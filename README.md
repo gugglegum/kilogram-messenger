@@ -7,7 +7,7 @@ stage. Do not use it for sensitive communication.
 The project goals and draft architecture are documented in
 [`docs/RFC-0001-core-architecture.md`](docs/RFC-0001-core-architecture.md).
 
-## Current milestone: M0.1.4 automatic bounded history sync
+## Current milestone: M0.1.5 transport path diagnostics
 
 The CLI exchanges a signed text event and a signed acknowledgement over an
 authenticated Iroh/QUIC connection. Application-level device identities are
@@ -27,6 +27,13 @@ The transport-independent reconciliation state machine lives in
 `kilogram-session`; the Iroh ALPN and typed stream framing live in
 `kilogram-transport-iroh`. The CLI only orchestrates these layers. This is the
 first concrete transport-replacement boundary, not yet the final transport API.
+
+After a delivery or synchronization exchange, both peers wait up to three
+seconds for Iroh relay-to-direct migration and print `transport_path` (`direct`,
+`relay`, `custom`, or `unknown`), the selected remote transport address, RTT,
+and number of open paths. These development diagnostics make the upcoming
+two-host LAN test distinguish a real direct path from a successful relay
+fallback.
 
 This remains a development prototype. It does **not** yet implement Account
 Root Identity, device authorization/revocation, message-level E2EE, encrypted

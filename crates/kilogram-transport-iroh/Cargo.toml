@@ -10,6 +10,7 @@ publish = false
 anyhow.workspace = true
 iroh.workspace = true
 kilogram-protocol = { path = "../kilogram-protocol" }
+tokio.workspace = true
 
 [lints]
 workspace = true

@@ -204,12 +204,27 @@ Recovery smoke tests:
   проверена альтернативным transport или test adapter;
 - payload и локальный store всё ещё не зашифрованы.
 
+### M0.1.5 — диагностика Iroh path: выполнено
+
+Реализовано:
+
+- Iroh adapter снимает snapshot фактически выбранного connection path;
+- после прикладного exchange adapter ждёт до трёх секунд возможной миграции с
+  relay на direct path;
+- `listen`, `connect` и `sync` печатают `transport_path`, remote transport
+  address, RTT и число открытых paths;
+- результат различает `direct`, `relay`, `custom` и `unknown`;
+- локальный smoke на обоих концах показал `direct` IP path.
+
+Назначение — сделать M0.2 доказательным: успешная доставка через relay не должна
+ошибочно считаться успешной LAN direct проверкой. Диагностика пока выводится в
+stdout и не является production telemetry API.
+
 ### Следующее расширение M0
 
-1. Подготовить диагностику выбранного Iroh path (direct/relay, addresses,
-   timings) без смешивания её с session rules.
-2. Выполнить M0.2 на двух физических хостах в LAN.
-3. Проверить reconnect/error paths и определить минимальный resumable sync
+1. Выполнить M0.2 на двух физических Windows-хостах в LAN и зафиксировать
+   `direct` path с обеих сторон.
+2. Проверить reconnect/error paths и определить минимальный resumable sync
    cursor до замены full-ID inventory на Merkle/range summary.
-4. Начать Account Root → Device authorization model либо pairwise E2EE spike по
+3. Начать Account Root → Device authorization model либо pairwise E2EE spike по
    приоритету следующего RFC/ADR.

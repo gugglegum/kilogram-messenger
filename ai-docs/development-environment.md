@@ -1,6 +1,6 @@
 # Среда разработки
 
-Проверено: 2026-08-25 после реализации M0.1.4.
+Проверено: 2026-08-25 после реализации M0.1.5.
 
 ## Текущий Windows-хост
 
@@ -50,6 +50,9 @@ toolchain `1.98.0` для воспроизводимой разработки.
 12. Реальный локальный Iroh smoke после разделения crates: отставший client
     восстановил 2 events за один round; `sync_rounds_completed=1`, итоговый
     store содержит 2 events и один frontier — успешно.
+13. Path diagnostics на обоих концах локального Iroh exchange сообщили
+    `transport_path=direct`, IP transport addresses, RTT и один открытый path —
+    успешно.
 
 Публичный relay пока не проверялся: M0.1 использовал ticket с локальными IP
 адресами и direct connection на одном хосте.

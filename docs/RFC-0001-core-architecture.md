@@ -316,6 +316,12 @@ device secret в этом development store пока не зашифрованы
 Выбор остаётся предварительным до desktop/mobile spike. rust-libp2p является
 основной альтернативой.
 
+M0.1.5 добавляет наблюдаемость выбранного Iroh path. После прикладного обмена
+adapter ждёт до трёх секунд возможной миграции relay → direct и сообщает тип
+выбранного пути, remote transport address, RTT и число открытых paths. Это
+development diagnostics: она позволяет отличить успешный LAN direct test от
+незаметного relay fallback, но ещё не является telemetry subsystem продукта.
+
 Ядро должно зависеть от абстракции транспорта, а не от публичных типов Iroh:
 
 ```text

@@ -18,12 +18,14 @@ use kilogram_protocol::{
 use kilogram_session::{MAX_SYNC_ROUNDS, ServerInventoryOutcome, SyncClient, SyncServer};
 use kilogram_store::EventStore;
 use kilogram_transport_iroh::{
-    ALPN, read_client_request, read_server_response, write_client_request, write_server_response,
+    ALPN, read_client_request, read_server_response, selected_path_diagnostics,
+    write_client_request, write_server_response,
 };
 use serde::{Deserialize, Serialize};
 use tokio::time::timeout;
 
 const EVENT_STORE_DIRECTORY: &str = "events";
+const DIRECT_PATH_DIAGNOSTIC_WAIT: Duration = Duration::from_secs(3);
 const TICKET_SIGNATURE_DOMAIN: &[u8] = b"kilogram:connection-ticket-signature:v1\0";
 const TICKET_VERSION: u8 = 1;
 
@@ -313,6 +315,7 @@ async fn listen(
         ClientRequest::SyncEvents(_) => bail!("sync event batch cannot be the first request"),
     }
 
+    print_transport_diagnostics(&connection).await;
     let _ = timeout(Duration::from_secs(2), connection.closed()).await;
     endpoint.close().await;
     Ok(())
@@ -553,6 +556,7 @@ async fn connect(
     println!("acknowledgement_store={acknowledgement_store_outcome:?}");
     println!("status=acknowledged");
 
+    print_transport_diagnostics(&connection).await;
     connection.close(0_u32.into(), b"kilogram m0 complete");
     endpoint.close().await;
     Ok(())
@@ -655,12 +659,28 @@ async fn sync(
             println!("sync_more_available=false");
             println!("status=synchronized");
 
+            print_transport_diagnostics(&connection).await;
             connection.close(0_u32.into(), b"kilogram m0 sync complete");
             endpoint.close().await;
             return Ok(());
         }
     }
     bail!("sync exceeded the limit of {MAX_SYNC_ROUNDS} rounds")
+}
+
+async fn print_transport_diagnostics(connection: &iroh::endpoint::Connection) {
+    match selected_path_diagnostics(connection, DIRECT_PATH_DIAGNOSTIC_WAIT).await {
+        Some(path) => {
+            println!("transport_path={}", path.kind.as_str());
+            println!("transport_remote_address={}", path.remote_address);
+            println!(
+                "transport_rtt_ms={:.1}",
+                path.round_trip_time.as_secs_f64() * 1_000.0
+            );
+            println!("transport_open_paths={}", path.open_paths);
+        }
+        None => println!("transport_path=unknown"),
+    }
 }
 
 async fn load_connection_ticket(
