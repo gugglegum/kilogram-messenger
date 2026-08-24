@@ -1,5 +1,5 @@
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     fs,
     io::{self, Write},
     path::{Path, PathBuf},
@@ -25,6 +25,13 @@ pub enum StoreOutcome {
 pub struct StoredEvent {
     pub id: EventId,
     pub event: SignedEvent,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SyncPlan {
+    pub requested_from_remote: Vec<EventId>,
+    pub events_for_remote: Vec<SignedEvent>,
+    pub more_available: bool,
 }
 
 pub struct EventStore {
@@ -159,6 +166,85 @@ impl EventStore {
         Ok(frontier)
     }
 
+    pub fn inventory(&self, conversation_id: ConversationId) -> Result<Vec<EventId>, StoreError> {
+        Ok(self
+            .load_conversation(conversation_id)?
+            .into_iter()
+            .map(|stored| stored.id)
+            .collect())
+    }
+
+    pub fn contains_author(
+        &self,
+        conversation_id: ConversationId,
+        device_id: DeviceId,
+    ) -> Result<bool, StoreError> {
+        Ok(self
+            .load_conversation(conversation_id)?
+            .iter()
+            .any(|stored| stored.event.author_device_id() == device_id))
+    }
+
+    pub fn plan_sync(
+        &self,
+        conversation_id: ConversationId,
+        remote_inventory: &[EventId],
+        maximum_events_per_direction: usize,
+    ) -> Result<SyncPlan, StoreError> {
+        let local_events = self.load_conversation(conversation_id)?;
+        let local_ids: HashSet<_> = local_events.iter().map(|stored| stored.id).collect();
+        let remote_ids: HashSet<_> = remote_inventory.iter().copied().collect();
+
+        let mut requested_from_remote: Vec<_> =
+            remote_ids.difference(&local_ids).copied().collect();
+        requested_from_remote.sort_by_cached_key(ToString::to_string);
+
+        let mut events_for_remote: Vec<_> = local_events
+            .into_iter()
+            .filter(|stored| !remote_ids.contains(&stored.id))
+            .collect();
+        events_for_remote.sort_by_cached_key(|stored| stored.id.to_string());
+
+        let more_available = requested_from_remote.len() > maximum_events_per_direction
+            || events_for_remote.len() > maximum_events_per_direction;
+        requested_from_remote.truncate(maximum_events_per_direction);
+        events_for_remote.truncate(maximum_events_per_direction);
+
+        Ok(SyncPlan {
+            requested_from_remote,
+            events_for_remote: events_for_remote
+                .into_iter()
+                .map(|stored| stored.event)
+                .collect(),
+            more_available,
+        })
+    }
+
+    pub fn events_by_id(
+        &self,
+        conversation_id: ConversationId,
+        requested_event_ids: &[EventId],
+    ) -> Result<Vec<SignedEvent>, StoreError> {
+        let available: HashMap<_, _> = self
+            .load_conversation(conversation_id)?
+            .into_iter()
+            .map(|stored| (stored.id, stored.event))
+            .collect();
+
+        requested_event_ids
+            .iter()
+            .map(|event_id| {
+                available
+                    .get(event_id)
+                    .cloned()
+                    .ok_or(StoreError::RequestedEventMissing {
+                        conversation_id,
+                        event_id: *event_id,
+                    })
+            })
+            .collect()
+    }
+
     fn conversation_directory(&self, conversation_id: ConversationId) -> PathBuf {
         self.root.join(conversation_id.to_string())
     }
@@ -229,6 +315,12 @@ pub enum StoreError {
         conversation_id: ConversationId,
         author_device_id: DeviceId,
         author_sequence: u64,
+    },
+
+    #[error("requested event {event_id} is missing from conversation {conversation_id}")]
+    RequestedEventMissing {
+        conversation_id: ConversationId,
+        event_id: EventId,
     },
 
     #[error("stored event {event_id} does not match its filename at {path}")]
@@ -365,6 +457,29 @@ mod tests {
             acknowledgement.payload(),
             EventPayload::Acknowledgement { .. }
         ));
+        Ok(())
+    }
+
+    #[test]
+    fn sync_plan_is_bounded_and_bidirectional() -> Result<(), Box<dyn Error>> {
+        let local_directory = tempdir()?;
+        let local = EventStore::open(local_directory.path())?;
+        let conversation_id = ConversationId::from_label("sync-plan");
+        let local_only = text_event(conversation_id, 0, Vec::new(), "local")?;
+        let local_only_id = local_only.event_id()?;
+        local.put(&local_only)?;
+
+        let remote_only = text_event(conversation_id, 0, Vec::new(), "remote")?;
+        let remote_only_id = remote_only.event_id()?;
+        let plan = local.plan_sync(conversation_id, &[remote_only_id], 1)?;
+
+        assert_eq!(plan.requested_from_remote, vec![remote_only_id]);
+        assert_eq!(plan.events_for_remote, vec![local_only]);
+        assert!(!plan.more_available);
+        assert_eq!(
+            local.events_by_id(conversation_id, &[local_only_id])?,
+            plan.events_for_remote
+        );
         Ok(())
     }
 

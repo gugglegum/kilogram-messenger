@@ -4,6 +4,7 @@ use std::{
     io::{self, Write},
     num::ParseIntError,
     path::{Path, PathBuf},
+    str::FromStr,
 };
 
 use ed25519_dalek::{Signature, Signer, SigningKey, VerifyingKey};
@@ -43,6 +44,34 @@ impl fmt::Display for DeviceId {
             write!(formatter, "{byte:02x}")?;
         }
         Ok(())
+    }
+}
+
+impl FromStr for DeviceId {
+    type Err = IdentityError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        if value.len() != SECRET_KEY_BYTES * 2 {
+            return Err(IdentityError::InvalidDeviceIdLength(value.len()));
+        }
+        let mut bytes = [0_u8; SECRET_KEY_BYTES];
+        let encoded = value.as_bytes();
+        for (index, byte) in bytes.iter_mut().enumerate() {
+            let offset = index * 2;
+            let high = decode_hex_nibble(encoded[offset], offset)?;
+            let low = decode_hex_nibble(encoded[offset + 1], offset + 1)?;
+            *byte = (high << 4) | low;
+        }
+        Ok(Self(bytes))
+    }
+}
+
+fn decode_hex_nibble(byte: u8, index: usize) -> Result<u8, IdentityError> {
+    match byte {
+        b'0'..=b'9' => Ok(byte - b'0'),
+        b'a'..=b'f' => Ok(byte - b'a' + 10),
+        b'A'..=b'F' => Ok(byte - b'A' + 10),
+        _ => Err(IdentityError::InvalidDeviceIdHex(index)),
     }
 }
 
@@ -168,6 +197,12 @@ pub enum IdentityError {
     #[error("device secret key has {0} bytes; expected {SECRET_KEY_BYTES}")]
     InvalidSecretKeyLength(usize),
 
+    #[error("device ID has {0} hexadecimal characters; expected 64")]
+    InvalidDeviceIdLength(usize),
+
+    #[error("device ID contains invalid hexadecimal at character {0}")]
+    InvalidDeviceIdHex(usize),
+
     #[error("device public key is invalid")]
     InvalidDevicePublicKey(#[source] ed25519_dalek::SignatureError),
 
@@ -223,6 +258,14 @@ mod tests {
         signer.device_id().verify(b"message", &signature)?;
         assert!(signer.device_id().verify(b"tampered", &signature).is_err());
         assert!(other.device_id().verify(b"message", &signature).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn device_id_text_round_trips() -> Result<(), IdentityError> {
+        let device_id = DeviceIdentity::generate()?.device_id();
+        assert_eq!(device_id.to_string().parse::<DeviceId>()?, device_id);
+        assert!("not-a-device-id".parse::<DeviceId>().is_err());
         Ok(())
     }
 }

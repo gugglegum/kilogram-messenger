@@ -19,6 +19,7 @@
 | D-013 | 2026-08-25 | принято | Прикладная device identity не должна совпадать с transport identity Iroh. | Маршрут и transport могут меняться независимо от полномочий устройства; transport Endpoint ID не становится идентичностью аккаунта. |
 | D-014 | 2026-08-25 | предварительно | Для M0 кодировать детерминированные signed events через Postcard, подписывать Ed25519 и идентифицировать BLAKE3. | Это минимальный проверяемый Rust-прототип с domain separation; межъязыковой публичный wire format и crypto agility ещё предстоит спроектировать. |
 | D-015 | 2026-08-25 | предварительно | Для M0 хранить каждый signed event отдельным неизменяемым content-addressed файлом. | Это позволяет проверить append-only, deduplication, corruption detection и causal frontier до выбора production database; формат на диске и отсутствие at-rest encryption не являются production-решением. |
+| D-016 | 2026-08-25 | предварительно | В M0 listener явно задаёт один `allowed requester device`; signed ticket связывает его с listener key и transport Endpoint ID. Sync дополнительно требует, чтобы requester уже был автором conversation; inventory и signed diff session-bound. | Обладатель ticket без разрешённого device key не может сначала внедрить событие, а затем получить историю. Обе стороны доказывают владение ключами до раскрытия events. Это временная граница до Account Root authorization, membership и revocation. |
 
 ## Правило изменения решений
 

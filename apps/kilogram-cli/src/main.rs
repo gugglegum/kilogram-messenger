@@ -1,18 +1,30 @@
-use std::{path::PathBuf, time::Duration};
+use std::{
+    collections::HashSet,
+    path::{Path, PathBuf},
+    time::Duration,
+};
 
 use anyhow::{Context, Result, bail, ensure};
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use clap::{Parser, Subcommand};
-use iroh::{Endpoint, EndpointAddr, endpoint::presets};
-use kilogram_identity::{DeviceId, DeviceState};
-use kilogram_protocol::{ConversationId, EventPayload, SignedEvent};
+use iroh::{
+    Endpoint, EndpointAddr,
+    endpoint::{RecvStream, SendStream, presets},
+};
+use kilogram_identity::{DeviceId, DeviceIdentity, DeviceState};
+use kilogram_protocol::{
+    ClientRequest, ConversationId, EventId, EventPayload, MAX_SYNC_EVENTS_PER_BATCH,
+    ServerResponse, SignedEvent, SignedSyncInventory, SyncComplete, SyncDiff, SyncEventBatch,
+    SyncRejected, SyncRejectionReason, SyncSessionBinding,
+};
 use kilogram_store::EventStore;
 use serde::{Deserialize, Serialize};
 use tokio::time::timeout;
 
-const ALPN: &[u8] = b"kilogram/m0/signed-event/1";
+const ALPN: &[u8] = b"kilogram/m0/sync/1";
 const EVENT_STORE_DIRECTORY: &str = "events";
-const MAX_WIRE_EVENT_BYTES: usize = 128 * 1024;
+const MAX_WIRE_MESSAGE_BYTES: usize = 8 * 1024 * 1024;
+const TICKET_SIGNATURE_DOMAIN: &[u8] = b"kilogram:connection-ticket-signature:v1\0";
 const TICKET_VERSION: u8 = 1;
 
 #[derive(Debug, Parser)]
@@ -33,6 +45,10 @@ enum Command {
         /// Directory containing this application's persistent development device identity.
         #[arg(long)]
         state_dir: PathBuf,
+
+        /// Application device ID allowed to deliver or synchronize events.
+        #[arg(long)]
+        allow_device: DeviceId,
 
         /// Also write the public connection ticket to this file.
         #[arg(long)]
@@ -66,6 +82,25 @@ enum Command {
         conversation: String,
     },
 
+    /// Reconcile one bounded batch of conversation events with a listener.
+    Sync {
+        /// Directory containing this application's development state.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Connection ticket printed by the listener.
+        #[arg(long, conflicts_with = "ticket_file")]
+        ticket: Option<String>,
+
+        /// Read the connection ticket from this file.
+        #[arg(long, conflicts_with = "ticket")]
+        ticket_file: Option<PathBuf>,
+
+        /// Development-only shared label used to derive a conversation ID.
+        #[arg(long, default_value = "m0-local-smoke")]
+        conversation: String,
+    },
+
     /// Verify and print locally stored events without connecting to a peer.
     History {
         /// Directory containing this application's development state.
@@ -76,25 +111,50 @@ enum Command {
         #[arg(long, default_value = "m0-local-smoke")]
         conversation: String,
     },
+
+    /// Create or load a development device identity and print its public ID.
+    Identity {
+        /// Directory containing this application's development state.
+        #[arg(long)]
+        state_dir: PathBuf,
+    },
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ConnectionTicketContent {
+    version: u8,
+    endpoint: EndpointAddr,
+    listener_device_id: DeviceId,
+    allowed_requester_device_id: DeviceId,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 struct ConnectionTicket {
-    version: u8,
-    endpoint: EndpointAddr,
-    listener_device_id: DeviceId,
+    content: ConnectionTicketContent,
+    signature: Vec<u8>,
 }
 
 impl ConnectionTicket {
-    fn new(endpoint: EndpointAddr, listener_device_id: DeviceId) -> Self {
-        Self {
+    fn new(
+        endpoint: EndpointAddr,
+        listener_identity: &DeviceIdentity,
+        allowed_requester_device_id: DeviceId,
+    ) -> Result<Self> {
+        let content = ConnectionTicketContent {
             version: TICKET_VERSION,
             endpoint,
-            listener_device_id,
-        }
+            listener_device_id: listener_identity.device_id(),
+            allowed_requester_device_id,
+        };
+        let signature = listener_identity
+            .sign(&ticket_signing_bytes(&content)?)
+            .to_vec();
+        Ok(Self { content, signature })
     }
 
     fn encode(&self) -> Result<String> {
+        self.verify()
+            .context("verify connection ticket before encoding")?;
         let json = serde_json::to_vec(self).context("serialize connection ticket")?;
         Ok(URL_SAFE_NO_PAD.encode(json))
     }
@@ -105,13 +165,41 @@ impl ConnectionTicket {
             .context("decode connection ticket as base64url")?;
         let ticket: Self =
             serde_json::from_slice(&bytes).context("decode connection ticket payload")?;
-        ensure!(
-            ticket.version == TICKET_VERSION,
-            "unsupported connection ticket version: {}",
-            ticket.version
-        );
+        ticket.verify()?;
         Ok(ticket)
     }
+
+    fn endpoint(&self) -> &EndpointAddr {
+        &self.content.endpoint
+    }
+
+    fn listener_device_id(&self) -> DeviceId {
+        self.content.listener_device_id
+    }
+
+    fn allowed_requester_device_id(&self) -> DeviceId {
+        self.content.allowed_requester_device_id
+    }
+
+    fn verify(&self) -> Result<()> {
+        ensure!(
+            self.content.version == TICKET_VERSION,
+            "unsupported connection ticket version: {}",
+            self.content.version
+        );
+        self.content
+            .listener_device_id
+            .verify(&ticket_signing_bytes(&self.content)?, &self.signature)
+            .context("verify listener signature on connection ticket")
+    }
+}
+
+fn ticket_signing_bytes(content: &ConnectionTicketContent) -> Result<Vec<u8>> {
+    let encoded = serde_json::to_vec(content).context("serialize connection ticket content")?;
+    let mut bytes = Vec::with_capacity(TICKET_SIGNATURE_DOMAIN.len() + encoded.len());
+    bytes.extend_from_slice(TICKET_SIGNATURE_DOMAIN);
+    bytes.extend_from_slice(&encoded);
+    Ok(bytes)
 }
 
 #[tokio::main]
@@ -119,9 +207,10 @@ async fn main() -> Result<()> {
     match Cli::parse().command {
         Command::Listen {
             state_dir,
+            allow_device,
             ticket_file,
             relay_wait_seconds,
-        } => listen(state_dir, ticket_file, relay_wait_seconds).await,
+        } => listen(state_dir, allow_device, ticket_file, relay_wait_seconds).await,
         Command::Connect {
             state_dir,
             ticket,
@@ -129,15 +218,23 @@ async fn main() -> Result<()> {
             message,
             conversation,
         } => connect(state_dir, ticket, ticket_file, message, conversation).await,
+        Command::Sync {
+            state_dir,
+            ticket,
+            ticket_file,
+            conversation,
+        } => sync(state_dir, ticket, ticket_file, conversation).await,
         Command::History {
             state_dir,
             conversation,
         } => show_history(state_dir, conversation),
+        Command::Identity { state_dir } => show_identity(state_dir),
     }
 }
 
 async fn listen(
     state_dir: PathBuf,
+    allowed_requester_device_id: DeviceId,
     ticket_file: Option<PathBuf>,
     relay_wait_seconds: u64,
 ) -> Result<()> {
@@ -157,10 +254,15 @@ async fn listen(
         }
     }
 
-    let ticket =
-        ConnectionTicket::new(endpoint.addr(), device_state.identity().device_id()).encode()?;
+    let ticket = ConnectionTicket::new(
+        endpoint.addr(),
+        device_state.identity(),
+        allowed_requester_device_id,
+    )?
+    .encode()?;
     println!("transport_endpoint_id={}", endpoint.id());
     println!("device_id={}", device_state.identity().device_id());
+    println!("allowed_requester_device_id={allowed_requester_device_id}");
     println!("ticket={ticket}");
 
     if let Some(path) = ticket_file {
@@ -182,11 +284,51 @@ async fn listen(
         .accept_bi()
         .await
         .context("accept bidirectional stream")?;
-    let request = receive
-        .read_to_end(MAX_WIRE_EVENT_BYTES)
-        .await
-        .context("read signed event")?;
-    let event = SignedEvent::decode_and_verify(&request).context("verify received event")?;
+    let request = read_client_request(&mut receive).await?;
+    match request {
+        ClientRequest::DeliverEvent(event) => {
+            handle_delivery_request(
+                &device_state,
+                &event_store,
+                &mut send,
+                event,
+                allowed_requester_device_id,
+            )
+            .await?;
+        }
+        ClientRequest::SyncInventory(inventory) => {
+            let session_binding =
+                SyncSessionBinding::from_transport_label(&endpoint.id().to_string());
+            handle_sync_request(
+                &device_state,
+                &event_store,
+                &connection,
+                &mut send,
+                inventory,
+                session_binding,
+                allowed_requester_device_id,
+            )
+            .await?;
+        }
+        ClientRequest::SyncEvents(_) => bail!("sync event batch cannot be the first request"),
+    }
+
+    let _ = timeout(Duration::from_secs(2), connection.closed()).await;
+    endpoint.close().await;
+    Ok(())
+}
+
+async fn handle_delivery_request(
+    device_state: &DeviceState,
+    event_store: &EventStore,
+    send: &mut SendStream,
+    event: SignedEvent,
+    allowed_requester_device_id: DeviceId,
+) -> Result<()> {
+    ensure!(
+        event.author_device_id() == allowed_requester_device_id,
+        "event author is not the requester device allowed by this listener"
+    );
     let event_id = event.event_id().context("calculate received event ID")?;
     let EventPayload::Text { body } = event.payload() else {
         bail!("listener expected a text event");
@@ -217,16 +359,93 @@ async fn listen(
     let acknowledgement_store_outcome = event_store
         .put(&acknowledgement)
         .context("persist acknowledgement before sending it")?;
-    send.write_all(&acknowledgement.encode()?)
-        .await
-        .context("send signed acknowledgement")?;
-    send.finish().context("finish acknowledgement stream")?;
+    write_server_response(send, &ServerResponse::EventAcknowledgement(acknowledgement)).await?;
     println!("acknowledgement_event_id={acknowledgement_id}");
     println!("acknowledgement_store={acknowledgement_store_outcome:?}");
     println!("status=acknowledged");
+    Ok(())
+}
 
-    let _ = timeout(Duration::from_secs(2), connection.closed()).await;
-    endpoint.close().await;
+async fn handle_sync_request(
+    device_state: &DeviceState,
+    event_store: &EventStore,
+    connection: &iroh::endpoint::Connection,
+    first_send: &mut SendStream,
+    inventory: SignedSyncInventory,
+    expected_session: SyncSessionBinding,
+    allowed_requester_device_id: DeviceId,
+) -> Result<()> {
+    inventory
+        .verify_for_session(expected_session)
+        .context("verify sync inventory session binding")?;
+    let conversation_id = inventory.conversation_id();
+    if inventory.requester_device_id() != allowed_requester_device_id {
+        let rejected = SyncRejected::new(conversation_id, SyncRejectionReason::RequesterNotAllowed);
+        write_server_response(first_send, &ServerResponse::SyncRejected(rejected)).await?;
+        println!("sync_rejected=RequesterNotAllowed");
+        println!("status=rejected");
+        return Ok(());
+    }
+    let requester_is_known = event_store
+        .contains_author(conversation_id, inventory.requester_device_id())
+        .context("check sync requester against local conversation authors")?;
+    if !requester_is_known {
+        let rejected = SyncRejected::new(conversation_id, SyncRejectionReason::RequesterNotKnown);
+        write_server_response(first_send, &ServerResponse::SyncRejected(rejected)).await?;
+        println!("sync_rejected=RequesterNotKnown");
+        println!("status=rejected");
+        return Ok(());
+    }
+
+    let plan = event_store
+        .plan_sync(
+            conversation_id,
+            inventory.event_ids(),
+            MAX_SYNC_EVENTS_PER_BATCH,
+        )
+        .context("calculate bounded sync diff")?;
+    let requested_event_ids = plan.requested_from_remote;
+    let events_for_remote_count = plan.events_for_remote.len();
+    let more_available = plan.more_available;
+    let diff = SyncDiff::sign(
+        device_state.identity(),
+        conversation_id,
+        expected_session,
+        requested_event_ids.clone(),
+        plan.events_for_remote,
+        more_available,
+    )?;
+    write_server_response(first_send, &ServerResponse::SyncDiff(diff)).await?;
+
+    let (mut second_send, mut second_receive) = connection
+        .accept_bi()
+        .await
+        .context("accept sync event batch stream")?;
+    let batch = match read_client_request(&mut second_receive).await? {
+        ClientRequest::SyncEvents(batch) => batch,
+        _ => bail!("listener expected a sync event batch as the second request"),
+    };
+    ensure!(
+        batch.conversation_id() == conversation_id,
+        "sync event batch belongs to a different conversation"
+    );
+    let supplied_event_ids = event_ids(batch.events())?;
+    ensure!(
+        same_event_ids(&supplied_event_ids, &requested_event_ids),
+        "sync event batch does not exactly satisfy the requested event IDs"
+    );
+    for event in batch.into_events() {
+        event_store
+            .put(&event)
+            .context("persist event received during sync")?;
+    }
+
+    let complete = SyncComplete::new(conversation_id, supplied_event_ids.clone(), more_available)?;
+    write_server_response(&mut second_send, &ServerResponse::SyncComplete(complete)).await?;
+    println!("sync_sent_events={events_for_remote_count}");
+    println!("sync_received_events={}", supplied_event_ids.len());
+    println!("sync_more_available={more_available}");
+    println!("status=synchronized");
     Ok(())
 }
 
@@ -241,16 +460,12 @@ async fn connect(
         .with_context(|| format!("load device state from {}", state_dir.display()))?;
     let event_store = open_event_store(&state_dir)?;
 
-    let encoded_ticket = match (ticket, ticket_file) {
-        (Some(ticket), None) => ticket,
-        (None, Some(path)) => tokio::fs::read_to_string(&path)
-            .await
-            .with_context(|| format!("read ticket from {}", path.display()))?,
-        (None, None) => bail!("provide either --ticket or --ticket-file"),
-        (Some(_), Some(_)) => bail!("--ticket and --ticket-file are mutually exclusive"),
-    };
-    let ticket = ConnectionTicket::decode(&encoded_ticket)?;
-    let expected_listener_device_id = ticket.listener_device_id;
+    let ticket = load_connection_ticket(ticket, ticket_file).await?;
+    let expected_listener_device_id = ticket.listener_device_id();
+    ensure!(
+        device_state.identity().device_id() == ticket.allowed_requester_device_id(),
+        "this device is not the requester authorized by the connection ticket"
+    );
 
     let endpoint = Endpoint::bind(presets::N0)
         .await
@@ -259,7 +474,7 @@ async fn connect(
     println!("device_id={}", device_state.identity().device_id());
 
     let connection = endpoint
-        .connect(ticket.endpoint, ALPN)
+        .connect(ticket.endpoint().clone(), ALPN)
         .await
         .context("connect to listening endpoint")?;
     println!("peer_id={}", connection.remote_id());
@@ -287,20 +502,15 @@ async fn connect(
     let sent_store_outcome = event_store
         .put(&event)
         .context("persist signed event before sending it")?;
-    send.write_all(&event.encode()?)
-        .await
-        .context("send signed event")?;
-    send.finish().context("finish signed event stream")?;
+    write_client_request(&mut send, &ClientRequest::DeliverEvent(event.clone())).await?;
     println!("sent_event_id={event_id}");
     println!("sent_author_sequence={author_sequence}");
     println!("sent_store={sent_store_outcome:?}");
 
-    let response = receive
-        .read_to_end(MAX_WIRE_EVENT_BYTES)
-        .await
-        .context("read signed acknowledgement")?;
-    let acknowledgement =
-        SignedEvent::decode_and_verify(&response).context("verify signed acknowledgement")?;
+    let acknowledgement = match read_server_response(&mut receive).await? {
+        ServerResponse::EventAcknowledgement(event) => event,
+        _ => bail!("connector expected an event acknowledgement response"),
+    };
     ensure!(
         acknowledgement.conversation_id() == conversation_id,
         "acknowledgement belongs to a different conversation"
@@ -336,6 +546,190 @@ async fn connect(
 
     connection.close(0_u32.into(), b"kilogram m0 complete");
     endpoint.close().await;
+    Ok(())
+}
+
+async fn sync(
+    state_dir: PathBuf,
+    ticket: Option<String>,
+    ticket_file: Option<PathBuf>,
+    conversation: String,
+) -> Result<()> {
+    let device_state = DeviceState::load_or_create(&state_dir)
+        .with_context(|| format!("load device state from {}", state_dir.display()))?;
+    let event_store = open_event_store(&state_dir)?;
+    let ticket = load_connection_ticket(ticket, ticket_file).await?;
+    let expected_listener_device_id = ticket.listener_device_id();
+    ensure!(
+        device_state.identity().device_id() == ticket.allowed_requester_device_id(),
+        "this device is not the requester authorized by the connection ticket"
+    );
+    let session_binding =
+        SyncSessionBinding::from_transport_label(&ticket.endpoint().id.to_string());
+    let conversation_id = ConversationId::from_label(&conversation);
+    let inventory_ids = event_store
+        .inventory(conversation_id)
+        .context("build local sync inventory")?;
+    let inventory = SignedSyncInventory::sign(
+        device_state.identity(),
+        conversation_id,
+        session_binding,
+        inventory_ids.clone(),
+    )
+    .context("sign sync inventory")?;
+
+    let endpoint = Endpoint::bind(presets::N0)
+        .await
+        .context("bind syncing Iroh endpoint")?;
+    println!("transport_endpoint_id={}", endpoint.id());
+    println!("device_id={}", device_state.identity().device_id());
+    let connection = endpoint
+        .connect(ticket.endpoint().clone(), ALPN)
+        .await
+        .context("connect to listening endpoint for sync")?;
+    println!("peer_id={}", connection.remote_id());
+
+    let (mut first_send, mut first_receive) = connection
+        .open_bi()
+        .await
+        .context("open sync inventory stream")?;
+    write_client_request(&mut first_send, &ClientRequest::SyncInventory(inventory)).await?;
+    let diff = match read_server_response(&mut first_receive).await? {
+        ServerResponse::SyncDiff(diff) => diff,
+        ServerResponse::SyncRejected(rejected) => {
+            ensure!(
+                rejected.conversation_id() == conversation_id,
+                "sync rejection belongs to a different conversation"
+            );
+            bail!("sync rejected by listener: {:?}", rejected.reason());
+        }
+        _ => bail!("sync client expected a sync diff response"),
+    };
+    diff.verify_for_session(session_binding, expected_listener_device_id)
+        .context("verify sync responder identity and session binding")?;
+    ensure!(
+        diff.conversation_id() == conversation_id,
+        "sync diff belongs to a different conversation"
+    );
+    let advertised_ids: HashSet<_> = inventory_ids.iter().copied().collect();
+    ensure!(
+        diff.requested_event_ids()
+            .iter()
+            .all(|event_id| advertised_ids.contains(event_id)),
+        "listener requested an event that was not in the signed inventory"
+    );
+
+    let received_event_ids = event_ids(diff.events())?;
+    for event in diff.events() {
+        event_store
+            .put(event)
+            .context("persist event received from sync diff")?;
+    }
+    let requested_event_ids = diff.requested_event_ids().to_vec();
+    let events_for_listener = event_store
+        .events_by_id(conversation_id, &requested_event_ids)
+        .context("load events requested by listener")?;
+    let sent_event_ids = event_ids(&events_for_listener)?;
+    let more_available = diff.more_available();
+
+    let (mut second_send, mut second_receive) = connection
+        .open_bi()
+        .await
+        .context("open sync event batch stream")?;
+    let batch = SyncEventBatch::new(conversation_id, events_for_listener)?;
+    write_client_request(&mut second_send, &ClientRequest::SyncEvents(batch)).await?;
+    let complete = match read_server_response(&mut second_receive).await? {
+        ServerResponse::SyncComplete(complete) => complete,
+        _ => bail!("sync client expected a sync completion response"),
+    };
+    ensure!(
+        complete.conversation_id() == conversation_id,
+        "sync completion belongs to a different conversation"
+    );
+    ensure!(
+        same_event_ids(complete.stored_event_ids(), &sent_event_ids),
+        "listener did not confirm the exact event batch sent by the client"
+    );
+    ensure!(
+        complete.more_available() == more_available,
+        "sync completion disagrees about continuation state"
+    );
+
+    println!("sync_inventory_events={}", inventory_ids.len());
+    println!("sync_received_events={}", received_event_ids.len());
+    println!("sync_sent_events={}", sent_event_ids.len());
+    println!("sync_more_available={more_available}");
+    println!("status=synchronized");
+
+    connection.close(0_u32.into(), b"kilogram m0 sync complete");
+    endpoint.close().await;
+    Ok(())
+}
+
+async fn load_connection_ticket(
+    ticket: Option<String>,
+    ticket_file: Option<PathBuf>,
+) -> Result<ConnectionTicket> {
+    let encoded_ticket = match (ticket, ticket_file) {
+        (Some(ticket), None) => ticket,
+        (None, Some(path)) => tokio::fs::read_to_string(&path)
+            .await
+            .with_context(|| format!("read ticket from {}", path.display()))?,
+        (None, None) => bail!("provide either --ticket or --ticket-file"),
+        (Some(_), Some(_)) => bail!("--ticket and --ticket-file are mutually exclusive"),
+    };
+    ConnectionTicket::decode(&encoded_ticket)
+}
+
+async fn read_client_request(receive: &mut RecvStream) -> Result<ClientRequest> {
+    let bytes = receive
+        .read_to_end(MAX_WIRE_MESSAGE_BYTES)
+        .await
+        .context("read client protocol request")?;
+    ClientRequest::decode(&bytes).context("decode and verify client protocol request")
+}
+
+async fn write_client_request(send: &mut SendStream, request: &ClientRequest) -> Result<()> {
+    send.write_all(&request.encode()?)
+        .await
+        .context("send client protocol request")?;
+    send.finish().context("finish client protocol request")?;
+    Ok(())
+}
+
+async fn read_server_response(receive: &mut RecvStream) -> Result<ServerResponse> {
+    let bytes = receive
+        .read_to_end(MAX_WIRE_MESSAGE_BYTES)
+        .await
+        .context("read server protocol response")?;
+    ServerResponse::decode(&bytes).context("decode and verify server protocol response")
+}
+
+async fn write_server_response(send: &mut SendStream, response: &ServerResponse) -> Result<()> {
+    send.write_all(&response.encode()?)
+        .await
+        .context("send server protocol response")?;
+    send.finish().context("finish server protocol response")?;
+    Ok(())
+}
+
+fn event_ids(events: &[SignedEvent]) -> Result<Vec<EventId>> {
+    events
+        .iter()
+        .map(|event| event.event_id().map_err(Into::into))
+        .collect()
+}
+
+fn same_event_ids(left: &[EventId], right: &[EventId]) -> bool {
+    left.len() == right.len()
+        && left.iter().copied().collect::<HashSet<_>>()
+            == right.iter().copied().collect::<HashSet<_>>()
+}
+
+fn show_identity(state_dir: PathBuf) -> Result<()> {
+    let device_state = DeviceState::load_or_create(&state_dir)
+        .with_context(|| format!("load device state from {}", state_dir.display()))?;
+    println!("device_id={}", device_state.identity().device_id());
     Ok(())
 }
 
@@ -388,7 +782,7 @@ fn show_history(state_dir: PathBuf, conversation: String) -> Result<()> {
     Ok(())
 }
 
-fn open_event_store(state_dir: &std::path::Path) -> Result<EventStore> {
+fn open_event_store(state_dir: &Path) -> Result<EventStore> {
     let path = state_dir.join(EVENT_STORE_DIRECTORY);
     EventStore::open(&path).with_context(|| format!("open event store at {}", path.display()))
 }
@@ -402,25 +796,39 @@ mod tests {
     #[test]
     fn connection_ticket_round_trips() -> Result<()> {
         let endpoint = EndpointAddr::new(SecretKey::generate().public());
-        let listener_device_id = DeviceIdentity::generate()?.device_id();
-        let encoded = ConnectionTicket::new(endpoint.clone(), listener_device_id).encode()?;
+        let listener_identity = DeviceIdentity::generate()?;
+        let listener_device_id = listener_identity.device_id();
+        let allowed_requester_device_id = DeviceIdentity::generate()?.device_id();
+        let encoded = ConnectionTicket::new(
+            endpoint.clone(),
+            &listener_identity,
+            allowed_requester_device_id,
+        )?
+        .encode()?;
         let decoded = ConnectionTicket::decode(&encoded)?;
 
-        assert_eq!(decoded.version, TICKET_VERSION);
-        assert_eq!(decoded.endpoint, endpoint);
-        assert_eq!(decoded.listener_device_id, listener_device_id);
+        assert_eq!(decoded.content.version, TICKET_VERSION);
+        assert_eq!(decoded.endpoint(), &endpoint);
+        assert_eq!(decoded.listener_device_id(), listener_device_id);
+        assert_eq!(
+            decoded.allowed_requester_device_id(),
+            allowed_requester_device_id
+        );
         Ok(())
     }
 
     #[test]
     fn connection_ticket_rejects_unknown_version() -> Result<()> {
-        let ticket = ConnectionTicket {
-            version: TICKET_VERSION + 1,
-            endpoint: EndpointAddr::new(SecretKey::generate().public()),
-            listener_device_id: DeviceIdentity::generate()?.device_id(),
-        };
+        let identity = DeviceIdentity::generate()?;
+        let mut ticket = ConnectionTicket::new(
+            EndpointAddr::new(SecretKey::generate().public()),
+            &identity,
+            DeviceIdentity::generate()?.device_id(),
+        )?;
+        ticket.content.version = TICKET_VERSION + 1;
+        let encoded = URL_SAFE_NO_PAD.encode(serde_json::to_vec(&ticket)?);
 
-        let error = ConnectionTicket::decode(&ticket.encode()?)
+        let error = ConnectionTicket::decode(&encoded)
             .err()
             .context("unknown ticket version unexpectedly succeeded")?;
 
@@ -428,6 +836,28 @@ mod tests {
             error
                 .to_string()
                 .contains("unsupported connection ticket version")
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn connection_ticket_rejects_tampering() -> Result<()> {
+        let identity = DeviceIdentity::generate()?;
+        let mut ticket = ConnectionTicket::new(
+            EndpointAddr::new(SecretKey::generate().public()),
+            &identity,
+            DeviceIdentity::generate()?.device_id(),
+        )?;
+        ticket.content.endpoint = EndpointAddr::new(SecretKey::generate().public());
+        let encoded = URL_SAFE_NO_PAD.encode(serde_json::to_vec(&ticket)?);
+
+        let error = ConnectionTicket::decode(&encoded)
+            .err()
+            .context("tampered connection ticket unexpectedly succeeded")?;
+        assert!(
+            error
+                .to_string()
+                .contains("verify listener signature on connection ticket")
         );
         Ok(())
     }

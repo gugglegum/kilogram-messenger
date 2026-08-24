@@ -12,9 +12,10 @@
 Два процесса обмениваются подписанными событиями через Iroh/QUIC, проверяют
 Ed25519-подписи и causal acknowledgement. Прикладная device identity, author
 sequence и signed events сохраняются после перезапуска отдельно от эфемерной
-transport identity. Локальные M0.1, M0.1.1 и M0.1.2 smoke tests пройдены.
-Прикладное E2EE, Account Root Identity, шифрование локальной истории,
-P2P-синхронизация и группы ещё не реализованы.
+transport identity. Bounded signed inventory/diff восстанавливает пропущенные
+events в обе стороны. Локальные M0.1–M0.1.3 smoke tests пройдены. Прикладное
+E2EE, Account Root Identity, шифрование локальной истории, production-grade
+sync summaries и группы ещё не реализованы.
 
 ## Цель продукта
 
@@ -68,8 +69,8 @@ P2P-синхронизация и группы ещё не реализован�
 2. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
 3. Спроектировать формат идентичности, сертификатов устройств и revocation log.
 4. Спроектировать wire format подписанного события и алгоритм линеаризации.
-5. Расширить пройденный M0.1.2: inventory/diff и повторная P2P-синхронизация
-   пропущенных signed events после перезапуска.
+5. Расширить пройденный M0.1.3: вынести transport/session handlers из CLI,
+   добавить continuation sync rounds и подготовить LAN-диагностику.
 6. Выполнить M0.2 на двух хостах в LAN и M0.3 в разных сетях, отдельно проверив
    direct path и relay fallback.
 7. Реализовать мультиустройство, затем небольшие MLS-группы.

@@ -4,6 +4,14 @@ use kilogram_identity::{DeviceId, DeviceIdentity, IdentityError};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+mod wire;
+
+pub use wire::{
+    ClientRequest, MAX_INVENTORY_EVENT_IDS, MAX_SYNC_EVENTS_PER_BATCH, ServerResponse,
+    SignedSyncInventory, SyncComplete, SyncDiff, SyncEventBatch, SyncRejected, SyncRejectionReason,
+    SyncSessionBinding,
+};
+
 const EVENT_VERSION: u8 = 1;
 const EVENT_SIGNATURE_DOMAIN: &[u8] = b"kilogram:event-signature:v1\0";
 const EVENT_ID_DOMAIN: &[u8] = b"kilogram:event-id:v1\0";
@@ -210,6 +218,30 @@ pub enum ProtocolError {
 
     #[error("text has {0} bytes; maximum is {MAX_TEXT_BYTES}")]
     TextTooLarge(usize),
+
+    #[error("unsupported sync protocol version: {0}")]
+    UnsupportedSyncVersion(u8),
+
+    #[error("sync inventory has {0} event IDs; maximum is {MAX_INVENTORY_EVENT_IDS}")]
+    TooManyInventoryEventIds(usize),
+
+    #[error("sync batch has {0} events; maximum is {MAX_SYNC_EVENTS_PER_BATCH}")]
+    TooManySyncEvents(usize),
+
+    #[error("sync batch has {0} event IDs; maximum is {MAX_SYNC_EVENTS_PER_BATCH}")]
+    TooManySyncEventIds(usize),
+
+    #[error("sync message contains duplicate event ID {0}")]
+    DuplicateSyncEventId(EventId),
+
+    #[error("event {event_id} belongs to a different conversation")]
+    SyncConversationMismatch { event_id: EventId },
+
+    #[error("sync message is bound to a different transport session")]
+    SyncSessionMismatch,
+
+    #[error("sync response was signed by an unexpected device")]
+    SyncResponderMismatch,
 }
 
 #[cfg(test)]

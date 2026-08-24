@@ -32,7 +32,7 @@ toolchain `1.98.0` для воспроизводимой разработки.
 2. Компиляция минимального executable — успешно.
 3. `cargo fmt --all -- --check` — успешно.
 4. `cargo clippy --workspace --all-targets --all-features -- -D warnings` — успешно.
-5. `cargo test --workspace --all-targets` — 14 тестов успешно.
+5. `cargo test --workspace --all-targets` — 21 тест успешно.
 6. Два локальных Iroh endpoint обменялись signed event и signed
    acknowledgement — успешно.
 7. После перезапуска обоих процессов application device IDs сохранились,
@@ -40,6 +40,11 @@ toolchain `1.98.0` для воспроизводимой разработки.
 8. После двух storage-aware соединений оба state directories содержат по 4
    одинаковых валидных events, один общий frontier и causal link между
    последовательными обменами — успешно.
+9. Пустой recovery store с прежним device key восстановил историю у полного
+   peer; частичный listener запросил отсутствующее событие у клиента — успешно.
+10. Device, не совпадающий с allowed requester signed ticket, отклонён до
+    соединения; allowed, но неизвестный истории device получил явный
+    `RequesterNotKnown` без передачи events и зависания — успешно.
 
 Публичный relay пока не проверялся: M0.1 использовал ticket с локальными IP
 адресами и direct connection на одном хосте.

@@ -7,7 +7,7 @@ stage. Do not use it for sensitive communication.
 The project goals and draft architecture are documented in
 [`docs/RFC-0001-core-architecture.md`](docs/RFC-0001-core-architecture.md).
 
-## Current milestone: M0.1.2 local event store
+## Current milestone: M0.1.3 bounded history sync
 
 The CLI exchanges a signed text event and a signed acknowledgement over an
 authenticated Iroh/QUIC connection. Application-level device identities are
@@ -16,18 +16,31 @@ Every verified event is also persisted locally before the corresponding send
 or acknowledgement. Repeated writes are idempotent and stored corruption is
 detected when history is read.
 
+Two known conversation devices can reconcile one bounded batch in both
+directions. The inventory is signed by the requesting application device and
+bound to the listener's current Iroh Endpoint ID. The listener signs its diff
+with the application device key named in the ticket. It rejects devices that
+have never authored an event in its local copy of the conversation.
+
 This remains a development prototype. It does **not** yet implement Account
 Root Identity, device authorization/revocation, message-level E2EE, encrypted
-storage, peer-to-peer history synchronization, seed phrases, or groups. The
-local device secret and message bodies are currently stored unencrypted in the
-explicitly selected state directory. Do not use it for sensitive
-communication.
+storage, account-authorized synchronization, seed phrases, or groups. The local
+device secret and message bodies are currently stored unencrypted in the
+explicitly selected state directory. Do not use it for sensitive communication.
 
-Start a listener:
+Create or load Alice's identity first:
+
+```powershell
+cargo run -p kilogram-cli -- identity --state-dir .tmp/alice
+```
+
+Copy the printed device ID and start Bob's listener with that device explicitly
+authorized:
 
 ```powershell
 cargo run -p kilogram-cli -- listen `
   --state-dir .tmp/bob `
+  --allow-device <ALICE_DEVICE_ID> `
   --ticket-file .tmp/listener.ticket
 ```
 
@@ -57,10 +70,27 @@ Events are stored as immutable content-addressed files beneath
 `STATE_DIR/events`. The `history` command prints the current causal frontier;
 its file-order output is deterministic but is not yet a chat timeline.
 
+To synchronize missing events, start `listen` again on one device and run:
+
+```powershell
+cargo run -p kilogram-cli -- sync `
+  --state-dir .tmp/alice `
+  --ticket-file .tmp/listener.ticket
+```
+
+One round accepts at most 4,096 inventory IDs and transfers at most 64 events
+in each direction. If `sync_more_available=true`, start another listener and
+repeat the command. This full-ID inventory is an M0 mechanism, not the future
+compact Merkle summary.
+
 The connection ticket is public addressing data: it contains the listener's
-Iroh address and public application device ID, allowing the connector to bind a
-signed acknowledgement to the invited device. It contains neither the Iroh
-endpoint secret nor the application device secret. The Postcard event encoding
+Iroh address and public application device ID. The application device signs
+this mapping together with the one requester device ID authorized by the
+listener, so tampering is detected before a connection or inventory is sent.
+Possession of the ticket alone is insufficient to deliver or synchronize
+events without the allowed device key. The public ticket therefore exposes
+both device IDs as metadata. It contains neither the Iroh endpoint secret nor
+an application device secret. The ticket encoding, Postcard event encoding,
 and development conversation-label derivation are provisional M0 choices, not
 the final public wire protocol.
 

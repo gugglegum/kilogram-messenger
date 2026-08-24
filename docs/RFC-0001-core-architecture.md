@@ -255,6 +255,30 @@ reducer и может быть пересоздана из валидных со
 - обнаружение неполной истории;
 - синхронизацию между собственными устройствами и участниками разговора.
 
+M0.1.3 проверяет базовую reconciliation state machine с bounded full-ID
+inventory: requester подписывает inventory application device key и включает
+session binding к текущему transport Endpoint ID listener. Стороны обмениваются
+не более чем 64 отсутствующими events в каждом направлении за round, сверяют
+точные requested IDs, повторно проверяют подписи и сохраняют события
+идемпотентно. Inventory ограничен 4096 IDs. Неизвестный локальной истории
+requester получает явный отказ.
+
+Connection ticket также подписан application device key listener и связывает
+этот ключ с конкретным Iroh Endpoint ID и одним явно разрешённым requester
+device ID. Клиент проверяет ticket до отправки inventory; изменение transport
+endpoint или любого из device IDs обнаруживается. Listener применяет то же
+ограничение к обычной delivery, поэтому посторонний обладатель ticket не может
+сначала добавить своё событие, чтобы пройти последующую known-author проверку.
+
+До отправки запрошенных локальных events клиент также проверяет подписанный и
+session-bound diff listener. Подписант обязан совпадать с application device ID
+из connection ticket; одной transport identity или копии старого signed event
+недостаточно, чтобы запросить историю клиента.
+
+Это временный профиль: правило known-author не заменяет Account Root
+authorization и revocation, полный список IDs не заменяет compact Merkle/range
+summary, а continuation пока требует нового соединения.
+
 Постоянный plaintext хранится только на устройствах, которым он предназначен.
 Локальная БД шифруется отдельным ключом устройства, защищённым средствами ОС,
 где они доступны.

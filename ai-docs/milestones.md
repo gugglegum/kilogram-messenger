@@ -108,11 +108,64 @@ Storage smoke test после двух последовательных соед
 - история пока не синхронизируется, если один из участников пропустил событие;
 - вывод `history` отсортирован по event ID и не является timeline ordering.
 
-### Следующее расширение M0.1
+### M0.1.3 — bounded inventory/diff sync: выполнено
 
-1. Реализовать bounded протокол обмена inventory/summary для одного
-   conversation.
-2. Передавать отсутствующие events, повторно проверять и идемпотентно сохранять
-   их на принимающей стороне.
-3. Проверить восстановление намеренно пропущенного события после перезапуска.
-4. Затем выделить transport interface из CLI перед M0.2 на двух хостах.
+Реализовано:
+
+- новый ALPN `kilogram/m0/sync/1` и typed Postcard envelopes для delivery и
+  sync;
+- connection ticket подписан application device key listener; подмена Iroh
+  endpoint, listener ID или allowed requester ID обнаруживается до отправки
+  inventory;
+- команда `identity` позволяет заранее получить requester ID; `listen` требует
+  явный `--allow-device`, а signed ticket фиксирует это разрешение;
+- двухфазный bidirectional sync на одном Iroh connection: signed inventory,
+  diff, ответный event batch и completion;
+- полный inventory ограничен 4096 event IDs;
+- один diff ограничен 64 events в каждом направлении и сообщает
+  `more_available` для продолжения;
+- каждый embedded event повторно проверяется protocol и store слоями;
+- listener запрашивает только IDs из подписанного inventory, клиент отправляет
+  только явно запрошенные events, обе стороны сверяют точные множества IDs;
+- inventory подписывается application device key и session-bound к текущему
+  Iroh Endpoint ID listener;
+- diff подписывается application device key listener, также session-bound, а
+  клиент проверяет владение публичным ключом из connection ticket до отправки
+  запрошенных локальных events;
+- listener синхронизирует историю только device ID, уже встречавшемуся как
+  автор локального conversation и совпадающему с `--allow-device`;
+- неизвестный requester получает явный `SyncRejected`, не историю и не
+  зависшее соединение;
+- store умеет строить двунаправленный bounded sync plan и выбирать events по
+  запрошенным IDs.
+
+Recovery smoke tests:
+
+1. Новый пустой store с прежним ключом Alice восстановил 2 события с Bob.
+2. Частичный store Bob запросил и получил недостающее событие у Alice во второй
+   фазе протокола.
+3. Обе восстановленные истории получили одинаковый frontier.
+4. Device, не совпадающий с allowed requester в signed ticket, отклонён клиентом
+   до Iroh connection.
+5. Явно allowed, но отсутствующий среди authors device получил
+   `RequesterNotKnown`; listener завершил запрос штатно без раскрытия events.
+6. Финальный recovery прогон повторён с одновременно signed ticket и signed
+   session-bound diff.
+
+Ограничения:
+
+- правило «известный author device» — временная M0 authorization, а не замена
+  Account Root certificates, membership epochs и revocation;
+- ticket раскрывает listener и allowed requester device IDs;
+- full-ID inventory раскрывает peer известный набор event IDs и не масштабируется
+  как Merkle/range summary;
+- continuation пока требует нового запуска listener и команды `sync`;
+- batch sync не имеет resumable cursor;
+- payload и локальный store всё ещё не зашифрованы.
+
+### Следующее расширение M0
+
+1. Выделить transport/session handlers из CLI в отдельный testable crate.
+2. Добавить автоматическое продолжение bounded sync rounds в одном соединении.
+3. Подготовить диагностику выбранного Iroh path.
+4. Выполнить M0.2 на двух физических хостах в LAN.

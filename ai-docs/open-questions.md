@@ -32,6 +32,10 @@
 
 - Какая production database и схема at-rest encryption заменят временный
   content-addressed filesystem store из M0.1.2?
+- Какая Merkle/range summary и cursor-схема заменит bounded full-ID inventory
+  M0.1.3, не раскрывая лишнюю структуру истории?
+- Как Account Root certificates, conversation membership и revocation заменят
+  временное правило sync authorization «device уже был автором»?
 - Схема blind mailbox: вычисление адресов, TTL, подтверждение получения,
   повторная доставка и unlinkability.
 - Репликация или erasure coding: сколько случайных узлов и какие гарантии нужны?
