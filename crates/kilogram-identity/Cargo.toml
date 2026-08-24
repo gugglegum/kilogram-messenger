@@ -1,0 +1,19 @@
+[package]
+name = "kilogram-identity"
+description = "Application-level device identities for Kilogram"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+ed25519-dalek.workspace = true
+getrandom.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

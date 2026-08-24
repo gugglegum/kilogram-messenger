@@ -1,5 +1,10 @@
 [workspace]
-members = ["apps/kilogram-cli"]
+members = [
+    "apps/kilogram-cli",
+    "crates/kilogram-identity",
+    "crates/kilogram-protocol",
+    "crates/kilogram-store",
+]
 resolver = "3"
 
 [workspace.package]
@@ -10,10 +15,16 @@ rust-version = "1.91"
 [workspace.dependencies]
 anyhow = "1.0"
 base64 = "0.22"
+blake3 = "1.8"
 clap = { version = "4.5", features = ["derive"] }
+ed25519-dalek = "3.0"
+getrandom = "0.4"
 iroh = "1.0.3"
+postcard = { version = "1.1", features = ["alloc"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+tempfile = "3.0"
+thiserror = "2.0"
 tokio = { version = "1.0", features = ["fs", "io-util", "macros", "rt-multi-thread", "time"] }
 
 [workspace.lints.rust]

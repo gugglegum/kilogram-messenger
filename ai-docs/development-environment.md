@@ -1,6 +1,6 @@
 # Среда разработки
 
-Проверено: 2026-08-24 после обновления toolchain.
+Проверено: 2026-08-25 после реализации M0.1.1.
 
 ## Текущий Windows-хост
 
@@ -32,8 +32,14 @@ toolchain `1.98.0` для воспроизводимой разработки.
 2. Компиляция минимального executable — успешно.
 3. `cargo fmt --all -- --check` — успешно.
 4. `cargo clippy --workspace --all-targets --all-features -- -D warnings` — успешно.
-5. `cargo test --workspace --all-targets` — 2 теста успешно.
-6. Два локальных Iroh endpoint обменялись сообщением и acknowledgement — успешно.
+5. `cargo test --workspace --all-targets` — 14 тестов успешно.
+6. Два локальных Iroh endpoint обменялись signed event и signed
+   acknowledgement — успешно.
+7. После перезапуска обоих процессов application device IDs сохранились,
+   transport Endpoint IDs сменились, author sequence продолжился — успешно.
+8. После двух storage-aware соединений оба state directories содержат по 4
+   одинаковых валидных events, один общий frontier и causal link между
+   последовательными обменами — успешно.
 
 Публичный relay пока не проверялся: M0.1 использовал ticket с локальными IP
 адресами и direct connection на одном хосте.

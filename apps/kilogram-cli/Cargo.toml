@@ -1,6 +1,6 @@
 [package]
 name = "kilogram-cli"
-description = "Kilogram P2P transport proof of concept"
+description = "Kilogram P2P protocol proof of concept"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -11,6 +11,9 @@ anyhow.workspace = true
 base64.workspace = true
 clap.workspace = true
 iroh.workspace = true
+kilogram-identity = { path = "../../crates/kilogram-identity" }
+kilogram-protocol = { path = "../../crates/kilogram-protocol" }
+kilogram-store = { path = "../../crates/kilogram-store" }
 serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
