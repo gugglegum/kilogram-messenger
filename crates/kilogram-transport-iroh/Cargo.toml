@@ -1,0 +1,15 @@
+[package]
+name = "kilogram-transport-iroh"
+description = "Iroh transport adapter for Kilogram protocol envelopes"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+iroh.workspace = true
+kilogram-protocol = { path = "../kilogram-protocol" }
+
+[lints]
+workspace = true

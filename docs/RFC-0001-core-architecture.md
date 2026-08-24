@@ -275,9 +275,20 @@ session-bound diff listener. Подписант обязан совпадать 
 из connection ticket; одной transport identity или копии старого signed event
 недостаточно, чтобы запросить историю клиента.
 
+M0.1.4 выносит эти проверки и переходы протокола в transport-independent
+`kilogram-session`, доступ к событиям задаётся узким `SessionStore` trait.
+Iroh-specific ALPN и framing находятся в отдельном
+`kilogram-transport-iroh`. CLI автоматически повторяет bounded rounds в одном
+аутентифицированном Iroh connection до convergence, но не более 64 rounds.
+Детерминированный тест с 70 отсутствующими событиями в каждом направлении
+сходится за два rounds (64 + 6). Запись принятого batch в временный файловый
+store проверяет существующую conversation history один раз на batch.
+
 Это временный профиль: правило known-author не заменяет Account Root
 authorization и revocation, полный список IDs не заменяет compact Merkle/range
-summary, а continuation пока требует нового соединения.
+summary, а восстановление rounds после разрыва ещё не имеет resumable cursor.
+Лимит inventory означает, что этот M0-профиль перестаёт работать после 4096
+локальных events и не является масштабируемым алгоритмом истории.
 
 Постоянный plaintext хранится только на устройствах, которым он предназначен.
 Локальная БД шифруется отдельным ключом устройства, защищённым средствами ОС,

@@ -3,7 +3,9 @@ members = [
     "apps/kilogram-cli",
     "crates/kilogram-identity",
     "crates/kilogram-protocol",
+    "crates/kilogram-session",
     "crates/kilogram-store",
+    "crates/kilogram-transport-iroh",
 ]
 resolver = "3"
 

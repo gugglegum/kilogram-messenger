@@ -163,9 +163,53 @@ Recovery smoke tests:
 - batch sync не имеет resumable cursor;
 - payload и локальный store всё ещё не зашифрованы.
 
+### M0.1.4 — transport boundary и automatic continuation: выполнено
+
+Реализовано:
+
+- `kilogram-session` содержит transport-independent client/server sync state
+  machine и все проверки responder identity, session binding, conversation,
+  requested IDs, exact batches и completion;
+- `SessionStore` отделяет reconciliation rules от конкретного файлового store
+  и позволяет детерминированно тестировать их в памяти;
+- `kilogram-transport-iroh` содержит Iroh ALPN, лимит wire message и typed
+  Postcard framing; Iroh stream types больше не используются session-слоем;
+- CLI автоматически повторяет inventory/diff/batch/completion rounds в одном
+  Iroh connection до convergence;
+- один connection ограничен 64 rounds, один round — прежними 64 events в каждом
+  направлении;
+- новый `EventStore::put_batch` проверяет существующую writer history один раз
+  для всего принятого batch и сохраняет dedup/equivocation guarantees;
+- CLI печатает per-round counters, общее число rounds и итоговые totals.
+
+Проверки:
+
+- in-memory расхождение 70 client-only и 70 server-only events сошлось ровно за
+  два rounds (64 + 6) в обе стороны;
+- неизвестный requester по-прежнему получает `RequesterNotKnown` до раскрытия
+  events;
+- локальный Iroh smoke после разделения crates восстановил отставшему client 2
+  events, завершился с `sync_rounds_completed=1` и одинаковой валидной историей;
+- `cargo fmt`, строгий Clippy и все 24 workspace tests прошли.
+
+Ограничения:
+
+- full-ID inventory по-прежнему ограничен 4096 IDs, поэтому это только M0
+  reconciliation profile;
+- после разрыва connection нет signed resumable cursor: следующая команда
+  начинает reconciliation с нового полного inventory;
+- 64-round cap защищает connection от бесконечной работы, но не является
+  production policy;
+- transport adapter пока покрывает только Iroh, а его граница ещё должна быть
+  проверена альтернативным transport или test adapter;
+- payload и локальный store всё ещё не зашифрованы.
+
 ### Следующее расширение M0
 
-1. Выделить transport/session handlers из CLI в отдельный testable crate.
-2. Добавить автоматическое продолжение bounded sync rounds в одном соединении.
-3. Подготовить диагностику выбранного Iroh path.
-4. Выполнить M0.2 на двух физических хостах в LAN.
+1. Подготовить диагностику выбранного Iroh path (direct/relay, addresses,
+   timings) без смешивания её с session rules.
+2. Выполнить M0.2 на двух физических хостах в LAN.
+3. Проверить reconnect/error paths и определить минимальный resumable sync
+   cursor до замены full-ID inventory на Merkle/range summary.
+4. Начать Account Root → Device authorization model либо pairwise E2EE spike по
+   приоритету следующего RFC/ADR.

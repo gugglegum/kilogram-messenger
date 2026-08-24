@@ -1708,7 +1708,9 @@ dependencies = [
  "iroh",
  "kilogram-identity",
  "kilogram-protocol",
+ "kilogram-session",
  "kilogram-store",
+ "kilogram-transport-iroh",
  "serde",
  "serde_json",
  "tokio",
@@ -1737,6 +1739,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "kilogram-session"
+version = "0.1.0"
+dependencies = [
+ "kilogram-identity",
+ "kilogram-protocol",
+ "kilogram-store",
+ "thiserror 2.0.20",
+]
+
+[[package]]
 name = "kilogram-store"
 version = "0.1.0"
 dependencies = [
@@ -1744,6 +1756,15 @@ dependencies = [
  "kilogram-protocol",
  "tempfile",
  "thiserror 2.0.20",
+]
+
+[[package]]
+name = "kilogram-transport-iroh"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "iroh",
+ "kilogram-protocol",
 ]
 
 [[package]]

@@ -1,5 +1,4 @@
 use std::{
-    collections::HashSet,
     path::{Path, PathBuf},
     time::Duration,
 };
@@ -9,21 +8,22 @@ use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use clap::{Parser, Subcommand};
 use iroh::{
     Endpoint, EndpointAddr,
-    endpoint::{RecvStream, SendStream, presets},
+    endpoint::{SendStream, presets},
 };
 use kilogram_identity::{DeviceId, DeviceIdentity, DeviceState};
 use kilogram_protocol::{
-    ClientRequest, ConversationId, EventId, EventPayload, MAX_SYNC_EVENTS_PER_BATCH,
-    ServerResponse, SignedEvent, SignedSyncInventory, SyncComplete, SyncDiff, SyncEventBatch,
-    SyncRejected, SyncRejectionReason, SyncSessionBinding,
+    ClientRequest, ConversationId, EventPayload, ServerResponse, SignedEvent, SignedSyncInventory,
+    SyncSessionBinding,
 };
+use kilogram_session::{MAX_SYNC_ROUNDS, ServerInventoryOutcome, SyncClient, SyncServer};
 use kilogram_store::EventStore;
+use kilogram_transport_iroh::{
+    ALPN, read_client_request, read_server_response, write_client_request, write_server_response,
+};
 use serde::{Deserialize, Serialize};
 use tokio::time::timeout;
 
-const ALPN: &[u8] = b"kilogram/m0/sync/1";
 const EVENT_STORE_DIRECTORY: &str = "events";
-const MAX_WIRE_MESSAGE_BYTES: usize = 8 * 1024 * 1024;
 const TICKET_SIGNATURE_DOMAIN: &[u8] = b"kilogram:connection-ticket-signature:v1\0";
 const TICKET_VERSION: u8 = 1;
 
@@ -40,7 +40,7 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Command {
-    /// Listen for one connection, acknowledge one message, then exit.
+    /// Handle one delivery or synchronization connection, then exit.
     Listen {
         /// Directory containing this application's persistent development device identity.
         #[arg(long)]
@@ -82,7 +82,7 @@ enum Command {
         conversation: String,
     },
 
-    /// Reconcile one bounded batch of conversation events with a listener.
+    /// Reconcile bounded conversation event batches with a listener until converged.
     Sync {
         /// Directory containing this application's development state.
         #[arg(long)]
@@ -303,7 +303,7 @@ async fn listen(
                 &device_state,
                 &event_store,
                 &connection,
-                &mut send,
+                send,
                 inventory,
                 session_binding,
                 allowed_requester_device_id,
@@ -370,83 +370,92 @@ async fn handle_sync_request(
     device_state: &DeviceState,
     event_store: &EventStore,
     connection: &iroh::endpoint::Connection,
-    first_send: &mut SendStream,
-    inventory: SignedSyncInventory,
+    first_send: SendStream,
+    first_inventory: SignedSyncInventory,
     expected_session: SyncSessionBinding,
     allowed_requester_device_id: DeviceId,
 ) -> Result<()> {
-    inventory
-        .verify_for_session(expected_session)
-        .context("verify sync inventory session binding")?;
-    let conversation_id = inventory.conversation_id();
-    if inventory.requester_device_id() != allowed_requester_device_id {
-        let rejected = SyncRejected::new(conversation_id, SyncRejectionReason::RequesterNotAllowed);
-        write_server_response(first_send, &ServerResponse::SyncRejected(rejected)).await?;
-        println!("sync_rejected=RequesterNotAllowed");
-        println!("status=rejected");
-        return Ok(());
-    }
-    let requester_is_known = event_store
-        .contains_author(conversation_id, inventory.requester_device_id())
-        .context("check sync requester against local conversation authors")?;
-    if !requester_is_known {
-        let rejected = SyncRejected::new(conversation_id, SyncRejectionReason::RequesterNotKnown);
-        write_server_response(first_send, &ServerResponse::SyncRejected(rejected)).await?;
-        println!("sync_rejected=RequesterNotKnown");
-        println!("status=rejected");
-        return Ok(());
-    }
-
-    let plan = event_store
-        .plan_sync(
-            conversation_id,
-            inventory.event_ids(),
-            MAX_SYNC_EVENTS_PER_BATCH,
-        )
-        .context("calculate bounded sync diff")?;
-    let requested_event_ids = plan.requested_from_remote;
-    let events_for_remote_count = plan.events_for_remote.len();
-    let more_available = plan.more_available;
-    let diff = SyncDiff::sign(
+    let server = SyncServer::new(
         device_state.identity(),
-        conversation_id,
+        event_store,
         expected_session,
-        requested_event_ids.clone(),
-        plan.events_for_remote,
-        more_available,
-    )?;
-    write_server_response(first_send, &ServerResponse::SyncDiff(diff)).await?;
+        allowed_requester_device_id,
+    );
+    let mut inventory = first_inventory;
+    let mut inventory_send = first_send;
+    let mut total_sent_events = 0;
+    let mut total_received_events = 0;
 
-    let (mut second_send, mut second_receive) = connection
-        .accept_bi()
-        .await
-        .context("accept sync event batch stream")?;
-    let batch = match read_client_request(&mut second_receive).await? {
-        ClientRequest::SyncEvents(batch) => batch,
-        _ => bail!("listener expected a sync event batch as the second request"),
-    };
-    ensure!(
-        batch.conversation_id() == conversation_id,
-        "sync event batch belongs to a different conversation"
-    );
-    let supplied_event_ids = event_ids(batch.events())?;
-    ensure!(
-        same_event_ids(&supplied_event_ids, &requested_event_ids),
-        "sync event batch does not exactly satisfy the requested event IDs"
-    );
-    for event in batch.into_events() {
-        event_store
-            .put(&event)
-            .context("persist event received during sync")?;
+    for round_number in 1..=MAX_SYNC_ROUNDS {
+        let server_round = match server.accept_inventory(&inventory)? {
+            ServerInventoryOutcome::Accepted(round) => round,
+            ServerInventoryOutcome::Rejected(rejected) => {
+                write_server_response(
+                    &mut inventory_send,
+                    &ServerResponse::SyncRejected(rejected.clone()),
+                )
+                .await?;
+                println!("sync_rejected={:?}", rejected.reason());
+                println!("sync_rounds_completed={}", round_number - 1);
+                println!("status=rejected");
+                return Ok(());
+            }
+        };
+        write_server_response(
+            &mut inventory_send,
+            &ServerResponse::SyncDiff(server_round.diff().clone()),
+        )
+        .await?;
+
+        let (mut batch_send, mut batch_receive) = connection
+            .accept_bi()
+            .await
+            .context("accept sync event batch stream")?;
+        let batch = match read_client_request(&mut batch_receive).await? {
+            ClientRequest::SyncEvents(batch) => batch,
+            _ => bail!("listener expected a sync event batch after a sync diff"),
+        };
+        let completion = server.complete_round(*server_round, batch)?;
+        let stats = completion.stats();
+        write_server_response(
+            &mut batch_send,
+            &ServerResponse::SyncComplete(completion.response().clone()),
+        )
+        .await?;
+        total_sent_events += stats.sent_events;
+        total_received_events += stats.received_events;
+        println!(
+            "sync_round_{round_number}_sent_events={}",
+            stats.sent_events
+        );
+        println!(
+            "sync_round_{round_number}_received_events={}",
+            stats.received_events
+        );
+
+        if !stats.more_available {
+            println!("sync_rounds_completed={round_number}");
+            println!("sync_sent_events={total_sent_events}");
+            println!("sync_received_events={total_received_events}");
+            println!("sync_more_available=false");
+            println!("status=synchronized");
+            return Ok(());
+        }
+        if round_number == MAX_SYNC_ROUNDS {
+            bail!("sync exceeded the limit of {MAX_SYNC_ROUNDS} rounds");
+        }
+
+        let (next_send, mut next_receive) = connection
+            .accept_bi()
+            .await
+            .context("accept next sync inventory stream")?;
+        inventory = match read_client_request(&mut next_receive).await? {
+            ClientRequest::SyncInventory(inventory) => inventory,
+            _ => bail!("listener expected another sync inventory for continuation"),
+        };
+        inventory_send = next_send;
     }
-
-    let complete = SyncComplete::new(conversation_id, supplied_event_ids.clone(), more_available)?;
-    write_server_response(&mut second_send, &ServerResponse::SyncComplete(complete)).await?;
-    println!("sync_sent_events={events_for_remote_count}");
-    println!("sync_received_events={}", supplied_event_ids.len());
-    println!("sync_more_available={more_available}");
-    println!("status=synchronized");
-    Ok(())
+    bail!("sync exceeded the limit of {MAX_SYNC_ROUNDS} rounds")
 }
 
 async fn connect(
@@ -567,16 +576,13 @@ async fn sync(
     let session_binding =
         SyncSessionBinding::from_transport_label(&ticket.endpoint().id.to_string());
     let conversation_id = ConversationId::from_label(&conversation);
-    let inventory_ids = event_store
-        .inventory(conversation_id)
-        .context("build local sync inventory")?;
-    let inventory = SignedSyncInventory::sign(
+    let client = SyncClient::new(
         device_state.identity(),
+        &event_store,
         conversation_id,
         session_binding,
-        inventory_ids.clone(),
-    )
-    .context("sign sync inventory")?;
+        expected_listener_device_id,
+    );
 
     let endpoint = Endpoint::bind(presets::N0)
         .await
@@ -589,81 +595,72 @@ async fn sync(
         .context("connect to listening endpoint for sync")?;
     println!("peer_id={}", connection.remote_id());
 
-    let (mut first_send, mut first_receive) = connection
-        .open_bi()
-        .await
-        .context("open sync inventory stream")?;
-    write_client_request(&mut first_send, &ClientRequest::SyncInventory(inventory)).await?;
-    let diff = match read_server_response(&mut first_receive).await? {
-        ServerResponse::SyncDiff(diff) => diff,
-        ServerResponse::SyncRejected(rejected) => {
-            ensure!(
-                rejected.conversation_id() == conversation_id,
-                "sync rejection belongs to a different conversation"
-            );
-            bail!("sync rejected by listener: {:?}", rejected.reason());
+    let mut total_sent_events = 0;
+    let mut total_received_events = 0;
+    for round_number in 1..=MAX_SYNC_ROUNDS {
+        let inventory_round = client.begin_round()?;
+        let inventory_event_count = inventory_round.inventory_event_count();
+        let (mut inventory_send, mut inventory_receive) = connection
+            .open_bi()
+            .await
+            .context("open sync inventory stream")?;
+        write_client_request(
+            &mut inventory_send,
+            &ClientRequest::SyncInventory(inventory_round.inventory().clone()),
+        )
+        .await?;
+        let diff = match read_server_response(&mut inventory_receive).await? {
+            ServerResponse::SyncDiff(diff) => diff,
+            ServerResponse::SyncRejected(rejected) => {
+                ensure!(
+                    rejected.conversation_id() == conversation_id,
+                    "sync rejection belongs to a different conversation"
+                );
+                bail!("sync rejected by listener: {:?}", rejected.reason());
+            }
+            _ => bail!("sync client expected a sync diff response"),
+        };
+        let batch_round = client.accept_diff(inventory_round, diff)?;
+
+        let (mut batch_send, mut batch_receive) = connection
+            .open_bi()
+            .await
+            .context("open sync event batch stream")?;
+        write_client_request(
+            &mut batch_send,
+            &ClientRequest::SyncEvents(batch_round.batch().clone()),
+        )
+        .await?;
+        let complete = match read_server_response(&mut batch_receive).await? {
+            ServerResponse::SyncComplete(complete) => complete,
+            _ => bail!("sync client expected a sync completion response"),
+        };
+        let stats = client.accept_complete(batch_round, complete)?;
+        total_sent_events += stats.sent_events;
+        total_received_events += stats.received_events;
+        println!("sync_round_{round_number}_inventory_events={inventory_event_count}");
+        println!(
+            "sync_round_{round_number}_received_events={}",
+            stats.received_events
+        );
+        println!(
+            "sync_round_{round_number}_sent_events={}",
+            stats.sent_events
+        );
+
+        if !stats.more_available {
+            println!("sync_rounds_completed={round_number}");
+            println!("sync_received_events={total_received_events}");
+            println!("sync_sent_events={total_sent_events}");
+            println!("sync_more_available=false");
+            println!("status=synchronized");
+
+            connection.close(0_u32.into(), b"kilogram m0 sync complete");
+            endpoint.close().await;
+            return Ok(());
         }
-        _ => bail!("sync client expected a sync diff response"),
-    };
-    diff.verify_for_session(session_binding, expected_listener_device_id)
-        .context("verify sync responder identity and session binding")?;
-    ensure!(
-        diff.conversation_id() == conversation_id,
-        "sync diff belongs to a different conversation"
-    );
-    let advertised_ids: HashSet<_> = inventory_ids.iter().copied().collect();
-    ensure!(
-        diff.requested_event_ids()
-            .iter()
-            .all(|event_id| advertised_ids.contains(event_id)),
-        "listener requested an event that was not in the signed inventory"
-    );
-
-    let received_event_ids = event_ids(diff.events())?;
-    for event in diff.events() {
-        event_store
-            .put(event)
-            .context("persist event received from sync diff")?;
     }
-    let requested_event_ids = diff.requested_event_ids().to_vec();
-    let events_for_listener = event_store
-        .events_by_id(conversation_id, &requested_event_ids)
-        .context("load events requested by listener")?;
-    let sent_event_ids = event_ids(&events_for_listener)?;
-    let more_available = diff.more_available();
-
-    let (mut second_send, mut second_receive) = connection
-        .open_bi()
-        .await
-        .context("open sync event batch stream")?;
-    let batch = SyncEventBatch::new(conversation_id, events_for_listener)?;
-    write_client_request(&mut second_send, &ClientRequest::SyncEvents(batch)).await?;
-    let complete = match read_server_response(&mut second_receive).await? {
-        ServerResponse::SyncComplete(complete) => complete,
-        _ => bail!("sync client expected a sync completion response"),
-    };
-    ensure!(
-        complete.conversation_id() == conversation_id,
-        "sync completion belongs to a different conversation"
-    );
-    ensure!(
-        same_event_ids(complete.stored_event_ids(), &sent_event_ids),
-        "listener did not confirm the exact event batch sent by the client"
-    );
-    ensure!(
-        complete.more_available() == more_available,
-        "sync completion disagrees about continuation state"
-    );
-
-    println!("sync_inventory_events={}", inventory_ids.len());
-    println!("sync_received_events={}", received_event_ids.len());
-    println!("sync_sent_events={}", sent_event_ids.len());
-    println!("sync_more_available={more_available}");
-    println!("status=synchronized");
-
-    connection.close(0_u32.into(), b"kilogram m0 sync complete");
-    endpoint.close().await;
-    Ok(())
+    bail!("sync exceeded the limit of {MAX_SYNC_ROUNDS} rounds")
 }
 
 async fn load_connection_ticket(
@@ -679,51 +676,6 @@ async fn load_connection_ticket(
         (Some(_), Some(_)) => bail!("--ticket and --ticket-file are mutually exclusive"),
     };
     ConnectionTicket::decode(&encoded_ticket)
-}
-
-async fn read_client_request(receive: &mut RecvStream) -> Result<ClientRequest> {
-    let bytes = receive
-        .read_to_end(MAX_WIRE_MESSAGE_BYTES)
-        .await
-        .context("read client protocol request")?;
-    ClientRequest::decode(&bytes).context("decode and verify client protocol request")
-}
-
-async fn write_client_request(send: &mut SendStream, request: &ClientRequest) -> Result<()> {
-    send.write_all(&request.encode()?)
-        .await
-        .context("send client protocol request")?;
-    send.finish().context("finish client protocol request")?;
-    Ok(())
-}
-
-async fn read_server_response(receive: &mut RecvStream) -> Result<ServerResponse> {
-    let bytes = receive
-        .read_to_end(MAX_WIRE_MESSAGE_BYTES)
-        .await
-        .context("read server protocol response")?;
-    ServerResponse::decode(&bytes).context("decode and verify server protocol response")
-}
-
-async fn write_server_response(send: &mut SendStream, response: &ServerResponse) -> Result<()> {
-    send.write_all(&response.encode()?)
-        .await
-        .context("send server protocol response")?;
-    send.finish().context("finish server protocol response")?;
-    Ok(())
-}
-
-fn event_ids(events: &[SignedEvent]) -> Result<Vec<EventId>> {
-    events
-        .iter()
-        .map(|event| event.event_id().map_err(Into::into))
-        .collect()
-}
-
-fn same_event_ids(left: &[EventId], right: &[EventId]) -> bool {
-    left.len() == right.len()
-        && left.iter().copied().collect::<HashSet<_>>()
-            == right.iter().copied().collect::<HashSet<_>>()
 }
 
 fn show_identity(state_dir: PathBuf) -> Result<()> {

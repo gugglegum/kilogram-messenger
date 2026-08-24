@@ -7,7 +7,7 @@ stage. Do not use it for sensitive communication.
 The project goals and draft architecture are documented in
 [`docs/RFC-0001-core-architecture.md`](docs/RFC-0001-core-architecture.md).
 
-## Current milestone: M0.1.3 bounded history sync
+## Current milestone: M0.1.4 automatic bounded history sync
 
 The CLI exchanges a signed text event and a signed acknowledgement over an
 authenticated Iroh/QUIC connection. Application-level device identities are
@@ -16,11 +16,17 @@ Every verified event is also persisted locally before the corresponding send
 or acknowledgement. Repeated writes are idempotent and stored corruption is
 detected when history is read.
 
-Two known conversation devices can reconcile one bounded batch in both
-directions. The inventory is signed by the requesting application device and
-bound to the listener's current Iroh Endpoint ID. The listener signs its diff
-with the application device key named in the ticket. It rejects devices that
-have never authored an event in its local copy of the conversation.
+Two known conversation devices can reconcile bounded batches in both directions
+until their histories converge. The inventory is signed by the requesting
+application device and bound to the listener's current Iroh Endpoint ID. The
+listener signs its diff with the application device key named in the ticket. It
+rejects devices that have never authored an event in its local copy of the
+conversation.
+
+The transport-independent reconciliation state machine lives in
+`kilogram-session`; the Iroh ALPN and typed stream framing live in
+`kilogram-transport-iroh`. The CLI only orchestrates these layers. This is the
+first concrete transport-replacement boundary, not yet the final transport API.
 
 This remains a development prototype. It does **not** yet implement Account
 Root Identity, device authorization/revocation, message-level E2EE, encrypted
@@ -78,10 +84,12 @@ cargo run -p kilogram-cli -- sync `
   --ticket-file .tmp/listener.ticket
 ```
 
-One round accepts at most 4,096 inventory IDs and transfers at most 64 events
-in each direction. If `sync_more_available=true`, start another listener and
-repeat the command. This full-ID inventory is an M0 mechanism, not the future
-compact Merkle summary.
+Each round accepts at most 4,096 inventory IDs and transfers at most 64 events
+in each direction. One `sync` invocation automatically continues for up to 64
+rounds on the same Iroh connection and finishes with
+`sync_more_available=false`. This full-ID inventory is an M0 mechanism, not the
+future compact Merkle summary: once a local conversation exceeds 4,096 events,
+this development profile must be replaced rather than treated as scalable sync.
 
 The connection ticket is public addressing data: it contains the listener's
 Iroh address and public application device ID. The application device signs

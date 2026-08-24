@@ -69,21 +69,59 @@ impl EventStore {
             }
         }
 
-        let mut temporary = NamedTempFile::new_in(&conversation_directory)?;
-        temporary.write_all(&encoded)?;
-        temporary.as_file().sync_all()?;
+        persist_event(&conversation_directory, &destination, &encoded, event_id)
+    }
 
-        match temporary.persist_noclobber(&destination) {
-            Ok(file) => {
-                file.sync_all()?;
-                sync_directory(&conversation_directory)?;
-                Ok(StoreOutcome::Inserted)
-            }
-            Err(error) if error.error.kind() == io::ErrorKind::AlreadyExists => {
-                validate_existing_event(&destination, &encoded, event_id)
-            }
-            Err(error) => Err(error.error.into()),
+    pub fn put_batch(&self, events: &[SignedEvent]) -> Result<(), StoreError> {
+        let mut conversations: HashMap<ConversationId, Vec<&SignedEvent>> = HashMap::new();
+        for event in events {
+            event.verify()?;
+            conversations
+                .entry(event.conversation_id())
+                .or_default()
+                .push(event);
         }
+
+        for (conversation_id, new_events) in conversations {
+            let existing_events = self.load_conversation(conversation_id)?;
+            let mut writer_positions: HashMap<(DeviceId, u64), EventId> = existing_events
+                .into_iter()
+                .map(|stored| {
+                    (
+                        (
+                            stored.event.author_device_id(),
+                            stored.event.author_sequence(),
+                        ),
+                        stored.id,
+                    )
+                })
+                .collect();
+            let conversation_directory = self.conversation_directory(conversation_id);
+            fs::create_dir_all(&conversation_directory)?;
+
+            for event in new_events {
+                let event_id = event.event_id()?;
+                let encoded = event.encode()?;
+                let destination = event_path(&conversation_directory, event_id);
+                if destination.try_exists()? {
+                    validate_existing_event(&destination, &encoded, event_id)?;
+                    continue;
+                }
+
+                let writer_position = (event.author_device_id(), event.author_sequence());
+                if let Some(existing_event_id) = writer_positions.get(&writer_position) {
+                    return Err(StoreError::WriterSequenceConflict {
+                        author_device_id: event.author_device_id(),
+                        author_sequence: event.author_sequence(),
+                        existing_event_id: *existing_event_id,
+                        rejected_event_id: event_id,
+                    });
+                }
+                persist_event(&conversation_directory, &destination, &encoded, event_id)?;
+                writer_positions.insert(writer_position, event_id);
+            }
+        }
+        Ok(())
     }
 
     pub fn load_conversation(
@@ -267,6 +305,29 @@ fn validate_existing_event(
             path: path.to_path_buf(),
             event_id,
         })
+    }
+}
+
+fn persist_event(
+    conversation_directory: &Path,
+    destination: &Path,
+    encoded: &[u8],
+    event_id: EventId,
+) -> Result<StoreOutcome, StoreError> {
+    let mut temporary = NamedTempFile::new_in(conversation_directory)?;
+    temporary.write_all(encoded)?;
+    temporary.as_file().sync_all()?;
+
+    match temporary.persist_noclobber(destination) {
+        Ok(file) => {
+            file.sync_all()?;
+            sync_directory(conversation_directory)?;
+            Ok(StoreOutcome::Inserted)
+        }
+        Err(error) if error.error.kind() == io::ErrorKind::AlreadyExists => {
+            validate_existing_event(destination, encoded, event_id)
+        }
+        Err(error) => Err(error.error.into()),
     }
 }
 
@@ -480,6 +541,44 @@ mod tests {
             local.events_by_id(conversation_id, &[local_only_id])?,
             plan.events_for_remote
         );
+        Ok(())
+    }
+
+    #[test]
+    fn batch_put_inserts_events_and_rejects_equivocation() -> Result<(), Box<dyn Error>> {
+        let directory = tempdir()?;
+        let store = EventStore::open(directory.path())?;
+        let conversation_id = ConversationId::from_label("batch-put");
+        let identity = DeviceIdentity::generate()?;
+        let first = SignedEvent::sign_text(
+            &identity,
+            conversation_id,
+            0,
+            Vec::new(),
+            "first".to_owned(),
+        )?;
+        let second = SignedEvent::sign_text(
+            &identity,
+            conversation_id,
+            1,
+            Vec::new(),
+            "second".to_owned(),
+        )?;
+        store.put_batch(&[first.clone(), second.clone()])?;
+        store.put_batch(&[first])?;
+        assert_eq!(store.load_conversation(conversation_id)?.len(), 2);
+
+        let conflicting = SignedEvent::sign_text(
+            &identity,
+            conversation_id,
+            1,
+            Vec::new(),
+            "conflicting".to_owned(),
+        )?;
+        assert!(matches!(
+            store.put_batch(&[conflicting]),
+            Err(StoreError::WriterSequenceConflict { .. })
+        ));
         Ok(())
     }
 

@@ -1,6 +1,6 @@
 # Среда разработки
 
-Проверено: 2026-08-25 после реализации M0.1.1.
+Проверено: 2026-08-25 после реализации M0.1.4.
 
 ## Текущий Windows-хост
 
@@ -32,7 +32,7 @@ toolchain `1.98.0` для воспроизводимой разработки.
 2. Компиляция минимального executable — успешно.
 3. `cargo fmt --all -- --check` — успешно.
 4. `cargo clippy --workspace --all-targets --all-features -- -D warnings` — успешно.
-5. `cargo test --workspace --all-targets` — 21 тест успешно.
+5. `cargo test --workspace --all-targets` — 24 теста успешно.
 6. Два локальных Iroh endpoint обменялись signed event и signed
    acknowledgement — успешно.
 7. После перезапуска обоих процессов application device IDs сохранились,
@@ -45,6 +45,11 @@ toolchain `1.98.0` для воспроизводимой разработки.
 10. Device, не совпадающий с allowed requester signed ticket, отклонён до
     соединения; allowed, но неизвестный истории device получил явный
     `RequesterNotKnown` без передачи events и зависания — успешно.
+11. Transport-independent session test синхронизировал расхождение 70 events в
+    каждом направлении за два bounded rounds (64 + 6) — успешно.
+12. Реальный локальный Iroh smoke после разделения crates: отставший client
+    восстановил 2 events за один round; `sync_rounds_completed=1`, итоговый
+    store содержит 2 events и один frontier — успешно.
 
 Публичный relay пока не проверялся: M0.1 использовал ticket с локальными IP
 адресами и direct connection на одном хосте.

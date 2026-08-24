@@ -20,6 +20,7 @@
 | D-014 | 2026-08-25 | предварительно | Для M0 кодировать детерминированные signed events через Postcard, подписывать Ed25519 и идентифицировать BLAKE3. | Это минимальный проверяемый Rust-прототип с domain separation; межъязыковой публичный wire format и crypto agility ещё предстоит спроектировать. |
 | D-015 | 2026-08-25 | предварительно | Для M0 хранить каждый signed event отдельным неизменяемым content-addressed файлом. | Это позволяет проверить append-only, deduplication, corruption detection и causal frontier до выбора production database; формат на диске и отсутствие at-rest encryption не являются production-решением. |
 | D-016 | 2026-08-25 | предварительно | В M0 listener явно задаёт один `allowed requester device`; signed ticket связывает его с listener key и transport Endpoint ID. Sync дополнительно требует, чтобы requester уже был автором conversation; inventory и signed diff session-bound. | Обладатель ticket без разрешённого device key не может сначала внедрить событие, а затем получить историю. Обе стороны доказывают владение ключами до раскрытия events. Это временная граница до Account Root authorization, membership и revocation. |
+| D-017 | 2026-08-25 | принято | Reconciliation state machine не должна зависеть от Iroh: session rules используют узкий store trait, а Iroh-specific ALPN и framing вынесены в отдельный adapter crate. | Проверки identity, session binding, exact event sets и continuation можно тестировать без сети; смена Iroh на другой transport не должна менять правила синхронизации. |
 
 ## Правило изменения решений
 
