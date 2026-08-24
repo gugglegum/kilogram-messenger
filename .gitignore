@@ -1,0 +1,16 @@
+/target/
+/.tmp/
+
+# Local secrets and runtime identity material.
+.env
+*.key
+*.secret
+*.seed
+
+# Locally exchanged connection tickets.
+*.ticket
+
+# Editor and OS noise.
+.idea/
+.DS_Store
+Thumbs.db
