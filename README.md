@@ -6,6 +6,8 @@ stage. Do not use it for sensitive communication.
 
 The project goals and draft architecture are documented in
 [`docs/RFC-0001-core-architecture.md`](docs/RFC-0001-core-architecture.md).
+The current two-network Windows procedure is in
+[`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md).
 
 ## Current milestone: M0.3 cross-network route verification
 
