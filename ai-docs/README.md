@@ -16,10 +16,12 @@ sequence и signed events сохраняются после перезапуск
 transport identity. Bounded signed inventory/diff восстанавливает пропущенные
 events в обе стороны. M0.1.4 автоматически продолжает bounded sync rounds в
 одном Iroh connection; state machine отделена от transport framing. M0.1.5
-показывает фактически выбранный direct/relay path, remote address и RTT.
-Локальные M0.1–M0.1.5 smoke tests пройдены. Прикладное E2EE, Account Root
-Identity, шифрование локальной истории, production-grade sync summaries и
-группы ещё не реализованы.
+показывает фактически выбранный direct/relay path, remote address и RTT. M0.1.6
+исправляет Windows event-store paths длиннее 260 символов. Локальные
+M0.1–M0.1.6 smoke tests пройдены. Реальный M0.2 delivery между двумя Windows-PC
+прошёл по direct LAN; recovery sync ожидает повторения с исправленным build.
+Прикладное E2EE, Account Root Identity, шифрование локальной истории,
+production-grade sync summaries и группы ещё не реализованы.
 
 ## Цель продукта
 
@@ -73,8 +75,8 @@ Identity, шифрование локальной истории, production-gra
 2. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
 3. Спроектировать формат идентичности, сертификатов устройств и revocation log.
 4. Спроектировать wire format подписанного события и алгоритм линеаризации.
-5. После пройденного M0.1.5 проверить выделенную transport boundary и
-   диагностику direct path на двух физических Windows-хостах в LAN.
+5. Завершить M0.2 recovery sync исправленным M0.1.6 build на двух физических
+   Windows-хостах; direct delivery уже подтверждён.
 6. Выполнить M0.2 на двух хостах в LAN и M0.3 в разных сетях, отдельно проверив
    direct path и relay fallback.
 7. Реализовать мультиустройство, затем небольшие MLS-группы.

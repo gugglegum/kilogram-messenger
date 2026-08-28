@@ -1,6 +1,6 @@
 # Среда разработки
 
-Проверено: 2026-08-25 после реализации M0.1.5.
+Проверено: 2026-08-28 после реализации M0.1.6.
 
 ## Текущий Windows-хост
 
@@ -32,7 +32,7 @@ toolchain `1.98.0` для воспроизводимой разработки.
 2. Компиляция минимального executable — успешно.
 3. `cargo fmt --all -- --check` — успешно.
 4. `cargo clippy --workspace --all-targets --all-features -- -D warnings` — успешно.
-5. `cargo test --workspace --all-targets` — 24 теста успешно.
+5. `cargo test --workspace --all-targets` — 25 тестов успешно.
 6. Два локальных Iroh endpoint обменялись signed event и signed
    acknowledgement — успешно.
 7. После перезапуска обоих процессов application device IDs сохранились,
@@ -53,6 +53,13 @@ toolchain `1.98.0` для воспроизводимой разработки.
 13. Path diagnostics на обоих концах локального Iroh exchange сообщили
     `transport_path=direct`, IP transport addresses, RTT и один открытый path —
     успешно.
+14. При `LongPathsEnabled=1` Windows regression test воспроизвёл `os error 3`
+    на event path длиннее 260 символов; canonical/verbatim root устранил ошибку.
+    Полный release recovery smoke сохранил 2 events по пути длиной 298 символов,
+    показал `event_count=2`, `frontier_count=1` и direct path — успешно.
+15. Первый реальный M0.2 exchange между Windows-PC Alice `192.168.0.134` и Bob
+    `192.168.0.135` доставил и подтвердил signed event напрямую по LAN с RTT
+    около 1 ms. Recovery sync выявил long-path bug; повтор с fix ожидается.
 
 Публичный relay пока не проверялся: M0.1 использовал ticket с локальными IP
 адресами и direct connection на одном хосте.

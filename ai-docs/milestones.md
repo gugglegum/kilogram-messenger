@@ -220,9 +220,32 @@ Recovery smoke tests:
 ошибочно считаться успешной LAN direct проверкой. Диагностика пока выводится в
 stdout и не является production telemetry API.
 
+### M0.1.6 — Windows long-path event store: выполнено
+
+Реальный M0.2 recovery test дважды дошёл до sync diff, но пустой client store
+получил `os error 3` при записи. Derived event path имел 268 символов. Системный
+`LongPathsEnabled=1` был включён, однако atomic-file операция получила обычный
+путь без verbatim prefix.
+
+Исправлено:
+
+- `EventStore::open` canonicalizes созданный root; Windows возвращает verbatim
+  absolute path, используемый всеми последующими event operations;
+- Windows regression test намеренно строит event path длиннее 260 символов;
+- до исправления тест воспроизводил тот же `os error 3`, после исправления
+  проходит;
+- полный recovery smoke release-бинарником сохранил 2 events при максимальной
+  длине пути 298 символов, получил `event_count=2`, `frontier_count=1` и
+  `transport_path=direct`;
+- строгий Clippy и все 25 workspace tests проходят.
+
+Внешний M0.2 delivery между двумя физическими Windows-хостами уже подтверждён:
+Alice `192.168.0.134` и Bob `192.168.0.135` выбрали direct LAN path, RTT около
+1 ms. Повтор recovery sync исправленным build остаётся финальной проверкой M0.2.
+
 ### Следующее расширение M0
 
-1. Выполнить M0.2 на двух физических Windows-хостах в LAN и зафиксировать
+1. Завершить M0.2 recovery sync исправленным Windows build и зафиксировать
    `direct` path с обеих сторон.
 2. Проверить reconnect/error paths и определить минимальный resumable sync
    cursor до замены full-ID inventory на Merkle/range summary.

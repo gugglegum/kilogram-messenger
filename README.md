@@ -7,7 +7,7 @@ stage. Do not use it for sensitive communication.
 The project goals and draft architecture are documented in
 [`docs/RFC-0001-core-architecture.md`](docs/RFC-0001-core-architecture.md).
 
-## Current milestone: M0.1.5 transport path diagnostics
+## Current milestone: M0.1.6 Windows long-path storage fix
 
 The CLI exchanges a signed text event and a signed acknowledgement over an
 authenticated Iroh/QUIC connection. Application-level device identities are
@@ -34,6 +34,12 @@ seconds for Iroh relay-to-direct migration and print `transport_path` (`direct`,
 and number of open paths. These development diagnostics make the upcoming
 two-host LAN test distinguish a real direct path from a successful relay
 fallback.
+
+The file event store canonicalizes its root before deriving content-addressed
+event paths. On Windows this produces verbatim absolute paths and avoids the
+legacy 260-character limit even when `LongPathsEnabled=1` is insufficient for a
+specific atomic-file operation. A Windows regression test and a full release
+recovery smoke cover event paths longer than 260 characters.
 
 This remains a development prototype. It does **not** yet implement Account
 Root Identity, device authorization/revocation, message-level E2EE, encrypted

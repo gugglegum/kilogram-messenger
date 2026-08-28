@@ -42,6 +42,7 @@ impl EventStore {
     pub fn open(root: impl AsRef<Path>) -> Result<Self, StoreError> {
         let root = root.as_ref().to_path_buf();
         fs::create_dir_all(&root)?;
+        let root = fs::canonicalize(root)?;
         Ok(Self { root })
     }
 
@@ -579,6 +580,23 @@ mod tests {
             store.put_batch(&[conflicting]),
             Err(StoreError::WriterSequenceConflict { .. })
         ));
+        Ok(())
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn event_store_supports_paths_beyond_legacy_windows_max_path() -> Result<(), Box<dyn Error>> {
+        let directory = tempdir()?;
+        let root = directory.path().join("a".repeat(80)).join("b".repeat(80));
+        let store = EventStore::open(&root)?;
+        let conversation_id = ConversationId::from_label("windows-long-path");
+        let event = text_event(conversation_id, 0, Vec::new(), "long path")?;
+        let event_id = event.event_id()?;
+        let path = event_path(&store.conversation_directory(conversation_id), event_id);
+
+        assert!(path.to_string_lossy().encode_utf16().count() > 260);
+        store.put(&event)?;
+        assert_eq!(store.load_conversation(conversation_id)?.len(), 1);
         Ok(())
     }
 

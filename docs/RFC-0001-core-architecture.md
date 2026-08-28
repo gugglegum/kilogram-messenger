@@ -301,6 +301,14 @@ device secret в этом development store пока не зашифрованы
 временное несоответствие целевому требованию at-rest encryption, поэтому такое
 состояние нельзя использовать для реальной переписки.
 
+После M0.2 LAN-теста M0.1.6 исправляет Windows-specific отказ atomic-file
+операции на derived event path длиннее legacy `MAX_PATH`. Даже при системном
+`LongPathsEnabled=1` отдельному Win32-вызову нужен long-path-aware manifest или
+verbatim absolute path. `EventStore::open` теперь canonicalizes root; на Windows
+последующие paths получают verbatim форму. Regression test сначала
+воспроизводил `os error 3`, а после fix полный release recovery успешно сохранил
+2 events по пути длиной 298 символов.
+
 ## 11. Сетевой транспорт
 
 ### 11.1. Первая версия
