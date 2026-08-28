@@ -1765,6 +1765,8 @@ dependencies = [
  "anyhow",
  "iroh",
  "kilogram-protocol",
+ "serde",
+ "serde_json",
  "tokio",
 ]
 

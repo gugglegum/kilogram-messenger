@@ -337,6 +337,22 @@ Text и подписанный Acknowledgement, после проверки во
 causal frontier. Transport Endpoint IDs менялись между listener sessions, а
 application device IDs и event IDs оставались стабильными.
 
+Подготовка M0.3 вводит подписанную route policy в connection ticket v2:
+
+- `auto` принимает фактически выбранный Iroh direct или relay path;
+- `direct-only` оставляет relay доступным для handshake, координации и NAT
+  traversal, но не открывает первый Kilogram protocol stream, пока соединение
+  не выберет direct IP path;
+- `relay-only` отключает IP transports у обоих endpoints, поэтому ни ticket, ни
+  connection не могут незаметно перейти на direct path.
+
+Handshake/connect ограничен 30 секундами, ожидание policy path, открытие stream
+и wire I/O — 15 секундами. Ошибка указывает зависшую операцию и, для route
+policy, последний выбранный path. После прикладного exchange policy проверяется
+повторно. Локальный Windows process smoke подтвердил delivery и reconnect/sync
+после restart listener для direct-only и public n0 relay-only. Это проверяет
+управляемость маршрута, но ещё не доказывает hole punching между двумя NAT.
+
 Ядро должно зависеть от абстракции транспорта, а не от публичных типов Iroh:
 
 ```text
@@ -349,12 +365,19 @@ listen() -> incoming authenticated connections
 Первая версия допускает раскрытие IP при direct P2P. UI должен сообщать об этом
 без обещания анонимности.
 
+Текущие M0 diagnostics/policies:
+
+- `auto` — direct-preferred с relay fallback;
+- `direct-only` — прикладной трафик только после выбора direct path;
+- `relay-only` — одно relay-звено, peer не получает IP path из Iroh;
+
 Будущие режимы:
 
-- `direct-preferred` — relay fallback;
-- `relay-only` — собеседник не видит IP;
 - `multi-hop` — endpoints разделены несколькими relay;
 - per-contact policy — direct только для доверенных контактов.
+
+Single-hop relay скрывает IP участников друг от друга на transport level, но
+сам relay видит сетевые адреса и timing. Он не обеспечивает полную анонимность.
 
 Маскировка под HTTPS, padding и cover traffic проектируются отдельно. TLS/QUIC
 сам по себе не гарантирует нераспознаваемость приложения для DPI.

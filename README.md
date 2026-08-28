@@ -7,7 +7,7 @@ stage. Do not use it for sensitive communication.
 The project goals and draft architecture are documented in
 [`docs/RFC-0001-core-architecture.md`](docs/RFC-0001-core-architecture.md).
 
-## Current milestone: M0.2 two-host LAN direct sync
+## Current milestone: M0.3 cross-network route verification
 
 The CLI exchanges a signed text event and a signed acknowledgement over an
 authenticated Iroh/QUIC connection. Application-level device identities are
@@ -33,6 +33,20 @@ seconds for Iroh relay-to-direct migration and print `transport_path` (`direct`,
 `relay`, `custom`, or `unknown`), the selected remote transport address, RTT,
 and number of open paths. These development diagnostics made the two-host LAN
 test distinguish a real direct path from a successful relay fallback.
+
+The listener now signs one of three application route policies into ticket v2:
+
+- `auto` accepts Iroh's selected direct or relay path;
+- `direct-only` permits relay-assisted connection establishment and NAT traversal,
+  but withholds Kilogram protocol frames until a direct IP path is selected;
+- `relay-only` disables all IP transports at both endpoints, so the ticket and
+  the established connection contain only a relay path.
+
+Connection establishment, route selection, stream opening, and framed wire I/O
+have bounded timeouts with operation-specific diagnostics. A local process smoke
+verified delivery and reconnect/sync after listener restart in both forced modes.
+The public relay test selected `euc1-1.relay.n0.iroh.link`; the cross-network
+two-host hole-punching test is still pending.
 
 The file event store canonicalizes its root before deriving content-addressed
 event paths. On Windows this produces verbatim absolute paths and avoids the
@@ -65,7 +79,8 @@ authorized:
 cargo run -p kilogram-cli -- listen `
   --state-dir .tmp/bob `
   --allow-device <ALICE_DEVICE_ID> `
-  --ticket-file .tmp/listener.ticket
+  --ticket-file .tmp/listener.ticket `
+  --route-policy auto
 ```
 
 In another terminal, connect and send a message:
@@ -110,15 +125,16 @@ future compact Merkle summary: once a local conversation exceeds 4,096 events,
 this development profile must be replaced rather than treated as scalable sync.
 
 The connection ticket is public addressing data: it contains the listener's
-Iroh address and public application device ID. The application device signs
-this mapping together with the one requester device ID authorized by the
-listener, so tampering is detected before a connection or inventory is sent.
+Iroh address, public application device ID, and route policy. The application
+device signs this mapping together with the one requester device ID authorized
+by the listener, so tampering is detected before a connection or inventory is sent.
 Possession of the ticket alone is insufficient to deliver or synchronize
 events without the allowed device key. The public ticket therefore exposes
 both device IDs as metadata. It contains neither the Iroh endpoint secret nor
 an application device secret. The ticket encoding, Postcard event encoding,
 and development conversation-label derivation are provisional M0 choices, not
-the final public wire protocol.
+the final public wire protocol. Ticket v2 intentionally does not decode old v1
+tickets; restart the listener to generate a ticket matching this build.
 
 ## Development checks
 

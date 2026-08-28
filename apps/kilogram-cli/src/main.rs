@@ -5,10 +5,10 @@ use std::{
 
 use anyhow::{Context, Result, bail, ensure};
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use iroh::{
     Endpoint, EndpointAddr,
-    endpoint::{SendStream, presets},
+    endpoint::{Connection, RecvStream, SendStream},
 };
 use kilogram_identity::{DeviceId, DeviceIdentity, DeviceState};
 use kilogram_protocol::{
@@ -18,16 +18,20 @@ use kilogram_protocol::{
 use kilogram_session::{MAX_SYNC_ROUNDS, ServerInventoryOutcome, SyncClient, SyncServer};
 use kilogram_store::EventStore;
 use kilogram_transport_iroh::{
-    ALPN, read_client_request, read_server_response, selected_path_diagnostics,
-    write_client_request, write_server_response,
+    ALPN, RoutePolicy, SelectedPathDiagnostics, await_route_policy, endpoint_builder,
+    read_client_request, read_server_response, selected_path_diagnostics, write_client_request,
+    write_server_response,
 };
 use serde::{Deserialize, Serialize};
 use tokio::time::timeout;
 
 const EVENT_STORE_DIRECTORY: &str = "events";
 const DIRECT_PATH_DIAGNOSTIC_WAIT: Duration = Duration::from_secs(3);
-const TICKET_SIGNATURE_DOMAIN: &[u8] = b"kilogram:connection-ticket-signature:v1\0";
-const TICKET_VERSION: u8 = 1;
+const ROUTE_POLICY_WAIT: Duration = Duration::from_secs(15);
+const CONNECTION_TIMEOUT: Duration = Duration::from_secs(30);
+const STREAM_OPEN_TIMEOUT: Duration = Duration::from_secs(15);
+const TICKET_SIGNATURE_DOMAIN: &[u8] = b"kilogram:connection-ticket-signature:v2\0";
+const TICKET_VERSION: u8 = 2;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -59,6 +63,10 @@ enum Command {
         /// How long to wait for a public relay before accepting local connections.
         #[arg(long, default_value_t = 15)]
         relay_wait_seconds: u64,
+
+        /// Transport path required for Kilogram application frames.
+        #[arg(long, value_enum, default_value = "auto")]
+        route_policy: RoutePolicyArg,
     },
 
     /// Connect to a listener, send one message, print its acknowledgement, then exit.
@@ -122,12 +130,30 @@ enum Command {
     },
 }
 
+#[derive(Clone, Copy, Debug, ValueEnum)]
+enum RoutePolicyArg {
+    Auto,
+    DirectOnly,
+    RelayOnly,
+}
+
+impl From<RoutePolicyArg> for RoutePolicy {
+    fn from(value: RoutePolicyArg) -> Self {
+        match value {
+            RoutePolicyArg::Auto => Self::Auto,
+            RoutePolicyArg::DirectOnly => Self::DirectOnly,
+            RoutePolicyArg::RelayOnly => Self::RelayOnly,
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 struct ConnectionTicketContent {
     version: u8,
     endpoint: EndpointAddr,
     listener_device_id: DeviceId,
     allowed_requester_device_id: DeviceId,
+    route_policy: RoutePolicy,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -141,12 +167,14 @@ impl ConnectionTicket {
         endpoint: EndpointAddr,
         listener_identity: &DeviceIdentity,
         allowed_requester_device_id: DeviceId,
+        route_policy: RoutePolicy,
     ) -> Result<Self> {
         let content = ConnectionTicketContent {
             version: TICKET_VERSION,
             endpoint,
             listener_device_id: listener_identity.device_id(),
             allowed_requester_device_id,
+            route_policy,
         };
         let signature = listener_identity
             .sign(&ticket_signing_bytes(&content)?)
@@ -183,6 +211,10 @@ impl ConnectionTicket {
         self.content.allowed_requester_device_id
     }
 
+    fn route_policy(&self) -> RoutePolicy {
+        self.content.route_policy
+    }
+
     fn verify(&self) -> Result<()> {
         ensure!(
             self.content.version == TICKET_VERSION,
@@ -212,7 +244,17 @@ async fn main() -> Result<()> {
             allow_device,
             ticket_file,
             relay_wait_seconds,
-        } => listen(state_dir, allow_device, ticket_file, relay_wait_seconds).await,
+            route_policy,
+        } => {
+            listen(
+                state_dir,
+                allow_device,
+                ticket_file,
+                relay_wait_seconds,
+                route_policy.into(),
+            )
+            .await
+        }
         Command::Connect {
             state_dir,
             ticket,
@@ -239,31 +281,29 @@ async fn listen(
     allowed_requester_device_id: DeviceId,
     ticket_file: Option<PathBuf>,
     relay_wait_seconds: u64,
+    route_policy: RoutePolicy,
 ) -> Result<()> {
     let device_state = DeviceState::load_or_create(&state_dir)
         .with_context(|| format!("load device state from {}", state_dir.display()))?;
     let event_store = open_event_store(&state_dir)?;
-    let endpoint = Endpoint::builder(presets::N0)
+    let endpoint = endpoint_builder(route_policy)
         .alpns(vec![ALPN.to_vec()])
         .bind()
         .await
         .context("bind listening Iroh endpoint")?;
 
-    if relay_wait_seconds > 0 {
-        match timeout(Duration::from_secs(relay_wait_seconds), endpoint.online()).await {
-            Ok(()) => println!("relay_status=online"),
-            Err(_) => eprintln!("relay_status=timeout (local/direct connections can still work)"),
-        }
-    }
+    wait_for_relay(&endpoint, route_policy, relay_wait_seconds).await?;
 
     let ticket = ConnectionTicket::new(
         endpoint.addr(),
         device_state.identity(),
         allowed_requester_device_id,
+        route_policy,
     )?
     .encode()?;
     println!("transport_endpoint_id={}", endpoint.id());
     println!("device_id={}", device_state.identity().device_id());
+    println!("route_policy={}", route_policy.as_str());
     println!("allowed_requester_device_id={allowed_requester_device_id}");
     println!("ticket={ticket}");
 
@@ -279,13 +319,19 @@ async fn listen(
         .accept()
         .await
         .context("listener endpoint closed before receiving a connection")?;
-    let connection = incoming.await.context("accept Iroh connection")?;
+    let connection = timeout(CONNECTION_TIMEOUT, incoming)
+        .await
+        .with_context(|| timeout_message("incoming Iroh handshake", CONNECTION_TIMEOUT))?
+        .context("accept Iroh connection")?;
     println!("peer_id={}", connection.remote_id());
 
-    let (mut send, mut receive) = connection
-        .accept_bi()
+    let ready_path = await_route_policy(&connection, route_policy, ROUTE_POLICY_WAIT)
         .await
-        .context("accept bidirectional stream")?;
+        .context("wait for an incoming path allowed by the connection ticket")?;
+    print_ready_path(&ready_path);
+
+    let (mut send, mut receive) =
+        accept_bi(&connection, "accept initial bidirectional stream").await?;
     let request = read_client_request(&mut receive).await?;
     match request {
         ClientRequest::DeliverEvent(event) => {
@@ -315,7 +361,7 @@ async fn listen(
         ClientRequest::SyncEvents(_) => bail!("sync event batch cannot be the first request"),
     }
 
-    print_transport_diagnostics(&connection).await;
+    print_transport_diagnostics(&connection, route_policy).await?;
     let _ = timeout(Duration::from_secs(2), connection.closed()).await;
     endpoint.close().await;
     Ok(())
@@ -410,10 +456,8 @@ async fn handle_sync_request(
         )
         .await?;
 
-        let (mut batch_send, mut batch_receive) = connection
-            .accept_bi()
-            .await
-            .context("accept sync event batch stream")?;
+        let (mut batch_send, mut batch_receive) =
+            accept_bi(connection, "accept sync event batch stream").await?;
         let batch = match read_client_request(&mut batch_receive).await? {
             ClientRequest::SyncEvents(batch) => batch,
             _ => bail!("listener expected a sync event batch after a sync diff"),
@@ -448,10 +492,8 @@ async fn handle_sync_request(
             bail!("sync exceeded the limit of {MAX_SYNC_ROUNDS} rounds");
         }
 
-        let (next_send, mut next_receive) = connection
-            .accept_bi()
-            .await
-            .context("accept next sync inventory stream")?;
+        let (next_send, mut next_receive) =
+            accept_bi(connection, "accept next sync inventory stream").await?;
         inventory = match read_client_request(&mut next_receive).await? {
             ClientRequest::SyncInventory(inventory) => inventory,
             _ => bail!("listener expected another sync inventory for continuation"),
@@ -474,27 +516,36 @@ async fn connect(
 
     let ticket = load_connection_ticket(ticket, ticket_file).await?;
     let expected_listener_device_id = ticket.listener_device_id();
+    let route_policy = ticket.route_policy();
     ensure!(
         device_state.identity().device_id() == ticket.allowed_requester_device_id(),
         "this device is not the requester authorized by the connection ticket"
     );
 
-    let endpoint = Endpoint::bind(presets::N0)
+    let endpoint = endpoint_builder(route_policy)
+        .bind()
         .await
         .context("bind connecting Iroh endpoint")?;
     println!("transport_endpoint_id={}", endpoint.id());
     println!("device_id={}", device_state.identity().device_id());
+    println!("route_policy={}", route_policy.as_str());
 
-    let connection = endpoint
-        .connect(ticket.endpoint().clone(), ALPN)
-        .await
-        .context("connect to listening endpoint")?;
+    let connection = timeout(
+        CONNECTION_TIMEOUT,
+        endpoint.connect(ticket.endpoint().clone(), ALPN),
+    )
+    .await
+    .with_context(|| timeout_message("connect to listening endpoint", CONNECTION_TIMEOUT))?
+    .context("connect to listening endpoint")?;
     println!("peer_id={}", connection.remote_id());
 
-    let (mut send, mut receive) = connection
-        .open_bi()
+    let ready_path = await_route_policy(&connection, route_policy, ROUTE_POLICY_WAIT)
         .await
-        .context("open bidirectional stream")?;
+        .context("wait for a path allowed by the connection ticket")?;
+    print_ready_path(&ready_path);
+
+    let (mut send, mut receive) =
+        open_bi(&connection, "open delivery bidirectional stream").await?;
     let conversation_id = ConversationId::from_label(&conversation);
     let author_sequence = device_state
         .allocate_sequence()
@@ -556,7 +607,7 @@ async fn connect(
     println!("acknowledgement_store={acknowledgement_store_outcome:?}");
     println!("status=acknowledged");
 
-    print_transport_diagnostics(&connection).await;
+    print_transport_diagnostics(&connection, route_policy).await?;
     connection.close(0_u32.into(), b"kilogram m0 complete");
     endpoint.close().await;
     Ok(())
@@ -573,6 +624,7 @@ async fn sync(
     let event_store = open_event_store(&state_dir)?;
     let ticket = load_connection_ticket(ticket, ticket_file).await?;
     let expected_listener_device_id = ticket.listener_device_id();
+    let route_policy = ticket.route_policy();
     ensure!(
         device_state.identity().device_id() == ticket.allowed_requester_device_id(),
         "this device is not the requester authorized by the connection ticket"
@@ -588,26 +640,34 @@ async fn sync(
         expected_listener_device_id,
     );
 
-    let endpoint = Endpoint::bind(presets::N0)
+    let endpoint = endpoint_builder(route_policy)
+        .bind()
         .await
         .context("bind syncing Iroh endpoint")?;
     println!("transport_endpoint_id={}", endpoint.id());
     println!("device_id={}", device_state.identity().device_id());
-    let connection = endpoint
-        .connect(ticket.endpoint().clone(), ALPN)
-        .await
-        .context("connect to listening endpoint for sync")?;
+    println!("route_policy={}", route_policy.as_str());
+    let connection = timeout(
+        CONNECTION_TIMEOUT,
+        endpoint.connect(ticket.endpoint().clone(), ALPN),
+    )
+    .await
+    .with_context(|| timeout_message("connect to listening endpoint for sync", CONNECTION_TIMEOUT))?
+    .context("connect to listening endpoint for sync")?;
     println!("peer_id={}", connection.remote_id());
+
+    let ready_path = await_route_policy(&connection, route_policy, ROUTE_POLICY_WAIT)
+        .await
+        .context("wait for a sync path allowed by the connection ticket")?;
+    print_ready_path(&ready_path);
 
     let mut total_sent_events = 0;
     let mut total_received_events = 0;
     for round_number in 1..=MAX_SYNC_ROUNDS {
         let inventory_round = client.begin_round()?;
         let inventory_event_count = inventory_round.inventory_event_count();
-        let (mut inventory_send, mut inventory_receive) = connection
-            .open_bi()
-            .await
-            .context("open sync inventory stream")?;
+        let (mut inventory_send, mut inventory_receive) =
+            open_bi(&connection, "open sync inventory stream").await?;
         write_client_request(
             &mut inventory_send,
             &ClientRequest::SyncInventory(inventory_round.inventory().clone()),
@@ -626,10 +686,8 @@ async fn sync(
         };
         let batch_round = client.accept_diff(inventory_round, diff)?;
 
-        let (mut batch_send, mut batch_receive) = connection
-            .open_bi()
-            .await
-            .context("open sync event batch stream")?;
+        let (mut batch_send, mut batch_receive) =
+            open_bi(&connection, "open sync event batch stream").await?;
         write_client_request(
             &mut batch_send,
             &ClientRequest::SyncEvents(batch_round.batch().clone()),
@@ -659,7 +717,7 @@ async fn sync(
             println!("sync_more_available=false");
             println!("status=synchronized");
 
-            print_transport_diagnostics(&connection).await;
+            print_transport_diagnostics(&connection, route_policy).await?;
             connection.close(0_u32.into(), b"kilogram m0 sync complete");
             endpoint.close().await;
             return Ok(());
@@ -668,19 +726,75 @@ async fn sync(
     bail!("sync exceeded the limit of {MAX_SYNC_ROUNDS} rounds")
 }
 
-async fn print_transport_diagnostics(connection: &iroh::endpoint::Connection) {
-    match selected_path_diagnostics(connection, DIRECT_PATH_DIAGNOSTIC_WAIT).await {
-        Some(path) => {
-            println!("transport_path={}", path.kind.as_str());
-            println!("transport_remote_address={}", path.remote_address);
-            println!(
-                "transport_rtt_ms={:.1}",
-                path.round_trip_time.as_secs_f64() * 1_000.0
-            );
-            println!("transport_open_paths={}", path.open_paths);
-        }
-        None => println!("transport_path=unknown"),
+async fn wait_for_relay(
+    endpoint: &Endpoint,
+    route_policy: RoutePolicy,
+    relay_wait_seconds: u64,
+) -> Result<()> {
+    if relay_wait_seconds == 0 {
+        ensure!(
+            route_policy != RoutePolicy::RelayOnly,
+            "relay-only requires --relay-wait-seconds greater than zero"
+        );
+        println!("relay_status=skipped");
+        return Ok(());
     }
+
+    match timeout(Duration::from_secs(relay_wait_seconds), endpoint.online()).await {
+        Ok(()) => println!("relay_status=online"),
+        Err(_) if route_policy == RoutePolicy::RelayOnly => bail!(
+            "required relay did not become online within {relay_wait_seconds}s; route_policy=relay-only"
+        ),
+        Err(_) => eprintln!(
+            "relay_status=timeout after {relay_wait_seconds}s (direct connections may still work)"
+        ),
+    }
+    Ok(())
+}
+
+async fn open_bi(connection: &Connection, operation: &str) -> Result<(SendStream, RecvStream)> {
+    timeout(STREAM_OPEN_TIMEOUT, connection.open_bi())
+        .await
+        .with_context(|| timeout_message(operation, STREAM_OPEN_TIMEOUT))?
+        .with_context(|| operation.to_owned())
+}
+
+async fn accept_bi(connection: &Connection, operation: &str) -> Result<(SendStream, RecvStream)> {
+    timeout(STREAM_OPEN_TIMEOUT, connection.accept_bi())
+        .await
+        .with_context(|| timeout_message(operation, STREAM_OPEN_TIMEOUT))?
+        .with_context(|| operation.to_owned())
+}
+
+fn print_ready_path(path: &SelectedPathDiagnostics) {
+    println!("transport_ready_path={}", path.kind.as_str());
+}
+
+async fn print_transport_diagnostics(
+    connection: &Connection,
+    route_policy: RoutePolicy,
+) -> Result<()> {
+    let path = selected_path_diagnostics(connection, DIRECT_PATH_DIAGNOSTIC_WAIT)
+        .await
+        .context("selected transport path is unavailable")?;
+    ensure!(
+        route_policy.accepts(path.kind),
+        "selected transport path {} violates route policy {}",
+        path.kind.as_str(),
+        route_policy.as_str()
+    );
+    println!("transport_path={}", path.kind.as_str());
+    println!("transport_remote_address={}", path.remote_address);
+    println!(
+        "transport_rtt_ms={:.1}",
+        path.round_trip_time.as_secs_f64() * 1_000.0
+    );
+    println!("transport_open_paths={}", path.open_paths);
+    Ok(())
+}
+
+fn timeout_message(operation: &str, duration: Duration) -> String {
+    format!("{operation} timed out after {:.1}s", duration.as_secs_f64())
 }
 
 async fn load_connection_ticket(
@@ -775,6 +889,7 @@ mod tests {
             endpoint.clone(),
             &listener_identity,
             allowed_requester_device_id,
+            RoutePolicy::DirectOnly,
         )?
         .encode()?;
         let decoded = ConnectionTicket::decode(&encoded)?;
@@ -782,6 +897,7 @@ mod tests {
         assert_eq!(decoded.content.version, TICKET_VERSION);
         assert_eq!(decoded.endpoint(), &endpoint);
         assert_eq!(decoded.listener_device_id(), listener_device_id);
+        assert_eq!(decoded.route_policy(), RoutePolicy::DirectOnly);
         assert_eq!(
             decoded.allowed_requester_device_id(),
             allowed_requester_device_id
@@ -796,6 +912,7 @@ mod tests {
             EndpointAddr::new(SecretKey::generate().public()),
             &identity,
             DeviceIdentity::generate()?.device_id(),
+            RoutePolicy::Auto,
         )?;
         ticket.content.version = TICKET_VERSION + 1;
         let encoded = URL_SAFE_NO_PAD.encode(serde_json::to_vec(&ticket)?);
@@ -819,6 +936,7 @@ mod tests {
             EndpointAddr::new(SecretKey::generate().public()),
             &identity,
             DeviceIdentity::generate()?.device_id(),
+            RoutePolicy::Auto,
         )?;
         ticket.content.endpoint = EndpointAddr::new(SecretKey::generate().public());
         let encoded = URL_SAFE_NO_PAD.encode(serde_json::to_vec(&ticket)?);
@@ -826,6 +944,29 @@ mod tests {
         let error = ConnectionTicket::decode(&encoded)
             .err()
             .context("tampered connection ticket unexpectedly succeeded")?;
+        assert!(
+            error
+                .to_string()
+                .contains("verify listener signature on connection ticket")
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn connection_ticket_rejects_route_policy_tampering() -> Result<()> {
+        let identity = DeviceIdentity::generate()?;
+        let mut ticket = ConnectionTicket::new(
+            EndpointAddr::new(SecretKey::generate().public()),
+            &identity,
+            DeviceIdentity::generate()?.device_id(),
+            RoutePolicy::Auto,
+        )?;
+        ticket.content.route_policy = RoutePolicy::RelayOnly;
+        let encoded = URL_SAFE_NO_PAD.encode(serde_json::to_vec(&ticket)?);
+
+        let error = ConnectionTicket::decode(&encoded)
+            .err()
+            .context("tampered route policy unexpectedly succeeded")?;
         assert!(
             error
                 .to_string()

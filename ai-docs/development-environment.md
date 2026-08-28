@@ -63,9 +63,14 @@ toolchain `1.98.0` для воспроизводимой разработки.
     store за один round по direct path с RTT 1.6 ms; `history` подтвердил
     `event_count=2`, `frontier_count=1` и точную causal acknowledgement — M0.2
     успешно завершён.
+16. M0.1.7 process smoke проверил signed route policies. `direct-only` delivery
+    и sync после restart listener выбрали direct IP path. Строгий `relay-only`
+    endpoint публиковал ticket только с Relay address, delivery и sync после
+    restart выбрали `euc1-1.relay.n0.iroh.link`; RTT составил примерно
+    240–450 ms. Все 28 workspace tests прошли.
 
-Публичный relay пока не проверялся: M0.1 использовал ticket с локальными IP
-адресами и direct connection на одном хосте.
+Публичный relay проверен на одном хосте в принудительном `relay-only`. Внешний
+M0.3 hole-punching тест между разными сетями пока не выполнен.
 
 ## Решения, которые ещё нельзя фиксировать
 

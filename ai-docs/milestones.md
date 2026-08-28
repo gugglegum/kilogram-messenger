@@ -47,11 +47,26 @@ Listener endpoint 2397...23d9
 - первый recovery прогон обнаружил Windows `MAX_PATH` bug; M0.1.6 исправил его,
   а повтор на тех же физических хостах прошёл успешно.
 
-### M0.3 — два хоста в разных сетях: не начато
+### M0.3 — два хоста в разных сетях: подготовлен к внешнему тесту
 
-- Проверить hole punching при двух NAT.
-- Отдельно принудительно проверить public relay fallback.
-- Проверить reconnect и смену сетевого интерфейса.
+Инструменты проверки готовы:
+
+- signed ticket v2 фиксирует `auto`, `direct-only` или `relay-only`;
+- `direct-only` не передаёт Kilogram protocol frames до выбора direct IP path,
+  сохраняя relay-assisted NAT traversal;
+- `relay-only` физически отключает IP transports у обоих endpoints;
+- connection, route selection, stream open и wire I/O имеют ограниченные
+  таймауты с явным названием зависшей операции;
+- локальный process smoke проверил delivery, перезапуск listener с новым
+  Endpoint ID/ticket и sync в `direct-only` и `relay-only`;
+- public relay smoke выбрал `euc1-1.relay.n0.iroh.link`, причём relay-only ticket
+  содержал только Relay address, без IP candidates.
+
+Осталось выполнить на двух физических хостах в разных сетях:
+
+- проверить `direct-only` hole punching при NAT домашней и мобильной сетей;
+- повторить `relay-only` как контрольный прогон;
+- проверить смену сетевого интерфейса во время более долгой сессии.
 
 ### M0.1.1 — постоянная device identity и signed event: выполнено
 
@@ -254,11 +269,33 @@ stdout и не является production telemetry API.
 подтверждены: direct LAN path, RTT около 1–2 ms, 2 восстановленных events и
 правильный causal frontier.
 
+### M0.1.7 — принудительные route policies и bounded failures: выполнено
+
+Реализовано:
+
+- transport-level `RoutePolicy` и endpoint factory;
+- `auto`, `direct-only` и строгий `relay-only` в CLI;
+- route policy входит в подписанный ticket v2 и автоматически применяется
+  connector, поэтому стороны не могут незаметно выбрать разные режимы;
+- `direct-only` ждёт до 15 секунд direct path перед первым прикладным stream;
+- `relay-only` использует Iroh endpoint без IP transports и требует online relay;
+- connect/handshake ограничены 30 секундами, path/stream/wire операции — 15;
+- ошибки называют операцию, timeout и фактически выбранный path, если он есть;
+- после exchange выбранный path повторно сверяется с signed policy.
+
+Process smoke на одном Windows-хосте:
+
+- direct delivery и sync после restart listener: `transport_ready_path=direct`,
+  новый Endpoint ID, одна sync round без лишних events;
+- relay delivery и sync после restart listener: `transport_ready_path=relay`,
+  `transport_path=relay`, public n0 relay, одна sync round;
+- все 28 workspace tests проходят.
+
 ### Следующее расширение M0
 
-1. Выполнить M0.3 на двух физических хостах в разных сетях: сначала проверить
-   hole punching/direct path, затем отдельно relay fallback.
-2. Проверить reconnect/error paths и определить минимальный resumable sync
+1. Завершить M0.3 на двух физических хостах в разных сетях: проверить
+   `direct-only` hole punching, затем `relay-only` контроль.
+2. Проверить смену сетевого интерфейса и определить минимальный resumable sync
    cursor до замены full-ID inventory на Merkle/range summary.
 3. Начать Account Root → Device authorization model либо pairwise E2EE spike по
    приоритету следующего RFC/ADR.

@@ -10,7 +10,11 @@ publish = false
 anyhow.workspace = true
 iroh.workspace = true
 kilogram-protocol = { path = "../kilogram-protocol" }
+serde.workspace = true
 tokio.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
 
 [lints]
 workspace = true
