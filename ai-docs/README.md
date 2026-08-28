@@ -18,8 +18,9 @@ events в обе стороны. M0.1.4 автоматически продол�
 одном Iroh connection; state machine отделена от transport framing. M0.1.5
 показывает фактически выбранный direct/relay path, remote address и RTT. M0.1.6
 исправляет Windows event-store paths длиннее 260 символов. Локальные
-M0.1–M0.1.6 smoke tests пройдены. Реальный M0.2 delivery между двумя Windows-PC
-прошёл по direct LAN; recovery sync ожидает повторения с исправленным build.
+M0.1–M0.1.6 smoke tests пройдены. M0.2 полностью пройден на двух физических
+Windows-PC: delivery и recovery sync использовали direct LAN, пустая история с
+прежним device key восстановила 2 подписанных events и правильный frontier.
 Прикладное E2EE, Account Root Identity, шифрование локальной истории,
 production-grade sync summaries и группы ещё не реализованы.
 
@@ -75,10 +76,10 @@ production-grade sync summaries и группы ещё не реализован
 2. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
 3. Спроектировать формат идентичности, сертификатов устройств и revocation log.
 4. Спроектировать wire format подписанного события и алгоритм линеаризации.
-5. Завершить M0.2 recovery sync исправленным M0.1.6 build на двух физических
-   Windows-хостах; direct delivery уже подтверждён.
-6. Выполнить M0.2 на двух хостах в LAN и M0.3 в разных сетях, отдельно проверив
-   direct path и relay fallback.
+5. Выполнить M0.3 на двух хостах в разных сетях, отдельно проверить hole
+   punching, direct path и relay fallback.
+6. Проверить reconnect/error paths и определить минимальный resumable sync
+   cursor до замены full-ID inventory.
 7. Реализовать мультиустройство, затем небольшие MLS-группы.
 8. Перед публичным выпуском провести независимый криптографический аудит.
 

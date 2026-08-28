@@ -330,6 +330,13 @@ adapter ждёт до трёх секунд возможной миграции 
 development diagnostics: она позволяет отличить успешный LAN direct test от
 незаметного relay fallback, но ещё не является telemetry subsystem продукта.
 
+M0.2 проверен на двух физических Windows-хостах в одной LAN. Delivery и
+последующий recovery sync выбрали direct IP path с RTT около 1–2 ms. Пустая
+копия истории с прежним application device key получила за один round исходный
+Text и подписанный Acknowledgement, после проверки восстановила 2 events и один
+causal frontier. Transport Endpoint IDs менялись между listener sessions, а
+application device IDs и event IDs оставались стабильными.
+
 Ядро должно зависеть от абстракции транспорта, а не от публичных типов Iroh:
 
 ```text

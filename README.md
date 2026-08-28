@@ -7,7 +7,7 @@ stage. Do not use it for sensitive communication.
 The project goals and draft architecture are documented in
 [`docs/RFC-0001-core-architecture.md`](docs/RFC-0001-core-architecture.md).
 
-## Current milestone: M0.1.6 Windows long-path storage fix
+## Current milestone: M0.2 two-host LAN direct sync
 
 The CLI exchanges a signed text event and a signed acknowledgement over an
 authenticated Iroh/QUIC connection. Application-level device identities are
@@ -31,15 +31,20 @@ first concrete transport-replacement boundary, not yet the final transport API.
 After a delivery or synchronization exchange, both peers wait up to three
 seconds for Iroh relay-to-direct migration and print `transport_path` (`direct`,
 `relay`, `custom`, or `unknown`), the selected remote transport address, RTT,
-and number of open paths. These development diagnostics make the upcoming
-two-host LAN test distinguish a real direct path from a successful relay
-fallback.
+and number of open paths. These development diagnostics made the two-host LAN
+test distinguish a real direct path from a successful relay fallback.
 
 The file event store canonicalizes its root before deriving content-addressed
 event paths. On Windows this produces verbatim absolute paths and avoids the
 legacy 260-character limit even when `LongPathsEnabled=1` is insufficient for a
 specific atomic-file operation. A Windows regression test and a full release
 recovery smoke cover event paths longer than 260 characters.
+
+M0.2 is complete on two physical Windows PCs. A signed text event and its
+signed acknowledgement travelled over a direct LAN path with approximately
+1 ms RTT. A second client store containing only Alice's device key recovered
+both events from Bob in one sync round, verified them on read, and reconstructed
+the acknowledgement as the single causal frontier.
 
 This remains a development prototype. It does **not** yet implement Account
 Root Identity, device authorization/revocation, message-level E2EE, encrypted

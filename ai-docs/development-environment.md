@@ -59,7 +59,10 @@ toolchain `1.98.0` для воспроизводимой разработки.
     показал `event_count=2`, `frontier_count=1` и direct path — успешно.
 15. Первый реальный M0.2 exchange между Windows-PC Alice `192.168.0.134` и Bob
     `192.168.0.135` доставил и подтвердил signed event напрямую по LAN с RTT
-    около 1 ms. Recovery sync выявил long-path bug; повтор с fix ожидается.
+    около 1 ms. Recovery sync исправленным build получил 2 events в пустой
+    store за один round по direct path с RTT 1.6 ms; `history` подтвердил
+    `event_count=2`, `frontier_count=1` и точную causal acknowledgement — M0.2
+    успешно завершён.
 
 Публичный relay пока не проверялся: M0.1 использовал ticket с локальными IP
 адресами и direct connection на одном хосте.

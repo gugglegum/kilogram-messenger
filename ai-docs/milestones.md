@@ -1,6 +1,6 @@
 # Технические этапы
 
-Актуально на: 2026-08-25.
+Актуально на: 2026-08-28.
 
 ## M0 — проверка сетевого и репликационного фундамента
 
@@ -30,11 +30,22 @@ Listener endpoint 2397...23d9
 пока эфемерна; message-level E2EE, Account Identity, подпись события, история и
 синхронизация отсутствуют.
 
-### M0.2 — два хоста в одной LAN: не начато
+### M0.2 — два хоста в одной LAN: выполнено
 
-- Передать ticket на второй физический хост.
-- Проверить Windows Firewall и direct LAN path.
-- Зафиксировать выбранный Iroh path и сетевую диагностику.
+Проверено на двух физических Windows-PC:
+
+- Alice `192.168.0.134` и Bob `192.168.0.135` обменялись signed Text и signed
+  Acknowledgement;
+- обе стороны выбрали `transport_path=direct`, RTT около 1–2 ms, relay не
+  использовался;
+- Bob перезапустил listener с новым transport Endpoint ID и новым signed ticket;
+- recovery store Alice содержал прежний device key, но нулевой inventory;
+- за один sync round recovery store получил ровно 2 отсутствующих events и не
+  отправил лишних;
+- повторное чтение проверило подписи, event IDs, causal parent и восстановило
+  `event_count=2`, `frontier_count=1`;
+- первый recovery прогон обнаружил Windows `MAX_PATH` bug; M0.1.6 исправил его,
+  а повтор на тех же физических хостах прошёл успешно.
 
 ### M0.3 — два хоста в разных сетях: не начато
 
@@ -239,14 +250,14 @@ stdout и не является production telemetry API.
   `transport_path=direct`;
 - строгий Clippy и все 25 workspace tests проходят.
 
-Внешний M0.2 delivery между двумя физическими Windows-хостами уже подтверждён:
-Alice `192.168.0.134` и Bob `192.168.0.135` выбрали direct LAN path, RTT около
-1 ms. Повтор recovery sync исправленным build остаётся финальной проверкой M0.2.
+Внешний M0.2 delivery и recovery sync между двумя физическими Windows-хостами
+подтверждены: direct LAN path, RTT около 1–2 ms, 2 восстановленных events и
+правильный causal frontier.
 
 ### Следующее расширение M0
 
-1. Завершить M0.2 recovery sync исправленным Windows build и зафиксировать
-   `direct` path с обеих сторон.
+1. Выполнить M0.3 на двух физических хостах в разных сетях: сначала проверить
+   hole punching/direct path, затем отдельно relay fallback.
 2. Проверить reconnect/error paths и определить минимальный resumable sync
    cursor до замены full-ID inventory на Merkle/range summary.
 3. Начать Account Root → Device authorization model либо pairwise E2EE spike по
