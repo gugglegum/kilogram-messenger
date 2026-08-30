@@ -74,6 +74,12 @@ event, но transport addresses оказались `192.168.0.134` ↔ `192.168.
 засчитывается как cross-network hole punching. VPN действительно мешал первой
 попытке, однако сетевую изоляцию Bob через 4G надо подтвердить отдельно.
 
+Следующий cellular-only прогон подтвердил разные network candidates Bob, но
+снова остался на relay. На Alice при этом сохранился активный `singbox_tun` и
+default route через `172.18.0.2` с metric `0`, несмотря на выключенный VPN UI.
+Поэтому перед окончательным выводом о mobile CGNAT нужно полностью убрать TUN
+route и повторить тест со свежим ticket.
+
 ### M0.1.1 — постоянная device identity и signed event: выполнено
 
 Реализовано:

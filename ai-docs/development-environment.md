@@ -86,6 +86,15 @@ toolchain `1.98.0` для воспроизводимой разработки.
     transport, но не засчитывается как доказательство Internet hole punching;
     перед повтором надо исключить Ethernet/второй Wi-Fi/bridge/virtual route и
     сравнить внешние IP обоих хостов.
+19. После принудительного cellular-only подключения Bob ticket содержал mobile
+    IPv4 candidate `91.79.188.23:16025`, private hotspot address
+    `10.108.80.130` и global IPv6 candidates. QUIC peer authentication через
+    relay прошла, но direct path не появился за 15 секунд. Диагностика Alice
+    обнаружила, что UI-отключение VPN не удалило `singbox_tun`: интерфейс
+    `172.18.0.1` оставался connected и имел второй default route через
+    `172.18.0.2` с metric `0`, при Ethernet route metric `25`. Alice также не
+    имела global IPv6. До отключения TUN/default route этот результат нельзя
+    приписывать только mobile CGNAT.
 
 Публичный relay проверен на одном хосте в принудительном `relay-only`. Внешний
 M0.3 hole-punching тест между разными сетями пока не выполнен.
