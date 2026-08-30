@@ -101,11 +101,22 @@ toolchain `1.98.0` для воспроизводимой разработки.
     следующего внешнего прогона client теперь явно ждёт online relay и печатает
     target Endpoint ID: это отличает stale/wrong ticket от недоступности relay
     на стороне Alice.
+21. Диагностический build исключил stale ticket: Alice target Endpoint ID
+    совпал с живым listener Bob, обе стороны были relay-online, но строгий
+    relay-only снова завершился до `peer_id`. Контрольный `auto` с теми же
+    хостами успешно доставил event и acknowledgement исключительно через
+    relay: один open path, Bob/Alice RTT 457/686 ms. Ticket Bob рекламировал
+    `euc1`, тогда как выбранный connection path на обеих сторонах стал `aps1`.
+    Следовательно, public relay fallback и прикладной exchange исправны, а
+    дефект локализован в строгом relay-only при разных relay selections. Новый
+    dialer pin-ит свой relay map к relay URL подписанного listener ticket и
+    печатает home/target relay URLs; внешний retest ещё требуется.
 
 Публичный relay проверен на одном хосте в принудительном `relay-only`. Внешний
 M0.3 direct-only тест корректно доказал невозможность hole punching в выбранной
-home-to-cellular topology; внешний relay-only control требует повтора с новой
-диагностической сборкой.
+home-to-cellular topology. `auto` подтвердил успешный внешний relay fallback;
+строгий relay-only требует финального повтора после pinning обоих endpoints к
+relay из ticket.
 
 ## Решения, которые ещё нельзя фиксировать
 

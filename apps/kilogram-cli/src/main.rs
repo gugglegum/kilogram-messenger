@@ -19,8 +19,8 @@ use kilogram_session::{MAX_SYNC_ROUNDS, ServerInventoryOutcome, SyncClient, Sync
 use kilogram_store::EventStore;
 use kilogram_transport_iroh::{
     ALPN, RoutePolicy, SelectedPathDiagnostics, await_route_policy, endpoint_builder,
-    read_client_request, read_server_response, selected_path_diagnostics, write_client_request,
-    write_server_response,
+    endpoint_builder_for_remote, read_client_request, read_server_response,
+    selected_path_diagnostics, write_client_request, write_server_response,
 };
 use serde::{Deserialize, Serialize};
 use tokio::time::timeout;
@@ -516,14 +516,14 @@ async fn connect(
         "this device is not the requester authorized by the connection ticket"
     );
 
-    let endpoint = endpoint_builder(route_policy)
+    let endpoint = endpoint_builder_for_remote(route_policy, ticket.endpoint())?
         .bind()
         .await
         .context("bind connecting Iroh endpoint")?;
     println!("transport_endpoint_id={}", endpoint.id());
     println!("device_id={}", device_state.identity().device_id());
     println!("route_policy={}", route_policy.as_str());
-    println!("target_endpoint_id={}", ticket.endpoint().id);
+    print_connection_target(&ticket);
 
     if route_policy == RoutePolicy::RelayOnly {
         wait_for_relay(&endpoint, route_policy, CLIENT_RELAY_WAIT_SECONDS).await?;
@@ -639,14 +639,14 @@ async fn sync(
         expected_listener_device_id,
     );
 
-    let endpoint = endpoint_builder(route_policy)
+    let endpoint = endpoint_builder_for_remote(route_policy, ticket.endpoint())?
         .bind()
         .await
         .context("bind syncing Iroh endpoint")?;
     println!("transport_endpoint_id={}", endpoint.id());
     println!("device_id={}", device_state.identity().device_id());
     println!("route_policy={}", route_policy.as_str());
-    println!("target_endpoint_id={}", ticket.endpoint().id);
+    print_connection_target(&ticket);
 
     if route_policy == RoutePolicy::RelayOnly {
         wait_for_relay(&endpoint, route_policy, CLIENT_RELAY_WAIT_SECONDS).await?;
@@ -746,7 +746,13 @@ async fn wait_for_relay(
     }
 
     match timeout(Duration::from_secs(relay_wait_seconds), endpoint.online()).await {
-        Ok(()) => println!("relay_status=online"),
+        Ok(()) => {
+            println!("relay_status=online");
+            let endpoint_addr = endpoint.addr();
+            for relay_url in endpoint_addr.relay_urls() {
+                println!("relay_home_url={relay_url}");
+            }
+        }
         Err(_) if route_policy == RoutePolicy::RelayOnly => bail!(
             "required relay did not become online within {relay_wait_seconds}s; route_policy=relay-only"
         ),
@@ -755,6 +761,13 @@ async fn wait_for_relay(
         ),
     }
     Ok(())
+}
+
+fn print_connection_target(ticket: &ConnectionTicket) {
+    println!("target_endpoint_id={}", ticket.endpoint().id);
+    for relay_url in ticket.endpoint().relay_urls() {
+        println!("target_relay_url={relay_url}");
+    }
 }
 
 /// Waits for one valid QUIC connection while treating malformed or retransmitted

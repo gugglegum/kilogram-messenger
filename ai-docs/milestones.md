@@ -87,6 +87,15 @@ Relay handshake прошёл, но direct path не возник за 15 сек�
 отдельно ждёт online relay и печатает target Endpoint ID для проверки, что
 скопирован ticket именно текущего listener Bob.
 
+Повтор подтвердил совпадение Endpoint ID и online relay на обеих сторонах, но
+strict relay-only снова не дошёл до `peer_id`. Следом `auto` на тех же двух
+сетях успешно доставил и подтвердил signed event через единственный relay path:
+Bob ticket рекламировал `euc1`, а установленное соединение выбрало `aps1`, RTT
+составил 457–686 ms. Это доказывает работоспособность public relay fallback и
+локализует проблему в строгом отключении IP transports при разных relay
+selections. Следующая сборка pin-ит relay-only dialer к relay URL подписанного
+listener ticket; остался один внешний retest delivery и sync.
+
 ### M0.1.1 — постоянная device identity и signed event: выполнено
 
 Реализовано:

@@ -1,8 +1,8 @@
 use std::time::Duration;
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result, bail, ensure};
 use iroh::{
-    Endpoint,
+    Endpoint, EndpointAddr, RelayMode,
     endpoint::{Builder, Connection, RecvStream, SendStream, presets},
 };
 use kilogram_protocol::{ClientRequest, ServerResponse};
@@ -55,6 +55,26 @@ pub fn endpoint_builder(policy: RoutePolicy) -> Builder {
         // Removing all IP transports makes relay-only strict at the Iroh layer.
         RoutePolicy::RelayOnly => builder.clear_ip_transports(),
     }
+}
+
+/// Builds a dialing endpoint whose strict relay route is pinned to the remote
+/// endpoint's advertised home relay.
+///
+/// Iroh normally manages relay selection dynamically. Pinning the strict
+/// relay-only dialer to the signed ticket avoids selecting a different home
+/// relay from the listener while no IP transports are available.
+pub fn endpoint_builder_for_remote(policy: RoutePolicy, remote: &EndpointAddr) -> Result<Builder> {
+    let builder = endpoint_builder(policy);
+    if policy != RoutePolicy::RelayOnly {
+        return Ok(builder);
+    }
+
+    let relay_urls = remote.relay_urls().cloned().collect::<Vec<_>>();
+    ensure!(
+        !relay_urls.is_empty(),
+        "relay-only remote endpoint has no relay address"
+    );
+    Ok(builder.relay_mode(RelayMode::custom(relay_urls)))
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -191,6 +211,7 @@ fn wire_timeout_message(operation: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use iroh::SecretKey;
 
     #[test]
     fn strict_route_policies_accept_only_the_requested_path() {
@@ -213,6 +234,21 @@ mod tests {
             serde_json::to_string(&RoutePolicy::RelayOnly)?,
             "\"relay-only\""
         );
+        Ok(())
+    }
+
+    #[test]
+    fn relay_only_dialer_requires_a_remote_relay() -> Result<()> {
+        let endpoint_id = SecretKey::generate().public();
+        let remote_without_relay = EndpointAddr::new(endpoint_id);
+        let remote_with_relay = EndpointAddr::new(endpoint_id)
+            .with_relay_url("https://euc1-1.relay.n0.iroh.link./".parse()?);
+
+        assert!(endpoint_builder_for_remote(RoutePolicy::Auto, &remote_without_relay).is_ok());
+        assert!(
+            endpoint_builder_for_remote(RoutePolicy::RelayOnly, &remote_without_relay).is_err()
+        );
+        assert!(endpoint_builder_for_remote(RoutePolicy::RelayOnly, &remote_with_relay).is_ok());
         Ok(())
     }
 }

@@ -29,8 +29,11 @@ reconnect/sync после перезапуска listener в обоих прин
 direct-only тест между домашней сетью и настоящим cellular hotspot корректно
 остался на relay, подтвердив необходимость fallback для жёсткой NAT topology.
 Первый внешний relay-only control дал connection timeout до `peer_id`; новая
-диагностика проверяет online relay клиента и соответствие target Endpoint ID
-текущему listener.
+диагностика подтвердила online relay и соответствие target Endpoint ID текущему
+listener. Контрольный `auto` успешно выполнил delivery через relay (`aps1`) при
+ticket Bob с `euc1`, локализовав проблему в strict relay-only cross-relay
+negotiation. Relay-only dialer теперь pin-ится к relay URL подписанного ticket;
+нужен финальный внешний retest.
 Прикладное E2EE, Account Root Identity, шифрование локальной истории,
 production-grade sync summaries и группы ещё не реализованы.
 
