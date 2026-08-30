@@ -78,6 +78,14 @@ toolchain `1.98.0` для воспроизводимой разработки.
     следующую валидную попытку. Regression test посылает сначала handshake с
     неподдерживаемым ALPN, затем валидный; listener принимает второй connection.
     После добавления regression coverage проходят все 29 workspace tests.
+18. Повторный direct-only прогон после отключения VPN успешно доставил signed
+    Text/Acknowledgement: обе стороны сообщили `transport_ready_path=direct`,
+    `transport_path=direct`, RTT 9.7–11.9 ms и два open paths. Однако выбранные
+    remote addresses — `192.168.0.134` и `192.168.0.111` — принадлежат одной
+    private `/24` LAN. Поэтому прогон подтверждает влияние VPN и рабочий direct
+    transport, но не засчитывается как доказательство Internet hole punching;
+    перед повтором надо исключить Ethernet/второй Wi-Fi/bridge/virtual route и
+    сравнить внешние IP обоих хостов.
 
 Публичный relay проверен на одном хосте в принудительном `relay-only`. Внешний
 M0.3 hole-punching тест между разными сетями пока не выполнен.
