@@ -1,6 +1,6 @@
 # Среда разработки
 
-Проверено: 2026-08-28 после реализации M0.1.6.
+Проверено: 2026-08-31 во время внешней проверки M0.3.
 
 ## Текущий Windows-хост
 
@@ -86,18 +86,26 @@ toolchain `1.98.0` для воспроизводимой разработки.
     transport, но не засчитывается как доказательство Internet hole punching;
     перед повтором надо исключить Ethernet/второй Wi-Fi/bridge/virtual route и
     сравнить внешние IP обоих хостов.
-19. После принудительного cellular-only подключения Bob ticket содержал mobile
-    IPv4 candidate `91.79.188.23:16025`, private hotspot address
-    `10.108.80.130` и global IPv6 candidates. QUIC peer authentication через
-    relay прошла, но direct path не появился за 15 секунд. Диагностика Alice
-    обнаружила, что UI-отключение VPN не удалило `singbox_tun`: интерфейс
-    `172.18.0.1` оставался connected и имел второй default route через
-    `172.18.0.2` с metric `0`, при Ethernet route metric `25`. Alice также не
-    имела global IPv6. До отключения TUN/default route этот результат нельзя
-    приписывать только mobile CGNAT.
+19. При корректном cellular-only прогоне Bob ticket содержал mobile public
+    IPv4 mapping `91.79.200.55:16029`, private hotspot address
+    `10.108.80.130` и global IPv6 candidates. Перед тестом Alice не имела
+    `singbox_tun` и использовала единственный default route через домашний
+    router `192.168.0.1`; VMware routes не были default. QUIC peer
+    authentication через relay прошла, но direct path не появился за 15
+    секунд. Это валидный отрицательный результат Internet hole punching,
+    согласующийся с double NAT/CGNAT мобильного подключения Bob.
+20. Последующий cross-network `relay-only` control дошёл у Bob до
+    `relay_status=online` и `status=listening`, но Alice не получила `peer_id` и
+    завершилась connection timeout через 30 секунд. На локальном хосте тот же
+    build успешно повторил строгий public `euc1` relay-only delivery. Для
+    следующего внешнего прогона client теперь явно ждёт online relay и печатает
+    target Endpoint ID: это отличает stale/wrong ticket от недоступности relay
+    на стороне Alice.
 
 Публичный relay проверен на одном хосте в принудительном `relay-only`. Внешний
-M0.3 hole-punching тест между разными сетями пока не выполнен.
+M0.3 direct-only тест корректно доказал невозможность hole punching в выбранной
+home-to-cellular topology; внешний relay-only control требует повтора с новой
+диагностической сборкой.
 
 ## Решения, которые ещё нельзя фиксировать
 

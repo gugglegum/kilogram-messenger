@@ -29,6 +29,7 @@ const EVENT_STORE_DIRECTORY: &str = "events";
 const DIRECT_PATH_DIAGNOSTIC_WAIT: Duration = Duration::from_secs(3);
 const ROUTE_POLICY_WAIT: Duration = Duration::from_secs(15);
 const CONNECTION_TIMEOUT: Duration = Duration::from_secs(30);
+const CLIENT_RELAY_WAIT_SECONDS: u64 = 30;
 const STREAM_OPEN_TIMEOUT: Duration = Duration::from_secs(15);
 const TICKET_SIGNATURE_DOMAIN: &[u8] = b"kilogram:connection-ticket-signature:v2\0";
 const TICKET_VERSION: u8 = 2;
@@ -522,6 +523,11 @@ async fn connect(
     println!("transport_endpoint_id={}", endpoint.id());
     println!("device_id={}", device_state.identity().device_id());
     println!("route_policy={}", route_policy.as_str());
+    println!("target_endpoint_id={}", ticket.endpoint().id);
+
+    if route_policy == RoutePolicy::RelayOnly {
+        wait_for_relay(&endpoint, route_policy, CLIENT_RELAY_WAIT_SECONDS).await?;
+    }
 
     let connection = timeout(
         CONNECTION_TIMEOUT,
@@ -640,6 +646,12 @@ async fn sync(
     println!("transport_endpoint_id={}", endpoint.id());
     println!("device_id={}", device_state.identity().device_id());
     println!("route_policy={}", route_policy.as_str());
+    println!("target_endpoint_id={}", ticket.endpoint().id);
+
+    if route_policy == RoutePolicy::RelayOnly {
+        wait_for_relay(&endpoint, route_policy, CLIENT_RELAY_WAIT_SECONDS).await?;
+    }
+
     let connection = timeout(
         CONNECTION_TIMEOUT,
         endpoint.connect(ticket.endpoint().clone(), ALPN),

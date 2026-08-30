@@ -1,6 +1,6 @@
 # Память проекта Kilogram
 
-Актуально на: 2026-08-28.
+Актуально на: 2026-08-31.
 
 Эта папка — краткая проектная память и дорожная карта. Подробная техническая
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
@@ -26,7 +26,11 @@ Windows-PC: delivery и recovery sync использовали direct LAN, пу�
 диагностику выбранного пути. Локальный process smoke подтвердил delivery и
 reconnect/sync после перезапуска listener в обоих принудительных режимах;
 `relay-only` использовал публичный n0 relay и ticket без IP-адресов. Внешний
-двуххостовый hole-punching тест в разных сетях ещё не выполнен.
+direct-only тест между домашней сетью и настоящим cellular hotspot корректно
+остался на relay, подтвердив необходимость fallback для жёсткой NAT topology.
+Первый внешний relay-only control дал connection timeout до `peer_id`; новая
+диагностика проверяет online relay клиента и соответствие target Endpoint ID
+текущему listener.
 Прикладное E2EE, Account Root Identity, шифрование локальной истории,
 production-grade sync summaries и группы ещё не реализованы.
 
