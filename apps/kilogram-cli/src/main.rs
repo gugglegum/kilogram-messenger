@@ -7,7 +7,7 @@ use anyhow::{Context, Result, bail, ensure};
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use clap::{Parser, Subcommand, ValueEnum};
 use iroh::{
-    Endpoint, EndpointAddr,
+    Endpoint, EndpointAddr, RelayUrl,
     endpoint::{Connection, RecvStream, SendStream},
 };
 use kilogram_identity::{DeviceId, DeviceIdentity, DeviceState};
@@ -18,8 +18,8 @@ use kilogram_protocol::{
 use kilogram_session::{MAX_SYNC_ROUNDS, ServerInventoryOutcome, SyncClient, SyncServer};
 use kilogram_store::EventStore;
 use kilogram_transport_iroh::{
-    ALPN, RoutePolicy, SelectedPathDiagnostics, await_route_policy, endpoint_builder,
-    endpoint_builder_for_remote, read_client_request, read_server_response,
+    ALPN, RoutePolicy, SelectedPathDiagnostics, await_route_policy, endpoint_builder_for_remote,
+    endpoint_builder_with_relay, read_client_request, read_server_response,
     selected_path_diagnostics, write_client_request, write_server_response,
 };
 use serde::{Deserialize, Serialize};
@@ -68,6 +68,10 @@ enum Command {
         /// Transport path required for Kilogram application frames.
         #[arg(long, value_enum, default_value = "auto")]
         route_policy: RoutePolicyArg,
+
+        /// Restrict this listener to one explicit relay URL.
+        #[arg(long)]
+        relay_url: Option<RelayUrl>,
     },
 
     /// Connect to a listener, send one message, print its acknowledgement, then exit.
@@ -246,6 +250,7 @@ async fn main() -> Result<()> {
             ticket_file,
             relay_wait_seconds,
             route_policy,
+            relay_url,
         } => {
             listen(
                 state_dir,
@@ -253,6 +258,7 @@ async fn main() -> Result<()> {
                 ticket_file,
                 relay_wait_seconds,
                 route_policy.into(),
+                relay_url,
             )
             .await
         }
@@ -283,11 +289,12 @@ async fn listen(
     ticket_file: Option<PathBuf>,
     relay_wait_seconds: u64,
     route_policy: RoutePolicy,
+    relay_url: Option<RelayUrl>,
 ) -> Result<()> {
     let device_state = DeviceState::load_or_create(&state_dir)
         .with_context(|| format!("load device state from {}", state_dir.display()))?;
     let event_store = open_event_store(&state_dir)?;
-    let endpoint = endpoint_builder(route_policy)
+    let endpoint = endpoint_builder_with_relay(route_policy, relay_url)
         .alpns(vec![ALPN.to_vec()])
         .bind()
         .await
@@ -936,6 +943,7 @@ mod tests {
     use super::*;
     use iroh::SecretKey;
     use kilogram_identity::DeviceIdentity;
+    use kilogram_transport_iroh::endpoint_builder;
 
     const UNSUPPORTED_TEST_ALPN: &[u8] = b"kilogram/test/unsupported/1";
 

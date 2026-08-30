@@ -32,8 +32,10 @@ direct-only тест между домашней сетью и настоящи�
 диагностика подтвердила online relay и соответствие target Endpoint ID текущему
 listener. Контрольный `auto` успешно выполнил delivery через relay (`aps1`) при
 ticket Bob с `euc1`, локализовав проблему в strict relay-only cross-relay
-negotiation. Relay-only dialer теперь pin-ится к relay URL подписанного ticket;
-нужен финальный внешний retest.
+negotiation. Однако retest с одинаковым pinned `euc1` снова дал timeout.
+Listener теперь поддерживает явный `--relay-url`; следующий контроль использует
+доказанно рабочий в `auto` relay `aps1`, чтобы разделить дефект relay route и
+дефект строгого отключения IP transports.
 Прикладное E2EE, Account Root Identity, шифрование локальной истории,
 production-grade sync summaries и группы ещё не реализованы.
 

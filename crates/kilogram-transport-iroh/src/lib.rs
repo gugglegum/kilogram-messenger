@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use anyhow::{Context, Result, bail, ensure};
 use iroh::{
-    Endpoint, EndpointAddr, RelayMode,
+    Endpoint, EndpointAddr, RelayMode, RelayUrl,
     endpoint::{Builder, Connection, RecvStream, SendStream, presets},
 };
 use kilogram_protocol::{ClientRequest, ServerResponse};
@@ -54,6 +54,16 @@ pub fn endpoint_builder(policy: RoutePolicy) -> Builder {
         RoutePolicy::Auto | RoutePolicy::DirectOnly => builder,
         // Removing all IP transports makes relay-only strict at the Iroh layer.
         RoutePolicy::RelayOnly => builder.clear_ip_transports(),
+    }
+}
+
+/// Builds an endpoint and optionally restricts relay selection to one explicit
+/// relay URL.
+pub fn endpoint_builder_with_relay(policy: RoutePolicy, relay_url: Option<RelayUrl>) -> Builder {
+    let builder = endpoint_builder(policy);
+    match relay_url {
+        Some(relay_url) => builder.relay_mode(RelayMode::custom([relay_url])),
+        None => builder,
     }
 }
 

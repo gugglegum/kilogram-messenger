@@ -96,6 +96,18 @@ Bob ticket рекламировал `euc1`, а установленное сое
 selections. Следующая сборка pin-ит relay-only dialer к relay URL подписанного
 listener ticket; остался один внешний retest delivery и sync.
 
+Retest с одинаковым pinned `euc1` на Bob и Alice снова завершился timeout до
+`peer_id`, поэтому разные home relay не являлись достаточной причиной. В CLI
+добавлен явный `--relay-url`; следующий минимальный тест принудит оба strict
+relay-only endpoints использовать `aps1`, который уже успешно перенёс
+cross-network `auto` exchange. Успех локализует проблему в `euc1` route, а
+повторный timeout — в cross-network поведении Iroh без IP transports.
+
+Локальный release smoke нового override успешно выполнил strict relay-only
+delivery через явно выбранный `aps1`; ticket, home/target URL и selected path
+совпали, открытым был ровно один relay path. Осталась внешняя проверка теми же
+двумя хостами.
+
 ### M0.1.1 — постоянная device identity и signed event: выполнено
 
 Реализовано:

@@ -111,12 +111,24 @@ toolchain `1.98.0` для воспроизводимой разработки.
     дефект локализован в строгом relay-only при разных relay selections. Новый
     dialer pin-ит свой relay map к relay URL подписанного listener ticket и
     печатает home/target relay URLs; внешний retest ещё требуется.
+22. Внешний retest с pinning подтвердил `euc1` как home/target relay на обеих
+    сторонах, но strict relay-only снова завершился connection timeout до
+    `peer_id`; значит, расхождение home relay не было достаточным объяснением.
+    CLI listener теперь принимает `--relay-url`: следующий контроль принудит
+    оба endpoints использовать `aps1`, который уже успешно перенёс тот же
+    exchange в режиме `auto`. Это разделит неисправность конкретного public
+    relay route и общий дефект Iroh `clear_ip_transports` между сетями.
+23. Локальный release smoke явно зафиксировал оба strict relay-only endpoints
+    на `aps1`: listener ticket, client target/home URL и итоговый selected path
+    совпали; delivery и acknowledgement прошли через один relay path с RTT
+    около 484–485 ms. Механизм `--relay-url` готов к внешнему контрольному
+    прогону.
 
 Публичный relay проверен на одном хосте в принудительном `relay-only`. Внешний
 M0.3 direct-only тест корректно доказал невозможность hole punching в выбранной
 home-to-cellular topology. `auto` подтвердил успешный внешний relay fallback;
-строгий relay-only требует финального повтора после pinning обоих endpoints к
-relay из ticket.
+строгий relay-only требует ещё одного контрольного прогона через явно выбранный
+рабочий `aps1` relay.
 
 ## Решения, которые ещё нельзя фиксировать
 
