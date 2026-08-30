@@ -315,14 +315,7 @@ async fn listen(
     }
 
     println!("status=listening");
-    let incoming = endpoint
-        .accept()
-        .await
-        .context("listener endpoint closed before receiving a connection")?;
-    let connection = timeout(CONNECTION_TIMEOUT, incoming)
-        .await
-        .with_context(|| timeout_message("incoming Iroh handshake", CONNECTION_TIMEOUT))?
-        .context("accept Iroh connection")?;
+    let connection = accept_authenticated_connection(&endpoint).await?;
     println!("peer_id={}", connection.remote_id());
 
     let ready_path = await_route_policy(&connection, route_policy, ROUTE_POLICY_WAIT)
@@ -752,6 +745,46 @@ async fn wait_for_relay(
     Ok(())
 }
 
+/// Waits for one valid QUIC connection while treating malformed or retransmitted
+/// Initial datagrams as recoverable network input. Iroh explicitly documents that
+/// `Incoming::accept` can fail for ordinary UDP traffic and retransmissions.
+async fn accept_authenticated_connection(endpoint: &Endpoint) -> Result<Connection> {
+    let mut ignored_attempts = 0_u64;
+    loop {
+        let incoming = endpoint
+            .accept()
+            .await
+            .context("listener endpoint closed before receiving a connection")?;
+        let accepting = match incoming.accept() {
+            Ok(accepting) => accepting,
+            Err(error) => {
+                ignored_attempts = ignored_attempts.saturating_add(1);
+                eprintln!(
+                    "incoming_connection_ignored={ignored_attempts} stage=initial error={error:#}"
+                );
+                continue;
+            }
+        };
+
+        match timeout(CONNECTION_TIMEOUT, accepting).await {
+            Ok(Ok(connection)) => return Ok(connection),
+            Ok(Err(error)) => {
+                ignored_attempts = ignored_attempts.saturating_add(1);
+                eprintln!(
+                    "incoming_connection_ignored={ignored_attempts} stage=handshake error={error:#}"
+                );
+            }
+            Err(_) => {
+                ignored_attempts = ignored_attempts.saturating_add(1);
+                eprintln!(
+                    "incoming_connection_ignored={ignored_attempts} stage=handshake error={}",
+                    timeout_message("incoming Iroh handshake", CONNECTION_TIMEOUT)
+                );
+            }
+        }
+    }
+}
+
 async fn open_bi(connection: &Connection, operation: &str) -> Result<(SendStream, RecvStream)> {
     timeout(STREAM_OPEN_TIMEOUT, connection.open_bi())
         .await
@@ -879,6 +912,8 @@ mod tests {
     use iroh::SecretKey;
     use kilogram_identity::DeviceIdentity;
 
+    const UNSUPPORTED_TEST_ALPN: &[u8] = b"kilogram/test/unsupported/1";
+
     #[test]
     fn connection_ticket_round_trips() -> Result<()> {
         let endpoint = EndpointAddr::new(SecretKey::generate().public());
@@ -972,6 +1007,51 @@ mod tests {
                 .to_string()
                 .contains("verify listener signature on connection ticket")
         );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn listener_ignores_failed_handshake_and_accepts_the_next_connection() -> Result<()> {
+        let listener = endpoint_builder(RoutePolicy::Auto)
+            .alpns(vec![ALPN.to_vec()])
+            .bind()
+            .await?;
+        let listener_address = listener.addr();
+        let listener_id = listener.id();
+        let accept_task = tokio::spawn({
+            let listener = listener.clone();
+            async move { accept_authenticated_connection(&listener).await }
+        });
+
+        let incompatible_client = endpoint_builder(RoutePolicy::Auto).bind().await?;
+        let incompatible_result = timeout(
+            CONNECTION_TIMEOUT,
+            incompatible_client.connect(listener_address.clone(), UNSUPPORTED_TEST_ALPN),
+        )
+        .await
+        .context("incompatible test handshake timed out")?;
+        assert!(incompatible_result.is_err());
+        incompatible_client.close().await;
+
+        let valid_client = endpoint_builder(RoutePolicy::Auto).bind().await?;
+        let valid_connection = timeout(
+            CONNECTION_TIMEOUT,
+            valid_client.connect(listener_address, ALPN),
+        )
+        .await
+        .context("valid test handshake timed out")??;
+        let accepted_connection = timeout(CONNECTION_TIMEOUT, accept_task)
+            .await
+            .context("listener did not accept the valid test connection")?
+            .context("join listener accept task")??;
+
+        assert_eq!(valid_connection.remote_id(), listener_id);
+        assert_eq!(accepted_connection.remote_id(), valid_client.id());
+
+        valid_connection.close(0_u32.into(), b"test complete");
+        accepted_connection.close(0_u32.into(), b"test complete");
+        valid_client.close().await;
+        listener.close().await;
         Ok(())
     }
 }

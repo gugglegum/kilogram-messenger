@@ -269,7 +269,7 @@ stdout и не является production telemetry API.
 подтверждены: direct LAN path, RTT около 1–2 ms, 2 восстановленных events и
 правильный causal frontier.
 
-### M0.1.7 — принудительные route policies и bounded failures: выполнено
+### Реализовано для M0.3: route policies и bounded failures
 
 Реализовано:
 
@@ -289,7 +289,16 @@ Process smoke на одном Windows-хосте:
   новый Endpoint ID, одна sync round без лишних events;
 - relay delivery и sync после restart listener: `transport_ready_path=relay`,
   `transport_path=relay`, public n0 relay, одна sync round;
-- все 28 workspace tests проходят.
+- на момент первого route-policy smoke проходили все 28 workspace tests.
+
+Первый внешний direct-only прогон обнаружил, что единичная ошибка packet
+authentication в `Incoming` завершала listener. Iroh предупреждает, что ранний
+`Incoming::accept` может штатно отклонять посторонние или retransmitted UDP
+datagrams. Listener исправлен: такие initial/handshake attempts диагностируются
+и игнорируются, после чего accept-loop продолжает ждать валидное соединение.
+Regression test подтверждает продолжение работы после несовместимого ALPN
+handshake и успешный приём следующего клиента; текущий workspace содержит 29
+проходящих tests.
 
 ### Следующее расширение M0
 

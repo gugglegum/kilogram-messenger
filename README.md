@@ -50,6 +50,10 @@ verified delivery and reconnect/sync after listener restart in both forced modes
 The public relay test selected `euc1-1.relay.n0.iroh.link`; the cross-network
 two-host hole-punching test is still pending.
 
+The listener treats failed QUIC Initial/handshake attempts as recoverable network
+input and keeps accepting. This is required for public UDP endpoints because Iroh
+documents that retransmitted or unrelated datagrams may fail early authentication.
+
 The file event store canonicalizes its root before deriving content-addressed
 event paths. On Windows this produces verbatim absolute paths and avoids the
 legacy 260-character limit even when `LongPathsEnabled=1` is insufficient for a

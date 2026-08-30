@@ -353,6 +353,11 @@ policy, последний выбранный path. После прикладн�
 после restart listener для direct-only и public n0 relay-only. Это проверяет
 управляемость маршрута, но ещё не доказывает hole punching между двумя NAT.
 
+Listener не должен завершаться из-за первой ошибки `Incoming`. Публичный UDP
+endpoint может получить посторонний или retransmitted QUIC-like datagram, для
+которого Iroh возвращает раннюю packet-authentication/handshake ошибку. M0.3
+логирует такую попытку и продолжает accept-loop до валидного соединения.
+
 Ядро должно зависеть от абстракции транспорта, а не от публичных типов Iroh:
 
 ```text

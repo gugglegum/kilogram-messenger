@@ -63,11 +63,21 @@ toolchain `1.98.0` для воспроизводимой разработки.
     store за один round по direct path с RTT 1.6 ms; `history` подтвердил
     `event_count=2`, `frontier_count=1` и точную causal acknowledgement — M0.2
     успешно завершён.
-16. M0.1.7 process smoke проверил signed route policies. `direct-only` delivery
+16. Подготовительный M0.3 process smoke проверил signed route policies.
+    `direct-only` delivery
     и sync после restart listener выбрали direct IP path. Строгий `relay-only`
     endpoint публиковал ticket только с Relay address, delivery и sync после
     restart выбрали `euc1-1.relay.n0.iroh.link`; RTT составил примерно
-    240–450 ms. Все 28 workspace tests прошли.
+    240–450 ms. На этом шаге проходили все 28 workspace tests.
+17. Первый cross-network M0.3 direct-only прогон между домашней сетью и 4G
+    обнаружил ошибку listener lifecycle. Iroh получил QUIC Initial, который не
+    прошёл packet authentication (`authentication failed`); такой результат
+    документирован Iroh как допустимый для UDP/retransmitted datagrams. CLI
+    ошибочно завершал весь listener на первой неудачной `Incoming`. Listener
+    теперь логирует и игнорирует initial/handshake failures, продолжая ждать
+    следующую валидную попытку. Regression test посылает сначала handshake с
+    неподдерживаемым ALPN, затем валидный; listener принимает второй connection.
+    После добавления regression coverage проходят все 29 workspace tests.
 
 Публичный relay проверен на одном хосте в принудительном `relay-only`. Внешний
 M0.3 hole-punching тест между разными сетями пока не выполнен.
