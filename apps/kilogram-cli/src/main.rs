@@ -14,17 +14,20 @@ use iroh::{
     endpoint::{Connection, RecvStream, SendStream},
 };
 use kilogram_identity::{
-    AccountAuthoritySnapshot, AccountId, AccountRootState, AuthorizedDevice,
-    ConversationMembershipSnapshot, DeviceCapability, DeviceCertificate, DeviceId, DeviceIdentity,
-    DeviceState, verify_device_authorization_with_snapshot,
+    AccountAuthoritySnapshot, AccountDeviceListSnapshot, AccountId, AccountRootState,
+    AuthorizedDevice, ConversationMembershipSnapshot, DeviceCapability, DeviceCertificate,
+    DeviceId, DeviceIdentity, DeviceState, verify_device_authorization_with_snapshot,
 };
 use kilogram_protocol::{
     AuthorizedEvent, ClientRequest, ConversationId, DeviceAuthorizationAccepted,
     DeviceAuthorizationRejected, EventPayload, LocalTextProjection, MAX_INVENTORY_EVENT_IDS,
-    ServerResponse, SignedDeviceSessionAuthorization, SignedEvent, SignedSyncInventory, SyncPause,
-    SyncPaused, SyncSessionBinding,
+    RatchetRecipient, ServerResponse, SignedDeviceSessionAuthorization, SignedEvent,
+    SignedSyncInventory, SyncPause, SyncPaused, SyncSessionBinding,
 };
-use kilogram_ratchet::{DecryptedMessage, RatchetState, SignedPrekeyBundle};
+use kilogram_ratchet::{
+    AccountPrekeyDirectory, DecryptedMessage, RatchetOperation, RatchetState, SignedPrekeyBundle,
+    SignedRatchetIdentity,
+};
 use kilogram_session::{
     MAX_SYNC_ROUNDS, ServerInventoryOutcome, SessionStore, SyncClient, SyncServer,
     authorize_device_session,
@@ -45,8 +48,8 @@ const ROUTE_POLICY_WAIT: Duration = Duration::from_secs(15);
 const CONNECTION_TIMEOUT: Duration = Duration::from_secs(30);
 const CLIENT_RELAY_WAIT_SECONDS: u64 = 30;
 const STREAM_OPEN_TIMEOUT: Duration = Duration::from_secs(15);
-const TICKET_SIGNATURE_DOMAIN: &[u8] = b"kilogram:connection-ticket-signature:v7\0";
-const TICKET_VERSION: u8 = 7;
+const TICKET_SIGNATURE_DOMAIN: &[u8] = b"kilogram:connection-ticket-signature:v8\0";
+const TICKET_VERSION: u8 = 8;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -70,6 +73,14 @@ enum Command {
         /// Account ID allowed to authenticate a certified requester device.
         #[arg(long)]
         allow_account: AccountId,
+
+        /// Root-signed complete device list for this listener account.
+        #[arg(long)]
+        device_list_file: PathBuf,
+
+        /// Signed current prekey for another device in this account. Repeat for every peer device.
+        #[arg(long = "peer-prekey-bundle-file")]
+        peer_prekey_bundle_files: Vec<PathBuf>,
 
         /// Also write the public connection ticket to this file.
         #[arg(long)]
@@ -164,6 +175,10 @@ enum Command {
         #[arg(long)]
         peer_certificate_file: PathBuf,
 
+        /// Root-signed device list containing exactly this development peer.
+        #[arg(long)]
+        peer_device_list_file: PathBuf,
+
         /// Device-signed one-time prekey bundle for the peer recipient.
         #[arg(long)]
         peer_prekey_bundle_file: PathBuf,
@@ -221,6 +236,21 @@ enum Command {
         /// Write the signed snapshot to this new file.
         #[arg(long)]
         snapshot_file: PathBuf,
+    },
+
+    /// Publish a complete root-signed list of authorized account devices.
+    AccountDeviceList {
+        /// Directory containing an existing development Account Root authority.
+        #[arg(long)]
+        account_dir: PathBuf,
+
+        /// Public device certificate to include. Repeat for every active device.
+        #[arg(long = "device-certificate-file", required = true)]
+        device_certificate_files: Vec<PathBuf>,
+
+        /// Write the complete signed list to this new file.
+        #[arg(long)]
+        device_list_file: PathBuf,
     },
 
     /// Create an owner-signed, add-only conversation membership snapshot.
@@ -332,6 +362,17 @@ enum RoutePolicyArg {
     RelayOnly,
 }
 
+struct ListenOptions {
+    state_dir: PathBuf,
+    allowed_requester_account_id: AccountId,
+    device_list_file: PathBuf,
+    peer_prekey_bundle_files: Vec<PathBuf>,
+    ticket_file: Option<PathBuf>,
+    relay_wait_seconds: u64,
+    route_policy: RoutePolicy,
+    relay_url: Option<RelayUrl>,
+}
+
 impl From<RoutePolicyArg> for RoutePolicy {
     fn from(value: RoutePolicyArg) -> Self {
         match value {
@@ -347,8 +388,7 @@ struct ConnectionTicketContent {
     version: u8,
     endpoint: EndpointAddr,
     listener_certificate: DeviceCertificate,
-    listener_authority_snapshot: AccountAuthoritySnapshot,
-    listener_prekey_bundle: SignedPrekeyBundle,
+    listener_directory: AccountPrekeyDirectory,
     allowed_requester_account_id: AccountId,
     route_policy: RoutePolicy,
 }
@@ -364,8 +404,7 @@ impl ConnectionTicket {
         endpoint: EndpointAddr,
         listener_identity: &DeviceIdentity,
         listener_certificate: DeviceCertificate,
-        listener_authority_snapshot: AccountAuthoritySnapshot,
-        listener_prekey_bundle: SignedPrekeyBundle,
+        listener_directory: AccountPrekeyDirectory,
         allowed_requester_account_id: AccountId,
         route_policy: RoutePolicy,
     ) -> Result<Self> {
@@ -373,26 +412,29 @@ impl ConnectionTicket {
             listener_certificate.device_id() == listener_identity.device_id(),
             "listener certificate belongs to a different device"
         );
-        verify_device_authorization_with_snapshot(
-            listener_certificate.account_id(),
-            &listener_certificate,
-            &listener_authority_snapshot,
-            &DeviceCapability::MESSAGING,
-        )
-        .context("verify listener certificate for connection ticket")?;
-        listener_prekey_bundle
+        listener_directory
             .verify()
-            .context("verify listener prekey bundle")?;
+            .context("verify listener account prekey directory")?;
         ensure!(
-            listener_prekey_bundle.device_id() == listener_identity.device_id(),
-            "listener prekey bundle belongs to a different device"
+            listener_directory.account_id() == listener_certificate.account_id(),
+            "listener prekey directory belongs to a different account"
+        );
+        ensure!(
+            listener_directory.certificate_for(listener_identity.device_id())
+                == Some(&listener_certificate),
+            "listener certificate is not present exactly in its signed device list"
+        );
+        ensure!(
+            listener_directory
+                .bundle_for(listener_identity.device_id())
+                .is_some(),
+            "listener prekey directory has no bundle for the listening device"
         );
         let content = ConnectionTicketContent {
             version: TICKET_VERSION,
             endpoint,
             listener_certificate,
-            listener_authority_snapshot,
-            listener_prekey_bundle,
+            listener_directory,
             allowed_requester_account_id,
             route_policy,
         };
@@ -432,15 +474,11 @@ impl ConnectionTicket {
     }
 
     fn listener_authority_snapshot(&self) -> &AccountAuthoritySnapshot {
-        &self.content.listener_authority_snapshot
+        self.content.listener_directory.authority_snapshot()
     }
 
-    fn listener_certificate(&self) -> &DeviceCertificate {
-        &self.content.listener_certificate
-    }
-
-    fn listener_prekey_bundle(&self) -> &SignedPrekeyBundle {
-        &self.content.listener_prekey_bundle
+    fn listener_directory(&self) -> &AccountPrekeyDirectory {
+        &self.content.listener_directory
     }
 
     fn route_policy(&self) -> RoutePolicy {
@@ -454,15 +492,19 @@ impl ConnectionTicket {
             self.content.version
         );
         self.content.listener_certificate.verify()?;
-        self.content.listener_prekey_bundle.verify()?;
+        self.content.listener_directory.verify()?;
         ensure!(
-            self.content.listener_prekey_bundle.device_id()
-                == self.content.listener_certificate.device_id(),
-            "connection ticket prekey bundle does not belong to the listener device"
+            self.content.listener_directory.account_id()
+                == self.content.listener_certificate.account_id(),
+            "connection ticket directory does not belong to the listener account"
         );
-        self.content
-            .listener_authority_snapshot
-            .verify_for_account(self.content.listener_certificate.account_id())?;
+        ensure!(
+            self.content
+                .listener_directory
+                .certificate_for(self.content.listener_certificate.device_id())
+                == Some(&self.content.listener_certificate),
+            "connection ticket listener certificate is absent from its signed device list"
+        );
         self.content
             .listener_certificate
             .device_id()
@@ -478,7 +520,7 @@ impl ConnectionTicket {
         verify_device_authorization_with_snapshot(
             expected_account,
             &self.content.listener_certificate,
-            &self.content.listener_authority_snapshot,
+            self.content.listener_directory.authority_snapshot(),
             &DeviceCapability::MESSAGING,
         )
         .context("verify listener Account Root authorization")
@@ -487,7 +529,8 @@ impl ConnectionTicket {
     fn verify_listener_account(&self, expected_account: AccountId) -> Result<()> {
         self.verify()?;
         self.content
-            .listener_authority_snapshot
+            .listener_directory
+            .authority_snapshot()
             .verify_for_account(expected_account)
             .context("verify expected listener Account ID")
     }
@@ -507,19 +550,23 @@ async fn main() -> Result<()> {
         Command::Listen {
             state_dir,
             allow_account,
+            device_list_file,
+            peer_prekey_bundle_files,
             ticket_file,
             relay_wait_seconds,
             route_policy,
             relay_url,
         } => {
-            listen(
+            listen(ListenOptions {
                 state_dir,
-                allow_account,
+                allowed_requester_account_id: allow_account,
+                device_list_file,
+                peer_prekey_bundle_files,
                 ticket_file,
                 relay_wait_seconds,
-                route_policy.into(),
+                route_policy: route_policy.into(),
                 relay_url,
-            )
+            })
             .await
         }
         Command::Connect {
@@ -564,6 +611,7 @@ async fn main() -> Result<()> {
             count,
             message_prefix,
             peer_certificate_file,
+            peer_device_list_file,
             peer_prekey_bundle_file,
         } => seed_history(
             state_dir,
@@ -571,6 +619,7 @@ async fn main() -> Result<()> {
             count,
             message_prefix,
             peer_certificate_file,
+            peer_device_list_file,
             peer_prekey_bundle_file,
         ),
         Command::RatchetBundle {
@@ -588,6 +637,11 @@ async fn main() -> Result<()> {
             account_dir,
             snapshot_file,
         } => export_account_snapshot(account_dir, snapshot_file),
+        Command::AccountDeviceList {
+            account_dir,
+            device_certificate_files,
+            device_list_file,
+        } => publish_account_device_list(account_dir, device_certificate_files, device_list_file),
         Command::ConversationCreate {
             account_dir,
             conversation,
@@ -630,22 +684,35 @@ async fn main() -> Result<()> {
     }
 }
 
-async fn listen(
-    state_dir: PathBuf,
-    allowed_requester_account_id: AccountId,
-    ticket_file: Option<PathBuf>,
-    relay_wait_seconds: u64,
-    route_policy: RoutePolicy,
-    relay_url: Option<RelayUrl>,
-) -> Result<()> {
+async fn listen(options: ListenOptions) -> Result<()> {
+    let ListenOptions {
+        state_dir,
+        allowed_requester_account_id,
+        device_list_file,
+        peer_prekey_bundle_files,
+        ticket_file,
+        relay_wait_seconds,
+        route_policy,
+        relay_url,
+    } = options;
     let device_state = DeviceState::load_or_create(&state_dir)
         .with_context(|| format!("load device state from {}", state_dir.display()))?;
     let listener_certificate = device_state
         .load_certificate()
         .context("load listener Account Root certificate")?;
-    let listener_authority_snapshot = device_state
-        .load_own_authority_snapshot()
-        .context("load listener Account Root authority snapshot")?;
+    let listener_device_list = AccountDeviceListSnapshot::decode_and_verify(
+        &fs::read(&device_list_file)
+            .with_context(|| format!("read device list from {}", device_list_file.display()))?,
+    )
+    .context("decode and verify listener account device list")?;
+    ensure!(
+        listener_device_list.certificate_for(listener_certificate.device_id())
+            == Some(&listener_certificate),
+        "listener certificate is not present exactly in the supplied device list"
+    );
+    let authority_snapshot_store = device_state
+        .install_own_authority_snapshot(listener_device_list.authority_snapshot())
+        .context("install authority snapshot embedded in listener device list")?;
     let event_store = open_event_store(&state_dir)?;
     let local_message_store = open_local_message_store(&state_dir)?;
     let mut ratchet_state = RatchetState::load_or_create(&state_dir)
@@ -653,6 +720,18 @@ async fn listen(
     let listener_prekey_bundle = ratchet_state
         .prekey_bundle(device_state.identity())
         .context("publish listener one-time prekey bundle")?;
+    let mut prekey_bundles = vec![listener_prekey_bundle.clone()];
+    for path in peer_prekey_bundle_files {
+        prekey_bundles.push(
+            SignedPrekeyBundle::decode(
+                &fs::read(&path)
+                    .with_context(|| format!("read peer prekey bundle from {}", path.display()))?,
+            )
+            .with_context(|| format!("verify peer prekey bundle from {}", path.display()))?,
+        );
+    }
+    let listener_directory = AccountPrekeyDirectory::new(listener_device_list, prekey_bundles)
+        .context("assemble complete listener account prekey directory")?;
     let endpoint = endpoint_builder_with_relay(route_policy, relay_url)
         .alpns(vec![ALPN.to_vec()])
         .bind()
@@ -665,8 +744,7 @@ async fn listen(
         endpoint.addr(),
         device_state.identity(),
         listener_certificate,
-        listener_authority_snapshot,
-        listener_prekey_bundle,
+        listener_directory,
         allowed_requester_account_id,
         route_policy,
     )?;
@@ -676,7 +754,11 @@ async fn listen(
     println!("device_id={}", device_state.identity().device_id());
     println!(
         "ratchet_prekey_sequence={}",
-        ticket.listener_prekey_bundle().sequence()
+        listener_prekey_bundle.sequence()
+    );
+    println!(
+        "fanout_device_count={}",
+        ticket.listener_directory().bundles().len()
     );
     println!("route_policy={}", route_policy.as_str());
     println!("allowed_requester_account_id={allowed_requester_account_id}");
@@ -684,6 +766,7 @@ async fn listen(
         "authority_revision={}",
         ticket.listener_authority_snapshot().revision()
     );
+    println!("authority_store={authority_snapshot_store:?}");
     println!("ticket={encoded_ticket}");
 
     if let Some(path) = ticket_file {
@@ -898,8 +981,13 @@ async fn handle_delivery_request(
         bail!("listener expected a text event");
     };
     ensure!(
-        signed_event.text_recipient_device_id()? == device_state.identity().device_id(),
-        "received ratchet text is addressed to a different device"
+        signed_event.recipient_device_list()?.account_id() == listener_certificate.account_id(),
+        "received ratchet text recipient device list belongs to a different account"
+    );
+    let local_device_id = device_state.identity().device_id();
+    ensure!(
+        signed_event.ratchet_message_for(local_device_id).is_ok(),
+        "received ratchet text has no ciphertext for this device"
     );
     let (body, local_projection_store_outcome, ratchet_operation) =
         match open_local_text_projection_if_present(
@@ -909,7 +997,8 @@ async fn handle_delivery_request(
         )? {
             Some(body) => (body, kilogram_store::StoreOutcome::AlreadyPresent, None),
             None => {
-                let (sender_ratchet_identity, ciphertext) = signed_event.ratchet_message()?;
+                let (sender_ratchet_identity, ciphertext) =
+                    signed_event.ratchet_message_for(local_device_id)?;
                 let (decrypted, operation) = ratchet_state
                     .decrypt(device_state.identity(), sender_ratchet_identity, ciphertext)
                     .context("decrypt received text through the persistent ratchet")?;
@@ -1101,6 +1190,52 @@ async fn handle_sync_request(
     bail!("sync exceeded the limit of {MAX_SYNC_ROUNDS} rounds")
 }
 
+struct RatchetFanout {
+    sender_identity: SignedRatchetIdentity,
+    recipients: Vec<RatchetRecipient>,
+    operations: Vec<(DeviceId, RatchetOperation)>,
+}
+
+fn encrypt_ratchet_fanout(
+    ratchet_state: &mut RatchetState,
+    sender: &DeviceIdentity,
+    directory: &AccountPrekeyDirectory,
+    plaintext: &str,
+) -> Result<RatchetFanout> {
+    directory
+        .verify()
+        .context("verify recipient account prekey directory before fan-out")?;
+    let mut sender_identity = None;
+    let mut recipients = Vec::with_capacity(directory.bundles().len());
+    let mut operations = Vec::with_capacity(directory.bundles().len());
+    for bundle in directory.bundles() {
+        let (current_sender_identity, ciphertext, operation) = ratchet_state
+            .encrypt(sender, bundle, plaintext)
+            .with_context(|| {
+                format!(
+                    "advance and persist sender ratchet session for device {}",
+                    bundle.device_id()
+                )
+            })?;
+        if let Some(expected) = &sender_identity {
+            ensure!(
+                expected == &current_sender_identity,
+                "ratchet account returned inconsistent sender identities during fan-out"
+            );
+        } else {
+            sender_identity = Some(current_sender_identity.clone());
+        }
+        recipients.push(RatchetRecipient::new(bundle.device_id(), ciphertext)?);
+        operations.push((bundle.device_id(), operation));
+    }
+    Ok(RatchetFanout {
+        sender_identity: sender_identity
+            .context("recipient account prekey directory contains no devices")?,
+        recipients,
+        operations,
+    })
+}
+
 async fn connect(
     state_dir: PathBuf,
     ticket: Option<String>,
@@ -1203,21 +1338,20 @@ async fn connect(
     let parents = event_store
         .frontier(conversation_id)
         .context("calculate local conversation frontier")?;
-    let (sender_ratchet_identity, ratchet_ciphertext, ratchet_operation) = ratchet_state
-        .encrypt(
-            device_state.identity(),
-            ticket.listener_prekey_bundle(),
-            &message,
-        )
-        .context("advance and persist sender ratchet session")?;
+    let ratchet_fanout = encrypt_ratchet_fanout(
+        &mut ratchet_state,
+        device_state.identity(),
+        ticket.listener_directory(),
+        &message,
+    )?;
     let signed_event = SignedEvent::sign_ratchet_text(
         device_state.identity(),
         conversation_id,
         author_sequence,
         parents,
-        ticket.listener_certificate().device_id(),
-        sender_ratchet_identity,
-        ratchet_ciphertext,
+        ticket.listener_directory().device_list().clone(),
+        ratchet_fanout.sender_identity,
+        ratchet_fanout.recipients,
     )
     .context("sign ratchet text event")?;
     let event = AuthorizedEvent::new(
@@ -1247,12 +1381,25 @@ async fn connect(
     .await?;
     println!("sent_event_id={event_id}");
     println!("sent_author_sequence={author_sequence}");
-    println!("ratchet_session_id={}", ratchet_operation.session_id);
+    println!("fanout_recipient_count={}", ratchet_fanout.operations.len());
+    for (device_id, operation) in &ratchet_fanout.operations {
+        println!(
+            "fanout_recipient_device_id={device_id} ratchet_session_id={} ratchet_session_created={} ratchet_message_type={}",
+            operation.session_id, operation.session_created, operation.message_kind
+        );
+    }
+    let listener_operation = ratchet_fanout
+        .operations
+        .iter()
+        .find(|(device_id, _)| *device_id == expected_listener_device_id)
+        .map(|(_, operation)| operation)
+        .context("fan-out diagnostics are missing the connected listener device")?;
+    println!("ratchet_session_id={}", listener_operation.session_id);
     println!(
         "ratchet_session_created={}",
-        ratchet_operation.session_created
+        listener_operation.session_created
     );
-    println!("ratchet_message_type={}", ratchet_operation.message_kind);
+    println!("ratchet_message_type={}", listener_operation.message_kind);
     println!("sent_local_projection={local_projection_store_outcome:?}");
     println!("sent_store={sent_store_outcome:?}");
 
@@ -1702,6 +1849,39 @@ fn export_account_snapshot(account_dir: PathBuf, snapshot_file: PathBuf) -> Resu
     Ok(())
 }
 
+fn publish_account_device_list(
+    account_dir: PathBuf,
+    device_certificate_files: Vec<PathBuf>,
+    device_list_file: PathBuf,
+) -> Result<()> {
+    let account = AccountRootState::load(&account_dir)
+        .with_context(|| format!("load Account Root state from {}", account_dir.display()))?;
+    let mut certificates = Vec::with_capacity(device_certificate_files.len());
+    for path in device_certificate_files {
+        certificates.push(
+            DeviceCertificate::decode_and_verify(
+                &fs::read(&path)
+                    .with_context(|| format!("read device certificate from {}", path.display()))?,
+            )
+            .with_context(|| format!("verify device certificate from {}", path.display()))?,
+        );
+    }
+    let device_list = account
+        .publish_device_list(&certificates)
+        .context("publish complete root-signed account device list")?;
+    write_new_authority_file(&device_list_file, &device_list.encode()?)
+        .with_context(|| format!("export device list to {}", device_list_file.display()))?;
+    println!("account_id={}", device_list.account_id());
+    println!("authority_revision={}", device_list.revision());
+    println!("device_count={}", device_list.devices().len());
+    for certificate in device_list.devices() {
+        println!("device_id={}", certificate.device_id());
+    }
+    println!("device_list_file={}", device_list_file.display());
+    println!("status=account-device-list-published");
+    Ok(())
+}
+
 fn create_conversation_membership(
     account_dir: PathBuf,
     conversation: String,
@@ -2074,6 +2254,7 @@ fn seed_history(
     count: usize,
     message_prefix: String,
     peer_certificate_file: PathBuf,
+    peer_device_list_file: PathBuf,
     peer_prekey_bundle_file: PathBuf,
 ) -> Result<()> {
     ensure!(count > 0, "--count must be greater than zero");
@@ -2097,6 +2278,19 @@ fn seed_history(
     ensure!(
         peer_certificate.device_id() != certificate.device_id(),
         "peer certificate belongs to this same device"
+    );
+    let peer_device_list = AccountDeviceListSnapshot::decode_and_verify(
+        &fs::read(&peer_device_list_file).with_context(|| {
+            format!(
+                "read peer device list from {}",
+                peer_device_list_file.display()
+            )
+        })?,
+    )
+    .context("decode and verify peer account device list")?;
+    ensure!(
+        peer_device_list.devices() == std::slice::from_ref(&peer_certificate),
+        "development seed-history requires a single-device list matching the peer certificate"
     );
     let peer_prekey_bundle =
         SignedPrekeyBundle::decode(&fs::read(&peer_prekey_bundle_file).with_context(|| {
@@ -2153,9 +2347,12 @@ fn seed_history(
             conversation_id,
             author_sequence,
             parents,
-            peer_certificate.device_id(),
+            peer_device_list.clone(),
             sender_ratchet_identity,
-            ciphertext,
+            vec![RatchetRecipient::new(
+                peer_certificate.device_id(),
+                ciphertext,
+            )?],
         )
         .context("sign seeded ratchet history event")?;
         let local_projection = LocalTextProjection::seal_authored(
@@ -2328,7 +2525,21 @@ impl<'a> DecryptingSessionStore<'a> {
                 if event.author_device_id() == local_device_id {
                     return Err(error);
                 }
-                if event.text_recipient_device_id()? != local_device_id {
+                let local_certificate = self
+                    .device_state
+                    .load_certificate()
+                    .map_err(kilogram_protocol::ProtocolError::from)?;
+                let recipient_account_id = event.recipient_device_list()?.account_id();
+                if recipient_account_id != local_certificate.account_id() {
+                    return Err(
+                        kilogram_protocol::ProtocolError::RatchetRecipientAccountMismatch {
+                            expected: local_certificate.account_id(),
+                            actual: recipient_account_id,
+                        }
+                        .into(),
+                    );
+                }
+                if event.ratchet_message_for(local_device_id).is_err() {
                     return Err(
                         kilogram_protocol::ProtocolError::LocalProjectionDeviceNotParticipant(
                             local_device_id,
@@ -2336,7 +2547,7 @@ impl<'a> DecryptingSessionStore<'a> {
                         .into(),
                     );
                 }
-                let (sender_identity, ciphertext) = event.ratchet_message()?;
+                let (sender_identity, ciphertext) = event.ratchet_message_for(local_device_id)?;
                 let (decrypted, _) = self
                     .ratchet_state
                     .borrow_mut()
@@ -2416,7 +2627,12 @@ mod tests {
 
     fn authority_for(
         identity: &DeviceIdentity,
-    ) -> Result<(AccountId, DeviceCertificate, AccountAuthoritySnapshot)> {
+    ) -> Result<(
+        AccountId,
+        DeviceCertificate,
+        AccountAuthoritySnapshot,
+        AccountPrekeyDirectory,
+    )> {
         let directory = tempfile::tempdir()?;
         let root = AccountRootState::create(directory.path())?;
         let encryption = DeviceEncryptionIdentity::generate()?;
@@ -2426,7 +2642,10 @@ mod tests {
             &DeviceCapability::MESSAGING,
         )?;
         let snapshot = root.authority_snapshot()?;
-        Ok((root.account_id(), certificate, snapshot))
+        let device_list = root.publish_device_list(std::slice::from_ref(&certificate))?;
+        let prekey_directory =
+            AccountPrekeyDirectory::new(device_list, vec![prekey_bundle_for(identity)?])?;
+        Ok((root.account_id(), certificate, snapshot, prekey_directory))
     }
 
     fn prekey_bundle_for(identity: &DeviceIdentity) -> Result<SignedPrekeyBundle> {
@@ -2438,27 +2657,35 @@ mod tests {
     fn seeded_history_is_signed_chained_and_persistent() -> Result<()> {
         let directory = tempfile::tempdir()?;
         let account_dir = directory.path().join("account");
+        let peer_account_dir = directory.path().join("peer-account");
         let state_dir = directory.path().join("seeded-device");
         let peer_state_dir = directory.path().join("peer-device");
         let peer_certificate_file = directory.path().join("peer-device.cert");
+        let peer_device_list_file = directory.path().join("peer-devices.snapshot");
         let peer_prekey_bundle_file = directory.path().join("peer-device.prekey");
         let conversation = "seed-history-test";
         create_account(account_dir.clone())?;
         enroll_device(account_dir.clone(), state_dir.clone(), None)?;
         let account = AccountRootState::load(&account_dir)?;
+        let peer_account = AccountRootState::create(&peer_account_dir)?;
         let peer = DeviceState::load_or_create(&peer_state_dir)?;
-        let peer_certificate = account.issue_device_certificate(
+        let peer_certificate = peer_account.issue_device_certificate(
             peer.identity().device_id(),
             peer.encryption().public_key(),
             &DeviceCapability::MESSAGING,
         )?;
         write_new_authority_file(&peer_certificate_file, &peer_certificate.encode()?)?;
+        let peer_device_list =
+            peer_account.publish_device_list(std::slice::from_ref(&peer_certificate))?;
+        peer.install_certificate(&peer_certificate)?;
+        peer.install_own_authority_snapshot(peer_device_list.authority_snapshot())?;
+        write_new_authority_file(&peer_device_list_file, &peer_device_list.encode()?)?;
         let peer_prekey_bundle =
             RatchetState::load_or_create(&peer_state_dir)?.prekey_bundle(peer.identity())?;
         write_new_authority_file(&peer_prekey_bundle_file, &peer_prekey_bundle.encode()?)?;
         let membership = account.create_conversation_membership(
             ConversationId::from_label(conversation).scope_id(),
-            &[],
+            &[peer_account.account_id()],
         )?;
         DeviceState::load_or_create(&state_dir)?.install_conversation_membership(&membership)?;
         seed_history(
@@ -2467,6 +2694,7 @@ mod tests {
             3,
             "fixture".to_owned(),
             peer_certificate_file,
+            peer_device_list_file,
             peer_prekey_bundle_file,
         )?;
 
@@ -2523,6 +2751,11 @@ mod tests {
         let local_state = DeviceState::load_or_create(directory.path().join("local-state"))?;
         let local_root = AccountRootState::create(directory.path().join("local-root"))?;
         let peer_root = AccountRootState::create(directory.path().join("peer-root"))?;
+        let local_certificate = local_root.issue_device_certificate(
+            local_state.identity().device_id(),
+            local_state.encryption().public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
         let peer_identity = DeviceIdentity::generate()?;
         let peer_encryption = DeviceEncryptionIdentity::generate()?;
         let peer_certificate = peer_root.issue_device_certificate(
@@ -2531,6 +2764,15 @@ mod tests {
             &DeviceCapability::MESSAGING,
         )?;
         let outsider_identity = DeviceIdentity::generate()?;
+        let outsider_certificate = local_root.issue_device_certificate(
+            outsider_identity.device_id(),
+            DeviceEncryptionIdentity::generate()?.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let outsider_device_list =
+            local_root.publish_device_list(std::slice::from_ref(&outsider_certificate))?;
+        local_state.install_certificate(&local_certificate)?;
+        local_state.install_own_authority_snapshot(outsider_device_list.authority_snapshot())?;
         let mut outsider_ratchet =
             RatchetState::load_or_create(directory.path().join("outsider-ratchet"))?;
         let outsider_bundle = outsider_ratchet.prekey_bundle(&outsider_identity)?;
@@ -2548,9 +2790,12 @@ mod tests {
                 conversation_id,
                 0,
                 Vec::new(),
-                outsider_identity.device_id(),
+                outsider_device_list,
                 sender_ratchet_identity,
-                ciphertext,
+                vec![RatchetRecipient::new(
+                    outsider_identity.device_id(),
+                    ciphertext,
+                )?],
             )?,
             peer_certificate,
             peer_root.authority_snapshot()?,
@@ -2591,6 +2836,15 @@ mod tests {
             peer_encryption.public_key(),
             &DeviceCapability::MESSAGING,
         )?;
+        let local_certificate = local_root.issue_device_certificate(
+            local_state.identity().device_id(),
+            local_state.encryption().public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let local_device_list =
+            local_root.publish_device_list(std::slice::from_ref(&local_certificate))?;
+        local_state.install_certificate(&local_certificate)?;
+        local_state.install_own_authority_snapshot(local_device_list.authority_snapshot())?;
         let conversation_id = ConversationId::from_label("received-local-projection");
         let membership = local_root.create_conversation_membership(
             conversation_id.scope_id(),
@@ -2607,9 +2861,12 @@ mod tests {
                 conversation_id,
                 0,
                 Vec::new(),
-                local_state.identity().device_id(),
+                local_device_list,
                 sender_ratchet_identity,
-                ciphertext,
+                vec![RatchetRecipient::new(
+                    local_state.identity().device_id(),
+                    ciphertext,
+                )?],
             )?,
             peer_certificate,
             peer_root.authority_snapshot()?,
@@ -2672,16 +2929,15 @@ mod tests {
         let endpoint = EndpointAddr::new(SecretKey::generate().public());
         let listener_identity = DeviceIdentity::generate()?;
         let listener_device_id = listener_identity.device_id();
-        let (listener_account_id, listener_certificate, listener_snapshot) =
+        let (listener_account_id, listener_certificate, _, listener_directory) =
             authority_for(&listener_identity)?;
         let requester_identity = DeviceIdentity::generate()?;
-        let (allowed_requester_account_id, _, _) = authority_for(&requester_identity)?;
+        let (allowed_requester_account_id, _, _, _) = authority_for(&requester_identity)?;
         let encoded = ConnectionTicket::new(
             endpoint.clone(),
             &listener_identity,
             listener_certificate,
-            listener_snapshot,
-            prekey_bundle_for(&listener_identity)?,
+            listener_directory,
             allowed_requester_account_id,
             RoutePolicy::DirectOnly,
         )?
@@ -2710,6 +2966,80 @@ mod tests {
     }
 
     #[test]
+    fn ratchet_fanout_encrypts_one_event_for_every_signed_account_device() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let account = AccountRootState::create(directory.path().join("recipient-account"))?;
+        let sender = DeviceIdentity::generate()?;
+        let first = DeviceIdentity::generate()?;
+        let second = DeviceIdentity::generate()?;
+        let first_certificate = account.issue_device_certificate(
+            first.device_id(),
+            DeviceEncryptionIdentity::generate()?.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let second_certificate = account.issue_device_certificate(
+            second.device_id(),
+            DeviceEncryptionIdentity::generate()?.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let device_list = account
+            .publish_device_list(&[second_certificate.clone(), first_certificate.clone()])?;
+        let mut first_ratchet =
+            RatchetState::load_or_create(directory.path().join("first-ratchet"))?;
+        let mut second_ratchet =
+            RatchetState::load_or_create(directory.path().join("second-ratchet"))?;
+        let prekey_directory = AccountPrekeyDirectory::new(
+            device_list,
+            vec![
+                second_ratchet.prekey_bundle(&second)?,
+                first_ratchet.prekey_bundle(&first)?,
+            ],
+        )?;
+        let mut sender_ratchet =
+            RatchetState::load_or_create(directory.path().join("sender-ratchet"))?;
+        let fanout = encrypt_ratchet_fanout(
+            &mut sender_ratchet,
+            &sender,
+            &prekey_directory,
+            "one event for both devices",
+        )?;
+        assert_eq!(fanout.recipients.len(), 2);
+        assert_eq!(fanout.operations.len(), 2);
+        assert!(fanout.operations.iter().all(|(_, operation)| {
+            operation.message_kind == kilogram_ratchet::RatchetMessageKind::PreKey
+        }));
+        let event = SignedEvent::sign_ratchet_text(
+            &sender,
+            ConversationId::from_label("fanout-unit"),
+            0,
+            Vec::new(),
+            prekey_directory.device_list().clone(),
+            fanout.sender_identity,
+            fanout.recipients,
+        )?;
+
+        let (sender_identity, first_ciphertext) = event.ratchet_message_for(first.device_id())?;
+        let (first_body, _) = first_ratchet.decrypt(&first, sender_identity, first_ciphertext)?;
+        let (sender_identity, second_ciphertext) = event.ratchet_message_for(second.device_id())?;
+        let (second_body, _) =
+            second_ratchet.decrypt(&second, sender_identity, second_ciphertext)?;
+        assert_eq!(first_body.as_str(), "one event for both devices");
+        assert_eq!(second_body.as_str(), first_body.as_str());
+        assert!(
+            event
+                .ratchet_message_for(DeviceIdentity::generate()?.device_id())
+                .is_err()
+        );
+        assert!(
+            !event
+                .encode()?
+                .windows(b"one event for both devices".len())
+                .any(|window| window == b"one event for both devices")
+        );
+        Ok(())
+    }
+
+    #[test]
     fn pinned_peer_state_rejects_an_older_ticket_snapshot() -> Result<()> {
         let root_directory = tempfile::tempdir()?;
         let peer_directory = tempfile::tempdir()?;
@@ -2721,15 +3051,19 @@ mod tests {
             listener_encryption.public_key(),
             &DeviceCapability::MESSAGING,
         )?;
-        let old_snapshot = listener_root.authority_snapshot()?;
         let requester = DeviceIdentity::generate()?;
-        let (requester_account_id, _, _) = authority_for(&requester)?;
+        let (requester_account_id, _, _, _) = authority_for(&requester)?;
+        let old_device_list =
+            listener_root.publish_device_list(std::slice::from_ref(&listener_certificate))?;
+        let old_directory = AccountPrekeyDirectory::new(
+            old_device_list,
+            vec![prekey_bundle_for(&listener_identity)?],
+        )?;
         let encoded = ConnectionTicket::new(
             EndpointAddr::new(SecretKey::generate().public()),
             &listener_identity,
             listener_certificate,
-            old_snapshot,
-            prekey_bundle_for(&listener_identity)?,
+            old_directory,
             requester_account_id,
             RoutePolicy::Auto,
         )?
@@ -2751,15 +3085,14 @@ mod tests {
     #[test]
     fn connection_ticket_rejects_unknown_version() -> Result<()> {
         let identity = DeviceIdentity::generate()?;
-        let (_, certificate, snapshot) = authority_for(&identity)?;
+        let (_, certificate, _, directory) = authority_for(&identity)?;
         let requester = DeviceIdentity::generate()?;
-        let (requester_account_id, _, _) = authority_for(&requester)?;
+        let (requester_account_id, _, _, _) = authority_for(&requester)?;
         let mut ticket = ConnectionTicket::new(
             EndpointAddr::new(SecretKey::generate().public()),
             &identity,
             certificate,
-            snapshot,
-            prekey_bundle_for(&identity)?,
+            directory,
             requester_account_id,
             RoutePolicy::Auto,
         )?;
@@ -2781,15 +3114,14 @@ mod tests {
     #[test]
     fn connection_ticket_rejects_tampering() -> Result<()> {
         let identity = DeviceIdentity::generate()?;
-        let (_, certificate, snapshot) = authority_for(&identity)?;
+        let (_, certificate, _, directory) = authority_for(&identity)?;
         let requester = DeviceIdentity::generate()?;
-        let (requester_account_id, _, _) = authority_for(&requester)?;
+        let (requester_account_id, _, _, _) = authority_for(&requester)?;
         let mut ticket = ConnectionTicket::new(
             EndpointAddr::new(SecretKey::generate().public()),
             &identity,
             certificate,
-            snapshot,
-            prekey_bundle_for(&identity)?,
+            directory,
             requester_account_id,
             RoutePolicy::Auto,
         )?;
@@ -2810,15 +3142,14 @@ mod tests {
     #[test]
     fn connection_ticket_rejects_route_policy_tampering() -> Result<()> {
         let identity = DeviceIdentity::generate()?;
-        let (_, certificate, snapshot) = authority_for(&identity)?;
+        let (_, certificate, _, directory) = authority_for(&identity)?;
         let requester = DeviceIdentity::generate()?;
-        let (requester_account_id, _, _) = authority_for(&requester)?;
+        let (requester_account_id, _, _, _) = authority_for(&requester)?;
         let mut ticket = ConnectionTicket::new(
             EndpointAddr::new(SecretKey::generate().public()),
             &identity,
             certificate,
-            snapshot,
-            prekey_bundle_for(&identity)?,
+            directory,
             requester_account_id,
             RoutePolicy::Auto,
         )?;
@@ -2839,7 +3170,7 @@ mod tests {
     #[tokio::test]
     async fn certified_device_authorizes_before_application_exchange() -> Result<()> {
         let requester_identity = DeviceIdentity::generate()?;
-        let (requester_account_id, requester_certificate, requester_snapshot) =
+        let (requester_account_id, requester_certificate, requester_snapshot, _) =
             authority_for(&requester_identity)?;
         let listener_device_directory = tempfile::tempdir()?;
         let listener_device_state = DeviceState::load_or_create(listener_device_directory.path())?;

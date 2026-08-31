@@ -74,10 +74,14 @@ local-only encrypted projections, адресованные Event ID. M0.7.3 за
 оставшийся peer HPKE box на `vodozemac::olm` Double Ratchet: device-signed
 identity/one-time prekey входит в ticket, а persistent session выдаёт
 PreKey/Normal ciphertext с per-message key evolution. Sync projection не
-передаёт и создаёт её только после ratchet decrypt. Один OTK/session на device
-pair пока не решает simultaneous initiation или account-wide device fan-out.
+передаёт и создаёт её только после ratchet decrypt. M0.7.4 добавил root-signed
+полный device list, точный directory prekey bundles и отдельный ratchet
+ciphertext каждого устройства peer account в одном Event ID. Offline Bob-2
+может получить через sync тот же event, расшифровать свой slot и получить
+историю, идентичную Bob-1.
 Seed/recovery, history rewrap, защищённое хранение root/local/ratchet keys,
-production-grade sync summaries, membership removal и группы ещё не реализованы.
+production prekey discovery/concurrent initiation, sync summaries, membership
+removal и группы ещё не реализованы.
 
 ## Цель продукта
 
@@ -130,18 +134,20 @@ production-grade sync summaries, membership removal и группы ещё не 
 
 ## План ближайших работ
 
-1. Добавить signed device-list fan-out, prekey pool и разрешение concurrent
-   pairwise session initiation.
-2. Спроектировать membership removal вместе с ordered security log и MLS epoch;
+1. Добавить authenticated history rewrap для нового/восстановленного устройства
+   с явной неполнотой и provenance.
+2. Добавить production prekey pool/discovery и разрешение concurrent pairwise
+   session initiation.
+3. Спроектировать membership removal вместе с ordered security log и MLS epoch;
    отдельно — gossip/witness для first-contact freshness.
-3. Спроектировать seed/recovery authority, protected root storage, root
+4. Спроектировать seed/recovery authority, protected root storage, root
    rotation и конфликтующие authority operations.
-4. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
-5. Спроектировать финальный wire format подписанного события и алгоритм
+5. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
+6. Спроектировать финальный wire format подписанного события и алгоритм
    линеаризации.
-6. Спроектировать compact Merkle/range summary и переносимый signed cursor.
-7. Добавить мультиустройство и затем небольшие MLS-группы.
-8. Перед публичным выпуском провести независимый криптографический аудит.
+7. Спроектировать compact Merkle/range summary и переносимый signed cursor.
+8. Добавить небольшие MLS-группы.
+9. Перед публичным выпуском провести независимый криптографический аудит.
 
 ## Навигация
 
@@ -162,5 +168,7 @@ production-grade sync summaries, membership removal и группы ещё не 
   реализованный M0.7.2-контракт recipient-only event и локальной projection.
 - [`../docs/RFC-0006-pairwise-double-ratchet.md`](../docs/RFC-0006-pairwise-double-ratchet.md) —
   реализованный M0.7.3-контракт signed prekey и persistent pairwise ratchet.
+- [`../docs/RFC-0007-multi-device-ratchet-fanout.md`](../docs/RFC-0007-multi-device-ratchet-fanout.md) —
+  реализованный M0.7.4-контракт signed device list и ratchet fan-out.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

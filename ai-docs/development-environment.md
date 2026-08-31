@@ -232,6 +232,16 @@ toolchain `1.98.0` для воспроизводимой разработки.
     direct PreKey → Normal → Normal через три listener restart, подтвердил один
     session ID, одинаковые histories из 6 events и отсутствие plaintext в 22
     проверенных ciphertext state files.
+36. M0.7.4 добавил root-signed `AccountDeviceListSnapshot`, exact
+    `AccountPrekeyDirectory` и ticket v8. Event v5 содержит embedded device list
+    и отдельный canonical Olm ciphertext slot каждого peer device; sync/session/
+    ALPN повышены до v6/v6/`kilogram/m0/sync/6`. `account-device-list` публикует
+    список, `listen` собирает bundle directory, а offline device создаёт local
+    projection после sync своего slot. Форматирование, строгий Clippy, release
+    workspace build и все 63 tests проходят. Release smoke
+    `.tmp/m074-smoke-20260901-004422` подтвердил один Alice event для Bob-1 и
+    Bob-2, последующий sync Bob-2, одинаковые histories, session counts 2/1/1
+    и отсутствие plaintext в 16 ciphertext state files.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -244,9 +254,10 @@ batch. M0.5.1 завершает локальную authority-модель; се
 certificate/revocation завершено в M0.5.2. Completeness на подписанной revision
 и anti-rollback реализованы в M0.6.1; M0.6.2 закрывает минимальный add-only
 conversation membership и author verification. M0.7.3 завершил первый
-persistent pairwise Double Ratchet spike. First-contact global freshness,
-signed device-list/prekey fan-out, concurrent initiation, history rewrap,
-membership removal/epochs и group E2EE остаются открыты.
+persistent pairwise Double Ratchet spike; M0.7.4 расширил его до проверяемого
+account-wide fan-out. First-contact global freshness, production prekey
+discovery, concurrent initiation, history rewrap, membership removal/epochs и
+group E2EE остаются открыты.
 
 ## Решения, которые ещё нельзя фиксировать
 

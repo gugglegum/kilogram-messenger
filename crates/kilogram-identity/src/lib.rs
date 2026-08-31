@@ -15,10 +15,11 @@ use thiserror::Error;
 mod account;
 
 pub use account::{
-    AccountAuthoritySnapshot, AccountId, AccountRootState, AuthoritySnapshotStoreOutcome,
-    AuthorizedDevice, ConversationMembershipSnapshot, ConversationMembershipStoreOutcome,
-    ConversationScopeId, DeviceCapability, DeviceCertificate, DeviceRevocation,
-    verify_device_authorization, verify_device_authorization_with_snapshot,
+    AccountAuthoritySnapshot, AccountDeviceListSnapshot, AccountId, AccountRootState,
+    AuthoritySnapshotStoreOutcome, AuthorizedDevice, ConversationMembershipSnapshot,
+    ConversationMembershipStoreOutcome, ConversationScopeId, DeviceCapability, DeviceCertificate,
+    DeviceRevocation, MAX_ACCOUNT_DEVICES, verify_device_authorization,
+    verify_device_authorization_with_snapshot,
 };
 pub use kilogram_crypto::{DeviceEncryptionIdentity, EncryptionPublicKey};
 
@@ -345,6 +346,32 @@ pub enum IdentityError {
 
     #[error("authority snapshot contains duplicate revocations for device {0}")]
     DuplicateDeviceRevocation(DeviceId),
+
+    #[error("unsupported account device-list version: {0}")]
+    UnsupportedAccountDeviceListVersion(u8),
+
+    #[error("an account device list must contain at least one device")]
+    EmptyAccountDeviceList,
+
+    #[error("account device list has {0} devices; maximum is 32")]
+    TooManyAccountDevices(usize),
+
+    #[error("account device list contains duplicate device {0}")]
+    DuplicateAccountDevice(DeviceId),
+
+    #[error("account device list is not in canonical device-ID order")]
+    NonCanonicalAccountDeviceList,
+
+    #[error("a different account device list is already published at authority revision {0}")]
+    AccountDeviceListAlreadyPublished(u64),
+
+    #[error(
+        "account device-list rollback detected: stored revision {stored_revision}, received revision {received_revision}"
+    )]
+    AccountDeviceListRollback {
+        stored_revision: u64,
+        received_revision: u64,
+    },
 
     #[error(
         "revocation sequence {revocation_sequence} is not covered by authority snapshot revision {snapshot_revision}"

@@ -11,7 +11,9 @@ add-only conversation membership и проверку Account/Device proof каж
 event. M0.7.1 добавил два static-key HPKE box для тела сообщения. M0.7.2 удалил
 sender box из replicated event и ввёл local-only encrypted history projection.
 M0.7.3 заменил оставшийся peer box на persistent `vodozemac::olm` Double
-Ratchet с device-signed one-time prekey.
+Ratchet с device-signed one-time prekey. M0.7.4 добавил root-signed полный
+device list, точный prekey directory и отдельный ciphertext slot каждого
+устройства peer account.
 Следующие вопросы относятся к production recovery, rotation, asynchronous
 sessions, distribution, removal и key epochs и не решены этим прототипом.
 
@@ -29,8 +31,10 @@ sessions, distribution, removal и key epochs и не решены этим пр
   для одной пары devices без downgrade/identity confusion?
 - Как транзакционно сохранять ratchet advancement, local projection и immutable
   event, не позволяя crash потерять использованный message key?
-- Как подписывать, распространять, обновлять и удалять device/prekey bundles,
-  чтобы первое offline-сообщение и fan-out не позволяли peer подменить key list?
+- Как authenticated discovery/gossip сообщает самую свежую device-list revision
+  и prekey pool, предотвращает replay/исчерпание OTK и не раскрывает лишнюю
+  account metadata? M0.7.4 проверяет подпись и полноту полученного списка, но не
+  его глобальную свежесть при первом контакте.
 - Как authenticated history rewrap передаёт старую локальную историю новому или
   восстановленному device, не возвращая static sender box в replicated event?
 - Какой финальный межъязыковой canonical wire encoding обеспечивает одинаковые

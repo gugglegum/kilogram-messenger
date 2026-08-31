@@ -438,6 +438,7 @@ fn plan_sync<S: SessionStore + ?Sized>(
 
 #[cfg(test)]
 mod tests {
+    use kilogram_protocol::RatchetRecipient;
     use std::{cell::RefCell, error::Error};
 
     use kilogram_identity::{
@@ -936,6 +937,15 @@ mod tests {
         let sender_directory = tempdir()?;
         let peer_directory = tempdir()?;
         let peer_identity = DeviceIdentity::generate()?;
+        let peer_encryption = DeviceEncryptionIdentity::generate()?;
+        let peer_root = AccountRootState::create(peer_directory.path().join("account"))?;
+        let peer_certificate = peer_root.issue_device_certificate(
+            peer_identity.device_id(),
+            peer_encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let peer_device_list =
+            peer_root.publish_device_list(std::slice::from_ref(&peer_certificate))?;
         let peer_bundle =
             RatchetState::load_or_create(peer_directory.path())?.prekey_bundle(&peer_identity)?;
         let (sender_ratchet_identity, ciphertext, _) = RatchetState::load_or_create(
@@ -948,9 +958,12 @@ mod tests {
                 conversation_id,
                 sequence,
                 Vec::new(),
-                peer_identity.device_id(),
+                peer_device_list,
                 sender_ratchet_identity,
-                ciphertext,
+                vec![RatchetRecipient::new(
+                    peer_identity.device_id(),
+                    ciphertext,
+                )?],
             )?,
             certificate.clone(),
             authority_snapshot.clone(),

@@ -4,9 +4,9 @@ use kilogram_crypto::{
     CryptoError, DeviceEncryptionIdentity, ENCRYPTION_KEY_BYTES, EncryptionPublicKey, SealedMessage,
 };
 use kilogram_identity::{
-    AccountAuthoritySnapshot, AccountId, ConversationMembershipSnapshot, ConversationScopeId,
-    DeviceCapability, DeviceCertificate, DeviceId, DeviceIdentity, IdentityError,
-    verify_device_authorization_with_snapshot,
+    AccountAuthoritySnapshot, AccountDeviceListSnapshot, AccountId, ConversationMembershipSnapshot,
+    ConversationScopeId, DeviceCapability, DeviceCertificate, DeviceId, DeviceIdentity,
+    IdentityError, MAX_ACCOUNT_DEVICES, verify_device_authorization_with_snapshot,
 };
 use kilogram_ratchet::{DecryptedMessage, RatchetCiphertext, RatchetError, SignedRatchetIdentity};
 use serde::{Deserialize, Serialize};
@@ -21,9 +21,9 @@ pub use wire::{
     SyncPause, SyncPaused, SyncRejected, SyncRejectionReason, SyncSessionBinding,
 };
 
-const EVENT_VERSION: u8 = 4;
-const EVENT_SIGNATURE_DOMAIN: &[u8] = b"kilogram:event-signature:v4\0";
-const EVENT_ID_DOMAIN: &[u8] = b"kilogram:event-id:v4\0";
+const EVENT_VERSION: u8 = 5;
+const EVENT_SIGNATURE_DOMAIN: &[u8] = b"kilogram:event-signature:v5\0";
+const EVENT_ID_DOMAIN: &[u8] = b"kilogram:event-id:v5\0";
 const LOCAL_TEXT_PROJECTION_VERSION: u8 = 1;
 const LOCAL_TEXT_PROJECTION_HPKE_INFO: &[u8] = b"kilogram:local-text-projection-hpke:v1\0";
 const LOCAL_TEXT_PROJECTION_AAD_DOMAIN: &[u8] = b"kilogram:local-text-projection-aad:v1\0";
@@ -64,11 +64,35 @@ impl fmt::Display for EventId {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct RatchetRecipient {
+    device_id: DeviceId,
+    ciphertext: RatchetCiphertext,
+}
+
+impl RatchetRecipient {
+    pub fn new(device_id: DeviceId, ciphertext: RatchetCiphertext) -> Result<Self, ProtocolError> {
+        ciphertext.validate()?;
+        Ok(Self {
+            device_id,
+            ciphertext,
+        })
+    }
+
+    pub fn device_id(&self) -> DeviceId {
+        self.device_id
+    }
+
+    pub fn ciphertext(&self) -> &RatchetCiphertext {
+        &self.ciphertext
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum EventPayload {
     RatchetText {
-        recipient_device_id: DeviceId,
+        recipient_device_list: Box<AccountDeviceListSnapshot>,
         sender_ratchet_identity: SignedRatchetIdentity,
-        ciphertext: RatchetCiphertext,
+        recipients: Vec<RatchetRecipient>,
     },
     Acknowledgement {
         acknowledged_event_id: EventId,
@@ -316,15 +340,11 @@ impl SignedEvent {
         conversation_id: ConversationId,
         author_sequence: u64,
         parents: Vec<EventId>,
-        recipient_device_id: DeviceId,
+        recipient_device_list: AccountDeviceListSnapshot,
         sender_ratchet_identity: SignedRatchetIdentity,
-        ciphertext: RatchetCiphertext,
+        mut recipients: Vec<RatchetRecipient>,
     ) -> Result<Self, ProtocolError> {
-        if recipient_device_id == identity.device_id() {
-            return Err(ProtocolError::EncryptedRecipientIsAuthor(
-                recipient_device_id,
-            ));
-        }
+        recipients.sort_by_key(|recipient| *recipient.device_id().as_bytes());
         Self::sign(
             identity,
             EventContent {
@@ -334,9 +354,9 @@ impl SignedEvent {
                 author_sequence,
                 parents,
                 payload: EventPayload::RatchetText {
-                    recipient_device_id,
+                    recipient_device_list: Box::new(recipient_device_list),
                     sender_ratchet_identity,
-                    ciphertext,
+                    recipients,
                 },
             },
         )
@@ -411,29 +431,40 @@ impl SignedEvent {
         &self.content.payload
     }
 
-    pub fn text_recipient_device_id(&self) -> Result<DeviceId, ProtocolError> {
+    pub fn ratchet_recipients(&self) -> Result<&[RatchetRecipient], ProtocolError> {
+        let EventPayload::RatchetText { recipients, .. } = &self.content.payload else {
+            return Err(ProtocolError::EventIsNotEncryptedText);
+        };
+        Ok(recipients)
+    }
+
+    pub fn recipient_device_list(&self) -> Result<&AccountDeviceListSnapshot, ProtocolError> {
         let EventPayload::RatchetText {
-            recipient_device_id,
+            recipient_device_list,
             ..
         } = &self.content.payload
         else {
             return Err(ProtocolError::EventIsNotEncryptedText);
         };
-        Ok(*recipient_device_id)
+        Ok(recipient_device_list)
     }
 
-    pub fn ratchet_message(
+    pub fn ratchet_message_for(
         &self,
+        recipient_device_id: DeviceId,
     ) -> Result<(&SignedRatchetIdentity, &RatchetCiphertext), ProtocolError> {
         let EventPayload::RatchetText {
             sender_ratchet_identity,
-            ciphertext,
+            recipients,
             ..
         } = &self.content.payload
         else {
             return Err(ProtocolError::EventIsNotEncryptedText);
         };
-        Ok((sender_ratchet_identity, ciphertext))
+        let index = recipients
+            .binary_search_by(|recipient| recipient.device_id().cmp(&recipient_device_id))
+            .map_err(|_| ProtocolError::MissingEncryptedRecipient(recipient_device_id))?;
+        Ok((sender_ratchet_identity, recipients[index].ciphertext()))
     }
 
     fn sign(identity: &DeviceIdentity, content: EventContent) -> Result<Self, ProtocolError> {
@@ -463,21 +494,52 @@ fn validate_content(content: &EventContent) -> Result<(), ProtocolError> {
         return Err(ProtocolError::DuplicateParent);
     }
     if let EventPayload::RatchetText {
-        recipient_device_id,
+        recipient_device_list,
         sender_ratchet_identity,
-        ciphertext,
+        recipients,
     } = &content.payload
     {
-        if *recipient_device_id == content.author_device_id {
-            return Err(ProtocolError::EncryptedRecipientIsAuthor(
-                *recipient_device_id,
-            ));
-        }
         sender_ratchet_identity.verify()?;
         if sender_ratchet_identity.device_id() != content.author_device_id {
             return Err(ProtocolError::RatchetIdentityAuthorMismatch);
         }
-        ciphertext.validate()?;
+        recipient_device_list.verify()?;
+        if recipients.is_empty() {
+            return Err(ProtocolError::EmptyRatchetRecipients);
+        }
+        if recipients.len() > MAX_ACCOUNT_DEVICES {
+            return Err(ProtocolError::TooManyRatchetRecipients(recipients.len()));
+        }
+        for recipient in recipients {
+            if recipient.device_id() == content.author_device_id {
+                return Err(ProtocolError::EncryptedRecipientIsAuthor(
+                    recipient.device_id(),
+                ));
+            }
+            recipient.ciphertext().validate()?;
+        }
+        for pair in recipients.windows(2) {
+            match pair[0].device_id().cmp(&pair[1].device_id()) {
+                std::cmp::Ordering::Less => {}
+                std::cmp::Ordering::Equal => {
+                    return Err(ProtocolError::DuplicateRatchetRecipient(
+                        pair[0].device_id(),
+                    ));
+                }
+                std::cmp::Ordering::Greater => {
+                    return Err(ProtocolError::NonCanonicalRatchetRecipients);
+                }
+            }
+        }
+        if recipient_device_list.devices().len() != recipients.len()
+            || recipient_device_list
+                .devices()
+                .iter()
+                .zip(recipients)
+                .any(|(certificate, recipient)| certificate.device_id() != recipient.device_id())
+        {
+            return Err(ProtocolError::RatchetRecipientDeviceListMismatch);
+        }
     }
     Ok(())
 }
@@ -486,8 +548,11 @@ fn require_text_participant(
     event: &SignedEvent,
     local_device_id: DeviceId,
 ) -> Result<(), ProtocolError> {
-    let recipient_device_id = event.text_recipient_device_id()?;
-    if event.author_device_id() != local_device_id && recipient_device_id != local_device_id {
+    let is_recipient = event
+        .ratchet_recipients()?
+        .binary_search_by(|recipient| recipient.device_id().cmp(&local_device_id))
+        .is_ok();
+    if event.author_device_id() != local_device_id && !is_recipient {
         return Err(ProtocolError::LocalProjectionDeviceNotParticipant(
             local_device_id,
         ));
@@ -546,6 +611,29 @@ pub enum ProtocolError {
 
     #[error("encrypted text recipient is the author device {0}")]
     EncryptedRecipientIsAuthor(DeviceId),
+
+    #[error("ratchet text must contain at least one recipient")]
+    EmptyRatchetRecipients,
+
+    #[error("ratchet text has {0} recipients; maximum is 32")]
+    TooManyRatchetRecipients(usize),
+
+    #[error("ratchet text contains duplicate recipient {0}")]
+    DuplicateRatchetRecipient(DeviceId),
+
+    #[error("ratchet text recipients are not in canonical device-ID order")]
+    NonCanonicalRatchetRecipients,
+
+    #[error("ratchet recipient slots do not exactly match the embedded root-signed device list")]
+    RatchetRecipientDeviceListMismatch,
+
+    #[error(
+        "ratchet recipient device list belongs to account {actual}; expected local account {expected}"
+    )]
+    RatchetRecipientAccountMismatch {
+        expected: AccountId,
+        actual: AccountId,
+    },
 
     #[error("HPKE encapsulated key has {0} bytes; expected {ENCRYPTION_KEY_BYTES}")]
     InvalidEncapsulatedKeyLength(usize),
@@ -656,6 +744,15 @@ mod tests {
         let sender_directory = tempdir()?;
         let peer_directory = tempdir()?;
         let peer_identity = DeviceIdentity::generate()?;
+        let peer_encryption = DeviceEncryptionIdentity::generate()?;
+        let peer_root = AccountRootState::create(peer_directory.path().join("account"))?;
+        let peer_certificate = peer_root.issue_device_certificate(
+            peer_identity.device_id(),
+            peer_encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let peer_device_list =
+            peer_root.publish_device_list(std::slice::from_ref(&peer_certificate))?;
         let peer_bundle =
             RatchetState::load_or_create(peer_directory.path())?.prekey_bundle(&peer_identity)?;
         let (sender_ratchet_identity, ciphertext, _) = RatchetState::load_or_create(
@@ -667,9 +764,12 @@ mod tests {
             conversation_id,
             author_sequence,
             parents,
-            peer_identity.device_id(),
+            peer_device_list,
             sender_ratchet_identity,
-            ciphertext,
+            vec![RatchetRecipient::new(
+                peer_identity.device_id(),
+                ciphertext,
+            )?],
         )?)
     }
 
@@ -698,7 +798,11 @@ mod tests {
             local_projection.open(&decoded, identity.device_id(), &own_encryption)?,
             "hello"
         );
-        assert_ne!(decoded.text_recipient_device_id()?, identity.device_id());
+        assert_eq!(decoded.ratchet_recipients()?.len(), 1);
+        assert_ne!(
+            decoded.ratchet_recipients()?[0].device_id(),
+            identity.device_id()
+        );
         assert!(
             !decoded
                 .encode()?
@@ -738,26 +842,71 @@ mod tests {
         let root = tempdir()?;
         let identity = DeviceIdentity::generate()?;
         let peer_identity = DeviceIdentity::generate()?;
+        let second_peer_identity = DeviceIdentity::generate()?;
         let peer_encryption = DeviceEncryptionIdentity::generate()?;
+        let second_peer_encryption = DeviceEncryptionIdentity::generate()?;
+        let peer_account = AccountRootState::create(root.path().join("peer-account"))?;
+        let peer_certificate = peer_account.issue_device_certificate(
+            peer_identity.device_id(),
+            peer_encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let second_peer_certificate = peer_account.issue_device_certificate(
+            second_peer_identity.device_id(),
+            second_peer_encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let peer_device_list =
+            peer_account.publish_device_list(&[peer_certificate, second_peer_certificate])?;
         let outsider_identity = DeviceIdentity::generate()?;
         let mut sender_ratchet = RatchetState::load_or_create(root.path().join("sender"))?;
         let mut peer_ratchet = RatchetState::load_or_create(root.path().join("peer"))?;
+        let mut second_peer_ratchet =
+            RatchetState::load_or_create(root.path().join("second-peer"))?;
         let peer_bundle = peer_ratchet.prekey_bundle(&peer_identity)?;
-        let (sender_ratchet_identity, ciphertext, _) =
+        let second_peer_bundle = second_peer_ratchet.prekey_bundle(&second_peer_identity)?;
+        let (sender_ratchet_identity, peer_ciphertext, _) =
             sender_ratchet.encrypt(&identity, &peer_bundle, "for the intended peer device")?;
+        let (second_sender_identity, second_peer_ciphertext, _) = sender_ratchet.encrypt(
+            &identity,
+            &second_peer_bundle,
+            "for the intended peer device",
+        )?;
+        assert_eq!(second_sender_identity, sender_ratchet_identity);
+        let peer_recipient = RatchetRecipient::new(peer_identity.device_id(), peer_ciphertext)?;
+        let second_peer_recipient =
+            RatchetRecipient::new(second_peer_identity.device_id(), second_peer_ciphertext)?;
+        assert!(matches!(
+            SignedEvent::sign_ratchet_text(
+                &identity,
+                ConversationId::from_label("incomplete-recipient-binding"),
+                2,
+                Vec::new(),
+                peer_device_list.clone(),
+                sender_ratchet_identity.clone(),
+                vec![peer_recipient.clone()],
+            ),
+            Err(ProtocolError::RatchetRecipientDeviceListMismatch)
+        ));
         let event = SignedEvent::sign_ratchet_text(
             &identity,
             ConversationId::from_label("recipient-binding"),
             3,
             Vec::new(),
-            peer_identity.device_id(),
+            peer_device_list,
             sender_ratchet_identity,
-            ciphertext,
+            vec![second_peer_recipient, peer_recipient],
         )?;
 
-        let (ratchet_identity, ciphertext) = event.ratchet_message()?;
+        let (ratchet_identity, ciphertext) =
+            event.ratchet_message_for(peer_identity.device_id())?;
         let (peer_body, _) = peer_ratchet.decrypt(&peer_identity, ratchet_identity, ciphertext)?;
         assert_eq!(peer_body.as_str(), "for the intended peer device");
+        let (ratchet_identity, ciphertext) =
+            event.ratchet_message_for(second_peer_identity.device_id())?;
+        let (second_peer_body, _) =
+            second_peer_ratchet.decrypt(&second_peer_identity, ratchet_identity, ciphertext)?;
+        assert_eq!(second_peer_body.as_str(), peer_body.as_str());
         let peer_projection = LocalTextProjection::seal_received(
             &event,
             peer_identity.device_id(),
@@ -767,6 +916,20 @@ mod tests {
         assert_eq!(
             peer_projection.open(&event, peer_identity.device_id(), &peer_encryption)?,
             peer_body.as_str()
+        );
+        let second_peer_projection = LocalTextProjection::seal_received(
+            &event,
+            second_peer_identity.device_id(),
+            second_peer_encryption.public_key(),
+            &second_peer_body,
+        )?;
+        assert_eq!(
+            second_peer_projection.open(
+                &event,
+                second_peer_identity.device_id(),
+                &second_peer_encryption,
+            )?,
+            second_peer_body.as_str()
         );
         assert!(matches!(
             require_text_participant(&event, outsider_identity.device_id()),
@@ -786,14 +949,10 @@ mod tests {
             Vec::new(),
             "original",
         )?;
-        let EventPayload::RatchetText {
-            recipient_device_id,
-            ..
-        } = &mut event.content.payload
-        else {
+        let EventPayload::RatchetText { recipients, .. } = &mut event.content.payload else {
             return Err(Box::new(ProtocolError::EventIsNotEncryptedText));
         };
-        *recipient_device_id = DeviceIdentity::generate()?.device_id();
+        recipients[0].device_id = DeviceIdentity::generate()?.device_id();
 
         assert!(event.verify().is_err());
         Ok(())

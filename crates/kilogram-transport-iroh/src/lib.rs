@@ -9,7 +9,7 @@ use kilogram_protocol::{ClientRequest, ServerResponse};
 use serde::{Deserialize, Serialize};
 use tokio::time::{Instant, sleep, timeout};
 
-pub const ALPN: &[u8] = b"kilogram/m0/sync/5";
+pub const ALPN: &[u8] = b"kilogram/m0/sync/6";
 pub const MAX_WIRE_MESSAGE_BYTES: usize = 8 * 1024 * 1024;
 pub const WIRE_IO_TIMEOUT: Duration = Duration::from_secs(15);
 

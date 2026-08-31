@@ -10,13 +10,13 @@ use crate::{AuthorizedEvent, ConversationId, EventId, ProtocolError};
 pub const MAX_INVENTORY_EVENT_IDS: usize = 4096;
 pub const MAX_SYNC_EVENTS_PER_BATCH: usize = 64;
 
-const SYNC_VERSION: u8 = 5;
-const SYNC_DIFF_SIGNATURE_DOMAIN: &[u8] = b"kilogram:sync-diff-signature:v5\0";
-const SYNC_INVENTORY_SIGNATURE_DOMAIN: &[u8] = b"kilogram:sync-inventory-signature:v5\0";
+const SYNC_VERSION: u8 = 6;
+const SYNC_DIFF_SIGNATURE_DOMAIN: &[u8] = b"kilogram:sync-diff-signature:v6\0";
+const SYNC_INVENTORY_SIGNATURE_DOMAIN: &[u8] = b"kilogram:sync-inventory-signature:v6\0";
 const SYNC_SESSION_DOMAIN: &[u8] = b"kilogram:sync-session:v1\0";
-const DEVICE_AUTHORIZATION_VERSION: u8 = 5;
+const DEVICE_AUTHORIZATION_VERSION: u8 = 6;
 const DEVICE_AUTHORIZATION_SIGNATURE_DOMAIN: &[u8] =
-    b"kilogram:device-session-authorization-signature:v5\0";
+    b"kilogram:device-session-authorization-signature:v6\0";
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct SyncSessionBinding([u8; 32]);
@@ -654,7 +654,7 @@ mod tests {
     use tempfile::tempdir;
 
     use super::*;
-    use crate::SignedEvent;
+    use crate::{RatchetRecipient, SignedEvent};
 
     fn sign_test_text(
         identity: &DeviceIdentity,
@@ -663,6 +663,15 @@ mod tests {
         let sender_directory = tempdir()?;
         let peer_directory = tempdir()?;
         let peer_identity = DeviceIdentity::generate()?;
+        let peer_encryption = DeviceEncryptionIdentity::generate()?;
+        let peer_root = AccountRootState::create(peer_directory.path().join("account"))?;
+        let peer_certificate = peer_root.issue_device_certificate(
+            peer_identity.device_id(),
+            peer_encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let peer_device_list =
+            peer_root.publish_device_list(std::slice::from_ref(&peer_certificate))?;
         let peer_bundle =
             RatchetState::load_or_create(peer_directory.path())?.prekey_bundle(&peer_identity)?;
         let (sender_ratchet_identity, ciphertext, _) = RatchetState::load_or_create(
@@ -674,9 +683,12 @@ mod tests {
             conversation_id,
             0,
             Vec::new(),
-            peer_identity.device_id(),
+            peer_device_list,
             sender_ratchet_identity,
-            ciphertext,
+            vec![RatchetRecipient::new(
+                peer_identity.device_id(),
+                ciphertext,
+            )?],
         )?)
     }
 

@@ -682,12 +682,56 @@ session initiation и multi-device fan-out. Копии device signing key бол
 authenticated history rewrap. Полный контракт —
 [`../docs/RFC-0006-pairwise-double-ratchet.md`](../docs/RFC-0006-pairwise-double-ratchet.md).
 
+### M0.7.4 — signed multi-device ratchet fan-out: выполнено
+
+Реализовано:
+
+- `AccountDeviceListSnapshot` связывает полный authority snapshot с
+  каноническим root-signed списком от 1 до 32 messaging devices; Root не
+  подписывает два разных списка на одной authority revision;
+- `AccountPrekeyDirectory` требует ровно один device-signed bundle для каждого
+  certificate из списка без пропусков, дубликатов и outsiders;
+- connection ticket v8 переносит весь directory, а `listen` принимает
+  `--device-list-file` и повторяемый `--peer-prekey-bundle-file`, автоматически
+  добавляя текущий bundle online listener;
+- `RatchetText` event v5 содержит root-signed recipient device list и
+  канонический ciphertext slot каждого устройства peer account; проверка event
+  требует точного совпадения списка и slots;
+- sender атомарно на уровне каждой файловой операции продвигает отдельную
+  persistent Olm session на каждый Device ID и создаёт один общий signed event;
+- online listener расшифровывает только свой slot, а другое устройство того же
+  account получает immutable event через sync и создаёт свою local projection;
+- sync/session/ticket/ALPN границы повышены до v6/v6/v8/`kilogram/m0/sync/6`;
+- `seed-history` требует peer certificate, root-signed device list и prekey
+  bundle, а `account-device-list` публикует список явно от Account Root.
+
+Проверки:
+
+- canonical/duplicate/revoked device lists и неполные prekey directories/events
+  отклоняются;
+- два устройства одного Bob account расшифровывают разные ciphertext одного
+  event, а устройство без slot не может принять event в local history;
+- все 63 workspace tests, форматирование, строгий Clippy и release build
+  проходят;
+- release process smoke `.tmp/m074-smoke-20260901-004422` доставил Alice →
+  Bob-1 один event с двумя slots, затем Bob-2 получил event и acknowledgement
+  через sync; histories всех трёх devices совпали, session counts равны 2/1/1,
+  plaintext marker отсутствует в 16 event/projection/account/session files.
+
+Граница среза: Root пока получает перечень certificate files вручную, public
+prekey distribution не имеет discovery/freshness и использует один OTK.
+Одновременная инициализация sessions и общая транзакция нескольких ratchets,
+projection и event ещё не решены. Новый device не получает старые ciphertext
+slots. Полный контракт —
+[`../docs/RFC-0007-multi-device-ratchet-fanout.md`](../docs/RFC-0007-multi-device-ratchet-fanout.md).
+
 ### Следующий этап
 
-1. M0.7.4: добавить signed device-list fan-out и отдельный prekey для каждого
-   разрешённого устройства account.
-2. Затем добавить authenticated history rewrap для
-   нового/восстановленного устройства.
+1. M0.7.5: добавить authenticated history rewrap для нового или
+   восстановленного устройства с явным диапазоном, provenance и признаком
+   неполной истории.
+2. Затем добавить production prekey pool/discovery и разрешение concurrent
+   pairwise session initiation.
 3. Membership removal и group governance проектировать вместе с ordered
    security events и MLS epoch.
 4. First-contact authority/membership gossip-witness, seed/recovery и compact

@@ -13,7 +13,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use kilogram_identity::{DeviceId, DeviceIdentity, IdentityError};
+use kilogram_identity::{
+    AccountAuthoritySnapshot, AccountDeviceListSnapshot, AccountId, DeviceCertificate, DeviceId,
+    DeviceIdentity, IdentityError,
+};
 use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
 use thiserror::Error;
@@ -35,6 +38,7 @@ const SESSION_FILE_SUFFIX: &str = ".session";
 const PICKLE_SECRET_BYTES: usize = 32;
 const RATCHET_IDENTITY_VERSION: u8 = 1;
 const PREKEY_BUNDLE_VERSION: u8 = 1;
+const PREKEY_DIRECTORY_VERSION: u8 = 1;
 const CIPHERTEXT_VERSION: u8 = 1;
 const SESSION_RECORD_VERSION: u8 = 1;
 const RATCHET_IDENTITY_SIGNATURE_DOMAIN: &[u8] = b"kilogram:ratchet-identity-signature:v1\0";
@@ -180,6 +184,102 @@ impl SignedPrekeyBundle {
 
     fn one_time_key(&self) -> Curve25519PublicKey {
         Curve25519PublicKey::from_bytes(self.content.one_time_key)
+    }
+}
+
+/// A root-complete account device list paired with one device-signed prekey
+/// bundle for every authorized device.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct AccountPrekeyDirectory {
+    version: u8,
+    device_list: AccountDeviceListSnapshot,
+    bundles: Vec<SignedPrekeyBundle>,
+}
+
+impl AccountPrekeyDirectory {
+    pub fn new(
+        device_list: AccountDeviceListSnapshot,
+        mut bundles: Vec<SignedPrekeyBundle>,
+    ) -> Result<Self, RatchetError> {
+        bundles.sort_by_key(|bundle| *bundle.device_id().as_bytes());
+        let directory = Self {
+            version: PREKEY_DIRECTORY_VERSION,
+            device_list,
+            bundles,
+        };
+        directory.verify()?;
+        Ok(directory)
+    }
+
+    pub fn decode(bytes: &[u8]) -> Result<Self, RatchetError> {
+        let directory: Self = postcard::from_bytes(bytes)?;
+        directory.verify()?;
+        Ok(directory)
+    }
+
+    pub fn encode(&self) -> Result<Vec<u8>, RatchetError> {
+        self.verify()?;
+        Ok(postcard::to_allocvec(self)?)
+    }
+
+    pub fn verify(&self) -> Result<(), RatchetError> {
+        if self.version != PREKEY_DIRECTORY_VERSION {
+            return Err(RatchetError::UnsupportedPrekeyDirectoryVersion(
+                self.version,
+            ));
+        }
+        self.device_list.verify()?;
+        if self.bundles.len() != self.device_list.devices().len() {
+            return Err(RatchetError::PrekeyDirectoryCoverage {
+                devices: self.device_list.devices().len(),
+                bundles: self.bundles.len(),
+            });
+        }
+        for (certificate, bundle) in self.device_list.devices().iter().zip(&self.bundles) {
+            bundle.verify()?;
+            if certificate.device_id() != bundle.device_id() {
+                return Err(RatchetError::PrekeyDirectoryDeviceMismatch {
+                    certificate: certificate.device_id(),
+                    bundle: bundle.device_id(),
+                });
+            }
+        }
+        Ok(())
+    }
+
+    pub fn account_id(&self) -> AccountId {
+        self.device_list.account_id()
+    }
+
+    pub fn revision(&self) -> u64 {
+        self.device_list.revision()
+    }
+
+    pub fn authority_snapshot(&self) -> &AccountAuthoritySnapshot {
+        self.device_list.authority_snapshot()
+    }
+
+    pub fn device_list(&self) -> &AccountDeviceListSnapshot {
+        &self.device_list
+    }
+
+    pub fn certificates(&self) -> &[DeviceCertificate] {
+        self.device_list.devices()
+    }
+
+    pub fn bundles(&self) -> &[SignedPrekeyBundle] {
+        &self.bundles
+    }
+
+    pub fn certificate_for(&self, device_id: DeviceId) -> Option<&DeviceCertificate> {
+        self.device_list.certificate_for(device_id)
+    }
+
+    pub fn bundle_for(&self, device_id: DeviceId) -> Option<&SignedPrekeyBundle> {
+        self.bundles
+            .binary_search_by(|bundle| bundle.device_id().cmp(&device_id))
+            .ok()
+            .map(|index| &self.bundles[index])
     }
 }
 
@@ -681,6 +781,20 @@ pub enum RatchetError {
     #[error("unsupported prekey bundle version: {0}")]
     UnsupportedPrekeyBundleVersion(u8),
 
+    #[error("unsupported account prekey-directory version: {0}")]
+    UnsupportedPrekeyDirectoryVersion(u8),
+
+    #[error("prekey directory contains {bundles} bundles for {devices} devices")]
+    PrekeyDirectoryCoverage { devices: usize, bundles: usize },
+
+    #[error(
+        "prekey directory certificate names device {certificate}, but aligned bundle names {bundle}"
+    )]
+    PrekeyDirectoryDeviceMismatch {
+        certificate: DeviceId,
+        bundle: DeviceId,
+    },
+
     #[error("unsupported ratchet ciphertext version: {0}")]
     UnsupportedCiphertextVersion(u8),
 
@@ -736,7 +850,9 @@ pub enum RatchetError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kilogram_identity::DeviceIdentity;
+    use kilogram_identity::{
+        AccountRootState, DeviceCapability, DeviceEncryptionIdentity, DeviceIdentity,
+    };
     use tempfile::tempdir;
 
     #[test]
@@ -821,6 +937,53 @@ mod tests {
             error,
             RatchetError::PrekeyBundleDeviceMismatch { expected, actual }
                 if expected == original.device_id() && actual == replacement.device_id()
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn prekey_directory_requires_exact_root_signed_device_list_coverage()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let root_directory = tempdir()?;
+        let state_root = tempdir()?;
+        let root = AccountRootState::create(root_directory.path())?;
+        let first = DeviceIdentity::generate()?;
+        let second = DeviceIdentity::generate()?;
+        let first_certificate = root.issue_device_certificate(
+            first.device_id(),
+            DeviceEncryptionIdentity::generate()?.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let second_certificate = root.issue_device_certificate(
+            second.device_id(),
+            DeviceEncryptionIdentity::generate()?.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let device_list =
+            root.publish_device_list(&[second_certificate.clone(), first_certificate.clone()])?;
+        let first_bundle =
+            RatchetState::load_or_create(state_root.path().join("first"))?.prekey_bundle(&first)?;
+        let second_bundle = RatchetState::load_or_create(state_root.path().join("second"))?
+            .prekey_bundle(&second)?;
+
+        let directory = AccountPrekeyDirectory::new(
+            device_list.clone(),
+            vec![second_bundle.clone(), first_bundle.clone()],
+        )?;
+        assert_eq!(directory.account_id(), root.account_id());
+        assert_eq!(directory.revision(), 2);
+        assert_eq!(directory.bundles().len(), 2);
+        assert_eq!(directory.bundle_for(first.device_id()), Some(&first_bundle));
+        assert_eq!(
+            AccountPrekeyDirectory::decode(&directory.encode()?)?,
+            directory
+        );
+        assert!(matches!(
+            AccountPrekeyDirectory::new(device_list, vec![second_bundle]),
+            Err(RatchetError::PrekeyDirectoryCoverage {
+                devices: 2,
+                bundles: 1
+            })
         ));
         Ok(())
     }

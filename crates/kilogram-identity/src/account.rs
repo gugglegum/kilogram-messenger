@@ -20,6 +20,7 @@ const REVOCATIONS_DIRECTORY: &str = "revocations";
 const CONVERSATION_MEMBERSHIPS_DIRECTORY: &str = "conversation-memberships";
 const DEVICE_CERTIFICATE_FILE: &str = "device-certificate.cert";
 const ACCOUNT_AUTHORITY_SNAPSHOT_FILE: &str = "account-authority.snapshot";
+const ACCOUNT_DEVICE_LIST_FILE: &str = "account-device-list.snapshot";
 const PEER_AUTHORITY_DIRECTORY: &str = "peer-authority";
 const AUTHORITY_VERSION: u8 = 1;
 const DEVICE_CERTIFICATE_VERSION: u8 = 2;
@@ -29,6 +30,10 @@ const AUTHORITY_SNAPSHOT_SIGNATURE_DOMAIN: &[u8] =
     b"kilogram:account-authority-snapshot-signature:v1\0";
 const CONVERSATION_MEMBERSHIP_SIGNATURE_DOMAIN: &[u8] =
     b"kilogram:conversation-membership-signature:v1\0";
+const ACCOUNT_DEVICE_LIST_VERSION: u8 = 1;
+const ACCOUNT_DEVICE_LIST_SIGNATURE_DOMAIN: &[u8] = b"kilogram:account-device-list-signature:v1\0";
+
+pub const MAX_ACCOUNT_DEVICES: usize = 32;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct AccountId([u8; SECRET_KEY_BYTES]);
@@ -242,6 +247,40 @@ impl AccountRootState {
         }
         revocations.sort_by_key(|revocation| *revocation.device_id().as_bytes());
         AccountAuthoritySnapshot::issue(&self.identity, revision, revocations)
+    }
+
+    pub fn publish_device_list(
+        &self,
+        certificates: &[DeviceCertificate],
+    ) -> Result<AccountDeviceListSnapshot, IdentityError> {
+        self.ensure_authority_log_ready()?;
+        let snapshot = self.authority_snapshot()?;
+        let candidate =
+            AccountDeviceListSnapshot::issue(&self.identity, snapshot, certificates.to_vec())?;
+        let path = self.directory.join(ACCOUNT_DEVICE_LIST_FILE);
+        match fs::read(&path) {
+            Ok(bytes) => {
+                let existing = AccountDeviceListSnapshot::decode_and_verify(&bytes)?;
+                if existing.revision() > candidate.revision() {
+                    return Err(IdentityError::AccountDeviceListRollback {
+                        stored_revision: existing.revision(),
+                        received_revision: candidate.revision(),
+                    });
+                }
+                if existing.revision() == candidate.revision() {
+                    if existing == candidate {
+                        return Ok(existing);
+                    }
+                    return Err(IdentityError::AccountDeviceListAlreadyPublished(
+                        candidate.revision(),
+                    ));
+                }
+            }
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+            Err(error) => return Err(error.into()),
+        }
+        replace_file_atomically(&path, &candidate.encode()?)?;
+        Ok(candidate)
     }
 
     pub fn create_conversation_membership(
@@ -734,6 +773,147 @@ fn authority_snapshot_signing_bytes(
     content: &AccountAuthoritySnapshotContent,
 ) -> Result<Vec<u8>, IdentityError> {
     authority_signing_bytes(AUTHORITY_SNAPSHOT_SIGNATURE_DOMAIN, content)
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+struct AccountDeviceListSnapshotContent {
+    version: u8,
+    authority_snapshot: AccountAuthoritySnapshot,
+    devices: Vec<DeviceCertificate>,
+}
+
+/// A complete, root-signed list of messaging devices at one authority revision.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct AccountDeviceListSnapshot {
+    content: AccountDeviceListSnapshotContent,
+    signature: Vec<u8>,
+}
+
+impl AccountDeviceListSnapshot {
+    fn issue(
+        root: &AccountRootIdentity,
+        authority_snapshot: AccountAuthoritySnapshot,
+        mut devices: Vec<DeviceCertificate>,
+    ) -> Result<Self, IdentityError> {
+        devices.sort_by_key(|certificate| *certificate.device_id().as_bytes());
+        let content = AccountDeviceListSnapshotContent {
+            version: ACCOUNT_DEVICE_LIST_VERSION,
+            authority_snapshot,
+            devices,
+        };
+        validate_account_device_list_content(&content)?;
+        if content.authority_snapshot.account_id() != root.account_id() {
+            return Err(IdentityError::AccountMismatch {
+                expected: root.account_id(),
+                actual: content.authority_snapshot.account_id(),
+            });
+        }
+        let signature = root
+            .sign(&account_device_list_signing_bytes(&content)?)
+            .to_vec();
+        Ok(Self { content, signature })
+    }
+
+    pub fn decode_and_verify(bytes: &[u8]) -> Result<Self, IdentityError> {
+        let snapshot: Self = postcard::from_bytes(bytes)?;
+        snapshot.verify()?;
+        Ok(snapshot)
+    }
+
+    pub fn encode(&self) -> Result<Vec<u8>, IdentityError> {
+        self.verify()?;
+        Ok(postcard::to_allocvec(self)?)
+    }
+
+    pub fn verify(&self) -> Result<(), IdentityError> {
+        validate_account_device_list_content(&self.content)?;
+        self.account_id().verify(
+            &account_device_list_signing_bytes(&self.content)?,
+            &self.signature,
+        )
+    }
+
+    pub fn verify_for_account(&self, expected: AccountId) -> Result<(), IdentityError> {
+        self.verify()?;
+        if self.account_id() != expected {
+            return Err(IdentityError::AccountMismatch {
+                expected,
+                actual: self.account_id(),
+            });
+        }
+        Ok(())
+    }
+
+    pub fn account_id(&self) -> AccountId {
+        self.content.authority_snapshot.account_id()
+    }
+
+    pub fn revision(&self) -> u64 {
+        self.content.authority_snapshot.revision()
+    }
+
+    pub fn authority_snapshot(&self) -> &AccountAuthoritySnapshot {
+        &self.content.authority_snapshot
+    }
+
+    pub fn devices(&self) -> &[DeviceCertificate] {
+        &self.content.devices
+    }
+
+    pub fn certificate_for(&self, device_id: DeviceId) -> Option<&DeviceCertificate> {
+        self.content
+            .devices
+            .binary_search_by(|certificate| certificate.device_id().cmp(&device_id))
+            .ok()
+            .map(|index| &self.content.devices[index])
+    }
+}
+
+fn validate_account_device_list_content(
+    content: &AccountDeviceListSnapshotContent,
+) -> Result<(), IdentityError> {
+    if content.version != ACCOUNT_DEVICE_LIST_VERSION {
+        return Err(IdentityError::UnsupportedAccountDeviceListVersion(
+            content.version,
+        ));
+    }
+    content.authority_snapshot.verify()?;
+    if content.devices.is_empty() {
+        return Err(IdentityError::EmptyAccountDeviceList);
+    }
+    if content.devices.len() > MAX_ACCOUNT_DEVICES {
+        return Err(IdentityError::TooManyAccountDevices(content.devices.len()));
+    }
+    for certificate in &content.devices {
+        verify_device_authorization_with_snapshot(
+            content.authority_snapshot.account_id(),
+            certificate,
+            &content.authority_snapshot,
+            &DeviceCapability::MESSAGING,
+        )?;
+    }
+    for pair in content.devices.windows(2) {
+        match pair[0]
+            .device_id()
+            .as_bytes()
+            .cmp(pair[1].device_id().as_bytes())
+        {
+            std::cmp::Ordering::Less => {}
+            std::cmp::Ordering::Equal => {
+                return Err(IdentityError::DuplicateAccountDevice(pair[0].device_id()));
+            }
+            std::cmp::Ordering::Greater => {
+                return Err(IdentityError::NonCanonicalAccountDeviceList);
+            }
+        }
+    }
+    Ok(())
+}
+
+fn account_device_list_signing_bytes(
+    content: &AccountDeviceListSnapshotContent,
+) -> Result<Vec<u8>, IdentityError> {
+    authority_signing_bytes(ACCOUNT_DEVICE_LIST_SIGNATURE_DOMAIN, content)
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -1415,6 +1595,51 @@ mod tests {
             reloaded.revoke_device(revoked_device.device_id()),
             Err(IdentityError::DeviceAlreadyRevoked(device_id))
                 if device_id == revoked_device.device_id()
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn root_publishes_one_complete_canonical_device_list_per_authority_revision()
+    -> Result<(), IdentityError> {
+        let root_directory = tempdir()?;
+        let root = AccountRootState::create(root_directory.path())?;
+        let first_device = crate::DeviceIdentity::generate()?;
+        let second_device = crate::DeviceIdentity::generate()?;
+        let first_certificate = root.issue_device_certificate(
+            first_device.device_id(),
+            test_encryption_public_key()?,
+            &DeviceCapability::MESSAGING,
+        )?;
+        let second_certificate = root.issue_device_certificate(
+            second_device.device_id(),
+            test_encryption_public_key()?,
+            &DeviceCapability::MESSAGING,
+        )?;
+
+        let published =
+            root.publish_device_list(&[second_certificate.clone(), first_certificate.clone()])?;
+        published.verify_for_account(root.account_id())?;
+        assert_eq!(published.revision(), 2);
+        assert_eq!(published.devices().len(), 2);
+        assert!(published.devices()[0].device_id() < published.devices()[1].device_id());
+        assert_eq!(
+            AccountDeviceListSnapshot::decode_and_verify(&published.encode()?)?,
+            published
+        );
+        assert!(matches!(
+            root.publish_device_list(std::slice::from_ref(&first_certificate)),
+            Err(IdentityError::AccountDeviceListAlreadyPublished(2))
+        ));
+
+        root.revoke_device(second_device.device_id())?;
+        let updated = root.publish_device_list(std::slice::from_ref(&first_certificate))?;
+        assert_eq!(updated.revision(), 3);
+        assert_eq!(updated.devices(), std::slice::from_ref(&first_certificate));
+        assert!(matches!(
+            root.publish_device_list(&[first_certificate, second_certificate]),
+            Err(IdentityError::DeviceRevoked(device_id))
+                if device_id == second_device.device_id()
         ));
         Ok(())
     }

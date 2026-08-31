@@ -4,6 +4,10 @@
 - Дата: 2026-08-31
 - Область: асинхронное установление и сохранение pairwise ratchet-сессии
 
+> M0.7.4 расширил этот single-recipient контракт до полного account-wide
+> fan-out. Актуальные device-list и event-инварианты описаны в
+> [`RFC-0007`](RFC-0007-multi-device-ratchet-fanout.md).
+
 ## 1. Цель этапа
 
 M0.7.2 отделил реплицируемый ciphertext от читаемой локальной истории, но
@@ -166,9 +170,9 @@ LocalTextProjection v1 сохраняются: их смысл не измени
 
 ## 11. Следующий pairwise этап
 
-M0.7.4 должен добавить signed device-list fan-out и безопасную доставку
-отдельному prekey каждого устройства. Следом нужен authenticated history rewrap
-с явной маркировкой неполной истории и транзакционная storage-модель.
+M0.7.4 добавил signed device-list fan-out и отдельный ciphertext для prekey
+каждого устройства. Следующий этап — authenticated history rewrap с явной
+маркировкой неполной истории и транзакционная storage-модель.
 
 Документация использованной реализации:
 <https://matrix-org.github.io/vodozemac/vodozemac/olm/index.html>.
