@@ -1,5 +1,8 @@
 use std::{collections::HashSet, fmt};
 
+use kilogram_crypto::{
+    CryptoError, DeviceEncryptionIdentity, ENCRYPTION_KEY_BYTES, EncryptionPublicKey, SealedMessage,
+};
 use kilogram_identity::{
     AccountAuthoritySnapshot, AccountId, ConversationMembershipSnapshot, ConversationScopeId,
     DeviceCapability, DeviceCertificate, DeviceId, DeviceIdentity, IdentityError,
@@ -17,12 +20,16 @@ pub use wire::{
     SyncPause, SyncPaused, SyncRejected, SyncRejectionReason, SyncSessionBinding,
 };
 
-const EVENT_VERSION: u8 = 1;
-const EVENT_SIGNATURE_DOMAIN: &[u8] = b"kilogram:event-signature:v1\0";
-const EVENT_ID_DOMAIN: &[u8] = b"kilogram:event-id:v1\0";
+const EVENT_VERSION: u8 = 2;
+const EVENT_SIGNATURE_DOMAIN: &[u8] = b"kilogram:event-signature:v2\0";
+const EVENT_ID_DOMAIN: &[u8] = b"kilogram:event-id:v2\0";
+const TEXT_HPKE_INFO: &[u8] = b"kilogram:event-text-hpke:v1\0";
+const TEXT_HPKE_AAD_DOMAIN: &[u8] = b"kilogram:event-text-hpke-aad:v1\0";
 const CONVERSATION_LABEL_DOMAIN: &[u8] = b"kilogram:conversation-label:v1\0";
 const MAX_PARENTS: usize = 64;
 const MAX_TEXT_BYTES: usize = 64 * 1024;
+const MAX_CIPHERTEXT_BYTES: usize = MAX_TEXT_BYTES + 16;
+const PAIRWISE_RECIPIENTS: usize = 2;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct ConversationId([u8; 32]);
@@ -57,8 +64,38 @@ impl fmt::Display for EventId {
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum EventPayload {
-    Text { body: String },
+    EncryptedText { recipients: Vec<EncryptedRecipient> },
     Acknowledgement { acknowledged_event_id: EventId },
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct EncryptedRecipient {
+    recipient_device_id: DeviceId,
+    sealed: SealedMessage,
+}
+
+impl EncryptedRecipient {
+    pub fn recipient_device_id(&self) -> DeviceId {
+        self.recipient_device_id
+    }
+
+    pub fn encapsulated_key(&self) -> &[u8] {
+        &self.sealed.encapsulated_key
+    }
+
+    pub fn ciphertext(&self) -> &[u8] {
+        &self.sealed.ciphertext
+    }
+}
+
+#[derive(Serialize)]
+struct TextEncryptionContext<'a> {
+    version: u8,
+    conversation_id: ConversationId,
+    author_device_id: DeviceId,
+    author_sequence: u64,
+    parents: &'a [EventId],
+    recipient_device_id: DeviceId,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -158,13 +195,36 @@ impl AuthorizedEvent {
 }
 
 impl SignedEvent {
-    pub fn sign_text(
+    pub fn sign_encrypted_text(
         identity: &DeviceIdentity,
         conversation_id: ConversationId,
         author_sequence: u64,
         parents: Vec<EventId>,
         body: String,
+        recipients: [(DeviceId, EncryptionPublicKey); PAIRWISE_RECIPIENTS],
     ) -> Result<Self, ProtocolError> {
+        if body.len() > MAX_TEXT_BYTES {
+            return Err(ProtocolError::TextTooLarge(body.len()));
+        }
+        let mut recipients = recipients;
+        recipients.sort_unstable_by_key(|(device_id, _)| *device_id);
+        if recipients[0].0 == recipients[1].0 {
+            return Err(ProtocolError::DuplicateEncryptedRecipient(recipients[0].0));
+        }
+        let mut encrypted_recipients = Vec::with_capacity(PAIRWISE_RECIPIENTS);
+        for (recipient_device_id, public_key) in recipients {
+            let aad = text_encryption_aad(
+                conversation_id,
+                identity.device_id(),
+                author_sequence,
+                &parents,
+                recipient_device_id,
+            )?;
+            encrypted_recipients.push(EncryptedRecipient {
+                recipient_device_id,
+                sealed: public_key.seal(body.as_bytes(), TEXT_HPKE_INFO, &aad)?,
+            });
+        }
         Self::sign(
             identity,
             EventContent {
@@ -173,9 +233,37 @@ impl SignedEvent {
                 author_device_id: identity.device_id(),
                 author_sequence,
                 parents,
-                payload: EventPayload::Text { body },
+                payload: EventPayload::EncryptedText {
+                    recipients: encrypted_recipients,
+                },
             },
         )
+    }
+
+    pub fn decrypt_text(
+        &self,
+        recipient_device_id: DeviceId,
+        encryption: &DeviceEncryptionIdentity,
+    ) -> Result<String, ProtocolError> {
+        self.verify()?;
+        let EventPayload::EncryptedText { recipients } = &self.content.payload else {
+            return Err(ProtocolError::EventIsNotEncryptedText);
+        };
+        let recipient = recipients
+            .iter()
+            .find(|recipient| recipient.recipient_device_id == recipient_device_id)
+            .ok_or(ProtocolError::MissingEncryptedRecipient(
+                recipient_device_id,
+            ))?;
+        let aad = text_encryption_aad(
+            self.content.conversation_id,
+            self.content.author_device_id,
+            self.content.author_sequence,
+            &self.content.parents,
+            recipient_device_id,
+        )?;
+        let plaintext = encryption.open(&recipient.sealed, TEXT_HPKE_INFO, &aad)?;
+        String::from_utf8(plaintext).map_err(ProtocolError::InvalidTextEncoding)
     }
 
     pub fn sign_acknowledgement(
@@ -273,12 +361,58 @@ fn validate_content(content: &EventContent) -> Result<(), ProtocolError> {
     if unique_parents.len() != content.parents.len() {
         return Err(ProtocolError::DuplicateParent);
     }
-    if let EventPayload::Text { body } = &content.payload
-        && body.len() > MAX_TEXT_BYTES
-    {
-        return Err(ProtocolError::TextTooLarge(body.len()));
+    if let EventPayload::EncryptedText { recipients } = &content.payload {
+        if recipients.len() != PAIRWISE_RECIPIENTS {
+            return Err(ProtocolError::InvalidEncryptedRecipientCount(
+                recipients.len(),
+            ));
+        }
+        for pair in recipients.windows(2) {
+            if pair[0].recipient_device_id == pair[1].recipient_device_id {
+                return Err(ProtocolError::DuplicateEncryptedRecipient(
+                    pair[0].recipient_device_id,
+                ));
+            }
+            if pair[0].recipient_device_id > pair[1].recipient_device_id {
+                return Err(ProtocolError::NonCanonicalEncryptedRecipients);
+            }
+        }
+        for recipient in recipients {
+            if recipient.sealed.encapsulated_key.len() != ENCRYPTION_KEY_BYTES {
+                return Err(ProtocolError::InvalidEncapsulatedKeyLength(
+                    recipient.sealed.encapsulated_key.len(),
+                ));
+            }
+            if recipient.sealed.ciphertext.len() > MAX_CIPHERTEXT_BYTES {
+                return Err(ProtocolError::CiphertextTooLarge(
+                    recipient.sealed.ciphertext.len(),
+                ));
+            }
+        }
     }
     Ok(())
+}
+
+fn text_encryption_aad(
+    conversation_id: ConversationId,
+    author_device_id: DeviceId,
+    author_sequence: u64,
+    parents: &[EventId],
+    recipient_device_id: DeviceId,
+) -> Result<Vec<u8>, ProtocolError> {
+    let context = TextEncryptionContext {
+        version: EVENT_VERSION,
+        conversation_id,
+        author_device_id,
+        author_sequence,
+        parents,
+        recipient_device_id,
+    };
+    let encoded = postcard::to_allocvec(&context)?;
+    let mut aad = Vec::with_capacity(TEXT_HPKE_AAD_DOMAIN.len() + encoded.len());
+    aad.extend_from_slice(TEXT_HPKE_AAD_DOMAIN);
+    aad.extend_from_slice(&encoded);
+    Ok(aad)
 }
 
 fn write_hex(formatter: &mut fmt::Formatter<'_>, bytes: &[u8]) -> fmt::Result {
@@ -296,6 +430,9 @@ pub enum ProtocolError {
     #[error("event signature is invalid")]
     Identity(#[from] IdentityError),
 
+    #[error("event encryption failed")]
+    Crypto(#[from] CryptoError),
+
     #[error("unsupported event version: {0}")]
     UnsupportedEventVersion(u8),
 
@@ -307,6 +444,30 @@ pub enum ProtocolError {
 
     #[error("text has {0} bytes; maximum is {MAX_TEXT_BYTES}")]
     TextTooLarge(usize),
+
+    #[error("encrypted text has {0} recipients; expected {PAIRWISE_RECIPIENTS}")]
+    InvalidEncryptedRecipientCount(usize),
+
+    #[error("encrypted text contains duplicate recipient {0}")]
+    DuplicateEncryptedRecipient(DeviceId),
+
+    #[error("encrypted text recipients are not in canonical order")]
+    NonCanonicalEncryptedRecipients,
+
+    #[error("HPKE encapsulated key has {0} bytes; expected {ENCRYPTION_KEY_BYTES}")]
+    InvalidEncapsulatedKeyLength(usize),
+
+    #[error("encrypted text ciphertext has {0} bytes; maximum is {MAX_CIPHERTEXT_BYTES}")]
+    CiphertextTooLarge(usize),
+
+    #[error("event is not an encrypted text event")]
+    EventIsNotEncryptedText,
+
+    #[error("encrypted text has no recipient box for device {0}")]
+    MissingEncryptedRecipient(DeviceId),
+
+    #[error("decrypted text is not valid UTF-8")]
+    InvalidTextEncoding(#[source] std::string::FromUtf8Error),
 
     #[error("unsupported sync protocol version: {0}")]
     UnsupportedSyncVersion(u8),
@@ -367,36 +528,113 @@ mod tests {
 
     use super::*;
 
+    fn sign_test_text(
+        identity: &DeviceIdentity,
+        conversation_id: ConversationId,
+        author_sequence: u64,
+        parents: Vec<EventId>,
+        body: &str,
+    ) -> Result<SignedEvent, ProtocolError> {
+        let own_encryption = DeviceEncryptionIdentity::generate()?;
+        let peer_identity = DeviceIdentity::generate()?;
+        let peer_encryption = DeviceEncryptionIdentity::generate()?;
+        SignedEvent::sign_encrypted_text(
+            identity,
+            conversation_id,
+            author_sequence,
+            parents,
+            body.to_owned(),
+            [
+                (identity.device_id(), own_encryption.public_key()),
+                (peer_identity.device_id(), peer_encryption.public_key()),
+            ],
+        )
+    }
+
     #[test]
     fn signed_event_round_trips_and_verifies() -> Result<(), ProtocolError> {
         let identity = DeviceIdentity::generate()?;
-        let event = SignedEvent::sign_text(
+        let own_encryption = DeviceEncryptionIdentity::generate()?;
+        let peer_identity = DeviceIdentity::generate()?;
+        let peer_encryption = DeviceEncryptionIdentity::generate()?;
+        let event = SignedEvent::sign_encrypted_text(
             &identity,
             ConversationId::from_label("test"),
             7,
             Vec::new(),
             "hello".to_owned(),
+            [
+                (identity.device_id(), own_encryption.public_key()),
+                (peer_identity.device_id(), peer_encryption.public_key()),
+            ],
         )?;
         let decoded = SignedEvent::decode_and_verify(&event.encode()?)?;
 
         assert_eq!(decoded, event);
         assert_eq!(decoded.author_device_id(), identity.device_id());
+        assert_eq!(
+            decoded.decrypt_text(identity.device_id(), &own_encryption)?,
+            "hello"
+        );
+        assert!(
+            !decoded
+                .encode()?
+                .windows(b"hello".len())
+                .any(|window| window == b"hello")
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn encrypted_text_is_bound_to_recipient_device_and_metadata() -> Result<(), ProtocolError> {
+        let identity = DeviceIdentity::generate()?;
+        let own_encryption = DeviceEncryptionIdentity::generate()?;
+        let peer_identity = DeviceIdentity::generate()?;
+        let peer_encryption = DeviceEncryptionIdentity::generate()?;
+        let outsider_identity = DeviceIdentity::generate()?;
+        let event = SignedEvent::sign_encrypted_text(
+            &identity,
+            ConversationId::from_label("recipient-binding"),
+            3,
+            Vec::new(),
+            "for the two intended devices".to_owned(),
+            [
+                (identity.device_id(), own_encryption.public_key()),
+                (peer_identity.device_id(), peer_encryption.public_key()),
+            ],
+        )?;
+
+        assert_eq!(
+            event.decrypt_text(peer_identity.device_id(), &peer_encryption)?,
+            "for the two intended devices"
+        );
+        assert!(matches!(
+            event.decrypt_text(outsider_identity.device_id(), &peer_encryption),
+            Err(ProtocolError::MissingEncryptedRecipient(device_id))
+                if device_id == outsider_identity.device_id()
+        ));
+        assert!(
+            event
+                .decrypt_text(peer_identity.device_id(), &own_encryption)
+                .is_err()
+        );
         Ok(())
     }
 
     #[test]
     fn tampering_is_rejected() -> Result<(), ProtocolError> {
         let identity = DeviceIdentity::generate()?;
-        let mut event = SignedEvent::sign_text(
+        let mut event = sign_test_text(
             &identity,
             ConversationId::from_label("test"),
             0,
             Vec::new(),
-            "original".to_owned(),
+            "original",
         )?;
-        event.content.payload = EventPayload::Text {
-            body: "tampered".to_owned(),
+        let EventPayload::EncryptedText { recipients } = &mut event.content.payload else {
+            return Err(ProtocolError::EventIsNotEncryptedText);
         };
+        recipients[0].sealed.ciphertext[0] ^= 1;
 
         assert!(event.verify().is_err());
         Ok(())
@@ -405,12 +643,12 @@ mod tests {
     #[test]
     fn unknown_event_version_is_rejected() -> Result<(), ProtocolError> {
         let identity = DeviceIdentity::generate()?;
-        let mut event = SignedEvent::sign_text(
+        let mut event = sign_test_text(
             &identity,
             ConversationId::from_label("test"),
             0,
             Vec::new(),
-            "hello".to_owned(),
+            "hello",
         )?;
         event.content.version = EVENT_VERSION + 1;
 
@@ -426,8 +664,7 @@ mod tests {
         let sender = DeviceIdentity::generate()?;
         let receiver = DeviceIdentity::generate()?;
         let conversation_id = ConversationId::from_label("test");
-        let sent =
-            SignedEvent::sign_text(&sender, conversation_id, 0, Vec::new(), "hello".to_owned())?;
+        let sent = sign_test_text(&sender, conversation_id, 0, Vec::new(), "hello")?;
         let sent_id = sent.event_id()?;
         let acknowledgement = SignedEvent::sign_acknowledgement(
             &receiver,
@@ -456,18 +693,28 @@ mod tests {
         let owner = AccountRootState::create(owner_directory.path())?;
         let outsider = AccountRootState::create(outsider_directory.path())?;
         let identity = DeviceIdentity::generate()?;
-        let certificate = outsider
-            .issue_device_certificate(identity.device_id(), &DeviceCapability::MESSAGING)?;
+        let encryption = DeviceEncryptionIdentity::generate()?;
+        let peer_identity = DeviceIdentity::generate()?;
+        let peer_encryption = DeviceEncryptionIdentity::generate()?;
+        let certificate = outsider.issue_device_certificate(
+            identity.device_id(),
+            encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
         let authority_snapshot = outsider.authority_snapshot()?;
         let conversation_id = ConversationId::from_label("membership-rejection");
         let membership = owner.create_conversation_membership(conversation_id.scope_id(), &[])?;
         let event = AuthorizedEvent::new(
-            SignedEvent::sign_text(
+            SignedEvent::sign_encrypted_text(
                 &identity,
                 conversation_id,
                 0,
                 Vec::new(),
                 "not a member".to_owned(),
+                [
+                    (identity.device_id(), encryption.public_key()),
+                    (peer_identity.device_id(), peer_encryption.public_key()),
+                ],
             )?,
             certificate,
             authority_snapshot,

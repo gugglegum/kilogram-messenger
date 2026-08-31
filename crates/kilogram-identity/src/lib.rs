@@ -8,6 +8,7 @@ use std::{
 };
 
 use ed25519_dalek::{Signature, Signer, SigningKey, VerifyingKey};
+use kilogram_crypto::{CryptoError, ENCRYPTION_KEY_BYTES};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -19,12 +20,14 @@ pub use account::{
     ConversationScopeId, DeviceCapability, DeviceCertificate, DeviceRevocation,
     verify_device_authorization, verify_device_authorization_with_snapshot,
 };
+pub use kilogram_crypto::{DeviceEncryptionIdentity, EncryptionPublicKey};
 
 const DEVICE_SECRET_FILE: &str = "device-secret.key";
+const DEVICE_ENCRYPTION_SECRET_FILE: &str = "device-encryption-secret.key";
 const NEXT_SEQUENCE_FILE: &str = "next-sequence";
 const SECRET_KEY_BYTES: usize = 32;
 
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct DeviceId([u8; SECRET_KEY_BYTES]);
 
 impl DeviceId {
@@ -117,6 +120,7 @@ impl DeviceIdentity {
 pub struct DeviceState {
     directory: PathBuf,
     identity: DeviceIdentity,
+    encryption: DeviceEncryptionIdentity,
 }
 
 impl DeviceState {
@@ -125,15 +129,22 @@ impl DeviceState {
         fs::create_dir_all(&directory)?;
         let secret_path = directory.join(DEVICE_SECRET_FILE);
         let identity = load_or_create_identity(&secret_path)?;
+        let encryption_secret_path = directory.join(DEVICE_ENCRYPTION_SECRET_FILE);
+        let encryption = load_or_create_encryption_identity(&encryption_secret_path)?;
 
         Ok(Self {
             directory,
             identity,
+            encryption,
         })
     }
 
     pub fn identity(&self) -> &DeviceIdentity {
         &self.identity
+    }
+
+    pub fn encryption(&self) -> &DeviceEncryptionIdentity {
+        &self.encryption
     }
 
     pub fn allocate_sequence(&self) -> Result<u64, IdentityError> {
@@ -195,6 +206,28 @@ fn load_identity(path: &Path) -> Result<DeviceIdentity, IdentityError> {
     Ok(DeviceIdentity::from_secret_bytes(secret))
 }
 
+fn load_or_create_encryption_identity(
+    path: &Path,
+) -> Result<DeviceEncryptionIdentity, IdentityError> {
+    match open_new_secret_file(path) {
+        Ok(mut file) => {
+            let identity = DeviceEncryptionIdentity::generate()?;
+            file.write_all(&identity.secret_bytes())?;
+            file.sync_all()?;
+            Ok(identity)
+        }
+        Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {
+            let bytes = fs::read(path)?;
+            let secret: [u8; ENCRYPTION_KEY_BYTES] =
+                bytes.try_into().map_err(|bytes: Vec<u8>| {
+                    IdentityError::InvalidEncryptionSecretKeyLength(bytes.len())
+                })?;
+            Ok(DeviceEncryptionIdentity::from_secret_bytes(secret))
+        }
+        Err(error) => Err(error.into()),
+    }
+}
+
 #[derive(Debug, Error)]
 pub enum IdentityError {
     #[error("device state I/O failed")]
@@ -203,8 +236,17 @@ pub enum IdentityError {
     #[error("secure random generation failed: {0}")]
     SecureRandom(getrandom::Error),
 
+    #[error("device encryption failed")]
+    Crypto(#[from] CryptoError),
+
     #[error("device secret key has {0} bytes; expected {SECRET_KEY_BYTES}")]
     InvalidSecretKeyLength(usize),
+
+    #[error("device encryption secret key has {0} bytes; expected {ENCRYPTION_KEY_BYTES}")]
+    InvalidEncryptionSecretKeyLength(usize),
+
+    #[error("device certificate encryption key does not match this device")]
+    DeviceCertificateEncryptionKeyMismatch,
 
     #[error("device ID has {0} hexadecimal characters; expected 64")]
     InvalidDeviceIdLength(usize),
@@ -396,10 +438,12 @@ mod tests {
         let directory = tempdir()?;
         let first = DeviceState::load_or_create(directory.path())?;
         let first_id = first.identity().device_id();
+        let first_encryption_key = first.encryption().public_key();
         drop(first);
 
         let second = DeviceState::load_or_create(directory.path())?;
         assert_eq!(second.identity().device_id(), first_id);
+        assert_eq!(second.encryption().public_key(), first_encryption_key);
         Ok(())
     }
 

@@ -561,10 +561,48 @@ trusted time/epoch и gossip не исключает forged «historical» event
 отозванным ключом. Полный контракт описан в
 [`../docs/RFC-0003-conversation-membership.md`](../docs/RFC-0003-conversation-membership.md).
 
+### M0.7.1 — pairwise HPKE payload baseline: выполнено
+
+Реализовано:
+
+- новый `kilogram-crypto` изолирует RFC 9180 HPKE Base mode ciphersuite
+  X25519/HKDF-SHA256/ChaCha20-Poly1305;
+- device state хранит отдельный encryption key seed, а root-signed
+  DeviceCertificate v2 связывает Account ID, signing Device ID и X25519 public
+  key;
+- plaintext `EventPayload::Text` удалён; encrypted text содержит canonical
+  recipient boxes для sender device и одного peer device;
+- HPKE AAD связывает conversation, author, sequence, parents и recipient;
+  внешняя Ed25519 event signature аутентифицирует полный ciphertext envelope;
+- listener обязан расшифровать полученный text до persist/ack; `history`
+  расшифровывает локальный recipient box; sync и store работают с ciphertext;
+- `seed-history` теперь требует `--peer-certificate-file` и не создаёт plaintext
+  fixtures;
+- event/signature domains повышены до v2, sync/session authorization — до v3,
+  ticket — до v5, Iroh ALPN — до `kilogram/m0/sync/3`.
+
+Проверки:
+
+- HPKE round trip, wrong key, AAD tampering, missing recipient и ciphertext
+  tampering покрыты unit tests;
+- serialized event и сохранённый `.event` проверены на отсутствие fixture
+  plaintext;
+- certificate persistence проверяет совпадение локального encryption key;
+- все 54 workspace tests проходят после перевода store/session fixtures на
+  encrypted events.
+- release process smoke между отдельными Alice/Bob accounts выполнил direct
+  encrypted delivery и reconnect sync трёх events; обе расшифрованные histories
+  содержат одинаковые 5 events, а fixture plaintext отсутствует в `.event`.
+
+Граница среза: static recipient key не даёт forward secrecy или PCS. Нет
+asynchronous prekeys, session ratchet, multi-device fan-out, protected local
+keystore и metadata hiding. Полный контракт —
+[`../docs/RFC-0004-pairwise-hpke-payload.md`](../docs/RFC-0004-pairwise-hpke-payload.md).
+
 ### Следующий этап
 
-1. Начать pairwise E2EE spike поверх цепочки
-   Membership → Account → Device → Event/Session.
+1. Выбрать и прототипировать asynchronous pairwise session establishment и
+   ratchet с forward secrecy/PCS, включая проверенный device-list fan-out.
 2. Membership removal и group governance проектировать вместе с ordered
    security events и MLS epoch.
 3. First-contact authority/membership gossip-witness, seed/recovery и compact

@@ -29,6 +29,10 @@ revision и канонический полный набор permanent revocatio
 Устройства сохраняют максимальную увиденную revision каждого peer account и
 отклоняют rollback или два разных snapshot с одинаковой revision.
 
+M0.7.1 расширяет сертификат до v2 и root-подписанно связывает отдельный
+X25519 public key устройства. Полный payload-контракт описан в
+[`RFC-0004`](RFC-0004-pairwise-hpke-payload.md).
+
 ## 2. Инварианты
 
 1. Account Root и Device Identity — разные ключи и разные state directories.
@@ -66,6 +70,7 @@ ACCOUNT_DIR/
 
 STATE_DIR/
     device-secret.key          # существующий device signing secret
+    device-encryption-secret.key # HPKE X25519 key seed, development plaintext
     device-certificate.cert    # публичный root-signed certificate
     account-authority.snapshot # snapshot собственного аккаунта
     peer-authority/
@@ -77,7 +82,7 @@ STATE_DIR/
 production-решение и не seed/recovery implementation. Не следует синхронизировать
 `ACCOUNT_DIR` через облачный диск или передавать его другому устройству.
 
-## 4. DeviceCertificate v1
+## 4. DeviceCertificate v1/v2
 
 Подписываемое содержимое:
 
@@ -85,6 +90,7 @@ production-решение и не seed/recovery implementation. Не следу�
 version: u8
 account_id: AccountId
 device_id: DeviceId
+encryption_public_key: EncryptionPublicKey # добавлено в v2
 authority_sequence: u64
 capabilities: sorted unique list<DeviceCapability>
 ```
@@ -95,9 +101,10 @@ M0.5.1 определяет две capabilities:
 - `sync-history` — устройство может участвовать в синхронизации истории.
 
 Пустой, повторяющийся или неканонически отсортированный список отклоняется.
-Подпись Ed25519 вычисляется над domain prefix
-`kilogram:device-certificate-signature:v1\0` и Postcard-представлением
-содержимого. Postcard остаётся временным Rust-only codec и не фиксирует
+Подпись Ed25519 текущего v2 вычисляется над domain prefix
+`kilogram:device-certificate-signature:v2\0` и Postcard-представлением
+содержимого. Исторический v1 не содержал encryption key и использовал domain
+v1. Postcard остаётся временным Rust-only codec и не фиксирует
 будущий публичный межъязыковой wire format.
 
 `authority_sequence` выдаётся корневым состоянием монотонно, начиная с нуля.
@@ -248,6 +255,10 @@ M0.6.2 применяет эту authority chain к каждому автору 
 Owner-signed membership и `AuthorizedEvent` определены отдельно в
 [`RFC-0003`](RFC-0003-conversation-membership.md).
 
+M0.7.1 добавляет отдельный persistent encryption key, certificate v2 и ticket
+v5/session authorization v3. Сертификат больше нельзя заменить без явной
+миграции device state; для текущего development spike нужен свежий state.
+
 Не реализовано:
 
 - derivation или восстановление root key из seed-фразы;
@@ -255,12 +266,16 @@ Owner-signed membership и `AuthorizedEvent` определены отдельн
 - recovery quorum, root rotation и разрешение конкурирующих authority events;
 - discovery/gossip/witness-механизм, гарантирующий получение глобально самой
   свежей revision при первом контакте;
-- отдельные device encryption/session keys;
+- session ratchet/prekey keys с forward secrecy и post-compromise security;
 - срок действия и обновление сертификатов;
 - discovery/gossip свежих account и conversation snapshots;
 - окончательный codec и crypto-agility.
 
 ## 10. Сетевой контракт M0.6.1
+
+Ниже зафиксирован исторический M0.6.1 contract. Текущий M0.7.1 переносит тот же
+authority смысл в несовместимые ticket v5 и session authorization v3 из-за
+DeviceCertificate v2.
 
 M0.5.2 заменяет временное `--allow-device` / known-author правило на цепочку:
 
@@ -303,6 +318,7 @@ root-signed revocation.
 ## 11. Следующий срез
 
 M0.6.2 завершил минимальный signed conversation membership и проверку каждого
-автора history. Authenticated gossip/witness для first-contact freshness,
-pairwise E2EE, membership removal/MLS epochs, seed/recovery и root rotation
-остаются отдельными срезами.
+автора history. M0.7.1 добавил static-key pairwise HPKE payload baseline.
+Authenticated gossip/witness для first-contact freshness, asynchronous ratchet
+с FS/PCS, membership removal/MLS epochs, seed/recovery и root rotation остаются
+отдельными срезами.

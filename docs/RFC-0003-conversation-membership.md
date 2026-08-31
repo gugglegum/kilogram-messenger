@@ -155,9 +155,11 @@ kilogram-cli conversation-member-add `
   gossip/witness, expiry или epoch-bound authorizations украденный отозванный
   ключ и старый корректный snapshot остаются проблемой при first contact и при
   импорте «исторических» событий.
-- Payload и локальный development store всё ещё plaintext; message-level E2EE
-  не реализовано.
+- В границе M0.6.2 payload и local store были plaintext. M0.7.1 заменил этот
+  формат pairwise HPKE ciphertext; см.
+  [`RFC-0004`](RFC-0004-pairwise-hpke-payload.md).
 
-Следующий криптографический срез должен отдельно определить pairwise E2EE и
-ключевые эпохи. Модель удаления участников должна проектироваться вместе с MLS,
-а не расширением add-only snapshot задним числом.
+Pairwise HPKE spike теперь определён отдельно в RFC-0004, но ratchet и ключевые
+эпохи остаются следующей криптографической задачей. Модель удаления участников
+должна проектироваться вместе с MLS, а не расширением add-only snapshot задним
+числом.

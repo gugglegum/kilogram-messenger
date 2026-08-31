@@ -8,6 +8,7 @@ publish = false
 
 [dependencies]
 blake3.workspace = true
+kilogram-crypto = { path = "../kilogram-crypto" }
 kilogram-identity = { path = "../kilogram-identity" }
 postcard.workspace = true
 serde.workspace = true

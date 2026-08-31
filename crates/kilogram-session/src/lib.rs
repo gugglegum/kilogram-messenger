@@ -440,7 +440,9 @@ fn plan_sync<S: SessionStore + ?Sized>(
 mod tests {
     use std::{cell::RefCell, error::Error};
 
-    use kilogram_identity::{AccountAuthoritySnapshot, AccountRootState, DeviceCertificate};
+    use kilogram_identity::{
+        AccountAuthoritySnapshot, AccountRootState, DeviceCertificate, DeviceEncryptionIdentity,
+    };
     use kilogram_protocol::SignedEvent;
     use tempfile::tempdir;
 
@@ -452,8 +454,12 @@ mod tests {
         let root_directory = tempdir()?;
         let root = AccountRootState::create(root_directory.path())?;
         let requester = DeviceIdentity::generate()?;
-        let certificate =
-            root.issue_device_certificate(requester.device_id(), &DeviceCapability::MESSAGING)?;
+        let requester_encryption = DeviceEncryptionIdentity::generate()?;
+        let certificate = root.issue_device_certificate(
+            requester.device_id(),
+            requester_encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
         let first_snapshot = root.authority_snapshot()?;
         let session = SyncSessionBinding::from_transport_label("authorized-listener");
         let authorization = SignedDeviceSessionAuthorization::sign(
@@ -900,8 +906,12 @@ mod tests {
     ) -> Result<(AccountId, DeviceCertificate, AccountAuthoritySnapshot), Box<dyn Error>> {
         let directory = tempdir()?;
         let root = AccountRootState::create(directory.path())?;
-        let certificate =
-            root.issue_device_certificate(identity.device_id(), &DeviceCapability::MESSAGING)?;
+        let encryption = DeviceEncryptionIdentity::generate()?;
+        let certificate = root.issue_device_certificate(
+            identity.device_id(),
+            encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
         Ok((root.account_id(), certificate, root.authority_snapshot()?))
     }
 
@@ -922,13 +932,19 @@ mod tests {
         sequence: u64,
         body: &str,
     ) -> Result<AuthorizedEvent, ProtocolError> {
+        let peer_identity = DeviceIdentity::generate()?;
+        let peer_encryption = DeviceEncryptionIdentity::generate()?;
         AuthorizedEvent::new(
-            SignedEvent::sign_text(
+            SignedEvent::sign_encrypted_text(
                 identity,
                 conversation_id,
                 sequence,
                 Vec::new(),
                 body.to_owned(),
+                [
+                    (identity.device_id(), certificate.encryption_public_key()),
+                    (peer_identity.device_id(), peer_encryption.public_key()),
+                ],
             )?,
             certificate.clone(),
             authority_snapshot.clone(),

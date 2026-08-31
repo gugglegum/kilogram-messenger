@@ -7,6 +7,7 @@ use std::{
 };
 
 use ed25519_dalek::{Signature, Signer, SigningKey, VerifyingKey};
+use kilogram_crypto::EncryptionPublicKey;
 use serde::{Deserialize, Serialize};
 
 use crate::{DeviceId, DeviceState, IdentityError, SECRET_KEY_BYTES, open_new_secret_file};
@@ -21,7 +22,8 @@ const DEVICE_CERTIFICATE_FILE: &str = "device-certificate.cert";
 const ACCOUNT_AUTHORITY_SNAPSHOT_FILE: &str = "account-authority.snapshot";
 const PEER_AUTHORITY_DIRECTORY: &str = "peer-authority";
 const AUTHORITY_VERSION: u8 = 1;
-const DEVICE_CERTIFICATE_SIGNATURE_DOMAIN: &[u8] = b"kilogram:device-certificate-signature:v1\0";
+const DEVICE_CERTIFICATE_VERSION: u8 = 2;
+const DEVICE_CERTIFICATE_SIGNATURE_DOMAIN: &[u8] = b"kilogram:device-certificate-signature:v2\0";
 const DEVICE_REVOCATION_SIGNATURE_DOMAIN: &[u8] = b"kilogram:device-revocation-signature:v1\0";
 const AUTHORITY_SNAPSHOT_SIGNATURE_DOMAIN: &[u8] =
     b"kilogram:account-authority-snapshot-signature:v1\0";
@@ -198,12 +200,19 @@ impl AccountRootState {
     pub fn issue_device_certificate(
         &self,
         device_id: DeviceId,
+        encryption_public_key: EncryptionPublicKey,
         capabilities: &[DeviceCapability],
     ) -> Result<DeviceCertificate, IdentityError> {
         self.ensure_authority_log_ready()?;
         validate_requested_capabilities(capabilities)?;
         let authority_sequence = self.allocate_authority_sequence()?;
-        DeviceCertificate::issue(&self.identity, device_id, authority_sequence, capabilities)
+        DeviceCertificate::issue(
+            &self.identity,
+            device_id,
+            encryption_public_key,
+            authority_sequence,
+            capabilities,
+        )
     }
 
     pub fn revoke_device(&self, device_id: DeviceId) -> Result<DeviceRevocation, IdentityError> {
@@ -415,6 +424,7 @@ struct DeviceCertificateContent {
     version: u8,
     account_id: AccountId,
     device_id: DeviceId,
+    encryption_public_key: EncryptionPublicKey,
     authority_sequence: u64,
     capabilities: Vec<DeviceCapability>,
 }
@@ -429,6 +439,7 @@ impl DeviceCertificate {
     fn issue(
         root: &AccountRootIdentity,
         device_id: DeviceId,
+        encryption_public_key: EncryptionPublicKey,
         authority_sequence: u64,
         capabilities: &[DeviceCapability],
     ) -> Result<Self, IdentityError> {
@@ -436,9 +447,10 @@ impl DeviceCertificate {
         let mut capabilities = capabilities.to_vec();
         capabilities.sort_unstable();
         let content = DeviceCertificateContent {
-            version: AUTHORITY_VERSION,
+            version: DEVICE_CERTIFICATE_VERSION,
             account_id: root.account_id(),
             device_id,
+            encryption_public_key,
             authority_sequence,
             capabilities,
         };
@@ -488,6 +500,10 @@ impl DeviceCertificate {
         self.content.authority_sequence
     }
 
+    pub fn encryption_public_key(&self) -> EncryptionPublicKey {
+        self.content.encryption_public_key
+    }
+
     pub fn capabilities(&self) -> &[DeviceCapability] {
         &self.content.capabilities
     }
@@ -510,7 +526,11 @@ fn validate_requested_capabilities(capabilities: &[DeviceCapability]) -> Result<
 }
 
 fn validate_certificate_content(content: &DeviceCertificateContent) -> Result<(), IdentityError> {
-    validate_authority_version(content.version)?;
+    if content.version != DEVICE_CERTIFICATE_VERSION {
+        return Err(IdentityError::UnsupportedAccountAuthorityVersion(
+            content.version,
+        ));
+    }
     if content.capabilities.is_empty() {
         return Err(IdentityError::EmptyDeviceCapabilities);
     }
@@ -965,6 +985,9 @@ impl DeviceState {
                 actual: certificate.device_id(),
             });
         }
+        if certificate.encryption_public_key() != self.encryption.public_key() {
+            return Err(IdentityError::DeviceCertificateEncryptionKeyMismatch);
+        }
         let encoded = certificate.encode()?;
         let path = self.directory.join(DEVICE_CERTIFICATE_FILE);
         match fs::read(&path) {
@@ -995,6 +1018,9 @@ impl DeviceState {
                 expected,
                 actual: certificate.device_id(),
             });
+        }
+        if certificate.encryption_public_key() != self.encryption.public_key() {
+            return Err(IdentityError::DeviceCertificateEncryptionKeyMismatch);
         }
         Ok(certificate)
     }
@@ -1182,6 +1208,10 @@ mod tests {
     use crate::DeviceState;
     use tempfile::tempdir;
 
+    fn test_encryption_public_key() -> Result<EncryptionPublicKey, IdentityError> {
+        Ok(EncryptionPublicKey::from_bytes([7_u8; 32])?)
+    }
+
     #[test]
     fn root_state_issues_persistent_device_certificate() -> Result<(), IdentityError> {
         let root_directory = tempdir()?;
@@ -1191,6 +1221,7 @@ mod tests {
         let device = DeviceState::load_or_create(device_directory.path())?;
         let certificate = root.issue_device_certificate(
             device.identity().device_id(),
+            device.encryption().public_key(),
             &DeviceCapability::MESSAGING,
         )?;
         device.install_certificate(&certificate)?;
@@ -1221,8 +1252,11 @@ mod tests {
         let first = AccountRootState::create(first_directory.path())?;
         let second = AccountRootState::create(second_directory.path())?;
         let device_id = crate::DeviceIdentity::generate()?.device_id();
-        let certificate =
-            first.issue_device_certificate(device_id, &DeviceCapability::MESSAGING)?;
+        let certificate = first.issue_device_certificate(
+            device_id,
+            test_encryption_public_key()?,
+            &DeviceCapability::MESSAGING,
+        )?;
 
         assert!(matches!(
             certificate.verify_for_account(second.account_id()),
@@ -1240,7 +1274,11 @@ mod tests {
         let root_directory = tempdir()?;
         let root = AccountRootState::create(root_directory.path())?;
         let device_id = crate::DeviceIdentity::generate()?.device_id();
-        let certificate = root.issue_device_certificate(device_id, &DeviceCapability::MESSAGING)?;
+        let certificate = root.issue_device_certificate(
+            device_id,
+            test_encryption_public_key()?,
+            &DeviceCapability::MESSAGING,
+        )?;
         let revocation = root.revoke_device(device_id)?;
         let mut tampered_revocation = revocation.clone();
         tampered_revocation.content.device_id = crate::DeviceIdentity::generate()?.device_id();
@@ -1258,7 +1296,11 @@ mod tests {
             Err(IdentityError::DeviceRevoked(revoked)) if revoked == device_id
         ));
 
-        let reissued = root.issue_device_certificate(device_id, &DeviceCapability::MESSAGING)?;
+        let reissued = root.issue_device_certificate(
+            device_id,
+            test_encryption_public_key()?,
+            &DeviceCapability::MESSAGING,
+        )?;
         assert_eq!(reissued.authority_sequence(), 2);
         assert!(matches!(
             verify_device_authorization(
@@ -1282,6 +1324,7 @@ mod tests {
         let second_device = DeviceState::load_or_create(second_device_directory.path())?;
         let certificate = root.issue_device_certificate(
             first_device.identity().device_id(),
+            first_device.encryption().public_key(),
             &[DeviceCapability::SignEvents],
         )?;
 
@@ -1312,6 +1355,7 @@ mod tests {
         assert!(matches!(
             root.issue_device_certificate(
                 device_id,
+                test_encryption_public_key()?,
                 &[DeviceCapability::SignEvents, DeviceCapability::SignEvents]
             ),
             Err(IdentityError::DuplicateDeviceCapability)
@@ -1330,10 +1374,16 @@ mod tests {
         let root = AccountRootState::create(root_directory.path())?;
         let allowed_device = crate::DeviceIdentity::generate()?;
         let revoked_device = crate::DeviceIdentity::generate()?;
-        let allowed_certificate = root
-            .issue_device_certificate(allowed_device.device_id(), &DeviceCapability::MESSAGING)?;
-        let revoked_certificate = root
-            .issue_device_certificate(revoked_device.device_id(), &DeviceCapability::MESSAGING)?;
+        let allowed_certificate = root.issue_device_certificate(
+            allowed_device.device_id(),
+            test_encryption_public_key()?,
+            &DeviceCapability::MESSAGING,
+        )?;
+        let revoked_certificate = root.issue_device_certificate(
+            revoked_device.device_id(),
+            test_encryption_public_key()?,
+            &DeviceCapability::MESSAGING,
+        )?;
         root.revoke_device(revoked_device.device_id())?;
         drop(root);
 
@@ -1378,6 +1428,7 @@ mod tests {
         let device = DeviceState::load_or_create(device_directory.path())?;
         let certificate = root.issue_device_certificate(
             device.identity().device_id(),
+            device.encryption().public_key(),
             &DeviceCapability::MESSAGING,
         )?;
         device.install_certificate(&certificate)?;
@@ -1393,6 +1444,7 @@ mod tests {
 
         root.issue_device_certificate(
             crate::DeviceIdentity::generate()?.device_id(),
+            test_encryption_public_key()?,
             &DeviceCapability::MESSAGING,
         )?;
         let second = root.authority_snapshot()?;
@@ -1434,6 +1486,7 @@ mod tests {
         let root = AccountRootState::create(root_directory.path())?;
         root.issue_device_certificate(
             crate::DeviceIdentity::generate()?.device_id(),
+            test_encryption_public_key()?,
             &DeviceCapability::MESSAGING,
         )?;
         fs::remove_file(root_directory.path().join(AUTHORITY_LOG_VERSION_FILE))?;

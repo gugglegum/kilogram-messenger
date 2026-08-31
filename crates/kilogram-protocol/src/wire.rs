@@ -10,13 +10,13 @@ use crate::{AuthorizedEvent, ConversationId, EventId, ProtocolError};
 pub const MAX_INVENTORY_EVENT_IDS: usize = 4096;
 pub const MAX_SYNC_EVENTS_PER_BATCH: usize = 64;
 
-const SYNC_VERSION: u8 = 2;
-const SYNC_DIFF_SIGNATURE_DOMAIN: &[u8] = b"kilogram:sync-diff-signature:v2\0";
-const SYNC_INVENTORY_SIGNATURE_DOMAIN: &[u8] = b"kilogram:sync-inventory-signature:v2\0";
+const SYNC_VERSION: u8 = 3;
+const SYNC_DIFF_SIGNATURE_DOMAIN: &[u8] = b"kilogram:sync-diff-signature:v3\0";
+const SYNC_INVENTORY_SIGNATURE_DOMAIN: &[u8] = b"kilogram:sync-inventory-signature:v3\0";
 const SYNC_SESSION_DOMAIN: &[u8] = b"kilogram:sync-session:v1\0";
-const DEVICE_AUTHORIZATION_VERSION: u8 = 2;
+const DEVICE_AUTHORIZATION_VERSION: u8 = 3;
 const DEVICE_AUTHORIZATION_SIGNATURE_DOMAIN: &[u8] =
-    b"kilogram:device-session-authorization-signature:v2\0";
+    b"kilogram:device-session-authorization-signature:v3\0";
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct SyncSessionBinding([u8; 32]);
@@ -648,19 +648,44 @@ fn validate_version(version: u8) -> Result<(), ProtocolError> {
 
 #[cfg(test)]
 mod tests {
+    use kilogram_crypto::DeviceEncryptionIdentity;
     use kilogram_identity::{AccountRootState, DeviceCapability, IdentityError};
     use tempfile::tempdir;
 
     use super::*;
     use crate::SignedEvent;
 
+    fn sign_test_text(
+        identity: &DeviceIdentity,
+        conversation_id: ConversationId,
+    ) -> Result<SignedEvent, ProtocolError> {
+        let own_encryption = DeviceEncryptionIdentity::generate()?;
+        let peer_identity = DeviceIdentity::generate()?;
+        let peer_encryption = DeviceEncryptionIdentity::generate()?;
+        SignedEvent::sign_encrypted_text(
+            identity,
+            conversation_id,
+            0,
+            Vec::new(),
+            "hello".to_owned(),
+            [
+                (identity.device_id(), own_encryption.public_key()),
+                (peer_identity.device_id(), peer_encryption.public_key()),
+            ],
+        )
+    }
+
     #[test]
     fn device_authorization_is_root_and_session_bound() -> Result<(), Box<dyn std::error::Error>> {
         let root_directory = tempdir()?;
         let root = AccountRootState::create(root_directory.path())?;
         let identity = DeviceIdentity::generate()?;
-        let certificate =
-            root.issue_device_certificate(identity.device_id(), &DeviceCapability::MESSAGING)?;
+        let encryption = DeviceEncryptionIdentity::generate()?;
+        let certificate = root.issue_device_certificate(
+            identity.device_id(),
+            encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
         let authority_snapshot = root.authority_snapshot()?;
         let expected_session = SyncSessionBinding::from_transport_label("listener-a");
         let other_session = SyncSessionBinding::from_transport_label("listener-b");
@@ -742,20 +767,18 @@ mod tests {
     #[test]
     fn sync_wire_messages_round_trip() -> Result<(), ProtocolError> {
         let identity = DeviceIdentity::generate()?;
+        let encryption = DeviceEncryptionIdentity::generate()?;
         let root_directory = tempdir().map_err(IdentityError::Io)?;
         let root = AccountRootState::create(root_directory.path())?;
-        let certificate =
-            root.issue_device_certificate(identity.device_id(), &DeviceCapability::MESSAGING)?;
+        let certificate = root.issue_device_certificate(
+            identity.device_id(),
+            encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
         let authority_snapshot = root.authority_snapshot()?;
         let conversation_id = ConversationId::from_label("test");
         let event = AuthorizedEvent::new(
-            SignedEvent::sign_text(
-                &identity,
-                conversation_id,
-                0,
-                Vec::new(),
-                "hello".to_owned(),
-            )?,
+            sign_test_text(&identity, conversation_id)?,
             certificate,
             authority_snapshot,
         )?;
@@ -805,13 +828,7 @@ mod tests {
         let identity = DeviceIdentity::generate()?;
         let conversation_id = ConversationId::from_label("test");
         let session = SyncSessionBinding::from_transport_label("listener");
-        let event = SignedEvent::sign_text(
-            &identity,
-            conversation_id,
-            0,
-            Vec::new(),
-            "hello".to_owned(),
-        )?;
+        let event = sign_test_text(&identity, conversation_id)?;
         let event_id = event.event_id()?;
 
         assert!(matches!(

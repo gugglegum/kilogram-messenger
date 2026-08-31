@@ -68,8 +68,13 @@ M0.6.2 добавил owner-signed add-only conversation membership и обяз�
 history и каждый sync event проверяют цепочку membership → account → device →
 event; store требует immutable authorization sidecar. Локальный Alice/Bob Iroh
 smoke получил две одинаковые авторизованные истории.
-Прикладное E2EE, seed/recovery, защищённое хранение root/local history,
-production-grade sync summaries, membership removal и группы ещё не
+M0.7.1 удалил plaintext `Text` payload и добавил отдельный X25519 key каждого
+устройства, root-signed binding этого key в DeviceCertificate v2 и два
+single-shot HPKE box на сообщение: для устройства автора и одного peer device.
+Listener расшифровывает до сохранения/ack, history — локальным key, а store/sync
+видят только ciphertext. Это baseline без Double Ratchet, forward secrecy, PCS
+и account-wide device fan-out. Seed/recovery, защищённое хранение root/local
+keys, production-grade sync summaries, membership removal и группы ещё не
 реализованы.
 
 ## Цель продукта
@@ -123,8 +128,8 @@ production-grade sync summaries, membership removal и группы ещё не
 
 ## План ближайших работ
 
-1. Начать pairwise E2EE spike поверх реализованной цепочки
-   Membership → Account → Device → Event/Session.
+1. Спроектировать следующий pairwise session slice: asynchronous prekeys,
+   ratchet с forward secrecy/PCS и fan-out по проверенному device list.
 2. Спроектировать membership removal вместе с ordered security log и MLS epoch;
    отдельно — gossip/witness для first-contact freshness.
 3. Спроектировать seed/recovery authority, protected root storage, root
@@ -149,5 +154,7 @@ production-grade sync summaries, membership removal и группы ещё не
   реализованный M0.6.1-контракт Account Root, snapshot, device и session authority.
 - [`../docs/RFC-0003-conversation-membership.md`](../docs/RFC-0003-conversation-membership.md) —
   реализованный M0.6.2-контракт membership и авторизации событий.
+- [`../docs/RFC-0004-pairwise-hpke-payload.md`](../docs/RFC-0004-pairwise-hpke-payload.md) —
+  реализованный M0.7.1 HPKE baseline для ciphertext payload двух устройств.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

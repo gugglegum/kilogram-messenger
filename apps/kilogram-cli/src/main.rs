@@ -24,9 +24,10 @@ use kilogram_protocol::{
     SyncSessionBinding,
 };
 use kilogram_session::{
-    MAX_SYNC_ROUNDS, ServerInventoryOutcome, SyncClient, SyncServer, authorize_device_session,
+    MAX_SYNC_ROUNDS, ServerInventoryOutcome, SessionStore, SyncClient, SyncServer,
+    authorize_device_session,
 };
-use kilogram_store::EventStore;
+use kilogram_store::{EventStore, StoreError};
 use kilogram_transport_iroh::{
     ALPN, RoutePolicy, SelectedPathDiagnostics, await_route_policy, endpoint_builder_for_remote,
     endpoint_builder_with_relay, read_client_request, read_server_response,
@@ -41,8 +42,8 @@ const ROUTE_POLICY_WAIT: Duration = Duration::from_secs(15);
 const CONNECTION_TIMEOUT: Duration = Duration::from_secs(30);
 const CLIENT_RELAY_WAIT_SECONDS: u64 = 30;
 const STREAM_OPEN_TIMEOUT: Duration = Duration::from_secs(15);
-const TICKET_SIGNATURE_DOMAIN: &[u8] = b"kilogram:connection-ticket-signature:v4\0";
-const TICKET_VERSION: u8 = 4;
+const TICKET_SIGNATURE_DOMAIN: &[u8] = b"kilogram:connection-ticket-signature:v5\0";
+const TICKET_VERSION: u8 = 5;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -155,6 +156,10 @@ enum Command {
         /// Prefix used in the generated test message bodies.
         #[arg(long, default_value = "seed")]
         message_prefix: String,
+
+        /// Public certificate for the peer device that must also decrypt the fixtures.
+        #[arg(long)]
+        peer_certificate_file: PathBuf,
     },
 
     /// Verify and print locally stored events without connecting to a peer.
@@ -402,6 +407,10 @@ impl ConnectionTicket {
         &self.content.listener_authority_snapshot
     }
 
+    fn listener_certificate(&self) -> &DeviceCertificate {
+        &self.content.listener_certificate
+    }
+
     fn route_policy(&self) -> RoutePolicy {
         self.content.route_policy
     }
@@ -516,7 +525,14 @@ async fn main() -> Result<()> {
             conversation,
             count,
             message_prefix,
-        } => seed_history(state_dir, conversation, count, message_prefix),
+            peer_certificate_file,
+        } => seed_history(
+            state_dir,
+            conversation,
+            count,
+            message_prefix,
+            peer_certificate_file,
+        ),
         Command::History {
             state_dir,
             conversation,
@@ -815,9 +831,15 @@ async fn handle_delivery_request(
     let event_id = signed_event
         .event_id()
         .context("calculate received event ID")?;
-    let EventPayload::Text { body } = signed_event.payload() else {
+    let EventPayload::EncryptedText { .. } = signed_event.payload() else {
         bail!("listener expected a text event");
     };
+    let body = signed_event
+        .decrypt_text(
+            device_state.identity().device_id(),
+            device_state.encryption(),
+        )
+        .context("decrypt received text for this listener device")?;
     let received_store_outcome = event_store
         .put_authorized(&event, &membership)
         .context("persist received event before acknowledging it")?;
@@ -890,9 +912,10 @@ async fn handle_sync_request(
         listener_account_id,
         authorized_requester.account_id(),
     )?;
+    let decrypting_store = DecryptingSessionStore::new(event_store, device_state);
     let server = SyncServer::new(
         device_state.identity(),
-        event_store,
+        &decrypting_store,
         expected_session,
         authorized_requester.device_id(),
         &membership,
@@ -1086,14 +1109,24 @@ async fn connect(
     let parents = event_store
         .frontier(conversation_id)
         .context("calculate local conversation frontier")?;
-    let signed_event = SignedEvent::sign_text(
+    let signed_event = SignedEvent::sign_encrypted_text(
         device_state.identity(),
         conversation_id,
         author_sequence,
         parents,
         message,
+        [
+            (
+                requester_certificate.device_id(),
+                requester_certificate.encryption_public_key(),
+            ),
+            (
+                ticket.listener_certificate().device_id(),
+                ticket.listener_certificate().encryption_public_key(),
+            ),
+        ],
     )
-    .context("sign text event")?;
+    .context("encrypt and sign text event")?;
     let event = AuthorizedEvent::new(
         signed_event,
         requester_certificate,
@@ -1217,9 +1250,10 @@ async fn sync(
         requester_certificate.account_id(),
         authorized_listener.account_id(),
     )?;
+    let decrypting_store = DecryptingSessionStore::new(&event_store, &device_state);
     let client = SyncClient::new(
         device_state.identity(),
-        &event_store,
+        &decrypting_store,
         conversation_id,
         &membership,
         session_binding,
@@ -1506,6 +1540,10 @@ fn show_identity(state_dir: PathBuf) -> Result<()> {
     let device_state = DeviceState::load_or_create(&state_dir)
         .with_context(|| format!("load device state from {}", state_dir.display()))?;
     println!("device_id={}", device_state.identity().device_id());
+    println!(
+        "device_encryption_public_key={}",
+        device_state.encryption().public_key()
+    );
     Ok(())
 }
 
@@ -1666,7 +1704,11 @@ fn enroll_device(
     let device = DeviceState::load_or_create(&state_dir)
         .with_context(|| format!("load device state from {}", state_dir.display()))?;
     let certificate = account
-        .issue_device_certificate(device.identity().device_id(), &DeviceCapability::MESSAGING)
+        .issue_device_certificate(
+            device.identity().device_id(),
+            device.encryption().public_key(),
+            &DeviceCapability::MESSAGING,
+        )
         .context("issue root-signed device certificate")?;
     device
         .install_certificate(&certificate)
@@ -1686,6 +1728,10 @@ fn enroll_device(
 
     println!("account_id={}", certificate.account_id());
     println!("device_id={}", certificate.device_id());
+    println!(
+        "device_encryption_public_key={}",
+        certificate.encryption_public_key()
+    );
     println!(
         "certificate_authority_sequence={}",
         certificate.authority_sequence()
@@ -1847,12 +1893,20 @@ fn show_history(state_dir: PathBuf, conversation: String) -> Result<()> {
             .collect::<Vec<_>>()
             .join(",");
         match event.payload() {
-            EventPayload::Text { body } => println!(
-                "event_id={} author_account_id={author_account_id} author_device_id={} author_sequence={} parents=[{parents}] payload=text body={body:?}",
-                stored.id,
-                event.author_device_id(),
-                event.author_sequence()
-            ),
+            EventPayload::EncryptedText { .. } => {
+                let body = event
+                    .decrypt_text(
+                        device_state.identity().device_id(),
+                        device_state.encryption(),
+                    )
+                    .with_context(|| format!("decrypt stored event {}", stored.id))?;
+                println!(
+                    "event_id={} author_account_id={author_account_id} author_device_id={} author_sequence={} parents=[{parents}] payload=encrypted-text body={body:?}",
+                    stored.id,
+                    event.author_device_id(),
+                    event.author_sequence()
+                );
+            }
             EventPayload::Acknowledgement {
                 acknowledged_event_id,
             } => println!(
@@ -1871,6 +1925,7 @@ fn seed_history(
     conversation: String,
     count: usize,
     message_prefix: String,
+    peer_certificate_file: PathBuf,
 ) -> Result<()> {
     ensure!(count > 0, "--count must be greater than zero");
     let device_state = DeviceState::load_or_create(&state_dir)
@@ -1881,6 +1936,19 @@ fn seed_history(
     let authority_snapshot = device_state
         .load_own_authority_snapshot()
         .context("load device authority snapshot before seeding history")?;
+    let peer_certificate = DeviceCertificate::decode_and_verify(
+        &fs::read(&peer_certificate_file).with_context(|| {
+            format!(
+                "read peer certificate from {}",
+                peer_certificate_file.display()
+            )
+        })?,
+    )
+    .context("decode and verify peer device certificate")?;
+    ensure!(
+        peer_certificate.device_id() != certificate.device_id(),
+        "peer certificate belongs to this same device"
+    );
     let event_store = open_event_store(&state_dir)?;
     let conversation_id = ConversationId::from_label(&conversation);
     let membership = device_state
@@ -1889,6 +1957,9 @@ fn seed_history(
     membership
         .require_member(certificate.account_id())
         .context("this device account is not a member of the conversation")?;
+    membership
+        .require_member(peer_certificate.account_id())
+        .context("peer device account is not a member of the conversation")?;
     let existing_count = event_store
         .authorized_inventory(conversation_id, &membership)
         .context("load current authorized inventory before seeding history")?
@@ -1908,14 +1979,21 @@ fn seed_history(
         let author_sequence = device_state
             .allocate_sequence()
             .context("allocate seeded event sequence")?;
-        let event = SignedEvent::sign_text(
+        let event = SignedEvent::sign_encrypted_text(
             device_state.identity(),
             conversation_id,
             author_sequence,
             parents,
             format!("{message_prefix}-{index}"),
+            [
+                (certificate.device_id(), certificate.encryption_public_key()),
+                (
+                    peer_certificate.device_id(),
+                    peer_certificate.encryption_public_key(),
+                ),
+            ],
         )
-        .context("sign seeded history event")?;
+        .context("encrypt and sign seeded history event")?;
         let event_id = event.event_id().context("calculate seeded event ID")?;
         first_event_id.get_or_insert(event_id);
         last_event_id = Some(event_id);
@@ -1948,6 +2026,65 @@ fn open_event_store(state_dir: &Path) -> Result<EventStore> {
     EventStore::open(&path).with_context(|| format!("open event store at {}", path.display()))
 }
 
+struct DecryptingSessionStore<'a> {
+    store: &'a EventStore,
+    device_state: &'a DeviceState,
+}
+
+impl<'a> DecryptingSessionStore<'a> {
+    fn new(store: &'a EventStore, device_state: &'a DeviceState) -> Self {
+        Self {
+            store,
+            device_state,
+        }
+    }
+
+    fn require_decryptable(&self, events: &[AuthorizedEvent]) -> Result<(), StoreError> {
+        for event in events {
+            if matches!(event.event().payload(), EventPayload::EncryptedText { .. }) {
+                event.event().decrypt_text(
+                    self.device_state.identity().device_id(),
+                    self.device_state.encryption(),
+                )?;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl SessionStore for DecryptingSessionStore<'_> {
+    fn inventory(
+        &self,
+        conversation_id: ConversationId,
+        membership: &ConversationMembershipSnapshot,
+    ) -> Result<Vec<kilogram_protocol::EventId>, StoreError> {
+        self.store.authorized_inventory(conversation_id, membership)
+    }
+
+    fn events_by_id(
+        &self,
+        conversation_id: ConversationId,
+        event_ids: &[kilogram_protocol::EventId],
+        membership: &ConversationMembershipSnapshot,
+    ) -> Result<Vec<AuthorizedEvent>, StoreError> {
+        let events = self
+            .store
+            .authorized_events_by_id(conversation_id, event_ids, membership)?;
+        self.require_decryptable(&events)?;
+        Ok(events)
+    }
+
+    fn put_events(
+        &self,
+        events: &[AuthorizedEvent],
+        membership: &ConversationMembershipSnapshot,
+    ) -> Result<(), StoreError> {
+        self.require_decryptable(events)?;
+        self.store.put_authorized_batch(events, membership)?;
+        Ok(())
+    }
+}
+
 fn require_conversation_participants(
     membership: &ConversationMembershipSnapshot,
     local_account_id: AccountId,
@@ -1966,7 +2103,7 @@ fn require_conversation_participants(
 mod tests {
     use super::*;
     use iroh::SecretKey;
-    use kilogram_identity::DeviceIdentity;
+    use kilogram_identity::{DeviceEncryptionIdentity, DeviceIdentity};
     use kilogram_transport_iroh::endpoint_builder;
 
     const UNSUPPORTED_TEST_ALPN: &[u8] = b"kilogram/test/unsupported/1";
@@ -1976,8 +2113,12 @@ mod tests {
     ) -> Result<(AccountId, DeviceCertificate, AccountAuthoritySnapshot)> {
         let directory = tempfile::tempdir()?;
         let root = AccountRootState::create(directory.path())?;
-        let certificate =
-            root.issue_device_certificate(identity.device_id(), &DeviceCapability::MESSAGING)?;
+        let encryption = DeviceEncryptionIdentity::generate()?;
+        let certificate = root.issue_device_certificate(
+            identity.device_id(),
+            encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
         let snapshot = root.authority_snapshot()?;
         Ok((root.account_id(), certificate, snapshot))
     }
@@ -1987,10 +2128,19 @@ mod tests {
         let directory = tempfile::tempdir()?;
         let account_dir = directory.path().join("account");
         let state_dir = directory.path().join("seeded-device");
+        let peer_state_dir = directory.path().join("peer-device");
+        let peer_certificate_file = directory.path().join("peer-device.cert");
         let conversation = "seed-history-test";
         create_account(account_dir.clone())?;
         enroll_device(account_dir.clone(), state_dir.clone(), None)?;
         let account = AccountRootState::load(&account_dir)?;
+        let peer = DeviceState::load_or_create(&peer_state_dir)?;
+        let peer_certificate = account.issue_device_certificate(
+            peer.identity().device_id(),
+            peer.encryption().public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        write_new_authority_file(&peer_certificate_file, &peer_certificate.encode()?)?;
         let membership = account.create_conversation_membership(
             ConversationId::from_label(conversation).scope_id(),
             &[],
@@ -2001,6 +2151,7 @@ mod tests {
             conversation.to_owned(),
             3,
             "fixture".to_owned(),
+            peer_certificate_file,
         )?;
 
         let store = open_event_store(&state_dir)?;
@@ -2012,6 +2163,61 @@ mod tests {
             events
                 .iter()
                 .all(|stored| stored.event.verify_for_membership(&membership).is_ok())
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn sync_store_rejects_event_without_a_local_recipient_box() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let local_state = DeviceState::load_or_create(directory.path().join("local-state"))?;
+        let local_root = AccountRootState::create(directory.path().join("local-root"))?;
+        let peer_root = AccountRootState::create(directory.path().join("peer-root"))?;
+        let peer_identity = DeviceIdentity::generate()?;
+        let peer_encryption = DeviceEncryptionIdentity::generate()?;
+        let peer_certificate = peer_root.issue_device_certificate(
+            peer_identity.device_id(),
+            peer_encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let outsider_identity = DeviceIdentity::generate()?;
+        let outsider_encryption = DeviceEncryptionIdentity::generate()?;
+        let conversation_id = ConversationId::from_label("missing-local-recipient");
+        let membership = local_root.create_conversation_membership(
+            conversation_id.scope_id(),
+            &[peer_root.account_id()],
+        )?;
+        let event = AuthorizedEvent::new(
+            SignedEvent::sign_encrypted_text(
+                &peer_identity,
+                conversation_id,
+                0,
+                Vec::new(),
+                "must not reach disk".to_owned(),
+                [
+                    (peer_identity.device_id(), peer_encryption.public_key()),
+                    (
+                        outsider_identity.device_id(),
+                        outsider_encryption.public_key(),
+                    ),
+                ],
+            )?,
+            peer_certificate,
+            peer_root.authority_snapshot()?,
+        )?;
+        let store = EventStore::open(directory.path().join("events"))?;
+        let guarded = DecryptingSessionStore::new(&store, &local_state);
+
+        assert!(matches!(
+            guarded.put_events(&[event], &membership),
+            Err(StoreError::Protocol(
+                kilogram_protocol::ProtocolError::MissingEncryptedRecipient(device_id)
+            )) if device_id == local_state.identity().device_id()
+        ));
+        assert!(
+            store
+                .authorized_inventory(conversation_id, &membership)?
+                .is_empty()
         );
         Ok(())
     }
@@ -2093,8 +2299,10 @@ mod tests {
         let peer_directory = tempfile::tempdir()?;
         let listener_root = AccountRootState::create(root_directory.path())?;
         let listener_identity = DeviceIdentity::generate()?;
+        let listener_encryption = DeviceEncryptionIdentity::generate()?;
         let listener_certificate = listener_root.issue_device_certificate(
             listener_identity.device_id(),
+            listener_encryption.public_key(),
             &DeviceCapability::MESSAGING,
         )?;
         let old_snapshot = listener_root.authority_snapshot()?;
@@ -2262,8 +2470,10 @@ mod tests {
         let requester_root_directory = tempfile::tempdir()?;
         let requester_root = AccountRootState::create(requester_root_directory.path())?;
         let requester_identity = DeviceIdentity::generate()?;
+        let requester_encryption = DeviceEncryptionIdentity::generate()?;
         let requester_certificate = requester_root.issue_device_certificate(
             requester_identity.device_id(),
+            requester_encryption.public_key(),
             &DeviceCapability::MESSAGING,
         )?;
         requester_root.revoke_device(requester_identity.device_id())?;

@@ -8,8 +8,9 @@ M0.5.1 зафиксировал минимальную однопроцессн�
 caller-supplied revocations до сетевых данных. M0.6.1 заменил их полным
 root-signed snapshot и max-seen anti-rollback. M0.6.2 добавил owner-signed
 add-only conversation membership и проверку Account/Device proof каждого
-event. Следующие вопросы относятся к production recovery, rotation,
-distribution, removal и key epochs и не решены этим прототипом.
+event. M0.7.1 добавил два static-key HPKE box для тела сообщения, но не ratchet.
+Следующие вопросы относятся к production recovery, rotation, asynchronous
+sessions, distribution, removal и key epochs и не решены этим прототипом.
 
 - Какая точная модель угроз: массовое наблюдение, целевой атакующий, злонамеренные
   relay/storage peers, компрометация bootstrap-инфраструктуры, Sybil и eclipse?
@@ -18,8 +19,10 @@ distribution, removal и key epochs и не решены этим прототи
 - Какие операции может единолично подписать device key, а какие требуют seed,
   аппаратного ключа или кворума устройств?
 - Как разрешать конкурирующие операции восстановления и отзыва при утечке seed?
-- Какой протокол использовать для личных чатов: двухучастниковый MLS или
-  отдельную pairwise-схему уровня PQXDH + Double Ratchet?
+- Какой production-протокол личного чата заменит static-key HPKE baseline:
+  двухучастниковый MLS или отдельная схема уровня PQXDH + Double Ratchet?
+- Как подписывать, распространять, обновлять и удалять device/prekey bundles,
+  чтобы первое offline-сообщение и fan-out не позволяли peer подменить key list?
 - Какой финальный межъязыковой canonical wire encoding обеспечивает одинаковые
   подписи и event IDs на всех платформах? Postcard используется только как
   предварительный M0 codec и не закрывает вопрос публичного протокола.

@@ -197,6 +197,17 @@ toolchain `1.98.0` для воспроизводимой разработки.
     Text/Acknowledgement, добавил Alice 3 events и одним sync round передал Bob
     ровно эти 3. Обе авторизованные истории содержали одинаковые 5 events. Все
     50 workspace tests проходят.
+33. M0.7.1 добавил `kilogram-crypto` с HPKE 0.14 Base mode
+    X25519/HKDF-SHA256/ChaCha20-Poly1305, отдельный persistent encryption key
+    устройства и его root-signed binding в DeviceCertificate v2. Plaintext
+    Text event удалён; delivery/history используют два recipient boxes, а
+    store/sync сохраняют ciphertext. Event/sync/session/ticket/ALPN версии
+    повышены несовместимо. Форматирование, строгий Clippy, release workspace
+    build и 54 tests прошли. Свежий release process smoke
+    `.tmp/m071-smoke-20260831-184557` между отдельными Alice/Bob Account Roots
+    выполнил direct encrypted delivery, передал 3 encrypted seed events через
+    reconnect sync, получил одинаковые histories из 5 events и не нашёл
+    plaintext marker в сырых `.event` обоих устройств.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -208,8 +219,9 @@ transport Endpoint/session binding без повторной передачи п
 batch. M0.5.1 завершает локальную authority-модель; сетевое применение
 certificate/revocation завершено в M0.5.2. Completeness на подписанной revision
 и anti-rollback реализованы в M0.6.1; M0.6.2 закрывает минимальный add-only
-conversation membership и author verification. First-contact global freshness,
-membership removal/epochs и E2EE остаются открыты.
+conversation membership и author verification. M0.7.1 закрывает только
+static-key HPKE payload baseline. First-contact global freshness, pairwise
+ratchet/FS/PCS, membership removal/epochs и group E2EE остаются открыты.
 
 ## Решения, которые ещё нельзя фиксировать
 

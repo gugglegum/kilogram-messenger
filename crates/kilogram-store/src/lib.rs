@@ -603,7 +603,9 @@ pub enum StoreError {
 mod tests {
     use std::error::Error;
 
-    use kilogram_identity::{AccountRootState, DeviceCapability, DeviceIdentity};
+    use kilogram_identity::{
+        AccountRootState, DeviceCapability, DeviceEncryptionIdentity, DeviceIdentity,
+    };
     use kilogram_protocol::{AuthorizedEvent, EventPayload};
     use tempfile::tempdir;
 
@@ -618,6 +620,15 @@ mod tests {
         let event_id = event.event_id()?;
 
         assert_eq!(store.put(&event)?, StoreOutcome::Inserted);
+        let event_bytes = fs::read(event_path(
+            &store.conversation_directory(conversation_id),
+            event_id,
+        ))?;
+        assert!(
+            !event_bytes
+                .windows(b"hello".len())
+                .any(|window| window == b"hello")
+        );
         let reopened = EventStore::open(directory.path())?;
         let stored = reopened.load_conversation(conversation_id)?;
 
@@ -634,19 +645,17 @@ mod tests {
         let store = EventStore::open(directory.path())?;
         let root = AccountRootState::create(root_directory.path())?;
         let identity = DeviceIdentity::generate()?;
-        let certificate =
-            root.issue_device_certificate(identity.device_id(), &DeviceCapability::MESSAGING)?;
+        let encryption = DeviceEncryptionIdentity::generate()?;
+        let certificate = root.issue_device_certificate(
+            identity.device_id(),
+            encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
         let authority_snapshot = root.authority_snapshot()?;
         let conversation_id = ConversationId::from_label("authorized-persistence");
         let membership = root.create_conversation_membership(conversation_id.scope_id(), &[])?;
         let event = AuthorizedEvent::new(
-            SignedEvent::sign_text(
-                &identity,
-                conversation_id,
-                0,
-                Vec::new(),
-                "hello".to_owned(),
-            )?,
+            sign_test_text(&identity, conversation_id, 0, Vec::new(), "hello")?,
             certificate,
             authority_snapshot,
         )?;
@@ -728,20 +737,8 @@ mod tests {
         let store = EventStore::open(directory.path())?;
         let conversation_id = ConversationId::from_label("equivocation");
         let identity = DeviceIdentity::generate()?;
-        let first = SignedEvent::sign_text(
-            &identity,
-            conversation_id,
-            9,
-            Vec::new(),
-            "first".to_owned(),
-        )?;
-        let conflicting = SignedEvent::sign_text(
-            &identity,
-            conversation_id,
-            9,
-            Vec::new(),
-            "conflicting".to_owned(),
-        )?;
+        let first = sign_test_text(&identity, conversation_id, 9, Vec::new(), "first")?;
+        let conflicting = sign_test_text(&identity, conversation_id, 9, Vec::new(), "conflicting")?;
 
         store.put(&first)?;
         assert!(matches!(
@@ -808,31 +805,13 @@ mod tests {
         let store = EventStore::open(directory.path())?;
         let conversation_id = ConversationId::from_label("batch-put");
         let identity = DeviceIdentity::generate()?;
-        let first = SignedEvent::sign_text(
-            &identity,
-            conversation_id,
-            0,
-            Vec::new(),
-            "first".to_owned(),
-        )?;
-        let second = SignedEvent::sign_text(
-            &identity,
-            conversation_id,
-            1,
-            Vec::new(),
-            "second".to_owned(),
-        )?;
+        let first = sign_test_text(&identity, conversation_id, 0, Vec::new(), "first")?;
+        let second = sign_test_text(&identity, conversation_id, 1, Vec::new(), "second")?;
         store.put_batch(&[first.clone(), second.clone()])?;
         store.put_batch(&[first])?;
         assert_eq!(store.load_conversation(conversation_id)?.len(), 2);
 
-        let conflicting = SignedEvent::sign_text(
-            &identity,
-            conversation_id,
-            1,
-            Vec::new(),
-            "conflicting".to_owned(),
-        )?;
+        let conflicting = sign_test_text(&identity, conversation_id, 1, Vec::new(), "conflicting")?;
         assert!(matches!(
             store.put_batch(&[conflicting]),
             Err(StoreError::WriterSequenceConflict { .. })
@@ -863,12 +842,35 @@ mod tests {
         parents: Vec<EventId>,
         body: &str,
     ) -> Result<SignedEvent, ProtocolError> {
-        SignedEvent::sign_text(
+        sign_test_text(
             &DeviceIdentity::generate()?,
             conversation_id,
             sequence,
             parents,
+            body,
+        )
+    }
+
+    fn sign_test_text(
+        identity: &DeviceIdentity,
+        conversation_id: ConversationId,
+        sequence: u64,
+        parents: Vec<EventId>,
+        body: &str,
+    ) -> Result<SignedEvent, ProtocolError> {
+        let own_encryption = DeviceEncryptionIdentity::generate()?;
+        let peer_identity = DeviceIdentity::generate()?;
+        let peer_encryption = DeviceEncryptionIdentity::generate()?;
+        SignedEvent::sign_encrypted_text(
+            identity,
+            conversation_id,
+            sequence,
+            parents,
             body.to_owned(),
+            [
+                (identity.device_id(), own_encryption.public_key()),
+                (peer_identity.device_id(), peer_encryption.public_key()),
+            ],
         )
     }
 }

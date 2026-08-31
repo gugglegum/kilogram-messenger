@@ -1,19 +1,17 @@
 [package]
-name = "kilogram-identity"
-description = "Application-level device identities for Kilogram"
+name = "kilogram-crypto"
+description = "Application-level encryption primitives for Kilogram"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 publish = false
 
 [dependencies]
-ed25519-dalek.workspace = true
 getrandom.workspace = true
-kilogram-crypto = { path = "../kilogram-crypto" }
-postcard.workspace = true
+hpke.workspace = true
 serde.workspace = true
-tempfile.workspace = true
 thiserror.workspace = true
+zeroize.workspace = true
 
 [lints]
 workspace = true
