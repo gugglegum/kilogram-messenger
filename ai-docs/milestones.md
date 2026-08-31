@@ -47,7 +47,7 @@ Listener endpoint 2397...23d9
 - первый recovery прогон обнаружил Windows `MAX_PATH` bug; M0.1.6 исправил его,
   а повтор на тех же физических хостах прошёл успешно.
 
-### M0.3 — два хоста в разных сетях: внешний тест выполняется
+### M0.3 — два хоста в разных сетях: выполнено
 
 Инструменты проверки готовы:
 
@@ -62,10 +62,14 @@ Listener endpoint 2397...23d9
 - public relay smoke выбрал `euc1-1.relay.n0.iroh.link`, причём relay-only ticket
   содержал только Relay address, без IP candidates.
 
-Осталось выполнить на двух физических хостах в разных сетях:
+На двух физических хостах в разных сетях подтверждено:
 
-- проверить relay-only sync после restart listener;
-- проверить смену сетевого интерфейса во время более долгой сессии.
+- `direct-only` корректно отказался передавать frames, когда NAT не позволил
+  создать direct path;
+- `auto` доставил event через public relay fallback;
+- strict `relay-only` через явно выбранный `aps1` доставил event без IP paths;
+- relay-only sync после restart listener восстановил 6 недостающих events за
+  один bounded round и свёл обе стороны к 8 events.
 
 Промежуточный внешний прогон без VPN выбрал direct path и успешно доставил
 event, но transport addresses оказались `192.168.0.134` ↔ `192.168.0.111`.
@@ -112,7 +116,13 @@ Bob home, Alice target/home и selected path совпали, был открыт
 relay path, а signed event и acknowledgement совпали на обеих сторонах. RTT
 составил 461.9–466.6 ms. Это подтверждает cross-network работу
 `clear_ip_transports`; прежние timeout были специфичны для доступности `euc1`
-route в момент тестов. До завершения M0.3 остался relay-only restart/sync.
+route в момент тестов.
+
+Финальный test6 перезапустил Bob с новым Endpoint ID/ticket. Alice имел 8
+events, Bob уже имел 2; за один round Alice отправил, а Bob получил ровно 6
+недостающих events. Обе стороны сообщили `status=synchronized`,
+`sync_more_available=false`, `transport_path=relay`, один open path и RTT около
+472 ms. Таким образом, M0.3 выполнен полностью.
 
 ### M0.1.1 — постоянная device identity и signed event: выполнено
 
@@ -348,9 +358,7 @@ handshake и успешный приём следующего клиента; т
 
 ### Следующее расширение M0
 
-1. Завершить M0.3 на двух физических хостах в разных сетях: проверить
-   `direct-only` hole punching, затем `relay-only` контроль.
-2. Проверить смену сетевого интерфейса и определить минимальный resumable sync
+1. Проверить смену сетевого интерфейса и определить минимальный resumable sync
    cursor до замены full-ID inventory на Merkle/range summary.
-3. Начать Account Root → Device authorization model либо pairwise E2EE spike по
+2. Начать Account Root → Device authorization model либо pairwise E2EE spike по
    приоритету следующего RFC/ADR.

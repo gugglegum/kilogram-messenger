@@ -131,12 +131,19 @@ toolchain `1.98.0` для воспроизводимой разработки.
     `clear_ip_transports` работает между этими сетями, а прежний failure был
     специфичен для доступности `euc1` route во время тестов. Остался внешний
     relay-only sync после restart listener.
+25. Финальный test6 перезапустил Bob с новым transport Endpoint ID и новым
+    signed `aps1` relay-only ticket. Alice inventory содержал 8 events; за один
+    bounded round она отправила ровно 6 отсутствующих, Bob получил те же 6 и
+    ничего не отправил обратно. Обе стороны сообщили `status=synchronized`,
+    `sync_more_available=false`, один relay path и RTT 472.0/472.8 ms. Bob
+    начал с 2 events и закончил теми же 8, что Alice, поэтому M0.3 завершён без
+    дополнительного history dump.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
 punching в выбранной home-to-cellular topology; `auto` и strict relay-only
-подтвердили рабочий fallback. Для завершения M0.3 остался restart/sync через
-`aps1` и отдельная последующая проверка смены интерфейса.
+подтвердили рабочий fallback. Restart/sync через `aps1` сошёлся за один round;
+M0.3 завершён. Проверка смены интерфейса относится к следующему расширению M0.
 
 ## Решения, которые ещё нельзя фиксировать
 

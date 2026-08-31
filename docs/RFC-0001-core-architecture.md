@@ -350,8 +350,15 @@ Handshake/connect ограничен 30 секундами, ожидание pol
 и wire I/O — 15 секундами. Ошибка указывает зависшую операцию и, для route
 policy, последний выбранный path. После прикладного exchange policy проверяется
 повторно. Локальный Windows process smoke подтвердил delivery и reconnect/sync
-после restart listener для direct-only и public n0 relay-only. Это проверяет
-управляемость маршрута, но ещё не доказывает hole punching между двумя NAT.
+после restart listener для direct-only и public n0 relay-only. Последующий
+внешний M0.3 между домашней сетью и cellular hotspot показал невозможность
+direct path в выбранной NAT topology, успешный `auto` relay fallback и strict
+relay-only delivery через явно выбранный `aps1` без IP transports. После
+restart listener relay-only sync за один bounded round передал 6 недостающих
+events и свёл обе стороны к 8 events. Автоматически выбранный `euc1` во время
+тестов дважды не доставил strict handshake, поэтому M0 CLI допускает
+подписанный explicit relay override; production relay health/failover остаётся
+отдельной задачей.
 
 Listener не должен завершаться из-за первой ошибки `Incoming`. Публичный UDP
 endpoint может получить посторонний или retransmitted QUIC-like datagram, для
