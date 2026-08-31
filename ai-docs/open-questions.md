@@ -9,8 +9,9 @@ caller-supplied revocations до сетевых данных. M0.6.1 замен�
 root-signed snapshot и max-seen anti-rollback. M0.6.2 добавил owner-signed
 add-only conversation membership и проверку Account/Device proof каждого
 event. M0.7.1 добавил два static-key HPKE box для тела сообщения. M0.7.2 удалил
-sender box из replicated event и ввёл local-only encrypted history projection,
-но peer box всё ещё не ratchet.
+sender box из replicated event и ввёл local-only encrypted history projection.
+M0.7.3 заменил оставшийся peer box на persistent `vodozemac::olm` Double
+Ratchet с device-signed one-time prekey.
 Следующие вопросы относятся к production recovery, rotation, asynchronous
 sessions, distribution, removal и key epochs и не решены этим прототипом.
 
@@ -21,8 +22,13 @@ sessions, distribution, removal и key epochs и не решены этим пр
 - Какие операции может единолично подписать device key, а какие требуют seed,
   аппаратного ключа или кворума устройств?
 - Как разрешать конкурирующие операции восстановления и отзыва при утечке seed?
-- Какой production-протокол личного чата заменит static-key HPKE baseline:
-  двухучастниковый MLS или отдельная схема уровня PQXDH + Double Ratchet?
+- Остаётся ли vodozemac/Olm только M0 reference implementation или production
+  личный чат использует Signal-style PQXDH + Double Ratchet либо
+  двухучастниковый MLS?
+- Как разрешать simultaneous outbound initiation и хранить несколько sessions
+  для одной пары devices без downgrade/identity confusion?
+- Как транзакционно сохранять ratchet advancement, local projection и immutable
+  event, не позволяя crash потерять использованный message key?
 - Как подписывать, распространять, обновлять и удалять device/prekey bundles,
   чтобы первое offline-сообщение и fan-out не позволяли peer подменить key list?
 - Как authenticated history rewrap передаёт старую локальную историю новому или

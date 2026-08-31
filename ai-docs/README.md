@@ -68,16 +68,15 @@ M0.6.2 добавил owner-signed add-only conversation membership и обяз�
 history и каждый sync event проверяют цепочку membership → account → device →
 event; store требует immutable authorization sidecar. Локальный Alice/Bob Iroh
 smoke получил две одинаковые авторизованные истории.
-M0.7.1 удалил plaintext `Text` payload и добавил отдельный X25519 key каждого
-устройства, root-signed binding этого key в DeviceCertificate v2 и два
-single-shot HPKE box на сообщение: для устройства автора и одного peer device.
-Listener расшифровывает до сохранения/ack, history — локальным key, а store/sync
-видят только ciphertext. M0.7.2 удалил sender box из replicated event: теперь
-там один peer box, а sender и recipient хранят отдельные local-only encrypted
-projections, адресованные Event ID. Sync projection не передаёт и создаёт её
-после успешного recipient decrypt. Это необходимая storage boundary, но peer
-box всё ещё без Double Ratchet, forward secrecy, PCS и account-wide device
-fan-out. Seed/recovery, history rewrap, защищённое хранение root/local keys,
+M0.7.1 удалил plaintext `Text` payload и добавил static HPKE baseline. M0.7.2
+удалил sender box из replicated event: sender и recipient хранят отдельные
+local-only encrypted projections, адресованные Event ID. M0.7.3 заменил
+оставшийся peer HPKE box на `vodozemac::olm` Double Ratchet: device-signed
+identity/one-time prekey входит в ticket, а persistent session выдаёт
+PreKey/Normal ciphertext с per-message key evolution. Sync projection не
+передаёт и создаёт её только после ratchet decrypt. Один OTK/session на device
+pair пока не решает simultaneous initiation или account-wide device fan-out.
+Seed/recovery, history rewrap, защищённое хранение root/local/ratchet keys,
 production-grade sync summaries, membership removal и группы ещё не реализованы.
 
 ## Цель продукта
@@ -131,8 +130,8 @@ production-grade sync summaries, membership removal и группы ещё не 
 
 ## План ближайших работ
 
-1. Спроектировать следующий pairwise session slice: asynchronous prekeys,
-   ratchet с forward secrecy/PCS и fan-out по проверенному device list.
+1. Добавить signed device-list fan-out, prekey pool и разрешение concurrent
+   pairwise session initiation.
 2. Спроектировать membership removal вместе с ordered security log и MLS epoch;
    отдельно — gossip/witness для first-contact freshness.
 3. Спроектировать seed/recovery authority, protected root storage, root
@@ -161,5 +160,7 @@ production-grade sync summaries, membership removal и группы ещё не 
   исторический M0.7.1 HPKE baseline для ciphertext payload двух устройств.
 - [`../docs/RFC-0005-local-encrypted-history-projection.md`](../docs/RFC-0005-local-encrypted-history-projection.md) —
   реализованный M0.7.2-контракт recipient-only event и локальной projection.
+- [`../docs/RFC-0006-pairwise-double-ratchet.md`](../docs/RFC-0006-pairwise-double-ratchet.md) —
+  реализованный M0.7.3-контракт signed prekey и persistent pairwise ratchet.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

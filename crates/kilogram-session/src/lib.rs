@@ -444,6 +444,7 @@ mod tests {
         AccountAuthoritySnapshot, AccountRootState, DeviceCertificate, DeviceEncryptionIdentity,
     };
     use kilogram_protocol::SignedEvent;
+    use kilogram_ratchet::RatchetState;
     use tempfile::tempdir;
 
     use super::*;
@@ -931,20 +932,28 @@ mod tests {
         conversation_id: ConversationId,
         sequence: u64,
         body: &str,
-    ) -> Result<AuthorizedEvent, ProtocolError> {
+    ) -> Result<AuthorizedEvent, Box<dyn Error>> {
+        let sender_directory = tempdir()?;
+        let peer_directory = tempdir()?;
         let peer_identity = DeviceIdentity::generate()?;
-        let peer_encryption = DeviceEncryptionIdentity::generate()?;
-        AuthorizedEvent::new(
-            SignedEvent::sign_encrypted_text(
+        let peer_bundle =
+            RatchetState::load_or_create(peer_directory.path())?.prekey_bundle(&peer_identity)?;
+        let (sender_ratchet_identity, ciphertext, _) = RatchetState::load_or_create(
+            sender_directory.path(),
+        )?
+        .encrypt(identity, &peer_bundle, body)?;
+        Ok(AuthorizedEvent::new(
+            SignedEvent::sign_ratchet_text(
                 identity,
                 conversation_id,
                 sequence,
                 Vec::new(),
-                body.to_owned(),
-                (peer_identity.device_id(), peer_encryption.public_key()),
+                peer_identity.device_id(),
+                sender_ratchet_identity,
+                ciphertext,
             )?,
             certificate.clone(),
             authority_snapshot.clone(),
-        )
+        )?)
     }
 }

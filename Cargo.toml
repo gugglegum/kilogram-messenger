@@ -4,6 +4,7 @@ members = [
     "crates/kilogram-crypto",
     "crates/kilogram-identity",
     "crates/kilogram-protocol",
+    "crates/kilogram-ratchet",
     "crates/kilogram-session",
     "crates/kilogram-store",
     "crates/kilogram-transport-iroh",
@@ -31,6 +32,7 @@ tempfile = "3.0"
 thiserror = "2.0"
 tokio = { version = "1.0", features = ["fs", "io-util", "macros", "rt-multi-thread", "time"] }
 zeroize = { version = "1.8", features = ["zeroize_derive"] }
+vodozemac = "0.10.0"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

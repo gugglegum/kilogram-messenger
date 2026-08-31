@@ -4,6 +4,10 @@
 - Дата: 2026-08-31
 - Область: разделение реплицируемого E2EE-event и читаемой локальной истории
 
+> Исторический контракт M0.7.2. M0.7.3 заменил peer HPKE box на persistent
+> Double Ratchet; актуальная схема описана в
+> [`RFC-0006`](RFC-0006-pairwise-double-ratchet.md).
+
 ## 1. Почему этот слой нужен до Double Ratchet
 
 В M0.7.1 один `EncryptedText` содержал два static-key HPKE box: для peer и для

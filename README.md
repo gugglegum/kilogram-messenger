@@ -15,41 +15,43 @@ The implemented pairwise HPKE payload spike is specified in
 [`docs/RFC-0004-pairwise-hpke-payload.md`](docs/RFC-0004-pairwise-hpke-payload.md).
 The local-history separation required before a ratchet is specified in
 [`docs/RFC-0005-local-encrypted-history-projection.md`](docs/RFC-0005-local-encrypted-history-projection.md).
+The authenticated persistent ratchet spike is specified in
+[`docs/RFC-0006-pairwise-double-ratchet.md`](docs/RFC-0006-pairwise-double-ratchet.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.7.2 local encrypted history projection — complete
+## Current milestone: M0.7.3 authenticated pairwise Double Ratchet — complete
 
-Plaintext `Text` events no longer exist in the protocol. Each message body is
-sealed with RFC 9180 HPKE for exactly one certified peer device. The selected
-suite is X25519/HKDF-SHA256 with ChaCha20-Poly1305. Event metadata is
-authenticated as AEAD AAD, and the existing Ed25519 `SignedEvent` authenticates
-the complete ciphertext envelope and sender.
+Plaintext `Text` events and static peer HPKE boxes no longer exist in the
+replicated protocol. A device-signed Olm identity and one-time prekey are bound
+to the certified listener in ticket v7. The first message establishes a
+persistent `vodozemac::olm` session as `PreKey`; the reply and subsequent
+messages are `Normal` Double Ratchet ciphertexts. The Ed25519 `SignedEvent`
+authenticates the complete recipient/ratchet envelope and conversation
+metadata.
 
 The sender-readable copy is no longer part of the replicated event. Every
 endpoint writes a separate immutable `STATE_DIR/local-messages/*.local-text`
 projection encrypted to its own device key. A sender creates it from the text it
 authored; a recipient creates it only after decrypting and authenticating the
-network box. `history` reads this local projection, while sync transfers only
-recipient ciphertext events and public authorization proofs. This separation is
-required before a Double Ratchet can delete old message keys without losing the
-user's local chat history or retaining a static sender box that defeats forward
-secrecy.
+ratchet message. `history` reads this local projection, while sync transfers
+only ratchet ciphertext events and public authorization proofs. This allows
+the ratchet to delete consumed message keys without losing the user's local
+chat history or retaining a static sender box that defeats forward secrecy.
 
-Every device now has a separate persistent X25519 encryption identity. Its
-public key is bound into root-signed `DeviceCertificate` v2. `connect` obtains
-the peer key only from the verified ticket, and the listener must decrypt and
-write its local projection before persisting or acknowledging a message.
-Synchronization and the immutable event store move the same ciphertext without
-replicating either endpoint's local projection.
+Olm account and one pairwise session per peer Device ID are encrypted before
+being stored under `STATE_DIR/ratchet`. The development pickle key is kept next
+to them, so this is a structural persistence boundary rather than a protected
+keystore. The root-signed DeviceCertificate v2 encryption key is now used for
+the local projection, not for replicated message decryption.
 
-This is a narrow integration spike, not a Double Ratchet implementation. It
-does not yet provide forward secrecy, post-compromise security, asynchronous
-prekeys, account-wide multi-device fan-out, or encrypted local key storage.
-It also does not yet implement authenticated history rewrap after a sender
-loses its local projection.
+This is still a narrow integration spike. It does not yet provide a production
+prekey pool, simultaneous-session resolution, account-wide multi-device
+fan-out, protected local key storage, PQXDH, or authenticated history rewrap.
+Losing ratchet state or a sender projection cannot be repaired from old
+ciphertext with only the device signing key.
 Do not use it for sensitive communication.
 
 An owner Account Root now signs a complete, canonical, add-only conversation
@@ -73,8 +75,8 @@ certificate to the expected Account ID, checks the required `sign-events` and
 `sync-history` capabilities, and rejects a revoked device key even if a later
 certificate is issued for it.
 
-Ticket v6 embeds the listener's root-signed certificate and complete signed
-authority snapshot, and authorizes one
+Ticket v7 embeds the listener's root-signed certificate, complete signed
+authority snapshot and device-signed one-time prekey bundle, and authorizes one
 requester Account ID rather than one hard-coded device. Before any event or
 inventory is sent, the requester presents its certificate, authority snapshot,
 and a device-signed proof bound to the listener's current Endpoint ID. Both
@@ -94,7 +96,7 @@ Conversation lifecycle commands are `conversation-create`,
 M0.4 resumable synchronization remains complete. Its tested transport and
 storage behavior is summarized below.
 
-The CLI exchanges a signed HPKE-encrypted text event and a signed acknowledgement over an
+The CLI exchanges a signed Double Ratchet text event and a signed acknowledgement over an
 authenticated Iroh/QUIC connection. Application-level device identities are
 persistent and deliberately separate from ephemeral Iroh transport identities.
 Every verified event is also persisted locally before the corresponding send
@@ -102,11 +104,12 @@ or acknowledgement. Repeated writes are idempotent and stored corruption is
 detected when history is read.
 
 Certified devices of the allowed account can reconcile bounded batches in both
-directions until their histories converge. The inventory is signed by the
+directions until their event logs converge. The inventory is signed by the
 requesting application device and bound to the listener's current Iroh Endpoint
 ID. The listener signs its diff with the certified device key embedded in the
-ticket. A newly enrolled device may therefore recover history without first
-authoring a synthetic event.
+ticket. A newly enrolled device can authenticate and sync the immutable log
+without first authoring a synthetic event, but it cannot read old ratchet text
+until a future authenticated history-rewrap flow provides local projections.
 
 The transport-independent reconciliation state machine lives in
 `kilogram-session`; the Iroh ALPN and typed stream framing live in
@@ -119,7 +122,7 @@ seconds for Iroh relay-to-direct migration and print `transport_path` (`direct`,
 and number of open paths. These development diagnostics made the two-host LAN
 test distinguish a real direct path from a successful relay fallback.
 
-The listener signs one of three application route policies into ticket v6:
+The listener signs one of three application route policies into ticket v7:
 
 - `auto` accepts Iroh's selected direct or relay path;
 - `direct-only` permits relay-assisted connection establishment and NAT traversal,
@@ -157,10 +160,10 @@ signed acknowledgement travelled over a direct LAN path with approximately
 both events from Bob in one sync round, verified them on read, and reconstructed
 the acknowledgement as the single causal frontier.
 
-This remains a development prototype. It now implements a first message-level
-HPKE ciphertext format, but does **not** yet implement a ratchet with forward
-secrecy/post-compromise security, encrypted local key storage, seed
-phrases/recovery, member removal, or production groups. Account Root and local
+This remains a development prototype. It now implements a first persistent
+Olm/Double Ratchet slice, but does **not** yet implement a production-audited
+pairwise protocol, protected local key storage, seed phrases/recovery,
+multi-device fan-out, member removal, or production groups. Account Root and local
 device secrets remain unencrypted in their explicitly selected directories.
 A snapshot proves state at its signed revision and prevents
 rollback after a newer revision has been observed. The protocol does not yet
@@ -238,7 +241,7 @@ message bodies are separate encrypted local-only projections beneath
 verifies the event and authorization against the installed membership, then
 opens the matching local projection and prints the current causal frontier. Its
 file-order output is deterministic but is not yet a chat timeline. M0.6.1 state
-without authorization sidecars and M0.7.1 events without local projections are
+without authorization sidecars and pre-M0.7.3 static-HPKE events are
 intentionally not migrated.
 
 To synchronize missing events, start `listen` again on one device and run:
@@ -264,20 +267,23 @@ ticket, and run `sync` again. A fresh session-bound inventory is signed, while
 the durable event stores ensure that only still-missing events are transferred.
 An explicit portable cursor is intentionally deferred until full-ID inventory
 is replaced by a compact authenticated summary. The development-only
-`seed-history` command creates encrypted fixture events and requires the other
-device's public certificate through `--peer-certificate-file`;
+`seed-history` command creates ratchet-encrypted fixture events and requires the
+other device's public certificate plus signed bundle through
+`--peer-certificate-file` and `--peer-prekey-bundle-file`. Generate the latter
+offline with `ratchet-bundle --state-dir <PEER_STATE> --bundle-file <FILE>`;
 see [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
 The connection ticket is public addressing and authorization data: it contains
 the listener's Iroh address, root-signed public device certificate, complete
-root-signed authority snapshot, allowed requester Account ID, and route policy.
+root-signed authority snapshot, device-signed one-time prekey bundle, allowed
+requester Account ID, and route policy.
 The certified listener device signs the whole mapping, so tampering is detected
 before a connection or inventory is sent. Possession of the ticket alone is
 insufficient: the requester must present a certificate and authority snapshot
 for the allowed account and prove possession of its device key.
 The ticket contains neither the Iroh endpoint secret nor any application secret.
 Ticket JSON, Postcard messages, and development conversation-label derivation
-remain provisional M0 choices. Ticket v6 intentionally does not decode v1-v5
+remain provisional M0 choices. Ticket v7 intentionally does not decode v1-v6
 tickets; restart the listener to generate a ticket matching this build. See
 [`RFC-0002`](docs/RFC-0002-account-device-authority.md) for snapshot and
 first-contact freshness boundaries.

@@ -12,5 +12,8 @@ kilogram-protocol = { path = "../kilogram-protocol" }
 tempfile.workspace = true
 thiserror.workspace = true
 
+[dev-dependencies]
+kilogram-ratchet = { path = "../kilogram-ratchet" }
+
 [lints]
 workspace = true

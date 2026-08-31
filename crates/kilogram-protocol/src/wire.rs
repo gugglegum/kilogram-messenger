@@ -10,13 +10,13 @@ use crate::{AuthorizedEvent, ConversationId, EventId, ProtocolError};
 pub const MAX_INVENTORY_EVENT_IDS: usize = 4096;
 pub const MAX_SYNC_EVENTS_PER_BATCH: usize = 64;
 
-const SYNC_VERSION: u8 = 4;
-const SYNC_DIFF_SIGNATURE_DOMAIN: &[u8] = b"kilogram:sync-diff-signature:v4\0";
-const SYNC_INVENTORY_SIGNATURE_DOMAIN: &[u8] = b"kilogram:sync-inventory-signature:v4\0";
+const SYNC_VERSION: u8 = 5;
+const SYNC_DIFF_SIGNATURE_DOMAIN: &[u8] = b"kilogram:sync-diff-signature:v5\0";
+const SYNC_INVENTORY_SIGNATURE_DOMAIN: &[u8] = b"kilogram:sync-inventory-signature:v5\0";
 const SYNC_SESSION_DOMAIN: &[u8] = b"kilogram:sync-session:v1\0";
-const DEVICE_AUTHORIZATION_VERSION: u8 = 4;
+const DEVICE_AUTHORIZATION_VERSION: u8 = 5;
 const DEVICE_AUTHORIZATION_SIGNATURE_DOMAIN: &[u8] =
-    b"kilogram:device-session-authorization-signature:v4\0";
+    b"kilogram:device-session-authorization-signature:v5\0";
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct SyncSessionBinding([u8; 32]);
@@ -491,7 +491,7 @@ impl SyncComplete {
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum ClientRequest {
     AuthorizeDevice(SignedDeviceSessionAuthorization),
-    DeliverEvent(AuthorizedEvent),
+    DeliverEvent(Box<AuthorizedEvent>),
     SyncInventory(SignedSyncInventory),
     SyncEvents(SyncEventBatch),
     SyncPause(SyncPause),
@@ -650,6 +650,7 @@ fn validate_version(version: u8) -> Result<(), ProtocolError> {
 mod tests {
     use kilogram_crypto::DeviceEncryptionIdentity;
     use kilogram_identity::{AccountRootState, DeviceCapability, IdentityError};
+    use kilogram_ratchet::RatchetState;
     use tempfile::tempdir;
 
     use super::*;
@@ -658,17 +659,25 @@ mod tests {
     fn sign_test_text(
         identity: &DeviceIdentity,
         conversation_id: ConversationId,
-    ) -> Result<SignedEvent, ProtocolError> {
+    ) -> Result<SignedEvent, Box<dyn std::error::Error>> {
+        let sender_directory = tempdir()?;
+        let peer_directory = tempdir()?;
         let peer_identity = DeviceIdentity::generate()?;
-        let peer_encryption = DeviceEncryptionIdentity::generate()?;
-        SignedEvent::sign_encrypted_text(
+        let peer_bundle =
+            RatchetState::load_or_create(peer_directory.path())?.prekey_bundle(&peer_identity)?;
+        let (sender_ratchet_identity, ciphertext, _) = RatchetState::load_or_create(
+            sender_directory.path(),
+        )?
+        .encrypt(identity, &peer_bundle, "hello")?;
+        Ok(SignedEvent::sign_ratchet_text(
             identity,
             conversation_id,
             0,
             Vec::new(),
-            "hello".to_owned(),
-            (peer_identity.device_id(), peer_encryption.public_key()),
-        )
+            peer_identity.device_id(),
+            sender_ratchet_identity,
+            ciphertext,
+        )?)
     }
 
     #[test]
@@ -725,7 +734,7 @@ mod tests {
     }
 
     #[test]
-    fn signed_inventory_is_bound_to_device_and_session() -> Result<(), ProtocolError> {
+    fn signed_inventory_is_bound_to_device_and_session() -> Result<(), Box<dyn std::error::Error>> {
         let identity = DeviceIdentity::generate()?;
         let expected = SyncSessionBinding::from_transport_label("listener-a");
         let other = SyncSessionBinding::from_transport_label("listener-b");
@@ -745,7 +754,7 @@ mod tests {
     }
 
     #[test]
-    fn tampered_inventory_is_rejected() -> Result<(), ProtocolError> {
+    fn tampered_inventory_is_rejected() -> Result<(), Box<dyn std::error::Error>> {
         let identity = DeviceIdentity::generate()?;
         let session = SyncSessionBinding::from_transport_label("listener");
         let mut inventory = SignedSyncInventory::sign(
@@ -761,7 +770,7 @@ mod tests {
     }
 
     #[test]
-    fn sync_wire_messages_round_trip() -> Result<(), ProtocolError> {
+    fn sync_wire_messages_round_trip() -> Result<(), Box<dyn std::error::Error>> {
         let identity = DeviceIdentity::generate()?;
         let encryption = DeviceEncryptionIdentity::generate()?;
         let root_directory = tempdir().map_err(IdentityError::Io)?;
@@ -791,7 +800,7 @@ mod tests {
         assert_eq!(ServerResponse::decode(&response.encode()?)?, response);
         let ServerResponse::SyncDiff(decoded_diff) = ServerResponse::decode(&response.encode()?)?
         else {
-            return Err(ProtocolError::SyncResponderMismatch);
+            return Err(Box::new(ProtocolError::SyncResponderMismatch));
         };
         decoded_diff.verify_for_session(session, identity.device_id())?;
         assert!(matches!(
@@ -820,7 +829,7 @@ mod tests {
     }
 
     #[test]
-    fn inventory_size_and_uniqueness_are_enforced() -> Result<(), ProtocolError> {
+    fn inventory_size_and_uniqueness_are_enforced() -> Result<(), Box<dyn std::error::Error>> {
         let identity = DeviceIdentity::generate()?;
         let conversation_id = ConversationId::from_label("test");
         let session = SyncSessionBinding::from_transport_label("listener");

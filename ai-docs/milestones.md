@@ -633,12 +633,60 @@ authenticated history rewrap. Development key file рядом с projection не
 является production at-rest protection. Полный контракт —
 [`../docs/RFC-0005-local-encrypted-history-projection.md`](../docs/RFC-0005-local-encrypted-history-projection.md).
 
+### M0.7.3 — authenticated persistent pairwise Double Ratchet: выполнено
+
+Реализовано:
+
+- новый `kilogram-ratchet` изолирует `vodozemac::olm` 0.10.0 и не раскрывает
+  его private account/session types другим слоям;
+- стабильные Olm Curve25519/Ed25519 identity keys и single-use OTK связаны с
+  application Device ID отдельными domain-separated device signatures;
+- connection ticket v7 переносит и проверяет listener `SignedPrekeyBundle`;
+- encrypted account/session pickles атомарно сохраняются под
+  `STATE_DIR/ratchet`, одна session адресуется peer Device ID;
+- `RatchetText` event v4 заменил static recipient HPKE box на opaque Olm
+  PreKey/Normal ciphertext; HPKE остался только у local-only projection;
+- первое исходящее сообщение создаёт outbound session, первое входящее
+  PreKey — inbound session и ротацию OTK, ответ и дальнейшие сообщения идут
+  как Normal;
+- delivery не повторяет ratchet decrypt для уже принятого event, а использует
+  существующую authenticated projection;
+- sync сортирует входящие ratchet texts по author sequence, сохраняет session и
+  projection до event batch; `seed-history` принимает peer certificate и
+  signed prekey bundle;
+- добавлена команда `ratchet-bundle` для offline экспорта публичного bundle;
+- event/sync/session/ticket/ALPN границы повышены до v4/v5/v5/v7/sync-5.
+
+Проверки:
+
+- real persistent cycle PreKey → Normal reply → Normal subsequent проходит с
+  reload account/session между шагами;
+- tampered bundle, ciphertext/event metadata и смена peer ratchet identity
+  отклоняются;
+- account/session/event/projection files не содержат fixture plaintext;
+- sync трёх prekey-events в пустой recipient event store создаёт три читаемые
+  local projections и остаётся идемпотентным;
+- все 60 workspace tests, форматирование, строгий Clippy и release build
+  проходят;
+- release process smoke `.tmp/m073-smoke-20260831-232212` выполнил три direct
+  delivery с перезапуском listener: PreKey → Normal reply → Normal subsequent,
+  один session ID на обеих сторонах, одинаковые histories из 6 events и
+  отсутствие трёх plaintext markers в 22 event/projection/account/session
+  ciphertext files.
+
+Граница среза: pickle key хранится рядом с encrypted state; файловые
+ratchet/projection/event updates ещё не объединены одной транзакцией. Одна
+session и один опубликованный OTK на peer Device ID не разрешают concurrent
+session initiation и multi-device fan-out. Копии device signing key больше
+недостаточно для расшифровки старой истории — нужны ratchet state backup либо
+authenticated history rewrap. Полный контракт —
+[`../docs/RFC-0006-pairwise-double-ratchet.md`](../docs/RFC-0006-pairwise-double-ratchet.md).
+
 ### Следующий этап
 
-1. M0.7.3: прототипировать authenticated asynchronous prekey bundle и
-   persistent pairwise Double Ratchet session в recipient-only event slot;
-   первым кандидатом проверить `vodozemac::olm`, не реализуя ratchet вручную.
-2. Затем добавить signed device-list fan-out и authenticated history rewrap для
+1. M0.7.4: добавить signed device-list fan-out и отдельный prekey для каждого
+   разрешённого устройства account.
+2. Затем добавить authenticated history rewrap для
    нового/восстановленного устройства.
 3. Membership removal и group governance проектировать вместе с ordered
    security events и MLS epoch.

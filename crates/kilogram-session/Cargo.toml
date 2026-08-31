@@ -13,6 +13,7 @@ kilogram-store = { path = "../kilogram-store" }
 thiserror.workspace = true
 
 [dev-dependencies]
+kilogram-ratchet = { path = "../kilogram-ratchet" }
 tempfile.workspace = true
 
 [lints]

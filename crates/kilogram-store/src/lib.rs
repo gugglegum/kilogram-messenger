@@ -720,6 +720,7 @@ mod tests {
         AccountRootState, DeviceCapability, DeviceEncryptionIdentity, DeviceIdentity,
     };
     use kilogram_protocol::{AuthorizedEvent, EventPayload, LocalTextProjection};
+    use kilogram_ratchet::RatchetState;
     use tempfile::tempdir;
 
     use super::*;
@@ -827,15 +828,12 @@ mod tests {
         let store = LocalMessageStore::open(directory.path())?;
         let author = DeviceIdentity::generate()?;
         let author_encryption = DeviceEncryptionIdentity::generate()?;
-        let recipient = DeviceIdentity::generate()?;
-        let recipient_encryption = DeviceEncryptionIdentity::generate()?;
-        let event = SignedEvent::sign_encrypted_text(
+        let event = sign_test_text(
             &author,
             ConversationId::from_label("local-projection"),
             0,
             Vec::new(),
-            "local plaintext".to_owned(),
-            (recipient.device_id(), recipient_encryption.public_key()),
+            "local plaintext",
         )?;
         let projection = LocalTextProjection::seal_authored(
             &event,
@@ -1010,7 +1008,7 @@ mod tests {
         sequence: u64,
         parents: Vec<EventId>,
         body: &str,
-    ) -> Result<SignedEvent, ProtocolError> {
+    ) -> Result<SignedEvent, Box<dyn Error>> {
         sign_test_text(
             &DeviceIdentity::generate()?,
             conversation_id,
@@ -1026,16 +1024,24 @@ mod tests {
         sequence: u64,
         parents: Vec<EventId>,
         body: &str,
-    ) -> Result<SignedEvent, ProtocolError> {
+    ) -> Result<SignedEvent, Box<dyn Error>> {
+        let sender_directory = tempdir()?;
+        let peer_directory = tempdir()?;
         let peer_identity = DeviceIdentity::generate()?;
-        let peer_encryption = DeviceEncryptionIdentity::generate()?;
-        SignedEvent::sign_encrypted_text(
+        let peer_bundle =
+            RatchetState::load_or_create(peer_directory.path())?.prekey_bundle(&peer_identity)?;
+        let (sender_ratchet_identity, ciphertext, _) = RatchetState::load_or_create(
+            sender_directory.path(),
+        )?
+        .encrypt(identity, &peer_bundle, body)?;
+        Ok(SignedEvent::sign_ratchet_text(
             identity,
             conversation_id,
             sequence,
             parents,
-            body.to_owned(),
-            (peer_identity.device_id(), peer_encryption.public_key()),
-        )
+            peer_identity.device_id(),
+            sender_ratchet_identity,
+            ciphertext,
+        )?)
     }
 }

@@ -1,22 +1,22 @@
 [package]
-name = "kilogram-protocol"
-description = "Signed application events for Kilogram"
+name = "kilogram-ratchet"
+description = "Authenticated persistent pairwise Double Ratchet sessions for Kilogram"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 publish = false
 
 [dependencies]
-blake3.workspace = true
-kilogram-crypto = { path = "../kilogram-crypto" }
+getrandom.workspace = true
 kilogram-identity = { path = "../kilogram-identity" }
-kilogram-ratchet = { path = "../kilogram-ratchet" }
 postcard.workspace = true
 serde.workspace = true
+tempfile.workspace = true
 thiserror.workspace = true
+vodozemac.workspace = true
+zeroize.workspace = true
 
 [dev-dependencies]
-tempfile.workspace = true
 
 [lints]
 workspace = true

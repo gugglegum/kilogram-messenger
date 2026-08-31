@@ -219,6 +219,19 @@ toolchain `1.98.0` для воспроизводимой разработки.
     seed events, получил одинаковые histories из 5 events и по 4 local
     projections на endpoint; plaintext markers отсутствуют в `.event` и
     `.local-text`.
+35. M0.7.3 добавил `kilogram-ratchet` на `vodozemac` 0.10.0. Olm account,
+    one-time prekey и pairwise sessions сохраняются encrypted pickle под
+    `STATE_DIR/ratchet`; public ratchet identity/prekey подписаны application
+    Device key. Event v4 хранит PreKey/Normal ciphertext, ticket v7 переносит
+    listener bundle, sync/session/ALPN повышены до v5/v5/`kilogram/m0/sync/5`.
+    `seed-history` теперь требует также `--peer-prekey-bundle-file`, а команда
+    `ratchet-bundle` экспортирует bundle без запуска listener. Unit/integration
+    tests покрывают persistent PreKey → Normal → Normal cycle и sync нескольких
+    prekey-events. Форматирование, строгий Clippy, release workspace build и все
+    60 tests проходят. Release smoke `.tmp/m073-smoke-20260831-232212` выполнил
+    direct PreKey → Normal → Normal через три listener restart, подтвердил один
+    session ID, одинаковые histories из 6 events и отсутствие plaintext в 22
+    проверенных ciphertext state files.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -230,9 +243,9 @@ transport Endpoint/session binding без повторной передачи п
 batch. M0.5.1 завершает локальную authority-модель; сетевое применение
 certificate/revocation завершено в M0.5.2. Completeness на подписанной revision
 и anti-rollback реализованы в M0.6.1; M0.6.2 закрывает минимальный add-only
-conversation membership и author verification. M0.7.2 создал правильную
-storage boundary для ratchet, но recipient encryption остаётся static-key HPKE.
-First-contact global freshness, pairwise ratchet/FS/PCS, history rewrap,
+conversation membership и author verification. M0.7.3 завершил первый
+persistent pairwise Double Ratchet spike. First-contact global freshness,
+signed device-list/prekey fan-out, concurrent initiation, history rewrap,
 membership removal/epochs и group E2EE остаются открыты.
 
 ## Решения, которые ещё нельзя фиксировать
