@@ -12,8 +12,8 @@ use iroh::{
 };
 use kilogram_identity::{DeviceId, DeviceIdentity, DeviceState};
 use kilogram_protocol::{
-    ClientRequest, ConversationId, EventPayload, ServerResponse, SignedEvent, SignedSyncInventory,
-    SyncSessionBinding,
+    ClientRequest, ConversationId, EventPayload, MAX_INVENTORY_EVENT_IDS, ServerResponse,
+    SignedEvent, SignedSyncInventory, SyncPause, SyncPaused, SyncSessionBinding,
 };
 use kilogram_session::{MAX_SYNC_ROUNDS, ServerInventoryOutcome, SyncClient, SyncServer};
 use kilogram_store::EventStore;
@@ -114,6 +114,29 @@ enum Command {
         /// Development-only shared label used to derive a conversation ID.
         #[arg(long, default_value = "m0-local-smoke")]
         conversation: String,
+
+        /// Stop cleanly after this many completed rounds if more events remain.
+        #[arg(long, default_value_t = MAX_SYNC_ROUNDS)]
+        max_rounds: usize,
+    },
+
+    /// Add signed local-only events for deterministic synchronization tests.
+    SeedHistory {
+        /// Directory containing this application's development state.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Development-only shared label used to derive a conversation ID.
+        #[arg(long, default_value = "m0-local-smoke")]
+        conversation: String,
+
+        /// Number of chained local events to create.
+        #[arg(long, default_value_t = 70)]
+        count: usize,
+
+        /// Prefix used in the generated test message bodies.
+        #[arg(long, default_value = "seed")]
+        message_prefix: String,
     },
 
     /// Verify and print locally stored events without connecting to a peer.
@@ -274,7 +297,14 @@ async fn main() -> Result<()> {
             ticket,
             ticket_file,
             conversation,
-        } => sync(state_dir, ticket, ticket_file, conversation).await,
+            max_rounds,
+        } => sync(state_dir, ticket, ticket_file, conversation, max_rounds).await,
+        Command::SeedHistory {
+            state_dir,
+            conversation,
+            count,
+            message_prefix,
+        } => seed_history(state_dir, conversation, count, message_prefix),
         Command::History {
             state_dir,
             conversation,
@@ -360,6 +390,7 @@ async fn listen(
             .await?;
         }
         ClientRequest::SyncEvents(_) => bail!("sync event batch cannot be the first request"),
+        ClientRequest::SyncPause(_) => bail!("sync pause cannot be the first request"),
     }
 
     print_transport_diagnostics(&connection, route_policy).await?;
@@ -489,16 +520,33 @@ async fn handle_sync_request(
             println!("status=synchronized");
             return Ok(());
         }
-        if round_number == MAX_SYNC_ROUNDS {
-            bail!("sync exceeded the limit of {MAX_SYNC_ROUNDS} rounds");
-        }
-
-        let (next_send, mut next_receive) =
+        let (mut next_send, mut next_receive) =
             accept_bi(connection, "accept next sync inventory stream").await?;
         inventory = match read_client_request(&mut next_receive).await? {
             ClientRequest::SyncInventory(inventory) => inventory,
+            ClientRequest::SyncPause(pause) => {
+                ensure!(
+                    pause.conversation_id() == inventory.conversation_id(),
+                    "sync pause belongs to a different conversation"
+                );
+                write_server_response(
+                    &mut next_send,
+                    &ServerResponse::SyncPaused(SyncPaused::new(pause.conversation_id())),
+                )
+                .await?;
+                println!("sync_rounds_completed={round_number}");
+                println!("sync_sent_events={total_sent_events}");
+                println!("sync_received_events={total_received_events}");
+                println!("sync_more_available=true");
+                println!("sync_resume_checkpoint=event-store");
+                println!("status=paused");
+                return Ok(());
+            }
             _ => bail!("listener expected another sync inventory for continuation"),
         };
+        if round_number == MAX_SYNC_ROUNDS {
+            bail!("sync exceeded the limit of {MAX_SYNC_ROUNDS} rounds");
+        }
         inventory_send = next_send;
     }
     bail!("sync exceeded the limit of {MAX_SYNC_ROUNDS} rounds")
@@ -624,7 +672,12 @@ async fn sync(
     ticket: Option<String>,
     ticket_file: Option<PathBuf>,
     conversation: String,
+    max_rounds: usize,
 ) -> Result<()> {
+    ensure!(
+        (1..=MAX_SYNC_ROUNDS).contains(&max_rounds),
+        "--max-rounds must be between 1 and {MAX_SYNC_ROUNDS}"
+    );
     let device_state = DeviceState::load_or_create(&state_dir)
         .with_context(|| format!("load device state from {}", state_dir.display()))?;
     let event_store = open_event_store(&state_dir)?;
@@ -731,6 +784,35 @@ async fn sync(
 
             print_transport_diagnostics(&connection, route_policy).await?;
             connection.close(0_u32.into(), b"kilogram m0 sync complete");
+            endpoint.close().await;
+            return Ok(());
+        }
+
+        if round_number == max_rounds {
+            let (mut pause_send, mut pause_receive) =
+                open_bi(&connection, "open sync pause stream").await?;
+            write_client_request(
+                &mut pause_send,
+                &ClientRequest::SyncPause(SyncPause::new(conversation_id)),
+            )
+            .await?;
+            let paused = match read_server_response(&mut pause_receive).await? {
+                ServerResponse::SyncPaused(paused) => paused,
+                _ => bail!("sync client expected a sync paused response"),
+            };
+            ensure!(
+                paused.conversation_id() == conversation_id,
+                "sync paused response belongs to a different conversation"
+            );
+            println!("sync_rounds_completed={round_number}");
+            println!("sync_received_events={total_received_events}");
+            println!("sync_sent_events={total_sent_events}");
+            println!("sync_more_available=true");
+            println!("sync_resume_checkpoint=event-store");
+            println!("status=paused");
+
+            print_transport_diagnostics(&connection, route_policy).await?;
+            connection.close(0_u32.into(), b"kilogram m0 sync paused");
             endpoint.close().await;
             return Ok(());
         }
@@ -933,6 +1015,68 @@ fn show_history(state_dir: PathBuf, conversation: String) -> Result<()> {
     Ok(())
 }
 
+fn seed_history(
+    state_dir: PathBuf,
+    conversation: String,
+    count: usize,
+    message_prefix: String,
+) -> Result<()> {
+    ensure!(count > 0, "--count must be greater than zero");
+    let device_state = DeviceState::load_or_create(&state_dir)
+        .with_context(|| format!("load device state from {}", state_dir.display()))?;
+    let event_store = open_event_store(&state_dir)?;
+    let conversation_id = ConversationId::from_label(&conversation);
+    let existing_count = event_store
+        .inventory(conversation_id)
+        .context("load current inventory before seeding history")?
+        .len();
+    ensure!(
+        existing_count.saturating_add(count) <= MAX_INVENTORY_EVENT_IDS,
+        "seeded history would exceed the M0 inventory limit of {MAX_INVENTORY_EVENT_IDS} events"
+    );
+
+    let mut parents = event_store
+        .frontier(conversation_id)
+        .context("calculate initial frontier for seeded history")?;
+    let mut events = Vec::with_capacity(count);
+    let mut first_event_id = None;
+    let mut last_event_id = None;
+    for index in 1..=count {
+        let author_sequence = device_state
+            .allocate_sequence()
+            .context("allocate seeded event sequence")?;
+        let event = SignedEvent::sign_text(
+            device_state.identity(),
+            conversation_id,
+            author_sequence,
+            parents,
+            format!("{message_prefix}-{index}"),
+        )
+        .context("sign seeded history event")?;
+        let event_id = event.event_id().context("calculate seeded event ID")?;
+        first_event_id.get_or_insert(event_id);
+        last_event_id = Some(event_id);
+        parents = vec![event_id];
+        events.push(event);
+    }
+    event_store
+        .put_batch(&events)
+        .context("persist seeded history events")?;
+
+    println!("conversation_id={conversation_id}");
+    println!("device_id={}", device_state.identity().device_id());
+    println!("seeded_event_count={count}");
+    if let Some(event_id) = first_event_id {
+        println!("seeded_first_event_id={event_id}");
+    }
+    if let Some(event_id) = last_event_id {
+        println!("seeded_last_event_id={event_id}");
+    }
+    println!("event_count={}", existing_count + count);
+    println!("status=seeded");
+    Ok(())
+}
+
 fn open_event_store(state_dir: &Path) -> Result<EventStore> {
     let path = state_dir.join(EVENT_STORE_DIRECTORY);
     EventStore::open(&path).with_context(|| format!("open event store at {}", path.display()))
@@ -946,6 +1090,27 @@ mod tests {
     use kilogram_transport_iroh::endpoint_builder;
 
     const UNSUPPORTED_TEST_ALPN: &[u8] = b"kilogram/test/unsupported/1";
+
+    #[test]
+    fn seeded_history_is_signed_chained_and_persistent() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let state_dir = directory.path().join("seeded-device");
+        let conversation = "seed-history-test";
+        seed_history(
+            state_dir.clone(),
+            conversation.to_owned(),
+            3,
+            "fixture".to_owned(),
+        )?;
+
+        let store = open_event_store(&state_dir)?;
+        let conversation_id = ConversationId::from_label(conversation);
+        let events = store.load_conversation(conversation_id)?;
+        assert_eq!(events.len(), 3);
+        assert_eq!(store.frontier(conversation_id)?.len(), 1);
+        assert!(events.iter().all(|stored| stored.event.verify().is_ok()));
+        Ok(())
+    }
 
     #[test]
     fn connection_ticket_round_trips() -> Result<()> {

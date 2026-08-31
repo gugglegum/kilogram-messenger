@@ -1713,6 +1713,7 @@ dependencies = [
  "kilogram-transport-iroh",
  "serde",
  "serde_json",
+ "tempfile",
  "tokio",
 ]
 

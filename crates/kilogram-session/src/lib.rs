@@ -483,6 +483,112 @@ mod tests {
     }
 
     #[test]
+    fn completed_round_resumes_with_a_new_transport_session() -> Result<(), Box<dyn Error>> {
+        let client_store = MemoryStore::default();
+        let server_store = MemoryStore::default();
+        let client_identity = DeviceIdentity::generate()?;
+        let server_identity = DeviceIdentity::generate()?;
+        let conversation_id = ConversationId::from_label("resume-after-reconnect");
+
+        let shared = SignedEvent::sign_text(
+            &client_identity,
+            conversation_id,
+            0,
+            Vec::new(),
+            "shared".to_owned(),
+        )?;
+        client_store.put_events(std::slice::from_ref(&shared))?;
+        server_store.put_events(std::slice::from_ref(&shared))?;
+        for sequence in 1..=70 {
+            client_store.put_events(&[SignedEvent::sign_text(
+                &client_identity,
+                conversation_id,
+                sequence,
+                Vec::new(),
+                format!("client-{sequence}"),
+            )?])?;
+        }
+        for sequence in 0..70 {
+            server_store.put_events(&[SignedEvent::sign_text(
+                &server_identity,
+                conversation_id,
+                sequence,
+                Vec::new(),
+                format!("server-{sequence}"),
+            )?])?;
+        }
+
+        let first_binding = SyncSessionBinding::from_transport_label("listener-before-restart");
+        let first_client = SyncClient::new(
+            &client_identity,
+            &client_store,
+            conversation_id,
+            first_binding,
+            server_identity.device_id(),
+        );
+        let first_server = SyncServer::new(
+            &server_identity,
+            &server_store,
+            first_binding,
+            client_identity.device_id(),
+        );
+        let first_inventory = first_client.begin_round()?;
+        let first_server_round = match first_server.accept_inventory(first_inventory.inventory())? {
+            ServerInventoryOutcome::Accepted(round) => round,
+            ServerInventoryOutcome::Rejected(rejected) => {
+                return Err(format!("unexpected rejection: {:?}", rejected.reason()).into());
+            }
+        };
+        let first_client_batch =
+            first_client.accept_diff(first_inventory, first_server_round.diff().clone())?;
+        let first_completion =
+            first_server.complete_round(*first_server_round, first_client_batch.batch().clone())?;
+        let first_stats = first_client
+            .accept_complete(first_client_batch, first_completion.response().clone())?;
+        assert_eq!(first_stats.sent_events, MAX_SYNC_EVENTS_PER_BATCH);
+        assert_eq!(first_stats.received_events, MAX_SYNC_EVENTS_PER_BATCH);
+        assert!(first_stats.more_available);
+
+        let resumed_binding = SyncSessionBinding::from_transport_label("listener-after-restart");
+        let resumed_client = SyncClient::new(
+            &client_identity,
+            &client_store,
+            conversation_id,
+            resumed_binding,
+            server_identity.device_id(),
+        );
+        let resumed_server = SyncServer::new(
+            &server_identity,
+            &server_store,
+            resumed_binding,
+            client_identity.device_id(),
+        );
+        let resumed_inventory = resumed_client.begin_round()?;
+        let resumed_server_round =
+            match resumed_server.accept_inventory(resumed_inventory.inventory())? {
+                ServerInventoryOutcome::Accepted(round) => round,
+                ServerInventoryOutcome::Rejected(rejected) => {
+                    return Err(format!("unexpected rejection: {:?}", rejected.reason()).into());
+                }
+            };
+        let resumed_client_batch =
+            resumed_client.accept_diff(resumed_inventory, resumed_server_round.diff().clone())?;
+        let resumed_completion = resumed_server
+            .complete_round(*resumed_server_round, resumed_client_batch.batch().clone())?;
+        let resumed_stats = resumed_client
+            .accept_complete(resumed_client_batch, resumed_completion.response().clone())?;
+
+        assert_eq!(resumed_stats.sent_events, 6);
+        assert_eq!(resumed_stats.received_events, 6);
+        assert!(!resumed_stats.more_available);
+        assert_eq!(
+            client_store.inventory(conversation_id)?,
+            server_store.inventory(conversation_id)?
+        );
+        Ok(())
+    }
+
+    #[test]
     fn unknown_requester_is_rejected_without_events() -> Result<(), Box<dyn Error>> {
         let store = MemoryStore::default();
         let requester = DeviceIdentity::generate()?;

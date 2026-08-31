@@ -32,8 +32,11 @@
 
 - Какая production database и схема at-rest encryption заменят временный
   content-addressed filesystem store из M0.1.2?
-- Какая Merkle/range summary и cursor-схема заменит bounded full-ID inventory
-  M0.1.3, не раскрывая лишнюю структуру истории?
+- Какая Merkle/range summary и переносимая signed cursor-схема заменит bounded
+  full-ID inventory M0.1.3, не раскрывая лишнюю структуру истории? M0.4 уже
+  использует durable event set как correctness checkpoint, поэтому будущий
+  cursor должен давать измеримый выигрыш по трафику и иметь явные
+  snapshot/staleness semantics.
 - Как Account Root certificates, conversation membership и revocation заменят
   временное правило sync authorization «device уже был автором»?
 - Схема blind mailbox: вычисление адресов, TTL, подтверждение получения,

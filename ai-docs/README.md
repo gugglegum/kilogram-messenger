@@ -40,6 +40,12 @@ relay path. Это подтвердило cross-network работу `clear_ip_t
 локализовало прежние timeout в доступности `euc1` route во время тестов;
 финальный restart/sync через `aps1` восстановил 6 недостающих events за один
 round и свёл обе стороны к 8 events. M0.3 завершён.
+M0.4 начал проверку resumable sync: CLI умеет штатно остановиться после
+заданного числа завершённых rounds через `sync --max-rounds`, а новый
+transport-independent тест меняет session binding после первого batch и при
+reconnect передаёт только оставшиеся 6 из 70 events. Для bounded full-ID
+профиля durable event set принят как correctness checkpoint; отдельный
+переносимый signed cursor отложен до compact Merkle/range summary.
 Прикладное E2EE, Account Root Identity, шифрование локальной истории,
 production-grade sync summaries и группы ещё не реализованы.
 
@@ -95,10 +101,12 @@ production-grade sync summaries и группы ещё не реализован
 2. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
 3. Спроектировать формат идентичности, сертификатов устройств и revocation log.
 4. Спроектировать wire format подписанного события и алгоритм линеаризации.
-5. Проверить смену сетевого интерфейса и определить минимальный resumable sync
-   cursor до замены full-ID inventory.
-6. Реализовать мультиустройство, затем небольшие MLS-группы.
-7. Перед публичным выпуском провести независимый криптографический аудит.
+5. Проверить управляемую pause/reconnect синхронизацию при реальной смене
+   сетевого интерфейса; correctness checkpoint уже определён как durable event
+   set.
+6. Спроектировать compact Merkle/range summary и переносимый signed cursor.
+7. Реализовать мультиустройство, затем небольшие MLS-группы.
+8. Перед публичным выпуском провести независимый криптографический аудит.
 
 ## Навигация
 
@@ -109,3 +117,5 @@ production-grade sync summaries и группы ещё не реализован
 - [`milestones.md`](milestones.md) — выполненные и следующие технические этапы.
 - [`../docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md) —
   черновик основного RFC.
+- [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
+  внешний тест pause/reconnect со сменой интерфейса.

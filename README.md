@@ -130,6 +130,16 @@ rounds on the same Iroh connection and finishes with
 future compact Merkle summary: once a local conversation exceeds 4,096 events,
 this development profile must be replaced rather than treated as scalable sync.
 
+For an interruption/reconnect test, pass `--max-rounds 1`. If more events
+remain, both peers finish the completed round cleanly with `status=paused` and
+`sync_resume_checkpoint=event-store`. Restart the listener, transfer its new
+ticket, and run `sync` again. A fresh session-bound inventory is signed, while
+the durable event stores ensure that only still-missing events are transferred.
+An explicit portable cursor is intentionally deferred until full-ID inventory
+is replaced by a compact authenticated summary. The development-only
+`seed-history` command can create local signed fixture events for this test;
+see [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
+
 The connection ticket is public addressing data: it contains the listener's
 Iroh address, public application device ID, and route policy. The application
 device signs this mapping together with the one requester device ID authorized

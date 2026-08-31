@@ -356,9 +356,44 @@ Regression test подтверждает продолжение работы п�
 handshake и успешный приём следующего клиента; текущий workspace содержит 29
 проходящих tests.
 
-### Следующее расширение M0
+### M0.4 — pause/reconnect sync: реализация завершена, внешний тест ожидается
 
-1. Проверить смену сетевого интерфейса и определить минимальный resumable sync
-   cursor до замены full-ID inventory на Merkle/range summary.
-2. Начать Account Root → Device authorization model либо pairwise E2EE spike по
-   приоритету следующего RFC/ADR.
+Реализовано:
+
+- `sync --max-rounds N` может штатно остановить reconciliation после N
+  полностью подтверждённых rounds, если `more_available=true`;
+- `SyncPause` / `SyncPaused` завершают текущий connection без ложной ошибки у
+  listener; обе стороны печатают `status=paused` и
+  `sync_resume_checkpoint=event-store`;
+- события по-прежнему сохраняются до acknowledgement/completion и
+  дедуплицируются, поэтому новый запуск с новым Endpoint ID и session binding
+  начинает со свежего signed full inventory, но передаёт лишь отсутствующий
+  остаток;
+- отдельный переносимый cursor не вводится: с текущим full-ID inventory он не
+  сокращает трафик, а snapshot/staleness semantics пока не определены.
+- development-only `seed-history` создаёт локальную цепочку подписанных events,
+  чтобы воспроизводимо получить расхождение больше одного batch без 140 ручных
+  сетевых отправок.
+
+Проверки:
+
+- deterministic in-memory divergence 70/70 выполняет первый round 64/64,
+  меняет transport session binding и после reconnect передаёт ровно оставшиеся
+  6/6 за один round;
+- old inventory/diff не переиспользуются между sessions; новая сторона создаёт
+  новый session-bound inventory из durable store;
+- wire round-trip покрывает новые pause request/response;
+- локальный Iroh smoke создал по 70 расходящихся events поверх 2 общих,
+  остановился после 64/64 с `status=paused`, перезапустил listener с новым
+  Endpoint ID и передал только остаток 6/6; обе histories содержали 142 events,
+  одинаковый frontier и полностью совпадающий вывод;
+- `cargo fmt`, строгий Clippy и все 32 workspace tests проходят.
+
+Осталось для закрытия M0.4:
+
+1. Провести внешний pause/reconnect прогон двух клиентов с реальной сменой
+   сетевого интерфейса между командами и подтвердить новый Endpoint ID,
+   отсутствие повторной передачи первых 64 events и итоговую одинаковую
+   историю.
+2. После этого начать Account Root → Device authorization model либо pairwise
+   E2EE spike по приоритету следующего RFC/ADR.

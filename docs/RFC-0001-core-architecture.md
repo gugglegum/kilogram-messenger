@@ -284,9 +284,29 @@ Iroh-specific ALPN и framing находятся в отдельном
 сходится за два rounds (64 + 6). Запись принятого batch в временный файловый
 store проверяет существующую conversation history один раз на batch.
 
+M0.4 фиксирует минимальный контракт возобновления. Каждый принятый batch
+попадает в append-only event store до отправки подтверждения. После обрыва или
+смены transport Endpoint стороны создают новый session binding, подписывают
+свежий полный inventory и вычисляют только ещё отсутствующие events. Поэтому
+на этом профиле durable set сохранённых event IDs уже является достаточным
+checkpoint корректности: отдельный opaque cursor не добавил бы гарантий и не
+уменьшил бы full-ID inventory. Детерминированный тест прерывает reconciliation
+после первого из двух rounds, меняет transport session binding и передаёт после
+переподключения только оставшиеся 6 из 70 events в каждом направлении.
+
+Для управляемой проверки CLI принимает `sync --max-rounds N`. Если после N
+завершённых rounds остаются события, клиент отправляет `SyncPause`, listener
+подтверждает `SyncPaused`, обе стороны выводят `status=paused`,
+`sync_more_available=true` и `sync_resume_checkpoint=event-store`. Следующий
+запуск с новым ticket продолжает reconciliation из durable stores. Pause не
+является переносимым authorization token: прежние inventory/diff остаются
+привязаны к старой transport session и не переиспользуются.
+
 Это временный профиль: правило known-author не заменяет Account Root
-authorization и revocation, полный список IDs не заменяет compact Merkle/range
-summary, а восстановление rounds после разрыва ещё не имеет resumable cursor.
+authorization и revocation, а полный список IDs не заменяет compact
+Merkle/range summary. Переносимый подписанный cursor имеет смысл проектировать
+вместе с compact summary, когда он сможет ссылаться на проверяемый snapshot или
+range frontier и реально избавит от повторной отправки полного inventory.
 Лимит inventory означает, что этот M0-профиль перестаёт работать после 4096
 локальных events и не является масштабируемым алгоритмом истории.
 

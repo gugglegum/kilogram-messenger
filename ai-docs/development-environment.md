@@ -138,12 +138,23 @@ toolchain `1.98.0` для воспроизводимой разработки.
     `sync_more_available=false`, один relay path и RTT 472.0/472.8 ms. Bob
     начал с 2 events и закончил теми же 8, что Alice, поэтому M0.3 завершён без
     дополнительного history dump.
+26. Локальный M0.4 wire smoke использовал два persistent device state и 70/70
+    уникальных fixture events поверх 2 общих. Первый direct-only connection
+    штатно остановился после 64/64 через `SyncPause` / `SyncPaused`; обе стороны
+    вывели `status=paused` и `sync_resume_checkpoint=event-store`. После restart
+    listener новый Endpoint ID и новый session binding передали ровно остаток
+    6/6. Итоговые `history` полностью совпали: `event_count=142`,
+    `frontier_count=2`. Форматирование, строгий Clippy и 32 workspace tests
+    прошли.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
 punching в выбранной home-to-cellular topology; `auto` и strict relay-only
 подтвердили рабочий fallback. Restart/sync через `aps1` сошёлся за один round;
 M0.3 завершён. Проверка смены интерфейса относится к следующему расширению M0.
+Локальная реализация M0.4 pause/reconnect готова; для закрытия этапа нужен тот
+же сценарий с переходом одного физического хоста LAN → cellular между pause и
+resume.
 
 ## Решения, которые ещё нельзя фиксировать
 

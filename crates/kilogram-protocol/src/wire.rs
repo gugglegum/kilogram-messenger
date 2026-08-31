@@ -219,6 +219,52 @@ pub struct SyncComplete {
     more_available: bool,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct SyncPause {
+    version: u8,
+    conversation_id: ConversationId,
+}
+
+impl SyncPause {
+    pub fn new(conversation_id: ConversationId) -> Self {
+        Self {
+            version: SYNC_VERSION,
+            conversation_id,
+        }
+    }
+
+    pub fn conversation_id(&self) -> ConversationId {
+        self.conversation_id
+    }
+
+    fn validate(&self) -> Result<(), ProtocolError> {
+        validate_version(self.version)
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct SyncPaused {
+    version: u8,
+    conversation_id: ConversationId,
+}
+
+impl SyncPaused {
+    pub fn new(conversation_id: ConversationId) -> Self {
+        Self {
+            version: SYNC_VERSION,
+            conversation_id,
+        }
+    }
+
+    pub fn conversation_id(&self) -> ConversationId {
+        self.conversation_id
+    }
+
+    fn validate(&self) -> Result<(), ProtocolError> {
+        validate_version(self.version)
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum SyncRejectionReason {
     RequesterNotAllowed,
@@ -293,6 +339,7 @@ pub enum ClientRequest {
     DeliverEvent(SignedEvent),
     SyncInventory(SignedSyncInventory),
     SyncEvents(SyncEventBatch),
+    SyncPause(SyncPause),
 }
 
 impl ClientRequest {
@@ -312,6 +359,7 @@ impl ClientRequest {
             Self::DeliverEvent(event) => event.verify(),
             Self::SyncInventory(inventory) => inventory.verify_signature(),
             Self::SyncEvents(batch) => batch.validate(),
+            Self::SyncPause(pause) => pause.validate(),
         }
     }
 }
@@ -322,6 +370,7 @@ pub enum ServerResponse {
     SyncDiff(SyncDiff),
     SyncComplete(SyncComplete),
     SyncRejected(SyncRejected),
+    SyncPaused(SyncPaused),
 }
 
 impl ServerResponse {
@@ -342,6 +391,7 @@ impl ServerResponse {
             Self::SyncDiff(diff) => diff.verify_signature(),
             Self::SyncComplete(complete) => complete.validate(),
             Self::SyncRejected(rejected) => rejected.validate(),
+            Self::SyncPaused(paused) => paused.validate(),
         }
     }
 }
@@ -501,6 +551,11 @@ mod tests {
             SyncRejectionReason::RequesterNotKnown,
         ));
         assert_eq!(ServerResponse::decode(&rejected.encode()?)?, rejected);
+
+        let pause = ClientRequest::SyncPause(SyncPause::new(conversation_id));
+        assert_eq!(ClientRequest::decode(&pause.encode()?)?, pause);
+        let paused = ServerResponse::SyncPaused(SyncPaused::new(conversation_id));
+        assert_eq!(ServerResponse::decode(&paused.encode()?)?, paused);
         Ok(())
     }
 

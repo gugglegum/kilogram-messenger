@@ -8,8 +8,8 @@ mod wire;
 
 pub use wire::{
     ClientRequest, MAX_INVENTORY_EVENT_IDS, MAX_SYNC_EVENTS_PER_BATCH, ServerResponse,
-    SignedSyncInventory, SyncComplete, SyncDiff, SyncEventBatch, SyncRejected, SyncRejectionReason,
-    SyncSessionBinding,
+    SignedSyncInventory, SyncComplete, SyncDiff, SyncEventBatch, SyncPause, SyncPaused,
+    SyncRejected, SyncRejectionReason, SyncSessionBinding,
 };
 
 const EVENT_VERSION: u8 = 1;
