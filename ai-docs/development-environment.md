@@ -146,6 +146,15 @@ toolchain `1.98.0` для воспроизводимой разработки.
     6/6. Итоговые `history` полностью совпали: `event_count=142`,
     `frontier_count=2`. Форматирование, строгий Clippy и 32 workspace tests
     прошли.
+27. Для внешнего M0.4 test7 в общей двусторонне синхронизируемой папке
+    `C:\Users\Paul\YandexDisk\!M\test7` размещены release EXE commit
+    `62a9d37` и пронумерованные PowerShell wrappers. Они динамически создают
+    уникальные Run ID/conversation/ticket names, используют прошлые Alice/Bob
+    device states, проверяют SHA-256 EXE, обязательные status/counters и
+    автоматически сохраняют/сравнивают финальные histories. Phase 1 выполняет
+    shared delivery и pause 64/64 по direct LAN; после ручного переключения Bob
+    на cellular phase 2 ожидает resume 6/6 через pinned `aps1`. Все семь `.ps1`
+    файлов успешно разобраны PowerShell parser; внешний прогон ещё не выполнен.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole

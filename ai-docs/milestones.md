@@ -394,6 +394,8 @@ handshake и успешный приём следующего клиента; т
 1. Провести внешний pause/reconnect прогон двух клиентов с реальной сменой
    сетевого интерфейса между командами и подтвердить новый Endpoint ID,
    отсутствие повторной передачи первых 64 events и итоговую одинаковую
-   историю.
+   историю. Для test7 уже подготовлены release EXE и self-checking scripts:
+   Alice/Bob Phase 1 в LAN, ручной network switch Bob, Phase 2 через pinned
+   `aps1`, затем автоматическое сравнение histories.
 2. После этого начать Account Root → Device authorization model либо pairwise
    E2EE spike по приоритету следующего RFC/ADR.
