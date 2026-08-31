@@ -2,6 +2,11 @@
 
 ## P0 — до реализации протокола
 
+M0.5.1 зафиксировал только минимальную однопроцессную модель authority:
+`AccountId` — Ed25519 public root key, root подписывает device certificate и
+постоянный отзыв конкретного ключа. Следующие вопросы относятся к production
+recovery/rotation и не считаются решёнными этим прототипом.
+
 - Какая точная модель угроз: массовое наблюдение, целевой атакующий, злонамеренные
   relay/storage peers, компрометация bootstrap-инфраструктуры, Sybil и eclipse?
 - Как seed соотносится с Account Root Key: прямое детерминированное получение или
@@ -37,8 +42,9 @@
   использует durable event set как correctness checkpoint, поэтому будущий
   cursor должен давать измеримый выигрыш по трафику и иметь явные
   snapshot/staleness semantics.
-- Как Account Root certificates, conversation membership и revocation заменят
-  временное правило sync authorization «device уже был автором»?
+- Как M0.5.2 доставляет Account Root certificate и актуальный revocation view,
+  связывает их с conversation membership и заменяет временные
+  `--allow-device` / «device уже был автором» до раскрытия истории?
 - Схема blind mailbox: вычисление адресов, TTL, подтверждение получения,
   повторная доставка и unlinkability.
 - Репликация или erasure coding: сколько случайных узлов и какие гарантии нужны?

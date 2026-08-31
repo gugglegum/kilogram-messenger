@@ -397,9 +397,44 @@ M0.4 закрывает correctness-level возобновление между 
 смене process, Endpoint ID, session binding и сетевого пути. Он не обещает
 переносимый compact cursor или эффективный inventory для больших histories.
 
+### M0.5.1 — Account Root → Device authority: выполнено
+
+Реализовано:
+
+- отдельный случайный Ed25519 Account Root и публичный `AccountId`, не
+  совпадающие с device/transport identities;
+- root-signed `DeviceCertificate` связывает Account ID, Device ID, монотонный
+  authority sequence и canonical capabilities `sign-events,sync-history`;
+- root-signed `DeviceRevocation` навсегда отзывает конкретный device key;
+  более поздний сертификат не возвращает его в доверенное состояние;
+- `DeviceState` устанавливает сертификат только для собственного Device ID и
+  не заменяет его другим сертификатом;
+- публичная проверка требует ожидаемый Account ID, необходимые capabilities и
+  валидный account-scoped revocation view;
+- CLI-команды `account-create`, `account-show`, `device-enroll`,
+  `device-authorize`, `device-revoke` покрывают полный локальный lifecycle.
+
+Проверки:
+
+- unit tests покрывают persistence, idempotent install, wrong account/device,
+  signature tampering, noncanonical/duplicate capabilities, missing capability,
+  tampered revocation и permanent revoke после более поздней reissue;
+- CLI lifecycle test и отдельный локальный smoke подтверждают create → enroll →
+  authorize → revoke → отказ authorization с ненулевым exit code;
+- форматирование, строгий Clippy, release build и все 38 workspace tests
+  проходят.
+
+Граница среза: root secret пока хранится plaintext в отдельной development
+директории; seed/recovery, rotation/quorum, distributed revocation view,
+device encryption/session keys и сетевое применение сертификатов не входят в
+M0.5.1. Формат описан в
+[`../docs/RFC-0002-account-device-authority.md`](../docs/RFC-0002-account-device-authority.md).
+
 ### Следующий этап
 
-1. Начать Account Root → Device authorization model: root identity, device
-   certificates, добавление/отзыв устройства и recovery authority.
-2. После фиксации authorization boundary начать pairwise E2EE spike; compact
-   Merkle/range summary и signed cursor остаются отдельным sync-направлением.
+1. M0.5.2: передавать и проверять device certificate/revocation view в
+   connection ticket и session protocol; заменить `--allow-device` и
+   known-author до раскрытия истории.
+2. После сетевой фиксации authorization boundary начать pairwise E2EE spike;
+   seed/recovery и compact Merkle/range summary остаются отдельными
+   направлениями.

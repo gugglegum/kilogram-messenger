@@ -164,6 +164,12 @@ toolchain `1.98.0` для воспроизводимой разработки.
     совпадение детерминированного `history` Alice/Bob, включая оба frontier IDs.
     Сохранённый `SUCCESS.txt` содержит `histories_equal=true` и
     `resume_path=relay`. M0.4 завершён.
+29. M0.5.1 добавил отдельный Account Root, root-signed device certificate и
+    permanent revocation. Локальный CLI smoke создал account/device, успешно
+    проверил capabilities `sign-events,sync-history`, затем применил revocation
+    sequence 1 и получил ожидаемый ненулевой exit code с `DeviceRevoked`.
+    Форматирование, строгий Clippy, release build и все 38 workspace tests
+    прошли.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -172,7 +178,8 @@ punching в выбранной home-to-cellular topology; `auto` и strict relay
 M0.3 и M0.4 завершены. Смена физической сети LAN → cellular между pause и
 resume подтверждает, что durable event set продолжает bounded sync с новым
 transport Endpoint/session binding без повторной передачи подтверждённого
-batch.
+batch. M0.5.1 завершает локальную authority-модель; сетевое применение
+certificate/revocation является M0.5.2.
 
 ## Решения, которые ещё нельзя фиксировать
 

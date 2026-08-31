@@ -49,7 +49,13 @@ reconnect передаёт только оставшиеся 6 из 70 events. �
 test7 остановился после 64/64 по direct LAN, после смены сети Bob продолжил
 через pinned `aps1` только остатком 6/6; обе histories полностью совпали и
 содержат 142 events с одинаковым frontier.
-Прикладное E2EE, Account Root Identity, шифрование локальной истории,
+M0.5.1 добавил отдельную Account Root Identity: публичный Ed25519 key является
+`AccountId`, а root secret подписывает capability-bearing device certificates
+и постоянные отзывы device keys, но не обычные сообщения. Реализованы
+локальные CLI lifecycle-команды create/show/enroll/authorize/revoke и проверка
+чужого account, tampering, capability mismatch и revocation. Сертификаты ещё не
+применяются в connection ticket, delivery и sync — это граница M0.5.2.
+Прикладное E2EE, seed/recovery, защищённое хранение root/local history,
 production-grade sync summaries и группы ещё не реализованы.
 
 ## Цель продукта
@@ -80,6 +86,9 @@ production-grade sync summaries и группы ещё не реализован
   с TTL, не имея ключей и прикладных идентификаторов.
 - Seed-фраза восстанавливает корневую идентичность аккаунта. У каждого
   устройства должны быть отдельные ключи и отзывные полномочия.
+- В M0.5.1 `AccountId` является отдельным Ed25519 public root key; root secret
+  подписывает только device certificate/revocation. Любой валидный отзыв
+  навсегда запрещает повторное использование конкретного device key.
 - Блокчейн для групп не используется. Базовая модель порядка — причинный DAG,
   детерминированная линеаризация и, при необходимости, кворумные checkpoints.
 - Протокол и клиент должны быть open-source; безопасность не должна зависеть
@@ -100,15 +109,17 @@ production-grade sync summaries и группы ещё не реализован
 
 ## План ближайших работ
 
-1. Довести RFC-0001 до согласованной модели угроз и зафиксировать термины.
-2. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
-3. Спроектировать формат идентичности, сертификатов устройств и revocation log.
-4. Спроектировать wire format подписанного события и алгоритм линеаризации.
-5. Спроектировать Account Root → Device authorization, certificates и
-   revocation, заменив временное правило known-author.
-6. Спроектировать compact Merkle/range summary и переносимый signed cursor.
-7. Добавить pairwise E2EE и мультиустройство, затем небольшие MLS-группы.
-8. Перед публичным выпуском провести независимый криптографический аудит.
+1. В M0.5.2 встроить Account Root certificates и revocation view в ticket,
+   session authorization, delivery и sync, заменив `--allow-device` и
+   known-author.
+2. Спроектировать seed/recovery authority, protected root storage, root
+   rotation и конфликтующие authority operations.
+3. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
+4. Спроектировать финальный wire format подписанного события и алгоритм
+   линеаризации.
+5. Спроектировать compact Merkle/range summary и переносимый signed cursor.
+6. Добавить pairwise E2EE и мультиустройство, затем небольшие MLS-группы.
+7. Перед публичным выпуском провести независимый криптографический аудит.
 
 ## Навигация
 
@@ -119,5 +130,7 @@ production-grade sync summaries и группы ещё не реализован
 - [`milestones.md`](milestones.md) — выполненные и следующие технические этапы.
 - [`../docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md) —
   черновик основного RFC.
+- [`../docs/RFC-0002-account-device-authority.md`](../docs/RFC-0002-account-device-authority.md) —
+  реализованный M0.5.1-контракт Account Root и device authority.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

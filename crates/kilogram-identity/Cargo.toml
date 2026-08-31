@@ -9,6 +9,7 @@ publish = false
 [dependencies]
 ed25519-dalek.workspace = true
 getrandom.workspace = true
+postcard.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 

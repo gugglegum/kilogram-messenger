@@ -6,12 +6,31 @@ stage. Do not use it for sensitive communication.
 
 The project goals and draft architecture are documented in
 [`docs/RFC-0001-core-architecture.md`](docs/RFC-0001-core-architecture.md).
+The implemented Account Root / device authority slice is specified in
+[`docs/RFC-0002-account-device-authority.md`](docs/RFC-0002-account-device-authority.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.4 resumable synchronization — complete
+## Current milestone: M0.5.1 Account Root → Device authority — complete
+
+The `kilogram-identity` crate now separates an account's Ed25519 root authority
+from per-installation device keys. The root issues capability-bearing device
+certificates and permanent root-signed revocations. Public verification binds a
+certificate to the expected Account ID, checks the required `sign-events` and
+`sync-history` capabilities, and rejects a revoked device key even if a later
+certificate is issued for it.
+
+The development CLI covers the complete local lifecycle with `account-create`,
+`account-show`, `device-enroll`, `device-authorize`, and `device-revoke`. The
+root secret is currently plaintext in a separately selected development
+directory: seed recovery, protected key storage, distributed revocation state,
+and network/session enforcement are not implemented yet. M0.5.2 will integrate
+the public certificate and revocation view into delivery and synchronization.
+
+M0.4 resumable synchronization remains complete. Its tested transport and
+storage behavior is summarized below.
 
 The CLI exchanges a signed text event and a signed acknowledgement over an
 authenticated Iroh/QUIC connection. Application-level device identities are
@@ -76,11 +95,24 @@ signed acknowledgement travelled over a direct LAN path with approximately
 both events from Bob in one sync round, verified them on read, and reconstructed
 the acknowledgement as the single causal frontier.
 
-This remains a development prototype. It does **not** yet implement Account
-Root Identity, device authorization/revocation, message-level E2EE, encrypted
-storage, account-authorized synchronization, seed phrases, or groups. The local
-device secret and message bodies are currently stored unencrypted in the
-explicitly selected state directory. Do not use it for sensitive communication.
+This remains a development prototype. It does **not** yet enforce Account Root
+authorization in network sessions, and it does not implement message-level
+E2EE, encrypted storage, seed phrases/recovery, or groups. The Account Root
+secret, local device secret, and message bodies are currently stored
+unencrypted in their explicitly selected directories. Do not use it for
+sensitive communication.
+
+Create an Account Root and enroll a development device locally:
+
+```powershell
+cargo run -p kilogram-cli -- account-create --account-dir .tmp/account-root
+cargo run -p kilogram-cli -- device-enroll `
+  --account-dir .tmp/account-root `
+  --state-dir .tmp/alice
+```
+
+See [`RFC-0002`](docs/RFC-0002-account-device-authority.md) for authorization
+and revocation commands, security invariants, and the explicit M0.5.1 limits.
 
 Create or load Alice's identity first:
 

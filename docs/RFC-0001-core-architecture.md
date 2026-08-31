@@ -151,6 +151,12 @@ Account Root Key / Recovery Authority
 Account Root Key не используется для подписи обычных сообщений. Каждое
 устройство создаёт собственные signing, encryption и session keys.
 
+M0.5.1 реализует минимальный Account Root → Device authority slice: отдельный
+Ed25519 `AccountId`, root-signed device certificates с capabilities и постоянный
+root-signed отзыв конкретного device key. Точный контракт, формат прототипа и
+граница следующей сетевой интеграции описаны в
+[`RFC-0002`](RFC-0002-account-device-authority.md).
+
 `DeviceCertificate` должен как минимум связывать:
 
 - Account ID;
@@ -226,8 +232,9 @@ domain separation, hash и signature algorithm будут зафиксирова
 M0.1.1 использует отдельный экспериментальный профиль: Postcard для
 детерминированной сериализации Rust-структур, Ed25519 для подписей и BLAKE3 для
 идентификаторов с разными domain-separation prefixes. Этот профиль проверяет
-инварианты и API, но не фиксирует публичный межъязыковой wire protocol. Device
-signing key в прототипе также ещё не имеет сертификата от Account Root Identity.
+инварианты и API, но не фиксирует публичный межъязыковой wire protocol. M0.5.1
+уже умеет выдать device signing key сертификат от Account Root Identity, но
+M0-events и session protocol пока ещё не требуют предъявления этого сертификата.
 
 Все клиенты обязаны отклонять событие, если:
 

@@ -1,4 +1,6 @@
 use std::{
+    fs::{self, OpenOptions},
+    io::Write,
     path::{Path, PathBuf},
     time::Duration,
 };
@@ -10,7 +12,10 @@ use iroh::{
     Endpoint, EndpointAddr, RelayUrl,
     endpoint::{Connection, RecvStream, SendStream},
 };
-use kilogram_identity::{DeviceId, DeviceIdentity, DeviceState};
+use kilogram_identity::{
+    AccountId, AccountRootState, DeviceCapability, DeviceId, DeviceIdentity, DeviceRevocation,
+    DeviceState, verify_device_authorization,
+};
 use kilogram_protocol::{
     ClientRequest, ConversationId, EventPayload, MAX_INVENTORY_EVENT_IDS, ServerResponse,
     SignedEvent, SignedSyncInventory, SyncPause, SyncPaused, SyncSessionBinding,
@@ -155,6 +160,65 @@ enum Command {
         /// Directory containing this application's development state.
         #[arg(long)]
         state_dir: PathBuf,
+    },
+
+    /// Create a development Account Root authority in a separate directory.
+    AccountCreate {
+        /// Directory reserved for the offline Account Root secret and authority sequence.
+        #[arg(long)]
+        account_dir: PathBuf,
+    },
+
+    /// Print the public Account ID for an existing Account Root authority.
+    AccountShow {
+        /// Directory containing an existing development Account Root secret.
+        #[arg(long)]
+        account_dir: PathBuf,
+    },
+
+    /// Root-sign and install a messaging certificate for one device state.
+    DeviceEnroll {
+        /// Directory containing an existing development Account Root authority.
+        #[arg(long)]
+        account_dir: PathBuf,
+
+        /// Directory containing the device identity to authorize.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Also export the public device certificate to a new file.
+        #[arg(long)]
+        certificate_file: Option<PathBuf>,
+    },
+
+    /// Verify an installed device certificate against an Account ID and revocations.
+    DeviceAuthorize {
+        /// Directory containing the device identity and installed certificate.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Trusted public Account ID expected to have signed the certificate.
+        #[arg(long)]
+        account_id: AccountId,
+
+        /// Root-signed revocation files that form the current account view.
+        #[arg(long = "revocation-file")]
+        revocation_files: Vec<PathBuf>,
+    },
+
+    /// Permanently revoke one device key with the Account Root authority.
+    DeviceRevoke {
+        /// Directory containing an existing development Account Root authority.
+        #[arg(long)]
+        account_dir: PathBuf,
+
+        /// Public device key to revoke. Re-enrollment requires a new device key.
+        #[arg(long)]
+        device_id: DeviceId,
+
+        /// Write the public root-signed revocation to this new file.
+        #[arg(long)]
+        revocation_file: PathBuf,
     },
 }
 
@@ -310,6 +374,23 @@ async fn main() -> Result<()> {
             conversation,
         } => show_history(state_dir, conversation),
         Command::Identity { state_dir } => show_identity(state_dir),
+        Command::AccountCreate { account_dir } => create_account(account_dir),
+        Command::AccountShow { account_dir } => show_account(account_dir),
+        Command::DeviceEnroll {
+            account_dir,
+            state_dir,
+            certificate_file,
+        } => enroll_device(account_dir, state_dir, certificate_file),
+        Command::DeviceAuthorize {
+            state_dir,
+            account_id,
+            revocation_files,
+        } => authorize_device(state_dir, account_id, revocation_files),
+        Command::DeviceRevoke {
+            account_dir,
+            device_id,
+            revocation_file,
+        } => revoke_device(account_dir, device_id, revocation_file),
     }
 }
 
@@ -966,6 +1047,155 @@ fn show_identity(state_dir: PathBuf) -> Result<()> {
     Ok(())
 }
 
+fn create_account(account_dir: PathBuf) -> Result<()> {
+    let account = AccountRootState::create(&account_dir)
+        .with_context(|| format!("create Account Root state in {}", account_dir.display()))?;
+    println!("account_id={}", account.account_id());
+    println!("account_root_dir={}", account_dir.display());
+    println!("root_secret_storage=development-plaintext");
+    println!("status=account-created");
+    Ok(())
+}
+
+fn show_account(account_dir: PathBuf) -> Result<()> {
+    let account = AccountRootState::load(&account_dir)
+        .with_context(|| format!("load Account Root state from {}", account_dir.display()))?;
+    println!("account_id={}", account.account_id());
+    println!("status=account-loaded");
+    Ok(())
+}
+
+fn enroll_device(
+    account_dir: PathBuf,
+    state_dir: PathBuf,
+    certificate_file: Option<PathBuf>,
+) -> Result<()> {
+    let account = AccountRootState::load(&account_dir)
+        .with_context(|| format!("load Account Root state from {}", account_dir.display()))?;
+    let device = DeviceState::load_or_create(&state_dir)
+        .with_context(|| format!("load device state from {}", state_dir.display()))?;
+    let certificate = account
+        .issue_device_certificate(device.identity().device_id(), &DeviceCapability::MESSAGING)
+        .context("issue root-signed device certificate")?;
+    device
+        .install_certificate(&certificate)
+        .context("install root-signed certificate into device state")?;
+    let encoded = certificate.encode()?;
+    if let Some(path) = certificate_file {
+        write_new_authority_file(&path, &encoded)
+            .with_context(|| format!("export device certificate to {}", path.display()))?;
+        println!("certificate_file={}", path.display());
+    }
+
+    println!("account_id={}", certificate.account_id());
+    println!("device_id={}", certificate.device_id());
+    println!(
+        "certificate_authority_sequence={}",
+        certificate.authority_sequence()
+    );
+    println!(
+        "device_capabilities={}",
+        format_capabilities(certificate.capabilities())
+    );
+    println!("certificate={}", URL_SAFE_NO_PAD.encode(encoded));
+    println!("status=device-enrolled");
+    Ok(())
+}
+
+fn authorize_device(
+    state_dir: PathBuf,
+    account_id: AccountId,
+    revocation_files: Vec<PathBuf>,
+) -> Result<()> {
+    let device = DeviceState::load_or_create(&state_dir)
+        .with_context(|| format!("load device state from {}", state_dir.display()))?;
+    let certificate = device
+        .load_certificate()
+        .context("load installed root-signed device certificate")?;
+    let revocations = revocation_files
+        .iter()
+        .map(|path| {
+            let bytes = fs::read(path)
+                .with_context(|| format!("read device revocation from {}", path.display()))?;
+            DeviceRevocation::decode_and_verify(&bytes)
+                .with_context(|| format!("verify device revocation from {}", path.display()))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let authorization = verify_device_authorization(
+        account_id,
+        &certificate,
+        &revocations,
+        &DeviceCapability::MESSAGING,
+    )
+    .context("verify Account Root to device authorization")?;
+
+    println!("account_id={}", authorization.account_id());
+    println!("device_id={}", authorization.device_id());
+    println!(
+        "certificate_authority_sequence={}",
+        authorization.certificate_authority_sequence()
+    );
+    println!(
+        "device_capabilities={}",
+        format_capabilities(authorization.capabilities())
+    );
+    println!("revocation_count={}", revocations.len());
+    println!("authorization=valid");
+    println!("status=device-authorized");
+    Ok(())
+}
+
+fn revoke_device(
+    account_dir: PathBuf,
+    device_id: DeviceId,
+    revocation_file: PathBuf,
+) -> Result<()> {
+    let account = AccountRootState::load(&account_dir)
+        .with_context(|| format!("load Account Root state from {}", account_dir.display()))?;
+    let revocation = account
+        .revoke_device(device_id)
+        .context("issue root-signed permanent device revocation")?;
+    let encoded = revocation.encode()?;
+    write_new_authority_file(&revocation_file, &encoded)
+        .with_context(|| format!("write device revocation to {}", revocation_file.display()))?;
+
+    println!("account_id={}", revocation.account_id());
+    println!("revoked_device_id={}", revocation.device_id());
+    println!(
+        "revocation_authority_sequence={}",
+        revocation.authority_sequence()
+    );
+    println!("revocation_file={}", revocation_file.display());
+    println!("revocation={}", URL_SAFE_NO_PAD.encode(encoded));
+    println!("status=device-revoked");
+    Ok(())
+}
+
+fn format_capabilities(capabilities: &[DeviceCapability]) -> String {
+    capabilities
+        .iter()
+        .map(|capability| capability.as_str())
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
+fn write_new_authority_file(path: &Path, bytes: &[u8]) -> Result<()> {
+    if let Some(parent) = path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("create authority output directory {}", parent.display()))?;
+    }
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)
+        .context("create authority output without overwriting an existing file")?;
+    file.write_all(bytes)?;
+    file.sync_all()?;
+    Ok(())
+}
+
 fn show_history(state_dir: PathBuf, conversation: String) -> Result<()> {
     let event_store = open_event_store(&state_dir)?;
     let conversation_id = ConversationId::from_label(&conversation);
@@ -1109,6 +1339,33 @@ mod tests {
         assert_eq!(events.len(), 3);
         assert_eq!(store.frontier(conversation_id)?.len(), 1);
         assert!(events.iter().all(|stored| stored.event.verify().is_ok()));
+        Ok(())
+    }
+
+    #[test]
+    fn account_device_cli_lifecycle_persists_and_revokes() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let account_dir = directory.path().join("account");
+        let state_dir = directory.path().join("device");
+        let certificate_file = directory.path().join("public-device.cert");
+        let revocation_file = directory.path().join("device.revocation");
+
+        create_account(account_dir.clone())?;
+        let account_id = AccountRootState::load(&account_dir)?.account_id();
+        enroll_device(
+            account_dir.clone(),
+            state_dir.clone(),
+            Some(certificate_file.clone()),
+        )?;
+        authorize_device(state_dir.clone(), account_id, Vec::new())?;
+        assert!(certificate_file.is_file());
+
+        let device_id = DeviceState::load_or_create(&state_dir)?
+            .identity()
+            .device_id();
+        revoke_device(account_dir, device_id, revocation_file.clone())?;
+        assert!(revocation_file.is_file());
+        assert!(authorize_device(state_dir, account_id, vec![revocation_file]).is_err());
         Ok(())
     }
 

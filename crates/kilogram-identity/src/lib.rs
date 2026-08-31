@@ -11,6 +11,13 @@ use ed25519_dalek::{Signature, Signer, SigningKey, VerifyingKey};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+mod account;
+
+pub use account::{
+    AccountId, AccountRootState, AuthorizedDevice, DeviceCapability, DeviceCertificate,
+    DeviceRevocation, verify_device_authorization,
+};
+
 const DEVICE_SECRET_FILE: &str = "device-secret.key";
 const NEXT_SEQUENCE_FILE: &str = "next-sequence";
 const SECRET_KEY_BYTES: usize = 32;
@@ -217,6 +224,66 @@ pub enum IdentityError {
 
     #[error("device sequence is exhausted")]
     SequenceExhausted,
+
+    #[error("account authority encoding is invalid")]
+    AuthorityEncoding(#[from] postcard::Error),
+
+    #[error("account root already exists at {0}")]
+    AccountRootAlreadyExists(PathBuf),
+
+    #[error("account root does not exist at {0}")]
+    AccountRootMissing(PathBuf),
+
+    #[error("account root secret key has {0} bytes; expected {SECRET_KEY_BYTES}")]
+    InvalidAccountRootSecretKeyLength(usize),
+
+    #[error("account ID has {0} hexadecimal characters; expected 64")]
+    InvalidAccountIdLength(usize),
+
+    #[error("account ID contains invalid hexadecimal at character {0}")]
+    InvalidAccountIdHex(usize),
+
+    #[error("account public key is invalid")]
+    InvalidAccountPublicKey(#[source] ed25519_dalek::SignatureError),
+
+    #[error("unsupported account authority version: {0}")]
+    UnsupportedAccountAuthorityVersion(u8),
+
+    #[error("a device certificate must contain at least one capability")]
+    EmptyDeviceCapabilities,
+
+    #[error("a device certificate contains duplicate capabilities")]
+    DuplicateDeviceCapability,
+
+    #[error("device certificate capabilities are not in canonical order")]
+    NonCanonicalDeviceCapabilities,
+
+    #[error("authority object belongs to account {actual}; expected {expected}")]
+    AccountMismatch {
+        expected: AccountId,
+        actual: AccountId,
+    },
+
+    #[error("device certificate belongs to device {actual}; expected {expected}")]
+    DeviceCertificateDeviceMismatch {
+        expected: DeviceId,
+        actual: DeviceId,
+    },
+
+    #[error("device certificate is missing required capability {0:?}")]
+    MissingDeviceCapability(DeviceCapability),
+
+    #[error("device {0} has been permanently revoked by its account root")]
+    DeviceRevoked(DeviceId),
+
+    #[error("device certificate is not installed")]
+    DeviceCertificateMissing,
+
+    #[error("a different device certificate is already installed")]
+    DeviceCertificateAlreadyInstalled,
+
+    #[error("account authority sequence is exhausted")]
+    AuthoritySequenceExhausted,
 }
 
 #[cfg(test)]
