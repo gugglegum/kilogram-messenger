@@ -302,6 +302,15 @@ checkpoint корректности: отдельный opaque cursor не до�
 является переносимым authorization token: прежние inventory/diff остаются
 привязаны к старой transport session и не переиспользуются.
 
+Внешний M0.4 test7 подтвердил этот контракт на двух физических Windows-хостах.
+Первый direct LAN connection обменял 64/64 events и штатно завершился с
+`status=paused`. Затем Bob сменил домашнюю сеть на cellular hotspot, создал
+новый relay-only Endpoint через pinned `aps1`, а свежий sync передал только
+оставшиеся 6/6 events. Итоговые локальные histories Alice и Bob побайтно
+совпали: 142 проверенных events, два одинаковых causal frontier IDs. Таким
+образом, M0.4 закрыт для смены process, transport Endpoint, session binding и
+фактического сетевого пути между подтверждёнными rounds.
+
 Это временный профиль: правило known-author не заменяет Account Root
 authorization и revocation, а полный список IDs не заменяет compact
 Merkle/range summary. Переносимый подписанный cursor имеет смысл проектировать

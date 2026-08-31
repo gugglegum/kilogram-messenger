@@ -154,16 +154,25 @@ toolchain `1.98.0` для воспроизводимой разработки.
     автоматически сохраняют/сравнивают финальные histories. Phase 1 выполняет
     shared delivery и pause 64/64 по direct LAN; после ручного переключения Bob
     на cellular phase 2 ожидает resume 6/6 через pinned `aps1`. Все семь `.ps1`
-    файлов успешно разобраны PowerShell parser; внешний прогон ещё не выполнен.
+    файлов успешно разобраны PowerShell parser; на момент подготовки внешний
+    прогон ещё не был выполнен.
+28. Внешний M0.4 test7 (`run_id=20260831-055424`, conversation
+    `m04-test7-20260831-055424`) успешно выполнил весь self-checking сценарий.
+    Phase 1 передал 64/64 и остановился после подтверждённого round. После
+    переключения Bob с LAN на cellular Phase 2 через relay передал только 6/6.
+    Финальная проверка получила `event_count=142`, `frontier_count=2` и полное
+    совпадение детерминированного `history` Alice/Bob, включая оба frontier IDs.
+    Сохранённый `SUCCESS.txt` содержит `histories_equal=true` и
+    `resume_path=relay`. M0.4 завершён.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
 punching в выбранной home-to-cellular topology; `auto` и strict relay-only
 подтвердили рабочий fallback. Restart/sync через `aps1` сошёлся за один round;
-M0.3 завершён. Проверка смены интерфейса относится к следующему расширению M0.
-Локальная реализация M0.4 pause/reconnect готова; для закрытия этапа нужен тот
-же сценарий с переходом одного физического хоста LAN → cellular между pause и
-resume.
+M0.3 и M0.4 завершены. Смена физической сети LAN → cellular между pause и
+resume подтверждает, что durable event set продолжает bounded sync с новым
+transport Endpoint/session binding без повторной передачи подтверждённого
+batch.
 
 ## Решения, которые ещё нельзя фиксировать
 

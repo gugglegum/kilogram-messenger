@@ -7,9 +7,11 @@ stage. Do not use it for sensitive communication.
 The project goals and draft architecture are documented in
 [`docs/RFC-0001-core-architecture.md`](docs/RFC-0001-core-architecture.md).
 The current two-network Windows procedure is in
-[`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md).
+[`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
+the pause/reconnect procedure is in
+[`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.3 cross-network route verification
+## Current milestone: M0.4 resumable synchronization — complete
 
 The CLI exchanges a signed text event and a signed acknowledgement over an
 authenticated Iroh/QUIC connection. Application-level device identities are
@@ -45,10 +47,18 @@ The listener now signs one of three application route policies into ticket v2:
   the established connection contain only a relay path.
 
 Connection establishment, route selection, stream opening, and framed wire I/O
-have bounded timeouts with operation-specific diagnostics. A local process smoke
-verified delivery and reconnect/sync after listener restart in both forced modes.
-The public relay test selected `euc1-1.relay.n0.iroh.link`; the cross-network
-two-host hole-punching test is still pending.
+have bounded timeouts with operation-specific diagnostics. M0.3 external tests
+verified direct LAN, a valid no-direct result between home and cellular NAT,
+automatic relay fallback, and strict relay-only delivery/sync through a pinned
+`aps1` public relay.
+
+M0.4 adds a clean `SyncPause` / `SyncPaused` boundary after completed bounded
+rounds. The full-ID M0 profile resumes from the durable event set with a fresh
+session-bound inventory rather than reusing an old transport authorization.
+An external two-host test paused after 64/64 events on direct LAN, moved Bob to
+cellular, created a new relay-only session, and transferred only the remaining
+6/6 events. Both verified histories then contained the same 142 events and
+causal frontier.
 
 The listener treats failed QUIC Initial/handshake attempts as recoverable network
 input and keeps accepting. This is required for public UDP endpoints because Iroh

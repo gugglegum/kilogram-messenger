@@ -40,12 +40,15 @@ relay path. Это подтвердило cross-network работу `clear_ip_t
 локализовало прежние timeout в доступности `euc1` route во время тестов;
 финальный restart/sync через `aps1` восстановил 6 недостающих events за один
 round и свёл обе стороны к 8 events. M0.3 завершён.
-M0.4 начал проверку resumable sync: CLI умеет штатно остановиться после
+M0.4 завершил проверку resumable sync: CLI умеет штатно остановиться после
 заданного числа завершённых rounds через `sync --max-rounds`, а новый
 transport-independent тест меняет session binding после первого batch и при
 reconnect передаёт только оставшиеся 6 из 70 events. Для bounded full-ID
 профиля durable event set принят как correctness checkpoint; отдельный
-переносимый signed cursor отложен до compact Merkle/range summary.
+переносимый signed cursor отложен до compact Merkle/range summary. Внешний
+test7 остановился после 64/64 по direct LAN, после смены сети Bob продолжил
+через pinned `aps1` только остатком 6/6; обе histories полностью совпали и
+содержат 142 events с одинаковым frontier.
 Прикладное E2EE, Account Root Identity, шифрование локальной истории,
 production-grade sync summaries и группы ещё не реализованы.
 
@@ -101,11 +104,10 @@ production-grade sync summaries и группы ещё не реализован
 2. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
 3. Спроектировать формат идентичности, сертификатов устройств и revocation log.
 4. Спроектировать wire format подписанного события и алгоритм линеаризации.
-5. Проверить управляемую pause/reconnect синхронизацию при реальной смене
-   сетевого интерфейса; correctness checkpoint уже определён как durable event
-   set.
+5. Спроектировать Account Root → Device authorization, certificates и
+   revocation, заменив временное правило known-author.
 6. Спроектировать compact Merkle/range summary и переносимый signed cursor.
-7. Реализовать мультиустройство, затем небольшие MLS-группы.
+7. Добавить pairwise E2EE и мультиустройство, затем небольшие MLS-группы.
 8. Перед публичным выпуском провести независимый криптографический аудит.
 
 ## Навигация

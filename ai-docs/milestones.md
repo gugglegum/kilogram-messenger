@@ -356,7 +356,7 @@ Regression test подтверждает продолжение работы п�
 handshake и успешный приём следующего клиента; текущий workspace содержит 29
 проходящих tests.
 
-### M0.4 — pause/reconnect sync: реализация завершена, внешний тест ожидается
+### M0.4 — pause/reconnect sync: выполнено
 
 Реализовано:
 
@@ -387,15 +387,19 @@ handshake и успешный приём следующего клиента; т
   остановился после 64/64 с `status=paused`, перезапустил listener с новым
   Endpoint ID и передал только остаток 6/6; обе histories содержали 142 events,
   одинаковый frontier и полностью совпадающий вывод;
+- внешний test7 на двух физических Windows-хостах остановил direct LAN sync
+  после 64/64, затем после переключения Bob на cellular продолжил через pinned
+  `aps1` только остатком 6/6. Автоматическое сравнение подтвердило 142 events,
+  `frontier_count=2` и полностью одинаковые histories;
 - `cargo fmt`, строгий Clippy и все 32 workspace tests проходят.
 
-Осталось для закрытия M0.4:
+M0.4 закрывает correctness-level возобновление между подтверждёнными rounds при
+смене process, Endpoint ID, session binding и сетевого пути. Он не обещает
+переносимый compact cursor или эффективный inventory для больших histories.
 
-1. Провести внешний pause/reconnect прогон двух клиентов с реальной сменой
-   сетевого интерфейса между командами и подтвердить новый Endpoint ID,
-   отсутствие повторной передачи первых 64 events и итоговую одинаковую
-   историю. Для test7 уже подготовлены release EXE и self-checking scripts:
-   Alice/Bob Phase 1 в LAN, ручной network switch Bob, Phase 2 через pinned
-   `aps1`, затем автоматическое сравнение histories.
-2. После этого начать Account Root → Device authorization model либо pairwise
-   E2EE spike по приоритету следующего RFC/ADR.
+### Следующий этап
+
+1. Начать Account Root → Device authorization model: root identity, device
+   certificates, добавление/отзыв устройства и recovery authority.
+2. После фиксации authorization boundary начать pairwise E2EE spike; compact
+   Merkle/range summary и signed cursor остаются отдельным sync-направлением.
