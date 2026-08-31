@@ -5,7 +5,8 @@
 M0.5.1 зафиксировал минимальную однопроцессную модель authority:
 `AccountId` — Ed25519 public root key, root подписывает device certificate и
 постоянный отзыв конкретного ключа. M0.5.2 применяет certificate и известные
-caller-supplied revocations до сетевых данных. Следующие вопросы относятся к
+caller-supplied revocations до сетевых данных. M0.6.1 заменил их полным
+root-signed snapshot и max-seen anti-rollback. Следующие вопросы относятся к
 production recovery/rotation/distribution и не решены этим прототипом.
 
 - Какая точная модель угроз: массовое наблюдение, целевой атакующий, злонамеренные
@@ -43,10 +44,10 @@ production recovery/rotation/distribution и не решены этим прот
   использует durable event set как correctness checkpoint, поэтому будущий
   cursor должен давать измеримый выигрыш по трафику и иметь явные
   snapshot/staleness semantics.
-- Как authenticated authority log доказывает freshness/completeness revocation
-  view без центрального сервера? M0.5.2 уже проверяет переданные root-signed
-  файлы и заменил `--allow-device` / known-author, но не умеет обнаружить
-  скрытый или ещё не полученный отзыв.
+- Как discovery/gossip/witness доказывает global freshness authority snapshot
+  без центрального сервера? M0.6.1 доказывает completeness на подписанной
+  revision и запрещает rollback после получения новой, но first contact может
+  получить старый корректно подписанный snapshot.
 - Как связать Account Root authorization с conversation membership и проверять
   полномочия каждого автора в получаемом history batch?
 - Схема blind mailbox: вычисление адресов, TTL, подтверждение получения,

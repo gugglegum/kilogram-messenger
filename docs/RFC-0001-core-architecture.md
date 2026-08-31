@@ -270,11 +270,13 @@ session binding к текущему transport Endpoint ID listener. Сторон
 идемпотентно. Inventory ограничен 4096 IDs. В историческом M0.1.3 неизвестный
 локальной истории requester получал явный отказ.
 
-M0.5.2 заменяет эту временную границу. Ticket v3 связывает Iroh Endpoint ID,
-root-signed certificate listener и один разрешённый requester Account ID.
+M0.6.1 развивает заменившую эту временную границу модель. Ticket v4 связывает
+Iroh Endpoint ID, root-signed certificate и authority snapshot listener, а
+также один разрешённый requester Account ID.
 Клиент закрепляет ожидаемый Account ID, затем предъявляет собственный
 root-signed certificate и device-signed session proof, привязанный к Endpoint.
-Listener проверяет предоставленный trusted revocation view до event/inventory.
+Listener проверяет device-signed session proof, root-signed complete snapshot и
+его persistent anti-rollback state до event/inventory.
 Новый сертифицированный device аккаунта может синхронизироваться без
 предыдущего авторства; другой аккаунт или отозванный device отклоняется до
 раскрытия истории.
@@ -320,8 +322,9 @@ checkpoint корректности: отдельный opaque cursor не до�
 образом, M0.4 закрыт для смены process, transport Endpoint, session binding и
 фактического сетевого пути между подтверждёнными rounds.
 
-M0.5.2 удалил правило known-author в пользу Account Root authorization и
-caller-supplied revocation view. Однако полный список IDs всё ещё не заменяет
+M0.5.2 удалил правило known-author в пользу Account Root authorization, а
+M0.6.1 заменил caller-supplied revocation files подписанным snapshot и
+max-seen revision. Однако полный список IDs всё ещё не заменяет
 compact Merkle/range summary. Переносимый подписанный cursor имеет смысл проектировать
 вместе с compact summary, когда он сможет ссылаться на проверяемый snapshot или
 range frontier и реально избавит от повторной отправки полного inventory.
@@ -384,8 +387,9 @@ application device IDs и event IDs оставались стабильными.
 - `relay-only` отключает IP transports у обоих endpoints, поэтому ни ticket, ни
   connection не могут незаметно перейти на direct path.
 
-M0.5.2 переносит те же route-policy semantics в несовместимый ticket v3,
-добавляющий listener certificate и allowed requester Account ID.
+M0.6.1 переносит те же route-policy semantics в несовместимый ticket v4,
+добавляющий listener certificate, authority snapshot и allowed requester
+Account ID.
 
 Handshake/connect ограничен 30 секундами, ожидание policy path, открытие stream
 и wire I/O — 15 секундами. Ошибка указывает зависшую операцию и, для route

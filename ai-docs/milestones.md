@@ -469,11 +469,54 @@ M0.5.1. Формат описан в
 скрытого или ещё не доставленного отзыва не доказывается. Conversation
 membership и полномочия авторов history batch также ещё не реализованы.
 
+### M0.6.1 — signed authority snapshots и anti-rollback: выполнено
+
+Реализовано:
+
+- Account Root хранит каждый permanent revocation в durable canonical set и
+  подписывает полный `AccountAuthoritySnapshot` с монотонной revision;
+- snapshot валидирует вложенные root signatures, Account ID, уникальный
+  порядок Device IDs и покрытие всех authority sequences;
+- device state атомарно хранит snapshot своего аккаунта и max-seen snapshot
+  каждого peer account; более старая revision и два разных состояния одной
+  revision отклоняются;
+- legacy root, у которого уже были authority operations без durable log, не
+  может объявить неполный набор полным и требует явной будущей миграции;
+- ticket v4 несёт listener certificate + snapshot, а несовместимый
+  Endpoint-bound session authorization v2 несёт requester certificate + snapshot;
+- snapshot pinning происходит до certificate authorization: валидный новый
+  snapshot сохраняется даже тогда, когда он отзывает предъявившее его device;
+- `--peer-revocation-file` удалён из network CLI; добавлены
+  `account-snapshot` и `device-authority-update`, а `device-enroll`
+  автоматически устанавливает текущий own snapshot.
+
+Проверки:
+
+- identity tests покрывают persistence полного набора, permanent revoke,
+  atomic update, idempotency, rollback, equivocation и legacy-root refusal;
+- protocol/session tests покрывают snapshot внутри device-signed session proof
+  и отказ revoked certificate;
+- ticket test подтверждает, что старый криптографически валидный ticket
+  отклоняется устройством, уже закрепившим более новую peer revision;
+- CLI lifecycle выполняет enroll → authorize → revoke → snapshot export/update
+  → ожидаемый отказ authorization;
+- `cargo test --workspace` проходит 46 tests, включая сетевой regression:
+  listener сохраняет новый snapshot до ожидаемого отказа revoked device.
+- локальный process smoke свежими Alice/Bob Account Roots выполнил ticket v4,
+  установил peer revision 1 на обеих сторонах и доставил подписанные
+  Text/Acknowledgement по direct path;
+- `cargo fmt --all -- --check`, строгий Clippy и release workspace build
+  проходят.
+
+Граница среза: completeness доказана на конкретной подписанной revision, а
+rollback — после наблюдения более новой. Узел при первом контакте не может
+узнать, существует ли ещё более свежая revision, пока нет authenticated
+discovery/gossip/witness. Conversation membership ещё отсутствует.
+
 ### Следующий этап
 
-1. Спроектировать authenticated authority/revocation synchronization и
-   conversation membership, чтобы проверять freshness и полномочия каждого
-   автора истории.
+1. M0.6.2: подписанный conversation membership state и проверка полномочий
+   каждого автора history batch.
 2. Начать pairwise E2EE spike поверх Account → Device → Session boundary;
-   seed/recovery и compact Merkle/range summary остаются отдельными
-   направлениями.
+   first-contact authority gossip/witness, seed/recovery и compact Merkle/range
+   summary остаются отдельными направлениями.

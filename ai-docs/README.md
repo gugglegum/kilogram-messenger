@@ -59,7 +59,10 @@ Account ID; до event/inventory клиент предъявляет certificate
 Endpoint-bound proof. `--allow-device` и known-author удалены, новое устройство
 того же account может восстановить пустую историю. Проверяющая сторона принимает
 trusted revocations через `--peer-revocation-file`; revoked device отклоняется
-до sync inventory. Freshness/completeness revocation view пока не доказывается.
+до sync inventory. M0.6.1 заменил эти файлы root-signed полным authority
+snapshot в ticket v4/session proof. Устройства атомарно сохраняют max-seen
+revision каждого account и отклоняют rollback/equivocation. Snapshot доказывает
+completeness на своей revision, но не global freshness при первом контакте.
 Прикладное E2EE, seed/recovery, защищённое хранение root/local history,
 production-grade sync summaries и группы ещё не реализованы.
 
@@ -114,8 +117,8 @@ production-grade sync summaries и группы ещё не реализован
 
 ## План ближайших работ
 
-1. Спроектировать authenticated распространение свежего authority/revocation
-   state и conversation membership для каждого автора истории.
+1. Реализовать conversation membership и проверку полномочий каждого автора
+   истории; отдельно спроектировать gossip/witness для first-contact freshness.
 2. Спроектировать seed/recovery authority, protected root storage, root
    rotation и конфликтующие authority operations.
 3. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
@@ -135,6 +138,6 @@ production-grade sync summaries и группы ещё не реализован
 - [`../docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md) —
   черновик основного RFC.
 - [`../docs/RFC-0002-account-device-authority.md`](../docs/RFC-0002-account-device-authority.md) —
-  реализованный M0.5.2-контракт Account Root, device и session authority.
+  реализованный M0.6.1-контракт Account Root, snapshot, device и session authority.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

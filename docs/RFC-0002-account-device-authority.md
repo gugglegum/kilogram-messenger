@@ -1,8 +1,8 @@
 # RFC-0002: Account Root и авторизация устройств
 
-- Статус: **Implemented draft (M0.5.2)**
+- Статус: **Implemented draft (M0.6.1)**
 - Дата: **2026-08-31**
-- Область: Account ID, device certificates, capabilities, revocation
+- Область: Account ID, device certificates, capabilities, revocation snapshots
 - Связанные материалы: [`RFC-0001`](RFC-0001-core-architecture.md),
   [`../ai-docs/decisions.md`](../ai-docs/decisions.md)
 
@@ -23,6 +23,12 @@ M0.5.2 применяет эту модель в connection ticket и отдел
 authorization handshake до любых delivery/sync данных. Временные
 `--allow-device` и known-author больше не используются.
 
+M0.6.1 заменяет передаваемые вручную отдельные файлы отзывов полным
+`AccountAuthoritySnapshot`. Snapshot подписан root key, содержит монотонную
+revision и канонический полный набор permanent revocations на эту revision.
+Устройства сохраняют максимальную увиденную revision каждого peer account и
+отклоняют rollback или два разных snapshot с одинаковой revision.
+
 ## 2. Инварианты
 
 1. Account Root и Device Identity — разные ключи и разные state directories.
@@ -36,6 +42,11 @@ authorization handshake до любых delivery/sync данных. Времен
    session proof всё равно должно быть подписано самим устройством.
 7. Неизвестный, неверно подписанный или относящийся к другому аккаунту отзыв
    не должен влиять на авторизацию и должен завершать проверку ошибкой.
+8. Сертификат и каждый отзыв должны иметь `authority_sequence < revision`
+   используемого snapshot.
+9. После принятия revision `N` устройство никогда не принимает revision `< N`;
+   разные валидно подписанные состояния с revision `N` считаются root
+   equivocation и тоже отклоняются.
 
 ## 3. Ключи и идентификаторы
 
@@ -49,10 +60,16 @@ hex-символа. Это осознанно прямой публичный к
 ACCOUNT_DIR/
     account-root-secret.key    # 32-byte Ed25519 secret, development plaintext
     next-authority-sequence    # следующий локальный sequence
+    authority-log-version      # версия durable authority layout
+    revocations/
+        <DEVICE_ID>.revocation # полный durable permanent-revocation set
 
 STATE_DIR/
     device-secret.key          # существующий device signing secret
     device-certificate.cert    # публичный root-signed certificate
+    account-authority.snapshot # snapshot собственного аккаунта
+    peer-authority/
+        <ACCOUNT_ID>.snapshot  # max revision, увиденная для peer account
     ...
 ```
 
@@ -85,7 +102,8 @@ M0.5.1 определяет две capabilities:
 
 `authority_sequence` выдаётся корневым состоянием монотонно, начиная с нуля.
 Он задаёт порядок root operations и пригодится для будущего authority log, но
-M0.5.1 ещё не решает конкурирующую работу нескольких копий root authority.
+M0.6.1 всё ещё предполагает единственный локальный writer Account Root и не
+решает конкурирующую работу нескольких копий root authority.
 
 ## 5. DeviceRevocation v1
 
@@ -107,7 +125,30 @@ Domain prefix подписи:
 Чтобы снова добавить то же физическое устройство, клиент создаёт новую пару
 device keys и получает новый сертификат.
 
-## 6. Алгоритм проверки
+## 6. AccountAuthoritySnapshot v1
+
+Подписываемое содержимое:
+
+```text
+version: u8
+account_id: AccountId
+revision: u64
+revocations: sorted unique list<DeviceRevocation>
+```
+
+`revision` равна следующему невыданному `authority_sequence`. Поэтому любой
+сертификат или отзыв, покрываемый snapshot, имеет меньший sequence. Revocations
+сортируются по `DeviceId`; повтор, другой Account ID, sequence из будущего или
+невалидная вложенная root signature отклоняются до проверки внешней подписи.
+Domain prefix внешней подписи:
+`kilogram:account-authority-snapshot-signature:v1\0`.
+
+Root сохраняет каждый отзыв до публикации snapshot. Старый root directory, в
+котором уже были authority operations, но ещё не было durable revocation log,
+не может безопасно объявить свой набор полным и отклоняется как legacy state.
+Автоматическая миграция такого состояния в M0.6.1 намеренно отсутствует.
+
+## 7. Алгоритм проверки
 
 Для авторизации устройства проверяющая сторона:
 
@@ -116,19 +157,23 @@ device keys и получает новый сертификат.
    signature;
 3. требует точного совпадения Account ID;
 4. требует capabilities, нужные текущей операции;
-5. проверяет root signature и Account ID каждого полученного revocation;
-6. отклоняет устройство, если хотя бы один валидный отзыв указывает его
+5. проверяет root signature snapshot, его Account ID, canonical full revocation
+   set и покрытие certificate/revocation sequences указанной revision;
+6. сравнивает revision с максимальной сохранённой для этого аккаунта и
+   отклоняет rollback/equivocation;
+7. сохраняет более новый snapshot атомарной заменой;
+8. отклоняет устройство, если хотя бы один валидный отзыв указывает его
    `DeviceId`;
-7. отдельно проверяет device signature над событием или session proof.
+9. отдельно проверяет device signature над событием или session proof.
 
 M0.5.1 реализует шаги 1–6 в `kilogram-identity`. M0.5.2 добавляет
 `SignedDeviceSessionAuthorization`: устройство подписывает сертификат вместе с
 binding текущего listener Endpoint ID. `kilogram-session` связывает proof,
-сертификат, требуемые capabilities и доверенный revocation view до того, как
+сертификат, требуемые capabilities и подписанный authority snapshot до того, как
 listener принимает event или inventory. Подпись самого event/inventory затем
 обязана принадлежать уже авторизованному device key.
 
-## 7. CLI lifecycle
+## 8. CLI lifecycle
 
 Development CLI позволяет проверить модель без сети:
 
@@ -146,10 +191,15 @@ cargo run -p kilogram-cli -- device-revoke `
   --account-dir .tmp/account-root `
   --device-id <DEVICE_ID> `
   --revocation-file .tmp/alice.revocation
+cargo run -p kilogram-cli -- account-snapshot `
+  --account-dir .tmp/account-root `
+  --snapshot-file .tmp/account.snapshot
+cargo run -p kilogram-cli -- device-authority-update `
+  --state-dir .tmp/alice `
+  --snapshot-file .tmp/account.snapshot
 cargo run -p kilogram-cli -- device-authorize `
   --state-dir .tmp/alice `
-  --account-id <ACCOUNT_ID> `
-  --revocation-file .tmp/alice.revocation
+  --account-id <ACCOUNT_ID>
 ```
 
 Последняя команда обязана завершиться ошибкой. Exported certificate и
@@ -157,7 +207,11 @@ revocation являются публичными подписанными объ
 входит. CLI не перезаписывает существующие export-файлы и не заменяет уже
 установленный сертификат другим.
 
-## 8. Реализованная граница
+`device-enroll` автоматически создаёт и устанавливает snapshot сразу после
+выдачи сертификата. После последующих root-операций устройство получает более
+новую версию через `account-snapshot` + `device-authority-update`.
+
+## 9. Реализованная граница
 
 Реализовано:
 
@@ -180,59 +234,72 @@ M0.5.2 дополнительно реализует:
 - sync нового сертифицированного устройства с пустой локальной историей без
   synthetic event и known-author bootstrap.
 
+M0.6.1 дополнительно реализует:
+
+- durable полный набор permanent revocations у Account Root;
+- root-signed snapshot с canonical completeness на конкретной revision;
+- atomically persisted own/peer snapshots и защита от rollback/equivocation;
+- ticket v4 с listener snapshot и session authorization v2 с requester snapshot;
+- pinning snapshot до certificate authorization, поэтому revoked device может
+  доставить подписанное состояние, которое немедленно запретит его же session;
+- CLI export/update lifecycle без `--peer-revocation-file`.
+
 Не реализовано:
 
 - derivation или восстановление root key из seed-фразы;
 - защита root secret средствами ОС или аппаратного хранилища;
 - recovery quorum, root rotation и разрешение конкурирующих authority events;
-- автоматическое распространение полного актуального revocation view и
-  доказательство его freshness/completeness;
+- discovery/gossip/witness-механизм, гарантирующий получение глобально самой
+  свежей revision при первом контакте;
 - отдельные device encryption/session keys;
 - срок действия и обновление сертификатов;
 - account-authorized membership разговоров и проверка полномочий каждого автора
   получаемой history;
 - окончательный codec и crypto-agility.
 
-## 9. Сетевой контракт M0.5.2
+## 10. Сетевой контракт M0.6.1
 
 M0.5.2 заменяет временное `--allow-device` / known-author правило на цепочку:
 
 ```text
 trusted AccountId
     -> root-signed DeviceCertificate
+    + root-signed complete AccountAuthoritySnapshot(revision)
     -> device-signed ticket/session proof/event
-    -> caller-supplied root-signed revocation view
+    -> persistent max-seen revision per peer account
 ```
 
-Ticket v3 содержит endpoint, public listener certificate, разрешённый requester
-Account ID и route policy. Listener device подписывает весь ticket. Клиент
-сначала проверяет root signature сертификата, Account ID из
-`--expect-account`, capabilities, предоставленные ему revocations и затем
-device signature ticket. Listener аналогично принимает только сертификат
+Ticket v4 содержит endpoint, public listener certificate, listener authority
+snapshot, разрешённый requester Account ID и route policy. Listener device
+подписывает весь ticket. Клиент проверяет device signature ticket, root
+signatures, Account ID из `--expect-account`, pin/rollback state и certificate
+authorization. Listener аналогично принимает только certificate + snapshot
 аккаунта из `--allow-account`.
 
 После QUIC/path establishment клиент открывает отдельный authorization stream.
-Он отправляет certificate и device signature над certificate + binding текущего
-listener Endpoint ID. Listener отвечает `DeviceAuthorized` или общим
+Он отправляет certificate, snapshot и device signature над ними + binding
+текущего listener Endpoint ID. Listener сначала проверяет proof и Account ID,
+затем сохраняет snapshot и только после этого проверяет revocation certificate.
+Listener отвечает `DeviceAuthorized` или общим
 `DeviceAuthorizationRejected`; лишь после успешного ответа открывается stream с
 event или inventory. Следующие sync rounds используют уже авторизованный device
 на том же connection.
 
-Для revocation enforcement проверяющая сторона получает публичные файлы через
-повторяемый `--peer-revocation-file`. Объекты проверяются криптографически, но
-M0.5.2 не умеет доказать отсутствие более свежего отзыва: пустой или устаревший
-набор не становится полным только потому, что его предоставил peer. До
-реализации authenticated authority-log synchronization это явная операционная
-граница, а не обещание мгновенного глобального отзыва.
+Snapshot доказывает полноту permanent revocations только на подписанную
+revision. Anti-rollback доказывает, что после встречи с revision `N` узел не
+вернулся назад. Но первая встреча со старым, корректно подписанным snapshot не
+позволяет узнать, существует ли где-то revision `N+1`. До появления
+authenticated discovery/gossip/witness это явная граница, а не обещание
+мгновенного глобального отзыва.
 
 Локальный process smoke подтвердил delivery между двумя отдельными аккаунтами,
 recovery sync двух events на новое устройство того же requester account без
 предыдущего авторства и отказ нового session после передачи listener валидного
 root-signed revocation.
 
-## 10. Следующий срез
+## 11. Следующий срез
 
-Следующий identity/security этап должен определить conversation membership и
-authenticated распространение свежего authority/revocation state. Pairwise
-E2EE может начинаться поверх уже существующей Account → Device → Session
-цепочки, но не должен считать M0.5.2 production revocation service.
+M0.6.2 должен определить подписанный conversation membership state и проверять
+полномочия каждого автора получаемой history. Authenticated gossip/witness для
+first-contact freshness, pairwise E2EE, seed/recovery и root rotation остаются
+отдельными срезами.

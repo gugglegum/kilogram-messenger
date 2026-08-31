@@ -177,6 +177,15 @@ toolchain `1.98.0` для воспроизводимой разработки.
     revocation этого device обе стороны завершили новый session ненулевым exit
     code до inventory (`authorization=rejected`). Форматирование, строгий
     Clippy, release build и все 42 workspace tests прошли.
+31. M0.6.1 добавил durable root revocation set, root-signed complete authority
+    snapshot и persistent max-seen anti-rollback/equivocation protection.
+    Ticket v4 несёт listener snapshot, session proof — requester snapshot;
+    сетевые `--peer-revocation-file` удалены. Lifecycle дополнен
+    `account-snapshot` и `device-authority-update`. Старый root с уже выданными
+    sequences без durable log отклоняется вместо небезопасной автоматической
+    миграции. Локальный свежий Alice/Bob process smoke подтвердил ticket v4,
+    двусторонний pin revision 1, authorization и direct delivery. Форматирование,
+    строгий Clippy, release build и все 46 workspace tests проходят.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -186,8 +195,9 @@ M0.3 и M0.4 завершены. Смена физической сети LAN �
 resume подтверждает, что durable event set продолжает bounded sync с новым
 transport Endpoint/session binding без повторной передачи подтверждённого
 batch. M0.5.1 завершает локальную authority-модель; сетевое применение
-certificate/revocation завершено в M0.5.2. Автоматическая freshness/completeness
-revocation view и conversation membership остаются открыты.
+certificate/revocation завершено в M0.5.2. Completeness на подписанной revision
+и anti-rollback реализованы в M0.6.1; first-contact global freshness и
+conversation membership остаются открыты.
 
 ## Решения, которые ещё нельзя фиксировать
 

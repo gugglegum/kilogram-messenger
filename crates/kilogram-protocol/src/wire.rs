@@ -1,6 +1,8 @@
 use std::collections::HashSet;
 
-use kilogram_identity::{AccountId, DeviceCertificate, DeviceId, DeviceIdentity};
+use kilogram_identity::{
+    AccountAuthoritySnapshot, AccountId, DeviceCertificate, DeviceId, DeviceIdentity,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::{ConversationId, EventId, ProtocolError, SignedEvent};
@@ -12,9 +14,9 @@ const SYNC_VERSION: u8 = 1;
 const SYNC_DIFF_SIGNATURE_DOMAIN: &[u8] = b"kilogram:sync-diff-signature:v1\0";
 const SYNC_INVENTORY_SIGNATURE_DOMAIN: &[u8] = b"kilogram:sync-inventory-signature:v1\0";
 const SYNC_SESSION_DOMAIN: &[u8] = b"kilogram:sync-session:v1\0";
-const DEVICE_AUTHORIZATION_VERSION: u8 = 1;
+const DEVICE_AUTHORIZATION_VERSION: u8 = 2;
 const DEVICE_AUTHORIZATION_SIGNATURE_DOMAIN: &[u8] =
-    b"kilogram:device-session-authorization-signature:v1\0";
+    b"kilogram:device-session-authorization-signature:v2\0";
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct SyncSessionBinding([u8; 32]);
@@ -33,6 +35,7 @@ struct DeviceSessionAuthorizationContent {
     version: u8,
     session_binding: SyncSessionBinding,
     certificate: DeviceCertificate,
+    authority_snapshot: AccountAuthoritySnapshot,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -45,9 +48,11 @@ impl SignedDeviceSessionAuthorization {
     pub fn sign(
         identity: &DeviceIdentity,
         certificate: DeviceCertificate,
+        authority_snapshot: AccountAuthoritySnapshot,
         session_binding: SyncSessionBinding,
     ) -> Result<Self, ProtocolError> {
         certificate.verify()?;
+        authority_snapshot.verify_for_account(certificate.account_id())?;
         if certificate.device_id() != identity.device_id() {
             return Err(ProtocolError::DeviceAuthorizationSignerMismatch);
         }
@@ -55,6 +60,7 @@ impl SignedDeviceSessionAuthorization {
             version: DEVICE_AUTHORIZATION_VERSION,
             session_binding,
             certificate,
+            authority_snapshot,
         };
         let signature = identity
             .sign(&device_authorization_signing_bytes(&content)?)
@@ -76,6 +82,9 @@ impl SignedDeviceSessionAuthorization {
     pub fn verify_signature(&self) -> Result<(), ProtocolError> {
         validate_device_authorization_version(self.content.version)?;
         self.content.certificate.verify()?;
+        self.content
+            .authority_snapshot
+            .verify_for_account(self.content.certificate.account_id())?;
         self.content.certificate.device_id().verify(
             &device_authorization_signing_bytes(&self.content)?,
             &self.signature,
@@ -85,6 +94,10 @@ impl SignedDeviceSessionAuthorization {
 
     pub fn certificate(&self) -> &DeviceCertificate {
         &self.content.certificate
+    }
+
+    pub fn authority_snapshot(&self) -> &AccountAuthoritySnapshot {
+        &self.content.authority_snapshot
     }
 
     pub fn session_binding(&self) -> SyncSessionBinding {
@@ -647,18 +660,24 @@ mod tests {
         let identity = DeviceIdentity::generate()?;
         let certificate =
             root.issue_device_certificate(identity.device_id(), &DeviceCapability::MESSAGING)?;
+        let authority_snapshot = root.authority_snapshot()?;
         let expected_session = SyncSessionBinding::from_transport_label("listener-a");
         let other_session = SyncSessionBinding::from_transport_label("listener-b");
         assert!(matches!(
             SignedDeviceSessionAuthorization::sign(
                 &DeviceIdentity::generate()?,
                 certificate.clone(),
+                authority_snapshot.clone(),
                 expected_session,
             ),
             Err(ProtocolError::DeviceAuthorizationSignerMismatch)
         ));
-        let authorization =
-            SignedDeviceSessionAuthorization::sign(&identity, certificate, expected_session)?;
+        let authorization = SignedDeviceSessionAuthorization::sign(
+            &identity,
+            certificate,
+            authority_snapshot,
+            expected_session,
+        )?;
 
         let request = ClientRequest::AuthorizeDevice(authorization.clone());
         assert_eq!(ClientRequest::decode(&request.encode()?)?, request);

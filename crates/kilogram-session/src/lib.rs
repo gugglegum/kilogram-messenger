@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
 use kilogram_identity::{
-    AccountId, AuthorizedDevice, DeviceCapability, DeviceId, DeviceIdentity, DeviceRevocation,
-    IdentityError, verify_device_authorization,
+    AccountId, AuthorizedDevice, DeviceCapability, DeviceId, DeviceIdentity, IdentityError,
+    verify_device_authorization_with_snapshot,
 };
 use kilogram_protocol::{
     ConversationId, EventId, MAX_SYNC_EVENTS_PER_BATCH, ProtocolError,
@@ -18,15 +18,14 @@ pub const MAX_SYNC_ROUNDS: usize = 64;
 pub fn authorize_device_session(
     expected_account: AccountId,
     authorization: &SignedDeviceSessionAuthorization,
-    revocations: &[DeviceRevocation],
     required_capabilities: &[DeviceCapability],
     expected_session: SyncSessionBinding,
 ) -> Result<AuthorizedDevice, SessionError> {
     authorization.verify_for_session(expected_session)?;
-    Ok(verify_device_authorization(
+    Ok(verify_device_authorization_with_snapshot(
         expected_account,
         authorization.certificate(),
-        revocations,
+        authorization.authority_snapshot(),
         required_capabilities,
     )?)
 }
@@ -405,25 +404,36 @@ mod tests {
         let requester = DeviceIdentity::generate()?;
         let certificate =
             root.issue_device_certificate(requester.device_id(), &DeviceCapability::MESSAGING)?;
+        let first_snapshot = root.authority_snapshot()?;
         let session = SyncSessionBinding::from_transport_label("authorized-listener");
-        let authorization =
-            SignedDeviceSessionAuthorization::sign(&requester, certificate, session)?;
+        let authorization = SignedDeviceSessionAuthorization::sign(
+            &requester,
+            certificate,
+            first_snapshot,
+            session,
+        )?;
 
         let authorized = authorize_device_session(
             root.account_id(),
             &authorization,
-            &[],
             &DeviceCapability::MESSAGING,
             session,
         )?;
         assert_eq!(authorized.device_id(), requester.device_id());
 
         let revocation = root.revoke_device(requester.device_id())?;
+        let revoked_snapshot = root.authority_snapshot()?;
+        let revoked_authorization = SignedDeviceSessionAuthorization::sign(
+            &requester,
+            authorization.certificate().clone(),
+            revoked_snapshot,
+            session,
+        )?;
+        assert_eq!(revocation.device_id(), requester.device_id());
         assert!(matches!(
             authorize_device_session(
                 root.account_id(),
-                &authorization,
-                &[revocation],
+                &revoked_authorization,
                 &DeviceCapability::MESSAGING,
                 session,
             ),
@@ -434,7 +444,6 @@ mod tests {
             authorize_device_session(
                 root.account_id(),
                 &authorization,
-                &[],
                 &DeviceCapability::MESSAGING,
                 SyncSessionBinding::from_transport_label("other-listener"),
             ),

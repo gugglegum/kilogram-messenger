@@ -13,10 +13,17 @@ use crate::{DeviceId, DeviceState, IdentityError, SECRET_KEY_BYTES, open_new_sec
 
 const ACCOUNT_ROOT_SECRET_FILE: &str = "account-root-secret.key";
 const NEXT_AUTHORITY_SEQUENCE_FILE: &str = "next-authority-sequence";
+const AUTHORITY_LOG_VERSION_FILE: &str = "authority-log-version";
+const AUTHORITY_LOG_VERSION: &str = "1";
+const REVOCATIONS_DIRECTORY: &str = "revocations";
 const DEVICE_CERTIFICATE_FILE: &str = "device-certificate.cert";
+const ACCOUNT_AUTHORITY_SNAPSHOT_FILE: &str = "account-authority.snapshot";
+const PEER_AUTHORITY_DIRECTORY: &str = "peer-authority";
 const AUTHORITY_VERSION: u8 = 1;
 const DEVICE_CERTIFICATE_SIGNATURE_DOMAIN: &[u8] = b"kilogram:device-certificate-signature:v1\0";
 const DEVICE_REVOCATION_SIGNATURE_DOMAIN: &[u8] = b"kilogram:device-revocation-signature:v1\0";
+const AUTHORITY_SNAPSHOT_SIGNATURE_DOMAIN: &[u8] =
+    b"kilogram:account-authority-snapshot-signature:v1\0";
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct AccountId([u8; SECRET_KEY_BYTES]);
@@ -128,6 +135,11 @@ impl AccountRootState {
         let identity = AccountRootIdentity::generate()?;
         file.write_all(&identity.secret_bytes())?;
         file.sync_all()?;
+        write_new_file(
+            &directory.join(AUTHORITY_LOG_VERSION_FILE),
+            format!("{AUTHORITY_LOG_VERSION}\n").as_bytes(),
+        )?;
+        fs::create_dir_all(directory.join(REVOCATIONS_DIRECTORY))?;
         Ok(Self {
             directory,
             identity,
@@ -162,26 +174,44 @@ impl AccountRootState {
         device_id: DeviceId,
         capabilities: &[DeviceCapability],
     ) -> Result<DeviceCertificate, IdentityError> {
+        self.ensure_authority_log_ready()?;
         validate_requested_capabilities(capabilities)?;
         let authority_sequence = self.allocate_authority_sequence()?;
         DeviceCertificate::issue(&self.identity, device_id, authority_sequence, capabilities)
     }
 
     pub fn revoke_device(&self, device_id: DeviceId) -> Result<DeviceRevocation, IdentityError> {
+        self.ensure_authority_log_ready()?;
+        let path = self.revocation_path(device_id);
+        if path.exists() {
+            return Err(IdentityError::DeviceAlreadyRevoked(device_id));
+        }
         let authority_sequence = self.allocate_authority_sequence()?;
-        DeviceRevocation::issue(&self.identity, device_id, authority_sequence)
+        let revocation = DeviceRevocation::issue(&self.identity, device_id, authority_sequence)?;
+        write_new_file(&path, &revocation.encode()?)?;
+        Ok(revocation)
+    }
+
+    pub fn authority_snapshot(&self) -> Result<AccountAuthoritySnapshot, IdentityError> {
+        self.ensure_authority_log_ready()?;
+        let revision = self.read_next_authority_sequence()?;
+        let mut revocations = Vec::new();
+        for entry in fs::read_dir(self.directory.join(REVOCATIONS_DIRECTORY))? {
+            let entry = entry?;
+            if !entry.file_type()?.is_file() {
+                continue;
+            }
+            revocations.push(DeviceRevocation::decode_and_verify(&fs::read(
+                entry.path(),
+            )?)?);
+        }
+        revocations.sort_by_key(|revocation| *revocation.device_id().as_bytes());
+        AccountAuthoritySnapshot::issue(&self.identity, revision, revocations)
     }
 
     fn allocate_authority_sequence(&self) -> Result<u64, IdentityError> {
         let sequence_path = self.directory.join(NEXT_AUTHORITY_SEQUENCE_FILE);
-        let current: u64 = match fs::read_to_string(&sequence_path) {
-            Ok(value) => value
-                .trim()
-                .parse()
-                .map_err(IdentityError::InvalidSequence)?,
-            Err(error) if error.kind() == io::ErrorKind::NotFound => 0,
-            Err(error) => return Err(error.into()),
-        };
+        let current = self.read_next_authority_sequence()?;
         let next = current
             .checked_add(1)
             .ok_or(IdentityError::AuthoritySequenceExhausted)?;
@@ -194,6 +224,56 @@ impl AccountRootState {
         file.sync_all()?;
         Ok(current)
     }
+
+    fn read_next_authority_sequence(&self) -> Result<u64, IdentityError> {
+        match fs::read_to_string(self.directory.join(NEXT_AUTHORITY_SEQUENCE_FILE)) {
+            Ok(value) => value.trim().parse().map_err(IdentityError::InvalidSequence),
+            Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(0),
+            Err(error) => Err(error.into()),
+        }
+    }
+
+    fn ensure_authority_log_ready(&self) -> Result<(), IdentityError> {
+        let version_path = self.directory.join(AUTHORITY_LOG_VERSION_FILE);
+        match fs::read_to_string(&version_path) {
+            Ok(version) if version.trim() == AUTHORITY_LOG_VERSION => {
+                fs::create_dir_all(self.directory.join(REVOCATIONS_DIRECTORY))?;
+                Ok(())
+            }
+            Ok(version) => Err(IdentityError::UnsupportedAuthorityLogVersion(
+                version.trim().to_owned(),
+            )),
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                if self.read_next_authority_sequence()? != 0 {
+                    return Err(IdentityError::LegacyAuthorityState);
+                }
+                write_new_file(
+                    &version_path,
+                    format!("{AUTHORITY_LOG_VERSION}\n").as_bytes(),
+                )?;
+                fs::create_dir_all(self.directory.join(REVOCATIONS_DIRECTORY))?;
+                Ok(())
+            }
+            Err(error) => Err(error.into()),
+        }
+    }
+
+    fn revocation_path(&self, device_id: DeviceId) -> PathBuf {
+        self.directory
+            .join(REVOCATIONS_DIRECTORY)
+            .join(format!("{device_id}.revocation"))
+    }
+}
+
+fn write_new_file(path: &Path, bytes: &[u8]) -> Result<(), IdentityError> {
+    let parent = path.parent().ok_or_else(|| {
+        io::Error::new(io::ErrorKind::InvalidInput, "authority file has no parent")
+    })?;
+    let mut file = tempfile::NamedTempFile::new_in(parent)?;
+    file.write_all(bytes)?;
+    file.as_file().sync_all()?;
+    file.persist_noclobber(path).map_err(|error| error.error)?;
+    Ok(())
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
@@ -408,6 +488,117 @@ fn revocation_signing_bytes(content: &DeviceRevocationContent) -> Result<Vec<u8>
     authority_signing_bytes(DEVICE_REVOCATION_SIGNATURE_DOMAIN, content)
 }
 
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+struct AccountAuthoritySnapshotContent {
+    version: u8,
+    account_id: AccountId,
+    revision: u64,
+    revocations: Vec<DeviceRevocation>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct AccountAuthoritySnapshot {
+    content: AccountAuthoritySnapshotContent,
+    signature: Vec<u8>,
+}
+
+impl AccountAuthoritySnapshot {
+    fn issue(
+        root: &AccountRootIdentity,
+        revision: u64,
+        revocations: Vec<DeviceRevocation>,
+    ) -> Result<Self, IdentityError> {
+        let content = AccountAuthoritySnapshotContent {
+            version: AUTHORITY_VERSION,
+            account_id: root.account_id(),
+            revision,
+            revocations,
+        };
+        validate_authority_snapshot_content(&content)?;
+        let signature = root
+            .sign(&authority_snapshot_signing_bytes(&content)?)
+            .to_vec();
+        Ok(Self { content, signature })
+    }
+
+    pub fn decode_and_verify(bytes: &[u8]) -> Result<Self, IdentityError> {
+        let snapshot: Self = postcard::from_bytes(bytes)?;
+        snapshot.verify()?;
+        Ok(snapshot)
+    }
+
+    pub fn encode(&self) -> Result<Vec<u8>, IdentityError> {
+        self.verify()?;
+        Ok(postcard::to_allocvec(self)?)
+    }
+
+    pub fn verify(&self) -> Result<(), IdentityError> {
+        validate_authority_snapshot_content(&self.content)?;
+        self.content.account_id.verify(
+            &authority_snapshot_signing_bytes(&self.content)?,
+            &self.signature,
+        )
+    }
+
+    pub fn verify_for_account(&self, expected: AccountId) -> Result<(), IdentityError> {
+        self.verify()?;
+        if self.content.account_id != expected {
+            return Err(IdentityError::AccountMismatch {
+                expected,
+                actual: self.content.account_id,
+            });
+        }
+        Ok(())
+    }
+
+    pub fn account_id(&self) -> AccountId {
+        self.content.account_id
+    }
+
+    pub fn revision(&self) -> u64 {
+        self.content.revision
+    }
+
+    pub fn revocations(&self) -> &[DeviceRevocation] {
+        &self.content.revocations
+    }
+}
+
+fn validate_authority_snapshot_content(
+    content: &AccountAuthoritySnapshotContent,
+) -> Result<(), IdentityError> {
+    validate_authority_version(content.version)?;
+    for revocation in &content.revocations {
+        revocation.verify_for_account(content.account_id)?;
+        if revocation.authority_sequence() >= content.revision {
+            return Err(IdentityError::RevocationOutsideSnapshot {
+                revocation_sequence: revocation.authority_sequence(),
+                snapshot_revision: content.revision,
+            });
+        }
+    }
+    for pair in content.revocations.windows(2) {
+        let first = pair[0].device_id();
+        let second = pair[1].device_id();
+        match first.as_bytes().cmp(second.as_bytes()) {
+            std::cmp::Ordering::Less => {}
+            std::cmp::Ordering::Equal => {
+                return Err(IdentityError::DuplicateDeviceRevocation(first));
+            }
+            std::cmp::Ordering::Greater => {
+                return Err(IdentityError::NonCanonicalAuthoritySnapshot);
+            }
+        }
+    }
+    Ok(())
+}
+
+fn authority_snapshot_signing_bytes(
+    content: &AccountAuthoritySnapshotContent,
+) -> Result<Vec<u8>, IdentityError> {
+    authority_signing_bytes(AUTHORITY_SNAPSHOT_SIGNATURE_DOMAIN, content)
+}
+
 fn authority_signing_bytes<T: Serialize>(
     domain: &[u8],
     content: &T,
@@ -478,6 +669,34 @@ pub fn verify_device_authorization(
     })
 }
 
+pub fn verify_device_authorization_with_snapshot(
+    expected_account: AccountId,
+    certificate: &DeviceCertificate,
+    snapshot: &AccountAuthoritySnapshot,
+    required_capabilities: &[DeviceCapability],
+) -> Result<AuthorizedDevice, IdentityError> {
+    snapshot.verify_for_account(expected_account)?;
+    if certificate.authority_sequence() >= snapshot.revision() {
+        return Err(IdentityError::CertificateOutsideSnapshot {
+            certificate_sequence: certificate.authority_sequence(),
+            snapshot_revision: snapshot.revision(),
+        });
+    }
+    verify_device_authorization(
+        expected_account,
+        certificate,
+        snapshot.revocations(),
+        required_capabilities,
+    )
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum AuthoritySnapshotStoreOutcome {
+    Installed,
+    Updated,
+    Unchanged,
+}
+
 impl DeviceState {
     pub fn install_certificate(
         &self,
@@ -524,6 +743,114 @@ impl DeviceState {
         }
         Ok(certificate)
     }
+
+    pub fn install_own_authority_snapshot(
+        &self,
+        snapshot: &AccountAuthoritySnapshot,
+    ) -> Result<AuthoritySnapshotStoreOutcome, IdentityError> {
+        let certificate = self.load_certificate()?;
+        snapshot.verify_for_account(certificate.account_id())?;
+        if certificate.authority_sequence() >= snapshot.revision() {
+            return Err(IdentityError::CertificateOutsideSnapshot {
+                certificate_sequence: certificate.authority_sequence(),
+                snapshot_revision: snapshot.revision(),
+            });
+        }
+        store_authority_snapshot(
+            &self.directory.join(ACCOUNT_AUTHORITY_SNAPSHOT_FILE),
+            snapshot,
+        )
+    }
+
+    pub fn load_own_authority_snapshot(&self) -> Result<AccountAuthoritySnapshot, IdentityError> {
+        let path = self.directory.join(ACCOUNT_AUTHORITY_SNAPSHOT_FILE);
+        let bytes = match fs::read(path) {
+            Ok(bytes) => bytes,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                return Err(IdentityError::AccountAuthoritySnapshotMissing);
+            }
+            Err(error) => return Err(error.into()),
+        };
+        let snapshot = AccountAuthoritySnapshot::decode_and_verify(&bytes)?;
+        let certificate = self.load_certificate()?;
+        snapshot.verify_for_account(certificate.account_id())?;
+        Ok(snapshot)
+    }
+
+    pub fn pin_peer_authority_snapshot(
+        &self,
+        snapshot: &AccountAuthoritySnapshot,
+    ) -> Result<AuthoritySnapshotStoreOutcome, IdentityError> {
+        snapshot.verify()?;
+        let directory = self.directory.join(PEER_AUTHORITY_DIRECTORY);
+        fs::create_dir_all(&directory)?;
+        store_authority_snapshot(
+            &directory.join(format!("{}.snapshot", snapshot.account_id())),
+            snapshot,
+        )
+    }
+
+    pub fn load_peer_authority_snapshot(
+        &self,
+        account_id: AccountId,
+    ) -> Result<AccountAuthoritySnapshot, IdentityError> {
+        let path = self
+            .directory
+            .join(PEER_AUTHORITY_DIRECTORY)
+            .join(format!("{account_id}.snapshot"));
+        let snapshot = AccountAuthoritySnapshot::decode_and_verify(&fs::read(path)?)?;
+        snapshot.verify_for_account(account_id)?;
+        Ok(snapshot)
+    }
+}
+
+fn store_authority_snapshot(
+    path: &Path,
+    snapshot: &AccountAuthoritySnapshot,
+) -> Result<AuthoritySnapshotStoreOutcome, IdentityError> {
+    let encoded = snapshot.encode()?;
+    let outcome = match fs::read(path) {
+        Ok(existing) => {
+            let stored = AccountAuthoritySnapshot::decode_and_verify(&existing)?;
+            if stored.account_id() != snapshot.account_id() {
+                return Err(IdentityError::AccountMismatch {
+                    expected: stored.account_id(),
+                    actual: snapshot.account_id(),
+                });
+            }
+            if snapshot.revision() < stored.revision() {
+                return Err(IdentityError::AuthoritySnapshotRollback {
+                    account_id: snapshot.account_id(),
+                    stored_revision: stored.revision(),
+                    received_revision: snapshot.revision(),
+                });
+            }
+            if snapshot.revision() == stored.revision() {
+                if existing == encoded {
+                    return Ok(AuthoritySnapshotStoreOutcome::Unchanged);
+                }
+                return Err(IdentityError::AuthoritySnapshotEquivocation {
+                    account_id: snapshot.account_id(),
+                    revision: snapshot.revision(),
+                });
+            }
+            AuthoritySnapshotStoreOutcome::Updated
+        }
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            AuthoritySnapshotStoreOutcome::Installed
+        }
+        Err(error) => return Err(error.into()),
+    };
+
+    let parent = path.parent().ok_or_else(|| {
+        io::Error::new(io::ErrorKind::InvalidInput, "snapshot file has no parent")
+    })?;
+    fs::create_dir_all(parent)?;
+    let mut file = tempfile::NamedTempFile::new_in(parent)?;
+    file.write_all(&encoded)?;
+    file.as_file().sync_all()?;
+    file.persist(path).map_err(|error| error.error)?;
+    Ok(outcome)
 }
 
 #[cfg(test)]
@@ -669,6 +996,128 @@ mod tests {
         assert!(matches!(
             AccountRootState::create(root_directory.path()),
             Err(IdentityError::AccountRootAlreadyExists(_))
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn authority_snapshot_is_complete_durable_and_enforces_revocation() -> Result<(), IdentityError>
+    {
+        let root_directory = tempdir()?;
+        let root = AccountRootState::create(root_directory.path())?;
+        let allowed_device = crate::DeviceIdentity::generate()?;
+        let revoked_device = crate::DeviceIdentity::generate()?;
+        let allowed_certificate = root
+            .issue_device_certificate(allowed_device.device_id(), &DeviceCapability::MESSAGING)?;
+        let revoked_certificate = root
+            .issue_device_certificate(revoked_device.device_id(), &DeviceCapability::MESSAGING)?;
+        root.revoke_device(revoked_device.device_id())?;
+        drop(root);
+
+        let reloaded = AccountRootState::load(root_directory.path())?;
+        let snapshot = reloaded.authority_snapshot()?;
+        assert_eq!(snapshot.revision(), 3);
+        assert_eq!(snapshot.revocations().len(), 1);
+        assert_eq!(
+            snapshot.revocations()[0].device_id(),
+            revoked_device.device_id()
+        );
+        verify_device_authorization_with_snapshot(
+            reloaded.account_id(),
+            &allowed_certificate,
+            &snapshot,
+            &DeviceCapability::MESSAGING,
+        )?;
+        assert!(matches!(
+            verify_device_authorization_with_snapshot(
+                reloaded.account_id(),
+                &revoked_certificate,
+                &snapshot,
+                &DeviceCapability::MESSAGING,
+            ),
+            Err(IdentityError::DeviceRevoked(device_id))
+                if device_id == revoked_device.device_id()
+        ));
+        assert!(matches!(
+            reloaded.revoke_device(revoked_device.device_id()),
+            Err(IdentityError::DeviceAlreadyRevoked(device_id))
+                if device_id == revoked_device.device_id()
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn device_snapshot_store_detects_rollback_and_equivocation() -> Result<(), IdentityError> {
+        let root_directory = tempdir()?;
+        let device_directory = tempdir()?;
+        let peer_directory = tempdir()?;
+        let root = AccountRootState::create(root_directory.path())?;
+        let device = DeviceState::load_or_create(device_directory.path())?;
+        let certificate = root.issue_device_certificate(
+            device.identity().device_id(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        device.install_certificate(&certificate)?;
+        let first = root.authority_snapshot()?;
+        assert_eq!(
+            device.install_own_authority_snapshot(&first)?,
+            AuthoritySnapshotStoreOutcome::Installed
+        );
+        assert_eq!(
+            device.install_own_authority_snapshot(&first)?,
+            AuthoritySnapshotStoreOutcome::Unchanged
+        );
+
+        root.issue_device_certificate(
+            crate::DeviceIdentity::generate()?.device_id(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let second = root.authority_snapshot()?;
+        assert_eq!(
+            device.install_own_authority_snapshot(&second)?,
+            AuthoritySnapshotStoreOutcome::Updated
+        );
+        assert!(matches!(
+            device.install_own_authority_snapshot(&first),
+            Err(IdentityError::AuthoritySnapshotRollback { .. })
+        ));
+
+        let peer = DeviceState::load_or_create(peer_directory.path())?;
+        assert_eq!(
+            peer.pin_peer_authority_snapshot(&second)?,
+            AuthoritySnapshotStoreOutcome::Installed
+        );
+        let alternate_revocation = DeviceRevocation::issue(
+            &root.identity,
+            crate::DeviceIdentity::generate()?.device_id(),
+            0,
+        )?;
+        let conflicting = AccountAuthoritySnapshot::issue(
+            &root.identity,
+            second.revision(),
+            vec![alternate_revocation],
+        )?;
+        assert!(matches!(
+            peer.pin_peer_authority_snapshot(&conflicting),
+            Err(IdentityError::AuthoritySnapshotEquivocation { .. })
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn legacy_root_with_prior_operations_cannot_claim_complete_snapshot()
+    -> Result<(), IdentityError> {
+        let root_directory = tempdir()?;
+        let root = AccountRootState::create(root_directory.path())?;
+        root.issue_device_certificate(
+            crate::DeviceIdentity::generate()?.device_id(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        fs::remove_file(root_directory.path().join(AUTHORITY_LOG_VERSION_FILE))?;
+
+        assert!(matches!(
+            root.authority_snapshot(),
+            Err(IdentityError::LegacyAuthorityState)
         ));
         Ok(())
     }

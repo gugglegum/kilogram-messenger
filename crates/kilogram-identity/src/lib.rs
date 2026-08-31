@@ -14,8 +14,9 @@ use thiserror::Error;
 mod account;
 
 pub use account::{
-    AccountId, AccountRootState, AuthorizedDevice, DeviceCapability, DeviceCertificate,
-    DeviceRevocation, verify_device_authorization,
+    AccountAuthoritySnapshot, AccountId, AccountRootState, AuthoritySnapshotStoreOutcome,
+    AuthorizedDevice, DeviceCapability, DeviceCertificate, DeviceRevocation,
+    verify_device_authorization, verify_device_authorization_with_snapshot,
 };
 
 const DEVICE_SECRET_FILE: &str = "device-secret.key";
@@ -284,6 +285,59 @@ pub enum IdentityError {
 
     #[error("account authority sequence is exhausted")]
     AuthoritySequenceExhausted,
+
+    #[error(
+        "legacy Account Root state has authority operations but no complete revocation log; create a fresh M0.6 root or migrate it explicitly"
+    )]
+    LegacyAuthorityState,
+
+    #[error("unsupported account authority log version: {0}")]
+    UnsupportedAuthorityLogVersion(String),
+
+    #[error("device {0} is already permanently revoked")]
+    DeviceAlreadyRevoked(DeviceId),
+
+    #[error("authority snapshot contains revocations in non-canonical order")]
+    NonCanonicalAuthoritySnapshot,
+
+    #[error("authority snapshot contains duplicate revocations for device {0}")]
+    DuplicateDeviceRevocation(DeviceId),
+
+    #[error(
+        "revocation sequence {revocation_sequence} is not covered by authority snapshot revision {snapshot_revision}"
+    )]
+    RevocationOutsideSnapshot {
+        revocation_sequence: u64,
+        snapshot_revision: u64,
+    },
+
+    #[error(
+        "device certificate sequence {certificate_sequence} is not covered by authority snapshot revision {snapshot_revision}"
+    )]
+    CertificateOutsideSnapshot {
+        certificate_sequence: u64,
+        snapshot_revision: u64,
+    },
+
+    #[error("account authority snapshot is not installed for this device")]
+    AccountAuthoritySnapshotMissing,
+
+    #[error(
+        "authority snapshot rollback detected for account {account_id}: stored revision {stored_revision}, received revision {received_revision}"
+    )]
+    AuthoritySnapshotRollback {
+        account_id: AccountId,
+        stored_revision: u64,
+        received_revision: u64,
+    },
+
+    #[error(
+        "conflicting authority snapshots have the same revision {revision} for account {account_id}"
+    )]
+    AuthoritySnapshotEquivocation {
+        account_id: AccountId,
+        revision: u64,
+    },
 }
 
 #[cfg(test)]
