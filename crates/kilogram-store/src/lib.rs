@@ -8,12 +8,13 @@ use std::{
 #[cfg(unix)]
 use std::fs::File;
 
-use kilogram_identity::DeviceId;
-use kilogram_protocol::{ConversationId, EventId, ProtocolError, SignedEvent};
+use kilogram_identity::{ConversationMembershipSnapshot, ConversationScopeId, DeviceId};
+use kilogram_protocol::{AuthorizedEvent, ConversationId, EventId, ProtocolError, SignedEvent};
 use tempfile::NamedTempFile;
 use thiserror::Error;
 
 const EVENT_FILE_EXTENSION: &str = "event";
+const AUTHORIZATION_FILE_EXTENSION: &str = "authorization";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum StoreOutcome {
@@ -25,6 +26,12 @@ pub enum StoreOutcome {
 pub struct StoredEvent {
     pub id: EventId,
     pub event: SignedEvent,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct StoredAuthorizedEvent {
+    pub id: EventId,
+    pub event: AuthorizedEvent,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -71,6 +78,46 @@ impl EventStore {
         }
 
         persist_event(&conversation_directory, &destination, &encoded, event_id)
+    }
+
+    pub fn put_authorized(
+        &self,
+        event: &AuthorizedEvent,
+        membership: &ConversationMembershipSnapshot,
+    ) -> Result<StoreOutcome, StoreError> {
+        event.verify_for_membership(membership)?;
+        let event_id = event.event().event_id()?;
+        let outcome = self.put(event.event())?;
+        let conversation_directory = self.conversation_directory(event.event().conversation_id());
+        let authorization_destination = authorization_path(&conversation_directory, event_id);
+        let encoded = event.encode()?;
+        if authorization_destination.try_exists()? {
+            validate_existing_authorization(&authorization_destination, &encoded, event_id)?;
+        } else {
+            persist_authorization(
+                &conversation_directory,
+                &authorization_destination,
+                &encoded,
+                event_id,
+            )?;
+        }
+        Ok(outcome)
+    }
+
+    pub fn put_authorized_batch(
+        &self,
+        events: &[AuthorizedEvent],
+        membership: &ConversationMembershipSnapshot,
+    ) -> Result<(), StoreError> {
+        for event in events {
+            event.verify_for_membership(membership)?;
+        }
+        let signed_events: Vec<_> = events.iter().map(|event| event.event().clone()).collect();
+        self.put_batch(&signed_events)?;
+        for event in events {
+            self.put_authorized(event, membership)?;
+        }
+        Ok(())
     }
 
     pub fn put_batch(&self, events: &[SignedEvent]) -> Result<(), StoreError> {
@@ -190,6 +237,58 @@ impl EventStore {
         Ok(events)
     }
 
+    pub fn load_authorized_conversation(
+        &self,
+        conversation_id: ConversationId,
+        membership: &ConversationMembershipSnapshot,
+    ) -> Result<Vec<StoredAuthorizedEvent>, StoreError> {
+        membership.verify().map_err(ProtocolError::from)?;
+        if membership.conversation_id() != conversation_id.scope_id() {
+            return Err(StoreError::ConversationMembershipMismatch {
+                conversation_id,
+                membership_conversation_id: membership.conversation_id(),
+            });
+        }
+        let stored_events = self.load_conversation(conversation_id)?;
+        let directory = self.conversation_directory(conversation_id);
+        stored_events
+            .into_iter()
+            .map(|stored| {
+                let path = authorization_path(&directory, stored.id);
+                let encoded = match fs::read(&path) {
+                    Ok(encoded) => encoded,
+                    Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                        return Err(StoreError::EventAuthorizationMissing {
+                            path,
+                            event_id: stored.id,
+                        });
+                    }
+                    Err(error) => return Err(error.into()),
+                };
+                let authorized =
+                    AuthorizedEvent::decode_and_verify_author(&encoded).map_err(|source| {
+                        StoreError::InvalidStoredAuthorization {
+                            path: path.clone(),
+                            source,
+                        }
+                    })?;
+                authorized.verify_for_membership(membership)?;
+                if authorized.event() != &stored.event
+                    || authorized.event().event_id()? != stored.id
+                {
+                    return Err(StoreError::EventAuthorizationMismatch {
+                        path,
+                        event_id: stored.id,
+                    });
+                }
+                Ok(StoredAuthorizedEvent {
+                    id: stored.id,
+                    event: authorized,
+                })
+            })
+            .collect()
+    }
+
     pub fn frontier(&self, conversation_id: ConversationId) -> Result<Vec<EventId>, StoreError> {
         let events = self.load_conversation(conversation_id)?;
         let referenced: HashSet<_> = events
@@ -208,6 +307,18 @@ impl EventStore {
     pub fn inventory(&self, conversation_id: ConversationId) -> Result<Vec<EventId>, StoreError> {
         Ok(self
             .load_conversation(conversation_id)?
+            .into_iter()
+            .map(|stored| stored.id)
+            .collect())
+    }
+
+    pub fn authorized_inventory(
+        &self,
+        conversation_id: ConversationId,
+        membership: &ConversationMembershipSnapshot,
+    ) -> Result<Vec<EventId>, StoreError> {
+        Ok(self
+            .load_authorized_conversation(conversation_id, membership)?
             .into_iter()
             .map(|stored| stored.id)
             .collect())
@@ -284,6 +395,31 @@ impl EventStore {
             .collect()
     }
 
+    pub fn authorized_events_by_id(
+        &self,
+        conversation_id: ConversationId,
+        requested_event_ids: &[EventId],
+        membership: &ConversationMembershipSnapshot,
+    ) -> Result<Vec<AuthorizedEvent>, StoreError> {
+        let available: HashMap<_, _> = self
+            .load_authorized_conversation(conversation_id, membership)?
+            .into_iter()
+            .map(|stored| (stored.id, stored.event))
+            .collect();
+        requested_event_ids
+            .iter()
+            .map(|event_id| {
+                available
+                    .get(event_id)
+                    .cloned()
+                    .ok_or(StoreError::RequestedEventMissing {
+                        conversation_id,
+                        event_id: *event_id,
+                    })
+            })
+            .collect()
+    }
+
     fn conversation_directory(&self, conversation_id: ConversationId) -> PathBuf {
         self.root.join(conversation_id.to_string())
     }
@@ -291,6 +427,47 @@ impl EventStore {
 
 fn event_path(directory: &Path, event_id: EventId) -> PathBuf {
     directory.join(format!("{event_id}.{EVENT_FILE_EXTENSION}"))
+}
+
+fn authorization_path(directory: &Path, event_id: EventId) -> PathBuf {
+    directory.join(format!("{event_id}.{AUTHORIZATION_FILE_EXTENSION}"))
+}
+
+fn validate_existing_authorization(
+    path: &Path,
+    expected: &[u8],
+    event_id: EventId,
+) -> Result<(), StoreError> {
+    if fs::read(path)? == expected {
+        Ok(())
+    } else {
+        Err(StoreError::ImmutableEventAuthorizationConflict {
+            path: path.to_path_buf(),
+            event_id,
+        })
+    }
+}
+
+fn persist_authorization(
+    conversation_directory: &Path,
+    destination: &Path,
+    encoded: &[u8],
+    event_id: EventId,
+) -> Result<(), StoreError> {
+    let mut temporary = NamedTempFile::new_in(conversation_directory)?;
+    temporary.write_all(encoded)?;
+    temporary.as_file().sync_all()?;
+    match temporary.persist_noclobber(destination) {
+        Ok(file) => {
+            file.sync_all()?;
+            sync_directory(conversation_directory)?;
+            Ok(())
+        }
+        Err(error) if error.error.kind() == io::ErrorKind::AlreadyExists => {
+            validate_existing_authorization(destination, encoded, event_id)
+        }
+        Err(error) => Err(error.error.into()),
+    }
 }
 
 fn validate_existing_event(
@@ -360,6 +537,30 @@ pub enum StoreError {
     #[error("event {event_id} conflicts with immutable file {path}")]
     ImmutableEventConflict { path: PathBuf, event_id: EventId },
 
+    #[error("event authorization for {event_id} conflicts with immutable file {path}")]
+    ImmutableEventAuthorizationConflict { path: PathBuf, event_id: EventId },
+
+    #[error("event authorization for {event_id} is missing at {path}")]
+    EventAuthorizationMissing { path: PathBuf, event_id: EventId },
+
+    #[error("stored event authorization at {path} is invalid")]
+    InvalidStoredAuthorization {
+        path: PathBuf,
+        #[source]
+        source: ProtocolError,
+    },
+
+    #[error("stored authorization at {path} does not match event {event_id}")]
+    EventAuthorizationMismatch { path: PathBuf, event_id: EventId },
+
+    #[error(
+        "conversation {conversation_id} does not match membership {membership_conversation_id}"
+    )]
+    ConversationMembershipMismatch {
+        conversation_id: ConversationId,
+        membership_conversation_id: ConversationScopeId,
+    },
+
     #[error(
         "device {author_device_id} sequence {author_sequence} already belongs to event {existing_event_id}; rejected {rejected_event_id}"
     )]
@@ -402,8 +603,8 @@ pub enum StoreError {
 mod tests {
     use std::error::Error;
 
-    use kilogram_identity::DeviceIdentity;
-    use kilogram_protocol::EventPayload;
+    use kilogram_identity::{AccountRootState, DeviceCapability, DeviceIdentity};
+    use kilogram_protocol::{AuthorizedEvent, EventPayload};
     use tempfile::tempdir;
 
     use super::*;
@@ -423,6 +624,62 @@ mod tests {
         assert_eq!(stored.len(), 1);
         assert_eq!(stored[0].id, event_id);
         assert_eq!(stored[0].event, event);
+        Ok(())
+    }
+
+    #[test]
+    fn authorized_event_sidecar_is_required_and_persistent() -> Result<(), Box<dyn Error>> {
+        let directory = tempdir()?;
+        let root_directory = tempdir()?;
+        let store = EventStore::open(directory.path())?;
+        let root = AccountRootState::create(root_directory.path())?;
+        let identity = DeviceIdentity::generate()?;
+        let certificate =
+            root.issue_device_certificate(identity.device_id(), &DeviceCapability::MESSAGING)?;
+        let authority_snapshot = root.authority_snapshot()?;
+        let conversation_id = ConversationId::from_label("authorized-persistence");
+        let membership = root.create_conversation_membership(conversation_id.scope_id(), &[])?;
+        let event = AuthorizedEvent::new(
+            SignedEvent::sign_text(
+                &identity,
+                conversation_id,
+                0,
+                Vec::new(),
+                "hello".to_owned(),
+            )?,
+            certificate,
+            authority_snapshot,
+        )?;
+        let event_id = event.event().event_id()?;
+
+        assert_eq!(
+            store.put_authorized(&event, &membership)?,
+            StoreOutcome::Inserted
+        );
+        let reopened = EventStore::open(directory.path())?;
+        let stored = reopened.load_authorized_conversation(conversation_id, &membership)?;
+        assert_eq!(stored.len(), 1);
+        assert_eq!(stored[0].event, event);
+        let other_conversation = ConversationId::from_label("other-conversation");
+        assert!(matches!(
+            reopened.load_authorized_conversation(other_conversation, &membership),
+            Err(StoreError::ConversationMembershipMismatch {
+                conversation_id: actual,
+                ..
+            }) if actual == other_conversation
+        ));
+
+        fs::remove_file(authorization_path(
+            &reopened.conversation_directory(conversation_id),
+            event_id,
+        ))?;
+        assert!(matches!(
+            reopened.load_authorized_conversation(conversation_id, &membership),
+            Err(StoreError::EventAuthorizationMissing {
+                event_id: missing,
+                ..
+            }) if missing == event_id
+        ));
         Ok(())
     }
 

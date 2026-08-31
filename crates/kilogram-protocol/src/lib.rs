@@ -1,6 +1,10 @@
 use std::{collections::HashSet, fmt};
 
-use kilogram_identity::{DeviceId, DeviceIdentity, IdentityError};
+use kilogram_identity::{
+    AccountAuthoritySnapshot, AccountId, ConversationMembershipSnapshot, ConversationScopeId,
+    DeviceCapability, DeviceCertificate, DeviceId, DeviceIdentity, IdentityError,
+    verify_device_authorization_with_snapshot,
+};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -29,6 +33,10 @@ impl ConversationId {
         hasher.update(CONVERSATION_LABEL_DOMAIN);
         hasher.update(label.as_bytes());
         Self(*hasher.finalize().as_bytes())
+    }
+
+    pub fn scope_id(self) -> ConversationScopeId {
+        ConversationScopeId::from_bytes(self.0)
     }
 }
 
@@ -67,6 +75,86 @@ pub struct EventContent {
 pub struct SignedEvent {
     content: EventContent,
     signature: Vec<u8>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct AuthorizedEvent {
+    event: SignedEvent,
+    author_certificate: DeviceCertificate,
+    author_authority_snapshot: AccountAuthoritySnapshot,
+}
+
+impl AuthorizedEvent {
+    pub fn new(
+        event: SignedEvent,
+        author_certificate: DeviceCertificate,
+        author_authority_snapshot: AccountAuthoritySnapshot,
+    ) -> Result<Self, ProtocolError> {
+        let authorized = Self {
+            event,
+            author_certificate,
+            author_authority_snapshot,
+        };
+        authorized.verify_author()?;
+        Ok(authorized)
+    }
+
+    pub fn decode_and_verify_author(bytes: &[u8]) -> Result<Self, ProtocolError> {
+        let event: Self = postcard::from_bytes(bytes)?;
+        event.verify_author()?;
+        Ok(event)
+    }
+
+    pub fn encode(&self) -> Result<Vec<u8>, ProtocolError> {
+        self.verify_author()?;
+        Ok(postcard::to_allocvec(self)?)
+    }
+
+    pub fn verify_author(&self) -> Result<(), ProtocolError> {
+        self.event.verify()?;
+        if self.author_certificate.device_id() != self.event.author_device_id() {
+            return Err(ProtocolError::EventAuthorCertificateMismatch);
+        }
+        verify_device_authorization_with_snapshot(
+            self.author_certificate.account_id(),
+            &self.author_certificate,
+            &self.author_authority_snapshot,
+            &[DeviceCapability::SignEvents],
+        )?;
+        Ok(())
+    }
+
+    pub fn verify_for_membership(
+        &self,
+        membership: &ConversationMembershipSnapshot,
+    ) -> Result<(), ProtocolError> {
+        self.verify_author()?;
+        if membership.conversation_id() != self.event.conversation_id().scope_id() {
+            return Err(ProtocolError::EventConversationMembershipMismatch);
+        }
+        membership.require_member(self.author_certificate.account_id())?;
+        Ok(())
+    }
+
+    pub fn event(&self) -> &SignedEvent {
+        &self.event
+    }
+
+    pub fn into_event(self) -> SignedEvent {
+        self.event
+    }
+
+    pub fn author_account_id(&self) -> AccountId {
+        self.author_certificate.account_id()
+    }
+
+    pub fn author_certificate(&self) -> &DeviceCertificate {
+        &self.author_certificate
+    }
+
+    pub fn author_authority_snapshot(&self) -> &AccountAuthoritySnapshot {
+        &self.author_authority_snapshot
+    }
 }
 
 impl SignedEvent {
@@ -264,10 +352,19 @@ pub enum ProtocolError {
         expected: DeviceId,
         actual: DeviceId,
     },
+
+    #[error("event author does not match its root-signed device certificate")]
+    EventAuthorCertificateMismatch,
+
+    #[error("event and conversation membership refer to different conversations")]
+    EventConversationMembershipMismatch,
 }
 
 #[cfg(test)]
 mod tests {
+    use kilogram_identity::AccountRootState;
+    use tempfile::tempdir;
+
     use super::*;
 
     #[test]
@@ -348,6 +445,40 @@ mod tests {
                 acknowledged_event_id: sent_id
             }
         );
+        Ok(())
+    }
+
+    #[test]
+    fn authorized_event_rejects_an_account_outside_conversation_membership()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let owner_directory = tempdir()?;
+        let outsider_directory = tempdir()?;
+        let owner = AccountRootState::create(owner_directory.path())?;
+        let outsider = AccountRootState::create(outsider_directory.path())?;
+        let identity = DeviceIdentity::generate()?;
+        let certificate = outsider
+            .issue_device_certificate(identity.device_id(), &DeviceCapability::MESSAGING)?;
+        let authority_snapshot = outsider.authority_snapshot()?;
+        let conversation_id = ConversationId::from_label("membership-rejection");
+        let membership = owner.create_conversation_membership(conversation_id.scope_id(), &[])?;
+        let event = AuthorizedEvent::new(
+            SignedEvent::sign_text(
+                &identity,
+                conversation_id,
+                0,
+                Vec::new(),
+                "not a member".to_owned(),
+            )?,
+            certificate,
+            authority_snapshot,
+        )?;
+
+        assert!(matches!(
+            event.verify_for_membership(&membership),
+            Err(ProtocolError::Identity(
+                IdentityError::AccountNotConversationMember(account_id)
+            )) if account_id == outsider.account_id()
+        ));
         Ok(())
     }
 }

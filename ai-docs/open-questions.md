@@ -6,8 +6,10 @@ M0.5.1 зафиксировал минимальную однопроцессн�
 `AccountId` — Ed25519 public root key, root подписывает device certificate и
 постоянный отзыв конкретного ключа. M0.5.2 применяет certificate и известные
 caller-supplied revocations до сетевых данных. M0.6.1 заменил их полным
-root-signed snapshot и max-seen anti-rollback. Следующие вопросы относятся к
-production recovery/rotation/distribution и не решены этим прототипом.
+root-signed snapshot и max-seen anti-rollback. M0.6.2 добавил owner-signed
+add-only conversation membership и проверку Account/Device proof каждого
+event. Следующие вопросы относятся к production recovery, rotation,
+distribution, removal и key epochs и не решены этим прототипом.
 
 - Какая точная модель угроз: массовое наблюдение, целевой атакующий, злонамеренные
   relay/storage peers, компрометация bootstrap-инфраструктуры, Sybil и eclipse?
@@ -48,8 +50,14 @@ production recovery/rotation/distribution и не решены этим прот
   без центрального сервера? M0.6.1 доказывает completeness на подписанной
   revision и запрещает rollback после получения новой, но first contact может
   получить старый корректно подписанный snapshot.
-- Как связать Account Root authorization с conversation membership и проверять
-  полномочия каждого автора в получаемом history batch?
+- Как доставлять и обнаруживать самый свежий conversation membership без
+  доверия одному peer и без раскрытия social graph? M0.6.2 принимает локально
+  установленный owner-signed add-only snapshot и запрещает rollback после его
+  наблюдения, но не реализует distribution.
+- Как доказать, что импортируемое «историческое» событие было создано до
+  device revocation? Embedded authority snapshot сам по себе не даёт trusted
+  time; нужны epoch-bound/expiring authorizations, ordered witness или другая
+  явная модель исторической валидности.
 - Схема blind mailbox: вычисление адресов, TTL, подтверждение получения,
   повторная доставка и unlinkability.
 - Репликация или erasure coding: сколько случайных узлов и какие гарантии нужны?

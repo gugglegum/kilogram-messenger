@@ -281,6 +281,16 @@ Listener проверяет device-signed session proof, root-signed complete sn
 предыдущего авторства; другой аккаунт или отозванный device отклоняется до
 раскрытия истории.
 
+M0.6.2 добавляет локально доверенный owner-signed add-only conversation
+membership. Delivery и каждый event в sync batch теперь передаются как
+`AuthorizedEvent`: исходный device-signed event, root-signed device certificate
+и полный authority snapshot автора. Получатель принимает event только если
+Account ID сертификата входит в установленный membership, а вся цепочка
+подписей и capabilities валидна. Membership не принимается от peer как часть
+event: он устанавливается отдельно и защищён от rollback/equivocation. Детали и
+границы модели описаны в
+[`RFC-0003`](RFC-0003-conversation-membership.md).
+
 До отправки запрошенных локальных events клиент также проверяет подписанный и
 session-bound diff listener. Подписант обязан совпадать с application device ID
 из connection ticket; одной transport identity или копии старого signed event
@@ -324,7 +334,8 @@ checkpoint корректности: отдельный opaque cursor не до�
 
 M0.5.2 удалил правило known-author в пользу Account Root authorization, а
 M0.6.1 заменил caller-supplied revocation files подписанным snapshot и
-max-seen revision. Однако полный список IDs всё ещё не заменяет
+max-seen revision. M0.6.2 добавил проверку conversation membership и
+Account/Device proof каждого автора истории. Однако полный список IDs всё ещё не заменяет
 compact Merkle/range summary. Переносимый подписанный cursor имеет смысл проектировать
 вместе с compact summary, когда он сможет ссылаться на проверяемый snapshot или
 range frontier и реально избавит от повторной отправки полного inventory.

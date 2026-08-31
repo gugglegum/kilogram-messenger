@@ -15,7 +15,8 @@ mod account;
 
 pub use account::{
     AccountAuthoritySnapshot, AccountId, AccountRootState, AuthoritySnapshotStoreOutcome,
-    AuthorizedDevice, DeviceCapability, DeviceCertificate, DeviceRevocation,
+    AuthorizedDevice, ConversationMembershipSnapshot, ConversationMembershipStoreOutcome,
+    ConversationScopeId, DeviceCapability, DeviceCertificate, DeviceRevocation,
     verify_device_authorization, verify_device_authorization_with_snapshot,
 };
 
@@ -338,6 +339,51 @@ pub enum IdentityError {
         account_id: AccountId,
         revision: u64,
     },
+
+    #[error("conversation membership already exists for {0}")]
+    ConversationMembershipAlreadyExists(ConversationScopeId),
+
+    #[error("conversation membership is missing for {0}")]
+    ConversationMembershipMissing(ConversationScopeId),
+
+    #[error("conversation membership owner is {actual}; expected trusted owner {expected}")]
+    ConversationMembershipOwnerMismatch {
+        expected: AccountId,
+        actual: AccountId,
+    },
+
+    #[error("conversation membership does not contain account {0}")]
+    AccountNotConversationMember(AccountId),
+
+    #[error("conversation membership contains duplicate account {0}")]
+    DuplicateConversationMember(AccountId),
+
+    #[error("conversation membership members are not in canonical order")]
+    NonCanonicalConversationMembers,
+
+    #[error("conversation membership revision is exhausted")]
+    ConversationMembershipRevisionExhausted,
+
+    #[error("conversation membership revision must be greater than zero")]
+    InvalidConversationMembershipRevision,
+
+    #[error(
+        "conversation membership rollback detected for {conversation_id}: stored revision {stored_revision}, received revision {received_revision}"
+    )]
+    ConversationMembershipRollback {
+        conversation_id: ConversationScopeId,
+        stored_revision: u64,
+        received_revision: u64,
+    },
+
+    #[error("conflicting conversation memberships have revision {revision} for {conversation_id}")]
+    ConversationMembershipEquivocation {
+        conversation_id: ConversationScopeId,
+        revision: u64,
+    },
+
+    #[error("conversation membership update for {0} is not add-only")]
+    ConversationMembershipNotAddOnly(ConversationScopeId),
 }
 
 #[cfg(test)]

@@ -16,6 +16,7 @@ const NEXT_AUTHORITY_SEQUENCE_FILE: &str = "next-authority-sequence";
 const AUTHORITY_LOG_VERSION_FILE: &str = "authority-log-version";
 const AUTHORITY_LOG_VERSION: &str = "1";
 const REVOCATIONS_DIRECTORY: &str = "revocations";
+const CONVERSATION_MEMBERSHIPS_DIRECTORY: &str = "conversation-memberships";
 const DEVICE_CERTIFICATE_FILE: &str = "device-certificate.cert";
 const ACCOUNT_AUTHORITY_SNAPSHOT_FILE: &str = "account-authority.snapshot";
 const PEER_AUTHORITY_DIRECTORY: &str = "peer-authority";
@@ -24,6 +25,8 @@ const DEVICE_CERTIFICATE_SIGNATURE_DOMAIN: &[u8] = b"kilogram:device-certificate
 const DEVICE_REVOCATION_SIGNATURE_DOMAIN: &[u8] = b"kilogram:device-revocation-signature:v1\0";
 const AUTHORITY_SNAPSHOT_SIGNATURE_DOMAIN: &[u8] =
     b"kilogram:account-authority-snapshot-signature:v1\0";
+const CONVERSATION_MEMBERSHIP_SIGNATURE_DOMAIN: &[u8] =
+    b"kilogram:conversation-membership-signature:v1\0";
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct AccountId([u8; SECRET_KEY_BYTES]);
@@ -45,6 +48,28 @@ impl AccountId {
         verifying_key
             .verify_strict(message, &signature)
             .map_err(IdentityError::InvalidSignature)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
+pub struct ConversationScopeId([u8; 32]);
+
+impl ConversationScopeId {
+    pub fn from_bytes(bytes: [u8; 32]) -> Self {
+        Self(bytes)
+    }
+
+    pub fn as_bytes(&self) -> &[u8; 32] {
+        &self.0
+    }
+}
+
+impl fmt::Display for ConversationScopeId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for byte in self.0 {
+            write!(formatter, "{byte:02x}")?;
+        }
+        Ok(())
     }
 }
 
@@ -140,6 +165,7 @@ impl AccountRootState {
             format!("{AUTHORITY_LOG_VERSION}\n").as_bytes(),
         )?;
         fs::create_dir_all(directory.join(REVOCATIONS_DIRECTORY))?;
+        fs::create_dir_all(directory.join(CONVERSATION_MEMBERSHIPS_DIRECTORY))?;
         Ok(Self {
             directory,
             identity,
@@ -209,6 +235,77 @@ impl AccountRootState {
         AccountAuthoritySnapshot::issue(&self.identity, revision, revocations)
     }
 
+    pub fn create_conversation_membership(
+        &self,
+        conversation_id: ConversationScopeId,
+        members: &[AccountId],
+    ) -> Result<ConversationMembershipSnapshot, IdentityError> {
+        self.ensure_authority_log_ready()?;
+        let path = self.conversation_membership_path(conversation_id);
+        if path.exists() {
+            return Err(IdentityError::ConversationMembershipAlreadyExists(
+                conversation_id,
+            ));
+        }
+        let snapshot = ConversationMembershipSnapshot::issue(
+            &self.identity,
+            conversation_id,
+            1,
+            canonical_members(self.account_id(), members),
+        )?;
+        write_new_file(&path, &snapshot.encode()?)?;
+        Ok(snapshot)
+    }
+
+    pub fn add_conversation_members(
+        &self,
+        conversation_id: ConversationScopeId,
+        additions: &[AccountId],
+    ) -> Result<ConversationMembershipSnapshot, IdentityError> {
+        self.ensure_authority_log_ready()?;
+        let path = self.conversation_membership_path(conversation_id);
+        let current = self.load_root_conversation_membership(conversation_id)?;
+        current.verify_for_owner(self.account_id())?;
+        let members = canonical_members(
+            current.owner_account_id(),
+            &[current.members(), additions].concat(),
+        );
+        if members == current.members() {
+            return Ok(current);
+        }
+        let revision = current
+            .revision()
+            .checked_add(1)
+            .ok_or(IdentityError::ConversationMembershipRevisionExhausted)?;
+        let updated = ConversationMembershipSnapshot::issue(
+            &self.identity,
+            conversation_id,
+            revision,
+            members,
+        )?;
+        replace_file_atomically(&path, &updated.encode()?)?;
+        Ok(updated)
+    }
+
+    pub fn load_root_conversation_membership(
+        &self,
+        conversation_id: ConversationScopeId,
+    ) -> Result<ConversationMembershipSnapshot, IdentityError> {
+        let path = self.conversation_membership_path(conversation_id);
+        let bytes = match fs::read(path) {
+            Ok(bytes) => bytes,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                return Err(IdentityError::ConversationMembershipMissing(
+                    conversation_id,
+                ));
+            }
+            Err(error) => return Err(error.into()),
+        };
+        let membership = ConversationMembershipSnapshot::decode_and_verify(&bytes)?;
+        membership.verify_for_owner(self.account_id())?;
+        Ok(membership)
+    }
+
     fn allocate_authority_sequence(&self) -> Result<u64, IdentityError> {
         let sequence_path = self.directory.join(NEXT_AUTHORITY_SEQUENCE_FILE);
         let current = self.read_next_authority_sequence()?;
@@ -238,6 +335,7 @@ impl AccountRootState {
         match fs::read_to_string(&version_path) {
             Ok(version) if version.trim() == AUTHORITY_LOG_VERSION => {
                 fs::create_dir_all(self.directory.join(REVOCATIONS_DIRECTORY))?;
+                fs::create_dir_all(self.directory.join(CONVERSATION_MEMBERSHIPS_DIRECTORY))?;
                 Ok(())
             }
             Ok(version) => Err(IdentityError::UnsupportedAuthorityLogVersion(
@@ -252,6 +350,7 @@ impl AccountRootState {
                     format!("{AUTHORITY_LOG_VERSION}\n").as_bytes(),
                 )?;
                 fs::create_dir_all(self.directory.join(REVOCATIONS_DIRECTORY))?;
+                fs::create_dir_all(self.directory.join(CONVERSATION_MEMBERSHIPS_DIRECTORY))?;
                 Ok(())
             }
             Err(error) => Err(error.into()),
@@ -263,6 +362,12 @@ impl AccountRootState {
             .join(REVOCATIONS_DIRECTORY)
             .join(format!("{device_id}.revocation"))
     }
+
+    fn conversation_membership_path(&self, conversation_id: ConversationScopeId) -> PathBuf {
+        self.directory
+            .join(CONVERSATION_MEMBERSHIPS_DIRECTORY)
+            .join(format!("{conversation_id}.membership"))
+    }
 }
 
 fn write_new_file(path: &Path, bytes: &[u8]) -> Result<(), IdentityError> {
@@ -273,6 +378,18 @@ fn write_new_file(path: &Path, bytes: &[u8]) -> Result<(), IdentityError> {
     file.write_all(bytes)?;
     file.as_file().sync_all()?;
     file.persist_noclobber(path).map_err(|error| error.error)?;
+    Ok(())
+}
+
+fn replace_file_atomically(path: &Path, bytes: &[u8]) -> Result<(), IdentityError> {
+    let parent = path.parent().ok_or_else(|| {
+        io::Error::new(io::ErrorKind::InvalidInput, "authority file has no parent")
+    })?;
+    fs::create_dir_all(parent)?;
+    let mut file = tempfile::NamedTempFile::new_in(parent)?;
+    file.write_all(bytes)?;
+    file.as_file().sync_all()?;
+    file.persist(path).map_err(|error| error.error)?;
     Ok(())
 }
 
@@ -599,6 +716,137 @@ fn authority_snapshot_signing_bytes(
     authority_signing_bytes(AUTHORITY_SNAPSHOT_SIGNATURE_DOMAIN, content)
 }
 
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+struct ConversationMembershipSnapshotContent {
+    version: u8,
+    conversation_id: ConversationScopeId,
+    revision: u64,
+    owner_account_id: AccountId,
+    members: Vec<AccountId>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct ConversationMembershipSnapshot {
+    content: ConversationMembershipSnapshotContent,
+    signature: Vec<u8>,
+}
+
+impl ConversationMembershipSnapshot {
+    fn issue(
+        root: &AccountRootIdentity,
+        conversation_id: ConversationScopeId,
+        revision: u64,
+        members: Vec<AccountId>,
+    ) -> Result<Self, IdentityError> {
+        let content = ConversationMembershipSnapshotContent {
+            version: AUTHORITY_VERSION,
+            conversation_id,
+            revision,
+            owner_account_id: root.account_id(),
+            members,
+        };
+        validate_conversation_membership_content(&content)?;
+        let signature = root
+            .sign(&conversation_membership_signing_bytes(&content)?)
+            .to_vec();
+        Ok(Self { content, signature })
+    }
+
+    pub fn decode_and_verify(bytes: &[u8]) -> Result<Self, IdentityError> {
+        let membership: Self = postcard::from_bytes(bytes)?;
+        membership.verify()?;
+        Ok(membership)
+    }
+
+    pub fn encode(&self) -> Result<Vec<u8>, IdentityError> {
+        self.verify()?;
+        Ok(postcard::to_allocvec(self)?)
+    }
+
+    pub fn verify(&self) -> Result<(), IdentityError> {
+        validate_conversation_membership_content(&self.content)?;
+        self.content.owner_account_id.verify(
+            &conversation_membership_signing_bytes(&self.content)?,
+            &self.signature,
+        )
+    }
+
+    pub fn verify_for_owner(&self, expected_owner: AccountId) -> Result<(), IdentityError> {
+        self.verify()?;
+        if self.content.owner_account_id != expected_owner {
+            return Err(IdentityError::ConversationMembershipOwnerMismatch {
+                expected: expected_owner,
+                actual: self.content.owner_account_id,
+            });
+        }
+        Ok(())
+    }
+
+    pub fn require_member(&self, account_id: AccountId) -> Result<(), IdentityError> {
+        self.verify()?;
+        if !self.content.members.contains(&account_id) {
+            return Err(IdentityError::AccountNotConversationMember(account_id));
+        }
+        Ok(())
+    }
+
+    pub fn conversation_id(&self) -> ConversationScopeId {
+        self.content.conversation_id
+    }
+
+    pub fn revision(&self) -> u64 {
+        self.content.revision
+    }
+
+    pub fn owner_account_id(&self) -> AccountId {
+        self.content.owner_account_id
+    }
+
+    pub fn members(&self) -> &[AccountId] {
+        &self.content.members
+    }
+}
+
+fn canonical_members(owner: AccountId, members: &[AccountId]) -> Vec<AccountId> {
+    let mut members = members.to_vec();
+    members.push(owner);
+    members.sort_by_key(|account_id| *account_id.as_bytes());
+    members.dedup();
+    members
+}
+
+fn validate_conversation_membership_content(
+    content: &ConversationMembershipSnapshotContent,
+) -> Result<(), IdentityError> {
+    validate_authority_version(content.version)?;
+    if content.revision == 0 {
+        return Err(IdentityError::InvalidConversationMembershipRevision);
+    }
+    for pair in content.members.windows(2) {
+        match pair[0].as_bytes().cmp(pair[1].as_bytes()) {
+            std::cmp::Ordering::Less => {}
+            std::cmp::Ordering::Equal => {
+                return Err(IdentityError::DuplicateConversationMember(pair[0]));
+            }
+            std::cmp::Ordering::Greater => {
+                return Err(IdentityError::NonCanonicalConversationMembers);
+            }
+        }
+    }
+    if !content.members.contains(&content.owner_account_id) {
+        return Err(IdentityError::AccountNotConversationMember(
+            content.owner_account_id,
+        ));
+    }
+    Ok(())
+}
+
+fn conversation_membership_signing_bytes(
+    content: &ConversationMembershipSnapshotContent,
+) -> Result<Vec<u8>, IdentityError> {
+    authority_signing_bytes(CONVERSATION_MEMBERSHIP_SIGNATURE_DOMAIN, content)
+}
+
 fn authority_signing_bytes<T: Serialize>(
     domain: &[u8],
     content: &T,
@@ -692,6 +940,13 @@ pub fn verify_device_authorization_with_snapshot(
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum AuthoritySnapshotStoreOutcome {
+    Installed,
+    Updated,
+    Unchanged,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ConversationMembershipStoreOutcome {
     Installed,
     Updated,
     Unchanged,
@@ -802,6 +1057,81 @@ impl DeviceState {
         snapshot.verify_for_account(account_id)?;
         Ok(snapshot)
     }
+
+    pub fn install_conversation_membership(
+        &self,
+        membership: &ConversationMembershipSnapshot,
+    ) -> Result<ConversationMembershipStoreOutcome, IdentityError> {
+        membership.verify()?;
+        let directory = self.directory.join(CONVERSATION_MEMBERSHIPS_DIRECTORY);
+        fs::create_dir_all(&directory)?;
+        let path = directory.join(format!("{}.membership", membership.conversation_id()));
+        let encoded = membership.encode()?;
+        let outcome = match fs::read(&path) {
+            Ok(existing) => {
+                let stored = ConversationMembershipSnapshot::decode_and_verify(&existing)?;
+                stored.verify_for_owner(membership.owner_account_id())?;
+                if membership.revision() < stored.revision() {
+                    return Err(IdentityError::ConversationMembershipRollback {
+                        conversation_id: membership.conversation_id(),
+                        stored_revision: stored.revision(),
+                        received_revision: membership.revision(),
+                    });
+                }
+                if membership.revision() == stored.revision() {
+                    if existing == encoded {
+                        return Ok(ConversationMembershipStoreOutcome::Unchanged);
+                    }
+                    return Err(IdentityError::ConversationMembershipEquivocation {
+                        conversation_id: membership.conversation_id(),
+                        revision: membership.revision(),
+                    });
+                }
+                if stored
+                    .members()
+                    .iter()
+                    .any(|account_id| !membership.members().contains(account_id))
+                {
+                    return Err(IdentityError::ConversationMembershipNotAddOnly(
+                        membership.conversation_id(),
+                    ));
+                }
+                ConversationMembershipStoreOutcome::Updated
+            }
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                ConversationMembershipStoreOutcome::Installed
+            }
+            Err(error) => return Err(error.into()),
+        };
+        replace_file_atomically(&path, &encoded)?;
+        Ok(outcome)
+    }
+
+    pub fn load_conversation_membership(
+        &self,
+        conversation_id: ConversationScopeId,
+    ) -> Result<ConversationMembershipSnapshot, IdentityError> {
+        let path = self
+            .directory
+            .join(CONVERSATION_MEMBERSHIPS_DIRECTORY)
+            .join(format!("{conversation_id}.membership"));
+        let bytes = match fs::read(path) {
+            Ok(bytes) => bytes,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                return Err(IdentityError::ConversationMembershipMissing(
+                    conversation_id,
+                ));
+            }
+            Err(error) => return Err(error.into()),
+        };
+        let membership = ConversationMembershipSnapshot::decode_and_verify(&bytes)?;
+        if membership.conversation_id() != conversation_id {
+            return Err(IdentityError::ConversationMembershipMissing(
+                conversation_id,
+            ));
+        }
+        Ok(membership)
+    }
 }
 
 fn store_authority_snapshot(
@@ -842,14 +1172,7 @@ fn store_authority_snapshot(
         Err(error) => return Err(error.into()),
     };
 
-    let parent = path.parent().ok_or_else(|| {
-        io::Error::new(io::ErrorKind::InvalidInput, "snapshot file has no parent")
-    })?;
-    fs::create_dir_all(parent)?;
-    let mut file = tempfile::NamedTempFile::new_in(parent)?;
-    file.write_all(&encoded)?;
-    file.as_file().sync_all()?;
-    file.persist(path).map_err(|error| error.error)?;
+    replace_file_atomically(path, &encoded)?;
     Ok(outcome)
 }
 
@@ -1119,6 +1442,98 @@ mod tests {
             root.authority_snapshot(),
             Err(IdentityError::LegacyAuthorityState)
         ));
+        Ok(())
+    }
+
+    #[test]
+    fn conversation_membership_is_durable_add_only_and_rollback_safe() -> Result<(), IdentityError>
+    {
+        let owner_directory = tempdir()?;
+        let device_directory = tempdir()?;
+        let first_member_directory = tempdir()?;
+        let second_member_directory = tempdir()?;
+        let third_member_directory = tempdir()?;
+        let owner = AccountRootState::create(owner_directory.path())?;
+        let first_member = AccountRootState::create(first_member_directory.path())?;
+        let second_member = AccountRootState::create(second_member_directory.path())?;
+        let third_member = AccountRootState::create(third_member_directory.path())?;
+        let device = DeviceState::load_or_create(device_directory.path())?;
+        let conversation_id = ConversationScopeId::from_bytes([42; 32]);
+
+        assert!(matches!(
+            ConversationMembershipSnapshot::issue(
+                &owner.identity,
+                conversation_id,
+                0,
+                vec![owner.account_id()],
+            ),
+            Err(IdentityError::InvalidConversationMembershipRevision)
+        ));
+
+        let first = owner.create_conversation_membership(
+            conversation_id,
+            &[first_member.account_id(), first_member.account_id()],
+        )?;
+        assert_eq!(first.revision(), 1);
+        assert_eq!(first.owner_account_id(), owner.account_id());
+        assert_eq!(first.members().len(), 2);
+        assert_eq!(
+            device.install_conversation_membership(&first)?,
+            ConversationMembershipStoreOutcome::Installed
+        );
+        assert_eq!(
+            device.install_conversation_membership(&first)?,
+            ConversationMembershipStoreOutcome::Unchanged
+        );
+
+        let second = owner.add_conversation_members(
+            conversation_id,
+            &[second_member.account_id(), first_member.account_id()],
+        )?;
+        assert_eq!(second.revision(), 2);
+        assert_eq!(second.members().len(), 3);
+        assert_eq!(
+            device.install_conversation_membership(&second)?,
+            ConversationMembershipStoreOutcome::Updated
+        );
+        assert!(matches!(
+            device.install_conversation_membership(&first),
+            Err(IdentityError::ConversationMembershipRollback { .. })
+        ));
+
+        let conflicting = ConversationMembershipSnapshot::issue(
+            &owner.identity,
+            conversation_id,
+            second.revision(),
+            canonical_members(
+                owner.account_id(),
+                &[first_member.account_id(), third_member.account_id()],
+            ),
+        )?;
+        assert!(matches!(
+            device.install_conversation_membership(&conflicting),
+            Err(IdentityError::ConversationMembershipEquivocation { .. })
+        ));
+
+        let removing = ConversationMembershipSnapshot::issue(
+            &owner.identity,
+            conversation_id,
+            3,
+            canonical_members(owner.account_id(), &[second_member.account_id()]),
+        )?;
+        assert!(matches!(
+            device.install_conversation_membership(&removing),
+            Err(IdentityError::ConversationMembershipNotAddOnly(id)) if id == conversation_id
+        ));
+
+        drop(owner);
+        let reloaded = AccountRootState::load(owner_directory.path())?
+            .load_root_conversation_membership(conversation_id)?;
+        assert_eq!(reloaded, second);
+        assert_eq!(
+            device.load_conversation_membership(conversation_id)?,
+            second
+        );
         Ok(())
     }
 }

@@ -5,14 +5,14 @@ use kilogram_identity::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{ConversationId, EventId, ProtocolError, SignedEvent};
+use crate::{AuthorizedEvent, ConversationId, EventId, ProtocolError};
 
 pub const MAX_INVENTORY_EVENT_IDS: usize = 4096;
 pub const MAX_SYNC_EVENTS_PER_BATCH: usize = 64;
 
-const SYNC_VERSION: u8 = 1;
-const SYNC_DIFF_SIGNATURE_DOMAIN: &[u8] = b"kilogram:sync-diff-signature:v1\0";
-const SYNC_INVENTORY_SIGNATURE_DOMAIN: &[u8] = b"kilogram:sync-inventory-signature:v1\0";
+const SYNC_VERSION: u8 = 2;
+const SYNC_DIFF_SIGNATURE_DOMAIN: &[u8] = b"kilogram:sync-diff-signature:v2\0";
+const SYNC_INVENTORY_SIGNATURE_DOMAIN: &[u8] = b"kilogram:sync-inventory-signature:v2\0";
 const SYNC_SESSION_DOMAIN: &[u8] = b"kilogram:sync-session:v1\0";
 const DEVICE_AUTHORIZATION_VERSION: u8 = 2;
 const DEVICE_AUTHORIZATION_SIGNATURE_DOMAIN: &[u8] =
@@ -251,13 +251,13 @@ impl SignedSyncInventory {
 pub struct SyncEventBatch {
     version: u8,
     conversation_id: ConversationId,
-    events: Vec<SignedEvent>,
+    events: Vec<AuthorizedEvent>,
 }
 
 impl SyncEventBatch {
     pub fn new(
         conversation_id: ConversationId,
-        events: Vec<SignedEvent>,
+        events: Vec<AuthorizedEvent>,
     ) -> Result<Self, ProtocolError> {
         let batch = Self {
             version: SYNC_VERSION,
@@ -272,11 +272,11 @@ impl SyncEventBatch {
         self.conversation_id
     }
 
-    pub fn events(&self) -> &[SignedEvent] {
+    pub fn events(&self) -> &[AuthorizedEvent] {
         &self.events
     }
 
-    pub fn into_events(self) -> Vec<SignedEvent> {
+    pub fn into_events(self) -> Vec<AuthorizedEvent> {
         self.events
     }
 
@@ -293,7 +293,7 @@ struct SyncDiffContent {
     responder_device_id: DeviceId,
     session_binding: SyncSessionBinding,
     requested_event_ids: Vec<EventId>,
-    events: Vec<SignedEvent>,
+    events: Vec<AuthorizedEvent>,
     more_available: bool,
 }
 
@@ -309,7 +309,7 @@ impl SyncDiff {
         conversation_id: ConversationId,
         session_binding: SyncSessionBinding,
         requested_event_ids: Vec<EventId>,
-        events: Vec<SignedEvent>,
+        events: Vec<AuthorizedEvent>,
         more_available: bool,
     ) -> Result<Self, ProtocolError> {
         let content = SyncDiffContent {
@@ -357,7 +357,7 @@ impl SyncDiff {
         &self.content.requested_event_ids
     }
 
-    pub fn events(&self) -> &[SignedEvent] {
+    pub fn events(&self) -> &[AuthorizedEvent] {
         &self.content.events
     }
 
@@ -491,7 +491,7 @@ impl SyncComplete {
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum ClientRequest {
     AuthorizeDevice(SignedDeviceSessionAuthorization),
-    DeliverEvent(SignedEvent),
+    DeliverEvent(AuthorizedEvent),
     SyncInventory(SignedSyncInventory),
     SyncEvents(SyncEventBatch),
     SyncPause(SyncPause),
@@ -512,7 +512,7 @@ impl ClientRequest {
     fn validate(&self) -> Result<(), ProtocolError> {
         match self {
             Self::AuthorizeDevice(authorization) => authorization.verify_signature(),
-            Self::DeliverEvent(event) => event.verify(),
+            Self::DeliverEvent(event) => event.verify_author(),
             Self::SyncInventory(inventory) => inventory.verify_signature(),
             Self::SyncEvents(batch) => batch.validate(),
             Self::SyncPause(pause) => pause.validate(),
@@ -524,7 +524,7 @@ impl ClientRequest {
 pub enum ServerResponse {
     DeviceAuthorized(DeviceAuthorizationAccepted),
     DeviceAuthorizationRejected(DeviceAuthorizationRejected),
-    EventAcknowledgement(SignedEvent),
+    EventAcknowledgement(Box<AuthorizedEvent>),
     SyncDiff(SyncDiff),
     SyncComplete(SyncComplete),
     SyncRejected(SyncRejected),
@@ -547,7 +547,7 @@ impl ServerResponse {
         match self {
             Self::DeviceAuthorized(accepted) => accepted.validate(),
             Self::DeviceAuthorizationRejected(rejected) => rejected.validate(),
-            Self::EventAcknowledgement(event) => event.verify(),
+            Self::EventAcknowledgement(event) => event.verify_author(),
             Self::SyncDiff(diff) => diff.verify_signature(),
             Self::SyncComplete(complete) => complete.validate(),
             Self::SyncRejected(rejected) => rejected.validate(),
@@ -604,16 +604,16 @@ fn validate_sync_diff_content(content: &SyncDiffContent) -> Result<(), ProtocolE
 
 fn validate_events(
     conversation_id: ConversationId,
-    events: &[SignedEvent],
+    events: &[AuthorizedEvent],
 ) -> Result<(), ProtocolError> {
     if events.len() > MAX_SYNC_EVENTS_PER_BATCH {
         return Err(ProtocolError::TooManySyncEvents(events.len()));
     }
     let mut event_ids = HashSet::with_capacity(events.len());
     for event in events {
-        event.verify()?;
-        let event_id = event.event_id()?;
-        if event.conversation_id() != conversation_id {
+        event.verify_author()?;
+        let event_id = event.event().event_id()?;
+        if event.event().conversation_id() != conversation_id {
             return Err(ProtocolError::SyncConversationMismatch { event_id });
         }
         if !event_ids.insert(event_id) {
@@ -648,10 +648,11 @@ fn validate_version(version: u8) -> Result<(), ProtocolError> {
 
 #[cfg(test)]
 mod tests {
-    use kilogram_identity::{AccountRootState, DeviceCapability};
+    use kilogram_identity::{AccountRootState, DeviceCapability, IdentityError};
     use tempfile::tempdir;
 
     use super::*;
+    use crate::SignedEvent;
 
     #[test]
     fn device_authorization_is_root_and_session_bound() -> Result<(), Box<dyn std::error::Error>> {
@@ -741,13 +742,22 @@ mod tests {
     #[test]
     fn sync_wire_messages_round_trip() -> Result<(), ProtocolError> {
         let identity = DeviceIdentity::generate()?;
+        let root_directory = tempdir().map_err(IdentityError::Io)?;
+        let root = AccountRootState::create(root_directory.path())?;
+        let certificate =
+            root.issue_device_certificate(identity.device_id(), &DeviceCapability::MESSAGING)?;
+        let authority_snapshot = root.authority_snapshot()?;
         let conversation_id = ConversationId::from_label("test");
-        let event = SignedEvent::sign_text(
-            &identity,
-            conversation_id,
-            0,
-            Vec::new(),
-            "hello".to_owned(),
+        let event = AuthorizedEvent::new(
+            SignedEvent::sign_text(
+                &identity,
+                conversation_id,
+                0,
+                Vec::new(),
+                "hello".to_owned(),
+            )?,
+            certificate,
+            authority_snapshot,
         )?;
         let session = SyncSessionBinding::from_transport_label("listener");
         let response = ServerResponse::SyncDiff(SyncDiff::sign(

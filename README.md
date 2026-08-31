@@ -1,19 +1,36 @@
 # Kilogram
 
-Kilogram is an experimental peer-to-peer messenger with end-to-end encryption.
-The protocol is currently at the architecture and transport proof-of-concept
-stage. Do not use it for sensitive communication.
+Kilogram is an experimental peer-to-peer messenger intended to provide
+end-to-end encryption. The protocol is currently at the architecture,
+authorization, and transport proof-of-concept stage. Do not use it for
+sensitive communication.
 
 The project goals and draft architecture are documented in
 [`docs/RFC-0001-core-architecture.md`](docs/RFC-0001-core-architecture.md).
 The implemented Account Root / device authority slice is specified in
 [`docs/RFC-0002-account-device-authority.md`](docs/RFC-0002-account-device-authority.md).
+The implemented M0 conversation authorization slice is specified in
+[`docs/RFC-0003-conversation-membership.md`](docs/RFC-0003-conversation-membership.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.6.1 authority snapshots and anti-rollback — complete
+## Current milestone: M0.6.2 conversation membership — complete
+
+An owner Account Root now signs a complete, canonical, add-only conversation
+membership snapshot. Each participant installs the same public snapshot as a
+local trust anchor. Devices reject older revisions, conflicting state at one
+revision, a different owner, and updates that remove an existing member.
+
+Delivery and synchronization no longer accept a bare `SignedEvent`. An
+`AuthorizedEvent` carries the event, the author's root-signed device
+certificate, and the author's complete authority snapshot. Every receiver
+checks conversation membership, account authority, device capability and
+revocation state, and finally the event signature. Direct delivery also binds
+the author to the already authorized account/device session. The original event
+remains content-addressed; its authorization proof is stored in a mandatory
+immutable sidecar.
 
 The `kilogram-identity` crate now separates an account's Ed25519 root authority
 from per-installation device keys. The root issues capability-bearing device
@@ -34,6 +51,8 @@ as root equivocation. A revoked device is rejected on the authorization stream.
 The development CLI covers the authority lifecycle with `account-create`,
 `account-show`, `account-snapshot`, `device-enroll`,
 `device-authority-update`, `device-authorize`, and `device-revoke`.
+Conversation lifecycle commands are `conversation-create`,
+`conversation-member-add`, and `conversation-membership-install`.
 `listen` now uses `--allow-account`; `connect` and `sync` require
 `--expect-account`. Ticket/session snapshots replace the former manually copied
 `--peer-revocation-file` lists.
@@ -105,13 +124,13 @@ both events from Bob in one sync round, verified them on read, and reconstructed
 the acknowledgement as the single causal frontier.
 
 This remains a development prototype. It does **not** yet implement
-message-level E2EE, encrypted storage, seed phrases/recovery, conversation
-membership, or groups. The Account Root secret, local device secret, and message
+message-level E2EE, encrypted storage, seed phrases/recovery, member removal,
+or production groups. The Account Root secret, local device secret, and message
 bodies are currently stored unencrypted in their explicitly selected
-directories. A snapshot proves a complete revocation set at its signed revision
-and prevents rollback after a newer revision has been observed. The protocol
-does not yet discover whether a newer revision exists at first contact. Do not
-use it for sensitive communication.
+directories. A snapshot proves state at its signed revision and prevents
+rollback after a newer revision has been observed. The protocol does not yet
+discover whether newer account or membership state exists at first contact.
+Do not use it for sensitive communication.
 
 Create separate Account Roots and enroll Alice and Bob devices locally. Preserve
 the two printed Account IDs:
@@ -125,6 +144,23 @@ cargo run -p kilogram-cli -- device-enroll `
 cargo run -p kilogram-cli -- device-enroll `
   --account-dir .tmp/bob-account `
   --state-dir .tmp/bob
+```
+
+Create one membership owned by Alice, then install the same public snapshot on
+both devices:
+
+```powershell
+cargo run -p kilogram-cli -- conversation-create `
+  --account-dir .tmp/alice-account `
+  --conversation m0-local-smoke `
+  --member-account <BOB_ACCOUNT_ID> `
+  --membership-file .tmp/m0-local-smoke-v1.membership
+cargo run -p kilogram-cli -- conversation-membership-install `
+  --state-dir .tmp/alice `
+  --membership-file .tmp/m0-local-smoke-v1.membership
+cargo run -p kilogram-cli -- conversation-membership-install `
+  --state-dir .tmp/bob `
+  --membership-file .tmp/m0-local-smoke-v1.membership
 ```
 
 Start Bob's listener with Alice's Account ID authorized:
@@ -161,8 +197,11 @@ cargo run -p kilogram-cli -- history --state-dir .tmp/bob
 ```
 
 Events are stored as immutable content-addressed files beneath
-`STATE_DIR/events`. The `history` command prints the current causal frontier;
-its file-order output is deterministic but is not yet a chat timeline.
+`STATE_DIR/events`, together with immutable authorization sidecars. The
+`history` command verifies both files against the installed membership and
+prints the current causal frontier; its file-order output is deterministic but
+is not yet a chat timeline. M0.6.1 state without sidecars is intentionally
+rejected because it has no proof of the author's Account ID.
 
 To synchronize missing events, start `listen` again on one device and run:
 

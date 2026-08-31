@@ -244,6 +244,10 @@ M0.6.1 дополнительно реализует:
   доставить подписанное состояние, которое немедленно запретит его же session;
 - CLI export/update lifecycle без `--peer-revocation-file`.
 
+M0.6.2 применяет эту authority chain к каждому автору conversation history.
+Owner-signed membership и `AuthorizedEvent` определены отдельно в
+[`RFC-0003`](RFC-0003-conversation-membership.md).
+
 Не реализовано:
 
 - derivation или восстановление root key из seed-фразы;
@@ -253,8 +257,7 @@ M0.6.1 дополнительно реализует:
   свежей revision при первом контакте;
 - отдельные device encryption/session keys;
 - срок действия и обновление сертификатов;
-- account-authorized membership разговоров и проверка полномочий каждого автора
-  получаемой history;
+- discovery/gossip свежих account и conversation snapshots;
 - окончательный codec и crypto-agility.
 
 ## 10. Сетевой контракт M0.6.1
@@ -299,7 +302,7 @@ root-signed revocation.
 
 ## 11. Следующий срез
 
-M0.6.2 должен определить подписанный conversation membership state и проверять
-полномочия каждого автора получаемой history. Authenticated gossip/witness для
-first-contact freshness, pairwise E2EE, seed/recovery и root rotation остаются
-отдельными срезами.
+M0.6.2 завершил минимальный signed conversation membership и проверку каждого
+автора history. Authenticated gossip/witness для first-contact freshness,
+pairwise E2EE, membership removal/MLS epochs, seed/recovery и root rotation
+остаются отдельными срезами.

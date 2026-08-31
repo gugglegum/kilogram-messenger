@@ -186,6 +186,17 @@ toolchain `1.98.0` для воспроизводимой разработки.
     миграции. Локальный свежий Alice/Bob process smoke подтвердил ticket v4,
     двусторонний pin revision 1, authorization и direct delivery. Форматирование,
     строгий Clippy, release build и все 46 workspace tests проходят.
+32. M0.6.2 добавил owner-signed add-only conversation membership,
+    `AuthorizedEvent` и обязательные immutable authorization sidecars. Sync
+    wire/signature domains повышены до v2, Iroh ALPN — до
+    `kilogram/m0/sync/2`. Unit tests покрывают membership persistence,
+    rollback/equivocation/removal refusal, non-member events и missing sidecar.
+    После обнаружения stale debug EXE финальная проверка использовала явно
+    пересобранный release binary. Локальный direct Alice/Bob smoke создал
+    membership revision 1, установил его на оба отдельных Account ID, доставил
+    Text/Acknowledgement, добавил Alice 3 events и одним sync round передал Bob
+    ровно эти 3. Обе авторизованные истории содержали одинаковые 5 events. Все
+    50 workspace tests проходят.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -196,8 +207,9 @@ resume подтверждает, что durable event set продолжает b
 transport Endpoint/session binding без повторной передачи подтверждённого
 batch. M0.5.1 завершает локальную authority-модель; сетевое применение
 certificate/revocation завершено в M0.5.2. Completeness на подписанной revision
-и anti-rollback реализованы в M0.6.1; first-contact global freshness и
-conversation membership остаются открыты.
+и anti-rollback реализованы в M0.6.1; M0.6.2 закрывает минимальный add-only
+conversation membership и author verification. First-contact global freshness,
+membership removal/epochs и E2EE остаются открыты.
 
 ## Решения, которые ещё нельзя фиксировать
 

@@ -511,12 +511,61 @@ membership и полномочия авторов history batch также ещ�
 Граница среза: completeness доказана на конкретной подписанной revision, а
 rollback — после наблюдения более новой. Узел при первом контакте не может
 узнать, существует ли ещё более свежая revision, пока нет authenticated
-discovery/gossip/witness. Conversation membership ещё отсутствует.
+discovery/gossip/witness.
+
+### M0.6.2 — signed conversation membership и author authorization: выполнено
+
+Реализовано:
+
+- owner Account Root подписывает полный canonical
+  `ConversationMembershipSnapshot`: conversation ID, revision, owner и список
+  Account IDs;
+- owner всегда является участником; M0 membership только расширяется, потому
+  что removal должен быть связан с ordered security event и новой key epoch;
+- device state атомарно устанавливает membership только для собственного
+  member account и отклоняет rollback, equivocation, смену owner и удаление
+  прежнего участника;
+- `AuthorizedEvent` связывает `SignedEvent`, root-signed `DeviceCertificate` и
+  полный `AccountAuthoritySnapshot` автора;
+- delivery, acknowledgement и каждый event history batch проверяются по цепочке
+  membership → account snapshot → device certificate → event signature;
+- direct exchange дополнительно требует совпадение account/device автора с
+  уже авторизованной session;
+- event store сохраняет исходный content-addressed `.event` и обязательный
+  immutable `.authorization` sidecar; history и sync fail-closed при его
+  отсутствии или несовпадении;
+- sync envelopes/signature domains переведены на v2, Iroh ALPN — на
+  `kilogram/m0/sync/2`; ticket остаётся v4, так как его структура не менялась;
+- CLI получил `conversation-create`, `conversation-member-add` и
+  `conversation-membership-install`; `connect`, `listen`, `sync`, `history` и
+  `seed-history` требуют установленный membership.
+
+Проверки:
+
+- identity tests покрывают canonicalization, persistence, add-only update,
+  rollback и equivocation;
+- protocol/session tests отклоняют event аккаунта вне membership;
+- store test требует совпадающий authorization sidecar;
+- прежние multi-round 64+6 и reconnect sync tests работают с полными
+  authorization envelopes;
+- все 50 workspace tests проходят;
+- финальный release direct-Iroh smoke между отдельными Alice/Bob Account IDs
+  создал и установил общий membership, доставил авторизованные
+  Text/Acknowledgement, добавил Alice ещё 3 events, передал Bob только эти 3 за
+  один sync round и подтвердил две одинаковые истории из 5 events.
+
+Граница среза: автоматической миграции старых `.event` без доказательства
+Account ID нет. Один owner/add-only не реализует group governance или removal.
+Embedded authority snapshot доказывает состояние на своей revision, но без
+trusted time/epoch и gossip не исключает forged «historical» event украденным
+отозванным ключом. Полный контракт описан в
+[`../docs/RFC-0003-conversation-membership.md`](../docs/RFC-0003-conversation-membership.md).
 
 ### Следующий этап
 
-1. M0.6.2: подписанный conversation membership state и проверка полномочий
-   каждого автора history batch.
-2. Начать pairwise E2EE spike поверх Account → Device → Session boundary;
-   first-contact authority gossip/witness, seed/recovery и compact Merkle/range
-   summary остаются отдельными направлениями.
+1. Начать pairwise E2EE spike поверх цепочки
+   Membership → Account → Device → Event/Session.
+2. Membership removal и group governance проектировать вместе с ordered
+   security events и MLS epoch.
+3. First-contact authority/membership gossip-witness, seed/recovery и compact
+   Merkle/range summary остаются отдельными направлениями.

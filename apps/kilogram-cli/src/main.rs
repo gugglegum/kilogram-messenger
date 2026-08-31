@@ -13,14 +13,15 @@ use iroh::{
     endpoint::{Connection, RecvStream, SendStream},
 };
 use kilogram_identity::{
-    AccountAuthoritySnapshot, AccountId, AccountRootState, AuthorizedDevice, DeviceCapability,
-    DeviceCertificate, DeviceId, DeviceIdentity, DeviceState,
-    verify_device_authorization_with_snapshot,
+    AccountAuthoritySnapshot, AccountId, AccountRootState, AuthorizedDevice,
+    ConversationMembershipSnapshot, DeviceCapability, DeviceCertificate, DeviceId, DeviceIdentity,
+    DeviceState, verify_device_authorization_with_snapshot,
 };
 use kilogram_protocol::{
-    ClientRequest, ConversationId, DeviceAuthorizationAccepted, DeviceAuthorizationRejected,
-    EventPayload, MAX_INVENTORY_EVENT_IDS, ServerResponse, SignedDeviceSessionAuthorization,
-    SignedEvent, SignedSyncInventory, SyncPause, SyncPaused, SyncSessionBinding,
+    AuthorizedEvent, ClientRequest, ConversationId, DeviceAuthorizationAccepted,
+    DeviceAuthorizationRejected, EventPayload, MAX_INVENTORY_EVENT_IDS, ServerResponse,
+    SignedDeviceSessionAuthorization, SignedEvent, SignedSyncInventory, SyncPause, SyncPaused,
+    SyncSessionBinding,
 };
 use kilogram_session::{
     MAX_SYNC_ROUNDS, ServerInventoryOutcome, SyncClient, SyncServer, authorize_device_session,
@@ -197,6 +198,55 @@ enum Command {
         /// Write the signed snapshot to this new file.
         #[arg(long)]
         snapshot_file: PathBuf,
+    },
+
+    /// Create an owner-signed, add-only conversation membership snapshot.
+    ConversationCreate {
+        /// Directory containing the owner Account Root authority.
+        #[arg(long)]
+        account_dir: PathBuf,
+
+        /// Development-only shared label used to derive a conversation ID.
+        #[arg(long)]
+        conversation: String,
+
+        /// Account to include. Repeat this option for every initial member.
+        #[arg(long = "member-account")]
+        member_accounts: Vec<AccountId>,
+
+        /// Write the signed membership snapshot to this new file.
+        #[arg(long)]
+        membership_file: PathBuf,
+    },
+
+    /// Add accounts to an existing owner-signed conversation membership.
+    ConversationMemberAdd {
+        /// Directory containing the owner Account Root authority.
+        #[arg(long)]
+        account_dir: PathBuf,
+
+        /// Development-only shared label used to derive a conversation ID.
+        #[arg(long)]
+        conversation: String,
+
+        /// Account to add. Repeat this option to add multiple accounts atomically.
+        #[arg(long = "member-account", required = true)]
+        member_accounts: Vec<AccountId>,
+
+        /// Write the updated signed membership snapshot to this new file.
+        #[arg(long)]
+        membership_file: PathBuf,
+    },
+
+    /// Install or update a trusted conversation membership on one device.
+    ConversationMembershipInstall {
+        /// Directory containing this application's development device state.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Owner-signed membership snapshot to install.
+        #[arg(long)]
+        membership_file: PathBuf,
     },
 
     /// Root-sign and install a messaging certificate for one device state.
@@ -478,6 +528,27 @@ async fn main() -> Result<()> {
             account_dir,
             snapshot_file,
         } => export_account_snapshot(account_dir, snapshot_file),
+        Command::ConversationCreate {
+            account_dir,
+            conversation,
+            member_accounts,
+            membership_file,
+        } => create_conversation_membership(
+            account_dir,
+            conversation,
+            member_accounts,
+            membership_file,
+        ),
+        Command::ConversationMemberAdd {
+            account_dir,
+            conversation,
+            member_accounts,
+            membership_file,
+        } => add_conversation_members(account_dir, conversation, member_accounts, membership_file),
+        Command::ConversationMembershipInstall {
+            state_dir,
+            membership_file,
+        } => install_conversation_membership(state_dir, membership_file),
         Command::DeviceEnroll {
             account_dir,
             state_dir,
@@ -579,6 +650,7 @@ async fn listen(
                 &event_store,
                 &mut send,
                 event,
+                authorized_requester.account_id(),
                 authorized_requester.device_id(),
             )
             .await?;
@@ -591,7 +663,7 @@ async fn listen(
                 send,
                 inventory,
                 session_binding,
-                authorized_requester.device_id(),
+                &authorized_requester,
             )
             .await?;
         }
@@ -707,23 +779,58 @@ async fn handle_delivery_request(
     device_state: &DeviceState,
     event_store: &EventStore,
     send: &mut SendStream,
-    event: SignedEvent,
+    event: AuthorizedEvent,
+    allowed_requester_account_id: AccountId,
     allowed_requester_device_id: DeviceId,
 ) -> Result<()> {
+    let signed_event = event.event();
+    let membership = device_state
+        .load_conversation_membership(signed_event.conversation_id().scope_id())
+        .context("load trusted conversation membership for received event")?;
+    let listener_certificate = device_state
+        .load_certificate()
+        .context("load listener certificate for acknowledgement")?;
+    let listener_authority_snapshot = device_state
+        .load_own_authority_snapshot()
+        .context("load listener authority snapshot for acknowledgement")?;
+    require_conversation_participants(
+        &membership,
+        listener_certificate.account_id(),
+        allowed_requester_account_id,
+    )?;
+    event_store
+        .authorized_inventory(signed_event.conversation_id(), &membership)
+        .context("validate existing authorized history before delivery")?;
+    event
+        .verify_for_membership(&membership)
+        .context("verify received event author and conversation membership")?;
     ensure!(
-        event.author_device_id() == allowed_requester_device_id,
+        event.author_account_id() == allowed_requester_account_id,
+        "event author account is not the requester account allowed by this listener"
+    );
+    ensure!(
+        signed_event.author_device_id() == allowed_requester_device_id,
         "event author is not the requester device allowed by this listener"
     );
-    let event_id = event.event_id().context("calculate received event ID")?;
-    let EventPayload::Text { body } = event.payload() else {
+    let event_id = signed_event
+        .event_id()
+        .context("calculate received event ID")?;
+    let EventPayload::Text { body } = signed_event.payload() else {
         bail!("listener expected a text event");
     };
     let received_store_outcome = event_store
-        .put(&event)
+        .put_authorized(&event, &membership)
         .context("persist received event before acknowledging it")?;
     println!("received_event_id={event_id}");
-    println!("received_author_device_id={}", event.author_device_id());
-    println!("received_author_sequence={}", event.author_sequence());
+    println!("received_author_account_id={}", event.author_account_id());
+    println!(
+        "received_author_device_id={}",
+        signed_event.author_device_id()
+    );
+    println!(
+        "received_author_sequence={}",
+        signed_event.author_sequence()
+    );
     println!("received={body}");
     println!("received_store={received_store_outcome:?}");
 
@@ -732,19 +839,30 @@ async fn handle_delivery_request(
         .context("allocate acknowledgement sequence")?;
     let acknowledgement = SignedEvent::sign_acknowledgement(
         device_state.identity(),
-        event.conversation_id(),
+        signed_event.conversation_id(),
         acknowledgement_sequence,
         vec![event_id],
         event_id,
     )
     .context("sign acknowledgement event")?;
+    let acknowledgement = AuthorizedEvent::new(
+        acknowledgement,
+        listener_certificate,
+        listener_authority_snapshot,
+    )
+    .context("attach listener Account Root authorization to acknowledgement")?;
     let acknowledgement_id = acknowledgement
+        .event()
         .event_id()
         .context("calculate acknowledgement event ID")?;
     let acknowledgement_store_outcome = event_store
-        .put(&acknowledgement)
+        .put_authorized(&acknowledgement, &membership)
         .context("persist acknowledgement before sending it")?;
-    write_server_response(send, &ServerResponse::EventAcknowledgement(acknowledgement)).await?;
+    write_server_response(
+        send,
+        &ServerResponse::EventAcknowledgement(Box::new(acknowledgement)),
+    )
+    .await?;
     println!("acknowledgement_event_id={acknowledgement_id}");
     println!("acknowledgement_store={acknowledgement_store_outcome:?}");
     println!("status=acknowledged");
@@ -758,13 +876,26 @@ async fn handle_sync_request(
     first_send: SendStream,
     first_inventory: SignedSyncInventory,
     expected_session: SyncSessionBinding,
-    allowed_requester_device_id: DeviceId,
+    authorized_requester: &AuthorizedDevice,
 ) -> Result<()> {
+    let membership = device_state
+        .load_conversation_membership(first_inventory.conversation_id().scope_id())
+        .context("load trusted conversation membership for synchronization")?;
+    let listener_account_id = device_state
+        .load_certificate()
+        .context("load listener certificate for synchronization")?
+        .account_id();
+    require_conversation_participants(
+        &membership,
+        listener_account_id,
+        authorized_requester.account_id(),
+    )?;
     let server = SyncServer::new(
         device_state.identity(),
         event_store,
         expected_session,
-        allowed_requester_device_id,
+        authorized_requester.device_id(),
+        &membership,
     );
     let mut inventory = first_inventory;
     let mut inventory_send = first_send;
@@ -889,6 +1020,18 @@ async fn connect(
         &DeviceCapability::MESSAGING,
     )
     .context("this device account is not authorized by the connection ticket")?;
+    let conversation_id = ConversationId::from_label(&conversation);
+    let membership = device_state
+        .load_conversation_membership(conversation_id.scope_id())
+        .context("load trusted conversation membership before delivery")?;
+    require_conversation_participants(
+        &membership,
+        requester_certificate.account_id(),
+        authorized_listener.account_id(),
+    )?;
+    event_store
+        .authorized_inventory(conversation_id, &membership)
+        .context("validate existing authorized history before delivery")?;
     let session_binding =
         SyncSessionBinding::from_transport_label(&ticket.endpoint().id.to_string());
 
@@ -929,22 +1072,21 @@ async fn connect(
     authorize_with_listener(
         &connection,
         device_state.identity(),
-        requester_certificate,
-        requester_authority_snapshot,
+        requester_certificate.clone(),
+        requester_authority_snapshot.clone(),
         session_binding,
     )
     .await?;
 
     let (mut send, mut receive) =
         open_bi(&connection, "open delivery bidirectional stream").await?;
-    let conversation_id = ConversationId::from_label(&conversation);
     let author_sequence = device_state
         .allocate_sequence()
         .context("allocate message sequence")?;
     let parents = event_store
         .frontier(conversation_id)
         .context("calculate local conversation frontier")?;
-    let event = SignedEvent::sign_text(
+    let signed_event = SignedEvent::sign_text(
         device_state.identity(),
         conversation_id,
         author_sequence,
@@ -952,30 +1094,47 @@ async fn connect(
         message,
     )
     .context("sign text event")?;
-    let event_id = event.event_id().context("calculate sent event ID")?;
+    let event = AuthorizedEvent::new(
+        signed_event,
+        requester_certificate,
+        requester_authority_snapshot,
+    )
+    .context("attach requester Account Root authorization to sent event")?;
+    let event_id = event
+        .event()
+        .event_id()
+        .context("calculate sent event ID")?;
     let sent_store_outcome = event_store
-        .put(&event)
-        .context("persist signed event before sending it")?;
+        .put_authorized(&event, &membership)
+        .context("persist authorized event before sending it")?;
     write_client_request(&mut send, &ClientRequest::DeliverEvent(event.clone())).await?;
     println!("sent_event_id={event_id}");
     println!("sent_author_sequence={author_sequence}");
     println!("sent_store={sent_store_outcome:?}");
 
     let acknowledgement = match read_server_response(&mut receive).await? {
-        ServerResponse::EventAcknowledgement(event) => event,
+        ServerResponse::EventAcknowledgement(event) => *event,
         _ => bail!("connector expected an event acknowledgement response"),
     };
+    acknowledgement
+        .verify_for_membership(&membership)
+        .context("verify acknowledgement author and conversation membership")?;
     ensure!(
-        acknowledgement.conversation_id() == conversation_id,
+        acknowledgement.author_account_id() == authorized_listener.account_id(),
+        "acknowledgement was authorized by an account not named in the connection ticket"
+    );
+    let acknowledgement_event = acknowledgement.event();
+    ensure!(
+        acknowledgement_event.conversation_id() == conversation_id,
         "acknowledgement belongs to a different conversation"
     );
     ensure!(
-        acknowledgement.author_device_id() == expected_listener_device_id,
+        acknowledgement_event.author_device_id() == expected_listener_device_id,
         "acknowledgement was signed by a device not named in the connection ticket"
     );
     let EventPayload::Acknowledgement {
         acknowledged_event_id,
-    } = acknowledgement.payload()
+    } = acknowledgement_event.payload()
     else {
         bail!("connector expected an acknowledgement event");
     };
@@ -984,16 +1143,23 @@ async fn connect(
         "acknowledgement references a different event"
     );
     ensure!(
-        acknowledgement.parents() == [event_id],
+        acknowledgement_event.parents() == [event_id],
         "acknowledgement does not causally reference the sent event"
     );
     let acknowledgement_store_outcome = event_store
-        .put(&acknowledgement)
+        .put_authorized(&acknowledgement, &membership)
         .context("persist verified acknowledgement")?;
-    println!("acknowledgement_event_id={}", acknowledgement.event_id()?);
+    println!(
+        "acknowledgement_event_id={}",
+        acknowledgement_event.event_id()?
+    );
+    println!(
+        "acknowledgement_author_account_id={}",
+        acknowledgement.author_account_id()
+    );
     println!(
         "acknowledgement_author_device_id={}",
-        acknowledgement.author_device_id()
+        acknowledgement_event.author_device_id()
     );
     println!("acknowledgement_store={acknowledgement_store_outcome:?}");
     println!("status=acknowledged");
@@ -1043,10 +1209,19 @@ async fn sync(
     let session_binding =
         SyncSessionBinding::from_transport_label(&ticket.endpoint().id.to_string());
     let conversation_id = ConversationId::from_label(&conversation);
+    let membership = device_state
+        .load_conversation_membership(conversation_id.scope_id())
+        .context("load trusted conversation membership before synchronization")?;
+    require_conversation_participants(
+        &membership,
+        requester_certificate.account_id(),
+        authorized_listener.account_id(),
+    )?;
     let client = SyncClient::new(
         device_state.identity(),
         &event_store,
         conversation_id,
+        &membership,
         session_binding,
         expected_listener_device_id,
     );
@@ -1370,6 +1545,117 @@ fn export_account_snapshot(account_dir: PathBuf, snapshot_file: PathBuf) -> Resu
     Ok(())
 }
 
+fn create_conversation_membership(
+    account_dir: PathBuf,
+    conversation: String,
+    member_accounts: Vec<AccountId>,
+    membership_file: PathBuf,
+) -> Result<()> {
+    let account = AccountRootState::load(&account_dir)
+        .with_context(|| format!("load Account Root state from {}", account_dir.display()))?;
+    let conversation_id = ConversationId::from_label(&conversation);
+    let membership = account
+        .create_conversation_membership(conversation_id.scope_id(), &member_accounts)
+        .context("create owner-signed conversation membership")?;
+    export_conversation_membership(&membership_file, &membership)?;
+    println!("conversation={conversation}");
+    print_conversation_membership(&membership, &membership_file);
+    println!("status=conversation-created");
+    Ok(())
+}
+
+fn add_conversation_members(
+    account_dir: PathBuf,
+    conversation: String,
+    member_accounts: Vec<AccountId>,
+    membership_file: PathBuf,
+) -> Result<()> {
+    ensure!(
+        !member_accounts.is_empty(),
+        "provide at least one --member-account"
+    );
+    let account = AccountRootState::load(&account_dir)
+        .with_context(|| format!("load Account Root state from {}", account_dir.display()))?;
+    let conversation_id = ConversationId::from_label(&conversation);
+    let membership = account
+        .add_conversation_members(conversation_id.scope_id(), &member_accounts)
+        .context("add accounts to owner-signed conversation membership")?;
+    export_conversation_membership(&membership_file, &membership)?;
+    println!("conversation={conversation}");
+    print_conversation_membership(&membership, &membership_file);
+    println!("status=conversation-members-added");
+    Ok(())
+}
+
+fn install_conversation_membership(state_dir: PathBuf, membership_file: PathBuf) -> Result<()> {
+    let device = DeviceState::load_or_create(&state_dir)
+        .with_context(|| format!("load device state from {}", state_dir.display()))?;
+    let certificate = device
+        .load_certificate()
+        .context("load device certificate before installing conversation membership")?;
+    let bytes = fs::read(&membership_file).with_context(|| {
+        format!(
+            "read conversation membership from {}",
+            membership_file.display()
+        )
+    })?;
+    let membership =
+        ConversationMembershipSnapshot::decode_and_verify(&bytes).with_context(|| {
+            format!(
+                "verify conversation membership from {}",
+                membership_file.display()
+            )
+        })?;
+    membership
+        .require_member(certificate.account_id())
+        .context("this device account is not a member of the conversation")?;
+    let store = device
+        .install_conversation_membership(&membership)
+        .context("install conversation membership and reject rollback or equivocation")?;
+    println!("account_id={}", certificate.account_id());
+    println!("conversation_id={}", membership.conversation_id());
+    println!(
+        "conversation_owner_account_id={}",
+        membership.owner_account_id()
+    );
+    println!("membership_revision={}", membership.revision());
+    println!("membership_store={store:?}");
+    println!("status=conversation-membership-installed");
+    Ok(())
+}
+
+fn export_conversation_membership(
+    path: &Path,
+    membership: &ConversationMembershipSnapshot,
+) -> Result<()> {
+    let encoded = membership.encode()?;
+    write_new_authority_file(path, &encoded)
+        .with_context(|| format!("export conversation membership to {}", path.display()))
+}
+
+fn print_conversation_membership(
+    membership: &ConversationMembershipSnapshot,
+    membership_file: &Path,
+) {
+    println!("conversation_id={}", membership.conversation_id());
+    println!(
+        "conversation_owner_account_id={}",
+        membership.owner_account_id()
+    );
+    println!("membership_revision={}", membership.revision());
+    println!("member_count={}", membership.members().len());
+    println!(
+        "member_accounts={}",
+        membership
+            .members()
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .join(",")
+    );
+    println!("membership_file={}", membership_file.display());
+}
+
 fn enroll_device(
     account_dir: PathBuf,
     state_dir: PathBuf,
@@ -1519,16 +1805,28 @@ fn write_new_authority_file(path: &Path, bytes: &[u8]) -> Result<()> {
 }
 
 fn show_history(state_dir: PathBuf, conversation: String) -> Result<()> {
+    let device_state = DeviceState::load_or_create(&state_dir)
+        .with_context(|| format!("load device state from {}", state_dir.display()))?;
+    let certificate = device_state
+        .load_certificate()
+        .context("load device certificate before reading history")?;
     let event_store = open_event_store(&state_dir)?;
     let conversation_id = ConversationId::from_label(&conversation);
+    let membership = device_state
+        .load_conversation_membership(conversation_id.scope_id())
+        .context("load trusted conversation membership before reading history")?;
+    membership
+        .require_member(certificate.account_id())
+        .context("this device account is not a member of the conversation")?;
     let events = event_store
-        .load_conversation(conversation_id)
-        .context("load and verify local conversation history")?;
+        .load_authorized_conversation(conversation_id, &membership)
+        .context("load and verify authorized local conversation history")?;
     let frontier = event_store
         .frontier(conversation_id)
         .context("calculate local conversation frontier")?;
 
     println!("conversation_id={conversation_id}");
+    println!("membership_revision={}", membership.revision());
     println!("event_count={}", events.len());
     println!("frontier_count={}", frontier.len());
     println!(
@@ -1540,7 +1838,8 @@ fn show_history(state_dir: PathBuf, conversation: String) -> Result<()> {
             .join(",")
     );
     for stored in events {
-        let event = stored.event;
+        let author_account_id = stored.event.author_account_id();
+        let event = stored.event.into_event();
         let parents = event
             .parents()
             .iter()
@@ -1549,7 +1848,7 @@ fn show_history(state_dir: PathBuf, conversation: String) -> Result<()> {
             .join(",");
         match event.payload() {
             EventPayload::Text { body } => println!(
-                "event_id={} author_device_id={} author_sequence={} parents=[{parents}] payload=text body={body:?}",
+                "event_id={} author_account_id={author_account_id} author_device_id={} author_sequence={} parents=[{parents}] payload=text body={body:?}",
                 stored.id,
                 event.author_device_id(),
                 event.author_sequence()
@@ -1557,7 +1856,7 @@ fn show_history(state_dir: PathBuf, conversation: String) -> Result<()> {
             EventPayload::Acknowledgement {
                 acknowledged_event_id,
             } => println!(
-                "event_id={} author_device_id={} author_sequence={} parents=[{parents}] payload=acknowledgement acknowledged_event_id={acknowledged_event_id}",
+                "event_id={} author_account_id={author_account_id} author_device_id={} author_sequence={} parents=[{parents}] payload=acknowledgement acknowledged_event_id={acknowledged_event_id}",
                 stored.id,
                 event.author_device_id(),
                 event.author_sequence()
@@ -1576,11 +1875,23 @@ fn seed_history(
     ensure!(count > 0, "--count must be greater than zero");
     let device_state = DeviceState::load_or_create(&state_dir)
         .with_context(|| format!("load device state from {}", state_dir.display()))?;
+    let certificate = device_state
+        .load_certificate()
+        .context("load device certificate before seeding history")?;
+    let authority_snapshot = device_state
+        .load_own_authority_snapshot()
+        .context("load device authority snapshot before seeding history")?;
     let event_store = open_event_store(&state_dir)?;
     let conversation_id = ConversationId::from_label(&conversation);
+    let membership = device_state
+        .load_conversation_membership(conversation_id.scope_id())
+        .context("load trusted conversation membership before seeding history")?;
+    membership
+        .require_member(certificate.account_id())
+        .context("this device account is not a member of the conversation")?;
     let existing_count = event_store
-        .inventory(conversation_id)
-        .context("load current inventory before seeding history")?
+        .authorized_inventory(conversation_id, &membership)
+        .context("load current authorized inventory before seeding history")?
         .len();
     ensure!(
         existing_count.saturating_add(count) <= MAX_INVENTORY_EVENT_IDS,
@@ -1609,11 +1920,14 @@ fn seed_history(
         first_event_id.get_or_insert(event_id);
         last_event_id = Some(event_id);
         parents = vec![event_id];
-        events.push(event);
+        events.push(
+            AuthorizedEvent::new(event, certificate.clone(), authority_snapshot.clone())
+                .context("attach Account Root authorization to seeded event")?,
+        );
     }
     event_store
-        .put_batch(&events)
-        .context("persist seeded history events")?;
+        .put_authorized_batch(&events, &membership)
+        .context("persist authorized seeded history events")?;
 
     println!("conversation_id={conversation_id}");
     println!("device_id={}", device_state.identity().device_id());
@@ -1632,6 +1946,20 @@ fn seed_history(
 fn open_event_store(state_dir: &Path) -> Result<EventStore> {
     let path = state_dir.join(EVENT_STORE_DIRECTORY);
     EventStore::open(&path).with_context(|| format!("open event store at {}", path.display()))
+}
+
+fn require_conversation_participants(
+    membership: &ConversationMembershipSnapshot,
+    local_account_id: AccountId,
+    peer_account_id: AccountId,
+) -> Result<()> {
+    membership
+        .require_member(local_account_id)
+        .context("local account is not a member of the conversation")?;
+    membership
+        .require_member(peer_account_id)
+        .context("peer account is not a member of the conversation")?;
+    Ok(())
 }
 
 #[cfg(test)]
@@ -1657,8 +1985,17 @@ mod tests {
     #[test]
     fn seeded_history_is_signed_chained_and_persistent() -> Result<()> {
         let directory = tempfile::tempdir()?;
+        let account_dir = directory.path().join("account");
         let state_dir = directory.path().join("seeded-device");
         let conversation = "seed-history-test";
+        create_account(account_dir.clone())?;
+        enroll_device(account_dir.clone(), state_dir.clone(), None)?;
+        let account = AccountRootState::load(&account_dir)?;
+        let membership = account.create_conversation_membership(
+            ConversationId::from_label(conversation).scope_id(),
+            &[],
+        )?;
+        DeviceState::load_or_create(&state_dir)?.install_conversation_membership(&membership)?;
         seed_history(
             state_dir.clone(),
             conversation.to_owned(),
@@ -1668,10 +2005,14 @@ mod tests {
 
         let store = open_event_store(&state_dir)?;
         let conversation_id = ConversationId::from_label(conversation);
-        let events = store.load_conversation(conversation_id)?;
+        let events = store.load_authorized_conversation(conversation_id, &membership)?;
         assert_eq!(events.len(), 3);
         assert_eq!(store.frontier(conversation_id)?.len(), 1);
-        assert!(events.iter().all(|stored| stored.event.verify().is_ok()));
+        assert!(
+            events
+                .iter()
+                .all(|stored| stored.event.verify_for_membership(&membership).is_ok())
+        );
         Ok(())
     }
 

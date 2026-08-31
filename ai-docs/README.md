@@ -63,8 +63,14 @@ trusted revocations через `--peer-revocation-file`; revoked device откл
 snapshot в ticket v4/session proof. Устройства атомарно сохраняют max-seen
 revision каждого account и отклоняют rollback/equivocation. Snapshot доказывает
 completeness на своей revision, но не global freshness при первом контакте.
+M0.6.2 добавил owner-signed add-only conversation membership и обязательный
+`AuthorizedEvent` с certificate/snapshot автора. Delivery, acknowledgement,
+history и каждый sync event проверяют цепочку membership → account → device →
+event; store требует immutable authorization sidecar. Локальный Alice/Bob Iroh
+smoke получил две одинаковые авторизованные истории.
 Прикладное E2EE, seed/recovery, защищённое хранение root/local history,
-production-grade sync summaries и группы ещё не реализованы.
+production-grade sync summaries, membership removal и группы ещё не
+реализованы.
 
 ## Цель продукта
 
@@ -117,16 +123,18 @@ production-grade sync summaries и группы ещё не реализован
 
 ## План ближайших работ
 
-1. Реализовать conversation membership и проверку полномочий каждого автора
-   истории; отдельно спроектировать gossip/witness для first-contact freshness.
-2. Спроектировать seed/recovery authority, protected root storage, root
+1. Начать pairwise E2EE spike поверх реализованной цепочки
+   Membership → Account → Device → Event/Session.
+2. Спроектировать membership removal вместе с ordered security log и MLS epoch;
+   отдельно — gossip/witness для first-contact freshness.
+3. Спроектировать seed/recovery authority, protected root storage, root
    rotation и конфликтующие authority operations.
-3. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
-4. Спроектировать финальный wire format подписанного события и алгоритм
+4. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
+5. Спроектировать финальный wire format подписанного события и алгоритм
    линеаризации.
-5. Спроектировать compact Merkle/range summary и переносимый signed cursor.
-6. Добавить pairwise E2EE и мультиустройство, затем небольшие MLS-группы.
-7. Перед публичным выпуском провести независимый криптографический аудит.
+6. Спроектировать compact Merkle/range summary и переносимый signed cursor.
+7. Добавить мультиустройство и затем небольшие MLS-группы.
+8. Перед публичным выпуском провести независимый криптографический аудит.
 
 ## Навигация
 
@@ -139,5 +147,7 @@ production-grade sync summaries и группы ещё не реализован
   черновик основного RFC.
 - [`../docs/RFC-0002-account-device-authority.md`](../docs/RFC-0002-account-device-authority.md) —
   реализованный M0.6.1-контракт Account Root, snapshot, device и session authority.
+- [`../docs/RFC-0003-conversation-membership.md`](../docs/RFC-0003-conversation-membership.md) —
+  реализованный M0.6.2-контракт membership и авторизации событий.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.
