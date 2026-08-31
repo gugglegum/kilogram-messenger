@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use kilogram_identity::{DeviceId, DeviceIdentity};
+use kilogram_identity::{AccountId, DeviceCertificate, DeviceId, DeviceIdentity};
 use serde::{Deserialize, Serialize};
 
 use crate::{ConversationId, EventId, ProtocolError, SignedEvent};
@@ -12,6 +12,9 @@ const SYNC_VERSION: u8 = 1;
 const SYNC_DIFF_SIGNATURE_DOMAIN: &[u8] = b"kilogram:sync-diff-signature:v1\0";
 const SYNC_INVENTORY_SIGNATURE_DOMAIN: &[u8] = b"kilogram:sync-inventory-signature:v1\0";
 const SYNC_SESSION_DOMAIN: &[u8] = b"kilogram:sync-session:v1\0";
+const DEVICE_AUTHORIZATION_VERSION: u8 = 1;
+const DEVICE_AUTHORIZATION_SIGNATURE_DOMAIN: &[u8] =
+    b"kilogram:device-session-authorization-signature:v1\0";
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct SyncSessionBinding([u8; 32]);
@@ -22,6 +25,145 @@ impl SyncSessionBinding {
         hasher.update(SYNC_SESSION_DOMAIN);
         hasher.update(label.as_bytes());
         Self(*hasher.finalize().as_bytes())
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+struct DeviceSessionAuthorizationContent {
+    version: u8,
+    session_binding: SyncSessionBinding,
+    certificate: DeviceCertificate,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct SignedDeviceSessionAuthorization {
+    content: DeviceSessionAuthorizationContent,
+    signature: Vec<u8>,
+}
+
+impl SignedDeviceSessionAuthorization {
+    pub fn sign(
+        identity: &DeviceIdentity,
+        certificate: DeviceCertificate,
+        session_binding: SyncSessionBinding,
+    ) -> Result<Self, ProtocolError> {
+        certificate.verify()?;
+        if certificate.device_id() != identity.device_id() {
+            return Err(ProtocolError::DeviceAuthorizationSignerMismatch);
+        }
+        let content = DeviceSessionAuthorizationContent {
+            version: DEVICE_AUTHORIZATION_VERSION,
+            session_binding,
+            certificate,
+        };
+        let signature = identity
+            .sign(&device_authorization_signing_bytes(&content)?)
+            .to_vec();
+        Ok(Self { content, signature })
+    }
+
+    pub fn verify_for_session(
+        &self,
+        expected_session: SyncSessionBinding,
+    ) -> Result<(), ProtocolError> {
+        self.verify_signature()?;
+        if self.content.session_binding != expected_session {
+            return Err(ProtocolError::DeviceAuthorizationSessionMismatch);
+        }
+        Ok(())
+    }
+
+    pub fn verify_signature(&self) -> Result<(), ProtocolError> {
+        validate_device_authorization_version(self.content.version)?;
+        self.content.certificate.verify()?;
+        self.content.certificate.device_id().verify(
+            &device_authorization_signing_bytes(&self.content)?,
+            &self.signature,
+        )?;
+        Ok(())
+    }
+
+    pub fn certificate(&self) -> &DeviceCertificate {
+        &self.content.certificate
+    }
+
+    pub fn session_binding(&self) -> SyncSessionBinding {
+        self.content.session_binding
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct DeviceAuthorizationAccepted {
+    version: u8,
+    session_binding: SyncSessionBinding,
+    account_id: AccountId,
+    device_id: DeviceId,
+}
+
+impl DeviceAuthorizationAccepted {
+    pub fn new(
+        session_binding: SyncSessionBinding,
+        account_id: AccountId,
+        device_id: DeviceId,
+    ) -> Self {
+        Self {
+            version: DEVICE_AUTHORIZATION_VERSION,
+            session_binding,
+            account_id,
+            device_id,
+        }
+    }
+
+    pub fn verify(
+        &self,
+        expected_session: SyncSessionBinding,
+        expected_account: AccountId,
+        expected_device: DeviceId,
+    ) -> Result<(), ProtocolError> {
+        self.validate()?;
+        if self.session_binding != expected_session {
+            return Err(ProtocolError::DeviceAuthorizationSessionMismatch);
+        }
+        if self.account_id != expected_account {
+            return Err(ProtocolError::DeviceAuthorizationAccountMismatch {
+                expected: expected_account,
+                actual: self.account_id,
+            });
+        }
+        if self.device_id != expected_device {
+            return Err(ProtocolError::DeviceAuthorizationDeviceMismatch {
+                expected: expected_device,
+                actual: self.device_id,
+            });
+        }
+        Ok(())
+    }
+
+    fn validate(&self) -> Result<(), ProtocolError> {
+        validate_device_authorization_version(self.version)
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct DeviceAuthorizationRejected {
+    version: u8,
+}
+
+impl DeviceAuthorizationRejected {
+    pub fn new() -> Self {
+        Self {
+            version: DEVICE_AUTHORIZATION_VERSION,
+        }
+    }
+
+    fn validate(&self) -> Result<(), ProtocolError> {
+        validate_device_authorization_version(self.version)
+    }
+}
+
+impl Default for DeviceAuthorizationRejected {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -268,7 +410,6 @@ impl SyncPaused {
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum SyncRejectionReason {
     RequesterNotAllowed,
-    RequesterNotKnown,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -336,6 +477,7 @@ impl SyncComplete {
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum ClientRequest {
+    AuthorizeDevice(SignedDeviceSessionAuthorization),
     DeliverEvent(SignedEvent),
     SyncInventory(SignedSyncInventory),
     SyncEvents(SyncEventBatch),
@@ -356,6 +498,7 @@ impl ClientRequest {
 
     fn validate(&self) -> Result<(), ProtocolError> {
         match self {
+            Self::AuthorizeDevice(authorization) => authorization.verify_signature(),
             Self::DeliverEvent(event) => event.verify(),
             Self::SyncInventory(inventory) => inventory.verify_signature(),
             Self::SyncEvents(batch) => batch.validate(),
@@ -366,6 +509,8 @@ impl ClientRequest {
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum ServerResponse {
+    DeviceAuthorized(DeviceAuthorizationAccepted),
+    DeviceAuthorizationRejected(DeviceAuthorizationRejected),
     EventAcknowledgement(SignedEvent),
     SyncDiff(SyncDiff),
     SyncComplete(SyncComplete),
@@ -387,6 +532,8 @@ impl ServerResponse {
 
     fn validate(&self) -> Result<(), ProtocolError> {
         match self {
+            Self::DeviceAuthorized(accepted) => accepted.validate(),
+            Self::DeviceAuthorizationRejected(rejected) => rejected.validate(),
             Self::EventAcknowledgement(event) => event.verify(),
             Self::SyncDiff(diff) => diff.verify_signature(),
             Self::SyncComplete(complete) => complete.validate(),
@@ -394,6 +541,25 @@ impl ServerResponse {
             Self::SyncPaused(paused) => paused.validate(),
         }
     }
+}
+
+fn device_authorization_signing_bytes(
+    content: &DeviceSessionAuthorizationContent,
+) -> Result<Vec<u8>, ProtocolError> {
+    let encoded = postcard::to_allocvec(content)?;
+    let mut bytes = Vec::with_capacity(DEVICE_AUTHORIZATION_SIGNATURE_DOMAIN.len() + encoded.len());
+    bytes.extend_from_slice(DEVICE_AUTHORIZATION_SIGNATURE_DOMAIN);
+    bytes.extend_from_slice(&encoded);
+    Ok(bytes)
+}
+
+fn validate_device_authorization_version(version: u8) -> Result<(), ProtocolError> {
+    if version != DEVICE_AUTHORIZATION_VERSION {
+        return Err(ProtocolError::UnsupportedDeviceAuthorizationVersion(
+            version,
+        ));
+    }
+    Ok(())
 }
 
 fn inventory_signing_bytes(content: &SyncInventoryContent) -> Result<Vec<u8>, ProtocolError> {
@@ -469,7 +635,53 @@ fn validate_version(version: u8) -> Result<(), ProtocolError> {
 
 #[cfg(test)]
 mod tests {
+    use kilogram_identity::{AccountRootState, DeviceCapability};
+    use tempfile::tempdir;
+
     use super::*;
+
+    #[test]
+    fn device_authorization_is_root_and_session_bound() -> Result<(), Box<dyn std::error::Error>> {
+        let root_directory = tempdir()?;
+        let root = AccountRootState::create(root_directory.path())?;
+        let identity = DeviceIdentity::generate()?;
+        let certificate =
+            root.issue_device_certificate(identity.device_id(), &DeviceCapability::MESSAGING)?;
+        let expected_session = SyncSessionBinding::from_transport_label("listener-a");
+        let other_session = SyncSessionBinding::from_transport_label("listener-b");
+        assert!(matches!(
+            SignedDeviceSessionAuthorization::sign(
+                &DeviceIdentity::generate()?,
+                certificate.clone(),
+                expected_session,
+            ),
+            Err(ProtocolError::DeviceAuthorizationSignerMismatch)
+        ));
+        let authorization =
+            SignedDeviceSessionAuthorization::sign(&identity, certificate, expected_session)?;
+
+        let request = ClientRequest::AuthorizeDevice(authorization.clone());
+        assert_eq!(ClientRequest::decode(&request.encode()?)?, request);
+        authorization.verify_for_session(expected_session)?;
+        assert!(matches!(
+            authorization.verify_for_session(other_session),
+            Err(ProtocolError::DeviceAuthorizationSessionMismatch)
+        ));
+
+        let accepted = DeviceAuthorizationAccepted::new(
+            expected_session,
+            root.account_id(),
+            identity.device_id(),
+        );
+        accepted.verify(expected_session, root.account_id(), identity.device_id())?;
+        let response = ServerResponse::DeviceAuthorized(accepted);
+        assert_eq!(ServerResponse::decode(&response.encode()?)?, response);
+
+        let rejected =
+            ServerResponse::DeviceAuthorizationRejected(DeviceAuthorizationRejected::new());
+        assert_eq!(ServerResponse::decode(&rejected.encode()?)?, rejected);
+        Ok(())
+    }
 
     #[test]
     fn signed_inventory_is_bound_to_device_and_session() -> Result<(), ProtocolError> {
@@ -548,7 +760,7 @@ mod tests {
 
         let rejected = ServerResponse::SyncRejected(SyncRejected::new(
             conversation_id,
-            SyncRejectionReason::RequesterNotKnown,
+            SyncRejectionReason::RequesterNotAllowed,
         ));
         assert_eq!(ServerResponse::decode(&rejected.encode()?)?, rejected);
 

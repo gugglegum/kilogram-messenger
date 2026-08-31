@@ -13,7 +13,7 @@ The current two-network Windows procedure is in
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.5.1 Account Root → Device authority — complete
+## Current milestone: M0.5.2 account-authorized sessions — complete
 
 The `kilogram-identity` crate now separates an account's Ed25519 root authority
 from per-installation device keys. The root issues capability-bearing device
@@ -22,12 +22,18 @@ certificate to the expected Account ID, checks the required `sign-events` and
 `sync-history` capabilities, and rejects a revoked device key even if a later
 certificate is issued for it.
 
-The development CLI covers the complete local lifecycle with `account-create`,
-`account-show`, `device-enroll`, `device-authorize`, and `device-revoke`. The
-root secret is currently plaintext in a separately selected development
-directory: seed recovery, protected key storage, distributed revocation state,
-and network/session enforcement are not implemented yet. M0.5.2 will integrate
-the public certificate and revocation view into delivery and synchronization.
+Ticket v3 embeds the listener's root-signed certificate and authorizes one
+requester Account ID rather than one hard-coded device. Before any event or
+inventory is sent, the requester presents its certificate and a device-signed
+proof bound to the listener's current Endpoint ID. Both peers validate the
+expected Account ID, certificate capabilities, and their caller-supplied trusted
+revocation view. A revoked device is rejected on the authorization stream.
+
+The development CLI covers the authority lifecycle with `account-create`,
+`account-show`, `device-enroll`, `device-authorize`, and `device-revoke`.
+`listen` now uses `--allow-account`; `connect` and `sync` require
+`--expect-account`. Any side can supply current root-signed revocations for the
+remote account with repeatable `--peer-revocation-file` arguments.
 
 M0.4 resumable synchronization remains complete. Its tested transport and
 storage behavior is summarized below.
@@ -39,12 +45,12 @@ Every verified event is also persisted locally before the corresponding send
 or acknowledgement. Repeated writes are idempotent and stored corruption is
 detected when history is read.
 
-Two known conversation devices can reconcile bounded batches in both directions
-until their histories converge. The inventory is signed by the requesting
-application device and bound to the listener's current Iroh Endpoint ID. The
-listener signs its diff with the application device key named in the ticket. It
-rejects devices that have never authored an event in its local copy of the
-conversation.
+Certified devices of the allowed account can reconcile bounded batches in both
+directions until their histories converge. The inventory is signed by the
+requesting application device and bound to the listener's current Iroh Endpoint
+ID. The listener signs its diff with the certified device key embedded in the
+ticket. A newly enrolled device may therefore recover history without first
+authoring a synthetic event.
 
 The transport-independent reconciliation state machine lives in
 `kilogram-session`; the Iroh ALPN and typed stream framing live in
@@ -57,7 +63,7 @@ seconds for Iroh relay-to-direct migration and print `transport_path` (`direct`,
 and number of open paths. These development diagnostics made the two-host LAN
 test distinguish a real direct path from a successful relay fallback.
 
-The listener now signs one of three application route policies into ticket v2:
+The listener signs one of three application route policies into ticket v3:
 
 - `auto` accepts Iroh's selected direct or relay path;
 - `direct-only` permits relay-assisted connection establishment and NAT traversal,
@@ -95,38 +101,34 @@ signed acknowledgement travelled over a direct LAN path with approximately
 both events from Bob in one sync round, verified them on read, and reconstructed
 the acknowledgement as the single causal frontier.
 
-This remains a development prototype. It does **not** yet enforce Account Root
-authorization in network sessions, and it does not implement message-level
-E2EE, encrypted storage, seed phrases/recovery, or groups. The Account Root
-secret, local device secret, and message bodies are currently stored
-unencrypted in their explicitly selected directories. Do not use it for
+This remains a development prototype. It does **not** yet implement
+message-level E2EE, encrypted storage, seed phrases/recovery, conversation
+membership, or groups. The Account Root secret, local device secret, and message
+bodies are currently stored unencrypted in their explicitly selected
+directories. Revocation files are verified, but the protocol does not yet prove
+that a supplied revocation view is fresh or complete. Do not use it for
 sensitive communication.
 
-Create an Account Root and enroll a development device locally:
+Create separate Account Roots and enroll Alice and Bob devices locally. Preserve
+the two printed Account IDs:
 
 ```powershell
-cargo run -p kilogram-cli -- account-create --account-dir .tmp/account-root
+cargo run -p kilogram-cli -- account-create --account-dir .tmp/alice-account
+cargo run -p kilogram-cli -- account-create --account-dir .tmp/bob-account
 cargo run -p kilogram-cli -- device-enroll `
-  --account-dir .tmp/account-root `
+  --account-dir .tmp/alice-account `
   --state-dir .tmp/alice
+cargo run -p kilogram-cli -- device-enroll `
+  --account-dir .tmp/bob-account `
+  --state-dir .tmp/bob
 ```
 
-See [`RFC-0002`](docs/RFC-0002-account-device-authority.md) for authorization
-and revocation commands, security invariants, and the explicit M0.5.1 limits.
-
-Create or load Alice's identity first:
-
-```powershell
-cargo run -p kilogram-cli -- identity --state-dir .tmp/alice
-```
-
-Copy the printed device ID and start Bob's listener with that device explicitly
-authorized:
+Start Bob's listener with Alice's Account ID authorized:
 
 ```powershell
 cargo run -p kilogram-cli -- listen `
   --state-dir .tmp/bob `
-  --allow-device <ALICE_DEVICE_ID> `
+  --allow-account <ALICE_ACCOUNT_ID> `
   --ticket-file .tmp/listener.ticket `
   --route-policy auto
 ```
@@ -137,6 +139,7 @@ In another terminal, connect and send a message:
 cargo run -p kilogram-cli -- connect `
   --state-dir .tmp/alice `
   --ticket-file .tmp/listener.ticket `
+  --expect-account <BOB_ACCOUNT_ID> `
   --message "hello"
 ```
 
@@ -162,7 +165,8 @@ To synchronize missing events, start `listen` again on one device and run:
 ```powershell
 cargo run -p kilogram-cli -- sync `
   --state-dir .tmp/alice `
-  --ticket-file .tmp/listener.ticket
+  --ticket-file .tmp/listener.ticket `
+  --expect-account <BOB_ACCOUNT_ID>
 ```
 
 Each round accepts at most 4,096 inventory IDs and transfers at most 64 events
@@ -182,17 +186,21 @@ is replaced by a compact authenticated summary. The development-only
 `seed-history` command can create local signed fixture events for this test;
 see [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-The connection ticket is public addressing data: it contains the listener's
-Iroh address, public application device ID, and route policy. The application
-device signs this mapping together with the one requester device ID authorized
-by the listener, so tampering is detected before a connection or inventory is sent.
-Possession of the ticket alone is insufficient to deliver or synchronize
-events without the allowed device key. The public ticket therefore exposes
-both device IDs as metadata. It contains neither the Iroh endpoint secret nor
-an application device secret. The ticket encoding, Postcard event encoding,
-and development conversation-label derivation are provisional M0 choices, not
-the final public wire protocol. Ticket v2 intentionally does not decode old v1
+The connection ticket is public addressing and authorization data: it contains
+the listener's Iroh address, root-signed public device certificate, allowed
+requester Account ID, and route policy. The certified listener device signs the
+whole mapping, so tampering is detected before a connection or inventory is
+sent. Possession of the ticket alone is insufficient: the requester must present
+a certificate for the allowed account and prove possession of its device key.
+The ticket contains neither the Iroh endpoint secret nor any application secret.
+Ticket JSON, Postcard messages, and development conversation-label derivation
+remain provisional M0 choices. Ticket v3 intentionally does not decode v1/v2
 tickets; restart the listener to generate a ticket matching this build.
+
+To enforce a known revocation, pass its public file as
+`--peer-revocation-file <PATH>` to the side validating that remote account. See
+[`RFC-0002`](docs/RFC-0002-account-device-authority.md) for the trust boundary:
+an omitted revocation cannot yet be discovered automatically.
 
 ## Development checks
 

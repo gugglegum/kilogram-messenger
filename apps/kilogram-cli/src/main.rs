@@ -13,14 +13,17 @@ use iroh::{
     endpoint::{Connection, RecvStream, SendStream},
 };
 use kilogram_identity::{
-    AccountId, AccountRootState, DeviceCapability, DeviceId, DeviceIdentity, DeviceRevocation,
-    DeviceState, verify_device_authorization,
+    AccountId, AccountRootState, AuthorizedDevice, DeviceCapability, DeviceCertificate, DeviceId,
+    DeviceIdentity, DeviceRevocation, DeviceState, verify_device_authorization,
 };
 use kilogram_protocol::{
-    ClientRequest, ConversationId, EventPayload, MAX_INVENTORY_EVENT_IDS, ServerResponse,
+    ClientRequest, ConversationId, DeviceAuthorizationAccepted, DeviceAuthorizationRejected,
+    EventPayload, MAX_INVENTORY_EVENT_IDS, ServerResponse, SignedDeviceSessionAuthorization,
     SignedEvent, SignedSyncInventory, SyncPause, SyncPaused, SyncSessionBinding,
 };
-use kilogram_session::{MAX_SYNC_ROUNDS, ServerInventoryOutcome, SyncClient, SyncServer};
+use kilogram_session::{
+    MAX_SYNC_ROUNDS, ServerInventoryOutcome, SyncClient, SyncServer, authorize_device_session,
+};
 use kilogram_store::EventStore;
 use kilogram_transport_iroh::{
     ALPN, RoutePolicy, SelectedPathDiagnostics, await_route_policy, endpoint_builder_for_remote,
@@ -36,8 +39,8 @@ const ROUTE_POLICY_WAIT: Duration = Duration::from_secs(15);
 const CONNECTION_TIMEOUT: Duration = Duration::from_secs(30);
 const CLIENT_RELAY_WAIT_SECONDS: u64 = 30;
 const STREAM_OPEN_TIMEOUT: Duration = Duration::from_secs(15);
-const TICKET_SIGNATURE_DOMAIN: &[u8] = b"kilogram:connection-ticket-signature:v2\0";
-const TICKET_VERSION: u8 = 2;
+const TICKET_SIGNATURE_DOMAIN: &[u8] = b"kilogram:connection-ticket-signature:v3\0";
+const TICKET_VERSION: u8 = 3;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -58,9 +61,13 @@ enum Command {
         #[arg(long)]
         state_dir: PathBuf,
 
-        /// Application device ID allowed to deliver or synchronize events.
+        /// Account ID allowed to authenticate a certified requester device.
         #[arg(long)]
-        allow_device: DeviceId,
+        allow_account: AccountId,
+
+        /// Trusted root-signed revocations for the allowed requester account.
+        #[arg(long = "peer-revocation-file")]
+        peer_revocation_files: Vec<PathBuf>,
 
         /// Also write the public connection ticket to this file.
         #[arg(long)]
@@ -100,6 +107,14 @@ enum Command {
         /// Development-only shared label used to derive a conversation ID.
         #[arg(long, default_value = "m0-local-smoke")]
         conversation: String,
+
+        /// Trusted Account ID expected for the listener certificate in the ticket.
+        #[arg(long)]
+        expect_account: AccountId,
+
+        /// Trusted root-signed revocations for the listener account.
+        #[arg(long = "peer-revocation-file")]
+        peer_revocation_files: Vec<PathBuf>,
     },
 
     /// Reconcile bounded conversation event batches with a listener until converged.
@@ -123,6 +138,14 @@ enum Command {
         /// Stop cleanly after this many completed rounds if more events remain.
         #[arg(long, default_value_t = MAX_SYNC_ROUNDS)]
         max_rounds: usize,
+
+        /// Trusted Account ID expected for the listener certificate in the ticket.
+        #[arg(long)]
+        expect_account: AccountId,
+
+        /// Trusted root-signed revocations for the listener account.
+        #[arg(long = "peer-revocation-file")]
+        peer_revocation_files: Vec<PathBuf>,
     },
 
     /// Add signed local-only events for deterministic synchronization tests.
@@ -243,8 +266,8 @@ impl From<RoutePolicyArg> for RoutePolicy {
 struct ConnectionTicketContent {
     version: u8,
     endpoint: EndpointAddr,
-    listener_device_id: DeviceId,
-    allowed_requester_device_id: DeviceId,
+    listener_certificate: DeviceCertificate,
+    allowed_requester_account_id: AccountId,
     route_policy: RoutePolicy,
 }
 
@@ -258,14 +281,26 @@ impl ConnectionTicket {
     fn new(
         endpoint: EndpointAddr,
         listener_identity: &DeviceIdentity,
-        allowed_requester_device_id: DeviceId,
+        listener_certificate: DeviceCertificate,
+        allowed_requester_account_id: AccountId,
         route_policy: RoutePolicy,
     ) -> Result<Self> {
+        ensure!(
+            listener_certificate.device_id() == listener_identity.device_id(),
+            "listener certificate belongs to a different device"
+        );
+        verify_device_authorization(
+            listener_certificate.account_id(),
+            &listener_certificate,
+            &[],
+            &DeviceCapability::MESSAGING,
+        )
+        .context("verify listener certificate for connection ticket")?;
         let content = ConnectionTicketContent {
             version: TICKET_VERSION,
             endpoint,
-            listener_device_id: listener_identity.device_id(),
-            allowed_requester_device_id,
+            listener_certificate,
+            allowed_requester_account_id,
             route_policy,
         };
         let signature = listener_identity
@@ -295,12 +330,12 @@ impl ConnectionTicket {
         &self.content.endpoint
     }
 
-    fn listener_device_id(&self) -> DeviceId {
-        self.content.listener_device_id
+    fn listener_account_id(&self) -> AccountId {
+        self.content.listener_certificate.account_id()
     }
 
-    fn allowed_requester_device_id(&self) -> DeviceId {
-        self.content.allowed_requester_device_id
+    fn allowed_requester_account_id(&self) -> AccountId {
+        self.content.allowed_requester_account_id
     }
 
     fn route_policy(&self) -> RoutePolicy {
@@ -313,10 +348,33 @@ impl ConnectionTicket {
             "unsupported connection ticket version: {}",
             self.content.version
         );
+        verify_device_authorization(
+            self.content.listener_certificate.account_id(),
+            &self.content.listener_certificate,
+            &[],
+            &DeviceCapability::MESSAGING,
+        )
+        .context("verify listener certificate in connection ticket")?;
         self.content
-            .listener_device_id
+            .listener_certificate
+            .device_id()
             .verify(&ticket_signing_bytes(&self.content)?, &self.signature)
             .context("verify listener signature on connection ticket")
+    }
+
+    fn verify_listener_authorization(
+        &self,
+        expected_account: AccountId,
+        revocations: &[DeviceRevocation],
+    ) -> Result<AuthorizedDevice> {
+        self.verify()?;
+        verify_device_authorization(
+            expected_account,
+            &self.content.listener_certificate,
+            revocations,
+            &DeviceCapability::MESSAGING,
+        )
+        .context("verify listener Account Root authorization")
     }
 }
 
@@ -333,7 +391,8 @@ async fn main() -> Result<()> {
     match Cli::parse().command {
         Command::Listen {
             state_dir,
-            allow_device,
+            allow_account,
+            peer_revocation_files,
             ticket_file,
             relay_wait_seconds,
             route_policy,
@@ -341,7 +400,8 @@ async fn main() -> Result<()> {
         } => {
             listen(
                 state_dir,
-                allow_device,
+                allow_account,
+                peer_revocation_files,
                 ticket_file,
                 relay_wait_seconds,
                 route_policy.into(),
@@ -355,14 +415,40 @@ async fn main() -> Result<()> {
             ticket_file,
             message,
             conversation,
-        } => connect(state_dir, ticket, ticket_file, message, conversation).await,
+            expect_account,
+            peer_revocation_files,
+        } => {
+            connect(
+                state_dir,
+                ticket,
+                ticket_file,
+                message,
+                conversation,
+                expect_account,
+                peer_revocation_files,
+            )
+            .await
+        }
         Command::Sync {
             state_dir,
             ticket,
             ticket_file,
             conversation,
             max_rounds,
-        } => sync(state_dir, ticket, ticket_file, conversation, max_rounds).await,
+            expect_account,
+            peer_revocation_files,
+        } => {
+            sync(
+                state_dir,
+                ticket,
+                ticket_file,
+                conversation,
+                max_rounds,
+                expect_account,
+                peer_revocation_files,
+            )
+            .await
+        }
         Command::SeedHistory {
             state_dir,
             conversation,
@@ -396,7 +482,8 @@ async fn main() -> Result<()> {
 
 async fn listen(
     state_dir: PathBuf,
-    allowed_requester_device_id: DeviceId,
+    allowed_requester_account_id: AccountId,
+    peer_revocation_files: Vec<PathBuf>,
     ticket_file: Option<PathBuf>,
     relay_wait_seconds: u64,
     route_policy: RoutePolicy,
@@ -404,6 +491,10 @@ async fn listen(
 ) -> Result<()> {
     let device_state = DeviceState::load_or_create(&state_dir)
         .with_context(|| format!("load device state from {}", state_dir.display()))?;
+    let listener_certificate = device_state
+        .load_certificate()
+        .context("load listener Account Root certificate")?;
+    let peer_revocations = load_revocations(&peer_revocation_files)?;
     let event_store = open_event_store(&state_dir)?;
     let endpoint = endpoint_builder_with_relay(route_policy, relay_url)
         .alpns(vec![ALPN.to_vec()])
@@ -416,18 +507,21 @@ async fn listen(
     let ticket = ConnectionTicket::new(
         endpoint.addr(),
         device_state.identity(),
-        allowed_requester_device_id,
+        listener_certificate,
+        allowed_requester_account_id,
         route_policy,
-    )?
-    .encode()?;
+    )?;
+    let encoded_ticket = ticket.encode()?;
     println!("transport_endpoint_id={}", endpoint.id());
+    println!("account_id={}", ticket.listener_account_id());
     println!("device_id={}", device_state.identity().device_id());
     println!("route_policy={}", route_policy.as_str());
-    println!("allowed_requester_device_id={allowed_requester_device_id}");
-    println!("ticket={ticket}");
+    println!("allowed_requester_account_id={allowed_requester_account_id}");
+    println!("peer_revocation_count={}", peer_revocations.len());
+    println!("ticket={encoded_ticket}");
 
     if let Some(path) = ticket_file {
-        tokio::fs::write(&path, &ticket)
+        tokio::fs::write(&path, &encoded_ticket)
             .await
             .with_context(|| format!("write ticket to {}", path.display()))?;
         println!("ticket_file={}", path.display());
@@ -442,8 +536,17 @@ async fn listen(
         .context("wait for an incoming path allowed by the connection ticket")?;
     print_ready_path(&ready_path);
 
+    let session_binding = SyncSessionBinding::from_transport_label(&endpoint.id().to_string());
+    let authorized_requester = accept_device_authorization(
+        &connection,
+        session_binding,
+        allowed_requester_account_id,
+        &peer_revocations,
+    )
+    .await?;
+
     let (mut send, mut receive) =
-        accept_bi(&connection, "accept initial bidirectional stream").await?;
+        accept_bi(&connection, "accept authorized application stream").await?;
     let request = read_client_request(&mut receive).await?;
     match request {
         ClientRequest::DeliverEvent(event) => {
@@ -452,13 +555,11 @@ async fn listen(
                 &event_store,
                 &mut send,
                 event,
-                allowed_requester_device_id,
+                authorized_requester.device_id(),
             )
             .await?;
         }
         ClientRequest::SyncInventory(inventory) => {
-            let session_binding =
-                SyncSessionBinding::from_transport_label(&endpoint.id().to_string());
             handle_sync_request(
                 &device_state,
                 &event_store,
@@ -466,18 +567,96 @@ async fn listen(
                 send,
                 inventory,
                 session_binding,
-                allowed_requester_device_id,
+                authorized_requester.device_id(),
             )
             .await?;
         }
         ClientRequest::SyncEvents(_) => bail!("sync event batch cannot be the first request"),
         ClientRequest::SyncPause(_) => bail!("sync pause cannot be the first request"),
+        ClientRequest::AuthorizeDevice(_) => {
+            bail!("device authorization cannot be repeated on an authorized connection")
+        }
     }
 
     print_transport_diagnostics(&connection, route_policy).await?;
     let _ = timeout(Duration::from_secs(2), connection.closed()).await;
     endpoint.close().await;
     Ok(())
+}
+
+async fn accept_device_authorization(
+    connection: &Connection,
+    expected_session: SyncSessionBinding,
+    allowed_account: AccountId,
+    revocations: &[DeviceRevocation],
+) -> Result<AuthorizedDevice> {
+    let (mut send, mut receive) =
+        accept_bi(connection, "accept device authorization stream").await?;
+    let authorization = match read_client_request(&mut receive).await? {
+        ClientRequest::AuthorizeDevice(authorization) => authorization,
+        _ => bail!("device authorization must be the first application request"),
+    };
+    match authorize_device_session(
+        allowed_account,
+        &authorization,
+        revocations,
+        &DeviceCapability::MESSAGING,
+        expected_session,
+    ) {
+        Ok(authorized) => {
+            write_server_response(
+                &mut send,
+                &ServerResponse::DeviceAuthorized(DeviceAuthorizationAccepted::new(
+                    expected_session,
+                    authorized.account_id(),
+                    authorized.device_id(),
+                )),
+            )
+            .await?;
+            println!(
+                "authorized_requester_account_id={}",
+                authorized.account_id()
+            );
+            println!("authorized_requester_device_id={}", authorized.device_id());
+            println!("authorization=valid");
+            Ok(authorized)
+        }
+        Err(error) => {
+            write_server_response(
+                &mut send,
+                &ServerResponse::DeviceAuthorizationRejected(DeviceAuthorizationRejected::new()),
+            )
+            .await?;
+            println!("authorization=rejected");
+            Err(error).context("reject requester Account Root authorization")
+        }
+    }
+}
+
+async fn authorize_with_listener(
+    connection: &Connection,
+    identity: &DeviceIdentity,
+    certificate: DeviceCertificate,
+    session_binding: SyncSessionBinding,
+) -> Result<()> {
+    let expected_account = certificate.account_id();
+    let expected_device = certificate.device_id();
+    let authorization =
+        SignedDeviceSessionAuthorization::sign(identity, certificate, session_binding)
+            .context("sign device authorization for transport session")?;
+    let (mut send, mut receive) = open_bi(connection, "open device authorization stream").await?;
+    write_client_request(&mut send, &ClientRequest::AuthorizeDevice(authorization)).await?;
+    match read_server_response(&mut receive).await? {
+        ServerResponse::DeviceAuthorized(accepted) => {
+            accepted.verify(session_binding, expected_account, expected_device)?;
+            println!("authorization=valid");
+            Ok(())
+        }
+        ServerResponse::DeviceAuthorizationRejected(_) => {
+            bail!("device authorization was rejected by listener")
+        }
+        _ => bail!("client expected a device authorization response"),
+    }
 }
 
 async fn handle_delivery_request(
@@ -639,25 +818,41 @@ async fn connect(
     ticket_file: Option<PathBuf>,
     message: String,
     conversation: String,
+    expected_listener_account_id: AccountId,
+    peer_revocation_files: Vec<PathBuf>,
 ) -> Result<()> {
     let device_state = DeviceState::load_or_create(&state_dir)
         .with_context(|| format!("load device state from {}", state_dir.display()))?;
+    let requester_certificate = device_state
+        .load_certificate()
+        .context("load requester Account Root certificate")?;
     let event_store = open_event_store(&state_dir)?;
 
     let ticket = load_connection_ticket(ticket, ticket_file).await?;
-    let expected_listener_device_id = ticket.listener_device_id();
+    let peer_revocations = load_revocations(&peer_revocation_files)?;
+    let authorized_listener =
+        ticket.verify_listener_authorization(expected_listener_account_id, &peer_revocations)?;
+    let expected_listener_device_id = authorized_listener.device_id();
     let route_policy = ticket.route_policy();
-    ensure!(
-        device_state.identity().device_id() == ticket.allowed_requester_device_id(),
-        "this device is not the requester authorized by the connection ticket"
-    );
+    verify_device_authorization(
+        ticket.allowed_requester_account_id(),
+        &requester_certificate,
+        &[],
+        &DeviceCapability::MESSAGING,
+    )
+    .context("this device account is not authorized by the connection ticket")?;
+    let session_binding =
+        SyncSessionBinding::from_transport_label(&ticket.endpoint().id.to_string());
 
     let endpoint = endpoint_builder_for_remote(route_policy, ticket.endpoint())?
         .bind()
         .await
         .context("bind connecting Iroh endpoint")?;
     println!("transport_endpoint_id={}", endpoint.id());
+    println!("account_id={}", requester_certificate.account_id());
     println!("device_id={}", device_state.identity().device_id());
+    println!("target_account_id={}", authorized_listener.account_id());
+    println!("peer_revocation_count={}", peer_revocations.len());
     println!("route_policy={}", route_policy.as_str());
     print_connection_target(&ticket);
 
@@ -678,6 +873,14 @@ async fn connect(
         .await
         .context("wait for a path allowed by the connection ticket")?;
     print_ready_path(&ready_path);
+
+    authorize_with_listener(
+        &connection,
+        device_state.identity(),
+        requester_certificate,
+        session_binding,
+    )
+    .await?;
 
     let (mut send, mut receive) =
         open_bi(&connection, "open delivery bidirectional stream").await?;
@@ -754,6 +957,8 @@ async fn sync(
     ticket_file: Option<PathBuf>,
     conversation: String,
     max_rounds: usize,
+    expected_listener_account_id: AccountId,
+    peer_revocation_files: Vec<PathBuf>,
 ) -> Result<()> {
     ensure!(
         (1..=MAX_SYNC_ROUNDS).contains(&max_rounds),
@@ -761,14 +966,23 @@ async fn sync(
     );
     let device_state = DeviceState::load_or_create(&state_dir)
         .with_context(|| format!("load device state from {}", state_dir.display()))?;
+    let requester_certificate = device_state
+        .load_certificate()
+        .context("load requester Account Root certificate")?;
     let event_store = open_event_store(&state_dir)?;
     let ticket = load_connection_ticket(ticket, ticket_file).await?;
-    let expected_listener_device_id = ticket.listener_device_id();
+    let peer_revocations = load_revocations(&peer_revocation_files)?;
+    let authorized_listener =
+        ticket.verify_listener_authorization(expected_listener_account_id, &peer_revocations)?;
+    let expected_listener_device_id = authorized_listener.device_id();
     let route_policy = ticket.route_policy();
-    ensure!(
-        device_state.identity().device_id() == ticket.allowed_requester_device_id(),
-        "this device is not the requester authorized by the connection ticket"
-    );
+    verify_device_authorization(
+        ticket.allowed_requester_account_id(),
+        &requester_certificate,
+        &[],
+        &DeviceCapability::MESSAGING,
+    )
+    .context("this device account is not authorized by the connection ticket")?;
     let session_binding =
         SyncSessionBinding::from_transport_label(&ticket.endpoint().id.to_string());
     let conversation_id = ConversationId::from_label(&conversation);
@@ -785,7 +999,10 @@ async fn sync(
         .await
         .context("bind syncing Iroh endpoint")?;
     println!("transport_endpoint_id={}", endpoint.id());
+    println!("account_id={}", requester_certificate.account_id());
     println!("device_id={}", device_state.identity().device_id());
+    println!("target_account_id={}", authorized_listener.account_id());
+    println!("peer_revocation_count={}", peer_revocations.len());
     println!("route_policy={}", route_policy.as_str());
     print_connection_target(&ticket);
 
@@ -806,6 +1023,14 @@ async fn sync(
         .await
         .context("wait for a sync path allowed by the connection ticket")?;
     print_ready_path(&ready_path);
+
+    authorize_with_listener(
+        &connection,
+        device_state.identity(),
+        requester_certificate,
+        session_binding,
+    )
+    .await?;
 
     let mut total_sent_events = 0;
     let mut total_received_events = 0;
@@ -1112,15 +1337,7 @@ fn authorize_device(
     let certificate = device
         .load_certificate()
         .context("load installed root-signed device certificate")?;
-    let revocations = revocation_files
-        .iter()
-        .map(|path| {
-            let bytes = fs::read(path)
-                .with_context(|| format!("read device revocation from {}", path.display()))?;
-            DeviceRevocation::decode_and_verify(&bytes)
-                .with_context(|| format!("verify device revocation from {}", path.display()))
-        })
-        .collect::<Result<Vec<_>>>()?;
+    let revocations = load_revocations(&revocation_files)?;
     let authorization = verify_device_authorization(
         account_id,
         &certificate,
@@ -1177,6 +1394,18 @@ fn format_capabilities(capabilities: &[DeviceCapability]) -> String {
         .map(|capability| capability.as_str())
         .collect::<Vec<_>>()
         .join(",")
+}
+
+fn load_revocations(paths: &[PathBuf]) -> Result<Vec<DeviceRevocation>> {
+    paths
+        .iter()
+        .map(|path| {
+            let bytes = fs::read(path)
+                .with_context(|| format!("read device revocation from {}", path.display()))?;
+            DeviceRevocation::decode_and_verify(&bytes)
+                .with_context(|| format!("verify device revocation from {}", path.display()))
+        })
+        .collect()
 }
 
 fn write_new_authority_file(path: &Path, bytes: &[u8]) -> Result<()> {
@@ -1321,6 +1550,14 @@ mod tests {
 
     const UNSUPPORTED_TEST_ALPN: &[u8] = b"kilogram/test/unsupported/1";
 
+    fn certificate_for(identity: &DeviceIdentity) -> Result<(AccountId, DeviceCertificate)> {
+        let directory = tempfile::tempdir()?;
+        let root = AccountRootState::create(directory.path())?;
+        let certificate =
+            root.issue_device_certificate(identity.device_id(), &DeviceCapability::MESSAGING)?;
+        Ok((root.account_id(), certificate))
+    }
+
     #[test]
     fn seeded_history_is_signed_chained_and_persistent() -> Result<()> {
         let directory = tempfile::tempdir()?;
@@ -1374,11 +1611,14 @@ mod tests {
         let endpoint = EndpointAddr::new(SecretKey::generate().public());
         let listener_identity = DeviceIdentity::generate()?;
         let listener_device_id = listener_identity.device_id();
-        let allowed_requester_device_id = DeviceIdentity::generate()?.device_id();
+        let (listener_account_id, listener_certificate) = certificate_for(&listener_identity)?;
+        let requester_identity = DeviceIdentity::generate()?;
+        let (allowed_requester_account_id, _) = certificate_for(&requester_identity)?;
         let encoded = ConnectionTicket::new(
             endpoint.clone(),
             &listener_identity,
-            allowed_requester_device_id,
+            listener_certificate,
+            allowed_requester_account_id,
             RoutePolicy::DirectOnly,
         )?
         .encode()?;
@@ -1386,11 +1626,51 @@ mod tests {
 
         assert_eq!(decoded.content.version, TICKET_VERSION);
         assert_eq!(decoded.endpoint(), &endpoint);
-        assert_eq!(decoded.listener_device_id(), listener_device_id);
+        assert_eq!(
+            decoded.content.listener_certificate.device_id(),
+            listener_device_id
+        );
+        assert_eq!(decoded.listener_account_id(), listener_account_id);
         assert_eq!(decoded.route_policy(), RoutePolicy::DirectOnly);
         assert_eq!(
-            decoded.allowed_requester_device_id(),
-            allowed_requester_device_id
+            decoded.allowed_requester_account_id(),
+            allowed_requester_account_id
+        );
+        decoded.verify_listener_authorization(listener_account_id, &[])?;
+        assert!(
+            decoded
+                .verify_listener_authorization(allowed_requester_account_id, &[])
+                .is_err()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn connection_ticket_rejects_revoked_listener_authorization() -> Result<()> {
+        let root_directory = tempfile::tempdir()?;
+        let listener_root = AccountRootState::create(root_directory.path())?;
+        let listener_identity = DeviceIdentity::generate()?;
+        let listener_certificate = listener_root.issue_device_certificate(
+            listener_identity.device_id(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let requester = DeviceIdentity::generate()?;
+        let (requester_account_id, _) = certificate_for(&requester)?;
+        let encoded = ConnectionTicket::new(
+            EndpointAddr::new(SecretKey::generate().public()),
+            &listener_identity,
+            listener_certificate,
+            requester_account_id,
+            RoutePolicy::Auto,
+        )?
+        .encode()?;
+        let ticket = ConnectionTicket::decode(&encoded)?;
+        let revocation = listener_root.revoke_device(listener_identity.device_id())?;
+
+        assert!(
+            ticket
+                .verify_listener_authorization(listener_root.account_id(), &[revocation])
+                .is_err()
         );
         Ok(())
     }
@@ -1398,10 +1678,14 @@ mod tests {
     #[test]
     fn connection_ticket_rejects_unknown_version() -> Result<()> {
         let identity = DeviceIdentity::generate()?;
+        let (_, certificate) = certificate_for(&identity)?;
+        let requester = DeviceIdentity::generate()?;
+        let (requester_account_id, _) = certificate_for(&requester)?;
         let mut ticket = ConnectionTicket::new(
             EndpointAddr::new(SecretKey::generate().public()),
             &identity,
-            DeviceIdentity::generate()?.device_id(),
+            certificate,
+            requester_account_id,
             RoutePolicy::Auto,
         )?;
         ticket.content.version = TICKET_VERSION + 1;
@@ -1422,10 +1706,14 @@ mod tests {
     #[test]
     fn connection_ticket_rejects_tampering() -> Result<()> {
         let identity = DeviceIdentity::generate()?;
+        let (_, certificate) = certificate_for(&identity)?;
+        let requester = DeviceIdentity::generate()?;
+        let (requester_account_id, _) = certificate_for(&requester)?;
         let mut ticket = ConnectionTicket::new(
             EndpointAddr::new(SecretKey::generate().public()),
             &identity,
-            DeviceIdentity::generate()?.device_id(),
+            certificate,
+            requester_account_id,
             RoutePolicy::Auto,
         )?;
         ticket.content.endpoint = EndpointAddr::new(SecretKey::generate().public());
@@ -1445,10 +1733,14 @@ mod tests {
     #[test]
     fn connection_ticket_rejects_route_policy_tampering() -> Result<()> {
         let identity = DeviceIdentity::generate()?;
+        let (_, certificate) = certificate_for(&identity)?;
+        let requester = DeviceIdentity::generate()?;
+        let (requester_account_id, _) = certificate_for(&requester)?;
         let mut ticket = ConnectionTicket::new(
             EndpointAddr::new(SecretKey::generate().public()),
             &identity,
-            DeviceIdentity::generate()?.device_id(),
+            certificate,
+            requester_account_id,
             RoutePolicy::Auto,
         )?;
         ticket.content.route_policy = RoutePolicy::RelayOnly;
@@ -1462,6 +1754,51 @@ mod tests {
                 .to_string()
                 .contains("verify listener signature on connection ticket")
         );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn certified_device_authorizes_before_application_exchange() -> Result<()> {
+        let requester_identity = DeviceIdentity::generate()?;
+        let (requester_account_id, requester_certificate) = certificate_for(&requester_identity)?;
+        let listener = endpoint_builder(RoutePolicy::Auto)
+            .alpns(vec![ALPN.to_vec()])
+            .bind()
+            .await?;
+        let listener_address = listener.addr();
+        let session_binding = SyncSessionBinding::from_transport_label(&listener.id().to_string());
+        let accept_task = tokio::spawn({
+            let listener = listener.clone();
+            async move {
+                let connection = accept_authenticated_connection(&listener).await?;
+                let authorized = accept_device_authorization(
+                    &connection,
+                    session_binding,
+                    requester_account_id,
+                    &[],
+                )
+                .await?;
+                connection.closed().await;
+                Ok::<_, anyhow::Error>(authorized)
+            }
+        });
+
+        let client = endpoint_builder(RoutePolicy::Auto).bind().await?;
+        let connection = client.connect(listener_address, ALPN).await?;
+        authorize_with_listener(
+            &connection,
+            &requester_identity,
+            requester_certificate,
+            session_binding,
+        )
+        .await?;
+        connection.close(0_u32.into(), b"authorization test complete");
+        let authorized = accept_task.await??;
+
+        assert_eq!(authorized.account_id(), requester_account_id);
+        assert_eq!(authorized.device_id(), requester_identity.device_id());
+        client.close().await;
+        listener.close().await;
         Ok(())
     }
 

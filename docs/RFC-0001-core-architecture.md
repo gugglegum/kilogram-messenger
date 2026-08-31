@@ -267,15 +267,17 @@ inventory: requester подписывает inventory application device key и 
 session binding к текущему transport Endpoint ID listener. Стороны обмениваются
 не более чем 64 отсутствующими events в каждом направлении за round, сверяют
 точные requested IDs, повторно проверяют подписи и сохраняют события
-идемпотентно. Inventory ограничен 4096 IDs. Неизвестный локальной истории
-requester получает явный отказ.
+идемпотентно. Inventory ограничен 4096 IDs. В историческом M0.1.3 неизвестный
+локальной истории requester получал явный отказ.
 
-Connection ticket также подписан application device key listener и связывает
-этот ключ с конкретным Iroh Endpoint ID и одним явно разрешённым requester
-device ID. Клиент проверяет ticket до отправки inventory; изменение transport
-endpoint или любого из device IDs обнаруживается. Listener применяет то же
-ограничение к обычной delivery, поэтому посторонний обладатель ticket не может
-сначала добавить своё событие, чтобы пройти последующую known-author проверку.
+M0.5.2 заменяет эту временную границу. Ticket v3 связывает Iroh Endpoint ID,
+root-signed certificate listener и один разрешённый requester Account ID.
+Клиент закрепляет ожидаемый Account ID, затем предъявляет собственный
+root-signed certificate и device-signed session proof, привязанный к Endpoint.
+Listener проверяет предоставленный trusted revocation view до event/inventory.
+Новый сертифицированный device аккаунта может синхронизироваться без
+предыдущего авторства; другой аккаунт или отозванный device отклоняется до
+раскрытия истории.
 
 До отправки запрошенных локальных events клиент также проверяет подписанный и
 session-bound diff listener. Подписант обязан совпадать с application device ID
@@ -318,9 +320,9 @@ checkpoint корректности: отдельный opaque cursor не до�
 образом, M0.4 закрыт для смены process, transport Endpoint, session binding и
 фактического сетевого пути между подтверждёнными rounds.
 
-Это временный профиль: правило known-author не заменяет Account Root
-authorization и revocation, а полный список IDs не заменяет compact
-Merkle/range summary. Переносимый подписанный cursor имеет смысл проектировать
+M0.5.2 удалил правило known-author в пользу Account Root authorization и
+caller-supplied revocation view. Однако полный список IDs всё ещё не заменяет
+compact Merkle/range summary. Переносимый подписанный cursor имеет смысл проектировать
 вместе с compact summary, когда он сможет ссылаться на проверяемый snapshot или
 range frontier и реально избавит от повторной отправки полного inventory.
 Лимит inventory означает, что этот M0-профиль перестаёт работать после 4096
@@ -381,6 +383,9 @@ application device IDs и event IDs оставались стабильными.
   не выберет direct IP path;
 - `relay-only` отключает IP transports у обоих endpoints, поэтому ни ticket, ни
   connection не могут незаметно перейти на direct path.
+
+M0.5.2 переносит те же route-policy semantics в несовместимый ticket v3,
+добавляющий listener certificate и allowed requester Account ID.
 
 Handshake/connect ограничен 30 секундами, ожидание policy path, открытие stream
 и wire I/O — 15 секундами. Ошибка указывает зависшую операцию и, для route

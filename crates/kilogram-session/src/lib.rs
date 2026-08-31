@@ -1,10 +1,13 @@
 use std::collections::HashSet;
 
-use kilogram_identity::{DeviceId, DeviceIdentity};
+use kilogram_identity::{
+    AccountId, AuthorizedDevice, DeviceCapability, DeviceId, DeviceIdentity, DeviceRevocation,
+    IdentityError, verify_device_authorization,
+};
 use kilogram_protocol::{
-    ConversationId, EventId, MAX_SYNC_EVENTS_PER_BATCH, ProtocolError, SignedEvent,
-    SignedSyncInventory, SyncComplete, SyncDiff, SyncEventBatch, SyncRejected, SyncRejectionReason,
-    SyncSessionBinding,
+    ConversationId, EventId, MAX_SYNC_EVENTS_PER_BATCH, ProtocolError,
+    SignedDeviceSessionAuthorization, SignedEvent, SignedSyncInventory, SyncComplete, SyncDiff,
+    SyncEventBatch, SyncRejected, SyncRejectionReason, SyncSessionBinding,
 };
 use kilogram_store::{EventStore, StoreError};
 use thiserror::Error;
@@ -12,14 +15,24 @@ use thiserror::Error;
 /// Maximum number of bounded reconciliation rounds accepted on one connection.
 pub const MAX_SYNC_ROUNDS: usize = 64;
 
+pub fn authorize_device_session(
+    expected_account: AccountId,
+    authorization: &SignedDeviceSessionAuthorization,
+    revocations: &[DeviceRevocation],
+    required_capabilities: &[DeviceCapability],
+    expected_session: SyncSessionBinding,
+) -> Result<AuthorizedDevice, SessionError> {
+    authorization.verify_for_session(expected_session)?;
+    Ok(verify_device_authorization(
+        expected_account,
+        authorization.certificate(),
+        revocations,
+        required_capabilities,
+    )?)
+}
+
 pub trait SessionStore {
     fn inventory(&self, conversation_id: ConversationId) -> Result<Vec<EventId>, StoreError>;
-
-    fn contains_author(
-        &self,
-        conversation_id: ConversationId,
-        device_id: DeviceId,
-    ) -> Result<bool, StoreError>;
 
     fn events_by_id(
         &self,
@@ -33,14 +46,6 @@ pub trait SessionStore {
 impl SessionStore for EventStore {
     fn inventory(&self, conversation_id: ConversationId) -> Result<Vec<EventId>, StoreError> {
         self.inventory(conversation_id)
-    }
-
-    fn contains_author(
-        &self,
-        conversation_id: ConversationId,
-        device_id: DeviceId,
-    ) -> Result<bool, StoreError> {
-        self.contains_author(conversation_id, device_id)
     }
 
     fn events_by_id(
@@ -213,16 +218,6 @@ impl<'a, S: SessionStore + ?Sized> SyncServer<'a, S> {
                 SyncRejectionReason::RequesterNotAllowed,
             )));
         }
-        if !self
-            .store
-            .contains_author(conversation_id, inventory.requester_device_id())?
-        {
-            return Ok(ServerInventoryOutcome::Rejected(SyncRejected::new(
-                conversation_id,
-                SyncRejectionReason::RequesterNotKnown,
-            )));
-        }
-
         let plan = plan_sync(
             self.store,
             conversation_id,
@@ -327,6 +322,9 @@ pub enum SessionError {
     #[error("sync protocol validation failed")]
     Protocol(#[from] ProtocolError),
 
+    #[error("account device authorization failed")]
+    Authorization(#[from] IdentityError),
+
     #[error("sync event store operation failed")]
     Store(#[from] StoreError),
 
@@ -394,7 +392,58 @@ fn plan_sync<S: SessionStore + ?Sized>(
 mod tests {
     use std::{cell::RefCell, error::Error};
 
+    use kilogram_identity::AccountRootState;
+    use tempfile::tempdir;
+
     use super::*;
+
+    #[test]
+    fn account_authorization_accepts_new_device_and_rejects_revocation()
+    -> Result<(), Box<dyn Error>> {
+        let root_directory = tempdir()?;
+        let root = AccountRootState::create(root_directory.path())?;
+        let requester = DeviceIdentity::generate()?;
+        let certificate =
+            root.issue_device_certificate(requester.device_id(), &DeviceCapability::MESSAGING)?;
+        let session = SyncSessionBinding::from_transport_label("authorized-listener");
+        let authorization =
+            SignedDeviceSessionAuthorization::sign(&requester, certificate, session)?;
+
+        let authorized = authorize_device_session(
+            root.account_id(),
+            &authorization,
+            &[],
+            &DeviceCapability::MESSAGING,
+            session,
+        )?;
+        assert_eq!(authorized.device_id(), requester.device_id());
+
+        let revocation = root.revoke_device(requester.device_id())?;
+        assert!(matches!(
+            authorize_device_session(
+                root.account_id(),
+                &authorization,
+                &[revocation],
+                &DeviceCapability::MESSAGING,
+                session,
+            ),
+            Err(SessionError::Authorization(IdentityError::DeviceRevoked(device_id)))
+                if device_id == requester.device_id()
+        ));
+        assert!(matches!(
+            authorize_device_session(
+                root.account_id(),
+                &authorization,
+                &[],
+                &DeviceCapability::MESSAGING,
+                SyncSessionBinding::from_transport_label("other-listener"),
+            ),
+            Err(SessionError::Protocol(
+                ProtocolError::DeviceAuthorizationSessionMismatch
+            ))
+        ));
+        Ok(())
+    }
 
     #[test]
     fn more_than_one_batch_converges_bidirectionally() -> Result<(), Box<dyn Error>> {
@@ -589,7 +638,7 @@ mod tests {
     }
 
     #[test]
-    fn unknown_requester_is_rejected_without_events() -> Result<(), Box<dyn Error>> {
+    fn authorized_new_requester_is_accepted_without_prior_events() -> Result<(), Box<dyn Error>> {
         let store = MemoryStore::default();
         let requester = DeviceIdentity::generate()?;
         let responder = DeviceIdentity::generate()?;
@@ -599,11 +648,20 @@ mod tests {
             SignedSyncInventory::sign(&requester, conversation_id, session_binding, Vec::new())?;
         let server = SyncServer::new(&responder, &store, session_binding, requester.device_id());
 
-        let ServerInventoryOutcome::Rejected(rejection) = server.accept_inventory(&inventory)?
+        assert!(matches!(
+            server.accept_inventory(&inventory)?,
+            ServerInventoryOutcome::Accepted(_)
+        ));
+
+        let other = DeviceIdentity::generate()?;
+        let other_inventory =
+            SignedSyncInventory::sign(&other, conversation_id, session_binding, Vec::new())?;
+        let ServerInventoryOutcome::Rejected(rejection) =
+            server.accept_inventory(&other_inventory)?
         else {
-            return Err("unknown requester was accepted".into());
+            return Err("an unauthenticated requester was accepted".into());
         };
-        assert_eq!(rejection.reason(), SyncRejectionReason::RequesterNotKnown);
+        assert_eq!(rejection.reason(), SyncRejectionReason::RequesterNotAllowed);
         Ok(())
     }
 
@@ -623,16 +681,6 @@ mod tests {
                 .collect::<Result<_, _>>()?;
             event_ids.sort_by_cached_key(ToString::to_string);
             Ok(event_ids)
-        }
-
-        fn contains_author(
-            &self,
-            conversation_id: ConversationId,
-            device_id: DeviceId,
-        ) -> Result<bool, StoreError> {
-            Ok(self.events.borrow().iter().any(|event| {
-                event.conversation_id() == conversation_id && event.author_device_id() == device_id
-            }))
         }
 
         fn events_by_id(

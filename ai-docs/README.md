@@ -53,8 +53,13 @@ M0.5.1 добавил отдельную Account Root Identity: публичны
 `AccountId`, а root secret подписывает capability-bearing device certificates
 и постоянные отзывы device keys, но не обычные сообщения. Реализованы
 локальные CLI lifecycle-команды create/show/enroll/authorize/revoke и проверка
-чужого account, tampering, capability mismatch и revocation. Сертификаты ещё не
-применяются в connection ticket, delivery и sync — это граница M0.5.2.
+чужого account, tampering, capability mismatch и revocation. M0.5.2 встроил
+эту модель в сеть: ticket v3 содержит listener certificate и allowed requester
+Account ID; до event/inventory клиент предъявляет certificate и device-signed
+Endpoint-bound proof. `--allow-device` и known-author удалены, новое устройство
+того же account может восстановить пустую историю. Проверяющая сторона принимает
+trusted revocations через `--peer-revocation-file`; revoked device отклоняется
+до sync inventory. Freshness/completeness revocation view пока не доказывается.
 Прикладное E2EE, seed/recovery, защищённое хранение root/local history,
 production-grade sync summaries и группы ещё не реализованы.
 
@@ -109,9 +114,8 @@ production-grade sync summaries и группы ещё не реализован
 
 ## План ближайших работ
 
-1. В M0.5.2 встроить Account Root certificates и revocation view в ticket,
-   session authorization, delivery и sync, заменив `--allow-device` и
-   known-author.
+1. Спроектировать authenticated распространение свежего authority/revocation
+   state и conversation membership для каждого автора истории.
 2. Спроектировать seed/recovery authority, protected root storage, root
    rotation и конфликтующие authority operations.
 3. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
@@ -131,6 +135,6 @@ production-grade sync summaries и группы ещё не реализован
 - [`../docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md) —
   черновик основного RFC.
 - [`../docs/RFC-0002-account-device-authority.md`](../docs/RFC-0002-account-device-authority.md) —
-  реализованный M0.5.1-контракт Account Root и device authority.
+  реализованный M0.5.2-контракт Account Root, device и session authority.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

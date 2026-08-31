@@ -7,9 +7,10 @@ use thiserror::Error;
 mod wire;
 
 pub use wire::{
-    ClientRequest, MAX_INVENTORY_EVENT_IDS, MAX_SYNC_EVENTS_PER_BATCH, ServerResponse,
-    SignedSyncInventory, SyncComplete, SyncDiff, SyncEventBatch, SyncPause, SyncPaused,
-    SyncRejected, SyncRejectionReason, SyncSessionBinding,
+    ClientRequest, DeviceAuthorizationAccepted, DeviceAuthorizationRejected,
+    MAX_INVENTORY_EVENT_IDS, MAX_SYNC_EVENTS_PER_BATCH, ServerResponse,
+    SignedDeviceSessionAuthorization, SignedSyncInventory, SyncComplete, SyncDiff, SyncEventBatch,
+    SyncPause, SyncPaused, SyncRejected, SyncRejectionReason, SyncSessionBinding,
 };
 
 const EVENT_VERSION: u8 = 1;
@@ -242,6 +243,27 @@ pub enum ProtocolError {
 
     #[error("sync response was signed by an unexpected device")]
     SyncResponderMismatch,
+
+    #[error("unsupported device authorization version: {0}")]
+    UnsupportedDeviceAuthorizationVersion(u8),
+
+    #[error("device session authorization was signed by a different device")]
+    DeviceAuthorizationSignerMismatch,
+
+    #[error("device session authorization is bound to a different transport session")]
+    DeviceAuthorizationSessionMismatch,
+
+    #[error("device authorization response belongs to account {actual}; expected {expected}")]
+    DeviceAuthorizationAccountMismatch {
+        expected: kilogram_identity::AccountId,
+        actual: kilogram_identity::AccountId,
+    },
+
+    #[error("device authorization response belongs to device {actual}; expected {expected}")]
+    DeviceAuthorizationDeviceMismatch {
+        expected: DeviceId,
+        actual: DeviceId,
+    },
 }
 
 #[cfg(test)]

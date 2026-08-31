@@ -430,11 +430,50 @@ device encryption/session keys и сетевое применение серти
 M0.5.1. Формат описан в
 [`../docs/RFC-0002-account-device-authority.md`](../docs/RFC-0002-account-device-authority.md).
 
+### M0.5.2 — account-authorized network sessions: выполнено
+
+Реализовано:
+
+- несовместимый ticket v3 содержит Endpoint, root-signed listener certificate,
+  allowed requester Account ID и route policy; весь ticket подписан listener
+  device key;
+- `connect` / `sync` требуют явный `--expect-account`, а listener использует
+  `--allow-account` вместо привязки к одному Device ID;
+- первый application stream несёт `SignedDeviceSessionAuthorization`: requester
+  подписывает certificate и binding текущего listener Endpoint ID;
+- `kilogram-session` проверяет session proof, ожидаемый Account ID,
+  capabilities и caller-supplied `DeviceRevocation` до event/inventory;
+- обе стороны принимают повторяемые `--peer-revocation-file`; общий ответ peer
+  не раскрывает детали причины отказа;
+- known-author удалён из `SessionStore` и sync policy. Новый сертифицированный
+  device разрешён даже при пустой локальной истории, но inventory signer обязан
+  совпадать с уже авторизованным device.
+
+Проверки:
+
+- protocol tests подтверждают root/device/session binding и wire round-trip;
+- transport-independent session tests принимают новое сертифицированное
+  устройство, отклоняют другой device, другой Endpoint binding и root-signed
+  revocation;
+- CLI/Iroh integration test выполняет отдельный authorization stream до
+  application exchange; ticket test отклоняет revoked listener;
+- локальный process smoke между отдельными Alice/Bob Account IDs успешно
+  доставил Text/Acknowledgement, затем второе неизвестное устройство Alice с
+  пустым inventory получило 2/2 events Bob без synthetic event;
+- после root revocation этого второго device новый listener session напечатал
+  `authorization=rejected`, клиент получил ненулевой exit code до inventory;
+- форматирование, строгий Clippy, release build и все 42 workspace tests
+  проходят.
+
+Ограничение: валидность переданных revocation проверяется, но отсутствие
+скрытого или ещё не доставленного отзыва не доказывается. Conversation
+membership и полномочия авторов history batch также ещё не реализованы.
+
 ### Следующий этап
 
-1. M0.5.2: передавать и проверять device certificate/revocation view в
-   connection ticket и session protocol; заменить `--allow-device` и
-   known-author до раскрытия истории.
-2. После сетевой фиксации authorization boundary начать pairwise E2EE spike;
+1. Спроектировать authenticated authority/revocation synchronization и
+   conversation membership, чтобы проверять freshness и полномочия каждого
+   автора истории.
+2. Начать pairwise E2EE spike поверх Account → Device → Session boundary;
    seed/recovery и compact Merkle/range summary остаются отдельными
    направлениями.

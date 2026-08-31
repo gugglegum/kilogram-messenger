@@ -1,6 +1,6 @@
 # RFC-0002: Account Root и авторизация устройств
 
-- Статус: **Implemented draft (M0.5.1)**
+- Статус: **Implemented draft (M0.5.2)**
 - Дата: **2026-08-31**
 - Область: Account ID, device certificates, capabilities, revocation
 - Связанные материалы: [`RFC-0001`](RFC-0001-core-architecture.md),
@@ -19,8 +19,9 @@ device secret. `DeviceCertificate` связывает этот ключ с ак�
 device key. Сертификат и отзыв проверяются только по публичному `AccountId`,
 поэтому проверяющей стороне не нужен root secret.
 
-Этот срез намеренно не меняет M0.4 connection ticket и session protocol.
-Применение новой authority-модели при delivery и sync выделено в M0.5.2.
+M0.5.2 применяет эту модель в connection ticket и отдельном session
+authorization handshake до любых delivery/sync данных. Временные
+`--allow-device` и known-author больше не используются.
 
 ## 2. Инварианты
 
@@ -120,9 +121,12 @@ device keys и получает новый сертификат.
    `DeviceId`;
 7. отдельно проверяет device signature над событием или session proof.
 
-M0.5.1 реализует шаги 1–6 в `kilogram-identity`. Шаг 7 уже существует для
-M0-events и session messages, но связывание двух проверок в сетевом протоколе
-относится к M0.5.2.
+M0.5.1 реализует шаги 1–6 в `kilogram-identity`. M0.5.2 добавляет
+`SignedDeviceSessionAuthorization`: устройство подписывает сертификат вместе с
+binding текущего listener Endpoint ID. `kilogram-session` связывает proof,
+сертификат, требуемые capabilities и доверенный revocation view до того, как
+listener принимает event или inventory. Подпись самого event/inventory затем
+обязана принадлежать уже авторизованному device key.
 
 ## 7. CLI lifecycle
 
@@ -153,7 +157,7 @@ revocation являются публичными подписанными объ
 входит. CLI не перезаписывает существующие export-файлы и не заменяет уже
 установленный сертификат другим.
 
-## 8. Граница M0.5.1
+## 8. Реализованная граница
 
 Реализовано:
 
@@ -165,32 +169,70 @@ revocation являются публичными подписанными объ
 - отрицательные тесты на tampering, другой Account ID, другой Device ID,
   недостающую capability и попытку повторной выдачи после отзыва.
 
+M0.5.2 дополнительно реализует:
+
+- ticket v3 с public listener certificate и разрешённым requester Account ID;
+- явный `--expect-account`, предотвращающий незаметную замену listener другим
+  самоподписанным аккаунтом;
+- session proof, подписанный requester device и привязанный к текущему Endpoint;
+- проверку caller-supplied root-signed revocations обеими сторонами;
+- отказ до event/inventory для неверного account, proof или revoked device;
+- sync нового сертифицированного устройства с пустой локальной историей без
+  synthetic event и known-author bootstrap.
+
 Не реализовано:
 
 - derivation или восстановление root key из seed-фразы;
 - защита root secret средствами ОС или аппаратного хранилища;
 - recovery quorum, root rotation и разрешение конкурирующих authority events;
-- распространение полного актуального revocation view;
+- автоматическое распространение полного актуального revocation view и
+  доказательство его freshness/completeness;
 - отдельные device encryption/session keys;
 - срок действия и обновление сертификатов;
-- account-authorized membership разговоров;
-- проверка сертификатов и отзывов в connection ticket, delivery и sync;
+- account-authorized membership разговоров и проверка полномочий каждого автора
+  получаемой history;
 - окончательный codec и crypto-agility.
 
-## 9. Следующий срез: M0.5.2
+## 9. Сетевой контракт M0.5.2
 
-M0.5.2 должен заменить временное `--allow-device` / known-author правило на
-публично проверяемую цепочку:
+M0.5.2 заменяет временное `--allow-device` / known-author правило на цепочку:
 
 ```text
 trusted AccountId
     -> root-signed DeviceCertificate
     -> device-signed ticket/session proof/event
-    -> current root-signed revocation view
-    -> conversation membership policy
+    -> caller-supplied root-signed revocation view
 ```
 
-Минимальный integration test должен доказать, что сертифицированное устройство
-может доставлять и синхронизировать события, несертифицированное устройство
-отклоняется до раскрытия истории, а новый session после получения revocation
-отклоняет ранее действительный device key.
+Ticket v3 содержит endpoint, public listener certificate, разрешённый requester
+Account ID и route policy. Listener device подписывает весь ticket. Клиент
+сначала проверяет root signature сертификата, Account ID из
+`--expect-account`, capabilities, предоставленные ему revocations и затем
+device signature ticket. Listener аналогично принимает только сертификат
+аккаунта из `--allow-account`.
+
+После QUIC/path establishment клиент открывает отдельный authorization stream.
+Он отправляет certificate и device signature над certificate + binding текущего
+listener Endpoint ID. Listener отвечает `DeviceAuthorized` или общим
+`DeviceAuthorizationRejected`; лишь после успешного ответа открывается stream с
+event или inventory. Следующие sync rounds используют уже авторизованный device
+на том же connection.
+
+Для revocation enforcement проверяющая сторона получает публичные файлы через
+повторяемый `--peer-revocation-file`. Объекты проверяются криптографически, но
+M0.5.2 не умеет доказать отсутствие более свежего отзыва: пустой или устаревший
+набор не становится полным только потому, что его предоставил peer. До
+реализации authenticated authority-log synchronization это явная операционная
+граница, а не обещание мгновенного глобального отзыва.
+
+Локальный process smoke подтвердил delivery между двумя отдельными аккаунтами,
+recovery sync двух events на новое устройство того же requester account без
+предыдущего авторства и отказ нового session после передачи listener валидного
+root-signed revocation.
+
+## 10. Следующий срез
+
+Следующий identity/security этап должен определить conversation membership и
+authenticated распространение свежего authority/revocation state. Pairwise
+E2EE может начинаться поверх уже существующей Account → Device → Session
+цепочки, но не должен считать M0.5.2 production revocation service.

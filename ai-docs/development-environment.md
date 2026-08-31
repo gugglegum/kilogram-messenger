@@ -170,6 +170,13 @@ toolchain `1.98.0` для воспроизводимой разработки.
     sequence 1 и получил ожидаемый ненулевой exit code с `DeviceRevoked`.
     Форматирование, строгий Clippy, release build и все 38 workspace tests
     прошли.
+30. M0.5.2 заменил `--allow-device` / known-author на ticket v3 и отдельный
+    Endpoint-bound authorization stream. Локальный process smoke между двумя
+    Account IDs успешно выполнил delivery; второе новое устройство Alice с
+    пустой историей получило 2 events Bob. После передачи Bob root-signed
+    revocation этого device обе стороны завершили новый session ненулевым exit
+    code до inventory (`authorization=rejected`). Форматирование, строгий
+    Clippy, release build и все 42 workspace tests прошли.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -179,7 +186,8 @@ M0.3 и M0.4 завершены. Смена физической сети LAN �
 resume подтверждает, что durable event set продолжает bounded sync с новым
 transport Endpoint/session binding без повторной передачи подтверждённого
 batch. M0.5.1 завершает локальную authority-модель; сетевое применение
-certificate/revocation является M0.5.2.
+certificate/revocation завершено в M0.5.2. Автоматическая freshness/completeness
+revocation view и conversation membership остаются открыты.
 
 ## Решения, которые ещё нельзя фиксировать
 
