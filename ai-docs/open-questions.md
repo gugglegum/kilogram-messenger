@@ -15,6 +15,8 @@ Ratchet с device-signed one-time prekey. M0.7.4 добавил root-signed по
 device list, точный prekey directory и отдельный ciphertext slot каждого
 устройства peer account. M0.7.5 добавил same-account history rewrap с signed
 source inventory/range, HPKE на новый device и local projection provenance v2.
+M0.7.6 добавил signed prekey pools, per-device max-seen freshness и bounded
+active/retained resolution для двух crossed outbound sessions.
 Следующие вопросы относятся к production recovery, rotation, asynchronous
 sessions, distribution, removal и key epochs и не решены этим прототипом.
 
@@ -28,14 +30,16 @@ sessions, distribution, removal и key epochs и не решены этим пр
 - Остаётся ли vodozemac/Olm только M0 reference implementation или production
   личный чат использует Signal-style PQXDH + Double Ratchet либо
   двухучастниковый MLS?
-- Как разрешать simultaneous outbound initiation и хранить несколько sessions
-  для одной пары devices без downgrade/identity confusion?
+- Какой TTL применять к retained losing session, как выполнять authenticated
+  session reset после потери state и нужен ли production-протокол сложнее
+  проверенного M0.7.6 lexicographic-min разрешения двух crossed sessions?
 - Как транзакционно сохранять ratchet advancement, local projection и immutable
   event, не позволяя crash потерять использованный message key?
-- Как authenticated discovery/gossip сообщает самую свежую device-list revision
-  и prekey pool, предотвращает replay/исчерпание OTK и не раскрывает лишнюю
-  account metadata? M0.7.4 проверяет подпись и полноту полученного списка, но не
-  его глобальную свежесть при первом контакте.
+- Как authenticated discovery/gossip сообщает глобально самую свежую device-list
+  revision и prekey pool, выполняет remote atomic OTK reservation и не раскрывает
+  лишнюю account metadata? M0.7.6 отклоняет rollback/equivocation после
+  наблюдения новой generation, но не доказывает её глобальную свежесть при
+  первом контакте.
 - Как сетевой history rewrap подтверждает согласие пользователя/SAS, объединяет
   claims нескольких sources и разрешает recovery от устройства собеседника без
   неявного расширения same-account trust?

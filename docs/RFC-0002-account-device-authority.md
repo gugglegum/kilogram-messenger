@@ -256,8 +256,8 @@ Owner-signed membership и `AuthorizedEvent` определены отдельн
 [`RFC-0003`](RFC-0003-conversation-membership.md).
 
 M0.7.1 добавил отдельный persistent encryption key и certificate v2. Текущий
-M0.7.5 сохраняет ticket v8/session authorization v6, root-signed полный device
-list и точный directory подписанных device prekey bundles. Сертификат и ratchet
+M0.7.6 использует ticket v9/session authorization v6, root-signed полный device
+list и точный directory свежих подписанных device prekey pools. Сертификат и ratchet
 identity больше нельзя заменить без явной миграции device state; для текущего
 development spike нужен свежий state.
 
@@ -268,16 +268,16 @@ development spike нужен свежий state.
 - recovery quorum, root rotation и разрешение конкурирующих authority events;
 - discovery/gossip/witness-механизм, гарантирующий получение глобально самой
   свежей revision при первом контакте;
-- session ratchet/prekey keys с forward secrecy и post-compromise security;
+- production-аудит ratchet/prekey-композиции и post-compromise security;
 - срок действия и обновление сертификатов;
 - discovery/gossip свежих account и conversation snapshots;
 - окончательный codec и crypto-agility.
 
 ## 10. Сетевой контракт M0.6.1
 
-Ниже зафиксирован исторический M0.6.1 contract. Текущий M0.7.5 переносит тот же
-authority смысл в несовместимые ticket v8 и session authorization v6 из-за
-DeviceCertificate v2, полного device list и directory ratchet prekey bundles.
+Ниже зафиксирован исторический M0.6.1 contract. Текущий M0.7.6 переносит тот же
+authority смысл в несовместимые ticket v9 и session authorization v6 из-за
+DeviceCertificate v2, полного device list и directory ratchet prekey pools.
 
 M0.5.2 заменяет временное `--allow-device` / known-author правило на цепочку:
 
@@ -324,6 +324,7 @@ M0.6.2 завершил минимальный signed conversation membership и
 M0.7.2 отделил recipient-only event от local encrypted history projection, а
 M0.7.3 заменил replicated text payload на persistent pairwise Olm ratchet.
 M0.7.4 добавил root-signed device-list fan-out с отдельным ciphertext каждого
-устройства. M0.7.5 добавил same-account authenticated history rewrap. Gossip/
+устройства. M0.7.5 добавил same-account authenticated history rewrap, а M0.7.6
+— signed prekey pools и crossed-session resolution. Gossip/
 witness для first-contact freshness, membership removal/MLS epochs,
 seed/recovery и root rotation остаются отдельными срезами.

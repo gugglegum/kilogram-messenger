@@ -1,6 +1,6 @@
 # Память проекта Kilogram
 
-Актуально на: 2026-08-31.
+Актуально на: 2026-09-01.
 
 Эта папка — краткая проектная память и дорожная карта. Подробная техническая
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
@@ -82,9 +82,13 @@ ciphertext каждого устройства peer account в одном Event 
 rewrap для устройства, добавленного после старых events: source подписывает
 canonical inventory/range и HPKE ciphertexts, а local projection v2 сохраняет
 проверяемый provenance. Полный range — это claim source, не глобальный
-checkpoint.
+checkpoint. M0.7.6 заменил сетевой single-OTK directory на signed pools по 16
+ключей с generation/sequence/expiry и persistent max-seen anti-rollback.
+Crossed outbound sessions теперь временно сосуществуют и детерминированно
+сходятся на одном active session ID, сохраняя losing session для in-flight
+сообщений. Ticket повышен до v9; event/sync v5/v6 не изменились.
 Seed/root recovery, защищённое хранение root/local/ratchet keys, production
-prekey discovery/concurrent initiation, сетевой multi-source rewrap, sync
+global prekey discovery/witness, сетевой multi-source rewrap, sync
 summaries, membership removal и группы ещё не реализованы.
 
 ## Цель продукта
@@ -138,8 +142,8 @@ summaries, membership removal и группы ещё не реализованы
 
 ## План ближайших работ
 
-1. Добавить production prekey pool/discovery, sequence/freshness и разрешение
-   concurrent pairwise session initiation.
+1. Объединить ratchet advancement, local projection, immutable event и prekey
+   rotation одной crash-consistent транзакцией; добавить state-directory lock.
 2. Связать history rewrap с authenticated device-to-device transport,
    user consent/SAS и multi-source completeness reconciliation.
 3. Спроектировать membership removal вместе с ordered security log и MLS epoch;
@@ -176,5 +180,7 @@ summaries, membership removal и группы ещё не реализованы
   реализованный M0.7.4-контракт signed device list и ratchet fan-out.
 - [`../docs/RFC-0008-authenticated-history-rewrap.md`](../docs/RFC-0008-authenticated-history-rewrap.md) —
   реализованный M0.7.5-контракт same-account history rewrap и provenance.
+- [`../docs/RFC-0009-authenticated-prekey-pools.md`](../docs/RFC-0009-authenticated-prekey-pools.md) —
+  реализованный M0.7.6-контракт fresh prekey pools и concurrent initiation.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

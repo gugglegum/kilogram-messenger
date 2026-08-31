@@ -252,6 +252,16 @@ toolchain `1.98.0` для воспроизводимой разработки.
     `.tmp/m075-smoke-20260901-020138` восстановил новому Bob device три старых
     events, отклонил wrong recipient, повторно получил удалённый event через
     sync и не нашёл plaintext в 16 ciphertext files.
+38. M0.7.6 добавил `SignedPrekeyPool` v1, `AccountPrekeyDirectory` v2, ticket
+    v9 и persistent ratchet session record v2. Пул по умолчанию содержит 16
+    OTK, signed generation/sequence/expiry; observer сохраняет per-device
+    max-seen pool. Crossed outbound sessions сходятся на lexicographic-min
+    active session и сохраняют одну retained branch. CLI использует
+    `ratchet-prekey-pool` и `--peer-prekey-pool-file`. Форматирование, строгий
+    Clippy, release build и все 69 tests проходят. Smoke
+    `.tmp/m076-smoke-20260901-032421` подтвердил crossed sync 1/1, rotation
+    generation `0 -> 1`, sequence `0..15 -> 16..31`, stale rejection,
+    post-convergence delivery и отсутствие plaintext в 24 ciphertext files.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -265,8 +275,9 @@ certificate/revocation завершено в M0.5.2. Completeness на подп�
 и anti-rollback реализованы в M0.6.1; M0.6.2 закрывает минимальный add-only
 conversation membership и author verification. M0.7.3 завершил первый
 persistent pairwise Double Ratchet spike; M0.7.4 расширил его до проверяемого
-account-wide fan-out. First-contact global freshness, production prekey
-discovery и concurrent initiation остаются открыты. M0.7.5 реализовал
+account-wide fan-out. M0.7.6 добавил bounded signed pools, local freshness
+high-water и concurrent initiation resolution; first-contact global freshness
+и production network discovery остаются открыты. M0.7.5 реализовал
 same-account file-boundary history rewrap; сетевой consent/multi-source recovery,
 membership removal/epochs и group E2EE остаются открыты.
 

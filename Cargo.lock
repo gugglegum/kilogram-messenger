@@ -2000,6 +2000,7 @@ dependencies = [
 name = "kilogram-ratchet"
 version = "0.1.0"
 dependencies = [
+ "blake3",
  "getrandom 0.4.3",
  "kilogram-identity",
  "postcard",

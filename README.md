@@ -21,17 +21,21 @@ The signed account device-list and ratchet fan-out slice is specified in
 [`docs/RFC-0007-multi-device-ratchet-fanout.md`](docs/RFC-0007-multi-device-ratchet-fanout.md).
 The authenticated same-account history recovery slice is specified in
 [`docs/RFC-0008-authenticated-history-rewrap.md`](docs/RFC-0008-authenticated-history-rewrap.md).
+The authenticated prekey-pool and concurrent-initiation slice is specified in
+[`docs/RFC-0009-authenticated-prekey-pools.md`](docs/RFC-0009-authenticated-prekey-pools.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.7.5 authenticated history rewrap — complete
+## Current milestone: M0.7.6 authenticated prekey pools — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
-at each authority revision. Ticket v8 combines that list with exactly one
-device-signed Olm prekey bundle per authorized device. One `RatchetText` v5
+at each authority revision. Ticket v9 combines that list with exactly one
+fresh device-signed Olm prekey pool per authorized device. Every pool contains
+16 independently consumable keys by default, a monotonic generation and
+sequence range, and signed publication/expiry times. One `RatchetText` v5
 event carries a sorted recipient table with a separate persistent pairwise
 ratchet ciphertext for every device in the peer account. A connected device
 decrypts its own slot; another offline device can later receive the same event
@@ -55,15 +59,22 @@ only ratchet ciphertext events and public authorization proofs. This allows
 the ratchet to delete consumed message keys without losing the user's local
 chat history or retaining a static sender box that defeats forward secrecy.
 
-Olm account and one pairwise session per peer Device ID are encrypted before
-being stored under `STATE_DIR/ratchet`. The development pickle key is kept next
-to them, so this is a structural persistence boundary rather than a protected
-keystore. The root-signed DeviceCertificate v2 encryption key is now used for
-the local projection, not for replicated message decryption.
+Olm account and the bounded active/retained session set per peer Device ID are
+encrypted before being stored under `STATE_DIR/ratchet`. The development pickle
+key is kept next to them, so this is a structural persistence boundary rather
+than a protected keystore. The root-signed DeviceCertificate v2 encryption key
+is now used for the local projection, not for replicated message decryption.
 
-This is still a narrow integration spike. It does not yet provide a production
-prekey pool or discovery service, simultaneous-session resolution, protected
-local key storage, PQXDH, cross-account recovery, or automatic history-transfer
+M0.7.6 persists the maximum prekey generation seen for every peer device and
+rejects rollback or same-generation equivocation. `connect` and `sync` observe
+this authenticated directory directly from the ticket. Crossed first messages
+may temporarily create two Olm sessions for one Device-ID pair; both endpoints
+choose the same active session by session ID and retain the loser only for
+already in-flight messages.
+
+This is still a narrow integration spike. It does not yet provide a global DHT
+or gossip freshness proof, atomic remote prekey reservation, protected local
+key storage, PQXDH, cross-account recovery, or automatic history-transfer
 transport. Losing every readable projection still cannot be repaired from old
 ciphertext with only the device signing key.
 Do not use it for sensitive communication.
@@ -89,8 +100,8 @@ certificate to the expected Account ID, checks the required `sign-events` and
 `sync-history` capabilities, and rejects a revoked device key even if a later
 certificate is issued for it.
 
-Ticket v8 embeds the listener's root-signed certificate, complete signed device
-list/authority snapshot and one device-signed prekey bundle for every listed
+Ticket v9 embeds the listener's root-signed certificate, complete signed device
+list/authority snapshot and one fresh device-signed prekey pool for every listed
 device. It authorizes one requester Account ID rather than one hard-coded
 device. Before any event or
 inventory is sent, the requester presents its certificate, authority snapshot,
@@ -138,7 +149,7 @@ seconds for Iroh relay-to-direct migration and print `transport_path` (`direct`,
 and number of open paths. These development diagnostics made the two-host LAN
 test distinguish a real direct path from a successful relay fallback.
 
-The listener signs one of three application route policies into ticket v8:
+The listener signs one of three application route policies into ticket v9:
 
 - `auto` accepts Iroh's selected direct or relay path;
 - `direct-only` permits relay-assisted connection establishment and NAT traversal,
@@ -177,9 +188,10 @@ both events from Bob in one sync round, verified them on read, and reconstructed
 the acknowledgement as the single causal frontier.
 
 This remains a development prototype. It now implements persistent pairwise
-Olm sessions, account-wide ciphertext fan-out and same-account history rewrap,
-but does **not** yet implement a production-audited pairwise protocol, protected
-local key storage, automatic device/prekey discovery, seed phrases/root
+Olm sessions, bounded signed prekey pools, crossed-session resolution,
+account-wide ciphertext fan-out and same-account history rewrap, but does **not**
+yet implement a production-audited pairwise protocol, protected local key
+storage, global device/prekey discovery, seed phrases/root
 recovery, member removal, or production groups. Account Root and local
 device secrets remain unencrypted in their explicitly selected directories.
 A snapshot proves state at its signed revision and prevents
@@ -236,10 +248,18 @@ cargo run -p kilogram-cli -- listen `
 ```
 
 For every additional device in Bob's signed list, export its current public
-bundle with `ratchet-bundle` and repeat
-`--peer-prekey-bundle-file <DEVICE.prekey>` on the listener. The listener adds
-its own current bundle automatically and rejects incomplete, duplicate, stale
-authority-revision, or mismatched device coverage.
+pool and repeat `--peer-prekey-pool-file <DEVICE.prekeys>` on the listener:
+
+```powershell
+cargo run -p kilogram-cli -- ratchet-prekey-pool `
+  --state-dir .tmp/bob-2 `
+  --pool-file .tmp/bob-2.prekeys
+```
+
+The listener adds its own current pool automatically and rejects incomplete,
+duplicate, expired, rolled-back, or mismatched device coverage. A pool contains
+16 OTKs and is valid for seven days by default; `--refresh` publishes the next
+generation explicitly.
 
 In another terminal, connect and send a message:
 
@@ -327,15 +347,15 @@ the durable event stores ensure that only still-missing events are transferred.
 An explicit portable cursor is intentionally deferred until full-ID inventory
 is replaced by a compact authenticated summary. The development-only
 `seed-history` command creates ratchet-encrypted fixture events and requires the
-other account's public certificate, root-signed device list, and signed bundle
+other account's public certificate, root-signed device list, and signed pool
 through `--peer-certificate-file`, `--peer-device-list-file`, and
-`--peer-prekey-bundle-file`. Generate the latter offline with
-`ratchet-bundle --state-dir <PEER_STATE> --bundle-file <FILE>`;
+`--peer-prekey-pool-file`. Generate the latter offline with
+`ratchet-prekey-pool --state-dir <PEER_STATE> --pool-file <FILE>`;
 see [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
 The connection ticket is public addressing and authorization data: it contains
 the listener's Iroh address, root-signed public device certificate, complete
-root-signed device list/authority snapshot, one device-signed prekey bundle for
+root-signed device list/authority snapshot, one fresh device-signed prekey pool for
 every listed device, allowed requester Account ID, and route policy.
 The certified listener device signs the whole mapping, so tampering is detected
 before a connection or inventory is sent. Possession of the ticket alone is
@@ -343,7 +363,7 @@ insufficient: the requester must present a certificate and authority snapshot
 for the allowed account and prove possession of its device key.
 The ticket contains neither the Iroh endpoint secret nor any application secret.
 Ticket JSON, Postcard messages, and development conversation-label derivation
-remain provisional M0 choices. Ticket v8 intentionally does not decode v1-v7
+remain provisional M0 choices. Ticket v9 intentionally does not decode v1-v8
 tickets; restart the listener to generate a ticket matching this build. See
 [`RFC-0002`](docs/RFC-0002-account-device-authority.md) for snapshot and
 first-contact freshness boundaries.

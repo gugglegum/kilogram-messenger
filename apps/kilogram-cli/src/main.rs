@@ -26,8 +26,9 @@ use kilogram_protocol::{
     SyncSessionBinding,
 };
 use kilogram_ratchet::{
-    AccountPrekeyDirectory, DecryptedMessage, RatchetOperation, RatchetState, SignedPrekeyBundle,
-    SignedRatchetIdentity,
+    AccountPrekeyDirectory, DEFAULT_PREKEY_POOL_SIZE, DEFAULT_PREKEY_POOL_VALIDITY_SECONDS,
+    DecryptedMessage, MAX_PREKEY_POOL_SIZE, RatchetOperation, RatchetState, SignedPrekeyPool,
+    SignedRatchetIdentity, unix_time_now,
 };
 use kilogram_session::{
     MAX_SYNC_ROUNDS, ServerInventoryOutcome, SessionStore, SyncClient, SyncServer,
@@ -51,8 +52,8 @@ const ROUTE_POLICY_WAIT: Duration = Duration::from_secs(15);
 const CONNECTION_TIMEOUT: Duration = Duration::from_secs(30);
 const CLIENT_RELAY_WAIT_SECONDS: u64 = 30;
 const STREAM_OPEN_TIMEOUT: Duration = Duration::from_secs(15);
-const TICKET_SIGNATURE_DOMAIN: &[u8] = b"kilogram:connection-ticket-signature:v8\0";
-const TICKET_VERSION: u8 = 8;
+const TICKET_SIGNATURE_DOMAIN: &[u8] = b"kilogram:connection-ticket-signature:v9\0";
+const TICKET_VERSION: u8 = 9;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -81,9 +82,9 @@ enum Command {
         #[arg(long)]
         device_list_file: PathBuf,
 
-        /// Signed current prekey for another device in this account. Repeat for every peer device.
-        #[arg(long = "peer-prekey-bundle-file")]
-        peer_prekey_bundle_files: Vec<PathBuf>,
+        /// Signed current prekey pool for another device in this account. Repeat for every peer device.
+        #[arg(long = "peer-prekey-pool-file")]
+        peer_prekey_pool_files: Vec<PathBuf>,
 
         /// Also write the public connection ticket to this file.
         #[arg(long)]
@@ -182,9 +183,9 @@ enum Command {
         #[arg(long)]
         peer_device_list_file: PathBuf,
 
-        /// Device-signed one-time prekey bundle for the peer recipient.
+        /// Device-signed fresh one-time prekey pool for the peer recipient.
         #[arg(long)]
-        peer_prekey_bundle_file: PathBuf,
+        peer_prekey_pool_file: PathBuf,
     },
 
     /// Export this device's signed asynchronous Olm prekey bundle.
@@ -196,6 +197,29 @@ enum Command {
         /// Write the signed public bundle to this new file.
         #[arg(long)]
         bundle_file: PathBuf,
+    },
+
+    /// Export or explicitly rotate this device's signed Olm prekey pool.
+    RatchetPrekeyPool {
+        /// Directory containing this application's development device state.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Write the signed public pool to this new file.
+        #[arg(long)]
+        pool_file: PathBuf,
+
+        /// Number of independently consumable one-time keys.
+        #[arg(long, default_value_t = DEFAULT_PREKEY_POOL_SIZE)]
+        count: usize,
+
+        /// Freshness lifetime advertised by the signed pool.
+        #[arg(long, default_value_t = 168)]
+        valid_for_hours: u64,
+
+        /// Rotate even when a current fresh pool with the requested size exists.
+        #[arg(long)]
+        refresh: bool,
     },
 
     /// Export an authenticated plaintext-history range to another device of this account.
@@ -415,7 +439,7 @@ struct ListenOptions {
     state_dir: PathBuf,
     allowed_requester_account_id: AccountId,
     device_list_file: PathBuf,
-    peer_prekey_bundle_files: Vec<PathBuf>,
+    peer_prekey_pool_files: Vec<PathBuf>,
     ticket_file: Option<PathBuf>,
     relay_wait_seconds: u64,
     route_policy: RoutePolicy,
@@ -462,7 +486,7 @@ impl ConnectionTicket {
             "listener certificate belongs to a different device"
         );
         listener_directory
-            .verify()
+            .verify_at(unix_time_now()?)
             .context("verify listener account prekey directory")?;
         ensure!(
             listener_directory.account_id() == listener_certificate.account_id(),
@@ -475,9 +499,9 @@ impl ConnectionTicket {
         );
         ensure!(
             listener_directory
-                .bundle_for(listener_identity.device_id())
+                .pool_for(listener_identity.device_id())
                 .is_some(),
-            "listener prekey directory has no bundle for the listening device"
+            "listener prekey directory has no pool for the listening device"
         );
         let content = ConnectionTicketContent {
             version: TICKET_VERSION,
@@ -541,7 +565,9 @@ impl ConnectionTicket {
             self.content.version
         );
         self.content.listener_certificate.verify()?;
-        self.content.listener_directory.verify()?;
+        self.content
+            .listener_directory
+            .verify_at(unix_time_now()?)?;
         ensure!(
             self.content.listener_directory.account_id()
                 == self.content.listener_certificate.account_id(),
@@ -600,7 +626,7 @@ async fn main() -> Result<()> {
             state_dir,
             allow_account,
             device_list_file,
-            peer_prekey_bundle_files,
+            peer_prekey_pool_files,
             ticket_file,
             relay_wait_seconds,
             route_policy,
@@ -610,7 +636,7 @@ async fn main() -> Result<()> {
                 state_dir,
                 allowed_requester_account_id: allow_account,
                 device_list_file,
-                peer_prekey_bundle_files,
+                peer_prekey_pool_files,
                 ticket_file,
                 relay_wait_seconds,
                 route_policy: route_policy.into(),
@@ -661,7 +687,7 @@ async fn main() -> Result<()> {
             message_prefix,
             peer_certificate_file,
             peer_device_list_file,
-            peer_prekey_bundle_file,
+            peer_prekey_pool_file,
         } => seed_history(
             state_dir,
             conversation,
@@ -669,12 +695,19 @@ async fn main() -> Result<()> {
             message_prefix,
             peer_certificate_file,
             peer_device_list_file,
-            peer_prekey_bundle_file,
+            peer_prekey_pool_file,
         ),
         Command::RatchetBundle {
             state_dir,
             bundle_file,
         } => export_ratchet_bundle(state_dir, bundle_file),
+        Command::RatchetPrekeyPool {
+            state_dir,
+            pool_file,
+            count,
+            valid_for_hours,
+            refresh,
+        } => export_ratchet_prekey_pool(state_dir, pool_file, count, valid_for_hours, refresh),
         Command::HistoryRewrapExport {
             state_dir,
             conversation,
@@ -760,7 +793,7 @@ async fn listen(options: ListenOptions) -> Result<()> {
         state_dir,
         allowed_requester_account_id,
         device_list_file,
-        peer_prekey_bundle_files,
+        peer_prekey_pool_files,
         ticket_file,
         relay_wait_seconds,
         route_policy,
@@ -788,21 +821,30 @@ async fn listen(options: ListenOptions) -> Result<()> {
     let local_message_store = open_local_message_store(&state_dir)?;
     let mut ratchet_state = RatchetState::load_or_create(&state_dir)
         .context("load persistent listener ratchet state")?;
-    let listener_prekey_bundle = ratchet_state
-        .prekey_bundle(device_state.identity())
-        .context("publish listener one-time prekey bundle")?;
-    let mut prekey_bundles = vec![listener_prekey_bundle.clone()];
-    for path in peer_prekey_bundle_files {
-        prekey_bundles.push(
-            SignedPrekeyBundle::decode(
+    let now_unix_seconds = unix_time_now().context("read time for listener prekey freshness")?;
+    let listener_prekey_pool = ratchet_state
+        .prekey_pool(
+            device_state.identity(),
+            DEFAULT_PREKEY_POOL_SIZE,
+            now_unix_seconds,
+            DEFAULT_PREKEY_POOL_VALIDITY_SECONDS,
+        )
+        .context("publish listener one-time prekey pool")?;
+    let mut prekey_pools = vec![listener_prekey_pool.clone()];
+    for path in peer_prekey_pool_files {
+        prekey_pools.push(
+            SignedPrekeyPool::decode(
                 &fs::read(&path)
-                    .with_context(|| format!("read peer prekey bundle from {}", path.display()))?,
+                    .with_context(|| format!("read peer prekey pool from {}", path.display()))?,
             )
-            .with_context(|| format!("verify peer prekey bundle from {}", path.display()))?,
+            .with_context(|| format!("verify peer prekey pool from {}", path.display()))?,
         );
     }
-    let listener_directory = AccountPrekeyDirectory::new(listener_device_list, prekey_bundles)
+    let listener_directory = AccountPrekeyDirectory::new(listener_device_list, prekey_pools)
         .context("assemble complete listener account prekey directory")?;
+    listener_directory
+        .verify_at(now_unix_seconds)
+        .context("verify listener account prekey directory freshness")?;
     let endpoint = endpoint_builder_with_relay(route_policy, relay_url)
         .alpns(vec![ALPN.to_vec()])
         .bind()
@@ -824,12 +866,21 @@ async fn listen(options: ListenOptions) -> Result<()> {
     println!("account_id={}", ticket.listener_account_id());
     println!("device_id={}", device_state.identity().device_id());
     println!(
-        "ratchet_prekey_sequence={}",
-        listener_prekey_bundle.sequence()
+        "ratchet_prekey_pool_generation={}",
+        listener_prekey_pool.generation()
+    );
+    println!(
+        "ratchet_prekey_sequence_range={}..={}",
+        listener_prekey_pool.first_sequence(),
+        listener_prekey_pool.last_sequence()
+    );
+    println!(
+        "ratchet_prekey_pool_expires_at={}",
+        listener_prekey_pool.expires_at_unix_seconds()
     );
     println!(
         "fanout_device_count={}",
-        ticket.listener_directory().bundles().len()
+        ticket.listener_directory().pools().len()
     );
     println!("route_policy={}", route_policy.as_str());
     println!("allowed_requester_account_id={allowed_requester_account_id}");
@@ -1102,6 +1153,14 @@ async fn handle_delivery_request(
         println!("ratchet_session_id={}", operation.session_id);
         println!("ratchet_session_created={}", operation.session_created);
         println!("ratchet_message_type={}", operation.message_kind);
+        println!(
+            "ratchet_concurrent_session_resolved={}",
+            operation.concurrent_session_resolved
+        );
+        println!(
+            "ratchet_retained_session_count={}",
+            operation.retained_session_count
+        );
     } else {
         println!("ratchet_replay=local-projection");
     }
@@ -1273,19 +1332,20 @@ fn encrypt_ratchet_fanout(
     directory: &AccountPrekeyDirectory,
     plaintext: &str,
 ) -> Result<RatchetFanout> {
+    let now_unix_seconds = unix_time_now().context("read time for recipient prekey freshness")?;
     directory
-        .verify()
+        .verify_at(now_unix_seconds)
         .context("verify recipient account prekey directory before fan-out")?;
     let mut sender_identity = None;
-    let mut recipients = Vec::with_capacity(directory.bundles().len());
-    let mut operations = Vec::with_capacity(directory.bundles().len());
-    for bundle in directory.bundles() {
+    let mut recipients = Vec::with_capacity(directory.pools().len());
+    let mut operations = Vec::with_capacity(directory.pools().len());
+    for pool in directory.pools() {
         let (current_sender_identity, ciphertext, operation) = ratchet_state
-            .encrypt(sender, bundle, plaintext)
+            .encrypt_with_pool(sender, pool, plaintext, now_unix_seconds)
             .with_context(|| {
                 format!(
                     "advance and persist sender ratchet session for device {}",
-                    bundle.device_id()
+                    pool.device_id()
                 )
             })?;
         if let Some(expected) = &sender_identity {
@@ -1296,8 +1356,8 @@ fn encrypt_ratchet_fanout(
         } else {
             sender_identity = Some(current_sender_identity.clone());
         }
-        recipients.push(RatchetRecipient::new(bundle.device_id(), ciphertext)?);
-        operations.push((bundle.device_id(), operation));
+        recipients.push(RatchetRecipient::new(pool.device_id(), ciphertext)?);
+        operations.push((pool.device_id(), operation));
     }
     Ok(RatchetFanout {
         sender_identity: sender_identity
@@ -1330,6 +1390,9 @@ async fn connect(
 
     let ticket = load_connection_ticket(ticket, ticket_file).await?;
     ticket.verify_listener_account(expected_listener_account_id)?;
+    ratchet_state
+        .observe_prekey_directory(ticket.listener_directory(), unix_time_now()?)
+        .context("observe listener prekey directory and reject rollback")?;
     let listener_snapshot_store = device_state
         .pin_peer_authority_snapshot(ticket.listener_authority_snapshot())
         .context("pin listener authority snapshot and reject rollback")?;
@@ -1455,8 +1518,11 @@ async fn connect(
     println!("fanout_recipient_count={}", ratchet_fanout.operations.len());
     for (device_id, operation) in &ratchet_fanout.operations {
         println!(
-            "fanout_recipient_device_id={device_id} ratchet_session_id={} ratchet_session_created={} ratchet_message_type={}",
-            operation.session_id, operation.session_created, operation.message_kind
+            "fanout_recipient_device_id={device_id} ratchet_session_id={} ratchet_session_created={} ratchet_message_type={} ratchet_retained_session_count={}",
+            operation.session_id,
+            operation.session_created,
+            operation.message_kind,
+            operation.retained_session_count
         );
     }
     let listener_operation = ratchet_fanout
@@ -1471,6 +1537,10 @@ async fn connect(
         listener_operation.session_created
     );
     println!("ratchet_message_type={}", listener_operation.message_kind);
+    println!(
+        "ratchet_retained_session_count={}",
+        listener_operation.retained_session_count
+    );
     println!("sent_local_projection={local_projection_store_outcome:?}");
     println!("sent_store={sent_store_outcome:?}");
 
@@ -1558,6 +1628,9 @@ async fn sync(
         RatchetState::load_or_create(&state_dir).context("load persistent sync ratchet state")?;
     let ticket = load_connection_ticket(ticket, ticket_file).await?;
     ticket.verify_listener_account(expected_listener_account_id)?;
+    ratchet_state
+        .observe_prekey_directory(ticket.listener_directory(), unix_time_now()?)
+        .context("observe listener prekey directory and reject rollback")?;
     let listener_snapshot_store = device_state
         .pin_peer_authority_snapshot(ticket.listener_authority_snapshot())
         .context("pin listener authority snapshot and reject rollback")?;
@@ -2320,6 +2393,68 @@ fn export_ratchet_bundle(state_dir: PathBuf, bundle_file: PathBuf) -> Result<()>
     Ok(())
 }
 
+fn export_ratchet_prekey_pool(
+    state_dir: PathBuf,
+    pool_file: PathBuf,
+    count: usize,
+    valid_for_hours: u64,
+    refresh: bool,
+) -> Result<()> {
+    ensure!(
+        (1..=MAX_PREKEY_POOL_SIZE).contains(&count),
+        "--count must be within 1..={MAX_PREKEY_POOL_SIZE}"
+    );
+    let validity_seconds = valid_for_hours
+        .checked_mul(60 * 60)
+        .context("--valid-for-hours overflows seconds")?;
+    let device_state = DeviceState::load_or_create(&state_dir)
+        .with_context(|| format!("load device state from {}", state_dir.display()))?;
+    let certificate = device_state
+        .load_certificate()
+        .context("load device certificate before exporting a prekey pool")?;
+    ensure!(
+        certificate.device_id() == device_state.identity().device_id(),
+        "installed certificate belongs to a different device"
+    );
+    let now_unix_seconds = unix_time_now().context("read time for prekey pool publication")?;
+    let mut ratchet_state =
+        RatchetState::load_or_create(&state_dir).context("load persistent ratchet state")?;
+    let pool = if refresh {
+        ratchet_state
+            .refresh_prekey_pool(
+                device_state.identity(),
+                count,
+                now_unix_seconds,
+                validity_seconds,
+            )
+            .context("rotate signed one-time prekey pool")?
+    } else {
+        ratchet_state
+            .prekey_pool(
+                device_state.identity(),
+                count,
+                now_unix_seconds,
+                validity_seconds,
+            )
+            .context("create or reuse signed one-time prekey pool")?
+    };
+    write_new_authority_file(&pool_file, &pool.encode()?)
+        .with_context(|| format!("export prekey pool to {}", pool_file.display()))?;
+    println!("device_id={}", pool.device_id());
+    println!("prekey_pool_generation={}", pool.generation());
+    println!("prekey_count={}", pool.bundles().len());
+    println!("prekey_sequence_first={}", pool.first_sequence());
+    println!("prekey_sequence_last={}", pool.last_sequence());
+    println!(
+        "prekey_pool_published_at={}",
+        pool.published_at_unix_seconds()
+    );
+    println!("prekey_pool_expires_at={}", pool.expires_at_unix_seconds());
+    println!("prekey_pool_file={}", pool_file.display());
+    println!("status=ratchet-prekey-pool-exported");
+    Ok(())
+}
+
 fn export_history_rewrap(
     state_dir: PathBuf,
     conversation: String,
@@ -2622,7 +2757,7 @@ fn seed_history(
     message_prefix: String,
     peer_certificate_file: PathBuf,
     peer_device_list_file: PathBuf,
-    peer_prekey_bundle_file: PathBuf,
+    peer_prekey_pool_file: PathBuf,
 ) -> Result<()> {
     ensure!(count > 0, "--count must be greater than zero");
     let device_state = DeviceState::load_or_create(&state_dir)
@@ -2659,20 +2794,27 @@ fn seed_history(
         peer_device_list.devices() == std::slice::from_ref(&peer_certificate),
         "development seed-history requires a single-device list matching the peer certificate"
     );
-    let peer_prekey_bundle =
-        SignedPrekeyBundle::decode(&fs::read(&peer_prekey_bundle_file).with_context(|| {
+    let peer_prekey_pool =
+        SignedPrekeyPool::decode(&fs::read(&peer_prekey_pool_file).with_context(|| {
             format!(
-                "read peer prekey bundle from {}",
-                peer_prekey_bundle_file.display()
+                "read peer prekey pool from {}",
+                peer_prekey_pool_file.display()
             )
         })?)
-        .context("decode and verify peer prekey bundle")?;
+        .context("decode and verify peer prekey pool")?;
+    let now_unix_seconds = unix_time_now().context("read time for peer prekey freshness")?;
+    peer_prekey_pool
+        .verify_at(now_unix_seconds)
+        .context("verify peer prekey pool freshness")?;
     ensure!(
-        peer_prekey_bundle.device_id() == peer_certificate.device_id(),
-        "peer prekey bundle belongs to a different device than the peer certificate"
+        peer_prekey_pool.device_id() == peer_certificate.device_id(),
+        "peer prekey pool belongs to a different device than the peer certificate"
     );
     let mut ratchet_state = RatchetState::load_or_create(&state_dir)
         .context("load persistent ratchet state before seeding history")?;
+    ratchet_state
+        .observe_prekey_pool(&peer_prekey_pool, now_unix_seconds)
+        .context("observe peer prekey pool before allocating seeded events")?;
     let event_store = open_event_store(&state_dir)?;
     let local_message_store = open_local_message_store(&state_dir)?;
     let conversation_id = ConversationId::from_label(&conversation);
@@ -2707,7 +2849,12 @@ fn seed_history(
             .context("allocate seeded event sequence")?;
         let body = format!("{message_prefix}-{index}");
         let (sender_ratchet_identity, ciphertext, _) = ratchet_state
-            .encrypt(device_state.identity(), &peer_prekey_bundle, &body)
+            .encrypt_with_pool(
+                device_state.identity(),
+                &peer_prekey_pool,
+                &body,
+                now_unix_seconds,
+            )
             .context("advance and persist seeded ratchet message")?;
         let event = SignedEvent::sign_ratchet_text(
             device_state.identity(),
@@ -3037,13 +3184,18 @@ mod tests {
         let snapshot = root.authority_snapshot()?;
         let device_list = root.publish_device_list(std::slice::from_ref(&certificate))?;
         let prekey_directory =
-            AccountPrekeyDirectory::new(device_list, vec![prekey_bundle_for(identity)?])?;
+            AccountPrekeyDirectory::new(device_list, vec![prekey_pool_for(identity)?])?;
         Ok((root.account_id(), certificate, snapshot, prekey_directory))
     }
 
-    fn prekey_bundle_for(identity: &DeviceIdentity) -> Result<SignedPrekeyBundle> {
+    fn prekey_pool_for(identity: &DeviceIdentity) -> Result<SignedPrekeyPool> {
         let directory = tempfile::tempdir()?;
-        Ok(RatchetState::load_or_create(directory.path())?.prekey_bundle(identity)?)
+        Ok(RatchetState::load_or_create(directory.path())?.prekey_pool(
+            identity,
+            4,
+            unix_time_now()?,
+            DEFAULT_PREKEY_POOL_VALIDITY_SECONDS,
+        )?)
     }
 
     #[test]
@@ -3055,7 +3207,7 @@ mod tests {
         let peer_state_dir = directory.path().join("peer-device");
         let peer_certificate_file = directory.path().join("peer-device.cert");
         let peer_device_list_file = directory.path().join("peer-devices.snapshot");
-        let peer_prekey_bundle_file = directory.path().join("peer-device.prekey");
+        let peer_prekey_pool_file = directory.path().join("peer-device.prekey-pool");
         let conversation = "seed-history-test";
         create_account(account_dir.clone())?;
         enroll_device(account_dir.clone(), state_dir.clone(), None)?;
@@ -3073,9 +3225,13 @@ mod tests {
         peer.install_certificate(&peer_certificate)?;
         peer.install_own_authority_snapshot(peer_device_list.authority_snapshot())?;
         write_new_authority_file(&peer_device_list_file, &peer_device_list.encode()?)?;
-        let peer_prekey_bundle =
-            RatchetState::load_or_create(&peer_state_dir)?.prekey_bundle(peer.identity())?;
-        write_new_authority_file(&peer_prekey_bundle_file, &peer_prekey_bundle.encode()?)?;
+        let peer_prekey_pool = RatchetState::load_or_create(&peer_state_dir)?.prekey_pool(
+            peer.identity(),
+            4,
+            unix_time_now()?,
+            DEFAULT_PREKEY_POOL_VALIDITY_SECONDS,
+        )?;
+        write_new_authority_file(&peer_prekey_pool_file, &peer_prekey_pool.encode()?)?;
         let membership = account.create_conversation_membership(
             ConversationId::from_label(conversation).scope_id(),
             &[peer_account.account_id()],
@@ -3088,7 +3244,7 @@ mod tests {
             "fixture".to_owned(),
             peer_certificate_file,
             peer_device_list_file,
-            peer_prekey_bundle_file,
+            peer_prekey_pool_file,
         )?;
 
         let store = open_event_store(&state_dir)?;
@@ -3359,6 +3515,46 @@ mod tests {
     }
 
     #[test]
+    fn connection_ticket_rejects_an_expired_prekey_directory() -> Result<()> {
+        let root_directory = tempfile::tempdir()?;
+        let ratchet_directory = tempfile::tempdir()?;
+        let root = AccountRootState::create(root_directory.path())?;
+        let identity = DeviceIdentity::generate()?;
+        let certificate = root.issue_device_certificate(
+            identity.device_id(),
+            DeviceEncryptionIdentity::generate()?.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let device_list = root.publish_device_list(std::slice::from_ref(&certificate))?;
+        let now = unix_time_now()?;
+        let published_at = now
+            .checked_sub(kilogram_ratchet::PREKEY_CLOCK_SKEW_SECONDS + 2)
+            .context("test clock is unexpectedly close to Unix epoch")?;
+        let expired_pool = RatchetState::load_or_create(ratchet_directory.path())?.prekey_pool(
+            &identity,
+            4,
+            published_at,
+            1,
+        )?;
+        let directory = AccountPrekeyDirectory::new(device_list, vec![expired_pool])?;
+        let requester = DeviceIdentity::generate()?;
+        let (requester_account_id, _, _, _) = authority_for(&requester)?;
+
+        let error = ConnectionTicket::new(
+            EndpointAddr::new(SecretKey::generate().public()),
+            &identity,
+            certificate,
+            directory,
+            requester_account_id,
+            RoutePolicy::Auto,
+        )
+        .err()
+        .context("expired prekey directory unexpectedly produced a ticket")?;
+        assert!(format!("{error:#}").contains("expired"));
+        Ok(())
+    }
+
+    #[test]
     fn ratchet_fanout_encrypts_one_event_for_every_signed_account_device() -> Result<()> {
         let directory = tempfile::tempdir()?;
         let account = AccountRootState::create(directory.path().join("recipient-account"))?;
@@ -3384,8 +3580,18 @@ mod tests {
         let prekey_directory = AccountPrekeyDirectory::new(
             device_list,
             vec![
-                second_ratchet.prekey_bundle(&second)?,
-                first_ratchet.prekey_bundle(&first)?,
+                second_ratchet.prekey_pool(
+                    &second,
+                    4,
+                    unix_time_now()?,
+                    DEFAULT_PREKEY_POOL_VALIDITY_SECONDS,
+                )?,
+                first_ratchet.prekey_pool(
+                    &first,
+                    4,
+                    unix_time_now()?,
+                    DEFAULT_PREKEY_POOL_VALIDITY_SECONDS,
+                )?,
             ],
         )?;
         let mut sender_ratchet =
@@ -3450,7 +3656,7 @@ mod tests {
             listener_root.publish_device_list(std::slice::from_ref(&listener_certificate))?;
         let old_directory = AccountPrekeyDirectory::new(
             old_device_list,
-            vec![prekey_bundle_for(&listener_identity)?],
+            vec![prekey_pool_for(&listener_identity)?],
         )?;
         let encoded = ConnectionTicket::new(
             EndpointAddr::new(SecretKey::generate().public()),

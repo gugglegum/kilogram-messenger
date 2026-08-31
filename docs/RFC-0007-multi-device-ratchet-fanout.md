@@ -5,6 +5,11 @@
 - Область: полный список устройств аккаунта и отдельный pairwise ciphertext для
   каждого устройства
 
+> M0.7.6 заменил описанные здесь одиночные bundles на fresh signed pools и
+> повысил только directory/ticket/session-state границы. Актуальный контракт —
+> [`RFC-0009`](RFC-0009-authenticated-prekey-pools.md); event fan-out v5 остался
+> без изменений.
+
 ## 1. Цель этапа
 
 M0.7.3 устанавливал persistent ratchet только с устройством, которое создало
@@ -137,4 +142,5 @@ M0.7.5 реализовал authenticated history rewrap от живого ус�
 source inventory. Актуальный контракт описан в
 [`RFC-0008`](RFC-0008-authenticated-history-rewrap.md). Он не возвращает static
 sender boxes в replicated events и не обещает восстановление после потери всех
-живых projections.
+живых projections. M0.7.6 затем закрыл single-OTK/freshness/concurrent-initiation
+границу в [`RFC-0009`](RFC-0009-authenticated-prekey-pools.md).

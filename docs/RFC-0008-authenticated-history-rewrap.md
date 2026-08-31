@@ -158,7 +158,7 @@ production UI должен передавать его по авторизова
 
 ## 9. Следующий этап
 
-M0.7.6 должен заменить single-use ручную prekey distribution на authenticated
-prekey pool с sequence/freshness, безопасным расходованием и разрешением
-concurrent pairwise session initiation. Discovery не должно позволять peer
-скрыть устройство из Root-signed списка или откатить уже виденную revision.
+M0.7.6 реализовал authenticated prekey pools, sequence/freshness high-water и
+детерминированное разрешение crossed pairwise initiation. Актуальный контракт
+описан в [`RFC-0009`](RFC-0009-authenticated-prekey-pools.md). Следующим срезом
+остаётся общая crash-consistent транзакция ratchet/projection/event/prekey.

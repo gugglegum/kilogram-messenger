@@ -769,10 +769,56 @@ multi-source reconciliation, user consent/SAS и общая storage transaction 
 реализованы. Полный контракт —
 [`../docs/RFC-0008-authenticated-history-rewrap.md`](../docs/RFC-0008-authenticated-history-rewrap.md).
 
+### M0.7.6 — authenticated prekey pools и concurrent initiation: выполнено
+
+Реализовано:
+
+- `SignedPrekeyPool` публикует 1–64 (по умолчанию 16) independently consumable
+  OTK, стабильную signed ratchet identity, generation, непрерывный sequence
+  range и signed publication/expiry interval;
+- `AccountPrekeyDirectory` v2 требует fresh pool для каждого устройства
+  root-signed списка; ticket/signature domain повышены до v9, event v5 и
+  sync/session v6 не менялись;
+- `connect` и `sync` сохраняют max-seen pool каждого peer device; более старая
+  generation, different pool той же generation, sequence/timestamp rollback и
+  ratchet identity substitution отклоняются;
+- после успешного inbound PreKey private OTK удаляется `vodozemac`, а устройство
+  публикует следующую generation; истёкший current pool также ротируется
+  автоматически;
+- deterministic hash selector распределяет разные initiator Device IDs по
+  entries, не превращая collision в повторное использование private key;
+- persistent session record v2 хранит active и максимум одну retained session;
+  crossed outbound X/Y выбирают одинаковый lexicographic-min active ID на обеих
+  сторонах, losing session обслуживает только уже отправленные сообщения;
+- session record v1 читается как confirmed legacy session и мигрирует при
+  следующей записи;
+- CLI добавил `ratchet-prekey-pool`; `listen` и `seed-history` принимают
+  `--peer-prekey-pool-file`.
+
+Проверки:
+
+- signature/tamper, pool size, sequence continuity, expiry и automatic rotation;
+- max-seen rollback/equivocation и смена ratchet identity fail-closed;
+- simultaneous outbound unit cycle расшифровывает оба crossed first messages,
+  сохраняет две sessions и сходится на одном active ID;
+- все 69 workspace tests, форматирование, строгий Clippy и release build
+  проходят;
+- release process smoke `.tmp/m076-smoke-20260901-032421` создал Alice/Bob
+  first messages до соединения, передал их 1/1 через sync, ротировал pools
+  `generation 0 -> 1` и `sequence 0..15 -> 16..31`, отклонил stale pool,
+  выполнил post-convergence delivery с одной retained session, получил
+  одинаковые histories и не нашёл plaintext в 24 ciphertext state files.
+
+Граница среза: ticket/file является authenticated M0 discovery boundary, но не
+глобальным DHT/gossip freshness proof. Нет remote atomic OTK reservation,
+session-reset protocol, TTL retained session или общей DB transaction. Полный
+контракт —
+[`../docs/RFC-0009-authenticated-prekey-pools.md`](../docs/RFC-0009-authenticated-prekey-pools.md).
+
 ### Следующий этап
 
-1. M0.7.6: добавить authenticated prekey pool/discovery, sequence/freshness и
-   разрешение concurrent pairwise session initiation.
+1. M0.7.7: объединить ratchet advancement, local projection, immutable event и
+   prekey rotation одной crash-consistent транзакцией и добавить state lock.
 2. Затем связать history rewrap с сетевой device-to-device сессией, user consent
    и multi-source completeness reconciliation.
 3. Membership removal и group governance проектировать вместе с ordered
