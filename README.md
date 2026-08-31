@@ -23,12 +23,14 @@ The authenticated same-account history recovery slice is specified in
 [`docs/RFC-0008-authenticated-history-rewrap.md`](docs/RFC-0008-authenticated-history-rewrap.md).
 The authenticated prekey-pool and concurrent-initiation slice is specified in
 [`docs/RFC-0009-authenticated-prekey-pools.md`](docs/RFC-0009-authenticated-prekey-pools.md).
+The crash-consistent local state transaction is specified in
+[`docs/RFC-0010-crash-consistent-local-state.md`](docs/RFC-0010-crash-consistent-local-state.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.7.6 authenticated prekey pools — complete
+## Current milestone: M0.7.7 crash-consistent local state — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -72,11 +74,20 @@ may temporarily create two Olm sessions for one Device-ID pair; both endpoints
 choose the same active session by session ID and retain the loser only for
 already in-flight messages.
 
+M0.7.7 serializes every CLI command that uses a device `STATE_DIR` with an
+exclusive OS file lock. A prepared write-ahead journal snapshots mutable
+ratchet and author-sequence state and records the baseline of the immutable
+event, local-projection, and history-rewrap stores. Delivery, synchronization,
+history seeding/import, and prekey rotation either commit all related files or
+restore the previous ratchet/sequence and remove only newly created immutable
+files on error or the next startup. Network frames are sent only after the
+corresponding local transaction commits.
+
 This is still a narrow integration spike. It does not yet provide a global DHT
 or gossip freshness proof, atomic remote prekey reservation, protected local
-key storage, PQXDH, cross-account recovery, or automatic history-transfer
-transport. Losing every readable projection still cannot be repaired from old
-ciphertext with only the device signing key.
+key storage, a scalable transactional database, PQXDH, cross-account recovery,
+or automatic history-transfer transport. Losing every readable projection
+still cannot be repaired from old ciphertext with only the device signing key.
 Do not use it for sensitive communication.
 
 An owner Account Root now signs a complete, canonical, add-only conversation

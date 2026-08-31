@@ -8,8 +8,9 @@
 ## Текущее состояние
 
 Архитектура остаётся в стадии проектирования. Rust workspace теперь содержит
-`kilogram-identity`, `kilogram-protocol`, `kilogram-store`,
-`kilogram-session`, `kilogram-transport-iroh` и `kilogram-cli`.
+`kilogram-identity`, `kilogram-protocol`, `kilogram-ratchet`, `kilogram-state`,
+`kilogram-store`, `kilogram-session`, `kilogram-transport-iroh` и
+`kilogram-cli`.
 Два процесса обмениваются подписанными событиями через Iroh/QUIC, проверяют
 Ed25519-подписи и causal acknowledgement. Прикладная device identity, author
 sequence и signed events сохраняются после перезапуска отдельно от эфемерной
@@ -87,9 +88,15 @@ checkpoint. M0.7.6 заменил сетевой single-OTK directory на signe
 Crossed outbound sessions теперь временно сосуществуют и детерминированно
 сходятся на одном active session ID, сохраняя losing session для in-flight
 сообщений. Ticket повышен до v9; event/sync v5/v6 не изменились.
+M0.7.7 добавил exclusive OS lock всего device `STATE_DIR` и prepared/committed/
+rolled-back filesystem journal. Ratchet tree и `next-sequence` восстанавливаются
+из backup, а rollback удаляет только новые immutable event/projection/rewrap
+files относительно baseline. Delivery, sync batch, seed/import и prekey
+rotation теперь завершаются local commit до сетевого ответа; следующий запуск
+автоматически откатывает оставленный prepared journal. Wire версии не менялись.
 Seed/root recovery, защищённое хранение root/local/ratchet keys, production
-global prekey discovery/witness, сетевой multi-source rewrap, sync
-summaries, membership removal и группы ещё не реализованы.
+transactional DB, global prekey discovery/witness, сетевой multi-source rewrap,
+sync summaries, membership removal и группы ещё не реализованы.
 
 ## Цель продукта
 
@@ -142,10 +149,10 @@ summaries, membership removal и группы ещё не реализованы
 
 ## План ближайших работ
 
-1. Объединить ratchet advancement, local projection, immutable event и prekey
-   rotation одной crash-consistent транзакцией; добавить state-directory lock.
-2. Связать history rewrap с authenticated device-to-device transport,
+1. Связать history rewrap с authenticated device-to-device transport,
    user consent/SAS и multi-source completeness reconciliation.
+2. Заменить M0 filesystem snapshot journal на encrypted transactional DB/WAL с
+   bounded recovery и migrations.
 3. Спроектировать membership removal вместе с ordered security log и MLS epoch;
    отдельно — gossip/witness для first-contact freshness.
 4. Спроектировать seed/recovery authority, protected root storage, root
@@ -182,5 +189,7 @@ summaries, membership removal и группы ещё не реализованы
   реализованный M0.7.5-контракт same-account history rewrap и provenance.
 - [`../docs/RFC-0009-authenticated-prekey-pools.md`](../docs/RFC-0009-authenticated-prekey-pools.md) —
   реализованный M0.7.6-контракт fresh prekey pools и concurrent initiation.
+- [`../docs/RFC-0010-crash-consistent-local-state.md`](../docs/RFC-0010-crash-consistent-local-state.md) —
+  реализованный M0.7.7-контракт local state lock, journal и crash recovery.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

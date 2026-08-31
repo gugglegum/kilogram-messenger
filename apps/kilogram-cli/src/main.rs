@@ -1,7 +1,7 @@
 use std::{
     cell::RefCell,
     fs::{self, OpenOptions},
-    io::Write,
+    io::{self, Write},
     path::{Path, PathBuf},
     time::Duration,
 };
@@ -34,6 +34,7 @@ use kilogram_session::{
     MAX_SYNC_ROUNDS, ServerInventoryOutcome, SessionStore, SyncClient, SyncServer,
     authorize_device_session,
 };
+use kilogram_state::{StateDirectoryLock, StateTransaction};
 use kilogram_store::{EventStore, LocalMessageStore, StoreError, StoreOutcome};
 use kilogram_transport_iroh::{
     ALPN, RoutePolicy, SelectedPathDiagnostics, await_route_policy, endpoint_builder_for_remote,
@@ -428,6 +429,34 @@ enum Command {
     },
 }
 
+impl Command {
+    fn state_directory(&self) -> Option<&Path> {
+        match self {
+            Self::Listen { state_dir, .. }
+            | Self::Connect { state_dir, .. }
+            | Self::Sync { state_dir, .. }
+            | Self::SeedHistory { state_dir, .. }
+            | Self::RatchetBundle { state_dir, .. }
+            | Self::RatchetPrekeyPool { state_dir, .. }
+            | Self::HistoryRewrapExport { state_dir, .. }
+            | Self::HistoryRewrapImport { state_dir, .. }
+            | Self::History { state_dir, .. }
+            | Self::Identity { state_dir }
+            | Self::ConversationMembershipInstall { state_dir, .. }
+            | Self::DeviceEnroll { state_dir, .. }
+            | Self::DeviceAuthorityUpdate { state_dir, .. }
+            | Self::DeviceAuthorize { state_dir, .. } => Some(state_dir),
+            Self::AccountCreate { .. }
+            | Self::AccountShow { .. }
+            | Self::AccountSnapshot { .. }
+            | Self::AccountDeviceList { .. }
+            | Self::ConversationCreate { .. }
+            | Self::ConversationMemberAdd { .. }
+            | Self::DeviceRevoke { .. } => None,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, ValueEnum)]
 enum RoutePolicyArg {
     Auto,
@@ -621,7 +650,14 @@ fn ticket_signing_bytes(content: &ConnectionTicketContent) -> Result<Vec<u8>> {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    match Cli::parse().command {
+    let cli = Cli::parse();
+    let _state_lock = cli
+        .command
+        .state_directory()
+        .map(StateDirectoryLock::acquire)
+        .transpose()
+        .context("lock state directory and recover interrupted local transaction")?;
+    match cli.command {
         Command::Listen {
             state_dir,
             allow_account,
@@ -788,6 +824,54 @@ async fn main() -> Result<()> {
     }
 }
 
+fn run_state_transaction<T>(
+    state_directory: &Path,
+    operation: impl FnOnce() -> Result<T>,
+) -> Result<T> {
+    let transaction = StateTransaction::begin(state_directory)
+        .context("prepare crash-consistent local state transaction")?;
+    match operation() {
+        Ok(value) => {
+            transaction
+                .commit()
+                .context("commit crash-consistent local state transaction")?;
+            Ok(value)
+        }
+        Err(operation_error) => match transaction.rollback() {
+            Ok(()) => Err(operation_error),
+            Err(rollback_error) => Err(operation_error.context(format!(
+                "local state operation failed and rollback also failed: {rollback_error}"
+            ))),
+        },
+    }
+}
+
+fn run_store_transaction<T>(
+    state_directory: &Path,
+    operation: impl FnOnce() -> Result<T, StoreError>,
+) -> Result<T, StoreError> {
+    let transaction =
+        StateTransaction::begin(state_directory).map_err(state_transaction_store_error)?;
+    match operation() {
+        Ok(value) => {
+            transaction
+                .commit()
+                .map_err(state_transaction_store_error)?;
+            Ok(value)
+        }
+        Err(operation_error) => match transaction.rollback() {
+            Ok(()) => Err(operation_error),
+            Err(rollback_error) => Err(StoreError::from(io::Error::other(format!(
+                "local store operation failed ({operation_error}) and rollback also failed: {rollback_error}"
+            )))),
+        },
+    }
+}
+
+fn state_transaction_store_error(error: kilogram_state::StateError) -> StoreError {
+    StoreError::from(io::Error::other(error))
+}
+
 async fn listen(options: ListenOptions) -> Result<()> {
     let ListenOptions {
         state_dir,
@@ -819,17 +903,20 @@ async fn listen(options: ListenOptions) -> Result<()> {
         .context("install authority snapshot embedded in listener device list")?;
     let event_store = open_event_store(&state_dir)?;
     let local_message_store = open_local_message_store(&state_dir)?;
-    let mut ratchet_state = RatchetState::load_or_create(&state_dir)
-        .context("load persistent listener ratchet state")?;
     let now_unix_seconds = unix_time_now().context("read time for listener prekey freshness")?;
-    let listener_prekey_pool = ratchet_state
-        .prekey_pool(
-            device_state.identity(),
-            DEFAULT_PREKEY_POOL_SIZE,
-            now_unix_seconds,
-            DEFAULT_PREKEY_POOL_VALIDITY_SECONDS,
-        )
-        .context("publish listener one-time prekey pool")?;
+    let (mut ratchet_state, listener_prekey_pool) = run_state_transaction(&state_dir, || {
+        let mut ratchet_state = RatchetState::load_or_create(&state_dir)
+            .context("load persistent listener ratchet state")?;
+        let listener_prekey_pool = ratchet_state
+            .prekey_pool(
+                device_state.identity(),
+                DEFAULT_PREKEY_POOL_SIZE,
+                now_unix_seconds,
+                DEFAULT_PREKEY_POOL_VALIDITY_SECONDS,
+            )
+            .context("publish listener one-time prekey pool")?;
+        Ok((ratchet_state, listener_prekey_pool))
+    })?;
     let mut prekey_pools = vec![listener_prekey_pool.clone()];
     for path in peer_prekey_pool_files {
         prekey_pools.push(
@@ -922,10 +1009,13 @@ async fn listen(options: ListenOptions) -> Result<()> {
     match request {
         ClientRequest::DeliverEvent(event) => {
             handle_delivery_request(
-                &device_state,
-                &event_store,
-                &local_message_store,
-                &mut ratchet_state,
+                DeliveryState {
+                    state_directory: &state_dir,
+                    device_state: &device_state,
+                    event_store: &event_store,
+                    local_message_store: &local_message_store,
+                    ratchet_state: &mut ratchet_state,
+                },
                 &mut send,
                 *event,
                 &authorized_requester,
@@ -934,6 +1024,7 @@ async fn listen(options: ListenOptions) -> Result<()> {
         }
         ClientRequest::SyncInventory(inventory) => {
             let decrypting_store = DecryptingSessionStore::new(
+                &state_dir,
                 &event_store,
                 &local_message_store,
                 &device_state,
@@ -1058,15 +1149,27 @@ async fn authorize_with_listener(
     }
 }
 
+struct DeliveryState<'a> {
+    state_directory: &'a Path,
+    device_state: &'a DeviceState,
+    event_store: &'a EventStore,
+    local_message_store: &'a LocalMessageStore,
+    ratchet_state: &'a mut RatchetState,
+}
+
 async fn handle_delivery_request(
-    device_state: &DeviceState,
-    event_store: &EventStore,
-    local_message_store: &LocalMessageStore,
-    ratchet_state: &mut RatchetState,
+    state: DeliveryState<'_>,
     send: &mut SendStream,
     event: AuthorizedEvent,
     authorized_requester: &AuthorizedDevice,
 ) -> Result<()> {
+    let DeliveryState {
+        state_directory,
+        device_state,
+        event_store,
+        local_message_store,
+        ratchet_state,
+    } = state;
     let signed_event = event.event();
     let membership = device_state
         .load_conversation_membership(signed_event.conversation_id().scope_id())
@@ -1111,33 +1214,77 @@ async fn handle_delivery_request(
         signed_event.ratchet_message_for(local_device_id).is_ok(),
         "received ratchet text has no ciphertext for this device"
     );
-    let (body, local_projection_store_outcome, ratchet_operation) =
-        match open_local_text_projection_if_present(
-            local_message_store,
-            device_state,
-            signed_event,
-        )? {
-            Some(body) => (body, kilogram_store::StoreOutcome::AlreadyPresent, None),
-            None => {
-                let (sender_ratchet_identity, ciphertext) =
-                    signed_event.ratchet_message_for(local_device_id)?;
-                let (decrypted, operation) = ratchet_state
-                    .decrypt(device_state.identity(), sender_ratchet_identity, ciphertext)
-                    .context("decrypt received text through the persistent ratchet")?;
-                let body = decrypted.as_str().to_owned();
-                let outcome = ensure_received_local_text_projection(
-                    local_message_store,
-                    device_state,
-                    signed_event,
-                    &decrypted,
-                )
-                .context("persist local history projection before the received event")?;
-                (body, outcome, Some(operation))
-            }
-        };
-    let received_store_outcome = event_store
-        .put_authorized(&event, &membership)
-        .context("persist received event before acknowledging it")?;
+    let (
+        body,
+        local_projection_store_outcome,
+        ratchet_operation,
+        received_store_outcome,
+        acknowledgement,
+        acknowledgement_id,
+        acknowledgement_store_outcome,
+    ) = run_state_transaction(state_directory, || {
+        let (body, local_projection_store_outcome, ratchet_operation) =
+            match open_local_text_projection_if_present(
+                local_message_store,
+                device_state,
+                signed_event,
+            )? {
+                Some(body) => (body, kilogram_store::StoreOutcome::AlreadyPresent, None),
+                None => {
+                    let (sender_ratchet_identity, ciphertext) =
+                        signed_event.ratchet_message_for(local_device_id)?;
+                    let (decrypted, operation) = ratchet_state
+                        .decrypt(device_state.identity(), sender_ratchet_identity, ciphertext)
+                        .context("decrypt received text through the persistent ratchet")?;
+                    let body = decrypted.as_str().to_owned();
+                    let outcome = ensure_received_local_text_projection(
+                        local_message_store,
+                        device_state,
+                        signed_event,
+                        &decrypted,
+                    )
+                    .context("persist local history projection before the received event")?;
+                    (body, outcome, Some(operation))
+                }
+            };
+        let received_store_outcome = event_store
+            .put_authorized(&event, &membership)
+            .context("persist received event before acknowledging it")?;
+
+        let acknowledgement_sequence = device_state
+            .allocate_sequence()
+            .context("allocate acknowledgement sequence")?;
+        let acknowledgement = SignedEvent::sign_acknowledgement(
+            device_state.identity(),
+            signed_event.conversation_id(),
+            acknowledgement_sequence,
+            vec![event_id],
+            event_id,
+        )
+        .context("sign acknowledgement event")?;
+        let acknowledgement = AuthorizedEvent::new(
+            acknowledgement,
+            listener_certificate.clone(),
+            listener_authority_snapshot.clone(),
+        )
+        .context("attach listener Account Root authorization to acknowledgement")?;
+        let acknowledgement_id = acknowledgement
+            .event()
+            .event_id()
+            .context("calculate acknowledgement event ID")?;
+        let acknowledgement_store_outcome = event_store
+            .put_authorized(&acknowledgement, &membership)
+            .context("persist acknowledgement before sending it")?;
+        Ok((
+            body,
+            local_projection_store_outcome,
+            ratchet_operation,
+            received_store_outcome,
+            acknowledgement,
+            acknowledgement_id,
+            acknowledgement_store_outcome,
+        ))
+    })?;
     println!("received_event_id={event_id}");
     println!("received_author_account_id={}", event.author_account_id());
     println!(
@@ -1167,30 +1314,6 @@ async fn handle_delivery_request(
     println!("received_local_projection={local_projection_store_outcome:?}");
     println!("received_store={received_store_outcome:?}");
 
-    let acknowledgement_sequence = device_state
-        .allocate_sequence()
-        .context("allocate acknowledgement sequence")?;
-    let acknowledgement = SignedEvent::sign_acknowledgement(
-        device_state.identity(),
-        signed_event.conversation_id(),
-        acknowledgement_sequence,
-        vec![event_id],
-        event_id,
-    )
-    .context("sign acknowledgement event")?;
-    let acknowledgement = AuthorizedEvent::new(
-        acknowledgement,
-        listener_certificate,
-        listener_authority_snapshot,
-    )
-    .context("attach listener Account Root authorization to acknowledgement")?;
-    let acknowledgement_id = acknowledgement
-        .event()
-        .event_id()
-        .context("calculate acknowledgement event ID")?;
-    let acknowledgement_store_outcome = event_store
-        .put_authorized(&acknowledgement, &membership)
-        .context("persist acknowledgement before sending it")?;
     write_server_response(
         send,
         &ServerResponse::EventAcknowledgement(Box::new(acknowledgement)),
@@ -1390,9 +1513,11 @@ async fn connect(
 
     let ticket = load_connection_ticket(ticket, ticket_file).await?;
     ticket.verify_listener_account(expected_listener_account_id)?;
-    ratchet_state
-        .observe_prekey_directory(ticket.listener_directory(), unix_time_now()?)
-        .context("observe listener prekey directory and reject rollback")?;
+    run_state_transaction(&state_dir, || {
+        ratchet_state
+            .observe_prekey_directory(ticket.listener_directory(), unix_time_now()?)
+            .context("observe listener prekey directory and reject rollback")
+    })?;
     let listener_snapshot_store = device_state
         .pin_peer_authority_snapshot(ticket.listener_authority_snapshot())
         .context("pin listener authority snapshot and reject rollback")?;
@@ -1466,48 +1591,65 @@ async fn connect(
 
     let (mut send, mut receive) =
         open_bi(&connection, "open delivery bidirectional stream").await?;
-    let author_sequence = device_state
-        .allocate_sequence()
-        .context("allocate message sequence")?;
-    let parents = event_store
-        .frontier(conversation_id)
-        .context("calculate local conversation frontier")?;
-    let ratchet_fanout = encrypt_ratchet_fanout(
-        &mut ratchet_state,
-        device_state.identity(),
-        ticket.listener_directory(),
-        &message,
-    )?;
-    let signed_event = SignedEvent::sign_ratchet_text(
-        device_state.identity(),
-        conversation_id,
+    let (
         author_sequence,
-        parents,
-        ticket.listener_directory().device_list().clone(),
-        ratchet_fanout.sender_identity,
-        ratchet_fanout.recipients,
-    )
-    .context("sign ratchet text event")?;
-    let event = AuthorizedEvent::new(
-        signed_event,
-        requester_certificate,
-        requester_authority_snapshot,
-    )
-    .context("attach requester Account Root authorization to sent event")?;
-    let event_id = event
-        .event()
-        .event_id()
-        .context("calculate sent event ID")?;
-    let local_projection_store_outcome = ensure_authored_local_text_projection(
-        &local_message_store,
-        &device_state,
-        event.event(),
-        &message,
-    )
-    .context("persist local history projection before the sent event")?;
-    let sent_store_outcome = event_store
-        .put_authorized(&event, &membership)
-        .context("persist authorized event before sending it")?;
+        ratchet_fanout,
+        event,
+        event_id,
+        local_projection_store_outcome,
+        sent_store_outcome,
+    ) = run_state_transaction(&state_dir, || {
+        let author_sequence = device_state
+            .allocate_sequence()
+            .context("allocate message sequence")?;
+        let parents = event_store
+            .frontier(conversation_id)
+            .context("calculate local conversation frontier")?;
+        let ratchet_fanout = encrypt_ratchet_fanout(
+            &mut ratchet_state,
+            device_state.identity(),
+            ticket.listener_directory(),
+            &message,
+        )?;
+        let signed_event = SignedEvent::sign_ratchet_text(
+            device_state.identity(),
+            conversation_id,
+            author_sequence,
+            parents,
+            ticket.listener_directory().device_list().clone(),
+            ratchet_fanout.sender_identity.clone(),
+            ratchet_fanout.recipients.clone(),
+        )
+        .context("sign ratchet text event")?;
+        let event = AuthorizedEvent::new(
+            signed_event,
+            requester_certificate,
+            requester_authority_snapshot,
+        )
+        .context("attach requester Account Root authorization to sent event")?;
+        let event_id = event
+            .event()
+            .event_id()
+            .context("calculate sent event ID")?;
+        let local_projection_store_outcome = ensure_authored_local_text_projection(
+            &local_message_store,
+            &device_state,
+            event.event(),
+            &message,
+        )
+        .context("persist local history projection before the sent event")?;
+        let sent_store_outcome = event_store
+            .put_authorized(&event, &membership)
+            .context("persist authorized event before sending it")?;
+        Ok((
+            author_sequence,
+            ratchet_fanout,
+            event,
+            event_id,
+            local_projection_store_outcome,
+            sent_store_outcome,
+        ))
+    })?;
     write_client_request(
         &mut send,
         &ClientRequest::DeliverEvent(Box::new(event.clone())),
@@ -1578,9 +1720,11 @@ async fn connect(
         acknowledgement_event.parents() == [event_id],
         "acknowledgement does not causally reference the sent event"
     );
-    let acknowledgement_store_outcome = event_store
-        .put_authorized(&acknowledgement, &membership)
-        .context("persist verified acknowledgement")?;
+    let acknowledgement_store_outcome = run_state_transaction(&state_dir, || {
+        event_store
+            .put_authorized(&acknowledgement, &membership)
+            .context("persist verified acknowledgement")
+    })?;
     println!(
         "acknowledgement_event_id={}",
         acknowledgement_event.event_id()?
@@ -1628,9 +1772,11 @@ async fn sync(
         RatchetState::load_or_create(&state_dir).context("load persistent sync ratchet state")?;
     let ticket = load_connection_ticket(ticket, ticket_file).await?;
     ticket.verify_listener_account(expected_listener_account_id)?;
-    ratchet_state
-        .observe_prekey_directory(ticket.listener_directory(), unix_time_now()?)
-        .context("observe listener prekey directory and reject rollback")?;
+    run_state_transaction(&state_dir, || {
+        ratchet_state
+            .observe_prekey_directory(ticket.listener_directory(), unix_time_now()?)
+            .context("observe listener prekey directory and reject rollback")
+    })?;
     let listener_snapshot_store = device_state
         .pin_peer_authority_snapshot(ticket.listener_authority_snapshot())
         .context("pin listener authority snapshot and reject rollback")?;
@@ -1656,6 +1802,7 @@ async fn sync(
         authorized_listener.account_id(),
     )?;
     let decrypting_store = DecryptingSessionStore::new(
+        &state_dir,
         &event_store,
         &local_message_store,
         &device_state,
@@ -2379,11 +2526,13 @@ fn export_ratchet_bundle(state_dir: PathBuf, bundle_file: PathBuf) -> Result<()>
         certificate.device_id() == device_state.identity().device_id(),
         "installed certificate belongs to a different device"
     );
-    let mut ratchet_state =
-        RatchetState::load_or_create(&state_dir).context("load persistent ratchet state")?;
-    let bundle = ratchet_state
-        .prekey_bundle(device_state.identity())
-        .context("create or reuse the current one-time prekey bundle")?;
+    let bundle = run_state_transaction(&state_dir, || {
+        let mut ratchet_state =
+            RatchetState::load_or_create(&state_dir).context("load persistent ratchet state")?;
+        ratchet_state
+            .prekey_bundle(device_state.identity())
+            .context("create or reuse the current one-time prekey bundle")
+    })?;
     write_new_authority_file(&bundle_file, &bundle.encode()?)
         .with_context(|| format!("export prekey bundle to {}", bundle_file.display()))?;
     println!("device_id={}", bundle.device_id());
@@ -2417,27 +2566,29 @@ fn export_ratchet_prekey_pool(
         "installed certificate belongs to a different device"
     );
     let now_unix_seconds = unix_time_now().context("read time for prekey pool publication")?;
-    let mut ratchet_state =
-        RatchetState::load_or_create(&state_dir).context("load persistent ratchet state")?;
-    let pool = if refresh {
-        ratchet_state
-            .refresh_prekey_pool(
-                device_state.identity(),
-                count,
-                now_unix_seconds,
-                validity_seconds,
-            )
-            .context("rotate signed one-time prekey pool")?
-    } else {
-        ratchet_state
-            .prekey_pool(
-                device_state.identity(),
-                count,
-                now_unix_seconds,
-                validity_seconds,
-            )
-            .context("create or reuse signed one-time prekey pool")?
-    };
+    let pool = run_state_transaction(&state_dir, || {
+        let mut ratchet_state =
+            RatchetState::load_or_create(&state_dir).context("load persistent ratchet state")?;
+        if refresh {
+            ratchet_state
+                .refresh_prekey_pool(
+                    device_state.identity(),
+                    count,
+                    now_unix_seconds,
+                    validity_seconds,
+                )
+                .context("rotate signed one-time prekey pool")
+        } else {
+            ratchet_state
+                .prekey_pool(
+                    device_state.identity(),
+                    count,
+                    now_unix_seconds,
+                    validity_seconds,
+                )
+                .context("create or reuse signed one-time prekey pool")
+        }
+    })?;
     write_new_authority_file(&pool_file, &pool.encode()?)
         .with_context(|| format!("export prekey pool to {}", pool_file.display()))?;
     println!("device_id={}", pool.device_id());
@@ -2664,17 +2815,25 @@ fn import_history_rewrap(
         };
         prepared.push((authorized_event, projection, projection_exists));
     }
-    let bundle_store = persist_history_rewrap_bundle(&state_dir, &bundle, &encoded)?;
-    let mut inserted_projections = 0_usize;
-    let mut inserted_events = 0_usize;
-    for (authorized_event, projection, projection_exists) in prepared {
-        if !projection_exists && local_message_store.put(&projection)? == StoreOutcome::Inserted {
-            inserted_projections += 1;
-        }
-        if event_store.put_authorized(&authorized_event, &membership)? == StoreOutcome::Inserted {
-            inserted_events += 1;
-        }
-    }
+    let (bundle_store, inserted_projections, inserted_events) =
+        run_state_transaction(&state_dir, || {
+            let bundle_store = persist_history_rewrap_bundle(&state_dir, &bundle, &encoded)?;
+            let mut inserted_projections = 0_usize;
+            let mut inserted_events = 0_usize;
+            for (authorized_event, projection, projection_exists) in prepared {
+                if !projection_exists
+                    && local_message_store.put(&projection)? == StoreOutcome::Inserted
+                {
+                    inserted_projections += 1;
+                }
+                if event_store.put_authorized(&authorized_event, &membership)?
+                    == StoreOutcome::Inserted
+                {
+                    inserted_events += 1;
+                }
+            }
+            Ok((bundle_store, inserted_projections, inserted_events))
+        })?;
     println!("history_rewrap_id={}", bundle.bundle_id()?);
     println!("source_device_id={}", bundle.manifest().source_device_id());
     println!(
@@ -2810,90 +2969,101 @@ fn seed_history(
         peer_prekey_pool.device_id() == peer_certificate.device_id(),
         "peer prekey pool belongs to a different device than the peer certificate"
     );
-    let mut ratchet_state = RatchetState::load_or_create(&state_dir)
-        .context("load persistent ratchet state before seeding history")?;
-    ratchet_state
-        .observe_prekey_pool(&peer_prekey_pool, now_unix_seconds)
-        .context("observe peer prekey pool before allocating seeded events")?;
-    let event_store = open_event_store(&state_dir)?;
-    let local_message_store = open_local_message_store(&state_dir)?;
-    let conversation_id = ConversationId::from_label(&conversation);
-    let membership = device_state
-        .load_conversation_membership(conversation_id.scope_id())
-        .context("load trusted conversation membership before seeding history")?;
-    membership
-        .require_member(certificate.account_id())
-        .context("this device account is not a member of the conversation")?;
-    membership
-        .require_member(peer_certificate.account_id())
-        .context("peer device account is not a member of the conversation")?;
-    let existing_count = event_store
-        .authorized_inventory(conversation_id, &membership)
-        .context("load current authorized inventory before seeding history")?
-        .len();
-    ensure!(
-        existing_count.saturating_add(count) <= MAX_INVENTORY_EVENT_IDS,
-        "seeded history would exceed the M0 inventory limit of {MAX_INVENTORY_EVENT_IDS} events"
-    );
+    let (conversation_id, existing_count, first_event_id, last_event_id) = run_state_transaction(
+        &state_dir,
+        || {
+            let mut ratchet_state = RatchetState::load_or_create(&state_dir)
+                .context("load persistent ratchet state before seeding history")?;
+            ratchet_state
+                .observe_prekey_pool(&peer_prekey_pool, now_unix_seconds)
+                .context("observe peer prekey pool before allocating seeded events")?;
+            let event_store = open_event_store(&state_dir)?;
+            let local_message_store = open_local_message_store(&state_dir)?;
+            let conversation_id = ConversationId::from_label(&conversation);
+            let membership = device_state
+                .load_conversation_membership(conversation_id.scope_id())
+                .context("load trusted conversation membership before seeding history")?;
+            membership
+                .require_member(certificate.account_id())
+                .context("this device account is not a member of the conversation")?;
+            membership
+                .require_member(peer_certificate.account_id())
+                .context("peer device account is not a member of the conversation")?;
+            let existing_count = event_store
+                .authorized_inventory(conversation_id, &membership)
+                .context("load current authorized inventory before seeding history")?
+                .len();
+            ensure!(
+                existing_count.saturating_add(count) <= MAX_INVENTORY_EVENT_IDS,
+                "seeded history would exceed the M0 inventory limit of {MAX_INVENTORY_EVENT_IDS} events"
+            );
 
-    let mut parents = event_store
-        .frontier(conversation_id)
-        .context("calculate initial frontier for seeded history")?;
-    let mut events = Vec::with_capacity(count);
-    let mut local_projections = Vec::with_capacity(count);
-    let mut first_event_id = None;
-    let mut last_event_id = None;
-    for index in 1..=count {
-        let author_sequence = device_state
-            .allocate_sequence()
-            .context("allocate seeded event sequence")?;
-        let body = format!("{message_prefix}-{index}");
-        let (sender_ratchet_identity, ciphertext, _) = ratchet_state
-            .encrypt_with_pool(
-                device_state.identity(),
-                &peer_prekey_pool,
-                &body,
-                now_unix_seconds,
-            )
-            .context("advance and persist seeded ratchet message")?;
-        let event = SignedEvent::sign_ratchet_text(
-            device_state.identity(),
-            conversation_id,
-            author_sequence,
-            parents,
-            peer_device_list.clone(),
-            sender_ratchet_identity,
-            vec![RatchetRecipient::new(
-                peer_certificate.device_id(),
-                ciphertext,
-            )?],
-        )
-        .context("sign seeded ratchet history event")?;
-        let local_projection = LocalTextProjection::seal_authored(
-            &event,
-            device_state.identity().device_id(),
-            certificate.encryption_public_key(),
-            &body,
-        )
-        .context("encrypt seeded text into the local history projection")?;
-        let event_id = event.event_id().context("calculate seeded event ID")?;
-        first_event_id.get_or_insert(event_id);
-        last_event_id = Some(event_id);
-        parents = vec![event_id];
-        events.push(
-            AuthorizedEvent::new(event, certificate.clone(), authority_snapshot.clone())
-                .context("attach Account Root authorization to seeded event")?,
-        );
-        local_projections.push(local_projection);
-    }
-    for projection in &local_projections {
-        local_message_store
-            .put(projection)
-            .context("persist seeded local history projection")?;
-    }
-    event_store
-        .put_authorized_batch(&events, &membership)
-        .context("persist authorized seeded history events")?;
+            let mut parents = event_store
+                .frontier(conversation_id)
+                .context("calculate initial frontier for seeded history")?;
+            let mut events = Vec::with_capacity(count);
+            let mut local_projections = Vec::with_capacity(count);
+            let mut first_event_id = None;
+            let mut last_event_id = None;
+            for index in 1..=count {
+                let author_sequence = device_state
+                    .allocate_sequence()
+                    .context("allocate seeded event sequence")?;
+                let body = format!("{message_prefix}-{index}");
+                let (sender_ratchet_identity, ciphertext, _) = ratchet_state
+                    .encrypt_with_pool(
+                        device_state.identity(),
+                        &peer_prekey_pool,
+                        &body,
+                        now_unix_seconds,
+                    )
+                    .context("advance and persist seeded ratchet message")?;
+                let event = SignedEvent::sign_ratchet_text(
+                    device_state.identity(),
+                    conversation_id,
+                    author_sequence,
+                    parents,
+                    peer_device_list.clone(),
+                    sender_ratchet_identity,
+                    vec![RatchetRecipient::new(
+                        peer_certificate.device_id(),
+                        ciphertext,
+                    )?],
+                )
+                .context("sign seeded ratchet history event")?;
+                let local_projection = LocalTextProjection::seal_authored(
+                    &event,
+                    device_state.identity().device_id(),
+                    certificate.encryption_public_key(),
+                    &body,
+                )
+                .context("encrypt seeded text into the local history projection")?;
+                let event_id = event.event_id().context("calculate seeded event ID")?;
+                first_event_id.get_or_insert(event_id);
+                last_event_id = Some(event_id);
+                parents = vec![event_id];
+                events.push(
+                    AuthorizedEvent::new(event, certificate.clone(), authority_snapshot.clone())
+                        .context("attach Account Root authorization to seeded event")?,
+                );
+                local_projections.push(local_projection);
+            }
+            for projection in &local_projections {
+                local_message_store
+                    .put(projection)
+                    .context("persist seeded local history projection")?;
+            }
+            event_store
+                .put_authorized_batch(&events, &membership)
+                .context("persist authorized seeded history events")?;
+            Ok((
+                conversation_id,
+                existing_count,
+                first_event_id,
+                last_event_id,
+            ))
+        },
+    )?;
 
     println!("conversation_id={conversation_id}");
     println!("device_id={}", device_state.identity().device_id());
@@ -3005,6 +3175,7 @@ fn ensure_received_local_text_projection(
 }
 
 struct DecryptingSessionStore<'a> {
+    state_directory: PathBuf,
     store: &'a EventStore,
     local_messages: &'a LocalMessageStore,
     device_state: &'a DeviceState,
@@ -3013,12 +3184,14 @@ struct DecryptingSessionStore<'a> {
 
 impl<'a> DecryptingSessionStore<'a> {
     fn new(
+        state_directory: impl AsRef<Path>,
         store: &'a EventStore,
         local_messages: &'a LocalMessageStore,
         device_state: &'a DeviceState,
         ratchet_state: RatchetState,
     ) -> Self {
         Self {
+            state_directory: state_directory.as_ref().to_path_buf(),
             store,
             local_messages,
             device_state,
@@ -3121,11 +3294,13 @@ impl SessionStore for DecryptingSessionStore<'_> {
         event_ids: &[kilogram_protocol::EventId],
         membership: &ConversationMembershipSnapshot,
     ) -> Result<Vec<AuthorizedEvent>, StoreError> {
-        let events = self
-            .store
-            .authorized_events_by_id(conversation_id, event_ids, membership)?;
-        self.ensure_local_projections(&events)?;
-        Ok(events)
+        run_store_transaction(&self.state_directory, || {
+            let events =
+                self.store
+                    .authorized_events_by_id(conversation_id, event_ids, membership)?;
+            self.ensure_local_projections(&events)?;
+            Ok(events)
+        })
     }
 
     fn put_events(
@@ -3133,12 +3308,14 @@ impl SessionStore for DecryptingSessionStore<'_> {
         events: &[AuthorizedEvent],
         membership: &ConversationMembershipSnapshot,
     ) -> Result<(), StoreError> {
-        for event in events {
-            event.verify_for_membership(membership)?;
-        }
-        self.ensure_local_projections(events)?;
-        self.store.put_authorized_batch(events, membership)?;
-        Ok(())
+        run_store_transaction(&self.state_directory, || {
+            for event in events {
+                event.verify_for_membership(membership)?;
+            }
+            self.ensure_local_projections(events)?;
+            self.store.put_authorized_batch(events, membership)?;
+            Ok(())
+        })
     }
 }
 
@@ -3164,6 +3341,60 @@ mod tests {
     use kilogram_transport_iroh::endpoint_builder;
 
     const UNSUPPORTED_TEST_ALPN: &[u8] = b"kilogram/test/unsupported/1";
+
+    #[test]
+    fn cli_state_transaction_rolls_back_all_managed_roots_on_operation_error() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        fs::create_dir_all(directory.path().join("ratchet"))?;
+        fs::write(directory.path().join("ratchet/session.bin"), b"before")?;
+        fs::write(directory.path().join("next-sequence"), b"4")?;
+
+        let result: Result<()> = run_state_transaction(directory.path(), || {
+            fs::write(directory.path().join("ratchet/session.bin"), b"after")?;
+            fs::write(directory.path().join("next-sequence"), b"5")?;
+            fs::create_dir_all(directory.path().join("events/conversation"))?;
+            fs::write(
+                directory
+                    .path()
+                    .join("events/conversation/interrupted.event"),
+                b"partial",
+            )?;
+            fs::create_dir_all(directory.path().join("local-messages"))?;
+            fs::write(
+                directory
+                    .path()
+                    .join("local-messages/interrupted.local-text"),
+                b"partial",
+            )?;
+            bail!("injected local state failure")
+        });
+
+        assert!(result.is_err());
+        assert_eq!(
+            fs::read(directory.path().join("ratchet/session.bin"))?,
+            b"before"
+        );
+        assert_eq!(fs::read(directory.path().join("next-sequence"))?, b"4");
+        assert!(
+            !directory
+                .path()
+                .join("events/conversation/interrupted.event")
+                .exists()
+        );
+        assert!(
+            !directory
+                .path()
+                .join("local-messages/interrupted.local-text")
+                .exists()
+        );
+        assert!(
+            !directory
+                .path()
+                .join(".kilogram-transactions/active")
+                .exists()
+        );
+        Ok(())
+    }
 
     fn authority_for(
         identity: &DeviceIdentity,
@@ -3274,8 +3505,13 @@ mod tests {
         let peer_events = EventStore::open(directory.path().join("peer-events"))?;
         let peer_messages = LocalMessageStore::open(directory.path().join("peer-messages"))?;
         let peer_ratchet = RatchetState::load_or_create(&peer_state_dir)?;
-        let peer_sync =
-            DecryptingSessionStore::new(&peer_events, &peer_messages, &peer, peer_ratchet);
+        let peer_sync = DecryptingSessionStore::new(
+            directory.path(),
+            &peer_events,
+            &peer_messages,
+            &peer,
+            peer_ratchet,
+        );
         let authorized_events = events
             .iter()
             .map(|stored| stored.event.clone())
@@ -3352,6 +3588,7 @@ mod tests {
         let store = EventStore::open(directory.path().join("events"))?;
         let local_messages = LocalMessageStore::open(directory.path().join("local-messages"))?;
         let guarded = DecryptingSessionStore::new(
+            directory.path(),
             &store,
             &local_messages,
             &local_state,
@@ -3423,8 +3660,13 @@ mod tests {
         let event_id = event.event().event_id()?;
         let store = EventStore::open(directory.path().join("events"))?;
         let local_messages = LocalMessageStore::open(directory.path().join("local-messages"))?;
-        let guarded =
-            DecryptingSessionStore::new(&store, &local_messages, &local_state, local_ratchet);
+        let guarded = DecryptingSessionStore::new(
+            directory.path(),
+            &store,
+            &local_messages,
+            &local_state,
+            local_ratchet,
+        );
 
         guarded.put_events(std::slice::from_ref(&event), &membership)?;
         guarded.put_events(std::slice::from_ref(&event), &membership)?;

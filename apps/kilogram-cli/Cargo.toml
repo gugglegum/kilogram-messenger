@@ -15,6 +15,7 @@ kilogram-identity = { path = "../../crates/kilogram-identity" }
 kilogram-protocol = { path = "../../crates/kilogram-protocol" }
 kilogram-ratchet = { path = "../../crates/kilogram-ratchet" }
 kilogram-session = { path = "../../crates/kilogram-session" }
+kilogram-state = { path = "../../crates/kilogram-state" }
 kilogram-store = { path = "../../crates/kilogram-store" }
 kilogram-transport-iroh = { path = "../../crates/kilogram-transport-iroh" }
 serde.workspace = true

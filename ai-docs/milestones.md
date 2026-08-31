@@ -815,12 +815,50 @@ session-reset protocol, TTL retained session или общей DB transaction. �
 контракт —
 [`../docs/RFC-0009-authenticated-prekey-pools.md`](../docs/RFC-0009-authenticated-prekey-pools.md).
 
+### M0.7.7 — crash-consistent local state: выполнено
+
+Реализовано:
+
+- новый `kilogram-state` получает exclusive OS file lock canonical
+  `STATE_DIR` на всё время любой device CLI-команды; второй процесс fail-fast;
+- journal v1 сохраняет backup mutable `ratchet` и `next-sequence`, а также
+  baseline файлов append-only `events`, `local-messages` и `history-rewraps`;
+- durable markers `prepared`, `committed` и `rolled-back` делают recovery
+  идемпотентным даже при повторном падении во время rollback/cleanup;
+- prepared без terminal marker восстанавливает mutable backup и удаляет только
+  новые immutable files; committed никогда не откатывается;
+- symlink и небезопасные relative paths в managed state отклоняются;
+- delivery связывает decrypt/prekey consumption, projection, received event,
+  acknowledgement sequence/event; connect связывает sequence, весь ratchet
+  fan-out, authored projection и event до network send;
+- sync materialization/store, `seed-history`, `history-rewrap-import`, prekey
+  publication/rotation и peer pool high-water используют ту же transaction;
+- ticket v9, event v5 и sync/session v6 не изменились.
+
+Проверки:
+
+- exclusive/reusable lock, operation-error rollback, next-startup recovery и
+  interrupted committed-cleanup покрыты отдельными unit tests;
+- CLI fault-injection test восстанавливает ratchet/sequence и удаляет новые
+  event/projection files;
+- все 75 workspace tests проходят; форматирование, строгий Clippy и release
+  build проверены;
+- локальный release process smoke `.tmp/m077-smoke-20260901-035517` подтвердил
+  lock refusal (`exit=1`), reuse после освобождения (`exit=0`) и отсутствие
+  оставленного active journal.
+
+Граница среза: filesystem snapshot/baseline имеет стоимость `O(local state)` и
+не заменяет production encrypted DB/WAL. Lock координирует только процессы,
+соблюдающие контракт, не включает Account Root каталоги и не защищает от
+hardware loss/hostile local administrator. Полный контракт —
+[`../docs/RFC-0010-crash-consistent-local-state.md`](../docs/RFC-0010-crash-consistent-local-state.md).
+
 ### Следующий этап
 
-1. M0.7.7: объединить ratchet advancement, local projection, immutable event и
-   prekey rotation одной crash-consistent транзакцией и добавить state lock.
-2. Затем связать history rewrap с сетевой device-to-device сессией, user consent
+1. M0.7.8: связать history rewrap с сетевой device-to-device сессией, user consent
    и multi-source completeness reconciliation.
+2. Production local storage заменить encrypted transactional DB/WAL с bounded
+   recovery и migrations.
 3. Membership removal и group governance проектировать вместе с ordered
    security events и MLS epoch.
 4. First-contact authority/membership gossip-witness, seed/root recovery и

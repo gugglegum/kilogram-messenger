@@ -167,15 +167,16 @@ Event schema не повышается: Olm PreKey message уже связыва
 - hash-selection уменьшает, но не исключает collision разных initiators;
 - сохраняются максимум две session на peer, losing session пока не имеет TTL;
 - не реализован authenticated session reset после потери state;
-- pool/account/session/projection/event всё ещё не объединены одной DB
-  транзакцией и state directory не имеет межпроцессного lock;
+- M0.7.7 добавил filesystem transaction и межпроцессный state lock по
+  [`RFC-0010`](RFC-0010-crash-consistent-local-state.md); production DB/WAL всё
+  ещё не выбрана;
 - Olm остаётся M0 reference implementation без PQXDH и внешнего аудита всей
   Kilogram-композиции.
 
 ## 10. Следующий этап
 
-M0.7.7 должен закрыть crash consistency: единая транзакционная операция для
-ratchet advancement, local projection, immutable event и prekey rotation, а
-также эксклюзивный lock state directory. Это необходимо до расширения сетевого
-mailbox/discovery, иначе crash может безопасно обнаруживаться, но оставлять
-использованный message key без соответствующего локального event.
+M0.7.7 выполнен в [`RFC-0010`](RFC-0010-crash-consistent-local-state.md):
+ratchet advancement, local projection, immutable event и prekey rotation
+охвачены crash-consistent M0 filesystem transaction, а device state защищён
+exclusive lock. Следующий шаг — сетевой authenticated history rewrap с user
+consent/SAS и multi-source completeness reconciliation.

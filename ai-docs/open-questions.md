@@ -17,6 +17,8 @@ device list, точный prekey directory и отдельный ciphertext slot
 source inventory/range, HPKE на новый device и local projection provenance v2.
 M0.7.6 добавил signed prekey pools, per-device max-seen freshness и bounded
 active/retained resolution для двух crossed outbound sessions.
+M0.7.7 добавил exclusive device state lock и crash-consistent M0 filesystem
+transaction для ratchet/sequence/projection/event/prekey state.
 Следующие вопросы относятся к production recovery, rotation, asynchronous
 sessions, distribution, removal и key epochs и не решены этим прототипом.
 
@@ -33,8 +35,9 @@ sessions, distribution, removal и key epochs и не решены этим пр
 - Какой TTL применять к retained losing session, как выполнять authenticated
   session reset после потери state и нужен ли production-протокол сложнее
   проверенного M0.7.6 lexicographic-min разрешения двух crossed sessions?
-- Как транзакционно сохранять ratchet advancement, local projection и immutable
-  event, не позволяя crash потерять использованный message key?
+- Какая encrypted production DB/WAL заменит M0.7.7 full ratchet snapshot и
+  append-only filename baseline, обеспечит bounded recovery, migrations,
+  backups и безопасное удаление без ослабления forward secrecy?
 - Как authenticated discovery/gossip сообщает глобально самую свежую device-list
   revision и prekey pool, выполняет remote atomic OTK reservation и не раскрывает
   лишнюю account metadata? M0.7.6 отклоняет rollback/equivocation после

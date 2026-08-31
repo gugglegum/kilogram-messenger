@@ -262,6 +262,15 @@ toolchain `1.98.0` для воспроизводимой разработки.
     `.tmp/m076-smoke-20260901-032421` подтвердил crossed sync 1/1, rotation
     generation `0 -> 1`, sequence `0..15 -> 16..31`, stale rejection,
     post-convergence delivery и отсутствие plaintext в 24 ciphertext files.
+39. M0.7.7 добавил crate `kilogram-state`: exclusive OS lock canonical
+    `STATE_DIR`, journal v1 с mutable backup `ratchet`/`next-sequence`, baseline
+    append-only roots и markers prepared/committed/rolled-back. CLI transaction
+    охватывает delivery, sync materialization, seed, rewrap import и prekey
+    update. Unit fault tests проверяют operation rollback, next-start recovery,
+    interrupted committed cleanup и повторное получение lock. Форматирование,
+    строгий Clippy, release workspace build и все 75 tests проходят. Release
+    process smoke `.tmp/m077-smoke-20260901-035517` проверил refusal второго CLI
+    (`exit=1`), reuse после освобождения (`exit=0`) и отсутствие active journal.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -279,7 +288,9 @@ account-wide fan-out. M0.7.6 добавил bounded signed pools, local freshnes
 high-water и concurrent initiation resolution; first-contact global freshness
 и production network discovery остаются открыты. M0.7.5 реализовал
 same-account file-boundary history rewrap; сетевой consent/multi-source recovery,
-membership removal/epochs и group E2EE остаются открыты.
+membership removal/epochs и group E2EE остаются открыты. M0.7.7 закрывает
+M0 crash consistency для device filesystem state; encrypted production DB/WAL,
+bounded migrations/backups и защищённый keystore ещё не выбраны.
 
 ## Решения, которые ещё нельзя фиксировать
 

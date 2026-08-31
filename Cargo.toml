@@ -6,6 +6,7 @@ members = [
     "crates/kilogram-protocol",
     "crates/kilogram-ratchet",
     "crates/kilogram-session",
+    "crates/kilogram-state",
     "crates/kilogram-store",
     "crates/kilogram-transport-iroh",
 ]
