@@ -17,14 +17,15 @@ mod wire;
 
 pub use rewrap::{
     HistoryRewrapBundle, HistoryRewrapEntry, HistoryRewrapId, HistoryRewrapManifest,
-    MAX_HISTORY_REWRAP_ENTRIES,
+    HistoryRewrapSas, MAX_HISTORY_REWRAP_ENTRIES, SignedHistoryRewrapRequest,
+    SignedHistoryRewrapTransfer,
 };
 
 pub use wire::{
-    ClientRequest, DeviceAuthorizationAccepted, DeviceAuthorizationRejected,
-    MAX_INVENTORY_EVENT_IDS, MAX_SYNC_EVENTS_PER_BATCH, ServerResponse,
-    SignedDeviceSessionAuthorization, SignedSyncInventory, SyncComplete, SyncDiff, SyncEventBatch,
-    SyncPause, SyncPaused, SyncRejected, SyncRejectionReason, SyncSessionBinding,
+    ClientRequest, DeviceAuthorizationAccepted, DeviceAuthorizationRejected, HistoryRewrapRejected,
+    HistoryRewrapRejectionReason, MAX_INVENTORY_EVENT_IDS, MAX_SYNC_EVENTS_PER_BATCH,
+    ServerResponse, SignedDeviceSessionAuthorization, SignedSyncInventory, SyncComplete, SyncDiff,
+    SyncEventBatch, SyncPause, SyncPaused, SyncRejected, SyncRejectionReason, SyncSessionBinding,
 };
 
 const EVENT_VERSION: u8 = 5;
@@ -895,6 +896,36 @@ pub enum ProtocolError {
     #[error("history rewrap projection does not contain the expected immutable event")]
     HistoryRewrapProjectionEventMismatch,
 
+    #[error("unsupported history rewrap request version: {0}")]
+    UnsupportedHistoryRewrapRequestVersion(u8),
+
+    #[error("history rewrap request is bound to a different transport session")]
+    HistoryRewrapRequestSessionMismatch,
+
+    #[error("history rewrap request source is device {actual}; expected {expected}")]
+    HistoryRewrapRequestSourceMismatch {
+        expected: DeviceId,
+        actual: DeviceId,
+    },
+
+    #[error("history rewrap SAS does not match the authorized device pair")]
+    HistoryRewrapSasMismatch,
+
+    #[error("history rewrap request range overflows")]
+    HistoryRewrapRequestRangeOverflow,
+
+    #[error("unsupported history rewrap transfer version: {0}")]
+    UnsupportedHistoryRewrapTransferVersion(u8),
+
+    #[error("history rewrap transfer is bound to a different signed request")]
+    HistoryRewrapTransferRequestMismatch,
+
+    #[error("history rewrap transfer range exceeds the signed request")]
+    HistoryRewrapTransferRangeMismatch,
+
+    #[error("unsupported history rewrap response version: {0}")]
+    UnsupportedHistoryRewrapResponseVersion(u8),
+
     #[error("unsupported local text projection version: {0}")]
     UnsupportedLocalTextProjectionVersion(u8),
 
@@ -1229,6 +1260,124 @@ mod tests {
             decoded
                 .open_entry(0, recipient_identity.device_id(), &source_encryption,)
                 .is_err()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn network_history_rewrap_binds_sas_session_request_and_transfer()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let directory = tempdir()?;
+        let conversation_id = ConversationId::from_label("network-history-rewrap");
+        let source = DeviceIdentity::generate()?;
+        let source_encryption = DeviceEncryptionIdentity::generate()?;
+        let recipient = DeviceIdentity::generate()?;
+        let recipient_encryption = DeviceEncryptionIdentity::generate()?;
+        let account = AccountRootState::create(directory.path().join("account"))?;
+        let source_certificate = account.issue_device_certificate(
+            source.device_id(),
+            source_encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let recipient_certificate = account.issue_device_certificate(
+            recipient.device_id(),
+            recipient_encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let device_list =
+            account.publish_device_list(&[source_certificate, recipient_certificate])?;
+        let author = DeviceIdentity::generate()?;
+        let author_account = AccountRootState::create(directory.path().join("author-account"))?;
+        let author_certificate = author_account.issue_device_certificate(
+            author.device_id(),
+            DeviceEncryptionIdentity::generate()?.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let event = AuthorizedEvent::new(
+            sign_test_text(&author, conversation_id, 0, Vec::new(), "recover me")?,
+            author_certificate,
+            author_account.authority_snapshot()?,
+        )?;
+        let inventory = vec![(event, "recover me".to_owned())];
+        let sas =
+            HistoryRewrapSas::derive(&device_list, source.device_id(), recipient.device_id())?;
+        assert_ne!(
+            sas,
+            HistoryRewrapSas::derive(&device_list, recipient.device_id(), source.device_id(),)?
+        );
+        assert_eq!(sas.to_string().len(), 15);
+        let session = SyncSessionBinding::from_transport_label("listener-endpoint");
+        let request = SignedHistoryRewrapRequest::sign(
+            &recipient,
+            conversation_id,
+            source.device_id(),
+            session,
+            0,
+            2,
+            sas,
+        )?;
+        request.verify_for_session(session, source.device_id(), recipient.device_id(), sas)?;
+        assert!(matches!(
+            request.verify_for_session(
+                SyncSessionBinding::from_transport_label("other-endpoint"),
+                source.device_id(),
+                recipient.device_id(),
+                sas,
+            ),
+            Err(ProtocolError::HistoryRewrapRequestSessionMismatch)
+        ));
+        let bundle = HistoryRewrapBundle::seal(
+            &source,
+            device_list,
+            recipient.device_id(),
+            conversation_id,
+            &inventory,
+            0,
+            1,
+        )?;
+        let transfer = SignedHistoryRewrapTransfer::sign(&source, request.clone(), bundle)?;
+        transfer.verify_for_request(&request)?;
+        let encoded = transfer.encode()?;
+        assert_eq!(
+            SignedHistoryRewrapTransfer::decode_and_verify(&encoded)?,
+            transfer
+        );
+        assert_eq!(
+            ServerResponse::decode(
+                &ServerResponse::HistoryRewrapTransfer(Box::new(transfer.clone())).encode()?
+            )?,
+            ServerResponse::HistoryRewrapTransfer(Box::new(transfer))
+        );
+        let other_request = SignedHistoryRewrapRequest::sign(
+            &recipient,
+            conversation_id,
+            source.device_id(),
+            session,
+            0,
+            1,
+            sas,
+        )?;
+        assert!(matches!(
+            SignedHistoryRewrapTransfer::decode_and_verify(&encoded)?
+                .verify_for_request(&other_request),
+            Err(ProtocolError::HistoryRewrapTransferRequestMismatch)
+        ));
+        let mut tampered = encoded;
+        *tampered
+            .last_mut()
+            .ok_or(ProtocolError::HistoryRewrapTransferRequestMismatch)? ^= 1;
+        assert!(SignedHistoryRewrapTransfer::decode_and_verify(&tampered).is_err());
+        assert!(
+            SignedHistoryRewrapRequest::sign(
+                &recipient,
+                conversation_id,
+                source.device_id(),
+                session,
+                0,
+                MAX_HISTORY_REWRAP_ENTRIES + 1,
+                sas,
+            )
+            .is_err()
         );
         Ok(())
     }

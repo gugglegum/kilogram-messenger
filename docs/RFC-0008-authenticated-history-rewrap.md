@@ -147,9 +147,10 @@ production UI должен передавать его по авторизова
 - source может передать только projections, которые сам способен открыть;
 - `source_inventory_complete` является подписанным утверждением source, а не
   глобальным consensus checkpoint;
-- package transport, user consent и SAS/QR verification пока ручные;
-- нет cross-account recovery, multi-source reconciliation и политики выбора
-  более доверенного source;
+- M0.7.8 добавил session-bound network transport, явный user consent, SAS и
+  multi-source claim reconciliation в [`RFC-0011`](RFC-0011-network-history-rewrap.md);
+- нет cross-account recovery, автоматического source discovery и политики
+  выбора более доверенного source;
 - bundle и projections раскрывают историю при компрометации target device;
 - bundle persistence, projections и event store ещё не объединены одной
   транзакцией; операции идемпотентны, но crash может оставить безопасный orphan;
@@ -161,4 +162,7 @@ production UI должен передавать его по авторизова
 M0.7.6 реализовал authenticated prekey pools, sequence/freshness high-water и
 детерминированное разрешение crossed pairwise initiation. Актуальный контракт
 описан в [`RFC-0009`](RFC-0009-authenticated-prekey-pools.md). Следующим срезом
-остаётся общая crash-consistent транзакция ratchet/projection/event/prekey.
+оставалась общая crash-consistent транзакция ratchet/projection/event/prekey.
+Она реализована M0.7.7 в [`RFC-0010`](RFC-0010-crash-consistent-local-state.md),
+а сетевой rewrap с consent и reconciliation — M0.7.8 в
+[`RFC-0011`](RFC-0011-network-history-rewrap.md).

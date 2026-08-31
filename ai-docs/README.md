@@ -149,8 +149,8 @@ sync summaries, membership removal и группы ещё не реализов�
 
 ## План ближайших работ
 
-1. Связать history rewrap с authenticated device-to-device transport,
-   user consent/SAS и multi-source completeness reconciliation.
+1. Добавить resumable history-recovery orchestration: pagination/checkpoint,
+   безопасный retry и сбор claims нескольких явно выбранных sources.
 2. Заменить M0 filesystem snapshot journal на encrypted transactional DB/WAL с
    bounded recovery и migrations.
 3. Спроектировать membership removal вместе с ordered security log и MLS epoch;
@@ -191,5 +191,7 @@ sync summaries, membership removal и группы ещё не реализов�
   реализованный M0.7.6-контракт fresh prekey pools и concurrent initiation.
 - [`../docs/RFC-0010-crash-consistent-local-state.md`](../docs/RFC-0010-crash-consistent-local-state.md) —
   реализованный M0.7.7-контракт local state lock, journal и crash recovery.
+- [`../docs/RFC-0011-network-history-rewrap.md`](../docs/RFC-0011-network-history-rewrap.md) —
+  реализованный M0.7.8-контракт session-bound rewrap, consent/SAS и reconciliation.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

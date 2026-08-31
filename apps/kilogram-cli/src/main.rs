@@ -1,5 +1,6 @@
 use std::{
     cell::RefCell,
+    collections::{BTreeMap, BTreeSet},
     fs::{self, OpenOptions},
     io::{self, Write},
     path::{Path, PathBuf},
@@ -20,10 +21,11 @@ use kilogram_identity::{
 };
 use kilogram_protocol::{
     AuthorizedEvent, ClientRequest, ConversationId, DeviceAuthorizationAccepted,
-    DeviceAuthorizationRejected, EventPayload, HistoryRewrapBundle, LocalTextProjection,
+    DeviceAuthorizationRejected, EventPayload, HistoryRewrapBundle, HistoryRewrapRejected,
+    HistoryRewrapRejectionReason, HistoryRewrapSas, LocalTextProjection,
     MAX_HISTORY_REWRAP_ENTRIES, MAX_INVENTORY_EVENT_IDS, RatchetRecipient, ServerResponse,
-    SignedDeviceSessionAuthorization, SignedEvent, SignedSyncInventory, SyncPause, SyncPaused,
-    SyncSessionBinding,
+    SignedDeviceSessionAuthorization, SignedEvent, SignedHistoryRewrapRequest,
+    SignedHistoryRewrapTransfer, SignedSyncInventory, SyncPause, SyncPaused, SyncSessionBinding,
 };
 use kilogram_ratchet::{
     AccountPrekeyDirectory, DEFAULT_PREKEY_POOL_SIZE, DEFAULT_PREKEY_POOL_VALIDITY_SECONDS,
@@ -37,9 +39,9 @@ use kilogram_session::{
 use kilogram_state::{StateDirectoryLock, StateTransaction};
 use kilogram_store::{EventStore, LocalMessageStore, StoreError, StoreOutcome};
 use kilogram_transport_iroh::{
-    ALPN, RoutePolicy, SelectedPathDiagnostics, await_route_policy, endpoint_builder_for_remote,
-    endpoint_builder_with_relay, read_client_request, read_server_response,
-    selected_path_diagnostics, write_client_request, write_server_response,
+    ALPN, MAX_WIRE_MESSAGE_BYTES, RoutePolicy, SelectedPathDiagnostics, await_route_policy,
+    endpoint_builder_for_remote, endpoint_builder_with_relay, read_client_request,
+    read_server_response, selected_path_diagnostics, write_client_request, write_server_response,
 };
 use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
@@ -102,6 +104,26 @@ enum Command {
         /// Restrict this listener to one explicit relay URL.
         #[arg(long)]
         relay_url: Option<RelayUrl>,
+
+        /// Explicitly approve serving this conversation through authenticated history rewrap.
+        #[arg(long)]
+        history_rewrap_conversation: Option<String>,
+
+        /// Exact same-account recipient device approved for history rewrap.
+        #[arg(long)]
+        history_rewrap_recipient_device: Option<DeviceId>,
+
+        /// SAS compared out of band and explicitly approved by the source user.
+        #[arg(long)]
+        history_rewrap_approve_sas: Option<String>,
+
+        /// First canonical history index approved for a network rewrap request.
+        #[arg(long, default_value_t = 0)]
+        history_rewrap_range_start: usize,
+
+        /// Maximum consecutive text events approved for a network rewrap request.
+        #[arg(long, default_value_t = MAX_HISTORY_REWRAP_ENTRIES)]
+        history_rewrap_count: usize,
     },
 
     /// Connect to a listener, send one message, print its acknowledgement, then exit.
@@ -267,6 +289,67 @@ enum Command {
         /// Signed encrypted rewrap bundle received from a live account device.
         #[arg(long)]
         bundle_file: PathBuf,
+    },
+
+    /// Derive the out-of-band SAS for a source/recipient pair in one signed device list.
+    HistoryRewrapSas {
+        /// Root-signed account device list used by both devices.
+        #[arg(long)]
+        device_list_file: PathBuf,
+
+        /// Live source device that can read and rewrap the old history.
+        #[arg(long)]
+        source_device: DeviceId,
+
+        /// New same-account device that will receive the history.
+        #[arg(long)]
+        recipient_device: DeviceId,
+    },
+
+    /// Fetch one approved history range over an authenticated device session.
+    HistoryRewrapFetch {
+        /// Directory containing the recipient device state.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Connection ticket printed by the source listener.
+        #[arg(long, conflicts_with = "ticket_file")]
+        ticket: Option<String>,
+
+        /// Read the source connection ticket from this file.
+        #[arg(long, conflicts_with = "ticket")]
+        ticket_file: Option<PathBuf>,
+
+        /// Development-only shared label expected in the transfer.
+        #[arg(long, default_value = "m0-local-smoke")]
+        conversation: String,
+
+        /// First canonical text-event inventory index to request.
+        #[arg(long, default_value_t = 0)]
+        range_start: usize,
+
+        /// Maximum number of consecutive text events to request.
+        #[arg(long, default_value_t = MAX_HISTORY_REWRAP_ENTRIES)]
+        count: usize,
+
+        /// SAS independently compared by both users before the request is sent.
+        #[arg(long)]
+        confirm_sas: String,
+
+        /// Trusted Account ID shared by the source and recipient devices.
+        #[arg(long)]
+        expect_account: AccountId,
+    },
+
+    /// Reconcile source-signed completeness claims from locally stored rewrap bundles.
+    HistoryRewrapReconcile {
+        /// Directory containing imported history-rewrap bundles.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Development-only shared label used to derive a conversation ID.
+        #[arg(long, default_value = "m0-local-smoke")]
+        conversation: String,
     },
 
     /// Verify and print locally stored events without connecting to a peer.
@@ -440,6 +523,8 @@ impl Command {
             | Self::RatchetPrekeyPool { state_dir, .. }
             | Self::HistoryRewrapExport { state_dir, .. }
             | Self::HistoryRewrapImport { state_dir, .. }
+            | Self::HistoryRewrapFetch { state_dir, .. }
+            | Self::HistoryRewrapReconcile { state_dir, .. }
             | Self::History { state_dir, .. }
             | Self::Identity { state_dir }
             | Self::ConversationMembershipInstall { state_dir, .. }
@@ -447,6 +532,7 @@ impl Command {
             | Self::DeviceAuthorityUpdate { state_dir, .. }
             | Self::DeviceAuthorize { state_dir, .. } => Some(state_dir),
             Self::AccountCreate { .. }
+            | Self::HistoryRewrapSas { .. }
             | Self::AccountShow { .. }
             | Self::AccountSnapshot { .. }
             | Self::AccountDeviceList { .. }
@@ -473,6 +559,20 @@ struct ListenOptions {
     relay_wait_seconds: u64,
     route_policy: RoutePolicy,
     relay_url: Option<RelayUrl>,
+    history_rewrap_conversation: Option<String>,
+    history_rewrap_recipient_device: Option<DeviceId>,
+    history_rewrap_approve_sas: Option<String>,
+    history_rewrap_range_start: usize,
+    history_rewrap_count: usize,
+}
+
+#[derive(Clone, Debug)]
+struct HistoryRewrapApproval {
+    conversation_id: ConversationId,
+    recipient_device_id: DeviceId,
+    sas: HistoryRewrapSas,
+    range_start: usize,
+    count: usize,
 }
 
 impl From<RoutePolicyArg> for RoutePolicy {
@@ -651,13 +751,17 @@ fn ticket_signing_bytes(content: &ConnectionTicketContent) -> Result<Vec<u8>> {
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
-    let _state_lock = cli
-        .command
+    let command = cli.command;
+    let _state_lock = command
         .state_directory()
         .map(StateDirectoryLock::acquire)
         .transpose()
         .context("lock state directory and recover interrupted local transaction")?;
-    match cli.command {
+    Box::pin(run_command(command)).await
+}
+
+async fn run_command(command: Command) -> Result<()> {
+    match command {
         Command::Listen {
             state_dir,
             allow_account,
@@ -667,6 +771,11 @@ async fn main() -> Result<()> {
             relay_wait_seconds,
             route_policy,
             relay_url,
+            history_rewrap_conversation,
+            history_rewrap_recipient_device,
+            history_rewrap_approve_sas,
+            history_rewrap_range_start,
+            history_rewrap_count,
         } => {
             listen(ListenOptions {
                 state_dir,
@@ -677,6 +786,11 @@ async fn main() -> Result<()> {
                 relay_wait_seconds,
                 route_policy: route_policy.into(),
                 relay_url,
+                history_rewrap_conversation,
+                history_rewrap_recipient_device,
+                history_rewrap_approve_sas,
+                history_rewrap_range_start,
+                history_rewrap_count,
             })
             .await
         }
@@ -766,6 +880,37 @@ async fn main() -> Result<()> {
             conversation,
             bundle_file,
         } => import_history_rewrap(state_dir, conversation, bundle_file),
+        Command::HistoryRewrapSas {
+            device_list_file,
+            source_device,
+            recipient_device,
+        } => show_history_rewrap_sas(device_list_file, source_device, recipient_device),
+        Command::HistoryRewrapFetch {
+            state_dir,
+            ticket,
+            ticket_file,
+            conversation,
+            range_start,
+            count,
+            confirm_sas,
+            expect_account,
+        } => {
+            fetch_history_rewrap(
+                state_dir,
+                ticket,
+                ticket_file,
+                conversation,
+                range_start,
+                count,
+                confirm_sas,
+                expect_account,
+            )
+            .await
+        }
+        Command::HistoryRewrapReconcile {
+            state_dir,
+            conversation,
+        } => reconcile_history_rewrap(state_dir, conversation),
         Command::History {
             state_dir,
             conversation,
@@ -882,6 +1027,11 @@ async fn listen(options: ListenOptions) -> Result<()> {
         relay_wait_seconds,
         route_policy,
         relay_url,
+        history_rewrap_conversation,
+        history_rewrap_recipient_device,
+        history_rewrap_approve_sas,
+        history_rewrap_range_start,
+        history_rewrap_count,
     } = options;
     let device_state = DeviceState::load_or_create(&state_dir)
         .with_context(|| format!("load device state from {}", state_dir.display()))?;
@@ -898,6 +1048,16 @@ async fn listen(options: ListenOptions) -> Result<()> {
             == Some(&listener_certificate),
         "listener certificate is not present exactly in the supplied device list"
     );
+    let history_rewrap_approval = prepare_history_rewrap_approval(
+        history_rewrap_conversation,
+        history_rewrap_recipient_device,
+        history_rewrap_approve_sas,
+        history_rewrap_range_start,
+        history_rewrap_count,
+        &listener_device_list,
+        &listener_certificate,
+        allowed_requester_account_id,
+    )?;
     let authority_snapshot_store = device_state
         .install_own_authority_snapshot(listener_device_list.authority_snapshot())
         .context("install authority snapshot embedded in listener device list")?;
@@ -943,7 +1103,7 @@ async fn listen(options: ListenOptions) -> Result<()> {
     let ticket = ConnectionTicket::new(
         endpoint.addr(),
         device_state.identity(),
-        listener_certificate,
+        listener_certificate.clone(),
         listener_directory,
         allowed_requester_account_id,
         route_policy,
@@ -976,6 +1136,20 @@ async fn listen(options: ListenOptions) -> Result<()> {
         ticket.listener_authority_snapshot().revision()
     );
     println!("authority_store={authority_snapshot_store:?}");
+    if let Some(approval) = &history_rewrap_approval {
+        println!(
+            "history_rewrap_source_device_id={}",
+            listener_certificate.device_id()
+        );
+        println!(
+            "history_rewrap_recipient_device_id={}",
+            approval.recipient_device_id
+        );
+        println!("history_rewrap_sas={}", approval.sas);
+        println!("history_rewrap_range_start={}", approval.range_start);
+        println!("history_rewrap_count={}", approval.count);
+        println!("history_rewrap_user_consent=approved");
+    }
     println!("ticket={encoded_ticket}");
 
     if let Some(path) = ticket_file {
@@ -1043,6 +1217,20 @@ async fn listen(options: ListenOptions) -> Result<()> {
         }
         ClientRequest::SyncEvents(_) => bail!("sync event batch cannot be the first request"),
         ClientRequest::SyncPause(_) => bail!("sync pause cannot be the first request"),
+        ClientRequest::HistoryRewrap(request) => {
+            handle_history_rewrap_request(
+                &device_state,
+                &event_store,
+                &local_message_store,
+                &mut send,
+                request,
+                session_binding,
+                &authorized_requester,
+                ticket.listener_directory().device_list(),
+                history_rewrap_approval.as_ref(),
+            )
+            .await?;
+        }
         ClientRequest::AuthorizeDevice(_) => {
             bail!("device authorization cannot be repeated on an authorized connection")
         }
@@ -1051,6 +1239,163 @@ async fn listen(options: ListenOptions) -> Result<()> {
     print_transport_diagnostics(&connection, route_policy).await?;
     let _ = timeout(Duration::from_secs(2), connection.closed()).await;
     endpoint.close().await;
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn prepare_history_rewrap_approval(
+    conversation: Option<String>,
+    recipient_device_id: Option<DeviceId>,
+    approved_sas: Option<String>,
+    range_start: usize,
+    count: usize,
+    device_list: &AccountDeviceListSnapshot,
+    source_certificate: &DeviceCertificate,
+    allowed_requester_account_id: AccountId,
+) -> Result<Option<HistoryRewrapApproval>> {
+    let any_option =
+        conversation.is_some() || recipient_device_id.is_some() || approved_sas.is_some();
+    if !any_option {
+        return Ok(None);
+    }
+    let conversation = conversation.context(
+        "--history-rewrap-conversation is required when history rewrap approval is configured",
+    )?;
+    let recipient_device_id = recipient_device_id.context(
+        "--history-rewrap-recipient-device is required when history rewrap approval is configured",
+    )?;
+    let approved_sas = approved_sas.context(
+        "--history-rewrap-approve-sas is required when history rewrap approval is configured",
+    )?;
+    ensure!(
+        count > 0,
+        "--history-rewrap-count must be greater than zero"
+    );
+    ensure!(
+        count <= MAX_HISTORY_REWRAP_ENTRIES,
+        "--history-rewrap-count must not exceed {MAX_HISTORY_REWRAP_ENTRIES}"
+    );
+    ensure!(
+        source_certificate.account_id() == allowed_requester_account_id,
+        "network history rewrap is restricted to devices of the listener account"
+    );
+    ensure!(
+        device_list.certificate_for(recipient_device_id).is_some(),
+        "history-rewrap recipient is absent from the supplied root-signed device list"
+    );
+    let sas = HistoryRewrapSas::derive(
+        device_list,
+        source_certificate.device_id(),
+        recipient_device_id,
+    )?;
+    ensure!(
+        approved_sas.trim() == sas.to_string(),
+        "source user approved SAS {}, but the signed device list derives {sas}",
+        approved_sas.trim()
+    );
+    Ok(Some(HistoryRewrapApproval {
+        conversation_id: ConversationId::from_label(&conversation),
+        recipient_device_id,
+        sas,
+        range_start,
+        count,
+    }))
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn handle_history_rewrap_request(
+    device_state: &DeviceState,
+    event_store: &EventStore,
+    local_message_store: &LocalMessageStore,
+    send: &mut SendStream,
+    request: SignedHistoryRewrapRequest,
+    expected_session: SyncSessionBinding,
+    authorized_requester: &AuthorizedDevice,
+    device_list: &AccountDeviceListSnapshot,
+    approval: Option<&HistoryRewrapApproval>,
+) -> Result<()> {
+    let Some(approval) = approval else {
+        write_server_response(
+            send,
+            &ServerResponse::HistoryRewrapRejected(HistoryRewrapRejected::new(
+                request.conversation_id(),
+                HistoryRewrapRejectionReason::NotApproved,
+            )),
+        )
+        .await?;
+        println!("history_rewrap_rejected=NotApproved");
+        println!("status=rejected");
+        return Ok(());
+    };
+    let source_certificate = device_state
+        .load_certificate()
+        .context("load source certificate for network history rewrap")?;
+    let request_matches_approval = request
+        .verify_for_session(
+            expected_session,
+            source_certificate.device_id(),
+            authorized_requester.device_id(),
+            approval.sas,
+        )
+        .is_ok()
+        && authorized_requester.account_id() == source_certificate.account_id()
+        && request.conversation_id() == approval.conversation_id
+        && request.recipient_device_id() == approval.recipient_device_id
+        && usize::try_from(request.range_start()).ok() == Some(approval.range_start)
+        && usize::try_from(request.max_event_count()).ok() == Some(approval.count)
+        && device_list
+            .certificate_for(authorized_requester.device_id())
+            .is_some();
+    if !request_matches_approval {
+        write_server_response(
+            send,
+            &ServerResponse::HistoryRewrapRejected(HistoryRewrapRejected::new(
+                request.conversation_id(),
+                HistoryRewrapRejectionReason::ApprovalMismatch,
+            )),
+        )
+        .await?;
+        println!("history_rewrap_rejected=ApprovalMismatch");
+        println!("status=rejected");
+        return Ok(());
+    }
+
+    let bundle = build_history_rewrap_bundle(
+        device_state,
+        &source_certificate,
+        device_list.clone(),
+        approval.recipient_device_id,
+        approval.conversation_id,
+        event_store,
+        local_message_store,
+        approval.range_start,
+        approval.count,
+    )?;
+    let transfer = SignedHistoryRewrapTransfer::sign(device_state.identity(), request, bundle)?;
+    let transfer_size = transfer.encode()?.len();
+    if transfer_size > MAX_WIRE_MESSAGE_BYTES {
+        write_server_response(
+            send,
+            &ServerResponse::HistoryRewrapRejected(HistoryRewrapRejected::new(
+                approval.conversation_id,
+                HistoryRewrapRejectionReason::TransferTooLarge,
+            )),
+        )
+        .await?;
+        println!("history_rewrap_rejected=TransferTooLarge");
+        println!("history_rewrap_transfer_bytes={transfer_size}");
+        println!("status=rejected");
+        return Ok(());
+    }
+    write_server_response(
+        send,
+        &ServerResponse::HistoryRewrapTransfer(Box::new(transfer.clone())),
+    )
+    .await?;
+    println!("history_rewrap_id={}", transfer.bundle().bundle_id()?);
+    println!("history_rewrap_transfer_bytes={transfer_size}");
+    println!("history_rewrap_user_consent=approved");
+    println!("status=history-rewrap-transferred");
     Ok(())
 }
 
@@ -2606,6 +2951,179 @@ fn export_ratchet_prekey_pool(
     Ok(())
 }
 
+fn show_history_rewrap_sas(
+    device_list_file: PathBuf,
+    source_device_id: DeviceId,
+    recipient_device_id: DeviceId,
+) -> Result<()> {
+    let device_list = AccountDeviceListSnapshot::decode_and_verify(
+        &fs::read(&device_list_file)
+            .with_context(|| format!("read device list from {}", device_list_file.display()))?,
+    )
+    .context("decode and verify history-rewrap account device list")?;
+    let sas = HistoryRewrapSas::derive(&device_list, source_device_id, recipient_device_id)?;
+    println!("account_id={}", device_list.account_id());
+    println!("authority_revision={}", device_list.revision());
+    println!("source_device_id={source_device_id}");
+    println!("recipient_device_id={recipient_device_id}");
+    println!("history_rewrap_sas={sas}");
+    println!("status=history-rewrap-sas-derived");
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn fetch_history_rewrap(
+    state_dir: PathBuf,
+    ticket: Option<String>,
+    ticket_file: Option<PathBuf>,
+    conversation: String,
+    range_start: usize,
+    count: usize,
+    confirmed_sas: String,
+    expected_account_id: AccountId,
+) -> Result<()> {
+    ensure!(count > 0, "--count must be greater than zero");
+    ensure!(
+        count <= MAX_HISTORY_REWRAP_ENTRIES,
+        "--count must not exceed {MAX_HISTORY_REWRAP_ENTRIES}"
+    );
+    let device_state = DeviceState::load_or_create(&state_dir)
+        .with_context(|| format!("load recipient device state from {}", state_dir.display()))?;
+    let recipient_certificate = device_state
+        .load_certificate()
+        .context("load recipient Account Root certificate")?;
+    let recipient_authority_snapshot = device_state
+        .load_own_authority_snapshot()
+        .context("load recipient Account Root authority snapshot")?;
+    ensure!(
+        recipient_certificate.account_id() == expected_account_id,
+        "network history rewrap requires the recipient to belong to --expect-account"
+    );
+    let ticket = load_connection_ticket(ticket, ticket_file).await?;
+    ticket.verify_listener_account(expected_account_id)?;
+    ensure!(
+        ticket.allowed_requester_account_id() == expected_account_id,
+        "source ticket does not authorize this same account"
+    );
+    let source = ticket.verify_listener_authorization(expected_account_id)?;
+    let source_device_id = source.device_id();
+    let device_list = ticket.listener_directory().device_list();
+    ensure!(
+        device_list.certificate_for(recipient_certificate.device_id())
+            == Some(&recipient_certificate),
+        "recipient certificate is not present exactly in the source signed device list"
+    );
+    let sas = HistoryRewrapSas::derive(
+        device_list,
+        source_device_id,
+        recipient_certificate.device_id(),
+    )?;
+    println!("history_rewrap_sas={sas}");
+    ensure!(
+        confirmed_sas.trim() == sas.to_string(),
+        "recipient confirmed SAS {}, but the signed source ticket derives {sas}",
+        confirmed_sas.trim()
+    );
+    println!("history_rewrap_user_consent=confirmed");
+    let conversation_id = ConversationId::from_label(&conversation);
+    let membership = device_state
+        .load_conversation_membership(conversation_id.scope_id())
+        .context("load trusted conversation membership before network history rewrap")?;
+    membership
+        .require_member(expected_account_id)
+        .context("account is not a member of the requested conversation")?;
+    let source_snapshot_store = device_state
+        .install_own_authority_snapshot(ticket.listener_authority_snapshot())
+        .context("install same-account authority snapshot from source ticket")?;
+    let session_binding =
+        SyncSessionBinding::from_transport_label(&ticket.endpoint().id.to_string());
+    let route_policy = ticket.route_policy();
+    let endpoint = endpoint_builder_for_remote(route_policy, ticket.endpoint())?
+        .bind()
+        .await
+        .context("bind history-rewrap recipient endpoint")?;
+    println!("transport_endpoint_id={}", endpoint.id());
+    println!("account_id={expected_account_id}");
+    println!("device_id={}", recipient_certificate.device_id());
+    println!("source_device_id={source_device_id}");
+    println!("source_authority_store={source_snapshot_store:?}");
+    println!("route_policy={}", route_policy.as_str());
+    print_connection_target(&ticket);
+    if route_policy == RoutePolicy::RelayOnly {
+        wait_for_relay(&endpoint, route_policy, CLIENT_RELAY_WAIT_SECONDS).await?;
+    }
+    let connection = timeout(
+        CONNECTION_TIMEOUT,
+        endpoint.connect(ticket.endpoint().clone(), ALPN),
+    )
+    .await
+    .with_context(|| {
+        timeout_message(
+            "connect to listening endpoint for history rewrap",
+            CONNECTION_TIMEOUT,
+        )
+    })?
+    .context("connect to listening endpoint for history rewrap")?;
+    println!("peer_id={}", connection.remote_id());
+    let ready_path = await_route_policy(&connection, route_policy, ROUTE_POLICY_WAIT)
+        .await
+        .context("wait for a history-rewrap path allowed by the connection ticket")?;
+    print_ready_path(&ready_path);
+    authorize_with_listener(
+        &connection,
+        device_state.identity(),
+        recipient_certificate,
+        recipient_authority_snapshot,
+        session_binding,
+    )
+    .await?;
+    let request = SignedHistoryRewrapRequest::sign(
+        device_state.identity(),
+        conversation_id,
+        source_device_id,
+        session_binding,
+        range_start,
+        count,
+        sas,
+    )?;
+    let (mut send, mut receive) =
+        open_bi(&connection, "open history-rewrap request stream").await?;
+    write_client_request(&mut send, &ClientRequest::HistoryRewrap(request.clone())).await?;
+    let transfer = match read_server_response(&mut receive).await? {
+        ServerResponse::HistoryRewrapTransfer(transfer) => *transfer,
+        ServerResponse::HistoryRewrapRejected(rejected) => {
+            ensure!(
+                rejected.conversation_id() == conversation_id,
+                "history-rewrap rejection belongs to a different conversation"
+            );
+            bail!("history rewrap rejected by source: {:?}", rejected.reason());
+        }
+        _ => bail!("recipient expected a history-rewrap transfer response"),
+    };
+    transfer
+        .verify_for_request(&request)
+        .context("verify source-signed transfer against exact recipient request")?;
+    let transfer_encoded = transfer.encode()?;
+    ensure!(
+        transfer_encoded.len() <= MAX_WIRE_MESSAGE_BYTES,
+        "history-rewrap transfer exceeds the bounded wire frame"
+    );
+    let bundle = transfer.bundle().clone();
+    let bundle_encoded = bundle.encode()?;
+    println!("history_rewrap_transfer_bytes={}", transfer_encoded.len());
+    print_transport_diagnostics(&connection, route_policy).await?;
+    connection.close(0_u32.into(), b"kilogram history rewrap complete");
+    endpoint.close().await;
+    import_history_rewrap_material(
+        state_dir,
+        conversation,
+        bundle,
+        bundle_encoded,
+        Some((transfer, transfer_encoded)),
+        "history-rewrap-fetched",
+    )
+}
+
 fn export_history_rewrap(
     state_dir: PathBuf,
     conversation: String,
@@ -2727,20 +3245,117 @@ fn export_history_rewrap(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
+fn build_history_rewrap_bundle(
+    device_state: &DeviceState,
+    source_certificate: &DeviceCertificate,
+    device_list: AccountDeviceListSnapshot,
+    recipient_device_id: DeviceId,
+    conversation_id: ConversationId,
+    event_store: &EventStore,
+    local_message_store: &LocalMessageStore,
+    range_start: usize,
+    count: usize,
+) -> Result<HistoryRewrapBundle> {
+    ensure!(count > 0, "history-rewrap count must be greater than zero");
+    ensure!(
+        count <= MAX_HISTORY_REWRAP_ENTRIES,
+        "history-rewrap count must not exceed {MAX_HISTORY_REWRAP_ENTRIES}"
+    );
+    device_list
+        .verify_for_account(source_certificate.account_id())
+        .context("history-rewrap device list belongs to a different account")?;
+    ensure!(
+        device_list.certificate_for(source_certificate.device_id()) == Some(source_certificate),
+        "source certificate is not present exactly in the signed device list"
+    );
+    ensure!(
+        device_list.certificate_for(recipient_device_id).is_some(),
+        "recipient device is absent from the supplied root-signed device list"
+    );
+    let membership = device_state
+        .load_conversation_membership(conversation_id.scope_id())
+        .context("load trusted conversation membership before history rewrap")?;
+    membership
+        .require_member(source_certificate.account_id())
+        .context("source account is not a member of this conversation")?;
+    let stored_events = event_store
+        .load_authorized_conversation(conversation_id, &membership)
+        .context("load and verify source history before rewrap")?;
+    let mut inventory = Vec::new();
+    for stored in stored_events {
+        if !matches!(
+            stored.event.event().payload(),
+            EventPayload::RatchetText { .. }
+        ) {
+            continue;
+        }
+        let projection = local_message_store
+            .get(stored.id)
+            .with_context(|| format!("load readable source projection for event {}", stored.id))?;
+        let body = projection
+            .open_for_account(
+                stored.event.event(),
+                source_certificate.device_id(),
+                source_certificate.account_id(),
+                device_state.encryption(),
+            )
+            .with_context(|| format!("open source projection for event {}", stored.id))?;
+        inventory.push((stored.event, body));
+    }
+    ensure!(
+        range_start < inventory.len(),
+        "history-rewrap range start {range_start} is outside text inventory with {} events",
+        inventory.len()
+    );
+    let requested_end = range_start
+        .checked_add(count)
+        .context("history-rewrap range overflow")?;
+    let range_end = requested_end.min(inventory.len());
+    HistoryRewrapBundle::seal(
+        device_state.identity(),
+        device_list,
+        recipient_device_id,
+        conversation_id,
+        &inventory,
+        range_start,
+        range_end,
+    )
+    .context("seal authenticated history-rewrap bundle")
+}
+
 fn import_history_rewrap(
     state_dir: PathBuf,
     conversation: String,
     bundle_file: PathBuf,
+) -> Result<()> {
+    let encoded = fs::read(&bundle_file)
+        .with_context(|| format!("read history rewrap from {}", bundle_file.display()))?;
+    let bundle = HistoryRewrapBundle::decode_and_verify(&encoded)
+        .context("decode and verify authenticated history-rewrap bundle")?;
+    import_history_rewrap_material(
+        state_dir,
+        conversation,
+        bundle,
+        encoded,
+        None,
+        "history-rewrap-imported",
+    )
+}
+
+fn import_history_rewrap_material(
+    state_dir: PathBuf,
+    conversation: String,
+    bundle: HistoryRewrapBundle,
+    encoded: Vec<u8>,
+    transfer: Option<(SignedHistoryRewrapTransfer, Vec<u8>)>,
+    final_status: &str,
 ) -> Result<()> {
     let device_state = DeviceState::load_or_create(&state_dir)
         .with_context(|| format!("load recipient device state from {}", state_dir.display()))?;
     let recipient_certificate = device_state
         .load_certificate()
         .context("load recipient device certificate before history rewrap")?;
-    let encoded = fs::read(&bundle_file)
-        .with_context(|| format!("read history rewrap from {}", bundle_file.display()))?;
-    let bundle = HistoryRewrapBundle::decode_and_verify(&encoded)
-        .context("decode and verify authenticated history-rewrap bundle")?;
     let conversation_id = ConversationId::from_label(&conversation);
     ensure!(
         bundle.manifest().conversation_id() == conversation_id,
@@ -2815,9 +3430,15 @@ fn import_history_rewrap(
         };
         prepared.push((authorized_event, projection, projection_exists));
     }
-    let (bundle_store, inserted_projections, inserted_events) =
+    let (bundle_store, transfer_store, inserted_projections, inserted_events) =
         run_state_transaction(&state_dir, || {
             let bundle_store = persist_history_rewrap_bundle(&state_dir, &bundle, &encoded)?;
+            let transfer_store = transfer
+                .as_ref()
+                .map(|(transfer, encoded)| {
+                    persist_history_rewrap_transfer(&state_dir, transfer, encoded)
+                })
+                .transpose()?;
             let mut inserted_projections = 0_usize;
             let mut inserted_events = 0_usize;
             for (authorized_event, projection, projection_exists) in prepared {
@@ -2832,7 +3453,12 @@ fn import_history_rewrap(
                     inserted_events += 1;
                 }
             }
-            Ok((bundle_store, inserted_projections, inserted_events))
+            Ok((
+                bundle_store,
+                transfer_store,
+                inserted_projections,
+                inserted_events,
+            ))
         })?;
     println!("history_rewrap_id={}", bundle.bundle_id()?);
     println!("source_device_id={}", bundle.manifest().source_device_id());
@@ -2859,7 +3485,10 @@ fn import_history_rewrap(
     );
     println!("authority_snapshot_store={snapshot_store:?}");
     println!("bundle_store={bundle_store:?}");
-    println!("status=history-rewrap-imported");
+    if let Some(transfer_store) = transfer_store {
+        println!("transfer_store={transfer_store:?}");
+    }
+    println!("status={final_status}");
     Ok(())
 }
 
@@ -2897,6 +3526,186 @@ fn validate_existing_history_rewrap(path: &Path, expected: &[u8]) -> Result<Stor
         path.display()
     );
     Ok(StoreOutcome::AlreadyPresent)
+}
+
+fn persist_history_rewrap_transfer(
+    state_dir: &Path,
+    transfer: &SignedHistoryRewrapTransfer,
+    encoded: &[u8],
+) -> Result<StoreOutcome> {
+    transfer.verify_signature()?;
+    let directory = state_dir.join(HISTORY_REWRAP_STORE_DIRECTORY);
+    fs::create_dir_all(&directory)?;
+    let path = directory.join(format!("{}.transfer", transfer.bundle().bundle_id()?));
+    if path.try_exists()? {
+        return validate_existing_history_rewrap(&path, encoded);
+    }
+    let mut temporary = NamedTempFile::new_in(&directory)?;
+    temporary.write_all(encoded)?;
+    temporary.as_file().sync_all()?;
+    match temporary.persist_noclobber(&path) {
+        Ok(file) => {
+            file.sync_all()?;
+            Ok(StoreOutcome::Inserted)
+        }
+        Err(error) if error.error.kind() == std::io::ErrorKind::AlreadyExists => {
+            validate_existing_history_rewrap(&path, encoded)
+        }
+        Err(error) => Err(error.error.into()),
+    }
+}
+
+#[derive(Debug, Default)]
+struct HistoryRewrapClaimCoverage {
+    ranges: Vec<(u64, u64)>,
+    bundle_count: usize,
+}
+
+fn reconcile_history_rewrap(state_dir: PathBuf, conversation: String) -> Result<()> {
+    let device_state = DeviceState::load_or_create(&state_dir)
+        .with_context(|| format!("load recipient device state from {}", state_dir.display()))?;
+    let recipient_certificate = device_state
+        .load_certificate()
+        .context("load recipient certificate for history-rewrap reconciliation")?;
+    let conversation_id = ConversationId::from_label(&conversation);
+    let directory = state_dir.join(HISTORY_REWRAP_STORE_DIRECTORY);
+    let mut paths = match fs::read_dir(&directory) {
+        Ok(entries) => entries
+            .map(|entry| entry.map(|entry| entry.path()))
+            .collect::<std::result::Result<Vec<_>, _>>()?,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Vec::new(),
+        Err(error) => return Err(error.into()),
+    };
+    paths.retain(|path| path.extension().and_then(|value| value.to_str()) == Some("rewrap"));
+    paths.sort();
+
+    type ClaimKey = (DeviceId, u64, [u8; 32]);
+    let mut claims = BTreeMap::<ClaimKey, HistoryRewrapClaimCoverage>::new();
+    let mut source_claims = BTreeMap::<DeviceId, BTreeSet<(u64, [u8; 32])>>::new();
+    let mut covered_event_ids = BTreeSet::new();
+    let mut matched_bundle_count = 0_usize;
+    for path in &paths {
+        let bundle = HistoryRewrapBundle::decode_and_verify(
+            &fs::read(path).with_context(|| format!("read {}", path.display()))?,
+        )
+        .with_context(|| format!("verify stored history rewrap {}", path.display()))?;
+        let manifest = bundle.manifest();
+        if manifest.conversation_id() != conversation_id {
+            continue;
+        }
+        matched_bundle_count += 1;
+        ensure!(
+            manifest.account_id() == recipient_certificate.account_id(),
+            "stored history rewrap {} belongs to a different account",
+            path.display()
+        );
+        ensure!(
+            manifest.recipient_device_id() == recipient_certificate.device_id(),
+            "stored history rewrap {} is addressed to a different device",
+            path.display()
+        );
+        ensure!(
+            manifest
+                .account_device_list()
+                .certificate_for(recipient_certificate.device_id())
+                == Some(&recipient_certificate),
+            "stored history rewrap {} contains a different recipient certificate",
+            path.display()
+        );
+        let digest = *manifest.inventory_digest();
+        let key = (
+            manifest.source_device_id(),
+            manifest.inventory_event_count(),
+            digest,
+        );
+        let coverage = claims.entry(key).or_default();
+        coverage
+            .ranges
+            .push((manifest.range_start(), manifest.range_end()));
+        coverage.bundle_count += 1;
+        source_claims
+            .entry(manifest.source_device_id())
+            .or_default()
+            .insert((manifest.inventory_event_count(), digest));
+        for entry in bundle.entries() {
+            covered_event_ids.insert(entry.event().event().event_id()?);
+        }
+    }
+
+    let mut complete_claims = Vec::new();
+    let mut complete_sources = BTreeSet::new();
+    for ((source, count, digest), coverage) in &mut claims {
+        coverage.ranges.sort_unstable();
+        let complete = ranges_cover_inventory(&coverage.ranges, *count);
+        if complete {
+            complete_claims.push((*source, *count, *digest));
+            complete_sources.insert(*source);
+        }
+        println!(
+            "claim_source_device_id={source} inventory_event_count={count} inventory_digest={} bundle_count={} range_count={} complete={complete}",
+            encode_hex(digest),
+            coverage.bundle_count,
+            coverage.ranges.len()
+        );
+    }
+    let equivocation_count = source_claims
+        .values()
+        .filter(|claims| claims.len() > 1)
+        .count();
+    let agreement = classify_history_rewrap_agreement(&complete_claims, equivocation_count);
+    println!("conversation_id={conversation_id}");
+    println!("recipient_device_id={}", recipient_certificate.device_id());
+    println!("rewrap_bundle_count={matched_bundle_count}");
+    println!("source_device_count={}", source_claims.len());
+    println!("source_claim_count={}", claims.len());
+    println!("complete_source_count={}", complete_sources.len());
+    println!("source_equivocation_count={equivocation_count}");
+    println!("covered_event_count={}", covered_event_ids.len());
+    println!("source_claim_agreement={agreement}");
+    println!("global_completeness_proven=false");
+    println!("status=history-rewrap-reconciled");
+    Ok(())
+}
+
+fn ranges_cover_inventory(ranges: &[(u64, u64)], inventory_event_count: u64) -> bool {
+    if inventory_event_count == 0 {
+        return false;
+    }
+    let mut covered_until = 0_u64;
+    for &(start, end) in ranges {
+        if start > covered_until {
+            return false;
+        }
+        covered_until = covered_until.max(end);
+        if covered_until >= inventory_event_count {
+            return true;
+        }
+    }
+    false
+}
+
+fn classify_history_rewrap_agreement(
+    complete_claims: &[(DeviceId, u64, [u8; 32])],
+    equivocation_count: usize,
+) -> &'static str {
+    if complete_claims.is_empty() {
+        return "incomplete";
+    }
+    let sources = complete_claims
+        .iter()
+        .map(|(source, _, _)| *source)
+        .collect::<BTreeSet<_>>();
+    let inventories = complete_claims
+        .iter()
+        .map(|(_, count, digest)| (*count, *digest))
+        .collect::<BTreeSet<_>>();
+    if inventories.len() > 1 || equivocation_count > 0 {
+        "divergent"
+    } else if sources.len() == 1 {
+        "single-source"
+    } else {
+        "agreed"
+    }
 }
 
 fn encode_hex(bytes: &[u8]) -> String {
@@ -3341,6 +4150,100 @@ mod tests {
     use kilogram_transport_iroh::endpoint_builder;
 
     const UNSUPPORTED_TEST_ALPN: &[u8] = b"kilogram/test/unsupported/1";
+
+    #[test]
+    fn history_rewrap_source_consent_requires_exact_sas_and_same_account() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let root = AccountRootState::create(directory.path().join("root"))?;
+        let source = DeviceIdentity::generate()?;
+        let recipient = DeviceIdentity::generate()?;
+        let source_certificate = root.issue_device_certificate(
+            source.device_id(),
+            DeviceEncryptionIdentity::generate()?.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let recipient_certificate = root.issue_device_certificate(
+            recipient.device_id(),
+            DeviceEncryptionIdentity::generate()?.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let device_list =
+            root.publish_device_list(&[source_certificate.clone(), recipient_certificate])?;
+        let sas =
+            HistoryRewrapSas::derive(&device_list, source.device_id(), recipient.device_id())?;
+        let approval = prepare_history_rewrap_approval(
+            Some("consent-test".to_owned()),
+            Some(recipient.device_id()),
+            Some(sas.to_string()),
+            4,
+            8,
+            &device_list,
+            &source_certificate,
+            root.account_id(),
+        )?
+        .context("complete history-rewrap approval was ignored")?;
+        assert_eq!(approval.sas, sas);
+        assert_eq!(approval.range_start, 4);
+        assert_eq!(approval.count, 8);
+        assert!(
+            prepare_history_rewrap_approval(
+                Some("consent-test".to_owned()),
+                Some(recipient.device_id()),
+                Some("000-000-000-000".to_owned()),
+                4,
+                8,
+                &device_list,
+                &source_certificate,
+                root.account_id(),
+            )
+            .is_err()
+        );
+        let other_root = AccountRootState::create(directory.path().join("other-root"))?;
+        assert!(
+            prepare_history_rewrap_approval(
+                Some("consent-test".to_owned()),
+                Some(recipient.device_id()),
+                Some(sas.to_string()),
+                4,
+                8,
+                &device_list,
+                &source_certificate,
+                other_root.account_id(),
+            )
+            .is_err()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn history_rewrap_reconciliation_distinguishes_coverage_and_source_claims() -> Result<()> {
+        assert!(ranges_cover_inventory(&[(0, 2), (2, 5)], 5));
+        assert!(ranges_cover_inventory(&[(0, 3), (2, 5)], 5));
+        assert!(!ranges_cover_inventory(&[(0, 2), (3, 5)], 5));
+        assert!(!ranges_cover_inventory(&[], 5));
+
+        let first = DeviceIdentity::generate()?.device_id();
+        let second = DeviceIdentity::generate()?.device_id();
+        let digest = [7_u8; 32];
+        assert_eq!(
+            classify_history_rewrap_agreement(&[(first, 5, digest)], 0),
+            "single-source"
+        );
+        assert_eq!(
+            classify_history_rewrap_agreement(&[(first, 5, digest), (second, 5, digest)], 0,),
+            "agreed"
+        );
+        assert_eq!(
+            classify_history_rewrap_agreement(&[(first, 5, digest), (second, 6, [8_u8; 32])], 0,),
+            "divergent"
+        );
+        assert_eq!(
+            classify_history_rewrap_agreement(&[(first, 5, digest)], 1),
+            "divergent"
+        );
+        assert_eq!(classify_history_rewrap_agreement(&[], 0), "incomplete");
+        Ok(())
+    }
 
     #[test]
     fn cli_state_transaction_rolls_back_all_managed_roots_on_operation_error() -> Result<()> {

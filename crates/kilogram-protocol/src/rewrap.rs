@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     AuthorizedEvent, ConversationId, EventId, EventPayload, MAX_CIPHERTEXT_BYTES, MAX_TEXT_BYTES,
-    ProtocolError,
+    ProtocolError, SyncSessionBinding,
 };
 
 const HISTORY_REWRAP_VERSION: u8 = 1;
@@ -15,8 +15,254 @@ const HISTORY_REWRAP_HPKE_INFO: &[u8] = b"kilogram:history-rewrap-hpke:v1\0";
 const HISTORY_REWRAP_AAD_DOMAIN: &[u8] = b"kilogram:history-rewrap-aad:v1\0";
 const HISTORY_REWRAP_INVENTORY_DOMAIN: &[u8] = b"kilogram:history-rewrap-inventory:v1\0";
 const HISTORY_REWRAP_ID_DOMAIN: &[u8] = b"kilogram:history-rewrap-id:v1\0";
+const HISTORY_REWRAP_SAS_DOMAIN: &[u8] = b"kilogram:history-rewrap-sas:v1\0";
+const HISTORY_REWRAP_REQUEST_VERSION: u8 = 1;
+const HISTORY_REWRAP_REQUEST_SIGNATURE_DOMAIN: &[u8] =
+    b"kilogram:history-rewrap-request-signature:v1\0";
+const HISTORY_REWRAP_TRANSFER_VERSION: u8 = 1;
+const HISTORY_REWRAP_TRANSFER_SIGNATURE_DOMAIN: &[u8] =
+    b"kilogram:history-rewrap-transfer-signature:v1\0";
 
 pub const MAX_HISTORY_REWRAP_ENTRIES: usize = 256;
+
+/// A short authentication string derived from one root-signed account device list.
+///
+/// The displayed decimal code is only for an out-of-band human comparison. The
+/// full digest is carried in and signed by the network request.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
+pub struct HistoryRewrapSas([u8; 32]);
+
+impl fmt::Display for HistoryRewrapSas {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut prefix = [0_u8; 8];
+        prefix.copy_from_slice(&self.0[..8]);
+        let digits = u64::from_be_bytes(prefix) % 1_000_000_000_000;
+        let code = format!("{digits:012}");
+        write!(
+            formatter,
+            "{}-{}-{}-{}",
+            &code[0..3],
+            &code[3..6],
+            &code[6..9],
+            &code[9..12]
+        )
+    }
+}
+
+impl HistoryRewrapSas {
+    pub fn derive(
+        account_device_list: &AccountDeviceListSnapshot,
+        source_device_id: DeviceId,
+        recipient_device_id: DeviceId,
+    ) -> Result<Self, ProtocolError> {
+        account_device_list.verify()?;
+        validate_rewrap_devices(account_device_list, source_device_id, recipient_device_id)?;
+        let encoded = account_device_list.encode()?;
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(HISTORY_REWRAP_SAS_DOMAIN);
+        hasher.update(&encoded);
+        hasher.update(source_device_id.as_bytes());
+        hasher.update(recipient_device_id.as_bytes());
+        Ok(Self(*hasher.finalize().as_bytes()))
+    }
+
+    pub fn digest(&self) -> &[u8; 32] {
+        &self.0
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+struct HistoryRewrapRequestContent {
+    version: u8,
+    conversation_id: ConversationId,
+    source_device_id: DeviceId,
+    recipient_device_id: DeviceId,
+    session_binding: SyncSessionBinding,
+    range_start: u64,
+    max_event_count: u64,
+    sas: HistoryRewrapSas,
+}
+
+/// A recipient-signed, session-bound request for one bounded history range.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct SignedHistoryRewrapRequest {
+    content: HistoryRewrapRequestContent,
+    signature: Vec<u8>,
+}
+
+impl SignedHistoryRewrapRequest {
+    pub fn sign(
+        recipient_identity: &DeviceIdentity,
+        conversation_id: ConversationId,
+        source_device_id: DeviceId,
+        session_binding: SyncSessionBinding,
+        range_start: usize,
+        max_event_count: usize,
+        sas: HistoryRewrapSas,
+    ) -> Result<Self, ProtocolError> {
+        let content = HistoryRewrapRequestContent {
+            version: HISTORY_REWRAP_REQUEST_VERSION,
+            conversation_id,
+            source_device_id,
+            recipient_device_id: recipient_identity.device_id(),
+            session_binding,
+            range_start: u64::try_from(range_start)
+                .map_err(|_| ProtocolError::HistoryRewrapInventoryTooLarge(range_start))?,
+            max_event_count: u64::try_from(max_event_count)
+                .map_err(|_| ProtocolError::HistoryRewrapInventoryTooLarge(max_event_count))?,
+            sas,
+        };
+        validate_request_content(&content)?;
+        let signature = recipient_identity
+            .sign(&history_rewrap_request_signing_bytes(&content)?)
+            .to_vec();
+        Ok(Self { content, signature })
+    }
+
+    pub fn verify_signature(&self) -> Result<(), ProtocolError> {
+        validate_request_content(&self.content)?;
+        self.content.recipient_device_id.verify(
+            &history_rewrap_request_signing_bytes(&self.content)?,
+            &self.signature,
+        )?;
+        Ok(())
+    }
+
+    pub fn verify_for_session(
+        &self,
+        expected_session: SyncSessionBinding,
+        expected_source: DeviceId,
+        expected_recipient: DeviceId,
+        expected_sas: HistoryRewrapSas,
+    ) -> Result<(), ProtocolError> {
+        self.verify_signature()?;
+        if self.content.session_binding != expected_session {
+            return Err(ProtocolError::HistoryRewrapRequestSessionMismatch);
+        }
+        if self.content.source_device_id != expected_source {
+            return Err(ProtocolError::HistoryRewrapRequestSourceMismatch {
+                expected: expected_source,
+                actual: self.content.source_device_id,
+            });
+        }
+        if self.content.recipient_device_id != expected_recipient {
+            return Err(ProtocolError::HistoryRewrapRecipientMismatch {
+                expected: expected_recipient,
+                actual: self.content.recipient_device_id,
+            });
+        }
+        if self.content.sas != expected_sas {
+            return Err(ProtocolError::HistoryRewrapSasMismatch);
+        }
+        Ok(())
+    }
+
+    pub fn conversation_id(&self) -> ConversationId {
+        self.content.conversation_id
+    }
+
+    pub fn source_device_id(&self) -> DeviceId {
+        self.content.source_device_id
+    }
+
+    pub fn recipient_device_id(&self) -> DeviceId {
+        self.content.recipient_device_id
+    }
+
+    pub fn session_binding(&self) -> SyncSessionBinding {
+        self.content.session_binding
+    }
+
+    pub fn range_start(&self) -> u64 {
+        self.content.range_start
+    }
+
+    pub fn max_event_count(&self) -> u64 {
+        self.content.max_event_count
+    }
+
+    pub fn sas(&self) -> HistoryRewrapSas {
+        self.content.sas
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+struct HistoryRewrapTransferContent {
+    version: u8,
+    request: SignedHistoryRewrapRequest,
+    bundle: HistoryRewrapBundle,
+}
+
+/// A source-signed response that binds the encrypted bundle to the exact request.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct SignedHistoryRewrapTransfer {
+    content: HistoryRewrapTransferContent,
+    signature: Vec<u8>,
+}
+
+impl SignedHistoryRewrapTransfer {
+    pub fn sign(
+        source_identity: &DeviceIdentity,
+        request: SignedHistoryRewrapRequest,
+        bundle: HistoryRewrapBundle,
+    ) -> Result<Self, ProtocolError> {
+        let content = HistoryRewrapTransferContent {
+            version: HISTORY_REWRAP_TRANSFER_VERSION,
+            request,
+            bundle,
+        };
+        validate_transfer_content(&content)?;
+        if content.request.source_device_id() != source_identity.device_id() {
+            return Err(ProtocolError::HistoryRewrapRequestSourceMismatch {
+                expected: source_identity.device_id(),
+                actual: content.request.source_device_id(),
+            });
+        }
+        let signature = source_identity
+            .sign(&history_rewrap_transfer_signing_bytes(&content)?)
+            .to_vec();
+        Ok(Self { content, signature })
+    }
+
+    pub fn encode(&self) -> Result<Vec<u8>, ProtocolError> {
+        self.verify_signature()?;
+        Ok(postcard::to_allocvec(self)?)
+    }
+
+    pub fn decode_and_verify(bytes: &[u8]) -> Result<Self, ProtocolError> {
+        let transfer: Self = postcard::from_bytes(bytes)?;
+        transfer.verify_signature()?;
+        Ok(transfer)
+    }
+
+    pub fn verify_signature(&self) -> Result<(), ProtocolError> {
+        validate_transfer_content(&self.content)?;
+        self.content.request.source_device_id().verify(
+            &history_rewrap_transfer_signing_bytes(&self.content)?,
+            &self.signature,
+        )?;
+        Ok(())
+    }
+
+    pub fn verify_for_request(
+        &self,
+        expected_request: &SignedHistoryRewrapRequest,
+    ) -> Result<(), ProtocolError> {
+        self.verify_signature()?;
+        if &self.content.request != expected_request {
+            return Err(ProtocolError::HistoryRewrapTransferRequestMismatch);
+        }
+        Ok(())
+    }
+
+    pub fn request(&self) -> &SignedHistoryRewrapRequest {
+        &self.content.request
+    }
+
+    pub fn bundle(&self) -> &HistoryRewrapBundle {
+        &self.content.bundle
+    }
+}
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct HistoryRewrapId([u8; 32]);
@@ -457,4 +703,95 @@ fn history_rewrap_aad(
     aad.extend_from_slice(HISTORY_REWRAP_AAD_DOMAIN);
     aad.extend_from_slice(&encoded);
     Ok(aad)
+}
+
+fn validate_request_content(content: &HistoryRewrapRequestContent) -> Result<(), ProtocolError> {
+    if content.version != HISTORY_REWRAP_REQUEST_VERSION {
+        return Err(ProtocolError::UnsupportedHistoryRewrapRequestVersion(
+            content.version,
+        ));
+    }
+    if content.source_device_id == content.recipient_device_id {
+        return Err(ProtocolError::HistoryRewrapSameDevice(
+            content.source_device_id,
+        ));
+    }
+    let max_event_count = usize::try_from(content.max_event_count)
+        .map_err(|_| ProtocolError::HistoryRewrapInventoryTooLarge(usize::MAX))?;
+    if max_event_count == 0 || max_event_count > MAX_HISTORY_REWRAP_ENTRIES {
+        return Err(ProtocolError::TooManyHistoryRewrapEntries(max_event_count));
+    }
+    content
+        .range_start
+        .checked_add(content.max_event_count)
+        .ok_or(ProtocolError::HistoryRewrapRequestRangeOverflow)?;
+    Ok(())
+}
+
+fn validate_transfer_content(content: &HistoryRewrapTransferContent) -> Result<(), ProtocolError> {
+    if content.version != HISTORY_REWRAP_TRANSFER_VERSION {
+        return Err(ProtocolError::UnsupportedHistoryRewrapTransferVersion(
+            content.version,
+        ));
+    }
+    content.request.verify_signature()?;
+    content.bundle.verify()?;
+    let manifest = content.bundle.manifest();
+    if manifest.conversation_id() != content.request.conversation_id() {
+        return Err(ProtocolError::HistoryRewrapConversationMismatch);
+    }
+    if manifest.source_device_id() != content.request.source_device_id() {
+        return Err(ProtocolError::HistoryRewrapRequestSourceMismatch {
+            expected: content.request.source_device_id(),
+            actual: manifest.source_device_id(),
+        });
+    }
+    if manifest.recipient_device_id() != content.request.recipient_device_id() {
+        return Err(ProtocolError::HistoryRewrapRecipientMismatch {
+            expected: content.request.recipient_device_id(),
+            actual: manifest.recipient_device_id(),
+        });
+    }
+    if manifest.range_start() != content.request.range_start() {
+        return Err(ProtocolError::HistoryRewrapTransferRangeMismatch);
+    }
+    let maximum_end = content
+        .request
+        .range_start()
+        .checked_add(content.request.max_event_count())
+        .ok_or(ProtocolError::HistoryRewrapRequestRangeOverflow)?;
+    if manifest.range_end() > maximum_end {
+        return Err(ProtocolError::HistoryRewrapTransferRangeMismatch);
+    }
+    let expected_sas = HistoryRewrapSas::derive(
+        manifest.account_device_list(),
+        manifest.source_device_id(),
+        manifest.recipient_device_id(),
+    )?;
+    if content.request.sas() != expected_sas {
+        return Err(ProtocolError::HistoryRewrapSasMismatch);
+    }
+    Ok(())
+}
+
+fn history_rewrap_request_signing_bytes(
+    content: &HistoryRewrapRequestContent,
+) -> Result<Vec<u8>, ProtocolError> {
+    let encoded = postcard::to_allocvec(content)?;
+    let mut bytes =
+        Vec::with_capacity(HISTORY_REWRAP_REQUEST_SIGNATURE_DOMAIN.len() + encoded.len());
+    bytes.extend_from_slice(HISTORY_REWRAP_REQUEST_SIGNATURE_DOMAIN);
+    bytes.extend_from_slice(&encoded);
+    Ok(bytes)
+}
+
+fn history_rewrap_transfer_signing_bytes(
+    content: &HistoryRewrapTransferContent,
+) -> Result<Vec<u8>, ProtocolError> {
+    let encoded = postcard::to_allocvec(content)?;
+    let mut bytes =
+        Vec::with_capacity(HISTORY_REWRAP_TRANSFER_SIGNATURE_DOMAIN.len() + encoded.len());
+    bytes.extend_from_slice(HISTORY_REWRAP_TRANSFER_SIGNATURE_DOMAIN);
+    bytes.extend_from_slice(&encoded);
+    Ok(bytes)
 }

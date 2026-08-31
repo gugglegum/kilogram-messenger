@@ -853,10 +853,55 @@ session-reset protocol, TTL retained session или общей DB transaction. �
 hardware loss/hostile local administrator. Полный контракт —
 [`../docs/RFC-0010-crash-consistent-local-state.md`](../docs/RFC-0010-crash-consistent-local-state.md).
 
+### M0.7.8 — network authenticated history rewrap: выполнено
+
+Реализовано:
+
+- `HistoryRewrapSas` связывает полный root-signed same-account device list и
+  направленные роли source/recipient; UI-код — 12 цифр, полный digest входит в
+  signed request;
+- recipient подписывает session-bound conversation/source/recipient/range/SAS
+  request, source сверяет его с exact local approval;
+- source подписывает transfer поверх точного request и прежнего HPKE rewrap
+  bundle; recipient повторно проверяет request equality, signatures, device
+  authority, conversation, range и SAS;
+- CLI добавил `history-rewrap-sas`, consent options у `listen`,
+  `history-rewrap-fetch` и `history-rewrap-reconcile`;
+- frame остаётся bounded 8 MiB, request ограничен 1–256 events, oversized
+  transfer получает явный `TransferTooLarge`;
+- `.rewrap`, `.transfer`, imported projections и events сохраняются одной
+  crash-consistent transaction;
+- reconciliation объединяет ranges каждого source inventory claim, выявляет
+  same-source equivocation и печатает `incomplete`/`single-source`/`agreed`/
+  `divergent` плюс неизменное `global_completeness_proven=false`;
+- ALPN повышен до `kilogram/m0/sync/7`; ticket v9, sync/session v6 и event v5
+  сохранены;
+- async command dispatch box-pinned, чтобы выросший future не переполнял 1 MiB
+  Windows main-thread stack ещё до Clap parsing.
+
+Проверки:
+
+- protocol tests покрывают SAS role binding, session/request/transfer binding,
+  oversized request и tampering;
+- CLI tests покрывают exact source consent, same-account restriction,
+  gap/overlap coverage и все reconciliation outcomes;
+- все 78 workspace tests, форматирование, строгий Clippy и release build
+  проходят;
+- direct process smoke `.tmp/m078-smoke-20260901-044605` передал 3/3 старых
+  events в source-signed transfer размером 4,674 bytes, восстановил читаемую
+  recipient history, сохранил bundle+transfer, получил complete
+  `single-source` и не нашёл plaintext marker в recipient state.
+
+Граница среза: один listener обслуживает один bounded range; pagination, resume,
+source discovery и автоматический сбор нескольких claims ещё не реализованы.
+`agreed` — согласие наблюдавшихся sources, не глобальный checkpoint. Полный
+контракт —
+[`../docs/RFC-0011-network-history-rewrap.md`](../docs/RFC-0011-network-history-rewrap.md).
+
 ### Следующий этап
 
-1. M0.7.8: связать history rewrap с сетевой device-to-device сессией, user consent
-   и multi-source completeness reconciliation.
+1. M0.7.9: resumable history-recovery orchestration с authenticated pagination,
+   local checkpoint, retry и несколькими явно выбранными sources.
 2. Production local storage заменить encrypted transactional DB/WAL с bounded
    recovery и migrations.
 3. Membership removal и group governance проектировать вместе с ordered

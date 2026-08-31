@@ -178,5 +178,6 @@ Event schema не повышается: Olm PreKey message уже связыва
 M0.7.7 выполнен в [`RFC-0010`](RFC-0010-crash-consistent-local-state.md):
 ratchet advancement, local projection, immutable event и prekey rotation
 охвачены crash-consistent M0 filesystem transaction, а device state защищён
-exclusive lock. Следующий шаг — сетевой authenticated history rewrap с user
-consent/SAS и multi-source completeness reconciliation.
+exclusive lock. Сетевой authenticated history rewrap с user consent/SAS и
+multi-source completeness reconciliation реализован M0.7.8 в
+[`RFC-0011`](RFC-0011-network-history-rewrap.md).

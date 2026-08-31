@@ -5,7 +5,10 @@ use kilogram_identity::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{AuthorizedEvent, ConversationId, EventId, ProtocolError};
+use crate::{
+    AuthorizedEvent, ConversationId, EventId, ProtocolError, SignedHistoryRewrapRequest,
+    SignedHistoryRewrapTransfer,
+};
 
 pub const MAX_INVENTORY_EVENT_IDS: usize = 4096;
 pub const MAX_SYNC_EVENTS_PER_BATCH: usize = 64;
@@ -17,6 +20,7 @@ const SYNC_SESSION_DOMAIN: &[u8] = b"kilogram:sync-session:v1\0";
 const DEVICE_AUTHORIZATION_VERSION: u8 = 6;
 const DEVICE_AUTHORIZATION_SIGNATURE_DOMAIN: &[u8] =
     b"kilogram:device-session-authorization-signature:v6\0";
+const HISTORY_REWRAP_RESPONSE_VERSION: u8 = 1;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct SyncSessionBinding([u8; 32]);
@@ -454,6 +458,47 @@ impl SyncRejected {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub enum HistoryRewrapRejectionReason {
+    NotApproved,
+    ApprovalMismatch,
+    TransferTooLarge,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct HistoryRewrapRejected {
+    version: u8,
+    conversation_id: ConversationId,
+    reason: HistoryRewrapRejectionReason,
+}
+
+impl HistoryRewrapRejected {
+    pub fn new(conversation_id: ConversationId, reason: HistoryRewrapRejectionReason) -> Self {
+        Self {
+            version: HISTORY_REWRAP_RESPONSE_VERSION,
+            conversation_id,
+            reason,
+        }
+    }
+
+    pub fn conversation_id(&self) -> ConversationId {
+        self.conversation_id
+    }
+
+    pub fn reason(&self) -> HistoryRewrapRejectionReason {
+        self.reason
+    }
+
+    fn validate(&self) -> Result<(), ProtocolError> {
+        if self.version != HISTORY_REWRAP_RESPONSE_VERSION {
+            return Err(ProtocolError::UnsupportedHistoryRewrapResponseVersion(
+                self.version,
+            ));
+        }
+        Ok(())
+    }
+}
+
 impl SyncComplete {
     pub fn new(
         conversation_id: ConversationId,
@@ -495,6 +540,7 @@ pub enum ClientRequest {
     SyncInventory(SignedSyncInventory),
     SyncEvents(SyncEventBatch),
     SyncPause(SyncPause),
+    HistoryRewrap(SignedHistoryRewrapRequest),
 }
 
 impl ClientRequest {
@@ -516,6 +562,7 @@ impl ClientRequest {
             Self::SyncInventory(inventory) => inventory.verify_signature(),
             Self::SyncEvents(batch) => batch.validate(),
             Self::SyncPause(pause) => pause.validate(),
+            Self::HistoryRewrap(request) => request.verify_signature(),
         }
     }
 }
@@ -529,6 +576,8 @@ pub enum ServerResponse {
     SyncComplete(SyncComplete),
     SyncRejected(SyncRejected),
     SyncPaused(SyncPaused),
+    HistoryRewrapTransfer(Box<SignedHistoryRewrapTransfer>),
+    HistoryRewrapRejected(HistoryRewrapRejected),
 }
 
 impl ServerResponse {
@@ -552,6 +601,8 @@ impl ServerResponse {
             Self::SyncComplete(complete) => complete.validate(),
             Self::SyncRejected(rejected) => rejected.validate(),
             Self::SyncPaused(paused) => paused.validate(),
+            Self::HistoryRewrapTransfer(transfer) => transfer.verify_signature(),
+            Self::HistoryRewrapRejected(rejected) => rejected.validate(),
         }
     }
 }

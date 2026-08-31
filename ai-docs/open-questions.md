@@ -19,6 +19,9 @@ M0.7.6 добавил signed prekey pools, per-device max-seen freshness и boun
 active/retained resolution для двух crossed outbound sessions.
 M0.7.7 добавил exclusive device state lock и crash-consistent M0 filesystem
 transaction для ratchet/sequence/projection/event/prekey state.
+M0.7.8 добавил same-account network history rewrap с двусторонним consent/SAS,
+session-bound request, source-signed transfer и local multi-source claim
+reconciliation без обещания глобальной полноты.
 Следующие вопросы относятся к production recovery, rotation, asynchronous
 sessions, distribution, removal и key epochs и не решены этим прототипом.
 
@@ -43,9 +46,9 @@ sessions, distribution, removal и key epochs и не решены этим пр
   лишнюю account metadata? M0.7.6 отклоняет rollback/equivocation после
   наблюдения новой generation, но не доказывает её глобальную свежесть при
   первом контакте.
-- Как сетевой history rewrap подтверждает согласие пользователя/SAS, объединяет
-  claims нескольких sources и разрешает recovery от устройства собеседника без
-  неявного расширения same-account trust?
+- Как resumable network history recovery выбирает и опрашивает несколько
+  sources, переносит signed checkpoint между соединениями и разрешает recovery
+  от устройства собеседника без неявного расширения same-account trust?
 - Какой финальный межъязыковой canonical wire encoding обеспечивает одинаковые
   подписи и event IDs на всех платформах? Postcard используется только как
   предварительный M0 codec и не закрывает вопрос публичного протокола.

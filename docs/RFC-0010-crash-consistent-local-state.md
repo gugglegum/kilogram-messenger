@@ -184,7 +184,7 @@ ratchet уже мог продвинуться и не используется 
 
 ## 10. Следующий этап
 
-M0.7.8 должен перенести authenticated history rewrap с ручной файловой границы
-на существующую device-to-device session: явное предложение/согласие
-пользователя, SAS/identity confirmation, bounded ranges и reconciliation claims
-нескольких источников без ложного обещания глобальной полноты.
+M0.7.8 выполнен в [`RFC-0011`](RFC-0011-network-history-rewrap.md): authenticated
+history rewrap перенесён с ручной файловой границы в device-to-device session,
+добавлены явное согласие обеих сторон, SAS, bounded request/transfer и
+reconciliation claims нескольких источников без обещания глобальной полноты.

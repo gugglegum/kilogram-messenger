@@ -271,6 +271,17 @@ toolchain `1.98.0` для воспроизводимой разработки.
     строгий Clippy, release workspace build и все 75 tests проходят. Release
     process smoke `.tmp/m077-smoke-20260901-035517` проверил refusal второго CLI
     (`exit=1`), reuse после освобождения (`exit=0`) и отсутствие active journal.
+40. M0.7.8 добавил `history-rewrap-sas`, `history-rewrap-fetch` и
+    `history-rewrap-reconcile`. Recipient request подписан и session-bound,
+    source transfer подписывает точный request+bundle, source/listener требует
+    exact consent для device/conversation/range/SAS. ALPN —
+    `kilogram/m0/sync/7`; event v5, sync/session v6 и ticket v9 не менялись.
+    `.rewrap`, `.transfer`, events и projections сохраняются одной M0.7.7
+    transaction. Async command dispatcher box-pinned: без indirection новый
+    крупный command future переполнял 1 MiB main-thread stack Windows до разбора
+    CLI. Process smoke `.tmp/m078-smoke-20260901-044605` передал 3/3 старых
+    events по direct Iroh, сохранил transfer 4,674 bytes, получил complete
+    `single-source`, `global_completeness_proven=false` и clean plaintext scan.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -287,7 +298,8 @@ persistent pairwise Double Ratchet spike; M0.7.4 расширил его до п
 account-wide fan-out. M0.7.6 добавил bounded signed pools, local freshness
 high-water и concurrent initiation resolution; first-contact global freshness
 и production network discovery остаются открыты. M0.7.5 реализовал
-same-account file-boundary history rewrap; сетевой consent/multi-source recovery,
+same-account history rewrap; M0.7.8 добавил сетевой consent/SAS и local
+multi-source claim reconciliation. Resumable pagination/source discovery,
 membership removal/epochs и group E2EE остаются открыты. M0.7.7 закрывает
 M0 crash consistency для device filesystem state; encrypted production DB/WAL,
 bounded migrations/backups и защищённый keystore ещё не выбраны.

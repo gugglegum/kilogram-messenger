@@ -25,12 +25,14 @@ The authenticated prekey-pool and concurrent-initiation slice is specified in
 [`docs/RFC-0009-authenticated-prekey-pools.md`](docs/RFC-0009-authenticated-prekey-pools.md).
 The crash-consistent local state transaction is specified in
 [`docs/RFC-0010-crash-consistent-local-state.md`](docs/RFC-0010-crash-consistent-local-state.md).
+The consent-gated network history recovery flow is specified in
+[`docs/RFC-0011-network-history-rewrap.md`](docs/RFC-0011-network-history-rewrap.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.7.7 crash-consistent local state — complete
+## Current milestone: M0.7.8 network authenticated history rewrap — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -83,10 +85,20 @@ restore the previous ratchet/sequence and remove only newly created immutable
 files on error or the next startup. Network frames are sent only after the
 corresponding local transaction commits.
 
+M0.7.8 moves history rewrap from manual file exchange into the authenticated
+Iroh device session. The recipient signs a session-bound request for one
+bounded range; the source must explicitly approve the same account device,
+conversation, range, and independently compared 12-digit SAS. The source signs
+the response over the exact request and encrypted bundle. Import stores events,
+local projections, the original bundle, and network transfer provenance in one
+crash-consistent transaction. Local reconciliation merges ranges per signed
+source claim and reports `incomplete`, `single-source`, `agreed`, or `divergent`
+while always stating that global completeness is not proven.
+
 This is still a narrow integration spike. It does not yet provide a global DHT
 or gossip freshness proof, atomic remote prekey reservation, protected local
 key storage, a scalable transactional database, PQXDH, cross-account recovery,
-or automatic history-transfer transport. Losing every readable projection
+or resumable multi-range history recovery. Losing every readable projection
 still cannot be repaired from old ciphertext with only the device signing key.
 Do not use it for sensitive communication.
 
