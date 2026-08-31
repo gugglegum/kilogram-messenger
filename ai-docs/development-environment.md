@@ -208,6 +208,17 @@ toolchain `1.98.0` для воспроизводимой разработки.
     выполнил direct encrypted delivery, передал 3 encrypted seed events через
     reconnect sync, получил одинаковые histories из 5 events и не нашёл
     plaintext marker в сырых `.event` обоих устройств.
+34. M0.7.2 разделил replicated ciphertext и local readable history. Event v3
+    содержит только один peer HPKE box; sender/recipient создают immutable
+    `local-messages/*.local-text`, зашифрованный на local device key и связанный
+    с Event ID. Delivery и sync сохраняют projection до event, history требует
+    projection, outsider event fail-closed отклоняется. Sync/session/ticket/ALPN
+    повышены до v4/v4/v6/`kilogram/m0/sync/4`. Форматирование, строгий Clippy,
+    release workspace build и все 56 tests проходят. Свежий release process
+    smoke `.tmp/m072-smoke-20260831-194220` выполнил direct delivery, sync трёх
+    seed events, получил одинаковые histories из 5 events и по 4 local
+    projections на endpoint; plaintext markers отсутствуют в `.event` и
+    `.local-text`.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -219,9 +230,10 @@ transport Endpoint/session binding без повторной передачи п
 batch. M0.5.1 завершает локальную authority-модель; сетевое применение
 certificate/revocation завершено в M0.5.2. Completeness на подписанной revision
 и anti-rollback реализованы в M0.6.1; M0.6.2 закрывает минимальный add-only
-conversation membership и author verification. M0.7.1 закрывает только
-static-key HPKE payload baseline. First-contact global freshness, pairwise
-ratchet/FS/PCS, membership removal/epochs и group E2EE остаются открыты.
+conversation membership и author verification. M0.7.2 создал правильную
+storage boundary для ratchet, но recipient encryption остаётся static-key HPKE.
+First-contact global freshness, pairwise ratchet/FS/PCS, history rewrap,
+membership removal/epochs и group E2EE остаются открыты.
 
 ## Решения, которые ещё нельзя фиксировать
 

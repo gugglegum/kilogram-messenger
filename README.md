@@ -13,30 +13,43 @@ The implemented M0 conversation authorization slice is specified in
 [`docs/RFC-0003-conversation-membership.md`](docs/RFC-0003-conversation-membership.md).
 The implemented pairwise HPKE payload spike is specified in
 [`docs/RFC-0004-pairwise-hpke-payload.md`](docs/RFC-0004-pairwise-hpke-payload.md).
+The local-history separation required before a ratchet is specified in
+[`docs/RFC-0005-local-encrypted-history-projection.md`](docs/RFC-0005-local-encrypted-history-projection.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.7.1 pairwise HPKE payload — complete
+## Current milestone: M0.7.2 local encrypted history projection — complete
 
 Plaintext `Text` events no longer exist in the protocol. Each message body is
-sealed independently with RFC 9180 HPKE for exactly two certified device keys:
-the current sender device and one current peer device. The selected suite is
-X25519/HKDF-SHA256 with ChaCha20-Poly1305. Event metadata is authenticated as
-AEAD AAD, and the existing Ed25519 `SignedEvent` authenticates the complete
-ciphertext envelope and sender.
+sealed with RFC 9180 HPKE for exactly one certified peer device. The selected
+suite is X25519/HKDF-SHA256 with ChaCha20-Poly1305. Event metadata is
+authenticated as AEAD AAD, and the existing Ed25519 `SignedEvent` authenticates
+the complete ciphertext envelope and sender.
+
+The sender-readable copy is no longer part of the replicated event. Every
+endpoint writes a separate immutable `STATE_DIR/local-messages/*.local-text`
+projection encrypted to its own device key. A sender creates it from the text it
+authored; a recipient creates it only after decrypting and authenticating the
+network box. `history` reads this local projection, while sync transfers only
+recipient ciphertext events and public authorization proofs. This separation is
+required before a Double Ratchet can delete old message keys without losing the
+user's local chat history or retaining a static sender box that defeats forward
+secrecy.
 
 Every device now has a separate persistent X25519 encryption identity. Its
 public key is bound into root-signed `DeviceCertificate` v2. `connect` obtains
-the peer key only from the verified ticket, the listener must decrypt before
-persisting or acknowledging a message, and `history` decrypts only the box for
-the current local device. Synchronization and the immutable event store move
-the same ciphertext without requiring message plaintext.
+the peer key only from the verified ticket, and the listener must decrypt and
+write its local projection before persisting or acknowledging a message.
+Synchronization and the immutable event store move the same ciphertext without
+replicating either endpoint's local projection.
 
 This is a narrow integration spike, not a Double Ratchet implementation. It
 does not yet provide forward secrecy, post-compromise security, asynchronous
 prekeys, account-wide multi-device fan-out, or encrypted local key storage.
+It also does not yet implement authenticated history rewrap after a sender
+loses its local projection.
 Do not use it for sensitive communication.
 
 An owner Account Root now signs a complete, canonical, add-only conversation
@@ -60,7 +73,7 @@ certificate to the expected Account ID, checks the required `sign-events` and
 `sync-history` capabilities, and rejects a revoked device key even if a later
 certificate is issued for it.
 
-Ticket v5 embeds the listener's root-signed certificate and complete signed
+Ticket v6 embeds the listener's root-signed certificate and complete signed
 authority snapshot, and authorizes one
 requester Account ID rather than one hard-coded device. Before any event or
 inventory is sent, the requester presents its certificate, authority snapshot,
@@ -106,7 +119,7 @@ seconds for Iroh relay-to-direct migration and print `transport_path` (`direct`,
 and number of open paths. These development diagnostics made the two-host LAN
 test distinguish a real direct path from a successful relay fallback.
 
-The listener signs one of three application route policies into ticket v5:
+The listener signs one of three application route policies into ticket v6:
 
 - `auto` accepts Iroh's selected direct or relay path;
 - `direct-only` permits relay-assisted connection establishment and NAT traversal,
@@ -219,11 +232,14 @@ cargo run -p kilogram-cli -- history --state-dir .tmp/bob
 ```
 
 Events are stored as immutable content-addressed files beneath
-`STATE_DIR/events`, together with immutable authorization sidecars. The
-`history` command verifies both files against the installed membership and
-prints the current causal frontier; its file-order output is deterministic but
-is not yet a chat timeline. M0.6.1 state without sidecars is intentionally
-rejected because it has no proof of the author's Account ID.
+`STATE_DIR/events`, together with immutable authorization sidecars. Readable
+message bodies are separate encrypted local-only projections beneath
+`STATE_DIR/local-messages`; they are never part of sync. The `history` command
+verifies the event and authorization against the installed membership, then
+opens the matching local projection and prints the current causal frontier. Its
+file-order output is deterministic but is not yet a chat timeline. M0.6.1 state
+without authorization sidecars and M0.7.1 events without local projections are
+intentionally not migrated.
 
 To synchronize missing events, start `listen` again on one device and run:
 
@@ -261,7 +277,7 @@ insufficient: the requester must present a certificate and authority snapshot
 for the allowed account and prove possession of its device key.
 The ticket contains neither the Iroh endpoint secret nor any application secret.
 Ticket JSON, Postcard messages, and development conversation-label derivation
-remain provisional M0 choices. Ticket v5 intentionally does not decode v1-v4
+remain provisional M0 choices. Ticket v6 intentionally does not decode v1-v5
 tickets; restart the listener to generate a ticket matching this build. See
 [`RFC-0002`](docs/RFC-0002-account-device-authority.md) for snapshot and
 first-contact freshness boundaries.

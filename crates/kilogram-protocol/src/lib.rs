@@ -20,16 +20,18 @@ pub use wire::{
     SyncPause, SyncPaused, SyncRejected, SyncRejectionReason, SyncSessionBinding,
 };
 
-const EVENT_VERSION: u8 = 2;
-const EVENT_SIGNATURE_DOMAIN: &[u8] = b"kilogram:event-signature:v2\0";
-const EVENT_ID_DOMAIN: &[u8] = b"kilogram:event-id:v2\0";
+const EVENT_VERSION: u8 = 3;
+const EVENT_SIGNATURE_DOMAIN: &[u8] = b"kilogram:event-signature:v3\0";
+const EVENT_ID_DOMAIN: &[u8] = b"kilogram:event-id:v3\0";
 const TEXT_HPKE_INFO: &[u8] = b"kilogram:event-text-hpke:v1\0";
 const TEXT_HPKE_AAD_DOMAIN: &[u8] = b"kilogram:event-text-hpke-aad:v1\0";
+const LOCAL_TEXT_PROJECTION_VERSION: u8 = 1;
+const LOCAL_TEXT_PROJECTION_HPKE_INFO: &[u8] = b"kilogram:local-text-projection-hpke:v1\0";
+const LOCAL_TEXT_PROJECTION_AAD_DOMAIN: &[u8] = b"kilogram:local-text-projection-aad:v1\0";
 const CONVERSATION_LABEL_DOMAIN: &[u8] = b"kilogram:conversation-label:v1\0";
 const MAX_PARENTS: usize = 64;
 const MAX_TEXT_BYTES: usize = 64 * 1024;
 const MAX_CIPHERTEXT_BYTES: usize = MAX_TEXT_BYTES + 16;
-const PAIRWISE_RECIPIENTS: usize = 2;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct ConversationId([u8; 32]);
@@ -64,7 +66,7 @@ impl fmt::Display for EventId {
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum EventPayload {
-    EncryptedText { recipients: Vec<EncryptedRecipient> },
+    EncryptedText { recipient: EncryptedRecipient },
     Acknowledgement { acknowledged_event_id: EventId },
 }
 
@@ -96,6 +98,147 @@ struct TextEncryptionContext<'a> {
     author_sequence: u64,
     parents: &'a [EventId],
     recipient_device_id: DeviceId,
+}
+
+#[derive(Serialize)]
+struct LocalTextProjectionContext {
+    version: u8,
+    event_id: EventId,
+    local_device_id: DeviceId,
+}
+
+/// Local-only encrypted plaintext projection for one immutable ciphertext event.
+///
+/// This object is never sent by the synchronization protocol. It allows an author
+/// to read sent history without adding a static-key sender box to the replicated
+/// event, which is a prerequisite for replacing the recipient HPKE box with a
+/// forward-secret ratchet message.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct LocalTextProjection {
+    version: u8,
+    event_id: EventId,
+    local_device_id: DeviceId,
+    sealed: SealedMessage,
+}
+
+impl LocalTextProjection {
+    pub fn seal_authored(
+        event: &SignedEvent,
+        local_device_id: DeviceId,
+        local_public_key: EncryptionPublicKey,
+        body: &str,
+    ) -> Result<Self, ProtocolError> {
+        event.verify()?;
+        if event.author_device_id() != local_device_id {
+            return Err(ProtocolError::LocalProjectionAuthorMismatch {
+                expected: local_device_id,
+                actual: event.author_device_id(),
+            });
+        }
+        Self::seal_participant(event, local_device_id, local_public_key, body)
+    }
+
+    pub fn decrypt_and_seal_received(
+        event: &SignedEvent,
+        local_device_id: DeviceId,
+        local_public_key: EncryptionPublicKey,
+        encryption: &DeviceEncryptionIdentity,
+    ) -> Result<(Self, String), ProtocolError> {
+        let body = event.decrypt_text(local_device_id, encryption)?;
+        let projection = Self::seal_participant(event, local_device_id, local_public_key, &body)?;
+        Ok((projection, body))
+    }
+
+    fn seal_participant(
+        event: &SignedEvent,
+        local_device_id: DeviceId,
+        local_public_key: EncryptionPublicKey,
+        body: &str,
+    ) -> Result<Self, ProtocolError> {
+        if body.len() > MAX_TEXT_BYTES {
+            return Err(ProtocolError::TextTooLarge(body.len()));
+        }
+        require_text_participant(event, local_device_id)?;
+        let event_id = event.event_id()?;
+        let aad = local_text_projection_aad(event_id, local_device_id)?;
+        let projection = Self {
+            version: LOCAL_TEXT_PROJECTION_VERSION,
+            event_id,
+            local_device_id,
+            sealed: local_public_key.seal(
+                body.as_bytes(),
+                LOCAL_TEXT_PROJECTION_HPKE_INFO,
+                &aad,
+            )?,
+        };
+        projection.validate()?;
+        Ok(projection)
+    }
+
+    pub fn decode(bytes: &[u8]) -> Result<Self, ProtocolError> {
+        let projection: Self = postcard::from_bytes(bytes)?;
+        projection.validate()?;
+        Ok(projection)
+    }
+
+    pub fn encode(&self) -> Result<Vec<u8>, ProtocolError> {
+        self.validate()?;
+        Ok(postcard::to_allocvec(self)?)
+    }
+
+    pub fn open(
+        &self,
+        event: &SignedEvent,
+        local_device_id: DeviceId,
+        encryption: &DeviceEncryptionIdentity,
+    ) -> Result<String, ProtocolError> {
+        self.validate()?;
+        event.verify()?;
+        let actual_event_id = event.event_id()?;
+        if self.event_id != actual_event_id {
+            return Err(ProtocolError::LocalProjectionEventMismatch {
+                expected: actual_event_id,
+                actual: self.event_id,
+            });
+        }
+        if self.local_device_id != local_device_id {
+            return Err(ProtocolError::LocalProjectionDeviceMismatch {
+                expected: local_device_id,
+                actual: self.local_device_id,
+            });
+        }
+        require_text_participant(event, local_device_id)?;
+        let aad = local_text_projection_aad(self.event_id, self.local_device_id)?;
+        let plaintext = encryption.open(&self.sealed, LOCAL_TEXT_PROJECTION_HPKE_INFO, &aad)?;
+        String::from_utf8(plaintext).map_err(ProtocolError::InvalidTextEncoding)
+    }
+
+    pub fn event_id(&self) -> EventId {
+        self.event_id
+    }
+
+    pub fn local_device_id(&self) -> DeviceId {
+        self.local_device_id
+    }
+
+    fn validate(&self) -> Result<(), ProtocolError> {
+        if self.version != LOCAL_TEXT_PROJECTION_VERSION {
+            return Err(ProtocolError::UnsupportedLocalTextProjectionVersion(
+                self.version,
+            ));
+        }
+        if self.sealed.encapsulated_key.len() != ENCRYPTION_KEY_BYTES {
+            return Err(ProtocolError::InvalidEncapsulatedKeyLength(
+                self.sealed.encapsulated_key.len(),
+            ));
+        }
+        if self.sealed.ciphertext.len() > MAX_CIPHERTEXT_BYTES {
+            return Err(ProtocolError::CiphertextTooLarge(
+                self.sealed.ciphertext.len(),
+            ));
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -201,30 +344,28 @@ impl SignedEvent {
         author_sequence: u64,
         parents: Vec<EventId>,
         body: String,
-        recipients: [(DeviceId, EncryptionPublicKey); PAIRWISE_RECIPIENTS],
+        recipient: (DeviceId, EncryptionPublicKey),
     ) -> Result<Self, ProtocolError> {
         if body.len() > MAX_TEXT_BYTES {
             return Err(ProtocolError::TextTooLarge(body.len()));
         }
-        let mut recipients = recipients;
-        recipients.sort_unstable_by_key(|(device_id, _)| *device_id);
-        if recipients[0].0 == recipients[1].0 {
-            return Err(ProtocolError::DuplicateEncryptedRecipient(recipients[0].0));
-        }
-        let mut encrypted_recipients = Vec::with_capacity(PAIRWISE_RECIPIENTS);
-        for (recipient_device_id, public_key) in recipients {
-            let aad = text_encryption_aad(
-                conversation_id,
-                identity.device_id(),
-                author_sequence,
-                &parents,
+        let (recipient_device_id, public_key) = recipient;
+        if recipient_device_id == identity.device_id() {
+            return Err(ProtocolError::EncryptedRecipientIsAuthor(
                 recipient_device_id,
-            )?;
-            encrypted_recipients.push(EncryptedRecipient {
-                recipient_device_id,
-                sealed: public_key.seal(body.as_bytes(), TEXT_HPKE_INFO, &aad)?,
-            });
+            ));
         }
+        let aad = text_encryption_aad(
+            conversation_id,
+            identity.device_id(),
+            author_sequence,
+            &parents,
+            recipient_device_id,
+        )?;
+        let recipient = EncryptedRecipient {
+            recipient_device_id,
+            sealed: public_key.seal(body.as_bytes(), TEXT_HPKE_INFO, &aad)?,
+        };
         Self::sign(
             identity,
             EventContent {
@@ -233,9 +374,7 @@ impl SignedEvent {
                 author_device_id: identity.device_id(),
                 author_sequence,
                 parents,
-                payload: EventPayload::EncryptedText {
-                    recipients: encrypted_recipients,
-                },
+                payload: EventPayload::EncryptedText { recipient },
             },
         )
     }
@@ -246,15 +385,14 @@ impl SignedEvent {
         encryption: &DeviceEncryptionIdentity,
     ) -> Result<String, ProtocolError> {
         self.verify()?;
-        let EventPayload::EncryptedText { recipients } = &self.content.payload else {
+        let EventPayload::EncryptedText { recipient } = &self.content.payload else {
             return Err(ProtocolError::EventIsNotEncryptedText);
         };
-        let recipient = recipients
-            .iter()
-            .find(|recipient| recipient.recipient_device_id == recipient_device_id)
-            .ok_or(ProtocolError::MissingEncryptedRecipient(
+        if recipient.recipient_device_id != recipient_device_id {
+            return Err(ProtocolError::MissingEncryptedRecipient(
                 recipient_device_id,
-            ))?;
+            ));
+        }
         let aad = text_encryption_aad(
             self.content.conversation_id,
             self.content.author_device_id,
@@ -335,6 +473,13 @@ impl SignedEvent {
         &self.content.payload
     }
 
+    pub fn encrypted_recipient_device_id(&self) -> Result<DeviceId, ProtocolError> {
+        let EventPayload::EncryptedText { recipient } = &self.content.payload else {
+            return Err(ProtocolError::EventIsNotEncryptedText);
+        };
+        Ok(recipient.recipient_device_id)
+    }
+
     fn sign(identity: &DeviceIdentity, content: EventContent) -> Result<Self, ProtocolError> {
         validate_content(&content)?;
         let signature = identity.sign(&signing_bytes(&content)?).to_vec();
@@ -361,36 +506,53 @@ fn validate_content(content: &EventContent) -> Result<(), ProtocolError> {
     if unique_parents.len() != content.parents.len() {
         return Err(ProtocolError::DuplicateParent);
     }
-    if let EventPayload::EncryptedText { recipients } = &content.payload {
-        if recipients.len() != PAIRWISE_RECIPIENTS {
-            return Err(ProtocolError::InvalidEncryptedRecipientCount(
-                recipients.len(),
+    if let EventPayload::EncryptedText { recipient } = &content.payload {
+        if recipient.recipient_device_id == content.author_device_id {
+            return Err(ProtocolError::EncryptedRecipientIsAuthor(
+                recipient.recipient_device_id,
             ));
         }
-        for pair in recipients.windows(2) {
-            if pair[0].recipient_device_id == pair[1].recipient_device_id {
-                return Err(ProtocolError::DuplicateEncryptedRecipient(
-                    pair[0].recipient_device_id,
-                ));
-            }
-            if pair[0].recipient_device_id > pair[1].recipient_device_id {
-                return Err(ProtocolError::NonCanonicalEncryptedRecipients);
-            }
+        if recipient.sealed.encapsulated_key.len() != ENCRYPTION_KEY_BYTES {
+            return Err(ProtocolError::InvalidEncapsulatedKeyLength(
+                recipient.sealed.encapsulated_key.len(),
+            ));
         }
-        for recipient in recipients {
-            if recipient.sealed.encapsulated_key.len() != ENCRYPTION_KEY_BYTES {
-                return Err(ProtocolError::InvalidEncapsulatedKeyLength(
-                    recipient.sealed.encapsulated_key.len(),
-                ));
-            }
-            if recipient.sealed.ciphertext.len() > MAX_CIPHERTEXT_BYTES {
-                return Err(ProtocolError::CiphertextTooLarge(
-                    recipient.sealed.ciphertext.len(),
-                ));
-            }
+        if recipient.sealed.ciphertext.len() > MAX_CIPHERTEXT_BYTES {
+            return Err(ProtocolError::CiphertextTooLarge(
+                recipient.sealed.ciphertext.len(),
+            ));
         }
     }
     Ok(())
+}
+
+fn require_text_participant(
+    event: &SignedEvent,
+    local_device_id: DeviceId,
+) -> Result<(), ProtocolError> {
+    let recipient_device_id = event.encrypted_recipient_device_id()?;
+    if event.author_device_id() != local_device_id && recipient_device_id != local_device_id {
+        return Err(ProtocolError::LocalProjectionDeviceNotParticipant(
+            local_device_id,
+        ));
+    }
+    Ok(())
+}
+
+fn local_text_projection_aad(
+    event_id: EventId,
+    local_device_id: DeviceId,
+) -> Result<Vec<u8>, ProtocolError> {
+    let context = LocalTextProjectionContext {
+        version: LOCAL_TEXT_PROJECTION_VERSION,
+        event_id,
+        local_device_id,
+    };
+    let encoded = postcard::to_allocvec(&context)?;
+    let mut aad = Vec::with_capacity(LOCAL_TEXT_PROJECTION_AAD_DOMAIN.len() + encoded.len());
+    aad.extend_from_slice(LOCAL_TEXT_PROJECTION_AAD_DOMAIN);
+    aad.extend_from_slice(&encoded);
+    Ok(aad)
 }
 
 fn text_encryption_aad(
@@ -445,14 +607,8 @@ pub enum ProtocolError {
     #[error("text has {0} bytes; maximum is {MAX_TEXT_BYTES}")]
     TextTooLarge(usize),
 
-    #[error("encrypted text has {0} recipients; expected {PAIRWISE_RECIPIENTS}")]
-    InvalidEncryptedRecipientCount(usize),
-
-    #[error("encrypted text contains duplicate recipient {0}")]
-    DuplicateEncryptedRecipient(DeviceId),
-
-    #[error("encrypted text recipients are not in canonical order")]
-    NonCanonicalEncryptedRecipients,
+    #[error("encrypted text recipient is the author device {0}")]
+    EncryptedRecipientIsAuthor(DeviceId),
 
     #[error("HPKE encapsulated key has {0} bytes; expected {ENCRYPTION_KEY_BYTES}")]
     InvalidEncapsulatedKeyLength(usize),
@@ -468,6 +624,27 @@ pub enum ProtocolError {
 
     #[error("decrypted text is not valid UTF-8")]
     InvalidTextEncoding(#[source] std::string::FromUtf8Error),
+
+    #[error("unsupported local text projection version: {0}")]
+    UnsupportedLocalTextProjectionVersion(u8),
+
+    #[error("local text projection belongs to event {actual}; expected {expected}")]
+    LocalProjectionEventMismatch { expected: EventId, actual: EventId },
+
+    #[error("local text projection belongs to device {actual}; expected {expected}")]
+    LocalProjectionDeviceMismatch {
+        expected: DeviceId,
+        actual: DeviceId,
+    },
+
+    #[error("device {0} is neither author nor recipient of the encrypted text event")]
+    LocalProjectionDeviceNotParticipant(DeviceId),
+
+    #[error("local text projection author is device {actual}; expected {expected}")]
+    LocalProjectionAuthorMismatch {
+        expected: DeviceId,
+        actual: DeviceId,
+    },
 
     #[error("unsupported sync protocol version: {0}")]
     UnsupportedSyncVersion(u8),
@@ -535,7 +712,6 @@ mod tests {
         parents: Vec<EventId>,
         body: &str,
     ) -> Result<SignedEvent, ProtocolError> {
-        let own_encryption = DeviceEncryptionIdentity::generate()?;
         let peer_identity = DeviceIdentity::generate()?;
         let peer_encryption = DeviceEncryptionIdentity::generate()?;
         SignedEvent::sign_encrypted_text(
@@ -544,10 +720,7 @@ mod tests {
             author_sequence,
             parents,
             body.to_owned(),
-            [
-                (identity.device_id(), own_encryption.public_key()),
-                (peer_identity.device_id(), peer_encryption.public_key()),
-            ],
+            (peer_identity.device_id(), peer_encryption.public_key()),
         )
     }
 
@@ -563,24 +736,57 @@ mod tests {
             7,
             Vec::new(),
             "hello".to_owned(),
-            [
-                (identity.device_id(), own_encryption.public_key()),
-                (peer_identity.device_id(), peer_encryption.public_key()),
-            ],
+            (peer_identity.device_id(), peer_encryption.public_key()),
         )?;
         let decoded = SignedEvent::decode_and_verify(&event.encode()?)?;
+        let local_projection = LocalTextProjection::seal_authored(
+            &decoded,
+            identity.device_id(),
+            own_encryption.public_key(),
+            "hello",
+        )?;
 
         assert_eq!(decoded, event);
         assert_eq!(decoded.author_device_id(), identity.device_id());
         assert_eq!(
-            decoded.decrypt_text(identity.device_id(), &own_encryption)?,
+            local_projection.open(&decoded, identity.device_id(), &own_encryption)?,
             "hello"
         );
+        assert!(matches!(
+            decoded.decrypt_text(identity.device_id(), &own_encryption),
+            Err(ProtocolError::MissingEncryptedRecipient(device_id))
+                if device_id == identity.device_id()
+        ));
         assert!(
             !decoded
                 .encode()?
                 .windows(b"hello".len())
                 .any(|window| window == b"hello")
+        );
+        assert!(
+            !local_projection
+                .encode()?
+                .windows(b"hello".len())
+                .any(|window| window == b"hello")
+        );
+        let other_event = SignedEvent::sign_encrypted_text(
+            &identity,
+            ConversationId::from_label("test"),
+            8,
+            Vec::new(),
+            "other".to_owned(),
+            (peer_identity.device_id(), peer_encryption.public_key()),
+        )?;
+        assert!(matches!(
+            local_projection.open(&other_event, identity.device_id(), &own_encryption),
+            Err(ProtocolError::LocalProjectionEventMismatch { .. })
+        ));
+        let mut tampered_projection = local_projection;
+        tampered_projection.sealed.ciphertext[0] ^= 1;
+        assert!(
+            tampered_projection
+                .open(&decoded, identity.device_id(), &own_encryption)
+                .is_err()
         );
         Ok(())
     }
@@ -588,7 +794,6 @@ mod tests {
     #[test]
     fn encrypted_text_is_bound_to_recipient_device_and_metadata() -> Result<(), ProtocolError> {
         let identity = DeviceIdentity::generate()?;
-        let own_encryption = DeviceEncryptionIdentity::generate()?;
         let peer_identity = DeviceIdentity::generate()?;
         let peer_encryption = DeviceEncryptionIdentity::generate()?;
         let outsider_identity = DeviceIdentity::generate()?;
@@ -597,25 +802,34 @@ mod tests {
             ConversationId::from_label("recipient-binding"),
             3,
             Vec::new(),
-            "for the two intended devices".to_owned(),
-            [
-                (identity.device_id(), own_encryption.public_key()),
-                (peer_identity.device_id(), peer_encryption.public_key()),
-            ],
+            "for the intended peer device".to_owned(),
+            (peer_identity.device_id(), peer_encryption.public_key()),
         )?;
 
         assert_eq!(
             event.decrypt_text(peer_identity.device_id(), &peer_encryption)?,
-            "for the two intended devices"
+            "for the intended peer device"
+        );
+        let (peer_projection, peer_body) = LocalTextProjection::decrypt_and_seal_received(
+            &event,
+            peer_identity.device_id(),
+            peer_encryption.public_key(),
+            &peer_encryption,
+        )?;
+        assert_eq!(peer_body, "for the intended peer device");
+        assert_eq!(
+            peer_projection.open(&event, peer_identity.device_id(), &peer_encryption)?,
+            peer_body
         );
         assert!(matches!(
             event.decrypt_text(outsider_identity.device_id(), &peer_encryption),
             Err(ProtocolError::MissingEncryptedRecipient(device_id))
                 if device_id == outsider_identity.device_id()
         ));
+        let wrong_encryption = DeviceEncryptionIdentity::generate()?;
         assert!(
             event
-                .decrypt_text(peer_identity.device_id(), &own_encryption)
+                .decrypt_text(peer_identity.device_id(), &wrong_encryption)
                 .is_err()
         );
         Ok(())
@@ -631,10 +845,10 @@ mod tests {
             Vec::new(),
             "original",
         )?;
-        let EventPayload::EncryptedText { recipients } = &mut event.content.payload else {
+        let EventPayload::EncryptedText { recipient } = &mut event.content.payload else {
             return Err(ProtocolError::EventIsNotEncryptedText);
         };
-        recipients[0].sealed.ciphertext[0] ^= 1;
+        recipient.sealed.ciphertext[0] ^= 1;
 
         assert!(event.verify().is_err());
         Ok(())
@@ -693,9 +907,9 @@ mod tests {
         let owner = AccountRootState::create(owner_directory.path())?;
         let outsider = AccountRootState::create(outsider_directory.path())?;
         let identity = DeviceIdentity::generate()?;
-        let encryption = DeviceEncryptionIdentity::generate()?;
         let peer_identity = DeviceIdentity::generate()?;
         let peer_encryption = DeviceEncryptionIdentity::generate()?;
+        let encryption = DeviceEncryptionIdentity::generate()?;
         let certificate = outsider.issue_device_certificate(
             identity.device_id(),
             encryption.public_key(),
@@ -711,10 +925,7 @@ mod tests {
                 0,
                 Vec::new(),
                 "not a member".to_owned(),
-                [
-                    (identity.device_id(), encryption.public_key()),
-                    (peer_identity.device_id(), peer_encryption.public_key()),
-                ],
+                (peer_identity.device_id(), peer_encryption.public_key()),
             )?,
             certificate,
             authority_snapshot,

@@ -599,11 +599,48 @@ asynchronous prekeys, session ratchet, multi-device fan-out, protected local
 keystore и metadata hiding. Полный контракт —
 [`../docs/RFC-0004-pairwise-hpke-payload.md`](../docs/RFC-0004-pairwise-hpke-payload.md).
 
+### M0.7.2 — local encrypted history projection: выполнено
+
+Реализовано:
+
+- replicated `EncryptedText` v3 содержит один peer recipient HPKE box; отдельный
+  static-key sender box удалён;
+- `LocalTextProjection` связывает Event ID и локальный Device ID и шифрует
+  читаемую копию на key текущего устройства;
+- новый `LocalMessageStore` атомарно и immutable хранит projection отдельно от
+  `events`; projection никогда не входит в `AuthorizedEvent`, inventory или wire;
+- connect/listener сохраняют projection до event, а history читает только её;
+- sync создаёт projection после успешного recipient AEAD open и до event batch;
+  повтор exact event идемпотентен, outsider event без local box отклоняется;
+- event/sync/session/ticket/ALPN границы повышены до v3/v4/v4/v6/sync-4.
+
+Проверки:
+
+- sender больше не расшифровывает replicated event, но читает собственную
+  encrypted projection;
+- serialized event и projection не содержат fixture plaintext;
+- seed-history создаёт projections для всех fixture events;
+- sync создаёт recipient projection и повторно принимает тот же event без
+  randomized-HPKE immutable conflict;
+- все 56 workspace tests проходят.
+- release process smoke `.tmp/m072-smoke-20260831-194220` выполнил direct
+  delivery, reconnect sync трёх events, подтвердил одинаковые histories из 5
+  events и по 4 projections; plaintext отсутствует в `.event` и `.local-text`.
+
+Граница среза: static peer HPKE box всё ещё не даёт FS/PCS. Потерянную sender
+projection нельзя восстановить из возвращённого peer ciphertext; нужен будущий
+authenticated history rewrap. Development key file рядом с projection не
+является production at-rest protection. Полный контракт —
+[`../docs/RFC-0005-local-encrypted-history-projection.md`](../docs/RFC-0005-local-encrypted-history-projection.md).
+
 ### Следующий этап
 
-1. Выбрать и прототипировать asynchronous pairwise session establishment и
-   ratchet с forward secrecy/PCS, включая проверенный device-list fan-out.
-2. Membership removal и group governance проектировать вместе с ordered
+1. M0.7.3: прототипировать authenticated asynchronous prekey bundle и
+   persistent pairwise Double Ratchet session в recipient-only event slot;
+   первым кандидатом проверить `vodozemac::olm`, не реализуя ratchet вручную.
+2. Затем добавить signed device-list fan-out и authenticated history rewrap для
+   нового/восстановленного устройства.
+3. Membership removal и group governance проектировать вместе с ordered
    security events и MLS epoch.
-3. First-contact authority/membership gossip-witness, seed/recovery и compact
+4. First-contact authority/membership gossip-witness, seed/recovery и compact
    Merkle/range summary остаются отдельными направлениями.

@@ -255,8 +255,8 @@ M0.6.2 применяет эту authority chain к каждому автору 
 Owner-signed membership и `AuthorizedEvent` определены отдельно в
 [`RFC-0003`](RFC-0003-conversation-membership.md).
 
-M0.7.1 добавляет отдельный persistent encryption key, certificate v2 и ticket
-v5/session authorization v3. Сертификат больше нельзя заменить без явной
+M0.7.1 добавил отдельный persistent encryption key и certificate v2. Текущий
+M0.7.2 использует ticket v6/session authorization v4. Сертификат больше нельзя заменить без явной
 миграции device state; для текущего development spike нужен свежий state.
 
 Не реализовано:
@@ -273,8 +273,8 @@ v5/session authorization v3. Сертификат больше нельзя за
 
 ## 10. Сетевой контракт M0.6.1
 
-Ниже зафиксирован исторический M0.6.1 contract. Текущий M0.7.1 переносит тот же
-authority смысл в несовместимые ticket v5 и session authorization v3 из-за
+Ниже зафиксирован исторический M0.6.1 contract. Текущий M0.7.2 переносит тот же
+authority смысл в несовместимые ticket v6 и session authorization v4 из-за
 DeviceCertificate v2.
 
 M0.5.2 заменяет временное `--allow-device` / known-author правило на цепочку:
@@ -318,7 +318,8 @@ root-signed revocation.
 ## 11. Следующий срез
 
 M0.6.2 завершил минимальный signed conversation membership и проверку каждого
-автора history. M0.7.1 добавил static-key pairwise HPKE payload baseline.
+автора history. M0.7.1 добавил static-key pairwise HPKE payload baseline, а
+M0.7.2 отделил recipient-only event от local encrypted history projection.
 Authenticated gossip/witness для first-contact freshness, asynchronous ratchet
 с FS/PCS, membership removal/MLS epochs, seed/recovery и root rotation остаются
 отдельными срезами.

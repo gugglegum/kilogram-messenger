@@ -9,12 +9,15 @@ use std::{
 use std::fs::File;
 
 use kilogram_identity::{ConversationMembershipSnapshot, ConversationScopeId, DeviceId};
-use kilogram_protocol::{AuthorizedEvent, ConversationId, EventId, ProtocolError, SignedEvent};
+use kilogram_protocol::{
+    AuthorizedEvent, ConversationId, EventId, LocalTextProjection, ProtocolError, SignedEvent,
+};
 use tempfile::NamedTempFile;
 use thiserror::Error;
 
 const EVENT_FILE_EXTENSION: &str = "event";
 const AUTHORIZATION_FILE_EXTENSION: &str = "authorization";
+const LOCAL_TEXT_PROJECTION_FILE_EXTENSION: &str = "local-text";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum StoreOutcome {
@@ -43,6 +46,55 @@ pub struct SyncPlan {
 
 pub struct EventStore {
     root: PathBuf,
+}
+
+/// Immutable local-only storage for plaintext projections encrypted to one device.
+///
+/// Projection files are deliberately outside the replicated event store. The sync
+/// protocol exchanges `AuthorizedEvent` values only and therefore cannot leak these
+/// sender-readable copies to relays or peers.
+pub struct LocalMessageStore {
+    root: PathBuf,
+}
+
+impl LocalMessageStore {
+    pub fn open(root: impl AsRef<Path>) -> Result<Self, StoreError> {
+        let root = root.as_ref().to_path_buf();
+        fs::create_dir_all(&root)?;
+        let root = fs::canonicalize(root)?;
+        Ok(Self { root })
+    }
+
+    pub fn put(&self, projection: &LocalTextProjection) -> Result<StoreOutcome, StoreError> {
+        let event_id = projection.event_id();
+        let encoded = projection.encode()?;
+        let destination = local_text_projection_path(&self.root, event_id);
+        if destination.try_exists()? {
+            return validate_existing_local_text_projection(&destination, &encoded, event_id);
+        }
+        persist_local_text_projection(&self.root, &destination, &encoded, event_id)
+    }
+
+    pub fn get(&self, event_id: EventId) -> Result<LocalTextProjection, StoreError> {
+        let path = local_text_projection_path(&self.root, event_id);
+        let bytes = match fs::read(&path) {
+            Ok(bytes) => bytes,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                return Err(StoreError::LocalTextProjectionMissing { path, event_id });
+            }
+            Err(error) => return Err(error.into()),
+        };
+        let projection = LocalTextProjection::decode(&bytes).map_err(|source| {
+            StoreError::InvalidStoredLocalTextProjection {
+                path: path.clone(),
+                source,
+            }
+        })?;
+        if projection.event_id() != event_id {
+            return Err(StoreError::LocalTextProjectionFileNameMismatch { path, event_id });
+        }
+        Ok(projection)
+    }
 }
 
 impl EventStore {
@@ -433,6 +485,10 @@ fn authorization_path(directory: &Path, event_id: EventId) -> PathBuf {
     directory.join(format!("{event_id}.{AUTHORIZATION_FILE_EXTENSION}"))
 }
 
+fn local_text_projection_path(directory: &Path, event_id: EventId) -> PathBuf {
+    directory.join(format!("{event_id}.{LOCAL_TEXT_PROJECTION_FILE_EXTENSION}"))
+}
+
 fn validate_existing_authorization(
     path: &Path,
     expected: &[u8],
@@ -509,6 +565,44 @@ fn persist_event(
     }
 }
 
+fn validate_existing_local_text_projection(
+    path: &Path,
+    expected: &[u8],
+    event_id: EventId,
+) -> Result<StoreOutcome, StoreError> {
+    let actual = fs::read(path)?;
+    if actual == expected {
+        Ok(StoreOutcome::AlreadyPresent)
+    } else {
+        Err(StoreError::ImmutableLocalTextProjectionConflict {
+            path: path.to_path_buf(),
+            event_id,
+        })
+    }
+}
+
+fn persist_local_text_projection(
+    directory: &Path,
+    destination: &Path,
+    encoded: &[u8],
+    event_id: EventId,
+) -> Result<StoreOutcome, StoreError> {
+    let mut temporary = NamedTempFile::new_in(directory)?;
+    temporary.write_all(encoded)?;
+    temporary.as_file().sync_all()?;
+    match temporary.persist_noclobber(destination) {
+        Ok(file) => {
+            file.sync_all()?;
+            sync_directory(directory)?;
+            Ok(StoreOutcome::Inserted)
+        }
+        Err(error) if error.error.kind() == io::ErrorKind::AlreadyExists => {
+            validate_existing_local_text_projection(destination, encoded, event_id)
+        }
+        Err(error) => Err(error.error.into()),
+    }
+}
+
 #[cfg(unix)]
 fn sync_directory(path: &Path) -> io::Result<()> {
     File::open(path)?.sync_all()
@@ -542,6 +636,25 @@ pub enum StoreError {
 
     #[error("event authorization for {event_id} is missing at {path}")]
     EventAuthorizationMissing { path: PathBuf, event_id: EventId },
+
+    #[error("local text projection for {event_id} is missing at {path}")]
+    LocalTextProjectionMissing { path: PathBuf, event_id: EventId },
+
+    #[error("stored local text projection at {path} is invalid")]
+    InvalidStoredLocalTextProjection {
+        path: PathBuf,
+        #[source]
+        source: ProtocolError,
+    },
+
+    #[error("local text projection for {event_id} conflicts with immutable file {path}")]
+    ImmutableLocalTextProjectionConflict { path: PathBuf, event_id: EventId },
+
+    #[error("stored local text projection {event_id} does not match its filename at {path}")]
+    LocalTextProjectionFileNameMismatch { path: PathBuf, event_id: EventId },
+
+    #[error("local text projection plaintext conflicts with event {event_id}")]
+    LocalTextProjectionPlaintextConflict { event_id: EventId },
 
     #[error("stored event authorization at {path} is invalid")]
     InvalidStoredAuthorization {
@@ -606,7 +719,7 @@ mod tests {
     use kilogram_identity::{
         AccountRootState, DeviceCapability, DeviceEncryptionIdentity, DeviceIdentity,
     };
-    use kilogram_protocol::{AuthorizedEvent, EventPayload};
+    use kilogram_protocol::{AuthorizedEvent, EventPayload, LocalTextProjection};
     use tempfile::tempdir;
 
     use super::*;
@@ -705,6 +818,62 @@ mod tests {
 
         assert_eq!(store.put(&event)?, StoreOutcome::Inserted);
         assert_eq!(store.put(&event)?, StoreOutcome::AlreadyPresent);
+        Ok(())
+    }
+
+    #[test]
+    fn local_text_projection_is_encrypted_immutable_and_persistent() -> Result<(), Box<dyn Error>> {
+        let directory = tempdir()?;
+        let store = LocalMessageStore::open(directory.path())?;
+        let author = DeviceIdentity::generate()?;
+        let author_encryption = DeviceEncryptionIdentity::generate()?;
+        let recipient = DeviceIdentity::generate()?;
+        let recipient_encryption = DeviceEncryptionIdentity::generate()?;
+        let event = SignedEvent::sign_encrypted_text(
+            &author,
+            ConversationId::from_label("local-projection"),
+            0,
+            Vec::new(),
+            "local plaintext".to_owned(),
+            (recipient.device_id(), recipient_encryption.public_key()),
+        )?;
+        let projection = LocalTextProjection::seal_authored(
+            &event,
+            author.device_id(),
+            author_encryption.public_key(),
+            "local plaintext",
+        )?;
+        let event_id = event.event_id()?;
+
+        assert_eq!(store.put(&projection)?, StoreOutcome::Inserted);
+        assert_eq!(store.put(&projection)?, StoreOutcome::AlreadyPresent);
+        let independently_sealed = LocalTextProjection::seal_authored(
+            &event,
+            author.device_id(),
+            author_encryption.public_key(),
+            "local plaintext",
+        )?;
+        assert!(matches!(
+            store.put(&independently_sealed),
+            Err(StoreError::ImmutableLocalTextProjectionConflict {
+                event_id: conflicting,
+                ..
+            }) if conflicting == event_id
+        ));
+        let bytes = fs::read(local_text_projection_path(directory.path(), event_id))?;
+        assert!(
+            !bytes
+                .windows(b"local plaintext".len())
+                .any(|window| window == b"local plaintext")
+        );
+
+        let reopened = LocalMessageStore::open(directory.path())?;
+        let loaded = reopened.get(event_id)?;
+        assert_eq!(loaded, projection);
+        assert_eq!(
+            loaded.open(&event, author.device_id(), &author_encryption)?,
+            "local plaintext"
+        );
         Ok(())
     }
 
@@ -858,7 +1027,6 @@ mod tests {
         parents: Vec<EventId>,
         body: &str,
     ) -> Result<SignedEvent, ProtocolError> {
-        let own_encryption = DeviceEncryptionIdentity::generate()?;
         let peer_identity = DeviceIdentity::generate()?;
         let peer_encryption = DeviceEncryptionIdentity::generate()?;
         SignedEvent::sign_encrypted_text(
@@ -867,10 +1035,7 @@ mod tests {
             sequence,
             parents,
             body.to_owned(),
-            [
-                (identity.device_id(), own_encryption.public_key()),
-                (peer_identity.device_id(), peer_encryption.public_key()),
-            ],
+            (peer_identity.device_id(), peer_encryption.public_key()),
         )
     }
 }

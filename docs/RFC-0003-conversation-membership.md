@@ -156,8 +156,9 @@ kilogram-cli conversation-member-add `
   ключ и старый корректный snapshot остаются проблемой при first contact и при
   импорте «исторических» событий.
 - В границе M0.6.2 payload и local store были plaintext. M0.7.1 заменил этот
-  формат pairwise HPKE ciphertext; см.
-  [`RFC-0004`](RFC-0004-pairwise-hpke-payload.md).
+  формат pairwise HPKE ciphertext, а M0.7.2 вынес читаемую копию в local-only
+  encrypted projection; см. [`RFC-0004`](RFC-0004-pairwise-hpke-payload.md) и
+  [`RFC-0005`](RFC-0005-local-encrypted-history-projection.md).
 
 Pairwise HPKE spike теперь определён отдельно в RFC-0004, но ratchet и ключевые
 эпохи остаются следующей криптографической задачей. Модель удаления участников

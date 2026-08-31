@@ -19,15 +19,15 @@ use kilogram_identity::{
 };
 use kilogram_protocol::{
     AuthorizedEvent, ClientRequest, ConversationId, DeviceAuthorizationAccepted,
-    DeviceAuthorizationRejected, EventPayload, MAX_INVENTORY_EVENT_IDS, ServerResponse,
-    SignedDeviceSessionAuthorization, SignedEvent, SignedSyncInventory, SyncPause, SyncPaused,
-    SyncSessionBinding,
+    DeviceAuthorizationRejected, EventPayload, LocalTextProjection, MAX_INVENTORY_EVENT_IDS,
+    ServerResponse, SignedDeviceSessionAuthorization, SignedEvent, SignedSyncInventory, SyncPause,
+    SyncPaused, SyncSessionBinding,
 };
 use kilogram_session::{
     MAX_SYNC_ROUNDS, ServerInventoryOutcome, SessionStore, SyncClient, SyncServer,
     authorize_device_session,
 };
-use kilogram_store::{EventStore, StoreError};
+use kilogram_store::{EventStore, LocalMessageStore, StoreError};
 use kilogram_transport_iroh::{
     ALPN, RoutePolicy, SelectedPathDiagnostics, await_route_policy, endpoint_builder_for_remote,
     endpoint_builder_with_relay, read_client_request, read_server_response,
@@ -37,13 +37,14 @@ use serde::{Deserialize, Serialize};
 use tokio::time::timeout;
 
 const EVENT_STORE_DIRECTORY: &str = "events";
+const LOCAL_MESSAGE_STORE_DIRECTORY: &str = "local-messages";
 const DIRECT_PATH_DIAGNOSTIC_WAIT: Duration = Duration::from_secs(3);
 const ROUTE_POLICY_WAIT: Duration = Duration::from_secs(15);
 const CONNECTION_TIMEOUT: Duration = Duration::from_secs(30);
 const CLIENT_RELAY_WAIT_SECONDS: u64 = 30;
 const STREAM_OPEN_TIMEOUT: Duration = Duration::from_secs(15);
-const TICKET_SIGNATURE_DOMAIN: &[u8] = b"kilogram:connection-ticket-signature:v5\0";
-const TICKET_VERSION: u8 = 5;
+const TICKET_SIGNATURE_DOMAIN: &[u8] = b"kilogram:connection-ticket-signature:v6\0";
+const TICKET_VERSION: u8 = 6;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -603,6 +604,7 @@ async fn listen(
         .load_own_authority_snapshot()
         .context("load listener Account Root authority snapshot")?;
     let event_store = open_event_store(&state_dir)?;
+    let local_message_store = open_local_message_store(&state_dir)?;
     let endpoint = endpoint_builder_with_relay(route_policy, relay_url)
         .alpns(vec![ALPN.to_vec()])
         .bind()
@@ -664,6 +666,7 @@ async fn listen(
             handle_delivery_request(
                 &device_state,
                 &event_store,
+                &local_message_store,
                 &mut send,
                 event,
                 authorized_requester.account_id(),
@@ -672,9 +675,11 @@ async fn listen(
             .await?;
         }
         ClientRequest::SyncInventory(inventory) => {
+            let decrypting_store =
+                DecryptingSessionStore::new(&event_store, &local_message_store, &device_state);
             handle_sync_request(
                 &device_state,
-                &event_store,
+                &decrypting_store,
                 &connection,
                 send,
                 inventory,
@@ -794,6 +799,7 @@ async fn authorize_with_listener(
 async fn handle_delivery_request(
     device_state: &DeviceState,
     event_store: &EventStore,
+    local_message_store: &LocalMessageStore,
     send: &mut SendStream,
     event: AuthorizedEvent,
     allowed_requester_account_id: AccountId,
@@ -840,6 +846,9 @@ async fn handle_delivery_request(
             device_state.encryption(),
         )
         .context("decrypt received text for this listener device")?;
+    let local_projection_store_outcome =
+        ensure_local_text_projection(local_message_store, device_state, signed_event, &body)
+            .context("persist local history projection before the received event")?;
     let received_store_outcome = event_store
         .put_authorized(&event, &membership)
         .context("persist received event before acknowledging it")?;
@@ -854,6 +863,7 @@ async fn handle_delivery_request(
         signed_event.author_sequence()
     );
     println!("received={body}");
+    println!("received_local_projection={local_projection_store_outcome:?}");
     println!("received_store={received_store_outcome:?}");
 
     let acknowledgement_sequence = device_state
@@ -893,7 +903,7 @@ async fn handle_delivery_request(
 
 async fn handle_sync_request(
     device_state: &DeviceState,
-    event_store: &EventStore,
+    decrypting_store: &DecryptingSessionStore<'_>,
     connection: &iroh::endpoint::Connection,
     first_send: SendStream,
     first_inventory: SignedSyncInventory,
@@ -912,10 +922,9 @@ async fn handle_sync_request(
         listener_account_id,
         authorized_requester.account_id(),
     )?;
-    let decrypting_store = DecryptingSessionStore::new(event_store, device_state);
     let server = SyncServer::new(
         device_state.identity(),
-        &decrypting_store,
+        decrypting_store,
         expected_session,
         authorized_requester.device_id(),
         &membership,
@@ -1027,6 +1036,7 @@ async fn connect(
         .load_own_authority_snapshot()
         .context("load requester Account Root authority snapshot")?;
     let event_store = open_event_store(&state_dir)?;
+    let local_message_store = open_local_message_store(&state_dir)?;
 
     let ticket = load_connection_ticket(ticket, ticket_file).await?;
     ticket.verify_listener_account(expected_listener_account_id)?;
@@ -1114,17 +1124,11 @@ async fn connect(
         conversation_id,
         author_sequence,
         parents,
-        message,
-        [
-            (
-                requester_certificate.device_id(),
-                requester_certificate.encryption_public_key(),
-            ),
-            (
-                ticket.listener_certificate().device_id(),
-                ticket.listener_certificate().encryption_public_key(),
-            ),
-        ],
+        message.clone(),
+        (
+            ticket.listener_certificate().device_id(),
+            ticket.listener_certificate().encryption_public_key(),
+        ),
     )
     .context("encrypt and sign text event")?;
     let event = AuthorizedEvent::new(
@@ -1137,12 +1141,16 @@ async fn connect(
         .event()
         .event_id()
         .context("calculate sent event ID")?;
+    let local_projection_store_outcome =
+        ensure_local_text_projection(&local_message_store, &device_state, event.event(), &message)
+            .context("persist local history projection before the sent event")?;
     let sent_store_outcome = event_store
         .put_authorized(&event, &membership)
         .context("persist authorized event before sending it")?;
     write_client_request(&mut send, &ClientRequest::DeliverEvent(event.clone())).await?;
     println!("sent_event_id={event_id}");
     println!("sent_author_sequence={author_sequence}");
+    println!("sent_local_projection={local_projection_store_outcome:?}");
     println!("sent_store={sent_store_outcome:?}");
 
     let acknowledgement = match read_server_response(&mut receive).await? {
@@ -1224,6 +1232,7 @@ async fn sync(
         .load_own_authority_snapshot()
         .context("load requester Account Root authority snapshot")?;
     let event_store = open_event_store(&state_dir)?;
+    let local_message_store = open_local_message_store(&state_dir)?;
     let ticket = load_connection_ticket(ticket, ticket_file).await?;
     ticket.verify_listener_account(expected_listener_account_id)?;
     let listener_snapshot_store = device_state
@@ -1250,7 +1259,8 @@ async fn sync(
         requester_certificate.account_id(),
         authorized_listener.account_id(),
     )?;
-    let decrypting_store = DecryptingSessionStore::new(&event_store, &device_state);
+    let decrypting_store =
+        DecryptingSessionStore::new(&event_store, &local_message_store, &device_state);
     let client = SyncClient::new(
         device_state.identity(),
         &decrypting_store,
@@ -1857,6 +1867,7 @@ fn show_history(state_dir: PathBuf, conversation: String) -> Result<()> {
         .load_certificate()
         .context("load device certificate before reading history")?;
     let event_store = open_event_store(&state_dir)?;
+    let local_message_store = open_local_message_store(&state_dir)?;
     let conversation_id = ConversationId::from_label(&conversation);
     let membership = device_state
         .load_conversation_membership(conversation_id.scope_id())
@@ -1894,12 +1905,16 @@ fn show_history(state_dir: PathBuf, conversation: String) -> Result<()> {
             .join(",");
         match event.payload() {
             EventPayload::EncryptedText { .. } => {
-                let body = event
-                    .decrypt_text(
+                let projection = local_message_store
+                    .get(stored.id)
+                    .with_context(|| format!("load local projection for event {}", stored.id))?;
+                let body = projection
+                    .open(
+                        &event,
                         device_state.identity().device_id(),
                         device_state.encryption(),
                     )
-                    .with_context(|| format!("decrypt stored event {}", stored.id))?;
+                    .with_context(|| format!("decrypt local projection for event {}", stored.id))?;
                 println!(
                     "event_id={} author_account_id={author_account_id} author_device_id={} author_sequence={} parents=[{parents}] payload=encrypted-text body={body:?}",
                     stored.id,
@@ -1950,6 +1965,7 @@ fn seed_history(
         "peer certificate belongs to this same device"
     );
     let event_store = open_event_store(&state_dir)?;
+    let local_message_store = open_local_message_store(&state_dir)?;
     let conversation_id = ConversationId::from_label(&conversation);
     let membership = device_state
         .load_conversation_membership(conversation_id.scope_id())
@@ -1973,27 +1989,33 @@ fn seed_history(
         .frontier(conversation_id)
         .context("calculate initial frontier for seeded history")?;
     let mut events = Vec::with_capacity(count);
+    let mut local_projections = Vec::with_capacity(count);
     let mut first_event_id = None;
     let mut last_event_id = None;
     for index in 1..=count {
         let author_sequence = device_state
             .allocate_sequence()
             .context("allocate seeded event sequence")?;
+        let body = format!("{message_prefix}-{index}");
         let event = SignedEvent::sign_encrypted_text(
             device_state.identity(),
             conversation_id,
             author_sequence,
             parents,
-            format!("{message_prefix}-{index}"),
-            [
-                (certificate.device_id(), certificate.encryption_public_key()),
-                (
-                    peer_certificate.device_id(),
-                    peer_certificate.encryption_public_key(),
-                ),
-            ],
+            body.clone(),
+            (
+                peer_certificate.device_id(),
+                peer_certificate.encryption_public_key(),
+            ),
         )
         .context("encrypt and sign seeded history event")?;
+        let local_projection = LocalTextProjection::seal_authored(
+            &event,
+            device_state.identity().device_id(),
+            certificate.encryption_public_key(),
+            &body,
+        )
+        .context("encrypt seeded text into the local history projection")?;
         let event_id = event.event_id().context("calculate seeded event ID")?;
         first_event_id.get_or_insert(event_id);
         last_event_id = Some(event_id);
@@ -2002,6 +2024,12 @@ fn seed_history(
             AuthorizedEvent::new(event, certificate.clone(), authority_snapshot.clone())
                 .context("attach Account Root authorization to seeded event")?,
         );
+        local_projections.push(local_projection);
+    }
+    for projection in &local_projections {
+        local_message_store
+            .put(projection)
+            .context("persist seeded local history projection")?;
     }
     event_store
         .put_authorized_batch(&events, &membership)
@@ -2026,29 +2054,97 @@ fn open_event_store(state_dir: &Path) -> Result<EventStore> {
     EventStore::open(&path).with_context(|| format!("open event store at {}", path.display()))
 }
 
+fn open_local_message_store(state_dir: &Path) -> Result<LocalMessageStore> {
+    let path = state_dir.join(LOCAL_MESSAGE_STORE_DIRECTORY);
+    LocalMessageStore::open(&path)
+        .with_context(|| format!("open local message store at {}", path.display()))
+}
+
+fn ensure_local_text_projection(
+    store: &LocalMessageStore,
+    device_state: &DeviceState,
+    event: &SignedEvent,
+    body: &str,
+) -> Result<kilogram_store::StoreOutcome, StoreError> {
+    let event_id = event.event_id()?;
+    let local_device_id = device_state.identity().device_id();
+    match store.get(event_id) {
+        Ok(projection) => {
+            let stored_body = projection.open(event, local_device_id, device_state.encryption())?;
+            if stored_body != body {
+                return Err(StoreError::LocalTextProjectionPlaintextConflict { event_id });
+            }
+            Ok(kilogram_store::StoreOutcome::AlreadyPresent)
+        }
+        Err(StoreError::LocalTextProjectionMissing { .. }) => {
+            let projection = if event.author_device_id() == local_device_id {
+                LocalTextProjection::seal_authored(
+                    event,
+                    local_device_id,
+                    device_state.encryption().public_key(),
+                    body,
+                )?
+            } else {
+                let (projection, decrypted_body) = LocalTextProjection::decrypt_and_seal_received(
+                    event,
+                    local_device_id,
+                    device_state.encryption().public_key(),
+                    device_state.encryption(),
+                )?;
+                if decrypted_body != body {
+                    return Err(StoreError::LocalTextProjectionPlaintextConflict { event_id });
+                }
+                projection
+            };
+            store.put(&projection)
+        }
+        Err(error) => Err(error),
+    }
+}
+
 struct DecryptingSessionStore<'a> {
     store: &'a EventStore,
+    local_messages: &'a LocalMessageStore,
     device_state: &'a DeviceState,
 }
 
 impl<'a> DecryptingSessionStore<'a> {
-    fn new(store: &'a EventStore, device_state: &'a DeviceState) -> Self {
+    fn new(
+        store: &'a EventStore,
+        local_messages: &'a LocalMessageStore,
+        device_state: &'a DeviceState,
+    ) -> Self {
         Self {
             store,
+            local_messages,
             device_state,
         }
     }
 
-    fn require_decryptable(&self, events: &[AuthorizedEvent]) -> Result<(), StoreError> {
+    fn ensure_local_projections(&self, events: &[AuthorizedEvent]) -> Result<(), StoreError> {
         for event in events {
             if matches!(event.event().payload(), EventPayload::EncryptedText { .. }) {
-                event.event().decrypt_text(
-                    self.device_state.identity().device_id(),
-                    self.device_state.encryption(),
-                )?;
+                self.ensure_local_projection(event.event())?;
             }
         }
         Ok(())
+    }
+
+    fn ensure_local_projection(&self, event: &SignedEvent) -> Result<(), StoreError> {
+        let event_id = event.event_id()?;
+        let local_device_id = self.device_state.identity().device_id();
+        match self.local_messages.get(event_id) {
+            Ok(projection) => {
+                projection.open(event, local_device_id, self.device_state.encryption())?;
+                Ok(())
+            }
+            Err(StoreError::LocalTextProjectionMissing { .. }) => {
+                let body = event.decrypt_text(local_device_id, self.device_state.encryption())?;
+                ensure_local_text_projection(self.local_messages, self.device_state, event, &body)?;
+                Ok(())
+            }
+            Err(error) => Err(error),
+        }
     }
 }
 
@@ -2070,7 +2166,7 @@ impl SessionStore for DecryptingSessionStore<'_> {
         let events = self
             .store
             .authorized_events_by_id(conversation_id, event_ids, membership)?;
-        self.require_decryptable(&events)?;
+        self.ensure_local_projections(&events)?;
         Ok(events)
     }
 
@@ -2079,7 +2175,10 @@ impl SessionStore for DecryptingSessionStore<'_> {
         events: &[AuthorizedEvent],
         membership: &ConversationMembershipSnapshot,
     ) -> Result<(), StoreError> {
-        self.require_decryptable(events)?;
+        for event in events {
+            event.verify_for_membership(membership)?;
+        }
+        self.ensure_local_projections(events)?;
         self.store.put_authorized_batch(events, membership)?;
         Ok(())
     }
@@ -2159,6 +2258,19 @@ mod tests {
         let events = store.load_authorized_conversation(conversation_id, &membership)?;
         assert_eq!(events.len(), 3);
         assert_eq!(store.frontier(conversation_id)?.len(), 1);
+        let local_messages = open_local_message_store(&state_dir)?;
+        let seeded_device = DeviceState::load_or_create(&state_dir)?;
+        let mut bodies = Vec::with_capacity(events.len());
+        for stored in &events {
+            let projection = local_messages.get(stored.id)?;
+            bodies.push(projection.open(
+                stored.event.event(),
+                seeded_device.identity().device_id(),
+                seeded_device.encryption(),
+            )?);
+        }
+        bodies.sort();
+        assert_eq!(bodies, ["fixture-1", "fixture-2", "fixture-3"]);
         assert!(
             events
                 .iter()
@@ -2194,19 +2306,17 @@ mod tests {
                 0,
                 Vec::new(),
                 "must not reach disk".to_owned(),
-                [
-                    (peer_identity.device_id(), peer_encryption.public_key()),
-                    (
-                        outsider_identity.device_id(),
-                        outsider_encryption.public_key(),
-                    ),
-                ],
+                (
+                    outsider_identity.device_id(),
+                    outsider_encryption.public_key(),
+                ),
             )?,
             peer_certificate,
             peer_root.authority_snapshot()?,
         )?;
         let store = EventStore::open(directory.path().join("events"))?;
-        let guarded = DecryptingSessionStore::new(&store, &local_state);
+        let local_messages = LocalMessageStore::open(directory.path().join("local-messages"))?;
+        let guarded = DecryptingSessionStore::new(&store, &local_messages, &local_state);
 
         assert!(matches!(
             guarded.put_events(&[event], &membership),
@@ -2218,6 +2328,61 @@ mod tests {
             store
                 .authorized_inventory(conversation_id, &membership)?
                 .is_empty()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn sync_store_creates_a_local_projection_for_a_received_event() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let local_state = DeviceState::load_or_create(directory.path().join("local-state"))?;
+        let local_root = AccountRootState::create(directory.path().join("local-root"))?;
+        let peer_root = AccountRootState::create(directory.path().join("peer-root"))?;
+        let peer_identity = DeviceIdentity::generate()?;
+        let peer_encryption = DeviceEncryptionIdentity::generate()?;
+        let peer_certificate = peer_root.issue_device_certificate(
+            peer_identity.device_id(),
+            peer_encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let conversation_id = ConversationId::from_label("received-local-projection");
+        let membership = local_root.create_conversation_membership(
+            conversation_id.scope_id(),
+            &[peer_root.account_id()],
+        )?;
+        let event = AuthorizedEvent::new(
+            SignedEvent::sign_encrypted_text(
+                &peer_identity,
+                conversation_id,
+                0,
+                Vec::new(),
+                "received through sync".to_owned(),
+                (
+                    local_state.identity().device_id(),
+                    local_state.encryption().public_key(),
+                ),
+            )?,
+            peer_certificate,
+            peer_root.authority_snapshot()?,
+        )?;
+        let event_id = event.event().event_id()?;
+        let store = EventStore::open(directory.path().join("events"))?;
+        let local_messages = LocalMessageStore::open(directory.path().join("local-messages"))?;
+        let guarded = DecryptingSessionStore::new(&store, &local_messages, &local_state);
+
+        guarded.put_events(std::slice::from_ref(&event), &membership)?;
+        guarded.put_events(std::slice::from_ref(&event), &membership)?;
+        assert_eq!(
+            local_messages.get(event_id)?.open(
+                event.event(),
+                local_state.identity().device_id(),
+                local_state.encryption(),
+            )?,
+            "received through sync"
+        );
+        assert_eq!(
+            store.authorized_inventory(conversation_id, &membership)?,
+            vec![event_id]
         );
         Ok(())
     }

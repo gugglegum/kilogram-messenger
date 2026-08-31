@@ -941,10 +941,7 @@ mod tests {
                 sequence,
                 Vec::new(),
                 body.to_owned(),
-                [
-                    (identity.device_id(), certificate.encryption_public_key()),
-                    (peer_identity.device_id(), peer_encryption.public_key()),
-                ],
+                (peer_identity.device_id(), peer_encryption.public_key()),
             )?,
             certificate.clone(),
             authority_snapshot.clone(),

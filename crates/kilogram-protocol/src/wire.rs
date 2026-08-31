@@ -10,13 +10,13 @@ use crate::{AuthorizedEvent, ConversationId, EventId, ProtocolError};
 pub const MAX_INVENTORY_EVENT_IDS: usize = 4096;
 pub const MAX_SYNC_EVENTS_PER_BATCH: usize = 64;
 
-const SYNC_VERSION: u8 = 3;
-const SYNC_DIFF_SIGNATURE_DOMAIN: &[u8] = b"kilogram:sync-diff-signature:v3\0";
-const SYNC_INVENTORY_SIGNATURE_DOMAIN: &[u8] = b"kilogram:sync-inventory-signature:v3\0";
+const SYNC_VERSION: u8 = 4;
+const SYNC_DIFF_SIGNATURE_DOMAIN: &[u8] = b"kilogram:sync-diff-signature:v4\0";
+const SYNC_INVENTORY_SIGNATURE_DOMAIN: &[u8] = b"kilogram:sync-inventory-signature:v4\0";
 const SYNC_SESSION_DOMAIN: &[u8] = b"kilogram:sync-session:v1\0";
-const DEVICE_AUTHORIZATION_VERSION: u8 = 3;
+const DEVICE_AUTHORIZATION_VERSION: u8 = 4;
 const DEVICE_AUTHORIZATION_SIGNATURE_DOMAIN: &[u8] =
-    b"kilogram:device-session-authorization-signature:v3\0";
+    b"kilogram:device-session-authorization-signature:v4\0";
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct SyncSessionBinding([u8; 32]);
@@ -659,7 +659,6 @@ mod tests {
         identity: &DeviceIdentity,
         conversation_id: ConversationId,
     ) -> Result<SignedEvent, ProtocolError> {
-        let own_encryption = DeviceEncryptionIdentity::generate()?;
         let peer_identity = DeviceIdentity::generate()?;
         let peer_encryption = DeviceEncryptionIdentity::generate()?;
         SignedEvent::sign_encrypted_text(
@@ -668,10 +667,7 @@ mod tests {
             0,
             Vec::new(),
             "hello".to_owned(),
-            [
-                (identity.device_id(), own_encryption.public_key()),
-                (peer_identity.device_id(), peer_encryption.public_key()),
-            ],
+            (peer_identity.device_id(), peer_encryption.public_key()),
         )
     }
 
