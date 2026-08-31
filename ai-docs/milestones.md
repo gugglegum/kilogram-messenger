@@ -64,8 +64,7 @@ Listener endpoint 2397...23d9
 
 Осталось выполнить на двух физических хостах в разных сетях:
 
-- проверить `direct-only` hole punching при NAT домашней и мобильной сетей;
-- повторить `relay-only` как контрольный прогон;
+- проверить relay-only sync после restart listener;
 - проверить смену сетевого интерфейса во время более долгой сессии.
 
 Промежуточный внешний прогон без VPN выбрал direct path и успешно доставил
@@ -107,6 +106,13 @@ cross-network `auto` exchange. Успех локализует проблему 
 delivery через явно выбранный `aps1`; ticket, home/target URL и selected path
 совпали, открытым был ровно один relay path. Осталась внешняя проверка теми же
 двумя хостами.
+
+Внешний test5 также успешно выполнил strict relay-only delivery через `aps1`:
+Bob home, Alice target/home и selected path совпали, был открыт ровно один
+relay path, а signed event и acknowledgement совпали на обеих сторонах. RTT
+составил 461.9–466.6 ms. Это подтверждает cross-network работу
+`clear_ip_transports`; прежние timeout были специфичны для доступности `euc1`
+route в момент тестов. До завершения M0.3 остался relay-only restart/sync.
 
 ### M0.1.1 — постоянная device identity и signed event: выполнено
 

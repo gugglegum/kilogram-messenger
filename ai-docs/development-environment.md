@@ -123,12 +123,20 @@ toolchain `1.98.0` для воспроизводимой разработки.
     совпали; delivery и acknowledgement прошли через один relay path с RTT
     около 484–485 ms. Механизм `--relay-url` готов к внешнему контрольному
     прогону.
+24. Внешний test5 между домашней сетью Alice и cellular hotspot Bob успешно
+    выполнил strict relay-only delivery через явно выбранный `aps1`. Bob home,
+    Alice target/home и selected path совпали; был ровно один open relay path.
+    Signed event `c64a2149...` и acknowledgement `b13047d3...` совпали на обеих
+    сторонах, RTT составил 461.9/466.6 ms. Следовательно, Iroh
+    `clear_ip_transports` работает между этими сетями, а прежний failure был
+    специфичен для доступности `euc1` route во время тестов. Остался внешний
+    relay-only sync после restart listener.
 
-Публичный relay проверен на одном хосте в принудительном `relay-only`. Внешний
-M0.3 direct-only тест корректно доказал невозможность hole punching в выбранной
-home-to-cellular topology. `auto` подтвердил успешный внешний relay fallback;
-строгий relay-only требует ещё одного контрольного прогона через явно выбранный
-рабочий `aps1` relay.
+Публичный relay проверен между двумя сетями в принудительном `relay-only` через
+`aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
+punching в выбранной home-to-cellular topology; `auto` и strict relay-only
+подтвердили рабочий fallback. Для завершения M0.3 остался restart/sync через
+`aps1` и отдельная последующая проверка смены интерфейса.
 
 ## Решения, которые ещё нельзя фиксировать
 

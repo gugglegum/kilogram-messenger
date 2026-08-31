@@ -34,8 +34,11 @@ listener. Контрольный `auto` успешно выполнил delivery
 ticket Bob с `euc1`, локализовав проблему в strict relay-only cross-relay
 negotiation. Однако retest с одинаковым pinned `euc1` снова дал timeout.
 Listener теперь поддерживает явный `--relay-url`; следующий контроль использует
-доказанно рабочий в `auto` relay `aps1`, чтобы разделить дефект relay route и
-дефект строгого отключения IP transports.
+доказанно рабочий в `auto` relay `aps1`. Внешний test5 через него успешно
+выполнил strict relay-only delivery между домашней и cellular сетями с одним
+relay path. Это подтвердило cross-network работу `clear_ip_transports` и
+локализовало прежние timeout в доступности `euc1` route во время тестов;
+остался relay-only restart/sync.
 Прикладное E2EE, Account Root Identity, шифрование локальной истории,
 production-grade sync summaries и группы ещё не реализованы.
 
