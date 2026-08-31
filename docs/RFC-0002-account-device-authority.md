@@ -256,7 +256,7 @@ Owner-signed membership и `AuthorizedEvent` определены отдельн
 [`RFC-0003`](RFC-0003-conversation-membership.md).
 
 M0.7.1 добавил отдельный persistent encryption key и certificate v2. Текущий
-M0.7.4 использует ticket v8/session authorization v6, root-signed полный device
+M0.7.5 сохраняет ticket v8/session authorization v6, root-signed полный device
 list и точный directory подписанных device prekey bundles. Сертификат и ratchet
 identity больше нельзя заменить без явной миграции device state; для текущего
 development spike нужен свежий state.
@@ -275,7 +275,7 @@ development spike нужен свежий state.
 
 ## 10. Сетевой контракт M0.6.1
 
-Ниже зафиксирован исторический M0.6.1 contract. Текущий M0.7.4 переносит тот же
+Ниже зафиксирован исторический M0.6.1 contract. Текущий M0.7.5 переносит тот же
 authority смысл в несовместимые ticket v8 и session authorization v6 из-за
 DeviceCertificate v2, полного device list и directory ratchet prekey bundles.
 
@@ -324,6 +324,6 @@ M0.6.2 завершил минимальный signed conversation membership и
 M0.7.2 отделил recipient-only event от local encrypted history projection, а
 M0.7.3 заменил replicated text payload на persistent pairwise Olm ratchet.
 M0.7.4 добавил root-signed device-list fan-out с отдельным ciphertext каждого
-устройства. Authenticated history rewrap, gossip/witness для first-contact
-freshness, membership removal/MLS epochs, seed/recovery и root rotation остаются
-отдельными срезами.
+устройства. M0.7.5 добавил same-account authenticated history rewrap. Gossip/
+witness для first-contact freshness, membership removal/MLS epochs,
+seed/recovery и root rotation остаются отдельными срезами.

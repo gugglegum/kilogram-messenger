@@ -13,7 +13,8 @@ sender box из replicated event и ввёл local-only encrypted history projec
 M0.7.3 заменил оставшийся peer box на persistent `vodozemac::olm` Double
 Ratchet с device-signed one-time prekey. M0.7.4 добавил root-signed полный
 device list, точный prekey directory и отдельный ciphertext slot каждого
-устройства peer account.
+устройства peer account. M0.7.5 добавил same-account history rewrap с signed
+source inventory/range, HPKE на новый device и local projection provenance v2.
 Следующие вопросы относятся к production recovery, rotation, asynchronous
 sessions, distribution, removal и key epochs и не решены этим прототипом.
 
@@ -35,8 +36,9 @@ sessions, distribution, removal и key epochs и не решены этим пр
   и prekey pool, предотвращает replay/исчерпание OTK и не раскрывает лишнюю
   account metadata? M0.7.4 проверяет подпись и полноту полученного списка, но не
   его глобальную свежесть при первом контакте.
-- Как authenticated history rewrap передаёт старую локальную историю новому или
-  восстановленному device, не возвращая static sender box в replicated event?
+- Как сетевой history rewrap подтверждает согласие пользователя/SAS, объединяет
+  claims нескольких sources и разрешает recovery от устройства собеседника без
+  неявного расширения same-account trust?
 - Какой финальный межъязыковой canonical wire encoding обеспечивает одинаковые
   подписи и event IDs на всех платформах? Postcard используется только как
   предварительный M0 codec и не закрывает вопрос публичного протокола.

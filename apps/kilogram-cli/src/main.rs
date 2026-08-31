@@ -20,9 +20,10 @@ use kilogram_identity::{
 };
 use kilogram_protocol::{
     AuthorizedEvent, ClientRequest, ConversationId, DeviceAuthorizationAccepted,
-    DeviceAuthorizationRejected, EventPayload, LocalTextProjection, MAX_INVENTORY_EVENT_IDS,
-    RatchetRecipient, ServerResponse, SignedDeviceSessionAuthorization, SignedEvent,
-    SignedSyncInventory, SyncPause, SyncPaused, SyncSessionBinding,
+    DeviceAuthorizationRejected, EventPayload, HistoryRewrapBundle, LocalTextProjection,
+    MAX_HISTORY_REWRAP_ENTRIES, MAX_INVENTORY_EVENT_IDS, RatchetRecipient, ServerResponse,
+    SignedDeviceSessionAuthorization, SignedEvent, SignedSyncInventory, SyncPause, SyncPaused,
+    SyncSessionBinding,
 };
 use kilogram_ratchet::{
     AccountPrekeyDirectory, DecryptedMessage, RatchetOperation, RatchetState, SignedPrekeyBundle,
@@ -32,17 +33,19 @@ use kilogram_session::{
     MAX_SYNC_ROUNDS, ServerInventoryOutcome, SessionStore, SyncClient, SyncServer,
     authorize_device_session,
 };
-use kilogram_store::{EventStore, LocalMessageStore, StoreError};
+use kilogram_store::{EventStore, LocalMessageStore, StoreError, StoreOutcome};
 use kilogram_transport_iroh::{
     ALPN, RoutePolicy, SelectedPathDiagnostics, await_route_policy, endpoint_builder_for_remote,
     endpoint_builder_with_relay, read_client_request, read_server_response,
     selected_path_diagnostics, write_client_request, write_server_response,
 };
 use serde::{Deserialize, Serialize};
+use tempfile::NamedTempFile;
 use tokio::time::timeout;
 
 const EVENT_STORE_DIRECTORY: &str = "events";
 const LOCAL_MESSAGE_STORE_DIRECTORY: &str = "local-messages";
+const HISTORY_REWRAP_STORE_DIRECTORY: &str = "history-rewraps";
 const DIRECT_PATH_DIAGNOSTIC_WAIT: Duration = Duration::from_secs(3);
 const ROUTE_POLICY_WAIT: Duration = Duration::from_secs(15);
 const CONNECTION_TIMEOUT: Duration = Duration::from_secs(30);
@@ -191,6 +194,52 @@ enum Command {
         state_dir: PathBuf,
 
         /// Write the signed public bundle to this new file.
+        #[arg(long)]
+        bundle_file: PathBuf,
+    },
+
+    /// Export an authenticated plaintext-history range to another device of this account.
+    HistoryRewrapExport {
+        /// Directory containing the live source device and readable local history.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Development-only shared label used to derive a conversation ID.
+        #[arg(long, default_value = "m0-local-smoke")]
+        conversation: String,
+
+        /// Fresh root-signed list containing both source and recipient devices.
+        #[arg(long)]
+        device_list_file: PathBuf,
+
+        /// Authorized device that should receive the rewrapped history.
+        #[arg(long)]
+        recipient_device: DeviceId,
+
+        /// First canonical text-event inventory index to export.
+        #[arg(long, default_value_t = 0)]
+        range_start: usize,
+
+        /// Maximum number of consecutive text events in this bundle.
+        #[arg(long, default_value_t = MAX_HISTORY_REWRAP_ENTRIES)]
+        count: usize,
+
+        /// Write the signed encrypted rewrap bundle to this new file.
+        #[arg(long)]
+        bundle_file: PathBuf,
+    },
+
+    /// Import an authenticated history-rewrap bundle addressed to this device.
+    HistoryRewrapImport {
+        /// Directory containing the new or restored recipient device state.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Development-only shared label expected in the bundle.
+        #[arg(long, default_value = "m0-local-smoke")]
+        conversation: String,
+
+        /// Signed encrypted rewrap bundle received from a live account device.
         #[arg(long)]
         bundle_file: PathBuf,
     },
@@ -626,6 +675,28 @@ async fn main() -> Result<()> {
             state_dir,
             bundle_file,
         } => export_ratchet_bundle(state_dir, bundle_file),
+        Command::HistoryRewrapExport {
+            state_dir,
+            conversation,
+            device_list_file,
+            recipient_device,
+            range_start,
+            count,
+            bundle_file,
+        } => export_history_rewrap(
+            state_dir,
+            conversation,
+            device_list_file,
+            recipient_device,
+            range_start,
+            count,
+            bundle_file,
+        ),
+        Command::HistoryRewrapImport {
+            state_dir,
+            conversation,
+            bundle_file,
+        } => import_history_rewrap(state_dir, conversation, bundle_file),
         Command::History {
             state_dir,
             conversation,
@@ -2198,9 +2269,10 @@ fn show_history(state_dir: PathBuf, conversation: String) -> Result<()> {
                     .get(stored.id)
                     .with_context(|| format!("load local projection for event {}", stored.id))?;
                 let body = projection
-                    .open(
+                    .open_for_account(
                         &event,
                         device_state.identity().device_id(),
+                        certificate.account_id(),
                         device_state.encryption(),
                     )
                     .with_context(|| format!("decrypt local projection for event {}", stored.id))?;
@@ -2246,6 +2318,301 @@ fn export_ratchet_bundle(state_dir: PathBuf, bundle_file: PathBuf) -> Result<()>
     println!("prekey_bundle_file={}", bundle_file.display());
     println!("status=ratchet-bundle-exported");
     Ok(())
+}
+
+fn export_history_rewrap(
+    state_dir: PathBuf,
+    conversation: String,
+    device_list_file: PathBuf,
+    recipient_device_id: DeviceId,
+    range_start: usize,
+    count: usize,
+    bundle_file: PathBuf,
+) -> Result<()> {
+    ensure!(count > 0, "--count must be greater than zero");
+    ensure!(
+        count <= MAX_HISTORY_REWRAP_ENTRIES,
+        "--count must not exceed {MAX_HISTORY_REWRAP_ENTRIES}"
+    );
+    let device_state = DeviceState::load_or_create(&state_dir)
+        .with_context(|| format!("load source device state from {}", state_dir.display()))?;
+    let source_certificate = device_state
+        .load_certificate()
+        .context("load source device certificate before history rewrap")?;
+    let device_list = AccountDeviceListSnapshot::decode_and_verify(
+        &fs::read(&device_list_file)
+            .with_context(|| format!("read device list from {}", device_list_file.display()))?,
+    )
+    .context("decode and verify history-rewrap account device list")?;
+    device_list
+        .verify_for_account(source_certificate.account_id())
+        .context("history-rewrap device list belongs to a different account")?;
+    ensure!(
+        device_list.certificate_for(source_certificate.device_id()) == Some(&source_certificate),
+        "source certificate is not present exactly in the supplied device list"
+    );
+    ensure!(
+        device_list.certificate_for(recipient_device_id).is_some(),
+        "recipient device is absent from the supplied root-signed device list"
+    );
+    let snapshot_store = device_state
+        .install_own_authority_snapshot(device_list.authority_snapshot())
+        .context("install authority snapshot from history-rewrap device list")?;
+    let conversation_id = ConversationId::from_label(&conversation);
+    let membership = device_state
+        .load_conversation_membership(conversation_id.scope_id())
+        .context("load trusted conversation membership before history rewrap")?;
+    membership
+        .require_member(source_certificate.account_id())
+        .context("source account is not a member of this conversation")?;
+    let event_store = open_event_store(&state_dir)?;
+    let local_message_store = open_local_message_store(&state_dir)?;
+    let stored_events = event_store
+        .load_authorized_conversation(conversation_id, &membership)
+        .context("load and verify source history before rewrap")?;
+    let mut inventory = Vec::new();
+    for stored in stored_events {
+        if !matches!(
+            stored.event.event().payload(),
+            EventPayload::RatchetText { .. }
+        ) {
+            continue;
+        }
+        let projection = local_message_store
+            .get(stored.id)
+            .with_context(|| format!("load readable source projection for event {}", stored.id))?;
+        let body = projection
+            .open_for_account(
+                stored.event.event(),
+                source_certificate.device_id(),
+                source_certificate.account_id(),
+                device_state.encryption(),
+            )
+            .with_context(|| format!("open source projection for event {}", stored.id))?;
+        inventory.push((stored.event, body));
+    }
+    ensure!(
+        range_start < inventory.len(),
+        "--range-start {range_start} is outside text inventory with {} events",
+        inventory.len()
+    );
+    let requested_end = range_start
+        .checked_add(count)
+        .context("history-rewrap range overflow")?;
+    let range_end = requested_end.min(inventory.len());
+    let bundle = HistoryRewrapBundle::seal(
+        device_state.identity(),
+        device_list,
+        recipient_device_id,
+        conversation_id,
+        &inventory,
+        range_start,
+        range_end,
+    )
+    .context("seal authenticated history-rewrap bundle")?;
+    let encoded = bundle.encode()?;
+    write_new_authority_file(&bundle_file, &encoded)
+        .with_context(|| format!("write history rewrap to {}", bundle_file.display()))?;
+    println!("history_rewrap_id={}", bundle.bundle_id()?);
+    println!("account_id={}", bundle.manifest().account_id());
+    println!("source_device_id={}", bundle.manifest().source_device_id());
+    println!(
+        "recipient_device_id={}",
+        bundle.manifest().recipient_device_id()
+    );
+    println!(
+        "source_inventory_event_count={}",
+        bundle.manifest().inventory_event_count()
+    );
+    println!(
+        "source_inventory_digest={}",
+        encode_hex(bundle.manifest().inventory_digest())
+    );
+    println!("range_start={}", bundle.manifest().range_start());
+    println!("range_end={}", bundle.manifest().range_end());
+    println!("rewrapped_event_count={}", bundle.entries().len());
+    println!(
+        "source_inventory_complete={}",
+        bundle.is_complete_source_inventory()
+    );
+    println!("authority_snapshot_store={snapshot_store:?}");
+    println!("bundle_file={}", bundle_file.display());
+    println!("status=history-rewrap-exported");
+    Ok(())
+}
+
+fn import_history_rewrap(
+    state_dir: PathBuf,
+    conversation: String,
+    bundle_file: PathBuf,
+) -> Result<()> {
+    let device_state = DeviceState::load_or_create(&state_dir)
+        .with_context(|| format!("load recipient device state from {}", state_dir.display()))?;
+    let recipient_certificate = device_state
+        .load_certificate()
+        .context("load recipient device certificate before history rewrap")?;
+    let encoded = fs::read(&bundle_file)
+        .with_context(|| format!("read history rewrap from {}", bundle_file.display()))?;
+    let bundle = HistoryRewrapBundle::decode_and_verify(&encoded)
+        .context("decode and verify authenticated history-rewrap bundle")?;
+    let conversation_id = ConversationId::from_label(&conversation);
+    ensure!(
+        bundle.manifest().conversation_id() == conversation_id,
+        "history-rewrap bundle belongs to a different conversation"
+    );
+    ensure!(
+        bundle.manifest().recipient_device_id() == recipient_certificate.device_id(),
+        "history-rewrap bundle is addressed to a different device"
+    );
+    ensure!(
+        bundle.manifest().account_id() == recipient_certificate.account_id(),
+        "history-rewrap bundle belongs to a different account"
+    );
+    ensure!(
+        bundle
+            .manifest()
+            .account_device_list()
+            .certificate_for(recipient_certificate.device_id())
+            == Some(&recipient_certificate),
+        "recipient certificate is not present exactly in the signed device list"
+    );
+    let snapshot_store = device_state
+        .install_own_authority_snapshot(
+            bundle.manifest().account_device_list().authority_snapshot(),
+        )
+        .context("install authority snapshot from history-rewrap bundle")?;
+    let membership = device_state
+        .load_conversation_membership(conversation_id.scope_id())
+        .context("load trusted conversation membership before history rewrap import")?;
+    membership
+        .require_member(recipient_certificate.account_id())
+        .context("recipient account is not a member of this conversation")?;
+    let event_store = open_event_store(&state_dir)?;
+    let local_message_store = open_local_message_store(&state_dir)?;
+    let mut prepared = Vec::with_capacity(bundle.entries().len());
+    for entry_offset in 0..bundle.entries().len() {
+        let (authorized_event, body) = bundle
+            .open_entry(
+                entry_offset,
+                recipient_certificate.device_id(),
+                device_state.encryption(),
+            )
+            .with_context(|| format!("open history-rewrap entry {entry_offset}"))?;
+        authorized_event
+            .verify_for_membership(&membership)
+            .with_context(|| format!("authorize history-rewrap entry {entry_offset}"))?;
+        let projection = LocalTextProjection::from_history_rewrap(
+            authorized_event.event(),
+            &bundle,
+            entry_offset,
+            recipient_certificate.device_id(),
+            recipient_certificate.account_id(),
+            device_state.encryption(),
+        )?;
+        let event_id = authorized_event.event().event_id()?;
+        let projection_exists = match local_message_store.get(event_id) {
+            Ok(existing) => {
+                let existing_body = existing.open_for_account(
+                    authorized_event.event(),
+                    recipient_certificate.device_id(),
+                    recipient_certificate.account_id(),
+                    device_state.encryption(),
+                )?;
+                ensure!(
+                    existing_body == body,
+                    "existing local projection conflicts with history-rewrap event {event_id}"
+                );
+                true
+            }
+            Err(StoreError::LocalTextProjectionMissing { .. }) => false,
+            Err(error) => return Err(error.into()),
+        };
+        prepared.push((authorized_event, projection, projection_exists));
+    }
+    let bundle_store = persist_history_rewrap_bundle(&state_dir, &bundle, &encoded)?;
+    let mut inserted_projections = 0_usize;
+    let mut inserted_events = 0_usize;
+    for (authorized_event, projection, projection_exists) in prepared {
+        if !projection_exists && local_message_store.put(&projection)? == StoreOutcome::Inserted {
+            inserted_projections += 1;
+        }
+        if event_store.put_authorized(&authorized_event, &membership)? == StoreOutcome::Inserted {
+            inserted_events += 1;
+        }
+    }
+    println!("history_rewrap_id={}", bundle.bundle_id()?);
+    println!("source_device_id={}", bundle.manifest().source_device_id());
+    println!(
+        "recipient_device_id={}",
+        bundle.manifest().recipient_device_id()
+    );
+    println!(
+        "source_inventory_event_count={}",
+        bundle.manifest().inventory_event_count()
+    );
+    println!(
+        "source_inventory_digest={}",
+        encode_hex(bundle.manifest().inventory_digest())
+    );
+    println!("range_start={}", bundle.manifest().range_start());
+    println!("range_end={}", bundle.manifest().range_end());
+    println!("rewrapped_event_count={}", bundle.entries().len());
+    println!("inserted_event_count={inserted_events}");
+    println!("inserted_projection_count={inserted_projections}");
+    println!(
+        "source_inventory_complete={}",
+        bundle.is_complete_source_inventory()
+    );
+    println!("authority_snapshot_store={snapshot_store:?}");
+    println!("bundle_store={bundle_store:?}");
+    println!("status=history-rewrap-imported");
+    Ok(())
+}
+
+fn persist_history_rewrap_bundle(
+    state_dir: &Path,
+    bundle: &HistoryRewrapBundle,
+    encoded: &[u8],
+) -> Result<StoreOutcome> {
+    let directory = state_dir.join(HISTORY_REWRAP_STORE_DIRECTORY);
+    fs::create_dir_all(&directory)?;
+    let path = directory.join(format!("{}.rewrap", bundle.bundle_id()?));
+    if path.try_exists()? {
+        return validate_existing_history_rewrap(&path, encoded);
+    }
+    let mut temporary = NamedTempFile::new_in(&directory)?;
+    temporary.write_all(encoded)?;
+    temporary.as_file().sync_all()?;
+    match temporary.persist_noclobber(&path) {
+        Ok(file) => {
+            file.sync_all()?;
+            Ok(StoreOutcome::Inserted)
+        }
+        Err(error) if error.error.kind() == std::io::ErrorKind::AlreadyExists => {
+            validate_existing_history_rewrap(&path, encoded)
+        }
+        Err(error) => Err(error.error.into()),
+    }
+}
+
+fn validate_existing_history_rewrap(path: &Path, expected: &[u8]) -> Result<StoreOutcome> {
+    let existing = fs::read(path)?;
+    ensure!(
+        existing == expected,
+        "stored history-rewrap bundle conflicts with immutable file {}",
+        path.display()
+    );
+    Ok(StoreOutcome::AlreadyPresent)
+}
+
+fn encode_hex(bytes: &[u8]) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut encoded = String::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        encoded.push(char::from(HEX[usize::from(byte >> 4)]));
+        encoded.push(char::from(HEX[usize::from(byte & 0x0f)]));
+    }
+    encoded
 }
 
 fn seed_history(
@@ -2416,7 +2783,16 @@ fn ensure_authored_local_text_projection(
     let local_device_id = device_state.identity().device_id();
     match store.get(event_id) {
         Ok(projection) => {
-            let stored_body = projection.open(event, local_device_id, device_state.encryption())?;
+            let local_account_id = device_state
+                .load_certificate()
+                .map_err(kilogram_protocol::ProtocolError::from)?
+                .account_id();
+            let stored_body = projection.open_for_account(
+                event,
+                local_device_id,
+                local_account_id,
+                device_state.encryption(),
+            )?;
             if stored_body != body {
                 return Err(StoreError::LocalTextProjectionPlaintextConflict { event_id });
             }
@@ -2442,11 +2818,18 @@ fn open_local_text_projection_if_present(
 ) -> Result<Option<String>, StoreError> {
     let event_id = event.event_id()?;
     match store.get(event_id) {
-        Ok(projection) => Ok(Some(projection.open(
-            event,
-            device_state.identity().device_id(),
-            device_state.encryption(),
-        )?)),
+        Ok(projection) => {
+            let local_account_id = device_state
+                .load_certificate()
+                .map_err(kilogram_protocol::ProtocolError::from)?
+                .account_id();
+            Ok(Some(projection.open_for_account(
+                event,
+                device_state.identity().device_id(),
+                local_account_id,
+                device_state.encryption(),
+            )?))
+        }
         Err(StoreError::LocalTextProjectionMissing { .. }) => Ok(None),
         Err(error) => Err(error),
     }
@@ -2518,7 +2901,17 @@ impl<'a> DecryptingSessionStore<'a> {
         let local_device_id = self.device_state.identity().device_id();
         match self.local_messages.get(event_id) {
             Ok(projection) => {
-                projection.open(event, local_device_id, self.device_state.encryption())?;
+                let local_account_id = self
+                    .device_state
+                    .load_certificate()
+                    .map_err(kilogram_protocol::ProtocolError::from)?
+                    .account_id();
+                projection.open_for_account(
+                    event,
+                    local_device_id,
+                    local_account_id,
+                    self.device_state.encryption(),
+                )?;
                 Ok(())
             }
             Err(error @ StoreError::LocalTextProjectionMissing { .. }) => {

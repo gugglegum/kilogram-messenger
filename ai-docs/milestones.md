@@ -725,14 +725,57 @@ projection и event ещё не решены. Новый device не получ�
 slots. Полный контракт —
 [`../docs/RFC-0007-multi-device-ratchet-fanout.md`](../docs/RFC-0007-multi-device-ratchet-fanout.md).
 
+### M0.7.5 — authenticated history rewrap: выполнено
+
+Реализовано:
+
+- same-account `HistoryRewrapBundle` связывает root-signed device list, source
+  и recipient Device ID, conversation, digest полного source text inventory и
+  явный canonical диапазон `[start, end)`;
+- каждая entry содержит исходный `AuthorizedEvent`, inventory index и HPKE
+  ciphertext на encryption key нового device; source Device signature покрывает
+  manifest, event и ciphertext;
+- bundle ограничен 256 text events и выводит
+  `source_inventory_complete`, не выдавая source claim за глобальную полноту;
+- `history-rewrap-export` открывает только проверенные local projections живого
+  source, а `history-rewrap-import` повторно проверяет target account/device,
+  membership и каждого event author;
+- local projection v2 сохраняет rewrap manifest/entry/signature и открывается
+  только с совпадающими local Account ID, Device ID и immutable event; direct
+  projection v1 остаётся совместимой;
+- import сохраняет исходный bundle в `STATE_DIR/history-rewraps`, projection,
+  неизменённый event и authorization sidecar; перекрывающиеся bundles с тем же
+  plaintext идемпотентны;
+- существующая rewrapped projection позволяет обычному sync повторно принять
+  старый event без отсутствующей у нового устройства ratchet session.
+
+Проверки:
+
+- invalid range, signature/ciphertext tampering и wrong recipient отклоняются;
+- protocol round trip сохраняет `AuthorizedEvent`, plaintext и provenance;
+- partial `1..2` помечен incomplete, полный `0..3` восстанавливает три events;
+- source и recovered histories совпадают; удалённый после import event успешно
+  восстановлен обычным authenticated sync через rewrapped projection;
+- все 64 workspace tests, форматирование, строгий Clippy и release build
+  проходят;
+- release process smoke `.tmp/m075-smoke-20260901-020138` подтвердил partial/full
+  import, wrong-account refusal, histories equality, sync reuse и отсутствие
+  plaintext markers в 16 event/projection/rewrap files.
+
+Граница среза: bundle передаётся файлом, source должен быть online и иметь все
+нужные projections. `source_inventory_complete` — подписанное утверждение
+конкретного source, не consensus checkpoint. Cross-account recovery,
+multi-source reconciliation, user consent/SAS и общая storage transaction не
+реализованы. Полный контракт —
+[`../docs/RFC-0008-authenticated-history-rewrap.md`](../docs/RFC-0008-authenticated-history-rewrap.md).
+
 ### Следующий этап
 
-1. M0.7.5: добавить authenticated history rewrap для нового или
-   восстановленного устройства с явным диапазоном, provenance и признаком
-   неполной истории.
-2. Затем добавить production prekey pool/discovery и разрешение concurrent
-   pairwise session initiation.
+1. M0.7.6: добавить authenticated prekey pool/discovery, sequence/freshness и
+   разрешение concurrent pairwise session initiation.
+2. Затем связать history rewrap с сетевой device-to-device сессией, user consent
+   и multi-source completeness reconciliation.
 3. Membership removal и group governance проектировать вместе с ordered
    security events и MLS epoch.
-4. First-contact authority/membership gossip-witness, seed/recovery и compact
-   Merkle/range summary остаются отдельными направлениями.
+4. First-contact authority/membership gossip-witness, seed/root recovery и
+   compact Merkle/range summary остаются отдельными направлениями.

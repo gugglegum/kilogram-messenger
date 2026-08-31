@@ -85,8 +85,9 @@ Offline устройство позднее получает тот же immutab
 ratchet sessions различаются.
 
 Устройство, отсутствующее в embedded list, не может создать projection. Новый
-device, добавленный после создания event, намеренно не получает старый slot:
-для него нужен следующий этап authenticated history rewrap.
+device, добавленный после создания event, намеренно не получает старый slot;
+M0.7.5 передаёт ему доступную историю отдельным authenticated rewrap из
+[`RFC-0008`](RFC-0008-authenticated-history-rewrap.md).
 
 ## 6. Версии
 
@@ -131,7 +132,9 @@ Ratchet account/session pickle и LocalTextProjection остаются совм�
 
 ## 9. Следующий этап
 
-M0.7.5 должен определить authenticated history rewrap от живого устройства к
-новому авторизованному device с явным диапазоном, provenance и признаком
-неполной истории. Он не должен возвращать static sender boxes в replicated
-events или обещать восстановление после потери всех живых projections.
+M0.7.5 реализовал authenticated history rewrap от живого устройства к новому
+авторизованному device с явным диапазоном, provenance и признаком неполного
+source inventory. Актуальный контракт описан в
+[`RFC-0008`](RFC-0008-authenticated-history-rewrap.md). Он не возвращает static
+sender boxes в replicated events и не обещает восстановление после потери всех
+живых projections.

@@ -12,7 +12,13 @@ use kilogram_ratchet::{DecryptedMessage, RatchetCiphertext, RatchetError, Signed
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+mod rewrap;
 mod wire;
+
+pub use rewrap::{
+    HistoryRewrapBundle, HistoryRewrapEntry, HistoryRewrapId, HistoryRewrapManifest,
+    MAX_HISTORY_REWRAP_ENTRIES,
+};
 
 pub use wire::{
     ClientRequest, DeviceAuthorizationAccepted, DeviceAuthorizationRejected,
@@ -24,7 +30,8 @@ pub use wire::{
 const EVENT_VERSION: u8 = 5;
 const EVENT_SIGNATURE_DOMAIN: &[u8] = b"kilogram:event-signature:v5\0";
 const EVENT_ID_DOMAIN: &[u8] = b"kilogram:event-id:v5\0";
-const LOCAL_TEXT_PROJECTION_VERSION: u8 = 1;
+const DIRECT_LOCAL_TEXT_PROJECTION_VERSION: u8 = 1;
+const REWRAPPED_LOCAL_TEXT_PROJECTION_VERSION: u8 = 2;
 const LOCAL_TEXT_PROJECTION_HPKE_INFO: &[u8] = b"kilogram:local-text-projection-hpke:v1\0";
 const LOCAL_TEXT_PROJECTION_AAD_DOMAIN: &[u8] = b"kilogram:local-text-projection-aad:v1\0";
 const CONVERSATION_LABEL_DOMAIN: &[u8] = b"kilogram:conversation-label:v1\0";
@@ -32,7 +39,7 @@ const MAX_PARENTS: usize = 64;
 const MAX_TEXT_BYTES: usize = 64 * 1024;
 const MAX_CIPHERTEXT_BYTES: usize = MAX_TEXT_BYTES + 16;
 
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct ConversationId([u8; 32]);
 
 impl ConversationId {
@@ -46,6 +53,10 @@ impl ConversationId {
     pub fn scope_id(self) -> ConversationScopeId {
         ConversationScopeId::from_bytes(self.0)
     }
+
+    pub fn as_bytes(&self) -> &[u8; 32] {
+        &self.0
+    }
 }
 
 impl fmt::Display for ConversationId {
@@ -54,8 +65,14 @@ impl fmt::Display for ConversationId {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct EventId([u8; 32]);
+
+impl EventId {
+    pub fn as_bytes(&self) -> &[u8; 32] {
+        &self.0
+    }
+}
 
 impl fmt::Display for EventId {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -112,12 +129,32 @@ struct LocalTextProjectionContext {
 /// to read sent history without adding a static-key sender box to the replicated
 /// event, which is a prerequisite for replacing the recipient HPKE box with a
 /// forward-secret ratchet message.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct LocalTextProjection {
+    content: LocalTextProjectionContent,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum LocalTextProjectionContent {
+    Direct(DirectLocalTextProjection),
+    HistoryRewrap(Box<RewrappedLocalTextProjection>),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+struct DirectLocalTextProjection {
     version: u8,
     event_id: EventId,
     local_device_id: DeviceId,
     sealed: SealedMessage,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+struct RewrappedLocalTextProjection {
+    version: u8,
+    event_id: EventId,
+    local_device_id: DeviceId,
+    manifest: HistoryRewrapManifest,
+    entry: HistoryRewrapEntry,
 }
 
 impl LocalTextProjection {
@@ -159,28 +196,88 @@ impl LocalTextProjection {
         let event_id = event.event_id()?;
         let aad = local_text_projection_aad(event_id, local_device_id)?;
         let projection = Self {
-            version: LOCAL_TEXT_PROJECTION_VERSION,
-            event_id,
-            local_device_id,
-            sealed: local_public_key.seal(
-                body.as_bytes(),
-                LOCAL_TEXT_PROJECTION_HPKE_INFO,
-                &aad,
-            )?,
+            content: LocalTextProjectionContent::Direct(DirectLocalTextProjection {
+                version: DIRECT_LOCAL_TEXT_PROJECTION_VERSION,
+                event_id,
+                local_device_id,
+                sealed: local_public_key.seal(
+                    body.as_bytes(),
+                    LOCAL_TEXT_PROJECTION_HPKE_INFO,
+                    &aad,
+                )?,
+            }),
         };
         projection.validate()?;
         Ok(projection)
     }
 
     pub fn decode(bytes: &[u8]) -> Result<Self, ProtocolError> {
-        let projection: Self = postcard::from_bytes(bytes)?;
+        let Some(version) = bytes.first().copied() else {
+            return Err(ProtocolError::UnsupportedLocalTextProjectionVersion(0));
+        };
+        let content = match version {
+            DIRECT_LOCAL_TEXT_PROJECTION_VERSION => LocalTextProjectionContent::Direct(
+                postcard::from_bytes::<DirectLocalTextProjection>(bytes)?,
+            ),
+            REWRAPPED_LOCAL_TEXT_PROJECTION_VERSION => {
+                LocalTextProjectionContent::HistoryRewrap(Box::new(postcard::from_bytes::<
+                    RewrappedLocalTextProjection,
+                >(bytes)?))
+            }
+            version => {
+                return Err(ProtocolError::UnsupportedLocalTextProjectionVersion(
+                    version,
+                ));
+            }
+        };
+        let projection = Self { content };
         projection.validate()?;
         Ok(projection)
     }
 
     pub fn encode(&self) -> Result<Vec<u8>, ProtocolError> {
         self.validate()?;
-        Ok(postcard::to_allocvec(self)?)
+        match &self.content {
+            LocalTextProjectionContent::Direct(projection) => {
+                Ok(postcard::to_allocvec(projection)?)
+            }
+            LocalTextProjectionContent::HistoryRewrap(projection) => {
+                Ok(postcard::to_allocvec(projection)?)
+            }
+        }
+    }
+
+    pub fn from_history_rewrap(
+        event: &SignedEvent,
+        bundle: &HistoryRewrapBundle,
+        entry_offset: usize,
+        local_device_id: DeviceId,
+        local_account_id: AccountId,
+        encryption: &DeviceEncryptionIdentity,
+    ) -> Result<Self, ProtocolError> {
+        let (authorized_event, _) = bundle.open_entry(entry_offset, local_device_id, encryption)?;
+        if authorized_event.event() != event {
+            return Err(ProtocolError::HistoryRewrapProjectionEventMismatch);
+        }
+        if bundle.manifest().account_id() != local_account_id {
+            return Err(ProtocolError::HistoryRewrapAccountMismatch {
+                expected: local_account_id,
+                actual: bundle.manifest().account_id(),
+            });
+        }
+        let projection = Self {
+            content: LocalTextProjectionContent::HistoryRewrap(Box::new(
+                RewrappedLocalTextProjection {
+                    version: REWRAPPED_LOCAL_TEXT_PROJECTION_VERSION,
+                    event_id: event.event_id()?,
+                    local_device_id,
+                    manifest: bundle.manifest().clone(),
+                    entry: bundle.entries()[entry_offset].clone(),
+                },
+            )),
+        };
+        projection.validate()?;
+        Ok(projection)
     }
 
     pub fn open(
@@ -189,53 +286,135 @@ impl LocalTextProjection {
         local_device_id: DeviceId,
         encryption: &DeviceEncryptionIdentity,
     ) -> Result<String, ProtocolError> {
+        self.open_inner(event, local_device_id, None, encryption)
+    }
+
+    pub fn open_for_account(
+        &self,
+        event: &SignedEvent,
+        local_device_id: DeviceId,
+        local_account_id: AccountId,
+        encryption: &DeviceEncryptionIdentity,
+    ) -> Result<String, ProtocolError> {
+        self.open_inner(event, local_device_id, Some(local_account_id), encryption)
+    }
+
+    fn open_inner(
+        &self,
+        event: &SignedEvent,
+        local_device_id: DeviceId,
+        local_account_id: Option<AccountId>,
+        encryption: &DeviceEncryptionIdentity,
+    ) -> Result<String, ProtocolError> {
         self.validate()?;
         event.verify()?;
         let actual_event_id = event.event_id()?;
-        if self.event_id != actual_event_id {
+        if self.event_id() != actual_event_id {
             return Err(ProtocolError::LocalProjectionEventMismatch {
                 expected: actual_event_id,
-                actual: self.event_id,
+                actual: self.event_id(),
             });
         }
-        if self.local_device_id != local_device_id {
+        if self.local_device_id() != local_device_id {
             return Err(ProtocolError::LocalProjectionDeviceMismatch {
                 expected: local_device_id,
-                actual: self.local_device_id,
+                actual: self.local_device_id(),
             });
         }
-        require_text_participant(event, local_device_id)?;
-        let aad = local_text_projection_aad(self.event_id, self.local_device_id)?;
-        let plaintext = encryption.open(&self.sealed, LOCAL_TEXT_PROJECTION_HPKE_INFO, &aad)?;
-        String::from_utf8(plaintext).map_err(ProtocolError::InvalidTextEncoding)
+        match &self.content {
+            LocalTextProjectionContent::Direct(projection) => {
+                require_text_participant(event, local_device_id)?;
+                let aad =
+                    local_text_projection_aad(projection.event_id, projection.local_device_id)?;
+                let plaintext =
+                    encryption.open(&projection.sealed, LOCAL_TEXT_PROJECTION_HPKE_INFO, &aad)?;
+                String::from_utf8(plaintext).map_err(ProtocolError::InvalidTextEncoding)
+            }
+            LocalTextProjectionContent::HistoryRewrap(projection) => {
+                let local_account_id =
+                    local_account_id.ok_or(ProtocolError::HistoryRewrapLocalAccountRequired)?;
+                if projection.manifest.account_id() != local_account_id {
+                    return Err(ProtocolError::HistoryRewrapAccountMismatch {
+                        expected: local_account_id,
+                        actual: projection.manifest.account_id(),
+                    });
+                }
+                if projection.entry.event().event() != event {
+                    return Err(ProtocolError::HistoryRewrapProjectionEventMismatch);
+                }
+                projection.entry.open_for_manifest(
+                    &projection.manifest,
+                    local_device_id,
+                    encryption,
+                )
+            }
+        }
     }
 
     pub fn event_id(&self) -> EventId {
-        self.event_id
+        match &self.content {
+            LocalTextProjectionContent::Direct(projection) => projection.event_id,
+            LocalTextProjectionContent::HistoryRewrap(projection) => projection.event_id,
+        }
     }
 
     pub fn local_device_id(&self) -> DeviceId {
-        self.local_device_id
+        match &self.content {
+            LocalTextProjectionContent::Direct(projection) => projection.local_device_id,
+            LocalTextProjectionContent::HistoryRewrap(projection) => projection.local_device_id,
+        }
+    }
+
+    pub fn history_rewrap_manifest(&self) -> Option<&HistoryRewrapManifest> {
+        match &self.content {
+            LocalTextProjectionContent::Direct(_) => None,
+            LocalTextProjectionContent::HistoryRewrap(projection) => Some(&projection.manifest),
+        }
     }
 
     fn validate(&self) -> Result<(), ProtocolError> {
-        if self.version != LOCAL_TEXT_PROJECTION_VERSION {
-            return Err(ProtocolError::UnsupportedLocalTextProjectionVersion(
-                self.version,
-            ));
-        }
-        if self.sealed.encapsulated_key.len() != ENCRYPTION_KEY_BYTES {
-            return Err(ProtocolError::InvalidEncapsulatedKeyLength(
-                self.sealed.encapsulated_key.len(),
-            ));
-        }
-        if self.sealed.ciphertext.len() > MAX_CIPHERTEXT_BYTES {
-            return Err(ProtocolError::CiphertextTooLarge(
-                self.sealed.ciphertext.len(),
-            ));
+        match &self.content {
+            LocalTextProjectionContent::Direct(projection) => {
+                if projection.version != DIRECT_LOCAL_TEXT_PROJECTION_VERSION {
+                    return Err(ProtocolError::UnsupportedLocalTextProjectionVersion(
+                        projection.version,
+                    ));
+                }
+                validate_local_projection_sealed_message(&projection.sealed)?;
+            }
+            LocalTextProjectionContent::HistoryRewrap(projection) => {
+                if projection.version != REWRAPPED_LOCAL_TEXT_PROJECTION_VERSION {
+                    return Err(ProtocolError::UnsupportedLocalTextProjectionVersion(
+                        projection.version,
+                    ));
+                }
+                projection.manifest.verify()?;
+                projection.entry.verify_for_manifest(&projection.manifest)?;
+                if projection.entry.event().event().event_id()? != projection.event_id {
+                    return Err(ProtocolError::HistoryRewrapProjectionEventMismatch);
+                }
+                if projection.local_device_id != projection.manifest.recipient_device_id() {
+                    return Err(ProtocolError::HistoryRewrapRecipientMismatch {
+                        expected: projection.manifest.recipient_device_id(),
+                        actual: projection.local_device_id,
+                    });
+                }
+            }
         }
         Ok(())
     }
+}
+
+fn validate_local_projection_sealed_message(sealed: &SealedMessage) -> Result<(), ProtocolError> {
+    if sealed.encapsulated_key.len() != ENCRYPTION_KEY_BYTES {
+        return Err(ProtocolError::InvalidEncapsulatedKeyLength(
+            sealed.encapsulated_key.len(),
+        ));
+    }
+    if sealed.ciphertext.len() > MAX_CIPHERTEXT_BYTES {
+        return Err(ProtocolError::CiphertextTooLarge(sealed.ciphertext.len()));
+    }
+    Ok(())
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -565,7 +744,7 @@ fn local_text_projection_aad(
     local_device_id: DeviceId,
 ) -> Result<Vec<u8>, ProtocolError> {
     let context = LocalTextProjectionContext {
-        version: LOCAL_TEXT_PROJECTION_VERSION,
+        version: DIRECT_LOCAL_TEXT_PROJECTION_VERSION,
         event_id,
         local_device_id,
     };
@@ -652,6 +831,69 @@ pub enum ProtocolError {
 
     #[error("decrypted text is not valid UTF-8")]
     InvalidTextEncoding(#[source] std::string::FromUtf8Error),
+
+    #[error("unsupported history rewrap version: {0}")]
+    UnsupportedHistoryRewrapVersion(u8),
+
+    #[error("history rewrap source and recipient are the same device {0}")]
+    HistoryRewrapSameDevice(DeviceId),
+
+    #[error("history rewrap device list does not contain device {0}")]
+    HistoryRewrapDeviceMissing(DeviceId),
+
+    #[error(
+        "invalid history rewrap range [{start}, {end}) for inventory with {inventory_len} text events"
+    )]
+    InvalidHistoryRewrapRange {
+        start: usize,
+        end: usize,
+        inventory_len: usize,
+    },
+
+    #[error("history rewrap has {0} entries; maximum is {MAX_HISTORY_REWRAP_ENTRIES}")]
+    TooManyHistoryRewrapEntries(usize),
+
+    #[error("history rewrap inventory with {0} entries cannot be represented")]
+    HistoryRewrapInventoryTooLarge(usize),
+
+    #[error("history rewrap entries are not in canonical event-ID order")]
+    NonCanonicalHistoryRewrapEntries,
+
+    #[error("history rewrap event belongs to a different conversation")]
+    HistoryRewrapConversationMismatch,
+
+    #[error("history rewrap contains an event that is not ratchet text")]
+    HistoryRewrapEventIsNotText,
+
+    #[error("history rewrap contains {actual} entries; expected {expected}")]
+    HistoryRewrapEntryCountMismatch { expected: usize, actual: usize },
+
+    #[error("history rewrap entry index is {actual}; expected {expected}")]
+    HistoryRewrapEntryIndexMismatch { expected: u64, actual: u64 },
+
+    #[error("history rewrap entry index {index} is outside [{start}, {end})")]
+    HistoryRewrapEntryIndexOutsideRange { index: u64, start: u64, end: u64 },
+
+    #[error("history rewrap recipient is device {actual}; expected {expected}")]
+    HistoryRewrapRecipientMismatch {
+        expected: DeviceId,
+        actual: DeviceId,
+    },
+
+    #[error("history rewrap entry offset {0} is out of range")]
+    HistoryRewrapEntryOffsetOutOfRange(usize),
+
+    #[error("local account ID is required to open a history-rewrapped projection")]
+    HistoryRewrapLocalAccountRequired,
+
+    #[error("history rewrap belongs to account {actual}; expected local account {expected}")]
+    HistoryRewrapAccountMismatch {
+        expected: AccountId,
+        actual: AccountId,
+    },
+
+    #[error("history rewrap projection does not contain the expected immutable event")]
+    HistoryRewrapProjectionEventMismatch,
 
     #[error("unsupported local text projection version: {0}")]
     UnsupportedLocalTextProjectionVersion(u8),
@@ -827,10 +1069,165 @@ mod tests {
             Err(ProtocolError::LocalProjectionEventMismatch { .. })
         ));
         let mut tampered_projection = local_projection;
-        tampered_projection.sealed.ciphertext[0] ^= 1;
+        match &mut tampered_projection.content {
+            LocalTextProjectionContent::Direct(projection) => {
+                projection.sealed.ciphertext[0] ^= 1;
+            }
+            LocalTextProjectionContent::HistoryRewrap(_) => {
+                return Err(ProtocolError::HistoryRewrapProjectionEventMismatch.into());
+            }
+        }
         assert!(
             tampered_projection
                 .open(&decoded, identity.device_id(), &own_encryption)
+                .is_err()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn authenticated_history_rewrap_preserves_event_and_plaintext_provenance()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let directory = tempdir()?;
+        let conversation_id = ConversationId::from_label("history-rewrap");
+        let source_identity = DeviceIdentity::generate()?;
+        let source_encryption = DeviceEncryptionIdentity::generate()?;
+        let recipient_identity = DeviceIdentity::generate()?;
+        let recipient_encryption = DeviceEncryptionIdentity::generate()?;
+        let account = AccountRootState::create(directory.path().join("account"))?;
+        let source_certificate = account.issue_device_certificate(
+            source_identity.device_id(),
+            source_encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let recipient_certificate = account.issue_device_certificate(
+            recipient_identity.device_id(),
+            recipient_encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let device_list =
+            account.publish_device_list(&[source_certificate, recipient_certificate])?;
+
+        let author_identity = DeviceIdentity::generate()?;
+        let author_encryption = DeviceEncryptionIdentity::generate()?;
+        let author_account = AccountRootState::create(directory.path().join("author-account"))?;
+        let author_certificate = author_account.issue_device_certificate(
+            author_identity.device_id(),
+            author_encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let author_snapshot = author_account.authority_snapshot()?;
+        let first = AuthorizedEvent::new(
+            sign_test_text(
+                &author_identity,
+                conversation_id,
+                0,
+                Vec::new(),
+                "rewrapped-one",
+            )?,
+            author_certificate.clone(),
+            author_snapshot.clone(),
+        )?;
+        let second = AuthorizedEvent::new(
+            sign_test_text(
+                &author_identity,
+                conversation_id,
+                1,
+                Vec::new(),
+                "rewrapped-two",
+            )?,
+            author_certificate,
+            author_snapshot,
+        )?;
+        let mut keyed_inventory = vec![
+            (first.event().event_id()?, first, "rewrapped-one".to_owned()),
+            (
+                second.event().event_id()?,
+                second,
+                "rewrapped-two".to_owned(),
+            ),
+        ];
+        keyed_inventory.sort_by_key(|(event_id, _, _)| *event_id);
+        let inventory = keyed_inventory
+            .into_iter()
+            .map(|(_, event, body)| (event, body))
+            .collect::<Vec<_>>();
+        assert!(matches!(
+            HistoryRewrapBundle::seal(
+                &source_identity,
+                device_list.clone(),
+                recipient_identity.device_id(),
+                conversation_id,
+                &inventory,
+                0,
+                0,
+            ),
+            Err(ProtocolError::InvalidHistoryRewrapRange { .. })
+        ));
+        let bundle = HistoryRewrapBundle::seal(
+            &source_identity,
+            device_list,
+            recipient_identity.device_id(),
+            conversation_id,
+            &inventory,
+            0,
+            inventory.len(),
+        )?;
+        assert!(bundle.is_complete_source_inventory());
+        let encoded = bundle.encode()?;
+        let decoded = HistoryRewrapBundle::decode_and_verify(&encoded)?;
+        assert_eq!(decoded.bundle_id()?, bundle.bundle_id()?);
+        let mut tampered = encoded;
+        if let Some(last) = tampered.last_mut() {
+            *last ^= 1;
+        } else {
+            return Err(ProtocolError::HistoryRewrapEntryCountMismatch {
+                expected: 1,
+                actual: 0,
+            }
+            .into());
+        }
+        assert!(HistoryRewrapBundle::decode_and_verify(&tampered).is_err());
+
+        for (offset, expected) in inventory.iter().enumerate() {
+            let (authorized, body) = decoded.open_entry(
+                offset,
+                recipient_identity.device_id(),
+                &recipient_encryption,
+            )?;
+            assert_eq!(&authorized, &expected.0);
+            assert_eq!(body, expected.1);
+            let projection = LocalTextProjection::from_history_rewrap(
+                authorized.event(),
+                &decoded,
+                offset,
+                recipient_identity.device_id(),
+                account.account_id(),
+                &recipient_encryption,
+            )?;
+            let projection = LocalTextProjection::decode(&projection.encode()?)?;
+            assert!(projection.history_rewrap_manifest().is_some());
+            assert!(matches!(
+                projection.open(
+                    authorized.event(),
+                    recipient_identity.device_id(),
+                    &recipient_encryption,
+                ),
+                Err(ProtocolError::HistoryRewrapLocalAccountRequired)
+            ));
+            assert_eq!(
+                projection.open_for_account(
+                    authorized.event(),
+                    recipient_identity.device_id(),
+                    account.account_id(),
+                    &recipient_encryption,
+                )?,
+                expected.1
+            );
+        }
+        assert!(
+            decoded
+                .open_entry(0, recipient_identity.device_id(), &source_encryption,)
                 .is_err()
         );
         Ok(())

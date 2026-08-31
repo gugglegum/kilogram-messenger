@@ -78,10 +78,14 @@ PreKey/Normal ciphertext с per-message key evolution. Sync projection не
 полный device list, точный directory prekey bundles и отдельный ratchet
 ciphertext каждого устройства peer account в одном Event ID. Offline Bob-2
 может получить через sync тот же event, расшифровать свой slot и получить
-историю, идентичную Bob-1.
-Seed/recovery, history rewrap, защищённое хранение root/local/ratchet keys,
-production prekey discovery/concurrent initiation, sync summaries, membership
-removal и группы ещё не реализованы.
+историю, идентичную Bob-1. M0.7.5 добавил same-account authenticated history
+rewrap для устройства, добавленного после старых events: source подписывает
+canonical inventory/range и HPKE ciphertexts, а local projection v2 сохраняет
+проверяемый provenance. Полный range — это claim source, не глобальный
+checkpoint.
+Seed/root recovery, защищённое хранение root/local/ratchet keys, production
+prekey discovery/concurrent initiation, сетевой multi-source rewrap, sync
+summaries, membership removal и группы ещё не реализованы.
 
 ## Цель продукта
 
@@ -134,10 +138,10 @@ removal и группы ещё не реализованы.
 
 ## План ближайших работ
 
-1. Добавить authenticated history rewrap для нового/восстановленного устройства
-   с явной неполнотой и provenance.
-2. Добавить production prekey pool/discovery и разрешение concurrent pairwise
-   session initiation.
+1. Добавить production prekey pool/discovery, sequence/freshness и разрешение
+   concurrent pairwise session initiation.
+2. Связать history rewrap с authenticated device-to-device transport,
+   user consent/SAS и multi-source completeness reconciliation.
 3. Спроектировать membership removal вместе с ordered security log и MLS epoch;
    отдельно — gossip/witness для first-contact freshness.
 4. Спроектировать seed/recovery authority, protected root storage, root
@@ -170,5 +174,7 @@ removal и группы ещё не реализованы.
   реализованный M0.7.3-контракт signed prekey и persistent pairwise ratchet.
 - [`../docs/RFC-0007-multi-device-ratchet-fanout.md`](../docs/RFC-0007-multi-device-ratchet-fanout.md) —
   реализованный M0.7.4-контракт signed device list и ratchet fan-out.
+- [`../docs/RFC-0008-authenticated-history-rewrap.md`](../docs/RFC-0008-authenticated-history-rewrap.md) —
+  реализованный M0.7.5-контракт same-account history rewrap и provenance.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

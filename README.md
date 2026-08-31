@@ -19,12 +19,14 @@ The authenticated persistent ratchet spike is specified in
 [`docs/RFC-0006-pairwise-double-ratchet.md`](docs/RFC-0006-pairwise-double-ratchet.md).
 The signed account device-list and ratchet fan-out slice is specified in
 [`docs/RFC-0007-multi-device-ratchet-fanout.md`](docs/RFC-0007-multi-device-ratchet-fanout.md).
+The authenticated same-account history recovery slice is specified in
+[`docs/RFC-0008-authenticated-history-rewrap.md`](docs/RFC-0008-authenticated-history-rewrap.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.7.4 signed multi-device ratchet fan-out — complete
+## Current milestone: M0.7.5 authenticated history rewrap — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -34,6 +36,15 @@ event carries a sorted recipient table with a separate persistent pairwise
 ratchet ciphertext for every device in the peer account. A connected device
 decrypts its own slot; another offline device can later receive the same event
 through sync and decrypt its different slot.
+
+A device enrolled after an event was created has no old ratchet slot by design.
+M0.7.5 lets a live device of the same account export an explicit canonical
+text-event range to that new device. The source signs the complete source
+inventory digest, range, original `AuthorizedEvent` values and HPKE ciphertexts
+addressed to the recipient certificate. Import verifies account/device
+authority and conversation membership, then stores unchanged events plus an
+immutable local projection v2 with durable source provenance. Partial bundles
+are explicitly marked incomplete relative to the source inventory.
 
 The sender-readable copy is no longer part of the replicated event. Every
 endpoint writes a separate immutable `STATE_DIR/local-messages/*.local-text`
@@ -52,8 +63,8 @@ the local projection, not for replicated message decryption.
 
 This is still a narrow integration spike. It does not yet provide a production
 prekey pool or discovery service, simultaneous-session resolution, protected
-local key storage, PQXDH, or authenticated history rewrap.
-Losing ratchet state or a sender projection cannot be repaired from old
+local key storage, PQXDH, cross-account recovery, or automatic history-transfer
+transport. Losing every readable projection still cannot be repaired from old
 ciphertext with only the device signing key.
 Do not use it for sensitive communication.
 
@@ -112,8 +123,9 @@ directions until their event logs converge. The inventory is signed by the
 requesting application device and bound to the listener's current Iroh Endpoint
 ID. The listener signs its diff with the certified device key embedded in the
 ticket. A newly enrolled device can authenticate and sync the immutable log
-without first authoring a synthetic event, but it cannot read old ratchet text
-until a future authenticated history-rewrap flow provides local projections.
+without first authoring a synthetic event. Old ratchet text requires a prior
+authenticated history rewrap from a live device because the new device was not
+one of the original ciphertext recipients.
 
 The transport-independent reconciliation state machine lives in
 `kilogram-session`; the Iroh ALPN and typed stream framing live in
@@ -165,10 +177,10 @@ both events from Bob in one sync round, verified them on read, and reconstructed
 the acknowledgement as the single causal frontier.
 
 This remains a development prototype. It now implements persistent pairwise
-Olm sessions and account-wide ciphertext fan-out, but does **not** yet implement
-a production-audited pairwise protocol, protected local key storage, automatic
-device/prekey discovery, seed phrases/recovery, member removal, or production
-groups. Account Root and local
+Olm sessions, account-wide ciphertext fan-out and same-account history rewrap,
+but does **not** yet implement a production-audited pairwise protocol, protected
+local key storage, automatic device/prekey discovery, seed phrases/root
+recovery, member removal, or production groups. Account Root and local
 device secrets remain unencrypted in their explicitly selected directories.
 A snapshot proves state at its signed revision and prevents
 rollback after a newer revision has been observed. The protocol does not yet
@@ -260,7 +272,36 @@ verifies the event and authorization against the installed membership, then
 opens the matching local projection and prints the current causal frontier. Its
 file-order output is deterministic but is not yet a chat timeline. M0.6.1 state
 without authorization sidecars and pre-M0.7.4 single-recipient events are
-intentionally not migrated.
+intentionally not migrated. Direct local projections v1 remain readable;
+history-rewrapped projections use v2 and retain signed source provenance.
+
+To recover old text history on a newly enrolled device of the same account,
+publish a fresh root-signed list containing both devices. On the live source:
+
+```powershell
+cargo run -p kilogram-cli -- history-rewrap-export `
+  --state-dir .tmp/bob-1 `
+  --conversation m0-local-smoke `
+  --device-list-file .tmp/bob-devices.snapshot `
+  --recipient-device <BOB_2_DEVICE_ID> `
+  --range-start 0 `
+  --count 256 `
+  --bundle-file .tmp/bob-2-history.rewrap
+```
+
+After installing the same conversation membership on the new device:
+
+```powershell
+cargo run -p kilogram-cli -- history-rewrap-import `
+  --state-dir .tmp/bob-2 `
+  --conversation m0-local-smoke `
+  --bundle-file .tmp/bob-2-history.rewrap
+```
+
+`source_inventory_complete=true` means that this bundle covers the source
+device's entire signed text inventory. It is not a global completeness proof if
+the source itself has a stale or incomplete replica. Bundles contain no ratchet
+session keys and can be followed by ordinary sync for remaining events.
 
 To synchronize missing events, start `listen` again on one device and run:
 

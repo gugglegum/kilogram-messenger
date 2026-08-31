@@ -6,7 +6,9 @@
 
 > M0.7.4 расширил этот single-recipient контракт до полного account-wide
 > fan-out. Актуальные device-list и event-инварианты описаны в
-> [`RFC-0007`](RFC-0007-multi-device-ratchet-fanout.md).
+> [`RFC-0007`](RFC-0007-multi-device-ratchet-fanout.md). M0.7.5 добавил
+> same-account recovery старых projections в
+> [`RFC-0008`](RFC-0008-authenticated-history-rewrap.md).
 
 ## 1. Цель этапа
 
@@ -171,8 +173,9 @@ LocalTextProjection v1 сохраняются: их смысл не измени
 ## 11. Следующий pairwise этап
 
 M0.7.4 добавил signed device-list fan-out и отдельный ciphertext для prekey
-каждого устройства. Следующий этап — authenticated history rewrap с явной
-маркировкой неполной истории и транзакционная storage-модель.
+каждого устройства. M0.7.5 добавил authenticated history rewrap с явной
+маркировкой неполного source inventory; транзакционная storage-модель остаётся
+следующим отдельным срезом.
 
 Документация использованной реализации:
 <https://matrix-org.github.io/vodozemac/vodozemac/olm/index.html>.

@@ -242,6 +242,16 @@ toolchain `1.98.0` для воспроизводимой разработки.
     `.tmp/m074-smoke-20260901-004422` подтвердил один Alice event для Bob-1 и
     Bob-2, последующий sync Bob-2, одинаковые histories, session counts 2/1/1
     и отсутствие plaintext в 16 ciphertext state files.
+37. M0.7.5 добавил `HistoryRewrapBundle` v1 и local projection v2. Source
+    подписывает canonical text-inventory digest/range и каждую HPKE entry с
+    исходным `AuthorizedEvent`; import проверяет same-account device list,
+    membership, target key и durable provenance. Direct projections v1 остаются
+    совместимыми. `history-rewrap-export/import` поддерживают диапазоны до 256,
+    partial/full marker и идемпотентное перекрытие. Форматирование, строгий
+    Clippy, release workspace build и все 64 tests проходят. Smoke
+    `.tmp/m075-smoke-20260901-020138` восстановил новому Bob device три старых
+    events, отклонил wrong recipient, повторно получил удалённый event через
+    sync и не нашёл plaintext в 16 ciphertext files.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -256,8 +266,9 @@ certificate/revocation завершено в M0.5.2. Completeness на подп�
 conversation membership и author verification. M0.7.3 завершил первый
 persistent pairwise Double Ratchet spike; M0.7.4 расширил его до проверяемого
 account-wide fan-out. First-contact global freshness, production prekey
-discovery, concurrent initiation, history rewrap, membership removal/epochs и
-group E2EE остаются открыты.
+discovery и concurrent initiation остаются открыты. M0.7.5 реализовал
+same-account file-boundary history rewrap; сетевой consent/multi-source recovery,
+membership removal/epochs и group E2EE остаются открыты.
 
 ## Решения, которые ещё нельзя фиксировать
 

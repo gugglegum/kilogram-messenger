@@ -19,10 +19,8 @@ kilogram-store = { path = "../../crates/kilogram-store" }
 kilogram-transport-iroh = { path = "../../crates/kilogram-transport-iroh" }
 serde.workspace = true
 serde_json.workspace = true
-tokio.workspace = true
-
-[dev-dependencies]
 tempfile.workspace = true
+tokio.workspace = true
 
 [lints]
 workspace = true
