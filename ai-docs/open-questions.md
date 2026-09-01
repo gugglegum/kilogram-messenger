@@ -29,10 +29,10 @@ M0.8.1 добавил обратимый encrypted shadow snapshot всего de
 а M0.8.2 — authenticated intent, versioned generation и recoverable mirror
 после каждой live CLI-команды. M0.8.3 добавил typed exact shadow reads и
 атомарный encrypted delta: DB writes стали `O(changed + deleted)`, хотя полный
-scan/decrypt остаётся `O(state)`. M0.8.4 перевёл только read-only history на
-DB-primary event/projection snapshot без silent fallback. Все writes и
-остальные reads остаются legacy-primary, а master key лежит рядом
-development-файлом.
+scan/decrypt остаётся `O(state)`. M0.8.4 перевёл read-only history, а M0.8.5 —
+manual/network history-rewrap source inventory на DB-primary
+event/projection snapshot без silent fallback. Все writes и mixed read/write
+sync остаются legacy-primary, а master key лежит рядом development-файлом.
 Следующие вопросы относятся к production recovery, rotation, asynchronous
 sessions, distribution, removal и key epochs и не решены этим прототипом.
 
@@ -49,7 +49,7 @@ sessions, distribution, removal и key epochs и не решены этим пр
 - Какой TTL применять к retained losing session, как выполнять authenticated
   session reset после потери state и нужен ли production-протокол сложнее
   проверенного M0.7.6 lexicographic-min разрешения двух crossed sessions?
-- Как после read-only canary M0.8.4 построить command-local overlay или direct
+- Как после immutable read cutover M0.8.4–M0.8.5 построить command-local overlay или direct
   transactional DB writes для mixed read/write sync, чтобы snapshot начала
   команды видел новые events/projections и не ослаблял crash recovery? Как
   долго сохранять обязательный legacy shadow, и какие fault/migration критерии

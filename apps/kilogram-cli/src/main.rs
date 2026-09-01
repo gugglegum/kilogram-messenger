@@ -1420,6 +1420,11 @@ async fn listen(options: ListenOptions) -> Result<()> {
         &listener_certificate,
         allowed_requester_account_id,
     )?;
+    let history_rewrap_reads = history_rewrap_approval
+        .as_ref()
+        .map(|_| open_immutable_read_repositories(&state_dir))
+        .transpose()
+        .context("capture immutable vault-primary source history before listener state changes")?;
     let authority_snapshot_store = device_state
         .install_own_authority_snapshot(listener_device_list.authority_snapshot())
         .context("install authority snapshot embedded in listener device list")?;
@@ -1499,6 +1504,10 @@ async fn listen(options: ListenOptions) -> Result<()> {
     );
     println!("authority_store={authority_snapshot_store:?}");
     if let Some(approval) = &history_rewrap_approval {
+        let reads = history_rewrap_reads
+            .as_ref()
+            .context("history-rewrap approval is missing its immutable read snapshot")?;
+        print_immutable_read_diagnostics("history_rewrap", reads);
         println!(
             "history_rewrap_source_device_id={}",
             listener_certificate.device_id()
@@ -1582,8 +1591,7 @@ async fn listen(options: ListenOptions) -> Result<()> {
         ClientRequest::HistoryRewrap(request) => {
             handle_history_rewrap_request(
                 &device_state,
-                &event_store,
-                &local_message_store,
+                history_rewrap_reads.as_ref(),
                 &mut send,
                 request,
                 session_binding,
@@ -1666,8 +1674,7 @@ fn prepare_history_rewrap_approval(
 #[allow(clippy::too_many_arguments)]
 async fn handle_history_rewrap_request(
     device_state: &DeviceState,
-    event_store: &EventStore,
-    local_message_store: &LocalMessageStore,
+    read_repositories: Option<&ImmutableReadRepositories>,
     send: &mut SendStream,
     request: SignedHistoryRewrapRequest,
     expected_session: SyncSessionBinding,
@@ -1723,6 +1730,8 @@ async fn handle_history_rewrap_request(
         println!("status=rejected");
         return Ok(());
     }
+    let read_repositories = read_repositories
+        .context("approved network history rewrap is missing its immutable read snapshot")?;
 
     let bundle = build_history_rewrap_bundle(
         device_state,
@@ -1730,8 +1739,8 @@ async fn handle_history_rewrap_request(
         device_list.clone(),
         approval.recipient_device_id,
         approval.conversation_id,
-        event_store,
-        local_message_store,
+        read_repositories.events.as_ref(),
+        read_repositories.local_messages.as_ref(),
         requested_start.context("history-rewrap request range cannot be represented")?,
         requested_count.context("history-rewrap request count cannot be represented")?,
     )?;
@@ -3149,7 +3158,7 @@ fn write_new_authority_file(path: &Path, bytes: &[u8]) -> Result<()> {
     Ok(())
 }
 
-struct HistoryReadRepositories {
+struct ImmutableReadRepositories {
     events: Box<dyn EventReadRepository>,
     local_messages: Box<dyn LocalMessageReadRepository>,
     primary: &'static str,
@@ -3159,11 +3168,11 @@ struct HistoryReadRepositories {
     local_projection_record_count: u64,
 }
 
-fn open_history_read_repositories(state_dir: &Path) -> Result<HistoryReadRepositories> {
+fn open_immutable_read_repositories(state_dir: &Path) -> Result<ImmutableReadRepositories> {
     if !EncryptedStateVault::is_initialized(state_dir)
         .context("inspect encrypted state vault before history read")?
     {
-        return Ok(HistoryReadRepositories {
+        return Ok(ImmutableReadRepositories {
             events: Box::new(open_event_store(state_dir)?),
             local_messages: Box::new(open_local_message_store(state_dir)?),
             primary: "legacy-filesystem",
@@ -3213,7 +3222,7 @@ fn open_history_read_repositories(state_dir: &Path) -> Result<HistoryReadReposit
         .context("construct authenticated event read snapshot from vault")?;
     let local_messages = ImmutableLocalMessageReadSnapshot::from_records(local_projection_records)
         .context("construct authenticated local-projection read snapshot from vault")?;
-    Ok(HistoryReadRepositories {
+    Ok(ImmutableReadRepositories {
         events: Box::new(events),
         local_messages: Box::new(local_messages),
         primary: "encrypted-vault",
@@ -3222,6 +3231,22 @@ fn open_history_read_repositories(state_dir: &Path) -> Result<HistoryReadReposit
         event_record_count,
         local_projection_record_count,
     })
+}
+
+fn print_immutable_read_diagnostics(prefix: &str, repositories: &ImmutableReadRepositories) {
+    println!("{prefix}_primary_read={}", repositories.primary);
+    println!("{prefix}_shadow_read={}", repositories.shadow);
+    if let Some(generation) = repositories.mirror_generation {
+        println!("{prefix}_vault_generation={generation}");
+        println!(
+            "{prefix}_vault_event_records={}",
+            repositories.event_record_count
+        );
+        println!(
+            "{prefix}_vault_local_projection_records={}",
+            repositories.local_projection_record_count
+        );
+    }
 }
 
 fn strip_vault_record_prefix(relative_path: &str, prefix: &str) -> Result<String> {
@@ -3240,7 +3265,7 @@ fn show_history(state_dir: PathBuf, conversation: String) -> Result<()> {
     let certificate = device_state
         .load_certificate()
         .context("load device certificate before reading history")?;
-    let read_repositories = open_history_read_repositories(&state_dir)?;
+    let read_repositories = open_immutable_read_repositories(&state_dir)?;
     let conversation_id = ConversationId::from_label(&conversation);
     let membership = device_state
         .load_conversation_membership(conversation_id.scope_id())
@@ -3257,19 +3282,7 @@ fn show_history(state_dir: PathBuf, conversation: String) -> Result<()> {
         .frontier(conversation_id)
         .context("calculate local conversation frontier")?;
 
-    println!("history_primary_read={}", read_repositories.primary);
-    println!("history_shadow_read={}", read_repositories.shadow);
-    if let Some(generation) = read_repositories.mirror_generation {
-        println!("history_vault_generation={generation}");
-        println!(
-            "history_vault_event_records={}",
-            read_repositories.event_record_count
-        );
-        println!(
-            "history_vault_local_projection_records={}",
-            read_repositories.local_projection_record_count
-        );
-    }
+    print_immutable_read_diagnostics("history", &read_repositories);
     println!("conversation_id={conversation_id}");
     println!("membership_revision={}", membership.revision());
     println!("event_count={}", events.len());
@@ -3794,6 +3807,8 @@ fn export_history_rewrap(
     );
     let device_state = DeviceState::load_or_create(&state_dir)
         .with_context(|| format!("load source device state from {}", state_dir.display()))?;
+    let read_repositories = open_immutable_read_repositories(&state_dir)
+        .context("capture immutable vault-primary source history before export state changes")?;
     let source_certificate = device_state
         .load_certificate()
         .context("load source device certificate before history rewrap")?;
@@ -3816,58 +3831,18 @@ fn export_history_rewrap(
     let snapshot_store = device_state
         .install_own_authority_snapshot(device_list.authority_snapshot())
         .context("install authority snapshot from history-rewrap device list")?;
-    let conversation_id = ConversationId::from_label(&conversation);
-    let membership = device_state
-        .load_conversation_membership(conversation_id.scope_id())
-        .context("load trusted conversation membership before history rewrap")?;
-    membership
-        .require_member(source_certificate.account_id())
-        .context("source account is not a member of this conversation")?;
-    let event_store = open_event_store(&state_dir)?;
-    let local_message_store = open_local_message_store(&state_dir)?;
-    let stored_events = event_store
-        .load_authorized_conversation(conversation_id, &membership)
-        .context("load and verify source history before rewrap")?;
-    let mut inventory = Vec::new();
-    for stored in stored_events {
-        if !matches!(
-            stored.event.event().payload(),
-            EventPayload::RatchetText { .. }
-        ) {
-            continue;
-        }
-        let projection = local_message_store
-            .get(stored.id)
-            .with_context(|| format!("load readable source projection for event {}", stored.id))?;
-        let body = projection
-            .open_for_account(
-                stored.event.event(),
-                source_certificate.device_id(),
-                source_certificate.account_id(),
-                device_state.encryption(),
-            )
-            .with_context(|| format!("open source projection for event {}", stored.id))?;
-        inventory.push((stored.event, body));
-    }
-    ensure!(
-        range_start < inventory.len(),
-        "--range-start {range_start} is outside text inventory with {} events",
-        inventory.len()
-    );
-    let requested_end = range_start
-        .checked_add(count)
-        .context("history-rewrap range overflow")?;
-    let range_end = requested_end.min(inventory.len());
-    let bundle = HistoryRewrapBundle::seal(
-        device_state.identity(),
+    let bundle = build_history_rewrap_bundle(
+        &device_state,
+        &source_certificate,
         device_list,
         recipient_device_id,
-        conversation_id,
-        &inventory,
+        ConversationId::from_label(&conversation),
+        read_repositories.events.as_ref(),
+        read_repositories.local_messages.as_ref(),
         range_start,
-        range_end,
+        count,
     )
-    .context("seal authenticated history-rewrap bundle")?;
+    .context("build authenticated history-rewrap bundle from immutable source snapshot")?;
     let encoded = bundle.encode()?;
     write_new_authority_file(&bundle_file, &encoded)
         .with_context(|| format!("write history rewrap to {}", bundle_file.display()))?;
@@ -3894,6 +3869,7 @@ fn export_history_rewrap(
         bundle.is_complete_source_inventory()
     );
     println!("authority_snapshot_store={snapshot_store:?}");
+    print_immutable_read_diagnostics("history_rewrap", &read_repositories);
     println!("bundle_file={}", bundle_file.display());
     println!("status=history-rewrap-exported");
     Ok(())
@@ -3906,8 +3882,8 @@ fn build_history_rewrap_bundle(
     device_list: AccountDeviceListSnapshot,
     recipient_device_id: DeviceId,
     conversation_id: ConversationId,
-    event_store: &EventStore,
-    local_message_store: &LocalMessageStore,
+    event_reads: &dyn EventReadRepository,
+    local_message_reads: &dyn LocalMessageReadRepository,
     range_start: usize,
     count: usize,
 ) -> Result<HistoryRewrapBundle> {
@@ -3933,7 +3909,7 @@ fn build_history_rewrap_bundle(
     membership
         .require_member(source_certificate.account_id())
         .context("source account is not a member of this conversation")?;
-    let stored_events = event_store
+    let stored_events = event_reads
         .load_authorized_conversation(conversation_id, &membership)
         .context("load and verify source history before rewrap")?;
     let mut inventory = Vec::new();
@@ -3944,7 +3920,7 @@ fn build_history_rewrap_bundle(
         ) {
             continue;
         }
-        let projection = local_message_store
+        let projection = local_message_reads
             .get(stored.id)
             .with_context(|| format!("load readable source projection for event {}", stored.id))?;
         let body = projection
@@ -5182,7 +5158,7 @@ mod tests {
         drop(vault);
         let guard = VaultDualWriteGuard::prepare(&state_dir)?
             .context("expected vault guard for immutable history canary")?;
-        let primary = open_history_read_repositories(&state_dir)?;
+        let primary = open_immutable_read_repositories(&state_dir)?;
         assert_eq!(primary.primary, "encrypted-vault");
         assert_eq!(primary.shadow, "legacy-verified");
         assert_eq!(primary.event_record_count, 6);
@@ -5199,6 +5175,51 @@ mod tests {
                 local_messages.get(stored.id)?
             );
         }
+        let immutable_inventory = primary
+            .events
+            .authorized_inventory(conversation_id, &membership)?;
+        assert_eq!(immutable_inventory.len(), 3);
+        assert_eq!(
+            primary.events.authorized_events_by_id(
+                conversation_id,
+                &immutable_inventory,
+                &membership,
+            )?,
+            events
+                .iter()
+                .map(|stored| stored.event.clone())
+                .collect::<Vec<_>>()
+        );
+
+        let source_certificate = seeded_device.load_certificate()?;
+        let recovery_identity = DeviceIdentity::generate()?;
+        let recovery_encryption = DeviceEncryptionIdentity::generate()?;
+        let recovery_certificate = account.issue_device_certificate(
+            recovery_identity.device_id(),
+            recovery_encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let rewrap_device_list = account
+            .publish_device_list(&[source_certificate.clone(), recovery_certificate.clone()])?;
+        let events_backup = directory.path().join("events-vault-primary-test");
+        let projections_backup = directory.path().join("projections-vault-primary-test");
+        fs::rename(state_dir.join("events"), &events_backup)?;
+        fs::rename(state_dir.join("local-messages"), &projections_backup)?;
+        let rewrap_bundle = build_history_rewrap_bundle(
+            &seeded_device,
+            &source_certificate,
+            rewrap_device_list,
+            recovery_certificate.device_id(),
+            conversation_id,
+            primary.events.as_ref(),
+            primary.local_messages.as_ref(),
+            0,
+            3,
+        )?;
+        assert_eq!(rewrap_bundle.entries().len(), 3);
+        assert!(rewrap_bundle.is_complete_source_inventory());
+        fs::rename(&events_backup, state_dir.join("events"))?;
+        fs::rename(&projections_backup, state_dir.join("local-messages"))?;
         guard.finish()?;
 
         let peer_events = EventStore::open(directory.path().join("peer-events"))?;

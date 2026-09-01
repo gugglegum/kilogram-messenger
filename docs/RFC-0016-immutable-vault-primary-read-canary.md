@@ -156,12 +156,15 @@ mirror как `0/0/23`. Post-canary vault verify сохранил generation 2. 
 
 ## 7. Следующий этап
 
-M0.8.5 должен расширять DB-primary только там, где command-local consistency
-можно формально сохранить. Безопасный следующий срез — read-only source-history
-paths (создание history-rewrap bundle) и общий immutable snapshot API для sync
-planning. Для mixed read/write sync потребуется явный overlay новых
-event/projection records либо direct transactional DB write; нельзя просто
-переиспользовать snapshot начала команды и потерять записи, созданные позже.
+M0.8.5 реализован в
+[`RFC-0017`](RFC-0017-vault-primary-history-rewrap.md): оба read-only
+source-history пути history rewrap используют общий authenticated owned
+snapshot и не открывают legacy stores после cutover. Read trait подготовлен к
+sync inventory/events-by-ID, но mixed read/write sync остаётся legacy-primary.
+
+M0.8.6 должен добавить явный overlay новых event/projection records либо direct
+transactional DB write; нельзя просто переиспользовать snapshot начала команды
+и потерять записи, созданные позже.
 
 Mutable ratchet/trust/sequence cutover, protected key provider, migrations,
 backup и rollback witness остаются отдельными security stages.

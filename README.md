@@ -37,12 +37,14 @@ The typed incremental encrypted mirror is specified in
 [`docs/RFC-0015-typed-incremental-shadow-repositories.md`](docs/RFC-0015-typed-incremental-shadow-repositories.md).
 The first immutable vault primary-read canary is specified in
 [`docs/RFC-0016-immutable-vault-primary-read-canary.md`](docs/RFC-0016-immutable-vault-primary-read-canary.md).
+The vault-primary history-rewrap source cutover is specified in
+[`docs/RFC-0017-vault-primary-history-rewrap.md`](docs/RFC-0017-vault-primary-history-rewrap.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.8.4 immutable vault primary-read canary — complete
+## Current milestone: M0.8.5 vault-primary history rewrap — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -147,10 +149,21 @@ authorization, writer sequencing, and projection binding. A drifted or invalid
 initialized vault fails closed; it never silently downgrades history to the
 filesystem. States that have never been migrated remain legacy-compatible.
 
+M0.8.5 applies the same fail-closed immutable read-set to both history-rewrap
+source paths. Manual export captures authenticated vault events/projections
+before local authority updates; an explicitly approved network listener
+captures the same owned snapshot before transport-side authority, prekey, and
+request processing. Bundle construction now depends only on read traits, and
+listener diagnostics expose the physical primary source. The event read trait
+also supports authorized inventory and events-by-ID for the next sync stage.
+Mixed read/write sync remains legacy-primary until a command-local overlay can
+make newly committed events and projections visible without weakening crash
+recovery.
+
 This is still a narrow integration spike. The vault is not yet the primary
-repository for writes or network workflows: only read-only history uses DB
-bytes, while live writes continue through legacy files before an `O(state)`
-shadow comparison. The
+repository for writes or synchronization: read-only history and history-rewrap
+source inventory use DB bytes, while live writes continue through legacy files
+before an `O(state)` shadow comparison. The
 development master key remains beside the database. It does not yet provide a
 global DHT or gossip freshness proof, atomic remote prekey reservation,
 protected local key storage, full DB-primary repository cutover, PQXDH, or

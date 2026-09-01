@@ -57,7 +57,7 @@ pub struct LocalMessageStore {
     root: PathBuf,
 }
 
-pub trait EventReadRepository {
+pub trait EventReadRepository: Send + Sync {
     fn load_authorized_conversation(
         &self,
         conversation_id: ConversationId,
@@ -65,9 +65,46 @@ pub trait EventReadRepository {
     ) -> Result<Vec<StoredAuthorizedEvent>, StoreError>;
 
     fn frontier(&self, conversation_id: ConversationId) -> Result<Vec<EventId>, StoreError>;
+
+    fn authorized_inventory(
+        &self,
+        conversation_id: ConversationId,
+        membership: &ConversationMembershipSnapshot,
+    ) -> Result<Vec<EventId>, StoreError> {
+        Ok(self
+            .load_authorized_conversation(conversation_id, membership)?
+            .into_iter()
+            .map(|stored| stored.id)
+            .collect())
+    }
+
+    fn authorized_events_by_id(
+        &self,
+        conversation_id: ConversationId,
+        requested_event_ids: &[EventId],
+        membership: &ConversationMembershipSnapshot,
+    ) -> Result<Vec<AuthorizedEvent>, StoreError> {
+        let available: HashMap<_, _> = self
+            .load_authorized_conversation(conversation_id, membership)?
+            .into_iter()
+            .map(|stored| (stored.id, stored.event))
+            .collect();
+        requested_event_ids
+            .iter()
+            .map(|event_id| {
+                available
+                    .get(event_id)
+                    .cloned()
+                    .ok_or(StoreError::RequestedEventMissing {
+                        conversation_id,
+                        event_id: *event_id,
+                    })
+            })
+            .collect()
+    }
 }
 
-pub trait LocalMessageReadRepository {
+pub trait LocalMessageReadRepository: Send + Sync {
     fn get(&self, event_id: EventId) -> Result<LocalTextProjection, StoreError>;
 }
 
@@ -510,6 +547,23 @@ impl EventReadRepository for EventStore {
 
     fn frontier(&self, conversation_id: ConversationId) -> Result<Vec<EventId>, StoreError> {
         EventStore::frontier(self, conversation_id)
+    }
+
+    fn authorized_inventory(
+        &self,
+        conversation_id: ConversationId,
+        membership: &ConversationMembershipSnapshot,
+    ) -> Result<Vec<EventId>, StoreError> {
+        EventStore::authorized_inventory(self, conversation_id, membership)
+    }
+
+    fn authorized_events_by_id(
+        &self,
+        conversation_id: ConversationId,
+        requested_event_ids: &[EventId],
+        membership: &ConversationMembershipSnapshot,
+    ) -> Result<Vec<AuthorizedEvent>, StoreError> {
+        EventStore::authorized_events_by_id(self, conversation_id, requested_event_ids, membership)
     }
 }
 

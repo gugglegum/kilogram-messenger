@@ -339,6 +339,16 @@ toolchain `1.98.0` для воспроизводимой разработки.
     `.tmp/m084-smoke-20260901-120000` прочитал generation 2, 6 event records,
     3 projections и 3 history messages с mirror delta `0/0/23`; отдельный
     projection drift дал exit 1 typed mismatch и `silent_fallback=false`.
+46. M0.8.5 распространил immutable vault-primary read-set на manual
+    `history-rewrap-export` и source-side network rewrap. Listener захватывает
+    snapshot только при explicit approval и до authority/prekey/request work;
+    bundle builder использует `EventReadRepository`/
+    `LocalMessageReadRepository`, а event trait получил authorized inventory и
+    events-by-ID для будущего sync overlay. Все 85 tests, strict Clippy и
+    release build проходят. Release smoke
+    `.tmp/m085-smoke-20260901-153149` создал manual и network bundle по 3
+    events из vault generation 1 (6 event records, 3 projections), сохранил
+    exact post-transfer generation 1; projection drift дал exit 1 без fallback.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -360,9 +370,10 @@ multi-source claim reconciliation, а M0.7.9 — signed checkpoint pagination и
 safe retry. Source discovery/background coordinator, membership removal/epochs
 и group E2EE остаются открыты. M0.7.7 закрывает M0 crash consistency для device
 filesystem state; M0.8.1 доказывает атомарную encrypted shadow migration в
-`redb`, M0.8.2 — recoverable versioned dual-write всех live CLI commands, а
-M0.8.3 — typed incremental encrypted delta и exact shadow reads, а M0.8.4 —
-первый DB-primary canary для read-only history. Остальные repository cutover,
+`redb`, M0.8.2 — recoverable versioned dual-write всех live CLI commands,
+M0.8.3 — typed incremental encrypted delta и exact shadow reads, M0.8.4 —
+первый DB-primary canary для read-only history, а M0.8.5 — тот же cutover для
+manual/network history-rewrap source reads. Sync overlay и остальные repository cutover,
 bounded backups и защищённый key provider ещё не реализованы.
 
 ## Решения, которые ещё нельзя фиксировать

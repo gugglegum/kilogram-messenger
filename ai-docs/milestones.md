@@ -1090,11 +1090,46 @@ Writes, sync, rewrap, ratchet/trust/sequence остаются legacy-primary; п
 shadow scan всё ещё `O(state)`. Полный контракт —
 [`../docs/RFC-0016-immutable-vault-primary-read-canary.md`](../docs/RFC-0016-immutable-vault-primary-read-canary.md).
 
+### M0.8.5 — vault-primary history rewrap sources: выполнено
+
+Реализовано:
+
+- один `ImmutableReadRepositories` выбирает legacy compatibility либо
+  authenticated vault snapshot и публикует общие diagnostics;
+- manual `history-rewrap-export` захватывает snapshot до authority update и
+  строит inventory/bundle только через read traits;
+- rewrap-enabled listener захватывает owned snapshot до authority/prekey,
+  transport awaits, requester pinning и application request;
+- listener без approval сохраняет прежний explicit `NotApproved`, не открывая
+  canary;
+- `build_history_rewrap_bundle` больше не зависит от concrete filesystem
+  stores;
+- `EventReadRepository: Send + Sync` получил authorized inventory и
+  events-by-ID primitives, нужные будущему sync overlay;
+- initialized vault при auth/shadow/layout/decode ошибке блокирует manual и
+  network source без silent fallback.
+
+Проверки:
+
+- CLI fixture получает authorized inventory/events-by-ID из vault, временно
+  убирает legacy event/projection directories и всё равно строит полный bundle
+  из 3 entries;
+- все 85 workspace tests, rustfmt, strict Clippy и release build проходят;
+- release smoke `.tmp/m085-smoke-20260901-153149` создал manual bundle и
+  передал network bundle из 3 events через authenticated direct Iroh session;
+  оба source сообщили generation 1, 6 event/authorization records и 3
+  projections, а post-transfer verify сохранил generation 1;
+- изменённая legacy projection дала exit 1 и `silent_fallback=false`.
+
+Граница среза: `history` и оба rewrap source-history paths теперь DB-primary,
+но delivery/sync/import и все writes остаются legacy-primary. Snapshot начала
+команды нельзя напрямую использовать в mixed sync. Полный контракт —
+[`../docs/RFC-0017-vault-primary-history-rewrap.md`](../docs/RFC-0017-vault-primary-history-rewrap.md).
+
 ### Следующий этап
 
-1. M0.8.5 расширить DB-primary на read-only source-history/rewrap paths и
-   спроектировать command-local overlay/direct DB writes до cutover mixed
-   read/write sync.
+1. M0.8.6 реализовать command-local event/projection overlay и доказать его на
+   mixed read/write sync planning, сохранив M0.7.7 rollback и M0.8.2 intent.
 2. Защитить vault master key через OS keystore/passphrase/seed wrapping и
    спроектировать rollback witness, backup и versioned migrations.
 3. Source discovery/background coordinator и QR/device-link UX строить поверх
