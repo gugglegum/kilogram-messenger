@@ -29,8 +29,9 @@ M0.9.1 переносит до 64 смежных страниц по одном�
 сохраняя atomic checkpoint каждой страницы и explicit source/SAS consent.
 M0.9.2 добавляет compact expiring source-signed link, offline verification и
 exact recipient/conversation/SAS preflight. M0.9.3 добавляет bounded QR image
-render/decode; live camera/clipboard, GUI ceremony и descriptor discovery ещё
-не реализованы.
+render/decode; M0.9.4 добавляет default-off bounded LAN descriptor discovery без
+connection/consent. Live camera/clipboard, GUI ceremony и wide-area
+privacy-preserving discovery ещё не реализованы.
 M0.8.1 добавил обратимый encrypted shadow snapshot всего device state в `redb`,
 а M0.8.2 — authenticated intent, versioned generation и recoverable mirror
 после каждой live CLI-команды. M0.8.3 добавил typed exact shadow reads и
@@ -84,8 +85,9 @@ sessions, distribution, removal и key epochs и не решены этим пр
   наблюдения новой generation, но не доказывает её глобальную свежесть при
   первом контакте.
 - M0.9.2 определяет compact signed recipient-specific descriptor, offline
-  inspect и explicit SAS-gated accept; M0.9.3 реализует PNG/JPEG image round-trip.
-  Как публиковать/обнаруживать свежие descriptors, подключать live camera/
+  inspect и explicit SAS-gated accept; M0.9.3 реализует PNG/JPEG image round-trip,
+  M0.9.4 — opt-in bounded LAN multicast publication и verified no-connect scan.
+  Как сделать wide-area privacy-preserving lookup/gossip, подключать live camera/
   clipboard/GUI, регистрировать deep link и как
   power/network-aware scheduler возобновляет bounded sessions; как отдельно
   разрешать recovery от устройства собеседника без неявного расширения

@@ -1643,14 +1643,54 @@ confirmation screen и OS deep-link handler отсутствуют. Publication/
 и background scheduler также остаются следующими задачами. Полный контракт —
 [`../docs/RFC-0030-bounded-history-recovery-qr-ceremony.md`](../docs/RFC-0030-bounded-history-recovery-qr-ceremony.md).
 
+### M0.9.4 — authenticated LAN history recovery discovery: выполнено
+
+Реализовано:
+
+- source listener только по `--history-recovery-discovery-publish` рассылает
+  точную signed recipient-specific URI на `239.255.75.71:45371` с TTL 1 и
+  дополнительным same-host loopback;
+- публикация повторяется каждые 750 ms только пока живёт consent-gated listener;
+- `history-recovery-link-discover` слушает `1..=30` s, обрабатывает до 512
+  датаграмм и собирает до 16 unique candidates;
+- каждый candidate проходит Root/source signature, expiry, exact local
+  recipient/conversation/membership, optional source и local authority
+  anti-rollback/equivocation проверки;
+- scan не открывает Iroh connection и явно сообщает
+  `history_recovery_discovery_user_consent=not-granted`;
+- один однозначный candidate можно сохранить no-clobber, а ноль, несколько или
+  достигнутый cap не приводят к автоматическому выбору;
+- recovery начинается только отдельным прежним `history-recovery-link-accept`
+  с ручным SAS, после чего source повторно проверяет device и local consent;
+- wire, ticket v9, URI v1, QR contract и checkpoint format не изменились.
+
+Проверки:
+
+- новый unit test покрывает opt-in publication, bounded receive и deduplication;
+- direct process smoke `.tmp/m094-smoke-20260902-015219` подтвердил multicast
+  join, три датаграммы и два дедуплицированных повтора;
+- wrong device получил ноль candidates и не создал connection;
+- exact recipient обнаружил один candidate без connection, затем отдельным
+  accept перенёс две atomic pages по одному authenticated connection;
+- получены два checkpoint и identical source/recipient history;
+- все 110 workspace tests, rustfmt, strict Clippy и release build проходят.
+
+Граница среза: LAN descriptor виден локальным наблюдателям и функция default-off.
+Wide-area privacy-preserving discovery, multi-client socket semantics, GUI
+picker, background scheduler и network/power policy не реализованы. Полный
+контракт —
+[`../docs/RFC-0031-authenticated-lan-recovery-discovery.md`](../docs/RFC-0031-authenticated-lan-recovery-discovery.md).
+
 ### Следующий этап
 
-1. Добавить authenticated local discovery/publication свежих M0.9.2
-   descriptors; найденный peer остаётся недоверенным до exact-device/SAS accept.
-2. Добавить live camera/clipboard и GUI confirmation позже в platform clients;
+1. Добавить power/network-aware background retry coordinator поверх recovery
+   plan; discovery не должен означать automatic consent.
+2. Спроектировать privacy-preserving wide-area publication/gossip/mailbox и
+   first-contact freshness; M0.9.4 закрывает только явный LAN opt-in.
+3. Добавить live camera/clipboard и GUI confirmation позже в platform clients;
    CLI image-file ceremony уже закрыта M0.9.3.
-3. Membership removal и group governance проектировать вместе с ordered
+4. Membership removal и group governance проектировать вместе с ordered
    security events и MLS epoch.
-4. Production macOS/Linux local provider, согласованный monotonic witness,
+5. Production macOS/Linux local provider, согласованный monotonic witness,
    master-key rotation, seed/root recovery и compact Merkle/range summary
    остаются отдельными направлениями.

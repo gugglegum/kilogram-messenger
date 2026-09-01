@@ -145,6 +145,7 @@ CLI использует `qrcode 0.14.1` для генерации, `rqrr 0.10.1
 
 - live camera/clipboard scanner и GUI confirmation screen;
 - OS registration для `kilogram://` deep links;
-- authenticated publication/discovery свежих source descriptors;
+- authenticated LAN publication/discovery свежих source descriptors реализован
+  в M0.9.4; wide-area privacy-preserving discovery остаётся открытым;
 - background scheduler с retry, power и metered-network policy;
 - multi-source selection и recovery claim UI.

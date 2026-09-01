@@ -65,12 +65,14 @@ The compact signed recovery device link is specified in
 [`docs/RFC-0029-signed-history-recovery-device-link.md`](docs/RFC-0029-signed-history-recovery-device-link.md).
 The bounded PNG/JPEG QR ceremony is specified in
 [`docs/RFC-0030-bounded-history-recovery-qr-ceremony.md`](docs/RFC-0030-bounded-history-recovery-qr-ceremony.md).
+The opt-in authenticated LAN recovery discovery slice is specified in
+[`docs/RFC-0031-authenticated-lan-recovery-discovery.md`](docs/RFC-0031-authenticated-lan-recovery-discovery.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.3 bounded history recovery QR ceremony — complete
+## Current milestone: M0.9.4 authenticated LAN recovery discovery — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -157,7 +159,8 @@ SAS confirmation before opening a connection. The link is public bootstrap
 metadata, not a bearer capability; the listener still authenticates the device
 and independently enforces its local consent. The implemented payload is
 QR-ready; M0.9.3 adds the file-based image round-trip, while live capture and
-automatic discovery remain future client work.
+wide-area automatic discovery remain future client work. M0.9.4 now covers an
+explicit local-network discovery mode.
 
 M0.9.3 implements that QR image boundary. A listener may directly publish a
 no-clobber PNG, and a separate command can render an existing verified link.
@@ -166,6 +169,16 @@ JPEG before running the same signed-link verifier. File size, dimensions,
 decoded payload and accepted formats are bounded; multiple QR codes are
 rejected as ambiguous. This is file-based CLI scanning, not yet a live camera,
 clipboard, GUI or OS deep-link integration.
+
+M0.9.4 adds explicit opt-in discovery of the same signed, expiring,
+recipient-specific descriptors on an IPv4 local-network multicast group. The
+recipient verifies the source/root signatures, exact local device and
+conversation, expiry, membership and local authority freshness while making no
+Iroh connection. A unique candidate may be saved as a no-clobber link file, but
+discovery never grants consent: the user must still compare the displayed SAS
+and invoke the separate accept command. LAN observers can see the public
+descriptor metadata, so publication remains disabled by default and is not a
+global, anonymous, or privacy-preserving discovery service.
 
 M0.8.1 adds a reversible encrypted shadow snapshot of the entire device state.
 `state-vault-migrate` publishes encrypted records and a keyed manifest in one

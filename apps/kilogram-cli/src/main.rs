@@ -61,9 +61,15 @@ use tempfile::NamedTempFile;
 use tokio::time::timeout;
 use zeroize::Zeroizing;
 
+mod recovery_discovery;
 mod recovery_link;
 mod recovery_qr;
 
+use recovery_discovery::{
+    DEFAULT_DISCOVERY_CANDIDATES, DEFAULT_DISCOVERY_WAIT_SECONDS, MAX_DISCOVERY_CANDIDATES,
+    MAX_DISCOVERY_WAIT_SECONDS, discover_recovery_links, loopback_target, multicast_target,
+    publication_interval, start_recovery_discovery_publisher,
+};
 use recovery_link::{
     DEFAULT_HISTORY_RECOVERY_LINK_VALIDITY_SECONDS, HistoryRecoveryLinkOptions,
     MAX_HISTORY_RECOVERY_LINK_TEXT_BYTES, MAX_HISTORY_RECOVERY_LINK_VALIDITY_SECONDS,
@@ -177,6 +183,10 @@ enum Command {
             default_value_t = DEFAULT_HISTORY_RECOVERY_LINK_VALIDITY_SECONDS
         )]
         history_recovery_link_valid_for_seconds: u64,
+
+        /// Explicitly publish the signed recipient-specific recovery link on the local network.
+        #[arg(long)]
+        history_recovery_discovery_publish: bool,
     },
 
     /// Connect to a listener, send one message, print its acknowledgement, then exit.
@@ -502,6 +512,37 @@ enum Command {
         max_pages: usize,
     },
 
+    /// Discover verified recipient-specific recovery links on the local network without connecting.
+    HistoryRecoveryLinkDiscover {
+        /// Directory containing the exact recipient device named by discovered links.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Local conversation label whose derived ID must match every candidate.
+        #[arg(long)]
+        conversation: String,
+
+        /// Optionally restrict discovery to one exact source device.
+        #[arg(long)]
+        expect_source: Option<DeviceId>,
+
+        /// Bounded time to listen for local discovery publications.
+        #[arg(
+            long,
+            default_value_t = DEFAULT_DISCOVERY_WAIT_SECONDS,
+            value_parser = clap::value_parser!(u64).range(1..=MAX_DISCOVERY_WAIT_SECONDS)
+        )]
+        wait_seconds: u64,
+
+        /// Maximum distinct verified candidates to collect before stopping.
+        #[arg(long, default_value_t = DEFAULT_DISCOVERY_CANDIDATES)]
+        max_candidates: usize,
+
+        /// Write the signed URI only when discovery finds exactly one candidate.
+        #[arg(long)]
+        output_link_file: Option<PathBuf>,
+    },
+
     /// Reconcile source-signed completeness claims from locally stored rewrap bundles.
     HistoryRewrapReconcile {
         /// Directory containing imported history-rewrap bundles.
@@ -756,6 +797,7 @@ impl Command {
             | Self::HistoryRewrapFetch { state_dir, .. }
             | Self::HistoryRecoveryResume { state_dir, .. }
             | Self::HistoryRecoveryLinkAccept { state_dir, .. }
+            | Self::HistoryRecoveryLinkDiscover { state_dir, .. }
             | Self::HistoryRewrapReconcile { state_dir, .. }
             | Self::History { state_dir, .. }
             | Self::Identity { state_dir }
@@ -823,6 +865,7 @@ struct ListenOptions {
     history_recovery_qr_file: Option<PathBuf>,
     history_recovery_link_page_size: usize,
     history_recovery_link_valid_for_seconds: u64,
+    history_recovery_discovery_publish: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -1249,6 +1292,7 @@ async fn run_command(command: Command) -> Result<()> {
             history_recovery_qr_file,
             history_recovery_link_page_size,
             history_recovery_link_valid_for_seconds,
+            history_recovery_discovery_publish,
         } => {
             Box::pin(listen(ListenOptions {
                 state_dir,
@@ -1268,6 +1312,7 @@ async fn run_command(command: Command) -> Result<()> {
                 history_recovery_qr_file,
                 history_recovery_link_page_size,
                 history_recovery_link_valid_for_seconds,
+                history_recovery_discovery_publish,
             }))
             .await
         }
@@ -1443,6 +1488,24 @@ async fn run_command(command: Command) -> Result<()> {
                 confirm_sas,
                 max_pages,
             ))
+            .await
+        }
+        Command::HistoryRecoveryLinkDiscover {
+            state_dir,
+            conversation,
+            expect_source,
+            wait_seconds,
+            max_candidates,
+            output_link_file,
+        } => {
+            discover_history_recovery_links(
+                state_dir,
+                conversation,
+                expect_source,
+                wait_seconds,
+                max_candidates,
+                output_link_file,
+            )
             .await
         }
         Command::HistoryRewrapReconcile {
@@ -2343,6 +2406,7 @@ async fn listen_inner(options: ListenOptions) -> Result<()> {
         history_recovery_qr_file,
         history_recovery_link_page_size,
         history_recovery_link_valid_for_seconds,
+        history_recovery_discovery_publish,
     } = options;
     let device_state = load_command_device_state(&state_dir)?;
     let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
@@ -2369,8 +2433,9 @@ async fn listen_inner(options: ListenOptions) -> Result<()> {
         &listener_certificate,
         allowed_requester_account_id,
     )?;
-    let publishes_history_recovery_link =
-        history_recovery_link_file.is_some() || history_recovery_qr_file.is_some();
+    let publishes_history_recovery_link = history_recovery_link_file.is_some()
+        || history_recovery_qr_file.is_some()
+        || history_recovery_discovery_publish;
     if publishes_history_recovery_link {
         ensure!(
             (1..=MAX_HISTORY_REWRAP_ENTRIES).contains(&history_recovery_link_page_size),
@@ -2539,6 +2604,7 @@ async fn listen_inner(options: ListenOptions) -> Result<()> {
             .with_context(|| format!("write ticket to {}", path.display()))?;
         println!("ticket_file={}", path.display());
     }
+    let mut recovery_discovery_publisher = None;
     if let Some((link, encoded)) = recovery_link {
         println!("history_recovery_link_id={}", encode_hex(&link.link_id()?));
         println!(
@@ -2557,6 +2623,34 @@ async fn listen_inner(options: ListenOptions) -> Result<()> {
         if let Some(path) = history_recovery_qr_file {
             let report = render_recovery_link_qr_png(&encoded, &path)?;
             print_recovery_qr_render_report(&report, &path);
+        }
+        if history_recovery_discovery_publish {
+            let (publisher, report) = start_recovery_discovery_publisher(encoded).await?;
+            println!("history_recovery_discovery_scope=local-network");
+            println!("history_recovery_discovery_opt_in=true");
+            println!(
+                "history_recovery_discovery_multicast_target={}",
+                multicast_target()
+            );
+            println!(
+                "history_recovery_discovery_loopback_target={}",
+                loopback_target()
+            );
+            println!(
+                "history_recovery_discovery_interval_ms={}",
+                publication_interval().as_millis()
+            );
+            println!(
+                "history_recovery_discovery_multicast_initial_sent={}",
+                report.multicast_initial_sent
+            );
+            println!(
+                "history_recovery_discovery_loopback_initial_sent={}",
+                report.loopback_initial_sent
+            );
+            println!("history_recovery_discovery_metadata_visible_to_lan=true");
+            println!("history_recovery_discovery_status=publishing");
+            recovery_discovery_publisher = Some(publisher);
         }
     }
 
@@ -2652,6 +2746,7 @@ async fn listen_inner(options: ListenOptions) -> Result<()> {
         print_transport_diagnostics(&connection, route_policy).await?;
     }
     let _ = timeout(Duration::from_secs(2), connection.closed()).await;
+    drop(recovery_discovery_publisher);
     endpoint.close().await;
     Ok(())
 }
@@ -4166,6 +4261,178 @@ fn print_history_recovery_link(
     println!("history_recovery_link_requires_device_authentication=true");
     println!("history_recovery_link_requires_sas_confirmation=true");
     print_endpoint_target(link.endpoint());
+    Ok(())
+}
+
+async fn discover_history_recovery_links(
+    state_dir: PathBuf,
+    conversation: String,
+    expected_source: Option<DeviceId>,
+    wait_seconds: u64,
+    max_candidates: usize,
+    output_link_file: Option<PathBuf>,
+) -> Result<()> {
+    ensure!(
+        (1..=MAX_DISCOVERY_WAIT_SECONDS).contains(&wait_seconds),
+        "--wait-seconds must be between 1 and {MAX_DISCOVERY_WAIT_SECONDS}"
+    );
+    ensure!(
+        (1..=MAX_DISCOVERY_CANDIDATES).contains(&max_candidates),
+        "--max-candidates must be between 1 and {MAX_DISCOVERY_CANDIDATES}"
+    );
+
+    let device_state = load_command_device_state(&state_dir)?;
+    let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
+    let recipient_certificate = trust
+        .load_certificate()
+        .context("load discovery recipient Account Root certificate")?;
+    let local_authority = trust
+        .load_own_authority_snapshot(&recipient_certificate)
+        .context("load discovery recipient authority snapshot")?;
+    let conversation_id = ConversationId::from_label(&conversation);
+    let membership = trust
+        .load_conversation_membership(conversation_id.scope_id())
+        .context("load discovery conversation membership")?;
+    membership
+        .require_member(recipient_certificate.account_id())
+        .context("verify discovery recipient conversation membership")?;
+    let now_unix_seconds = unix_time_now().context("read time for history recovery discovery")?;
+
+    println!("history_recovery_discovery_scope=local-network");
+    println!("history_recovery_discovery_opt_in=true");
+    println!(
+        "history_recovery_discovery_multicast_target={}",
+        multicast_target()
+    );
+    println!(
+        "history_recovery_discovery_loopback_target={}",
+        loopback_target()
+    );
+    println!("history_recovery_discovery_wait_seconds={wait_seconds}");
+    println!("history_recovery_discovery_max_candidates={max_candidates}");
+    println!("recipient_device_id={}", recipient_certificate.device_id());
+    println!("conversation_id={conversation_id}");
+    if let Some(source) = expected_source {
+        println!("expected_source_device_id={source}");
+    }
+
+    let scan = discover_recovery_links(
+        Duration::from_secs(wait_seconds),
+        max_candidates,
+        |encoded| {
+            let Ok(link) = SignedHistoryRecoveryLink::decode_text(encoded) else {
+                return false;
+            };
+            if link
+                .verify_for_recipient(now_unix_seconds, &recipient_certificate)
+                .is_err()
+                || link.conversation_id() != conversation_id
+                || expected_source.is_some_and(|source| source != link.source_device_id())
+            {
+                return false;
+            }
+            let remote_authority = link.account_device_list().authority_snapshot();
+            remote_authority.revision() > local_authority.revision()
+                || (remote_authority.revision() == local_authority.revision()
+                    && remote_authority == &local_authority)
+        },
+    )
+    .await?;
+
+    println!(
+        "history_recovery_discovery_multicast_joined={}",
+        scan.multicast_joined
+    );
+    println!(
+        "history_recovery_discovery_datagrams_received={}",
+        scan.datagrams_received
+    );
+    println!(
+        "history_recovery_discovery_datagrams_rejected={}",
+        scan.datagrams_rejected
+    );
+    println!(
+        "history_recovery_discovery_duplicate_candidates={}",
+        scan.duplicate_candidates
+    );
+    println!(
+        "history_recovery_discovery_datagram_limit_reached={}",
+        scan.datagram_limit_reached
+    );
+    println!(
+        "history_recovery_discovery_candidate_limit_reached={}",
+        scan.candidate_limit_reached
+    );
+    println!(
+        "history_recovery_discovery_candidate_count={}",
+        scan.candidates.len()
+    );
+
+    for (offset, encoded) in scan.candidates.iter().enumerate() {
+        let candidate = SignedHistoryRecoveryLink::decode_text(encoded)
+            .context("decode already verified discovery candidate")?;
+        let index = offset + 1;
+        println!(
+            "history_recovery_candidate_{index}_link_id={}",
+            encode_hex(&candidate.link_id()?)
+        );
+        println!(
+            "history_recovery_candidate_{index}_account_id={}",
+            candidate.account_id()
+        );
+        println!(
+            "history_recovery_candidate_{index}_source_device_id={}",
+            candidate.source_device_id()
+        );
+        println!(
+            "history_recovery_candidate_{index}_recipient_device_id={}",
+            candidate.recipient_device_id()
+        );
+        println!(
+            "history_recovery_candidate_{index}_conversation_id={}",
+            candidate.conversation_id()
+        );
+        println!(
+            "history_recovery_candidate_{index}_authority_revision={}",
+            candidate.account_device_list().revision()
+        );
+        println!(
+            "history_recovery_candidate_{index}_sas={}",
+            candidate.sas()?
+        );
+        println!(
+            "history_recovery_candidate_{index}_endpoint_id={}",
+            candidate.endpoint().id
+        );
+        println!(
+            "history_recovery_candidate_{index}_route_policy={}",
+            candidate.route_policy().as_str()
+        );
+        println!(
+            "history_recovery_candidate_{index}_expires_at={}",
+            candidate.expires_at_unix_seconds()
+        );
+        println!("history_recovery_candidate_{index}_link={encoded}");
+    }
+
+    println!("history_recovery_discovery_metadata_visible_to_lan=true");
+    println!("history_recovery_discovery_user_consent=not-granted");
+    println!("connection_attempted=false");
+
+    ensure!(
+        !scan.candidates.is_empty(),
+        "no valid history recovery link was discovered for this device and conversation"
+    );
+    ensure!(
+        scan.candidates.len() == 1 && !scan.candidate_limit_reached,
+        "history recovery discovery is ambiguous; inspect and select one exact signed link"
+    );
+    if let Some(path) = output_link_file {
+        write_new_authority_file(&path, scan.candidates[0].as_bytes())
+            .with_context(|| format!("write discovered recovery link to {}", path.display()))?;
+        println!("history_recovery_discovery_link_file={}", path.display());
+    }
+    println!("status=history-recovery-link-discovered");
     Ok(())
 }
 

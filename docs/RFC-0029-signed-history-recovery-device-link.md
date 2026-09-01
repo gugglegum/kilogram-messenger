@@ -147,7 +147,8 @@ link path этот ticket не передаёт recipient. Prekey pools оста
 - QR image renderer/decoder реализованы в M0.9.3 и описаны в
   [`RFC-0030`](RFC-0030-bounded-history-recovery-qr-ceremony.md); live camera,
   clipboard и OS deep-link integration ещё не реализованы;
-- authenticated publication/discovery нескольких доступных source descriptors;
+- authenticated LAN publication/discovery реализован в M0.9.4; wide-area и
+  multi-source discovery остаются открытыми;
 - постоянный scheduler с retry, power и metered-network policy;
 - rotation/revocation-aware descriptor refresh и multi-source UI;
 - compact Merkle/range summary вместо bounded full inventory.
