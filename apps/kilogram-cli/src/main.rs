@@ -39,10 +39,13 @@ use kilogram_session::{
 };
 use kilogram_state::{
     EncryptedStateVault, STATE_VAULT_FILE, STATE_VAULT_KEY_FILE, StateDirectoryLock,
-    StateMirrorRepository, StateTransaction, TypedStateRepository, VaultMigrationOutcome,
-    VaultMirrorCommit, VaultMirrorOutcome, VaultReport,
+    StateMirrorRepository, StateRecordKind, StateTransaction, TypedStateRepository,
+    VaultMigrationOutcome, VaultMirrorCommit, VaultMirrorOutcome, VaultReport,
 };
-use kilogram_store::{EventStore, LocalMessageStore, StoreError, StoreOutcome};
+use kilogram_store::{
+    EventReadRepository, EventStore, ImmutableEventReadSnapshot, ImmutableLocalMessageReadSnapshot,
+    LocalMessageReadRepository, LocalMessageStore, StoreError, StoreOutcome,
+};
 use kilogram_transport_iroh::{
     ALPN, MAX_WIRE_MESSAGE_BYTES, RoutePolicy, SelectedPathDiagnostics, await_route_policy,
     endpoint_builder_for_remote, endpoint_builder_with_relay, read_client_request,
@@ -3146,14 +3149,98 @@ fn write_new_authority_file(path: &Path, bytes: &[u8]) -> Result<()> {
     Ok(())
 }
 
+struct HistoryReadRepositories {
+    events: Box<dyn EventReadRepository>,
+    local_messages: Box<dyn LocalMessageReadRepository>,
+    primary: &'static str,
+    shadow: &'static str,
+    mirror_generation: Option<u64>,
+    event_record_count: u64,
+    local_projection_record_count: u64,
+}
+
+fn open_history_read_repositories(state_dir: &Path) -> Result<HistoryReadRepositories> {
+    if !EncryptedStateVault::is_initialized(state_dir)
+        .context("inspect encrypted state vault before history read")?
+    {
+        return Ok(HistoryReadRepositories {
+            events: Box::new(open_event_store(state_dir)?),
+            local_messages: Box::new(open_local_message_store(state_dir)?),
+            primary: "legacy-filesystem",
+            shadow: "not-enabled",
+            mirror_generation: None,
+            event_record_count: 0,
+            local_projection_record_count: 0,
+        });
+    }
+
+    let vault = EncryptedStateVault::open_existing(state_dir)
+        .context("open encrypted vault for immutable primary-read canary")?;
+    let primary = vault
+        .read_primary_canary(&[StateRecordKind::Event, StateRecordKind::LocalProjection])
+        .context("read immutable history from vault and compare legacy shadow")?;
+    let mirror_generation = primary.mirror_generation();
+    let event_record_count = primary
+        .shadow_reports()
+        .iter()
+        .find(|report| report.kind() == StateRecordKind::Event)
+        .map_or(0, |report| report.record_count());
+    let local_projection_record_count = primary
+        .shadow_reports()
+        .iter()
+        .find(|report| report.kind() == StateRecordKind::LocalProjection)
+        .map_or(0, |report| report.record_count());
+    let mut event_records = Vec::new();
+    let mut local_projection_records = Vec::new();
+    for record in primary.into_records() {
+        let (kind, relative_path, content) = record.into_parts();
+        match kind {
+            StateRecordKind::Event => event_records.push((
+                strip_vault_record_prefix(&relative_path, "events/")?,
+                content,
+            )),
+            StateRecordKind::LocalProjection => local_projection_records.push((
+                strip_vault_record_prefix(&relative_path, "local-messages/")?,
+                content,
+            )),
+            _ => bail!(
+                "vault immutable history selection returned unexpected {} record",
+                kind.as_str()
+            ),
+        }
+    }
+    let events = ImmutableEventReadSnapshot::from_records(event_records)
+        .context("construct authenticated event read snapshot from vault")?;
+    let local_messages = ImmutableLocalMessageReadSnapshot::from_records(local_projection_records)
+        .context("construct authenticated local-projection read snapshot from vault")?;
+    Ok(HistoryReadRepositories {
+        events: Box::new(events),
+        local_messages: Box::new(local_messages),
+        primary: "encrypted-vault",
+        shadow: "legacy-verified",
+        mirror_generation: Some(mirror_generation),
+        event_record_count,
+        local_projection_record_count,
+    })
+}
+
+fn strip_vault_record_prefix(relative_path: &str, prefix: &str) -> Result<String> {
+    let stripped = relative_path
+        .strip_prefix(prefix)
+        .filter(|path| !path.is_empty())
+        .with_context(|| {
+            format!("vault record {relative_path} does not have required prefix {prefix}")
+        })?;
+    Ok(stripped.to_owned())
+}
+
 fn show_history(state_dir: PathBuf, conversation: String) -> Result<()> {
     let device_state = DeviceState::load_or_create(&state_dir)
         .with_context(|| format!("load device state from {}", state_dir.display()))?;
     let certificate = device_state
         .load_certificate()
         .context("load device certificate before reading history")?;
-    let event_store = open_event_store(&state_dir)?;
-    let local_message_store = open_local_message_store(&state_dir)?;
+    let read_repositories = open_history_read_repositories(&state_dir)?;
     let conversation_id = ConversationId::from_label(&conversation);
     let membership = device_state
         .load_conversation_membership(conversation_id.scope_id())
@@ -3161,13 +3248,28 @@ fn show_history(state_dir: PathBuf, conversation: String) -> Result<()> {
     membership
         .require_member(certificate.account_id())
         .context("this device account is not a member of the conversation")?;
-    let events = event_store
+    let events = read_repositories
+        .events
         .load_authorized_conversation(conversation_id, &membership)
         .context("load and verify authorized local conversation history")?;
-    let frontier = event_store
+    let frontier = read_repositories
+        .events
         .frontier(conversation_id)
         .context("calculate local conversation frontier")?;
 
+    println!("history_primary_read={}", read_repositories.primary);
+    println!("history_shadow_read={}", read_repositories.shadow);
+    if let Some(generation) = read_repositories.mirror_generation {
+        println!("history_vault_generation={generation}");
+        println!(
+            "history_vault_event_records={}",
+            read_repositories.event_record_count
+        );
+        println!(
+            "history_vault_local_projection_records={}",
+            read_repositories.local_projection_record_count
+        );
+    }
     println!("conversation_id={conversation_id}");
     println!("membership_revision={}", membership.revision());
     println!("event_count={}", events.len());
@@ -3191,7 +3293,8 @@ fn show_history(state_dir: PathBuf, conversation: String) -> Result<()> {
             .join(",");
         match event.payload() {
             EventPayload::RatchetText { .. } => {
-                let projection = local_message_store
+                let projection = read_repositories
+                    .local_messages
                     .get(stored.id)
                     .with_context(|| format!("load local projection for event {}", stored.id))?;
                 let body = projection
@@ -5073,6 +5176,30 @@ mod tests {
                 .iter()
                 .all(|stored| stored.event.verify_for_membership(&membership).is_ok())
         );
+
+        let vault = EncryptedStateVault::open_or_create(&state_dir)?;
+        vault.migrate_legacy_snapshot()?;
+        drop(vault);
+        let guard = VaultDualWriteGuard::prepare(&state_dir)?
+            .context("expected vault guard for immutable history canary")?;
+        let primary = open_history_read_repositories(&state_dir)?;
+        assert_eq!(primary.primary, "encrypted-vault");
+        assert_eq!(primary.shadow, "legacy-verified");
+        assert_eq!(primary.event_record_count, 6);
+        assert_eq!(primary.local_projection_record_count, 3);
+        assert_eq!(
+            primary
+                .events
+                .load_authorized_conversation(conversation_id, &membership)?,
+            events
+        );
+        for stored in &events {
+            assert_eq!(
+                primary.local_messages.get(stored.id)?,
+                local_messages.get(stored.id)?
+            );
+        }
+        guard.finish()?;
 
         let peer_events = EventStore::open(directory.path().join("peer-events"))?;
         let peer_messages = LocalMessageStore::open(directory.path().join("peer-messages"))?;

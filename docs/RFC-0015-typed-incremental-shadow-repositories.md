@@ -148,9 +148,10 @@ ratchet records: `2/0/21`, generation 2 и 34,332 bytes. Typed shadow inventory
   реализованы;
 - Account Root directories не входят в device-state coordinator.
 
-M0.8.4 должен начать ограниченный DB-primary canary с наименее рискованных
-immutable repositories (`event` и `local-projection`): typed adapter читает DB,
-одновременно проверяет legacy shadow result и при расхождении fail-closed без
-тихого fallback. Mutable ratchet/trust/sequence остаются legacy-primary до
-отдельных fault и migration tests. Protected key provider и rollback witness
-остаются самостоятельными security stages.
+M0.8.4 реализован в
+[`RFC-0016`](RFC-0016-immutable-vault-primary-read-canary.md): read-only
+`history` получает events/authorizations/projections из DB-owned snapshot,
+обязательно проверяет полный legacy shadow и не имеет silent fallback при
+расхождении. Mutable ratchet/trust/sequence и все writes остаются
+legacy-primary до отдельных overlay, fault и migration tests. Protected key
+provider и rollback witness остаются самостоятельными security stages.

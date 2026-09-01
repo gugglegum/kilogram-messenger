@@ -329,6 +329,16 @@ toolchain `1.98.0` для воспроизводимой разработки.
     exact typed inventory, byte-exact restore 23 files/3 history events и clean
     raw DB marker scan. Полный scan/decrypt остаётся `O(state)`, но encryption и
     DB writes стали `O(changed + deleted)`.
+45. M0.8.4 добавил первый DB-primary read canary. `history` при наличии vault
+    получает `.event`, `.authorization` и `.local-text` bytes из owned
+    encrypted snapshot после exact full shadow compare. Новые object-safe
+    `EventReadRepository`/`LocalMessageReadRepository` реализованы filesystem
+    stores и strict snapshot adapters; snapshots повторяют signature/ID/
+    membership/projection validation и не обращаются к legacy files. Все 85
+    tests, strict Clippy и release build проходят. Process smoke
+    `.tmp/m084-smoke-20260901-120000` прочитал generation 2, 6 event records,
+    3 projections и 3 history messages с mirror delta `0/0/23`; отдельный
+    projection drift дал exit 1 typed mismatch и `silent_fallback=false`.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -351,8 +361,9 @@ safe retry. Source discovery/background coordinator, membership removal/epochs
 и group E2EE остаются открыты. M0.7.7 закрывает M0 crash consistency для device
 filesystem state; M0.8.1 доказывает атомарную encrypted shadow migration в
 `redb`, M0.8.2 — recoverable versioned dual-write всех live CLI commands, а
-M0.8.3 — typed incremental encrypted delta и exact shadow reads. Primary DB
-cutover, bounded backups и защищённый key provider ещё не реализованы.
+M0.8.3 — typed incremental encrypted delta и exact shadow reads, а M0.8.4 —
+первый DB-primary canary для read-only history. Остальные repository cutover,
+bounded backups и защищённый key provider ещё не реализованы.
 
 ## Решения, которые ещё нельзя фиксировать
 

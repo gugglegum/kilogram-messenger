@@ -29,8 +29,10 @@ M0.8.1 добавил обратимый encrypted shadow snapshot всего de
 а M0.8.2 — authenticated intent, versioned generation и recoverable mirror
 после каждой live CLI-команды. M0.8.3 добавил typed exact shadow reads и
 атомарный encrypted delta: DB writes стали `O(changed + deleted)`, хотя полный
-scan/decrypt остаётся `O(state)`. Legacy по-прежнему является primary store, а
-master key лежит рядом development-файлом.
+scan/decrypt остаётся `O(state)`. M0.8.4 перевёл только read-only history на
+DB-primary event/projection snapshot без silent fallback. Все writes и
+остальные reads остаются legacy-primary, а master key лежит рядом
+development-файлом.
 Следующие вопросы относятся к production recovery, rotation, asynchronous
 sessions, distribution, removal и key epochs и не решены этим прототипом.
 
@@ -47,11 +49,12 @@ sessions, distribution, removal и key epochs и не решены этим пр
 - Какой TTL применять к retained losing session, как выполнять authenticated
   session reset после потери state и нужен ли production-протокол сложнее
   проверенного M0.7.6 lexicographic-min разрешения двух crossed sessions?
-- В каком порядке переключать typed repositories на DB-primary после M0.8.3:
-  достаточно ли начать с immutable events/projections, как долго сохранять
-  обязательный legacy shadow read и какие fault/versioned-migration критерии
-  разрешают удалить fallback? Остаётся ли `redb` production engine после
-  mobile/load tests, bounded backup и compaction tests?
+- Как после read-only canary M0.8.4 построить command-local overlay или direct
+  transactional DB writes для mixed read/write sync, чтобы snapshot начала
+  команды видел новые events/projections и не ослаблял crash recovery? Как
+  долго сохранять обязательный legacy shadow, и какие fault/migration критерии
+  разрешают удалить legacy copy? Остаётся ли `redb` production engine после
+  mobile/load, bounded backup и compaction tests?
 - Как защищать vault master key: OS keystore, аппаратный ключ,
   passphrase/seed-derived wrapping или их комбинация; как обнаруживать rollback
   согласованной старой пары DB+key и восстанавливать key без создания общего

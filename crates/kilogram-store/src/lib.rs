@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
     fs,
     io::{self, Write},
     path::{Path, PathBuf},
@@ -55,6 +55,28 @@ pub struct EventStore {
 /// sender-readable copies to relays or peers.
 pub struct LocalMessageStore {
     root: PathBuf,
+}
+
+pub trait EventReadRepository {
+    fn load_authorized_conversation(
+        &self,
+        conversation_id: ConversationId,
+        membership: &ConversationMembershipSnapshot,
+    ) -> Result<Vec<StoredAuthorizedEvent>, StoreError>;
+
+    fn frontier(&self, conversation_id: ConversationId) -> Result<Vec<EventId>, StoreError>;
+}
+
+pub trait LocalMessageReadRepository {
+    fn get(&self, event_id: EventId) -> Result<LocalTextProjection, StoreError>;
+}
+
+pub struct ImmutableEventReadSnapshot {
+    records: BTreeMap<String, Vec<u8>>,
+}
+
+pub struct ImmutableLocalMessageReadSnapshot {
+    records: BTreeMap<String, Vec<u8>>,
 }
 
 impl LocalMessageStore {
@@ -477,6 +499,256 @@ impl EventStore {
     }
 }
 
+impl EventReadRepository for EventStore {
+    fn load_authorized_conversation(
+        &self,
+        conversation_id: ConversationId,
+        membership: &ConversationMembershipSnapshot,
+    ) -> Result<Vec<StoredAuthorizedEvent>, StoreError> {
+        EventStore::load_authorized_conversation(self, conversation_id, membership)
+    }
+
+    fn frontier(&self, conversation_id: ConversationId) -> Result<Vec<EventId>, StoreError> {
+        EventStore::frontier(self, conversation_id)
+    }
+}
+
+impl LocalMessageReadRepository for LocalMessageStore {
+    fn get(&self, event_id: EventId) -> Result<LocalTextProjection, StoreError> {
+        LocalMessageStore::get(self, event_id)
+    }
+}
+
+impl ImmutableEventReadSnapshot {
+    pub fn from_records(
+        records: impl IntoIterator<Item = (String, Vec<u8>)>,
+    ) -> Result<Self, StoreError> {
+        let mut validated = BTreeMap::new();
+        for (relative_path, content) in records {
+            let components = validate_snapshot_path(&relative_path, 2)?;
+            if !is_canonical_hex_identifier(components[0])
+                || !is_canonical_snapshot_file(
+                    components[1],
+                    &[EVENT_FILE_EXTENSION, AUTHORIZATION_FILE_EXTENSION],
+                )
+            {
+                return Err(StoreError::InvalidImmutableSnapshotPath(relative_path));
+            }
+            if validated.insert(relative_path.clone(), content).is_some() {
+                return Err(StoreError::DuplicateImmutableSnapshotPath(relative_path));
+            }
+        }
+        Ok(Self { records: validated })
+    }
+
+    fn load_conversation(
+        &self,
+        conversation_id: ConversationId,
+    ) -> Result<Vec<StoredEvent>, StoreError> {
+        let prefix = format!("{conversation_id}/");
+        let mut events = Vec::new();
+        for (relative_path, encoded) in &self.records {
+            let Some(file_name) = relative_path.strip_prefix(&prefix) else {
+                continue;
+            };
+            if !file_name.ends_with(&format!(".{EVENT_FILE_EXTENSION}")) {
+                continue;
+            }
+            let path = PathBuf::from(relative_path);
+            let event = SignedEvent::decode_and_verify(encoded).map_err(|source| {
+                StoreError::InvalidStoredEvent {
+                    path: path.clone(),
+                    source,
+                }
+            })?;
+            let event_id = event.event_id()?;
+            let expected_name = format!("{event_id}.{EVENT_FILE_EXTENSION}");
+            if file_name != expected_name {
+                return Err(StoreError::EventFileNameMismatch { path, event_id });
+            }
+            if event.conversation_id() != conversation_id {
+                return Err(StoreError::ConversationDirectoryMismatch {
+                    path,
+                    expected: conversation_id,
+                    actual: event.conversation_id(),
+                });
+            }
+            events.push(StoredEvent {
+                id: event_id,
+                event,
+            });
+        }
+        validate_loaded_event_positions(conversation_id, &mut events)?;
+        Ok(events)
+    }
+}
+
+impl EventReadRepository for ImmutableEventReadSnapshot {
+    fn load_authorized_conversation(
+        &self,
+        conversation_id: ConversationId,
+        membership: &ConversationMembershipSnapshot,
+    ) -> Result<Vec<StoredAuthorizedEvent>, StoreError> {
+        membership.verify().map_err(ProtocolError::from)?;
+        if membership.conversation_id() != conversation_id.scope_id() {
+            return Err(StoreError::ConversationMembershipMismatch {
+                conversation_id,
+                membership_conversation_id: membership.conversation_id(),
+            });
+        }
+        self.load_conversation(conversation_id)?
+            .into_iter()
+            .map(|stored| {
+                let relative_path = format!(
+                    "{conversation_id}/{}.{AUTHORIZATION_FILE_EXTENSION}",
+                    stored.id
+                );
+                let path = PathBuf::from(&relative_path);
+                let encoded = self.records.get(&relative_path).ok_or_else(|| {
+                    StoreError::EventAuthorizationMissing {
+                        path: path.clone(),
+                        event_id: stored.id,
+                    }
+                })?;
+                let authorized =
+                    AuthorizedEvent::decode_and_verify_author(encoded).map_err(|source| {
+                        StoreError::InvalidStoredAuthorization {
+                            path: path.clone(),
+                            source,
+                        }
+                    })?;
+                authorized.verify_for_membership(membership)?;
+                if authorized.event() != &stored.event
+                    || authorized.event().event_id()? != stored.id
+                {
+                    return Err(StoreError::EventAuthorizationMismatch {
+                        path,
+                        event_id: stored.id,
+                    });
+                }
+                Ok(StoredAuthorizedEvent {
+                    id: stored.id,
+                    event: authorized,
+                })
+            })
+            .collect()
+    }
+
+    fn frontier(&self, conversation_id: ConversationId) -> Result<Vec<EventId>, StoreError> {
+        let events = self.load_conversation(conversation_id)?;
+        let referenced: HashSet<_> = events
+            .iter()
+            .flat_map(|stored| stored.event.parents().iter().copied())
+            .collect();
+        let mut frontier: Vec<_> = events
+            .into_iter()
+            .map(|stored| stored.id)
+            .filter(|event_id| !referenced.contains(event_id))
+            .collect();
+        frontier.sort_by_cached_key(ToString::to_string);
+        Ok(frontier)
+    }
+}
+
+impl ImmutableLocalMessageReadSnapshot {
+    pub fn from_records(
+        records: impl IntoIterator<Item = (String, Vec<u8>)>,
+    ) -> Result<Self, StoreError> {
+        let mut validated = BTreeMap::new();
+        for (relative_path, content) in records {
+            let components = validate_snapshot_path(&relative_path, 1)?;
+            if !is_canonical_snapshot_file(components[0], &[LOCAL_TEXT_PROJECTION_FILE_EXTENSION]) {
+                return Err(StoreError::InvalidImmutableSnapshotPath(relative_path));
+            }
+            if validated.insert(relative_path.clone(), content).is_some() {
+                return Err(StoreError::DuplicateImmutableSnapshotPath(relative_path));
+            }
+        }
+        Ok(Self { records: validated })
+    }
+}
+
+impl LocalMessageReadRepository for ImmutableLocalMessageReadSnapshot {
+    fn get(&self, event_id: EventId) -> Result<LocalTextProjection, StoreError> {
+        let relative_path = format!("{event_id}.{LOCAL_TEXT_PROJECTION_FILE_EXTENSION}");
+        let path = PathBuf::from(&relative_path);
+        let bytes = self.records.get(&relative_path).ok_or_else(|| {
+            StoreError::LocalTextProjectionMissing {
+                path: path.clone(),
+                event_id,
+            }
+        })?;
+        let projection = LocalTextProjection::decode(bytes).map_err(|source| {
+            StoreError::InvalidStoredLocalTextProjection {
+                path: path.clone(),
+                source,
+            }
+        })?;
+        if projection.event_id() != event_id {
+            return Err(StoreError::LocalTextProjectionFileNameMismatch { path, event_id });
+        }
+        Ok(projection)
+    }
+}
+
+fn validate_snapshot_path(
+    relative_path: &str,
+    expected_components: usize,
+) -> Result<Vec<&str>, StoreError> {
+    if relative_path.is_empty() || relative_path.contains('\\') {
+        return Err(StoreError::InvalidImmutableSnapshotPath(
+            relative_path.to_owned(),
+        ));
+    }
+    let components = relative_path.split('/').collect::<Vec<_>>();
+    if components.len() != expected_components
+        || components
+            .iter()
+            .any(|component| component.is_empty() || matches!(*component, "." | ".."))
+    {
+        return Err(StoreError::InvalidImmutableSnapshotPath(
+            relative_path.to_owned(),
+        ));
+    }
+    Ok(components)
+}
+
+fn is_canonical_snapshot_file(file_name: &str, allowed_extensions: &[&str]) -> bool {
+    let Some((identifier, extension)) = file_name.split_once('.') else {
+        return false;
+    };
+    is_canonical_hex_identifier(identifier) && allowed_extensions.contains(&extension)
+}
+
+fn is_canonical_hex_identifier(value: &str) -> bool {
+    value.len() == 64
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+}
+
+fn validate_loaded_event_positions(
+    conversation_id: ConversationId,
+    events: &mut [StoredEvent],
+) -> Result<(), StoreError> {
+    events.sort_by_cached_key(|stored| stored.id.to_string());
+    let mut writer_positions = HashSet::new();
+    for stored in events {
+        let position = (
+            stored.event.author_device_id(),
+            stored.event.author_sequence(),
+        );
+        if !writer_positions.insert(position) {
+            return Err(StoreError::DuplicateWriterSequence {
+                conversation_id,
+                author_device_id: position.0,
+                author_sequence: position.1,
+            });
+        }
+    }
+    Ok(())
+}
+
 fn event_path(directory: &Path, event_id: EventId) -> PathBuf {
     directory.join(format!("{event_id}.{EVENT_FILE_EXTENSION}"))
 }
@@ -620,6 +892,12 @@ pub enum StoreError {
 
     #[error("event validation failed")]
     Protocol(#[from] ProtocolError),
+
+    #[error("immutable read snapshot contains an unsafe or unsupported path: {0}")]
+    InvalidImmutableSnapshotPath(String),
+
+    #[error("immutable read snapshot contains duplicate path: {0}")]
+    DuplicateImmutableSnapshotPath(String),
 
     #[error("stored event at {path} is invalid")]
     InvalidStoredEvent {
@@ -803,6 +1081,75 @@ mod tests {
                 event_id: missing,
                 ..
             }) if missing == event_id
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn immutable_snapshots_read_verified_events_and_local_projections_without_filesystem_fallback()
+    -> Result<(), Box<dyn Error>> {
+        let event_directory = tempdir()?;
+        let projection_directory = tempdir()?;
+        let root_directory = tempdir()?;
+        let event_store = EventStore::open(event_directory.path())?;
+        let projection_store = LocalMessageStore::open(projection_directory.path())?;
+        let root = AccountRootState::create(root_directory.path())?;
+        let identity = DeviceIdentity::generate()?;
+        let encryption = DeviceEncryptionIdentity::generate()?;
+        let certificate = root.issue_device_certificate(
+            identity.device_id(),
+            encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let conversation_id = ConversationId::from_label("immutable-snapshot-read");
+        let membership = root.create_conversation_membership(conversation_id.scope_id(), &[])?;
+        let signed = sign_test_text(&identity, conversation_id, 0, Vec::new(), "snapshot")?;
+        let projection = LocalTextProjection::seal_authored(
+            &signed,
+            identity.device_id(),
+            encryption.public_key(),
+            "snapshot",
+        )?;
+        let authorized = AuthorizedEvent::new(signed, certificate, root.authority_snapshot()?)?;
+        let event_id = authorized.event().event_id()?;
+        event_store.put_authorized(&authorized, &membership)?;
+        projection_store.put(&projection)?;
+        let expected_events =
+            event_store.load_authorized_conversation(conversation_id, &membership)?;
+        let expected_frontier = event_store.frontier(conversation_id)?;
+
+        let conversation_directory = event_store.conversation_directory(conversation_id);
+        let stored_event_path = event_path(&conversation_directory, event_id);
+        let stored_authorization_path = authorization_path(&conversation_directory, event_id);
+        let stored_projection_path =
+            local_text_projection_path(projection_directory.path(), event_id);
+        let event_snapshot = ImmutableEventReadSnapshot::from_records([
+            (
+                format!("{conversation_id}/{event_id}.{EVENT_FILE_EXTENSION}"),
+                fs::read(&stored_event_path)?,
+            ),
+            (
+                format!("{conversation_id}/{event_id}.{AUTHORIZATION_FILE_EXTENSION}"),
+                fs::read(&stored_authorization_path)?,
+            ),
+        ])?;
+        let projection_snapshot = ImmutableLocalMessageReadSnapshot::from_records([(
+            format!("{event_id}.{LOCAL_TEXT_PROJECTION_FILE_EXTENSION}"),
+            fs::read(&stored_projection_path)?,
+        )])?;
+        fs::remove_file(stored_event_path)?;
+        fs::remove_file(stored_authorization_path)?;
+        fs::remove_file(stored_projection_path)?;
+
+        assert_eq!(
+            event_snapshot.load_authorized_conversation(conversation_id, &membership)?,
+            expected_events
+        );
+        assert_eq!(event_snapshot.frontier(conversation_id)?, expected_frontier);
+        assert_eq!(projection_snapshot.get(event_id)?, projection);
+        assert!(matches!(
+            ImmutableEventReadSnapshot::from_records([(String::from("../event.event"), vec![])]),
+            Err(StoreError::InvalidImmutableSnapshotPath(_))
         ));
         Ok(())
     }

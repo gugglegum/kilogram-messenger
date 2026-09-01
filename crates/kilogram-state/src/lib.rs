@@ -14,7 +14,8 @@ mod vault;
 pub use vault::{
     EncryptedStateVault, STATE_VAULT_FILE, STATE_VAULT_KEY_FILE, StateMirrorRepository,
     StateRecordKind, TypedShadowReadReport, TypedStateRepository, VaultMigrationOutcome,
-    VaultMirrorCommit, VaultMirrorDelta, VaultMirrorOutcome, VaultReport,
+    VaultMirrorCommit, VaultMirrorDelta, VaultMirrorOutcome, VaultPrimaryRead, VaultPrimaryRecord,
+    VaultReport,
 };
 
 const LOCK_FILE: &str = ".kilogram-state.lock";
@@ -128,6 +129,12 @@ pub enum StateError {
 
     #[error("state vault typed shadow read mismatch for {kind} record at {relative_path}")]
     VaultTypedShadowReadMismatch { kind: String, relative_path: String },
+
+    #[error("state vault primary-read canary requires at least one repository kind")]
+    VaultPrimaryReadSelectionEmpty,
+
+    #[error("state vault primary-read canary does not allow repository kind {0}")]
+    VaultPrimaryReadKindNotAllowed(String),
 
     #[error("state vault path is not valid UTF-8: {0}")]
     VaultNonUtf8Path(PathBuf),

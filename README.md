@@ -35,12 +35,14 @@ The recoverable live shadow dual-write is specified in
 [`docs/RFC-0014-recoverable-shadow-dual-write.md`](docs/RFC-0014-recoverable-shadow-dual-write.md).
 The typed incremental encrypted mirror is specified in
 [`docs/RFC-0015-typed-incremental-shadow-repositories.md`](docs/RFC-0015-typed-incremental-shadow-repositories.md).
+The first immutable vault primary-read canary is specified in
+[`docs/RFC-0016-immutable-vault-primary-read-canary.md`](docs/RFC-0016-immutable-vault-primary-read-canary.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.8.3 typed incremental shadow repositories — complete
+## Current milestone: M0.8.4 immutable vault primary-read canary — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -136,12 +138,22 @@ also report upsert/remove/unchanged counters. Encryption and DB mutations are
 now proportional to the delta, while the conservative full scan/decrypt/compare
 remains proportional to total state.
 
+M0.8.4 makes the read-only `history` command the first real DB-primary canary.
+When a vault is initialized, event, authorization, and local-projection bytes
+come from an owned authenticated vault snapshot. The complete retained legacy
+tree must still match exactly before those bytes are returned. Strict read
+adapters reapply event signatures, IDs, Account Root and membership
+authorization, writer sequencing, and projection binding. A drifted or invalid
+initialized vault fails closed; it never silently downgrades history to the
+filesystem. States that have never been migrated remain legacy-compatible.
+
 This is still a narrow integration spike. The vault is not yet the primary
-repository: live commands continue to read and write legacy files before an
-`O(state)` shadow comparison, and the
+repository for writes or network workflows: only read-only history uses DB
+bytes, while live writes continue through legacy files before an `O(state)`
+shadow comparison. The
 development master key remains beside the database. It does not yet provide a
 global DHT or gossip freshness proof, atomic remote prekey reservation,
-protected local key storage, DB-primary repository cutover, PQXDH, or
+protected local key storage, full DB-primary repository cutover, PQXDH, or
 cross-account recovery. Losing every readable projection
 still cannot be repaired from old ciphertext with only the device signing key.
 Do not use it for sensitive communication.

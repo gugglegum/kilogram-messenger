@@ -1052,10 +1052,49 @@ development-файлом. Полный контракт —
 primary; master key лежит рядом с DB. Полный контракт —
 [`../docs/RFC-0015-typed-incremental-shadow-repositories.md`](../docs/RFC-0015-typed-incremental-shadow-repositories.md).
 
+### M0.8.4 — immutable vault primary-read canary: выполнено
+
+Реализовано:
+
+- `TypedStateRepository::read_primary_canary` возвращает owned DB records
+  только для явно разрешённых `event` и `local-projection` kinds;
+- перед выдачей bytes полностью проверяются vault/manifest/generation, matching
+  intent и exact shadow всего retained legacy tree;
+- stale legacy после intent блокирует DB read; empty и mutable kind selections
+  отклоняются;
+- `EventReadRepository` и `LocalMessageReadRepository` отделяют прикладное
+  чтение от filesystem write implementation;
+- strict immutable snapshots принимают DB bytes, проверяют canonical
+  Conversation/Event path layout, duplicate paths, signatures, IDs,
+  authorization/membership, writer sequence и projection binding;
+- read-only `history` при инициализированном vault использует только snapshot,
+  сообщает `encrypted-vault`/`legacy-verified` и не делает silent fallback;
+- полностью немигрированный state сохраняет прежний legacy history path.
+
+Проверки:
+
+- state tests покрывают allowed/forbidden selection, matching intent, stale
+  shadow refusal и recovery;
+- store test удаляет исходные event/authorization/projection files после
+  построения snapshot и всё равно читает verified history только из snapshot;
+- CLI seeded-history test получает те же 3 events/3 projections через vault
+  adapters под live intent;
+- все 85 workspace tests, rustfmt, strict Clippy и release build проходят;
+- release smoke `.tmp/m084-smoke-20260901-120000` прочитал generation 2,
+  6 event/authorization records, 3 projections и прежние 3 сообщения из vault,
+  завершил mirror `0/0/23`; изменённый projection shadow дал exit 1 typed
+  mismatch без legacy fallback.
+
+Граница среза: только `history` и только immutable reads переведены на DB.
+Writes, sync, rewrap, ratchet/trust/sequence остаются legacy-primary; полный
+shadow scan всё ещё `O(state)`. Полный контракт —
+[`../docs/RFC-0016-immutable-vault-primary-read-canary.md`](../docs/RFC-0016-immutable-vault-primary-read-canary.md).
+
 ### Следующий этап
 
-1. M0.8.4 начать DB-primary canary для immutable event/projection adapters с
-   обязательным legacy shadow compare и fail-closed без silent fallback.
+1. M0.8.5 расширить DB-primary на read-only source-history/rewrap paths и
+   спроектировать command-local overlay/direct DB writes до cutover mixed
+   read/write sync.
 2. Защитить vault master key через OS keystore/passphrase/seed wrapping и
    спроектировать rollback witness, backup и versioned migrations.
 3. Source discovery/background coordinator и QR/device-link UX строить поверх

@@ -117,8 +117,13 @@ M0.8.3 применяет только encrypted record delta: changed/new recor
 переписывается. Девять typed repository kinds проходят exact DB/legacy shadow
 comparison; CLI публикует per-kind inventory и delta counters. Filesystem пока
 остаётся primary read/write path.
+M0.8.4 переводит read-only `history` на DB-primary owned snapshot для
+events/authorization/local projections. Vault полностью проверяется и exact
+сравнивается с legacy shadow; после этого прикладные decoders получают DB bytes.
+Инициализированный vault при любой ошибке блокирует history без silent fallback;
+writes и остальные reads пока остаются legacy-primary.
 Seed/root recovery, защищённое хранение root/local/ratchet keys, production
-DB-primary adapters/cutover, global prekey discovery/witness, автоматический
+repository cutover, global prekey discovery/witness, автоматический
 recovery source discovery/background coordinator, sync summaries, membership
 removal и группы ещё не реализованы.
 
@@ -173,8 +178,8 @@ removal и группы ещё не реализованы.
 
 ## План ближайших работ
 
-1. В M0.8.4 начать DB-primary canary для immutable event/projection adapters с
-   обязательным legacy shadow compare и без silent fallback.
+1. В M0.8.5 расширить DB-primary на read-only source-history/rewrap paths и
+   подготовить overlay/direct DB writes до mixed read/write sync cutover.
 2. Защитить vault master key через OS keystore/passphrase/seed wrapping,
    добавить rollback witness, versioned migrations и bounded backup/restore.
 3. Добавить source discovery/background coordinator и QR/device-link UX поверх
@@ -227,5 +232,7 @@ removal и группы ещё не реализованы.
   реализованный M0.8.2-контракт authenticated intent, generation и crash recovery.
 - [`../docs/RFC-0015-typed-incremental-shadow-repositories.md`](../docs/RFC-0015-typed-incremental-shadow-repositories.md) —
   реализованный M0.8.3-контракт encrypted delta и typed shadow equivalence.
+- [`../docs/RFC-0016-immutable-vault-primary-read-canary.md`](../docs/RFC-0016-immutable-vault-primary-read-canary.md) —
+  реализованный M0.8.4-контракт DB-primary immutable history canary без fallback.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

@@ -115,6 +115,56 @@ impl TypedShadowReadReport {
     }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct VaultPrimaryRecord {
+    kind: StateRecordKind,
+    relative_path: String,
+    content: Vec<u8>,
+}
+
+impl VaultPrimaryRecord {
+    pub fn kind(&self) -> StateRecordKind {
+        self.kind
+    }
+
+    pub fn relative_path(&self) -> &str {
+        &self.relative_path
+    }
+
+    pub fn content(&self) -> &[u8] {
+        &self.content
+    }
+
+    pub fn into_parts(self) -> (StateRecordKind, String, Vec<u8>) {
+        (self.kind, self.relative_path, self.content)
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct VaultPrimaryRead {
+    mirror_generation: u64,
+    records: Vec<VaultPrimaryRecord>,
+    shadow_reports: Vec<TypedShadowReadReport>,
+}
+
+impl VaultPrimaryRead {
+    pub fn mirror_generation(&self) -> u64 {
+        self.mirror_generation
+    }
+
+    pub fn records(&self) -> &[VaultPrimaryRecord] {
+        &self.records
+    }
+
+    pub fn shadow_reports(&self) -> &[TypedShadowReadReport] {
+        &self.shadow_reports
+    }
+
+    pub fn into_records(self) -> Vec<VaultPrimaryRecord> {
+        self.records
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct VaultMirrorDelta {
     upserted_records: u64,
@@ -254,6 +304,11 @@ pub trait StateMirrorRepository {
 
 pub trait TypedStateRepository {
     fn verify_typed_shadow_reads(&self) -> Result<Vec<TypedShadowReadReport>, StateError>;
+
+    fn read_primary_canary(
+        &self,
+        kinds: &[StateRecordKind],
+    ) -> Result<VaultPrimaryRead, StateError>;
 }
 
 impl EncryptedStateVault {
@@ -348,6 +403,10 @@ impl EncryptedStateVault {
     }
 
     pub fn verify(&self) -> Result<VaultReport, StateError> {
+        self.verify_with_records().map(|(report, _)| report)
+    }
+
+    fn verify_with_records(&self) -> Result<(VaultReport, Vec<VaultRecord>), StateError> {
         let manifest = self
             .load_manifest()?
             .ok_or_else(|| StateError::VaultNotMigrated(self.root.clone()))?;
@@ -358,7 +417,7 @@ impl EncryptedStateVault {
             return Err(StateError::VaultManifestMismatch);
         }
         let generation = self.load_generation(&manifest)?;
-        Ok(report_from_manifest(&manifest, generation))
+        Ok((report_from_manifest(&manifest, generation), records))
     }
 
     pub fn verify_against_legacy(&self) -> Result<VaultReport, StateError> {
@@ -367,15 +426,17 @@ impl EncryptedStateVault {
     }
 
     fn verify_current_against_legacy(&self) -> Result<VaultReport, StateError> {
-        let report = self.verify()?;
-        self.typed_shadow_reports()?;
+        let (report, records) = self.verify_with_records()?;
+        self.typed_shadow_reports(&records)?;
         Ok(report)
     }
 
-    fn typed_shadow_reports(&self) -> Result<Vec<TypedShadowReadReport>, StateError> {
-        let vault_records = self.load_records()?;
+    fn typed_shadow_reports(
+        &self,
+        vault_records: &[VaultRecord],
+    ) -> Result<Vec<TypedShadowReadReport>, StateError> {
         let legacy_records = collect_legacy_records(&self.root)?;
-        let vault_by_path = records_by_path(&vault_records);
+        let vault_by_path = records_by_path(vault_records);
         let legacy_by_path = records_by_path(&legacy_records);
 
         for relative_path in vault_by_path.keys().chain(legacy_by_path.keys()) {
@@ -900,8 +961,58 @@ impl StateMirrorRepository for EncryptedStateVault {
 impl TypedStateRepository for EncryptedStateVault {
     fn verify_typed_shadow_reads(&self) -> Result<Vec<TypedShadowReadReport>, StateError> {
         self.ensure_no_pending_mirror()?;
-        self.verify()?;
-        self.typed_shadow_reports()
+        let (_, records) = self.verify_with_records()?;
+        self.typed_shadow_reports(&records)
+    }
+
+    fn read_primary_canary(
+        &self,
+        kinds: &[StateRecordKind],
+    ) -> Result<VaultPrimaryRead, StateError> {
+        if kinds.is_empty() {
+            return Err(StateError::VaultPrimaryReadSelectionEmpty);
+        }
+        let mut selected = BTreeSet::new();
+        for kind in kinds {
+            if !matches!(
+                kind,
+                StateRecordKind::Event | StateRecordKind::LocalProjection
+            ) {
+                return Err(StateError::VaultPrimaryReadKindNotAllowed(
+                    kind.as_str().to_owned(),
+                ));
+            }
+            selected.insert(*kind);
+        }
+
+        let (report, records) = self.verify_with_records()?;
+        if let Some(intent) = self.load_mirror_intent()?
+            && (intent.base_generation != report.mirror_generation
+                || intent.base_snapshot_id != report.snapshot_id)
+        {
+            return Err(StateError::VaultMirrorIntentBaseMismatch);
+        }
+        let shadow_reports = self
+            .typed_shadow_reports(&records)?
+            .into_iter()
+            .filter(|typed| selected.contains(&typed.kind))
+            .collect();
+        let records = records
+            .into_iter()
+            .filter_map(|record| {
+                let kind = classify_record_kind(&record.relative_path);
+                selected.contains(&kind).then_some(VaultPrimaryRecord {
+                    kind,
+                    relative_path: record.relative_path,
+                    content: record.content,
+                })
+            })
+            .collect();
+        Ok(VaultPrimaryRead {
+            mirror_generation: report.mirror_generation,
+            records,
+            shadow_reports,
+        })
     }
 }
 
@@ -1498,16 +1609,45 @@ mod tests {
         assert_eq!(typed.len(), StateRecordKind::ALL.len());
         assert!(typed.iter().all(|report| report.record_count() == 1));
 
+        let primary = vault
+            .read_primary_canary(&[StateRecordKind::Event, StateRecordKind::LocalProjection])?;
+        assert_eq!(primary.mirror_generation(), 2);
+        assert_eq!(primary.shadow_reports().len(), 2);
+        assert_eq!(primary.records().len(), 2);
+        assert!(primary.records().iter().all(|record| matches!(
+            record.kind(),
+            StateRecordKind::Event | StateRecordKind::LocalProjection
+        )));
+        assert!(matches!(
+            vault.read_primary_canary(&[StateRecordKind::Ratchet]),
+            Err(StateError::VaultPrimaryReadKindNotAllowed(kind)) if kind == "ratchet"
+        ));
+        assert!(matches!(
+            vault.read_primary_canary(&[]),
+            Err(StateError::VaultPrimaryReadSelectionEmpty)
+        ));
+
+        vault.begin_dual_write()?;
+        assert_eq!(
+            vault
+                .read_primary_canary(&[StateRecordKind::Event])?
+                .mirror_generation(),
+            2
+        );
         write(
             &directory.path().join("local-messages/old.local-text"),
             b"external-drift",
         )?;
         assert!(matches!(
-            vault.verify_typed_shadow_reads(),
+            vault.read_primary_canary(&[StateRecordKind::LocalProjection]),
             Err(StateError::VaultTypedShadowReadMismatch { kind, relative_path })
                 if kind == "local-projection"
                     && relative_path == "local-messages/old.local-text"
         ));
+        let recovered = vault
+            .recover_pending_dual_write()?
+            .ok_or("expected pending canary mirror recovery")?;
+        assert_eq!(recovered.report().mirror_generation(), 3);
         Ok(())
     }
 }
