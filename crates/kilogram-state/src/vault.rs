@@ -1,5 +1,5 @@
 use std::{
-    collections::BTreeSet,
+    collections::{BTreeMap, BTreeSet},
     ffi::OsString,
     fs::{self, File, OpenOptions},
     io::{self, Write},
@@ -51,6 +51,110 @@ pub enum VaultMigrationOutcome {
 pub enum VaultMirrorOutcome {
     Mirrored,
     AlreadyCurrent,
+}
+
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub enum StateRecordKind {
+    DeviceIdentity,
+    Ratchet,
+    Event,
+    LocalProjection,
+    HistoryRewrap,
+    HistoryRecovery,
+    Trust,
+    Sequence,
+    Other,
+}
+
+impl StateRecordKind {
+    pub const ALL: [Self; 9] = [
+        Self::DeviceIdentity,
+        Self::Ratchet,
+        Self::Event,
+        Self::LocalProjection,
+        Self::HistoryRewrap,
+        Self::HistoryRecovery,
+        Self::Trust,
+        Self::Sequence,
+        Self::Other,
+    ];
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::DeviceIdentity => "device-identity",
+            Self::Ratchet => "ratchet",
+            Self::Event => "event",
+            Self::LocalProjection => "local-projection",
+            Self::HistoryRewrap => "history-rewrap",
+            Self::HistoryRecovery => "history-recovery",
+            Self::Trust => "trust",
+            Self::Sequence => "sequence",
+            Self::Other => "other",
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TypedShadowReadReport {
+    kind: StateRecordKind,
+    record_count: u64,
+    plaintext_bytes: u64,
+}
+
+impl TypedShadowReadReport {
+    pub fn kind(&self) -> StateRecordKind {
+        self.kind
+    }
+
+    pub fn record_count(&self) -> u64 {
+        self.record_count
+    }
+
+    pub fn plaintext_bytes(&self) -> u64 {
+        self.plaintext_bytes
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct VaultMirrorDelta {
+    upserted_records: u64,
+    removed_records: u64,
+    unchanged_records: u64,
+}
+
+impl VaultMirrorDelta {
+    pub fn upserted_records(&self) -> u64 {
+        self.upserted_records
+    }
+
+    pub fn removed_records(&self) -> u64 {
+        self.removed_records
+    }
+
+    pub fn unchanged_records(&self) -> u64 {
+        self.unchanged_records
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct VaultMirrorCommit {
+    outcome: VaultMirrorOutcome,
+    report: VaultReport,
+    delta: VaultMirrorDelta,
+}
+
+impl VaultMirrorCommit {
+    pub fn outcome(&self) -> VaultMirrorOutcome {
+        self.outcome
+    }
+
+    pub fn report(&self) -> &VaultReport {
+        &self.report
+    }
+
+    pub fn delta(&self) -> VaultMirrorDelta {
+        self.delta
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -118,6 +222,22 @@ struct VaultRecord {
     content: Vec<u8>,
 }
 
+struct PendingVaultDelta {
+    upserts: Vec<VaultRecord>,
+    removals: Vec<String>,
+    unchanged_records: u64,
+}
+
+impl PendingVaultDelta {
+    fn report(&self) -> VaultMirrorDelta {
+        VaultMirrorDelta {
+            upserted_records: self.upserts.len() as u64,
+            removed_records: self.removals.len() as u64,
+            unchanged_records: self.unchanged_records,
+        }
+    }
+}
+
 pub struct EncryptedStateVault {
     root: PathBuf,
     database: Database,
@@ -127,11 +247,13 @@ pub struct EncryptedStateVault {
 pub trait StateMirrorRepository {
     fn begin_dual_write(&self) -> Result<VaultReport, StateError>;
 
-    fn finish_dual_write(&self) -> Result<(VaultMirrorOutcome, VaultReport), StateError>;
+    fn finish_dual_write(&self) -> Result<VaultMirrorCommit, StateError>;
 
-    fn recover_pending_dual_write(
-        &self,
-    ) -> Result<Option<(VaultMirrorOutcome, VaultReport)>, StateError>;
+    fn recover_pending_dual_write(&self) -> Result<Option<VaultMirrorCommit>, StateError>;
+}
+
+pub trait TypedStateRepository {
+    fn verify_typed_shadow_reads(&self) -> Result<Vec<TypedShadowReadReport>, StateError>;
 }
 
 impl EncryptedStateVault {
@@ -246,18 +368,49 @@ impl EncryptedStateVault {
 
     fn verify_current_against_legacy(&self) -> Result<VaultReport, StateError> {
         let report = self.verify()?;
-        let records = collect_legacy_records(&self.root)?;
-        let current = self.manifest_for_records(&records)?;
-        if current.snapshot_id != *report.snapshot_id()
-            || current.record_count != report.record_count()
-            || current.plaintext_bytes != report.plaintext_bytes()
-        {
-            return Err(StateError::VaultLegacyStateChanged {
-                stored: *report.snapshot_id(),
-                current: current.snapshot_id,
-            });
-        }
+        self.typed_shadow_reports()?;
         Ok(report)
+    }
+
+    fn typed_shadow_reports(&self) -> Result<Vec<TypedShadowReadReport>, StateError> {
+        let vault_records = self.load_records()?;
+        let legacy_records = collect_legacy_records(&self.root)?;
+        let vault_by_path = records_by_path(&vault_records);
+        let legacy_by_path = records_by_path(&legacy_records);
+
+        for relative_path in vault_by_path.keys().chain(legacy_by_path.keys()) {
+            if vault_by_path.get(relative_path) != legacy_by_path.get(relative_path) {
+                return Err(StateError::VaultTypedShadowReadMismatch {
+                    kind: classify_record_kind(relative_path).as_str().to_owned(),
+                    relative_path: (*relative_path).to_owned(),
+                });
+            }
+        }
+
+        let mut totals = BTreeMap::new();
+        for kind in StateRecordKind::ALL {
+            totals.insert(kind, (0_u64, 0_u64));
+        }
+        for record in vault_records {
+            let entry = totals
+                .entry(classify_record_kind(&record.relative_path))
+                .or_insert((0, 0));
+            entry.0 += 1;
+            entry.1 = entry
+                .1
+                .checked_add(record.content.len() as u64)
+                .ok_or(StateError::VaultSnapshotTooLarge(u64::MAX))?;
+        }
+        Ok(totals
+            .into_iter()
+            .map(
+                |(kind, (record_count, plaintext_bytes))| TypedShadowReadReport {
+                    kind,
+                    record_count,
+                    plaintext_bytes,
+                },
+            )
+            .collect())
     }
 
     pub fn restore_to_new_directory(
@@ -359,6 +512,68 @@ impl EncryptedStateVault {
                     .remove(MIRROR_INTENT_KEY)
                     .map_err(vault_database_error)?;
             }
+        }
+        write.commit().map_err(vault_database_error)
+    }
+
+    fn commit_delta(
+        &self,
+        delta: &PendingVaultDelta,
+        manifest: &VaultManifest,
+        generation: u64,
+        fail_after_operations: Option<usize>,
+    ) -> Result<(), StateError> {
+        let mut encrypted_upserts = Vec::with_capacity(delta.upserts.len());
+        for record in &delta.upserts {
+            let record_key = self.record_key(&record.relative_path);
+            let encrypted = self.encrypt_record(record, &record_key)?;
+            encrypted_upserts.push((record_key, encrypted));
+        }
+        let removal_keys = delta
+            .removals
+            .iter()
+            .map(|relative_path| self.record_key(relative_path))
+            .collect::<Vec<_>>();
+        let encoded_manifest = postcard::to_allocvec(manifest)?;
+        let generation_record = self.generation_record(generation, manifest.snapshot_id);
+        let encoded_generation = postcard::to_allocvec(&generation_record)?;
+        let mut write = self.database.begin_write().map_err(vault_database_error)?;
+        write
+            .set_durability(Durability::Immediate)
+            .map_err(vault_database_error)?;
+        let mut completed_operations = 0_usize;
+        {
+            let mut table = write
+                .open_table(RECORD_TABLE)
+                .map_err(vault_database_error)?;
+            for key in &removal_keys {
+                table.remove(key.as_slice()).map_err(vault_database_error)?;
+                completed_operations += 1;
+                if fail_after_operations == Some(completed_operations) {
+                    return Err(StateError::VaultInjectedFailure(completed_operations));
+                }
+            }
+            for (key, value) in &encrypted_upserts {
+                table
+                    .insert(key.as_slice(), value.as_slice())
+                    .map_err(vault_database_error)?;
+                completed_operations += 1;
+                if fail_after_operations == Some(completed_operations) {
+                    return Err(StateError::VaultInjectedFailure(completed_operations));
+                }
+            }
+        }
+        {
+            let mut table = write.open_table(META_TABLE).map_err(vault_database_error)?;
+            table
+                .insert(MANIFEST_KEY, encoded_manifest.as_slice())
+                .map_err(vault_database_error)?;
+            table
+                .insert(GENERATION_KEY, encoded_generation.as_slice())
+                .map_err(vault_database_error)?;
+            table
+                .remove(MIRROR_INTENT_KEY)
+                .map_err(vault_database_error)?;
         }
         write.commit().map_err(vault_database_error)
     }
@@ -482,8 +697,8 @@ impl EncryptedStateVault {
 
     fn finish_dual_write_internal(
         &self,
-        fail_after_records: Option<usize>,
-    ) -> Result<(VaultMirrorOutcome, VaultReport), StateError> {
+        fail_after_operations: Option<usize>,
+    ) -> Result<VaultMirrorCommit, StateError> {
         let intent = self
             .load_mirror_intent()?
             .ok_or(StateError::VaultMirrorIntentMissing)?;
@@ -494,26 +709,33 @@ impl EncryptedStateVault {
             return Err(StateError::VaultMirrorIntentBaseMismatch);
         }
 
+        let active_records = self.load_records()?;
         let records = collect_legacy_records(&self.root)?;
         let manifest = self.manifest_for_records(&records)?;
-        if report_matches_manifest(&active, &manifest) {
+        let delta = diff_records(&active_records, &records);
+        if delta.upserts.is_empty() && delta.removals.is_empty() {
+            if !report_matches_manifest(&active, &manifest) {
+                return Err(StateError::VaultManifestMismatch);
+            }
             self.clear_mirror_intent(&active)?;
-            return Ok((VaultMirrorOutcome::AlreadyCurrent, active));
+            return Ok(VaultMirrorCommit {
+                outcome: VaultMirrorOutcome::AlreadyCurrent,
+                report: active,
+                delta: delta.report(),
+            });
         }
 
         let next_generation = active
             .mirror_generation
             .checked_add(1)
             .ok_or(StateError::VaultGenerationExhausted)?;
-        self.commit_snapshot(
-            &records,
-            &manifest,
-            next_generation,
-            true,
-            fail_after_records,
-        )?;
+        self.commit_delta(&delta, &manifest, next_generation, fail_after_operations)?;
         let report = self.verify_current_against_legacy()?;
-        Ok((VaultMirrorOutcome::Mirrored, report))
+        Ok(VaultMirrorCommit {
+            outcome: VaultMirrorOutcome::Mirrored,
+            report,
+            delta: delta.report(),
+        })
     }
 
     fn clear_mirror_intent(&self, report: &VaultReport) -> Result<(), StateError> {
@@ -663,17 +885,71 @@ impl StateMirrorRepository for EncryptedStateVault {
         Ok(report)
     }
 
-    fn finish_dual_write(&self) -> Result<(VaultMirrorOutcome, VaultReport), StateError> {
+    fn finish_dual_write(&self) -> Result<VaultMirrorCommit, StateError> {
         self.finish_dual_write_internal(None)
     }
 
-    fn recover_pending_dual_write(
-        &self,
-    ) -> Result<Option<(VaultMirrorOutcome, VaultReport)>, StateError> {
+    fn recover_pending_dual_write(&self) -> Result<Option<VaultMirrorCommit>, StateError> {
         if self.load_mirror_intent()?.is_none() {
             return Ok(None);
         }
         self.finish_dual_write_internal(None).map(Some)
+    }
+}
+
+impl TypedStateRepository for EncryptedStateVault {
+    fn verify_typed_shadow_reads(&self) -> Result<Vec<TypedShadowReadReport>, StateError> {
+        self.ensure_no_pending_mirror()?;
+        self.verify()?;
+        self.typed_shadow_reports()
+    }
+}
+
+fn records_by_path(records: &[VaultRecord]) -> BTreeMap<&str, &VaultRecord> {
+    records
+        .iter()
+        .map(|record| (record.relative_path.as_str(), record))
+        .collect()
+}
+
+fn diff_records(active: &[VaultRecord], current: &[VaultRecord]) -> PendingVaultDelta {
+    let active_by_path = records_by_path(active);
+    let current_by_path = records_by_path(current);
+    let upserts = current
+        .iter()
+        .filter(|record| active_by_path.get(record.relative_path.as_str()) != Some(record))
+        .cloned()
+        .collect();
+    let removals = active
+        .iter()
+        .filter(|record| !current_by_path.contains_key(record.relative_path.as_str()))
+        .map(|record| record.relative_path.clone())
+        .collect();
+    let unchanged_records = current
+        .iter()
+        .filter(|record| active_by_path.get(record.relative_path.as_str()) == Some(record))
+        .count() as u64;
+    PendingVaultDelta {
+        upserts,
+        removals,
+        unchanged_records,
+    }
+}
+
+fn classify_record_kind(relative_path: &str) -> StateRecordKind {
+    let first = relative_path.split('/').next().unwrap_or(relative_path);
+    match first {
+        "device-secret.key" | "device-encryption-secret.key" => StateRecordKind::DeviceIdentity,
+        "ratchet" => StateRecordKind::Ratchet,
+        "events" => StateRecordKind::Event,
+        "local-messages" => StateRecordKind::LocalProjection,
+        "history-rewraps" => StateRecordKind::HistoryRewrap,
+        "history-recovery" => StateRecordKind::HistoryRecovery,
+        "account-authority.snapshot" | "device-certificate.cert" | "conversation-memberships" => {
+            StateRecordKind::Trust
+        }
+        "next-sequence" => StateRecordKind::Sequence,
+        _ => StateRecordKind::Other,
     }
 }
 
@@ -930,6 +1206,20 @@ mod tests {
         Ok(())
     }
 
+    fn encrypted_record(
+        vault: &EncryptedStateVault,
+        relative_path: &str,
+    ) -> Result<Vec<u8>, Box<dyn Error>> {
+        let read = vault.database.begin_read()?;
+        let table = read.open_table(RECORD_TABLE)?;
+        let key = vault.record_key(relative_path);
+        Ok(table
+            .get(key.as_slice())?
+            .ok_or("encrypted record is missing")?
+            .value()
+            .to_vec())
+    }
+
     #[test]
     fn encrypted_vault_migrates_verifies_and_restores_exact_snapshot() -> Result<(), Box<dyn Error>>
     {
@@ -1015,7 +1305,7 @@ mod tests {
         write(&directory.path().join("second"), b"changed")?;
         assert!(matches!(
             vault.verify_against_legacy(),
-            Err(StateError::VaultLegacyStateChanged { .. })
+            Err(StateError::VaultTypedShadowReadMismatch { .. })
         ));
         assert!(matches!(
             vault.migrate_legacy_snapshot(),
@@ -1079,9 +1369,12 @@ mod tests {
 
         let begun = vault.begin_dual_write()?;
         assert_eq!(begun, initial);
-        let (unchanged, unchanged_report) = vault.finish_dual_write()?;
-        assert_eq!(unchanged, VaultMirrorOutcome::AlreadyCurrent);
-        assert_eq!(unchanged_report.mirror_generation(), 1);
+        let unchanged = vault.finish_dual_write()?;
+        assert_eq!(unchanged.outcome(), VaultMirrorOutcome::AlreadyCurrent);
+        assert_eq!(unchanged.report().mirror_generation(), 1);
+        assert_eq!(unchanged.delta().upserted_records(), 0);
+        assert_eq!(unchanged.delta().removed_records(), 0);
+        assert_eq!(unchanged.delta().unchanged_records(), 1);
 
         vault.begin_dual_write()?;
         write(&directory.path().join("state"), b"two")?;
@@ -1089,12 +1382,15 @@ mod tests {
             vault.verify_against_legacy(),
             Err(StateError::VaultMirrorRecoveryRequired { .. })
         ));
-        let (recovered, second) = vault
+        let recovered = vault
             .recover_pending_dual_write()?
             .ok_or("expected pending mirror recovery")?;
-        assert_eq!(recovered, VaultMirrorOutcome::Mirrored);
-        assert_eq!(second.mirror_generation(), 2);
-        assert_eq!(vault.verify_against_legacy()?, second);
+        assert_eq!(recovered.outcome(), VaultMirrorOutcome::Mirrored);
+        assert_eq!(recovered.report().mirror_generation(), 2);
+        assert_eq!(recovered.delta().upserted_records(), 1);
+        assert_eq!(recovered.delta().removed_records(), 0);
+        assert_eq!(recovered.delta().unchanged_records(), 0);
+        assert_eq!(vault.verify_against_legacy()?, *recovered.report());
 
         vault.begin_dual_write()?;
         write(&directory.path().join("another"), b"three")?;
@@ -1107,15 +1403,15 @@ mod tests {
             vault.verify_against_legacy(),
             Err(StateError::VaultMirrorRecoveryRequired { .. })
         ));
-        let (_, third) = vault
+        let third = vault
             .recover_pending_dual_write()?
             .ok_or("expected fault recovery")?;
-        assert_eq!(third.mirror_generation(), 3);
+        assert_eq!(third.report().mirror_generation(), 3);
 
         write(&directory.path().join("external"), b"not authorized")?;
         assert!(matches!(
             vault.begin_dual_write(),
-            Err(StateError::VaultLegacyStateChanged { .. })
+            Err(StateError::VaultTypedShadowReadMismatch { .. })
         ));
 
         let tampered_directory = tempfile::tempdir()?;
@@ -1144,6 +1440,73 @@ mod tests {
         assert!(matches!(
             tampered_vault.recover_pending_dual_write(),
             Err(StateError::VaultMirrorIntentAuthenticationFailed)
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn incremental_typed_mirror_preserves_unchanged_ciphertext_and_applies_deletions()
+    -> Result<(), Box<dyn Error>> {
+        let directory = tempfile::tempdir()?;
+        let fixtures = [
+            ("device-secret.key", b"identity".as_slice()),
+            ("ratchet/session.pickle", b"ratchet-one".as_slice()),
+            ("events/chat/old.event", b"event-old".as_slice()),
+            ("local-messages/old.local-text", b"projection".as_slice()),
+            ("history-rewraps/transfer.rewrap", b"rewrap".as_slice()),
+            ("history-recovery/page.checkpoint", b"recovery".as_slice()),
+            ("account-authority.snapshot", b"trust".as_slice()),
+            ("next-sequence", b"7".as_slice()),
+            ("future-extension.bin", b"other".as_slice()),
+        ];
+        for (path, content) in fixtures {
+            write(&directory.path().join(path), content)?;
+        }
+
+        let vault = EncryptedStateVault::open_or_create(directory.path())?;
+        vault.migrate_legacy_snapshot()?;
+        let identity_before = encrypted_record(&vault, "device-secret.key")?;
+        let ratchet_before = encrypted_record(&vault, "ratchet/session.pickle")?;
+
+        vault.begin_dual_write()?;
+        write(
+            &directory.path().join("ratchet/session.pickle"),
+            b"ratchet-two",
+        )?;
+        fs::remove_file(directory.path().join("events/chat/old.event"))?;
+        write(
+            &directory.path().join("events/chat/new.event"),
+            b"event-new",
+        )?;
+        let commit = vault.finish_dual_write()?;
+        assert_eq!(commit.outcome(), VaultMirrorOutcome::Mirrored);
+        assert_eq!(commit.report().mirror_generation(), 2);
+        assert_eq!(commit.delta().upserted_records(), 2);
+        assert_eq!(commit.delta().removed_records(), 1);
+        assert_eq!(commit.delta().unchanged_records(), 7);
+        assert_eq!(
+            encrypted_record(&vault, "device-secret.key")?,
+            identity_before
+        );
+        assert_ne!(
+            encrypted_record(&vault, "ratchet/session.pickle")?,
+            ratchet_before
+        );
+        assert!(encrypted_record(&vault, "events/chat/old.event").is_err());
+
+        let typed = vault.verify_typed_shadow_reads()?;
+        assert_eq!(typed.len(), StateRecordKind::ALL.len());
+        assert!(typed.iter().all(|report| report.record_count() == 1));
+
+        write(
+            &directory.path().join("local-messages/old.local-text"),
+            b"external-drift",
+        )?;
+        assert!(matches!(
+            vault.verify_typed_shadow_reads(),
+            Err(StateError::VaultTypedShadowReadMismatch { kind, relative_path })
+                if kind == "local-projection"
+                    && relative_path == "local-messages/old.local-text"
         ));
         Ok(())
     }

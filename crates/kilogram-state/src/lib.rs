@@ -13,7 +13,8 @@ mod vault;
 
 pub use vault::{
     EncryptedStateVault, STATE_VAULT_FILE, STATE_VAULT_KEY_FILE, StateMirrorRepository,
-    VaultMigrationOutcome, VaultMirrorOutcome, VaultReport,
+    StateRecordKind, TypedShadowReadReport, TypedStateRepository, VaultMigrationOutcome,
+    VaultMirrorCommit, VaultMirrorDelta, VaultMirrorOutcome, VaultReport,
 };
 
 const LOCK_FILE: &str = ".kilogram-state.lock";
@@ -124,6 +125,9 @@ pub enum StateError {
 
     #[error("legacy state changed after vault snapshot (stored {stored:?}, current {current:?})")]
     VaultLegacyStateChanged { stored: [u8; 32], current: [u8; 32] },
+
+    #[error("state vault typed shadow read mismatch for {kind} record at {relative_path}")]
+    VaultTypedShadowReadMismatch { kind: String, relative_path: String },
 
     #[error("state vault path is not valid UTF-8: {0}")]
     VaultNonUtf8Path(PathBuf),

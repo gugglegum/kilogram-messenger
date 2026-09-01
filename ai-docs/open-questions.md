@@ -27,8 +27,10 @@ M0.7.9 добавил signed append-only checkpoint chain, authenticated paginat
 согласии минимум двух явно опрошенных sources.
 M0.8.1 добавил обратимый encrypted shadow snapshot всего device state в `redb`,
 а M0.8.2 — authenticated intent, versioned generation и recoverable mirror
-после каждой live CLI-команды. Legacy по-прежнему является primary store,
-changed mirror остаётся `O(state)`, а master key лежит рядом development-файлом.
+после каждой live CLI-команды. M0.8.3 добавил typed exact shadow reads и
+атомарный encrypted delta: DB writes стали `O(changed + deleted)`, хотя полный
+scan/decrypt остаётся `O(state)`. Legacy по-прежнему является primary store, а
+master key лежит рядом development-файлом.
 Следующие вопросы относятся к production recovery, rotation, asynchronous
 sessions, distribution, removal и key epochs и не решены этим прототипом.
 
@@ -45,10 +47,11 @@ sessions, distribution, removal и key epochs и не решены этим пр
 - Какой TTL применять к retained losing session, как выполнять authenticated
   session reset после потери state и нужен ли production-протокол сложнее
   проверенного M0.7.6 lexicographic-min разрешения двух crossed sessions?
-- Как разбить M0.8.2 full-snapshot mirror на typed incremental repositories,
-  доказать DB/legacy read equivalence и выполнить primary cutover с versioned
-  migrations, bounded backups и безопасным удалением без ослабления forward
-  secrecy? Остаётся ли `redb` production engine после mobile/load tests?
+- В каком порядке переключать typed repositories на DB-primary после M0.8.3:
+  достаточно ли начать с immutable events/projections, как долго сохранять
+  обязательный legacy shadow read и какие fault/versioned-migration критерии
+  разрешают удалить fallback? Остаётся ли `redb` production engine после
+  mobile/load tests, bounded backup и compaction tests?
 - Как защищать vault master key: OS keystore, аппаратный ключ,
   passphrase/seed-derived wrapping или их комбинация; как обнаруживать rollback
   согласованной старой пары DB+key и восстанавливать key без создания общего

@@ -39,8 +39,8 @@ use kilogram_session::{
 };
 use kilogram_state::{
     EncryptedStateVault, STATE_VAULT_FILE, STATE_VAULT_KEY_FILE, StateDirectoryLock,
-    StateMirrorRepository, StateTransaction, VaultMigrationOutcome, VaultMirrorOutcome,
-    VaultReport,
+    StateMirrorRepository, StateTransaction, TypedStateRepository, VaultMigrationOutcome,
+    VaultMirrorCommit, VaultMirrorOutcome, VaultReport,
 };
 use kilogram_store::{EventStore, LocalMessageStore, StoreError, StoreOutcome};
 use kilogram_transport_iroh::{
@@ -574,6 +574,13 @@ enum Command {
         state_dir: PathBuf,
     },
 
+    /// Compare each typed encrypted repository view with its retained legacy view.
+    StateVaultShadowRead {
+        /// Directory containing the migrated device state and encrypted vault.
+        #[arg(long)]
+        state_dir: PathBuf,
+    },
+
     /// Recover a vault mirror only when a prior authenticated dual-write intent exists.
     StateVaultRecover {
         /// Directory containing an interrupted encrypted vault mirror.
@@ -615,6 +622,7 @@ impl Command {
             | Self::DeviceAuthorize { state_dir, .. }
             | Self::StateVaultMigrate { state_dir }
             | Self::StateVaultVerify { state_dir }
+            | Self::StateVaultShadowRead { state_dir }
             | Self::StateVaultRecover { state_dir }
             | Self::StateVaultRestore { state_dir, .. } => Some(state_dir),
             Self::AccountCreate { .. }
@@ -634,6 +642,7 @@ impl Command {
                 self,
                 Self::StateVaultMigrate { .. }
                     | Self::StateVaultVerify { .. }
+                    | Self::StateVaultShadowRead { .. }
                     | Self::StateVaultRecover { .. }
                     | Self::StateVaultRestore { .. }
             )
@@ -903,15 +912,15 @@ impl VaultDualWriteGuard {
         }
         let vault = EncryptedStateVault::open_existing(state_directory)
             .context("open encrypted state vault before live command")?;
-        if let Some((outcome, report)) = vault
+        if let Some(commit) = vault
             .recover_pending_dual_write()
             .context("recover interrupted state vault dual-write")?
         {
             println!(
                 "vault_dual_write_recovery={}",
-                vault_mirror_outcome_name(outcome)
+                vault_mirror_outcome_name(commit.outcome())
             );
-            print_vault_report(&report);
+            print_vault_mirror_commit(&commit);
         }
         let base = vault
             .begin_dual_write()
@@ -929,11 +938,14 @@ impl VaultDualWriteGuard {
     fn finish(self) -> Result<()> {
         let vault = EncryptedStateVault::open_existing(&self.state_directory)
             .context("reopen encrypted state vault after live command")?;
-        let (outcome, report) = vault
+        let commit = vault
             .finish_dual_write()
             .context("commit live legacy state to encrypted state vault")?;
-        println!("vault_dual_write={}", vault_mirror_outcome_name(outcome));
-        print_vault_report(&report);
+        println!(
+            "vault_dual_write={}",
+            vault_mirror_outcome_name(commit.outcome())
+        );
+        print_vault_mirror_commit(&commit);
         Ok(())
     }
 }
@@ -1182,6 +1194,7 @@ async fn run_command(command: Command) -> Result<()> {
         } => revoke_device(account_dir, device_id, revocation_file),
         Command::StateVaultMigrate { state_dir } => migrate_state_vault(state_dir),
         Command::StateVaultVerify { state_dir } => verify_state_vault(state_dir),
+        Command::StateVaultShadowRead { state_dir } => shadow_read_state_vault(state_dir),
         Command::StateVaultRecover { state_dir } => recover_state_vault(state_dir),
         Command::StateVaultRestore {
             state_dir,
@@ -1227,6 +1240,26 @@ fn verify_state_vault(state_dir: PathBuf) -> Result<()> {
     Ok(())
 }
 
+fn shadow_read_state_vault(state_dir: PathBuf) -> Result<()> {
+    let vault = EncryptedStateVault::open_existing(&state_dir)
+        .context("open encrypted transactional state vault")?;
+    let reports = vault
+        .verify_typed_shadow_reads()
+        .context("compare typed encrypted and legacy repository reads")?;
+    for report in &reports {
+        println!(
+            "vault_shadow_kind={} records={} plaintext_bytes={}",
+            report.kind().as_str(),
+            report.record_count(),
+            report.plaintext_bytes()
+        );
+    }
+    println!("shadow_kind_count={}", reports.len());
+    println!("shadow_reads_equal=true");
+    println!("status=state-vault-shadow-read-verified");
+    Ok(())
+}
+
 fn recover_state_vault(state_dir: PathBuf) -> Result<()> {
     let vault = EncryptedStateVault::open_existing(&state_dir)
         .context("open encrypted transactional state vault")?;
@@ -1234,12 +1267,13 @@ fn recover_state_vault(state_dir: PathBuf) -> Result<()> {
         .recover_pending_dual_write()
         .context("recover authenticated pending state vault dual-write")?
     {
-        Some((outcome, report)) => {
+        Some(commit) => {
             println!(
                 "vault_dual_write_recovery={}",
-                vault_mirror_outcome_name(outcome)
+                vault_mirror_outcome_name(commit.outcome())
             );
-            report
+            print_vault_mirror_delta(&commit);
+            commit.report().clone()
         }
         None => {
             println!("vault_dual_write_recovery=not-needed");
@@ -1272,6 +1306,26 @@ fn print_vault_report(report: &VaultReport) {
     println!("vault_record_count={}", report.record_count());
     println!("vault_plaintext_bytes={}", report.plaintext_bytes());
     println!("vault_snapshot_id={}", encode_hex(report.snapshot_id()));
+}
+
+fn print_vault_mirror_delta(commit: &VaultMirrorCommit) {
+    println!(
+        "vault_delta_upserted_records={}",
+        commit.delta().upserted_records()
+    );
+    println!(
+        "vault_delta_removed_records={}",
+        commit.delta().removed_records()
+    );
+    println!(
+        "vault_delta_unchanged_records={}",
+        commit.delta().unchanged_records()
+    );
+}
+
+fn print_vault_mirror_commit(commit: &VaultMirrorCommit) {
+    print_vault_mirror_delta(commit);
+    print_vault_report(commit.report());
 }
 
 fn run_state_transaction<T>(
@@ -4907,6 +4961,7 @@ mod tests {
         let vault = EncryptedStateVault::open_existing(directory.path())?;
         assert_eq!(vault.verify_against_legacy()?.mirror_generation(), 3);
         drop(vault);
+        shadow_read_state_vault(directory.path().to_path_buf())?;
 
         fs::write(directory.path().join("state"), b"external-tamper")?;
         assert!(VaultDualWriteGuard::prepare(directory.path()).is_err());

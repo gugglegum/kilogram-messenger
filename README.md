@@ -33,12 +33,14 @@ The encrypted transactional shadow-vault migration is specified in
 [`docs/RFC-0013-encrypted-transactional-state-vault.md`](docs/RFC-0013-encrypted-transactional-state-vault.md).
 The recoverable live shadow dual-write is specified in
 [`docs/RFC-0014-recoverable-shadow-dual-write.md`](docs/RFC-0014-recoverable-shadow-dual-write.md).
+The typed incremental encrypted mirror is specified in
+[`docs/RFC-0015-typed-incremental-shadow-repositories.md`](docs/RFC-0015-typed-incremental-shadow-repositories.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.8.2 recoverable shadow dual-write — complete
+## Current milestone: M0.8.3 typed incremental shadow repositories — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -125,12 +127,21 @@ Read-only commands keep the generation unchanged, while changed state advances
 it monotonically. `state-vault-recover` exposes the same constrained recovery
 explicitly.
 
+M0.8.3 replaces the full encrypted rewrite with an atomic per-record delta.
+Changed and new records are encrypted and upserted, removed records are
+deleted, and unchanged ciphertext values stay untouched. Nine typed state
+categories expose exact DB/legacy shadow-read inventory through
+`state-vault-shadow-read`; any per-path mismatch fails closed. Live commands
+also report upsert/remove/unchanged counters. Encryption and DB mutations are
+now proportional to the delta, while the conservative full scan/decrypt/compare
+remains proportional to total state.
+
 This is still a narrow integration spike. The vault is not yet the primary
-repository: live commands continue to read and write legacy files before a
-full `O(state)` encrypted mirror, and the
+repository: live commands continue to read and write legacy files before an
+`O(state)` shadow comparison, and the
 development master key remains beside the database. It does not yet provide a
 global DHT or gossip freshness proof, atomic remote prekey reservation,
-protected local key storage, typed incremental repositories/cutover, PQXDH, or
+protected local key storage, DB-primary repository cutover, PQXDH, or
 cross-account recovery. Losing every readable projection
 still cannot be repaired from old ciphertext with only the device signing key.
 Do not use it for sensitive communication.

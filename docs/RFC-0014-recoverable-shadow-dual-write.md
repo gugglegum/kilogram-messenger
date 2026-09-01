@@ -85,8 +85,10 @@ Generation — локальный sequencing marker, а не внешний roll
 7. Независимо от успеха команды собирается фактически committed legacy state.
 8. Если snapshot не изменился, generation record подтверждается, а intent
    удаляется одной transaction.
-9. Если snapshot изменился, все encrypted records, новый manifest,
-   `generation + 1` и удаление intent коммитятся одной transaction.
+9. В M0.8.2 при изменении все encrypted records, новый manifest,
+   `generation + 1` и удаление intent коммитились одной transaction. M0.8.3
+   сохраняет тот же recovery protocol, но атомарно применяет только record
+   delta по контракту RFC-0015.
 
 Completion запускается и после ошибки команды: delivery/connect может успеть
 durably сохранить локальное событие до последующей сетевой ошибки. Если и
@@ -187,8 +189,9 @@ Release process smoke `.tmp/m082-smoke-20260901-080000`:
 - соседний key file не является production keystore;
 - Account Root directories не входят в device-state coordinator.
 
-Следующий этап M0.8.3 должен разбить snapshot на typed repositories и
-incremental encrypted transactions для mutable ratchet/sequence/trust state и
-immutable events/projections/recovery records. Сначала каждый DB read должен
-сравниваться с legacy read в shadow mode; primary read cutover допустим только
-после equivalence/fault tests и versioned migration policy.
+M0.8.3 реализован в
+[`RFC-0015`](RFC-0015-typed-incremental-shadow-repositories.md): live mirror
+шифрует и записывает только changed/new records, удаляет только исчезнувшие и
+публикует typed DB/legacy shadow inventory. Полный сбор/сравнение пока остаётся
+`O(state)`. Primary read cutover разрешён только как следующий ограниченный
+canary после equivalence/fault tests и versioned migration policy.

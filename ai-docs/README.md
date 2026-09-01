@@ -112,10 +112,15 @@ M0.8.2 добавил recoverable shadow dual-write: каждая live device-st
 атомарно зеркалирует фактически committed legacy tree. После crash валидный
 intent разрешает next-start recovery; drift без intent блокируется. Read-only
 command оставляет generation неизменной, changed command увеличивает её.
+M0.8.3 применяет только encrypted record delta: changed/new records
+перешифровываются, removed records удаляются, unchanged ciphertext не
+переписывается. Девять typed repository kinds проходят exact DB/legacy shadow
+comparison; CLI публикует per-kind inventory и delta counters. Filesystem пока
+остаётся primary read/write path.
 Seed/root recovery, защищённое хранение root/local/ratchet keys, production
-typed DB repositories/cutover, global prekey discovery/witness, автоматический recovery
-source discovery/background coordinator, sync summaries, membership removal и
-группы ещё не реализованы.
+DB-primary adapters/cutover, global prekey discovery/witness, автоматический
+recovery source discovery/background coordinator, sync summaries, membership
+removal и группы ещё не реализованы.
 
 ## Цель продукта
 
@@ -168,8 +173,8 @@ source discovery/background coordinator, sync summaries, membership removal и
 
 ## План ближайших работ
 
-1. Ввести M0.8.3 typed incremental repositories, сверять DB/legacy reads в
-   shadow mode и только затем переключить primary store.
+1. В M0.8.4 начать DB-primary canary для immutable event/projection adapters с
+   обязательным legacy shadow compare и без silent fallback.
 2. Защитить vault master key через OS keystore/passphrase/seed wrapping,
    добавить rollback witness, versioned migrations и bounded backup/restore.
 3. Добавить source discovery/background coordinator и QR/device-link UX поверх
@@ -220,5 +225,7 @@ source discovery/background coordinator, sync summaries, membership removal и
   реализованный M0.8.1-контракт encrypted shadow migration, verify и restore.
 - [`../docs/RFC-0014-recoverable-shadow-dual-write.md`](../docs/RFC-0014-recoverable-shadow-dual-write.md) —
   реализованный M0.8.2-контракт authenticated intent, generation и crash recovery.
+- [`../docs/RFC-0015-typed-incremental-shadow-repositories.md`](../docs/RFC-0015-typed-incremental-shadow-repositories.md) —
+  реализованный M0.8.3-контракт encrypted delta и typed shadow equivalence.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

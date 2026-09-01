@@ -318,6 +318,17 @@ toolchain `1.98.0` для воспроизводимой разработки.
     `.tmp/m082-smoke-20260901-080000` сохранил generation 1 на read-only
     `identity`, повысил её до 2 после live prekey rotation, восстановил exact 23
     files/3 history events и не нашёл plaintext markers в raw DB.
+44. M0.8.3 заменил full live rewrite на atomic record delta и добавил typed
+    shadow inventory. `VaultMirrorCommit` публикует upsert/remove/unchanged;
+    девять `StateRecordKind` проверяются exact DB/legacy path+content через
+    `state-vault-shadow-read`. Unit test доказывает, что unchanged ciphertext
+    остаётся byte-identical, changed ciphertext заменяется, deletion удаляется,
+    а abort не публикует delta. Все 84 workspace tests, strict Clippy и release
+    build проходят. Release smoke `.tmp/m083-smoke-20260901-100000` получил
+    `0/0/23` для read-only и `2/0/21` для prekey rotation, generation 1→2,
+    exact typed inventory, byte-exact restore 23 files/3 history events и clean
+    raw DB marker scan. Полный scan/decrypt остаётся `O(state)`, но encryption и
+    DB writes стали `O(changed + deleted)`.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -339,9 +350,9 @@ multi-source claim reconciliation, а M0.7.9 — signed checkpoint pagination и
 safe retry. Source discovery/background coordinator, membership removal/epochs
 и group E2EE остаются открыты. M0.7.7 закрывает M0 crash consistency для device
 filesystem state; M0.8.1 доказывает атомарную encrypted shadow migration в
-`redb`, а M0.8.2 — recoverable versioned dual-write всех live CLI commands.
-Typed incremental repositories, primary DB cutover, bounded backups и
-защищённый key provider ещё не реализованы.
+`redb`, M0.8.2 — recoverable versioned dual-write всех live CLI commands, а
+M0.8.3 — typed incremental encrypted delta и exact shadow reads. Primary DB
+cutover, bounded backups и защищённый key provider ещё не реализованы.
 
 ## Решения, которые ещё нельзя фиксировать
 

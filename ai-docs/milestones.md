@@ -1017,10 +1017,45 @@ Generation не является внешним rollback witness, а key ост�
 development-файлом. Полный контракт —
 [`../docs/RFC-0014-recoverable-shadow-dual-write.md`](../docs/RFC-0014-recoverable-shadow-dual-write.md).
 
+### M0.8.3 — typed incremental shadow repositories: выполнено
+
+Реализовано:
+
+- active vault и legacy tree сравниваются по canonical relative path; mirror
+  формирует точные upsert/remove/unchanged множества;
+- changed/new records шифруются с новым nonce, удалённые keyed records
+  удаляются, а неизменённые ciphertext values не переписываются;
+- delta, manifest, generation и intent removal публикуются одной immediate
+  `redb` transaction; fault сохраняет прежний active snapshot и pending intent;
+- `VaultMirrorCommit` возвращает outcome/report и delta counters, которые
+  печатаются live CLI как при normal completion, так и recovery;
+- девять `StateRecordKind` покрывают identity, ratchet, events, local
+  projections, rewrap, recovery, trust, sequence и явный `other` fallback;
+- `TypedStateRepository` выполняет exact DB/legacy shadow comparison и
+  возвращает per-kind record/byte inventory;
+- `state-vault-shadow-read` проверяет и печатает все typed views без
+  переключения primary read path.
+
+Проверки:
+
+- unit test подтверждает delta `2 upsert / 1 remove / 7 unchanged`, сохранение
+  ciphertext неизменённой identity-записи, замену ratchet ciphertext, удаление
+  event и typed mismatch для local projection;
+- все 84 workspace tests, rustfmt, strict Clippy и release build проходят;
+- release smoke `.tmp/m083-smoke-20260901-100000` на 23 реальных records дал
+  `0/0/23` для `identity` и `2/0/21` для prekey rotation, generation 1→2;
+  девять typed views совпали, restore дал byte-exact 23 files и прежние 3
+  history events, raw DB scan не нашёл plaintext/path markers.
+
+Граница среза: шифрование и DB mutations теперь `O(changed + deleted)`, но
+сбор legacy, decrypt и exact compare остаются `O(state)`. Filesystem всё ещё
+primary; master key лежит рядом с DB. Полный контракт —
+[`../docs/RFC-0015-typed-incremental-shadow-repositories.md`](../docs/RFC-0015-typed-incremental-shadow-repositories.md).
+
 ### Следующий этап
 
-1. M0.8.3 ввести typed incremental repositories для mutable и immutable state,
-   сравнивать DB/legacy reads в shadow mode до primary cutover.
+1. M0.8.4 начать DB-primary canary для immutable event/projection adapters с
+   обязательным legacy shadow compare и fail-closed без silent fallback.
 2. Защитить vault master key через OS keystore/passphrase/seed wrapping и
    спроектировать rollback witness, backup и versioned migrations.
 3. Source discovery/background coordinator и QR/device-link UX строить поверх
