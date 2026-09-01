@@ -12,9 +12,11 @@ use kilogram_ratchet::{DecryptedMessage, RatchetCiphertext, RatchetError, Signed
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+mod recovery;
 mod rewrap;
 mod wire;
 
+pub use recovery::{HistoryRecoveryId, SignedHistoryRecoveryCheckpoint};
 pub use rewrap::{
     HistoryRewrapBundle, HistoryRewrapEntry, HistoryRewrapId, HistoryRewrapManifest,
     HistoryRewrapSas, MAX_HISTORY_REWRAP_ENTRIES, SignedHistoryRewrapRequest,
@@ -926,6 +928,27 @@ pub enum ProtocolError {
     #[error("unsupported history rewrap response version: {0}")]
     UnsupportedHistoryRewrapResponseVersion(u8),
 
+    #[error("unsupported history recovery checkpoint version: {0}")]
+    UnsupportedHistoryRecoveryCheckpointVersion(u8),
+
+    #[error("history recovery approved range overflows")]
+    HistoryRecoveryRangeOverflow,
+
+    #[error("invalid history recovery checkpoint range [{start}, {end}) at next index {next}")]
+    InvalidHistoryRecoveryCheckpointRange { start: u64, end: u64, next: u64 },
+
+    #[error("history recovery checkpoint signer is device {actual}; expected {expected}")]
+    HistoryRecoveryCheckpointSignerMismatch {
+        expected: DeviceId,
+        actual: DeviceId,
+    },
+
+    #[error("history recovery page does not match the signed checkpoint")]
+    HistoryRecoveryCheckpointPageMismatch,
+
+    #[error("history recovery source inventory claim changed during resume")]
+    HistoryRecoveryCheckpointClaimMismatch,
+
     #[error("unsupported local text projection version: {0}")]
     UnsupportedLocalTextProjectionVersion(u8),
 
@@ -1293,12 +1316,34 @@ mod tests {
             DeviceEncryptionIdentity::generate()?.public_key(),
             &DeviceCapability::MESSAGING,
         )?;
-        let event = AuthorizedEvent::new(
+        let author_snapshot = author_account.authority_snapshot()?;
+        let first_event = AuthorizedEvent::new(
             sign_test_text(&author, conversation_id, 0, Vec::new(), "recover me")?,
-            author_certificate,
-            author_account.authority_snapshot()?,
+            author_certificate.clone(),
+            author_snapshot.clone(),
         )?;
-        let inventory = vec![(event, "recover me".to_owned())];
+        let second_event = AuthorizedEvent::new(
+            sign_test_text(&author, conversation_id, 1, Vec::new(), "recover more")?,
+            author_certificate.clone(),
+            author_snapshot.clone(),
+        )?;
+        let mut keyed_inventory = vec![
+            (
+                first_event.event().event_id()?,
+                first_event.clone(),
+                "recover me".to_owned(),
+            ),
+            (
+                second_event.event().event_id()?,
+                second_event,
+                "recover more".to_owned(),
+            ),
+        ];
+        keyed_inventory.sort_by_key(|(event_id, _, _)| *event_id);
+        let inventory = keyed_inventory
+            .into_iter()
+            .map(|(_, event, body)| (event, body))
+            .collect::<Vec<_>>();
         let sas =
             HistoryRewrapSas::derive(&device_list, source.device_id(), recipient.device_id())?;
         assert_ne!(
@@ -1328,7 +1373,7 @@ mod tests {
         ));
         let bundle = HistoryRewrapBundle::seal(
             &source,
-            device_list,
+            device_list.clone(),
             recipient.device_id(),
             conversation_id,
             &inventory,
@@ -1336,6 +1381,7 @@ mod tests {
             1,
         )?;
         let transfer = SignedHistoryRewrapTransfer::sign(&source, request.clone(), bundle)?;
+        let recovery_bundle = transfer.bundle().clone();
         transfer.verify_for_request(&request)?;
         let encoded = transfer.encode()?;
         assert_eq!(
@@ -1379,6 +1425,87 @@ mod tests {
             )
             .is_err()
         );
+
+        let initial_checkpoint = SignedHistoryRecoveryCheckpoint::start(
+            &recipient,
+            account.account_id(),
+            conversation_id,
+            source.device_id(),
+            sas,
+            0,
+            2,
+            1,
+        )?;
+        let advanced_checkpoint =
+            initial_checkpoint.advance(&recipient, recovery_bundle.manifest())?;
+        assert_eq!(advanced_checkpoint.next_range_start(), 1);
+        assert_eq!(advanced_checkpoint.inventory_event_count(), Some(2));
+        assert!(!advanced_checkpoint.is_complete());
+        assert_eq!(
+            advanced_checkpoint.previous_checkpoint_id(),
+            Some(&initial_checkpoint.checkpoint_id()?)
+        );
+        assert_eq!(
+            SignedHistoryRecoveryCheckpoint::decode_and_verify(&advanced_checkpoint.encode()?)?,
+            advanced_checkpoint
+        );
+        assert!(matches!(
+            advanced_checkpoint.advance(&recipient, recovery_bundle.manifest()),
+            Err(ProtocolError::HistoryRecoveryCheckpointPageMismatch)
+        ));
+        let second_bundle = HistoryRewrapBundle::seal(
+            &source,
+            device_list.clone(),
+            recipient.device_id(),
+            conversation_id,
+            &inventory,
+            1,
+            2,
+        )?;
+        let completed_checkpoint =
+            advanced_checkpoint.advance(&recipient, second_bundle.manifest())?;
+        assert!(completed_checkpoint.is_complete());
+
+        let alternate_event = AuthorizedEvent::new(
+            sign_test_text(&author, conversation_id, 2, Vec::new(), "alternate")?,
+            author_certificate,
+            author_snapshot,
+        )?;
+        let mut keyed_divergent_inventory = vec![
+            (
+                first_event.event().event_id()?,
+                first_event,
+                "recover me".to_owned(),
+            ),
+            (
+                alternate_event.event().event_id()?,
+                alternate_event,
+                "alternate".to_owned(),
+            ),
+        ];
+        keyed_divergent_inventory.sort_by_key(|(event_id, _, _)| *event_id);
+        let divergent_inventory = keyed_divergent_inventory
+            .into_iter()
+            .map(|(_, event, body)| (event, body))
+            .collect::<Vec<_>>();
+        let divergent_bundle = HistoryRewrapBundle::seal(
+            &source,
+            device_list,
+            recipient.device_id(),
+            conversation_id,
+            &divergent_inventory,
+            1,
+            2,
+        )?;
+        assert!(matches!(
+            advanced_checkpoint.advance(&recipient, divergent_bundle.manifest()),
+            Err(ProtocolError::HistoryRecoveryCheckpointClaimMismatch)
+        ));
+        let outsider = DeviceIdentity::generate()?;
+        assert!(matches!(
+            initial_checkpoint.advance(&outsider, recovery_bundle.manifest()),
+            Err(ProtocolError::HistoryRecoveryCheckpointSignerMismatch { .. })
+        ));
         Ok(())
     }
 

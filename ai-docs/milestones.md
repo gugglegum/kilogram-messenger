@@ -898,12 +898,54 @@ source discovery и автоматический сбор нескольких c
 контракт —
 [`../docs/RFC-0011-network-history-rewrap.md`](../docs/RFC-0011-network-history-rewrap.md).
 
+### M0.7.9 — resumable history recovery: выполнено
+
+Реализовано:
+
+- `SignedHistoryRecoveryCheckpoint` v1 подписывается recipient device и
+  связывает account, conversation, направленные source/recipient, полный SAS,
+  approved window, page size, source inventory claim и следующий индекс;
+- immutable checkpoints образуют hash chain; при resume проверяются подпись,
+  отсутствие gap/fork/regression и совпадение нового ticket с exact source;
+- CLI `history-recovery-resume` сам вычисляет очередной диапазон, отправляет
+  fresh session-bound request и после reconnect продолжает с durable index;
+- source approval трактуется как полное окно, но каждая фактическая страница
+  остаётся bounded 1–256 events и обязана лежать внутри consent window;
+- первый source-signed transfer фиксирует inventory count/digest; смена claim
+  на следующей странице fail-closed;
+- bundle, transfer, projections, events и следующий checkpoint коммитятся одной
+  crash-consistent transaction; `history-recovery` добавлен в append-only roots;
+- завершённый plan повторно проверяет ticket/source/SAS, но не открывает network
+  connection;
+- для нескольких sources создаются отдельные явно выбранные plans, а
+  reconciliation публикует `selected_inventory_*` только при совпадении минимум
+  двух полных claims без equivocation;
+- wire schema не менялась: ALPN остаётся `kilogram/m0/sync/7`, ticket v9.
+
+Проверки:
+
+- protocol test покрывает checkpoint signature, hash-link, advance/completion,
+  wrong signer и повтор диапазона;
+- state/CLI tests покрывают rollback checkpoint root и границы consent window;
+- все 78 workspace tests проходят; форматирование, строгий Clippy и release
+  build проверены;
+- direct process smoke `.tmp/m079-smoke-20260901-051549` двумя fresh sessions
+  импортировал `0..2`, затем `2..3`, создал два checkpoint, не подключался после
+  completion и получил идентичные source/recipient histories.
+
+Граница среза: новый listener/ticket пока запускается вручную для каждой
+страницы; source discovery, background coordinator и QR/device-link ceremony не
+реализованы. Signed local chain не обнаруживает удаление всей цепочки без
+внешнего witness/backup, а agreed claims не доказывают глобальную полноту.
+Полный контракт —
+[`../docs/RFC-0012-resumable-history-recovery.md`](../docs/RFC-0012-resumable-history-recovery.md).
+
 ### Следующий этап
 
-1. M0.7.9: resumable history-recovery orchestration с authenticated pagination,
-   local checkpoint, retry и несколькими явно выбранными sources.
-2. Production local storage заменить encrypted transactional DB/WAL с bounded
+1. Production local storage заменить encrypted transactional DB/WAL с bounded
    recovery и migrations.
+2. Source discovery/background coordinator и QR/device-link UX строить поверх
+   M0.7.9 без ослабления explicit consent.
 3. Membership removal и group governance проектировать вместе с ordered
    security events и MLS epoch.
 4. First-contact authority/membership gossip-witness, seed/root recovery и

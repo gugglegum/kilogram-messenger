@@ -19,7 +19,12 @@ const COMMITTED_MARKER: &str = "committed";
 const ROLLED_BACK_MARKER: &str = "rolled-back";
 const RATCHET_DIRECTORY: &str = "ratchet";
 const NEXT_SEQUENCE_FILE: &str = "next-sequence";
-const APPEND_ONLY_ROOTS: [&str; 3] = ["events", "local-messages", "history-rewraps"];
+const APPEND_ONLY_ROOTS: [&str; 4] = [
+    "events",
+    "local-messages",
+    "history-rewraps",
+    "history-recovery",
+];
 const MANIFEST_VERSION: u8 = 1;
 
 #[derive(Debug, Error)]
@@ -506,6 +511,10 @@ mod tests {
             &directory.path().join("local-messages/new.local-text"),
             "projection",
         )?;
+        write(
+            &directory.path().join("history-recovery/new.checkpoint"),
+            "checkpoint",
+        )?;
         transaction.rollback()?;
 
         assert_eq!(
@@ -523,6 +532,12 @@ mod tests {
             !directory
                 .path()
                 .join("local-messages/new.local-text")
+                .exists()
+        );
+        assert!(
+            !directory
+                .path()
+                .join("history-recovery/new.checkpoint")
                 .exists()
         );
         Ok(())

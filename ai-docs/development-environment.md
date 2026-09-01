@@ -282,6 +282,19 @@ toolchain `1.98.0` для воспроизводимой разработки.
     CLI. Process smoke `.tmp/m078-smoke-20260901-044605` передал 3/3 старых
     events по direct Iroh, сохранил transfer 4,674 bytes, получил complete
     `single-source`, `global_completeness_proven=false` и clean plaintext scan.
+41. M0.7.9 добавил `SignedHistoryRecoveryCheckpoint` v1 и команду
+    `history-recovery-resume`. Source consent теперь является полным окном, а
+    каждый session-bound request остаётся страницей до 256 events. Recipient
+    требует exact `--source-device`, восстанавливает hash-linked append-only
+    checkpoint chain, фиксирует первый source inventory claim и отклоняет его
+    смену. Bundle, transfer, events, projections и новый checkpoint коммитятся
+    одной transaction; `history-recovery` добавлен в append-only journal roots.
+    Reconciliation публикует `selected_inventory_*` только при согласии минимум
+    двух полных claims. Wire objects/ALPN `kilogram/m0/sync/7` и ticket v9 не
+    менялись. Все 78 tests проходят. Process smoke
+    `.tmp/m079-smoke-20260901-051549` через два fresh direct Iroh sessions
+    восстановил страницы `0..2` и `2..3`, создал два checkpoint, подтвердил
+    network-free completed retry и полное совпадение source/recipient history.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -299,8 +312,9 @@ account-wide fan-out. M0.7.6 добавил bounded signed pools, local freshnes
 high-water и concurrent initiation resolution; first-contact global freshness
 и production network discovery остаются открыты. M0.7.5 реализовал
 same-account history rewrap; M0.7.8 добавил сетевой consent/SAS и local
-multi-source claim reconciliation. Resumable pagination/source discovery,
-membership removal/epochs и group E2EE остаются открыты. M0.7.7 закрывает
+multi-source claim reconciliation, а M0.7.9 — signed checkpoint pagination и
+safe retry. Source discovery/background coordinator, membership removal/epochs
+и group E2EE остаются открыты. M0.7.7 закрывает
 M0 crash consistency для device filesystem state; encrypted production DB/WAL,
 bounded migrations/backups и защищённый keystore ещё не выбраны.
 

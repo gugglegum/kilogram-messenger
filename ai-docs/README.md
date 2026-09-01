@@ -94,9 +94,17 @@ rolled-back filesystem journal. Ratchet tree и `next-sequence` восстана
 files относительно baseline. Delivery, sync batch, seed/import и prekey
 rotation теперь завершаются local commit до сетевого ответа; следующий запуск
 автоматически откатывает оставленный prepared journal. Wire версии не менялись.
+M0.7.8 добавил двусторонний consent/SAS, session-bound network history rewrap и
+multi-source claim reconciliation. M0.7.9 добавил signed append-only checkpoint
+chain и `history-recovery-resume`: каждая fresh session переносит следующую
+страницу, import и checkpoint коммитятся атомарно, а смена source inventory
+claim отклоняется. Reconciliation выбирает inventory только при совпадении двух
+или более полных явно собранных claims и всё равно не обещает global
+completeness.
 Seed/root recovery, защищённое хранение root/local/ratchet keys, production
-transactional DB, global prekey discovery/witness, сетевой multi-source rewrap,
-sync summaries, membership removal и группы ещё не реализованы.
+transactional DB, global prekey discovery/witness, автоматический recovery
+source discovery/background coordinator, sync summaries, membership removal и
+группы ещё не реализованы.
 
 ## Цель продукта
 
@@ -149,10 +157,10 @@ sync summaries, membership removal и группы ещё не реализов�
 
 ## План ближайших работ
 
-1. Добавить resumable history-recovery orchestration: pagination/checkpoint,
-   безопасный retry и сбор claims нескольких явно выбранных sources.
-2. Заменить M0 filesystem snapshot journal на encrypted transactional DB/WAL с
+1. Заменить M0 filesystem snapshot journal на encrypted transactional DB/WAL с
    bounded recovery и migrations.
+2. Добавить source discovery/background coordinator и QR/device-link UX поверх
+   resumable history recovery без ослабления явного consent.
 3. Спроектировать membership removal вместе с ordered security log и MLS epoch;
    отдельно — gossip/witness для first-contact freshness.
 4. Спроектировать seed/recovery authority, protected root storage, root
@@ -193,5 +201,7 @@ sync summaries, membership removal и группы ещё не реализов�
   реализованный M0.7.7-контракт local state lock, journal и crash recovery.
 - [`../docs/RFC-0011-network-history-rewrap.md`](../docs/RFC-0011-network-history-rewrap.md) —
   реализованный M0.7.8-контракт session-bound rewrap, consent/SAS и reconciliation.
+- [`../docs/RFC-0012-resumable-history-recovery.md`](../docs/RFC-0012-resumable-history-recovery.md) —
+  реализованный M0.7.9-контракт signed checkpoint pagination и safe retry.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

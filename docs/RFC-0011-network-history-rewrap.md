@@ -196,9 +196,8 @@ recipient state не нашёл совпадений.
 
 ## 11. Следующий этап
 
-M0.7.9 должен превратить одноразовый range fetch в resumable recovery
-orchestration: authenticated pagination с локальным checkpoint, безопасный
-retry после разрыва, сбор claims от нескольких явно выбранных устройств и
-выбор согласованного inventory без ложного глобального consensus. QR/device-link
-ceremony и автоматический source discovery остаются следующими UX/discovery
-слоями поверх этого механизма.
+M0.7.9 реализован в
+[`RFC-0012`](RFC-0012-resumable-history-recovery.md): authenticated pagination,
+signed local checkpoint chain, crash-consistent retry и явный multi-source
+claim selection. QR/device-link ceremony и автоматический source discovery
+остаются следующими UX/discovery слоями поверх этого механизма.
