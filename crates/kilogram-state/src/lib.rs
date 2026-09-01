@@ -22,6 +22,7 @@ const LOCK_FILE: &str = ".kilogram-state.lock";
 const TRANSACTION_DIRECTORY: &str = ".kilogram-transactions";
 const ACTIVE_DIRECTORY: &str = "active";
 const BACKUP_DIRECTORY: &str = "backup";
+const PRIMARY_BACKUP_DIRECTORY: &str = "primary-backup";
 const MANIFEST_FILE: &str = "manifest.json";
 const PREPARED_MARKER: &str = "prepared";
 const COMMITTED_MARKER: &str = "committed";
@@ -201,6 +202,43 @@ pub enum StateError {
     #[error("append-only state record disappeared during a transaction: {0}")]
     AppendOnlyRecordRemoved(PathBuf),
 
+    #[error("append-only state record was modified in place: {0}")]
+    AppendOnlyRecordModified(String),
+
+    #[error("append-only state record is no longer a regular file: {0}")]
+    AppendOnlyRecordTypeChanged(PathBuf),
+
+    #[error("state transaction append-only write is outside an allowed repository: {0}")]
+    AppendOnlyWriteKindNotAllowed(PathBuf),
+
+    #[error("state transaction already prepared its DB-primary ratchet workspace")]
+    RatchetWorkspaceAlreadyPrepared,
+
+    #[error(
+        "DB-primary ratchet workspace belongs to {workspace_root}, not transaction root {transaction_root}"
+    )]
+    RatchetWorkspaceRootMismatch {
+        workspace_root: PathBuf,
+        transaction_root: PathBuf,
+    },
+
+    #[error("DB-primary ratchet workspace contains non-ratchet record {0}")]
+    RatchetWorkspaceKindMismatch(String),
+
+    #[error("state transaction already prepared its DB-primary sequence workspace")]
+    SequenceWorkspaceAlreadyPrepared,
+
+    #[error(
+        "DB-primary sequence workspace belongs to {workspace_root}, not transaction root {transaction_root}"
+    )]
+    SequenceWorkspaceRootMismatch {
+        workspace_root: PathBuf,
+        transaction_root: PathBuf,
+    },
+
+    #[error("DB-primary sequence workspace contains unexpected record {0}")]
+    SequenceWorkspaceKindMismatch(String),
+
     #[error("retained trust record disappeared before a direct vault transaction: {0}")]
     VaultTrustRecordRemoved(String),
 
@@ -254,6 +292,9 @@ impl StateDirectoryLock {
 pub struct StateTransaction {
     root: PathBuf,
     active: PathBuf,
+    ratchet_primary_baseline: Option<BTreeMap<PathBuf, Vec<u8>>>,
+    sequence_primary_prepared: bool,
+    append_only_writes: BTreeSet<PathBuf>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -278,7 +319,13 @@ impl StateTransaction {
         write_manifest(&active, &manifest)?;
         write_marker(&active.join(PREPARED_MARKER))?;
 
-        Ok(Self { root, active })
+        Ok(Self {
+            root,
+            active,
+            ratchet_primary_baseline: None,
+            sequence_primary_prepared: false,
+            append_only_writes: BTreeSet::new(),
+        })
     }
 
     pub fn commit(self) -> Result<(), StateError> {
@@ -296,18 +343,179 @@ impl StateTransaction {
         &self.root
     }
 
+    pub fn ratchet_workspace_prepared(&self) -> bool {
+        self.ratchet_primary_baseline.is_some()
+    }
+
+    pub fn registered_append_only_write_count(&self) -> usize {
+        self.append_only_writes.len()
+    }
+
+    pub fn prepare_ratchet_workspace(&mut self, read: &VaultMutableRead) -> Result<(), StateError> {
+        if self.ratchet_primary_baseline.is_some() {
+            return Err(StateError::RatchetWorkspaceAlreadyPrepared);
+        }
+        if read.state_root() != self.root {
+            return Err(StateError::RatchetWorkspaceRootMismatch {
+                workspace_root: read.state_root().to_path_buf(),
+                transaction_root: self.root.clone(),
+            });
+        }
+        if read.selected_kind_count() != 1 || !read.includes_kind(StateRecordKind::Ratchet) {
+            return Err(StateError::RatchetWorkspaceKindMismatch(
+                "mutable read selection".to_owned(),
+            ));
+        }
+
+        let mut baseline = BTreeMap::new();
+        for record in read.records() {
+            if record.kind() != StateRecordKind::Ratchet {
+                return Err(StateError::RatchetWorkspaceKindMismatch(
+                    record.relative_path().to_owned(),
+                ));
+            }
+            let relative_path = PathBuf::from(record.relative_path());
+            validate_relative(&relative_path)?;
+            if state_record_kind_for_path(&relative_path) != StateRecordKind::Ratchet {
+                return Err(StateError::RatchetWorkspaceKindMismatch(
+                    record.relative_path().to_owned(),
+                ));
+            }
+            if baseline
+                .insert(relative_path.clone(), record.content().to_vec())
+                .is_some()
+            {
+                return Err(StateError::VaultDirectWriteDuplicatePath(relative_path));
+            }
+        }
+
+        let mut manifest = read_manifest(&self.active)?;
+        let primary_backup = self
+            .active
+            .join(PRIMARY_BACKUP_DIRECTORY)
+            .join(RATCHET_DIRECTORY);
+        remove_tree_if_present(&primary_backup)?;
+        for (relative_path, content) in &baseline {
+            let relative_ratchet = relative_path.strip_prefix(RATCHET_DIRECTORY).map_err(|_| {
+                StateError::RatchetWorkspaceKindMismatch(relative_path.display().to_string())
+            })?;
+            write_staged_file(&primary_backup.join(relative_ratchet), content)?;
+        }
+        manifest.ratchet_primary_existed = Some(!baseline.is_empty());
+        write_manifest(&self.active, &manifest)?;
+
+        let ratchet = self.root.join(RATCHET_DIRECTORY);
+        remove_tree_if_present(&ratchet)?;
+        for (relative_path, content) in &baseline {
+            write_staged_file(&self.root.join(relative_path), content)?;
+        }
+        self.ratchet_primary_baseline = Some(baseline);
+        Ok(())
+    }
+
+    pub fn prepare_sequence_workspace(
+        &mut self,
+        read: &VaultMutableRead,
+    ) -> Result<(), StateError> {
+        if self.sequence_primary_prepared {
+            return Err(StateError::SequenceWorkspaceAlreadyPrepared);
+        }
+        if read.state_root() != self.root {
+            return Err(StateError::SequenceWorkspaceRootMismatch {
+                workspace_root: read.state_root().to_path_buf(),
+                transaction_root: self.root.clone(),
+            });
+        }
+        if read.selected_kind_count() != 1 || !read.includes_kind(StateRecordKind::Sequence) {
+            return Err(StateError::SequenceWorkspaceKindMismatch(
+                "mutable read selection".to_owned(),
+            ));
+        }
+        if read.records().len() > 1 {
+            return Err(StateError::SequenceWorkspaceKindMismatch(
+                "multiple sequence records".to_owned(),
+            ));
+        }
+        let content = match read.records().first() {
+            Some(record)
+                if record.kind() == StateRecordKind::Sequence
+                    && record.relative_path() == NEXT_SEQUENCE_FILE =>
+            {
+                Some(record.content())
+            }
+            Some(record) => {
+                return Err(StateError::SequenceWorkspaceKindMismatch(
+                    record.relative_path().to_owned(),
+                ));
+            }
+            None => None,
+        };
+
+        let mut manifest = read_manifest(&self.active)?;
+        let primary_backup = self
+            .active
+            .join(PRIMARY_BACKUP_DIRECTORY)
+            .join(NEXT_SEQUENCE_FILE);
+        remove_file_if_present(&primary_backup)?;
+        if let Some(content) = content {
+            write_staged_file(&primary_backup, content)?;
+        }
+        manifest.next_sequence_primary_existed = Some(content.is_some());
+        write_manifest(&self.active, &manifest)?;
+
+        let sequence = self.root.join(NEXT_SEQUENCE_FILE);
+        remove_file_if_present(&sequence)?;
+        if let Some(content) = content {
+            write_staged_file(&sequence, content)?;
+        }
+        self.sequence_primary_prepared = true;
+        Ok(())
+    }
+
+    pub fn register_append_only_write(
+        &mut self,
+        relative_path: impl AsRef<Path>,
+    ) -> Result<(), StateError> {
+        let relative_path = relative_path.as_ref();
+        validate_relative(relative_path)?;
+        if !matches!(
+            state_record_kind_for_path(relative_path),
+            StateRecordKind::Event
+                | StateRecordKind::LocalProjection
+                | StateRecordKind::HistoryRewrap
+                | StateRecordKind::HistoryRecovery
+        ) {
+            return Err(StateError::AppendOnlyWriteKindNotAllowed(
+                relative_path.to_path_buf(),
+            ));
+        }
+        reject_relative_symlinks(&self.root, relative_path)?;
+        self.append_only_writes.insert(relative_path.to_path_buf());
+        Ok(())
+    }
+
     pub(crate) fn staged_mutations(&self) -> Result<Vec<StagedStateMutation>, StateError> {
         let manifest = read_manifest(&self.active)?;
         let mut mutations = BTreeMap::<PathBuf, StagedStateMutation>::new();
 
-        collect_mutable_tree_mutations(
-            &self.root,
-            &self.root.join(RATCHET_DIRECTORY),
-            &self.active.join(BACKUP_DIRECTORY).join(RATCHET_DIRECTORY),
-            manifest.ratchet_existed,
-            StateRecordKind::Ratchet,
-            &mut mutations,
-        )?;
+        if let Some(baseline) = &self.ratchet_primary_baseline {
+            collect_primary_tree_mutations(
+                &self.root,
+                &self.root.join(RATCHET_DIRECTORY),
+                baseline,
+                StateRecordKind::Ratchet,
+                &mut mutations,
+            )?;
+        } else {
+            collect_mutable_tree_mutations(
+                &self.root,
+                &self.root.join(RATCHET_DIRECTORY),
+                &self.active.join(BACKUP_DIRECTORY).join(RATCHET_DIRECTORY),
+                manifest.ratchet_existed,
+                StateRecordKind::Ratchet,
+                &mut mutations,
+            )?;
+        }
         collect_single_file_mutation(
             &self.root,
             &self.root.join(NEXT_SEQUENCE_FILE),
@@ -318,17 +526,26 @@ impl StateTransaction {
         )?;
 
         let baseline: BTreeSet<_> = manifest.append_only_files.into_iter().collect();
-        let mut current = Vec::new();
-        for name in APPEND_ONLY_ROOTS {
-            collect_relative_files(&self.root, &self.root.join(name), &mut current)?;
-        }
-        current.sort();
-        let current_set: BTreeSet<_> = current.iter().cloned().collect();
-        if let Some(removed) = baseline.difference(&current_set).next() {
-            return Err(StateError::AppendOnlyRecordRemoved(removed.clone()));
-        }
-        for relative_path in current_set.difference(&baseline) {
+        for relative_path in &baseline {
             let path = self.root.join(relative_path);
+            if !path_exists(&path)? {
+                return Err(StateError::AppendOnlyRecordRemoved(relative_path.clone()));
+            }
+            reject_relative_symlinks(&self.root, relative_path)?;
+            if !io_at(&path, fs::metadata(&path))?.is_file() {
+                return Err(StateError::AppendOnlyRecordTypeChanged(
+                    relative_path.clone(),
+                ));
+            }
+        }
+        for relative_path in &self.append_only_writes {
+            let path = self.root.join(relative_path);
+            reject_relative_symlinks(&self.root, relative_path)?;
+            if !io_at(&path, fs::metadata(&path))?.is_file() {
+                return Err(StateError::AppendOnlyRecordTypeChanged(
+                    relative_path.clone(),
+                ));
+            }
             let content = io_at(&path, fs::read(&path))?;
             insert_staged_mutation(
                 &mut mutations,
@@ -350,6 +567,10 @@ struct TransactionManifest {
     ratchet_existed: bool,
     next_sequence_existed: bool,
     append_only_files: Vec<PathBuf>,
+    #[serde(default)]
+    ratchet_primary_existed: Option<bool>,
+    #[serde(default)]
+    next_sequence_primary_existed: Option<bool>,
 }
 
 fn prepare_snapshot(root: &Path, active: &Path) -> Result<TransactionManifest, StateError> {
@@ -382,6 +603,8 @@ fn prepare_snapshot(root: &Path, active: &Path) -> Result<TransactionManifest, S
         ratchet_existed,
         next_sequence_existed,
         append_only_files,
+        ratchet_primary_existed: None,
+        next_sequence_primary_existed: None,
     })
 }
 
@@ -417,16 +640,39 @@ fn rollback_active(root: &Path, active: &Path) -> Result<(), StateError> {
         }
     }
 
-    let ratchet_backup = active.join(BACKUP_DIRECTORY).join(RATCHET_DIRECTORY);
-    if manifest.ratchet_existed {
+    let (ratchet_existed, ratchet_backup) = match manifest.ratchet_primary_existed {
+        Some(existed) => (
+            existed,
+            active
+                .join(PRIMARY_BACKUP_DIRECTORY)
+                .join(RATCHET_DIRECTORY),
+        ),
+        None => (
+            manifest.ratchet_existed,
+            active.join(BACKUP_DIRECTORY).join(RATCHET_DIRECTORY),
+        ),
+    };
+    if ratchet_existed {
         if !path_exists(&ratchet_backup)? {
             return Err(StateError::InvalidBackup(ratchet_backup));
         }
         let mut backup_files = Vec::new();
         collect_relative_files(active, &ratchet_backup, &mut backup_files)?;
     }
-    let next_sequence_backup = active.join(BACKUP_DIRECTORY).join(NEXT_SEQUENCE_FILE);
-    if manifest.next_sequence_existed {
+    let (next_sequence_existed, next_sequence_backup) = match manifest.next_sequence_primary_existed
+    {
+        Some(existed) => (
+            existed,
+            active
+                .join(PRIMARY_BACKUP_DIRECTORY)
+                .join(NEXT_SEQUENCE_FILE),
+        ),
+        None => (
+            manifest.next_sequence_existed,
+            active.join(BACKUP_DIRECTORY).join(NEXT_SEQUENCE_FILE),
+        ),
+    };
+    if next_sequence_existed {
         if !path_exists(&next_sequence_backup)? {
             return Err(StateError::InvalidBackup(next_sequence_backup));
         }
@@ -439,13 +685,13 @@ fn rollback_active(root: &Path, active: &Path) -> Result<(), StateError> {
 
     let ratchet = root.join(RATCHET_DIRECTORY);
     remove_tree_if_present(&ratchet)?;
-    if manifest.ratchet_existed {
+    if ratchet_existed {
         copy_tree(&ratchet_backup, &ratchet)?;
     }
 
     let next_sequence = root.join(NEXT_SEQUENCE_FILE);
     remove_file_if_present(&next_sequence)?;
-    if manifest.next_sequence_existed {
+    if next_sequence_existed {
         copy_file(&next_sequence_backup, &next_sequence)?;
     }
     let baseline: HashSet<_> = manifest.append_only_files.into_iter().collect();
@@ -516,6 +762,31 @@ fn collect_mutable_tree_mutations(
                 kind,
                 relative_path: prefix.join(relative),
                 content: current.get(relative).cloned(),
+            },
+        )?;
+    }
+    Ok(())
+}
+
+fn collect_primary_tree_mutations(
+    root: &Path,
+    current_directory: &Path,
+    baseline: &BTreeMap<PathBuf, Vec<u8>>,
+    kind: StateRecordKind,
+    mutations: &mut BTreeMap<PathBuf, StagedStateMutation>,
+) -> Result<(), StateError> {
+    let current = collect_tree_contents(current_directory, root)?;
+    let paths: BTreeSet<_> = current.keys().chain(baseline.keys()).cloned().collect();
+    for relative_path in paths {
+        if current.get(&relative_path) == baseline.get(&relative_path) {
+            continue;
+        }
+        insert_staged_mutation(
+            mutations,
+            StagedStateMutation {
+                kind,
+                relative_path: relative_path.clone(),
+                content: current.get(&relative_path).cloned(),
             },
         )?;
     }
@@ -597,6 +868,20 @@ fn read_optional_file(path: &Path) -> Result<Option<Vec<u8>>, StateError> {
     }
 }
 
+fn write_staged_file(path: &Path, content: &[u8]) -> Result<(), StateError> {
+    let parent = path
+        .parent()
+        .ok_or_else(|| StateError::UnsafeRelativePath(path.to_path_buf()))?;
+    io_at(parent, fs::create_dir_all(parent))?;
+    reject_symlink(parent)?;
+    let mut temporary = io_at(parent, NamedTempFile::new_in(parent))?;
+    let temporary_path = temporary.path().to_path_buf();
+    io_at(&temporary_path, temporary.write_all(content))?;
+    io_at(&temporary_path, temporary.as_file().sync_all())?;
+    io_at(path, temporary.persist(path).map_err(|error| error.error))?;
+    sync_directory(parent)
+}
+
 fn insert_staged_mutation(
     mutations: &mut BTreeMap<PathBuf, StagedStateMutation>,
     mutation: StagedStateMutation,
@@ -612,6 +897,7 @@ fn insert_staged_mutation(
 
 fn state_record_kind_for_path(path: &Path) -> StateRecordKind {
     match path.components().next() {
+        Some(Component::Normal(first)) if first == RATCHET_DIRECTORY => StateRecordKind::Ratchet,
         Some(Component::Normal(first)) if first == "events" => StateRecordKind::Event,
         Some(Component::Normal(first)) if first == "local-messages" => {
             StateRecordKind::LocalProjection
@@ -779,6 +1065,21 @@ fn reject_symlink(path: &Path) -> Result<(), StateError> {
     Ok(())
 }
 
+fn reject_relative_symlinks(root: &Path, relative_path: &Path) -> Result<(), StateError> {
+    validate_relative(relative_path)?;
+    let mut current = root.to_path_buf();
+    for component in relative_path.components() {
+        let Component::Normal(component) = component else {
+            return Err(StateError::UnsafeRelativePath(relative_path.to_path_buf()));
+        };
+        current.push(component);
+        if path_exists(&current)? {
+            reject_symlink(&current)?;
+        }
+    }
+    Ok(())
+}
+
 fn path_exists(path: &Path) -> Result<bool, StateError> {
     path.try_exists().map_err(|source| StateError::Io {
         path: path.to_path_buf(),
@@ -861,7 +1162,7 @@ mod tests {
         write(&directory.path().join("next-sequence"), "7")?;
         write(&directory.path().join("events/existing.event"), "old-event")?;
 
-        let transaction = StateTransaction::begin(directory.path())?;
+        let mut transaction = StateTransaction::begin(directory.path())?;
         write(&directory.path().join("ratchet/session.bin"), "new-ratchet")?;
         write(&directory.path().join("ratchet/new.bin"), "new")?;
         write(&directory.path().join("next-sequence"), "8")?;
@@ -870,6 +1171,12 @@ mod tests {
             &directory.path().join("local-messages/new.local-text"),
             "projection",
         )?;
+        write(
+            &directory.path().join("history-rewraps/unregistered.rewrap"),
+            "not-in-write-set",
+        )?;
+        transaction.register_append_only_write("events/new.event")?;
+        transaction.register_append_only_write("local-messages/new.local-text")?;
         write(
             &directory.path().join("history-recovery/new.checkpoint"),
             "checkpoint",
@@ -899,6 +1206,12 @@ mod tests {
                 .join("history-recovery/new.checkpoint")
                 .exists()
         );
+        assert!(
+            !directory
+                .path()
+                .join("history-rewraps/unregistered.rewrap")
+                .exists()
+        );
         Ok(())
     }
 
@@ -910,7 +1223,7 @@ mod tests {
         write(&directory.path().join("next-sequence"), "4\n")?;
         write(&directory.path().join("events/existing.event"), "existing")?;
 
-        let transaction = StateTransaction::begin(directory.path())?;
+        let mut transaction = StateTransaction::begin(directory.path())?;
         write(&directory.path().join("ratchet/changed.bin"), "after")?;
         fs::remove_file(directory.path().join("ratchet/removed.bin"))?;
         write(&directory.path().join("ratchet/added.bin"), "added")?;
@@ -920,6 +1233,12 @@ mod tests {
             &directory.path().join("local-messages/new.local-text"),
             "projection",
         )?;
+        write(
+            &directory.path().join("history-rewraps/unregistered.rewrap"),
+            "not-in-write-set",
+        )?;
+        transaction.register_append_only_write("events/new.event")?;
+        transaction.register_append_only_write("local-messages/new.local-text")?;
 
         let mutations = transaction.staged_mutations()?;
         let by_path = mutations
@@ -949,6 +1268,12 @@ mod tests {
             StateRecordKind::LocalProjection
         );
         assert!(!by_path.contains_key(Path::new("events/existing.event")));
+        assert!(!by_path.contains_key(Path::new("history-rewraps/unregistered.rewrap")));
+        assert!(matches!(
+            transaction.register_append_only_write("ratchet/not-append-only"),
+            Err(StateError::AppendOnlyWriteKindNotAllowed(path))
+                if path == Path::new("ratchet/not-append-only")
+        ));
         transaction.rollback()?;
         Ok(())
     }

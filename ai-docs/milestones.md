@@ -1250,10 +1250,51 @@ post-commit exact confirmation читает retained tree. Ratchet/trust mutable
 reads пока filesystem-backed. Полный контракт —
 [`../docs/RFC-0020-typed-journal-delta-and-mutable-sequence.md`](../docs/RFC-0020-typed-journal-delta-and-mutable-sequence.md).
 
+### M0.8.9 — DB-primary ratchet workspace и registered appends: выполнено
+
+Реализовано:
+
+- mutable vault canary разрешает `ratchet` вместе с `sequence` только при exact
+  active outer intent и без pending primary-shadow marker;
+- transaction context гидратирует retained ratchet staging из authenticated DB
+  до открытия `RatchetState`; mutation сравнивается с DB baseline;
+- отдельный durable primary backup ratchet/sequence публикуется в crash manifest
+  до изменения live shadow, поэтому rollback возвращает DB-authoritative state;
+- listener, delivery, connect, sync, prekey export и seed-history больше не
+  загружают production `RatchetState` вне transaction context;
+- sync получает свежее vault generation для каждого committed batch, не держит
+  filesystem-backed ratchet между rounds;
+- append-only event, authorization, projection, rewrap, transfer и checkpoint
+  paths явно регистрируются до записи;
+- direct delta проверяет baseline existence и читает только registered paths;
+  второй append-only directory walk удалён;
+- committed append-only modification-in-place и removal отклоняются fail-closed;
+- diagnostics сообщают `typed-registered-delta`, ratchet workspace status и
+  точный размер append write-set.
+
+Проверки:
+
+- state/vault tests проверяют DB hydration поверх изменённого shadow, durable
+  primary rollback ratchet+sequence, registered-only delta, wrong kind/root,
+  append removal и modification rejection;
+- CLI test после открытия authenticated intent повреждает ratchet secret,
+  восстанавливает его из DB и коммитит registered canary event;
+- все 92 workspace tests, rustfmt, strict Clippy и release build проходят;
+- release process smoke `.tmp/m089-smoke-20260901-193740` выполнил Alice/Bob
+  delivery+ack с DB-primary ratchet/sequence, append write-set `3/5`, source/
+  listener generations `4/3`, совпавшей history и final `already-current`.
+
+Граница среза: vodozemac всё ещё пишет в filesystem staging, initial append
+baseline и post-commit exact confirmation сканируют retained tree, active DB
+manifest полностью decrypt/re-hash, trust repository filesystem-backed. Полный
+контракт —
+[`../docs/RFC-0021-db-primary-ratchet-workspace-and-registered-appends.md`](../docs/RFC-0021-db-primary-ratchet-workspace-and-registered-appends.md).
+
 ### Следующий этап
 
-1. M0.8.9 добавить DB-owned ratchet read/write workspace и явную регистрацию
-   append-only write-set, чтобы filesystem остался только выходным shadow.
+1. M0.8.10 перенести typed write receipts из CLI в domain repositories и
+   добавить authenticated incremental manifest index, чтобы normal commit не
+   зависел от full-state scan.
 2. Защитить vault master key через OS keystore/passphrase/seed wrapping и
    спроектировать rollback witness, backup и versioned migrations.
 3. Source discovery/background coordinator и QR/device-link UX строить поверх

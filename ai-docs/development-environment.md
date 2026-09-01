@@ -381,6 +381,15 @@ toolchain `1.98.0` для воспроизводимой разработки.
     `.tmp/m088-smoke-20260901-185655` завершил delivery/ack, получил source/
     listener generations `4/3`, DB-primary sequence, typed journal delta и
     exact совпадение final vault/legacy histories.
+50. M0.8.9 добавил DB-primary ratchet staging: authenticated vault records
+    заменяют retained workspace до `RatchetState`, а отдельный primary backup
+    гарантирует DB-authoritative ratchet/sequence rollback. Все live append-only
+    writers регистрируют canonical paths; второй directory walk удалён,
+    modification/removal immutable records запрещены. Все 92 workspace tests,
+    strict Clippy и release build проходят. Release process smoke
+    `.tmp/m089-smoke-20260901-193740` завершил delivery/ack с ratchet+sequence
+    DB-primary, append write-set `3/5`, generations `4/3`, совпавшей history и
+    final `already-current` compatibility mirror.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -408,8 +417,10 @@ M0.8.3 — typed incremental encrypted delta и exact shadow reads, M0.8.4 —
 manual/network history-rewrap source reads, M0.8.6 — command-local overlay для
 mixed sync reads, а M0.8.7 — vault-primary commit barrier для journaled writes.
 M0.8.8 добавляет typed direct journal delta и mutable DB-primary sequence.
-Ratchet/trust DB-owned adapters, explicit append-only write-set, bounded backups
-и защищённый key provider ещё не реализованы.
+M0.8.9 добавляет DB-primary ratchet workspace, durable primary rollback backup
+и explicit append-only write-set. Repository-owned receipts, incremental
+manifest, trust DB-primary adapter, bounded backup и защищённый key provider ещё
+не реализованы.
 
 ## Решения, которые ещё нельзя фиксировать
 

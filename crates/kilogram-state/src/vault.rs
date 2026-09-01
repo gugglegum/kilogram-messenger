@@ -175,13 +175,27 @@ impl VaultPrimaryRead {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct VaultMutableRead {
+    state_root: PathBuf,
     mirror_generation: u64,
+    selected_kinds: BTreeSet<StateRecordKind>,
     records: Vec<VaultPrimaryRecord>,
 }
 
 impl VaultMutableRead {
+    pub fn state_root(&self) -> &Path {
+        &self.state_root
+    }
+
     pub fn mirror_generation(&self) -> u64 {
         self.mirror_generation
+    }
+
+    pub fn selected_kind_count(&self) -> usize {
+        self.selected_kinds.len()
+    }
+
+    pub fn includes_kind(&self, kind: StateRecordKind) -> bool {
+        self.selected_kinds.contains(&kind)
     }
 
     pub fn records(&self) -> &[VaultPrimaryRecord] {
@@ -1044,6 +1058,18 @@ impl EncryptedStateVault {
             }
             match content {
                 Some(content) => {
+                    if matches!(
+                        kind,
+                        StateRecordKind::Event
+                            | StateRecordKind::LocalProjection
+                            | StateRecordKind::HistoryRewrap
+                            | StateRecordKind::HistoryRecovery
+                    ) && staged_by_path
+                        .get(&relative_path)
+                        .is_some_and(|existing| existing.content != content)
+                    {
+                        return Err(StateError::AppendOnlyRecordModified(relative_path));
+                    }
                     let record = VaultRecord {
                         version: VAULT_RECORD_VERSION,
                         relative_path: relative_path.clone(),
@@ -1548,7 +1574,7 @@ impl TypedStateRepository for EncryptedStateVault {
         }
         let mut selected = BTreeSet::new();
         for kind in kinds {
-            if *kind != StateRecordKind::Sequence {
+            if !matches!(kind, StateRecordKind::Ratchet | StateRecordKind::Sequence) {
                 return Err(StateError::VaultPrimaryReadKindNotAllowed(
                     kind.as_str().to_owned(),
                 ));
@@ -1582,7 +1608,9 @@ impl TypedStateRepository for EncryptedStateVault {
             })
             .collect();
         Ok(VaultMutableRead {
+            state_root: self.root.clone(),
             mirror_generation: report.mirror_generation,
+            selected_kinds: selected,
             records,
         })
     }
@@ -2283,11 +2311,22 @@ mod tests {
         let vault = EncryptedStateVault::open_or_create(directory.path())?;
         assert_eq!(vault.migrate_legacy_snapshot()?.1.mirror_generation(), 1);
         vault.begin_dual_write()?;
-        let transaction = crate::StateTransaction::begin(directory.path())?;
+        let mut transaction = crate::StateTransaction::begin(directory.path())?;
+        write(&changed_ratchet, b"tampered-shadow")?;
+        let ratchet_read = vault.read_mutable_primary_canary(&[StateRecordKind::Ratchet])?;
+        assert_eq!(ratchet_read.records().len(), 2);
+        assert!(matches!(
+            transaction.prepare_sequence_workspace(&ratchet_read),
+            Err(StateError::SequenceWorkspaceKindMismatch(selection))
+                if selection == "mutable read selection"
+        ));
+        transaction.prepare_ratchet_workspace(&ratchet_read)?;
+        assert_eq!(fs::read(&changed_ratchet)?, b"ratchet-before");
         write(&changed_ratchet, b"ratchet-after")?;
         fs::remove_file(&removed_ratchet)?;
         write(&sequence, b"5\n")?;
         write(&new_event, b"new-event")?;
+        transaction.register_append_only_write("events/chat/new.event")?;
         write(
             &directory.path().join("peer-authority/peer.snapshot"),
             b"trust-update",
@@ -2330,10 +2369,20 @@ mod tests {
             Err(StateError::VaultMirrorIntentMissing)
         ));
         vault.begin_dual_write()?;
+        let ratchet = vault.read_mutable_primary_canary(&[StateRecordKind::Ratchet])?;
+        assert_eq!(ratchet.records().len(), 1);
+        assert_eq!(ratchet.records()[0].content(), b"ratchet-after");
+        let existing_event = directory.path().join("events/chat/existing.event");
+        let mut immutable_transaction = crate::StateTransaction::begin(directory.path())?;
+        write(&existing_event, b"modified-in-place")?;
+        immutable_transaction.register_append_only_write("events/chat/existing.event")?;
         assert!(matches!(
-            vault.read_mutable_primary_canary(&[StateRecordKind::Ratchet]),
-            Err(StateError::VaultPrimaryReadKindNotAllowed(kind)) if kind == "ratchet"
+            vault.commit_primary_transaction(&immutable_transaction),
+            Err(StateError::AppendOnlyRecordModified(path))
+                if path == "events/chat/existing.event"
         ));
+        write(&existing_event, b"existing-event")?;
+        immutable_transaction.rollback()?;
         let other = tempfile::tempdir()?;
         let other_transaction = crate::StateTransaction::begin(other.path())?;
         assert!(matches!(
@@ -2342,6 +2391,59 @@ mod tests {
         ));
         other_transaction.rollback()?;
         vault.finish_dual_write()?;
+        Ok(())
+    }
+
+    #[test]
+    fn mutable_workspaces_roll_back_to_db_primary_state_not_tampered_shadow()
+    -> Result<(), Box<dyn Error>> {
+        let directory = tempfile::tempdir()?;
+        let ratchet = directory.path().join("ratchet/session.pickle");
+        let sequence = directory.path().join("next-sequence");
+        write(&ratchet, b"db-ratchet")?;
+        write(&sequence, b"4\n")?;
+        let vault = EncryptedStateVault::open_or_create(directory.path())?;
+        vault.migrate_legacy_snapshot()?;
+        vault.begin_dual_write()?;
+
+        write(&ratchet, b"tampered-shadow")?;
+        write(&sequence, b"99\n")?;
+        let mut transaction = crate::StateTransaction::begin(directory.path())?;
+        let ratchet_read = vault.read_mutable_primary_canary(&[StateRecordKind::Ratchet])?;
+        let sequence_read = vault.read_mutable_primary_canary(&[StateRecordKind::Sequence])?;
+        transaction.prepare_ratchet_workspace(&ratchet_read)?;
+        transaction.prepare_sequence_workspace(&sequence_read)?;
+        assert_eq!(fs::read(&ratchet)?, b"db-ratchet");
+        assert_eq!(fs::read(&sequence)?, b"4\n");
+
+        write(&ratchet, b"failed-operation")?;
+        write(&sequence, b"5\n")?;
+        transaction.rollback()?;
+        assert_eq!(fs::read(&ratchet)?, b"db-ratchet");
+        assert_eq!(fs::read(&sequence)?, b"4\n");
+        assert_eq!(
+            vault.finish_dual_write()?.outcome(),
+            VaultMirrorOutcome::AlreadyCurrent
+        );
+        assert_eq!(vault.verify_against_legacy()?.mirror_generation(), 1);
+
+        vault.begin_dual_write()?;
+        let mut interrupted = crate::StateTransaction::begin(directory.path())?;
+        let ratchet_read = vault.read_mutable_primary_canary(&[StateRecordKind::Ratchet])?;
+        let sequence_read = vault.read_mutable_primary_canary(&[StateRecordKind::Sequence])?;
+        interrupted.prepare_ratchet_workspace(&ratchet_read)?;
+        interrupted.prepare_sequence_workspace(&sequence_read)?;
+        write(&ratchet, b"interrupted-operation")?;
+        write(&sequence, b"6\n")?;
+        drop(interrupted);
+        let lock = crate::StateDirectoryLock::acquire(directory.path())?;
+        assert_eq!(fs::read(&ratchet)?, b"db-ratchet");
+        assert_eq!(fs::read(&sequence)?, b"4\n");
+        drop(lock);
+        assert_eq!(
+            vault.finish_dual_write()?.outcome(),
+            VaultMirrorOutcome::AlreadyCurrent
+        );
         Ok(())
     }
 

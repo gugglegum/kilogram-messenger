@@ -45,12 +45,14 @@ The vault-primary transaction checkpoint is specified in
 [`docs/RFC-0019-vault-primary-transaction-checkpoint.md`](docs/RFC-0019-vault-primary-transaction-checkpoint.md).
 The typed journal delta and mutable sequence canary are specified in
 [`docs/RFC-0020-typed-journal-delta-and-mutable-sequence.md`](docs/RFC-0020-typed-journal-delta-and-mutable-sequence.md).
+The DB-primary ratchet workspace and registered append contract are specified in
+[`docs/RFC-0021-db-primary-ratchet-workspace-and-registered-appends.md`](docs/RFC-0021-db-primary-ratchet-workspace-and-registered-appends.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.8.8 typed journal delta and mutable sequence — complete
+## Current milestone: M0.8.9 DB-primary ratchet workspace — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -200,12 +202,20 @@ the coordinator also folds only the bounded trust namespaces into that same
 commit and rejects removal of an already committed trust record. This is a
 compatibility bridge, not a DB-primary trust repository.
 
+M0.8.9 makes ratchet reads DB-primary at every transaction boundary. The
+authenticated vault snapshot is installed into a crash-journaled staging
+workspace before `RatchetState` opens it; commit compares that workspace with
+the DB baseline, and rollback restores a durable DB-primary backup. Sequence
+uses the same rollback rule. Append-only writers now register exact canonical
+paths, replacing the second history-directory walk with a typed write-set.
+Committed append records cannot be removed or modified in place.
+
 This is still a narrow integration spike. The vault is not yet the primary
-repository for every read or write: ratchet/trust mutable reads and trust
-domain writes have not completed their cutover. Append-only
-directories are still enumerated, ratchet is compared against its bounded
-journal backup, and active DB records are fully authenticated/rehashed, so the
-whole path is not yet `O(changed)`. The development master key remains beside
+repository for every read or write: trust mutable reads and domain writes have
+not completed their cutover. The initial crash-journal baseline and final exact
+shadow confirmation still enumerate append-only state, while active DB records
+are fully authenticated/rehashed, so the whole path is not yet `O(changed)`.
+The development master key remains beside
 the database. It does not yet provide a
 global DHT or gossip freshness proof, atomic remote prekey reservation,
 protected local key storage, full DB-primary repository cutover, PQXDH, or

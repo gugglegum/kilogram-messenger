@@ -155,6 +155,14 @@ post-commit shadow confirmation, DB manifest rebuild и path enumeration ещё
 trust compatibility ingress включает authority/certificate/membership/
 peer-authority records в ту же vault transaction и запрещает их неявное
 удаление; trust repository всё ещё filesystem-backed.
+M0.8.9 делает ratchet read DB-primary на каждой transaction boundary. Active
+vault generation гидратирует crash-журналированный staging до открытия
+`RatchetState`, direct delta сравнивается с DB baseline, а rollback ratchet и
+sequence использует durable primary backup вместо предкомандного shadow.
+Append-only writers явно регистрируют event/authorization/projection/rewrap/
+recovery paths; второй directory walk при построении delta удалён, committed
+append record нельзя удалить или изменить на месте. Начальный rollback baseline,
+final exact shadow scan и full DB manifest rebuild пока остаются `O(state)`.
 Seed/root recovery, защищённое хранение root/local/ratchet keys, production
 repository cutover, global prekey discovery/witness, автоматический
 recovery source discovery/background coordinator, sync summaries, membership
@@ -211,8 +219,8 @@ removal и группы ещё не реализованы.
 
 ## План ближайших работ
 
-1. В M0.8.9 добавить DB-owned ratchet read/write workspace и явную регистрацию
-   append-only write-set, исключив повторное directory enumeration.
+1. В M0.8.10 перенести typed write receipts из CLI в domain repositories и
+   добавить authenticated incremental manifest index.
 2. Защитить vault master key через OS keystore/passphrase/seed wrapping,
    добавить rollback witness, versioned migrations и bounded backup/restore.
 3. Добавить source discovery/background coordinator и QR/device-link UX поверх
@@ -275,5 +283,7 @@ removal и группы ещё не реализованы.
   реализованный M0.8.7-контракт vault commit barrier и recoverable legacy shadow.
 - [`../docs/RFC-0020-typed-journal-delta-and-mutable-sequence.md`](../docs/RFC-0020-typed-journal-delta-and-mutable-sequence.md) —
   реализованный M0.8.8 typed direct delta и первый mutable DB-primary sequence adapter.
+- [`../docs/RFC-0021-db-primary-ratchet-workspace-and-registered-appends.md`](../docs/RFC-0021-db-primary-ratchet-workspace-and-registered-appends.md) —
+  реализованный M0.8.9 DB-primary ratchet workspace и explicit append write-set.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

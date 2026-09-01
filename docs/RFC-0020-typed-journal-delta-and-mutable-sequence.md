@@ -142,8 +142,9 @@ adapter, write-set регистрации от domain repositories, incremental 
 manifest index или production migration schema. Development master key всё ещё
 лежит рядом с DB.
 
-Следующий логичный этап M0.8.9 — дать ratchet repository DB-owned read/write
-workspace и явную регистрацию append-only write-set, чтобы убрать повторное
-directory enumeration и оставить filesystem только выходным compatibility
-shadow. Trust cutover, protected key provider, rollback witness, versioned
-migrations и bounded backup остаются отдельными security stages.
+M0.8.9 реализован в
+[`RFC-0021`](RFC-0021-db-primary-ratchet-workspace-and-registered-appends.md):
+ratchet transaction начинается с authenticated DB snapshot, rollback использует
+primary backup, а explicit append write-set убирает второй directory walk.
+Trust cutover, protected key provider, rollback witness, versioned migrations и
+bounded backup остаются отдельными security stages.
