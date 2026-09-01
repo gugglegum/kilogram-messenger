@@ -15,7 +15,7 @@ pub use vault::{
     EncryptedStateVault, STATE_VAULT_FILE, STATE_VAULT_KEY_FILE, StateMirrorRepository,
     StateRecordKind, TypedShadowReadReport, TypedStateRepository, VaultMigrationOutcome,
     VaultMirrorCommit, VaultMirrorDelta, VaultMirrorOutcome, VaultPrimaryRead, VaultPrimaryRecord,
-    VaultReport,
+    VaultPrimaryWriteRepository, VaultReport,
 };
 
 const LOCK_FILE: &str = ".kilogram-state.lock";
@@ -165,6 +165,17 @@ pub enum StateError {
 
     #[error("state vault mirror intent does not match the active snapshot")]
     VaultMirrorIntentBaseMismatch,
+
+    #[error("state vault primary-shadow intent authentication failed")]
+    VaultPrimaryShadowIntentAuthenticationFailed,
+
+    #[error(
+        "state vault primary commit at generation {generation} must restore or confirm its legacy shadow"
+    )]
+    VaultPrimaryShadowRecoveryRequired { generation: u64 },
+
+    #[error("state vault primary shadow recovery is blocked by active local transaction at {path}")]
+    VaultPrimaryShadowBlockedByLocalTransaction { path: PathBuf },
 
     #[error("state vault mirror generation is exhausted")]
     VaultGenerationExhausted,

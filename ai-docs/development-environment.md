@@ -358,6 +358,15 @@ toolchain `1.98.0` для воспроизводимой разработки.
     `.tmp/m086-smoke-20260901-160635` передал 73 events rounds `64 + 9`, получил
     listener overlay `73/73`, одинаковые vault-primary histories, peer vault
     generation 2 и fail-closed exit 1 на projection drift.
+48. M0.8.7 сделал immediate redb checkpoint точкой commit для всех
+    `StateTransaction` paths. DB transaction атомарно меняет records/manifest/
+    generation и публикует keyed primary-shadow intent; filesystem journal
+    затем подтверждает exact retained shadow. Crash test откатывает prepared
+    staging и восстанавливает event+ratchet из vault; forged marker отклоняется.
+    Все 86 tests, strict Clippy и release build проходят. Process smoke
+    `.tmp/m087-smoke-20260901-170711` получил source generation 4, listener
+    generation 3, commit до network status, final `already-current` mirrors и
+    совпадающие DB-primary delivery/ack events.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -382,9 +391,10 @@ filesystem state; M0.8.1 доказывает атомарную encrypted shado
 `redb`, M0.8.2 — recoverable versioned dual-write всех live CLI commands,
 M0.8.3 — typed incremental encrypted delta и exact shadow reads, M0.8.4 —
 первый DB-primary canary для read-only history, M0.8.5 — тот же cutover для
-manual/network history-rewrap source reads, а M0.8.6 — command-local overlay
-для mixed sync reads. Vault-primary writes и остальные repository cutover,
-bounded backups и защищённый key provider ещё не реализованы.
+manual/network history-rewrap source reads, M0.8.6 — command-local overlay для
+mixed sync reads, а M0.8.7 — vault-primary commit barrier для journaled writes.
+Typed direct repositories, mutable DB-primary reads, bounded backups и
+защищённый key provider ещё не реализованы.
 
 ## Решения, которые ещё нельзя фиксировать
 

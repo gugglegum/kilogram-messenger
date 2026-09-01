@@ -12,7 +12,7 @@ use chacha20poly1305::{
 };
 use redb::{Database, Durability, ReadableDatabase, ReadableTable, TableDefinition};
 use serde::{Deserialize, Serialize};
-use tempfile::TempDir;
+use tempfile::{NamedTempFile, TempDir};
 use zeroize::ZeroizeOnDrop;
 
 use crate::{StateError, io_at, path_exists, reject_symlink, sync_directory, validate_relative};
@@ -30,12 +30,15 @@ const MAX_VAULT_SNAPSHOT_BYTES: u64 = 512 * 1024 * 1024;
 const MANIFEST_KEY: &str = "snapshot-manifest";
 const GENERATION_KEY: &str = "snapshot-generation-v1";
 const MIRROR_INTENT_KEY: &str = "mirror-intent-v1";
+const PRIMARY_SHADOW_INTENT_KEY: &str = "primary-shadow-intent-v1";
 const MIRROR_METADATA_VERSION: u8 = 1;
 const RECORD_KEY_DOMAIN: &str = "kilogram state vault record lookup v1";
 const ENCRYPTION_KEY_DOMAIN: &str = "kilogram state vault encryption v1";
 const SNAPSHOT_KEY_DOMAIN: &str = "kilogram state vault snapshot v1";
 const GENERATION_AUTH_KEY_DOMAIN: &str = "kilogram state vault generation auth v1";
 const MIRROR_INTENT_AUTH_KEY_DOMAIN: &str = "kilogram state vault mirror intent auth v1";
+const PRIMARY_SHADOW_INTENT_AUTH_KEY_DOMAIN: &str =
+    "kilogram state vault primary shadow intent auth v1";
 const RECORD_AAD_DOMAIN: &[u8] = b"kilogram:state-vault-record-aad:v1\0";
 
 const META_TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("vault-meta-v1");
@@ -266,6 +269,14 @@ struct VaultMirrorIntent {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+struct VaultPrimaryShadowIntent {
+    version: u8,
+    generation: u64,
+    snapshot_id: [u8; 32],
+    authenticator: [u8; 32],
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 struct VaultRecord {
     version: u8,
     relative_path: String,
@@ -309,6 +320,16 @@ pub trait TypedStateRepository {
         &self,
         kinds: &[StateRecordKind],
     ) -> Result<VaultPrimaryRead, StateError>;
+}
+
+/// Commits the filesystem transaction's staged state to the encrypted vault
+/// before publishing the filesystem as its retained compatibility shadow.
+pub trait VaultPrimaryWriteRepository {
+    fn commit_primary_checkpoint(&self) -> Result<VaultMirrorCommit, StateError>;
+
+    fn confirm_primary_shadow(&self) -> Result<VaultReport, StateError>;
+
+    fn recover_primary_shadow(&self) -> Result<Option<VaultReport>, StateError>;
 }
 
 impl EncryptedStateVault {
@@ -639,6 +660,78 @@ impl EncryptedStateVault {
         write.commit().map_err(vault_database_error)
     }
 
+    fn commit_primary_delta(
+        &self,
+        delta: &PendingVaultDelta,
+        manifest: &VaultManifest,
+        generation: u64,
+        mirror_intent: &VaultMirrorIntent,
+        primary_shadow_intent: &VaultPrimaryShadowIntent,
+        fail_after_operations: Option<usize>,
+    ) -> Result<(), StateError> {
+        let mut encrypted_upserts = Vec::with_capacity(delta.upserts.len());
+        for record in &delta.upserts {
+            let record_key = self.record_key(&record.relative_path);
+            let encrypted = self.encrypt_record(record, &record_key)?;
+            encrypted_upserts.push((record_key, encrypted));
+        }
+        let removal_keys = delta
+            .removals
+            .iter()
+            .map(|relative_path| self.record_key(relative_path))
+            .collect::<Vec<_>>();
+        let encoded_manifest = postcard::to_allocvec(manifest)?;
+        let generation_record = self.generation_record(generation, manifest.snapshot_id);
+        let encoded_generation = postcard::to_allocvec(&generation_record)?;
+        let encoded_mirror_intent = postcard::to_allocvec(mirror_intent)?;
+        let encoded_primary_shadow_intent = postcard::to_allocvec(primary_shadow_intent)?;
+        let mut write = self.database.begin_write().map_err(vault_database_error)?;
+        write
+            .set_durability(Durability::Immediate)
+            .map_err(vault_database_error)?;
+        let mut completed_operations = 0_usize;
+        {
+            let mut table = write
+                .open_table(RECORD_TABLE)
+                .map_err(vault_database_error)?;
+            for key in &removal_keys {
+                table.remove(key.as_slice()).map_err(vault_database_error)?;
+                completed_operations += 1;
+                if fail_after_operations == Some(completed_operations) {
+                    return Err(StateError::VaultInjectedFailure(completed_operations));
+                }
+            }
+            for (key, value) in &encrypted_upserts {
+                table
+                    .insert(key.as_slice(), value.as_slice())
+                    .map_err(vault_database_error)?;
+                completed_operations += 1;
+                if fail_after_operations == Some(completed_operations) {
+                    return Err(StateError::VaultInjectedFailure(completed_operations));
+                }
+            }
+        }
+        {
+            let mut table = write.open_table(META_TABLE).map_err(vault_database_error)?;
+            table
+                .insert(MANIFEST_KEY, encoded_manifest.as_slice())
+                .map_err(vault_database_error)?;
+            table
+                .insert(GENERATION_KEY, encoded_generation.as_slice())
+                .map_err(vault_database_error)?;
+            table
+                .insert(MIRROR_INTENT_KEY, encoded_mirror_intent.as_slice())
+                .map_err(vault_database_error)?;
+            table
+                .insert(
+                    PRIMARY_SHADOW_INTENT_KEY,
+                    encoded_primary_shadow_intent.as_slice(),
+                )
+                .map_err(vault_database_error)?;
+        }
+        write.commit().map_err(vault_database_error)
+    }
+
     fn load_manifest(&self) -> Result<Option<VaultManifest>, StateError> {
         self.load_metadata(MANIFEST_KEY)?
             .map(|bytes| postcard::from_bytes(&bytes).map_err(StateError::from))
@@ -686,6 +779,25 @@ impl EncryptedStateVault {
         Ok(Some(intent))
     }
 
+    fn load_primary_shadow_intent(&self) -> Result<Option<VaultPrimaryShadowIntent>, StateError> {
+        let Some(encoded) = self.load_metadata(PRIMARY_SHADOW_INTENT_KEY)? else {
+            return Ok(None);
+        };
+        let intent: VaultPrimaryShadowIntent = postcard::from_bytes(&encoded)?;
+        if intent.version != MIRROR_METADATA_VERSION {
+            return Err(StateError::UnsupportedVaultMirrorMetadataVersion(
+                intent.version,
+            ));
+        }
+        if intent.generation == 0
+            || intent.authenticator
+                != self.primary_shadow_intent_authenticator(intent.generation, intent.snapshot_id)
+        {
+            return Err(StateError::VaultPrimaryShadowIntentAuthenticationFailed);
+        }
+        Ok(Some(intent))
+    }
+
     fn load_metadata(&self, key: &str) -> Result<Option<Vec<u8>>, StateError> {
         let read = self.database.begin_read().map_err(vault_database_error)?;
         let table = match read.open_table(META_TABLE) {
@@ -726,6 +838,11 @@ impl EncryptedStateVault {
     }
 
     fn ensure_no_pending_mirror(&self) -> Result<(), StateError> {
+        if let Some(intent) = self.load_primary_shadow_intent()? {
+            return Err(StateError::VaultPrimaryShadowRecoveryRequired {
+                generation: intent.generation,
+            });
+        }
         if let Some(intent) = self.load_mirror_intent()? {
             return Err(StateError::VaultMirrorRecoveryRequired {
                 base_generation: intent.base_generation,
@@ -735,13 +852,7 @@ impl EncryptedStateVault {
     }
 
     fn write_mirror_intent(&self, report: &VaultReport) -> Result<(), StateError> {
-        let intent = VaultMirrorIntent {
-            version: MIRROR_METADATA_VERSION,
-            base_generation: report.mirror_generation,
-            base_snapshot_id: report.snapshot_id,
-            authenticator: self
-                .mirror_intent_authenticator(report.mirror_generation, report.snapshot_id),
-        };
+        let intent = self.mirror_intent_record(report.mirror_generation, report.snapshot_id);
         let encoded = postcard::to_allocvec(&intent)?;
         let mut write = self.database.begin_write().map_err(vault_database_error)?;
         write
@@ -756,10 +867,190 @@ impl EncryptedStateVault {
         write.commit().map_err(vault_database_error)
     }
 
+    fn commit_primary_checkpoint_internal(
+        &self,
+        fail_after_operations: Option<usize>,
+    ) -> Result<VaultMirrorCommit, StateError> {
+        if let Some(intent) = self.load_primary_shadow_intent()? {
+            return Err(StateError::VaultPrimaryShadowRecoveryRequired {
+                generation: intent.generation,
+            });
+        }
+        let intent = self
+            .load_mirror_intent()?
+            .ok_or(StateError::VaultMirrorIntentMissing)?;
+        let active = self.verify()?;
+        if intent.base_generation != active.mirror_generation
+            || intent.base_snapshot_id != active.snapshot_id
+        {
+            return Err(StateError::VaultMirrorIntentBaseMismatch);
+        }
+
+        let active_records = self.load_records()?;
+        let staged_records = collect_legacy_records(&self.root)?;
+        let manifest = self.manifest_for_records(&staged_records)?;
+        let delta = diff_records(&active_records, &staged_records);
+        if delta.upserts.is_empty() && delta.removals.is_empty() {
+            if !report_matches_manifest(&active, &manifest) {
+                return Err(StateError::VaultManifestMismatch);
+            }
+            return Ok(VaultMirrorCommit {
+                outcome: VaultMirrorOutcome::AlreadyCurrent,
+                report: active,
+                delta: delta.report(),
+            });
+        }
+
+        let next_generation = active
+            .mirror_generation
+            .checked_add(1)
+            .ok_or(StateError::VaultGenerationExhausted)?;
+        let mirror_intent = self.mirror_intent_record(next_generation, manifest.snapshot_id);
+        let primary_shadow_intent =
+            self.primary_shadow_intent_record(next_generation, manifest.snapshot_id);
+        self.commit_primary_delta(
+            &delta,
+            &manifest,
+            next_generation,
+            &mirror_intent,
+            &primary_shadow_intent,
+            fail_after_operations,
+        )?;
+        let report = self.verify_current_against_legacy()?;
+        Ok(VaultMirrorCommit {
+            outcome: VaultMirrorOutcome::Mirrored,
+            report,
+            delta: delta.report(),
+        })
+    }
+
+    fn confirm_primary_shadow_internal(&self) -> Result<VaultReport, StateError> {
+        let active = self.verify_current_against_legacy()?;
+        let mirror_intent = self
+            .load_mirror_intent()?
+            .ok_or(StateError::VaultMirrorIntentMissing)?;
+        if mirror_intent.base_generation != active.mirror_generation
+            || mirror_intent.base_snapshot_id != active.snapshot_id
+        {
+            return Err(StateError::VaultMirrorIntentBaseMismatch);
+        }
+        let Some(primary_intent) = self.load_primary_shadow_intent()? else {
+            return Ok(active);
+        };
+        if primary_intent.generation != active.mirror_generation
+            || primary_intent.snapshot_id != active.snapshot_id
+        {
+            return Err(StateError::VaultMirrorIntentBaseMismatch);
+        }
+        self.clear_primary_shadow_intent()?;
+        Ok(active)
+    }
+
+    fn recover_primary_shadow_internal(&self) -> Result<Option<VaultReport>, StateError> {
+        let Some(primary_intent) = self.load_primary_shadow_intent()? else {
+            return Ok(None);
+        };
+        let active_transaction = self.root.join(".kilogram-transactions").join("active");
+        if path_exists(&active_transaction)? {
+            return Err(StateError::VaultPrimaryShadowBlockedByLocalTransaction {
+                path: active_transaction,
+            });
+        }
+        let (active, records) = self.verify_with_records()?;
+        if primary_intent.generation != active.mirror_generation
+            || primary_intent.snapshot_id != active.snapshot_id
+        {
+            return Err(StateError::VaultMirrorIntentBaseMismatch);
+        }
+        let mirror_intent = self
+            .load_mirror_intent()?
+            .ok_or(StateError::VaultMirrorIntentMissing)?;
+        if mirror_intent.base_generation != active.mirror_generation
+            || mirror_intent.base_snapshot_id != active.snapshot_id
+        {
+            return Err(StateError::VaultMirrorIntentBaseMismatch);
+        }
+        self.restore_legacy_shadow(&records)?;
+        let confirmed = self.verify_current_against_legacy()?;
+        self.clear_primary_shadow_intent()?;
+        Ok(Some(confirmed))
+    }
+
+    fn restore_legacy_shadow(&self, records: &[VaultRecord]) -> Result<(), StateError> {
+        let current = collect_legacy_records(&self.root)?;
+        let expected_by_path = records_by_path(records);
+
+        for record in records {
+            if current
+                .iter()
+                .find(|existing| existing.relative_path == record.relative_path)
+                == Some(record)
+            {
+                continue;
+            }
+            self.restore_legacy_record(record)?;
+        }
+        for existing in &current {
+            if expected_by_path.contains_key(existing.relative_path.as_str()) {
+                continue;
+            }
+            let relative = path_from_vault(&existing.relative_path)?;
+            let path = self.root.join(relative);
+            reject_symlink(&path)?;
+            io_at(&path, fs::remove_file(&path))?;
+            if let Some(parent) = path.parent() {
+                sync_directory(parent)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn restore_legacy_record(&self, record: &VaultRecord) -> Result<(), StateError> {
+        validate_record(record)?;
+        let relative = path_from_vault(&record.relative_path)?;
+        let destination = self.root.join(relative);
+        let parent = destination
+            .parent()
+            .ok_or_else(|| StateError::UnsafeRelativePath(destination.clone()))?;
+        io_at(parent, fs::create_dir_all(parent))?;
+        reject_symlink(parent)?;
+        if path_exists(&destination)? {
+            reject_symlink(&destination)?;
+            io_at(&destination, fs::remove_file(&destination))?;
+        }
+        let mut temporary = io_at(parent, NamedTempFile::new_in(parent))?;
+        let temporary_path = temporary.path().to_path_buf();
+        io_at(&temporary_path, temporary.write_all(&record.content))?;
+        io_at(&temporary_path, temporary.as_file().sync_all())?;
+        io_at(
+            &destination,
+            temporary
+                .persist_noclobber(&destination)
+                .map_err(|error| error.error),
+        )?;
+        sync_directory(parent)?;
+        Ok(())
+    }
+
+    fn clear_primary_shadow_intent(&self) -> Result<(), StateError> {
+        let mut write = self.database.begin_write().map_err(vault_database_error)?;
+        write
+            .set_durability(Durability::Immediate)
+            .map_err(vault_database_error)?;
+        {
+            let mut table = write.open_table(META_TABLE).map_err(vault_database_error)?;
+            table
+                .remove(PRIMARY_SHADOW_INTENT_KEY)
+                .map_err(vault_database_error)?;
+        }
+        write.commit().map_err(vault_database_error)
+    }
+
     fn finish_dual_write_internal(
         &self,
         fail_after_operations: Option<usize>,
     ) -> Result<VaultMirrorCommit, StateError> {
+        self.recover_primary_shadow_internal()?;
         let intent = self
             .load_mirror_intent()?
             .ok_or(StateError::VaultMirrorIntentMissing)?;
@@ -827,6 +1118,28 @@ impl EncryptedStateVault {
         }
     }
 
+    fn mirror_intent_record(&self, generation: u64, snapshot_id: [u8; 32]) -> VaultMirrorIntent {
+        VaultMirrorIntent {
+            version: MIRROR_METADATA_VERSION,
+            base_generation: generation,
+            base_snapshot_id: snapshot_id,
+            authenticator: self.mirror_intent_authenticator(generation, snapshot_id),
+        }
+    }
+
+    fn primary_shadow_intent_record(
+        &self,
+        generation: u64,
+        snapshot_id: [u8; 32],
+    ) -> VaultPrimaryShadowIntent {
+        VaultPrimaryShadowIntent {
+            version: MIRROR_METADATA_VERSION,
+            generation,
+            snapshot_id,
+            authenticator: self.primary_shadow_intent_authenticator(generation, snapshot_id),
+        }
+    }
+
     fn generation_authenticator(&self, generation: u64, snapshot_id: [u8; 32]) -> [u8; 32] {
         keyed_metadata_authenticator(
             GENERATION_AUTH_KEY_DOMAIN,
@@ -839,6 +1152,19 @@ impl EncryptedStateVault {
     fn mirror_intent_authenticator(&self, generation: u64, snapshot_id: [u8; 32]) -> [u8; 32] {
         keyed_metadata_authenticator(
             MIRROR_INTENT_AUTH_KEY_DOMAIN,
+            &self.master_key.0,
+            generation,
+            &snapshot_id,
+        )
+    }
+
+    fn primary_shadow_intent_authenticator(
+        &self,
+        generation: u64,
+        snapshot_id: [u8; 32],
+    ) -> [u8; 32] {
+        keyed_metadata_authenticator(
+            PRIMARY_SHADOW_INTENT_AUTH_KEY_DOMAIN,
             &self.master_key.0,
             generation,
             &snapshot_id,
@@ -951,10 +1277,24 @@ impl StateMirrorRepository for EncryptedStateVault {
     }
 
     fn recover_pending_dual_write(&self) -> Result<Option<VaultMirrorCommit>, StateError> {
-        if self.load_mirror_intent()?.is_none() {
+        if self.load_mirror_intent()?.is_none() && self.load_primary_shadow_intent()?.is_none() {
             return Ok(None);
         }
         self.finish_dual_write_internal(None).map(Some)
+    }
+}
+
+impl VaultPrimaryWriteRepository for EncryptedStateVault {
+    fn commit_primary_checkpoint(&self) -> Result<VaultMirrorCommit, StateError> {
+        self.commit_primary_checkpoint_internal(None)
+    }
+
+    fn confirm_primary_shadow(&self) -> Result<VaultReport, StateError> {
+        self.confirm_primary_shadow_internal()
+    }
+
+    fn recover_primary_shadow(&self) -> Result<Option<VaultReport>, StateError> {
+        self.recover_primary_shadow_internal()
     }
 }
 
@@ -983,6 +1323,12 @@ impl TypedStateRepository for EncryptedStateVault {
                 ));
             }
             selected.insert(*kind);
+        }
+
+        if let Some(intent) = self.load_primary_shadow_intent()? {
+            return Err(StateError::VaultPrimaryShadowRecoveryRequired {
+                generation: intent.generation,
+            });
         }
 
         let (report, records) = self.verify_with_records()?;
@@ -1551,6 +1897,111 @@ mod tests {
         assert!(matches!(
             tampered_vault.recover_pending_dual_write(),
             Err(StateError::VaultMirrorIntentAuthenticationFailed)
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn primary_checkpoint_is_atomic_and_restores_its_legacy_shadow_after_a_crash()
+    -> Result<(), Box<dyn Error>> {
+        let directory = tempfile::tempdir()?;
+        let ratchet_path = directory.path().join("ratchet/session.pickle");
+        let event_path = directory.path().join("events/chat/new.event");
+        write(&ratchet_path, b"ratchet-before")?;
+        let vault = EncryptedStateVault::open_or_create(directory.path())?;
+        assert_eq!(vault.migrate_legacy_snapshot()?.1.mirror_generation(), 1);
+
+        vault.begin_dual_write()?;
+        write(&ratchet_path, b"ratchet-staged")?;
+        write(&event_path, b"event-staged")?;
+        assert!(matches!(
+            vault.commit_primary_checkpoint_internal(Some(1)),
+            Err(StateError::VaultInjectedFailure(1))
+        ));
+        assert_eq!(vault.verify()?.mirror_generation(), 1);
+        assert!(vault.load_primary_shadow_intent()?.is_none());
+        write(&ratchet_path, b"ratchet-before")?;
+        fs::remove_file(&event_path)?;
+        assert_eq!(
+            vault.finish_dual_write()?.outcome(),
+            VaultMirrorOutcome::AlreadyCurrent
+        );
+
+        vault.begin_dual_write()?;
+        let transaction = crate::StateTransaction::begin(directory.path())?;
+        write(&ratchet_path, b"ratchet-primary")?;
+        write(&event_path, b"event-primary")?;
+        let primary = vault.commit_primary_checkpoint()?;
+        assert_eq!(primary.outcome(), VaultMirrorOutcome::Mirrored);
+        assert_eq!(primary.report().mirror_generation(), 2);
+        assert_eq!(primary.delta().upserted_records(), 2);
+        assert!(matches!(
+            vault.read_primary_canary(&[StateRecordKind::Event]),
+            Err(StateError::VaultPrimaryShadowRecoveryRequired { generation: 2 })
+        ));
+        assert!(matches!(
+            vault.recover_primary_shadow(),
+            Err(StateError::VaultPrimaryShadowBlockedByLocalTransaction { .. })
+        ));
+        drop(transaction);
+        let state_lock = crate::StateDirectoryLock::acquire(directory.path())?;
+        assert_eq!(fs::read(&ratchet_path)?, b"ratchet-before");
+        assert!(!event_path.exists());
+        let recovered = vault
+            .recover_primary_shadow()?
+            .ok_or("expected primary shadow recovery")?;
+        assert_eq!(recovered.mirror_generation(), 2);
+        assert_eq!(fs::read(&ratchet_path)?, b"ratchet-primary");
+        assert_eq!(fs::read(&event_path)?, b"event-primary");
+        assert!(vault.recover_primary_shadow()?.is_none());
+        let completed = vault.finish_dual_write()?;
+        assert_eq!(completed.outcome(), VaultMirrorOutcome::AlreadyCurrent);
+        assert_eq!(completed.report().mirror_generation(), 2);
+        drop(state_lock);
+
+        vault.begin_dual_write()?;
+        let projection_path = directory.path().join("local-messages/new.local-text");
+        write(&projection_path, b"projection-primary")?;
+        assert_eq!(
+            vault
+                .commit_primary_checkpoint()?
+                .report()
+                .mirror_generation(),
+            3
+        );
+        assert_eq!(vault.confirm_primary_shadow()?.mirror_generation(), 3);
+        write(
+            &directory.path().join("account-authority.snapshot"),
+            b"trust",
+        )?;
+        let final_commit = vault.finish_dual_write()?;
+        assert_eq!(final_commit.report().mirror_generation(), 4);
+        assert_eq!(vault.verify_against_legacy()?, *final_commit.report());
+
+        vault.begin_dual_write()?;
+        write(
+            &directory.path().join("events/chat/tampered.event"),
+            b"tampered-marker-fixture",
+        )?;
+        let tampered_commit = vault.commit_primary_checkpoint()?;
+        let forged = VaultPrimaryShadowIntent {
+            version: MIRROR_METADATA_VERSION,
+            generation: tampered_commit.report().mirror_generation(),
+            snapshot_id: *tampered_commit.report().snapshot_id(),
+            authenticator: [0_u8; 32],
+        };
+        let encoded = postcard::to_allocvec(&forged)?;
+        let write = vault.database.begin_write().map_err(vault_database_error)?;
+        {
+            let mut table = write.open_table(META_TABLE).map_err(vault_database_error)?;
+            table
+                .insert(PRIMARY_SHADOW_INTENT_KEY, encoded.as_slice())
+                .map_err(vault_database_error)?;
+        }
+        write.commit().map_err(vault_database_error)?;
+        assert!(matches!(
+            vault.recover_primary_shadow(),
+            Err(StateError::VaultPrimaryShadowIntentAuthenticationFailed)
         ));
         Ok(())
     }

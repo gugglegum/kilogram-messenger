@@ -30,10 +30,10 @@ M0.8.1 добавил обратимый encrypted shadow snapshot всего de
 после каждой live CLI-команды. M0.8.3 добавил typed exact shadow reads и
 атомарный encrypted delta: DB writes стали `O(changed + deleted)`, хотя полный
 scan/decrypt остаётся `O(state)`. M0.8.4 перевёл read-only history, M0.8.5 —
-manual/network history-rewrap source inventory, а M0.8.6 — mixed sync reads на
-DB-primary event/projection snapshot с command-local committed overlay без
-silent fallback. Все writes остаются legacy-primary, а master key лежит рядом
-development-файлом.
+manual/network history-rewrap source inventory, M0.8.6 — mixed sync reads на
+DB-primary event/projection snapshot, а M0.8.7 — vault commit barrier для всех
+journaled writes. Filesystem пока остаётся staging/shadow и primary для mutable
+reads и части trust updates, а master key лежит рядом development-файлом.
 Следующие вопросы относятся к production recovery, rotation, asynchronous
 sessions, distribution, removal и key epochs и не решены этим прототипом.
 
@@ -50,11 +50,11 @@ sessions, distribution, removal и key epochs и не решены этим пр
 - Какой TTL применять к retained losing session, как выполнять authenticated
   session reset после потери state и нужен ли production-протокол сложнее
   проверенного M0.7.6 lexicographic-min разрешения двух crossed sessions?
-- M0.8.6 уже использует command-local overlay для видимости успешно committed
-  sync records. Как теперь выполнить direct transactional DB writes для
-  events/projections, затем ratchet/trust/sequence, не создавая окно между DB и
-  retained legacy shadow? Как долго сохранять обязательный legacy shadow и
-  какие fault/migration критерии разрешают удалить legacy copy? Остаётся ли
+- M0.8.6 даёт command overlay, а M0.8.7 делает vault commit barrier и
+  восстанавливает legacy shadow из DB после crash. Как заменить full staging
+  scan typed direct DB transactions и перевести ratchet/trust/sequence reads,
+  не создавая два несовместимых transaction API? Как долго сохранять legacy
+  shadow и какие fault/migration критерии разрешают удалить его? Остаётся ли
   `redb` production engine после mobile/load, bounded backup и compaction tests?
 - Как защищать vault master key: OS keystore, аппаратный ключ,
   passphrase/seed-derived wrapping или их комбинация; как обнаруживать rollback

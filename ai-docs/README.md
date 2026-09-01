@@ -135,6 +135,14 @@ staged, затем проходит прежнюю crash-consistent filesystem t
 events двумя rounds 64+9, listener overlay вырос до 73 events/73 projections,
 обе vault-primary истории совпали; shadow drift завершился без fallback. Writes
 пока остаются legacy-primary.
+M0.8.7 делает vault необратимой точкой commit для всех M0.7.7
+StateTransaction operations. Filesystem сначала служит staging, затем одна
+immediate redb transaction публикует encrypted delta/generation и
+authenticated primary-shadow intent. Только после этого journal коммитит legacy
+shadow; crash между шагами восстанавливает весь shadow из vault, включая
+связанные ratchet/sequence records. Network response следует после обоих
+commit/confirmation. Mutable reads и non-transactional trust writes ещё не
+полностью переведены.
 Seed/root recovery, защищённое хранение root/local/ratchet keys, production
 repository cutover, global prekey discovery/witness, автоматический
 recovery source discovery/background coordinator, sync summaries, membership
@@ -191,9 +199,8 @@ removal и группы ещё не реализованы.
 
 ## План ближайших работ
 
-1. В M0.8.7 ввести transactional vault-primary writes для immutable
-   events/local projections с retained legacy shadow, fault injection и
-   доказанной атомарностью.
+1. В M0.8.8 добавить typed direct vault transactions и DB-primary mutable read
+   adapters, исключая полный legacy staging scan из основного write path.
 2. Защитить vault master key через OS keystore/passphrase/seed wrapping,
    добавить rollback witness, versioned migrations и bounded backup/restore.
 3. Добавить source discovery/background coordinator и QR/device-link UX поверх
@@ -252,5 +259,7 @@ removal и группы ещё не реализованы.
   реализованный M0.8.5-контракт vault-primary manual/network rewrap source reads.
 - [`../docs/RFC-0018-command-local-sync-read-overlay.md`](../docs/RFC-0018-command-local-sync-read-overlay.md) —
   реализованный M0.8.6-контракт immutable vault base и committed sync overlay.
+- [`../docs/RFC-0019-vault-primary-transaction-checkpoint.md`](../docs/RFC-0019-vault-primary-transaction-checkpoint.md) —
+  реализованный M0.8.7-контракт vault commit barrier и recoverable legacy shadow.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

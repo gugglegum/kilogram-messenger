@@ -1162,10 +1162,50 @@ reads теперь DB-primary, но events/projections и весь mutable state
 пишутся в retained legacy tree. Полный контракт —
 [`../docs/RFC-0018-command-local-sync-read-overlay.md`](../docs/RFC-0018-command-local-sync-read-overlay.md).
 
+### M0.8.7 — vault-primary transaction checkpoint: выполнено
+
+Реализовано:
+
+- каждая M0.7.7 `StateTransaction` при initialized vault сначала коммитит exact
+  staged delta одной immediate-durability redb transaction;
+- один atomic DB commit публикует encrypted records, manifest, новую generation,
+  rotated outer mirror intent и authenticated primary-shadow intent;
+- filesystem journal после этого публикует retained legacy shadow, а exact
+  comparison предшествует очистке primary marker;
+- delivery/acknowledgement, sync batches, seed-history, history import/recovery
+  и prekey/ratchet operations используют общий `PendingVaultPrimaryWrite`;
+- event/projection фиксируются атомарно со связанными ratchet/sequence changes;
+- crash до DB commit оставляет старый vault и откатывает staging, crash после DB
+  commit восстанавливает shadow из vault;
+- active filesystem journal блокирует преждевременную recovery, unsafe paths,
+  symlinks и forged marker отклоняются fail-closed;
+- network frames и успешный CLI result появляются только после vault commit и
+  shadow confirmation;
+- одна команда с несколькими transactions может увеличить generation несколько
+  раз; final compatibility mirror обычно `already-current`.
+
+Проверки:
+
+- state fault test проверяет невидимость aborted redb delta, crash между DB и
+  shadow commit, восстановление event+ratchet, идемпотентность, последующий
+  legacy mirror и forged marker;
+- CLI multi-batch test получил generation 3 после двух sync batches вместо
+  единственного command-end mirror;
+- все 86 workspace tests, rustfmt, strict Clippy и release build проходят;
+- release smoke `.tmp/m087-smoke-20260901-170711` выполнил direct delivery,
+  получил source generation 4 и listener generation 3; commit/confirmation
+  предшествовали `sent_event_id`/`received_event_id`, final mirrors остались
+  `already-current`, обе DB-primary histories подтвердили event и ack.
+
+Граница среза: filesystem остаётся staging input и shadow, full scan `O(state)`.
+Mutable read adapters и нетранзакционные trust updates ещё не DB-primary.
+Полный контракт —
+[`../docs/RFC-0019-vault-primary-transaction-checkpoint.md`](../docs/RFC-0019-vault-primary-transaction-checkpoint.md).
+
 ### Следующий этап
 
-1. M0.8.7 ввести transactional vault-primary immutable event/projection writes
-   с retained legacy shadow, fault injection и доказанной атомарностью.
+1. M0.8.8 добавить typed direct vault transactions и DB-primary mutable read
+   adapters, чтобы legacy был только выходным shadow без full staging scan.
 2. Защитить vault master key через OS keystore/passphrase/seed wrapping и
    спроектировать rollback witness, backup и versioned migrations.
 3. Source discovery/background coordinator и QR/device-link UX строить поверх

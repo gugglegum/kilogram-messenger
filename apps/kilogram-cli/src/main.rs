@@ -40,7 +40,8 @@ use kilogram_session::{
 use kilogram_state::{
     EncryptedStateVault, STATE_VAULT_FILE, STATE_VAULT_KEY_FILE, StateDirectoryLock,
     StateMirrorRepository, StateRecordKind, StateTransaction, TypedStateRepository,
-    VaultMigrationOutcome, VaultMirrorCommit, VaultMirrorOutcome, VaultReport,
+    VaultMigrationOutcome, VaultMirrorCommit, VaultMirrorOutcome, VaultPrimaryWriteRepository,
+    VaultReport,
 };
 use kilogram_store::{
     CommandEventReadOverlay, CommandLocalMessageReadOverlay, EventReadRepository, EventStore,
@@ -916,6 +917,13 @@ impl VaultDualWriteGuard {
         }
         let vault = EncryptedStateVault::open_existing(state_directory)
             .context("open encrypted state vault before live command")?;
+        if let Some(report) = vault
+            .recover_primary_shadow()
+            .context("recover retained legacy shadow from a committed vault-primary checkpoint")?
+        {
+            println!("vault_primary_shadow_recovery=restored");
+            print_vault_report(&report);
+        }
         if let Some(commit) = vault
             .recover_pending_dual_write()
             .context("recover interrupted state vault dual-write")?
@@ -942,6 +950,13 @@ impl VaultDualWriteGuard {
     fn finish(self) -> Result<()> {
         let vault = EncryptedStateVault::open_existing(&self.state_directory)
             .context("reopen encrypted state vault after live command")?;
+        if let Some(report) = vault
+            .recover_primary_shadow()
+            .context("recover retained legacy shadow before final vault mirror")?
+        {
+            println!("vault_primary_shadow_recovery=restored");
+            print_vault_report(&report);
+        }
         let commit = vault
             .finish_dual_write()
             .context("commit live legacy state to encrypted state vault")?;
@@ -1332,6 +1347,51 @@ fn print_vault_mirror_commit(commit: &VaultMirrorCommit) {
     print_vault_report(commit.report());
 }
 
+struct PendingVaultPrimaryWrite {
+    vault: EncryptedStateVault,
+    commit: VaultMirrorCommit,
+}
+
+impl PendingVaultPrimaryWrite {
+    fn prepare(state_directory: &Path) -> Result<Option<Self>, kilogram_state::StateError> {
+        if !EncryptedStateVault::is_initialized(state_directory)? {
+            return Ok(None);
+        }
+        let vault = EncryptedStateVault::open_existing(state_directory)?;
+        let commit = vault.commit_primary_checkpoint()?;
+        Ok(Some(Self { vault, commit }))
+    }
+
+    fn confirm(self) -> Result<(), kilogram_state::StateError> {
+        let report = self.vault.confirm_primary_shadow()?;
+        println!(
+            "vault_primary_write={}",
+            match self.commit.outcome() {
+                VaultMirrorOutcome::Mirrored => "committed",
+                VaultMirrorOutcome::AlreadyCurrent => "already-current",
+            }
+        );
+        println!(
+            "vault_primary_write_upserted_records={}",
+            self.commit.delta().upserted_records()
+        );
+        println!(
+            "vault_primary_write_removed_records={}",
+            self.commit.delta().removed_records()
+        );
+        println!(
+            "vault_primary_write_unchanged_records={}",
+            self.commit.delta().unchanged_records()
+        );
+        println!(
+            "vault_primary_write_generation={}",
+            report.mirror_generation()
+        );
+        println!("vault_primary_shadow=confirmed");
+        Ok(())
+    }
+}
+
 fn run_state_transaction<T>(
     state_directory: &Path,
     operation: impl FnOnce() -> Result<T>,
@@ -1340,9 +1400,28 @@ fn run_state_transaction<T>(
         .context("prepare crash-consistent local state transaction")?;
     match operation() {
         Ok(value) => {
+            let primary_write = match PendingVaultPrimaryWrite::prepare(state_directory) {
+                Ok(primary_write) => primary_write,
+                Err(primary_error) => {
+                    return match transaction.rollback() {
+                        Ok(()) => Err(primary_error)
+                            .context("commit staged local state to the encrypted vault"),
+                        Err(rollback_error) => Err(anyhow::Error::new(primary_error).context(
+                            format!(
+                                "vault-primary commit failed and local rollback also failed: {rollback_error}"
+                            ),
+                        )),
+                    };
+                }
+            };
             transaction
                 .commit()
                 .context("commit crash-consistent local state transaction")?;
+            if let Some(primary_write) = primary_write {
+                primary_write
+                    .confirm()
+                    .context("confirm retained legacy shadow after vault-primary commit")?;
+            }
             Ok(value)
         }
         Err(operation_error) => match transaction.rollback() {
@@ -1362,9 +1441,25 @@ fn run_store_transaction<T>(
         StateTransaction::begin(state_directory).map_err(state_transaction_store_error)?;
     match operation() {
         Ok(value) => {
+            let primary_write = match PendingVaultPrimaryWrite::prepare(state_directory) {
+                Ok(primary_write) => primary_write,
+                Err(primary_error) => {
+                    return match transaction.rollback() {
+                        Ok(()) => Err(state_transaction_store_error(primary_error)),
+                        Err(rollback_error) => Err(StoreError::from(io::Error::other(format!(
+                            "vault-primary store commit failed ({primary_error}) and local rollback also failed: {rollback_error}"
+                        )))),
+                    };
+                }
+            };
             transaction
                 .commit()
                 .map_err(state_transaction_store_error)?;
+            if let Some(primary_write) = primary_write {
+                primary_write
+                    .confirm()
+                    .map_err(state_transaction_store_error)?;
+            }
             Ok(value)
         }
         Err(operation_error) => match transaction.rollback() {
@@ -5356,7 +5451,7 @@ mod tests {
             EncryptedStateVault::open_existing(&peer_state_dir)?
                 .verify_against_legacy()?
                 .mirror_generation(),
-            2
+            3
         );
         Ok(())
     }

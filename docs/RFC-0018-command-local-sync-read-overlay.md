@@ -133,8 +133,9 @@ M0.7.7. Он решает только видимость records, committed в 
 команды. Full vault authentication/shadow comparison всё ещё `O(state)`, writes
 сначала попадают в legacy files, а development master key лежит рядом с DB.
 
-Следующий логичный этап M0.8.7 — ввести transactional vault-primary write
-repositories для immutable events и local projections с retained legacy shadow,
-failure injection и доказанной атомарностью. Ratchet/trust/sequence cutover,
-защищённый key provider, rollback witness, migrations и bounded backup остаются
-отдельными этапами.
+M0.8.7 реализован в
+[`RFC-0019`](RFC-0019-vault-primary-transaction-checkpoint.md): vault-primary
+checkpoint фиксирует event/projection вместе со связанным ratchet/sequence
+state до публикации legacy shadow и network response. Typed direct repository
+cutover, защищённый key provider, rollback witness, migrations и bounded backup
+остаются отдельными этапами.
