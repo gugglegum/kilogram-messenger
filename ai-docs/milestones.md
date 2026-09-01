@@ -1452,10 +1452,50 @@ master-key rotation и защита остальных filesystem secrets не �
 Полный контракт —
 [`../docs/RFC-0025-portable-vault-key-recovery-and-rollback-witness.md`](../docs/RFC-0025-portable-vault-key-recovery-and-rollback-witness.md).
 
+### M0.8.14 — DB-primary device identity: выполнено
+
+Реализовано:
+
+- `DeviceIdentityStateRepository` читает immutable signing/encryption identity
+  из authenticated active vault generation;
+- schema-v2 path проверяет encrypted manifest index и decrypt-ит только две
+  записи kind `DeviceIdentity`; schema v1 сохраняет full-verify compatibility;
+- initialized vault не делает silent filesystem fallback при missing,
+  unexpected, wrong-length или повреждённой identity record;
+- `DeviceState::from_secret_material` строит identity без чтения/создания raw
+  shadow, а временные secret buffers zeroize-ятся;
+- все 17 production `listen/connect/sync/identity/enroll/authorize/history/`
+  `ratchet/rewrap/recovery/seed` call sites используют единый DB-primary loader;
+- device identity не добавлена в direct mutation API: key rotation остаётся
+  отдельной authority-операцией.
+
+Проверки:
+
+- identity regression доказывает отсутствие filesystem I/O конструктора из
+  caller-authenticated bytes;
+- state regression покрывает tampered shadow, missing second record и AEAD
+  corruption выбранного identity ciphertext;
+- CLI regression сохраняет исходные device/encryption IDs при подмене обоих
+  shadow-файлов после открытия authenticated mirror intent;
+- все 101 workspace test, rustfmt, strict Clippy и release build проходят;
+- Windows release process smoke `.tmp/m0814-identity-smoke-20260901-234500`
+  запустил `identity` на копии реального schema-v2 vault, получил source
+  `db-primary`, generation 5, две identity records и прежние device ID /
+  encryption public key; pre/post verify сохранили 16 records и snapshot
+  `a81942b5e5935c02514617aa605d79bd74dcb2b6ccf2b1a03570aae9d7ee2da8`,
+  а compatibility delta осталась нулевой.
+
+Граница среза: raw `device-secret.key` и `device-encryption-secret.key` пока
+физически остаются retained compatibility shadow и проверяются full-state
+pre-command/final gate. Поэтому M0.8.14 устраняет чувствительное прикладное
+чтение, но ещё не улучшает at-rest confidentiality этих двух копий. Полный
+контракт —
+[`../docs/RFC-0026-db-primary-device-identity.md`](../docs/RFC-0026-db-primary-device-identity.md).
+
 ### Следующий этап
 
-1. Убрать оставшиеся sensitive compatibility reads/writes из filesystem,
-   начиная с device identity, и подготовить production shadow retirement.
+1. Физически удалить raw device identity из normal retained shadow и
+   адаптировать exact gate/primary-shadow recovery к DB-only secret records.
 2. Source discovery/background coordinator и QR/device-link UX строить поверх
    M0.7.9 без ослабления explicit consent.
 3. Membership removal и group governance проектировать вместе с ordered

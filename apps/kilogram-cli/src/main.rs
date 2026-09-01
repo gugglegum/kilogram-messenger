@@ -38,10 +38,10 @@ use kilogram_session::{
     authorize_device_session,
 };
 use kilogram_state::{
-    EncryptedStateVault, STATE_VAULT_FILE, STATE_VAULT_KEY_FILE, StateDirectoryLock,
-    StateMirrorRepository, StateRecordKind, StateTransaction, TrustStateRepository,
-    TypedStateRepository, VaultMigrationOutcome, VaultMirrorCommit, VaultMirrorOutcome,
-    VaultPrimaryWriteRepository, VaultRecoveryWitness, VaultReport,
+    DeviceIdentityStateRepository, EncryptedStateVault, STATE_VAULT_FILE, STATE_VAULT_KEY_FILE,
+    StateDirectoryLock, StateMirrorRepository, StateRecordKind, StateTransaction,
+    TrustStateRepository, TypedStateRepository, VaultMigrationOutcome, VaultMirrorCommit,
+    VaultMirrorOutcome, VaultPrimaryWriteRepository, VaultRecoveryWitness, VaultReport,
 };
 use kilogram_store::{
     AppendOnlyWriteReceipt, CommandEventReadOverlay, CommandLocalMessageReadOverlay,
@@ -1856,6 +1856,36 @@ fn state_transaction_store_error(error: kilogram_state::StateError) -> StoreErro
     StoreError::from(io::Error::other(error))
 }
 
+fn load_command_device_state(state_directory: &Path) -> Result<DeviceState> {
+    if !EncryptedStateVault::is_initialized(state_directory)
+        .context("inspect state vault before device identity read")?
+    {
+        let device_state = DeviceState::load_or_create(state_directory).with_context(|| {
+            format!(
+                "load retained filesystem device state from {}",
+                state_directory.display()
+            )
+        })?;
+        println!("device_identity_read_source=filesystem");
+        return Ok(device_state);
+    }
+
+    let read = EncryptedStateVault::open_existing(state_directory)
+        .context("open encrypted vault device identity repository")?
+        .read_primary_device_identity()
+        .context("read authenticated DB-primary device identity repository")?;
+    let mirror_generation = read.mirror_generation();
+    let device_state = DeviceState::from_secret_material(
+        state_directory,
+        *read.signing_secret(),
+        *read.encryption_secret(),
+    );
+    println!("vault_device_identity_read_source=db-primary");
+    println!("vault_device_identity_read_generation={mirror_generation}");
+    println!("vault_device_identity_record_count=2");
+    Ok(device_state)
+}
+
 enum TrustReadSource {
     Filesystem,
     Vault { records: BTreeMap<String, Vec<u8>> },
@@ -2049,8 +2079,7 @@ async fn listen(options: ListenOptions) -> Result<()> {
         history_rewrap_range_start,
         history_rewrap_count,
     } = options;
-    let device_state = DeviceState::load_or_create(&state_dir)
-        .with_context(|| format!("load device state from {}", state_dir.display()))?;
+    let device_state = load_command_device_state(&state_dir)?;
     let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
     let listener_certificate = trust
         .load_certificate()
@@ -2901,8 +2930,7 @@ async fn connect(
     conversation: String,
     expected_listener_account_id: AccountId,
 ) -> Result<()> {
-    let device_state = DeviceState::load_or_create(&state_dir)
-        .with_context(|| format!("load device state from {}", state_dir.display()))?;
+    let device_state = load_command_device_state(&state_dir)?;
     let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
     let requester_certificate = trust
         .load_certificate()
@@ -3171,8 +3199,7 @@ async fn sync(
         (1..=MAX_SYNC_ROUNDS).contains(&max_rounds),
         "--max-rounds must be between 1 and {MAX_SYNC_ROUNDS}"
     );
-    let device_state = DeviceState::load_or_create(&state_dir)
-        .with_context(|| format!("load device state from {}", state_dir.display()))?;
+    let device_state = load_command_device_state(&state_dir)?;
     let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
     let requester_certificate = trust
         .load_certificate()
@@ -3516,8 +3543,7 @@ async fn load_connection_ticket(
 }
 
 fn show_identity(state_dir: PathBuf) -> Result<()> {
-    let device_state = DeviceState::load_or_create(&state_dir)
-        .with_context(|| format!("load device state from {}", state_dir.display()))?;
+    let device_state = load_command_device_state(&state_dir)?;
     println!("device_id={}", device_state.identity().device_id());
     println!(
         "device_encryption_public_key={}",
@@ -3638,8 +3664,7 @@ fn add_conversation_members(
 }
 
 fn install_conversation_membership(state_dir: PathBuf, membership_file: PathBuf) -> Result<()> {
-    let device = DeviceState::load_or_create(&state_dir)
-        .with_context(|| format!("load device state from {}", state_dir.display()))?;
+    let device = load_command_device_state(&state_dir)?;
     let trust = CommandTrustReadRepository::open(&state_dir, &device)?;
     let certificate = trust
         .load_certificate()
@@ -3713,8 +3738,7 @@ fn enroll_device(
 ) -> Result<()> {
     let account = AccountRootState::load(&account_dir)
         .with_context(|| format!("load Account Root state from {}", account_dir.display()))?;
-    let device = DeviceState::load_or_create(&state_dir)
-        .with_context(|| format!("load device state from {}", state_dir.display()))?;
+    let device = load_command_device_state(&state_dir)?;
     let certificate = account
         .issue_device_certificate(
             device.identity().device_id(),
@@ -3757,8 +3781,7 @@ fn enroll_device(
 }
 
 fn authorize_device(state_dir: PathBuf, account_id: AccountId) -> Result<()> {
-    let device = DeviceState::load_or_create(&state_dir)
-        .with_context(|| format!("load device state from {}", state_dir.display()))?;
+    let device = load_command_device_state(&state_dir)?;
     let trust = CommandTrustReadRepository::open(&state_dir, &device)?;
     let certificate = trust
         .load_certificate()
@@ -3792,8 +3815,7 @@ fn authorize_device(state_dir: PathBuf, account_id: AccountId) -> Result<()> {
 }
 
 fn update_device_authority(state_dir: PathBuf, snapshot_file: PathBuf) -> Result<()> {
-    let device = DeviceState::load_or_create(&state_dir)
-        .with_context(|| format!("load device state from {}", state_dir.display()))?;
+    let device = load_command_device_state(&state_dir)?;
     let bytes = fs::read(&snapshot_file)
         .with_context(|| format!("read authority snapshot from {}", snapshot_file.display()))?;
     let snapshot = AccountAuthoritySnapshot::decode_and_verify(&bytes)
@@ -3971,8 +3993,7 @@ fn strip_vault_record_prefix(relative_path: &str, prefix: &str) -> Result<String
 }
 
 fn show_history(state_dir: PathBuf, conversation: String) -> Result<()> {
-    let device_state = DeviceState::load_or_create(&state_dir)
-        .with_context(|| format!("load device state from {}", state_dir.display()))?;
+    let device_state = load_command_device_state(&state_dir)?;
     let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
     let certificate = trust
         .load_certificate()
@@ -4051,8 +4072,7 @@ fn show_history(state_dir: PathBuf, conversation: String) -> Result<()> {
 }
 
 fn export_ratchet_bundle(state_dir: PathBuf, bundle_file: PathBuf) -> Result<()> {
-    let device_state = DeviceState::load_or_create(&state_dir)
-        .with_context(|| format!("load device state from {}", state_dir.display()))?;
+    let device_state = load_command_device_state(&state_dir)?;
     let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
     let certificate = trust
         .load_certificate()
@@ -4090,8 +4110,7 @@ fn export_ratchet_prekey_pool(
     let validity_seconds = valid_for_hours
         .checked_mul(60 * 60)
         .context("--valid-for-hours overflows seconds")?;
-    let device_state = DeviceState::load_or_create(&state_dir)
-        .with_context(|| format!("load device state from {}", state_dir.display()))?;
+    let device_state = load_command_device_state(&state_dir)?;
     let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
     let certificate = trust
         .load_certificate()
@@ -4179,8 +4198,7 @@ async fn fetch_history_rewrap(
         count <= MAX_HISTORY_REWRAP_ENTRIES,
         "--count must not exceed {MAX_HISTORY_REWRAP_ENTRIES}"
     );
-    let device_state = DeviceState::load_or_create(&state_dir)
-        .with_context(|| format!("load recipient device state from {}", state_dir.display()))?;
+    let device_state = load_command_device_state(&state_dir)?;
     let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
     let recipient_certificate = trust
         .load_certificate()
@@ -4368,8 +4386,7 @@ async fn resume_history_recovery(
         "--page-size must not exceed {MAX_HISTORY_REWRAP_ENTRIES}"
     );
 
-    let device_state = DeviceState::load_or_create(&state_dir)
-        .with_context(|| format!("load recipient device state from {}", state_dir.display()))?;
+    let device_state = load_command_device_state(&state_dir)?;
     let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
     let recipient_certificate = trust
         .load_certificate()
@@ -4522,8 +4539,7 @@ fn export_history_rewrap(
         count <= MAX_HISTORY_REWRAP_ENTRIES,
         "--count must not exceed {MAX_HISTORY_REWRAP_ENTRIES}"
     );
-    let device_state = DeviceState::load_or_create(&state_dir)
-        .with_context(|| format!("load source device state from {}", state_dir.display()))?;
+    let device_state = load_command_device_state(&state_dir)?;
     let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
     let read_repositories = open_immutable_read_repositories(&state_dir)
         .context("capture immutable vault-primary source history before export state changes")?;
@@ -4704,8 +4720,7 @@ fn import_history_rewrap_material(
     recovery_checkpoint: Option<(SignedHistoryRecoveryCheckpoint, Vec<u8>)>,
     final_status: &str,
 ) -> Result<()> {
-    let device_state = DeviceState::load_or_create(&state_dir)
-        .with_context(|| format!("load recipient device state from {}", state_dir.display()))?;
+    let device_state = load_command_device_state(&state_dir)?;
     let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
     let recipient_certificate = trust
         .load_certificate()
@@ -4987,8 +5002,7 @@ struct HistoryRewrapClaimCoverage {
 }
 
 fn reconcile_history_rewrap(state_dir: PathBuf, conversation: String) -> Result<()> {
-    let device_state = DeviceState::load_or_create(&state_dir)
-        .with_context(|| format!("load recipient device state from {}", state_dir.display()))?;
+    let device_state = load_command_device_state(&state_dir)?;
     let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
     let recipient_certificate = trust
         .load_certificate()
@@ -5169,8 +5183,7 @@ fn seed_history(
     peer_prekey_pool_file: PathBuf,
 ) -> Result<()> {
     ensure!(count > 0, "--count must be greater than zero");
-    let device_state = DeviceState::load_or_create(&state_dir)
-        .with_context(|| format!("load device state from {}", state_dir.display()))?;
+    let device_state = load_command_device_state(&state_dir)?;
     let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
     let certificate = trust
         .load_certificate()
@@ -5961,6 +5974,41 @@ mod tests {
                 .verify_against_legacy()?
                 .record_count(),
             5
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn cli_device_identity_reads_db_primary_without_filesystem_fallback() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let original = DeviceState::load_or_create(directory.path())?;
+        let expected_device_id = original.identity().device_id();
+        let expected_encryption_key = original.encryption().public_key();
+        drop(original);
+        let signing_path = directory.path().join("device-secret.key");
+        let encryption_path = directory.path().join("device-encryption-secret.key");
+        let signing_shadow = fs::read(&signing_path)?;
+        let encryption_shadow = fs::read(&encryption_path)?;
+        let vault = EncryptedStateVault::open_or_create(directory.path())?;
+        vault.migrate_legacy_snapshot()?;
+        drop(vault);
+
+        let guard = VaultDualWriteGuard::prepare(directory.path())?
+            .context("expected initialized identity vault guard")?;
+        fs::write(&signing_path, [41_u8; 32])?;
+        fs::write(&encryption_path, [43_u8; 32])?;
+        let loaded = load_command_device_state(directory.path())?;
+        assert_eq!(loaded.identity().device_id(), expected_device_id);
+        assert_eq!(loaded.encryption().public_key(), expected_encryption_key);
+
+        fs::write(&signing_path, signing_shadow)?;
+        fs::write(&encryption_path, encryption_shadow)?;
+        guard.finish()?;
+        assert_eq!(
+            EncryptedStateVault::open_existing(directory.path())?
+                .verify_against_legacy()?
+                .mirror_generation(),
+            1
         );
         Ok(())
     }

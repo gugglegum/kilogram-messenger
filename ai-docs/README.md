@@ -192,8 +192,14 @@ Package связывает key с generation/snapshot witness. Импорт сн
 аутентифицирует candidate DB, отклоняет rollback и same-generation fork и лишь
 затем атомарно создаёт локальный provider envelope. Согласованный rollback DB
 вместе со старым package по-прежнему требует независимого monotonic witness.
-Seed/root recovery, защищённое хранение root/local/ratchet keys, production
-shadow retirement, global prekey discovery/witness, автоматический
+M0.8.14 переводит device signing/encryption identity на отдельный immutable
+`DeviceIdentityStateRepository`. После инициализации vault все production
+команды получают ровно две 32-byte записи из authenticated schema-v2 index и
+не делают filesystem fallback; missing/invalid/tampered record fail-closed.
+Raw identity files пока остаются compatibility shadow для exact gate и crash
+recovery, поэтому их физическое retirement является следующим этапом.
+Seed/root recovery, защищённое хранение root и оставшихся ratchet shadows,
+production shadow retirement, global prekey discovery/witness, автоматический
 recovery source discovery/background coordinator, sync summaries, membership
 removal и группы ещё не реализованы.
 
@@ -248,20 +254,22 @@ removal и группы ещё не реализованы.
 
 ## План ближайших работ
 
-1. Добавить portable macOS/Linux keystore или passphrase/seed wrapping,
-   внешний rollback witness и явный bounded backup/restore защищённого ключа.
-2. Добавить source discovery/background coordinator и QR/device-link UX поверх
+1. Удалить raw device identity из retained compatibility shadow и адаптировать
+   exact gate/crash recovery к DB-only secret records.
+2. Добавить production macOS/Linux local key provider, согласованный monotonic
+   witness и lifecycle обновления portable recovery package.
+3. Добавить source discovery/background coordinator и QR/device-link UX поверх
    resumable history recovery без ослабления явного consent.
-3. Спроектировать membership removal вместе с ordered security log и MLS epoch;
+4. Спроектировать membership removal вместе с ordered security log и MLS epoch;
    отдельно — gossip/witness для first-contact freshness.
-4. Спроектировать seed/recovery authority, protected root storage, root
+5. Спроектировать seed/recovery authority, protected root storage, root
    rotation и конфликтующие authority operations.
-5. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
-6. Спроектировать финальный wire format подписанного события и алгоритм
+6. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
+7. Спроектировать финальный wire format подписанного события и алгоритм
    линеаризации.
-7. Спроектировать compact Merkle/range summary и переносимый signed cursor.
-8. Добавить небольшие MLS-группы.
-9. Перед публичным выпуском провести независимый криптографический аудит.
+8. Спроектировать compact Merkle/range summary и переносимый signed cursor.
+9. Добавить небольшие MLS-группы.
+10. Перед публичным выпуском провести независимый криптографический аудит.
 
 ## Навигация
 
@@ -320,5 +328,7 @@ removal и группы ещё не реализованы.
   реализованный M0.8.12 Windows DPAPI key envelope и legacy-key migration.
 - [`../docs/RFC-0025-portable-vault-key-recovery-and-rollback-witness.md`](../docs/RFC-0025-portable-vault-key-recovery-and-rollback-witness.md) —
   реализованный M0.8.13 portable key recovery и внешний rollback/fork witness.
+- [`../docs/RFC-0026-db-primary-device-identity.md`](../docs/RFC-0026-db-primary-device-identity.md) —
+  реализованный M0.8.14 immutable DB-primary device identity без filesystem fallback.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

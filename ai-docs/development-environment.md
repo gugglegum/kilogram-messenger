@@ -430,6 +430,19 @@ toolchain `1.98.0` для воспроизводимой разработки.
     удалил local key и восстановил 282-byte DPAPI envelope из 148-byte package,
     сохранив 16 records и snapshot
     `a81942b5e5935c02514617aa605d79bd74dcb2b6ccf2b1a03570aae9d7ee2da8`.
+55. M0.8.14 добавил immutable `DeviceIdentityStateRepository` и единый CLI
+    loader. Для initialized vault все 17 production call sites decrypt-ят только
+    две identity records из authenticated schema-v2 index; missing/invalid/
+    tampered record не имеет filesystem fallback. Secret buffers zeroize-ятся,
+    а identity не включена в direct mutation set. Все 101 workspace test,
+    rustfmt, strict Clippy и release build проходят. Windows release process
+    smoke `.tmp/m0814-identity-smoke-20260901-234500` выполнил `identity` на
+    копии реального vault, сообщил `vault_device_identity_read_source=db-primary`
+    и generation 5, сохранил device ID
+    `e9c761facda7ea876ee310e04192a88fa2b2c77a261b52a29e515289a94a3740`,
+    encryption public key
+    `674cd65a76d98d25b499b2630ce8aeef271912a629fce753ab2e31518ec8fc26`,
+    16 records и прежний snapshot ID без DB delta.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -461,10 +474,11 @@ M0.8.9 добавляет DB-primary ratchet workspace и durable primary rollba
 M0.8.10 — repository-owned receipts и encrypted incremental manifest index.
 M0.8.11 добавляет DB-primary trust repository и удаляет compatibility ingress.
 M0.8.12 добавляет Windows DPAPI CurrentUser key envelope и legacy-key rewrap;
-M0.8.13 — portable passphrase recovery package и внешний snapshot witness.
+M0.8.13 — portable passphrase recovery package и внешний snapshot witness;
+M0.8.14 — immutable DB-primary device identity без filesystem fallback.
 Paged/Merkle index, production non-Windows local provider, согласованный
-monotonic rollback witness и автоматический backup lifecycle ещё не
-реализованы.
+monotonic rollback witness, автоматический backup lifecycle и физическое
+retirement raw identity shadow ещё не реализованы.
 
 ## Решения, которые ещё нельзя фиксировать
 

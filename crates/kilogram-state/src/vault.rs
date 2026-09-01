@@ -25,10 +25,14 @@ use chacha20poly1305::{
 use redb::{Database, Durability, ReadableDatabase, ReadableTable, TableDefinition};
 use serde::{Deserialize, Serialize};
 use tempfile::{NamedTempFile, TempDir};
+use zeroize::{ZeroizeOnDrop, Zeroizing};
 
 pub const STATE_VAULT_FILE: &str = "state-vault.redb";
 pub const STATE_VAULT_KEY_FILE: &str = "state-vault.key";
 
+const DEVICE_SECRET_PATH: &str = "device-secret.key";
+const DEVICE_ENCRYPTION_SECRET_PATH: &str = "device-encryption-secret.key";
+const DEVICE_IDENTITY_SECRET_BYTES: usize = 32;
 const VAULT_SCHEMA_VERSION: u64 = 2;
 const LEGACY_VAULT_SCHEMA_VERSION: u64 = 1;
 const VAULT_RECORD_VERSION: u8 = 1;
@@ -202,6 +206,28 @@ pub struct VaultMutableRead {
     mirror_generation: u64,
     selected_kinds: BTreeSet<StateRecordKind>,
     records: Vec<VaultPrimaryRecord>,
+}
+
+#[derive(ZeroizeOnDrop)]
+pub struct VaultDeviceIdentityRead {
+    #[zeroize(skip)]
+    mirror_generation: u64,
+    signing_secret: [u8; DEVICE_IDENTITY_SECRET_BYTES],
+    encryption_secret: [u8; DEVICE_IDENTITY_SECRET_BYTES],
+}
+
+impl VaultDeviceIdentityRead {
+    pub fn mirror_generation(&self) -> u64 {
+        self.mirror_generation
+    }
+
+    pub fn signing_secret(&self) -> &[u8; DEVICE_IDENTITY_SECRET_BYTES] {
+        &self.signing_secret
+    }
+
+    pub fn encryption_secret(&self) -> &[u8; DEVICE_IDENTITY_SECRET_BYTES] {
+        &self.encryption_secret
+    }
 }
 
 impl VaultMutableRead {
@@ -423,6 +449,12 @@ pub trait TypedStateRepository {
 /// conversation-membership trust records.
 pub trait TrustStateRepository {
     fn read_primary_trust(&self) -> Result<VaultMutableRead, StateError>;
+}
+
+/// Authenticated DB-primary access to the immutable signing and encryption
+/// identity of one device.
+pub trait DeviceIdentityStateRepository {
+    fn read_primary_device_identity(&self) -> Result<VaultDeviceIdentityRead, StateError>;
 }
 
 /// Commits the filesystem transaction's staged state to the encrypted vault
@@ -2113,6 +2145,86 @@ impl TrustStateRepository for EncryptedStateVault {
     }
 }
 
+impl DeviceIdentityStateRepository for EncryptedStateVault {
+    fn read_primary_device_identity(&self) -> Result<VaultDeviceIdentityRead, StateError> {
+        if let Some(intent) = self.load_primary_shadow_intent()? {
+            return Err(StateError::VaultPrimaryShadowRecoveryRequired {
+                generation: intent.generation,
+            });
+        }
+        let manifest = self
+            .load_manifest()?
+            .ok_or_else(|| StateError::VaultNotMigrated(self.root.clone()))?;
+        validate_manifest(&manifest)?;
+
+        let (report, records) = if manifest.schema_version == VAULT_SCHEMA_VERSION {
+            let index = self
+                .load_manifest_index()?
+                .ok_or(StateError::VaultManifestIndexMissing)?;
+            if self.manifest_for_index(&index)? != manifest {
+                return Err(StateError::VaultManifestMismatch);
+            }
+            let generation = self.load_generation(&manifest)?;
+            let records =
+                self.load_indexed_records_for_kind(&index, StateRecordKind::DeviceIdentity)?;
+            (report_from_manifest(&manifest, generation), records)
+        } else {
+            let (report, records) = self.verify_with_records()?;
+            let records = records
+                .into_iter()
+                .filter(|record| {
+                    classify_record_kind(&record.relative_path) == StateRecordKind::DeviceIdentity
+                })
+                .collect();
+            (report, records)
+        };
+        if let Some(intent) = self.load_mirror_intent()?
+            && (intent.base_generation != report.mirror_generation
+                || intent.base_snapshot_id != report.snapshot_id)
+        {
+            return Err(StateError::VaultMirrorIntentBaseMismatch);
+        }
+
+        let mut signing_secret = None;
+        let mut encryption_secret = None;
+        for record in records {
+            let path = record.relative_path;
+            let content = Zeroizing::new(record.content);
+            let secret = Zeroizing::new(device_identity_secret(&path, content.as_slice())?);
+            match path.as_str() {
+                DEVICE_SECRET_PATH if signing_secret.is_none() => signing_secret = Some(secret),
+                DEVICE_ENCRYPTION_SECRET_PATH if encryption_secret.is_none() => {
+                    encryption_secret = Some(secret);
+                }
+                _ => return Err(StateError::VaultDeviceIdentityRecordUnexpected(path)),
+            }
+        }
+        let signing_secret = signing_secret.ok_or_else(|| {
+            StateError::VaultDeviceIdentityRecordMissing(DEVICE_SECRET_PATH.to_owned())
+        })?;
+        let encryption_secret = encryption_secret.ok_or_else(|| {
+            StateError::VaultDeviceIdentityRecordMissing(DEVICE_ENCRYPTION_SECRET_PATH.to_owned())
+        })?;
+        Ok(VaultDeviceIdentityRead {
+            mirror_generation: report.mirror_generation,
+            signing_secret: *signing_secret,
+            encryption_secret: *encryption_secret,
+        })
+    }
+}
+
+fn device_identity_secret(
+    path: &str,
+    content: &[u8],
+) -> Result<[u8; DEVICE_IDENTITY_SECRET_BYTES], StateError> {
+    content
+        .try_into()
+        .map_err(|_| StateError::InvalidVaultDeviceIdentityRecordLength {
+            path: path.to_owned(),
+            actual: content.len(),
+        })
+}
+
 fn records_by_path(records: &[VaultRecord]) -> BTreeMap<&str, &VaultRecord> {
     records
         .iter()
@@ -2169,7 +2281,7 @@ fn reject_unregistered_trust_delta(delta: &PendingVaultDelta) -> Result<(), Stat
 fn classify_record_kind(relative_path: &str) -> StateRecordKind {
     let first = relative_path.split('/').next().unwrap_or(relative_path);
     match first {
-        "device-secret.key" | "device-encryption-secret.key" => StateRecordKind::DeviceIdentity,
+        DEVICE_SECRET_PATH | DEVICE_ENCRYPTION_SECRET_PATH => StateRecordKind::DeviceIdentity,
         "ratchet" => StateRecordKind::Ratchet,
         "events" => StateRecordKind::Event,
         "local-messages" => StateRecordKind::LocalProjection,
@@ -3341,6 +3453,95 @@ mod tests {
             vault.finish_dual_write()?.outcome(),
             VaultMirrorOutcome::AlreadyCurrent
         );
+        Ok(())
+    }
+
+    #[test]
+    fn device_identity_repository_is_db_primary_complete_and_authenticated()
+    -> Result<(), Box<dyn Error>> {
+        let directory = tempfile::tempdir()?;
+        let signing_secret = [17_u8; DEVICE_IDENTITY_SECRET_BYTES];
+        let encryption_secret = [29_u8; DEVICE_IDENTITY_SECRET_BYTES];
+        write(&directory.path().join(DEVICE_SECRET_PATH), &signing_secret)?;
+        write(
+            &directory.path().join(DEVICE_ENCRYPTION_SECRET_PATH),
+            &encryption_secret,
+        )?;
+        write(
+            &directory.path().join("account-authority.snapshot"),
+            b"unrelated trust record",
+        )?;
+        let vault = EncryptedStateVault::open_or_create(directory.path())?;
+        vault.migrate_legacy_snapshot()?;
+        vault.begin_dual_write()?;
+
+        write(
+            &directory.path().join(DEVICE_SECRET_PATH),
+            &[41_u8; DEVICE_IDENTITY_SECRET_BYTES],
+        )?;
+        write(
+            &directory.path().join(DEVICE_ENCRYPTION_SECRET_PATH),
+            &[43_u8; DEVICE_IDENTITY_SECRET_BYTES],
+        )?;
+        let read = vault.read_primary_device_identity()?;
+        assert_eq!(read.mirror_generation(), 1);
+        assert_eq!(read.signing_secret(), &signing_secret);
+        assert_eq!(read.encryption_secret(), &encryption_secret);
+
+        write(&directory.path().join(DEVICE_SECRET_PATH), &signing_secret)?;
+        write(
+            &directory.path().join(DEVICE_ENCRYPTION_SECRET_PATH),
+            &encryption_secret,
+        )?;
+        assert_eq!(
+            vault.finish_dual_write()?.outcome(),
+            VaultMirrorOutcome::AlreadyCurrent
+        );
+
+        let missing = tempfile::tempdir()?;
+        write(&missing.path().join(DEVICE_SECRET_PATH), &signing_secret)?;
+        let missing_vault = EncryptedStateVault::open_or_create(missing.path())?;
+        missing_vault.migrate_legacy_snapshot()?;
+        missing_vault.begin_dual_write()?;
+        assert!(matches!(
+            missing_vault.read_primary_device_identity(),
+            Err(StateError::VaultDeviceIdentityRecordMissing(path))
+                if path == DEVICE_ENCRYPTION_SECRET_PATH
+        ));
+
+        let tampered = tempfile::tempdir()?;
+        write(&tampered.path().join(DEVICE_SECRET_PATH), &signing_secret)?;
+        write(
+            &tampered.path().join(DEVICE_ENCRYPTION_SECRET_PATH),
+            &encryption_secret,
+        )?;
+        let tampered_vault = EncryptedStateVault::open_or_create(tampered.path())?;
+        tampered_vault.migrate_legacy_snapshot()?;
+        tampered_vault.begin_dual_write()?;
+        let mut ciphertext = encrypted_record(&tampered_vault, DEVICE_SECRET_PATH)?;
+        *ciphertext
+            .last_mut()
+            .ok_or("identity ciphertext is empty")? ^= 1;
+        {
+            let write = tampered_vault
+                .database
+                .begin_write()
+                .map_err(vault_database_error)?;
+            {
+                let mut table = write
+                    .open_table(RECORD_TABLE)
+                    .map_err(vault_database_error)?;
+                let record_key = tampered_vault.record_key(DEVICE_SECRET_PATH);
+                table
+                    .insert(record_key.as_slice(), ciphertext.as_slice())
+                    .map_err(vault_database_error)?;
+            }
+            write.commit().map_err(vault_database_error)?;
+        }
+        assert!(matches!(
+            tampered_vault.read_primary_device_identity(),
+            Err(StateError::VaultEncryption)
+        ));
         Ok(())
     }
 

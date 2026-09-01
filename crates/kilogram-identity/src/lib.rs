@@ -11,6 +11,7 @@ use ed25519_dalek::{Signature, Signer, SigningKey, VerifyingKey};
 use kilogram_crypto::{CryptoError, ENCRYPTION_KEY_BYTES};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use zeroize::Zeroize;
 
 mod account;
 
@@ -96,13 +97,15 @@ impl DeviceIdentity {
     pub fn generate() -> Result<Self, IdentityError> {
         let mut secret = [0_u8; SECRET_KEY_BYTES];
         getrandom::fill(&mut secret).map_err(IdentityError::SecureRandom)?;
-        Ok(Self::from_secret_bytes(secret))
+        let identity = Self::from_secret_bytes(secret);
+        secret.zeroize();
+        Ok(identity)
     }
 
-    pub fn from_secret_bytes(secret: [u8; SECRET_KEY_BYTES]) -> Self {
-        Self {
-            signing_key: SigningKey::from_bytes(&secret),
-        }
+    pub fn from_secret_bytes(mut secret: [u8; SECRET_KEY_BYTES]) -> Self {
+        let signing_key = SigningKey::from_bytes(&secret);
+        secret.zeroize();
+        Self { signing_key }
     }
 
     pub fn device_id(&self) -> DeviceId {
@@ -138,6 +141,24 @@ impl DeviceState {
             identity,
             encryption,
         })
+    }
+
+    /// Builds an immutable device identity from caller-authenticated secret
+    /// material without reading or creating compatibility-shadow files.
+    pub fn from_secret_material(
+        directory: impl AsRef<Path>,
+        mut signing_secret: [u8; SECRET_KEY_BYTES],
+        mut encryption_secret: [u8; ENCRYPTION_KEY_BYTES],
+    ) -> Self {
+        let identity = DeviceIdentity::from_secret_bytes(signing_secret);
+        let encryption = DeviceEncryptionIdentity::from_secret_bytes(encryption_secret);
+        signing_secret.zeroize();
+        encryption_secret.zeroize();
+        Self {
+            directory: directory.as_ref().to_path_buf(),
+            identity,
+            encryption,
+        }
     }
 
     pub fn identity(&self) -> &DeviceIdentity {
@@ -478,6 +499,43 @@ mod tests {
         let second = DeviceState::load_or_create(directory.path())?;
         assert_eq!(second.identity().device_id(), first_id);
         assert_eq!(second.encryption().public_key(), first_encryption_key);
+        Ok(())
+    }
+
+    #[test]
+    fn authenticated_secret_material_does_not_read_or_create_shadow_files()
+    -> Result<(), IdentityError> {
+        let directory = tempdir()?;
+        let signing_secret = [17_u8; SECRET_KEY_BYTES];
+        let encryption_secret = [29_u8; ENCRYPTION_KEY_BYTES];
+        fs::write(
+            directory.path().join(DEVICE_SECRET_FILE),
+            b"tampered signing shadow",
+        )?;
+        fs::write(
+            directory.path().join(DEVICE_ENCRYPTION_SECRET_FILE),
+            b"tampered encryption shadow",
+        )?;
+
+        let state =
+            DeviceState::from_secret_material(directory.path(), signing_secret, encryption_secret);
+
+        assert_eq!(
+            state.identity().device_id(),
+            DeviceIdentity::from_secret_bytes(signing_secret).device_id()
+        );
+        assert_eq!(
+            state.encryption().public_key(),
+            DeviceEncryptionIdentity::from_secret_bytes(encryption_secret).public_key()
+        );
+        assert_eq!(
+            fs::read(directory.path().join(DEVICE_SECRET_FILE))?,
+            b"tampered signing shadow"
+        );
+        assert_eq!(
+            fs::read(directory.path().join(DEVICE_ENCRYPTION_SECRET_FILE))?,
+            b"tampered encryption shadow"
+        );
         Ok(())
     }
 

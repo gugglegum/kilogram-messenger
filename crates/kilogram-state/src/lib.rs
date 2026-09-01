@@ -16,11 +16,11 @@ mod vault;
 pub use key_provider::{VaultKeyLoadOutcome, VaultKeyProtection};
 pub use key_recovery::{VaultKeyRecoveryExport, VaultKeyRecoveryImport, VaultRecoveryWitness};
 pub use vault::{
-    EncryptedStateVault, STATE_VAULT_FILE, STATE_VAULT_KEY_FILE, StateMirrorRepository,
-    StateRecordKind, TrustStateRepository, TypedShadowReadReport, TypedStateRepository,
-    VaultManifestIndexMode, VaultMigrationOutcome, VaultMirrorCommit, VaultMirrorDelta,
-    VaultMirrorOutcome, VaultMutableRead, VaultPrimaryRead, VaultPrimaryRecord,
-    VaultPrimaryWriteRepository, VaultReport,
+    DeviceIdentityStateRepository, EncryptedStateVault, STATE_VAULT_FILE, STATE_VAULT_KEY_FILE,
+    StateMirrorRepository, StateRecordKind, TrustStateRepository, TypedShadowReadReport,
+    TypedStateRepository, VaultDeviceIdentityRead, VaultManifestIndexMode, VaultMigrationOutcome,
+    VaultMirrorCommit, VaultMirrorDelta, VaultMirrorOutcome, VaultMutableRead, VaultPrimaryRead,
+    VaultPrimaryRecord, VaultPrimaryWriteRepository, VaultReport,
 };
 
 const LOCK_FILE: &str = ".kilogram-state.lock";
@@ -329,6 +329,15 @@ pub enum StateError {
 
     #[error("trust state changed outside the DB-primary trust repository: {0}")]
     VaultUnregisteredTrustMutation(String),
+
+    #[error("state vault device identity record is missing: {0}")]
+    VaultDeviceIdentityRecordMissing(String),
+
+    #[error("state vault device identity record {path} has {actual} bytes; expected 32")]
+    InvalidVaultDeviceIdentityRecordLength { path: String, actual: usize },
+
+    #[error("state vault device identity repository contains unexpected record {0}")]
+    VaultDeviceIdentityRecordUnexpected(String),
 
     #[error("state vault mirror generation is exhausted")]
     VaultGenerationExhausted,
