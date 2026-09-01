@@ -248,18 +248,37 @@ providers, and DPAPI failures are fail-closed before the database is opened.
 Non-Windows builds retain an explicitly reported plaintext-development
 provider until platform keystore/passphrase support is implemented.
 
+M0.8.13 adds an explicit portable recovery package. The vault master key is
+wrapped with Argon2id and XChaCha20-Poly1305 in an external no-clobber file,
+bound to an authenticated schema/generation/snapshot witness, and verified
+against the database before a local provider envelope is installed.
+
+M0.8.14 makes the immutable device signing and encryption identity DB-primary.
+Once a vault exists, all production commands decrypt exactly those selected
+records from the authenticated manifest index and never fall back to raw
+filesystem keys.
+
+M0.8.15 introduces vault schema v3 as the DB-only identity layout marker. The
+upgrade commits the new schema and generation before deleting matching
+`device-secret.key` and `device-encryption-secret.key` files. Exact shadow
+checks merge the immutable DB identity with the remaining filesystem shadow,
+and primary-shadow crash recovery no longer recreates either raw key. A
+mismatched reappearing copy is rejected rather than imported.
+
 This is still a narrow integration spike. The vault is now primary for the
 implemented immutable history, ratchet, sequence, and authority/contact trust
-paths, but the retained filesystem shadow has not been removed. The initial
+paths, and device identity has been removed from the normal retained shadow.
+Other state still has a filesystem compatibility shadow. The initial
 crash-journal baseline, outer
 pre-command equivalence gate, and final exact shadow confirmation still perform
 full-state work. The indexed commit itself avoids the active DB payload scan,
 but index decode/re-encode is `O(record count)` metadata and the whole command
 path is therefore not yet `O(changed)`.
-The Windows vault key is now OS-protected, but the envelope is bound to its
-Windows user/machine and has no recovery export yet. Other local device,
-account-root, and ratchet pickle keys are not all protected by the same
-provider. The prototype does not yet provide a
+The Windows vault key is OS-protected and has an explicit passphrase recovery
+export, but the live envelope is still bound to its Windows user/machine and
+the external package is not a monotonic service. Account-root and ratchet
+pickle keys are not all protected by the same provider. The prototype does not
+yet provide a
 global DHT or gossip freshness proof, atomic remote prekey reservation,
 portable protected local key storage, full DB-primary repository cutover,
 PQXDH, or

@@ -40,8 +40,9 @@ use kilogram_session::{
 use kilogram_state::{
     DeviceIdentityStateRepository, EncryptedStateVault, STATE_VAULT_FILE, STATE_VAULT_KEY_FILE,
     StateDirectoryLock, StateMirrorRepository, StateRecordKind, StateTransaction,
-    TrustStateRepository, TypedStateRepository, VaultMigrationOutcome, VaultMirrorCommit,
-    VaultMirrorOutcome, VaultPrimaryWriteRepository, VaultRecoveryWitness, VaultReport,
+    TrustStateRepository, TypedStateRepository, VaultIdentityShadowOutcome, VaultMigrationOutcome,
+    VaultMirrorCommit, VaultMirrorOutcome, VaultPrimaryWriteRepository, VaultRecoveryWitness,
+    VaultReport,
 };
 use kilogram_store::{
     AppendOnlyWriteReceipt, CommandEventReadOverlay, CommandLocalMessageReadOverlay,
@@ -971,6 +972,16 @@ impl VaultDualWriteGuard {
             );
             print_vault_mirror_commit(&commit);
         }
+        let (identity_shadow, report) = vault
+            .retire_device_identity_shadow()
+            .context("retire plaintext device identity compatibility shadow")?;
+        println!(
+            "vault_device_identity_shadow={}",
+            vault_identity_shadow_outcome_name(identity_shadow)
+        );
+        if identity_shadow == VaultIdentityShadowOutcome::Retired {
+            print_vault_report(&report);
+        }
         let base = vault
             .begin_dual_write()
             .context("prepare authenticated state vault dual-write intent")?;
@@ -1003,6 +1014,13 @@ impl VaultDualWriteGuard {
         );
         print_vault_mirror_commit(&commit);
         Ok(())
+    }
+}
+
+fn vault_identity_shadow_outcome_name(outcome: VaultIdentityShadowOutcome) -> &'static str {
+    match outcome {
+        VaultIdentityShadowOutcome::Retired => "retired",
+        VaultIdentityShadowOutcome::AlreadyRetired => "already-retired",
     }
 }
 
@@ -1289,7 +1307,8 @@ fn migrate_state_vault(state_dir: PathBuf) -> Result<()> {
         }
     );
     print_vault_report(&report);
-    println!("legacy_files_retained=true");
+    println!("legacy_non_identity_files_retained=true");
+    println!("legacy_device_identity_files_retained=false");
     println!("status=state-vault-migrated");
     Ok(())
 }
@@ -5951,7 +5970,7 @@ mod tests {
             state_directory.join("account-authority.snapshot"),
             b"tampered-shadow",
         )?;
-        let device = DeviceState::load_or_create(&state_directory)?;
+        let device = load_command_device_state(&state_directory)?;
         let trust = CommandTrustReadRepository::open(&state_directory, &device)?;
         let certificate = trust.load_certificate()?;
         let authority = trust.load_own_authority_snapshot(&certificate)?;
@@ -5966,7 +5985,7 @@ mod tests {
         guard.finish()?;
 
         assert_eq!(
-            DeviceState::load_or_create(&state_directory)?.load_own_authority_snapshot()?,
+            load_command_device_state(&state_directory)?.load_own_authority_snapshot()?,
             authority
         );
         assert_eq!(
@@ -5987,11 +6006,11 @@ mod tests {
         drop(original);
         let signing_path = directory.path().join("device-secret.key");
         let encryption_path = directory.path().join("device-encryption-secret.key");
-        let signing_shadow = fs::read(&signing_path)?;
-        let encryption_shadow = fs::read(&encryption_path)?;
         let vault = EncryptedStateVault::open_or_create(directory.path())?;
         vault.migrate_legacy_snapshot()?;
         drop(vault);
+        assert!(!signing_path.exists());
+        assert!(!encryption_path.exists());
 
         let guard = VaultDualWriteGuard::prepare(directory.path())?
             .context("expected initialized identity vault guard")?;
@@ -6001,9 +6020,11 @@ mod tests {
         assert_eq!(loaded.identity().device_id(), expected_device_id);
         assert_eq!(loaded.encryption().public_key(), expected_encryption_key);
 
-        fs::write(&signing_path, signing_shadow)?;
-        fs::write(&encryption_path, encryption_shadow)?;
+        fs::remove_file(&signing_path)?;
+        fs::remove_file(&encryption_path)?;
         guard.finish()?;
+        assert!(!signing_path.exists());
+        assert!(!encryption_path.exists());
         assert_eq!(
             EncryptedStateVault::open_existing(directory.path())?
                 .verify_against_legacy()?

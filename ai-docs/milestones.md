@@ -1492,14 +1492,59 @@ pre-command/final gate. Поэтому M0.8.14 устраняет чувстви
 контракт —
 [`../docs/RFC-0026-db-primary-device-identity.md`](../docs/RFC-0026-db-primary-device-identity.md).
 
+### M0.8.15 — DB-only device identity layout: выполнено
+
+Реализовано:
+
+- vault schema v3 аутентифицированно фиксирует, что `DeviceIdentity` records
+  являются DB-only и больше не принадлежат normal retained shadow;
+- schema-v1/v2 upgrade сначала проверяет DB и exact non-identity shadow,
+  атомарно публикует schema v3 со следующей generation и только затем удаляет
+  совпадающие `device-secret.key`/`device-encryption-secret.key`;
+- уже отсутствующий raw key не приводит к генерации новой identity или
+  удалению DB record; interrupted cleanup можно безопасно повторить;
+- matching raw copy, появившаяся во время mirror intent, удаляется final gate,
+  mismatched copy не импортируется и завершает команду fail-closed;
+- effective snapshot объединяет filesystem non-identity shadow с immutable DB
+  identity, поэтому checkpoint/mirror не воспринимает отсутствие файлов как
+  mutation;
+- primary-shadow recovery не восстанавливает identity plaintext и удаляет
+  случайно появившиеся reserved copies;
+- typed shadow diagnostics сообщают `device-identity records=0`, хотя полный
+  authenticated report продолжает учитывать обе DB records;
+- explicit `state-vault-restore` сохраняет recovery/export semantics и поэтому
+  создаёт чувствительный legacy plaintext output, но normal command path этого
+  не делает.
+
+Проверки:
+
+- state regressions покрывают v2 → v3 upgrade при уже отсутствующем втором raw
+  key, повторное завершение удаления, mismatched reappearance, cleanup внутри
+  active mirror и DB-primary recovery без восстановления keys;
+- CLI regression подтверждает прежние device/encryption IDs после физического
+  удаления обоих files и отсутствие filesystem fallback;
+- все 102 workspace tests, rustfmt, strict Clippy и release build проходят;
+- Windows release process smoke
+  `.tmp/m0815-identity-retirement-smoke-20260902-002043` обновил копию
+  реального schema-v2 vault generation 5 до schema v3 generation 6, сохранил
+  16 records, 5654 plaintext bytes, прежний snapshot ID
+  `a81942b5e5935c02514617aa605d79bd74dcb2b6ccf2b1a03570aae9d7ee2da8`,
+  device ID и encryption public key; оба raw identity files отсутствуют,
+  повторный migrate сообщил `already-current`, typed shadow —
+  `device-identity records=0`.
+
+Граница среза: удаление filesystem name не обещает secure erase SSD blocks,
+journal, backup или cloud-sync history. Остальные compatibility shadows,
+account-root storage, ratchet pickle protection и production non-Windows key
+provider остаются отдельными задачами. Полный контракт —
+[`../docs/RFC-0027-db-only-device-identity-layout.md`](../docs/RFC-0027-db-only-device-identity-layout.md).
+
 ### Следующий этап
 
-1. Физически удалить raw device identity из normal retained shadow и
-   адаптировать exact gate/primary-shadow recovery к DB-only secret records.
-2. Source discovery/background coordinator и QR/device-link UX строить поверх
+1. Source discovery/background coordinator и QR/device-link UX строить поверх
    M0.7.9 без ослабления explicit consent.
-3. Membership removal и group governance проектировать вместе с ordered
+2. Membership removal и group governance проектировать вместе с ordered
    security events и MLS epoch.
-4. Production macOS/Linux local provider, согласованный monotonic witness,
+3. Production macOS/Linux local provider, согласованный monotonic witness,
    master-key rotation, seed/root recovery и compact Merkle/range summary
    остаются отдельными направлениями.

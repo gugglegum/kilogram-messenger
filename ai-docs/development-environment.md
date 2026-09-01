@@ -443,6 +443,19 @@ toolchain `1.98.0` для воспроизводимой разработки.
     encryption public key
     `674cd65a76d98d25b499b2630ce8aeef271912a629fce753ab2e31518ec8fc26`,
     16 records и прежний snapshot ID без DB delta.
+56. M0.8.15 вводит schema-v3 DB-only identity layout. Schema-v1/v2 vault
+    полностью аутентифицируется, non-identity shadow сравнивается exact, затем
+    новая schema/generation коммитится до удаления совпавших raw signing и
+    encryption keys. Effective snapshot сохраняет эти records только из DB,
+    final gate безопасно завершает matching interrupted cleanup, mismatched
+    copy fail-closed, а primary-shadow recovery keys не воссоздаёт. State/CLI
+    regressions покрывают upgrade с уже отсутствующим raw file, resumable
+    cleanup, reappearance и recovery. Все 102 workspace tests, rustfmt, strict
+    Clippy и release build проходят. Windows release smoke
+    `.tmp/m0815-identity-retirement-smoke-20260902-002043` сохранил 16 records,
+    5654 bytes, snapshot/device/encryption IDs при переходе schema `2 -> 3`,
+    generation `5 -> 6`; оба raw key files отсутствуют, повторный migrate
+    idempotent, typed identity shadow содержит 0 records.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -475,10 +488,11 @@ M0.8.10 — repository-owned receipts и encrypted incremental manifest index.
 M0.8.11 добавляет DB-primary trust repository и удаляет compatibility ingress.
 M0.8.12 добавляет Windows DPAPI CurrentUser key envelope и legacy-key rewrap;
 M0.8.13 — portable passphrase recovery package и внешний snapshot witness;
-M0.8.14 — immutable DB-primary device identity без filesystem fallback.
+M0.8.14 — immutable DB-primary device identity без filesystem fallback;
+M0.8.15 — schema-v3 DB-only device identity и physical namespace retirement.
 Paged/Merkle index, production non-Windows local provider, согласованный
 monotonic rollback witness, автоматический backup lifecycle и физическое
-retirement raw identity shadow ещё не реализованы.
+retirement остальных compatibility shadows ещё не реализованы.
 
 ## Решения, которые ещё нельзя фиксировать
 

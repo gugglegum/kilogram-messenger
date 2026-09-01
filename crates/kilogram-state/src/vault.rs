@@ -33,7 +33,8 @@ pub const STATE_VAULT_KEY_FILE: &str = "state-vault.key";
 const DEVICE_SECRET_PATH: &str = "device-secret.key";
 const DEVICE_ENCRYPTION_SECRET_PATH: &str = "device-encryption-secret.key";
 const DEVICE_IDENTITY_SECRET_BYTES: usize = 32;
-const VAULT_SCHEMA_VERSION: u64 = 2;
+const VAULT_SCHEMA_VERSION: u64 = 3;
+const INDEXED_VAULT_SCHEMA_VERSION: u64 = 2;
 const LEGACY_VAULT_SCHEMA_VERSION: u64 = 1;
 const VAULT_RECORD_VERSION: u8 = 1;
 const VAULT_MANIFEST_INDEX_VERSION: u8 = 1;
@@ -65,6 +66,12 @@ const RECORD_TABLE: TableDefinition<&[u8], &[u8]> = TableDefinition::new("vault-
 pub enum VaultMigrationOutcome {
     Migrated,
     AlreadyCurrent,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum VaultIdentityShadowOutcome {
+    Retired,
+    AlreadyRetired,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -651,41 +658,65 @@ impl EncryptedStateVault {
         &self,
     ) -> Result<(VaultMigrationOutcome, VaultReport), StateError> {
         self.ensure_no_pending_mirror()?;
+        if self.load_manifest()?.is_some() {
+            let active = self.verify()?;
+            let outcome = if active.schema_version == VAULT_SCHEMA_VERSION {
+                VaultMigrationOutcome::AlreadyCurrent
+            } else {
+                VaultMigrationOutcome::Migrated
+            };
+            let (_, report) = self.retire_device_identity_shadow_internal()?;
+            return Ok((outcome, report));
+        }
+
         let records = collect_legacy_records(&self.root)?;
         let index = self.index_for_records(&records)?;
         let manifest = self.manifest_for_index(&index)?;
-        match self.load_manifest()? {
-            Some(existing) if existing == manifest => {
-                let report = self.verify()?;
-                return Ok((VaultMigrationOutcome::AlreadyCurrent, report));
-            }
-            Some(existing) if existing.schema_version == LEGACY_VAULT_SCHEMA_VERSION => {
-                let legacy_current = self.legacy_manifest_for_records(&records)?;
-                if existing != legacy_current {
-                    return Err(StateError::VaultLegacyStateChanged {
-                        stored: existing.snapshot_id,
-                        current: legacy_current.snapshot_id,
-                    });
-                }
-                let active = self.verify()?;
-                let next_generation = active
-                    .mirror_generation
-                    .checked_add(1)
-                    .ok_or(StateError::VaultGenerationExhausted)?;
-                self.commit_snapshot(&records, &manifest, &index, next_generation, true, None)?;
-                return Ok((VaultMigrationOutcome::Migrated, self.verify()?));
-            }
-            Some(existing) => {
-                return Err(StateError::VaultLegacyStateChanged {
-                    stored: existing.snapshot_id,
-                    current: manifest.snapshot_id,
-                });
-            }
-            None => {}
-        }
         self.commit_snapshot(&records, &manifest, &index, 1, true, None)?;
-        let report = self.verify()?;
+        let (_, report) = self.retire_device_identity_shadow_internal()?;
         Ok((VaultMigrationOutcome::Migrated, report))
+    }
+
+    /// Makes the authenticated vault the sole normal storage location for the
+    /// device signing and encryption secrets. Schema upgrade is committed
+    /// before matching plaintext shadow files are removed, so an interruption
+    /// can only leave an extra copy and cannot lose the identity.
+    pub fn retire_device_identity_shadow(
+        &self,
+    ) -> Result<(VaultIdentityShadowOutcome, VaultReport), StateError> {
+        self.ensure_no_pending_mirror()?;
+        self.retire_device_identity_shadow_internal()
+    }
+
+    fn retire_device_identity_shadow_internal(
+        &self,
+    ) -> Result<(VaultIdentityShadowOutcome, VaultReport), StateError> {
+        let (active, records) = self.verify_with_records()?;
+        let mut retired = false;
+        if active.schema_version != VAULT_SCHEMA_VERSION {
+            self.verify_upgrade_source_shadow(&records)?;
+            let index = self.index_for_records(&records)?;
+            let manifest = self.manifest_for_index(&index)?;
+            let next_generation = active
+                .mirror_generation
+                .checked_add(1)
+                .ok_or(StateError::VaultGenerationExhausted)?;
+            self.commit_snapshot(&records, &manifest, &index, next_generation, true, None)?;
+            retired = true;
+        }
+
+        if self.remove_device_identity_shadow_files(&records)? {
+            retired = true;
+        }
+        let report = self.verify_current_against_legacy()?;
+        Ok((
+            if retired {
+                VaultIdentityShadowOutcome::Retired
+            } else {
+                VaultIdentityShadowOutcome::AlreadyRetired
+            },
+            report,
+        ))
     }
 
     pub fn verify(&self) -> Result<VaultReport, StateError> {
@@ -708,7 +739,7 @@ impl EncryptedStateVault {
             if observed_index != index {
                 return Err(StateError::VaultManifestMismatch);
             }
-            self.manifest_for_index(&index)?
+            self.manifest_for_index_schema(&index, manifest.schema_version)?
         };
         if observed != manifest {
             return Err(StateError::VaultManifestMismatch);
@@ -733,8 +764,21 @@ impl EncryptedStateVault {
         vault_records: &[VaultRecord],
     ) -> Result<Vec<TypedShadowReadReport>, StateError> {
         let legacy_records = collect_legacy_records(&self.root)?;
-        let vault_by_path = records_by_path(vault_records);
-        let legacy_by_path = records_by_path(&legacy_records);
+        let manifest = self
+            .load_manifest()?
+            .ok_or_else(|| StateError::VaultNotMigrated(self.root.clone()))?;
+        let identity_shadow_retired = manifest.schema_version == VAULT_SCHEMA_VERSION;
+        if identity_shadow_retired
+            && let Some(record) = legacy_records.iter().find(|record| {
+                classify_record_kind(&record.relative_path) == StateRecordKind::DeviceIdentity
+            })
+        {
+            return Err(StateError::VaultDeviceIdentityShadowPresent(
+                self.root.join(path_from_vault(&record.relative_path)?),
+            ));
+        }
+        let vault_by_path = records_by_path_filtered(vault_records, identity_shadow_retired);
+        let legacy_by_path = records_by_path_filtered(&legacy_records, identity_shadow_retired);
 
         for relative_path in vault_by_path.keys().chain(legacy_by_path.keys()) {
             if vault_by_path.get(relative_path) != legacy_by_path.get(relative_path) {
@@ -750,6 +794,11 @@ impl EncryptedStateVault {
             totals.insert(kind, (0_u64, 0_u64));
         }
         for record in vault_records {
+            if identity_shadow_retired
+                && classify_record_kind(&record.relative_path) == StateRecordKind::DeviceIdentity
+            {
+                continue;
+            }
             let entry = totals
                 .entry(classify_record_kind(&record.relative_path))
                 .or_insert((0, 0));
@@ -769,6 +818,92 @@ impl EncryptedStateVault {
                 },
             )
             .collect())
+    }
+
+    fn verify_upgrade_source_shadow(
+        &self,
+        vault_records: &[VaultRecord],
+    ) -> Result<(), StateError> {
+        let legacy_records = collect_legacy_records(&self.root)?;
+        let vault_shadow = records_by_path_filtered(vault_records, true);
+        let legacy_shadow = records_by_path_filtered(&legacy_records, true);
+        for relative_path in vault_shadow.keys().chain(legacy_shadow.keys()) {
+            if vault_shadow.get(relative_path) != legacy_shadow.get(relative_path) {
+                return Err(StateError::VaultTypedShadowReadMismatch {
+                    kind: classify_record_kind(relative_path).as_str().to_owned(),
+                    relative_path: (*relative_path).to_owned(),
+                });
+            }
+        }
+
+        let vault_by_path = records_by_path(vault_records);
+        for record in legacy_records.iter().filter(|record| {
+            classify_record_kind(&record.relative_path) == StateRecordKind::DeviceIdentity
+        }) {
+            if vault_by_path.get(record.relative_path.as_str()) != Some(&record) {
+                return Err(StateError::VaultDeviceIdentityShadowMismatch(
+                    self.root.join(path_from_vault(&record.relative_path)?),
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    fn remove_device_identity_shadow_files(
+        &self,
+        vault_records: &[VaultRecord],
+    ) -> Result<bool, StateError> {
+        let vault_by_path = records_by_path(vault_records);
+        let mut removed = false;
+        for relative_path in [DEVICE_SECRET_PATH, DEVICE_ENCRYPTION_SECRET_PATH] {
+            let path = self.root.join(relative_path);
+            if !path_exists(&path)? {
+                continue;
+            }
+            reject_symlink(&path)?;
+            let content = Zeroizing::new(io_at(&path, fs::read(&path))?);
+            let Some(expected) = vault_by_path.get(relative_path) else {
+                return Err(StateError::VaultDeviceIdentityShadowMismatch(path));
+            };
+            if content.as_slice() != expected.content.as_slice() {
+                return Err(StateError::VaultDeviceIdentityShadowMismatch(path));
+            }
+            io_at(&path, fs::remove_file(&path))?;
+            removed = true;
+        }
+        if removed {
+            sync_directory(&self.root)?;
+        }
+        Ok(removed)
+    }
+
+    fn records_from_retained_shadow(
+        &self,
+        active_records: &[VaultRecord],
+        schema_version: u64,
+    ) -> Result<Vec<VaultRecord>, StateError> {
+        if schema_version != VAULT_SCHEMA_VERSION {
+            return collect_legacy_records(&self.root);
+        }
+        self.remove_device_identity_shadow_files(active_records)?;
+        let mut records = collect_legacy_records(&self.root)?;
+        if let Some(record) = records.iter().find(|record| {
+            classify_record_kind(&record.relative_path) == StateRecordKind::DeviceIdentity
+        }) {
+            return Err(StateError::VaultDeviceIdentityShadowPresent(
+                self.root.join(path_from_vault(&record.relative_path)?),
+            ));
+        }
+        records.extend(
+            active_records
+                .iter()
+                .filter(|record| {
+                    classify_record_kind(&record.relative_path) == StateRecordKind::DeviceIdentity
+                })
+                .cloned(),
+        );
+        records.sort_by(|left, right| left.relative_path.cmp(&right.relative_path));
+        Ok(records)
     }
 
     pub fn restore_to_new_directory(
@@ -1213,7 +1348,8 @@ impl EncryptedStateVault {
         }
 
         let active_records = self.load_records()?;
-        let staged_records = collect_legacy_records(&self.root)?;
+        let staged_records =
+            self.records_from_retained_shadow(&active_records, active.schema_version)?;
         let index = self.index_for_records(&staged_records)?;
         let manifest = self.manifest_for_index(&index)?;
         let delta = diff_records(&active_records, &staged_records);
@@ -1287,11 +1423,13 @@ impl EncryptedStateVault {
         validate_manifest(&active_manifest)?;
         let active_generation = self.load_generation(&active_manifest)?;
         let (active_index, manifest_index_mode, payload_records_loaded) =
-            if active_manifest.schema_version == VAULT_SCHEMA_VERSION {
+            if is_indexed_vault_schema(active_manifest.schema_version) {
                 let index = self
                     .load_manifest_index()?
                     .ok_or(StateError::VaultManifestIndexMissing)?;
-                if self.manifest_for_index(&index)? != active_manifest {
+                if self.manifest_for_index_schema(&index, active_manifest.schema_version)?
+                    != active_manifest
+                {
                     return Err(StateError::VaultManifestMismatch);
                 }
                 (index, VaultManifestIndexMode::Incremental, 0)
@@ -1504,17 +1642,27 @@ impl EncryptedStateVault {
         {
             return Err(StateError::VaultMirrorIntentBaseMismatch);
         }
-        self.restore_legacy_shadow(&records)?;
+        self.restore_legacy_shadow(&records, active.schema_version)?;
         let confirmed = self.verify_current_against_legacy()?;
         self.clear_primary_shadow_intent()?;
         Ok(Some(confirmed))
     }
 
-    fn restore_legacy_shadow(&self, records: &[VaultRecord]) -> Result<(), StateError> {
+    fn restore_legacy_shadow(
+        &self,
+        records: &[VaultRecord],
+        schema_version: u64,
+    ) -> Result<(), StateError> {
         let current = collect_legacy_records(&self.root)?;
-        let expected_by_path = records_by_path(records);
+        let identity_shadow_retired = schema_version == VAULT_SCHEMA_VERSION;
+        let expected_by_path = records_by_path_filtered(records, identity_shadow_retired);
 
         for record in records {
+            if identity_shadow_retired
+                && classify_record_kind(&record.relative_path) == StateRecordKind::DeviceIdentity
+            {
+                continue;
+            }
             if current
                 .iter()
                 .find(|existing| existing.relative_path == record.relative_path)
@@ -1596,7 +1744,7 @@ impl EncryptedStateVault {
         }
 
         let active_records = self.load_records()?;
-        let records = collect_legacy_records(&self.root)?;
+        let records = self.records_from_retained_shadow(&active_records, active.schema_version)?;
         let index = self.index_for_records(&records)?;
         let manifest = self.manifest_for_index(&index)?;
         let delta = diff_records(&active_records, &records);
@@ -1780,6 +1928,14 @@ impl EncryptedStateVault {
     }
 
     fn manifest_for_index(&self, index: &VaultManifestIndex) -> Result<VaultManifest, StateError> {
+        self.manifest_for_index_schema(index, VAULT_SCHEMA_VERSION)
+    }
+
+    fn manifest_for_index_schema(
+        &self,
+        index: &VaultManifestIndex,
+        schema_version: u64,
+    ) -> Result<VaultManifest, StateError> {
         self.validate_manifest_index(index)?;
         let plaintext_bytes = validate_record_totals(
             index.entries.len(),
@@ -1796,7 +1952,7 @@ impl EncryptedStateVault {
             hasher.update(&entry.content_hash);
         }
         Ok(VaultManifest {
-            schema_version: VAULT_SCHEMA_VERSION,
+            schema_version,
             record_count: index.entries.len() as u64,
             plaintext_bytes,
             snapshot_id: *hasher.finalize().as_bytes(),
@@ -2102,11 +2258,11 @@ impl TrustStateRepository for EncryptedStateVault {
             .ok_or_else(|| StateError::VaultNotMigrated(self.root.clone()))?;
         validate_manifest(&manifest)?;
 
-        let (report, records) = if manifest.schema_version == VAULT_SCHEMA_VERSION {
+        let (report, records) = if is_indexed_vault_schema(manifest.schema_version) {
             let index = self
                 .load_manifest_index()?
                 .ok_or(StateError::VaultManifestIndexMissing)?;
-            if self.manifest_for_index(&index)? != manifest {
+            if self.manifest_for_index_schema(&index, manifest.schema_version)? != manifest {
                 return Err(StateError::VaultManifestMismatch);
             }
             let generation = self.load_generation(&manifest)?;
@@ -2157,11 +2313,11 @@ impl DeviceIdentityStateRepository for EncryptedStateVault {
             .ok_or_else(|| StateError::VaultNotMigrated(self.root.clone()))?;
         validate_manifest(&manifest)?;
 
-        let (report, records) = if manifest.schema_version == VAULT_SCHEMA_VERSION {
+        let (report, records) = if is_indexed_vault_schema(manifest.schema_version) {
             let index = self
                 .load_manifest_index()?
                 .ok_or(StateError::VaultManifestIndexMissing)?;
-            if self.manifest_for_index(&index)? != manifest {
+            if self.manifest_for_index_schema(&index, manifest.schema_version)? != manifest {
                 return Err(StateError::VaultManifestMismatch);
             }
             let generation = self.load_generation(&manifest)?;
@@ -2232,6 +2388,20 @@ fn records_by_path(records: &[VaultRecord]) -> BTreeMap<&str, &VaultRecord> {
         .collect()
 }
 
+fn records_by_path_filtered(
+    records: &[VaultRecord],
+    exclude_device_identity: bool,
+) -> BTreeMap<&str, &VaultRecord> {
+    records
+        .iter()
+        .filter(|record| {
+            !exclude_device_identity
+                || classify_record_kind(&record.relative_path) != StateRecordKind::DeviceIdentity
+        })
+        .map(|record| (record.relative_path.as_str(), record))
+        .collect()
+}
+
 fn diff_records(active: &[VaultRecord], current: &[VaultRecord]) -> PendingVaultDelta {
     let active_by_path = records_by_path(active);
     let current_by_path = records_by_path(current);
@@ -2294,6 +2464,13 @@ fn classify_record_kind(relative_path: &str) -> StateRecordKind {
         "next-sequence" => StateRecordKind::Sequence,
         _ => StateRecordKind::Other,
     }
+}
+
+fn is_indexed_vault_schema(schema_version: u64) -> bool {
+    matches!(
+        schema_version,
+        INDEXED_VAULT_SCHEMA_VERSION | VAULT_SCHEMA_VERSION
+    )
 }
 
 fn collect_legacy_records(root: &Path) -> Result<Vec<VaultRecord>, StateError> {
@@ -2387,7 +2564,7 @@ fn manifest_index_entry_for_record(
 fn validate_manifest(manifest: &VaultManifest) -> Result<(), StateError> {
     if !matches!(
         manifest.schema_version,
-        LEGACY_VAULT_SCHEMA_VERSION | VAULT_SCHEMA_VERSION
+        LEGACY_VAULT_SCHEMA_VERSION | INDEXED_VAULT_SCHEMA_VERSION | VAULT_SCHEMA_VERSION
     ) {
         return Err(StateError::UnsupportedVaultSchemaVersion(
             manifest.schema_version,
@@ -2658,6 +2835,93 @@ mod tests {
         );
         assert!(!restored.join(STATE_VAULT_FILE).exists());
         assert!(!restored.join(STATE_VAULT_KEY_FILE).exists());
+        Ok(())
+    }
+
+    #[test]
+    fn indexed_v2_upgrade_retires_identity_shadow_and_is_crash_resumable()
+    -> Result<(), Box<dyn Error>> {
+        let directory = tempfile::tempdir()?;
+        let signing_secret = [17_u8; DEVICE_IDENTITY_SECRET_BYTES];
+        let encryption_secret = [29_u8; DEVICE_IDENTITY_SECRET_BYTES];
+        write(&directory.path().join(DEVICE_SECRET_PATH), &signing_secret)?;
+        write(
+            &directory.path().join(DEVICE_ENCRYPTION_SECRET_PATH),
+            &encryption_secret,
+        )?;
+        write(&directory.path().join("state"), b"retained shadow")?;
+
+        let vault = EncryptedStateVault::open_or_create(directory.path())?;
+        let records = collect_legacy_records(directory.path())?;
+        let index = vault.index_for_records(&records)?;
+        let manifest = vault.manifest_for_index_schema(&index, INDEXED_VAULT_SCHEMA_VERSION)?;
+        vault.commit_snapshot(&records, &manifest, &index, 1, true, None)?;
+        assert_eq!(
+            vault.verify()?.schema_version(),
+            INDEXED_VAULT_SCHEMA_VERSION
+        );
+
+        fs::remove_file(directory.path().join(DEVICE_ENCRYPTION_SECRET_PATH))?;
+        let (outcome, upgraded) = vault.retire_device_identity_shadow()?;
+        assert_eq!(outcome, VaultIdentityShadowOutcome::Retired);
+        assert_eq!(upgraded.schema_version(), VAULT_SCHEMA_VERSION);
+        assert_eq!(upgraded.mirror_generation(), 2);
+        assert!(!directory.path().join(DEVICE_SECRET_PATH).exists());
+        assert!(
+            !directory
+                .path()
+                .join(DEVICE_ENCRYPTION_SECRET_PATH)
+                .exists()
+        );
+        let identity = vault.read_primary_device_identity()?;
+        assert_eq!(identity.signing_secret(), &signing_secret);
+        assert_eq!(identity.encryption_secret(), &encryption_secret);
+
+        write(&directory.path().join(DEVICE_SECRET_PATH), &signing_secret)?;
+        write(
+            &directory.path().join(DEVICE_ENCRYPTION_SECRET_PATH),
+            &encryption_secret,
+        )?;
+        let (resumed, report) = vault.retire_device_identity_shadow()?;
+        assert_eq!(resumed, VaultIdentityShadowOutcome::Retired);
+        assert_eq!(report.mirror_generation(), 2);
+        assert!(!directory.path().join(DEVICE_SECRET_PATH).exists());
+        assert!(
+            !directory
+                .path()
+                .join(DEVICE_ENCRYPTION_SECRET_PATH)
+                .exists()
+        );
+
+        write(
+            &directory.path().join(DEVICE_SECRET_PATH),
+            &[41_u8; DEVICE_IDENTITY_SECRET_BYTES],
+        )?;
+        assert!(matches!(
+            vault.retire_device_identity_shadow(),
+            Err(StateError::VaultDeviceIdentityShadowMismatch(path))
+                if path.ends_with(DEVICE_SECRET_PATH)
+        ));
+        fs::remove_file(directory.path().join(DEVICE_SECRET_PATH))?;
+        assert_eq!(vault.verify_against_legacy()?, report);
+
+        vault.begin_dual_write()?;
+        write(&directory.path().join(DEVICE_SECRET_PATH), &signing_secret)?;
+        write(
+            &directory.path().join(DEVICE_ENCRYPTION_SECRET_PATH),
+            &encryption_secret,
+        )?;
+        assert_eq!(
+            vault.finish_dual_write()?.outcome(),
+            VaultMirrorOutcome::AlreadyCurrent
+        );
+        assert!(!directory.path().join(DEVICE_SECRET_PATH).exists());
+        assert!(
+            !directory
+                .path()
+                .join(DEVICE_ENCRYPTION_SECRET_PATH)
+                .exists()
+        );
         Ok(())
     }
 
@@ -2944,7 +3208,7 @@ mod tests {
         ));
         assert!(matches!(
             vault.migrate_legacy_snapshot(),
-            Err(StateError::VaultLegacyStateChanged { .. })
+            Err(StateError::VaultTypedShadowReadMismatch { .. })
         ));
         Ok(())
     }
@@ -3148,9 +3412,24 @@ mod tests {
         let directory = tempfile::tempdir()?;
         let ratchet_path = directory.path().join("ratchet/session.pickle");
         let event_path = directory.path().join("events/chat/new.event");
+        write(
+            &directory.path().join(DEVICE_SECRET_PATH),
+            &[17_u8; DEVICE_IDENTITY_SECRET_BYTES],
+        )?;
+        write(
+            &directory.path().join(DEVICE_ENCRYPTION_SECRET_PATH),
+            &[29_u8; DEVICE_IDENTITY_SECRET_BYTES],
+        )?;
         write(&ratchet_path, b"ratchet-before")?;
         let vault = EncryptedStateVault::open_or_create(directory.path())?;
         assert_eq!(vault.migrate_legacy_snapshot()?.1.mirror_generation(), 1);
+        assert!(!directory.path().join(DEVICE_SECRET_PATH).exists());
+        assert!(
+            !directory
+                .path()
+                .join(DEVICE_ENCRYPTION_SECRET_PATH)
+                .exists()
+        );
 
         vault.begin_dual_write()?;
         write(&ratchet_path, b"ratchet-staged")?;
@@ -3194,6 +3473,13 @@ mod tests {
         assert_eq!(recovered.mirror_generation(), 2);
         assert_eq!(fs::read(&ratchet_path)?, b"ratchet-primary");
         assert_eq!(fs::read(&event_path)?, b"event-primary");
+        assert!(!directory.path().join(DEVICE_SECRET_PATH).exists());
+        assert!(
+            !directory
+                .path()
+                .join(DEVICE_ENCRYPTION_SECRET_PATH)
+                .exists()
+        );
         assert!(vault.recover_primary_shadow()?.is_none());
         let completed = vault.finish_dual_write()?;
         assert_eq!(completed.outcome(), VaultMirrorOutcome::AlreadyCurrent);
@@ -3374,6 +3660,13 @@ mod tests {
         write(&authority, b"db-authority")?;
         let vault = EncryptedStateVault::open_or_create(directory.path())?;
         vault.migrate_legacy_snapshot()?;
+        assert!(!directory.path().join(DEVICE_SECRET_PATH).exists());
+        assert!(
+            !directory
+                .path()
+                .join(DEVICE_ENCRYPTION_SECRET_PATH)
+                .exists()
+        );
         vault.begin_dual_write()?;
 
         write(&ratchet, b"tampered-shadow")?;
@@ -3488,11 +3781,12 @@ mod tests {
         assert_eq!(read.signing_secret(), &signing_secret);
         assert_eq!(read.encryption_secret(), &encryption_secret);
 
-        write(&directory.path().join(DEVICE_SECRET_PATH), &signing_secret)?;
-        write(
-            &directory.path().join(DEVICE_ENCRYPTION_SECRET_PATH),
-            &encryption_secret,
-        )?;
+        assert!(matches!(
+            vault.finish_dual_write(),
+            Err(StateError::VaultDeviceIdentityShadowMismatch(_))
+        ));
+        fs::remove_file(directory.path().join(DEVICE_SECRET_PATH))?;
+        fs::remove_file(directory.path().join(DEVICE_ENCRYPTION_SECRET_PATH))?;
         assert_eq!(
             vault.finish_dual_write()?.outcome(),
             VaultMirrorOutcome::AlreadyCurrent
@@ -3597,7 +3891,20 @@ mod tests {
 
         let typed = vault.verify_typed_shadow_reads()?;
         assert_eq!(typed.len(), StateRecordKind::ALL.len());
-        assert!(typed.iter().all(|report| report.record_count() == 1));
+        assert_eq!(
+            typed
+                .iter()
+                .find(|report| report.kind() == StateRecordKind::DeviceIdentity)
+                .ok_or("device identity shadow report is missing")?
+                .record_count(),
+            0
+        );
+        assert!(
+            typed
+                .iter()
+                .filter(|report| report.kind() != StateRecordKind::DeviceIdentity)
+                .all(|report| report.record_count() == 1)
+        );
 
         let primary = vault
             .read_primary_canary(&[StateRecordKind::Event, StateRecordKind::LocalProjection])?;

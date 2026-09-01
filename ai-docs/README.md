@@ -196,10 +196,14 @@ M0.8.14 переводит device signing/encryption identity на отдель�
 `DeviceIdentityStateRepository`. После инициализации vault все production
 команды получают ровно две 32-byte записи из authenticated schema-v2 index и
 не делают filesystem fallback; missing/invalid/tampered record fail-closed.
-Raw identity files пока остаются compatibility shadow для exact gate и crash
-recovery, поэтому их физическое retirement является следующим этапом.
+M0.8.15 вводит schema-v3 DB-only identity layout. Upgrade сначала атомарно
+публикует новую schema и generation, затем удаляет только byte-exact raw
+`device-secret.key`/`device-encryption-secret.key`. Exact gate сохраняет DB
+identity в effective snapshot, typed shadow показывает для неё 0 records, а
+primary-shadow recovery больше не создаёт plaintext keys. Mismatched
+повторно появившаяся копия блокируется без импорта.
 Seed/root recovery, защищённое хранение root и оставшихся ratchet shadows,
-production shadow retirement, global prekey discovery/witness, автоматический
+дальнейшее shadow retirement, global prekey discovery/witness, автоматический
 recovery source discovery/background coordinator, sync summaries, membership
 removal и группы ещё не реализованы.
 
@@ -254,22 +258,20 @@ removal и группы ещё не реализованы.
 
 ## План ближайших работ
 
-1. Удалить raw device identity из retained compatibility shadow и адаптировать
-   exact gate/crash recovery к DB-only secret records.
-2. Добавить production macOS/Linux local key provider, согласованный monotonic
+1. Добавить production macOS/Linux local key provider, согласованный monotonic
    witness и lifecycle обновления portable recovery package.
-3. Добавить source discovery/background coordinator и QR/device-link UX поверх
+2. Добавить source discovery/background coordinator и QR/device-link UX поверх
    resumable history recovery без ослабления явного consent.
-4. Спроектировать membership removal вместе с ordered security log и MLS epoch;
+3. Спроектировать membership removal вместе с ordered security log и MLS epoch;
    отдельно — gossip/witness для first-contact freshness.
-5. Спроектировать seed/recovery authority, protected root storage, root
+4. Спроектировать seed/recovery authority, protected root storage, root
    rotation и конфликтующие authority operations.
-6. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
-7. Спроектировать финальный wire format подписанного события и алгоритм
+5. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
+6. Спроектировать финальный wire format подписанного события и алгоритм
    линеаризации.
-8. Спроектировать compact Merkle/range summary и переносимый signed cursor.
-9. Добавить небольшие MLS-группы.
-10. Перед публичным выпуском провести независимый криптографический аудит.
+7. Спроектировать compact Merkle/range summary и переносимый signed cursor.
+8. Добавить небольшие MLS-группы.
+9. Перед публичным выпуском провести независимый криптографический аудит.
 
 ## Навигация
 
@@ -330,5 +332,7 @@ removal и группы ещё не реализованы.
   реализованный M0.8.13 portable key recovery и внешний rollback/fork witness.
 - [`../docs/RFC-0026-db-primary-device-identity.md`](../docs/RFC-0026-db-primary-device-identity.md) —
   реализованный M0.8.14 immutable DB-primary device identity без filesystem fallback.
+- [`../docs/RFC-0027-db-only-device-identity-layout.md`](../docs/RFC-0027-db-only-device-identity-layout.md) —
+  реализованный M0.8.15 schema-v3 layout и retirement raw device identity shadow.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

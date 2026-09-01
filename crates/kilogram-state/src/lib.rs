@@ -18,9 +18,10 @@ pub use key_recovery::{VaultKeyRecoveryExport, VaultKeyRecoveryImport, VaultReco
 pub use vault::{
     DeviceIdentityStateRepository, EncryptedStateVault, STATE_VAULT_FILE, STATE_VAULT_KEY_FILE,
     StateMirrorRepository, StateRecordKind, TrustStateRepository, TypedShadowReadReport,
-    TypedStateRepository, VaultDeviceIdentityRead, VaultManifestIndexMode, VaultMigrationOutcome,
-    VaultMirrorCommit, VaultMirrorDelta, VaultMirrorOutcome, VaultMutableRead, VaultPrimaryRead,
-    VaultPrimaryRecord, VaultPrimaryWriteRepository, VaultReport,
+    TypedStateRepository, VaultDeviceIdentityRead, VaultIdentityShadowOutcome,
+    VaultManifestIndexMode, VaultMigrationOutcome, VaultMirrorCommit, VaultMirrorDelta,
+    VaultMirrorOutcome, VaultMutableRead, VaultPrimaryRead, VaultPrimaryRecord,
+    VaultPrimaryWriteRepository, VaultReport,
 };
 
 const LOCK_FILE: &str = ".kilogram-state.lock";
@@ -201,6 +202,14 @@ pub enum StateError {
 
     #[error("state vault typed shadow read mismatch for {kind} record at {relative_path}")]
     VaultTypedShadowReadMismatch { kind: String, relative_path: String },
+
+    #[error(
+        "retired plaintext device identity shadow does not match the authenticated vault record at {0}"
+    )]
+    VaultDeviceIdentityShadowMismatch(PathBuf),
+
+    #[error("retired plaintext device identity shadow is still present at {0}")]
+    VaultDeviceIdentityShadowPresent(PathBuf),
 
     #[error("state vault primary-read canary requires at least one repository kind")]
     VaultPrimaryReadSelectionEmpty,
