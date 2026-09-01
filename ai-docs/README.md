@@ -106,7 +106,7 @@ durable `redb` transaction создаёт encrypted snapshot всего device s
 `state-vault-verify` аутентифицирует records и сверяет retained legacy tree, а
 `state-vault-restore` восстанавливает byte-exact snapshot только в новый
 каталог. Это пока shadow vault: live repositories продолжают использовать
-legacy files, а development master key лежит рядом с DB.
+legacy files; эволюция key provider описана ниже.
 M0.8.2 добавил recoverable shadow dual-write: каждая live device-state команда
 сначала сохраняет authenticated intent к exact generation/snapshot, а затем
 атомарно зеркалирует фактически committed legacy tree. После crash валидный
@@ -180,6 +180,12 @@ trust write явно гидратирует crash-journaled workspace из DB ba
 коммитит typed `Trust` delta до retained shadow. Rollback и next-start recovery
 восстанавливают DB-authoritative trust, а незарегистрированная filesystem
 подмена больше не становится authority mutation.
+M0.8.12 заменяет raw 32-byte `state-vault.key` versioned envelope. Windows
+сборка использует DPAPI CurrentUser и никогда не пишет новый vault master key
+на диск открытым; старый development key автоматически атомарно rewrap-ится
+без re-encryption DB. Ошибка provider, повреждение envelope или запуск под
+другим Windows user/machine fail-closed до открытия redb. На non-Windows пока
+остаётся явно диагностируемый `plaintext-development` provider.
 Seed/root recovery, защищённое хранение root/local/ratchet keys, production
 shadow retirement, global prekey discovery/witness, автоматический
 recovery source discovery/background coordinator, sync summaries, membership
@@ -236,8 +242,8 @@ removal и группы ещё не реализованы.
 
 ## План ближайших работ
 
-1. Защитить vault master key через OS keystore/passphrase/seed wrapping,
-   добавить rollback witness, versioned migrations и bounded backup/restore.
+1. Добавить portable macOS/Linux keystore или passphrase/seed wrapping,
+   внешний rollback witness и явный bounded backup/restore защищённого ключа.
 2. Добавить source discovery/background coordinator и QR/device-link UX поверх
    resumable history recovery без ослабления явного consent.
 3. Спроектировать membership removal вместе с ordered security log и MLS epoch;
@@ -304,5 +310,7 @@ removal и группы ещё не реализованы.
   реализованный M0.8.10 contract repository receipts и encrypted manifest index.
 - [`../docs/RFC-0023-db-primary-trust-repository.md`](../docs/RFC-0023-db-primary-trust-repository.md) —
   реализованный M0.8.11 DB-primary authority/contact trust repository.
+- [`../docs/RFC-0024-protected-vault-key-provider.md`](../docs/RFC-0024-protected-vault-key-provider.md) —
+  реализованный M0.8.12 Windows DPAPI key envelope и legacy-key migration.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

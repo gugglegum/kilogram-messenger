@@ -42,8 +42,10 @@ schema-v2 direct commit не decrypt-ит unchanged DB payload, schema-v1 rebuil
 выполняется один раз. Initial rollback baseline, pre-command/final shadow gates
 и цельный metadata index всё ещё `O(state)`. M0.8.11 переводит authority,
 contact pin и membership reads/writes на DB-primary trust repository и удаляет
-неявный filesystem ingress из direct commit. Master key лежит рядом
-development-файлом, retained shadow пока обязателен.
+неявный filesystem ingress из direct commit. M0.8.12 хранит Windows vault key
+только в DPAPI CurrentUser envelope и автоматически rewrap-ит прежний raw key;
+non-Windows provider, key recovery и rollback witness ещё не решены. Retained
+shadow пока обязателен.
 Следующие вопросы относятся к production recovery, rotation, asynchronous
 sessions, distribution, removal и key epochs и не решены этим прототипом.
 
@@ -66,10 +68,10 @@ sessions, distribution, removal и key epochs и не решены этим пр
   gates без второго coordinator? Как долго сохранять legacy shadow и какие fault/
   migration критерии разрешают удалить его? Остаётся ли `redb` production
   engine после mobile/load, bounded backup и compaction tests?
-- Как защищать vault master key: OS keystore, аппаратный ключ,
-  passphrase/seed-derived wrapping или их комбинация; как обнаруживать rollback
-  согласованной старой пары DB+key и восстанавливать key без создания общего
-  ключа расшифровки всех устройств?
+- Как дополнить Windows DPAPI CurrentUser provider аппаратным ключом или
+  passphrase/seed-derived wrapping на всех платформах; как обнаруживать rollback
+  согласованной старой пары DB+key и восстанавливать device-specific key без
+  создания общего ключа расшифровки всех устройств?
 - Как authenticated discovery/gossip сообщает глобально самую свежую device-list
   revision и prekey pool, выполняет remote atomic OTK reservation и не раскрывает
   лишнюю account metadata? M0.7.6 отклоняет rollback/equivocation после

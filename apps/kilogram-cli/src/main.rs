@@ -917,6 +917,7 @@ impl VaultDualWriteGuard {
         }
         let vault = EncryptedStateVault::open_existing(state_directory)
             .context("open encrypted state vault before live command")?;
+        print_vault_key_status(&vault);
         if let Some(report) = vault
             .recover_primary_shadow()
             .context("recover retained legacy shadow from a committed vault-primary checkpoint")?
@@ -1233,7 +1234,7 @@ fn migrate_state_vault(state_dir: PathBuf) -> Result<()> {
         "vault_key_file={}",
         state_dir.join(STATE_VAULT_KEY_FILE).display()
     );
-    println!("vault_key_protection=development-file");
+    print_vault_key_status(&vault);
     println!(
         "migration={}",
         match outcome {
@@ -1250,6 +1251,7 @@ fn migrate_state_vault(state_dir: PathBuf) -> Result<()> {
 fn verify_state_vault(state_dir: PathBuf) -> Result<()> {
     let vault = EncryptedStateVault::open_existing(&state_dir)
         .context("open encrypted transactional state vault")?;
+    print_vault_key_status(&vault);
     let report = vault
         .verify_against_legacy()
         .context("verify vault records and retained legacy state")?;
@@ -1325,6 +1327,12 @@ fn print_vault_report(report: &VaultReport) {
     println!("vault_record_count={}", report.record_count());
     println!("vault_plaintext_bytes={}", report.plaintext_bytes());
     println!("vault_snapshot_id={}", encode_hex(report.snapshot_id()));
+}
+
+fn print_vault_key_status(vault: &EncryptedStateVault) {
+    println!("vault_key_file_format=protected-envelope-v1");
+    println!("vault_key_protection={}", vault.key_protection().as_str());
+    println!("vault_key_load={}", vault.key_load_outcome().as_str());
 }
 
 fn print_vault_mirror_delta(commit: &VaultMirrorCommit) {

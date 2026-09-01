@@ -410,6 +410,14 @@ toolchain `1.98.0` для воспроизводимой разработки.
     `.tmp/m0811-smoke-20260901-204423` выполнил DB-primary trust reads, по одному
     explicit peer-authority upsert, direct delivery/ack, одинаковые histories
     из 2 events и валидные schema-v2 vault generations `5/4` с 16 records.
+53. M0.8.12 заменил raw `state-vault.key` versioned protected envelope. Windows
+    provider использует DPAPI CurrentUser; 32-byte legacy key автоматически
+    rewrap-ится до открытия redb, а corrupt blob завершается fail-closed. Все
+    96 workspace tests, rustfmt, strict Clippy и release build проходят.
+    Windows release smoke `.tmp/m0812-key-smoke-20260901-220000` на копии
+    настоящего M0.8.11 Alice vault сохранил generation 5, 16 records и snapshot
+    ID, изменил key file `32 -> 282` bytes с magic `KILOGRAM-VAULTK1`; второй
+    verify сообщил `vault_key_load=already-current`.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -440,7 +448,9 @@ M0.8.8 добавляет typed direct journal delta и mutable DB-primary seque
 M0.8.9 добавляет DB-primary ratchet workspace и durable primary rollback backup;
 M0.8.10 — repository-owned receipts и encrypted incremental manifest index.
 M0.8.11 добавляет DB-primary trust repository и удаляет compatibility ingress.
-Paged/Merkle index, bounded backup и защищённый key provider ещё не реализованы.
+M0.8.12 добавляет Windows DPAPI CurrentUser key envelope и legacy-key rewrap.
+Paged/Merkle index, portable non-Windows provider, rollback witness и bounded
+key backup/restore ещё не реализованы.
 
 ## Решения, которые ещё нельзя фиксировать
 

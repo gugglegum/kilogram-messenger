@@ -52,12 +52,14 @@ index are specified in
 [`docs/RFC-0022-repository-write-receipts-and-manifest-index.md`](docs/RFC-0022-repository-write-receipts-and-manifest-index.md).
 The DB-primary authority/contact trust repository is specified in
 [`docs/RFC-0023-db-primary-trust-repository.md`](docs/RFC-0023-db-primary-trust-repository.md).
+The versioned protected vault-key envelope is specified in
+[`docs/RFC-0024-protected-vault-key-provider.md`](docs/RFC-0024-protected-vault-key-provider.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.8.11 DB-primary trust repository — complete
+## Current milestone: M0.8.12 protected vault key provider — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -237,6 +239,15 @@ committed to the vault before the retained filesystem shadow. Rollback and
 next-start recovery restore DB-authoritative trust bytes, and an unregistered
 filesystem trust change can no longer become an implicit authority update.
 
+M0.8.12 replaces the adjacent raw 256-bit vault master key with a versioned
+key envelope. Windows builds protect the key with DPAPI CurrentUser scope and
+persist only the protected blob; a fresh key is never written to disk in
+plaintext. Existing 32-byte development key files are detected and atomically
+rewrapped without re-encrypting the vault. Corrupt envelopes, unavailable
+providers, and DPAPI failures are fail-closed before the database is opened.
+Non-Windows builds retain an explicitly reported plaintext-development
+provider until platform keystore/passphrase support is implemented.
+
 This is still a narrow integration spike. The vault is now primary for the
 implemented immutable history, ratchet, sequence, and authority/contact trust
 paths, but the retained filesystem shadow has not been removed. The initial
@@ -245,10 +256,13 @@ pre-command equivalence gate, and final exact shadow confirmation still perform
 full-state work. The indexed commit itself avoids the active DB payload scan,
 but index decode/re-encode is `O(record count)` metadata and the whole command
 path is therefore not yet `O(changed)`.
-The development master key remains beside
-the database. It does not yet provide a
+The Windows vault key is now OS-protected, but the envelope is bound to its
+Windows user/machine and has no recovery export yet. Other local device,
+account-root, and ratchet pickle keys are not all protected by the same
+provider. The prototype does not yet provide a
 global DHT or gossip freshness proof, atomic remote prekey reservation,
-protected local key storage, full DB-primary repository cutover, PQXDH, or
+portable protected local key storage, full DB-primary repository cutover,
+PQXDH, or
 cross-account recovery. Losing every readable projection
 still cannot be repaired from old ciphertext with only the device signing key.
 Do not use it for sensitive communication.

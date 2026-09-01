@@ -18,6 +18,9 @@ tempfile.workspace = true
 thiserror.workspace = true
 zeroize.workspace = true
 
+[target.'cfg(windows)'.dependencies]
+stellar-agent-windows-identity = "=0.1.0-alpha.6"
+
 [dev-dependencies]
 tempfile.workspace = true
 

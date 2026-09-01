@@ -6,6 +6,11 @@ use std::{
     path::{Component, Path, PathBuf},
 };
 
+use crate::{
+    StagedStateMutation, StateError, StateTransaction, io_at,
+    key_provider::{VAULT_KEY_BYTES, VaultMasterKey, load_master_key, load_or_create_master_key},
+    path_exists, reject_symlink, sync_directory, validate_relative,
+};
 use chacha20poly1305::{
     KeyInit, XChaCha20Poly1305, XNonce,
     aead::{Aead, Payload},
@@ -13,12 +18,6 @@ use chacha20poly1305::{
 use redb::{Database, Durability, ReadableDatabase, ReadableTable, TableDefinition};
 use serde::{Deserialize, Serialize};
 use tempfile::{NamedTempFile, TempDir};
-use zeroize::ZeroizeOnDrop;
-
-use crate::{
-    StagedStateMutation, StateError, StateTransaction, io_at, path_exists, reject_symlink,
-    sync_directory, validate_relative,
-};
 
 pub const STATE_VAULT_FILE: &str = "state-vault.redb";
 pub const STATE_VAULT_KEY_FILE: &str = "state-vault.key";
@@ -28,7 +27,6 @@ const LEGACY_VAULT_SCHEMA_VERSION: u64 = 1;
 const VAULT_RECORD_VERSION: u8 = 1;
 const VAULT_MANIFEST_INDEX_VERSION: u8 = 1;
 const VAULT_NONCE_BYTES: usize = 24;
-const VAULT_KEY_BYTES: usize = 32;
 const MAX_VAULT_RECORD_BYTES: usize = 64 * 1024 * 1024;
 const MAX_VAULT_RECORDS: usize = 1_000_000;
 const MAX_VAULT_SNAPSHOT_BYTES: u64 = 512 * 1024 * 1024;
@@ -308,9 +306,6 @@ impl VaultReport {
     }
 }
 
-#[derive(ZeroizeOnDrop)]
-struct VaultMasterKey([u8; VAULT_KEY_BYTES]);
-
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 struct VaultManifest {
     schema_version: u64,
@@ -391,6 +386,8 @@ pub struct EncryptedStateVault {
     root: PathBuf,
     database: Database,
     master_key: VaultMasterKey,
+    key_protection: crate::VaultKeyProtection,
+    key_load_outcome: crate::VaultKeyLoadOutcome,
 }
 
 pub trait StateMirrorRepository {
@@ -472,12 +469,14 @@ impl EncryptedStateVault {
         if database_exists && !key_exists {
             return Err(StateError::VaultKeyMissing(key_path));
         }
-        let master_key = load_or_create_master_key(&key_path)?;
+        let loaded_key = load_or_create_master_key(&key_path)?;
         let database = Database::create(&database_path).map_err(vault_database_error)?;
         Ok(Self {
             root,
             database,
-            master_key,
+            master_key: loaded_key.master_key,
+            key_protection: loaded_key.protection,
+            key_load_outcome: loaded_key.load_outcome,
         })
     }
 
@@ -494,13 +493,23 @@ impl EncryptedStateVault {
             return Err(StateError::VaultKeyMissing(key_path));
         }
         reject_symlink(&key_path)?;
-        let master_key = load_master_key(&key_path)?;
+        let loaded_key = load_master_key(&key_path)?;
         let database = Database::open(&database_path).map_err(vault_database_error)?;
         Ok(Self {
             root,
             database,
-            master_key,
+            master_key: loaded_key.master_key,
+            key_protection: loaded_key.protection,
+            key_load_outcome: loaded_key.load_outcome,
         })
+    }
+
+    pub fn key_protection(&self) -> crate::VaultKeyProtection {
+        self.key_protection
+    }
+
+    pub fn key_load_outcome(&self) -> crate::VaultKeyLoadOutcome {
+        self.key_load_outcome
     }
 
     pub fn migrate_legacy_snapshot(
@@ -2227,37 +2236,6 @@ fn keyed_metadata_authenticator(
     *hasher.finalize().as_bytes()
 }
 
-fn load_or_create_master_key(path: &Path) -> Result<VaultMasterKey, StateError> {
-    match open_new_private_file(path) {
-        Ok(mut file) => {
-            let mut key = [0_u8; VAULT_KEY_BYTES];
-            getrandom::fill(&mut key).map_err(StateError::VaultSecureRandom)?;
-            io_at(path, file.write_all(&key))?;
-            io_at(path, file.sync_all())?;
-            if let Some(parent) = path.parent() {
-                sync_directory(parent)?;
-            }
-            Ok(VaultMasterKey(key))
-        }
-        Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {
-            reject_symlink(path)?;
-            load_master_key(path)
-        }
-        Err(source) => Err(StateError::Io {
-            path: path.to_path_buf(),
-            source,
-        }),
-    }
-}
-
-fn load_master_key(path: &Path) -> Result<VaultMasterKey, StateError> {
-    let bytes = io_at(path, fs::read(path))?;
-    let key = bytes
-        .try_into()
-        .map_err(|bytes: Vec<u8>| StateError::InvalidVaultKeyLength(bytes.len()))?;
-    Ok(VaultMasterKey(key))
-}
-
 fn open_new_private_file(path: &Path) -> io::Result<File> {
     let mut options = OpenOptions::new();
     options.write(true).create_new(true);
@@ -2350,7 +2328,18 @@ fn vault_database_error(error: impl std::fmt::Display) -> StateError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::key_provider::VAULT_KEY_ENVELOPE_MAGIC;
     use std::error::Error;
+
+    #[cfg(windows)]
+    fn expected_key_protection() -> crate::VaultKeyProtection {
+        crate::VaultKeyProtection::WindowsDpapiCurrentUser
+    }
+
+    #[cfg(not(windows))]
+    fn expected_key_protection() -> crate::VaultKeyProtection {
+        crate::VaultKeyProtection::PlaintextDevelopment
+    }
 
     fn write(path: &Path, value: &[u8]) -> Result<(), Box<dyn Error>> {
         if let Some(parent) = path.parent() {
@@ -2392,6 +2381,14 @@ mod tests {
         )?;
 
         let vault = EncryptedStateVault::open_or_create(directory.path())?;
+        assert_eq!(vault.key_protection(), expected_key_protection());
+        assert_eq!(
+            vault.key_load_outcome(),
+            crate::VaultKeyLoadOutcome::Created
+        );
+        let fresh_key_file = fs::read(directory.path().join(STATE_VAULT_KEY_FILE))?;
+        assert!(fresh_key_file.starts_with(VAULT_KEY_ENVELOPE_MAGIC));
+        assert_ne!(fresh_key_file.len(), VAULT_KEY_BYTES);
         let (outcome, migrated) = vault.migrate_legacy_snapshot()?;
         assert_eq!(outcome, VaultMigrationOutcome::Migrated);
         assert_eq!(migrated.record_count(), 3);
@@ -2420,6 +2417,10 @@ mod tests {
         );
 
         let vault = EncryptedStateVault::open_or_create(directory.path())?;
+        assert_eq!(
+            vault.key_load_outcome(),
+            crate::VaultKeyLoadOutcome::AlreadyCurrent
+        );
         let restore_parent = tempfile::tempdir()?;
         let restored = restore_parent.path().join("restored");
         let restored_report = vault.restore_to_new_directory(&restored)?;
@@ -2434,6 +2435,93 @@ mod tests {
         );
         assert!(!restored.join(STATE_VAULT_FILE).exists());
         assert!(!restored.join(STATE_VAULT_KEY_FILE).exists());
+        Ok(())
+    }
+
+    #[test]
+    fn vault_key_envelope_migrates_legacy_key_and_rejects_tampering() -> Result<(), Box<dyn Error>>
+    {
+        let directory = tempfile::tempdir()?;
+        let key_path = directory.path().join(STATE_VAULT_KEY_FILE);
+        let legacy_key = [42_u8; VAULT_KEY_BYTES];
+        fs::write(&key_path, legacy_key)?;
+        write(&directory.path().join("state"), b"private")?;
+
+        let vault = EncryptedStateVault::open_or_create(directory.path())?;
+        assert_eq!(vault.key_protection(), expected_key_protection());
+        assert_eq!(
+            vault.key_load_outcome(),
+            crate::VaultKeyLoadOutcome::LegacyMigrated
+        );
+        let report = vault.migrate_legacy_snapshot()?.1;
+        drop(vault);
+
+        let protected = fs::read(&key_path)?;
+        assert!(protected.starts_with(VAULT_KEY_ENVELOPE_MAGIC));
+        assert_ne!(protected.len(), VAULT_KEY_BYTES);
+        #[cfg(windows)]
+        assert!(
+            !protected
+                .windows(legacy_key.len())
+                .any(|window| window == legacy_key)
+        );
+
+        fs::write(&key_path, legacy_key)?;
+        let reopened = EncryptedStateVault::open_existing(directory.path())?;
+        assert_eq!(
+            reopened.key_load_outcome(),
+            crate::VaultKeyLoadOutcome::LegacyMigrated
+        );
+        assert_eq!(reopened.verify()?, report);
+        drop(reopened);
+
+        let protected = fs::read(&key_path)?;
+        let mut invalid_magic = protected.clone();
+        invalid_magic[0] ^= 1;
+        fs::write(&key_path, invalid_magic)?;
+        assert!(matches!(
+            EncryptedStateVault::open_existing(directory.path()),
+            Err(StateError::InvalidVaultKeyEnvelope { .. })
+        ));
+
+        let mut unsupported_version = protected.clone();
+        unsupported_version[VAULT_KEY_ENVELOPE_MAGIC.len()] = 2;
+        fs::write(&key_path, unsupported_version)?;
+        assert!(matches!(
+            EncryptedStateVault::open_existing(directory.path()),
+            Err(StateError::UnsupportedVaultKeyEnvelopeVersion(2))
+        ));
+
+        let mut unsupported_provider = protected.clone();
+        unsupported_provider[VAULT_KEY_ENVELOPE_MAGIC.len() + 1] = u8::MAX;
+        fs::write(&key_path, unsupported_provider)?;
+        assert!(matches!(
+            EncryptedStateVault::open_existing(directory.path()),
+            Err(StateError::InvalidVaultKeyEnvelope { .. })
+        ));
+
+        let mut tampered = protected;
+        let last = tampered
+            .last_mut()
+            .ok_or("protected key envelope should not be empty")?;
+        *last ^= 1;
+        fs::write(&key_path, tampered)?;
+        #[cfg(windows)]
+        assert!(matches!(
+            EncryptedStateVault::open_existing(directory.path()),
+            Err(StateError::VaultKeyProtectionFailed {
+                operation: "unprotect",
+                ..
+            })
+        ));
+        #[cfg(not(windows))]
+        {
+            let wrong_key = EncryptedStateVault::open_existing(directory.path())?;
+            assert!(matches!(
+                wrong_key.verify(),
+                Err(StateError::VaultEncryption)
+            ));
+        }
         Ok(())
     }
 

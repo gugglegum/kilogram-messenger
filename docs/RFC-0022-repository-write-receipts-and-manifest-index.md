@@ -128,3 +128,5 @@ rollback witness, bounded backup/restore и versioned production migrations.
 Этот следующий срез реализован в
 [`RFC-0023`](RFC-0023-db-primary-trust-repository.md): M0.8.11 удаляет bounded
 trust ingress и переводит production trust reads/writes на DB-primary boundary.
+Защищённый Windows key provider и legacy raw-key rewrap затем реализованы в
+[`RFC-0024`](RFC-0024-protected-vault-key-provider.md).

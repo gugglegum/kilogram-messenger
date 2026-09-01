@@ -51,6 +51,11 @@ STATE_DIR/
   ... retained legacy state ...
 ```
 
+> Обновление M0.8.12: этот raw-key формат заменён versioned provider envelope;
+> Windows использует DPAPI CurrentUser. Текущий контракт описан в
+> [`RFC-0024`](RFC-0024-protected-vault-key-provider.md). Ниже сохранено
+> исходное описание M0.8.1.
+
 `state-vault.key` содержит случайный 256-bit master key. На Unix новый файл
 создаётся с mode `0600`; на Windows он получает ACL каталога. Это development
 key provider: шифрование vault защищает от случайного раскрытия или отдельной

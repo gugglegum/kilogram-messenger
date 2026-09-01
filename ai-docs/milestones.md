@@ -1373,10 +1373,46 @@ repository filesystem-backed. Полный контракт —
 `O(record count)` blob, master key лежит рядом с DB. Полный контракт —
 [`../docs/RFC-0023-db-primary-trust-repository.md`](../docs/RFC-0023-db-primary-trust-repository.md).
 
+### M0.8.12 — protected vault key provider: выполнено
+
+Реализовано:
+
+- `state-vault.key` стал versioned envelope с magic, version, provider и
+  bounded protected payload;
+- Windows build использует DPAPI CurrentUser с запрещённым UI prompt и хранит
+  на диске только protected blob;
+- fresh 256-bit master key никогда не записывается открытым в persistent file;
+- ровно 32-byte legacy key атомарно rewrap-ится без смены ключа и re-encryption
+  существующего vault;
+- invalid magic/version/provider, tampered DPAPI blob и missing key
+  обрабатываются fail-closed до открытия redb;
+- plaintext/DPAPI buffers и in-memory master key zeroize-ятся;
+- non-Windows compatibility provider использует тот же envelope, но честно
+  сообщает `plaintext-development`;
+- CLI выводит format, protection provider и `created|legacy-migrated|already-current`.
+
+Проверки:
+
+- state regression покрывает fresh/reopen, migration существующего raw key,
+  сохранение старого DB key, invalid magic, tampered DPAPI blob и wrong key;
+- все 96 workspace tests, rustfmt, strict Clippy и release build проходят;
+- Windows release process smoke `.tmp/m0812-key-smoke-20260901-220000`
+  скопировал M0.8.11 Alice vault generation 5 с 16 records, мигрировал key file
+  `32 -> 282` bytes с magic `KILOGRAM-VAULTK1`, сохранил тот же snapshot ID
+  `a81942b5e5935c02514617aa605d79bd74dcb2b6ccf2b1a03570aae9d7ee2da8`
+  и при повторном verify сообщил `already-current`.
+
+Граница среза: DPAPI защищает offline key at rest, но не от процесса с
+полномочиями того же Windows user. Envelope пока не переносим на другую машину,
+secure erase legacy blocks не гарантируется, non-Windows provider остаётся
+development, rollback witness и bounded key backup/restore отсутствуют. Полный
+контракт —
+[`../docs/RFC-0024-protected-vault-key-provider.md`](../docs/RFC-0024-protected-vault-key-provider.md).
+
 ### Следующий этап
 
-1. Защитить vault master key через OS keystore/passphrase/seed wrapping и
-   спроектировать rollback witness, backup и versioned migrations.
+1. Добавить portable macOS/Linux keystore или passphrase/seed wrapping,
+   внешний rollback witness и явный bounded backup/restore защищённого ключа.
 2. Source discovery/background coordinator и QR/device-link UX строить поверх
    M0.7.9 без ослабления explicit consent.
 3. Membership removal и group governance проектировать вместе с ordered

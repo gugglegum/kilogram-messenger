@@ -9,8 +9,10 @@ use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
 use thiserror::Error;
 
+mod key_provider;
 mod vault;
 
+pub use key_provider::{VaultKeyLoadOutcome, VaultKeyProtection};
 pub use vault::{
     EncryptedStateVault, STATE_VAULT_FILE, STATE_VAULT_KEY_FILE, StateMirrorRepository,
     StateRecordKind, TrustStateRepository, TypedShadowReadReport, TypedStateRepository,
@@ -95,6 +97,25 @@ pub enum StateError {
 
     #[error("state vault key has {0} bytes; expected 32")]
     InvalidVaultKeyLength(usize),
+
+    #[error("invalid state vault key envelope at {path}: {detail}")]
+    InvalidVaultKeyEnvelope { path: PathBuf, detail: String },
+
+    #[error("state vault key envelope has {0} bytes; maximum is 64 KiB")]
+    VaultKeyEnvelopeTooLarge(usize),
+
+    #[error("unsupported state vault key envelope version {0}")]
+    UnsupportedVaultKeyEnvelopeVersion(u8),
+
+    #[error("state vault key provider {0} is unavailable on this platform")]
+    VaultKeyProviderUnavailable(String),
+
+    #[error("state vault key provider {provider} failed to {operation}: {detail}")]
+    VaultKeyProtectionFailed {
+        provider: String,
+        operation: &'static str,
+        detail: String,
+    },
 
     #[error("state vault at {0} does not contain a committed migration")]
     VaultNotMigrated(PathBuf),

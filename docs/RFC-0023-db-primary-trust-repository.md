@@ -112,9 +112,9 @@ accounts.
 Retained filesystem остаётся compatibility shadow. Pre-command exact gate,
 initial append baseline и post-commit confirmation ещё выполняют full-state
 проверку. Encrypted manifest index остаётся единым `O(record count)` metadata
-blob. Vault master key хранится рядом с DB.
+blob. M0.8.12 заменяет raw master-key file защищённым versioned envelope.
 
-Следующий storage/security slice: protected key provider через OS keystore или
-passphrase/seed wrapping, внешний rollback witness, bounded backup/restore и
-формализованные versioned production migrations. Paged/Merkle index можно
-проектировать отдельно, не смешивая его с key custody.
+Продолжение key-custody контракта описано в
+[`RFC-0024`](RFC-0024-protected-vault-key-provider.md). Внешний rollback
+witness, bounded backup/restore и paged/Merkle index остаются отдельными
+этапами.
