@@ -1329,15 +1329,57 @@ initial crash baseline и post-commit confirmation всё ещё full-state. Tru
 repository filesystem-backed. Полный контракт —
 [`../docs/RFC-0022-repository-write-receipts-and-manifest-index.md`](../docs/RFC-0022-repository-write-receipts-and-manifest-index.md).
 
+### M0.8.11 — DB-primary trust repository: выполнено
+
+Реализовано:
+
+- `TrustStateRepository` читает authenticated certificate, own/peer authority
+  и conversation-membership records из vault;
+- schema-v2 path использует encrypted manifest index и decrypt-ит только
+  выбранные trust payloads, повторно сверяя path/length/hash;
+- initialized vault не делает silent filesystem fallback при отсутствующей или
+  повреждённой trust record;
+- production trust reads в listen/connect/sync/history/seed/rewrap/recovery
+  переведены на repository snapshot;
+- certificate, own authority, peer pin и membership writes явно подготавливают
+  DB-primary trust workspace внутри `StateTransaction`;
+- durable primary backup и rollback/next-start recovery восстанавливают
+  DB-authoritative trust baseline;
+- direct commit больше не перечисляет retained trust directories и принимает
+  только typed mutations подготовленного workspace;
+- compatibility checkpoint и final mirror отклоняют любой
+  незарегистрированный filesystem `Trust` delta;
+- sync projection path получает проверенный Account ID и не перечитывает
+  certificate из filesystem.
+
+Проверки:
+
+- state tests проверяют trust hydration поверх tampered shadow, совместный
+  ratchet/sequence/trust rollback и interrupted recovery;
+- отдельные regressions доказывают, что unregistered filesystem trust change
+  не попадает ни в direct DB transaction, ни в final full-snapshot commit;
+- CLI regression читает валидные authority/membership bytes из DB после
+  повреждения shadow и транзакционно восстанавливает retained snapshot;
+- все 95 workspace tests, rustfmt, strict Clippy и release build проходят;
+- release process smoke `.tmp/m0811-smoke-20260901-204423` выполнил fresh
+  Alice/Bob delivery+ack с DB-primary certificate/membership reads и двумя
+  explicit peer-authority Trust upserts по одному record; обе histories
+  совпали на 2 events, schema-v2 vault содержат по 16 records, generations
+  sender/listener `5/4`, каждый direct commit сообщил
+  `vault_payload_records_loaded=0`.
+
+Граница среза: retained filesystem остаётся compatibility shadow, pre-command
+и post-commit exact gates всё ещё full-state, encrypted index пока цельный
+`O(record count)` blob, master key лежит рядом с DB. Полный контракт —
+[`../docs/RFC-0023-db-primary-trust-repository.md`](../docs/RFC-0023-db-primary-trust-repository.md).
+
 ### Следующий этап
 
-1. Перевести authority/contact trust state на DB-primary read/write repository
-   и убрать bounded filesystem ingress из direct transaction.
-2. Защитить vault master key через OS keystore/passphrase/seed wrapping и
+1. Защитить vault master key через OS keystore/passphrase/seed wrapping и
    спроектировать rollback witness, backup и versioned migrations.
-3. Source discovery/background coordinator и QR/device-link UX строить поверх
+2. Source discovery/background coordinator и QR/device-link UX строить поверх
    M0.7.9 без ослабления explicit consent.
-4. Membership removal и group governance проектировать вместе с ordered
+3. Membership removal и group governance проектировать вместе с ordered
    security events и MLS epoch.
-5. First-contact authority/membership gossip-witness, seed/root recovery и
+4. First-contact authority/membership gossip-witness, seed/root recovery и
    compact Merkle/range summary остаются отдельными направлениями.

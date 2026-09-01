@@ -13,10 +13,10 @@ mod vault;
 
 pub use vault::{
     EncryptedStateVault, STATE_VAULT_FILE, STATE_VAULT_KEY_FILE, StateMirrorRepository,
-    StateRecordKind, TypedShadowReadReport, TypedStateRepository, VaultManifestIndexMode,
-    VaultMigrationOutcome, VaultMirrorCommit, VaultMirrorDelta, VaultMirrorOutcome,
-    VaultMutableRead, VaultPrimaryRead, VaultPrimaryRecord, VaultPrimaryWriteRepository,
-    VaultReport,
+    StateRecordKind, TrustStateRepository, TypedShadowReadReport, TypedStateRepository,
+    VaultManifestIndexMode, VaultMigrationOutcome, VaultMirrorCommit, VaultMirrorDelta,
+    VaultMirrorOutcome, VaultMutableRead, VaultPrimaryRead, VaultPrimaryRecord,
+    VaultPrimaryWriteRepository, VaultReport,
 };
 
 const LOCK_FILE: &str = ".kilogram-state.lock";
@@ -30,6 +30,9 @@ const COMMITTED_MARKER: &str = "committed";
 const ROLLED_BACK_MARKER: &str = "rolled-back";
 const RATCHET_DIRECTORY: &str = "ratchet";
 const NEXT_SEQUENCE_FILE: &str = "next-sequence";
+const TRUST_FILES: [&str; 2] = ["account-authority.snapshot", "device-certificate.cert"];
+const TRUST_DIRECTORIES: [&str; 2] = ["conversation-memberships", "peer-authority"];
+const TRUST_PRIMARY_BACKUP_DIRECTORY: &str = "trust";
 const APPEND_ONLY_ROOTS: [&str; 4] = [
     "events",
     "local-messages",
@@ -235,6 +238,20 @@ pub enum StateError {
     #[error("state transaction already prepared its DB-primary sequence workspace")]
     SequenceWorkspaceAlreadyPrepared,
 
+    #[error("state transaction already prepared its DB-primary trust workspace")]
+    TrustWorkspaceAlreadyPrepared,
+
+    #[error(
+        "DB-primary trust workspace belongs to {workspace_root}, not transaction root {transaction_root}"
+    )]
+    TrustWorkspaceRootMismatch {
+        workspace_root: PathBuf,
+        transaction_root: PathBuf,
+    },
+
+    #[error("DB-primary trust workspace contains non-trust record {0}")]
+    TrustWorkspaceKindMismatch(String),
+
     #[error(
         "DB-primary sequence workspace belongs to {workspace_root}, not transaction root {transaction_root}"
     )]
@@ -248,6 +265,9 @@ pub enum StateError {
 
     #[error("retained trust record disappeared before a direct vault transaction: {0}")]
     VaultTrustRecordRemoved(String),
+
+    #[error("trust state changed outside the DB-primary trust repository: {0}")]
+    VaultUnregisteredTrustMutation(String),
 
     #[error("state vault mirror generation is exhausted")]
     VaultGenerationExhausted,
@@ -301,6 +321,7 @@ pub struct StateTransaction {
     active: PathBuf,
     ratchet_primary_baseline: Option<BTreeMap<PathBuf, Vec<u8>>>,
     sequence_primary_prepared: bool,
+    trust_primary_baseline: Option<BTreeMap<PathBuf, Vec<u8>>>,
     append_only_writes: BTreeSet<PathBuf>,
 }
 
@@ -331,6 +352,7 @@ impl StateTransaction {
             active,
             ratchet_primary_baseline: None,
             sequence_primary_prepared: false,
+            trust_primary_baseline: None,
             append_only_writes: BTreeSet::new(),
         })
     }
@@ -352,6 +374,10 @@ impl StateTransaction {
 
     pub fn ratchet_workspace_prepared(&self) -> bool {
         self.ratchet_primary_baseline.is_some()
+    }
+
+    pub fn trust_workspace_prepared(&self) -> bool {
+        self.trust_primary_baseline.is_some()
     }
 
     pub fn registered_append_only_write_count(&self) -> usize {
@@ -479,6 +505,80 @@ impl StateTransaction {
         Ok(())
     }
 
+    pub fn prepare_trust_workspace(&mut self, read: &VaultMutableRead) -> Result<(), StateError> {
+        if self.trust_primary_baseline.is_some() {
+            return Err(StateError::TrustWorkspaceAlreadyPrepared);
+        }
+        if read.state_root() != self.root {
+            return Err(StateError::TrustWorkspaceRootMismatch {
+                workspace_root: read.state_root().to_path_buf(),
+                transaction_root: self.root.clone(),
+            });
+        }
+        if read.selected_kind_count() != 1 || !read.includes_kind(StateRecordKind::Trust) {
+            return Err(StateError::TrustWorkspaceKindMismatch(
+                "mutable read selection".to_owned(),
+            ));
+        }
+
+        let mut baseline = BTreeMap::new();
+        for record in read.records() {
+            if record.kind() != StateRecordKind::Trust {
+                return Err(StateError::TrustWorkspaceKindMismatch(
+                    record.relative_path().to_owned(),
+                ));
+            }
+            let relative_path = PathBuf::from(record.relative_path());
+            validate_relative(&relative_path)?;
+            if state_record_kind_for_path(&relative_path) != StateRecordKind::Trust {
+                return Err(StateError::TrustWorkspaceKindMismatch(
+                    record.relative_path().to_owned(),
+                ));
+            }
+            if baseline
+                .insert(relative_path.clone(), record.content().to_vec())
+                .is_some()
+            {
+                return Err(StateError::VaultDirectWriteDuplicatePath(relative_path));
+            }
+        }
+        self.prepare_trust_workspace_from_baseline(baseline)
+    }
+
+    pub fn prepare_legacy_trust_workspace(&mut self) -> Result<(), StateError> {
+        if self.trust_primary_baseline.is_some() {
+            return Err(StateError::TrustWorkspaceAlreadyPrepared);
+        }
+        let baseline = collect_trust_contents(&self.root)?;
+        self.prepare_trust_workspace_from_baseline(baseline)
+    }
+
+    fn prepare_trust_workspace_from_baseline(
+        &mut self,
+        baseline: BTreeMap<PathBuf, Vec<u8>>,
+    ) -> Result<(), StateError> {
+        let primary_backup = self
+            .active
+            .join(PRIMARY_BACKUP_DIRECTORY)
+            .join(TRUST_PRIMARY_BACKUP_DIRECTORY);
+        remove_tree_if_present(&primary_backup)?;
+        io_at(&primary_backup, fs::create_dir_all(&primary_backup))?;
+        for (relative_path, content) in &baseline {
+            write_staged_file(&primary_backup.join(relative_path), content)?;
+        }
+
+        let mut manifest = read_manifest(&self.active)?;
+        manifest.trust_primary_prepared = true;
+        write_manifest(&self.active, &manifest)?;
+
+        clear_trust_contents(&self.root)?;
+        for (relative_path, content) in &baseline {
+            write_staged_file(&self.root.join(relative_path), content)?;
+        }
+        self.trust_primary_baseline = Some(baseline);
+        Ok(())
+    }
+
     pub fn register_append_only_write(
         &mut self,
         relative_path: impl AsRef<Path>,
@@ -551,6 +651,23 @@ impl StateTransaction {
             StateRecordKind::Sequence,
             &mut mutations,
         )?;
+        if let Some(baseline) = &self.trust_primary_baseline {
+            let current = collect_trust_contents(&self.root)?;
+            let paths: BTreeSet<_> = current.keys().chain(baseline.keys()).cloned().collect();
+            for relative_path in paths {
+                if current.get(&relative_path) == baseline.get(&relative_path) {
+                    continue;
+                }
+                insert_staged_mutation(
+                    &mut mutations,
+                    StagedStateMutation {
+                        kind: StateRecordKind::Trust,
+                        relative_path: relative_path.clone(),
+                        content: current.get(&relative_path).cloned(),
+                    },
+                )?;
+            }
+        }
 
         let baseline: BTreeSet<_> = manifest.append_only_files.into_iter().collect();
         for relative_path in &baseline {
@@ -598,6 +715,8 @@ struct TransactionManifest {
     ratchet_primary_existed: Option<bool>,
     #[serde(default)]
     next_sequence_primary_existed: Option<bool>,
+    #[serde(default)]
+    trust_primary_prepared: bool,
 }
 
 fn prepare_snapshot(root: &Path, active: &Path) -> Result<TransactionManifest, StateError> {
@@ -632,6 +751,7 @@ fn prepare_snapshot(root: &Path, active: &Path) -> Result<TransactionManifest, S
         append_only_files,
         ratchet_primary_existed: None,
         next_sequence_primary_existed: None,
+        trust_primary_prepared: false,
     })
 }
 
@@ -720,6 +840,24 @@ fn rollback_active(root: &Path, active: &Path) -> Result<(), StateError> {
     remove_file_if_present(&next_sequence)?;
     if next_sequence_existed {
         copy_file(&next_sequence_backup, &next_sequence)?;
+    }
+    if manifest.trust_primary_prepared {
+        let trust_backup = active
+            .join(PRIMARY_BACKUP_DIRECTORY)
+            .join(TRUST_PRIMARY_BACKUP_DIRECTORY);
+        if !path_exists(&trust_backup)? {
+            return Err(StateError::InvalidBackup(trust_backup));
+        }
+        clear_trust_contents(root)?;
+        let backup = collect_tree_contents(&trust_backup, &trust_backup)?;
+        for (relative_path, content) in backup {
+            if state_record_kind_for_path(&relative_path) != StateRecordKind::Trust {
+                return Err(StateError::TrustWorkspaceKindMismatch(
+                    relative_path.display().to_string(),
+                ));
+            }
+            write_staged_file(&root.join(relative_path), &content)?;
+        }
     }
     let baseline: HashSet<_> = manifest.append_only_files.into_iter().collect();
     for name in APPEND_ONLY_ROOTS {
@@ -935,8 +1073,41 @@ fn state_record_kind_for_path(path: &Path) -> StateRecordKind {
         Some(Component::Normal(first)) if first == "history-recovery" => {
             StateRecordKind::HistoryRecovery
         }
+        Some(Component::Normal(first))
+            if TRUST_FILES.iter().any(|name| first == *name)
+                || TRUST_DIRECTORIES.iter().any(|name| first == *name) =>
+        {
+            StateRecordKind::Trust
+        }
+        Some(Component::Normal(first)) if first == NEXT_SEQUENCE_FILE => StateRecordKind::Sequence,
         _ => StateRecordKind::Other,
     }
+}
+
+fn collect_trust_contents(root: &Path) -> Result<BTreeMap<PathBuf, Vec<u8>>, StateError> {
+    let mut records = BTreeMap::new();
+    for name in TRUST_FILES {
+        let path = root.join(name);
+        if let Some(content) = read_optional_file(&path)? {
+            reject_symlink(&path)?;
+            records.insert(PathBuf::from(name), content);
+        }
+    }
+    for name in TRUST_DIRECTORIES {
+        let directory = root.join(name);
+        records.extend(collect_tree_contents(&directory, root)?);
+    }
+    Ok(records)
+}
+
+fn clear_trust_contents(root: &Path) -> Result<(), StateError> {
+    for name in TRUST_FILES {
+        remove_file_if_present(&root.join(name))?;
+    }
+    for name in TRUST_DIRECTORIES {
+        remove_tree_if_present(&root.join(name))?;
+    }
+    Ok(())
 }
 
 fn write_marker(path: &Path) -> Result<(), StateError> {

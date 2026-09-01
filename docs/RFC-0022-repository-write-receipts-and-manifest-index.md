@@ -58,7 +58,7 @@ Record envelope/AAD остаётся v1-совместимым, поэтому s
 
 ## 4. Incremental direct commit
 
-При schema v2 normal typed commit:
+В срезе M0.8.10 при schema v2 normal typed commit:
 
 1. проверяет encrypted index и его exact соответствие outer manifest;
 2. применяет bounded trust compatibility ingress и journal mutations к index;
@@ -125,3 +125,6 @@ Trust writers всё ещё используют filesystem compatibility ingres
 `StateTransaction`. После этого можно проектировать protected key provider,
 rollback witness, bounded backup/restore и versioned production migrations.
 
+Этот следующий срез реализован в
+[`RFC-0023`](RFC-0023-db-primary-trust-repository.md): M0.8.11 удаляет bounded
+trust ingress и переводит production trust reads/writes на DB-primary boundary.

@@ -50,12 +50,14 @@ The DB-primary ratchet workspace and registered append contract are specified in
 Repository-owned write receipts and the authenticated incremental manifest
 index are specified in
 [`docs/RFC-0022-repository-write-receipts-and-manifest-index.md`](docs/RFC-0022-repository-write-receipts-and-manifest-index.md).
+The DB-primary authority/contact trust repository is specified in
+[`docs/RFC-0023-db-primary-trust-repository.md`](docs/RFC-0023-db-primary-trust-repository.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.8.10 repository receipts and manifest index — complete
+## Current milestone: M0.8.11 DB-primary trust repository — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -225,9 +227,20 @@ records. Existing schema-v1 vaults are verified and rebuilt once, then continue
 on the incremental path. Diagnostics expose the index mode and exact number of
 DB payload records loaded by the commit.
 
-This is still a narrow integration spike. The vault is not yet the primary
-repository for every read or write: trust mutable reads and domain writes have
-not completed their cutover. The initial crash-journal baseline, outer
+M0.8.11 removes the bounded filesystem trust ingress from normal direct
+commits. Certificate, own/peer authority snapshot, and conversation-membership
+reads now come from an authenticated DB-primary trust repository whenever a
+vault exists. Schema-v2 reads decrypt only selected trust payload records after
+verifying the encrypted manifest index. Every trust mutation explicitly opens
+a crash-journaled workspace hydrated from the DB baseline; typed trust delta is
+committed to the vault before the retained filesystem shadow. Rollback and
+next-start recovery restore DB-authoritative trust bytes, and an unregistered
+filesystem trust change can no longer become an implicit authority update.
+
+This is still a narrow integration spike. The vault is now primary for the
+implemented immutable history, ratchet, sequence, and authority/contact trust
+paths, but the retained filesystem shadow has not been removed. The initial
+crash-journal baseline, outer
 pre-command equivalence gate, and final exact shadow confirmation still perform
 full-state work. The indexed commit itself avoids the active DB payload scan,
 but index decode/re-encode is `O(record count)` metadata and the whole command

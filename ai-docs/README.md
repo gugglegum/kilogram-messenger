@@ -172,8 +172,16 @@ payload records (`vault_payload_records_loaded=0`). Schema v1 проверяет
 перестраивается один раз. Pre-command gate, initial journal baseline и final
 exact shadow confirmation всё ещё full-state; index metadata пока цельный
 `O(record count)` blob.
+M0.8.11 удаляет bounded trust compatibility ingress. Новый
+`TrustStateRepository` выбирает certificate/own-authority/peer-authority/
+membership records из authenticated schema-v2 index и decrypt-ит только эти
+payloads; при initialized vault silent filesystem fallback запрещён. Каждый
+trust write явно гидратирует crash-journaled workspace из DB baseline и
+коммитит typed `Trust` delta до retained shadow. Rollback и next-start recovery
+восстанавливают DB-authoritative trust, а незарегистрированная filesystem
+подмена больше не становится authority mutation.
 Seed/root recovery, защищённое хранение root/local/ratchet keys, production
-repository cutover, global prekey discovery/witness, автоматический
+shadow retirement, global prekey discovery/witness, автоматический
 recovery source discovery/background coordinator, sync summaries, membership
 removal и группы ещё не реализованы.
 
@@ -228,22 +236,20 @@ removal и группы ещё не реализованы.
 
 ## План ближайших работ
 
-1. Перевести trust authority/contact reads и writes на отдельный DB-primary
-   repository и убрать bounded filesystem compatibility ingress.
-2. Защитить vault master key через OS keystore/passphrase/seed wrapping,
+1. Защитить vault master key через OS keystore/passphrase/seed wrapping,
    добавить rollback witness, versioned migrations и bounded backup/restore.
-3. Добавить source discovery/background coordinator и QR/device-link UX поверх
+2. Добавить source discovery/background coordinator и QR/device-link UX поверх
    resumable history recovery без ослабления явного consent.
-4. Спроектировать membership removal вместе с ordered security log и MLS epoch;
+3. Спроектировать membership removal вместе с ordered security log и MLS epoch;
    отдельно — gossip/witness для first-contact freshness.
-5. Спроектировать seed/recovery authority, protected root storage, root
+4. Спроектировать seed/recovery authority, protected root storage, root
    rotation и конфликтующие authority operations.
-6. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
-7. Спроектировать финальный wire format подписанного события и алгоритм
+5. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
+6. Спроектировать финальный wire format подписанного события и алгоритм
    линеаризации.
-8. Спроектировать compact Merkle/range summary и переносимый signed cursor.
-9. Добавить небольшие MLS-группы.
-10. Перед публичным выпуском провести независимый криптографический аудит.
+7. Спроектировать compact Merkle/range summary и переносимый signed cursor.
+8. Добавить небольшие MLS-группы.
+9. Перед публичным выпуском провести независимый криптографический аудит.
 
 ## Навигация
 
@@ -296,5 +302,7 @@ removal и группы ещё не реализованы.
   реализованный M0.8.9 DB-primary ratchet workspace и explicit append write-set.
 - [`../docs/RFC-0022-repository-write-receipts-and-manifest-index.md`](../docs/RFC-0022-repository-write-receipts-and-manifest-index.md) —
   реализованный M0.8.10 contract repository receipts и encrypted manifest index.
+- [`../docs/RFC-0023-db-primary-trust-repository.md`](../docs/RFC-0023-db-primary-trust-repository.md) —
+  реализованный M0.8.11 DB-primary authority/contact trust repository.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

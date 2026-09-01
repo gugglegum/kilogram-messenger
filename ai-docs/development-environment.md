@@ -400,6 +400,16 @@ toolchain `1.98.0` для воспроизводимой разработки.
     к одинаковым histories из 4 events и валидным schema-v2 vault с 21 record;
     receipts составили sender `3/2`, listener `5`, normal commit использовал
     incremental index с `payload_records_loaded=0`.
+52. M0.8.11 добавил `TrustStateRepository`, который через authenticated
+    schema-v2 index decrypt-ит только certificate/authority/membership payloads.
+    Все production trust writes используют DB-hydrated crash-journal workspace
+    и typed `Trust` delta; bounded filesystem ingress удалён из direct commit.
+    State/CLI regressions проверяют tampered shadow, rollback, interrupted
+    recovery и unregistered ingress. Все 95 workspace tests, rustfmt, strict
+    Clippy и release build проходят. Release process smoke
+    `.tmp/m0811-smoke-20260901-204423` выполнил DB-primary trust reads, по одному
+    explicit peer-authority upsert, direct delivery/ack, одинаковые histories
+    из 2 events и валидные schema-v2 vault generations `5/4` с 16 records.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -429,8 +439,8 @@ mixed sync reads, а M0.8.7 — vault-primary commit barrier для journaled wr
 M0.8.8 добавляет typed direct journal delta и mutable DB-primary sequence.
 M0.8.9 добавляет DB-primary ratchet workspace и durable primary rollback backup;
 M0.8.10 — repository-owned receipts и encrypted incremental manifest index.
-Trust DB-primary adapter, paged/Merkle index, bounded backup и защищённый key
-provider ещё не реализованы.
+M0.8.11 добавляет DB-primary trust repository и удаляет compatibility ingress.
+Paged/Merkle index, bounded backup и защищённый key provider ещё не реализованы.
 
 ## Решения, которые ещё нельзя фиксировать
 

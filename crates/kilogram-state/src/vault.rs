@@ -49,9 +49,6 @@ const PRIMARY_SHADOW_INTENT_AUTH_KEY_DOMAIN: &str =
     "kilogram state vault primary shadow intent auth v1";
 const RECORD_AAD_DOMAIN: &[u8] = b"kilogram:state-vault-record-aad:v1\0";
 const INDEX_AAD_DOMAIN: &[u8] = b"kilogram:state-vault-manifest-index-aad:v1\0";
-const TRUST_FILES: [&str; 2] = ["account-authority.snapshot", "device-certificate.cert"];
-const TRUST_DIRECTORIES: [&str; 2] = ["conversation-memberships", "peer-authority"];
-
 const META_TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("vault-meta-v1");
 const RECORD_TABLE: TableDefinition<&[u8], &[u8]> = TableDefinition::new("vault-records-v1");
 
@@ -416,6 +413,12 @@ pub trait TypedStateRepository {
         &self,
         kinds: &[StateRecordKind],
     ) -> Result<VaultMutableRead, StateError>;
+}
+
+/// Authenticated DB-primary access to the device's authority, contact and
+/// conversation-membership trust records.
+pub trait TrustStateRepository {
+    fn read_primary_trust(&self) -> Result<VaultMutableRead, StateError>;
 }
 
 /// Commits the filesystem transaction's staged state to the encrypted vault
@@ -984,6 +987,38 @@ impl EncryptedStateVault {
         Ok(records)
     }
 
+    fn load_indexed_records_for_kind(
+        &self,
+        index: &VaultManifestIndex,
+        selected_kind: StateRecordKind,
+    ) -> Result<Vec<VaultRecord>, StateError> {
+        self.validate_manifest_index(index)?;
+        let read = self.database.begin_read().map_err(vault_database_error)?;
+        let table = read
+            .open_table(RECORD_TABLE)
+            .map_err(vault_database_error)?;
+        let mut records = Vec::new();
+        for expected in index
+            .entries
+            .iter()
+            .filter(|entry| classify_record_kind(&entry.relative_path) == selected_kind)
+        {
+            let record_key = self.record_key(&expected.relative_path);
+            let encrypted = table
+                .get(record_key.as_slice())
+                .map_err(vault_database_error)?
+                .ok_or(StateError::VaultManifestMismatch)?;
+            let record = self.decrypt_record(encrypted.value(), &record_key)?;
+            if record.relative_path != expected.relative_path
+                || manifest_index_entry_for_record(&record)? != *expected
+            {
+                return Err(StateError::VaultManifestMismatch);
+            }
+            records.push(record);
+        }
+        Ok(records)
+    }
+
     fn ensure_no_pending_mirror(&self) -> Result<(), StateError> {
         if let Some(intent) = self.load_primary_shadow_intent()? {
             return Err(StateError::VaultPrimaryShadowRecoveryRequired {
@@ -1038,6 +1073,7 @@ impl EncryptedStateVault {
         let index = self.index_for_records(&staged_records)?;
         let manifest = self.manifest_for_index(&index)?;
         let delta = diff_records(&active_records, &staged_records);
+        reject_unregistered_trust_delta(&delta)?;
         if delta.upserts.is_empty()
             && delta.removals.is_empty()
             && active.schema_version == VAULT_SCHEMA_VERSION
@@ -1140,26 +1176,6 @@ impl EncryptedStateVault {
         let mut staged_by_path = active_by_path.clone();
         let mut upserts = BTreeMap::<String, VaultRecord>::new();
         let mut removals = BTreeSet::<String>::new();
-        let current_trust_records = collect_legacy_trust_records(&self.root)?;
-        let current_trust_paths = current_trust_records
-            .iter()
-            .map(|record| record.relative_path.as_str())
-            .collect::<BTreeSet<_>>();
-        if let Some(removed) = active_index.entries.iter().find(|entry| {
-            classify_record_kind(&entry.relative_path) == StateRecordKind::Trust
-                && !current_trust_paths.contains(entry.relative_path.as_str())
-        }) {
-            return Err(StateError::VaultTrustRecordRemoved(
-                removed.relative_path.clone(),
-            ));
-        }
-        for record in current_trust_records {
-            let entry = manifest_index_entry_for_record(&record)?;
-            if active_by_path.get(&record.relative_path) != Some(&entry) {
-                upserts.insert(record.relative_path.clone(), record.clone());
-            }
-            staged_by_path.insert(record.relative_path.clone(), entry);
-        }
         let mutations = transaction.staged_mutations()?;
         let mut seen = BTreeSet::new();
         for StagedStateMutation {
@@ -1175,6 +1191,7 @@ impl EncryptedStateVault {
                     | StateRecordKind::LocalProjection
                     | StateRecordKind::HistoryRewrap
                     | StateRecordKind::HistoryRecovery
+                    | StateRecordKind::Trust
                     | StateRecordKind::Sequence
             ) {
                 return Err(StateError::VaultDirectWriteKindNotAllowed(
@@ -1439,6 +1456,7 @@ impl EncryptedStateVault {
         let index = self.index_for_records(&records)?;
         let manifest = self.manifest_for_index(&index)?;
         let delta = diff_records(&active_records, &records);
+        reject_unregistered_trust_delta(&delta)?;
         if delta.upserts.is_empty()
             && delta.removals.is_empty()
             && active.schema_version == VAULT_SCHEMA_VERSION
@@ -1928,6 +1946,61 @@ impl TypedStateRepository for EncryptedStateVault {
     }
 }
 
+impl TrustStateRepository for EncryptedStateVault {
+    fn read_primary_trust(&self) -> Result<VaultMutableRead, StateError> {
+        if let Some(intent) = self.load_primary_shadow_intent()? {
+            return Err(StateError::VaultPrimaryShadowRecoveryRequired {
+                generation: intent.generation,
+            });
+        }
+        let manifest = self
+            .load_manifest()?
+            .ok_or_else(|| StateError::VaultNotMigrated(self.root.clone()))?;
+        validate_manifest(&manifest)?;
+
+        let (report, records) = if manifest.schema_version == VAULT_SCHEMA_VERSION {
+            let index = self
+                .load_manifest_index()?
+                .ok_or(StateError::VaultManifestIndexMissing)?;
+            if self.manifest_for_index(&index)? != manifest {
+                return Err(StateError::VaultManifestMismatch);
+            }
+            let generation = self.load_generation(&manifest)?;
+            let records = self.load_indexed_records_for_kind(&index, StateRecordKind::Trust)?;
+            (report_from_manifest(&manifest, generation), records)
+        } else {
+            let (report, records) = self.verify_with_records()?;
+            let records = records
+                .into_iter()
+                .filter(|record| {
+                    classify_record_kind(&record.relative_path) == StateRecordKind::Trust
+                })
+                .collect();
+            (report, records)
+        };
+        if let Some(intent) = self.load_mirror_intent()?
+            && (intent.base_generation != report.mirror_generation
+                || intent.base_snapshot_id != report.snapshot_id)
+        {
+            return Err(StateError::VaultMirrorIntentBaseMismatch);
+        }
+        let records = records
+            .into_iter()
+            .map(|record| VaultPrimaryRecord {
+                kind: StateRecordKind::Trust,
+                relative_path: record.relative_path,
+                content: record.content,
+            })
+            .collect();
+        Ok(VaultMutableRead {
+            state_root: self.root.clone(),
+            mirror_generation: report.mirror_generation,
+            selected_kinds: BTreeSet::from([StateRecordKind::Trust]),
+            records,
+        })
+    }
+}
+
 fn records_by_path(records: &[VaultRecord]) -> BTreeMap<&str, &VaultRecord> {
     records
         .iter()
@@ -1959,6 +2032,28 @@ fn diff_records(active: &[VaultRecord], current: &[VaultRecord]) -> PendingVault
     }
 }
 
+fn reject_unregistered_trust_delta(delta: &PendingVaultDelta) -> Result<(), StateError> {
+    if let Some(record) = delta
+        .upserts
+        .iter()
+        .find(|record| classify_record_kind(&record.relative_path) == StateRecordKind::Trust)
+    {
+        return Err(StateError::VaultUnregisteredTrustMutation(
+            record.relative_path.clone(),
+        ));
+    }
+    if let Some(relative_path) = delta
+        .removals
+        .iter()
+        .find(|path| classify_record_kind(path) == StateRecordKind::Trust)
+    {
+        return Err(StateError::VaultUnregisteredTrustMutation(
+            relative_path.clone(),
+        ));
+    }
+    Ok(())
+}
+
 fn classify_record_kind(relative_path: &str) -> StateRecordKind {
     let first = relative_path.split('/').next().unwrap_or(relative_path);
     match first {
@@ -1984,37 +2079,6 @@ fn collect_legacy_records(root: &Path) -> Result<Vec<VaultRecord>, StateError> {
     if records.len() > MAX_VAULT_RECORDS {
         return Err(StateError::TooManyVaultRecords(records.len()));
     }
-    Ok(records)
-}
-
-fn collect_legacy_trust_records(root: &Path) -> Result<Vec<VaultRecord>, StateError> {
-    let mut records = Vec::new();
-    for name in TRUST_FILES {
-        let path = root.join(name);
-        if !path_exists(&path)? {
-            continue;
-        }
-        reject_symlink(&path)?;
-        let metadata = io_at(&path, fs::metadata(&path))?;
-        if !metadata.is_file() {
-            return Err(StateError::UnsafeRelativePath(path));
-        }
-        let content = io_at(&path, fs::read(&path))?;
-        let record = VaultRecord {
-            version: VAULT_RECORD_VERSION,
-            relative_path: name.to_owned(),
-            content,
-        };
-        validate_record(&record)?;
-        records.push(record);
-    }
-    for name in TRUST_DIRECTORIES {
-        let directory = root.join(name);
-        if path_exists(&directory)? {
-            collect_legacy_records_from(root, &directory, &mut records)?;
-        }
-    }
-    records.sort_by(|left, right| left.relative_path.cmp(&right.relative_path));
     Ok(records)
 }
 
@@ -2667,12 +2731,17 @@ mod tests {
             3
         );
         assert_eq!(vault.confirm_primary_shadow()?.mirror_generation(), 3);
-        write(
-            &directory.path().join("account-authority.snapshot"),
-            b"trust",
-        )?;
+        let unregistered_trust_path = directory.path().join("account-authority.snapshot");
+        write(&unregistered_trust_path, b"trust")?;
+        assert!(matches!(
+            vault.finish_dual_write(),
+            Err(StateError::VaultUnregisteredTrustMutation(path))
+                if path == "account-authority.snapshot"
+        ));
+        fs::remove_file(&unregistered_trust_path)?;
         let final_commit = vault.finish_dual_write()?;
-        assert_eq!(final_commit.report().mirror_generation(), 4);
+        assert_eq!(final_commit.outcome(), VaultMirrorOutcome::AlreadyCurrent);
+        assert_eq!(final_commit.report().mirror_generation(), 3);
         assert_eq!(vault.verify_against_legacy()?, *final_commit.report());
 
         vault.begin_dual_write()?;
@@ -2732,6 +2801,9 @@ mod tests {
                 if selection == "mutable read selection"
         ));
         transaction.prepare_ratchet_workspace(&ratchet_read)?;
+        let trust_read = vault.read_primary_trust()?;
+        assert!(trust_read.records().is_empty());
+        transaction.prepare_trust_workspace(&trust_read)?;
         assert_eq!(fs::read(&changed_ratchet)?, b"ratchet-before");
         write(&changed_ratchet, b"ratchet-after")?;
         fs::remove_file(&removed_ratchet)?;
@@ -2816,27 +2888,35 @@ mod tests {
         let directory = tempfile::tempdir()?;
         let ratchet = directory.path().join("ratchet/session.pickle");
         let sequence = directory.path().join("next-sequence");
+        let authority = directory.path().join("account-authority.snapshot");
         write(&ratchet, b"db-ratchet")?;
         write(&sequence, b"4\n")?;
+        write(&authority, b"db-authority")?;
         let vault = EncryptedStateVault::open_or_create(directory.path())?;
         vault.migrate_legacy_snapshot()?;
         vault.begin_dual_write()?;
 
         write(&ratchet, b"tampered-shadow")?;
         write(&sequence, b"99\n")?;
+        write(&authority, b"tampered-authority")?;
         let mut transaction = crate::StateTransaction::begin(directory.path())?;
         let ratchet_read = vault.read_mutable_primary_canary(&[StateRecordKind::Ratchet])?;
         let sequence_read = vault.read_mutable_primary_canary(&[StateRecordKind::Sequence])?;
+        let trust_read = vault.read_primary_trust()?;
         transaction.prepare_ratchet_workspace(&ratchet_read)?;
         transaction.prepare_sequence_workspace(&sequence_read)?;
+        transaction.prepare_trust_workspace(&trust_read)?;
         assert_eq!(fs::read(&ratchet)?, b"db-ratchet");
         assert_eq!(fs::read(&sequence)?, b"4\n");
+        assert_eq!(fs::read(&authority)?, b"db-authority");
 
         write(&ratchet, b"failed-operation")?;
         write(&sequence, b"5\n")?;
+        write(&authority, b"failed-authority")?;
         transaction.rollback()?;
         assert_eq!(fs::read(&ratchet)?, b"db-ratchet");
         assert_eq!(fs::read(&sequence)?, b"4\n");
+        assert_eq!(fs::read(&authority)?, b"db-authority");
         assert_eq!(
             vault.finish_dual_write()?.outcome(),
             VaultMirrorOutcome::AlreadyCurrent
@@ -2847,15 +2927,48 @@ mod tests {
         let mut interrupted = crate::StateTransaction::begin(directory.path())?;
         let ratchet_read = vault.read_mutable_primary_canary(&[StateRecordKind::Ratchet])?;
         let sequence_read = vault.read_mutable_primary_canary(&[StateRecordKind::Sequence])?;
+        let trust_read = vault.read_primary_trust()?;
         interrupted.prepare_ratchet_workspace(&ratchet_read)?;
         interrupted.prepare_sequence_workspace(&sequence_read)?;
+        interrupted.prepare_trust_workspace(&trust_read)?;
         write(&ratchet, b"interrupted-operation")?;
         write(&sequence, b"6\n")?;
+        write(&authority, b"interrupted-authority")?;
         drop(interrupted);
         let lock = crate::StateDirectoryLock::acquire(directory.path())?;
         assert_eq!(fs::read(&ratchet)?, b"db-ratchet");
         assert_eq!(fs::read(&sequence)?, b"4\n");
+        assert_eq!(fs::read(&authority)?, b"db-authority");
         drop(lock);
+        assert_eq!(
+            vault.finish_dual_write()?.outcome(),
+            VaultMirrorOutcome::AlreadyCurrent
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn direct_transaction_ignores_unregistered_filesystem_trust_ingress()
+    -> Result<(), Box<dyn Error>> {
+        let directory = tempfile::tempdir()?;
+        let authority = directory.path().join("account-authority.snapshot");
+        write(&authority, b"db-authority")?;
+        let vault = EncryptedStateVault::open_or_create(directory.path())?;
+        vault.migrate_legacy_snapshot()?;
+        vault.begin_dual_write()?;
+
+        write(&authority, b"unregistered-shadow-change")?;
+        let transaction = crate::StateTransaction::begin(directory.path())?;
+        let commit = vault.commit_primary_transaction(&transaction)?;
+        assert_eq!(commit.outcome(), VaultMirrorOutcome::AlreadyCurrent);
+        assert_eq!(commit.delta().upserted_records(), 0);
+        assert_eq!(commit.payload_records_loaded(), 0);
+        let trust = vault.read_primary_trust()?;
+        assert_eq!(trust.records().len(), 1);
+        assert_eq!(trust.records()[0].content(), b"db-authority");
+        transaction.rollback()?;
+
+        write(&authority, b"db-authority")?;
         assert_eq!(
             vault.finish_dual_write()?.outcome(),
             VaultMirrorOutcome::AlreadyCurrent

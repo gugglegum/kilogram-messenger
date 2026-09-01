@@ -34,16 +34,16 @@ manual/network history-rewrap source inventory, M0.8.6 — mixed sync reads на
 DB-primary event/projection snapshot, а M0.8.7 — vault commit barrier для всех
 journaled writes. M0.8.8 добавил typed journal delta без полного filesystem
 payload scan и первый mutable DB-primary adapter для `next-sequence`.
-Filesystem пока остаётся ratchet/trust read path и compatibility shadow.
-Bounded trust compatibility ingress удерживает незажурналированные authority/
-membership/contact изменения в одной vault transaction, но не заменяет
-DB-primary trust repository. M0.8.9 переводит ratchet на DB-sourced workspace и
+Filesystem пока остаётся compatibility shadow. M0.8.9 переводит ratchet на
+DB-sourced workspace и
 заменяет второй append directory walk явным write-set. M0.8.10 заменяет CLI
 path reconstruction repository receipts и вводит encrypted manifest index:
 schema-v2 direct commit не decrypt-ит unchanged DB payload, schema-v1 rebuild
 выполняется один раз. Initial rollback baseline, pre-command/final shadow gates
-и цельный metadata index всё ещё `O(state)`. Master key лежит рядом
-development-файлом.
+и цельный metadata index всё ещё `O(state)`. M0.8.11 переводит authority,
+contact pin и membership reads/writes на DB-primary trust repository и удаляет
+неявный filesystem ingress из direct commit. Master key лежит рядом
+development-файлом, retained shadow пока обязателен.
 Следующие вопросы относятся к production recovery, rotation, asynchronous
 sessions, distribution, removal и key epochs и не решены этим прототипом.
 
@@ -62,9 +62,8 @@ sessions, distribution, removal и key epochs и не решены этим пр
   проверенного M0.7.6 lexicographic-min разрешения двух crossed sessions?
 - M0.8.10 даёт repository-owned append receipts и authenticated incremental
   manifest index без unchanged DB payload scan. Как разбить цельный metadata
-  index на transactional pages/Merkle nodes, убрать initial/final full-state
-  gates без второго coordinator и перевести trust writers с bounded filesystem
-  ingress на DB-primary repository? Как долго сохранять legacy shadow и какие fault/
+  index на transactional pages/Merkle nodes и убрать initial/final full-state
+  gates без второго coordinator? Как долго сохранять legacy shadow и какие fault/
   migration критерии разрешают удалить его? Остаётся ли `redb` production
   engine после mobile/load, bounded backup и compaction tests?
 - Как защищать vault master key: OS keystore, аппаратный ключ,

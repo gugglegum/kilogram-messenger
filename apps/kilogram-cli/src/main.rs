@@ -15,7 +15,8 @@ use iroh::{
 };
 use kilogram_identity::{
     AccountAuthoritySnapshot, AccountDeviceListSnapshot, AccountId, AccountRootState,
-    AuthorizedDevice, ConversationMembershipSnapshot, DeviceCapability, DeviceCertificate,
+    AuthoritySnapshotStoreOutcome, AuthorizedDevice, ConversationMembershipSnapshot,
+    ConversationMembershipStoreOutcome, ConversationScopeId, DeviceCapability, DeviceCertificate,
     DeviceId, DeviceIdentity, DeviceState, verify_device_authorization_with_snapshot,
 };
 use kilogram_protocol::{
@@ -38,9 +39,9 @@ use kilogram_session::{
 };
 use kilogram_state::{
     EncryptedStateVault, STATE_VAULT_FILE, STATE_VAULT_KEY_FILE, StateDirectoryLock,
-    StateMirrorRepository, StateRecordKind, StateTransaction, TypedStateRepository,
-    VaultMigrationOutcome, VaultMirrorCommit, VaultMirrorOutcome, VaultPrimaryWriteRepository,
-    VaultReport,
+    StateMirrorRepository, StateRecordKind, StateTransaction, TrustStateRepository,
+    TypedStateRepository, VaultMigrationOutcome, VaultMirrorCommit, VaultMirrorOutcome,
+    VaultPrimaryWriteRepository, VaultReport,
 };
 use kilogram_store::{
     AppendOnlyWriteReceipt, CommandEventReadOverlay, CommandLocalMessageReadOverlay,
@@ -1350,6 +1351,7 @@ struct PendingVaultPrimaryWrite {
     vault: EncryptedStateVault,
     commit: VaultMirrorCommit,
     ratchet_workspace_prepared: bool,
+    trust_workspace_prepared: bool,
     append_only_write_count: usize,
 }
 
@@ -1367,6 +1369,7 @@ impl PendingVaultPrimaryWrite {
             vault,
             commit,
             ratchet_workspace_prepared: transaction.ratchet_workspace_prepared(),
+            trust_workspace_prepared: transaction.trust_workspace_prepared(),
             append_only_write_count: transaction.registered_append_only_write_count(),
         }))
     }
@@ -1377,6 +1380,10 @@ impl PendingVaultPrimaryWrite {
         println!(
             "vault_ratchet_workspace_committed={}",
             self.ratchet_workspace_prepared
+        );
+        println!(
+            "vault_trust_workspace_committed={}",
+            self.trust_workspace_prepared
         );
         println!(
             "vault_append_write_set_count={}",
@@ -1433,6 +1440,7 @@ struct CommandTransactionContext<'a> {
     transaction: &'a mut StateTransaction,
     sequence: TransactionSequenceSource,
     ratchet_workspace_prepared: bool,
+    trust_workspace_prepared: bool,
 }
 
 impl<'a> CommandTransactionContext<'a> {
@@ -1442,6 +1450,7 @@ impl<'a> CommandTransactionContext<'a> {
             transaction,
             sequence: TransactionSequenceSource::Unloaded,
             ratchet_workspace_prepared: false,
+            trust_workspace_prepared: false,
         }
     }
 
@@ -1476,6 +1485,35 @@ impl<'a> CommandTransactionContext<'a> {
                 "prepare DB-primary ratchet workspace: {error:#}"
             )))
         })
+    }
+
+    fn prepare_trust_workspace(&mut self) -> Result<()> {
+        if self.trust_workspace_prepared {
+            return Ok(());
+        }
+        if EncryptedStateVault::is_initialized(self.state_directory)
+            .context("inspect state vault before mutable trust access")?
+        {
+            let vault = EncryptedStateVault::open_existing(self.state_directory)
+                .context("open state vault for mutable trust access")?;
+            let read = vault
+                .read_primary_trust()
+                .context("read authority/contact trust repository from authenticated vault")?;
+            self.transaction
+                .prepare_trust_workspace(&read)
+                .context("prepare retained trust staging from DB-primary state")?;
+            println!("vault_mutable_read_kind=trust");
+            println!("vault_mutable_read_source=db-primary");
+            println!("vault_mutable_read_generation={}", read.mirror_generation());
+            println!("vault_mutable_read_record_count={}", read.records().len());
+            println!("vault_trust_workspace=prepared");
+        } else {
+            self.transaction
+                .prepare_legacy_trust_workspace()
+                .context("prepare legacy trust workspace")?;
+        }
+        self.trust_workspace_prepared = true;
+        Ok(())
     }
 
     #[cfg(test)]
@@ -1668,6 +1706,183 @@ fn state_transaction_store_error(error: kilogram_state::StateError) -> StoreErro
     StoreError::from(io::Error::other(error))
 }
 
+enum TrustReadSource {
+    Filesystem,
+    Vault { records: BTreeMap<String, Vec<u8>> },
+}
+
+struct CommandTrustReadRepository<'a> {
+    device_state: &'a DeviceState,
+    source: TrustReadSource,
+}
+
+impl<'a> CommandTrustReadRepository<'a> {
+    fn open(state_directory: &Path, device_state: &'a DeviceState) -> Result<Self> {
+        if !EncryptedStateVault::is_initialized(state_directory)
+            .context("inspect state vault before trust repository read")?
+        {
+            return Ok(Self {
+                device_state,
+                source: TrustReadSource::Filesystem,
+            });
+        }
+        let read = EncryptedStateVault::open_existing(state_directory)
+            .context("open encrypted vault trust repository")?
+            .read_primary_trust()
+            .context("read authenticated DB-primary trust repository")?;
+        let mirror_generation = read.mirror_generation();
+        let mut records = BTreeMap::new();
+        for record in read.into_records() {
+            ensure!(
+                record.kind() == StateRecordKind::Trust,
+                "trust repository returned non-trust record {}",
+                record.relative_path()
+            );
+            let (_, relative_path, content) = record.into_parts();
+            ensure!(
+                records.insert(relative_path.clone(), content).is_none(),
+                "trust repository returned duplicate record {relative_path}"
+            );
+        }
+        println!("vault_trust_read_source=db-primary");
+        println!("vault_trust_read_generation={mirror_generation}");
+        println!("vault_trust_read_record_count={}", records.len());
+        Ok(Self {
+            device_state,
+            source: TrustReadSource::Vault { records },
+        })
+    }
+
+    fn vault_record(&self, relative_path: &str) -> Result<Option<&[u8]>> {
+        match &self.source {
+            TrustReadSource::Filesystem => Ok(None),
+            TrustReadSource::Vault { records } => records
+                .get(relative_path)
+                .map(Vec::as_slice)
+                .map(Some)
+                .with_context(|| format!("DB-primary trust record is missing: {relative_path}")),
+        }
+    }
+
+    fn load_certificate(&self) -> Result<DeviceCertificate> {
+        let Some(bytes) = self.vault_record("device-certificate.cert")? else {
+            return self
+                .device_state
+                .load_certificate()
+                .context("load retained device certificate");
+        };
+        let certificate = DeviceCertificate::decode_and_verify(bytes)
+            .context("decode DB-primary device certificate")?;
+        ensure!(
+            certificate.device_id() == self.device_state.identity().device_id(),
+            "DB-primary certificate belongs to a different device"
+        );
+        ensure!(
+            certificate.encryption_public_key() == self.device_state.encryption().public_key(),
+            "DB-primary certificate has a different device encryption key"
+        );
+        Ok(certificate)
+    }
+
+    fn load_own_authority_snapshot(
+        &self,
+        certificate: &DeviceCertificate,
+    ) -> Result<AccountAuthoritySnapshot> {
+        let Some(bytes) = self.vault_record("account-authority.snapshot")? else {
+            return self
+                .device_state
+                .load_own_authority_snapshot()
+                .context("load retained own authority snapshot");
+        };
+        let snapshot = AccountAuthoritySnapshot::decode_and_verify(bytes)
+            .context("decode DB-primary own authority snapshot")?;
+        snapshot
+            .verify_for_account(certificate.account_id())
+            .context("verify DB-primary own authority account")?;
+        ensure!(
+            certificate.authority_sequence() < snapshot.revision(),
+            "device certificate sequence is outside DB-primary authority snapshot"
+        );
+        Ok(snapshot)
+    }
+
+    fn load_conversation_membership(
+        &self,
+        conversation_id: ConversationScopeId,
+    ) -> Result<ConversationMembershipSnapshot> {
+        let relative_path = format!("conversation-memberships/{conversation_id}.membership");
+        let Some(bytes) = self.vault_record(&relative_path)? else {
+            return self
+                .device_state
+                .load_conversation_membership(conversation_id)
+                .context("load retained conversation membership");
+        };
+        let membership = ConversationMembershipSnapshot::decode_and_verify(bytes)
+            .context("decode DB-primary conversation membership")?;
+        ensure!(
+            membership.conversation_id() == conversation_id,
+            "DB-primary membership belongs to a different conversation"
+        );
+        Ok(membership)
+    }
+}
+
+fn install_own_authority_primary(
+    state_directory: &Path,
+    device_state: &DeviceState,
+    snapshot: &AccountAuthoritySnapshot,
+) -> Result<AuthoritySnapshotStoreOutcome> {
+    run_state_transaction(state_directory, |transaction| {
+        transaction.prepare_trust_workspace()?;
+        device_state
+            .install_own_authority_snapshot(snapshot)
+            .context("install own authority snapshot in DB-primary trust workspace")
+    })
+}
+
+fn install_enrollment_primary(
+    state_directory: &Path,
+    device_state: &DeviceState,
+    certificate: &DeviceCertificate,
+    snapshot: &AccountAuthoritySnapshot,
+) -> Result<AuthoritySnapshotStoreOutcome> {
+    run_state_transaction(state_directory, |transaction| {
+        transaction.prepare_trust_workspace()?;
+        device_state
+            .install_certificate(certificate)
+            .context("install certificate in DB-primary trust workspace")?;
+        device_state
+            .install_own_authority_snapshot(snapshot)
+            .context("install enrollment authority in DB-primary trust workspace")
+    })
+}
+
+fn pin_peer_authority_primary(
+    state_directory: &Path,
+    device_state: &DeviceState,
+    snapshot: &AccountAuthoritySnapshot,
+) -> Result<AuthoritySnapshotStoreOutcome> {
+    run_state_transaction(state_directory, |transaction| {
+        transaction.prepare_trust_workspace()?;
+        device_state
+            .pin_peer_authority_snapshot(snapshot)
+            .context("pin peer authority snapshot in DB-primary trust workspace")
+    })
+}
+
+fn install_membership_primary(
+    state_directory: &Path,
+    device_state: &DeviceState,
+    membership: &ConversationMembershipSnapshot,
+) -> Result<ConversationMembershipStoreOutcome> {
+    run_state_transaction(state_directory, |transaction| {
+        transaction.prepare_trust_workspace()?;
+        device_state
+            .install_conversation_membership(membership)
+            .context("install membership in DB-primary trust workspace")
+    })
+}
+
 async fn listen(options: ListenOptions) -> Result<()> {
     let ListenOptions {
         state_dir,
@@ -1686,7 +1901,8 @@ async fn listen(options: ListenOptions) -> Result<()> {
     } = options;
     let device_state = DeviceState::load_or_create(&state_dir)
         .with_context(|| format!("load device state from {}", state_dir.display()))?;
-    let listener_certificate = device_state
+    let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
+    let listener_certificate = trust
         .load_certificate()
         .context("load listener Account Root certificate")?;
     let listener_device_list = AccountDeviceListSnapshot::decode_and_verify(
@@ -1711,9 +1927,12 @@ async fn listen(options: ListenOptions) -> Result<()> {
     )?;
     let immutable_reads = open_immutable_read_repositories(&state_dir)
         .context("capture immutable vault-primary listener state before local changes")?;
-    let authority_snapshot_store = device_state
-        .install_own_authority_snapshot(listener_device_list.authority_snapshot())
-        .context("install authority snapshot embedded in listener device list")?;
+    let authority_snapshot_store = install_own_authority_primary(
+        &state_dir,
+        &device_state,
+        listener_device_list.authority_snapshot(),
+    )
+    .context("install authority snapshot embedded in listener device list")?;
     let event_store = open_event_store(&state_dir)?;
     let local_message_store = open_local_message_store(&state_dir)?;
     let now_unix_seconds = unix_time_now().context("read time for listener prekey freshness")?;
@@ -1824,6 +2043,7 @@ async fn listen(options: ListenOptions) -> Result<()> {
     let session_binding = SyncSessionBinding::from_transport_label(&endpoint.id().to_string());
     let authorized_requester = accept_device_authorization(
         &connection,
+        &state_dir,
         &device_state,
         session_binding,
         allowed_requester_account_id,
@@ -1855,11 +2075,15 @@ async fn listen(options: ListenOptions) -> Result<()> {
                 &event_store,
                 &local_message_store,
                 &device_state,
+                listener_certificate.account_id(),
                 immutable_reads,
             );
             handle_sync_request(
-                &device_state,
-                &decrypting_store,
+                SyncHandlerState {
+                    state_directory: &state_dir,
+                    device_state: &device_state,
+                    decrypting_store: &decrypting_store,
+                },
                 &connection,
                 send,
                 inventory,
@@ -1872,6 +2096,7 @@ async fn listen(options: ListenOptions) -> Result<()> {
         ClientRequest::SyncPause(_) => bail!("sync pause cannot be the first request"),
         ClientRequest::HistoryRewrap(request) => {
             handle_history_rewrap_request(
+                &state_dir,
                 &device_state,
                 Some(&immutable_reads),
                 &mut send,
@@ -1955,6 +2180,7 @@ fn prepare_history_rewrap_approval(
 
 #[allow(clippy::too_many_arguments)]
 async fn handle_history_rewrap_request(
+    state_directory: &Path,
     device_state: &DeviceState,
     read_repositories: Option<&ImmutableReadRepositories>,
     send: &mut SendStream,
@@ -1977,9 +2203,13 @@ async fn handle_history_rewrap_request(
         println!("status=rejected");
         return Ok(());
     };
-    let source_certificate = device_state
+    let trust = CommandTrustReadRepository::open(state_directory, device_state)?;
+    let source_certificate = trust
         .load_certificate()
         .context("load source certificate for network history rewrap")?;
+    let membership = trust
+        .load_conversation_membership(approval.conversation_id.scope_id())
+        .context("load DB-primary membership for network history rewrap")?;
     let requested_start = usize::try_from(request.range_start()).ok();
     let requested_count = usize::try_from(request.max_event_count()).ok();
     let request_matches_approval = request
@@ -2021,6 +2251,7 @@ async fn handle_history_rewrap_request(
         device_list.clone(),
         approval.recipient_device_id,
         approval.conversation_id,
+        &membership,
         read_repositories.events.as_ref(),
         read_repositories.local_messages.as_ref(),
         requested_start.context("history-rewrap request range cannot be represented")?,
@@ -2056,6 +2287,7 @@ async fn handle_history_rewrap_request(
 
 async fn accept_device_authorization(
     connection: &Connection,
+    state_directory: &Path,
     device_state: &DeviceState,
     expected_session: SyncSessionBinding,
     allowed_account: AccountId,
@@ -2071,9 +2303,12 @@ async fn accept_device_authorization(
         authorization
             .authority_snapshot()
             .verify_for_account(allowed_account)?;
-        let snapshot_store = device_state
-            .pin_peer_authority_snapshot(authorization.authority_snapshot())
-            .context("pin requester authority snapshot and reject rollback")?;
+        let snapshot_store = pin_peer_authority_primary(
+            state_directory,
+            device_state,
+            authorization.authority_snapshot(),
+        )
+        .context("pin requester authority snapshot and reject rollback")?;
         let authorized = authorize_device_session(
             allowed_account,
             &authorization,
@@ -2169,14 +2404,15 @@ async fn handle_delivery_request(
         local_message_store,
     } = state;
     let signed_event = event.event();
-    let membership = device_state
+    let trust = CommandTrustReadRepository::open(state_directory, device_state)?;
+    let membership = trust
         .load_conversation_membership(signed_event.conversation_id().scope_id())
         .context("load trusted conversation membership for received event")?;
-    let listener_certificate = device_state
+    let listener_certificate = trust
         .load_certificate()
         .context("load listener certificate for acknowledgement")?;
-    let listener_authority_snapshot = device_state
-        .load_own_authority_snapshot()
+    let listener_authority_snapshot = trust
+        .load_own_authority_snapshot(&listener_certificate)
         .context("load listener authority snapshot for acknowledgement")?;
     require_conversation_participants(
         &membership,
@@ -2225,6 +2461,7 @@ async fn handle_delivery_request(
             match open_local_text_projection_if_present(
                 local_message_store,
                 device_state,
+                listener_certificate.account_id(),
                 signed_event,
             )? {
                 Some(body) => (body, kilogram_store::StoreOutcome::AlreadyPresent, None),
@@ -2239,6 +2476,7 @@ async fn handle_delivery_request(
                     let (outcome, receipt) = ensure_received_local_text_projection(
                         local_message_store,
                         device_state,
+                        listener_certificate.account_id(),
                         signed_event,
                         &decrypted,
                     )
@@ -2327,19 +2565,30 @@ async fn handle_delivery_request(
     Ok(())
 }
 
+struct SyncHandlerState<'a> {
+    state_directory: &'a Path,
+    device_state: &'a DeviceState,
+    decrypting_store: &'a DecryptingSessionStore<'a>,
+}
+
 async fn handle_sync_request(
-    device_state: &DeviceState,
-    decrypting_store: &DecryptingSessionStore<'_>,
+    state: SyncHandlerState<'_>,
     connection: &iroh::endpoint::Connection,
     first_send: SendStream,
     first_inventory: SignedSyncInventory,
     expected_session: SyncSessionBinding,
     authorized_requester: &AuthorizedDevice,
 ) -> Result<()> {
-    let membership = device_state
+    let SyncHandlerState {
+        state_directory,
+        device_state,
+        decrypting_store,
+    } = state;
+    let trust = CommandTrustReadRepository::open(state_directory, device_state)?;
+    let membership = trust
         .load_conversation_membership(first_inventory.conversation_id().scope_id())
         .context("load trusted conversation membership for synchronization")?;
-    let listener_account_id = device_state
+    let listener_account_id = trust
         .load_certificate()
         .context("load listener certificate for synchronization")?
         .account_id();
@@ -2504,12 +2753,14 @@ async fn connect(
 ) -> Result<()> {
     let device_state = DeviceState::load_or_create(&state_dir)
         .with_context(|| format!("load device state from {}", state_dir.display()))?;
-    let requester_certificate = device_state
+    let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
+    let requester_certificate = trust
         .load_certificate()
         .context("load requester Account Root certificate")?;
-    let requester_authority_snapshot = device_state
-        .load_own_authority_snapshot()
+    let requester_authority_snapshot = trust
+        .load_own_authority_snapshot(&requester_certificate)
         .context("load requester Account Root authority snapshot")?;
+    let requester_account_id = requester_certificate.account_id();
     let event_store = open_event_store(&state_dir)?;
     let local_message_store = open_local_message_store(&state_dir)?;
     let ticket = load_connection_ticket(ticket, ticket_file).await?;
@@ -2520,9 +2771,12 @@ async fn connect(
             .observe_prekey_directory(ticket.listener_directory(), unix_time_now()?)
             .context("observe listener prekey directory and reject rollback")
     })?;
-    let listener_snapshot_store = device_state
-        .pin_peer_authority_snapshot(ticket.listener_authority_snapshot())
-        .context("pin listener authority snapshot and reject rollback")?;
+    let listener_snapshot_store = pin_peer_authority_primary(
+        &state_dir,
+        &device_state,
+        ticket.listener_authority_snapshot(),
+    )
+    .context("pin listener authority snapshot and reject rollback")?;
     let authorized_listener = ticket.verify_listener_authorization(expected_listener_account_id)?;
     let expected_listener_device_id = authorized_listener.device_id();
     let route_policy = ticket.route_policy();
@@ -2534,7 +2788,7 @@ async fn connect(
     )
     .context("this device account is not authorized by the connection ticket")?;
     let conversation_id = ConversationId::from_label(&conversation);
-    let membership = device_state
+    let membership = trust
         .load_conversation_membership(conversation_id.scope_id())
         .context("load trusted conversation membership before delivery")?;
     require_conversation_participants(
@@ -2638,6 +2892,7 @@ async fn connect(
             ensure_authored_local_text_projection(
                 &local_message_store,
                 &device_state,
+                requester_account_id,
                 event.event(),
                 &message,
             )
@@ -2768,11 +3023,12 @@ async fn sync(
     );
     let device_state = DeviceState::load_or_create(&state_dir)
         .with_context(|| format!("load device state from {}", state_dir.display()))?;
-    let requester_certificate = device_state
+    let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
+    let requester_certificate = trust
         .load_certificate()
         .context("load requester Account Root certificate")?;
-    let requester_authority_snapshot = device_state
-        .load_own_authority_snapshot()
+    let requester_authority_snapshot = trust
+        .load_own_authority_snapshot(&requester_certificate)
         .context("load requester Account Root authority snapshot")?;
     let immutable_reads = open_immutable_read_repositories(&state_dir)
         .context("capture immutable vault-primary sync state before local changes")?;
@@ -2786,9 +3042,12 @@ async fn sync(
             .observe_prekey_directory(ticket.listener_directory(), unix_time_now()?)
             .context("observe listener prekey directory and reject rollback")
     })?;
-    let listener_snapshot_store = device_state
-        .pin_peer_authority_snapshot(ticket.listener_authority_snapshot())
-        .context("pin listener authority snapshot and reject rollback")?;
+    let listener_snapshot_store = pin_peer_authority_primary(
+        &state_dir,
+        &device_state,
+        ticket.listener_authority_snapshot(),
+    )
+    .context("pin listener authority snapshot and reject rollback")?;
     let authorized_listener = ticket.verify_listener_authorization(expected_listener_account_id)?;
     let expected_listener_device_id = authorized_listener.device_id();
     let route_policy = ticket.route_policy();
@@ -2802,7 +3061,7 @@ async fn sync(
     let session_binding =
         SyncSessionBinding::from_transport_label(&ticket.endpoint().id.to_string());
     let conversation_id = ConversationId::from_label(&conversation);
-    let membership = device_state
+    let membership = trust
         .load_conversation_membership(conversation_id.scope_id())
         .context("load trusted conversation membership before synchronization")?;
     require_conversation_participants(
@@ -2816,6 +3075,7 @@ async fn sync(
         &event_store,
         &local_message_store,
         &device_state,
+        requester_certificate.account_id(),
         immutable_reads,
     );
     let client = SyncClient::new(
@@ -3230,7 +3490,8 @@ fn add_conversation_members(
 fn install_conversation_membership(state_dir: PathBuf, membership_file: PathBuf) -> Result<()> {
     let device = DeviceState::load_or_create(&state_dir)
         .with_context(|| format!("load device state from {}", state_dir.display()))?;
-    let certificate = device
+    let trust = CommandTrustReadRepository::open(&state_dir, &device)?;
+    let certificate = trust
         .load_certificate()
         .context("load device certificate before installing conversation membership")?;
     let bytes = fs::read(&membership_file).with_context(|| {
@@ -3249,8 +3510,7 @@ fn install_conversation_membership(state_dir: PathBuf, membership_file: PathBuf)
     membership
         .require_member(certificate.account_id())
         .context("this device account is not a member of the conversation")?;
-    let store = device
-        .install_conversation_membership(&membership)
+    let store = install_membership_primary(&state_dir, &device, &membership)
         .context("install conversation membership and reject rollback or equivocation")?;
     println!("account_id={}", certificate.account_id());
     println!("conversation_id={}", membership.conversation_id());
@@ -3312,15 +3572,12 @@ fn enroll_device(
             &DeviceCapability::MESSAGING,
         )
         .context("issue root-signed device certificate")?;
-    device
-        .install_certificate(&certificate)
-        .context("install root-signed certificate into device state")?;
     let authority_snapshot = account
         .authority_snapshot()
         .context("create authority snapshot after device enrollment")?;
-    let snapshot_store = device
-        .install_own_authority_snapshot(&authority_snapshot)
-        .context("install current authority snapshot into device state")?;
+    let snapshot_store =
+        install_enrollment_primary(&state_dir, &device, &certificate, &authority_snapshot)
+            .context("install current authority snapshot into device state")?;
     let encoded = certificate.encode()?;
     if let Some(path) = certificate_file {
         write_new_authority_file(&path, &encoded)
@@ -3352,11 +3609,12 @@ fn enroll_device(
 fn authorize_device(state_dir: PathBuf, account_id: AccountId) -> Result<()> {
     let device = DeviceState::load_or_create(&state_dir)
         .with_context(|| format!("load device state from {}", state_dir.display()))?;
-    let certificate = device
+    let trust = CommandTrustReadRepository::open(&state_dir, &device)?;
+    let certificate = trust
         .load_certificate()
         .context("load installed root-signed device certificate")?;
-    let snapshot = device
-        .load_own_authority_snapshot()
+    let snapshot = trust
+        .load_own_authority_snapshot(&certificate)
         .context("load installed authority snapshot")?;
     let authorization = verify_device_authorization_with_snapshot(
         account_id,
@@ -3390,8 +3648,7 @@ fn update_device_authority(state_dir: PathBuf, snapshot_file: PathBuf) -> Result
         .with_context(|| format!("read authority snapshot from {}", snapshot_file.display()))?;
     let snapshot = AccountAuthoritySnapshot::decode_and_verify(&bytes)
         .with_context(|| format!("verify authority snapshot from {}", snapshot_file.display()))?;
-    let store = device
-        .install_own_authority_snapshot(&snapshot)
+    let store = install_own_authority_primary(&state_dir, &device, &snapshot)
         .context("install own authority snapshot and reject rollback")?;
     println!("account_id={}", snapshot.account_id());
     println!("authority_revision={}", snapshot.revision());
@@ -3566,12 +3823,13 @@ fn strip_vault_record_prefix(relative_path: &str, prefix: &str) -> Result<String
 fn show_history(state_dir: PathBuf, conversation: String) -> Result<()> {
     let device_state = DeviceState::load_or_create(&state_dir)
         .with_context(|| format!("load device state from {}", state_dir.display()))?;
-    let certificate = device_state
+    let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
+    let certificate = trust
         .load_certificate()
         .context("load device certificate before reading history")?;
     let read_repositories = open_immutable_read_repositories(&state_dir)?;
     let conversation_id = ConversationId::from_label(&conversation);
-    let membership = device_state
+    let membership = trust
         .load_conversation_membership(conversation_id.scope_id())
         .context("load trusted conversation membership before reading history")?;
     membership
@@ -3645,7 +3903,8 @@ fn show_history(state_dir: PathBuf, conversation: String) -> Result<()> {
 fn export_ratchet_bundle(state_dir: PathBuf, bundle_file: PathBuf) -> Result<()> {
     let device_state = DeviceState::load_or_create(&state_dir)
         .with_context(|| format!("load device state from {}", state_dir.display()))?;
-    let certificate = device_state
+    let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
+    let certificate = trust
         .load_certificate()
         .context("load device certificate before exporting a prekey bundle")?;
     ensure!(
@@ -3683,7 +3942,8 @@ fn export_ratchet_prekey_pool(
         .context("--valid-for-hours overflows seconds")?;
     let device_state = DeviceState::load_or_create(&state_dir)
         .with_context(|| format!("load device state from {}", state_dir.display()))?;
-    let certificate = device_state
+    let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
+    let certificate = trust
         .load_certificate()
         .context("load device certificate before exporting a prekey pool")?;
     ensure!(
@@ -3771,11 +4031,12 @@ async fn fetch_history_rewrap(
     );
     let device_state = DeviceState::load_or_create(&state_dir)
         .with_context(|| format!("load recipient device state from {}", state_dir.display()))?;
-    let recipient_certificate = device_state
+    let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
+    let recipient_certificate = trust
         .load_certificate()
         .context("load recipient Account Root certificate")?;
-    let recipient_authority_snapshot = device_state
-        .load_own_authority_snapshot()
+    let recipient_authority_snapshot = trust
+        .load_own_authority_snapshot(&recipient_certificate)
         .context("load recipient Account Root authority snapshot")?;
     ensure!(
         recipient_certificate.account_id() == expected_account_id,
@@ -3814,15 +4075,18 @@ async fn fetch_history_rewrap(
     );
     println!("history_rewrap_user_consent=confirmed");
     let conversation_id = ConversationId::from_label(&conversation);
-    let membership = device_state
+    let membership = trust
         .load_conversation_membership(conversation_id.scope_id())
         .context("load trusted conversation membership before network history rewrap")?;
     membership
         .require_member(expected_account_id)
         .context("account is not a member of the requested conversation")?;
-    let source_snapshot_store = device_state
-        .install_own_authority_snapshot(ticket.listener_authority_snapshot())
-        .context("install same-account authority snapshot from source ticket")?;
+    let source_snapshot_store = install_own_authority_primary(
+        &state_dir,
+        &device_state,
+        ticket.listener_authority_snapshot(),
+    )
+    .context("install same-account authority snapshot from source ticket")?;
     let session_binding =
         SyncSessionBinding::from_transport_label(&ticket.endpoint().id.to_string());
     let route_policy = ticket.route_policy();
@@ -3956,7 +4220,8 @@ async fn resume_history_recovery(
 
     let device_state = DeviceState::load_or_create(&state_dir)
         .with_context(|| format!("load recipient device state from {}", state_dir.display()))?;
-    let recipient_certificate = device_state
+    let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
+    let recipient_certificate = trust
         .load_certificate()
         .context("load recipient Account Root certificate")?;
     ensure!(
@@ -4109,9 +4374,10 @@ fn export_history_rewrap(
     );
     let device_state = DeviceState::load_or_create(&state_dir)
         .with_context(|| format!("load source device state from {}", state_dir.display()))?;
+    let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
     let read_repositories = open_immutable_read_repositories(&state_dir)
         .context("capture immutable vault-primary source history before export state changes")?;
-    let source_certificate = device_state
+    let source_certificate = trust
         .load_certificate()
         .context("load source device certificate before history rewrap")?;
     let device_list = AccountDeviceListSnapshot::decode_and_verify(
@@ -4130,15 +4396,20 @@ fn export_history_rewrap(
         device_list.certificate_for(recipient_device_id).is_some(),
         "recipient device is absent from the supplied root-signed device list"
     );
-    let snapshot_store = device_state
-        .install_own_authority_snapshot(device_list.authority_snapshot())
-        .context("install authority snapshot from history-rewrap device list")?;
+    let conversation_id = ConversationId::from_label(&conversation);
+    let membership = trust
+        .load_conversation_membership(conversation_id.scope_id())
+        .context("load DB-primary membership before history rewrap")?;
+    let snapshot_store =
+        install_own_authority_primary(&state_dir, &device_state, device_list.authority_snapshot())
+            .context("install authority snapshot from history-rewrap device list")?;
     let bundle = build_history_rewrap_bundle(
         &device_state,
         &source_certificate,
         device_list,
         recipient_device_id,
-        ConversationId::from_label(&conversation),
+        conversation_id,
+        &membership,
         read_repositories.events.as_ref(),
         read_repositories.local_messages.as_ref(),
         range_start,
@@ -4184,6 +4455,7 @@ fn build_history_rewrap_bundle(
     device_list: AccountDeviceListSnapshot,
     recipient_device_id: DeviceId,
     conversation_id: ConversationId,
+    membership: &ConversationMembershipSnapshot,
     event_reads: &dyn EventReadRepository,
     local_message_reads: &dyn LocalMessageReadRepository,
     range_start: usize,
@@ -4205,14 +4477,11 @@ fn build_history_rewrap_bundle(
         device_list.certificate_for(recipient_device_id).is_some(),
         "recipient device is absent from the supplied root-signed device list"
     );
-    let membership = device_state
-        .load_conversation_membership(conversation_id.scope_id())
-        .context("load trusted conversation membership before history rewrap")?;
     membership
         .require_member(source_certificate.account_id())
         .context("source account is not a member of this conversation")?;
     let stored_events = event_reads
-        .load_authorized_conversation(conversation_id, &membership)
+        .load_authorized_conversation(conversation_id, membership)
         .context("load and verify source history before rewrap")?;
     let mut inventory = Vec::new();
     for stored in stored_events {
@@ -4287,7 +4556,8 @@ fn import_history_rewrap_material(
 ) -> Result<()> {
     let device_state = DeviceState::load_or_create(&state_dir)
         .with_context(|| format!("load recipient device state from {}", state_dir.display()))?;
-    let recipient_certificate = device_state
+    let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
+    let recipient_certificate = trust
         .load_certificate()
         .context("load recipient device certificate before history rewrap")?;
     let conversation_id = ConversationId::from_label(&conversation);
@@ -4311,12 +4581,13 @@ fn import_history_rewrap_material(
             == Some(&recipient_certificate),
         "recipient certificate is not present exactly in the signed device list"
     );
-    let snapshot_store = device_state
-        .install_own_authority_snapshot(
-            bundle.manifest().account_device_list().authority_snapshot(),
-        )
-        .context("install authority snapshot from history-rewrap bundle")?;
-    let membership = device_state
+    let snapshot_store = install_own_authority_primary(
+        &state_dir,
+        &device_state,
+        bundle.manifest().account_device_list().authority_snapshot(),
+    )
+    .context("install authority snapshot from history-rewrap bundle")?;
+    let membership = trust
         .load_conversation_membership(conversation_id.scope_id())
         .context("load trusted conversation membership before history rewrap import")?;
     membership
@@ -4568,7 +4839,8 @@ struct HistoryRewrapClaimCoverage {
 fn reconcile_history_rewrap(state_dir: PathBuf, conversation: String) -> Result<()> {
     let device_state = DeviceState::load_or_create(&state_dir)
         .with_context(|| format!("load recipient device state from {}", state_dir.display()))?;
-    let recipient_certificate = device_state
+    let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
+    let recipient_certificate = trust
         .load_certificate()
         .context("load recipient certificate for history-rewrap reconciliation")?;
     let conversation_id = ConversationId::from_label(&conversation);
@@ -4749,11 +5021,12 @@ fn seed_history(
     ensure!(count > 0, "--count must be greater than zero");
     let device_state = DeviceState::load_or_create(&state_dir)
         .with_context(|| format!("load device state from {}", state_dir.display()))?;
-    let certificate = device_state
+    let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
+    let certificate = trust
         .load_certificate()
         .context("load device certificate before seeding history")?;
-    let authority_snapshot = device_state
-        .load_own_authority_snapshot()
+    let authority_snapshot = trust
+        .load_own_authority_snapshot(&certificate)
         .context("load device authority snapshot before seeding history")?;
     let peer_certificate = DeviceCertificate::decode_and_verify(
         &fs::read(&peer_certificate_file).with_context(|| {
@@ -4797,6 +5070,10 @@ fn seed_history(
         peer_prekey_pool.device_id() == peer_certificate.device_id(),
         "peer prekey pool belongs to a different device than the peer certificate"
     );
+    let conversation_id = ConversationId::from_label(&conversation);
+    let membership = trust
+        .load_conversation_membership(conversation_id.scope_id())
+        .context("load DB-primary membership before seeding history")?;
     let (conversation_id, existing_count, first_event_id, last_event_id) = run_state_transaction(
         &state_dir,
         |transaction| {
@@ -4806,10 +5083,6 @@ fn seed_history(
                 .context("observe peer prekey pool before allocating seeded events")?;
             let event_store = open_event_store(&state_dir)?;
             let local_message_store = open_local_message_store(&state_dir)?;
-            let conversation_id = ConversationId::from_label(&conversation);
-            let membership = device_state
-                .load_conversation_membership(conversation_id.scope_id())
-                .context("load trusted conversation membership before seeding history")?;
             membership
                 .require_member(certificate.account_id())
                 .context("this device account is not a member of the conversation")?;
@@ -4922,6 +5195,7 @@ fn open_local_message_store(state_dir: &Path) -> Result<LocalMessageStore> {
 fn ensure_authored_local_text_projection(
     store: &LocalMessageStore,
     device_state: &DeviceState,
+    local_account_id: AccountId,
     event: &SignedEvent,
     body: &str,
 ) -> Result<(StoreOutcome, AppendOnlyWriteReceipt), StoreError> {
@@ -4929,10 +5203,6 @@ fn ensure_authored_local_text_projection(
     let local_device_id = device_state.identity().device_id();
     match store.get(event_id) {
         Ok(projection) => {
-            let local_account_id = device_state
-                .load_certificate()
-                .map_err(kilogram_protocol::ProtocolError::from)?
-                .account_id();
             let stored_body = projection.open_for_account(
                 event,
                 local_device_id,
@@ -4960,22 +5230,17 @@ fn ensure_authored_local_text_projection(
 fn open_local_text_projection_if_present(
     store: &LocalMessageStore,
     device_state: &DeviceState,
+    local_account_id: AccountId,
     event: &SignedEvent,
 ) -> Result<Option<String>, StoreError> {
     let event_id = event.event_id()?;
     match store.get(event_id) {
-        Ok(projection) => {
-            let local_account_id = device_state
-                .load_certificate()
-                .map_err(kilogram_protocol::ProtocolError::from)?
-                .account_id();
-            Ok(Some(projection.open_for_account(
-                event,
-                device_state.identity().device_id(),
-                local_account_id,
-                device_state.encryption(),
-            )?))
-        }
+        Ok(projection) => Ok(Some(projection.open_for_account(
+            event,
+            device_state.identity().device_id(),
+            local_account_id,
+            device_state.encryption(),
+        )?)),
         Err(StoreError::LocalTextProjectionMissing { .. }) => Ok(None),
         Err(error) => Err(error),
     }
@@ -4984,11 +5249,14 @@ fn open_local_text_projection_if_present(
 fn ensure_received_local_text_projection(
     store: &LocalMessageStore,
     device_state: &DeviceState,
+    local_account_id: AccountId,
     event: &SignedEvent,
     decrypted: &DecryptedMessage,
 ) -> Result<(StoreOutcome, AppendOnlyWriteReceipt), StoreError> {
     let event_id = event.event_id()?;
-    if let Some(body) = open_local_text_projection_if_present(store, device_state, event)? {
+    if let Some(body) =
+        open_local_text_projection_if_present(store, device_state, local_account_id, event)?
+    {
         if body != decrypted.as_str() {
             return Err(StoreError::LocalTextProjectionPlaintextConflict { event_id });
         }
@@ -5011,6 +5279,7 @@ struct DecryptingSessionStore<'a> {
     event_reads: CommandEventReadOverlay,
     local_message_reads: CommandLocalMessageReadOverlay,
     device_state: &'a DeviceState,
+    local_account_id: AccountId,
 }
 
 impl<'a> DecryptingSessionStore<'a> {
@@ -5019,6 +5288,7 @@ impl<'a> DecryptingSessionStore<'a> {
         store: &'a EventStore,
         local_messages: &'a LocalMessageStore,
         device_state: &'a DeviceState,
+        local_account_id: AccountId,
         read_repositories: ImmutableReadRepositories,
     ) -> Self {
         let ImmutableReadRepositories {
@@ -5033,6 +5303,7 @@ impl<'a> DecryptingSessionStore<'a> {
             event_reads: CommandEventReadOverlay::new(events),
             local_message_reads: CommandLocalMessageReadOverlay::new(local_message_reads),
             device_state,
+            local_account_id,
         }
     }
 
@@ -5073,15 +5344,10 @@ impl<'a> DecryptingSessionStore<'a> {
         let local_device_id = self.device_state.identity().device_id();
         match self.local_message_reads.get(event_id) {
             Ok(projection) => {
-                let local_account_id = self
-                    .device_state
-                    .load_certificate()
-                    .map_err(kilogram_protocol::ProtocolError::from)?
-                    .account_id();
                 projection.open_for_account(
                     event,
                     local_device_id,
-                    local_account_id,
+                    self.local_account_id,
                     self.device_state.encryption(),
                 )?;
                 Ok(None)
@@ -5090,15 +5356,11 @@ impl<'a> DecryptingSessionStore<'a> {
                 if event.author_device_id() == local_device_id {
                     return Err(error);
                 }
-                let local_certificate = self
-                    .device_state
-                    .load_certificate()
-                    .map_err(kilogram_protocol::ProtocolError::from)?;
                 let recipient_account_id = event.recipient_device_list()?.account_id();
-                if recipient_account_id != local_certificate.account_id() {
+                if recipient_account_id != self.local_account_id {
                     return Err(
                         kilogram_protocol::ProtocolError::RatchetRecipientAccountMismatch {
-                            expected: local_certificate.account_id(),
+                            expected: self.local_account_id,
                             actual: recipient_account_id,
                         }
                         .into(),
@@ -5499,6 +5761,60 @@ mod tests {
         Ok(())
     }
 
+    #[test]
+    fn cli_trust_repository_reads_db_and_repairs_tampered_shadow_transactionally() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let account_directory = directory.path().join("account");
+        let state_directory = directory.path().join("device");
+        create_account(account_directory.clone())?;
+        enroll_device(account_directory.clone(), state_directory.clone(), None)?;
+        let account = AccountRootState::load(&account_directory)?;
+        let membership = account.create_conversation_membership(
+            ConversationId::from_label("db-primary-trust").scope_id(),
+            &[],
+        )?;
+        install_conversation_membership(state_directory.clone(), {
+            let path = directory.path().join("membership.snapshot");
+            write_new_authority_file(&path, &membership.encode()?)?;
+            path
+        })?;
+        let vault = EncryptedStateVault::open_or_create(&state_directory)?;
+        vault.migrate_legacy_snapshot()?;
+        drop(vault);
+
+        let guard = VaultDualWriteGuard::prepare(&state_directory)?
+            .context("expected initialized trust vault guard")?;
+        fs::write(
+            state_directory.join("account-authority.snapshot"),
+            b"tampered-shadow",
+        )?;
+        let device = DeviceState::load_or_create(&state_directory)?;
+        let trust = CommandTrustReadRepository::open(&state_directory, &device)?;
+        let certificate = trust.load_certificate()?;
+        let authority = trust.load_own_authority_snapshot(&certificate)?;
+        assert_eq!(
+            trust.load_conversation_membership(membership.conversation_id())?,
+            membership
+        );
+        assert_eq!(
+            install_own_authority_primary(&state_directory, &device, &authority)?,
+            AuthoritySnapshotStoreOutcome::Unchanged
+        );
+        guard.finish()?;
+
+        assert_eq!(
+            DeviceState::load_or_create(&state_directory)?.load_own_authority_snapshot()?,
+            authority
+        );
+        assert_eq!(
+            EncryptedStateVault::open_existing(&state_directory)?
+                .verify_against_legacy()?
+                .record_count(),
+            5
+        );
+        Ok(())
+    }
+
     fn authority_for(
         identity: &DeviceIdentity,
     ) -> Result<(
@@ -5683,6 +5999,7 @@ mod tests {
             rewrap_device_list,
             recovery_certificate.device_id(),
             conversation_id,
+            &membership,
             primary.events.as_ref(),
             primary.local_messages.as_ref(),
             0,
@@ -5711,6 +6028,7 @@ mod tests {
             &peer_events,
             &peer_messages,
             &peer,
+            peer_account.account_id(),
             peer_reads,
         );
         let authorized_events = events
@@ -5808,6 +6126,7 @@ mod tests {
             &store,
             &local_messages,
             &local_state,
+            local_root.account_id(),
             empty_immutable_read_repositories()?,
         );
 
@@ -5884,6 +6203,7 @@ mod tests {
             &store,
             &local_messages,
             &local_state,
+            local_root.account_id(),
             empty_immutable_read_repositories()?,
         );
 
@@ -6239,7 +6559,8 @@ mod tests {
         let (requester_account_id, requester_certificate, requester_snapshot, _) =
             authority_for(&requester_identity)?;
         let listener_device_directory = tempfile::tempdir()?;
-        let listener_device_state = DeviceState::load_or_create(listener_device_directory.path())?;
+        let listener_state_path = listener_device_directory.path().to_path_buf();
+        let listener_device_state = DeviceState::load_or_create(&listener_state_path)?;
         let listener = endpoint_builder(RoutePolicy::Auto)
             .alpns(vec![ALPN.to_vec()])
             .bind()
@@ -6252,6 +6573,7 @@ mod tests {
                 let connection = accept_authenticated_connection(&listener).await?;
                 let authorized = accept_device_authorization(
                     &connection,
+                    &listener_state_path,
                     &listener_device_state,
                     session_binding,
                     requester_account_id,
@@ -6309,10 +6631,11 @@ mod tests {
             let listener = listener.clone();
             let listener_state_path = listener_state_path.clone();
             async move {
-                let listener_state = DeviceState::load_or_create(listener_state_path)?;
+                let listener_state = DeviceState::load_or_create(&listener_state_path)?;
                 let connection = accept_authenticated_connection(&listener).await?;
                 accept_device_authorization(
                     &connection,
+                    &listener_state_path,
                     &listener_state,
                     session_binding,
                     requester_account_id,
