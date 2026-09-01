@@ -9,6 +9,12 @@ use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
 use thiserror::Error;
 
+mod vault;
+
+pub use vault::{
+    EncryptedStateVault, STATE_VAULT_FILE, STATE_VAULT_KEY_FILE, VaultMigrationOutcome, VaultReport,
+};
+
 const LOCK_FILE: &str = ".kilogram-state.lock";
 const TRANSACTION_DIRECTORY: &str = ".kilogram-transactions";
 const ACTIVE_DIRECTORY: &str = "active";
@@ -60,6 +66,72 @@ pub enum StateError {
 
     #[error("symbolic links are not allowed in transaction-managed state: {0}")]
     SymbolicLink(PathBuf),
+
+    #[error("state vault database operation failed: {0}")]
+    VaultDatabase(String),
+
+    #[error("state vault encoding failed: {0}")]
+    VaultEncoding(#[from] postcard::Error),
+
+    #[error("state vault secure random generation failed: {0}")]
+    VaultSecureRandom(getrandom::Error),
+
+    #[error("state vault authenticated encryption failed")]
+    VaultEncryption,
+
+    #[error("state vault key is missing at {0}")]
+    VaultKeyMissing(PathBuf),
+
+    #[error("state vault database is missing at {0}")]
+    VaultDatabaseMissing(PathBuf),
+
+    #[error("state vault key has {0} bytes; expected 32")]
+    InvalidVaultKeyLength(usize),
+
+    #[error("state vault at {0} does not contain a committed migration")]
+    VaultNotMigrated(PathBuf),
+
+    #[error("unsupported state vault schema version {0}")]
+    UnsupportedVaultSchemaVersion(u64),
+
+    #[error("unsupported state vault record version {0}")]
+    UnsupportedVaultRecordVersion(u8),
+
+    #[error("state vault record envelope is truncated")]
+    InvalidVaultRecordEnvelope,
+
+    #[error("state vault record key has {0} bytes; expected 32")]
+    InvalidVaultRecordKeyLength(usize),
+
+    #[error("state vault record key does not match encrypted path {0}")]
+    VaultRecordKeyMismatch(String),
+
+    #[error("state vault contains duplicate encrypted path {0}")]
+    VaultDuplicatePath(String),
+
+    #[error("state vault record has {0} bytes; maximum is 64 MiB")]
+    VaultRecordTooLarge(usize),
+
+    #[error("state vault contains {0} records; maximum is 1000000")]
+    TooManyVaultRecords(usize),
+
+    #[error("state vault snapshot has {0} plaintext bytes; maximum is 512 MiB")]
+    VaultSnapshotTooLarge(u64),
+
+    #[error("state vault manifest does not match decrypted records")]
+    VaultManifestMismatch,
+
+    #[error("legacy state changed after vault snapshot (stored {stored:?}, current {current:?})")]
+    VaultLegacyStateChanged { stored: [u8; 32], current: [u8; 32] },
+
+    #[error("state vault path is not valid UTF-8: {0}")]
+    VaultNonUtf8Path(PathBuf),
+
+    #[error("state vault restore destination already exists: {0}")]
+    VaultRestoreDestinationExists(PathBuf),
+
+    #[error("injected state vault failure after {0} records")]
+    VaultInjectedFailure(usize),
 }
 
 pub struct StateDirectoryLock {

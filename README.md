@@ -27,12 +27,16 @@ The crash-consistent local state transaction is specified in
 [`docs/RFC-0010-crash-consistent-local-state.md`](docs/RFC-0010-crash-consistent-local-state.md).
 The consent-gated network history recovery flow is specified in
 [`docs/RFC-0011-network-history-rewrap.md`](docs/RFC-0011-network-history-rewrap.md).
+The resumable authenticated history-recovery flow is specified in
+[`docs/RFC-0012-resumable-history-recovery.md`](docs/RFC-0012-resumable-history-recovery.md).
+The encrypted transactional shadow-vault migration is specified in
+[`docs/RFC-0013-encrypted-transactional-state-vault.md`](docs/RFC-0013-encrypted-transactional-state-vault.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.7.8 network authenticated history rewrap — complete
+## Current milestone: M0.8.1 encrypted transactional state vault — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -95,10 +99,26 @@ crash-consistent transaction. Local reconciliation merges ranges per signed
 source claim and reports `incomplete`, `single-source`, `agreed`, or `divergent`
 while always stating that global completeness is not proven.
 
-This is still a narrow integration spike. It does not yet provide a global DHT
-or gossip freshness proof, atomic remote prekey reservation, protected local
-key storage, a scalable transactional database, PQXDH, cross-account recovery,
-or resumable multi-range history recovery. Losing every readable projection
+M0.7.9 adds a recipient-signed append-only recovery checkpoint chain. Each
+fresh authenticated session fetches the next bounded page from one explicitly
+selected source, pins the first source inventory claim, and atomically commits
+the imported page with the next checkpoint. A completed plan retries without a
+network connection.
+
+M0.8.1 adds a reversible encrypted shadow snapshot of the entire device state.
+`state-vault-migrate` publishes encrypted records and a keyed manifest in one
+immediate-durability `redb` transaction. `state-vault-verify` authenticates the
+complete vault and compares it with the retained legacy tree;
+`state-vault-restore` reconstructs an exact snapshot only in a new directory.
+Paths and contents are encrypted with XChaCha20-Poly1305, while keyed BLAKE3
+identifiers avoid plaintext path keys in the database.
+
+This is still a narrow integration spike. The vault is not yet the primary
+repository: live commands continue to read and write legacy files, and the
+development master key remains beside the database. It does not yet provide a
+global DHT or gossip freshness proof, atomic remote prekey reservation,
+protected local key storage, versioned database migrations/cutover, PQXDH, or
+cross-account recovery. Losing every readable projection
 still cannot be repaired from old ciphertext with only the device signing key.
 Do not use it for sensitive communication.
 

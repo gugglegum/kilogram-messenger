@@ -25,6 +25,9 @@ reconciliation без обещания глобальной полноты.
 M0.7.9 добавил signed append-only checkpoint chain, authenticated pagination
 через fresh session на каждую страницу, safe retry и выбор inventory только при
 согласии минимум двух явно опрошенных sources.
+M0.8.1 добавил обратимый encrypted shadow snapshot всего device state в `redb`,
+но live repositories по-прежнему используют legacy filesystem, а master key
+лежит рядом development-файлом.
 Следующие вопросы относятся к production recovery, rotation, asynchronous
 sessions, distribution, removal и key epochs и не решены этим прототипом.
 
@@ -41,9 +44,14 @@ sessions, distribution, removal и key epochs и не решены этим пр
 - Какой TTL применять к retained losing session, как выполнять authenticated
   session reset после потери state и нужен ли production-протокол сложнее
   проверенного M0.7.6 lexicographic-min разрешения двух crossed sessions?
-- Какая encrypted production DB/WAL заменит M0.7.7 full ratchet snapshot и
-  append-only filename baseline, обеспечит bounded recovery, migrations,
-  backups и безопасное удаление без ослабления forward secrecy?
+- Какая repository schema и dual-write/cutover процедура безопасно переведёт
+  live state с M0.7.7 filesystem на M0.8.1 `redb`, обеспечит versioned
+  migrations, bounded backups и безопасное удаление без ослабления forward
+  secrecy? Остаётся ли `redb` production engine после mobile/load tests?
+- Как защищать vault master key: OS keystore, аппаратный ключ,
+  passphrase/seed-derived wrapping или их комбинация; как обнаруживать rollback
+  согласованной старой пары DB+key и восстанавливать key без создания общего
+  ключа расшифровки всех устройств?
 - Как authenticated discovery/gossip сообщает глобально самую свежую device-list
   revision и prekey pool, выполняет remote atomic OTK reservation и не раскрывает
   лишнюю account metadata? M0.7.6 отклоняет rollback/equivocation после
@@ -71,8 +79,9 @@ sessions, distribution, removal и key epochs и не решены этим пр
 
 ## P1 — хранение и синхронизация
 
-- Какая production database и схема at-rest encryption заменят временный
-  content-addressed filesystem store из M0.1.2?
+- Как разделить transactional metadata и большие encrypted attachment blobs,
+  какие retention/compaction limits применять и как доказать отсутствие
+  plaintext remnants после окончательного ухода от legacy store?
 - Какая Merkle/range summary и переносимая signed cursor-схема заменит bounded
   full-ID inventory M0.1.3, не раскрывая лишнюю структуру истории? M0.4 уже
   использует durable event set как correctness checkpoint, поэтому будущий

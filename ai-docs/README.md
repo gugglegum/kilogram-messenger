@@ -101,8 +101,14 @@ chain и `history-recovery-resume`: каждая fresh session переноси�
 claim отклоняется. Reconciliation выбирает inventory только при совпадении двух
 или более полных явно собранных claims и всё равно не обещает global
 completeness.
+M0.8.1 добавил первый production-storage bridge: `state-vault-migrate` одной
+durable `redb` transaction создаёт encrypted snapshot всего device state,
+`state-vault-verify` аутентифицирует records и сверяет retained legacy tree, а
+`state-vault-restore` восстанавливает byte-exact snapshot только в новый
+каталог. Это пока shadow vault: live repositories продолжают использовать
+legacy files, а development master key лежит рядом с DB.
 Seed/root recovery, защищённое хранение root/local/ratchet keys, production
-transactional DB, global prekey discovery/witness, автоматический recovery
+DB cutover/migrations, global prekey discovery/witness, автоматический recovery
 source discovery/background coordinator, sync summaries, membership removal и
 группы ещё не реализованы.
 
@@ -157,20 +163,22 @@ source discovery/background coordinator, sync summaries, membership removal и
 
 ## План ближайших работ
 
-1. Заменить M0 filesystem snapshot journal на encrypted transactional DB/WAL с
-   bounded recovery и migrations.
-2. Добавить source discovery/background coordinator и QR/device-link UX поверх
+1. Ввести M0.8.2 storage repository traits и versioned dual-write, сверить
+   legacy/vault reads и только затем переключить primary store.
+2. Защитить vault master key через OS keystore/passphrase/seed wrapping,
+   добавить rollback witness, versioned migrations и bounded backup/restore.
+3. Добавить source discovery/background coordinator и QR/device-link UX поверх
    resumable history recovery без ослабления явного consent.
-3. Спроектировать membership removal вместе с ordered security log и MLS epoch;
+4. Спроектировать membership removal вместе с ordered security log и MLS epoch;
    отдельно — gossip/witness для first-contact freshness.
-4. Спроектировать seed/recovery authority, protected root storage, root
+5. Спроектировать seed/recovery authority, protected root storage, root
    rotation и конфликтующие authority operations.
-5. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
-6. Спроектировать финальный wire format подписанного события и алгоритм
+6. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
+7. Спроектировать финальный wire format подписанного события и алгоритм
    линеаризации.
-7. Спроектировать compact Merkle/range summary и переносимый signed cursor.
-8. Добавить небольшие MLS-группы.
-9. Перед публичным выпуском провести независимый криптографический аудит.
+8. Спроектировать compact Merkle/range summary и переносимый signed cursor.
+9. Добавить небольшие MLS-группы.
+10. Перед публичным выпуском провести независимый криптографический аудит.
 
 ## Навигация
 
@@ -203,5 +211,7 @@ source discovery/background coordinator, sync summaries, membership removal и
   реализованный M0.7.8-контракт session-bound rewrap, consent/SAS и reconciliation.
 - [`../docs/RFC-0012-resumable-history-recovery.md`](../docs/RFC-0012-resumable-history-recovery.md) —
   реализованный M0.7.9-контракт signed checkpoint pagination и safe retry.
+- [`../docs/RFC-0013-encrypted-transactional-state-vault.md`](../docs/RFC-0013-encrypted-transactional-state-vault.md) —
+  реализованный M0.8.1-контракт encrypted shadow migration, verify и restore.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

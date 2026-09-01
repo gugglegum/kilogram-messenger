@@ -295,6 +295,18 @@ toolchain `1.98.0` для воспроизводимой разработки.
     `.tmp/m079-smoke-20260901-051549` через два fresh direct Iroh sessions
     восстановил страницы `0..2` и `2..3`, создал два checkpoint, подтвердил
     network-free completed retry и полное совпадение source/recipient history.
+42. M0.8.1 добавил `redb` 4.2 в `kilogram-state` и encrypted shadow vault v1.
+    `state-vault-migrate` одной immediate-durability transaction сохраняет
+    XChaCha20-Poly1305 records и keyed BLAKE3 manifest; `verify` сверяет vault с
+    retained legacy tree, а `restore` публикует проверенный staging только в
+    новый каталог. Unit tests покрывают abort, drift, wrong key, plaintext scan
+    и exact restore. Все 81 workspace tests, strict Clippy и release build
+    проходят. Release smoke `.tmp/m081-smoke-20260901-070000` мигрировал 23
+    файла/26,037 bytes из реального M0.7.9 recipient state, получил idempotent
+    `already-current`, восстановил byte-identical tree и те же 3 history events;
+    raw DB scan не нашёл plaintext fixtures/path markers. Случайный key пока
+    лежит рядом development-файлом; primary CLI repositories ещё используют
+    filesystem state.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -314,9 +326,10 @@ high-water и concurrent initiation resolution; first-contact global freshness
 same-account history rewrap; M0.7.8 добавил сетевой consent/SAS и local
 multi-source claim reconciliation, а M0.7.9 — signed checkpoint pagination и
 safe retry. Source discovery/background coordinator, membership removal/epochs
-и group E2EE остаются открыты. M0.7.7 закрывает
-M0 crash consistency для device filesystem state; encrypted production DB/WAL,
-bounded migrations/backups и защищённый keystore ещё не выбраны.
+и group E2EE остаются открыты. M0.7.7 закрывает M0 crash consistency для device
+filesystem state; M0.8.1 доказывает атомарную encrypted shadow migration в
+`redb`, но versioned dual-write, primary DB cutover, bounded backups и
+защищённый key provider ещё не реализованы.
 
 ## Решения, которые ещё нельзя фиксировать
 

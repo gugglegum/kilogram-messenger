@@ -940,13 +940,53 @@ source discovery и автоматический сбор нескольких c
 Полный контракт —
 [`../docs/RFC-0012-resumable-history-recovery.md`](../docs/RFC-0012-resumable-history-recovery.md).
 
+### M0.8.1 — encrypted transactional state vault: выполнено
+
+Реализовано:
+
+- `kilogram-state` использует embedded `redb` 4.2 и одной
+  immediate-durability transaction сохраняет encrypted snapshot всего legacy
+  device state;
+- relative paths индексируются keyed BLAKE3, а path+content каждой записи
+  шифруются XChaCha20-Poly1305 с отдельным nonce и domain-separated subkeys;
+- keyed manifest фиксирует schema, record count, plaintext bytes и canonical
+  snapshot ID; verify полностью расшифровывает records и пересчитывает его;
+- `state-vault-migrate`, `state-vault-verify` и `state-vault-restore` работают
+  под existing state lock; restore разрешён только в новый каталог и проходит
+  staging verification до atomic rename;
+- migration сохраняет legacy files, идемпотентна для неизменного state и
+  fail-closed при drift; fault injection подтверждает невидимость transaction
+  без commit;
+- случайный 256-bit master key пока хранится в соседнем
+  `state-vault.key`; это development key provider, не защита от компрометации
+  всего локального аккаунта.
+
+Проверки:
+
+- state tests покрывают exact restore, отсутствие fixture plaintext/path в raw
+  DB, abort до commit, legacy drift, wrong key и existing destination;
+- все 81 workspace tests, rustfmt, строгий Clippy и release build проходят;
+- release process smoke `.tmp/m081-smoke-20260901-070000` мигрировал 23 файла
+  реального M0.7.9 recipient state (26,037 plaintext bytes), повторно получил
+  `already-current`, проверил vault, восстановил byte-identical legacy tree и
+  прочитал прежние 3 history events из restore; raw DB scan не нашёл fixtures.
+
+Граница среза: vault пока является immutable shadow snapshot. Основные
+repositories продолжают читать и писать legacy files; legacy plaintext/key
+metadata не удаляются, master key не защищён OS keystore, согласованный rollback
+DB+key не обнаруживается. Полный контракт —
+[`../docs/RFC-0013-encrypted-transactional-state-vault.md`](../docs/RFC-0013-encrypted-transactional-state-vault.md).
+
 ### Следующий этап
 
-1. Production local storage заменить encrypted transactional DB/WAL с bounded
-   recovery и migrations.
-2. Source discovery/background coordinator и QR/device-link UX строить поверх
+1. M0.8.2 ввести storage repository traits и versioned dual-write для
+   ratchet/sequence, events/projections/rewrap/checkpoints и trust snapshots;
+   сравнить DB/legacy reads до переключения primary store.
+2. Защитить vault master key через OS keystore/passphrase/seed wrapping и
+   спроектировать rollback witness, backup и versioned migrations.
+3. Source discovery/background coordinator и QR/device-link UX строить поверх
    M0.7.9 без ослабления explicit consent.
-3. Membership removal и group governance проектировать вместе с ordered
+4. Membership removal и group governance проектировать вместе с ordered
    security events и MLS epoch.
-4. First-contact authority/membership gossip-witness, seed/root recovery и
+5. First-contact authority/membership gossip-witness, seed/root recovery и
    compact Merkle/range summary остаются отдельными направлениями.

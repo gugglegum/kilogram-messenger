@@ -174,7 +174,10 @@ Wire objects M0.7.8 не изменились: каждая страница и�
   witness/backup;
 - metadata, timing, размеры и факт обращения к relay остаются видимыми.
 
-Следующий логичный этап — production-oriented локальное хранилище: encrypted
-transactional DB/WAL с bounded recovery, migrations и backup/restore. После
-него можно безопаснее строить постоянный background recovery coordinator и UX
-привязки нового устройства.
+Первый шаг production-oriented локального хранилища реализован M0.8.1 в
+[`RFC-0013`](RFC-0013-encrypted-transactional-state-vault.md): encrypted
+transactional shadow snapshot, полная verify и safe restore без destructive
+cutover. Следующий storage-срез должен перевести live repositories на
+versioned dual-write и сравнивать legacy/DB reads до переключения primary
+store. После этого можно безопаснее строить постоянный background recovery
+coordinator и UX привязки нового устройства.

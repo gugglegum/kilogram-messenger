@@ -37,7 +37,10 @@ use kilogram_session::{
     MAX_SYNC_ROUNDS, ServerInventoryOutcome, SessionStore, SyncClient, SyncServer,
     authorize_device_session,
 };
-use kilogram_state::{StateDirectoryLock, StateTransaction};
+use kilogram_state::{
+    EncryptedStateVault, STATE_VAULT_FILE, STATE_VAULT_KEY_FILE, StateDirectoryLock,
+    StateTransaction, VaultMigrationOutcome, VaultReport,
+};
 use kilogram_store::{EventStore, LocalMessageStore, StoreError, StoreOutcome};
 use kilogram_transport_iroh::{
     ALPN, MAX_WIRE_MESSAGE_BYTES, RoutePolicy, SelectedPathDiagnostics, await_route_policy,
@@ -555,6 +558,31 @@ enum Command {
         #[arg(long)]
         revocation_file: PathBuf,
     },
+
+    /// Atomically copy the current legacy device state into an encrypted transactional vault.
+    StateVaultMigrate {
+        /// Directory containing the existing development device state.
+        #[arg(long)]
+        state_dir: PathBuf,
+    },
+
+    /// Authenticate every encrypted vault record and compare it with the retained legacy state.
+    StateVaultVerify {
+        /// Directory containing the migrated device state and encrypted vault.
+        #[arg(long)]
+        state_dir: PathBuf,
+    },
+
+    /// Restore an authenticated vault snapshot into a new, previously absent directory.
+    StateVaultRestore {
+        /// Directory containing the encrypted vault and its development key file.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// New directory that will receive the restored legacy state snapshot.
+        #[arg(long)]
+        output_state_dir: PathBuf,
+    },
 }
 
 impl Command {
@@ -576,7 +604,10 @@ impl Command {
             | Self::ConversationMembershipInstall { state_dir, .. }
             | Self::DeviceEnroll { state_dir, .. }
             | Self::DeviceAuthorityUpdate { state_dir, .. }
-            | Self::DeviceAuthorize { state_dir, .. } => Some(state_dir),
+            | Self::DeviceAuthorize { state_dir, .. }
+            | Self::StateVaultMigrate { state_dir }
+            | Self::StateVaultVerify { state_dir }
+            | Self::StateVaultRestore { state_dir, .. } => Some(state_dir),
             Self::AccountCreate { .. }
             | Self::HistoryRewrapSas { .. }
             | Self::AccountShow { .. }
@@ -1051,7 +1082,69 @@ async fn run_command(command: Command) -> Result<()> {
             device_id,
             revocation_file,
         } => revoke_device(account_dir, device_id, revocation_file),
+        Command::StateVaultMigrate { state_dir } => migrate_state_vault(state_dir),
+        Command::StateVaultVerify { state_dir } => verify_state_vault(state_dir),
+        Command::StateVaultRestore {
+            state_dir,
+            output_state_dir,
+        } => restore_state_vault(state_dir, output_state_dir),
     }
+}
+
+fn migrate_state_vault(state_dir: PathBuf) -> Result<()> {
+    let vault = EncryptedStateVault::open_or_create(&state_dir)
+        .context("open encrypted transactional state vault")?;
+    let (outcome, report) = vault
+        .migrate_legacy_snapshot()
+        .context("atomically migrate legacy device state into encrypted vault")?;
+    println!("vault_file={}", state_dir.join(STATE_VAULT_FILE).display());
+    println!(
+        "vault_key_file={}",
+        state_dir.join(STATE_VAULT_KEY_FILE).display()
+    );
+    println!("vault_key_protection=development-file");
+    println!(
+        "migration={}",
+        match outcome {
+            VaultMigrationOutcome::Migrated => "committed",
+            VaultMigrationOutcome::AlreadyCurrent => "already-current",
+        }
+    );
+    print_vault_report(&report);
+    println!("legacy_files_retained=true");
+    println!("status=state-vault-migrated");
+    Ok(())
+}
+
+fn verify_state_vault(state_dir: PathBuf) -> Result<()> {
+    let vault = EncryptedStateVault::open_existing(&state_dir)
+        .context("open encrypted transactional state vault")?;
+    let report = vault
+        .verify_against_legacy()
+        .context("verify vault records and retained legacy state")?;
+    print_vault_report(&report);
+    println!("legacy_snapshot_match=true");
+    println!("status=state-vault-verified");
+    Ok(())
+}
+
+fn restore_state_vault(state_dir: PathBuf, output_state_dir: PathBuf) -> Result<()> {
+    let vault = EncryptedStateVault::open_existing(&state_dir)
+        .context("open encrypted transactional state vault")?;
+    let report = vault
+        .restore_to_new_directory(&output_state_dir)
+        .context("restore authenticated state vault snapshot")?;
+    print_vault_report(&report);
+    println!("output_state_dir={}", output_state_dir.display());
+    println!("status=state-vault-restored");
+    Ok(())
+}
+
+fn print_vault_report(report: &VaultReport) {
+    println!("vault_schema_version={}", report.schema_version());
+    println!("vault_record_count={}", report.record_count());
+    println!("vault_plaintext_bytes={}", report.plaintext_bytes());
+    println!("vault_snapshot_id={}", encode_hex(report.snapshot_id()));
 }
 
 fn run_state_transaction<T>(
