@@ -1409,13 +1409,57 @@ development, rollback witness и bounded key backup/restore отсутствую
 контракт —
 [`../docs/RFC-0024-protected-vault-key-provider.md`](../docs/RFC-0024-protected-vault-key-provider.md).
 
+### M0.8.13 — portable vault-key recovery and rollback witness: выполнено
+
+Реализовано:
+
+- `state-vault-key-export` создаёт только новый внешний recovery package и не
+  разрешает path внутри canonical `state-dir`;
+- package имеет bounded versioned format `KILOGRAM-VRECOV1`, Argon2id v0x13
+  profile `m=65536 KiB,t=3,p=1` и XChaCha20-Poly1305 AEAD;
+- passphrase читается из bounded не-symlink файла, один конечный LF/CRLF
+  снимается, секретные buffers zeroize-ятся;
+- encrypted plaintext содержит vault master key, schema, generation и snapshot
+  ID, а полный header входит в AAD;
+- export выполняет DB-only verify и публикует package через same-directory
+  temporary + fsync + no-clobber persist;
+- `state-vault-key-import` допускает missing/broken local envelope, но сначала
+  открывает и полностью аутентифицирует DB candidate key;
+- DB generation ниже witness отклоняется как rollback, другая ветка того же
+  generation — как fork; более новая валидная DB принимается;
+- local key file изменяется только после всех проверок и снова заворачивается
+  текущим provider, на Windows — DPAPI CurrentUser.
+
+Проверки:
+
+- state regressions покрывают roundtrip, внешний output/no-clobber, short/wrong
+  passphrase, ciphertext tamper, package другого vault и byte-exact отсутствие
+  key mutation при ошибке;
+- отдельный regression создаёт валидные ветки с общим master key и проверяет
+  rollback `witness=2,DB=1` и divergent snapshots при generation 2;
+- все 98 workspace tests, rustfmt, strict Clippy и release build проходят;
+- Windows release process smoke `.tmp/m0813-recovery-smoke-20260901-230000`
+  экспортировал 148-byte package из реального schema-v2 vault generation 5 с
+  16 records, удалил локальный envelope, восстановил новый 282-byte DPAPI
+  envelope с magic `KILOGRAM-VAULTK1` и сохранил snapshot ID
+  `a81942b5e5935c02514617aa605d79bd74dcb2b6ccf2b1a03570aae9d7ee2da8`.
+
+Граница среза: package является external snapshot witness, а не глобальным
+monotonic service. Согласованный rollback DB вместе со старым package не
+обнаруживается; passphrase file lifecycle и backup storage остаются
+ответственностью пользователя. Production macOS/Linux local provider,
+master-key rotation и защита остальных filesystem secrets не реализованы.
+Полный контракт —
+[`../docs/RFC-0025-portable-vault-key-recovery-and-rollback-witness.md`](../docs/RFC-0025-portable-vault-key-recovery-and-rollback-witness.md).
+
 ### Следующий этап
 
-1. Добавить portable macOS/Linux keystore или passphrase/seed wrapping,
-   внешний rollback witness и явный bounded backup/restore защищённого ключа.
+1. Убрать оставшиеся sensitive compatibility reads/writes из filesystem,
+   начиная с device identity, и подготовить production shadow retirement.
 2. Source discovery/background coordinator и QR/device-link UX строить поверх
    M0.7.9 без ослабления explicit consent.
 3. Membership removal и group governance проектировать вместе с ordered
    security events и MLS epoch.
-4. First-contact authority/membership gossip-witness, seed/root recovery и
-   compact Merkle/range summary остаются отдельными направлениями.
+4. Production macOS/Linux local provider, согласованный monotonic witness,
+   master-key rotation, seed/root recovery и compact Merkle/range summary
+   остаются отдельными направлениями.

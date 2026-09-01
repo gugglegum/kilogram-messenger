@@ -116,6 +116,30 @@ pub(crate) fn load_master_key(path: &Path) -> Result<LoadedVaultMasterKey, State
     result
 }
 
+pub(crate) fn install_master_key(
+    path: &Path,
+    master_key: &VaultMasterKey,
+) -> Result<LoadedVaultMasterKey, StateError> {
+    let (encoded, protection) = encode_platform_envelope(&master_key.0)?;
+    let validated = decode_enveloped_key(path, &encoded)?;
+    if validated.master_key.0 != master_key.0 || validated.protection != protection {
+        return Err(StateError::InvalidVaultKeyEnvelope {
+            path: path.to_path_buf(),
+            detail: "candidate key envelope did not round-trip before installation".to_owned(),
+        });
+    }
+    if path_exists(path)? {
+        replace_key_file(path, &encoded)?;
+    } else {
+        write_new_key_file(path, &encoded)?;
+    }
+    Ok(LoadedVaultMasterKey {
+        master_key: VaultMasterKey(master_key.0),
+        protection,
+        load_outcome: VaultKeyLoadOutcome::AlreadyCurrent,
+    })
+}
+
 fn migrate_legacy_key(path: &Path, bytes: &[u8]) -> Result<LoadedVaultMasterKey, StateError> {
     let master_key = master_key_from_slice(bytes)?;
     let (encoded, protection) = encode_platform_envelope(&master_key.0)?;

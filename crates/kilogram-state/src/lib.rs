@@ -10,9 +10,11 @@ use tempfile::NamedTempFile;
 use thiserror::Error;
 
 mod key_provider;
+mod key_recovery;
 mod vault;
 
 pub use key_provider::{VaultKeyLoadOutcome, VaultKeyProtection};
+pub use key_recovery::{VaultKeyRecoveryExport, VaultKeyRecoveryImport, VaultRecoveryWitness};
 pub use vault::{
     EncryptedStateVault, STATE_VAULT_FILE, STATE_VAULT_KEY_FILE, StateMirrorRepository,
     StateRecordKind, TrustStateRepository, TypedShadowReadReport, TypedStateRepository,
@@ -116,6 +118,44 @@ pub enum StateError {
         operation: &'static str,
         detail: String,
     },
+
+    #[error("state vault recovery passphrase has {0} bytes; minimum is 16")]
+    VaultRecoveryPassphraseTooShort(usize),
+
+    #[error("state vault recovery passphrase has {0} bytes; maximum is 4096")]
+    VaultRecoveryPassphraseTooLong(usize),
+
+    #[error("state vault recovery package has {0} bytes; maximum is 64 KiB")]
+    VaultRecoveryPackageTooLarge(usize),
+
+    #[error("invalid state vault recovery package at {path}: {detail}")]
+    InvalidVaultRecoveryPackage { path: PathBuf, detail: String },
+
+    #[error("unsupported state vault recovery package version {0}")]
+    UnsupportedVaultRecoveryVersion(u8),
+
+    #[error("unsupported state vault recovery KDF parameters")]
+    UnsupportedVaultRecoveryKdf,
+
+    #[error("state vault recovery package authentication failed")]
+    VaultRecoveryAuthenticationFailed,
+
+    #[error("state vault recovery output already exists: {0}")]
+    VaultRecoveryOutputExists(PathBuf),
+
+    #[error("state vault recovery package must be outside the state directory: {0}")]
+    VaultRecoveryInsideState(PathBuf),
+
+    #[error(
+        "state vault rollback detected: recovery witness generation {witness_generation}, database generation {database_generation}"
+    )]
+    VaultRecoveryRollback {
+        witness_generation: u64,
+        database_generation: u64,
+    },
+
+    #[error("state vault fork detected at generation {generation}")]
+    VaultRecoveryFork { generation: u64 },
 
     #[error("state vault at {0} does not contain a committed migration")]
     VaultNotMigrated(PathBuf),

@@ -418,6 +418,18 @@ toolchain `1.98.0` для воспроизводимой разработки.
     настоящего M0.8.11 Alice vault сохранил generation 5, 16 records и snapshot
     ID, изменил key file `32 -> 282` bytes с magic `KILOGRAM-VAULTK1`; второй
     verify сообщил `vault_key_load=already-current`.
+54. M0.8.13 добавил `state-vault-key-export/import`: внешний recovery package
+    использует Argon2id v0x13 (`64 MiB`, `t=3`, `p=1`) и
+    XChaCha20-Poly1305, содержит authenticated generation/snapshot witness и
+    никогда не перезаписывает существующий output. Import проверяет candidate
+    key на всей DB, rollback и same-generation fork до atomic local-provider
+    install. State regressions покрывают wrong passphrase/tamper/wrong vault,
+    no-clobber, отсутствие key mutation, rollback и fork. Все 98 workspace
+    tests, rustfmt, strict Clippy и release build проходят. Windows smoke
+    `.tmp/m0813-recovery-smoke-20260901-230000` на реальном vault generation 5
+    удалил local key и восстановил 282-byte DPAPI envelope из 148-byte package,
+    сохранив 16 records и snapshot
+    `a81942b5e5935c02514617aa605d79bd74dcb2b6ccf2b1a03570aae9d7ee2da8`.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -448,9 +460,11 @@ M0.8.8 добавляет typed direct journal delta и mutable DB-primary seque
 M0.8.9 добавляет DB-primary ratchet workspace и durable primary rollback backup;
 M0.8.10 — repository-owned receipts и encrypted incremental manifest index.
 M0.8.11 добавляет DB-primary trust repository и удаляет compatibility ingress.
-M0.8.12 добавляет Windows DPAPI CurrentUser key envelope и legacy-key rewrap.
-Paged/Merkle index, portable non-Windows provider, rollback witness и bounded
-key backup/restore ещё не реализованы.
+M0.8.12 добавляет Windows DPAPI CurrentUser key envelope и legacy-key rewrap;
+M0.8.13 — portable passphrase recovery package и внешний snapshot witness.
+Paged/Merkle index, production non-Windows local provider, согласованный
+monotonic rollback witness и автоматический backup lifecycle ещё не
+реализованы.
 
 ## Решения, которые ещё нельзя фиксировать
 

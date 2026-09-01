@@ -8,7 +8,14 @@ use std::{
 
 use crate::{
     StagedStateMutation, StateError, StateTransaction, io_at,
-    key_provider::{VAULT_KEY_BYTES, VaultMasterKey, load_master_key, load_or_create_master_key},
+    key_provider::{
+        VAULT_KEY_BYTES, VaultMasterKey, install_master_key, load_master_key,
+        load_or_create_master_key,
+    },
+    key_recovery::{
+        VaultKeyRecoveryExport, VaultKeyRecoveryImport, completed_import, open_recovery,
+        seal_recovery,
+    },
     path_exists, reject_symlink, sync_directory, validate_relative,
 };
 use chacha20poly1305::{
@@ -510,6 +517,102 @@ impl EncryptedStateVault {
 
     pub fn key_load_outcome(&self) -> crate::VaultKeyLoadOutcome {
         self.key_load_outcome
+    }
+
+    pub fn export_key_recovery(
+        &self,
+        output: impl AsRef<Path>,
+        passphrase: &[u8],
+    ) -> Result<VaultKeyRecoveryExport, StateError> {
+        self.ensure_no_pending_mirror()?;
+        let report = self.verify()?;
+        let requested_output = absolute_path(output.as_ref())?;
+        let output_exists = path_exists(&requested_output)?;
+        let output = resolve_destination_path(&requested_output)?;
+        if output.starts_with(&self.root) {
+            return Err(StateError::VaultRecoveryInsideState(output));
+        }
+        if output_exists {
+            return Err(StateError::VaultRecoveryOutputExists(output));
+        }
+        let parent = output
+            .parent()
+            .ok_or_else(|| StateError::UnsafeRelativePath(output.clone()))?;
+        io_at(parent, fs::create_dir_all(parent))?;
+        let (encoded, export) = seal_recovery(&self.master_key, &report, passphrase)?;
+        let mut temporary = io_at(parent, NamedTempFile::new_in(parent))?;
+        let temporary_path = temporary.path().to_path_buf();
+        io_at(&temporary_path, temporary.write_all(&encoded))?;
+        io_at(&temporary_path, temporary.as_file().sync_all())?;
+        match temporary.persist_noclobber(&output) {
+            Ok(_) => {}
+            Err(error) if error.error.kind() == io::ErrorKind::AlreadyExists => {
+                return Err(StateError::VaultRecoveryOutputExists(output));
+            }
+            Err(error) => {
+                return Err(StateError::Io {
+                    path: output,
+                    source: error.error,
+                });
+            }
+        }
+        sync_directory(parent)?;
+        Ok(export)
+    }
+
+    pub fn import_key_recovery(
+        state_directory: impl AsRef<Path>,
+        recovery_file: impl AsRef<Path>,
+        passphrase: &[u8],
+    ) -> Result<VaultKeyRecoveryImport, StateError> {
+        let requested_root = state_directory.as_ref();
+        let root = io_at(requested_root, fs::canonicalize(requested_root))?;
+        let database_path = root.join(STATE_VAULT_FILE);
+        if !path_exists(&database_path)? {
+            return Err(StateError::VaultDatabaseMissing(database_path));
+        }
+        reject_symlink(&database_path)?;
+
+        let requested_recovery = absolute_path(recovery_file.as_ref())?;
+        let recovery_file = io_at(&requested_recovery, fs::canonicalize(&requested_recovery))?;
+        if recovery_file.starts_with(&root) {
+            return Err(StateError::VaultRecoveryInsideState(recovery_file));
+        }
+        let opened = open_recovery(&recovery_file, passphrase)?;
+        let database = Database::open(&database_path).map_err(vault_database_error)?;
+        let candidate = Self {
+            root: root.clone(),
+            database,
+            master_key: opened.master_key,
+            key_protection: crate::VaultKeyProtection::PlaintextDevelopment,
+            key_load_outcome: crate::VaultKeyLoadOutcome::AlreadyCurrent,
+        };
+        let current = candidate.verify()?;
+        if current.mirror_generation() < opened.witness.mirror_generation() {
+            return Err(StateError::VaultRecoveryRollback {
+                witness_generation: opened.witness.mirror_generation(),
+                database_generation: current.mirror_generation(),
+            });
+        }
+        if current.mirror_generation() == opened.witness.mirror_generation()
+            && (current.schema_version() != opened.witness.schema_version()
+                || current.snapshot_id() != opened.witness.snapshot_id())
+        {
+            return Err(StateError::VaultRecoveryFork {
+                generation: current.mirror_generation(),
+            });
+        }
+
+        let key_path = root.join(STATE_VAULT_KEY_FILE);
+        if path_exists(&key_path)? {
+            reject_symlink(&key_path)?;
+        }
+        let installed = install_master_key(&key_path, &candidate.master_key)?;
+        Ok(completed_import(
+            opened.witness,
+            current,
+            installed.protection,
+        ))
     }
 
     pub fn migrate_legacy_snapshot(
@@ -2363,6 +2466,14 @@ mod tests {
             .to_vec())
     }
 
+    fn copy_recovery_fixture(source: &Path, destination: &Path) -> Result<(), Box<dyn Error>> {
+        fs::create_dir_all(destination)?;
+        for relative in ["state", STATE_VAULT_FILE, STATE_VAULT_KEY_FILE] {
+            fs::copy(source.join(relative), destination.join(relative))?;
+        }
+        Ok(())
+    }
+
     #[test]
     fn encrypted_vault_migrates_verifies_and_restores_exact_snapshot() -> Result<(), Box<dyn Error>>
     {
@@ -2522,6 +2633,175 @@ mod tests {
                 Err(StateError::VaultEncryption)
             ));
         }
+        Ok(())
+    }
+
+    #[test]
+    fn portable_key_recovery_is_authenticated_external_and_non_destructive()
+    -> Result<(), Box<dyn Error>> {
+        let workspace = tempfile::tempdir()?;
+        let source = workspace.path().join("source");
+        fs::create_dir_all(&source)?;
+        write(&source.join("state"), b"portable-recovery")?;
+        let vault = EncryptedStateVault::open_or_create(&source)?;
+        let expected = vault.migrate_legacy_snapshot()?.1;
+        assert!(matches!(
+            vault.export_key_recovery(
+                source.join("inside.recovery"),
+                b"correct horse battery staple"
+            ),
+            Err(StateError::VaultRecoveryInsideState(_))
+        ));
+        assert!(matches!(
+            vault.export_key_recovery(workspace.path().join("short.recovery"), b"too short"),
+            Err(StateError::VaultRecoveryPassphraseTooShort(9))
+        ));
+        let recovery = workspace.path().join("vault.recovery");
+        let exported = vault.export_key_recovery(&recovery, b"correct horse battery staple")?;
+        assert_eq!(exported.witness().mirror_generation(), 1);
+        assert_eq!(exported.witness().snapshot_id(), expected.snapshot_id());
+        assert!(fs::read(&recovery)?.starts_with(crate::key_recovery::VAULT_RECOVERY_MAGIC));
+        assert!(matches!(
+            vault.export_key_recovery(&recovery, b"correct horse battery staple"),
+            Err(StateError::VaultRecoveryOutputExists(_))
+        ));
+        drop(vault);
+
+        let target = workspace.path().join("target");
+        copy_recovery_fixture(&source, &target)?;
+        let original_key = fs::read(target.join(STATE_VAULT_KEY_FILE))?;
+        assert!(matches!(
+            EncryptedStateVault::import_key_recovery(
+                &target,
+                &recovery,
+                b"wrong horse battery staple"
+            ),
+            Err(StateError::VaultRecoveryAuthenticationFailed)
+        ));
+        assert_eq!(fs::read(target.join(STATE_VAULT_KEY_FILE))?, original_key);
+
+        let mut tampered = fs::read(&recovery)?;
+        let last = tampered.last_mut().ok_or("recovery package is empty")?;
+        *last ^= 1;
+        let tampered_path = workspace.path().join("tampered.recovery");
+        fs::write(&tampered_path, tampered)?;
+        assert!(matches!(
+            EncryptedStateVault::import_key_recovery(
+                &target,
+                &tampered_path,
+                b"correct horse battery staple"
+            ),
+            Err(StateError::VaultRecoveryAuthenticationFailed)
+        ));
+        assert_eq!(fs::read(target.join(STATE_VAULT_KEY_FILE))?, original_key);
+
+        fs::remove_file(target.join(STATE_VAULT_KEY_FILE))?;
+        let imported = EncryptedStateVault::import_key_recovery(
+            &target,
+            &recovery,
+            b"correct horse battery staple",
+        )?;
+        assert_eq!(imported.witness(), exported.witness());
+        assert_eq!(imported.current(), &expected);
+        assert_eq!(imported.key_protection(), expected_key_protection());
+        assert_eq!(
+            EncryptedStateVault::open_existing(&target)?.verify()?,
+            expected
+        );
+
+        let unrelated = workspace.path().join("unrelated");
+        fs::create_dir_all(&unrelated)?;
+        write(&unrelated.join("state"), b"unrelated")?;
+        let unrelated_vault = EncryptedStateVault::open_or_create(&unrelated)?;
+        unrelated_vault.migrate_legacy_snapshot()?;
+        drop(unrelated_vault);
+        let unrelated_key = fs::read(unrelated.join(STATE_VAULT_KEY_FILE))?;
+        assert!(matches!(
+            EncryptedStateVault::import_key_recovery(
+                &unrelated,
+                &recovery,
+                b"correct horse battery staple"
+            ),
+            Err(StateError::VaultEncryption)
+        ));
+        assert_eq!(
+            fs::read(unrelated.join(STATE_VAULT_KEY_FILE))?,
+            unrelated_key
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn portable_key_recovery_rejects_rollback_and_same_generation_fork()
+    -> Result<(), Box<dyn Error>> {
+        let workspace = tempfile::tempdir()?;
+        let base = workspace.path().join("base");
+        fs::create_dir_all(&base)?;
+        write(&base.join("state"), b"base")?;
+        let vault = EncryptedStateVault::open_or_create(&base)?;
+        assert_eq!(vault.migrate_legacy_snapshot()?.1.mirror_generation(), 1);
+        drop(vault);
+
+        let rollback = workspace.path().join("rollback");
+        let fork_a = workspace.path().join("fork-a");
+        let fork_b = workspace.path().join("fork-b");
+        copy_recovery_fixture(&base, &rollback)?;
+        copy_recovery_fixture(&base, &fork_a)?;
+        copy_recovery_fixture(&base, &fork_b)?;
+
+        let rollback_source = EncryptedStateVault::open_existing(&base)?;
+        rollback_source.begin_dual_write()?;
+        write(&base.join("state"), b"generation-two")?;
+        assert_eq!(
+            rollback_source
+                .finish_dual_write()?
+                .report()
+                .mirror_generation(),
+            2
+        );
+        let rollback_package = workspace.path().join("generation-two.recovery");
+        rollback_source.export_key_recovery(&rollback_package, b"rollback witness passphrase")?;
+        drop(rollback_source);
+        fs::remove_file(rollback.join(STATE_VAULT_KEY_FILE))?;
+        assert!(matches!(
+            EncryptedStateVault::import_key_recovery(
+                &rollback,
+                &rollback_package,
+                b"rollback witness passphrase"
+            ),
+            Err(StateError::VaultRecoveryRollback {
+                witness_generation: 2,
+                database_generation: 1
+            })
+        ));
+        assert!(!rollback.join(STATE_VAULT_KEY_FILE).exists());
+
+        let branch_a = EncryptedStateVault::open_existing(&fork_a)?;
+        branch_a.begin_dual_write()?;
+        write(&fork_a.join("state"), b"branch-a")?;
+        let branch_a_report = branch_a.finish_dual_write()?.report().clone();
+        let fork_package = workspace.path().join("branch-a.recovery");
+        branch_a.export_key_recovery(&fork_package, b"same generation fork passphrase")?;
+        drop(branch_a);
+
+        let branch_b = EncryptedStateVault::open_existing(&fork_b)?;
+        branch_b.begin_dual_write()?;
+        write(&fork_b.join("state"), b"branch-b")?;
+        let branch_b_report = branch_b.finish_dual_write()?.report().clone();
+        drop(branch_b);
+        assert_eq!(branch_a_report.mirror_generation(), 2);
+        assert_eq!(branch_b_report.mirror_generation(), 2);
+        assert_ne!(branch_a_report.snapshot_id(), branch_b_report.snapshot_id());
+        fs::remove_file(fork_b.join(STATE_VAULT_KEY_FILE))?;
+        assert!(matches!(
+            EncryptedStateVault::import_key_recovery(
+                &fork_b,
+                &fork_package,
+                b"same generation fork passphrase"
+            ),
+            Err(StateError::VaultRecoveryFork { generation: 2 })
+        ));
+        assert!(!fork_b.join(STATE_VAULT_KEY_FILE).exists());
         Ok(())
     }
 

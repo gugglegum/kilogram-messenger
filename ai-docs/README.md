@@ -186,6 +186,12 @@ M0.8.12 заменяет raw 32-byte `state-vault.key` versioned envelope. Windo
 без re-encryption DB. Ошибка provider, повреждение envelope или запуск под
 другим Windows user/machine fail-closed до открытия redb. На non-Windows пока
 остаётся явно диагностируемый `plaintext-development` provider.
+M0.8.13 добавляет явный portable recovery package: master key шифруется
+Argon2id-derived key и XChaCha20-Poly1305 только во внешнем no-clobber файле.
+Package связывает key с generation/snapshot witness. Импорт сначала полностью
+аутентифицирует candidate DB, отклоняет rollback и same-generation fork и лишь
+затем атомарно создаёт локальный provider envelope. Согласованный rollback DB
+вместе со старым package по-прежнему требует независимого monotonic witness.
 Seed/root recovery, защищённое хранение root/local/ratchet keys, production
 shadow retirement, global prekey discovery/witness, автоматический
 recovery source discovery/background coordinator, sync summaries, membership
@@ -312,5 +318,7 @@ removal и группы ещё не реализованы.
   реализованный M0.8.11 DB-primary authority/contact trust repository.
 - [`../docs/RFC-0024-protected-vault-key-provider.md`](../docs/RFC-0024-protected-vault-key-provider.md) —
   реализованный M0.8.12 Windows DPAPI key envelope и legacy-key migration.
+- [`../docs/RFC-0025-portable-vault-key-recovery-and-rollback-witness.md`](../docs/RFC-0025-portable-vault-key-recovery-and-rollback-witness.md) —
+  реализованный M0.8.13 portable key recovery и внешний rollback/fork witness.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

@@ -41,7 +41,7 @@ use kilogram_state::{
     EncryptedStateVault, STATE_VAULT_FILE, STATE_VAULT_KEY_FILE, StateDirectoryLock,
     StateMirrorRepository, StateRecordKind, StateTransaction, TrustStateRepository,
     TypedStateRepository, VaultMigrationOutcome, VaultMirrorCommit, VaultMirrorOutcome,
-    VaultPrimaryWriteRepository, VaultReport,
+    VaultPrimaryWriteRepository, VaultRecoveryWitness, VaultReport,
 };
 use kilogram_store::{
     AppendOnlyWriteReceipt, CommandEventReadOverlay, CommandLocalMessageReadOverlay,
@@ -56,6 +56,7 @@ use kilogram_transport_iroh::{
 use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
 use tokio::time::timeout;
+use zeroize::Zeroizing;
 
 const EVENT_STORE_DIRECTORY: &str = "events";
 const LOCAL_MESSAGE_STORE_DIRECTORY: &str = "local-messages";
@@ -68,6 +69,7 @@ const CLIENT_RELAY_WAIT_SECONDS: u64 = 30;
 const STREAM_OPEN_TIMEOUT: Duration = Duration::from_secs(15);
 const TICKET_SIGNATURE_DOMAIN: &[u8] = b"kilogram:connection-ticket-signature:v9\0";
 const TICKET_VERSION: u8 = 9;
+const MAX_RECOVERY_PASSPHRASE_FILE_BYTES: u64 = 4098;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -593,6 +595,36 @@ enum Command {
         state_dir: PathBuf,
     },
 
+    /// Export the vault master key as a portable passphrase-encrypted recovery package.
+    StateVaultKeyExport {
+        /// Directory containing the encrypted vault and local protected key envelope.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// New external file that will receive the portable recovery package.
+        #[arg(long)]
+        output_file: PathBuf,
+
+        /// File containing the recovery passphrase; one trailing CRLF or LF is removed.
+        #[arg(long)]
+        passphrase_file: PathBuf,
+    },
+
+    /// Install a local protected key envelope from a portable recovery package.
+    StateVaultKeyImport {
+        /// Directory containing the encrypted vault database to authenticate.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// External portable recovery package created by state-vault-key-export.
+        #[arg(long)]
+        recovery_file: PathBuf,
+
+        /// File containing the recovery passphrase; one trailing CRLF or LF is removed.
+        #[arg(long)]
+        passphrase_file: PathBuf,
+    },
+
     /// Restore an authenticated vault snapshot into a new, previously absent directory.
     StateVaultRestore {
         /// Directory containing the encrypted vault and its development key file.
@@ -629,6 +661,8 @@ impl Command {
             | Self::StateVaultVerify { state_dir }
             | Self::StateVaultShadowRead { state_dir }
             | Self::StateVaultRecover { state_dir }
+            | Self::StateVaultKeyExport { state_dir, .. }
+            | Self::StateVaultKeyImport { state_dir, .. }
             | Self::StateVaultRestore { state_dir, .. } => Some(state_dir),
             Self::AccountCreate { .. }
             | Self::HistoryRewrapSas { .. }
@@ -649,6 +683,8 @@ impl Command {
                     | Self::StateVaultVerify { .. }
                     | Self::StateVaultShadowRead { .. }
                     | Self::StateVaultRecover { .. }
+                    | Self::StateVaultKeyExport { .. }
+                    | Self::StateVaultKeyImport { .. }
                     | Self::StateVaultRestore { .. }
             )
     }
@@ -1216,6 +1252,16 @@ async fn run_command(command: Command) -> Result<()> {
         Command::StateVaultVerify { state_dir } => verify_state_vault(state_dir),
         Command::StateVaultShadowRead { state_dir } => shadow_read_state_vault(state_dir),
         Command::StateVaultRecover { state_dir } => recover_state_vault(state_dir),
+        Command::StateVaultKeyExport {
+            state_dir,
+            output_file,
+            passphrase_file,
+        } => export_state_vault_key(state_dir, output_file, passphrase_file),
+        Command::StateVaultKeyImport {
+            state_dir,
+            recovery_file,
+            passphrase_file,
+        } => import_state_vault_key(state_dir, recovery_file, passphrase_file),
         Command::StateVaultRestore {
             state_dir,
             output_state_dir,
@@ -1321,12 +1367,108 @@ fn restore_state_vault(state_dir: PathBuf, output_state_dir: PathBuf) -> Result<
     Ok(())
 }
 
+fn export_state_vault_key(
+    state_dir: PathBuf,
+    output_file: PathBuf,
+    passphrase_file: PathBuf,
+) -> Result<()> {
+    let passphrase = read_recovery_passphrase(&passphrase_file)?;
+    let vault = EncryptedStateVault::open_existing(&state_dir)
+        .context("open encrypted transactional state vault for key export")?;
+    let exported = vault
+        .export_key_recovery(&output_file, passphrase.as_slice())
+        .context("export portable vault key recovery package")?;
+    println!("vault_key_recovery_file={}", output_file.display());
+    println!("vault_key_recovery_format=portable-recovery-v1");
+    println!("vault_key_recovery_kdf=argon2id-v19-m65536-t3-p1");
+    print_recovery_witness(exported.witness());
+    println!("status=state-vault-key-exported");
+    Ok(())
+}
+
+fn import_state_vault_key(
+    state_dir: PathBuf,
+    recovery_file: PathBuf,
+    passphrase_file: PathBuf,
+) -> Result<()> {
+    let passphrase = read_recovery_passphrase(&passphrase_file)?;
+    let imported =
+        EncryptedStateVault::import_key_recovery(&state_dir, &recovery_file, passphrase.as_slice())
+            .context("authenticate vault and import portable key recovery package")?;
+    println!("vault_key_recovery_file={}", recovery_file.display());
+    println!("vault_key_recovery_format=portable-recovery-v1");
+    print_recovery_witness(imported.witness());
+    println!(
+        "vault_key_recovery_database_generation={}",
+        imported.current().mirror_generation()
+    );
+    println!(
+        "vault_key_recovery_database_snapshot_id={}",
+        encode_hex(imported.current().snapshot_id())
+    );
+    println!("vault_key_file_format=protected-envelope-v1");
+    println!(
+        "vault_key_protection={}",
+        imported.key_protection().as_str()
+    );
+    println!("vault_key_recovery_rollback_check=passed");
+    println!("status=state-vault-key-imported");
+    Ok(())
+}
+
+fn read_recovery_passphrase(path: &Path) -> Result<Zeroizing<Vec<u8>>> {
+    let metadata = fs::symlink_metadata(path)
+        .with_context(|| format!("inspect recovery passphrase file {}", path.display()))?;
+    ensure!(
+        !metadata.file_type().is_symlink(),
+        "recovery passphrase file must not be a symbolic link: {}",
+        path.display()
+    );
+    ensure!(
+        metadata.is_file(),
+        "recovery passphrase path is not a regular file: {}",
+        path.display()
+    );
+    ensure!(
+        metadata.len() <= MAX_RECOVERY_PASSPHRASE_FILE_BYTES,
+        "recovery passphrase file is too large: {} bytes",
+        metadata.len()
+    );
+    let mut passphrase = Zeroizing::new(
+        fs::read(path)
+            .with_context(|| format!("read recovery passphrase file {}", path.display()))?,
+    );
+    if passphrase.ends_with(b"\r\n") {
+        let trimmed_len = passphrase.len() - 2;
+        passphrase.truncate(trimmed_len);
+    } else if passphrase.ends_with(b"\n") {
+        let trimmed_len = passphrase.len() - 1;
+        passphrase.truncate(trimmed_len);
+    }
+    Ok(passphrase)
+}
+
 fn print_vault_report(report: &VaultReport) {
     println!("vault_schema_version={}", report.schema_version());
     println!("vault_mirror_generation={}", report.mirror_generation());
     println!("vault_record_count={}", report.record_count());
     println!("vault_plaintext_bytes={}", report.plaintext_bytes());
     println!("vault_snapshot_id={}", encode_hex(report.snapshot_id()));
+}
+
+fn print_recovery_witness(witness: &VaultRecoveryWitness) {
+    println!(
+        "vault_key_recovery_witness_schema_version={}",
+        witness.schema_version()
+    );
+    println!(
+        "vault_key_recovery_witness_generation={}",
+        witness.mirror_generation()
+    );
+    println!(
+        "vault_key_recovery_witness_snapshot_id={}",
+        encode_hex(witness.snapshot_id())
+    );
 }
 
 fn print_vault_key_status(vault: &EncryptedStateVault) {
