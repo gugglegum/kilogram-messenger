@@ -67,12 +67,14 @@ The bounded PNG/JPEG QR ceremony is specified in
 [`docs/RFC-0030-bounded-history-recovery-qr-ceremony.md`](docs/RFC-0030-bounded-history-recovery-qr-ceremony.md).
 The opt-in authenticated LAN recovery discovery slice is specified in
 [`docs/RFC-0031-authenticated-lan-recovery-discovery.md`](docs/RFC-0031-authenticated-lan-recovery-discovery.md).
+The consent-bound retry coordinator is specified in
+[`docs/RFC-0032-consent-bound-history-recovery-scheduler.md`](docs/RFC-0032-consent-bound-history-recovery-scheduler.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.4 authenticated LAN recovery discovery — complete
+## Current milestone: M0.9.5 consent-bound recovery retry coordinator — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -179,6 +181,16 @@ discovery never grants consent: the user must still compare the displayed SAS
 and invoke the separate accept command. LAN observers can see the public
 descriptor metadata, so publication remains disabled by default and is not a
 global, anonymous, or privacy-preserving discovery service.
+
+M0.9.5 makes retries possible without turning discovery into implicit trust. An
+exact recipient explicitly confirms SAS once and signs a short-lived local plan
+that binds the source/device list, conversation, range, page size, route, and
+network/power policy. A bounded runner may then discover a fresh endpoint after
+the source restarts, but only an otherwise exact matching descriptor can resume
+the existing signed checkpoint chain. Mobile and unknown networks are denied by
+default. The CLI accepts caller-supplied network/power context and releases the
+device-state lock during discovery and backoff; real OS sensing and scheduling
+remain platform-client work.
 
 M0.8.1 adds a reversible encrypted shadow snapshot of the entire device state.
 `state-vault-migrate` publishes encrypted records and a keyed manifest in one

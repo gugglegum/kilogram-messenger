@@ -1681,16 +1681,61 @@ picker, background scheduler и network/power policy не реализованы
 контракт —
 [`../docs/RFC-0031-authenticated-lan-recovery-discovery.md`](../docs/RFC-0031-authenticated-lan-recovery-discovery.md).
 
+### M0.9.5 — consent-bound history recovery retry coordinator: выполнено
+
+Реализовано:
+
+- `history-recovery-plan-approve` после exact recipient/conversation/
+  membership/authority/SAS preflight создаёт no-clobber recipient-signed plan;
+- plan v1 до 64 KiB связывает exact device list, source/recipient, полный SAS,
+  conversation, range, page size, route policy, execution policy и expiry
+  `1..=168` hours;
+- default разрешает Ethernet/Wi-Fi и battery, запрещает mobile/unknown;
+  `--deny-ethernet`, `--deny-wifi`, `--allow-mobile`,
+  `--allow-unknown-network`, `--require-external-power` подписываются в plan;
+- `history-recovery-plan-run` получает caller-supplied network/power context и
+  blocked policy завершает до discovery/connection;
+- runner выполняет до 8 attempts, discovery `1..=30` s и fixed delay
+  `0..=300` s, сохраняя M0.9.4 datagram/candidate bounds;
+- source restart и новый Endpoint ID допустимы, только если свежая signed URI
+  exact-match plan по device-list/source/recipient/SAS/conversation/range/page/
+  route; новая authority revision требует нового approval;
+- committed pages/checkpoints переживают failure и используются новой попыткой;
+- runner не держит state lock/vault intent во время discovery/backoff; короткие
+  exclusive sections защищают preflight, active transfer и checkpoint check;
+- это bounded CLI coordinator, не OS daemon и не автоматический network sensor;
+- wire, URI v1, ticket v9, ALPN `/7` и checkpoint format не изменились.
+
+Проверки:
+
+- unit tests покрывают recipient signature/round-trip/expiry, fresh endpoint
+  matching и fail-closed network/power matrix;
+- direct process smoke `.tmp/m095-smoke-20260902-022156` отклонил mobile до UDP,
+  получил `no-candidate` на первой разрешённой попытке и запустил foreground
+  identity на том же state во время backoff;
+- после source restart attempt 2 обнаружил новый Endpoint ID, открыл ровно один
+  authenticated connection и перенёс две atomic pages;
+- два checkpoint и source/recipient history совпали byte-for-byte;
+- все 112 workspace tests, rustfmt, strict Clippy и release build проходят.
+
+Граница среза: network/power context передаёт caller, retry state между
+процессами не сохраняется, backoff fixed без jitter, lookup остаётся LAN-only.
+OS background task/service, trusted platform adapters и wide-area discovery не
+реализованы. Полный контракт —
+[`../docs/RFC-0032-consent-bound-history-recovery-scheduler.md`](../docs/RFC-0032-consent-bound-history-recovery-scheduler.md).
+
 ### Следующий этап
 
-1. Добавить power/network-aware background retry coordinator поверх recovery
-   plan; discovery не должен означать automatic consent.
-2. Спроектировать privacy-preserving wide-area publication/gossip/mailbox и
+1. Добавить persistent scheduler state: exponential backoff с jitter,
+   monotonic/rollback-safe `next_attempt_at`, cancellation и restart resume.
+2. Добавить platform adapter boundary и первый Windows network/power probe без
+   встраивания Win32 деталей в protocol/core.
+3. Спроектировать privacy-preserving wide-area publication/gossip/mailbox и
    first-contact freshness; M0.9.4 закрывает только явный LAN opt-in.
-3. Добавить live camera/clipboard и GUI confirmation позже в platform clients;
+4. Добавить live camera/clipboard и GUI confirmation позже в platform clients;
    CLI image-file ceremony уже закрыта M0.9.3.
-4. Membership removal и group governance проектировать вместе с ordered
+5. Membership removal и group governance проектировать вместе с ordered
    security events и MLS epoch.
-5. Production macOS/Linux local provider, согласованный monotonic witness,
+6. Production macOS/Linux local provider, согласованный monotonic witness,
    master-key rotation, seed/root recovery и compact Merkle/range summary
    остаются отдельными направлениями.

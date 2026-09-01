@@ -157,6 +157,7 @@ checkpoint format не изменились. QR/text transfer остаются �
   privacy-preserving lookup и first-contact freshness;
 - несколько simultaneous local clients и явный interface selection;
 - GUI candidate picker, live camera/clipboard и OS deep-link handler;
-- background retry scheduler с power, Wi-Fi/Ethernet и metered/mobile policy;
+- bounded consent-bound retry coordinator с caller-supplied network/power
+  context реализован в M0.9.5; настоящий OS background service остаётся открыт;
 - multi-source recovery claims и безопасный recovery от устройства собеседника;
 - rate limiting, Sybil/eclipsing resistance и platform firewall UX.

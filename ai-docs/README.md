@@ -105,7 +105,10 @@ multi-source claim reconciliation. M0.7.9 добавил signed append-only chec
   no-clobber PNG renderer и bounded exact-one PNG/JPEG decoder; inspect/accept
   теперь принимают QR image напрямую. M0.9.4 добавил opt-in signed URI
   publication через bounded IPv4 LAN multicast и exact-recipient discovery без
-  Iroh connection; SAS и accept остаются отдельными. Reconciliation выбирает
+  Iroh connection. M0.9.5 добавил recipient-signed execution plan: fresh
+  endpoint может автоматически продолжить recovery только при exact совпадении
+  source/device-list/SAS/conversation/range/page/route и разрешённой
+  network/power policy. Reconciliation выбирает
   inventory только при совпадении двух или более полных явно собранных claims и
   всё равно не обещает global completeness.
 M0.8.1 добавил первый production-storage bridge: `state-vault-migrate` одной
@@ -267,9 +270,10 @@ summaries, membership removal и группы ещё не реализованы
 
 1. Добавить production macOS/Linux local key provider, согласованный monotonic
    witness и lifecycle обновления portable recovery package.
-2. Расширить реализованный M0.9.4 LAN discovery до privacy-preserving wide-area
-   publication/gossip/mailbox и power/network-aware retry; live camera/
-   clipboard оставить platform UI поверх готового M0.9.3 image contract.
+2. Добавить настоящий OS background service и trusted adapters для network/
+   metered/roaming/power context поверх M0.9.5 bounded coordinator; расширить
+   M0.9.4 LAN discovery до privacy-preserving wide-area publication/gossip/
+   mailbox. Live camera/clipboard оставить platform UI поверх M0.9.3.
 3. Спроектировать membership removal вместе с ordered security log и MLS epoch;
    отдельно — gossip/witness для first-contact freshness.
 4. Спроектировать seed/recovery authority, protected root storage, root
@@ -350,5 +354,7 @@ summaries, membership removal и группы ещё не реализованы
   реализованный M0.9.3 no-clobber PNG renderer и bounded exact-one PNG/JPEG QR import.
 - [`../docs/RFC-0031-authenticated-lan-recovery-discovery.md`](../docs/RFC-0031-authenticated-lan-recovery-discovery.md) —
   реализованный M0.9.4 opt-in bounded LAN publication и verified no-connect discovery.
+- [`../docs/RFC-0032-consent-bound-history-recovery-scheduler.md`](../docs/RFC-0032-consent-bound-history-recovery-scheduler.md) —
+  реализованный M0.9.5 recipient-signed retry plan и bounded fresh-endpoint coordinator.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

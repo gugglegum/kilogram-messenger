@@ -63,6 +63,7 @@ use zeroize::Zeroizing;
 
 mod recovery_discovery;
 mod recovery_link;
+mod recovery_plan;
 mod recovery_qr;
 
 use recovery_discovery::{
@@ -74,6 +75,11 @@ use recovery_link::{
     DEFAULT_HISTORY_RECOVERY_LINK_VALIDITY_SECONDS, HistoryRecoveryLinkOptions,
     MAX_HISTORY_RECOVERY_LINK_TEXT_BYTES, MAX_HISTORY_RECOVERY_LINK_VALIDITY_SECONDS,
     SignedHistoryRecoveryLink,
+};
+use recovery_plan::{
+    DEFAULT_HISTORY_RECOVERY_PLAN_VALIDITY_HOURS, HistoryRecoveryPlanOptions,
+    MAX_HISTORY_RECOVERY_PLAN_BYTES, MAX_HISTORY_RECOVERY_PLAN_VALIDITY_HOURS,
+    RecoveryExecutionPolicy, RecoveryNetworkClass, RecoveryPowerSource, SignedHistoryRecoveryPlan,
 };
 use recovery_qr::{
     RecoveryQrDecodeReport, RecoveryQrRenderReport, decode_recovery_link_qr_image,
@@ -95,6 +101,10 @@ const CLI_COORDINATOR_STACK_BYTES: usize = 8 * 1024 * 1024;
 const TICKET_SIGNATURE_DOMAIN: &[u8] = b"kilogram:connection-ticket-signature:v9\0";
 const TICKET_VERSION: u8 = 9;
 const MAX_RECOVERY_PASSPHRASE_FILE_BYTES: u64 = 4098;
+const DEFAULT_HISTORY_RECOVERY_SCHEDULER_ATTEMPTS: usize = 3;
+const MAX_HISTORY_RECOVERY_SCHEDULER_ATTEMPTS: usize = 8;
+const DEFAULT_HISTORY_RECOVERY_RETRY_DELAY_SECONDS: u64 = 5;
+const MAX_HISTORY_RECOVERY_RETRY_DELAY_SECONDS: u64 = 300;
 
 type CommandFuture = Pin<Box<dyn Future<Output = Result<()>>>>;
 
@@ -543,6 +553,112 @@ enum Command {
         output_link_file: Option<PathBuf>,
     },
 
+    /// Explicitly approve and sign a bounded background recovery plan without connecting.
+    HistoryRecoveryPlanApprove {
+        /// Directory containing the exact recipient device named by the link.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Recovery URI copied from the source listener.
+        #[arg(long, conflicts_with_all = ["link_file", "qr_file"])]
+        link: Option<String>,
+
+        /// Read the recovery URI from this file.
+        #[arg(long, conflicts_with_all = ["link", "qr_file"])]
+        link_file: Option<PathBuf>,
+
+        /// Decode the recovery URI from one bounded PNG or JPEG containing exactly one QR.
+        #[arg(long, conflicts_with_all = ["link", "link_file"])]
+        qr_file: Option<PathBuf>,
+
+        /// Local conversation label whose derived ID must match the signed link.
+        #[arg(long)]
+        conversation: String,
+
+        /// SAS independently compared before granting durable retry consent.
+        #[arg(long)]
+        confirm_sas: String,
+
+        /// New no-clobber file that will receive the recipient-signed plan.
+        #[arg(long)]
+        plan_file: PathBuf,
+
+        /// Do not run this plan while the platform reports Ethernet.
+        #[arg(long)]
+        deny_ethernet: bool,
+
+        /// Do not run this plan while the platform reports Wi-Fi.
+        #[arg(long)]
+        deny_wifi: bool,
+
+        /// Permit this plan while the platform reports a mobile/metered network.
+        #[arg(long)]
+        allow_mobile: bool,
+
+        /// Permit this plan when the platform cannot classify the network.
+        #[arg(long)]
+        allow_unknown_network: bool,
+
+        /// Permit retries only while external power is reported.
+        #[arg(long)]
+        require_external_power: bool,
+
+        /// Lifetime of the recipient-signed retry consent.
+        #[arg(
+            long,
+            default_value_t = DEFAULT_HISTORY_RECOVERY_PLAN_VALIDITY_HOURS,
+            value_parser = clap::value_parser!(u64).range(1..=MAX_HISTORY_RECOVERY_PLAN_VALIDITY_HOURS)
+        )]
+        valid_for_hours: u64,
+    },
+
+    /// Run bounded discovery/recovery retries under a previously signed local plan.
+    HistoryRecoveryPlanRun {
+        /// Directory containing the recipient device and recovery checkpoints.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Recipient-signed plan created by history-recovery-plan-approve.
+        #[arg(long)]
+        plan_file: PathBuf,
+
+        /// Local conversation label whose derived ID must match the approved plan.
+        #[arg(long)]
+        conversation: String,
+
+        /// Current network class supplied by the platform integration.
+        #[arg(long, value_enum)]
+        network_class: RecoveryNetworkClass,
+
+        /// Current power source supplied by the platform integration.
+        #[arg(long, value_enum)]
+        power_source: RecoveryPowerSource,
+
+        /// Maximum discovery/recovery attempts in this bounded run.
+        #[arg(long, default_value_t = DEFAULT_HISTORY_RECOVERY_SCHEDULER_ATTEMPTS)]
+        max_attempts: usize,
+
+        /// LAN discovery duration within each attempt.
+        #[arg(
+            long,
+            default_value_t = DEFAULT_DISCOVERY_WAIT_SECONDS,
+            value_parser = clap::value_parser!(u64).range(1..=MAX_DISCOVERY_WAIT_SECONDS)
+        )]
+        discovery_wait_seconds: u64,
+
+        /// Delay between attempts; zero is useful for deterministic tests.
+        #[arg(
+            long,
+            default_value_t = DEFAULT_HISTORY_RECOVERY_RETRY_DELAY_SECONDS,
+            value_parser = clap::value_parser!(u64).range(0..=MAX_HISTORY_RECOVERY_RETRY_DELAY_SECONDS)
+        )]
+        retry_delay_seconds: u64,
+
+        /// Maximum pages transferred over any one authenticated connection.
+        #[arg(long, default_value_t = MAX_HISTORY_RECOVERY_PAGES_PER_SESSION)]
+        max_pages: usize,
+    },
+
     /// Reconcile source-signed completeness claims from locally stored rewrap bundles.
     HistoryRewrapReconcile {
         /// Directory containing imported history-rewrap bundles.
@@ -798,6 +914,8 @@ impl Command {
             | Self::HistoryRecoveryResume { state_dir, .. }
             | Self::HistoryRecoveryLinkAccept { state_dir, .. }
             | Self::HistoryRecoveryLinkDiscover { state_dir, .. }
+            | Self::HistoryRecoveryPlanApprove { state_dir, .. }
+            | Self::HistoryRecoveryPlanRun { state_dir, .. }
             | Self::HistoryRewrapReconcile { state_dir, .. }
             | Self::History { state_dir, .. }
             | Self::Identity { state_dir }
@@ -836,7 +954,12 @@ impl Command {
                     | Self::StateVaultKeyExport { .. }
                     | Self::StateVaultKeyImport { .. }
                     | Self::StateVaultRestore { .. }
+                    | Self::HistoryRecoveryPlanRun { .. }
             )
+    }
+
+    fn uses_outer_state_lock(&self) -> bool {
+        self.state_directory().is_some() && !matches!(self, Self::HistoryRecoveryPlanRun { .. })
     }
 }
 
@@ -1154,7 +1277,9 @@ async fn async_main() -> Result<()> {
     let state_directory = command.state_directory().map(Path::to_path_buf);
     let uses_state_vault_dual_write = command.uses_state_vault_dual_write();
     let _state_lock = command
-        .state_directory()
+        .uses_outer_state_lock()
+        .then(|| command.state_directory())
+        .flatten()
         .map(StateDirectoryLock::acquire)
         .transpose()
         .context("lock state directory and recover interrupted local transaction")?;
@@ -1172,10 +1297,17 @@ async fn async_main() -> Result<()> {
         Some(guard) => guard.finish(),
         None => Ok(()),
     };
-    match (command_result, mirror_result) {
-        (Ok(()), Ok(())) => Ok(()),
+    combine_operation_and_mirror(command_result, mirror_result)
+}
+
+fn combine_operation_and_mirror<T>(
+    operation_result: Result<T>,
+    mirror_result: Result<()>,
+) -> Result<T> {
+    match (operation_result, mirror_result) {
+        (Ok(value), Ok(())) => Ok(value),
         (Err(command_error), Ok(())) => Err(command_error),
-        (Ok(()), Err(mirror_error)) => Err(mirror_error),
+        (Ok(_), Err(mirror_error)) => Err(mirror_error),
         (Err(command_error), Err(mirror_error)) => Err(command_error.context(format!(
             "command failed and state vault dual-write completion also failed: {mirror_error:#}"
         ))),
@@ -1256,6 +1388,21 @@ impl VaultDualWriteGuard {
         print_vault_mirror_commit(&commit);
         Ok(())
     }
+}
+
+fn with_locked_state<T>(
+    state_directory: &Path,
+    operation: impl FnOnce() -> Result<T>,
+) -> Result<T> {
+    let _state_lock = StateDirectoryLock::acquire(state_directory)
+        .context("lock state directory for bounded scheduler operation")?;
+    let vault_guard = VaultDualWriteGuard::prepare(state_directory)?;
+    let operation_result = operation();
+    let mirror_result = match vault_guard {
+        Some(guard) => guard.finish(),
+        None => Ok(()),
+    };
+    combine_operation_and_mirror(operation_result, mirror_result)
 }
 
 fn vault_identity_shadow_outcome_name(outcome: VaultIdentityShadowOutcome) -> &'static str {
@@ -1506,6 +1653,62 @@ async fn run_command(command: Command) -> Result<()> {
                 max_candidates,
                 output_link_file,
             )
+            .await
+        }
+        Command::HistoryRecoveryPlanApprove {
+            state_dir,
+            link,
+            link_file,
+            qr_file,
+            conversation,
+            confirm_sas,
+            plan_file,
+            deny_ethernet,
+            deny_wifi,
+            allow_mobile,
+            allow_unknown_network,
+            require_external_power,
+            valid_for_hours,
+        } => {
+            approve_history_recovery_plan(
+                state_dir,
+                link,
+                link_file,
+                qr_file,
+                conversation,
+                confirm_sas,
+                plan_file,
+                deny_ethernet,
+                deny_wifi,
+                allow_mobile,
+                allow_unknown_network,
+                require_external_power,
+                valid_for_hours,
+            )
+            .await
+        }
+        Command::HistoryRecoveryPlanRun {
+            state_dir,
+            plan_file,
+            conversation,
+            network_class,
+            power_source,
+            max_attempts,
+            discovery_wait_seconds,
+            retry_delay_seconds,
+            max_pages,
+        } => {
+            Box::pin(run_history_recovery_plan(
+                state_dir,
+                plan_file,
+                conversation,
+                network_class,
+                power_source,
+                max_attempts,
+                discovery_wait_seconds,
+                retry_delay_seconds,
+                max_pages,
+            ))
             .await
         }
         Command::HistoryRewrapReconcile {
@@ -4434,6 +4637,439 @@ async fn discover_history_recovery_links(
     }
     println!("status=history-recovery-link-discovered");
     Ok(())
+}
+
+async fn load_history_recovery_plan(path: &Path) -> Result<SignedHistoryRecoveryPlan> {
+    let metadata = tokio::fs::metadata(path)
+        .await
+        .with_context(|| format!("inspect history recovery plan {}", path.display()))?;
+    ensure!(
+        metadata.is_file(),
+        "history recovery plan input is not a regular file"
+    );
+    ensure!(
+        (1..=MAX_HISTORY_RECOVERY_PLAN_BYTES as u64).contains(&metadata.len()),
+        "history recovery plan file must contain 1..={MAX_HISTORY_RECOVERY_PLAN_BYTES} bytes"
+    );
+    let bytes = tokio::fs::read(path)
+        .await
+        .with_context(|| format!("read history recovery plan {}", path.display()))?;
+    SignedHistoryRecoveryPlan::decode(&bytes)
+}
+
+fn print_history_recovery_plan(plan: &SignedHistoryRecoveryPlan) -> Result<()> {
+    let policy = plan.execution_policy();
+    println!("history_recovery_plan_id={}", encode_hex(&plan.plan_id()?));
+    println!("account_id={}", plan.account_id());
+    println!("source_device_id={}", plan.source_device_id());
+    println!("recipient_device_id={}", plan.recipient_device_id());
+    println!("conversation_id={}", plan.conversation_id());
+    println!(
+        "authority_revision={}",
+        plan.account_device_list().revision()
+    );
+    println!("history_rewrap_sas={}", plan.sas());
+    println!(
+        "history_recovery_approved_range={}-{}",
+        plan.approved_range_start(),
+        plan.approved_range_end()
+    );
+    println!("history_recovery_page_size={}", plan.page_size());
+    println!("route_policy={}", plan.route_policy().as_str());
+    println!(
+        "history_recovery_plan_allow_ethernet={}",
+        policy.allow_ethernet()
+    );
+    println!("history_recovery_plan_allow_wifi={}", policy.allow_wifi());
+    println!(
+        "history_recovery_plan_allow_mobile={}",
+        policy.allow_mobile()
+    );
+    println!(
+        "history_recovery_plan_allow_unknown_network={}",
+        policy.allow_unknown_network()
+    );
+    println!(
+        "history_recovery_plan_require_external_power={}",
+        policy.require_external_power()
+    );
+    println!(
+        "history_recovery_plan_approved_at={}",
+        plan.approved_at_unix_seconds()
+    );
+    println!(
+        "history_recovery_plan_expires_at={}",
+        plan.expires_at_unix_seconds()
+    );
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn approve_history_recovery_plan(
+    state_dir: PathBuf,
+    link: Option<String>,
+    link_file: Option<PathBuf>,
+    qr_file: Option<PathBuf>,
+    conversation: String,
+    confirmed_sas: String,
+    plan_file: PathBuf,
+    deny_ethernet: bool,
+    deny_wifi: bool,
+    allow_mobile: bool,
+    allow_unknown_network: bool,
+    require_external_power: bool,
+    valid_for_hours: u64,
+) -> Result<()> {
+    let loaded = load_history_recovery_link(link, link_file, qr_file).await?;
+    let now_unix_seconds = unix_time_now().context("read time for recovery plan approval")?;
+    let device_state = load_command_device_state(&state_dir)?;
+    let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
+    let recipient_certificate = trust
+        .load_certificate()
+        .context("load recovery plan recipient certificate")?;
+    let local_authority = trust
+        .load_own_authority_snapshot(&recipient_certificate)
+        .context("load recovery plan recipient authority snapshot")?;
+    loaded
+        .link
+        .verify_for_recipient(now_unix_seconds, &recipient_certificate)?;
+    let conversation_id = ConversationId::from_label(&conversation);
+    ensure!(
+        loaded.link.conversation_id() == conversation_id,
+        "history recovery link is bound to a different conversation"
+    );
+    let membership = trust
+        .load_conversation_membership(conversation_id.scope_id())
+        .context("load recovery plan conversation membership")?;
+    membership
+        .require_member(recipient_certificate.account_id())
+        .context("verify recovery plan recipient conversation membership")?;
+    let link_authority = loaded.link.account_device_list().authority_snapshot();
+    ensure!(
+        link_authority.revision() > local_authority.revision()
+            || (link_authority.revision() == local_authority.revision()
+                && link_authority == &local_authority),
+        "history recovery link authority is older than or conflicts with local authority"
+    );
+    let sas = loaded.link.sas()?;
+    ensure!(
+        confirmed_sas.trim() == sas.to_string(),
+        "recipient confirmed SAS {}, but the signed history recovery link derives {sas}",
+        confirmed_sas.trim()
+    );
+    let execution_policy = RecoveryExecutionPolicy::new(
+        !deny_ethernet,
+        !deny_wifi,
+        allow_mobile,
+        allow_unknown_network,
+        require_external_power,
+    )?;
+    let plan = SignedHistoryRecoveryPlan::approve(
+        device_state.identity(),
+        HistoryRecoveryPlanOptions {
+            link: loaded.link,
+            execution_policy,
+            approved_at_unix_seconds: now_unix_seconds,
+            valid_for_hours,
+        },
+    )?;
+    write_new_authority_file(&plan_file, &plan.encode()?)
+        .with_context(|| format!("write history recovery plan to {}", plan_file.display()))?;
+
+    print_history_recovery_link_input(&loaded.input);
+    print_history_recovery_plan(&plan)?;
+    println!("history_recovery_plan_file={}", plan_file.display());
+    println!("history_recovery_plan_user_consent=approved");
+    println!("connection_attempted=false");
+    println!("status=history-recovery-plan-approved");
+    Ok(())
+}
+
+fn verify_history_recovery_plan_locally(
+    state_dir: &Path,
+    conversation: &str,
+    plan: &SignedHistoryRecoveryPlan,
+    now_unix_seconds: u64,
+) -> Result<(DeviceState, DeviceCertificate)> {
+    plan.verify_at(now_unix_seconds)?;
+    let device_state = load_command_device_state(state_dir)?;
+    let trust = CommandTrustReadRepository::open(state_dir, &device_state)?;
+    let recipient_certificate = trust
+        .load_certificate()
+        .context("load approved recovery plan recipient certificate")?;
+    ensure!(
+        recipient_certificate.device_id() == plan.recipient_device_id(),
+        "history recovery plan was signed by a different recipient device"
+    );
+    ensure!(
+        recipient_certificate.account_id() == plan.account_id(),
+        "history recovery plan belongs to a different account"
+    );
+    ensure!(
+        plan.account_device_list()
+            .certificate_for(recipient_certificate.device_id())
+            == Some(&recipient_certificate),
+        "local recipient certificate is not present exactly in the recovery plan device list"
+    );
+    ensure!(
+        ConversationId::from_label(conversation) == plan.conversation_id(),
+        "history recovery plan is bound to a different conversation"
+    );
+    let local_authority = trust
+        .load_own_authority_snapshot(&recipient_certificate)
+        .context("load local authority for approved recovery plan")?;
+    let plan_authority = plan.account_device_list().authority_snapshot();
+    ensure!(
+        plan_authority.revision() > local_authority.revision()
+            || (plan_authority.revision() == local_authority.revision()
+                && plan_authority == &local_authority),
+        "history recovery plan authority is older than or conflicts with local authority"
+    );
+    let membership = trust
+        .load_conversation_membership(plan.conversation_id().scope_id())
+        .context("load approved recovery plan conversation membership")?;
+    membership
+        .require_member(plan.account_id())
+        .context("verify approved recovery plan conversation membership")?;
+    Ok((device_state, recipient_certificate))
+}
+
+fn latest_checkpoint_for_plan(
+    state_dir: &Path,
+    device_state: &DeviceState,
+    plan: &SignedHistoryRecoveryPlan,
+) -> Result<SignedHistoryRecoveryCheckpoint> {
+    let approved_range_start = usize::try_from(plan.approved_range_start())
+        .context("approved recovery plan range start cannot be represented")?;
+    let approved_event_count = usize::try_from(plan.approved_event_count())
+        .context("approved recovery plan event count cannot be represented")?;
+    let page_size = usize::try_from(plan.page_size())
+        .context("approved recovery plan page size cannot be represented")?;
+    let initial = SignedHistoryRecoveryCheckpoint::start(
+        device_state.identity(),
+        plan.account_id(),
+        plan.conversation_id(),
+        plan.source_device_id(),
+        plan.sas(),
+        approved_range_start,
+        approved_event_count,
+        page_size,
+    )?;
+    load_latest_history_recovery_checkpoint(state_dir, initial)
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn run_approved_recovery_attempt(
+    state_dir: &Path,
+    conversation: &str,
+    plan: &SignedHistoryRecoveryPlan,
+    link: &SignedHistoryRecoveryLink,
+    approved_range_start: usize,
+    approved_event_count: usize,
+    page_size: usize,
+    max_pages: usize,
+) -> Result<()> {
+    let _state_lock = StateDirectoryLock::acquire(state_dir)
+        .context("lock state directory for active recovery attempt")?;
+    let vault_guard = VaultDualWriteGuard::prepare(state_dir)?;
+    let preflight =
+        verify_history_recovery_plan_locally(state_dir, conversation, plan, unix_time_now()?);
+    let operation_result = match preflight {
+        Ok(_) => {
+            Box::pin(resume_history_recovery_inner(
+                state_dir.to_path_buf(),
+                None,
+                None,
+                Some(HistoryRecoveryBootstrap::from_link(link)),
+                conversation.to_owned(),
+                plan.source_device_id(),
+                approved_range_start,
+                approved_event_count,
+                page_size,
+                max_pages,
+                plan.sas().to_string(),
+                plan.account_id(),
+            ))
+            .await
+        }
+        Err(error) => Err(error),
+    };
+    let mirror_result = match vault_guard {
+        Some(guard) => guard.finish(),
+        None => Ok(()),
+    };
+    combine_operation_and_mirror(operation_result, mirror_result)
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn run_history_recovery_plan(
+    state_dir: PathBuf,
+    plan_file: PathBuf,
+    conversation: String,
+    network_class: RecoveryNetworkClass,
+    power_source: RecoveryPowerSource,
+    max_attempts: usize,
+    discovery_wait_seconds: u64,
+    retry_delay_seconds: u64,
+    max_pages: usize,
+) -> Result<()> {
+    ensure!(
+        (1..=MAX_HISTORY_RECOVERY_SCHEDULER_ATTEMPTS).contains(&max_attempts),
+        "--max-attempts must be between 1 and {MAX_HISTORY_RECOVERY_SCHEDULER_ATTEMPTS}"
+    );
+    ensure!(
+        (1..=MAX_DISCOVERY_WAIT_SECONDS).contains(&discovery_wait_seconds),
+        "--discovery-wait-seconds must be between 1 and {MAX_DISCOVERY_WAIT_SECONDS}"
+    );
+    ensure!(
+        retry_delay_seconds <= MAX_HISTORY_RECOVERY_RETRY_DELAY_SECONDS,
+        "--retry-delay-seconds must not exceed {MAX_HISTORY_RECOVERY_RETRY_DELAY_SECONDS}"
+    );
+    ensure!(
+        (1..=MAX_HISTORY_RECOVERY_PAGES_PER_SESSION).contains(&max_pages),
+        "--max-pages must be between 1 and {MAX_HISTORY_RECOVERY_PAGES_PER_SESSION}"
+    );
+    let plan = load_history_recovery_plan(&plan_file).await?;
+    let now_unix_seconds = unix_time_now().context("read time for recovery scheduler")?;
+    let (recipient_certificate, initially_complete) = with_locked_state(&state_dir, || {
+        let (device_state, recipient_certificate) = verify_history_recovery_plan_locally(
+            &state_dir,
+            &conversation,
+            &plan,
+            now_unix_seconds,
+        )?;
+        let complete = latest_checkpoint_for_plan(&state_dir, &device_state, &plan)?.is_complete();
+        Ok((recipient_certificate, complete))
+    })?;
+    print_history_recovery_plan(&plan)?;
+    println!("history_recovery_plan_file={}", plan_file.display());
+    println!("history_recovery_plan_user_consent=previously-approved");
+    println!("history_recovery_network_context_source=caller-supplied");
+    println!(
+        "history_recovery_current_network_class={}",
+        network_class.as_str()
+    );
+    println!(
+        "history_recovery_current_power_source={}",
+        power_source.as_str()
+    );
+    let policy_allowed = plan.execution_policy().allows(network_class, power_source);
+    println!("history_recovery_execution_policy_allowed={policy_allowed}");
+
+    if initially_complete {
+        println!("history_recovery_scheduler_discovery_attempted=false");
+        println!("connection_attempted=false");
+        println!("history_recovery_complete=true");
+        println!("status=history-recovery-scheduler-complete");
+        return Ok(());
+    }
+    if !policy_allowed {
+        println!("history_recovery_scheduler_discovery_attempted=false");
+        println!("connection_attempted=false");
+        println!("status=history-recovery-scheduler-policy-blocked");
+        bail!("current network/power context is blocked by the recipient-signed recovery plan");
+    }
+
+    let approved_range_start = usize::try_from(plan.approved_range_start())
+        .context("approved recovery plan range start cannot be represented")?;
+    let approved_event_count = usize::try_from(plan.approved_event_count())
+        .context("approved recovery plan event count cannot be represented")?;
+    let page_size = usize::try_from(plan.page_size())
+        .context("approved recovery plan page size cannot be represented")?;
+
+    for attempt in 1..=max_attempts {
+        plan.verify_at(unix_time_now()?)?;
+        println!("history_recovery_scheduler_attempt={attempt}");
+        println!("history_recovery_scheduler_discovery_attempted=true");
+        let scan_time = unix_time_now()?;
+        let scan = discover_recovery_links(
+            Duration::from_secs(discovery_wait_seconds),
+            DEFAULT_DISCOVERY_CANDIDATES,
+            |encoded| {
+                let Ok(link) = SignedHistoryRecoveryLink::decode_text(encoded) else {
+                    return false;
+                };
+                link.verify_for_recipient(scan_time, &recipient_certificate)
+                    .is_ok()
+                    && plan.matches_link(&link).unwrap_or(false)
+            },
+        )
+        .await?;
+        println!(
+            "history_recovery_scheduler_attempt_{attempt}_datagrams_received={}",
+            scan.datagrams_received
+        );
+        println!(
+            "history_recovery_scheduler_attempt_{attempt}_candidates={}",
+            scan.candidates.len()
+        );
+        println!(
+            "history_recovery_scheduler_attempt_{attempt}_candidate_limit_reached={}",
+            scan.candidate_limit_reached
+        );
+
+        if scan.candidates.len() == 1 && !scan.candidate_limit_reached {
+            let link = SignedHistoryRecoveryLink::decode_text(&scan.candidates[0])
+                .context("decode scheduler discovery candidate")?;
+            println!(
+                "history_recovery_scheduler_attempt_{attempt}_target_endpoint_id={}",
+                link.endpoint().id
+            );
+            println!("connection_attempted=true");
+            let attempt_result = run_approved_recovery_attempt(
+                &state_dir,
+                &conversation,
+                &plan,
+                &link,
+                approved_range_start,
+                approved_event_count,
+                page_size,
+                max_pages,
+            )
+            .await;
+            match attempt_result {
+                Ok(()) => {
+                    let complete = with_locked_state(&state_dir, || {
+                        let (device_state, _) = verify_history_recovery_plan_locally(
+                            &state_dir,
+                            &conversation,
+                            &plan,
+                            unix_time_now()?,
+                        )?;
+                        Ok(
+                            latest_checkpoint_for_plan(&state_dir, &device_state, &plan)?
+                                .is_complete(),
+                        )
+                    })?;
+                    if complete {
+                        println!("history_recovery_scheduler_attempt_{attempt}_result=completed");
+                        println!("status=history-recovery-scheduler-complete");
+                        return Ok(());
+                    }
+                    println!("history_recovery_scheduler_attempt_{attempt}_result=paused");
+                }
+                Err(error) => {
+                    let message = error.to_string().replace(['\r', '\n'], " ");
+                    println!("history_recovery_scheduler_attempt_{attempt}_result=failed");
+                    println!("history_recovery_scheduler_attempt_{attempt}_error={message}");
+                }
+            }
+        } else if scan.candidates.is_empty() {
+            println!("history_recovery_scheduler_attempt_{attempt}_result=no-candidate");
+            println!("connection_attempted=false");
+        } else {
+            println!("history_recovery_scheduler_attempt_{attempt}_result=ambiguous");
+            println!("connection_attempted=false");
+        }
+
+        if attempt < max_attempts {
+            println!("history_recovery_scheduler_retry_delay_seconds={retry_delay_seconds}");
+            tokio::time::sleep(Duration::from_secs(retry_delay_seconds)).await;
+        }
+    }
+
+    println!("status=history-recovery-scheduler-exhausted");
+    bail!("history recovery scheduler exhausted {max_attempts} bounded attempts")
 }
 
 fn accept_history_recovery_link(

@@ -491,6 +491,17 @@ toolchain `1.98.0` для воспроизводимой разработки.
     smoke `.tmp/m094-smoke-20260902-015219` проверил wrong-device rejection,
     verified unique discovery без connection и отдельный SAS-gated accept с
     двумя recovery pages и identical history.
+61. M0.9.5 добавил `recovery_plan`: recipient-signed plan v1 до 64 KiB живёт
+    `1..=168` часов и связывает exact source/device-list/SAS/conversation/range/
+    page/route с Ethernet/Wi-Fi/mobile/unknown и external-power policy. Runner
+    выполняет до 8 LAN discovery attempts с delay до 300 s, принимает новый
+    endpoint только при exact-plan match и продолжает signed checkpoints.
+    Outer state lock/vault intent отключён для runner; короткие locks окружают
+    только preflight, active transfer и checkpoint read. Все 112 workspace
+    tests, rustfmt, strict Clippy и release build проходят. Direct smoke
+    `.tmp/m095-smoke-20260902-022156` подтвердил mobile block до discovery,
+    no-candidate → source restart → fresh endpoint, foreground state access во
+    время backoff и recovery двух pages с identical history.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -511,9 +522,10 @@ same-account history rewrap; M0.7.8 добавил сетевой consent/SAS и
 multi-source claim reconciliation, M0.7.9 — signed checkpoint pagination и
 safe retry, M0.9.1 — до 64 atomic pages в одном connection, M0.9.2 — compact
 signed recovery device link с offline inspect и explicit accept, M0.9.3 —
-bounded PNG/JPEG QR file ceremony, а M0.9.4 — opt-in authenticated LAN
-publication/discovery без automatic trust. Wide-area descriptor discovery,
-live camera/clipboard, постоянный scheduler, membership
+bounded PNG/JPEG QR file ceremony, M0.9.4 — opt-in authenticated LAN
+publication/discovery без automatic trust, а M0.9.5 — recipient-signed retry
+plan и bounded coordinator с caller-supplied network/power context. Wide-area
+descriptor discovery, OS background service, live camera/clipboard, membership
 removal/epochs и group E2EE остаются открыты. M0.7.7 закрывает M0 crash consistency для device
 filesystem state; M0.8.1 доказывает атомарную encrypted shadow migration в
 `redb`, M0.8.2 — recoverable versioned dual-write всех live CLI commands,
@@ -531,7 +543,8 @@ M0.8.14 — immutable DB-primary device identity без filesystem fallback;
 M0.8.15 — schema-v3 DB-only device identity и physical namespace retirement;
 M0.9.1 — bounded multi-page history recovery coordinator; M0.9.2 — signed
 QR-ready history recovery device link; M0.9.3 — bounded QR image round-trip;
-M0.9.4 — opt-in bounded LAN discovery signed descriptors без auto-connect.
+M0.9.4 — opt-in bounded LAN discovery signed descriptors без auto-connect;
+M0.9.5 — consent-bound retry plan/coordinator с fresh endpoint matching.
 Paged/Merkle index, production non-Windows local provider, согласованный
 monotonic rollback witness, автоматический backup lifecycle и физическое
 retirement остальных compatibility shadows ещё не реализованы.
