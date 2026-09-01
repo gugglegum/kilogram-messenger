@@ -25,6 +25,8 @@ reconciliation без обещания глобальной полноты.
 M0.7.9 добавил signed append-only checkpoint chain, authenticated pagination
 через fresh session на каждую страницу, safe retry и выбор inventory только при
 согласии минимум двух явно опрошенных sources.
+M0.9.1 переносит до 64 смежных страниц по одному authenticated connection,
+сохраняя atomic checkpoint каждой страницы и explicit source/SAS consent.
 M0.8.1 добавил обратимый encrypted shadow snapshot всего device state в `redb`,
 а M0.8.2 — authenticated intent, versioned generation и recoverable mirror
 после каждой live CLI-команды. M0.8.3 добавил typed exact shadow reads и
@@ -77,8 +79,9 @@ sessions, distribution, removal и key epochs и не решены этим пр
   лишнюю account metadata? M0.7.6 отклоняет rollback/equivocation после
   наблюдения новой generation, но не доказывает её глобальную свежесть при
   первом контакте.
-- Как автоматизировать source discovery и background pagination поверх
-  M0.7.9, сохранив явный user consent, и как отдельно разрешить recovery от
+- Как discovery descriptor и QR/device-link ceremony находят доступный source,
+  сохраняя explicit Device ID/SAS consent; как power/network-aware scheduler
+  возобновляет bounded M0.9.1 sessions и отдельно разрешает recovery от
   устройства собеседника без неявного расширения same-account trust?
 - Какой финальный межъязыковой canonical wire encoding обеспечивает одинаковые
   подписи и event IDs на всех платформах? Postcard используется только как

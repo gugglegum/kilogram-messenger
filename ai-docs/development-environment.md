@@ -456,6 +456,15 @@ toolchain `1.98.0` для воспроизводимой разработки.
     5654 bytes, snapshot/device/encryption IDs при переходе schema `2 -> 3`,
     generation `5 -> 6`; оба raw key files отсутствуют, повторный migrate
     idempotent, typed identity shadow содержит 0 records.
+57. M0.9.1 добавил bounded multi-page recovery coordinator. Source обслуживает
+    до 64 contiguous pages одного consent window по одному authenticated Iroh
+    connection и immutable DB-primary snapshot; recipient коммитит каждый
+    transfer/checkpoint отдельной state transaction. `--max-pages` даёт
+    resumable pause, wire/ticket/ALPN не менялись. Debug CLI coordinator вынесен
+    в отдельный 8 MiB stack thread после воспроизводимого pre-dispatch stack
+    overflow. Все 103 workspace tests, rustfmt, strict Clippy и release build
+    проходят. Direct smoke `.tmp/m091-smoke-20260902-004647` одним ticket
+    перенёс две страницы, создал два checkpoint и подтвердил identical history.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -473,9 +482,10 @@ account-wide fan-out. M0.7.6 добавил bounded signed pools, local freshnes
 high-water и concurrent initiation resolution; first-contact global freshness
 и production network discovery остаются открыты. M0.7.5 реализовал
 same-account history rewrap; M0.7.8 добавил сетевой consent/SAS и local
-multi-source claim reconciliation, а M0.7.9 — signed checkpoint pagination и
-safe retry. Source discovery/background coordinator, membership removal/epochs
-и group E2EE остаются открыты. M0.7.7 закрывает M0 crash consistency для device
+multi-source claim reconciliation, M0.7.9 — signed checkpoint pagination и
+safe retry, а M0.9.1 — до 64 atomic pages в одном connection. Signed source
+discovery, постоянный scheduler/QR ceremony, membership removal/epochs и group
+E2EE остаются открыты. M0.7.7 закрывает M0 crash consistency для device
 filesystem state; M0.8.1 доказывает атомарную encrypted shadow migration в
 `redb`, M0.8.2 — recoverable versioned dual-write всех live CLI commands,
 M0.8.3 — typed incremental encrypted delta и exact shadow reads, M0.8.4 —
@@ -489,7 +499,8 @@ M0.8.11 добавляет DB-primary trust repository и удаляет compati
 M0.8.12 добавляет Windows DPAPI CurrentUser key envelope и legacy-key rewrap;
 M0.8.13 — portable passphrase recovery package и внешний snapshot witness;
 M0.8.14 — immutable DB-primary device identity без filesystem fallback;
-M0.8.15 — schema-v3 DB-only device identity и physical namespace retirement.
+M0.8.15 — schema-v3 DB-only device identity и physical namespace retirement;
+M0.9.1 — bounded multi-page history recovery coordinator.
 Paged/Merkle index, production non-Windows local provider, согласованный
 monotonic rollback witness, автоматический backup lifecycle и физическое
 retirement остальных compatibility shadows ещё не реализованы.

@@ -1,8 +1,10 @@
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs::{self, OpenOptions},
+    future::Future,
     io::{self, Write},
     path::{Path, PathBuf},
+    pin::Pin,
     time::Duration,
 };
 
@@ -68,9 +70,14 @@ const ROUTE_POLICY_WAIT: Duration = Duration::from_secs(15);
 const CONNECTION_TIMEOUT: Duration = Duration::from_secs(30);
 const CLIENT_RELAY_WAIT_SECONDS: u64 = 30;
 const STREAM_OPEN_TIMEOUT: Duration = Duration::from_secs(15);
+const HISTORY_RECOVERY_NEXT_PAGE_TIMEOUT: Duration = Duration::from_secs(60);
+const MAX_HISTORY_RECOVERY_PAGES_PER_SESSION: usize = 64;
+const CLI_COORDINATOR_STACK_BYTES: usize = 8 * 1024 * 1024;
 const TICKET_SIGNATURE_DOMAIN: &[u8] = b"kilogram:connection-ticket-signature:v9\0";
 const TICKET_VERSION: u8 = 9;
 const MAX_RECOVERY_PASSPHRASE_FILE_BYTES: u64 = 4098;
+
+type CommandFuture = Pin<Box<dyn Future<Output = Result<()>>>>;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -385,9 +392,13 @@ enum Command {
         #[arg(long)]
         count: usize,
 
-        /// Maximum events requested in this invocation; repeat with a fresh ticket to resume.
+        /// Maximum events requested in each authenticated recovery page.
         #[arg(long, default_value_t = 64)]
         page_size: usize,
+
+        /// Maximum pages transferred over this one authenticated connection.
+        #[arg(long, default_value_t = MAX_HISTORY_RECOVERY_PAGES_PER_SESSION)]
+        max_pages: usize,
 
         /// SAS independently compared by both users before recovery starts.
         #[arg(long)]
@@ -733,6 +744,39 @@ impl HistoryRewrapApproval {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum HistoryRewrapServeOutcome {
+    Rejected,
+    Transferred {
+        next_range_start: u64,
+        recovery_complete: bool,
+    },
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+struct HistoryRecoverySessionProgress {
+    pages_served: usize,
+    expected_range_start: Option<u64>,
+    complete: bool,
+}
+
+impl HistoryRecoverySessionProgress {
+    fn accepts(&self, range_start: u64) -> bool {
+        self.expected_range_start
+            .is_none_or(|expected| expected == range_start)
+    }
+
+    fn record_page(&mut self, next_range_start: u64, complete: bool) {
+        self.pages_served += 1;
+        self.expected_range_start = Some(next_range_start);
+        self.complete = complete;
+    }
+
+    fn can_request_next(&self) -> bool {
+        !self.complete && self.pages_served < MAX_HISTORY_RECOVERY_PAGES_PER_SESSION
+    }
+}
+
 impl From<RoutePolicyArg> for RoutePolicy {
     fn from(value: RoutePolicyArg) -> Self {
         match value {
@@ -906,8 +950,21 @@ fn ticket_signing_bytes(content: &ConnectionTicketContent) -> Result<Vec<u8>> {
     Ok(bytes)
 }
 
+fn main() -> Result<()> {
+    match std::thread::Builder::new()
+        .name("kilogram-cli-coordinator".to_owned())
+        .stack_size(CLI_COORDINATOR_STACK_BYTES)
+        .spawn(async_main)
+        .context("start Kilogram CLI coordinator thread")?
+        .join()
+    {
+        Ok(result) => result,
+        Err(payload) => std::panic::resume_unwind(payload),
+    }
+}
+
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn async_main() -> Result<()> {
     let cli = Cli::parse();
     let command = cli.command;
     let state_directory = command.state_directory().map(Path::to_path_buf);
@@ -1048,7 +1105,7 @@ async fn run_command(command: Command) -> Result<()> {
             history_rewrap_range_start,
             history_rewrap_count,
         } => {
-            listen(ListenOptions {
+            Box::pin(listen(ListenOptions {
                 state_dir,
                 allowed_requester_account_id: allow_account,
                 device_list_file,
@@ -1062,7 +1119,7 @@ async fn run_command(command: Command) -> Result<()> {
                 history_rewrap_approve_sas,
                 history_rewrap_range_start,
                 history_rewrap_count,
-            })
+            }))
             .await
         }
         Command::Connect {
@@ -1190,10 +1247,11 @@ async fn run_command(command: Command) -> Result<()> {
             range_start,
             count,
             page_size,
+            max_pages,
             confirm_sas,
             expect_account,
         } => {
-            resume_history_recovery(
+            Box::pin(resume_history_recovery(
                 state_dir,
                 ticket,
                 ticket_file,
@@ -1202,9 +1260,10 @@ async fn run_command(command: Command) -> Result<()> {
                 range_start,
                 count,
                 page_size,
+                max_pages,
                 confirm_sas,
                 expect_account,
-            )
+            ))
             .await
         }
         Command::HistoryRewrapReconcile {
@@ -2082,7 +2141,11 @@ fn install_membership_primary(
     })
 }
 
-async fn listen(options: ListenOptions) -> Result<()> {
+fn listen(options: ListenOptions) -> CommandFuture {
+    Box::pin(listen_inner(options))
+}
+
+async fn listen_inner(options: ListenOptions) -> Result<()> {
     let ListenOptions {
         state_dir,
         allowed_requester_account_id,
@@ -2251,7 +2314,7 @@ async fn listen(options: ListenOptions) -> Result<()> {
     let (mut send, mut receive) =
         accept_bi(&connection, "accept authorized application stream").await?;
     let request = read_client_request(&mut receive).await?;
-    match request {
+    let print_transport_after_request = match request {
         ClientRequest::DeliverEvent(event) => {
             handle_delivery_request(
                 DeliveryState {
@@ -2265,6 +2328,7 @@ async fn listen(options: ListenOptions) -> Result<()> {
                 &authorized_requester,
             )
             .await?;
+            true
         }
         ClientRequest::SyncInventory(inventory) => {
             print_immutable_read_diagnostics("sync", &immutable_reads);
@@ -2289,15 +2353,19 @@ async fn listen(options: ListenOptions) -> Result<()> {
                 &authorized_requester,
             )
             .await?;
+            true
         }
         ClientRequest::SyncEvents(_) => bail!("sync event batch cannot be the first request"),
         ClientRequest::SyncPause(_) => bail!("sync pause cannot be the first request"),
         ClientRequest::HistoryRewrap(request) => {
-            handle_history_rewrap_request(
+            drop(receive);
+            serve_history_rewrap_session(
                 &state_dir,
                 &device_state,
                 Some(&immutable_reads),
-                &mut send,
+                &connection,
+                route_policy,
+                send,
                 request,
                 session_binding,
                 &authorized_requester,
@@ -2305,15 +2373,108 @@ async fn listen(options: ListenOptions) -> Result<()> {
                 history_rewrap_approval.as_ref(),
             )
             .await?;
+            false
         }
         ClientRequest::AuthorizeDevice(_) => {
             bail!("device authorization cannot be repeated on an authorized connection")
         }
-    }
+    };
 
-    print_transport_diagnostics(&connection, route_policy).await?;
+    if print_transport_after_request {
+        print_transport_diagnostics(&connection, route_policy).await?;
+    }
     let _ = timeout(Duration::from_secs(2), connection.closed()).await;
     endpoint.close().await;
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn serve_history_rewrap_session(
+    state_directory: &Path,
+    device_state: &DeviceState,
+    read_repositories: Option<&ImmutableReadRepositories>,
+    connection: &Connection,
+    route_policy: RoutePolicy,
+    mut send: SendStream,
+    mut request: SignedHistoryRewrapRequest,
+    expected_session: SyncSessionBinding,
+    authorized_requester: &AuthorizedDevice,
+    device_list: &AccountDeviceListSnapshot,
+    approval: Option<&HistoryRewrapApproval>,
+) -> Result<()> {
+    let mut progress = HistoryRecoverySessionProgress::default();
+
+    loop {
+        if !progress.accepts(request.range_start()) {
+            write_server_response(
+                &mut send,
+                &ServerResponse::HistoryRewrapRejected(HistoryRewrapRejected::new(
+                    request.conversation_id(),
+                    HistoryRewrapRejectionReason::ApprovalMismatch,
+                )),
+            )
+            .await?;
+            println!("history_rewrap_rejected=NonContiguousRange");
+            println!("status=rejected");
+            break;
+        }
+
+        let outcome = handle_history_rewrap_request(
+            state_directory,
+            device_state,
+            read_repositories,
+            &mut send,
+            request,
+            expected_session,
+            authorized_requester,
+            device_list,
+            approval,
+        )
+        .await?;
+        if progress.pages_served == 0 {
+            print_transport_diagnostics(connection, route_policy).await?;
+        }
+        let HistoryRewrapServeOutcome::Transferred {
+            next_range_start,
+            recovery_complete,
+        } = outcome
+        else {
+            break;
+        };
+        progress.record_page(next_range_start, recovery_complete);
+        println!(
+            "history_recovery_session_pages_served={}",
+            progress.pages_served
+        );
+        if progress.complete {
+            break;
+        }
+        if !progress.can_request_next() {
+            println!("history_recovery_session_limit_reached=true");
+            break;
+        }
+        drop(send);
+        let Some((next_send, mut receive)) =
+            accept_optional_history_rewrap_stream(connection).await?
+        else {
+            break;
+        };
+        send = next_send;
+        request = match read_client_request(&mut receive).await? {
+            ClientRequest::HistoryRewrap(request) => request,
+            _ => bail!("history recovery session only accepts history-rewrap page requests"),
+        };
+    }
+
+    println!("history_recovery_session_complete={}", progress.complete);
+    println!(
+        "status={}",
+        if progress.complete {
+            "history-recovery-session-served"
+        } else {
+            "history-recovery-session-paused"
+        }
+    );
     Ok(())
 }
 
@@ -2346,9 +2507,13 @@ fn prepare_history_rewrap_approval(
         count > 0,
         "--history-rewrap-count must be greater than zero"
     );
-    range_start
+    let approved_range_end = range_start
         .checked_add(count)
         .context("--history-rewrap-range-start plus --history-rewrap-count overflows")?;
+    ensure!(
+        approved_range_end <= MAX_INVENTORY_EVENT_IDS,
+        "approved history-rewrap range end must not exceed the bounded inventory limit of {MAX_INVENTORY_EVENT_IDS}"
+    );
     ensure!(
         source_certificate.account_id() == allowed_requester_account_id,
         "network history rewrap is restricted to devices of the listener account"
@@ -2387,7 +2552,7 @@ async fn handle_history_rewrap_request(
     authorized_requester: &AuthorizedDevice,
     device_list: &AccountDeviceListSnapshot,
     approval: Option<&HistoryRewrapApproval>,
-) -> Result<()> {
+) -> Result<HistoryRewrapServeOutcome> {
     let Some(approval) = approval else {
         write_server_response(
             send,
@@ -2399,7 +2564,7 @@ async fn handle_history_rewrap_request(
         .await?;
         println!("history_rewrap_rejected=NotApproved");
         println!("status=rejected");
-        return Ok(());
+        return Ok(HistoryRewrapServeOutcome::Rejected);
     };
     let trust = CommandTrustReadRepository::open(state_directory, device_state)?;
     let source_certificate = trust
@@ -2438,7 +2603,7 @@ async fn handle_history_rewrap_request(
         .await?;
         println!("history_rewrap_rejected=ApprovalMismatch");
         println!("status=rejected");
-        return Ok(());
+        return Ok(HistoryRewrapServeOutcome::Rejected);
     }
     let read_repositories = read_repositories
         .context("approved network history rewrap is missing its immutable read snapshot")?;
@@ -2469,7 +2634,7 @@ async fn handle_history_rewrap_request(
         println!("history_rewrap_rejected=TransferTooLarge");
         println!("history_rewrap_transfer_bytes={transfer_size}");
         println!("status=rejected");
-        return Ok(());
+        return Ok(HistoryRewrapServeOutcome::Rejected);
     }
     write_server_response(
         send,
@@ -2480,7 +2645,19 @@ async fn handle_history_rewrap_request(
     println!("history_rewrap_transfer_bytes={transfer_size}");
     println!("history_rewrap_user_consent=approved");
     println!("status=history-rewrap-transferred");
-    Ok(())
+    let approved_range_end = u64::try_from(
+        approval
+            .range_start
+            .checked_add(approval.count)
+            .context("approved history-rewrap range overflows")?,
+    )
+    .context("approved history-rewrap range cannot be represented")?;
+    let recovery_complete = transfer.bundle().manifest().range_end()
+        >= approved_range_end.min(transfer.bundle().manifest().inventory_event_count());
+    Ok(HistoryRewrapServeOutcome::Transferred {
+        next_range_start: transfer.bundle().manifest().range_end(),
+        recovery_complete,
+    })
 }
 
 async fn accept_device_authorization(
@@ -3515,6 +3692,20 @@ async fn accept_bi(connection: &Connection, operation: &str) -> Result<(SendStre
         .with_context(|| operation.to_owned())
 }
 
+async fn accept_optional_history_rewrap_stream(
+    connection: &Connection,
+) -> Result<Option<(SendStream, RecvStream)>> {
+    tokio::select! {
+        _ = connection.closed() => Ok(None),
+        result = timeout(HISTORY_RECOVERY_NEXT_PAGE_TIMEOUT, connection.accept_bi()) => {
+            result
+                .context("waiting for the next history-rewrap page request timed out")?
+                .context("accept next history-rewrap page request")
+                .map(Some)
+        }
+    }
+}
+
 fn print_ready_path(path: &SelectedPathDiagnostics) {
     println!("transport_ready_path={}", path.kind.as_str());
 }
@@ -4316,7 +4507,8 @@ async fn fetch_history_rewrap(
         session_binding,
     )
     .await?;
-    let request = SignedHistoryRewrapRequest::sign(
+    let (transfer, transfer_encoded) = request_history_rewrap_transfer(
+        &connection,
         device_state.identity(),
         conversation_id,
         source_device_id,
@@ -4324,38 +4516,19 @@ async fn fetch_history_rewrap(
         range_start,
         count,
         sas,
-    )?;
-    let (mut send, mut receive) =
-        open_bi(&connection, "open history-rewrap request stream").await?;
-    write_client_request(&mut send, &ClientRequest::HistoryRewrap(request.clone())).await?;
-    let transfer = match read_server_response(&mut receive).await? {
-        ServerResponse::HistoryRewrapTransfer(transfer) => *transfer,
-        ServerResponse::HistoryRewrapRejected(rejected) => {
-            ensure!(
-                rejected.conversation_id() == conversation_id,
-                "history-rewrap rejection belongs to a different conversation"
-            );
-            bail!("history rewrap rejected by source: {:?}", rejected.reason());
-        }
-        _ => bail!("recipient expected a history-rewrap transfer response"),
-    };
-    transfer
-        .verify_for_request(&request)
-        .context("verify source-signed transfer against exact recipient request")?;
-    let transfer_encoded = transfer.encode()?;
-    ensure!(
-        transfer_encoded.len() <= MAX_WIRE_MESSAGE_BYTES,
-        "history-rewrap transfer exceeds the bounded wire frame"
-    );
+    )
+    .await?;
     let bundle = transfer.bundle().clone();
     let bundle_encoded = bundle.encode()?;
     let recovery_checkpoint = recovery_checkpoint
         .map(|checkpoint| {
+            let requested_range_start = u64::try_from(range_start)
+                .context("history-rewrap request range cannot be represented")?;
             ensure!(
-                checkpoint.next_range_start() == request.range_start(),
+                checkpoint.next_range_start() == requested_range_start,
                 "history recovery checkpoint expects range {}, but request starts at {}",
                 checkpoint.next_range_start(),
-                request.range_start()
+                requested_range_start
             );
             let advanced = checkpoint
                 .advance(device_state.identity(), bundle.manifest())
@@ -4380,7 +4553,51 @@ async fn fetch_history_rewrap(
 }
 
 #[allow(clippy::too_many_arguments)]
-async fn resume_history_recovery(
+async fn request_history_rewrap_transfer(
+    connection: &Connection,
+    recipient_identity: &DeviceIdentity,
+    conversation_id: ConversationId,
+    source_device_id: DeviceId,
+    session_binding: SyncSessionBinding,
+    range_start: usize,
+    count: usize,
+    sas: HistoryRewrapSas,
+) -> Result<(SignedHistoryRewrapTransfer, Vec<u8>)> {
+    let request = SignedHistoryRewrapRequest::sign(
+        recipient_identity,
+        conversation_id,
+        source_device_id,
+        session_binding,
+        range_start,
+        count,
+        sas,
+    )?;
+    let (mut send, mut receive) = open_bi(connection, "open history-rewrap request stream").await?;
+    write_client_request(&mut send, &ClientRequest::HistoryRewrap(request.clone())).await?;
+    let transfer = match read_server_response(&mut receive).await? {
+        ServerResponse::HistoryRewrapTransfer(transfer) => *transfer,
+        ServerResponse::HistoryRewrapRejected(rejected) => {
+            ensure!(
+                rejected.conversation_id() == conversation_id,
+                "history-rewrap rejection belongs to a different conversation"
+            );
+            bail!("history rewrap rejected by source: {:?}", rejected.reason());
+        }
+        _ => bail!("recipient expected a history-rewrap transfer response"),
+    };
+    transfer
+        .verify_for_request(&request)
+        .context("verify source-signed transfer against exact recipient request")?;
+    let transfer_encoded = transfer.encode()?;
+    ensure!(
+        transfer_encoded.len() <= MAX_WIRE_MESSAGE_BYTES,
+        "history-rewrap transfer exceeds the bounded wire frame"
+    );
+    Ok((transfer, transfer_encoded))
+}
+
+#[allow(clippy::too_many_arguments)]
+fn resume_history_recovery(
     state_dir: PathBuf,
     ticket: Option<String>,
     ticket_file: Option<PathBuf>,
@@ -4389,6 +4606,36 @@ async fn resume_history_recovery(
     approved_range_start: usize,
     approved_event_count: usize,
     page_size: usize,
+    max_pages: usize,
+    confirmed_sas: String,
+    expected_account_id: AccountId,
+) -> CommandFuture {
+    Box::pin(resume_history_recovery_inner(
+        state_dir,
+        ticket,
+        ticket_file,
+        conversation,
+        expected_source_device_id,
+        approved_range_start,
+        approved_event_count,
+        page_size,
+        max_pages,
+        confirmed_sas,
+        expected_account_id,
+    ))
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn resume_history_recovery_inner(
+    state_dir: PathBuf,
+    ticket: Option<String>,
+    ticket_file: Option<PathBuf>,
+    conversation: String,
+    expected_source_device_id: DeviceId,
+    approved_range_start: usize,
+    approved_event_count: usize,
+    page_size: usize,
+    max_pages: usize,
     confirmed_sas: String,
     expected_account_id: AccountId,
 ) -> Result<()> {
@@ -4404,12 +4651,20 @@ async fn resume_history_recovery(
         page_size <= MAX_HISTORY_REWRAP_ENTRIES,
         "--page-size must not exceed {MAX_HISTORY_REWRAP_ENTRIES}"
     );
+    ensure!(max_pages > 0, "--max-pages must be greater than zero");
+    ensure!(
+        max_pages <= MAX_HISTORY_RECOVERY_PAGES_PER_SESSION,
+        "--max-pages must not exceed {MAX_HISTORY_RECOVERY_PAGES_PER_SESSION}"
+    );
 
     let device_state = load_command_device_state(&state_dir)?;
     let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
     let recipient_certificate = trust
         .load_certificate()
         .context("load recipient Account Root certificate")?;
+    let recipient_authority_snapshot = trust
+        .load_own_authority_snapshot(&recipient_certificate)
+        .context("load recipient Account Root authority snapshot")?;
     ensure!(
         recipient_certificate.account_id() == expected_account_id,
         "history recovery requires the recipient to belong to --expect-account"
@@ -4454,7 +4709,7 @@ async fn resume_history_recovery(
         approved_event_count,
         page_size,
     )?;
-    let checkpoint = load_latest_history_recovery_checkpoint(&state_dir, initial_checkpoint)?;
+    let mut checkpoint = load_latest_history_recovery_checkpoint(&state_dir, initial_checkpoint)?;
     println!("history_recovery_id={}", checkpoint.recovery_id()?);
     println!("source_device_id={expected_source_device_id}");
     println!(
@@ -4479,25 +4734,116 @@ async fn resume_history_recovery(
         return Ok(());
     }
 
-    let next_range_start = usize::try_from(checkpoint.next_range_start())
-        .context("history recovery next range cannot be represented on this platform")?;
-    let approved_range_end = usize::try_from(checkpoint.approved_range_end())
-        .context("history recovery approved range cannot be represented on this platform")?;
-    let request_count = page_size.min(approved_range_end - next_range_start);
-    fetch_history_rewrap(
-        state_dir,
-        ticket,
-        ticket_file,
-        conversation,
-        next_range_start,
-        request_count,
-        confirmed_sas,
-        expected_account_id,
-        Some(expected_source_device_id),
-        Some(checkpoint),
-        "history-recovery-page-imported",
+    let membership = trust
+        .load_conversation_membership(conversation_id.scope_id())
+        .context("load trusted conversation membership before history recovery")?;
+    membership
+        .require_member(expected_account_id)
+        .context("account is not a member of the requested conversation")?;
+    let source_snapshot_store = install_own_authority_primary(
+        &state_dir,
+        &device_state,
+        inspected_ticket.listener_authority_snapshot(),
+    )
+    .context("install same-account authority snapshot from recovery source ticket")?;
+    let session_binding =
+        SyncSessionBinding::from_transport_label(&inspected_ticket.endpoint().id.to_string());
+    let route_policy = inspected_ticket.route_policy();
+    let endpoint = endpoint_builder_for_remote(route_policy, inspected_ticket.endpoint())?
+        .bind()
+        .await
+        .context("bind history recovery recipient endpoint")?;
+    println!("transport_endpoint_id={}", endpoint.id());
+    println!("account_id={expected_account_id}");
+    println!("device_id={}", recipient_certificate.device_id());
+    println!("source_authority_store={source_snapshot_store:?}");
+    println!("route_policy={}", route_policy.as_str());
+    print_connection_target(&inspected_ticket);
+    if route_policy == RoutePolicy::RelayOnly {
+        wait_for_relay(&endpoint, route_policy, CLIENT_RELAY_WAIT_SECONDS).await?;
+    }
+    let connection = timeout(
+        CONNECTION_TIMEOUT,
+        endpoint.connect(inspected_ticket.endpoint().clone(), ALPN),
     )
     .await
+    .with_context(|| {
+        timeout_message(
+            "connect to listening endpoint for history recovery",
+            CONNECTION_TIMEOUT,
+        )
+    })?
+    .context("connect to listening endpoint for history recovery")?;
+    println!("peer_id={}", connection.remote_id());
+    let ready_path = await_route_policy(&connection, route_policy, ROUTE_POLICY_WAIT)
+        .await
+        .context("wait for a history recovery path allowed by the connection ticket")?;
+    print_ready_path(&ready_path);
+    authorize_with_listener(
+        &connection,
+        device_state.identity(),
+        recipient_certificate,
+        recipient_authority_snapshot,
+        session_binding,
+    )
+    .await?;
+
+    let mut pages_completed = 0_usize;
+    while pages_completed < max_pages && !checkpoint.is_complete() {
+        let next_range_start = usize::try_from(checkpoint.next_range_start())
+            .context("history recovery next range cannot be represented on this platform")?;
+        let approved_range_end = usize::try_from(checkpoint.approved_range_end())
+            .context("history recovery approved range cannot be represented on this platform")?;
+        let request_count = page_size.min(approved_range_end - next_range_start);
+        let (transfer, transfer_encoded) = request_history_rewrap_transfer(
+            &connection,
+            device_state.identity(),
+            conversation_id,
+            expected_source_device_id,
+            session_binding,
+            next_range_start,
+            request_count,
+            sas,
+        )
+        .await?;
+        let bundle = transfer.bundle().clone();
+        let bundle_encoded = bundle.encode()?;
+        let advanced_checkpoint = checkpoint
+            .advance(device_state.identity(), bundle.manifest())
+            .context("advance signed history recovery checkpoint")?;
+        let checkpoint_encoded = advanced_checkpoint.encode()?;
+        println!("history_rewrap_transfer_bytes={}", transfer_encoded.len());
+        import_history_rewrap_material(
+            state_dir.clone(),
+            conversation.clone(),
+            bundle,
+            bundle_encoded,
+            Some((transfer, transfer_encoded)),
+            Some((advanced_checkpoint.clone(), checkpoint_encoded)),
+            "history-recovery-page-imported",
+        )?;
+        checkpoint = advanced_checkpoint;
+        pages_completed += 1;
+        println!("history_recovery_session_page_completed={pages_completed}");
+    }
+
+    print_transport_diagnostics(&connection, route_policy).await?;
+    connection.close(0_u32.into(), b"kilogram history recovery session complete");
+    endpoint.close().await;
+    println!("history_recovery_session_pages_completed={pages_completed}");
+    println!(
+        "history_recovery_session_complete={}",
+        checkpoint.is_complete()
+    );
+    println!(
+        "status={}",
+        if checkpoint.is_complete() {
+            "history-recovery-complete"
+        } else {
+            "history-recovery-session-paused"
+        }
+    );
+    Ok(())
 }
 
 fn load_latest_history_recovery_checkpoint(
@@ -5753,6 +6099,30 @@ mod tests {
             .is_err()
         );
         Ok(())
+    }
+
+    #[test]
+    fn history_recovery_session_requires_contiguous_pages_and_stops_at_bound() {
+        let mut progress = HistoryRecoverySessionProgress::default();
+        assert!(progress.accepts(17));
+        progress.record_page(19, false);
+        assert_eq!(progress.pages_served, 1);
+        assert!(progress.accepts(19));
+        assert!(!progress.accepts(18));
+        assert!(progress.can_request_next());
+
+        for next in 20..=(MAX_HISTORY_RECOVERY_PAGES_PER_SESSION as u64 + 18) {
+            progress.record_page(next, false);
+        }
+        assert_eq!(
+            progress.pages_served,
+            MAX_HISTORY_RECOVERY_PAGES_PER_SESSION
+        );
+        assert!(!progress.can_request_next());
+
+        let mut completed = HistoryRecoverySessionProgress::default();
+        completed.record_page(1, true);
+        assert!(!completed.can_request_next());
     }
 
     #[test]

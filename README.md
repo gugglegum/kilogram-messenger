@@ -54,12 +54,19 @@ The DB-primary authority/contact trust repository is specified in
 [`docs/RFC-0023-db-primary-trust-repository.md`](docs/RFC-0023-db-primary-trust-repository.md).
 The versioned protected vault-key envelope is specified in
 [`docs/RFC-0024-protected-vault-key-provider.md`](docs/RFC-0024-protected-vault-key-provider.md).
+Portable vault-key recovery and the external rollback witness are specified in
+[`docs/RFC-0025-portable-vault-key-recovery-and-rollback-witness.md`](docs/RFC-0025-portable-vault-key-recovery-and-rollback-witness.md).
+DB-primary and DB-only device identity are specified in
+[`docs/RFC-0026-db-primary-device-identity.md`](docs/RFC-0026-db-primary-device-identity.md)
+and [`docs/RFC-0027-db-only-device-identity-layout.md`](docs/RFC-0027-db-only-device-identity-layout.md).
+The bounded multi-page recovery coordinator is specified in
+[`docs/RFC-0028-bounded-multi-page-history-recovery-session.md`](docs/RFC-0028-bounded-multi-page-history-recovery-session.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.8.12 protected vault key provider — complete
+## Current milestone: M0.9.1 bounded multi-page history recovery — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -127,6 +134,14 @@ fresh authenticated session fetches the next bounded page from one explicitly
 selected source, pins the first source inventory claim, and atomically commits
 the imported page with the next checkpoint. A completed plan retries without a
 network connection.
+
+M0.9.1 removes the per-page reconnect ceremony without changing the trust
+model. One explicitly approved source listener now serves up to 64 contiguous
+pages over one authenticated Iroh connection. `history-recovery-resume` commits
+every page and its signed checkpoint atomically before requesting the next one,
+and `--max-pages` provides a hard per-session resource bound. A disconnect or
+limit leaves a durable plan that resumes from the exact next page with a fresh
+ticket.
 
 M0.8.1 adds a reversible encrypted shadow snapshot of the entire device state.
 `state-vault-migrate` publishes encrypted records and a keyed manifest in one

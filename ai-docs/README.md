@@ -96,11 +96,12 @@ rotation теперь завершаются local commit до сетевого 
 автоматически откатывает оставленный prepared journal. Wire версии не менялись.
 M0.7.8 добавил двусторонний consent/SAS, session-bound network history rewrap и
 multi-source claim reconciliation. M0.7.9 добавил signed append-only checkpoint
-chain и `history-recovery-resume`: каждая fresh session переносит следующую
-страницу, import и checkpoint коммитятся атомарно, а смена source inventory
-claim отклоняется. Reconciliation выбирает inventory только при совпадении двух
-или более полных явно собранных claims и всё равно не обещает global
-completeness.
+  chain и `history-recovery-resume`: каждая страница атомарно коммитит import и
+  checkpoint, а смена source inventory claim отклоняется. M0.9.1 добавил bounded
+  coordinator: до 64 смежных страниц идут по одному явно подтверждённому
+  connection и одному immutable source snapshot. Reconciliation выбирает
+  inventory только при совпадении двух или более полных явно собранных claims и
+  всё равно не обещает global completeness.
 M0.8.1 добавил первый production-storage bridge: `state-vault-migrate` одной
 durable `redb` transaction создаёт encrypted snapshot всего device state,
 `state-vault-verify` аутентифицирует records и сверяет retained legacy tree, а
@@ -204,8 +205,8 @@ primary-shadow recovery больше не создаёт plaintext keys. Mismatc
 повторно появившаяся копия блокируется без импорта.
 Seed/root recovery, защищённое хранение root и оставшихся ratchet shadows,
 дальнейшее shadow retirement, global prekey discovery/witness, автоматический
-recovery source discovery/background coordinator, sync summaries, membership
-removal и группы ещё не реализованы.
+recovery source discovery, постоянный scheduler, QR/device-link UX, sync
+summaries, membership removal и группы ещё не реализованы.
 
 ## Цель продукта
 
@@ -260,8 +261,8 @@ removal и группы ещё не реализованы.
 
 1. Добавить production macOS/Linux local key provider, согласованный monotonic
    witness и lifecycle обновления portable recovery package.
-2. Добавить source discovery/background coordinator и QR/device-link UX поверх
-   resumable history recovery без ослабления явного consent.
+2. Добавить signed source discovery descriptor и QR/device-link ceremony поверх
+   bounded recovery coordinator без ослабления явного consent.
 3. Спроектировать membership removal вместе с ordered security log и MLS epoch;
    отдельно — gossip/witness для first-contact freshness.
 4. Спроектировать seed/recovery authority, protected root storage, root
@@ -334,5 +335,7 @@ removal и группы ещё не реализованы.
   реализованный M0.8.14 immutable DB-primary device identity без filesystem fallback.
 - [`../docs/RFC-0027-db-only-device-identity-layout.md`](../docs/RFC-0027-db-only-device-identity-layout.md) —
   реализованный M0.8.15 schema-v3 layout и retirement raw device identity shadow.
+- [`../docs/RFC-0028-bounded-multi-page-history-recovery-session.md`](../docs/RFC-0028-bounded-multi-page-history-recovery-session.md) —
+  реализованный M0.9.1 coordinator до 64 atomic recovery pages в одном connection.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

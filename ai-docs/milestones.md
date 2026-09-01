@@ -1539,10 +1539,46 @@ account-root storage, ratchet pickle protection и production non-Windows key
 provider остаются отдельными задачами. Полный контракт —
 [`../docs/RFC-0027-db-only-device-identity-layout.md`](../docs/RFC-0027-db-only-device-identity-layout.md).
 
+### M0.9.1 — bounded multi-page history recovery session: выполнено
+
+Реализовано:
+
+- `history-recovery-resume` по умолчанию переносит до 64 страниц через один
+  ticket, одну device authorization и одно Iroh connection;
+- `--max-pages=1..64` ограничивает работу coordinator, `--page-size=1..256`
+  сохраняет прежний per-transfer wire bound;
+- source listener принимает только смежные ranges внутри exact consent window,
+  использует один immutable DB-primary snapshot и завершает plan при достижении
+  меньшего из approved range end и source inventory count;
+- source session имеет hard cap 64 и 60-second межстраничный timeout; штатное
+  закрытие recipient connection превращается в resumable pause;
+- recipient проверяет и атомарно коммитит каждую страницу вместе с новым signed
+  checkpoint до запроса следующей, поэтому ошибка не теряет предыдущий прогресс;
+- достижение client limit возвращает `history-recovery-session-paused`, а
+  завершение — `history-recovery-complete`;
+- wire objects, ticket v9 и ALPN `/7` не изменились; старый recipient безопасно
+  использует новый source, а новый recipient со старым source сохраняет первую
+  страницу и требует свежий ticket для продолжения;
+- CLI coordinator запускается в отдельном 8 MiB stack thread, чтобы крупный
+  debug async state machine не падал до command dispatch.
+
+Проверки:
+
+- unit regression проверяет contiguous next range, completion stop и hard cap;
+- все 103 workspace tests, rustfmt, strict Clippy и release build проходят;
+- direct process smoke `.tmp/m091-smoke-20260902-004647` одним authenticated
+  connection передал ranges `0..2` и `2..3`, создал два checkpoint и получил
+  одинаковую verified history на source и recipient.
+
+Граница среза: source по-прежнему явно запускает listener и передаёт ticket;
+автоматического discovery, постоянного scheduler и QR/device-link ceremony нет.
+Полный контракт —
+[`../docs/RFC-0028-bounded-multi-page-history-recovery-session.md`](../docs/RFC-0028-bounded-multi-page-history-recovery-session.md).
+
 ### Следующий этап
 
-1. Source discovery/background coordinator и QR/device-link UX строить поверх
-   M0.7.9 без ослабления explicit consent.
+1. Signed source discovery descriptor и QR/device-link ceremony строить поверх
+   M0.9.1 без автоматического доверия найденному peer.
 2. Membership removal и group governance проектировать вместе с ordered
    security events и MLS epoch.
 3. Production macOS/Linux local provider, согласованный monotonic witness,
