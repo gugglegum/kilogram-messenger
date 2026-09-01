@@ -31,12 +31,14 @@ The resumable authenticated history-recovery flow is specified in
 [`docs/RFC-0012-resumable-history-recovery.md`](docs/RFC-0012-resumable-history-recovery.md).
 The encrypted transactional shadow-vault migration is specified in
 [`docs/RFC-0013-encrypted-transactional-state-vault.md`](docs/RFC-0013-encrypted-transactional-state-vault.md).
+The recoverable live shadow dual-write is specified in
+[`docs/RFC-0014-recoverable-shadow-dual-write.md`](docs/RFC-0014-recoverable-shadow-dual-write.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.8.1 encrypted transactional state vault — complete
+## Current milestone: M0.8.2 recoverable shadow dual-write — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -113,11 +115,22 @@ complete vault and compares it with the retained legacy tree;
 Paths and contents are encrypted with XChaCha20-Poly1305, while keyed BLAKE3
 identifiers avoid plaintext path keys in the database.
 
+M0.8.2 mirrors every live device-state CLI command once a vault is initialized.
+Before the command, an immediate-durability transaction stores a keyed,
+authenticated intent bound to the exact active generation and snapshot. After
+the command—even when it reports a later network error—the actually committed
+legacy tree is atomically mirrored and the intent removed. A restart may repair
+drift only when that valid intent exists; unexplained drift remains fail-closed.
+Read-only commands keep the generation unchanged, while changed state advances
+it monotonically. `state-vault-recover` exposes the same constrained recovery
+explicitly.
+
 This is still a narrow integration spike. The vault is not yet the primary
-repository: live commands continue to read and write legacy files, and the
+repository: live commands continue to read and write legacy files before a
+full `O(state)` encrypted mirror, and the
 development master key remains beside the database. It does not yet provide a
 global DHT or gossip freshness proof, atomic remote prekey reservation,
-protected local key storage, versioned database migrations/cutover, PQXDH, or
+protected local key storage, typed incremental repositories/cutover, PQXDH, or
 cross-account recovery. Losing every readable projection
 still cannot be repaired from old ciphertext with only the device signing key.
 Do not use it for sensitive communication.

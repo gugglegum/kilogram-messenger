@@ -1,5 +1,6 @@
 use std::{
     collections::BTreeSet,
+    ffi::OsString,
     fs::{self, File, OpenOptions},
     io::{self, Write},
     path::{Component, Path, PathBuf},
@@ -27,9 +28,14 @@ const MAX_VAULT_RECORD_BYTES: usize = 64 * 1024 * 1024;
 const MAX_VAULT_RECORDS: usize = 1_000_000;
 const MAX_VAULT_SNAPSHOT_BYTES: u64 = 512 * 1024 * 1024;
 const MANIFEST_KEY: &str = "snapshot-manifest";
+const GENERATION_KEY: &str = "snapshot-generation-v1";
+const MIRROR_INTENT_KEY: &str = "mirror-intent-v1";
+const MIRROR_METADATA_VERSION: u8 = 1;
 const RECORD_KEY_DOMAIN: &str = "kilogram state vault record lookup v1";
 const ENCRYPTION_KEY_DOMAIN: &str = "kilogram state vault encryption v1";
 const SNAPSHOT_KEY_DOMAIN: &str = "kilogram state vault snapshot v1";
+const GENERATION_AUTH_KEY_DOMAIN: &str = "kilogram state vault generation auth v1";
+const MIRROR_INTENT_AUTH_KEY_DOMAIN: &str = "kilogram state vault mirror intent auth v1";
 const RECORD_AAD_DOMAIN: &[u8] = b"kilogram:state-vault-record-aad:v1\0";
 
 const META_TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("vault-meta-v1");
@@ -41,9 +47,16 @@ pub enum VaultMigrationOutcome {
     AlreadyCurrent,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum VaultMirrorOutcome {
+    Mirrored,
+    AlreadyCurrent,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct VaultReport {
     schema_version: u64,
+    mirror_generation: u64,
     record_count: u64,
     plaintext_bytes: u64,
     snapshot_id: [u8; 32],
@@ -56,6 +69,10 @@ impl VaultReport {
 
     pub fn record_count(&self) -> u64 {
         self.record_count
+    }
+
+    pub fn mirror_generation(&self) -> u64 {
+        self.mirror_generation
     }
 
     pub fn plaintext_bytes(&self) -> u64 {
@@ -79,6 +96,22 @@ struct VaultManifest {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+struct VaultGenerationRecord {
+    version: u8,
+    generation: u64,
+    snapshot_id: [u8; 32],
+    authenticator: [u8; 32],
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+struct VaultMirrorIntent {
+    version: u8,
+    base_generation: u64,
+    base_snapshot_id: [u8; 32],
+    authenticator: [u8; 32],
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 struct VaultRecord {
     version: u8,
     relative_path: String,
@@ -91,7 +124,35 @@ pub struct EncryptedStateVault {
     master_key: VaultMasterKey,
 }
 
+pub trait StateMirrorRepository {
+    fn begin_dual_write(&self) -> Result<VaultReport, StateError>;
+
+    fn finish_dual_write(&self) -> Result<(VaultMirrorOutcome, VaultReport), StateError>;
+
+    fn recover_pending_dual_write(
+        &self,
+    ) -> Result<Option<(VaultMirrorOutcome, VaultReport)>, StateError>;
+}
+
 impl EncryptedStateVault {
+    pub fn is_initialized(state_directory: impl AsRef<Path>) -> Result<bool, StateError> {
+        let root = state_directory.as_ref();
+        let database_path = root.join(STATE_VAULT_FILE);
+        let key_path = root.join(STATE_VAULT_KEY_FILE);
+        let database_exists = path_exists(&database_path)?;
+        let key_exists = path_exists(&key_path)?;
+        match (database_exists, key_exists) {
+            (false, false) => Ok(false),
+            (true, false) => Err(StateError::VaultKeyMissing(key_path)),
+            (false, true) => Err(StateError::VaultDatabaseMissing(database_path)),
+            (true, true) => {
+                reject_symlink(&database_path)?;
+                reject_symlink(&key_path)?;
+                Ok(true)
+            }
+        }
+    }
+
     pub fn open_or_create(state_directory: impl AsRef<Path>) -> Result<Self, StateError> {
         let requested = state_directory.as_ref();
         io_at(requested, fs::create_dir_all(requested))?;
@@ -143,6 +204,7 @@ impl EncryptedStateVault {
     pub fn migrate_legacy_snapshot(
         &self,
     ) -> Result<(VaultMigrationOutcome, VaultReport), StateError> {
+        self.ensure_no_pending_mirror()?;
         let records = collect_legacy_records(&self.root)?;
         let manifest = self.manifest_for_records(&records)?;
         match self.load_manifest()? {
@@ -158,7 +220,7 @@ impl EncryptedStateVault {
             }
             None => {}
         }
-        self.commit_snapshot(&records, &manifest, None)?;
+        self.commit_snapshot(&records, &manifest, 1, true, None)?;
         let report = self.verify()?;
         Ok((VaultMigrationOutcome::Migrated, report))
     }
@@ -173,10 +235,16 @@ impl EncryptedStateVault {
         if observed != manifest {
             return Err(StateError::VaultManifestMismatch);
         }
-        Ok(report_from_manifest(&manifest))
+        let generation = self.load_generation(&manifest)?;
+        Ok(report_from_manifest(&manifest, generation))
     }
 
     pub fn verify_against_legacy(&self) -> Result<VaultReport, StateError> {
+        self.ensure_no_pending_mirror()?;
+        self.verify_current_against_legacy()
+    }
+
+    fn verify_current_against_legacy(&self) -> Result<VaultReport, StateError> {
         let report = self.verify()?;
         let records = collect_legacy_records(&self.root)?;
         let current = self.manifest_for_records(&records)?;
@@ -196,9 +264,15 @@ impl EncryptedStateVault {
         &self,
         destination: impl AsRef<Path>,
     ) -> Result<VaultReport, StateError> {
+        self.ensure_no_pending_mirror()?;
         let report = self.verify()?;
-        let destination = absolute_path(destination.as_ref())?;
-        if path_exists(&destination)? {
+        let requested_destination = absolute_path(destination.as_ref())?;
+        let destination_exists = path_exists(&requested_destination)?;
+        let destination = resolve_destination_path(&requested_destination)?;
+        if destination.starts_with(&self.root) {
+            return Err(StateError::VaultRestoreInsideSource(destination));
+        }
+        if destination_exists {
             return Err(StateError::VaultRestoreDestinationExists(destination));
         }
         let parent = destination
@@ -241,6 +315,8 @@ impl EncryptedStateVault {
         &self,
         records: &[VaultRecord],
         manifest: &VaultManifest,
+        generation: u64,
+        clear_intent: bool,
         fail_after_records: Option<usize>,
     ) -> Result<(), StateError> {
         let mut encrypted_records = Vec::with_capacity(records.len());
@@ -250,6 +326,8 @@ impl EncryptedStateVault {
             encrypted_records.push((record_key, encrypted));
         }
         let encoded_manifest = postcard::to_allocvec(manifest)?;
+        let generation_record = self.generation_record(generation, manifest.snapshot_id);
+        let encoded_generation = postcard::to_allocvec(&generation_record)?;
         let mut write = self.database.begin_write().map_err(vault_database_error)?;
         write
             .set_durability(Durability::Immediate)
@@ -273,24 +351,76 @@ impl EncryptedStateVault {
             table
                 .insert(MANIFEST_KEY, encoded_manifest.as_slice())
                 .map_err(vault_database_error)?;
+            table
+                .insert(GENERATION_KEY, encoded_generation.as_slice())
+                .map_err(vault_database_error)?;
+            if clear_intent {
+                table
+                    .remove(MIRROR_INTENT_KEY)
+                    .map_err(vault_database_error)?;
+            }
         }
         write.commit().map_err(vault_database_error)
     }
 
     fn load_manifest(&self) -> Result<Option<VaultManifest>, StateError> {
+        self.load_metadata(MANIFEST_KEY)?
+            .map(|bytes| postcard::from_bytes(&bytes).map_err(StateError::from))
+            .transpose()
+    }
+
+    fn load_generation(&self, manifest: &VaultManifest) -> Result<u64, StateError> {
+        let Some(encoded) = self.load_metadata(GENERATION_KEY)? else {
+            return Ok(1);
+        };
+        let generation: VaultGenerationRecord = postcard::from_bytes(&encoded)?;
+        if generation.version != MIRROR_METADATA_VERSION {
+            return Err(StateError::UnsupportedVaultMirrorMetadataVersion(
+                generation.version,
+            ));
+        }
+        if generation.generation == 0 {
+            return Err(StateError::InvalidVaultGeneration(0));
+        }
+        if generation.snapshot_id != manifest.snapshot_id
+            || generation.authenticator
+                != self.generation_authenticator(generation.generation, generation.snapshot_id)
+        {
+            return Err(StateError::VaultGenerationAuthenticationFailed);
+        }
+        Ok(generation.generation)
+    }
+
+    fn load_mirror_intent(&self) -> Result<Option<VaultMirrorIntent>, StateError> {
+        let Some(encoded) = self.load_metadata(MIRROR_INTENT_KEY)? else {
+            return Ok(None);
+        };
+        let intent: VaultMirrorIntent = postcard::from_bytes(&encoded)?;
+        if intent.version != MIRROR_METADATA_VERSION {
+            return Err(StateError::UnsupportedVaultMirrorMetadataVersion(
+                intent.version,
+            ));
+        }
+        if intent.base_generation == 0
+            || intent.authenticator
+                != self.mirror_intent_authenticator(intent.base_generation, intent.base_snapshot_id)
+        {
+            return Err(StateError::VaultMirrorIntentAuthenticationFailed);
+        }
+        Ok(Some(intent))
+    }
+
+    fn load_metadata(&self, key: &str) -> Result<Option<Vec<u8>>, StateError> {
         let read = self.database.begin_read().map_err(vault_database_error)?;
         let table = match read.open_table(META_TABLE) {
             Ok(table) => table,
             Err(redb::TableError::TableDoesNotExist(_)) => return Ok(None),
             Err(error) => return Err(vault_database_error(error)),
         };
-        let encoded = table
-            .get(MANIFEST_KEY)
-            .map_err(vault_database_error)?
-            .map(|value| value.value().to_vec());
-        encoded
-            .map(|bytes| postcard::from_bytes(&bytes).map_err(StateError::from))
-            .transpose()
+        table
+            .get(key)
+            .map_err(vault_database_error)
+            .map(|value| value.map(|value| value.value().to_vec()))
     }
 
     fn load_records(&self) -> Result<Vec<VaultRecord>, StateError> {
@@ -317,6 +447,119 @@ impl EncryptedStateVault {
         }
         records.sort_by(|left, right| left.relative_path.cmp(&right.relative_path));
         Ok(records)
+    }
+
+    fn ensure_no_pending_mirror(&self) -> Result<(), StateError> {
+        if let Some(intent) = self.load_mirror_intent()? {
+            return Err(StateError::VaultMirrorRecoveryRequired {
+                base_generation: intent.base_generation,
+            });
+        }
+        Ok(())
+    }
+
+    fn write_mirror_intent(&self, report: &VaultReport) -> Result<(), StateError> {
+        let intent = VaultMirrorIntent {
+            version: MIRROR_METADATA_VERSION,
+            base_generation: report.mirror_generation,
+            base_snapshot_id: report.snapshot_id,
+            authenticator: self
+                .mirror_intent_authenticator(report.mirror_generation, report.snapshot_id),
+        };
+        let encoded = postcard::to_allocvec(&intent)?;
+        let mut write = self.database.begin_write().map_err(vault_database_error)?;
+        write
+            .set_durability(Durability::Immediate)
+            .map_err(vault_database_error)?;
+        {
+            let mut table = write.open_table(META_TABLE).map_err(vault_database_error)?;
+            table
+                .insert(MIRROR_INTENT_KEY, encoded.as_slice())
+                .map_err(vault_database_error)?;
+        }
+        write.commit().map_err(vault_database_error)
+    }
+
+    fn finish_dual_write_internal(
+        &self,
+        fail_after_records: Option<usize>,
+    ) -> Result<(VaultMirrorOutcome, VaultReport), StateError> {
+        let intent = self
+            .load_mirror_intent()?
+            .ok_or(StateError::VaultMirrorIntentMissing)?;
+        let active = self.verify()?;
+        if intent.base_generation != active.mirror_generation
+            || intent.base_snapshot_id != active.snapshot_id
+        {
+            return Err(StateError::VaultMirrorIntentBaseMismatch);
+        }
+
+        let records = collect_legacy_records(&self.root)?;
+        let manifest = self.manifest_for_records(&records)?;
+        if report_matches_manifest(&active, &manifest) {
+            self.clear_mirror_intent(&active)?;
+            return Ok((VaultMirrorOutcome::AlreadyCurrent, active));
+        }
+
+        let next_generation = active
+            .mirror_generation
+            .checked_add(1)
+            .ok_or(StateError::VaultGenerationExhausted)?;
+        self.commit_snapshot(
+            &records,
+            &manifest,
+            next_generation,
+            true,
+            fail_after_records,
+        )?;
+        let report = self.verify_current_against_legacy()?;
+        Ok((VaultMirrorOutcome::Mirrored, report))
+    }
+
+    fn clear_mirror_intent(&self, report: &VaultReport) -> Result<(), StateError> {
+        let generation = self.generation_record(report.mirror_generation, report.snapshot_id);
+        let encoded_generation = postcard::to_allocvec(&generation)?;
+        let mut write = self.database.begin_write().map_err(vault_database_error)?;
+        write
+            .set_durability(Durability::Immediate)
+            .map_err(vault_database_error)?;
+        {
+            let mut table = write.open_table(META_TABLE).map_err(vault_database_error)?;
+            table
+                .insert(GENERATION_KEY, encoded_generation.as_slice())
+                .map_err(vault_database_error)?;
+            table
+                .remove(MIRROR_INTENT_KEY)
+                .map_err(vault_database_error)?;
+        }
+        write.commit().map_err(vault_database_error)
+    }
+
+    fn generation_record(&self, generation: u64, snapshot_id: [u8; 32]) -> VaultGenerationRecord {
+        VaultGenerationRecord {
+            version: MIRROR_METADATA_VERSION,
+            generation,
+            snapshot_id,
+            authenticator: self.generation_authenticator(generation, snapshot_id),
+        }
+    }
+
+    fn generation_authenticator(&self, generation: u64, snapshot_id: [u8; 32]) -> [u8; 32] {
+        keyed_metadata_authenticator(
+            GENERATION_AUTH_KEY_DOMAIN,
+            &self.master_key.0,
+            generation,
+            &snapshot_id,
+        )
+    }
+
+    fn mirror_intent_authenticator(&self, generation: u64, snapshot_id: [u8; 32]) -> [u8; 32] {
+        keyed_metadata_authenticator(
+            MIRROR_INTENT_AUTH_KEY_DOMAIN,
+            &self.master_key.0,
+            generation,
+            &snapshot_id,
+        )
     }
 
     fn manifest_for_records(&self, records: &[VaultRecord]) -> Result<VaultManifest, StateError> {
@@ -412,6 +655,28 @@ impl EncryptedStateVault {
     }
 }
 
+impl StateMirrorRepository for EncryptedStateVault {
+    fn begin_dual_write(&self) -> Result<VaultReport, StateError> {
+        self.ensure_no_pending_mirror()?;
+        let report = self.verify_current_against_legacy()?;
+        self.write_mirror_intent(&report)?;
+        Ok(report)
+    }
+
+    fn finish_dual_write(&self) -> Result<(VaultMirrorOutcome, VaultReport), StateError> {
+        self.finish_dual_write_internal(None)
+    }
+
+    fn recover_pending_dual_write(
+        &self,
+    ) -> Result<Option<(VaultMirrorOutcome, VaultReport)>, StateError> {
+        if self.load_mirror_intent()?.is_none() {
+            return Ok(None);
+        }
+        self.finish_dual_write_internal(None).map(Some)
+    }
+}
+
 fn collect_legacy_records(root: &Path) -> Result<Vec<VaultRecord>, StateError> {
     let mut records = Vec::new();
     collect_legacy_records_from(root, root, &mut records)?;
@@ -504,13 +769,35 @@ fn validate_manifest(manifest: &VaultManifest) -> Result<(), StateError> {
     Ok(())
 }
 
-fn report_from_manifest(manifest: &VaultManifest) -> VaultReport {
+fn report_from_manifest(manifest: &VaultManifest, mirror_generation: u64) -> VaultReport {
     VaultReport {
         schema_version: manifest.schema_version,
+        mirror_generation,
         record_count: manifest.record_count,
         plaintext_bytes: manifest.plaintext_bytes,
         snapshot_id: manifest.snapshot_id,
     }
+}
+
+fn report_matches_manifest(report: &VaultReport, manifest: &VaultManifest) -> bool {
+    report.schema_version == manifest.schema_version
+        && report.record_count == manifest.record_count
+        && report.plaintext_bytes == manifest.plaintext_bytes
+        && report.snapshot_id == manifest.snapshot_id
+}
+
+fn keyed_metadata_authenticator(
+    domain: &str,
+    master_key: &[u8; VAULT_KEY_BYTES],
+    generation: u64,
+    snapshot_id: &[u8; 32],
+) -> [u8; 32] {
+    let authentication_key = blake3::derive_key(domain, master_key);
+    let mut hasher = blake3::Hasher::new_keyed(&authentication_key);
+    hasher.update(&[MIRROR_METADATA_VERSION]);
+    hasher.update(&generation.to_be_bytes());
+    hasher.update(snapshot_id);
+    *hasher.finalize().as_bytes()
 }
 
 fn load_or_create_master_key(path: &Path) -> Result<VaultMasterKey, StateError> {
@@ -607,6 +894,25 @@ fn absolute_path(path: &Path) -> Result<PathBuf, StateError> {
     }
 }
 
+fn resolve_destination_path(path: &Path) -> Result<PathBuf, StateError> {
+    let mut cursor = path;
+    let mut missing_components = Vec::<OsString>::new();
+    while !path_exists(cursor)? {
+        let file_name = cursor
+            .file_name()
+            .ok_or_else(|| StateError::UnsafeRelativePath(path.to_path_buf()))?;
+        missing_components.push(file_name.to_os_string());
+        cursor = cursor
+            .parent()
+            .ok_or_else(|| StateError::UnsafeRelativePath(path.to_path_buf()))?;
+    }
+    let mut resolved = io_at(cursor, fs::canonicalize(cursor))?;
+    for component in missing_components.iter().rev() {
+        resolved.push(component);
+    }
+    Ok(resolved)
+}
+
 fn vault_database_error(error: impl std::fmt::Display) -> StateError {
     StateError::VaultDatabase(error.to_string())
 }
@@ -670,7 +976,8 @@ mod tests {
         );
 
         let vault = EncryptedStateVault::open_or_create(directory.path())?;
-        let restored = directory.path().join("restored");
+        let restore_parent = tempfile::tempdir()?;
+        let restored = restore_parent.path().join("restored");
         let restored_report = vault.restore_to_new_directory(&restored)?;
         assert_eq!(restored_report, migrated);
         assert_eq!(
@@ -696,7 +1003,7 @@ mod tests {
         let records = collect_legacy_records(directory.path())?;
         let manifest = vault.manifest_for_records(&records)?;
         assert!(matches!(
-            vault.commit_snapshot(&records, &manifest, Some(1)),
+            vault.commit_snapshot(&records, &manifest, 1, true, Some(1)),
             Err(StateError::VaultInjectedFailure(1))
         ));
         assert!(matches!(
@@ -733,6 +1040,17 @@ mod tests {
         vault.migrate_legacy_snapshot()?;
         assert!(matches!(
             vault.restore_to_new_directory(directory.path().join("state")),
+            Err(StateError::VaultRestoreInsideSource(_))
+        ));
+        let nested_inside = directory.path().join("new/restore");
+        assert!(matches!(
+            vault.restore_to_new_directory(&nested_inside),
+            Err(StateError::VaultRestoreInsideSource(_))
+        ));
+        assert!(!directory.path().join("new").exists());
+        let existing_destination = tempfile::tempdir()?;
+        assert!(matches!(
+            vault.restore_to_new_directory(existing_destination.path()),
             Err(StateError::VaultRestoreDestinationExists(_))
         ));
         drop(vault);
@@ -747,6 +1065,86 @@ mod tests {
         ));
         drop(wrong_key_vault);
         fs::write(key_path, original_key)?;
+        Ok(())
+    }
+
+    #[test]
+    fn versioned_dual_write_recovers_only_with_an_authenticated_intent()
+    -> Result<(), Box<dyn Error>> {
+        let directory = tempfile::tempdir()?;
+        write(&directory.path().join("state"), b"one")?;
+        let vault = EncryptedStateVault::open_or_create(directory.path())?;
+        let initial = vault.migrate_legacy_snapshot()?.1;
+        assert_eq!(initial.mirror_generation(), 1);
+
+        let begun = vault.begin_dual_write()?;
+        assert_eq!(begun, initial);
+        let (unchanged, unchanged_report) = vault.finish_dual_write()?;
+        assert_eq!(unchanged, VaultMirrorOutcome::AlreadyCurrent);
+        assert_eq!(unchanged_report.mirror_generation(), 1);
+
+        vault.begin_dual_write()?;
+        write(&directory.path().join("state"), b"two")?;
+        assert!(matches!(
+            vault.verify_against_legacy(),
+            Err(StateError::VaultMirrorRecoveryRequired { .. })
+        ));
+        let (recovered, second) = vault
+            .recover_pending_dual_write()?
+            .ok_or("expected pending mirror recovery")?;
+        assert_eq!(recovered, VaultMirrorOutcome::Mirrored);
+        assert_eq!(second.mirror_generation(), 2);
+        assert_eq!(vault.verify_against_legacy()?, second);
+
+        vault.begin_dual_write()?;
+        write(&directory.path().join("another"), b"three")?;
+        assert!(matches!(
+            vault.finish_dual_write_internal(Some(1)),
+            Err(StateError::VaultInjectedFailure(1))
+        ));
+        assert_eq!(vault.verify()?.mirror_generation(), 2);
+        assert!(matches!(
+            vault.verify_against_legacy(),
+            Err(StateError::VaultMirrorRecoveryRequired { .. })
+        ));
+        let (_, third) = vault
+            .recover_pending_dual_write()?
+            .ok_or("expected fault recovery")?;
+        assert_eq!(third.mirror_generation(), 3);
+
+        write(&directory.path().join("external"), b"not authorized")?;
+        assert!(matches!(
+            vault.begin_dual_write(),
+            Err(StateError::VaultLegacyStateChanged { .. })
+        ));
+
+        let tampered_directory = tempfile::tempdir()?;
+        write(&tampered_directory.path().join("state"), b"private")?;
+        let tampered_vault = EncryptedStateVault::open_or_create(tampered_directory.path())?;
+        tampered_vault.migrate_legacy_snapshot()?;
+        tampered_vault.begin_dual_write()?;
+        let forged = VaultMirrorIntent {
+            version: MIRROR_METADATA_VERSION,
+            base_generation: 1,
+            base_snapshot_id: *tampered_vault.verify()?.snapshot_id(),
+            authenticator: [0_u8; 32],
+        };
+        let encoded = postcard::to_allocvec(&forged)?;
+        let write = tampered_vault
+            .database
+            .begin_write()
+            .map_err(vault_database_error)?;
+        {
+            let mut table = write.open_table(META_TABLE).map_err(vault_database_error)?;
+            table
+                .insert(MIRROR_INTENT_KEY, encoded.as_slice())
+                .map_err(vault_database_error)?;
+        }
+        write.commit().map_err(vault_database_error)?;
+        assert!(matches!(
+            tampered_vault.recover_pending_dual_write(),
+            Err(StateError::VaultMirrorIntentAuthenticationFailed)
+        ));
         Ok(())
     }
 }

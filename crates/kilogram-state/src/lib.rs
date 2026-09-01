@@ -12,7 +12,8 @@ use thiserror::Error;
 mod vault;
 
 pub use vault::{
-    EncryptedStateVault, STATE_VAULT_FILE, STATE_VAULT_KEY_FILE, VaultMigrationOutcome, VaultReport,
+    EncryptedStateVault, STATE_VAULT_FILE, STATE_VAULT_KEY_FILE, StateMirrorRepository,
+    VaultMigrationOutcome, VaultMirrorOutcome, VaultReport,
 };
 
 const LOCK_FILE: &str = ".kilogram-state.lock";
@@ -129,6 +130,33 @@ pub enum StateError {
 
     #[error("state vault restore destination already exists: {0}")]
     VaultRestoreDestinationExists(PathBuf),
+
+    #[error("state vault restore destination is inside the source state directory: {0}")]
+    VaultRestoreInsideSource(PathBuf),
+
+    #[error("unsupported state vault mirror metadata version {0}")]
+    UnsupportedVaultMirrorMetadataVersion(u8),
+
+    #[error("state vault mirror generation must be greater than zero, got {0}")]
+    InvalidVaultGeneration(u64),
+
+    #[error("state vault mirror generation authentication failed")]
+    VaultGenerationAuthenticationFailed,
+
+    #[error("state vault mirror intent authentication failed")]
+    VaultMirrorIntentAuthenticationFailed,
+
+    #[error("state vault mirror recovery is required from generation {base_generation}")]
+    VaultMirrorRecoveryRequired { base_generation: u64 },
+
+    #[error("state vault mirror intent is missing")]
+    VaultMirrorIntentMissing,
+
+    #[error("state vault mirror intent does not match the active snapshot")]
+    VaultMirrorIntentBaseMismatch,
+
+    #[error("state vault mirror generation is exhausted")]
+    VaultGenerationExhausted,
 
     #[error("injected state vault failure after {0} records")]
     VaultInjectedFailure(usize),

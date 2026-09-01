@@ -39,7 +39,8 @@ use kilogram_session::{
 };
 use kilogram_state::{
     EncryptedStateVault, STATE_VAULT_FILE, STATE_VAULT_KEY_FILE, StateDirectoryLock,
-    StateTransaction, VaultMigrationOutcome, VaultReport,
+    StateMirrorRepository, StateTransaction, VaultMigrationOutcome, VaultMirrorOutcome,
+    VaultReport,
 };
 use kilogram_store::{EventStore, LocalMessageStore, StoreError, StoreOutcome};
 use kilogram_transport_iroh::{
@@ -573,6 +574,13 @@ enum Command {
         state_dir: PathBuf,
     },
 
+    /// Recover a vault mirror only when a prior authenticated dual-write intent exists.
+    StateVaultRecover {
+        /// Directory containing an interrupted encrypted vault mirror.
+        #[arg(long)]
+        state_dir: PathBuf,
+    },
+
     /// Restore an authenticated vault snapshot into a new, previously absent directory.
     StateVaultRestore {
         /// Directory containing the encrypted vault and its development key file.
@@ -607,6 +615,7 @@ impl Command {
             | Self::DeviceAuthorize { state_dir, .. }
             | Self::StateVaultMigrate { state_dir }
             | Self::StateVaultVerify { state_dir }
+            | Self::StateVaultRecover { state_dir }
             | Self::StateVaultRestore { state_dir, .. } => Some(state_dir),
             Self::AccountCreate { .. }
             | Self::HistoryRewrapSas { .. }
@@ -617,6 +626,17 @@ impl Command {
             | Self::ConversationMemberAdd { .. }
             | Self::DeviceRevoke { .. } => None,
         }
+    }
+
+    fn uses_state_vault_dual_write(&self) -> bool {
+        self.state_directory().is_some()
+            && !matches!(
+                self,
+                Self::StateVaultMigrate { .. }
+                    | Self::StateVaultVerify { .. }
+                    | Self::StateVaultRecover { .. }
+                    | Self::StateVaultRestore { .. }
+            )
     }
 }
 
@@ -839,12 +859,90 @@ fn ticket_signing_bytes(content: &ConnectionTicketContent) -> Result<Vec<u8>> {
 async fn main() -> Result<()> {
     let cli = Cli::parse();
     let command = cli.command;
+    let state_directory = command.state_directory().map(Path::to_path_buf);
+    let uses_state_vault_dual_write = command.uses_state_vault_dual_write();
     let _state_lock = command
         .state_directory()
         .map(StateDirectoryLock::acquire)
         .transpose()
         .context("lock state directory and recover interrupted local transaction")?;
-    Box::pin(run_command(command)).await
+    let vault_guard = if uses_state_vault_dual_write {
+        state_directory
+            .as_deref()
+            .map(VaultDualWriteGuard::prepare)
+            .transpose()?
+            .flatten()
+    } else {
+        None
+    };
+    let command_result = Box::pin(run_command(command)).await;
+    let mirror_result = match vault_guard {
+        Some(guard) => guard.finish(),
+        None => Ok(()),
+    };
+    match (command_result, mirror_result) {
+        (Ok(()), Ok(())) => Ok(()),
+        (Err(command_error), Ok(())) => Err(command_error),
+        (Ok(()), Err(mirror_error)) => Err(mirror_error),
+        (Err(command_error), Err(mirror_error)) => Err(command_error.context(format!(
+            "command failed and state vault dual-write completion also failed: {mirror_error:#}"
+        ))),
+    }
+}
+
+struct VaultDualWriteGuard {
+    state_directory: PathBuf,
+}
+
+impl VaultDualWriteGuard {
+    fn prepare(state_directory: &Path) -> Result<Option<Self>> {
+        if !EncryptedStateVault::is_initialized(state_directory)
+            .context("inspect encrypted state vault before live command")?
+        {
+            return Ok(None);
+        }
+        let vault = EncryptedStateVault::open_existing(state_directory)
+            .context("open encrypted state vault before live command")?;
+        if let Some((outcome, report)) = vault
+            .recover_pending_dual_write()
+            .context("recover interrupted state vault dual-write")?
+        {
+            println!(
+                "vault_dual_write_recovery={}",
+                vault_mirror_outcome_name(outcome)
+            );
+            print_vault_report(&report);
+        }
+        let base = vault
+            .begin_dual_write()
+            .context("prepare authenticated state vault dual-write intent")?;
+        println!("vault_dual_write_intent=prepared");
+        println!(
+            "vault_dual_write_base_generation={}",
+            base.mirror_generation()
+        );
+        Ok(Some(Self {
+            state_directory: state_directory.to_path_buf(),
+        }))
+    }
+
+    fn finish(self) -> Result<()> {
+        let vault = EncryptedStateVault::open_existing(&self.state_directory)
+            .context("reopen encrypted state vault after live command")?;
+        let (outcome, report) = vault
+            .finish_dual_write()
+            .context("commit live legacy state to encrypted state vault")?;
+        println!("vault_dual_write={}", vault_mirror_outcome_name(outcome));
+        print_vault_report(&report);
+        Ok(())
+    }
+}
+
+fn vault_mirror_outcome_name(outcome: VaultMirrorOutcome) -> &'static str {
+    match outcome {
+        VaultMirrorOutcome::Mirrored => "mirrored",
+        VaultMirrorOutcome::AlreadyCurrent => "already-current",
+    }
 }
 
 async fn run_command(command: Command) -> Result<()> {
@@ -1084,6 +1182,7 @@ async fn run_command(command: Command) -> Result<()> {
         } => revoke_device(account_dir, device_id, revocation_file),
         Command::StateVaultMigrate { state_dir } => migrate_state_vault(state_dir),
         Command::StateVaultVerify { state_dir } => verify_state_vault(state_dir),
+        Command::StateVaultRecover { state_dir } => recover_state_vault(state_dir),
         Command::StateVaultRestore {
             state_dir,
             output_state_dir,
@@ -1128,6 +1227,33 @@ fn verify_state_vault(state_dir: PathBuf) -> Result<()> {
     Ok(())
 }
 
+fn recover_state_vault(state_dir: PathBuf) -> Result<()> {
+    let vault = EncryptedStateVault::open_existing(&state_dir)
+        .context("open encrypted transactional state vault")?;
+    let report = match vault
+        .recover_pending_dual_write()
+        .context("recover authenticated pending state vault dual-write")?
+    {
+        Some((outcome, report)) => {
+            println!(
+                "vault_dual_write_recovery={}",
+                vault_mirror_outcome_name(outcome)
+            );
+            report
+        }
+        None => {
+            println!("vault_dual_write_recovery=not-needed");
+            vault
+                .verify_against_legacy()
+                .context("verify vault without a pending dual-write intent")?
+        }
+    };
+    print_vault_report(&report);
+    println!("legacy_snapshot_match=true");
+    println!("status=state-vault-recovered");
+    Ok(())
+}
+
 fn restore_state_vault(state_dir: PathBuf, output_state_dir: PathBuf) -> Result<()> {
     let vault = EncryptedStateVault::open_existing(&state_dir)
         .context("open encrypted transactional state vault")?;
@@ -1142,6 +1268,7 @@ fn restore_state_vault(state_dir: PathBuf, output_state_dir: PathBuf) -> Result<
 
 fn print_vault_report(report: &VaultReport) {
     println!("vault_schema_version={}", report.schema_version());
+    println!("vault_mirror_generation={}", report.mirror_generation());
     println!("vault_record_count={}", report.record_count());
     println!("vault_plaintext_bytes={}", report.plaintext_bytes());
     println!("vault_snapshot_id={}", encode_hex(report.snapshot_id()));
@@ -4750,6 +4877,39 @@ mod tests {
                 .join(".kilogram-transactions/active")
                 .exists()
         );
+        Ok(())
+    }
+
+    #[test]
+    fn cli_vault_guard_mirrors_live_state_and_recovers_a_crashed_command() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        fs::write(directory.path().join("state"), b"initial")?;
+        let vault = EncryptedStateVault::open_or_create(directory.path())?;
+        assert_eq!(vault.migrate_legacy_snapshot()?.1.mirror_generation(), 1);
+        drop(vault);
+
+        let guard = VaultDualWriteGuard::prepare(directory.path())?
+            .context("expected an initialized vault guard")?;
+        fs::write(directory.path().join("state"), b"committed")?;
+        guard.finish()?;
+        let vault = EncryptedStateVault::open_existing(directory.path())?;
+        assert_eq!(vault.verify_against_legacy()?.mirror_generation(), 2);
+        drop(vault);
+
+        let interrupted = VaultDualWriteGuard::prepare(directory.path())?
+            .context("expected a second vault guard")?;
+        fs::write(directory.path().join("state"), b"after-crash")?;
+        drop(interrupted);
+
+        let recovered = VaultDualWriteGuard::prepare(directory.path())?
+            .context("expected recovery to prepare the next intent")?;
+        recovered.finish()?;
+        let vault = EncryptedStateVault::open_existing(directory.path())?;
+        assert_eq!(vault.verify_against_legacy()?.mirror_generation(), 3);
+        drop(vault);
+
+        fs::write(directory.path().join("state"), b"external-tamper")?;
+        assert!(VaultDualWriteGuard::prepare(directory.path()).is_err());
         Ok(())
     }
 

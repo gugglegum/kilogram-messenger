@@ -977,11 +977,50 @@ metadata не удаляются, master key не защищён OS keystore, с
 DB+key не обнаруживается. Полный контракт —
 [`../docs/RFC-0013-encrypted-transactional-state-vault.md`](../docs/RFC-0013-encrypted-transactional-state-vault.md).
 
+### M0.8.2 — recoverable shadow dual-write: выполнено
+
+Реализовано:
+
+- публичный `StateMirrorRepository` отделяет begin/finish/recovery lifecycle от
+  конкретных `redb` tables;
+- vault metadata получает monotonic `mirror_generation`, exact snapshot ID и
+  keyed-authenticated generation record с backward-compatible upgrade M0.8.1;
+- перед каждой live device-state CLI-командой immediate transaction сохраняет
+  authenticated intent к active generation/snapshot;
+- после команды фактически committed legacy state атомарно зеркалируется в
+  vault, intent удаляется в той же transaction, generation растёт только при
+  реальном изменении;
+- после crash M0.7.7 сначала откатывает/завершает filesystem journal, затем
+  authenticated intent разрешает закончить mirror; drift без intent остаётся
+  fail-closed;
+- completion выполняется и после ошибки команды, потому что локальный commit
+  мог предшествовать network failure; двойная ошибка сохраняет оба контекста;
+- `state-vault-recover` явно восстанавливает только pending authenticated
+  operation, а `verify`/`restore` отказываются считать active snapshot текущим
+  до recovery;
+- restore внутрь source `STATE_DIR` теперь запрещён.
+
+Проверки:
+
+- unit tests покрывают unchanged/changed generations, crash после intent,
+  injected DB abort, retry, forged intent, external drift и CLI guard restart;
+- все 83 workspace tests, rustfmt, strict Clippy и release build проходят;
+- release smoke `.tmp/m082-smoke-20260901-080000` мигрировал 23 файла как
+  generation 1, оставил её после read-only `identity`, после live prekey-pool
+  rotation создал generation 2 (26,037 → 31,750 bytes), подтвердил verify/no
+  pending recovery и восстановил byte-identical tree с теми же 3 history
+  events; plaintext/path markers в raw DB не найдены.
+
+Граница среза: legacy остаётся primary store, changed command пересобирает весь
+encrypted snapshot за `O(state)`, read-only command пишет intent metadata.
+Generation не является внешним rollback witness, а key остаётся соседним
+development-файлом. Полный контракт —
+[`../docs/RFC-0014-recoverable-shadow-dual-write.md`](../docs/RFC-0014-recoverable-shadow-dual-write.md).
+
 ### Следующий этап
 
-1. M0.8.2 ввести storage repository traits и versioned dual-write для
-   ratchet/sequence, events/projections/rewrap/checkpoints и trust snapshots;
-   сравнить DB/legacy reads до переключения primary store.
+1. M0.8.3 ввести typed incremental repositories для mutable и immutable state,
+   сравнивать DB/legacy reads в shadow mode до primary cutover.
 2. Защитить vault master key через OS keystore/passphrase/seed wrapping и
    спроектировать rollback witness, backup и versioned migrations.
 3. Source discovery/background coordinator и QR/device-link UX строить поверх

@@ -195,9 +195,11 @@ legacy tree и прочитал те же 3 `history` events. Raw DB scan не �
 
 ## 10. Следующий этап
 
-M0.8.2 должен ввести storage repositories и versioned dual-write для mutable
-ratchet/sequence, immutable events/projections/rewrap/checkpoints и trust
-snapshots. Только после сравнения read results и crash tests можно переключить
-основной read path на vault, а legacy files оставить как ограниченный rollback
-source. Protected master-key provider и rollback witness остаются отдельными,
+M0.8.2 реализован в
+[`RFC-0014`](RFC-0014-recoverable-shadow-dual-write.md): vault получает
+versioned generation, authenticated intent и recoverable shadow dual-write
+после каждой live CLI-команды. Legacy остаётся primary read path, а changed
+command пока пересобирает полный snapshot. Следующий этап должен разбить его на
+typed incremental repositories и сравнивать DB/legacy reads до primary cutover.
+Protected master-key provider и rollback witness остаются отдельными,
 обязательными security slices.

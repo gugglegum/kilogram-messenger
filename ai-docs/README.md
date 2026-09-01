@@ -107,8 +107,13 @@ durable `redb` transaction создаёт encrypted snapshot всего device s
 `state-vault-restore` восстанавливает byte-exact snapshot только в новый
 каталог. Это пока shadow vault: live repositories продолжают использовать
 legacy files, а development master key лежит рядом с DB.
+M0.8.2 добавил recoverable shadow dual-write: каждая live device-state команда
+сначала сохраняет authenticated intent к exact generation/snapshot, а затем
+атомарно зеркалирует фактически committed legacy tree. После crash валидный
+intent разрешает next-start recovery; drift без intent блокируется. Read-only
+command оставляет generation неизменной, changed command увеличивает её.
 Seed/root recovery, защищённое хранение root/local/ratchet keys, production
-DB cutover/migrations, global prekey discovery/witness, автоматический recovery
+typed DB repositories/cutover, global prekey discovery/witness, автоматический recovery
 source discovery/background coordinator, sync summaries, membership removal и
 группы ещё не реализованы.
 
@@ -163,8 +168,8 @@ source discovery/background coordinator, sync summaries, membership removal и
 
 ## План ближайших работ
 
-1. Ввести M0.8.2 storage repository traits и versioned dual-write, сверить
-   legacy/vault reads и только затем переключить primary store.
+1. Ввести M0.8.3 typed incremental repositories, сверять DB/legacy reads в
+   shadow mode и только затем переключить primary store.
 2. Защитить vault master key через OS keystore/passphrase/seed wrapping,
    добавить rollback witness, versioned migrations и bounded backup/restore.
 3. Добавить source discovery/background coordinator и QR/device-link UX поверх
@@ -213,5 +218,7 @@ source discovery/background coordinator, sync summaries, membership removal и
   реализованный M0.7.9-контракт signed checkpoint pagination и safe retry.
 - [`../docs/RFC-0013-encrypted-transactional-state-vault.md`](../docs/RFC-0013-encrypted-transactional-state-vault.md) —
   реализованный M0.8.1-контракт encrypted shadow migration, verify и restore.
+- [`../docs/RFC-0014-recoverable-shadow-dual-write.md`](../docs/RFC-0014-recoverable-shadow-dual-write.md) —
+  реализованный M0.8.2-контракт authenticated intent, generation и crash recovery.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

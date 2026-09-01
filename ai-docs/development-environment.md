@@ -307,6 +307,17 @@ toolchain `1.98.0` для воспроизводимой разработки.
     raw DB scan не нашёл plaintext fixtures/path markers. Случайный key пока
     лежит рядом development-файлом; primary CLI repositories ещё используют
     filesystem state.
+43. M0.8.2 добавил `StateMirrorRepository`, authenticated mirror intent и
+    monotonic generation. Каждая live device-state CLI-команда после инициализации
+    vault готовит immediate-durability intent, а после своего фактического
+    результата зеркалирует committed legacy tree и очищает intent одной DB
+    transaction. Next-start сначала выполняет M0.7.7 filesystem recovery, затем
+    завершает mirror только при валидном intent; drift без intent fail-closed.
+    Unit/CLI tests покрывают crash, abort, retry, forged intent и tamper. Все 83
+    workspace tests, strict Clippy и release build проходят. Release smoke
+    `.tmp/m082-smoke-20260901-080000` сохранил generation 1 на read-only
+    `identity`, повысил её до 2 после live prekey rotation, восстановил exact 23
+    files/3 history events и не нашёл plaintext markers в raw DB.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -328,7 +339,8 @@ multi-source claim reconciliation, а M0.7.9 — signed checkpoint pagination и
 safe retry. Source discovery/background coordinator, membership removal/epochs
 и group E2EE остаются открыты. M0.7.7 закрывает M0 crash consistency для device
 filesystem state; M0.8.1 доказывает атомарную encrypted shadow migration в
-`redb`, но versioned dual-write, primary DB cutover, bounded backups и
+`redb`, а M0.8.2 — recoverable versioned dual-write всех live CLI commands.
+Typed incremental repositories, primary DB cutover, bounded backups и
 защищённый key provider ещё не реализованы.
 
 ## Решения, которые ещё нельзя фиксировать

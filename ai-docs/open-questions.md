@@ -26,8 +26,9 @@ M0.7.9 добавил signed append-only checkpoint chain, authenticated paginat
 через fresh session на каждую страницу, safe retry и выбор inventory только при
 согласии минимум двух явно опрошенных sources.
 M0.8.1 добавил обратимый encrypted shadow snapshot всего device state в `redb`,
-но live repositories по-прежнему используют legacy filesystem, а master key
-лежит рядом development-файлом.
+а M0.8.2 — authenticated intent, versioned generation и recoverable mirror
+после каждой live CLI-команды. Legacy по-прежнему является primary store,
+changed mirror остаётся `O(state)`, а master key лежит рядом development-файлом.
 Следующие вопросы относятся к production recovery, rotation, asynchronous
 sessions, distribution, removal и key epochs и не решены этим прототипом.
 
@@ -44,9 +45,9 @@ sessions, distribution, removal и key epochs и не решены этим пр
 - Какой TTL применять к retained losing session, как выполнять authenticated
   session reset после потери state и нужен ли production-протокол сложнее
   проверенного M0.7.6 lexicographic-min разрешения двух crossed sessions?
-- Какая repository schema и dual-write/cutover процедура безопасно переведёт
-  live state с M0.7.7 filesystem на M0.8.1 `redb`, обеспечит versioned
-  migrations, bounded backups и безопасное удаление без ослабления forward
+- Как разбить M0.8.2 full-snapshot mirror на typed incremental repositories,
+  доказать DB/legacy read equivalence и выполнить primary cutover с versioned
+  migrations, bounded backups и безопасным удалением без ослабления forward
   secrecy? Остаётся ли `redb` production engine после mobile/load tests?
 - Как защищать vault master key: OS keystore, аппаратный ключ,
   passphrase/seed-derived wrapping или их комбинация; как обнаруживать rollback
