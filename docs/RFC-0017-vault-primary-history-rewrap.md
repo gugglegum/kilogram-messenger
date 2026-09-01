@@ -131,11 +131,11 @@ source state, затем:
 
 ## 7. Следующий этап
 
-M0.8.6 должен реализовать command-local overlay для event/projection reads и
-доказать его на sync planning без немедленного удаления retained legacy tree.
-Overlay обязан сохранять authorization/membership validation, видеть только
-успешно committed writes, корректно переживать несколько sync rounds и не
-обходить M0.7.7 rollback и M0.8.2 authenticated mirror intent.
+M0.8.6 реализован в
+[`RFC-0018`](RFC-0018-command-local-sync-read-overlay.md): command-local
+event/projection overlay сохраняет authorization/membership validation, видит
+только успешно committed writes, корректно обслуживает несколько sync rounds и
+не обходит M0.7.7 rollback или M0.8.2 authenticated mirror intent.
 
 Ratchet/trust/sequence DB-primary writes, защищённый key provider, bounded
 backup, migrations и внешний rollback witness остаются отдельными этапами.

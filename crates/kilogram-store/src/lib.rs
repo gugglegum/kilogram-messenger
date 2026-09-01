@@ -3,6 +3,7 @@ use std::{
     fs,
     io::{self, Write},
     path::{Path, PathBuf},
+    sync::{RwLock, RwLockReadGuard},
 };
 
 #[cfg(unix)]
@@ -114,6 +115,268 @@ pub struct ImmutableEventReadSnapshot {
 
 pub struct ImmutableLocalMessageReadSnapshot {
     records: BTreeMap<String, Vec<u8>>,
+}
+
+/// A command-scoped authenticated read view over an immutable base snapshot.
+///
+/// Callers stage records before their durable filesystem transaction and only
+/// publish the returned batch after that transaction commits. Staged records
+/// are deliberately invisible to all read methods.
+pub struct CommandEventReadOverlay {
+    base: Box<dyn EventReadRepository>,
+    committed: RwLock<HashMap<EventId, AuthorizedEvent>>,
+}
+
+/// Command-scoped local-projection counterpart to [`CommandEventReadOverlay`].
+pub struct CommandLocalMessageReadOverlay {
+    base: Box<dyn LocalMessageReadRepository>,
+    committed: RwLock<HashMap<EventId, LocalTextProjection>>,
+}
+
+impl CommandEventReadOverlay {
+    pub fn new(base: Box<dyn EventReadRepository>) -> Self {
+        Self {
+            base,
+            committed: RwLock::new(HashMap::new()),
+        }
+    }
+
+    pub fn stage_committed(
+        &self,
+        events: &[AuthorizedEvent],
+        membership: &ConversationMembershipSnapshot,
+    ) -> Result<Vec<AuthorizedEvent>, StoreError> {
+        membership.verify().map_err(ProtocolError::from)?;
+        let Some(first) = events.first() else {
+            return Ok(Vec::new());
+        };
+        let conversation_id = first.event().conversation_id();
+        if conversation_id.scope_id() != membership.conversation_id() {
+            return Err(StoreError::ConversationMembershipMismatch {
+                conversation_id,
+                membership_conversation_id: membership.conversation_id(),
+            });
+        }
+        let existing = self.load_authorized_conversation(conversation_id, membership)?;
+        let mut events_by_id: HashMap<_, _> = existing
+            .into_iter()
+            .map(|stored| (stored.id, stored.event))
+            .collect();
+        let mut writer_positions: HashMap<_, _> = events_by_id
+            .iter()
+            .map(|(event_id, event)| {
+                (
+                    (
+                        event.event().author_device_id(),
+                        event.event().author_sequence(),
+                    ),
+                    *event_id,
+                )
+            })
+            .collect();
+        let mut staged = Vec::new();
+        for event in events {
+            event.verify_for_membership(membership)?;
+            if event.event().conversation_id() != conversation_id {
+                return Err(StoreError::ConversationMembershipMismatch {
+                    conversation_id: event.event().conversation_id(),
+                    membership_conversation_id: membership.conversation_id(),
+                });
+            }
+            let event_id = event.event().event_id()?;
+            if let Some(existing) = events_by_id.get(&event_id) {
+                if existing != event {
+                    return Err(StoreError::CommandOverlayEventConflict { event_id });
+                }
+                continue;
+            }
+            let writer_position = (
+                event.event().author_device_id(),
+                event.event().author_sequence(),
+            );
+            if let Some(existing_event_id) = writer_positions.get(&writer_position) {
+                return Err(StoreError::WriterSequenceConflict {
+                    author_device_id: writer_position.0,
+                    author_sequence: writer_position.1,
+                    existing_event_id: *existing_event_id,
+                    rejected_event_id: event_id,
+                });
+            }
+            writer_positions.insert(writer_position, event_id);
+            events_by_id.insert(event_id, event.clone());
+            staged.push(event.clone());
+        }
+        Ok(staged)
+    }
+
+    pub fn commit_staged(&self, staged: Vec<AuthorizedEvent>) -> Result<usize, StoreError> {
+        let mut committed = self
+            .committed
+            .write()
+            .map_err(|_| StoreError::CommandOverlayLockPoisoned("event"))?;
+        let mut inserted = 0;
+        for event in staged {
+            let event_id = event.event().event_id()?;
+            if let Some(existing) = committed.get(&event_id) {
+                if existing != &event {
+                    return Err(StoreError::CommandOverlayEventConflict { event_id });
+                }
+                continue;
+            }
+            committed.insert(event_id, event);
+            inserted += 1;
+        }
+        Ok(inserted)
+    }
+
+    pub fn committed_count(&self) -> Result<usize, StoreError> {
+        Ok(self.read_committed()?.len())
+    }
+
+    fn read_committed(
+        &self,
+    ) -> Result<RwLockReadGuard<'_, HashMap<EventId, AuthorizedEvent>>, StoreError> {
+        self.committed
+            .read()
+            .map_err(|_| StoreError::CommandOverlayLockPoisoned("event"))
+    }
+}
+
+impl EventReadRepository for CommandEventReadOverlay {
+    fn load_authorized_conversation(
+        &self,
+        conversation_id: ConversationId,
+        membership: &ConversationMembershipSnapshot,
+    ) -> Result<Vec<StoredAuthorizedEvent>, StoreError> {
+        let mut merged: HashMap<_, _> = self
+            .base
+            .load_authorized_conversation(conversation_id, membership)?
+            .into_iter()
+            .map(|stored| (stored.id, stored.event))
+            .collect();
+        for event in self.read_committed()?.values() {
+            if event.event().conversation_id() != conversation_id {
+                continue;
+            }
+            event.verify_for_membership(membership)?;
+            let event_id = event.event().event_id()?;
+            if let Some(existing) = merged.get(&event_id)
+                && existing != event
+            {
+                return Err(StoreError::CommandOverlayEventConflict { event_id });
+            }
+            merged.insert(event_id, event.clone());
+        }
+        let mut writer_positions = HashSet::new();
+        let mut stored = Vec::with_capacity(merged.len());
+        for (id, event) in merged {
+            let position = (
+                event.event().author_device_id(),
+                event.event().author_sequence(),
+            );
+            if !writer_positions.insert(position) {
+                return Err(StoreError::DuplicateWriterSequence {
+                    conversation_id,
+                    author_device_id: position.0,
+                    author_sequence: position.1,
+                });
+            }
+            stored.push(StoredAuthorizedEvent { id, event });
+        }
+        stored.sort_by_cached_key(|event| event.id.to_string());
+        Ok(stored)
+    }
+
+    fn frontier(&self, conversation_id: ConversationId) -> Result<Vec<EventId>, StoreError> {
+        let mut frontier: HashSet<_> = self.base.frontier(conversation_id)?.into_iter().collect();
+        let committed = self.read_committed()?;
+        let overlay_events = committed
+            .iter()
+            .filter(|(_, event)| event.event().conversation_id() == conversation_id)
+            .collect::<Vec<_>>();
+        frontier.extend(overlay_events.iter().map(|(event_id, _)| **event_id));
+        for parent in overlay_events
+            .iter()
+            .flat_map(|(_, event)| event.event().parents())
+        {
+            frontier.remove(parent);
+        }
+        let mut frontier = frontier.into_iter().collect::<Vec<_>>();
+        frontier.sort_by_cached_key(ToString::to_string);
+        Ok(frontier)
+    }
+}
+
+impl CommandLocalMessageReadOverlay {
+    pub fn new(base: Box<dyn LocalMessageReadRepository>) -> Self {
+        Self {
+            base,
+            committed: RwLock::new(HashMap::new()),
+        }
+    }
+
+    pub fn stage_committed(
+        &self,
+        projections: &[LocalTextProjection],
+    ) -> Result<Vec<LocalTextProjection>, StoreError> {
+        let mut staged = Vec::new();
+        for projection in projections {
+            let event_id = projection.event_id();
+            match self.get(event_id) {
+                Ok(existing) if existing == *projection => {}
+                Ok(_) => {
+                    return Err(StoreError::CommandOverlayLocalProjectionConflict { event_id });
+                }
+                Err(StoreError::LocalTextProjectionMissing { .. }) => {
+                    staged.push(projection.clone());
+                }
+                Err(error) => return Err(error),
+            }
+        }
+        Ok(staged)
+    }
+
+    pub fn commit_staged(&self, staged: Vec<LocalTextProjection>) -> Result<usize, StoreError> {
+        let mut committed = self
+            .committed
+            .write()
+            .map_err(|_| StoreError::CommandOverlayLockPoisoned("local-projection"))?;
+        let mut inserted = 0;
+        for projection in staged {
+            let event_id = projection.event_id();
+            if let Some(existing) = committed.get(&event_id) {
+                if existing != &projection {
+                    return Err(StoreError::CommandOverlayLocalProjectionConflict { event_id });
+                }
+                continue;
+            }
+            committed.insert(event_id, projection);
+            inserted += 1;
+        }
+        Ok(inserted)
+    }
+
+    pub fn committed_count(&self) -> Result<usize, StoreError> {
+        Ok(self
+            .committed
+            .read()
+            .map_err(|_| StoreError::CommandOverlayLockPoisoned("local-projection"))?
+            .len())
+    }
+}
+
+impl LocalMessageReadRepository for CommandLocalMessageReadOverlay {
+    fn get(&self, event_id: EventId) -> Result<LocalTextProjection, StoreError> {
+        if let Some(projection) = self
+            .committed
+            .read()
+            .map_err(|_| StoreError::CommandOverlayLockPoisoned("local-projection"))?
+            .get(&event_id)
+        {
+            return Ok(projection.clone());
+        }
+        self.base.get(event_id)
+    }
 }
 
 impl LocalMessageStore {
@@ -988,6 +1251,15 @@ pub enum StoreError {
     #[error("local text projection plaintext conflicts with event {event_id}")]
     LocalTextProjectionPlaintextConflict { event_id: EventId },
 
+    #[error("command-local event overlay conflicts with event {event_id}")]
+    CommandOverlayEventConflict { event_id: EventId },
+
+    #[error("command-local local-projection overlay conflicts with event {event_id}")]
+    CommandOverlayLocalProjectionConflict { event_id: EventId },
+
+    #[error("command-local {0} overlay lock is poisoned")]
+    CommandOverlayLockPoisoned(&'static str),
+
     #[error("stored event authorization at {path} is invalid")]
     InvalidStoredAuthorization {
         path: PathBuf,
@@ -1164,7 +1436,9 @@ mod tests {
             encryption.public_key(),
             "snapshot",
         )?;
-        let authorized = AuthorizedEvent::new(signed, certificate, root.authority_snapshot()?)?;
+        let authority_snapshot = root.authority_snapshot()?;
+        let authorized =
+            AuthorizedEvent::new(signed, certificate.clone(), authority_snapshot.clone())?;
         let event_id = authorized.event().event_id()?;
         event_store.put_authorized(&authorized, &membership)?;
         projection_store.put(&projection)?;
@@ -1204,6 +1478,66 @@ mod tests {
         assert!(matches!(
             ImmutableEventReadSnapshot::from_records([(String::from("../event.event"), vec![])]),
             Err(StoreError::InvalidImmutableSnapshotPath(_))
+        ));
+
+        let event_overlay = CommandEventReadOverlay::new(Box::new(event_snapshot));
+        let projection_overlay = CommandLocalMessageReadOverlay::new(Box::new(projection_snapshot));
+        let second_signed =
+            sign_test_text(&identity, conversation_id, 1, vec![event_id], "overlay")?;
+        let second_projection = LocalTextProjection::seal_authored(
+            &second_signed,
+            identity.device_id(),
+            encryption.public_key(),
+            "overlay",
+        )?;
+        let second = AuthorizedEvent::new(
+            second_signed,
+            certificate.clone(),
+            authority_snapshot.clone(),
+        )?;
+        let second_id = second.event().event_id()?;
+        let staged_events =
+            event_overlay.stage_committed(std::slice::from_ref(&second), &membership)?;
+        let staged_projections =
+            projection_overlay.stage_committed(std::slice::from_ref(&second_projection))?;
+
+        assert_eq!(
+            event_overlay.authorized_inventory(conversation_id, &membership)?,
+            vec![event_id]
+        );
+        assert!(matches!(
+            projection_overlay.get(second_id),
+            Err(StoreError::LocalTextProjectionMissing { event_id, .. })
+                if event_id == second_id
+        ));
+
+        assert_eq!(event_overlay.commit_staged(staged_events)?, 1);
+        assert_eq!(projection_overlay.commit_staged(staged_projections)?, 1);
+        assert_eq!(event_overlay.committed_count()?, 1);
+        assert_eq!(projection_overlay.committed_count()?, 1);
+        assert_eq!(
+            event_overlay.authorized_events_by_id(
+                conversation_id,
+                &[event_id, second_id],
+                &membership,
+            )?,
+            vec![authorized.clone(), second.clone()]
+        );
+        assert_eq!(event_overlay.frontier(conversation_id)?, vec![second_id]);
+        assert_eq!(projection_overlay.get(second_id)?, second_projection);
+
+        let conflicting = AuthorizedEvent::new(
+            sign_test_text(&identity, conversation_id, 1, vec![event_id], "conflict")?,
+            certificate,
+            authority_snapshot,
+        )?;
+        assert!(matches!(
+            event_overlay.stage_committed(&[conflicting], &membership),
+            Err(StoreError::WriterSequenceConflict {
+                author_sequence: 1,
+                existing_event_id,
+                ..
+            }) if existing_event_id == second_id
         ));
         Ok(())
     }

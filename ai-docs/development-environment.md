@@ -349,6 +349,15 @@ toolchain `1.98.0` для воспроизводимой разработки.
     `.tmp/m085-smoke-20260901-153149` создал manual и network bundle по 3
     events из vault generation 1 (6 event records, 3 projections), сохранил
     exact post-transfer generation 1; projection drift дал exit 1 без fallback.
+47. M0.8.6 добавил command-local committed overlay над immutable vault sync
+    base. Event/projection records staged до M0.7.7 transaction и публикуются
+    только после её commit; последующие rounds используют merged inventory.
+    Store/CLI tests проверяют невидимость staged data, два последовательных
+    batches, idempotency и rollback failure. Все 85 tests, strict Clippy и
+    release build проходят. Process smoke
+    `.tmp/m086-smoke-20260901-160635` передал 73 events rounds `64 + 9`, получил
+    listener overlay `73/73`, одинаковые vault-primary histories, peer vault
+    generation 2 и fail-closed exit 1 на projection drift.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -372,8 +381,9 @@ safe retry. Source discovery/background coordinator, membership removal/epochs
 filesystem state; M0.8.1 доказывает атомарную encrypted shadow migration в
 `redb`, M0.8.2 — recoverable versioned dual-write всех live CLI commands,
 M0.8.3 — typed incremental encrypted delta и exact shadow reads, M0.8.4 —
-первый DB-primary canary для read-only history, а M0.8.5 — тот же cutover для
-manual/network history-rewrap source reads. Sync overlay и остальные repository cutover,
+первый DB-primary canary для read-only history, M0.8.5 — тот же cutover для
+manual/network history-rewrap source reads, а M0.8.6 — command-local overlay
+для mixed sync reads. Vault-primary writes и остальные repository cutover,
 bounded backups и защищённый key provider ещё не реализованы.
 
 ## Решения, которые ещё нельзя фиксировать

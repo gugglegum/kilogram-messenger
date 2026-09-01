@@ -1126,10 +1126,46 @@ shadow scan всё ещё `O(state)`. Полный контракт —
 команды нельзя напрямую использовать в mixed sync. Полный контракт —
 [`../docs/RFC-0017-vault-primary-history-rewrap.md`](../docs/RFC-0017-vault-primary-history-rewrap.md).
 
+### M0.8.6 — command-local sync read overlay: выполнено
+
+Реализовано:
+
+- sync client и listener захватывают authenticated immutable read-set до своих
+  command-local authority/prekey/trust mutations;
+- `CommandEventReadOverlay` объединяет vault/filesystem base с только успешно
+  committed events, повторно проверяя membership, authorization, Event ID и
+  writer sequence;
+- `CommandLocalMessageReadOverlay` даёт overlay-first lookup и отклоняет
+  conflicting projection для одного Event ID;
+- staged records невидимы до завершения M0.7.7 filesystem transaction;
+- `DecryptingSessionStore` разделяет legacy writes и overlay reads, поэтому
+  каждый следующий bounded round видит предыдущий committed batch;
+- sync diagnostics публикуют physical primary/shadow, vault generation/record
+  counts и размеры event/projection overlay;
+- initialized invalid/stale/drifted vault блокирует sync без silent fallback;
+  never-migrated state сохраняет legacy compatibility.
+
+Проверки:
+
+- store test доказывает stage invisibility, commit visibility, frontier merge и
+  writer-sequence conflict;
+- CLI tests проверяют два последовательных batches поверх пустого immutable
+  vault base, idempotent retry и нулевой overlay после transaction failure;
+- все 85 workspace tests, rustfmt, strict Clippy и release build проходят;
+- release smoke `.tmp/m086-smoke-20260901-160635` передал 73 события rounds
+  `64 + 9`, listener сообщил encrypted-vault и overlay `73/73`, итоговые
+  vault-primary histories совпали, peer vault достиг generation 2;
+- projection shadow drift дал exit 1 и `silent_fallback=false`.
+
+Граница среза: overlay command-local и не заменяет persistent storage. Sync
+reads теперь DB-primary, но events/projections и весь mutable state сначала
+пишутся в retained legacy tree. Полный контракт —
+[`../docs/RFC-0018-command-local-sync-read-overlay.md`](../docs/RFC-0018-command-local-sync-read-overlay.md).
+
 ### Следующий этап
 
-1. M0.8.6 реализовать command-local event/projection overlay и доказать его на
-   mixed read/write sync planning, сохранив M0.7.7 rollback и M0.8.2 intent.
+1. M0.8.7 ввести transactional vault-primary immutable event/projection writes
+   с retained legacy shadow, fault injection и доказанной атомарностью.
 2. Защитить vault master key через OS keystore/passphrase/seed wrapping и
    спроектировать rollback witness, backup и versioned migrations.
 3. Source discovery/background coordinator и QR/device-link UX строить поверх

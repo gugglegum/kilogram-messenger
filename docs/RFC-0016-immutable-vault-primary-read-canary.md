@@ -162,9 +162,10 @@ source-history пути history rewrap используют общий authentic
 snapshot и не открывают legacy stores после cutover. Read trait подготовлен к
 sync inventory/events-by-ID, но mixed read/write sync остаётся legacy-primary.
 
-M0.8.6 должен добавить явный overlay новых event/projection records либо direct
-transactional DB write; нельзя просто переиспользовать snapshot начала команды
-и потерять записи, созданные позже.
+M0.8.6 реализован в
+[`RFC-0018`](RFC-0018-command-local-sync-read-overlay.md): sync использует
+command-local overlay новых event/projection records поверх snapshot начала
+команды и публикует их только после durable filesystem commit.
 
 Mutable ratchet/trust/sequence cutover, protected key provider, migrations,
 backup и rollback witness остаются отдельными security stages.

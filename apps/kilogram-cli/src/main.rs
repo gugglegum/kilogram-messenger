@@ -43,8 +43,9 @@ use kilogram_state::{
     VaultMigrationOutcome, VaultMirrorCommit, VaultMirrorOutcome, VaultReport,
 };
 use kilogram_store::{
-    EventReadRepository, EventStore, ImmutableEventReadSnapshot, ImmutableLocalMessageReadSnapshot,
-    LocalMessageReadRepository, LocalMessageStore, StoreError, StoreOutcome,
+    CommandEventReadOverlay, CommandLocalMessageReadOverlay, EventReadRepository, EventStore,
+    ImmutableEventReadSnapshot, ImmutableLocalMessageReadSnapshot, LocalMessageReadRepository,
+    LocalMessageStore, StoreError, StoreOutcome,
 };
 use kilogram_transport_iroh::{
     ALPN, MAX_WIRE_MESSAGE_BYTES, RoutePolicy, SelectedPathDiagnostics, await_route_policy,
@@ -1420,11 +1421,8 @@ async fn listen(options: ListenOptions) -> Result<()> {
         &listener_certificate,
         allowed_requester_account_id,
     )?;
-    let history_rewrap_reads = history_rewrap_approval
-        .as_ref()
-        .map(|_| open_immutable_read_repositories(&state_dir))
-        .transpose()
-        .context("capture immutable vault-primary source history before listener state changes")?;
+    let immutable_reads = open_immutable_read_repositories(&state_dir)
+        .context("capture immutable vault-primary listener state before local changes")?;
     let authority_snapshot_store = device_state
         .install_own_authority_snapshot(listener_device_list.authority_snapshot())
         .context("install authority snapshot embedded in listener device list")?;
@@ -1504,10 +1502,7 @@ async fn listen(options: ListenOptions) -> Result<()> {
     );
     println!("authority_store={authority_snapshot_store:?}");
     if let Some(approval) = &history_rewrap_approval {
-        let reads = history_rewrap_reads
-            .as_ref()
-            .context("history-rewrap approval is missing its immutable read snapshot")?;
-        print_immutable_read_diagnostics("history_rewrap", reads);
+        print_immutable_read_diagnostics("history_rewrap", &immutable_reads);
         println!(
             "history_rewrap_source_device_id={}",
             listener_certificate.device_id()
@@ -1568,12 +1563,14 @@ async fn listen(options: ListenOptions) -> Result<()> {
             .await?;
         }
         ClientRequest::SyncInventory(inventory) => {
+            print_immutable_read_diagnostics("sync", &immutable_reads);
             let decrypting_store = DecryptingSessionStore::new(
                 &state_dir,
                 &event_store,
                 &local_message_store,
                 &device_state,
                 ratchet_state,
+                immutable_reads,
             );
             handle_sync_request(
                 &device_state,
@@ -1591,7 +1588,7 @@ async fn listen(options: ListenOptions) -> Result<()> {
         ClientRequest::HistoryRewrap(request) => {
             handle_history_rewrap_request(
                 &device_state,
-                history_rewrap_reads.as_ref(),
+                Some(&immutable_reads),
                 &mut send,
                 request,
                 session_binding,
@@ -2126,6 +2123,7 @@ async fn handle_sync_request(
             println!("sync_sent_events={total_sent_events}");
             println!("sync_received_events={total_received_events}");
             println!("sync_more_available=false");
+            print_sync_overlay_diagnostics(decrypting_store)?;
             println!("status=synchronized");
             return Ok(());
         }
@@ -2148,6 +2146,7 @@ async fn handle_sync_request(
                 println!("sync_received_events={total_received_events}");
                 println!("sync_more_available=true");
                 println!("sync_resume_checkpoint=event-store");
+                print_sync_overlay_diagnostics(decrypting_store)?;
                 println!("status=paused");
                 return Ok(());
             }
@@ -2484,6 +2483,8 @@ async fn sync(
     let requester_authority_snapshot = device_state
         .load_own_authority_snapshot()
         .context("load requester Account Root authority snapshot")?;
+    let immutable_reads = open_immutable_read_repositories(&state_dir)
+        .context("capture immutable vault-primary sync state before local changes")?;
     let event_store = open_event_store(&state_dir)?;
     let local_message_store = open_local_message_store(&state_dir)?;
     let ratchet_state =
@@ -2519,12 +2520,14 @@ async fn sync(
         requester_certificate.account_id(),
         authorized_listener.account_id(),
     )?;
+    print_immutable_read_diagnostics("sync", &immutable_reads);
     let decrypting_store = DecryptingSessionStore::new(
         &state_dir,
         &event_store,
         &local_message_store,
         &device_state,
         ratchet_state,
+        immutable_reads,
     );
     let client = SyncClient::new(
         device_state.identity(),
@@ -2632,6 +2635,7 @@ async fn sync(
             println!("sync_received_events={total_received_events}");
             println!("sync_sent_events={total_sent_events}");
             println!("sync_more_available=false");
+            print_sync_overlay_diagnostics(&decrypting_store)?;
             println!("status=synchronized");
 
             print_transport_diagnostics(&connection, route_policy).await?;
@@ -2661,6 +2665,7 @@ async fn sync(
             println!("sync_sent_events={total_sent_events}");
             println!("sync_more_available=true");
             println!("sync_resume_checkpoint=event-store");
+            print_sync_overlay_diagnostics(&decrypting_store)?;
             println!("status=paused");
 
             print_transport_diagnostics(&connection, route_policy).await?;
@@ -3172,15 +3177,10 @@ fn open_immutable_read_repositories(state_dir: &Path) -> Result<ImmutableReadRep
     if !EncryptedStateVault::is_initialized(state_dir)
         .context("inspect encrypted state vault before history read")?
     {
-        return Ok(ImmutableReadRepositories {
-            events: Box::new(open_event_store(state_dir)?),
-            local_messages: Box::new(open_local_message_store(state_dir)?),
-            primary: "legacy-filesystem",
-            shadow: "not-enabled",
-            mirror_generation: None,
-            event_record_count: 0,
-            local_projection_record_count: 0,
-        });
+        return open_legacy_read_repositories(
+            &state_dir.join(EVENT_STORE_DIRECTORY),
+            &state_dir.join(LOCAL_MESSAGE_STORE_DIRECTORY),
+        );
     }
 
     let vault = EncryptedStateVault::open_existing(state_dir)
@@ -3230,6 +3230,21 @@ fn open_immutable_read_repositories(state_dir: &Path) -> Result<ImmutableReadRep
         mirror_generation: Some(mirror_generation),
         event_record_count,
         local_projection_record_count,
+    })
+}
+
+fn open_legacy_read_repositories(
+    event_root: &Path,
+    local_projection_root: &Path,
+) -> Result<ImmutableReadRepositories> {
+    Ok(ImmutableReadRepositories {
+        events: Box::new(EventStore::open(event_root)?),
+        local_messages: Box::new(LocalMessageStore::open(local_projection_root)?),
+        primary: "legacy-filesystem",
+        shadow: "not-enabled",
+        mirror_generation: None,
+        event_record_count: 0,
+        local_projection_record_count: 0,
     })
 }
 
@@ -4683,8 +4698,10 @@ fn ensure_received_local_text_projection(
 
 struct DecryptingSessionStore<'a> {
     state_directory: PathBuf,
-    store: &'a EventStore,
-    local_messages: &'a LocalMessageStore,
+    event_writes: &'a EventStore,
+    local_message_writes: &'a LocalMessageStore,
+    event_reads: CommandEventReadOverlay,
+    local_message_reads: CommandLocalMessageReadOverlay,
     device_state: &'a DeviceState,
     ratchet_state: RefCell<RatchetState>,
 }
@@ -4696,17 +4713,28 @@ impl<'a> DecryptingSessionStore<'a> {
         local_messages: &'a LocalMessageStore,
         device_state: &'a DeviceState,
         ratchet_state: RatchetState,
+        read_repositories: ImmutableReadRepositories,
     ) -> Self {
+        let ImmutableReadRepositories {
+            events,
+            local_messages: local_message_reads,
+            ..
+        } = read_repositories;
         Self {
             state_directory: state_directory.as_ref().to_path_buf(),
-            store,
-            local_messages,
+            event_writes: store,
+            local_message_writes: local_messages,
+            event_reads: CommandEventReadOverlay::new(events),
+            local_message_reads: CommandLocalMessageReadOverlay::new(local_message_reads),
             device_state,
             ratchet_state: RefCell::new(ratchet_state),
         }
     }
 
-    fn ensure_local_projections(&self, events: &[AuthorizedEvent]) -> Result<(), StoreError> {
+    fn ensure_local_projections(
+        &self,
+        events: &[AuthorizedEvent],
+    ) -> Result<Vec<LocalTextProjection>, StoreError> {
         let mut text_events = events
             .iter()
             .filter(|event| matches!(event.event().payload(), EventPayload::RatchetText { .. }))
@@ -4717,16 +4745,22 @@ impl<'a> DecryptingSessionStore<'a> {
                 event.event().author_sequence(),
             )
         });
+        let mut created = Vec::new();
         for event in text_events {
-            self.ensure_local_projection(event.event())?;
+            if let Some(projection) = self.ensure_local_projection(event.event())? {
+                created.push(projection);
+            }
         }
-        Ok(())
+        Ok(created)
     }
 
-    fn ensure_local_projection(&self, event: &SignedEvent) -> Result<(), StoreError> {
+    fn ensure_local_projection(
+        &self,
+        event: &SignedEvent,
+    ) -> Result<Option<LocalTextProjection>, StoreError> {
         let event_id = event.event_id()?;
         let local_device_id = self.device_state.identity().device_id();
-        match self.local_messages.get(event_id) {
+        match self.local_message_reads.get(event_id) {
             Ok(projection) => {
                 let local_account_id = self
                     .device_state
@@ -4739,7 +4773,7 @@ impl<'a> DecryptingSessionStore<'a> {
                     local_account_id,
                     self.device_state.encryption(),
                 )?;
-                Ok(())
+                Ok(None)
             }
             Err(error @ StoreError::LocalTextProjectionMissing { .. }) => {
                 if event.author_device_id() == local_device_id {
@@ -4773,16 +4807,25 @@ impl<'a> DecryptingSessionStore<'a> {
                     .borrow_mut()
                     .decrypt(self.device_state.identity(), sender_identity, ciphertext)
                     .map_err(kilogram_protocol::ProtocolError::from)?;
-                ensure_received_local_text_projection(
-                    self.local_messages,
-                    self.device_state,
+                let projection = LocalTextProjection::seal_received(
                     event,
+                    local_device_id,
+                    self.device_state.encryption().public_key(),
                     &decrypted,
                 )?;
-                Ok(())
+                self.local_message_writes.put(&projection)?;
+                Ok(Some(projection))
             }
             Err(error) => Err(error),
         }
+    }
+
+    fn overlay_event_count(&self) -> Result<usize, StoreError> {
+        self.event_reads.committed_count()
+    }
+
+    fn overlay_local_projection_count(&self) -> Result<usize, StoreError> {
+        self.local_message_reads.committed_count()
     }
 }
 
@@ -4792,7 +4835,8 @@ impl SessionStore for DecryptingSessionStore<'_> {
         conversation_id: ConversationId,
         membership: &ConversationMembershipSnapshot,
     ) -> Result<Vec<kilogram_protocol::EventId>, StoreError> {
-        self.store.authorized_inventory(conversation_id, membership)
+        self.event_reads
+            .authorized_inventory(conversation_id, membership)
     }
 
     fn events_by_id(
@@ -4801,13 +4845,15 @@ impl SessionStore for DecryptingSessionStore<'_> {
         event_ids: &[kilogram_protocol::EventId],
         membership: &ConversationMembershipSnapshot,
     ) -> Result<Vec<AuthorizedEvent>, StoreError> {
-        run_store_transaction(&self.state_directory, || {
-            let events =
-                self.store
-                    .authorized_events_by_id(conversation_id, event_ids, membership)?;
-            self.ensure_local_projections(&events)?;
-            Ok(events)
-        })
+        let events =
+            self.event_reads
+                .authorized_events_by_id(conversation_id, event_ids, membership)?;
+        let staged_projections = run_store_transaction(&self.state_directory, || {
+            let created = self.ensure_local_projections(&events)?;
+            self.local_message_reads.stage_committed(&created)
+        })?;
+        self.local_message_reads.commit_staged(staged_projections)?;
+        Ok(events)
     }
 
     fn put_events(
@@ -4815,15 +4861,35 @@ impl SessionStore for DecryptingSessionStore<'_> {
         events: &[AuthorizedEvent],
         membership: &ConversationMembershipSnapshot,
     ) -> Result<(), StoreError> {
-        run_store_transaction(&self.state_directory, || {
+        let staged_events = self.event_reads.stage_committed(events, membership)?;
+        let staged_projections = run_store_transaction(&self.state_directory, || {
             for event in events {
                 event.verify_for_membership(membership)?;
             }
-            self.ensure_local_projections(events)?;
-            self.store.put_authorized_batch(events, membership)?;
-            Ok(())
-        })
+            let created = self.ensure_local_projections(events)?;
+            self.event_writes.put_authorized_batch(events, membership)?;
+            self.local_message_reads.stage_committed(&created)
+        })?;
+        self.local_message_reads.commit_staged(staged_projections)?;
+        self.event_reads.commit_staged(staged_events)?;
+        Ok(())
     }
+}
+
+fn print_sync_overlay_diagnostics(store: &DecryptingSessionStore<'_>) -> Result<()> {
+    println!(
+        "sync_overlay_committed_events={}",
+        store
+            .overlay_event_count()
+            .context("read command-local sync event overlay size")?
+    );
+    println!(
+        "sync_overlay_committed_local_projections={}",
+        store
+            .overlay_local_projection_count()
+            .context("read command-local sync projection overlay size")?
+    );
+    Ok(())
 }
 
 fn require_conversation_participants(
@@ -5080,6 +5146,26 @@ mod tests {
         )?)
     }
 
+    fn empty_immutable_read_repositories() -> Result<ImmutableReadRepositories> {
+        Ok(ImmutableReadRepositories {
+            events: Box::new(ImmutableEventReadSnapshot::from_records(Vec::<(
+                String,
+                Vec<u8>,
+            )>::new(
+            ))?),
+            local_messages: Box::new(ImmutableLocalMessageReadSnapshot::from_records(Vec::<(
+                String,
+                Vec<u8>,
+            )>::new(
+            ))?),
+            primary: "test-immutable-snapshot",
+            shadow: "not-enabled",
+            mirror_generation: None,
+            event_record_count: 0,
+            local_projection_record_count: 0,
+        })
+    }
+
     #[test]
     fn seeded_history_is_signed_chained_and_persistent() -> Result<()> {
         let directory = tempfile::tempdir()?;
@@ -5222,21 +5308,38 @@ mod tests {
         fs::rename(&projections_backup, state_dir.join("local-messages"))?;
         guard.finish()?;
 
-        let peer_events = EventStore::open(directory.path().join("peer-events"))?;
-        let peer_messages = LocalMessageStore::open(directory.path().join("peer-messages"))?;
+        let peer_events = open_event_store(&peer_state_dir)?;
+        let peer_messages = open_local_message_store(&peer_state_dir)?;
         let peer_ratchet = RatchetState::load_or_create(&peer_state_dir)?;
+        let peer_vault = EncryptedStateVault::open_or_create(&peer_state_dir)?;
+        peer_vault.migrate_legacy_snapshot()?;
+        drop(peer_vault);
+        let peer_guard = VaultDualWriteGuard::prepare(&peer_state_dir)?
+            .context("expected vault guard for command-local sync overlay canary")?;
+        let peer_reads = open_immutable_read_repositories(&peer_state_dir)?;
+        assert_eq!(peer_reads.primary, "encrypted-vault");
+        assert_eq!(peer_reads.event_record_count, 0);
+        assert_eq!(peer_reads.local_projection_record_count, 0);
         let peer_sync = DecryptingSessionStore::new(
-            directory.path(),
+            &peer_state_dir,
             &peer_events,
             &peer_messages,
             &peer,
             peer_ratchet,
+            peer_reads,
         );
         let authorized_events = events
             .iter()
             .map(|stored| stored.event.clone())
             .collect::<Vec<_>>();
-        peer_sync.put_events(&authorized_events, &membership)?;
+        peer_sync.put_events(&authorized_events[..2], &membership)?;
+        assert_eq!(peer_sync.inventory(conversation_id, &membership)?.len(), 2);
+        assert_eq!(peer_sync.overlay_event_count()?, 2);
+        assert_eq!(peer_sync.overlay_local_projection_count()?, 2);
+        peer_sync.put_events(&authorized_events[2..], &membership)?;
+        assert_eq!(peer_sync.inventory(conversation_id, &membership)?.len(), 3);
+        assert_eq!(peer_sync.overlay_event_count()?, 3);
+        assert_eq!(peer_sync.overlay_local_projection_count()?, 3);
         let mut peer_bodies = Vec::with_capacity(events.len());
         for stored in &events {
             peer_bodies.push(peer_messages.get(stored.id)?.open(
@@ -5247,6 +5350,14 @@ mod tests {
         }
         peer_bodies.sort();
         assert_eq!(peer_bodies, ["fixture-1", "fixture-2", "fixture-3"]);
+        drop(peer_sync);
+        peer_guard.finish()?;
+        assert_eq!(
+            EncryptedStateVault::open_existing(&peer_state_dir)?
+                .verify_against_legacy()?
+                .mirror_generation(),
+            2
+        );
         Ok(())
     }
 
@@ -5313,6 +5424,7 @@ mod tests {
             &local_messages,
             &local_state,
             RatchetState::load_or_create(directory.path().join("local-ratchet"))?,
+            empty_immutable_read_repositories()?,
         );
 
         assert!(matches!(
@@ -5326,6 +5438,9 @@ mod tests {
                 .authorized_inventory(conversation_id, &membership)?
                 .is_empty()
         );
+        assert!(guarded.inventory(conversation_id, &membership)?.is_empty());
+        assert_eq!(guarded.overlay_event_count()?, 0);
+        assert_eq!(guarded.overlay_local_projection_count()?, 0);
         Ok(())
     }
 
@@ -5386,6 +5501,7 @@ mod tests {
             &local_messages,
             &local_state,
             local_ratchet,
+            empty_immutable_read_repositories()?,
         );
 
         guarded.put_events(std::slice::from_ref(&event), &membership)?;
@@ -5402,6 +5518,12 @@ mod tests {
             store.authorized_inventory(conversation_id, &membership)?,
             vec![event_id]
         );
+        assert_eq!(
+            guarded.inventory(conversation_id, &membership)?,
+            vec![event_id]
+        );
+        assert_eq!(guarded.overlay_event_count()?, 1);
+        assert_eq!(guarded.overlay_local_projection_count()?, 1);
         Ok(())
     }
 

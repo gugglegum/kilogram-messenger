@@ -39,12 +39,14 @@ The first immutable vault primary-read canary is specified in
 [`docs/RFC-0016-immutable-vault-primary-read-canary.md`](docs/RFC-0016-immutable-vault-primary-read-canary.md).
 The vault-primary history-rewrap source cutover is specified in
 [`docs/RFC-0017-vault-primary-history-rewrap.md`](docs/RFC-0017-vault-primary-history-rewrap.md).
+The command-local vault-primary sync overlay is specified in
+[`docs/RFC-0018-command-local-sync-read-overlay.md`](docs/RFC-0018-command-local-sync-read-overlay.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.8.5 vault-primary history rewrap — complete
+## Current milestone: M0.8.6 command-local sync read overlay — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -160,10 +162,19 @@ Mixed read/write sync remains legacy-primary until a command-local overlay can
 make newly committed events and projections visible without weakening crash
 recovery.
 
+M0.8.6 moves sync inventory and events-by-ID reads onto an authenticated
+immutable vault base plus a command-local committed overlay. Incoming event and
+local-projection batches are validated and staged first, written through the
+existing crash-consistent filesystem transaction, and published to the overlay
+only after that transaction commits. Subsequent bounded rounds therefore see
+records accepted earlier in the same connection. Both sync peers report their
+physical primary source and overlay sizes; an initialized invalid or drifted
+vault still fails closed without filesystem fallback.
+
 This is still a narrow integration spike. The vault is not yet the primary
-repository for writes or synchronization: read-only history and history-rewrap
-source inventory use DB bytes, while live writes continue through legacy files
-before an `O(state)` shadow comparison. The
+repository for writes: history, history-rewrap source inventory, and sync reads
+use DB bytes, while live writes continue through legacy files before an
+`O(state)` shadow comparison. The
 development master key remains beside the database. It does not yet provide a
 global DHT or gossip freshness proof, atomic remote prekey reservation,
 protected local key storage, full DB-primary repository cutover, PQXDH, or
