@@ -32,8 +32,12 @@ M0.8.1 добавил обратимый encrypted shadow snapshot всего de
 scan/decrypt остаётся `O(state)`. M0.8.4 перевёл read-only history, M0.8.5 —
 manual/network history-rewrap source inventory, M0.8.6 — mixed sync reads на
 DB-primary event/projection snapshot, а M0.8.7 — vault commit barrier для всех
-journaled writes. Filesystem пока остаётся staging/shadow и primary для mutable
-reads и части trust updates, а master key лежит рядом development-файлом.
+journaled writes. M0.8.8 добавил typed journal delta без полного filesystem
+payload scan и первый mutable DB-primary adapter для `next-sequence`.
+Filesystem пока остаётся ratchet/trust read path и compatibility shadow.
+Bounded trust compatibility ingress удерживает незажурналированные authority/
+membership/contact изменения в одной vault transaction, но не заменяет
+DB-primary trust repository. Master key лежит рядом development-файлом.
 Следующие вопросы относятся к production recovery, rotation, asynchronous
 sessions, distribution, removal и key epochs и не решены этим прототипом.
 
@@ -50,12 +54,13 @@ sessions, distribution, removal и key epochs и не решены этим пр
 - Какой TTL применять к retained losing session, как выполнять authenticated
   session reset после потери state и нужен ли production-протокол сложнее
   проверенного M0.7.6 lexicographic-min разрешения двух crossed sessions?
-- M0.8.6 даёт command overlay, а M0.8.7 делает vault commit barrier и
-  восстанавливает legacy shadow из DB после crash. Как заменить full staging
-  scan typed direct DB transactions и перевести ratchet/trust/sequence reads,
-  не создавая два несовместимых transaction API? Как долго сохранять legacy
-  shadow и какие fault/migration критерии разрешают удалить его? Остаётся ли
-  `redb` production engine после mobile/load, bounded backup и compaction tests?
+- M0.8.8 даёт typed journal delta и DB-primary sequence, но ratchet сравнивается
+  с backup целиком, append-only directories перечисляются, а manifest требует
+  полной DB decrypt/re-hash. Какой DB-owned ratchet workspace и authenticated
+  incremental manifest позволят перейти к `O(changed)` без второго transaction
+  coordinator? Как долго сохранять legacy shadow и какие fault/migration
+  критерии разрешают удалить его? Остаётся ли `redb` production engine после
+  mobile/load, bounded backup и compaction tests?
 - Как защищать vault master key: OS keystore, аппаратный ключ,
   passphrase/seed-derived wrapping или их комбинация; как обнаруживать rollback
   согласованной старой пары DB+key и восстанавливать key без создания общего

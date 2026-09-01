@@ -161,7 +161,9 @@ state tree, поэтому scan остаётся `O(state)`. Нетранзак�
 trust reads ещё не используют vault adapters. Development master key остаётся
 рядом с DB.
 
-Следующий логичный этап M0.8.8 — добавить typed direct vault transactions и
-DB-primary mutable read adapters, чтобы legacy стал только выходным shadow, а
-не входом для checkpoint scan. Protected key provider, rollback witness,
-versioned migrations и bounded backup остаются отдельными security stages.
+M0.8.8 реализован в
+[`RFC-0020`](RFC-0020-typed-journal-delta-and-mutable-sequence.md): live CLI
+использует typed delta активного journal вместо полного filesystem payload
+checkpoint, а `next-sequence` стал первым mutable DB-primary adapter. Ratchet и
+trust cutover, protected key provider, rollback witness, versioned migrations
+и bounded backup остаются отдельными security stages.

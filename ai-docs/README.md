@@ -143,6 +143,18 @@ shadow; crash между шагами восстанавливает весь sh
 связанные ratchet/sequence records. Network response следует после обоих
 commit/confirmation. Mutable reads и non-transactional trust writes ещё не
 полностью переведены.
+M0.8.8 заменяет полный filesystem payload checkpoint на typed delta активного
+journal. Direct vault transaction принимает changed ratchet/sequence и только
+новые append-only records, проверяет canonical kind/path и сохраняет прежний
+primary-shadow crash contract. `next-sequence` стал первым mutable DB-primary
+adapter: allocator получает authenticated counter из vault, а filesystem
+записывает только transactional shadow. Старые history payloads больше не
+перечитываются из filesystem при построении pre-commit delta, но exact
+post-commit shadow confirmation, DB manifest rebuild и path enumeration ещё
+остаются `O(state)`. Пока authority/contact writers не journal-aware, bounded
+trust compatibility ingress включает authority/certificate/membership/
+peer-authority records в ту же vault transaction и запрещает их неявное
+удаление; trust repository всё ещё filesystem-backed.
 Seed/root recovery, защищённое хранение root/local/ratchet keys, production
 repository cutover, global prekey discovery/witness, автоматический
 recovery source discovery/background coordinator, sync summaries, membership
@@ -199,8 +211,8 @@ removal и группы ещё не реализованы.
 
 ## План ближайших работ
 
-1. В M0.8.8 добавить typed direct vault transactions и DB-primary mutable read
-   adapters, исключая полный legacy staging scan из основного write path.
+1. В M0.8.9 добавить DB-owned ratchet read/write workspace и явную регистрацию
+   append-only write-set, исключив повторное directory enumeration.
 2. Защитить vault master key через OS keystore/passphrase/seed wrapping,
    добавить rollback witness, versioned migrations и bounded backup/restore.
 3. Добавить source discovery/background coordinator и QR/device-link UX поверх
@@ -261,5 +273,7 @@ removal и группы ещё не реализованы.
   реализованный M0.8.6-контракт immutable vault base и committed sync overlay.
 - [`../docs/RFC-0019-vault-primary-transaction-checkpoint.md`](../docs/RFC-0019-vault-primary-transaction-checkpoint.md) —
   реализованный M0.8.7-контракт vault commit barrier и recoverable legacy shadow.
+- [`../docs/RFC-0020-typed-journal-delta-and-mutable-sequence.md`](../docs/RFC-0020-typed-journal-delta-and-mutable-sequence.md) —
+  реализованный M0.8.8 typed direct delta и первый mutable DB-primary sequence adapter.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

@@ -15,7 +15,10 @@ use serde::{Deserialize, Serialize};
 use tempfile::{NamedTempFile, TempDir};
 use zeroize::ZeroizeOnDrop;
 
-use crate::{StateError, io_at, path_exists, reject_symlink, sync_directory, validate_relative};
+use crate::{
+    StagedStateMutation, StateError, StateTransaction, io_at, path_exists, reject_symlink,
+    sync_directory, validate_relative,
+};
 
 pub const STATE_VAULT_FILE: &str = "state-vault.redb";
 pub const STATE_VAULT_KEY_FILE: &str = "state-vault.key";
@@ -40,6 +43,8 @@ const MIRROR_INTENT_AUTH_KEY_DOMAIN: &str = "kilogram state vault mirror intent 
 const PRIMARY_SHADOW_INTENT_AUTH_KEY_DOMAIN: &str =
     "kilogram state vault primary shadow intent auth v1";
 const RECORD_AAD_DOMAIN: &[u8] = b"kilogram:state-vault-record-aad:v1\0";
+const TRUST_FILES: [&str; 2] = ["account-authority.snapshot", "device-certificate.cert"];
+const TRUST_DIRECTORIES: [&str; 2] = ["conversation-memberships", "peer-authority"];
 
 const META_TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("vault-meta-v1");
 const RECORD_TABLE: TableDefinition<&[u8], &[u8]> = TableDefinition::new("vault-records-v1");
@@ -161,6 +166,26 @@ impl VaultPrimaryRead {
 
     pub fn shadow_reports(&self) -> &[TypedShadowReadReport] {
         &self.shadow_reports
+    }
+
+    pub fn into_records(self) -> Vec<VaultPrimaryRecord> {
+        self.records
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct VaultMutableRead {
+    mirror_generation: u64,
+    records: Vec<VaultPrimaryRecord>,
+}
+
+impl VaultMutableRead {
+    pub fn mirror_generation(&self) -> u64 {
+        self.mirror_generation
+    }
+
+    pub fn records(&self) -> &[VaultPrimaryRecord] {
+        &self.records
     }
 
     pub fn into_records(self) -> Vec<VaultPrimaryRecord> {
@@ -320,12 +345,22 @@ pub trait TypedStateRepository {
         &self,
         kinds: &[StateRecordKind],
     ) -> Result<VaultPrimaryRead, StateError>;
+
+    fn read_mutable_primary_canary(
+        &self,
+        kinds: &[StateRecordKind],
+    ) -> Result<VaultMutableRead, StateError>;
 }
 
 /// Commits the filesystem transaction's staged state to the encrypted vault
 /// before publishing the filesystem as its retained compatibility shadow.
 pub trait VaultPrimaryWriteRepository {
     fn commit_primary_checkpoint(&self) -> Result<VaultMirrorCommit, StateError>;
+
+    fn commit_primary_transaction(
+        &self,
+        transaction: &StateTransaction,
+    ) -> Result<VaultMirrorCommit, StateError>;
 
     fn confirm_primary_shadow(&self) -> Result<VaultReport, StateError>;
 
@@ -924,6 +959,142 @@ impl EncryptedStateVault {
         })
     }
 
+    fn commit_primary_transaction_internal(
+        &self,
+        transaction: &StateTransaction,
+        fail_after_operations: Option<usize>,
+    ) -> Result<VaultMirrorCommit, StateError> {
+        if transaction.root() != self.root {
+            return Err(StateError::VaultTransactionRootMismatch {
+                transaction_root: transaction.root().to_path_buf(),
+                vault_root: self.root.clone(),
+            });
+        }
+        if let Some(intent) = self.load_primary_shadow_intent()? {
+            return Err(StateError::VaultPrimaryShadowRecoveryRequired {
+                generation: intent.generation,
+            });
+        }
+        let intent = self
+            .load_mirror_intent()?
+            .ok_or(StateError::VaultMirrorIntentMissing)?;
+        let active = self.verify()?;
+        if intent.base_generation != active.mirror_generation
+            || intent.base_snapshot_id != active.snapshot_id
+        {
+            return Err(StateError::VaultMirrorIntentBaseMismatch);
+        }
+
+        let active_records = self.load_records()?;
+        let mut staged_by_path = active_records
+            .iter()
+            .cloned()
+            .map(|record| (record.relative_path.clone(), record))
+            .collect::<BTreeMap<_, _>>();
+        let current_trust_records = collect_legacy_trust_records(&self.root)?;
+        let current_trust_paths = current_trust_records
+            .iter()
+            .map(|record| record.relative_path.as_str())
+            .collect::<BTreeSet<_>>();
+        if let Some(removed) = active_records.iter().find(|record| {
+            classify_record_kind(&record.relative_path) == StateRecordKind::Trust
+                && !current_trust_paths.contains(record.relative_path.as_str())
+        }) {
+            return Err(StateError::VaultTrustRecordRemoved(
+                removed.relative_path.clone(),
+            ));
+        }
+        for record in current_trust_records {
+            staged_by_path.insert(record.relative_path.clone(), record);
+        }
+        let mutations = transaction.staged_mutations()?;
+        let mut seen = BTreeSet::new();
+        for StagedStateMutation {
+            kind,
+            relative_path,
+            content,
+        } in mutations
+        {
+            if !matches!(
+                kind,
+                StateRecordKind::Ratchet
+                    | StateRecordKind::Event
+                    | StateRecordKind::LocalProjection
+                    | StateRecordKind::HistoryRewrap
+                    | StateRecordKind::HistoryRecovery
+                    | StateRecordKind::Sequence
+            ) {
+                return Err(StateError::VaultDirectWriteKindNotAllowed(
+                    kind.as_str().to_owned(),
+                ));
+            }
+            let relative_path = path_to_vault(&relative_path)?;
+            if !seen.insert(relative_path.clone()) {
+                return Err(StateError::VaultDirectWriteDuplicatePath(PathBuf::from(
+                    relative_path,
+                )));
+            }
+            let actual_kind = classify_record_kind(&relative_path);
+            if actual_kind != kind {
+                return Err(StateError::VaultDirectWriteKindMismatch {
+                    relative_path,
+                    declared_kind: kind.as_str().to_owned(),
+                    actual_kind: actual_kind.as_str().to_owned(),
+                });
+            }
+            match content {
+                Some(content) => {
+                    let record = VaultRecord {
+                        version: VAULT_RECORD_VERSION,
+                        relative_path: relative_path.clone(),
+                        content,
+                    };
+                    validate_record(&record)?;
+                    staged_by_path.insert(relative_path, record);
+                }
+                None => {
+                    staged_by_path.remove(&relative_path);
+                }
+            }
+        }
+
+        let staged_records = staged_by_path.into_values().collect::<Vec<_>>();
+        let manifest = self.manifest_for_records(&staged_records)?;
+        let delta = diff_records(&active_records, &staged_records);
+        if delta.upserts.is_empty() && delta.removals.is_empty() {
+            if !report_matches_manifest(&active, &manifest) {
+                return Err(StateError::VaultManifestMismatch);
+            }
+            return Ok(VaultMirrorCommit {
+                outcome: VaultMirrorOutcome::AlreadyCurrent,
+                report: active,
+                delta: delta.report(),
+            });
+        }
+
+        let next_generation = active
+            .mirror_generation
+            .checked_add(1)
+            .ok_or(StateError::VaultGenerationExhausted)?;
+        let mirror_intent = self.mirror_intent_record(next_generation, manifest.snapshot_id);
+        let primary_shadow_intent =
+            self.primary_shadow_intent_record(next_generation, manifest.snapshot_id);
+        self.commit_primary_delta(
+            &delta,
+            &manifest,
+            next_generation,
+            &mirror_intent,
+            &primary_shadow_intent,
+            fail_after_operations,
+        )?;
+        let report = self.verify()?;
+        Ok(VaultMirrorCommit {
+            outcome: VaultMirrorOutcome::Mirrored,
+            report,
+            delta: delta.report(),
+        })
+    }
+
     fn confirm_primary_shadow_internal(&self) -> Result<VaultReport, StateError> {
         let active = self.verify_current_against_legacy()?;
         let mirror_intent = self
@@ -1289,6 +1460,13 @@ impl VaultPrimaryWriteRepository for EncryptedStateVault {
         self.commit_primary_checkpoint_internal(None)
     }
 
+    fn commit_primary_transaction(
+        &self,
+        transaction: &StateTransaction,
+    ) -> Result<VaultMirrorCommit, StateError> {
+        self.commit_primary_transaction_internal(transaction, None)
+    }
+
     fn confirm_primary_shadow(&self) -> Result<VaultReport, StateError> {
         self.confirm_primary_shadow_internal()
     }
@@ -1360,6 +1538,54 @@ impl TypedStateRepository for EncryptedStateVault {
             shadow_reports,
         })
     }
+
+    fn read_mutable_primary_canary(
+        &self,
+        kinds: &[StateRecordKind],
+    ) -> Result<VaultMutableRead, StateError> {
+        if kinds.is_empty() {
+            return Err(StateError::VaultPrimaryReadSelectionEmpty);
+        }
+        let mut selected = BTreeSet::new();
+        for kind in kinds {
+            if *kind != StateRecordKind::Sequence {
+                return Err(StateError::VaultPrimaryReadKindNotAllowed(
+                    kind.as_str().to_owned(),
+                ));
+            }
+            selected.insert(*kind);
+        }
+        if let Some(intent) = self.load_primary_shadow_intent()? {
+            return Err(StateError::VaultPrimaryShadowRecoveryRequired {
+                generation: intent.generation,
+            });
+        }
+
+        let (report, records) = self.verify_with_records()?;
+        let intent = self
+            .load_mirror_intent()?
+            .ok_or(StateError::VaultMirrorIntentMissing)?;
+        if intent.base_generation != report.mirror_generation
+            || intent.base_snapshot_id != report.snapshot_id
+        {
+            return Err(StateError::VaultMirrorIntentBaseMismatch);
+        }
+        let records = records
+            .into_iter()
+            .filter_map(|record| {
+                let kind = classify_record_kind(&record.relative_path);
+                selected.contains(&kind).then_some(VaultPrimaryRecord {
+                    kind,
+                    relative_path: record.relative_path,
+                    content: record.content,
+                })
+            })
+            .collect();
+        Ok(VaultMutableRead {
+            mirror_generation: report.mirror_generation,
+            records,
+        })
+    }
 }
 
 fn records_by_path(records: &[VaultRecord]) -> BTreeMap<&str, &VaultRecord> {
@@ -1402,9 +1628,10 @@ fn classify_record_kind(relative_path: &str) -> StateRecordKind {
         "local-messages" => StateRecordKind::LocalProjection,
         "history-rewraps" => StateRecordKind::HistoryRewrap,
         "history-recovery" => StateRecordKind::HistoryRecovery,
-        "account-authority.snapshot" | "device-certificate.cert" | "conversation-memberships" => {
-            StateRecordKind::Trust
-        }
+        "account-authority.snapshot"
+        | "device-certificate.cert"
+        | "conversation-memberships"
+        | "peer-authority" => StateRecordKind::Trust,
         "next-sequence" => StateRecordKind::Sequence,
         _ => StateRecordKind::Other,
     }
@@ -1417,6 +1644,37 @@ fn collect_legacy_records(root: &Path) -> Result<Vec<VaultRecord>, StateError> {
     if records.len() > MAX_VAULT_RECORDS {
         return Err(StateError::TooManyVaultRecords(records.len()));
     }
+    Ok(records)
+}
+
+fn collect_legacy_trust_records(root: &Path) -> Result<Vec<VaultRecord>, StateError> {
+    let mut records = Vec::new();
+    for name in TRUST_FILES {
+        let path = root.join(name);
+        if !path_exists(&path)? {
+            continue;
+        }
+        reject_symlink(&path)?;
+        let metadata = io_at(&path, fs::metadata(&path))?;
+        if !metadata.is_file() {
+            return Err(StateError::UnsafeRelativePath(path));
+        }
+        let content = io_at(&path, fs::read(&path))?;
+        let record = VaultRecord {
+            version: VAULT_RECORD_VERSION,
+            relative_path: name.to_owned(),
+            content,
+        };
+        validate_record(&record)?;
+        records.push(record);
+    }
+    for name in TRUST_DIRECTORIES {
+        let directory = root.join(name);
+        if path_exists(&directory)? {
+            collect_legacy_records_from(root, &directory, &mut records)?;
+        }
+    }
+    records.sort_by(|left, right| left.relative_path.cmp(&right.relative_path));
     Ok(records)
 }
 
@@ -2003,6 +2261,87 @@ mod tests {
             vault.recover_primary_shadow(),
             Err(StateError::VaultPrimaryShadowIntentAuthenticationFailed)
         ));
+        Ok(())
+    }
+
+    #[test]
+    fn typed_transaction_commits_only_journal_delta_and_sequence_reads_from_db()
+    -> Result<(), Box<dyn Error>> {
+        let directory = tempfile::tempdir()?;
+        let changed_ratchet = directory.path().join("ratchet/changed.pickle");
+        let removed_ratchet = directory.path().join("ratchet/removed.pickle");
+        let sequence = directory.path().join("next-sequence");
+        let new_event = directory.path().join("events/chat/new.event");
+        write(&changed_ratchet, b"ratchet-before")?;
+        write(&removed_ratchet, b"remove-me")?;
+        write(&sequence, b"4\n")?;
+        write(
+            &directory.path().join("events/chat/existing.event"),
+            b"existing-event",
+        )?;
+
+        let vault = EncryptedStateVault::open_or_create(directory.path())?;
+        assert_eq!(vault.migrate_legacy_snapshot()?.1.mirror_generation(), 1);
+        vault.begin_dual_write()?;
+        let transaction = crate::StateTransaction::begin(directory.path())?;
+        write(&changed_ratchet, b"ratchet-after")?;
+        fs::remove_file(&removed_ratchet)?;
+        write(&sequence, b"5\n")?;
+        write(&new_event, b"new-event")?;
+        write(
+            &directory.path().join("peer-authority/peer.snapshot"),
+            b"trust-update",
+        )?;
+
+        let mutable = vault.read_mutable_primary_canary(&[StateRecordKind::Sequence])?;
+        assert_eq!(mutable.mirror_generation(), 1);
+        assert_eq!(mutable.records().len(), 1);
+        assert_eq!(mutable.records()[0].relative_path(), "next-sequence");
+        assert_eq!(mutable.records()[0].content(), b"4\n");
+        assert_eq!(fs::read(&sequence)?, b"5\n");
+
+        assert!(matches!(
+            vault.commit_primary_transaction_internal(&transaction, Some(1)),
+            Err(StateError::VaultInjectedFailure(1))
+        ));
+        assert_eq!(vault.verify()?.mirror_generation(), 1);
+        assert!(vault.load_primary_shadow_intent()?.is_none());
+
+        let commit = vault.commit_primary_transaction(&transaction)?;
+        assert_eq!(commit.outcome(), VaultMirrorOutcome::Mirrored);
+        assert_eq!(commit.report().mirror_generation(), 2);
+        assert_eq!(commit.delta().upserted_records(), 4);
+        assert_eq!(commit.delta().removed_records(), 1);
+        assert_eq!(commit.delta().unchanged_records(), 1);
+        assert!(matches!(
+            vault.read_mutable_primary_canary(&[StateRecordKind::Sequence]),
+            Err(StateError::VaultPrimaryShadowRecoveryRequired { generation: 2 })
+        ));
+        transaction.commit()?;
+        assert_eq!(vault.confirm_primary_shadow()?.mirror_generation(), 2);
+        assert_eq!(
+            vault.finish_dual_write()?.outcome(),
+            VaultMirrorOutcome::AlreadyCurrent
+        );
+        assert_eq!(vault.verify_against_legacy()?.mirror_generation(), 2);
+
+        assert!(matches!(
+            vault.read_mutable_primary_canary(&[StateRecordKind::Sequence]),
+            Err(StateError::VaultMirrorIntentMissing)
+        ));
+        vault.begin_dual_write()?;
+        assert!(matches!(
+            vault.read_mutable_primary_canary(&[StateRecordKind::Ratchet]),
+            Err(StateError::VaultPrimaryReadKindNotAllowed(kind)) if kind == "ratchet"
+        ));
+        let other = tempfile::tempdir()?;
+        let other_transaction = crate::StateTransaction::begin(other.path())?;
+        assert!(matches!(
+            vault.commit_primary_transaction(&other_transaction),
+            Err(StateError::VaultTransactionRootMismatch { .. })
+        ));
+        other_transaction.rollback()?;
+        vault.finish_dual_write()?;
         Ok(())
     }
 

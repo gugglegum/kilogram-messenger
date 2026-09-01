@@ -1202,10 +1202,58 @@ Mutable read adapters и нетранзакционные trust updates ещё �
 Полный контракт —
 [`../docs/RFC-0019-vault-primary-transaction-checkpoint.md`](../docs/RFC-0019-vault-primary-transaction-checkpoint.md).
 
+### M0.8.8 — typed journal delta и mutable sequence canary: выполнено
+
+Реализовано:
+
+- active `StateTransaction` формирует typed mutations только для journal-managed
+  ratchet, sequence и append-only roots;
+- changed/added/removed ratchet records сравниваются с backup, sequence — с
+  единственным backup record, а payload читается только у новых append-only
+  paths;
+- baseline append-only removal, duplicate/unsafe path, kind mismatch,
+  неразрешённый repository kind и transaction от другого state root
+  отклоняются;
+- `commit_primary_transaction` применяет journal mutations к authenticated
+  DB-owned record set и атомарно публикует delta/manifest/generation и оба
+  intents без полного legacy payload scan;
+- bounded compatibility ingress включает текущие authority/certificate,
+  membership и peer-authority records в ту же transaction, пока эти writers
+  ещё не переведены на journal; удаление committed trust record запрещено;
+- live CLI `run_state_transaction` и `run_store_transaction` используют direct
+  path; старый full checkpoint сохранён только как compatibility primitive;
+- `VaultMutableRead` и `read_mutable_primary_canary` открывают пока только
+  `sequence` при exact active outer intent;
+- `CommandTransactionContext` лениво читает `next-sequence` из vault и ведёт
+  локальный cursor, а `DeviceState::allocate_sequence_from` пишет retained
+  transactional shadow;
+- sequence по-прежнему коммитится атомарно с event/projection/ratchet, а
+  never-migrated state сохраняет filesystem behavior.
+
+Проверки:
+
+- state tests проверяют точный typed write-set, append-only removal rejection,
+  DB-primary sequence при изменённом shadow, injected direct-delta abort,
+  точные counters `4/1/1` с новым trust record, pending-marker block и
+  root/kind rejection;
+- CLI test после authenticated intent меняет shadow counter `2 -> 99`, но
+  allocator возвращает DB value `2`, публикует shadow `3`, generation `1 -> 2`
+  и final mirror `already-current`;
+- все 90 workspace tests, rustfmt, strict Clippy и release build проходят;
+- release process smoke `.tmp/m088-smoke-20260901-185655` выполнил Alice/Bob
+  delivery и acknowledgement с source/listener generations `4/3`, DB-primary
+  sequence, typed journal delta и совпадающими final vault/legacy histories.
+
+Граница среза: append-only directories ещё перечисляются, ratchet сравнивается
+с bounded backup, active DB records полностью decrypt/re-hash для manifest, а
+post-commit exact confirmation читает retained tree. Ratchet/trust mutable
+reads пока filesystem-backed. Полный контракт —
+[`../docs/RFC-0020-typed-journal-delta-and-mutable-sequence.md`](../docs/RFC-0020-typed-journal-delta-and-mutable-sequence.md).
+
 ### Следующий этап
 
-1. M0.8.8 добавить typed direct vault transactions и DB-primary mutable read
-   adapters, чтобы legacy был только выходным shadow без full staging scan.
+1. M0.8.9 добавить DB-owned ratchet read/write workspace и явную регистрацию
+   append-only write-set, чтобы filesystem остался только выходным shadow.
 2. Защитить vault master key через OS keystore/passphrase/seed wrapping и
    спроектировать rollback witness, backup и versioned migrations.
 3. Source discovery/background coordinator и QR/device-link UX строить поверх

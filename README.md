@@ -43,12 +43,14 @@ The command-local vault-primary sync overlay is specified in
 [`docs/RFC-0018-command-local-sync-read-overlay.md`](docs/RFC-0018-command-local-sync-read-overlay.md).
 The vault-primary transaction checkpoint is specified in
 [`docs/RFC-0019-vault-primary-transaction-checkpoint.md`](docs/RFC-0019-vault-primary-transaction-checkpoint.md).
+The typed journal delta and mutable sequence canary are specified in
+[`docs/RFC-0020-typed-journal-delta-and-mutable-sequence.md`](docs/RFC-0020-typed-journal-delta-and-mutable-sequence.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.8.7 vault-primary transaction checkpoint — complete
+## Current milestone: M0.8.8 typed journal delta and mutable sequence — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -182,12 +184,29 @@ committed and verified as an exact shadow. A crash in between restores the
 legacy shadow from the committed vault, including coupled ratchet and sequence
 state. Delivery and sync frames are emitted only after this barrier.
 
+M0.8.8 replaces the live full-filesystem checkpoint with a typed delta derived
+from the active crash journal. Ratchet and sequence changes, new append-only
+events/projections/recovery records, and permitted removals are validated by
+canonical kind and path before one direct vault transaction. Existing history
+payloads are no longer reread from filesystem while constructing the
+pre-commit delta; the post-commit exact shadow confirmation still scans them.
+Author sequence is the first mutable DB-primary adapter: an initialized vault
+supplies the authenticated current counter, while `next-sequence` is retained
+only as transactional compatibility shadow. Sequence, ratchet, event, and
+projection still cross the same vault-primary commit barrier.
+
+Authority and contact writers have not yet moved into `StateTransaction`, so
+the coordinator also folds only the bounded trust namespaces into that same
+commit and rejects removal of an already committed trust record. This is a
+compatibility bridge, not a DB-primary trust repository.
+
 This is still a narrow integration spike. The vault is not yet the primary
-repository for every read or direct typed write: filesystem remains a staging
-input and compatibility shadow, while mutable reads and non-transactional trust
-updates have not completed their cutover. Full-state collection remains
-`O(state)`. The
-development master key remains beside the database. It does not yet provide a
+repository for every read or write: ratchet/trust mutable reads and trust
+domain writes have not completed their cutover. Append-only
+directories are still enumerated, ratchet is compared against its bounded
+journal backup, and active DB records are fully authenticated/rehashed, so the
+whole path is not yet `O(changed)`. The development master key remains beside
+the database. It does not yet provide a
 global DHT or gossip freshness proof, atomic remote prekey reservation,
 protected local key storage, full DB-primary repository cutover, PQXDH, or
 cross-account recovery. Losing every readable projection

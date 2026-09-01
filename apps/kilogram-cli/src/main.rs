@@ -1353,17 +1353,21 @@ struct PendingVaultPrimaryWrite {
 }
 
 impl PendingVaultPrimaryWrite {
-    fn prepare(state_directory: &Path) -> Result<Option<Self>, kilogram_state::StateError> {
+    fn prepare(
+        state_directory: &Path,
+        transaction: &StateTransaction,
+    ) -> Result<Option<Self>, kilogram_state::StateError> {
         if !EncryptedStateVault::is_initialized(state_directory)? {
             return Ok(None);
         }
         let vault = EncryptedStateVault::open_existing(state_directory)?;
-        let commit = vault.commit_primary_checkpoint()?;
+        let commit = vault.commit_primary_transaction(transaction)?;
         Ok(Some(Self { vault, commit }))
     }
 
     fn confirm(self) -> Result<(), kilogram_state::StateError> {
         let report = self.vault.confirm_primary_shadow()?;
+        println!("vault_primary_write_mode=typed-journal-delta");
         println!(
             "vault_primary_write={}",
             match self.commit.outcome() {
@@ -1392,15 +1396,100 @@ impl PendingVaultPrimaryWrite {
     }
 }
 
+enum TransactionSequenceSource {
+    Unloaded,
+    Filesystem,
+    Vault { next: u64 },
+}
+
+struct CommandTransactionContext<'a> {
+    state_directory: &'a Path,
+    sequence: TransactionSequenceSource,
+}
+
+impl<'a> CommandTransactionContext<'a> {
+    fn new(state_directory: &'a Path) -> Self {
+        Self {
+            state_directory,
+            sequence: TransactionSequenceSource::Unloaded,
+        }
+    }
+
+    fn allocate_sequence(&mut self, device_state: &DeviceState) -> Result<u64> {
+        if matches!(self.sequence, TransactionSequenceSource::Unloaded) {
+            self.sequence = self.load_sequence_source()?;
+        }
+        match &mut self.sequence {
+            TransactionSequenceSource::Unloaded => {
+                bail!("transaction sequence source remained uninitialized")
+            }
+            TransactionSequenceSource::Filesystem => device_state
+                .allocate_sequence()
+                .context("allocate sequence from retained filesystem state"),
+            TransactionSequenceSource::Vault { next } => {
+                let current = *next;
+                device_state
+                    .allocate_sequence_from(current)
+                    .context("allocate sequence from authenticated vault-primary state")?;
+                *next = current
+                    .checked_add(1)
+                    .context("device sequence is exhausted")?;
+                Ok(current)
+            }
+        }
+    }
+
+    fn load_sequence_source(&self) -> Result<TransactionSequenceSource> {
+        if !EncryptedStateVault::is_initialized(self.state_directory)
+            .context("inspect state vault before mutable sequence read")?
+        {
+            return Ok(TransactionSequenceSource::Filesystem);
+        }
+        let vault = EncryptedStateVault::open_existing(self.state_directory)
+            .context("open state vault for mutable sequence read")?;
+        let read = vault
+            .read_mutable_primary_canary(&[StateRecordKind::Sequence])
+            .context("read mutable sequence from authenticated vault state")?;
+        ensure!(
+            read.records().len() <= 1,
+            "vault sequence repository contains more than one record"
+        );
+        let next = match read.records().first() {
+            Some(record) => {
+                ensure!(
+                    record.kind() == StateRecordKind::Sequence
+                        && record.relative_path() == "next-sequence",
+                    "vault sequence repository returned an unexpected record"
+                );
+                std::str::from_utf8(record.content())
+                    .context("vault next-sequence is not UTF-8")?
+                    .trim()
+                    .parse::<u64>()
+                    .context("vault next-sequence is invalid")?
+            }
+            None => 0,
+        };
+        println!("vault_mutable_read_kind=sequence");
+        println!("vault_mutable_read_source=db-primary");
+        println!("vault_mutable_read_generation={}", read.mirror_generation());
+        println!("vault_mutable_read_record_count={}", read.records().len());
+        Ok(TransactionSequenceSource::Vault { next })
+    }
+}
+
 fn run_state_transaction<T>(
     state_directory: &Path,
-    operation: impl FnOnce() -> Result<T>,
+    operation: impl FnOnce(&mut CommandTransactionContext<'_>) -> Result<T>,
 ) -> Result<T> {
     let transaction = StateTransaction::begin(state_directory)
         .context("prepare crash-consistent local state transaction")?;
-    match operation() {
+    let mut context = CommandTransactionContext::new(state_directory);
+    match operation(&mut context) {
         Ok(value) => {
-            let primary_write = match PendingVaultPrimaryWrite::prepare(state_directory) {
+            let primary_write = match PendingVaultPrimaryWrite::prepare(
+                state_directory,
+                &transaction,
+            ) {
                 Ok(primary_write) => primary_write,
                 Err(primary_error) => {
                     return match transaction.rollback() {
@@ -1441,7 +1530,10 @@ fn run_store_transaction<T>(
         StateTransaction::begin(state_directory).map_err(state_transaction_store_error)?;
     match operation() {
         Ok(value) => {
-            let primary_write = match PendingVaultPrimaryWrite::prepare(state_directory) {
+            let primary_write = match PendingVaultPrimaryWrite::prepare(
+                state_directory,
+                &transaction,
+            ) {
                 Ok(primary_write) => primary_write,
                 Err(primary_error) => {
                     return match transaction.rollback() {
@@ -1524,7 +1616,7 @@ async fn listen(options: ListenOptions) -> Result<()> {
     let event_store = open_event_store(&state_dir)?;
     let local_message_store = open_local_message_store(&state_dir)?;
     let now_unix_seconds = unix_time_now().context("read time for listener prekey freshness")?;
-    let (mut ratchet_state, listener_prekey_pool) = run_state_transaction(&state_dir, || {
+    let (mut ratchet_state, listener_prekey_pool) = run_state_transaction(&state_dir, |_| {
         let mut ratchet_state = RatchetState::load_or_create(&state_dir)
             .context("load persistent listener ratchet state")?;
         let listener_prekey_pool = ratchet_state
@@ -2032,7 +2124,7 @@ async fn handle_delivery_request(
         acknowledgement,
         acknowledgement_id,
         acknowledgement_store_outcome,
-    ) = run_state_transaction(state_directory, || {
+    ) = run_state_transaction(state_directory, |transaction| {
         let (body, local_projection_store_outcome, ratchet_operation) =
             match open_local_text_projection_if_present(
                 local_message_store,
@@ -2061,8 +2153,8 @@ async fn handle_delivery_request(
             .put_authorized(&event, &membership)
             .context("persist received event before acknowledging it")?;
 
-        let acknowledgement_sequence = device_state
-            .allocate_sequence()
+        let acknowledgement_sequence = transaction
+            .allocate_sequence(device_state)
             .context("allocate acknowledgement sequence")?;
         let acknowledgement = SignedEvent::sign_acknowledgement(
             device_state.identity(),
@@ -2325,7 +2417,7 @@ async fn connect(
 
     let ticket = load_connection_ticket(ticket, ticket_file).await?;
     ticket.verify_listener_account(expected_listener_account_id)?;
-    run_state_transaction(&state_dir, || {
+    run_state_transaction(&state_dir, |_| {
         ratchet_state
             .observe_prekey_directory(ticket.listener_directory(), unix_time_now()?)
             .context("observe listener prekey directory and reject rollback")
@@ -2410,9 +2502,9 @@ async fn connect(
         event_id,
         local_projection_store_outcome,
         sent_store_outcome,
-    ) = run_state_transaction(&state_dir, || {
-        let author_sequence = device_state
-            .allocate_sequence()
+    ) = run_state_transaction(&state_dir, |transaction| {
+        let author_sequence = transaction
+            .allocate_sequence(&device_state)
             .context("allocate message sequence")?;
         let parents = event_store
             .frontier(conversation_id)
@@ -2532,7 +2624,7 @@ async fn connect(
         acknowledgement_event.parents() == [event_id],
         "acknowledgement does not causally reference the sent event"
     );
-    let acknowledgement_store_outcome = run_state_transaction(&state_dir, || {
+    let acknowledgement_store_outcome = run_state_transaction(&state_dir, |_| {
         event_store
             .put_authorized(&acknowledgement, &membership)
             .context("persist verified acknowledgement")
@@ -2586,7 +2678,7 @@ async fn sync(
         RatchetState::load_or_create(&state_dir).context("load persistent sync ratchet state")?;
     let ticket = load_connection_ticket(ticket, ticket_file).await?;
     ticket.verify_listener_account(expected_listener_account_id)?;
-    run_state_transaction(&state_dir, || {
+    run_state_transaction(&state_dir, |_| {
         ratchet_state
             .observe_prekey_directory(ticket.listener_directory(), unix_time_now()?)
             .context("observe listener prekey directory and reject rollback")
@@ -3458,7 +3550,7 @@ fn export_ratchet_bundle(state_dir: PathBuf, bundle_file: PathBuf) -> Result<()>
         certificate.device_id() == device_state.identity().device_id(),
         "installed certificate belongs to a different device"
     );
-    let bundle = run_state_transaction(&state_dir, || {
+    let bundle = run_state_transaction(&state_dir, |_| {
         let mut ratchet_state =
             RatchetState::load_or_create(&state_dir).context("load persistent ratchet state")?;
         ratchet_state
@@ -3498,7 +3590,7 @@ fn export_ratchet_prekey_pool(
         "installed certificate belongs to a different device"
     );
     let now_unix_seconds = unix_time_now().context("read time for prekey pool publication")?;
-    let pool = run_state_transaction(&state_dir, || {
+    let pool = run_state_transaction(&state_dir, |_| {
         let mut ratchet_state =
             RatchetState::load_or_create(&state_dir).context("load persistent ratchet state")?;
         if refresh {
@@ -4173,7 +4265,7 @@ fn import_history_rewrap_material(
         prepared.push((authorized_event, projection, projection_exists));
     }
     let (bundle_store, transfer_store, checkpoint_store, inserted_projections, inserted_events) =
-        run_state_transaction(&state_dir, || {
+        run_state_transaction(&state_dir, |_| {
             let bundle_store = persist_history_rewrap_bundle(&state_dir, &bundle, &encoded)?;
             let transfer_store = transfer
                 .as_ref()
@@ -4588,7 +4680,7 @@ fn seed_history(
     );
     let (conversation_id, existing_count, first_event_id, last_event_id) = run_state_transaction(
         &state_dir,
-        || {
+        |transaction| {
             let mut ratchet_state = RatchetState::load_or_create(&state_dir)
                 .context("load persistent ratchet state before seeding history")?;
             ratchet_state
@@ -4623,8 +4715,8 @@ fn seed_history(
             let mut first_event_id = None;
             let mut last_event_id = None;
             for index in 1..=count {
-                let author_sequence = device_state
-                    .allocate_sequence()
+                let author_sequence = transaction
+                    .allocate_sequence(&device_state)
                     .context("allocate seeded event sequence")?;
                 let body = format!("{message_prefix}-{index}");
                 let (sender_ratchet_identity, ciphertext, _) = ratchet_state
@@ -5127,7 +5219,7 @@ mod tests {
         fs::write(directory.path().join("ratchet/session.bin"), b"before")?;
         fs::write(directory.path().join("next-sequence"), b"4")?;
 
-        let result: Result<()> = run_state_transaction(directory.path(), || {
+        let result: Result<()> = run_state_transaction(directory.path(), |_| {
             fs::write(directory.path().join("ratchet/session.bin"), b"after")?;
             fs::write(directory.path().join("next-sequence"), b"5")?;
             fs::create_dir_all(directory.path().join("events/conversation"))?;
@@ -5171,6 +5263,38 @@ mod tests {
                 .join(".kilogram-transactions/active")
                 .exists()
         );
+        Ok(())
+    }
+
+    #[test]
+    fn cli_sequence_uses_db_primary_value_and_commits_a_typed_delta() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let device_state = DeviceState::load_or_create(directory.path())?;
+        assert_eq!(device_state.allocate_sequence()?, 0);
+        assert_eq!(device_state.allocate_sequence()?, 1);
+        fs::create_dir_all(directory.path().join("events/conversation"))?;
+        fs::write(
+            directory.path().join("events/conversation/existing.event"),
+            b"existing",
+        )?;
+        let vault = EncryptedStateVault::open_or_create(directory.path())?;
+        assert_eq!(vault.migrate_legacy_snapshot()?.1.mirror_generation(), 1);
+        drop(vault);
+
+        let guard = VaultDualWriteGuard::prepare(directory.path())?
+            .context("expected an initialized vault guard")?;
+        fs::write(directory.path().join("next-sequence"), b"99\n")?;
+        let allocated = run_state_transaction(directory.path(), |transaction| {
+            transaction.allocate_sequence(&device_state)
+        })?;
+        assert_eq!(allocated, 2);
+        assert_eq!(fs::read(directory.path().join("next-sequence"))?, b"3\n");
+        guard.finish()?;
+
+        let vault = EncryptedStateVault::open_existing(directory.path())?;
+        let report = vault.verify_against_legacy()?;
+        assert_eq!(report.mirror_generation(), 2);
+        assert_eq!(report.record_count(), 4);
         Ok(())
     }
 

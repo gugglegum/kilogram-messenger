@@ -1,5 +1,5 @@
 use std::{
-    collections::HashSet,
+    collections::{BTreeMap, BTreeSet, HashSet},
     fs::{self, File, OpenOptions},
     io::{self, Write},
     path::{Component, Path, PathBuf},
@@ -14,8 +14,8 @@ mod vault;
 pub use vault::{
     EncryptedStateVault, STATE_VAULT_FILE, STATE_VAULT_KEY_FILE, StateMirrorRepository,
     StateRecordKind, TypedShadowReadReport, TypedStateRepository, VaultMigrationOutcome,
-    VaultMirrorCommit, VaultMirrorDelta, VaultMirrorOutcome, VaultPrimaryRead, VaultPrimaryRecord,
-    VaultPrimaryWriteRepository, VaultReport,
+    VaultMirrorCommit, VaultMirrorDelta, VaultMirrorOutcome, VaultMutableRead, VaultPrimaryRead,
+    VaultPrimaryRecord, VaultPrimaryWriteRepository, VaultReport,
 };
 
 const LOCK_FILE: &str = ".kilogram-state.lock";
@@ -177,6 +177,33 @@ pub enum StateError {
     #[error("state vault primary shadow recovery is blocked by active local transaction at {path}")]
     VaultPrimaryShadowBlockedByLocalTransaction { path: PathBuf },
 
+    #[error("state vault transaction belongs to {transaction_root}, not vault root {vault_root}")]
+    VaultTransactionRootMismatch {
+        transaction_root: PathBuf,
+        vault_root: PathBuf,
+    },
+
+    #[error("state vault direct transaction does not allow repository kind {0}")]
+    VaultDirectWriteKindNotAllowed(String),
+
+    #[error("state vault direct transaction contains duplicate path {0}")]
+    VaultDirectWriteDuplicatePath(PathBuf),
+
+    #[error(
+        "state vault direct transaction classified {relative_path} as {declared_kind}, but the canonical path kind is {actual_kind}"
+    )]
+    VaultDirectWriteKindMismatch {
+        relative_path: String,
+        declared_kind: String,
+        actual_kind: String,
+    },
+
+    #[error("append-only state record disappeared during a transaction: {0}")]
+    AppendOnlyRecordRemoved(PathBuf),
+
+    #[error("retained trust record disappeared before a direct vault transaction: {0}")]
+    VaultTrustRecordRemoved(String),
+
     #[error("state vault mirror generation is exhausted")]
     VaultGenerationExhausted,
 
@@ -229,6 +256,13 @@ pub struct StateTransaction {
     active: PathBuf,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct StagedStateMutation {
+    pub kind: StateRecordKind,
+    pub relative_path: PathBuf,
+    pub content: Option<Vec<u8>>,
+}
+
 impl StateTransaction {
     pub fn begin(state_directory: impl AsRef<Path>) -> Result<Self, StateError> {
         let requested = state_directory.as_ref();
@@ -256,6 +290,57 @@ impl StateTransaction {
     pub fn rollback(self) -> Result<(), StateError> {
         rollback_active(&self.root, &self.active)?;
         Ok(())
+    }
+
+    pub(crate) fn root(&self) -> &Path {
+        &self.root
+    }
+
+    pub(crate) fn staged_mutations(&self) -> Result<Vec<StagedStateMutation>, StateError> {
+        let manifest = read_manifest(&self.active)?;
+        let mut mutations = BTreeMap::<PathBuf, StagedStateMutation>::new();
+
+        collect_mutable_tree_mutations(
+            &self.root,
+            &self.root.join(RATCHET_DIRECTORY),
+            &self.active.join(BACKUP_DIRECTORY).join(RATCHET_DIRECTORY),
+            manifest.ratchet_existed,
+            StateRecordKind::Ratchet,
+            &mut mutations,
+        )?;
+        collect_single_file_mutation(
+            &self.root,
+            &self.root.join(NEXT_SEQUENCE_FILE),
+            &self.active.join(BACKUP_DIRECTORY).join(NEXT_SEQUENCE_FILE),
+            manifest.next_sequence_existed,
+            StateRecordKind::Sequence,
+            &mut mutations,
+        )?;
+
+        let baseline: BTreeSet<_> = manifest.append_only_files.into_iter().collect();
+        let mut current = Vec::new();
+        for name in APPEND_ONLY_ROOTS {
+            collect_relative_files(&self.root, &self.root.join(name), &mut current)?;
+        }
+        current.sort();
+        let current_set: BTreeSet<_> = current.iter().cloned().collect();
+        if let Some(removed) = baseline.difference(&current_set).next() {
+            return Err(StateError::AppendOnlyRecordRemoved(removed.clone()));
+        }
+        for relative_path in current_set.difference(&baseline) {
+            let path = self.root.join(relative_path);
+            let content = io_at(&path, fs::read(&path))?;
+            insert_staged_mutation(
+                &mut mutations,
+                StagedStateMutation {
+                    kind: state_record_kind_for_path(relative_path),
+                    relative_path: relative_path.clone(),
+                    content: Some(content),
+                },
+            )?;
+        }
+
+        Ok(mutations.into_values().collect())
     }
 }
 
@@ -387,6 +472,158 @@ fn write_manifest(active: &Path, manifest: &TransactionManifest) -> Result<(), S
     )?;
     sync_directory(active)?;
     Ok(())
+}
+
+fn read_manifest(active: &Path) -> Result<TransactionManifest, StateError> {
+    let manifest_path = active.join(MANIFEST_FILE);
+    let encoded = io_at(&manifest_path, fs::read(&manifest_path))?;
+    let manifest: TransactionManifest =
+        serde_json::from_slice(&encoded).map_err(|source| StateError::InvalidManifest {
+            path: manifest_path,
+            source,
+        })?;
+    if manifest.version != MANIFEST_VERSION {
+        return Err(StateError::UnsupportedManifestVersion(manifest.version));
+    }
+    Ok(manifest)
+}
+
+fn collect_mutable_tree_mutations(
+    root: &Path,
+    current_directory: &Path,
+    backup_directory: &Path,
+    backup_existed: bool,
+    kind: StateRecordKind,
+    mutations: &mut BTreeMap<PathBuf, StagedStateMutation>,
+) -> Result<(), StateError> {
+    let current = collect_tree_contents(current_directory, current_directory)?;
+    let backup = if backup_existed {
+        collect_tree_contents(backup_directory, backup_directory)?
+    } else {
+        BTreeMap::new()
+    };
+    let prefix = current_directory
+        .strip_prefix(root)
+        .map_err(|_| StateError::UnsafeRelativePath(current_directory.to_path_buf()))?;
+    let paths: BTreeSet<_> = current.keys().chain(backup.keys()).cloned().collect();
+    for relative in &paths {
+        if current.get(relative) == backup.get(relative) {
+            continue;
+        }
+        insert_staged_mutation(
+            mutations,
+            StagedStateMutation {
+                kind,
+                relative_path: prefix.join(relative),
+                content: current.get(relative).cloned(),
+            },
+        )?;
+    }
+    Ok(())
+}
+
+fn collect_single_file_mutation(
+    root: &Path,
+    current_path: &Path,
+    backup_path: &Path,
+    backup_existed: bool,
+    kind: StateRecordKind,
+    mutations: &mut BTreeMap<PathBuf, StagedStateMutation>,
+) -> Result<(), StateError> {
+    let current = read_optional_file(current_path)?;
+    let backup = if backup_existed {
+        Some(io_at(backup_path, fs::read(backup_path))?)
+    } else {
+        None
+    };
+    if current == backup {
+        return Ok(());
+    }
+    let relative_path = current_path
+        .strip_prefix(root)
+        .map_err(|_| StateError::UnsafeRelativePath(current_path.to_path_buf()))?
+        .to_path_buf();
+    insert_staged_mutation(
+        mutations,
+        StagedStateMutation {
+            kind,
+            relative_path,
+            content: current,
+        },
+    )
+}
+
+fn collect_tree_contents(
+    directory: &Path,
+    relative_root: &Path,
+) -> Result<BTreeMap<PathBuf, Vec<u8>>, StateError> {
+    let mut result = BTreeMap::new();
+    if !path_exists(directory)? {
+        return Ok(result);
+    }
+    reject_symlink(directory)?;
+    for entry in io_at(directory, fs::read_dir(directory))? {
+        let entry = entry.map_err(|source| StateError::Io {
+            path: directory.to_path_buf(),
+            source,
+        })?;
+        let path = entry.path();
+        let metadata = io_at(&path, fs::symlink_metadata(&path))?;
+        if metadata.file_type().is_symlink() {
+            return Err(StateError::SymbolicLink(path));
+        }
+        if metadata.is_dir() {
+            result.extend(collect_tree_contents(&path, relative_root)?);
+        } else if metadata.is_file() {
+            let relative = path
+                .strip_prefix(relative_root)
+                .map_err(|_| StateError::UnsafeRelativePath(path.clone()))?
+                .to_path_buf();
+            validate_relative(&relative)?;
+            result.insert(relative, io_at(&path, fs::read(&path))?);
+        }
+    }
+    Ok(result)
+}
+
+fn read_optional_file(path: &Path) -> Result<Option<Vec<u8>>, StateError> {
+    match fs::read(path) {
+        Ok(bytes) => Ok(Some(bytes)),
+        Err(source) if source.kind() == io::ErrorKind::NotFound => Ok(None),
+        Err(source) => Err(StateError::Io {
+            path: path.to_path_buf(),
+            source,
+        }),
+    }
+}
+
+fn insert_staged_mutation(
+    mutations: &mut BTreeMap<PathBuf, StagedStateMutation>,
+    mutation: StagedStateMutation,
+) -> Result<(), StateError> {
+    if mutations.contains_key(&mutation.relative_path) {
+        return Err(StateError::VaultDirectWriteDuplicatePath(
+            mutation.relative_path,
+        ));
+    }
+    mutations.insert(mutation.relative_path.clone(), mutation);
+    Ok(())
+}
+
+fn state_record_kind_for_path(path: &Path) -> StateRecordKind {
+    match path.components().next() {
+        Some(Component::Normal(first)) if first == "events" => StateRecordKind::Event,
+        Some(Component::Normal(first)) if first == "local-messages" => {
+            StateRecordKind::LocalProjection
+        }
+        Some(Component::Normal(first)) if first == "history-rewraps" => {
+            StateRecordKind::HistoryRewrap
+        }
+        Some(Component::Normal(first)) if first == "history-recovery" => {
+            StateRecordKind::HistoryRecovery
+        }
+        _ => StateRecordKind::Other,
+    }
 }
 
 fn write_marker(path: &Path) -> Result<(), StateError> {
@@ -662,6 +899,73 @@ mod tests {
                 .join("history-recovery/new.checkpoint")
                 .exists()
         );
+        Ok(())
+    }
+
+    #[test]
+    fn transaction_reports_only_typed_changed_records() -> Result<(), Box<dyn Error>> {
+        let directory = tempfile::tempdir()?;
+        write(&directory.path().join("ratchet/changed.bin"), "before")?;
+        write(&directory.path().join("ratchet/removed.bin"), "remove")?;
+        write(&directory.path().join("next-sequence"), "4\n")?;
+        write(&directory.path().join("events/existing.event"), "existing")?;
+
+        let transaction = StateTransaction::begin(directory.path())?;
+        write(&directory.path().join("ratchet/changed.bin"), "after")?;
+        fs::remove_file(directory.path().join("ratchet/removed.bin"))?;
+        write(&directory.path().join("ratchet/added.bin"), "added")?;
+        write(&directory.path().join("next-sequence"), "5\n")?;
+        write(&directory.path().join("events/new.event"), "new")?;
+        write(
+            &directory.path().join("local-messages/new.local-text"),
+            "projection",
+        )?;
+
+        let mutations = transaction.staged_mutations()?;
+        let by_path = mutations
+            .iter()
+            .map(|mutation| (mutation.relative_path.as_path(), mutation))
+            .collect::<BTreeMap<_, _>>();
+        assert_eq!(by_path.len(), 6);
+        assert_eq!(
+            by_path[Path::new("ratchet/changed.bin")].content.as_deref(),
+            Some(b"after".as_slice())
+        );
+        assert_eq!(by_path[Path::new("ratchet/removed.bin")].content, None);
+        assert_eq!(
+            by_path[Path::new("ratchet/added.bin")].kind,
+            StateRecordKind::Ratchet
+        );
+        assert_eq!(
+            by_path[Path::new("next-sequence")].kind,
+            StateRecordKind::Sequence
+        );
+        assert_eq!(
+            by_path[Path::new("events/new.event")].kind,
+            StateRecordKind::Event
+        );
+        assert_eq!(
+            by_path[Path::new("local-messages/new.local-text")].kind,
+            StateRecordKind::LocalProjection
+        );
+        assert!(!by_path.contains_key(Path::new("events/existing.event")));
+        transaction.rollback()?;
+        Ok(())
+    }
+
+    #[test]
+    fn transaction_rejects_append_only_removal_from_direct_delta() -> Result<(), Box<dyn Error>> {
+        let directory = tempfile::tempdir()?;
+        let event = directory.path().join("events/existing.event");
+        write(&event, "existing")?;
+        let transaction = StateTransaction::begin(directory.path())?;
+        fs::remove_file(&event)?;
+        assert!(matches!(
+            transaction.staged_mutations(),
+            Err(StateError::AppendOnlyRecordRemoved(path))
+                if path == Path::new("events/existing.event")
+        ));
+        transaction.rollback()?;
         Ok(())
     }
 

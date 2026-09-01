@@ -367,6 +367,20 @@ toolchain `1.98.0` для воспроизводимой разработки.
     `.tmp/m087-smoke-20260901-170711` получил source generation 4, listener
     generation 3, commit до network status, final `already-current` mirrors и
     совпадающие DB-primary delivery/ack events.
+49. M0.8.8 заменил live full-tree checkpoint на direct typed journal delta.
+    Transaction сравнивает bounded ratchet/sequence с backup и читает payload
+    только новых append-only records; vault проверяет canonical kind/path и
+    публикует delta с прежним primary-shadow marker. Bounded trust compatibility
+    ingress включает authority/certificate/membership/peer-authority records,
+    чьи writers пока находятся вне journal, и fail-closed отклоняет их удаление.
+    `next-sequence` теперь лениво читается из authenticated DB generation,
+    filesystem служит staged shadow. State/CLI tests покрывают exact write-set,
+    append-only removal,
+    abort, чужой root и намеренно изменённый shadow counter. Все 90 workspace
+    tests, strict Clippy и release build проходят. Release process smoke
+    `.tmp/m088-smoke-20260901-185655` завершил delivery/ack, получил source/
+    listener generations `4/3`, DB-primary sequence, typed journal delta и
+    exact совпадение final vault/legacy histories.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -393,8 +407,9 @@ M0.8.3 — typed incremental encrypted delta и exact shadow reads, M0.8.4 —
 первый DB-primary canary для read-only history, M0.8.5 — тот же cutover для
 manual/network history-rewrap source reads, M0.8.6 — command-local overlay для
 mixed sync reads, а M0.8.7 — vault-primary commit barrier для journaled writes.
-Typed direct repositories, mutable DB-primary reads, bounded backups и
-защищённый key provider ещё не реализованы.
+M0.8.8 добавляет typed direct journal delta и mutable DB-primary sequence.
+Ratchet/trust DB-owned adapters, explicit append-only write-set, bounded backups
+и защищённый key provider ещё не реализованы.
 
 ## Решения, которые ещё нельзя фиксировать
 

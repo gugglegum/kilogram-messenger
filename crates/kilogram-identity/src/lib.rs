@@ -158,6 +158,13 @@ impl DeviceState {
             Err(error) if error.kind() == io::ErrorKind::NotFound => 0,
             Err(error) => return Err(error.into()),
         };
+        self.allocate_sequence_from(current)
+    }
+
+    /// Allocates from a caller-authenticated next value while retaining the
+    /// filesystem record as a crash-recoverable compatibility shadow.
+    pub fn allocate_sequence_from(&self, current: u64) -> Result<u64, IdentityError> {
+        let sequence_path = self.directory.join(NEXT_SEQUENCE_FILE);
         let next = current
             .checked_add(1)
             .ok_or(IdentityError::SequenceExhausted)?;
