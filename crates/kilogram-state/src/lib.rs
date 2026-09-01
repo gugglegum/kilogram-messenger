@@ -13,9 +13,10 @@ mod vault;
 
 pub use vault::{
     EncryptedStateVault, STATE_VAULT_FILE, STATE_VAULT_KEY_FILE, StateMirrorRepository,
-    StateRecordKind, TypedShadowReadReport, TypedStateRepository, VaultMigrationOutcome,
-    VaultMirrorCommit, VaultMirrorDelta, VaultMirrorOutcome, VaultMutableRead, VaultPrimaryRead,
-    VaultPrimaryRecord, VaultPrimaryWriteRepository, VaultReport,
+    StateRecordKind, TypedShadowReadReport, TypedStateRepository, VaultManifestIndexMode,
+    VaultMigrationOutcome, VaultMirrorCommit, VaultMirrorDelta, VaultMirrorOutcome,
+    VaultMutableRead, VaultPrimaryRead, VaultPrimaryRecord, VaultPrimaryWriteRepository,
+    VaultReport,
 };
 
 const LOCK_FILE: &str = ".kilogram-state.lock";
@@ -97,6 +98,12 @@ pub enum StateError {
 
     #[error("unsupported state vault schema version {0}")]
     UnsupportedVaultSchemaVersion(u64),
+
+    #[error("unsupported state vault manifest index version {0}")]
+    UnsupportedVaultManifestIndexVersion(u8),
+
+    #[error("state vault schema requires an authenticated manifest index")]
+    VaultManifestIndexMissing,
 
     #[error("unsupported state vault record version {0}")]
     UnsupportedVaultRecordVersion(u8),
@@ -492,6 +499,26 @@ impl StateTransaction {
         reject_relative_symlinks(&self.root, relative_path)?;
         self.append_only_writes.insert(relative_path.to_path_buf());
         Ok(())
+    }
+
+    /// Registers an absolute path returned by an append-only repository.
+    ///
+    /// Repository receipts are rooted at their canonical store directory; the
+    /// transaction owns the conversion back to its canonical state-relative
+    /// path and rejects receipts from any other state tree.
+    pub fn register_append_only_receipt_path(
+        &mut self,
+        absolute_path: impl AsRef<Path>,
+    ) -> Result<(), StateError> {
+        let absolute_path = absolute_path.as_ref();
+        if !absolute_path.is_absolute() {
+            return Err(StateError::UnsafeRelativePath(absolute_path.to_path_buf()));
+        }
+        let canonical_path = io_at(absolute_path, fs::canonicalize(absolute_path))?;
+        let relative_path = canonical_path
+            .strip_prefix(&self.root)
+            .map_err(|_| StateError::UnsafeRelativePath(canonical_path.clone()))?;
+        self.register_append_only_write(relative_path)
     }
 
     pub(crate) fn staged_mutations(&self) -> Result<Vec<StagedStateMutation>, StateError> {
@@ -1175,8 +1202,15 @@ mod tests {
             &directory.path().join("history-rewraps/unregistered.rewrap"),
             "not-in-write-set",
         )?;
-        transaction.register_append_only_write("events/new.event")?;
+        transaction.register_append_only_receipt_path(directory.path().join("events/new.event"))?;
         transaction.register_append_only_write("local-messages/new.local-text")?;
+        let outside = tempfile::tempdir()?;
+        write(&outside.path().join("events/outside.event"), "outside")?;
+        assert!(matches!(
+            transaction
+                .register_append_only_receipt_path(outside.path().join("events/outside.event")),
+            Err(StateError::UnsafeRelativePath(_))
+        ));
         write(
             &directory.path().join("history-recovery/new.checkpoint"),
             "checkpoint",

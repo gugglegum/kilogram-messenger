@@ -26,6 +26,29 @@ pub enum StoreOutcome {
     AlreadyPresent,
 }
 
+/// Exact append-only filesystem paths touched by a repository write.
+///
+/// The receipt lets the transaction coordinator consume a domain-owned write
+/// set without duplicating repository directory layouts or file extensions.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AppendOnlyWriteReceipt {
+    paths: Vec<PathBuf>,
+}
+
+impl AppendOnlyWriteReceipt {
+    pub fn single(path: PathBuf) -> Self {
+        Self { paths: vec![path] }
+    }
+
+    pub fn paths(&self) -> &[PathBuf] {
+        &self.paths
+    }
+
+    fn extend(&mut self, other: Self) {
+        self.paths.extend(other.paths);
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct StoredEvent {
     pub id: EventId,
@@ -388,13 +411,23 @@ impl LocalMessageStore {
     }
 
     pub fn put(&self, projection: &LocalTextProjection) -> Result<StoreOutcome, StoreError> {
+        self.put_with_receipt(projection)
+            .map(|(outcome, _)| outcome)
+    }
+
+    pub fn put_with_receipt(
+        &self,
+        projection: &LocalTextProjection,
+    ) -> Result<(StoreOutcome, AppendOnlyWriteReceipt), StoreError> {
         let event_id = projection.event_id();
         let encoded = projection.encode()?;
         let destination = local_text_projection_path(&self.root, event_id);
-        if destination.try_exists()? {
-            return validate_existing_local_text_projection(&destination, &encoded, event_id);
-        }
-        persist_local_text_projection(&self.root, &destination, &encoded, event_id)
+        let outcome = if destination.try_exists()? {
+            validate_existing_local_text_projection(&destination, &encoded, event_id)?
+        } else {
+            persist_local_text_projection(&self.root, &destination, &encoded, event_id)?
+        };
+        Ok((outcome, AppendOnlyWriteReceipt::single(destination)))
     }
 
     pub fn get(&self, event_id: EventId) -> Result<LocalTextProjection, StoreError> {
@@ -459,10 +492,20 @@ impl EventStore {
         event: &AuthorizedEvent,
         membership: &ConversationMembershipSnapshot,
     ) -> Result<StoreOutcome, StoreError> {
+        self.put_authorized_with_receipt(event, membership)
+            .map(|(outcome, _)| outcome)
+    }
+
+    pub fn put_authorized_with_receipt(
+        &self,
+        event: &AuthorizedEvent,
+        membership: &ConversationMembershipSnapshot,
+    ) -> Result<(StoreOutcome, AppendOnlyWriteReceipt), StoreError> {
         event.verify_for_membership(membership)?;
         let event_id = event.event().event_id()?;
         let outcome = self.put(event.event())?;
         let conversation_directory = self.conversation_directory(event.event().conversation_id());
+        let event_destination = event_path(&conversation_directory, event_id);
         let authorization_destination = authorization_path(&conversation_directory, event_id);
         let encoded = event.encode()?;
         if authorization_destination.try_exists()? {
@@ -475,7 +518,12 @@ impl EventStore {
                 event_id,
             )?;
         }
-        Ok(outcome)
+        Ok((
+            outcome,
+            AppendOnlyWriteReceipt {
+                paths: vec![event_destination, authorization_destination],
+            },
+        ))
     }
 
     pub fn put_authorized_batch(
@@ -483,15 +531,26 @@ impl EventStore {
         events: &[AuthorizedEvent],
         membership: &ConversationMembershipSnapshot,
     ) -> Result<(), StoreError> {
+        self.put_authorized_batch_with_receipt(events, membership)
+            .map(|_| ())
+    }
+
+    pub fn put_authorized_batch_with_receipt(
+        &self,
+        events: &[AuthorizedEvent],
+        membership: &ConversationMembershipSnapshot,
+    ) -> Result<AppendOnlyWriteReceipt, StoreError> {
         for event in events {
             event.verify_for_membership(membership)?;
         }
         let signed_events: Vec<_> = events.iter().map(|event| event.event().clone()).collect();
         self.put_batch(&signed_events)?;
+        let mut receipt = AppendOnlyWriteReceipt { paths: Vec::new() };
         for event in events {
-            self.put_authorized(event, membership)?;
+            let (_, event_receipt) = self.put_authorized_with_receipt(event, membership)?;
+            receipt.extend(event_receipt);
         }
-        Ok(())
+        Ok(receipt)
     }
 
     pub fn put_batch(&self, events: &[SignedEvent]) -> Result<(), StoreError> {
@@ -1380,9 +1439,14 @@ mod tests {
         )?;
         let event_id = event.event().event_id()?;
 
+        let (outcome, receipt) = store.put_authorized_with_receipt(&event, &membership)?;
+        assert_eq!(outcome, StoreOutcome::Inserted);
         assert_eq!(
-            store.put_authorized(&event, &membership)?,
-            StoreOutcome::Inserted
+            receipt.paths(),
+            &[
+                event_path(&store.conversation_directory(conversation_id), event_id),
+                authorization_path(&store.conversation_directory(conversation_id), event_id),
+            ]
         );
         let reopened = EventStore::open(directory.path())?;
         let stored = reopened.load_authorized_conversation(conversation_id, &membership)?;
@@ -1579,8 +1643,18 @@ mod tests {
         )?;
         let event_id = event.event_id()?;
 
-        assert_eq!(store.put(&projection)?, StoreOutcome::Inserted);
-        assert_eq!(store.put(&projection)?, StoreOutcome::AlreadyPresent);
+        let (outcome, receipt) = store.put_with_receipt(&projection)?;
+        assert_eq!(outcome, StoreOutcome::Inserted);
+        assert_eq!(
+            receipt.paths(),
+            &[local_text_projection_path(
+                &fs::canonicalize(directory.path())?,
+                event_id
+            )]
+        );
+        let (outcome, duplicate_receipt) = store.put_with_receipt(&projection)?;
+        assert_eq!(outcome, StoreOutcome::AlreadyPresent);
+        assert_eq!(duplicate_receipt, receipt);
         let independently_sealed = LocalTextProjection::seal_authored(
             &event,
             author.device_id(),

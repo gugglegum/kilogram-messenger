@@ -390,6 +390,16 @@ toolchain `1.98.0` для воспроизводимой разработки.
     `.tmp/m089-smoke-20260901-193740` завершил delivery/ack с ratchet+sequence
     DB-primary, append write-set `3/5`, generations `4/3`, совпавшей history и
     final `already-current` compatibility mirror.
+51. M0.8.10 добавил repository-owned `AppendOnlyWriteReceipt` и vault schema v2
+    с AEAD-encrypted manifest index. Direct typed commit применяет journal delta
+    к path/length/hash metadata и сообщает `vault_payload_records_loaded=0`, не
+    перечисляя unchanged DB payload. Schema-v1 test проверяет one-time rebuild,
+    а index tamper завершается fail-closed. Все 93 workspace tests, strict
+    Clippy и release build проходят. Release process smoke
+    `.tmp/m0810-smoke-20260901-201413` выполнил два delivery+ack, свёл Alice/Bob
+    к одинаковым histories из 4 events и валидным schema-v2 vault с 21 record;
+    receipts составили sender `3/2`, listener `5`, normal commit использовал
+    incremental index с `payload_records_loaded=0`.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -417,10 +427,10 @@ M0.8.3 — typed incremental encrypted delta и exact shadow reads, M0.8.4 —
 manual/network history-rewrap source reads, M0.8.6 — command-local overlay для
 mixed sync reads, а M0.8.7 — vault-primary commit barrier для journaled writes.
 M0.8.8 добавляет typed direct journal delta и mutable DB-primary sequence.
-M0.8.9 добавляет DB-primary ratchet workspace, durable primary rollback backup
-и explicit append-only write-set. Repository-owned receipts, incremental
-manifest, trust DB-primary adapter, bounded backup и защищённый key provider ещё
-не реализованы.
+M0.8.9 добавляет DB-primary ratchet workspace и durable primary rollback backup;
+M0.8.10 — repository-owned receipts и encrypted incremental manifest index.
+Trust DB-primary adapter, paged/Merkle index, bounded backup и защищённый key
+provider ещё не реализованы.
 
 ## Решения, которые ещё нельзя фиксировать
 

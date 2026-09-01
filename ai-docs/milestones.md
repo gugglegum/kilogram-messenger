@@ -1290,11 +1290,49 @@ manifest полностью decrypt/re-hash, trust repository filesystem-backed.
 контракт —
 [`../docs/RFC-0021-db-primary-ratchet-workspace-and-registered-appends.md`](../docs/RFC-0021-db-primary-ratchet-workspace-and-registered-appends.md).
 
+### M0.8.10 — repository receipts и authenticated manifest index: выполнено
+
+Реализовано:
+
+- `kilogram-store` возвращает `AppendOnlyWriteReceipt` из single/batch event,
+  authorization и local-projection writes;
+- history bundle/transfer/checkpoint writers возвращают тот же exact receipt;
+- transaction канонизирует receipt path, требует exact state root и повторно
+  применяет append-only kind/symlink allowlist;
+- CLI больше не строит `.event`, `.authorization` и `.local-text` paths;
+- vault schema v2 хранит AEAD-encrypted sorted path/length/content-hash index;
+- direct journal commit обновляет index/manifest/delta без enumeration или
+  decrypt неизменённых DB payload records;
+- schema-v1 vault полностью проверяется и перестраивает index один раз без
+  обязательного re-encrypt unchanged record envelopes;
+- final exact DB/index/shadow confirmation и primary-shadow recovery marker
+  сохранены без ослабления;
+- diagnostics публикуют `vault_manifest_index_mode`,
+  `vault_payload_records_loaded` и exact receipt path count.
+
+Проверки:
+
+- store/state tests проверяют exact receipts, чужой root, schema-v1 upgrade,
+  index AEAD tamper и `payload_records_loaded=0` для schema-v2 direct commit;
+- прежние atomic delta, injected failure, rollback, immutable modification и
+  CLI ratchet/sequence tests проходят;
+- все 93 workspace tests, rustfmt, strict Clippy и release build проходят;
+- release process smoke `.tmp/m0810-smoke-20260901-201413` выполнил два
+  Alice/Bob delivery+ack, получил одинаковые histories из 4 events и валидные
+  vault schema v2 с 21 record на каждой стороне; repository receipts составили
+  `3/2` paths у sender и `5` у listener, а каждый normal direct commit сообщил
+  `vault_manifest_index_mode=incremental` и `vault_payload_records_loaded=0`.
+
+Граница среза: normal direct commit больше не читает unchanged DB payload, но
+цельный index metadata остаётся `O(record count)`. Pre-command exact gate,
+initial crash baseline и post-commit confirmation всё ещё full-state. Trust
+repository filesystem-backed. Полный контракт —
+[`../docs/RFC-0022-repository-write-receipts-and-manifest-index.md`](../docs/RFC-0022-repository-write-receipts-and-manifest-index.md).
+
 ### Следующий этап
 
-1. M0.8.10 перенести typed write receipts из CLI в domain repositories и
-   добавить authenticated incremental manifest index, чтобы normal commit не
-   зависел от full-state scan.
+1. Перевести authority/contact trust state на DB-primary read/write repository
+   и убрать bounded filesystem ingress из direct transaction.
 2. Защитить vault master key через OS keystore/passphrase/seed wrapping и
    спроектировать rollback witness, backup и versioned migrations.
 3. Source discovery/background coordinator и QR/device-link UX строить поверх

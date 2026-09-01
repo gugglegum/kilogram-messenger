@@ -130,9 +130,10 @@ prekey state, но filesystem остаётся участником write path.
 exact shadow scan сохраняют `O(state)` части. Trust reads/writers используют
 filesystem compatibility bridge. Development master key лежит рядом с DB.
 
-Следующий логичный этап M0.8.10 — перенести typed write receipts из CLI в domain
-repositories и добавить authenticated incremental manifest index. Это позволит
-сделать пропущенную регистрацию невозможной на уровне API и убрать оставшиеся
-full-state проверки из нормального commit path. Trust DB-primary cutover,
-protected key provider, rollback witness, versioned migrations и bounded backup
-остаются отдельными security stages.
+Этот следующий этап реализован в M0.8.10 и описан в
+[`RFC-0022`](RFC-0022-repository-write-receipts-and-manifest-index.md): domain
+writers возвращают exact receipts, а schema-v2 direct commit обновляет
+authenticated index без чтения неизменённых DB payload records. Initial/final
+shadow gates пока остаются full-state. Следующим storage cutover становится
+DB-primary trust repository; protected key provider, rollback witness и bounded
+backup остаются отдельными security stages.

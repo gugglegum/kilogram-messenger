@@ -38,9 +38,12 @@ Filesystem пока остаётся ratchet/trust read path и compatibility sh
 Bounded trust compatibility ingress удерживает незажурналированные authority/
 membership/contact изменения в одной vault transaction, но не заменяет
 DB-primary trust repository. M0.8.9 переводит ratchet на DB-sourced workspace и
-заменяет второй append directory walk явным write-set, но initial rollback
-baseline, final shadow scan и full DB manifest rebuild остаются. Master key
-лежит рядом development-файлом.
+заменяет второй append directory walk явным write-set. M0.8.10 заменяет CLI
+path reconstruction repository receipts и вводит encrypted manifest index:
+schema-v2 direct commit не decrypt-ит unchanged DB payload, schema-v1 rebuild
+выполняется один раз. Initial rollback baseline, pre-command/final shadow gates
+и цельный metadata index всё ещё `O(state)`. Master key лежит рядом
+development-файлом.
 Следующие вопросы относятся к production recovery, rotation, asynchronous
 sessions, distribution, removal и key epochs и не решены этим прототипом.
 
@@ -57,12 +60,11 @@ sessions, distribution, removal и key epochs и не решены этим пр
 - Какой TTL применять к retained losing session, как выполнять authenticated
   session reset после потери state и нужен ли production-протокол сложнее
   проверенного M0.7.6 lexicographic-min разрешения двух crossed sessions?
-- M0.8.9 даёт DB-primary ratchet workspace и explicit append write-set, но
-  registration пока дублирует path layout в CLI, initial crash baseline и final
-  confirmation сканируют retained tree, а manifest требует полной DB decrypt/
-  re-hash. Как domain repositories должны возвращать typed receipts и какой
-  authenticated incremental index позволит перейти к `O(changed)` без второго
-  transaction coordinator? Как долго сохранять legacy shadow и какие fault/
+- M0.8.10 даёт repository-owned append receipts и authenticated incremental
+  manifest index без unchanged DB payload scan. Как разбить цельный metadata
+  index на transactional pages/Merkle nodes, убрать initial/final full-state
+  gates без второго coordinator и перевести trust writers с bounded filesystem
+  ingress на DB-primary repository? Как долго сохранять legacy shadow и какие fault/
   migration критерии разрешают удалить его? Остаётся ли `redb` production
   engine после mobile/load, bounded backup и compaction tests?
 - Как защищать vault master key: OS keystore, аппаратный ключ,

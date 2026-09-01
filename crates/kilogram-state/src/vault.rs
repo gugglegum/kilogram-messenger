@@ -23,14 +23,17 @@ use crate::{
 pub const STATE_VAULT_FILE: &str = "state-vault.redb";
 pub const STATE_VAULT_KEY_FILE: &str = "state-vault.key";
 
-const VAULT_SCHEMA_VERSION: u64 = 1;
+const VAULT_SCHEMA_VERSION: u64 = 2;
+const LEGACY_VAULT_SCHEMA_VERSION: u64 = 1;
 const VAULT_RECORD_VERSION: u8 = 1;
+const VAULT_MANIFEST_INDEX_VERSION: u8 = 1;
 const VAULT_NONCE_BYTES: usize = 24;
 const VAULT_KEY_BYTES: usize = 32;
 const MAX_VAULT_RECORD_BYTES: usize = 64 * 1024 * 1024;
 const MAX_VAULT_RECORDS: usize = 1_000_000;
 const MAX_VAULT_SNAPSHOT_BYTES: u64 = 512 * 1024 * 1024;
 const MANIFEST_KEY: &str = "snapshot-manifest";
+const MANIFEST_INDEX_KEY: &str = "snapshot-manifest-index-v1";
 const GENERATION_KEY: &str = "snapshot-generation-v1";
 const MIRROR_INTENT_KEY: &str = "mirror-intent-v1";
 const PRIMARY_SHADOW_INTENT_KEY: &str = "primary-shadow-intent-v1";
@@ -38,11 +41,14 @@ const MIRROR_METADATA_VERSION: u8 = 1;
 const RECORD_KEY_DOMAIN: &str = "kilogram state vault record lookup v1";
 const ENCRYPTION_KEY_DOMAIN: &str = "kilogram state vault encryption v1";
 const SNAPSHOT_KEY_DOMAIN: &str = "kilogram state vault snapshot v1";
+const INDEX_SNAPSHOT_KEY_DOMAIN: &str = "kilogram state vault indexed snapshot v1";
+const INDEX_ENCRYPTION_KEY_DOMAIN: &str = "kilogram state vault manifest index encryption v1";
 const GENERATION_AUTH_KEY_DOMAIN: &str = "kilogram state vault generation auth v1";
 const MIRROR_INTENT_AUTH_KEY_DOMAIN: &str = "kilogram state vault mirror intent auth v1";
 const PRIMARY_SHADOW_INTENT_AUTH_KEY_DOMAIN: &str =
     "kilogram state vault primary shadow intent auth v1";
 const RECORD_AAD_DOMAIN: &[u8] = b"kilogram:state-vault-record-aad:v1\0";
+const INDEX_AAD_DOMAIN: &[u8] = b"kilogram:state-vault-manifest-index-aad:v1\0";
 const TRUST_FILES: [&str; 2] = ["account-authority.snapshot", "device-certificate.cert"];
 const TRUST_DIRECTORIES: [&str; 2] = ["conversation-memberships", "peer-authority"];
 
@@ -59,6 +65,21 @@ pub enum VaultMigrationOutcome {
 pub enum VaultMirrorOutcome {
     Mirrored,
     AlreadyCurrent,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum VaultManifestIndexMode {
+    Incremental,
+    Rebuilt,
+}
+
+impl VaultManifestIndexMode {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Incremental => "incremental",
+            Self::Rebuilt => "rebuilt",
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -233,6 +254,8 @@ pub struct VaultMirrorCommit {
     outcome: VaultMirrorOutcome,
     report: VaultReport,
     delta: VaultMirrorDelta,
+    manifest_index_mode: VaultManifestIndexMode,
+    payload_records_loaded: u64,
 }
 
 impl VaultMirrorCommit {
@@ -246,6 +269,14 @@ impl VaultMirrorCommit {
 
     pub fn delta(&self) -> VaultMirrorDelta {
         self.delta
+    }
+
+    pub fn manifest_index_mode(&self) -> VaultManifestIndexMode {
+        self.manifest_index_mode
+    }
+
+    pub fn payload_records_loaded(&self) -> u64 {
+        self.payload_records_loaded
     }
 }
 
@@ -292,6 +323,19 @@ struct VaultManifest {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+struct VaultManifestIndexEntry {
+    relative_path: String,
+    content_len: u64,
+    content_hash: [u8; 32],
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+struct VaultManifestIndex {
+    version: u8,
+    entries: Vec<VaultManifestIndexEntry>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 struct VaultGenerationRecord {
     version: u8,
     generation: u64,
@@ -326,6 +370,14 @@ struct PendingVaultDelta {
     upserts: Vec<VaultRecord>,
     removals: Vec<String>,
     unchanged_records: u64,
+}
+
+struct PendingPrimaryCommitMetadata<'a> {
+    manifest: &'a VaultManifest,
+    index: &'a VaultManifestIndex,
+    generation: u64,
+    mirror_intent: &'a VaultMirrorIntent,
+    primary_shadow_intent: &'a VaultPrimaryShadowIntent,
 }
 
 impl PendingVaultDelta {
@@ -453,11 +505,28 @@ impl EncryptedStateVault {
     ) -> Result<(VaultMigrationOutcome, VaultReport), StateError> {
         self.ensure_no_pending_mirror()?;
         let records = collect_legacy_records(&self.root)?;
-        let manifest = self.manifest_for_records(&records)?;
+        let index = self.index_for_records(&records)?;
+        let manifest = self.manifest_for_index(&index)?;
         match self.load_manifest()? {
             Some(existing) if existing == manifest => {
                 let report = self.verify()?;
                 return Ok((VaultMigrationOutcome::AlreadyCurrent, report));
+            }
+            Some(existing) if existing.schema_version == LEGACY_VAULT_SCHEMA_VERSION => {
+                let legacy_current = self.legacy_manifest_for_records(&records)?;
+                if existing != legacy_current {
+                    return Err(StateError::VaultLegacyStateChanged {
+                        stored: existing.snapshot_id,
+                        current: legacy_current.snapshot_id,
+                    });
+                }
+                let active = self.verify()?;
+                let next_generation = active
+                    .mirror_generation
+                    .checked_add(1)
+                    .ok_or(StateError::VaultGenerationExhausted)?;
+                self.commit_snapshot(&records, &manifest, &index, next_generation, true, None)?;
+                return Ok((VaultMigrationOutcome::Migrated, self.verify()?));
             }
             Some(existing) => {
                 return Err(StateError::VaultLegacyStateChanged {
@@ -467,7 +536,7 @@ impl EncryptedStateVault {
             }
             None => {}
         }
-        self.commit_snapshot(&records, &manifest, 1, true, None)?;
+        self.commit_snapshot(&records, &manifest, &index, 1, true, None)?;
         let report = self.verify()?;
         Ok((VaultMigrationOutcome::Migrated, report))
     }
@@ -482,7 +551,18 @@ impl EncryptedStateVault {
             .ok_or_else(|| StateError::VaultNotMigrated(self.root.clone()))?;
         validate_manifest(&manifest)?;
         let records = self.load_records()?;
-        let observed = self.manifest_for_records(&records)?;
+        let observed = if manifest.schema_version == LEGACY_VAULT_SCHEMA_VERSION {
+            self.legacy_manifest_for_records(&records)?
+        } else {
+            let index = self
+                .load_manifest_index()?
+                .ok_or(StateError::VaultManifestIndexMissing)?;
+            let observed_index = self.index_for_records(&records)?;
+            if observed_index != index {
+                return Err(StateError::VaultManifestMismatch);
+            }
+            self.manifest_for_index(&index)?
+        };
         if observed != manifest {
             return Err(StateError::VaultManifestMismatch);
         }
@@ -599,6 +679,7 @@ impl EncryptedStateVault {
         &self,
         records: &[VaultRecord],
         manifest: &VaultManifest,
+        index: &VaultManifestIndex,
         generation: u64,
         clear_intent: bool,
         fail_after_records: Option<usize>,
@@ -610,6 +691,7 @@ impl EncryptedStateVault {
             encrypted_records.push((record_key, encrypted));
         }
         let encoded_manifest = postcard::to_allocvec(manifest)?;
+        let encrypted_index = self.encrypt_manifest_index(index)?;
         let generation_record = self.generation_record(generation, manifest.snapshot_id);
         let encoded_generation = postcard::to_allocvec(&generation_record)?;
         let mut write = self.database.begin_write().map_err(vault_database_error)?;
@@ -636,6 +718,9 @@ impl EncryptedStateVault {
                 .insert(MANIFEST_KEY, encoded_manifest.as_slice())
                 .map_err(vault_database_error)?;
             table
+                .insert(MANIFEST_INDEX_KEY, encrypted_index.as_slice())
+                .map_err(vault_database_error)?;
+            table
                 .insert(GENERATION_KEY, encoded_generation.as_slice())
                 .map_err(vault_database_error)?;
             if clear_intent {
@@ -651,6 +736,7 @@ impl EncryptedStateVault {
         &self,
         delta: &PendingVaultDelta,
         manifest: &VaultManifest,
+        index: &VaultManifestIndex,
         generation: u64,
         fail_after_operations: Option<usize>,
     ) -> Result<(), StateError> {
@@ -666,6 +752,7 @@ impl EncryptedStateVault {
             .map(|relative_path| self.record_key(relative_path))
             .collect::<Vec<_>>();
         let encoded_manifest = postcard::to_allocvec(manifest)?;
+        let encrypted_index = self.encrypt_manifest_index(index)?;
         let generation_record = self.generation_record(generation, manifest.snapshot_id);
         let encoded_generation = postcard::to_allocvec(&generation_record)?;
         let mut write = self.database.begin_write().map_err(vault_database_error)?;
@@ -698,6 +785,9 @@ impl EncryptedStateVault {
             let mut table = write.open_table(META_TABLE).map_err(vault_database_error)?;
             table
                 .insert(MANIFEST_KEY, encoded_manifest.as_slice())
+                .map_err(vault_database_error)?;
+            table
+                .insert(MANIFEST_INDEX_KEY, encrypted_index.as_slice())
                 .map_err(vault_database_error)?;
             table
                 .insert(GENERATION_KEY, encoded_generation.as_slice())
@@ -712,10 +802,7 @@ impl EncryptedStateVault {
     fn commit_primary_delta(
         &self,
         delta: &PendingVaultDelta,
-        manifest: &VaultManifest,
-        generation: u64,
-        mirror_intent: &VaultMirrorIntent,
-        primary_shadow_intent: &VaultPrimaryShadowIntent,
+        metadata: PendingPrimaryCommitMetadata<'_>,
         fail_after_operations: Option<usize>,
     ) -> Result<(), StateError> {
         let mut encrypted_upserts = Vec::with_capacity(delta.upserts.len());
@@ -729,11 +816,13 @@ impl EncryptedStateVault {
             .iter()
             .map(|relative_path| self.record_key(relative_path))
             .collect::<Vec<_>>();
-        let encoded_manifest = postcard::to_allocvec(manifest)?;
-        let generation_record = self.generation_record(generation, manifest.snapshot_id);
+        let encoded_manifest = postcard::to_allocvec(metadata.manifest)?;
+        let encrypted_index = self.encrypt_manifest_index(metadata.index)?;
+        let generation_record =
+            self.generation_record(metadata.generation, metadata.manifest.snapshot_id);
         let encoded_generation = postcard::to_allocvec(&generation_record)?;
-        let encoded_mirror_intent = postcard::to_allocvec(mirror_intent)?;
-        let encoded_primary_shadow_intent = postcard::to_allocvec(primary_shadow_intent)?;
+        let encoded_mirror_intent = postcard::to_allocvec(metadata.mirror_intent)?;
+        let encoded_primary_shadow_intent = postcard::to_allocvec(metadata.primary_shadow_intent)?;
         let mut write = self.database.begin_write().map_err(vault_database_error)?;
         write
             .set_durability(Durability::Immediate)
@@ -764,6 +853,9 @@ impl EncryptedStateVault {
             let mut table = write.open_table(META_TABLE).map_err(vault_database_error)?;
             table
                 .insert(MANIFEST_KEY, encoded_manifest.as_slice())
+                .map_err(vault_database_error)?;
+            table
+                .insert(MANIFEST_INDEX_KEY, encrypted_index.as_slice())
                 .map_err(vault_database_error)?;
             table
                 .insert(GENERATION_KEY, encoded_generation.as_slice())
@@ -784,6 +876,12 @@ impl EncryptedStateVault {
     fn load_manifest(&self) -> Result<Option<VaultManifest>, StateError> {
         self.load_metadata(MANIFEST_KEY)?
             .map(|bytes| postcard::from_bytes(&bytes).map_err(StateError::from))
+            .transpose()
+    }
+
+    fn load_manifest_index(&self) -> Result<Option<VaultManifestIndex>, StateError> {
+        self.load_metadata(MANIFEST_INDEX_KEY)?
+            .map(|bytes| self.decrypt_manifest_index(&bytes))
             .transpose()
     }
 
@@ -937,9 +1035,13 @@ impl EncryptedStateVault {
 
         let active_records = self.load_records()?;
         let staged_records = collect_legacy_records(&self.root)?;
-        let manifest = self.manifest_for_records(&staged_records)?;
+        let index = self.index_for_records(&staged_records)?;
+        let manifest = self.manifest_for_index(&index)?;
         let delta = diff_records(&active_records, &staged_records);
-        if delta.upserts.is_empty() && delta.removals.is_empty() {
+        if delta.upserts.is_empty()
+            && delta.removals.is_empty()
+            && active.schema_version == VAULT_SCHEMA_VERSION
+        {
             if !report_matches_manifest(&active, &manifest) {
                 return Err(StateError::VaultManifestMismatch);
             }
@@ -947,6 +1049,8 @@ impl EncryptedStateVault {
                 outcome: VaultMirrorOutcome::AlreadyCurrent,
                 report: active,
                 delta: delta.report(),
+                manifest_index_mode: VaultManifestIndexMode::Rebuilt,
+                payload_records_loaded: active_records.len() as u64,
             });
         }
 
@@ -959,10 +1063,13 @@ impl EncryptedStateVault {
             self.primary_shadow_intent_record(next_generation, manifest.snapshot_id);
         self.commit_primary_delta(
             &delta,
-            &manifest,
-            next_generation,
-            &mirror_intent,
-            &primary_shadow_intent,
+            PendingPrimaryCommitMetadata {
+                manifest: &manifest,
+                index: &index,
+                generation: next_generation,
+                mirror_intent: &mirror_intent,
+                primary_shadow_intent: &primary_shadow_intent,
+            },
             fail_after_operations,
         )?;
         let report = self.verify_current_against_legacy()?;
@@ -970,6 +1077,8 @@ impl EncryptedStateVault {
             outcome: VaultMirrorOutcome::Mirrored,
             report,
             delta: delta.report(),
+            manifest_index_mode: VaultManifestIndexMode::Rebuilt,
+            payload_records_loaded: active_records.len() as u64,
         })
     }
 
@@ -992,34 +1101,64 @@ impl EncryptedStateVault {
         let intent = self
             .load_mirror_intent()?
             .ok_or(StateError::VaultMirrorIntentMissing)?;
-        let active = self.verify()?;
+        let active_manifest = self
+            .load_manifest()?
+            .ok_or_else(|| StateError::VaultNotMigrated(self.root.clone()))?;
+        validate_manifest(&active_manifest)?;
+        let active_generation = self.load_generation(&active_manifest)?;
+        let (active_index, manifest_index_mode, payload_records_loaded) =
+            if active_manifest.schema_version == VAULT_SCHEMA_VERSION {
+                let index = self
+                    .load_manifest_index()?
+                    .ok_or(StateError::VaultManifestIndexMissing)?;
+                if self.manifest_for_index(&index)? != active_manifest {
+                    return Err(StateError::VaultManifestMismatch);
+                }
+                (index, VaultManifestIndexMode::Incremental, 0)
+            } else {
+                let (_, records) = self.verify_with_records()?;
+                let loaded = records.len() as u64;
+                (
+                    self.index_for_records(&records)?,
+                    VaultManifestIndexMode::Rebuilt,
+                    loaded,
+                )
+            };
+        let active = report_from_manifest(&active_manifest, active_generation);
         if intent.base_generation != active.mirror_generation
             || intent.base_snapshot_id != active.snapshot_id
         {
             return Err(StateError::VaultMirrorIntentBaseMismatch);
         }
 
-        let active_records = self.load_records()?;
-        let mut staged_by_path = active_records
+        let active_by_path = active_index
+            .entries
             .iter()
             .cloned()
-            .map(|record| (record.relative_path.clone(), record))
+            .map(|entry| (entry.relative_path.clone(), entry))
             .collect::<BTreeMap<_, _>>();
+        let mut staged_by_path = active_by_path.clone();
+        let mut upserts = BTreeMap::<String, VaultRecord>::new();
+        let mut removals = BTreeSet::<String>::new();
         let current_trust_records = collect_legacy_trust_records(&self.root)?;
         let current_trust_paths = current_trust_records
             .iter()
             .map(|record| record.relative_path.as_str())
             .collect::<BTreeSet<_>>();
-        if let Some(removed) = active_records.iter().find(|record| {
-            classify_record_kind(&record.relative_path) == StateRecordKind::Trust
-                && !current_trust_paths.contains(record.relative_path.as_str())
+        if let Some(removed) = active_index.entries.iter().find(|entry| {
+            classify_record_kind(&entry.relative_path) == StateRecordKind::Trust
+                && !current_trust_paths.contains(entry.relative_path.as_str())
         }) {
             return Err(StateError::VaultTrustRecordRemoved(
                 removed.relative_path.clone(),
             ));
         }
         for record in current_trust_records {
-            staged_by_path.insert(record.relative_path.clone(), record);
+            let entry = manifest_index_entry_for_record(&record)?;
+            if active_by_path.get(&record.relative_path) != Some(&entry) {
+                upserts.insert(record.relative_path.clone(), record.clone());
+            }
+            staged_by_path.insert(record.relative_path.clone(), entry);
         }
         let mutations = transaction.staged_mutations()?;
         let mut seen = BTreeSet::new();
@@ -1058,6 +1197,13 @@ impl EncryptedStateVault {
             }
             match content {
                 Some(content) => {
+                    let record = VaultRecord {
+                        version: VAULT_RECORD_VERSION,
+                        relative_path: relative_path.clone(),
+                        content,
+                    };
+                    validate_record(&record)?;
+                    let entry = manifest_index_entry_for_record(&record)?;
                     if matches!(
                         kind,
                         StateRecordKind::Event
@@ -1066,28 +1212,51 @@ impl EncryptedStateVault {
                             | StateRecordKind::HistoryRecovery
                     ) && staged_by_path
                         .get(&relative_path)
-                        .is_some_and(|existing| existing.content != content)
+                        .is_some_and(|existing| existing != &entry)
                     {
                         return Err(StateError::AppendOnlyRecordModified(relative_path));
                     }
-                    let record = VaultRecord {
-                        version: VAULT_RECORD_VERSION,
-                        relative_path: relative_path.clone(),
-                        content,
-                    };
-                    validate_record(&record)?;
-                    staged_by_path.insert(relative_path, record);
+                    if active_by_path.get(&relative_path) != Some(&entry) {
+                        upserts.insert(relative_path.clone(), record);
+                    }
+                    removals.remove(&relative_path);
+                    staged_by_path.insert(relative_path, entry);
                 }
                 None => {
-                    staged_by_path.remove(&relative_path);
+                    upserts.remove(&relative_path);
+                    if staged_by_path.remove(&relative_path).is_some()
+                        && active_by_path.contains_key(&relative_path)
+                    {
+                        removals.insert(relative_path);
+                    }
                 }
             }
         }
 
-        let staged_records = staged_by_path.into_values().collect::<Vec<_>>();
-        let manifest = self.manifest_for_records(&staged_records)?;
-        let delta = diff_records(&active_records, &staged_records);
-        if delta.upserts.is_empty() && delta.removals.is_empty() {
+        let changed_existing = upserts
+            .keys()
+            .filter(|path| active_by_path.contains_key(path.as_str()))
+            .count()
+            .checked_add(removals.len())
+            .ok_or(StateError::VaultSnapshotTooLarge(u64::MAX))?;
+        let unchanged_records = active_by_path
+            .len()
+            .checked_sub(changed_existing)
+            .ok_or(StateError::VaultManifestMismatch)? as u64;
+        let delta = PendingVaultDelta {
+            upserts: upserts.into_values().collect(),
+            removals: removals.into_iter().collect(),
+            unchanged_records,
+        };
+        let index = VaultManifestIndex {
+            version: VAULT_MANIFEST_INDEX_VERSION,
+            entries: staged_by_path.into_values().collect(),
+        };
+        let manifest = self.manifest_for_index(&index)?;
+        if delta.upserts.is_empty()
+            && delta.removals.is_empty()
+            && active_manifest.schema_version == VAULT_SCHEMA_VERSION
+        {
             if !report_matches_manifest(&active, &manifest) {
                 return Err(StateError::VaultManifestMismatch);
             }
@@ -1095,6 +1264,8 @@ impl EncryptedStateVault {
                 outcome: VaultMirrorOutcome::AlreadyCurrent,
                 report: active,
                 delta: delta.report(),
+                manifest_index_mode,
+                payload_records_loaded,
             });
         }
 
@@ -1107,17 +1278,22 @@ impl EncryptedStateVault {
             self.primary_shadow_intent_record(next_generation, manifest.snapshot_id);
         self.commit_primary_delta(
             &delta,
-            &manifest,
-            next_generation,
-            &mirror_intent,
-            &primary_shadow_intent,
+            PendingPrimaryCommitMetadata {
+                manifest: &manifest,
+                index: &index,
+                generation: next_generation,
+                mirror_intent: &mirror_intent,
+                primary_shadow_intent: &primary_shadow_intent,
+            },
             fail_after_operations,
         )?;
-        let report = self.verify()?;
+        let report = report_from_manifest(&manifest, next_generation);
         Ok(VaultMirrorCommit {
             outcome: VaultMirrorOutcome::Mirrored,
             report,
             delta: delta.report(),
+            manifest_index_mode,
+            payload_records_loaded,
         })
     }
 
@@ -1260,9 +1436,13 @@ impl EncryptedStateVault {
 
         let active_records = self.load_records()?;
         let records = collect_legacy_records(&self.root)?;
-        let manifest = self.manifest_for_records(&records)?;
+        let index = self.index_for_records(&records)?;
+        let manifest = self.manifest_for_index(&index)?;
         let delta = diff_records(&active_records, &records);
-        if delta.upserts.is_empty() && delta.removals.is_empty() {
+        if delta.upserts.is_empty()
+            && delta.removals.is_empty()
+            && active.schema_version == VAULT_SCHEMA_VERSION
+        {
             if !report_matches_manifest(&active, &manifest) {
                 return Err(StateError::VaultManifestMismatch);
             }
@@ -1271,6 +1451,8 @@ impl EncryptedStateVault {
                 outcome: VaultMirrorOutcome::AlreadyCurrent,
                 report: active,
                 delta: delta.report(),
+                manifest_index_mode: VaultManifestIndexMode::Rebuilt,
+                payload_records_loaded: active_records.len() as u64,
             });
         }
 
@@ -1278,12 +1460,20 @@ impl EncryptedStateVault {
             .mirror_generation
             .checked_add(1)
             .ok_or(StateError::VaultGenerationExhausted)?;
-        self.commit_delta(&delta, &manifest, next_generation, fail_after_operations)?;
+        self.commit_delta(
+            &delta,
+            &manifest,
+            &index,
+            next_generation,
+            fail_after_operations,
+        )?;
         let report = self.verify_current_against_legacy()?;
         Ok(VaultMirrorCommit {
             outcome: VaultMirrorOutcome::Mirrored,
             report,
             delta: delta.report(),
+            manifest_index_mode: VaultManifestIndexMode::Rebuilt,
+            payload_records_loaded: active_records.len() as u64,
         })
     }
 
@@ -1369,19 +1559,21 @@ impl EncryptedStateVault {
     }
 
     fn manifest_for_records(&self, records: &[VaultRecord]) -> Result<VaultManifest, StateError> {
-        if records.len() > MAX_VAULT_RECORDS {
-            return Err(StateError::TooManyVaultRecords(records.len()));
-        }
-        let plaintext_bytes = records.iter().try_fold(0_u64, |total, record| {
-            let size = u64::try_from(record.content.len())
-                .map_err(|_| StateError::VaultRecordTooLarge(record.content.len()))?;
-            total
-                .checked_add(size)
-                .ok_or(StateError::VaultSnapshotTooLarge(u64::MAX))
-        })?;
-        if plaintext_bytes > MAX_VAULT_SNAPSHOT_BYTES {
-            return Err(StateError::VaultSnapshotTooLarge(plaintext_bytes));
-        }
+        let index = self.index_for_records(records)?;
+        self.manifest_for_index(&index)
+    }
+
+    fn legacy_manifest_for_records(
+        &self,
+        records: &[VaultRecord],
+    ) -> Result<VaultManifest, StateError> {
+        let plaintext_bytes = validate_record_totals(
+            records.len(),
+            records.iter().map(|record| {
+                u64::try_from(record.content.len())
+                    .map_err(|_| StateError::VaultRecordTooLarge(record.content.len()))
+            }),
+        )?;
         let snapshot_key = blake3::derive_key(SNAPSHOT_KEY_DOMAIN, &self.master_key.0);
         let mut hasher = blake3::Hasher::new_keyed(&snapshot_key);
         for record in records {
@@ -1392,11 +1584,84 @@ impl EncryptedStateVault {
             hasher.update(&record.content);
         }
         Ok(VaultManifest {
-            schema_version: VAULT_SCHEMA_VERSION,
+            schema_version: LEGACY_VAULT_SCHEMA_VERSION,
             record_count: records.len() as u64,
             plaintext_bytes,
             snapshot_id: *hasher.finalize().as_bytes(),
         })
+    }
+
+    fn index_for_records(&self, records: &[VaultRecord]) -> Result<VaultManifestIndex, StateError> {
+        if records.len() > MAX_VAULT_RECORDS {
+            return Err(StateError::TooManyVaultRecords(records.len()));
+        }
+        let mut entries = Vec::with_capacity(records.len());
+        let mut previous_path: Option<&str> = None;
+        for record in records {
+            validate_record(record)?;
+            if previous_path.is_some_and(|previous| previous >= record.relative_path.as_str()) {
+                return Err(StateError::VaultDuplicatePath(record.relative_path.clone()));
+            }
+            previous_path = Some(&record.relative_path);
+            entries.push(VaultManifestIndexEntry {
+                relative_path: record.relative_path.clone(),
+                content_len: record.content.len() as u64,
+                content_hash: *blake3::hash(&record.content).as_bytes(),
+            });
+        }
+        let index = VaultManifestIndex {
+            version: VAULT_MANIFEST_INDEX_VERSION,
+            entries,
+        };
+        self.validate_manifest_index(&index)?;
+        Ok(index)
+    }
+
+    fn manifest_for_index(&self, index: &VaultManifestIndex) -> Result<VaultManifest, StateError> {
+        self.validate_manifest_index(index)?;
+        let plaintext_bytes = validate_record_totals(
+            index.entries.len(),
+            index.entries.iter().map(|entry| Ok(entry.content_len)),
+        )?;
+        let snapshot_key = blake3::derive_key(INDEX_SNAPSHOT_KEY_DOMAIN, &self.master_key.0);
+        let mut hasher = blake3::Hasher::new_keyed(&snapshot_key);
+        hasher.update(&[index.version]);
+        for entry in &index.entries {
+            let path = entry.relative_path.as_bytes();
+            hasher.update(&(path.len() as u64).to_be_bytes());
+            hasher.update(path);
+            hasher.update(&entry.content_len.to_be_bytes());
+            hasher.update(&entry.content_hash);
+        }
+        Ok(VaultManifest {
+            schema_version: VAULT_SCHEMA_VERSION,
+            record_count: index.entries.len() as u64,
+            plaintext_bytes,
+            snapshot_id: *hasher.finalize().as_bytes(),
+        })
+    }
+
+    fn validate_manifest_index(&self, index: &VaultManifestIndex) -> Result<(), StateError> {
+        if index.version != VAULT_MANIFEST_INDEX_VERSION {
+            return Err(StateError::UnsupportedVaultManifestIndexVersion(
+                index.version,
+            ));
+        }
+        if index.entries.len() > MAX_VAULT_RECORDS {
+            return Err(StateError::TooManyVaultRecords(index.entries.len()));
+        }
+        let mut previous_path: Option<&str> = None;
+        for entry in &index.entries {
+            path_from_vault(&entry.relative_path)?;
+            if previous_path.is_some_and(|previous| previous >= entry.relative_path.as_str()) {
+                return Err(StateError::VaultDuplicatePath(entry.relative_path.clone()));
+            }
+            previous_path = Some(&entry.relative_path);
+            if entry.content_len > MAX_VAULT_RECORD_BYTES as u64 {
+                return Err(StateError::VaultRecordTooLarge(usize::MAX));
+            }
+        }
+        Ok(())
     }
 
     fn record_key(&self, relative_path: &str) -> [u8; 32] {
@@ -1458,6 +1723,53 @@ impl EncryptedStateVault {
         let record: VaultRecord = postcard::from_bytes(&plaintext)?;
         validate_record(&record)?;
         Ok(record)
+    }
+
+    fn encrypt_manifest_index(&self, index: &VaultManifestIndex) -> Result<Vec<u8>, StateError> {
+        self.validate_manifest_index(index)?;
+        let plaintext = postcard::to_allocvec(index)?;
+        let mut nonce = [0_u8; VAULT_NONCE_BYTES];
+        getrandom::fill(&mut nonce).map_err(StateError::VaultSecureRandom)?;
+        let encryption_key = blake3::derive_key(INDEX_ENCRYPTION_KEY_DOMAIN, &self.master_key.0);
+        let cipher = XChaCha20Poly1305::new((&encryption_key).into());
+        let ciphertext = cipher
+            .encrypt(
+                XNonce::from_slice(&nonce),
+                Payload {
+                    msg: &plaintext,
+                    aad: INDEX_AAD_DOMAIN,
+                },
+            )
+            .map_err(|_| StateError::VaultEncryption)?;
+        let mut encoded = Vec::with_capacity(1 + VAULT_NONCE_BYTES + ciphertext.len());
+        encoded.push(VAULT_MANIFEST_INDEX_VERSION);
+        encoded.extend_from_slice(&nonce);
+        encoded.extend_from_slice(&ciphertext);
+        Ok(encoded)
+    }
+
+    fn decrypt_manifest_index(&self, encoded: &[u8]) -> Result<VaultManifestIndex, StateError> {
+        if encoded.len() <= 1 + VAULT_NONCE_BYTES {
+            return Err(StateError::InvalidVaultRecordEnvelope);
+        }
+        if encoded[0] != VAULT_MANIFEST_INDEX_VERSION {
+            return Err(StateError::UnsupportedVaultManifestIndexVersion(encoded[0]));
+        }
+        let nonce = XNonce::from_slice(&encoded[1..1 + VAULT_NONCE_BYTES]);
+        let encryption_key = blake3::derive_key(INDEX_ENCRYPTION_KEY_DOMAIN, &self.master_key.0);
+        let cipher = XChaCha20Poly1305::new((&encryption_key).into());
+        let plaintext = cipher
+            .decrypt(
+                nonce,
+                Payload {
+                    msg: &encoded[1 + VAULT_NONCE_BYTES..],
+                    aad: INDEX_AAD_DOMAIN,
+                },
+            )
+            .map_err(|_| StateError::VaultEncryption)?;
+        let index: VaultManifestIndex = postcard::from_bytes(&plaintext)?;
+        self.validate_manifest_index(&index)?;
+        Ok(index)
     }
 }
 
@@ -1773,8 +2085,22 @@ fn validate_record(record: &VaultRecord) -> Result<(), StateError> {
     Ok(())
 }
 
+fn manifest_index_entry_for_record(
+    record: &VaultRecord,
+) -> Result<VaultManifestIndexEntry, StateError> {
+    validate_record(record)?;
+    Ok(VaultManifestIndexEntry {
+        relative_path: record.relative_path.clone(),
+        content_len: record.content.len() as u64,
+        content_hash: *blake3::hash(&record.content).as_bytes(),
+    })
+}
+
 fn validate_manifest(manifest: &VaultManifest) -> Result<(), StateError> {
-    if manifest.schema_version != VAULT_SCHEMA_VERSION {
+    if !matches!(
+        manifest.schema_version,
+        LEGACY_VAULT_SCHEMA_VERSION | VAULT_SCHEMA_VERSION
+    ) {
         return Err(StateError::UnsupportedVaultSchemaVersion(
             manifest.schema_version,
         ));
@@ -1786,6 +2112,24 @@ fn validate_manifest(manifest: &VaultManifest) -> Result<(), StateError> {
         return Err(StateError::VaultSnapshotTooLarge(manifest.plaintext_bytes));
     }
     Ok(())
+}
+
+fn validate_record_totals(
+    record_count: usize,
+    lengths: impl IntoIterator<Item = Result<u64, StateError>>,
+) -> Result<u64, StateError> {
+    if record_count > MAX_VAULT_RECORDS {
+        return Err(StateError::TooManyVaultRecords(record_count));
+    }
+    let plaintext_bytes = lengths.into_iter().try_fold(0_u64, |total, length| {
+        total
+            .checked_add(length?)
+            .ok_or(StateError::VaultSnapshotTooLarge(u64::MAX))
+    })?;
+    if plaintext_bytes > MAX_VAULT_SNAPSHOT_BYTES {
+        return Err(StateError::VaultSnapshotTooLarge(plaintext_bytes));
+    }
+    Ok(plaintext_bytes)
 }
 
 fn report_from_manifest(manifest: &VaultManifest, mirror_generation: u64) -> VaultReport {
@@ -1896,7 +2240,10 @@ fn path_from_vault(value: &str) -> Result<PathBuf, StateError> {
 fn record_aad(record_key: &[u8; 32]) -> Vec<u8> {
     let mut aad = Vec::with_capacity(RECORD_AAD_DOMAIN.len() + 8 + record_key.len());
     aad.extend_from_slice(RECORD_AAD_DOMAIN);
-    aad.extend_from_slice(&VAULT_SCHEMA_VERSION.to_be_bytes());
+    // Record envelopes remain wire-compatible with schema v1. Schema v2 adds
+    // an independently encrypted manifest index without rewriting unchanged
+    // payload ciphertexts.
+    aad.extend_from_slice(&LEGACY_VAULT_SCHEMA_VERSION.to_be_bytes());
     aad.extend_from_slice(record_key);
     aad
 }
@@ -2034,9 +2381,10 @@ mod tests {
         write(&directory.path().join("second"), b"two")?;
         let vault = EncryptedStateVault::open_or_create(directory.path())?;
         let records = collect_legacy_records(directory.path())?;
-        let manifest = vault.manifest_for_records(&records)?;
+        let index = vault.index_for_records(&records)?;
+        let manifest = vault.manifest_for_index(&index)?;
         assert!(matches!(
-            vault.commit_snapshot(&records, &manifest, 1, true, Some(1)),
+            vault.commit_snapshot(&records, &manifest, &index, 1, true, Some(1)),
             Err(StateError::VaultInjectedFailure(1))
         ));
         assert!(matches!(
@@ -2184,6 +2532,69 @@ mod tests {
             tampered_vault.recover_pending_dual_write(),
             Err(StateError::VaultMirrorIntentAuthenticationFailed)
         ));
+        Ok(())
+    }
+
+    #[test]
+    fn authenticated_manifest_index_upgrades_v1_and_is_fail_closed() -> Result<(), Box<dyn Error>> {
+        let directory = tempfile::tempdir()?;
+        write(&directory.path().join("state"), b"legacy-v1")?;
+        let vault = EncryptedStateVault::open_or_create(directory.path())?;
+        let records = collect_legacy_records(directory.path())?;
+        let index = vault.index_for_records(&records)?;
+        let legacy_manifest = vault.legacy_manifest_for_records(&records)?;
+        vault.commit_snapshot(&records, &legacy_manifest, &index, 1, true, None)?;
+        {
+            let write = vault.database.begin_write().map_err(vault_database_error)?;
+            {
+                let mut table = write.open_table(META_TABLE).map_err(vault_database_error)?;
+                table
+                    .remove(MANIFEST_INDEX_KEY)
+                    .map_err(vault_database_error)?;
+            }
+            write.commit().map_err(vault_database_error)?;
+        }
+        assert_eq!(
+            vault.verify()?.schema_version(),
+            LEGACY_VAULT_SCHEMA_VERSION
+        );
+
+        vault.begin_dual_write()?;
+        let transaction = crate::StateTransaction::begin(directory.path())?;
+        let upgraded = vault.commit_primary_transaction(&transaction)?;
+        assert_eq!(upgraded.outcome(), VaultMirrorOutcome::Mirrored);
+        assert_eq!(upgraded.report().schema_version(), VAULT_SCHEMA_VERSION);
+        assert_eq!(upgraded.report().mirror_generation(), 2);
+        assert_eq!(upgraded.delta().upserted_records(), 0);
+        assert_eq!(upgraded.delta().removed_records(), 0);
+        assert_eq!(upgraded.delta().unchanged_records(), 1);
+        assert_eq!(
+            upgraded.manifest_index_mode(),
+            VaultManifestIndexMode::Rebuilt
+        );
+        assert_eq!(upgraded.payload_records_loaded(), 1);
+        transaction.commit()?;
+        vault.confirm_primary_shadow()?;
+        vault.finish_dual_write()?;
+
+        let mut encrypted_index = vault
+            .load_metadata(MANIFEST_INDEX_KEY)?
+            .ok_or("manifest index should exist after upgrade")?;
+        let last = encrypted_index
+            .last_mut()
+            .ok_or("manifest index envelope should not be empty")?;
+        *last ^= 1;
+        {
+            let write = vault.database.begin_write().map_err(vault_database_error)?;
+            {
+                let mut table = write.open_table(META_TABLE).map_err(vault_database_error)?;
+                table
+                    .insert(MANIFEST_INDEX_KEY, encrypted_index.as_slice())
+                    .map_err(vault_database_error)?;
+            }
+            write.commit().map_err(vault_database_error)?;
+        }
+        assert!(matches!(vault.verify(), Err(StateError::VaultEncryption)));
         Ok(())
     }
 
@@ -2352,6 +2763,11 @@ mod tests {
         assert_eq!(commit.delta().upserted_records(), 4);
         assert_eq!(commit.delta().removed_records(), 1);
         assert_eq!(commit.delta().unchanged_records(), 1);
+        assert_eq!(
+            commit.manifest_index_mode(),
+            VaultManifestIndexMode::Incremental
+        );
+        assert_eq!(commit.payload_records_loaded(), 0);
         assert!(matches!(
             vault.read_mutable_primary_canary(&[StateRecordKind::Sequence]),
             Err(StateError::VaultPrimaryShadowRecoveryRequired { generation: 2 })

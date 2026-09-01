@@ -47,12 +47,15 @@ The typed journal delta and mutable sequence canary are specified in
 [`docs/RFC-0020-typed-journal-delta-and-mutable-sequence.md`](docs/RFC-0020-typed-journal-delta-and-mutable-sequence.md).
 The DB-primary ratchet workspace and registered append contract are specified in
 [`docs/RFC-0021-db-primary-ratchet-workspace-and-registered-appends.md`](docs/RFC-0021-db-primary-ratchet-workspace-and-registered-appends.md).
+Repository-owned write receipts and the authenticated incremental manifest
+index are specified in
+[`docs/RFC-0022-repository-write-receipts-and-manifest-index.md`](docs/RFC-0022-repository-write-receipts-and-manifest-index.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.8.9 DB-primary ratchet workspace — complete
+## Current milestone: M0.8.10 repository receipts and manifest index — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -210,11 +213,25 @@ uses the same rollback rule. Append-only writers now register exact canonical
 paths, replacing the second history-directory walk with a typed write-set.
 Committed append records cannot be removed or modified in place.
 
+M0.8.10 moves append-only path ownership into the repositories that actually
+write each record. Event, authorization, local-projection, history-rewrap,
+transfer, and recovery-checkpoint writes return exact receipts; the transaction
+coordinator validates those absolute paths against its canonical state root and
+no longer reconstructs repository extensions in the CLI. Vault schema v2 adds
+an encrypted authenticated index of canonical path, payload length, and payload
+hash. A normal typed commit updates this index and the keyed snapshot manifest
+from the journal delta without enumerating or decrypting unchanged DB payload
+records. Existing schema-v1 vaults are verified and rebuilt once, then continue
+on the incremental path. Diagnostics expose the index mode and exact number of
+DB payload records loaded by the commit.
+
 This is still a narrow integration spike. The vault is not yet the primary
 repository for every read or write: trust mutable reads and domain writes have
-not completed their cutover. The initial crash-journal baseline and final exact
-shadow confirmation still enumerate append-only state, while active DB records
-are fully authenticated/rehashed, so the whole path is not yet `O(changed)`.
+not completed their cutover. The initial crash-journal baseline, outer
+pre-command equivalence gate, and final exact shadow confirmation still perform
+full-state work. The indexed commit itself avoids the active DB payload scan,
+but index decode/re-encode is `O(record count)` metadata and the whole command
+path is therefore not yet `O(changed)`.
 The development master key remains beside
 the database. It does not yet provide a
 global DHT or gossip freshness proof, atomic remote prekey reservation,

@@ -43,9 +43,9 @@ use kilogram_state::{
     VaultReport,
 };
 use kilogram_store::{
-    CommandEventReadOverlay, CommandLocalMessageReadOverlay, EventReadRepository, EventStore,
-    ImmutableEventReadSnapshot, ImmutableLocalMessageReadSnapshot, LocalMessageReadRepository,
-    LocalMessageStore, StoreError, StoreOutcome,
+    AppendOnlyWriteReceipt, CommandEventReadOverlay, CommandLocalMessageReadOverlay,
+    EventReadRepository, EventStore, ImmutableEventReadSnapshot, ImmutableLocalMessageReadSnapshot,
+    LocalMessageReadRepository, LocalMessageStore, StoreError, StoreOutcome,
 };
 use kilogram_transport_iroh::{
     ALPN, MAX_WIRE_MESSAGE_BYTES, RoutePolicy, SelectedPathDiagnostics, await_route_policy,
@@ -1383,6 +1383,18 @@ impl PendingVaultPrimaryWrite {
             self.append_only_write_count
         );
         println!(
+            "vault_repository_write_receipt_path_count={}",
+            self.append_only_write_count
+        );
+        println!(
+            "vault_manifest_index_mode={}",
+            self.commit.manifest_index_mode().as_str()
+        );
+        println!(
+            "vault_payload_records_loaded={}",
+            self.commit.payload_records_loaded()
+        );
+        println!(
             "vault_primary_write={}",
             match self.commit.outcome() {
                 VaultMirrorOutcome::Mirrored => "committed",
@@ -1466,60 +1478,30 @@ impl<'a> CommandTransactionContext<'a> {
         })
     }
 
+    #[cfg(test)]
     fn register_append_only_write(&mut self, relative_path: impl AsRef<Path>) -> Result<()> {
         self.transaction
             .register_append_only_write(relative_path)
             .context("register append-only state write")
     }
 
-    fn register_append_only_write_for_store(
-        &mut self,
-        relative_path: impl AsRef<Path>,
-    ) -> Result<(), StoreError> {
-        self.transaction
-            .register_append_only_write(relative_path)
-            .map_err(state_transaction_store_error)
-    }
-
-    fn register_authorized_event(&mut self, event: &AuthorizedEvent) -> Result<()> {
-        let event_id = event.event().event_id()?;
-        let directory =
-            PathBuf::from(EVENT_STORE_DIRECTORY).join(event.event().conversation_id().to_string());
-        self.register_append_only_write(directory.join(format!("{event_id}.event")))?;
-        self.register_append_only_write(directory.join(format!("{event_id}.authorization")))
-    }
-
-    fn register_authorized_events_for_store(
-        &mut self,
-        events: &[AuthorizedEvent],
-    ) -> Result<(), StoreError> {
-        for event in events {
-            let event_id = event.event().event_id()?;
-            let directory = PathBuf::from(EVENT_STORE_DIRECTORY)
-                .join(event.event().conversation_id().to_string());
-            self.register_append_only_write_for_store(directory.join(format!("{event_id}.event")))?;
-            self.register_append_only_write_for_store(
-                directory.join(format!("{event_id}.authorization")),
-            )?;
+    fn register_store_receipt(&mut self, receipt: &AppendOnlyWriteReceipt) -> Result<()> {
+        for path in receipt.paths() {
+            self.transaction
+                .register_append_only_receipt_path(path)
+                .context("register repository append-only write receipt")?;
         }
         Ok(())
     }
 
-    fn register_local_projection(&mut self, event_id: kilogram_protocol::EventId) -> Result<()> {
-        self.register_append_only_write(
-            PathBuf::from(LOCAL_MESSAGE_STORE_DIRECTORY).join(format!("{event_id}.local-text")),
-        )
-    }
-
-    fn register_local_projections_for_store(
+    fn register_store_receipt_for_store(
         &mut self,
-        projections: &[LocalTextProjection],
+        receipt: &AppendOnlyWriteReceipt,
     ) -> Result<(), StoreError> {
-        for projection in projections {
-            self.register_append_only_write_for_store(
-                PathBuf::from(LOCAL_MESSAGE_STORE_DIRECTORY)
-                    .join(format!("{}.local-text", projection.event_id())),
-            )?;
+        for path in receipt.paths() {
+            self.transaction
+                .register_append_only_receipt_path(path)
+                .map_err(state_transaction_store_error)?;
         }
         Ok(())
     }
@@ -2254,21 +2236,21 @@ async fn handle_delivery_request(
                         .decrypt(device_state.identity(), sender_ratchet_identity, ciphertext)
                         .context("decrypt received text through the persistent ratchet")?;
                     let body = decrypted.as_str().to_owned();
-                    transaction.register_local_projection(event_id)?;
-                    let outcome = ensure_received_local_text_projection(
+                    let (outcome, receipt) = ensure_received_local_text_projection(
                         local_message_store,
                         device_state,
                         signed_event,
                         &decrypted,
                     )
                     .context("persist local history projection before the received event")?;
+                    transaction.register_store_receipt(&receipt)?;
                     (body, outcome, Some(operation))
                 }
             };
-        transaction.register_authorized_event(&event)?;
-        let received_store_outcome = event_store
-            .put_authorized(&event, &membership)
+        let (received_store_outcome, received_receipt) = event_store
+            .put_authorized_with_receipt(&event, &membership)
             .context("persist received event before acknowledging it")?;
+        transaction.register_store_receipt(&received_receipt)?;
 
         let acknowledgement_sequence = transaction
             .allocate_sequence(device_state)
@@ -2291,10 +2273,10 @@ async fn handle_delivery_request(
             .event()
             .event_id()
             .context("calculate acknowledgement event ID")?;
-        transaction.register_authorized_event(&acknowledgement)?;
-        let acknowledgement_store_outcome = event_store
-            .put_authorized(&acknowledgement, &membership)
+        let (acknowledgement_store_outcome, acknowledgement_receipt) = event_store
+            .put_authorized_with_receipt(&acknowledgement, &membership)
             .context("persist acknowledgement before sending it")?;
+        transaction.register_store_receipt(&acknowledgement_receipt)?;
         Ok((
             body,
             local_projection_store_outcome,
@@ -2652,18 +2634,19 @@ async fn connect(
             .event()
             .event_id()
             .context("calculate sent event ID")?;
-        transaction.register_local_projection(event_id)?;
-        let local_projection_store_outcome = ensure_authored_local_text_projection(
-            &local_message_store,
-            &device_state,
-            event.event(),
-            &message,
-        )
-        .context("persist local history projection before the sent event")?;
-        transaction.register_authorized_event(&event)?;
-        let sent_store_outcome = event_store
-            .put_authorized(&event, &membership)
+        let (local_projection_store_outcome, local_projection_receipt) =
+            ensure_authored_local_text_projection(
+                &local_message_store,
+                &device_state,
+                event.event(),
+                &message,
+            )
+            .context("persist local history projection before the sent event")?;
+        transaction.register_store_receipt(&local_projection_receipt)?;
+        let (sent_store_outcome, sent_receipt) = event_store
+            .put_authorized_with_receipt(&event, &membership)
             .context("persist authorized event before sending it")?;
+        transaction.register_store_receipt(&sent_receipt)?;
         Ok((
             author_sequence,
             ratchet_fanout,
@@ -2744,10 +2727,11 @@ async fn connect(
         "acknowledgement does not causally reference the sent event"
     );
     let acknowledgement_store_outcome = run_state_transaction(&state_dir, |transaction| {
-        transaction.register_authorized_event(&acknowledgement)?;
-        event_store
-            .put_authorized(&acknowledgement, &membership)
-            .context("persist verified acknowledgement")
+        let (outcome, receipt) = event_store
+            .put_authorized_with_receipt(&acknowledgement, &membership)
+            .context("persist verified acknowledgement")?;
+        transaction.register_store_receipt(&receipt)?;
+        Ok(outcome)
     })?;
     println!(
         "acknowledgement_event_id={}",
@@ -4382,49 +4366,40 @@ fn import_history_rewrap_material(
     }
     let (bundle_store, transfer_store, checkpoint_store, inserted_projections, inserted_events) =
         run_state_transaction(&state_dir, |transaction| {
-            transaction.register_append_only_write(
-                PathBuf::from(HISTORY_REWRAP_STORE_DIRECTORY)
-                    .join(format!("{}.rewrap", bundle.bundle_id()?)),
-            )?;
-            let bundle_store = persist_history_rewrap_bundle(&state_dir, &bundle, &encoded)?;
-            let transfer_store = transfer
-                .as_ref()
-                .map(|(transfer, encoded)| {
-                    transaction.register_append_only_write(
-                        PathBuf::from(HISTORY_REWRAP_STORE_DIRECTORY)
-                            .join(format!("{}.transfer", transfer.bundle().bundle_id()?)),
-                    )?;
-                    persist_history_rewrap_transfer(&state_dir, transfer, encoded)
-                })
-                .transpose()?;
-            let checkpoint_store = recovery_checkpoint
-                .as_ref()
-                .map(|(checkpoint, encoded)| {
-                    let checkpoint_id = checkpoint.checkpoint_id()?;
-                    transaction.register_append_only_write(
-                        PathBuf::from(HISTORY_RECOVERY_STORE_DIRECTORY).join(format!(
-                            "{}-{:020}-{}.checkpoint",
-                            checkpoint.recovery_id()?,
-                            checkpoint.next_range_start(),
-                            encode_hex(&checkpoint_id)
-                        )),
-                    )?;
-                    persist_history_recovery_checkpoint(&state_dir, checkpoint, encoded)
-                })
-                .transpose()?;
+            let (bundle_store, bundle_receipt) =
+                persist_history_rewrap_bundle(&state_dir, &bundle, &encoded)?;
+            transaction.register_store_receipt(&bundle_receipt)?;
+            let transfer_store = if let Some((transfer, encoded)) = transfer.as_ref() {
+                let (outcome, receipt) =
+                    persist_history_rewrap_transfer(&state_dir, transfer, encoded)?;
+                transaction.register_store_receipt(&receipt)?;
+                Some(outcome)
+            } else {
+                None
+            };
+            let checkpoint_store = if let Some((checkpoint, encoded)) = recovery_checkpoint.as_ref()
+            {
+                let (outcome, receipt) =
+                    persist_history_recovery_checkpoint(&state_dir, checkpoint, encoded)?;
+                transaction.register_store_receipt(&receipt)?;
+                Some(outcome)
+            } else {
+                None
+            };
             let mut inserted_projections = 0_usize;
             let mut inserted_events = 0_usize;
             for (authorized_event, projection, projection_exists) in prepared {
-                transaction.register_authorized_event(&authorized_event)?;
                 if !projection_exists && {
-                    transaction.register_local_projection(projection.event_id())?;
-                    local_message_store.put(&projection)? == StoreOutcome::Inserted
+                    let (outcome, receipt) = local_message_store.put_with_receipt(&projection)?;
+                    transaction.register_store_receipt(&receipt)?;
+                    outcome == StoreOutcome::Inserted
                 } {
                     inserted_projections += 1;
                 }
-                if event_store.put_authorized(&authorized_event, &membership)?
-                    == StoreOutcome::Inserted
-                {
+                let (outcome, receipt) =
+                    event_store.put_authorized_with_receipt(&authorized_event, &membership)?;
+                transaction.register_store_receipt(&receipt)?;
+                if outcome == StoreOutcome::Inserted {
                     inserted_events += 1;
                 }
             }
@@ -4483,26 +4458,29 @@ fn persist_history_rewrap_bundle(
     state_dir: &Path,
     bundle: &HistoryRewrapBundle,
     encoded: &[u8],
-) -> Result<StoreOutcome> {
+) -> Result<(StoreOutcome, AppendOnlyWriteReceipt)> {
     let directory = state_dir.join(HISTORY_REWRAP_STORE_DIRECTORY);
     fs::create_dir_all(&directory)?;
+    let directory = fs::canonicalize(directory)?;
     let path = directory.join(format!("{}.rewrap", bundle.bundle_id()?));
-    if path.try_exists()? {
-        return validate_existing_history_rewrap(&path, encoded);
-    }
-    let mut temporary = NamedTempFile::new_in(&directory)?;
-    temporary.write_all(encoded)?;
-    temporary.as_file().sync_all()?;
-    match temporary.persist_noclobber(&path) {
-        Ok(file) => {
-            file.sync_all()?;
-            Ok(StoreOutcome::Inserted)
+    let outcome = if path.try_exists()? {
+        validate_existing_history_rewrap(&path, encoded)?
+    } else {
+        let mut temporary = NamedTempFile::new_in(&directory)?;
+        temporary.write_all(encoded)?;
+        temporary.as_file().sync_all()?;
+        match temporary.persist_noclobber(&path) {
+            Ok(file) => {
+                file.sync_all()?;
+                StoreOutcome::Inserted
+            }
+            Err(error) if error.error.kind() == std::io::ErrorKind::AlreadyExists => {
+                validate_existing_history_rewrap(&path, encoded)?
+            }
+            Err(error) => return Err(error.error.into()),
         }
-        Err(error) if error.error.kind() == std::io::ErrorKind::AlreadyExists => {
-            validate_existing_history_rewrap(&path, encoded)
-        }
-        Err(error) => Err(error.error.into()),
-    }
+    };
+    Ok((outcome, AppendOnlyWriteReceipt::single(path)))
 }
 
 fn validate_existing_history_rewrap(path: &Path, expected: &[u8]) -> Result<StoreOutcome> {
@@ -4519,37 +4497,41 @@ fn persist_history_rewrap_transfer(
     state_dir: &Path,
     transfer: &SignedHistoryRewrapTransfer,
     encoded: &[u8],
-) -> Result<StoreOutcome> {
+) -> Result<(StoreOutcome, AppendOnlyWriteReceipt)> {
     transfer.verify_signature()?;
     let directory = state_dir.join(HISTORY_REWRAP_STORE_DIRECTORY);
     fs::create_dir_all(&directory)?;
+    let directory = fs::canonicalize(directory)?;
     let path = directory.join(format!("{}.transfer", transfer.bundle().bundle_id()?));
-    if path.try_exists()? {
-        return validate_existing_history_rewrap(&path, encoded);
-    }
-    let mut temporary = NamedTempFile::new_in(&directory)?;
-    temporary.write_all(encoded)?;
-    temporary.as_file().sync_all()?;
-    match temporary.persist_noclobber(&path) {
-        Ok(file) => {
-            file.sync_all()?;
-            Ok(StoreOutcome::Inserted)
+    let outcome = if path.try_exists()? {
+        validate_existing_history_rewrap(&path, encoded)?
+    } else {
+        let mut temporary = NamedTempFile::new_in(&directory)?;
+        temporary.write_all(encoded)?;
+        temporary.as_file().sync_all()?;
+        match temporary.persist_noclobber(&path) {
+            Ok(file) => {
+                file.sync_all()?;
+                StoreOutcome::Inserted
+            }
+            Err(error) if error.error.kind() == std::io::ErrorKind::AlreadyExists => {
+                validate_existing_history_rewrap(&path, encoded)?
+            }
+            Err(error) => return Err(error.error.into()),
         }
-        Err(error) if error.error.kind() == std::io::ErrorKind::AlreadyExists => {
-            validate_existing_history_rewrap(&path, encoded)
-        }
-        Err(error) => Err(error.error.into()),
-    }
+    };
+    Ok((outcome, AppendOnlyWriteReceipt::single(path)))
 }
 
 fn persist_history_recovery_checkpoint(
     state_dir: &Path,
     checkpoint: &SignedHistoryRecoveryCheckpoint,
     encoded: &[u8],
-) -> Result<StoreOutcome> {
+) -> Result<(StoreOutcome, AppendOnlyWriteReceipt)> {
     checkpoint.verify_signature()?;
     let directory = state_dir.join(HISTORY_RECOVERY_STORE_DIRECTORY);
     fs::create_dir_all(&directory)?;
+    let directory = fs::canonicalize(directory)?;
     let checkpoint_id = checkpoint.checkpoint_id()?;
     let path = directory.join(format!(
         "{}-{:020}-{}.checkpoint",
@@ -4557,22 +4539,24 @@ fn persist_history_recovery_checkpoint(
         checkpoint.next_range_start(),
         encode_hex(&checkpoint_id)
     ));
-    if path.try_exists()? {
-        return validate_existing_history_rewrap(&path, encoded);
-    }
-    let mut temporary = NamedTempFile::new_in(&directory)?;
-    temporary.write_all(encoded)?;
-    temporary.as_file().sync_all()?;
-    match temporary.persist_noclobber(&path) {
-        Ok(file) => {
-            file.sync_all()?;
-            Ok(StoreOutcome::Inserted)
+    let outcome = if path.try_exists()? {
+        validate_existing_history_rewrap(&path, encoded)?
+    } else {
+        let mut temporary = NamedTempFile::new_in(&directory)?;
+        temporary.write_all(encoded)?;
+        temporary.as_file().sync_all()?;
+        match temporary.persist_noclobber(&path) {
+            Ok(file) => {
+                file.sync_all()?;
+                StoreOutcome::Inserted
+            }
+            Err(error) if error.error.kind() == std::io::ErrorKind::AlreadyExists => {
+                validate_existing_history_rewrap(&path, encoded)?
+            }
+            Err(error) => return Err(error.error.into()),
         }
-        Err(error) if error.error.kind() == std::io::ErrorKind::AlreadyExists => {
-            validate_existing_history_rewrap(&path, encoded)
-        }
-        Err(error) => Err(error.error.into()),
-    }
+    };
+    Ok((outcome, AppendOnlyWriteReceipt::single(path)))
 }
 
 #[derive(Debug, Default)]
@@ -4892,17 +4876,15 @@ fn seed_history(
                 local_projections.push(local_projection);
             }
             for projection in &local_projections {
-                transaction.register_local_projection(projection.event_id())?;
-                local_message_store
-                    .put(projection)
+                let (_, receipt) = local_message_store
+                    .put_with_receipt(projection)
                     .context("persist seeded local history projection")?;
+                transaction.register_store_receipt(&receipt)?;
             }
-            for event in &events {
-                transaction.register_authorized_event(event)?;
-            }
-            event_store
-                .put_authorized_batch(&events, &membership)
+            let receipt = event_store
+                .put_authorized_batch_with_receipt(&events, &membership)
                 .context("persist authorized seeded history events")?;
+            transaction.register_store_receipt(&receipt)?;
             Ok((
                 conversation_id,
                 existing_count,
@@ -4942,7 +4924,7 @@ fn ensure_authored_local_text_projection(
     device_state: &DeviceState,
     event: &SignedEvent,
     body: &str,
-) -> Result<kilogram_store::StoreOutcome, StoreError> {
+) -> Result<(StoreOutcome, AppendOnlyWriteReceipt), StoreError> {
     let event_id = event.event_id()?;
     let local_device_id = device_state.identity().device_id();
     match store.get(event_id) {
@@ -4960,7 +4942,7 @@ fn ensure_authored_local_text_projection(
             if stored_body != body {
                 return Err(StoreError::LocalTextProjectionPlaintextConflict { event_id });
             }
-            Ok(kilogram_store::StoreOutcome::AlreadyPresent)
+            store.put_with_receipt(&projection)
         }
         Err(StoreError::LocalTextProjectionMissing { .. }) => {
             let projection = LocalTextProjection::seal_authored(
@@ -4969,7 +4951,7 @@ fn ensure_authored_local_text_projection(
                 device_state.encryption().public_key(),
                 body,
             )?;
-            store.put(&projection)
+            store.put_with_receipt(&projection)
         }
         Err(error) => Err(error),
     }
@@ -5004,13 +4986,14 @@ fn ensure_received_local_text_projection(
     device_state: &DeviceState,
     event: &SignedEvent,
     decrypted: &DecryptedMessage,
-) -> Result<kilogram_store::StoreOutcome, StoreError> {
+) -> Result<(StoreOutcome, AppendOnlyWriteReceipt), StoreError> {
     let event_id = event.event_id()?;
     if let Some(body) = open_local_text_projection_if_present(store, device_state, event)? {
         if body != decrypted.as_str() {
             return Err(StoreError::LocalTextProjectionPlaintextConflict { event_id });
         }
-        return Ok(kilogram_store::StoreOutcome::AlreadyPresent);
+        let projection = store.get(event_id)?;
+        return store.put_with_receipt(&projection);
     }
     let projection = LocalTextProjection::seal_received(
         event,
@@ -5018,7 +5001,7 @@ fn ensure_received_local_text_projection(
         device_state.encryption().public_key(),
         decrypted,
     )?;
-    store.put(&projection)
+    store.put_with_receipt(&projection)
 }
 
 struct DecryptingSessionStore<'a> {
@@ -5139,9 +5122,8 @@ impl<'a> DecryptingSessionStore<'a> {
                     self.device_state.encryption().public_key(),
                     &decrypted,
                 )?;
-                transaction
-                    .register_local_projections_for_store(std::slice::from_ref(&projection))?;
-                self.local_message_writes.put(&projection)?;
+                let (_, receipt) = self.local_message_writes.put_with_receipt(&projection)?;
+                transaction.register_store_receipt_for_store(&receipt)?;
                 Ok(Some(projection))
             }
             Err(error) => Err(error),
@@ -5198,8 +5180,10 @@ impl SessionStore for DecryptingSessionStore<'_> {
             }
             let mut ratchet_state = transaction.load_ratchet_state_for_store()?;
             let created = self.ensure_local_projections(transaction, &mut ratchet_state, events)?;
-            transaction.register_authorized_events_for_store(events)?;
-            self.event_writes.put_authorized_batch(events, membership)?;
+            let receipt = self
+                .event_writes
+                .put_authorized_batch_with_receipt(events, membership)?;
+            transaction.register_store_receipt_for_store(&receipt)?;
             self.local_message_reads.stage_committed(&created)
         })?;
         self.local_message_reads.commit_staged(staged_projections)?;

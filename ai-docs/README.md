@@ -163,6 +163,15 @@ Append-only writers явно регистрируют event/authorization/projec
 recovery paths; второй directory walk при построении delta удалён, committed
 append record нельзя удалить или изменить на месте. Начальный rollback baseline,
 final exact shadow scan и full DB manifest rebuild пока остаются `O(state)`.
+M0.8.10 переносит знание append layout из CLI в repository-owned
+`AppendOnlyWriteReceipt`: event/authorization/projection/rewrap/transfer/
+checkpoint writers возвращают exact canonical paths, а transaction проверяет
+root и kind. Vault schema v2 добавляет AEAD-encrypted path/length/hash index;
+normal typed commit обновляет manifest без enumeration/decrypt неизменённых DB
+payload records (`vault_payload_records_loaded=0`). Schema v1 проверяется и
+перестраивается один раз. Pre-command gate, initial journal baseline и final
+exact shadow confirmation всё ещё full-state; index metadata пока цельный
+`O(record count)` blob.
 Seed/root recovery, защищённое хранение root/local/ratchet keys, production
 repository cutover, global prekey discovery/witness, автоматический
 recovery source discovery/background coordinator, sync summaries, membership
@@ -219,8 +228,8 @@ removal и группы ещё не реализованы.
 
 ## План ближайших работ
 
-1. В M0.8.10 перенести typed write receipts из CLI в domain repositories и
-   добавить authenticated incremental manifest index.
+1. Перевести trust authority/contact reads и writes на отдельный DB-primary
+   repository и убрать bounded filesystem compatibility ingress.
 2. Защитить vault master key через OS keystore/passphrase/seed wrapping,
    добавить rollback witness, versioned migrations и bounded backup/restore.
 3. Добавить source discovery/background coordinator и QR/device-link UX поверх
@@ -285,5 +294,7 @@ removal и группы ещё не реализованы.
   реализованный M0.8.8 typed direct delta и первый mutable DB-primary sequence adapter.
 - [`../docs/RFC-0021-db-primary-ratchet-workspace-and-registered-appends.md`](../docs/RFC-0021-db-primary-ratchet-workspace-and-registered-appends.md) —
   реализованный M0.8.9 DB-primary ratchet workspace и explicit append write-set.
+- [`../docs/RFC-0022-repository-write-receipts-and-manifest-index.md`](../docs/RFC-0022-repository-write-receipts-and-manifest-index.md) —
+  реализованный M0.8.10 contract repository receipts и encrypted manifest index.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.
