@@ -144,7 +144,9 @@ link path этот ticket не передаёт recipient. Prekey pools оста
 
 ## 8. Что остаётся дальше
 
-- QR renderer/scanner и OS deep-link integration;
+- QR image renderer/decoder реализованы в M0.9.3 и описаны в
+  [`RFC-0030`](RFC-0030-bounded-history-recovery-qr-ceremony.md); live camera,
+  clipboard и OS deep-link integration ещё не реализованы;
 - authenticated publication/discovery нескольких доступных source descriptors;
 - постоянный scheduler с retry, power и metered-network policy;
 - rotation/revocation-aware descriptor refresh и multi-source UI;

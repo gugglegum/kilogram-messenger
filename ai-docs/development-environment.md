@@ -474,6 +474,14 @@ toolchain `1.98.0` для воспроизводимой разработки.
     release build проходят. Direct smoke `.tmp/m092-smoke-20260902-010717`
     получил 1202-byte link, отклонил wrong device до сети и перенёс две pages
     одним authenticated connection с identical history.
+59. M0.9.3 добавил `recovery_qr`: `qrcode 0.14.1` рендерит no-clobber PNG с EC
+    L/quiet zone, `rqrr 0.10.1` декодирует ровно один QR, `image 0.25.10`
+    собран только с PNG/JPEG. Input ограничен 16 MiB, 4096×4096, 64 MiB image
+    allocation budget и 2953-byte ASCII URI. Listener пишет QR напрямую,
+    standalone render повторяет его, inspect/accept принимают `--qr-file`.
+    Все 109 workspace tests, rustfmt, strict Clippy и release build проходят.
+    Direct smoke `.tmp/m093-smoke-20260902-012850` проверил Version 25 PNG,
+    offline round-trip/no-clobber/wrong-device preflight и две recovery pages.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -492,9 +500,10 @@ high-water и concurrent initiation resolution; first-contact global freshness
 и production network discovery остаются открыты. M0.7.5 реализовал
 same-account history rewrap; M0.7.8 добавил сетевой consent/SAS и local
 multi-source claim reconciliation, M0.7.9 — signed checkpoint pagination и
-safe retry, M0.9.1 — до 64 atomic pages в одном connection, а M0.9.2 — compact
-signed recovery device link с offline inspect и explicit accept. Descriptor
-publication/discovery, QR renderer/scanner, постоянный scheduler, membership
+safe retry, M0.9.1 — до 64 atomic pages в одном connection, M0.9.2 — compact
+signed recovery device link с offline inspect и explicit accept, а M0.9.3 —
+bounded PNG/JPEG QR file ceremony. Descriptor
+publication/discovery, live camera/clipboard, постоянный scheduler, membership
 removal/epochs и group E2EE остаются открыты. M0.7.7 закрывает M0 crash consistency для device
 filesystem state; M0.8.1 доказывает атомарную encrypted shadow migration в
 `redb`, M0.8.2 — recoverable versioned dual-write всех live CLI commands,
@@ -511,7 +520,7 @@ M0.8.13 — portable passphrase recovery package и внешний snapshot witn
 M0.8.14 — immutable DB-primary device identity без filesystem fallback;
 M0.8.15 — schema-v3 DB-only device identity и physical namespace retirement;
 M0.9.1 — bounded multi-page history recovery coordinator; M0.9.2 — signed
-QR-ready history recovery device link.
+QR-ready history recovery device link; M0.9.3 — bounded QR image round-trip.
 Paged/Merkle index, production non-Windows local provider, согласованный
 monotonic rollback witness, автоматический backup lifecycle и физическое
 retirement остальных compatibility shadows ещё не реализованы.

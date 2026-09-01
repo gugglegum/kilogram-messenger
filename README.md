@@ -63,12 +63,14 @@ The bounded multi-page recovery coordinator is specified in
 [`docs/RFC-0028-bounded-multi-page-history-recovery-session.md`](docs/RFC-0028-bounded-multi-page-history-recovery-session.md).
 The compact signed recovery device link is specified in
 [`docs/RFC-0029-signed-history-recovery-device-link.md`](docs/RFC-0029-signed-history-recovery-device-link.md).
+The bounded PNG/JPEG QR ceremony is specified in
+[`docs/RFC-0030-bounded-history-recovery-qr-ceremony.md`](docs/RFC-0030-bounded-history-recovery-qr-ceremony.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.2 signed history recovery device link — complete
+## Current milestone: M0.9.3 bounded history recovery QR ceremony — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -154,8 +156,16 @@ size, route policy and a short expiry without embedding the large prekey pools.
 SAS confirmation before opening a connection. The link is public bootstrap
 metadata, not a bearer capability; the listener still authenticates the device
 and independently enforces its local consent. The implemented payload is
-QR-ready, while QR rendering/scanning and automatic discovery remain future
-client work.
+QR-ready; M0.9.3 adds the file-based image round-trip, while live capture and
+automatic discovery remain future client work.
+
+M0.9.3 implements that QR image boundary. A listener may directly publish a
+no-clobber PNG, and a separate command can render an existing verified link.
+Offline inspect and explicit accept decode exactly one QR from a bounded PNG or
+JPEG before running the same signed-link verifier. File size, dimensions,
+decoded payload and accepted formats are bounded; multiple QR codes are
+rejected as ambiguous. This is file-based CLI scanning, not yet a live camera,
+clipboard, GUI or OS deep-link integration.
 
 M0.8.1 adds a reversible encrypted shadow snapshot of the entire device state.
 `state-vault-migrate` publishes encrypted records and a keyed manifest in one

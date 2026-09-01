@@ -62,11 +62,16 @@ use tokio::time::timeout;
 use zeroize::Zeroizing;
 
 mod recovery_link;
+mod recovery_qr;
 
 use recovery_link::{
     DEFAULT_HISTORY_RECOVERY_LINK_VALIDITY_SECONDS, HistoryRecoveryLinkOptions,
     MAX_HISTORY_RECOVERY_LINK_TEXT_BYTES, MAX_HISTORY_RECOVERY_LINK_VALIDITY_SECONDS,
     SignedHistoryRecoveryLink,
+};
+use recovery_qr::{
+    RecoveryQrDecodeReport, RecoveryQrRenderReport, decode_recovery_link_qr_image,
+    render_recovery_link_qr_png,
 };
 
 const EVENT_STORE_DIRECTORY: &str = "events";
@@ -157,6 +162,10 @@ enum Command {
         /// Write a compact signed, recipient-specific recovery link for copying or QR rendering.
         #[arg(long)]
         history_recovery_link_file: Option<PathBuf>,
+
+        /// Render the signed recovery link directly as a no-clobber PNG QR code.
+        #[arg(long)]
+        history_recovery_qr_file: Option<PathBuf>,
 
         /// Recommended authenticated page size embedded in the recovery link.
         #[arg(long, default_value_t = 64)]
@@ -435,12 +444,31 @@ enum Command {
     /// Verify and display a compact signed recovery link without connecting.
     HistoryRecoveryLinkInspect {
         /// Recovery URI copied from the source listener.
+        #[arg(long, conflicts_with_all = ["link_file", "qr_file"])]
+        link: Option<String>,
+
+        /// Read the recovery URI from this file.
+        #[arg(long, conflicts_with_all = ["link", "qr_file"])]
+        link_file: Option<PathBuf>,
+
+        /// Decode the recovery URI from one bounded PNG or JPEG containing exactly one QR.
+        #[arg(long, conflicts_with_all = ["link", "link_file"])]
+        qr_file: Option<PathBuf>,
+    },
+
+    /// Render a verified compact recovery link as a no-clobber PNG QR code.
+    HistoryRecoveryLinkQrRender {
+        /// Recovery URI copied from the source listener.
         #[arg(long, conflicts_with = "link_file")]
         link: Option<String>,
 
         /// Read the recovery URI from this file.
         #[arg(long, conflicts_with = "link")]
         link_file: Option<PathBuf>,
+
+        /// New PNG file that will receive the QR code.
+        #[arg(long)]
+        qr_file: PathBuf,
     },
 
     /// Explicitly accept a verified recovery link and run its bounded recovery plan.
@@ -450,12 +478,16 @@ enum Command {
         state_dir: PathBuf,
 
         /// Recovery URI copied from the source listener.
-        #[arg(long, conflicts_with = "link_file")]
+        #[arg(long, conflicts_with_all = ["link_file", "qr_file"])]
         link: Option<String>,
 
         /// Read the recovery URI from this file.
-        #[arg(long, conflicts_with = "link")]
+        #[arg(long, conflicts_with_all = ["link", "qr_file"])]
         link_file: Option<PathBuf>,
+
+        /// Decode the recovery URI from one bounded PNG or JPEG containing exactly one QR.
+        #[arg(long, conflicts_with_all = ["link", "link_file"])]
+        qr_file: Option<PathBuf>,
 
         /// Local conversation label whose derived ID must match the signed link.
         #[arg(long)]
@@ -741,6 +773,7 @@ impl Command {
             Self::AccountCreate { .. }
             | Self::HistoryRewrapSas { .. }
             | Self::HistoryRecoveryLinkInspect { .. }
+            | Self::HistoryRecoveryLinkQrRender { .. }
             | Self::AccountShow { .. }
             | Self::AccountSnapshot { .. }
             | Self::AccountDeviceList { .. }
@@ -787,6 +820,7 @@ struct ListenOptions {
     history_rewrap_range_start: usize,
     history_rewrap_count: usize,
     history_recovery_link_file: Option<PathBuf>,
+    history_recovery_qr_file: Option<PathBuf>,
     history_recovery_link_page_size: usize,
     history_recovery_link_valid_for_seconds: u64,
 }
@@ -1212,6 +1246,7 @@ async fn run_command(command: Command) -> Result<()> {
             history_rewrap_range_start,
             history_rewrap_count,
             history_recovery_link_file,
+            history_recovery_qr_file,
             history_recovery_link_page_size,
             history_recovery_link_valid_for_seconds,
         } => {
@@ -1230,6 +1265,7 @@ async fn run_command(command: Command) -> Result<()> {
                 history_rewrap_range_start,
                 history_rewrap_count,
                 history_recovery_link_file,
+                history_recovery_qr_file,
                 history_recovery_link_page_size,
                 history_recovery_link_valid_for_seconds,
             }))
@@ -1379,13 +1415,21 @@ async fn run_command(command: Command) -> Result<()> {
             ))
             .await
         }
-        Command::HistoryRecoveryLinkInspect { link, link_file } => {
-            inspect_history_recovery_link(link, link_file).await
-        }
+        Command::HistoryRecoveryLinkInspect {
+            link,
+            link_file,
+            qr_file,
+        } => inspect_history_recovery_link(link, link_file, qr_file).await,
+        Command::HistoryRecoveryLinkQrRender {
+            link,
+            link_file,
+            qr_file,
+        } => render_history_recovery_link_qr(link, link_file, qr_file).await,
         Command::HistoryRecoveryLinkAccept {
             state_dir,
             link,
             link_file,
+            qr_file,
             conversation,
             confirm_sas,
             max_pages,
@@ -1394,6 +1438,7 @@ async fn run_command(command: Command) -> Result<()> {
                 state_dir,
                 link,
                 link_file,
+                qr_file,
                 conversation,
                 confirm_sas,
                 max_pages,
@@ -2295,6 +2340,7 @@ async fn listen_inner(options: ListenOptions) -> Result<()> {
         history_rewrap_range_start,
         history_rewrap_count,
         history_recovery_link_file,
+        history_recovery_qr_file,
         history_recovery_link_page_size,
         history_recovery_link_valid_for_seconds,
     } = options;
@@ -2323,7 +2369,9 @@ async fn listen_inner(options: ListenOptions) -> Result<()> {
         &listener_certificate,
         allowed_requester_account_id,
     )?;
-    if history_recovery_link_file.is_some() {
+    let publishes_history_recovery_link =
+        history_recovery_link_file.is_some() || history_recovery_qr_file.is_some();
+    if publishes_history_recovery_link {
         ensure!(
             (1..=MAX_HISTORY_REWRAP_ENTRIES).contains(&history_recovery_link_page_size),
             "--history-recovery-link-page-size must be between 1 and {MAX_HISTORY_REWRAP_ENTRIES}"
@@ -2389,11 +2437,10 @@ async fn listen_inner(options: ListenOptions) -> Result<()> {
         route_policy,
     )?;
     let encoded_ticket = ticket.encode()?;
-    let recovery_link = history_recovery_link_file
-        .as_ref()
-        .map(|path| {
+    let recovery_link = publishes_history_recovery_link
+        .then(|| {
             let approval = history_rewrap_approval.as_ref().context(
-                "--history-recovery-link-file requires complete history-rewrap approval flags",
+                "history recovery link/QR output requires complete history-rewrap approval flags",
             )?;
             let issued_at_unix_seconds =
                 unix_time_now().context("read time for history recovery link")?;
@@ -2414,15 +2461,32 @@ async fn listen_inner(options: ListenOptions) -> Result<()> {
                 },
             )?;
             let encoded = link.encode_text()?;
-            Ok::<_, anyhow::Error>((path.clone(), link, encoded))
+            Ok::<_, anyhow::Error>((link, encoded))
         })
         .transpose()?;
-    if let (Some(ticket_path), Some((link_path, _, _))) =
-        (ticket_file.as_ref(), recovery_link.as_ref())
+    if let (Some(ticket_path), Some(link_path)) =
+        (ticket_file.as_ref(), history_recovery_link_file.as_ref())
     {
         ensure!(
             ticket_path != link_path,
             "--ticket-file and --history-recovery-link-file must be different paths"
+        );
+    }
+    if let (Some(ticket_path), Some(qr_path)) =
+        (ticket_file.as_ref(), history_recovery_qr_file.as_ref())
+    {
+        ensure!(
+            ticket_path != qr_path,
+            "--ticket-file and --history-recovery-qr-file must be different paths"
+        );
+    }
+    if let (Some(link_path), Some(qr_path)) = (
+        history_recovery_link_file.as_ref(),
+        history_recovery_qr_file.as_ref(),
+    ) {
+        ensure!(
+            link_path != qr_path,
+            "--history-recovery-link-file and --history-recovery-qr-file must be different paths"
         );
     }
     println!("transport_endpoint_id={}", endpoint.id());
@@ -2475,10 +2539,7 @@ async fn listen_inner(options: ListenOptions) -> Result<()> {
             .with_context(|| format!("write ticket to {}", path.display()))?;
         println!("ticket_file={}", path.display());
     }
-    if let Some((path, link, encoded)) = recovery_link {
-        tokio::fs::write(&path, &encoded)
-            .await
-            .with_context(|| format!("write history recovery link to {}", path.display()))?;
+    if let Some((link, encoded)) = recovery_link {
         println!("history_recovery_link_id={}", encode_hex(&link.link_id()?));
         println!(
             "history_recovery_link_expires_at={}",
@@ -2487,7 +2548,16 @@ async fn listen_inner(options: ListenOptions) -> Result<()> {
         println!("history_recovery_link_text_bytes={}", encoded.len());
         println!("history_recovery_link_qr_ready=true");
         println!("history_recovery_link={encoded}");
-        println!("history_recovery_link_file={}", path.display());
+        if let Some(path) = history_recovery_link_file {
+            tokio::fs::write(&path, &encoded)
+                .await
+                .with_context(|| format!("write history recovery link to {}", path.display()))?;
+            println!("history_recovery_link_file={}", path.display());
+        }
+        if let Some(path) = history_recovery_qr_file {
+            let report = render_recovery_link_qr_png(&encoded, &path)?;
+            print_recovery_qr_render_report(&report, &path);
+        }
     }
 
     println!("status=listening");
@@ -3957,10 +4027,11 @@ async fn load_connection_ticket(
 async fn load_history_recovery_link(
     link: Option<String>,
     link_file: Option<PathBuf>,
-) -> Result<(SignedHistoryRecoveryLink, String)> {
-    let encoded = match (link, link_file) {
-        (Some(link), None) => link,
-        (None, Some(path)) => {
+    qr_file: Option<PathBuf>,
+) -> Result<LoadedHistoryRecoveryLink> {
+    let (encoded, input) = match (link, link_file, qr_file) {
+        (Some(link), None, None) => (link, HistoryRecoveryLinkInput::Uri),
+        (None, Some(path), None) => {
             let bytes = tokio::fs::read(&path)
                 .await
                 .with_context(|| format!("read history recovery link from {}", path.display()))?;
@@ -3968,25 +4039,97 @@ async fn load_history_recovery_link(
                 bytes.len() <= MAX_HISTORY_RECOVERY_LINK_TEXT_BYTES,
                 "history recovery link file exceeds the QR-ready size limit"
             );
-            String::from_utf8(bytes).context("history recovery link file is not UTF-8")?
+            (
+                String::from_utf8(bytes).context("history recovery link file is not UTF-8")?,
+                HistoryRecoveryLinkInput::TextFile,
+            )
         }
-        (None, None) => bail!("provide either --link or --link-file"),
-        (Some(_), Some(_)) => bail!("--link and --link-file are mutually exclusive"),
+        (None, None, Some(path)) => {
+            let report = decode_recovery_link_qr_image(&path)?;
+            (
+                report.payload.clone(),
+                HistoryRecoveryLinkInput::QrImage(report),
+            )
+        }
+        (None, None, None) => bail!("provide exactly one of --link, --link-file, or --qr-file"),
+        _ => bail!("--link, --link-file, and --qr-file are mutually exclusive"),
     };
     let link = SignedHistoryRecoveryLink::decode_text(&encoded)?;
-    Ok((link, encoded.trim().to_owned()))
+    Ok(LoadedHistoryRecoveryLink {
+        link,
+        encoded: encoded.trim().to_owned(),
+        input,
+    })
+}
+
+enum HistoryRecoveryLinkInput {
+    Uri,
+    TextFile,
+    QrImage(RecoveryQrDecodeReport),
+}
+
+struct LoadedHistoryRecoveryLink {
+    link: SignedHistoryRecoveryLink,
+    encoded: String,
+    input: HistoryRecoveryLinkInput,
 }
 
 async fn inspect_history_recovery_link(
     link: Option<String>,
     link_file: Option<PathBuf>,
+    qr_file: Option<PathBuf>,
 ) -> Result<()> {
-    let (link, encoded) = load_history_recovery_link(link, link_file).await?;
-    link.verify_at(unix_time_now()?)?;
-    print_history_recovery_link(&link, encoded.len())?;
+    let loaded = load_history_recovery_link(link, link_file, qr_file).await?;
+    loaded.link.verify_at(unix_time_now()?)?;
+    print_history_recovery_link_input(&loaded.input);
+    print_history_recovery_link(&loaded.link, loaded.encoded.len())?;
     println!("connection_attempted=false");
     println!("status=history-recovery-link-verified");
     Ok(())
+}
+
+async fn render_history_recovery_link_qr(
+    link: Option<String>,
+    link_file: Option<PathBuf>,
+    qr_file: PathBuf,
+) -> Result<()> {
+    let loaded = load_history_recovery_link(link, link_file, None).await?;
+    loaded.link.verify_at(unix_time_now()?)?;
+    let report = render_recovery_link_qr_png(&loaded.encoded, &qr_file)?;
+    print_history_recovery_link_input(&loaded.input);
+    print_history_recovery_link(&loaded.link, loaded.encoded.len())?;
+    print_recovery_qr_render_report(&report, &qr_file);
+    println!("connection_attempted=false");
+    println!("status=history-recovery-qr-rendered");
+    Ok(())
+}
+
+fn print_history_recovery_link_input(input: &HistoryRecoveryLinkInput) {
+    match input {
+        HistoryRecoveryLinkInput::Uri => println!("history_recovery_link_input=uri"),
+        HistoryRecoveryLinkInput::TextFile => println!("history_recovery_link_input=text-file"),
+        HistoryRecoveryLinkInput::QrImage(report) => {
+            println!("history_recovery_link_input=qr-image");
+            println!("history_recovery_qr_image_format={}", report.image_format);
+            println!("history_recovery_qr_image_bytes={}", report.image_bytes);
+            println!(
+                "history_recovery_qr_image_dimensions={}x{}",
+                report.image_width, report.image_height
+            );
+        }
+    }
+}
+
+fn print_recovery_qr_render_report(report: &RecoveryQrRenderReport, path: &Path) {
+    println!("history_recovery_qr_error_correction=L");
+    println!("history_recovery_qr_version={}", report.qr_version);
+    println!("history_recovery_qr_module_count={}", report.module_count);
+    println!(
+        "history_recovery_qr_image_dimensions={}x{}",
+        report.pixel_width, report.pixel_height
+    );
+    println!("history_recovery_qr_png_bytes={}", report.png_bytes);
+    println!("history_recovery_qr_file={}", path.display());
 }
 
 fn print_history_recovery_link(
@@ -4030,6 +4173,7 @@ fn accept_history_recovery_link(
     state_dir: PathBuf,
     link: Option<String>,
     link_file: Option<PathBuf>,
+    qr_file: Option<PathBuf>,
     conversation: String,
     confirmed_sas: String,
     max_pages: usize,
@@ -4038,6 +4182,7 @@ fn accept_history_recovery_link(
         state_dir,
         link,
         link_file,
+        qr_file,
         conversation,
         confirmed_sas,
         max_pages,
@@ -4048,11 +4193,13 @@ async fn accept_history_recovery_link_inner(
     state_dir: PathBuf,
     link: Option<String>,
     link_file: Option<PathBuf>,
+    qr_file: Option<PathBuf>,
     conversation: String,
     confirmed_sas: String,
     max_pages: usize,
 ) -> Result<()> {
-    let (link, encoded) = load_history_recovery_link(link, link_file).await?;
+    let loaded = load_history_recovery_link(link, link_file, qr_file).await?;
+    let link = loaded.link;
     let recipient_certificate = {
         let device_state = load_command_device_state(&state_dir)?;
         let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
@@ -4074,7 +4221,8 @@ async fn accept_history_recovery_link_inner(
         confirmed_sas.trim()
     );
 
-    print_history_recovery_link(&link, encoded.len())?;
+    print_history_recovery_link_input(&loaded.input);
+    print_history_recovery_link(&link, loaded.encoded.len())?;
     println!("history_recovery_link_user_consent=confirmed");
 
     let expected_account_id = link.account_id();

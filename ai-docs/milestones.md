@@ -1607,12 +1607,50 @@ authenticated descriptor publication/discovery и background scheduler ещё н
 реализованы. Полный контракт —
 [`../docs/RFC-0029-signed-history-recovery-device-link.md`](../docs/RFC-0029-signed-history-recovery-device-link.md).
 
+### M0.9.3 — bounded history recovery QR ceremony: выполнено
+
+Реализовано:
+
+- listener может сразу записать signed recovery descriptor в no-clobber PNG
+  через `--history-recovery-qr-file`, без обязательного промежуточного text file;
+- отдельная `history-recovery-link-qr-render` создаёт тот же PNG из проверенной
+  URI или link file;
+- стандартный QR использует EC level L, quiet zone 4 modules и 4 pixels/module;
+  точный URI limit 2953 bytes помещается в Version 40;
+- inspect/accept принимают mutually exclusive `--link`, `--link-file` или
+  `--qr-file` и после decode используют один SignedHistoryRecoveryLink verifier;
+- decoder принимает только PNG/JPEG content до 16 MiB и 4096×4096, задаёт
+  64 MiB image allocation budget и требует ровно один QR;
+- QR output публикуется atomic no-clobber; несколько найденных QR отвергаются
+  как ambiguous вместо выбора первого;
+- wire, ticket v9, URI v1, ALPN `/7`, device authentication, SAS consent и
+  per-page recovery contract не изменились.
+
+Проверки:
+
+- unit regressions покрывают PNG/JPEG round-trip, no-clobber, wrong prefix,
+  exact Version 40 maximum, ambiguous multi-QR и oversized payload/file/dimension;
+- direct process smoke `.tmp/m093-smoke-20260902-012850` создал 1202-byte link,
+  Version 25 PNG размером 13263 bytes, независимо перерисовал/декодировал его и
+  отклонил overwrite;
+- wrong device отклонён после QR decode до сети; exact recipient одним
+  authenticated connection перенёс две atomic pages, создал два checkpoint и
+  получил identical history;
+- все 109 workspace tests, rustfmt, strict Clippy и release build проходят.
+
+Граница среза: decoder работает с image file, но live camera/clipboard, GUI
+confirmation screen и OS deep-link handler отсутствуют. Publication/discovery
+и background scheduler также остаются следующими задачами. Полный контракт —
+[`../docs/RFC-0030-bounded-history-recovery-qr-ceremony.md`](../docs/RFC-0030-bounded-history-recovery-qr-ceremony.md).
+
 ### Следующий этап
 
-1. Добавить QR renderer/import и authenticated publication/discovery уже
-   подписанных M0.9.2 descriptors без автоматического доверия найденному peer.
-2. Membership removal и group governance проектировать вместе с ordered
+1. Добавить authenticated local discovery/publication свежих M0.9.2
+   descriptors; найденный peer остаётся недоверенным до exact-device/SAS accept.
+2. Добавить live camera/clipboard и GUI confirmation позже в platform clients;
+   CLI image-file ceremony уже закрыта M0.9.3.
+3. Membership removal и group governance проектировать вместе с ordered
    security events и MLS epoch.
-3. Production macOS/Linux local provider, согласованный monotonic witness,
+4. Production macOS/Linux local provider, согласованный monotonic witness,
    master-key rotation, seed/root recovery и compact Merkle/range summary
    остаются отдельными направлениями.
