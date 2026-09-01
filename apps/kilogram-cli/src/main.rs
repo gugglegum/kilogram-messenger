@@ -61,6 +61,14 @@ use tempfile::NamedTempFile;
 use tokio::time::timeout;
 use zeroize::Zeroizing;
 
+mod recovery_link;
+
+use recovery_link::{
+    DEFAULT_HISTORY_RECOVERY_LINK_VALIDITY_SECONDS, HistoryRecoveryLinkOptions,
+    MAX_HISTORY_RECOVERY_LINK_TEXT_BYTES, MAX_HISTORY_RECOVERY_LINK_VALIDITY_SECONDS,
+    SignedHistoryRecoveryLink,
+};
+
 const EVENT_STORE_DIRECTORY: &str = "events";
 const LOCAL_MESSAGE_STORE_DIRECTORY: &str = "local-messages";
 const HISTORY_REWRAP_STORE_DIRECTORY: &str = "history-rewraps";
@@ -145,6 +153,21 @@ enum Command {
         /// Total consecutive text-event window approved for paginated recovery.
         #[arg(long, default_value_t = MAX_HISTORY_REWRAP_ENTRIES)]
         history_rewrap_count: usize,
+
+        /// Write a compact signed, recipient-specific recovery link for copying or QR rendering.
+        #[arg(long)]
+        history_recovery_link_file: Option<PathBuf>,
+
+        /// Recommended authenticated page size embedded in the recovery link.
+        #[arg(long, default_value_t = 64)]
+        history_recovery_link_page_size: usize,
+
+        /// Lifetime of the signed recovery link.
+        #[arg(
+            long,
+            default_value_t = DEFAULT_HISTORY_RECOVERY_LINK_VALIDITY_SECONDS
+        )]
+        history_recovery_link_valid_for_seconds: u64,
     },
 
     /// Connect to a listener, send one message, print its acknowledgement, then exit.
@@ -409,6 +432,44 @@ enum Command {
         expect_account: AccountId,
     },
 
+    /// Verify and display a compact signed recovery link without connecting.
+    HistoryRecoveryLinkInspect {
+        /// Recovery URI copied from the source listener.
+        #[arg(long, conflicts_with = "link_file")]
+        link: Option<String>,
+
+        /// Read the recovery URI from this file.
+        #[arg(long, conflicts_with = "link")]
+        link_file: Option<PathBuf>,
+    },
+
+    /// Explicitly accept a verified recovery link and run its bounded recovery plan.
+    HistoryRecoveryLinkAccept {
+        /// Directory containing the exact recipient device named by the link.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Recovery URI copied from the source listener.
+        #[arg(long, conflicts_with = "link_file")]
+        link: Option<String>,
+
+        /// Read the recovery URI from this file.
+        #[arg(long, conflicts_with = "link")]
+        link_file: Option<PathBuf>,
+
+        /// Local conversation label whose derived ID must match the signed link.
+        #[arg(long)]
+        conversation: String,
+
+        /// SAS independently compared by both users before accepting the link.
+        #[arg(long)]
+        confirm_sas: String,
+
+        /// Maximum pages transferred over this one authenticated connection.
+        #[arg(long, default_value_t = MAX_HISTORY_RECOVERY_PAGES_PER_SESSION)]
+        max_pages: usize,
+    },
+
     /// Reconcile source-signed completeness claims from locally stored rewrap bundles.
     HistoryRewrapReconcile {
         /// Directory containing imported history-rewrap bundles.
@@ -662,6 +723,7 @@ impl Command {
             | Self::HistoryRewrapImport { state_dir, .. }
             | Self::HistoryRewrapFetch { state_dir, .. }
             | Self::HistoryRecoveryResume { state_dir, .. }
+            | Self::HistoryRecoveryLinkAccept { state_dir, .. }
             | Self::HistoryRewrapReconcile { state_dir, .. }
             | Self::History { state_dir, .. }
             | Self::Identity { state_dir }
@@ -678,6 +740,7 @@ impl Command {
             | Self::StateVaultRestore { state_dir, .. } => Some(state_dir),
             Self::AccountCreate { .. }
             | Self::HistoryRewrapSas { .. }
+            | Self::HistoryRecoveryLinkInspect { .. }
             | Self::AccountShow { .. }
             | Self::AccountSnapshot { .. }
             | Self::AccountDeviceList { .. }
@@ -723,6 +786,9 @@ struct ListenOptions {
     history_rewrap_approve_sas: Option<String>,
     history_rewrap_range_start: usize,
     history_rewrap_count: usize,
+    history_recovery_link_file: Option<PathBuf>,
+    history_recovery_link_page_size: usize,
+    history_recovery_link_valid_for_seconds: u64,
 }
 
 #[derive(Clone, Debug)]
@@ -942,6 +1008,47 @@ impl ConnectionTicket {
     }
 }
 
+#[derive(Clone, Debug)]
+struct HistoryRecoveryBootstrap {
+    endpoint: EndpointAddr,
+    account_device_list: AccountDeviceListSnapshot,
+    account_id: AccountId,
+    source_device_id: DeviceId,
+    route_policy: RoutePolicy,
+}
+
+impl HistoryRecoveryBootstrap {
+    fn from_ticket(ticket: &ConnectionTicket, expected_account_id: AccountId) -> Result<Self> {
+        ticket.verify_listener_account(expected_account_id)?;
+        ensure!(
+            ticket.allowed_requester_account_id() == expected_account_id,
+            "source ticket does not authorize this same account"
+        );
+        let source = ticket.verify_listener_authorization(expected_account_id)?;
+        Ok(Self {
+            endpoint: ticket.endpoint().clone(),
+            account_device_list: ticket.listener_directory().device_list().clone(),
+            account_id: expected_account_id,
+            source_device_id: source.device_id(),
+            route_policy: ticket.route_policy(),
+        })
+    }
+
+    fn from_link(link: &SignedHistoryRecoveryLink) -> Self {
+        Self {
+            endpoint: link.endpoint().clone(),
+            account_device_list: link.account_device_list().clone(),
+            account_id: link.account_id(),
+            source_device_id: link.source_device_id(),
+            route_policy: link.route_policy(),
+        }
+    }
+
+    fn authority_snapshot(&self) -> &AccountAuthoritySnapshot {
+        self.account_device_list.authority_snapshot()
+    }
+}
+
 fn ticket_signing_bytes(content: &ConnectionTicketContent) -> Result<Vec<u8>> {
     let encoded = serde_json::to_vec(content).context("serialize connection ticket content")?;
     let mut bytes = Vec::with_capacity(TICKET_SIGNATURE_DOMAIN.len() + encoded.len());
@@ -1104,6 +1211,9 @@ async fn run_command(command: Command) -> Result<()> {
             history_rewrap_approve_sas,
             history_rewrap_range_start,
             history_rewrap_count,
+            history_recovery_link_file,
+            history_recovery_link_page_size,
+            history_recovery_link_valid_for_seconds,
         } => {
             Box::pin(listen(ListenOptions {
                 state_dir,
@@ -1119,6 +1229,9 @@ async fn run_command(command: Command) -> Result<()> {
                 history_rewrap_approve_sas,
                 history_rewrap_range_start,
                 history_rewrap_count,
+                history_recovery_link_file,
+                history_recovery_link_page_size,
+                history_recovery_link_valid_for_seconds,
             }))
             .await
         }
@@ -1263,6 +1376,27 @@ async fn run_command(command: Command) -> Result<()> {
                 max_pages,
                 confirm_sas,
                 expect_account,
+            ))
+            .await
+        }
+        Command::HistoryRecoveryLinkInspect { link, link_file } => {
+            inspect_history_recovery_link(link, link_file).await
+        }
+        Command::HistoryRecoveryLinkAccept {
+            state_dir,
+            link,
+            link_file,
+            conversation,
+            confirm_sas,
+            max_pages,
+        } => {
+            Box::pin(accept_history_recovery_link(
+                state_dir,
+                link,
+                link_file,
+                conversation,
+                confirm_sas,
+                max_pages,
             ))
             .await
         }
@@ -2160,6 +2294,9 @@ async fn listen_inner(options: ListenOptions) -> Result<()> {
         history_rewrap_approve_sas,
         history_rewrap_range_start,
         history_rewrap_count,
+        history_recovery_link_file,
+        history_recovery_link_page_size,
+        history_recovery_link_valid_for_seconds,
     } = options;
     let device_state = load_command_device_state(&state_dir)?;
     let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
@@ -2186,6 +2323,17 @@ async fn listen_inner(options: ListenOptions) -> Result<()> {
         &listener_certificate,
         allowed_requester_account_id,
     )?;
+    if history_recovery_link_file.is_some() {
+        ensure!(
+            (1..=MAX_HISTORY_REWRAP_ENTRIES).contains(&history_recovery_link_page_size),
+            "--history-recovery-link-page-size must be between 1 and {MAX_HISTORY_REWRAP_ENTRIES}"
+        );
+        ensure!(
+            (1..=MAX_HISTORY_RECOVERY_LINK_VALIDITY_SECONDS)
+                .contains(&history_recovery_link_valid_for_seconds),
+            "--history-recovery-link-valid-for-seconds must be between 1 and {MAX_HISTORY_RECOVERY_LINK_VALIDITY_SECONDS}"
+        );
+    }
     let immutable_reads = open_immutable_read_repositories(&state_dir)
         .context("capture immutable vault-primary listener state before local changes")?;
     let authority_snapshot_store = install_own_authority_primary(
@@ -2241,6 +2389,42 @@ async fn listen_inner(options: ListenOptions) -> Result<()> {
         route_policy,
     )?;
     let encoded_ticket = ticket.encode()?;
+    let recovery_link = history_recovery_link_file
+        .as_ref()
+        .map(|path| {
+            let approval = history_rewrap_approval.as_ref().context(
+                "--history-recovery-link-file requires complete history-rewrap approval flags",
+            )?;
+            let issued_at_unix_seconds =
+                unix_time_now().context("read time for history recovery link")?;
+            let link = SignedHistoryRecoveryLink::sign(
+                device_state.identity(),
+                HistoryRecoveryLinkOptions {
+                    endpoint: ticket.endpoint().clone(),
+                    source_certificate: listener_certificate.clone(),
+                    account_device_list: ticket.listener_directory().device_list().clone(),
+                    recipient_device_id: approval.recipient_device_id,
+                    conversation_id: approval.conversation_id,
+                    approved_range_start: approval.range_start,
+                    approved_event_count: approval.count,
+                    page_size: history_recovery_link_page_size,
+                    route_policy,
+                    issued_at_unix_seconds,
+                    valid_for_seconds: history_recovery_link_valid_for_seconds,
+                },
+            )?;
+            let encoded = link.encode_text()?;
+            Ok::<_, anyhow::Error>((path.clone(), link, encoded))
+        })
+        .transpose()?;
+    if let (Some(ticket_path), Some((link_path, _, _))) =
+        (ticket_file.as_ref(), recovery_link.as_ref())
+    {
+        ensure!(
+            ticket_path != link_path,
+            "--ticket-file and --history-recovery-link-file must be different paths"
+        );
+    }
     println!("transport_endpoint_id={}", endpoint.id());
     println!("account_id={}", ticket.listener_account_id());
     println!("device_id={}", device_state.identity().device_id());
@@ -2290,6 +2474,20 @@ async fn listen_inner(options: ListenOptions) -> Result<()> {
             .await
             .with_context(|| format!("write ticket to {}", path.display()))?;
         println!("ticket_file={}", path.display());
+    }
+    if let Some((path, link, encoded)) = recovery_link {
+        tokio::fs::write(&path, &encoded)
+            .await
+            .with_context(|| format!("write history recovery link to {}", path.display()))?;
+        println!("history_recovery_link_id={}", encode_hex(&link.link_id()?));
+        println!(
+            "history_recovery_link_expires_at={}",
+            link.expires_at_unix_seconds()
+        );
+        println!("history_recovery_link_text_bytes={}", encoded.len());
+        println!("history_recovery_link_qr_ready=true");
+        println!("history_recovery_link={encoded}");
+        println!("history_recovery_link_file={}", path.display());
     }
 
     println!("status=listening");
@@ -3632,8 +3830,12 @@ async fn wait_for_relay(
 }
 
 fn print_connection_target(ticket: &ConnectionTicket) {
-    println!("target_endpoint_id={}", ticket.endpoint().id);
-    for relay_url in ticket.endpoint().relay_urls() {
+    print_endpoint_target(ticket.endpoint());
+}
+
+fn print_endpoint_target(endpoint: &EndpointAddr) {
+    println!("target_endpoint_id={}", endpoint.id);
+    for relay_url in endpoint.relay_urls() {
         println!("target_relay_url={relay_url}");
     }
 }
@@ -3750,6 +3952,156 @@ async fn load_connection_ticket(
         (Some(_), Some(_)) => bail!("--ticket and --ticket-file are mutually exclusive"),
     };
     ConnectionTicket::decode(&encoded_ticket)
+}
+
+async fn load_history_recovery_link(
+    link: Option<String>,
+    link_file: Option<PathBuf>,
+) -> Result<(SignedHistoryRecoveryLink, String)> {
+    let encoded = match (link, link_file) {
+        (Some(link), None) => link,
+        (None, Some(path)) => {
+            let bytes = tokio::fs::read(&path)
+                .await
+                .with_context(|| format!("read history recovery link from {}", path.display()))?;
+            ensure!(
+                bytes.len() <= MAX_HISTORY_RECOVERY_LINK_TEXT_BYTES,
+                "history recovery link file exceeds the QR-ready size limit"
+            );
+            String::from_utf8(bytes).context("history recovery link file is not UTF-8")?
+        }
+        (None, None) => bail!("provide either --link or --link-file"),
+        (Some(_), Some(_)) => bail!("--link and --link-file are mutually exclusive"),
+    };
+    let link = SignedHistoryRecoveryLink::decode_text(&encoded)?;
+    Ok((link, encoded.trim().to_owned()))
+}
+
+async fn inspect_history_recovery_link(
+    link: Option<String>,
+    link_file: Option<PathBuf>,
+) -> Result<()> {
+    let (link, encoded) = load_history_recovery_link(link, link_file).await?;
+    link.verify_at(unix_time_now()?)?;
+    print_history_recovery_link(&link, encoded.len())?;
+    println!("connection_attempted=false");
+    println!("status=history-recovery-link-verified");
+    Ok(())
+}
+
+fn print_history_recovery_link(
+    link: &SignedHistoryRecoveryLink,
+    encoded_length: usize,
+) -> Result<()> {
+    println!("history_recovery_link_id={}", encode_hex(&link.link_id()?));
+    println!("account_id={}", link.account_id());
+    println!("source_device_id={}", link.source_device_id());
+    println!("recipient_device_id={}", link.recipient_device_id());
+    println!("conversation_id={}", link.conversation_id());
+    println!(
+        "authority_revision={}",
+        link.account_device_list().revision()
+    );
+    println!("history_rewrap_sas={}", link.sas()?);
+    println!(
+        "history_recovery_approved_range={}-{}",
+        link.approved_range_start(),
+        link.approved_range_end()
+    );
+    println!("history_recovery_page_size={}", link.page_size());
+    println!("route_policy={}", link.route_policy().as_str());
+    println!(
+        "history_recovery_link_issued_at={}",
+        link.issued_at_unix_seconds()
+    );
+    println!(
+        "history_recovery_link_expires_at={}",
+        link.expires_at_unix_seconds()
+    );
+    println!("history_recovery_link_text_bytes={encoded_length}");
+    println!("history_recovery_link_qr_ready=true");
+    println!("history_recovery_link_requires_device_authentication=true");
+    println!("history_recovery_link_requires_sas_confirmation=true");
+    print_endpoint_target(link.endpoint());
+    Ok(())
+}
+
+fn accept_history_recovery_link(
+    state_dir: PathBuf,
+    link: Option<String>,
+    link_file: Option<PathBuf>,
+    conversation: String,
+    confirmed_sas: String,
+    max_pages: usize,
+) -> CommandFuture {
+    Box::pin(accept_history_recovery_link_inner(
+        state_dir,
+        link,
+        link_file,
+        conversation,
+        confirmed_sas,
+        max_pages,
+    ))
+}
+
+async fn accept_history_recovery_link_inner(
+    state_dir: PathBuf,
+    link: Option<String>,
+    link_file: Option<PathBuf>,
+    conversation: String,
+    confirmed_sas: String,
+    max_pages: usize,
+) -> Result<()> {
+    let (link, encoded) = load_history_recovery_link(link, link_file).await?;
+    let recipient_certificate = {
+        let device_state = load_command_device_state(&state_dir)?;
+        let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
+        trust
+            .load_certificate()
+            .context("load recipient Account Root certificate")?
+    };
+    link.verify_for_recipient(unix_time_now()?, &recipient_certificate)?;
+
+    let conversation_id = ConversationId::from_label(&conversation);
+    ensure!(
+        conversation_id == link.conversation_id(),
+        "history recovery link is bound to a different conversation"
+    );
+    let sas = link.sas()?;
+    ensure!(
+        confirmed_sas.trim() == sas.to_string(),
+        "recipient confirmed SAS {}, but the signed history recovery link derives {sas}",
+        confirmed_sas.trim()
+    );
+
+    print_history_recovery_link(&link, encoded.len())?;
+    println!("history_recovery_link_user_consent=confirmed");
+
+    let expected_account_id = link.account_id();
+    let expected_source_device_id = link.source_device_id();
+    let approved_range_start = usize::try_from(link.approved_range_start())
+        .context("history recovery link range start cannot be represented on this platform")?;
+    let approved_event_count = usize::try_from(link.approved_event_count())
+        .context("history recovery link event count cannot be represented on this platform")?;
+    let page_size = usize::try_from(link.page_size())
+        .context("history recovery link page size cannot be represented on this platform")?;
+    let bootstrap = HistoryRecoveryBootstrap::from_link(&link);
+
+    resume_history_recovery_inner(
+        state_dir,
+        None,
+        None,
+        Some(bootstrap),
+        conversation,
+        expected_source_device_id,
+        approved_range_start,
+        approved_event_count,
+        page_size,
+        max_pages,
+        confirmed_sas,
+        expected_account_id,
+    )
+    .await
 }
 
 fn show_identity(state_dir: PathBuf) -> Result<()> {
@@ -4614,6 +4966,7 @@ fn resume_history_recovery(
         state_dir,
         ticket,
         ticket_file,
+        None,
         conversation,
         expected_source_device_id,
         approved_range_start,
@@ -4630,6 +4983,7 @@ async fn resume_history_recovery_inner(
     state_dir: PathBuf,
     ticket: Option<String>,
     ticket_file: Option<PathBuf>,
+    bootstrap_override: Option<HistoryRecoveryBootstrap>,
     conversation: String,
     expected_source_device_id: DeviceId,
     approved_range_start: usize,
@@ -4669,19 +5023,23 @@ async fn resume_history_recovery_inner(
         recipient_certificate.account_id() == expected_account_id,
         "history recovery requires the recipient to belong to --expect-account"
     );
-    let inspected_ticket = load_connection_ticket(ticket.clone(), ticket_file.clone()).await?;
-    inspected_ticket.verify_listener_account(expected_account_id)?;
+    let bootstrap = match bootstrap_override {
+        Some(bootstrap) => bootstrap,
+        None => {
+            let inspected_ticket = load_connection_ticket(ticket, ticket_file).await?;
+            HistoryRecoveryBootstrap::from_ticket(&inspected_ticket, expected_account_id)?
+        }
+    };
     ensure!(
-        inspected_ticket.allowed_requester_account_id() == expected_account_id,
-        "source ticket does not authorize this same account"
+        bootstrap.account_id == expected_account_id,
+        "history recovery source belongs to a different account"
     );
-    let source = inspected_ticket.verify_listener_authorization(expected_account_id)?;
     ensure!(
-        source.device_id() == expected_source_device_id,
-        "source ticket belongs to device {}; explicitly selected source is {expected_source_device_id}",
-        source.device_id()
+        bootstrap.source_device_id == expected_source_device_id,
+        "history recovery source belongs to device {}; explicitly selected source is {expected_source_device_id}",
+        bootstrap.source_device_id
     );
-    let device_list = inspected_ticket.listener_directory().device_list();
+    let device_list = &bootstrap.account_device_list;
     ensure!(
         device_list.certificate_for(recipient_certificate.device_id())
             == Some(&recipient_certificate),
@@ -4694,9 +5052,11 @@ async fn resume_history_recovery_inner(
     )?;
     ensure!(
         confirmed_sas.trim() == sas.to_string(),
-        "recipient confirmed SAS {}, but the signed source ticket derives {sas}",
+        "recipient confirmed SAS {}, but the signed source descriptor derives {sas}",
         confirmed_sas.trim()
     );
+    println!("history_rewrap_sas={sas}");
+    println!("history_rewrap_user_consent=confirmed");
 
     let conversation_id = ConversationId::from_label(&conversation);
     let initial_checkpoint = SignedHistoryRecoveryCheckpoint::start(
@@ -4740,16 +5100,13 @@ async fn resume_history_recovery_inner(
     membership
         .require_member(expected_account_id)
         .context("account is not a member of the requested conversation")?;
-    let source_snapshot_store = install_own_authority_primary(
-        &state_dir,
-        &device_state,
-        inspected_ticket.listener_authority_snapshot(),
-    )
-    .context("install same-account authority snapshot from recovery source ticket")?;
+    let source_snapshot_store =
+        install_own_authority_primary(&state_dir, &device_state, bootstrap.authority_snapshot())
+            .context("install same-account authority snapshot from recovery source ticket")?;
     let session_binding =
-        SyncSessionBinding::from_transport_label(&inspected_ticket.endpoint().id.to_string());
-    let route_policy = inspected_ticket.route_policy();
-    let endpoint = endpoint_builder_for_remote(route_policy, inspected_ticket.endpoint())?
+        SyncSessionBinding::from_transport_label(&bootstrap.endpoint.id.to_string());
+    let route_policy = bootstrap.route_policy;
+    let endpoint = endpoint_builder_for_remote(route_policy, &bootstrap.endpoint)?
         .bind()
         .await
         .context("bind history recovery recipient endpoint")?;
@@ -4758,13 +5115,13 @@ async fn resume_history_recovery_inner(
     println!("device_id={}", recipient_certificate.device_id());
     println!("source_authority_store={source_snapshot_store:?}");
     println!("route_policy={}", route_policy.as_str());
-    print_connection_target(&inspected_ticket);
+    print_endpoint_target(&bootstrap.endpoint);
     if route_policy == RoutePolicy::RelayOnly {
         wait_for_relay(&endpoint, route_policy, CLIENT_RELAY_WAIT_SECONDS).await?;
     }
     let connection = timeout(
         CONNECTION_TIMEOUT,
-        endpoint.connect(inspected_ticket.endpoint().clone(), ALPN),
+        endpoint.connect(bootstrap.endpoint.clone(), ALPN),
     )
     .await
     .with_context(|| {

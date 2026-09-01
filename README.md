@@ -61,12 +61,14 @@ DB-primary and DB-only device identity are specified in
 and [`docs/RFC-0027-db-only-device-identity-layout.md`](docs/RFC-0027-db-only-device-identity-layout.md).
 The bounded multi-page recovery coordinator is specified in
 [`docs/RFC-0028-bounded-multi-page-history-recovery-session.md`](docs/RFC-0028-bounded-multi-page-history-recovery-session.md).
+The compact signed recovery device link is specified in
+[`docs/RFC-0029-signed-history-recovery-device-link.md`](docs/RFC-0029-signed-history-recovery-device-link.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.1 bounded multi-page history recovery — complete
+## Current milestone: M0.9.2 signed history recovery device link — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -142,6 +144,18 @@ every page and its signed checkpoint atomically before requesting the next one,
 and `--max-pages` provides a hard per-session resource bound. A disconnect or
 limit leaves a durable plan that resumes from the exact next page with a fresh
 ticket.
+
+M0.9.2 replaces that manual recovery-ticket ceremony with a compact,
+recipient-specific signed URI. It binds the source endpoint and certificate,
+root-signed device list, exact recipient, conversation, approved range, page
+size, route policy and a short expiry without embedding the large prekey pools.
+`history-recovery-link-inspect` verifies it offline, while
+`history-recovery-link-accept` requires the exact local recipient and explicit
+SAS confirmation before opening a connection. The link is public bootstrap
+metadata, not a bearer capability; the listener still authenticates the device
+and independently enforces its local consent. The implemented payload is
+QR-ready, while QR rendering/scanning and automatic discovery remain future
+client work.
 
 M0.8.1 adds a reversible encrypted shadow snapshot of the entire device state.
 `state-vault-migrate` publishes encrypted records and a keyed manifest in one

@@ -27,6 +27,9 @@ M0.7.9 добавил signed append-only checkpoint chain, authenticated paginat
 согласии минимум двух явно опрошенных sources.
 M0.9.1 переносит до 64 смежных страниц по одному authenticated connection,
 сохраняя atomic checkpoint каждой страницы и explicit source/SAS consent.
+M0.9.2 добавляет compact expiring source-signed link, offline verification и
+exact recipient/conversation/SAS preflight; QR rendering и descriptor discovery
+ещё не реализованы.
 M0.8.1 добавил обратимый encrypted shadow snapshot всего device state в `redb`,
 а M0.8.2 — authenticated intent, versioned generation и recoverable mirror
 после каждой live CLI-команды. M0.8.3 добавил typed exact shadow reads и
@@ -79,10 +82,12 @@ sessions, distribution, removal и key epochs и не решены этим пр
   лишнюю account metadata? M0.7.6 отклоняет rollback/equivocation после
   наблюдения новой generation, но не доказывает её глобальную свежесть при
   первом контакте.
-- Как discovery descriptor и QR/device-link ceremony находят доступный source,
-  сохраняя explicit Device ID/SAS consent; как power/network-aware scheduler
-  возобновляет bounded M0.9.1 sessions и отдельно разрешает recovery от
-  устройства собеседника без неявного расширения same-account trust?
+- M0.9.2 определяет compact signed recipient-specific descriptor, offline
+  inspect и explicit SAS-gated accept. Как публиковать/обнаруживать свежие
+  descriptors, рисовать/сканировать QR, регистрировать deep link и как
+  power/network-aware scheduler возобновляет bounded sessions; как отдельно
+  разрешать recovery от устройства собеседника без неявного расширения
+  same-account trust?
 - Какой финальный межъязыковой canonical wire encoding обеспечивает одинаковые
   подписи и event IDs на всех платформах? Postcard используется только как
   предварительный M0 codec и не закрывает вопрос публичного протокола.

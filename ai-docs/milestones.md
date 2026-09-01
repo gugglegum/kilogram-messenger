@@ -1,6 +1,6 @@
 # Технические этапы
 
-Актуально на: 2026-08-31.
+Актуально на: 2026-09-02.
 
 ## M0 — проверка сетевого и репликационного фундамента
 
@@ -1575,10 +1575,42 @@ provider остаются отдельными задачами. Полный к
 Полный контракт —
 [`../docs/RFC-0028-bounded-multi-page-history-recovery-session.md`](../docs/RFC-0028-bounded-multi-page-history-recovery-session.md).
 
+### M0.9.2 — signed history recovery device link: выполнено
+
+Реализовано:
+
+- source listener выпускает compact signed
+  `kilogram://history-recovery/v1/...` descriptor для exact recipient;
+- descriptor связывает endpoint, source certificate, root-signed device list,
+  conversation, approved range, page size, route policy и короткий expiry;
+- prekey pools из ticket v9 в link не входят, поэтому реальный payload занял
+  1202 bytes при hard limit 2953 bytes и готов для QR byte mode;
+- `history-recovery-link-inspect` полностью проверяет Root/source signatures,
+  bounds и expiry без сетевого подключения;
+- `history-recovery-link-accept` требует exact local recipient certificate,
+  совпадающий conversation ID и ручное подтверждение SAS до открытия сети;
+- listener после подключения всё равно независимо проверяет device proof и
+  своё exact consent window; link не является bearer capability;
+- legacy `history-recovery-resume` с ticket остаётся совместимым, wire objects,
+  ticket v9 и ALPN `/7` не изменены.
+
+Проверки:
+
+- unit regression покрывает round-trip, expiry, wrong recipient и tampering;
+- direct process smoke `.tmp/m092-smoke-20260902-010717` проверил offline
+  inspect, wrong-device rejection до сети, один authenticated connection, две
+  atomic pages, два checkpoint и identical source/recipient history;
+- все 104 workspace tests, rustfmt, strict Clippy и release build проходят.
+
+Граница среза: payload готов для QR, но renderer/scanner, OS deep link,
+authenticated descriptor publication/discovery и background scheduler ещё не
+реализованы. Полный контракт —
+[`../docs/RFC-0029-signed-history-recovery-device-link.md`](../docs/RFC-0029-signed-history-recovery-device-link.md).
+
 ### Следующий этап
 
-1. Signed source discovery descriptor и QR/device-link ceremony строить поверх
-   M0.9.1 без автоматического доверия найденному peer.
+1. Добавить QR renderer/import и authenticated publication/discovery уже
+   подписанных M0.9.2 descriptors без автоматического доверия найденному peer.
 2. Membership removal и group governance проектировать вместе с ordered
    security events и MLS epoch.
 3. Production macOS/Linux local provider, согласованный monotonic witness,

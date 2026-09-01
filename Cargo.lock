@@ -1965,6 +1965,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "base64",
+ "blake3",
  "clap",
  "iroh",
  "kilogram-identity",
@@ -1974,6 +1975,7 @@ dependencies = [
  "kilogram-state",
  "kilogram-store",
  "kilogram-transport-iroh",
+ "postcard",
  "serde",
  "serde_json",
  "tempfile",

@@ -127,5 +127,7 @@ M0.9.1 или новее.
 - multi-source scheduling и UI для divergent/incomplete claims;
 - compact Merkle/range summary вместо полного bounded inventory.
 
-Следующий срез должен добавить discovery descriptor и явную QR/device-link
-ceremony, не превращая найденный peer в автоматически доверенный source.
+Компактный signed descriptor и явное принятие QR-ready device link реализованы
+в M0.9.2 и описаны в
+[`RFC-0029`](RFC-0029-signed-history-recovery-device-link.md). Автоматическая
+публикация/discovery и QR renderer остаются следующими отдельными срезами.
