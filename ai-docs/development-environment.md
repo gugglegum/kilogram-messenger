@@ -606,7 +606,9 @@ M0.9.6 — signed append-only scheduler state с restart resume и cancellation.
 M0.9.7 — Windows-native recovery platform context и provider boundary;
 M0.9.8 — bounded Windows recovery worker, native change events и повторный
 policy gate перед discovery/connect; M0.9.9 — long-lived multi-session
-messaging runtime со stable endpoint и per-session state transaction.
+messaging runtime со stable endpoint и per-session state transaction;
+M0.9.10 — signed persistent contact, locally encrypted durable outbox,
+materialize-once delivery, persistent retry и runtime-owned automatic sync.
 Paged/Merkle index, production non-Windows local provider, согласованный
 monotonic rollback witness, автоматический backup lifecycle и физическое
 retirement остальных compatibility shadows ещё не реализованы.
@@ -618,3 +620,17 @@ retirement остальных compatibility shadows ещё не реализов
   блокером; при выборе Protobuf желательно использовать воспроизводимый
   vendored protoc.
 - CMake/Ninja устанавливать заранее не требуется.
+
+## M0.9.10 verification snapshot (2026-09-03)
+
+- Rust workspace: `cargo fmt --all`, strict
+  `cargo clippy --workspace --all-targets -- -D warnings` проходят.
+- Все 124 workspace tests проходят; CLI test count вырос до 44.
+- Новый process test поднимает Alice/Bob direct-only runtimes на одном host,
+  проверяет durable queued delivery, ACK, automatic sync, identical two-event
+  histories и delivered outbox marker.
+- Первый запуск теста обнаружил cancellation race: polling пересоздавал accept
+  future и Iroh закрывал handshake. Accept/ctrl-c futures теперь сохраняются
+  между ticks; повторный process test и полный regression проходят.
+- Release artifact нужно продолжать собирать обычным `cargo build --release`;
+  новых native/system dependencies M0.9.10 не добавляет.

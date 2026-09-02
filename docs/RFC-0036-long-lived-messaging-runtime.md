@@ -116,3 +116,6 @@ OS registration не является условием работы мессен
 Следующий срез M0.9.10 должен добавить persistent contact/runtime descriptor и
 локальную исходящую очередь с reconnect/sync, не меняя криптографический wire
 protocol M0.9.9.
+
+Примечание 2026-09-03: этот следующий срез реализован в
+[`RFC-0037`](RFC-0037-persistent-runtime-contact-and-outbox.md).

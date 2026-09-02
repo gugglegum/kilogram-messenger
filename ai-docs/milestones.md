@@ -1902,17 +1902,65 @@ contacts, local outbound queue, automatic reconnect/sync trigger и local GUI AP
 настройкой, а не условием работы запущенного мессенджера. Полный контракт —
 [`../docs/RFC-0036-long-lived-messaging-runtime.md`](../docs/RFC-0036-long-lived-messaging-runtime.md).
 
+### M0.9.10 — persistent runtime contact и durable outbox: выполнено
+
+Реализовано:
+
+- `runtime-contact-add` append-only сохраняет подписанную локальным device
+  карточку: local/peer Account ID, exact peer Device ID, conversation label/ID,
+  route policy и canonical absolute path обновляемого runtime ticket;
+- descriptor проверяется по ticket signature, обеим Account Root authorities,
+  messaging capability, membership, exact peer device, prekey freshness и
+  high-water; публичный descriptor обязан находиться вне protected state;
+- `runtime-queue-message` случайным Queue ID адресует contact, сразу HPKE-шифрует
+  body локальному device с metadata AAD и append-only сохраняет signed record;
+  plaintext не входит в runtime record/vault;
+- runtime materialize-once transaction атомарно сохраняет local projection,
+  единственный `AuthorizedEvent` и signed marker с полным event; все retries
+  передают тот же event без нового sequence/ratchet message;
+- listener на replay того же Event ID возвращает уже сохранённый ACK без нового
+  acknowledgement sequence;
+- ACK и signed delivered marker коммитятся вместе; только marker завершает
+  queue item;
+- failed prepare/network attempt создаёт signed hash-linked retry state с
+  monotonic generation, previous State ID, `not_before` и bounded exponential
+  equal-jitter; restart проверяет цепочку;
+- polling runtime выполняет due delivery, затем periodic automatic sync contacts;
+  `--auto-sync-seconds 0` отключает sync, `--max-outbound-actions` ограничивает
+  process tests;
+- contact/queue/materialization/delivery/retry добавлены как новый append-only
+  `StateRecordKind::Runtime`, разрешённый в typed DB-primary canary и primary
+  transaction delta;
+- Iroh accept future сохраняется между polling ticks: отмена tick больше не
+  отклоняет handshake, находящийся в процессе установления.
+
+Проверки:
+
+- authenticated format test: contact/queue encode/decode, absence plaintext в
+  record, wrong local key, tamper и restart retry-chain verification;
+- state/vault tests проверяют registered append-only Runtime delta и zero/nonzero
+  typed shadow report;
+- process test поднимает Alice/Bob runtime, доставляет durable queued message,
+  получает ACK, выполняет automatic sync и подтверждает identical histories:
+  ровно один text event + один ACK, queue/materialized/delivered = 1/1/1;
+- rustfmt, strict Clippy и все 124 workspace tests проходят.
+
+Граница среза: M0 descriptor — exact-device карточка с локальным file-path
+adapter. Privacy-preserving wide-area discovery, versioned device/route rotation,
+multi-source gossip/witness, локальный IPC и parallel actor sessions ещё не
+реализованы. Internal automatic sync пока использует runtime-owned transient
+dialer, но не внешний state writer. Полный контракт —
+[`../docs/RFC-0037-persistent-runtime-contact-and-outbox.md`](../docs/RFC-0037-persistent-runtime-contact-and-outbox.md).
+
 ### Следующий этап
 
-1. M0.9.10: persistent contact/runtime descriptor, локальная исходящая очередь,
-   bounded reconnect/backoff и automatic sync trigger поверх M0.9.9 runtime.
-2. M0.9.11: локальный IPC/API, через который UI управляет runtime без второго
+1. M0.9.11: локальный IPC/API, через который UI управляет runtime без второго
    state writer; затем M0.9.12 minimal Windows GUI.
-3. Optional autostart/background mode проектировать как явную настройку клиента,
+2. Optional autostart/background mode проектировать как явную настройку клиента,
    не как обязательный Windows Task Scheduler step.
-4. Добавить macOS/Linux/mobile providers той же platform boundary.
-5. Спроектировать privacy-preserving wide-area publication/gossip/mailbox и
+3. Добавить macOS/Linux/mobile providers той же platform boundary.
+4. Спроектировать privacy-preserving wide-area publication/gossip/mailbox и
    first-contact freshness; M0.9.4 закрывает только явный LAN opt-in.
-6. Membership removal и group governance проектировать вместе с ordered
+5. Membership removal и group governance проектировать вместе с ordered
    security events и MLS epoch; seed/root recovery, compact Merkle/range summary
    и независимый криптографический аудит остаются до публичного выпуска.

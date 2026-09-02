@@ -100,11 +100,12 @@ sessions, distribution, removal и key epochs и не решены этим пр
   всей scheduler chain; как отдельно
   разрешать recovery от устройства собеседника без неявного расширения
   same-account trust?
-- Какой persistent contact descriptor безопасно обновляет ephemeral runtime
-  Endpoint ID после restart, не допускает rollback/equivocation и не раскрывает
-  social graph? Как локальная outbound queue взаимодействует с ratchet commit,
-  acknowledgement, retry/backoff и automatic sync, оставаясь единственным
-  state writer внутри будущего runtime actor?
+- M0.9.10 закрывает локальную часть contact/outbox: signed exact-device карточка
+  с atomically refreshable ticket path, materialize-once event, idempotent ACK,
+  signed retry chain и automatic sync внутри одного runtime writer. Открыто:
+  какой wide-area multi-source descriptor gossip/mailbox не раскрывает social
+  graph, как witness обнаруживает rollback/equivocation и как versioned contact
+  безопасно принимает device/route rotation?
 - Какой финальный межъязыковой canonical wire encoding обеспечивает одинаковые
   подписи и event IDs на всех платформах? Postcard используется только как
   предварительный M0 codec и не закрывает вопрос публичного протокола.

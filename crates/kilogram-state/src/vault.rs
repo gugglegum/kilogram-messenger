@@ -105,11 +105,12 @@ pub enum StateRecordKind {
     HistoryRecovery,
     Trust,
     Sequence,
+    Runtime,
     Other,
 }
 
 impl StateRecordKind {
-    pub const ALL: [Self; 9] = [
+    pub const ALL: [Self; 10] = [
         Self::DeviceIdentity,
         Self::Ratchet,
         Self::Event,
@@ -118,6 +119,7 @@ impl StateRecordKind {
         Self::HistoryRecovery,
         Self::Trust,
         Self::Sequence,
+        Self::Runtime,
         Self::Other,
     ];
 
@@ -131,6 +133,7 @@ impl StateRecordKind {
             Self::HistoryRecovery => "history-recovery",
             Self::Trust => "trust",
             Self::Sequence => "sequence",
+            Self::Runtime => "runtime",
             Self::Other => "other",
         }
     }
@@ -1475,6 +1478,7 @@ impl EncryptedStateVault {
                     | StateRecordKind::HistoryRecovery
                     | StateRecordKind::Trust
                     | StateRecordKind::Sequence
+                    | StateRecordKind::Runtime
             ) {
                 return Err(StateError::VaultDirectWriteKindNotAllowed(
                     kind.as_str().to_owned(),
@@ -1509,6 +1513,7 @@ impl EncryptedStateVault {
                             | StateRecordKind::LocalProjection
                             | StateRecordKind::HistoryRewrap
                             | StateRecordKind::HistoryRecovery
+                            | StateRecordKind::Runtime
                     ) && staged_by_path
                         .get(&relative_path)
                         .is_some_and(|existing| existing != &entry)
@@ -2150,7 +2155,9 @@ impl TypedStateRepository for EncryptedStateVault {
         for kind in kinds {
             if !matches!(
                 kind,
-                StateRecordKind::Event | StateRecordKind::LocalProjection
+                StateRecordKind::Event
+                    | StateRecordKind::LocalProjection
+                    | StateRecordKind::Runtime
             ) {
                 return Err(StateError::VaultPrimaryReadKindNotAllowed(
                     kind.as_str().to_owned(),
@@ -2457,6 +2464,7 @@ fn classify_record_kind(relative_path: &str) -> StateRecordKind {
         "local-messages" => StateRecordKind::LocalProjection,
         "history-rewraps" => StateRecordKind::HistoryRewrap,
         "history-recovery" => StateRecordKind::HistoryRecovery,
+        "runtime" => StateRecordKind::Runtime,
         "account-authority.snapshot"
         | "device-certificate.cert"
         | "conversation-memberships"
@@ -3902,8 +3910,21 @@ mod tests {
         assert!(
             typed
                 .iter()
-                .filter(|report| report.kind() != StateRecordKind::DeviceIdentity)
+                .filter(|report| {
+                    !matches!(
+                        report.kind(),
+                        StateRecordKind::DeviceIdentity | StateRecordKind::Runtime
+                    )
+                })
                 .all(|report| report.record_count() == 1)
+        );
+        assert_eq!(
+            typed
+                .iter()
+                .find(|report| report.kind() == StateRecordKind::Runtime)
+                .ok_or("runtime shadow report is missing")?
+                .record_count(),
+            0
         );
 
         let primary = vault

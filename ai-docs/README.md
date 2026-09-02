@@ -1,6 +1,6 @@
 # Память проекта Kilogram
 
-Актуально на: 2026-09-02.
+Актуально на: 2026-09-03.
 
 Эта папка — краткая проектная память и дорожная карта. Подробная техническая
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
@@ -121,7 +121,10 @@ multi-source claim reconciliation. M0.7.9 добавил signed append-only chec
   long-lived messaging runtime: один endpoint/ticket обслуживает successive
   delivery/sync sessions, network wait не держит state lock, а каждая сессия
   получает отдельную vault-mirrored transaction; restart атомарно публикует
-  новый ticket.
+  новый ticket. M0.9.10 добавил signed exact-device contact с обновляемым
+  descriptor path, locally encrypted durable outbox, materialize-once event,
+  idempotent ACK replay, persistent signed retry/backoff и runtime-owned
+  automatic sync. Runtime state стал десятым typed repository kind в vault.
   Reconciliation выбирает
   inventory только при совпадении двух или более полных явно собранных claims и
   всё равно не обещает global completeness.
@@ -282,25 +285,23 @@ summaries, membership removal и группы ещё не реализованы
 
 ## План ближайших работ
 
-1. M0.9.10: persistent contact/runtime descriptor, локальная исходящая очередь,
-   bounded reconnect/backoff и automatic sync trigger внутри M0.9.9 process.
-2. M0.9.11: локальный IPC/API для UI; M0.9.12: minimal Windows GUI. Optional
+1. M0.9.11: локальный IPC/API для UI; M0.9.12: minimal Windows GUI. Optional
    autostart/background mode оставить явной настройкой, а не обязательным
    Task Scheduler этапом.
-3. Добавить production macOS/Linux local key provider, согласованный monotonic
+2. Добавить production macOS/Linux local key provider, согласованный monotonic
    witness и lifecycle обновления portable recovery package; затем mobile
    providers. Расширить M0.9.4 LAN discovery до privacy-preserving wide-area
    publication/gossip/mailbox. Live camera/clipboard оставить platform UI.
-4. Спроектировать membership removal вместе с ordered security log и MLS epoch;
+3. Спроектировать membership removal вместе с ordered security log и MLS epoch;
    отдельно — gossip/witness для first-contact freshness.
-5. Спроектировать seed/recovery authority, protected root storage, root
+4. Спроектировать seed/recovery authority, protected root storage, root
    rotation и конфликтующие authority operations.
-6. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
-7. Спроектировать финальный wire format подписанного события и алгоритм
+5. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
+6. Спроектировать финальный wire format подписанного события и алгоритм
    линеаризации.
-8. Спроектировать compact Merkle/range summary и переносимый signed cursor.
-9. Добавить небольшие MLS-группы.
-10. Перед публичным выпуском провести независимый криптографический аудит.
+7. Спроектировать compact Merkle/range summary и переносимый signed cursor.
+8. Добавить небольшие MLS-группы.
+9. Перед публичным выпуском провести независимый криптографический аудит.
 
 ## Навигация
 
@@ -381,5 +382,7 @@ summaries, membership removal и группы ещё не реализованы
   реализованный M0.9.8 bounded process, native change events, signed deadline/cancel wakeup и повторный policy gate.
 - [`../docs/RFC-0036-long-lived-messaging-runtime.md`](../docs/RFC-0036-long-lived-messaging-runtime.md) —
   реализованный M0.9.9 stable endpoint, multi-session listener и per-session state/vault transaction.
+- [`../docs/RFC-0037-persistent-runtime-contact-and-outbox.md`](../docs/RFC-0037-persistent-runtime-contact-and-outbox.md) —
+  реализованный M0.9.10 signed contact, encrypted durable outbox, persistent retry и automatic sync.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

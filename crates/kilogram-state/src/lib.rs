@@ -38,11 +38,12 @@ const NEXT_SEQUENCE_FILE: &str = "next-sequence";
 const TRUST_FILES: [&str; 2] = ["account-authority.snapshot", "device-certificate.cert"];
 const TRUST_DIRECTORIES: [&str; 2] = ["conversation-memberships", "peer-authority"];
 const TRUST_PRIMARY_BACKUP_DIRECTORY: &str = "trust";
-const APPEND_ONLY_ROOTS: [&str; 4] = [
+const APPEND_ONLY_ROOTS: [&str; 5] = [
     "events",
     "local-messages",
     "history-rewraps",
     "history-recovery",
+    "runtime",
 ];
 const MANIFEST_VERSION: u8 = 1;
 
@@ -670,6 +671,7 @@ impl StateTransaction {
                 | StateRecordKind::LocalProjection
                 | StateRecordKind::HistoryRewrap
                 | StateRecordKind::HistoryRecovery
+                | StateRecordKind::Runtime
         ) {
             return Err(StateError::AppendOnlyWriteKindNotAllowed(
                 relative_path.to_path_buf(),
@@ -1152,6 +1154,7 @@ fn state_record_kind_for_path(path: &Path) -> StateRecordKind {
         Some(Component::Normal(first)) if first == "history-recovery" => {
             StateRecordKind::HistoryRecovery
         }
+        Some(Component::Normal(first)) if first == "runtime" => StateRecordKind::Runtime,
         Some(Component::Normal(first))
             if TRUST_FILES.iter().any(|name| first == *name)
                 || TRUST_DIRECTORIES.iter().any(|name| first == *name) =>
@@ -1521,15 +1524,17 @@ mod tests {
             &directory.path().join("history-rewraps/unregistered.rewrap"),
             "not-in-write-set",
         )?;
+        write(&directory.path().join("runtime/outbox/new.queued"), "queue")?;
         transaction.register_append_only_write("events/new.event")?;
         transaction.register_append_only_write("local-messages/new.local-text")?;
+        transaction.register_append_only_write("runtime/outbox/new.queued")?;
 
         let mutations = transaction.staged_mutations()?;
         let by_path = mutations
             .iter()
             .map(|mutation| (mutation.relative_path.as_path(), mutation))
             .collect::<BTreeMap<_, _>>();
-        assert_eq!(by_path.len(), 6);
+        assert_eq!(by_path.len(), 7);
         assert_eq!(
             by_path[Path::new("ratchet/changed.bin")].content.as_deref(),
             Some(b"after".as_slice())
@@ -1550,6 +1555,10 @@ mod tests {
         assert_eq!(
             by_path[Path::new("local-messages/new.local-text")].kind,
             StateRecordKind::LocalProjection
+        );
+        assert_eq!(
+            by_path[Path::new("runtime/outbox/new.queued")].kind,
+            StateRecordKind::Runtime
         );
         assert!(!by_path.contains_key(Path::new("events/existing.event")));
         assert!(!by_path.contains_key(Path::new("history-rewraps/unregistered.rewrap")));

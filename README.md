@@ -77,12 +77,14 @@ The bounded event-driven Windows recovery worker is specified in
 [`docs/RFC-0035-bounded-windows-recovery-worker.md`](docs/RFC-0035-bounded-windows-recovery-worker.md).
 The first long-lived multi-session messaging runtime is specified in
 [`docs/RFC-0036-long-lived-messaging-runtime.md`](docs/RFC-0036-long-lived-messaging-runtime.md).
+The persistent signed contact and durable runtime outbox are specified in
+[`docs/RFC-0037-persistent-runtime-contact-and-outbox.md`](docs/RFC-0037-persistent-runtime-contact-and-outbox.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.9 long-lived messaging runtime — complete
+## Current milestone: M0.9.10 persistent runtime contact and outbox — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -243,8 +245,18 @@ lock. Each accepted application session instead gets one bounded exclusive
 state/vault transaction, preserving the existing single-writer ratchet and
 sequence invariants while allowing foreground commands between sessions.
 Runtime exits cleanly on Ctrl+C or optional test bounds, and atomically replaces
-its public ticket after restart. Persistent contacts, an outbound queue,
-automatic reconnect/sync and local GUI API remain M0.9.10+ work.
+its public ticket after restart.
+
+M0.9.10 adds signed contacts pinned to exact peer account/device, conversation,
+route and an atomically refreshable public ticket file. `runtime-queue-message`
+seals plaintext immediately to the local device and appends it to a typed,
+authenticated outbox. The running process materializes one signed ratchet event
+per Queue ID, retries that exact event with persistent equal-jitter backoff,
+stores ACK plus delivery marker atomically, and periodically synchronizes idle
+contacts. A replayed delivery returns the original ACK without allocating a new
+sequence. The encrypted vault treats all runtime records as a bounded
+append-only state kind. Wide-area descriptor discovery and the GUI API remain
+future work.
 
 M0.8.1 adds a reversible encrypted shadow snapshot of the entire device state.
 `state-vault-migrate` publishes encrypted records and a keyed manifest in one
@@ -588,8 +600,48 @@ The ticket remains valid while this process is running. Separate `connect` and
 `sync` invocations can reuse it; stop the runtime with Ctrl+C. On restart the
 runtime atomically replaces the ticket with one containing its new Endpoint ID.
 `--max-sessions` and `--idle-seconds` provide optional bounded test/embedding
-modes; zero means no such bound. M0.9.9 does not yet include the local outbound
-queue or automatic contact-ticket refresh planned for M0.9.10.
+modes; zero means no such bound.
+
+On Alice, pin Bob's current public descriptor once and queue a message without
+opening a network connection:
+
+```powershell
+cargo run -p kilogram-cli -- runtime-contact-add `
+  --state-dir .tmp/alice `
+  --conversation m0-local-smoke `
+  --expect-account <BOB_ACCOUNT_ID> `
+  --descriptor-file .tmp/bob-runtime.ticket
+
+cargo run -p kilogram-cli -- runtime-queue-message `
+  --state-dir .tmp/alice `
+  --conversation m0-local-smoke `
+  --peer-account <BOB_ACCOUNT_ID> `
+  --message "hello from the durable outbox"
+```
+
+Then run Alice's own runtime. It detects the queue, sends it to Bob, retries a
+failed connection with persistent bounded backoff, stores the verified ACK, and
+periodically synchronizes the contact:
+
+```powershell
+cargo run -p kilogram-cli -- runtime `
+  --state-dir .tmp/alice `
+  --allow-account <BOB_ACCOUNT_ID> `
+  --device-list-file .tmp/alice-devices.snapshot `
+  --ticket-file .tmp/alice-runtime.ticket `
+  --route-policy auto
+
+cargo run -p kilogram-cli -- runtime-outbox-status `
+  --state-dir .tmp/alice
+```
+
+The contact stores the canonical absolute descriptor path, so the same file
+must be atomically refreshed after Bob restarts. In M0.9.10 this path is a local
+development adapter (for example a synchronized folder), not a global
+discovery protocol. The queued body is encrypted at rest and is not printed by
+the status command. `--poll-milliseconds`, `--retry-base-seconds`,
+`--retry-max-seconds`, and `--auto-sync-seconds` tune the runtime; setting the
+last option to zero disables periodic sync.
 
 For every additional device in Bob's signed list, export its current public
 pool and repeat `--peer-prekey-pool-file <DEVICE.prekeys>` on the listener:

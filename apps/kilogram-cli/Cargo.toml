@@ -11,8 +11,10 @@ anyhow.workspace = true
 base64.workspace = true
 blake3.workspace = true
 clap.workspace = true
+getrandom.workspace = true
 image.workspace = true
 iroh.workspace = true
+kilogram-crypto = { path = "../../crates/kilogram-crypto" }
 kilogram-identity = { path = "../../crates/kilogram-identity" }
 kilogram-protocol = { path = "../../crates/kilogram-protocol" }
 kilogram-ratchet = { path = "../../crates/kilogram-ratchet" }

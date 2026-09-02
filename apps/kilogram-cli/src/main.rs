@@ -67,6 +67,7 @@ mod recovery_plan;
 mod recovery_platform;
 mod recovery_qr;
 mod recovery_scheduler;
+mod runtime_queue;
 
 use recovery_discovery::{
     DEFAULT_DISCOVERY_CANDIDATES, DEFAULT_DISCOVERY_WAIT_SECONDS, MAX_DISCOVERY_CANDIDATES,
@@ -98,11 +99,18 @@ use recovery_scheduler::{
     RecoverySchedulerReadiness, SignedRecoverySchedulerState, load_recovery_scheduler_state,
     persist_recovery_scheduler_state,
 };
+use runtime_queue::{
+    MAX_RUNTIME_RECORD_BYTES, RuntimeContactId, RuntimeQueueId, SignedDeliveredMessage,
+    SignedMaterializedMessage, SignedQueuedMessage, SignedRuntimeContact, SignedRuntimeRetryState,
+};
 
 const EVENT_STORE_DIRECTORY: &str = "events";
 const LOCAL_MESSAGE_STORE_DIRECTORY: &str = "local-messages";
 const HISTORY_REWRAP_STORE_DIRECTORY: &str = "history-rewraps";
 const HISTORY_RECOVERY_STORE_DIRECTORY: &str = "history-recovery";
+const RUNTIME_STATE_DIRECTORY: &str = "runtime";
+const RUNTIME_CONTACTS_DIRECTORY: &str = "contacts";
+const RUNTIME_OUTBOX_DIRECTORY: &str = "outbox";
 const DIRECT_PATH_DIAGNOSTIC_WAIT: Duration = Duration::from_secs(3);
 const ROUTE_POLICY_WAIT: Duration = Duration::from_secs(15);
 const CONNECTION_TIMEOUT: Duration = Duration::from_secs(30);
@@ -128,6 +136,16 @@ const RUNTIME_STATE_LOCK_RETRY: Duration = Duration::from_millis(25);
 const RUNTIME_STATE_LOCK_WAIT: Duration = Duration::from_secs(15);
 const MAX_RUNTIME_SESSIONS: usize = 65_536;
 const MAX_RUNTIME_IDLE_SECONDS: u64 = 24 * 60 * 60;
+const DEFAULT_RUNTIME_POLL_MILLISECONDS: u64 = 250;
+const MAX_RUNTIME_POLL_MILLISECONDS: u64 = 10_000;
+const DEFAULT_RUNTIME_RETRY_BASE_SECONDS: u64 = 1;
+const DEFAULT_RUNTIME_RETRY_MAX_SECONDS: u64 = 60;
+const MAX_RUNTIME_RETRY_SECONDS: u64 = 3_600;
+const DEFAULT_RUNTIME_AUTO_SYNC_SECONDS: u64 = 30;
+const MAX_RUNTIME_AUTO_SYNC_SECONDS: u64 = 3_600;
+const MAX_RUNTIME_CONTACTS: usize = 256;
+const MAX_RUNTIME_QUEUE_ITEMS: usize = 4_096;
+const MAX_RUNTIME_RETRY_STATES: usize = 4_096;
 
 type CommandFuture = Pin<Box<dyn Future<Output = Result<()>>>>;
 
@@ -263,6 +281,71 @@ enum Command {
         /// Stop after this many idle seconds; zero disables the idle bound.
         #[arg(long, default_value_t = 0)]
         idle_seconds: u64,
+
+        /// How often to observe newly queued local work and refreshed peer descriptors.
+        #[arg(long, default_value_t = DEFAULT_RUNTIME_POLL_MILLISECONDS)]
+        poll_milliseconds: u64,
+
+        /// Initial persistent retry delay for failed queued deliveries.
+        #[arg(long, default_value_t = DEFAULT_RUNTIME_RETRY_BASE_SECONDS)]
+        retry_base_seconds: u64,
+
+        /// Maximum persistent retry delay for failed queued deliveries.
+        #[arg(long, default_value_t = DEFAULT_RUNTIME_RETRY_MAX_SECONDS)]
+        retry_max_seconds: u64,
+
+        /// Periodic automatic sync interval per contact; zero disables it.
+        #[arg(long, default_value_t = DEFAULT_RUNTIME_AUTO_SYNC_SECONDS)]
+        auto_sync_seconds: u64,
+
+        /// Stop after this many outbound delivery/sync network actions; zero is unbounded.
+        #[arg(long, default_value_t = 0)]
+        max_outbound_actions: usize,
+    },
+
+    /// Persist a signed local contact pinned to a refreshable peer runtime descriptor.
+    RuntimeContactAdd {
+        /// Directory containing this application's persistent device state.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Development conversation label whose membership is already installed.
+        #[arg(long)]
+        conversation: String,
+
+        /// Trusted peer Account ID expected in the current descriptor.
+        #[arg(long)]
+        expect_account: AccountId,
+
+        /// Current peer runtime ticket; the same path may be atomically refreshed later.
+        #[arg(long)]
+        descriptor_file: PathBuf,
+    },
+
+    /// Add one locally encrypted message to the durable runtime outbox.
+    RuntimeQueueMessage {
+        /// Directory containing this application's persistent device state.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Contact conversation label.
+        #[arg(long)]
+        conversation: String,
+
+        /// Peer account selecting the exact signed runtime contact.
+        #[arg(long)]
+        peer_account: AccountId,
+
+        /// UTF-8 plaintext sealed immediately to this local device.
+        #[arg(long)]
+        message: String,
+    },
+
+    /// Verify and summarize the durable runtime contact/outbox state.
+    RuntimeOutboxStatus {
+        /// Directory containing this application's persistent device state.
+        #[arg(long)]
+        state_dir: PathBuf,
     },
 
     /// Connect to a listener, send one message, print its acknowledgement, then exit.
@@ -1060,6 +1143,9 @@ impl Command {
         match self {
             Self::Listen { state_dir, .. }
             | Self::Runtime { state_dir, .. }
+            | Self::RuntimeContactAdd { state_dir, .. }
+            | Self::RuntimeQueueMessage { state_dir, .. }
+            | Self::RuntimeOutboxStatus { state_dir, .. }
             | Self::Connect { state_dir, .. }
             | Self::Sync { state_dir, .. }
             | Self::SeedHistory { state_dir, .. }
@@ -1170,6 +1256,11 @@ struct RuntimeOptions {
     relay_url: Option<RelayUrl>,
     max_sessions: usize,
     idle_seconds: u64,
+    poll_milliseconds: u64,
+    retry_base_seconds: u64,
+    retry_max_seconds: u64,
+    auto_sync_seconds: u64,
+    max_outbound_actions: usize,
 }
 
 #[derive(Clone, Debug)]
@@ -1663,6 +1754,11 @@ async fn run_command(command: Command) -> Result<()> {
             relay_url,
             max_sessions,
             idle_seconds,
+            poll_milliseconds,
+            retry_base_seconds,
+            retry_max_seconds,
+            auto_sync_seconds,
+            max_outbound_actions,
         } => {
             runtime(RuntimeOptions {
                 state_dir,
@@ -1675,9 +1771,27 @@ async fn run_command(command: Command) -> Result<()> {
                 relay_url,
                 max_sessions,
                 idle_seconds,
+                poll_milliseconds,
+                retry_base_seconds,
+                retry_max_seconds,
+                auto_sync_seconds,
+                max_outbound_actions,
             })
             .await
         }
+        Command::RuntimeContactAdd {
+            state_dir,
+            conversation,
+            expect_account,
+            descriptor_file,
+        } => add_runtime_contact(state_dir, conversation, expect_account, descriptor_file),
+        Command::RuntimeQueueMessage {
+            state_dir,
+            conversation,
+            peer_account,
+            message,
+        } => queue_runtime_message(state_dir, conversation, peer_account, message),
+        Command::RuntimeOutboxStatus { state_dir } => runtime_outbox_status(state_dir),
         Command::Connect {
             state_dir,
             ticket,
@@ -2450,6 +2564,12 @@ impl<'a> CommandTransactionContext<'a> {
             .context("register append-only state write")
     }
 
+    fn register_append_only_receipt_path(&mut self, path: impl AsRef<Path>) -> Result<()> {
+        self.transaction
+            .register_append_only_receipt_path(path)
+            .context("register append-only state receipt")
+    }
+
     fn register_store_receipt(&mut self, receipt: &AppendOnlyWriteReceipt) -> Result<()> {
         for path in receipt.paths() {
             self.transaction
@@ -2840,6 +2960,539 @@ fn install_membership_primary(
     })
 }
 
+#[derive(Default)]
+struct RuntimeStateSnapshot {
+    contacts: BTreeMap<RuntimeContactId, SignedRuntimeContact>,
+    queued: BTreeMap<RuntimeQueueId, SignedQueuedMessage>,
+    materialized: BTreeMap<RuntimeQueueId, SignedMaterializedMessage>,
+    delivered: BTreeMap<RuntimeQueueId, SignedDeliveredMessage>,
+    retries: BTreeMap<RuntimeQueueId, Vec<SignedRuntimeRetryState>>,
+}
+
+impl RuntimeStateSnapshot {
+    fn pending_count(&self) -> usize {
+        self.queued
+            .keys()
+            .filter(|queue_id| !self.delivered.contains_key(queue_id))
+            .count()
+    }
+
+    fn latest_retry(&self, queue_id: RuntimeQueueId) -> Option<&SignedRuntimeRetryState> {
+        self.retries.get(&queue_id).and_then(|states| states.last())
+    }
+}
+
+fn runtime_contact_relative_path(contact_id: RuntimeContactId) -> PathBuf {
+    PathBuf::from(RUNTIME_STATE_DIRECTORY)
+        .join(RUNTIME_CONTACTS_DIRECTORY)
+        .join(format!("{contact_id}.contact"))
+}
+
+fn runtime_queued_relative_path(queue_id: RuntimeQueueId) -> PathBuf {
+    PathBuf::from(RUNTIME_STATE_DIRECTORY)
+        .join(RUNTIME_OUTBOX_DIRECTORY)
+        .join(format!("{queue_id}.queued"))
+}
+
+fn runtime_materialized_relative_path(queue_id: RuntimeQueueId) -> PathBuf {
+    PathBuf::from(RUNTIME_STATE_DIRECTORY)
+        .join(RUNTIME_OUTBOX_DIRECTORY)
+        .join(format!("{queue_id}.materialized"))
+}
+
+fn runtime_delivered_relative_path(queue_id: RuntimeQueueId) -> PathBuf {
+    PathBuf::from(RUNTIME_STATE_DIRECTORY)
+        .join(RUNTIME_OUTBOX_DIRECTORY)
+        .join(format!("{queue_id}.delivered"))
+}
+
+fn runtime_retry_relative_path(queue_id: RuntimeQueueId, generation: u32) -> PathBuf {
+    PathBuf::from(RUNTIME_STATE_DIRECTORY)
+        .join(RUNTIME_OUTBOX_DIRECTORY)
+        .join(format!("{queue_id}.retry-{generation:010}"))
+}
+
+fn persist_runtime_record(
+    state_directory: &Path,
+    relative_path: &Path,
+    bytes: &[u8],
+    transaction: &mut CommandTransactionContext<'_>,
+) -> Result<StoreOutcome> {
+    ensure!(
+        bytes.len() <= MAX_RUNTIME_RECORD_BYTES,
+        "runtime state record is too large"
+    );
+    let path = state_directory.join(relative_path);
+    let parent = path.parent().context("runtime record path has no parent")?;
+    fs::create_dir_all(parent)
+        .with_context(|| format!("create runtime state directory {}", parent.display()))?;
+    if path.exists() {
+        let existing = fs::read(&path)
+            .with_context(|| format!("read existing runtime record {}", path.display()))?;
+        ensure!(
+            existing == bytes,
+            "runtime append-only record already exists with different content: {}",
+            path.display()
+        );
+        return Ok(StoreOutcome::AlreadyPresent);
+    }
+    let mut temporary = NamedTempFile::new_in(parent)
+        .with_context(|| format!("create temporary runtime record in {}", parent.display()))?;
+    temporary
+        .write_all(bytes)
+        .with_context(|| format!("write temporary runtime record for {}", path.display()))?;
+    temporary
+        .as_file()
+        .sync_all()
+        .with_context(|| format!("sync temporary runtime record for {}", path.display()))?;
+    match temporary.persist_noclobber(&path) {
+        Ok(file) => file
+            .sync_all()
+            .with_context(|| format!("sync runtime record {}", path.display()))?,
+        Err(error) if error.error.kind() == io::ErrorKind::AlreadyExists => {
+            let existing = fs::read(&path)
+                .with_context(|| format!("read raced runtime record {}", path.display()))?;
+            ensure!(
+                existing == bytes,
+                "runtime append-only record raced with different content: {}",
+                path.display()
+            );
+            return Ok(StoreOutcome::AlreadyPresent);
+        }
+        Err(error) => {
+            return Err(error.error)
+                .with_context(|| format!("persist runtime record {}", path.display()));
+        }
+    }
+    transaction.register_append_only_receipt_path(&path)?;
+    Ok(StoreOutcome::Inserted)
+}
+
+fn read_runtime_record_files(state_directory: &Path) -> Result<Vec<(PathBuf, Vec<u8>)>> {
+    if EncryptedStateVault::is_initialized(state_directory)? {
+        let vault = EncryptedStateVault::open_existing(state_directory)
+            .context("open state vault for runtime primary read")?;
+        let read = vault
+            .read_primary_canary(&[StateRecordKind::Runtime])
+            .context("read authenticated runtime records from DB-primary state")?;
+        println!("vault_runtime_read_source=db-primary");
+        println!("vault_runtime_read_generation={}", read.mirror_generation());
+        println!("vault_runtime_read_record_count={}", read.records().len());
+        return Ok(read
+            .into_records()
+            .into_iter()
+            .map(|record| {
+                let (_, relative_path, content) = record.into_parts();
+                (PathBuf::from(relative_path), content)
+            })
+            .collect());
+    }
+
+    let mut records = Vec::new();
+    for directory in [RUNTIME_CONTACTS_DIRECTORY, RUNTIME_OUTBOX_DIRECTORY] {
+        let root = state_directory
+            .join(RUNTIME_STATE_DIRECTORY)
+            .join(directory);
+        let entries = match fs::read_dir(&root) {
+            Ok(entries) => entries,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => continue,
+            Err(error) => return Err(error).with_context(|| format!("read {}", root.display())),
+        };
+        for entry in entries {
+            let entry = entry.with_context(|| format!("read entry in {}", root.display()))?;
+            let file_type = entry
+                .file_type()
+                .with_context(|| format!("inspect runtime record {}", entry.path().display()))?;
+            ensure!(
+                file_type.is_file() && !file_type.is_symlink(),
+                "runtime state contains a non-regular record: {}",
+                entry.path().display()
+            );
+            let metadata = entry
+                .metadata()
+                .with_context(|| format!("inspect runtime record {}", entry.path().display()))?;
+            ensure!(
+                metadata.len() <= MAX_RUNTIME_RECORD_BYTES as u64,
+                "runtime state record is too large: {}",
+                entry.path().display()
+            );
+            let relative = entry
+                .path()
+                .strip_prefix(state_directory)
+                .context("runtime record escaped its state directory")?
+                .to_owned();
+            records.push((
+                relative,
+                fs::read(entry.path()).context("read runtime state record")?,
+            ));
+        }
+    }
+    Ok(records)
+}
+
+fn load_runtime_state_snapshot(
+    state_directory: &Path,
+    local_account_id: AccountId,
+    local_device_id: DeviceId,
+) -> Result<RuntimeStateSnapshot> {
+    let mut snapshot = RuntimeStateSnapshot::default();
+    for (relative_path, bytes) in read_runtime_record_files(state_directory)? {
+        let file_name = relative_path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .context("runtime record filename is not UTF-8")?;
+        if file_name.ends_with(".contact") {
+            let value = SignedRuntimeContact::decode(&bytes)?;
+            value.verify_local(local_account_id, local_device_id)?;
+            ensure!(
+                relative_path == runtime_contact_relative_path(value.contact_id()),
+                "runtime contact filename does not match its authenticated ID"
+            );
+            ensure!(
+                snapshot
+                    .contacts
+                    .insert(value.contact_id(), value)
+                    .is_none(),
+                "duplicate runtime contact ID"
+            );
+        } else if file_name.ends_with(".queued") {
+            let value = SignedQueuedMessage::decode(&bytes)?;
+            ensure!(
+                value.local_account_id() == local_account_id
+                    && value.local_device_id() == local_device_id,
+                "runtime queue record belongs to another local identity"
+            );
+            ensure!(
+                relative_path == runtime_queued_relative_path(value.queue_id()),
+                "runtime queue filename does not match its authenticated ID"
+            );
+            ensure!(
+                snapshot.queued.insert(value.queue_id(), value).is_none(),
+                "duplicate runtime queue ID"
+            );
+        } else if file_name.ends_with(".materialized") {
+            let value = SignedMaterializedMessage::decode(&bytes)?;
+            ensure!(
+                value.local_device_id() == local_device_id,
+                "runtime materialization belongs to another local device"
+            );
+            ensure!(
+                relative_path == runtime_materialized_relative_path(value.queue_id()),
+                "runtime materialization filename does not match its authenticated ID"
+            );
+            ensure!(
+                snapshot
+                    .materialized
+                    .insert(value.queue_id(), value)
+                    .is_none(),
+                "duplicate runtime materialization"
+            );
+        } else if file_name.ends_with(".delivered") {
+            let value = SignedDeliveredMessage::decode(&bytes)?;
+            ensure!(
+                value.local_device_id() == local_device_id,
+                "runtime delivery marker belongs to another local device"
+            );
+            ensure!(
+                relative_path == runtime_delivered_relative_path(value.queue_id()),
+                "runtime delivery filename does not match its authenticated ID"
+            );
+            ensure!(
+                snapshot.delivered.insert(value.queue_id(), value).is_none(),
+                "duplicate runtime delivery marker"
+            );
+        } else if file_name.contains(".retry-") {
+            let value = SignedRuntimeRetryState::decode(&bytes)?;
+            ensure!(
+                value.local_device_id() == local_device_id,
+                "runtime retry state belongs to another local device"
+            );
+            ensure!(
+                relative_path == runtime_retry_relative_path(value.queue_id(), value.generation()),
+                "runtime retry filename does not match its authenticated state"
+            );
+            snapshot
+                .retries
+                .entry(value.queue_id())
+                .or_default()
+                .push(value);
+        } else {
+            bail!(
+                "unknown authenticated runtime record: {}",
+                relative_path.display()
+            );
+        }
+    }
+    ensure!(
+        snapshot.contacts.len() <= MAX_RUNTIME_CONTACTS,
+        "runtime contact limit exceeded"
+    );
+    ensure!(
+        snapshot.queued.len() <= MAX_RUNTIME_QUEUE_ITEMS,
+        "runtime queue limit exceeded"
+    );
+    let retry_count: usize = snapshot.retries.values().map(Vec::len).sum();
+    ensure!(
+        retry_count <= MAX_RUNTIME_RETRY_STATES,
+        "runtime retry state limit exceeded"
+    );
+    for states in snapshot.retries.values_mut() {
+        states.sort_by_key(SignedRuntimeRetryState::generation);
+        let mut previous = None;
+        for state in states.iter() {
+            state.verify(previous)?;
+            previous = Some(state);
+        }
+    }
+    for queued in snapshot.queued.values() {
+        let contact = snapshot
+            .contacts
+            .get(&queued.contact_id())
+            .context("runtime queue references an absent contact")?;
+        ensure!(
+            queued.peer_account_id() == contact.peer_account_id()
+                && queued.conversation_id() == contact.conversation_id(),
+            "runtime queue metadata differs from its contact"
+        );
+    }
+    for (queue_id, materialized) in &snapshot.materialized {
+        let queued = snapshot
+            .queued
+            .get(queue_id)
+            .context("runtime materialization references an absent queue record")?;
+        ensure!(
+            materialized.event().event().author_device_id() == local_device_id
+                && materialized.event().event().conversation_id() == queued.conversation_id(),
+            "runtime materialized event does not match its queue record"
+        );
+    }
+    for (queue_id, delivered) in &snapshot.delivered {
+        let materialized = snapshot
+            .materialized
+            .get(queue_id)
+            .context("runtime delivery marker has no materialized event")?;
+        ensure!(
+            materialized.event().event().event_id()? == delivered.event_id(),
+            "runtime delivery marker references a different event"
+        );
+    }
+    Ok(snapshot)
+}
+
+fn load_runtime_contact_ticket(
+    contact: &SignedRuntimeContact,
+    local_certificate: &DeviceCertificate,
+    local_authority: &AccountAuthoritySnapshot,
+) -> Result<ConnectionTicket> {
+    let encoded = fs::read_to_string(contact.descriptor_file()).with_context(|| {
+        format!(
+            "read runtime peer descriptor {}",
+            contact.descriptor_file().display()
+        )
+    })?;
+    ensure!(
+        encoded.len() <= MAX_RUNTIME_RECORD_BYTES,
+        "runtime peer descriptor is too large"
+    );
+    let ticket = ConnectionTicket::decode(&encoded).context("decode runtime peer descriptor")?;
+    ticket.verify_listener_account(contact.peer_account_id())?;
+    let peer = ticket.verify_listener_authorization(contact.peer_account_id())?;
+    ensure!(
+        peer.device_id() == contact.peer_device_id(),
+        "runtime descriptor names a different peer device"
+    );
+    ensure!(
+        ticket.route_policy() == contact.route_policy(),
+        "runtime descriptor route policy changed"
+    );
+    ensure!(
+        ticket.allowed_requester_account_id() == local_certificate.account_id(),
+        "runtime descriptor does not authorize this local account"
+    );
+    verify_device_authorization_with_snapshot(
+        ticket.allowed_requester_account_id(),
+        local_certificate,
+        local_authority,
+        &DeviceCapability::MESSAGING,
+    )
+    .context("local device is not authorized by the runtime descriptor")?;
+    Ok(ticket)
+}
+
+fn add_runtime_contact(
+    state_directory: PathBuf,
+    conversation: String,
+    expected_peer_account_id: AccountId,
+    descriptor_file: PathBuf,
+) -> Result<()> {
+    let device_state = load_command_device_state(&state_directory)?;
+    let trust = CommandTrustReadRepository::open(&state_directory, &device_state)?;
+    let local_certificate = trust.load_certificate()?;
+    let local_authority = trust.load_own_authority_snapshot(&local_certificate)?;
+    let conversation_id = ConversationId::from_label(&conversation);
+    let membership = trust.load_conversation_membership(conversation_id.scope_id())?;
+    require_conversation_participants(
+        &membership,
+        local_certificate.account_id(),
+        expected_peer_account_id,
+    )?;
+    let descriptor_file = fs::canonicalize(&descriptor_file).with_context(|| {
+        format!(
+            "resolve runtime peer descriptor {}",
+            descriptor_file.display()
+        )
+    })?;
+    let canonical_state = fs::canonicalize(&state_directory)
+        .context("resolve local state directory for runtime contact")?;
+    ensure!(
+        !descriptor_file.starts_with(&canonical_state),
+        "runtime peer descriptor must live outside the protected state directory"
+    );
+    let encoded = fs::read_to_string(&descriptor_file)
+        .with_context(|| format!("read runtime peer descriptor {}", descriptor_file.display()))?;
+    ensure!(
+        encoded.len() <= MAX_RUNTIME_RECORD_BYTES,
+        "runtime peer descriptor is too large"
+    );
+    let ticket = ConnectionTicket::decode(&encoded)?;
+    ticket.verify_listener_account(expected_peer_account_id)?;
+    let authorized_peer = ticket.verify_listener_authorization(expected_peer_account_id)?;
+    let contact = SignedRuntimeContact::sign(
+        device_state.identity(),
+        local_certificate.account_id(),
+        expected_peer_account_id,
+        authorized_peer.device_id(),
+        conversation,
+        conversation_id,
+        ticket.route_policy(),
+        descriptor_file,
+    )?;
+    load_runtime_contact_ticket(&contact, &local_certificate, &local_authority)?;
+    run_state_transaction(&state_directory, |transaction| {
+        transaction
+            .load_ratchet_state()?
+            .observe_prekey_directory(ticket.listener_directory(), unix_time_now()?)?;
+        Ok(())
+    })?;
+    pin_peer_authority_primary(
+        &state_directory,
+        &device_state,
+        ticket.listener_authority_snapshot(),
+    )?;
+    let encoded = contact.encode()?;
+    let outcome = run_state_transaction(&state_directory, |transaction| {
+        persist_runtime_record(
+            &state_directory,
+            &runtime_contact_relative_path(contact.contact_id()),
+            &encoded,
+            transaction,
+        )
+    })?;
+    println!("runtime_contact_id={}", contact.contact_id());
+    println!("peer_account_id={}", contact.peer_account_id());
+    println!("peer_device_id={}", contact.peer_device_id());
+    println!("conversation_id={}", contact.conversation_id());
+    println!("route_policy={}", contact.route_policy().as_str());
+    println!("runtime_contact_store={outcome:?}");
+    println!("status=runtime-contact-ready");
+    Ok(())
+}
+
+fn queue_runtime_message(
+    state_directory: PathBuf,
+    conversation: String,
+    peer_account_id: AccountId,
+    message: String,
+) -> Result<()> {
+    let device_state = load_command_device_state(&state_directory)?;
+    let trust = CommandTrustReadRepository::open(&state_directory, &device_state)?;
+    let local_certificate = trust.load_certificate()?;
+    let conversation_id = ConversationId::from_label(&conversation);
+    let snapshot = load_runtime_state_snapshot(
+        &state_directory,
+        local_certificate.account_id(),
+        device_state.identity().device_id(),
+    )?;
+    let contact = snapshot
+        .contacts
+        .values()
+        .find(|contact| {
+            contact.peer_account_id() == peer_account_id
+                && contact.conversation_id() == conversation_id
+        })
+        .context("no runtime contact matches the peer account and conversation")?;
+    let membership = trust.load_conversation_membership(conversation_id.scope_id())?;
+    require_conversation_participants(
+        &membership,
+        local_certificate.account_id(),
+        peer_account_id,
+    )?;
+    let queued = SignedQueuedMessage::seal(
+        device_state.identity(),
+        device_state.encryption(),
+        contact,
+        &message,
+        unix_time_now()?,
+    )?;
+    let encoded = queued.encode()?;
+    let outcome = run_state_transaction(&state_directory, |transaction| {
+        persist_runtime_record(
+            &state_directory,
+            &runtime_queued_relative_path(queued.queue_id()),
+            &encoded,
+            transaction,
+        )
+    })?;
+    println!("runtime_queue_id={}", queued.queue_id());
+    println!("runtime_contact_id={}", queued.contact_id());
+    println!("runtime_queue_body=encrypted-at-rest");
+    println!("runtime_queue_store={outcome:?}");
+    println!("status=runtime-message-queued");
+    Ok(())
+}
+
+fn runtime_outbox_status(state_directory: PathBuf) -> Result<()> {
+    let device_state = load_command_device_state(&state_directory)?;
+    let trust = CommandTrustReadRepository::open(&state_directory, &device_state)?;
+    let local_certificate = trust.load_certificate()?;
+    let snapshot = load_runtime_state_snapshot(
+        &state_directory,
+        local_certificate.account_id(),
+        device_state.identity().device_id(),
+    )?;
+    println!("runtime_contact_count={}", snapshot.contacts.len());
+    println!("runtime_queue_count={}", snapshot.queued.len());
+    println!("runtime_pending_count={}", snapshot.pending_count());
+    println!("runtime_materialized_count={}", snapshot.materialized.len());
+    println!("runtime_delivered_count={}", snapshot.delivered.len());
+    println!(
+        "runtime_retry_state_count={}",
+        snapshot.retries.values().map(Vec::len).sum::<usize>()
+    );
+    for (queue_id, queued) in &snapshot.queued {
+        let state = if snapshot.delivered.contains_key(queue_id) {
+            "delivered"
+        } else if snapshot.materialized.contains_key(queue_id) {
+            "materialized"
+        } else {
+            "queued"
+        };
+        println!(
+            "runtime_queue_id={queue_id} runtime_queue_state={state} peer_account_id={} conversation_id={}",
+            queued.peer_account_id(),
+            queued.conversation_id()
+        );
+        if let Some(delivered) = snapshot.delivered.get(queue_id) {
+            println!(
+                "runtime_queue_id={queue_id} acknowledgement_event_id={}",
+                delivered.acknowledgement_event_id()
+            );
+        }
+    }
+    println!("status=runtime-outbox-inspected");
+    Ok(())
+}
+
 fn listen(options: ListenOptions) -> CommandFuture {
     Box::pin(listen_inner(options))
 }
@@ -2854,6 +3507,7 @@ struct PreparedRuntimeListener {
 
 enum RuntimeEvent {
     Connection(Connection),
+    Tick,
     IdleTimeout,
     Shutdown,
 }
@@ -2870,6 +3524,11 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
         relay_url,
         max_sessions,
         idle_seconds,
+        poll_milliseconds,
+        retry_base_seconds,
+        retry_max_seconds,
+        auto_sync_seconds,
+        max_outbound_actions,
     } = options;
     ensure!(
         max_sessions <= MAX_RUNTIME_SESSIONS,
@@ -2878,6 +3537,22 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
     ensure!(
         idle_seconds <= MAX_RUNTIME_IDLE_SECONDS,
         "--idle-seconds must be zero or at most {MAX_RUNTIME_IDLE_SECONDS}"
+    );
+    ensure!(
+        (10..=MAX_RUNTIME_POLL_MILLISECONDS).contains(&poll_milliseconds),
+        "--poll-milliseconds must be between 10 and {MAX_RUNTIME_POLL_MILLISECONDS}"
+    );
+    ensure!(
+        (1..=MAX_RUNTIME_RETRY_SECONDS).contains(&retry_base_seconds),
+        "--retry-base-seconds must be between 1 and {MAX_RUNTIME_RETRY_SECONDS}"
+    );
+    ensure!(
+        retry_max_seconds >= retry_base_seconds && retry_max_seconds <= MAX_RUNTIME_RETRY_SECONDS,
+        "--retry-max-seconds must be at least the base and at most {MAX_RUNTIME_RETRY_SECONDS}"
+    );
+    ensure!(
+        auto_sync_seconds <= MAX_RUNTIME_AUTO_SYNC_SECONDS,
+        "--auto-sync-seconds must be zero or at most {MAX_RUNTIME_AUTO_SYNC_SECONDS}"
     );
 
     let prepared = with_locked_state(&state_dir, || {
@@ -2920,6 +3595,11 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
     println!("authority_store={:?}", prepared.authority_snapshot_store);
     println!("runtime_max_sessions={max_sessions}");
     println!("runtime_idle_seconds={idle_seconds}");
+    println!("runtime_poll_milliseconds={poll_milliseconds}");
+    println!("runtime_retry_base_seconds={retry_base_seconds}");
+    println!("runtime_retry_max_seconds={retry_max_seconds}");
+    println!("runtime_auto_sync_seconds={auto_sync_seconds}");
+    println!("runtime_max_outbound_actions={max_outbound_actions}");
     println!("ticket={encoded_ticket}");
     if let Some(path) = &ticket_file {
         publish_runtime_ticket(path, encoded_ticket.as_bytes())?;
@@ -2930,12 +3610,68 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
 
     let session_binding = SyncSessionBinding::from_transport_label(&endpoint.id().to_string());
     let mut accepted_sessions = 0_usize;
+    let mut outbound_actions = 0_usize;
+    let mut last_activity = tokio::time::Instant::now();
+    let mut last_sync_attempts = BTreeMap::new();
+    // Keep the accept future alive across polling ticks. Dropping an Iroh
+    // Incoming while a handshake is in progress actively rejects that peer.
+    let mut accept: Pin<Box<dyn Future<Output = Result<Connection>> + Send + '_>> =
+        Box::pin(accept_authenticated_connection(&endpoint));
+    let mut shutdown: Pin<Box<dyn Future<Output = io::Result<()>> + Send + '_>> =
+        Box::pin(tokio::signal::ctrl_c());
     let stop_reason = loop {
-        match wait_for_runtime_event(&endpoint, idle_seconds).await? {
+        let idle_deadline =
+            (idle_seconds != 0).then(|| last_activity + Duration::from_secs(idle_seconds));
+        let runtime_event = wait_for_runtime_event(
+            &mut accept,
+            &mut shutdown,
+            idle_deadline,
+            Duration::from_millis(poll_milliseconds),
+        )
+        .await?;
+        if matches!(runtime_event, RuntimeEvent::Connection(_)) {
+            accept = Box::pin(accept_authenticated_connection(&endpoint));
+        }
+        match runtime_event {
             RuntimeEvent::IdleTimeout => break "idle-timeout",
             RuntimeEvent::Shutdown => break "ctrl-c",
+            RuntimeEvent::Tick => {
+                let delivery_attempt = attempt_next_runtime_delivery(
+                    &endpoint,
+                    &state_dir,
+                    retry_base_seconds,
+                    retry_max_seconds,
+                )
+                .await?;
+                match delivery_attempt {
+                    RuntimeDeliveryAttempt::NoWork => {}
+                    RuntimeDeliveryAttempt::Delivered | RuntimeDeliveryAttempt::RetryScheduled => {
+                        outbound_actions += 1;
+                        last_activity = tokio::time::Instant::now();
+                        if max_outbound_actions != 0 && outbound_actions >= max_outbound_actions {
+                            break "outbound-action-limit";
+                        }
+                    }
+                }
+                if matches!(delivery_attempt, RuntimeDeliveryAttempt::NoWork)
+                    && auto_sync_seconds != 0
+                    && attempt_runtime_contact_sync(
+                        &state_dir,
+                        Duration::from_secs(auto_sync_seconds),
+                        &mut last_sync_attempts,
+                    )
+                    .await?
+                {
+                    outbound_actions += 1;
+                    last_activity = tokio::time::Instant::now();
+                    if max_outbound_actions != 0 && outbound_actions >= max_outbound_actions {
+                        break "outbound-action-limit";
+                    }
+                }
+            }
             RuntimeEvent::Connection(connection) => {
                 accepted_sessions += 1;
+                last_activity = tokio::time::Instant::now();
                 println!("runtime_session={accepted_sessions}");
                 println!("peer_id={}", connection.remote_id());
                 let route_result = await_route_policy(&connection, route_policy, ROUTE_POLICY_WAIT)
@@ -2985,8 +3721,11 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
         }
     };
 
+    drop(accept);
+    drop(shutdown);
     endpoint.close().await;
     println!("runtime_sessions_accepted={accepted_sessions}");
+    println!("runtime_outbound_actions={outbound_actions}");
     println!("runtime_stop_reason={stop_reason}");
     println!("status=runtime-stopped");
     Ok(())
@@ -3085,29 +3824,529 @@ fn publish_runtime_ticket(path: &Path, encoded_ticket: &[u8]) -> Result<()> {
     Ok(())
 }
 
-async fn wait_for_runtime_event(endpoint: &Endpoint, idle_seconds: u64) -> Result<RuntimeEvent> {
-    let accept = accept_authenticated_connection(endpoint);
-    tokio::pin!(accept);
-    let shutdown = tokio::signal::ctrl_c();
-    tokio::pin!(shutdown);
-    if idle_seconds == 0 {
+#[derive(Clone, Copy)]
+enum RuntimeDeliveryAttempt {
+    NoWork,
+    Delivered,
+    RetryScheduled,
+}
+
+struct PreparedRuntimeDelivery {
+    queue_id: RuntimeQueueId,
+    ticket: ConnectionTicket,
+    event: AuthorizedEvent,
+    membership: ConversationMembershipSnapshot,
+    local_certificate: DeviceCertificate,
+    local_authority: AccountAuthoritySnapshot,
+    peer_account_id: AccountId,
+    peer_device_id: DeviceId,
+}
+
+fn select_due_runtime_queue(state_directory: &Path) -> Result<Option<RuntimeQueueId>> {
+    let device_state = load_command_device_state(state_directory)?;
+    let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+    let certificate = trust.load_certificate()?;
+    let snapshot = load_runtime_state_snapshot(
+        state_directory,
+        certificate.account_id(),
+        device_state.identity().device_id(),
+    )?;
+    let now = unix_time_now()?;
+    Ok(snapshot.queued.keys().copied().find(|queue_id| {
+        !snapshot.delivered.contains_key(queue_id)
+            && snapshot
+                .latest_retry(*queue_id)
+                .is_none_or(|retry| retry.not_before_unix_seconds() <= now)
+    }))
+}
+
+async fn attempt_next_runtime_delivery(
+    endpoint: &Endpoint,
+    state_directory: &Path,
+    retry_base_seconds: u64,
+    retry_max_seconds: u64,
+) -> Result<RuntimeDeliveryAttempt> {
+    let selection_lock = acquire_runtime_state_lock(state_directory)
+        .await?
+        .context("runtime state lock remained busy while selecting outbound work")?;
+    let selected = select_due_runtime_queue(state_directory);
+    drop(selection_lock);
+    let Some(queue_id) = selected? else {
+        return Ok(RuntimeDeliveryAttempt::NoWork);
+    };
+    let prepared = match prepare_runtime_delivery(state_directory, queue_id).await {
+        Ok(prepared) => prepared,
+        Err(error) => {
+            eprintln!(
+                "runtime_outbound_status=failed runtime_queue_id={queue_id} stage=prepare error={error:#}"
+            );
+            persist_runtime_retry(
+                state_directory,
+                queue_id,
+                retry_base_seconds,
+                retry_max_seconds,
+            )
+            .await?;
+            return Ok(RuntimeDeliveryAttempt::RetryScheduled);
+        }
+    };
+    match send_runtime_delivery(endpoint, state_directory, &prepared).await {
+        Ok(acknowledgement) => {
+            persist_runtime_delivery(state_directory, &prepared, &acknowledgement).await?;
+            println!("runtime_queue_id={queue_id}");
+            println!(
+                "runtime_sent_event_id={}",
+                prepared.event.event().event_id()?
+            );
+            println!(
+                "runtime_acknowledgement_event_id={}",
+                acknowledgement.event().event_id()?
+            );
+            println!("runtime_outbound_status=delivered");
+            Ok(RuntimeDeliveryAttempt::Delivered)
+        }
+        Err(error) => {
+            eprintln!(
+                "runtime_outbound_status=failed runtime_queue_id={queue_id} stage=network error={error:#}"
+            );
+            persist_runtime_retry(
+                state_directory,
+                queue_id,
+                retry_base_seconds,
+                retry_max_seconds,
+            )
+            .await?;
+            Ok(RuntimeDeliveryAttempt::RetryScheduled)
+        }
+    }
+}
+
+async fn prepare_runtime_delivery(
+    state_directory: &Path,
+    queue_id: RuntimeQueueId,
+) -> Result<PreparedRuntimeDelivery> {
+    let state_lock = acquire_runtime_state_lock(state_directory)
+        .await?
+        .context("runtime state lock remained busy while preparing outbound delivery")?;
+    let vault_guard = VaultDualWriteGuard::prepare(state_directory)?;
+    let operation_result = (|| {
+        let device_state = load_command_device_state(state_directory)?;
+        let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+        let local_certificate = trust.load_certificate()?;
+        let local_authority = trust.load_own_authority_snapshot(&local_certificate)?;
+        let snapshot = load_runtime_state_snapshot(
+            state_directory,
+            local_certificate.account_id(),
+            device_state.identity().device_id(),
+        )?;
+        let queued = snapshot
+            .queued
+            .get(&queue_id)
+            .context("selected runtime queue record disappeared")?;
+        ensure!(
+            !snapshot.delivered.contains_key(&queue_id),
+            "selected runtime queue record is already delivered"
+        );
+        let contact = snapshot
+            .contacts
+            .get(&queued.contact_id())
+            .context("selected runtime queue contact disappeared")?;
+        let ticket = load_runtime_contact_ticket(contact, &local_certificate, &local_authority)?;
+        run_state_transaction(state_directory, |transaction| {
+            transaction
+                .load_ratchet_state()?
+                .observe_prekey_directory(ticket.listener_directory(), unix_time_now()?)?;
+            Ok(())
+        })?;
+        pin_peer_authority_primary(
+            state_directory,
+            &device_state,
+            ticket.listener_authority_snapshot(),
+        )?;
+        let membership = trust
+            .load_conversation_membership(queued.conversation_id().scope_id())
+            .context("load runtime queued conversation membership")?;
+        require_conversation_participants(
+            &membership,
+            local_certificate.account_id(),
+            contact.peer_account_id(),
+        )?;
+        let event = match snapshot.materialized.get(&queue_id) {
+            Some(materialized) => materialized.event().clone(),
+            None => {
+                let body = queued.open(device_state.encryption())?;
+                let event_store = open_event_store(state_directory)?;
+                let local_message_store = open_local_message_store(state_directory)?;
+                let event = run_state_transaction(state_directory, |transaction| {
+                    let author_sequence = transaction.allocate_sequence(&device_state)?;
+                    let parents = event_store.frontier(queued.conversation_id())?;
+                    let mut ratchet_state = transaction.load_ratchet_state()?;
+                    let fanout = encrypt_ratchet_fanout(
+                        &mut ratchet_state,
+                        device_state.identity(),
+                        ticket.listener_directory(),
+                        &body,
+                    )?;
+                    let signed = SignedEvent::sign_ratchet_text(
+                        device_state.identity(),
+                        queued.conversation_id(),
+                        author_sequence,
+                        parents,
+                        ticket.listener_directory().device_list().clone(),
+                        fanout.sender_identity,
+                        fanout.recipients,
+                    )?;
+                    let event = AuthorizedEvent::new(
+                        signed,
+                        local_certificate.clone(),
+                        local_authority.clone(),
+                    )?;
+                    let (_, projection_receipt) = ensure_authored_local_text_projection(
+                        &local_message_store,
+                        &device_state,
+                        local_certificate.account_id(),
+                        event.event(),
+                        &body,
+                    )?;
+                    transaction.register_store_receipt(&projection_receipt)?;
+                    let (_, event_receipt) =
+                        event_store.put_authorized_with_receipt(&event, &membership)?;
+                    transaction.register_store_receipt(&event_receipt)?;
+                    let marker = SignedMaterializedMessage::sign(
+                        device_state.identity(),
+                        queue_id,
+                        event.clone(),
+                    )?;
+                    persist_runtime_record(
+                        state_directory,
+                        &runtime_materialized_relative_path(queue_id),
+                        &marker.encode()?,
+                        transaction,
+                    )?;
+                    Ok(event)
+                })?;
+                println!("runtime_queue_id={queue_id}");
+                println!(
+                    "runtime_materialized_event_id={}",
+                    event.event().event_id()?
+                );
+                println!("runtime_materialization_store=Inserted");
+                event
+            }
+        };
+        event.verify_for_membership(&membership)?;
+        Ok(PreparedRuntimeDelivery {
+            queue_id,
+            ticket,
+            event,
+            membership,
+            local_certificate,
+            local_authority,
+            peer_account_id: contact.peer_account_id(),
+            peer_device_id: contact.peer_device_id(),
+        })
+    })();
+    let mirror_result = match vault_guard {
+        Some(guard) => guard.finish(),
+        None => Ok(()),
+    };
+    drop(state_lock);
+    combine_operation_and_mirror(operation_result, mirror_result)
+}
+
+async fn send_runtime_delivery(
+    endpoint: &Endpoint,
+    state_directory: &Path,
+    prepared: &PreparedRuntimeDelivery,
+) -> Result<AuthorizedEvent> {
+    let ticket = &prepared.ticket;
+    let route_policy = ticket.route_policy();
+    let connection = timeout(
+        CONNECTION_TIMEOUT,
+        endpoint.connect(ticket.endpoint().clone(), ALPN),
+    )
+    .await
+    .with_context(|| timeout_message("connect runtime outbox to peer", CONNECTION_TIMEOUT))?
+    .context("connect runtime outbox to peer")?;
+    let ready_path = await_route_policy(&connection, route_policy, ROUTE_POLICY_WAIT)
+        .await
+        .context("wait for a path allowed by the runtime contact")?;
+    print_ready_path(&ready_path);
+    let session_binding =
+        SyncSessionBinding::from_transport_label(&ticket.endpoint().id.to_string());
+    let device_state = load_command_device_state(state_directory)?;
+    authorize_with_listener(
+        &connection,
+        device_state.identity(),
+        prepared.local_certificate.clone(),
+        prepared.local_authority.clone(),
+        session_binding,
+    )
+    .await?;
+    let (mut send, mut receive) = open_bi(&connection, "open runtime delivery stream").await?;
+    write_client_request(
+        &mut send,
+        &ClientRequest::DeliverEvent(Box::new(prepared.event.clone())),
+    )
+    .await?;
+    let acknowledgement = match read_server_response(&mut receive).await? {
+        ServerResponse::EventAcknowledgement(event) => *event,
+        _ => bail!("runtime outbox expected an event acknowledgement"),
+    };
+    acknowledgement.verify_for_membership(&prepared.membership)?;
+    ensure!(
+        acknowledgement.author_account_id() == prepared.peer_account_id,
+        "runtime acknowledgement came from another account"
+    );
+    let acknowledgement_event = acknowledgement.event();
+    ensure!(
+        acknowledgement_event.author_device_id() == prepared.peer_device_id,
+        "runtime acknowledgement came from another peer device"
+    );
+    let event_id = prepared.event.event().event_id()?;
+    ensure!(
+        acknowledgement_event.conversation_id() == prepared.event.event().conversation_id(),
+        "runtime acknowledgement belongs to another conversation"
+    );
+    ensure!(
+        matches!(
+            acknowledgement_event.payload(),
+            EventPayload::Acknowledgement { acknowledged_event_id }
+                if *acknowledged_event_id == event_id
+        ) && acknowledgement_event.parents() == [event_id],
+        "runtime acknowledgement does not causally acknowledge the queued event"
+    );
+    print_transport_diagnostics(&connection, route_policy).await?;
+    connection.close(0_u32.into(), b"kilogram runtime delivery complete");
+    Ok(acknowledgement)
+}
+
+async fn persist_runtime_delivery(
+    state_directory: &Path,
+    prepared: &PreparedRuntimeDelivery,
+    acknowledgement: &AuthorizedEvent,
+) -> Result<()> {
+    let state_lock = acquire_runtime_state_lock(state_directory)
+        .await?
+        .context("runtime state lock remained busy while storing delivery")?;
+    let vault_guard = VaultDualWriteGuard::prepare(state_directory)?;
+    let operation_result = (|| {
+        let device_state = load_command_device_state(state_directory)?;
+        let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+        let certificate = trust.load_certificate()?;
+        let snapshot = load_runtime_state_snapshot(
+            state_directory,
+            certificate.account_id(),
+            device_state.identity().device_id(),
+        )?;
+        let materialized = snapshot
+            .materialized
+            .get(&prepared.queue_id)
+            .context("runtime materialization disappeared before delivery commit")?;
+        ensure!(
+            materialized.event() == &prepared.event,
+            "runtime materialization changed before delivery commit"
+        );
+        let membership = trust
+            .load_conversation_membership(prepared.event.event().conversation_id().scope_id())?;
+        acknowledgement.verify_for_membership(&membership)?;
+        let event_id = prepared.event.event().event_id()?;
+        let acknowledgement_id = acknowledgement.event().event_id()?;
+        let marker = SignedDeliveredMessage::sign(
+            device_state.identity(),
+            prepared.queue_id,
+            event_id,
+            acknowledgement_id,
+        )?;
+        let event_store = open_event_store(state_directory)?;
+        run_state_transaction(state_directory, |transaction| {
+            let (_, receipt) =
+                event_store.put_authorized_with_receipt(acknowledgement, &membership)?;
+            transaction.register_store_receipt(&receipt)?;
+            persist_runtime_record(
+                state_directory,
+                &runtime_delivered_relative_path(prepared.queue_id),
+                &marker.encode()?,
+                transaction,
+            )?;
+            Ok(())
+        })
+    })();
+    let mirror_result = match vault_guard {
+        Some(guard) => guard.finish(),
+        None => Ok(()),
+    };
+    drop(state_lock);
+    combine_operation_and_mirror(operation_result, mirror_result)
+}
+
+async fn persist_runtime_retry(
+    state_directory: &Path,
+    queue_id: RuntimeQueueId,
+    retry_base_seconds: u64,
+    retry_max_seconds: u64,
+) -> Result<()> {
+    let state_lock = acquire_runtime_state_lock(state_directory)
+        .await?
+        .context("runtime state lock remained busy while storing retry")?;
+    let vault_guard = VaultDualWriteGuard::prepare(state_directory)?;
+    let operation_result = (|| {
+        let device_state = load_command_device_state(state_directory)?;
+        let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+        let certificate = trust.load_certificate()?;
+        let snapshot = load_runtime_state_snapshot(
+            state_directory,
+            certificate.account_id(),
+            device_state.identity().device_id(),
+        )?;
+        ensure!(
+            snapshot.queued.contains_key(&queue_id),
+            "cannot retry an absent runtime queue record"
+        );
+        if snapshot.delivered.contains_key(&queue_id) {
+            return Ok(());
+        }
+        let previous = snapshot.latest_retry(queue_id);
+        let generation = previous.map_or(1, |value| value.generation().saturating_add(1));
+        let shift = generation.saturating_sub(1).min(20);
+        let cap = retry_base_seconds
+            .saturating_mul(1_u64 << shift)
+            .min(retry_max_seconds);
+        let floor = cap / 2;
+        let mut entropy = blake3::Hasher::new();
+        entropy.update(b"kilogram:runtime-retry-jitter:v1\0");
+        entropy.update(queue_id.as_bytes());
+        entropy.update(&generation.to_le_bytes());
+        let entropy = entropy.finalize();
+        let mut sample_bytes = [0_u8; 8];
+        sample_bytes.copy_from_slice(&entropy.as_bytes()[..8]);
+        let sample = u64::from_le_bytes(sample_bytes);
+        let delay = floor + sample % (cap.saturating_sub(floor).saturating_add(1));
+        let not_before = unix_time_now()?.saturating_add(delay.max(1));
+        let retry =
+            SignedRuntimeRetryState::sign(device_state.identity(), queue_id, previous, not_before)?;
+        run_state_transaction(state_directory, |transaction| {
+            persist_runtime_record(
+                state_directory,
+                &runtime_retry_relative_path(queue_id, retry.generation()),
+                &retry.encode()?,
+                transaction,
+            )?;
+            Ok(())
+        })?;
+        println!("runtime_queue_id={queue_id}");
+        println!("runtime_retry_generation={}", retry.generation());
+        println!("runtime_retry_delay_seconds={}", delay.max(1));
+        println!("runtime_retry_not_before_unix_seconds={not_before}");
+        println!("runtime_outbound_status=retry-scheduled");
+        Ok(())
+    })();
+    let mirror_result = match vault_guard {
+        Some(guard) => guard.finish(),
+        None => Ok(()),
+    };
+    drop(state_lock);
+    combine_operation_and_mirror(operation_result, mirror_result)
+}
+
+async fn attempt_runtime_contact_sync(
+    state_directory: &Path,
+    interval: Duration,
+    last_attempts: &mut BTreeMap<RuntimeContactId, tokio::time::Instant>,
+) -> Result<bool> {
+    let state_lock = acquire_runtime_state_lock(state_directory)
+        .await?
+        .context("runtime state lock remained busy while preparing automatic sync")?;
+    let vault_guard = VaultDualWriteGuard::prepare(state_directory)?;
+    let preparation = (|| {
+        let device_state = load_command_device_state(state_directory)?;
+        let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+        let certificate = trust.load_certificate()?;
+        let authority = trust.load_own_authority_snapshot(&certificate)?;
+        let snapshot = load_runtime_state_snapshot(
+            state_directory,
+            certificate.account_id(),
+            device_state.identity().device_id(),
+        )?;
+        let now = tokio::time::Instant::now();
+        let contact = snapshot
+            .contacts
+            .values()
+            .find(|contact| {
+                last_attempts
+                    .get(&contact.contact_id())
+                    .is_none_or(|last| now.duration_since(*last) >= interval)
+            })
+            .cloned();
+        let Some(contact) = contact else {
+            return Ok(None);
+        };
+        last_attempts.insert(contact.contact_id(), now);
+        let ticket = load_runtime_contact_ticket(&contact, &certificate, &authority)?;
+        Ok(Some((contact, ticket.encode()?)))
+    })();
+
+    let operation_result = match preparation {
+        Ok(Some((contact, encoded_ticket))) => {
+            println!("runtime_sync_contact_id={}", contact.contact_id());
+            sync(
+                state_directory.to_path_buf(),
+                Some(encoded_ticket),
+                None,
+                contact.conversation_label().to_owned(),
+                MAX_SYNC_ROUNDS,
+                contact.peer_account_id(),
+            )
+            .await
+        }
+        Ok(None) => {
+            let mirror_result = match vault_guard {
+                Some(guard) => guard.finish(),
+                None => Ok(()),
+            };
+            drop(state_lock);
+            mirror_result?;
+            return Ok(false);
+        }
+        Err(error) => Err(error),
+    };
+    let mirror_result = match vault_guard {
+        Some(guard) => guard.finish(),
+        None => Ok(()),
+    };
+    drop(state_lock);
+    mirror_result.context("finish automatic sync state-vault mirror")?;
+    match operation_result {
+        Ok(()) => println!("runtime_sync_status=synchronized"),
+        Err(error) => eprintln!("runtime_sync_status=failed error={error:#}"),
+    }
+    Ok(true)
+}
+
+async fn wait_for_runtime_event(
+    accept: &mut Pin<Box<dyn Future<Output = Result<Connection>> + Send + '_>>,
+    shutdown: &mut Pin<Box<dyn Future<Output = io::Result<()>> + Send + '_>>,
+    idle_deadline: Option<tokio::time::Instant>,
+    poll_interval: Duration,
+) -> Result<RuntimeEvent> {
+    if let Some(idle_deadline) = idle_deadline {
         tokio::select! {
-            connection = &mut accept => connection.map(RuntimeEvent::Connection),
-            signal = &mut shutdown => {
+            connection = accept.as_mut() => connection.map(RuntimeEvent::Connection),
+            signal = shutdown.as_mut() => {
                 signal.context("install or receive Ctrl+C runtime signal")?;
                 Ok(RuntimeEvent::Shutdown)
             }
+            () = tokio::time::sleep(poll_interval) => Ok(RuntimeEvent::Tick),
+            () = tokio::time::sleep_until(idle_deadline) => Ok(RuntimeEvent::IdleTimeout),
         }
     } else {
         tokio::select! {
-            connection = &mut accept => connection.map(RuntimeEvent::Connection),
-            signal = &mut shutdown => {
+            connection = accept.as_mut() => connection.map(RuntimeEvent::Connection),
+            signal = shutdown.as_mut() => {
                 signal.context("install or receive Ctrl+C runtime signal")?;
                 Ok(RuntimeEvent::Shutdown)
             }
-            () = tokio::time::sleep(Duration::from_secs(idle_seconds)) => {
-                Ok(RuntimeEvent::IdleTimeout)
-            }
+            () = tokio::time::sleep(poll_interval) => Ok(RuntimeEvent::Tick),
         }
     }
 }
@@ -4055,6 +5294,43 @@ async fn handle_delivery_request(
         signed_event.ratchet_message_for(local_device_id).is_ok(),
         "received ratchet text has no ciphertext for this device"
     );
+    let existing_acknowledgement = event_store
+        .load_authorized_conversation(signed_event.conversation_id(), &membership)?
+        .into_iter()
+        .find(|candidate| {
+            candidate.event.event().author_device_id() == local_device_id
+                && matches!(
+                    candidate.event.event().payload(),
+                    EventPayload::Acknowledgement {
+                        acknowledged_event_id
+                    } if acknowledged_event_id == &event_id
+                )
+                && candidate.event.event().parents() == [event_id]
+        })
+        .map(|stored| stored.event);
+    if let Some(acknowledgement) = existing_acknowledgement {
+        let body = open_local_text_projection_if_present(
+            local_message_store,
+            device_state,
+            listener_certificate.account_id(),
+            signed_event,
+        )?
+        .context("a replayed acknowledged event has no retained local projection")?;
+        let acknowledgement_id = acknowledgement.event().event_id()?;
+        write_server_response(
+            send,
+            &ServerResponse::EventAcknowledgement(Box::new(acknowledgement)),
+        )
+        .await?;
+        println!("received_event_id={event_id}");
+        println!("received={body}");
+        println!("received_store={:?}", StoreOutcome::AlreadyPresent);
+        println!("delivery_replay=true");
+        println!("acknowledgement_event_id={acknowledgement_id}");
+        println!("acknowledgement_store={:?}", StoreOutcome::AlreadyPresent);
+        println!("status=acknowledged");
+        return Ok(());
+    }
     let (
         body,
         local_projection_store_outcome,
@@ -9557,6 +10833,131 @@ mod tests {
         publish_runtime_ticket(&ticket, b"second-ticket")?;
         assert_eq!(fs::read(&ticket)?, b"second-ticket");
 
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn runtime_outbox_delivers_and_automatic_sync_converges() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let alice_root_dir = directory.path().join("alice-root");
+        let bob_root_dir = directory.path().join("bob-root");
+        let alice_state = directory.path().join("alice-state");
+        let bob_state = directory.path().join("bob-state");
+        create_account(alice_root_dir.clone())?;
+        create_account(bob_root_dir.clone())?;
+        enroll_device(alice_root_dir.clone(), alice_state.clone(), None)?;
+        enroll_device(bob_root_dir.clone(), bob_state.clone(), None)?;
+
+        let alice_root = AccountRootState::load(&alice_root_dir)?;
+        let bob_root = AccountRootState::load(&bob_root_dir)?;
+        let alice_device = DeviceState::load_or_create(&alice_state)?;
+        let bob_device = DeviceState::load_or_create(&bob_state)?;
+        let alice_certificate = alice_device.load_certificate()?;
+        let bob_certificate = bob_device.load_certificate()?;
+        let alice_devices =
+            alice_root.publish_device_list(std::slice::from_ref(&alice_certificate))?;
+        let bob_devices = bob_root.publish_device_list(std::slice::from_ref(&bob_certificate))?;
+        let alice_devices_file = directory.path().join("alice.devices");
+        let bob_devices_file = directory.path().join("bob.devices");
+        write_new_authority_file(&alice_devices_file, &alice_devices.encode()?)?;
+        write_new_authority_file(&bob_devices_file, &bob_devices.encode()?)?;
+
+        let conversation_label = "runtime-outbox-process-test";
+        let conversation_id = ConversationId::from_label(conversation_label);
+        let membership = alice_root
+            .create_conversation_membership(conversation_id.scope_id(), &[bob_root.account_id()])?;
+        alice_device.install_conversation_membership(&membership)?;
+        bob_device.install_conversation_membership(&membership)?;
+
+        let bob_ticket = directory.path().join("bob-runtime.ticket");
+        let bob_task = tokio::spawn(runtime(RuntimeOptions {
+            state_dir: bob_state.clone(),
+            allowed_requester_account_id: alice_root.account_id(),
+            device_list_file: bob_devices_file,
+            peer_prekey_pool_files: Vec::new(),
+            ticket_file: Some(bob_ticket.clone()),
+            relay_wait_seconds: 0,
+            route_policy: RoutePolicy::DirectOnly,
+            relay_url: None,
+            max_sessions: 2,
+            idle_seconds: 20,
+            poll_milliseconds: 20,
+            retry_base_seconds: 1,
+            retry_max_seconds: 1,
+            auto_sync_seconds: 0,
+            max_outbound_actions: 0,
+        }));
+        timeout(Duration::from_secs(10), async {
+            while !bob_ticket.is_file() {
+                tokio::time::sleep(Duration::from_millis(20)).await;
+            }
+        })
+        .await
+        .context("Bob runtime did not publish its descriptor")?;
+
+        add_runtime_contact(
+            alice_state.clone(),
+            conversation_label.to_owned(),
+            bob_root.account_id(),
+            bob_ticket,
+        )?;
+        queue_runtime_message(
+            alice_state.clone(),
+            conversation_label.to_owned(),
+            bob_root.account_id(),
+            "durable runtime outbox message".to_owned(),
+        )?;
+        let alice_task = tokio::spawn(runtime(RuntimeOptions {
+            state_dir: alice_state.clone(),
+            allowed_requester_account_id: bob_root.account_id(),
+            device_list_file: alice_devices_file,
+            peer_prekey_pool_files: Vec::new(),
+            ticket_file: Some(directory.path().join("alice-runtime.ticket")),
+            relay_wait_seconds: 0,
+            route_policy: RoutePolicy::DirectOnly,
+            relay_url: None,
+            max_sessions: 0,
+            idle_seconds: 20,
+            poll_milliseconds: 20,
+            retry_base_seconds: 1,
+            retry_max_seconds: 1,
+            auto_sync_seconds: 1,
+            max_outbound_actions: 2,
+        }));
+
+        let (alice_result, bob_result) = timeout(Duration::from_secs(30), async {
+            tokio::join!(alice_task, bob_task)
+        })
+        .await
+        .context("runtime outbox process test timed out")?;
+        alice_result.context("join Alice runtime")??;
+        bob_result.context("join Bob runtime")??;
+
+        let alice_events = open_event_store(&alice_state)?
+            .load_authorized_conversation(conversation_id, &membership)?;
+        let bob_events = open_event_store(&bob_state)?
+            .load_authorized_conversation(conversation_id, &membership)?;
+        assert_eq!(alice_events, bob_events);
+        assert_eq!(alice_events.len(), 2);
+        assert_eq!(
+            alice_events
+                .iter()
+                .filter(|stored| matches!(
+                    stored.event.event().payload(),
+                    EventPayload::RatchetText { .. }
+                ))
+                .count(),
+            1
+        );
+        let snapshot = load_runtime_state_snapshot(
+            &alice_state,
+            alice_root.account_id(),
+            alice_device.identity().device_id(),
+        )?;
+        assert_eq!(snapshot.queued.len(), 1);
+        assert_eq!(snapshot.materialized.len(), 1);
+        assert_eq!(snapshot.delivered.len(), 1);
+        assert_eq!(snapshot.pending_count(), 0);
         Ok(())
     }
 
