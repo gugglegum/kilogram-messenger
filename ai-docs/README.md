@@ -108,7 +108,10 @@ multi-source claim reconciliation. M0.7.9 добавил signed append-only chec
   Iroh connection. M0.9.5 добавил recipient-signed execution plan: fresh
   endpoint может автоматически продолжить recovery только при exact совпадении
   source/device-list/SAS/conversation/range/page/route и разрешённой
-  network/power policy. Reconciliation выбирает
+  network/power policy. M0.9.6 сохраняет retry state как recipient-signed
+  append-only chain: process restart соблюдает persistent equal-jitter deadline,
+  attempt lease не допускает параллельный connection, clock rollback блокируется,
+  а explicit cancel является terminal. Reconciliation выбирает
   inventory только при совпадении двух или более полных явно собранных claims и
   всё равно не обещает global completeness.
 M0.8.1 добавил первый production-storage bridge: `state-vault-migrate` одной
@@ -270,8 +273,9 @@ summaries, membership removal и группы ещё не реализованы
 
 1. Добавить production macOS/Linux local key provider, согласованный monotonic
    witness и lifecycle обновления portable recovery package.
-2. Добавить настоящий OS background service и trusted adapters для network/
-   metered/roaming/power context поверх M0.9.5 bounded coordinator; расширить
+2. Добавить platform adapter boundary, первый Windows probe и настоящий OS
+   background service для network/metered/roaming/power context поверх M0.9.6;
+   расширить
    M0.9.4 LAN discovery до privacy-preserving wide-area publication/gossip/
    mailbox. Live camera/clipboard оставить platform UI поверх M0.9.3.
 3. Спроектировать membership removal вместе с ordered security log и MLS epoch;
@@ -356,5 +360,7 @@ summaries, membership removal и группы ещё не реализованы
   реализованный M0.9.4 opt-in bounded LAN publication и verified no-connect discovery.
 - [`../docs/RFC-0032-consent-bound-history-recovery-scheduler.md`](../docs/RFC-0032-consent-bound-history-recovery-scheduler.md) —
   реализованный M0.9.5 recipient-signed retry plan и bounded fresh-endpoint coordinator.
+- [`../docs/RFC-0033-persistent-history-recovery-scheduler-state.md`](../docs/RFC-0033-persistent-history-recovery-scheduler-state.md) —
+  реализованный M0.9.6 signed append-only retry state, jitter, lease и terminal cancellation.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

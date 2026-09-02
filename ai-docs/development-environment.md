@@ -502,6 +502,18 @@ toolchain `1.98.0` для воспроизводимой разработки.
     `.tmp/m095-smoke-20260902-022156` подтвердил mobile block до discovery,
     no-candidate → source restart → fresh endpoint, foreground state access во
     время backoff и recovery двух pages с identical history.
+62. M0.9.6 добавил `recovery_scheduler`: recipient-signed append-only state v1
+    под `history-recovery/scheduler/<plan-id>` хранит generation/previous ID,
+    lifecycle, persistent attempts/failures, wall-clock high-water и deadline.
+    Перед discovery записывается bounded lease до двух часов; failure использует
+    exponential equal-jitter с base `0..=300` и max `0..=3600` seconds. Immediate
+    restart до deadline не открывает UDP; истёкший lease становится signed
+    failure, а clock rollback блокирует запуск. `history-recovery-plan-cancel`
+    добавляет необратимый terminal record. Все 114 workspace tests, rustfmt,
+    strict Clippy и release build проходят. Direct smoke
+    `.tmp/m096-smoke-20260902-130246` подтвердил process restart 1 → deferred →
+    persistent attempt 2, две pages/identical history и отдельный terminal
+    cancellation restart без discovery.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -524,8 +536,10 @@ safe retry, M0.9.1 — до 64 atomic pages в одном connection, M0.9.2 —
 signed recovery device link с offline inspect и explicit accept, M0.9.3 —
 bounded PNG/JPEG QR file ceremony, M0.9.4 — opt-in authenticated LAN
 publication/discovery без automatic trust, а M0.9.5 — recipient-signed retry
-plan и bounded coordinator с caller-supplied network/power context. Wide-area
-descriptor discovery, OS background service, live camera/clipboard, membership
+plan и bounded coordinator с caller-supplied network/power context. M0.9.6
+добавляет persistent signed retry state, lease, jitter, clock high-water и
+terminal cancellation. Wide-area descriptor discovery, platform network/power
+adapter, OS background service, live camera/clipboard, membership
 removal/epochs и group E2EE остаются открыты. M0.7.7 закрывает M0 crash consistency для device
 filesystem state; M0.8.1 доказывает атомарную encrypted shadow migration в
 `redb`, M0.8.2 — recoverable versioned dual-write всех live CLI commands,
@@ -544,7 +558,8 @@ M0.8.15 — schema-v3 DB-only device identity и physical namespace retirement;
 M0.9.1 — bounded multi-page history recovery coordinator; M0.9.2 — signed
 QR-ready history recovery device link; M0.9.3 — bounded QR image round-trip;
 M0.9.4 — opt-in bounded LAN discovery signed descriptors без auto-connect;
-M0.9.5 — consent-bound retry plan/coordinator с fresh endpoint matching.
+M0.9.5 — consent-bound retry plan/coordinator с fresh endpoint matching;
+M0.9.6 — signed append-only scheduler state с restart resume и cancellation.
 Paged/Merkle index, production non-Windows local provider, согласованный
 monotonic rollback witness, автоматический backup lifecycle и физическое
 retirement остальных compatibility shadows ещё не реализованы.

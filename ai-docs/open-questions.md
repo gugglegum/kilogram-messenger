@@ -87,11 +87,13 @@ sessions, distribution, removal и key epochs и не решены этим пр
 - M0.9.2 определяет compact signed recipient-specific descriptor, offline
   inspect и explicit SAS-gated accept; M0.9.3 реализует PNG/JPEG image round-trip,
   M0.9.4 — opt-in bounded LAN multicast publication и verified no-connect scan,
-  M0.9.5 — recipient-signed retry plan с caller-supplied network/power policy.
+  M0.9.5 — recipient-signed retry plan с caller-supplied network/power policy,
+  M0.9.6 — signed persistent retry chain, equal-jitter deadline, attempt lease,
+  clock high-water и terminal cancellation.
   Как сделать wide-area privacy-preserving lookup/gossip, подключать live camera/
-  clipboard/GUI, регистрировать deep link и как OS scheduler с trusted metered/
-  roaming/power adapters, jitter и persistent deadlines запускает bounded
-  sessions; как отдельно
+  clipboard/GUI, регистрировать deep link, как OS scheduler получает trusted
+  metered/roaming/power context и wakeup, как внешний witness обнаруживает rollback
+  всей scheduler chain; как отдельно
   разрешать recovery от устройства собеседника без неявного расширения
   same-account trust?
 - Какой финальный межъязыковой canonical wire encoding обеспечивает одинаковые

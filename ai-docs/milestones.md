@@ -1724,12 +1724,61 @@ OS background task/service, trusted platform adapters и wide-area discovery н�
 реализованы. Полный контракт —
 [`../docs/RFC-0032-consent-bound-history-recovery-scheduler.md`](../docs/RFC-0032-consent-bound-history-recovery-scheduler.md).
 
+### M0.9.6 — persistent history recovery scheduler state: выполнено
+
+Реализовано:
+
+- `recovery_scheduler` хранит отдельную recipient-signed append-only chain v1
+  для exact Plan ID под `history-recovery/scheduler/<plan-id>`;
+- record до 4 KiB связывает generation/previous State ID, recipient, transition,
+  lifecycle, total attempts, consecutive failures, wall-clock high-water,
+  persistent deadline и delay;
+- loader ограничен 4096 records и fail-closed отклоняет modification, fork,
+  duplicate/gap generation, чужой plan/device и filename/content mismatch;
+- transitions `initialized`, `attempt-started`, `attempt-failed`,
+  `attempt-progressed`, `cancelled`, `completed` образуют проверяемый state
+  machine; terminal state не имеет successor;
+- перед UDP записывается lease, вычисленный из discovery/connect/route/page
+  bounds и ограниченный двумя часами; concurrent runner не открывает второй
+  connection, stale lease сначала становится signed failure;
+- failure deadline использует exponential equal-jitter: base default 5/max 300,
+  CLI bounds `0..=300`/`0..=3600`; jitter зависит от plan/failure/attempt;
+- `--max-attempts 1..=8` ограничивает один process invocation; следующий process
+  продолжает persistent ordinal и до deadline завершает `deferred` без UDP;
+- signed `last_observed` блокирует clock rollback; это fail-closed local
+  high-water, а не trusted time или внешний whole-directory witness;
+- `history-recovery-plan-cancel` даже после plan expiry добавляет terminal signed
+  record; повторный run не выполняет discovery/connection;
+- scheduler transitions используют короткий state lock и recoverable vault
+  dual-write, но discovery/backoff остаются свободны для foreground client;
+- wire, recovery plan/URI v1, ticket v9, ALPN `/7` и checkpoints не изменились.
+
+Проверки:
+
+- unit tests покрывают signed restart chain, fork rejection, clock rollback,
+  bounded equal jitter и terminal cancellation;
+- M0.9.5 regression smoke снова прошёл прежний no-candidate → source restart →
+  complete сценарий через compatibility alias;
+- direct process smoke `.tmp/m096-smoke-20260902-130246` выполнил attempt 1,
+  завершил первый process, отклонил immediate restart до discovery и после
+  deadline продолжил exact plan как persistent attempt 2;
+- fresh source endpoint обслужил один authenticated connection и две atomic
+  pages; пять scheduler records, два checkpoints и histories совпали;
+- отдельный recipient state доказал `failed -> cancelled -> restart` с нулём
+  discovery/connection после terminal record;
+- все 114 workspace tests, rustfmt, strict Clippy и release build проходят.
+
+Граница среза: network/power context всё ещё caller-supplied, wakeup выполняет
+внешний caller, wall clock не является trusted, chain не compacted, lookup
+остаётся LAN-only. Полный контракт —
+[`../docs/RFC-0033-persistent-history-recovery-scheduler-state.md`](../docs/RFC-0033-persistent-history-recovery-scheduler-state.md).
+
 ### Следующий этап
 
-1. Добавить persistent scheduler state: exponential backoff с jitter,
-   monotonic/rollback-safe `next_attempt_at`, cancellation и restart resume.
-2. Добавить platform adapter boundary и первый Windows network/power probe без
+1. Добавить platform adapter boundary и первый Windows network/power probe без
    встраивания Win32 деталей в protocol/core.
+2. Зарегистрировать bounded runner как настоящий OS background task/service с
+   wakeup, network-change events и cancellation lifecycle.
 3. Спроектировать privacy-preserving wide-area publication/gossip/mailbox и
    first-contact freshness; M0.9.4 закрывает только явный LAN opt-in.
 4. Добавить live camera/clipboard и GUI confirmation позже в platform clients;

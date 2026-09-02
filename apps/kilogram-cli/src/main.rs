@@ -65,6 +65,7 @@ mod recovery_discovery;
 mod recovery_link;
 mod recovery_plan;
 mod recovery_qr;
+mod recovery_scheduler;
 
 use recovery_discovery::{
     DEFAULT_DISCOVERY_CANDIDATES, DEFAULT_DISCOVERY_WAIT_SECONDS, MAX_DISCOVERY_CANDIDATES,
@@ -85,6 +86,13 @@ use recovery_qr::{
     RecoveryQrDecodeReport, RecoveryQrRenderReport, decode_recovery_link_qr_image,
     render_recovery_link_qr_png,
 };
+use recovery_scheduler::{
+    DEFAULT_RECOVERY_RETRY_BASE_SECONDS, DEFAULT_RECOVERY_RETRY_MAX_SECONDS,
+    MAX_RECOVERY_ATTEMPT_LEASE_SECONDS, MAX_RECOVERY_RETRY_BASE_SECONDS,
+    MAX_RECOVERY_RETRY_MAX_SECONDS, RecoveryBackoffConfig, RecoverySchedulerLifecycle,
+    RecoverySchedulerReadiness, SignedRecoverySchedulerState, load_recovery_scheduler_state,
+    persist_recovery_scheduler_state,
+};
 
 const EVENT_STORE_DIRECTORY: &str = "events";
 const LOCAL_MESSAGE_STORE_DIRECTORY: &str = "local-messages";
@@ -103,8 +111,6 @@ const TICKET_VERSION: u8 = 9;
 const MAX_RECOVERY_PASSPHRASE_FILE_BYTES: u64 = 4098;
 const DEFAULT_HISTORY_RECOVERY_SCHEDULER_ATTEMPTS: usize = 3;
 const MAX_HISTORY_RECOVERY_SCHEDULER_ATTEMPTS: usize = 8;
-const DEFAULT_HISTORY_RECOVERY_RETRY_DELAY_SECONDS: u64 = 5;
-const MAX_HISTORY_RECOVERY_RETRY_DELAY_SECONDS: u64 = 300;
 
 type CommandFuture = Pin<Box<dyn Future<Output = Result<()>>>>;
 
@@ -646,17 +652,41 @@ enum Command {
         )]
         discovery_wait_seconds: u64,
 
-        /// Delay between attempts; zero is useful for deterministic tests.
+        /// Initial persistent retry delay before exponential backoff and jitter.
+        #[arg(
+            long = "retry-base-seconds",
+            alias = "retry-delay-seconds",
+            default_value_t = DEFAULT_RECOVERY_RETRY_BASE_SECONDS,
+            value_parser = clap::value_parser!(u64).range(0..=MAX_RECOVERY_RETRY_BASE_SECONDS)
+        )]
+        retry_base_seconds: u64,
+
+        /// Maximum persistent retry delay after exponential backoff and jitter.
         #[arg(
             long,
-            default_value_t = DEFAULT_HISTORY_RECOVERY_RETRY_DELAY_SECONDS,
-            value_parser = clap::value_parser!(u64).range(0..=MAX_HISTORY_RECOVERY_RETRY_DELAY_SECONDS)
+            default_value_t = DEFAULT_RECOVERY_RETRY_MAX_SECONDS,
+            value_parser = clap::value_parser!(u64).range(0..=MAX_RECOVERY_RETRY_MAX_SECONDS)
         )]
-        retry_delay_seconds: u64,
+        retry_max_seconds: u64,
 
         /// Maximum pages transferred over any one authenticated connection.
         #[arg(long, default_value_t = MAX_HISTORY_RECOVERY_PAGES_PER_SESSION)]
         max_pages: usize,
+    },
+
+    /// Irreversibly cancel one previously approved local recovery plan.
+    HistoryRecoveryPlanCancel {
+        /// Directory containing the exact recipient device and scheduler state.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Recipient-signed plan whose local execution consent is being cancelled.
+        #[arg(long)]
+        plan_file: PathBuf,
+
+        /// Local conversation label whose derived ID must match the approved plan.
+        #[arg(long)]
+        conversation: String,
     },
 
     /// Reconcile source-signed completeness claims from locally stored rewrap bundles.
@@ -916,6 +946,7 @@ impl Command {
             | Self::HistoryRecoveryLinkDiscover { state_dir, .. }
             | Self::HistoryRecoveryPlanApprove { state_dir, .. }
             | Self::HistoryRecoveryPlanRun { state_dir, .. }
+            | Self::HistoryRecoveryPlanCancel { state_dir, .. }
             | Self::HistoryRewrapReconcile { state_dir, .. }
             | Self::History { state_dir, .. }
             | Self::Identity { state_dir }
@@ -1695,7 +1726,8 @@ async fn run_command(command: Command) -> Result<()> {
             power_source,
             max_attempts,
             discovery_wait_seconds,
-            retry_delay_seconds,
+            retry_base_seconds,
+            retry_max_seconds,
             max_pages,
         } => {
             Box::pin(run_history_recovery_plan(
@@ -1706,11 +1738,17 @@ async fn run_command(command: Command) -> Result<()> {
                 power_source,
                 max_attempts,
                 discovery_wait_seconds,
-                retry_delay_seconds,
+                retry_base_seconds,
+                retry_max_seconds,
                 max_pages,
             ))
             .await
         }
+        Command::HistoryRecoveryPlanCancel {
+            state_dir,
+            plan_file,
+            conversation,
+        } => cancel_history_recovery_plan(state_dir, plan_file, conversation).await,
         Command::HistoryRewrapReconcile {
             state_dir,
             conversation,
@@ -4910,7 +4948,8 @@ async fn run_history_recovery_plan(
     power_source: RecoveryPowerSource,
     max_attempts: usize,
     discovery_wait_seconds: u64,
-    retry_delay_seconds: u64,
+    retry_base_seconds: u64,
+    retry_max_seconds: u64,
     max_pages: usize,
 ) -> Result<()> {
     ensure!(
@@ -4922,28 +4961,46 @@ async fn run_history_recovery_plan(
         "--discovery-wait-seconds must be between 1 and {MAX_DISCOVERY_WAIT_SECONDS}"
     );
     ensure!(
-        retry_delay_seconds <= MAX_HISTORY_RECOVERY_RETRY_DELAY_SECONDS,
-        "--retry-delay-seconds must not exceed {MAX_HISTORY_RECOVERY_RETRY_DELAY_SECONDS}"
-    );
-    ensure!(
         (1..=MAX_HISTORY_RECOVERY_PAGES_PER_SESSION).contains(&max_pages),
         "--max-pages must be between 1 and {MAX_HISTORY_RECOVERY_PAGES_PER_SESSION}"
     );
+    let backoff = RecoveryBackoffConfig::new(retry_base_seconds, retry_max_seconds)?;
     let plan = load_history_recovery_plan(&plan_file).await?;
     let now_unix_seconds = unix_time_now().context("read time for recovery scheduler")?;
-    let (recipient_certificate, initially_complete) = with_locked_state(&state_dir, || {
-        let (device_state, recipient_certificate) = verify_history_recovery_plan_locally(
+    let (mut scheduler_state, initially_complete) = with_locked_state(&state_dir, || {
+        let (device_state, _) = verify_history_recovery_plan_locally(
             &state_dir,
             &conversation,
             &plan,
             now_unix_seconds,
         )?;
         let complete = latest_checkpoint_for_plan(&state_dir, &device_state, &plan)?.is_complete();
-        Ok((recipient_certificate, complete))
+        let mut scheduler_state = load_or_initialize_recovery_scheduler_state(
+            &state_dir,
+            device_state.identity(),
+            &plan,
+            now_unix_seconds,
+        )?;
+        if complete && !scheduler_state.lifecycle().is_terminal() {
+            scheduler_state =
+                scheduler_state.complete(device_state.identity(), now_unix_seconds)?;
+            persist_recovery_scheduler_state(&state_dir, &scheduler_state)?;
+        }
+        ensure!(
+            scheduler_state.lifecycle() != RecoverySchedulerLifecycle::Completed || complete,
+            "scheduler claims completion but the signed recovery checkpoint is incomplete"
+        );
+        Ok((scheduler_state, complete))
     })?;
     print_history_recovery_plan(&plan)?;
     println!("history_recovery_plan_file={}", plan_file.display());
     println!("history_recovery_plan_user_consent=previously-approved");
+    println!("history_recovery_scheduler_state_mode=signed-append-only-v1");
+    println!("history_recovery_scheduler_restart_resume=true");
+    println!("history_recovery_scheduler_backoff=exponential-equal-jitter");
+    println!("history_recovery_scheduler_retry_base_seconds={retry_base_seconds}");
+    println!("history_recovery_scheduler_retry_max_seconds={retry_max_seconds}");
+    print_recovery_scheduler_state(&scheduler_state)?;
     println!("history_recovery_network_context_source=caller-supplied");
     println!(
         "history_recovery_current_network_class={}",
@@ -4956,11 +5013,17 @@ async fn run_history_recovery_plan(
     let policy_allowed = plan.execution_policy().allows(network_class, power_source);
     println!("history_recovery_execution_policy_allowed={policy_allowed}");
 
-    if initially_complete {
+    if initially_complete || scheduler_state.lifecycle() == RecoverySchedulerLifecycle::Completed {
         println!("history_recovery_scheduler_discovery_attempted=false");
         println!("connection_attempted=false");
         println!("history_recovery_complete=true");
         println!("status=history-recovery-scheduler-complete");
+        return Ok(());
+    }
+    if scheduler_state.lifecycle() == RecoverySchedulerLifecycle::Cancelled {
+        println!("history_recovery_scheduler_discovery_attempted=false");
+        println!("connection_attempted=false");
+        println!("status=history-recovery-scheduler-cancelled");
         return Ok(());
     }
     if !policy_allowed {
@@ -4970,19 +5033,147 @@ async fn run_history_recovery_plan(
         bail!("current network/power context is blocked by the recipient-signed recovery plan");
     }
 
+    match scheduler_state.readiness(now_unix_seconds) {
+        RecoverySchedulerReadiness::Cancelled => {
+            println!("history_recovery_scheduler_discovery_attempted=false");
+            println!("connection_attempted=false");
+            println!("status=history-recovery-scheduler-cancelled");
+            return Ok(());
+        }
+        RecoverySchedulerReadiness::Completed => {
+            bail!("scheduler is complete but the signed recovery checkpoint is incomplete")
+        }
+        RecoverySchedulerReadiness::ClockRollback {
+            last_observed_unix_seconds,
+        } => {
+            println!("history_recovery_scheduler_discovery_attempted=false");
+            println!("connection_attempted=false");
+            println!("history_recovery_scheduler_clock_rollback_detected=true");
+            println!(
+                "history_recovery_scheduler_last_observed_unix_seconds={last_observed_unix_seconds}"
+            );
+            println!("status=history-recovery-scheduler-clock-blocked");
+            bail!("wall clock is older than the signed scheduler high-water mark")
+        }
+        RecoverySchedulerReadiness::AttemptLeaseExpired => {
+            scheduler_state =
+                finalize_expired_recovery_attempt(&state_dir, &plan, now_unix_seconds, backoff)?;
+            println!("history_recovery_scheduler_stale_attempt_recovered=true");
+            print_recovery_scheduler_state(&scheduler_state)?;
+            println!("history_recovery_scheduler_discovery_attempted=false");
+            println!("connection_attempted=false");
+            println!("status=history-recovery-scheduler-deferred");
+            return Ok(());
+        }
+        RecoverySchedulerReadiness::Deferred {
+            not_before_unix_seconds,
+        } => {
+            println!(
+                "history_recovery_scheduler_not_before_unix_seconds={not_before_unix_seconds}"
+            );
+            println!("history_recovery_scheduler_discovery_attempted=false");
+            println!("connection_attempted=false");
+            println!("status=history-recovery-scheduler-deferred");
+            return Ok(());
+        }
+        RecoverySchedulerReadiness::Ready => {}
+    }
+
     let approved_range_start = usize::try_from(plan.approved_range_start())
         .context("approved recovery plan range start cannot be represented")?;
     let approved_event_count = usize::try_from(plan.approved_event_count())
         .context("approved recovery plan event count cannot be represented")?;
     let page_size = usize::try_from(plan.page_size())
         .context("approved recovery plan page size cannot be represented")?;
+    let attempt_lease_seconds =
+        history_recovery_attempt_lease_seconds(discovery_wait_seconds, max_pages)?;
 
-    for attempt in 1..=max_attempts {
-        plan.verify_at(unix_time_now()?)?;
-        println!("history_recovery_scheduler_attempt={attempt}");
+    for local_attempt in 1..=max_attempts {
+        let attempt_now = unix_time_now()?;
+        plan.verify_at(attempt_now)?;
+        let attempt_gate = with_locked_state(&state_dir, || {
+            let (device_state, recipient_certificate) = verify_history_recovery_plan_locally(
+                &state_dir,
+                &conversation,
+                &plan,
+                attempt_now,
+            )?;
+            let current = load_required_recovery_scheduler_state(&state_dir, &plan)?;
+            match current.readiness(attempt_now) {
+                RecoverySchedulerReadiness::Ready => {
+                    let started = current.start_attempt(
+                        device_state.identity(),
+                        attempt_now,
+                        attempt_lease_seconds,
+                    )?;
+                    persist_recovery_scheduler_state(&state_dir, &started)?;
+                    Ok(RecoveryAttemptGate::Started {
+                        state: Box::new(started),
+                        recipient_certificate,
+                    })
+                }
+                RecoverySchedulerReadiness::Cancelled => Ok(RecoveryAttemptGate::Cancelled),
+                RecoverySchedulerReadiness::Completed => Ok(RecoveryAttemptGate::Completed),
+                RecoverySchedulerReadiness::Deferred {
+                    not_before_unix_seconds,
+                } => Ok(RecoveryAttemptGate::Deferred {
+                    not_before_unix_seconds,
+                }),
+                RecoverySchedulerReadiness::ClockRollback {
+                    last_observed_unix_seconds,
+                } => Ok(RecoveryAttemptGate::ClockRollback {
+                    last_observed_unix_seconds,
+                }),
+                RecoverySchedulerReadiness::AttemptLeaseExpired => {
+                    bail!("a previous recovery attempt lease expired without reconciliation")
+                }
+            }
+        })?;
+        let (started_state, recipient_certificate) = match attempt_gate {
+            RecoveryAttemptGate::Started {
+                state,
+                recipient_certificate,
+            } => (*state, recipient_certificate),
+            RecoveryAttemptGate::Cancelled => {
+                println!("history_recovery_scheduler_discovery_attempted=false");
+                println!("connection_attempted=false");
+                println!("status=history-recovery-scheduler-cancelled");
+                return Ok(());
+            }
+            RecoveryAttemptGate::Completed => {
+                println!("history_recovery_scheduler_discovery_attempted=false");
+                println!("connection_attempted=false");
+                println!("status=history-recovery-scheduler-complete");
+                return Ok(());
+            }
+            RecoveryAttemptGate::Deferred {
+                not_before_unix_seconds,
+            } => {
+                println!(
+                    "history_recovery_scheduler_not_before_unix_seconds={not_before_unix_seconds}"
+                );
+                println!("history_recovery_scheduler_discovery_attempted=false");
+                println!("connection_attempted=false");
+                println!("status=history-recovery-scheduler-deferred");
+                return Ok(());
+            }
+            RecoveryAttemptGate::ClockRollback {
+                last_observed_unix_seconds,
+            } => {
+                println!("history_recovery_scheduler_clock_rollback_detected=true");
+                println!(
+                    "history_recovery_scheduler_last_observed_unix_seconds={last_observed_unix_seconds}"
+                );
+                bail!("wall clock is older than the signed scheduler high-water mark")
+            }
+        };
+        let persistent_attempt = started_state.total_attempts();
+        println!("history_recovery_scheduler_local_attempt={local_attempt}");
+        println!("history_recovery_scheduler_attempt={persistent_attempt}");
+        println!("history_recovery_scheduler_attempt_lease_seconds={attempt_lease_seconds}");
         println!("history_recovery_scheduler_discovery_attempted=true");
         let scan_time = unix_time_now()?;
-        let scan = discover_recovery_links(
+        let scan_result = discover_recovery_links(
             Duration::from_secs(discovery_wait_seconds),
             DEFAULT_DISCOVERY_CANDIDATES,
             |encoded| {
@@ -4994,29 +5185,61 @@ async fn run_history_recovery_plan(
                     && plan.matches_link(&link).unwrap_or(false)
             },
         )
-        .await?;
+        .await;
+        let scan = match scan_result {
+            Ok(scan) => scan,
+            Err(error) => {
+                let message = error.to_string().replace(['\r', '\n'], " ");
+                println!("history_recovery_scheduler_attempt_{persistent_attempt}_result=failed");
+                println!("history_recovery_scheduler_attempt_{persistent_attempt}_error={message}");
+                scheduler_state = finalize_recovery_scheduler_attempt(
+                    &state_dir,
+                    &plan,
+                    &started_state,
+                    SchedulerAttemptResult::Failed,
+                    unix_time_now()?,
+                    backoff,
+                )?;
+                if scheduler_state.lifecycle() == RecoverySchedulerLifecycle::Cancelled {
+                    println!("status=history-recovery-scheduler-cancelled");
+                    return Ok(());
+                }
+                print_recovery_scheduler_state(&scheduler_state)?;
+                if local_attempt < max_attempts {
+                    wait_for_recovery_scheduler_deadline(&state_dir, &plan).await?;
+                    continue;
+                }
+                println!("status=history-recovery-scheduler-scheduled");
+                return Ok(());
+            }
+        };
         println!(
-            "history_recovery_scheduler_attempt_{attempt}_datagrams_received={}",
+            "history_recovery_scheduler_attempt_{persistent_attempt}_datagrams_received={}",
             scan.datagrams_received
         );
         println!(
-            "history_recovery_scheduler_attempt_{attempt}_candidates={}",
+            "history_recovery_scheduler_attempt_{persistent_attempt}_candidates={}",
             scan.candidates.len()
         );
         println!(
-            "history_recovery_scheduler_attempt_{attempt}_candidate_limit_reached={}",
+            "history_recovery_scheduler_attempt_{persistent_attempt}_candidate_limit_reached={}",
             scan.candidate_limit_reached
         );
 
-        if scan.candidates.len() == 1 && !scan.candidate_limit_reached {
+        let attempt_result = if scan.candidates.len() == 1 && !scan.candidate_limit_reached {
             let link = SignedHistoryRecoveryLink::decode_text(&scan.candidates[0])
                 .context("decode scheduler discovery candidate")?;
             println!(
-                "history_recovery_scheduler_attempt_{attempt}_target_endpoint_id={}",
+                "history_recovery_scheduler_attempt_{persistent_attempt}_target_endpoint_id={}",
                 link.endpoint().id
             );
+            if !recovery_scheduler_attempt_is_current(&state_dir, &plan, &started_state)? {
+                println!("connection_attempted=false");
+                println!("status=history-recovery-scheduler-cancelled");
+                return Ok(());
+            }
             println!("connection_attempted=true");
-            let attempt_result = run_approved_recovery_attempt(
+            let transfer_result = run_approved_recovery_attempt(
                 &state_dir,
                 &conversation,
                 &plan,
@@ -5027,49 +5250,362 @@ async fn run_history_recovery_plan(
                 max_pages,
             )
             .await;
-            match attempt_result {
+            match transfer_result {
                 Ok(()) => {
                     let complete = with_locked_state(&state_dir, || {
-                        let (device_state, _) = verify_history_recovery_plan_locally(
-                            &state_dir,
-                            &conversation,
-                            &plan,
-                            unix_time_now()?,
-                        )?;
+                        let device_state = load_scheduler_signing_device(&state_dir, &plan)?;
                         Ok(
                             latest_checkpoint_for_plan(&state_dir, &device_state, &plan)?
                                 .is_complete(),
                         )
                     })?;
                     if complete {
-                        println!("history_recovery_scheduler_attempt_{attempt}_result=completed");
-                        println!("status=history-recovery-scheduler-complete");
-                        return Ok(());
+                        println!(
+                            "history_recovery_scheduler_attempt_{persistent_attempt}_result=completed"
+                        );
+                        SchedulerAttemptResult::Completed
+                    } else {
+                        println!(
+                            "history_recovery_scheduler_attempt_{persistent_attempt}_result=paused"
+                        );
+                        SchedulerAttemptResult::Progressed
                     }
-                    println!("history_recovery_scheduler_attempt_{attempt}_result=paused");
                 }
                 Err(error) => {
                     let message = error.to_string().replace(['\r', '\n'], " ");
-                    println!("history_recovery_scheduler_attempt_{attempt}_result=failed");
-                    println!("history_recovery_scheduler_attempt_{attempt}_error={message}");
+                    println!(
+                        "history_recovery_scheduler_attempt_{persistent_attempt}_result=failed"
+                    );
+                    println!(
+                        "history_recovery_scheduler_attempt_{persistent_attempt}_error={message}"
+                    );
+                    SchedulerAttemptResult::Failed
                 }
             }
         } else if scan.candidates.is_empty() {
-            println!("history_recovery_scheduler_attempt_{attempt}_result=no-candidate");
+            println!("history_recovery_scheduler_attempt_{persistent_attempt}_result=no-candidate");
             println!("connection_attempted=false");
+            SchedulerAttemptResult::Failed
         } else {
-            println!("history_recovery_scheduler_attempt_{attempt}_result=ambiguous");
+            println!("history_recovery_scheduler_attempt_{persistent_attempt}_result=ambiguous");
             println!("connection_attempted=false");
-        }
+            SchedulerAttemptResult::Failed
+        };
 
-        if attempt < max_attempts {
-            println!("history_recovery_scheduler_retry_delay_seconds={retry_delay_seconds}");
-            tokio::time::sleep(Duration::from_secs(retry_delay_seconds)).await;
+        scheduler_state = finalize_recovery_scheduler_attempt(
+            &state_dir,
+            &plan,
+            &started_state,
+            attempt_result,
+            unix_time_now()?,
+            backoff,
+        )?;
+        print_recovery_scheduler_state(&scheduler_state)?;
+        match scheduler_state.lifecycle() {
+            RecoverySchedulerLifecycle::Completed => {
+                println!("status=history-recovery-scheduler-complete");
+                return Ok(());
+            }
+            RecoverySchedulerLifecycle::Cancelled => {
+                println!("status=history-recovery-scheduler-cancelled");
+                return Ok(());
+            }
+            RecoverySchedulerLifecycle::Active if local_attempt < max_attempts => {
+                wait_for_recovery_scheduler_deadline(&state_dir, &plan).await?;
+            }
+            RecoverySchedulerLifecycle::Active => {
+                println!("status=history-recovery-scheduler-scheduled");
+                return Ok(());
+            }
+            RecoverySchedulerLifecycle::Attempting => {
+                bail!("history recovery attempt remained in progress after finalization")
+            }
         }
     }
 
-    println!("status=history-recovery-scheduler-exhausted");
-    bail!("history recovery scheduler exhausted {max_attempts} bounded attempts")
+    bail!("history recovery scheduler reached an unreachable local attempt state")
+}
+
+#[derive(Debug)]
+enum RecoveryAttemptGate {
+    Started {
+        state: Box<SignedRecoverySchedulerState>,
+        recipient_certificate: DeviceCertificate,
+    },
+    Deferred {
+        not_before_unix_seconds: u64,
+    },
+    ClockRollback {
+        last_observed_unix_seconds: u64,
+    },
+    Cancelled,
+    Completed,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum SchedulerAttemptResult {
+    Failed,
+    Progressed,
+    Completed,
+}
+
+fn load_or_initialize_recovery_scheduler_state(
+    state_dir: &Path,
+    identity: &DeviceIdentity,
+    plan: &SignedHistoryRecoveryPlan,
+    now_unix_seconds: u64,
+) -> Result<SignedRecoverySchedulerState> {
+    let plan_id = plan.plan_id()?;
+    if let Some(state) =
+        load_recovery_scheduler_state(state_dir, plan_id, plan.recipient_device_id())?
+    {
+        return Ok(state);
+    }
+    ensure!(
+        identity.device_id() == plan.recipient_device_id(),
+        "history recovery scheduler state can only be initialized by the plan recipient"
+    );
+    let state = SignedRecoverySchedulerState::initialize(identity, plan_id, now_unix_seconds)?;
+    persist_recovery_scheduler_state(state_dir, &state)?;
+    Ok(state)
+}
+
+fn load_required_recovery_scheduler_state(
+    state_dir: &Path,
+    plan: &SignedHistoryRecoveryPlan,
+) -> Result<SignedRecoverySchedulerState> {
+    load_recovery_scheduler_state(state_dir, plan.plan_id()?, plan.recipient_device_id())?
+        .context("history recovery scheduler state is not initialized")
+}
+
+fn recovery_scheduler_attempt_is_current(
+    state_dir: &Path,
+    plan: &SignedHistoryRecoveryPlan,
+    started: &SignedRecoverySchedulerState,
+) -> Result<bool> {
+    let current = with_state_lock_only(state_dir, || {
+        load_required_recovery_scheduler_state(state_dir, plan)
+    })?;
+    if current.lifecycle() == RecoverySchedulerLifecycle::Cancelled {
+        return Ok(false);
+    }
+    ensure!(
+        current.state_id()? == started.state_id()?
+            && current.lifecycle() == RecoverySchedulerLifecycle::Attempting,
+        "history recovery scheduler attempt lease was replaced unexpectedly"
+    );
+    Ok(true)
+}
+
+fn finalize_expired_recovery_attempt(
+    state_dir: &Path,
+    plan: &SignedHistoryRecoveryPlan,
+    now_unix_seconds: u64,
+    backoff: RecoveryBackoffConfig,
+) -> Result<SignedRecoverySchedulerState> {
+    with_locked_state(state_dir, || {
+        let device_state = load_scheduler_signing_device(state_dir, plan)?;
+        let current = load_required_recovery_scheduler_state(state_dir, plan)?;
+        ensure!(
+            current.readiness(now_unix_seconds) == RecoverySchedulerReadiness::AttemptLeaseExpired,
+            "history recovery attempt lease is no longer expired"
+        );
+        let next = current.record_failure(device_state.identity(), now_unix_seconds, backoff)?;
+        persist_recovery_scheduler_state(state_dir, &next)?;
+        Ok(next)
+    })
+}
+
+fn finalize_recovery_scheduler_attempt(
+    state_dir: &Path,
+    plan: &SignedHistoryRecoveryPlan,
+    started: &SignedRecoverySchedulerState,
+    result: SchedulerAttemptResult,
+    now_unix_seconds: u64,
+    backoff: RecoveryBackoffConfig,
+) -> Result<SignedRecoverySchedulerState> {
+    with_locked_state(state_dir, || {
+        let device_state = load_scheduler_signing_device(state_dir, plan)?;
+        let current = load_required_recovery_scheduler_state(state_dir, plan)?;
+        if current.lifecycle() == RecoverySchedulerLifecycle::Cancelled {
+            return Ok(current);
+        }
+        ensure!(
+            current.state_id()? == started.state_id()?
+                && current.lifecycle() == RecoverySchedulerLifecycle::Attempting,
+            "history recovery scheduler attempt cannot finalize a replaced lease"
+        );
+        let next = match result {
+            SchedulerAttemptResult::Failed => {
+                current.record_failure(device_state.identity(), now_unix_seconds, backoff)?
+            }
+            SchedulerAttemptResult::Progressed => {
+                current.record_progress(device_state.identity(), now_unix_seconds, backoff)?
+            }
+            SchedulerAttemptResult::Completed => {
+                current.complete(device_state.identity(), now_unix_seconds)?
+            }
+        };
+        persist_recovery_scheduler_state(state_dir, &next)?;
+        Ok(next)
+    })
+}
+
+fn load_scheduler_signing_device(
+    state_dir: &Path,
+    plan: &SignedHistoryRecoveryPlan,
+) -> Result<DeviceState> {
+    plan.verify()?;
+    let device_state = load_command_device_state(state_dir)?;
+    ensure!(
+        device_state.identity().device_id() == plan.recipient_device_id(),
+        "local device cannot sign scheduler state for a different plan recipient"
+    );
+    Ok(device_state)
+}
+
+fn print_recovery_scheduler_state(state: &SignedRecoverySchedulerState) -> Result<()> {
+    println!(
+        "history_recovery_scheduler_state_id={}",
+        encode_hex(&state.state_id()?)
+    );
+    println!(
+        "history_recovery_scheduler_generation={}",
+        state.generation()
+    );
+    println!(
+        "history_recovery_scheduler_transition={}",
+        state.transition().as_str()
+    );
+    println!(
+        "history_recovery_scheduler_lifecycle={}",
+        state.lifecycle().as_str()
+    );
+    println!(
+        "history_recovery_scheduler_total_attempts={}",
+        state.total_attempts()
+    );
+    println!(
+        "history_recovery_scheduler_consecutive_failures={}",
+        state.consecutive_failures()
+    );
+    println!(
+        "history_recovery_scheduler_last_observed_unix_seconds={}",
+        state.last_observed_unix_seconds()
+    );
+    println!(
+        "history_recovery_scheduler_next_attempt_at_unix_seconds={}",
+        state.next_attempt_at_unix_seconds()
+    );
+    println!(
+        "history_recovery_scheduler_scheduled_delay_seconds={}",
+        state.scheduled_delay_seconds()
+    );
+    Ok(())
+}
+
+fn history_recovery_attempt_lease_seconds(
+    discovery_wait_seconds: u64,
+    max_pages: usize,
+) -> Result<u64> {
+    let page_seconds = u64::try_from(max_pages)?
+        .checked_mul(HISTORY_RECOVERY_NEXT_PAGE_TIMEOUT.as_secs())
+        .context("history recovery attempt page timeout bound overflows")?;
+    let seconds = discovery_wait_seconds
+        .checked_add(CONNECTION_TIMEOUT.as_secs())
+        .and_then(|value| value.checked_add(ROUTE_POLICY_WAIT.as_secs()))
+        .and_then(|value| value.checked_add(CLIENT_RELAY_WAIT_SECONDS))
+        .and_then(|value| value.checked_add(page_seconds))
+        .and_then(|value| value.checked_add(60))
+        .context("history recovery attempt lease bound overflows")?;
+    ensure!(
+        seconds <= MAX_RECOVERY_ATTEMPT_LEASE_SECONDS,
+        "history recovery attempt lease exceeds {MAX_RECOVERY_ATTEMPT_LEASE_SECONDS} seconds"
+    );
+    Ok(seconds.max(1))
+}
+
+async fn wait_for_recovery_scheduler_deadline(
+    state_dir: &Path,
+    plan: &SignedHistoryRecoveryPlan,
+) -> Result<()> {
+    loop {
+        let now = unix_time_now()?;
+        plan.verify_at(now)?;
+        let current = with_state_lock_only(state_dir, || {
+            load_required_recovery_scheduler_state(state_dir, plan)
+        })?;
+        match current.readiness(now) {
+            RecoverySchedulerReadiness::Ready => return Ok(()),
+            RecoverySchedulerReadiness::Deferred {
+                not_before_unix_seconds,
+            } => {
+                let remaining = not_before_unix_seconds.saturating_sub(now);
+                println!("history_recovery_scheduler_retry_wait_remaining_seconds={remaining}");
+                tokio::time::sleep(Duration::from_secs(remaining.clamp(1, 5))).await;
+            }
+            RecoverySchedulerReadiness::Cancelled => return Ok(()),
+            RecoverySchedulerReadiness::Completed => return Ok(()),
+            RecoverySchedulerReadiness::ClockRollback {
+                last_observed_unix_seconds,
+            } => {
+                bail!(
+                    "wall clock is older than signed scheduler high-water mark {last_observed_unix_seconds}"
+                )
+            }
+            RecoverySchedulerReadiness::AttemptLeaseExpired => {
+                bail!("history recovery scheduler attempt lease expired while waiting")
+            }
+        }
+    }
+}
+
+fn with_state_lock_only<T>(
+    state_directory: &Path,
+    operation: impl FnOnce() -> Result<T>,
+) -> Result<T> {
+    let _state_lock = StateDirectoryLock::acquire(state_directory)
+        .context("lock state directory for scheduler state observation")?;
+    operation()
+}
+
+async fn cancel_history_recovery_plan(
+    state_dir: PathBuf,
+    plan_file: PathBuf,
+    conversation: String,
+) -> Result<()> {
+    let plan = load_history_recovery_plan(&plan_file).await?;
+    plan.verify()?;
+    ensure!(
+        ConversationId::from_label(&conversation) == plan.conversation_id(),
+        "history recovery plan is bound to a different conversation"
+    );
+    let device_state = load_scheduler_signing_device(&state_dir, &plan)?;
+    let now = unix_time_now()?;
+    let current = load_or_initialize_recovery_scheduler_state(
+        &state_dir,
+        device_state.identity(),
+        &plan,
+        now,
+    )?;
+    let state = match current.lifecycle() {
+        RecoverySchedulerLifecycle::Cancelled => current,
+        RecoverySchedulerLifecycle::Completed => {
+            bail!("completed history recovery plan cannot be cancelled")
+        }
+        RecoverySchedulerLifecycle::Active | RecoverySchedulerLifecycle::Attempting => {
+            let cancelled = current.cancel(device_state.identity(), now)?;
+            persist_recovery_scheduler_state(&state_dir, &cancelled)?;
+            cancelled
+        }
+    };
+    println!("history_recovery_plan_id={}", encode_hex(&plan.plan_id()?));
+    println!("history_recovery_plan_file={}", plan_file.display());
+    print_recovery_scheduler_state(&state)?;
+    println!("history_recovery_scheduler_discovery_attempted=false");
+    println!("connection_attempted=false");
+    println!("status=history-recovery-scheduler-cancelled");
+    Ok(())
 }
 
 fn accept_history_recovery_link(

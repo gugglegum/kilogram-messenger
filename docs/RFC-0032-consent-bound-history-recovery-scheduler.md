@@ -46,8 +46,9 @@ recipient device подписывает versioned plan, который связ�
 Plan file ограничен 64 KiB и публикуется no-clobber. Он не содержит E2EE keys,
 ratchet state или plaintext, но раскрывает account/device/conversation metadata
 и поэтому не должен считаться анонимным. Default lifetime — 24 часа, допустимый
-диапазон `1..=168` часов. Удаление файла отменяет локальный background consent;
-удалённого revocation protocol для уже скопированного plan file пока нет.
+диапазон `1..=168` часов. В M0.9.5 удаление файла было единственной локальной
+отменой; M0.9.6 добавил отдельный terminal recipient-signed cancel record.
+Удалённого revocation protocol для уже скопированного state пока нет.
 
 ## 3. Fresh endpoint without trust expansion
 
@@ -113,6 +114,9 @@ Blocked policy завершается до UDP bind и Iroh connection с diagno
 - каждый discovery сохраняет прежние caps: 512 датаграмм и 8 scheduler
   candidates из общего M0.9.4 maximum 16.
 
+M0.9.6 сохраняет этот per-process attempt cap, но заменяет fixed delay на
+persistent exponential equal-jitter backoff; см. RFC-0033.
+
 Перед каждым attempt повторно проверяется plan expiry. Descriptor проходит
 source signature, exact recipient и exact-plan matching. Перед самим connect
 локальные certificate, authority и membership заново проверяются под state
@@ -157,10 +161,9 @@ message. Новых dependencies нет.
 
 ## 8. Что остаётся дальше
 
-- настоящий OS background service/task с wakeup, cancellation и network-change
-  events;
+- настоящий OS background service/task с wakeup и network-change events;
 - platform adapters для достоверных metered/roaming/battery/charging данных;
-- exponential backoff с jitter и persistent `next_attempt_at` без clock rollback;
+- внешний rollback witness для persistent scheduler state из M0.9.6;
 - wide-area privacy-preserving descriptor lookup вместо LAN-only multicast;
 - plan listing/revocation UI и защищённое локальное хранение metadata;
 - source listener, рассчитанный на несколько последовательных recovery sessions;

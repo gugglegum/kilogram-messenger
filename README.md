@@ -69,12 +69,14 @@ The opt-in authenticated LAN recovery discovery slice is specified in
 [`docs/RFC-0031-authenticated-lan-recovery-discovery.md`](docs/RFC-0031-authenticated-lan-recovery-discovery.md).
 The consent-bound retry coordinator is specified in
 [`docs/RFC-0032-consent-bound-history-recovery-scheduler.md`](docs/RFC-0032-consent-bound-history-recovery-scheduler.md).
+Persistent signed scheduler state is specified in
+[`docs/RFC-0033-persistent-history-recovery-scheduler-state.md`](docs/RFC-0033-persistent-history-recovery-scheduler-state.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.5 consent-bound recovery retry coordinator — complete
+## Current milestone: M0.9.6 persistent recovery scheduler state — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -191,6 +193,17 @@ the existing signed checkpoint chain. Mobile and unknown networks are denied by
 default. The CLI accepts caller-supplied network/power context and releases the
 device-state lock during discovery and backoff; real OS sensing and scheduling
 remain platform-client work.
+
+M0.9.6 makes the retry state survive process restart. The exact recipient signs
+an append-only per-plan state chain containing monotonic generations, attempt
+leases, counters, the observed clock high-water mark and the next deadline.
+Failures use bounded exponential equal-jitter backoff; an immediate restart
+before the signed deadline performs no discovery. A terminal signed cancel
+record prevents later connection for that Plan ID, while a completed recovery
+is reconciled with the existing signed checkpoint chain. The state is mirrored
+through the encrypted vault when enabled. Whole-directory rollback still needs
+an external witness, and OS wakeups plus trusted network/power sensing remain
+platform work.
 
 M0.8.1 adds a reversible encrypted shadow snapshot of the entire device state.
 `state-vault-migrate` publishes encrypted records and a keyed manifest in one
