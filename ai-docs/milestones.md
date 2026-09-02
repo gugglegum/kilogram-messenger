@@ -1859,17 +1859,60 @@ service, sleep/reboot/logon lifecycle и non-Windows providers остаются 
 Полный контракт —
 [`../docs/RFC-0035-bounded-windows-recovery-worker.md`](../docs/RFC-0035-bounded-windows-recovery-worker.md).
 
+### M0.9.9 — long-lived messaging runtime: выполнено
+
+Реализовано:
+
+- новая команда `runtime` держит один Iroh endpoint/ticket и последовательно
+  обслуживает любое число delivery/sync connections до Ctrl+C;
+- каждый connection заново проходит route policy, Account Root/device
+  authorization и membership checks; ошибка одной сессии не завершает runtime;
+- runtime исключён из outer state lock/vault intent: network accept/route wait
+  идут без lock, а одна application session получает отдельный lock и vault
+  dual-write transaction;
+- typed lock contention повторяется каждые 25 ms до 15 s, чтобы краткая
+  foreground-команда не роняла уже принятый connection; остальные ошибки не
+  маскируются;
+- state-mutating sessions пока последовательны и тем самым сохраняют M0
+  single-writer sequence/ratchet invariant;
+- optional `--max-sessions 0..=65536` и `--idle-seconds 0..=86400` дают bounded
+  test/embedding lifecycle; zero означает работу до Ctrl+C;
+- ticket-файл публикуется same-directory temporary file + fsync + atomic replace,
+  поэтому restart не показывает peer частично записанный новый Endpoint ID;
+- специализированный consent/SAS history-recovery flow не расширен: runtime
+  не становится неограниченным rewrap source.
+
+Проверки:
+
+- unit test проверяет создание parent directory и atomic replacement ticket;
+- process smoke `.tmp/m099-smoke-20260902-182050` выполнил два `connect` и один
+  `sync` через один Endpoint ID, получил 3/3 completed sessions, 4 события и
+  identical Alice/Bob history;
+- runtime штатно завершился по session bound, затем restart на том же Bob state
+  опубликовал новый Endpoint ID, заменил ticket и доставил ещё одно сообщение;
+  обе истории сошлись на 6 событиях;
+- все 122 workspace tests, rustfmt, strict Clippy и release build проходят;
+- final regression на том же fixture добавил delivery + sync через ещё один
+  двухсессионный runtime, завершился idle-bound control без клиентов и сохранил
+  identical histories на 8 событиях.
+
+Граница среза: runtime пока только long-lived inbound/session core. Persistent
+contacts, local outbound queue, automatic reconnect/sync trigger и local GUI API
+не реализованы. OS autostart/background registration является optional UX
+настройкой, а не условием работы запущенного мессенджера. Полный контракт —
+[`../docs/RFC-0036-long-lived-messaging-runtime.md`](../docs/RFC-0036-long-lived-messaging-runtime.md).
+
 ### Следующий этап
 
-1. Безопасно регистрировать/удалять M0.9.8 worker как настоящий Windows
-   background task/service и закрыть sleep/reboot/logon lifecycle.
-2. Добавить macOS/Linux/mobile providers той же platform boundary.
-3. Спроектировать privacy-preserving wide-area publication/gossip/mailbox и
+1. M0.9.10: persistent contact/runtime descriptor, локальная исходящая очередь,
+   bounded reconnect/backoff и automatic sync trigger поверх M0.9.9 runtime.
+2. M0.9.11: локальный IPC/API, через который UI управляет runtime без второго
+   state writer; затем M0.9.12 minimal Windows GUI.
+3. Optional autostart/background mode проектировать как явную настройку клиента,
+   не как обязательный Windows Task Scheduler step.
+4. Добавить macOS/Linux/mobile providers той же platform boundary.
+5. Спроектировать privacy-preserving wide-area publication/gossip/mailbox и
    first-contact freshness; M0.9.4 закрывает только явный LAN opt-in.
-4. Добавить live camera/clipboard и GUI confirmation позже в platform clients;
-   CLI image-file ceremony уже закрыта M0.9.3.
-5. Membership removal и group governance проектировать вместе с ordered
-   security events и MLS epoch.
-6. Production macOS/Linux local provider, согласованный monotonic witness,
-   master-key rotation, seed/root recovery и compact Merkle/range summary
-   остаются отдельными направлениями.
+6. Membership removal и group governance проектировать вместе с ordered
+   security events и MLS epoch; seed/root recovery, compact Merkle/range summary
+   и независимый криптографический аудит остаются до публичного выпуска.

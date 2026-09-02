@@ -91,14 +91,20 @@ sessions, distribution, removal и key epochs и не решены этим пр
   M0.9.6 — signed persistent retry chain, equal-jitter deadline, attempt lease,
   clock high-water и terminal cancellation, M0.9.7 — Windows-native разовый
   network/metered/roaming/power snapshot с conservative VPN mapping, M0.9.8 —
-  bounded worker с native change events, deadline/cancel wakeup и policy recheck.
+  bounded worker с native change events, deadline/cancel wakeup и policy recheck,
+  M0.9.9 — stable multi-session endpoint с per-session state transaction.
   Как сделать wide-area privacy-preserving lookup/gossip, подключать live camera/
-  clipboard/GUI, регистрировать deep link, как безопасно установить worker как
-  Windows task/service и закрыть sleep/reboot/logon lifecycle, как реализовать
-  providers на других ОС, как внешний witness обнаруживает rollback
+  clipboard/GUI, регистрировать deep link, как сделать optional autostart/
+  background lifecycle, как реализовать providers на других ОС, как внешний
+  witness обнаруживает rollback
   всей scheduler chain; как отдельно
   разрешать recovery от устройства собеседника без неявного расширения
   same-account trust?
+- Какой persistent contact descriptor безопасно обновляет ephemeral runtime
+  Endpoint ID после restart, не допускает rollback/equivocation и не раскрывает
+  social graph? Как локальная outbound queue взаимодействует с ratchet commit,
+  acknowledgement, retry/backoff и automatic sync, оставаясь единственным
+  state writer внутри будущего runtime actor?
 - Какой финальный межъязыковой canonical wire encoding обеспечивает одинаковые
   подписи и event IDs на всех платформах? Postcard используется только как
   предварительный M0 codec и не закрывает вопрос публичного протокола.

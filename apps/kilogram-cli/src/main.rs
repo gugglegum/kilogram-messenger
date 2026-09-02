@@ -124,6 +124,10 @@ const DEFAULT_HISTORY_RECOVERY_WORKER_CANCEL_POLL_SECONDS: u64 = 5;
 const MAX_HISTORY_RECOVERY_WORKER_CANCEL_POLL_SECONDS: u64 = 30;
 const HISTORY_RECOVERY_WORKER_LOCK_RETRY: Duration = Duration::from_millis(25);
 const HISTORY_RECOVERY_WORKER_LOCK_WAIT: Duration = Duration::from_secs(2);
+const RUNTIME_STATE_LOCK_RETRY: Duration = Duration::from_millis(25);
+const RUNTIME_STATE_LOCK_WAIT: Duration = Duration::from_secs(15);
+const MAX_RUNTIME_SESSIONS: usize = 65_536;
+const MAX_RUNTIME_IDLE_SECONDS: u64 = 24 * 60 * 60;
 
 type CommandFuture = Pin<Box<dyn Future<Output = Result<()>>>>;
 
@@ -216,6 +220,49 @@ enum Command {
         /// Explicitly publish the signed recipient-specific recovery link on the local network.
         #[arg(long)]
         history_recovery_discovery_publish: bool,
+    },
+
+    /// Keep one stable endpoint online and serve successive messaging/sync sessions.
+    Runtime {
+        /// Directory containing this application's persistent device state.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Account ID allowed to authenticate a certified requester device.
+        #[arg(long)]
+        allow_account: AccountId,
+
+        /// Root-signed complete device list for this runtime account.
+        #[arg(long)]
+        device_list_file: PathBuf,
+
+        /// Signed current prekey pool for another device in this account. Repeat for every peer device.
+        #[arg(long = "peer-prekey-pool-file")]
+        peer_prekey_pool_files: Vec<PathBuf>,
+
+        /// Atomically publish the current runtime connection ticket to this file.
+        #[arg(long)]
+        ticket_file: Option<PathBuf>,
+
+        /// How long to wait for a public relay before accepting local connections.
+        #[arg(long, default_value_t = 15)]
+        relay_wait_seconds: u64,
+
+        /// Transport path required for Kilogram application frames.
+        #[arg(long, value_enum, default_value = "auto")]
+        route_policy: RoutePolicyArg,
+
+        /// Restrict this runtime to one explicit relay URL.
+        #[arg(long)]
+        relay_url: Option<RelayUrl>,
+
+        /// Stop cleanly after this many accepted sessions; zero runs until Ctrl+C.
+        #[arg(long, default_value_t = 0)]
+        max_sessions: usize,
+
+        /// Stop after this many idle seconds; zero disables the idle bound.
+        #[arg(long, default_value_t = 0)]
+        idle_seconds: u64,
     },
 
     /// Connect to a listener, send one message, print its acknowledgement, then exit.
@@ -1012,6 +1059,7 @@ impl Command {
     fn state_directory(&self) -> Option<&Path> {
         match self {
             Self::Listen { state_dir, .. }
+            | Self::Runtime { state_dir, .. }
             | Self::Connect { state_dir, .. }
             | Self::Sync { state_dir, .. }
             | Self::SeedHistory { state_dir, .. }
@@ -1066,6 +1114,7 @@ impl Command {
                     | Self::StateVaultKeyExport { .. }
                     | Self::StateVaultKeyImport { .. }
                     | Self::StateVaultRestore { .. }
+                    | Self::Runtime { .. }
                     | Self::HistoryRecoveryPlanRun { .. }
                     | Self::HistoryRecoveryPlanWatch { .. }
             )
@@ -1075,7 +1124,9 @@ impl Command {
         self.state_directory().is_some()
             && !matches!(
                 self,
-                Self::HistoryRecoveryPlanRun { .. } | Self::HistoryRecoveryPlanWatch { .. }
+                Self::Runtime { .. }
+                    | Self::HistoryRecoveryPlanRun { .. }
+                    | Self::HistoryRecoveryPlanWatch { .. }
             )
     }
 }
@@ -1106,6 +1157,19 @@ struct ListenOptions {
     history_recovery_link_page_size: usize,
     history_recovery_link_valid_for_seconds: u64,
     history_recovery_discovery_publish: bool,
+}
+
+struct RuntimeOptions {
+    state_dir: PathBuf,
+    allowed_requester_account_id: AccountId,
+    device_list_file: PathBuf,
+    peer_prekey_pool_files: Vec<PathBuf>,
+    ticket_file: Option<PathBuf>,
+    relay_wait_seconds: u64,
+    route_policy: RoutePolicy,
+    relay_url: Option<RelayUrl>,
+    max_sessions: usize,
+    idle_seconds: u64,
 }
 
 #[derive(Clone, Debug)]
@@ -1254,6 +1318,14 @@ impl ConnectionTicket {
 
     fn listener_account_id(&self) -> AccountId {
         self.content.listener_certificate.account_id()
+    }
+
+    fn listener_device_id(&self) -> DeviceId {
+        self.content.listener_certificate.device_id()
+    }
+
+    fn listener_certificate(&self) -> &DeviceCertificate {
+        &self.content.listener_certificate
     }
 
     fn allowed_requester_account_id(&self) -> AccountId {
@@ -1578,6 +1650,32 @@ async fn run_command(command: Command) -> Result<()> {
                 history_recovery_link_valid_for_seconds,
                 history_recovery_discovery_publish,
             }))
+            .await
+        }
+        Command::Runtime {
+            state_dir,
+            allow_account,
+            device_list_file,
+            peer_prekey_pool_files,
+            ticket_file,
+            relay_wait_seconds,
+            route_policy,
+            relay_url,
+            max_sessions,
+            idle_seconds,
+        } => {
+            runtime(RuntimeOptions {
+                state_dir,
+                allowed_requester_account_id: allow_account,
+                device_list_file,
+                peer_prekey_pool_files,
+                ticket_file,
+                relay_wait_seconds,
+                route_policy: route_policy.into(),
+                relay_url,
+                max_sessions,
+                idle_seconds,
+            })
             .await
         }
         Command::Connect {
@@ -2746,6 +2844,385 @@ fn listen(options: ListenOptions) -> CommandFuture {
     Box::pin(listen_inner(options))
 }
 
+struct PreparedRuntimeListener {
+    device_state: DeviceState,
+    listener_certificate: DeviceCertificate,
+    listener_directory: AccountPrekeyDirectory,
+    listener_prekey_pool: SignedPrekeyPool,
+    authority_snapshot_store: AuthoritySnapshotStoreOutcome,
+}
+
+enum RuntimeEvent {
+    Connection(Connection),
+    IdleTimeout,
+    Shutdown,
+}
+
+async fn runtime(options: RuntimeOptions) -> Result<()> {
+    let RuntimeOptions {
+        state_dir,
+        allowed_requester_account_id,
+        device_list_file,
+        peer_prekey_pool_files,
+        ticket_file,
+        relay_wait_seconds,
+        route_policy,
+        relay_url,
+        max_sessions,
+        idle_seconds,
+    } = options;
+    ensure!(
+        max_sessions <= MAX_RUNTIME_SESSIONS,
+        "--max-sessions must be zero or at most {MAX_RUNTIME_SESSIONS}"
+    );
+    ensure!(
+        idle_seconds <= MAX_RUNTIME_IDLE_SECONDS,
+        "--idle-seconds must be zero or at most {MAX_RUNTIME_IDLE_SECONDS}"
+    );
+
+    let prepared = with_locked_state(&state_dir, || {
+        prepare_runtime_listener(&state_dir, &device_list_file, &peer_prekey_pool_files)
+    })?;
+    let endpoint = endpoint_builder_with_relay(route_policy, relay_url)
+        .alpns(vec![ALPN.to_vec()])
+        .bind()
+        .await
+        .context("bind long-lived Iroh runtime endpoint")?;
+    wait_for_relay(&endpoint, route_policy, relay_wait_seconds).await?;
+
+    let ticket = ConnectionTicket::new(
+        endpoint.addr(),
+        prepared.device_state.identity(),
+        prepared.listener_certificate.clone(),
+        prepared.listener_directory,
+        allowed_requester_account_id,
+        route_policy,
+    )?;
+    let encoded_ticket = ticket.encode()?;
+    println!("runtime_mode=multi-session-v1");
+    println!("transport_endpoint_id={}", endpoint.id());
+    println!("account_id={}", ticket.listener_account_id());
+    println!("device_id={}", prepared.device_state.identity().device_id());
+    println!(
+        "ratchet_prekey_pool_generation={}",
+        prepared.listener_prekey_pool.generation()
+    );
+    println!(
+        "fanout_device_count={}",
+        ticket.listener_directory().pools().len()
+    );
+    println!("route_policy={}", route_policy.as_str());
+    println!("allowed_requester_account_id={allowed_requester_account_id}");
+    println!(
+        "authority_revision={}",
+        ticket.listener_authority_snapshot().revision()
+    );
+    println!("authority_store={:?}", prepared.authority_snapshot_store);
+    println!("runtime_max_sessions={max_sessions}");
+    println!("runtime_idle_seconds={idle_seconds}");
+    println!("ticket={encoded_ticket}");
+    if let Some(path) = &ticket_file {
+        publish_runtime_ticket(path, encoded_ticket.as_bytes())?;
+        println!("ticket_file={}", path.display());
+        println!("ticket_publish=atomic-replace");
+    }
+    println!("status=runtime-listening");
+
+    let session_binding = SyncSessionBinding::from_transport_label(&endpoint.id().to_string());
+    let mut accepted_sessions = 0_usize;
+    let stop_reason = loop {
+        match wait_for_runtime_event(&endpoint, idle_seconds).await? {
+            RuntimeEvent::IdleTimeout => break "idle-timeout",
+            RuntimeEvent::Shutdown => break "ctrl-c",
+            RuntimeEvent::Connection(connection) => {
+                accepted_sessions += 1;
+                println!("runtime_session={accepted_sessions}");
+                println!("peer_id={}", connection.remote_id());
+                let route_result = await_route_policy(&connection, route_policy, ROUTE_POLICY_WAIT)
+                    .await
+                    .context("wait for an incoming path allowed by the runtime ticket");
+                let session_result = match route_result {
+                    Ok(ready_path) => {
+                        print_ready_path(&ready_path);
+                        match handle_runtime_application_connection(
+                            &connection,
+                            &state_dir,
+                            &ticket,
+                            session_binding,
+                            allowed_requester_account_id,
+                            route_policy,
+                        )
+                        .await
+                        {
+                            Ok(result) => result,
+                            Err(error) => {
+                                connection
+                                    .close(1_u32.into(), b"kilogram runtime local state failure");
+                                endpoint.close().await;
+                                return Err(error).context(
+                                    "stop runtime after a local state/vault session failure",
+                                );
+                            }
+                        }
+                    }
+                    Err(error) => Err(error),
+                };
+                match session_result {
+                    Ok(()) => println!("runtime_session_status=completed"),
+                    Err(error) => {
+                        eprintln!(
+                            "runtime_session_status=failed runtime_session={accepted_sessions} error={error:#}"
+                        );
+                    }
+                }
+                let _ = timeout(Duration::from_secs(2), connection.closed()).await;
+                connection.close(0_u32.into(), b"kilogram runtime session complete");
+                if max_sessions != 0 && accepted_sessions >= max_sessions {
+                    break "session-limit";
+                }
+                println!("status=runtime-listening");
+            }
+        }
+    };
+
+    endpoint.close().await;
+    println!("runtime_sessions_accepted={accepted_sessions}");
+    println!("runtime_stop_reason={stop_reason}");
+    println!("status=runtime-stopped");
+    Ok(())
+}
+
+fn prepare_runtime_listener(
+    state_directory: &Path,
+    device_list_file: &Path,
+    peer_prekey_pool_files: &[PathBuf],
+) -> Result<PreparedRuntimeListener> {
+    let device_state = load_command_device_state(state_directory)?;
+    let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+    let listener_certificate = trust
+        .load_certificate()
+        .context("load runtime Account Root certificate")?;
+    let listener_device_list = AccountDeviceListSnapshot::decode_and_verify(
+        &fs::read(device_list_file).with_context(|| {
+            format!(
+                "read runtime device list from {}",
+                device_list_file.display()
+            )
+        })?,
+    )
+    .context("decode and verify runtime account device list")?;
+    ensure!(
+        listener_device_list.certificate_for(listener_certificate.device_id())
+            == Some(&listener_certificate),
+        "runtime certificate is not present exactly in the supplied device list"
+    );
+    let authority_snapshot_store = install_own_authority_primary(
+        state_directory,
+        &device_state,
+        listener_device_list.authority_snapshot(),
+    )
+    .context("install authority snapshot embedded in runtime device list")?;
+    let now_unix_seconds = unix_time_now().context("read time for runtime prekey freshness")?;
+    let listener_prekey_pool = run_state_transaction(state_directory, |transaction| {
+        let mut ratchet_state = transaction.load_ratchet_state()?;
+        ratchet_state
+            .prekey_pool(
+                device_state.identity(),
+                DEFAULT_PREKEY_POOL_SIZE,
+                now_unix_seconds,
+                DEFAULT_PREKEY_POOL_VALIDITY_SECONDS,
+            )
+            .context("publish runtime one-time prekey pool")
+    })?;
+    let mut prekey_pools = vec![listener_prekey_pool.clone()];
+    for path in peer_prekey_pool_files {
+        prekey_pools.push(
+            SignedPrekeyPool::decode(&fs::read(path).with_context(|| {
+                format!("read runtime peer prekey pool from {}", path.display())
+            })?)
+            .with_context(|| format!("verify runtime peer prekey pool from {}", path.display()))?,
+        );
+    }
+    let listener_directory = AccountPrekeyDirectory::new(listener_device_list, prekey_pools)
+        .context("assemble complete runtime account prekey directory")?;
+    listener_directory
+        .verify_at(now_unix_seconds)
+        .context("verify runtime account prekey directory freshness")?;
+    Ok(PreparedRuntimeListener {
+        device_state,
+        listener_certificate,
+        listener_directory,
+        listener_prekey_pool,
+        authority_snapshot_store,
+    })
+}
+
+fn publish_runtime_ticket(path: &Path, encoded_ticket: &[u8]) -> Result<()> {
+    let parent = path
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty());
+    if let Some(parent) = parent {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("create runtime ticket directory {}", parent.display()))?;
+    }
+    let temporary_directory = parent.unwrap_or_else(|| Path::new("."));
+    let mut temporary =
+        NamedTempFile::new_in(temporary_directory).context("create temporary runtime ticket")?;
+    temporary
+        .write_all(encoded_ticket)
+        .context("write temporary runtime ticket")?;
+    temporary
+        .as_file()
+        .sync_all()
+        .context("sync temporary runtime ticket")?;
+    let persisted = temporary
+        .persist(path)
+        .map_err(|error| error.error)
+        .with_context(|| format!("atomically publish runtime ticket to {}", path.display()))?;
+    persisted
+        .sync_all()
+        .with_context(|| format!("sync published runtime ticket at {}", path.display()))?;
+    Ok(())
+}
+
+async fn wait_for_runtime_event(endpoint: &Endpoint, idle_seconds: u64) -> Result<RuntimeEvent> {
+    let accept = accept_authenticated_connection(endpoint);
+    tokio::pin!(accept);
+    let shutdown = tokio::signal::ctrl_c();
+    tokio::pin!(shutdown);
+    if idle_seconds == 0 {
+        tokio::select! {
+            connection = &mut accept => connection.map(RuntimeEvent::Connection),
+            signal = &mut shutdown => {
+                signal.context("install or receive Ctrl+C runtime signal")?;
+                Ok(RuntimeEvent::Shutdown)
+            }
+        }
+    } else {
+        tokio::select! {
+            connection = &mut accept => connection.map(RuntimeEvent::Connection),
+            signal = &mut shutdown => {
+                signal.context("install or receive Ctrl+C runtime signal")?;
+                Ok(RuntimeEvent::Shutdown)
+            }
+            () = tokio::time::sleep(Duration::from_secs(idle_seconds)) => {
+                Ok(RuntimeEvent::IdleTimeout)
+            }
+        }
+    }
+}
+
+async fn acquire_runtime_state_lock(state_directory: &Path) -> Result<Option<StateDirectoryLock>> {
+    let started = tokio::time::Instant::now();
+    loop {
+        match StateDirectoryLock::acquire(state_directory) {
+            Ok(state_lock) => return Ok(Some(state_lock)),
+            Err(StateError::AlreadyLocked { .. })
+                if started.elapsed() < RUNTIME_STATE_LOCK_WAIT =>
+            {
+                tokio::time::sleep(RUNTIME_STATE_LOCK_RETRY).await;
+            }
+            Err(StateError::AlreadyLocked { .. }) => return Ok(None),
+            Err(error) => {
+                return Err(error)
+                    .context("lock state directory for an accepted runtime application session");
+            }
+        }
+    }
+}
+
+async fn handle_runtime_application_connection(
+    connection: &Connection,
+    state_directory: &Path,
+    ticket: &ConnectionTicket,
+    session_binding: SyncSessionBinding,
+    allowed_requester_account_id: AccountId,
+    route_policy: RoutePolicy,
+) -> Result<Result<()>> {
+    let Some(state_lock) = acquire_runtime_state_lock(state_directory).await? else {
+        return Ok(Err(anyhow::Error::msg(format!(
+            "runtime state lock remained busy for {:.1}s",
+            RUNTIME_STATE_LOCK_WAIT.as_secs_f64()
+        ))));
+    };
+    let vault_guard = VaultDualWriteGuard::prepare(state_directory)?;
+    let preparation_result = (|| {
+        let device_state = load_command_device_state(state_directory)?;
+        ensure!(
+            device_state.identity().device_id() == ticket.listener_device_id(),
+            "runtime device identity changed after the connection ticket was published"
+        );
+        let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+        let listener_certificate = trust
+            .load_certificate()
+            .context("load runtime listener certificate for accepted session")?;
+        ensure!(
+            listener_certificate == *ticket.listener_certificate(),
+            "runtime listener certificate changed after the connection ticket was published"
+        );
+        let immutable_reads = open_immutable_read_repositories(state_directory)
+            .context("capture immutable runtime session state before local changes")?;
+        let event_store = open_event_store(state_directory)?;
+        let local_message_store = open_local_message_store(state_directory)?;
+        Ok::<_, anyhow::Error>((
+            device_state,
+            listener_certificate,
+            immutable_reads,
+            event_store,
+            local_message_store,
+        ))
+    })();
+    let operation_result = match preparation_result {
+        Ok((
+            device_state,
+            listener_certificate,
+            immutable_reads,
+            event_store,
+            local_message_store,
+        )) => {
+            handle_authorized_application_connection(
+                connection,
+                state_directory,
+                &device_state,
+                &event_store,
+                &local_message_store,
+                immutable_reads,
+                &listener_certificate,
+                session_binding,
+                allowed_requester_account_id,
+                route_policy,
+                ticket.listener_directory().device_list(),
+                None,
+            )
+            .await
+        }
+        Err(error) => {
+            let mirror_result = match vault_guard {
+                Some(guard) => guard.finish(),
+                None => Ok(()),
+            };
+            drop(state_lock);
+            return match mirror_result {
+                Ok(()) => Err(error.context("prepare accepted runtime session state")),
+                Err(mirror_error) => Err(error.context(format!(
+                    "prepare accepted runtime session state and finish failed vault mirror: {mirror_error:#}"
+                ))),
+            };
+        }
+    };
+    let mirror_result = match vault_guard {
+        Some(guard) => guard.finish(),
+        None => Ok(()),
+    };
+    let result = match mirror_result {
+        Ok(()) => Ok(operation_result),
+        Err(mirror_error) => Err(mirror_error
+            .context("finish runtime session state-vault mirror after application operation")),
+    };
+    drop(state_lock);
+    result
+}
+
 async fn listen_inner(options: ListenOptions) -> Result<()> {
     let ListenOptions {
         state_dir,
@@ -3023,26 +3500,62 @@ async fn listen_inner(options: ListenOptions) -> Result<()> {
     print_ready_path(&ready_path);
 
     let session_binding = SyncSessionBinding::from_transport_label(&endpoint.id().to_string());
-    let authorized_requester = accept_device_authorization(
+    handle_authorized_application_connection(
         &connection,
         &state_dir,
         &device_state,
+        &event_store,
+        &local_message_store,
+        immutable_reads,
+        &listener_certificate,
+        session_binding,
+        allowed_requester_account_id,
+        route_policy,
+        ticket.listener_directory().device_list(),
+        history_rewrap_approval.as_ref(),
+    )
+    .await?;
+    let _ = timeout(Duration::from_secs(2), connection.closed()).await;
+    drop(recovery_discovery_publisher);
+    endpoint.close().await;
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn handle_authorized_application_connection(
+    connection: &Connection,
+    state_directory: &Path,
+    device_state: &DeviceState,
+    event_store: &EventStore,
+    local_message_store: &LocalMessageStore,
+    immutable_reads: ImmutableReadRepositories,
+    listener_certificate: &DeviceCertificate,
+    session_binding: SyncSessionBinding,
+    allowed_requester_account_id: AccountId,
+    route_policy: RoutePolicy,
+    listener_device_list: &AccountDeviceListSnapshot,
+    history_rewrap_approval: Option<&HistoryRewrapApproval>,
+) -> Result<()> {
+    let authorized_requester = accept_device_authorization(
+        connection,
+        state_directory,
+        device_state,
         session_binding,
         allowed_requester_account_id,
     )
     .await?;
 
     let (mut send, mut receive) =
-        accept_bi(&connection, "accept authorized application stream").await?;
+        accept_bi(connection, "accept authorized application stream").await?;
     let request = read_client_request(&mut receive).await?;
     let print_transport_after_request = match request {
         ClientRequest::DeliverEvent(event) => {
             handle_delivery_request(
                 DeliveryState {
-                    state_directory: &state_dir,
-                    device_state: &device_state,
-                    event_store: &event_store,
-                    local_message_store: &local_message_store,
+                    state_directory,
+                    device_state,
+                    event_store,
+                    local_message_store,
                 },
                 &mut send,
                 *event,
@@ -3054,20 +3567,20 @@ async fn listen_inner(options: ListenOptions) -> Result<()> {
         ClientRequest::SyncInventory(inventory) => {
             print_immutable_read_diagnostics("sync", &immutable_reads);
             let decrypting_store = DecryptingSessionStore::new(
-                &state_dir,
-                &event_store,
-                &local_message_store,
-                &device_state,
+                state_directory,
+                event_store,
+                local_message_store,
+                device_state,
                 listener_certificate.account_id(),
                 immutable_reads,
             );
             handle_sync_request(
                 SyncHandlerState {
-                    state_directory: &state_dir,
-                    device_state: &device_state,
+                    state_directory,
+                    device_state,
                     decrypting_store: &decrypting_store,
                 },
-                &connection,
+                connection,
                 send,
                 inventory,
                 session_binding,
@@ -3081,17 +3594,17 @@ async fn listen_inner(options: ListenOptions) -> Result<()> {
         ClientRequest::HistoryRewrap(request) => {
             drop(receive);
             serve_history_rewrap_session(
-                &state_dir,
-                &device_state,
+                state_directory,
+                device_state,
                 Some(&immutable_reads),
-                &connection,
+                connection,
                 route_policy,
                 send,
                 request,
                 session_binding,
                 &authorized_requester,
-                ticket.listener_directory().device_list(),
-                history_rewrap_approval.as_ref(),
+                listener_device_list,
+                history_rewrap_approval,
             )
             .await?;
             false
@@ -3102,11 +3615,8 @@ async fn listen_inner(options: ListenOptions) -> Result<()> {
     };
 
     if print_transport_after_request {
-        print_transport_diagnostics(&connection, route_policy).await?;
+        print_transport_diagnostics(connection, route_policy).await?;
     }
-    let _ = timeout(Duration::from_secs(2), connection.closed()).await;
-    drop(recovery_discovery_publisher);
-    endpoint.close().await;
     Ok(())
 }
 
@@ -9035,6 +9545,19 @@ mod tests {
             event_record_count: 0,
             local_projection_record_count: 0,
         })
+    }
+
+    #[test]
+    fn runtime_ticket_publication_creates_parent_and_replaces_existing_value() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let ticket = directory.path().join("published/runtime.ticket");
+
+        publish_runtime_ticket(&ticket, b"first-ticket")?;
+        assert_eq!(fs::read(&ticket)?, b"first-ticket");
+        publish_runtime_ticket(&ticket, b"second-ticket")?;
+        assert_eq!(fs::read(&ticket)?, b"second-ticket");
+
+        Ok(())
     }
 
     #[test]

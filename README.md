@@ -75,12 +75,14 @@ The first native Windows recovery platform context is specified in
 [`docs/RFC-0034-windows-recovery-platform-context.md`](docs/RFC-0034-windows-recovery-platform-context.md).
 The bounded event-driven Windows recovery worker is specified in
 [`docs/RFC-0035-bounded-windows-recovery-worker.md`](docs/RFC-0035-bounded-windows-recovery-worker.md).
+The first long-lived multi-session messaging runtime is specified in
+[`docs/RFC-0036-long-lived-messaging-runtime.md`](docs/RFC-0036-long-lived-messaging-runtime.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.8 bounded Windows recovery worker — complete
+## Current milestone: M0.9.9 long-lived messaging runtime — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -217,18 +219,32 @@ is never treated as Ethernet by guess: the adapter may use one unambiguous activ
 physical profile underneath it, while absent or conflicting evidence becomes
 `unknown`. Metered or roaming profiles use the already signed `mobile` policy
 bucket. The old network/power arguments remain an all-or-none development
-override; other platforms fail closed until they gain their own adapter. OS
-background registration remained future work at that boundary; M0.9.8 adds
-the bounded process and change-event wakeups without installing an OS task.
+override; other platforms fail closed until they gain their own adapter.
+Optional OS background registration remained future work at that boundary;
+M0.9.8 adds the bounded process and change-event wakeups without installing an
+OS task.
 
 M0.9.8 adds `history-recovery-plan-watch`, a bounded foreground worker ready for
-later Windows background registration. It waits for the recipient-signed retry
-deadline or native WinRT network/power change events, polls the signed scheduler
-chain for cross-process cancellation without holding the state lock, and stops
-at explicit runtime and wakeup limits. The runner re-probes policy immediately
-before discovery and again before connection; a newly forbidden context opens
-no connection and cannot bypass consent. OS service/Task Scheduler installation
-is deliberately still a separate platform-integration step.
+optional later Windows background integration. It waits for the
+recipient-signed retry deadline or native WinRT network/power change events,
+polls the signed scheduler chain for cross-process cancellation without holding
+the state lock, and stops at explicit runtime and wakeup limits. The runner
+re-probes policy immediately before discovery and again before connection; a
+newly forbidden context opens no connection and cannot bypass consent. OS
+service/Task Scheduler installation is deliberately not required: an ordinary
+running client can host the worker, while explicit autostart/background mode
+remains a future user-facing option.
+
+M0.9.9 adds `runtime`, the first long-lived messaging process boundary. One
+stable Iroh endpoint and signed ticket now serve successive delivery and sync
+connections; every connection is independently device/account authorized, and
+a failed session does not stop the listener. Network wait holds no device-state
+lock. Each accepted application session instead gets one bounded exclusive
+state/vault transaction, preserving the existing single-writer ratchet and
+sequence invariants while allowing foreground commands between sessions.
+Runtime exits cleanly on Ctrl+C or optional test bounds, and atomically replaces
+its public ticket after restart. Persistent contacts, an outbound queue,
+automatic reconnect/sync and local GUI API remain M0.9.10+ work.
 
 M0.8.1 adds a reversible encrypted shadow snapshot of the entire device state.
 `state-vault-migrate` publishes encrypted records and a keyed manifest in one
@@ -556,6 +572,25 @@ cargo run -p kilogram-cli -- listen `
   --route-policy auto
 ```
 
+For a client-like process that stays online across successive deliveries and
+syncs, use `runtime` with the same public inputs:
+
+```powershell
+cargo run -p kilogram-cli -- runtime `
+  --state-dir .tmp/bob `
+  --allow-account <ALICE_ACCOUNT_ID> `
+  --device-list-file .tmp/bob-devices.snapshot `
+  --ticket-file .tmp/bob-runtime.ticket `
+  --route-policy auto
+```
+
+The ticket remains valid while this process is running. Separate `connect` and
+`sync` invocations can reuse it; stop the runtime with Ctrl+C. On restart the
+runtime atomically replaces the ticket with one containing its new Endpoint ID.
+`--max-sessions` and `--idle-seconds` provide optional bounded test/embedding
+modes; zero means no such bound. M0.9.9 does not yet include the local outbound
+queue or automatic contact-ticket refresh planned for M0.9.10.
+
 For every additional device in Bob's signed list, export its current public
 pool and repeat `--peer-prekey-pool-file <DEVICE.prekeys>` on the listener:
 
@@ -580,10 +615,13 @@ cargo run -p kilogram-cli -- connect `
   --message "hello"
 ```
 
-The listener exits after acknowledging one event. Reusing a state directory
-preserves the application device ID and advances its author sequence across
-restarts. Do not run two processes against the same state directory: the M0
-sequence allocator is intentionally single-process only.
+The one-shot listener exits after acknowledging one event; `runtime` returns to
+listening. Reusing a state directory preserves the application device ID and
+advances its author sequence across restarts. Ordinary commands retain an
+exclusive outer lock. The runtime instead holds the same lock only during one
+accepted application session and waits briefly for a foreground command, so do
+not start two runtimes or otherwise introduce multiple concurrent state writers
+for one state directory.
 
 Inspect and cryptographically verify the local history after either process has
 exited:

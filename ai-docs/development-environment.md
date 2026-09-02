@@ -541,6 +541,20 @@ toolchain `1.98.0` для воспроизводимой разработки.
     свободный state lock во время wait и signed cross-process cancel за 1.733 s
     без connection после cancel; отдельный long discovery был прерван runtime
     bound, lease записан failure, bounded cleanup завершилась за 4.022 s.
+65. M0.9.9 добавил `runtime`: stable Iroh endpoint/ticket обслуживает successive
+    delivery/sync sessions, каждый connection повторяет authorization, а failed
+    session не завершает процесс. Runtime исключён из outer state lock/vault
+    guard; route wait проходит без lock, accepted application session получает
+    typed retry до 15 s и отдельный dual-write. Ticket публикуется atomic replace;
+    Tokio workspace получил feature `signal` для clean Ctrl+C. Unit test покрывает
+    create/replace ticket. Process smoke
+    `.tmp/m099-smoke-20260902-182050` выполнил два connects + sync через один
+    Endpoint ID (3 sessions, 4 events, identical histories), затем restart
+    сменил Endpoint ID/ticket и доставил третье сообщение (6 events, histories
+    equal). Final regression выполнил ещё delivery + sync через двухсессионный
+    runtime, histories сошлись на 8 events; idle-bound control завершился через
+    одну секунду с 0 sessions. Все 122 workspace tests, rustfmt, strict Clippy и
+    release build проходят.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -591,7 +605,8 @@ M0.9.5 — consent-bound retry plan/coordinator с fresh endpoint matching;
 M0.9.6 — signed append-only scheduler state с restart resume и cancellation.
 M0.9.7 — Windows-native recovery platform context и provider boundary;
 M0.9.8 — bounded Windows recovery worker, native change events и повторный
-policy gate перед discovery/connect.
+policy gate перед discovery/connect; M0.9.9 — long-lived multi-session
+messaging runtime со stable endpoint и per-session state transaction.
 Paged/Merkle index, production non-Windows local provider, согласованный
 monotonic rollback witness, автоматический backup lifecycle и физическое
 retirement остальных compatibility shadows ещё не реализованы.

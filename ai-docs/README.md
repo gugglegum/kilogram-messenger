@@ -117,7 +117,11 @@ multi-source claim reconciliation. M0.7.9 добавил signed append-only chec
   metered/roaming используют signed `mobile` bucket, ambiguity остаётся unknown.
   M0.9.8 добавил bounded worker, WinRT network/power change subscriptions,
   signed-deadline wakeup, cross-process cancel polling и policy recheck перед
-  discovery/connect без удержания state lock во время wait.
+  discovery/connect без удержания state lock во время wait. M0.9.9 добавил
+  long-lived messaging runtime: один endpoint/ticket обслуживает successive
+  delivery/sync sessions, network wait не держит state lock, а каждая сессия
+  получает отдельную vault-mirrored transaction; restart атомарно публикует
+  новый ticket.
   Reconciliation выбирает
   inventory только при совпадении двух или более полных явно собранных claims и
   всё равно не обещает global completeness.
@@ -278,23 +282,25 @@ summaries, membership removal и группы ещё не реализованы
 
 ## План ближайших работ
 
-1. Добавить production macOS/Linux local key provider, согласованный monotonic
-   witness и lifecycle обновления portable recovery package.
-2. Зарегистрировать M0.9.8 bounded worker как настоящий Windows OS background
-   service/task и закрыть sleep/reboot/logon lifecycle; затем macOS/Linux/mobile
-   providers. Расширить
-   M0.9.4 LAN discovery до privacy-preserving wide-area publication/gossip/
-   mailbox. Live camera/clipboard оставить platform UI поверх M0.9.3.
-3. Спроектировать membership removal вместе с ordered security log и MLS epoch;
+1. M0.9.10: persistent contact/runtime descriptor, локальная исходящая очередь,
+   bounded reconnect/backoff и automatic sync trigger внутри M0.9.9 process.
+2. M0.9.11: локальный IPC/API для UI; M0.9.12: minimal Windows GUI. Optional
+   autostart/background mode оставить явной настройкой, а не обязательным
+   Task Scheduler этапом.
+3. Добавить production macOS/Linux local key provider, согласованный monotonic
+   witness и lifecycle обновления portable recovery package; затем mobile
+   providers. Расширить M0.9.4 LAN discovery до privacy-preserving wide-area
+   publication/gossip/mailbox. Live camera/clipboard оставить platform UI.
+4. Спроектировать membership removal вместе с ordered security log и MLS epoch;
    отдельно — gossip/witness для first-contact freshness.
-4. Спроектировать seed/recovery authority, protected root storage, root
+5. Спроектировать seed/recovery authority, protected root storage, root
    rotation и конфликтующие authority operations.
-5. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
-6. Спроектировать финальный wire format подписанного события и алгоритм
+6. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
+7. Спроектировать финальный wire format подписанного события и алгоритм
    линеаризации.
-7. Спроектировать compact Merkle/range summary и переносимый signed cursor.
-8. Добавить небольшие MLS-группы.
-9. Перед публичным выпуском провести независимый криптографический аудит.
+8. Спроектировать compact Merkle/range summary и переносимый signed cursor.
+9. Добавить небольшие MLS-группы.
+10. Перед публичным выпуском провести независимый криптографический аудит.
 
 ## Навигация
 
@@ -373,5 +379,7 @@ summaries, membership removal и группы ещё не реализованы
   реализованный M0.9.7 Windows-native network/metered/roaming/power snapshot и fail-closed provider boundary.
 - [`../docs/RFC-0035-bounded-windows-recovery-worker.md`](../docs/RFC-0035-bounded-windows-recovery-worker.md) —
   реализованный M0.9.8 bounded process, native change events, signed deadline/cancel wakeup и повторный policy gate.
+- [`../docs/RFC-0036-long-lived-messaging-runtime.md`](../docs/RFC-0036-long-lived-messaging-runtime.md) —
+  реализованный M0.9.9 stable endpoint, multi-session listener и per-session state/vault transaction.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

@@ -105,8 +105,9 @@ Recovery plan v1, scheduler state v1, URI v1, ticket v9, ALPN
 
 ## 7. Что остаётся дальше
 
-- явная установка/удаление Windows Task Scheduler task или service с
-  least-privilege identity и безопасной передачей plan path;
+- optional явная установка/удаление Windows Task Scheduler task или service с
+  least-privilege identity и безопасной передачей plan path; обычный запущенный
+  клиент может хостить worker без этой интеграции;
 - wake компьютера из sleep и обработка logon/logoff/reboot lifecycle;
 - macOS/Linux/Android/iOS providers и native event loops;
 - monotonic rollback witness для всей scheduler chain;
