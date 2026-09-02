@@ -161,8 +161,9 @@ message. Новых dependencies нет.
 
 ## 8. Что остаётся дальше
 
-- настоящий OS background service/task с wakeup и network-change events;
-- macOS/Linux/mobile adapters и Windows event subscriptions поверх M0.9.7;
+- M0.9.8 уже добавил bounded Windows process, native change events и повторный
+  policy gate; остаётся зарегистрировать его как OS service/task;
+- macOS/Linux/mobile adapters той же platform boundary;
 - внешний rollback witness для persistent scheduler state из M0.9.6;
 - wide-area privacy-preserving descriptor lookup вместо LAN-only multicast;
 - plan listing/revocation UI и защищённое локальное хранение metadata;

@@ -177,8 +177,8 @@ recovery checkpoints не изменились. Scheduler state — только
 
 ## 9. Что остаётся дальше
 
-- настоящий Windows background task и change events поверх M0.9.7 probe;
-- регистрация настоящего OS background task/service и wakeup/cancel events;
+- M0.9.8 уже добавил bounded Windows process, change events и cancel polling;
+- регистрация настоящего OS background task/service и sleep/reboot/logon lifecycle;
 - внешний monotonic rollback witness для scheduler state;
 - compaction signed chain без потери rollback evidence;
 - wide-area privacy-preserving descriptor lookup вместо LAN-only multicast;

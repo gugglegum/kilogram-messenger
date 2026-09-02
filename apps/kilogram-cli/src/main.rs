@@ -41,7 +41,7 @@ use kilogram_session::{
 };
 use kilogram_state::{
     DeviceIdentityStateRepository, EncryptedStateVault, STATE_VAULT_FILE, STATE_VAULT_KEY_FILE,
-    StateDirectoryLock, StateMirrorRepository, StateRecordKind, StateTransaction,
+    StateDirectoryLock, StateError, StateMirrorRepository, StateRecordKind, StateTransaction,
     TrustStateRepository, TypedStateRepository, VaultIdentityShadowOutcome, VaultMigrationOutcome,
     VaultMirrorCommit, VaultMirrorOutcome, VaultPrimaryWriteRepository, VaultRecoveryWitness,
     VaultReport,
@@ -84,8 +84,8 @@ use recovery_plan::{
     RecoveryExecutionPolicy, RecoveryNetworkClass, RecoveryPowerSource, SignedHistoryRecoveryPlan,
 };
 use recovery_platform::{
-    print_recovery_platform_context, resolve_recovery_platform_context,
-    system_recovery_platform_context,
+    RecoveryPlatformChangeWait, print_recovery_platform_context, resolve_recovery_platform_context,
+    subscribe_recovery_platform_changes, system_recovery_platform_context,
 };
 use recovery_qr::{
     RecoveryQrDecodeReport, RecoveryQrRenderReport, decode_recovery_link_qr_image,
@@ -116,6 +116,14 @@ const TICKET_VERSION: u8 = 9;
 const MAX_RECOVERY_PASSPHRASE_FILE_BYTES: u64 = 4098;
 const DEFAULT_HISTORY_RECOVERY_SCHEDULER_ATTEMPTS: usize = 3;
 const MAX_HISTORY_RECOVERY_SCHEDULER_ATTEMPTS: usize = 8;
+const DEFAULT_HISTORY_RECOVERY_WORKER_RUNTIME_SECONDS: u64 = 60 * 60;
+const MAX_HISTORY_RECOVERY_WORKER_RUNTIME_SECONDS: u64 = 24 * 60 * 60;
+const DEFAULT_HISTORY_RECOVERY_WORKER_WAKEUPS: usize = 64;
+const MAX_HISTORY_RECOVERY_WORKER_WAKEUPS: usize = 1024;
+const DEFAULT_HISTORY_RECOVERY_WORKER_CANCEL_POLL_SECONDS: u64 = 5;
+const MAX_HISTORY_RECOVERY_WORKER_CANCEL_POLL_SECONDS: u64 = 30;
+const HISTORY_RECOVERY_WORKER_LOCK_RETRY: Duration = Duration::from_millis(25);
+const HISTORY_RECOVERY_WORKER_LOCK_WAIT: Duration = Duration::from_secs(2);
 
 type CommandFuture = Pin<Box<dyn Future<Output = Result<()>>>>;
 
@@ -679,6 +687,69 @@ enum Command {
         max_pages: usize,
     },
 
+    /// Watch one approved plan and wake its bounded runner on native platform changes or deadlines.
+    HistoryRecoveryPlanWatch {
+        /// Directory containing the recipient device, checkpoints, and scheduler state.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Recipient-signed plan created by history-recovery-plan-approve.
+        #[arg(long)]
+        plan_file: PathBuf,
+
+        /// Local conversation label whose derived ID must match the approved plan.
+        #[arg(long)]
+        conversation: String,
+
+        /// Active runtime bound; bounded signed-state cleanup may follow.
+        #[arg(
+            long,
+            default_value_t = DEFAULT_HISTORY_RECOVERY_WORKER_RUNTIME_SECONDS,
+            value_parser = clap::value_parser!(u64).range(1..=MAX_HISTORY_RECOVERY_WORKER_RUNTIME_SECONDS)
+        )]
+        max_runtime_seconds: u64,
+
+        /// Maximum initial/deadline/platform/scheduler-state wakes handled by this process.
+        #[arg(long, default_value_t = DEFAULT_HISTORY_RECOVERY_WORKER_WAKEUPS)]
+        max_wakeups: usize,
+
+        /// Maximum delay before observing a signed cancellation made by another process.
+        #[arg(
+            long,
+            default_value_t = DEFAULT_HISTORY_RECOVERY_WORKER_CANCEL_POLL_SECONDS,
+            value_parser = clap::value_parser!(u64).range(1..=MAX_HISTORY_RECOVERY_WORKER_CANCEL_POLL_SECONDS)
+        )]
+        cancel_poll_seconds: u64,
+
+        /// LAN discovery duration within each worker attempt.
+        #[arg(
+            long,
+            default_value_t = DEFAULT_DISCOVERY_WAIT_SECONDS,
+            value_parser = clap::value_parser!(u64).range(1..=MAX_DISCOVERY_WAIT_SECONDS)
+        )]
+        discovery_wait_seconds: u64,
+
+        /// Initial persistent retry delay before exponential backoff and jitter.
+        #[arg(
+            long = "retry-base-seconds",
+            default_value_t = DEFAULT_RECOVERY_RETRY_BASE_SECONDS,
+            value_parser = clap::value_parser!(u64).range(0..=MAX_RECOVERY_RETRY_BASE_SECONDS)
+        )]
+        retry_base_seconds: u64,
+
+        /// Maximum persistent retry delay after exponential backoff and jitter.
+        #[arg(
+            long,
+            default_value_t = DEFAULT_RECOVERY_RETRY_MAX_SECONDS,
+            value_parser = clap::value_parser!(u64).range(0..=MAX_RECOVERY_RETRY_MAX_SECONDS)
+        )]
+        retry_max_seconds: u64,
+
+        /// Maximum pages transferred over any one authenticated connection.
+        #[arg(long, default_value_t = MAX_HISTORY_RECOVERY_PAGES_PER_SESSION)]
+        max_pages: usize,
+    },
+
     /// Irreversibly cancel one previously approved local recovery plan.
     HistoryRecoveryPlanCancel {
         /// Directory containing the exact recipient device and scheduler state.
@@ -954,6 +1025,7 @@ impl Command {
             | Self::HistoryRecoveryLinkDiscover { state_dir, .. }
             | Self::HistoryRecoveryPlanApprove { state_dir, .. }
             | Self::HistoryRecoveryPlanRun { state_dir, .. }
+            | Self::HistoryRecoveryPlanWatch { state_dir, .. }
             | Self::HistoryRecoveryPlanCancel { state_dir, .. }
             | Self::HistoryRewrapReconcile { state_dir, .. }
             | Self::History { state_dir, .. }
@@ -995,11 +1067,16 @@ impl Command {
                     | Self::StateVaultKeyImport { .. }
                     | Self::StateVaultRestore { .. }
                     | Self::HistoryRecoveryPlanRun { .. }
+                    | Self::HistoryRecoveryPlanWatch { .. }
             )
     }
 
     fn uses_outer_state_lock(&self) -> bool {
-        self.state_directory().is_some() && !matches!(self, Self::HistoryRecoveryPlanRun { .. })
+        self.state_directory().is_some()
+            && !matches!(
+                self,
+                Self::HistoryRecoveryPlanRun { .. } | Self::HistoryRecoveryPlanWatch { .. }
+            )
     }
 }
 
@@ -1751,6 +1828,32 @@ async fn run_command(command: Command) -> Result<()> {
                 retry_max_seconds,
                 max_pages,
             ))
+            .await
+        }
+        Command::HistoryRecoveryPlanWatch {
+            state_dir,
+            plan_file,
+            conversation,
+            max_runtime_seconds,
+            max_wakeups,
+            cancel_poll_seconds,
+            discovery_wait_seconds,
+            retry_base_seconds,
+            retry_max_seconds,
+            max_pages,
+        } => {
+            Box::pin(watch_history_recovery_plan(HistoryRecoveryWorkerOptions {
+                state_dir,
+                plan_file,
+                conversation,
+                max_runtime_seconds,
+                max_wakeups,
+                cancel_poll_seconds,
+                discovery_wait_seconds,
+                retry_base_seconds,
+                retry_max_seconds,
+                max_pages,
+            }))
             .await
         }
         Command::HistoryRecoveryPlanCancel {
@@ -4954,6 +5057,71 @@ async fn run_approved_recovery_attempt(
     combine_operation_and_mirror(operation_result, mirror_result)
 }
 
+fn prepare_history_recovery_scheduler_state(
+    state_dir: &Path,
+    conversation: &str,
+    plan: &SignedHistoryRecoveryPlan,
+    now_unix_seconds: u64,
+) -> Result<(SignedRecoverySchedulerState, bool)> {
+    with_locked_state(state_dir, || {
+        let (device_state, _) =
+            verify_history_recovery_plan_locally(state_dir, conversation, plan, now_unix_seconds)?;
+        let complete = latest_checkpoint_for_plan(state_dir, &device_state, plan)?.is_complete();
+        let mut scheduler_state = load_or_initialize_recovery_scheduler_state(
+            state_dir,
+            device_state.identity(),
+            plan,
+            now_unix_seconds,
+        )?;
+        if complete && !scheduler_state.lifecycle().is_terminal() {
+            scheduler_state =
+                scheduler_state.complete(device_state.identity(), now_unix_seconds)?;
+            persist_recovery_scheduler_state(state_dir, &scheduler_state)?;
+        }
+        ensure!(
+            scheduler_state.lifecycle() != RecoverySchedulerLifecycle::Completed || complete,
+            "scheduler claims completion but the signed recovery checkpoint is incomplete"
+        );
+        Ok((scheduler_state, complete))
+    })
+}
+
+#[derive(Debug)]
+struct RecoveryPolicyBlocked {
+    stage: &'static str,
+}
+
+impl std::fmt::Display for RecoveryPolicyBlocked {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            formatter,
+            "current network/power context is blocked by the recipient-signed recovery plan at {}",
+            self.stage
+        )
+    }
+}
+
+impl std::error::Error for RecoveryPolicyBlocked {}
+
+fn recheck_recovery_execution_policy(
+    plan: &SignedHistoryRecoveryPlan,
+    platform_context: recovery_platform::RecoveryPlatformContext,
+    stage: &'static str,
+) -> Result<()> {
+    println!("history_recovery_policy_recheck_stage={stage}");
+    print_recovery_platform_context(&platform_context);
+    let allowed = plan.execution_policy().allows(
+        platform_context.network_class(),
+        platform_context.power_source(),
+    );
+    println!("history_recovery_policy_recheck_allowed={allowed}");
+    if allowed {
+        Ok(())
+    } else {
+        Err(RecoveryPolicyBlocked { stage }.into())
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 async fn run_history_recovery_plan(
     state_dir: PathBuf,
@@ -4985,31 +5153,12 @@ async fn run_history_recovery_plan(
     let power_source = platform_context.power_source();
     let plan = load_history_recovery_plan(&plan_file).await?;
     let now_unix_seconds = unix_time_now().context("read time for recovery scheduler")?;
-    let (mut scheduler_state, initially_complete) = with_locked_state(&state_dir, || {
-        let (device_state, _) = verify_history_recovery_plan_locally(
-            &state_dir,
-            &conversation,
-            &plan,
-            now_unix_seconds,
-        )?;
-        let complete = latest_checkpoint_for_plan(&state_dir, &device_state, &plan)?.is_complete();
-        let mut scheduler_state = load_or_initialize_recovery_scheduler_state(
-            &state_dir,
-            device_state.identity(),
-            &plan,
-            now_unix_seconds,
-        )?;
-        if complete && !scheduler_state.lifecycle().is_terminal() {
-            scheduler_state =
-                scheduler_state.complete(device_state.identity(), now_unix_seconds)?;
-            persist_recovery_scheduler_state(&state_dir, &scheduler_state)?;
-        }
-        ensure!(
-            scheduler_state.lifecycle() != RecoverySchedulerLifecycle::Completed || complete,
-            "scheduler claims completion but the signed recovery checkpoint is incomplete"
-        );
-        Ok((scheduler_state, complete))
-    })?;
+    let (mut scheduler_state, initially_complete) = prepare_history_recovery_scheduler_state(
+        &state_dir,
+        &conversation,
+        &plan,
+        now_unix_seconds,
+    )?;
     print_history_recovery_plan(&plan)?;
     println!("history_recovery_plan_file={}", plan_file.display());
     println!("history_recovery_plan_user_consent=previously-approved");
@@ -5040,7 +5189,7 @@ async fn run_history_recovery_plan(
         println!("history_recovery_scheduler_discovery_attempted=false");
         println!("connection_attempted=false");
         println!("status=history-recovery-scheduler-policy-blocked");
-        bail!("current network/power context is blocked by the recipient-signed recovery plan");
+        return Err(RecoveryPolicyBlocked { stage: "initial" }.into());
     }
 
     match scheduler_state.readiness(now_unix_seconds) {
@@ -5101,6 +5250,7 @@ async fn run_history_recovery_plan(
     for local_attempt in 1..=max_attempts {
         let attempt_now = unix_time_now()?;
         plan.verify_at(attempt_now)?;
+        recheck_recovery_execution_policy(&plan, platform_context.refreshed(), "before-discovery")?;
         let attempt_gate = with_locked_state(&state_dir, || {
             let (device_state, recipient_certificate) = verify_history_recovery_plan_locally(
                 &state_dir,
@@ -5248,48 +5398,69 @@ async fn run_history_recovery_plan(
                 println!("status=history-recovery-scheduler-cancelled");
                 return Ok(());
             }
-            println!("connection_attempted=true");
-            let transfer_result = run_approved_recovery_attempt(
-                &state_dir,
-                &conversation,
+            let connect_policy = recheck_recovery_execution_policy(
                 &plan,
-                &link,
-                approved_range_start,
-                approved_event_count,
-                page_size,
-                max_pages,
-            )
-            .await;
-            match transfer_result {
-                Ok(()) => {
-                    let complete = with_locked_state(&state_dir, || {
-                        let device_state = load_scheduler_signing_device(&state_dir, &plan)?;
-                        Ok(
-                            latest_checkpoint_for_plan(&state_dir, &device_state, &plan)?
-                                .is_complete(),
-                        )
-                    })?;
-                    if complete {
-                        println!(
-                            "history_recovery_scheduler_attempt_{persistent_attempt}_result=completed"
-                        );
-                        SchedulerAttemptResult::Completed
-                    } else {
-                        println!(
-                            "history_recovery_scheduler_attempt_{persistent_attempt}_result=paused"
-                        );
-                        SchedulerAttemptResult::Progressed
-                    }
-                }
+                platform_context.refreshed(),
+                "before-connect",
+            );
+            match connect_policy {
                 Err(error) => {
-                    let message = error.to_string().replace(['\r', '\n'], " ");
+                    println!("connection_attempted=false");
                     println!(
-                        "history_recovery_scheduler_attempt_{persistent_attempt}_result=failed"
+                        "history_recovery_scheduler_attempt_{persistent_attempt}_result=policy-blocked"
                     );
                     println!(
-                        "history_recovery_scheduler_attempt_{persistent_attempt}_error={message}"
+                        "history_recovery_scheduler_attempt_{persistent_attempt}_error={}",
+                        error.to_string().replace(['\r', '\n'], " ")
                     );
                     SchedulerAttemptResult::Failed
+                }
+                Ok(()) => {
+                    println!("connection_attempted=true");
+                    let transfer_result = run_approved_recovery_attempt(
+                        &state_dir,
+                        &conversation,
+                        &plan,
+                        &link,
+                        approved_range_start,
+                        approved_event_count,
+                        page_size,
+                        max_pages,
+                    )
+                    .await;
+                    match transfer_result {
+                        Ok(()) => {
+                            let complete = with_locked_state(&state_dir, || {
+                                let device_state =
+                                    load_scheduler_signing_device(&state_dir, &plan)?;
+                                Ok(
+                                    latest_checkpoint_for_plan(&state_dir, &device_state, &plan)?
+                                        .is_complete(),
+                                )
+                            })?;
+                            if complete {
+                                println!(
+                                    "history_recovery_scheduler_attempt_{persistent_attempt}_result=completed"
+                                );
+                                SchedulerAttemptResult::Completed
+                            } else {
+                                println!(
+                                    "history_recovery_scheduler_attempt_{persistent_attempt}_result=paused"
+                                );
+                                SchedulerAttemptResult::Progressed
+                            }
+                        }
+                        Err(error) => {
+                            let message = error.to_string().replace(['\r', '\n'], " ");
+                            println!(
+                                "history_recovery_scheduler_attempt_{persistent_attempt}_result=failed"
+                            );
+                            println!(
+                                "history_recovery_scheduler_attempt_{persistent_attempt}_error={message}"
+                            );
+                            SchedulerAttemptResult::Failed
+                        }
+                    }
                 }
             }
         } else if scan.candidates.is_empty() {
@@ -5334,6 +5505,425 @@ async fn run_history_recovery_plan(
     }
 
     bail!("history recovery scheduler reached an unreachable local attempt state")
+}
+
+#[derive(Debug)]
+struct HistoryRecoveryWorkerOptions {
+    state_dir: PathBuf,
+    plan_file: PathBuf,
+    conversation: String,
+    max_runtime_seconds: u64,
+    max_wakeups: usize,
+    cancel_poll_seconds: u64,
+    discovery_wait_seconds: u64,
+    retry_base_seconds: u64,
+    retry_max_seconds: u64,
+    max_pages: usize,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum HistoryRecoveryWorkerWakeReason {
+    Initial,
+    SchedulerDeadline,
+    PlatformChange,
+    SchedulerStateChange,
+}
+
+impl HistoryRecoveryWorkerWakeReason {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Initial => "initial",
+            Self::SchedulerDeadline => "scheduler-deadline",
+            Self::PlatformChange => "platform-change",
+            Self::SchedulerStateChange => "scheduler-state-change",
+        }
+    }
+}
+
+fn recovery_worker_state_lock_is_busy(error: &anyhow::Error) -> bool {
+    error.chain().any(|cause| {
+        matches!(
+            cause.downcast_ref::<StateError>(),
+            Some(StateError::AlreadyLocked { .. })
+        )
+    })
+}
+
+async fn retry_recovery_worker_state_operation<T>(
+    mut operation: impl FnMut() -> Result<T>,
+) -> Result<T> {
+    let started = std::time::Instant::now();
+    loop {
+        match operation() {
+            Ok(value) => return Ok(value),
+            Err(error) if recovery_worker_state_lock_is_busy(&error) => {
+                if started.elapsed() >= HISTORY_RECOVERY_WORKER_LOCK_WAIT {
+                    return Err(error).context("wait for a concurrent bounded state operation");
+                }
+                tokio::time::sleep(HISTORY_RECOVERY_WORKER_LOCK_RETRY).await;
+            }
+            Err(error) => return Err(error),
+        }
+    }
+}
+
+fn observe_terminal_recovery_scheduler_state(
+    state_dir: &Path,
+    conversation: &str,
+    plan: &SignedHistoryRecoveryPlan,
+) -> Result<Option<SignedRecoverySchedulerState>> {
+    plan.verify()?;
+    ensure!(
+        ConversationId::from_label(conversation) == plan.conversation_id(),
+        "history recovery plan is bound to a different conversation"
+    );
+    with_state_lock_only(state_dir, || {
+        let Some(state) =
+            load_recovery_scheduler_state(state_dir, plan.plan_id()?, plan.recipient_device_id())?
+        else {
+            return Ok(None);
+        };
+        if !state.lifecycle().is_terminal() {
+            return Ok(None);
+        }
+        load_scheduler_signing_device(state_dir, plan)?;
+        Ok(Some(state))
+    })
+}
+
+fn print_history_recovery_worker_terminal(state: &SignedRecoverySchedulerState) -> Result<()> {
+    print_recovery_scheduler_state(state)?;
+    println!("history_recovery_scheduler_discovery_attempted=false");
+    println!("connection_attempted=false");
+    match state.lifecycle() {
+        RecoverySchedulerLifecycle::Cancelled => {
+            println!("status=history-recovery-worker-cancelled")
+        }
+        RecoverySchedulerLifecycle::Completed => {
+            println!("history_recovery_complete=true");
+            println!("status=history-recovery-worker-complete");
+        }
+        RecoverySchedulerLifecycle::Active | RecoverySchedulerLifecycle::Attempting => {
+            bail!("non-terminal scheduler state passed to worker terminal printer")
+        }
+    }
+    Ok(())
+}
+
+fn finalize_interrupted_recovery_worker_attempt(
+    state_dir: &Path,
+    plan: &SignedHistoryRecoveryPlan,
+    now_unix_seconds: u64,
+    backoff: RecoveryBackoffConfig,
+) -> Result<SignedRecoverySchedulerState> {
+    with_locked_state(state_dir, || {
+        let device_state = load_scheduler_signing_device(state_dir, plan)?;
+        let current = load_required_recovery_scheduler_state(state_dir, plan)?;
+        if current.lifecycle() != RecoverySchedulerLifecycle::Attempting {
+            return Ok(current);
+        }
+        let next = current.record_failure(device_state.identity(), now_unix_seconds, backoff)?;
+        persist_recovery_scheduler_state(state_dir, &next)?;
+        Ok(next)
+    })
+}
+
+fn recovery_worker_wait_duration(
+    cancel_poll: Duration,
+    runtime_remaining: Duration,
+    scheduler_deadline: Option<(u64, u64)>,
+) -> Duration {
+    let mut duration = cancel_poll.min(runtime_remaining);
+    if let Some((now_unix_seconds, deadline_unix_seconds)) = scheduler_deadline {
+        let until_deadline = Duration::from_secs(
+            deadline_unix_seconds
+                .saturating_sub(now_unix_seconds)
+                .max(1),
+        );
+        duration = duration.min(until_deadline);
+    }
+    duration
+}
+
+async fn watch_history_recovery_plan(options: HistoryRecoveryWorkerOptions) -> Result<()> {
+    ensure!(
+        (1..=MAX_HISTORY_RECOVERY_WORKER_WAKEUPS).contains(&options.max_wakeups),
+        "--max-wakeups must be between 1 and {MAX_HISTORY_RECOVERY_WORKER_WAKEUPS}"
+    );
+    ensure!(
+        (1..=MAX_HISTORY_RECOVERY_WORKER_RUNTIME_SECONDS).contains(&options.max_runtime_seconds),
+        "--max-runtime-seconds must be between 1 and {MAX_HISTORY_RECOVERY_WORKER_RUNTIME_SECONDS}"
+    );
+    ensure!(
+        (1..=MAX_HISTORY_RECOVERY_WORKER_CANCEL_POLL_SECONDS)
+            .contains(&options.cancel_poll_seconds),
+        "--cancel-poll-seconds must be between 1 and {MAX_HISTORY_RECOVERY_WORKER_CANCEL_POLL_SECONDS}"
+    );
+    ensure!(
+        (1..=MAX_DISCOVERY_WAIT_SECONDS).contains(&options.discovery_wait_seconds),
+        "--discovery-wait-seconds must be between 1 and {MAX_DISCOVERY_WAIT_SECONDS}"
+    );
+    ensure!(
+        (1..=MAX_HISTORY_RECOVERY_PAGES_PER_SESSION).contains(&options.max_pages),
+        "--max-pages must be between 1 and {MAX_HISTORY_RECOVERY_PAGES_PER_SESSION}"
+    );
+    let backoff =
+        RecoveryBackoffConfig::new(options.retry_base_seconds, options.retry_max_seconds)?;
+    let plan = load_history_recovery_plan(&options.plan_file).await?;
+    plan.verify()?;
+    ensure!(
+        ConversationId::from_label(&options.conversation) == plan.conversation_id(),
+        "history recovery plan is bound to a different conversation"
+    );
+    let platform_changes = subscribe_recovery_platform_changes()
+        .context("subscribe to native recovery platform changes")?;
+    let started_at = std::time::Instant::now();
+    let runtime = Duration::from_secs(options.max_runtime_seconds);
+    let cancel_poll = Duration::from_secs(options.cancel_poll_seconds);
+    let mut wake_count = 0_usize;
+    let mut wake_reason = HistoryRecoveryWorkerWakeReason::Initial;
+
+    println!("history_recovery_plan_file={}", options.plan_file.display());
+    println!("history_recovery_worker_mode=bounded-process-v1");
+    println!(
+        "history_recovery_worker_native_events={}",
+        platform_changes.is_native()
+    );
+    println!(
+        "history_recovery_worker_max_runtime_seconds={}",
+        options.max_runtime_seconds
+    );
+    println!(
+        "history_recovery_worker_max_wakeups={}",
+        options.max_wakeups
+    );
+    println!(
+        "history_recovery_worker_cancel_poll_seconds={}",
+        options.cancel_poll_seconds
+    );
+
+    loop {
+        if let Some(terminal) = retry_recovery_worker_state_operation(|| {
+            observe_terminal_recovery_scheduler_state(
+                &options.state_dir,
+                &options.conversation,
+                &plan,
+            )
+        })
+        .await?
+        {
+            return print_history_recovery_worker_terminal(&terminal);
+        }
+        if started_at.elapsed() >= runtime {
+            println!("status=history-recovery-worker-runtime-expired");
+            return Ok(());
+        }
+        if wake_count >= options.max_wakeups {
+            println!("status=history-recovery-worker-wakeup-limit");
+            return Ok(());
+        }
+        wake_count += 1;
+        println!("history_recovery_worker_wake={wake_count}");
+        println!(
+            "history_recovery_worker_wake_reason={}",
+            wake_reason.as_str()
+        );
+
+        let now = unix_time_now().context("read time for recovery worker")?;
+        let (mut scheduler_state, complete) = retry_recovery_worker_state_operation(|| {
+            prepare_history_recovery_scheduler_state(
+                &options.state_dir,
+                &options.conversation,
+                &plan,
+                now,
+            )
+        })
+        .await?;
+        if complete || scheduler_state.lifecycle().is_terminal() {
+            return print_history_recovery_worker_terminal(&scheduler_state);
+        }
+        if scheduler_state.readiness(now) == RecoverySchedulerReadiness::AttemptLeaseExpired {
+            scheduler_state = retry_recovery_worker_state_operation(|| {
+                finalize_expired_recovery_attempt(&options.state_dir, &plan, now, backoff)
+            })
+            .await?;
+            println!("history_recovery_scheduler_stale_attempt_recovered=true");
+            print_recovery_scheduler_state(&scheduler_state)?;
+        }
+
+        let platform_context = system_recovery_platform_context();
+        print_recovery_platform_context(&platform_context);
+        let policy_allowed = plan.execution_policy().allows(
+            platform_context.network_class(),
+            platform_context.power_source(),
+        );
+        println!("history_recovery_execution_policy_allowed={policy_allowed}");
+
+        match scheduler_state.readiness(now) {
+            RecoverySchedulerReadiness::Ready if policy_allowed => {
+                let attempt = Box::pin(run_history_recovery_plan(
+                    options.state_dir.clone(),
+                    options.plan_file.clone(),
+                    options.conversation.clone(),
+                    None,
+                    None,
+                    1,
+                    options.discovery_wait_seconds,
+                    options.retry_base_seconds,
+                    options.retry_max_seconds,
+                    options.max_pages,
+                ));
+                let runtime_remaining = runtime.saturating_sub(started_at.elapsed());
+                match timeout(runtime_remaining, attempt).await {
+                    Ok(Ok(())) => {}
+                    Ok(Err(error)) => {
+                        if error.downcast_ref::<RecoveryPolicyBlocked>().is_some() {
+                            println!("history_recovery_worker_policy_race_blocked=true");
+                        } else if recovery_worker_state_lock_is_busy(&error) {
+                            println!("history_recovery_worker_state_lock_race=true");
+                        } else {
+                            return Err(error);
+                        }
+                    }
+                    Err(_) => {
+                        println!("history_recovery_worker_attempt_interrupted_by_runtime=true");
+                        let interrupted_at = unix_time_now()
+                            .context("read time while stopping bounded recovery attempt")?;
+                        let state = retry_recovery_worker_state_operation(|| {
+                            finalize_interrupted_recovery_worker_attempt(
+                                &options.state_dir,
+                                &plan,
+                                interrupted_at,
+                                backoff,
+                            )
+                        })
+                        .await?;
+                        if state.lifecycle().is_terminal() {
+                            return print_history_recovery_worker_terminal(&state);
+                        }
+                        print_recovery_scheduler_state(&state)?;
+                        println!("status=history-recovery-worker-runtime-expired");
+                        return Ok(());
+                    }
+                }
+            }
+            RecoverySchedulerReadiness::ClockRollback {
+                last_observed_unix_seconds,
+            } => {
+                bail!(
+                    "wall clock is older than signed scheduler high-water mark {last_observed_unix_seconds}"
+                )
+            }
+            RecoverySchedulerReadiness::AttemptLeaseExpired => {
+                bail!("expired recovery attempt lease remained after worker reconciliation")
+            }
+            RecoverySchedulerReadiness::Cancelled | RecoverySchedulerReadiness::Completed => {
+                return print_history_recovery_worker_terminal(&scheduler_state);
+            }
+            RecoverySchedulerReadiness::Deferred { .. } | RecoverySchedulerReadiness::Ready => {}
+        }
+
+        if let Some(terminal) = retry_recovery_worker_state_operation(|| {
+            observe_terminal_recovery_scheduler_state(
+                &options.state_dir,
+                &options.conversation,
+                &plan,
+            )
+        })
+        .await?
+        {
+            return print_history_recovery_worker_terminal(&terminal);
+        }
+
+        let observed_state = retry_recovery_worker_state_operation(|| {
+            with_state_lock_only(&options.state_dir, || {
+                load_required_recovery_scheduler_state(&options.state_dir, &plan)
+            })
+        })
+        .await?;
+        let mut observed_state_id = observed_state.state_id()?;
+        let observed_platform_sequence = platform_changes.sequence();
+        println!("history_recovery_worker_waiting=true");
+
+        wake_reason = loop {
+            if let Some(terminal) = retry_recovery_worker_state_operation(|| {
+                observe_terminal_recovery_scheduler_state(
+                    &options.state_dir,
+                    &options.conversation,
+                    &plan,
+                )
+            })
+            .await?
+            {
+                return print_history_recovery_worker_terminal(&terminal);
+            }
+            if started_at.elapsed() >= runtime {
+                println!("status=history-recovery-worker-runtime-expired");
+                return Ok(());
+            }
+
+            let wait_now = unix_time_now().context("read time while recovery worker waits")?;
+            plan.verify_at(wait_now)?;
+            let current = retry_recovery_worker_state_operation(|| {
+                with_state_lock_only(&options.state_dir, || {
+                    load_required_recovery_scheduler_state(&options.state_dir, &plan)
+                })
+            })
+            .await?;
+            let current_state_id = current.state_id()?;
+            if current_state_id != observed_state_id {
+                break HistoryRecoveryWorkerWakeReason::SchedulerStateChange;
+            }
+
+            let readiness = current.readiness(wait_now);
+            match readiness {
+                RecoverySchedulerReadiness::ClockRollback {
+                    last_observed_unix_seconds,
+                } => {
+                    bail!(
+                        "wall clock is older than signed scheduler high-water mark {last_observed_unix_seconds}"
+                    )
+                }
+                RecoverySchedulerReadiness::AttemptLeaseExpired => {
+                    break HistoryRecoveryWorkerWakeReason::SchedulerDeadline;
+                }
+                RecoverySchedulerReadiness::Ready => {
+                    let context = system_recovery_platform_context();
+                    if plan
+                        .execution_policy()
+                        .allows(context.network_class(), context.power_source())
+                    {
+                        break HistoryRecoveryWorkerWakeReason::SchedulerDeadline;
+                    }
+                }
+                RecoverySchedulerReadiness::Cancelled | RecoverySchedulerReadiness::Completed => {
+                    return print_history_recovery_worker_terminal(&current);
+                }
+                RecoverySchedulerReadiness::Deferred { .. } => {}
+            }
+
+            let runtime_remaining = runtime.saturating_sub(started_at.elapsed());
+            let scheduler_deadline = match readiness {
+                RecoverySchedulerReadiness::Deferred {
+                    not_before_unix_seconds,
+                } => Some((wait_now, not_before_unix_seconds)),
+                _ => None,
+            };
+            let wait_duration =
+                recovery_worker_wait_duration(cancel_poll, runtime_remaining, scheduler_deadline);
+            match platform_changes
+                .wait(observed_platform_sequence, wait_duration)
+                .await
+            {
+                RecoveryPlatformChangeWait::Changed => {
+                    break HistoryRecoveryWorkerWakeReason::PlatformChange;
+                }
+                RecoveryPlatformChangeWait::TimedOut => {
+                    observed_state_id = current_state_id;
+                }
+            }
+        };
+    }
 }
 
 #[derive(Debug)]
@@ -7974,6 +8564,42 @@ mod tests {
     use kilogram_transport_iroh::endpoint_builder;
 
     const UNSUPPORTED_TEST_ALPN: &[u8] = b"kilogram/test/unsupported/1";
+
+    #[test]
+    fn recovery_worker_wait_is_bounded_by_poll_runtime_and_signed_deadline() {
+        assert_eq!(
+            recovery_worker_wait_duration(
+                Duration::from_secs(5),
+                Duration::from_secs(20),
+                Some((100, 102)),
+            ),
+            Duration::from_secs(2)
+        );
+        assert_eq!(
+            recovery_worker_wait_duration(
+                Duration::from_secs(5),
+                Duration::from_secs(3),
+                Some((100, 120)),
+            ),
+            Duration::from_secs(3)
+        );
+        assert_eq!(
+            recovery_worker_wait_duration(Duration::from_secs(5), Duration::from_secs(20), None,),
+            Duration::from_secs(5)
+        );
+    }
+
+    #[test]
+    fn recovery_worker_recognizes_only_typed_state_lock_contention() {
+        let busy: anyhow::Error = StateError::AlreadyLocked {
+            path: PathBuf::from("state"),
+        }
+        .into();
+        assert!(recovery_worker_state_lock_is_busy(&busy));
+        assert!(!recovery_worker_state_lock_is_busy(&anyhow::anyhow!(
+            "state directory text mentions a lock"
+        )));
+    }
 
     #[test]
     fn history_rewrap_source_consent_requires_exact_sas_and_same_account() -> Result<()> {

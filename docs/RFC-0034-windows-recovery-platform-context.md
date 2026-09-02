@@ -122,10 +122,9 @@ Windows-target dependency `windows 0.62.2`; crate уже присутствов�
 
 ## 7. Что остаётся дальше
 
-- настоящий Windows background service/task с bounded wakeup;
-- подписка на network/cost/roaming/power change вместо разового snapshot;
-- повторный policy check непосредственно перед discovery и connect при смене
-  среды во время живого процесса;
+- M0.9.8 уже добавил bounded process, network/power subscriptions и повторный
+  policy check перед discovery/connect;
+- регистрация Windows service/task и sleep/reboot/logon lifecycle;
 - macOS/Linux/Android/iOS providers той же boundary;
 - monotonic OS clock/witness для scheduler rollback;
 - privacy-preserving wide-area discovery/mailbox вместо LAN-only multicast.

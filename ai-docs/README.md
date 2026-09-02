@@ -115,6 +115,9 @@ multi-source claim reconciliation. M0.7.9 добавил signed append-only chec
   provider и Windows-native network/cost/roaming/power snapshot; VPN tunnel
   разрешается только через единственный exact active physical profile,
   metered/roaming используют signed `mobile` bucket, ambiguity остаётся unknown.
+  M0.9.8 добавил bounded worker, WinRT network/power change subscriptions,
+  signed-deadline wakeup, cross-process cancel polling и policy recheck перед
+  discovery/connect без удержания state lock во время wait.
   Reconciliation выбирает
   inventory только при совпадении двух или более полных явно собранных claims и
   всё равно не обещает global completeness.
@@ -277,8 +280,8 @@ summaries, membership removal и группы ещё не реализованы
 
 1. Добавить production macOS/Linux local key provider, согласованный monotonic
    witness и lifecycle обновления portable recovery package.
-2. Добавить настоящий Windows OS background service/task, change events и
-   bounded wakeup поверх M0.9.7 native context; затем macOS/Linux/mobile
+2. Зарегистрировать M0.9.8 bounded worker как настоящий Windows OS background
+   service/task и закрыть sleep/reboot/logon lifecycle; затем macOS/Linux/mobile
    providers. Расширить
    M0.9.4 LAN discovery до privacy-preserving wide-area publication/gossip/
    mailbox. Live camera/clipboard оставить platform UI поверх M0.9.3.
@@ -368,5 +371,7 @@ summaries, membership removal и группы ещё не реализованы
   реализованный M0.9.6 signed append-only retry state, jitter, lease и terminal cancellation.
 - [`../docs/RFC-0034-windows-recovery-platform-context.md`](../docs/RFC-0034-windows-recovery-platform-context.md) —
   реализованный M0.9.7 Windows-native network/metered/roaming/power snapshot и fail-closed provider boundary.
+- [`../docs/RFC-0035-bounded-windows-recovery-worker.md`](../docs/RFC-0035-bounded-windows-recovery-worker.md) —
+  реализованный M0.9.8 bounded process, native change events, signed deadline/cancel wakeup и повторный policy gate.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

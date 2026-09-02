@@ -73,12 +73,14 @@ Persistent signed scheduler state is specified in
 [`docs/RFC-0033-persistent-history-recovery-scheduler-state.md`](docs/RFC-0033-persistent-history-recovery-scheduler-state.md).
 The first native Windows recovery platform context is specified in
 [`docs/RFC-0034-windows-recovery-platform-context.md`](docs/RFC-0034-windows-recovery-platform-context.md).
+The bounded event-driven Windows recovery worker is specified in
+[`docs/RFC-0035-bounded-windows-recovery-worker.md`](docs/RFC-0035-bounded-windows-recovery-worker.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.7 Windows recovery platform context — complete
+## Current milestone: M0.9.8 bounded Windows recovery worker — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -216,7 +218,17 @@ physical profile underneath it, while absent or conflicting evidence becomes
 `unknown`. Metered or roaming profiles use the already signed `mobile` policy
 bucket. The old network/power arguments remain an all-or-none development
 override; other platforms fail closed until they gain their own adapter. OS
-background registration and change-event wakeups remain the next stage.
+background registration remained future work at that boundary; M0.9.8 adds
+the bounded process and change-event wakeups without installing an OS task.
+
+M0.9.8 adds `history-recovery-plan-watch`, a bounded foreground worker ready for
+later Windows background registration. It waits for the recipient-signed retry
+deadline or native WinRT network/power change events, polls the signed scheduler
+chain for cross-process cancellation without holding the state lock, and stops
+at explicit runtime and wakeup limits. The runner re-probes policy immediately
+before discovery and again before connection; a newly forbidden context opens
+no connection and cannot bypass consent. OS service/Task Scheduler installation
+is deliberately still a separate platform-integration step.
 
 M0.8.1 adds a reversible encrypted shadow snapshot of the entire device state.
 `state-vault-migrate` publishes encrypted records and a keyed manifest in one

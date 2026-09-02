@@ -1815,10 +1815,54 @@ change subscriptions и policy recheck во время попытки ещё н�
 macOS/Linux/mobile providers также отсутствуют. Полный контракт —
 [`../docs/RFC-0034-windows-recovery-platform-context.md`](../docs/RFC-0034-windows-recovery-platform-context.md).
 
+### M0.9.8 — bounded Windows recovery worker: выполнено
+
+Реализовано:
+
+- `history-recovery-plan-watch` запускает один bounded process для exact signed
+  plan: runtime default 3600/max 86400 секунд, meaningful wakeups default 64/
+  max 1024, cancellation poll default 5/max 30 секунд;
+- worker ждёт recipient-signed scheduler deadline либо WinRT network/power
+  event, замечает внешний signed state ID и не считает polling timeout wakeup;
+- Windows subscriptions покрывают NetworkStatusChanged и PowerManager supply/
+  battery/EnergySaver changes; callbacks не сохраняют сетевой metadata, RAII
+  снимает tokens при выходе;
+- state lock удерживается только для кратких verify/transition; wait и platform
+  probe проходят без lock. Typed `StateError::AlreadyLocked` повторяется до двух
+  секунд, остальные ошибки остаются fail-closed;
+- terminal cancellation/completion проверяется даже после plan expiry, чтобы
+  worker мог остановиться; non-terminal retry после expiry запрещён;
+- runtime timeout прерывает network future и переводит оставшийся Attempting
+  lease в signed failure перед bounded cleanup/выходом;
+- native context повторно читается перед attempt lease/UDP discovery и после
+  unique descriptor непосредственно перед Iroh connect;
+- policy block до discovery не создаёт lease или UDP; block перед connect не
+  открывает connection, завершает lease signed failure и планирует retry;
+- worker не регистрирует Windows service/Task Scheduler и не меняет OS state.
+
+Проверки:
+
+- три новых unit tests покрывают no-lost-wakeup event sequence, bounded wait и
+  распознавание только typed state-lock contention;
+- M0.9.6 regression `.tmp/m096-smoke-20260902-171150` снова прошёл attempt 1 →
+  deferred restart → attempt 2, две pages, identical history и cancel;
+- direct worker smoke `.tmp/m098-smoke-20260902-173045` подтвердил native event
+  subscriptions, no-candidate retry, свободный lock во время wait и signed
+  cancellation из второго процесса за 1.733 s;
+- отдельный 30-second discovery был прерван при runtime=1 s, Attempting lease
+  reconciled как signed failure; bounded cleanup завершила process за 4.022 s;
+- worker завершился terminal и не выполнил connection после cancel;
+- все 121 workspace tests, rustfmt, strict Clippy и release build проходят.
+
+Граница среза: процесс нужно запустить явно. Установка/удаление Windows task или
+service, sleep/reboot/logon lifecycle и non-Windows providers остаются дальше.
+Полный контракт —
+[`../docs/RFC-0035-bounded-windows-recovery-worker.md`](../docs/RFC-0035-bounded-windows-recovery-worker.md).
+
 ### Следующий этап
 
-1. Зарегистрировать bounded runner как настоящий Windows background task/service
-   с wakeup, network/power change events, policy recheck и cancellation lifecycle.
+1. Безопасно регистрировать/удалять M0.9.8 worker как настоящий Windows
+   background task/service и закрыть sleep/reboot/logon lifecycle.
 2. Добавить macOS/Linux/mobile providers той же platform boundary.
 3. Спроектировать privacy-preserving wide-area publication/gossip/mailbox и
    first-contact freshness; M0.9.4 закрывает только явный LAN opt-in.

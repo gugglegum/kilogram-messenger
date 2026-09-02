@@ -90,11 +90,12 @@ sessions, distribution, removal и key epochs и не решены этим пр
   M0.9.5 — recipient-signed retry plan с caller-supplied network/power policy,
   M0.9.6 — signed persistent retry chain, equal-jitter deadline, attempt lease,
   clock high-water и terminal cancellation, M0.9.7 — Windows-native разовый
-  network/metered/roaming/power snapshot с conservative VPN mapping.
+  network/metered/roaming/power snapshot с conservative VPN mapping, M0.9.8 —
+  bounded worker с native change events, deadline/cancel wakeup и policy recheck.
   Как сделать wide-area privacy-preserving lookup/gossip, подключать live camera/
-  clipboard/GUI, регистрировать deep link, как Windows service получает bounded
-  wakeup/change events и повторно проверяет policy, как реализовать providers на
-  других ОС, как внешний witness обнаруживает rollback
+  clipboard/GUI, регистрировать deep link, как безопасно установить worker как
+  Windows task/service и закрыть sleep/reboot/logon lifecycle, как реализовать
+  providers на других ОС, как внешний witness обнаруживает rollback
   всей scheduler chain; как отдельно
   разрешать recovery от устройства собеседника без неявного расширения
   same-account trust?

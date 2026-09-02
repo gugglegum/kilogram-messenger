@@ -1,6 +1,15 @@
 #![cfg_attr(not(windows), allow(dead_code))]
 
+use std::{
+    sync::{
+        Arc,
+        atomic::{AtomicU64, Ordering},
+    },
+    time::Duration,
+};
+
 use anyhow::{Result, bail};
+use tokio::sync::Notify;
 
 use crate::recovery_plan::{RecoveryNetworkClass, RecoveryPowerSource};
 
@@ -208,6 +217,18 @@ impl RecoveryPlatformContext {
         self.power_source
     }
 
+    pub(crate) fn refreshed(self) -> Self {
+        match self.source {
+            RecoveryPlatformContextSource::CallerSupplied => self,
+            #[cfg(windows)]
+            RecoveryPlatformContextSource::WindowsNative => system_recovery_platform_context(),
+            #[cfg(not(windows))]
+            RecoveryPlatformContextSource::UnsupportedPlatform => {
+                system_recovery_platform_context()
+            }
+        }
+    }
+
     fn caller_supplied(network: RecoveryNetworkClass, power: RecoveryPowerSource) -> Self {
         Self {
             source: RecoveryPlatformContextSource::CallerSupplied,
@@ -250,6 +271,87 @@ impl RecoveryPlatformContext {
             remaining_charge_percent: None,
         }
     }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum RecoveryPlatformChangeWait {
+    Changed,
+    TimedOut,
+}
+
+#[derive(Debug)]
+struct RecoveryPlatformChangeSignal {
+    sequence: AtomicU64,
+    notify: Notify,
+}
+
+impl RecoveryPlatformChangeSignal {
+    fn new() -> Self {
+        Self {
+            sequence: AtomicU64::new(0),
+            notify: Notify::new(),
+        }
+    }
+
+    fn sequence(&self) -> u64 {
+        self.sequence.load(Ordering::Acquire)
+    }
+
+    fn changed(&self) {
+        self.sequence.fetch_add(1, Ordering::AcqRel);
+        self.notify.notify_waiters();
+    }
+
+    async fn wait(&self, observed_sequence: u64, duration: Duration) -> RecoveryPlatformChangeWait {
+        if self.sequence() != observed_sequence {
+            return RecoveryPlatformChangeWait::Changed;
+        }
+        let notified = self.notify.notified();
+        tokio::pin!(notified);
+        notified.as_mut().enable();
+        if self.sequence() != observed_sequence {
+            return RecoveryPlatformChangeWait::Changed;
+        }
+        match tokio::time::timeout(duration, notified).await {
+            Ok(()) => RecoveryPlatformChangeWait::Changed,
+            Err(_) => RecoveryPlatformChangeWait::TimedOut,
+        }
+    }
+}
+
+pub(crate) struct RecoveryPlatformChangeSubscription {
+    signal: Arc<RecoveryPlatformChangeSignal>,
+    #[cfg(windows)]
+    _windows: windows_events::WindowsRecoveryPlatformEvents,
+}
+
+impl RecoveryPlatformChangeSubscription {
+    pub(crate) fn is_native(&self) -> bool {
+        cfg!(windows)
+    }
+
+    pub(crate) fn sequence(&self) -> u64 {
+        self.signal.sequence()
+    }
+
+    pub(crate) async fn wait(
+        &self,
+        observed_sequence: u64,
+        duration: Duration,
+    ) -> RecoveryPlatformChangeWait {
+        self.signal.wait(observed_sequence, duration).await
+    }
+}
+
+pub(crate) fn subscribe_recovery_platform_changes() -> Result<RecoveryPlatformChangeSubscription> {
+    let signal = Arc::new(RecoveryPlatformChangeSignal::new());
+    #[cfg(windows)]
+    let windows = windows_events::WindowsRecoveryPlatformEvents::subscribe(signal.clone())?;
+    Ok(RecoveryPlatformChangeSubscription {
+        signal,
+        #[cfg(windows)]
+        _windows: windows,
+    })
 }
 
 pub(crate) trait RecoveryPlatformContextProvider {
@@ -681,9 +783,138 @@ mod windows_probe {
     }
 }
 
+#[cfg(windows)]
+mod windows_events {
+    use std::sync::Arc;
+
+    use anyhow::{Context, Result};
+    use windows::{
+        Foundation::EventHandler,
+        Networking::Connectivity::{NetworkInformation, NetworkStatusChangedEventHandler},
+        System::Power::PowerManager,
+        core::IInspectable,
+    };
+
+    use super::RecoveryPlatformChangeSignal;
+
+    pub(super) struct WindowsRecoveryPlatformEvents {
+        _network: NetworkRegistration,
+        _power_supply: PowerRegistration,
+        _battery: PowerRegistration,
+        _energy_saver: PowerRegistration,
+    }
+
+    impl WindowsRecoveryPlatformEvents {
+        pub(super) fn subscribe(signal: Arc<RecoveryPlatformChangeSignal>) -> Result<Self> {
+            Ok(Self {
+                _network: NetworkRegistration::subscribe(signal.clone())?,
+                _power_supply: PowerRegistration::subscribe(
+                    signal.clone(),
+                    PowerEventKind::Supply,
+                )?,
+                _battery: PowerRegistration::subscribe(signal.clone(), PowerEventKind::Battery)?,
+                _energy_saver: PowerRegistration::subscribe(signal, PowerEventKind::EnergySaver)?,
+            })
+        }
+    }
+
+    struct NetworkRegistration {
+        token: i64,
+        _handler: NetworkStatusChangedEventHandler,
+    }
+
+    impl NetworkRegistration {
+        fn subscribe(signal: Arc<RecoveryPlatformChangeSignal>) -> Result<Self> {
+            let handler = NetworkStatusChangedEventHandler::new(move |_| {
+                signal.changed();
+                Ok(())
+            });
+            let token = NetworkInformation::NetworkStatusChanged(&handler)
+                .context("subscribe to Windows network status changes")?;
+            Ok(Self {
+                token,
+                _handler: handler,
+            })
+        }
+    }
+
+    impl Drop for NetworkRegistration {
+        fn drop(&mut self) {
+            let _ = NetworkInformation::RemoveNetworkStatusChanged(self.token);
+        }
+    }
+
+    #[derive(Clone, Copy)]
+    enum PowerEventKind {
+        Supply,
+        Battery,
+        EnergySaver,
+    }
+
+    struct PowerRegistration {
+        kind: PowerEventKind,
+        token: i64,
+        _handler: EventHandler<IInspectable>,
+    }
+
+    impl PowerRegistration {
+        fn subscribe(
+            signal: Arc<RecoveryPlatformChangeSignal>,
+            kind: PowerEventKind,
+        ) -> Result<Self> {
+            let handler = EventHandler::<IInspectable>::new(move |_, _| {
+                signal.changed();
+                Ok(())
+            });
+            let token = match kind {
+                PowerEventKind::Supply => PowerManager::PowerSupplyStatusChanged(&handler)
+                    .context("subscribe to Windows power supply changes")?,
+                PowerEventKind::Battery => PowerManager::BatteryStatusChanged(&handler)
+                    .context("subscribe to Windows battery changes")?,
+                PowerEventKind::EnergySaver => PowerManager::EnergySaverStatusChanged(&handler)
+                    .context("subscribe to Windows energy saver changes")?,
+            };
+            Ok(Self {
+                kind,
+                token,
+                _handler: handler,
+            })
+        }
+    }
+
+    impl Drop for PowerRegistration {
+        fn drop(&mut self) {
+            let _ = match self.kind {
+                PowerEventKind::Supply => PowerManager::RemovePowerSupplyStatusChanged(self.token),
+                PowerEventKind::Battery => PowerManager::RemoveBatteryStatusChanged(self.token),
+                PowerEventKind::EnergySaver => {
+                    PowerManager::RemoveEnergySaverStatusChanged(self.token)
+                }
+            };
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn platform_change_signal_observes_changes_without_losing_wakeups() {
+        let signal = RecoveryPlatformChangeSignal::new();
+        let observed = signal.sequence();
+        signal.changed();
+        assert_eq!(
+            signal.wait(observed, Duration::from_secs(1)).await,
+            RecoveryPlatformChangeWait::Changed
+        );
+        assert_eq!(
+            signal
+                .wait(signal.sequence(), Duration::from_millis(1))
+                .await,
+            RecoveryPlatformChangeWait::TimedOut
+        );
+    }
 
     #[test]
     fn metered_or_roaming_networks_use_the_mobile_policy_bucket() {
