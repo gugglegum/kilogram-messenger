@@ -111,7 +111,11 @@ multi-source claim reconciliation. M0.7.9 добавил signed append-only chec
   network/power policy. M0.9.6 сохраняет retry state как recipient-signed
   append-only chain: process restart соблюдает persistent equal-jitter deadline,
   attempt lease не допускает параллельный connection, clock rollback блокируется,
-  а explicit cancel является terminal. Reconciliation выбирает
+  а explicit cancel является terminal. M0.9.7 добавил platform-neutral context
+  provider и Windows-native network/cost/roaming/power snapshot; VPN tunnel
+  разрешается только через единственный exact active physical profile,
+  metered/roaming используют signed `mobile` bucket, ambiguity остаётся unknown.
+  Reconciliation выбирает
   inventory только при совпадении двух или более полных явно собранных claims и
   всё равно не обещает global completeness.
 M0.8.1 добавил первый production-storage bridge: `state-vault-migrate` одной
@@ -273,9 +277,9 @@ summaries, membership removal и группы ещё не реализованы
 
 1. Добавить production macOS/Linux local key provider, согласованный monotonic
    witness и lifecycle обновления portable recovery package.
-2. Добавить platform adapter boundary, первый Windows probe и настоящий OS
-   background service для network/metered/roaming/power context поверх M0.9.6;
-   расширить
+2. Добавить настоящий Windows OS background service/task, change events и
+   bounded wakeup поверх M0.9.7 native context; затем macOS/Linux/mobile
+   providers. Расширить
    M0.9.4 LAN discovery до privacy-preserving wide-area publication/gossip/
    mailbox. Live camera/clipboard оставить platform UI поверх M0.9.3.
 3. Спроектировать membership removal вместе с ordered security log и MLS epoch;
@@ -362,5 +366,7 @@ summaries, membership removal и группы ещё не реализованы
   реализованный M0.9.5 recipient-signed retry plan и bounded fresh-endpoint coordinator.
 - [`../docs/RFC-0033-persistent-history-recovery-scheduler-state.md`](../docs/RFC-0033-persistent-history-recovery-scheduler-state.md) —
   реализованный M0.9.6 signed append-only retry state, jitter, lease и terminal cancellation.
+- [`../docs/RFC-0034-windows-recovery-platform-context.md`](../docs/RFC-0034-windows-recovery-platform-context.md) —
+  реализованный M0.9.7 Windows-native network/metered/roaming/power snapshot и fail-closed provider boundary.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

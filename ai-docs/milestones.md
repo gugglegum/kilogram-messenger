@@ -1773,12 +1773,53 @@ OS background task/service, trusted platform adapters и wide-area discovery н�
 остаётся LAN-only. Полный контракт —
 [`../docs/RFC-0033-persistent-history-recovery-scheduler-state.md`](../docs/RFC-0033-persistent-history-recovery-scheduler-state.md).
 
+### M0.9.7 — Windows recovery platform context: выполнено
+
+Реализовано:
+
+- новый `recovery_platform` отделяет platform-neutral context/provider от
+  Windows implementation; protocol/core и signed plan не получают WinRT types;
+- `platform-context` печатает один read-only native snapshot без state directory;
+- `history-recovery-plan-run` при отсутствии context flags по умолчанию использует
+  `windows-native`; прежние `--network-class` и `--power-source` сохранены как
+  development override и принимаются только вместе;
+- Windows Connectivity probe распознаёт WLAN/WWAN и exact IANA Ethernet/Wi-Fi/
+  WWAN types, connection cost, roaming, connectivity и data-limit restrictions;
+- tunnel/VPN не считается Ethernet: adapter ищет ровно один active exact physical
+  profile, а при нуле/нескольких profiles оставляет `unknown`;
+- fixed/variable cost или roaming переводят effective class в подписанный
+  `mobile` policy bucket; unknown cost/roaming блокируют default plan как unknown;
+- Windows PowerManager определяет adequate external supply, battery,
+  Energy Saver и bounded charge percentage; contradictory/unavailable state
+  становится unknown;
+- diagnostics не выводят и не сохраняют profile name, SSID, adapter GUID или IP;
+- network/power policy по-прежнему проверяется до UDP/Iroh, plan/scheduler/wire
+  formats не изменились;
+- non-Windows system provider явно возвращает unsupported/unknown и потому
+  fail-closed с default plan до реализации native adapters.
+
+Проверки:
+
+- четыре новых unit tests покрывают exact/ambiguous interface mapping,
+  metered/roaming → mobile, power classification и paired manual override;
+- M0.9.6 regression `.tmp/m096-smoke-20260902-140653` снова выполнил persistent
+  attempt 1 → deferred restart → attempt 2, две pages, identical history и cancel;
+- Windows smoke `.tmp/m097-smoke-20260902-142158` через активный VPN нашёл
+  единственный physical Ethernet, unrestricted/non-roaming cost и external power;
+- completed plan без manual context flags использовал native provider, прошёл
+  signed policy и не открыл discovery/connection; partial override отклонён;
+- все 118 workspace tests, rustfmt, strict Clippy и release build проходят.
+
+Граница среза: snapshot разовый. Windows service/Task Scheduler, network/power
+change subscriptions и policy recheck во время попытки ещё не реализованы.
+macOS/Linux/mobile providers также отсутствуют. Полный контракт —
+[`../docs/RFC-0034-windows-recovery-platform-context.md`](../docs/RFC-0034-windows-recovery-platform-context.md).
+
 ### Следующий этап
 
-1. Добавить platform adapter boundary и первый Windows network/power probe без
-   встраивания Win32 деталей в protocol/core.
-2. Зарегистрировать bounded runner как настоящий OS background task/service с
-   wakeup, network-change events и cancellation lifecycle.
+1. Зарегистрировать bounded runner как настоящий Windows background task/service
+   с wakeup, network/power change events, policy recheck и cancellation lifecycle.
+2. Добавить macOS/Linux/mobile providers той же platform boundary.
 3. Спроектировать privacy-preserving wide-area publication/gossip/mailbox и
    first-contact freshness; M0.9.4 закрывает только явный LAN opt-in.
 4. Добавить live camera/clipboard и GUI confirmation позже в platform clients;

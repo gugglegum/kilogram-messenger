@@ -89,10 +89,12 @@ sessions, distribution, removal и key epochs и не решены этим пр
   M0.9.4 — opt-in bounded LAN multicast publication и verified no-connect scan,
   M0.9.5 — recipient-signed retry plan с caller-supplied network/power policy,
   M0.9.6 — signed persistent retry chain, equal-jitter deadline, attempt lease,
-  clock high-water и terminal cancellation.
+  clock high-water и terminal cancellation, M0.9.7 — Windows-native разовый
+  network/metered/roaming/power snapshot с conservative VPN mapping.
   Как сделать wide-area privacy-preserving lookup/gossip, подключать live camera/
-  clipboard/GUI, регистрировать deep link, как OS scheduler получает trusted
-  metered/roaming/power context и wakeup, как внешний witness обнаруживает rollback
+  clipboard/GUI, регистрировать deep link, как Windows service получает bounded
+  wakeup/change events и повторно проверяет policy, как реализовать providers на
+  других ОС, как внешний witness обнаруживает rollback
   всей scheduler chain; как отдельно
   разрешать recovery от устройства собеседника без неявного расширения
   same-account trust?

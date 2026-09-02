@@ -20,8 +20,10 @@ deadline; fixed delay не защищал от синхронного retry stor
 - сделать явную cancellation терминальным подписанным переходом;
 - блокироваться при наблюдаемом откате wall clock.
 
-Это всё ещё platform-neutral CLI coordinator. Он не регистрирует Windows Task
-Scheduler/service и по-прежнему получает network/power context от caller.
+В срезе M0.9.6 это всё ещё был platform-neutral CLI coordinator: он не
+регистрировал Windows Task Scheduler/service и получал network/power context от
+caller. M0.9.7 позднее заменил default context path на Windows-native provider,
+не меняя описанную здесь scheduler chain.
 
 ## 2. Signed append-only state chain
 
@@ -175,7 +177,7 @@ recovery checkpoints не изменились. Scheduler state — только
 
 ## 9. Что остаётся дальше
 
-- platform adapter boundary и первый Windows network/power/metered probe;
+- настоящий Windows background task и change events поверх M0.9.7 probe;
 - регистрация настоящего OS background task/service и wakeup/cancel events;
 - внешний monotonic rollback witness для scheduler state;
 - compaction signed chain без потери rollback evidence;

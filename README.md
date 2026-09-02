@@ -71,12 +71,14 @@ The consent-bound retry coordinator is specified in
 [`docs/RFC-0032-consent-bound-history-recovery-scheduler.md`](docs/RFC-0032-consent-bound-history-recovery-scheduler.md).
 Persistent signed scheduler state is specified in
 [`docs/RFC-0033-persistent-history-recovery-scheduler-state.md`](docs/RFC-0033-persistent-history-recovery-scheduler-state.md).
+The first native Windows recovery platform context is specified in
+[`docs/RFC-0034-windows-recovery-platform-context.md`](docs/RFC-0034-windows-recovery-platform-context.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.6 persistent recovery scheduler state — complete
+## Current milestone: M0.9.7 Windows recovery platform context — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -190,9 +192,9 @@ that binds the source/device list, conversation, range, page size, route, and
 network/power policy. A bounded runner may then discover a fresh endpoint after
 the source restarts, but only an otherwise exact matching descriptor can resume
 the existing signed checkpoint chain. Mobile and unknown networks are denied by
-default. The CLI accepts caller-supplied network/power context and releases the
-device-state lock during discovery and backoff; real OS sensing and scheduling
-remain platform-client work.
+default. In that milestone the CLI accepted caller-supplied network/power
+context and released the device-state lock during discovery and backoff;
+M0.9.7 replaces the default context path while scheduling remains platform work.
 
 M0.9.6 makes the retry state survive process restart. The exact recipient signs
 an append-only per-plan state chain containing monotonic generations, attempt
@@ -202,8 +204,19 @@ before the signed deadline performs no discovery. A terminal signed cancel
 record prevents later connection for that Plan ID, while a completed recovery
 is reconciled with the existing signed checkpoint chain. The state is mirrored
 through the encrypted vault when enabled. Whole-directory rollback still needs
-an external witness, and OS wakeups plus trusted network/power sensing remain
-platform work.
+an external witness. OS wakeups and live network/power change subscriptions
+remain platform work.
+
+M0.9.7 replaces the default caller-supplied recovery context with a native
+Windows snapshot. It classifies exact Ethernet/Wi-Fi/WWAN interfaces, connection
+cost, metering, roaming, data-limit signals, power supply, battery and Energy
+Saver without exposing profile names, SSIDs or adapter identifiers. A VPN tunnel
+is never treated as Ethernet by guess: the adapter may use one unambiguous active
+physical profile underneath it, while absent or conflicting evidence becomes
+`unknown`. Metered or roaming profiles use the already signed `mobile` policy
+bucket. The old network/power arguments remain an all-or-none development
+override; other platforms fail closed until they gain their own adapter. OS
+background registration and change-event wakeups remain the next stage.
 
 M0.8.1 adds a reversible encrypted shadow snapshot of the entire device state.
 `state-vault-migrate` publishes encrypted records and a keyed manifest in one

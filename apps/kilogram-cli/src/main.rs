@@ -64,6 +64,7 @@ use zeroize::Zeroizing;
 mod recovery_discovery;
 mod recovery_link;
 mod recovery_plan;
+mod recovery_platform;
 mod recovery_qr;
 mod recovery_scheduler;
 
@@ -81,6 +82,10 @@ use recovery_plan::{
     DEFAULT_HISTORY_RECOVERY_PLAN_VALIDITY_HOURS, HistoryRecoveryPlanOptions,
     MAX_HISTORY_RECOVERY_PLAN_BYTES, MAX_HISTORY_RECOVERY_PLAN_VALIDITY_HOURS,
     RecoveryExecutionPolicy, RecoveryNetworkClass, RecoveryPowerSource, SignedHistoryRecoveryPlan,
+};
+use recovery_platform::{
+    print_recovery_platform_context, resolve_recovery_platform_context,
+    system_recovery_platform_context,
 };
 use recovery_qr::{
     RecoveryQrDecodeReport, RecoveryQrRenderReport, decode_recovery_link_qr_image,
@@ -632,13 +637,13 @@ enum Command {
         #[arg(long)]
         conversation: String,
 
-        /// Current network class supplied by the platform integration.
+        /// Development override for the current network class; omit with power-source to use the OS probe.
         #[arg(long, value_enum)]
-        network_class: RecoveryNetworkClass,
+        network_class: Option<RecoveryNetworkClass>,
 
-        /// Current power source supplied by the platform integration.
+        /// Development override for the current power source; omit with network-class to use the OS probe.
         #[arg(long, value_enum)]
-        power_source: RecoveryPowerSource,
+        power_source: Option<RecoveryPowerSource>,
 
         /// Maximum discovery/recovery attempts in this bounded run.
         #[arg(long, default_value_t = DEFAULT_HISTORY_RECOVERY_SCHEDULER_ATTEMPTS)]
@@ -688,6 +693,9 @@ enum Command {
         #[arg(long)]
         conversation: String,
     },
+
+    /// Probe the native platform network, metering, roaming, and power context.
+    PlatformContext,
 
     /// Reconcile source-signed completeness claims from locally stored rewrap bundles.
     HistoryRewrapReconcile {
@@ -970,7 +978,8 @@ impl Command {
             | Self::AccountDeviceList { .. }
             | Self::ConversationCreate { .. }
             | Self::ConversationMemberAdd { .. }
-            | Self::DeviceRevoke { .. } => None,
+            | Self::DeviceRevoke { .. }
+            | Self::PlatformContext => None,
         }
     }
 
@@ -1749,6 +1758,12 @@ async fn run_command(command: Command) -> Result<()> {
             plan_file,
             conversation,
         } => cancel_history_recovery_plan(state_dir, plan_file, conversation).await,
+        Command::PlatformContext => {
+            let context = system_recovery_platform_context();
+            print_recovery_platform_context(&context);
+            println!("status=platform-context-probed");
+            Ok(())
+        }
         Command::HistoryRewrapReconcile {
             state_dir,
             conversation,
@@ -4944,8 +4959,8 @@ async fn run_history_recovery_plan(
     state_dir: PathBuf,
     plan_file: PathBuf,
     conversation: String,
-    network_class: RecoveryNetworkClass,
-    power_source: RecoveryPowerSource,
+    network_class: Option<RecoveryNetworkClass>,
+    power_source: Option<RecoveryPowerSource>,
     max_attempts: usize,
     discovery_wait_seconds: u64,
     retry_base_seconds: u64,
@@ -4965,6 +4980,9 @@ async fn run_history_recovery_plan(
         "--max-pages must be between 1 and {MAX_HISTORY_RECOVERY_PAGES_PER_SESSION}"
     );
     let backoff = RecoveryBackoffConfig::new(retry_base_seconds, retry_max_seconds)?;
+    let platform_context = resolve_recovery_platform_context(network_class, power_source)?;
+    let network_class = platform_context.network_class();
+    let power_source = platform_context.power_source();
     let plan = load_history_recovery_plan(&plan_file).await?;
     let now_unix_seconds = unix_time_now().context("read time for recovery scheduler")?;
     let (mut scheduler_state, initially_complete) = with_locked_state(&state_dir, || {
@@ -5001,15 +5019,7 @@ async fn run_history_recovery_plan(
     println!("history_recovery_scheduler_retry_base_seconds={retry_base_seconds}");
     println!("history_recovery_scheduler_retry_max_seconds={retry_max_seconds}");
     print_recovery_scheduler_state(&scheduler_state)?;
-    println!("history_recovery_network_context_source=caller-supplied");
-    println!(
-        "history_recovery_current_network_class={}",
-        network_class.as_str()
-    );
-    println!(
-        "history_recovery_current_power_source={}",
-        power_source.as_str()
-    );
+    print_recovery_platform_context(&platform_context);
     let policy_allowed = plan.execution_policy().allows(network_class, power_source);
     println!("history_recovery_execution_policy_allowed={policy_allowed}");
 

@@ -94,10 +94,10 @@ kilogram-cli history-recovery-plan-run `
 ```
 
 Допустимые network classes: `ethernet`, `wifi`, `mobile`, `unknown`; power:
-`external`, `battery`, `unknown`. Значения передаёт platform integration, и CLI
-явно печатает `history_recovery_network_context_source=caller-supplied`. Это не
-защита от лживого локального caller. Production client должен получать context
-из доверенного OS API и повторно запускать coordinator при его изменении.
+`external`, `battery`, `unknown`. В M0.9.5 значения передавал caller, и CLI
+печатал `history_recovery_network_context_source=caller-supplied`. M0.9.7
+заменил default path на Windows-native probe; прежняя пара аргументов сохранена
+как явный development override. Полный контракт — RFC-0034.
 
 Blocked policy завершается до UDP bind и Iroh connection с diagnostics
 `history_recovery_scheduler_discovery_attempted=false` и
@@ -162,7 +162,7 @@ message. Новых dependencies нет.
 ## 8. Что остаётся дальше
 
 - настоящий OS background service/task с wakeup и network-change events;
-- platform adapters для достоверных metered/roaming/battery/charging данных;
+- macOS/Linux/mobile adapters и Windows event subscriptions поверх M0.9.7;
 - внешний rollback witness для persistent scheduler state из M0.9.6;
 - wide-area privacy-preserving descriptor lookup вместо LAN-only multicast;
 - plan listing/revocation UI и защищённое локальное хранение metadata;

@@ -29,5 +29,8 @@ tempfile.workspace = true
 tokio.workspace = true
 zeroize.workspace = true
 
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.62.2", features = ["Foundation_Collections", "Networking_Connectivity", "System_Power"] }
+
 [lints]
 workspace = true

@@ -514,6 +514,21 @@ toolchain `1.98.0` для воспроизводимой разработки.
     `.tmp/m096-smoke-20260902-130246` подтвердил process restart 1 → deferred →
     persistent attempt 2, две pages/identical history и отдельный terminal
     cancellation restart без discovery.
+63. M0.9.7 добавил `recovery_platform`: platform-neutral provider boundary и
+    Windows implementation на WinRT `Networking.Connectivity`/`System.Power`.
+    Runner без context flags использует `windows-native`; manual
+    `--network-class`/`--power-source` остаются только полной парой. Exact
+    WLAN/WWAN/IANA media, connection cost и roaming определяют policy class;
+    fixed/variable/metered/roaming используют `mobile`, tunnel/VPN может быть
+    разрешён только через единственный active physical profile, ambiguity
+    становится `unknown`. Power `external` требует adequate supply. CLI не
+    печатает profile name, SSID, GUID или IP. Добавлена target dependency
+    `windows 0.62.2` с `Foundation_Collections`, `Networking_Connectivity` и
+    `System_Power`. Все 118 workspace tests, rustfmt, strict Clippy и release
+    build проходят. Regression `.tmp/m096-smoke-20260902-140653` прошёл полностью;
+    `.tmp/m097-smoke-20260902-142158` подтвердил native Ethernet/unmetered/
+    non-roaming/external snapshot под активным VPN, automatic runner policy и
+    отказ partial manual override.
 
 Публичный relay проверен между двумя сетями в принудительном `relay-only` через
 `aps1`. Внешний M0.3 direct-only тест корректно доказал невозможность hole
@@ -538,8 +553,9 @@ bounded PNG/JPEG QR file ceremony, M0.9.4 — opt-in authenticated LAN
 publication/discovery без automatic trust, а M0.9.5 — recipient-signed retry
 plan и bounded coordinator с caller-supplied network/power context. M0.9.6
 добавляет persistent signed retry state, lease, jitter, clock high-water и
-terminal cancellation. Wide-area descriptor discovery, platform network/power
-adapter, OS background service, live camera/clipboard, membership
+terminal cancellation, M0.9.7 — Windows-native platform context с conservative
+VPN/metered/roaming/power mapping. Wide-area descriptor discovery, OS background
+service/change subscriptions, non-Windows adapters, live camera/clipboard, membership
 removal/epochs и group E2EE остаются открыты. M0.7.7 закрывает M0 crash consistency для device
 filesystem state; M0.8.1 доказывает атомарную encrypted shadow migration в
 `redb`, M0.8.2 — recoverable versioned dual-write всех live CLI commands,
@@ -560,6 +576,7 @@ QR-ready history recovery device link; M0.9.3 — bounded QR image round-trip;
 M0.9.4 — opt-in bounded LAN discovery signed descriptors без auto-connect;
 M0.9.5 — consent-bound retry plan/coordinator с fresh endpoint matching;
 M0.9.6 — signed append-only scheduler state с restart resume и cancellation.
+M0.9.7 — Windows-native recovery platform context и provider boundary.
 Paged/Merkle index, production non-Windows local provider, согласованный
 monotonic rollback witness, автоматический backup lifecycle и физическое
 retirement остальных compatibility shadows ещё не реализованы.
