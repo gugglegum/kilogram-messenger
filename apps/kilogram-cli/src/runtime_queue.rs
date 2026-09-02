@@ -43,6 +43,10 @@ impl RuntimeQueueId {
     pub fn as_bytes(&self) -> &[u8; 32] {
         &self.0
     }
+
+    pub fn from_bytes(bytes: [u8; 32]) -> Self {
+        Self(bytes)
+    }
 }
 
 impl fmt::Display for RuntimeQueueId {
@@ -228,10 +232,29 @@ pub struct SignedQueuedMessage {
 }
 
 impl SignedQueuedMessage {
+    #[cfg(test)]
     pub fn seal(
         identity: &DeviceIdentity,
         encryption: &DeviceEncryptionIdentity,
         contact: &SignedRuntimeContact,
+        body: &str,
+        created_at_unix_seconds: u64,
+    ) -> Result<Self> {
+        Self::seal_with_queue_id(
+            identity,
+            encryption,
+            contact,
+            RuntimeQueueId::generate()?,
+            body,
+            created_at_unix_seconds,
+        )
+    }
+
+    pub fn seal_with_queue_id(
+        identity: &DeviceIdentity,
+        encryption: &DeviceEncryptionIdentity,
+        contact: &SignedRuntimeContact,
+        queue_id: RuntimeQueueId,
         body: &str,
         created_at_unix_seconds: u64,
     ) -> Result<Self> {
@@ -240,7 +263,6 @@ impl SignedQueuedMessage {
             body.len() <= MAX_RUNTIME_MESSAGE_BYTES,
             "queued message is too large"
         );
-        let queue_id = RuntimeQueueId::generate()?;
         let aad = queue_body_aad(
             queue_id,
             contact.contact_id(),

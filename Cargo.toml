@@ -5,6 +5,7 @@ members = [
     "crates/kilogram-identity",
     "crates/kilogram-protocol",
     "crates/kilogram-ratchet",
+    "crates/kilogram-runtime-ipc",
     "crates/kilogram-session",
     "crates/kilogram-state",
     "crates/kilogram-store",

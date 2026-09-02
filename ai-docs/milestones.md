@@ -1952,10 +1952,47 @@ multi-source gossip/witness, локальный IPC и parallel actor sessions �
 dialer, но не внешний state writer. Полный контракт —
 [`../docs/RFC-0037-persistent-runtime-contact-and-outbox.md`](../docs/RFC-0037-persistent-runtime-contact-and-outbox.md).
 
+### M0.9.11 — authenticated local runtime IPC: выполнено
+
+Реализовано:
+
+- новый reusable crate `kilogram-runtime-ipc` отделяет локальный transport
+  contract от CLI и доступен будущему GUI;
+- `runtime --ipc-file` bind-ит только `127.0.0.1:0`, генерирует 256-bit bearer,
+  device-подписывает descriptor и публикует его atomic replace вне protected
+  state; token не печатается;
+- client проверяет version, loopback, token length и device signature; framing
+  ограничен 256 KiB, connect 3 s, I/O/actor response 30 s, actor queue 64;
+- per-connection tasks делают framing/auth и только затем передают command через
+  MPSC в основной runtime loop; state mutations остаются последовательными с
+  Iroh sessions и polling;
+- контракт `Ping`, `QueueMessage`, `OutboxStatus`; CLI adapters не принимают
+  `STATE_DIR` и не становятся вторым writer;
+- 256-bit IPC request ID становится durable Queue ID; exact replay возвращает
+  AlreadyPresent, reuse с другим content fail closed;
+- stop/drop удаляет descriptor только если он всё ещё принадлежит этому runtime
+  instance, поэтому старый process не стирает replacement;
+- `OutboxStatus` возвращает typed counters/items без plaintext; push revision
+  пока не реализован, GUI может делать bounded polling.
+
+Проверки:
+
+- shared crate tests: signed/loopback descriptor, authenticated round-trip,
+  wrong-token rejection до actor dispatch, replacement-owned cleanup;
+- process test теперь ставит Alice message только через runtime IPC, повторяет
+  тот же request ID, видит одну queue record, затем получает один text + ACK и
+  identical Alice/Bob history после automatic sync;
+- rustfmt, strict Clippy, все 129 workspace tests и release build проходят.
+
+Граница среза: bearer descriptor — same-user M0 boundary и должен храниться
+локально, не в sync/shared folder. OS peer credentials, push stream, IPC contact
+onboarding и GUI остаются дальше. Полный контракт —
+[`../docs/RFC-0038-authenticated-local-runtime-ipc.md`](../docs/RFC-0038-authenticated-local-runtime-ipc.md).
+
 ### Следующий этап
 
-1. M0.9.11: локальный IPC/API, через который UI управляет runtime без второго
-   state writer; затем M0.9.12 minimal Windows GUI.
+1. M0.9.12: minimal Windows GUI поверх `kilogram-runtime-ipc`, без прямой записи
+   в device state; первый срез может использовать bounded status polling.
 2. Optional autostart/background mode проектировать как явную настройку клиента,
    не как обязательный Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.

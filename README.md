@@ -79,12 +79,14 @@ The first long-lived multi-session messaging runtime is specified in
 [`docs/RFC-0036-long-lived-messaging-runtime.md`](docs/RFC-0036-long-lived-messaging-runtime.md).
 The persistent signed contact and durable runtime outbox are specified in
 [`docs/RFC-0037-persistent-runtime-contact-and-outbox.md`](docs/RFC-0037-persistent-runtime-contact-and-outbox.md).
+The authenticated local runtime actor API is specified in
+[`docs/RFC-0038-authenticated-local-runtime-ipc.md`](docs/RFC-0038-authenticated-local-runtime-ipc.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.10 persistent runtime contact and outbox — complete
+## Current milestone: M0.9.11 authenticated local runtime IPC — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -255,7 +257,18 @@ per Queue ID, retries that exact event with persistent equal-jitter backoff,
 stores ACK plus delivery marker atomically, and periodically synchronizes idle
 contacts. A replayed delivery returns the original ACK without allocating a new
 sequence. The encrypted vault treats all runtime records as a bounded
-append-only state kind. Wide-area descriptor discovery and the GUI API remain
+append-only state kind. Wide-area descriptor discovery and the GUI itself
+remain future work.
+
+M0.9.11 adds the reusable `kilogram-runtime-ipc` crate and an authenticated
+local actor API. A runtime may bind an ephemeral loopback TCP port and
+atomically publish a device-signed descriptor containing a random bearer
+token. Bounded framed requests are authenticated before entering the runtime's
+serialized actor loop. Local clients can ping the runtime, queue an idempotent
+message, and read structured outbox status without opening or writing the
+device state themselves. The descriptor is removed only by the runtime
+instance that published it. This is a same-user local boundary, not a remote
+network API; push subscriptions and stronger OS-specific peer credentials are
 future work.
 
 M0.8.1 adds a reversible encrypted shadow snapshot of the entire device state.
@@ -602,8 +615,7 @@ runtime atomically replaces the ticket with one containing its new Endpoint ID.
 `--max-sessions` and `--idle-seconds` provide optional bounded test/embedding
 modes; zero means no such bound.
 
-On Alice, pin Bob's current public descriptor once and queue a message without
-opening a network connection:
+On Alice, pin Bob's current public descriptor once:
 
 ```powershell
 cargo run -p kilogram-cli -- runtime-contact-add `
@@ -611,17 +623,11 @@ cargo run -p kilogram-cli -- runtime-contact-add `
   --conversation m0-local-smoke `
   --expect-account <BOB_ACCOUNT_ID> `
   --descriptor-file .tmp/bob-runtime.ticket
-
-cargo run -p kilogram-cli -- runtime-queue-message `
-  --state-dir .tmp/alice `
-  --conversation m0-local-smoke `
-  --peer-account <BOB_ACCOUNT_ID> `
-  --message "hello from the durable outbox"
 ```
 
-Then run Alice's own runtime. It detects the queue, sends it to Bob, retries a
-failed connection with persistent bounded backoff, stores the verified ACK, and
-periodically synchronizes the contact:
+Then run Alice's own runtime with a private, machine-local IPC descriptor. It
+sends queued work to Bob, retries failures with persistent bounded backoff,
+stores verified ACKs, and periodically synchronizes the contact:
 
 ```powershell
 cargo run -p kilogram-cli -- runtime `
@@ -629,11 +635,30 @@ cargo run -p kilogram-cli -- runtime `
   --allow-account <BOB_ACCOUNT_ID> `
   --device-list-file .tmp/alice-devices.snapshot `
   --ticket-file .tmp/alice-runtime.ticket `
+  --ipc-file .tmp/alice-runtime.ipc.json `
   --route-policy auto
-
-cargo run -p kilogram-cli -- runtime-outbox-status `
-  --state-dir .tmp/alice
 ```
+
+While that runtime stays open, a UI or these development adapters can use the
+local actor API without writing `STATE_DIR`:
+
+```powershell
+cargo run -p kilogram-cli -- runtime-ipc-ping `
+  --ipc-file .tmp/alice-runtime.ipc.json
+
+cargo run -p kilogram-cli -- runtime-ipc-queue-message `
+  --ipc-file .tmp/alice-runtime.ipc.json `
+  --conversation m0-local-smoke `
+  --peer-account <BOB_ACCOUNT_ID> `
+  --message "hello through the runtime actor"
+
+cargo run -p kilogram-cli -- runtime-ipc-outbox-status `
+  --ipc-file .tmp/alice-runtime.ipc.json
+```
+
+The queue command prints `runtime_ipc_request_id` before connecting. If its
+result is uncertain, repeat the same message with `--request-id <PRINTED_ID>`;
+the runtime returns the existing Queue ID instead of creating a duplicate.
 
 The contact stores the canonical absolute descriptor path, so the same file
 must be atomically refreshed after Bob restarts. In M0.9.10 this path is a local
@@ -642,6 +667,12 @@ discovery protocol. The queued body is encrypted at rest and is not printed by
 the status command. `--poll-milliseconds`, `--retry-base-seconds`,
 `--retry-max-seconds`, and `--auto-sync-seconds` tune the runtime; setting the
 last option to zero disables periodic sync.
+
+Keep the IPC descriptor in a private local directory: it contains a bearer
+secret and must not be placed in a synchronized/shared folder. It is signed by
+the runtime device and names only `127.0.0.1`; it is not part of the P2P wire
+protocol. The older direct outbox commands remain useful only as offline M0
+adapters when no runtime/UI owns the state.
 
 For every additional device in Bob's signed list, export its current public
 pool and repeat `--peer-prekey-pool-file <DEVICE.prekeys>` on the listener:

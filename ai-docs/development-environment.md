@@ -634,3 +634,13 @@ retirement остальных compatibility shadows ещё не реализов
   между ticks; повторный process test и полный regression проходят.
 - Release artifact нужно продолжать собирать обычным `cargo build --release`;
   новых native/system dependencies M0.9.10 не добавляет.
+
+## M0.9.11 verification snapshot (2026-09-03)
+
+- Workspace добавил pure-Rust `kilogram-runtime-ipc`; новых системных/native
+  dependencies нет.
+- `cargo fmt --all` и strict `cargo clippy --workspace --all-targets -- -D
+  warnings` проходят.
+- Все 129 workspace tests проходят; shared IPC crate имеет 5 unit tests, а CLI
+  process test подтверждает idempotent actor queue → P2P delivery → ACK → sync.
+- `cargo build --workspace --release` проходит на Windows host.

@@ -2075,6 +2075,7 @@ dependencies = [
  "kilogram-identity",
  "kilogram-protocol",
  "kilogram-ratchet",
+ "kilogram-runtime-ipc",
  "kilogram-session",
  "kilogram-state",
  "kilogram-store",
@@ -2142,6 +2143,22 @@ dependencies = [
  "thiserror 2.0.20",
  "vodozemac",
  "zeroize",
+]
+
+[[package]]
+name = "kilogram-runtime-ipc"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64",
+ "getrandom 0.4.3",
+ "kilogram-identity",
+ "kilogram-protocol",
+ "postcard",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
 ]
 
 [[package]]

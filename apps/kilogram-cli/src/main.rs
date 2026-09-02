@@ -35,6 +35,11 @@ use kilogram_ratchet::{
     DecryptedMessage, MAX_PREKEY_POOL_SIZE, RatchetOperation, RatchetState, SignedPrekeyPool,
     SignedRatchetIdentity, unix_time_now,
 };
+use kilogram_runtime_ipc::{
+    RuntimeIpcCommand, RuntimeIpcDescriptor, RuntimeIpcOutboxStatus, RuntimeIpcQueueItem,
+    RuntimeIpcQueueState, RuntimeIpcRequestId, RuntimeIpcResponse, RuntimeIpcServer,
+    RuntimeIpcWork,
+};
 use kilogram_session::{
     MAX_SYNC_ROUNDS, ServerInventoryOutcome, SessionStore, SyncClient, SyncServer,
     authorize_device_session,
@@ -301,6 +306,10 @@ enum Command {
         /// Stop after this many outbound delivery/sync network actions; zero is unbounded.
         #[arg(long, default_value_t = 0)]
         max_outbound_actions: usize,
+
+        /// Atomically publish an authenticated loopback IPC descriptor for local UI clients.
+        #[arg(long)]
+        ipc_file: Option<PathBuf>,
     },
 
     /// Persist a signed local contact pinned to a refreshable peer runtime descriptor.
@@ -346,6 +355,43 @@ enum Command {
         /// Directory containing this application's persistent device state.
         #[arg(long)]
         state_dir: PathBuf,
+    },
+
+    /// Authenticate to a running local runtime and print its identity.
+    RuntimeIpcPing {
+        /// Runtime-owned local IPC descriptor.
+        #[arg(long)]
+        ipc_file: PathBuf,
+    },
+
+    /// Queue one message through the running runtime actor.
+    RuntimeIpcQueueMessage {
+        /// Runtime-owned local IPC descriptor.
+        #[arg(long)]
+        ipc_file: PathBuf,
+
+        /// Contact conversation label.
+        #[arg(long)]
+        conversation: String,
+
+        /// Peer account selecting the exact signed runtime contact.
+        #[arg(long)]
+        peer_account: AccountId,
+
+        /// UTF-8 plaintext transferred only over authenticated loopback IPC.
+        #[arg(long)]
+        message: String,
+
+        /// Stable idempotency key to reuse after an uncertain local response.
+        #[arg(long)]
+        request_id: Option<RuntimeIpcRequestId>,
+    },
+
+    /// Read structured outbox status through the running runtime actor.
+    RuntimeIpcOutboxStatus {
+        /// Runtime-owned local IPC descriptor.
+        #[arg(long)]
+        ipc_file: PathBuf,
     },
 
     /// Connect to a listener, send one message, print its acknowledgement, then exit.
@@ -1185,6 +1231,9 @@ impl Command {
             | Self::ConversationCreate { .. }
             | Self::ConversationMemberAdd { .. }
             | Self::DeviceRevoke { .. }
+            | Self::RuntimeIpcPing { .. }
+            | Self::RuntimeIpcQueueMessage { .. }
+            | Self::RuntimeIpcOutboxStatus { .. }
             | Self::PlatformContext => None,
         }
     }
@@ -1261,6 +1310,7 @@ struct RuntimeOptions {
     retry_max_seconds: u64,
     auto_sync_seconds: u64,
     max_outbound_actions: usize,
+    ipc_file: Option<PathBuf>,
 }
 
 #[derive(Clone, Debug)]
@@ -1759,6 +1809,7 @@ async fn run_command(command: Command) -> Result<()> {
             retry_max_seconds,
             auto_sync_seconds,
             max_outbound_actions,
+            ipc_file,
         } => {
             runtime(RuntimeOptions {
                 state_dir,
@@ -1776,6 +1827,7 @@ async fn run_command(command: Command) -> Result<()> {
                 retry_max_seconds,
                 auto_sync_seconds,
                 max_outbound_actions,
+                ipc_file,
             })
             .await
         }
@@ -1792,6 +1844,18 @@ async fn run_command(command: Command) -> Result<()> {
             message,
         } => queue_runtime_message(state_dir, conversation, peer_account, message),
         Command::RuntimeOutboxStatus { state_dir } => runtime_outbox_status(state_dir),
+        Command::RuntimeIpcPing { ipc_file } => runtime_ipc_ping(ipc_file).await,
+        Command::RuntimeIpcQueueMessage {
+            ipc_file,
+            conversation,
+            peer_account,
+            message,
+            request_id,
+        } => {
+            runtime_ipc_queue_message(ipc_file, conversation, peer_account, message, request_id)
+                .await
+        }
+        Command::RuntimeIpcOutboxStatus { ipc_file } => runtime_ipc_outbox_status(ipc_file).await,
         Command::Connect {
             state_dir,
             ticket,
@@ -3404,15 +3468,53 @@ fn queue_runtime_message(
     peer_account_id: AccountId,
     message: String,
 ) -> Result<()> {
-    let device_state = load_command_device_state(&state_directory)?;
-    let trust = CommandTrustReadRepository::open(&state_directory, &device_state)?;
+    let receipt = queue_runtime_message_with_id(
+        &state_directory,
+        RuntimeQueueId::generate()?,
+        conversation,
+        peer_account_id,
+        message,
+    )?;
+    print_runtime_queue_receipt(&receipt);
+    Ok(())
+}
+
+#[derive(Clone, Copy)]
+struct RuntimeQueueReceipt {
+    queue_id: RuntimeQueueId,
+    contact_id: RuntimeContactId,
+    inserted: bool,
+}
+
+fn queue_runtime_message_with_id(
+    state_directory: &Path,
+    queue_id: RuntimeQueueId,
+    conversation: String,
+    peer_account_id: AccountId,
+    message: String,
+) -> Result<RuntimeQueueReceipt> {
+    let device_state = load_command_device_state(state_directory)?;
+    let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
     let local_certificate = trust.load_certificate()?;
     let conversation_id = ConversationId::from_label(&conversation);
     let snapshot = load_runtime_state_snapshot(
-        &state_directory,
+        state_directory,
         local_certificate.account_id(),
         device_state.identity().device_id(),
     )?;
+    if let Some(existing) = snapshot.queued.get(&queue_id) {
+        ensure!(
+            existing.peer_account_id() == peer_account_id
+                && existing.conversation_id() == conversation_id
+                && existing.open(device_state.encryption())? == message,
+            "runtime IPC request ID was already used for different message content"
+        );
+        return Ok(RuntimeQueueReceipt {
+            queue_id,
+            contact_id: existing.contact_id(),
+            inserted: false,
+        });
+    }
     let contact = snapshot
         .contacts
         .values()
@@ -3427,70 +3529,283 @@ fn queue_runtime_message(
         local_certificate.account_id(),
         peer_account_id,
     )?;
-    let queued = SignedQueuedMessage::seal(
+    let queued = SignedQueuedMessage::seal_with_queue_id(
         device_state.identity(),
         device_state.encryption(),
         contact,
+        queue_id,
         &message,
         unix_time_now()?,
     )?;
     let encoded = queued.encode()?;
-    let outcome = run_state_transaction(&state_directory, |transaction| {
+    let outcome = run_state_transaction(state_directory, |transaction| {
         persist_runtime_record(
-            &state_directory,
+            state_directory,
             &runtime_queued_relative_path(queued.queue_id()),
             &encoded,
             transaction,
         )
     })?;
-    println!("runtime_queue_id={}", queued.queue_id());
-    println!("runtime_contact_id={}", queued.contact_id());
-    println!("runtime_queue_body=encrypted-at-rest");
-    println!("runtime_queue_store={outcome:?}");
-    println!("status=runtime-message-queued");
-    Ok(())
+    Ok(RuntimeQueueReceipt {
+        queue_id: queued.queue_id(),
+        contact_id: queued.contact_id(),
+        inserted: outcome == StoreOutcome::Inserted,
+    })
 }
 
 fn runtime_outbox_status(state_directory: PathBuf) -> Result<()> {
-    let device_state = load_command_device_state(&state_directory)?;
-    let trust = CommandTrustReadRepository::open(&state_directory, &device_state)?;
+    let status = collect_runtime_outbox_status(&state_directory)?;
+    print_runtime_outbox_status(&status);
+    println!("status=runtime-outbox-inspected");
+    Ok(())
+}
+
+fn collect_runtime_outbox_status(state_directory: &Path) -> Result<RuntimeIpcOutboxStatus> {
+    let device_state = load_command_device_state(state_directory)?;
+    let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
     let local_certificate = trust.load_certificate()?;
     let snapshot = load_runtime_state_snapshot(
-        &state_directory,
+        state_directory,
         local_certificate.account_id(),
         device_state.identity().device_id(),
     )?;
-    println!("runtime_contact_count={}", snapshot.contacts.len());
-    println!("runtime_queue_count={}", snapshot.queued.len());
-    println!("runtime_pending_count={}", snapshot.pending_count());
-    println!("runtime_materialized_count={}", snapshot.materialized.len());
-    println!("runtime_delivered_count={}", snapshot.delivered.len());
-    println!(
-        "runtime_retry_state_count={}",
-        snapshot.retries.values().map(Vec::len).sum::<usize>()
-    );
+    let mut items = Vec::with_capacity(snapshot.queued.len());
     for (queue_id, queued) in &snapshot.queued {
         let state = if snapshot.delivered.contains_key(queue_id) {
-            "delivered"
+            RuntimeIpcQueueState::Delivered
         } else if snapshot.materialized.contains_key(queue_id) {
-            "materialized"
+            RuntimeIpcQueueState::Materialized
         } else {
-            "queued"
+            RuntimeIpcQueueState::Queued
         };
+        items.push(RuntimeIpcQueueItem {
+            queue_id: queue_id.to_string(),
+            peer_account_id: queued.peer_account_id(),
+            conversation_id: queued.conversation_id(),
+            state,
+            acknowledgement_event_id: snapshot
+                .delivered
+                .get(queue_id)
+                .map(SignedDeliveredMessage::acknowledgement_event_id),
+        });
+    }
+    Ok(RuntimeIpcOutboxStatus {
+        contact_count: snapshot.contacts.len(),
+        queue_count: snapshot.queued.len(),
+        pending_count: snapshot.pending_count(),
+        materialized_count: snapshot.materialized.len(),
+        delivered_count: snapshot.delivered.len(),
+        retry_state_count: snapshot.retries.values().map(Vec::len).sum(),
+        items,
+    })
+}
+
+fn print_runtime_queue_receipt(receipt: &RuntimeQueueReceipt) {
+    println!("runtime_queue_id={}", receipt.queue_id);
+    println!("runtime_contact_id={}", receipt.contact_id);
+    println!("runtime_queue_body=encrypted-at-rest");
+    println!(
+        "runtime_queue_store={}",
+        if receipt.inserted {
+            "Inserted"
+        } else {
+            "AlreadyPresent"
+        }
+    );
+    println!("status=runtime-message-queued");
+}
+
+fn print_runtime_outbox_status(status: &RuntimeIpcOutboxStatus) {
+    println!("runtime_contact_count={}", status.contact_count);
+    println!("runtime_queue_count={}", status.queue_count);
+    println!("runtime_pending_count={}", status.pending_count);
+    println!("runtime_materialized_count={}", status.materialized_count);
+    println!("runtime_delivered_count={}", status.delivered_count);
+    println!("runtime_retry_state_count={}", status.retry_state_count);
+    for item in &status.items {
         println!(
-            "runtime_queue_id={queue_id} runtime_queue_state={state} peer_account_id={} conversation_id={}",
-            queued.peer_account_id(),
-            queued.conversation_id()
+            "runtime_queue_id={} runtime_queue_state={} peer_account_id={} conversation_id={}",
+            item.queue_id,
+            item.state.as_str(),
+            item.peer_account_id,
+            item.conversation_id
         );
-        if let Some(delivered) = snapshot.delivered.get(queue_id) {
+        if let Some(acknowledgement_event_id) = item.acknowledgement_event_id {
             println!(
-                "runtime_queue_id={queue_id} acknowledgement_event_id={}",
-                delivered.acknowledgement_event_id()
+                "runtime_queue_id={} acknowledgement_event_id={acknowledgement_event_id}",
+                item.queue_id
             );
         }
     }
-    println!("status=runtime-outbox-inspected");
-    Ok(())
+}
+
+async fn runtime_ipc_ping(ipc_file: PathBuf) -> Result<()> {
+    let descriptor = RuntimeIpcDescriptor::load(&ipc_file)?;
+    match kilogram_runtime_ipc::call(&ipc_file, RuntimeIpcCommand::Ping).await? {
+        RuntimeIpcResponse::Pong {
+            account_id,
+            device_id,
+        } => {
+            ensure!(
+                account_id == descriptor.account_id() && device_id == descriptor.device_id(),
+                "runtime IPC ping identity does not match its signed descriptor"
+            );
+            println!("runtime_ipc_account_id={account_id}");
+            println!("runtime_ipc_device_id={device_id}");
+            println!("status=runtime-ipc-ready");
+            Ok(())
+        }
+        RuntimeIpcResponse::Error { message } => bail!("runtime IPC rejected ping: {message}"),
+        _ => bail!("runtime IPC returned an unexpected ping response"),
+    }
+}
+
+async fn runtime_ipc_queue_message(
+    ipc_file: PathBuf,
+    conversation: String,
+    peer_account_id: AccountId,
+    message: String,
+    request_id: Option<RuntimeIpcRequestId>,
+) -> Result<()> {
+    let request_id = match request_id {
+        Some(request_id) => request_id,
+        None => RuntimeIpcRequestId::generate()?,
+    };
+    println!("runtime_ipc_request_id={request_id}");
+    let response = kilogram_runtime_ipc::call(
+        &ipc_file,
+        RuntimeIpcCommand::QueueMessage {
+            request_id,
+            conversation,
+            peer_account_id,
+            message,
+        },
+    )
+    .await?;
+    match response {
+        RuntimeIpcResponse::MessageQueued {
+            queue_id,
+            contact_id,
+            inserted,
+        } => {
+            ensure!(
+                queue_id == request_id.to_string(),
+                "runtime IPC returned a different queue ID"
+            );
+            println!("runtime_queue_id={queue_id}");
+            println!("runtime_contact_id={contact_id}");
+            println!("runtime_queue_body=encrypted-at-rest");
+            println!(
+                "runtime_queue_store={}",
+                if inserted {
+                    "Inserted"
+                } else {
+                    "AlreadyPresent"
+                }
+            );
+            println!("status=runtime-message-queued");
+            Ok(())
+        }
+        RuntimeIpcResponse::Error { message } => {
+            bail!("runtime IPC rejected queued message: {message}")
+        }
+        _ => bail!("runtime IPC returned an unexpected queue response"),
+    }
+}
+
+async fn runtime_ipc_outbox_status(ipc_file: PathBuf) -> Result<()> {
+    match kilogram_runtime_ipc::call(&ipc_file, RuntimeIpcCommand::OutboxStatus).await? {
+        RuntimeIpcResponse::OutboxStatus(status) => {
+            print_runtime_outbox_status(&status);
+            println!("status=runtime-ipc-outbox-inspected");
+            Ok(())
+        }
+        RuntimeIpcResponse::Error { message } => {
+            bail!("runtime IPC rejected outbox status: {message}")
+        }
+        _ => bail!("runtime IPC returned an unexpected outbox response"),
+    }
+}
+
+fn handle_runtime_ipc_work(
+    state_directory: &Path,
+    account_id: AccountId,
+    device_id: DeviceId,
+    work: RuntimeIpcWork,
+) {
+    let (command, response_sender) = work.into_parts();
+    let response = match command {
+        RuntimeIpcCommand::Ping => RuntimeIpcResponse::Pong {
+            account_id,
+            device_id,
+        },
+        RuntimeIpcCommand::QueueMessage {
+            request_id,
+            conversation,
+            peer_account_id,
+            message,
+        } => match with_locked_state(state_directory, || {
+            queue_runtime_message_with_id(
+                state_directory,
+                RuntimeQueueId::from_bytes(*request_id.as_bytes()),
+                conversation,
+                peer_account_id,
+                message,
+            )
+        }) {
+            Ok(receipt) => RuntimeIpcResponse::MessageQueued {
+                queue_id: receipt.queue_id.to_string(),
+                contact_id: receipt.contact_id.to_string(),
+                inserted: receipt.inserted,
+            },
+            Err(error) => RuntimeIpcResponse::Error {
+                message: format!("{error:#}"),
+            },
+        },
+        RuntimeIpcCommand::OutboxStatus => {
+            let status = StateDirectoryLock::acquire(state_directory)
+                .context("lock runtime state for IPC outbox snapshot")
+                .and_then(|_lock| collect_runtime_outbox_status(state_directory));
+            match status {
+                Ok(status) => RuntimeIpcResponse::OutboxStatus(status),
+                Err(error) => RuntimeIpcResponse::Error {
+                    message: format!("{error:#}"),
+                },
+            }
+        }
+    };
+    let _ = response_sender.send(response);
+}
+
+fn resolve_runtime_ipc_descriptor_path(
+    state_directory: &Path,
+    descriptor_path: &Path,
+) -> Result<PathBuf> {
+    let absolute = if descriptor_path.is_absolute() {
+        descriptor_path.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .context("read current directory for runtime IPC descriptor")?
+            .join(descriptor_path)
+    };
+    let file_name = absolute
+        .file_name()
+        .context("runtime IPC descriptor path has no file name")?;
+    let parent = absolute
+        .parent()
+        .context("runtime IPC descriptor path has no parent")?;
+    fs::create_dir_all(parent)
+        .with_context(|| format!("create runtime IPC descriptor parent {}", parent.display()))?;
+    let resolved = fs::canonicalize(parent)
+        .with_context(|| format!("resolve runtime IPC descriptor parent {}", parent.display()))?
+        .join(file_name);
+    let canonical_state = fs::canonicalize(state_directory)
+        .context("resolve local state directory for runtime IPC")?;
+    ensure!(
+        !resolved.starts_with(&canonical_state),
+        "runtime IPC descriptor must live outside the protected state directory"
+    );
+    Ok(resolved)
 }
 
 fn listen(options: ListenOptions) -> CommandFuture {
@@ -3507,6 +3822,8 @@ struct PreparedRuntimeListener {
 
 enum RuntimeEvent {
     Connection(Connection),
+    Ipc(RuntimeIpcWork),
+    IpcClosed,
     Tick,
     IdleTimeout,
     Shutdown,
@@ -3529,6 +3846,7 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
         retry_max_seconds,
         auto_sync_seconds,
         max_outbound_actions,
+        ipc_file,
     } = options;
     ensure!(
         max_sessions <= MAX_RUNTIME_SESSIONS,
@@ -3574,6 +3892,22 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
         route_policy,
     )?;
     let encoded_ticket = ticket.encode()?;
+    let (mut ipc_server, mut ipc_receiver, _ipc_keepalive) = if let Some(ipc_file) = ipc_file {
+        let ipc_file = resolve_runtime_ipc_descriptor_path(&state_dir, &ipc_file)?;
+        let (server, receiver) = RuntimeIpcServer::start(
+            ipc_file.clone(),
+            ticket.listener_account_id(),
+            prepared.device_state.identity(),
+        )
+        .await?;
+        println!("runtime_ipc_file={}", ipc_file.display());
+        println!("runtime_ipc_address={}", server.address());
+        println!("runtime_ipc_auth=bearer-token");
+        (Some(server), receiver, None)
+    } else {
+        let (keepalive, receiver) = tokio::sync::mpsc::channel(1);
+        (None, receiver, Some(keepalive))
+    };
     println!("runtime_mode=multi-session-v1");
     println!("transport_endpoint_id={}", endpoint.id());
     println!("account_id={}", ticket.listener_account_id());
@@ -3625,6 +3959,7 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
         let runtime_event = wait_for_runtime_event(
             &mut accept,
             &mut shutdown,
+            &mut ipc_receiver,
             idle_deadline,
             Duration::from_millis(poll_milliseconds),
         )
@@ -3635,6 +3970,16 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
         match runtime_event {
             RuntimeEvent::IdleTimeout => break "idle-timeout",
             RuntimeEvent::Shutdown => break "ctrl-c",
+            RuntimeEvent::IpcClosed => bail!("runtime IPC acceptor stopped unexpectedly"),
+            RuntimeEvent::Ipc(work) => {
+                last_activity = tokio::time::Instant::now();
+                handle_runtime_ipc_work(
+                    &state_dir,
+                    ticket.listener_account_id(),
+                    prepared.device_state.identity().device_id(),
+                    work,
+                );
+            }
             RuntimeEvent::Tick => {
                 let delivery_attempt = attempt_next_runtime_delivery(
                     &endpoint,
@@ -3723,6 +4068,9 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
 
     drop(accept);
     drop(shutdown);
+    if let Some(server) = ipc_server.take() {
+        server.shutdown().await?;
+    }
     endpoint.close().await;
     println!("runtime_sessions_accepted={accepted_sessions}");
     println!("runtime_outbound_actions={outbound_actions}");
@@ -4326,6 +4674,7 @@ async fn attempt_runtime_contact_sync(
 async fn wait_for_runtime_event(
     accept: &mut Pin<Box<dyn Future<Output = Result<Connection>> + Send + '_>>,
     shutdown: &mut Pin<Box<dyn Future<Output = io::Result<()>> + Send + '_>>,
+    ipc_receiver: &mut tokio::sync::mpsc::Receiver<RuntimeIpcWork>,
     idle_deadline: Option<tokio::time::Instant>,
     poll_interval: Duration,
 ) -> Result<RuntimeEvent> {
@@ -4336,6 +4685,7 @@ async fn wait_for_runtime_event(
                 signal.context("install or receive Ctrl+C runtime signal")?;
                 Ok(RuntimeEvent::Shutdown)
             }
+            work = ipc_receiver.recv() => Ok(work.map_or(RuntimeEvent::IpcClosed, RuntimeEvent::Ipc)),
             () = tokio::time::sleep(poll_interval) => Ok(RuntimeEvent::Tick),
             () = tokio::time::sleep_until(idle_deadline) => Ok(RuntimeEvent::IdleTimeout),
         }
@@ -4346,6 +4696,7 @@ async fn wait_for_runtime_event(
                 signal.context("install or receive Ctrl+C runtime signal")?;
                 Ok(RuntimeEvent::Shutdown)
             }
+            work = ipc_receiver.recv() => Ok(work.map_or(RuntimeEvent::IpcClosed, RuntimeEvent::Ipc)),
             () = tokio::time::sleep(poll_interval) => Ok(RuntimeEvent::Tick),
         }
     }
@@ -10886,6 +11237,7 @@ mod tests {
             retry_max_seconds: 1,
             auto_sync_seconds: 0,
             max_outbound_actions: 0,
+            ipc_file: None,
         }));
         timeout(Duration::from_secs(10), async {
             while !bob_ticket.is_file() {
@@ -10901,12 +11253,7 @@ mod tests {
             bob_root.account_id(),
             bob_ticket,
         )?;
-        queue_runtime_message(
-            alice_state.clone(),
-            conversation_label.to_owned(),
-            bob_root.account_id(),
-            "durable runtime outbox message".to_owned(),
-        )?;
+        let alice_ipc = directory.path().join("alice-runtime.ipc.json");
         let alice_task = tokio::spawn(runtime(RuntimeOptions {
             state_dir: alice_state.clone(),
             allowed_requester_account_id: bob_root.account_id(),
@@ -10923,7 +11270,52 @@ mod tests {
             retry_max_seconds: 1,
             auto_sync_seconds: 1,
             max_outbound_actions: 2,
+            ipc_file: Some(alice_ipc.clone()),
         }));
+
+        timeout(Duration::from_secs(10), async {
+            while !alice_ipc.is_file() {
+                tokio::time::sleep(Duration::from_millis(20)).await;
+            }
+        })
+        .await
+        .context("Alice runtime did not publish its IPC descriptor")?;
+        assert!(matches!(
+            kilogram_runtime_ipc::call(&alice_ipc, RuntimeIpcCommand::Ping).await?,
+            RuntimeIpcResponse::Pong {
+                account_id,
+                device_id,
+            } if account_id == alice_root.account_id()
+                && device_id == alice_device.identity().device_id()
+        ));
+        let request_id = RuntimeIpcRequestId::generate()?;
+        let queue_command = RuntimeIpcCommand::QueueMessage {
+            request_id,
+            conversation: conversation_label.to_owned(),
+            peer_account_id: bob_root.account_id(),
+            message: "durable runtime outbox message".to_owned(),
+        };
+        assert!(matches!(
+            kilogram_runtime_ipc::call(&alice_ipc, queue_command.clone()).await?,
+            RuntimeIpcResponse::MessageQueued {
+                queue_id: returned,
+                inserted: true,
+                ..
+            } if returned == request_id.to_string()
+        ));
+        assert!(matches!(
+            kilogram_runtime_ipc::call(&alice_ipc, queue_command).await?,
+            RuntimeIpcResponse::MessageQueued {
+                queue_id: returned,
+                inserted: false,
+                ..
+            } if returned == request_id.to_string()
+        ));
+        assert!(matches!(
+            kilogram_runtime_ipc::call(&alice_ipc, RuntimeIpcCommand::OutboxStatus).await?,
+            RuntimeIpcResponse::OutboxStatus(status)
+                if status.queue_count == 1 && status.items.len() == 1
+        ));
 
         let (alice_result, bob_result) = timeout(Duration::from_secs(30), async {
             tokio::join!(alice_task, bob_task)

@@ -18,6 +18,7 @@ kilogram-crypto = { path = "../../crates/kilogram-crypto" }
 kilogram-identity = { path = "../../crates/kilogram-identity" }
 kilogram-protocol = { path = "../../crates/kilogram-protocol" }
 kilogram-ratchet = { path = "../../crates/kilogram-ratchet" }
+kilogram-runtime-ipc = { path = "../../crates/kilogram-runtime-ipc" }
 kilogram-session = { path = "../../crates/kilogram-session" }
 kilogram-state = { path = "../../crates/kilogram-state" }
 kilogram-store = { path = "../../crates/kilogram-store" }

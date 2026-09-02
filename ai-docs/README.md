@@ -9,8 +9,8 @@
 
 Архитектура остаётся в стадии проектирования. Rust workspace теперь содержит
 `kilogram-identity`, `kilogram-protocol`, `kilogram-ratchet`, `kilogram-state`,
-`kilogram-store`, `kilogram-session`, `kilogram-transport-iroh` и
-`kilogram-cli`.
+`kilogram-store`, `kilogram-runtime-ipc`, `kilogram-session`,
+`kilogram-transport-iroh` и `kilogram-cli`.
 Два процесса обмениваются подписанными событиями через Iroh/QUIC, проверяют
 Ed25519-подписи и causal acknowledgement. Прикладная device identity, author
 sequence и signed events сохраняются после перезапуска отдельно от эфемерной
@@ -125,6 +125,11 @@ multi-source claim reconciliation. M0.7.9 добавил signed append-only chec
   descriptor path, locally encrypted durable outbox, materialize-once event,
   idempotent ACK replay, persistent signed retry/backoff и runtime-owned
   automatic sync. Runtime state стал десятым typed repository kind в vault.
+  M0.9.11 вынес versioned local API в reusable `kilogram-runtime-ipc`: runtime
+  публикует device-signed bearer descriptor для loopback-only bounded RPC,
+  а `Ping`, idempotent `QueueMessage` и structured `OutboxStatus` проходят через
+  сериализованный actor без доступа UI к `STATE_DIR`. Descriptor должен быть
+  private machine-local; push/OS peer credentials остаются дальше.
   Reconciliation выбирает
   inventory только при совпадении двух или более полных явно собранных claims и
   всё равно не обещает global completeness.
@@ -285,9 +290,9 @@ summaries, membership removal и группы ещё не реализованы
 
 ## План ближайших работ
 
-1. M0.9.11: локальный IPC/API для UI; M0.9.12: minimal Windows GUI. Optional
-   autostart/background mode оставить явной настройкой, а не обязательным
-   Task Scheduler этапом.
+1. M0.9.12: minimal Windows GUI поверх local actor API без прямой записи в
+   device state. Optional autostart/background mode оставить явной настройкой,
+   а не обязательным Task Scheduler этапом.
 2. Добавить production macOS/Linux local key provider, согласованный monotonic
    witness и lifecycle обновления portable recovery package; затем mobile
    providers. Расширить M0.9.4 LAN discovery до privacy-preserving wide-area
@@ -384,5 +389,7 @@ summaries, membership removal и группы ещё не реализованы
   реализованный M0.9.9 stable endpoint, multi-session listener и per-session state/vault transaction.
 - [`../docs/RFC-0037-persistent-runtime-contact-and-outbox.md`](../docs/RFC-0037-persistent-runtime-contact-and-outbox.md) —
   реализованный M0.9.10 signed contact, encrypted durable outbox, persistent retry и automatic sync.
+- [`../docs/RFC-0038-authenticated-local-runtime-ipc.md`](../docs/RFC-0038-authenticated-local-runtime-ipc.md) —
+  реализованный M0.9.11 device-signed loopback IPC и сериализованный runtime actor API.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

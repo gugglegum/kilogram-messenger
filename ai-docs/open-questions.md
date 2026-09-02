@@ -106,6 +106,11 @@ sessions, distribution, removal и key epochs и не решены этим пр
   какой wide-area multi-source descriptor gossip/mailbox не раскрывает social
   graph, как witness обнаруживает rollback/equivocation и как versioned contact
   безопасно принимает device/route rotation?
+- M0.9.11 дал device-signed bearer IPC только на loopback и сериализованный
+  runtime actor. Открыто: Windows named-pipe/Unix-socket peer credentials,
+  push/change revision с backpressure, локальные роли нескольких UI clients и
+  IPC onboarding/rotation contact без передачи секретного descriptor через
+  sync/shared folder.
 - Какой финальный межъязыковой canonical wire encoding обеспечивает одинаковые
   подписи и event IDs на всех платформах? Postcard используется только как
   предварительный M0 codec и не закрывает вопрос публичного протокола.
