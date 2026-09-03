@@ -2086,16 +2086,47 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 Полный контракт —
 [`../docs/RFC-0041-desktop-contact-onboarding-and-runtime-lifecycle.md`](../docs/RFC-0041-desktop-contact-onboarding-and-runtime-lifecycle.md).
 
+### M0.9.15 — desktop runtime setup и change notifications: выполнено
+
+Реализовано:
+
+- desktop launch panel загружает, редактирует и атомарно сохраняет
+  `RuntimeLaunchProfile` для уже enrolled device без обязательного
+  `runtime-profile-create` CLI шага;
+- GUI canonicalizes существующие state/device-list/prekey inputs, resolves
+  output paths и использует shared bounded profile validation;
+- редактирование/сохранение запрещено при connected или desktop-owned runtime;
+  profile по-прежнему не содержит seed/device/vault/bearer secrets;
+- IPC v4 добавил bounded `WaitForChange`/`ChangeState` с in-memory revision;
+  long poll обслуживается connection task и никогда не занимает actor MPSC;
+- runtime публикует wake-up после contact/queue, delivery/retry, automatic sync
+  и успешной inbound session, но не после idempotent replay;
+- отдельный desktop watcher отслеживает revision и coalesces refresh pipeline
+  conversations → selected history → outbox; unconditional polling раз в две
+  секунды удалён, manual refresh сохранён;
+- runtime start/stop остаётся foreground-only без Task Scheduler/service.
+
+Проверки:
+
+- shared profile replacement/bounds и desktop public-draft round-trip tests;
+- IPC long-poll test проверяет wake, quiet timeout и отсутствие actor dispatch;
+- desktop watcher integration получает revision через настоящий signed
+  loopback server, также не создавая actor work;
+- rustfmt, strict workspace all-target/all-feature Clippy, все 147 tests и
+  release build проходят;
+- полный контракт —
+  [`../docs/RFC-0042-desktop-runtime-setup-and-change-notifications.md`](../docs/RFC-0042-desktop-runtime-setup-and-change-notifications.md).
+
 ### Следующий этап
 
-1. M0.9.15: добавить first-run desktop setup и редактирование/сохранение
-   launch-profile через GUI, не передавая ему device/vault secrets; заменить
-   periodic polling на revision/change notification после actor-owned snapshot.
+1. M0.9.16: спроектировать и реализовать desktop account/device first-run
+   boundary — создание нового account либо enrollment/recovery существующего
+   device без передачи root/device/vault secrets в обычный runtime UI.
 2. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.
 4. Спроектировать privacy-preserving wide-area publication/gossip/mailbox и
    first-contact freshness; M0.9.4 закрывает только явный LAN opt-in.
 5. Membership removal и group governance проектировать вместе с ordered
-   security events и MLS epoch; seed/root recovery, compact Merkle/range summary
-   и независимый криптографический аудит остаются до публичного выпуска.
+   security events и MLS epoch; compact Merkle/range summary и независимый
+   криптографический аудит остаются до публичного выпуска.

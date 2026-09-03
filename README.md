@@ -85,12 +85,16 @@ The first desktop client over that API is specified in
 [`docs/RFC-0039-minimal-desktop-runtime-client.md`](docs/RFC-0039-minimal-desktop-runtime-client.md).
 The actor-owned chat list and paginated local history are specified in
 [`docs/RFC-0040-actor-owned-chat-read-model.md`](docs/RFC-0040-actor-owned-chat-read-model.md).
+Desktop contact onboarding and foreground runtime lifecycle are specified in
+[`docs/RFC-0041-desktop-contact-onboarding-and-runtime-lifecycle.md`](docs/RFC-0041-desktop-contact-onboarding-and-runtime-lifecycle.md).
+Desktop runtime-profile editing and change notifications are specified in
+[`docs/RFC-0042-desktop-runtime-setup-and-change-notifications.md`](docs/RFC-0042-desktop-runtime-setup-and-change-notifications.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.13 actor-owned chat read model — complete
+## Current milestone: M0.9.15 desktop runtime setup and change notifications — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -272,8 +276,7 @@ serialized actor loop. Local clients can ping the runtime, queue an idempotent
 message, and read structured outbox status without opening or writing the
 device state themselves. The descriptor is removed only by the runtime
 instance that published it. This is a same-user local boundary, not a remote
-network API; push subscriptions and stronger OS-specific peer credentials are
-future work.
+network API; stronger OS-specific peer credentials remain future work.
 
 M0.9.12 adds `kilogram-windows.exe`, the first safe-Rust desktop shell over
 that actor API. It authenticates a private runtime descriptor, displays the
@@ -290,6 +293,19 @@ the authenticated loopback channel. The desktop now selects a chat from the
 contact list, displays readable local history, loads older pages and routes the
 composer from the selected signed contact. The GUI still has no `STATE_DIR`,
 storage, ratchet, session or transport access.
+
+M0.9.14 moves signed contact import and foreground runtime start/stop into the
+desktop flow. A versioned secret-free launch profile carries only public
+settings and absolute paths; the GUI starts the same CLI runtime implementation
+and shuts it down through authenticated IPC. Runtime remains the only authority
+and state writer, and no service, autostart entry or Scheduled Task is created.
+
+M0.9.15 lets the desktop load, edit and atomically save that launch profile for
+an already enrolled device. IPC v4 adds a bounded per-runtime change revision:
+long polls are served outside the actor queue, while committed contact, queue,
+delivery, retry and synchronization work publishes a wake-up hint. A dedicated
+desktop worker coalesces those hints and refreshes actor-owned chat, history and
+outbox snapshots, replacing unconditional two-second polling.
 
 M0.8.1 adds a reversible encrypted shadow snapshot of the entire device state.
 `state-vault-migrate` publishes encrypted records and a keyed manifest in one
@@ -676,18 +692,18 @@ cargo run -p kilogram-cli -- runtime-ipc-outbox-status `
   --ipc-file .tmp/alice-runtime.ipc.json
 ```
 
-The first desktop client uses the same API. Keep the runtime terminal open and
-start the window in another terminal:
+The desktop client uses the same API. It can connect to an existing runtime:
 
 ```powershell
 cargo run -p kilogram-windows -- --ipc-file .tmp/alice-runtime.ipc.json
 ```
 
-You can also drop `runtime.ipc.json` onto the window. The M0.9.13 client expects
-contacts to have been added beforehand with `runtime-contact-add`; it then
-loads the signed contact list and paginated local history through the runtime
-actor. IPC contact onboarding and runtime lifecycle controls are the next
-desktop slice.
+You can also drop `runtime.ipc.json` onto the window. For an already enrolled
+device, expand **Runtime launch settings** to load/edit/save the secret-free
+profile and use **Start runtime**; the old `runtime-profile-create` command is
+not mandatory. Contacts can be imported with **+ Contact** from a signed peer
+runtime ticket. Account creation, device enrollment and seed/root recovery are
+still separate bootstrap ceremonies.
 
 The queue command prints `runtime_ipc_request_id` before connecting. If its
 result is uncertain, repeat the same message with `--request-id <PRINTED_ID>`;

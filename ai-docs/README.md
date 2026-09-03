@@ -134,8 +134,12 @@ multi-source claim reconciliation. M0.7.9 добавил signed append-only chec
   M0.9.13 перенёс signed contact list, preview и paginated decrypted history в
   actor-owned IPC read model. M0.9.14 поднял IPC до v3: GUI импортирует contact
   только через actor, запускает runtime из secret-free no-clobber profile и
-  штатно останавливает его authenticated `Shutdown`. Autostart/service не
-  устанавливается; push/OS peer credentials остаются дальше.
+  штатно останавливает его authenticated `Shutdown`. M0.9.15 поднял IPC до v4:
+  отдельный connection-task long poll будит GUI по actor change revision, а
+  unconditional двухсекундный polling удалён. Desktop теперь редактирует и
+  атомарно сохраняет public launch profile уже enrolled device, не получая
+  seed/device/vault secrets. Autostart/service не устанавливается; account/
+  device first-run и OS peer credentials остаются дальше.
   Reconciliation выбирает
   inventory только при совпадении двух или более полных явно собранных claims и
   всё равно не обещает global completeness.
@@ -296,8 +300,9 @@ summaries, membership removal и группы ещё не реализованы
 
 ## План ближайших работ
 
-1. M0.9.15: добавить first-run desktop setup, GUI editing/persistence
-   launch-profile и actor change revision/notification вместо periodic polling.
+1. M0.9.16: добавить desktop account/device first-run boundary для создания
+   нового account либо enrollment/recovery существующего device, сохранив root,
+   device и vault secrets вне обычного runtime UI.
 2. Optional autostart/background mode оставить отдельной явной настройкой, а не
    обязательным Task Scheduler этапом.
 3. Добавить production macOS/Linux local key provider, согласованный monotonic

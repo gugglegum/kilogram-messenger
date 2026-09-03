@@ -1,5 +1,6 @@
 use std::{
     ffi::OsString,
+    fs,
     path::PathBuf,
     process::{Child, Command, Stdio},
     str::FromStr,
@@ -14,10 +15,12 @@ use kilogram_identity::AccountId;
 use kilogram_runtime_ipc::{
     RuntimeIpcCommand, RuntimeIpcConversationSummary, RuntimeIpcHistoryCursor,
     RuntimeIpcHistoryMessage, RuntimeIpcHistoryPage, RuntimeIpcOutboxStatus, RuntimeIpcQueueState,
-    RuntimeIpcRequestId, RuntimeIpcResponse, RuntimeLaunchProfile,
+    RuntimeIpcRequestId, RuntimeIpcResponse, RuntimeIpcRoutePolicy, RuntimeLaunchProfile,
+    RuntimeLaunchSettings,
 };
 
-const STATUS_POLL_INTERVAL: Duration = Duration::from_secs(2);
+const CHANGE_WAIT_MILLISECONDS: u32 = 20_000;
+const CHANGE_RETRY_INTERVAL: Duration = Duration::from_millis(500);
 const MAX_CONVERSATION_BYTES: usize = 4_096;
 const MAX_MESSAGE_BYTES: usize = 64 * 1024;
 const HISTORY_PAGE_SIZE: u16 = 50;
@@ -161,6 +164,118 @@ enum RuntimeUiAction {
     Connect,
     Start,
     Stop,
+    LoadProfile,
+    SaveProfile,
+}
+
+#[derive(Clone, Debug)]
+struct RuntimeProfileDraft {
+    state_dir: String,
+    allowed_requester_account_id: String,
+    device_list_file: String,
+    peer_prekey_pool_files: String,
+    ticket_file: String,
+    ipc_file: String,
+    route_policy: RuntimeIpcRoutePolicy,
+    relay_url: String,
+    relay_wait_seconds: String,
+    poll_milliseconds: String,
+    retry_base_seconds: String,
+    retry_max_seconds: String,
+    auto_sync_seconds: String,
+}
+
+impl Default for RuntimeProfileDraft {
+    fn default() -> Self {
+        Self {
+            state_dir: "state".to_owned(),
+            allowed_requester_account_id: String::new(),
+            device_list_file: "account-device-list.bin".to_owned(),
+            peer_prekey_pool_files: "peer-prekeys.bin".to_owned(),
+            ticket_file: "runtime.ticket".to_owned(),
+            ipc_file: "runtime.ipc.json".to_owned(),
+            route_policy: RuntimeIpcRoutePolicy::Auto,
+            relay_url: String::new(),
+            relay_wait_seconds: "15".to_owned(),
+            poll_milliseconds: "250".to_owned(),
+            retry_base_seconds: "1".to_owned(),
+            retry_max_seconds: "60".to_owned(),
+            auto_sync_seconds: "30".to_owned(),
+        }
+    }
+}
+
+impl RuntimeProfileDraft {
+    fn from_profile(profile: &RuntimeLaunchProfile) -> Self {
+        let settings = profile.settings();
+        Self {
+            state_dir: settings.state_dir.display().to_string(),
+            allowed_requester_account_id: settings.allowed_requester_account_id.to_string(),
+            device_list_file: settings.device_list_file.display().to_string(),
+            peer_prekey_pool_files: settings
+                .peer_prekey_pool_files
+                .iter()
+                .map(|path| path.display().to_string())
+                .collect::<Vec<_>>()
+                .join("\n"),
+            ticket_file: settings
+                .ticket_file
+                .as_ref()
+                .map(|path| path.display().to_string())
+                .unwrap_or_default(),
+            ipc_file: settings.ipc_file.display().to_string(),
+            route_policy: settings.route_policy,
+            relay_url: settings.relay_url.clone().unwrap_or_default(),
+            relay_wait_seconds: settings.relay_wait_seconds.to_string(),
+            poll_milliseconds: settings.poll_milliseconds.to_string(),
+            retry_base_seconds: settings.retry_base_seconds.to_string(),
+            retry_max_seconds: settings.retry_max_seconds.to_string(),
+            auto_sync_seconds: settings.auto_sync_seconds.to_string(),
+        }
+    }
+
+    fn build(&self) -> Result<RuntimeLaunchProfile> {
+        let state_dir = canonical_input_path(&self.state_dir, "State directory", false)?;
+        let device_list_file = canonical_input_path(&self.device_list_file, "Device list", true)?;
+        let peer_prekey_pool_files = self
+            .peer_prekey_pool_files
+            .lines()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(|value| canonical_input_path(value, "Peer prekey pool", true))
+            .collect::<Result<Vec<_>>>()?;
+        ensure!(
+            !peer_prekey_pool_files.is_empty(),
+            "At least one peer prekey pool is required"
+        );
+        let ticket_file = optional_output_path(&self.ticket_file, "Runtime ticket", &state_dir)?;
+        let ipc_file = absolute_output_path(&self.ipc_file, "IPC descriptor", &state_dir)?;
+        RuntimeLaunchProfile::new(RuntimeLaunchSettings {
+            state_dir,
+            allowed_requester_account_id: AccountId::from_str(
+                self.allowed_requester_account_id.trim(),
+            )
+            .context("Allowed requester Account ID is invalid")?,
+            device_list_file,
+            peer_prekey_pool_files,
+            ticket_file,
+            relay_wait_seconds: parse_profile_number(
+                &self.relay_wait_seconds,
+                "Relay wait seconds",
+            )?,
+            route_policy: self.route_policy,
+            relay_url: (!self.relay_url.trim().is_empty())
+                .then(|| self.relay_url.trim().to_owned()),
+            poll_milliseconds: parse_profile_number(&self.poll_milliseconds, "Poll milliseconds")?,
+            retry_base_seconds: parse_profile_number(
+                &self.retry_base_seconds,
+                "Retry base seconds",
+            )?,
+            retry_max_seconds: parse_profile_number(&self.retry_max_seconds, "Retry max seconds")?,
+            auto_sync_seconds: parse_profile_number(&self.auto_sync_seconds, "Auto sync seconds")?,
+            ipc_file,
+        })
+    }
 }
 
 #[derive(Debug, Default)]
@@ -619,6 +734,157 @@ struct RuntimeWorker {
     responses: Receiver<WorkerResponse>,
 }
 
+enum ChangeWatcherCommand {
+    Subscribe(PathBuf),
+    Stop,
+}
+
+enum ChangeWatcherEvent {
+    Changed,
+    Unavailable(String),
+}
+
+struct RuntimeChangeWatcher {
+    commands: Sender<ChangeWatcherCommand>,
+    events: Receiver<ChangeWatcherEvent>,
+}
+
+impl RuntimeChangeWatcher {
+    fn spawn() -> Result<Self> {
+        let (command_sender, command_receiver) = mpsc::channel();
+        let (event_sender, event_receiver) = mpsc::channel();
+        thread::Builder::new()
+            .name("kilogram-runtime-changes".to_owned())
+            .spawn(move || change_watcher_main(command_receiver, event_sender))
+            .context("start runtime change watcher")?;
+        Ok(Self {
+            commands: command_sender,
+            events: event_receiver,
+        })
+    }
+
+    fn subscribe(&self, descriptor: PathBuf) -> Result<()> {
+        self.commands
+            .send(ChangeWatcherCommand::Subscribe(descriptor))
+            .context("runtime change watcher stopped")
+    }
+
+    fn stop(&self) {
+        let _ = self.commands.send(ChangeWatcherCommand::Stop);
+    }
+
+    fn try_receive(&self) -> Option<ChangeWatcherEvent> {
+        self.events.try_recv().ok()
+    }
+}
+
+fn change_watcher_main(
+    commands: Receiver<ChangeWatcherCommand>,
+    events: Sender<ChangeWatcherEvent>,
+) {
+    let runtime = match tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+    {
+        Ok(runtime) => runtime,
+        Err(error) => {
+            let _ = events.send(ChangeWatcherEvent::Unavailable(format!(
+                "Create change-watcher runtime: {error}"
+            )));
+            return;
+        }
+    };
+    while let Ok(command) = commands.recv() {
+        let ChangeWatcherCommand::Subscribe(mut descriptor) = command else {
+            continue;
+        };
+        let mut revision = 0_u64;
+        let mut failure_reported = false;
+        loop {
+            let result = runtime.block_on(kilogram_runtime_ipc::call(
+                &descriptor,
+                RuntimeIpcCommand::WaitForChange {
+                    after_revision: revision,
+                    timeout_milliseconds: CHANGE_WAIT_MILLISECONDS,
+                },
+            ));
+
+            let mut restart = false;
+            let mut stop = false;
+            while let Ok(command) = commands.try_recv() {
+                match command {
+                    ChangeWatcherCommand::Subscribe(next) => {
+                        descriptor = next;
+                        revision = 0;
+                        failure_reported = false;
+                        restart = true;
+                    }
+                    ChangeWatcherCommand::Stop => {
+                        stop = true;
+                        break;
+                    }
+                }
+            }
+            if stop {
+                break;
+            }
+            if restart {
+                continue;
+            }
+
+            match result {
+                Ok(RuntimeIpcResponse::ChangeState {
+                    revision: next,
+                    changed,
+                }) => {
+                    revision = next;
+                    failure_reported = false;
+                    if changed && events.send(ChangeWatcherEvent::Changed).is_err() {
+                        return;
+                    }
+                }
+                Ok(RuntimeIpcResponse::Error { message }) => {
+                    if !failure_reported {
+                        if events
+                            .send(ChangeWatcherEvent::Unavailable(format!(
+                                "Runtime change subscription rejected: {message}"
+                            )))
+                            .is_err()
+                        {
+                            return;
+                        }
+                        failure_reported = true;
+                    }
+                    thread::sleep(CHANGE_RETRY_INTERVAL);
+                }
+                Ok(_) => {
+                    if !failure_reported {
+                        let _ = events.send(ChangeWatcherEvent::Unavailable(
+                            "Runtime returned an unexpected change response".to_owned(),
+                        ));
+                        failure_reported = true;
+                    }
+                    thread::sleep(CHANGE_RETRY_INTERVAL);
+                }
+                Err(error) => {
+                    if !failure_reported {
+                        if events
+                            .send(ChangeWatcherEvent::Unavailable(format!(
+                                "Runtime change subscription unavailable: {error:#}"
+                            )))
+                            .is_err()
+                        {
+                            return;
+                        }
+                        failure_reported = true;
+                    }
+                    thread::sleep(CHANGE_RETRY_INTERVAL);
+                }
+            }
+        }
+    }
+}
+
 impl RuntimeWorker {
     fn spawn() -> Result<Self> {
         let (request_sender, request_receiver) = mpsc::channel();
@@ -794,8 +1060,11 @@ async fn execute_request(request: WorkerRequest) -> Result<WorkerSuccess> {
 struct KilogramApp {
     model: ViewModel,
     worker: Option<RuntimeWorker>,
-    last_poll_started: Instant,
+    change_watcher: Option<RuntimeChangeWatcher>,
+    pending_change_refresh: bool,
     runtime_profile_path: String,
+    runtime_profile_draft: RuntimeProfileDraft,
+    show_profile_editor: bool,
     runtime_executable_path: String,
     runtime_process: Option<Child>,
     runtime_start_deadline: Option<Instant>,
@@ -820,11 +1089,29 @@ impl KilogramApp {
                 None
             }
         };
+        let change_watcher = match RuntimeChangeWatcher::spawn() {
+            Ok(watcher) => Some(watcher),
+            Err(error) => {
+                model.error = Some(format!("Start runtime change watcher: {error:#}"));
+                None
+            }
+        };
+        let runtime_profile_exists = options.runtime_profile_path.exists();
+        let runtime_profile_draft = if runtime_profile_exists {
+            RuntimeLaunchProfile::load(&options.runtime_profile_path)
+                .map(|profile| RuntimeProfileDraft::from_profile(&profile))
+                .unwrap_or_default()
+        } else {
+            RuntimeProfileDraft::default()
+        };
         Self {
             model,
             worker,
-            last_poll_started: Instant::now(),
+            change_watcher,
+            pending_change_refresh: false,
             runtime_profile_path: options.runtime_profile_path.display().to_string(),
+            runtime_profile_draft,
+            show_profile_editor: !runtime_profile_exists,
             runtime_executable_path: options.runtime_executable_path.display().to_string(),
             runtime_process: None,
             runtime_start_deadline: None,
@@ -846,8 +1133,7 @@ impl KilogramApp {
                 continue;
             }
             let connected = matches!(response.result, Ok(WorkerSuccess::Connected { .. }));
-            let contact_added = matches!(response.result, Ok(WorkerSuccess::ContactAdded { .. }));
-            let queued = matches!(response.result, Ok(WorkerSuccess::Queued { .. }));
+            let shutdown = matches!(response.result, Ok(WorkerSuccess::Shutdown));
             let conversations = matches!(response.result, Ok(WorkerSuccess::Conversations(_)));
             let initial_history = matches!(
                 response.result,
@@ -857,14 +1143,63 @@ impl KilogramApp {
             if connected {
                 self.runtime_start_deadline = None;
                 self.runtime_start_error = None;
+                self.start_change_subscription();
             }
-            if connected || contact_added || queued {
+            if shutdown {
+                self.stop_change_subscription();
+            }
+            if connected {
                 self.start_conversations();
             } else if conversations && self.model.selected_contact_id.is_some() {
                 self.start_history(false);
             } else if conversations || initial_history {
                 self.start_refresh();
             }
+        }
+    }
+
+    fn start_change_subscription(&mut self) {
+        let Some(watcher) = self.change_watcher.as_ref() else {
+            return;
+        };
+        match self.model.descriptor() {
+            Ok(descriptor) => {
+                if let Err(error) = watcher.subscribe(descriptor) {
+                    self.model.error = Some(format!("Subscribe to runtime changes: {error:#}"));
+                }
+            }
+            Err(error) => self.model.error = Some(format!("{error:#}")),
+        }
+    }
+
+    fn stop_change_subscription(&mut self) {
+        if let Some(watcher) = self.change_watcher.as_ref() {
+            watcher.stop();
+        }
+        self.pending_change_refresh = false;
+    }
+
+    fn receive_change_events(&mut self) {
+        while let Some(event) = self
+            .change_watcher
+            .as_ref()
+            .and_then(RuntimeChangeWatcher::try_receive)
+        {
+            match event {
+                ChangeWatcherEvent::Changed => self.pending_change_refresh = true,
+                ChangeWatcherEvent::Unavailable(message) => {
+                    if self.model.connection == ConnectionState::Connected {
+                        self.model.error = Some(message);
+                    }
+                }
+            }
+        }
+        if self.pending_change_refresh
+            && self.model.connection == ConnectionState::Connected
+            && self.model.pending.is_none()
+        {
+            self.pending_change_refresh = false;
+            self.start_conversations();
         }
     }
 
@@ -886,6 +1221,48 @@ impl KilogramApp {
                 self.submit(Operation::Connect, WorkerRequest::Connect { descriptor })
             }
             Err(error) => self.model.fail(Operation::Connect, format!("{error:#}")),
+        }
+    }
+
+    fn load_runtime_profile(&mut self) {
+        let result: Result<RuntimeLaunchProfile> = (|| {
+            let path = required_path(&self.runtime_profile_path, "Runtime profile")?;
+            RuntimeLaunchProfile::load(&path)
+        })();
+        match result {
+            Ok(profile) => {
+                self.model.descriptor_path = profile.settings().ipc_file.display().to_string();
+                self.runtime_profile_draft = RuntimeProfileDraft::from_profile(&profile);
+                self.model.notice = Some("Runtime launch profile loaded".to_owned());
+                self.model.error = None;
+            }
+            Err(error) => self.model.error = Some(format!("Load runtime profile: {error:#}")),
+        }
+    }
+
+    fn save_runtime_profile(&mut self) {
+        if self.runtime_process.is_some()
+            || self.model.connection != ConnectionState::Disconnected
+            || self.model.pending.is_some()
+        {
+            self.model.error =
+                Some("Stop or disconnect the runtime before editing its profile".to_owned());
+            return;
+        }
+        let result: Result<RuntimeLaunchProfile> = (|| {
+            let path = required_path(&self.runtime_profile_path, "Runtime profile")?;
+            let profile = self.runtime_profile_draft.build()?;
+            profile.write_replace(&path)?;
+            Ok(profile)
+        })();
+        match result {
+            Ok(profile) => {
+                self.model.descriptor_path = profile.settings().ipc_file.display().to_string();
+                self.runtime_profile_draft = RuntimeProfileDraft::from_profile(&profile);
+                self.model.notice = Some("Runtime launch profile saved atomically".to_owned());
+                self.model.error = None;
+            }
+            Err(error) => self.model.error = Some(format!("Save runtime profile: {error:#}")),
         }
     }
 
@@ -958,7 +1335,6 @@ impl KilogramApp {
         }
         match self.model.descriptor() {
             Ok(descriptor) => {
-                self.last_poll_started = Instant::now();
                 self.submit(Operation::Refresh, WorkerRequest::Refresh { descriptor });
             }
             Err(error) => self.model.fail(Operation::Refresh, format!("{error:#}")),
@@ -971,7 +1347,6 @@ impl KilogramApp {
         }
         match self.model.descriptor() {
             Ok(descriptor) => {
-                self.last_poll_started = Instant::now();
                 self.submit(
                     Operation::Conversations,
                     WorkerRequest::Conversations { descriptor },
@@ -1025,15 +1400,6 @@ impl KilogramApp {
         }
     }
 
-    fn maybe_poll(&mut self) {
-        if self.model.connection == ConnectionState::Connected
-            && self.model.pending.is_none()
-            && self.last_poll_started.elapsed() >= STATUS_POLL_INTERVAL
-        {
-            self.start_conversations();
-        }
-    }
-
     fn observe_runtime_process(&mut self) {
         let Some(child) = self.runtime_process.as_mut() else {
             return;
@@ -1047,6 +1413,7 @@ impl KilogramApp {
                 self.model.connection = ConnectionState::Disconnected;
                 self.model.account_id = None;
                 self.model.device_id = None;
+                self.stop_change_subscription();
                 if was_starting {
                     let detail = self
                         .runtime_start_error
@@ -1109,12 +1476,13 @@ impl KilogramApp {
     fn draw_header(&self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             ui.heading(egui::RichText::new("Kilogram").size(28.0).strong());
-            ui.label(egui::RichText::new("M0.9.14").color(egui::Color32::from_rgb(88, 166, 255)));
+            ui.label(egui::RichText::new("M0.9.15").color(egui::Color32::from_rgb(88, 166, 255)));
         });
         ui.label("Desktop client · authenticated local runtime IPC");
     }
 
     fn draw_runtime(&mut self, ui: &mut egui::Ui) -> RuntimeUiAction {
+        let mut action = RuntimeUiAction::None;
         let color = match self.model.connection {
             ConnectionState::Disconnected => egui::Color32::from_rgb(239, 112, 112),
             ConnectionState::Connecting => egui::Color32::from_rgb(246, 195, 93),
@@ -1134,6 +1502,9 @@ impl KilogramApp {
                 );
             });
             ui.collapsing("Runtime launch settings", |ui| {
+                let editable = self.model.pending.is_none()
+                    && self.runtime_process.is_none()
+                    && self.model.connection == ConnectionState::Disconnected;
                 ui.horizontal(|ui| {
                     ui.label("Launch profile");
                     ui.add_enabled(
@@ -1150,11 +1521,131 @@ impl KilogramApp {
                             .desired_width(f32::INFINITY),
                     );
                 });
-                ui.small("The versioned profile contains paths and public runtime settings, never device secrets.");
+                ui.horizontal(|ui| {
+                    if ui
+                        .add_enabled(editable, egui::Button::new("Load profile"))
+                        .clicked()
+                    {
+                        action = RuntimeUiAction::LoadProfile;
+                    }
+                    if ui
+                        .add_enabled(editable, egui::Button::new("Save profile"))
+                        .clicked()
+                    {
+                        action = RuntimeUiAction::SaveProfile;
+                    }
+                    if ui.button("Edit settings").clicked() {
+                        self.show_profile_editor = !self.show_profile_editor;
+                    }
+                });
+                if self.show_profile_editor {
+                    ui.separator();
+                    ui.label("Enrolled device state directory");
+                    ui.add_enabled(
+                        editable,
+                        egui::TextEdit::singleline(&mut self.runtime_profile_draft.state_dir)
+                            .hint_text("Enrolled device state directory"),
+                    );
+                    ui.label("Allowed requester Account ID");
+                    ui.add_enabled(
+                        editable,
+                        egui::TextEdit::singleline(
+                            &mut self.runtime_profile_draft.allowed_requester_account_id,
+                        )
+                        .hint_text("Allowed requester Account ID"),
+                    );
+                    ui.label("Signed device-list file");
+                    ui.add_enabled(
+                        editable,
+                        egui::TextEdit::singleline(
+                            &mut self.runtime_profile_draft.device_list_file,
+                        )
+                        .hint_text("Signed device-list file"),
+                    );
+                    ui.label("Peer prekey-pool files (one path per line)");
+                    ui.add_enabled(
+                        editable,
+                        egui::TextEdit::multiline(
+                            &mut self.runtime_profile_draft.peer_prekey_pool_files,
+                        )
+                        .desired_rows(2)
+                        .desired_width(f32::INFINITY),
+                    );
+                    ui.label("Published runtime ticket (optional)");
+                    ui.add_enabled(
+                        editable,
+                        egui::TextEdit::singleline(&mut self.runtime_profile_draft.ticket_file)
+                            .hint_text("Published runtime ticket (optional)"),
+                    );
+                    ui.label("Local IPC descriptor");
+                    ui.add_enabled(
+                        editable,
+                        egui::TextEdit::singleline(&mut self.runtime_profile_draft.ipc_file)
+                            .hint_text("Local IPC descriptor"),
+                    );
+                    ui.add_enabled_ui(editable, |ui| {
+                        egui::ComboBox::from_label("Route policy")
+                            .selected_text(self.runtime_profile_draft.route_policy.as_str())
+                            .show_ui(ui, |ui| {
+                                for policy in [
+                                    RuntimeIpcRoutePolicy::Auto,
+                                    RuntimeIpcRoutePolicy::DirectOnly,
+                                    RuntimeIpcRoutePolicy::RelayOnly,
+                                ] {
+                                    ui.selectable_value(
+                                        &mut self.runtime_profile_draft.route_policy,
+                                        policy,
+                                        policy.as_str(),
+                                    );
+                                }
+                            });
+                        ui.label("Custom relay URL (optional)");
+                        ui.add(
+                            egui::TextEdit::singleline(
+                                &mut self.runtime_profile_draft.relay_url,
+                            )
+                            .hint_text("Custom relay URL (optional)"),
+                        );
+                    });
+                    egui::Grid::new("runtime-profile-numbers")
+                        .num_columns(2)
+                        .show(ui, |ui| {
+                            for (label, value) in [
+                                (
+                                    "Relay wait seconds",
+                                    &mut self.runtime_profile_draft.relay_wait_seconds,
+                                ),
+                                (
+                                    "Runtime poll ms",
+                                    &mut self.runtime_profile_draft.poll_milliseconds,
+                                ),
+                                (
+                                    "Retry base seconds",
+                                    &mut self.runtime_profile_draft.retry_base_seconds,
+                                ),
+                                (
+                                    "Retry max seconds",
+                                    &mut self.runtime_profile_draft.retry_max_seconds,
+                                ),
+                                (
+                                    "Auto sync seconds",
+                                    &mut self.runtime_profile_draft.auto_sync_seconds,
+                                ),
+                            ] {
+                                ui.label(label);
+                                ui.add_enabled(
+                                    editable,
+                                    egui::TextEdit::singleline(value).desired_width(100.0),
+                                );
+                                ui.end_row();
+                            }
+                        });
+                }
+                ui.small("This profile contains paths and public runtime settings, never device or vault secrets.");
+                ui.small("It configures an already enrolled device; account/device bootstrap remains separate.");
             });
             ui.small("Pass --ipc-file/--runtime-profile or drop a descriptor onto this window.");
         });
-        let mut action = RuntimeUiAction::None;
         ui.horizontal(|ui| {
             if ui
                 .add_enabled(
@@ -1450,6 +1941,74 @@ fn required_path(value: &str, label: &str) -> Result<PathBuf> {
     Ok(PathBuf::from(value))
 }
 
+fn canonical_input_path(value: &str, label: &str, require_file: bool) -> Result<PathBuf> {
+    let path = required_path(value, label)?;
+    let path = fs::canonicalize(&path)
+        .with_context(|| format!("Resolve {label} path {}", path.display()))?;
+    let metadata =
+        fs::metadata(&path).with_context(|| format!("Inspect {label} path {}", path.display()))?;
+    if require_file {
+        ensure!(metadata.is_file(), "{label} must be a file");
+    } else {
+        ensure!(metadata.is_dir(), "{label} must be a directory");
+    }
+    Ok(path)
+}
+
+fn absolute_output_path(
+    value: &str,
+    label: &str,
+    protected_state: &std::path::Path,
+) -> Result<PathBuf> {
+    let path = required_path(value, label)?;
+    let absolute = if path.is_absolute() {
+        path
+    } else {
+        std::env::current_dir()
+            .context("Read current directory for runtime profile")?
+            .join(path)
+    };
+    ensure!(
+        !absolute.starts_with(protected_state),
+        "{label} must live outside the protected state directory"
+    );
+    let file_name = absolute
+        .file_name()
+        .context(format!("{label} path has no file name"))?;
+    let parent = absolute
+        .parent()
+        .context(format!("{label} path has no parent"))?;
+    fs::create_dir_all(parent)
+        .with_context(|| format!("Create {label} directory {}", parent.display()))?;
+    let resolved = fs::canonicalize(parent)
+        .with_context(|| format!("Resolve {label} directory {}", parent.display()))?
+        .join(file_name);
+    ensure!(
+        !resolved.starts_with(protected_state),
+        "{label} must live outside the protected state directory"
+    );
+    Ok(resolved)
+}
+
+fn optional_output_path(
+    value: &str,
+    label: &str,
+    protected_state: &std::path::Path,
+) -> Result<Option<PathBuf>> {
+    if value.trim().is_empty() {
+        Ok(None)
+    } else {
+        absolute_output_path(value, label, protected_state).map(Some)
+    }
+}
+
+fn parse_profile_number(value: &str, label: &str) -> Result<u64> {
+    value
+        .trim()
+        .parse::<u64>()
+        .with_context(|| format!("{label} must be a non-negative integer"))
+}
+
 fn spawn_runtime_process(executable: &std::path::Path, profile: &std::path::Path) -> Result<Child> {
     let mut command = Command::new(executable);
     command
@@ -1476,6 +2035,7 @@ fn spawn_runtime_process(executable: &std::path::Path, profile: &std::path::Path
 
 impl Drop for KilogramApp {
     fn drop(&mut self) {
+        self.stop_change_subscription();
         let Some(mut child) = self.runtime_process.take() else {
             return;
         };
@@ -1506,9 +2066,9 @@ impl eframe::App for KilogramApp {
     fn update(&mut self, context: &egui::Context, _frame: &mut eframe::Frame) {
         self.accept_dropped_descriptor(context);
         self.receive_worker_responses();
+        self.receive_change_events();
         self.observe_runtime_process();
         self.maybe_connect_started_runtime();
-        self.maybe_poll();
 
         let mut runtime_action = RuntimeUiAction::None;
         let mut add_contact_clicked = false;
@@ -1517,25 +2077,29 @@ impl eframe::App for KilogramApp {
         let mut selected_contact = None;
         let mut load_older_clicked = false;
         egui::CentralPanel::default().show(context, |ui| {
-            self.draw_header(ui);
-            ui.add_space(8.0);
-            runtime_action = self.draw_runtime(ui);
-            self.draw_identity(ui);
-            ui.separator();
-            ui.columns(2, |columns| {
-                add_contact_clicked = self.draw_contact_onboarding(&mut columns[0]);
-                selected_contact = self.draw_conversations(&mut columns[0]);
-                load_older_clicked = self.draw_history(&mut columns[1]);
-                queue_clicked = self.draw_composer(&mut columns[1]);
-            });
-            egui::CollapsingHeader::new("Runtime outbox")
-                .default_open(false)
+            egui::ScrollArea::vertical()
+                .id_salt("desktop-content")
                 .show(ui, |ui| {
-                    refresh_clicked = self.draw_outbox(ui);
-                    self.draw_outbox_contents(ui);
+                    self.draw_header(ui);
+                    ui.add_space(8.0);
+                    runtime_action = self.draw_runtime(ui);
+                    self.draw_identity(ui);
+                    ui.separator();
+                    ui.columns(2, |columns| {
+                        add_contact_clicked = self.draw_contact_onboarding(&mut columns[0]);
+                        selected_contact = self.draw_conversations(&mut columns[0]);
+                        load_older_clicked = self.draw_history(&mut columns[1]);
+                        queue_clicked = self.draw_composer(&mut columns[1]);
+                    });
+                    egui::CollapsingHeader::new("Runtime outbox")
+                        .default_open(false)
+                        .show(ui, |ui| {
+                            refresh_clicked = self.draw_outbox(ui);
+                            self.draw_outbox_contents(ui);
+                        });
+                    ui.add_space(8.0);
+                    self.draw_feedback(ui);
                 });
-            ui.add_space(8.0);
-            self.draw_feedback(ui);
         });
 
         if runtime_action == RuntimeUiAction::Connect {
@@ -1544,6 +2108,10 @@ impl eframe::App for KilogramApp {
             self.start_runtime();
         } else if runtime_action == RuntimeUiAction::Stop {
             self.start_shutdown();
+        } else if runtime_action == RuntimeUiAction::LoadProfile {
+            self.load_runtime_profile();
+        } else if runtime_action == RuntimeUiAction::SaveProfile {
+            self.save_runtime_profile();
         } else if add_contact_clicked {
             self.start_add_contact();
         } else if let Some(contact_id) = selected_contact {
@@ -1607,6 +2175,47 @@ mod tests {
 
         let unknown = DesktopOptions::from_arguments([OsString::from("--unknown")]);
         assert!(unknown.startup_error.is_some());
+    }
+
+    #[test]
+    fn profile_draft_builds_from_public_enrolled_device_paths()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let directory = tempfile::tempdir()?;
+        let state_dir = directory.path().join("state");
+        fs::create_dir(&state_dir)?;
+        let device_list = directory.path().join("device-list.bin");
+        let prekeys = directory.path().join("peer-prekeys.bin");
+        fs::write(&device_list, b"signed-device-list-placeholder")?;
+        fs::write(&prekeys, b"signed-prekeys-placeholder")?;
+        let draft = RuntimeProfileDraft {
+            state_dir: state_dir.display().to_string(),
+            allowed_requester_account_id: ACCOUNT_ID.to_owned(),
+            device_list_file: device_list.display().to_string(),
+            peer_prekey_pool_files: prekeys.display().to_string(),
+            ticket_file: directory
+                .path()
+                .join("runtime.ticket")
+                .display()
+                .to_string(),
+            ipc_file: directory
+                .path()
+                .join("runtime.ipc.json")
+                .display()
+                .to_string(),
+            ..RuntimeProfileDraft::default()
+        };
+        let profile = draft.build()?;
+        let profile_path = directory.path().join("runtime.launch.json");
+        profile.write_replace(&profile_path)?;
+        assert_eq!(RuntimeLaunchProfile::load(&profile_path)?, profile);
+        assert_eq!(
+            RuntimeProfileDraft::from_profile(&profile).route_policy,
+            RuntimeIpcRoutePolicy::Auto
+        );
+        let mut unsafe_draft = draft;
+        unsafe_draft.ticket_file = state_dir.join("public.ticket").display().to_string();
+        assert!(unsafe_draft.build().is_err());
+        Ok(())
     }
 
     #[test]
@@ -1968,6 +2577,39 @@ mod tests {
         actor.await??;
         server.shutdown().await?;
         assert!(!descriptor.exists());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn desktop_change_watcher_observes_revision_without_actor_dispatch()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let directory = tempfile::tempdir()?;
+        let descriptor = directory.path().join("runtime.ipc.json");
+        let root = AccountRootState::create(directory.path().join("root"))?;
+        let identity = DeviceIdentity::generate()?;
+        let (server, mut requests) =
+            RuntimeIpcServer::start(descriptor.clone(), root.account_id(), &identity).await?;
+        let watcher = RuntimeChangeWatcher::spawn()?;
+        watcher.subscribe(descriptor)?;
+        assert_eq!(server.publish_change(), 1);
+
+        let event = tokio::time::timeout(Duration::from_secs(2), async {
+            loop {
+                if let Some(event) = watcher.try_receive() {
+                    break event;
+                }
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+        })
+        .await?;
+        assert!(matches!(event, ChangeWatcherEvent::Changed));
+        assert!(
+            tokio::time::timeout(Duration::from_millis(100), requests.recv())
+                .await
+                .is_err()
+        );
+        watcher.stop();
+        server.shutdown().await?;
         Ok(())
     }
 }

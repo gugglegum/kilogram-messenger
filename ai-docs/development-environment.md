@@ -698,3 +698,22 @@ retirement остальных compatibility shadows ещё не реализов
   SHA-256 `48361DCB344064D5DA9556A01351B3CBE2E4CE41A8B9D4D1EB74AA99F6D8C891`;
   `target/release/kilogram-cli.exe` — 22,520,320 bytes, SHA-256
   `2A439A1219090E7743B44FB14F26FDCD6120CD04CA94D84F43523C6BD3A93F26`.
+
+## M0.9.15 verification snapshot (2026-09-03)
+
+- Runtime IPC v4 добавил bounded `WaitForChange`/`ChangeState`; connection-task
+  long poll использует in-memory watch revision и не занимает actor MPSC.
+- Runtime change revision публикуется после committed/meaningful contact,
+  queue, delivery/retry, automatic sync и successful inbound session; exact
+  idempotent contact/queue replay не создаёт wake-up.
+- Desktop отдельным worker-ом coalesces change wake-ups в actor-owned
+  conversations → selected history → outbox refresh; двухсекундный polling
+  удалён.
+- GUI load/edit/save создаёт атомарно заменяемый launch profile только для уже
+  enrolled device, canonicalizes public inputs и не читает device/vault secret.
+- `cargo fmt --all -- --check`, strict workspace all-target/all-feature Clippy,
+  все 147 workspace tests и `cargo build --workspace --release` проходят.
+- Windows artifacts: `target/release/kilogram-windows.exe` — 6,566,912 bytes,
+  SHA-256 `8F2DC29B22BECEE7301D6B420426BD56E6767C5DBE0F78BDF8B87C0CA1B3681E`;
+  `target/release/kilogram-cli.exe` — 22,529,024 bytes, SHA-256
+  `CC581322CD473FF0137D270713B352CFA2016547F34B424EDA3BD4FB5E8E9095`.

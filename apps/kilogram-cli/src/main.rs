@@ -4340,14 +4340,20 @@ async fn runtime_ipc_outbox_status(ipc_file: PathBuf) -> Result<()> {
     }
 }
 
+struct RuntimeIpcDispatchOutcome {
+    shutdown_requested: bool,
+    state_changed: bool,
+}
+
 fn handle_runtime_ipc_work(
     state_directory: &Path,
     account_id: AccountId,
     device_id: DeviceId,
     work: RuntimeIpcWork,
-) -> bool {
+) -> RuntimeIpcDispatchOutcome {
     let (command, response_sender) = work.into_parts();
     let shutdown_requested = matches!(command, RuntimeIpcCommand::Shutdown);
+    let mut state_changed = false;
     let response = match command {
         RuntimeIpcCommand::Ping => RuntimeIpcResponse::Pong {
             account_id,
@@ -4365,12 +4371,15 @@ fn handle_runtime_ipc_work(
                 descriptor_file,
             )
         }) {
-            Ok(receipt) => RuntimeIpcResponse::ContactAdded {
-                contact_id: receipt.contact_id.to_string(),
-                peer_account_id: receipt.peer_account_id,
-                peer_device_id: receipt.peer_device_id,
-                inserted: receipt.inserted,
-            },
+            Ok(receipt) => {
+                state_changed = receipt.inserted;
+                RuntimeIpcResponse::ContactAdded {
+                    contact_id: receipt.contact_id.to_string(),
+                    peer_account_id: receipt.peer_account_id,
+                    peer_device_id: receipt.peer_device_id,
+                    inserted: receipt.inserted,
+                }
+            }
             Err(error) => RuntimeIpcResponse::Error {
                 message: format!("{error:#}"),
             },
@@ -4389,11 +4398,14 @@ fn handle_runtime_ipc_work(
                 message,
             )
         }) {
-            Ok(receipt) => RuntimeIpcResponse::MessageQueued {
-                queue_id: receipt.queue_id.to_string(),
-                contact_id: receipt.contact_id.to_string(),
-                inserted: receipt.inserted,
-            },
+            Ok(receipt) => {
+                state_changed = receipt.inserted;
+                RuntimeIpcResponse::MessageQueued {
+                    queue_id: receipt.queue_id.to_string(),
+                    contact_id: receipt.contact_id.to_string(),
+                    inserted: receipt.inserted,
+                }
+            }
             Err(error) => RuntimeIpcResponse::Error {
                 message: format!("{error:#}"),
             },
@@ -4437,10 +4449,16 @@ fn handle_runtime_ipc_work(
                 },
             }
         }
+        RuntimeIpcCommand::WaitForChange { .. } => RuntimeIpcResponse::Error {
+            message: "change waits are handled by the IPC acceptor".to_owned(),
+        },
         RuntimeIpcCommand::Shutdown => RuntimeIpcResponse::ShutdownAccepted,
     };
     let _ = response_sender.send(response);
-    shutdown_requested
+    RuntimeIpcDispatchOutcome {
+        shutdown_requested,
+        state_changed,
+    }
 }
 
 fn resolve_runtime_ipc_descriptor_path(
@@ -4616,12 +4634,18 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
             RuntimeEvent::IpcClosed => bail!("runtime IPC acceptor stopped unexpectedly"),
             RuntimeEvent::Ipc(work) => {
                 last_activity = tokio::time::Instant::now();
-                if handle_runtime_ipc_work(
+                let outcome = handle_runtime_ipc_work(
                     &state_dir,
                     ticket.listener_account_id(),
                     prepared.device_state.identity().device_id(),
                     work,
-                ) {
+                );
+                if outcome.state_changed
+                    && let Some(server) = ipc_server.as_ref()
+                {
+                    server.publish_change();
+                }
+                if outcome.shutdown_requested {
                     tokio::time::sleep(Duration::from_millis(50)).await;
                     break "ipc-shutdown";
                 }
@@ -4637,6 +4661,9 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                 match delivery_attempt {
                     RuntimeDeliveryAttempt::NoWork => {}
                     RuntimeDeliveryAttempt::Delivered | RuntimeDeliveryAttempt::RetryScheduled => {
+                        if let Some(server) = ipc_server.as_ref() {
+                            server.publish_change();
+                        }
                         outbound_actions += 1;
                         last_activity = tokio::time::Instant::now();
                         if max_outbound_actions != 0 && outbound_actions >= max_outbound_actions {
@@ -4654,6 +4681,9 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                     )
                     .await?
                 {
+                    if let Some(server) = ipc_server.as_ref() {
+                        server.publish_change();
+                    }
                     outbound_actions += 1;
                     last_activity = tokio::time::Instant::now();
                     if max_outbound_actions != 0 && outbound_actions >= max_outbound_actions {
@@ -4695,6 +4725,11 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                     }
                     Err(error) => Err(error),
                 };
+                if session_result.is_ok()
+                    && let Some(server) = ipc_server.as_ref()
+                {
+                    server.publish_change();
+                }
                 match session_result {
                     Ok(()) => println!("runtime_session_status=completed"),
                     Err(error) => {

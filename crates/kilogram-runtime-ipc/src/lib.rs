@@ -16,21 +16,27 @@ use tempfile::NamedTempFile;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, TcpStream},
-    sync::{mpsc, oneshot},
+    sync::{mpsc, oneshot, watch},
     task::JoinHandle,
     time::timeout,
 };
 
-const IPC_VERSION: u8 = 3;
+const IPC_VERSION: u8 = 4;
 const MAX_DESCRIPTOR_BYTES: u64 = 16 * 1024;
 const MAX_LAUNCH_PROFILE_BYTES: u64 = 64 * 1024;
 const MAX_LAUNCH_PROFILE_PATHS: usize = 64;
 const MAX_RELAY_URL_BYTES: usize = 4 * 1024;
+const MIN_RUNTIME_POLL_MILLISECONDS: u64 = 10;
+const MAX_RUNTIME_POLL_MILLISECONDS: u64 = 10_000;
+const MIN_RUNTIME_RETRY_SECONDS: u64 = 1;
+const MAX_RUNTIME_RETRY_SECONDS: u64 = 3_600;
+const MAX_RUNTIME_AUTO_SYNC_SECONDS: u64 = 3_600;
+const MAX_CHANGE_WAIT_MILLISECONDS: u32 = 25_000;
 const MAX_FRAME_BYTES: usize = 256 * 1024;
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(3);
 const IO_TIMEOUT: Duration = Duration::from_secs(30);
 const REQUEST_CHANNEL_CAPACITY: usize = 64;
-const DESCRIPTOR_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-ipc-descriptor:v3\0";
+const DESCRIPTOR_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-ipc-descriptor:v4\0";
 pub const RUNTIME_LAUNCH_PROFILE_VERSION: u8 = 1;
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -86,6 +92,14 @@ impl RuntimeLaunchProfile {
     }
 
     pub fn write_new(&self, path: &Path) -> Result<()> {
+        self.write(path, true)
+    }
+
+    pub fn write_replace(&self, path: &Path) -> Result<()> {
+        self.write(path, false)
+    }
+
+    fn write(&self, path: &Path, no_clobber: bool) -> Result<()> {
         self.validate()?;
         let lexical_path = if path.is_absolute() {
             path.to_path_buf()
@@ -120,10 +134,19 @@ impl RuntimeLaunchProfile {
             .as_file()
             .sync_all()
             .context("sync runtime launch profile")?;
-        let persisted = temporary
-            .persist_noclobber(path)
-            .map_err(|error| error.error)
-            .with_context(|| format!("persist new runtime launch profile to {}", path.display()))?;
+        let persisted = if no_clobber {
+            temporary
+                .persist_noclobber(path)
+                .map_err(|error| error.error)
+                .with_context(|| {
+                    format!("persist new runtime launch profile to {}", path.display())
+                })?
+        } else {
+            temporary
+                .persist(path)
+                .map_err(|error| error.error)
+                .with_context(|| format!("replace runtime launch profile at {}", path.display()))?
+        };
         persisted
             .sync_all()
             .with_context(|| format!("sync runtime launch profile at {}", path.display()))?;
@@ -165,6 +188,10 @@ impl RuntimeLaunchProfile {
                 path.is_absolute(),
                 "runtime launch profile ticket_file must be absolute"
             );
+            ensure!(
+                !path.starts_with(&self.settings.state_dir),
+                "runtime ticket must live outside the protected state directory"
+            );
         }
         if let Some(url) = &self.settings.relay_url {
             ensure!(
@@ -172,6 +199,25 @@ impl RuntimeLaunchProfile {
                 "runtime launch profile relay URL is invalid"
             );
         }
+        ensure!(
+            (MIN_RUNTIME_POLL_MILLISECONDS..=MAX_RUNTIME_POLL_MILLISECONDS)
+                .contains(&self.settings.poll_milliseconds),
+            "runtime launch profile poll interval is out of range"
+        );
+        ensure!(
+            (MIN_RUNTIME_RETRY_SECONDS..=MAX_RUNTIME_RETRY_SECONDS)
+                .contains(&self.settings.retry_base_seconds),
+            "runtime launch profile retry base is out of range"
+        );
+        ensure!(
+            self.settings.retry_max_seconds >= self.settings.retry_base_seconds
+                && self.settings.retry_max_seconds <= MAX_RUNTIME_RETRY_SECONDS,
+            "runtime launch profile retry maximum is out of range"
+        );
+        ensure!(
+            self.settings.auto_sync_seconds <= MAX_RUNTIME_AUTO_SYNC_SECONDS,
+            "runtime launch profile automatic sync interval is out of range"
+        );
         ensure!(
             !self.settings.ipc_file.starts_with(&self.settings.state_dir),
             "runtime IPC descriptor must live outside the protected state directory"
@@ -314,6 +360,10 @@ pub enum RuntimeIpcCommand {
         conversation: String,
         cursor: Option<RuntimeIpcHistoryCursor>,
         limit: u16,
+    },
+    WaitForChange {
+        after_revision: u64,
+        timeout_milliseconds: u32,
     },
     Shutdown,
 }
@@ -527,6 +577,10 @@ pub enum RuntimeIpcResponse {
     OutboxStatus(RuntimeIpcOutboxStatus),
     ConversationList(Vec<RuntimeIpcConversationSummary>),
     HistoryPage(RuntimeIpcHistoryPage),
+    ChangeState {
+        revision: u64,
+        changed: bool,
+    },
     ShutdownAccepted,
     Error {
         message: String,
@@ -554,6 +608,7 @@ impl RuntimeIpcWork {
 pub struct RuntimeIpcServer {
     descriptor_path: PathBuf,
     descriptor: RuntimeIpcDescriptor,
+    changes: watch::Sender<u64>,
     accept_task: JoinHandle<()>,
 }
 
@@ -574,11 +629,13 @@ impl RuntimeIpcServer {
         let descriptor = RuntimeIpcDescriptor::new(address, token, account_id, identity)?;
         publish_descriptor(&descriptor_path, &descriptor)?;
         let (sender, receiver) = mpsc::channel(REQUEST_CHANNEL_CAPACITY);
-        let accept_task = tokio::spawn(run_accept_loop(listener, token, sender));
+        let (changes, change_receiver) = watch::channel(0_u64);
+        let accept_task = tokio::spawn(run_accept_loop(listener, token, sender, change_receiver));
         Ok((
             Self {
                 descriptor_path,
                 descriptor,
+                changes,
                 accept_task,
             },
             receiver,
@@ -587,6 +644,15 @@ impl RuntimeIpcServer {
 
     pub fn address(&self) -> &str {
         &self.descriptor.content.address
+    }
+
+    pub fn publish_change(&self) -> u64 {
+        let mut published = 0_u64;
+        self.changes.send_modify(|revision| {
+            *revision = revision.saturating_add(1);
+            published = *revision;
+        });
+        published
     }
 
     pub async fn shutdown(self) -> Result<()> {
@@ -647,6 +713,7 @@ async fn run_accept_loop(
     listener: TcpListener,
     expected_token: [u8; 32],
     sender: mpsc::Sender<RuntimeIpcWork>,
+    changes: watch::Receiver<u64>,
 ) {
     loop {
         let Ok((stream, remote)) = listener.accept().await else {
@@ -656,8 +723,15 @@ async fn run_accept_loop(
             continue;
         }
         let connection_sender = sender.clone();
+        let connection_changes = changes.clone();
         tokio::spawn(async move {
-            let _ = serve_connection(stream, expected_token, connection_sender).await;
+            let _ = serve_connection(
+                stream,
+                expected_token,
+                connection_sender,
+                connection_changes,
+            )
+            .await;
         });
     }
 }
@@ -666,6 +740,7 @@ async fn serve_connection(
     mut stream: TcpStream,
     expected_token: [u8; 32],
     sender: mpsc::Sender<RuntimeIpcWork>,
+    mut changes: watch::Receiver<u64>,
 ) -> Result<()> {
     let request: RuntimeIpcRequest = timeout(IO_TIMEOUT, read_frame(&mut stream))
         .await
@@ -678,25 +753,75 @@ async fn serve_connection(
         request.token == expected_token,
         "runtime IPC authentication failed"
     );
-    let (response_sender, response_receiver) = oneshot::channel();
-    timeout(
-        IO_TIMEOUT,
-        sender.send(RuntimeIpcWork {
-            command: request.command,
-            response: response_sender,
-        }),
-    )
-    .await
-    .context("runtime IPC actor queue timed out")?
-    .context("runtime IPC actor stopped")?;
-    let response = timeout(IO_TIMEOUT, response_receiver)
-        .await
-        .context("runtime IPC actor response timed out")?
-        .context("runtime IPC actor dropped its response")?;
+    let response = match request.command {
+        RuntimeIpcCommand::WaitForChange {
+            after_revision,
+            timeout_milliseconds,
+        } => wait_for_change(&mut changes, after_revision, timeout_milliseconds).await,
+        command => {
+            let (response_sender, response_receiver) = oneshot::channel();
+            timeout(
+                IO_TIMEOUT,
+                sender.send(RuntimeIpcWork {
+                    command,
+                    response: response_sender,
+                }),
+            )
+            .await
+            .context("runtime IPC actor queue timed out")?
+            .context("runtime IPC actor stopped")?;
+            timeout(IO_TIMEOUT, response_receiver)
+                .await
+                .context("runtime IPC actor response timed out")?
+                .context("runtime IPC actor dropped its response")?
+        }
+    };
     timeout(IO_TIMEOUT, write_frame(&mut stream, &response))
         .await
         .context("runtime IPC client response timed out")??;
     Ok(())
+}
+
+async fn wait_for_change(
+    changes: &mut watch::Receiver<u64>,
+    after_revision: u64,
+    timeout_milliseconds: u32,
+) -> RuntimeIpcResponse {
+    if !(1..=MAX_CHANGE_WAIT_MILLISECONDS).contains(&timeout_milliseconds) {
+        return RuntimeIpcResponse::Error {
+            message: format!(
+                "change wait must be between 1 and {MAX_CHANGE_WAIT_MILLISECONDS} milliseconds"
+            ),
+        };
+    }
+    let current = *changes.borrow_and_update();
+    if current != after_revision {
+        return RuntimeIpcResponse::ChangeState {
+            revision: current,
+            changed: true,
+        };
+    }
+    match timeout(
+        Duration::from_millis(u64::from(timeout_milliseconds)),
+        changes.changed(),
+    )
+    .await
+    {
+        Ok(Ok(())) => RuntimeIpcResponse::ChangeState {
+            revision: *changes.borrow_and_update(),
+            changed: true,
+        },
+        Ok(Err(_)) => RuntimeIpcResponse::Error {
+            message: "runtime change publisher stopped".to_owned(),
+        },
+        Err(_) => {
+            let revision = *changes.borrow_and_update();
+            RuntimeIpcResponse::ChangeState {
+                revision,
+                changed: revision != after_revision,
+            }
+        }
+    }
 }
 
 fn publish_descriptor(path: &Path, descriptor: &RuntimeIpcDescriptor) -> Result<()> {
@@ -823,6 +948,11 @@ mod tests {
         profile.write_new(&path)?;
         assert_eq!(RuntimeLaunchProfile::load(&path)?, profile);
         assert!(profile.write_new(&path).is_err());
+        let mut replacement_settings = launch_settings(directory.path())?;
+        replacement_settings.auto_sync_seconds = 45;
+        let replacement = RuntimeLaunchProfile::new(replacement_settings)?;
+        replacement.write_replace(&path)?;
+        assert_eq!(RuntimeLaunchProfile::load(&path)?, replacement);
         assert!(
             profile
                 .write_new(&profile.settings().state_dir.join("forbidden.json"))
@@ -893,6 +1023,61 @@ mod tests {
             timeout(Duration::from_millis(100), receiver.recv())
                 .await
                 .is_err()
+        );
+        server.shutdown().await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn change_wait_is_long_polled_without_blocking_actor() -> Result<(), Box<dyn Error>> {
+        let directory = tempfile::tempdir()?;
+        let descriptor_path = directory.path().join("runtime.ipc.json");
+        let root = AccountRootState::create(directory.path().join("root"))?;
+        let identity = kilogram_identity::DeviceIdentity::generate()?;
+        let (server, mut receiver) =
+            RuntimeIpcServer::start(descriptor_path.clone(), root.account_id(), &identity).await?;
+
+        let waiting = tokio::spawn({
+            let descriptor_path = descriptor_path.clone();
+            async move {
+                call(
+                    &descriptor_path,
+                    RuntimeIpcCommand::WaitForChange {
+                        after_revision: 0,
+                        timeout_milliseconds: 1_000,
+                    },
+                )
+                .await
+            }
+        });
+        tokio::task::yield_now().await;
+        assert_eq!(server.publish_change(), 1);
+        assert_eq!(
+            waiting.await??,
+            RuntimeIpcResponse::ChangeState {
+                revision: 1,
+                changed: true,
+            }
+        );
+        assert!(
+            timeout(Duration::from_millis(100), receiver.recv())
+                .await
+                .is_err()
+        );
+
+        assert_eq!(
+            call(
+                &descriptor_path,
+                RuntimeIpcCommand::WaitForChange {
+                    after_revision: 1,
+                    timeout_milliseconds: 10,
+                },
+            )
+            .await?,
+            RuntimeIpcResponse::ChangeState {
+                revision: 1,
+                changed: false,
+            }
         );
         server.shutdown().await?;
         Ok(())
