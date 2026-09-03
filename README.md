@@ -81,12 +81,14 @@ The persistent signed contact and durable runtime outbox are specified in
 [`docs/RFC-0037-persistent-runtime-contact-and-outbox.md`](docs/RFC-0037-persistent-runtime-contact-and-outbox.md).
 The authenticated local runtime actor API is specified in
 [`docs/RFC-0038-authenticated-local-runtime-ipc.md`](docs/RFC-0038-authenticated-local-runtime-ipc.md).
+The first desktop client over that API is specified in
+[`docs/RFC-0039-minimal-desktop-runtime-client.md`](docs/RFC-0039-minimal-desktop-runtime-client.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.11 authenticated local runtime IPC — complete
+## Current milestone: M0.9.12 minimal desktop runtime client — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -270,6 +272,14 @@ device state themselves. The descriptor is removed only by the runtime
 instance that published it. This is a same-user local boundary, not a remote
 network API; push subscriptions and stronger OS-specific peer credentials are
 future work.
+
+M0.9.12 adds `kilogram-windows.exe`, the first safe-Rust desktop shell over
+that actor API. It authenticates a private runtime descriptor, displays the
+runtime Account/Device IDs, queues messages without opening `STATE_DIR`, and
+polls structured outbox state every two seconds on a background IPC worker.
+An uncertain send retains its request ID for an idempotent retry. Contact and
+history views wait for an expanded actor-owned read API rather than reading
+device files from the GUI.
 
 M0.8.1 adds a reversible encrypted shadow snapshot of the entire device state.
 `state-vault-migrate` publishes encrypted records and a keyed manifest in one
@@ -655,6 +665,17 @@ cargo run -p kilogram-cli -- runtime-ipc-queue-message `
 cargo run -p kilogram-cli -- runtime-ipc-outbox-status `
   --ipc-file .tmp/alice-runtime.ipc.json
 ```
+
+The first desktop client uses the same API. Keep the runtime terminal open and
+start the window in another terminal:
+
+```powershell
+cargo run -p kilogram-windows -- --ipc-file .tmp/alice-runtime.ipc.json
+```
+
+You can also drop `runtime.ipc.json` onto the window. The M0.9.12 client expects
+the contact to have been added beforehand with `runtime-contact-add`; contact
+selection and readable chat history are the next IPC/read-model slice.
 
 The queue command prints `runtime_ipc_request_id` before connecting. If its
 result is uncertain, repeat the same message with `--request-id <PRINTED_ID>`;

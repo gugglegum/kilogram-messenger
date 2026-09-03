@@ -644,3 +644,19 @@ retirement остальных compatibility shadows ещё не реализов
 - Все 129 workspace tests проходят; shared IPC crate имеет 5 unit tests, а CLI
   process test подтверждает idempotent actor queue → P2P delivery → ACK → sync.
 - `cargo build --workspace --release` проходит на Windows host.
+
+## M0.9.12 verification snapshot (2026-09-03)
+
+- Workspace добавил safe-Rust `kilogram-windows` desktop package поверх
+  `kilogram-runtime-ipc`; GUI не зависит от state/store/session/transport.
+- `eframe`/`egui` закреплён на 0.33.3 с declared MSRV Rust 1.88, поэтому
+  workspace сохраняет собственный `rust-version = 1.91`.
+- `cargo fmt --all -- --check` и strict
+  `cargo clippy --workspace --all-targets --all-features -- -D warnings`
+  проходят.
+- Все 135 workspace tests проходят; 6 новых tests включают signed loopback IPC
+  round-trip `Ping` → `QueueMessage` → `OutboxStatus` и uncertain-send retry с
+  тем же request ID.
+- `cargo build --workspace --release` проходит. Windows artifact
+  `target/release/kilogram-windows.exe`: 6,175,232 bytes, SHA-256
+  `D77D55107BBA300422CE5D4372298FF9FB81C1F520FA18FEF98903560F7F9B92`.

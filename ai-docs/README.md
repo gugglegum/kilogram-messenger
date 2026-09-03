@@ -10,7 +10,8 @@
 Архитектура остаётся в стадии проектирования. Rust workspace теперь содержит
 `kilogram-identity`, `kilogram-protocol`, `kilogram-ratchet`, `kilogram-state`,
 `kilogram-store`, `kilogram-runtime-ipc`, `kilogram-session`,
-`kilogram-transport-iroh` и `kilogram-cli`.
+`kilogram-transport-iroh`, `kilogram-cli` и первый GUI package
+`kilogram-windows`.
 Два процесса обмениваются подписанными событиями через Iroh/QUIC, проверяют
 Ed25519-подписи и causal acknowledgement. Прикладная device identity, author
 sequence и signed events сохраняются после перезапуска отдельно от эфемерной
@@ -290,19 +291,22 @@ summaries, membership removal и группы ещё не реализованы
 
 ## План ближайших работ
 
-1. M0.9.12: minimal Windows GUI поверх local actor API без прямой записи в
-   device state. Optional autostart/background mode оставить явной настройкой,
-   а не обязательным Task Scheduler этапом.
-2. Добавить production macOS/Linux local key provider, согласованный monotonic
+1. M0.9.13: actor-owned read model и bounded IPC для contact list, conversation
+   summaries и paginated local history; первый обычный список чатов строить без
+   прямого GUI-доступа к device state.
+2. Добавить IPC contact onboarding и runtime lifecycle. Optional
+   autostart/background mode оставить явной настройкой, а не обязательным Task
+   Scheduler этапом.
+3. Добавить production macOS/Linux local key provider, согласованный monotonic
    witness и lifecycle обновления portable recovery package; затем mobile
    providers. Расширить M0.9.4 LAN discovery до privacy-preserving wide-area
    publication/gossip/mailbox. Live camera/clipboard оставить platform UI.
-3. Спроектировать membership removal вместе с ordered security log и MLS epoch;
+4. Спроектировать membership removal вместе с ordered security log и MLS epoch;
    отдельно — gossip/witness для first-contact freshness.
-4. Спроектировать seed/recovery authority, protected root storage, root
+5. Спроектировать seed/recovery authority, protected root storage, root
    rotation и конфликтующие authority operations.
-5. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
-6. Спроектировать финальный wire format подписанного события и алгоритм
+6. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
+7. Спроектировать финальный wire format подписанного события и алгоритм
    линеаризации.
 7. Спроектировать compact Merkle/range summary и переносимый signed cursor.
 8. Добавить небольшие MLS-группы.
@@ -391,5 +395,7 @@ summaries, membership removal и группы ещё не реализованы
   реализованный M0.9.10 signed contact, encrypted durable outbox, persistent retry и automatic sync.
 - [`../docs/RFC-0038-authenticated-local-runtime-ipc.md`](../docs/RFC-0038-authenticated-local-runtime-ipc.md) —
   реализованный M0.9.11 device-signed loopback IPC и сериализованный runtime actor API.
+- [`../docs/RFC-0039-minimal-desktop-runtime-client.md`](../docs/RFC-0039-minimal-desktop-runtime-client.md) —
+  реализованный M0.9.12 safe-Rust desktop GUI поверх authenticated runtime IPC.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

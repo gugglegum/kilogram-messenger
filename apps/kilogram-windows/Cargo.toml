@@ -1,0 +1,20 @@
+[package]
+name = "kilogram-windows"
+description = "Minimal desktop client for the Kilogram messaging runtime"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+eframe.workspace = true
+kilogram-identity = { path = "../../crates/kilogram-identity" }
+kilogram-runtime-ipc = { path = "../../crates/kilogram-runtime-ipc" }
+tokio.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

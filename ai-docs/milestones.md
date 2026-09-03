@@ -1989,11 +1989,46 @@ dialer, но не внешний state writer. Полный контракт —
 onboarding и GUI остаются дальше. Полный контракт —
 [`../docs/RFC-0038-authenticated-local-runtime-ipc.md`](../docs/RFC-0038-authenticated-local-runtime-ipc.md).
 
+### M0.9.12 — minimal desktop runtime client: выполнено
+
+Реализовано:
+
+- новый `apps/kilogram-windows` собирает оконный Windows-клиент на safe Rust и
+  не зависит от state/store/session/transport crates;
+- путь к private runtime descriptor принимается через `--ipc-file`, редактируется
+  в окне или меняется drag-and-drop; `Ping` показывает точные Account/Device ID;
+- composer валидирует conversation, peer Account ID и message, затем ставит
+  сообщение только через `QueueMessage`, не открывая `STATE_DIR`;
+- request ID сохраняется при неопределённой ошибке и повторно используется для
+  неизменённого draft; успешная постановка очищает только body;
+- отдельный Tokio worker не блокирует оконный event loop, сериализует локальные
+  requests и опрашивает structured outbox status не чаще раза в две секунды;
+- outbox показывает counters, Queue/peer/conversation IDs, materialization,
+  delivery и ACK metadata без plaintext;
+- `eframe` закреплён на 0.33.3 с MSRV 1.88, поэтому workspace сохраняет Rust
+  1.91 и получает переиспользуемую desktop UI основу.
+
+Проверки:
+
+- 5 pure UI/view-model cases проверяют validation, draft semantics, feedback и
+  idempotent retry request ID;
+- IPC integration case поднимает настоящий signed loopback server и проверяет
+  desktop `Ping` → `QueueMessage` → `OutboxStatus` contract;
+- rustfmt, strict package Clippy и 6 package tests проходят.
+
+Граница среза: runtime должен быть запущен отдельно; contact создаётся CLI
+bootstrap-командой. Contact list, conversation summaries, readable history,
+IPC onboarding, runtime launch/autostart и push subscription ещё не
+реализованы. Полный контракт —
+[`../docs/RFC-0039-minimal-desktop-runtime-client.md`](../docs/RFC-0039-minimal-desktop-runtime-client.md).
+
 ### Следующий этап
 
-1. M0.9.12: minimal Windows GUI поверх `kilogram-runtime-ipc`, без прямой записи
-   в device state; первый срез может использовать bounded status polling.
-2. Optional autostart/background mode проектировать как явную настройку клиента,
+1. M0.9.13: добавить actor-owned read model и bounded IPC для contact list,
+   conversation summaries и paginated local history; построить из него первый
+   обычный список чатов без прямого GUI-доступа к device state.
+2. IPC contact onboarding и runtime lifecycle добавить после read model.
+   Optional autostart/background mode проектировать как явную настройку клиента,
    не как обязательный Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.
 4. Спроектировать privacy-preserving wide-area publication/gossip/mailbox и
