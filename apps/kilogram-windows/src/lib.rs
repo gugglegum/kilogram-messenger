@@ -1,5 +1,7 @@
 use std::{
+    ffi::OsString,
     path::PathBuf,
+    process::{Child, Command, Stdio},
     str::FromStr,
     sync::mpsc::{self, Receiver, Sender},
     thread,
@@ -12,16 +14,20 @@ use kilogram_identity::AccountId;
 use kilogram_runtime_ipc::{
     RuntimeIpcCommand, RuntimeIpcConversationSummary, RuntimeIpcHistoryCursor,
     RuntimeIpcHistoryMessage, RuntimeIpcHistoryPage, RuntimeIpcOutboxStatus, RuntimeIpcQueueState,
-    RuntimeIpcRequestId, RuntimeIpcResponse,
+    RuntimeIpcRequestId, RuntimeIpcResponse, RuntimeLaunchProfile,
 };
 
 const STATUS_POLL_INTERVAL: Duration = Duration::from_secs(2);
 const MAX_CONVERSATION_BYTES: usize = 4_096;
 const MAX_MESSAGE_BYTES: usize = 64 * 1024;
 const HISTORY_PAGE_SIZE: u16 = 50;
+const RUNTIME_START_TIMEOUT: Duration = Duration::from_secs(60);
+const RUNTIME_START_RETRY_INTERVAL: Duration = Duration::from_millis(500);
+const RUNTIME_STOP_TIMEOUT: Duration = Duration::from_secs(3);
+const MAX_DESCRIPTOR_PATH_BYTES: usize = 32 * 1024;
 
 pub fn run() -> eframe::Result {
-    let descriptor_path = descriptor_path_from_args();
+    let options = DesktopOptions::from_arguments(std::env::args_os().skip(1));
     let native_options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("Kilogram")
@@ -33,26 +39,91 @@ pub fn run() -> eframe::Result {
     eframe::run_native(
         "Kilogram",
         native_options,
-        Box::new(move |creation_context| {
-            Ok(Box::new(KilogramApp::new(
-                creation_context,
-                descriptor_path,
-            )))
-        }),
+        Box::new(move |creation_context| Ok(Box::new(KilogramApp::new(creation_context, options)))),
     )
 }
 
-fn descriptor_path_from_args() -> PathBuf {
-    let mut arguments = std::env::args_os().skip(1);
-    while let Some(argument) = arguments.next() {
-        if argument == "--ipc-file" {
-            if let Some(path) = arguments.next() {
-                return PathBuf::from(path);
+#[derive(Clone, Debug)]
+struct DesktopOptions {
+    descriptor_path: PathBuf,
+    runtime_profile_path: PathBuf,
+    runtime_executable_path: PathBuf,
+    startup_error: Option<String>,
+}
+
+impl DesktopOptions {
+    fn from_arguments(arguments: impl IntoIterator<Item = OsString>) -> Self {
+        let mut descriptor_path = None;
+        let mut runtime_profile_path = None;
+        let mut runtime_executable_path = None;
+        let mut startup_error = None;
+        let mut arguments = arguments.into_iter();
+        while let Some(argument) = arguments.next() {
+            let target = if argument == "--ipc-file" {
+                &mut descriptor_path
+            } else if argument == "--runtime-profile" {
+                &mut runtime_profile_path
+            } else if argument == "--runtime-exe" {
+                &mut runtime_executable_path
+            } else {
+                startup_error = Some(format!(
+                    "Unknown desktop argument: {}",
+                    argument.to_string_lossy()
+                ));
+                continue;
+            };
+            if let Some(value) = arguments.next() {
+                *target = Some(PathBuf::from(value));
+            } else {
+                startup_error = Some(format!(
+                    "Desktop argument {} requires a path",
+                    argument.to_string_lossy()
+                ));
+                break;
             }
-            break;
+        }
+
+        let runtime_profile_path =
+            runtime_profile_path.unwrap_or_else(|| PathBuf::from("runtime.launch.json"));
+        if runtime_profile_path.exists() {
+            match RuntimeLaunchProfile::load(&runtime_profile_path) {
+                Ok(profile) => {
+                    let profile_ipc = profile.settings().ipc_file.clone();
+                    if descriptor_path
+                        .as_ref()
+                        .is_some_and(|explicit| explicit != &profile_ipc)
+                    {
+                        startup_error =
+                            Some("--ipc-file does not match the runtime launch profile".to_owned());
+                    }
+                    descriptor_path = Some(profile_ipc);
+                }
+                Err(error) => {
+                    startup_error = Some(format!("Load runtime launch profile: {error:#}"));
+                }
+            }
+        }
+
+        Self {
+            descriptor_path: descriptor_path.unwrap_or_else(|| PathBuf::from("runtime.ipc.json")),
+            runtime_profile_path,
+            runtime_executable_path: runtime_executable_path
+                .unwrap_or_else(default_runtime_executable),
+            startup_error,
         }
     }
-    PathBuf::from("runtime.ipc.json")
+}
+
+fn default_runtime_executable() -> PathBuf {
+    let executable_name = if cfg!(windows) {
+        "kilogram-cli.exe"
+    } else {
+        "kilogram-cli"
+    };
+    std::env::current_exe()
+        .ok()
+        .and_then(|path| path.parent().map(|parent| parent.join(executable_name)))
+        .unwrap_or_else(|| PathBuf::from(executable_name))
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -75,11 +146,64 @@ impl ConnectionState {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Operation {
     Connect,
+    AddContact,
     Queue,
     Refresh,
     Conversations,
     History,
     HistoryOlder,
+    Shutdown,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum RuntimeUiAction {
+    None,
+    Connect,
+    Start,
+    Stop,
+}
+
+#[derive(Debug, Default)]
+struct ContactDraft {
+    conversation: String,
+    peer_account_id: String,
+    descriptor_file: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct ValidatedContactDraft {
+    conversation: String,
+    peer_account_id: AccountId,
+    descriptor_file: PathBuf,
+}
+
+impl ContactDraft {
+    fn validate(&self) -> Result<ValidatedContactDraft> {
+        let conversation = self.conversation.trim();
+        ensure!(!conversation.is_empty(), "Conversation is required");
+        ensure!(
+            conversation.len() <= MAX_CONVERSATION_BYTES,
+            "Conversation must not exceed {MAX_CONVERSATION_BYTES} bytes"
+        );
+        let peer_text = self.peer_account_id.trim();
+        ensure!(!peer_text.is_empty(), "Peer Account ID is required");
+        let peer_account_id =
+            AccountId::from_str(peer_text).context("Peer Account ID is invalid")?;
+        let descriptor_text = self.descriptor_file.trim();
+        ensure!(
+            !descriptor_text.is_empty(),
+            "Peer descriptor path is required"
+        );
+        ensure!(
+            descriptor_text.len() <= MAX_DESCRIPTOR_PATH_BYTES,
+            "Peer descriptor path is too long"
+        );
+        Ok(ValidatedContactDraft {
+            conversation: conversation.to_owned(),
+            peer_account_id,
+            descriptor_file: PathBuf::from(descriptor_text),
+        })
+    }
 }
 
 #[derive(Debug)]
@@ -191,6 +315,8 @@ struct ViewModel {
     history: Vec<RuntimeIpcHistoryMessage>,
     history_total: u32,
     history_next_cursor: Option<RuntimeIpcHistoryCursor>,
+    contact_draft: ContactDraft,
+    show_contact_form: bool,
     message: String,
     queue_attempt: Option<QueueAttempt>,
     outbox: Option<OutboxView>,
@@ -213,6 +339,8 @@ impl ViewModel {
             history: Vec::new(),
             history_total: 0,
             history_next_cursor: None,
+            contact_draft: ContactDraft::default(),
+            show_contact_form: false,
             message: String::new(),
             queue_attempt: None,
             outbox: None,
@@ -352,6 +480,27 @@ impl ViewModel {
                 ));
                 self.error = None;
             }
+            Ok(WorkerSuccess::ContactAdded {
+                contact_id,
+                peer_account_id,
+                peer_device_id,
+                inserted,
+            }) => {
+                self.contact_draft = ContactDraft::default();
+                self.show_contact_form = false;
+                let action = if inserted {
+                    "Contact added"
+                } else {
+                    "Contact already present"
+                };
+                self.notice = Some(format!(
+                    "{action}: {} · peer {} / device {}",
+                    compact_id(&contact_id),
+                    compact_id(&peer_account_id),
+                    compact_id(&peer_device_id)
+                ));
+                self.error = None;
+            }
             Ok(WorkerSuccess::Refreshed(status)) => {
                 self.connection = ConnectionState::Connected;
                 self.outbox = Some(status.into());
@@ -375,6 +524,13 @@ impl ViewModel {
                 self.history_next_cursor = page.next_cursor;
                 self.error = None;
             }
+            Ok(WorkerSuccess::Shutdown) => {
+                self.connection = ConnectionState::Disconnected;
+                self.account_id = None;
+                self.device_id = None;
+                self.notice = Some("Runtime stopped cleanly".to_owned());
+                self.error = None;
+            }
             Err(message) => self.fail(response.operation, message),
         }
     }
@@ -384,6 +540,10 @@ impl ViewModel {
 enum WorkerRequest {
     Connect {
         descriptor: PathBuf,
+    },
+    AddContact {
+        descriptor: PathBuf,
+        draft: ValidatedContactDraft,
     },
     Queue {
         descriptor: PathBuf,
@@ -402,17 +562,22 @@ enum WorkerRequest {
         cursor: Option<RuntimeIpcHistoryCursor>,
         older: bool,
     },
+    Shutdown {
+        descriptor: PathBuf,
+    },
 }
 
 impl WorkerRequest {
     fn operation(&self) -> Operation {
         match self {
             Self::Connect { .. } => Operation::Connect,
+            Self::AddContact { .. } => Operation::AddContact,
             Self::Queue { .. } => Operation::Queue,
             Self::Refresh { .. } => Operation::Refresh,
             Self::Conversations { .. } => Operation::Conversations,
             Self::History { older: false, .. } => Operation::History,
             Self::History { older: true, .. } => Operation::HistoryOlder,
+            Self::Shutdown { .. } => Operation::Shutdown,
         }
     }
 }
@@ -428,12 +593,19 @@ enum WorkerSuccess {
         contact_id: String,
         inserted: bool,
     },
+    ContactAdded {
+        contact_id: String,
+        peer_account_id: String,
+        peer_device_id: String,
+        inserted: bool,
+    },
     Refreshed(RuntimeIpcOutboxStatus),
     Conversations(Vec<RuntimeIpcConversationSummary>),
     History {
         page: RuntimeIpcHistoryPage,
         older: bool,
     },
+    Shutdown,
 }
 
 #[derive(Debug)]
@@ -515,6 +687,30 @@ async fn execute_request(request: WorkerRequest) -> Result<WorkerSuccess> {
                 _ => bail!("Runtime returned an unexpected ping response"),
             }
         }
+        WorkerRequest::AddContact { descriptor, draft } => {
+            let command = RuntimeIpcCommand::AddContact {
+                conversation: draft.conversation,
+                expected_peer_account_id: draft.peer_account_id,
+                descriptor_file: draft.descriptor_file,
+            };
+            match kilogram_runtime_ipc::call(&descriptor, command).await? {
+                RuntimeIpcResponse::ContactAdded {
+                    contact_id,
+                    peer_account_id,
+                    peer_device_id,
+                    inserted,
+                } => Ok(WorkerSuccess::ContactAdded {
+                    contact_id,
+                    peer_account_id: peer_account_id.to_string(),
+                    peer_device_id: peer_device_id.to_string(),
+                    inserted,
+                }),
+                RuntimeIpcResponse::Error { message } => {
+                    bail!("Runtime rejected the contact: {message}")
+                }
+                _ => bail!("Runtime returned an unexpected add-contact response"),
+            }
+        }
         WorkerRequest::Queue {
             descriptor,
             request_id,
@@ -583,6 +779,15 @@ async fn execute_request(request: WorkerRequest) -> Result<WorkerSuccess> {
                 _ => bail!("Runtime returned an unexpected history response"),
             }
         }
+        WorkerRequest::Shutdown { descriptor } => {
+            match kilogram_runtime_ipc::call(&descriptor, RuntimeIpcCommand::Shutdown).await? {
+                RuntimeIpcResponse::ShutdownAccepted => Ok(WorkerSuccess::Shutdown),
+                RuntimeIpcResponse::Error { message } => {
+                    bail!("Runtime rejected shutdown: {message}")
+                }
+                _ => bail!("Runtime returned an unexpected shutdown response"),
+            }
+        }
     }
 }
 
@@ -590,17 +795,24 @@ struct KilogramApp {
     model: ViewModel,
     worker: Option<RuntimeWorker>,
     last_poll_started: Instant,
+    runtime_profile_path: String,
+    runtime_executable_path: String,
+    runtime_process: Option<Child>,
+    runtime_start_deadline: Option<Instant>,
+    runtime_next_connect_attempt: Instant,
+    runtime_start_error: Option<String>,
 }
 
 impl KilogramApp {
-    fn new(creation_context: &eframe::CreationContext<'_>, descriptor_path: PathBuf) -> Self {
+    fn new(creation_context: &eframe::CreationContext<'_>, options: DesktopOptions) -> Self {
         creation_context.egui_ctx.set_visuals(egui::Visuals::dark());
         creation_context.egui_ctx.style_mut(|style| {
             style.spacing.item_spacing = egui::vec2(8.0, 8.0);
             style.spacing.button_padding = egui::vec2(14.0, 7.0);
             style.interaction.selectable_labels = true;
         });
-        let mut model = ViewModel::new(descriptor_path);
+        let mut model = ViewModel::new(options.descriptor_path);
+        model.error = options.startup_error;
         let worker = match RuntimeWorker::spawn() {
             Ok(worker) => Some(worker),
             Err(error) => {
@@ -612,12 +824,29 @@ impl KilogramApp {
             model,
             worker,
             last_poll_started: Instant::now(),
+            runtime_profile_path: options.runtime_profile_path.display().to_string(),
+            runtime_executable_path: options.runtime_executable_path.display().to_string(),
+            runtime_process: None,
+            runtime_start_deadline: None,
+            runtime_next_connect_attempt: Instant::now(),
+            runtime_start_error: None,
         }
     }
 
     fn receive_worker_responses(&mut self) {
         while let Some(response) = self.worker.as_ref().and_then(RuntimeWorker::try_receive) {
+            if response.operation == Operation::Connect
+                && response.result.is_err()
+                && self.runtime_start_deadline.is_some()
+            {
+                self.runtime_start_error = response.result.err();
+                self.model.pending = None;
+                self.model.connection = ConnectionState::Connecting;
+                self.runtime_next_connect_attempt = Instant::now() + RUNTIME_START_RETRY_INTERVAL;
+                continue;
+            }
             let connected = matches!(response.result, Ok(WorkerSuccess::Connected { .. }));
+            let contact_added = matches!(response.result, Ok(WorkerSuccess::ContactAdded { .. }));
             let queued = matches!(response.result, Ok(WorkerSuccess::Queued { .. }));
             let conversations = matches!(response.result, Ok(WorkerSuccess::Conversations(_)));
             let initial_history = matches!(
@@ -625,7 +854,11 @@ impl KilogramApp {
                 Ok(WorkerSuccess::History { older: false, .. })
             );
             self.model.apply(response);
-            if connected || queued {
+            if connected {
+                self.runtime_start_deadline = None;
+                self.runtime_start_error = None;
+            }
+            if connected || contact_added || queued {
                 self.start_conversations();
             } else if conversations && self.model.selected_contact_id.is_some() {
                 self.start_history(false);
@@ -653,6 +886,54 @@ impl KilogramApp {
                 self.submit(Operation::Connect, WorkerRequest::Connect { descriptor })
             }
             Err(error) => self.model.fail(Operation::Connect, format!("{error:#}")),
+        }
+    }
+
+    fn start_runtime(&mut self) {
+        if self.runtime_process.is_some() {
+            self.model.error = Some("A desktop-owned runtime is already active".to_owned());
+            return;
+        }
+        let result: Result<Child> = (|| {
+            let profile_path = required_path(&self.runtime_profile_path, "Runtime profile")?;
+            let executable_path =
+                required_path(&self.runtime_executable_path, "Runtime executable")?;
+            let profile = RuntimeLaunchProfile::load(&profile_path)?;
+            self.model.descriptor_path = profile.settings().ipc_file.display().to_string();
+            let child = spawn_runtime_process(&executable_path, &profile_path)?;
+            Ok(child)
+        })();
+        match result {
+            Ok(child) => {
+                self.runtime_process = Some(child);
+                self.runtime_start_deadline = Some(Instant::now() + RUNTIME_START_TIMEOUT);
+                self.runtime_next_connect_attempt = Instant::now();
+                self.runtime_start_error = None;
+                self.model.connection = ConnectionState::Connecting;
+                self.model.notice = Some("Runtime process started; waiting for IPC".to_owned());
+                self.model.error = None;
+            }
+            Err(error) => self.model.fail(Operation::Connect, format!("{error:#}")),
+        }
+    }
+
+    fn start_add_contact(&mut self) {
+        let result = self.model.descriptor().and_then(|descriptor| {
+            let draft = self.model.contact_draft.validate()?;
+            Ok(WorkerRequest::AddContact { descriptor, draft })
+        });
+        match result {
+            Ok(request) => self.submit(Operation::AddContact, request),
+            Err(error) => self.model.fail(Operation::AddContact, format!("{error:#}")),
+        }
+    }
+
+    fn start_shutdown(&mut self) {
+        match self.model.descriptor() {
+            Ok(descriptor) => {
+                self.submit(Operation::Shutdown, WorkerRequest::Shutdown { descriptor })
+            }
+            Err(error) => self.model.fail(Operation::Shutdown, format!("{error:#}")),
         }
     }
 
@@ -753,6 +1034,58 @@ impl KilogramApp {
         }
     }
 
+    fn observe_runtime_process(&mut self) {
+        let Some(child) = self.runtime_process.as_mut() else {
+            return;
+        };
+        let outcome = child.try_wait();
+        match outcome {
+            Ok(Some(status)) => {
+                self.runtime_process = None;
+                let was_starting = self.runtime_start_deadline.take().is_some();
+                self.model.pending = None;
+                self.model.connection = ConnectionState::Disconnected;
+                self.model.account_id = None;
+                self.model.device_id = None;
+                if was_starting {
+                    let detail = self
+                        .runtime_start_error
+                        .take()
+                        .unwrap_or_else(|| format!("runtime exited with {status}"));
+                    self.model.error = Some(format!("Runtime failed to start: {detail}"));
+                } else {
+                    self.model.notice = Some(format!("Runtime process exited: {status}"));
+                }
+            }
+            Ok(None) => {}
+            Err(error) => {
+                self.model.error = Some(format!("Observe runtime process: {error}"));
+            }
+        }
+    }
+
+    fn maybe_connect_started_runtime(&mut self) {
+        let Some(deadline) = self.runtime_start_deadline else {
+            return;
+        };
+        if Instant::now() >= deadline {
+            if let Some(child) = self.runtime_process.as_mut() {
+                let _ = child.kill();
+            }
+            self.runtime_start_deadline = None;
+            self.model.fail(
+                Operation::Connect,
+                self.runtime_start_error
+                    .take()
+                    .unwrap_or_else(|| "Runtime startup timed out".to_owned()),
+            );
+            return;
+        }
+        if self.model.pending.is_none() && Instant::now() >= self.runtime_next_connect_attempt {
+            self.start_connect();
+        }
+    }
+
     fn accept_dropped_descriptor(&mut self, context: &egui::Context) {
         let dropped_path = context.input(|input| {
             input
@@ -762,21 +1095,26 @@ impl KilogramApp {
                 .find_map(|file| file.path.clone())
         });
         if let Some(path) = dropped_path {
-            self.model.descriptor_path = path.display().to_string();
-            self.model.connection = ConnectionState::Disconnected;
-            self.model.notice = Some("Runtime descriptor path updated".to_owned());
+            if self.model.show_contact_form {
+                self.model.contact_draft.descriptor_file = path.display().to_string();
+                self.model.notice = Some("Peer descriptor path updated".to_owned());
+            } else if self.runtime_process.is_none() {
+                self.model.descriptor_path = path.display().to_string();
+                self.model.connection = ConnectionState::Disconnected;
+                self.model.notice = Some("Runtime descriptor path updated".to_owned());
+            }
         }
     }
 
     fn draw_header(&self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             ui.heading(egui::RichText::new("Kilogram").size(28.0).strong());
-            ui.label(egui::RichText::new("M0.9.13").color(egui::Color32::from_rgb(88, 166, 255)));
+            ui.label(egui::RichText::new("M0.9.14").color(egui::Color32::from_rgb(88, 166, 255)));
         });
         ui.label("Desktop client · authenticated local runtime IPC");
     }
 
-    fn draw_runtime(&mut self, ui: &mut egui::Ui) -> bool {
+    fn draw_runtime(&mut self, ui: &mut egui::Ui) -> RuntimeUiAction {
         let color = match self.model.connection {
             ConnectionState::Disconnected => egui::Color32::from_rgb(239, 112, 112),
             ConnectionState::Connecting => egui::Color32::from_rgb(246, 195, 93),
@@ -790,22 +1128,70 @@ impl KilogramApp {
             ui.horizontal(|ui| {
                 ui.label("IPC descriptor");
                 ui.add_enabled(
-                    self.model.pending.is_none(),
+                    self.model.pending.is_none() && self.runtime_process.is_none(),
                     egui::TextEdit::singleline(&mut self.model.descriptor_path)
                         .desired_width(f32::INFINITY),
                 );
             });
-            ui.small("Pass --ipc-file PATH or drop runtime.ipc.json onto this window.");
+            ui.collapsing("Runtime launch settings", |ui| {
+                ui.horizontal(|ui| {
+                    ui.label("Launch profile");
+                    ui.add_enabled(
+                        self.model.pending.is_none() && self.runtime_process.is_none(),
+                        egui::TextEdit::singleline(&mut self.runtime_profile_path)
+                            .desired_width(f32::INFINITY),
+                    );
+                });
+                ui.horizontal(|ui| {
+                    ui.label("Runtime executable");
+                    ui.add_enabled(
+                        self.model.pending.is_none() && self.runtime_process.is_none(),
+                        egui::TextEdit::singleline(&mut self.runtime_executable_path)
+                            .desired_width(f32::INFINITY),
+                    );
+                });
+                ui.small("The versioned profile contains paths and public runtime settings, never device secrets.");
+            });
+            ui.small("Pass --ipc-file/--runtime-profile or drop a descriptor onto this window.");
         });
-        ui.add_enabled(
-            self.model.pending.is_none(),
-            egui::Button::new(if self.model.connection == ConnectionState::Connected {
-                "Reconnect"
-            } else {
-                "Connect"
-            }),
-        )
-        .clicked()
+        let mut action = RuntimeUiAction::None;
+        ui.horizontal(|ui| {
+            if ui
+                .add_enabled(
+                    self.model.pending.is_none(),
+                    egui::Button::new(if self.model.connection == ConnectionState::Connected {
+                        "Reconnect"
+                    } else {
+                        "Connect"
+                    }),
+                )
+                .clicked()
+            {
+                action = RuntimeUiAction::Connect;
+            }
+            if ui
+                .add_enabled(
+                    self.model.pending.is_none()
+                        && self.runtime_process.is_none()
+                        && self.model.connection == ConnectionState::Disconnected,
+                    egui::Button::new("Start runtime"),
+                )
+                .clicked()
+            {
+                action = RuntimeUiAction::Start;
+            }
+            if ui
+                .add_enabled(
+                    self.model.pending.is_none()
+                        && self.model.connection == ConnectionState::Connected,
+                    egui::Button::new("Stop runtime"),
+                )
+                .clicked()
+            {
+                action = RuntimeUiAction::Stop;
+            }
+        });
+        action
     }
 
     fn draw_identity(&self, ui: &mut egui::Ui) {
@@ -846,11 +1232,53 @@ impl KilogramApp {
             .clicked()
     }
 
+    fn draw_contact_onboarding(&mut self, ui: &mut egui::Ui) -> bool {
+        ui.horizontal(|ui| {
+            ui.heading("Chats");
+            if ui
+                .add_enabled(
+                    self.model.connection == ConnectionState::Connected
+                        && self.model.pending.is_none(),
+                    egui::Button::new("+ Contact"),
+                )
+                .clicked()
+            {
+                self.model.show_contact_form = !self.model.show_contact_form;
+            }
+        });
+        if !self.model.show_contact_form {
+            return false;
+        }
+        let mut submit = false;
+        ui.group(|ui| {
+            ui.strong("Import signed runtime contact");
+            ui.add_enabled(
+                self.model.pending.is_none(),
+                egui::TextEdit::singleline(&mut self.model.contact_draft.conversation)
+                    .hint_text("Conversation label"),
+            );
+            ui.add_enabled(
+                self.model.pending.is_none(),
+                egui::TextEdit::singleline(&mut self.model.contact_draft.peer_account_id)
+                    .hint_text("Expected peer Account ID"),
+            );
+            ui.add_enabled(
+                self.model.pending.is_none(),
+                egui::TextEdit::singleline(&mut self.model.contact_draft.descriptor_file)
+                    .hint_text("Peer runtime ticket path"),
+            );
+            ui.small("The runtime verifies membership, account, device authorization and route before persisting.");
+            submit = ui
+                .add_enabled(self.model.pending.is_none(), egui::Button::new("Add contact"))
+                .clicked();
+        });
+        submit
+    }
+
     fn draw_conversations(&self, ui: &mut egui::Ui) -> Option<String> {
-        ui.heading("Chats");
         if self.model.conversations.is_empty() {
             ui.label("No runtime contacts yet.");
-            ui.small("Add a signed contact with kilogram-cli, then refresh.");
+            ui.small("Use + Contact to import a signed peer runtime ticket.");
             return None;
         }
         let mut selected = None;
@@ -1012,13 +1440,78 @@ impl KilogramApp {
     }
 }
 
+fn required_path(value: &str, label: &str) -> Result<PathBuf> {
+    let value = value.trim();
+    ensure!(!value.is_empty(), "{label} path is required");
+    ensure!(
+        value.len() <= MAX_DESCRIPTOR_PATH_BYTES,
+        "{label} path is too long"
+    );
+    Ok(PathBuf::from(value))
+}
+
+fn spawn_runtime_process(executable: &std::path::Path, profile: &std::path::Path) -> Result<Child> {
+    let mut command = Command::new(executable);
+    command
+        .arg("runtime-from-profile")
+        .arg("--profile-file")
+        .arg(profile)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt as _;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+    command.spawn().with_context(|| {
+        format!(
+            "Start runtime executable {} with profile {}",
+            executable.display(),
+            profile.display()
+        )
+    })
+}
+
+impl Drop for KilogramApp {
+    fn drop(&mut self) {
+        let Some(mut child) = self.runtime_process.take() else {
+            return;
+        };
+        if let Ok(descriptor) = self.model.descriptor()
+            && let Ok(runtime) = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+        {
+            let _ = runtime.block_on(tokio::time::timeout(
+                RUNTIME_STOP_TIMEOUT,
+                kilogram_runtime_ipc::call(&descriptor, RuntimeIpcCommand::Shutdown),
+            ));
+        }
+        let deadline = Instant::now() + RUNTIME_STOP_TIMEOUT;
+        while Instant::now() < deadline {
+            match child.try_wait() {
+                Ok(Some(_)) => return,
+                Ok(None) => thread::sleep(Duration::from_millis(50)),
+                Err(_) => break,
+            }
+        }
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+}
+
 impl eframe::App for KilogramApp {
     fn update(&mut self, context: &egui::Context, _frame: &mut eframe::Frame) {
         self.accept_dropped_descriptor(context);
         self.receive_worker_responses();
+        self.observe_runtime_process();
+        self.maybe_connect_started_runtime();
         self.maybe_poll();
 
-        let mut connect_clicked = false;
+        let mut runtime_action = RuntimeUiAction::None;
+        let mut add_contact_clicked = false;
         let mut queue_clicked = false;
         let mut refresh_clicked = false;
         let mut selected_contact = None;
@@ -1026,10 +1519,11 @@ impl eframe::App for KilogramApp {
         egui::CentralPanel::default().show(context, |ui| {
             self.draw_header(ui);
             ui.add_space(8.0);
-            connect_clicked = self.draw_runtime(ui);
+            runtime_action = self.draw_runtime(ui);
             self.draw_identity(ui);
             ui.separator();
             ui.columns(2, |columns| {
+                add_contact_clicked = self.draw_contact_onboarding(&mut columns[0]);
                 selected_contact = self.draw_conversations(&mut columns[0]);
                 load_older_clicked = self.draw_history(&mut columns[1]);
                 queue_clicked = self.draw_composer(&mut columns[1]);
@@ -1044,8 +1538,14 @@ impl eframe::App for KilogramApp {
             self.draw_feedback(ui);
         });
 
-        if connect_clicked {
+        if runtime_action == RuntimeUiAction::Connect {
             self.start_connect();
+        } else if runtime_action == RuntimeUiAction::Start {
+            self.start_runtime();
+        } else if runtime_action == RuntimeUiAction::Stop {
+            self.start_shutdown();
+        } else if add_contact_clicked {
+            self.start_add_contact();
         } else if let Some(contact_id) = selected_contact {
             if self.model.select_conversation(&contact_id) {
                 self.start_history(false);
@@ -1085,6 +1585,31 @@ mod tests {
     const ACCOUNT_ID: &str = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
     #[test]
+    fn desktop_options_keep_explicit_runtime_paths_and_reject_unknown_flags() {
+        let options = DesktopOptions::from_arguments([
+            OsString::from("--ipc-file"),
+            OsString::from("desktop.ipc.json"),
+            OsString::from("--runtime-profile"),
+            OsString::from("missing-profile.json"),
+            OsString::from("--runtime-exe"),
+            OsString::from("runtime-test.exe"),
+        ]);
+        assert_eq!(options.descriptor_path, PathBuf::from("desktop.ipc.json"));
+        assert_eq!(
+            options.runtime_profile_path,
+            PathBuf::from("missing-profile.json")
+        );
+        assert_eq!(
+            options.runtime_executable_path,
+            PathBuf::from("runtime-test.exe")
+        );
+        assert!(options.startup_error.is_none());
+
+        let unknown = DesktopOptions::from_arguments([OsString::from("--unknown")]);
+        assert!(unknown.startup_error.is_some());
+    }
+
+    #[test]
     fn queue_draft_trims_routing_and_preserves_message() -> Result<(), Box<dyn std::error::Error>> {
         let draft = QueueDraft {
             conversation: "  alice-bob  ".to_owned(),
@@ -1120,6 +1645,34 @@ mod tests {
             message: "\n \t".to_owned(),
         };
         assert!(missing_message.validate().is_err());
+    }
+
+    #[test]
+    fn contact_draft_requires_exact_account_and_descriptor_path()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let draft = ContactDraft {
+            conversation: "  alice-bob  ".to_owned(),
+            peer_account_id: format!("  {ACCOUNT_ID}  "),
+            descriptor_file: "  C:\\Kilogram\\bob.ticket  ".to_owned(),
+        }
+        .validate()?;
+        assert_eq!(draft.conversation, "alice-bob");
+        assert_eq!(draft.peer_account_id.to_string(), ACCOUNT_ID);
+        assert_eq!(
+            draft.descriptor_file,
+            PathBuf::from("C:\\Kilogram\\bob.ticket")
+        );
+
+        assert!(
+            ContactDraft {
+                conversation: "chat".to_owned(),
+                peer_account_id: "invalid".to_owned(),
+                descriptor_file: "bob.ticket".to_owned(),
+            }
+            .validate()
+            .is_err()
+        );
+        Ok(())
     }
 
     #[test]
@@ -1220,6 +1773,28 @@ mod tests {
                 })
                 .map_err(|_| anyhow::anyhow!("send GUI ping response"))?;
 
+            let contact = requests.recv().await.context("receive GUI contact")?;
+            let (command, response) = contact.into_parts();
+            let RuntimeIpcCommand::AddContact {
+                conversation,
+                expected_peer_account_id,
+                descriptor_file,
+            } = command
+            else {
+                bail!("expected GUI add-contact command");
+            };
+            ensure!(conversation == "desktop-test");
+            ensure!(expected_peer_account_id == peer_account_id);
+            ensure!(descriptor_file == PathBuf::from("peer-runtime.ticket"));
+            response
+                .send(RuntimeIpcResponse::ContactAdded {
+                    contact_id: "22".repeat(32),
+                    peer_account_id,
+                    peer_device_id: device_id,
+                    inserted: true,
+                })
+                .map_err(|_| anyhow::anyhow!("send GUI contact response"))?;
+
             let queue = requests.recv().await.context("receive GUI queue")?;
             let (command, response) = queue.into_parts();
             let RuntimeIpcCommand::QueueMessage {
@@ -1296,6 +1871,13 @@ mod tests {
                     next_cursor: None,
                 }))
                 .map_err(|_| anyhow::anyhow!("send GUI history response"))?;
+
+            let shutdown = requests.recv().await.context("receive GUI shutdown")?;
+            let (command, response) = shutdown.into_parts();
+            ensure!(matches!(command, RuntimeIpcCommand::Shutdown));
+            response
+                .send(RuntimeIpcResponse::ShutdownAccepted)
+                .map_err(|_| anyhow::anyhow!("send GUI shutdown response"))?;
             Ok::<_, anyhow::Error>(())
         });
 
@@ -1310,6 +1892,20 @@ mod tests {
                 device_id: connected_device,
             } if connected_account == account_id.to_string()
                 && connected_device == device_id.to_string()
+        ));
+
+        let contact = execute_request(WorkerRequest::AddContact {
+            descriptor: descriptor.clone(),
+            draft: ValidatedContactDraft {
+                conversation: "desktop-test".to_owned(),
+                peer_account_id,
+                descriptor_file: PathBuf::from("peer-runtime.ticket"),
+            },
+        })
+        .await?;
+        assert!(matches!(
+            contact,
+            WorkerSuccess::ContactAdded { inserted: true, .. }
         ));
 
         let queued = execute_request(WorkerRequest::Queue {
@@ -1362,6 +1958,12 @@ mod tests {
             WorkerSuccess::History { page, older: false }
                 if page.total_messages == 0 && page.messages.is_empty()
         ));
+
+        let shutdown = execute_request(WorkerRequest::Shutdown {
+            descriptor: descriptor.clone(),
+        })
+        .await?;
+        assert!(matches!(shutdown, WorkerSuccess::Shutdown));
 
         actor.await??;
         server.shutdown().await?;

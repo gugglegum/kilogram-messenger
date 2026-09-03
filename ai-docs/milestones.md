@@ -2053,13 +2053,46 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 Полный контракт —
 [`../docs/RFC-0040-actor-owned-chat-read-model.md`](../docs/RFC-0040-actor-owned-chat-read-model.md).
 
+### M0.9.14 — desktop contact onboarding и runtime lifecycle: выполнено
+
+Реализовано:
+
+- IPC v3 добавил typed `AddContact` и `Shutdown`; mutation выполняется только
+  runtime actor под state lock/vault dual-write, а GUI не читает ticket/trust;
+- runtime проверяет membership, expected peer Account ID, certified Device ID,
+  local authorization, route и canonical descriptor path до append-only contact;
+- `runtime-profile-create` пишет no-clobber JSON v1 с абсолютными public paths и
+  settings вне protected state, без seed/device/vault/bearer secrets;
+- `runtime-from-profile` заново валидирует profile и запускает ту же runtime
+  реализацию с foreground-unbounded lifecycle;
+- desktop GUI умеет стартовать соседний CLI process, bounded retry ждать signed
+  IPC descriptor, подключаться и штатно останавливать runtime;
+- при закрытии окна desktop-owned runtime сначала получает authenticated
+  shutdown; hard kill используется только после bounded timeout;
+- форма `+ Contact` принимает label, expected Account ID и public peer ticket,
+  поддерживает drag-and-drop и после успеха обновляет signed chat list;
+- autostart, Windows service и Task Scheduler не устанавливаются.
+
+Проверки:
+
+- profile round-trip/no-clobber/protected-state tests и настоящий
+  profile-started runtime → authenticated shutdown → descriptor cleanup;
+- Alice/Bob process test импортирует peer contact через IPC, затем сохраняет
+  прежнюю exactly-once queue/delivery/sync сходимость;
+- desktop signed-loopback adapter проходит ping → add contact → queue → outbox →
+  conversations → history → shutdown;
+- rustfmt, strict workspace Clippy, все 144 tests и release build проходят.
+
+Полный контракт —
+[`../docs/RFC-0041-desktop-contact-onboarding-and-runtime-lifecycle.md`](../docs/RFC-0041-desktop-contact-onboarding-and-runtime-lifecycle.md).
+
 ### Следующий этап
 
-1. M0.9.14: добавить IPC contact onboarding и runtime lifecycle в desktop GUI,
-   сохранив signed-contact validation, private descriptor и единственного actor
-   writer.
-2. После этого добавить optional autostart/background mode как явную настройку
-   клиента, не как обязательный Windows Task Scheduler step.
+1. M0.9.15: добавить first-run desktop setup и редактирование/сохранение
+   launch-profile через GUI, не передавая ему device/vault secrets; заменить
+   periodic polling на revision/change notification после actor-owned snapshot.
+2. Optional autostart/background mode оставить отдельной явной настройкой, не
+   обязательным Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.
 4. Спроектировать privacy-preserving wide-area publication/gossip/mailbox и
    first-contact freshness; M0.9.4 закрывает только явный LAN opt-in.

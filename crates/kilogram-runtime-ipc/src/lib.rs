@@ -21,13 +21,194 @@ use tokio::{
     time::timeout,
 };
 
-const IPC_VERSION: u8 = 2;
+const IPC_VERSION: u8 = 3;
 const MAX_DESCRIPTOR_BYTES: u64 = 16 * 1024;
+const MAX_LAUNCH_PROFILE_BYTES: u64 = 64 * 1024;
+const MAX_LAUNCH_PROFILE_PATHS: usize = 64;
+const MAX_RELAY_URL_BYTES: usize = 4 * 1024;
 const MAX_FRAME_BYTES: usize = 256 * 1024;
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(3);
 const IO_TIMEOUT: Duration = Duration::from_secs(30);
 const REQUEST_CHANNEL_CAPACITY: usize = 64;
-const DESCRIPTOR_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-ipc-descriptor:v2\0";
+const DESCRIPTOR_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-ipc-descriptor:v3\0";
+pub const RUNTIME_LAUNCH_PROFILE_VERSION: u8 = 1;
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct RuntimeLaunchSettings {
+    pub state_dir: PathBuf,
+    pub allowed_requester_account_id: AccountId,
+    pub device_list_file: PathBuf,
+    pub peer_prekey_pool_files: Vec<PathBuf>,
+    pub ticket_file: Option<PathBuf>,
+    pub relay_wait_seconds: u64,
+    pub route_policy: RuntimeIpcRoutePolicy,
+    pub relay_url: Option<String>,
+    pub poll_milliseconds: u64,
+    pub retry_base_seconds: u64,
+    pub retry_max_seconds: u64,
+    pub auto_sync_seconds: u64,
+    pub ipc_file: PathBuf,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct RuntimeLaunchProfile {
+    version: u8,
+    settings: RuntimeLaunchSettings,
+}
+
+impl RuntimeLaunchProfile {
+    pub fn new(settings: RuntimeLaunchSettings) -> Result<Self> {
+        let profile = Self {
+            version: RUNTIME_LAUNCH_PROFILE_VERSION,
+            settings,
+        };
+        profile.validate()?;
+        Ok(profile)
+    }
+
+    pub fn load(path: &Path) -> Result<Self> {
+        let metadata = fs::metadata(path)
+            .with_context(|| format!("inspect runtime launch profile {}", path.display()))?;
+        ensure!(
+            metadata.len() <= MAX_LAUNCH_PROFILE_BYTES,
+            "runtime launch profile is too large"
+        );
+        let profile: Self = serde_json::from_slice(
+            &fs::read(path)
+                .with_context(|| format!("read runtime launch profile {}", path.display()))?,
+        )
+        .context("decode runtime launch profile")?;
+        profile.validate()?;
+        profile.ensure_file_outside_state(path)?;
+        Ok(profile)
+    }
+
+    pub fn write_new(&self, path: &Path) -> Result<()> {
+        self.validate()?;
+        let lexical_path = if path.is_absolute() {
+            path.to_path_buf()
+        } else {
+            std::env::current_dir()
+                .context("read current directory for runtime launch profile")?
+                .join(path)
+        };
+        ensure!(
+            !lexical_path.starts_with(&self.settings.state_dir),
+            "runtime launch profile must live outside the protected state directory"
+        );
+        let parent = path
+            .parent()
+            .filter(|parent| !parent.as_os_str().is_empty())
+            .unwrap_or_else(|| Path::new("."));
+        fs::create_dir_all(parent).with_context(|| {
+            format!(
+                "create runtime launch profile directory {}",
+                parent.display()
+            )
+        })?;
+        self.ensure_file_outside_state(path)?;
+        let mut temporary =
+            NamedTempFile::new_in(parent).context("create runtime launch profile")?;
+        serde_json::to_writer_pretty(&mut temporary, self)
+            .context("encode runtime launch profile")?;
+        temporary
+            .write_all(b"\n")
+            .context("finish runtime launch profile")?;
+        temporary
+            .as_file()
+            .sync_all()
+            .context("sync runtime launch profile")?;
+        let persisted = temporary
+            .persist_noclobber(path)
+            .map_err(|error| error.error)
+            .with_context(|| format!("persist new runtime launch profile to {}", path.display()))?;
+        persisted
+            .sync_all()
+            .with_context(|| format!("sync runtime launch profile at {}", path.display()))?;
+        Ok(())
+    }
+
+    pub fn settings(&self) -> &RuntimeLaunchSettings {
+        &self.settings
+    }
+
+    fn validate(&self) -> Result<()> {
+        ensure!(
+            self.version == RUNTIME_LAUNCH_PROFILE_VERSION,
+            "unsupported runtime launch profile version"
+        );
+        for (name, path) in [
+            ("state_dir", &self.settings.state_dir),
+            ("device_list_file", &self.settings.device_list_file),
+            ("ipc_file", &self.settings.ipc_file),
+        ] {
+            ensure!(
+                path.is_absolute(),
+                "runtime launch profile {name} must be absolute"
+            );
+        }
+        ensure!(
+            self.settings.peer_prekey_pool_files.len() <= MAX_LAUNCH_PROFILE_PATHS,
+            "runtime launch profile must contain at most {MAX_LAUNCH_PROFILE_PATHS} peer prekey pool paths"
+        );
+        ensure!(
+            self.settings
+                .peer_prekey_pool_files
+                .iter()
+                .all(|path| path.is_absolute()),
+            "runtime launch profile peer prekey pool paths must be absolute"
+        );
+        if let Some(path) = &self.settings.ticket_file {
+            ensure!(
+                path.is_absolute(),
+                "runtime launch profile ticket_file must be absolute"
+            );
+        }
+        if let Some(url) = &self.settings.relay_url {
+            ensure!(
+                !url.is_empty() && url.len() <= MAX_RELAY_URL_BYTES,
+                "runtime launch profile relay URL is invalid"
+            );
+        }
+        ensure!(
+            !self.settings.ipc_file.starts_with(&self.settings.state_dir),
+            "runtime IPC descriptor must live outside the protected state directory"
+        );
+        Ok(())
+    }
+
+    fn ensure_file_outside_state(&self, path: &Path) -> Result<()> {
+        let absolute = absolute_output_path(path)?;
+        let canonical_state = fs::canonicalize(&self.settings.state_dir)
+            .context("resolve runtime launch profile state directory")?;
+        ensure!(
+            !absolute.starts_with(canonical_state),
+            "runtime launch profile must live outside the protected state directory"
+        );
+        Ok(())
+    }
+}
+
+fn absolute_output_path(path: &Path) -> Result<PathBuf> {
+    let absolute = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .context("read current directory for runtime launch profile")?
+            .join(path)
+    };
+    let file_name = absolute
+        .file_name()
+        .context("runtime launch profile path has no file name")?;
+    let parent = absolute
+        .parent()
+        .context("runtime launch profile path has no parent")?;
+    Ok(fs::canonicalize(parent)
+        .with_context(|| format!("resolve runtime launch profile parent {}", parent.display()))?
+        .join(file_name))
+}
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 struct RuntimeIpcDescriptorContent {
@@ -116,6 +297,11 @@ impl RuntimeIpcDescriptor {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum RuntimeIpcCommand {
     Ping,
+    AddContact {
+        conversation: String,
+        expected_peer_account_id: AccountId,
+        descriptor_file: PathBuf,
+    },
     QueueMessage {
         request_id: RuntimeIpcRequestId,
         conversation: String,
@@ -129,6 +315,7 @@ pub enum RuntimeIpcCommand {
         cursor: Option<RuntimeIpcHistoryCursor>,
         limit: u16,
     },
+    Shutdown,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -331,9 +518,16 @@ pub enum RuntimeIpcResponse {
         contact_id: String,
         inserted: bool,
     },
+    ContactAdded {
+        contact_id: String,
+        peer_account_id: AccountId,
+        peer_device_id: DeviceId,
+        inserted: bool,
+    },
     OutboxStatus(RuntimeIpcOutboxStatus),
     ConversationList(Vec<RuntimeIpcConversationSummary>),
     HistoryPage(RuntimeIpcHistoryPage),
+    ShutdownAccepted,
     Error {
         message: String,
     },
@@ -599,6 +793,52 @@ mod tests {
     use kilogram_identity::AccountRootState;
 
     use super::*;
+
+    fn launch_settings(directory: &Path) -> Result<RuntimeLaunchSettings> {
+        let state_dir = directory.join("state");
+        fs::create_dir_all(&state_dir)?;
+        Ok(RuntimeLaunchSettings {
+            state_dir,
+            allowed_requester_account_id: AccountId::from_bytes([3_u8; 32]),
+            device_list_file: directory.join("device-list.bin"),
+            peer_prekey_pool_files: vec![directory.join("peer-prekeys.bin")],
+            ticket_file: Some(directory.join("runtime.ticket")),
+            relay_wait_seconds: 15,
+            route_policy: RuntimeIpcRoutePolicy::Auto,
+            relay_url: None,
+            poll_milliseconds: 250,
+            retry_base_seconds: 1,
+            retry_max_seconds: 60,
+            auto_sync_seconds: 30,
+            ipc_file: directory.join("runtime.ipc.json"),
+        })
+    }
+
+    #[test]
+    fn launch_profile_round_trip_is_bounded_no_clobber_and_outside_state()
+    -> Result<(), Box<dyn Error>> {
+        let directory = tempfile::tempdir()?;
+        let profile = RuntimeLaunchProfile::new(launch_settings(directory.path())?)?;
+        let path = directory.path().join("runtime.launch.json");
+        profile.write_new(&path)?;
+        assert_eq!(RuntimeLaunchProfile::load(&path)?, profile);
+        assert!(profile.write_new(&path).is_err());
+        assert!(
+            profile
+                .write_new(&profile.settings().state_dir.join("forbidden.json"))
+                .is_err()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn launch_profile_rejects_relative_authority_paths() -> Result<(), Box<dyn Error>> {
+        let directory = tempfile::tempdir()?;
+        let mut settings = launch_settings(directory.path())?;
+        settings.ipc_file = PathBuf::from("relative.ipc.json");
+        assert!(RuntimeLaunchProfile::new(settings).is_err());
+        Ok(())
+    }
 
     #[tokio::test]
     async fn authenticated_loopback_round_trip_and_cleanup() -> Result<(), Box<dyn Error>> {

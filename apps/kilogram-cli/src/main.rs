@@ -40,7 +40,7 @@ use kilogram_runtime_ipc::{
     RuntimeIpcHistoryCursor, RuntimeIpcHistoryMessage, RuntimeIpcHistoryPage,
     RuntimeIpcMessagePreview, RuntimeIpcOutboxStatus, RuntimeIpcQueueItem, RuntimeIpcQueueState,
     RuntimeIpcRequestId, RuntimeIpcResponse, RuntimeIpcRoutePolicy, RuntimeIpcServer,
-    RuntimeIpcWork,
+    RuntimeIpcWork, RuntimeLaunchProfile, RuntimeLaunchSettings,
 };
 use kilogram_session::{
     MAX_SYNC_ROUNDS, ServerInventoryOutcome, SessionStore, SyncClient, SyncServer,
@@ -317,6 +317,72 @@ enum Command {
         /// Atomically publish an authenticated loopback IPC descriptor for local UI clients.
         #[arg(long)]
         ipc_file: Option<PathBuf>,
+    },
+
+    /// Write a no-clobber, secret-free profile that the desktop client can launch.
+    RuntimeProfileCreate {
+        /// New machine-local runtime launch profile.
+        #[arg(long)]
+        profile_file: PathBuf,
+
+        /// Directory containing this application's persistent device state.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Account ID allowed to authenticate a certified requester device.
+        #[arg(long)]
+        allow_account: AccountId,
+
+        /// Root-signed complete device list for this runtime account.
+        #[arg(long)]
+        device_list_file: PathBuf,
+
+        /// Signed current prekey pool for another device in this account. Repeat for every peer device.
+        #[arg(long = "peer-prekey-pool-file")]
+        peer_prekey_pool_files: Vec<PathBuf>,
+
+        /// Atomically publish the current runtime connection ticket to this file.
+        #[arg(long)]
+        ticket_file: Option<PathBuf>,
+
+        /// How long to wait for a public relay before accepting local connections.
+        #[arg(long, default_value_t = 15)]
+        relay_wait_seconds: u64,
+
+        /// Transport path required for Kilogram application frames.
+        #[arg(long, value_enum, default_value = "auto")]
+        route_policy: RoutePolicyArg,
+
+        /// Restrict this runtime to one explicit relay URL.
+        #[arg(long)]
+        relay_url: Option<RelayUrl>,
+
+        /// How often to observe newly queued local work and refreshed peer descriptors.
+        #[arg(long, default_value_t = DEFAULT_RUNTIME_POLL_MILLISECONDS)]
+        poll_milliseconds: u64,
+
+        /// Initial persistent retry delay for failed queued deliveries.
+        #[arg(long, default_value_t = DEFAULT_RUNTIME_RETRY_BASE_SECONDS)]
+        retry_base_seconds: u64,
+
+        /// Maximum persistent retry delay for failed queued deliveries.
+        #[arg(long, default_value_t = DEFAULT_RUNTIME_RETRY_MAX_SECONDS)]
+        retry_max_seconds: u64,
+
+        /// Periodic automatic sync interval per contact; zero disables it.
+        #[arg(long, default_value_t = DEFAULT_RUNTIME_AUTO_SYNC_SECONDS)]
+        auto_sync_seconds: u64,
+
+        /// Runtime-owned authenticated loopback IPC descriptor.
+        #[arg(long)]
+        ipc_file: PathBuf,
+    },
+
+    /// Run from a validated launch profile created for the desktop client.
+    RuntimeFromProfile {
+        /// Machine-local runtime launch profile.
+        #[arg(long)]
+        profile_file: PathBuf,
     },
 
     /// Persist a signed local contact pinned to a refreshable peer runtime descriptor.
@@ -1229,6 +1295,8 @@ impl Command {
             | Self::StateVaultKeyImport { state_dir, .. }
             | Self::StateVaultRestore { state_dir, .. } => Some(state_dir),
             Self::AccountCreate { .. }
+            | Self::RuntimeProfileCreate { .. }
+            | Self::RuntimeFromProfile { .. }
             | Self::HistoryRewrapSas { .. }
             | Self::HistoryRecoveryLinkInspect { .. }
             | Self::HistoryRecoveryLinkQrRender { .. }
@@ -1318,6 +1386,122 @@ struct RuntimeOptions {
     auto_sync_seconds: u64,
     max_outbound_actions: usize,
     ipc_file: Option<PathBuf>,
+}
+
+fn create_runtime_launch_profile(
+    profile_file: PathBuf,
+    mut settings: RuntimeLaunchSettings,
+) -> Result<()> {
+    settings.state_dir = fs::canonicalize(&settings.state_dir).with_context(|| {
+        format!(
+            "resolve runtime profile state directory {}",
+            settings.state_dir.display()
+        )
+    })?;
+    settings.device_list_file =
+        fs::canonicalize(&settings.device_list_file).with_context(|| {
+            format!(
+                "resolve runtime profile device list {}",
+                settings.device_list_file.display()
+            )
+        })?;
+    settings.peer_prekey_pool_files = settings
+        .peer_prekey_pool_files
+        .iter()
+        .map(|path| {
+            fs::canonicalize(path)
+                .with_context(|| format!("resolve runtime profile prekey pool {}", path.display()))
+        })
+        .collect::<Result<_>>()?;
+    let canonical_state = settings.state_dir.clone();
+    settings.ticket_file = settings
+        .ticket_file
+        .as_deref()
+        .map(|path| resolve_runtime_profile_output(path, &canonical_state))
+        .transpose()?;
+    settings.ipc_file = resolve_runtime_profile_output(&settings.ipc_file, &canonical_state)?;
+    let profile = RuntimeLaunchProfile::new(settings)?;
+    let options = runtime_options_from_launch_settings(profile.settings())?;
+    validate_runtime_options(&options)?;
+    profile.write_new(&profile_file)?;
+    println!("runtime_profile_file={}", profile_file.display());
+    println!("runtime_ipc_file={}", profile.settings().ipc_file.display());
+    println!("runtime_profile_contains_secrets=false");
+    println!("status=runtime-profile-ready");
+    Ok(())
+}
+
+fn runtime_options_from_profile(profile_file: &Path) -> Result<RuntimeOptions> {
+    let profile = RuntimeLaunchProfile::load(profile_file)?;
+    let options = runtime_options_from_launch_settings(profile.settings())?;
+    validate_runtime_options(&options)?;
+    Ok(options)
+}
+
+fn runtime_options_from_launch_settings(
+    settings: &RuntimeLaunchSettings,
+) -> Result<RuntimeOptions> {
+    Ok(RuntimeOptions {
+        state_dir: settings.state_dir.clone(),
+        allowed_requester_account_id: settings.allowed_requester_account_id,
+        device_list_file: settings.device_list_file.clone(),
+        peer_prekey_pool_files: settings.peer_prekey_pool_files.clone(),
+        ticket_file: settings.ticket_file.clone(),
+        relay_wait_seconds: settings.relay_wait_seconds,
+        route_policy: match settings.route_policy {
+            RuntimeIpcRoutePolicy::Auto => RoutePolicy::Auto,
+            RuntimeIpcRoutePolicy::DirectOnly => RoutePolicy::DirectOnly,
+            RuntimeIpcRoutePolicy::RelayOnly => RoutePolicy::RelayOnly,
+        },
+        relay_url: settings
+            .relay_url
+            .as_deref()
+            .map(str::parse)
+            .transpose()
+            .context("parse runtime launch profile relay URL")?,
+        max_sessions: 0,
+        idle_seconds: 0,
+        poll_milliseconds: settings.poll_milliseconds,
+        retry_base_seconds: settings.retry_base_seconds,
+        retry_max_seconds: settings.retry_max_seconds,
+        auto_sync_seconds: settings.auto_sync_seconds,
+        max_outbound_actions: 0,
+        ipc_file: Some(settings.ipc_file.clone()),
+    })
+}
+
+fn resolve_runtime_profile_output(path: &Path, canonical_state: &Path) -> Result<PathBuf> {
+    let absolute = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .context("read current directory for runtime profile output")?
+            .join(path)
+    };
+    ensure!(
+        !absolute.starts_with(canonical_state),
+        "runtime profile output must live outside the protected state directory"
+    );
+    let file_name = absolute
+        .file_name()
+        .context("runtime profile output path has no file name")?;
+    let parent = absolute
+        .parent()
+        .context("runtime profile output path has no parent")?;
+    fs::create_dir_all(parent).with_context(|| {
+        format!(
+            "create runtime profile output directory {}",
+            parent.display()
+        )
+    })?;
+    let resolved = fs::canonicalize(parent)
+        .with_context(|| format!("resolve runtime profile output parent {}", parent.display()))?
+        .join(file_name);
+    ensure!(
+        !resolved.starts_with(canonical_state),
+        "runtime profile output must live outside the protected state directory"
+    );
+    Ok(resolved)
 }
 
 #[derive(Clone, Debug)]
@@ -1837,6 +2021,42 @@ async fn run_command(command: Command) -> Result<()> {
                 ipc_file,
             })
             .await
+        }
+        Command::RuntimeProfileCreate {
+            profile_file,
+            state_dir,
+            allow_account,
+            device_list_file,
+            peer_prekey_pool_files,
+            ticket_file,
+            relay_wait_seconds,
+            route_policy,
+            relay_url,
+            poll_milliseconds,
+            retry_base_seconds,
+            retry_max_seconds,
+            auto_sync_seconds,
+            ipc_file,
+        } => create_runtime_launch_profile(
+            profile_file,
+            RuntimeLaunchSettings {
+                state_dir,
+                allowed_requester_account_id: allow_account,
+                device_list_file,
+                peer_prekey_pool_files,
+                ticket_file,
+                relay_wait_seconds,
+                route_policy: runtime_ipc_route_policy(route_policy.into()),
+                relay_url: relay_url.map(|url| url.to_string()),
+                poll_milliseconds,
+                retry_base_seconds,
+                retry_max_seconds,
+                auto_sync_seconds,
+                ipc_file,
+            },
+        ),
+        Command::RuntimeFromProfile { profile_file } => {
+            runtime(runtime_options_from_profile(&profile_file)?).await
         }
         Command::RuntimeContactAdd {
             state_dir,
@@ -3396,8 +3616,47 @@ fn add_runtime_contact(
     expected_peer_account_id: AccountId,
     descriptor_file: PathBuf,
 ) -> Result<()> {
-    let device_state = load_command_device_state(&state_directory)?;
-    let trust = CommandTrustReadRepository::open(&state_directory, &device_state)?;
+    let receipt = add_runtime_contact_record(
+        &state_directory,
+        conversation,
+        expected_peer_account_id,
+        descriptor_file,
+    )?;
+    println!("runtime_contact_id={}", receipt.contact_id);
+    println!("peer_account_id={}", receipt.peer_account_id);
+    println!("peer_device_id={}", receipt.peer_device_id);
+    println!("conversation_id={}", receipt.conversation_id);
+    println!("route_policy={}", receipt.route_policy.as_str());
+    println!(
+        "runtime_contact_store={}",
+        if receipt.inserted {
+            "Inserted"
+        } else {
+            "AlreadyPresent"
+        }
+    );
+    println!("status=runtime-contact-ready");
+    Ok(())
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct RuntimeContactReceipt {
+    contact_id: RuntimeContactId,
+    peer_account_id: AccountId,
+    peer_device_id: DeviceId,
+    conversation_id: ConversationId,
+    route_policy: RoutePolicy,
+    inserted: bool,
+}
+
+fn add_runtime_contact_record(
+    state_directory: &Path,
+    conversation: String,
+    expected_peer_account_id: AccountId,
+    descriptor_file: PathBuf,
+) -> Result<RuntimeContactReceipt> {
+    let device_state = load_command_device_state(state_directory)?;
+    let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
     let local_certificate = trust.load_certificate()?;
     let local_authority = trust.load_own_authority_snapshot(&local_certificate)?;
     let conversation_id = ConversationId::from_label(&conversation);
@@ -3413,7 +3672,7 @@ fn add_runtime_contact(
             descriptor_file.display()
         )
     })?;
-    let canonical_state = fs::canonicalize(&state_directory)
+    let canonical_state = fs::canonicalize(state_directory)
         .context("resolve local state directory for runtime contact")?;
     ensure!(
         !descriptor_file.starts_with(&canonical_state),
@@ -3439,34 +3698,34 @@ fn add_runtime_contact(
         descriptor_file,
     )?;
     load_runtime_contact_ticket(&contact, &local_certificate, &local_authority)?;
-    run_state_transaction(&state_directory, |transaction| {
+    run_state_transaction(state_directory, |transaction| {
         transaction
             .load_ratchet_state()?
             .observe_prekey_directory(ticket.listener_directory(), unix_time_now()?)?;
         Ok(())
     })?;
     pin_peer_authority_primary(
-        &state_directory,
+        state_directory,
         &device_state,
         ticket.listener_authority_snapshot(),
     )?;
     let encoded = contact.encode()?;
-    let outcome = run_state_transaction(&state_directory, |transaction| {
+    let outcome = run_state_transaction(state_directory, |transaction| {
         persist_runtime_record(
-            &state_directory,
+            state_directory,
             &runtime_contact_relative_path(contact.contact_id()),
             &encoded,
             transaction,
         )
     })?;
-    println!("runtime_contact_id={}", contact.contact_id());
-    println!("peer_account_id={}", contact.peer_account_id());
-    println!("peer_device_id={}", contact.peer_device_id());
-    println!("conversation_id={}", contact.conversation_id());
-    println!("route_policy={}", contact.route_policy().as_str());
-    println!("runtime_contact_store={outcome:?}");
-    println!("status=runtime-contact-ready");
-    Ok(())
+    Ok(RuntimeContactReceipt {
+        contact_id: contact.contact_id(),
+        peer_account_id: contact.peer_account_id(),
+        peer_device_id: contact.peer_device_id(),
+        conversation_id: contact.conversation_id(),
+        route_policy: contact.route_policy(),
+        inserted: outcome == StoreOutcome::Inserted,
+    })
 }
 
 fn queue_runtime_message(
@@ -4086,12 +4345,35 @@ fn handle_runtime_ipc_work(
     account_id: AccountId,
     device_id: DeviceId,
     work: RuntimeIpcWork,
-) {
+) -> bool {
     let (command, response_sender) = work.into_parts();
+    let shutdown_requested = matches!(command, RuntimeIpcCommand::Shutdown);
     let response = match command {
         RuntimeIpcCommand::Ping => RuntimeIpcResponse::Pong {
             account_id,
             device_id,
+        },
+        RuntimeIpcCommand::AddContact {
+            conversation,
+            expected_peer_account_id,
+            descriptor_file,
+        } => match with_locked_state(state_directory, || {
+            add_runtime_contact_record(
+                state_directory,
+                conversation,
+                expected_peer_account_id,
+                descriptor_file,
+            )
+        }) {
+            Ok(receipt) => RuntimeIpcResponse::ContactAdded {
+                contact_id: receipt.contact_id.to_string(),
+                peer_account_id: receipt.peer_account_id,
+                peer_device_id: receipt.peer_device_id,
+                inserted: receipt.inserted,
+            },
+            Err(error) => RuntimeIpcResponse::Error {
+                message: format!("{error:#}"),
+            },
         },
         RuntimeIpcCommand::QueueMessage {
             request_id,
@@ -4155,8 +4437,10 @@ fn handle_runtime_ipc_work(
                 },
             }
         }
+        RuntimeIpcCommand::Shutdown => RuntimeIpcResponse::ShutdownAccepted,
     };
     let _ = response_sender.send(response);
+    shutdown_requested
 }
 
 fn resolve_runtime_ipc_descriptor_path(
@@ -4212,6 +4496,7 @@ enum RuntimeEvent {
 }
 
 async fn runtime(options: RuntimeOptions) -> Result<()> {
+    validate_runtime_options(&options)?;
     let RuntimeOptions {
         state_dir,
         allowed_requester_account_id,
@@ -4230,31 +4515,6 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
         max_outbound_actions,
         ipc_file,
     } = options;
-    ensure!(
-        max_sessions <= MAX_RUNTIME_SESSIONS,
-        "--max-sessions must be zero or at most {MAX_RUNTIME_SESSIONS}"
-    );
-    ensure!(
-        idle_seconds <= MAX_RUNTIME_IDLE_SECONDS,
-        "--idle-seconds must be zero or at most {MAX_RUNTIME_IDLE_SECONDS}"
-    );
-    ensure!(
-        (10..=MAX_RUNTIME_POLL_MILLISECONDS).contains(&poll_milliseconds),
-        "--poll-milliseconds must be between 10 and {MAX_RUNTIME_POLL_MILLISECONDS}"
-    );
-    ensure!(
-        (1..=MAX_RUNTIME_RETRY_SECONDS).contains(&retry_base_seconds),
-        "--retry-base-seconds must be between 1 and {MAX_RUNTIME_RETRY_SECONDS}"
-    );
-    ensure!(
-        retry_max_seconds >= retry_base_seconds && retry_max_seconds <= MAX_RUNTIME_RETRY_SECONDS,
-        "--retry-max-seconds must be at least the base and at most {MAX_RUNTIME_RETRY_SECONDS}"
-    );
-    ensure!(
-        auto_sync_seconds <= MAX_RUNTIME_AUTO_SYNC_SECONDS,
-        "--auto-sync-seconds must be zero or at most {MAX_RUNTIME_AUTO_SYNC_SECONDS}"
-    );
-
     let prepared = with_locked_state(&state_dir, || {
         prepare_runtime_listener(&state_dir, &device_list_file, &peer_prekey_pool_files)
     })?;
@@ -4356,12 +4616,15 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
             RuntimeEvent::IpcClosed => bail!("runtime IPC acceptor stopped unexpectedly"),
             RuntimeEvent::Ipc(work) => {
                 last_activity = tokio::time::Instant::now();
-                handle_runtime_ipc_work(
+                if handle_runtime_ipc_work(
                     &state_dir,
                     ticket.listener_account_id(),
                     prepared.device_state.identity().device_id(),
                     work,
-                );
+                ) {
+                    tokio::time::sleep(Duration::from_millis(50)).await;
+                    break "ipc-shutdown";
+                }
             }
             RuntimeEvent::Tick => {
                 let delivery_attempt = attempt_next_runtime_delivery(
@@ -4460,6 +4723,35 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
     println!("runtime_outbound_actions={outbound_actions}");
     println!("runtime_stop_reason={stop_reason}");
     println!("status=runtime-stopped");
+    Ok(())
+}
+
+fn validate_runtime_options(options: &RuntimeOptions) -> Result<()> {
+    ensure!(
+        options.max_sessions <= MAX_RUNTIME_SESSIONS,
+        "--max-sessions must be zero or at most {MAX_RUNTIME_SESSIONS}"
+    );
+    ensure!(
+        options.idle_seconds <= MAX_RUNTIME_IDLE_SECONDS,
+        "--idle-seconds must be zero or at most {MAX_RUNTIME_IDLE_SECONDS}"
+    );
+    ensure!(
+        (10..=MAX_RUNTIME_POLL_MILLISECONDS).contains(&options.poll_milliseconds),
+        "--poll-milliseconds must be between 10 and {MAX_RUNTIME_POLL_MILLISECONDS}"
+    );
+    ensure!(
+        (1..=MAX_RUNTIME_RETRY_SECONDS).contains(&options.retry_base_seconds),
+        "--retry-base-seconds must be between 1 and {MAX_RUNTIME_RETRY_SECONDS}"
+    );
+    ensure!(
+        options.retry_max_seconds >= options.retry_base_seconds
+            && options.retry_max_seconds <= MAX_RUNTIME_RETRY_SECONDS,
+        "--retry-max-seconds must be at least the base and at most {MAX_RUNTIME_RETRY_SECONDS}"
+    );
+    ensure!(
+        options.auto_sync_seconds <= MAX_RUNTIME_AUTO_SYNC_SECONDS,
+        "--auto-sync-seconds must be zero or at most {MAX_RUNTIME_AUTO_SYNC_SECONDS}"
+    );
     Ok(())
 }
 
@@ -11652,6 +11944,61 @@ mod tests {
         Ok(())
     }
 
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn runtime_launch_profile_starts_and_stops_through_authenticated_ipc() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let root_dir = directory.path().join("root");
+        let state_dir = directory.path().join("state");
+        create_account(root_dir.clone())?;
+        enroll_device(root_dir.clone(), state_dir.clone(), None)?;
+        let root = AccountRootState::load(&root_dir)?;
+        let device = DeviceState::load_or_create(&state_dir)?;
+        let certificate = device.load_certificate()?;
+        let device_list = root.publish_device_list(std::slice::from_ref(&certificate))?;
+        let device_list_file = directory.path().join("device-list.snapshot");
+        write_new_authority_file(&device_list_file, &device_list.encode()?)?;
+        let profile_file = directory.path().join("runtime.launch.json");
+        let ticket_file = directory.path().join("runtime.ticket");
+        let ipc_file = directory.path().join("runtime.ipc.json");
+        create_runtime_launch_profile(
+            profile_file.clone(),
+            RuntimeLaunchSettings {
+                state_dir,
+                allowed_requester_account_id: root.account_id(),
+                device_list_file,
+                peer_prekey_pool_files: Vec::new(),
+                ticket_file: Some(ticket_file.clone()),
+                relay_wait_seconds: 0,
+                route_policy: RuntimeIpcRoutePolicy::DirectOnly,
+                relay_url: None,
+                poll_milliseconds: 20,
+                retry_base_seconds: 1,
+                retry_max_seconds: 1,
+                auto_sync_seconds: 0,
+                ipc_file: ipc_file.clone(),
+            },
+        )?;
+        let task = tokio::spawn(runtime(runtime_options_from_profile(&profile_file)?));
+        timeout(Duration::from_secs(10), async {
+            while !ipc_file.is_file() {
+                tokio::time::sleep(Duration::from_millis(20)).await;
+            }
+        })
+        .await
+        .context("profile runtime did not publish its IPC descriptor")?;
+        assert!(matches!(
+            kilogram_runtime_ipc::call(&ipc_file, RuntimeIpcCommand::Shutdown).await?,
+            RuntimeIpcResponse::ShutdownAccepted
+        ));
+        timeout(Duration::from_secs(10), task)
+            .await
+            .context("profile runtime did not stop after IPC shutdown")?
+            .context("join profile runtime")??;
+        assert!(ticket_file.is_file());
+        assert!(!ipc_file.exists());
+        Ok(())
+    }
+
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
     async fn runtime_outbox_delivers_and_automatic_sync_converges() -> Result<()> {
         let directory = tempfile::tempdir()?;
@@ -11712,12 +12059,6 @@ mod tests {
         .await
         .context("Bob runtime did not publish its descriptor")?;
 
-        add_runtime_contact(
-            alice_state.clone(),
-            conversation_label.to_owned(),
-            bob_root.account_id(),
-            bob_ticket,
-        )?;
         let alice_ipc = directory.path().join("alice-runtime.ipc.json");
         let alice_task = tokio::spawn(runtime(RuntimeOptions {
             state_dir: alice_state.clone(),
@@ -11752,6 +12093,24 @@ mod tests {
                 device_id,
             } if account_id == alice_root.account_id()
                 && device_id == alice_device.identity().device_id()
+        ));
+        assert!(matches!(
+            kilogram_runtime_ipc::call(
+                &alice_ipc,
+                RuntimeIpcCommand::AddContact {
+                    conversation: conversation_label.to_owned(),
+                    expected_peer_account_id: bob_root.account_id(),
+                    descriptor_file: bob_ticket,
+                },
+            )
+            .await?,
+            RuntimeIpcResponse::ContactAdded {
+                peer_account_id,
+                peer_device_id,
+                inserted: true,
+                ..
+            } if peer_account_id == bob_root.account_id()
+                && peer_device_id == bob_device.identity().device_id()
         ));
         assert!(matches!(
             kilogram_runtime_ipc::call(&alice_ipc, RuntimeIpcCommand::ConversationList).await?,

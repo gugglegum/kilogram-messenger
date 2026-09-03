@@ -679,3 +679,22 @@ retirement остальных compatibility shadows ещё не реализов
 - Windows artifact `target/release/kilogram-windows.exe`: 6,245,888 bytes,
   SHA-256
   `1F732775050C37AFAA93ADF0708F835BDDCCB0DD744A5905FE53C6C4C598FDC1`.
+
+## M0.9.14 verification snapshot (2026-09-03)
+
+- Runtime IPC v3 добавил actor-owned `AddContact` и graceful `Shutdown`;
+  desktop package по-прежнему не зависит от state/store/session/transport.
+- `RuntimeLaunchProfile` v1 bounded до 64 KiB, no-clobber, требует абсолютные
+  authority/output paths и расположение profile/IPC descriptor вне protected
+  state; seed/device/vault/bearer secrets в profile отсутствуют.
+- CLI `runtime-profile-create` и `runtime-from-profile` проверены release help;
+  GUI запускает соседний CLI child, ждёт authenticated readiness до 60 секунд и
+  останавливает его IPC-командой с bounded hard-kill fallback только при сбое.
+- Targeted process test подтверждает profile start/shutdown/descriptor cleanup;
+  Alice/Bob test теперь импортирует signed contact через runtime IPC до queue.
+- `cargo fmt --all -- --check`, strict workspace all-target Clippy, все 144
+  workspace tests и `cargo build --workspace --release` проходят.
+- Windows artifacts: `target/release/kilogram-windows.exe` — 6,372,352 bytes,
+  SHA-256 `48361DCB344064D5DA9556A01351B3CBE2E4CE41A8B9D4D1EB74AA99F6D8C891`;
+  `target/release/kilogram-cli.exe` — 22,520,320 bytes, SHA-256
+  `2A439A1219090E7743B44FB14F26FDCD6120CD04CA94D84F43523C6BD3A93F26`.

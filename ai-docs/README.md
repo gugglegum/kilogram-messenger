@@ -130,7 +130,12 @@ multi-source claim reconciliation. M0.7.9 добавил signed append-only chec
   публикует device-signed bearer descriptor для loopback-only bounded RPC,
   а `Ping`, idempotent `QueueMessage` и structured `OutboxStatus` проходят через
   сериализованный actor без доступа UI к `STATE_DIR`. Descriptor должен быть
-  private machine-local; push/OS peer credentials остаются дальше.
+  private machine-local. M0.9.12 добавил отдельный safe-Rust desktop client;
+  M0.9.13 перенёс signed contact list, preview и paginated decrypted history в
+  actor-owned IPC read model. M0.9.14 поднял IPC до v3: GUI импортирует contact
+  только через actor, запускает runtime из secret-free no-clobber profile и
+  штатно останавливает его authenticated `Shutdown`. Autostart/service не
+  устанавливается; push/OS peer credentials остаются дальше.
   Reconciliation выбирает
   inventory только при совпадении двух или более полных явно собранных claims и
   всё равно не обещает global completeness.
@@ -291,12 +296,10 @@ summaries, membership removal и группы ещё не реализованы
 
 ## План ближайших работ
 
-1. M0.9.13: actor-owned read model и bounded IPC для contact list, conversation
-   summaries и paginated local history; первый обычный список чатов строить без
-   прямого GUI-доступа к device state.
-2. Добавить IPC contact onboarding и runtime lifecycle. Optional
-   autostart/background mode оставить явной настройкой, а не обязательным Task
-   Scheduler этапом.
+1. M0.9.15: добавить first-run desktop setup, GUI editing/persistence
+   launch-profile и actor change revision/notification вместо periodic polling.
+2. Optional autostart/background mode оставить отдельной явной настройкой, а не
+   обязательным Task Scheduler этапом.
 3. Добавить production macOS/Linux local key provider, согласованный monotonic
    witness и lifecycle обновления portable recovery package; затем mobile
    providers. Расширить M0.9.4 LAN discovery до privacy-preserving wide-area
@@ -397,5 +400,9 @@ summaries, membership removal и группы ещё не реализованы
   реализованный M0.9.11 device-signed loopback IPC и сериализованный runtime actor API.
 - [`../docs/RFC-0039-minimal-desktop-runtime-client.md`](../docs/RFC-0039-minimal-desktop-runtime-client.md) —
   реализованный M0.9.12 safe-Rust desktop GUI поверх authenticated runtime IPC.
+- [`../docs/RFC-0040-actor-owned-chat-read-model.md`](../docs/RFC-0040-actor-owned-chat-read-model.md) —
+  реализованный M0.9.13 signed chat list и paginated readable local history через runtime actor.
+- [`../docs/RFC-0041-desktop-contact-onboarding-and-runtime-lifecycle.md`](../docs/RFC-0041-desktop-contact-onboarding-and-runtime-lifecycle.md) —
+  реализованный M0.9.14 IPC contact import, secret-free launch profile и foreground runtime lifecycle.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.
