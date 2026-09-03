@@ -1,0 +1,20 @@
+[package]
+name = "kilogram-bootstrap-contract"
+description = "Bounded one-shot desktop bootstrap result contract for Kilogram"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+kilogram-identity = { path = "../kilogram-identity" }
+serde.workspace = true
+serde_json.workspace = true
+zeroize.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

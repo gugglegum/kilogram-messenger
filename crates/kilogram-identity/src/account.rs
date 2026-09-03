@@ -6,13 +6,19 @@ use std::{
     str::FromStr,
 };
 
+use bip39::{Language, Mnemonic};
 use ed25519_dalek::{Signature, Signer, SigningKey, VerifyingKey};
 use kilogram_crypto::EncryptionPublicKey;
 use serde::{Deserialize, Serialize};
+use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 use crate::{DeviceId, DeviceState, IdentityError, SECRET_KEY_BYTES, open_new_secret_file};
 
 const ACCOUNT_ROOT_SECRET_FILE: &str = "account-root-secret.key";
+const ACCOUNT_ROOT_KEY_ENVELOPE_MAGIC: &[u8; 16] = b"KILOGRAM-ROOTK01";
+const ACCOUNT_ROOT_KEY_ENVELOPE_VERSION: u8 = 1;
+const MAX_ACCOUNT_ROOT_KEY_ENVELOPE_BYTES: usize = 64 * 1024;
+const ACCOUNT_ROOT_DERIVATION_CONTEXT: &str = "Kilogram Account Root signing key v1";
 const NEXT_AUTHORITY_SEQUENCE_FILE: &str = "next-authority-sequence";
 const AUTHORITY_LOG_VERSION_FILE: &str = "authority-log-version";
 const AUTHORITY_LOG_VERSION: &str = "1";
@@ -128,10 +134,12 @@ impl AccountRootIdentity {
         Ok(Self::from_secret_bytes(secret))
     }
 
-    fn from_secret_bytes(secret: [u8; SECRET_KEY_BYTES]) -> Self {
-        Self {
+    fn from_secret_bytes(mut secret: [u8; SECRET_KEY_BYTES]) -> Self {
+        let identity = Self {
             signing_key: SigningKey::from_bytes(&secret),
-        }
+        };
+        secret.zeroize();
+        identity
     }
 
     fn account_id(&self) -> AccountId {
@@ -147,13 +155,128 @@ impl AccountRootIdentity {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum AccountRootKeyProtection {
+    WindowsDpapiCurrentUser,
+    PlaintextDevelopment,
+}
+
+impl AccountRootKeyProtection {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::WindowsDpapiCurrentUser => "windows-dpapi-current-user",
+            Self::PlaintextDevelopment => "plaintext-development",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum AccountRootKeyLoadOutcome {
+    Created,
+    LegacyMigrated,
+    AlreadyCurrent,
+}
+
+impl AccountRootKeyLoadOutcome {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Created => "created",
+            Self::LegacyMigrated => "legacy-migrated",
+            Self::AlreadyCurrent => "already-current",
+        }
+    }
+}
+
+pub struct AccountRecoveryPhrase(Zeroizing<String>);
+
+impl AccountRecoveryPhrase {
+    pub fn parse(value: &str) -> Result<Self, IdentityError> {
+        let normalized = value.split_whitespace().collect::<Vec<_>>().join(" ");
+        let mnemonic = Mnemonic::parse_in_normalized(Language::English, &normalized)
+            .map_err(|error| IdentityError::InvalidAccountRecoveryPhrase(error.to_string()))?;
+        if mnemonic.word_count() != 24 {
+            return Err(IdentityError::InvalidAccountRecoveryWordCount(
+                mnemonic.word_count(),
+            ));
+        }
+        Ok(Self(Zeroizing::new(mnemonic.to_string())))
+    }
+
+    pub fn expose_secret(&self) -> &str {
+        &self.0
+    }
+
+    pub fn account_id(&self) -> Result<AccountId, IdentityError> {
+        Ok(account_root_identity_from_phrase(self)?.account_id())
+    }
+}
+
+impl fmt::Debug for AccountRecoveryPhrase {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("AccountRecoveryPhrase([REDACTED])")
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+enum AccountRootKeyProviderId {
+    WindowsDpapiCurrentUser,
+    PlaintextDevelopment,
+}
+
+impl AccountRootKeyProviderId {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::WindowsDpapiCurrentUser => "windows-dpapi-current-user",
+            Self::PlaintextDevelopment => "plaintext-development",
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, ZeroizeOnDrop)]
+struct AccountRootKeyEnvelope {
+    #[zeroize(skip)]
+    version: u8,
+    #[zeroize(skip)]
+    provider: AccountRootKeyProviderId,
+    protected_key: Vec<u8>,
+}
+
+struct LoadedAccountRootKey {
+    identity: AccountRootIdentity,
+    protection: AccountRootKeyProtection,
+    load_outcome: AccountRootKeyLoadOutcome,
+}
+
 pub struct AccountRootState {
     directory: PathBuf,
     identity: AccountRootIdentity,
+    key_protection: AccountRootKeyProtection,
+    key_load_outcome: AccountRootKeyLoadOutcome,
 }
 
 impl AccountRootState {
     pub fn create(directory: impl AsRef<Path>) -> Result<Self, IdentityError> {
+        Self::create_with_identity(directory, AccountRootIdentity::generate()?)
+    }
+
+    pub fn create_recoverable(
+        directory: impl AsRef<Path>,
+    ) -> Result<(Self, AccountRecoveryPhrase), IdentityError> {
+        let mut entropy = [0_u8; 32];
+        getrandom::fill(&mut entropy).map_err(IdentityError::SecureRandom)?;
+        let mnemonic = Mnemonic::from_entropy(&entropy)
+            .map_err(|error| IdentityError::InvalidAccountRecoveryPhrase(error.to_string()))?;
+        entropy.zeroize();
+        let phrase = AccountRecoveryPhrase(Zeroizing::new(mnemonic.to_string()));
+        let identity = account_root_identity_from_phrase(&phrase)?;
+        let root = Self::create_with_identity(directory, identity)?;
+        Ok((root, phrase))
+    }
+
+    fn create_with_identity(
+        directory: impl AsRef<Path>,
+        identity: AccountRootIdentity,
+    ) -> Result<Self, IdentityError> {
         let directory = directory.as_ref().to_path_buf();
         fs::create_dir_all(&directory)?;
         let secret_path = directory.join(ACCOUNT_ROOT_SECRET_FILE);
@@ -164,8 +287,10 @@ impl AccountRootState {
             }
             Err(error) => return Err(error.into()),
         };
-        let identity = AccountRootIdentity::generate()?;
-        file.write_all(&identity.secret_bytes())?;
+        let secret = Zeroizing::new(identity.secret_bytes());
+        let (encoded, key_protection) = encode_account_root_key(&secret)?;
+        let encoded = Zeroizing::new(encoded);
+        file.write_all(&encoded)?;
         file.sync_all()?;
         write_new_file(
             &directory.join(AUTHORITY_LOG_VERSION_FILE),
@@ -176,6 +301,8 @@ impl AccountRootState {
         Ok(Self {
             directory,
             identity,
+            key_protection,
+            key_load_outcome: AccountRootKeyLoadOutcome::Created,
         })
     }
 
@@ -183,23 +310,35 @@ impl AccountRootState {
         let directory = directory.as_ref().to_path_buf();
         let secret_path = directory.join(ACCOUNT_ROOT_SECRET_FILE);
         let bytes = match fs::read(&secret_path) {
-            Ok(bytes) => bytes,
+            Ok(bytes) => Zeroizing::new(bytes),
             Err(error) if error.kind() == io::ErrorKind::NotFound => {
                 return Err(IdentityError::AccountRootMissing(secret_path));
             }
             Err(error) => return Err(error.into()),
         };
-        let secret: [u8; SECRET_KEY_BYTES] = bytes.try_into().map_err(|bytes: Vec<u8>| {
-            IdentityError::InvalidAccountRootSecretKeyLength(bytes.len())
-        })?;
+        let loaded = if bytes.len() == SECRET_KEY_BYTES {
+            migrate_legacy_account_root_key(&secret_path, &bytes)?
+        } else {
+            decode_account_root_key(&secret_path, &bytes)?
+        };
         Ok(Self {
             directory,
-            identity: AccountRootIdentity::from_secret_bytes(secret),
+            identity: loaded.identity,
+            key_protection: loaded.protection,
+            key_load_outcome: loaded.load_outcome,
         })
     }
 
     pub fn account_id(&self) -> AccountId {
         self.identity.account_id()
+    }
+
+    pub fn key_protection(&self) -> AccountRootKeyProtection {
+        self.key_protection
+    }
+
+    pub fn key_load_outcome(&self) -> AccountRootKeyLoadOutcome {
+        self.key_load_outcome
     }
 
     pub fn issue_device_certificate(
@@ -416,6 +555,202 @@ impl AccountRootState {
             .join(CONVERSATION_MEMBERSHIPS_DIRECTORY)
             .join(format!("{conversation_id}.membership"))
     }
+}
+
+fn account_root_identity_from_phrase(
+    phrase: &AccountRecoveryPhrase,
+) -> Result<AccountRootIdentity, IdentityError> {
+    let mnemonic = Mnemonic::parse_in_normalized(Language::English, phrase.expose_secret())
+        .map_err(|error| IdentityError::InvalidAccountRecoveryPhrase(error.to_string()))?;
+    let mut seed = mnemonic.to_seed_normalized("");
+    let mut secret = blake3::derive_key(ACCOUNT_ROOT_DERIVATION_CONTEXT, &seed);
+    seed.zeroize();
+    let identity = AccountRootIdentity::from_secret_bytes(secret);
+    secret.zeroize();
+    Ok(identity)
+}
+
+fn migrate_legacy_account_root_key(
+    path: &Path,
+    bytes: &[u8],
+) -> Result<LoadedAccountRootKey, IdentityError> {
+    let mut secret: [u8; SECRET_KEY_BYTES] = bytes
+        .try_into()
+        .map_err(|_| IdentityError::InvalidAccountRootSecretKeyLength(bytes.len()))?;
+    let (encoded, protection) = encode_account_root_key(&secret)?;
+    let encoded = Zeroizing::new(encoded);
+    replace_file_atomically(path, &encoded)?;
+    let identity = AccountRootIdentity::from_secret_bytes(secret);
+    secret.zeroize();
+    Ok(LoadedAccountRootKey {
+        identity,
+        protection,
+        load_outcome: AccountRootKeyLoadOutcome::LegacyMigrated,
+    })
+}
+
+fn decode_account_root_key(
+    path: &Path,
+    bytes: &[u8],
+) -> Result<LoadedAccountRootKey, IdentityError> {
+    if bytes.len() > MAX_ACCOUNT_ROOT_KEY_ENVELOPE_BYTES {
+        return Err(IdentityError::AccountRootKeyEnvelopeTooLarge(bytes.len()));
+    }
+    let encoded = bytes
+        .strip_prefix(ACCOUNT_ROOT_KEY_ENVELOPE_MAGIC)
+        .ok_or_else(|| IdentityError::InvalidAccountRootKeyEnvelope {
+            path: path.to_path_buf(),
+            detail: "missing Kilogram Account Root key-envelope magic".to_owned(),
+        })?;
+    let envelope: AccountRootKeyEnvelope = postcard::from_bytes(encoded).map_err(|error| {
+        IdentityError::InvalidAccountRootKeyEnvelope {
+            path: path.to_path_buf(),
+            detail: error.to_string(),
+        }
+    })?;
+    if envelope.version != ACCOUNT_ROOT_KEY_ENVELOPE_VERSION {
+        return Err(IdentityError::UnsupportedAccountRootKeyEnvelopeVersion(
+            envelope.version,
+        ));
+    }
+    open_account_root_key(path, envelope)
+}
+
+fn open_account_root_key(
+    path: &Path,
+    mut envelope: AccountRootKeyEnvelope,
+) -> Result<LoadedAccountRootKey, IdentityError> {
+    match envelope.provider {
+        AccountRootKeyProviderId::WindowsDpapiCurrentUser => {
+            let plaintext = unprotect_account_root_key_windows_dpapi(&envelope.protected_key)?;
+            loaded_account_root_key_from_vec(
+                plaintext,
+                AccountRootKeyProtection::WindowsDpapiCurrentUser,
+                AccountRootKeyLoadOutcome::AlreadyCurrent,
+            )
+        }
+        AccountRootKeyProviderId::PlaintextDevelopment => {
+            let plaintext = std::mem::take(&mut envelope.protected_key);
+            #[cfg(windows)]
+            {
+                let mut secret = secret_from_vec(plaintext)?;
+                let (encoded, protection) = encode_account_root_key(&secret)?;
+                let encoded = Zeroizing::new(encoded);
+                replace_file_atomically(path, &encoded)?;
+                let identity = AccountRootIdentity::from_secret_bytes(secret);
+                secret.zeroize();
+                Ok(LoadedAccountRootKey {
+                    identity,
+                    protection,
+                    load_outcome: AccountRootKeyLoadOutcome::LegacyMigrated,
+                })
+            }
+            #[cfg(not(windows))]
+            {
+                let _ = path;
+                loaded_account_root_key_from_vec(
+                    plaintext,
+                    AccountRootKeyProtection::PlaintextDevelopment,
+                    AccountRootKeyLoadOutcome::AlreadyCurrent,
+                )
+            }
+        }
+    }
+}
+
+fn loaded_account_root_key_from_vec(
+    bytes: Vec<u8>,
+    protection: AccountRootKeyProtection,
+    load_outcome: AccountRootKeyLoadOutcome,
+) -> Result<LoadedAccountRootKey, IdentityError> {
+    let bytes = Zeroizing::new(bytes);
+    let mut secret = secret_from_slice(&bytes)?;
+    let identity = AccountRootIdentity::from_secret_bytes(secret);
+    secret.zeroize();
+    Ok(LoadedAccountRootKey {
+        identity,
+        protection,
+        load_outcome,
+    })
+}
+
+fn secret_from_vec(mut bytes: Vec<u8>) -> Result<[u8; SECRET_KEY_BYTES], IdentityError> {
+    let result = secret_from_slice(&bytes);
+    bytes.zeroize();
+    result
+}
+
+fn secret_from_slice(bytes: &[u8]) -> Result<[u8; SECRET_KEY_BYTES], IdentityError> {
+    bytes
+        .try_into()
+        .map_err(|_| IdentityError::InvalidAccountRootSecretKeyLength(bytes.len()))
+}
+
+fn encode_account_root_key(
+    secret: &[u8; SECRET_KEY_BYTES],
+) -> Result<(Vec<u8>, AccountRootKeyProtection), IdentityError> {
+    #[cfg(windows)]
+    let (provider, protected_key, protection) = (
+        AccountRootKeyProviderId::WindowsDpapiCurrentUser,
+        protect_account_root_key_windows_dpapi(secret)?,
+        AccountRootKeyProtection::WindowsDpapiCurrentUser,
+    );
+    #[cfg(not(windows))]
+    let (provider, protected_key, protection) = (
+        AccountRootKeyProviderId::PlaintextDevelopment,
+        secret.to_vec(),
+        AccountRootKeyProtection::PlaintextDevelopment,
+    );
+    let envelope = AccountRootKeyEnvelope {
+        version: ACCOUNT_ROOT_KEY_ENVELOPE_VERSION,
+        provider,
+        protected_key,
+    };
+    let mut payload = postcard::to_allocvec(&envelope)?;
+    let total_len = ACCOUNT_ROOT_KEY_ENVELOPE_MAGIC.len() + payload.len();
+    if total_len > MAX_ACCOUNT_ROOT_KEY_ENVELOPE_BYTES {
+        payload.zeroize();
+        return Err(IdentityError::AccountRootKeyEnvelopeTooLarge(total_len));
+    }
+    let mut encoded = Vec::with_capacity(total_len);
+    encoded.extend_from_slice(ACCOUNT_ROOT_KEY_ENVELOPE_MAGIC);
+    encoded.append(&mut payload);
+    Ok((encoded, protection))
+}
+
+#[cfg(windows)]
+fn protect_account_root_key_windows_dpapi(plaintext: &[u8]) -> Result<Vec<u8>, IdentityError> {
+    stellar_agent_windows_identity::dpapi_protect(plaintext).map_err(|error| {
+        IdentityError::AccountRootKeyProtectionFailed {
+            provider: AccountRootKeyProviderId::WindowsDpapiCurrentUser
+                .as_str()
+                .to_owned(),
+            operation: "protect",
+            detail: error.to_string(),
+        }
+    })
+}
+
+#[cfg(windows)]
+fn unprotect_account_root_key_windows_dpapi(ciphertext: &[u8]) -> Result<Vec<u8>, IdentityError> {
+    stellar_agent_windows_identity::dpapi_unprotect(ciphertext).map_err(|error| {
+        IdentityError::AccountRootKeyProtectionFailed {
+            provider: AccountRootKeyProviderId::WindowsDpapiCurrentUser
+                .as_str()
+                .to_owned(),
+            operation: "unprotect",
+            detail: error.to_string(),
+        }
+    })
+}
+
+#[cfg(not(windows))]
+fn unprotect_account_root_key_windows_dpapi(_ciphertext: &[u8]) -> Result<Vec<u8>, IdentityError> {
+    Err(IdentityError::AccountRootKeyProviderUnavailable(
+        AccountRootKeyProviderId::WindowsDpapiCurrentUser
+            .as_str()
+            .to_owned(),
+    ))
 }
 
 fn write_new_file(path: &Path, bytes: &[u8]) -> Result<(), IdentityError> {
@@ -1390,6 +1725,48 @@ mod tests {
 
     fn test_encryption_public_key() -> Result<EncryptionPublicKey, IdentityError> {
         Ok(EncryptionPublicKey::from_bytes([7_u8; 32])?)
+    }
+
+    #[test]
+    fn recovery_phrase_is_stable_and_root_key_is_enveloped() -> Result<(), IdentityError> {
+        let directory = tempdir()?;
+        let (root, phrase) = AccountRootState::create_recoverable(directory.path())?;
+        let account_id = root.account_id();
+        assert_eq!(phrase.expose_secret().split_whitespace().count(), 24);
+        assert_eq!(
+            AccountRecoveryPhrase::parse(phrase.expose_secret())?.account_id()?,
+            account_id
+        );
+        let stored = fs::read(directory.path().join(ACCOUNT_ROOT_SECRET_FILE))?;
+        assert_ne!(stored.len(), SECRET_KEY_BYTES);
+        assert!(stored.starts_with(ACCOUNT_ROOT_KEY_ENVELOPE_MAGIC));
+        assert_eq!(
+            AccountRootState::load(directory.path())?.account_id(),
+            account_id
+        );
+        assert!(AccountRecoveryPhrase::parse("not a valid recovery phrase").is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn legacy_plaintext_root_key_migrates_without_changing_account() -> Result<(), IdentityError> {
+        let directory = tempdir()?;
+        let root = AccountRootState::create(directory.path())?;
+        let account_id = root.account_id();
+        let secret = root.identity.secret_bytes();
+        drop(root);
+        let secret_path = directory.path().join(ACCOUNT_ROOT_SECRET_FILE);
+        fs::write(&secret_path, secret)?;
+
+        let migrated = AccountRootState::load(directory.path())?;
+        assert_eq!(migrated.account_id(), account_id);
+        assert_eq!(
+            migrated.key_load_outcome(),
+            AccountRootKeyLoadOutcome::LegacyMigrated
+        );
+        let stored = fs::read(secret_path)?;
+        assert!(stored.starts_with(ACCOUNT_ROOT_KEY_ENVELOPE_MAGIC));
+        Ok(())
     }
 
     #[test]

@@ -2117,11 +2117,45 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - полный контракт —
   [`../docs/RFC-0042-desktop-runtime-setup-and-change-notifications.md`](../docs/RFC-0042-desktop-runtime-setup-and-change-notifications.md).
 
+### M0.9.16 — desktop first-account bootstrap: выполнено
+
+Реализовано:
+
+- 256-bit entropy кодируется 24-word English BIP39 phrase; отдельный BLAKE3
+  derivation domain детерминированно даёт Ed25519 Account Root и тот же
+  `AccountId`, а sensitive intermediate buffers zeroize;
+- `account-root-secret.key` стал bounded versioned envelope: Windows DPAPI
+  CurrentUser, explicit plaintext-development fallback на остальных ОС и
+  автоматическая миграция прежнего raw 32-byte key без смены Account ID;
+- отдельный `kilogram-bootstrap create` в same-parent staging создаёт root,
+  первый device/certificate/authority/device-list, signed prekey pool и verified
+  encrypted vault, затем no-clobber публикует всю workspace одним rename;
+- persistent receipt содержит только IDs/public paths/protection/recovery scope;
+  phrase возвращается ровно в bounded redacted/zeroizing process response;
+- first-run GUI запускает соседний helper без secret command-line arguments,
+  показывает phrase до explicit offline-save acknowledgement и заполняет public
+  launch-profile paths; peer Account ID/prekeys остаются пустыми до contact
+  ceremony;
+- seed-alone restore намеренно отсутствует: без authenticated current authority
+  history он мог бы создать signed rollback/fork.
+
+Проверки:
+
+- deterministic phrase/Account ID, invalid phrase, root envelope round-trip и
+  legacy raw migration;
+- atomic no-clobber bootstrap, receipt без phrase, public artifacts и verified
+  encrypted vault;
+- bounded/redacted output contract, GUI helper option и launch profile без peer
+  prekeys;
+- rustfmt, strict workspace Clippy, all tests и release build;
+- полный контракт —
+  [`../docs/RFC-0043-desktop-first-account-bootstrap.md`](../docs/RFC-0043-desktop-first-account-bootstrap.md).
+
 ### Следующий этап
 
-1. M0.9.16: спроектировать и реализовать desktop account/device first-run
-   boundary — создание нового account либо enrollment/recovery существующего
-   device без передачи root/device/vault secrets в обычный runtime UI.
+1. M0.9.17: реализовать existing-account device-link ceremony — одноразовое
+   recipient-bound разрешение, authenticated authority transfer, transactional
+   certificate/device-list publication и resumable multi-source history sync.
 2. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.

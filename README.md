@@ -89,12 +89,14 @@ Desktop contact onboarding and foreground runtime lifecycle are specified in
 [`docs/RFC-0041-desktop-contact-onboarding-and-runtime-lifecycle.md`](docs/RFC-0041-desktop-contact-onboarding-and-runtime-lifecycle.md).
 Desktop runtime-profile editing and change notifications are specified in
 [`docs/RFC-0042-desktop-runtime-setup-and-change-notifications.md`](docs/RFC-0042-desktop-runtime-setup-and-change-notifications.md).
+Desktop creation of a recoverable first account/device is specified in
+[`docs/RFC-0043-desktop-first-account-bootstrap.md`](docs/RFC-0043-desktop-first-account-bootstrap.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.15 desktop runtime setup and change notifications — complete
+## Current milestone: M0.9.16 desktop first-account bootstrap — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -306,6 +308,17 @@ long polls are served outside the actor queue, while committed contact, queue,
 delivery, retry and synchronization work publishes a wake-up hint. A dedicated
 desktop worker coalesces those hints and refreshes actor-owned chat, history and
 outbox snapshots, replacing unconditional two-second polling.
+
+M0.9.16 adds a separate one-shot `kilogram-bootstrap` process and first-run
+desktop panel. A new 24-word BIP39 phrase deterministically encodes the Account
+Root key; the local root is stored in a versioned Windows DPAPI CurrentUser
+envelope, while legacy raw root keys migrate without changing Account ID. The
+helper atomically creates the first certified device, signed device list and
+prekey pool, migrates it to a verified encrypted vault, and persists only a
+public receipt. The phrase is shown once through a bounded redacted/zeroizing
+response and is never written to the receipt or runtime profile. Phrase-only
+restore remains deliberately disabled until current authority history can be
+authenticated.
 
 M0.8.1 adds a reversible encrypted shadow snapshot of the entire device state.
 `state-vault-migrate` publishes encrypted records and a keyed manifest in one
@@ -702,8 +715,12 @@ You can also drop `runtime.ipc.json` onto the window. For an already enrolled
 device, expand **Runtime launch settings** to load/edit/save the secret-free
 profile and use **Start runtime**; the old `runtime-profile-create` command is
 not mandatory. Contacts can be imported with **+ Contact** from a signed peer
-runtime ticket. Account creation, device enrollment and seed/root recovery are
-still separate bootstrap ceremonies.
+runtime ticket. On a first run, expand **First run · create account**, choose a
+new non-existing workspace and run the sibling `kilogram-bootstrap` helper.
+Save the phrase offline before hiding it; the panel then fills the local public
+profile paths. A peer Account ID and current peer prekey pool are still required
+before that profile can be saved and the runtime started. Existing-account
+device linking and full authority-safe seed recovery remain separate ceremonies.
 
 The queue command prints `runtime_ipc_request_id` before connecting. If its
 result is uncertain, repeat the same message with `--request-id <PRINTED_ID>`;

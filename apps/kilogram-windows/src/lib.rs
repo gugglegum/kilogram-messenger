@@ -11,6 +11,7 @@ use std::{
 
 use anyhow::{Context, Result, bail, ensure};
 use eframe::egui;
+use kilogram_bootstrap_contract::{DesktopBootstrapOutput, MAX_DESKTOP_BOOTSTRAP_OUTPUT_BYTES};
 use kilogram_identity::AccountId;
 use kilogram_runtime_ipc::{
     RuntimeIpcCommand, RuntimeIpcConversationSummary, RuntimeIpcHistoryCursor,
@@ -18,6 +19,7 @@ use kilogram_runtime_ipc::{
     RuntimeIpcRequestId, RuntimeIpcResponse, RuntimeIpcRoutePolicy, RuntimeLaunchProfile,
     RuntimeLaunchSettings,
 };
+use zeroize::Zeroizing;
 
 const CHANGE_WAIT_MILLISECONDS: u32 = 20_000;
 const CHANGE_RETRY_INTERVAL: Duration = Duration::from_millis(500);
@@ -51,6 +53,7 @@ struct DesktopOptions {
     descriptor_path: PathBuf,
     runtime_profile_path: PathBuf,
     runtime_executable_path: PathBuf,
+    bootstrap_executable_path: PathBuf,
     startup_error: Option<String>,
 }
 
@@ -59,6 +62,7 @@ impl DesktopOptions {
         let mut descriptor_path = None;
         let mut runtime_profile_path = None;
         let mut runtime_executable_path = None;
+        let mut bootstrap_executable_path = None;
         let mut startup_error = None;
         let mut arguments = arguments.into_iter();
         while let Some(argument) = arguments.next() {
@@ -68,6 +72,8 @@ impl DesktopOptions {
                 &mut runtime_profile_path
             } else if argument == "--runtime-exe" {
                 &mut runtime_executable_path
+            } else if argument == "--bootstrap-exe" {
+                &mut bootstrap_executable_path
             } else {
                 startup_error = Some(format!(
                     "Unknown desktop argument: {}",
@@ -112,9 +118,23 @@ impl DesktopOptions {
             runtime_profile_path,
             runtime_executable_path: runtime_executable_path
                 .unwrap_or_else(default_runtime_executable),
+            bootstrap_executable_path: bootstrap_executable_path
+                .unwrap_or_else(default_bootstrap_executable),
             startup_error,
         }
     }
+}
+
+fn default_bootstrap_executable() -> PathBuf {
+    let executable_name = if cfg!(windows) {
+        "kilogram-bootstrap.exe"
+    } else {
+        "kilogram-bootstrap"
+    };
+    std::env::current_exe()
+        .ok()
+        .and_then(|path| path.parent().map(|parent| parent.join(executable_name)))
+        .unwrap_or_else(|| PathBuf::from(executable_name))
 }
 
 fn default_runtime_executable() -> PathBuf {
@@ -148,6 +168,7 @@ impl ConnectionState {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Operation {
+    Bootstrap,
     Connect,
     AddContact,
     Queue,
@@ -166,6 +187,13 @@ enum RuntimeUiAction {
     Stop,
     LoadProfile,
     SaveProfile,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum BootstrapUiAction {
+    None,
+    Create,
+    DismissPhrase,
 }
 
 #[derive(Clone, Debug)]
@@ -191,7 +219,7 @@ impl Default for RuntimeProfileDraft {
             state_dir: "state".to_owned(),
             allowed_requester_account_id: String::new(),
             device_list_file: "account-device-list.bin".to_owned(),
-            peer_prekey_pool_files: "peer-prekeys.bin".to_owned(),
+            peer_prekey_pool_files: String::new(),
             ticket_file: "runtime.ticket".to_owned(),
             ipc_file: "runtime.ipc.json".to_owned(),
             route_policy: RuntimeIpcRoutePolicy::Auto,
@@ -244,10 +272,6 @@ impl RuntimeProfileDraft {
             .filter(|value| !value.is_empty())
             .map(|value| canonical_input_path(value, "Peer prekey pool", true))
             .collect::<Result<Vec<_>>>()?;
-        ensure!(
-            !peer_prekey_pool_files.is_empty(),
-            "At least one peer prekey pool is required"
-        );
         let ticket_file = optional_output_path(&self.ticket_file, "Runtime ticket", &state_dir)?;
         let ipc_file = absolute_output_path(&self.ipc_file, "IPC descriptor", &state_dir)?;
         RuntimeLaunchProfile::new(RuntimeLaunchSettings {
@@ -646,6 +670,9 @@ impl ViewModel {
                 self.notice = Some("Runtime stopped cleanly".to_owned());
                 self.error = None;
             }
+            Ok(WorkerSuccess::Bootstrapped(_)) => {
+                self.error = Some("Bootstrap result reached the runtime view model".to_owned());
+            }
             Err(message) => self.fail(response.operation, message),
         }
     }
@@ -653,6 +680,10 @@ impl ViewModel {
 
 #[derive(Debug)]
 enum WorkerRequest {
+    Bootstrap {
+        executable: PathBuf,
+        workspace: PathBuf,
+    },
     Connect {
         descriptor: PathBuf,
     },
@@ -685,6 +716,7 @@ enum WorkerRequest {
 impl WorkerRequest {
     fn operation(&self) -> Operation {
         match self {
+            Self::Bootstrap { .. } => Operation::Bootstrap,
             Self::Connect { .. } => Operation::Connect,
             Self::AddContact { .. } => Operation::AddContact,
             Self::Queue { .. } => Operation::Queue,
@@ -699,6 +731,7 @@ impl WorkerRequest {
 
 #[derive(Debug)]
 enum WorkerSuccess {
+    Bootstrapped(Box<DesktopBootstrapOutput>),
     Connected {
         account_id: String,
         device_id: String,
@@ -940,6 +973,12 @@ fn worker_main(requests: Receiver<WorkerRequest>, responses: Sender<WorkerRespon
 
 async fn execute_request(request: WorkerRequest) -> Result<WorkerSuccess> {
     match request {
+        WorkerRequest::Bootstrap {
+            executable,
+            workspace,
+        } => run_bootstrap_process(&executable, &workspace)
+            .map(Box::new)
+            .map(WorkerSuccess::Bootstrapped),
         WorkerRequest::Connect { descriptor } => {
             match kilogram_runtime_ipc::call(&descriptor, RuntimeIpcCommand::Ping).await? {
                 RuntimeIpcResponse::Pong {
@@ -1057,6 +1096,17 @@ async fn execute_request(request: WorkerRequest) -> Result<WorkerSuccess> {
     }
 }
 
+struct BootstrapView {
+    recovery_phrase: Zeroizing<String>,
+    account_id: String,
+    device_id: String,
+    account_root_dir: String,
+    prekey_pool_file: String,
+    root_key_protection: String,
+    vault_key_protection: String,
+    phrase_saved: bool,
+}
+
 struct KilogramApp {
     model: ViewModel,
     worker: Option<RuntimeWorker>,
@@ -1066,6 +1116,9 @@ struct KilogramApp {
     runtime_profile_draft: RuntimeProfileDraft,
     show_profile_editor: bool,
     runtime_executable_path: String,
+    bootstrap_executable_path: String,
+    bootstrap_workspace_path: String,
+    bootstrap_view: Option<BootstrapView>,
     runtime_process: Option<Child>,
     runtime_start_deadline: Option<Instant>,
     runtime_next_connect_attempt: Instant,
@@ -1113,6 +1166,9 @@ impl KilogramApp {
             runtime_profile_draft,
             show_profile_editor: !runtime_profile_exists,
             runtime_executable_path: options.runtime_executable_path.display().to_string(),
+            bootstrap_executable_path: options.bootstrap_executable_path.display().to_string(),
+            bootstrap_workspace_path: PathBuf::from("kilogram-account").display().to_string(),
+            bootstrap_view: None,
             runtime_process: None,
             runtime_start_deadline: None,
             runtime_next_connect_attempt: Instant::now(),
@@ -1122,6 +1178,10 @@ impl KilogramApp {
 
     fn receive_worker_responses(&mut self) {
         while let Some(response) = self.worker.as_ref().and_then(RuntimeWorker::try_receive) {
+            if response.operation == Operation::Bootstrap {
+                self.apply_bootstrap_response(response.result);
+                continue;
+            }
             if response.operation == Operation::Connect
                 && response.result.is_err()
                 && self.runtime_start_deadline.is_some()
@@ -1156,6 +1216,54 @@ impl KilogramApp {
                 self.start_refresh();
             }
         }
+    }
+
+    fn apply_bootstrap_response(&mut self, result: Result<WorkerSuccess, String>) {
+        self.model.pending = None;
+        let mut output = match result {
+            Ok(WorkerSuccess::Bootstrapped(output)) => *output,
+            Ok(_) => {
+                self.model.error =
+                    Some("Bootstrap helper returned an unexpected result".to_owned());
+                return;
+            }
+            Err(message) => {
+                self.model.error = Some(message);
+                return;
+            }
+        };
+        let workspace = output.workspace_dir().clone();
+        let runtime_profile = workspace.join("runtime.launch.json");
+        let runtime_ticket = workspace.join("public").join("runtime.ticket");
+        let runtime_ipc = workspace.join("runtime.ipc.json");
+        self.runtime_profile_path = runtime_profile.display().to_string();
+        self.model.descriptor_path = runtime_ipc.display().to_string();
+        self.runtime_profile_draft.state_dir = output.state_dir().display().to_string();
+        self.runtime_profile_draft
+            .allowed_requester_account_id
+            .clear();
+        self.runtime_profile_draft.device_list_file =
+            output.device_list_file().display().to_string();
+        self.runtime_profile_draft.peer_prekey_pool_files.clear();
+        self.runtime_profile_draft.ticket_file = runtime_ticket.display().to_string();
+        self.runtime_profile_draft.ipc_file = runtime_ipc.display().to_string();
+        self.show_profile_editor = true;
+        self.bootstrap_workspace_path = workspace.display().to_string();
+        self.bootstrap_view = Some(BootstrapView {
+            recovery_phrase: Zeroizing::new(output.take_recovery_phrase()),
+            account_id: output.account_id().to_string(),
+            device_id: output.device_id().to_string(),
+            account_root_dir: output.account_root_dir().display().to_string(),
+            prekey_pool_file: output.prekey_pool_file().display().to_string(),
+            root_key_protection: output.root_key_protection().to_owned(),
+            vault_key_protection: output.vault_key_protection().to_owned(),
+            phrase_saved: false,
+        });
+        self.model.notice = Some(
+            "Account and first device created. Save the recovery phrase before continuing."
+                .to_owned(),
+        );
+        self.model.error = None;
     }
 
     fn start_change_subscription(&mut self) {
@@ -1221,6 +1329,31 @@ impl KilogramApp {
                 self.submit(Operation::Connect, WorkerRequest::Connect { descriptor })
             }
             Err(error) => self.model.fail(Operation::Connect, format!("{error:#}")),
+        }
+    }
+
+    fn start_bootstrap(&mut self) {
+        if self.runtime_process.is_some() || self.model.connection != ConnectionState::Disconnected
+        {
+            self.model.error = Some("Stop or disconnect the runtime before bootstrap".to_owned());
+            return;
+        }
+        let result: Result<WorkerRequest> = (|| {
+            let executable = canonical_input_path(
+                &self.bootstrap_executable_path,
+                "Bootstrap executable",
+                true,
+            )?;
+            let workspace =
+                absolute_new_directory_path(&self.bootstrap_workspace_path, "Account workspace")?;
+            Ok(WorkerRequest::Bootstrap {
+                executable,
+                workspace,
+            })
+        })();
+        match result {
+            Ok(request) => self.submit(Operation::Bootstrap, request),
+            Err(error) => self.model.fail(Operation::Bootstrap, format!("{error:#}")),
         }
     }
 
@@ -1476,9 +1609,82 @@ impl KilogramApp {
     fn draw_header(&self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             ui.heading(egui::RichText::new("Kilogram").size(28.0).strong());
-            ui.label(egui::RichText::new("M0.9.15").color(egui::Color32::from_rgb(88, 166, 255)));
+            ui.label(egui::RichText::new("M0.9.16").color(egui::Color32::from_rgb(88, 166, 255)));
         });
         ui.label("Desktop client · authenticated local runtime IPC");
+    }
+
+    fn draw_bootstrap(&mut self, ui: &mut egui::Ui) -> BootstrapUiAction {
+        let mut action = BootstrapUiAction::None;
+        egui::CollapsingHeader::new("First run · create account")
+            .default_open(self.bootstrap_view.is_some())
+            .show(ui, |ui| {
+                if let Some(view) = self.bootstrap_view.as_mut() {
+                    ui.colored_label(
+                        egui::Color32::from_rgb(246, 195, 93),
+                        "Write down these 24 words now. They are shown once and are not stored in the receipt or launch profile.",
+                    );
+                    ui.add_space(4.0);
+                    ui.label(
+                        egui::RichText::new(view.recovery_phrase.as_str())
+                            .monospace()
+                            .size(15.0),
+                    );
+                    ui.add_space(4.0);
+                    ui.label(format!("Account: {}", view.account_id));
+                    ui.label(format!("First device: {}", view.device_id));
+                    ui.label(format!("Account Root: {}", view.account_root_dir));
+                    ui.label(format!("Public prekey pool: {}", view.prekey_pool_file));
+                    ui.small(format!(
+                        "Local protection: root={} · device vault={}",
+                        view.root_key_protection, view.vault_key_protection
+                    ));
+                    ui.small(
+                        "The phrase encodes the Account Root key only. Restore remains blocked until trusted authority history is supplied; encrypted message history still requires a backup or another enrolled device.",
+                    );
+                    ui.checkbox(&mut view.phrase_saved, "I saved the recovery phrase offline");
+                    if ui
+                        .add_enabled(
+                            view.phrase_saved,
+                            egui::Button::new("Hide recovery phrase permanently"),
+                        )
+                        .clicked()
+                    {
+                        action = BootstrapUiAction::DismissPhrase;
+                    }
+                } else {
+                    ui.label("Create a new Account Root and its first enrolled device in one atomic workspace.");
+                    ui.horizontal(|ui| {
+                        ui.label("Bootstrap executable");
+                        ui.add_enabled(
+                            self.model.pending.is_none(),
+                            egui::TextEdit::singleline(&mut self.bootstrap_executable_path)
+                                .desired_width(f32::INFINITY),
+                        );
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label("New account workspace");
+                        ui.add_enabled(
+                            self.model.pending.is_none(),
+                            egui::TextEdit::singleline(&mut self.bootstrap_workspace_path)
+                                .desired_width(f32::INFINITY),
+                        );
+                    });
+                    ui.small("The destination must not exist. No seed or private key is passed on a command line.");
+                    if ui
+                        .add_enabled(
+                            self.model.pending.is_none()
+                                && self.runtime_process.is_none()
+                                && self.model.connection == ConnectionState::Disconnected,
+                            egui::Button::new("Create new account"),
+                        )
+                        .clicked()
+                    {
+                        action = BootstrapUiAction::Create;
+                    }
+                }
+            });
+        action
     }
 
     fn draw_runtime(&mut self, ui: &mut egui::Ui) -> RuntimeUiAction {
@@ -1642,7 +1848,7 @@ impl KilogramApp {
                         });
                 }
                 ui.small("This profile contains paths and public runtime settings, never device or vault secrets.");
-                ui.small("It configures an already enrolled device; account/device bootstrap remains separate.");
+                ui.small("First-device bootstrap fills these local paths. Peer Account ID and peer prekey pools are added during contact setup.");
             });
             ui.small("Pass --ipc-file/--runtime-profile or drop a descriptor onto this window.");
         });
@@ -1941,6 +2147,31 @@ fn required_path(value: &str, label: &str) -> Result<PathBuf> {
     Ok(PathBuf::from(value))
 }
 
+fn absolute_new_directory_path(value: &str, label: &str) -> Result<PathBuf> {
+    let path = required_path(value, label)?;
+    let absolute = if path.is_absolute() {
+        path
+    } else {
+        std::env::current_dir()
+            .context("Read current directory for account bootstrap")?
+            .join(path)
+    };
+    ensure!(!absolute.exists(), "{label} already exists");
+    let name = absolute
+        .file_name()
+        .context(format!("{label} path has no final component"))?;
+    let parent = absolute
+        .parent()
+        .context(format!("{label} path has no parent"))?;
+    fs::create_dir_all(parent)
+        .with_context(|| format!("Create {label} parent {}", parent.display()))?;
+    let resolved = fs::canonicalize(parent)
+        .with_context(|| format!("Resolve {label} parent {}", parent.display()))?
+        .join(name);
+    ensure!(!resolved.exists(), "{label} already exists");
+    Ok(resolved)
+}
+
 fn canonical_input_path(value: &str, label: &str, require_file: bool) -> Result<PathBuf> {
     let path = required_path(value, label)?;
     let path = fs::canonicalize(&path)
@@ -2009,6 +2240,57 @@ fn parse_profile_number(value: &str, label: &str) -> Result<u64> {
         .with_context(|| format!("{label} must be a non-negative integer"))
 }
 
+fn run_bootstrap_process(
+    executable: &std::path::Path,
+    workspace: &std::path::Path,
+) -> Result<DesktopBootstrapOutput> {
+    let mut command = Command::new(executable);
+    command
+        .arg("create")
+        .arg("--workspace-dir")
+        .arg(workspace)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt as _;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+    let output = command.output().with_context(|| {
+        format!(
+            "Start bootstrap executable {} for {}",
+            executable.display(),
+            workspace.display()
+        )
+    })?;
+    ensure!(
+        output.stdout.len() <= MAX_DESKTOP_BOOTSTRAP_OUTPUT_BYTES,
+        "Bootstrap helper output is too large"
+    );
+    ensure!(
+        output.stderr.len() <= MAX_DESKTOP_BOOTSTRAP_OUTPUT_BYTES,
+        "Bootstrap helper error output is too large"
+    );
+    if !output.status.success() {
+        let detail = String::from_utf8_lossy(&output.stderr);
+        bail!(
+            "Bootstrap helper exited with {}: {}",
+            output.status,
+            detail.trim()
+        );
+    }
+    let stdout = Zeroizing::new(output.stdout);
+    let result =
+        DesktopBootstrapOutput::decode(&stdout).context("Validate bootstrap helper result")?;
+    ensure!(
+        result.workspace_dir() == workspace,
+        "Bootstrap helper returned a different workspace"
+    );
+    Ok(result)
+}
+
 fn spawn_runtime_process(executable: &std::path::Path, profile: &std::path::Path) -> Result<Child> {
     let mut command = Command::new(executable);
     command
@@ -2071,6 +2353,7 @@ impl eframe::App for KilogramApp {
         self.maybe_connect_started_runtime();
 
         let mut runtime_action = RuntimeUiAction::None;
+        let mut bootstrap_action = BootstrapUiAction::None;
         let mut add_contact_clicked = false;
         let mut queue_clicked = false;
         let mut refresh_clicked = false;
@@ -2082,6 +2365,8 @@ impl eframe::App for KilogramApp {
                 .show(ui, |ui| {
                     self.draw_header(ui);
                     ui.add_space(8.0);
+                    bootstrap_action = self.draw_bootstrap(ui);
+                    ui.add_space(4.0);
                     runtime_action = self.draw_runtime(ui);
                     self.draw_identity(ui);
                     ui.separator();
@@ -2102,7 +2387,15 @@ impl eframe::App for KilogramApp {
                 });
         });
 
-        if runtime_action == RuntimeUiAction::Connect {
+        if bootstrap_action == BootstrapUiAction::Create {
+            self.start_bootstrap();
+        } else if bootstrap_action == BootstrapUiAction::DismissPhrase {
+            self.bootstrap_view = None;
+            self.model.notice = Some(
+                "Recovery phrase removed from the desktop process. Complete peer setup in the launch profile."
+                    .to_owned(),
+            );
+        } else if runtime_action == RuntimeUiAction::Connect {
             self.start_connect();
         } else if runtime_action == RuntimeUiAction::Start {
             self.start_runtime();
@@ -2161,6 +2454,8 @@ mod tests {
             OsString::from("missing-profile.json"),
             OsString::from("--runtime-exe"),
             OsString::from("runtime-test.exe"),
+            OsString::from("--bootstrap-exe"),
+            OsString::from("bootstrap-test.exe"),
         ]);
         assert_eq!(options.descriptor_path, PathBuf::from("desktop.ipc.json"));
         assert_eq!(
@@ -2170,6 +2465,10 @@ mod tests {
         assert_eq!(
             options.runtime_executable_path,
             PathBuf::from("runtime-test.exe")
+        );
+        assert_eq!(
+            options.bootstrap_executable_path,
+            PathBuf::from("bootstrap-test.exe")
         );
         assert!(options.startup_error.is_none());
 
@@ -2184,14 +2483,12 @@ mod tests {
         let state_dir = directory.path().join("state");
         fs::create_dir(&state_dir)?;
         let device_list = directory.path().join("device-list.bin");
-        let prekeys = directory.path().join("peer-prekeys.bin");
         fs::write(&device_list, b"signed-device-list-placeholder")?;
-        fs::write(&prekeys, b"signed-prekeys-placeholder")?;
         let draft = RuntimeProfileDraft {
             state_dir: state_dir.display().to_string(),
             allowed_requester_account_id: ACCOUNT_ID.to_owned(),
             device_list_file: device_list.display().to_string(),
-            peer_prekey_pool_files: prekeys.display().to_string(),
+            peer_prekey_pool_files: String::new(),
             ticket_file: directory
                 .path()
                 .join("runtime.ticket")
@@ -2205,6 +2502,7 @@ mod tests {
             ..RuntimeProfileDraft::default()
         };
         let profile = draft.build()?;
+        assert!(profile.settings().peer_prekey_pool_files.is_empty());
         let profile_path = directory.path().join("runtime.launch.json");
         profile.write_replace(&profile_path)?;
         assert_eq!(RuntimeLaunchProfile::load(&profile_path)?, profile);

@@ -1,6 +1,6 @@
 [package]
-name = "kilogram-windows"
-description = "Minimal desktop client for the Kilogram messaging runtime"
+name = "kilogram-bootstrap"
+description = "One-shot Account Root and first-device bootstrap for Kilogram"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,15 +8,15 @@ publish = false
 
 [dependencies]
 anyhow.workspace = true
-eframe.workspace = true
+clap.workspace = true
 kilogram-bootstrap-contract = { path = "../../crates/kilogram-bootstrap-contract" }
 kilogram-identity = { path = "../../crates/kilogram-identity" }
-kilogram-runtime-ipc = { path = "../../crates/kilogram-runtime-ipc" }
-tokio.workspace = true
-zeroize.workspace = true
-
-[dev-dependencies]
+kilogram-ratchet = { path = "../../crates/kilogram-ratchet" }
+kilogram-state = { path = "../../crates/kilogram-state" }
+serde.workspace = true
+serde_json.workspace = true
 tempfile.workspace = true
+zeroize.workspace = true
 
 [lints]
 workspace = true

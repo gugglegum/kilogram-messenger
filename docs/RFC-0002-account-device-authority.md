@@ -62,7 +62,7 @@ hex-символа. Это осознанно прямой публичный к
 
 ```text
 ACCOUNT_DIR/
-    account-root-secret.key    # 32-byte Ed25519 secret, development plaintext
+    account-root-secret.key    # versioned platform-protected root-key envelope
     next-authority-sequence    # следующий локальный sequence
     authority-log-version      # версия durable authority layout
     revocations/
@@ -78,9 +78,14 @@ STATE_DIR/
     ...
 ```
 
-`account-root-secret.key` в текущем прототипе хранится plaintext. Это не
-production-решение и не seed/recovery implementation. Не следует синхронизировать
-`ACCOUNT_DIR` через облачный диск или передавать его другому устройству.
+Начиная с M0.9.16 `account-root-secret.key` является bounded versioned envelope:
+на Windows его payload защищён DPAPI CurrentUser, а старый raw 32-byte формат
+атомарно мигрирует при загрузке. На платформах без реализованного provider
+envelope явно остаётся `plaintext-development`. 24-word recovery phrase
+детерминированно кодирует root key, но безопасное восстановление также требует
+актуальную authority history; полный контракт описан в
+[`RFC-0043`](RFC-0043-desktop-first-account-bootstrap.md). `ACCOUNT_DIR` всё
+равно нельзя синхронизировать как обычную папку или передавать другому устройству.
 
 ## 4. DeviceCertificate v1/v2
 

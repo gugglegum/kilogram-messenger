@@ -9154,7 +9154,8 @@ fn create_account(account_dir: PathBuf) -> Result<()> {
         .with_context(|| format!("create Account Root state in {}", account_dir.display()))?;
     println!("account_id={}", account.account_id());
     println!("account_root_dir={}", account_dir.display());
-    println!("root_secret_storage=development-plaintext");
+    println!("root_key_protection={}", account.key_protection().as_str());
+    println!("root_key_load={}", account.key_load_outcome().as_str());
     println!("status=account-created");
     Ok(())
 }
@@ -9163,6 +9164,8 @@ fn show_account(account_dir: PathBuf) -> Result<()> {
     let account = AccountRootState::load(&account_dir)
         .with_context(|| format!("load Account Root state from {}", account_dir.display()))?;
     println!("account_id={}", account.account_id());
+    println!("root_key_protection={}", account.key_protection().as_str());
+    println!("root_key_load={}", account.key_load_outcome().as_str());
     println!("status=account-loaded");
     Ok(())
 }

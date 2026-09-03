@@ -16,7 +16,8 @@ use zeroize::Zeroize;
 mod account;
 
 pub use account::{
-    AccountAuthoritySnapshot, AccountDeviceListSnapshot, AccountId, AccountRootState,
+    AccountAuthoritySnapshot, AccountDeviceListSnapshot, AccountId, AccountRecoveryPhrase,
+    AccountRootKeyLoadOutcome, AccountRootKeyProtection, AccountRootState,
     AuthoritySnapshotStoreOutcome, AuthorizedDevice, ConversationMembershipSnapshot,
     ConversationMembershipStoreOutcome, ConversationScopeId, DeviceCapability, DeviceCertificate,
     DeviceRevocation, MAX_ACCOUNT_DEVICES, verify_device_authorization,
@@ -309,6 +310,31 @@ pub enum IdentityError {
 
     #[error("account root secret key has {0} bytes; expected {SECRET_KEY_BYTES}")]
     InvalidAccountRootSecretKeyLength(usize),
+
+    #[error("invalid account recovery phrase: {0}")]
+    InvalidAccountRecoveryPhrase(String),
+
+    #[error("account recovery phrase has {0} words; expected 24")]
+    InvalidAccountRecoveryWordCount(usize),
+
+    #[error("invalid Account Root key envelope at {path}: {detail}")]
+    InvalidAccountRootKeyEnvelope { path: PathBuf, detail: String },
+
+    #[error("Account Root key envelope has {0} bytes; maximum is 64 KiB")]
+    AccountRootKeyEnvelopeTooLarge(usize),
+
+    #[error("unsupported Account Root key envelope version {0}")]
+    UnsupportedAccountRootKeyEnvelopeVersion(u8),
+
+    #[error("Account Root key provider {0} is unavailable on this platform")]
+    AccountRootKeyProviderUnavailable(String),
+
+    #[error("Account Root key provider {provider} failed to {operation}: {detail}")]
+    AccountRootKeyProtectionFailed {
+        provider: String,
+        operation: &'static str,
+        detail: String,
+    },
 
     #[error("account ID has {0} hexadecimal characters; expected 64")]
     InvalidAccountIdLength(usize),

@@ -1,6 +1,6 @@
 # Память проекта Kilogram
 
-Актуально на: 2026-09-03.
+Актуально на: 2026-09-04.
 
 Эта папка — краткая проектная память и дорожная карта. Подробная техническая
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
@@ -9,9 +9,9 @@
 
 Архитектура остаётся в стадии проектирования. Rust workspace теперь содержит
 `kilogram-identity`, `kilogram-protocol`, `kilogram-ratchet`, `kilogram-state`,
-`kilogram-store`, `kilogram-runtime-ipc`, `kilogram-session`,
-`kilogram-transport-iroh`, `kilogram-cli` и первый GUI package
-`kilogram-windows`.
+`kilogram-store`, `kilogram-runtime-ipc`, `kilogram-bootstrap-contract`,
+`kilogram-session`, `kilogram-transport-iroh`, `kilogram-cli`, отдельный
+`kilogram-bootstrap` и первый GUI package `kilogram-windows`.
 Два процесса обмениваются подписанными событиями через Iroh/QUIC, проверяют
 Ed25519-подписи и causal acknowledgement. Прикладная device identity, author
 sequence и signed events сохраняются после перезапуска отдельно от эфемерной
@@ -138,8 +138,14 @@ multi-source claim reconciliation. M0.7.9 добавил signed append-only chec
   отдельный connection-task long poll будит GUI по actor change revision, а
   unconditional двухсекундный polling удалён. Desktop теперь редактирует и
   атомарно сохраняет public launch profile уже enrolled device, не получая
-  seed/device/vault secrets. Autostart/service не устанавливается; account/
-  device first-run и OS peer credentials остаются дальше.
+  seed/device/vault secrets. Autostart/service не устанавливается. M0.9.16
+  добавил отдельный one-shot bootstrap process и first-run GUI: 24-word BIP39
+  phrase детерминированно кодирует Account Root, Windows root envelope защищён
+  DPAPI CurrentUser, первый device/certificate/device-list/prekey pool создаются
+  в staging и публикуются только после verified vault migration. Persistent
+  receipt и launch draft не содержат phrase; восстановление намеренно требует
+  ещё и актуальную authority history. Enrollment второго устройства и OS peer
+  credentials остаются дальше.
   Reconciliation выбирает
   inventory только при совпадении двух или более полных явно собранных claims и
   всё равно не обещает global completeness.
@@ -244,10 +250,11 @@ M0.8.15 вводит schema-v3 DB-only identity layout. Upgrade сначала �
 identity в effective snapshot, typed shadow показывает для неё 0 records, а
 primary-shadow recovery больше не создаёт plaintext keys. Mismatched
 повторно появившаяся копия блокируется без импорта.
-Seed/root recovery, защищённое хранение root и оставшихся ratchet shadows,
-дальнейшее shadow retirement, global prekey discovery/witness, автоматический
-recovery source discovery, постоянный scheduler, QR/device-link UX, sync
-summaries, membership removal и группы ещё не реализованы.
+Полное seed/root recovery с authority history, non-Windows root provider,
+защищённое хранение оставшихся ratchet shadows, дальнейшее shadow retirement,
+global prekey discovery/witness, автоматический recovery source discovery,
+постоянный scheduler, QR/device-link UX, sync summaries, membership removal и
+группы ещё не реализованы.
 
 ## Цель продукта
 
@@ -300,9 +307,9 @@ summaries, membership removal и группы ещё не реализованы
 
 ## План ближайших работ
 
-1. M0.9.16: добавить desktop account/device first-run boundary для создания
-   нового account либо enrollment/recovery существующего device, сохранив root,
-   device и vault secrets вне обычного runtime UI.
+1. M0.9.17: добавить existing-account device-link ceremony: recipient-bound
+   одноразовое разрешение, authenticated authority transfer, transactional
+   certificate/device-list publication и resumable multi-source history sync.
 2. Optional autostart/background mode оставить отдельной явной настройкой, а не
    обязательным Task Scheduler этапом.
 3. Добавить production macOS/Linux local key provider, согласованный monotonic
@@ -311,8 +318,8 @@ summaries, membership removal и группы ещё не реализованы
    publication/gossip/mailbox. Live camera/clipboard оставить platform UI.
 4. Спроектировать membership removal вместе с ordered security log и MLS epoch;
    отдельно — gossip/witness для first-contact freshness.
-5. Спроектировать seed/recovery authority, protected root storage, root
-   rotation и конфликтующие authority operations.
+5. Спроектировать полное seed/recovery authority с monotonic history/witness,
+   root rotation и конфликтующие authority operations.
 6. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
 7. Спроектировать финальный wire format подписанного события и алгоритм
    линеаризации.

@@ -58,8 +58,10 @@ sessions, distribution, removal и key epochs и не решены этим пр
 
 - Какая точная модель угроз: массовое наблюдение, целевой атакующий, злонамеренные
   relay/storage peers, компрометация bootstrap-инфраструктуры, Sybil и eclipse?
-- Как seed соотносится с Account Root Key: прямое детерминированное получение или
-  расшифрование случайно созданного root key?
+- M0.9.16 выбрал для новых аккаунтов прямое domain-separated получение Account
+  Root Key из 24-word BIP39 phrase. Как безопасно восстановить вместе с key
+  актуальные authority sequence/revocations/device-list, не допустив rollback
+  или fork существующего account?
 - Какие операции может единолично подписать device key, а какие требуют seed,
   аппаратного ключа или кворума устройств?
 - Как разрешать конкурирующие операции восстановления и отзыва при утечке seed?
