@@ -10,13 +10,15 @@ use anyhow::{Context, Result, bail, ensure};
 use eframe::egui;
 use kilogram_identity::AccountId;
 use kilogram_runtime_ipc::{
-    RuntimeIpcCommand, RuntimeIpcOutboxStatus, RuntimeIpcQueueState, RuntimeIpcRequestId,
-    RuntimeIpcResponse,
+    RuntimeIpcCommand, RuntimeIpcConversationSummary, RuntimeIpcHistoryCursor,
+    RuntimeIpcHistoryMessage, RuntimeIpcHistoryPage, RuntimeIpcOutboxStatus, RuntimeIpcQueueState,
+    RuntimeIpcRequestId, RuntimeIpcResponse,
 };
 
 const STATUS_POLL_INTERVAL: Duration = Duration::from_secs(2);
 const MAX_CONVERSATION_BYTES: usize = 4_096;
 const MAX_MESSAGE_BYTES: usize = 64 * 1024;
+const HISTORY_PAGE_SIZE: u16 = 50;
 
 pub fn run() -> eframe::Result {
     let descriptor_path = descriptor_path_from_args();
@@ -75,6 +77,9 @@ enum Operation {
     Connect,
     Queue,
     Refresh,
+    Conversations,
+    History,
+    HistoryOlder,
 }
 
 #[derive(Debug)]
@@ -181,6 +186,11 @@ struct ViewModel {
     device_id: Option<String>,
     conversation: String,
     peer_account_id: String,
+    conversations: Vec<RuntimeIpcConversationSummary>,
+    selected_contact_id: Option<String>,
+    history: Vec<RuntimeIpcHistoryMessage>,
+    history_total: u32,
+    history_next_cursor: Option<RuntimeIpcHistoryCursor>,
     message: String,
     queue_attempt: Option<QueueAttempt>,
     outbox: Option<OutboxView>,
@@ -198,6 +208,11 @@ impl ViewModel {
             device_id: None,
             conversation: String::new(),
             peer_account_id: String::new(),
+            conversations: Vec::new(),
+            selected_contact_id: None,
+            history: Vec::new(),
+            history_total: 0,
+            history_next_cursor: None,
             message: String::new(),
             queue_attempt: None,
             outbox: None,
@@ -217,6 +232,53 @@ impl ViewModel {
             conversation: self.conversation.clone(),
             peer_account_id: self.peer_account_id.clone(),
             message: self.message.clone(),
+        }
+    }
+
+    fn select_conversation(&mut self, contact_id: &str) -> bool {
+        let Some(summary) = self
+            .conversations
+            .iter()
+            .find(|summary| summary.contact_id == contact_id)
+        else {
+            return false;
+        };
+        let changed = self.selected_contact_id.as_deref() != Some(contact_id);
+        self.selected_contact_id = Some(contact_id.to_owned());
+        self.conversation.clone_from(&summary.conversation_label);
+        self.peer_account_id = summary.peer_account_id.to_string();
+        if changed {
+            self.history.clear();
+            self.history_total = 0;
+            self.history_next_cursor = None;
+            self.queue_attempt = None;
+        }
+        changed
+    }
+
+    fn apply_conversations(&mut self, conversations: Vec<RuntimeIpcConversationSummary>) {
+        let selected = self.selected_contact_id.clone();
+        self.conversations = conversations;
+        let contact_id = selected
+            .filter(|selected| {
+                self.conversations
+                    .iter()
+                    .any(|summary| summary.contact_id == *selected)
+            })
+            .or_else(|| {
+                self.conversations
+                    .first()
+                    .map(|summary| summary.contact_id.clone())
+            });
+        if let Some(contact_id) = contact_id {
+            self.select_conversation(&contact_id);
+        } else {
+            self.selected_contact_id = None;
+            self.conversation.clear();
+            self.peer_account_id.clear();
+            self.history.clear();
+            self.history_total = 0;
+            self.history_next_cursor = None;
         }
     }
 
@@ -248,7 +310,7 @@ impl ViewModel {
 
     fn fail(&mut self, operation: Operation, message: String) {
         self.pending = None;
-        if matches!(operation, Operation::Connect | Operation::Refresh) {
+        if operation == Operation::Connect {
             self.connection = ConnectionState::Disconnected;
         }
         if operation == Operation::Queue {
@@ -295,6 +357,24 @@ impl ViewModel {
                 self.outbox = Some(status.into());
                 self.error = None;
             }
+            Ok(WorkerSuccess::Conversations(conversations)) => {
+                self.connection = ConnectionState::Connected;
+                self.apply_conversations(conversations);
+                self.error = None;
+            }
+            Ok(WorkerSuccess::History { page, older }) => {
+                self.connection = ConnectionState::Connected;
+                if older {
+                    let mut messages = page.messages;
+                    messages.append(&mut self.history);
+                    self.history = messages;
+                } else {
+                    self.history = page.messages;
+                }
+                self.history_total = page.total_messages;
+                self.history_next_cursor = page.next_cursor;
+                self.error = None;
+            }
             Err(message) => self.fail(response.operation, message),
         }
     }
@@ -313,6 +393,15 @@ enum WorkerRequest {
     Refresh {
         descriptor: PathBuf,
     },
+    Conversations {
+        descriptor: PathBuf,
+    },
+    History {
+        descriptor: PathBuf,
+        conversation: String,
+        cursor: Option<RuntimeIpcHistoryCursor>,
+        older: bool,
+    },
 }
 
 impl WorkerRequest {
@@ -321,6 +410,9 @@ impl WorkerRequest {
             Self::Connect { .. } => Operation::Connect,
             Self::Queue { .. } => Operation::Queue,
             Self::Refresh { .. } => Operation::Refresh,
+            Self::Conversations { .. } => Operation::Conversations,
+            Self::History { older: false, .. } => Operation::History,
+            Self::History { older: true, .. } => Operation::HistoryOlder,
         }
     }
 }
@@ -337,6 +429,11 @@ enum WorkerSuccess {
         inserted: bool,
     },
     Refreshed(RuntimeIpcOutboxStatus),
+    Conversations(Vec<RuntimeIpcConversationSummary>),
+    History {
+        page: RuntimeIpcHistoryPage,
+        older: bool,
+    },
 }
 
 #[derive(Debug)]
@@ -454,6 +551,38 @@ async fn execute_request(request: WorkerRequest) -> Result<WorkerSuccess> {
                 _ => bail!("Runtime returned an unexpected outbox response"),
             }
         }
+        WorkerRequest::Conversations { descriptor } => {
+            match kilogram_runtime_ipc::call(&descriptor, RuntimeIpcCommand::ConversationList)
+                .await?
+            {
+                RuntimeIpcResponse::ConversationList(conversations) => {
+                    Ok(WorkerSuccess::Conversations(conversations))
+                }
+                RuntimeIpcResponse::Error { message } => {
+                    bail!("Runtime rejected conversation list: {message}")
+                }
+                _ => bail!("Runtime returned an unexpected conversation-list response"),
+            }
+        }
+        WorkerRequest::History {
+            descriptor,
+            conversation,
+            cursor,
+            older,
+        } => {
+            let command = RuntimeIpcCommand::HistoryPage {
+                conversation,
+                cursor,
+                limit: HISTORY_PAGE_SIZE,
+            };
+            match kilogram_runtime_ipc::call(&descriptor, command).await? {
+                RuntimeIpcResponse::HistoryPage(page) => Ok(WorkerSuccess::History { page, older }),
+                RuntimeIpcResponse::Error { message } => {
+                    bail!("Runtime rejected history page: {message}")
+                }
+                _ => bail!("Runtime returned an unexpected history response"),
+            }
+        }
     }
 }
 
@@ -489,8 +618,18 @@ impl KilogramApp {
     fn receive_worker_responses(&mut self) {
         while let Some(response) = self.worker.as_ref().and_then(RuntimeWorker::try_receive) {
             let connected = matches!(response.result, Ok(WorkerSuccess::Connected { .. }));
+            let queued = matches!(response.result, Ok(WorkerSuccess::Queued { .. }));
+            let conversations = matches!(response.result, Ok(WorkerSuccess::Conversations(_)));
+            let initial_history = matches!(
+                response.result,
+                Ok(WorkerSuccess::History { older: false, .. })
+            );
             self.model.apply(response);
-            if connected {
+            if connected || queued {
+                self.start_conversations();
+            } else if conversations && self.model.selected_contact_id.is_some() {
+                self.start_history(false);
+            } else if conversations || initial_history {
                 self.start_refresh();
             }
         }
@@ -545,12 +684,72 @@ impl KilogramApp {
         }
     }
 
+    fn start_conversations(&mut self) {
+        if self.model.pending.is_some() {
+            return;
+        }
+        match self.model.descriptor() {
+            Ok(descriptor) => {
+                self.last_poll_started = Instant::now();
+                self.submit(
+                    Operation::Conversations,
+                    WorkerRequest::Conversations { descriptor },
+                );
+            }
+            Err(error) => self
+                .model
+                .fail(Operation::Conversations, format!("{error:#}")),
+        }
+    }
+
+    fn start_history(&mut self, older: bool) {
+        if self.model.pending.is_some() {
+            return;
+        }
+        let Some(conversation) =
+            (!self.model.conversation.is_empty()).then(|| self.model.conversation.clone())
+        else {
+            return;
+        };
+        let cursor = if older {
+            self.model.history_next_cursor
+        } else {
+            None
+        };
+        if older && cursor.is_none() {
+            return;
+        }
+        match self.model.descriptor() {
+            Ok(descriptor) => self.submit(
+                if older {
+                    Operation::HistoryOlder
+                } else {
+                    Operation::History
+                },
+                WorkerRequest::History {
+                    descriptor,
+                    conversation,
+                    cursor,
+                    older,
+                },
+            ),
+            Err(error) => self.model.fail(
+                if older {
+                    Operation::HistoryOlder
+                } else {
+                    Operation::History
+                },
+                format!("{error:#}"),
+            ),
+        }
+    }
+
     fn maybe_poll(&mut self) {
         if self.model.connection == ConnectionState::Connected
             && self.model.pending.is_none()
             && self.last_poll_started.elapsed() >= STATUS_POLL_INTERVAL
         {
-            self.start_refresh();
+            self.start_conversations();
         }
     }
 
@@ -572,7 +771,7 @@ impl KilogramApp {
     fn draw_header(&self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             ui.heading(egui::RichText::new("Kilogram").size(28.0).strong());
-            ui.label(egui::RichText::new("M0.9.12").color(egui::Color32::from_rgb(88, 166, 255)));
+            ui.label(egui::RichText::new("M0.9.13").color(egui::Color32::from_rgb(88, 166, 255)));
         });
         ui.label("Desktop client · authenticated local runtime IPC");
     }
@@ -633,30 +832,9 @@ impl KilogramApp {
 
     fn draw_composer(&mut self, ui: &mut egui::Ui) -> bool {
         ui.separator();
-        ui.heading("New message");
-        let editable =
-            self.model.connection == ConnectionState::Connected && self.model.pending.is_none();
-        egui::Grid::new("message-routing")
-            .num_columns(2)
-            .spacing([12.0, 8.0])
-            .show(ui, |ui| {
-                ui.label("Conversation");
-                ui.add_enabled(
-                    editable,
-                    egui::TextEdit::singleline(&mut self.model.conversation)
-                        .hint_text("private-chat-alice-bob")
-                        .desired_width(f32::INFINITY),
-                );
-                ui.end_row();
-                ui.label("Peer Account ID");
-                ui.add_enabled(
-                    editable,
-                    egui::TextEdit::singleline(&mut self.model.peer_account_id)
-                        .hint_text("64 hexadecimal characters")
-                        .desired_width(f32::INFINITY),
-                );
-                ui.end_row();
-            });
+        let editable = self.model.connection == ConnectionState::Connected
+            && self.model.pending.is_none()
+            && self.model.selected_contact_id.is_some();
         ui.add_enabled(
             editable,
             egui::TextEdit::multiline(&mut self.model.message)
@@ -666,6 +844,96 @@ impl KilogramApp {
         );
         ui.add_enabled(editable, egui::Button::new("Queue message"))
             .clicked()
+    }
+
+    fn draw_conversations(&self, ui: &mut egui::Ui) -> Option<String> {
+        ui.heading("Chats");
+        if self.model.conversations.is_empty() {
+            ui.label("No runtime contacts yet.");
+            ui.small("Add a signed contact with kilogram-cli, then refresh.");
+            return None;
+        }
+        let mut selected = None;
+        egui::ScrollArea::vertical()
+            .id_salt("conversation-list")
+            .show(ui, |ui| {
+                for conversation in &self.model.conversations {
+                    let active = self.model.selected_contact_id.as_deref()
+                        == Some(conversation.contact_id.as_str());
+                    let title = format!(
+                        "{}  ({})",
+                        conversation.conversation_label, conversation.message_count
+                    );
+                    if ui.selectable_label(active, title).clicked() {
+                        selected = Some(conversation.contact_id.clone());
+                    }
+                    if let Some(preview) = &conversation.latest_message {
+                        let suffix = if preview.truncated { "…" } else { "" };
+                        ui.small(format!("{}{}", preview.body.replace('\n', " "), suffix));
+                    } else {
+                        ui.small("No messages");
+                    }
+                    ui.separator();
+                }
+            });
+        selected
+    }
+
+    fn draw_history(&self, ui: &mut egui::Ui) -> bool {
+        let Some(selected) = self.model.selected_contact_id.as_ref() else {
+            ui.centered_and_justified(|ui| {
+                ui.label("Select a chat to read local history.");
+            });
+            return false;
+        };
+        let summary = self
+            .model
+            .conversations
+            .iter()
+            .find(|summary| &summary.contact_id == selected);
+        ui.horizontal(|ui| {
+            ui.heading(summary.map_or(self.model.conversation.as_str(), |item| {
+                item.conversation_label.as_str()
+            }));
+            ui.small(format!("{} messages", self.model.history_total));
+        });
+        if let Some(summary) = summary {
+            ui.small(format!(
+                "Peer {} · {}",
+                compact_id(&summary.peer_account_id.to_string()),
+                summary.route_policy.as_str()
+            ));
+        }
+        let load_older = self.model.history_next_cursor.is_some()
+            && ui
+                .add_enabled(
+                    self.model.pending.is_none(),
+                    egui::Button::new("Load older messages"),
+                )
+                .clicked();
+        egui::ScrollArea::vertical()
+            .id_salt("chat-history")
+            .max_height(360.0)
+            .stick_to_bottom(true)
+            .show(ui, |ui| {
+                if self.model.history.is_empty() {
+                    ui.label("No local messages in this chat.");
+                }
+                for message in &self.model.history {
+                    let outgoing = self.model.account_id.as_deref()
+                        == Some(message.author_account_id.to_string().as_str());
+                    ui.group(|ui| {
+                        ui.small(if outgoing { "You" } else { "Peer" });
+                        ui.label(&message.body);
+                        ui.small(format!(
+                            "#{} · {}",
+                            message.author_sequence,
+                            compact_id(&message.event_id.to_string())
+                        ));
+                    });
+                }
+            });
+        load_older
     }
 
     fn draw_outbox(&mut self, ui: &mut egui::Ui) -> bool {
@@ -753,20 +1021,37 @@ impl eframe::App for KilogramApp {
         let mut connect_clicked = false;
         let mut queue_clicked = false;
         let mut refresh_clicked = false;
+        let mut selected_contact = None;
+        let mut load_older_clicked = false;
         egui::CentralPanel::default().show(context, |ui| {
             self.draw_header(ui);
             ui.add_space(8.0);
             connect_clicked = self.draw_runtime(ui);
             self.draw_identity(ui);
-            queue_clicked = self.draw_composer(ui);
-            refresh_clicked = self.draw_outbox(ui);
-            self.draw_outbox_contents(ui);
+            ui.separator();
+            ui.columns(2, |columns| {
+                selected_contact = self.draw_conversations(&mut columns[0]);
+                load_older_clicked = self.draw_history(&mut columns[1]);
+                queue_clicked = self.draw_composer(&mut columns[1]);
+            });
+            egui::CollapsingHeader::new("Runtime outbox")
+                .default_open(false)
+                .show(ui, |ui| {
+                    refresh_clicked = self.draw_outbox(ui);
+                    self.draw_outbox_contents(ui);
+                });
             ui.add_space(8.0);
             self.draw_feedback(ui);
         });
 
         if connect_clicked {
             self.start_connect();
+        } else if let Some(contact_id) = selected_contact {
+            if self.model.select_conversation(&contact_id) {
+                self.start_history(false);
+            }
+        } else if load_older_clicked {
+            self.start_history(true);
         } else if queue_clicked {
             self.start_queue();
         } else if refresh_clicked {
@@ -791,7 +1076,9 @@ fn compact_id(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use kilogram_identity::{AccountRootState, DeviceIdentity};
-    use kilogram_runtime_ipc::{RuntimeIpcOutboxStatus, RuntimeIpcServer};
+    use kilogram_runtime_ipc::{
+        ConversationId, RuntimeIpcOutboxStatus, RuntimeIpcRoutePolicy, RuntimeIpcServer,
+    };
 
     use super::*;
 
@@ -861,6 +1148,28 @@ mod tests {
                 .as_deref()
                 .is_some_and(|value| value.contains("Queued"))
         );
+    }
+
+    #[test]
+    fn conversation_list_selects_a_signed_runtime_contact() -> Result<(), Box<dyn std::error::Error>>
+    {
+        let mut model = ViewModel::new(PathBuf::from("runtime.ipc.json"));
+        let peer = AccountId::from_bytes([7_u8; 32]);
+        let peer_device = DeviceIdentity::generate()?;
+        model.apply_conversations(vec![RuntimeIpcConversationSummary {
+            contact_id: "contact-a".to_owned(),
+            conversation_label: "alice-bob".to_owned(),
+            conversation_id: ConversationId::from_label("alice-bob"),
+            peer_account_id: peer,
+            peer_device_id: peer_device.device_id(),
+            route_policy: RuntimeIpcRoutePolicy::Auto,
+            message_count: 0,
+            latest_message: None,
+        }]);
+        assert_eq!(model.selected_contact_id.as_deref(), Some("contact-a"));
+        assert_eq!(model.conversation, "alice-bob");
+        assert_eq!(model.peer_account_id, peer.to_string());
+        Ok(())
     }
 
     #[test]
@@ -947,6 +1256,46 @@ mod tests {
                     items: Vec::new(),
                 }))
                 .map_err(|_| anyhow::anyhow!("send GUI status response"))?;
+
+            let conversations = requests
+                .recv()
+                .await
+                .context("receive GUI conversation list")?;
+            let (command, response) = conversations.into_parts();
+            ensure!(matches!(command, RuntimeIpcCommand::ConversationList));
+            response
+                .send(RuntimeIpcResponse::ConversationList(vec![
+                    RuntimeIpcConversationSummary {
+                        contact_id: "22".repeat(32),
+                        conversation_label: "desktop-test".to_owned(),
+                        conversation_id: ConversationId::from_label("desktop-test"),
+                        peer_account_id,
+                        peer_device_id: device_id,
+                        route_policy: RuntimeIpcRoutePolicy::Auto,
+                        message_count: 0,
+                        latest_message: None,
+                    },
+                ]))
+                .map_err(|_| anyhow::anyhow!("send GUI conversation-list response"))?;
+
+            let history = requests.recv().await.context("receive GUI history page")?;
+            let (command, response) = history.into_parts();
+            ensure!(matches!(
+                command,
+                RuntimeIpcCommand::HistoryPage {
+                    conversation,
+                    cursor: None,
+                    limit: HISTORY_PAGE_SIZE,
+                } if conversation == "desktop-test"
+            ));
+            response
+                .send(RuntimeIpcResponse::HistoryPage(RuntimeIpcHistoryPage {
+                    conversation_id: ConversationId::from_label("desktop-test"),
+                    total_messages: 0,
+                    messages: Vec::new(),
+                    next_cursor: None,
+                }))
+                .map_err(|_| anyhow::anyhow!("send GUI history response"))?;
             Ok::<_, anyhow::Error>(())
         });
 
@@ -989,6 +1338,29 @@ mod tests {
                 pending_count: 1,
                 ..
             })
+        ));
+
+        let conversations = execute_request(WorkerRequest::Conversations {
+            descriptor: descriptor.clone(),
+        })
+        .await?;
+        assert!(matches!(
+            conversations,
+            WorkerSuccess::Conversations(items)
+                if items.len() == 1 && items[0].conversation_label == "desktop-test"
+        ));
+
+        let history = execute_request(WorkerRequest::History {
+            descriptor: descriptor.clone(),
+            conversation: "desktop-test".to_owned(),
+            cursor: None,
+            older: false,
+        })
+        .await?;
+        assert!(matches!(
+            history,
+            WorkerSuccess::History { page, older: false }
+                if page.total_messages == 0 && page.messages.is_empty()
         ));
 
         actor.await??;

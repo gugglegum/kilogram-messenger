@@ -92,3 +92,6 @@ history и не принимает contact onboarding. Поэтому M0.9.12 т
 Следующий этап M0.9.13 — actor-owned read model и bounded IPC-команды для
 contacts, conversation list и paginated local history. После этого desktop UI
 сможет стать обычным экраном списка чатов, не обходя single-writer boundary.
+
+Примечание 2026-09-03: этот следующий срез реализован в
+[`RFC-0040-actor-owned-chat-read-model.md`](RFC-0040-actor-owned-chat-read-model.md).

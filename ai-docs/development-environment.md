@@ -660,3 +660,22 @@ retirement остальных compatibility shadows ещё не реализов
 - `cargo build --workspace --release` проходит. Windows artifact
   `target/release/kilogram-windows.exe`: 6,175,232 bytes, SHA-256
   `D77D55107BBA300422CE5D4372298FF9FB81C1F520FA18FEF98903560F7F9B92`.
+
+## M0.9.13 verification snapshot (2026-09-03)
+
+- Runtime IPC v2 дополнен typed `ConversationList` и snapshot-bound
+  `HistoryPage`; новых external/system dependencies нет.
+- GUI по-прежнему зависит только от `kilogram-runtime-ipc`, public identity
+  types и `eframe`, но теперь показывает signed-contact chat list и локально
+  расшифрованную paginated history.
+- Targeted tests проверяют cursor parse/staleness, causal ordering, desktop
+  selection/adapter и настоящий runtime process до и после P2P delivery.
+- Повторный process run обнаружил startup race: empty last-sync map делал
+  periodic sync немедленным и мог исчерпать test action budget до GUI queue.
+  Первый sync теперь due только после полного interval; delivery остаётся
+  приоритетной.
+- `cargo fmt --all -- --check`, strict all-target/all-feature Clippy, все 139
+  workspace tests и `cargo build --workspace --release` проходят.
+- Windows artifact `target/release/kilogram-windows.exe`: 6,245,888 bytes,
+  SHA-256
+  `1F732775050C37AFAA93ADF0708F835BDDCCB0DD744A5905FE53C6C4C598FDC1`.

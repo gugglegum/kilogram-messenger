@@ -2022,14 +2022,44 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 реализованы. Полный контракт —
 [`../docs/RFC-0039-minimal-desktop-runtime-client.md`](../docs/RFC-0039-minimal-desktop-runtime-client.md).
 
+### M0.9.13 — actor-owned chat read model: выполнено
+
+Реализовано:
+
+- `ConversationList` выдаёт GUI только проверенные signed runtime contacts,
+  bounded metadata, message count и 96-byte latest preview;
+- `HistoryPage` возвращает до 100 local text projections и не более 192 KiB
+  plaintext body; ACK не превращаются в видимые chat messages;
+- cursor привязан BLAKE3 digest к точному ordered text-event snapshot и
+  fail-closed устаревает при изменении истории;
+- runtime строит causal topological order с deterministic ready tie-break, не
+  обещая group-consensus ordering;
+- все read/decrypt операции выполняет runtime actor под state lock; GUI не
+  получил `STATE_DIR`, vault/ratchet keys или зависимость от storage/transport;
+- desktop UI заменил ручной conversation/peer ввод на двухколоночный список
+  чатов, readable history, `Load older messages` и composer выбранного contact;
+- двухсекундный polling остаётся последовательным и bounded: chats → selected
+  history → outbox.
+
+Проверки:
+
+- shared IPC cursor tests, causal ordering/snapshot tests и desktop view-model
+  tests;
+- настоящий runtime process отвечает на пустые list/history reads, затем P2P
+  delivery materializes readable local history;
+- desktop adapter проходит signed loopback `Ping`, queue, outbox, conversation
+  list и history page contract.
+
+Полный контракт —
+[`../docs/RFC-0040-actor-owned-chat-read-model.md`](../docs/RFC-0040-actor-owned-chat-read-model.md).
+
 ### Следующий этап
 
-1. M0.9.13: добавить actor-owned read model и bounded IPC для contact list,
-   conversation summaries и paginated local history; построить из него первый
-   обычный список чатов без прямого GUI-доступа к device state.
-2. IPC contact onboarding и runtime lifecycle добавить после read model.
-   Optional autostart/background mode проектировать как явную настройку клиента,
-   не как обязательный Windows Task Scheduler step.
+1. M0.9.14: добавить IPC contact onboarding и runtime lifecycle в desktop GUI,
+   сохранив signed-contact validation, private descriptor и единственного actor
+   writer.
+2. После этого добавить optional autostart/background mode как явную настройку
+   клиента, не как обязательный Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.
 4. Спроектировать privacy-preserving wide-area publication/gossip/mailbox и
    first-contact freshness; M0.9.4 закрывает только явный LAN opt-in.

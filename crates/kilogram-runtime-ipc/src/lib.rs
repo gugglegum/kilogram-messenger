@@ -10,7 +10,7 @@ use std::{
 use anyhow::{Context, Result, bail, ensure};
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use kilogram_identity::{AccountId, DeviceId, DeviceIdentity};
-use kilogram_protocol::{ConversationId, EventId};
+pub use kilogram_protocol::{ConversationId, EventId};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use tempfile::NamedTempFile;
 use tokio::{
@@ -21,13 +21,13 @@ use tokio::{
     time::timeout,
 };
 
-const IPC_VERSION: u8 = 1;
+const IPC_VERSION: u8 = 2;
 const MAX_DESCRIPTOR_BYTES: u64 = 16 * 1024;
 const MAX_FRAME_BYTES: usize = 256 * 1024;
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(3);
 const IO_TIMEOUT: Duration = Duration::from_secs(30);
 const REQUEST_CHANNEL_CAPACITY: usize = 64;
-const DESCRIPTOR_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-ipc-descriptor:v1\0";
+const DESCRIPTOR_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-ipc-descriptor:v2\0";
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 struct RuntimeIpcDescriptorContent {
@@ -123,6 +123,12 @@ pub enum RuntimeIpcCommand {
         message: String,
     },
     OutboxStatus,
+    ConversationList,
+    HistoryPage {
+        conversation: String,
+        cursor: Option<RuntimeIpcHistoryCursor>,
+        limit: u16,
+    },
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -165,6 +171,116 @@ impl FromStr for RuntimeIpcRequestId {
         }
         Ok(Self(bytes))
     }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+pub struct RuntimeIpcHistoryCursor {
+    snapshot_id: [u8; 32],
+    before_index: u32,
+}
+
+impl RuntimeIpcHistoryCursor {
+    pub fn new(snapshot_id: [u8; 32], before_index: u32) -> Self {
+        Self {
+            snapshot_id,
+            before_index,
+        }
+    }
+
+    pub fn snapshot_id(self) -> [u8; 32] {
+        self.snapshot_id
+    }
+
+    pub fn before_index(self) -> u32 {
+        self.before_index
+    }
+}
+
+impl fmt::Display for RuntimeIpcHistoryCursor {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for byte in self.snapshot_id {
+            write!(formatter, "{byte:02x}")?;
+        }
+        write!(formatter, ":{}", self.before_index)
+    }
+}
+
+impl FromStr for RuntimeIpcHistoryCursor {
+    type Err = anyhow::Error;
+
+    fn from_str(value: &str) -> Result<Self> {
+        let (snapshot, index) = value
+            .split_once(':')
+            .context("runtime IPC history cursor must contain one ':' separator")?;
+        ensure!(
+            snapshot.len() == 64 && snapshot.is_ascii(),
+            "runtime IPC history cursor snapshot must be 64 hexadecimal characters"
+        );
+        let mut snapshot_id = [0_u8; 32];
+        for (position, byte) in snapshot_id.iter_mut().enumerate() {
+            let start = position * 2;
+            *byte = u8::from_str_radix(&snapshot[start..start + 2], 16)
+                .context("runtime IPC history cursor contains non-hexadecimal characters")?;
+        }
+        let before_index = index
+            .parse::<u32>()
+            .context("runtime IPC history cursor index is invalid")?;
+        Ok(Self::new(snapshot_id, before_index))
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub enum RuntimeIpcRoutePolicy {
+    Auto,
+    DirectOnly,
+    RelayOnly,
+}
+
+impl RuntimeIpcRoutePolicy {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Auto => "auto",
+            Self::DirectOnly => "direct-only",
+            Self::RelayOnly => "relay-only",
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcMessagePreview {
+    pub event_id: EventId,
+    pub author_account_id: AccountId,
+    pub body: String,
+    pub truncated: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcConversationSummary {
+    pub contact_id: String,
+    pub conversation_label: String,
+    pub conversation_id: ConversationId,
+    pub peer_account_id: AccountId,
+    pub peer_device_id: DeviceId,
+    pub route_policy: RuntimeIpcRoutePolicy,
+    pub message_count: u32,
+    pub latest_message: Option<RuntimeIpcMessagePreview>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcHistoryMessage {
+    pub event_id: EventId,
+    pub author_account_id: AccountId,
+    pub author_device_id: DeviceId,
+    pub author_sequence: u64,
+    pub body: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcHistoryPage {
+    pub conversation_id: ConversationId,
+    pub total_messages: u32,
+    pub messages: Vec<RuntimeIpcHistoryMessage>,
+    pub next_cursor: Option<RuntimeIpcHistoryCursor>,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -216,6 +332,8 @@ pub enum RuntimeIpcResponse {
         inserted: bool,
     },
     OutboxStatus(RuntimeIpcOutboxStatus),
+    ConversationList(Vec<RuntimeIpcConversationSummary>),
+    HistoryPage(RuntimeIpcHistoryPage),
     Error {
         message: String,
     },
@@ -572,6 +690,12 @@ mod tests {
             &identity,
         )?;
         assert!(descriptor.verify().is_ok());
+        let mut old_version = descriptor.clone();
+        old_version.content.version = 1;
+        let mut old_signing_bytes = DESCRIPTOR_SIGNATURE_DOMAIN.to_vec();
+        old_signing_bytes.extend_from_slice(&postcard::to_allocvec(&old_version.content)?);
+        old_version.signature = identity.sign(&old_signing_bytes).to_vec();
+        assert!(old_version.verify().is_err());
         let mut tampered = descriptor.clone();
         tampered.content.address = SocketAddr::new(IpAddr::from([127, 0, 0, 1]), 2).to_string();
         assert!(tampered.verify().is_err());
@@ -592,6 +716,27 @@ mod tests {
         assert!(
             "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
                 .parse::<RuntimeIpcRequestId>()
+                .is_err()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn history_cursor_text_round_trips_and_rejects_invalid_input() -> Result<(), Box<dyn Error>> {
+        let cursor = RuntimeIpcHistoryCursor::new([0xab; 32], 42);
+        assert_eq!(
+            cursor.to_string().parse::<RuntimeIpcHistoryCursor>()?,
+            cursor
+        );
+        assert!("ab:42".parse::<RuntimeIpcHistoryCursor>().is_err());
+        assert!(
+            "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz:42"
+                .parse::<RuntimeIpcHistoryCursor>()
+                .is_err()
+        );
+        assert!(
+            "abababababababababababababababababababababababababababababababab:not-a-number"
+                .parse::<RuntimeIpcHistoryCursor>()
                 .is_err()
         );
         Ok(())

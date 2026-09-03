@@ -83,12 +83,14 @@ The authenticated local runtime actor API is specified in
 [`docs/RFC-0038-authenticated-local-runtime-ipc.md`](docs/RFC-0038-authenticated-local-runtime-ipc.md).
 The first desktop client over that API is specified in
 [`docs/RFC-0039-minimal-desktop-runtime-client.md`](docs/RFC-0039-minimal-desktop-runtime-client.md).
+The actor-owned chat list and paginated local history are specified in
+[`docs/RFC-0040-actor-owned-chat-read-model.md`](docs/RFC-0040-actor-owned-chat-read-model.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.12 minimal desktop runtime client — complete
+## Current milestone: M0.9.13 actor-owned chat read model — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -280,6 +282,14 @@ polls structured outbox state every two seconds on a background IPC worker.
 An uncertain send retains its request ID for an idempotent retry. Contact and
 history views wait for an expanded actor-owned read API rather than reading
 device files from the GUI.
+
+M0.9.13 adds that actor-owned read model. The runtime verifies signed contacts,
+membership, event authorization and device-local encrypted projections before
+returning bounded conversation summaries or snapshot-bound history pages over
+the authenticated loopback channel. The desktop now selects a chat from the
+contact list, displays readable local history, loads older pages and routes the
+composer from the selected signed contact. The GUI still has no `STATE_DIR`,
+storage, ratchet, session or transport access.
 
 M0.8.1 adds a reversible encrypted shadow snapshot of the entire device state.
 `state-vault-migrate` publishes encrypted records and a keyed manifest in one
@@ -673,9 +683,11 @@ start the window in another terminal:
 cargo run -p kilogram-windows -- --ipc-file .tmp/alice-runtime.ipc.json
 ```
 
-You can also drop `runtime.ipc.json` onto the window. The M0.9.12 client expects
-the contact to have been added beforehand with `runtime-contact-add`; contact
-selection and readable chat history are the next IPC/read-model slice.
+You can also drop `runtime.ipc.json` onto the window. The M0.9.13 client expects
+contacts to have been added beforehand with `runtime-contact-add`; it then
+loads the signed contact list and paginated local history through the runtime
+actor. IPC contact onboarding and runtime lifecycle controls are the next
+desktop slice.
 
 The queue command prints `runtime_ipc_request_id` before connecting. If its
 result is uncertain, repeat the same message with `--request-id <PRINTED_ID>`;

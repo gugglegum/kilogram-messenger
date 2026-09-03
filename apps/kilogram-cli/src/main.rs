@@ -36,8 +36,10 @@ use kilogram_ratchet::{
     SignedRatchetIdentity, unix_time_now,
 };
 use kilogram_runtime_ipc::{
-    RuntimeIpcCommand, RuntimeIpcDescriptor, RuntimeIpcOutboxStatus, RuntimeIpcQueueItem,
-    RuntimeIpcQueueState, RuntimeIpcRequestId, RuntimeIpcResponse, RuntimeIpcServer,
+    RuntimeIpcCommand, RuntimeIpcConversationSummary, RuntimeIpcDescriptor,
+    RuntimeIpcHistoryCursor, RuntimeIpcHistoryMessage, RuntimeIpcHistoryPage,
+    RuntimeIpcMessagePreview, RuntimeIpcOutboxStatus, RuntimeIpcQueueItem, RuntimeIpcQueueState,
+    RuntimeIpcRequestId, RuntimeIpcResponse, RuntimeIpcRoutePolicy, RuntimeIpcServer,
     RuntimeIpcWork,
 };
 use kilogram_session::{
@@ -54,7 +56,7 @@ use kilogram_state::{
 use kilogram_store::{
     AppendOnlyWriteReceipt, CommandEventReadOverlay, CommandLocalMessageReadOverlay,
     EventReadRepository, EventStore, ImmutableEventReadSnapshot, ImmutableLocalMessageReadSnapshot,
-    LocalMessageReadRepository, LocalMessageStore, StoreError, StoreOutcome,
+    LocalMessageReadRepository, LocalMessageStore, StoreError, StoreOutcome, StoredAuthorizedEvent,
 };
 use kilogram_transport_iroh::{
     ALPN, MAX_WIRE_MESSAGE_BYTES, RoutePolicy, SelectedPathDiagnostics, await_route_policy,
@@ -151,6 +153,11 @@ const MAX_RUNTIME_AUTO_SYNC_SECONDS: u64 = 3_600;
 const MAX_RUNTIME_CONTACTS: usize = 256;
 const MAX_RUNTIME_QUEUE_ITEMS: usize = 4_096;
 const MAX_RUNTIME_RETRY_STATES: usize = 4_096;
+const MAX_RUNTIME_HISTORY_PAGE_SIZE: u16 = 100;
+const MAX_RUNTIME_HISTORY_PAGE_BODY_BYTES: usize = 192 * 1024;
+const MAX_RUNTIME_PREVIEW_BYTES: usize = 96;
+const MAX_RUNTIME_CONVERSATION_LIST_EVENTS: usize = 16_384;
+const RUNTIME_HISTORY_SNAPSHOT_DOMAIN: &[u8] = b"kilogram:runtime-history-snapshot:v1\0";
 
 type CommandFuture = Pin<Box<dyn Future<Output = Result<()>>>>;
 
@@ -3600,6 +3607,353 @@ fn collect_runtime_outbox_status(state_directory: &Path) -> Result<RuntimeIpcOut
     })
 }
 
+fn runtime_ipc_route_policy(route_policy: RoutePolicy) -> RuntimeIpcRoutePolicy {
+    match route_policy {
+        RoutePolicy::Auto => RuntimeIpcRoutePolicy::Auto,
+        RoutePolicy::DirectOnly => RuntimeIpcRoutePolicy::DirectOnly,
+        RoutePolicy::RelayOnly => RuntimeIpcRoutePolicy::RelayOnly,
+    }
+}
+
+fn order_runtime_history(events: Vec<StoredAuthorizedEvent>) -> Result<Vec<StoredAuthorizedEvent>> {
+    ensure!(
+        events.len() <= MAX_INVENTORY_EVENT_IDS,
+        "runtime history exceeds the bounded local event limit of {MAX_INVENTORY_EVENT_IDS}"
+    );
+    let known = events
+        .iter()
+        .map(|stored| stored.id)
+        .collect::<BTreeSet<_>>();
+    let mut remaining = events
+        .into_iter()
+        .map(|stored| (stored.id, stored))
+        .collect::<BTreeMap<_, _>>();
+    let mut dependency_counts = BTreeMap::new();
+    let mut children = BTreeMap::<_, Vec<_>>::new();
+    let mut ready = BTreeSet::new();
+
+    for stored in remaining.values() {
+        let dependencies = stored
+            .event
+            .event()
+            .parents()
+            .iter()
+            .filter(|parent| known.contains(parent))
+            .count();
+        dependency_counts.insert(stored.id, dependencies);
+        for parent in stored
+            .event
+            .event()
+            .parents()
+            .iter()
+            .filter(|parent| known.contains(parent))
+        {
+            children.entry(*parent).or_default().push(stored.id);
+        }
+        if dependencies == 0 {
+            ready.insert((
+                stored.event.event().author_sequence(),
+                stored.event.event().author_device_id().to_string(),
+                stored.id,
+            ));
+        }
+    }
+
+    let event_count = remaining.len();
+    let mut ordered = Vec::with_capacity(event_count);
+    while let Some((_, _, event_id)) = ready.pop_first() {
+        let stored = remaining
+            .remove(&event_id)
+            .context("runtime history ordering lost a ready event")?;
+        if let Some(child_ids) = children.get(&event_id) {
+            for child_id in child_ids {
+                let count = dependency_counts
+                    .get_mut(child_id)
+                    .context("runtime history ordering lost a child dependency")?;
+                *count = count
+                    .checked_sub(1)
+                    .context("runtime history dependency count underflow")?;
+                if *count == 0 {
+                    let child = remaining
+                        .get(child_id)
+                        .context("runtime history ordering lost a child event")?;
+                    ready.insert((
+                        child.event.event().author_sequence(),
+                        child.event.event().author_device_id().to_string(),
+                        *child_id,
+                    ));
+                }
+            }
+        }
+        ordered.push(stored);
+    }
+    ensure!(
+        ordered.len() == event_count,
+        "runtime history contains an invalid causal cycle"
+    );
+    Ok(ordered)
+}
+
+fn truncate_runtime_preview(body: &str) -> (String, bool) {
+    if body.len() <= MAX_RUNTIME_PREVIEW_BYTES {
+        return (body.to_owned(), false);
+    }
+    let mut end = MAX_RUNTIME_PREVIEW_BYTES;
+    while !body.is_char_boundary(end) {
+        end -= 1;
+    }
+    (body[..end].to_owned(), true)
+}
+
+fn runtime_history_page_end(
+    total_messages: usize,
+    snapshot_id: [u8; 32],
+    cursor: Option<RuntimeIpcHistoryCursor>,
+) -> Result<usize> {
+    let Some(cursor) = cursor else {
+        return Ok(total_messages);
+    };
+    ensure!(
+        cursor.snapshot_id() == snapshot_id,
+        "runtime history changed; restart pagination"
+    );
+    let before_index = usize::try_from(cursor.before_index())
+        .context("runtime history cursor index conversion")?;
+    ensure!(
+        before_index <= total_messages,
+        "runtime history cursor is outside this conversation"
+    );
+    Ok(before_index)
+}
+
+fn open_runtime_history_message(
+    stored: &StoredAuthorizedEvent,
+    read_repositories: &ImmutableReadRepositories,
+    device_state: &DeviceState,
+    local_account_id: AccountId,
+) -> Result<RuntimeIpcHistoryMessage> {
+    let event = stored.event.event();
+    ensure!(
+        matches!(event.payload(), EventPayload::RatchetText { .. }),
+        "runtime history attempted to expose a non-text event"
+    );
+    let projection = read_repositories
+        .local_messages
+        .get(stored.id)
+        .with_context(|| format!("load local projection for runtime event {}", stored.id))?;
+    let body = projection
+        .open_for_account(
+            event,
+            device_state.identity().device_id(),
+            local_account_id,
+            device_state.encryption(),
+        )
+        .with_context(|| format!("decrypt local projection for runtime event {}", stored.id))?;
+    Ok(RuntimeIpcHistoryMessage {
+        event_id: stored.id,
+        author_account_id: stored.event.author_account_id(),
+        author_device_id: event.author_device_id(),
+        author_sequence: event.author_sequence(),
+        body,
+    })
+}
+
+fn collect_runtime_conversation_list(
+    state_directory: &Path,
+) -> Result<Vec<RuntimeIpcConversationSummary>> {
+    let device_state = load_command_device_state(state_directory)?;
+    let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+    let local_certificate = trust.load_certificate()?;
+    let local_account_id = local_certificate.account_id();
+    let snapshot = load_runtime_state_snapshot(
+        state_directory,
+        local_account_id,
+        device_state.identity().device_id(),
+    )?;
+    let read_repositories = open_immutable_read_repositories(state_directory)?;
+    let mut summaries = Vec::with_capacity(snapshot.contacts.len());
+    let mut inspected_events = 0_usize;
+
+    for contact in snapshot.contacts.values() {
+        let membership = trust
+            .load_conversation_membership(contact.conversation_id().scope_id())
+            .with_context(|| {
+                format!(
+                    "load membership for runtime conversation {}",
+                    contact.conversation_label()
+                )
+            })?;
+        require_conversation_participants(
+            &membership,
+            local_account_id,
+            contact.peer_account_id(),
+        )?;
+        let events = read_repositories
+            .events
+            .load_authorized_conversation(contact.conversation_id(), &membership)
+            .with_context(|| {
+                format!("load runtime conversation {}", contact.conversation_label())
+            })?;
+        inspected_events = inspected_events
+            .checked_add(events.len())
+            .context("runtime conversation-list event count overflow")?;
+        ensure!(
+            inspected_events <= MAX_RUNTIME_CONVERSATION_LIST_EVENTS,
+            "runtime conversation list exceeds the bounded aggregate event limit of {MAX_RUNTIME_CONVERSATION_LIST_EVENTS}"
+        );
+        let ordered = order_runtime_history(events)?;
+        let text_events = ordered
+            .iter()
+            .filter(|stored| {
+                matches!(
+                    stored.event.event().payload(),
+                    EventPayload::RatchetText { .. }
+                )
+            })
+            .collect::<Vec<_>>();
+        let latest_message = text_events
+            .last()
+            .map(|stored| {
+                let message = open_runtime_history_message(
+                    stored,
+                    &read_repositories,
+                    &device_state,
+                    local_account_id,
+                )?;
+                let (body, truncated) = truncate_runtime_preview(&message.body);
+                Ok::<_, anyhow::Error>(RuntimeIpcMessagePreview {
+                    event_id: message.event_id,
+                    author_account_id: message.author_account_id,
+                    body,
+                    truncated,
+                })
+            })
+            .transpose()?;
+        summaries.push(RuntimeIpcConversationSummary {
+            contact_id: contact.contact_id().to_string(),
+            conversation_label: contact.conversation_label().to_owned(),
+            conversation_id: contact.conversation_id(),
+            peer_account_id: contact.peer_account_id(),
+            peer_device_id: contact.peer_device_id(),
+            route_policy: runtime_ipc_route_policy(contact.route_policy()),
+            message_count: u32::try_from(text_events.len())
+                .context("runtime conversation message count overflow")?,
+            latest_message,
+        });
+    }
+    summaries.sort_by(|left, right| {
+        left.conversation_label
+            .cmp(&right.conversation_label)
+            .then_with(|| {
+                left.peer_account_id
+                    .as_bytes()
+                    .cmp(right.peer_account_id.as_bytes())
+            })
+    });
+    Ok(summaries)
+}
+
+fn collect_runtime_history_page(
+    state_directory: &Path,
+    conversation: &str,
+    cursor: Option<RuntimeIpcHistoryCursor>,
+    limit: u16,
+) -> Result<RuntimeIpcHistoryPage> {
+    ensure!(
+        !conversation.is_empty() && conversation.len() <= 4_096,
+        "runtime history conversation label is invalid"
+    );
+    ensure!(
+        (1..=MAX_RUNTIME_HISTORY_PAGE_SIZE).contains(&limit),
+        "runtime history page limit must be between 1 and {MAX_RUNTIME_HISTORY_PAGE_SIZE}"
+    );
+    let device_state = load_command_device_state(state_directory)?;
+    let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+    let local_certificate = trust.load_certificate()?;
+    let local_account_id = local_certificate.account_id();
+    let conversation_id = ConversationId::from_label(conversation);
+    let runtime_snapshot = load_runtime_state_snapshot(
+        state_directory,
+        local_account_id,
+        device_state.identity().device_id(),
+    )?;
+    ensure!(
+        runtime_snapshot.contacts.values().any(|contact| {
+            contact.conversation_id() == conversation_id
+                && contact.conversation_label() == conversation
+        }),
+        "runtime history is not exposed without a matching signed contact"
+    );
+    let membership = trust
+        .load_conversation_membership(conversation_id.scope_id())
+        .context("load membership for runtime history page")?;
+    membership
+        .require_member(local_account_id)
+        .context("runtime account is not a conversation member")?;
+    let read_repositories = open_immutable_read_repositories(state_directory)?;
+    let ordered = order_runtime_history(
+        read_repositories
+            .events
+            .load_authorized_conversation(conversation_id, &membership)
+            .context("load authorized runtime history page")?,
+    )?;
+    let text_events = ordered
+        .iter()
+        .filter(|stored| {
+            matches!(
+                stored.event.event().payload(),
+                EventPayload::RatchetText { .. }
+            )
+        })
+        .collect::<Vec<_>>();
+    let total_messages =
+        u32::try_from(text_events.len()).context("runtime history message count overflow")?;
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(RUNTIME_HISTORY_SNAPSHOT_DOMAIN);
+    hasher.update(conversation_id.as_bytes());
+    for stored in &text_events {
+        hasher.update(stored.id.as_bytes());
+    }
+    let snapshot_id = *hasher.finalize().as_bytes();
+    let end = runtime_history_page_end(text_events.len(), snapshot_id, cursor)?;
+
+    let mut messages = Vec::new();
+    let mut page_body_bytes = 0_usize;
+    let mut start = end;
+    while start > 0 && messages.len() < usize::from(limit) {
+        let candidate = open_runtime_history_message(
+            text_events[start - 1],
+            &read_repositories,
+            &device_state,
+            local_account_id,
+        )?;
+        if !messages.is_empty()
+            && page_body_bytes.saturating_add(candidate.body.len())
+                > MAX_RUNTIME_HISTORY_PAGE_BODY_BYTES
+        {
+            break;
+        }
+        page_body_bytes = page_body_bytes.saturating_add(candidate.body.len());
+        messages.push(candidate);
+        start -= 1;
+    }
+    messages.reverse();
+    let next_cursor = if start == 0 {
+        None
+    } else {
+        Some(RuntimeIpcHistoryCursor::new(
+            snapshot_id,
+            u32::try_from(start).context("runtime history cursor index overflow")?,
+        ))
+    };
+    Ok(RuntimeIpcHistoryPage {
+        conversation_id,
+        total_messages,
+        messages,
+        next_cursor,
+    })
+}
+
 fn print_runtime_queue_receipt(receipt: &RuntimeQueueReceipt) {
     println!("runtime_queue_id={}", receipt.queue_id);
     println!("runtime_contact_id={}", receipt.contact_id);
@@ -3768,6 +4122,34 @@ fn handle_runtime_ipc_work(
                 .and_then(|_lock| collect_runtime_outbox_status(state_directory));
             match status {
                 Ok(status) => RuntimeIpcResponse::OutboxStatus(status),
+                Err(error) => RuntimeIpcResponse::Error {
+                    message: format!("{error:#}"),
+                },
+            }
+        }
+        RuntimeIpcCommand::ConversationList => {
+            let conversations = StateDirectoryLock::acquire(state_directory)
+                .context("lock runtime state for IPC conversation snapshot")
+                .and_then(|_lock| collect_runtime_conversation_list(state_directory));
+            match conversations {
+                Ok(conversations) => RuntimeIpcResponse::ConversationList(conversations),
+                Err(error) => RuntimeIpcResponse::Error {
+                    message: format!("{error:#}"),
+                },
+            }
+        }
+        RuntimeIpcCommand::HistoryPage {
+            conversation,
+            cursor,
+            limit,
+        } => {
+            let history = StateDirectoryLock::acquire(state_directory)
+                .context("lock runtime state for IPC history snapshot")
+                .and_then(|_lock| {
+                    collect_runtime_history_page(state_directory, &conversation, cursor, limit)
+                });
+            match history {
+                Ok(page) => RuntimeIpcResponse::HistoryPage(page),
                 Err(error) => RuntimeIpcResponse::Error {
                     message: format!("{error:#}"),
                 },
@@ -3946,6 +4328,7 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
     let mut accepted_sessions = 0_usize;
     let mut outbound_actions = 0_usize;
     let mut last_activity = tokio::time::Instant::now();
+    let automatic_sync_started_at = tokio::time::Instant::now();
     let mut last_sync_attempts = BTreeMap::new();
     // Keep the accept future alive across polling ticks. Dropping an Iroh
     // Incoming while a handshake is in progress actively rejects that peer.
@@ -4000,6 +4383,7 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                 }
                 if matches!(delivery_attempt, RuntimeDeliveryAttempt::NoWork)
                     && auto_sync_seconds != 0
+                    && automatic_sync_started_at.elapsed() >= Duration::from_secs(auto_sync_seconds)
                     && attempt_runtime_contact_sync(
                         &state_dir,
                         Duration::from_secs(auto_sync_seconds),
@@ -10739,6 +11123,87 @@ mod tests {
     }
 
     #[test]
+    fn runtime_history_order_is_causal_with_a_deterministic_ready_tie_break() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let root = AccountRootState::create(directory.path().join("root"))?;
+        let identity = DeviceIdentity::generate()?;
+        let certificate = root.issue_device_certificate(
+            identity.device_id(),
+            DeviceEncryptionIdentity::generate()?.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let authority = root.authority_snapshot()?;
+        let conversation_id = ConversationId::from_label("runtime-read-order");
+        let acknowledged_id: kilogram_protocol::EventId = postcard::from_bytes(&[1_u8; 32])?;
+        let first = SignedEvent::sign_acknowledgement(
+            &identity,
+            conversation_id,
+            10,
+            Vec::new(),
+            acknowledged_id,
+        )?;
+        let first_id = first.event_id()?;
+        let child = SignedEvent::sign_acknowledgement(
+            &identity,
+            conversation_id,
+            0,
+            vec![first_id],
+            first_id,
+        )?;
+        let child_id = child.event_id()?;
+        let independent =
+            SignedEvent::sign_acknowledgement(&identity, conversation_id, 5, Vec::new(), first_id)?;
+        let independent_id = independent.event_id()?;
+        let authorize = |id, event| -> Result<StoredAuthorizedEvent> {
+            Ok(StoredAuthorizedEvent {
+                id,
+                event: AuthorizedEvent::new(event, certificate.clone(), authority.clone())?,
+            })
+        };
+        let ordered = order_runtime_history(vec![
+            authorize(child_id, child)?,
+            authorize(first_id, first)?,
+            authorize(independent_id, independent)?,
+        ])?;
+        assert_eq!(
+            ordered.iter().map(|stored| stored.id).collect::<Vec<_>>(),
+            vec![independent_id, first_id, child_id]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn runtime_history_cursor_is_bound_to_one_immutable_text_snapshot() -> Result<()> {
+        let snapshot = [7_u8; 32];
+        assert_eq!(runtime_history_page_end(80, snapshot, None)?, 80);
+        assert_eq!(
+            runtime_history_page_end(
+                80,
+                snapshot,
+                Some(RuntimeIpcHistoryCursor::new(snapshot, 30)),
+            )?,
+            30
+        );
+        assert!(
+            runtime_history_page_end(
+                80,
+                snapshot,
+                Some(RuntimeIpcHistoryCursor::new([8_u8; 32], 30)),
+            )
+            .is_err()
+        );
+        assert!(
+            runtime_history_page_end(
+                80,
+                snapshot,
+                Some(RuntimeIpcHistoryCursor::new(snapshot, 81)),
+            )
+            .is_err()
+        );
+        Ok(())
+    }
+
+    #[test]
     fn history_rewrap_source_consent_requires_exact_sas_and_same_account() -> Result<()> {
         let directory = tempfile::tempdir()?;
         let root = AccountRootState::create(directory.path().join("root"))?;
@@ -11288,6 +11753,29 @@ mod tests {
             } if account_id == alice_root.account_id()
                 && device_id == alice_device.identity().device_id()
         ));
+        assert!(matches!(
+            kilogram_runtime_ipc::call(&alice_ipc, RuntimeIpcCommand::ConversationList).await?,
+            RuntimeIpcResponse::ConversationList(conversations)
+                if conversations.len() == 1
+                    && conversations[0].conversation_label == conversation_label
+                    && conversations[0].message_count == 0
+                    && conversations[0].latest_message.is_none()
+        ));
+        assert!(matches!(
+            kilogram_runtime_ipc::call(
+                &alice_ipc,
+                RuntimeIpcCommand::HistoryPage {
+                    conversation: conversation_label.to_owned(),
+                    cursor: None,
+                    limit: 50,
+                },
+            )
+            .await?,
+            RuntimeIpcResponse::HistoryPage(page)
+                if page.total_messages == 0
+                    && page.messages.is_empty()
+                    && page.next_cursor.is_none()
+        ));
         let request_id = RuntimeIpcRequestId::generate()?;
         let queue_command = RuntimeIpcCommand::QueueMessage {
             request_id,
@@ -11350,6 +11838,26 @@ mod tests {
         assert_eq!(snapshot.materialized.len(), 1);
         assert_eq!(snapshot.delivered.len(), 1);
         assert_eq!(snapshot.pending_count(), 0);
+        let conversations = collect_runtime_conversation_list(&alice_state)?;
+        assert_eq!(conversations.len(), 1);
+        assert_eq!(conversations[0].message_count, 1);
+        assert_eq!(
+            conversations[0]
+                .latest_message
+                .as_ref()
+                .map(|message| message.body.as_str()),
+            Some("durable runtime outbox message")
+        );
+        let history = collect_runtime_history_page(
+            &alice_state,
+            conversation_label,
+            None,
+            MAX_RUNTIME_HISTORY_PAGE_SIZE,
+        )?;
+        assert_eq!(history.total_messages, 1);
+        assert_eq!(history.messages.len(), 1);
+        assert_eq!(history.messages[0].body, "durable runtime outbox message");
+        assert!(history.next_cursor.is_none());
         Ok(())
     }
 
