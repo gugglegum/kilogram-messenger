@@ -717,3 +717,37 @@ retirement остальных compatibility shadows ещё не реализов
   SHA-256 `8F2DC29B22BECEE7301D6B420426BD56E6767C5DBE0F78BDF8B87C0CA1B3681E`;
   `target/release/kilogram-cli.exe` — 22,529,024 bytes, SHA-256
   `CC581322CD473FF0137D270713B352CFA2016547F34B424EDA3BD4FB5E8E9095`.
+
+## M0.9.16 verification snapshot (2026-09-04)
+
+- Workspace добавил `kilogram-bootstrap` и shared bounded
+  `kilogram-bootstrap-contract`; 24-word recovery phrase не попадает в receipt,
+  launch profile или `Debug`.
+- Account Root key использует Windows DPAPI CurrentUser envelope; device state
+  сразу мигрирует в DB-primary encrypted vault без retained plaintext identity.
+- `cargo fmt --all -- --check`, strict workspace all-target/all-feature Clippy,
+  все 151 workspace tests и `cargo build --release --workspace` проходят.
+- Release process smoke подтвердил atomic first-account layout, 24 слова,
+  Root/vault protection, valid certificate/device list/prekeys и отсутствие
+  phrase в persistent receipt.
+
+## M0.9.17 verification snapshot (2026-09-04)
+
+- `kilogram-bootstrap` добавил `device-link-request`, `device-link-inspect`,
+  `device-link-authorize` и `device-link-accept`; новых system dependencies нет.
+- Root enrollment использует OS file lock и atomic complete-list publication;
+  accept использует authenticated DB-primary identity и trust transaction.
+- Targeted tests проверяют full round-trip, exact retry, repeated accept, wrong
+  SAS, wrong recipient, tampering и Device ID/key conflict.
+- `cargo fmt --all -- --check`, strict
+  `cargo clippy --workspace --all-targets --all-features -- -D warnings`, все
+  154 workspace tests и `cargo build --release --workspace` проходят.
+- Real release process smoke `.tmp/m0917-smoke-20260904-014515` прошёл четыре
+  helper-команды: request fresh, SAS equal, authority revision 2, encrypted
+  response 911 bytes, accept status `device-link-accepted`.
+- Windows artifacts: `target/release/kilogram-bootstrap.exe` — 3,606,528 bytes,
+  SHA-256 `125E8468031479EFA7C260FD5D68C54E12C737293127DAEBCCBFA0C5EB38839F`;
+  `target/release/kilogram-windows.exe` — 6,545,920 bytes, SHA-256
+  `A5A4667349F4567AD9356EADA398DF2229A8832CE4BCA930AE0B7748DBEE8F32`;
+  `target/release/kilogram-cli.exe` — 22,547,968 bytes, SHA-256
+  `99EFB35534BA4C0439564CAFA7C2DD342B9E4A5ACC275CFC0A4A1437F3B99A2D`.

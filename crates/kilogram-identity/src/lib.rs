@@ -419,6 +419,15 @@ pub enum IdentityError {
     #[error("a different account device list is already published at authority revision {0}")]
     AccountDeviceListAlreadyPublished(u64),
 
+    #[error("account device list does not exist at {0}")]
+    AccountDeviceListMissing(PathBuf),
+
+    #[error("another Account Root process is changing account authority")]
+    AccountAuthorityWriteLocked,
+
+    #[error("device {0} is already enrolled with different key material or capabilities")]
+    DeviceEnrollmentIdentityConflict(DeviceId),
+
     #[error(
         "account device-list rollback detected: stored revision {stored_revision}, received revision {received_revision}"
     )]

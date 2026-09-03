@@ -3067,11 +3067,15 @@ name = "kilogram-bootstrap"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "blake3",
  "clap",
+ "getrandom 0.4.3",
  "kilogram-bootstrap-contract",
+ "kilogram-crypto",
  "kilogram-identity",
  "kilogram-ratchet",
  "kilogram-state",
+ "postcard",
  "serde",
  "serde_json",
  "tempfile",

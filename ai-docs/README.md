@@ -144,8 +144,11 @@ multi-source claim reconciliation. M0.7.9 добавил signed append-only chec
   DPAPI CurrentUser, первый device/certificate/device-list/prekey pool создаются
   в staging и публикуются только после verified vault migration. Persistent
   receipt и launch draft не содержат phrase; восстановление намеренно требует
-  ещё и актуальную authority history. Enrollment второго устройства и OS peer
-  credentials остаются дальше.
+  ещё и актуальную authority history. M0.9.17 добавил existing-account link:
+  short-lived device-signed request, exact SAS, idempotent Root enrollment,
+  atomic complete device list, HPKE-encrypted authorization и DB-primary trust
+  accept. Несколько history sources остаются отдельными recipient-bound plans с
+  signed reconciliation; desktop wizard и OS peer credentials остаются дальше.
   Reconciliation выбирает
   inventory только при совпадении двух или более полных явно собранных claims и
   всё равно не обещает global completeness.
@@ -307,9 +310,9 @@ global prekey discovery/witness, автоматический recovery source di
 
 ## План ближайших работ
 
-1. M0.9.17: добавить existing-account device-link ceremony: recipient-bound
-   одноразовое разрешение, authenticated authority transfer, transactional
-   certificate/device-list publication и resumable multi-source history sync.
+1. M0.9.18: добавить desktop device-link/recovery wizard: request/response
+   drag-and-drop, крупный SAS confirmation, launch-profile update после accept,
+   список нескольких recovery plans и честный progress/reconciliation UI.
 2. Optional autostart/background mode оставить отдельной явной настройкой, а не
    обязательным Task Scheduler этапом.
 3. Добавить production macOS/Linux local key provider, согласованный monotonic
@@ -416,5 +419,11 @@ global prekey discovery/witness, автоматический recovery source di
   реализованный M0.9.13 signed chat list и paginated readable local history через runtime actor.
 - [`../docs/RFC-0041-desktop-contact-onboarding-and-runtime-lifecycle.md`](../docs/RFC-0041-desktop-contact-onboarding-and-runtime-lifecycle.md) —
   реализованный M0.9.14 IPC contact import, secret-free launch profile и foreground runtime lifecycle.
+- [`../docs/RFC-0042-desktop-runtime-setup-and-change-notifications.md`](../docs/RFC-0042-desktop-runtime-setup-and-change-notifications.md) —
+  реализованный M0.9.15 desktop launch-profile editor и actor-safe IPC change notifications.
+- [`../docs/RFC-0043-desktop-first-account-bootstrap.md`](../docs/RFC-0043-desktop-first-account-bootstrap.md) —
+  реализованный M0.9.16 recoverable Account Root, protected key envelope и atomic first-device bootstrap.
+- [`../docs/RFC-0044-existing-account-device-link.md`](../docs/RFC-0044-existing-account-device-link.md) —
+  реализованный M0.9.17 short-lived SAS-gated device request, Root enrollment, recipient-encrypted authority transfer и DB-primary accept.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

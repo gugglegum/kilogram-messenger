@@ -2151,11 +2151,44 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - полный контракт —
   [`../docs/RFC-0043-desktop-first-account-bootstrap.md`](../docs/RFC-0043-desktop-first-account-bootstrap.md).
 
+### M0.9.17 — existing-account device link: выполнено
+
+Реализовано:
+
+- новый device атомарно создаёт provisional workspace, DB-primary vault, signed
+  prekey pool и short-lived device-signed request без seed/private-key transfer;
+- request exact-account/device/key/nonce bound, ограничен 30 минутами и 256 KiB,
+  а 12-digit SAS вычисляется из digest всего signed объекта;
+- Root authorization требует свежесть и ручной exact SAS, сериализует enrollment
+  OS lock и идемпотентно публикует certificate только внутри нового полного
+  Root-signed device list;
+- повтор Device ID с другим key/capabilities и permanently revoked key
+  отклоняются; сбой до atomic list replace может оставить только sequence gap,
+  но не авторизованный partial device;
+- Root-signed exact authorization HPKE-шифруется на новый device; чужой device,
+  другой request и tampering отклоняются;
+- accept читает identity из authenticated DB-primary vault, коммитит certificate
+  и authority через trust transaction, публикует public artifacts и terminal
+  receipt идемпотентно;
+- после accept device готов быть exact recipient нескольких независимых
+  resumable history recovery plans; существующий signed reconciliation сохраняет
+  `incomplete`/`agreed`/`divergent` и не обещает global completeness.
+
+Проверки:
+
+- полный request → inspect → authorize → accept, exact retry и repeated accept;
+- wrong SAS, wrong recipient, response tampering и Device ID/key conflict;
+- форматирование, strict workspace Clippy, все 154 tests и release build;
+- real release process smoke `.tmp/m0917-smoke-20260904-014515` прошёл четыре
+  helper-команды, authority revision 2 и encrypted response 911 bytes;
+- полный контракт —
+  [`../docs/RFC-0044-existing-account-device-link.md`](../docs/RFC-0044-existing-account-device-link.md).
+
 ### Следующий этап
 
-1. M0.9.17: реализовать existing-account device-link ceremony — одноразовое
-   recipient-bound разрешение, authenticated authority transfer, transactional
-   certificate/device-list publication и resumable multi-source history sync.
+1. M0.9.18: добавить desktop device-link/recovery wizard — request/response
+   drag-and-drop, крупный SAS confirmation, launch-profile update после accept и
+   multi-source plan/progress/reconciliation UI.
 2. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.

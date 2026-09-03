@@ -15,6 +15,8 @@ use serde::Serialize;
 use tempfile::NamedTempFile;
 use zeroize::Zeroize;
 
+pub mod device_link;
+
 const RECEIPT_VERSION: u8 = 1;
 const ACCOUNT_ROOT_DIRECTORY: &str = "account-root";
 const DEVICE_STATE_DIRECTORY: &str = "device";

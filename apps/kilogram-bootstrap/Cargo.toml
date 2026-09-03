@@ -9,12 +9,16 @@ publish = false
 [dependencies]
 anyhow.workspace = true
 clap.workspace = true
+blake3.workspace = true
+getrandom.workspace = true
 kilogram-bootstrap-contract = { path = "../../crates/kilogram-bootstrap-contract" }
+kilogram-crypto = { path = "../../crates/kilogram-crypto" }
 kilogram-identity = { path = "../../crates/kilogram-identity" }
 kilogram-ratchet = { path = "../../crates/kilogram-ratchet" }
 kilogram-state = { path = "../../crates/kilogram-state" }
 serde.workspace = true
 serde_json.workspace = true
+postcard.workspace = true
 tempfile.workspace = true
 zeroize.workspace = true
 

@@ -53,6 +53,11 @@ contact pin и membership reads/writes на DB-primary trust repository и уд�
 только в DPAPI CurrentUser envelope и автоматически rewrap-ит прежний raw key;
 non-Windows provider, key recovery и rollback witness ещё не решены. Retained
 shadow пока обязателен.
+M0.9.17 добавил existing-account enrollment без seed transfer: новый device
+подписывает short-lived request, Root после exact SAS атомарно публикует полный
+device list и шифрует authorization exact recipient. Это делает device
+допустимым получателем уже существующих resumable recovery plans, но не выбирает
+источники автоматически и не доказывает полноту восстановленной истории.
 Следующие вопросы относятся к production recovery, rotation, asynchronous
 sessions, distribution, removal и key epochs и не решены этим прототипом.
 
@@ -157,7 +162,9 @@ sessions, distribution, removal и key epochs и не решены этим пр
 - Репликация или erasure coding: сколько случайных узлов и какие гарантии нужны?
 - Как выдавать storage capability и ограничивать spam/Sybil без глобального
   аккаунта и утечки социального графа?
-- Как синхронизировать новое устройство и честно показывать неполную историю?
+- Как desktop автоматически находит и планирует несколько recovery sources для
+  нового устройства, ограничивает параллелизм/трафик и честно показывает
+  `incomplete`/`agreed`/`divergent` без обещания глобальной полноты?
 - Как обрабатывать редактирование, удаление, reactions, receipts и исчезающие
   сообщения в append-only модели?
 - Что означает удаление: локальное сокрытие, подписанный tombstone или best-effort

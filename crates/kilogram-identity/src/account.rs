@@ -27,6 +27,7 @@ const CONVERSATION_MEMBERSHIPS_DIRECTORY: &str = "conversation-memberships";
 const DEVICE_CERTIFICATE_FILE: &str = "device-certificate.cert";
 const ACCOUNT_AUTHORITY_SNAPSHOT_FILE: &str = "account-authority.snapshot";
 const ACCOUNT_DEVICE_LIST_FILE: &str = "account-device-list.snapshot";
+const AUTHORITY_WRITE_LOCK_FILE: &str = "authority-write.lock";
 const PEER_AUTHORITY_DIRECTORY: &str = "peer-authority";
 const AUTHORITY_VERSION: u8 = 1;
 const DEVICE_CERTIFICATE_VERSION: u8 = 2;
@@ -38,6 +39,8 @@ const CONVERSATION_MEMBERSHIP_SIGNATURE_DOMAIN: &[u8] =
     b"kilogram:conversation-membership-signature:v1\0";
 const ACCOUNT_DEVICE_LIST_VERSION: u8 = 1;
 const ACCOUNT_DEVICE_LIST_SIGNATURE_DOMAIN: &[u8] = b"kilogram:account-device-list-signature:v1\0";
+const DEVICE_LINK_AUTHORIZATION_SIGNATURE_DOMAIN: &[u8] =
+    b"kilogram:device-link-authorization-signature:v1\0";
 
 pub const MAX_ACCOUNT_DEVICES: usize = 32;
 
@@ -61,6 +64,21 @@ impl AccountId {
         verifying_key
             .verify_strict(message, &signature)
             .map_err(IdentityError::InvalidSignature)
+    }
+
+    /// Verifies an Account Root signature over a canonical device-link
+    /// authorization payload. The fixed domain prevents this narrow API from
+    /// becoming a generic Root signature oracle.
+    pub fn verify_device_link_authorization(
+        &self,
+        payload: &[u8],
+        signature: &[u8],
+    ) -> Result<(), IdentityError> {
+        let mut message =
+            Vec::with_capacity(DEVICE_LINK_AUTHORIZATION_SIGNATURE_DOMAIN.len() + payload.len());
+        message.extend_from_slice(DEVICE_LINK_AUTHORIZATION_SIGNATURE_DOMAIN);
+        message.extend_from_slice(payload);
+        self.verify(&message, signature)
     }
 }
 
@@ -341,6 +359,111 @@ impl AccountRootState {
         self.key_load_outcome
     }
 
+    /// Signs one canonical device-link authorization payload with the Account
+    /// Root under a protocol-specific domain.
+    pub fn sign_device_link_authorization(&self, payload: &[u8]) -> Vec<u8> {
+        let mut message =
+            Vec::with_capacity(DEVICE_LINK_AUTHORIZATION_SIGNATURE_DOMAIN.len() + payload.len());
+        message.extend_from_slice(DEVICE_LINK_AUTHORIZATION_SIGNATURE_DOMAIN);
+        message.extend_from_slice(payload);
+        self.identity.sign(&message).to_vec()
+    }
+
+    /// Loads the latest complete Root-signed device list kept by this root.
+    pub fn published_device_list(&self) -> Result<AccountDeviceListSnapshot, IdentityError> {
+        let path = self.directory.join(ACCOUNT_DEVICE_LIST_FILE);
+        let bytes = match fs::read(&path) {
+            Ok(bytes) => bytes,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                return Err(IdentityError::AccountDeviceListMissing(path));
+            }
+            Err(error) => return Err(error.into()),
+        };
+        let list = AccountDeviceListSnapshot::decode_and_verify(&bytes)?;
+        list.verify_for_account(self.account_id())?;
+        Ok(list)
+    }
+
+    /// Idempotently enrolls an exact device and atomically publishes the new
+    /// complete device list. A certificate that was issued but not published
+    /// is never sufficient authorization.
+    pub fn enroll_device(
+        &self,
+        device_id: DeviceId,
+        encryption_public_key: EncryptionPublicKey,
+        capabilities: &[DeviceCapability],
+    ) -> Result<(DeviceCertificate, AccountDeviceListSnapshot), IdentityError> {
+        self.ensure_authority_log_ready()?;
+        validate_requested_capabilities(capabilities)?;
+        let mut canonical_capabilities = capabilities.to_vec();
+        canonical_capabilities.sort_unstable();
+        let _lock = self.acquire_authority_write_lock()?;
+
+        let current = self.published_device_list()?;
+        let current_authority = self.authority_snapshot()?;
+        if let Some(existing) = current.certificate_for(device_id) {
+            if existing.encryption_public_key() != encryption_public_key
+                || existing.capabilities() != canonical_capabilities
+            {
+                return Err(IdentityError::DeviceEnrollmentIdentityConflict(device_id));
+            }
+            verify_device_authorization_with_snapshot(
+                self.account_id(),
+                existing,
+                &current_authority,
+                &canonical_capabilities,
+            )?;
+            if current.revision() == current_authority.revision() {
+                return Ok((existing.clone(), current));
+            }
+            let active = current
+                .devices()
+                .iter()
+                .filter(|certificate| {
+                    !current_authority
+                        .revocations()
+                        .iter()
+                        .any(|revocation| revocation.device_id() == certificate.device_id())
+                })
+                .cloned()
+                .collect::<Vec<_>>();
+            let refreshed = self.publish_device_list_unlocked(&active)?;
+            return Ok((existing.clone(), refreshed));
+        }
+
+        let revoked = current_authority
+            .revocations()
+            .iter()
+            .any(|revocation| revocation.device_id() == device_id);
+        if revoked {
+            return Err(IdentityError::DeviceRevoked(device_id));
+        }
+        let mut certificates = current
+            .devices()
+            .iter()
+            .filter(|certificate| {
+                !current_authority
+                    .revocations()
+                    .iter()
+                    .any(|revocation| revocation.device_id() == certificate.device_id())
+            })
+            .cloned()
+            .collect::<Vec<_>>();
+        if certificates.len() >= MAX_ACCOUNT_DEVICES {
+            return Err(IdentityError::TooManyAccountDevices(
+                certificates.len().saturating_add(1),
+            ));
+        }
+        let certificate = self.issue_device_certificate_unlocked(
+            device_id,
+            encryption_public_key,
+            &canonical_capabilities,
+        )?;
+        certificates.push(certificate.clone());
+        let list = self.publish_device_list_unlocked(&certificates)?;
+        Ok((certificate, list))
+    }
+
     pub fn issue_device_certificate(
         &self,
         device_id: DeviceId,
@@ -349,6 +472,16 @@ impl AccountRootState {
     ) -> Result<DeviceCertificate, IdentityError> {
         self.ensure_authority_log_ready()?;
         validate_requested_capabilities(capabilities)?;
+        let _lock = self.acquire_authority_write_lock()?;
+        self.issue_device_certificate_unlocked(device_id, encryption_public_key, capabilities)
+    }
+
+    fn issue_device_certificate_unlocked(
+        &self,
+        device_id: DeviceId,
+        encryption_public_key: EncryptionPublicKey,
+        capabilities: &[DeviceCapability],
+    ) -> Result<DeviceCertificate, IdentityError> {
         let authority_sequence = self.allocate_authority_sequence()?;
         DeviceCertificate::issue(
             &self.identity,
@@ -361,6 +494,7 @@ impl AccountRootState {
 
     pub fn revoke_device(&self, device_id: DeviceId) -> Result<DeviceRevocation, IdentityError> {
         self.ensure_authority_log_ready()?;
+        let _lock = self.acquire_authority_write_lock()?;
         let path = self.revocation_path(device_id);
         if path.exists() {
             return Err(IdentityError::DeviceAlreadyRevoked(device_id));
@@ -393,6 +527,14 @@ impl AccountRootState {
         certificates: &[DeviceCertificate],
     ) -> Result<AccountDeviceListSnapshot, IdentityError> {
         self.ensure_authority_log_ready()?;
+        let _lock = self.acquire_authority_write_lock()?;
+        self.publish_device_list_unlocked(certificates)
+    }
+
+    fn publish_device_list_unlocked(
+        &self,
+        certificates: &[DeviceCertificate],
+    ) -> Result<AccountDeviceListSnapshot, IdentityError> {
         let snapshot = self.authority_snapshot()?;
         let candidate =
             AccountDeviceListSnapshot::issue(&self.identity, snapshot, certificates.to_vec())?;
@@ -420,6 +562,23 @@ impl AccountRootState {
         }
         replace_file_atomically(&path, &candidate.encode()?)?;
         Ok(candidate)
+    }
+
+    fn acquire_authority_write_lock(&self) -> Result<fs::File, IdentityError> {
+        let lock_path = self.directory.join(AUTHORITY_WRITE_LOCK_FILE);
+        let lock = OpenOptions::new()
+            .create(true)
+            .truncate(false)
+            .read(true)
+            .write(true)
+            .open(&lock_path)?;
+        if let Err(source) = lock.try_lock() {
+            return match source {
+                fs::TryLockError::WouldBlock => Err(IdentityError::AccountAuthorityWriteLocked),
+                fs::TryLockError::Error(source) => Err(source.into()),
+            };
+        }
+        Ok(lock)
     }
 
     pub fn create_conversation_membership(
@@ -2096,6 +2255,51 @@ mod tests {
         assert!(matches!(
             root.authority_snapshot(),
             Err(IdentityError::LegacyAuthorityState)
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn device_enrollment_is_complete_idempotent_and_conflict_safe() -> Result<(), IdentityError> {
+        let root_directory = tempdir()?;
+        let first_directory = tempdir()?;
+        let joining_directory = tempdir()?;
+        let root = AccountRootState::create(root_directory.path())?;
+        let first = DeviceState::load_or_create(first_directory.path())?;
+        let first_certificate = root.issue_device_certificate(
+            first.identity().device_id(),
+            first.encryption().public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        root.publish_device_list(std::slice::from_ref(&first_certificate))?;
+        let joining = DeviceState::load_or_create(joining_directory.path())?;
+
+        let (certificate, list) = root.enroll_device(
+            joining.identity().device_id(),
+            joining.encryption().public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        assert_eq!(list.revision(), 2);
+        assert_eq!(list.devices().len(), 2);
+        assert_eq!(
+            list.certificate_for(joining.identity().device_id()),
+            Some(&certificate)
+        );
+        let (repeated, repeated_list) = root.enroll_device(
+            joining.identity().device_id(),
+            joining.encryption().public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        assert_eq!(repeated, certificate);
+        assert_eq!(repeated_list, list);
+        assert!(matches!(
+            root.enroll_device(
+                joining.identity().device_id(),
+                test_encryption_public_key()?,
+                &DeviceCapability::MESSAGING,
+            ),
+            Err(IdentityError::DeviceEnrollmentIdentityConflict(id))
+                if id == joining.identity().device_id()
         ));
         Ok(())
     }

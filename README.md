@@ -91,12 +91,15 @@ Desktop runtime-profile editing and change notifications are specified in
 [`docs/RFC-0042-desktop-runtime-setup-and-change-notifications.md`](docs/RFC-0042-desktop-runtime-setup-and-change-notifications.md).
 Desktop creation of a recoverable first account/device is specified in
 [`docs/RFC-0043-desktop-first-account-bootstrap.md`](docs/RFC-0043-desktop-first-account-bootstrap.md).
+Existing-account enrollment and recipient-encrypted authority transfer are
+specified in
+[`docs/RFC-0044-existing-account-device-link.md`](docs/RFC-0044-existing-account-device-link.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.16 desktop first-account bootstrap — complete
+## Current milestone: M0.9.17 existing-account device link — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -319,6 +322,18 @@ public receipt. The phrase is shown once through a bounded redacted/zeroizing
 response and is never written to the receipt or runtime profile. Phrase-only
 restore remains deliberately disabled until current authority history can be
 authenticated.
+
+M0.9.17 adds an existing-account enrollment ceremony without transferring the
+seed or any private key. A new device atomically creates a provisional encrypted
+vault and a short-lived device-signed request. After offline inspection and an
+exact 12-digit SAS confirmation, the existing Account Root idempotently issues
+the certificate and atomically publishes a new complete device list. The exact
+Root-signed authorization is HPKE-encrypted to the requesting device; accept
+reads its identity only from the authenticated DB-primary vault and commits the
+certificate/authority through the existing trust transaction. The newly linked
+device is then eligible for one or more independent recipient-bound resumable
+history recovery plans; reconciliation still reports divergence without
+claiming global completeness.
 
 M0.8.1 adds a reversible encrypted shadow snapshot of the entire device state.
 `state-vault-migrate` publishes encrypted records and a keyed manifest in one
@@ -719,8 +734,30 @@ runtime ticket. On a first run, expand **First run · create account**, choose a
 new non-existing workspace and run the sibling `kilogram-bootstrap` helper.
 Save the phrase offline before hiding it; the panel then fills the local public
 profile paths. A peer Account ID and current peer prekey pool are still required
-before that profile can be saved and the runtime started. Existing-account
-device linking and full authority-safe seed recovery remain separate ceremonies.
+before that profile can be saved and the runtime started. Full authority-safe
+seed recovery remains a separate ceremony.
+
+Until the desktop wizard is added, link an existing account with the helper:
+
+```powershell
+# New device
+kilogram-bootstrap device-link-request `
+  --workspace-dir .\kilogram-linked-device `
+  --account-id <ACCOUNT_ID>
+
+# Existing Account Root, after comparing the printed SAS
+kilogram-bootstrap device-link-authorize `
+  --account-root-dir .\kilogram-account\account-root `
+  --request-file .\kilogram-linked-device\device-link\request.kdl `
+  --confirm-sas 1234-5678-9012 `
+  --response-file .\response.kdl `
+  --device-list-file .\kilogram-account\public\account-device-list.snapshot
+
+# Exact requesting device
+kilogram-bootstrap device-link-accept `
+  --workspace-dir .\kilogram-linked-device `
+  --response-file .\response.kdl
+```
 
 The queue command prints `runtime_ipc_request_id` before connecting. If its
 result is uncertain, repeat the same message with `--request-id <PRINTED_ID>`;
