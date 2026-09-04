@@ -2752,11 +2752,38 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - contract зафиксирован в
   [`../docs/RFC-0055-unlinkable-ticket-write-capability.md`](../docs/RFC-0055-unlinkable-ticket-write-capability.md).
 
+### M0.9.34 — authenticated multi-device endpoint failover: выполнено
+
+Реализовано:
+
+- stable v1 runtime contact и его ID не изменены; дополнительные peer devices
+  сохраняются как local-device-signed append-only endpoint-candidate records в
+  vault-primary Runtime repository;
+- повторный `AddContact` для той же пары peer account/conversation добавляет
+  другой Device endpoint, exact повтор идемпотентен, а смена path/policy для уже
+  enrolled Device ID fail closed;
+- contact ограничен четырьмя endpoint-кандидатами; IPC v9 и Windows GUI
+  показывают enrolled candidate count;
+- resolver независимо отбрасывает unreadable/expired/invalid descriptor,
+  сортирует remaining candidates по authority revision, primary flag и Device
+  ID, отклоняет same-revision authority equivocation;
+- новый event materialize-ится ровно один раз по newest usable complete prekey
+  directory; runtime последовательно отправляет тот же immutable event и
+  принимает ack только от exact attempted Device ID;
+- older endpoint допустим для delivery только если его exact certificate всё
+  ещё active в newest observed roster; automatic sync использует только
+  current-authority candidates и не обходит existing durable authority
+  high-water;
+- single-candidate contacts работают как раньше, queued/materialized/delivered
+  records и automation policy не мигрируются;
+- contract зафиксирован в
+  [`../docs/RFC-0056-authenticated-endpoint-candidate-failover.md`](../docs/RFC-0056-authenticated-endpoint-candidate-failover.md).
+
 ### Следующий этап
 
-1. M0.9.34: authenticated endpoint candidate set для нескольких online devices
-   одного peer account и bounded deterministic failover без rollback
-   authority/prekey/publication high-water.
+1. M0.9.35: multi-candidate publication refresh — независимо обновлять каждый
+   enrolled Device channel, сохранять per-candidate observation high-water и
+   показывать `usable`/`stale` состояния в desktop.
 2. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.

@@ -11,12 +11,14 @@ use kilogram_transport_iroh::RoutePolicy;
 use serde::{Deserialize, Serialize};
 
 const CONTACT_VERSION: u8 = 1;
+const ENDPOINT_CANDIDATE_VERSION: u8 = 1;
 const QUEUED_MESSAGE_VERSION: u8 = 1;
 const MATERIALIZATION_VERSION: u8 = 1;
 const DELIVERY_VERSION: u8 = 1;
 const RETRY_VERSION: u8 = 1;
 const DEVICE_DIRECTORY_RECEIPT_VERSION: u8 = 1;
 const CONTACT_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-contact:v1\0";
+const ENDPOINT_CANDIDATE_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-endpoint-candidate:v1\0";
 const QUEUE_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-queue:v1\0";
 const QUEUE_HPKE_INFO: &[u8] = b"kilogram:runtime-queue-body:v1";
 const MATERIALIZATION_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-materialized:v1\0";
@@ -36,9 +38,22 @@ impl RuntimeContactId {
     pub fn from_bytes(bytes: [u8; 32]) -> Self {
         Self(bytes)
     }
+
+    pub fn as_bytes(&self) -> &[u8; 32] {
+        &self.0
+    }
 }
 
 impl fmt::Display for RuntimeContactId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write_hex(formatter, &self.0)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub struct RuntimeEndpointCandidateId([u8; 32]);
+
+impl fmt::Display for RuntimeEndpointCandidateId {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         write_hex(formatter, &self.0)
     }
@@ -424,6 +439,152 @@ impl SignedRuntimeContact {
 
     pub fn conversation_label(&self) -> &str {
         &self.content.conversation_label
+    }
+
+    pub fn route_policy(&self) -> RoutePolicy {
+        self.content.route_policy
+    }
+
+    pub fn descriptor_file(&self) -> &PathBuf {
+        &self.content.descriptor_file
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+struct RuntimeEndpointCandidateContent {
+    version: u8,
+    local_account_id: AccountId,
+    local_device_id: DeviceId,
+    contact_id: RuntimeContactId,
+    peer_account_id: AccountId,
+    peer_device_id: DeviceId,
+    conversation_id: ConversationId,
+    route_policy: RoutePolicy,
+    descriptor_file: PathBuf,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct SignedRuntimeEndpointCandidate {
+    content: RuntimeEndpointCandidateContent,
+    signature: Vec<u8>,
+}
+
+impl SignedRuntimeEndpointCandidate {
+    #[allow(clippy::too_many_arguments)]
+    pub fn sign(
+        identity: &DeviceIdentity,
+        local_account_id: AccountId,
+        contact_id: RuntimeContactId,
+        peer_account_id: AccountId,
+        peer_device_id: DeviceId,
+        conversation_id: ConversationId,
+        route_policy: RoutePolicy,
+        descriptor_file: PathBuf,
+    ) -> Result<Self> {
+        ensure!(
+            descriptor_file.is_absolute(),
+            "runtime endpoint-candidate descriptor path must be absolute"
+        );
+        let content = RuntimeEndpointCandidateContent {
+            version: ENDPOINT_CANDIDATE_VERSION,
+            local_account_id,
+            local_device_id: identity.device_id(),
+            contact_id,
+            peer_account_id,
+            peer_device_id,
+            conversation_id,
+            route_policy,
+            descriptor_file,
+        };
+        let signature = identity
+            .sign(&signing_bytes(
+                ENDPOINT_CANDIDATE_SIGNATURE_DOMAIN,
+                &content,
+            )?)
+            .to_vec();
+        let candidate = Self { content, signature };
+        candidate.verify()?;
+        Ok(candidate)
+    }
+
+    pub fn encode(&self) -> Result<Vec<u8>> {
+        self.verify()?;
+        postcard::to_allocvec(self).context("encode signed runtime endpoint candidate")
+    }
+
+    pub fn decode(bytes: &[u8]) -> Result<Self> {
+        ensure!(
+            bytes.len() <= MAX_RUNTIME_RECORD_BYTES,
+            "runtime endpoint-candidate record is too large"
+        );
+        let candidate: Self =
+            postcard::from_bytes(bytes).context("decode signed runtime endpoint candidate")?;
+        candidate.verify()?;
+        Ok(candidate)
+    }
+
+    pub fn verify(&self) -> Result<()> {
+        ensure!(
+            self.content.version == ENDPOINT_CANDIDATE_VERSION,
+            "unsupported runtime endpoint-candidate version"
+        );
+        ensure!(
+            self.content.descriptor_file.is_absolute(),
+            "runtime endpoint-candidate descriptor path must be absolute"
+        );
+        self.content
+            .local_device_id
+            .verify(
+                &signing_bytes(ENDPOINT_CANDIDATE_SIGNATURE_DOMAIN, &self.content)?,
+                &self.signature,
+            )
+            .context("verify runtime endpoint-candidate signature")
+    }
+
+    pub fn verify_local(&self, account_id: AccountId, device_id: DeviceId) -> Result<()> {
+        self.verify()?;
+        ensure!(
+            self.local_account_id() == account_id,
+            "runtime endpoint candidate belongs to another local account"
+        );
+        ensure!(
+            self.local_device_id() == device_id,
+            "runtime endpoint candidate belongs to another local device"
+        );
+        Ok(())
+    }
+
+    pub fn candidate_id(&self) -> RuntimeEndpointCandidateId {
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(b"kilogram:runtime-endpoint-candidate-id:v1\0");
+        hasher.update(self.content.local_account_id.as_bytes());
+        hasher.update(self.content.contact_id.as_bytes());
+        hasher.update(self.content.peer_device_id.as_bytes());
+        RuntimeEndpointCandidateId(*hasher.finalize().as_bytes())
+    }
+
+    pub fn local_account_id(&self) -> AccountId {
+        self.content.local_account_id
+    }
+
+    pub fn local_device_id(&self) -> DeviceId {
+        self.content.local_device_id
+    }
+
+    pub fn contact_id(&self) -> RuntimeContactId {
+        self.content.contact_id
+    }
+
+    pub fn peer_account_id(&self) -> AccountId {
+        self.content.peer_account_id
+    }
+
+    pub fn peer_device_id(&self) -> DeviceId {
+        self.content.peer_device_id
+    }
+
+    pub fn conversation_id(&self) -> ConversationId {
+        self.content.conversation_id
     }
 
     pub fn route_policy(&self) -> RoutePolicy {
@@ -920,6 +1081,34 @@ mod tests {
         let decoded_contact = SignedRuntimeContact::decode(&contact.encode()?)?;
         assert_eq!(decoded_contact, contact);
         assert_eq!(decoded_contact.contact_id(), contact.contact_id());
+
+        let second_peer_identity = DeviceIdentity::generate()?;
+        let endpoint_candidate = SignedRuntimeEndpointCandidate::sign(
+            &local_identity,
+            local_root.account_id(),
+            contact.contact_id(),
+            peer_root.account_id(),
+            second_peer_identity.device_id(),
+            conversation_id,
+            RoutePolicy::Auto,
+            directory.path().join("peer-2.ticket"),
+        )?;
+        let restarted_candidate =
+            SignedRuntimeEndpointCandidate::decode(&endpoint_candidate.encode()?)?;
+        assert_eq!(restarted_candidate, endpoint_candidate);
+        assert_eq!(
+            restarted_candidate.candidate_id(),
+            endpoint_candidate.candidate_id()
+        );
+        assert_eq!(restarted_candidate.contact_id(), contact.contact_id());
+        assert_eq!(
+            restarted_candidate.peer_device_id(),
+            second_peer_identity.device_id()
+        );
+        let mut tampered_candidate = endpoint_candidate.encode()?;
+        let last = tampered_candidate.len() - 1;
+        tampered_candidate[last] ^= 1;
+        assert!(SignedRuntimeEndpointCandidate::decode(&tampered_candidate).is_err());
 
         let body = "plaintext that must not be retained in the queue record";
         let queued =

@@ -1216,3 +1216,31 @@ retirement остальных compatibility shadows ещё не реализов
   `9D9DEB787857DC386A892D421467F8F04AB77B522FC542845D46CF136DDF2EC6`;
   `target/release/kilogram-ticket-store.exe` — 2,581,504 bytes, SHA-256
   `123887E3B8F607F77A5BEE8969B5B9B73ABC189BAEC1BD51AFFA925183020191`.
+
+## M0.9.34 verification snapshot (2026-09-05)
+
+- Новый signed runtime endpoint-candidate record round-trip проверяет stable
+  candidate ID, exact contact/device binding и signature tamper rejection.
+- Contact-set regression импортирует четыре Device tickets одного peer account,
+  сохраняет stable contact ID, проверяет idempotent duplicate, отклоняет пятый
+  candidate и после удаления primary descriptor продолжает resolver с тремя
+  authenticated candidates.
+- Existing runtime outbox/automatic-sync process regression проходит без
+  изменения single-candidate поведения; desktop IPC adapter и conversation
+  model проходят с IPC v9 и endpoint count.
+- `cargo test --workspace --all-targets`: 200 tests, 0 failed.
+- `cargo fmt --all -- --check`, `git diff --check` и strict
+  `cargo clippy --workspace --all-targets --all-features -- -D warnings`
+  проходят.
+- `cargo build --workspace --release` проходит; stable-name CLI/bootstrap/store
+  `--help` smoke успешен. Windows GUI stable EXE был запущен из release path и
+  штатно остановлен после launch smoke (GUI не имеет CLI `--help` exit).
+- Windows artifacts со стабильными именами:
+  `target/release/kilogram-bootstrap.exe` — 20,476,928 bytes, SHA-256
+  `1AB47A618A813F83E6E1243BD0855A708837B3BF2B47E5CA891BB353E9D507D9`;
+  `target/release/kilogram-cli.exe` — 24,745,984 bytes, SHA-256
+  `038B35D41B91D396F75DB9081AB6295EB06CF409822636E7986A1BFB7677C52A`;
+  `target/release/kilogram-windows.exe` — 7,990,784 bytes, SHA-256
+  `E19A5A3EF0FEAF8D24D49BF54AA5CC37BC627AEB0F76F2ED022EDF92DAE1078F`;
+  `target/release/kilogram-ticket-store.exe` — 2,581,504 bytes, SHA-256
+  `123887E3B8F607F77A5BEE8969B5B9B73ABC189BAEC1BD51AFFA925183020191`.

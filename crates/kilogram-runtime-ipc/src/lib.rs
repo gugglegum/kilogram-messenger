@@ -21,7 +21,7 @@ use tokio::{
     time::timeout,
 };
 
-const IPC_VERSION: u8 = 8;
+const IPC_VERSION: u8 = 9;
 const MAX_DESCRIPTOR_BYTES: u64 = 16 * 1024;
 const MAX_LAUNCH_PROFILE_BYTES: u64 = 64 * 1024;
 const MAX_LAUNCH_PROFILE_PATHS: usize = 64;
@@ -534,6 +534,7 @@ pub struct RuntimeIpcConversationSummary {
     pub conversation_id: ConversationId,
     pub peer_account_id: AccountId,
     pub peer_device_id: DeviceId,
+    pub endpoint_candidate_count: u8,
     pub route_policy: RuntimeIpcRoutePolicy,
     pub message_count: u32,
     pub latest_message: Option<RuntimeIpcMessagePreview>,
@@ -734,6 +735,8 @@ pub enum RuntimeIpcResponse {
         contact_id: String,
         peer_account_id: AccountId,
         peer_device_id: DeviceId,
+        endpoint_candidate_count: u8,
+        endpoint_candidate_added: bool,
         inserted: bool,
     },
     OutboxStatus(RuntimeIpcOutboxStatus),

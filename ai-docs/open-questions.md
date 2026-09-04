@@ -178,8 +178,10 @@ sessions, distribution, removal и key epochs и не решены этим пр
 - Как синхронизировать M0.9.29 observation high-water между устройствами одного
   аккаунта и обнаруживать valid publisher equivocation между получателями без
   доверенного global log? Первый recipient observation пока защищён только
-  signature/expiry, а endpoint failover на другой publisher Device требует
-  отдельного authenticated candidate-set/gossip контракта.
+  signature/expiry. M0.9.34 уже хранит bounded authenticated candidate set и
+  делает delivery/automatic-sync failover между явно импортированными Devices,
+  но не распространяет set через gossip и не обновляет все Device publication
+  channels одной automation action; per-candidate refresh/status — M0.9.35.
 - M0.9.32 compact/checkpoint-ит runtime publication, observation, policy и
   attempt chains до exact signed heads за device-signed cumulative checkpoint;
   DB-primary checkpoint/removals атомарны и crash-safe. Открытым остаётся

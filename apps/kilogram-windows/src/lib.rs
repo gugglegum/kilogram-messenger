@@ -1013,20 +1013,25 @@ impl ViewModel {
                 contact_id,
                 peer_account_id,
                 peer_device_id,
+                endpoint_candidate_count,
+                endpoint_candidate_added,
                 inserted,
             }) => {
                 self.contact_draft = ContactDraft::default();
                 self.show_contact_form = false;
-                let action = if inserted {
+                let action = if endpoint_candidate_added && endpoint_candidate_count > 1 {
+                    "Endpoint candidate added"
+                } else if inserted {
                     "Contact added"
                 } else {
                     "Contact already present"
                 };
                 self.notice = Some(format!(
-                    "{action}: {} · peer {} / device {}",
+                    "{action}: {} · peer {} / device {} · {} endpoint(s)",
                     compact_id(&contact_id),
                     compact_id(&peer_account_id),
-                    compact_id(&peer_device_id)
+                    compact_id(&peer_device_id),
+                    endpoint_candidate_count
                 ));
                 self.error = None;
             }
@@ -1452,6 +1457,8 @@ enum WorkerSuccess {
         contact_id: String,
         peer_account_id: String,
         peer_device_id: String,
+        endpoint_candidate_count: u8,
+        endpoint_candidate_added: bool,
         inserted: bool,
     },
     Refreshed(RuntimeIpcOutboxStatus),
@@ -2244,11 +2251,15 @@ async fn execute_request(request: WorkerRequest) -> Result<WorkerSuccess> {
                     contact_id,
                     peer_account_id,
                     peer_device_id,
+                    endpoint_candidate_count,
+                    endpoint_candidate_added,
                     inserted,
                 } => Ok(WorkerSuccess::ContactAdded {
                     contact_id,
                     peer_account_id: peer_account_id.to_string(),
                     peer_device_id: peer_device_id.to_string(),
+                    endpoint_candidate_count,
+                    endpoint_candidate_added,
                     inserted,
                 }),
                 RuntimeIpcResponse::Error { message } => {
@@ -6391,7 +6402,7 @@ impl KilogramApp {
                 egui::TextEdit::singleline(&mut self.model.contact_draft.descriptor_file)
                     .hint_text("Peer runtime ticket path"),
             );
-            ui.small("The runtime verifies membership, account, device authorization and route before persisting.");
+            ui.small("Import another signed ticket for the same peer and conversation to add an authenticated endpoint candidate.");
             submit = ui
                 .add_enabled(self.model.pending.is_none(), egui::Button::new("Add contact"))
                 .clicked();
@@ -6451,9 +6462,10 @@ impl KilogramApp {
         });
         if let Some(summary) = summary {
             ui.small(format!(
-                "Peer {} · {}",
+                "Peer {} · {} · {} endpoint(s)",
                 compact_id(&summary.peer_account_id.to_string()),
-                summary.route_policy.as_str()
+                summary.route_policy.as_str(),
+                summary.endpoint_candidate_count
             ));
         }
         let load_older = self.model.history_next_cursor.is_some()
@@ -7567,6 +7579,7 @@ mod tests {
             conversation_id: ConversationId::from_label("alice-bob"),
             peer_account_id: peer,
             peer_device_id: peer_device.device_id(),
+            endpoint_candidate_count: 1,
             route_policy: RuntimeIpcRoutePolicy::Auto,
             message_count: 0,
             latest_message: None,
@@ -7675,6 +7688,8 @@ mod tests {
                     contact_id: "22".repeat(32),
                     peer_account_id,
                     peer_device_id: device_id,
+                    endpoint_candidate_count: 1,
+                    endpoint_candidate_added: true,
                     inserted: true,
                 })
                 .map_err(|_| anyhow::anyhow!("send GUI contact response"))?;
@@ -7730,6 +7745,7 @@ mod tests {
                         conversation_id: ConversationId::from_label("desktop-test"),
                         peer_account_id,
                         peer_device_id: device_id,
+                        endpoint_candidate_count: 1,
                         route_policy: RuntimeIpcRoutePolicy::Auto,
                         message_count: 0,
                         latest_message: None,

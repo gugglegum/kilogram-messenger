@@ -119,9 +119,10 @@ use runtime_publication::{
     TicketPublicationWriteCapability, TicketPublicationWriteKey,
 };
 use runtime_queue::{
-    MAX_RUNTIME_RECORD_BYTES, RuntimeContactId, RuntimeDeviceDirectoryReceiptId, RuntimeQueueId,
-    SignedDeliveredMessage, SignedMaterializedMessage, SignedQueuedMessage, SignedRuntimeContact,
-    SignedRuntimeDeviceDirectoryReceipt, SignedRuntimeRetryState,
+    MAX_RUNTIME_RECORD_BYTES, RuntimeContactId, RuntimeDeviceDirectoryReceiptId,
+    RuntimeEndpointCandidateId, RuntimeQueueId, SignedDeliveredMessage, SignedMaterializedMessage,
+    SignedQueuedMessage, SignedRuntimeContact, SignedRuntimeDeviceDirectoryReceipt,
+    SignedRuntimeEndpointCandidate, SignedRuntimeRetryState,
 };
 use runtime_ticket_automation::{
     DEFAULT_AUTOMATION_RETRY_BASE_SECONDS, DEFAULT_AUTOMATION_RETRY_MAX_SECONDS,
@@ -139,6 +140,7 @@ const HISTORY_REWRAP_STORE_DIRECTORY: &str = "history-rewraps";
 const HISTORY_RECOVERY_STORE_DIRECTORY: &str = "history-recovery";
 const RUNTIME_STATE_DIRECTORY: &str = "runtime";
 const RUNTIME_CONTACTS_DIRECTORY: &str = "contacts";
+const RUNTIME_ENDPOINT_CANDIDATES_DIRECTORY: &str = "endpoint-candidates";
 const RUNTIME_OUTBOX_DIRECTORY: &str = "outbox";
 const RUNTIME_DEVICE_DIRECTORY: &str = "device-directory";
 const RUNTIME_TICKET_PUBLICATIONS_DIRECTORY: &str = "ticket-publications";
@@ -147,6 +149,7 @@ const RUNTIME_TICKET_AUTOMATION_POLICIES_DIRECTORY: &str = "ticket-automation-po
 const RUNTIME_TICKET_AUTOMATION_ATTEMPTS_DIRECTORY: &str = "ticket-automation-attempts";
 const RUNTIME_TICKET_CHECKPOINTS_DIRECTORY: &str = "ticket-checkpoints";
 const MAX_RUNTIME_DEVICE_DIRECTORY_RECEIPTS: usize = 1_024;
+const MAX_RUNTIME_ENDPOINT_CANDIDATES_PER_CONTACT: usize = 4;
 const MAX_RUNTIME_TICKET_PUBLICATION_RECORDS: usize = 4_096;
 const MAX_RUNTIME_TICKET_AUTOMATION_RECORDS: usize = 4_096;
 const MAX_RUNTIME_TICKET_CHAIN_RECORDS_BEFORE_COMPACTION: usize = 8;
@@ -419,7 +422,7 @@ enum Command {
         profile_file: PathBuf,
     },
 
-    /// Persist a signed local contact pinned to a refreshable peer runtime descriptor.
+    /// Enroll a signed peer endpoint; repeat for up to four devices of one contact.
     RuntimeContactAdd {
         /// Directory containing this application's persistent device state.
         #[arg(long)]
@@ -1728,7 +1731,7 @@ impl From<RoutePolicyArg> for RoutePolicy {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 struct ConnectionTicketContent {
     version: u8,
     endpoint: EndpointAddr,
@@ -1739,7 +1742,7 @@ struct ConnectionTicketContent {
     route_policy: RoutePolicy,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 struct ConnectionTicket {
     content: ConnectionTicketContent,
     signature: Vec<u8>,
@@ -3515,6 +3518,7 @@ fn install_membership_primary(
 #[derive(Default)]
 struct RuntimeStateSnapshot {
     contacts: BTreeMap<RuntimeContactId, SignedRuntimeContact>,
+    endpoint_candidates: BTreeMap<RuntimeEndpointCandidateId, SignedRuntimeEndpointCandidate>,
     queued: BTreeMap<RuntimeQueueId, SignedQueuedMessage>,
     materialized: BTreeMap<RuntimeQueueId, SignedMaterializedMessage>,
     delivered: BTreeMap<RuntimeQueueId, SignedDeliveredMessage>,
@@ -3587,6 +3591,12 @@ fn runtime_contact_relative_path(contact_id: RuntimeContactId) -> PathBuf {
     PathBuf::from(RUNTIME_STATE_DIRECTORY)
         .join(RUNTIME_CONTACTS_DIRECTORY)
         .join(format!("{contact_id}.contact"))
+}
+
+fn runtime_endpoint_candidate_relative_path(candidate_id: RuntimeEndpointCandidateId) -> PathBuf {
+    PathBuf::from(RUNTIME_STATE_DIRECTORY)
+        .join(RUNTIME_ENDPOINT_CANDIDATES_DIRECTORY)
+        .join(format!("{candidate_id}.endpoint-candidate"))
 }
 
 fn runtime_queued_relative_path(queue_id: RuntimeQueueId) -> PathBuf {
@@ -3756,6 +3766,7 @@ fn read_runtime_record_files(state_directory: &Path) -> Result<Vec<(PathBuf, Vec
     let mut records = Vec::new();
     for directory in [
         RUNTIME_CONTACTS_DIRECTORY,
+        RUNTIME_ENDPOINT_CANDIDATES_DIRECTORY,
         RUNTIME_OUTBOX_DIRECTORY,
         RUNTIME_DEVICE_DIRECTORY,
         RUNTIME_TICKET_PUBLICATIONS_DIRECTORY,
@@ -3921,6 +3932,20 @@ fn load_runtime_state_snapshot(
                 .entry((value.contact_id(), value.action()))
                 .or_default()
                 .push(value);
+        } else if file_name.ends_with(".endpoint-candidate") {
+            let value = SignedRuntimeEndpointCandidate::decode(&bytes)?;
+            value.verify_local(local_account_id, local_device_id)?;
+            ensure!(
+                relative_path == runtime_endpoint_candidate_relative_path(value.candidate_id()),
+                "runtime endpoint-candidate filename does not match its authenticated ID"
+            );
+            ensure!(
+                snapshot
+                    .endpoint_candidates
+                    .insert(value.candidate_id(), value)
+                    .is_none(),
+                "duplicate runtime endpoint-candidate ID"
+            );
         } else if file_name.ends_with(".contact") {
             let value = SignedRuntimeContact::decode(&bytes)?;
             value.verify_local(local_account_id, local_device_id)?;
@@ -4002,6 +4027,29 @@ fn load_runtime_state_snapshot(
                 relative_path.display()
             );
         }
+    }
+    for candidate in snapshot.endpoint_candidates.values() {
+        let contact = snapshot
+            .contacts
+            .get(&candidate.contact_id())
+            .context("runtime endpoint candidate names an absent contact")?;
+        ensure!(
+            candidate.peer_account_id() == contact.peer_account_id()
+                && candidate.conversation_id() == contact.conversation_id()
+                && candidate.peer_device_id() != contact.peer_device_id(),
+            "runtime endpoint candidate does not match its authenticated contact"
+        );
+    }
+    let mut candidate_counts = BTreeMap::<RuntimeContactId, usize>::new();
+    for candidate in snapshot.endpoint_candidates.values() {
+        let count = candidate_counts.entry(candidate.contact_id()).or_insert(1);
+        *count = count
+            .checked_add(1)
+            .context("runtime endpoint-candidate count overflow")?;
+        ensure!(
+            *count <= MAX_RUNTIME_ENDPOINT_CANDIDATES_PER_CONTACT,
+            "runtime contact exceeds the bounded endpoint-candidate limit of {MAX_RUNTIME_ENDPOINT_CANDIDATES_PER_CONTACT}"
+        );
     }
     ensure!(
         snapshot.contacts.len() <= MAX_RUNTIME_CONTACTS,
@@ -4493,25 +4541,39 @@ fn load_runtime_contact_ticket(
     local_certificate: &DeviceCertificate,
     local_authority: &AccountAuthoritySnapshot,
 ) -> Result<ConnectionTicket> {
-    let encoded = fs::read_to_string(contact.descriptor_file()).with_context(|| {
-        format!(
-            "read runtime peer descriptor {}",
-            contact.descriptor_file().display()
-        )
-    })?;
+    load_runtime_endpoint_ticket(
+        contact.peer_account_id(),
+        contact.peer_device_id(),
+        contact.route_policy(),
+        contact.descriptor_file(),
+        local_certificate,
+        local_authority,
+    )
+}
+
+fn load_runtime_endpoint_ticket(
+    peer_account_id: AccountId,
+    peer_device_id: DeviceId,
+    route_policy: RoutePolicy,
+    descriptor_file: &Path,
+    local_certificate: &DeviceCertificate,
+    local_authority: &AccountAuthoritySnapshot,
+) -> Result<ConnectionTicket> {
+    let encoded = fs::read_to_string(descriptor_file)
+        .with_context(|| format!("read runtime peer descriptor {}", descriptor_file.display()))?;
     ensure!(
         encoded.len() <= MAX_RUNTIME_RECORD_BYTES,
         "runtime peer descriptor is too large"
     );
     let ticket = ConnectionTicket::decode(&encoded).context("decode runtime peer descriptor")?;
-    ticket.verify_listener_account(contact.peer_account_id())?;
-    let peer = ticket.verify_listener_authorization(contact.peer_account_id())?;
+    ticket.verify_listener_account(peer_account_id)?;
+    let peer = ticket.verify_listener_authorization(peer_account_id)?;
     ensure!(
-        peer.device_id() == contact.peer_device_id(),
+        peer.device_id() == peer_device_id,
         "runtime descriptor names a different peer device"
     );
     ensure!(
-        ticket.route_policy() == contact.route_policy(),
+        ticket.route_policy() == route_policy,
         "runtime descriptor route policy changed"
     );
     ensure!(
@@ -4526,6 +4588,122 @@ fn load_runtime_contact_ticket(
     )
     .context("local device is not authorized by the runtime descriptor")?;
     Ok(ticket)
+}
+
+#[derive(Clone)]
+struct ResolvedRuntimeEndpointCandidate {
+    ticket: ConnectionTicket,
+    peer_device_id: DeviceId,
+    primary: bool,
+    authority_current: bool,
+}
+
+fn load_runtime_endpoint_candidate_set(
+    snapshot: &RuntimeStateSnapshot,
+    contact: &SignedRuntimeContact,
+    local_certificate: &DeviceCertificate,
+    local_authority: &AccountAuthoritySnapshot,
+) -> Result<Vec<ResolvedRuntimeEndpointCandidate>> {
+    let mut candidates = Vec::new();
+    let mut rejected = Vec::new();
+    match load_runtime_contact_ticket(contact, local_certificate, local_authority) {
+        Ok(ticket) => candidates.push(ResolvedRuntimeEndpointCandidate {
+            ticket,
+            peer_device_id: contact.peer_device_id(),
+            primary: true,
+            authority_current: false,
+        }),
+        Err(error) => rejected.push(format!("{}: {error:#}", contact.peer_device_id())),
+    }
+    for candidate in snapshot
+        .endpoint_candidates
+        .values()
+        .filter(|candidate| candidate.contact_id() == contact.contact_id())
+    {
+        match load_runtime_endpoint_ticket(
+            candidate.peer_account_id(),
+            candidate.peer_device_id(),
+            candidate.route_policy(),
+            candidate.descriptor_file(),
+            local_certificate,
+            local_authority,
+        ) {
+            Ok(ticket) => candidates.push(ResolvedRuntimeEndpointCandidate {
+                ticket,
+                peer_device_id: candidate.peer_device_id(),
+                primary: false,
+                authority_current: false,
+            }),
+            Err(error) => rejected.push(format!("{}: {error:#}", candidate.peer_device_id())),
+        }
+    }
+    ensure!(
+        candidates.len() <= MAX_RUNTIME_ENDPOINT_CANDIDATES_PER_CONTACT,
+        "runtime contact exceeds the bounded endpoint-candidate limit of {MAX_RUNTIME_ENDPOINT_CANDIDATES_PER_CONTACT}"
+    );
+    candidates.sort_by(|left, right| {
+        right
+            .ticket
+            .listener_authority_snapshot()
+            .revision()
+            .cmp(&left.ticket.listener_authority_snapshot().revision())
+            .then_with(|| right.primary.cmp(&left.primary))
+            .then_with(|| {
+                left.peer_device_id
+                    .as_bytes()
+                    .cmp(right.peer_device_id.as_bytes())
+            })
+    });
+    let authoritative = candidates
+        .first()
+        .context("runtime endpoint candidate set is empty")?;
+    let authority_revision = authoritative
+        .ticket
+        .listener_authority_snapshot()
+        .revision();
+    let authority_bytes = authoritative
+        .ticket
+        .listener_authority_snapshot()
+        .encode()
+        .context("encode authoritative endpoint-candidate snapshot")?;
+    let active_certificates = authoritative
+        .ticket
+        .listener_directory()
+        .device_list()
+        .devices()
+        .iter()
+        .map(|certificate| (certificate.device_id(), certificate.clone()))
+        .collect::<BTreeMap<_, _>>();
+    for candidate in &mut candidates {
+        let candidate_revision = candidate.ticket.listener_authority_snapshot().revision();
+        if candidate_revision == authority_revision {
+            ensure!(
+                candidate
+                    .ticket
+                    .listener_authority_snapshot()
+                    .encode()
+                    .is_ok_and(|encoded| encoded == authority_bytes),
+                "endpoint candidates equivocate at the same authority revision"
+            );
+            candidate.authority_current = true;
+        }
+    }
+    candidates.retain(|candidate| {
+        active_certificates
+            .get(&candidate.peer_device_id)
+            .is_some_and(|certificate| {
+                certificate == &candidate.ticket.content.listener_certificate
+            })
+    });
+    ensure!(
+        !candidates.is_empty(),
+        "no authenticated endpoint candidate is usable: {}",
+        rejected.join(" | ")
+    );
+    for failure in rejected {
+        eprintln!("runtime_endpoint_candidate_status=rejected error={failure}");
+    }
+    Ok(candidates)
 }
 
 fn add_runtime_contact(
@@ -4543,6 +4721,14 @@ fn add_runtime_contact(
     println!("runtime_contact_id={}", receipt.contact_id);
     println!("peer_account_id={}", receipt.peer_account_id);
     println!("peer_device_id={}", receipt.peer_device_id);
+    println!(
+        "endpoint_candidate_count={}",
+        receipt.endpoint_candidate_count
+    );
+    println!(
+        "endpoint_candidate_added={}",
+        receipt.endpoint_candidate_added
+    );
     println!("conversation_id={}", receipt.conversation_id);
     println!("route_policy={}", receipt.route_policy.as_str());
     println!(
@@ -4564,6 +4750,8 @@ struct RuntimeContactReceipt {
     peer_device_id: DeviceId,
     conversation_id: ConversationId,
     route_policy: RoutePolicy,
+    endpoint_candidate_count: usize,
+    endpoint_candidate_added: bool,
     inserted: bool,
 }
 
@@ -4605,6 +4793,118 @@ fn add_runtime_contact_record(
     let ticket = ConnectionTicket::decode(&encoded)?;
     ticket.verify_listener_account(expected_peer_account_id)?;
     let authorized_peer = ticket.verify_listener_authorization(expected_peer_account_id)?;
+    ensure!(
+        ticket.allowed_requester_account_id() == local_certificate.account_id(),
+        "runtime descriptor does not authorize this local account"
+    );
+    verify_device_authorization_with_snapshot(
+        ticket.allowed_requester_account_id(),
+        &local_certificate,
+        &local_authority,
+        &DeviceCapability::MESSAGING,
+    )
+    .context("local device is not authorized by the runtime descriptor")?;
+    let snapshot = load_runtime_state_snapshot(
+        state_directory,
+        local_certificate.account_id(),
+        device_state.identity().device_id(),
+    )?;
+    let mut matching_contacts = snapshot.contacts.values().filter(|contact| {
+        contact.peer_account_id() == expected_peer_account_id
+            && contact.conversation_id() == conversation_id
+            && contact.conversation_label() == conversation
+    });
+    if let Some(contact) = matching_contacts.next() {
+        ensure!(
+            matching_contacts.next().is_none(),
+            "multiple runtime contacts match the peer account and conversation"
+        );
+        let existing_candidates = snapshot
+            .endpoint_candidates
+            .values()
+            .filter(|candidate| candidate.contact_id() == contact.contact_id())
+            .collect::<Vec<_>>();
+        if authorized_peer.device_id() == contact.peer_device_id() {
+            ensure!(
+                contact.descriptor_file() == &descriptor_file
+                    && contact.route_policy() == ticket.route_policy(),
+                "primary peer device is already enrolled with another descriptor contract"
+            );
+            load_runtime_contact_ticket(contact, &local_certificate, &local_authority)?;
+            return Ok(RuntimeContactReceipt {
+                contact_id: contact.contact_id(),
+                peer_account_id: contact.peer_account_id(),
+                peer_device_id: contact.peer_device_id(),
+                conversation_id: contact.conversation_id(),
+                route_policy: contact.route_policy(),
+                endpoint_candidate_count: existing_candidates.len() + 1,
+                endpoint_candidate_added: false,
+                inserted: false,
+            });
+        }
+        ensure!(
+            existing_candidates.len() + 1 < MAX_RUNTIME_ENDPOINT_CANDIDATES_PER_CONTACT
+                || existing_candidates
+                    .iter()
+                    .any(|candidate| candidate.peer_device_id() == authorized_peer.device_id()),
+            "runtime contact already has the maximum of {MAX_RUNTIME_ENDPOINT_CANDIDATES_PER_CONTACT} endpoint candidates"
+        );
+        if let Some(existing) = existing_candidates
+            .iter()
+            .find(|candidate| candidate.peer_device_id() == authorized_peer.device_id())
+        {
+            ensure!(
+                existing.descriptor_file() == &descriptor_file
+                    && existing.route_policy() == ticket.route_policy(),
+                "peer device is already enrolled with another descriptor contract"
+            );
+        }
+        let candidate = SignedRuntimeEndpointCandidate::sign(
+            device_state.identity(),
+            local_certificate.account_id(),
+            contact.contact_id(),
+            expected_peer_account_id,
+            authorized_peer.device_id(),
+            conversation_id,
+            ticket.route_policy(),
+            descriptor_file,
+        )?;
+        load_runtime_endpoint_ticket(
+            candidate.peer_account_id(),
+            candidate.peer_device_id(),
+            candidate.route_policy(),
+            candidate.descriptor_file(),
+            &local_certificate,
+            &local_authority,
+        )?;
+        let outcome = run_state_transaction(state_directory, |transaction| {
+            transaction.prepare_trust_workspace()?;
+            device_state
+                .pin_peer_authority_snapshot(ticket.listener_authority_snapshot())
+                .context("pin endpoint-candidate peer authority in DB-primary trust workspace")?;
+            transaction
+                .load_ratchet_state()?
+                .observe_prekey_directory(ticket.listener_directory(), unix_time_now()?)?;
+            persist_runtime_record(
+                state_directory,
+                &runtime_endpoint_candidate_relative_path(candidate.candidate_id()),
+                &candidate.encode()?,
+                transaction,
+            )
+        })?;
+        return Ok(RuntimeContactReceipt {
+            contact_id: contact.contact_id(),
+            peer_account_id: contact.peer_account_id(),
+            peer_device_id: candidate.peer_device_id(),
+            conversation_id: contact.conversation_id(),
+            route_policy: candidate.route_policy(),
+            endpoint_candidate_count: existing_candidates.len()
+                + usize::from(outcome == StoreOutcome::Inserted)
+                + 1,
+            endpoint_candidate_added: outcome == StoreOutcome::Inserted,
+            inserted: outcome == StoreOutcome::Inserted,
+        });
+    }
     let contact = SignedRuntimeContact::sign(
         device_state.identity(),
         local_certificate.account_id(),
@@ -4616,19 +4916,15 @@ fn add_runtime_contact_record(
         descriptor_file,
     )?;
     load_runtime_contact_ticket(&contact, &local_certificate, &local_authority)?;
-    run_state_transaction(state_directory, |transaction| {
+    let encoded = contact.encode()?;
+    let outcome = run_state_transaction(state_directory, |transaction| {
+        transaction.prepare_trust_workspace()?;
+        device_state
+            .pin_peer_authority_snapshot(ticket.listener_authority_snapshot())
+            .context("pin contact peer authority in DB-primary trust workspace")?;
         transaction
             .load_ratchet_state()?
             .observe_prekey_directory(ticket.listener_directory(), unix_time_now()?)?;
-        Ok(())
-    })?;
-    pin_peer_authority_primary(
-        state_directory,
-        &device_state,
-        ticket.listener_authority_snapshot(),
-    )?;
-    let encoded = contact.encode()?;
-    let outcome = run_state_transaction(state_directory, |transaction| {
         persist_runtime_record(
             state_directory,
             &runtime_contact_relative_path(contact.contact_id()),
@@ -4642,6 +4938,8 @@ fn add_runtime_contact_record(
         peer_device_id: contact.peer_device_id(),
         conversation_id: contact.conversation_id(),
         route_policy: contact.route_policy(),
+        endpoint_candidate_count: 1,
+        endpoint_candidate_added: true,
         inserted: outcome == StoreOutcome::Inserted,
     })
 }
@@ -5037,6 +5335,15 @@ fn collect_runtime_conversation_list(
             conversation_id: contact.conversation_id(),
             peer_account_id: contact.peer_account_id(),
             peer_device_id: contact.peer_device_id(),
+            endpoint_candidate_count: u8::try_from(
+                snapshot
+                    .endpoint_candidates
+                    .values()
+                    .filter(|candidate| candidate.contact_id() == contact.contact_id())
+                    .count()
+                    + 1,
+            )
+            .context("runtime endpoint-candidate count exceeds IPC representation")?,
             route_policy: runtime_ipc_route_policy(contact.route_policy()),
             message_count: u32::try_from(text_events.len())
                 .context("runtime conversation message count overflow")?,
@@ -5688,6 +5995,9 @@ async fn handle_runtime_ipc_work(
                     contact_id: receipt.contact_id.to_string(),
                     peer_account_id: receipt.peer_account_id,
                     peer_device_id: receipt.peer_device_id,
+                    endpoint_candidate_count: u8::try_from(receipt.endpoint_candidate_count)
+                        .unwrap_or(u8::MAX),
+                    endpoint_candidate_added: receipt.endpoint_candidate_added,
                     inserted: receipt.inserted,
                 }
             }
@@ -6297,9 +6607,17 @@ async fn publish_runtime_own_ticket(
             local_certificate.account_id(),
             peer_account_id,
         )?;
-        let recipient_ticket =
-            load_runtime_contact_ticket(contact, &local_certificate, &local_authority)
-                .context("load recipient directory for ticket publication")?;
+        let recipient_candidates = load_runtime_endpoint_candidate_set(
+            &snapshot,
+            contact,
+            &local_certificate,
+            &local_authority,
+        )
+        .context("load recipient endpoint set for ticket publication")?;
+        let recipient_ticket = &recipient_candidates
+            .first()
+            .context("recipient endpoint set is empty")?
+            .ticket;
         let write_capability =
             ticket_publication_write_capability(device_state.identity(), peer_account_id);
         ensure!(
@@ -7503,13 +7821,12 @@ enum RuntimeDeliveryAttempt {
 
 struct PreparedRuntimeDelivery {
     queue_id: RuntimeQueueId,
-    ticket: ConnectionTicket,
+    endpoint_candidates: Vec<ResolvedRuntimeEndpointCandidate>,
     event: AuthorizedEvent,
     membership: ConversationMembershipSnapshot,
     local_certificate: DeviceCertificate,
     local_authority: AccountAuthoritySnapshot,
     peer_account_id: AccountId,
-    peer_device_id: DeviceId,
 }
 
 fn select_due_runtime_queue(state_directory: &Path) -> Result<Option<RuntimeQueueId>> {
@@ -7560,7 +7877,7 @@ async fn attempt_next_runtime_delivery(
             return Ok(RuntimeDeliveryAttempt::RetryScheduled);
         }
     };
-    match send_runtime_delivery(endpoint, state_directory, &prepared).await {
+    match send_runtime_delivery_with_failover(endpoint, state_directory, &prepared).await {
         Ok(acknowledgement) => {
             persist_runtime_delivery(state_directory, &prepared, &acknowledgement).await?;
             println!("runtime_queue_id={queue_id}");
@@ -7621,7 +7938,17 @@ async fn prepare_runtime_delivery(
             .contacts
             .get(&queued.contact_id())
             .context("selected runtime queue contact disappeared")?;
-        let ticket = load_runtime_contact_ticket(contact, &local_certificate, &local_authority)?;
+        let endpoint_candidates = load_runtime_endpoint_candidate_set(
+            &snapshot,
+            contact,
+            &local_certificate,
+            &local_authority,
+        )?;
+        let ticket = endpoint_candidates
+            .first()
+            .context("runtime endpoint candidate set is empty")?
+            .ticket
+            .clone();
         pin_peer_authority_primary(
             state_directory,
             &device_state,
@@ -7744,13 +8071,12 @@ async fn prepare_runtime_delivery(
         }
         Ok(PreparedRuntimeDelivery {
             queue_id,
-            ticket,
             event,
             membership,
             local_certificate,
             local_authority,
             peer_account_id: contact.peer_account_id(),
-            peer_device_id: contact.peer_device_id(),
+            endpoint_candidates,
         })
     })();
     let mirror_result = match vault_guard {
@@ -7761,12 +8087,48 @@ async fn prepare_runtime_delivery(
     combine_operation_and_mirror(operation_result, mirror_result)
 }
 
-async fn send_runtime_delivery(
+async fn send_runtime_delivery_with_failover(
     endpoint: &Endpoint,
     state_directory: &Path,
     prepared: &PreparedRuntimeDelivery,
 ) -> Result<AuthorizedEvent> {
-    let ticket = &prepared.ticket;
+    let mut failures = Vec::new();
+    for (index, candidate) in prepared.endpoint_candidates.iter().enumerate() {
+        println!("runtime_endpoint_attempt={}", index + 1);
+        println!(
+            "runtime_endpoint_candidate_device_id={}",
+            candidate.peer_device_id
+        );
+        match send_runtime_delivery_to_candidate(endpoint, state_directory, prepared, candidate)
+            .await
+        {
+            Ok(acknowledgement) => {
+                println!("runtime_endpoint_failover_count={index}");
+                return Ok(acknowledgement);
+            }
+            Err(error) => {
+                eprintln!(
+                    "runtime_endpoint_candidate_status=failed peer_device_id={} error={error:#}",
+                    candidate.peer_device_id
+                );
+                failures.push(format!("{}: {error:#}", candidate.peer_device_id));
+            }
+        }
+    }
+    bail!(
+        "all {} authenticated endpoint candidates failed: {}",
+        prepared.endpoint_candidates.len(),
+        failures.join(" | ")
+    )
+}
+
+async fn send_runtime_delivery_to_candidate(
+    endpoint: &Endpoint,
+    state_directory: &Path,
+    prepared: &PreparedRuntimeDelivery,
+    candidate: &ResolvedRuntimeEndpointCandidate,
+) -> Result<AuthorizedEvent> {
+    let ticket = &candidate.ticket;
     let route_policy = ticket.route_policy();
     let connection = timeout(
         CONNECTION_TIMEOUT,
@@ -7807,7 +8169,7 @@ async fn send_runtime_delivery(
     );
     let acknowledgement_event = acknowledgement.event();
     ensure!(
-        acknowledgement_event.author_device_id() == prepared.peer_device_id,
+        acknowledgement_event.author_device_id() == candidate.peer_device_id,
         "runtime acknowledgement came from another peer device"
     );
     let event_id = prepared.event.event().event_id()?;
@@ -7956,6 +8318,11 @@ async fn persist_runtime_retry(
     combine_operation_and_mirror(operation_result, mirror_result)
 }
 
+struct PreparedRuntimeSync {
+    contact: SignedRuntimeContact,
+    candidates: Vec<(DeviceId, String)>,
+}
+
 async fn attempt_runtime_contact_sync(
     state_directory: &Path,
     interval: Duration,
@@ -7965,7 +8332,7 @@ async fn attempt_runtime_contact_sync(
         .await?
         .context("runtime state lock remained busy while preparing automatic sync")?;
     let vault_guard = VaultDualWriteGuard::prepare(state_directory)?;
-    let preparation = (|| {
+    let preparation: Result<Option<PreparedRuntimeSync>> = (|| {
         let device_state = load_command_device_state(state_directory)?;
         let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
         let certificate = trust.load_certificate()?;
@@ -7989,22 +8356,63 @@ async fn attempt_runtime_contact_sync(
             return Ok(None);
         };
         last_attempts.insert(contact.contact_id(), now);
-        let ticket = load_runtime_contact_ticket(&contact, &certificate, &authority)?;
-        Ok(Some((contact, ticket.encode()?)))
+        let candidates =
+            load_runtime_endpoint_candidate_set(&snapshot, &contact, &certificate, &authority)?
+                .into_iter()
+                .filter(|candidate| candidate.authority_current)
+                .map(|candidate| Ok((candidate.peer_device_id, candidate.ticket.encode()?)))
+                .collect::<Result<Vec<_>>>()?;
+        ensure!(
+            !candidates.is_empty(),
+            "automatic sync has no endpoint candidate at the authority high-water revision"
+        );
+        Ok(Some(PreparedRuntimeSync {
+            contact,
+            candidates,
+        }))
     })();
 
     let operation_result = match preparation {
-        Ok(Some((contact, encoded_ticket))) => {
+        Ok(Some(PreparedRuntimeSync {
+            contact,
+            candidates,
+        })) => {
             println!("runtime_sync_contact_id={}", contact.contact_id());
-            sync(
-                state_directory.to_path_buf(),
-                Some(encoded_ticket),
-                None,
-                contact.conversation_label().to_owned(),
-                MAX_SYNC_ROUNDS,
-                contact.peer_account_id(),
-            )
-            .await
+            let mut failures = Vec::new();
+            let mut synchronized = false;
+            for (index, (peer_device_id, encoded_ticket)) in candidates.iter().enumerate() {
+                println!("runtime_sync_endpoint_attempt={}", index + 1);
+                println!("runtime_sync_endpoint_device_id={peer_device_id}");
+                match sync(
+                    state_directory.to_path_buf(),
+                    Some(encoded_ticket.clone()),
+                    None,
+                    contact.conversation_label().to_owned(),
+                    MAX_SYNC_ROUNDS,
+                    contact.peer_account_id(),
+                )
+                .await
+                {
+                    Ok(()) => {
+                        println!("runtime_sync_endpoint_failover_count={index}");
+                        synchronized = true;
+                        break;
+                    }
+                    Err(error) => {
+                        eprintln!(
+                            "runtime_sync_endpoint_status=failed peer_device_id={peer_device_id} error={error:#}"
+                        );
+                        failures.push(format!("{peer_device_id}: {error:#}"));
+                    }
+                }
+            }
+            ensure!(
+                synchronized,
+                "all {} authenticated sync endpoint candidates failed: {}",
+                candidates.len(),
+                failures.join(" | ")
+            );
+            Ok(())
         }
         Ok(None) => {
             let mirror_result = match vault_guard {
@@ -14821,6 +15229,155 @@ mod tests {
             .count(),
             1
         );
+        Ok(())
+    }
+
+    #[test]
+    fn runtime_contact_enrolls_bounded_authenticated_endpoint_candidate_set() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let local_root_dir = directory.path().join("local-root");
+        let local_state_dir = directory.path().join("local-state");
+        create_account(local_root_dir.clone())?;
+        enroll_device(local_root_dir.clone(), local_state_dir.clone(), None)?;
+        let local_root = AccountRootState::load(&local_root_dir)?;
+        let local_state = DeviceState::load_or_create(&local_state_dir)?;
+
+        let peer_root = AccountRootState::create(directory.path().join("peer-root"))?;
+        let mut peer_identities = Vec::new();
+        let mut peer_certificates = Vec::new();
+        let mut peer_pools = Vec::new();
+        for index in 0..=MAX_RUNTIME_ENDPOINT_CANDIDATES_PER_CONTACT {
+            let identity = DeviceIdentity::generate()?;
+            let encryption = DeviceEncryptionIdentity::generate()?;
+            let certificate = peer_root.issue_device_certificate(
+                identity.device_id(),
+                encryption.public_key(),
+                &DeviceCapability::MESSAGING,
+            )?;
+            let ratchet_directory = directory.path().join(format!("peer-ratchet-{index}"));
+            let pool = RatchetState::load_or_create(ratchet_directory)?.prekey_pool(
+                &identity,
+                4,
+                unix_time_now()?,
+                DEFAULT_PREKEY_POOL_VALIDITY_SECONDS,
+            )?;
+            peer_identities.push(identity);
+            peer_certificates.push(certificate);
+            peer_pools.push(pool);
+        }
+        let peer_device_list = peer_root.publish_device_list(&peer_certificates)?;
+        let conversation = "endpoint-candidate-set";
+        let conversation_id = ConversationId::from_label(conversation);
+        let membership = local_root.create_conversation_membership(
+            conversation_id.scope_id(),
+            &[peer_root.account_id()],
+        )?;
+        local_state.install_conversation_membership(&membership)?;
+
+        let mut ticket_files = Vec::new();
+        for (index, (identity, certificate)) in peer_identities
+            .iter()
+            .zip(peer_certificates.iter())
+            .enumerate()
+        {
+            let ticket = ConnectionTicket::new(
+                EndpointAddr::new(SecretKey::generate().public()),
+                identity,
+                certificate.clone(),
+                AccountPrekeyDirectory::new(peer_device_list.clone(), peer_pools.clone())?,
+                local_root.account_id(),
+                RoutePolicy::Auto,
+            )?;
+            let path = directory.path().join(format!("peer-{index}.ticket"));
+            fs::write(&path, ticket.encode()?)?;
+            ticket_files.push(path);
+        }
+
+        let first = add_runtime_contact_record(
+            &local_state_dir,
+            conversation.to_owned(),
+            peer_root.account_id(),
+            ticket_files[0].clone(),
+        )?;
+        assert!(first.inserted);
+        assert!(first.endpoint_candidate_added);
+        assert_eq!(first.endpoint_candidate_count, 1);
+        for (index, ticket_file) in ticket_files
+            .iter()
+            .enumerate()
+            .take(MAX_RUNTIME_ENDPOINT_CANDIDATES_PER_CONTACT)
+            .skip(1)
+        {
+            let receipt = add_runtime_contact_record(
+                &local_state_dir,
+                conversation.to_owned(),
+                peer_root.account_id(),
+                ticket_file.clone(),
+            )?;
+            assert!(receipt.inserted);
+            assert!(receipt.endpoint_candidate_added);
+            assert_eq!(receipt.endpoint_candidate_count, index + 1);
+            assert_eq!(receipt.contact_id, first.contact_id);
+        }
+        let repeated = add_runtime_contact_record(
+            &local_state_dir,
+            conversation.to_owned(),
+            peer_root.account_id(),
+            ticket_files[1].clone(),
+        )?;
+        assert!(!repeated.inserted);
+        assert!(!repeated.endpoint_candidate_added);
+        assert_eq!(
+            repeated.endpoint_candidate_count,
+            MAX_RUNTIME_ENDPOINT_CANDIDATES_PER_CONTACT
+        );
+        let overflow = add_runtime_contact_record(
+            &local_state_dir,
+            conversation.to_owned(),
+            peer_root.account_id(),
+            ticket_files[MAX_RUNTIME_ENDPOINT_CANDIDATES_PER_CONTACT].clone(),
+        )
+        .err()
+        .context("fifth endpoint candidate unexpectedly enrolled")?;
+        assert!(format!("{overflow:#}").contains("maximum"));
+
+        let local_certificate = local_state.load_certificate()?;
+        let local_authority = local_state.load_own_authority_snapshot()?;
+        let snapshot = load_runtime_state_snapshot(
+            &local_state_dir,
+            local_root.account_id(),
+            local_state.identity().device_id(),
+        )?;
+        assert_eq!(snapshot.contacts.len(), 1);
+        assert_eq!(snapshot.endpoint_candidates.len(), 3);
+        let contact = snapshot
+            .contacts
+            .get(&first.contact_id)
+            .context("runtime contact disappeared")?;
+        let candidates = load_runtime_endpoint_candidate_set(
+            &snapshot,
+            contact,
+            &local_certificate,
+            &local_authority,
+        )?;
+        assert_eq!(
+            candidates.len(),
+            MAX_RUNTIME_ENDPOINT_CANDIDATES_PER_CONTACT
+        );
+        assert!(candidates[0].primary);
+        assert_eq!(candidates[0].peer_device_id, peer_identities[0].device_id());
+        fs::remove_file(&ticket_files[0])?;
+        let surviving = load_runtime_endpoint_candidate_set(
+            &snapshot,
+            contact,
+            &local_certificate,
+            &local_authority,
+        )?;
+        assert_eq!(
+            surviving.len(),
+            MAX_RUNTIME_ENDPOINT_CANDIDATES_PER_CONTACT - 1
+        );
+        assert!(surviving.iter().all(|candidate| !candidate.primary));
         Ok(())
     }
 

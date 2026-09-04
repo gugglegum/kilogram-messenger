@@ -199,7 +199,11 @@ multi-source claim reconciliation. M0.7.9 добавил signed append-only chec
   self-authenticating channel из отдельного per-peer Ed25519 write key. PUT
   подписывает exact channel/generation/body, поэтому знающий channel не может
   записать произвольный высокий generation; store по-прежнему не видит
-  Account/Device ID или envelope plaintext. IP/timing/size correlation остаётся.
+  Account/Device ID или envelope plaintext. M0.9.34 поднял runtime IPC до v9 и
+  добавил до четырёх local-device-signed endpoints на stable contact:
+  deterministic delivery/automatic-sync failover, single immutable
+  materialization, exact attempted-device ack и newest-authority/prekey
+  high-water. IP/timing/size correlation остаётся.
   OS peer credentials остаются дальше. Reconciliation выбирает
   inventory только при совпадении двух или более полных явно собранных claims и
   всё равно не обещает global completeness.
@@ -361,9 +365,9 @@ global prekey discovery/witness, автоматический recovery source di
 
 ## План ближайших работ
 
-1. M0.9.34: спроектировать authenticated endpoint candidate set для нескольких
-   online devices одного peer account, с deterministic bounded failover без
-   отката authority/prekey/publication high-water.
+1. M0.9.35: обновлять все enrolled endpoint publication channels одной bounded
+   automation action с независимыми observation high-water и desktop
+   `usable`/`stale` состояниями.
 2. Уже реализованный M0.9.33 даёт self-authenticating per-peer capability
    channel и exact Ed25519 PUT authorization без Account/Device ID на store.
 3. Уже реализованные M0.9.31–M0.9.32 дают opt-in foreground automation и
@@ -512,6 +516,8 @@ global prekey discovery/witness, автоматический recovery source di
   реализованный M0.9.32 device-signed checkpoint, bounded ticket-chain retention и crash-safe vault-primary compaction.
 - [`../docs/RFC-0055-unlinkable-ticket-write-capability.md`](../docs/RFC-0055-unlinkable-ticket-write-capability.md) —
   реализованный M0.9.33 self-authenticating per-peer channel и unlinkable Ed25519 PUT authorization.
+- [`../docs/RFC-0056-authenticated-endpoint-candidate-failover.md`](../docs/RFC-0056-authenticated-endpoint-candidate-failover.md) —
+  реализованный M0.9.34 bounded authenticated multi-device endpoint set, deterministic delivery/sync failover и stable contact compatibility.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
