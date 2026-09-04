@@ -207,7 +207,7 @@ impl SignedTicketAutomationPolicy {
         Ok(())
     }
 
-    fn verify_signature(&self) -> Result<()> {
+    pub(crate) fn verify_signature(&self) -> Result<()> {
         ensure!(
             self.content.version == POLICY_VERSION,
             "unsupported ticket automation policy version"
@@ -480,7 +480,7 @@ impl SignedTicketAutomationAttempt {
         Ok(())
     }
 
-    fn verify_signature(&self) -> Result<()> {
+    pub(crate) fn verify_signature(&self) -> Result<()> {
         ensure!(
             self.content.version == ATTEMPT_VERSION,
             "unsupported ticket automation attempt version"

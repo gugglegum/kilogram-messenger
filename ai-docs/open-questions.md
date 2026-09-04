@@ -180,11 +180,12 @@ sessions, distribution, removal и key epochs и не решены этим пр
   доверенного global log? Первый recipient observation пока защищён только
   signature/expiry, а endpoint failover на другой publisher Device требует
   отдельного authenticated candidate-set/gossip контракта.
-- Как compact/checkpoint-ить append-only runtime publication, observation и
-  M0.9.31 automation attempt chains, сохраняя monotonic high-water, crash-safe
-  DB-primary mutation и проверяемый restart без unbounded startup scan? Текущие
-  hard record-count bounds делают этот вопрос обязательным до public long-lived
-  deployment.
+- M0.9.32 compact/checkpoint-ит runtime publication, observation, policy и
+  attempt chains до exact signed heads за device-signed cumulative checkpoint;
+  DB-primary checkpoint/removals атомарны и crash-safe. Открытым остаётся
+  внешний witness против rollback всего vault и общая compaction policy для
+  outbox/recovery/event repositories; локальная `.rtc` цепочка сама по себе не
+  является global freshness proof.
 - Репликация или erasure coding: сколько случайных узлов и какие гарантии нужны?
 - Как выдавать storage capability и ограничивать spam/Sybil без глобального
   аккаунта и утечки социального графа? M0.9.30 применяет только per-IP/global/

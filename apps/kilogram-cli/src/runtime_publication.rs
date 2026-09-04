@@ -230,7 +230,7 @@ impl SignedTicketPublication {
         Ok(())
     }
 
-    fn verify_signature(&self) -> Result<()> {
+    pub(crate) fn verify_signature(&self) -> Result<()> {
         ensure!(
             self.content.version == PUBLICATION_VERSION,
             "unsupported ticket publication version"
@@ -602,7 +602,7 @@ impl SignedTicketPublicationObservation {
         Ok(())
     }
 
-    fn verify_signature(&self) -> Result<()> {
+    pub(crate) fn verify_signature(&self) -> Result<()> {
         ensure!(
             self.content.version == OBSERVATION_VERSION,
             "unsupported ticket publication observation version"

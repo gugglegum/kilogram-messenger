@@ -2679,19 +2679,56 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - contract зафиксирован в
   [`../docs/RFC-0053-opt-in-ticket-automation.md`](../docs/RFC-0053-opt-in-ticket-automation.md).
 
+### M0.9.32 — authenticated bounded runtime ticket compaction: выполнено
+
+Реализовано:
+
+- device-signed `.rtc` checkpoint сохраняет exact Account/Device,
+  monotonic generation/previous ID, canonical removed-delta digest, cumulative
+  history digest и total compacted count;
+- checkpoint anchors сохраняют exact chain key, generation и signed record ID
+  для publication, observation, policy и отдельных publish/refresh attempts;
+- retained signed head остаётся обычным record, поэтому следующий элемент
+  продолжает прежнюю generation/hash-link без дублирования большого ticket в
+  checkpoint;
+- любая covered chain после девятого retained record compact-ится до одного
+  head; новый checkpoint заменяет старый и запрещает исчезновение, rollback или
+  same-generation смену authenticated anchor;
+- loader допускает ненулевую initial generation только при exact checkpoint
+  anchor, проверяет signature retained head и обычную непрерывность всех новых
+  successors; missing checkpoint/head и extra pre-anchor data fail closed;
+- state transaction получил узкую crash-safe регистрацию removal только для
+  existing Runtime records: synced backup, manifest recovery, typed DB-primary
+  deletion; другие append-only namespaces остались immutable;
+- runtime выполняет compaction локально на persistent maintenance tick после
+  delivery/sync/ticket automation, не делает network request и публикует только
+  безопасные count diagnostics/change notification.
+
+Проверки:
+
+- state regression подтверждает rollback и simulated crash recovery удалённого
+  runtime record вместе с удалением uncommitted checkpoint;
+- два последовательных publication checkpoint дают generation `1 -> 2`,
+  retained publication продолжает `9 -> 17`, а restart видит ровно один current
+  checkpoint;
+- отдельный multi-chain regression compact-ит observation, policy, publish и
+  refresh attempt chains до signed generation 9 heads;
+- tampered checkpoint signature отклоняется, а production automatic ticket
+  lifecycle проверяет logical high-water независимо от физического количества
+  compacted files;
+- contract зафиксирован в
+  [`../docs/RFC-0054-authenticated-runtime-ticket-compaction.md`](../docs/RFC-0054-authenticated-runtime-ticket-compaction.md).
+
 ### Следующий этап
 
-1. M0.9.32: спроектировать authenticated bounded compaction/checkpoint для
-   runtime publication/observation/automation chains без потери monotonic
-   high-water и без unbounded startup scan.
-2. После наблюдаемого service contract спроектировать unlinkable write
+1. M0.9.33: после наблюдаемого service contract спроектировать unlinkable write
    capability/admission: M0.9.30 ограничивает ресурсы, но channel-aware writer
    может вызвать availability failure.
-3. Optional autostart/background mode оставить отдельной явной настройкой, не
+2. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
-4. Добавить macOS/Linux/mobile providers той же platform boundary.
-5. Спроектировать privacy-preserving gossip/mailbox и first-contact freshness;
+3. Добавить macOS/Linux/mobile providers той же platform boundary.
+4. Спроектировать privacy-preserving gossip/mailbox и first-contact freshness;
    M0.9.29 скрывает payload/явные IDs, но не access correlation.
-6. Membership removal и group governance проектировать вместе с ordered
+5. Membership removal и group governance проектировать вместе с ordered
    security events и MLS epoch; compact Merkle/range summary и независимый
    криптографический аудит остаются до публичного выпуска.

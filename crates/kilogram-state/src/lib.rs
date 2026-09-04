@@ -29,6 +29,7 @@ const TRANSACTION_DIRECTORY: &str = ".kilogram-transactions";
 const ACTIVE_DIRECTORY: &str = "active";
 const BACKUP_DIRECTORY: &str = "backup";
 const PRIMARY_BACKUP_DIRECTORY: &str = "primary-backup";
+const APPEND_ONLY_COMPACTION_BACKUP_DIRECTORY: &str = "append-only-compaction-backup";
 const MANIFEST_FILE: &str = "manifest.json";
 const PREPARED_MARKER: &str = "prepared";
 const COMMITTED_MARKER: &str = "committed";
@@ -288,6 +289,9 @@ pub enum StateError {
     #[error("append-only state record disappeared during a transaction: {0}")]
     AppendOnlyRecordRemoved(PathBuf),
 
+    #[error("append-only compaction is allowed only for existing runtime records: {0}")]
+    AppendOnlyCompactionNotAllowed(PathBuf),
+
     #[error("append-only state record was modified in place: {0}")]
     AppendOnlyRecordModified(String),
 
@@ -408,6 +412,7 @@ pub struct StateTransaction {
     sequence_primary_prepared: bool,
     trust_primary_baseline: Option<BTreeMap<PathBuf, Vec<u8>>>,
     append_only_writes: BTreeSet<PathBuf>,
+    append_only_removals: BTreeSet<PathBuf>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -439,6 +444,7 @@ impl StateTransaction {
             sequence_primary_prepared: false,
             trust_primary_baseline: None,
             append_only_writes: BTreeSet::new(),
+            append_only_removals: BTreeSet::new(),
         })
     }
 
@@ -682,6 +688,11 @@ impl StateTransaction {
                 relative_path.to_path_buf(),
             ));
         }
+        if self.append_only_removals.contains(relative_path) {
+            return Err(StateError::AppendOnlyCompactionNotAllowed(
+                relative_path.to_path_buf(),
+            ));
+        }
         reject_relative_symlinks(&self.root, relative_path)?;
         self.append_only_writes.insert(relative_path.to_path_buf());
         Ok(())
@@ -705,6 +716,61 @@ impl StateTransaction {
             .strip_prefix(&self.root)
             .map_err(|_| StateError::UnsafeRelativePath(canonical_path.clone()))?;
         self.register_append_only_write(relative_path)
+    }
+
+    /// Crash-safely removes one existing runtime record as part of an
+    /// authenticated higher-layer compaction transaction.
+    ///
+    /// Other append-only namespaces deliberately remain immutable. The caller
+    /// must persist and register the replacement checkpoint in this same
+    /// transaction before requesting removals.
+    pub fn compact_runtime_record(
+        &mut self,
+        relative_path: impl AsRef<Path>,
+    ) -> Result<(), StateError> {
+        let relative_path = relative_path.as_ref();
+        validate_relative(relative_path)?;
+        if state_record_kind_for_path(relative_path) != StateRecordKind::Runtime {
+            return Err(StateError::AppendOnlyCompactionNotAllowed(
+                relative_path.to_path_buf(),
+            ));
+        }
+        let mut manifest = read_manifest(&self.active)?;
+        if !manifest
+            .append_only_files
+            .iter()
+            .any(|existing| existing == relative_path)
+        {
+            return Err(StateError::AppendOnlyCompactionNotAllowed(
+                relative_path.to_path_buf(),
+            ));
+        }
+        if self.append_only_removals.contains(relative_path) {
+            return Ok(());
+        }
+
+        let source = self.root.join(relative_path);
+        reject_relative_symlinks(&self.root, relative_path)?;
+        if !io_at(&source, fs::metadata(&source))?.is_file() {
+            return Err(StateError::AppendOnlyCompactionNotAllowed(
+                relative_path.to_path_buf(),
+            ));
+        }
+        let backup = self
+            .active
+            .join(APPEND_ONLY_COMPACTION_BACKUP_DIRECTORY)
+            .join(relative_path);
+        copy_file(&source, &backup)?;
+        manifest
+            .compacted_append_only_files
+            .push(relative_path.to_path_buf());
+        manifest.compacted_append_only_files.sort();
+        manifest.compacted_append_only_files.dedup();
+        write_manifest(&self.active, &manifest)?;
+        remove_file_if_present(&source)?;
+        self.append_only_removals
+            .insert(relative_path.to_path_buf());
+        Ok(())
     }
 
     pub(crate) fn staged_mutations(&self) -> Result<Vec<StagedStateMutation>, StateError> {
@@ -755,9 +821,35 @@ impl StateTransaction {
             }
         }
 
+        let compacted: BTreeSet<_> = manifest
+            .compacted_append_only_files
+            .iter()
+            .cloned()
+            .collect();
+        if compacted != self.append_only_removals {
+            return Err(StateError::AppendOnlyCompactionNotAllowed(PathBuf::from(
+                "transaction compaction manifest mismatch",
+            )));
+        }
         let baseline: BTreeSet<_> = manifest.append_only_files.into_iter().collect();
         for relative_path in &baseline {
             let path = self.root.join(relative_path);
+            if compacted.contains(relative_path) {
+                if path_exists(&path)? {
+                    return Err(StateError::AppendOnlyCompactionNotAllowed(
+                        relative_path.clone(),
+                    ));
+                }
+                insert_staged_mutation(
+                    &mut mutations,
+                    StagedStateMutation {
+                        kind: StateRecordKind::Runtime,
+                        relative_path: relative_path.clone(),
+                        content: None,
+                    },
+                )?;
+                continue;
+            }
             if !path_exists(&path)? {
                 return Err(StateError::AppendOnlyRecordRemoved(relative_path.clone()));
             }
@@ -798,6 +890,8 @@ struct TransactionManifest {
     next_sequence_existed: bool,
     append_only_files: Vec<PathBuf>,
     #[serde(default)]
+    compacted_append_only_files: Vec<PathBuf>,
+    #[serde(default)]
     ratchet_primary_existed: Option<bool>,
     #[serde(default)]
     next_sequence_primary_existed: Option<bool>,
@@ -835,6 +929,7 @@ fn prepare_snapshot(root: &Path, active: &Path) -> Result<TransactionManifest, S
         ratchet_existed,
         next_sequence_existed,
         append_only_files,
+        compacted_append_only_files: Vec::new(),
         ratchet_primary_existed: None,
         next_sequence_primary_existed: None,
         trust_primary_prepared: false,
@@ -870,6 +965,24 @@ fn rollback_active(root: &Path, active: &Path) -> Result<(), StateError> {
         validate_relative(path)?;
         if !APPEND_ONLY_ROOTS.iter().any(|root| path.starts_with(root)) {
             return Err(StateError::UnsafeRelativePath(path.clone()));
+        }
+    }
+    for path in &manifest.compacted_append_only_files {
+        validate_relative(path)?;
+        if state_record_kind_for_path(path) != StateRecordKind::Runtime
+            || !manifest
+                .append_only_files
+                .iter()
+                .any(|existing| existing == path)
+        {
+            return Err(StateError::AppendOnlyCompactionNotAllowed(path.clone()));
+        }
+        let backup = active
+            .join(APPEND_ONLY_COMPACTION_BACKUP_DIRECTORY)
+            .join(path);
+        reject_symlink(&backup)?;
+        if !io_at(&backup, fs::metadata(&backup))?.is_file() {
+            return Err(StateError::InvalidBackup(backup));
         }
     }
 
@@ -945,9 +1058,21 @@ fn rollback_active(root: &Path, active: &Path) -> Result<(), StateError> {
             write_staged_file(&root.join(relative_path), &content)?;
         }
     }
+    let compacted = manifest.compacted_append_only_files.clone();
     let baseline: HashSet<_> = manifest.append_only_files.into_iter().collect();
     for name in APPEND_ONLY_ROOTS {
         remove_new_files(root, &root.join(name), &baseline)?;
+    }
+    for relative_path in compacted {
+        let destination = root.join(&relative_path);
+        reject_relative_symlinks(root, &relative_path)?;
+        remove_file_if_present(&destination)?;
+        copy_file(
+            &active
+                .join(APPEND_ONLY_COMPACTION_BACKUP_DIRECTORY)
+                .join(&relative_path),
+            &destination,
+        )?;
     }
     write_marker(&active.join(ROLLED_BACK_MARKER))?;
     remove_tree_if_present(active)
@@ -1589,6 +1714,65 @@ mod tests {
                 if path == Path::new("events/existing.event")
         ));
         transaction.rollback()?;
+        Ok(())
+    }
+
+    #[test]
+    fn authenticated_runtime_compaction_is_typed_and_rollback_safe() -> Result<(), Box<dyn Error>> {
+        let directory = tempfile::tempdir()?;
+        let old = Path::new("runtime/ticket-automation-attempts/old.taa");
+        let checkpoint = Path::new("runtime/ticket-checkpoints/new.rtc");
+        write(&directory.path().join(old), "signed-old")?;
+
+        let mut transaction = StateTransaction::begin(directory.path())?;
+        write(&directory.path().join(checkpoint), "signed-checkpoint")?;
+        transaction.register_append_only_write(checkpoint)?;
+        transaction.compact_runtime_record(old)?;
+        assert!(!directory.path().join(old).exists());
+        assert!(matches!(
+            transaction.compact_runtime_record("events/existing.event"),
+            Err(StateError::AppendOnlyCompactionNotAllowed(path))
+                if path == Path::new("events/existing.event")
+        ));
+
+        let mutations = transaction.staged_mutations()?;
+        let by_path = mutations
+            .iter()
+            .map(|mutation| (mutation.relative_path.as_path(), mutation))
+            .collect::<BTreeMap<_, _>>();
+        assert_eq!(by_path[old].content, None);
+        assert_eq!(
+            by_path[checkpoint].content.as_deref(),
+            Some(b"signed-checkpoint".as_slice())
+        );
+        transaction.rollback()?;
+        assert_eq!(
+            fs::read_to_string(directory.path().join(old))?,
+            "signed-old"
+        );
+        assert!(!directory.path().join(checkpoint).exists());
+
+        let mut recreated = StateTransaction::begin(directory.path())?;
+        recreated.compact_runtime_record(old)?;
+        write(&directory.path().join(old), "replacement")?;
+        assert!(matches!(
+            recreated.staged_mutations(),
+            Err(StateError::AppendOnlyCompactionNotAllowed(path)) if path == old
+        ));
+        recreated.rollback()?;
+        assert_eq!(
+            fs::read_to_string(directory.path().join(old))?,
+            "signed-old"
+        );
+
+        let mut interrupted = StateTransaction::begin(directory.path())?;
+        interrupted.compact_runtime_record(old)?;
+        std::mem::forget(interrupted);
+        StateDirectoryLock::acquire(directory.path())?;
+        assert_eq!(
+            fs::read_to_string(directory.path().join(old))?,
+            "signed-old"
+        );
         Ok(())
     }
 

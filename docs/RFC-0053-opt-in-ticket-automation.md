@@ -120,10 +120,9 @@ authenticated. Store operators still observe IP, channel, timing, size, and
 declared generation. A party that learns a channel can still attempt a high-
 generation availability attack.
 
-Policy, attempt, publication, and observation histories are deliberately
-append-only and currently protected by hard record-count bounds. Before a
-long-lived public release they need an authenticated checkpoint/compaction
-contract that preserves monotonic high-water evidence without unbounded startup
-scans. The next protocol stage should also design an unlinkable write capability
-or admission scheme for the opaque store; neither concern should be hidden by
-calling the present result production-ready.
+M0.9.32 and RFC-0054 now compact policy, attempt, publication, and observation
+histories behind a device-signed monotonic checkpoint while retaining exact
+signed heads. Whole-vault rollback still needs an external witness and deletion
+is not forensic secure erasure. The next protocol stage should design an
+unlinkable write capability or admission scheme for the opaque store; neither
+concern should be hidden by calling the present result production-ready.

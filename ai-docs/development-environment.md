@@ -1153,3 +1153,34 @@ retirement остальных compatibility shadows ещё не реализов
   Iroh transport ограничен loopback. Обычный пользовательский/release запуск
   использует стабильные имена выше и не требует нового firewall rule при каждой
   сборке из-за одного лишь имени файла.
+
+## M0.9.32 verification snapshot (2026-09-05)
+
+- State regression `authenticated_runtime_compaction_is_typed_and_rollback_safe`
+  подтверждает typed Runtime-only removal, exact rollback old record/new
+  checkpoint и recovery после simulated interrupted prepared transaction.
+- DB-primary publication lifecycle создаёт generations `1..9`, compact-ит их до
+  signed head 9/checkpoint 1, продолжает `10..17`, заменяет checkpoint на
+  generation 2 и после restart видит один head 17 и один current `.rtc`.
+- Multi-chain regression одновременно compact-ит observation, policy, publish
+  attempt и refresh attempt chains: 32 prefix records заменяются четырьмя exact
+  generation-9 anchors; signature tamper checkpoint отклоняется.
+- Старый production automatic ticket lifecycle переведён с timing-dependent
+  physical file counts на logical signed high-water и проходит после реальной
+  background compaction.
+- `cargo fmt --all -- --check`, `git diff --check`, strict
+  `cargo clippy --workspace --all-targets --all-features -- -D warnings`, все
+  197 workspace tests и `cargo build --workspace --release` проходят.
+- Release-mode `runtime_ticket_compaction_` проходит оба checkpoint lifecycle;
+  release-mode
+  `runtime_publishes_and_refreshes_an_opaque_contact_ticket_idempotently`
+  повторно проходит с двумя actors и production opaque store.
+- Windows artifacts со стабильными именами: `target/release/kilogram-bootstrap.exe`
+  — 20,476,928 bytes, SHA-256
+  `1AB47A618A813F83E6E1243BD0855A708837B3BF2B47E5CA891BB353E9D507D9`;
+  `target/release/kilogram-cli.exe` — 24,619,008 bytes, SHA-256
+  `A534DF1729BEC3BB369D604D980F7D24F8934221004868E0F0AF8DD84995E5C1`;
+  `target/release/kilogram-windows.exe` — 7,988,224 bytes, SHA-256
+  `9D9DEB787857DC386A892D421467F8F04AB77B522FC542845D46CF136DDF2EC6`;
+  `target/release/kilogram-ticket-store.exe` — 2,427,904 bytes, SHA-256
+  `BD7C3469E88355B81230F66F4C37C3BFC9A1586B8711708216D4E14851897179`.

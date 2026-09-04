@@ -79,6 +79,7 @@ mod recovery_scheduler;
 mod runtime_publication;
 mod runtime_queue;
 mod runtime_ticket_automation;
+mod runtime_ticket_checkpoint;
 
 use recovery_discovery::{
     DEFAULT_DISCOVERY_CANDIDATES, DEFAULT_DISCOVERY_WAIT_SECONDS, MAX_DISCOVERY_CANDIDATES,
@@ -127,6 +128,9 @@ use runtime_ticket_automation::{
     MIN_REFRESH_BEFORE_SECONDS, SignedTicketAutomationAttempt, SignedTicketAutomationPolicy,
     TicketAutomationAction, TicketAutomationAttemptId, TicketAutomationPolicyId,
 };
+use runtime_ticket_checkpoint::{
+    RuntimeTicketChainAnchor, RuntimeTicketCheckpointId, SignedRuntimeTicketCheckpoint,
+};
 
 const EVENT_STORE_DIRECTORY: &str = "events";
 const LOCAL_MESSAGE_STORE_DIRECTORY: &str = "local-messages";
@@ -140,9 +144,11 @@ const RUNTIME_TICKET_PUBLICATIONS_DIRECTORY: &str = "ticket-publications";
 const RUNTIME_TICKET_OBSERVATIONS_DIRECTORY: &str = "ticket-observations";
 const RUNTIME_TICKET_AUTOMATION_POLICIES_DIRECTORY: &str = "ticket-automation-policies";
 const RUNTIME_TICKET_AUTOMATION_ATTEMPTS_DIRECTORY: &str = "ticket-automation-attempts";
+const RUNTIME_TICKET_CHECKPOINTS_DIRECTORY: &str = "ticket-checkpoints";
 const MAX_RUNTIME_DEVICE_DIRECTORY_RECEIPTS: usize = 1_024;
 const MAX_RUNTIME_TICKET_PUBLICATION_RECORDS: usize = 4_096;
 const MAX_RUNTIME_TICKET_AUTOMATION_RECORDS: usize = 4_096;
+const MAX_RUNTIME_TICKET_CHAIN_RECORDS_BEFORE_COMPACTION: usize = 8;
 const RUNTIME_TICKET_AUTOMATION_CHECK_INTERVAL: Duration = Duration::from_secs(5);
 const RUNTIME_DEVICE_LIST_DIGEST_DOMAIN: &[u8] = b"kilogram:runtime-device-list:v1\0";
 const DIRECT_PATH_DIAGNOSTIC_WAIT: Duration = Duration::from_secs(3);
@@ -3109,6 +3115,12 @@ impl<'a> CommandTransactionContext<'a> {
         Ok(())
     }
 
+    fn compact_runtime_record(&mut self, relative_path: impl AsRef<Path>) -> Result<()> {
+        self.transaction
+            .compact_runtime_record(relative_path)
+            .context("register crash-safe runtime compaction removal")
+    }
+
     fn allocate_sequence(&mut self, device_state: &DeviceState) -> Result<u64> {
         if matches!(self.sequence, TransactionSequenceSource::Unloaded) {
             self.sequence = self.load_sequence_source()?;
@@ -3492,6 +3504,7 @@ struct RuntimeStateSnapshot {
     ticket_automation_policies: BTreeMap<RuntimeContactId, Vec<SignedTicketAutomationPolicy>>,
     ticket_automation_attempts:
         BTreeMap<(RuntimeContactId, TicketAutomationAction), Vec<SignedTicketAutomationAttempt>>,
+    ticket_checkpoint: Option<SignedRuntimeTicketCheckpoint>,
 }
 
 impl RuntimeStateSnapshot {
@@ -3625,6 +3638,12 @@ fn runtime_ticket_automation_attempt_relative_path(
         .join(format!("{attempt_id}.taa"))
 }
 
+fn runtime_ticket_checkpoint_relative_path(checkpoint_id: RuntimeTicketCheckpointId) -> PathBuf {
+    PathBuf::from(RUNTIME_STATE_DIRECTORY)
+        .join(RUNTIME_TICKET_CHECKPOINTS_DIRECTORY)
+        .join(format!("{checkpoint_id}.rtc"))
+}
+
 fn runtime_device_list_digest(device_list: &AccountDeviceListSnapshot) -> Result<[u8; 32]> {
     let mut hasher = blake3::Hasher::new();
     hasher.update(RUNTIME_DEVICE_LIST_DIGEST_DOMAIN);
@@ -3721,6 +3740,7 @@ fn read_runtime_record_files(state_directory: &Path) -> Result<Vec<(PathBuf, Vec
         RUNTIME_TICKET_OBSERVATIONS_DIRECTORY,
         RUNTIME_TICKET_AUTOMATION_POLICIES_DIRECTORY,
         RUNTIME_TICKET_AUTOMATION_ATTEMPTS_DIRECTORY,
+        RUNTIME_TICKET_CHECKPOINTS_DIRECTORY,
     ] {
         let root = state_directory
             .join(RUNTIME_STATE_DIRECTORY)
@@ -3789,6 +3809,21 @@ fn load_runtime_state_snapshot(
                 "runtime device-directory receipt filename does not match its authenticated state"
             );
             snapshot.device_directory_receipts.push(value);
+        } else if file_name.ends_with(".rtc") {
+            let value = SignedRuntimeTicketCheckpoint::decode(&bytes)?;
+            ensure!(
+                value.local_account_id() == local_account_id
+                    && value.local_device_id() == local_device_id,
+                "runtime ticket checkpoint belongs to another local identity"
+            );
+            ensure!(
+                relative_path == runtime_ticket_checkpoint_relative_path(value.checkpoint_id()?),
+                "runtime ticket checkpoint filename does not match its authenticated state"
+            );
+            ensure!(
+                snapshot.ticket_checkpoint.replace(value).is_none(),
+                "runtime state contains more than one ticket checkpoint"
+            );
         } else if file_name.ends_with(".ticket-publication") {
             let value = SignedTicketPublication::decode(&bytes)?;
             ensure!(
@@ -4011,36 +4046,132 @@ fn load_runtime_state_snapshot(
         receipt.verify(previous)?;
         previous = Some(receipt);
     }
-    for publications in snapshot.ticket_publications.values_mut() {
+    for (channel_id, publications) in &mut snapshot.ticket_publications {
         publications.sort_by_key(SignedTicketPublication::generation);
-        let mut previous = None;
-        for publication in publications.iter() {
+        let mut remaining = publications.iter();
+        let mut previous = if let Some((generation, record_id)) = snapshot
+            .ticket_checkpoint
+            .as_ref()
+            .and_then(|checkpoint| checkpoint.publication_anchor(*channel_id))
+        {
+            let head = remaining
+                .next()
+                .context("runtime ticket checkpoint publication anchor is absent")?;
+            head.verify_signature()?;
+            ensure!(
+                head.generation() == generation && head.publication_id()? == record_id,
+                "runtime ticket checkpoint publication anchor does not match retained head"
+            );
+            Some(head)
+        } else {
+            None
+        };
+        for publication in remaining {
             publication.verify(previous)?;
             previous = Some(publication);
         }
     }
-    for observations in snapshot.ticket_observations.values_mut() {
+    for (channel_id, observations) in &mut snapshot.ticket_observations {
         observations.sort_by_key(SignedTicketPublicationObservation::observation_generation);
-        let mut previous = None;
-        for observation in observations.iter() {
+        let mut remaining = observations.iter();
+        let mut previous = if let Some((generation, publication_generation, record_id)) = snapshot
+            .ticket_checkpoint
+            .as_ref()
+            .and_then(|checkpoint| checkpoint.observation_anchor(*channel_id))
+        {
+            let head = remaining
+                .next()
+                .context("runtime ticket checkpoint observation anchor is absent")?;
+            head.verify_signature()?;
+            ensure!(
+                head.observation_generation() == generation
+                    && head.publication_generation() == publication_generation
+                    && head.observation_id()? == record_id,
+                "runtime ticket checkpoint observation anchor does not match retained head"
+            );
+            Some(head)
+        } else {
+            None
+        };
+        for observation in remaining {
             observation.verify(previous)?;
             previous = Some(observation);
         }
     }
-    for policies in snapshot.ticket_automation_policies.values_mut() {
+    for (contact_id, policies) in &mut snapshot.ticket_automation_policies {
         policies.sort_by_key(SignedTicketAutomationPolicy::generation);
-        let mut previous = None;
-        for policy in policies.iter() {
+        let mut remaining = policies.iter();
+        let mut previous = if let Some((generation, record_id)) = snapshot
+            .ticket_checkpoint
+            .as_ref()
+            .and_then(|checkpoint| checkpoint.policy_anchor(*contact_id))
+        {
+            let head = remaining
+                .next()
+                .context("runtime ticket checkpoint policy anchor is absent")?;
+            head.verify_signature()?;
+            ensure!(
+                head.generation() == generation && head.policy_id()? == record_id,
+                "runtime ticket checkpoint policy anchor does not match retained head"
+            );
+            Some(head)
+        } else {
+            None
+        };
+        for policy in remaining {
             policy.verify(previous)?;
             previous = Some(policy);
         }
     }
-    for attempts in snapshot.ticket_automation_attempts.values_mut() {
+    for ((contact_id, action), attempts) in &mut snapshot.ticket_automation_attempts {
         attempts.sort_by_key(SignedTicketAutomationAttempt::generation);
-        let mut previous = None;
-        for attempt in attempts.iter() {
+        let mut remaining = attempts.iter();
+        let mut previous = if let Some((generation, policy_generation, record_id)) = snapshot
+            .ticket_checkpoint
+            .as_ref()
+            .and_then(|checkpoint| checkpoint.attempt_anchor(*contact_id, *action))
+        {
+            let head = remaining
+                .next()
+                .context("runtime ticket checkpoint attempt anchor is absent")?;
+            head.verify_signature()?;
+            ensure!(
+                head.generation() == generation
+                    && head.policy_generation() == policy_generation
+                    && head.attempt_id()? == record_id,
+                "runtime ticket checkpoint attempt anchor does not match retained head"
+            );
+            Some(head)
+        } else {
+            None
+        };
+        for attempt in remaining {
             attempt.verify(previous)?;
             previous = Some(attempt);
+        }
+    }
+    if let Some(checkpoint) = &snapshot.ticket_checkpoint {
+        for anchor in checkpoint.anchors() {
+            let present = match anchor {
+                RuntimeTicketChainAnchor::Publication { channel_id, .. } => {
+                    snapshot.ticket_publications.contains_key(channel_id)
+                }
+                RuntimeTicketChainAnchor::Observation { channel_id, .. } => {
+                    snapshot.ticket_observations.contains_key(channel_id)
+                }
+                RuntimeTicketChainAnchor::Policy { contact_id, .. } => {
+                    snapshot.ticket_automation_policies.contains_key(contact_id)
+                }
+                RuntimeTicketChainAnchor::Attempt {
+                    contact_id, action, ..
+                } => snapshot
+                    .ticket_automation_attempts
+                    .contains_key(&(*contact_id, *action)),
+            };
+            ensure!(
+                present,
+                "runtime ticket checkpoint references an absent chain"
+            );
         }
     }
     for (contact_id, policies) in &snapshot.ticket_automation_policies {
@@ -4062,10 +4193,16 @@ fn load_runtime_state_snapshot(
             .get(contact_id)
             .context("ticket automation attempt has no policy chain")?;
         for attempt in attempts {
+            let exact_policy_present = policies
+                .iter()
+                .any(|policy| policy.generation() == attempt.policy_generation());
+            let compacted_policy_present = snapshot
+                .ticket_checkpoint
+                .as_ref()
+                .and_then(|checkpoint| checkpoint.policy_anchor(*contact_id))
+                .is_some_and(|(generation, _)| generation >= attempt.policy_generation());
             ensure!(
-                policies
-                    .iter()
-                    .any(|policy| policy.generation() == attempt.policy_generation()),
+                exact_policy_present || compacted_policy_present,
                 "ticket automation attempt references an absent policy generation"
             );
         }
@@ -4103,6 +4240,230 @@ fn load_runtime_state_snapshot(
         );
     }
     Ok(snapshot)
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct RuntimeTicketCompactionReport {
+    checkpoint_generation: u64,
+    removed_records: usize,
+    retained_anchors: usize,
+    compacted_total_records: u64,
+}
+
+fn runtime_ticket_state_needs_compaction(snapshot: &RuntimeStateSnapshot) -> bool {
+    snapshot
+        .ticket_publications
+        .values()
+        .any(|records| records.len() > MAX_RUNTIME_TICKET_CHAIN_RECORDS_BEFORE_COMPACTION)
+        || snapshot
+            .ticket_observations
+            .values()
+            .any(|records| records.len() > MAX_RUNTIME_TICKET_CHAIN_RECORDS_BEFORE_COMPACTION)
+        || snapshot
+            .ticket_automation_policies
+            .values()
+            .any(|records| records.len() > MAX_RUNTIME_TICKET_CHAIN_RECORDS_BEFORE_COMPACTION)
+        || snapshot
+            .ticket_automation_attempts
+            .values()
+            .any(|records| records.len() > MAX_RUNTIME_TICKET_CHAIN_RECORDS_BEFORE_COMPACTION)
+}
+
+fn canonical_runtime_record_name(path: &Path) -> Result<String> {
+    let components = path
+        .iter()
+        .map(|component| {
+            component
+                .to_str()
+                .context("runtime compaction path is not UTF-8")
+        })
+        .collect::<Result<Vec<_>>>()?;
+    ensure!(!components.is_empty(), "runtime compaction path is empty");
+    Ok(components.join("/"))
+}
+
+fn add_runtime_ticket_compaction_record(
+    state_directory: &Path,
+    records: &mut Vec<(PathBuf, Vec<u8>)>,
+    relative_path: PathBuf,
+    expected_bytes: Vec<u8>,
+) -> Result<()> {
+    let actual = fs::read(state_directory.join(&relative_path)).with_context(|| {
+        format!(
+            "read runtime ticket record selected for compaction {}",
+            relative_path.display()
+        )
+    })?;
+    ensure!(
+        actual == expected_bytes,
+        "runtime ticket shadow differs from authenticated DB-primary record selected for compaction: {}",
+        relative_path.display()
+    );
+    records.push((relative_path, actual));
+    Ok(())
+}
+
+fn compact_runtime_ticket_state_if_needed(
+    state_directory: &Path,
+) -> Result<Option<RuntimeTicketCompactionReport>> {
+    let device_state = load_command_device_state(state_directory)?;
+    let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+    let certificate = trust.load_certificate()?;
+    let snapshot = load_runtime_state_snapshot(
+        state_directory,
+        certificate.account_id(),
+        device_state.identity().device_id(),
+    )?;
+    if !runtime_ticket_state_needs_compaction(&snapshot) {
+        return Ok(None);
+    }
+
+    let mut anchors = Vec::new();
+    let mut removed = Vec::<(PathBuf, Vec<u8>)>::new();
+    for records in snapshot.ticket_publications.values() {
+        let head = records
+            .last()
+            .context("runtime ticket publication chain is empty")?;
+        anchors.push(RuntimeTicketChainAnchor::publication(head)?);
+        for record in &records[..records.len() - 1] {
+            add_runtime_ticket_compaction_record(
+                state_directory,
+                &mut removed,
+                runtime_ticket_publication_relative_path(
+                    record.channel_id(),
+                    record.generation(),
+                    record.publication_id()?,
+                ),
+                record.encode()?,
+            )?;
+        }
+    }
+    for records in snapshot.ticket_observations.values() {
+        let head = records
+            .last()
+            .context("runtime ticket observation chain is empty")?;
+        anchors.push(RuntimeTicketChainAnchor::observation(head)?);
+        for record in &records[..records.len() - 1] {
+            add_runtime_ticket_compaction_record(
+                state_directory,
+                &mut removed,
+                runtime_ticket_observation_relative_path(
+                    record.channel_id(),
+                    record.observation_generation(),
+                    record.observation_id()?,
+                ),
+                record.encode()?,
+            )?;
+        }
+    }
+    for records in snapshot.ticket_automation_policies.values() {
+        let head = records
+            .last()
+            .context("runtime ticket automation policy chain is empty")?;
+        anchors.push(RuntimeTicketChainAnchor::policy(head)?);
+        for record in &records[..records.len() - 1] {
+            add_runtime_ticket_compaction_record(
+                state_directory,
+                &mut removed,
+                runtime_ticket_automation_policy_relative_path(record.policy_id()?),
+                record.encode()?,
+            )?;
+        }
+    }
+    for records in snapshot.ticket_automation_attempts.values() {
+        let head = records
+            .last()
+            .context("runtime ticket automation attempt chain is empty")?;
+        anchors.push(RuntimeTicketChainAnchor::attempt(head)?);
+        for record in &records[..records.len() - 1] {
+            add_runtime_ticket_compaction_record(
+                state_directory,
+                &mut removed,
+                runtime_ticket_automation_attempt_relative_path(record.attempt_id()?),
+                record.encode()?,
+            )?;
+        }
+    }
+    if let Some(previous) = &snapshot.ticket_checkpoint {
+        add_runtime_ticket_compaction_record(
+            state_directory,
+            &mut removed,
+            runtime_ticket_checkpoint_relative_path(previous.checkpoint_id()?),
+            previous.encode()?,
+        )?;
+    }
+    ensure!(
+        !removed.is_empty(),
+        "runtime ticket compaction trigger selected no removable records"
+    );
+    let compacted_records = removed
+        .iter()
+        .map(|(path, bytes)| {
+            Ok((
+                canonical_runtime_record_name(path)?,
+                *blake3::hash(bytes).as_bytes(),
+            ))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let checkpoint = SignedRuntimeTicketCheckpoint::sign(
+        device_state.identity(),
+        certificate.account_id(),
+        unix_time_now()?,
+        &compacted_records,
+        anchors,
+        snapshot.ticket_checkpoint.as_ref(),
+    )?;
+    let checkpoint_id = checkpoint.checkpoint_id()?;
+    let checkpoint_path = runtime_ticket_checkpoint_relative_path(checkpoint_id);
+    let checkpoint_bytes = checkpoint.encode()?;
+    run_state_transaction(state_directory, |transaction| {
+        let outcome = persist_runtime_record(
+            state_directory,
+            &checkpoint_path,
+            &checkpoint_bytes,
+            transaction,
+        )?;
+        ensure!(
+            outcome == StoreOutcome::Inserted,
+            "runtime ticket compaction checkpoint already exists"
+        );
+        for (relative_path, _) in &removed {
+            transaction.compact_runtime_record(relative_path)?;
+        }
+        Ok(())
+    })?;
+
+    let verified = load_runtime_state_snapshot(
+        state_directory,
+        certificate.account_id(),
+        device_state.identity().device_id(),
+    )?;
+    ensure!(
+        verified
+            .ticket_checkpoint
+            .as_ref()
+            .map(SignedRuntimeTicketCheckpoint::checkpoint_id)
+            .transpose()?
+            == Some(checkpoint_id),
+        "runtime ticket checkpoint did not become the verified current head"
+    );
+    Ok(Some(RuntimeTicketCompactionReport {
+        checkpoint_generation: checkpoint.generation(),
+        removed_records: removed.len(),
+        retained_anchors: checkpoint.anchors().len(),
+        compacted_total_records: checkpoint.compacted_total_records(),
+    }))
+}
+
+async fn attempt_runtime_ticket_compaction(
+    state_directory: &Path,
+) -> Result<Option<RuntimeTicketCompactionReport>> {
+    let state_lock = acquire_runtime_state_lock(state_directory)
+        .await?
+        .context("runtime state lock remained busy while compacting ticket state")?;
+    let result = compact_runtime_ticket_state_if_needed(state_directory);
+    drop(state_lock);
+    result
 }
 
 fn load_runtime_contact_ticket(
@@ -6789,6 +7150,19 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                         if max_outbound_actions != 0 && outbound_actions >= max_outbound_actions {
                             break "outbound-action-limit";
                         }
+                    }
+                    if let Some(report) = attempt_runtime_ticket_compaction(&state_dir).await? {
+                        println!(
+                            "runtime_ticket_compaction_status=committed checkpoint_generation={} removed_records={} retained_anchors={} compacted_total_records={}",
+                            report.checkpoint_generation,
+                            report.removed_records,
+                            report.retained_anchors,
+                            report.compacted_total_records
+                        );
+                        if let Some(server) = ipc_server.as_ref() {
+                            server.publish_change();
+                        }
+                        last_activity = tokio::time::Instant::now();
                     }
                 }
             }
@@ -14292,6 +14666,304 @@ mod tests {
         Ok(())
     }
 
+    #[test]
+    fn runtime_ticket_compaction_preserves_signed_head_and_bounded_restart_state() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let root_dir = directory.path().join("root");
+        let state_dir = directory.path().join("state");
+        let peer_root_dir = directory.path().join("peer-root");
+        create_account(root_dir.clone())?;
+        create_account(peer_root_dir.clone())?;
+        enroll_device(root_dir.clone(), state_dir.clone(), None)?;
+        let root = AccountRootState::load(&root_dir)?;
+        let peer = AccountRootState::load(&peer_root_dir)?;
+        let device = DeviceState::load_or_create(&state_dir)?;
+        let channel_id = TicketPublicationChannelId::derive(
+            ConversationId::from_label("runtime-ticket-compaction"),
+            root.account_id(),
+            device.identity().device_id(),
+            peer.account_id(),
+        );
+        let started_at = unix_time_now()?;
+        let mut previous = None;
+        for index in 0..=MAX_RUNTIME_TICKET_CHAIN_RECORDS_BEFORE_COMPACTION {
+            let publication = SignedTicketPublication::sign(
+                device.identity(),
+                channel_id,
+                root.account_id(),
+                peer.account_id(),
+                format!("ticket-{index}"),
+                started_at + index as u64,
+                300,
+                previous.as_ref(),
+            )?;
+            let path = runtime_ticket_publication_relative_path(
+                channel_id,
+                publication.generation(),
+                publication.publication_id()?,
+            );
+            let bytes = publication.encode()?;
+            run_state_transaction(&state_dir, |transaction| {
+                persist_runtime_record(&state_dir, &path, &bytes, transaction)
+            })?;
+            previous = Some(publication);
+        }
+
+        let first = compact_runtime_ticket_state_if_needed(&state_dir)?
+            .context("first runtime ticket compaction was not triggered")?;
+        assert_eq!(first.checkpoint_generation, 1);
+        assert_eq!(first.removed_records, 8);
+        assert_eq!(first.retained_anchors, 1);
+        let snapshot = load_runtime_state_snapshot(
+            &state_dir,
+            root.account_id(),
+            device.identity().device_id(),
+        )?;
+        assert_eq!(snapshot.ticket_publications[&channel_id].len(), 1);
+        assert_eq!(snapshot.ticket_publications[&channel_id][0].generation(), 9);
+        assert_eq!(
+            snapshot
+                .ticket_checkpoint
+                .as_ref()
+                .context("first runtime ticket checkpoint is absent")?
+                .compacted_total_records(),
+            8
+        );
+        assert!(compact_runtime_ticket_state_if_needed(&state_dir)?.is_none());
+
+        previous = snapshot.latest_ticket_publication(channel_id).cloned();
+        for index in 9..17 {
+            let publication = SignedTicketPublication::sign(
+                device.identity(),
+                channel_id,
+                root.account_id(),
+                peer.account_id(),
+                format!("ticket-{index}"),
+                started_at + index as u64,
+                300,
+                previous.as_ref(),
+            )?;
+            let path = runtime_ticket_publication_relative_path(
+                channel_id,
+                publication.generation(),
+                publication.publication_id()?,
+            );
+            let bytes = publication.encode()?;
+            run_state_transaction(&state_dir, |transaction| {
+                persist_runtime_record(&state_dir, &path, &bytes, transaction)
+            })?;
+            previous = Some(publication);
+        }
+        let second = compact_runtime_ticket_state_if_needed(&state_dir)?
+            .context("second runtime ticket compaction was not triggered")?;
+        assert_eq!(second.checkpoint_generation, 2);
+        assert_eq!(second.removed_records, 9);
+        assert_eq!(second.compacted_total_records, 17);
+        let restarted = load_runtime_state_snapshot(
+            &state_dir,
+            root.account_id(),
+            device.identity().device_id(),
+        )?;
+        assert_eq!(restarted.ticket_publications[&channel_id].len(), 1);
+        assert_eq!(
+            restarted.ticket_publications[&channel_id][0].generation(),
+            17
+        );
+        let checkpoint = restarted
+            .ticket_checkpoint
+            .context("second runtime ticket checkpoint is absent")?;
+        assert_eq!(checkpoint.generation(), 2);
+        assert_eq!(checkpoint.compacted_total_records(), 17);
+        let mut tampered = checkpoint.encode()?;
+        let last = tampered
+            .last_mut()
+            .context("encoded runtime ticket checkpoint is empty")?;
+        *last ^= 1;
+        assert!(SignedRuntimeTicketCheckpoint::decode(&tampered).is_err());
+        assert_eq!(
+            fs::read_dir(
+                state_dir
+                    .join(RUNTIME_STATE_DIRECTORY)
+                    .join(RUNTIME_TICKET_CHECKPOINTS_DIRECTORY)
+            )?
+            .count(),
+            1
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn runtime_ticket_compaction_covers_observation_policy_and_attempt_heads() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let root_dir = directory.path().join("root");
+        let state_dir = directory.path().join("state");
+        let peer_root_dir = directory.path().join("peer-root");
+        create_account(root_dir.clone())?;
+        create_account(peer_root_dir.clone())?;
+        enroll_device(root_dir.clone(), state_dir.clone(), None)?;
+        let root = AccountRootState::load(&root_dir)?;
+        let peer_root = AccountRootState::load(&peer_root_dir)?;
+        let device = DeviceState::load_or_create(&state_dir)?;
+        let peer_device = DeviceIdentity::generate()?;
+        let conversation = "runtime-ticket-all-chain-compaction";
+        let conversation_id = ConversationId::from_label(conversation);
+        let contact = SignedRuntimeContact::sign(
+            device.identity(),
+            root.account_id(),
+            peer_root.account_id(),
+            peer_device.device_id(),
+            conversation.to_owned(),
+            conversation_id,
+            RoutePolicy::Auto,
+            directory.path().join("peer.ticket"),
+        )?;
+        let contact_path = runtime_contact_relative_path(contact.contact_id());
+        let contact_bytes = contact.encode()?;
+        run_state_transaction(&state_dir, |transaction| {
+            persist_runtime_record(&state_dir, &contact_path, &contact_bytes, transaction)
+        })?;
+
+        let peer_channel = TicketPublicationChannelId::derive(
+            conversation_id,
+            peer_root.account_id(),
+            peer_device.device_id(),
+            root.account_id(),
+        );
+        let started_at = unix_time_now()?;
+        let mut previous_publication = None;
+        let mut previous_observation = None;
+        let mut previous_policy = None;
+        let mut previous_publish_attempt = None;
+        let mut previous_refresh_attempt = None;
+        for index in 0..=MAX_RUNTIME_TICKET_CHAIN_RECORDS_BEFORE_COMPACTION {
+            let publication = SignedTicketPublication::sign(
+                &peer_device,
+                peer_channel,
+                peer_root.account_id(),
+                root.account_id(),
+                format!("peer-ticket-{index}"),
+                started_at + index as u64,
+                300,
+                previous_publication.as_ref(),
+            )?;
+            let observation = SignedTicketPublicationObservation::sign(
+                device.identity(),
+                root.account_id(),
+                &publication,
+                started_at + index as u64,
+                previous_observation.as_ref(),
+            )?;
+            let policy = SignedTicketAutomationPolicy::sign(
+                device.identity(),
+                root.account_id(),
+                contact.contact_id(),
+                conversation.to_owned(),
+                peer_root.account_id(),
+                started_at + index as u64,
+                true,
+                "https://ticket-store.invalid/".to_owned(),
+                300,
+                60,
+                1,
+                8,
+                true,
+                true,
+                false,
+                false,
+                previous_policy.as_ref(),
+            )?;
+            let publish_attempt = SignedTicketAutomationAttempt::sign(
+                device.identity(),
+                root.account_id(),
+                &policy,
+                TicketAutomationAction::Publish,
+                started_at + index as u64,
+                None,
+                previous_publish_attempt.as_ref(),
+            )?;
+            let refresh_attempt = SignedTicketAutomationAttempt::sign(
+                device.identity(),
+                root.account_id(),
+                &policy,
+                TicketAutomationAction::Refresh,
+                started_at + index as u64,
+                None,
+                previous_refresh_attempt.as_ref(),
+            )?;
+            let records = [
+                (
+                    runtime_ticket_observation_relative_path(
+                        observation.channel_id(),
+                        observation.observation_generation(),
+                        observation.observation_id()?,
+                    ),
+                    observation.encode()?,
+                ),
+                (
+                    runtime_ticket_automation_policy_relative_path(policy.policy_id()?),
+                    policy.encode()?,
+                ),
+                (
+                    runtime_ticket_automation_attempt_relative_path(publish_attempt.attempt_id()?),
+                    publish_attempt.encode()?,
+                ),
+                (
+                    runtime_ticket_automation_attempt_relative_path(refresh_attempt.attempt_id()?),
+                    refresh_attempt.encode()?,
+                ),
+            ];
+            run_state_transaction(&state_dir, |transaction| {
+                for (path, bytes) in &records {
+                    persist_runtime_record(&state_dir, path, bytes, transaction)?;
+                }
+                Ok(())
+            })?;
+            previous_publication = Some(publication);
+            previous_observation = Some(observation);
+            previous_policy = Some(policy);
+            previous_publish_attempt = Some(publish_attempt);
+            previous_refresh_attempt = Some(refresh_attempt);
+        }
+
+        let report = compact_runtime_ticket_state_if_needed(&state_dir)?
+            .context("multi-chain runtime ticket compaction was not triggered")?;
+        assert_eq!(report.removed_records, 32);
+        assert_eq!(report.retained_anchors, 4);
+        let restarted = load_runtime_state_snapshot(
+            &state_dir,
+            root.account_id(),
+            device.identity().device_id(),
+        )?;
+        assert_eq!(restarted.ticket_observations[&peer_channel].len(), 1);
+        assert_eq!(
+            restarted.ticket_automation_policies[&contact.contact_id()].len(),
+            1
+        );
+        for action in [
+            TicketAutomationAction::Publish,
+            TicketAutomationAction::Refresh,
+        ] {
+            assert_eq!(
+                restarted.ticket_automation_attempts[&(contact.contact_id(), action)].len(),
+                1
+            );
+            assert_eq!(
+                restarted.ticket_automation_attempts[&(contact.contact_id(), action)][0]
+                    .generation(),
+                9
+            );
+        }
+        assert_eq!(
+            restarted
+                .ticket_checkpoint
+                .context("multi-chain runtime ticket checkpoint is absent")?
+                .anchors()
+                .len(),
+            4
+        );
+        Ok(())
+    }
+
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn runtime_launch_profile_starts_and_stops_through_authenticated_ipc() -> Result<()> {
         let directory = tempfile::tempdir()?;
@@ -14595,54 +15267,6 @@ mod tests {
             .await
             .context("publication store did not finish")?
             .context("join publication store")??;
-
-        let bob_snapshot = load_runtime_state_snapshot(
-            &bob_state,
-            bob_root.account_id(),
-            bob_device.identity().device_id(),
-        )?;
-        assert_eq!(
-            bob_snapshot
-                .ticket_publications
-                .values()
-                .map(Vec::len)
-                .sum::<usize>(),
-            2
-        );
-        let alice_snapshot = load_runtime_state_snapshot(
-            &alice_state,
-            alice_root.account_id(),
-            alice_device.identity().device_id(),
-        )?;
-        assert_eq!(
-            alice_snapshot
-                .ticket_observations
-                .values()
-                .map(Vec::len)
-                .sum::<usize>(),
-            2
-        );
-        assert_eq!(
-            alice_snapshot
-                .ticket_automation_policies
-                .values()
-                .map(Vec::len)
-                .sum::<usize>(),
-            2
-        );
-        assert!(
-            alice_snapshot
-                .ticket_automation_attempts
-                .values()
-                .map(Vec::len)
-                .sum::<usize>()
-                >= 2
-        );
-        assert_eq!(
-            ConnectionTicket::decode(&fs::read_to_string(&bob_ticket)?)?.listener_device_id(),
-            bob_device.identity().device_id()
-        );
-
         for ipc in [&alice_ipc, &bob_ipc] {
             assert!(matches!(
                 kilogram_runtime_ipc::call(ipc, RuntimeIpcCommand::Shutdown).await?,
@@ -14655,6 +15279,56 @@ mod tests {
                 .with_context(|| format!("{name} publication runtime did not stop"))?
                 .with_context(|| format!("join {name} publication runtime"))??;
         }
+
+        let bob_snapshot = load_runtime_state_snapshot(
+            &bob_state,
+            bob_root.account_id(),
+            bob_device.identity().device_id(),
+        )?;
+        assert!(
+            bob_snapshot
+                .ticket_publications
+                .values()
+                .filter_map(|records| records.last())
+                .any(|publication| publication.generation() >= 2)
+        );
+        let alice_snapshot = load_runtime_state_snapshot(
+            &alice_state,
+            alice_root.account_id(),
+            alice_device.identity().device_id(),
+        )?;
+        assert!(
+            alice_snapshot
+                .ticket_observations
+                .values()
+                .filter_map(|records| records.last())
+                .any(|observation| observation.publication_generation() >= 2)
+        );
+        assert_eq!(
+            alice_snapshot
+                .ticket_automation_policies
+                .values()
+                .filter_map(|records| records.last())
+                .map(SignedTicketAutomationPolicy::generation)
+                .max(),
+            Some(2)
+        );
+        for action in [
+            TicketAutomationAction::Publish,
+            TicketAutomationAction::Refresh,
+        ] {
+            assert!(
+                alice_snapshot
+                    .ticket_automation_attempts
+                    .values()
+                    .filter_map(|records| records.last())
+                    .any(|attempt| attempt.action() == action)
+            );
+        }
+        assert_eq!(
+            ConnectionTicket::decode(&fs::read_to_string(&bob_ticket)?)?.listener_device_id(),
+            bob_device.identity().device_id()
+        );
         Ok(())
     }
 
