@@ -6,8 +6,8 @@ use std::{
 
 use anyhow::{Context, Result, ensure};
 use kilogram_identity::{
-    AccountRecoveryPhrase, AccountRootRecoveryPackage, AccountRootRecoveryWitness,
-    AccountRootState, MAX_ACCOUNT_ROOT_RECOVERY_PACKAGE_BYTES,
+    AccountRecoveryPhrase, AccountRootRecoveryCheckpointState, AccountRootRecoveryPackage,
+    AccountRootRecoveryWitness, AccountRootState, MAX_ACCOUNT_ROOT_RECOVERY_PACKAGE_BYTES,
     MAX_ACCOUNT_ROOT_RECOVERY_WITNESS_BYTES,
 };
 use serde::Serialize;
@@ -29,22 +29,59 @@ pub struct AccountRecoveryReport {
     freshness_scope: &'static str,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct AccountRecoveryStatusReport {
+    status: &'static str,
+    checkpoint_state: &'static str,
+    account_id: String,
+    authority_revision: u64,
+    device_count: usize,
+    conversation_membership_count: usize,
+    current_package_id: String,
+    recorded_package_id: Option<String>,
+    recorded_authority_revision: Option<u64>,
+    account_root_dir: PathBuf,
+    lifecycle_scope: &'static str,
+}
+
+pub fn account_root_status(
+    account_root_dir: impl AsRef<Path>,
+) -> Result<AccountRecoveryStatusReport> {
+    let account_root_dir = canonical_account_root(account_root_dir.as_ref())?;
+    let root = AccountRootState::load(&account_root_dir).context("load Account Root")?;
+    let checkpoint = root
+        .recovery_checkpoint_status()
+        .context("calculate Account Root recovery checkpoint status")?;
+    let status = match checkpoint.state() {
+        AccountRootRecoveryCheckpointState::Current => "account-root-recovery-current",
+        AccountRootRecoveryCheckpointState::UpdateRequired => {
+            "account-root-recovery-update-required"
+        }
+    };
+    Ok(AccountRecoveryStatusReport {
+        status,
+        checkpoint_state: checkpoint.state().as_str(),
+        account_id: checkpoint.account_id().to_string(),
+        authority_revision: checkpoint.authority_revision(),
+        device_count: checkpoint.device_count(),
+        conversation_membership_count: checkpoint.conversation_membership_count(),
+        current_package_id: encode_hex(checkpoint.current_package_id()),
+        recorded_package_id: checkpoint
+            .recorded_package_id()
+            .map(|package_id| encode_hex(package_id)),
+        recorded_authority_revision: checkpoint.recorded_authority_revision(),
+        account_root_dir,
+        lifecycle_scope: "local-exact-export-receipt-not-global-freshness-proof",
+    })
+}
+
 pub fn export_account_root(
     account_root_dir: impl AsRef<Path>,
     package_file: impl AsRef<Path>,
     witness_file: impl AsRef<Path>,
 ) -> Result<AccountRecoveryReport> {
-    let account_root_dir = fs::canonicalize(account_root_dir.as_ref()).with_context(|| {
-        format!(
-            "resolve Account Root directory {}",
-            account_root_dir.as_ref().display()
-        )
-    })?;
-    ensure!(
-        account_root_dir.is_dir(),
-        "Account Root path is not a directory: {}",
-        account_root_dir.display()
-    );
+    let account_root_dir = canonical_account_root(account_root_dir.as_ref())?;
     let package_file = resolve_new_external_file(package_file.as_ref(), &account_root_dir)?;
     let witness_file = resolve_new_external_file(witness_file.as_ref(), &account_root_dir)?;
     ensure!(
@@ -59,6 +96,25 @@ pub fn export_account_root(
     let package_bytes = package.encode().context("encode recovery package")?;
     let witness_bytes = witness.encode().context("encode recovery witness")?;
     write_new_pair(&package_file, &package_bytes, &witness_file, &witness_bytes)?;
+    if let Err(error) = root.record_exported_recovery_checkpoint(&package, &witness) {
+        let mut cleanup_failures = Vec::new();
+        for path in [&package_file, &witness_file] {
+            if let Err(cleanup) = fs::remove_file(path) {
+                cleanup_failures.push(format!("{}: {cleanup}", path.display()));
+            }
+        }
+        let detail = if cleanup_failures.is_empty() {
+            "external package and witness were removed".to_owned()
+        } else {
+            format!(
+                "external cleanup also failed for {}",
+                cleanup_failures.join(", ")
+            )
+        };
+        return Err(error).context(format!(
+            "record exported Account Root recovery checkpoint; {detail}"
+        ));
+    }
     report(
         "account-root-recovery-exported",
         &package,
@@ -68,6 +124,17 @@ pub fn export_account_root(
         None,
         None,
     )
+}
+
+fn canonical_account_root(path: &Path) -> Result<PathBuf> {
+    let resolved = fs::canonicalize(path)
+        .with_context(|| format!("resolve Account Root directory {}", path.display()))?;
+    ensure!(
+        resolved.is_dir(),
+        "Account Root path is not a directory: {}",
+        resolved.display()
+    );
+    Ok(resolved)
 }
 
 pub fn inspect_account_root(
@@ -342,6 +409,10 @@ mod tests {
         let created = crate::create_account(&workspace)?;
         let phrase = AccountRecoveryPhrase::parse(created.recovery_phrase())?;
         let root = AccountRootState::load(created.account_root_dir())?;
+        assert_eq!(
+            account_root_status(created.account_root_dir())?.checkpoint_state,
+            "update-required"
+        );
 
         let second = DeviceState::load_or_create(parent.path().join("second-device"))?;
         root.enroll_device(
@@ -357,6 +428,9 @@ mod tests {
         let old_package = parent.path().join("old.karp");
         let old_witness = parent.path().join("old.karw");
         let exported = export_account_root(created.account_root_dir(), &old_package, &old_witness)?;
+        let current_status = account_root_status(created.account_root_dir())?;
+        assert_eq!(current_status.checkpoint_state, "current");
+        assert_eq!(current_status.current_package_id, exported.package_id);
         assert_eq!(exported.device_count, 2);
         assert_eq!(exported.conversation_membership_count, 1);
         assert!(
@@ -376,6 +450,10 @@ mod tests {
         )?;
         assert_eq!(restored_report.status, "account-root-recovery-restored");
         let restored = AccountRootState::load(&restored_path)?;
+        assert_eq!(
+            account_root_status(&restored_path)?.checkpoint_state,
+            "current"
+        );
         assert_eq!(restored.account_id(), root.account_id());
         assert_eq!(restored.authority_snapshot()?, root.authority_snapshot()?);
         assert_eq!(
@@ -387,6 +465,14 @@ mod tests {
             root.load_root_conversation_membership(conversation_id)?
         );
 
+        root.add_conversation_members(conversation_id, &[AccountId::from_bytes([11_u8; 32])])?;
+        let membership_due = account_root_status(created.account_root_dir())?;
+        assert_eq!(membership_due.checkpoint_state, "update-required");
+        assert_eq!(
+            membership_due.authority_revision,
+            exported.authority_revision
+        );
+
         let third_key = EncryptionPublicKey::from_bytes([13_u8; 32])?;
         let (_, advanced_list) = restored.enroll_device(
             kilogram_identity::DeviceId::from_bytes([12_u8; 32]),
@@ -394,6 +480,10 @@ mod tests {
             &DeviceCapability::MESSAGING,
         )?;
         assert!(advanced_list.revision() > exported.authority_revision);
+        assert_eq!(
+            account_root_status(&restored_path)?.checkpoint_state,
+            "update-required"
+        );
 
         let wrong_workspace = parent.path().join("wrong-account");
         let wrong = crate::create_account(&wrong_workspace)?;
@@ -418,10 +508,18 @@ mod tests {
             fourth.encryption().public_key(),
             &DeviceCapability::MESSAGING,
         )?;
+        assert_eq!(
+            account_root_status(created.account_root_dir())?.checkpoint_state,
+            "update-required"
+        );
         let new_package = parent.path().join("new.karp");
         let new_witness = parent.path().join("new.karw");
         let new_exported =
             export_account_root(created.account_root_dir(), &new_package, &new_witness)?;
+        assert_eq!(
+            account_root_status(created.account_root_dir())?.checkpoint_state,
+            "current"
+        );
         let stale_target = parent.path().join("stale-target");
         assert!(
             restore_account_root(

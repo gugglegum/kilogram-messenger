@@ -2283,10 +2283,44 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - formatting, strict workspace Clippy, все 162 serial workspace tests и release
   workspace build проходят; hashes зафиксированы в `development-environment.md`.
 
+### M0.9.21 — recovery freshness design и exact-export lifecycle: выполнено
+
+Реализовано:
+
+- Account Root хранит bounded Root-signed witness последнего действительно
+  опубликованного exact recovery package без phrase/private keys;
+- export после внешней no-clobber публикации повторно берёт authority lock,
+  пересобирает current package и при race удаляет внешнюю пару вместо записи
+  ложного receipt;
+- `account-recovery-status` под тем же lock сравнивает пересобранный package с
+  receipt и сообщает `current`/`update-required`, current/recorded package IDs,
+  revisions и captured counts;
+- membership-only mutation при неизменной authority revision тоже делает status
+  stale; restored Root начинает с `current`, последующий enrollment — с
+  `update-required`;
+- Windows recovery panel показывает lifecycle status и явно отделяет его от
+  global freshness;
+- RFC-0048 выбрал fresh challenge-bound device approvals, DB-primary
+  anti-equivocation head и strict majority exact recovery roster; для безопасной
+  смены roster требуется joint-majority old/new epoch transition;
+- полный контракт —
+  [`../docs/RFC-0048-recovery-freshness-and-checkpoint-lifecycle.md`](../docs/RFC-0048-recovery-freshness-and-checkpoint-lifecycle.md).
+
+Проверки:
+
+- targeted identity/bootstrap/desktop regression и real debug helper-process
+  create → status due → export → status current → restore → status current;
+- formatting, strict workspace Clippy и release workspace build проходят;
+  full serial run прошёл 161/162, а единственный Iroh runtime outbox timeout
+  прошёл exact rerun. Три unit-only authorization endpoints закреплены на IPv4
+  loopback без production relay map, чтобы убрать прежнюю order-dependent flake;
+  детали и hashes зафиксированы в `development-environment.md`.
+
 ### Следующий этап
 
-1. M0.9.21: спроектировать согласованный monotonic witness/current-device quorum
-   и обязательный lifecycle обновления recovery package после Root mutations.
+1. M0.9.22: реализовать bounded recovery challenge/request/approval formats,
+   exact roster binding, DB-primary approval head и strict-majority verifier.
+   Cross-roster fork-safety требует recovery-policy epochs и joint transition.
 2. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.

@@ -11410,11 +11410,18 @@ fn require_conversation_participants(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use iroh::SecretKey;
+    use iroh::{RelayMode, SecretKey, endpoint::Builder};
     use kilogram_identity::{DeviceEncryptionIdentity, DeviceIdentity};
     use kilogram_transport_iroh::endpoint_builder;
 
     const UNSUPPORTED_TEST_ALPN: &[u8] = b"kilogram/test/unsupported/1";
+
+    fn local_test_endpoint_builder() -> Result<Builder> {
+        Ok(endpoint_builder(RoutePolicy::Auto)
+            .relay_mode(RelayMode::Disabled)
+            .clear_ip_transports()
+            .bind_addr((std::net::Ipv4Addr::LOCALHOST, 0))?)
+    }
 
     #[test]
     fn recovery_worker_wait_is_bounded_by_poll_runtime_and_signed_deadline() {
@@ -12951,7 +12958,7 @@ mod tests {
         let listener_device_directory = tempfile::tempdir()?;
         let listener_state_path = listener_device_directory.path().to_path_buf();
         let listener_device_state = DeviceState::load_or_create(&listener_state_path)?;
-        let listener = endpoint_builder(RoutePolicy::Auto)
+        let listener = local_test_endpoint_builder()?
             .alpns(vec![ALPN.to_vec()])
             .bind()
             .await?;
@@ -12974,7 +12981,7 @@ mod tests {
             }
         });
 
-        let client = endpoint_builder(RoutePolicy::Auto).bind().await?;
+        let client = local_test_endpoint_builder()?.bind().await?;
         let connection = client.connect(listener_address, ALPN).await?;
         authorize_with_listener(
             &connection,
@@ -13011,7 +13018,7 @@ mod tests {
 
         let listener_device_directory = tempfile::tempdir()?;
         let listener_state_path = listener_device_directory.path().to_path_buf();
-        let listener = endpoint_builder(RoutePolicy::Auto)
+        let listener = local_test_endpoint_builder()?
             .alpns(vec![ALPN.to_vec()])
             .bind()
             .await?;
@@ -13034,7 +13041,7 @@ mod tests {
             }
         });
 
-        let client = endpoint_builder(RoutePolicy::Auto).bind().await?;
+        let client = local_test_endpoint_builder()?.bind().await?;
         let connection = client.connect(listener_address, ALPN).await?;
         assert!(
             authorize_with_listener(
@@ -13061,7 +13068,7 @@ mod tests {
 
     #[tokio::test]
     async fn listener_ignores_failed_handshake_and_accepts_the_next_connection() -> Result<()> {
-        let listener = endpoint_builder(RoutePolicy::Auto)
+        let listener = local_test_endpoint_builder()?
             .alpns(vec![ALPN.to_vec()])
             .bind()
             .await?;
@@ -13072,7 +13079,7 @@ mod tests {
             async move { accept_authenticated_connection(&listener).await }
         });
 
-        let incompatible_client = endpoint_builder(RoutePolicy::Auto).bind().await?;
+        let incompatible_client = local_test_endpoint_builder()?.bind().await?;
         let incompatible_result = timeout(
             CONNECTION_TIMEOUT,
             incompatible_client.connect(listener_address.clone(), UNSUPPORTED_TEST_ALPN),
@@ -13082,7 +13089,7 @@ mod tests {
         assert!(incompatible_result.is_err());
         incompatible_client.close().await;
 
-        let valid_client = endpoint_builder(RoutePolicy::Auto).bind().await?;
+        let valid_client = local_test_endpoint_builder()?.bind().await?;
         let valid_connection = timeout(
             CONNECTION_TIMEOUT,
             valid_client.connect(listener_address, ALPN),

@@ -29,6 +29,13 @@ counts. It explicitly tells the user to retain the latest witness independently
 from the package. Every authority or membership mutation requires another
 export and independent witness update.
 
+M0.9.21 also exposes **Check recovery export status**. It compares a package
+rebuilt from current Root state with the exact local receipt from the last
+successful export and reports `current` or `update-required`. The status is
+cleared when the Root path changes or desktop device enrollment mutates Root
+authority. It is deliberately labelled as local lifecycle state, not global
+freshness proof; RFC-0048 defines the stronger live-device protocol.
+
 ## 3. Inspect and exact-artifact gate
 
 Package and witness can be selected through text fields or dedicated file-drop

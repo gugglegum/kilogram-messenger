@@ -17,8 +17,9 @@ mod account;
 
 pub use account::{
     AccountAuthoritySnapshot, AccountDeviceListSnapshot, AccountId, AccountRecoveryPhrase,
-    AccountRootKeyLoadOutcome, AccountRootKeyProtection, AccountRootRecoveryPackage,
-    AccountRootRecoveryWitness, AccountRootState, AuthoritySnapshotStoreOutcome, AuthorizedDevice,
+    AccountRootKeyLoadOutcome, AccountRootKeyProtection, AccountRootRecoveryCheckpointState,
+    AccountRootRecoveryCheckpointStatus, AccountRootRecoveryPackage, AccountRootRecoveryWitness,
+    AccountRootState, AuthoritySnapshotStoreOutcome, AuthorizedDevice,
     ConversationMembershipSnapshot, ConversationMembershipStoreOutcome, ConversationScopeId,
     DeviceCapability, DeviceCertificate, DeviceRevocation, MAX_ACCOUNT_DEVICES,
     MAX_ACCOUNT_ROOT_RECOVERY_MEMBERSHIPS, MAX_ACCOUNT_ROOT_RECOVERY_PACKAGE_BYTES,
@@ -365,6 +366,9 @@ pub enum IdentityError {
 
     #[error("reconstructed Account Root authority state does not match its recovery package")]
     AccountRootRecoveryVerificationFailed,
+
+    #[error("Account Root state changed before the exported recovery checkpoint was recorded")]
+    AccountRootRecoveryCheckpointChanged,
 
     #[error("invalid Account Root key envelope at {path}: {detail}")]
     InvalidAccountRootKeyEnvelope { path: PathBuf, detail: String },

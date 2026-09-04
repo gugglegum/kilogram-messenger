@@ -24,9 +24,9 @@ use zeroize::{Zeroize as _, Zeroizing};
 mod wizard;
 
 use wizard::{
-    AccountRecoveryOutput, DeviceLinkAcceptOutput, DeviceLinkAuthorizeOutput,
-    DeviceLinkInspectOutput, DeviceLinkRequestOutput, RecoveryCommandOutput, command_arguments,
-    run_json, run_json_with_stdin, run_recovery_command,
+    AccountRecoveryOutput, AccountRecoveryStatusOutput, DeviceLinkAcceptOutput,
+    DeviceLinkAuthorizeOutput, DeviceLinkInspectOutput, DeviceLinkRequestOutput,
+    RecoveryCommandOutput, command_arguments, run_json, run_json_with_stdin, run_recovery_command,
 };
 
 const CHANGE_WAIT_MILLISECONDS: u32 = 20_000;
@@ -177,6 +177,7 @@ impl ConnectionState {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Operation {
     Bootstrap,
+    AccountRecoveryStatus,
     AccountRecoveryExport,
     AccountRecoveryInspect,
     AccountRecoveryRestore,
@@ -227,6 +228,7 @@ enum DeviceLinkUiAction {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum AccountRecoveryUiAction {
     None,
+    Status,
     Export,
     Inspect,
     Restore,
@@ -254,6 +256,7 @@ enum DropTarget {
 
 struct AccountRecoveryView {
     account_root_dir: String,
+    checkpoint_status: Option<AccountRecoveryStatusOutput>,
     package_output_file: String,
     witness_output_file: String,
     exported: Option<AccountRecoveryOutput>,
@@ -272,6 +275,7 @@ impl Default for AccountRecoveryView {
     fn default() -> Self {
         Self {
             account_root_dir: "kilogram-account/account-root".to_owned(),
+            checkpoint_status: None,
             package_output_file: "kilogram-root-authority.karp".to_owned(),
             witness_output_file: "kilogram-root-latest.karw".to_owned(),
             exported: None,
@@ -879,6 +883,7 @@ impl ViewModel {
             }
             Ok(
                 WorkerSuccess::Bootstrapped(_)
+                | WorkerSuccess::AccountRecoveryStatus(_)
                 | WorkerSuccess::AccountRecoveryExported(_)
                 | WorkerSuccess::AccountRecoveryInspected { .. }
                 | WorkerSuccess::AccountRecoveryRestored(_)
@@ -903,6 +908,10 @@ enum WorkerRequest {
     Bootstrap {
         executable: PathBuf,
         workspace: PathBuf,
+    },
+    AccountRecoveryStatus {
+        executable: PathBuf,
+        account_root_dir: PathBuf,
     },
     AccountRecoveryExport {
         executable: PathBuf,
@@ -1009,6 +1018,7 @@ impl WorkerRequest {
     fn operation(&self) -> Operation {
         match self {
             Self::Bootstrap { .. } => Operation::Bootstrap,
+            Self::AccountRecoveryStatus { .. } => Operation::AccountRecoveryStatus,
             Self::AccountRecoveryExport { .. } => Operation::AccountRecoveryExport,
             Self::AccountRecoveryInspect { .. } => Operation::AccountRecoveryInspect,
             Self::AccountRecoveryRestore { .. } => Operation::AccountRecoveryRestore,
@@ -1035,6 +1045,7 @@ impl WorkerRequest {
 #[derive(Debug)]
 enum WorkerSuccess {
     Bootstrapped(Box<DesktopBootstrapOutput>),
+    AccountRecoveryStatus(Box<AccountRecoveryStatusOutput>),
     AccountRecoveryExported(Box<AccountRecoveryOutput>),
     AccountRecoveryInspected {
         package_file: PathBuf,
@@ -1309,6 +1320,21 @@ async fn execute_request(request: WorkerRequest) -> Result<WorkerSuccess> {
         } => run_bootstrap_process(&executable, &workspace)
             .map(Box::new)
             .map(WorkerSuccess::Bootstrapped),
+        WorkerRequest::AccountRecoveryStatus {
+            executable,
+            account_root_dir,
+        } => {
+            let output: AccountRecoveryStatusOutput = run_json(
+                &executable,
+                "account-recovery-status",
+                command_arguments([("--account-root-dir", account_root_dir.as_os_str())]),
+            )?;
+            ensure!(
+                output.account_root_dir == account_root_dir,
+                "Account Root recovery helper reported a different Root path"
+            );
+            Ok(WorkerSuccess::AccountRecoveryStatus(Box::new(output)))
+        }
         WorkerRequest::AccountRecoveryExport {
             executable,
             account_root_dir,
@@ -1767,7 +1793,8 @@ impl KilogramApp {
             }
             if matches!(
                 response.operation,
-                Operation::AccountRecoveryExport
+                Operation::AccountRecoveryStatus
+                    | Operation::AccountRecoveryExport
                     | Operation::AccountRecoveryInspect
                     | Operation::AccountRecoveryRestore
                     | Operation::DeviceLinkRequest
@@ -1828,12 +1855,24 @@ impl KilogramApp {
             }
         };
         match success {
+            WorkerSuccess::AccountRecoveryStatus(output) => {
+                let current = output.checkpoint_state == "current";
+                self.account_recovery.checkpoint_status = Some(*output);
+                self.model.notice = Some(if current {
+                    "The current Account Root state has an exact successful recovery export."
+                        .to_owned()
+                } else {
+                    "Recovery export update required: Root authority or membership state differs from the last successful export."
+                        .to_owned()
+                });
+            }
             WorkerSuccess::AccountRecoveryExported(output) => {
                 self.account_recovery.package_input_file =
                     output.package_file.display().to_string();
                 self.account_recovery.witness_input_file =
                     output.witness_file.display().to_string();
                 self.account_recovery.exported = Some(*output);
+                self.account_recovery.checkpoint_status = None;
                 self.account_recovery.inspected = None;
                 self.account_recovery.inspected_package_file = None;
                 self.account_recovery.inspected_witness_file = None;
@@ -1869,6 +1908,7 @@ impl KilogramApp {
                 self.account_recovery.recovery_phrase.zeroize();
                 self.account_recovery.confirm_latest_witness = false;
                 self.account_recovery.account_root_dir = account_root_dir.clone();
+                self.account_recovery.checkpoint_status = None;
                 self.device_link.account_id = account_id;
                 self.device_link.account_root_dir = account_root_dir;
                 self.account_recovery.restored = Some(*output);
@@ -1901,6 +1941,7 @@ impl KilogramApp {
             }
             WorkerSuccess::DeviceLinkAuthorized(output) => {
                 self.account_recovery.account_root_dir = self.device_link.account_root_dir.clone();
+                self.account_recovery.checkpoint_status = None;
                 self.account_recovery.exported = None;
                 self.account_recovery.inspected = None;
                 self.account_recovery.confirm_latest_witness = false;
@@ -2030,6 +2071,7 @@ impl KilogramApp {
         self.show_profile_editor = true;
         self.bootstrap_workspace_path = workspace.display().to_string();
         self.account_recovery.account_root_dir = output.account_root_dir().display().to_string();
+        self.account_recovery.checkpoint_status = None;
         self.account_recovery.exported = None;
         self.account_recovery.inspected = None;
         self.bootstrap_view = Some(BootstrapView {
@@ -2151,6 +2193,32 @@ impl KilogramApp {
             "Another operation is still running"
         );
         Ok(())
+    }
+
+    fn start_account_recovery_status(&mut self) {
+        let result: Result<WorkerRequest> = (|| {
+            self.require_offline_wizard()?;
+            let executable = canonical_input_path(
+                &self.bootstrap_executable_path,
+                "Bootstrap executable",
+                true,
+            )?;
+            let account_root_dir = canonical_input_path(
+                &self.account_recovery.account_root_dir,
+                "Account Root directory",
+                false,
+            )?;
+            Ok(WorkerRequest::AccountRecoveryStatus {
+                executable,
+                account_root_dir,
+            })
+        })();
+        match result {
+            Ok(request) => self.submit(Operation::AccountRecoveryStatus, request),
+            Err(error) => self
+                .model
+                .fail(Operation::AccountRecoveryStatus, format!("{error:#}")),
+        }
     }
 
     fn start_account_recovery_export(&mut self) {
@@ -2889,7 +2957,7 @@ impl KilogramApp {
     fn draw_header(&self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             ui.heading(egui::RichText::new("Kilogram").size(28.0).strong());
-            ui.label(egui::RichText::new("M0.9.20").color(egui::Color32::from_rgb(88, 166, 255)));
+            ui.label(egui::RichText::new("M0.9.21").color(egui::Color32::from_rgb(88, 166, 255)));
         });
         ui.label("Desktop client · authenticated local runtime IPC");
     }
@@ -2978,16 +3046,61 @@ impl KilogramApp {
                 ui.small("Root recovery restores authority, not a messaging device or its history. Keep the 24-word phrase, package, and latest witness as separate recovery inputs.");
                 ui.separator();
                 ui.label("Current Root: export a fresh authority checkpoint");
-                ui.horizontal(|ui| {
-                    ui.label("Account Root directory");
-                    ui.add_enabled(
-                        idle,
-                        egui::TextEdit::singleline(
-                            &mut self.account_recovery.account_root_dir,
+                let root_changed = ui
+                    .horizontal(|ui| {
+                        ui.label("Account Root directory");
+                        ui.add_enabled(
+                            idle,
+                            egui::TextEdit::singleline(
+                                &mut self.account_recovery.account_root_dir,
+                            )
+                            .desired_width(f32::INFINITY),
                         )
-                        .desired_width(f32::INFINITY),
+                        .changed()
+                    })
+                    .inner;
+                if root_changed {
+                    self.account_recovery.checkpoint_status = None;
+                    self.account_recovery.exported = None;
+                }
+                if ui
+                    .add_enabled(idle, egui::Button::new("Check recovery export status"))
+                    .clicked()
+                {
+                    action = AccountRecoveryUiAction::Status;
+                }
+                if let Some(checkpoint) = self.account_recovery.checkpoint_status.as_ref() {
+                    let current = checkpoint.checkpoint_state == "current";
+                    ui.colored_label(
+                        if current {
+                            egui::Color32::from_rgb(92, 201, 137)
+                        } else {
+                            egui::Color32::from_rgb(239, 112, 112)
+                        },
+                        if current {
+                            "Recovery export is exact for the current Root state."
+                        } else {
+                            "Recovery export update required."
+                        },
                     );
-                });
+                    ui.label(format!(
+                        "Authority revision {} · {} devices · {} memberships",
+                        checkpoint.authority_revision,
+                        checkpoint.device_count,
+                        checkpoint.conversation_membership_count
+                    ));
+                    ui.monospace(format!(
+                        "Current package ID: {}",
+                        checkpoint.current_package_id
+                    ));
+                    if let Some(recorded) = checkpoint.recorded_package_id.as_ref() {
+                        ui.monospace(format!("Last exported package ID: {recorded}"));
+                    }
+                    if let Some(revision) = checkpoint.recorded_authority_revision {
+                        ui.label(format!("Last exported authority revision: {revision}"));
+                    }
+                    ui.small("This is a local exact-export receipt, not proof that independently stored artifacts are globally newest.");
+                }
                 ui.horizontal(|ui| {
                     ui.label("New package file");
                     ui.add_enabled(
@@ -4322,6 +4435,8 @@ impl eframe::App for KilogramApp {
                 "Recovery phrase removed from the desktop process. Complete peer setup in the launch profile."
                     .to_owned(),
             );
+        } else if account_recovery_action == AccountRecoveryUiAction::Status {
+            self.start_account_recovery_status();
         } else if account_recovery_action == AccountRecoveryUiAction::Export {
             self.start_account_recovery_export();
         } else if account_recovery_action == AccountRecoveryUiAction::Inspect {
@@ -4459,6 +4574,12 @@ mod tests {
         let directory_path = fs::canonicalize(directory.path())?;
         let workspace = directory_path.join("account");
         let mut created = run_bootstrap_process(&executable, &workspace)?;
+        let initial_status: AccountRecoveryStatusOutput = run_json(
+            &executable,
+            "account-recovery-status",
+            command_arguments([("--account-root-dir", created.account_root_dir().as_os_str())]),
+        )?;
+        assert_eq!(initial_status.checkpoint_state, "update-required");
         let package_file = directory_path.join("root.karp");
         let witness_file = directory_path.join("latest.karw");
         let exported: AccountRecoveryOutput = run_json(
@@ -4471,6 +4592,13 @@ mod tests {
             ]),
         )?;
         exported.validate_expected_status("account-root-recovery-exported")?;
+        let current_status: AccountRecoveryStatusOutput = run_json(
+            &executable,
+            "account-recovery-status",
+            command_arguments([("--account-root-dir", created.account_root_dir().as_os_str())]),
+        )?;
+        assert_eq!(current_status.checkpoint_state, "current");
+        assert_eq!(current_status.current_package_id, exported.package_id);
         let inspected: AccountRecoveryOutput = run_json(
             &executable,
             "account-recovery-inspect",
@@ -4511,6 +4639,12 @@ mod tests {
         assert_eq!(restored.account_id, exported.account_id);
         assert_eq!(restored.authority_revision, exported.authority_revision);
         assert_eq!(restored.account_root_dir.as_ref(), Some(&restored_root));
+        let restored_status: AccountRecoveryStatusOutput = run_json(
+            &executable,
+            "account-recovery-status",
+            command_arguments([("--account-root-dir", restored_root.as_os_str())]),
+        )?;
+        assert_eq!(restored_status.checkpoint_state, "current");
         let expected_provider = if cfg!(windows) {
             "windows-dpapi-current-user"
         } else {

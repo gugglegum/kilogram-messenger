@@ -93,7 +93,10 @@ Export holds the same exclusive Account Root authority lock as enrollment,
 revocation, and membership mutation. Both outputs must be new regular paths
 outside the Root directory. Temporary files are synced before no-clobber
 publication; failure to publish the witness removes the package created by that
-attempt.
+attempt. M0.9.21 then reacquires the Root lock, requires current state to match
+the published package exactly, and records the witness as a local successful-
+export receipt. A mismatch removes the newly published pair and leaves the
+lifecycle `update-required`.
 
 Inspect verifies all nested and outer Root signatures plus the exact witness
 binding without reading the phrase. Inputs are bounded regular files and direct
@@ -122,7 +125,8 @@ recovered Root key is wrapped anew with DPAPI CurrentUser.
 6. Immediately export and independently retain a new package/witness pair after
    the authority revision changes.
 
-The implemented desktop orchestration is specified in RFC-0047.
+The implemented desktop orchestration is specified in RFC-0047. Exact-export
+lifecycle and live freshness modes are specified in RFC-0048.
 
 Recovery does not overwrite an existing Root, silently reset authority state,
 copy any device secret, claim message-history completeness, or revoke a lost

@@ -65,6 +65,11 @@ enum Command {
         #[arg(long)]
         witness_file: PathBuf,
     },
+    /// Report whether the current Root state has an exact successful export.
+    AccountRecoveryStatus {
+        #[arg(long)]
+        account_root_dir: PathBuf,
+    },
     /// Authenticate and inspect a recovery package without reading the phrase.
     AccountRecoveryInspect {
         #[arg(long)]
@@ -133,6 +138,9 @@ fn main() -> Result<()> {
             package_file,
             witness_file,
         )?)?,
+        Command::AccountRecoveryStatus { account_root_dir } => serde_json::to_vec(
+            &kilogram_bootstrap::account_recovery::account_root_status(account_root_dir)?,
+        )?,
         Command::AccountRecoveryInspect {
             package_file,
             witness_file,

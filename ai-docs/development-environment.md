@@ -829,3 +829,32 @@ retirement остальных compatibility shadows ещё не реализов
   `0BFD06F2C0056E77809CDD72DAB821C70DCFCB7FD115B8BD920022193AB62968`;
   `target/release/kilogram-cli.exe` — 22,564,864 bytes, SHA-256
   `D1D7D8A56AFD0CFC839D3E32A3A7D198A03BEA7716D00D67D5BABEA469519DF2`.
+
+## M0.9.21 verification snapshot (2026-09-04)
+
+- `kilogram-identity` записывает local exact-export witness receipt только
+  после повторной Root-locked проверки опубликованного package; status
+  пересобирает canonical current package и различает `current`/
+  `update-required` для authority и membership-only изменений.
+- `kilogram-bootstrap account-recovery-status` и Windows recovery panel
+  показывают current/recorded IDs/revisions и явно маркируют lifecycle scope как
+  не являющийся global freshness proof.
+- Targeted identity/bootstrap/desktop regression прошёл 40 tests; configured
+  real debug и release helper-process smoke прошёл create → initial due → export
+  current → restore current.
+- `cargo fmt --all -- --check`, strict
+  `cargo clippy --workspace --all-targets --all-features -- -D warnings` и
+  `cargo build --release --workspace` проходят.
+- Full serial workspace run прошёл 161 из 162 tests; единственный прежний Iroh
+  `runtime_outbox_delivers_and_automatic_sync_converges` не установил direct
+  session до idle timeout, но exact isolated rerun прошёл. Это не затронутый
+  recovery-код, поэтому причинность с M0.9.21 не установлена.
+- Unit-only listener authorization tests теперь используют один IPv4 loopback
+  transport с отключённым production relay map; два ранее order-dependent
+  handshake tests после изменения проходят вместе.
+- Windows artifacts: `target/release/kilogram-bootstrap.exe` — 3,798,016 bytes,
+  SHA-256 `BB78CE4D9AD5896769507586FE45170F997891820F1A2C4F27A9F6F07CD30442`;
+  `target/release/kilogram-windows.exe` — 7,236,608 bytes, SHA-256
+  `124006831DA0CCE6250BA70DCF98B21DA64FC116CD8176661FA98DAE86A3F73A`;
+  `target/release/kilogram-cli.exe` — 22,563,840 bytes, SHA-256
+  `92C7456B85EBF646C13C0EC6CB9F12F9E6AD1DB8A01C5BCD729E6220E7D39E94`.

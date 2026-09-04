@@ -100,12 +100,14 @@ specified in
 Portable Account Root authority recovery and its desktop ceremony are specified
 in [`docs/RFC-0046-account-root-authority-recovery.md`](docs/RFC-0046-account-root-authority-recovery.md)
 and [`docs/RFC-0047-desktop-account-root-recovery.md`](docs/RFC-0047-desktop-account-root-recovery.md).
+Recovery freshness modes and the exact-export lifecycle are specified in
+[`docs/RFC-0048-recovery-freshness-and-checkpoint-lifecycle.md`](docs/RFC-0048-recovery-freshness-and-checkpoint-lifecycle.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.20 desktop Account Root recovery — complete
+## Current milestone: M0.9.21 recovery freshness/lifecycle — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -372,6 +374,19 @@ revision displayed by inspect, requires an explicit newest-witness confirmation,
 and writes only a new Root directory. Success pre-fills the existing device-link
 ceremony; device enrollment and message-history recovery remain explicit later
 steps.
+
+M0.9.21 makes recovery-backup maintenance observable instead of relying on a
+remembered manual step. A successful export records the exact Root-signed
+witness inside the Account Root only after revalidating that Root state did not
+change during external publication. Status rebuilds the current package under
+the authority lock and reports `current` or `update-required`, including for a
+membership-only change at the same authority revision. This local receipt is a
+lifecycle check, not an anti-rollback oracle. RFC-0048 therefore defines a fresh
+challenge-bound strict-majority current-device ceremony as the next serverless
+freshness layer, while retaining an explicitly weaker offline fallback. Every
+approval binds one exact recovery roster; safe changes between roster epochs
+require joint majorities of the old and new rosters rather than a Root signature
+alone.
 
 M0.8.1 adds a reversible encrypted shadow snapshot of the entire device state.
 `state-vault-migrate` publishes encrypted records and a keyed manifest in one
@@ -808,6 +823,9 @@ kilogram-bootstrap account-recovery-export `
   --package-file .\kilogram-root-20260904.karp `
   --witness-file .\kilogram-root-latest.karw
 
+kilogram-bootstrap account-recovery-status `
+  --account-root-dir .\kilogram-account\account-root
+
 kilogram-bootstrap account-recovery-inspect `
   --package-file .\kilogram-root-20260904.karp `
   --witness-file .\kilogram-root-latest.karw
@@ -829,7 +847,9 @@ the phrase or a private key, but both expose account/device/membership metadata.
 The full contract is in
 [`docs/RFC-0046-account-root-authority-recovery.md`](docs/RFC-0046-account-root-authority-recovery.md),
 with the desktop boundary in
-[`docs/RFC-0047-desktop-account-root-recovery.md`](docs/RFC-0047-desktop-account-root-recovery.md).
+[`docs/RFC-0047-desktop-account-root-recovery.md`](docs/RFC-0047-desktop-account-root-recovery.md)
+and freshness/lifecycle rules in
+[`docs/RFC-0048-recovery-freshness-and-checkpoint-lifecycle.md`](docs/RFC-0048-recovery-freshness-and-checkpoint-lifecycle.md).
 
 The queue command prints `runtime_ipc_request_id` before connecting. If its
 result is uncertain, repeat the same message with `--request-id <PRINTED_ID>`;

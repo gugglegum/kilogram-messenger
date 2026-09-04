@@ -43,6 +43,7 @@ const DEVICE_LINK_AUTHORIZATION_SIGNATURE_DOMAIN: &[u8] =
     b"kilogram:device-link-authorization-signature:v1\0";
 const ACCOUNT_ROOT_RECOVERY_PACKAGE_MAGIC: &[u8; 16] = b"KILOGRAM-ARPKG01";
 const ACCOUNT_ROOT_RECOVERY_WITNESS_MAGIC: &[u8; 16] = b"KILOGRAM-ARWIT01";
+const ACCOUNT_ROOT_RECOVERY_CHECKPOINT_FILE: &str = "latest-recovery-checkpoint.witness";
 const ACCOUNT_ROOT_RECOVERY_VERSION: u8 = 1;
 const ACCOUNT_ROOT_RECOVERY_PACKAGE_SIGNATURE_DOMAIN: &[u8] =
     b"kilogram:account-root-recovery-package-signature:v1\0";
@@ -446,6 +447,67 @@ impl AccountRootRecoveryWitness {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum AccountRootRecoveryCheckpointState {
+    Current,
+    UpdateRequired,
+}
+
+impl AccountRootRecoveryCheckpointState {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Current => "current",
+            Self::UpdateRequired => "update-required",
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AccountRootRecoveryCheckpointStatus {
+    state: AccountRootRecoveryCheckpointState,
+    account_id: AccountId,
+    authority_revision: u64,
+    device_count: usize,
+    conversation_membership_count: usize,
+    current_package_id: [u8; 32],
+    recorded_package_id: Option<[u8; 32]>,
+    recorded_authority_revision: Option<u64>,
+}
+
+impl AccountRootRecoveryCheckpointStatus {
+    pub fn state(&self) -> AccountRootRecoveryCheckpointState {
+        self.state
+    }
+
+    pub fn account_id(&self) -> AccountId {
+        self.account_id
+    }
+
+    pub fn authority_revision(&self) -> u64 {
+        self.authority_revision
+    }
+
+    pub fn device_count(&self) -> usize {
+        self.device_count
+    }
+
+    pub fn conversation_membership_count(&self) -> usize {
+        self.conversation_membership_count
+    }
+
+    pub fn current_package_id(&self) -> &[u8; 32] {
+        &self.current_package_id
+    }
+
+    pub fn recorded_package_id(&self) -> Option<&[u8; 32]> {
+        self.recorded_package_id.as_ref()
+    }
+
+    pub fn recorded_authority_revision(&self) -> Option<u64> {
+        self.recorded_authority_revision
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 enum AccountRootKeyProviderId {
     WindowsDpapiCurrentUser,
@@ -577,6 +639,12 @@ impl AccountRootState {
     ) -> Result<(AccountRootRecoveryPackage, AccountRootRecoveryWitness), IdentityError> {
         self.ensure_authority_log_ready()?;
         let _lock = self.acquire_authority_write_lock()?;
+        self.capture_recovery_unlocked()
+    }
+
+    fn capture_recovery_unlocked(
+        &self,
+    ) -> Result<(AccountRootRecoveryPackage, AccountRootRecoveryWitness), IdentityError> {
         let authority_snapshot = self.authority_snapshot()?;
         let device_list = self.published_device_list()?;
         let conversation_memberships = self.root_conversation_memberships()?;
@@ -588,6 +656,94 @@ impl AccountRootState {
         )?;
         let witness = AccountRootRecoveryWitness::issue(&self.identity, &package)?;
         Ok((package, witness))
+    }
+
+    /// Records an externally published checkpoint only if Root state still
+    /// matches the exact captured package. This local receipt makes every later
+    /// authority or membership mutation observable as `update-required`.
+    pub fn record_exported_recovery_checkpoint(
+        &self,
+        package: &AccountRootRecoveryPackage,
+        witness: &AccountRootRecoveryWitness,
+    ) -> Result<(), IdentityError> {
+        self.ensure_authority_log_ready()?;
+        package.verify()?;
+        witness.verify_package(package)?;
+        if package.account_id() != self.account_id() {
+            return Err(IdentityError::AccountMismatch {
+                expected: self.account_id(),
+                actual: package.account_id(),
+            });
+        }
+        let _lock = self.acquire_authority_write_lock()?;
+        let (current_package, _) = self.capture_recovery_unlocked()?;
+        if current_package != *package {
+            return Err(IdentityError::AccountRootRecoveryCheckpointChanged);
+        }
+        replace_file_atomically(
+            &self.directory.join(ACCOUNT_ROOT_RECOVERY_CHECKPOINT_FILE),
+            &witness.encode()?,
+        )
+    }
+
+    /// Rebuilds the current recovery package under the authority lock and
+    /// compares it with the exact witness recorded by the last successful
+    /// export. The result is local lifecycle state, not global freshness proof.
+    pub fn recovery_checkpoint_status(
+        &self,
+    ) -> Result<AccountRootRecoveryCheckpointStatus, IdentityError> {
+        self.ensure_authority_log_ready()?;
+        let _lock = self.acquire_authority_write_lock()?;
+        let (package, _) = self.capture_recovery_unlocked()?;
+        let checkpoint_path = self.directory.join(ACCOUNT_ROOT_RECOVERY_CHECKPOINT_FILE);
+        let recorded = match fs::symlink_metadata(&checkpoint_path) {
+            Ok(metadata) => {
+                if metadata.file_type().is_symlink() || !metadata.is_file() {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        "Account Root recovery checkpoint receipt is not a regular file",
+                    )
+                    .into());
+                }
+                let length = usize::try_from(metadata.len()).unwrap_or(usize::MAX);
+                if length > MAX_ACCOUNT_ROOT_RECOVERY_WITNESS_BYTES {
+                    return Err(IdentityError::AccountRootRecoveryWitnessTooLarge(length));
+                }
+                Some(AccountRootRecoveryWitness::decode_and_verify(&fs::read(
+                    checkpoint_path,
+                )?)?)
+            }
+            Err(error) if error.kind() == io::ErrorKind::NotFound => None,
+            Err(error) => return Err(error.into()),
+        };
+        if let Some(witness) = recorded.as_ref()
+            && witness.account_id() != self.account_id()
+        {
+            return Err(IdentityError::AccountMismatch {
+                expected: self.account_id(),
+                actual: witness.account_id(),
+            });
+        }
+        let state = if recorded
+            .as_ref()
+            .is_some_and(|witness| witness.verify_package(&package).is_ok())
+        {
+            AccountRootRecoveryCheckpointState::Current
+        } else {
+            AccountRootRecoveryCheckpointState::UpdateRequired
+        };
+        Ok(AccountRootRecoveryCheckpointStatus {
+            state,
+            account_id: package.account_id(),
+            authority_revision: package.authority_revision(),
+            device_count: package.device_count(),
+            conversation_membership_count: package.conversation_membership_count(),
+            current_package_id: package.package_id()?,
+            recorded_package_id: recorded.as_ref().map(|witness| *witness.package_id()),
+            recorded_authority_revision: recorded
+                .as_ref()
+                .map(AccountRootRecoveryWitness::authority_revision),
+        })
     }
 
     /// Reconstructs an Account Root only in a new path after the phrase,
@@ -667,11 +823,17 @@ impl AccountRootState {
                 &membership.encode()?,
             )?;
         }
+        write_new_file(
+            &staging.path().join(ACCOUNT_ROOT_RECOVERY_CHECKPOINT_FILE),
+            &witness.encode()?,
+        )?;
 
         if staged_root.authority_snapshot()? != package.content.authority_snapshot
             || staged_root.published_device_list()? != package.content.device_list
             || staged_root.root_conversation_memberships()?
                 != package.content.conversation_memberships
+            || staged_root.recovery_checkpoint_status()?.state()
+                != AccountRootRecoveryCheckpointState::Current
         {
             return Err(IdentityError::AccountRootRecoveryVerificationFailed);
         }

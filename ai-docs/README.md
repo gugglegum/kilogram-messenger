@@ -162,6 +162,13 @@ multi-source claim reconciliation. M0.7.9 добавил signed append-only chec
   единственным Root writer, phrase идёт только bounded stdin и zeroize-ится после
   enqueue, а restore связан с exact inspected package ID/revision для защиты от
   same-path replacement. После успеха GUI только заполняет device-link поля.
+  M0.9.21 добавил обязательный exact-export lifecycle: Root локально фиксирует
+  witness только после повторной проверки опубликованного package, а status
+  пересобирает current package под authority lock и показывает `current` либо
+  `update-required`, включая membership-only mutation без смены authority
+  revision. Это локальный receipt, не global freshness proof. RFC-0048 выбрал
+  fresh challenge-bound current-device quorum как более сильный serverless
+  режим и зафиксировал необходимость joint-consensus смены recovery roster.
   OS peer
   credentials остаются дальше. Reconciliation выбирает
   inventory только при совпадении двух или более полных явно собранных claims и
@@ -324,11 +331,13 @@ global prekey discovery/witness, автоматический recovery source di
 
 ## План ближайших работ
 
-1. M0.9.21: спроектировать global/monotonic witness или current-device quorum:
-   M0.9.19/M0.9.20 отклоняют old package с latest witness, но не matching rollback
-   обоих файлов; определить обязательный checkpoint-update lifecycle.
-2. Реализовать выбранный freshness protocol и интегрировать его в desktop
-   recovery ceremony без превращения инфраструктуры в holder Root secrets.
+1. M0.9.22: реализовать bounded challenge/request/approval artifacts,
+   DB-primary anti-equivocation head, exact recovery-roster binding и
+   strict-majority verification для current-device recovery ceremony.
+2. Интегрировать quorum collection/claims в desktop recovery ceremony и
+   сохранить явно более слабый offline fallback без превращения инфраструктуры
+   в holder Root secrets. До cross-roster fork-safety добавить recovery-policy
+   epochs и joint-majority transition старого и нового roster.
 3. Optional autostart/background mode оставить отдельной явной настройкой, а не
    обязательным Task Scheduler этапом.
 4. Добавить production macOS/Linux local key provider, согласованный monotonic
@@ -447,5 +456,7 @@ global prekey discovery/witness, автоматический recovery source di
   реализованный M0.9.19 portable Root authority package, exact witness и atomic phrase restore.
 - [`../docs/RFC-0047-desktop-account-root-recovery.md`](../docs/RFC-0047-desktop-account-root-recovery.md) —
   реализованный M0.9.20 desktop export/inspect/stdin restore и exact inspected-artifact gate.
+- [`../docs/RFC-0048-recovery-freshness-and-checkpoint-lifecycle.md`](../docs/RFC-0048-recovery-freshness-and-checkpoint-lifecycle.md) —
+  реализованный M0.9.21 exact-export lifecycle и принятый current-device quorum contract.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

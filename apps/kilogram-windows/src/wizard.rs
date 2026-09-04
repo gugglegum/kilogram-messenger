@@ -89,6 +89,22 @@ pub(crate) struct AccountRecoveryOutput {
     pub(crate) freshness_scope: String,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct AccountRecoveryStatusOutput {
+    pub(crate) status: String,
+    pub(crate) checkpoint_state: String,
+    pub(crate) account_id: String,
+    pub(crate) authority_revision: u64,
+    pub(crate) device_count: usize,
+    pub(crate) conversation_membership_count: usize,
+    pub(crate) current_package_id: String,
+    pub(crate) recorded_package_id: Option<String>,
+    pub(crate) recorded_authority_revision: Option<u64>,
+    pub(crate) account_root_dir: PathBuf,
+    pub(crate) lifecycle_scope: String,
+}
+
 impl AccountRecoveryOutput {
     pub(crate) fn validate_expected_status(&self, expected: &str) -> Result<()> {
         self.validate()?;
@@ -230,6 +246,73 @@ impl WizardJsonOutput for AccountRecoveryOutput {
                 self.account_root_dir.is_none() && self.root_key_protection.is_none(),
                 "non-restore output unexpectedly contains local Root state"
             );
+        }
+        Ok(())
+    }
+}
+
+impl WizardJsonOutput for AccountRecoveryStatusOutput {
+    fn validate(&self) -> Result<()> {
+        ensure!(
+            matches!(
+                self.status.as_str(),
+                "account-root-recovery-current" | "account-root-recovery-update-required"
+            ),
+            "wizard helper returned an unknown recovery checkpoint status"
+        );
+        AccountId::from_str(&self.account_id)
+            .context("recovery checkpoint Account ID is invalid")?;
+        ensure!(
+            self.authority_revision > 0,
+            "recovery checkpoint authority revision is missing"
+        );
+        ensure!(
+            self.device_count > 0,
+            "recovery checkpoint device list is empty"
+        );
+        validate_hex_id(&self.current_package_id, "current recovery package ID")?;
+        ensure!(
+            self.account_root_dir.is_absolute(),
+            "recovery checkpoint Root path is relative"
+        );
+        ensure!(
+            self.lifecycle_scope == "local-exact-export-receipt-not-global-freshness-proof",
+            "recovery checkpoint lifecycle scope is invalid"
+        );
+        ensure!(
+            self.recorded_package_id.is_some() == self.recorded_authority_revision.is_some(),
+            "recovery checkpoint recorded fields are incomplete"
+        );
+        if let Some(package_id) = self.recorded_package_id.as_ref() {
+            validate_hex_id(package_id, "recorded recovery package ID")?;
+        }
+        if let Some(revision) = self.recorded_authority_revision {
+            ensure!(
+                revision > 0,
+                "recorded recovery authority revision is invalid"
+            );
+        }
+        match self.status.as_str() {
+            "account-root-recovery-current" => {
+                ensure!(
+                    self.checkpoint_state == "current"
+                        && self.recorded_package_id.as_ref() == Some(&self.current_package_id)
+                        && self.recorded_authority_revision == Some(self.authority_revision),
+                    "current recovery checkpoint fields disagree"
+                );
+            }
+            "account-root-recovery-update-required" => {
+                ensure!(
+                    self.checkpoint_state == "update-required",
+                    "stale recovery checkpoint state is invalid"
+                );
+                ensure!(
+                    self.recorded_package_id.as_ref() != Some(&self.current_package_id)
+                        || self.recorded_authority_revision != Some(self.authority_revision),
+                    "stale recovery checkpoint unexpectedly matches current state"
+                );
+            }
+            _ => unreachable!("status was checked above"),
         }
         Ok(())
     }
@@ -596,6 +679,22 @@ mod tests {
         );
         value["unexpected"] = serde_json::Value::Bool(true);
         assert!(serde_json::from_value::<AccountRecoveryOutput>(value).is_err());
+
+        let root = temporary.path().join("account-root");
+        let status: AccountRecoveryStatusOutput = serde_json::from_value(serde_json::json!({
+            "status": "account-root-recovery-update-required",
+            "checkpoint_state": "update-required",
+            "account_id": "0101010101010101010101010101010101010101010101010101010101010101",
+            "authority_revision": 7,
+            "device_count": 2,
+            "conversation_membership_count": 3,
+            "current_package_id": "0303030303030303030303030303030303030303030303030303030303030303",
+            "recorded_package_id": "0202020202020202020202020202020202020202020202020202020202020202",
+            "recorded_authority_revision": 7,
+            "account_root_dir": root,
+            "lifecycle_scope": "local-exact-export-receipt-not-global-freshness-proof"
+        }))?;
+        status.validate()?;
         Ok(())
     }
 }

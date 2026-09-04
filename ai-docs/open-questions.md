@@ -65,14 +65,22 @@ membership heads, а old package с latest witness отклоняется. Со�
 источника или current-device quorum. M0.9.20 добавил desktop ceremony, exact
 inspected package ID/revision gate и stdin-only phrase handling, но explicit
 checkbox newest witness является только human assertion, не freshness proof.
+M0.9.21 добавил local exact-export receipt/status и поэтому делает пропущенное
+обновление видимым, но rollback всего Root откатывает и receipt. RFC-0048 выбрал
+fresh challenge-bound current-device quorum; его exact roster и DB-primary
+anti-equivocation head ещё предстоит реализовать, а безопасная смена recovery
+roster требует joint-majority transition старого и нового epoch.
 Следующие вопросы относятся к production recovery, rotation, asynchronous
 sessions, distribution, removal и key epochs и не решены этим прототипом.
 
 - Какая точная модель угроз: массовое наблюдение, целевой атакующий, злонамеренные
   relay/storage peers, компрометация bootstrap-инфраструктуры, Sybil и eclipse?
-- Какой privacy-preserving monotonic witness/current-device quorum подтверждает,
-  что matching M0.9.19 package+witness действительно является глобально
-  последним, и как безопасно требовать его обновление после каждой Root mutation?
+- Как транспортировать current-device recovery approvals через local/LAN/relay,
+  не раскрывая лишнюю account metadata, и какой future external monotonic
+  witness реализует тот же verifier interface, когда device quorum недоступен?
+- Как мигрировать существующие аккаунты на recovery-policy roster и обеспечить
+  joint-majority epoch transition при enrollment/revocation, не блокируя честный
+  emergency recovery после потери большинства устройств?
 - Какие операции может единолично подписать device key, а какие требуют seed,
   аппаратного ключа или кворума устройств?
 - Как разрешать конкурирующие операции восстановления и отзыва при утечке seed?
