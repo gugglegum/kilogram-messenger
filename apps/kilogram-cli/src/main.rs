@@ -5826,7 +5826,17 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
         prepare_runtime_listener(&state_dir, &device_list_file, &peer_prekey_pool_files)
     })?;
     let mut device_directory_state = prepared.device_directory_state;
-    let endpoint = endpoint_builder_with_relay(route_policy, relay_url)
+    let endpoint_builder = endpoint_builder_with_relay(route_policy, relay_url);
+    #[cfg(test)]
+    let endpoint_builder = endpoint_builder
+        .relay_mode(iroh::RelayMode::Disabled)
+        .clear_ip_transports()
+        .clear_address_lookup()
+        .portmapper_config(iroh::endpoint::PortmapperConfig::Disabled)
+        .net_report_config(iroh::endpoint::NetReportConfig::minimal())
+        .bind_addr((std::net::Ipv4Addr::LOCALHOST, 0))
+        .context("bind test runtime endpoint exclusively to IPv4 loopback")?;
+    let endpoint = endpoint_builder
         .alpns(vec![ALPN.to_vec()])
         .bind()
         .await
@@ -12854,6 +12864,9 @@ mod tests {
         Ok(endpoint_builder(RoutePolicy::Auto)
             .relay_mode(RelayMode::Disabled)
             .clear_ip_transports()
+            .clear_address_lookup()
+            .portmapper_config(iroh::endpoint::PortmapperConfig::Disabled)
+            .net_report_config(iroh::endpoint::NetReportConfig::minimal())
             .bind_addr((std::net::Ipv4Addr::LOCALHOST, 0))?)
     }
 

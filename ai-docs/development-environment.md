@@ -1106,3 +1106,12 @@ retirement остальных compatibility shadows ещё не реализов
   `DE56811114AC383DF41D678D0BD275563CB6EB256A488F630B8662BDB00BA079`;
   `target/release/kilogram-ticket-store.exe` — 2,427,904 bytes, SHA-256
   `BD7C3469E88355B81230F66F4C37C3BFC9A1586B8711708216D4E14851897179`.
+- Windows Firewall hygiene: Iroh endpoints внутри Cargo test-harness теперь
+  принудительно используют только `127.0.0.1:0`; relay, address lookup,
+  portmapper/SSDP и optional net-report probes отключены, default wildcard
+  transports удалены. Это устраняет необходимость разрешать
+  меняющийся `target/*/deps/kilogram_cli-<hash>.exe`; production runtime и
+  release process smoke сохраняют обычную сетевую конфигурацию. Отдельные 13
+  runtime-related tests и полный serial regression из 193 tests проходят;
+  workspace feature-unification действительно меняет harness suffix, но больше
+  не меняет его сетевую экспозицию.
