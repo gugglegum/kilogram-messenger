@@ -2645,11 +2645,45 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
   и
   [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md).
 
+### M0.9.31 — opt-in runtime ticket automation: выполнено
+
+Реализовано:
+
+- IPC v8 устанавливает и читает device-signed per-contact policy для
+  автоматической публикации собственного ticket и refresh peer ticket;
+- policy связывает exact contact/conversation/peer/store, TTL/refresh lead,
+  bounded retry и разрешения Ethernet/Wi-Fi/mobile/unknown; повтор той же
+  конфигурации идемпотентен, изменение или disable создаёт следующую generation;
+- отдельные signed append-only attempt chains сохраняют publish/refresh result,
+  failure count и `not_before`, поэтому restart не сбрасывает exponential
+  backoff; success планируется от signed expiry, near-expiry recheck не чаще 30s;
+- automatic publish создаёт новую signed publication generation и не выдаёт
+  randomized reseal той же generation за idempotent replay;
+- постоянный monotonic runtime ticker не может быть вытеснен частыми IPC/UI
+  reads; сетевой wait не удерживает state lock, а commit повторно проверяет exact
+  current policy head;
+- Windows UI даёт явные enable/disable/status и отдельные network permissions,
+  показывает обе action states и честно сообщает: работа только пока открыт
+  runtime, без Task Scheduler/service/autostart и без участия в чужом relay;
+- content-addressed короткие `.tap`/`.taa` имена исключают Windows long-path
+  failure для новых signed records.
+
+Проверки:
+
+- unit regression проверяет policy succession, bounded backoff, success reset и
+  minimum near-expiry recheck;
+- два live runtime actor через production opaque store проходят automatic mutual
+  publish/refresh, durable status и signed disable generation;
+- strict Windows adapter проверяет exact safe defaults и typed IPC v8 status;
+- полный workspace/release snapshot записывается в `development-environment.md`;
+- contract зафиксирован в
+  [`../docs/RFC-0053-opt-in-ticket-automation.md`](../docs/RFC-0053-opt-in-ticket-automation.md).
+
 ### Следующий этап
 
-1. M0.9.31: добавить opt-in automatic publish/refresh policy с expiry-aware
-   schedule, bounded retry/backoff, network-class constraints и явными
-   foreground/background/UI состояниями.
+1. M0.9.32: спроектировать authenticated bounded compaction/checkpoint для
+   runtime publication/observation/automation chains без потери monotonic
+   high-water и без unbounded startup scan.
 2. После наблюдаемого service contract спроектировать unlinkable write
    capability/admission: M0.9.30 ограничивает ресурсы, но channel-aware writer
    может вызвать availability failure.

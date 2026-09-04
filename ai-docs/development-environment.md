@@ -1115,3 +1115,41 @@ retirement остальных compatibility shadows ещё не реализов
   runtime-related tests и полный serial regression из 193 tests проходят;
   workspace feature-unification действительно меняет harness suffix, но больше
   не меняет его сетевую экспозицию.
+
+## M0.9.31 verification snapshot (2026-09-05)
+
+- Signed scheduler unit regression проходит policy succession/disable,
+  exponential `5 -> 10` backoff, success reset, expiry-derived schedule и
+  minimum 30-second near-expiry recheck.
+- Production opaque store между двумя live runtime actors проходит initial
+  explicit bootstrap, automatic next-generation mutual publish, mutual refresh,
+  persisted success heads и signed policy disable `1 -> 2`.
+- Persistent monotonic runtime ticker устраняет starvation delivery/sync/
+  automation при частых IPC status reads; старый outbox+automatic-sync lifecycle
+  переведён на явный authenticated shutdown обоих unbounded test runtimes и
+  повторно проходит.
+- Windows adapter проверяет exact IPC v8 policy `TTL=900`, refresh lead `300`,
+  retry `5..300`, default Ethernet/Wi-Fi allow, mobile/unknown deny и literal
+  `only-while-runtime-process-is-running` без OS background service.
+- `cargo fmt --all -- --check`, strict
+  `cargo clippy --workspace --all-targets --all-features -- -D warnings`, все
+  194 workspace tests и `cargo build --workspace --release` проходят. Полный
+  serial запуск составлен из зелёных bootstrap 14/14, CLI 55/55 и остальных
+  workspace crates 125/125 после исправления единственной test-lifecycle гонки.
+- Release-mode lifecycle
+  `cargo test --release -p kilogram-cli
+  runtime_publishes_and_refreshes_an_opaque_contact_ticket_idempotently`
+  проходит с двумя actors, signed automation state и production store.
+- Windows artifacts со стабильными именами: `target/release/kilogram-bootstrap.exe`
+  — 20,460,544 bytes, SHA-256
+  `3AC84084FB06FB255FEDDF3816CA7B14FCBF410D5200EBB75D6082BC2B9BF2F3`;
+  `target/release/kilogram-cli.exe` — 24,533,504 bytes, SHA-256
+  `D0FE0F8938248C8931D9A4D904BEFA695D35083CDD05B9C11287AE29B3FED36B`;
+  `target/release/kilogram-windows.exe` — 7,988,224 bytes, SHA-256
+  `9D9DEB787857DC386A892D421467F8F04AB77B522FC542845D46CF136DDF2EC6`;
+  `target/release/kilogram-ticket-store.exe` — 2,427,904 bytes, SHA-256
+  `BD7C3469E88355B81230F66F4C37C3BFC9A1586B8711708216D4E14851897179`.
+- Cargo test harness по-прежнему использует меняющийся hash-suffixed EXE, но его
+  Iroh transport ограничен loopback. Обычный пользовательский/release запуск
+  использует стабильные имена выше и не требует нового firewall rule при каждой
+  сборке из-за одного лишь имени файла.

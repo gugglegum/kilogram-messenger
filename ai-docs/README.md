@@ -494,6 +494,8 @@ global prekey discovery/witness, автоматический recovery source di
   реализованный M0.9.29 signed expiring ticket publication, recipient HPKE slots, local rollback high-water и explicit first-contact/privacy boundary.
 - [`../docs/RFC-0052-self-hostable-opaque-ticket-store.md`](../docs/RFC-0052-self-hostable-opaque-ticket-store.md) —
   реализованный M0.9.30 loopback-only self-hostable store, durable opaque Redb records, fixed retention и bounded abuse controls.
+- [`../docs/RFC-0053-opt-in-ticket-automation.md`](../docs/RFC-0053-opt-in-ticket-automation.md) —
+  реализованный M0.9.31 signed opt-in publish/refresh scheduler, durable bounded backoff, network permissions и explicit foreground-only UI state.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

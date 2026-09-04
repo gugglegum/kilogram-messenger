@@ -21,7 +21,7 @@ use tokio::{
     time::timeout,
 };
 
-const IPC_VERSION: u8 = 7;
+const IPC_VERSION: u8 = 8;
 const MAX_DESCRIPTOR_BYTES: u64 = 16 * 1024;
 const MAX_LAUNCH_PROFILE_BYTES: u64 = 64 * 1024;
 const MAX_LAUNCH_PROFILE_PATHS: usize = 64;
@@ -376,6 +376,21 @@ pub enum RuntimeIpcCommand {
         peer_account_id: AccountId,
         service_base_url: String,
     },
+    ConfigureTicketAutomation {
+        conversation: String,
+        peer_account_id: AccountId,
+        enabled: bool,
+        service_base_url: String,
+        ttl_seconds: u64,
+        refresh_before_seconds: u64,
+        retry_base_seconds: u64,
+        retry_max_seconds: u64,
+        allow_ethernet: bool,
+        allow_wifi: bool,
+        allow_mobile: bool,
+        allow_unknown_network: bool,
+    },
+    TicketAutomationStatus,
     ConversationList,
     HistoryPage {
         conversation: String,
@@ -648,6 +663,62 @@ pub struct RuntimeIpcContactTicketRefresh {
     pub first_contact_freshness: String,
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub enum RuntimeIpcNetworkClass {
+    Ethernet,
+    Wifi,
+    Mobile,
+    Unknown,
+}
+
+impl RuntimeIpcNetworkClass {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Ethernet => "ethernet",
+            Self::Wifi => "wifi",
+            Self::Mobile => "mobile",
+            Self::Unknown => "unknown",
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcTicketAutomationActionStatus {
+    pub action: String,
+    pub state: String,
+    pub last_attempt_unix_seconds: Option<u64>,
+    pub last_success_unix_seconds: Option<u64>,
+    pub next_attempt_unix_seconds: Option<u64>,
+    pub consecutive_failures: u32,
+    pub publication_generation: Option<u64>,
+    pub expires_at_unix_seconds: Option<u64>,
+    pub last_result: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcTicketAutomationStatus {
+    pub contact_id: String,
+    pub conversation: String,
+    pub peer_account_id: AccountId,
+    pub enabled: bool,
+    pub policy_generation: u64,
+    pub service_base_url: String,
+    pub ttl_seconds: u64,
+    pub refresh_before_seconds: u64,
+    pub retry_base_seconds: u64,
+    pub retry_max_seconds: u64,
+    pub allow_ethernet: bool,
+    pub allow_wifi: bool,
+    pub allow_mobile: bool,
+    pub allow_unknown_network: bool,
+    pub current_network: RuntimeIpcNetworkClass,
+    pub network_allowed: bool,
+    pub execution_scope: String,
+    pub os_background_service_enabled: bool,
+    pub publish: RuntimeIpcTicketAutomationActionStatus,
+    pub refresh: RuntimeIpcTicketAutomationActionStatus,
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum RuntimeIpcResponse {
     Pong {
@@ -670,6 +741,8 @@ pub enum RuntimeIpcResponse {
     OwnDeviceDirectoryStatus(RuntimeIpcDeviceDirectoryStatus),
     OwnTicketPublished(Box<RuntimeIpcTicketPublication>),
     ContactTicketRefreshed(Box<RuntimeIpcContactTicketRefresh>),
+    TicketAutomationConfigured(Box<RuntimeIpcTicketAutomationStatus>),
+    TicketAutomationStatus(Vec<RuntimeIpcTicketAutomationStatus>),
     ConversationList(Vec<RuntimeIpcConversationSummary>),
     HistoryPage(RuntimeIpcHistoryPage),
     ChangeState {

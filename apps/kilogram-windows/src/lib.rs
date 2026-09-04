@@ -18,9 +18,12 @@ use kilogram_runtime_ipc::{
     RuntimeIpcCommand, RuntimeIpcContactTicketRefresh, RuntimeIpcConversationSummary,
     RuntimeIpcDeviceDirectoryStatus, RuntimeIpcDeviceDirectoryUpdate, RuntimeIpcHistoryCursor,
     RuntimeIpcHistoryMessage, RuntimeIpcHistoryPage, RuntimeIpcOutboxStatus, RuntimeIpcQueueState,
-    RuntimeIpcRequestId, RuntimeIpcResponse, RuntimeIpcRoutePolicy, RuntimeIpcTicketPublication,
-    RuntimeLaunchProfile, RuntimeLaunchSettings,
+    RuntimeIpcRequestId, RuntimeIpcResponse, RuntimeIpcRoutePolicy,
+    RuntimeIpcTicketAutomationStatus, RuntimeIpcTicketPublication, RuntimeLaunchProfile,
+    RuntimeLaunchSettings,
 };
+#[cfg(test)]
+use kilogram_runtime_ipc::{RuntimeIpcNetworkClass, RuntimeIpcTicketAutomationActionStatus};
 use zeroize::{Zeroize as _, Zeroizing};
 
 mod wizard;
@@ -206,6 +209,8 @@ enum Operation {
     ApplyDeviceDirectory,
     PublishTicket,
     RefreshContactTicket,
+    ConfigureTicketAutomation,
+    TicketAutomationStatus,
     RecoveryApprove,
     RecoveryRun,
     RecoveryCancel,
@@ -232,6 +237,9 @@ enum RuntimeUiAction {
     ReconcileProfile,
     PublishTicket,
     RefreshContactTicket,
+    EnableTicketAutomation,
+    DisableTicketAutomation,
+    RefreshTicketAutomationStatus,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -823,6 +831,11 @@ struct ViewModel {
     ticket_publication_service_url: String,
     ticket_publication: Option<RuntimeIpcTicketPublication>,
     contact_ticket_refresh: Option<RuntimeIpcContactTicketRefresh>,
+    ticket_automation_allow_ethernet: bool,
+    ticket_automation_allow_wifi: bool,
+    ticket_automation_allow_mobile: bool,
+    ticket_automation_allow_unknown_network: bool,
+    ticket_automation_statuses: Vec<RuntimeIpcTicketAutomationStatus>,
     notice: Option<String>,
     error: Option<String>,
 }
@@ -852,6 +865,11 @@ impl ViewModel {
             ticket_publication_service_url: String::new(),
             ticket_publication: None,
             contact_ticket_refresh: None,
+            ticket_automation_allow_ethernet: true,
+            ticket_automation_allow_wifi: true,
+            ticket_automation_allow_mobile: false,
+            ticket_automation_allow_unknown_network: false,
+            ticket_automation_statuses: Vec::new(),
             notice: None,
             error: None,
         }
@@ -1043,6 +1061,30 @@ impl ViewModel {
                     refresh.publication_generation
                 ));
                 self.contact_ticket_refresh = Some(refresh);
+                self.error = None;
+            }
+            Ok(WorkerSuccess::TicketAutomationConfigured(status)) => {
+                self.connection = ConnectionState::Connected;
+                let enabled = status.enabled;
+                if let Some(existing) = self
+                    .ticket_automation_statuses
+                    .iter_mut()
+                    .find(|existing| existing.contact_id == status.contact_id)
+                {
+                    *existing = status;
+                } else {
+                    self.ticket_automation_statuses.push(status);
+                }
+                self.notice = Some(format!(
+                    "Automatic ticket exchange {} for the selected contact.",
+                    if enabled { "enabled" } else { "disabled" }
+                ));
+                self.error = None;
+            }
+            Ok(WorkerSuccess::TicketAutomationStatus(statuses)) => {
+                self.connection = ConnectionState::Connected;
+                self.ticket_automation_statuses = statuses;
+                self.notice = Some("Automatic ticket-exchange status refreshed".to_owned());
                 self.error = None;
             }
             Ok(WorkerSuccess::Conversations(conversations)) => {
@@ -1284,6 +1326,20 @@ enum WorkerRequest {
         peer_account_id: AccountId,
         service_base_url: String,
     },
+    ConfigureTicketAutomation {
+        descriptor: PathBuf,
+        conversation: String,
+        peer_account_id: AccountId,
+        enabled: bool,
+        service_base_url: String,
+        allow_ethernet: bool,
+        allow_wifi: bool,
+        allow_mobile: bool,
+        allow_unknown_network: bool,
+    },
+    TicketAutomationStatus {
+        descriptor: PathBuf,
+    },
     Conversations {
         descriptor: PathBuf,
     },
@@ -1331,6 +1387,8 @@ impl WorkerRequest {
             Self::ApplyDeviceDirectory { .. } => Operation::ApplyDeviceDirectory,
             Self::PublishTicket { .. } => Operation::PublishTicket,
             Self::RefreshContactTicket { .. } => Operation::RefreshContactTicket,
+            Self::ConfigureTicketAutomation { .. } => Operation::ConfigureTicketAutomation,
+            Self::TicketAutomationStatus { .. } => Operation::TicketAutomationStatus,
             Self::Conversations { .. } => Operation::Conversations,
             Self::History { older: false, .. } => Operation::History,
             Self::History { older: true, .. } => Operation::HistoryOlder,
@@ -1400,6 +1458,8 @@ enum WorkerSuccess {
     DeviceDirectoryApplied(RuntimeIpcDeviceDirectoryUpdate),
     TicketPublished(RuntimeIpcTicketPublication),
     ContactTicketRefreshed(RuntimeIpcContactTicketRefresh),
+    TicketAutomationConfigured(RuntimeIpcTicketAutomationStatus),
+    TicketAutomationStatus(Vec<RuntimeIpcTicketAutomationStatus>),
     Conversations(Vec<RuntimeIpcConversationSummary>),
     History {
         page: RuntimeIpcHistoryPage,
@@ -2289,6 +2349,54 @@ async fn execute_request(request: WorkerRequest) -> Result<WorkerSuccess> {
                     bail!("Runtime rejected contact-ticket refresh: {message}")
                 }
                 _ => bail!("Runtime returned an unexpected contact-ticket response"),
+            }
+        }
+        WorkerRequest::ConfigureTicketAutomation {
+            descriptor,
+            conversation,
+            peer_account_id,
+            enabled,
+            service_base_url,
+            allow_ethernet,
+            allow_wifi,
+            allow_mobile,
+            allow_unknown_network,
+        } => {
+            let command = RuntimeIpcCommand::ConfigureTicketAutomation {
+                conversation,
+                peer_account_id,
+                enabled,
+                service_base_url,
+                ttl_seconds: 15 * 60,
+                refresh_before_seconds: 5 * 60,
+                retry_base_seconds: 5,
+                retry_max_seconds: 5 * 60,
+                allow_ethernet,
+                allow_wifi,
+                allow_mobile,
+                allow_unknown_network,
+            };
+            match kilogram_runtime_ipc::call(&descriptor, command).await? {
+                RuntimeIpcResponse::TicketAutomationConfigured(status) => {
+                    Ok(WorkerSuccess::TicketAutomationConfigured(*status))
+                }
+                RuntimeIpcResponse::Error { message } => {
+                    bail!("Runtime rejected ticket automation: {message}")
+                }
+                _ => bail!("Runtime returned an unexpected ticket-automation response"),
+            }
+        }
+        WorkerRequest::TicketAutomationStatus { descriptor } => {
+            match kilogram_runtime_ipc::call(&descriptor, RuntimeIpcCommand::TicketAutomationStatus)
+                .await?
+            {
+                RuntimeIpcResponse::TicketAutomationStatus(statuses) => {
+                    Ok(WorkerSuccess::TicketAutomationStatus(statuses))
+                }
+                RuntimeIpcResponse::Error { message } => {
+                    bail!("Runtime rejected ticket-automation status: {message}")
+                }
+                _ => bail!("Runtime returned an unexpected ticket-automation status response"),
             }
         }
         WorkerRequest::Conversations { descriptor } => {
@@ -4167,6 +4275,62 @@ impl KilogramApp {
         }
     }
 
+    fn start_configure_ticket_automation(&mut self, enabled: bool) {
+        let result: Result<WorkerRequest> = (|| {
+            ensure!(
+                self.model.connection == ConnectionState::Connected,
+                "Connect to the running runtime first"
+            );
+            ensure!(
+                self.model.selected_contact_id.is_some(),
+                "Select an enrolled contact first"
+            );
+            let descriptor = self.model.descriptor()?;
+            let conversation = self.model.conversation.trim();
+            ensure!(!conversation.is_empty(), "Conversation label is required");
+            let peer_account_id = AccountId::from_str(self.model.peer_account_id.trim())
+                .context("Peer Account ID is invalid")?;
+            let service_base_url = self.model.ticket_publication_service_url.trim();
+            ensure!(
+                !service_base_url.is_empty(),
+                "Ticket publication service URL is required"
+            );
+            Ok(WorkerRequest::ConfigureTicketAutomation {
+                descriptor,
+                conversation: conversation.to_owned(),
+                peer_account_id,
+                enabled,
+                service_base_url: service_base_url.to_owned(),
+                allow_ethernet: self.model.ticket_automation_allow_ethernet,
+                allow_wifi: self.model.ticket_automation_allow_wifi,
+                allow_mobile: self.model.ticket_automation_allow_mobile,
+                allow_unknown_network: self.model.ticket_automation_allow_unknown_network,
+            })
+        })();
+        match result {
+            Ok(request) => self.submit(Operation::ConfigureTicketAutomation, request),
+            Err(error) => self
+                .model
+                .fail(Operation::ConfigureTicketAutomation, format!("{error:#}")),
+        }
+    }
+
+    fn start_ticket_automation_status(&mut self) {
+        let result = self.model.descriptor().and_then(|descriptor| {
+            ensure!(
+                self.model.connection == ConnectionState::Connected,
+                "Connect to the running runtime first"
+            );
+            Ok(WorkerRequest::TicketAutomationStatus { descriptor })
+        });
+        match result {
+            Ok(request) => self.submit(Operation::TicketAutomationStatus, request),
+            Err(error) => self
+                .model
+                .fail(Operation::TicketAutomationStatus, format!("{error:#}")),
+        }
+    }
+
     fn start_conversations(&mut self) {
         if self.model.pending.is_some() {
             return;
@@ -6024,6 +6188,99 @@ impl KilogramApp {
                     action = RuntimeUiAction::RefreshContactTicket;
                 }
             });
+            ui.separator();
+            ui.strong("Automatic exchange (opt-in)");
+            ui.horizontal_wrapped(|ui| {
+                ui.add_enabled(
+                    self.model.pending.is_none(),
+                    egui::Checkbox::new(
+                        &mut self.model.ticket_automation_allow_ethernet,
+                        "Ethernet",
+                    ),
+                );
+                ui.add_enabled(
+                    self.model.pending.is_none(),
+                    egui::Checkbox::new(&mut self.model.ticket_automation_allow_wifi, "Wi-Fi"),
+                );
+                ui.add_enabled(
+                    self.model.pending.is_none(),
+                    egui::Checkbox::new(
+                        &mut self.model.ticket_automation_allow_mobile,
+                        "Mobile",
+                    ),
+                );
+                ui.add_enabled(
+                    self.model.pending.is_none(),
+                    egui::Checkbox::new(
+                        &mut self.model.ticket_automation_allow_unknown_network,
+                        "Unknown network",
+                    ),
+                );
+            });
+            ui.horizontal_wrapped(|ui| {
+                if ui
+                    .add_enabled(exchange_enabled, egui::Button::new("Enable automatic exchange"))
+                    .clicked()
+                {
+                    action = RuntimeUiAction::EnableTicketAutomation;
+                }
+                if ui
+                    .add_enabled(exchange_enabled, egui::Button::new("Disable"))
+                    .clicked()
+                {
+                    action = RuntimeUiAction::DisableTicketAutomation;
+                }
+                if ui
+                    .add_enabled(
+                        self.model.pending.is_none()
+                            && self.model.connection == ConnectionState::Connected,
+                        egui::Button::new("Refresh automation status"),
+                    )
+                    .clicked()
+                {
+                    action = RuntimeUiAction::RefreshTicketAutomationStatus;
+                }
+            });
+            ui.small("Runs only while this runtime process is open. It does not register Task Scheduler, install a background service, or relay other users' traffic. Ethernet and Wi-Fi are allowed by default; mobile and unknown networks require explicit opt-in.");
+            let selected_status = self
+                .model
+                .ticket_automation_statuses
+                .iter()
+                .find(|status| {
+                    status.conversation == self.model.conversation
+                        && status.peer_account_id.to_string() == self.model.peer_account_id
+                });
+            if let Some(status) = selected_status {
+                let color = if status.enabled && status.network_allowed {
+                    egui::Color32::from_rgb(92, 201, 137)
+                } else {
+                    egui::Color32::from_rgb(246, 195, 93)
+                };
+                ui.colored_label(
+                    color,
+                    format!(
+                        "Automation {} · current network {} ({}) · policy generation {}",
+                        if status.enabled { "enabled" } else { "disabled" },
+                        status.current_network.as_str(),
+                        if status.network_allowed { "allowed" } else { "blocked" },
+                        status.policy_generation
+                    ),
+                );
+                ui.small(format!(
+                    "Publish: {} / {} · next {:?} · failures {}",
+                    status.publish.state,
+                    status.publish.last_result,
+                    status.publish.next_attempt_unix_seconds,
+                    status.publish.consecutive_failures
+                ));
+                ui.small(format!(
+                    "Refresh: {} / {} · next {:?} · failures {}",
+                    status.refresh.state,
+                    status.refresh.last_result,
+                    status.refresh.next_attempt_unix_seconds,
+                    status.refresh.consecutive_failures
+                ));
+            }
             ui.small("This channel cannot establish first-contact trust: exchange one verified initial contact ticket out of band. Freshness is then protected by signed expiry and this device's persistent monotonic high-water mark.");
             if let Some(publication) = self.model.ticket_publication.as_ref() {
                 ui.colored_label(
@@ -6883,6 +7140,12 @@ impl eframe::App for KilogramApp {
             self.start_publish_ticket();
         } else if runtime_action == RuntimeUiAction::RefreshContactTicket {
             self.start_refresh_contact_ticket();
+        } else if runtime_action == RuntimeUiAction::EnableTicketAutomation {
+            self.start_configure_ticket_automation(true);
+        } else if runtime_action == RuntimeUiAction::DisableTicketAutomation {
+            self.start_configure_ticket_automation(false);
+        } else if runtime_action == RuntimeUiAction::RefreshTicketAutomationStatus {
+            self.start_ticket_automation_status();
         } else if add_contact_clicked {
             self.start_add_contact();
         } else if let Some(contact_id) = selected_contact {
@@ -7565,6 +7828,90 @@ mod tests {
                 )))
                 .map_err(|_| anyhow::anyhow!("send GUI contact-ticket response"))?;
 
+            let configure_automation = requests
+                .recv()
+                .await
+                .context("receive GUI ticket-automation configuration")?;
+            let (command, response) = configure_automation.into_parts();
+            ensure!(matches!(
+                command,
+                RuntimeIpcCommand::ConfigureTicketAutomation {
+                    conversation,
+                    peer_account_id: requested_peer,
+                    enabled: true,
+                    service_base_url,
+                    ttl_seconds: 900,
+                    refresh_before_seconds: 300,
+                    retry_base_seconds: 5,
+                    retry_max_seconds: 300,
+                    allow_ethernet: true,
+                    allow_wifi: true,
+                    allow_mobile: false,
+                    allow_unknown_network: false,
+                } if conversation == "desktop-test"
+                    && requested_peer == peer_account_id
+                    && service_base_url == "https://publication.example"
+            ));
+            let automation_status = RuntimeIpcTicketAutomationStatus {
+                contact_id: "22".repeat(32),
+                conversation: "desktop-test".to_owned(),
+                peer_account_id,
+                enabled: true,
+                policy_generation: 1,
+                service_base_url: "https://publication.example/".to_owned(),
+                ttl_seconds: 900,
+                refresh_before_seconds: 300,
+                retry_base_seconds: 5,
+                retry_max_seconds: 300,
+                allow_ethernet: true,
+                allow_wifi: true,
+                allow_mobile: false,
+                allow_unknown_network: false,
+                current_network: RuntimeIpcNetworkClass::Ethernet,
+                network_allowed: true,
+                execution_scope: "only-while-runtime-process-is-running".to_owned(),
+                os_background_service_enabled: false,
+                publish: RuntimeIpcTicketAutomationActionStatus {
+                    action: "publish".to_owned(),
+                    state: "due".to_owned(),
+                    last_attempt_unix_seconds: None,
+                    last_success_unix_seconds: None,
+                    next_attempt_unix_seconds: None,
+                    consecutive_failures: 0,
+                    publication_generation: None,
+                    expires_at_unix_seconds: None,
+                    last_result: "never".to_owned(),
+                },
+                refresh: RuntimeIpcTicketAutomationActionStatus {
+                    action: "refresh".to_owned(),
+                    state: "due".to_owned(),
+                    last_attempt_unix_seconds: None,
+                    last_success_unix_seconds: None,
+                    next_attempt_unix_seconds: None,
+                    consecutive_failures: 0,
+                    publication_generation: None,
+                    expires_at_unix_seconds: None,
+                    last_result: "never".to_owned(),
+                },
+            };
+            response
+                .send(RuntimeIpcResponse::TicketAutomationConfigured(Box::new(
+                    automation_status.clone(),
+                )))
+                .map_err(|_| anyhow::anyhow!("send GUI ticket-automation response"))?;
+
+            let automation_query = requests
+                .recv()
+                .await
+                .context("receive GUI ticket-automation status")?;
+            let (command, response) = automation_query.into_parts();
+            ensure!(matches!(command, RuntimeIpcCommand::TicketAutomationStatus));
+            response
+                .send(RuntimeIpcResponse::TicketAutomationStatus(vec![
+                    automation_status,
+                ]))
+                .map_err(|_| anyhow::anyhow!("send GUI ticket-automation status response"))?;
+
             let directory_update = requests
                 .recv()
                 .await
@@ -7722,6 +8069,39 @@ mod tests {
                 authority_revision: 5,
                 ..
             })
+        ));
+
+        let automation = execute_request(WorkerRequest::ConfigureTicketAutomation {
+            descriptor: descriptor.clone(),
+            conversation: "desktop-test".to_owned(),
+            peer_account_id,
+            enabled: true,
+            service_base_url: "https://publication.example".to_owned(),
+            allow_ethernet: true,
+            allow_wifi: true,
+            allow_mobile: false,
+            allow_unknown_network: false,
+        })
+        .await?;
+        assert!(matches!(
+            automation,
+            WorkerSuccess::TicketAutomationConfigured(RuntimeIpcTicketAutomationStatus {
+                enabled: true,
+                network_allowed: true,
+                policy_generation: 1,
+                ..
+            })
+        ));
+
+        let automation_status = execute_request(WorkerRequest::TicketAutomationStatus {
+            descriptor: descriptor.clone(),
+        })
+        .await?;
+        assert!(matches!(
+            automation_status,
+            WorkerSuccess::TicketAutomationStatus(statuses)
+                if statuses.len() == 1 && statuses[0].execution_scope
+                    == "only-while-runtime-process-is-running"
         ));
 
         let directory_update = execute_request(WorkerRequest::ApplyDeviceDirectory {

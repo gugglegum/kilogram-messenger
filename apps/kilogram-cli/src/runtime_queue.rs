@@ -31,6 +31,13 @@ pub const MAX_RUNTIME_RECORD_BYTES: usize = 8 * 1024 * 1024;
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub struct RuntimeContactId([u8; 32]);
 
+impl RuntimeContactId {
+    #[cfg(test)]
+    pub fn from_bytes(bytes: [u8; 32]) -> Self {
+        Self(bytes)
+    }
+}
+
 impl fmt::Display for RuntimeContactId {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         write_hex(formatter, &self.0)

@@ -180,6 +180,11 @@ sessions, distribution, removal и key epochs и не решены этим пр
   доверенного global log? Первый recipient observation пока защищён только
   signature/expiry, а endpoint failover на другой publisher Device требует
   отдельного authenticated candidate-set/gossip контракта.
+- Как compact/checkpoint-ить append-only runtime publication, observation и
+  M0.9.31 automation attempt chains, сохраняя monotonic high-water, crash-safe
+  DB-primary mutation и проверяемый restart без unbounded startup scan? Текущие
+  hard record-count bounds делают этот вопрос обязательным до public long-lived
+  deployment.
 - Репликация или erasure coding: сколько случайных узлов и какие гарантии нужны?
 - Как выдавать storage capability и ограничивать spam/Sybil без глобального
   аккаунта и утечки социального графа? M0.9.30 применяет только per-IP/global/

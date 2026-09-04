@@ -39,8 +39,9 @@ use kilogram_runtime_ipc::{
     RuntimeIpcCommand, RuntimeIpcContactTicketRefresh, RuntimeIpcConversationSummary,
     RuntimeIpcDescriptor, RuntimeIpcDeviceDirectoryStatus, RuntimeIpcDeviceDirectoryUpdate,
     RuntimeIpcHistoryCursor, RuntimeIpcHistoryMessage, RuntimeIpcHistoryPage,
-    RuntimeIpcMessagePreview, RuntimeIpcOutboxStatus, RuntimeIpcQueueItem, RuntimeIpcQueueState,
-    RuntimeIpcRequestId, RuntimeIpcResponse, RuntimeIpcRoutePolicy, RuntimeIpcServer,
+    RuntimeIpcMessagePreview, RuntimeIpcNetworkClass, RuntimeIpcOutboxStatus, RuntimeIpcQueueItem,
+    RuntimeIpcQueueState, RuntimeIpcRequestId, RuntimeIpcResponse, RuntimeIpcRoutePolicy,
+    RuntimeIpcServer, RuntimeIpcTicketAutomationActionStatus, RuntimeIpcTicketAutomationStatus,
     RuntimeIpcTicketPublication, RuntimeIpcWork, RuntimeLaunchProfile, RuntimeLaunchSettings,
 };
 use kilogram_session::{
@@ -77,6 +78,7 @@ mod recovery_qr;
 mod recovery_scheduler;
 mod runtime_publication;
 mod runtime_queue;
+mod runtime_ticket_automation;
 
 use recovery_discovery::{
     DEFAULT_DISCOVERY_CANDIDATES, DEFAULT_DISCOVERY_WAIT_SECONDS, MAX_DISCOVERY_CANDIDATES,
@@ -119,6 +121,12 @@ use runtime_queue::{
     SignedDeliveredMessage, SignedMaterializedMessage, SignedQueuedMessage, SignedRuntimeContact,
     SignedRuntimeDeviceDirectoryReceipt, SignedRuntimeRetryState,
 };
+use runtime_ticket_automation::{
+    DEFAULT_AUTOMATION_RETRY_BASE_SECONDS, DEFAULT_AUTOMATION_RETRY_MAX_SECONDS,
+    DEFAULT_REFRESH_BEFORE_SECONDS, MAX_AUTOMATION_RETRY_SECONDS, MAX_REFRESH_BEFORE_SECONDS,
+    MIN_REFRESH_BEFORE_SECONDS, SignedTicketAutomationAttempt, SignedTicketAutomationPolicy,
+    TicketAutomationAction, TicketAutomationAttemptId, TicketAutomationPolicyId,
+};
 
 const EVENT_STORE_DIRECTORY: &str = "events";
 const LOCAL_MESSAGE_STORE_DIRECTORY: &str = "local-messages";
@@ -130,8 +138,12 @@ const RUNTIME_OUTBOX_DIRECTORY: &str = "outbox";
 const RUNTIME_DEVICE_DIRECTORY: &str = "device-directory";
 const RUNTIME_TICKET_PUBLICATIONS_DIRECTORY: &str = "ticket-publications";
 const RUNTIME_TICKET_OBSERVATIONS_DIRECTORY: &str = "ticket-observations";
+const RUNTIME_TICKET_AUTOMATION_POLICIES_DIRECTORY: &str = "ticket-automation-policies";
+const RUNTIME_TICKET_AUTOMATION_ATTEMPTS_DIRECTORY: &str = "ticket-automation-attempts";
 const MAX_RUNTIME_DEVICE_DIRECTORY_RECEIPTS: usize = 1_024;
 const MAX_RUNTIME_TICKET_PUBLICATION_RECORDS: usize = 4_096;
+const MAX_RUNTIME_TICKET_AUTOMATION_RECORDS: usize = 4_096;
+const RUNTIME_TICKET_AUTOMATION_CHECK_INTERVAL: Duration = Duration::from_secs(5);
 const RUNTIME_DEVICE_LIST_DIGEST_DOMAIN: &[u8] = b"kilogram:runtime-device-list:v1\0";
 const DIRECT_PATH_DIAGNOSTIC_WAIT: Duration = Duration::from_secs(3);
 const ROUTE_POLICY_WAIT: Duration = Duration::from_secs(15);
@@ -540,6 +552,68 @@ enum Command {
         /// HTTPS base URL of the opaque ticket-publication store.
         #[arg(long)]
         service_base_url: String,
+    },
+
+    /// Opt in, update, or disable durable automatic ticket exchange for one contact.
+    RuntimeIpcConfigureTicketAutomation {
+        /// Runtime-owned local IPC descriptor.
+        #[arg(long)]
+        ipc_file: PathBuf,
+
+        /// Contact conversation label.
+        #[arg(long)]
+        conversation: String,
+
+        /// Peer account selecting the exact signed runtime contact.
+        #[arg(long)]
+        peer_account: AccountId,
+
+        /// Set false to append a disabled policy head without deleting history.
+        #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
+        enabled: bool,
+
+        /// HTTPS base URL of the opaque ticket-publication store.
+        #[arg(long)]
+        service_base_url: String,
+
+        /// Lifetime of each publication.
+        #[arg(long, default_value_t = DEFAULT_TICKET_PUBLICATION_TTL_SECONDS)]
+        ttl_seconds: u64,
+
+        /// Refresh this many seconds before the last successful expiry.
+        #[arg(long, default_value_t = DEFAULT_REFRESH_BEFORE_SECONDS)]
+        refresh_before_seconds: u64,
+
+        /// Initial retry delay after a failed automatic action.
+        #[arg(long, default_value_t = DEFAULT_AUTOMATION_RETRY_BASE_SECONDS)]
+        retry_base_seconds: u64,
+
+        /// Maximum exponential retry delay.
+        #[arg(long, default_value_t = DEFAULT_AUTOMATION_RETRY_MAX_SECONDS)]
+        retry_max_seconds: u64,
+
+        /// Deny automatic exchange on wired networks.
+        #[arg(long)]
+        deny_ethernet: bool,
+
+        /// Deny automatic exchange on Wi-Fi.
+        #[arg(long)]
+        deny_wifi: bool,
+
+        /// Explicitly allow automatic exchange on metered/mobile networks.
+        #[arg(long)]
+        allow_mobile: bool,
+
+        /// Explicitly allow exchange when the OS cannot classify the network.
+        #[arg(long)]
+        allow_unknown_network: bool,
+    },
+
+    /// Inspect durable ticket-automation policy and scheduler state.
+    RuntimeIpcTicketAutomationStatus {
+        /// Runtime-owned local IPC descriptor.
+        #[arg(long)]
+        ipc_file: PathBuf,
     },
 
     /// Connect to a listener, send one message, print its acknowledgement, then exit.
@@ -1388,6 +1462,8 @@ impl Command {
             | Self::RuntimeIpcDeviceDirectoryStatus { .. }
             | Self::RuntimeIpcPublishTicket { .. }
             | Self::RuntimeIpcRefreshContactTicket { .. }
+            | Self::RuntimeIpcConfigureTicketAutomation { .. }
+            | Self::RuntimeIpcTicketAutomationStatus { .. }
             | Self::PlatformContext => None,
         }
     }
@@ -2198,6 +2274,41 @@ async fn run_command(command: Command) -> Result<()> {
                 service_base_url,
             )
             .await
+        }
+        Command::RuntimeIpcConfigureTicketAutomation {
+            ipc_file,
+            conversation,
+            peer_account,
+            enabled,
+            service_base_url,
+            ttl_seconds,
+            refresh_before_seconds,
+            retry_base_seconds,
+            retry_max_seconds,
+            deny_ethernet,
+            deny_wifi,
+            allow_mobile,
+            allow_unknown_network,
+        } => {
+            runtime_ipc_configure_ticket_automation(
+                ipc_file,
+                conversation,
+                peer_account,
+                enabled,
+                service_base_url,
+                ttl_seconds,
+                refresh_before_seconds,
+                retry_base_seconds,
+                retry_max_seconds,
+                !deny_ethernet,
+                !deny_wifi,
+                allow_mobile,
+                allow_unknown_network,
+            )
+            .await
+        }
+        Command::RuntimeIpcTicketAutomationStatus { ipc_file } => {
+            runtime_ipc_ticket_automation_status(ipc_file).await
         }
         Command::Connect {
             state_dir,
@@ -3378,6 +3489,9 @@ struct RuntimeStateSnapshot {
     ticket_publications: BTreeMap<TicketPublicationChannelId, Vec<SignedTicketPublication>>,
     ticket_observations:
         BTreeMap<TicketPublicationChannelId, Vec<SignedTicketPublicationObservation>>,
+    ticket_automation_policies: BTreeMap<RuntimeContactId, Vec<SignedTicketAutomationPolicy>>,
+    ticket_automation_attempts:
+        BTreeMap<(RuntimeContactId, TicketAutomationAction), Vec<SignedTicketAutomationAttempt>>,
 }
 
 impl RuntimeStateSnapshot {
@@ -3412,6 +3526,25 @@ impl RuntimeStateSnapshot {
         self.ticket_observations
             .get(&channel_id)
             .and_then(|observations| observations.last())
+    }
+
+    fn latest_ticket_automation_policy(
+        &self,
+        contact_id: RuntimeContactId,
+    ) -> Option<&SignedTicketAutomationPolicy> {
+        self.ticket_automation_policies
+            .get(&contact_id)
+            .and_then(|policies| policies.last())
+    }
+
+    fn latest_ticket_automation_attempt(
+        &self,
+        contact_id: RuntimeContactId,
+        action: TicketAutomationAction,
+    ) -> Option<&SignedTicketAutomationAttempt> {
+        self.ticket_automation_attempts
+            .get(&(contact_id, action))
+            .and_then(|attempts| attempts.last())
     }
 }
 
@@ -3476,6 +3609,20 @@ fn runtime_ticket_observation_relative_path(
         .join(format!(
             "{channel_id}-{observation_generation:020}-{observation_id}.ticket-observation"
         ))
+}
+
+fn runtime_ticket_automation_policy_relative_path(policy_id: TicketAutomationPolicyId) -> PathBuf {
+    PathBuf::from(RUNTIME_STATE_DIRECTORY)
+        .join(RUNTIME_TICKET_AUTOMATION_POLICIES_DIRECTORY)
+        .join(format!("{policy_id}.tap"))
+}
+
+fn runtime_ticket_automation_attempt_relative_path(
+    attempt_id: TicketAutomationAttemptId,
+) -> PathBuf {
+    PathBuf::from(RUNTIME_STATE_DIRECTORY)
+        .join(RUNTIME_TICKET_AUTOMATION_ATTEMPTS_DIRECTORY)
+        .join(format!("{attempt_id}.taa"))
 }
 
 fn runtime_device_list_digest(device_list: &AccountDeviceListSnapshot) -> Result<[u8; 32]> {
@@ -3572,6 +3719,8 @@ fn read_runtime_record_files(state_directory: &Path) -> Result<Vec<(PathBuf, Vec
         RUNTIME_DEVICE_DIRECTORY,
         RUNTIME_TICKET_PUBLICATIONS_DIRECTORY,
         RUNTIME_TICKET_OBSERVATIONS_DIRECTORY,
+        RUNTIME_TICKET_AUTOMATION_POLICIES_DIRECTORY,
+        RUNTIME_TICKET_AUTOMATION_ATTEMPTS_DIRECTORY,
     ] {
         let root = state_directory
             .join(RUNTIME_STATE_DIRECTORY)
@@ -3680,6 +3829,39 @@ fn load_runtime_state_snapshot(
             snapshot
                 .ticket_observations
                 .entry(value.channel_id())
+                .or_default()
+                .push(value);
+        } else if file_name.ends_with(".tap") {
+            let value = SignedTicketAutomationPolicy::decode(&bytes)?;
+            ensure!(
+                value.local_account_id() == local_account_id
+                    && value.local_device_id() == local_device_id,
+                "ticket automation policy belongs to another local identity"
+            );
+            ensure!(
+                relative_path == runtime_ticket_automation_policy_relative_path(value.policy_id()?),
+                "ticket automation policy filename does not match its authenticated state"
+            );
+            snapshot
+                .ticket_automation_policies
+                .entry(value.contact_id())
+                .or_default()
+                .push(value);
+        } else if file_name.ends_with(".taa") {
+            let value = SignedTicketAutomationAttempt::decode(&bytes)?;
+            ensure!(
+                value.local_account_id() == local_account_id
+                    && value.local_device_id() == local_device_id,
+                "ticket automation attempt belongs to another local identity"
+            );
+            ensure!(
+                relative_path
+                    == runtime_ticket_automation_attempt_relative_path(value.attempt_id()?),
+                "ticket automation attempt filename does not match its authenticated state"
+            );
+            snapshot
+                .ticket_automation_attempts
+                .entry((value.contact_id(), value.action()))
                 .or_default()
                 .push(value);
         } else if file_name.ends_with(".contact") {
@@ -3797,6 +3979,22 @@ fn load_runtime_state_snapshot(
         publication_record_count <= MAX_RUNTIME_TICKET_PUBLICATION_RECORDS,
         "runtime ticket-publication record limit exceeded"
     );
+    let automation_record_count = snapshot
+        .ticket_automation_policies
+        .values()
+        .map(Vec::len)
+        .sum::<usize>()
+        .saturating_add(
+            snapshot
+                .ticket_automation_attempts
+                .values()
+                .map(Vec::len)
+                .sum::<usize>(),
+        );
+    ensure!(
+        automation_record_count <= MAX_RUNTIME_TICKET_AUTOMATION_RECORDS,
+        "runtime ticket-automation record limit exceeded"
+    );
     for states in snapshot.retries.values_mut() {
         states.sort_by_key(SignedRuntimeRetryState::generation);
         let mut previous = None;
@@ -3827,6 +4025,49 @@ fn load_runtime_state_snapshot(
         for observation in observations.iter() {
             observation.verify(previous)?;
             previous = Some(observation);
+        }
+    }
+    for policies in snapshot.ticket_automation_policies.values_mut() {
+        policies.sort_by_key(SignedTicketAutomationPolicy::generation);
+        let mut previous = None;
+        for policy in policies.iter() {
+            policy.verify(previous)?;
+            previous = Some(policy);
+        }
+    }
+    for attempts in snapshot.ticket_automation_attempts.values_mut() {
+        attempts.sort_by_key(SignedTicketAutomationAttempt::generation);
+        let mut previous = None;
+        for attempt in attempts.iter() {
+            attempt.verify(previous)?;
+            previous = Some(attempt);
+        }
+    }
+    for (contact_id, policies) in &snapshot.ticket_automation_policies {
+        let contact = snapshot
+            .contacts
+            .get(contact_id)
+            .context("ticket automation policy references an absent contact")?;
+        for policy in policies {
+            ensure!(
+                policy.conversation() == contact.conversation_label()
+                    && policy.peer_account_id() == contact.peer_account_id(),
+                "ticket automation policy differs from its signed contact"
+            );
+        }
+    }
+    for ((contact_id, _), attempts) in &snapshot.ticket_automation_attempts {
+        let policies = snapshot
+            .ticket_automation_policies
+            .get(contact_id)
+            .context("ticket automation attempt has no policy chain")?;
+        for attempt in attempts {
+            ensure!(
+                policies
+                    .iter()
+                    .any(|policy| policy.generation() == attempt.policy_generation()),
+                "ticket automation attempt references an absent policy generation"
+            );
         }
     }
     for queued in snapshot.queued.values() {
@@ -4760,6 +5001,122 @@ async fn runtime_ipc_refresh_contact_ticket(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
+async fn runtime_ipc_configure_ticket_automation(
+    ipc_file: PathBuf,
+    conversation: String,
+    peer_account_id: AccountId,
+    enabled: bool,
+    service_base_url: String,
+    ttl_seconds: u64,
+    refresh_before_seconds: u64,
+    retry_base_seconds: u64,
+    retry_max_seconds: u64,
+    allow_ethernet: bool,
+    allow_wifi: bool,
+    allow_mobile: bool,
+    allow_unknown_network: bool,
+) -> Result<()> {
+    match kilogram_runtime_ipc::call(
+        &ipc_file,
+        RuntimeIpcCommand::ConfigureTicketAutomation {
+            conversation,
+            peer_account_id,
+            enabled,
+            service_base_url,
+            ttl_seconds,
+            refresh_before_seconds,
+            retry_base_seconds,
+            retry_max_seconds,
+            allow_ethernet,
+            allow_wifi,
+            allow_mobile,
+            allow_unknown_network,
+        },
+    )
+    .await?
+    {
+        RuntimeIpcResponse::TicketAutomationConfigured(status) => {
+            print_runtime_ticket_automation_status(&status);
+            println!("status=runtime-ticket-automation-configured");
+            Ok(())
+        }
+        RuntimeIpcResponse::Error { message } => {
+            bail!("runtime IPC rejected ticket automation policy: {message}")
+        }
+        _ => bail!("runtime IPC returned an unexpected ticket-automation response"),
+    }
+}
+
+async fn runtime_ipc_ticket_automation_status(ipc_file: PathBuf) -> Result<()> {
+    match kilogram_runtime_ipc::call(&ipc_file, RuntimeIpcCommand::TicketAutomationStatus).await? {
+        RuntimeIpcResponse::TicketAutomationStatus(statuses) => {
+            println!("ticket_automation_policy_count={}", statuses.len());
+            for status in &statuses {
+                print_runtime_ticket_automation_status(status);
+            }
+            println!("status=runtime-ticket-automation-status");
+            Ok(())
+        }
+        RuntimeIpcResponse::Error { message } => {
+            bail!("runtime IPC rejected ticket automation status: {message}")
+        }
+        _ => bail!("runtime IPC returned an unexpected ticket-automation status response"),
+    }
+}
+
+fn print_runtime_ticket_automation_status(status: &RuntimeIpcTicketAutomationStatus) {
+    println!("ticket_automation_contact_id={}", status.contact_id);
+    println!("ticket_automation_conversation={}", status.conversation);
+    println!(
+        "ticket_automation_peer_account_id={}",
+        status.peer_account_id
+    );
+    println!("ticket_automation_enabled={}", status.enabled);
+    println!(
+        "ticket_automation_policy_generation={}",
+        status.policy_generation
+    );
+    println!(
+        "ticket_automation_service_base_url={}",
+        status.service_base_url
+    );
+    println!(
+        "ticket_automation_current_network={}",
+        status.current_network.as_str()
+    );
+    println!(
+        "ticket_automation_network_allowed={}",
+        status.network_allowed
+    );
+    println!(
+        "ticket_automation_execution_scope={}",
+        status.execution_scope
+    );
+    println!(
+        "ticket_automation_os_background_service_enabled={}",
+        status.os_background_service_enabled
+    );
+    for action in [&status.publish, &status.refresh] {
+        println!("ticket_automation_{}_state={}", action.action, action.state);
+        println!(
+            "ticket_automation_{}_next_attempt_unix_seconds={}",
+            action.action,
+            action
+                .next_attempt_unix_seconds
+                .map_or_else(|| "none".to_owned(), |value| value.to_string())
+        );
+        println!(
+            "ticket_automation_{}_consecutive_failures={}",
+            action.action, action.consecutive_failures
+        );
+        println!(
+            "ticket_automation_{}_last_result={}",
+            action.action, action.last_result
+        );
+    }
+}
+
 fn print_runtime_ticket_publication(publication: &RuntimeIpcTicketPublication) {
     println!("runtime_contact_id={}", publication.contact_id);
     println!("ticket_publication_channel_id={}", publication.channel_id);
@@ -4955,6 +5312,61 @@ async fn handle_runtime_ipc_work(
                 message: format!("{error:#}"),
             },
         },
+        RuntimeIpcCommand::ConfigureTicketAutomation {
+            conversation,
+            peer_account_id,
+            enabled,
+            service_base_url,
+            ttl_seconds,
+            refresh_before_seconds,
+            retry_base_seconds,
+            retry_max_seconds,
+            allow_ethernet,
+            allow_wifi,
+            allow_mobile,
+            allow_unknown_network,
+        } => match with_locked_state(state_directory, || {
+            configure_runtime_ticket_automation(
+                state_directory,
+                conversation,
+                peer_account_id,
+                enabled,
+                service_base_url,
+                ttl_seconds,
+                refresh_before_seconds,
+                retry_base_seconds,
+                retry_max_seconds,
+                allow_ethernet,
+                allow_wifi,
+                allow_mobile,
+                allow_unknown_network,
+                current_runtime_network_class(),
+            )
+        }) {
+            Ok(status) => {
+                state_changed = true;
+                RuntimeIpcResponse::TicketAutomationConfigured(Box::new(status))
+            }
+            Err(error) => RuntimeIpcResponse::Error {
+                message: format!("{error:#}"),
+            },
+        },
+        RuntimeIpcCommand::TicketAutomationStatus => {
+            let status = StateDirectoryLock::acquire(state_directory)
+                .context("lock runtime state for ticket automation status")
+                .and_then(|_lock| {
+                    collect_runtime_ticket_automation_status(
+                        state_directory,
+                        current_runtime_network_class(),
+                    )
+                });
+            match status {
+                Ok(status) => RuntimeIpcResponse::TicketAutomationStatus(status),
+                Err(error) => RuntimeIpcResponse::Error {
+                    message: format!("{error:#}"),
+                },
+            }
+        }
         RuntimeIpcCommand::QueueMessage {
             request_id,
             conversation,
@@ -5032,6 +5444,7 @@ async fn handle_runtime_ipc_work(
             peer_account_id,
             &service_base_url,
             ttl_seconds,
+            MIN_TICKET_PUBLICATION_TTL_SECONDS,
         )
         .await
         {
@@ -5451,12 +5864,17 @@ async fn publish_runtime_own_ticket(
     peer_account_id: AccountId,
     service_base_url: &str,
     ttl_seconds: u64,
+    renew_before_seconds: u64,
 ) -> Result<RuntimeIpcTicketPublication> {
     ensure!(
         (MIN_TICKET_PUBLICATION_TTL_SECONDS..=MAX_TICKET_PUBLICATION_TTL_SECONDS)
             .contains(&ttl_seconds),
         "ticket publication TTL must be between {MIN_TICKET_PUBLICATION_TTL_SECONDS} and \
          {MAX_TICKET_PUBLICATION_TTL_SECONDS} seconds"
+    );
+    ensure!(
+        renew_before_seconds <= ttl_seconds,
+        "ticket publication renewal lead exceeds its TTL"
     );
     let store_client = TicketPublicationStoreClient::new(service_base_url)?;
     let (contact_id, channel_id, publication, publication_id, publication_store, encrypted) =
@@ -5505,8 +5923,7 @@ async fn publish_runtime_own_ticket(
                 Some(previous)
                     if previous.ticket() == encoded_ticket
                         && previous.expires_at_unix_seconds()
-                            > now_unix_seconds
-                                .saturating_add(MIN_TICKET_PUBLICATION_TTL_SECONDS) =>
+                            > now_unix_seconds.saturating_add(renew_before_seconds) =>
                 {
                     previous.clone()
                 }
@@ -5786,6 +6203,356 @@ async fn refresh_runtime_contact_ticket(
     })
 }
 
+#[allow(clippy::too_many_arguments)]
+fn configure_runtime_ticket_automation(
+    state_directory: &Path,
+    conversation: String,
+    peer_account_id: AccountId,
+    enabled: bool,
+    service_base_url: String,
+    ttl_seconds: u64,
+    refresh_before_seconds: u64,
+    retry_base_seconds: u64,
+    retry_max_seconds: u64,
+    allow_ethernet: bool,
+    allow_wifi: bool,
+    allow_mobile: bool,
+    allow_unknown_network: bool,
+    current_network: RuntimeIpcNetworkClass,
+) -> Result<RuntimeIpcTicketAutomationStatus> {
+    ensure!(
+        (MIN_TICKET_PUBLICATION_TTL_SECONDS..=MAX_TICKET_PUBLICATION_TTL_SECONDS)
+            .contains(&ttl_seconds),
+        "ticket automation TTL is outside publication bounds"
+    );
+    ensure!(
+        (MIN_REFRESH_BEFORE_SECONDS..=MAX_REFRESH_BEFORE_SECONDS).contains(&refresh_before_seconds)
+            && refresh_before_seconds < ttl_seconds,
+        "ticket automation refresh lead must be within bounds and shorter than TTL"
+    );
+    ensure!(
+        (1..=MAX_AUTOMATION_RETRY_SECONDS).contains(&retry_base_seconds)
+            && retry_max_seconds >= retry_base_seconds
+            && retry_max_seconds <= MAX_AUTOMATION_RETRY_SECONDS,
+        "ticket automation retry bounds are invalid"
+    );
+    let store_client = TicketPublicationStoreClient::new(&service_base_url)?;
+    let service_base_url = store_client.base_url().to_owned();
+    let device_state = load_command_device_state(state_directory)?;
+    let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+    let certificate = trust.load_certificate()?;
+    let snapshot = load_runtime_state_snapshot(
+        state_directory,
+        certificate.account_id(),
+        device_state.identity().device_id(),
+    )?;
+    let contact = exact_runtime_contact(&snapshot, &conversation, peer_account_id)?;
+    let previous = snapshot.latest_ticket_automation_policy(contact.contact_id());
+    let candidate = SignedTicketAutomationPolicy::sign(
+        device_state.identity(),
+        certificate.account_id(),
+        contact.contact_id(),
+        conversation,
+        peer_account_id,
+        unix_time_now()?,
+        enabled,
+        service_base_url,
+        ttl_seconds,
+        refresh_before_seconds,
+        retry_base_seconds,
+        retry_max_seconds,
+        allow_ethernet,
+        allow_wifi,
+        allow_mobile,
+        allow_unknown_network,
+        previous,
+    )?;
+    let policy = if previous.is_some_and(|previous| previous.same_configuration(&candidate)) {
+        previous
+            .context("ticket automation previous policy disappeared")?
+            .clone()
+    } else {
+        let policy_id = candidate.policy_id()?;
+        let path = runtime_ticket_automation_policy_relative_path(policy_id);
+        let bytes = candidate.encode()?;
+        run_state_transaction(state_directory, |transaction| {
+            persist_runtime_record(state_directory, &path, &bytes, transaction)
+        })?;
+        candidate
+    };
+    let snapshot = load_runtime_state_snapshot(
+        state_directory,
+        certificate.account_id(),
+        device_state.identity().device_id(),
+    )?;
+    ticket_automation_status_for_policy(&snapshot, &policy, current_network, unix_time_now()?)
+}
+
+fn current_runtime_network_class() -> RuntimeIpcNetworkClass {
+    match system_recovery_platform_context().network_class() {
+        RecoveryNetworkClass::Ethernet => RuntimeIpcNetworkClass::Ethernet,
+        RecoveryNetworkClass::Wifi => RuntimeIpcNetworkClass::Wifi,
+        RecoveryNetworkClass::Mobile => RuntimeIpcNetworkClass::Mobile,
+        RecoveryNetworkClass::Unknown => RuntimeIpcNetworkClass::Unknown,
+    }
+}
+
+fn collect_runtime_ticket_automation_status(
+    state_directory: &Path,
+    current_network: RuntimeIpcNetworkClass,
+) -> Result<Vec<RuntimeIpcTicketAutomationStatus>> {
+    let device_state = load_command_device_state(state_directory)?;
+    let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+    let certificate = trust.load_certificate()?;
+    let snapshot = load_runtime_state_snapshot(
+        state_directory,
+        certificate.account_id(),
+        device_state.identity().device_id(),
+    )?;
+    let now = unix_time_now()?;
+    snapshot
+        .ticket_automation_policies
+        .values()
+        .filter_map(|policies| policies.last())
+        .map(|policy| ticket_automation_status_for_policy(&snapshot, policy, current_network, now))
+        .collect()
+}
+
+fn ticket_automation_status_for_policy(
+    snapshot: &RuntimeStateSnapshot,
+    policy: &SignedTicketAutomationPolicy,
+    current_network: RuntimeIpcNetworkClass,
+    now_unix_seconds: u64,
+) -> Result<RuntimeIpcTicketAutomationStatus> {
+    let network_allowed = policy.allows_network(current_network);
+    Ok(RuntimeIpcTicketAutomationStatus {
+        contact_id: policy.contact_id().to_string(),
+        conversation: policy.conversation().to_owned(),
+        peer_account_id: policy.peer_account_id(),
+        enabled: policy.enabled(),
+        policy_generation: policy.generation(),
+        service_base_url: policy.service_base_url().to_owned(),
+        ttl_seconds: policy.ttl_seconds(),
+        refresh_before_seconds: policy.refresh_before_seconds(),
+        retry_base_seconds: policy.retry_base_seconds(),
+        retry_max_seconds: policy.retry_max_seconds(),
+        allow_ethernet: policy.allow_ethernet(),
+        allow_wifi: policy.allow_wifi(),
+        allow_mobile: policy.allow_mobile(),
+        allow_unknown_network: policy.allow_unknown_network(),
+        current_network,
+        network_allowed,
+        execution_scope: "only-while-runtime-process-is-running".to_owned(),
+        os_background_service_enabled: false,
+        publish: ticket_automation_action_status(
+            snapshot,
+            policy,
+            TicketAutomationAction::Publish,
+            network_allowed,
+            now_unix_seconds,
+        ),
+        refresh: ticket_automation_action_status(
+            snapshot,
+            policy,
+            TicketAutomationAction::Refresh,
+            network_allowed,
+            now_unix_seconds,
+        ),
+    })
+}
+
+fn ticket_automation_action_status(
+    snapshot: &RuntimeStateSnapshot,
+    policy: &SignedTicketAutomationPolicy,
+    action: TicketAutomationAction,
+    network_allowed: bool,
+    now_unix_seconds: u64,
+) -> RuntimeIpcTicketAutomationActionStatus {
+    let attempts = snapshot
+        .ticket_automation_attempts
+        .get(&(policy.contact_id(), action));
+    let latest = attempts
+        .and_then(|attempts| attempts.last())
+        .filter(|attempt| attempt.policy_generation() == policy.generation());
+    let latest_success = attempts.and_then(|attempts| {
+        attempts.iter().rev().find(|attempt| {
+            attempt.policy_generation() == policy.generation() && attempt.succeeded()
+        })
+    });
+    let state = if !policy.enabled() {
+        "disabled"
+    } else if !network_allowed {
+        "network-blocked"
+    } else if latest.is_some_and(|attempt| attempt.not_before_unix_seconds() > now_unix_seconds) {
+        if latest.is_some_and(SignedTicketAutomationAttempt::succeeded) {
+            "fresh"
+        } else {
+            "backoff"
+        }
+    } else {
+        "due"
+    };
+    RuntimeIpcTicketAutomationActionStatus {
+        action: action.as_str().to_owned(),
+        state: state.to_owned(),
+        last_attempt_unix_seconds: latest
+            .map(SignedTicketAutomationAttempt::attempted_at_unix_seconds),
+        last_success_unix_seconds: latest_success
+            .map(SignedTicketAutomationAttempt::attempted_at_unix_seconds),
+        next_attempt_unix_seconds: latest
+            .map(SignedTicketAutomationAttempt::not_before_unix_seconds),
+        consecutive_failures: latest.map_or(0, SignedTicketAutomationAttempt::consecutive_failures),
+        publication_generation: latest_success
+            .and_then(SignedTicketAutomationAttempt::publication_generation),
+        expires_at_unix_seconds: latest_success
+            .and_then(SignedTicketAutomationAttempt::expires_at_unix_seconds),
+        last_result: latest
+            .map_or("never", |attempt| {
+                if attempt.succeeded() {
+                    "success"
+                } else {
+                    "failure"
+                }
+            })
+            .to_owned(),
+    }
+}
+
+#[derive(Clone, Copy)]
+enum RuntimeTicketAutomationAttempt {
+    NoWork,
+    Completed,
+}
+
+async fn attempt_next_runtime_ticket_automation(
+    state_directory: &Path,
+    current_ticket: &ConnectionTicket,
+) -> Result<RuntimeTicketAutomationAttempt> {
+    let current_network = current_runtime_network_class();
+    let selection_lock = acquire_runtime_state_lock(state_directory)
+        .await?
+        .context("runtime state lock remained busy while selecting ticket automation")?;
+    let device_state = load_command_device_state(state_directory)?;
+    let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+    let certificate = trust.load_certificate()?;
+    let snapshot = load_runtime_state_snapshot(
+        state_directory,
+        certificate.account_id(),
+        device_state.identity().device_id(),
+    )?;
+    let now = unix_time_now()?;
+    let selected = snapshot
+        .ticket_automation_policies
+        .values()
+        .filter_map(|policies| policies.last())
+        .filter(|policy| policy.enabled() && policy.allows_network(current_network))
+        .find_map(|policy| {
+            [
+                TicketAutomationAction::Publish,
+                TicketAutomationAction::Refresh,
+            ]
+            .into_iter()
+            .find(|action| {
+                snapshot
+                    .latest_ticket_automation_attempt(policy.contact_id(), *action)
+                    .filter(|attempt| attempt.policy_generation() == policy.generation())
+                    .is_none_or(|attempt| attempt.not_before_unix_seconds() <= now)
+            })
+            .map(|action| (policy.clone(), action))
+        });
+    drop(selection_lock);
+    let Some((policy, action)) = selected else {
+        return Ok(RuntimeTicketAutomationAttempt::NoWork);
+    };
+
+    let operation = match action {
+        TicketAutomationAction::Publish => publish_runtime_own_ticket(
+            state_directory,
+            current_ticket,
+            policy.conversation(),
+            policy.peer_account_id(),
+            policy.service_base_url(),
+            policy.ttl_seconds(),
+            policy.ttl_seconds(),
+        )
+        .await
+        .map(|publication| {
+            (
+                publication.publication_generation,
+                publication.expires_at_unix_seconds,
+            )
+        }),
+        TicketAutomationAction::Refresh => refresh_runtime_contact_ticket(
+            state_directory,
+            policy.conversation(),
+            policy.peer_account_id(),
+            policy.service_base_url(),
+        )
+        .await
+        .map(|refresh| {
+            (
+                refresh.publication_generation,
+                refresh.expires_at_unix_seconds,
+            )
+        }),
+    };
+    if let Err(error) = &operation {
+        eprintln!(
+            "runtime_ticket_automation_status=failed contact_id={} action={} error={error:#}",
+            policy.contact_id(),
+            action.as_str()
+        );
+    }
+    let attempted_at = unix_time_now()?;
+    let persist_lock = acquire_runtime_state_lock(state_directory)
+        .await?
+        .context("runtime state lock remained busy while persisting ticket automation")?;
+    let device_state = load_command_device_state(state_directory)?;
+    let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+    let certificate = trust.load_certificate()?;
+    let snapshot = load_runtime_state_snapshot(
+        state_directory,
+        certificate.account_id(),
+        device_state.identity().device_id(),
+    )?;
+    let current_policy = snapshot
+        .latest_ticket_automation_policy(policy.contact_id())
+        .context("ticket automation policy disappeared during network operation")?;
+    if current_policy.policy_id()? != policy.policy_id()? {
+        drop(persist_lock);
+        return Ok(RuntimeTicketAutomationAttempt::Completed);
+    }
+    let previous = snapshot.latest_ticket_automation_attempt(policy.contact_id(), action);
+    let attempt = SignedTicketAutomationAttempt::sign(
+        device_state.identity(),
+        certificate.account_id(),
+        &policy,
+        action,
+        attempted_at,
+        operation.ok(),
+        previous,
+    )?;
+    let attempt_id = attempt.attempt_id()?;
+    let path = runtime_ticket_automation_attempt_relative_path(attempt_id);
+    let bytes = attempt.encode()?;
+    run_state_transaction(state_directory, |transaction| {
+        persist_runtime_record(state_directory, &path, &bytes, transaction)
+    })?;
+    drop(persist_lock);
+    println!(
+        "runtime_ticket_automation_status={} contact_id={} action={} next_attempt_unix_seconds={}",
+        if attempt.succeeded() {
+            "succeeded"
+        } else {
+            "backoff"
+        },
+        attempt.contact_id(),
+        action.as_str(),
+        attempt.not_before_unix_seconds()
+    );
+    Ok(RuntimeTicketAutomationAttempt::Completed)
+}
+
 fn store_outcome_name(outcome: StoreOutcome) -> &'static str {
     match outcome {
         StoreOutcome::Inserted => "Inserted",
@@ -5894,6 +6661,9 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
     println!("runtime_retry_base_seconds={retry_base_seconds}");
     println!("runtime_retry_max_seconds={retry_max_seconds}");
     println!("runtime_auto_sync_seconds={auto_sync_seconds}");
+    println!("runtime_ticket_automation=opt-in");
+    println!("runtime_ticket_automation_scope=only-while-runtime-process-is-running");
+    println!("runtime_ticket_automation_os_background_service=false");
     println!("runtime_max_outbound_actions={max_outbound_actions}");
     println!("ticket={encoded_ticket}");
     if let Some(path) = &ticket_file {
@@ -5909,12 +6679,18 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
     let mut last_activity = tokio::time::Instant::now();
     let automatic_sync_started_at = tokio::time::Instant::now();
     let mut last_sync_attempts = BTreeMap::new();
+    let mut last_ticket_automation_check =
+        tokio::time::Instant::now() - RUNTIME_TICKET_AUTOMATION_CHECK_INTERVAL;
     // Keep the accept future alive across polling ticks. Dropping an Iroh
     // Incoming while a handshake is in progress actively rejects that peer.
     let mut accept: Pin<Box<dyn Future<Output = Result<Connection>> + Send + '_>> =
         Box::pin(accept_authenticated_connection(&endpoint));
     let mut shutdown: Pin<Box<dyn Future<Output = io::Result<()>> + Send + '_>> =
         Box::pin(tokio::signal::ctrl_c());
+    let poll_interval = Duration::from_millis(poll_milliseconds);
+    let mut poll_tick =
+        tokio::time::interval_at(tokio::time::Instant::now() + poll_interval, poll_interval);
+    poll_tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
     let stop_reason = loop {
         let idle_deadline =
             (idle_seconds != 0).then(|| last_activity + Duration::from_secs(idle_seconds));
@@ -5923,7 +6699,7 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
             &mut shutdown,
             &mut ipc_receiver,
             idle_deadline,
-            Duration::from_millis(poll_milliseconds),
+            &mut poll_tick,
         )
         .await?;
         if matches!(runtime_event, RuntimeEvent::Connection(_)) {
@@ -5975,16 +6751,17 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                         }
                     }
                 }
-                if matches!(delivery_attempt, RuntimeDeliveryAttempt::NoWork)
+                let sync_attempted = matches!(delivery_attempt, RuntimeDeliveryAttempt::NoWork)
                     && auto_sync_seconds != 0
-                    && automatic_sync_started_at.elapsed() >= Duration::from_secs(auto_sync_seconds)
+                    && automatic_sync_started_at.elapsed()
+                        >= Duration::from_secs(auto_sync_seconds)
                     && attempt_runtime_contact_sync(
                         &state_dir,
                         Duration::from_secs(auto_sync_seconds),
                         &mut last_sync_attempts,
                     )
-                    .await?
-                {
+                    .await?;
+                if sync_attempted {
                     if let Some(server) = ipc_server.as_ref() {
                         server.publish_change();
                     }
@@ -5992,6 +6769,26 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                     last_activity = tokio::time::Instant::now();
                     if max_outbound_actions != 0 && outbound_actions >= max_outbound_actions {
                         break "outbound-action-limit";
+                    }
+                }
+                if matches!(delivery_attempt, RuntimeDeliveryAttempt::NoWork)
+                    && !sync_attempted
+                    && last_ticket_automation_check.elapsed()
+                        >= RUNTIME_TICKET_AUTOMATION_CHECK_INTERVAL
+                {
+                    last_ticket_automation_check = tokio::time::Instant::now();
+                    if matches!(
+                        attempt_next_runtime_ticket_automation(&state_dir, &ticket).await?,
+                        RuntimeTicketAutomationAttempt::Completed
+                    ) {
+                        if let Some(server) = ipc_server.as_ref() {
+                            server.publish_change();
+                        }
+                        outbound_actions += 1;
+                        last_activity = tokio::time::Instant::now();
+                        if max_outbound_actions != 0 && outbound_actions >= max_outbound_actions {
+                            break "outbound-action-limit";
+                        }
                     }
                 }
             }
@@ -6829,7 +7626,7 @@ async fn wait_for_runtime_event(
     shutdown: &mut Pin<Box<dyn Future<Output = io::Result<()>> + Send + '_>>,
     ipc_receiver: &mut tokio::sync::mpsc::Receiver<RuntimeIpcWork>,
     idle_deadline: Option<tokio::time::Instant>,
-    poll_interval: Duration,
+    poll_tick: &mut tokio::time::Interval,
 ) -> Result<RuntimeEvent> {
     if let Some(idle_deadline) = idle_deadline {
         tokio::select! {
@@ -6839,7 +7636,7 @@ async fn wait_for_runtime_event(
                 Ok(RuntimeEvent::Shutdown)
             }
             work = ipc_receiver.recv() => Ok(work.map_or(RuntimeEvent::IpcClosed, RuntimeEvent::Ipc)),
-            () = tokio::time::sleep(poll_interval) => Ok(RuntimeEvent::Tick),
+            _ = poll_tick.tick() => Ok(RuntimeEvent::Tick),
             () = tokio::time::sleep_until(idle_deadline) => Ok(RuntimeEvent::IdleTimeout),
         }
     } else {
@@ -6850,7 +7647,7 @@ async fn wait_for_runtime_event(
                 Ok(RuntimeEvent::Shutdown)
             }
             work = ipc_receiver.recv() => Ok(work.map_or(RuntimeEvent::IpcClosed, RuntimeEvent::Ipc)),
-            () = tokio::time::sleep(poll_interval) => Ok(RuntimeEvent::Tick),
+            _ = poll_tick.tick() => Ok(RuntimeEvent::Tick),
         }
     }
 }
@@ -13698,6 +14495,101 @@ mod tests {
             assert_eq!(refresh.local_observation_status, expected_store);
             assert_eq!(refresh.descriptor_publish_status, "atomic-replace");
         }
+
+        for (ipc, peer_account_id) in [
+            (&alice_ipc, bob_root.account_id()),
+            (&bob_ipc, alice_root.account_id()),
+        ] {
+            let configured = kilogram_runtime_ipc::call(
+                ipc,
+                RuntimeIpcCommand::ConfigureTicketAutomation {
+                    conversation: conversation.to_owned(),
+                    peer_account_id,
+                    enabled: true,
+                    service_base_url: service_base_url.clone(),
+                    ttl_seconds: 300,
+                    refresh_before_seconds: 60,
+                    retry_base_seconds: 1,
+                    retry_max_seconds: 4,
+                    allow_ethernet: true,
+                    allow_wifi: true,
+                    allow_mobile: true,
+                    allow_unknown_network: true,
+                },
+            )
+            .await?;
+            let status = match configured {
+                RuntimeIpcResponse::TicketAutomationConfigured(status) => status,
+                RuntimeIpcResponse::Error { message } => {
+                    bail!("runtime rejected ticket automation: {message}")
+                }
+                _ => bail!("runtime returned an unexpected ticket-automation response"),
+            };
+            assert!(status.enabled && status.network_allowed);
+            assert_eq!(
+                status.execution_scope,
+                "only-while-runtime-process-is-running"
+            );
+            assert!(!status.os_background_service_enabled);
+        }
+        let automation_convergence = timeout(Duration::from_secs(35), async {
+            loop {
+                let mut converged = true;
+                for ipc in [&alice_ipc, &bob_ipc] {
+                    let response =
+                        kilogram_runtime_ipc::call(ipc, RuntimeIpcCommand::TicketAutomationStatus)
+                            .await?;
+                    let RuntimeIpcResponse::TicketAutomationStatus(statuses) = response else {
+                        bail!("runtime returned unexpected ticket-automation status")
+                    };
+                    converged &= statuses.len() == 1
+                        && statuses[0].publish.last_result == "success"
+                        && statuses[0].refresh.last_result == "success";
+                }
+                if converged {
+                    return Ok::<_, anyhow::Error>(());
+                }
+                tokio::time::sleep(Duration::from_millis(200)).await;
+            }
+        })
+        .await;
+        if automation_convergence.is_err() {
+            let alice_status =
+                kilogram_runtime_ipc::call(&alice_ipc, RuntimeIpcCommand::TicketAutomationStatus)
+                    .await?;
+            let bob_status =
+                kilogram_runtime_ipc::call(&bob_ipc, RuntimeIpcCommand::TicketAutomationStatus)
+                    .await?;
+            bail!(
+                "automatic ticket publish/refresh did not converge: alice={alice_status:?}; bob={bob_status:?}"
+            );
+        }
+        automation_convergence.context("automatic ticket publish/refresh did not converge")??;
+        let disabled = kilogram_runtime_ipc::call(
+            &alice_ipc,
+            RuntimeIpcCommand::ConfigureTicketAutomation {
+                conversation: conversation.to_owned(),
+                peer_account_id: bob_root.account_id(),
+                enabled: false,
+                service_base_url: service_base_url.clone(),
+                ttl_seconds: 300,
+                refresh_before_seconds: 60,
+                retry_base_seconds: 1,
+                retry_max_seconds: 4,
+                allow_ethernet: true,
+                allow_wifi: true,
+                allow_mobile: true,
+                allow_unknown_network: true,
+            },
+        )
+        .await?;
+        let RuntimeIpcResponse::TicketAutomationConfigured(disabled) = disabled else {
+            bail!("runtime returned unexpected disabled ticket-automation status")
+        };
+        assert!(!disabled.enabled);
+        assert_eq!(disabled.policy_generation, 2);
+        assert_eq!(disabled.publish.state, "disabled");
+        assert_eq!(disabled.refresh.state, "disabled");
         let _ = store_shutdown_sender.send(());
         timeout(Duration::from_secs(5), store_task)
             .await
@@ -13715,7 +14607,7 @@ mod tests {
                 .values()
                 .map(Vec::len)
                 .sum::<usize>(),
-            1
+            2
         );
         let alice_snapshot = load_runtime_state_snapshot(
             &alice_state,
@@ -13728,7 +14620,23 @@ mod tests {
                 .values()
                 .map(Vec::len)
                 .sum::<usize>(),
-            1
+            2
+        );
+        assert_eq!(
+            alice_snapshot
+                .ticket_automation_policies
+                .values()
+                .map(Vec::len)
+                .sum::<usize>(),
+            2
+        );
+        assert!(
+            alice_snapshot
+                .ticket_automation_attempts
+                .values()
+                .map(Vec::len)
+                .sum::<usize>()
+                >= 2
         );
         assert_eq!(
             ConnectionTicket::decode(&fs::read_to_string(&bob_ticket)?)?.listener_device_id(),
@@ -13970,6 +14878,7 @@ mod tests {
         bob_device.install_conversation_membership(&membership)?;
 
         let bob_ticket = directory.path().join("bob-runtime.ticket");
+        let bob_ipc = directory.path().join("bob-runtime.ipc.json");
         let bob_task = tokio::spawn(runtime(RuntimeOptions {
             state_dir: bob_state.clone(),
             allowed_requester_account_id: alice_root.account_id(),
@@ -13979,17 +14888,17 @@ mod tests {
             relay_wait_seconds: 0,
             route_policy: RoutePolicy::DirectOnly,
             relay_url: None,
-            max_sessions: 2,
-            idle_seconds: 20,
+            max_sessions: 0,
+            idle_seconds: 0,
             poll_milliseconds: 20,
             retry_base_seconds: 1,
             retry_max_seconds: 1,
             auto_sync_seconds: 0,
             max_outbound_actions: 0,
-            ipc_file: None,
+            ipc_file: Some(bob_ipc.clone()),
         }));
         timeout(Duration::from_secs(10), async {
-            while !bob_ticket.is_file() {
+            while !bob_ticket.is_file() || !bob_ipc.is_file() {
                 tokio::time::sleep(Duration::from_millis(20)).await;
             }
         })
@@ -14012,7 +14921,7 @@ mod tests {
             retry_base_seconds: 1,
             retry_max_seconds: 1,
             auto_sync_seconds: 1,
-            max_outbound_actions: 2,
+            max_outbound_actions: 0,
             ipc_file: Some(alice_ipc.clone()),
         }));
 
@@ -14101,11 +15010,34 @@ mod tests {
                 if status.queue_count == 1 && status.items.len() == 1
         ));
 
-        let (alice_result, bob_result) = timeout(Duration::from_secs(30), async {
+        timeout(Duration::from_secs(30), async {
+            loop {
+                let delivered = matches!(
+                    kilogram_runtime_ipc::call(&alice_ipc, RuntimeIpcCommand::OutboxStatus)
+                        .await?,
+                    RuntimeIpcResponse::OutboxStatus(status)
+                        if status.pending_count == 0 && status.delivered_count == 1
+                );
+                if delivered {
+                    return Ok::<_, anyhow::Error>(());
+                }
+                tokio::time::sleep(Duration::from_millis(50)).await;
+            }
+        })
+        .await
+        .context("runtime outbox delivery/sync did not converge")??;
+        tokio::time::sleep(Duration::from_millis(1_200)).await;
+        for ipc in [&alice_ipc, &bob_ipc] {
+            assert_eq!(
+                kilogram_runtime_ipc::call(ipc, RuntimeIpcCommand::Shutdown).await?,
+                RuntimeIpcResponse::ShutdownAccepted
+            );
+        }
+        let (alice_result, bob_result) = timeout(Duration::from_secs(10), async {
             tokio::join!(alice_task, bob_task)
         })
         .await
-        .context("runtime outbox process test timed out")?;
+        .context("runtime outbox processes did not stop")?;
         alice_result.context("join Alice runtime")??;
         bob_result.context("join Bob runtime")??;
 
