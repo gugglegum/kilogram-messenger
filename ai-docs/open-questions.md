@@ -172,7 +172,14 @@ sessions, distribution, removal и key epochs и не решены этим пр
   time; нужны epoch-bound/expiring authorizations, ordered witness или другая
   явная модель исторической валидности.
 - Схема blind mailbox: вычисление адресов, TTL, подтверждение получения,
-  повторная доставка и unlinkability.
+  повторная доставка и unlinkability. M0.9.29 решает только short-lived runtime
+  ticket head для already-enrolled contact: deterministic pseudonymous channel
+  и access pattern ещё не являются blind capability или mailbox.
+- Как синхронизировать M0.9.29 observation high-water между устройствами одного
+  аккаунта и обнаруживать valid publisher equivocation между получателями без
+  доверенного global log? Первый recipient observation пока защищён только
+  signature/expiry, а endpoint failover на другой publisher Device требует
+  отдельного authenticated candidate-set/gossip контракта.
 - Репликация или erasure coding: сколько случайных узлов и какие гарантии нужны?
 - Как выдавать storage capability и ограничивать spam/Sybil без глобального
   аккаунта и утечки социального графа?

@@ -21,7 +21,7 @@ use tokio::{
     time::timeout,
 };
 
-const IPC_VERSION: u8 = 6;
+const IPC_VERSION: u8 = 7;
 const MAX_DESCRIPTOR_BYTES: u64 = 16 * 1024;
 const MAX_LAUNCH_PROFILE_BYTES: u64 = 64 * 1024;
 const MAX_LAUNCH_PROFILE_PATHS: usize = 64;
@@ -36,7 +36,7 @@ const MAX_FRAME_BYTES: usize = 256 * 1024;
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(3);
 const IO_TIMEOUT: Duration = Duration::from_secs(30);
 const REQUEST_CHANNEL_CAPACITY: usize = 64;
-const DESCRIPTOR_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-ipc-descriptor:v6\0";
+const DESCRIPTOR_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-ipc-descriptor:v7\0";
 pub const RUNTIME_LAUNCH_PROFILE_VERSION: u8 = 1;
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -365,6 +365,17 @@ pub enum RuntimeIpcCommand {
         device_list_file: PathBuf,
     },
     OwnDeviceDirectoryStatus,
+    PublishOwnTicket {
+        conversation: String,
+        peer_account_id: AccountId,
+        service_base_url: String,
+        ttl_seconds: u64,
+    },
+    RefreshContactTicket {
+        conversation: String,
+        peer_account_id: AccountId,
+        service_base_url: String,
+    },
     ConversationList,
     HistoryPage {
         conversation: String,
@@ -604,6 +615,40 @@ pub struct RuntimeIpcDeviceDirectoryStatus {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcTicketPublication {
+    pub contact_id: String,
+    pub channel_id: String,
+    pub publication_id: String,
+    pub publication_generation: u64,
+    pub expires_at_unix_seconds: u64,
+    pub recipient_device_count: usize,
+    pub encrypted_record_bytes: usize,
+    pub service_base_url: String,
+    pub local_store_status: String,
+    pub upload_status: String,
+    pub lookup_privacy_status: String,
+    pub first_contact_freshness: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcContactTicketRefresh {
+    pub contact_id: String,
+    pub channel_id: String,
+    pub publication_id: String,
+    pub publication_generation: u64,
+    pub expires_at_unix_seconds: u64,
+    pub publisher_account_id: AccountId,
+    pub publisher_device_id: DeviceId,
+    pub authority_revision: u64,
+    pub active_device_count: usize,
+    pub descriptor_file: PathBuf,
+    pub local_observation_status: String,
+    pub descriptor_publish_status: String,
+    pub freshness_status: String,
+    pub first_contact_freshness: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum RuntimeIpcResponse {
     Pong {
         account_id: AccountId,
@@ -623,6 +668,8 @@ pub enum RuntimeIpcResponse {
     OutboxStatus(RuntimeIpcOutboxStatus),
     OwnDeviceDirectoryApplied(Box<RuntimeIpcDeviceDirectoryUpdate>),
     OwnDeviceDirectoryStatus(RuntimeIpcDeviceDirectoryStatus),
+    OwnTicketPublished(Box<RuntimeIpcTicketPublication>),
+    ContactTicketRefreshed(Box<RuntimeIpcContactTicketRefresh>),
     ConversationList(Vec<RuntimeIpcConversationSummary>),
     HistoryPage(RuntimeIpcHistoryPage),
     ChangeState {

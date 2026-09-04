@@ -108,12 +108,15 @@ specified in
 Restart-safe persistence of that applied roster and bounded launch-profile
 convergence are specified in
 [`docs/RFC-0050-restart-safe-runtime-device-directory.md`](docs/RFC-0050-restart-safe-runtime-device-directory.md).
+Signed recipient-encrypted wide-area publication of refreshed runtime tickets is
+specified in
+[`docs/RFC-0051-signed-wide-area-ticket-publication.md`](docs/RFC-0051-signed-wide-area-ticket-publication.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.28 restart-safe device directory — complete
+## Current milestone: M0.9.29 signed wide-area ticket publication — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -1049,6 +1052,40 @@ The desktop reads this status on connect. When profile convergence is required,
 directory, old path, new canonical non-symlink path and unchanged profile bytes;
 it then atomically changes only `device_list_file` and reloads the result. The
 runtime itself still has no general configuration-file write authority.
+
+M0.9.29 replaces that contact's synchronized ticket-file refresh with an
+explicit wide-area publication/fetch adapter. The publishing device signs a
+short-lived monotonic head, HPKE-seals it separately to every active device in
+the peer's last verified account directory, and uploads only the opaque
+envelope. A directional lookup channel includes the publisher Device ID, so
+separate endpoints of one account do not overwrite each other. The store still
+observes IP addresses, channel access, timing, generation, and ciphertext size;
+this is pseudonymous lookup, not metadata anonymity.
+
+With both contacts already enrolled, the running actors expose:
+
+```powershell
+cargo run -p kilogram-cli -- runtime-ipc-publish-ticket `
+  --ipc-file C:\Kilogram\private\runtime.ipc.json `
+  --conversation friends `
+  --peer-account <PEER_ACCOUNT_ID> `
+  --service-base-url https://ticket-store.example
+
+cargo run -p kilogram-cli -- runtime-ipc-refresh-contact-ticket `
+  --ipc-file C:\Kilogram\private\runtime.ipc.json `
+  --conversation friends `
+  --peer-account <PEER_ACCOUNT_ID> `
+  --service-base-url https://ticket-store.example
+```
+
+Fetch validates the publication, complete ticket, membership, account/device,
+route, authority and prekey state before atomically replacing the existing
+contact descriptor. Each device persists a signed observation high-water and
+rejects an older or conflicting generation after observation; exact retries are
+idempotent. First contact still requires an independently verified ticket, and
+the repository does not yet ship a public Internet object service. The Windows
+desktop exposes the same two explicit actions without enabling a background
+task.
 
 The queue command prints `runtime_ipc_request_id` before connecting. If its
 result is uncertain, repeat the same message with `--request-id <PRINTED_ID>`;

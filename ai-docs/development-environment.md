@@ -1059,3 +1059,26 @@ retirement остальных compatibility shadows ещё не реализов
   `D8DADA49E93CD348C26C1968A708DA030CDD92ACE96E64A9A733CC351EF5D3A0`;
   `target/release/kilogram-cli.exe` — 22,723,584 bytes, SHA-256
   `842663CA448DE3707728C1FA3BE231CBD9668F915D87C2D88864A6BAE38B2EB1`.
+
+## M0.9.29 verification snapshot (2026-09-05)
+
+- Crypto regression проверяет recipient-bound HPKE slots, wrong key/device,
+  expiry, отдельные channels для publisher devices, signed observation chain,
+  idempotent replay и rollback/equivocation rejection.
+- Реальный loopback HTTP fixture получает только opaque envelope по exact
+  pseudonymous path. Два long-lived runtime actor с взаимно enrolled contacts
+  проходят publish → fetch/install → idempotent second fetch; publisher и
+  receiver high-water chains остаются в vault-primary `Runtime` repository.
+- `cargo fmt --all -- --check`, strict
+  `cargo clippy --workspace --all-targets --all-features -- -D warnings`, все
+  189 workspace tests и `cargo build --release --workspace` проходят.
+- Release-mode lifecycle
+  `cargo test --release -p kilogram-cli
+  runtime_publishes_and_refreshes_an_opaque_contact_ticket_idempotently`
+  проходит с двумя реальными runtime actor и локальным opaque store.
+- Windows artifacts: `target/release/kilogram-bootstrap.exe` — 20,460,544 bytes,
+  SHA-256 `3AC84084FB06FB255FEDDF3816CA7B14FCBF410D5200EBB75D6082BC2B9BF2F3`;
+  `target/release/kilogram-windows.exe` — 7,954,432 bytes, SHA-256
+  `B77F0FFD831C3610FA693DAFAE982D2407811F5BA27400E7533DD8495B45B9B7`;
+  `target/release/kilogram-cli.exe` — 24,397,824 bytes, SHA-256
+  `5FF658D027BF428C448E0EF9A2CE45581D24E3FFCDCC73DFFE9FE9566C2BA8D3`.

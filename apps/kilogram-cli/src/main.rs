@@ -36,12 +36,12 @@ use kilogram_ratchet::{
     SignedRatchetIdentity, unix_time_now,
 };
 use kilogram_runtime_ipc::{
-    RuntimeIpcCommand, RuntimeIpcConversationSummary, RuntimeIpcDescriptor,
-    RuntimeIpcDeviceDirectoryStatus, RuntimeIpcDeviceDirectoryUpdate, RuntimeIpcHistoryCursor,
-    RuntimeIpcHistoryMessage, RuntimeIpcHistoryPage, RuntimeIpcMessagePreview,
-    RuntimeIpcOutboxStatus, RuntimeIpcQueueItem, RuntimeIpcQueueState, RuntimeIpcRequestId,
-    RuntimeIpcResponse, RuntimeIpcRoutePolicy, RuntimeIpcServer, RuntimeIpcWork,
-    RuntimeLaunchProfile, RuntimeLaunchSettings,
+    RuntimeIpcCommand, RuntimeIpcContactTicketRefresh, RuntimeIpcConversationSummary,
+    RuntimeIpcDescriptor, RuntimeIpcDeviceDirectoryStatus, RuntimeIpcDeviceDirectoryUpdate,
+    RuntimeIpcHistoryCursor, RuntimeIpcHistoryMessage, RuntimeIpcHistoryPage,
+    RuntimeIpcMessagePreview, RuntimeIpcOutboxStatus, RuntimeIpcQueueItem, RuntimeIpcQueueState,
+    RuntimeIpcRequestId, RuntimeIpcResponse, RuntimeIpcRoutePolicy, RuntimeIpcServer,
+    RuntimeIpcTicketPublication, RuntimeIpcWork, RuntimeLaunchProfile, RuntimeLaunchSettings,
 };
 use kilogram_session::{
     MAX_SYNC_ROUNDS, ServerInventoryOutcome, SessionStore, SyncClient, SyncServer,
@@ -75,6 +75,7 @@ mod recovery_plan;
 mod recovery_platform;
 mod recovery_qr;
 mod recovery_scheduler;
+mod runtime_publication;
 mod runtime_queue;
 
 use recovery_discovery::{
@@ -107,6 +108,12 @@ use recovery_scheduler::{
     RecoverySchedulerReadiness, SignedRecoverySchedulerState, load_recovery_scheduler_state,
     persist_recovery_scheduler_state,
 };
+use runtime_publication::{
+    DEFAULT_TICKET_PUBLICATION_TTL_SECONDS, EncryptedTicketPublication,
+    MAX_TICKET_PUBLICATION_TTL_SECONDS, MIN_TICKET_PUBLICATION_TTL_SECONDS,
+    SignedTicketPublication, SignedTicketPublicationObservation, TicketPublicationChannelId,
+    TicketPublicationId, TicketPublicationObservationId, TicketPublicationStoreClient,
+};
 use runtime_queue::{
     MAX_RUNTIME_RECORD_BYTES, RuntimeContactId, RuntimeDeviceDirectoryReceiptId, RuntimeQueueId,
     SignedDeliveredMessage, SignedMaterializedMessage, SignedQueuedMessage, SignedRuntimeContact,
@@ -121,7 +128,10 @@ const RUNTIME_STATE_DIRECTORY: &str = "runtime";
 const RUNTIME_CONTACTS_DIRECTORY: &str = "contacts";
 const RUNTIME_OUTBOX_DIRECTORY: &str = "outbox";
 const RUNTIME_DEVICE_DIRECTORY: &str = "device-directory";
+const RUNTIME_TICKET_PUBLICATIONS_DIRECTORY: &str = "ticket-publications";
+const RUNTIME_TICKET_OBSERVATIONS_DIRECTORY: &str = "ticket-observations";
 const MAX_RUNTIME_DEVICE_DIRECTORY_RECEIPTS: usize = 1_024;
+const MAX_RUNTIME_TICKET_PUBLICATION_RECORDS: usize = 4_096;
 const RUNTIME_DEVICE_LIST_DIGEST_DOMAIN: &[u8] = b"kilogram:runtime-device-list:v1\0";
 const DIRECT_PATH_DIAGNOSTIC_WAIT: Duration = Duration::from_secs(3);
 const ROUTE_POLICY_WAIT: Duration = Duration::from_secs(15);
@@ -488,6 +498,48 @@ enum Command {
         /// Runtime-owned local IPC descriptor.
         #[arg(long)]
         ipc_file: PathBuf,
+    },
+
+    /// Publish this runtime's current connection ticket for one enrolled contact.
+    RuntimeIpcPublishTicket {
+        /// Runtime-owned local IPC descriptor.
+        #[arg(long)]
+        ipc_file: PathBuf,
+
+        /// Contact conversation label.
+        #[arg(long)]
+        conversation: String,
+
+        /// Peer account selecting the exact signed runtime contact.
+        #[arg(long)]
+        peer_account: AccountId,
+
+        /// HTTPS base URL of the opaque ticket-publication store.
+        #[arg(long)]
+        service_base_url: String,
+
+        /// Short publication lifetime; refresh before it expires.
+        #[arg(long, default_value_t = DEFAULT_TICKET_PUBLICATION_TTL_SECONDS)]
+        ttl_seconds: u64,
+    },
+
+    /// Fetch and install a newer signed ticket for one enrolled contact.
+    RuntimeIpcRefreshContactTicket {
+        /// Runtime-owned local IPC descriptor.
+        #[arg(long)]
+        ipc_file: PathBuf,
+
+        /// Contact conversation label.
+        #[arg(long)]
+        conversation: String,
+
+        /// Peer account selecting the exact signed runtime contact.
+        #[arg(long)]
+        peer_account: AccountId,
+
+        /// HTTPS base URL of the opaque ticket-publication store.
+        #[arg(long)]
+        service_base_url: String,
     },
 
     /// Connect to a listener, send one message, print its acknowledgement, then exit.
@@ -1334,6 +1386,8 @@ impl Command {
             | Self::RuntimeIpcOutboxStatus { .. }
             | Self::RuntimeIpcApplyDeviceDirectory { .. }
             | Self::RuntimeIpcDeviceDirectoryStatus { .. }
+            | Self::RuntimeIpcPublishTicket { .. }
+            | Self::RuntimeIpcRefreshContactTicket { .. }
             | Self::PlatformContext => None,
         }
     }
@@ -2114,6 +2168,36 @@ async fn run_command(command: Command) -> Result<()> {
         } => runtime_ipc_apply_device_directory(ipc_file, device_list_file).await,
         Command::RuntimeIpcDeviceDirectoryStatus { ipc_file } => {
             runtime_ipc_device_directory_status(ipc_file).await
+        }
+        Command::RuntimeIpcPublishTicket {
+            ipc_file,
+            conversation,
+            peer_account,
+            service_base_url,
+            ttl_seconds,
+        } => {
+            runtime_ipc_publish_ticket(
+                ipc_file,
+                conversation,
+                peer_account,
+                service_base_url,
+                ttl_seconds,
+            )
+            .await
+        }
+        Command::RuntimeIpcRefreshContactTicket {
+            ipc_file,
+            conversation,
+            peer_account,
+            service_base_url,
+        } => {
+            runtime_ipc_refresh_contact_ticket(
+                ipc_file,
+                conversation,
+                peer_account,
+                service_base_url,
+            )
+            .await
         }
         Command::Connect {
             state_dir,
@@ -3291,6 +3375,9 @@ struct RuntimeStateSnapshot {
     delivered: BTreeMap<RuntimeQueueId, SignedDeliveredMessage>,
     retries: BTreeMap<RuntimeQueueId, Vec<SignedRuntimeRetryState>>,
     device_directory_receipts: Vec<SignedRuntimeDeviceDirectoryReceipt>,
+    ticket_publications: BTreeMap<TicketPublicationChannelId, Vec<SignedTicketPublication>>,
+    ticket_observations:
+        BTreeMap<TicketPublicationChannelId, Vec<SignedTicketPublicationObservation>>,
 }
 
 impl RuntimeStateSnapshot {
@@ -3307,6 +3394,24 @@ impl RuntimeStateSnapshot {
 
     fn latest_device_directory_receipt(&self) -> Option<&SignedRuntimeDeviceDirectoryReceipt> {
         self.device_directory_receipts.last()
+    }
+
+    fn latest_ticket_publication(
+        &self,
+        channel_id: TicketPublicationChannelId,
+    ) -> Option<&SignedTicketPublication> {
+        self.ticket_publications
+            .get(&channel_id)
+            .and_then(|publications| publications.last())
+    }
+
+    fn latest_ticket_observation(
+        &self,
+        channel_id: TicketPublicationChannelId,
+    ) -> Option<&SignedTicketPublicationObservation> {
+        self.ticket_observations
+            .get(&channel_id)
+            .and_then(|observations| observations.last())
     }
 }
 
@@ -3347,6 +3452,30 @@ fn runtime_device_directory_receipt_relative_path(
     PathBuf::from(RUNTIME_STATE_DIRECTORY)
         .join(RUNTIME_DEVICE_DIRECTORY)
         .join(format!("{generation:020}-{receipt_id}.directory-receipt"))
+}
+
+fn runtime_ticket_publication_relative_path(
+    channel_id: TicketPublicationChannelId,
+    generation: u64,
+    publication_id: TicketPublicationId,
+) -> PathBuf {
+    PathBuf::from(RUNTIME_STATE_DIRECTORY)
+        .join(RUNTIME_TICKET_PUBLICATIONS_DIRECTORY)
+        .join(format!(
+            "{channel_id}-{generation:020}-{publication_id}.ticket-publication"
+        ))
+}
+
+fn runtime_ticket_observation_relative_path(
+    channel_id: TicketPublicationChannelId,
+    observation_generation: u64,
+    observation_id: TicketPublicationObservationId,
+) -> PathBuf {
+    PathBuf::from(RUNTIME_STATE_DIRECTORY)
+        .join(RUNTIME_TICKET_OBSERVATIONS_DIRECTORY)
+        .join(format!(
+            "{channel_id}-{observation_generation:020}-{observation_id}.ticket-observation"
+        ))
 }
 
 fn runtime_device_list_digest(device_list: &AccountDeviceListSnapshot) -> Result<[u8; 32]> {
@@ -3441,6 +3570,8 @@ fn read_runtime_record_files(state_directory: &Path) -> Result<Vec<(PathBuf, Vec
         RUNTIME_CONTACTS_DIRECTORY,
         RUNTIME_OUTBOX_DIRECTORY,
         RUNTIME_DEVICE_DIRECTORY,
+        RUNTIME_TICKET_PUBLICATIONS_DIRECTORY,
+        RUNTIME_TICKET_OBSERVATIONS_DIRECTORY,
     ] {
         let root = state_directory
             .join(RUNTIME_STATE_DIRECTORY)
@@ -3509,6 +3640,48 @@ fn load_runtime_state_snapshot(
                 "runtime device-directory receipt filename does not match its authenticated state"
             );
             snapshot.device_directory_receipts.push(value);
+        } else if file_name.ends_with(".ticket-publication") {
+            let value = SignedTicketPublication::decode(&bytes)?;
+            ensure!(
+                value.publisher_account_id() == local_account_id
+                    && value.publisher_device_id() == local_device_id,
+                "ticket publication belongs to another local identity"
+            );
+            ensure!(
+                relative_path
+                    == runtime_ticket_publication_relative_path(
+                        value.channel_id(),
+                        value.generation(),
+                        value.publication_id()?,
+                    ),
+                "ticket publication filename does not match its authenticated state"
+            );
+            snapshot
+                .ticket_publications
+                .entry(value.channel_id())
+                .or_default()
+                .push(value);
+        } else if file_name.ends_with(".ticket-observation") {
+            let value = SignedTicketPublicationObservation::decode(&bytes)?;
+            ensure!(
+                value.local_account_id() == local_account_id
+                    && value.local_device_id() == local_device_id,
+                "ticket publication observation belongs to another local identity"
+            );
+            ensure!(
+                relative_path
+                    == runtime_ticket_observation_relative_path(
+                        value.channel_id(),
+                        value.observation_generation(),
+                        value.observation_id()?,
+                    ),
+                "ticket publication observation filename does not match its authenticated state"
+            );
+            snapshot
+                .ticket_observations
+                .entry(value.channel_id())
+                .or_default()
+                .push(value);
         } else if file_name.ends_with(".contact") {
             let value = SignedRuntimeContact::decode(&bytes)?;
             value.verify_local(local_account_id, local_device_id)?;
@@ -3608,6 +3781,22 @@ fn load_runtime_state_snapshot(
         snapshot.device_directory_receipts.len() <= MAX_RUNTIME_DEVICE_DIRECTORY_RECEIPTS,
         "runtime device-directory receipt limit exceeded"
     );
+    let publication_record_count = snapshot
+        .ticket_publications
+        .values()
+        .map(Vec::len)
+        .sum::<usize>()
+        .saturating_add(
+            snapshot
+                .ticket_observations
+                .values()
+                .map(Vec::len)
+                .sum::<usize>(),
+        );
+    ensure!(
+        publication_record_count <= MAX_RUNTIME_TICKET_PUBLICATION_RECORDS,
+        "runtime ticket-publication record limit exceeded"
+    );
     for states in snapshot.retries.values_mut() {
         states.sort_by_key(SignedRuntimeRetryState::generation);
         let mut previous = None;
@@ -3623,6 +3812,22 @@ fn load_runtime_state_snapshot(
     for receipt in &snapshot.device_directory_receipts {
         receipt.verify(previous)?;
         previous = Some(receipt);
+    }
+    for publications in snapshot.ticket_publications.values_mut() {
+        publications.sort_by_key(SignedTicketPublication::generation);
+        let mut previous = None;
+        for publication in publications.iter() {
+            publication.verify(previous)?;
+            previous = Some(publication);
+        }
+    }
+    for observations in snapshot.ticket_observations.values_mut() {
+        observations.sort_by_key(SignedTicketPublicationObservation::observation_generation);
+        let mut previous = None;
+        for observation in observations.iter() {
+            observation.verify(previous)?;
+            previous = Some(observation);
+        }
     }
     for queued in snapshot.queued.values() {
         let contact = snapshot
@@ -3961,6 +4166,31 @@ fn runtime_ipc_route_policy(route_policy: RoutePolicy) -> RuntimeIpcRoutePolicy 
         RoutePolicy::DirectOnly => RuntimeIpcRoutePolicy::DirectOnly,
         RoutePolicy::RelayOnly => RuntimeIpcRoutePolicy::RelayOnly,
     }
+}
+
+fn exact_runtime_contact<'a>(
+    snapshot: &'a RuntimeStateSnapshot,
+    conversation: &str,
+    peer_account_id: AccountId,
+) -> Result<&'a SignedRuntimeContact> {
+    ensure!(
+        !conversation.is_empty() && conversation.len() <= 4_096,
+        "runtime contact conversation label is invalid"
+    );
+    let conversation_id = ConversationId::from_label(conversation);
+    let mut matches = snapshot.contacts.values().filter(|contact| {
+        contact.peer_account_id() == peer_account_id
+            && contact.conversation_id() == conversation_id
+            && contact.conversation_label() == conversation
+    });
+    let contact = matches
+        .next()
+        .context("no runtime contact matches the peer account and conversation")?;
+    ensure!(
+        matches.next().is_none(),
+        "multiple runtime contacts match the peer account and conversation"
+    );
+    Ok(contact)
 }
 
 fn order_runtime_history(events: Vec<StoredAuthorizedEvent>) -> Result<Vec<StoredAuthorizedEvent>> {
@@ -4472,6 +4702,135 @@ async fn runtime_ipc_device_directory_status(ipc_file: PathBuf) -> Result<()> {
     }
 }
 
+async fn runtime_ipc_publish_ticket(
+    ipc_file: PathBuf,
+    conversation: String,
+    peer_account_id: AccountId,
+    service_base_url: String,
+    ttl_seconds: u64,
+) -> Result<()> {
+    match kilogram_runtime_ipc::call(
+        &ipc_file,
+        RuntimeIpcCommand::PublishOwnTicket {
+            conversation,
+            peer_account_id,
+            service_base_url,
+            ttl_seconds,
+        },
+    )
+    .await?
+    {
+        RuntimeIpcResponse::OwnTicketPublished(publication) => {
+            print_runtime_ticket_publication(&publication);
+            println!("status=runtime-own-ticket-published");
+            Ok(())
+        }
+        RuntimeIpcResponse::Error { message } => {
+            bail!("runtime IPC rejected ticket publication: {message}")
+        }
+        _ => bail!("runtime IPC returned an unexpected ticket-publication response"),
+    }
+}
+
+async fn runtime_ipc_refresh_contact_ticket(
+    ipc_file: PathBuf,
+    conversation: String,
+    peer_account_id: AccountId,
+    service_base_url: String,
+) -> Result<()> {
+    match kilogram_runtime_ipc::call(
+        &ipc_file,
+        RuntimeIpcCommand::RefreshContactTicket {
+            conversation,
+            peer_account_id,
+            service_base_url,
+        },
+    )
+    .await?
+    {
+        RuntimeIpcResponse::ContactTicketRefreshed(refresh) => {
+            print_runtime_contact_ticket_refresh(&refresh);
+            println!("status=runtime-contact-ticket-refreshed");
+            Ok(())
+        }
+        RuntimeIpcResponse::Error { message } => {
+            bail!("runtime IPC rejected contact-ticket refresh: {message}")
+        }
+        _ => bail!("runtime IPC returned an unexpected contact-ticket response"),
+    }
+}
+
+fn print_runtime_ticket_publication(publication: &RuntimeIpcTicketPublication) {
+    println!("runtime_contact_id={}", publication.contact_id);
+    println!("ticket_publication_channel_id={}", publication.channel_id);
+    println!("ticket_publication_id={}", publication.publication_id);
+    println!(
+        "ticket_publication_generation={}",
+        publication.publication_generation
+    );
+    println!(
+        "ticket_publication_expires_at_unix_seconds={}",
+        publication.expires_at_unix_seconds
+    );
+    println!(
+        "ticket_publication_recipient_device_count={}",
+        publication.recipient_device_count
+    );
+    println!(
+        "ticket_publication_encrypted_record_bytes={}",
+        publication.encrypted_record_bytes
+    );
+    println!(
+        "ticket_publication_service_base_url={}",
+        publication.service_base_url
+    );
+    println!(
+        "ticket_publication_local_store={}",
+        publication.local_store_status
+    );
+    println!("ticket_publication_upload={}", publication.upload_status);
+    println!(
+        "ticket_publication_lookup_privacy={}",
+        publication.lookup_privacy_status
+    );
+    println!(
+        "ticket_publication_first_contact_freshness={}",
+        publication.first_contact_freshness
+    );
+}
+
+fn print_runtime_contact_ticket_refresh(refresh: &RuntimeIpcContactTicketRefresh) {
+    println!("runtime_contact_id={}", refresh.contact_id);
+    println!("ticket_publication_channel_id={}", refresh.channel_id);
+    println!("ticket_publication_id={}", refresh.publication_id);
+    println!(
+        "ticket_publication_generation={}",
+        refresh.publication_generation
+    );
+    println!(
+        "ticket_publication_expires_at_unix_seconds={}",
+        refresh.expires_at_unix_seconds
+    );
+    println!("publisher_account_id={}", refresh.publisher_account_id);
+    println!("publisher_device_id={}", refresh.publisher_device_id);
+    println!("authority_revision={}", refresh.authority_revision);
+    println!("active_device_count={}", refresh.active_device_count);
+    println!("descriptor_file={}", refresh.descriptor_file.display());
+    println!(
+        "ticket_publication_local_observation={}",
+        refresh.local_observation_status
+    );
+    println!(
+        "ticket_publication_descriptor_publish={}",
+        refresh.descriptor_publish_status
+    );
+    println!("ticket_publication_freshness={}", refresh.freshness_status);
+    println!(
+        "ticket_publication_first_contact_freshness={}",
+        refresh.first_contact_freshness
+    );
+}
+
 fn print_runtime_device_directory_status(status: &RuntimeIpcDeviceDirectoryStatus) {
     println!("account_id={}", status.account_id);
     println!("device_id={}", status.local_device_id);
@@ -4553,7 +4912,7 @@ struct RuntimeIpcDispatchOutcome {
     state_changed: bool,
 }
 
-fn handle_runtime_ipc_work(
+async fn handle_runtime_ipc_work(
     state_directory: &Path,
     endpoint: &Endpoint,
     ticket: &mut ConnectionTicket,
@@ -4657,6 +5016,49 @@ fn handle_runtime_ipc_work(
         }
         RuntimeIpcCommand::OwnDeviceDirectoryStatus => match directory_state.status(ticket) {
             Ok(status) => RuntimeIpcResponse::OwnDeviceDirectoryStatus(status),
+            Err(error) => RuntimeIpcResponse::Error {
+                message: format!("{error:#}"),
+            },
+        },
+        RuntimeIpcCommand::PublishOwnTicket {
+            conversation,
+            peer_account_id,
+            service_base_url,
+            ttl_seconds,
+        } => match publish_runtime_own_ticket(
+            state_directory,
+            ticket,
+            &conversation,
+            peer_account_id,
+            &service_base_url,
+            ttl_seconds,
+        )
+        .await
+        {
+            Ok(publication) => {
+                state_changed = true;
+                RuntimeIpcResponse::OwnTicketPublished(Box::new(publication))
+            }
+            Err(error) => RuntimeIpcResponse::Error {
+                message: format!("{error:#}"),
+            },
+        },
+        RuntimeIpcCommand::RefreshContactTicket {
+            conversation,
+            peer_account_id,
+            service_base_url,
+        } => match refresh_runtime_contact_ticket(
+            state_directory,
+            &conversation,
+            peer_account_id,
+            &service_base_url,
+        )
+        .await
+        {
+            Ok(refresh) => {
+                state_changed = true;
+                RuntimeIpcResponse::ContactTicketRefreshed(Box::new(refresh))
+            }
             Err(error) => RuntimeIpcResponse::Error {
                 message: format!("{error:#}"),
             },
@@ -5042,6 +5444,355 @@ fn apply_runtime_own_device_directory(
     ))
 }
 
+async fn publish_runtime_own_ticket(
+    state_directory: &Path,
+    current_ticket: &ConnectionTicket,
+    conversation: &str,
+    peer_account_id: AccountId,
+    service_base_url: &str,
+    ttl_seconds: u64,
+) -> Result<RuntimeIpcTicketPublication> {
+    ensure!(
+        (MIN_TICKET_PUBLICATION_TTL_SECONDS..=MAX_TICKET_PUBLICATION_TTL_SECONDS)
+            .contains(&ttl_seconds),
+        "ticket publication TTL must be between {MIN_TICKET_PUBLICATION_TTL_SECONDS} and \
+         {MAX_TICKET_PUBLICATION_TTL_SECONDS} seconds"
+    );
+    let store_client = TicketPublicationStoreClient::new(service_base_url)?;
+    let (contact_id, channel_id, publication, publication_id, publication_store, encrypted) =
+        with_locked_state(state_directory, || {
+            let device_state = load_command_device_state(state_directory)?;
+            let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+            let local_certificate = trust
+                .load_certificate()
+                .context("load local certificate for ticket publication")?;
+            let local_authority = trust
+                .load_own_authority_snapshot(&local_certificate)
+                .context("load local authority for ticket publication")?;
+            ensure!(
+                current_ticket.listener_account_id() == local_certificate.account_id()
+                    && current_ticket.listener_device_id() == device_state.identity().device_id()
+                    && current_ticket.allowed_requester_account_id() == peer_account_id,
+                "running ticket does not target the selected contact account"
+            );
+            let snapshot = load_runtime_state_snapshot(
+                state_directory,
+                local_certificate.account_id(),
+                device_state.identity().device_id(),
+            )?;
+            let contact = exact_runtime_contact(&snapshot, conversation, peer_account_id)?;
+            let membership = trust
+                .load_conversation_membership(contact.conversation_id().scope_id())
+                .context("load conversation membership for ticket publication")?;
+            require_conversation_participants(
+                &membership,
+                local_certificate.account_id(),
+                peer_account_id,
+            )?;
+            let recipient_ticket =
+                load_runtime_contact_ticket(contact, &local_certificate, &local_authority)
+                    .context("load recipient directory for ticket publication")?;
+            let channel_id = TicketPublicationChannelId::derive(
+                contact.conversation_id(),
+                local_certificate.account_id(),
+                device_state.identity().device_id(),
+                peer_account_id,
+            );
+            let encoded_ticket = current_ticket.encode()?;
+            let now_unix_seconds = unix_time_now().context("read time for ticket publication")?;
+            let previous = snapshot.latest_ticket_publication(channel_id);
+            let publication = match previous {
+                Some(previous)
+                    if previous.ticket() == encoded_ticket
+                        && previous.expires_at_unix_seconds()
+                            > now_unix_seconds
+                                .saturating_add(MIN_TICKET_PUBLICATION_TTL_SECONDS) =>
+                {
+                    previous.clone()
+                }
+                previous => SignedTicketPublication::sign(
+                    device_state.identity(),
+                    channel_id,
+                    local_certificate.account_id(),
+                    peer_account_id,
+                    encoded_ticket,
+                    now_unix_seconds,
+                    ttl_seconds,
+                    previous,
+                )?,
+            };
+            let publication_id = publication.publication_id()?;
+            let publication_path = runtime_ticket_publication_relative_path(
+                channel_id,
+                publication.generation(),
+                publication_id,
+            );
+            let publication_bytes = publication.encode()?;
+            let publication_store = run_state_transaction(state_directory, |transaction| {
+                persist_runtime_record(
+                    state_directory,
+                    &publication_path,
+                    &publication_bytes,
+                    transaction,
+                )
+            })?;
+            let recipients = recipient_ticket
+                .listener_directory()
+                .device_list()
+                .devices()
+                .iter()
+                .map(|certificate| (certificate.device_id(), certificate.encryption_public_key()))
+                .collect::<Vec<_>>();
+            let encrypted = EncryptedTicketPublication::seal(&publication, &recipients)?;
+            Ok((
+                contact.contact_id().to_string(),
+                channel_id,
+                publication,
+                publication_id,
+                publication_store,
+                encrypted,
+            ))
+        })?;
+    let encrypted_record_bytes = store_client.put(&encrypted).await?;
+    Ok(RuntimeIpcTicketPublication {
+        contact_id,
+        channel_id: channel_id.to_string(),
+        publication_id: publication_id.to_string(),
+        publication_generation: publication.generation(),
+        expires_at_unix_seconds: publication.expires_at_unix_seconds(),
+        recipient_device_count: encrypted.recipient_count(),
+        encrypted_record_bytes,
+        service_base_url: store_client.base_url().to_owned(),
+        local_store_status: store_outcome_name(publication_store).to_owned(),
+        upload_status: "confirmed-http-success".to_owned(),
+        lookup_privacy_status: "opaque-hpke-recipient-slots-traffic-analysis-visible".to_owned(),
+        first_contact_freshness: "bootstrap-contact-required".to_owned(),
+    })
+}
+
+async fn refresh_runtime_contact_ticket(
+    state_directory: &Path,
+    conversation: &str,
+    peer_account_id: AccountId,
+    service_base_url: &str,
+) -> Result<RuntimeIpcContactTicketRefresh> {
+    let store_client = TicketPublicationStoreClient::new(service_base_url)?;
+    let channel_id = with_locked_state(state_directory, || {
+        let device_state = load_command_device_state(state_directory)?;
+        let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+        let local_certificate = trust
+            .load_certificate()
+            .context("load local certificate for ticket publication lookup")?;
+        let snapshot = load_runtime_state_snapshot(
+            state_directory,
+            local_certificate.account_id(),
+            device_state.identity().device_id(),
+        )?;
+        let contact = exact_runtime_contact(&snapshot, conversation, peer_account_id)?;
+        let membership = trust
+            .load_conversation_membership(contact.conversation_id().scope_id())
+            .context("load conversation membership for ticket publication lookup")?;
+        require_conversation_participants(
+            &membership,
+            local_certificate.account_id(),
+            peer_account_id,
+        )?;
+        Ok(TicketPublicationChannelId::derive(
+            contact.conversation_id(),
+            peer_account_id,
+            contact.peer_device_id(),
+            local_certificate.account_id(),
+        ))
+    })?;
+    let encrypted = store_client.get(channel_id).await?;
+    ensure!(
+        encrypted.channel_id() == channel_id,
+        "ticket publication service returned another lookup channel"
+    );
+    with_locked_state(state_directory, || {
+        let device_state = load_command_device_state(state_directory)?;
+        let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+        let local_certificate = trust
+            .load_certificate()
+            .context("load local certificate for ticket publication fetch")?;
+        let local_authority = trust
+            .load_own_authority_snapshot(&local_certificate)
+            .context("load local authority for ticket publication fetch")?;
+        let snapshot = load_runtime_state_snapshot(
+            state_directory,
+            local_certificate.account_id(),
+            device_state.identity().device_id(),
+        )?;
+        let contact = exact_runtime_contact(&snapshot, conversation, peer_account_id)?;
+        let membership = trust
+            .load_conversation_membership(contact.conversation_id().scope_id())
+            .context("reload conversation membership after ticket publication fetch")?;
+        require_conversation_participants(
+            &membership,
+            local_certificate.account_id(),
+            peer_account_id,
+        )?;
+        let expected_channel_id = TicketPublicationChannelId::derive(
+            contact.conversation_id(),
+            peer_account_id,
+            contact.peer_device_id(),
+            local_certificate.account_id(),
+        );
+        ensure!(
+            expected_channel_id == channel_id,
+            "ticket publication contact changed during fetch"
+        );
+        let now_unix_seconds = unix_time_now().context("read time for ticket publication fetch")?;
+        let publication = encrypted.open(
+            device_state.identity().device_id(),
+            device_state.encryption(),
+            now_unix_seconds,
+        )?;
+        ensure!(
+            publication.channel_id() == channel_id
+                && publication.publisher_account_id() == peer_account_id
+                && publication.publisher_device_id() == contact.peer_device_id()
+                && publication.recipient_account_id() == local_certificate.account_id(),
+            "ticket publication identity does not match the selected contact"
+        );
+        let ticket = ConnectionTicket::decode(publication.ticket())
+            .context("decode ticket from signed publication")?;
+        ticket.verify_listener_account(peer_account_id)?;
+        let authorized_peer = ticket.verify_listener_authorization(peer_account_id)?;
+        ensure!(
+            authorized_peer.device_id() == contact.peer_device_id()
+                && ticket.route_policy() == contact.route_policy()
+                && ticket.allowed_requester_account_id() == local_certificate.account_id(),
+            "published ticket does not match the selected contact contract"
+        );
+        verify_device_authorization_with_snapshot(
+            ticket.allowed_requester_account_id(),
+            &local_certificate,
+            &local_authority,
+            &DeviceCapability::MESSAGING,
+        )
+        .context("local device is not authorized by the published ticket")?;
+
+        let previous_observation = snapshot.latest_ticket_observation(channel_id);
+        let first_contact_freshness = if previous_observation.is_some() {
+            "local-monotonic-high-water"
+        } else {
+            "non-expired-signed-first-observation-no-global-freshness"
+        };
+        let observation = match previous_observation {
+            Some(previous)
+                if publication.generation() == previous.publication_generation()
+                    && publication.publication_id()? == previous.publication_id()
+                    && publication.ticket_digest() == previous.ticket_digest() =>
+            {
+                previous.clone()
+            }
+            Some(previous) => {
+                ensure!(
+                    publication.generation() > previous.publication_generation(),
+                    "ticket publication rolls the locally observed generation back or equivocates"
+                );
+                SignedTicketPublicationObservation::sign(
+                    device_state.identity(),
+                    local_certificate.account_id(),
+                    &publication,
+                    now_unix_seconds,
+                    Some(previous),
+                )?
+            }
+            None => SignedTicketPublicationObservation::sign(
+                device_state.identity(),
+                local_certificate.account_id(),
+                &publication,
+                now_unix_seconds,
+                None,
+            )?,
+        };
+        let observation_id = observation.observation_id()?;
+        let observation_path = runtime_ticket_observation_relative_path(
+            channel_id,
+            observation.observation_generation(),
+            observation_id,
+        );
+        let observation_bytes = observation.encode()?;
+        let (observation_store, retired_sessions, retired_observations) =
+            run_state_transaction(state_directory, |transaction| {
+                transaction.prepare_trust_workspace()?;
+                device_state
+                    .pin_peer_authority_snapshot(ticket.listener_authority_snapshot())
+                    .context("pin published peer authority in DB-primary trust workspace")?;
+                let ratchet_state = transaction.load_ratchet_state()?;
+                let mut retired_sessions = 0_usize;
+                let mut retired_observations = 0_usize;
+                for revocation in ticket.listener_authority_snapshot().revocations() {
+                    let retirement = ratchet_state
+                        .retire_peer_device(revocation.device_id())
+                        .with_context(|| {
+                            format!(
+                                "retire published peer ratchet state for revoked device {}",
+                                revocation.device_id()
+                            )
+                        })?;
+                    retired_sessions += usize::from(retirement.session_removed);
+                    retired_observations += usize::from(retirement.prekey_observation_removed);
+                }
+                ratchet_state
+                    .observe_prekey_directory(ticket.listener_directory(), now_unix_seconds)
+                    .context("observe published peer prekey directory")?;
+                let store = persist_runtime_record(
+                    state_directory,
+                    &observation_path,
+                    &observation_bytes,
+                    transaction,
+                )?;
+                Ok((store, retired_sessions, retired_observations))
+            })?;
+        if retired_sessions != 0 || retired_observations != 0 {
+            println!("runtime_peer_ratchet_sessions_retired={retired_sessions}");
+            println!("runtime_peer_prekey_observations_retired={retired_observations}");
+        }
+        let descriptor_file = contact.descriptor_file();
+        let metadata = fs::symlink_metadata(descriptor_file).with_context(|| {
+            format!(
+                "inspect runtime peer descriptor {}",
+                descriptor_file.display()
+            )
+        })?;
+        ensure!(
+            metadata.file_type().is_file() && !metadata.file_type().is_symlink(),
+            "runtime peer descriptor must remain a regular non-symlink file"
+        );
+        ensure!(
+            fs::canonicalize(descriptor_file)?.as_path() == descriptor_file.as_path(),
+            "runtime peer descriptor path changed since contact enrollment"
+        );
+        publish_runtime_ticket(descriptor_file, publication.ticket().as_bytes())?;
+        Ok(RuntimeIpcContactTicketRefresh {
+            contact_id: contact.contact_id().to_string(),
+            channel_id: channel_id.to_string(),
+            publication_id: publication.publication_id()?.to_string(),
+            publication_generation: publication.generation(),
+            expires_at_unix_seconds: publication.expires_at_unix_seconds(),
+            publisher_account_id: publication.publisher_account_id(),
+            publisher_device_id: publication.publisher_device_id(),
+            authority_revision: ticket.listener_authority_snapshot().revision(),
+            active_device_count: ticket.listener_directory().device_list().devices().len(),
+            descriptor_file: descriptor_file.clone(),
+            local_observation_status: store_outcome_name(observation_store).to_owned(),
+            descriptor_publish_status: "atomic-replace".to_owned(),
+            freshness_status: "signed-non-expired-local-high-water".to_owned(),
+            first_contact_freshness: first_contact_freshness.to_owned(),
+        })
+    })
+}
+
+fn store_outcome_name(outcome: StoreOutcome) -> &'static str {
+    match outcome {
+        StoreOutcome::Inserted => "Inserted",
+        StoreOutcome::AlreadyPresent => "AlreadyPresent",
+    }
+}
+
 enum RuntimeEvent {
     Connection(Connection),
     Ipc(RuntimeIpcWork),
@@ -5181,7 +5932,8 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                     &mut device_directory_state,
                     ticket_file.as_deref(),
                     work,
-                );
+                )
+                .await;
                 if outcome.state_changed
                     && let Some(server) = ipc_server.as_ref()
                 {
@@ -12093,6 +12845,10 @@ mod tests {
     use iroh::{RelayMode, SecretKey, endpoint::Builder};
     use kilogram_identity::{DeviceEncryptionIdentity, DeviceIdentity};
     use kilogram_transport_iroh::endpoint_builder;
+    use tokio::{
+        io::{AsyncReadExt, AsyncWriteExt},
+        net::{TcpListener, TcpStream},
+    };
 
     const UNSUPPORTED_TEST_ALPN: &[u8] = b"kilogram/test/unsupported/1";
 
@@ -12101,6 +12857,111 @@ mod tests {
             .relay_mode(RelayMode::Disabled)
             .clear_ip_transports()
             .bind_addr((std::net::Ipv4Addr::LOCALHOST, 0))?)
+    }
+
+    async fn read_publication_store_request(
+        stream: &mut TcpStream,
+    ) -> Result<(String, String, Vec<u8>)> {
+        let mut bytes = Vec::new();
+        let header_end = loop {
+            let mut chunk = [0_u8; 4_096];
+            let read = stream.read(&mut chunk).await?;
+            ensure!(
+                read != 0,
+                "publication-store client closed before HTTP headers"
+            );
+            bytes.extend_from_slice(&chunk[..read]);
+            ensure!(
+                bytes.len() <= runtime_publication::MAX_TICKET_PUBLICATION_BYTES,
+                "publication-store request is too large"
+            );
+            if let Some(position) = bytes.windows(4).position(|window| window == b"\r\n\r\n") {
+                break position + 4;
+            }
+        };
+        let headers = std::str::from_utf8(&bytes[..header_end])?;
+        let mut lines = headers.split("\r\n");
+        let mut request_line = lines
+            .next()
+            .context("publication-store HTTP request line is missing")?
+            .split_ascii_whitespace();
+        let method = request_line
+            .next()
+            .context("publication-store HTTP method is missing")?
+            .to_owned();
+        let path = request_line
+            .next()
+            .context("publication-store HTTP path is missing")?
+            .to_owned();
+        let content_length = lines
+            .find_map(|line| {
+                let (name, value) = line.split_once(':')?;
+                name.eq_ignore_ascii_case("content-length")
+                    .then(|| value.trim().parse::<usize>())
+            })
+            .transpose()?
+            .unwrap_or(0);
+        ensure!(
+            content_length <= runtime_publication::MAX_TICKET_PUBLICATION_BYTES,
+            "publication-store request body is too large"
+        );
+        while bytes.len() - header_end < content_length {
+            let mut chunk = [0_u8; 4_096];
+            let read = stream.read(&mut chunk).await?;
+            ensure!(
+                read != 0,
+                "publication-store client closed during HTTP body"
+            );
+            bytes.extend_from_slice(&chunk[..read]);
+        }
+        Ok((
+            method,
+            path,
+            bytes[header_end..header_end + content_length].to_vec(),
+        ))
+    }
+
+    async fn spawn_test_publication_store(
+        request_count: usize,
+    ) -> Result<(String, tokio::task::JoinHandle<Result<()>>)> {
+        let listener = TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 0)).await?;
+        let address = listener.local_addr()?;
+        let task = tokio::spawn(async move {
+            let mut stored = None;
+            for _ in 0..request_count {
+                let (mut stream, _) = listener.accept().await?;
+                let (method, path, body) = read_publication_store_request(&mut stream).await?;
+                ensure!(
+                    path.starts_with("/v1/ticket-publications/")
+                        && path.len() == "/v1/ticket-publications/".len() + 64,
+                    "publication-store request uses an invalid lookup path"
+                );
+                match method.as_str() {
+                    "PUT" => {
+                        ensure!(!body.is_empty(), "publication-store PUT is empty");
+                        stored = Some(body);
+                        stream
+                            .write_all(b"HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n")
+                            .await?;
+                    }
+                    "GET" => {
+                        ensure!(body.is_empty(), "publication-store GET contains a body");
+                        let body = stored
+                            .as_ref()
+                            .context("publication-store GET precedes PUT")?;
+                        let headers = format!(
+                            "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                            body.len()
+                        );
+                        stream.write_all(headers.as_bytes()).await?;
+                        stream.write_all(body).await?;
+                    }
+                    _ => bail!("publication-store received an unexpected HTTP method"),
+                }
+            }
+            Ok(())
+        });
+        Ok((format!("http://{address}"), task))
     }
 
     #[test]
@@ -12780,6 +13641,195 @@ mod tests {
             .context("join profile runtime")??;
         assert!(ticket_file.is_file());
         assert!(!ipc_file.exists());
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn runtime_publishes_and_refreshes_an_opaque_contact_ticket_idempotently() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let alice_root_dir = directory.path().join("alice-root");
+        let bob_root_dir = directory.path().join("bob-root");
+        let alice_state = directory.path().join("alice-state");
+        let bob_state = directory.path().join("bob-state");
+        create_account(alice_root_dir.clone())?;
+        create_account(bob_root_dir.clone())?;
+        enroll_device(alice_root_dir.clone(), alice_state.clone(), None)?;
+        enroll_device(bob_root_dir.clone(), bob_state.clone(), None)?;
+
+        let alice_root = AccountRootState::load(&alice_root_dir)?;
+        let bob_root = AccountRootState::load(&bob_root_dir)?;
+        let alice_device = DeviceState::load_or_create(&alice_state)?;
+        let bob_device = DeviceState::load_or_create(&bob_state)?;
+        let alice_certificate = alice_device.load_certificate()?;
+        let bob_certificate = bob_device.load_certificate()?;
+        let alice_devices =
+            alice_root.publish_device_list(std::slice::from_ref(&alice_certificate))?;
+        let bob_devices = bob_root.publish_device_list(std::slice::from_ref(&bob_certificate))?;
+        let alice_devices_file = directory.path().join("alice.devices");
+        let bob_devices_file = directory.path().join("bob.devices");
+        write_new_authority_file(&alice_devices_file, &alice_devices.encode()?)?;
+        write_new_authority_file(&bob_devices_file, &bob_devices.encode()?)?;
+
+        let conversation = "ticket-publication-runtime-test";
+        let conversation_id = ConversationId::from_label(conversation);
+        let membership = alice_root
+            .create_conversation_membership(conversation_id.scope_id(), &[bob_root.account_id()])?;
+        alice_device.install_conversation_membership(&membership)?;
+        bob_device.install_conversation_membership(&membership)?;
+
+        let alice_ticket = directory.path().join("alice-runtime.ticket");
+        let bob_ticket = directory.path().join("bob-runtime.ticket");
+        let alice_ipc = directory.path().join("alice-runtime.ipc.json");
+        let bob_ipc = directory.path().join("bob-runtime.ipc.json");
+        let alice_task = tokio::spawn(runtime(RuntimeOptions {
+            state_dir: alice_state.clone(),
+            allowed_requester_account_id: bob_root.account_id(),
+            device_list_file: alice_devices_file,
+            peer_prekey_pool_files: Vec::new(),
+            ticket_file: Some(alice_ticket.clone()),
+            relay_wait_seconds: 0,
+            route_policy: RoutePolicy::DirectOnly,
+            relay_url: None,
+            max_sessions: 0,
+            idle_seconds: 0,
+            poll_milliseconds: 500,
+            retry_base_seconds: 1,
+            retry_max_seconds: 1,
+            auto_sync_seconds: 0,
+            max_outbound_actions: 0,
+            ipc_file: Some(alice_ipc.clone()),
+        }));
+        let bob_task = tokio::spawn(runtime(RuntimeOptions {
+            state_dir: bob_state.clone(),
+            allowed_requester_account_id: alice_root.account_id(),
+            device_list_file: bob_devices_file,
+            peer_prekey_pool_files: Vec::new(),
+            ticket_file: Some(bob_ticket.clone()),
+            relay_wait_seconds: 0,
+            route_policy: RoutePolicy::DirectOnly,
+            relay_url: None,
+            max_sessions: 0,
+            idle_seconds: 0,
+            poll_milliseconds: 500,
+            retry_base_seconds: 1,
+            retry_max_seconds: 1,
+            auto_sync_seconds: 0,
+            max_outbound_actions: 0,
+            ipc_file: Some(bob_ipc.clone()),
+        }));
+        timeout(Duration::from_secs(10), async {
+            while !alice_ticket.is_file()
+                || !bob_ticket.is_file()
+                || !alice_ipc.is_file()
+                || !bob_ipc.is_file()
+            {
+                tokio::time::sleep(Duration::from_millis(20)).await;
+            }
+        })
+        .await
+        .context("ticket publication runtimes did not become ready")?;
+
+        for (ipc, peer_account_id, descriptor_file) in [
+            (&alice_ipc, bob_root.account_id(), &bob_ticket),
+            (&bob_ipc, alice_root.account_id(), &alice_ticket),
+        ] {
+            assert!(matches!(
+                kilogram_runtime_ipc::call(
+                    ipc,
+                    RuntimeIpcCommand::AddContact {
+                        conversation: conversation.to_owned(),
+                        expected_peer_account_id: peer_account_id,
+                        descriptor_file: descriptor_file.clone(),
+                    },
+                )
+                .await?,
+                RuntimeIpcResponse::ContactAdded { inserted: true, .. }
+            ));
+        }
+
+        let (service_base_url, store_task) = spawn_test_publication_store(3).await?;
+        let publication = kilogram_runtime_ipc::call(
+            &bob_ipc,
+            RuntimeIpcCommand::PublishOwnTicket {
+                conversation: conversation.to_owned(),
+                peer_account_id: alice_root.account_id(),
+                service_base_url: service_base_url.clone(),
+                ttl_seconds: 300,
+            },
+        )
+        .await?;
+        let RuntimeIpcResponse::OwnTicketPublished(publication) = publication else {
+            bail!("Bob runtime returned an unexpected ticket-publication response")
+        };
+        assert_eq!(publication.publication_generation, 1);
+        assert_eq!(publication.recipient_device_count, 1);
+        assert_eq!(publication.local_store_status, "Inserted");
+
+        for expected_store in ["Inserted", "AlreadyPresent"] {
+            let refresh = kilogram_runtime_ipc::call(
+                &alice_ipc,
+                RuntimeIpcCommand::RefreshContactTicket {
+                    conversation: conversation.to_owned(),
+                    peer_account_id: bob_root.account_id(),
+                    service_base_url: service_base_url.clone(),
+                },
+            )
+            .await?;
+            let RuntimeIpcResponse::ContactTicketRefreshed(refresh) = refresh else {
+                bail!("Alice runtime returned an unexpected ticket-refresh response")
+            };
+            assert_eq!(refresh.publication_generation, 1);
+            assert_eq!(refresh.local_observation_status, expected_store);
+            assert_eq!(refresh.descriptor_publish_status, "atomic-replace");
+        }
+        timeout(Duration::from_secs(5), store_task)
+            .await
+            .context("publication store did not finish")?
+            .context("join publication store")??;
+
+        let bob_snapshot = load_runtime_state_snapshot(
+            &bob_state,
+            bob_root.account_id(),
+            bob_device.identity().device_id(),
+        )?;
+        assert_eq!(
+            bob_snapshot
+                .ticket_publications
+                .values()
+                .map(Vec::len)
+                .sum::<usize>(),
+            1
+        );
+        let alice_snapshot = load_runtime_state_snapshot(
+            &alice_state,
+            alice_root.account_id(),
+            alice_device.identity().device_id(),
+        )?;
+        assert_eq!(
+            alice_snapshot
+                .ticket_observations
+                .values()
+                .map(Vec::len)
+                .sum::<usize>(),
+            1
+        );
+        assert_eq!(
+            ConnectionTicket::decode(&fs::read_to_string(&bob_ticket)?)?.listener_device_id(),
+            bob_device.identity().device_id()
+        );
+
+        for ipc in [&alice_ipc, &bob_ipc] {
+            assert!(matches!(
+                kilogram_runtime_ipc::call(ipc, RuntimeIpcCommand::Shutdown).await?,
+                RuntimeIpcResponse::ShutdownAccepted
+            ));
+        }
+        for (name, task) in [("Alice", alice_task), ("Bob", bob_task)] {
+            timeout(Duration::from_secs(10), task)
+                .await
+                .with_context(|| format!("{name} publication runtime did not stop"))?
+                .with_context(|| format!("join {name} publication runtime"))??;
+        }
         Ok(())
     }
 

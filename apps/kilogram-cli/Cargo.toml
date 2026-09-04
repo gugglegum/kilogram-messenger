@@ -25,6 +25,7 @@ kilogram-store = { path = "../../crates/kilogram-store" }
 kilogram-transport-iroh = { path = "../../crates/kilogram-transport-iroh" }
 postcard.workspace = true
 qrcode.workspace = true
+reqwest.workspace = true
 rqrr.workspace = true
 serde.workspace = true
 serde_json.workspace = true

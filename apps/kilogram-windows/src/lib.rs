@@ -15,10 +15,11 @@ use eframe::egui;
 use kilogram_bootstrap_contract::{DesktopBootstrapOutput, MAX_DESKTOP_BOOTSTRAP_OUTPUT_BYTES};
 use kilogram_identity::{AccountDeviceListSnapshot, AccountId, AccountRecoveryPhrase};
 use kilogram_runtime_ipc::{
-    RuntimeIpcCommand, RuntimeIpcConversationSummary, RuntimeIpcDeviceDirectoryStatus,
-    RuntimeIpcDeviceDirectoryUpdate, RuntimeIpcHistoryCursor, RuntimeIpcHistoryMessage,
-    RuntimeIpcHistoryPage, RuntimeIpcOutboxStatus, RuntimeIpcQueueState, RuntimeIpcRequestId,
-    RuntimeIpcResponse, RuntimeIpcRoutePolicy, RuntimeLaunchProfile, RuntimeLaunchSettings,
+    RuntimeIpcCommand, RuntimeIpcContactTicketRefresh, RuntimeIpcConversationSummary,
+    RuntimeIpcDeviceDirectoryStatus, RuntimeIpcDeviceDirectoryUpdate, RuntimeIpcHistoryCursor,
+    RuntimeIpcHistoryMessage, RuntimeIpcHistoryPage, RuntimeIpcOutboxStatus, RuntimeIpcQueueState,
+    RuntimeIpcRequestId, RuntimeIpcResponse, RuntimeIpcRoutePolicy, RuntimeIpcTicketPublication,
+    RuntimeLaunchProfile, RuntimeLaunchSettings,
 };
 use zeroize::{Zeroize as _, Zeroizing};
 
@@ -203,6 +204,8 @@ enum Operation {
     DeviceLinkAccept,
     DeviceRemove,
     ApplyDeviceDirectory,
+    PublishTicket,
+    RefreshContactTicket,
     RecoveryApprove,
     RecoveryRun,
     RecoveryCancel,
@@ -227,6 +230,8 @@ enum RuntimeUiAction {
     SaveProfile,
     ApplyDeviceDirectory,
     ReconcileProfile,
+    PublishTicket,
+    RefreshContactTicket,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -815,6 +820,9 @@ struct ViewModel {
     outbox: Option<OutboxView>,
     device_directory_update: Option<RuntimeIpcDeviceDirectoryUpdate>,
     device_directory_status: Option<RuntimeIpcDeviceDirectoryStatus>,
+    ticket_publication_service_url: String,
+    ticket_publication: Option<RuntimeIpcTicketPublication>,
+    contact_ticket_refresh: Option<RuntimeIpcContactTicketRefresh>,
     notice: Option<String>,
     error: Option<String>,
 }
@@ -841,6 +849,9 @@ impl ViewModel {
             outbox: None,
             device_directory_update: None,
             device_directory_status: None,
+            ticket_publication_service_url: String::new(),
+            ticket_publication: None,
+            contact_ticket_refresh: None,
             notice: None,
             error: None,
         }
@@ -1014,6 +1025,24 @@ impl ViewModel {
                 ));
                 self.device_directory_status = Some(update.directory_status.clone());
                 self.device_directory_update = Some(update);
+                self.error = None;
+            }
+            Ok(WorkerSuccess::TicketPublished(publication)) => {
+                self.connection = ConnectionState::Connected;
+                self.notice = Some(format!(
+                    "Current ticket published for {} device(s), generation {}.",
+                    publication.recipient_device_count, publication.publication_generation
+                ));
+                self.ticket_publication = Some(publication);
+                self.error = None;
+            }
+            Ok(WorkerSuccess::ContactTicketRefreshed(refresh)) => {
+                self.connection = ConnectionState::Connected;
+                self.notice = Some(format!(
+                    "Contact ticket refreshed to generation {} and installed atomically.",
+                    refresh.publication_generation
+                ));
+                self.contact_ticket_refresh = Some(refresh);
                 self.error = None;
             }
             Ok(WorkerSuccess::Conversations(conversations)) => {
@@ -1243,6 +1272,18 @@ enum WorkerRequest {
         descriptor: PathBuf,
         device_list_file: PathBuf,
     },
+    PublishTicket {
+        descriptor: PathBuf,
+        conversation: String,
+        peer_account_id: AccountId,
+        service_base_url: String,
+    },
+    RefreshContactTicket {
+        descriptor: PathBuf,
+        conversation: String,
+        peer_account_id: AccountId,
+        service_base_url: String,
+    },
     Conversations {
         descriptor: PathBuf,
     },
@@ -1288,6 +1329,8 @@ impl WorkerRequest {
             Self::Queue { .. } => Operation::Queue,
             Self::Refresh { .. } => Operation::Refresh,
             Self::ApplyDeviceDirectory { .. } => Operation::ApplyDeviceDirectory,
+            Self::PublishTicket { .. } => Operation::PublishTicket,
+            Self::RefreshContactTicket { .. } => Operation::RefreshContactTicket,
             Self::Conversations { .. } => Operation::Conversations,
             Self::History { older: false, .. } => Operation::History,
             Self::History { older: true, .. } => Operation::HistoryOlder,
@@ -1355,6 +1398,8 @@ enum WorkerSuccess {
     },
     Refreshed(RuntimeIpcOutboxStatus),
     DeviceDirectoryApplied(RuntimeIpcDeviceDirectoryUpdate),
+    TicketPublished(RuntimeIpcTicketPublication),
+    ContactTicketRefreshed(RuntimeIpcContactTicketRefresh),
     Conversations(Vec<RuntimeIpcConversationSummary>),
     History {
         page: RuntimeIpcHistoryPage,
@@ -2201,6 +2246,49 @@ async fn execute_request(request: WorkerRequest) -> Result<WorkerSuccess> {
                     bail!("Runtime rejected the device directory: {message}")
                 }
                 _ => bail!("Runtime returned an unexpected device-directory response"),
+            }
+        }
+        WorkerRequest::PublishTicket {
+            descriptor,
+            conversation,
+            peer_account_id,
+            service_base_url,
+        } => {
+            let command = RuntimeIpcCommand::PublishOwnTicket {
+                conversation,
+                peer_account_id,
+                service_base_url,
+                ttl_seconds: 15 * 60,
+            };
+            match kilogram_runtime_ipc::call(&descriptor, command).await? {
+                RuntimeIpcResponse::OwnTicketPublished(publication) => {
+                    Ok(WorkerSuccess::TicketPublished(*publication))
+                }
+                RuntimeIpcResponse::Error { message } => {
+                    bail!("Runtime rejected ticket publication: {message}")
+                }
+                _ => bail!("Runtime returned an unexpected ticket-publication response"),
+            }
+        }
+        WorkerRequest::RefreshContactTicket {
+            descriptor,
+            conversation,
+            peer_account_id,
+            service_base_url,
+        } => {
+            let command = RuntimeIpcCommand::RefreshContactTicket {
+                conversation,
+                peer_account_id,
+                service_base_url,
+            };
+            match kilogram_runtime_ipc::call(&descriptor, command).await? {
+                RuntimeIpcResponse::ContactTicketRefreshed(refresh) => {
+                    Ok(WorkerSuccess::ContactTicketRefreshed(*refresh))
+                }
+                RuntimeIpcResponse::Error { message } => {
+                    bail!("Runtime rejected contact-ticket refresh: {message}")
+                }
+                _ => bail!("Runtime returned an unexpected contact-ticket response"),
             }
         }
         WorkerRequest::Conversations { descriptor } => {
@@ -4006,6 +4094,76 @@ impl KilogramApp {
             Err(error) => self
                 .model
                 .fail(Operation::ApplyDeviceDirectory, format!("{error:#}")),
+        }
+    }
+
+    fn start_publish_ticket(&mut self) {
+        let result: Result<WorkerRequest> = (|| {
+            ensure!(
+                self.model.connection == ConnectionState::Connected,
+                "Connect to the running runtime first"
+            );
+            ensure!(
+                self.model.selected_contact_id.is_some(),
+                "Select an enrolled contact first"
+            );
+            let descriptor = self.model.descriptor()?;
+            let conversation = self.model.conversation.trim();
+            ensure!(!conversation.is_empty(), "Conversation label is required");
+            let peer_account_id = AccountId::from_str(self.model.peer_account_id.trim())
+                .context("Peer Account ID is invalid")?;
+            let service_base_url = self.model.ticket_publication_service_url.trim();
+            ensure!(
+                !service_base_url.is_empty(),
+                "Ticket publication service URL is required"
+            );
+            Ok(WorkerRequest::PublishTicket {
+                descriptor,
+                conversation: conversation.to_owned(),
+                peer_account_id,
+                service_base_url: service_base_url.to_owned(),
+            })
+        })();
+        match result {
+            Ok(request) => self.submit(Operation::PublishTicket, request),
+            Err(error) => self
+                .model
+                .fail(Operation::PublishTicket, format!("{error:#}")),
+        }
+    }
+
+    fn start_refresh_contact_ticket(&mut self) {
+        let result: Result<WorkerRequest> = (|| {
+            ensure!(
+                self.model.connection == ConnectionState::Connected,
+                "Connect to the running runtime first"
+            );
+            ensure!(
+                self.model.selected_contact_id.is_some(),
+                "Select an enrolled contact first"
+            );
+            let descriptor = self.model.descriptor()?;
+            let conversation = self.model.conversation.trim();
+            ensure!(!conversation.is_empty(), "Conversation label is required");
+            let peer_account_id = AccountId::from_str(self.model.peer_account_id.trim())
+                .context("Peer Account ID is invalid")?;
+            let service_base_url = self.model.ticket_publication_service_url.trim();
+            ensure!(
+                !service_base_url.is_empty(),
+                "Ticket publication service URL is required"
+            );
+            Ok(WorkerRequest::RefreshContactTicket {
+                descriptor,
+                conversation: conversation.to_owned(),
+                peer_account_id,
+                service_base_url: service_base_url.to_owned(),
+            })
+        })();
+        match result {
+            Ok(request) => self.submit(Operation::RefreshContactTicket, request),
+            Err(error) => self
+                .model
+                .fail(Operation::RefreshContactTicket, format!("{error:#}")),
         }
     }
 
@@ -5835,6 +5993,71 @@ impl KilogramApp {
             }
             ui.small("The refreshed ticket excludes removed devices from future peer fanout. Previously signed recipient slots cannot be rewritten, and history already copied to a removed device cannot be erased.");
         }
+        ui.collapsing("Wide-area ticket exchange", |ui| {
+            ui.small("For an already enrolled contact, publish/fetch replaces manual synchronized ticket files. The store receives an opaque HPKE envelope under a pseudonymous directional channel; request timing and size remain visible.");
+            ui.horizontal(|ui| {
+                ui.label("Publication service");
+                ui.add_enabled(
+                    self.model.pending.is_none(),
+                    egui::TextEdit::singleline(
+                        &mut self.model.ticket_publication_service_url,
+                    )
+                    .hint_text("https://ticket-store.example")
+                    .desired_width(f32::INFINITY),
+                );
+            });
+            let exchange_enabled = self.model.pending.is_none()
+                && self.model.connection == ConnectionState::Connected
+                && self.model.selected_contact_id.is_some()
+                && !self.model.ticket_publication_service_url.trim().is_empty();
+            ui.horizontal(|ui| {
+                if ui
+                    .add_enabled(exchange_enabled, egui::Button::new("Publish my ticket"))
+                    .clicked()
+                {
+                    action = RuntimeUiAction::PublishTicket;
+                }
+                if ui
+                    .add_enabled(exchange_enabled, egui::Button::new("Refresh peer ticket"))
+                    .clicked()
+                {
+                    action = RuntimeUiAction::RefreshContactTicket;
+                }
+            });
+            ui.small("This channel cannot establish first-contact trust: exchange one verified initial contact ticket out of band. Freshness is then protected by signed expiry and this device's persistent monotonic high-water mark.");
+            if let Some(publication) = self.model.ticket_publication.as_ref() {
+                ui.colored_label(
+                    egui::Color32::from_rgb(92, 201, 137),
+                    format!(
+                        "Published generation {} for {} active peer device(s) · expires at Unix {}",
+                        publication.publication_generation,
+                        publication.recipient_device_count,
+                        publication.expires_at_unix_seconds
+                    ),
+                );
+                ui.small(format!(
+                    "Channel {} · encrypted record {} bytes · {}",
+                    compact_id(&publication.channel_id),
+                    publication.encrypted_record_bytes,
+                    publication.lookup_privacy_status
+                ));
+            }
+            if let Some(refresh) = self.model.contact_ticket_refresh.as_ref() {
+                ui.colored_label(
+                    egui::Color32::from_rgb(92, 201, 137),
+                    format!(
+                        "Peer generation {} installed · authority revision {} · {} active device(s)",
+                        refresh.publication_generation,
+                        refresh.authority_revision,
+                        refresh.active_device_count
+                    ),
+                );
+                ui.small(format!(
+                    "Freshness: {} · first observation: {}",
+                    refresh.freshness_status, refresh.first_contact_freshness
+                ));
+            }
+        });
         action
     }
 
@@ -6656,6 +6879,10 @@ impl eframe::App for KilogramApp {
             self.start_apply_device_directory();
         } else if runtime_action == RuntimeUiAction::ReconcileProfile {
             self.reconcile_runtime_profile();
+        } else if runtime_action == RuntimeUiAction::PublishTicket {
+            self.start_publish_ticket();
+        } else if runtime_action == RuntimeUiAction::RefreshContactTicket {
+            self.start_refresh_contact_ticket();
         } else if add_contact_clicked {
             self.start_add_contact();
         } else if let Some(contact_id) = selected_contact {
@@ -7266,6 +7493,78 @@ mod tests {
                 }))
                 .map_err(|_| anyhow::anyhow!("send GUI history response"))?;
 
+            let publication = requests
+                .recv()
+                .await
+                .context("receive GUI ticket publication")?;
+            let (command, response) = publication.into_parts();
+            ensure!(matches!(
+                command,
+                RuntimeIpcCommand::PublishOwnTicket {
+                    conversation,
+                    peer_account_id: requested_peer,
+                    service_base_url,
+                    ttl_seconds: 900,
+                } if conversation == "desktop-test"
+                    && requested_peer == peer_account_id
+                    && service_base_url == "https://publication.example"
+            ));
+            response
+                .send(RuntimeIpcResponse::OwnTicketPublished(Box::new(
+                    RuntimeIpcTicketPublication {
+                        contact_id: "22".repeat(32),
+                        channel_id: "55".repeat(32),
+                        publication_id: "66".repeat(32),
+                        publication_generation: 2,
+                        expires_at_unix_seconds: 123_456,
+                        recipient_device_count: 3,
+                        encrypted_record_bytes: 4_096,
+                        service_base_url: "https://publication.example/".to_owned(),
+                        local_store_status: "Inserted".to_owned(),
+                        upload_status: "confirmed-http-success".to_owned(),
+                        lookup_privacy_status:
+                            "opaque-hpke-recipient-slots-traffic-analysis-visible".to_owned(),
+                        first_contact_freshness: "bootstrap-contact-required".to_owned(),
+                    },
+                )))
+                .map_err(|_| anyhow::anyhow!("send GUI ticket-publication response"))?;
+
+            let refresh = requests
+                .recv()
+                .await
+                .context("receive GUI contact-ticket refresh")?;
+            let (command, response) = refresh.into_parts();
+            ensure!(matches!(
+                command,
+                RuntimeIpcCommand::RefreshContactTicket {
+                    conversation,
+                    peer_account_id: requested_peer,
+                    service_base_url,
+                } if conversation == "desktop-test"
+                    && requested_peer == peer_account_id
+                    && service_base_url == "https://publication.example"
+            ));
+            response
+                .send(RuntimeIpcResponse::ContactTicketRefreshed(Box::new(
+                    RuntimeIpcContactTicketRefresh {
+                        contact_id: "22".repeat(32),
+                        channel_id: "77".repeat(32),
+                        publication_id: "88".repeat(32),
+                        publication_generation: 4,
+                        expires_at_unix_seconds: 123_789,
+                        publisher_account_id: peer_account_id,
+                        publisher_device_id: device_id,
+                        authority_revision: 5,
+                        active_device_count: 2,
+                        descriptor_file: PathBuf::from("peer-runtime.ticket"),
+                        local_observation_status: "Inserted".to_owned(),
+                        descriptor_publish_status: "atomic-replace".to_owned(),
+                        freshness_status: "signed-non-expired-local-high-water".to_owned(),
+                        first_contact_freshness: "local-monotonic-high-water".to_owned(),
+                    },
+                )))
+                .map_err(|_| anyhow::anyhow!("send GUI contact-ticket response"))?;
+
             let directory_update = requests
                 .recv()
                 .await
@@ -7391,6 +7690,38 @@ mod tests {
             history,
             WorkerSuccess::History { page, older: false }
                 if page.total_messages == 0 && page.messages.is_empty()
+        ));
+
+        let publication = execute_request(WorkerRequest::PublishTicket {
+            descriptor: descriptor.clone(),
+            conversation: "desktop-test".to_owned(),
+            peer_account_id,
+            service_base_url: "https://publication.example".to_owned(),
+        })
+        .await?;
+        assert!(matches!(
+            publication,
+            WorkerSuccess::TicketPublished(RuntimeIpcTicketPublication {
+                publication_generation: 2,
+                recipient_device_count: 3,
+                ..
+            })
+        ));
+
+        let ticket_refresh = execute_request(WorkerRequest::RefreshContactTicket {
+            descriptor: descriptor.clone(),
+            conversation: "desktop-test".to_owned(),
+            peer_account_id,
+            service_base_url: "https://publication.example".to_owned(),
+        })
+        .await?;
+        assert!(matches!(
+            ticket_refresh,
+            WorkerSuccess::ContactTicketRefreshed(RuntimeIpcContactTicketRefresh {
+                publication_generation: 4,
+                authority_revision: 5,
+                ..
+            })
         ));
 
         let directory_update = execute_request(WorkerRequest::ApplyDeviceDirectory {

@@ -2564,17 +2564,58 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - contract зафиксирован в
   [`../docs/RFC-0050-restart-safe-runtime-device-directory.md`](../docs/RFC-0050-restart-safe-runtime-device-directory.md).
 
+### M0.9.29 — signed wide-area ticket publication: выполнено
+
+Реализовано:
+
+- directional lookup channel связывает conversation, publisher Account/Device
+  и recipient Account без публикации этих идентификаторов в открытом виде;
+  отдельный publisher Device исключает коллизию endpoint-ов одного аккаунта;
+- current ticket входит в device-signed expiring hash chain с generation и
+  previous ID, а локальный publisher head сохраняется append-only в
+  vault-primary `Runtime` repository;
+- одна HPKE envelope содержит отдельный recipient slot для каждого active
+  устройства из последнего проверенного peer directory; store получает только
+  pseudonymous outer metadata и ciphertext;
+- receiver проверяет publication, ticket, exact contact Device/route,
+  membership, local authorization, authority и prekey high-water, затем одной
+  transaction продвигает trust/ratchet и device-signed observation high-water;
+- rollback/same-generation equivocation после локального observation fail
+  closed, exact retry идемпотентен; descriptor заменяется атомарно только после
+  state commit;
+- HTTPS client запрещает redirects, ограничивает time/body, разрешает plain
+  HTTP только numeric loopback; сетевой wait не удерживает state/vault lock;
+- IPC v7, CLI и Windows desktop дают explicit publish/refresh для уже
+  enrolled contact и честно показывают expiry, generation, privacy и
+  first-contact boundary без background service.
+
+Проверки:
+
+- crypto regression проверяет recipient binding, wrong key/device, expiry,
+  publisher-device channel separation, observation monotonicity и rollback;
+- реальный loopback HTTP regression проверяет exact PUT/GET path и opaque
+  envelope round-trip;
+- два live runtime actor проходят mutual contact enrollment, publish, fetch,
+  atomic install и idempotent replay с durable publication/observation records;
+- Windows adapter regression проверяет exact typed IPC commands и ответы;
+- rustfmt, strict workspace Clippy, все 189 workspace tests и release build
+  проходят; новый live runtime lifecycle отдельно проходит в release mode;
+- contract зафиксирован в
+  [`../docs/RFC-0051-signed-wide-area-ticket-publication.md`](../docs/RFC-0051-signed-wide-area-ticket-publication.md).
+
 ### Следующий этап
 
-1. M0.9.29: заменить synchronized ticket-file adapter минимальным signed
-   wide-area publication/fetch contract с explicit freshness, rollback и
-   first-contact boundaries; privacy-sensitive lookup не должен публиковать
-   социальный граф в открытом виде.
-2. Optional autostart/background mode оставить отдельной явной настройкой, не
+1. M0.9.30: добавить минимальный self-hostable opaque publication service с
+   fixed retention, conditional generation replacement, size/rate limits и
+   Internet test procedure; он не должен разбирать ticket plaintext или
+   принимать application identifiers.
+2. После наблюдаемого service contract добавить opt-in automatic
+   publish/refresh policy; foreground runtime остаётся стандартным режимом.
+3. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
-3. Добавить macOS/Linux/mobile providers той же platform boundary.
-4. Спроектировать privacy-preserving wide-area publication/gossip/mailbox и
-   first-contact freshness; M0.9.4 закрывает только явный LAN opt-in.
-5. Membership removal и group governance проектировать вместе с ordered
+4. Добавить macOS/Linux/mobile providers той же platform boundary.
+5. Спроектировать privacy-preserving gossip/mailbox и first-contact freshness;
+   M0.9.29 скрывает payload/явные IDs, но не access correlation.
+6. Membership removal и group governance проектировать вместе с ordered
    security events и MLS epoch; compact Merkle/range summary и независимый
    криптографический аудит остаются до публичного выпуска.
