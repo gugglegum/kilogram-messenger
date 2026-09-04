@@ -138,6 +138,7 @@ witnesses, and it cannot defend a device whose signing key is compromised.
 Filesystem deletion is not a promise of forensic secure erasure on SSDs,
 snapshots, backups, or cloud-synchronized directories.
 
-Compaction does not make the opaque store authenticated or unlinkable. The next
-protocol step remains a write capability/admission design that prevents a party
-which learns a channel from replacing it with an arbitrary high generation.
+Compaction itself does not make the opaque store authenticated or unlinkable.
+M0.9.33 and RFC-0055 subsequently add a self-authenticating per-peer write
+capability that prevents a party which merely learns a channel from replacing
+it with an arbitrary high generation.

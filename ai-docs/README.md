@@ -1,6 +1,6 @@
 # Память проекта Kilogram
 
-Актуально на: 2026-09-04.
+Актуально на: 2026-09-05.
 
 Эта папка — краткая проектная память и дорожная карта. Подробная техническая
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
@@ -10,8 +10,9 @@
 Архитектура остаётся в стадии проектирования. Rust workspace теперь содержит
 `kilogram-identity`, `kilogram-protocol`, `kilogram-ratchet`, `kilogram-state`,
 `kilogram-store`, `kilogram-runtime-ipc`, `kilogram-bootstrap-contract`,
-`kilogram-session`, `kilogram-transport-iroh`, `kilogram-cli`, отдельный
-`kilogram-bootstrap` и первый GUI package `kilogram-windows`.
+`kilogram-session`, `kilogram-ticket-publication`, `kilogram-transport-iroh`,
+`kilogram-cli`, отдельный `kilogram-bootstrap` и первый GUI package
+`kilogram-windows`.
 Два процесса обмениваются подписанными событиями через Iroh/QUIC, проверяют
 Ed25519-подписи и causal acknowledgement. Прикладная device identity, author
 sequence и signed events сохраняются после перезапуска отдельно от эфемерной
@@ -191,8 +192,15 @@ multi-source claim reconciliation. M0.7.9 добавил signed append-only chec
   независимой проверки. M0.9.30 добавил отдельный `kilogram-ticket-store`:
   loopback-only HTTP за HTTPS reverse proxy, durable Redb opaque values,
   monotonic conditional replacement, fixed TTL, bounded parser/channel/body/
-  connection limits и per-IP/global rate limits. Он не декодирует envelope и
-  не устраняет channel-aware DoS или traffic correlation. OS peer credentials остаются дальше. Reconciliation выбирает
+  connection limits и per-IP/global rate limits. M0.9.31 добавил signed opt-in
+  foreground automation с network permissions и bounded backoff; M0.9.32 —
+  device-signed crash-safe checkpoint/compaction этих runtime chains. M0.9.33
+  поднял connection ticket до v10 и заменил identity-input lookup на
+  self-authenticating channel из отдельного per-peer Ed25519 write key. PUT
+  подписывает exact channel/generation/body, поэтому знающий channel не может
+  записать произвольный высокий generation; store по-прежнему не видит
+  Account/Device ID или envelope plaintext. IP/timing/size correlation остаётся.
+  OS peer credentials остаются дальше. Reconciliation выбирает
   inventory только при совпадении двух или более полных явно собранных claims и
   всё равно не обещает global completeness.
 M0.8.1 добавил первый production-storage bridge: `state-vault-migrate` одной
@@ -353,35 +361,39 @@ global prekey discovery/witness, автоматический recovery source di
 
 ## План ближайших работ
 
-1. M0.9.31: добавить opt-in automatic runtime policy для publication/refresh с
-   expiry-aware schedule, bounded retry/backoff, network-class constraints,
-   foreground/background boundary и явным UI status.
-2. Уже реализованный M0.9.30 даёт self-hostable loopback-only opaque store за
+1. M0.9.34: спроектировать authenticated endpoint candidate set для нескольких
+   online devices одного peer account, с deterministic bounded failover без
+   отката authority/prekey/publication high-water.
+2. Уже реализованный M0.9.33 даёт self-authenticating per-peer capability
+   channel и exact Ed25519 PUT authorization без Account/Device ID на store.
+3. Уже реализованные M0.9.31–M0.9.32 дают opt-in foreground automation и
+   crash-safe bounded compaction его signed runtime chains.
+4. Уже реализованный M0.9.30 даёт self-hostable loopback-only opaque store за
    HTTPS reverse proxy: durable Redb, fixed retention, monotonic replacement,
    size/channel/connection/rate limits и Internet test procedure.
-3. Уже реализованный M0.9.29 заменяет synchronized steady-state ticket refresh
+5. Уже реализованный M0.9.29 заменяет synchronized steady-state ticket refresh
    на explicit HTTPS publication/fetch: device-signed expiring chain, per-device
    HPKE slots, local rollback high-water, IPC v7 и Windows UI. Initial verified
    contact остаётся out-of-band, store traffic metadata видимы.
-4. Уже реализованный M0.9.28 сохраняет device-signed receipt применённого live
+6. Уже реализованный M0.9.28 сохраняет device-signed receipt применённого live
    roster в vault-primary transaction, восстанавливает его раньше stale launch
    profile и bounded desktop-операцией согласует exact canonical path.
-5. Optional autostart/background mode оставить отдельной явной настройкой, а не
+7. Optional autostart/background mode оставить отдельной явной настройкой, а не
    обязательным Task Scheduler этапом.
-6. Добавить production macOS/Linux local key provider, согласованный monotonic
+8. Добавить production macOS/Linux local key provider, согласованный monotonic
    witness и lifecycle обновления portable recovery package; затем mobile
    providers. Расширить pseudonymous M0.9.29 lookup до privacy-preserving
    gossip/mailbox. Live camera/clipboard оставить platform UI.
-7. Спроектировать membership removal вместе с ordered security log и MLS epoch;
+9. Спроектировать membership removal вместе с ordered security log и MLS epoch;
    отдельно — gossip/witness для first-contact freshness.
-8. Спроектировать полное seed/recovery authority с monotonic history/witness,
+10. Спроектировать полное seed/recovery authority с monotonic history/witness,
    root rotation и конфликтующие authority operations.
-9. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
-10. Спроектировать финальный wire format подписанного события и алгоритм
+11. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
+12. Спроектировать финальный wire format подписанного события и алгоритм
    линеаризации.
-11. Спроектировать compact Merkle/range summary и переносимый signed cursor.
-12. Добавить небольшие MLS-группы.
-13. Перед публичным выпуском провести независимый криптографический аудит.
+13. Спроектировать compact Merkle/range summary и переносимый signed cursor.
+14. Добавить небольшие MLS-группы.
+15. Перед публичным выпуском провести независимый криптографический аудит.
 
 ## Навигация
 
@@ -498,6 +510,8 @@ global prekey discovery/witness, автоматический recovery source di
   реализованный M0.9.31 signed opt-in publish/refresh scheduler, durable bounded backoff, network permissions и explicit foreground-only UI state.
 - [`../docs/RFC-0054-authenticated-runtime-ticket-compaction.md`](../docs/RFC-0054-authenticated-runtime-ticket-compaction.md) —
   реализованный M0.9.32 device-signed checkpoint, bounded ticket-chain retention и crash-safe vault-primary compaction.
+- [`../docs/RFC-0055-unlinkable-ticket-write-capability.md`](../docs/RFC-0055-unlinkable-ticket-write-capability.md) —
+  реализованный M0.9.33 self-authenticating per-peer channel и unlinkable Ed25519 PUT authorization.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

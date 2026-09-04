@@ -2,6 +2,10 @@
 
 Status: M0.9.30 implemented (2026-09-05).
 
+> Current protocol note: M0.9.33 / RFC-0055 adds mandatory unlinkable Ed25519
+> write-capability headers. The historical unauthenticated PUT contract below
+> describes M0.9.30, not the current executable.
+
 ## 1. Goal
 
 RFC-0051 defined an authenticated, recipient-encrypted runtime ticket record but

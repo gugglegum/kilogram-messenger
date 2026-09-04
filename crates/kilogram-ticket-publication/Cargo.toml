@@ -1,0 +1,17 @@
+[package]
+name = "kilogram-ticket-publication"
+description = "Unlinkable write capability for Kilogram opaque ticket publication"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+blake3.workspace = true
+ed25519-dalek.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+zeroize.workspace = true
+
+[lints]
+workspace = true

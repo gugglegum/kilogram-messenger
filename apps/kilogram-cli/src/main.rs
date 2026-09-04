@@ -116,6 +116,7 @@ use runtime_publication::{
     MAX_TICKET_PUBLICATION_TTL_SECONDS, MIN_TICKET_PUBLICATION_TTL_SECONDS,
     SignedTicketPublication, SignedTicketPublicationObservation, TicketPublicationChannelId,
     TicketPublicationId, TicketPublicationObservationId, TicketPublicationStoreClient,
+    TicketPublicationWriteCapability, TicketPublicationWriteKey,
 };
 use runtime_queue::{
     MAX_RUNTIME_RECORD_BYTES, RuntimeContactId, RuntimeDeviceDirectoryReceiptId, RuntimeQueueId,
@@ -159,8 +160,8 @@ const STREAM_OPEN_TIMEOUT: Duration = Duration::from_secs(15);
 const HISTORY_RECOVERY_NEXT_PAGE_TIMEOUT: Duration = Duration::from_secs(60);
 const MAX_HISTORY_RECOVERY_PAGES_PER_SESSION: usize = 64;
 const CLI_COORDINATOR_STACK_BYTES: usize = 8 * 1024 * 1024;
-const TICKET_SIGNATURE_DOMAIN: &[u8] = b"kilogram:connection-ticket-signature:v9\0";
-const TICKET_VERSION: u8 = 9;
+const TICKET_SIGNATURE_DOMAIN: &[u8] = b"kilogram:connection-ticket-signature:v10\0";
+const TICKET_VERSION: u8 = 10;
 const MAX_RECOVERY_PASSPHRASE_FILE_BYTES: u64 = 4098;
 const DEFAULT_HISTORY_RECOVERY_SCHEDULER_ATTEMPTS: usize = 3;
 const MAX_HISTORY_RECOVERY_SCHEDULER_ATTEMPTS: usize = 8;
@@ -1734,6 +1735,7 @@ struct ConnectionTicketContent {
     listener_certificate: DeviceCertificate,
     listener_directory: AccountPrekeyDirectory,
     allowed_requester_account_id: AccountId,
+    ticket_publication_write_key: TicketPublicationWriteKey,
     route_policy: RoutePolicy,
 }
 
@@ -1780,6 +1782,11 @@ impl ConnectionTicket {
             listener_certificate,
             listener_directory,
             allowed_requester_account_id,
+            ticket_publication_write_key: ticket_publication_write_capability(
+                listener_identity,
+                allowed_requester_account_id,
+            )
+            .write_key(),
             route_policy,
         };
         let signature = listener_identity
@@ -1825,6 +1832,10 @@ impl ConnectionTicket {
         self.content.allowed_requester_account_id
     }
 
+    fn ticket_publication_write_key(&self) -> TicketPublicationWriteKey {
+        self.content.ticket_publication_write_key
+    }
+
     fn listener_authority_snapshot(&self) -> &AccountAuthoritySnapshot {
         self.content.listener_directory.authority_snapshot()
     }
@@ -1843,6 +1854,10 @@ impl ConnectionTicket {
             "unsupported connection ticket version: {}",
             self.content.version
         );
+        self.content
+            .ticket_publication_write_key
+            .verify()
+            .context("verify ticket publication write key")?;
         self.content.listener_certificate.verify()?;
         self.content
             .listener_directory
@@ -1888,6 +1903,13 @@ impl ConnectionTicket {
             .verify_for_account(expected_account)
             .context("verify expected listener Account ID")
     }
+}
+
+fn ticket_publication_write_capability(
+    identity: &DeviceIdentity,
+    peer_account_id: AccountId,
+) -> TicketPublicationWriteCapability {
+    TicketPublicationWriteCapability::derive(identity.secret_bytes(), peer_account_id.as_bytes())
 }
 
 #[derive(Clone, Debug)]
@@ -6238,100 +6260,109 @@ async fn publish_runtime_own_ticket(
         "ticket publication renewal lead exceeds its TTL"
     );
     let store_client = TicketPublicationStoreClient::new(service_base_url)?;
-    let (contact_id, channel_id, publication, publication_id, publication_store, encrypted) =
-        with_locked_state(state_directory, || {
-            let device_state = load_command_device_state(state_directory)?;
-            let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
-            let local_certificate = trust
-                .load_certificate()
-                .context("load local certificate for ticket publication")?;
-            let local_authority = trust
-                .load_own_authority_snapshot(&local_certificate)
-                .context("load local authority for ticket publication")?;
-            ensure!(
-                current_ticket.listener_account_id() == local_certificate.account_id()
-                    && current_ticket.listener_device_id() == device_state.identity().device_id()
-                    && current_ticket.allowed_requester_account_id() == peer_account_id,
-                "running ticket does not target the selected contact account"
-            );
-            let snapshot = load_runtime_state_snapshot(
+    let (
+        contact_id,
+        channel_id,
+        publication,
+        publication_id,
+        publication_store,
+        encrypted,
+        write_capability,
+    ) = with_locked_state(state_directory, || {
+        let device_state = load_command_device_state(state_directory)?;
+        let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+        let local_certificate = trust
+            .load_certificate()
+            .context("load local certificate for ticket publication")?;
+        let local_authority = trust
+            .load_own_authority_snapshot(&local_certificate)
+            .context("load local authority for ticket publication")?;
+        ensure!(
+            current_ticket.listener_account_id() == local_certificate.account_id()
+                && current_ticket.listener_device_id() == device_state.identity().device_id()
+                && current_ticket.allowed_requester_account_id() == peer_account_id,
+            "running ticket does not target the selected contact account"
+        );
+        let snapshot = load_runtime_state_snapshot(
+            state_directory,
+            local_certificate.account_id(),
+            device_state.identity().device_id(),
+        )?;
+        let contact = exact_runtime_contact(&snapshot, conversation, peer_account_id)?;
+        let membership = trust
+            .load_conversation_membership(contact.conversation_id().scope_id())
+            .context("load conversation membership for ticket publication")?;
+        require_conversation_participants(
+            &membership,
+            local_certificate.account_id(),
+            peer_account_id,
+        )?;
+        let recipient_ticket =
+            load_runtime_contact_ticket(contact, &local_certificate, &local_authority)
+                .context("load recipient directory for ticket publication")?;
+        let write_capability =
+            ticket_publication_write_capability(device_state.identity(), peer_account_id);
+        ensure!(
+            current_ticket.ticket_publication_write_key() == write_capability.write_key(),
+            "running ticket write capability does not match its selected contact account"
+        );
+        let channel_id = write_capability.write_key().channel_id();
+        let encoded_ticket = current_ticket.encode()?;
+        let now_unix_seconds = unix_time_now().context("read time for ticket publication")?;
+        let previous = snapshot.latest_ticket_publication(channel_id);
+        let publication = match previous {
+            Some(previous)
+                if previous.ticket() == encoded_ticket
+                    && previous.expires_at_unix_seconds()
+                        > now_unix_seconds.saturating_add(renew_before_seconds) =>
+            {
+                previous.clone()
+            }
+            previous => SignedTicketPublication::sign(
+                device_state.identity(),
+                channel_id,
+                local_certificate.account_id(),
+                peer_account_id,
+                encoded_ticket,
+                now_unix_seconds,
+                ttl_seconds,
+                previous,
+            )?,
+        };
+        let publication_id = publication.publication_id()?;
+        let publication_path = runtime_ticket_publication_relative_path(
+            channel_id,
+            publication.generation(),
+            publication_id,
+        );
+        let publication_bytes = publication.encode()?;
+        let publication_store = run_state_transaction(state_directory, |transaction| {
+            persist_runtime_record(
                 state_directory,
-                local_certificate.account_id(),
-                device_state.identity().device_id(),
-            )?;
-            let contact = exact_runtime_contact(&snapshot, conversation, peer_account_id)?;
-            let membership = trust
-                .load_conversation_membership(contact.conversation_id().scope_id())
-                .context("load conversation membership for ticket publication")?;
-            require_conversation_participants(
-                &membership,
-                local_certificate.account_id(),
-                peer_account_id,
-            )?;
-            let recipient_ticket =
-                load_runtime_contact_ticket(contact, &local_certificate, &local_authority)
-                    .context("load recipient directory for ticket publication")?;
-            let channel_id = TicketPublicationChannelId::derive(
-                contact.conversation_id(),
-                local_certificate.account_id(),
-                device_state.identity().device_id(),
-                peer_account_id,
-            );
-            let encoded_ticket = current_ticket.encode()?;
-            let now_unix_seconds = unix_time_now().context("read time for ticket publication")?;
-            let previous = snapshot.latest_ticket_publication(channel_id);
-            let publication = match previous {
-                Some(previous)
-                    if previous.ticket() == encoded_ticket
-                        && previous.expires_at_unix_seconds()
-                            > now_unix_seconds.saturating_add(renew_before_seconds) =>
-                {
-                    previous.clone()
-                }
-                previous => SignedTicketPublication::sign(
-                    device_state.identity(),
-                    channel_id,
-                    local_certificate.account_id(),
-                    peer_account_id,
-                    encoded_ticket,
-                    now_unix_seconds,
-                    ttl_seconds,
-                    previous,
-                )?,
-            };
-            let publication_id = publication.publication_id()?;
-            let publication_path = runtime_ticket_publication_relative_path(
-                channel_id,
-                publication.generation(),
-                publication_id,
-            );
-            let publication_bytes = publication.encode()?;
-            let publication_store = run_state_transaction(state_directory, |transaction| {
-                persist_runtime_record(
-                    state_directory,
-                    &publication_path,
-                    &publication_bytes,
-                    transaction,
-                )
-            })?;
-            let recipients = recipient_ticket
-                .listener_directory()
-                .device_list()
-                .devices()
-                .iter()
-                .map(|certificate| (certificate.device_id(), certificate.encryption_public_key()))
-                .collect::<Vec<_>>();
-            let encrypted = EncryptedTicketPublication::seal(&publication, &recipients)?;
-            Ok((
-                contact.contact_id().to_string(),
-                channel_id,
-                publication,
-                publication_id,
-                publication_store,
-                encrypted,
-            ))
+                &publication_path,
+                &publication_bytes,
+                transaction,
+            )
         })?;
-    let encrypted_record_bytes = store_client.put(&encrypted).await?;
+        let recipients = recipient_ticket
+            .listener_directory()
+            .device_list()
+            .devices()
+            .iter()
+            .map(|certificate| (certificate.device_id(), certificate.encryption_public_key()))
+            .collect::<Vec<_>>();
+        let encrypted = EncryptedTicketPublication::seal(&publication, &recipients)?;
+        Ok((
+            contact.contact_id().to_string(),
+            channel_id,
+            publication,
+            publication_id,
+            publication_store,
+            encrypted,
+            write_capability,
+        ))
+    })?;
+    let encrypted_record_bytes = store_client.put(&encrypted, &write_capability).await?;
     Ok(RuntimeIpcTicketPublication {
         contact_id,
         channel_id: channel_id.to_string(),
@@ -6343,7 +6374,9 @@ async fn publish_runtime_own_ticket(
         service_base_url: store_client.base_url().to_owned(),
         local_store_status: store_outcome_name(publication_store).to_owned(),
         upload_status: "confirmed-http-success".to_owned(),
-        lookup_privacy_status: "opaque-hpke-recipient-slots-traffic-analysis-visible".to_owned(),
+        lookup_privacy_status:
+            "opaque-hpke-recipient-slots-self-authenticating-capability-channel-traffic-analysis-visible"
+                .to_owned(),
         first_contact_freshness: "bootstrap-contact-required".to_owned(),
     })
 }
@@ -6375,12 +6408,13 @@ async fn refresh_runtime_contact_ticket(
             local_certificate.account_id(),
             peer_account_id,
         )?;
-        Ok(TicketPublicationChannelId::derive(
-            contact.conversation_id(),
-            peer_account_id,
-            contact.peer_device_id(),
-            local_certificate.account_id(),
-        ))
+        let local_authority = trust
+            .load_own_authority_snapshot(&local_certificate)
+            .context("load local authority for ticket publication lookup")?;
+        let peer_ticket =
+            load_runtime_contact_ticket(contact, &local_certificate, &local_authority)
+                .context("load peer ticket publication write capability")?;
+        Ok(peer_ticket.ticket_publication_write_key().channel_id())
     })?;
     let encrypted = store_client.get(channel_id).await?;
     ensure!(
@@ -6410,12 +6444,12 @@ async fn refresh_runtime_contact_ticket(
             local_certificate.account_id(),
             peer_account_id,
         )?;
-        let expected_channel_id = TicketPublicationChannelId::derive(
-            contact.conversation_id(),
-            peer_account_id,
-            contact.peer_device_id(),
-            local_certificate.account_id(),
-        );
+        let current_peer_ticket =
+            load_runtime_contact_ticket(contact, &local_certificate, &local_authority)
+                .context("reload peer ticket publication write capability")?;
+        let expected_channel_id = current_peer_ticket
+            .ticket_publication_write_key()
+            .channel_id();
         ensure!(
             expected_channel_id == channel_id,
             "ticket publication contact changed during fetch"
@@ -6440,7 +6474,8 @@ async fn refresh_runtime_contact_ticket(
         ensure!(
             authorized_peer.device_id() == contact.peer_device_id()
                 && ticket.route_policy() == contact.route_policy()
-                && ticket.allowed_requester_account_id() == local_certificate.account_id(),
+                && ticket.allowed_requester_account_id() == local_certificate.account_id()
+                && ticket.ticket_publication_write_key().channel_id() == channel_id,
             "published ticket does not match the selected contact contract"
         );
         verify_device_authorization_with_snapshot(
@@ -14678,12 +14713,9 @@ mod tests {
         let root = AccountRootState::load(&root_dir)?;
         let peer = AccountRootState::load(&peer_root_dir)?;
         let device = DeviceState::load_or_create(&state_dir)?;
-        let channel_id = TicketPublicationChannelId::derive(
-            ConversationId::from_label("runtime-ticket-compaction"),
-            root.account_id(),
-            device.identity().device_id(),
-            peer.account_id(),
-        );
+        let channel_id = ticket_publication_write_capability(device.identity(), peer.account_id())
+            .write_key()
+            .channel_id();
         let started_at = unix_time_now()?;
         let mut previous = None;
         for index in 0..=MAX_RUNTIME_TICKET_CHAIN_RECORDS_BEFORE_COMPACTION {
@@ -14823,12 +14855,9 @@ mod tests {
             persist_runtime_record(&state_dir, &contact_path, &contact_bytes, transaction)
         })?;
 
-        let peer_channel = TicketPublicationChannelId::derive(
-            conversation_id,
-            peer_root.account_id(),
-            peer_device.device_id(),
-            root.account_id(),
-        );
+        let peer_channel = ticket_publication_write_capability(&peer_device, root.account_id())
+            .write_key()
+            .channel_id();
         let started_at = unix_time_now()?;
         let mut previous_publication = None;
         let mut previous_observation = None;
@@ -16186,6 +16215,11 @@ mod tests {
         assert_eq!(
             decoded.allowed_requester_account_id(),
             allowed_requester_account_id
+        );
+        assert_eq!(
+            decoded.ticket_publication_write_key(),
+            ticket_publication_write_capability(&listener_identity, allowed_requester_account_id,)
+                .write_key()
         );
         decoded.verify_listener_authorization(listener_account_id)?;
         assert!(

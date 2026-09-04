@@ -2,6 +2,11 @@
 
 Status: M0.9.29 implemented (2026-09-05).
 
+> Current protocol note: M0.9.33 / RFC-0055 replaces the deterministic
+> identity-input channel below with a self-authenticating per-peer capability
+> channel and advances connection tickets to v10. The text below preserves the
+> original M0.9.29 design record.
+
 ## 1. Goal
 
 Before this stage, a runtime contact retained one canonical ticket-file path.

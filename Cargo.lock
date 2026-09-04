@@ -3161,6 +3161,7 @@ dependencies = [
  "kilogram-session",
  "kilogram-state",
  "kilogram-store",
+ "kilogram-ticket-publication",
  "kilogram-ticket-store",
  "kilogram-transport-iroh",
  "postcard",
@@ -3290,11 +3291,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "kilogram-ticket-publication"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+ "ed25519-dalek 3.0.0",
+ "serde",
+ "thiserror 2.0.20",
+ "zeroize",
+]
+
+[[package]]
 name = "kilogram-ticket-store"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
+ "kilogram-ticket-publication",
  "postcard",
  "redb",
  "reqwest",

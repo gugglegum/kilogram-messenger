@@ -113,17 +113,25 @@ specified in
 [`docs/RFC-0051-signed-wide-area-ticket-publication.md`](docs/RFC-0051-signed-wide-area-ticket-publication.md).
 The separately runnable bounded opaque store for that contract is specified in
 [`docs/RFC-0052-self-hostable-opaque-ticket-store.md`](docs/RFC-0052-self-hostable-opaque-ticket-store.md).
+Foreground opt-in publication automation and bounded authenticated compaction
+are specified in
+[`docs/RFC-0053-opt-in-ticket-automation.md`](docs/RFC-0053-opt-in-ticket-automation.md)
+and
+[`docs/RFC-0054-authenticated-runtime-ticket-compaction.md`](docs/RFC-0054-authenticated-runtime-ticket-compaction.md).
+The current self-authenticating store write capability is specified in
+[`docs/RFC-0055-unlinkable-ticket-write-capability.md`](docs/RFC-0055-unlinkable-ticket-write-capability.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.30 self-hostable opaque ticket store — complete
+## Current milestone: M0.9.33 unlinkable ticket write capability — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
-at each authority revision. Ticket v9 combines that list with exactly one
-fresh device-signed Olm prekey pool per authorized device. Every pool contains
+at each authority revision. Ticket v10 retains v9's complete list and exactly
+one fresh device-signed Olm prekey pool per authorized device, and adds a
+per-peer ticket-publication write key. Every pool contains
 16 independently consumable keys by default, a monotonic generation and
 sequence range, and signed publication/expiry times. One `RatchetText` v5
 event carries a sorted recipient table with a separate persistent pairwise
@@ -578,7 +586,7 @@ certificate to the expected Account ID, checks the required `sign-events` and
 `sync-history` capabilities, and rejects a revoked device key even if a later
 certificate is issued for it.
 
-Ticket v9 embeds the listener's root-signed certificate, complete signed device
+Ticket v10 embeds the listener's root-signed certificate, complete signed device
 list/authority snapshot and one fresh device-signed prekey pool for every listed
 device. It authorizes one requester Account ID rather than one hard-coded
 device. Before any event or
@@ -627,7 +635,7 @@ seconds for Iroh relay-to-direct migration and print `transport_path` (`direct`,
 and number of open paths. These development diagnostics made the two-host LAN
 test distinguish a real direct path from a successful relay fallback.
 
-The listener signs one of three application route policies into ticket v9:
+The listener signs one of three application route policies into ticket v10:
 
 - `auto` accepts Iroh's selected direct or relay path;
 - `direct-only` permits relay-assisted connection establishment and NAT traversal,
@@ -1055,13 +1063,17 @@ directory, old path, new canonical non-symlink path and unchanged profile bytes;
 it then atomically changes only `device_list_file` and reloads the result. The
 runtime itself still has no general configuration-file write authority.
 
-M0.9.29 replaces that contact's synchronized ticket-file refresh with an
-explicit wide-area publication/fetch adapter. The publishing device signs a
-short-lived monotonic head, HPKE-seals it separately to every active device in
-the peer's last verified account directory, and uploads only the opaque
-envelope. A directional lookup channel includes the publisher Device ID, so
-separate endpoints of one account do not overwrite each other. The store still
-observes IP addresses, channel access, timing, generation, and ciphertext size;
+M0.9.29 introduced an explicit wide-area publication/fetch adapter. M0.9.33
+now addresses each publisher-device/recipient-account pair through the hash of
+an unrelated Ed25519 write key carried in signed connection ticket v10. The
+private capability is deterministically derived under a separate KDF domain
+from protected local device material and is never persisted or uploaded. The
+store can verify PUT authority without learning an Account ID or Device ID.
+
+The publishing device signs a short-lived monotonic head, HPKE-seals it
+separately to every active device in the peer's last verified account
+directory, and uploads only the opaque envelope. The store still observes IP
+addresses, channel access, timing, generation, and ciphertext size;
 this is pseudonymous lookup, not metadata anonymity.
 
 With both contacts already enrolled, the running actors expose:
@@ -1106,10 +1118,17 @@ generations replace atomically, exact retries are idempotent, and rollback or a
 different body at the same generation returns HTTP 409. Fixed retention,
 record/channel/connection limits, bounded HTTP parsing and per-IP/global rate
 limits, including a 1 GiB default combined-body cap, are enforced. The service
-cannot authenticate the declared generation;
-a party that knows a channel can still cause denial of service. Deployment and
+requires an Ed25519 authorization over the exact channel, generation, body
+length and body digest. Because the channel is derived from that public write
+key, another key cannot claim a known channel or inject an arbitrary high
+generation. GET remains capability-addressed but unauthenticated. Deployment and
 two-network verification are in
 [`docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md).
+
+M0.9.31 adds signed opt-in foreground publish/refresh automation; M0.9.32
+compacts its append-only publication, observation, policy, and attempt chains
+behind a device-signed crash-safe checkpoint. Neither stage installs a Windows
+scheduled task or hidden background service.
 
 The queue command prints `runtime_ipc_request_id` before connecting. If its
 result is uncertain, repeat the same message with `--request-id <PRINTED_ID>`;
@@ -1241,14 +1260,15 @@ see [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md)
 The connection ticket is public addressing and authorization data: it contains
 the listener's Iroh address, root-signed public device certificate, complete
 root-signed device list/authority snapshot, one fresh device-signed prekey pool for
-every listed device, allowed requester Account ID, and route policy.
+every listed device, allowed requester Account ID, per-peer publication write
+key, and route policy.
 The certified listener device signs the whole mapping, so tampering is detected
 before a connection or inventory is sent. Possession of the ticket alone is
 insufficient: the requester must present a certificate and authority snapshot
 for the allowed account and prove possession of its device key.
 The ticket contains neither the Iroh endpoint secret nor any application secret.
 Ticket JSON, Postcard messages, and development conversation-label derivation
-remain provisional M0 choices. Ticket v9 intentionally does not decode v1-v8
+remain provisional M0 choices. Ticket v10 intentionally does not decode v1-v9
 tickets; restart the listener to generate a ticket matching this build. See
 [`RFC-0002`](docs/RFC-0002-account-device-authority.md) for snapshot and
 first-contact freshness boundaries.

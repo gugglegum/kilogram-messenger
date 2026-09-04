@@ -9,6 +9,7 @@ publish = false
 [dependencies]
 anyhow.workspace = true
 clap.workspace = true
+kilogram-ticket-publication = { path = "../../crates/kilogram-ticket-publication" }
 postcard.workspace = true
 redb.workspace = true
 serde.workspace = true

@@ -3,7 +3,10 @@ use std::{fmt, net::IpAddr, time::Duration};
 use anyhow::{Context, Result, bail, ensure};
 use kilogram_crypto::{EncryptionPublicKey, SealedMessage};
 use kilogram_identity::{AccountId, DeviceEncryptionIdentity, DeviceId, DeviceIdentity};
-use kilogram_protocol::ConversationId;
+pub use kilogram_ticket_publication::{
+    TicketPublicationChannelId, TicketPublicationWriteCapability, TicketPublicationWriteKey,
+};
+use kilogram_ticket_publication::{WRITE_KEY_HEADER, WRITE_SIGNATURE_HEADER, encode_signature};
 use reqwest::{Client, StatusCode, Url, redirect::Policy};
 use serde::{Deserialize, Serialize};
 
@@ -14,7 +17,6 @@ const PUBLICATION_SIGNATURE_DOMAIN: &[u8] = b"kilogram:ticket-publication:v1\0";
 const OBSERVATION_SIGNATURE_DOMAIN: &[u8] = b"kilogram:ticket-publication-observation:v1\0";
 const PUBLICATION_ID_DOMAIN: &[u8] = b"kilogram:ticket-publication-id:v1\0";
 const OBSERVATION_ID_DOMAIN: &[u8] = b"kilogram:ticket-publication-observation-id:v1\0";
-const CHANNEL_ID_DOMAIN: &[u8] = b"kilogram:ticket-publication-channel:v1\0";
 const TICKET_DIGEST_DOMAIN: &[u8] = b"kilogram:ticket-publication-ticket-digest:v1\0";
 const RECIPIENT_SELECTOR_DOMAIN: &[u8] = b"kilogram:ticket-publication-recipient:v1\0";
 const ENVELOPE_HPKE_INFO: &[u8] = b"kilogram:ticket-publication-envelope:v1";
@@ -27,36 +29,6 @@ pub const MAX_TICKET_PUBLICATION_RECIPIENTS: usize = 64;
 const MAX_TICKET_TEXT_BYTES: usize = 8 * 1024 * 1024;
 const HTTP_CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
 const HTTP_REQUEST_TIMEOUT: Duration = Duration::from_secs(20);
-
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
-pub struct TicketPublicationChannelId([u8; 32]);
-
-impl TicketPublicationChannelId {
-    pub fn derive(
-        conversation_id: ConversationId,
-        publisher_account_id: AccountId,
-        publisher_device_id: DeviceId,
-        recipient_account_id: AccountId,
-    ) -> Self {
-        let mut hasher = blake3::Hasher::new();
-        hasher.update(CHANNEL_ID_DOMAIN);
-        hasher.update(conversation_id.as_bytes());
-        hasher.update(publisher_account_id.as_bytes());
-        hasher.update(publisher_device_id.as_bytes());
-        hasher.update(recipient_account_id.as_bytes());
-        Self(*hasher.finalize().as_bytes())
-    }
-
-    pub fn as_bytes(&self) -> &[u8; 32] {
-        &self.0
-    }
-}
-
-impl fmt::Display for TicketPublicationChannelId {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write_hex(formatter, &self.0)
-    }
-}
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub struct TicketPublicationId([u8; 32]);
@@ -717,9 +689,22 @@ impl TicketPublicationStoreClient {
         Ok(Self { client, base_url })
     }
 
-    pub async fn put(&self, envelope: &EncryptedTicketPublication) -> Result<usize> {
+    pub async fn put(
+        &self,
+        envelope: &EncryptedTicketPublication,
+        capability: &TicketPublicationWriteCapability,
+    ) -> Result<usize> {
         let body = envelope.encode()?;
         let url = self.record_url(envelope.channel_id())?;
+        ensure!(
+            capability.write_key().channel_id() == envelope.channel_id(),
+            "ticket publication write capability belongs to another channel"
+        );
+        let signature = capability.authorize(
+            envelope.channel_id(),
+            envelope.publication_generation(),
+            &body,
+        );
         let response = self
             .client
             .put(url)
@@ -731,6 +716,8 @@ impl TicketPublicationStoreClient {
                 "x-kilogram-publication-generation",
                 envelope.publication_generation().to_string(),
             )
+            .header(WRITE_KEY_HEADER, capability.write_key().to_string())
+            .header(WRITE_SIGNATURE_HEADER, encode_signature(&signature))
             .body(body.clone())
             .send()
             .await
@@ -924,20 +911,19 @@ mod tests {
         let recipient = DeviceIdentity::generate()?;
         let recipient_encryption = DeviceEncryptionIdentity::generate()?;
         let other_encryption = DeviceEncryptionIdentity::generate()?;
-        let channel = TicketPublicationChannelId::derive(
-            ConversationId::from_label("publication-test"),
-            publisher_root.account_id(),
-            publisher.device_id(),
-            recipient_root.account_id(),
+        let capability = TicketPublicationWriteCapability::derive(
+            publisher.secret_bytes(),
+            recipient_root.account_id().as_bytes(),
         );
+        let channel = capability.write_key().channel_id();
         assert_ne!(
             channel,
-            TicketPublicationChannelId::derive(
-                ConversationId::from_label("publication-test"),
-                publisher_root.account_id(),
-                DeviceIdentity::generate()?.device_id(),
-                recipient_root.account_id(),
+            TicketPublicationWriteCapability::derive(
+                DeviceIdentity::generate()?.secret_bytes(),
+                recipient_root.account_id().as_bytes(),
             )
+            .write_key()
+            .channel_id()
         );
         let first = SignedTicketPublication::sign(
             &publisher,
@@ -1031,12 +1017,11 @@ mod tests {
         let publisher = DeviceIdentity::generate()?;
         let recipient = DeviceIdentity::generate()?;
         let recipient_encryption = DeviceEncryptionIdentity::generate()?;
-        let channel = TicketPublicationChannelId::derive(
-            ConversationId::from_label("publication-http-test"),
-            publisher_root.account_id(),
-            publisher.device_id(),
-            recipient_root.account_id(),
+        let capability = TicketPublicationWriteCapability::derive(
+            publisher.secret_bytes(),
+            recipient_root.account_id().as_bytes(),
         );
+        let channel = capability.write_key().channel_id();
         let publication = SignedTicketPublication::sign(
             &publisher,
             channel,
@@ -1090,7 +1075,10 @@ mod tests {
         });
 
         let client = TicketPublicationStoreClient::new(&format!("http://{address}/fixture"))?;
-        assert_eq!(client.put(&envelope).await?, expected_body.len());
+        assert_eq!(
+            client.put(&envelope, &capability).await?,
+            expected_body.len()
+        );
         assert_eq!(client.get(channel).await?, envelope);
         server.await??;
         Ok(())

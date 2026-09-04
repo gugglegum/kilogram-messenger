@@ -1106,6 +1106,7 @@ retirement остальных compatibility shadows ещё не реализов
   `DE56811114AC383DF41D678D0BD275563CB6EB256A488F630B8662BDB00BA079`;
   `target/release/kilogram-ticket-store.exe` — 2,427,904 bytes, SHA-256
   `BD7C3469E88355B81230F66F4C37C3BFC9A1586B8711708216D4E14851897179`.
+
 - Windows Firewall hygiene: Iroh endpoints внутри Cargo test-harness теперь
   принудительно используют только `127.0.0.1:0`; relay, address lookup,
   portmapper/SSDP и optional net-report probes отключены, default wildcard
@@ -1184,3 +1185,34 @@ retirement остальных compatibility shadows ещё не реализов
   `9D9DEB787857DC386A892D421467F8F04AB77B522FC542845D46CF136DDF2EC6`;
   `target/release/kilogram-ticket-store.exe` — 2,427,904 bytes, SHA-256
   `BD7C3469E88355B81230F66F4C37C3BFC9A1586B8711708216D4E14851897179`.
+
+## M0.9.33 verification snapshot (2026-09-05)
+
+- Новый shared crate `kilogram-ticket-publication` проверяет deterministic
+  per-peer derivation, различие scopes, canonical lowercase key/channel/
+  signature encoding и exact binding authorization к channel/generation/body.
+- Production HTTP service требует write key/signature до Redb transaction:
+  unsigned PUT получает 403; другой корректный Ed25519 key с `u64::MAX` на
+  известном channel получает 403; legitimate generation 2 и exact bytes после
+  атаки остаются читаемыми.
+- Connection ticket/signature domain подняты до v10 и содержат проверенный
+  derived public write key. Старые v9 contacts требуют однократного обмена
+  свежими tickets; event/session/ALPN wire не изменились.
+- Полный `cargo test --workspace --all-targets` проходит: 199 tests, 0 failed.
+- `cargo fmt --all -- --check`, `git diff --check` и strict
+  `cargo clippy --workspace --all-targets --all-features -- -D warnings`
+  проходят.
+- Release tests `kilogram-ticket-publication`, `kilogram-ticket-store` и exact
+  двухакторный
+  `runtime_publishes_and_refreshes_an_opaque_contact_ticket_idempotently`
+  проходят; `cargo build --workspace --release` и stable-name EXE `--help`
+  smoke проходят.
+- Windows artifacts со стабильными именами:
+  `target/release/kilogram-bootstrap.exe` — 20,476,928 bytes, SHA-256
+  `1AB47A618A813F83E6E1243BD0855A708837B3BF2B47E5CA891BB353E9D507D9`;
+  `target/release/kilogram-cli.exe` — 24,667,136 bytes, SHA-256
+  `A93C9B14A1A3E5F2ECD96B94289FF436621C0A9A203CA9C026316A0FC0EB223C`;
+  `target/release/kilogram-windows.exe` — 7,988,224 bytes, SHA-256
+  `9D9DEB787857DC386A892D421467F8F04AB77B522FC542845D46CF136DDF2EC6`;
+  `target/release/kilogram-ticket-store.exe` — 2,581,504 bytes, SHA-256
+  `123887E3B8F607F77A5BEE8969B5B9B73ABC189BAEC1BD51AFFA925183020191`.

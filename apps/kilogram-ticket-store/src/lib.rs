@@ -8,6 +8,10 @@ use std::{
 };
 
 use anyhow::{Context, Result, ensure};
+use kilogram_ticket_publication::{
+    TicketPublicationChannelId, TicketPublicationWriteKey, WRITE_KEY_HEADER,
+    WRITE_SIGNATURE_HEADER, decode_signature,
+};
 use redb::{
     Database, Durability, ReadableDatabase, ReadableTable, ReadableTableMetadata, TableDefinition,
 };
@@ -708,6 +712,15 @@ impl HttpProblem {
         }
     }
 
+    const fn forbidden(message: &'static str) -> Self {
+        Self {
+            status: 403,
+            reason: "Forbidden",
+            message,
+            retry_after: None,
+        }
+    }
+
     const fn too_many_requests() -> Self {
         Self {
             status: 429,
@@ -808,8 +821,10 @@ fn route_request(
             message: "resource not found",
             retry_after: None,
         })?;
-    let channel = parse_channel_id(channel_text)
-        .ok_or_else(|| HttpProblem::bad_request("invalid publication channel"))?;
+    let channel_id = channel_text
+        .parse::<TicketPublicationChannelId>()
+        .map_err(|_| HttpProblem::bad_request("invalid publication channel"))?;
+    let channel = *channel_id.as_bytes();
     match request.method.as_str() {
         "PUT" => {
             if request.body.is_empty() {
@@ -837,6 +852,19 @@ fn route_request(
                 .ok_or_else(|| {
                     HttpProblem::bad_request("valid publication generation is required")
                 })?;
+            let write_key = request
+                .headers
+                .get(WRITE_KEY_HEADER)
+                .and_then(|value| value.parse::<TicketPublicationWriteKey>().ok())
+                .ok_or_else(|| HttpProblem::forbidden("valid write capability is required"))?;
+            let write_signature = request
+                .headers
+                .get(WRITE_SIGNATURE_HEADER)
+                .and_then(|value| decode_signature(value).ok())
+                .ok_or_else(|| HttpProblem::forbidden("valid write capability is required"))?;
+            write_key
+                .verify_authorization(channel_id, generation, &request.body, &write_signature)
+                .map_err(|_| HttpProblem::forbidden("write capability authorization failed"))?;
             let outcome = store
                 .put(channel, generation, request.body, now)
                 .map_err(|_| HttpProblem {
@@ -1126,29 +1154,12 @@ async fn write_response(stream: &mut TcpStream, response: HttpResponse) -> Resul
     .context("write ticket-store response")
 }
 
+#[cfg(test)]
 fn parse_channel_id(value: &str) -> Option<[u8; 32]> {
-    if value.len() != 64
-        || !value
-            .bytes()
-            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
-    {
-        return None;
-    }
-    let mut channel = [0_u8; 32];
-    for (index, output) in channel.iter_mut().enumerate() {
-        let high = hex_nibble(value.as_bytes()[index * 2])?;
-        let low = hex_nibble(value.as_bytes()[index * 2 + 1])?;
-        *output = (high << 4) | low;
-    }
-    Some(channel)
-}
-
-fn hex_nibble(value: u8) -> Option<u8> {
-    match value {
-        b'0'..=b'9' => Some(value - b'0'),
-        b'a'..=b'f' => Some(value - b'a' + 10),
-        _ => None,
-    }
+    value
+        .parse::<TicketPublicationChannelId>()
+        .ok()
+        .map(|channel| *channel.as_bytes())
 }
 
 fn unix_time_now() -> Result<u64> {
@@ -1252,8 +1263,8 @@ mod tests {
         let directory = tempfile::tempdir()?;
         let mut config = StoreConfig::local_test(directory.path().to_path_buf());
         config.max_record_bytes = 32;
-        config.per_ip_requests_per_minute = 7;
-        config.global_requests_per_minute = 7;
+        config.per_ip_requests_per_minute = 10;
+        config.global_requests_per_minute = 10;
         config.trust_x_real_ip = true;
         let server = TicketStoreServer::bind(config).await?;
         let address = server.local_addr();
@@ -1266,15 +1277,23 @@ mod tests {
         let client = Client::builder()
             .redirect(reqwest::redirect::Policy::none())
             .build()?;
-        let url = format!(
-            "http://{address}{PUBLICATION_PATH_PREFIX}{}",
-            "ab".repeat(32)
+        let capability = kilogram_ticket_publication::TicketPublicationWriteCapability::derive(
+            [7_u8; 32],
+            b"http-store-test",
         );
+        let channel_id = capability.write_key().channel_id();
+        let url = format!("http://{address}{PUBLICATION_PATH_PREFIX}{channel_id}");
         let put = |generation: u64, body: &'static [u8]| {
+            let signature = capability.authorize(channel_id, generation, body);
             client
                 .put(&url)
                 .header("content-type", PUBLICATION_CONTENT_TYPE)
                 .header("x-kilogram-publication-generation", generation)
+                .header(WRITE_KEY_HEADER, capability.write_key().to_string())
+                .header(
+                    WRITE_SIGNATURE_HEADER,
+                    kilogram_ticket_publication::encode_signature(&signature),
+                )
                 .header("x-real-ip", "198.51.100.7")
                 .body(body)
         };
@@ -1304,6 +1323,55 @@ mod tests {
             Some("2")
         );
         assert_eq!(get.bytes().await?.as_ref(), b"opaque-two");
+        let attacker = kilogram_ticket_publication::TicketPublicationWriteCapability::derive(
+            [8_u8; 32],
+            b"http-store-test",
+        );
+        let attacker_body = b"arbitrary-high-generation";
+        let attacker_signature = attacker.authorize(channel_id, u64::MAX, attacker_body);
+        assert_eq!(
+            client
+                .put(&url)
+                .header("content-type", PUBLICATION_CONTENT_TYPE)
+                .header("x-kilogram-publication-generation", u64::MAX)
+                .header(WRITE_KEY_HEADER, attacker.write_key().to_string())
+                .header(
+                    WRITE_SIGNATURE_HEADER,
+                    kilogram_ticket_publication::encode_signature(&attacker_signature),
+                )
+                .header("x-real-ip", "198.51.100.7")
+                .body(attacker_body.as_slice())
+                .send()
+                .await?
+                .status(),
+            StatusCode::FORBIDDEN
+        );
+        let retained = client
+            .get(&url)
+            .header("x-real-ip", "198.51.100.7")
+            .send()
+            .await?;
+        assert_eq!(retained.status(), StatusCode::OK);
+        assert_eq!(
+            retained
+                .headers()
+                .get("x-kilogram-publication-generation")
+                .and_then(|value| value.to_str().ok()),
+            Some("2")
+        );
+        assert_eq!(retained.bytes().await?.as_ref(), b"opaque-two");
+        assert_eq!(
+            client
+                .put(&url)
+                .header("content-type", PUBLICATION_CONTENT_TYPE)
+                .header("x-kilogram-publication-generation", 3)
+                .header("x-real-ip", "198.51.100.7")
+                .body("unsigned")
+                .send()
+                .await?
+                .status(),
+            StatusCode::FORBIDDEN
+        );
         assert_eq!(
             client
                 .put(&url)

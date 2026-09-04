@@ -13,6 +13,7 @@ members = [
     "crates/kilogram-session",
     "crates/kilogram-state",
     "crates/kilogram-store",
+    "crates/kilogram-ticket-publication",
     "crates/kilogram-transport-iroh",
 ]
 resolver = "3"

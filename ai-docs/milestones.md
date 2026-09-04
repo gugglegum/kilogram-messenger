@@ -2719,11 +2719,44 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - contract зафиксирован в
   [`../docs/RFC-0054-authenticated-runtime-ticket-compaction.md`](../docs/RFC-0054-authenticated-runtime-ticket-compaction.md).
 
+### M0.9.33 — unlinkable self-authenticating ticket write capability: выполнено
+
+Реализовано:
+
+- новый narrow crate `kilogram-ticket-publication` является общей реализацией
+  per-peer capability KDF, Ed25519 write key, self-authenticating channel и
+  exact PUT authorization для клиента и opaque store;
+- capability seed выводится BLAKE3 `derive_key` из protected Device seed и
+  recipient Account ID, временные buffers zeroize-ятся, private key не
+  сохраняется и не передаётся;
+- connection ticket/signature domain подняты до v10 и подписывают public write
+  key; recipient выводит lookup только из своего уже проверенного contact ticket;
+- channel равен domain-separated BLAKE3 hash write key, поэтому другой key не
+  может захватить известный channel даже при первом PUT и после expiry;
+- PUT headers несут canonical key/signature, связанную с channel, generation,
+  body length и digest exact opaque HPKE envelope; invalid proof даёт 403 до
+  Redb generation transaction;
+- GET остаётся public-to-channel, а store не получает Account/Device ID,
+  conversation label или plaintext envelope; IP/timing/size correlation и
+  Sybil/global capacity остаются честно открытыми границами.
+
+Проверки:
+
+- новый crate проверяет restart stability, peer unlinkability, canonical wire
+  encoding и binding подписи к channel/generation/body;
+- real HTTP store отклоняет valid attacker key с `u64::MAX` на чужом channel и
+  сохраняет legitimate generation;
+- connection ticket v10 проверяет exact derived public key;
+- полный 199-test workspace regression, strict Clippy и release verification
+  зафиксированы в `development-environment.md`;
+- contract зафиксирован в
+  [`../docs/RFC-0055-unlinkable-ticket-write-capability.md`](../docs/RFC-0055-unlinkable-ticket-write-capability.md).
+
 ### Следующий этап
 
-1. M0.9.33: после наблюдаемого service contract спроектировать unlinkable write
-   capability/admission: M0.9.30 ограничивает ресурсы, но channel-aware writer
-   может вызвать availability failure.
+1. M0.9.34: authenticated endpoint candidate set для нескольких online devices
+   одного peer account и bounded deterministic failover без rollback
+   authority/prekey/publication high-water.
 2. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.

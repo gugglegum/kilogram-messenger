@@ -187,12 +187,13 @@ sessions, distribution, removal и key epochs и не решены этим пр
   outbox/recovery/event repositories; локальная `.rtc` цепочка сама по себе не
   является global freshness proof.
 - Репликация или erasure coding: сколько случайных узлов и какие гарантии нужны?
-- Как выдавать storage capability и ограничивать spam/Sybil без глобального
-  аккаунта и утечки социального графа? M0.9.30 применяет только per-IP/global/
-  capacity limits и unauthenticated monotonic generation: знающий channel может
-  записать высокий generation, а распределённый attacker — занять channel cap.
-  Нужен unlinkable write capability или иная admission модель без открытого
-  Account ID.
+- Как ограничивать spam/Sybil без глобального аккаунта и утечки социального
+  графа? M0.9.33 защищает существующий channel от постороннего высокого
+  generation через self-authenticating per-peer Ed25519 write capability без
+  открытого Account/Device ID. Но capability не мешает распределённому attacker
+  создавать собственные channels, занимать общий cap или устраивать volumetric
+  DDoS; proof-of-work, invitations/quota или другая admission модель остаётся
+  открытой.
 - M0.9.18 уже позволяет вручную добавить несколько recipient-bound plans,
   запускает по одной bounded attempt и честно показывает
   `incomplete`/`single-source`/`agreed`/`divergent`. Как desktop безопасно
