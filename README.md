@@ -102,7 +102,7 @@ The current two-network Windows procedure is in
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.18 desktop device-link and recovery wizard — complete
+## Current milestone: M0.9.19 Account Root authority recovery — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -349,6 +349,17 @@ signed scheduler progress. Reconciliation reports `incomplete`,
 `single-source`, `agreed`, or `divergent` while always preserving
 `global_completeness_proven=false`. No background service or Task Scheduler entry
 is installed.
+
+M0.9.19 enables phrase recovery without silently resetting Root authority to
+revision zero. A Root-signed portable package contains the current authority
+snapshot, complete device list, revocations and all current conversation
+membership heads. A separate Root-signed witness pins the exact package digest
+and revision. Restore accepts only an agreeing phrase/package/witness set and
+publishes a newly reconstructed Root directory atomically; it never overwrites
+an existing Root. An old package paired with the newest witness is rejected.
+The witness must be stored independently and kept current: rolling back both
+files together still requires a future monotonic service or current-device
+quorum to detect.
 
 M0.8.1 adds a reversible encrypted shadow snapshot of the entire device state.
 `state-vault-migrate` publishes encrypted records and a keyed manifest in one
@@ -749,8 +760,9 @@ runtime ticket. On a first run, expand **First run · create account**, choose a
 new non-existing workspace and run the sibling `kilogram-bootstrap` helper.
 Save the phrase offline before hiding it; the panel then fills the local public
 profile paths. A peer Account ID and current peer prekey pool are still required
-before that profile can be saved and the runtime started. Full authority-safe
-seed recovery remains a separate ceremony.
+before that profile can be saved and the runtime started. Account Root recovery
+is an explicit helper ceremony and remains separate from device enrollment and
+message-history recovery.
 
 Until the desktop wizard is added, link an existing account with the helper:
 
@@ -773,6 +785,34 @@ kilogram-bootstrap device-link-accept `
   --workspace-dir .\kilogram-linked-device `
   --response-file .\response.kdl
 ```
+
+Export and inspect an Account Root authority recovery checkpoint after account
+creation and after every authority or membership change:
+
+```powershell
+kilogram-bootstrap account-recovery-export `
+  --account-root-dir .\kilogram-account\account-root `
+  --package-file .\kilogram-root-20260904.karp `
+  --witness-file .\kilogram-root-latest.karw
+
+kilogram-bootstrap account-recovery-inspect `
+  --package-file .\kilogram-root-20260904.karp `
+  --witness-file .\kilogram-root-latest.karw
+
+$RecoveryPhrase = Read-Host 'Enter the 24 recovery words'
+$RecoveryPhrase | kilogram-bootstrap account-recovery-restore `
+  --account-root-dir .\kilogram-account-restored\account-root `
+  --package-file .\kilogram-root-20260904.karp `
+  --witness-file .\kilogram-root-latest.karw `
+  --recovery-phrase-stdin
+$RecoveryPhrase = $null
+```
+
+The package and the latest witness must be retained in independent places; a
+matching old pair cannot by itself prove global freshness. Neither file contains
+the phrase or a private key, but both expose account/device/membership metadata.
+The full contract is in
+[`docs/RFC-0046-account-root-authority-recovery.md`](docs/RFC-0046-account-root-authority-recovery.md).
 
 The queue command prints `runtime_ipc_request_id` before connecting. If its
 result is uncertain, repeat the same message with `--request-id <PRINTED_ID>`;

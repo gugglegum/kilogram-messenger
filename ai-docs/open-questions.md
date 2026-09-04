@@ -58,15 +58,19 @@ M0.9.17 добавил existing-account enrollment без seed transfer: нов�
 device list и шифрует authorization exact recipient. Это делает device
 допустимым получателем уже существующих resumable recovery plans, но не выбирает
 источники автоматически и не доказывает полноту восстановленной истории.
+M0.9.19 добавил portable Root-signed authority package и exact independently
+retained witness: phrase restore больше не обнуляет sequence/revocations/list/
+membership heads, а old package с latest witness отклоняется. Совместный rollback
+старого matching package+witness остаётся неразрешимым без внешнего monotonic
+источника или current-device quorum.
 Следующие вопросы относятся к production recovery, rotation, asynchronous
 sessions, distribution, removal и key epochs и не решены этим прототипом.
 
 - Какая точная модель угроз: массовое наблюдение, целевой атакующий, злонамеренные
   relay/storage peers, компрометация bootstrap-инфраструктуры, Sybil и eclipse?
-- M0.9.16 выбрал для новых аккаунтов прямое domain-separated получение Account
-  Root Key из 24-word BIP39 phrase. Как безопасно восстановить вместе с key
-  актуальные authority sequence/revocations/device-list, не допустив rollback
-  или fork существующего account?
+- Какой privacy-preserving monotonic witness/current-device quorum подтверждает,
+  что matching M0.9.19 package+witness действительно является глобально
+  последним, и как безопасно требовать его обновление после каждой Root mutation?
 - Какие операции может единолично подписать device key, а какие требуют seed,
   аппаратного ключа или кворума устройств?
 - Как разрешать конкурирующие операции восстановления и отзыва при утечке seed?

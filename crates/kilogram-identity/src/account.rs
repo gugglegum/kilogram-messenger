@@ -41,6 +41,19 @@ const ACCOUNT_DEVICE_LIST_VERSION: u8 = 1;
 const ACCOUNT_DEVICE_LIST_SIGNATURE_DOMAIN: &[u8] = b"kilogram:account-device-list-signature:v1\0";
 const DEVICE_LINK_AUTHORIZATION_SIGNATURE_DOMAIN: &[u8] =
     b"kilogram:device-link-authorization-signature:v1\0";
+const ACCOUNT_ROOT_RECOVERY_PACKAGE_MAGIC: &[u8; 16] = b"KILOGRAM-ARPKG01";
+const ACCOUNT_ROOT_RECOVERY_WITNESS_MAGIC: &[u8; 16] = b"KILOGRAM-ARWIT01";
+const ACCOUNT_ROOT_RECOVERY_VERSION: u8 = 1;
+const ACCOUNT_ROOT_RECOVERY_PACKAGE_SIGNATURE_DOMAIN: &[u8] =
+    b"kilogram:account-root-recovery-package-signature:v1\0";
+const ACCOUNT_ROOT_RECOVERY_WITNESS_SIGNATURE_DOMAIN: &[u8] =
+    b"kilogram:account-root-recovery-witness-signature:v1\0";
+const ACCOUNT_ROOT_RECOVERY_PACKAGE_ID_DOMAIN: &str =
+    "Kilogram Account Root recovery package ID v1";
+
+pub const MAX_ACCOUNT_ROOT_RECOVERY_PACKAGE_BYTES: usize = 32 * 1024 * 1024;
+pub const MAX_ACCOUNT_ROOT_RECOVERY_WITNESS_BYTES: usize = 4 * 1024;
+pub const MAX_ACCOUNT_ROOT_RECOVERY_MEMBERSHIPS: usize = 16 * 1024;
 
 pub const MAX_ACCOUNT_DEVICES: usize = 32;
 
@@ -235,6 +248,204 @@ impl fmt::Debug for AccountRecoveryPhrase {
     }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+struct AccountRootRecoveryPackageContent {
+    version: u8,
+    account_id: AccountId,
+    authority_snapshot: AccountAuthoritySnapshot,
+    device_list: AccountDeviceListSnapshot,
+    conversation_memberships: Vec<ConversationMembershipSnapshot>,
+}
+
+/// A Root-signed, portable checkpoint of every authority head required to
+/// continue device enrollment and conversation membership updates.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct AccountRootRecoveryPackage {
+    content: AccountRootRecoveryPackageContent,
+    signature: Vec<u8>,
+}
+
+impl AccountRootRecoveryPackage {
+    fn issue(
+        root: &AccountRootIdentity,
+        authority_snapshot: AccountAuthoritySnapshot,
+        device_list: AccountDeviceListSnapshot,
+        conversation_memberships: Vec<ConversationMembershipSnapshot>,
+    ) -> Result<Self, IdentityError> {
+        let content = AccountRootRecoveryPackageContent {
+            version: ACCOUNT_ROOT_RECOVERY_VERSION,
+            account_id: root.account_id(),
+            authority_snapshot,
+            device_list,
+            conversation_memberships,
+        };
+        validate_account_root_recovery_package_content(&content)?;
+        let signature = root
+            .sign(&account_root_recovery_package_signing_bytes(&content)?)
+            .to_vec();
+        Ok(Self { content, signature })
+    }
+
+    pub fn decode_and_verify(bytes: &[u8]) -> Result<Self, IdentityError> {
+        if bytes.len() > MAX_ACCOUNT_ROOT_RECOVERY_PACKAGE_BYTES {
+            return Err(IdentityError::AccountRootRecoveryPackageTooLarge(
+                bytes.len(),
+            ));
+        }
+        let payload = bytes
+            .strip_prefix(ACCOUNT_ROOT_RECOVERY_PACKAGE_MAGIC)
+            .ok_or(IdentityError::InvalidAccountRootRecoveryPackageMagic)?;
+        let package: Self = postcard::from_bytes(payload)?;
+        package.verify()?;
+        Ok(package)
+    }
+
+    pub fn encode(&self) -> Result<Vec<u8>, IdentityError> {
+        self.verify()?;
+        let payload = postcard::to_allocvec(self)?;
+        let total_len = ACCOUNT_ROOT_RECOVERY_PACKAGE_MAGIC.len() + payload.len();
+        if total_len > MAX_ACCOUNT_ROOT_RECOVERY_PACKAGE_BYTES {
+            return Err(IdentityError::AccountRootRecoveryPackageTooLarge(total_len));
+        }
+        let mut encoded = Vec::with_capacity(total_len);
+        encoded.extend_from_slice(ACCOUNT_ROOT_RECOVERY_PACKAGE_MAGIC);
+        encoded.extend_from_slice(&payload);
+        Ok(encoded)
+    }
+
+    pub fn verify(&self) -> Result<(), IdentityError> {
+        validate_account_root_recovery_package_content(&self.content)?;
+        self.content.account_id.verify(
+            &account_root_recovery_package_signing_bytes(&self.content)?,
+            &self.signature,
+        )
+    }
+
+    pub fn account_id(&self) -> AccountId {
+        self.content.account_id
+    }
+
+    pub fn authority_revision(&self) -> u64 {
+        self.content.authority_snapshot.revision()
+    }
+
+    pub fn device_count(&self) -> usize {
+        self.content.device_list.devices().len()
+    }
+
+    pub fn conversation_membership_count(&self) -> usize {
+        self.content.conversation_memberships.len()
+    }
+
+    pub fn package_id(&self) -> Result<[u8; 32], IdentityError> {
+        Ok(blake3::derive_key(
+            ACCOUNT_ROOT_RECOVERY_PACKAGE_ID_DOMAIN,
+            &self.encode()?,
+        ))
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+struct AccountRootRecoveryWitnessContent {
+    version: u8,
+    account_id: AccountId,
+    authority_revision: u64,
+    package_id: [u8; 32],
+}
+
+/// A small latest-known checkpoint which must be retained independently from
+/// the recovery package whose digest it pins.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct AccountRootRecoveryWitness {
+    content: AccountRootRecoveryWitnessContent,
+    signature: Vec<u8>,
+}
+
+impl AccountRootRecoveryWitness {
+    fn issue(
+        root: &AccountRootIdentity,
+        package: &AccountRootRecoveryPackage,
+    ) -> Result<Self, IdentityError> {
+        let content = AccountRootRecoveryWitnessContent {
+            version: ACCOUNT_ROOT_RECOVERY_VERSION,
+            account_id: package.account_id(),
+            authority_revision: package.authority_revision(),
+            package_id: package.package_id()?,
+        };
+        let signature = root
+            .sign(&account_root_recovery_witness_signing_bytes(&content)?)
+            .to_vec();
+        Ok(Self { content, signature })
+    }
+
+    pub fn decode_and_verify(bytes: &[u8]) -> Result<Self, IdentityError> {
+        if bytes.len() > MAX_ACCOUNT_ROOT_RECOVERY_WITNESS_BYTES {
+            return Err(IdentityError::AccountRootRecoveryWitnessTooLarge(
+                bytes.len(),
+            ));
+        }
+        let payload = bytes
+            .strip_prefix(ACCOUNT_ROOT_RECOVERY_WITNESS_MAGIC)
+            .ok_or(IdentityError::InvalidAccountRootRecoveryWitnessMagic)?;
+        let witness: Self = postcard::from_bytes(payload)?;
+        witness.verify()?;
+        Ok(witness)
+    }
+
+    pub fn encode(&self) -> Result<Vec<u8>, IdentityError> {
+        self.verify()?;
+        let payload = postcard::to_allocvec(self)?;
+        let total_len = ACCOUNT_ROOT_RECOVERY_WITNESS_MAGIC.len() + payload.len();
+        if total_len > MAX_ACCOUNT_ROOT_RECOVERY_WITNESS_BYTES {
+            return Err(IdentityError::AccountRootRecoveryWitnessTooLarge(total_len));
+        }
+        let mut encoded = Vec::with_capacity(total_len);
+        encoded.extend_from_slice(ACCOUNT_ROOT_RECOVERY_WITNESS_MAGIC);
+        encoded.extend_from_slice(&payload);
+        Ok(encoded)
+    }
+
+    pub fn verify(&self) -> Result<(), IdentityError> {
+        if self.content.version != ACCOUNT_ROOT_RECOVERY_VERSION {
+            return Err(IdentityError::UnsupportedAccountRootRecoveryVersion(
+                self.content.version,
+            ));
+        }
+        self.content.account_id.verify(
+            &account_root_recovery_witness_signing_bytes(&self.content)?,
+            &self.signature,
+        )
+    }
+
+    pub fn verify_package(
+        &self,
+        package: &AccountRootRecoveryPackage,
+    ) -> Result<(), IdentityError> {
+        self.verify()?;
+        package.verify()?;
+        let package_id = package.package_id()?;
+        if self.content.account_id != package.account_id()
+            || self.content.authority_revision != package.authority_revision()
+            || self.content.package_id != package_id
+        {
+            return Err(IdentityError::AccountRootRecoveryWitnessMismatch);
+        }
+        Ok(())
+    }
+
+    pub fn account_id(&self) -> AccountId {
+        self.content.account_id
+    }
+
+    pub fn authority_revision(&self) -> u64 {
+        self.content.authority_revision
+    }
+
+    pub fn package_id(&self) -> &[u8; 32] {
+        &self.content.package_id
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 enum AccountRootKeyProviderId {
     WindowsDpapiCurrentUser,
@@ -357,6 +568,116 @@ impl AccountRootState {
 
     pub fn key_load_outcome(&self) -> AccountRootKeyLoadOutcome {
         self.key_load_outcome
+    }
+
+    /// Captures one consistent, Root-signed recovery checkpoint. The returned
+    /// witness must be retained independently and kept at its latest version.
+    pub fn export_recovery(
+        &self,
+    ) -> Result<(AccountRootRecoveryPackage, AccountRootRecoveryWitness), IdentityError> {
+        self.ensure_authority_log_ready()?;
+        let _lock = self.acquire_authority_write_lock()?;
+        let authority_snapshot = self.authority_snapshot()?;
+        let device_list = self.published_device_list()?;
+        let conversation_memberships = self.root_conversation_memberships()?;
+        let package = AccountRootRecoveryPackage::issue(
+            &self.identity,
+            authority_snapshot,
+            device_list,
+            conversation_memberships,
+        )?;
+        let witness = AccountRootRecoveryWitness::issue(&self.identity, &package)?;
+        Ok((package, witness))
+    }
+
+    /// Reconstructs an Account Root only in a new path after the phrase,
+    /// package signatures and independently retained witness all agree.
+    pub fn recover(
+        directory: impl AsRef<Path>,
+        phrase: &AccountRecoveryPhrase,
+        package: &AccountRootRecoveryPackage,
+        witness: &AccountRootRecoveryWitness,
+    ) -> Result<Self, IdentityError> {
+        package.verify()?;
+        witness.verify_package(package)?;
+        let identity = account_root_identity_from_phrase(phrase)?;
+        if identity.account_id() != package.account_id() {
+            return Err(IdentityError::AccountRecoveryPhraseAccountMismatch {
+                expected: package.account_id(),
+                actual: identity.account_id(),
+            });
+        }
+
+        let requested = directory.as_ref();
+        if requested.as_os_str().is_empty() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Account Root recovery path is empty",
+            )
+            .into());
+        }
+        let lexical = if requested.is_absolute() {
+            requested.to_path_buf()
+        } else {
+            std::env::current_dir()?.join(requested)
+        };
+        if lexical.exists() {
+            return Err(IdentityError::AccountRootRecoveryTargetExists(lexical));
+        }
+        let name = lexical.file_name().ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Account Root recovery path has no final component",
+            )
+        })?;
+        let parent = lexical.parent().ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Account Root recovery path has no parent",
+            )
+        })?;
+        fs::create_dir_all(parent)?;
+        let parent = fs::canonicalize(parent)?;
+        let resolved = parent.join(name);
+        if resolved.exists() {
+            return Err(IdentityError::AccountRootRecoveryTargetExists(resolved));
+        }
+
+        let staging = tempfile::Builder::new()
+            .prefix(".kilogram-root-recovery-")
+            .tempdir_in(&parent)?;
+        let staged_root = Self::create_with_identity(staging.path(), identity)?;
+        write_new_file(
+            &staging.path().join(NEXT_AUTHORITY_SEQUENCE_FILE),
+            format!("{}\n", package.content.authority_snapshot.revision()).as_bytes(),
+        )?;
+        for revocation in package.content.authority_snapshot.revocations() {
+            write_new_file(
+                &staged_root.revocation_path(revocation.device_id()),
+                &revocation.encode()?,
+            )?;
+        }
+        write_new_file(
+            &staging.path().join(ACCOUNT_DEVICE_LIST_FILE),
+            &package.content.device_list.encode()?,
+        )?;
+        for membership in &package.content.conversation_memberships {
+            write_new_file(
+                &staged_root.conversation_membership_path(membership.conversation_id()),
+                &membership.encode()?,
+            )?;
+        }
+
+        if staged_root.authority_snapshot()? != package.content.authority_snapshot
+            || staged_root.published_device_list()? != package.content.device_list
+            || staged_root.root_conversation_memberships()?
+                != package.content.conversation_memberships
+        {
+            return Err(IdentityError::AccountRootRecoveryVerificationFailed);
+        }
+        drop(staged_root);
+        fs::rename(staging.path(), &resolved)?;
+        Self::load(resolved)
     }
 
     /// Signs one canonical device-link authorization payload with the Account
@@ -587,6 +908,7 @@ impl AccountRootState {
         members: &[AccountId],
     ) -> Result<ConversationMembershipSnapshot, IdentityError> {
         self.ensure_authority_log_ready()?;
+        let _lock = self.acquire_authority_write_lock()?;
         let path = self.conversation_membership_path(conversation_id);
         if path.exists() {
             return Err(IdentityError::ConversationMembershipAlreadyExists(
@@ -609,6 +931,7 @@ impl AccountRootState {
         additions: &[AccountId],
     ) -> Result<ConversationMembershipSnapshot, IdentityError> {
         self.ensure_authority_log_ready()?;
+        let _lock = self.acquire_authority_write_lock()?;
         let path = self.conversation_membership_path(conversation_id);
         let current = self.load_root_conversation_membership(conversation_id)?;
         current.verify_for_owner(self.account_id())?;
@@ -650,6 +973,29 @@ impl AccountRootState {
         let membership = ConversationMembershipSnapshot::decode_and_verify(&bytes)?;
         membership.verify_for_owner(self.account_id())?;
         Ok(membership)
+    }
+
+    fn root_conversation_memberships(
+        &self,
+    ) -> Result<Vec<ConversationMembershipSnapshot>, IdentityError> {
+        let mut memberships = Vec::new();
+        for entry in fs::read_dir(self.directory.join(CONVERSATION_MEMBERSHIPS_DIRECTORY))? {
+            let entry = entry?;
+            if !entry.file_type()?.is_file() {
+                continue;
+            }
+            let membership =
+                ConversationMembershipSnapshot::decode_and_verify(&fs::read(entry.path())?)?;
+            membership.verify_for_owner(self.account_id())?;
+            memberships.push(membership);
+            if memberships.len() > MAX_ACCOUNT_ROOT_RECOVERY_MEMBERSHIPS {
+                return Err(IdentityError::TooManyAccountRootRecoveryMemberships(
+                    memberships.len(),
+                ));
+            }
+        }
+        memberships.sort_by_key(|membership| *membership.conversation_id().as_bytes());
+        Ok(memberships)
     }
 
     fn allocate_authority_sequence(&self) -> Result<u64, IdentityError> {
@@ -727,6 +1073,64 @@ fn account_root_identity_from_phrase(
     let identity = AccountRootIdentity::from_secret_bytes(secret);
     secret.zeroize();
     Ok(identity)
+}
+
+fn validate_account_root_recovery_package_content(
+    content: &AccountRootRecoveryPackageContent,
+) -> Result<(), IdentityError> {
+    if content.version != ACCOUNT_ROOT_RECOVERY_VERSION {
+        return Err(IdentityError::UnsupportedAccountRootRecoveryVersion(
+            content.version,
+        ));
+    }
+    content
+        .authority_snapshot
+        .verify_for_account(content.account_id)?;
+    content.device_list.verify_for_account(content.account_id)?;
+    if content.device_list.revision() > content.authority_snapshot.revision() {
+        return Err(IdentityError::AccountRootRecoveryDeviceListAhead {
+            device_list_revision: content.device_list.revision(),
+            authority_revision: content.authority_snapshot.revision(),
+        });
+    }
+    if content.conversation_memberships.len() > MAX_ACCOUNT_ROOT_RECOVERY_MEMBERSHIPS {
+        return Err(IdentityError::TooManyAccountRootRecoveryMemberships(
+            content.conversation_memberships.len(),
+        ));
+    }
+    for membership in &content.conversation_memberships {
+        membership.verify_for_owner(content.account_id)?;
+    }
+    for pair in content.conversation_memberships.windows(2) {
+        match pair[0]
+            .conversation_id()
+            .as_bytes()
+            .cmp(pair[1].conversation_id().as_bytes())
+        {
+            std::cmp::Ordering::Less => {}
+            std::cmp::Ordering::Equal => {
+                return Err(IdentityError::DuplicateAccountRootRecoveryMembership(
+                    pair[0].conversation_id(),
+                ));
+            }
+            std::cmp::Ordering::Greater => {
+                return Err(IdentityError::NonCanonicalAccountRootRecoveryMemberships);
+            }
+        }
+    }
+    Ok(())
+}
+
+fn account_root_recovery_package_signing_bytes(
+    content: &AccountRootRecoveryPackageContent,
+) -> Result<Vec<u8>, IdentityError> {
+    authority_signing_bytes(ACCOUNT_ROOT_RECOVERY_PACKAGE_SIGNATURE_DOMAIN, content)
+}
+
+fn account_root_recovery_witness_signing_bytes(
+    content: &AccountRootRecoveryWitnessContent,
+) -> Result<Vec<u8>, IdentityError> {
+    authority_signing_bytes(ACCOUNT_ROOT_RECOVERY_WITNESS_SIGNATURE_DOMAIN, content)
 }
 
 fn migrate_legacy_account_root_key(

@@ -151,8 +151,14 @@ multi-source claim reconciliation. M0.7.9 добавил signed append-only chec
   крупным exact SAS, заполнением нового launch-profile draft и списком нескольких
   recipient-bound recovery plans. Одна bounded attempt показывает signed
   scheduler progress, а reconciliation выводит exact source counts и
-  `incomplete`/`single-source`/`agreed`/`divergent`; OS peer credentials остаются дальше.
-  Reconciliation выбирает
+  `incomplete`/`single-source`/`agreed`/`divergent`. M0.9.19 добавил Root-signed
+  portable authority package, который сохраняет exact sequence/revocations,
+  complete device list и все current membership heads. Отдельный Root-signed
+  witness фиксирует exact package digest/revision; phrase restore выполняется
+  только в новый staged Root и заново использует local platform key provider.
+  Old package + latest witness отклоняется, но matching rollback обоих файлов
+  всё ещё требует global monotonic witness/current-device quorum. OS peer
+  credentials остаются дальше. Reconciliation выбирает
   inventory только при совпадении двух или более полных явно собранных claims и
   всё равно не обещает global completeness.
 M0.8.1 добавил первый production-storage bridge: `state-vault-migrate` одной
@@ -313,24 +319,26 @@ global prekey discovery/witness, автоматический recovery source di
 
 ## План ближайших работ
 
-1. M0.9.19: добавить portable authenticated recovery package для Account Root
-   authority history и безопасный phrase restore без rollback/fork.
-2. Optional autostart/background mode оставить отдельной явной настройкой, а не
+1. M0.9.20: добавить desktop export/inspect/restore ceremony для реализованного
+   Root-signed authority package + independently retained exact witness.
+2. Спроектировать global/monotonic witness или current-device quorum: M0.9.19
+   отклоняет old package с latest witness, но не matching rollback обоих файлов.
+3. Optional autostart/background mode оставить отдельной явной настройкой, а не
    обязательным Task Scheduler этапом.
-3. Добавить production macOS/Linux local key provider, согласованный monotonic
+4. Добавить production macOS/Linux local key provider, согласованный monotonic
    witness и lifecycle обновления portable recovery package; затем mobile
    providers. Расширить M0.9.4 LAN discovery до privacy-preserving wide-area
    publication/gossip/mailbox. Live camera/clipboard оставить platform UI.
-4. Спроектировать membership removal вместе с ordered security log и MLS epoch;
+5. Спроектировать membership removal вместе с ordered security log и MLS epoch;
    отдельно — gossip/witness для first-contact freshness.
-5. Спроектировать полное seed/recovery authority с monotonic history/witness,
+6. Спроектировать полное seed/recovery authority с monotonic history/witness,
    root rotation и конфликтующие authority operations.
-6. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
-7. Спроектировать финальный wire format подписанного события и алгоритм
+7. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
+8. Спроектировать финальный wire format подписанного события и алгоритм
    линеаризации.
-7. Спроектировать compact Merkle/range summary и переносимый signed cursor.
-8. Добавить небольшие MLS-группы.
-9. Перед публичным выпуском провести независимый криптографический аудит.
+9. Спроектировать compact Merkle/range summary и переносимый signed cursor.
+10. Добавить небольшие MLS-группы.
+11. Перед публичным выпуском провести независимый криптографический аудит.
 
 ## Навигация
 

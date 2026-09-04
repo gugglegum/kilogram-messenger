@@ -1,8 +1,13 @@
-use std::{io::Write as _, path::PathBuf, str::FromStr as _};
+use std::{
+    io::{Read as _, Write as _},
+    path::PathBuf,
+    str::FromStr as _,
+};
 
 use anyhow::{Context as _, Result};
 use clap::{Parser, Subcommand};
-use kilogram_identity::AccountId;
+use kilogram_identity::{AccountId, AccountRecoveryPhrase};
+use zeroize::Zeroizing;
 
 #[derive(Debug, Parser)]
 #[command(name = "kilogram-bootstrap")]
@@ -51,6 +56,33 @@ enum Command {
         #[arg(long)]
         response_file: PathBuf,
     },
+    /// Export current Root authority history and a separately retained witness.
+    AccountRecoveryExport {
+        #[arg(long)]
+        account_root_dir: PathBuf,
+        #[arg(long)]
+        package_file: PathBuf,
+        #[arg(long)]
+        witness_file: PathBuf,
+    },
+    /// Authenticate and inspect a recovery package without reading the phrase.
+    AccountRecoveryInspect {
+        #[arg(long)]
+        package_file: PathBuf,
+        #[arg(long)]
+        witness_file: PathBuf,
+    },
+    /// Restore a Root into a new directory; reads the 24 words from standard input.
+    AccountRecoveryRestore {
+        #[arg(long)]
+        account_root_dir: PathBuf,
+        #[arg(long)]
+        package_file: PathBuf,
+        #[arg(long)]
+        witness_file: PathBuf,
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        recovery_phrase_stdin: bool,
+    },
 }
 
 fn main() -> Result<()> {
@@ -88,10 +120,62 @@ fn main() -> Result<()> {
             workspace_dir,
             response_file,
         )?)?,
+        Command::AccountRecoveryExport {
+            account_root_dir,
+            package_file,
+            witness_file,
+        } => serde_json::to_vec(&kilogram_bootstrap::account_recovery::export_account_root(
+            account_root_dir,
+            package_file,
+            witness_file,
+        )?)?,
+        Command::AccountRecoveryInspect {
+            package_file,
+            witness_file,
+        } => serde_json::to_vec(&kilogram_bootstrap::account_recovery::inspect_account_root(
+            package_file,
+            witness_file,
+        )?)?,
+        Command::AccountRecoveryRestore {
+            account_root_dir,
+            package_file,
+            witness_file,
+            recovery_phrase_stdin,
+        } => {
+            anyhow::ensure!(
+                recovery_phrase_stdin,
+                "Account Root recovery requires --recovery-phrase-stdin"
+            );
+            let phrase = read_recovery_phrase()?;
+            serde_json::to_vec(&kilogram_bootstrap::account_recovery::restore_account_root(
+                account_root_dir,
+                package_file,
+                witness_file,
+                &phrase,
+            )?)?
+        }
     };
     let mut stdout = std::io::stdout().lock();
     stdout.write_all(&output)?;
     stdout.write_all(b"\n")?;
     stdout.flush()?;
     Ok(())
+}
+
+fn read_recovery_phrase() -> Result<AccountRecoveryPhrase> {
+    const MAX_PHRASE_BYTES: usize = 4096;
+    let mut bytes = Zeroizing::new(Vec::new());
+    std::io::stdin()
+        .lock()
+        .take((MAX_PHRASE_BYTES + 1) as u64)
+        .read_to_end(&mut bytes)
+        .context("read recovery phrase from standard input")?;
+    anyhow::ensure!(
+        bytes.len() <= MAX_PHRASE_BYTES,
+        "recovery phrase input is too large"
+    );
+    let phrase = Zeroizing::new(
+        String::from_utf8(bytes.to_vec()).context("recovery phrase input is not UTF-8")?,
+    );
+    AccountRecoveryPhrase::parse(&phrase).context("parse Account Root recovery phrase")
 }

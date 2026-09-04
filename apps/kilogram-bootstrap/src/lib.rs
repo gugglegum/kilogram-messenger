@@ -15,6 +15,7 @@ use serde::Serialize;
 use tempfile::NamedTempFile;
 use zeroize::Zeroize;
 
+pub mod account_recovery;
 pub mod device_link;
 
 const RECEIPT_VERSION: u8 = 1;

@@ -2219,16 +2219,51 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
   revision 2, `incomplete`,
   `global_completeness_proven=false`.
 
+### M0.9.19 — portable Account Root authority recovery: выполнено
+
+Реализовано:
+
+- Root-signed bounded package содержит current complete authority snapshot,
+  latest complete device list и canonical current conversation-membership heads;
+- отдельный Root-signed witness связывает Account ID, authority revision и
+  domain-separated digest exact package;
+- export сериализован тем же OS authority lock, что enrollment/revocation и
+  теперь membership mutations; artifacts публикуются no-clobber вне Root;
+- offline inspect проверяет nested/outer signatures и exact witness binding без
+  seed; bounded direct symlinks отклоняются;
+- phrase принимается helper только через stdin, восстанавливает Root только в
+  новый same-parent-staged path и на Windows создаёт новый DPAPI CurrentUser
+  envelope;
+- перед final rename восстановленные sequence/revocations/device-list/
+  memberships повторно строят byte-exact authority views;
+- wrong phrase, tampering, stale package + latest witness, existing target и
+  output внутри Root fail closed;
+- matching rollback package+witness остаётся честно обозначенной границей без
+  global monotonic witness/current-device quorum;
+- полный контракт —
+  [`../docs/RFC-0046-account-root-authority-recovery.md`](../docs/RFC-0046-account-root-authority-recovery.md).
+
+Проверки:
+
+- unit round-trip сохраняет Account ID, authority/list/membership state и после
+  restore выдаёт следующему device более новую revision;
+- formatting, strict workspace Clippy, все 159 serial workspace tests и release
+  workspace build проходят;
+- release process smoke `.tmp/m0919-release-smoke-20260904-112123` прошёл create
+  → export → inspect → stdin phrase restore с DPAPI CurrentUser provider.
+
 ### Следующий этап
 
-1. M0.9.19: спроектировать и реализовать portable authenticated recovery
-   package для Account Root authority history, чтобы phrase restore не создавал
-   rollback/fork и мог безопасно перейти к enrollment нового device.
-2. Optional autostart/background mode оставить отдельной явной настройкой, не
+1. M0.9.20: добавить desktop ceremony для export/inspect/phrase restore,
+   раздельного хранения latest witness и явного перехода к device-link/history
+   recovery без передачи seed в command line.
+2. Спроектировать согласованный monotonic witness/current-device quorum и
+   lifecycle обязательного обновления recovery package после authority changes.
+3. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
-3. Добавить macOS/Linux/mobile providers той же platform boundary.
-4. Спроектировать privacy-preserving wide-area publication/gossip/mailbox и
+4. Добавить macOS/Linux/mobile providers той же platform boundary.
+5. Спроектировать privacy-preserving wide-area publication/gossip/mailbox и
    first-contact freshness; M0.9.4 закрывает только явный LAN opt-in.
-5. Membership removal и group governance проектировать вместе с ordered
+6. Membership removal и group governance проектировать вместе с ordered
    security events и MLS epoch; compact Merkle/range summary и независимый
    криптографический аудит остаются до публичного выпуска.

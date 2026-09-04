@@ -781,3 +781,28 @@ retirement остальных compatibility shadows ещё не реализов
   `504289DC42A48C558DF9AA75F8758A645C06F965D9D565F6B8EC7EE5D572180C`;
   `target/release/kilogram-cli.exe` — 22,547,968 bytes, SHA-256
   `99EFB35534BA4C0439564CAFA7C2DD342B9E4A5ACC275CFC0A4A1437F3B99A2D`.
+
+## M0.9.19 verification snapshot (2026-09-04)
+
+- `kilogram-identity` добавил Root-signed portable authority package и отдельный
+  exact-package witness; package охватывает current authority/revocations,
+  complete device list и canonical current conversation-membership heads.
+- `kilogram-bootstrap` добавил `account-recovery-export`,
+  `account-recovery-inspect` и stdin-only `account-recovery-restore`; restore
+  использует same-parent staging, new target и новый local provider envelope.
+- Targeted regression проверил exact round-trip, продолжение monotonic enrollment,
+  wrong phrase, tamper, stale package + latest witness, existing target и unsafe
+  output path.
+- `cargo fmt --all -- --check`, strict
+  `cargo clippy --workspace --all-targets --all-features -- -D warnings`, все
+  159 workspace tests (`--test-threads=1`) и
+  `cargo build --release --workspace` проходят.
+- Release process smoke `.tmp/m0919-release-smoke-20260904-112123` прошёл create
+  → export → inspect → stdin phrase restore: authority revision 1, package 548
+  bytes, witness 147 bytes, recovered provider `windows-dpapi-current-user`.
+- Windows artifacts: `target/release/kilogram-bootstrap.exe` — 3,761,664 bytes,
+  SHA-256 `E30E74A526F52888A361DA53C0096BB18C9FBED4BE27AE9F6F3C3A51FA8DCCD0`;
+  `target/release/kilogram-windows.exe` — 7,110,656 bytes, SHA-256
+  `269FF629D275393AC3D8000CCA7539C5B07F030D8D6C23C1082618D0F0EC2166`;
+  `target/release/kilogram-cli.exe` — 22,564,864 bytes, SHA-256
+  `D1D7D8A56AFD0CFC839D3E32A3A7D198A03BEA7716D00D67D5BABEA469519DF2`.

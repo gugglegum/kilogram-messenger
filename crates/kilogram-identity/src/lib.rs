@@ -17,10 +17,12 @@ mod account;
 
 pub use account::{
     AccountAuthoritySnapshot, AccountDeviceListSnapshot, AccountId, AccountRecoveryPhrase,
-    AccountRootKeyLoadOutcome, AccountRootKeyProtection, AccountRootState,
-    AuthoritySnapshotStoreOutcome, AuthorizedDevice, ConversationMembershipSnapshot,
-    ConversationMembershipStoreOutcome, ConversationScopeId, DeviceCapability, DeviceCertificate,
-    DeviceRevocation, MAX_ACCOUNT_DEVICES, verify_device_authorization,
+    AccountRootKeyLoadOutcome, AccountRootKeyProtection, AccountRootRecoveryPackage,
+    AccountRootRecoveryWitness, AccountRootState, AuthoritySnapshotStoreOutcome, AuthorizedDevice,
+    ConversationMembershipSnapshot, ConversationMembershipStoreOutcome, ConversationScopeId,
+    DeviceCapability, DeviceCertificate, DeviceRevocation, MAX_ACCOUNT_DEVICES,
+    MAX_ACCOUNT_ROOT_RECOVERY_MEMBERSHIPS, MAX_ACCOUNT_ROOT_RECOVERY_PACKAGE_BYTES,
+    MAX_ACCOUNT_ROOT_RECOVERY_WITNESS_BYTES, verify_device_authorization,
     verify_device_authorization_with_snapshot,
 };
 pub use kilogram_crypto::{DeviceEncryptionIdentity, EncryptionPublicKey};
@@ -316,6 +318,53 @@ pub enum IdentityError {
 
     #[error("account recovery phrase has {0} words; expected 24")]
     InvalidAccountRecoveryWordCount(usize),
+
+    #[error("account recovery phrase resolves to account {actual}; package belongs to {expected}")]
+    AccountRecoveryPhraseAccountMismatch {
+        expected: AccountId,
+        actual: AccountId,
+    },
+
+    #[error("Account Root recovery target already exists at {0}")]
+    AccountRootRecoveryTargetExists(PathBuf),
+
+    #[error("Account Root recovery package has invalid magic")]
+    InvalidAccountRootRecoveryPackageMagic,
+
+    #[error("Account Root recovery witness has invalid magic")]
+    InvalidAccountRootRecoveryWitnessMagic,
+
+    #[error("unsupported Account Root recovery version {0}")]
+    UnsupportedAccountRootRecoveryVersion(u8),
+
+    #[error("Account Root recovery package has {0} bytes; maximum is 32 MiB")]
+    AccountRootRecoveryPackageTooLarge(usize),
+
+    #[error("Account Root recovery witness has {0} bytes; maximum is 4 KiB")]
+    AccountRootRecoveryWitnessTooLarge(usize),
+
+    #[error("Account Root recovery witness does not match the exact recovery package")]
+    AccountRootRecoveryWitnessMismatch,
+
+    #[error(
+        "Account Root recovery device list revision {device_list_revision} is ahead of authority revision {authority_revision}"
+    )]
+    AccountRootRecoveryDeviceListAhead {
+        device_list_revision: u64,
+        authority_revision: u64,
+    },
+
+    #[error("Account Root recovery package has {0} conversation memberships; maximum is 16384")]
+    TooManyAccountRootRecoveryMemberships(usize),
+
+    #[error("Account Root recovery package repeats conversation membership {0}")]
+    DuplicateAccountRootRecoveryMembership(ConversationScopeId),
+
+    #[error("Account Root recovery memberships are not in canonical conversation-ID order")]
+    NonCanonicalAccountRootRecoveryMemberships,
+
+    #[error("reconstructed Account Root authority state does not match its recovery package")]
+    AccountRootRecoveryVerificationFailed,
 
     #[error("invalid Account Root key envelope at {path}: {detail}")]
     InvalidAccountRootKeyEnvelope { path: PathBuf, detail: String },
