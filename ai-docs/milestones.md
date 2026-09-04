@@ -2184,11 +2184,46 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - полный контракт —
   [`../docs/RFC-0044-existing-account-device-link.md`](../docs/RFC-0044-existing-account-device-link.md).
 
+### M0.9.18 — desktop device-link и multi-source recovery wizard: выполнено
+
+Реализовано:
+
+- desktop проводит четыре явных device-link шага через sibling bootstrap helper:
+  create request, inspect, SAS-gated authorize и exact-workspace accept;
+- request/response поддерживают явно вооружаемый drag-and-drop target, SAS
+  показан крупно, а authorize требует тот же canonical request path, который был
+  inspected;
+- bounded strict JSON adapter проверяет IDs/status/SAS/absolute paths, exact
+  requested outputs, authority revision и recipient-encrypted response;
+- после accept secret-free launch-profile draft получает новые state/device-list/
+  ticket/IPC paths, а прежние peer Account ID/prekey paths очищаются;
+- recovery UI утверждает новый recipient-signed plan с network/power consent,
+  добавляет несколько существующих plans, запускает одну bounded attempt и
+  подписывает irreversible cancellation только после отдельного confirmation;
+- structured terminal result сохраняется и при policy-blocked nonzero exit;
+  строки показывают status/lifecycle/attempts/complete;
+- reconciliation показывает source/complete/covered/equivocation counts и exact
+  `incomplete`/`single-source`/`agreed`/`divergent`, всегда отдельно отображая
+  `global_completeness_proven=false`;
+- runtime должен быть stopped/disconnected; Task Scheduler/background service не
+  регистрируется;
+- полный контракт —
+  [`../docs/RFC-0045-desktop-device-link-and-recovery-wizard.md`](../docs/RFC-0045-desktop-device-link-and-recovery-wizard.md).
+
+Проверки:
+
+- targeted GUI adapter/parser tests, rustfmt, strict workspace Clippy, все 157
+  workspace tests в serial regression и release workspace build;
+- release process smoke выполнил create → request → inspect → authorize → accept
+  и empty reconciliation (`.tmp/m0918-smoke-20260904-102552`): authority
+  revision 2, `incomplete`,
+  `global_completeness_proven=false`.
+
 ### Следующий этап
 
-1. M0.9.18: добавить desktop device-link/recovery wizard — request/response
-   drag-and-drop, крупный SAS confirmation, launch-profile update после accept и
-   multi-source plan/progress/reconciliation UI.
+1. M0.9.19: спроектировать и реализовать portable authenticated recovery
+   package для Account Root authority history, чтобы phrase restore не создавал
+   rollback/fork и мог безопасно перейти к enrollment нового device.
 2. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.

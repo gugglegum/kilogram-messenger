@@ -751,3 +751,33 @@ retirement остальных compatibility shadows ещё не реализов
   `A5A4667349F4567AD9356EADA398DF2229A8832CE4BCA930AE0B7748DBEE8F32`;
   `target/release/kilogram-cli.exe` — 22,547,968 bytes, SHA-256
   `99EFB35534BA4C0439564CAFA7C2DD342B9E4A5ACC275CFC0A4A1437F3B99A2D`.
+
+## M0.9.18 verification snapshot (2026-09-04)
+
+- `kilogram-windows` добавил four-step existing-account device-link wizard:
+  explicit request/response drop targets, large SAS, exact inspected-path gate,
+  bounded strict helper JSON и accepted launch-profile draft cleanup.
+- Multi-source recovery UI утверждает и добавляет independent signed plans,
+  выполняет одну bounded attempt, показывает scheduler status/lifecycle/attempts/
+  completion, а irreversible cancel требует отдельный confirmation и создаёт
+  signed terminal transition.
+- Reconciliation показывает observed/complete sources, covered events,
+  equivocation и exact `incomplete`/`single-source`/`agreed`/`divergent`, не
+  скрывая `global_completeness_proven=false`.
+- Release process smoke `.tmp/m0918-smoke-20260904-102552` прошёл create →
+  request → inspect → authorize → accept и empty reconcile: request fresh,
+  authority revision 2, `incomplete`, `global_completeness_proven=false`.
+- Первый полный workspace test run поймал flaky valid-handshake timeout после
+  deliberate invalid clients; второй — отдельный 30-second Iroh handshake
+  timeout. Оба exact rerun прошли; окончательный serial workspace regression
+  исключил конкуренцию transport tests и прошёл целиком: 157 tests.
+- `cargo fmt --all -- --check`, strict workspace all-target/all-feature Clippy,
+  все 157 workspace tests (`--test-threads=1`) и
+  `cargo build --release --workspace` проходят.
+- Windows artifacts: `target/release/kilogram-bootstrap.exe` — 3,606,528 bytes,
+  SHA-256
+  `CFFBFF50FA707B37966507AE88128BB5C75C78733DB24F2ACCF7E1A55C607B08`;
+  `target/release/kilogram-windows.exe` — 7,102,464 bytes, SHA-256
+  `504289DC42A48C558DF9AA75F8758A645C06F965D9D565F6B8EC7EE5D572180C`;
+  `target/release/kilogram-cli.exe` — 22,547,968 bytes, SHA-256
+  `99EFB35534BA4C0439564CAFA7C2DD342B9E4A5ACC275CFC0A4A1437F3B99A2D`.

@@ -162,9 +162,11 @@ sessions, distribution, removal и key epochs и не решены этим пр
 - Репликация или erasure coding: сколько случайных узлов и какие гарантии нужны?
 - Как выдавать storage capability и ограничивать spam/Sybil без глобального
   аккаунта и утечки социального графа?
-- Как desktop автоматически находит и планирует несколько recovery sources для
-  нового устройства, ограничивает параллелизм/трафик и честно показывает
-  `incomplete`/`agreed`/`divergent` без обещания глобальной полноты?
+- M0.9.18 уже позволяет вручную добавить несколько recipient-bound plans,
+  запускает по одной bounded attempt и честно показывает
+  `incomplete`/`single-source`/`agreed`/`divergent`. Как desktop безопасно
+  автоматизирует wide-area поиск sources и persistent supervision, не сливая
+  разные consent scopes и не создавая скрытый background service?
 - Как обрабатывать редактирование, удаление, reactions, receipts и исчезающие
   сообщения в append-only модели?
 - Что означает удаление: локальное сокрытие, подписанный tombstone или best-effort

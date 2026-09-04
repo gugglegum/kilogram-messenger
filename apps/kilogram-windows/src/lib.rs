@@ -21,6 +21,14 @@ use kilogram_runtime_ipc::{
 };
 use zeroize::Zeroizing;
 
+mod wizard;
+
+use wizard::{
+    DeviceLinkAcceptOutput, DeviceLinkAuthorizeOutput, DeviceLinkInspectOutput,
+    DeviceLinkRequestOutput, RecoveryCommandOutput, command_arguments, run_json,
+    run_recovery_command,
+};
+
 const CHANGE_WAIT_MILLISECONDS: u32 = 20_000;
 const CHANGE_RETRY_INTERVAL: Duration = Duration::from_millis(500);
 const MAX_CONVERSATION_BYTES: usize = 4_096;
@@ -169,6 +177,14 @@ impl ConnectionState {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Operation {
     Bootstrap,
+    DeviceLinkRequest,
+    DeviceLinkInspect,
+    DeviceLinkAuthorize,
+    DeviceLinkAccept,
+    RecoveryApprove,
+    RecoveryRun,
+    RecoveryCancel,
+    RecoveryReconcile,
     Connect,
     AddContact,
     Queue,
@@ -194,6 +210,148 @@ enum BootstrapUiAction {
     None,
     Create,
     DismissPhrase,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum DeviceLinkUiAction {
+    None,
+    Request,
+    Inspect,
+    Authorize,
+    Accept,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum RecoveryUiAction {
+    None,
+    Approve,
+    AddExisting,
+    RunSelected,
+    CancelSelected,
+    Reconcile,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum DropTarget {
+    DeviceLinkRequest,
+    DeviceLinkResponse,
+    RecoveryLink,
+    RecoveryPlan,
+}
+
+#[derive(Debug)]
+struct DeviceLinkView {
+    joining_workspace: String,
+    account_id: String,
+    request: Option<DeviceLinkRequestOutput>,
+    owner_request_file: String,
+    inspected_request_file: Option<PathBuf>,
+    inspected: Option<DeviceLinkInspectOutput>,
+    account_root_dir: String,
+    confirmed_sas: String,
+    response_output_file: String,
+    device_list_output_file: String,
+    authorization: Option<DeviceLinkAuthorizeOutput>,
+    response_input_file: String,
+    accepted: Option<DeviceLinkAcceptOutput>,
+}
+
+impl Default for DeviceLinkView {
+    fn default() -> Self {
+        Self {
+            joining_workspace: "kilogram-linked-device".to_owned(),
+            account_id: String::new(),
+            request: None,
+            owner_request_file: String::new(),
+            inspected_request_file: None,
+            inspected: None,
+            account_root_dir: "kilogram-account/account-root".to_owned(),
+            confirmed_sas: String::new(),
+            response_output_file: "device-link-response.bin".to_owned(),
+            device_list_output_file: "account-device-list.snapshot".to_owned(),
+            authorization: None,
+            response_input_file: String::new(),
+            accepted: None,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct RecoveryPlanView {
+    path: PathBuf,
+    status: String,
+    lifecycle: String,
+    attempts: String,
+    complete: String,
+}
+
+impl RecoveryPlanView {
+    fn new(path: PathBuf) -> Self {
+        Self {
+            path,
+            status: "not run".to_owned(),
+            lifecycle: "unknown".to_owned(),
+            attempts: "0".to_owned(),
+            complete: "unknown".to_owned(),
+        }
+    }
+
+    fn update(&mut self, output: &RecoveryCommandOutput) {
+        self.status = output.status().to_owned();
+        self.lifecycle = output
+            .field("history_recovery_scheduler_lifecycle")
+            .unwrap_or("unknown")
+            .to_owned();
+        self.attempts = output
+            .field("history_recovery_scheduler_total_attempts")
+            .unwrap_or("0")
+            .to_owned();
+        self.complete = output
+            .field("history_recovery_complete")
+            .unwrap_or("unknown")
+            .to_owned();
+    }
+}
+
+#[derive(Debug)]
+struct RecoveryView {
+    state_dir: String,
+    conversation: String,
+    link_file: String,
+    confirmed_sas: String,
+    plan_output_file: String,
+    allow_ethernet: bool,
+    allow_wifi: bool,
+    allow_mobile: bool,
+    allow_unknown_network: bool,
+    require_external_power: bool,
+    existing_plan_file: String,
+    plans: Vec<RecoveryPlanView>,
+    selected: Option<usize>,
+    confirm_cancel: bool,
+    reconciliation: Option<RecoveryCommandOutput>,
+}
+
+impl Default for RecoveryView {
+    fn default() -> Self {
+        Self {
+            state_dir: String::new(),
+            conversation: String::new(),
+            link_file: String::new(),
+            confirmed_sas: String::new(),
+            plan_output_file: "history-recovery-plan.bin".to_owned(),
+            allow_ethernet: true,
+            allow_wifi: true,
+            allow_mobile: false,
+            allow_unknown_network: false,
+            require_external_power: false,
+            existing_plan_file: String::new(),
+            plans: Vec::new(),
+            selected: None,
+            confirm_cancel: false,
+            reconciliation: None,
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -670,8 +828,18 @@ impl ViewModel {
                 self.notice = Some("Runtime stopped cleanly".to_owned());
                 self.error = None;
             }
-            Ok(WorkerSuccess::Bootstrapped(_)) => {
-                self.error = Some("Bootstrap result reached the runtime view model".to_owned());
+            Ok(
+                WorkerSuccess::Bootstrapped(_)
+                | WorkerSuccess::DeviceLinkRequested(_)
+                | WorkerSuccess::DeviceLinkInspected { .. }
+                | WorkerSuccess::DeviceLinkAuthorized(_)
+                | WorkerSuccess::DeviceLinkAccepted(_)
+                | WorkerSuccess::RecoveryApproved { .. }
+                | WorkerSuccess::RecoveryRan { .. }
+                | WorkerSuccess::RecoveryCancelled { .. }
+                | WorkerSuccess::RecoveryReconciled(_),
+            ) => {
+                self.error = Some("Wizard result reached the runtime view model".to_owned());
             }
             Err(message) => self.fail(response.operation, message),
         }
@@ -683,6 +851,58 @@ enum WorkerRequest {
     Bootstrap {
         executable: PathBuf,
         workspace: PathBuf,
+    },
+    DeviceLinkRequest {
+        executable: PathBuf,
+        workspace: PathBuf,
+        account_id: AccountId,
+    },
+    DeviceLinkInspect {
+        executable: PathBuf,
+        request_file: PathBuf,
+    },
+    DeviceLinkAuthorize {
+        executable: PathBuf,
+        account_root_dir: PathBuf,
+        request_file: PathBuf,
+        confirmed_sas: String,
+        response_file: PathBuf,
+        device_list_file: PathBuf,
+    },
+    DeviceLinkAccept {
+        executable: PathBuf,
+        workspace: PathBuf,
+        response_file: PathBuf,
+    },
+    RecoveryApprove {
+        executable: PathBuf,
+        state_dir: PathBuf,
+        link_file: PathBuf,
+        conversation: String,
+        confirmed_sas: String,
+        plan_file: PathBuf,
+        deny_ethernet: bool,
+        deny_wifi: bool,
+        allow_mobile: bool,
+        allow_unknown_network: bool,
+        require_external_power: bool,
+    },
+    RecoveryRun {
+        executable: PathBuf,
+        state_dir: PathBuf,
+        plan_file: PathBuf,
+        conversation: String,
+    },
+    RecoveryCancel {
+        executable: PathBuf,
+        state_dir: PathBuf,
+        plan_file: PathBuf,
+        conversation: String,
+    },
+    RecoveryReconcile {
+        executable: PathBuf,
+        state_dir: PathBuf,
+        conversation: String,
     },
     Connect {
         descriptor: PathBuf,
@@ -717,6 +937,14 @@ impl WorkerRequest {
     fn operation(&self) -> Operation {
         match self {
             Self::Bootstrap { .. } => Operation::Bootstrap,
+            Self::DeviceLinkRequest { .. } => Operation::DeviceLinkRequest,
+            Self::DeviceLinkInspect { .. } => Operation::DeviceLinkInspect,
+            Self::DeviceLinkAuthorize { .. } => Operation::DeviceLinkAuthorize,
+            Self::DeviceLinkAccept { .. } => Operation::DeviceLinkAccept,
+            Self::RecoveryApprove { .. } => Operation::RecoveryApprove,
+            Self::RecoveryRun { .. } => Operation::RecoveryRun,
+            Self::RecoveryCancel { .. } => Operation::RecoveryCancel,
+            Self::RecoveryReconcile { .. } => Operation::RecoveryReconcile,
             Self::Connect { .. } => Operation::Connect,
             Self::AddContact { .. } => Operation::AddContact,
             Self::Queue { .. } => Operation::Queue,
@@ -732,6 +960,26 @@ impl WorkerRequest {
 #[derive(Debug)]
 enum WorkerSuccess {
     Bootstrapped(Box<DesktopBootstrapOutput>),
+    DeviceLinkRequested(Box<DeviceLinkRequestOutput>),
+    DeviceLinkInspected {
+        request_file: PathBuf,
+        output: Box<DeviceLinkInspectOutput>,
+    },
+    DeviceLinkAuthorized(Box<DeviceLinkAuthorizeOutput>),
+    DeviceLinkAccepted(Box<DeviceLinkAcceptOutput>),
+    RecoveryApproved {
+        plan_file: PathBuf,
+        output: RecoveryCommandOutput,
+    },
+    RecoveryRan {
+        plan_file: PathBuf,
+        output: RecoveryCommandOutput,
+    },
+    RecoveryCancelled {
+        plan_file: PathBuf,
+        output: RecoveryCommandOutput,
+    },
+    RecoveryReconciled(RecoveryCommandOutput),
     Connected {
         account_id: String,
         device_id: String,
@@ -979,6 +1227,164 @@ async fn execute_request(request: WorkerRequest) -> Result<WorkerSuccess> {
         } => run_bootstrap_process(&executable, &workspace)
             .map(Box::new)
             .map(WorkerSuccess::Bootstrapped),
+        WorkerRequest::DeviceLinkRequest {
+            executable,
+            workspace,
+            account_id,
+        } => {
+            let account_text = account_id.to_string();
+            let output: DeviceLinkRequestOutput = run_json(
+                &executable,
+                "device-link-request",
+                command_arguments([
+                    ("--workspace-dir", workspace.as_os_str()),
+                    ("--account-id", std::ffi::OsStr::new(&account_text)),
+                ]),
+            )?;
+            ensure!(
+                output.workspace_dir == workspace && output.account_id == account_text,
+                "device-link helper returned a different request target"
+            );
+            Ok(WorkerSuccess::DeviceLinkRequested(Box::new(output)))
+        }
+        WorkerRequest::DeviceLinkInspect {
+            executable,
+            request_file,
+        } => {
+            let output = run_json(
+                &executable,
+                "device-link-inspect",
+                command_arguments([("--request-file", request_file.as_os_str())]),
+            )?;
+            Ok(WorkerSuccess::DeviceLinkInspected {
+                request_file,
+                output: Box::new(output),
+            })
+        }
+        WorkerRequest::DeviceLinkAuthorize {
+            executable,
+            account_root_dir,
+            request_file,
+            confirmed_sas,
+            response_file,
+            device_list_file,
+        } => {
+            let output: DeviceLinkAuthorizeOutput = run_json(
+                &executable,
+                "device-link-authorize",
+                command_arguments([
+                    ("--account-root-dir", account_root_dir.as_os_str()),
+                    ("--request-file", request_file.as_os_str()),
+                    ("--confirm-sas", std::ffi::OsStr::new(&confirmed_sas)),
+                    ("--response-file", response_file.as_os_str()),
+                    ("--device-list-file", device_list_file.as_os_str()),
+                ]),
+            )?;
+            ensure!(
+                output.response_file == response_file
+                    && output.device_list_file == device_list_file,
+                "device-link helper returned different authorization output paths"
+            );
+            Ok(WorkerSuccess::DeviceLinkAuthorized(Box::new(output)))
+        }
+        WorkerRequest::DeviceLinkAccept {
+            executable,
+            workspace,
+            response_file,
+        } => {
+            let output: DeviceLinkAcceptOutput = run_json(
+                &executable,
+                "device-link-accept",
+                command_arguments([
+                    ("--workspace-dir", workspace.as_os_str()),
+                    ("--response-file", response_file.as_os_str()),
+                ]),
+            )?;
+            ensure!(
+                output.workspace_dir == workspace,
+                "device-link helper returned a different accepted workspace"
+            );
+            Ok(WorkerSuccess::DeviceLinkAccepted(Box::new(output)))
+        }
+        WorkerRequest::RecoveryApprove {
+            executable,
+            state_dir,
+            link_file,
+            conversation,
+            confirmed_sas,
+            plan_file,
+            deny_ethernet,
+            deny_wifi,
+            allow_mobile,
+            allow_unknown_network,
+            require_external_power,
+        } => {
+            let mut arguments = command_arguments([
+                ("--state-dir", state_dir.as_os_str()),
+                ("--link-file", link_file.as_os_str()),
+                ("--conversation", std::ffi::OsStr::new(&conversation)),
+                ("--confirm-sas", std::ffi::OsStr::new(&confirmed_sas)),
+                ("--plan-file", plan_file.as_os_str()),
+            ]);
+            for (enabled, name) in [
+                (deny_ethernet, "--deny-ethernet"),
+                (deny_wifi, "--deny-wifi"),
+                (allow_mobile, "--allow-mobile"),
+                (allow_unknown_network, "--allow-unknown-network"),
+                (require_external_power, "--require-external-power"),
+            ] {
+                if enabled {
+                    arguments.push(name.into());
+                }
+            }
+            run_recovery_command(&executable, "history-recovery-plan-approve", arguments)
+                .map(|output| WorkerSuccess::RecoveryApproved { plan_file, output })
+        }
+        WorkerRequest::RecoveryRun {
+            executable,
+            state_dir,
+            plan_file,
+            conversation,
+        } => run_recovery_command(
+            &executable,
+            "history-recovery-plan-run",
+            command_arguments([
+                ("--state-dir", state_dir.as_os_str()),
+                ("--plan-file", plan_file.as_os_str()),
+                ("--conversation", std::ffi::OsStr::new(&conversation)),
+                ("--max-attempts", std::ffi::OsStr::new("1")),
+                ("--discovery-wait-seconds", std::ffi::OsStr::new("5")),
+            ]),
+        )
+        .map(|output| WorkerSuccess::RecoveryRan { plan_file, output }),
+        WorkerRequest::RecoveryCancel {
+            executable,
+            state_dir,
+            plan_file,
+            conversation,
+        } => run_recovery_command(
+            &executable,
+            "history-recovery-plan-cancel",
+            command_arguments([
+                ("--state-dir", state_dir.as_os_str()),
+                ("--plan-file", plan_file.as_os_str()),
+                ("--conversation", std::ffi::OsStr::new(&conversation)),
+            ]),
+        )
+        .map(|output| WorkerSuccess::RecoveryCancelled { plan_file, output }),
+        WorkerRequest::RecoveryReconcile {
+            executable,
+            state_dir,
+            conversation,
+        } => run_recovery_command(
+            &executable,
+            "history-rewrap-reconcile",
+            command_arguments([
+                ("--state-dir", state_dir.as_os_str()),
+                ("--conversation", std::ffi::OsStr::new(&conversation)),
+            ]),
+        )
+        .map(WorkerSuccess::RecoveryReconciled),
         WorkerRequest::Connect { descriptor } => {
             match kilogram_runtime_ipc::call(&descriptor, RuntimeIpcCommand::Ping).await? {
                 RuntimeIpcResponse::Pong {
@@ -1119,6 +1525,9 @@ struct KilogramApp {
     bootstrap_executable_path: String,
     bootstrap_workspace_path: String,
     bootstrap_view: Option<BootstrapView>,
+    device_link: DeviceLinkView,
+    recovery: RecoveryView,
+    drop_target: Option<DropTarget>,
     runtime_process: Option<Child>,
     runtime_start_deadline: Option<Instant>,
     runtime_next_connect_attempt: Instant,
@@ -1169,6 +1578,9 @@ impl KilogramApp {
             bootstrap_executable_path: options.bootstrap_executable_path.display().to_string(),
             bootstrap_workspace_path: PathBuf::from("kilogram-account").display().to_string(),
             bootstrap_view: None,
+            device_link: DeviceLinkView::default(),
+            recovery: RecoveryView::default(),
+            drop_target: None,
             runtime_process: None,
             runtime_start_deadline: None,
             runtime_next_connect_attempt: Instant::now(),
@@ -1180,6 +1592,20 @@ impl KilogramApp {
         while let Some(response) = self.worker.as_ref().and_then(RuntimeWorker::try_receive) {
             if response.operation == Operation::Bootstrap {
                 self.apply_bootstrap_response(response.result);
+                continue;
+            }
+            if matches!(
+                response.operation,
+                Operation::DeviceLinkRequest
+                    | Operation::DeviceLinkInspect
+                    | Operation::DeviceLinkAuthorize
+                    | Operation::DeviceLinkAccept
+                    | Operation::RecoveryApprove
+                    | Operation::RecoveryRun
+                    | Operation::RecoveryCancel
+                    | Operation::RecoveryReconcile
+            ) {
+                self.apply_wizard_response(response);
                 continue;
             }
             if response.operation == Operation::Connect
@@ -1215,6 +1641,133 @@ impl KilogramApp {
             } else if conversations || initial_history {
                 self.start_refresh();
             }
+        }
+    }
+
+    fn apply_wizard_response(&mut self, response: WorkerResponse) {
+        self.model.pending = None;
+        let success = match response.result {
+            Ok(success) => success,
+            Err(message) => {
+                self.model.error = Some(message);
+                return;
+            }
+        };
+        match success {
+            WorkerSuccess::DeviceLinkRequested(output) => {
+                self.device_link.joining_workspace = output.workspace_dir.display().to_string();
+                self.device_link.owner_request_file = output.request_file.display().to_string();
+                self.device_link.request = Some(*output);
+                self.device_link.accepted = None;
+                self.model.notice = Some(
+                    "Device-link request created. Compare its 12-digit SAS through an independent channel."
+                        .to_owned(),
+                );
+            }
+            WorkerSuccess::DeviceLinkInspected {
+                request_file,
+                output,
+            } => {
+                self.device_link.confirmed_sas.clear();
+                self.device_link.inspected_request_file = Some(request_file);
+                self.device_link.inspected = Some(*output);
+                self.model.notice = Some(
+                    "Signed request inspected. Confirm the large SAS with the new-device owner before authorizing."
+                        .to_owned(),
+                );
+            }
+            WorkerSuccess::DeviceLinkAuthorized(output) => {
+                self.device_link.response_input_file = output.response_file.display().to_string();
+                self.device_link.authorization = Some(*output);
+                self.model.notice = Some(
+                    "Exact device enrolled; return the recipient-encrypted response and updated public device list."
+                        .to_owned(),
+                );
+            }
+            WorkerSuccess::DeviceLinkAccepted(output) => {
+                let workspace = output.workspace_dir.clone();
+                self.runtime_profile_path =
+                    workspace.join("runtime.launch.json").display().to_string();
+                self.model.descriptor_path =
+                    workspace.join("runtime.ipc.json").display().to_string();
+                self.runtime_profile_draft.state_dir = output.state_dir.display().to_string();
+                self.runtime_profile_draft
+                    .allowed_requester_account_id
+                    .clear();
+                self.runtime_profile_draft.device_list_file =
+                    output.device_list_file.display().to_string();
+                self.runtime_profile_draft.ticket_file = workspace
+                    .join("public")
+                    .join("runtime.ticket")
+                    .display()
+                    .to_string();
+                self.runtime_profile_draft.ipc_file =
+                    workspace.join("runtime.ipc.json").display().to_string();
+                self.runtime_profile_draft.peer_prekey_pool_files.clear();
+                self.show_profile_editor = true;
+                self.recovery.state_dir = output.state_dir.display().to_string();
+                self.device_link.accepted = Some(*output);
+                self.model.notice = Some(
+                    "Device link accepted. Runtime profile paths are filled; add peer routing data, save the profile, then recover history from one or more devices."
+                        .to_owned(),
+                );
+            }
+            WorkerSuccess::RecoveryApproved { plan_file, output } => {
+                let index = self.upsert_recovery_plan(plan_file);
+                self.recovery.plans[index].update(&output);
+                self.recovery.selected = Some(index);
+                self.model.notice = Some(
+                    "Recipient-signed recovery plan approved. The source must publish its matching recovery link while a bounded attempt runs."
+                        .to_owned(),
+                );
+            }
+            WorkerSuccess::RecoveryRan { plan_file, output } => {
+                let index = self.upsert_recovery_plan(plan_file);
+                self.recovery.plans[index].update(&output);
+                self.recovery.selected = Some(index);
+                self.model.notice = Some(format!(
+                    "Recovery attempt finished with status {}",
+                    output.status()
+                ));
+            }
+            WorkerSuccess::RecoveryCancelled { plan_file, output } => {
+                let index = self.upsert_recovery_plan(plan_file);
+                self.recovery.plans[index].update(&output);
+                self.recovery.selected = Some(index);
+                self.recovery.confirm_cancel = false;
+                self.model.notice = Some("Recovery plan cancellation signed and stored".to_owned());
+            }
+            WorkerSuccess::RecoveryReconciled(output) => {
+                let agreement = output
+                    .field("source_claim_agreement")
+                    .unwrap_or("incomplete");
+                self.model.notice = Some(format!(
+                    "Recovery sources reconciled: {agreement}; global completeness remains unproven"
+                ));
+                self.recovery.reconciliation = Some(output);
+            }
+            _ => {
+                self.model.error = Some(format!(
+                    "Operation {:?} returned an unexpected wizard result",
+                    response.operation
+                ));
+                return;
+            }
+        }
+        self.model.error = None;
+    }
+
+    fn upsert_recovery_plan(&mut self, path: PathBuf) -> usize {
+        if let Some(index) = self
+            .recovery
+            .plans
+            .iter()
+            .position(|plan| plan.path == path)
+        {
+            index
+        } else {
+            self.recovery.plans.push(RecoveryPlanView::new(path));
+            self.recovery.plans.len() - 1
         }
     }
 
@@ -1354,6 +1907,311 @@ impl KilogramApp {
         match result {
             Ok(request) => self.submit(Operation::Bootstrap, request),
             Err(error) => self.model.fail(Operation::Bootstrap, format!("{error:#}")),
+        }
+    }
+
+    fn require_offline_wizard(&self) -> Result<()> {
+        ensure!(
+            self.runtime_process.is_none()
+                && self.model.connection == ConnectionState::Disconnected,
+            "Stop or disconnect the runtime before changing enrolled-device or recovery state"
+        );
+        ensure!(
+            self.model.pending.is_none(),
+            "Another operation is still running"
+        );
+        Ok(())
+    }
+
+    fn start_device_link_request(&mut self) {
+        let result: Result<WorkerRequest> = (|| {
+            self.require_offline_wizard()?;
+            let executable = canonical_input_path(
+                &self.bootstrap_executable_path,
+                "Bootstrap executable",
+                true,
+            )?;
+            let workspace = absolute_new_directory_path(
+                &self.device_link.joining_workspace,
+                "Joining-device workspace",
+            )?;
+            let account_id = AccountId::from_str(self.device_link.account_id.trim())
+                .context("Existing Account ID is invalid")?;
+            Ok(WorkerRequest::DeviceLinkRequest {
+                executable,
+                workspace,
+                account_id,
+            })
+        })();
+        match result {
+            Ok(request) => self.submit(Operation::DeviceLinkRequest, request),
+            Err(error) => self
+                .model
+                .fail(Operation::DeviceLinkRequest, format!("{error:#}")),
+        }
+    }
+
+    fn start_device_link_inspect(&mut self) {
+        let result: Result<WorkerRequest> = (|| {
+            self.require_offline_wizard()?;
+            let executable = canonical_input_path(
+                &self.bootstrap_executable_path,
+                "Bootstrap executable",
+                true,
+            )?;
+            let request_file = canonical_input_path(
+                &self.device_link.owner_request_file,
+                "Device-link request",
+                true,
+            )?;
+            Ok(WorkerRequest::DeviceLinkInspect {
+                executable,
+                request_file,
+            })
+        })();
+        match result {
+            Ok(request) => self.submit(Operation::DeviceLinkInspect, request),
+            Err(error) => self
+                .model
+                .fail(Operation::DeviceLinkInspect, format!("{error:#}")),
+        }
+    }
+
+    fn start_device_link_authorize(&mut self) {
+        let result: Result<WorkerRequest> = (|| {
+            self.require_offline_wizard()?;
+            let inspected = self
+                .device_link
+                .inspected
+                .as_ref()
+                .context("Inspect the request before authorizing it")?;
+            ensure!(inspected.request_fresh, "The inspected request has expired");
+            ensure!(
+                self.device_link.confirmed_sas.trim() == inspected.sas,
+                "Typed SAS does not match the inspected signed request"
+            );
+            let executable = canonical_input_path(
+                &self.bootstrap_executable_path,
+                "Bootstrap executable",
+                true,
+            )?;
+            let account_root_dir = canonical_input_path(
+                &self.device_link.account_root_dir,
+                "Account Root directory",
+                false,
+            )?;
+            let request_file = canonical_input_path(
+                &self.device_link.owner_request_file,
+                "Device-link request",
+                true,
+            )?;
+            ensure!(
+                self.device_link.inspected_request_file.as_ref() == Some(&request_file),
+                "The request path changed after inspection; inspect it again"
+            );
+            let response_file = absolute_output_path(
+                &self.device_link.response_output_file,
+                "Device-link response",
+                &account_root_dir,
+            )?;
+            let device_list_file = absolute_output_path(
+                &self.device_link.device_list_output_file,
+                "Published device list",
+                &account_root_dir,
+            )?;
+            Ok(WorkerRequest::DeviceLinkAuthorize {
+                executable,
+                account_root_dir,
+                request_file,
+                confirmed_sas: self.device_link.confirmed_sas.trim().to_owned(),
+                response_file,
+                device_list_file,
+            })
+        })();
+        match result {
+            Ok(request) => self.submit(Operation::DeviceLinkAuthorize, request),
+            Err(error) => self
+                .model
+                .fail(Operation::DeviceLinkAuthorize, format!("{error:#}")),
+        }
+    }
+
+    fn start_device_link_accept(&mut self) {
+        let result: Result<WorkerRequest> = (|| {
+            self.require_offline_wizard()?;
+            let executable = canonical_input_path(
+                &self.bootstrap_executable_path,
+                "Bootstrap executable",
+                true,
+            )?;
+            let workspace = canonical_input_path(
+                &self.device_link.joining_workspace,
+                "Joining-device workspace",
+                false,
+            )?;
+            let response_file = canonical_input_path(
+                &self.device_link.response_input_file,
+                "Device-link response",
+                true,
+            )?;
+            Ok(WorkerRequest::DeviceLinkAccept {
+                executable,
+                workspace,
+                response_file,
+            })
+        })();
+        match result {
+            Ok(request) => self.submit(Operation::DeviceLinkAccept, request),
+            Err(error) => self
+                .model
+                .fail(Operation::DeviceLinkAccept, format!("{error:#}")),
+        }
+    }
+
+    fn validate_recovery_context(&self) -> Result<(PathBuf, PathBuf, String)> {
+        self.require_offline_wizard()?;
+        let executable = canonical_input_path(
+            &self.runtime_executable_path,
+            "Kilogram CLI executable",
+            true,
+        )?;
+        let state_dir = canonical_input_path(&self.recovery.state_dir, "Recovery state", false)?;
+        let conversation = self.recovery.conversation.trim();
+        ensure!(
+            !conversation.is_empty(),
+            "Recovery conversation is required"
+        );
+        ensure!(
+            conversation.len() <= MAX_CONVERSATION_BYTES,
+            "Recovery conversation is too long"
+        );
+        Ok((executable, state_dir, conversation.to_owned()))
+    }
+
+    fn start_recovery_approve(&mut self) {
+        let result: Result<WorkerRequest> = (|| {
+            let (executable, state_dir, conversation) = self.validate_recovery_context()?;
+            let link_file = canonical_input_path(&self.recovery.link_file, "Recovery link", true)?;
+            let confirmed_sas = self.recovery.confirmed_sas.trim();
+            ensure!(
+                confirmed_sas.len() == 12
+                    && confirmed_sas.bytes().all(|byte| byte.is_ascii_digit()),
+                "Recovery SAS must contain exactly 12 digits"
+            );
+            let plan_file =
+                absolute_output_path(&self.recovery.plan_output_file, "Recovery plan", &state_dir)?;
+            Ok(WorkerRequest::RecoveryApprove {
+                executable,
+                state_dir,
+                link_file,
+                conversation,
+                confirmed_sas: confirmed_sas.to_owned(),
+                plan_file,
+                deny_ethernet: !self.recovery.allow_ethernet,
+                deny_wifi: !self.recovery.allow_wifi,
+                allow_mobile: self.recovery.allow_mobile,
+                allow_unknown_network: self.recovery.allow_unknown_network,
+                require_external_power: self.recovery.require_external_power,
+            })
+        })();
+        match result {
+            Ok(request) => self.submit(Operation::RecoveryApprove, request),
+            Err(error) => self
+                .model
+                .fail(Operation::RecoveryApprove, format!("{error:#}")),
+        }
+    }
+
+    fn add_existing_recovery_plan(&mut self) {
+        let result = canonical_input_path(
+            &self.recovery.existing_plan_file,
+            "Existing recovery plan",
+            true,
+        );
+        match result {
+            Ok(path) => {
+                let index = self.upsert_recovery_plan(path);
+                self.recovery.selected = Some(index);
+                self.model.notice = Some("Existing recovery plan added to this view".to_owned());
+                self.model.error = None;
+            }
+            Err(error) => self.model.error = Some(format!("{error:#}")),
+        }
+    }
+
+    fn start_recovery_run(&mut self) {
+        let result: Result<WorkerRequest> = (|| {
+            let (executable, state_dir, conversation) = self.validate_recovery_context()?;
+            let index = self.recovery.selected.context("Select a recovery plan")?;
+            let plan_file = self
+                .recovery
+                .plans
+                .get(index)
+                .context("Selected recovery plan no longer exists")?
+                .path
+                .clone();
+            ensure!(plan_file.is_file(), "Selected recovery plan is not a file");
+            Ok(WorkerRequest::RecoveryRun {
+                executable,
+                state_dir,
+                plan_file,
+                conversation,
+            })
+        })();
+        match result {
+            Ok(request) => self.submit(Operation::RecoveryRun, request),
+            Err(error) => self
+                .model
+                .fail(Operation::RecoveryRun, format!("{error:#}")),
+        }
+    }
+
+    fn start_recovery_cancel(&mut self) {
+        let result: Result<WorkerRequest> = (|| {
+            ensure!(
+                self.recovery.confirm_cancel,
+                "Explicitly confirm irreversible plan cancellation"
+            );
+            let (executable, state_dir, conversation) = self.validate_recovery_context()?;
+            let index = self.recovery.selected.context("Select a recovery plan")?;
+            let plan_file = self
+                .recovery
+                .plans
+                .get(index)
+                .context("Selected recovery plan no longer exists")?
+                .path
+                .clone();
+            ensure!(plan_file.is_file(), "Selected recovery plan is not a file");
+            Ok(WorkerRequest::RecoveryCancel {
+                executable,
+                state_dir,
+                plan_file,
+                conversation,
+            })
+        })();
+        match result {
+            Ok(request) => self.submit(Operation::RecoveryCancel, request),
+            Err(error) => self
+                .model
+                .fail(Operation::RecoveryCancel, format!("{error:#}")),
+        }
+    }
+
+    fn start_recovery_reconcile(&mut self) {
+        let result =
+            self.validate_recovery_context()
+                .map(
+                    |(executable, state_dir, conversation)| WorkerRequest::RecoveryReconcile {
+                        executable,
+                        state_dir,
+                        conversation,
+                    },
+                );
+        match result {
+            Ok(request) => self.submit(Operation::RecoveryReconcile, request),
+            Err(error) => self
+                .model
+                .fail(Operation::RecoveryReconcile, format!("{error:#}")),
         }
     }
 
@@ -1595,7 +2453,30 @@ impl KilogramApp {
                 .find_map(|file| file.path.clone())
         });
         if let Some(path) = dropped_path {
-            if self.model.show_contact_form {
+            if let Some(target) = self.drop_target.take() {
+                let value = path.display().to_string();
+                match target {
+                    DropTarget::DeviceLinkRequest => {
+                        self.device_link.owner_request_file = value;
+                        self.device_link.inspected_request_file = None;
+                        self.device_link.inspected = None;
+                        self.device_link.confirmed_sas.clear();
+                        self.model.notice = Some("Device-link request path updated".to_owned());
+                    }
+                    DropTarget::DeviceLinkResponse => {
+                        self.device_link.response_input_file = value;
+                        self.model.notice = Some("Device-link response path updated".to_owned());
+                    }
+                    DropTarget::RecoveryLink => {
+                        self.recovery.link_file = value;
+                        self.model.notice = Some("Recovery-link path updated".to_owned());
+                    }
+                    DropTarget::RecoveryPlan => {
+                        self.recovery.existing_plan_file = value;
+                        self.model.notice = Some("Recovery-plan path updated".to_owned());
+                    }
+                }
+            } else if self.model.show_contact_form {
                 self.model.contact_draft.descriptor_file = path.display().to_string();
                 self.model.notice = Some("Peer descriptor path updated".to_owned());
             } else if self.runtime_process.is_none() {
@@ -1609,7 +2490,7 @@ impl KilogramApp {
     fn draw_header(&self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             ui.heading(egui::RichText::new("Kilogram").size(28.0).strong());
-            ui.label(egui::RichText::new("M0.9.17").color(egui::Color32::from_rgb(88, 166, 255)));
+            ui.label(egui::RichText::new("M0.9.18").color(egui::Color32::from_rgb(88, 166, 255)));
         });
         ui.label("Desktop client · authenticated local runtime IPC");
     }
@@ -1682,6 +2563,410 @@ impl KilogramApp {
                     {
                         action = BootstrapUiAction::Create;
                     }
+                }
+            });
+        action
+    }
+
+    fn draw_device_link(&mut self, ui: &mut egui::Ui) -> DeviceLinkUiAction {
+        let mut action = DeviceLinkUiAction::None;
+        let idle = self.model.pending.is_none()
+            && self.runtime_process.is_none()
+            && self.model.connection == ConnectionState::Disconnected;
+        egui::CollapsingHeader::new("Existing account · link another device")
+            .default_open(false)
+            .show(ui, |ui| {
+                ui.label("New device: create a short-lived request");
+                ui.horizontal(|ui| {
+                    ui.label("Existing Account ID");
+                    ui.add_enabled(
+                        idle,
+                        egui::TextEdit::singleline(&mut self.device_link.account_id)
+                            .desired_width(f32::INFINITY),
+                    );
+                });
+                ui.horizontal(|ui| {
+                    ui.label("New device workspace");
+                    ui.add_enabled(
+                        idle,
+                        egui::TextEdit::singleline(&mut self.device_link.joining_workspace)
+                            .desired_width(f32::INFINITY),
+                    );
+                });
+                if ui
+                    .add_enabled(idle, egui::Button::new("1 · Create request"))
+                    .clicked()
+                {
+                    action = DeviceLinkUiAction::Request;
+                }
+                if let Some(request) = self.device_link.request.as_ref() {
+                    ui.colored_label(
+                        egui::Color32::from_rgb(246, 195, 93),
+                        "Compare this code through an independent channel:",
+                    );
+                    ui.label(egui::RichText::new(&request.sas).monospace().size(28.0).strong());
+                    ui.monospace(format!("Request: {}", request.request_file.display()));
+                    ui.small(format!(
+                        "Device {} · expires at Unix {} · vault {}",
+                        compact_id(&request.device_id),
+                        request.expires_at_unix_seconds,
+                        request.vault_key_protection
+                    ));
+                }
+
+                ui.separator();
+                ui.label("Existing device owner: inspect, compare, then authorize");
+                ui.horizontal(|ui| {
+                    ui.label("Request file");
+                    ui.add_enabled(
+                        idle,
+                        egui::TextEdit::singleline(&mut self.device_link.owner_request_file)
+                            .desired_width(f32::INFINITY),
+                    );
+                    if ui.add_enabled(idle, egui::Button::new("Drop next file")).clicked() {
+                        self.drop_target = Some(DropTarget::DeviceLinkRequest);
+                    }
+                });
+                if self.drop_target == Some(DropTarget::DeviceLinkRequest) {
+                    ui.small("Drop the signed device-link request anywhere in this window.");
+                }
+                if ui
+                    .add_enabled(idle, egui::Button::new("2 · Inspect signed request"))
+                    .clicked()
+                {
+                    action = DeviceLinkUiAction::Inspect;
+                }
+                if let Some(inspected) = self.device_link.inspected.as_ref() {
+                    let color = if inspected.request_fresh {
+                        egui::Color32::from_rgb(92, 201, 137)
+                    } else {
+                        egui::Color32::from_rgb(239, 112, 112)
+                    };
+                    ui.colored_label(
+                        color,
+                        if inspected.request_fresh {
+                            "Signature valid and request is fresh"
+                        } else {
+                            "Request signature decoded, but the request is expired or not yet valid"
+                        },
+                    );
+                    ui.label(egui::RichText::new(&inspected.sas).monospace().size(28.0).strong());
+                    ui.small(format!(
+                        "Account {} · device {} · issued {} · expires {}",
+                        compact_id(&inspected.account_id),
+                        compact_id(&inspected.device_id),
+                        inspected.issued_at_unix_seconds,
+                        inspected.expires_at_unix_seconds
+                    ));
+                    ui.horizontal(|ui| {
+                        ui.label("Account Root directory");
+                        ui.add_enabled(
+                            idle,
+                            egui::TextEdit::singleline(&mut self.device_link.account_root_dir)
+                                .desired_width(f32::INFINITY),
+                        );
+                    });
+                    ui.label("Type the independently confirmed 12-digit SAS");
+                    ui.add_enabled(
+                        idle,
+                        egui::TextEdit::singleline(&mut self.device_link.confirmed_sas)
+                            .desired_width(220.0),
+                    );
+                    ui.horizontal(|ui| {
+                        ui.label("Encrypted response output");
+                        ui.add_enabled(
+                            idle,
+                            egui::TextEdit::singleline(
+                                &mut self.device_link.response_output_file,
+                            )
+                            .desired_width(f32::INFINITY),
+                        );
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label("Updated public device list");
+                        ui.add_enabled(
+                            idle,
+                            egui::TextEdit::singleline(
+                                &mut self.device_link.device_list_output_file,
+                            )
+                            .desired_width(f32::INFINITY),
+                        );
+                    });
+                    let sas_matches = self.device_link.confirmed_sas.trim() == inspected.sas;
+                    if ui
+                        .add_enabled(
+                            idle && inspected.request_fresh && sas_matches,
+                            egui::Button::new("3 · Authorize exact device"),
+                        )
+                        .clicked()
+                    {
+                        action = DeviceLinkUiAction::Authorize;
+                    }
+                    if !self.device_link.confirmed_sas.is_empty() && !sas_matches {
+                        ui.colored_label(
+                            egui::Color32::from_rgb(239, 112, 112),
+                            "Typed SAS does not match the signed request.",
+                        );
+                    }
+                }
+                if let Some(authorization) = self.device_link.authorization.as_ref() {
+                    ui.small(format!(
+                        "Authorized device {} at authority revision {}. Response is encrypted for that device: {}",
+                        compact_id(&authorization.device_id),
+                        authorization.authority_revision,
+                        authorization.response_encrypted_for_device
+                    ));
+                    ui.monospace(format!("Response: {}", authorization.response_file.display()));
+                    ui.monospace(format!(
+                        "Device list: {}",
+                        authorization.device_list_file.display()
+                    ));
+                }
+
+                ui.separator();
+                ui.label("New device: accept the returned encrypted response");
+                ui.horizontal(|ui| {
+                    ui.label("Response file");
+                    ui.add_enabled(
+                        idle,
+                        egui::TextEdit::singleline(&mut self.device_link.response_input_file)
+                            .desired_width(f32::INFINITY),
+                    );
+                    if ui.add_enabled(idle, egui::Button::new("Drop next file")).clicked() {
+                        self.drop_target = Some(DropTarget::DeviceLinkResponse);
+                    }
+                });
+                if self.drop_target == Some(DropTarget::DeviceLinkResponse) {
+                    ui.small("Drop the encrypted response anywhere in this window.");
+                }
+                if ui
+                    .add_enabled(idle, egui::Button::new("4 · Accept enrollment"))
+                    .clicked()
+                {
+                    action = DeviceLinkUiAction::Accept;
+                }
+                if let Some(accepted) = self.device_link.accepted.as_ref() {
+                    ui.colored_label(
+                        egui::Color32::from_rgb(92, 201, 137),
+                        format!(
+                            "Device {} linked at authority revision {}",
+                            compact_id(&accepted.device_id),
+                            accepted.authority_revision
+                        ),
+                    );
+                    ui.small(format!(
+                        "Certificate: {} · prekey pool: {}",
+                        accepted.certificate_file.display(),
+                        accepted.prekey_pool_file.display()
+                    ));
+                    ui.small("History is not inside the response. Use one or more recipient-bound recovery plans below.");
+                }
+                ui.small("The GUI passes only public paths, IDs and typed SAS values. Root and device private keys remain inside their protected stores.");
+            });
+        action
+    }
+
+    fn draw_recovery(&mut self, ui: &mut egui::Ui) -> RecoveryUiAction {
+        let mut action = RecoveryUiAction::None;
+        let idle = self.model.pending.is_none()
+            && self.runtime_process.is_none()
+            && self.model.connection == ConnectionState::Disconnected;
+        egui::CollapsingHeader::new("History recovery · multiple source devices")
+            .default_open(false)
+            .show(ui, |ui| {
+                ui.small("Each plan is signed by this recipient and bound to one exact source, range, policy and expiry. Run only while the matching source publishes its recovery link.");
+                ui.horizontal(|ui| {
+                    ui.label("Recipient state directory");
+                    ui.add_enabled(
+                        idle,
+                        egui::TextEdit::singleline(&mut self.recovery.state_dir)
+                            .desired_width(f32::INFINITY),
+                    );
+                    if ui.add_enabled(idle, egui::Button::new("Use profile")).clicked() {
+                        self.recovery.state_dir = self.runtime_profile_draft.state_dir.clone();
+                    }
+                });
+                ui.horizontal(|ui| {
+                    ui.label("Conversation label");
+                    ui.add_enabled(
+                        idle,
+                        egui::TextEdit::singleline(&mut self.recovery.conversation)
+                            .desired_width(f32::INFINITY),
+                    );
+                });
+                ui.separator();
+                ui.label("Approve another source plan");
+                ui.horizontal(|ui| {
+                    ui.label("Signed recovery link file");
+                    ui.add_enabled(
+                        idle,
+                        egui::TextEdit::singleline(&mut self.recovery.link_file)
+                            .desired_width(f32::INFINITY),
+                    );
+                    if ui.add_enabled(idle, egui::Button::new("Drop next file")).clicked() {
+                        self.drop_target = Some(DropTarget::RecoveryLink);
+                    }
+                });
+                if self.drop_target == Some(DropTarget::RecoveryLink) {
+                    ui.small("Drop the signed recovery-link text file anywhere in this window.");
+                }
+                ui.horizontal(|ui| {
+                    ui.label("Confirmed 12-digit SAS");
+                    ui.add_enabled(
+                        idle,
+                        egui::TextEdit::singleline(&mut self.recovery.confirmed_sas)
+                            .desired_width(220.0),
+                    );
+                });
+                ui.horizontal(|ui| {
+                    ui.label("New signed plan file");
+                    ui.add_enabled(
+                        idle,
+                        egui::TextEdit::singleline(&mut self.recovery.plan_output_file)
+                            .desired_width(f32::INFINITY),
+                    );
+                });
+                ui.add_enabled_ui(idle, |ui| {
+                    ui.horizontal_wrapped(|ui| {
+                        ui.checkbox(&mut self.recovery.allow_ethernet, "Ethernet");
+                        ui.checkbox(&mut self.recovery.allow_wifi, "Wi-Fi");
+                        ui.checkbox(&mut self.recovery.allow_mobile, "Mobile/metered");
+                        ui.checkbox(
+                            &mut self.recovery.allow_unknown_network,
+                            "Unknown network",
+                        );
+                        ui.checkbox(
+                            &mut self.recovery.require_external_power,
+                            "External power required",
+                        );
+                    });
+                });
+                if ui
+                    .add_enabled(idle, egui::Button::new("Approve and add plan"))
+                    .clicked()
+                {
+                    action = RecoveryUiAction::Approve;
+                }
+
+                ui.separator();
+                ui.horizontal(|ui| {
+                    ui.label("Existing plan file");
+                    ui.add_enabled(
+                        idle,
+                        egui::TextEdit::singleline(&mut self.recovery.existing_plan_file)
+                            .desired_width(f32::INFINITY),
+                    );
+                    if ui.add_enabled(idle, egui::Button::new("Drop next file")).clicked() {
+                        self.drop_target = Some(DropTarget::RecoveryPlan);
+                    }
+                    if ui.add_enabled(idle, egui::Button::new("Add")).clicked() {
+                        action = RecoveryUiAction::AddExisting;
+                    }
+                });
+                if self.drop_target == Some(DropTarget::RecoveryPlan) {
+                    ui.small("Drop an existing recipient-signed plan anywhere in this window, then click Add.");
+                }
+                if self.recovery.plans.is_empty() {
+                    ui.small("No recovery plans added yet.");
+                } else {
+                    egui::Grid::new("recovery-plan-list")
+                        .striped(true)
+                        .num_columns(5)
+                        .show(ui, |ui| {
+                            ui.strong("Plan");
+                            ui.strong("Status");
+                            ui.strong("Lifecycle");
+                            ui.strong("Attempts");
+                            ui.strong("Complete");
+                            ui.end_row();
+                            for (index, plan) in self.recovery.plans.iter().enumerate() {
+                                if ui
+                                    .selectable_label(
+                                        self.recovery.selected == Some(index),
+                                        plan.path
+                                            .file_name()
+                                            .map(|name| name.to_string_lossy())
+                                            .unwrap_or_else(|| plan.path.display().to_string().into()),
+                                    )
+                                    .clicked()
+                                {
+                                    self.recovery.selected = Some(index);
+                                    self.recovery.confirm_cancel = false;
+                                }
+                                ui.label(&plan.status);
+                                ui.label(&plan.lifecycle);
+                                ui.label(&plan.attempts);
+                                ui.label(&plan.complete);
+                                ui.end_row();
+                            }
+                        });
+                }
+                if ui
+                    .add_enabled(
+                        idle && self.recovery.selected.is_some(),
+                        egui::Button::new("Run one bounded attempt for selected plan"),
+                    )
+                    .clicked()
+                {
+                    action = RecoveryUiAction::RunSelected;
+                }
+                ui.horizontal(|ui| {
+                    ui.add_enabled(
+                        idle && self.recovery.selected.is_some(),
+                        egui::Checkbox::new(
+                            &mut self.recovery.confirm_cancel,
+                            "I understand cancellation permanently revokes this plan's local retry consent",
+                        ),
+                    );
+                    if ui
+                        .add_enabled(
+                            idle
+                                && self.recovery.selected.is_some()
+                                && self.recovery.confirm_cancel,
+                            egui::Button::new("Cancel selected plan"),
+                        )
+                        .clicked()
+                    {
+                        action = RecoveryUiAction::CancelSelected;
+                    }
+                });
+
+                ui.separator();
+                if ui
+                    .add_enabled(idle, egui::Button::new("Reconcile all received source claims"))
+                    .clicked()
+                {
+                    action = RecoveryUiAction::Reconcile;
+                }
+                if let Some(reconciliation) = self.recovery.reconciliation.as_ref() {
+                    let agreement = reconciliation
+                        .field("source_claim_agreement")
+                        .unwrap_or("incomplete");
+                    let color = match agreement {
+                        "agreed" => egui::Color32::from_rgb(92, 201, 137),
+                        "divergent" => egui::Color32::from_rgb(239, 112, 112),
+                        _ => egui::Color32::from_rgb(246, 195, 93),
+                    };
+                    ui.colored_label(color, format!("Source claims: {agreement}"));
+                    ui.horizontal_wrapped(|ui| {
+                        for (label, key) in [
+                            ("sources", "source_device_count"),
+                            ("complete sources", "complete_source_count"),
+                            ("covered events", "covered_event_count"),
+                            ("equivocations", "source_equivocation_count"),
+                        ] {
+                            ui.label(format!(
+                                "{label}: {}",
+                                reconciliation.field(key).unwrap_or("0")
+                            ));
+                        }
+                    });
+                    ui.small(format!(
+                        "Global completeness proven: {} (this remains false without an external completeness witness)",
+                        reconciliation
+                            .field("global_completeness_proven")
+                            .unwrap_or("false")
+                    ));
                 }
             });
         action
@@ -2354,6 +3639,8 @@ impl eframe::App for KilogramApp {
 
         let mut runtime_action = RuntimeUiAction::None;
         let mut bootstrap_action = BootstrapUiAction::None;
+        let mut device_link_action = DeviceLinkUiAction::None;
+        let mut recovery_action = RecoveryUiAction::None;
         let mut add_contact_clicked = false;
         let mut queue_clicked = false;
         let mut refresh_clicked = false;
@@ -2366,6 +3653,10 @@ impl eframe::App for KilogramApp {
                     self.draw_header(ui);
                     ui.add_space(8.0);
                     bootstrap_action = self.draw_bootstrap(ui);
+                    ui.add_space(4.0);
+                    device_link_action = self.draw_device_link(ui);
+                    ui.add_space(4.0);
+                    recovery_action = self.draw_recovery(ui);
                     ui.add_space(4.0);
                     runtime_action = self.draw_runtime(ui);
                     self.draw_identity(ui);
@@ -2395,6 +3686,24 @@ impl eframe::App for KilogramApp {
                 "Recovery phrase removed from the desktop process. Complete peer setup in the launch profile."
                     .to_owned(),
             );
+        } else if device_link_action == DeviceLinkUiAction::Request {
+            self.start_device_link_request();
+        } else if device_link_action == DeviceLinkUiAction::Inspect {
+            self.start_device_link_inspect();
+        } else if device_link_action == DeviceLinkUiAction::Authorize {
+            self.start_device_link_authorize();
+        } else if device_link_action == DeviceLinkUiAction::Accept {
+            self.start_device_link_accept();
+        } else if recovery_action == RecoveryUiAction::Approve {
+            self.start_recovery_approve();
+        } else if recovery_action == RecoveryUiAction::AddExisting {
+            self.add_existing_recovery_plan();
+        } else if recovery_action == RecoveryUiAction::RunSelected {
+            self.start_recovery_run();
+        } else if recovery_action == RecoveryUiAction::CancelSelected {
+            self.start_recovery_cancel();
+        } else if recovery_action == RecoveryUiAction::Reconcile {
+            self.start_recovery_reconcile();
         } else if runtime_action == RuntimeUiAction::Connect {
             self.start_connect();
         } else if runtime_action == RuntimeUiAction::Start {

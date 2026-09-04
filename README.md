@@ -94,12 +94,15 @@ Desktop creation of a recoverable first account/device is specified in
 Existing-account enrollment and recipient-encrypted authority transfer are
 specified in
 [`docs/RFC-0044-existing-account-device-link.md`](docs/RFC-0044-existing-account-device-link.md).
+The desktop enrollment and multi-source recovery orchestration boundary is
+specified in
+[`docs/RFC-0045-desktop-device-link-and-recovery-wizard.md`](docs/RFC-0045-desktop-device-link-and-recovery-wizard.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.17 existing-account device link — complete
+## Current milestone: M0.9.18 desktop device-link and recovery wizard — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -334,6 +337,18 @@ certificate/authority through the existing trust transaction. The newly linked
 device is then eligible for one or more independent recipient-bound resumable
 history recovery plans; reconciliation still reports divergence without
 claiming global completeness.
+
+M0.9.18 exposes that ceremony in the desktop client without moving Account Root
+or device secrets into the GUI. The user explicitly creates or drops a request,
+inspects it, compares a large 12-digit SAS, authorizes the exact inspected file,
+and returns a recipient-encrypted response. Accept fills the new device's
+secret-free runtime-profile draft but does not pretend that authority enrollment
+also transferred history. The recovery panel can hold several independent
+recipient-signed plan files, run one bounded attempt at a time, and display
+signed scheduler progress. Reconciliation reports `incomplete`,
+`single-source`, `agreed`, or `divergent` while always preserving
+`global_completeness_proven=false`. No background service or Task Scheduler entry
+is installed.
 
 M0.8.1 adds a reversible encrypted shadow snapshot of the entire device state.
 `state-vault-migrate` publishes encrypted records and a keyed manifest in one

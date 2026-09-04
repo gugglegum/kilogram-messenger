@@ -12,6 +12,8 @@ eframe.workspace = true
 kilogram-bootstrap-contract = { path = "../../crates/kilogram-bootstrap-contract" }
 kilogram-identity = { path = "../../crates/kilogram-identity" }
 kilogram-runtime-ipc = { path = "../../crates/kilogram-runtime-ipc" }
+serde.workspace = true
+serde_json.workspace = true
 tokio.workspace = true
 zeroize.workspace = true
 

@@ -3260,6 +3260,8 @@ dependencies = [
  "kilogram-bootstrap-contract",
  "kilogram-identity",
  "kilogram-runtime-ipc",
+ "serde",
+ "serde_json",
  "tempfile",
  "tokio",
  "zeroize",
