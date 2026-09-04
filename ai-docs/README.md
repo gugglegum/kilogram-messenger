@@ -169,6 +169,15 @@ multi-source claim reconciliation. M0.7.9 добавил signed append-only chec
   revision. Это локальный receipt, не global freshness proof. RFC-0048 выбрал
   fresh challenge-bound current-device quorum как более сильный serverless
   режим и зафиксировал необходимость joint-consensus смены recovery roster.
+  M0.9.22–M0.9.25 реализовали device-signed quorum approvals, one-shot Iroh
+  transport, joint-majority recovery-policy epochs и desktop orchestration.
+  M0.9.26 добавил permanent Root revocation/removal с exact before/after
+  checkpoint. M0.9.27 поднял runtime IPC до v5: работающий actor принимает
+  только Root-signed monotonic removal-only device list, одной vault-primary
+  транзакцией устанавливает authority и удаляет revoked-device ratchet/prekey
+  state, затем атомарно заменяет public ticket. Новый peer fanout исключает
+  removed device после наблюдения ticket; уже подписанные recipient slots не
+  переписываются, а старые копии истории остаются читаемыми.
   OS peer
   credentials остаются дальше. Reconciliation выбирает
   inventory только при совпадении двух или более полных явно собранных claims и
@@ -331,14 +340,13 @@ global prekey discovery/witness, автоматический recovery source di
 
 ## План ближайших работ
 
-1. M0.9.27: после установленного revocation научить long-lived runtime
-   аутентифицированно принимать refreshed local-account device list, исключать
-   removed Device ID из нового fanout/очередей и crash-consistently retire его
-   ratchet sessions; результат вывести через IPC.
-2. Уже реализованный M0.9.26 показывает removal, policy activation, runtime
-   peer-directory refresh, ratchet/session retirement и history availability
-   раздельно; transport/relay не становится holder Root secrets, а старую
-   историю на отозванном устройстве удалить удалённо невозможно.
+1. M0.9.28: сохранить authenticated receipt применённого live device directory
+   и bounded desktop-операцией согласовать launch-profile path, чтобы restart
+   не мог молча вернуть revoked roster; промежуточное состояние должно быть
+   явно repairable.
+2. Уже реализованный M0.9.27 применяет removal через authenticated runtime IPC,
+   обновляет ticket и retire ratchet/prekey state crash-consistently. Future
+   fanout и immutable old slots/history показываются как разные claims.
 3. Optional autostart/background mode оставить отдельной явной настройкой, а не
    обязательным Task Scheduler этапом.
 4. Добавить production macOS/Linux local key provider, согласованный monotonic
@@ -458,6 +466,8 @@ global prekey discovery/witness, автоматический recovery source di
 - [`../docs/RFC-0047-desktop-account-root-recovery.md`](../docs/RFC-0047-desktop-account-root-recovery.md) —
   реализованный M0.9.20 desktop export/inspect/stdin restore и exact inspected-artifact gate.
 - [`../docs/RFC-0048-recovery-freshness-and-checkpoint-lifecycle.md`](../docs/RFC-0048-recovery-freshness-and-checkpoint-lifecycle.md) —
-  реализованный M0.9.21 exact-export lifecycle и принятый current-device quorum contract.
+  реализованный M0.9.21–M0.9.27 recovery lifecycle, quorum/policy transitions и runtime activation removal.
+- [`../docs/RFC-0049-live-runtime-device-directory-refresh.md`](../docs/RFC-0049-live-runtime-device-directory-refresh.md) —
+  реализованный M0.9.27 authenticated live roster refresh, crash-consistent ratchet retirement и honest immutable-history boundary.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

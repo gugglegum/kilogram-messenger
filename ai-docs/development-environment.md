@@ -1000,3 +1000,32 @@ retirement остальных compatibility shadows ещё не реализов
   `395E0BECA0AB9C2174B0014A5756BCF495D33D9F4C6FD6C0B3536C3195B0E680`;
   `target/release/kilogram-cli.exe` — 22,585,344 bytes, SHA-256
   `C1EB232703598BBDED6840B94562FDAC4EDFAECA024163D107C0A802B7430781`.
+
+## M0.9.27 verification snapshot (2026-09-04)
+
+- Live runtime regression применяет Root-signed roster `2 -> 1` без restart,
+  сохраняет Endpoint/route/requester authority, атомарно заменяет public ticket,
+  удаляет ratchet session и prekey observation и повторяет exact IPC command
+  идемпотентно с нулём новых removals.
+- Injected failure после удаления обоих ratchet records откатывает filesystem
+  workspace; успешная transaction коммитит два authenticated vault removals.
+  Windows adapter regression проверяет exact selected device-list path и typed
+  IPC v5 result.
+- Release process smoke
+  `.tmp/m0927-release-smoke-20260904-222939` прошёл create → encrypted
+  device-link → exact recovery export → permanent device removal → отдельный
+  long-lived release runtime → authenticated live apply. Authority `2 -> 3`,
+  active roster `2 -> 1`, removed Device ID
+  `534939dda17bc5d3c231e6ce384bbd023bd62355fb5c3ba11efe34b8ac875c29`,
+  ticket опубликован; future fanout exclusion и old-history readability выданы
+  как отдельные claims.
+- `cargo fmt --all -- --check`, strict
+  `cargo clippy --workspace --all-targets --all-features -- -D warnings`, все
+  183 workspace tests (`--test-threads=1`) и
+  `cargo build --workspace --release` проходят.
+- Windows artifacts: `target/release/kilogram-bootstrap.exe` — 19,014,144 bytes,
+  SHA-256 `FCD1ED29600B466AE4A0111C2A559C423697DBE502BFC75CA1E3630C1AE5DBA5`;
+  `target/release/kilogram-windows.exe` — 7,848,960 bytes, SHA-256
+  `6C310932824B3485E2866EC2ACA78F10BE44246B20970E467D83064B189F654C`;
+  `target/release/kilogram-cli.exe` — 22,645,760 bytes, SHA-256
+  `C6F7E65436F1B19696BB47D424036FBA36208B72C6DF09B0AC3274C09F6B1AC8`.

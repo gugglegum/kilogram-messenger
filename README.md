@@ -102,12 +102,15 @@ in [`docs/RFC-0046-account-root-authority-recovery.md`](docs/RFC-0046-account-ro
 and [`docs/RFC-0047-desktop-account-root-recovery.md`](docs/RFC-0047-desktop-account-root-recovery.md).
 Recovery freshness modes and the exact-export lifecycle are specified in
 [`docs/RFC-0048-recovery-freshness-and-checkpoint-lifecycle.md`](docs/RFC-0048-recovery-freshness-and-checkpoint-lifecycle.md).
+Live application of a Root-signed device removal to the running actor is
+specified in
+[`docs/RFC-0049-live-runtime-device-directory-refresh.md`](docs/RFC-0049-live-runtime-device-directory-refresh.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.26 first-class device removal — complete
+## Current milestone: M0.9.27 live device-directory refresh — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -998,6 +1001,30 @@ device removal, recovery-policy activation, runtime peer-directory refresh,
 ratchet/session retirement, and old-history availability independently. In
 particular, revocation does not erase ciphertext or plaintext already held by
 the removed device.
+
+M0.9.27 activates that removal in a running process. Authenticated loopback IPC
+version 5 accepts only a verified same-account monotonic removal-only device
+list which retains the running device's exact certificate. One vault-primary
+transaction installs its authority high-water mark and retires every revoked
+device's ratchet session and remembered prekey-pool observation. The public
+runtime ticket is then atomically replaced while the current Endpoint ID and
+route policy remain unchanged; repeating the exact update is idempotent.
+
+```powershell
+cargo run -p kilogram-cli -- runtime-ipc-apply-device-directory `
+  --ipc-file C:\Kilogram\private\runtime.ipc.json `
+  --device-list-file C:\Kilogram\public\devices-after.kadl
+```
+
+Peers already reload that public ticket before materializing an outbound queue
+item. Once they observe the refresh, new recipient tables exclude the revoked
+Device ID and their corresponding ratchet/prekey observations are retired in
+the same state transaction. A previously materialized recipient table is part
+of an immutable signed event and is not rewritten. The CLI and desktop report
+that boundary separately: future fanout is updated, old signed slots are
+immutable, and existing history copies remain readable. If the applied list
+path differs from the launch profile, the UI also requires that profile path to
+be saved before restart.
 
 The queue command prints `runtime_ipc_request_id` before connecting. If its
 result is uncertain, repeat the same message with `--request-id <PRINTED_ID>`;

@@ -37,10 +37,10 @@ use kilogram_ratchet::{
 };
 use kilogram_runtime_ipc::{
     RuntimeIpcCommand, RuntimeIpcConversationSummary, RuntimeIpcDescriptor,
-    RuntimeIpcHistoryCursor, RuntimeIpcHistoryMessage, RuntimeIpcHistoryPage,
-    RuntimeIpcMessagePreview, RuntimeIpcOutboxStatus, RuntimeIpcQueueItem, RuntimeIpcQueueState,
-    RuntimeIpcRequestId, RuntimeIpcResponse, RuntimeIpcRoutePolicy, RuntimeIpcServer,
-    RuntimeIpcWork, RuntimeLaunchProfile, RuntimeLaunchSettings,
+    RuntimeIpcDeviceDirectoryUpdate, RuntimeIpcHistoryCursor, RuntimeIpcHistoryMessage,
+    RuntimeIpcHistoryPage, RuntimeIpcMessagePreview, RuntimeIpcOutboxStatus, RuntimeIpcQueueItem,
+    RuntimeIpcQueueState, RuntimeIpcRequestId, RuntimeIpcResponse, RuntimeIpcRoutePolicy,
+    RuntimeIpcServer, RuntimeIpcWork, RuntimeLaunchProfile, RuntimeLaunchSettings,
 };
 use kilogram_session::{
     MAX_SYNC_ROUNDS, ServerInventoryOutcome, SessionStore, SyncClient, SyncServer,
@@ -465,6 +465,17 @@ enum Command {
         /// Runtime-owned local IPC descriptor.
         #[arg(long)]
         ipc_file: PathBuf,
+    },
+
+    /// Apply a refreshed Root-signed own device directory to a running runtime.
+    RuntimeIpcApplyDeviceDirectory {
+        /// Runtime-owned local IPC descriptor.
+        #[arg(long)]
+        ipc_file: PathBuf,
+
+        /// Root-signed complete local-account device list after revocation.
+        #[arg(long)]
+        device_list_file: PathBuf,
     },
 
     /// Connect to a listener, send one message, print its acknowledgement, then exit.
@@ -1309,6 +1320,7 @@ impl Command {
             | Self::RuntimeIpcPing { .. }
             | Self::RuntimeIpcQueueMessage { .. }
             | Self::RuntimeIpcOutboxStatus { .. }
+            | Self::RuntimeIpcApplyDeviceDirectory { .. }
             | Self::PlatformContext => None,
         }
     }
@@ -2083,6 +2095,10 @@ async fn run_command(command: Command) -> Result<()> {
                 .await
         }
         Command::RuntimeIpcOutboxStatus { ipc_file } => runtime_ipc_outbox_status(ipc_file).await,
+        Command::RuntimeIpcApplyDeviceDirectory {
+            ipc_file,
+            device_list_file,
+        } => runtime_ipc_apply_device_directory(ipc_file, device_list_file).await,
         Command::Connect {
             state_dir,
             ticket,
@@ -4340,6 +4356,81 @@ async fn runtime_ipc_outbox_status(ipc_file: PathBuf) -> Result<()> {
     }
 }
 
+async fn runtime_ipc_apply_device_directory(
+    ipc_file: PathBuf,
+    device_list_file: PathBuf,
+) -> Result<()> {
+    let device_list_file = fs::canonicalize(&device_list_file).with_context(|| {
+        format!(
+            "resolve refreshed device list {}",
+            device_list_file.display()
+        )
+    })?;
+    match kilogram_runtime_ipc::call(
+        &ipc_file,
+        RuntimeIpcCommand::ApplyOwnDeviceDirectory { device_list_file },
+    )
+    .await?
+    {
+        RuntimeIpcResponse::OwnDeviceDirectoryApplied(update) => {
+            print_runtime_device_directory_update(&update);
+            println!("status=runtime-own-device-directory-applied");
+            Ok(())
+        }
+        RuntimeIpcResponse::Error { message } => {
+            bail!("runtime IPC rejected device-directory update: {message}")
+        }
+        _ => bail!("runtime IPC returned an unexpected device-directory response"),
+    }
+}
+
+fn print_runtime_device_directory_update(update: &RuntimeIpcDeviceDirectoryUpdate) {
+    println!("account_id={}", update.account_id);
+    println!("device_id={}", update.local_device_id);
+    println!(
+        "previous_authority_revision={}",
+        update.previous_authority_revision
+    );
+    println!("authority_revision={}", update.authority_revision);
+    println!("active_device_count={}", update.active_device_count);
+    for device_id in &update.removed_device_ids {
+        println!("removed_device_id={device_id}");
+    }
+    println!(
+        "ratchet_session_records_retired={}",
+        update.ratchet_session_records_retired
+    );
+    println!(
+        "prekey_observations_retired={}",
+        update.prekey_observations_retired
+    );
+    println!(
+        "pending_unmaterialized_messages={}",
+        update.pending_unmaterialized_messages
+    );
+    println!(
+        "pending_materialized_messages={}",
+        update.pending_materialized_messages
+    );
+    println!(
+        "future_recipient_slot_status={}",
+        update.future_recipient_slot_status
+    );
+    println!(
+        "preexisting_recipient_slot_status={}",
+        update.preexisting_recipient_slot_status
+    );
+    println!("ticket_published={}", update.ticket_published);
+    println!(
+        "launch_profile_update_required={}",
+        update.launch_profile_update_required
+    );
+    println!(
+        "history_availability_status={}",
+        update.history_availability_status
+    );
+}
+
 struct RuntimeIpcDispatchOutcome {
     shutdown_requested: bool,
     state_changed: bool,
@@ -4347,13 +4438,17 @@ struct RuntimeIpcDispatchOutcome {
 
 fn handle_runtime_ipc_work(
     state_directory: &Path,
-    account_id: AccountId,
-    device_id: DeviceId,
+    endpoint: &Endpoint,
+    ticket: &mut ConnectionTicket,
+    launch_device_list_file: &Path,
+    ticket_file: Option<&Path>,
     work: RuntimeIpcWork,
 ) -> RuntimeIpcDispatchOutcome {
     let (command, response_sender) = work.into_parts();
     let shutdown_requested = matches!(command, RuntimeIpcCommand::Shutdown);
     let mut state_changed = false;
+    let account_id = ticket.listener_account_id();
+    let device_id = ticket.listener_device_id();
     let response = match command {
         RuntimeIpcCommand::Ping => RuntimeIpcResponse::Pong {
             account_id,
@@ -4416,6 +4511,27 @@ fn handle_runtime_ipc_work(
                 .and_then(|_lock| collect_runtime_outbox_status(state_directory));
             match status {
                 Ok(status) => RuntimeIpcResponse::OutboxStatus(status),
+                Err(error) => RuntimeIpcResponse::Error {
+                    message: format!("{error:#}"),
+                },
+            }
+        }
+        RuntimeIpcCommand::ApplyOwnDeviceDirectory { device_list_file } => {
+            match with_locked_state(state_directory, || {
+                apply_runtime_own_device_directory(
+                    state_directory,
+                    endpoint,
+                    ticket,
+                    launch_device_list_file,
+                    ticket_file,
+                    &device_list_file,
+                )
+            }) {
+                Ok((replacement, update)) => {
+                    *ticket = replacement;
+                    state_changed = true;
+                    RuntimeIpcResponse::OwnDeviceDirectoryApplied(update)
+                }
                 Err(error) => RuntimeIpcResponse::Error {
                     message: format!("{error:#}"),
                 },
@@ -4504,6 +4620,198 @@ struct PreparedRuntimeListener {
     authority_snapshot_store: AuthoritySnapshotStoreOutcome,
 }
 
+fn apply_runtime_own_device_directory(
+    state_directory: &Path,
+    endpoint: &Endpoint,
+    current_ticket: &ConnectionTicket,
+    launch_device_list_file: &Path,
+    ticket_file: Option<&Path>,
+    device_list_file: &Path,
+) -> Result<(ConnectionTicket, RuntimeIpcDeviceDirectoryUpdate)> {
+    ensure!(
+        device_list_file.is_absolute(),
+        "refreshed runtime device-list path must be absolute"
+    );
+    let metadata = fs::symlink_metadata(device_list_file).with_context(|| {
+        format!(
+            "inspect refreshed runtime device list {}",
+            device_list_file.display()
+        )
+    })?;
+    ensure!(
+        metadata.file_type().is_file() && !metadata.file_type().is_symlink(),
+        "refreshed runtime device list must be a regular non-symlink file"
+    );
+    let device_list_file = fs::canonicalize(device_list_file).with_context(|| {
+        format!(
+            "resolve refreshed runtime device list {}",
+            device_list_file.display()
+        )
+    })?;
+    let new_device_list = AccountDeviceListSnapshot::decode_and_verify(
+        &fs::read(&device_list_file).with_context(|| {
+            format!(
+                "read refreshed runtime device list {}",
+                device_list_file.display()
+            )
+        })?,
+    )
+    .context("decode and verify refreshed runtime device list")?;
+    let old_device_list = current_ticket.listener_directory().device_list();
+    new_device_list
+        .verify_for_account(current_ticket.listener_account_id())
+        .context("verify refreshed runtime device-list account")?;
+    ensure!(
+        new_device_list.revision() >= old_device_list.revision(),
+        "refreshed runtime device list rolls authority revision back from {} to {}",
+        old_device_list.revision(),
+        new_device_list.revision()
+    );
+    if new_device_list.revision() == old_device_list.revision() {
+        ensure!(
+            &new_device_list == old_device_list,
+            "refreshed runtime device list equivocates at authority revision {}",
+            new_device_list.revision()
+        );
+    }
+
+    let device_state = load_command_device_state(state_directory)?;
+    let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+    let local_certificate = trust
+        .load_certificate()
+        .context("load runtime certificate for directory refresh")?;
+    ensure!(
+        new_device_list.certificate_for(local_certificate.device_id()) == Some(&local_certificate),
+        "the running device is absent or changed in the refreshed device list"
+    );
+
+    let new_device_ids = new_device_list
+        .devices()
+        .iter()
+        .map(DeviceCertificate::device_id)
+        .collect::<BTreeSet<_>>();
+    for certificate in new_device_list.devices() {
+        ensure!(
+            old_device_list.certificate_for(certificate.device_id()) == Some(certificate),
+            "live device-directory refresh cannot add or replace device {}",
+            certificate.device_id()
+        );
+    }
+    let removed_device_ids = old_device_list
+        .devices()
+        .iter()
+        .map(DeviceCertificate::device_id)
+        .filter(|device_id| !new_device_ids.contains(device_id))
+        .collect::<Vec<_>>();
+    let revoked_device_ids = new_device_list
+        .authority_snapshot()
+        .revocations()
+        .iter()
+        .map(|revocation| revocation.device_id())
+        .collect::<BTreeSet<_>>();
+    for device_id in &removed_device_ids {
+        ensure!(
+            revoked_device_ids.contains(device_id),
+            "device {device_id} disappeared without a permanent Root revocation"
+        );
+    }
+
+    let retained_pools = current_ticket
+        .listener_directory()
+        .pools()
+        .iter()
+        .filter(|pool| new_device_ids.contains(&pool.device_id()))
+        .cloned()
+        .collect::<Vec<_>>();
+    let new_directory = AccountPrekeyDirectory::new(new_device_list.clone(), retained_pools)
+        .context("assemble refreshed complete runtime prekey directory")?;
+    new_directory
+        .verify_at(unix_time_now()?)
+        .context("verify refreshed runtime prekey directory freshness")?;
+
+    let snapshot = load_runtime_state_snapshot(
+        state_directory,
+        current_ticket.listener_account_id(),
+        current_ticket.listener_device_id(),
+    )?;
+    let mut pending_unmaterialized_messages = 0_usize;
+    let mut pending_materialized_messages = 0_usize;
+    for (queue_id, _) in snapshot
+        .queued
+        .iter()
+        .filter(|(queue_id, _)| !snapshot.delivered.contains_key(queue_id))
+    {
+        if !snapshot.materialized.contains_key(queue_id) {
+            pending_unmaterialized_messages += 1;
+            continue;
+        }
+        pending_materialized_messages += 1;
+    }
+
+    let (authority_store, ratchet_session_records_retired, prekey_observations_retired) =
+        run_state_transaction(state_directory, |transaction| {
+            transaction.prepare_trust_workspace()?;
+            let authority_store = device_state
+                .install_own_authority_snapshot(new_device_list.authority_snapshot())
+                .context("install refreshed own authority in DB-primary trust workspace")?;
+            let ratchet_state = transaction.load_ratchet_state()?;
+            let mut sessions = 0_usize;
+            let mut observations = 0_usize;
+            for device_id in &revoked_device_ids {
+                let retirement = ratchet_state
+                    .retire_peer_device(*device_id)
+                    .with_context(|| format!("retire ratchet state for device {device_id}"))?;
+                sessions += usize::from(retirement.session_removed);
+                observations += usize::from(retirement.prekey_observation_removed);
+            }
+            Ok((authority_store, sessions, observations))
+        })?;
+
+    let replacement = ConnectionTicket::new(
+        endpoint.addr(),
+        device_state.identity(),
+        local_certificate,
+        new_directory,
+        current_ticket.allowed_requester_account_id(),
+        current_ticket.route_policy(),
+    )?;
+    let encoded = replacement.encode()?;
+    let ticket_published = if let Some(path) = ticket_file {
+        publish_runtime_ticket(path, encoded.as_bytes())?;
+        true
+    } else {
+        false
+    };
+    println!("runtime_directory_authority_store={authority_store:?}");
+    println!("runtime_directory_ticket={encoded}");
+    if let Some(path) = ticket_file {
+        println!("runtime_directory_ticket_file={}", path.display());
+        println!("runtime_directory_ticket_publish=atomic-replace");
+    }
+
+    Ok((
+        replacement,
+        RuntimeIpcDeviceDirectoryUpdate {
+            account_id: current_ticket.listener_account_id(),
+            local_device_id: current_ticket.listener_device_id(),
+            previous_authority_revision: old_device_list.revision(),
+            authority_revision: new_device_list.revision(),
+            active_device_count: new_device_list.devices().len(),
+            removed_device_ids: revoked_device_ids.into_iter().collect(),
+            ratchet_session_records_retired,
+            prekey_observations_retired,
+            pending_unmaterialized_messages,
+            pending_materialized_messages,
+            ticket_published,
+            launch_profile_update_required: device_list_file != launch_device_list_file,
+            future_recipient_slot_status: "removed-devices-excluded-by-refreshed-ticket".to_owned(),
+            preexisting_recipient_slot_status: "immutable-cannot-be-remotely-rewritten-or-erased"
+                .to_owned(),
+            history_availability_status: "existing-copies-remain-readable".to_owned(),
+        },
+    ))
+}
+
 enum RuntimeEvent {
     Connection(Connection),
     Ipc(RuntimeIpcWork),
@@ -4543,7 +4851,7 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
         .context("bind long-lived Iroh runtime endpoint")?;
     wait_for_relay(&endpoint, route_policy, relay_wait_seconds).await?;
 
-    let ticket = ConnectionTicket::new(
+    let mut ticket = ConnectionTicket::new(
         endpoint.addr(),
         prepared.device_state.identity(),
         prepared.listener_certificate.clone(),
@@ -4636,8 +4944,10 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                 last_activity = tokio::time::Instant::now();
                 let outcome = handle_runtime_ipc_work(
                     &state_dir,
-                    ticket.listener_account_id(),
-                    prepared.device_state.identity().device_id(),
+                    &endpoint,
+                    &mut ticket,
+                    &device_list_file,
+                    ticket_file.as_deref(),
                     work,
                 );
                 if outcome.state_changed
@@ -5011,17 +5321,35 @@ async fn prepare_runtime_delivery(
             .get(&queued.contact_id())
             .context("selected runtime queue contact disappeared")?;
         let ticket = load_runtime_contact_ticket(contact, &local_certificate, &local_authority)?;
-        run_state_transaction(state_directory, |transaction| {
-            transaction
-                .load_ratchet_state()?
-                .observe_prekey_directory(ticket.listener_directory(), unix_time_now()?)?;
-            Ok(())
-        })?;
         pin_peer_authority_primary(
             state_directory,
             &device_state,
             ticket.listener_authority_snapshot(),
         )?;
+        run_state_transaction(state_directory, |transaction| {
+            let ratchet_state = transaction.load_ratchet_state()?;
+            let mut retired_sessions = 0_usize;
+            let mut retired_observations = 0_usize;
+            for revocation in ticket.listener_authority_snapshot().revocations() {
+                let retirement = ratchet_state
+                    .retire_peer_device(revocation.device_id())
+                    .with_context(|| {
+                        format!(
+                            "retire peer ratchet state for revoked device {}",
+                            revocation.device_id()
+                        )
+                    })?;
+                retired_sessions += usize::from(retirement.session_removed);
+                retired_observations += usize::from(retirement.prekey_observation_removed);
+            }
+            ratchet_state
+                .observe_prekey_directory(ticket.listener_directory(), unix_time_now()?)?;
+            if retired_sessions != 0 || retired_observations != 0 {
+                println!("runtime_peer_ratchet_sessions_retired={retired_sessions}");
+                println!("runtime_peer_prekey_observations_retired={retired_observations}");
+            }
+            Ok(())
+        })?;
         let membership = trust
             .load_conversation_membership(queued.conversation_id().scope_id())
             .context("load runtime queued conversation membership")?;
@@ -5094,6 +5422,25 @@ async fn prepare_runtime_delivery(
             }
         };
         event.verify_for_membership(&membership)?;
+        let immutable_revoked_slots = event
+            .event()
+            .ratchet_recipients()?
+            .iter()
+            .filter(|recipient| {
+                ticket
+                    .listener_authority_snapshot()
+                    .revocations()
+                    .iter()
+                    .any(|revocation| revocation.device_id() == recipient.device_id())
+            })
+            .count();
+        if immutable_revoked_slots != 0 {
+            println!("runtime_queue_id={queue_id}");
+            println!(
+                "runtime_preexisting_revoked_recipient_slots_immutable={immutable_revoked_slots}"
+            );
+            println!("runtime_preexisting_recipient_slot_action=not-rewritten");
+        }
         Ok(PreparedRuntimeDelivery {
             queue_id,
             ticket,
@@ -11799,6 +12146,65 @@ mod tests {
     }
 
     #[test]
+    fn ratchet_retirement_rolls_back_on_failure_and_commits_as_vault_delta() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let peer_directory = tempfile::tempdir()?;
+        let local = DeviceIdentity::generate()?;
+        let peer = DeviceIdentity::generate()?;
+        let now = unix_time_now()?;
+        let peer_pool = RatchetState::load_or_create(peer_directory.path())?.prekey_pool(
+            &peer,
+            4,
+            now,
+            DEFAULT_PREKEY_POOL_VALIDITY_SECONDS,
+        )?;
+        let mut local_ratchet = RatchetState::load_or_create(directory.path())?;
+        local_ratchet.observe_prekey_pool(&peer_pool, now)?;
+        local_ratchet.encrypt_with_pool(&local, &peer_pool, "transactional retirement", now)?;
+        drop(local_ratchet);
+        EncryptedStateVault::open_or_create(directory.path())?.migrate_legacy_snapshot()?;
+
+        let failed_guard = VaultDualWriteGuard::prepare(directory.path())?
+            .context("prepare failed retirement dual-write")?;
+        let failed: Result<()> = run_state_transaction(directory.path(), |transaction| {
+            let ratchet = transaction.load_ratchet_state()?;
+            let retirement = ratchet.retire_peer_device(peer.device_id())?;
+            ensure!(retirement.session_removed && retirement.prekey_observation_removed);
+            bail!("injected failure after ratchet retirement")
+        });
+        assert!(failed.is_err());
+        failed_guard.finish()?;
+        assert!(
+            RatchetState::load_or_create(directory.path())?.has_session(peer.device_id()),
+            "rollback must restore the retired session"
+        );
+
+        let committed_guard = VaultDualWriteGuard::prepare(directory.path())?
+            .context("prepare committed retirement dual-write")?;
+        let retirement = run_state_transaction(directory.path(), |transaction| {
+            transaction
+                .load_ratchet_state()?
+                .retire_peer_device(peer.device_id())
+                .context("commit peer retirement")
+        })?;
+        committed_guard.finish()?;
+        assert!(retirement.session_removed && retirement.prekey_observation_removed);
+        assert!(!RatchetState::load_or_create(directory.path())?.has_session(peer.device_id()));
+        let read_guard = VaultDualWriteGuard::prepare(directory.path())?
+            .context("prepare retirement verification read")?;
+        let read = EncryptedStateVault::open_existing(directory.path())?
+            .read_mutable_primary_canary(&[StateRecordKind::Ratchet])?;
+        let peer_id = peer.device_id().to_string();
+        assert!(
+            read.records()
+                .iter()
+                .all(|record| !record.relative_path().contains(&peer_id))
+        );
+        read_guard.finish()?;
+        Ok(())
+    }
+
+    #[test]
     fn cli_vault_guard_mirrors_live_state_and_recovers_a_crashed_command() -> Result<()> {
         let directory = tempfile::tempdir()?;
         fs::write(directory.path().join("state"), b"initial")?;
@@ -12041,6 +12447,142 @@ mod tests {
             .context("join profile runtime")??;
         assert!(ticket_file.is_file());
         assert!(!ipc_file.exists());
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn live_runtime_applies_revocation_republishes_ticket_and_retires_ratchet() -> Result<()>
+    {
+        let directory = tempfile::tempdir()?;
+        let root_dir = directory.path().join("root");
+        let retained_state = directory.path().join("retained-state");
+        let removed_state = directory.path().join("removed-state");
+        create_account(root_dir.clone())?;
+        enroll_device(root_dir.clone(), retained_state.clone(), None)?;
+        enroll_device(root_dir.clone(), removed_state.clone(), None)?;
+        let root = AccountRootState::load(&root_dir)?;
+        let retained = DeviceState::load_or_create(&retained_state)?;
+        let removed = DeviceState::load_or_create(&removed_state)?;
+        let retained_certificate = retained.load_certificate()?;
+        let removed_certificate = removed.load_certificate()?;
+        let initial_list =
+            root.publish_device_list(&[retained_certificate.clone(), removed_certificate.clone()])?;
+        let initial_list_file = directory.path().join("devices-before.snapshot");
+        write_new_authority_file(&initial_list_file, &initial_list.encode()?)?;
+
+        let now = unix_time_now()?;
+        let removed_pool = RatchetState::load_or_create(&removed_state)?.prekey_pool(
+            removed.identity(),
+            4,
+            now,
+            DEFAULT_PREKEY_POOL_VALIDITY_SECONDS,
+        )?;
+        let removed_pool_file = directory.path().join("removed.prekeys");
+        write_new_authority_file(&removed_pool_file, &removed_pool.encode()?)?;
+        let mut retained_ratchet = RatchetState::load_or_create(&retained_state)?;
+        retained_ratchet.observe_prekey_pool(&removed_pool, now)?;
+        retained_ratchet.encrypt_with_pool(
+            retained.identity(),
+            &removed_pool,
+            "retire this local session",
+            now,
+        )?;
+        drop(retained_ratchet);
+
+        let profile_file = directory.path().join("runtime.launch.json");
+        let ticket_file = directory.path().join("runtime.ticket");
+        let ipc_file = directory.path().join("runtime.ipc.json");
+        create_runtime_launch_profile(
+            profile_file.clone(),
+            RuntimeLaunchSettings {
+                state_dir: retained_state.clone(),
+                allowed_requester_account_id: root.account_id(),
+                device_list_file: initial_list_file.clone(),
+                peer_prekey_pool_files: vec![removed_pool_file],
+                ticket_file: Some(ticket_file.clone()),
+                relay_wait_seconds: 0,
+                route_policy: RuntimeIpcRoutePolicy::DirectOnly,
+                relay_url: None,
+                poll_milliseconds: 20,
+                retry_base_seconds: 1,
+                retry_max_seconds: 1,
+                auto_sync_seconds: 0,
+                ipc_file: ipc_file.clone(),
+            },
+        )?;
+        let task = tokio::spawn(runtime(runtime_options_from_profile(&profile_file)?));
+        timeout(Duration::from_secs(10), async {
+            while !ipc_file.is_file() {
+                tokio::time::sleep(Duration::from_millis(20)).await;
+            }
+        })
+        .await
+        .context("runtime did not publish its IPC descriptor")?;
+
+        let (_, refreshed_list) =
+            root.revoke_and_publish_device_list(removed.identity().device_id())?;
+        let refreshed_list_file = directory.path().join("devices-after.snapshot");
+        write_new_authority_file(&refreshed_list_file, &refreshed_list.encode()?)?;
+        let response = kilogram_runtime_ipc::call(
+            &ipc_file,
+            RuntimeIpcCommand::ApplyOwnDeviceDirectory {
+                device_list_file: fs::canonicalize(&refreshed_list_file)?,
+            },
+        )
+        .await?;
+        let RuntimeIpcResponse::OwnDeviceDirectoryApplied(update) = response else {
+            bail!("runtime returned an unexpected directory-update response")
+        };
+        assert_eq!(update.previous_authority_revision, initial_list.revision());
+        assert_eq!(update.authority_revision, refreshed_list.revision());
+        assert_eq!(update.active_device_count, 1);
+        assert_eq!(
+            update.removed_device_ids,
+            vec![removed.identity().device_id()]
+        );
+        assert_eq!(update.ratchet_session_records_retired, 1);
+        assert_eq!(update.prekey_observations_retired, 1);
+        assert!(update.ticket_published);
+        assert!(update.launch_profile_update_required);
+        assert_eq!(
+            update.history_availability_status,
+            "existing-copies-remain-readable"
+        );
+        let published = ConnectionTicket::decode(&fs::read_to_string(&ticket_file)?)?;
+        assert_eq!(
+            published.listener_authority_snapshot().revision(),
+            refreshed_list.revision()
+        );
+        assert!(
+            published
+                .listener_directory()
+                .certificate_for(removed.identity().device_id())
+                .is_none()
+        );
+        let retry = kilogram_runtime_ipc::call(
+            &ipc_file,
+            RuntimeIpcCommand::ApplyOwnDeviceDirectory {
+                device_list_file: fs::canonicalize(&refreshed_list_file)?,
+            },
+        )
+        .await?;
+        let RuntimeIpcResponse::OwnDeviceDirectoryApplied(retry) = retry else {
+            bail!("runtime returned an unexpected retry response")
+        };
+        assert_eq!(retry.previous_authority_revision, refreshed_list.revision());
+        assert_eq!(retry.authority_revision, refreshed_list.revision());
+        assert_eq!(retry.ratchet_session_records_retired, 0);
+        assert_eq!(retry.prekey_observations_retired, 0);
+        let retained_ratchet = RatchetState::load_or_create(&retained_state)?;
+        assert!(!retained_ratchet.has_session(removed.identity().device_id()));
+        assert_eq!(
+            kilogram_runtime_ipc::call(&ipc_file, RuntimeIpcCommand::Shutdown).await?,
+            RuntimeIpcResponse::ShutdownAccepted
+        );
+        timeout(Duration::from_secs(10), task)
+            .await
+            .context("runtime did not stop after directory-update test")?
+            .context("join directory-update runtime")??;
         Ok(())
     }
 

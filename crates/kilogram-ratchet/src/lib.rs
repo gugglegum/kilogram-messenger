@@ -602,6 +602,18 @@ pub struct RatchetOperation {
     pub retained_session_count: usize,
 }
 
+/// Exact local mutable records removed when a device is retired.
+///
+/// The caller is responsible for running this mutation inside Kilogram's
+/// crash-consistent state transaction. Missing records are an idempotent
+/// success, which makes a directory refresh safe to retry after an uncertain
+/// IPC response.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct RatchetRetirement {
+    pub session_removed: bool,
+    pub prekey_observation_removed: bool,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 struct LegacySessionRecord {
     version: u8,
@@ -794,6 +806,18 @@ impl RatchetState {
 
     pub fn has_session(&self, peer_device_id: DeviceId) -> bool {
         self.session_path(peer_device_id).is_file()
+    }
+
+    pub fn retire_peer_device(
+        &self,
+        peer_device_id: DeviceId,
+    ) -> Result<RatchetRetirement, RatchetError> {
+        Ok(RatchetRetirement {
+            session_removed: remove_file_if_present(&self.session_path(peer_device_id))?,
+            prekey_observation_removed: remove_file_if_present(
+                &self.peer_prekey_pool_path(peer_device_id),
+            )?,
+        })
     }
 
     pub fn encrypt(
@@ -1567,6 +1591,14 @@ fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), RatchetError> {
     Ok(())
 }
 
+fn remove_file_if_present(path: &Path) -> Result<bool, RatchetError> {
+    match fs::remove_file(path) {
+        Ok(()) => Ok(true),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
+        Err(error) => Err(error.into()),
+    }
+}
+
 #[derive(Debug, Error)]
 pub enum RatchetError {
     #[error("ratchet state I/O failed")]
@@ -2149,6 +2181,43 @@ mod tests {
             );
         }
         assert!(!ciphertext.ciphertext().is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn peer_retirement_removes_session_and_prekey_observation_idempotently()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let root = tempdir()?;
+        let local_dir = root.path().join("local");
+        let peer_dir = root.path().join("peer");
+        let local = DeviceIdentity::generate()?;
+        let peer = DeviceIdentity::generate()?;
+        let now = 2_000_000_000;
+        let peer_pool = RatchetState::load_or_create(&peer_dir)?.prekey_pool(
+            &peer,
+            4,
+            now,
+            DEFAULT_PREKEY_POOL_VALIDITY_SECONDS,
+        )?;
+        let mut state = RatchetState::load_or_create(&local_dir)?;
+        state.observe_prekey_pool(&peer_pool, now)?;
+        state.encrypt_with_pool(&local, &peer_pool, "create session", now)?;
+        assert!(state.has_session(peer.device_id()));
+        assert!(state.peer_prekey_pool_path(peer.device_id()).is_file());
+
+        assert_eq!(
+            state.retire_peer_device(peer.device_id())?,
+            RatchetRetirement {
+                session_removed: true,
+                prekey_observation_removed: true,
+            }
+        );
+        assert!(!state.has_session(peer.device_id()));
+        assert!(!state.peer_prekey_pool_path(peer.device_id()).exists());
+        assert_eq!(
+            state.retire_peer_device(peer.device_id())?,
+            RatchetRetirement::default()
+        );
         Ok(())
     }
 

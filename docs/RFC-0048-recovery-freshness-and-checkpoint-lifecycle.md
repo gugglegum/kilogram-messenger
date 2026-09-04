@@ -1,6 +1,6 @@
 # RFC-0048: Recovery freshness and checkpoint lifecycle
 
-Status: M0.9.26 first-class device removal implemented (2026-09-04).
+Status: M0.9.27 live runtime device-directory refresh implemented (2026-09-04).
 
 ## 1. Problem and impossibility boundary
 
@@ -369,11 +369,19 @@ states: Root removal is complete; recovery-policy activation is required;
 runtime peer-directory refresh is required; ratchet/session retirement is
 required; existing history copies remain readable.
 
-## 10. Next stage
+## 10. Implemented M0.9.27 runtime activation
 
-M0.9.27 should make an installed revocation operational in the long-lived
-runtime: authenticate and apply the refreshed local-account device directory,
-prevent all new fanout/session use for the removed Device ID, retire its local
-ratchet sessions and queued recipient slots crash-consistently, and expose the
-result over IPC. This must still state honestly that already delivered history
-on the removed device cannot be remotely erased.
+The installed revocation can now be applied to a long-lived runtime through an
+authenticated typed IPC operation. The runtime accepts only an idempotent replay
+or a Root-signed monotonic removal-only subset which retains its own exact
+certificate. One vault-primary transaction installs the authority high-water
+mark and removes revoked-device ratchet sessions and prekey observations; the
+current public runtime ticket is then atomically replaced without changing the
+Endpoint ID.
+
+Senders dynamically reading that refreshed ticket retire the revoked recipient
+state before new fanout materialization, so new recipient tables exclude the
+device. Already signed events are append-only and are explicitly reported as
+not rewritten; history already held by the removed device remains readable.
+The complete contract and failure boundaries are specified in
+[`RFC-0049-live-runtime-device-directory-refresh.md`](RFC-0049-live-runtime-device-directory-refresh.md).

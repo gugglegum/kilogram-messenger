@@ -2498,11 +2498,46 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
   byte-idempotent повторный запуск;
 - strict Windows JSON regression не принимает ложное удаление старой истории.
 
+### M0.9.27 — live runtime device-directory refresh: выполнено
+
+Реализовано:
+
+- runtime IPC поднят до v5 и получил authenticated
+  `ApplyOwnDeviceDirectory`; CLI и Windows GUI используют тот же typed actor
+  contract без прямого доступа к `STATE_DIR`;
+- runtime принимает только canonical Root-signed same-account transition с
+  monotonic revision, exact retained certificates, active current device и без
+  additions/replacements; каждое исчезновение требует permanent revocation;
+- одна vault-primary transaction устанавливает новый own authority high-water
+  и удаляет ratchet session + peer-prekey observation для revoked Device IDs;
+- failure rollback восстанавливает удалённые records, commit сохраняет typed
+  authenticated delta, exact повтор операции идемпотентен;
+- runtime сохраняет Endpoint ID/route/requester authority и атомарно заменяет
+  public ticket; при другом canonical device-list path отдельно требует
+  convergence launch profile;
+- sender при чтении refreshed peer ticket retire revoked-device state до
+  наблюдения active pools и нового fanout; unmaterialized queue использует
+  только active roster;
+- старый materialized recipient table не переписывается, потому что входит в
+  signed append-only event; IPC/UI отдельно показывают future exclusion,
+  immutable old slots и `existing-copies-remain-readable`.
+
+Проверки:
+
+- live runtime regression без restart проверяет `2 -> 1`, atomic ticket
+  replacement, session/prekey retirement и idempotent retry;
+- injected transaction failure восстанавливает оба ratchet records, а commit
+  записывает два removals в vault delta;
+- Windows adapter regression проверяет exact IPC command/path и typed result;
+- подробный contract зафиксирован в
+  [`../docs/RFC-0049-live-runtime-device-directory-refresh.md`](../docs/RFC-0049-live-runtime-device-directory-refresh.md).
+
 ### Следующий этап
 
-1. M0.9.27: применить refreshed local-account directory в long-lived runtime,
-   прекратить новый fanout/queue use removed Device ID, crash-consistently
-   retire его ratchet sessions и показать результат через authenticated IPC.
+1. M0.9.28: записывать authenticated receipt применённого runtime directory и
+   bounded desktop-операцией согласовывать launch profile с canonical applied
+   path; crash/restart между state commit, ticket replace и profile convergence
+   должен иметь явный repairable status и не возвращать revoked roster молча.
 2. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.

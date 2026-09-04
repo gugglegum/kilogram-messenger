@@ -15,10 +15,10 @@ use eframe::egui;
 use kilogram_bootstrap_contract::{DesktopBootstrapOutput, MAX_DESKTOP_BOOTSTRAP_OUTPUT_BYTES};
 use kilogram_identity::{AccountId, AccountRecoveryPhrase};
 use kilogram_runtime_ipc::{
-    RuntimeIpcCommand, RuntimeIpcConversationSummary, RuntimeIpcHistoryCursor,
-    RuntimeIpcHistoryMessage, RuntimeIpcHistoryPage, RuntimeIpcOutboxStatus, RuntimeIpcQueueState,
-    RuntimeIpcRequestId, RuntimeIpcResponse, RuntimeIpcRoutePolicy, RuntimeLaunchProfile,
-    RuntimeLaunchSettings,
+    RuntimeIpcCommand, RuntimeIpcConversationSummary, RuntimeIpcDeviceDirectoryUpdate,
+    RuntimeIpcHistoryCursor, RuntimeIpcHistoryMessage, RuntimeIpcHistoryPage,
+    RuntimeIpcOutboxStatus, RuntimeIpcQueueState, RuntimeIpcRequestId, RuntimeIpcResponse,
+    RuntimeIpcRoutePolicy, RuntimeLaunchProfile, RuntimeLaunchSettings,
 };
 use zeroize::{Zeroize as _, Zeroizing};
 
@@ -201,6 +201,7 @@ enum Operation {
     DeviceLinkAuthorize,
     DeviceLinkAccept,
     DeviceRemove,
+    ApplyDeviceDirectory,
     RecoveryApprove,
     RecoveryRun,
     RecoveryCancel,
@@ -223,6 +224,7 @@ enum RuntimeUiAction {
     Stop,
     LoadProfile,
     SaveProfile,
+    ApplyDeviceDirectory,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -809,6 +811,7 @@ struct ViewModel {
     message: String,
     queue_attempt: Option<QueueAttempt>,
     outbox: Option<OutboxView>,
+    device_directory_update: Option<RuntimeIpcDeviceDirectoryUpdate>,
     notice: Option<String>,
     error: Option<String>,
 }
@@ -833,6 +836,7 @@ impl ViewModel {
             message: String::new(),
             queue_attempt: None,
             outbox: None,
+            device_directory_update: None,
             notice: None,
             error: None,
         }
@@ -993,6 +997,15 @@ impl ViewModel {
             Ok(WorkerSuccess::Refreshed(status)) => {
                 self.connection = ConnectionState::Connected;
                 self.outbox = Some(status.into());
+                self.error = None;
+            }
+            Ok(WorkerSuccess::DeviceDirectoryApplied(update)) => {
+                self.connection = ConnectionState::Connected;
+                self.notice = Some(format!(
+                    "Runtime directory applied at authority revision {}. {} ratchet session record(s) retired; old history copies remain readable.",
+                    update.authority_revision, update.ratchet_session_records_retired
+                ));
+                self.device_directory_update = Some(update);
                 self.error = None;
             }
             Ok(WorkerSuccess::Conversations(conversations)) => {
@@ -1218,6 +1231,10 @@ enum WorkerRequest {
     Refresh {
         descriptor: PathBuf,
     },
+    ApplyDeviceDirectory {
+        descriptor: PathBuf,
+        device_list_file: PathBuf,
+    },
     Conversations {
         descriptor: PathBuf,
     },
@@ -1262,6 +1279,7 @@ impl WorkerRequest {
             Self::AddContact { .. } => Operation::AddContact,
             Self::Queue { .. } => Operation::Queue,
             Self::Refresh { .. } => Operation::Refresh,
+            Self::ApplyDeviceDirectory { .. } => Operation::ApplyDeviceDirectory,
             Self::Conversations { .. } => Operation::Conversations,
             Self::History { older: false, .. } => Operation::History,
             Self::History { older: true, .. } => Operation::HistoryOlder,
@@ -1327,6 +1345,7 @@ enum WorkerSuccess {
         inserted: bool,
     },
     Refreshed(RuntimeIpcOutboxStatus),
+    DeviceDirectoryApplied(RuntimeIpcDeviceDirectoryUpdate),
     Conversations(Vec<RuntimeIpcConversationSummary>),
     History {
         page: RuntimeIpcHistoryPage,
@@ -2140,6 +2159,21 @@ async fn execute_request(request: WorkerRequest) -> Result<WorkerSuccess> {
                 _ => bail!("Runtime returned an unexpected outbox response"),
             }
         }
+        WorkerRequest::ApplyDeviceDirectory {
+            descriptor,
+            device_list_file,
+        } => {
+            let command = RuntimeIpcCommand::ApplyOwnDeviceDirectory { device_list_file };
+            match kilogram_runtime_ipc::call(&descriptor, command).await? {
+                RuntimeIpcResponse::OwnDeviceDirectoryApplied(update) => {
+                    Ok(WorkerSuccess::DeviceDirectoryApplied(update))
+                }
+                RuntimeIpcResponse::Error { message } => {
+                    bail!("Runtime rejected the device directory: {message}")
+                }
+                _ => bail!("Runtime returned an unexpected device-directory response"),
+            }
+        }
         WorkerRequest::Conversations { descriptor } => {
             match kilogram_runtime_ipc::call(&descriptor, RuntimeIpcCommand::ConversationList)
                 .await?
@@ -2589,6 +2623,7 @@ impl KilogramApp {
                 );
             }
             WorkerSuccess::DeviceRemoved(output) => {
+                self.model.device_directory_update = None;
                 if let Some(installed) = self.device_link.policy.installation.as_ref() {
                     self.device_link.policy.old_epoch = installed.policy_epoch.to_string();
                     self.device_link.policy.previous_transition_id =
@@ -3880,6 +3915,29 @@ impl KilogramApp {
         }
     }
 
+    fn start_apply_device_directory(&mut self) {
+        let result = self.model.descriptor().and_then(|descriptor| {
+            ensure!(
+                self.model.connection == ConnectionState::Connected,
+                "Connect to the running runtime first"
+            );
+            let device_list_file = canonical_nonsymlink_input_file(
+                &self.runtime_profile_draft.device_list_file,
+                "Refreshed device list",
+            )?;
+            Ok(WorkerRequest::ApplyDeviceDirectory {
+                descriptor,
+                device_list_file,
+            })
+        });
+        match result {
+            Ok(request) => self.submit(Operation::ApplyDeviceDirectory, request),
+            Err(error) => self
+                .model
+                .fail(Operation::ApplyDeviceDirectory, format!("{error:#}")),
+        }
+    }
+
     fn start_conversations(&mut self) {
         if self.model.pending.is_some() {
             return;
@@ -4863,6 +4921,19 @@ impl KilogramApp {
                     );
                 }
                 if let Some(result) = self.device_link.removal.result.as_ref() {
+                    let applied = self
+                        .model
+                        .device_directory_update
+                        .as_ref()
+                        .filter(|update| {
+                            update.authority_revision == result.after_authority_revision
+                                && update
+                                    .removed_device_ids
+                                    .iter()
+                                    .any(|device_id| {
+                                        device_id.to_string() == result.removed_device_id
+                                    })
+                        });
                     ui.separator();
                     ui.colored_label(
                         egui::Color32::from_rgb(92, 201, 137),
@@ -4880,11 +4951,19 @@ impl KilogramApp {
                     ));
                     ui.label(format!(
                         "Runtime peer-directory refresh: {}",
-                        result.runtime_peer_directory_status
+                        if applied.is_some() {
+                            "applied"
+                        } else {
+                            &result.runtime_peer_directory_status
+                        }
                     ));
                     ui.label(format!(
                         "Ratchet/session retirement: {}",
-                        result.ratchet_session_retirement_status
+                        if applied.is_some() {
+                            "complete"
+                        } else {
+                            &result.ratchet_session_retirement_status
+                        }
                     ));
                     ui.label(format!(
                         "History availability: {}",
@@ -5600,7 +5679,45 @@ impl KilogramApp {
             {
                 action = RuntimeUiAction::Stop;
             }
+            if ui
+                .add_enabled(
+                    self.model.pending.is_none()
+                        && self.model.connection == ConnectionState::Connected
+                        && !self
+                            .runtime_profile_draft
+                            .device_list_file
+                            .trim()
+                            .is_empty(),
+                    egui::Button::new("Apply refreshed device list"),
+                )
+                .clicked()
+            {
+                action = RuntimeUiAction::ApplyDeviceDirectory;
+            }
         });
+        if let Some(update) = self.model.device_directory_update.as_ref() {
+            ui.colored_label(
+                egui::Color32::from_rgb(92, 201, 137),
+                format!(
+                    "Runtime roster active: revision {} · {} active device(s)",
+                    update.authority_revision, update.active_device_count
+                ),
+            );
+            ui.small(format!(
+                "Retired: {} session record(s), {} prekey observation(s). Local pending queues: {} sealed, {} already materialized.",
+                update.ratchet_session_records_retired,
+                update.prekey_observations_retired,
+                update.pending_unmaterialized_messages,
+                update.pending_materialized_messages
+            ));
+            if update.launch_profile_update_required {
+                ui.colored_label(
+                    egui::Color32::from_rgb(246, 195, 93),
+                    "Save the same device-list path into the launch profile after stopping runtime.",
+                );
+            }
+            ui.small("The refreshed ticket excludes removed devices from future peer fanout. Previously signed recipient slots cannot be rewritten, and history already copied to a removed device cannot be erased.");
+        }
         action
     }
 
@@ -6275,6 +6392,8 @@ impl eframe::App for KilogramApp {
             self.load_runtime_profile();
         } else if runtime_action == RuntimeUiAction::SaveProfile {
             self.save_runtime_profile();
+        } else if runtime_action == RuntimeUiAction::ApplyDeviceDirectory {
+            self.start_apply_device_directory();
         } else if add_contact_clicked {
             self.start_add_contact();
         } else if let Some(contact_id) = selected_contact {
@@ -6764,6 +6883,40 @@ mod tests {
                 }))
                 .map_err(|_| anyhow::anyhow!("send GUI history response"))?;
 
+            let directory_update = requests
+                .recv()
+                .await
+                .context("receive GUI device-directory update")?;
+            let (command, response) = directory_update.into_parts();
+            ensure!(matches!(
+                command,
+                RuntimeIpcCommand::ApplyOwnDeviceDirectory { device_list_file }
+                    if device_list_file == std::path::Path::new("refreshed.kadl")
+            ));
+            response
+                .send(RuntimeIpcResponse::OwnDeviceDirectoryApplied(
+                    RuntimeIpcDeviceDirectoryUpdate {
+                        account_id,
+                        local_device_id: device_id,
+                        previous_authority_revision: 3,
+                        authority_revision: 4,
+                        active_device_count: 1,
+                        removed_device_ids: vec![device_id],
+                        ratchet_session_records_retired: 1,
+                        prekey_observations_retired: 1,
+                        pending_unmaterialized_messages: 2,
+                        pending_materialized_messages: 3,
+                        ticket_published: true,
+                        launch_profile_update_required: true,
+                        future_recipient_slot_status:
+                            "removed-devices-excluded-by-refreshed-ticket".to_owned(),
+                        preexisting_recipient_slot_status:
+                            "immutable-cannot-be-remotely-rewritten-or-erased".to_owned(),
+                        history_availability_status: "existing-copies-remain-readable".to_owned(),
+                    },
+                ))
+                .map_err(|_| anyhow::anyhow!("send GUI device-directory response"))?;
+
             let shutdown = requests.recv().await.context("receive GUI shutdown")?;
             let (command, response) = shutdown.into_parts();
             ensure!(matches!(command, RuntimeIpcCommand::Shutdown));
@@ -6849,6 +7002,21 @@ mod tests {
             history,
             WorkerSuccess::History { page, older: false }
                 if page.total_messages == 0 && page.messages.is_empty()
+        ));
+
+        let directory_update = execute_request(WorkerRequest::ApplyDeviceDirectory {
+            descriptor: descriptor.clone(),
+            device_list_file: PathBuf::from("refreshed.kadl"),
+        })
+        .await?;
+        assert!(matches!(
+            directory_update,
+            WorkerSuccess::DeviceDirectoryApplied(RuntimeIpcDeviceDirectoryUpdate {
+                authority_revision: 4,
+                ratchet_session_records_retired: 1,
+                history_availability_status,
+                ..
+            }) if history_availability_status == "existing-copies-remain-readable"
         ));
 
         let shutdown = execute_request(WorkerRequest::Shutdown {
