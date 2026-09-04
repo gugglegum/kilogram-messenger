@@ -975,3 +975,28 @@ retirement остальных compatibility shadows ещё не реализов
   `8EAAB811C067AE132C4B158F09B1BE0D52CA4EFD260913CC25291B5FF956C77E`;
   `target/release/kilogram-cli.exe` — 22,584,320 bytes, SHA-256
   `E6D93BC70A82307D8CBF05F9A13BEB30AE33BBA4E34178D4A977EDB82AB3BF34`.
+
+## M0.9.26 verification snapshot (2026-09-04)
+
+- Identity regression моделирует durable revocation без следующей device-list
+  публикации: recovery export fail-closed, exact retry переиспользует тот же
+  authority operation, публикует revision 3 и снова разрешает exact export.
+  Unknown target и удаление последнего active device отклоняются.
+- Bootstrap regression проходит exact roster `2 -> 1`, independently witnessed
+  before checkpoint, public revocation/list, after checkpoint receipt и
+  byte-identical retry. Strict desktop JSON regression сохраняет пять отдельных
+  lifecycle claims и отвергает ложное `history=deleted`.
+- Release process smoke
+  `.tmp/m0926-release-smoke-20260904-213349` прошёл create → encrypted
+  device-link → before export → remove → idempotent remove retry → policy
+  transition request. Authority `2 -> 3`, roster `2 -> 1`, checkpoint `current`,
+  policy transition `0 -> 1` с thresholds old 2 devices/new 1 device.
+- `cargo fmt --all -- --check`, strict
+  `cargo clippy --workspace --all-targets -- -D warnings`, все 180 workspace
+  tests и `cargo build --workspace --release` проходят.
+- Windows artifacts: `target/release/kilogram-bootstrap.exe` — 19,014,656 bytes,
+  SHA-256 `ED391038D34CBFBFFEF55CB4953B67AB99C742E9044D62F64AD8A2D3BDA015C5`;
+  `target/release/kilogram-windows.exe` — 7,838,720 bytes, SHA-256
+  `395E0BECA0AB9C2174B0014A5756BCF495D33D9F4C6FD6C0B3536C3195B0E680`;
+  `target/release/kilogram-cli.exe` — 22,585,344 bytes, SHA-256
+  `C1EB232703598BBDED6840B94562FDAC4EDFAECA024163D107C0A802B7430781`.

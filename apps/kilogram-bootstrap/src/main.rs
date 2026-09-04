@@ -60,6 +60,25 @@ enum Command {
         #[arg(long)]
         response_file: PathBuf,
     },
+    /// Revoke one active device and publish exact before/after recovery artifacts.
+    DeviceRemove {
+        #[arg(long)]
+        account_root_dir: PathBuf,
+        #[arg(long)]
+        device_id: String,
+        #[arg(long)]
+        before_package_file: PathBuf,
+        #[arg(long)]
+        before_witness_file: PathBuf,
+        #[arg(long)]
+        after_package_file: PathBuf,
+        #[arg(long)]
+        after_witness_file: PathBuf,
+        #[arg(long)]
+        device_list_file: PathBuf,
+        #[arg(long)]
+        revocation_file: PathBuf,
+    },
     /// Export current Root authority history and a separately retained witness.
     AccountRecoveryExport {
         #[arg(long)]
@@ -298,6 +317,25 @@ async fn main() -> Result<()> {
         } => serde_json::to_vec(&kilogram_bootstrap::device_link::accept_response(
             workspace_dir,
             response_file,
+        )?)?,
+        Command::DeviceRemove {
+            account_root_dir,
+            device_id,
+            before_package_file,
+            before_witness_file,
+            after_package_file,
+            after_witness_file,
+            device_list_file,
+            revocation_file,
+        } => serde_json::to_vec(&kilogram_bootstrap::device_removal::remove_device(
+            account_root_dir,
+            kilogram_identity::DeviceId::from_str(&device_id).context("parse device ID")?,
+            before_package_file,
+            before_witness_file,
+            after_package_file,
+            after_witness_file,
+            device_list_file,
+            revocation_file,
         )?)?,
         Command::AccountRecoveryExport {
             account_root_dir,

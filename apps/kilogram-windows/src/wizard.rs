@@ -75,6 +75,31 @@ pub(crate) struct DeviceLinkAcceptOutput {
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
+pub(crate) struct DeviceRemovalOutput {
+    pub(crate) status: String,
+    pub(crate) account_id: String,
+    pub(crate) removed_device_id: String,
+    pub(crate) before_authority_revision: u64,
+    pub(crate) after_authority_revision: u64,
+    pub(crate) before_device_count: usize,
+    pub(crate) after_device_count: usize,
+    pub(crate) before_package_id: String,
+    pub(crate) after_package_id: String,
+    pub(crate) before_package_file: PathBuf,
+    pub(crate) before_witness_file: PathBuf,
+    pub(crate) after_package_file: PathBuf,
+    pub(crate) after_witness_file: PathBuf,
+    pub(crate) device_list_file: PathBuf,
+    pub(crate) revocation_file: PathBuf,
+    pub(crate) removal_status: String,
+    pub(crate) policy_activation_status: String,
+    pub(crate) runtime_peer_directory_status: String,
+    pub(crate) ratchet_session_retirement_status: String,
+    pub(crate) history_availability_status: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct AccountRecoveryOutput {
     pub(crate) status: String,
     pub(crate) account_id: String,
@@ -382,6 +407,52 @@ impl WizardJsonOutput for DeviceLinkAcceptOutput {
         ensure!(
             self.history_recovery == "ready-for-recipient-bound-multi-source-plans",
             "device-link recovery readiness is invalid"
+        );
+        Ok(())
+    }
+}
+
+impl WizardJsonOutput for DeviceRemovalOutput {
+    fn validate(&self) -> Result<()> {
+        validate_status(&self.status, "device-removed")?;
+        AccountId::from_str(&self.account_id).context("device-removal Account ID is invalid")?;
+        DeviceId::from_str(&self.removed_device_id).context("removed Device ID is invalid")?;
+        ensure!(
+            self.after_authority_revision
+                == self
+                    .before_authority_revision
+                    .checked_add(1)
+                    .context("before-removal authority revision is exhausted")?,
+            "device-removal authority transition is not exact"
+        );
+        ensure!(
+            self.before_device_count > 1
+                && self.after_device_count.saturating_add(1) == self.before_device_count,
+            "device-removal roster-size transition is invalid"
+        );
+        validate_hex_id(&self.before_package_id, "before-removal package ID")?;
+        validate_hex_id(&self.after_package_id, "after-removal package ID")?;
+        ensure!(
+            self.before_package_id != self.after_package_id,
+            "device-removal package IDs did not change"
+        );
+        for (path, label) in [
+            (&self.before_package_file, "before_package_file"),
+            (&self.before_witness_file, "before_witness_file"),
+            (&self.after_package_file, "after_package_file"),
+            (&self.after_witness_file, "after_witness_file"),
+            (&self.device_list_file, "device_list_file"),
+            (&self.revocation_file, "revocation_file"),
+        ] {
+            validate_absolute_file_path(path, label)?;
+        }
+        ensure!(
+            self.removal_status == "complete"
+                && self.policy_activation_status == "required"
+                && self.runtime_peer_directory_status == "refresh-required"
+                && self.ratchet_session_retirement_status == "required"
+                && self.history_availability_status == "existing-copies-remain-readable",
+            "device-removal lifecycle states are dishonest or unknown"
         );
         Ok(())
     }
@@ -1404,6 +1475,40 @@ mod tests {
 
         value["joint_majority_satisfied"] = serde_json::Value::Bool(false);
         let dishonest: RecoveryPolicyTransitionCollectOutput = serde_json::from_value(value)?;
+        assert!(dishonest.validate().is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn device_removal_json_keeps_follow_up_states_explicit() -> Result<()> {
+        let temporary = tempfile::tempdir()?;
+        let mut value = serde_json::json!({
+            "status": "device-removed",
+            "account_id": "0101010101010101010101010101010101010101010101010101010101010101",
+            "removed_device_id": "0202020202020202020202020202020202020202020202020202020202020202",
+            "before_authority_revision": 2,
+            "after_authority_revision": 3,
+            "before_device_count": 2,
+            "after_device_count": 1,
+            "before_package_id": "0303030303030303030303030303030303030303030303030303030303030303",
+            "after_package_id": "0404040404040404040404040404040404040404040404040404040404040404",
+            "before_package_file": temporary.path().join("before.karp"),
+            "before_witness_file": temporary.path().join("before.karw"),
+            "after_package_file": temporary.path().join("after.karp"),
+            "after_witness_file": temporary.path().join("after.karw"),
+            "device_list_file": temporary.path().join("active.snapshot"),
+            "revocation_file": temporary.path().join("removed.revocation"),
+            "removal_status": "complete",
+            "policy_activation_status": "required",
+            "runtime_peer_directory_status": "refresh-required",
+            "ratchet_session_retirement_status": "required",
+            "history_availability_status": "existing-copies-remain-readable"
+        });
+        let output: DeviceRemovalOutput = serde_json::from_value(value.clone())?;
+        output.validate()?;
+
+        value["history_availability_status"] = serde_json::Value::String("deleted".to_owned());
+        let dishonest: DeviceRemovalOutput = serde_json::from_value(value)?;
         assert!(dishonest.validate().is_err());
         Ok(())
     }

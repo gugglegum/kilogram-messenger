@@ -17,6 +17,7 @@ use zeroize::Zeroize;
 
 pub mod account_recovery;
 pub mod device_link;
+pub mod device_removal;
 pub mod recovery_policy;
 pub mod recovery_quorum;
 

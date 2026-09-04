@@ -1,6 +1,6 @@
 # RFC-0048: Recovery freshness and checkpoint lifecycle
 
-Status: M0.9.25 networked recovery-policy activation implemented (2026-09-04).
+Status: M0.9.26 first-class device removal implemented (2026-09-04).
 
 ## 1. Problem and impossibility boundary
 
@@ -337,10 +337,43 @@ installation. Its status display deliberately separates three facts:
 The GUI never transports Root/device private keys and does not infer policy or
 history completion from a successful device-link operation.
 
-## 9. Next stage
+## 9. Implemented M0.9.26 first-class device removal
 
-M0.9.26 should make device removal a first-class desktop Root operation, publish
-the resulting active device list/checkpoint, and hand the exact before/after
-artifacts directly into the same recovery-policy transition workflow. Removal,
-policy activation, runtime peer-directory refresh, ratchet/session retirement,
-and history availability must remain separately observable states.
+`kilogram-bootstrap device-remove` accepts one full Device ID and an exact,
+independently witnessed recovery checkpoint from before the operation. The
+Root writer verifies that this checkpoint is still byte-exact current, refuses
+an unknown device or the last active device, writes the permanent revocation,
+and publishes the complete remaining device list at revision `N+1`.
+
+The two Root files are a logical fail-closed transaction. A crash after the
+revocation but before the list publication makes recovery export impossible
+because the revisions differ. Repeating the same removal reuses the existing
+revocation and repairs the list; it never allocates a second authority
+sequence. Exact-removal validation admits no unrelated certificate,
+membership, or revocation change between the supplied before package and the
+new after package.
+
+The helper idempotently publishes four public outputs outside the Root:
+
+1. the Root-signed device revocation;
+2. the refreshed complete active-device list;
+3. the exact after-removal recovery package;
+4. its exact independently retainable witness.
+
+It then records the new package/witness as the local current checkpoint. The
+Windows desktop requires the operator to type the full Device ID twice, feeds
+the exact before/after package and witness paths into the M0.9.25
+joint-majority transition workflow, and points the runtime-profile draft at the
+new public device list. It deliberately exposes five independent lifecycle
+states: Root removal is complete; recovery-policy activation is required;
+runtime peer-directory refresh is required; ratchet/session retirement is
+required; existing history copies remain readable.
+
+## 10. Next stage
+
+M0.9.27 should make an installed revocation operational in the long-lived
+runtime: authenticate and apply the refreshed local-account device directory,
+prevent all new fanout/session use for the removed Device ID, retire its local
+ratchet sessions and queued recipient slots crash-consistently, and expose the
+result over IPC. This must still state honestly that already delivered history
+on the removed device cannot be remotely erased.

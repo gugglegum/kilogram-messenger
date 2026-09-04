@@ -27,11 +27,12 @@ mod wizard;
 use wizard::{
     AccountRecoveryOutput, AccountRecoveryStatusOutput, DeviceLinkAcceptOutput,
     DeviceLinkAuthorizeOutput, DeviceLinkInspectOutput, DeviceLinkRequestOutput,
-    RecoveryCommandOutput, RecoveryPolicyInstallOutput, RecoveryPolicyTransitionCertificateOutput,
-    RecoveryPolicyTransitionCollectOutput, RecoveryPolicyTransitionListenOutput,
-    RecoveryPolicyTransitionRequestOutput, RecoveryQuorumCollectOutput, RecoveryQuorumListenOutput,
-    RecoveryQuorumRequestOutput, RecoveryQuorumVerifyOutput, command_arguments, run_json,
-    run_json_with_stdin, run_recovery_command,
+    DeviceRemovalOutput, RecoveryCommandOutput, RecoveryPolicyInstallOutput,
+    RecoveryPolicyTransitionCertificateOutput, RecoveryPolicyTransitionCollectOutput,
+    RecoveryPolicyTransitionListenOutput, RecoveryPolicyTransitionRequestOutput,
+    RecoveryQuorumCollectOutput, RecoveryQuorumListenOutput, RecoveryQuorumRequestOutput,
+    RecoveryQuorumVerifyOutput, command_arguments, run_json, run_json_with_stdin,
+    run_recovery_command,
 };
 
 const CHANGE_WAIT_MILLISECONDS: u32 = 20_000;
@@ -199,6 +200,7 @@ enum Operation {
     DeviceLinkInspect,
     DeviceLinkAuthorize,
     DeviceLinkAccept,
+    DeviceRemove,
     RecoveryApprove,
     RecoveryRun,
     RecoveryCancel,
@@ -237,6 +239,7 @@ enum DeviceLinkUiAction {
     Inspect,
     Authorize,
     Accept,
+    Remove,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -357,7 +360,39 @@ struct DeviceLinkView {
     authorization: Option<DeviceLinkAuthorizeOutput>,
     response_input_file: String,
     accepted: Option<DeviceLinkAcceptOutput>,
+    removal: DeviceRemovalView,
     policy: RecoveryPolicyView,
+}
+
+#[derive(Debug)]
+struct DeviceRemovalView {
+    account_root_dir: String,
+    device_id: String,
+    confirmed_device_id: String,
+    before_package_file: String,
+    before_witness_file: String,
+    after_package_file: String,
+    after_witness_file: String,
+    device_list_file: String,
+    revocation_file: String,
+    result: Option<DeviceRemovalOutput>,
+}
+
+impl Default for DeviceRemovalView {
+    fn default() -> Self {
+        Self {
+            account_root_dir: "kilogram-account/account-root".to_owned(),
+            device_id: String::new(),
+            confirmed_device_id: String::new(),
+            before_package_file: "kilogram-root-before-removal.karp".to_owned(),
+            before_witness_file: "kilogram-root-before-removal.karw".to_owned(),
+            after_package_file: "kilogram-root-after-removal.karp".to_owned(),
+            after_witness_file: "kilogram-root-after-removal.karw".to_owned(),
+            device_list_file: "kilogram-active-devices-after-removal.snapshot".to_owned(),
+            revocation_file: "kilogram-removed-device.revocation".to_owned(),
+            result: None,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -427,6 +462,7 @@ impl Default for DeviceLinkView {
             authorization: None,
             response_input_file: String::new(),
             accepted: None,
+            removal: DeviceRemovalView::default(),
             policy: RecoveryPolicyView::default(),
         }
     }
@@ -1003,6 +1039,7 @@ impl ViewModel {
                 | WorkerSuccess::DeviceLinkInspected { .. }
                 | WorkerSuccess::DeviceLinkAuthorized(_)
                 | WorkerSuccess::DeviceLinkAccepted(_)
+                | WorkerSuccess::DeviceRemoved(_)
                 | WorkerSuccess::RecoveryApproved { .. }
                 | WorkerSuccess::RecoveryRan { .. }
                 | WorkerSuccess::RecoveryCancelled { .. }
@@ -1125,6 +1162,17 @@ enum WorkerRequest {
         workspace: PathBuf,
         response_file: PathBuf,
     },
+    DeviceRemove {
+        executable: PathBuf,
+        account_root_dir: PathBuf,
+        device_id: kilogram_identity::DeviceId,
+        before_package_file: PathBuf,
+        before_witness_file: PathBuf,
+        after_package_file: PathBuf,
+        after_witness_file: PathBuf,
+        device_list_file: PathBuf,
+        revocation_file: PathBuf,
+    },
     RecoveryApprove {
         executable: PathBuf,
         state_dir: PathBuf,
@@ -1205,6 +1253,7 @@ impl WorkerRequest {
             Self::DeviceLinkInspect { .. } => Operation::DeviceLinkInspect,
             Self::DeviceLinkAuthorize { .. } => Operation::DeviceLinkAuthorize,
             Self::DeviceLinkAccept { .. } => Operation::DeviceLinkAccept,
+            Self::DeviceRemove { .. } => Operation::DeviceRemove,
             Self::RecoveryApprove { .. } => Operation::RecoveryApprove,
             Self::RecoveryRun { .. } => Operation::RecoveryRun,
             Self::RecoveryCancel { .. } => Operation::RecoveryCancel,
@@ -1248,6 +1297,7 @@ enum WorkerSuccess {
     },
     DeviceLinkAuthorized(Box<DeviceLinkAuthorizeOutput>),
     DeviceLinkAccepted(Box<DeviceLinkAcceptOutput>),
+    DeviceRemoved(Box<DeviceRemovalOutput>),
     RecoveryApproved {
         plan_file: PathBuf,
         output: RecoveryCommandOutput,
@@ -1900,6 +1950,44 @@ async fn execute_request(request: WorkerRequest) -> Result<WorkerSuccess> {
             );
             Ok(WorkerSuccess::DeviceLinkAccepted(Box::new(output)))
         }
+        WorkerRequest::DeviceRemove {
+            executable,
+            account_root_dir,
+            device_id,
+            before_package_file,
+            before_witness_file,
+            after_package_file,
+            after_witness_file,
+            device_list_file,
+            revocation_file,
+        } => {
+            let device_id = device_id.to_string();
+            let output: DeviceRemovalOutput = run_json(
+                &executable,
+                "device-remove",
+                command_arguments([
+                    ("--account-root-dir", account_root_dir.as_os_str()),
+                    ("--device-id", std::ffi::OsStr::new(&device_id)),
+                    ("--before-package-file", before_package_file.as_os_str()),
+                    ("--before-witness-file", before_witness_file.as_os_str()),
+                    ("--after-package-file", after_package_file.as_os_str()),
+                    ("--after-witness-file", after_witness_file.as_os_str()),
+                    ("--device-list-file", device_list_file.as_os_str()),
+                    ("--revocation-file", revocation_file.as_os_str()),
+                ]),
+            )?;
+            ensure!(
+                output.removed_device_id == device_id
+                    && output.before_package_file == before_package_file
+                    && output.before_witness_file == before_witness_file
+                    && output.after_package_file == after_package_file
+                    && output.after_witness_file == after_witness_file
+                    && output.device_list_file == device_list_file
+                    && output.revocation_file == revocation_file,
+                "device-removal helper returned different identity or artifact paths"
+            );
+            Ok(WorkerSuccess::DeviceRemoved(Box::new(output)))
+        }
         WorkerRequest::RecoveryApprove {
             executable,
             state_dir,
@@ -2209,6 +2297,7 @@ impl KilogramApp {
                     | Operation::DeviceLinkInspect
                     | Operation::DeviceLinkAuthorize
                     | Operation::DeviceLinkAccept
+                    | Operation::DeviceRemove
                     | Operation::RecoveryApprove
                     | Operation::RecoveryRun
                     | Operation::RecoveryCancel
@@ -2326,7 +2415,8 @@ impl KilogramApp {
                 self.account_recovery.account_root_dir = account_root_dir.clone();
                 self.account_recovery.checkpoint_status = None;
                 self.device_link.account_id = account_id;
-                self.device_link.account_root_dir = account_root_dir;
+                self.device_link.account_root_dir = account_root_dir.clone();
+                self.device_link.removal.account_root_dir = account_root_dir;
                 self.account_recovery.restored = Some(*output);
                 self.model.notice = Some(
                     "Account Root restored. Use the device-link ceremony below to enroll a new device, then recover message history separately."
@@ -2456,6 +2546,8 @@ impl KilogramApp {
             }
             WorkerSuccess::DeviceLinkAuthorized(output) => {
                 self.account_recovery.account_root_dir = self.device_link.account_root_dir.clone();
+                self.device_link.removal.account_root_dir =
+                    self.device_link.account_root_dir.clone();
                 self.account_recovery.checkpoint_status = None;
                 self.account_recovery.exported = None;
                 self.account_recovery.inspected = None;
@@ -2495,6 +2587,43 @@ impl KilogramApp {
                     "Device link accepted at the Root layer. Runtime setup, recovery-policy activation, and message-history recovery are three separate remaining states."
                         .to_owned(),
                 );
+            }
+            WorkerSuccess::DeviceRemoved(output) => {
+                if let Some(installed) = self.device_link.policy.installation.as_ref() {
+                    self.device_link.policy.old_epoch = installed.policy_epoch.to_string();
+                    self.device_link.policy.previous_transition_id =
+                        installed.latest_transition_id.clone();
+                }
+                self.device_link.policy.old_package_file =
+                    output.before_package_file.display().to_string();
+                self.device_link.policy.old_witness_file =
+                    output.before_witness_file.display().to_string();
+                self.device_link.policy.new_package_file =
+                    output.after_package_file.display().to_string();
+                self.device_link.policy.new_witness_file =
+                    output.after_witness_file.display().to_string();
+                self.runtime_profile_draft.device_list_file =
+                    output.device_list_file.display().to_string();
+                self.device_link.account_root_dir =
+                    self.device_link.removal.account_root_dir.clone();
+                self.account_recovery.account_root_dir =
+                    self.device_link.removal.account_root_dir.clone();
+                self.account_recovery.checkpoint_status = None;
+                self.account_recovery.package_input_file =
+                    output.after_package_file.display().to_string();
+                self.account_recovery.witness_input_file =
+                    output.after_witness_file.display().to_string();
+                self.device_link.policy.request = None;
+                self.device_link.policy.listener = None;
+                self.device_link.policy.collection = None;
+                self.device_link.policy.certificate = None;
+                self.device_link.policy.installation = None;
+                self.device_link.removal.confirmed_device_id.clear();
+                self.model.notice = Some(format!(
+                    "Device {} removed. Exact policy inputs are filled in; runtime directory refresh and ratchet-session retirement remain explicit pending steps.",
+                    compact_id(&output.removed_device_id)
+                ));
+                self.device_link.removal.result = Some(*output);
             }
             WorkerSuccess::RecoveryApproved { plan_file, output } => {
                 let index = self.upsert_recovery_plan(plan_file);
@@ -2587,6 +2716,7 @@ impl KilogramApp {
         self.show_profile_editor = true;
         self.bootstrap_workspace_path = workspace.display().to_string();
         self.account_recovery.account_root_dir = output.account_root_dir().display().to_string();
+        self.device_link.removal.account_root_dir = output.account_root_dir().display().to_string();
         self.account_recovery.checkpoint_status = None;
         self.account_recovery.exported = None;
         self.account_recovery.inspected = None;
@@ -3413,6 +3543,76 @@ impl KilogramApp {
             Err(error) => self
                 .model
                 .fail(Operation::DeviceLinkAccept, format!("{error:#}")),
+        }
+    }
+
+    fn start_device_remove(&mut self) {
+        let result: Result<WorkerRequest> = (|| {
+            self.require_offline_wizard()?;
+            let executable = canonical_input_path(
+                &self.bootstrap_executable_path,
+                "Bootstrap executable",
+                true,
+            )?;
+            let device_id =
+                kilogram_identity::DeviceId::from_str(self.device_link.removal.device_id.trim())
+                    .context("Device ID to remove is invalid")?;
+            ensure!(
+                self.device_link.removal.confirmed_device_id.trim() == device_id.to_string(),
+                "Type the full Device ID again to confirm permanent removal"
+            );
+            let account_root_dir = canonical_input_path(
+                &self.device_link.removal.account_root_dir,
+                "Account Root directory",
+                false,
+            )?;
+            let before_package_file = canonical_input_path(
+                &self.device_link.removal.before_package_file,
+                "Before-removal recovery package",
+                true,
+            )?;
+            let before_witness_file = canonical_input_path(
+                &self.device_link.removal.before_witness_file,
+                "Before-removal recovery witness",
+                true,
+            )?;
+            let after_package_file = absolute_output_path(
+                &self.device_link.removal.after_package_file,
+                "After-removal recovery package",
+                &account_root_dir,
+            )?;
+            let after_witness_file = absolute_output_path(
+                &self.device_link.removal.after_witness_file,
+                "After-removal recovery witness",
+                &account_root_dir,
+            )?;
+            let device_list_file = absolute_output_path(
+                &self.device_link.removal.device_list_file,
+                "Refreshed active-device list",
+                &account_root_dir,
+            )?;
+            let revocation_file = absolute_output_path(
+                &self.device_link.removal.revocation_file,
+                "Device revocation",
+                &account_root_dir,
+            )?;
+            Ok(WorkerRequest::DeviceRemove {
+                executable,
+                account_root_dir,
+                device_id,
+                before_package_file,
+                before_witness_file,
+                after_package_file,
+                after_witness_file,
+                device_list_file,
+                revocation_file,
+            })
+        })();
+        match result {
+            Ok(request) => self.submit(Operation::DeviceRemove, request),
+            Err(error) => self
+                .model
+                .fail(Operation::DeviceRemove, format!("{error:#}")),
         }
     }
 
@@ -4603,6 +4803,104 @@ impl KilogramApp {
         action
     }
 
+    fn draw_device_removal(&mut self, ui: &mut egui::Ui) -> DeviceLinkUiAction {
+        let mut action = DeviceLinkUiAction::None;
+        let idle = self.model.pending.is_none()
+            && self.runtime_process.is_none()
+            && self.model.connection == ConnectionState::Disconnected;
+        egui::CollapsingHeader::new("Remove a device · permanent Root revocation")
+            .default_open(self.device_link.removal.result.is_some())
+            .show(ui, |ui| {
+                ui.colored_label(
+                    egui::Color32::from_rgb(239, 112, 112),
+                    "Removal is permanent. Stop the runtime and verify the full Device ID through a trusted channel.",
+                );
+                ui.small("First export the current Root package and independent witness. They become the exact old-roster input; this operation publishes the exact new-roster pair.");
+                for (label, value) in [
+                    ("Account Root directory", &mut self.device_link.removal.account_root_dir),
+                    ("Device ID to remove", &mut self.device_link.removal.device_id),
+                    ("Before package (.karp)", &mut self.device_link.removal.before_package_file),
+                    ("Before witness (.karw)", &mut self.device_link.removal.before_witness_file),
+                    ("After package (.karp)", &mut self.device_link.removal.after_package_file),
+                    ("After witness (.karw)", &mut self.device_link.removal.after_witness_file),
+                    ("New public device list", &mut self.device_link.removal.device_list_file),
+                    ("Public revocation", &mut self.device_link.removal.revocation_file),
+                ] {
+                    ui.horizontal(|ui| {
+                        ui.label(label);
+                        ui.add_enabled(
+                            idle,
+                            egui::TextEdit::singleline(value).desired_width(f32::INFINITY),
+                        );
+                    });
+                }
+                ui.horizontal(|ui| {
+                    ui.label("Type the full Device ID again");
+                    ui.add_enabled(
+                        idle,
+                        egui::TextEdit::singleline(
+                            &mut self.device_link.removal.confirmed_device_id,
+                        )
+                        .desired_width(f32::INFINITY),
+                    );
+                });
+                let confirmed = !self.device_link.removal.device_id.trim().is_empty()
+                    && self.device_link.removal.device_id.trim()
+                        == self.device_link.removal.confirmed_device_id.trim();
+                if ui
+                    .add_enabled(
+                        idle && confirmed,
+                        egui::Button::new("Permanently remove exact device"),
+                    )
+                    .clicked()
+                {
+                    action = DeviceLinkUiAction::Remove;
+                }
+                if !self.device_link.removal.confirmed_device_id.is_empty() && !confirmed {
+                    ui.colored_label(
+                        egui::Color32::from_rgb(239, 112, 112),
+                        "Confirmation does not match the full Device ID.",
+                    );
+                }
+                if let Some(result) = self.device_link.removal.result.as_ref() {
+                    ui.separator();
+                    ui.colored_label(
+                        egui::Color32::from_rgb(92, 201, 137),
+                        format!(
+                            "Removal: {} · device {} · authority {}→{}",
+                            result.removal_status,
+                            compact_id(&result.removed_device_id),
+                            result.before_authority_revision,
+                            result.after_authority_revision
+                        ),
+                    );
+                    ui.label(format!(
+                        "Recovery-policy activation: {}",
+                        result.policy_activation_status
+                    ));
+                    ui.label(format!(
+                        "Runtime peer-directory refresh: {}",
+                        result.runtime_peer_directory_status
+                    ));
+                    ui.label(format!(
+                        "Ratchet/session retirement: {}",
+                        result.ratchet_session_retirement_status
+                    ));
+                    ui.label(format!(
+                        "History availability: {}",
+                        result.history_availability_status
+                    ));
+                    ui.small(format!(
+                        "Active devices {}→{}. Existing copies of old history are not erased by cryptographic revocation.",
+                        result.before_device_count, result.after_device_count
+                    ));
+                    ui.monospace(format!("New device list: {}", result.device_list_file.display()));
+                    ui.monospace(format!("Revocation: {}", result.revocation_file.display()));
+                }
+            });
+        action
+    }
+
     fn draw_recovery_policy(&mut self, ui: &mut egui::Ui) -> RecoveryPolicyUiAction {
         let mut action = RecoveryPolicyUiAction::None;
         let idle = self.model.pending.is_none()
@@ -4613,6 +4911,7 @@ impl KilogramApp {
             .show(ui, |ui| {
                 let root_state = if self.device_link.authorization.is_some()
                     || self.device_link.accepted.is_some()
+                    || self.device_link.removal.result.is_some()
                 {
                     "Root operation: device roster changed"
                 } else {
@@ -5883,6 +6182,11 @@ impl eframe::App for KilogramApp {
                     ui.add_space(4.0);
                     device_link_action = self.draw_device_link(ui);
                     ui.add_space(4.0);
+                    let removal_action = self.draw_device_removal(ui);
+                    if removal_action != DeviceLinkUiAction::None {
+                        device_link_action = removal_action;
+                    }
+                    ui.add_space(4.0);
                     recovery_policy_action = self.draw_recovery_policy(ui);
                     ui.add_space(4.0);
                     recovery_action = self.draw_recovery(ui);
@@ -5939,6 +6243,8 @@ impl eframe::App for KilogramApp {
             self.start_device_link_authorize();
         } else if device_link_action == DeviceLinkUiAction::Accept {
             self.start_device_link_accept();
+        } else if device_link_action == DeviceLinkUiAction::Remove {
+            self.start_device_remove();
         } else if recovery_policy_action == RecoveryPolicyUiAction::Request {
             self.start_recovery_policy_request();
         } else if recovery_policy_action == RecoveryPolicyUiAction::Listen {

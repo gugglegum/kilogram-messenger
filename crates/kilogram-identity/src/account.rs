@@ -1018,6 +1018,79 @@ impl AccountRootState {
         Ok(revocation)
     }
 
+    /// Permanently revokes one currently active device and republishes the
+    /// complete active-device list at the resulting authority revision.
+    ///
+    /// If a process stops after persisting the revocation but before publishing
+    /// the refreshed list, `export_recovery` remains fail-closed because the
+    /// revisions differ. Repeating this operation repairs that intermediate
+    /// state without allocating another authority sequence.
+    pub fn revoke_and_publish_device_list(
+        &self,
+        device_id: DeviceId,
+    ) -> Result<(DeviceRevocation, AccountDeviceListSnapshot), IdentityError> {
+        self.ensure_authority_log_ready()?;
+        let _lock = self.acquire_authority_write_lock()?;
+        let current = self.published_device_list()?;
+        let mut authority = self.authority_snapshot()?;
+        let existing_revocation = authority
+            .revocations()
+            .iter()
+            .find(|revocation| revocation.device_id() == device_id)
+            .cloned();
+
+        if existing_revocation.is_none() && current.certificate_for(device_id).is_none() {
+            return Err(IdentityError::DeviceNotActive(device_id));
+        }
+
+        let active_before = current
+            .devices()
+            .iter()
+            .filter(|certificate| {
+                !authority
+                    .revocations()
+                    .iter()
+                    .any(|revocation| revocation.device_id() == certificate.device_id())
+            })
+            .count();
+        if existing_revocation.is_none() && active_before <= 1 {
+            return Err(IdentityError::CannotRemoveLastActiveDevice);
+        }
+
+        let revocation = match existing_revocation {
+            Some(revocation) => revocation,
+            None => {
+                let authority_sequence = self.allocate_authority_sequence()?;
+                let revocation =
+                    DeviceRevocation::issue(&self.identity, device_id, authority_sequence)?;
+                write_new_file(&self.revocation_path(device_id), &revocation.encode()?)?;
+                authority = self.authority_snapshot()?;
+                revocation
+            }
+        };
+        let active = current
+            .devices()
+            .iter()
+            .filter(|certificate| {
+                !authority
+                    .revocations()
+                    .iter()
+                    .any(|item| item.device_id() == certificate.device_id())
+            })
+            .cloned()
+            .collect::<Vec<_>>();
+        if active.is_empty() {
+            return Err(IdentityError::CannotRemoveLastActiveDevice);
+        }
+        if current.revision() == authority.revision()
+            && current.certificate_for(device_id).is_none()
+        {
+            return Ok((revocation, current));
+        }
+        let refreshed = self.publish_device_list_unlocked(&active)?;
+        Ok((revocation, refreshed))
+    }
+
     pub fn authority_snapshot(&self) -> Result<AccountAuthoritySnapshot, IdentityError> {
         self.ensure_authority_log_ready()?;
         let revision = self.read_next_authority_sequence()?;
@@ -2780,6 +2853,47 @@ mod tests {
             root.publish_device_list(&[first_certificate, second_certificate]),
             Err(IdentityError::DeviceRevoked(device_id))
                 if device_id == second_device.device_id()
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn transactional_removal_repairs_interrupted_publication_and_protects_last_device()
+    -> Result<(), IdentityError> {
+        let root_directory = tempdir()?;
+        let root = AccountRootState::create(root_directory.path())?;
+        let first = crate::DeviceIdentity::generate()?;
+        let second = crate::DeviceIdentity::generate()?;
+        let first_certificate = root.issue_device_certificate(
+            first.device_id(),
+            test_encryption_public_key()?,
+            &DeviceCapability::MESSAGING,
+        )?;
+        let second_certificate = root.issue_device_certificate(
+            second.device_id(),
+            test_encryption_public_key()?,
+            &DeviceCapability::MESSAGING,
+        )?;
+        root.publish_device_list(&[first_certificate.clone(), second_certificate])?;
+
+        let interrupted = root.revoke_device(second.device_id())?;
+        assert!(root.export_recovery().is_err());
+        let (reused, repaired) = root.revoke_and_publish_device_list(second.device_id())?;
+        assert_eq!(reused, interrupted);
+        assert_eq!(repaired.revision(), 3);
+        assert_eq!(repaired.devices(), std::slice::from_ref(&first_certificate));
+        assert!(root.export_recovery().is_ok());
+        assert_eq!(
+            root.revoke_and_publish_device_list(second.device_id())?,
+            (reused, repaired)
+        );
+        assert!(matches!(
+            root.revoke_and_publish_device_list(first.device_id()),
+            Err(IdentityError::CannotRemoveLastActiveDevice)
+        ));
+        assert!(matches!(
+            root.revoke_and_publish_device_list(crate::DeviceIdentity::generate()?.device_id()),
+            Err(IdentityError::DeviceNotActive(_))
         ));
         Ok(())
     }

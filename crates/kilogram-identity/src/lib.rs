@@ -580,6 +580,12 @@ pub enum IdentityError {
     #[error("device {0} is already permanently revoked")]
     DeviceAlreadyRevoked(DeviceId),
 
+    #[error("device {0} is not present in the current active device list")]
+    DeviceNotActive(DeviceId),
+
+    #[error("cannot remove the last active device from an account")]
+    CannotRemoveLastActiveDevice,
+
     #[error("authority snapshot contains revocations in non-canonical order")]
     NonCanonicalAuthoritySnapshot,
 

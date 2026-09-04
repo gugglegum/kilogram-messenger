@@ -107,7 +107,7 @@ The current two-network Windows procedure is in
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.25 networked recovery-policy activation — complete
+## Current milestone: M0.9.26 first-class device removal — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -980,6 +980,24 @@ create `.karpt`, run a voter listener, collect multiple tickets, certify the
 joint majority and install `.karpc` into one selected active device. Root and
 device private keys remain inside their protected stores; the GUI passes only
 public artifact paths and invokes the one-shot helper.
+
+M0.9.26 adds permanent device removal as a separate stopped-runtime Root
+operation. `kilogram-bootstrap device-remove` requires the exact exported
+`.karp`/`.karw` pair from before the change, rejects an unknown device and the
+last active device, persists a Root-signed revocation, and republishes the
+complete active-device list at the exact next authority revision. If execution
+stops between those two Root writes, recovery export remains fail-closed and an
+exact retry repairs the list without allocating another revocation sequence.
+
+The command also publishes a public revocation, refreshed device list, and the
+exact after-change `.karp`/`.karw` pair, then records that pair as the current
+local recovery checkpoint. The desktop requires the full Device ID to be typed
+again, fills those exact before/after paths into the existing joint-majority
+policy transition, and updates the draft runtime device-list path. It reports
+device removal, recovery-policy activation, runtime peer-directory refresh,
+ratchet/session retirement, and old-history availability independently. In
+particular, revocation does not erase ciphertext or plaintext already held by
+the removed device.
 
 The queue command prints `runtime_ipc_request_id` before connecting. If its
 result is uncertain, repeat the same message with `--request-id <PRINTED_ID>`;

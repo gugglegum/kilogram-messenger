@@ -2469,13 +2469,40 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
   остаются зелёными; финальные workspace/release проверки записываются в
   `development-environment.md`.
 
+### M0.9.26 — first-class device removal: выполнено
+
+Реализовано:
+
+- `AccountRootState::revoke_and_publish_device_list` сериализует permanent
+  revocation и публикацию полного оставшегося roster; промежуточная revision
+  mismatch остаётся fail-closed для recovery export, а retry повторно использует
+  existing revocation и завершает публикацию;
+- запрещены unknown target и удаление последнего active device;
+- `kilogram-bootstrap device-remove` требует exact independently witnessed
+  before checkpoint и проверяет, что after state отличается ровно одним новым
+  revocation, одним удалённым certificate и revision `N -> N+1`, без изменения
+  conversation memberships;
+- helper idempotently публикует public revocation, refreshed device list и
+  after `.karp`/`.karw`, затем отмечает новый checkpoint current;
+- Windows GUI требует повторный ввод полного Device ID, автоматически заполняет
+  exact policy-transition before/after paths и draft runtime device-list path;
+- UI отдельно показывает complete removal, required policy activation,
+  required runtime directory refresh, required ratchet/session retirement и
+  честный факт `existing-copies-remain-readable` для старой истории.
+
+Проверки:
+
+- identity regression моделирует crash между revocation и list publication,
+  успешный repair/retry, last-device guard и unknown-device guard;
+- bootstrap regression проверяет exact `2 -> 1`, current checkpoint и
+  byte-idempotent повторный запуск;
+- strict Windows JSON regression не принимает ложное удаление старой истории.
+
 ### Следующий этап
 
-1. M0.9.26: сделать removal/revocation first-class Root operation в Windows,
-   атомарно публиковать active device list и fresh recovery checkpoint, затем
-   передавать exact before/after artifacts в уже готовый policy transition;
-   отдельно показывать removal, policy activation, runtime directory refresh,
-   ratchet retirement и history availability.
+1. M0.9.27: применить refreshed local-account directory в long-lived runtime,
+   прекратить новый fanout/queue use removed Device ID, crash-consistently
+   retire его ratchet sessions и показать результат через authenticated IPC.
 2. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.

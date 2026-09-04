@@ -331,13 +331,14 @@ global prekey discovery/witness, автоматический recovery source di
 
 ## План ближайших работ
 
-1. M0.9.26: сделать device removal/revocation first-class Root operation в
-   Windows, публиковать новый active device list и fresh recovery checkpoint,
-   затем передавать exact before/after artifacts в реализованный M0.9.25
-   networked recovery-policy transition.
-2. Removal, policy activation, runtime peer-directory refresh, ratchet/session
-   retirement и multi-source history availability показывать раздельно;
-   transport/relay не становится holder Root secrets.
+1. M0.9.27: после установленного revocation научить long-lived runtime
+   аутентифицированно принимать refreshed local-account device list, исключать
+   removed Device ID из нового fanout/очередей и crash-consistently retire его
+   ratchet sessions; результат вывести через IPC.
+2. Уже реализованный M0.9.26 показывает removal, policy activation, runtime
+   peer-directory refresh, ratchet/session retirement и history availability
+   раздельно; transport/relay не становится holder Root secrets, а старую
+   историю на отозванном устройстве удалить удалённо невозможно.
 3. Optional autostart/background mode оставить отдельной явной настройкой, а не
    обязательным Task Scheduler этапом.
 4. Добавить production macOS/Linux local key provider, согласованный monotonic
