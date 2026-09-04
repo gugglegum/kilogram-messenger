@@ -1,8 +1,7 @@
 # RFC-0048: Recovery freshness and checkpoint lifecycle
 
-Status: M0.9.21 lifecycle implemented and quorum protocol accepted
-(2026-09-04). Live quorum transport and approval artifacts are scheduled for
-M0.9.22.
+Status: M0.9.22 quorum cryptographic/storage core implemented (2026-09-04).
+Network collection and desktop orchestration are scheduled for M0.9.23.
 
 ## 1. Problem and impossibility boundary
 
@@ -148,13 +147,74 @@ not silently converted into a false freshness claim. After any successful
 restore/enrollment, a new package and independent witness must be exported and
 the lifecycle must return to `current`.
 
-## 5. M0.9.22 implementation requirements
+## 5. Implemented M0.9.22 core
 
-The next stage will implement the bounded challenge/request/approval formats,
-exact voter-roster binding, DB-primary monotonic approval head,
-local/LAN-or-relay collection, strict-majority verification, and desktop claim
-display. Recovery-policy epoch and joint roster transitions must be implemented
-before claiming cross-roster fork safety. Tests must cover replay, duplicate and
-revoked approvers, stale local heads, same-revision membership forks, concurrent
-approval attempts, different-roster conflicts, insufficient quorum, and explicit
-offline fallback.
+`kilogram-identity` now defines two bounded binary artifacts:
+
+- `.karq`: an unsigned fresh request containing the exact Root-signed package,
+  matching Root-signed witness, random 256-bit challenge, issue time and expiry;
+- `.kara`: a device-signed approval binding Account ID, request/package IDs,
+  authority revision, state-vector digest, exact recovery-roster digest,
+  challenge, expiry, approver, approval time and previous local approval-head
+  digest.
+
+The request is valid for 10 minutes by default and at most 30 minutes. A
+different challenge produces a different Request ID, so an approval from an old
+attempt cannot be replayed. Decoders enforce magic, version, size and time
+bounds before a claim is evaluated.
+
+The package device-list revision must now equal the package authority revision,
+not merely be older than it. Every approval is checked against that package's
+current authority snapshot, so an entry from a stale pre-revocation list cannot
+act as a current voter.
+
+The one-shot helper exposes:
+
+```text
+kilogram-bootstrap account-recovery-quorum-request
+kilogram-bootstrap account-recovery-quorum-approve
+kilogram-bootstrap account-recovery-quorum-verify
+```
+
+Approval requires an initialized encrypted state vault. Under the exclusive
+device-state lock it reads the certificate, authority, memberships and previous
+approval head from DB-primary records. The candidate must contain the exact
+local device certificate and dominate every locally known own-account authority
+and membership head. Lower revisions, missing memberships, same-revision forks,
+non-add-only membership updates, revoked devices and different certificates fail
+closed.
+
+Before a `.kara` file becomes visible, one trust transaction advances the local
+high-water state and stores `recovery-approval/latest.approval` in DB-primary
+state. Publication failure therefore cannot release an unrecorded signature; a
+retry for the same Request ID returns the exact committed approval. The device
+state lock serializes concurrent attempts. A later request chains the previous
+approval ID.
+
+Until recovery-policy epochs exist, the first committed approval head freezes
+the exact roster digest for that device. A different roster is rejected even if
+Root-signed. This is deliberately conservative: adding or revoking a recovery
+voter needs the future joint old/new-majority transition before the product can
+claim cross-roster fork safety.
+
+The verifier rejects duplicate Device IDs and approvals bound to another
+request, challenge, package or roster. It reports 0 approvals as
+`artifact-integrity-only`, one sub-majority approval as
+`single-current-device-observed`, and a strict majority as
+`current-device-majority-observed`. `--require-majority` turns an insufficient
+result into a hard failure. It always reports `cross_roster_fork_safety=false`.
+
+Regression covers expiry/replay, duplicate approvals, insufficient quorum,
+explicit offline fallback, DB-primary commit-before-publish and idempotent retry,
+stale membership omission, same-revision membership fork and different-roster
+rejection. Revocation is enforced both by candidate dominance and by checking
+each voter against the package's exact current authority.
+
+## 6. Next stage
+
+M0.9.23 will transport the same artifacts to current devices over authenticated
+local/LAN-or-relay paths, collect distinct approvals, and expose the exact claim
+in the desktop recovery ceremony. It must not weaken the implemented verifier
+or silently fall back from required majority to offline integrity. Recovery-policy
+epochs and joint roster transitions remain a later prerequisite for any
+cross-roster fork-safety claim.

@@ -14,6 +14,7 @@ use thiserror::Error;
 use zeroize::Zeroize;
 
 mod account;
+mod recovery_quorum;
 
 pub use account::{
     AccountAuthoritySnapshot, AccountDeviceListSnapshot, AccountId, AccountRecoveryPhrase,
@@ -27,6 +28,13 @@ pub use account::{
     verify_device_authorization_with_snapshot,
 };
 pub use kilogram_crypto::{DeviceEncryptionIdentity, EncryptionPublicKey};
+pub use recovery_quorum::{
+    AccountRootRecoveryApproval, AccountRootRecoveryApprovalRequest,
+    AccountRootRecoveryFreshnessClaim, AccountRootRecoveryQuorumReport,
+    DEFAULT_ACCOUNT_ROOT_RECOVERY_APPROVAL_VALIDITY_SECONDS,
+    MAX_ACCOUNT_ROOT_RECOVERY_APPROVAL_BYTES, MAX_ACCOUNT_ROOT_RECOVERY_APPROVAL_REQUEST_BYTES,
+    MAX_ACCOUNT_ROOT_RECOVERY_APPROVAL_VALIDITY_SECONDS, verify_account_root_recovery_quorum,
+};
 
 const DEVICE_SECRET_FILE: &str = "device-secret.key";
 const DEVICE_ENCRYPTION_SECRET_FILE: &str = "device-encryption-secret.key";
@@ -347,10 +355,63 @@ pub enum IdentityError {
     #[error("Account Root recovery witness does not match the exact recovery package")]
     AccountRootRecoveryWitnessMismatch,
 
+    #[error("Account Root recovery approval request has invalid magic")]
+    InvalidAccountRootRecoveryApprovalRequestMagic,
+
+    #[error("Account Root recovery approval has invalid magic")]
+    InvalidAccountRootRecoveryApprovalMagic,
+
+    #[error("Account Root recovery approval request has {0} bytes; maximum is 33 MiB")]
+    AccountRootRecoveryApprovalRequestTooLarge(usize),
+
+    #[error("Account Root recovery approval has {0} bytes; maximum is 16 KiB")]
+    AccountRootRecoveryApprovalTooLarge(usize),
+
+    #[error("unsupported Account Root recovery approval version {0}")]
+    UnsupportedAccountRootRecoveryApprovalVersion(u8),
+
+    #[error("Account Root recovery approval validity must be between 1 and 1800 seconds")]
+    InvalidAccountRootRecoveryApprovalValidity,
+
+    #[error("Account Root recovery approval request is not current")]
+    AccountRootRecoveryApprovalRequestNotCurrent,
+
+    #[error("Account Root recovery approval does not match the exact request")]
+    AccountRootRecoveryApprovalMismatch,
+
+    #[error("Account Root recovery approval time is outside its request lifetime")]
+    AccountRootRecoveryApprovalTimeInvalid,
+
+    #[error("device {0} is not an active voter in the exact recovery roster")]
+    AccountRootRecoveryApproverNotInRoster(DeviceId),
+
+    #[error("device {0} appears more than once in the recovery quorum")]
+    DuplicateAccountRootRecoveryApprover(DeviceId),
+
+    #[error("Account Root recovery quorum has {observed} approvals; {required} are required")]
+    InsufficientAccountRootRecoveryQuorum { observed: usize, required: usize },
+
+    #[error("recovery approval head belongs to a different voter roster")]
+    AccountRootRecoveryApprovalRosterChanged,
+
+    #[error("recovery candidate omits locally pinned conversation membership {0}")]
+    AccountRootRecoveryMissingLocalMembership(ConversationScopeId),
+
+    #[error("recovery candidate contains a different certificate for the approving device")]
+    AccountRootRecoveryApproverCertificateMismatch,
+
     #[error(
         "Account Root recovery device list revision {device_list_revision} is ahead of authority revision {authority_revision}"
     )]
     AccountRootRecoveryDeviceListAhead {
+        device_list_revision: u64,
+        authority_revision: u64,
+    },
+
+    #[error(
+        "Account Root recovery device-list revision {device_list_revision} does not equal authority revision {authority_revision}"
+    )]
+    AccountRootRecoveryDeviceListRevisionMismatch {
         device_list_revision: u64,
         authority_revision: u64,
     },

@@ -6,7 +6,10 @@ use std::{
 
 use anyhow::{Context as _, Result};
 use clap::{Parser, Subcommand};
-use kilogram_identity::{AccountId, AccountRecoveryPhrase};
+use kilogram_identity::{
+    AccountId, AccountRecoveryPhrase, DEFAULT_ACCOUNT_ROOT_RECOVERY_APPROVAL_VALIDITY_SECONDS,
+    MAX_ACCOUNT_ROOT_RECOVERY_APPROVAL_VALIDITY_SECONDS,
+};
 use zeroize::Zeroizing;
 
 #[derive(Debug, Parser)]
@@ -92,6 +95,39 @@ enum Command {
         #[arg(long, action = clap::ArgAction::SetTrue)]
         recovery_phrase_stdin: bool,
     },
+    /// Create a fresh bounded approval request for an exact recovery checkpoint.
+    AccountRecoveryQuorumRequest {
+        #[arg(long)]
+        package_file: PathBuf,
+        #[arg(long)]
+        witness_file: PathBuf,
+        #[arg(long)]
+        request_file: PathBuf,
+        #[arg(
+            long,
+            default_value_t = DEFAULT_ACCOUNT_ROOT_RECOVERY_APPROVAL_VALIDITY_SECONDS,
+            value_parser = clap::value_parser!(u64).range(1..=MAX_ACCOUNT_ROOT_RECOVERY_APPROVAL_VALIDITY_SECONDS)
+        )]
+        valid_for_seconds: u64,
+    },
+    /// Approve an exact recovery request after committing the local DB-primary head.
+    AccountRecoveryQuorumApprove {
+        #[arg(long)]
+        state_dir: PathBuf,
+        #[arg(long)]
+        request_file: PathBuf,
+        #[arg(long)]
+        approval_file: PathBuf,
+    },
+    /// Verify distinct current-device approvals and report the exact freshness claim.
+    AccountRecoveryQuorumVerify {
+        #[arg(long)]
+        request_file: PathBuf,
+        #[arg(long = "approval-file")]
+        approval_files: Vec<PathBuf>,
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        require_majority: bool,
+    },
 }
 
 fn main() -> Result<()> {
@@ -170,6 +206,35 @@ fn main() -> Result<()> {
                 expected_authority_revision,
             )?)?
         }
+        Command::AccountRecoveryQuorumRequest {
+            package_file,
+            witness_file,
+            request_file,
+            valid_for_seconds,
+        } => serde_json::to_vec(&kilogram_bootstrap::recovery_quorum::create_request(
+            package_file,
+            witness_file,
+            request_file,
+            valid_for_seconds,
+        )?)?,
+        Command::AccountRecoveryQuorumApprove {
+            state_dir,
+            request_file,
+            approval_file,
+        } => serde_json::to_vec(&kilogram_bootstrap::recovery_quorum::approve_request(
+            state_dir,
+            request_file,
+            approval_file,
+        )?)?,
+        Command::AccountRecoveryQuorumVerify {
+            request_file,
+            approval_files,
+            require_majority,
+        } => serde_json::to_vec(&kilogram_bootstrap::recovery_quorum::verify_request(
+            request_file,
+            &approval_files,
+            require_majority,
+        )?)?,
     };
     let mut stdout = std::io::stdout().lock();
     stdout.write_all(&output)?;

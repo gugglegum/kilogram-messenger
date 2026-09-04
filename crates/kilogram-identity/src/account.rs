@@ -338,6 +338,36 @@ impl AccountRootRecoveryPackage {
         self.content.conversation_memberships.len()
     }
 
+    pub fn authority_snapshot(&self) -> &AccountAuthoritySnapshot {
+        &self.content.authority_snapshot
+    }
+
+    pub fn device_list(&self) -> &AccountDeviceListSnapshot {
+        &self.content.device_list
+    }
+
+    pub fn conversation_memberships(&self) -> &[ConversationMembershipSnapshot] {
+        &self.content.conversation_memberships
+    }
+
+    pub fn state_vector_digest(&self) -> Result<[u8; 32], IdentityError> {
+        Ok(blake3::derive_key(
+            "Kilogram Account Root recovery state vector v1",
+            &postcard::to_allocvec(&(
+                &self.content.authority_snapshot,
+                &self.content.device_list,
+                &self.content.conversation_memberships,
+            ))?,
+        ))
+    }
+
+    pub fn recovery_roster_digest(&self) -> Result<[u8; 32], IdentityError> {
+        Ok(blake3::derive_key(
+            "Kilogram Account Root recovery voter roster v1",
+            &self.content.device_list.encode()?,
+        ))
+    }
+
     pub fn package_id(&self) -> Result<[u8; 32], IdentityError> {
         Ok(blake3::derive_key(
             ACCOUNT_ROOT_RECOVERY_PACKAGE_ID_DOMAIN,
@@ -1254,6 +1284,14 @@ fn validate_account_root_recovery_package_content(
             device_list_revision: content.device_list.revision(),
             authority_revision: content.authority_snapshot.revision(),
         });
+    }
+    if content.device_list.revision() < content.authority_snapshot.revision() {
+        return Err(
+            IdentityError::AccountRootRecoveryDeviceListRevisionMismatch {
+                device_list_revision: content.device_list.revision(),
+                authority_revision: content.authority_snapshot.revision(),
+            },
+        );
     }
     if content.conversation_memberships.len() > MAX_ACCOUNT_ROOT_RECOVERY_MEMBERSHIPS {
         return Err(IdentityError::TooManyAccountRootRecoveryMemberships(
@@ -2867,6 +2905,44 @@ mod tests {
             Err(IdentityError::DeviceEnrollmentIdentityConflict(id))
                 if id == joining.identity().device_id()
         ));
+        Ok(())
+    }
+
+    #[test]
+    fn recovery_requires_a_device_list_at_the_exact_current_authority_revision()
+    -> Result<(), IdentityError> {
+        let root_directory = tempdir()?;
+        let first_directory = tempdir()?;
+        let second_directory = tempdir()?;
+        let root = AccountRootState::create(root_directory.path())?;
+        let first = DeviceState::load_or_create(first_directory.path())?;
+        let second = DeviceState::load_or_create(second_directory.path())?;
+        let first_certificate = root.issue_device_certificate(
+            first.identity().device_id(),
+            first.encryption().public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let second_certificate = root.issue_device_certificate(
+            second.identity().device_id(),
+            second.encryption().public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        root.publish_device_list(&[first_certificate.clone(), second_certificate])?;
+        root.revoke_device(second.identity().device_id())?;
+        assert!(matches!(
+            root.export_recovery(),
+            Err(
+                IdentityError::AccountRootRecoveryDeviceListRevisionMismatch {
+                    device_list_revision: 2,
+                    authority_revision: 3,
+                }
+            )
+        ));
+        root.publish_device_list(std::slice::from_ref(&first_certificate))?;
+        let (package, witness) = root.export_recovery()?;
+        witness.verify_package(&package)?;
+        assert_eq!(package.authority_revision(), 3);
+        assert_eq!(package.device_count(), 1);
         Ok(())
     }
 

@@ -858,3 +858,34 @@ retirement остальных compatibility shadows ещё не реализов
   `124006831DA0CCE6250BA70DCF98B21DA64FC116CD8176661FA98DAE86A3F73A`;
   `target/release/kilogram-cli.exe` — 22,563,840 bytes, SHA-256
   `92C7456B85EBF646C13C0EC6CB9F12F9E6AD1DB8A01C5BCD729E6220E7D39E94`.
+
+## M0.9.22 verification snapshot (2026-09-04)
+
+- `kilogram-identity` добавил bounded `.karq`/`.kara`, fresh challenge, exact
+  package/state-vector/roster binding, expiry/replay checks, distinct-device
+  strict-majority verifier и explicit three-level freshness claim.
+- Recovery package теперь требует device list exact current authority revision;
+  approver проверяет exact certificate, current candidate revocation и
+  dominance всех локальных own-account authority/membership heads.
+- `recovery-approval/latest.approval` классифицируется как Trust, читается из
+  DB-primary vault и коммитится вместе с advanced high-water до публикации
+  подписи. Same request retry возвращает exact committed bytes; roster change
+  fail closed до joint transition.
+- Targeted regression покрывает expiry/replay, duplicate/insufficient quorum,
+  offline integrity-only fallback, output failure после head commit,
+  idempotent publish retry, missing/stale membership, same-revision membership
+  fork и different-roster conflict.
+- Debug process smoke `.tmp/m0922-smoke-20260904-182036` и финальный release
+  process smoke `.tmp/m0922-release-final-20260904-184009` прошли create → export → request →
+  DB-primary approve → strict 1-of-1 verify: claim
+  `current-device-majority-observed`, `cross_roster_fork_safety=false`.
+- `cargo fmt --all -- --check`, strict
+  `cargo clippy --workspace --all-targets --all-features -- -D warnings`, все
+  169 workspace tests (`--test-threads=1`) и
+  `cargo build --release --workspace` проходят.
+- Windows artifacts: `target/release/kilogram-bootstrap.exe` — 3,977,216 bytes,
+  SHA-256 `980A160AEF581304310D6489352C3B7137AB2987C9CCD437BF3149CEB8F51D1C`;
+  `target/release/kilogram-windows.exe` — 7,257,600 bytes, SHA-256
+  `3EF59BF8ADA6377C5FA9586E3923D81A75D231E1DA6D44BC03B849E59D154E46`;
+  `target/release/kilogram-cli.exe` — 22,579,712 bytes, SHA-256
+  `4594E21006566BC6E11B09EF36D91AF9803AEF463A2407C60ED7B33667B6F116`.

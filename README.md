@@ -107,7 +107,7 @@ The current two-network Windows procedure is in
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.21 recovery freshness/lifecycle — complete
+## Current milestone: M0.9.22 current-device recovery quorum core — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -850,6 +850,33 @@ with the desktop boundary in
 [`docs/RFC-0047-desktop-account-root-recovery.md`](docs/RFC-0047-desktop-account-root-recovery.md)
 and freshness/lifecycle rules in
 [`docs/RFC-0048-recovery-freshness-and-checkpoint-lifecycle.md`](docs/RFC-0048-recovery-freshness-and-checkpoint-lifecycle.md).
+
+Create a fresh approval request, let each current device approve it from its
+DB-primary vault, then verify the collected distinct approvals:
+
+```powershell
+kilogram-bootstrap account-recovery-quorum-request `
+  --package-file .\kilogram-root-20260904.karp `
+  --witness-file .\kilogram-root-latest.karw `
+  --request-file .\recovery-attempt.karq
+
+kilogram-bootstrap account-recovery-quorum-approve `
+  --state-dir .\kilogram-account\device `
+  --request-file .\recovery-attempt.karq `
+  --approval-file .\this-device.kara
+
+kilogram-bootstrap account-recovery-quorum-verify `
+  --request-file .\recovery-attempt.karq `
+  --approval-file .\device-1.kara `
+  --approval-file .\device-2.kara `
+  --require-majority
+```
+
+This stage implements the bounded artifacts, exact-roster majority verifier and
+DB-primary anti-equivocation head. The helper does not yet discover or contact
+the other devices: M0.9.23 will add authenticated local/LAN-or-relay collection
+and desktop orchestration. A roster change remains rejected until joint
+old/new-majority transitions exist.
 
 The queue command prints `runtime_ipc_request_id` before connecting. If its
 result is uncertain, repeat the same message with `--request-id <PRINTED_ID>`;

@@ -17,6 +17,7 @@ use zeroize::Zeroize;
 
 pub mod account_recovery;
 pub mod device_link;
+pub mod recovery_quorum;
 
 const RECEIPT_VERSION: u8 = 1;
 const ACCOUNT_ROOT_DIRECTORY: &str = "account-root";

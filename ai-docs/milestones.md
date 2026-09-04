@@ -2326,11 +2326,48 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
   loopback без production relay map, чтобы убрать прежнюю order-dependent flake;
   детали и hashes зафиксированы в `development-environment.md`.
 
+### M0.9.22 — current-device recovery quorum core: выполнено
+
+Реализовано:
+
+- bounded `.karq` request содержит exact Root-signed package+witness, fresh
+  256-bit challenge и expiry; `.kara` device approval связывает exact request,
+  package/state-vector/roster, approver и previous local head;
+- package требует device-list той же authority revision; каждый approver
+  проверяется против current candidate authority, включая revocation;
+- approval читает certificate/authority/membership/head только из DB-primary
+  vault, отклоняет rollback, missing local head, same-revision equivocation и
+  non-add-only membership;
+- authority/membership high-water и signed approval head коммитятся одной trust
+  transaction до публикации approval; retry того же Request ID идемпотентен;
+- первый head замораживает exact roster до реализации joint transition;
+- verifier считает только distinct exact-request approvals, применяет
+  `floor(n/2)+1`, честно различает `artifact-integrity-only`,
+  `single-current-device-observed` и `current-device-majority-observed`;
+- `kilogram-bootstrap` получил команды `account-recovery-quorum-request`,
+  `account-recovery-quorum-approve` и `account-recovery-quorum-verify` с
+  optional hard gate `--require-majority`;
+- полный контракт —
+  [`../docs/RFC-0048-recovery-freshness-and-checkpoint-lifecycle.md`](../docs/RFC-0048-recovery-freshness-and-checkpoint-lifecycle.md).
+
+Проверки:
+
+- targeted identity/state/bootstrap tests покрывают expiry/replay, duplicate и
+  insufficient approvals, offline fallback, DB-primary commit-before-publish,
+  idempotent retry, stale/missing membership, same-revision fork и cross-roster
+  отказ;
+- debug process smoke прошёл create → export → request → 1-of-1 approve → strict
+  verify с `current-device-majority-observed` и явным
+  `cross_roster_fork_safety=false`.
+- formatting, strict workspace Clippy, все 169 serial workspace tests и release
+  workspace build проходят; release smoke и hashes зафиксированы в
+  `development-environment.md`.
+
 ### Следующий этап
 
-1. M0.9.22: реализовать bounded recovery challenge/request/approval formats,
-   exact roster binding, DB-primary approval head и strict-majority verifier.
-   Cross-roster fork-safety требует recovery-policy epochs и joint transition.
+1. M0.9.23: добавить authenticated local/LAN-or-relay доставку `.karq` к
+   current devices, сбор distinct `.kara` и desktop claim display поверх
+   неизменного strict verifier.
 2. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.

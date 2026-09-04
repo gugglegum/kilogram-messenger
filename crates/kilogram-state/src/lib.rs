@@ -36,7 +36,11 @@ const ROLLED_BACK_MARKER: &str = "rolled-back";
 const RATCHET_DIRECTORY: &str = "ratchet";
 const NEXT_SEQUENCE_FILE: &str = "next-sequence";
 const TRUST_FILES: [&str; 2] = ["account-authority.snapshot", "device-certificate.cert"];
-const TRUST_DIRECTORIES: [&str; 2] = ["conversation-memberships", "peer-authority"];
+const TRUST_DIRECTORIES: [&str; 3] = [
+    "conversation-memberships",
+    "peer-authority",
+    "recovery-approval",
+];
 const TRUST_PRIMARY_BACKUP_DIRECTORY: &str = "trust";
 const APPEND_ONLY_ROOTS: [&str; 5] = [
     "events",
