@@ -14,6 +14,7 @@ use thiserror::Error;
 use zeroize::Zeroize;
 
 mod account;
+mod recovery_policy;
 mod recovery_quorum;
 
 pub use account::{
@@ -28,6 +29,15 @@ pub use account::{
     verify_device_authorization_with_snapshot,
 };
 pub use kilogram_crypto::{DeviceEncryptionIdentity, EncryptionPublicKey};
+pub use recovery_policy::{
+    AccountRecoveryPolicyState, AccountRecoveryPolicyTransitionApproval,
+    AccountRecoveryPolicyTransitionCertificate, AccountRecoveryPolicyTransitionReport,
+    AccountRecoveryPolicyTransitionRequest, MAX_ACCOUNT_RECOVERY_POLICY_CERTIFICATE_BYTES,
+    MAX_ACCOUNT_RECOVERY_POLICY_TRANSITION_APPROVAL_BYTES,
+    MAX_ACCOUNT_RECOVERY_POLICY_TRANSITION_APPROVALS,
+    MAX_ACCOUNT_RECOVERY_POLICY_TRANSITION_REQUEST_BYTES,
+    verify_account_recovery_policy_transition, verify_recovery_package_successor,
+};
 pub use recovery_quorum::{
     AccountRootRecoveryApproval, AccountRootRecoveryApprovalRequest,
     AccountRootRecoveryFreshnessClaim, AccountRootRecoveryQuorumReport,
@@ -393,6 +403,67 @@ pub enum IdentityError {
 
     #[error("recovery approval head belongs to a different voter roster")]
     AccountRootRecoveryApprovalRosterChanged,
+
+    #[error("Account recovery policy state has invalid magic")]
+    InvalidAccountRecoveryPolicyStateMagic,
+
+    #[error("Account recovery policy transition request has invalid magic")]
+    InvalidAccountRecoveryPolicyTransitionRequestMagic,
+
+    #[error("Account recovery policy transition approval has invalid magic")]
+    InvalidAccountRecoveryPolicyTransitionApprovalMagic,
+
+    #[error("Account recovery policy transition certificate has invalid magic")]
+    InvalidAccountRecoveryPolicyTransitionCertificateMagic,
+
+    #[error("unsupported Account recovery policy version {0}")]
+    UnsupportedAccountRecoveryPolicyVersion(u8),
+
+    #[error("Account recovery policy artifact has {actual} bytes; maximum is {maximum}")]
+    AccountRecoveryPolicyArtifactTooLarge { actual: usize, maximum: usize },
+
+    #[error("Account recovery policy transition has an invalid epoch link")]
+    InvalidAccountRecoveryPolicyEpoch,
+
+    #[error("Account recovery policy transition does not change the recovery roster")]
+    AccountRecoveryPolicyRosterUnchanged,
+
+    #[error("Account recovery policy transition is not a monotonic Root-state successor")]
+    AccountRecoveryPolicyStateRollback,
+
+    #[error("Account recovery policy transition request is not current")]
+    AccountRecoveryPolicyTransitionRequestNotCurrent,
+
+    #[error("Account recovery policy transition approval does not match the exact request")]
+    AccountRecoveryPolicyTransitionApprovalMismatch,
+
+    #[error("Account recovery policy transition approval time is outside its request lifetime")]
+    AccountRecoveryPolicyTransitionApprovalTimeInvalid,
+
+    #[error("device {0} is not an active voter in either recovery-policy roster")]
+    AccountRecoveryPolicyApproverNotInEitherRoster(DeviceId),
+
+    #[error("device {0} appears more than once in the recovery-policy transition")]
+    DuplicateAccountRecoveryPolicyApprover(DeviceId),
+
+    #[error("recovery-policy transition has {0} approvals; maximum is 64")]
+    TooManyAccountRecoveryPolicyApprovals(usize),
+
+    #[error("recovery-policy transition approvals are not in canonical device-ID order")]
+    NonCanonicalAccountRecoveryPolicyApprovals,
+
+    #[error(
+        "Account recovery policy transition has old quorum {old_observed}/{old_required} and new quorum {new_observed}/{new_required}"
+    )]
+    InsufficientAccountRecoveryPolicyJointQuorum {
+        old_observed: usize,
+        old_required: usize,
+        new_observed: usize,
+        new_required: usize,
+    },
+
+    #[error("Account recovery policy state does not match the transition anchor")]
+    AccountRecoveryPolicyAnchorMismatch,
 
     #[error("recovery candidate omits locally pinned conversation membership {0}")]
     AccountRootRecoveryMissingLocalMembership(ConversationScopeId),

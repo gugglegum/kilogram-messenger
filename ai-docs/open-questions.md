@@ -67,20 +67,20 @@ inspected package ID/revision gate и stdin-only phrase handling, но explicit
 checkbox newest witness является только human assertion, не freshness proof.
 M0.9.21 добавил local exact-export receipt/status и поэтому делает пропущенное
 обновление видимым, но rollback всего Root откатывает и receipt. RFC-0048 выбрал
-fresh challenge-bound current-device quorum; его exact roster и DB-primary
-anti-equivocation head ещё предстоит реализовать, а безопасная смена recovery
-roster требует joint-majority transition старого и нового epoch.
+fresh challenge-bound current-device quorum. M0.9.22–24 реализовали exact
+roster, DB-primary anti-equivocation heads и joint-majority transition старого
+и нового epoch; wide-area witness и exceptional loss-of-majority recovery пока
+остаются открыты.
 Следующие вопросы относятся к production recovery, rotation, asynchronous
 sessions, distribution, removal и key epochs и не решены этим прототипом.
 
 - Какая точная модель угроз: массовое наблюдение, целевой атакующий, злонамеренные
   relay/storage peers, компрометация bootstrap-инфраструктуры, Sybil и eclipse?
-- Как транспортировать current-device recovery approvals через local/LAN/relay,
-  не раскрывая лишнюю account metadata, и какой future external monotonic
-  witness реализует тот же verifier interface, когда device quorum недоступен?
-- Как мигрировать существующие аккаунты на recovery-policy roster и обеспечить
-  joint-majority epoch transition при enrollment/revocation, не блокируя честный
-  emergency recovery после потери большинства устройств?
+- Как уменьшить раскрытие account metadata при реализованной local/LAN/relay
+  транспортировке recovery approvals и какой future external monotonic witness
+  реализует тот же verifier interface, когда device quorum недоступен?
+- Какой явно reduced-assurance процесс допустим для emergency recovery после
+  потери старого majority и как сделать его заметным всем оставшимся devices?
 - Какие операции может единолично подписать device key, а какие требуют seed,
   аппаратного ключа или кворума устройств?
 - Как разрешать конкурирующие операции восстановления и отзыва при утечке seed?

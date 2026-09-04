@@ -107,7 +107,7 @@ The current two-network Windows procedure is in
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.23 networked recovery quorum ceremony — complete
+## Current milestone: M0.9.24 recovery-policy epoch transition — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -905,8 +905,53 @@ The Windows recovery panel now creates requests, runs current-device listeners,
 collects multiple tickets, verifies saved approvals and displays the exact
 freshness claim. Restore is enabled by an exact-package majority or by a
 separately explicit reduced-assurance offline fallback; it never silently
-downgrades a required majority. A roster change remains rejected until joint
-old/new-majority transitions exist.
+downgrades a required majority. A roster change remains rejected until a joint
+old/new-majority transition is installed. M0.9.24 adds that missing policy
+layer: every participating device anchors `(account, epoch, roster digest,
+previous transition ID)` in DB-primary trust, and a voter-set change advances
+exactly one epoch only after strict majorities of both rosters sign the same
+short-lived request.
+
+The offline transition ceremony is intentionally explicit:
+
+```powershell
+# After enrollment/revocation, export the last old-roster checkpoint and the
+# new checkpoint. Epoch zero uses the default all-zero predecessor.
+kilogram-bootstrap account-recovery-policy-transition-request `
+  --old-package-file .\root-old.karp `
+  --old-witness-file .\root-old.karw `
+  --new-package-file .\root-new.karp `
+  --new-witness-file .\root-new.karw `
+  --old-epoch 0 `
+  --request-file .\roster-change.karpt
+
+# Run on participating old/new devices. An overlap device counts in both
+# thresholds; a new-only device never contributes to the old threshold.
+kilogram-bootstrap account-recovery-policy-transition-approve `
+  --state-dir .\kilogram-account\device `
+  --request-file .\roster-change.karpt `
+  --approval-file .\device-1.karpa
+
+kilogram-bootstrap account-recovery-policy-transition-certify `
+  --request-file .\roster-change.karpt `
+  --approval-file .\device-1.karpa `
+  --approval-file .\device-2.karpa `
+  --certificate-file .\roster-change.karpc
+
+kilogram-bootstrap account-recovery-policy-transition-install `
+  --state-dir .\kilogram-account\device `
+  --certificate-file .\roster-change.karpc
+```
+
+Certification fails unless both exact thresholds are met. Each signer commits
+an anti-equivocation transition head before publishing `.karpa`; install is an
+authenticated DB-primary transaction and only admits an active device in the
+new roster. A later recovery verification may add
+`--policy-certificate-file .\roster-change.karpc`; only an exact-package device
+majority whose package extends that certified new policy receives
+`cross_roster_fork_safety=true`. File exchange is implemented in this stage;
+network collection and the desktop wizard for policy transitions remain the
+next integration step.
 
 The queue command prints `runtime_ipc_request_id` before connecting. If its
 result is uncertain, repeat the same message with `--request-id <PRINTED_ID>`;

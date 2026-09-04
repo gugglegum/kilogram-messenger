@@ -1,6 +1,6 @@
 # RFC-0048: Recovery freshness and checkpoint lifecycle
 
-Status: M0.9.23 network collection and desktop orchestration implemented
+Status: M0.9.24 recovery-policy epoch and joint transition implemented
 (2026-09-04). Recovery-policy epochs and joint roster transitions remain future
 work.
 
@@ -250,9 +250,59 @@ shows the literal freshness claim and approval threshold and continues to show
 `cross-roster fork safety: false`. Restore is gated by a majority for the exact
 inspected package or an explicit reduced-assurance offline confirmation.
 
-## 7. Next stage
+## 7. Implemented M0.9.24 recovery-policy epoch transition
 
-M0.9.24 should introduce a versioned recovery-policy epoch and a joint
-old/new-roster transition certificate. Until both old and new strict majorities
-authorize a voter-set change, existing approval heads continue to reject roster
-changes and no component may claim cross-roster fork safety.
+Each participating device now retains a DB-primary policy anchor containing the
+Account ID, epoch, exact recovery-roster digest and latest transition ID. Epoch
+zero uses an all-zero predecessor and is derived only from the first locally
+committed recovery approval head. A later epoch must name the preceding
+transition ID; an old-roster signer rejects any request which does not extend
+its exact local anchor.
+
+A `.karpt` request binds the old and new Root-signed packages and witnesses,
+`N -> N+1`, the predecessor transition ID, a fresh 256-bit challenge and a
+bounded lifetime. The new package must be a monotonic authority/membership
+successor, removed device certificates must have a corresponding revocation,
+and the roster digest and authority revision must both advance.
+
+Every `.karpa` signature binds that complete request and the signer's previous
+transition-approval head. Before publication, the signer atomically stores the
+head and advances applicable authority/membership high-water state in the
+encrypted DB-primary trust repository. A device present in both rosters counts
+once toward each threshold. A new-only device counts only toward the new
+threshold and cannot replace old-roster consent. A different request for an
+already signed epoch fails closed.
+
+A permanent `.karpc` is canonical and valid only with distinct signatures
+satisfying both strict majorities. Installation is allowed only on an active
+new-roster device and atomically advances its policy anchor. Existing recovery
+approval heads remain frozen unless the installed certificate's old digest
+matches that head and its new digest matches the candidate package. This makes
+legitimate enrollment/revocation possible without granting the Root key alone
+the power to replace the recovery electorate.
+
+`account-recovery-quorum-verify --policy-certificate-file` checks that the
+candidate package extends the certified new package. It reports
+`cross_roster_fork_safety=true` only when the ordinary exact-package strict
+majority is also present. The claim assumes at least one honest member in every
+required majority and durable signer anti-equivocation state; loss of an old
+majority is intentionally not bypassed. For example, safe `2 -> 1` removal
+requires both old voters, while `3 -> 2` can be authorized by the two retained
+voters.
+
+The current helper exposes:
+
+```text
+kilogram-bootstrap account-recovery-policy-transition-request
+kilogram-bootstrap account-recovery-policy-transition-approve
+kilogram-bootstrap account-recovery-policy-transition-certify
+kilogram-bootstrap account-recovery-policy-transition-verify
+kilogram-bootstrap account-recovery-policy-transition-install
+```
+
+## 8. Next stage
+
+M0.9.25 should reuse the one-shot LAN/Iroh relay transport for `.karpa`
+collection and integrate request, threshold progress, certification and install
+into the Windows device-link/revocation workflow. The GUI must keep the Root
+operation, recovery-policy activation and history recovery as separate claims.

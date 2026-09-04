@@ -10,9 +10,11 @@ use anyhow::{Context, Result, anyhow, bail, ensure};
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use iroh::{Endpoint, EndpointAddr, RelayUrl, endpoint::Connection};
 use kilogram_identity::{
-    AccountAuthoritySnapshot, AccountRootRecoveryApproval, AccountRootRecoveryApprovalRequest,
-    AccountRootRecoveryPackage, AccountRootRecoveryWitness, ConversationMembershipSnapshot,
-    DeviceCertificate, DeviceIdentity, DeviceState, MAX_ACCOUNT_DEVICES,
+    AccountAuthoritySnapshot, AccountRecoveryPolicyState,
+    AccountRecoveryPolicyTransitionCertificate, AccountRootRecoveryApproval,
+    AccountRootRecoveryApprovalRequest, AccountRootRecoveryPackage, AccountRootRecoveryWitness,
+    ConversationMembershipSnapshot, DeviceCertificate, DeviceIdentity, DeviceState,
+    MAX_ACCOUNT_DEVICES, MAX_ACCOUNT_RECOVERY_POLICY_CERTIFICATE_BYTES,
     MAX_ACCOUNT_ROOT_RECOVERY_APPROVAL_BYTES, MAX_ACCOUNT_ROOT_RECOVERY_APPROVAL_REQUEST_BYTES,
     MAX_ACCOUNT_ROOT_RECOVERY_PACKAGE_BYTES, MAX_ACCOUNT_ROOT_RECOVERY_WITNESS_BYTES,
     verify_account_root_recovery_quorum, verify_device_authorization_with_snapshot,
@@ -94,6 +96,12 @@ pub struct RecoveryQuorumVerifyOutput {
     majority_satisfied: bool,
     freshness_claim: &'static str,
     cross_roster_fork_safety: bool,
+}
+
+impl RecoveryQuorumVerifyOutput {
+    pub fn cross_roster_fork_safety(&self) -> bool {
+        self.cross_roster_fork_safety
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
@@ -419,6 +427,13 @@ fn approve_decoded_request(
         .map(|record| AccountRootRecoveryApproval::decode_and_verify(record.content()))
         .transpose()
         .context("decode DB-primary recovery approval head")?;
+    let policy_state = trust
+        .records()
+        .iter()
+        .find(|record| record.relative_path() == crate::recovery_policy::RECOVERY_POLICY_STATE_PATH)
+        .map(|record| AccountRecoveryPolicyState::decode_and_verify(record.content()))
+        .transpose()
+        .context("decode DB-primary recovery-policy state")?;
     if let Some(existing) = existing_head.as_ref()
         && existing.request_id() == &request.request_id()?
     {
@@ -455,9 +470,41 @@ fn approve_decoded_request(
                 "recovery approval head belongs to a different account"
             );
             if existing.recovery_roster_digest() != &request.package().recovery_roster_digest()? {
-                return Err(anyhow!(
-                    kilogram_identity::IdentityError::AccountRootRecoveryApprovalRosterChanged
-                ));
+                let policy = policy_state.as_ref().ok_or_else(|| {
+                    anyhow!(
+                        kilogram_identity::IdentityError::AccountRootRecoveryApprovalRosterChanged
+                    )
+                })?;
+                ensure!(
+                    policy.account_id() == request.account_id()
+                        && policy.recovery_roster_digest()
+                            == &request.package().recovery_roster_digest()?,
+                    "recovery candidate does not match the installed recovery-policy roster"
+                );
+                let certificate_record = trust
+                    .records()
+                    .iter()
+                    .find(|record| {
+                        record.relative_path()
+                            == crate::recovery_policy::RECOVERY_POLICY_CERTIFICATE_PATH
+                    })
+                    .context(
+                        "changed recovery roster requires an installed transition certificate",
+                    )?;
+                let transition = AccountRecoveryPolicyTransitionCertificate::decode_and_verify(
+                    certificate_record.content(),
+                )
+                .context("decode installed recovery-policy transition certificate")?;
+                ensure!(
+                    transition.certificate_id()? == *policy.latest_transition_id()
+                        && transition.old_recovery_roster_digest()?
+                            == *existing.recovery_roster_digest(),
+                    "installed policy transition does not bridge the committed approval roster"
+                );
+                crate::recovery_policy::verify_candidate_against_certificate(
+                    request.package(),
+                    &transition,
+                )?;
             }
             ensure!(
                 request.package().authority_revision() >= existing.authority_revision(),
@@ -467,6 +514,15 @@ fn approve_decoded_request(
         }
         None => [0_u8; 32],
     };
+    if let Some(policy) = policy_state.as_ref() {
+        ensure!(
+            policy.account_id() == request.account_id()
+                && policy.recovery_roster_digest()
+                    == &request.package().recovery_roster_digest()?,
+            "recovery candidate does not match the installed recovery-policy roster"
+        );
+    }
+    let policy = policy_state.unwrap_or(AccountRecoveryPolicyState::genesis(request.package())?);
     let approval = AccountRootRecoveryApproval::issue(
         device.identity(),
         request,
@@ -479,8 +535,14 @@ fn approve_decoded_request(
     vault
         .begin_dual_write()
         .context("prepare approval vault mirror intent")?;
-    let commit_result =
-        commit_approval_head_primary(&state_dir, &vault, &device, request.package(), &encoded);
+    let commit_result = commit_approval_head_primary(
+        &state_dir,
+        &vault,
+        &device,
+        request.package(),
+        &policy.encode()?,
+        &encoded,
+    );
     let mirror_result = vault
         .finish_dual_write()
         .context("complete approval vault mirror");
@@ -898,11 +960,39 @@ pub fn verify_request(
     })
 }
 
+pub fn verify_request_with_policy_certificate(
+    request_file: impl AsRef<Path>,
+    approval_files: &[PathBuf],
+    policy_certificate_file: impl AsRef<Path>,
+    require_majority: bool,
+) -> Result<RecoveryQuorumVerifyOutput> {
+    let mut output = verify_request(&request_file, approval_files, require_majority)?;
+    let now = unix_time_now()?;
+    let request = AccountRootRecoveryApprovalRequest::decode_and_verify(
+        &read_bounded_regular_file(
+            request_file.as_ref(),
+            MAX_ACCOUNT_ROOT_RECOVERY_APPROVAL_REQUEST_BYTES,
+            "recovery approval request",
+        )?,
+        now,
+    )?;
+    let certificate =
+        AccountRecoveryPolicyTransitionCertificate::decode_and_verify(&read_bounded_regular_file(
+            policy_certificate_file.as_ref(),
+            MAX_ACCOUNT_RECOVERY_POLICY_CERTIFICATE_BYTES,
+            "recovery-policy transition certificate",
+        )?)?;
+    crate::recovery_policy::verify_candidate_against_certificate(request.package(), &certificate)?;
+    output.cross_roster_fork_safety = output.majority_satisfied;
+    Ok(output)
+}
+
 fn commit_approval_head_primary(
     state_dir: &Path,
     vault: &EncryptedStateVault,
     device: &DeviceState,
     package: &AccountRootRecoveryPackage,
+    policy_bytes: &[u8],
     approval_bytes: &[u8],
 ) -> Result<()> {
     let trust = vault
@@ -923,6 +1013,10 @@ fn commit_approval_head_primary(
                     .install_conversation_membership(membership)
                     .context("advance approving device membership high-water")?;
             }
+            write_approval_head(
+                &state_dir.join(crate::recovery_policy::RECOVERY_POLICY_STATE_PATH),
+                policy_bytes,
+            )?;
             write_approval_head(&state_dir.join(APPROVAL_HEAD_PATH), approval_bytes)
         });
     if let Err(error) = operation {

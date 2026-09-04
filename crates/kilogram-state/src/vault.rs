@@ -2469,7 +2469,8 @@ fn classify_record_kind(relative_path: &str) -> StateRecordKind {
         | "device-certificate.cert"
         | "conversation-memberships"
         | "peer-authority"
-        | "recovery-approval" => StateRecordKind::Trust,
+        | "recovery-approval"
+        | "recovery-policy" => StateRecordKind::Trust,
         "next-sequence" => StateRecordKind::Sequence,
         _ => StateRecordKind::Other,
     }

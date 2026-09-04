@@ -2400,11 +2400,47 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
   все 172 serial workspace tests, release workspace build и release process
   smoke проходят, hashes записаны в `development-environment.md`.
 
+### M0.9.24 — recovery-policy epoch и joint transition: выполнено
+
+Реализовано:
+
+- DB-primary `recovery-policy/current.policy` фиксирует Account ID, monotonically
+  increasing epoch, exact roster digest и latest transition ID; epoch 0
+  мигрирует из уже committed recovery approval head;
+- bounded `.karpt` связывает старые/новые Root package+witness, exact
+  `N -> N+1`, previous transition ID, fresh challenge и expiry; new package
+  обязан быть monotonic successor, а roster и authority revision — измениться;
+- `.karpa` подписывается union old/new voter set, но distinct new-only подпись
+  считается только в new quorum; overlap signer считается в обоих;
+- old voter сверяет `.karpt` с локальным policy anchor и до публикации подписи
+  атомарно коммитит anti-equivocation head в DB-primary trust;
+- canonical permanent `.karpc` создаётся только при одновременном strict
+  majority old и new roster, после чего active new-roster device устанавливает
+  epoch одной crash-consistent trust transaction;
+- существующий recovery approval roster freeze снимается только exact
+  установленным bridge certificate; без него прежний different-roster отказ
+  сохранился;
+- recovery verifier с `--policy-certificate-file` выдаёт
+  `cross_roster_fork_safety=true` только вместе с majority exact candidate
+  roster и monotonic successor certified new package.
+
+Проверки:
+
+- identity regression проверяет overlap counting и невозможность заменить old
+  majority подписью new-only device;
+- end-to-end bootstrap regression проходит `1 -> 2`: partial certificate
+  отвергается, две подписи создают `.karpc`, оба device устанавливают epoch 1,
+  новый roster перестаёт блокироваться, а policy-bound recovery majority
+  повышает claim до cross-roster safety;
+- прежние rollback/equivocation, roster freeze, DB-primary commit-before-publish
+  и direct `.kart` regressions остаются зелёными.
+
 ### Следующий этап
 
-1. M0.9.24: добавить recovery-policy epoch и joint old/new strict-majority
-   transition certificate, чтобы enrollment/revocation мог безопасно менять
-   recovery roster и давать честный cross-roster fork-safety claim.
+1. M0.9.25: перенести `.karpa` collection на существующий one-shot
+   LAN/hole-punch/relay transport и встроить policy transition в Windows
+   device-link/revocation ceremony с отдельными Root-operation, activation и
+   history-recovery состояниями.
 2. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.

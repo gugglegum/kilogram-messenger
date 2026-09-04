@@ -917,3 +917,28 @@ retirement остальных compatibility shadows ещё не реализов
   `B87D7263A514668D7E17C466878B620103481AFFD15F71909AE7A4812FEFDC65`;
   `target/release/kilogram-cli.exe` — 22,579,712 bytes, SHA-256
   `4594E21006566BC6E11B09EF36D91AF9803AEF463A2407C60ED7B33667B6F116`.
+
+## M0.9.24 verification snapshot (2026-09-04)
+
+- Добавлены versioned recovery-policy state, bounded `.karpt`/`.karpa` и
+  permanent canonical `.karpc` с independent strict-majority old/new roster.
+- End-to-end bootstrap regression проходит `1 -> 2`: first old recovery head,
+  encrypted device-link, transition approvals обоих devices, partial-quorum
+  отказ, certificate/install на обоих DB-primary vault, новый 2/2 recovery
+  quorum и `cross_roster_fork_safety=true` только с exact `.karpc`.
+- Release process smoke
+  `.tmp/m0924-release-smoke-20260904-201623` прошёл тот же CLI lifecycle:
+  transition `387b75a99dd17e2d1f71c512f113c4e05573cc88b68d6b9b8e8c11b08ec8f470`,
+  certificate `b3db90151f8ab0864c19aecdf8f5339b1281c56e2230f5b68d57f550cd9abba3`,
+  old quorum 1/1, new quorum 2/2, policy epoch 1 на обоих devices, final
+  recovery quorum 2/2 и cross-roster claim true.
+- `cargo fmt --all -- --check`, strict
+  `cargo clippy --workspace --all-targets --all-features -- -D warnings`, все
+  175 workspace tests (`--test-threads=1`) и
+  `cargo build --release --workspace` проходят.
+- Windows artifacts: `target/release/kilogram-bootstrap.exe` — 18,586,112 bytes,
+  SHA-256 `347820A55C351ADA11C1333A9A917307C9368C50C318DD04176F04B48032183F`;
+  `target/release/kilogram-windows.exe` — 7,499,264 bytes, SHA-256
+  `EFC678CCC8C145A732B072D17DC56AA77D88A49180733FD8D047DE029ED747A5`;
+  `target/release/kilogram-cli.exe` — 22,584,320 bytes, SHA-256
+  `E6D93BC70A82307D8CBF05F9A13BEB30AE33BBA4E34178D4A977EDB82AB3BF34`.

@@ -128,6 +128,9 @@ enum Command {
         approval_files: Vec<PathBuf>,
         #[arg(long, action = clap::ArgAction::SetTrue)]
         require_majority: bool,
+        /// Joint old/new-majority certificate which bridges an earlier roster.
+        #[arg(long)]
+        policy_certificate_file: Option<PathBuf>,
     },
     /// Commit an approval and expose it once over a signed LAN-or-relay ticket.
     AccountRecoveryQuorumListen {
@@ -156,6 +159,62 @@ enum Command {
         require_majority: bool,
         #[arg(long, default_value_t = 30)]
         relay_wait_seconds: u64,
+    },
+    /// Propose an exact recovery voter-set change from epoch N to N+1.
+    AccountRecoveryPolicyTransitionRequest {
+        #[arg(long)]
+        old_package_file: PathBuf,
+        #[arg(long)]
+        old_witness_file: PathBuf,
+        #[arg(long)]
+        new_package_file: PathBuf,
+        #[arg(long)]
+        new_witness_file: PathBuf,
+        #[arg(long)]
+        old_epoch: u64,
+        #[arg(
+            long,
+            default_value = "0000000000000000000000000000000000000000000000000000000000000000"
+        )]
+        previous_transition_id: String,
+        #[arg(long)]
+        request_file: PathBuf,
+        #[arg(
+            long,
+            default_value_t = DEFAULT_ACCOUNT_ROOT_RECOVERY_APPROVAL_VALIDITY_SECONDS,
+            value_parser = clap::value_parser!(u64).range(1..=MAX_ACCOUNT_ROOT_RECOVERY_APPROVAL_VALIDITY_SECONDS)
+        )]
+        valid_for_seconds: u64,
+    },
+    /// Approve one exact transition after committing a DB-primary anti-equivocation head.
+    AccountRecoveryPolicyTransitionApprove {
+        #[arg(long)]
+        state_dir: PathBuf,
+        #[arg(long)]
+        request_file: PathBuf,
+        #[arg(long)]
+        approval_file: PathBuf,
+    },
+    /// Build a permanent certificate only when both old and new strict majorities sign.
+    AccountRecoveryPolicyTransitionCertify {
+        #[arg(long)]
+        request_file: PathBuf,
+        #[arg(long = "approval-file", required = true)]
+        approval_files: Vec<PathBuf>,
+        #[arg(long)]
+        certificate_file: PathBuf,
+    },
+    /// Verify a permanent joint-majority recovery-policy transition certificate.
+    AccountRecoveryPolicyTransitionVerify {
+        #[arg(long)]
+        certificate_file: PathBuf,
+    },
+    /// Install a certified transition into one active new-roster device vault.
+    AccountRecoveryPolicyTransitionInstall {
+        #[arg(long)]
+        state_dir: PathBuf,
+        #[arg(long)]
+        certificate_file: PathBuf,
     },
 }
 
@@ -277,11 +336,22 @@ async fn main() -> Result<()> {
             request_file,
             approval_files,
             require_majority,
-        } => serde_json::to_vec(&kilogram_bootstrap::recovery_quorum::verify_request(
-            request_file,
-            &approval_files,
-            require_majority,
-        )?)?,
+            policy_certificate_file,
+        } => serde_json::to_vec(&match policy_certificate_file {
+            Some(policy_certificate_file) => {
+                kilogram_bootstrap::recovery_quorum::verify_request_with_policy_certificate(
+                    request_file,
+                    &approval_files,
+                    policy_certificate_file,
+                    require_majority,
+                )?
+            }
+            None => kilogram_bootstrap::recovery_quorum::verify_request(
+                request_file,
+                &approval_files,
+                require_majority,
+            )?,
+        })?,
         Command::AccountRecoveryQuorumListen {
             state_dir,
             request_file,
@@ -321,6 +391,55 @@ async fn main() -> Result<()> {
             )
             .await?,
         )?,
+        Command::AccountRecoveryPolicyTransitionRequest {
+            old_package_file,
+            old_witness_file,
+            new_package_file,
+            new_witness_file,
+            old_epoch,
+            previous_transition_id,
+            request_file,
+            valid_for_seconds,
+        } => serde_json::to_vec(
+            &kilogram_bootstrap::recovery_policy::create_transition_request(
+                old_package_file,
+                old_witness_file,
+                new_package_file,
+                new_witness_file,
+                old_epoch,
+                &previous_transition_id,
+                request_file,
+                valid_for_seconds,
+            )?,
+        )?,
+        Command::AccountRecoveryPolicyTransitionApprove {
+            state_dir,
+            request_file,
+            approval_file,
+        } => serde_json::to_vec(&kilogram_bootstrap::recovery_policy::approve_transition(
+            state_dir,
+            request_file,
+            approval_file,
+        )?)?,
+        Command::AccountRecoveryPolicyTransitionCertify {
+            request_file,
+            approval_files,
+            certificate_file,
+        } => serde_json::to_vec(&kilogram_bootstrap::recovery_policy::certify_transition(
+            request_file,
+            &approval_files,
+            certificate_file,
+        )?)?,
+        Command::AccountRecoveryPolicyTransitionVerify { certificate_file } => serde_json::to_vec(
+            &kilogram_bootstrap::recovery_policy::verify_transition_certificate(certificate_file)?,
+        )?,
+        Command::AccountRecoveryPolicyTransitionInstall {
+            state_dir,
+            certificate_file,
+        } => serde_json::to_vec(&kilogram_bootstrap::recovery_policy::install_transition(
+            state_dir,
+            certificate_file,
+        )?)?,
     };
     let mut stdout = std::io::stdout().lock();
     stdout.write_all(&output)?;

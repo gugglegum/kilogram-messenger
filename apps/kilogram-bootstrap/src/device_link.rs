@@ -373,6 +373,16 @@ pub struct DeviceLinkRequestOutput {
     vault_key_protection: String,
 }
 
+impl DeviceLinkRequestOutput {
+    pub fn sas(&self) -> &str {
+        &self.sas
+    }
+
+    pub fn request_file(&self) -> &Path {
+        &self.request_file
+    }
+}
+
 #[derive(Debug, Serialize)]
 pub struct DeviceLinkInspectOutput {
     status: &'static str,
@@ -411,6 +421,12 @@ pub struct DeviceLinkAcceptOutput {
     prekey_pool_file: PathBuf,
     vault_key_protection: String,
     history_recovery: &'static str,
+}
+
+impl DeviceLinkAcceptOutput {
+    pub fn state_dir(&self) -> &Path {
+        &self.state_dir
+    }
 }
 
 #[derive(Serialize)]
