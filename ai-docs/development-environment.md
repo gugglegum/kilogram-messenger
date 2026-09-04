@@ -1082,3 +1082,27 @@ retirement остальных compatibility shadows ещё не реализов
   `B77F0FFD831C3610FA693DAFAE982D2407811F5BA27400E7533DD8495B45B9B7`;
   `target/release/kilogram-cli.exe` — 24,397,824 bytes, SHA-256
   `5FF658D027BF428C448E0EF9A2CE45581D24E3FFCDCC73DFFE9FE9566C2BA8D3`.
+
+## M0.9.30 verification snapshot (2026-09-05)
+
+- Отдельный release `kilogram-ticket-store.exe` запущен на случайном loopback
+  порту с Redb в `.tmp/m0930-release-smoke-final`. HTTP lifecycle дал `201`
+  create, `200` exact replay, `409` same-generation conflict, `204` greater
+  generation replace и `200` GET с generation 2/body `06070809`.
+- Процесс сервиса был принудительно завершён без graceful shutdown. Новый
+  release process с тем же data-dir успешно вернул generation 2 и те же opaque
+  bytes, подтверждая crash/restart durability финального EXE.
+- Release-mode runtime test
+  `runtime_publishes_and_refreshes_an_opaque_contact_ticket_idempotently`
+  проходит полный lifecycle двух live actors через production store.
+- `cargo fmt --all -- --check`, strict
+  `cargo clippy --workspace --all-targets --all-features -- -D warnings`, все
+  193 workspace tests и `cargo build --release --workspace` проходят.
+- Windows artifacts: `target/release/kilogram-bootstrap.exe` — 20,460,544 bytes,
+  SHA-256 `3AC84084FB06FB255FEDDF3816CA7B14FCBF410D5200EBB75D6082BC2B9BF2F3`;
+  `target/release/kilogram-windows.exe` — 7,954,432 bytes, SHA-256
+  `B77F0FFD831C3610FA693DAFAE982D2407811F5BA27400E7533DD8495B45B9B7`;
+  `target/release/kilogram-cli.exe` — 24,397,824 bytes, SHA-256
+  `DE56811114AC383DF41D678D0BD275563CB6EB256A488F630B8662BDB00BA079`;
+  `target/release/kilogram-ticket-store.exe` — 2,427,904 bytes, SHA-256
+  `BD7C3469E88355B81230F66F4C37C3BFC9A1586B8711708216D4E14851897179`.

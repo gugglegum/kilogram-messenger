@@ -2,6 +2,7 @@
 members = [
     "apps/kilogram-bootstrap",
     "apps/kilogram-cli",
+    "apps/kilogram-ticket-store",
     "apps/kilogram-windows",
     "crates/kilogram-bootstrap-contract",
     "crates/kilogram-crypto",

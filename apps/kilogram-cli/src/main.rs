@@ -12844,11 +12844,9 @@ mod tests {
     use super::*;
     use iroh::{RelayMode, SecretKey, endpoint::Builder};
     use kilogram_identity::{DeviceEncryptionIdentity, DeviceIdentity};
+    use kilogram_ticket_store::{StoreConfig, TicketStoreServer};
     use kilogram_transport_iroh::endpoint_builder;
-    use tokio::{
-        io::{AsyncReadExt, AsyncWriteExt},
-        net::{TcpListener, TcpStream},
-    };
+    use tokio::sync::oneshot;
 
     const UNSUPPORTED_TEST_ALPN: &[u8] = b"kilogram/test/unsupported/1";
 
@@ -12857,111 +12855,6 @@ mod tests {
             .relay_mode(RelayMode::Disabled)
             .clear_ip_transports()
             .bind_addr((std::net::Ipv4Addr::LOCALHOST, 0))?)
-    }
-
-    async fn read_publication_store_request(
-        stream: &mut TcpStream,
-    ) -> Result<(String, String, Vec<u8>)> {
-        let mut bytes = Vec::new();
-        let header_end = loop {
-            let mut chunk = [0_u8; 4_096];
-            let read = stream.read(&mut chunk).await?;
-            ensure!(
-                read != 0,
-                "publication-store client closed before HTTP headers"
-            );
-            bytes.extend_from_slice(&chunk[..read]);
-            ensure!(
-                bytes.len() <= runtime_publication::MAX_TICKET_PUBLICATION_BYTES,
-                "publication-store request is too large"
-            );
-            if let Some(position) = bytes.windows(4).position(|window| window == b"\r\n\r\n") {
-                break position + 4;
-            }
-        };
-        let headers = std::str::from_utf8(&bytes[..header_end])?;
-        let mut lines = headers.split("\r\n");
-        let mut request_line = lines
-            .next()
-            .context("publication-store HTTP request line is missing")?
-            .split_ascii_whitespace();
-        let method = request_line
-            .next()
-            .context("publication-store HTTP method is missing")?
-            .to_owned();
-        let path = request_line
-            .next()
-            .context("publication-store HTTP path is missing")?
-            .to_owned();
-        let content_length = lines
-            .find_map(|line| {
-                let (name, value) = line.split_once(':')?;
-                name.eq_ignore_ascii_case("content-length")
-                    .then(|| value.trim().parse::<usize>())
-            })
-            .transpose()?
-            .unwrap_or(0);
-        ensure!(
-            content_length <= runtime_publication::MAX_TICKET_PUBLICATION_BYTES,
-            "publication-store request body is too large"
-        );
-        while bytes.len() - header_end < content_length {
-            let mut chunk = [0_u8; 4_096];
-            let read = stream.read(&mut chunk).await?;
-            ensure!(
-                read != 0,
-                "publication-store client closed during HTTP body"
-            );
-            bytes.extend_from_slice(&chunk[..read]);
-        }
-        Ok((
-            method,
-            path,
-            bytes[header_end..header_end + content_length].to_vec(),
-        ))
-    }
-
-    async fn spawn_test_publication_store(
-        request_count: usize,
-    ) -> Result<(String, tokio::task::JoinHandle<Result<()>>)> {
-        let listener = TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 0)).await?;
-        let address = listener.local_addr()?;
-        let task = tokio::spawn(async move {
-            let mut stored = None;
-            for _ in 0..request_count {
-                let (mut stream, _) = listener.accept().await?;
-                let (method, path, body) = read_publication_store_request(&mut stream).await?;
-                ensure!(
-                    path.starts_with("/v1/ticket-publications/")
-                        && path.len() == "/v1/ticket-publications/".len() + 64,
-                    "publication-store request uses an invalid lookup path"
-                );
-                match method.as_str() {
-                    "PUT" => {
-                        ensure!(!body.is_empty(), "publication-store PUT is empty");
-                        stored = Some(body);
-                        stream
-                            .write_all(b"HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n")
-                            .await?;
-                    }
-                    "GET" => {
-                        ensure!(body.is_empty(), "publication-store GET contains a body");
-                        let body = stored
-                            .as_ref()
-                            .context("publication-store GET precedes PUT")?;
-                        let headers = format!(
-                            "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
-                            body.len()
-                        );
-                        stream.write_all(headers.as_bytes()).await?;
-                        stream.write_all(body).await?;
-                    }
-                    _ => bail!("publication-store received an unexpected HTTP method"),
-                }
-            }
-            Ok(())
-        });
-        Ok((format!("http://{address}"), task))
     }
 
     #[test]
@@ -13747,7 +13640,17 @@ mod tests {
             ));
         }
 
-        let (service_base_url, store_task) = spawn_test_publication_store(3).await?;
+        let store_server = TicketStoreServer::bind(StoreConfig::local_test(
+            directory.path().join("opaque-publication-store"),
+        ))
+        .await?;
+        let service_base_url = format!("http://{}", store_server.local_addr());
+        let (store_shutdown_sender, store_shutdown_receiver) = oneshot::channel();
+        let store_task = tokio::spawn(store_server.run_until(async {
+            store_shutdown_receiver
+                .await
+                .map_err(|_| anyhow::anyhow!("publication-store shutdown sender dropped"))
+        }));
         let publication = kilogram_runtime_ipc::call(
             &bob_ipc,
             RuntimeIpcCommand::PublishOwnTicket {
@@ -13782,6 +13685,7 @@ mod tests {
             assert_eq!(refresh.local_observation_status, expected_store);
             assert_eq!(refresh.descriptor_publish_status, "atomic-replace");
         }
+        let _ = store_shutdown_sender.send(());
         timeout(Duration::from_secs(5), store_task)
             .await
             .context("publication store did not finish")?

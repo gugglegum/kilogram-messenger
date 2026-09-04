@@ -36,5 +36,8 @@ zeroize.workspace = true
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.62.2", features = ["Foundation_Collections", "Networking_Connectivity", "System_Power"] }
 
+[dev-dependencies]
+kilogram-ticket-store = { path = "../kilogram-ticket-store" }
+
 [lints]
 workspace = true

@@ -111,12 +111,14 @@ convergence are specified in
 Signed recipient-encrypted wide-area publication of refreshed runtime tickets is
 specified in
 [`docs/RFC-0051-signed-wide-area-ticket-publication.md`](docs/RFC-0051-signed-wide-area-ticket-publication.md).
+The separately runnable bounded opaque store for that contract is specified in
+[`docs/RFC-0052-self-hostable-opaque-ticket-store.md`](docs/RFC-0052-self-hostable-opaque-ticket-store.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.29 signed wide-area ticket publication — complete
+## Current milestone: M0.9.30 self-hostable opaque ticket store — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -1086,6 +1088,28 @@ idempotent. First contact still requires an independently verified ticket, and
 the repository does not yet ship a public Internet object service. The Windows
 desktop exposes the same two explicit actions without enabling a background
 task.
+
+M0.9.30 adds the separately runnable `kilogram-ticket-store`. It listens only
+on loopback HTTP and must sit behind an operator-controlled HTTPS reverse proxy:
+
+```powershell
+cargo run -p kilogram-ticket-store -- `
+  --listen 127.0.0.1:8787 `
+  --data-dir C:\Kilogram\ticket-store-data `
+  --retention-seconds 900 `
+  --trust-x-real-ip
+```
+
+The service stores only a pseudonymous 32-byte channel, declared generation,
+service receipt/expiry and the opaque HPKE body in durable Redb. Greater
+generations replace atomically, exact retries are idempotent, and rollback or a
+different body at the same generation returns HTTP 409. Fixed retention,
+record/channel/connection limits, bounded HTTP parsing and per-IP/global rate
+limits, including a 1 GiB default combined-body cap, are enforced. The service
+cannot authenticate the declared generation;
+a party that knows a channel can still cause denial of service. Deployment and
+two-network verification are in
+[`docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md).
 
 The queue command prints `runtime_ipc_request_id` before connecting. If its
 result is uncertain, repeat the same message with `--request-id <PRINTED_ID>`;

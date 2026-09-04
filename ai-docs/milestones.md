@@ -2603,14 +2603,56 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - contract зафиксирован в
   [`../docs/RFC-0051-signed-wide-area-ticket-publication.md`](../docs/RFC-0051-signed-wide-area-ticket-publication.md).
 
+### M0.9.30 — self-hostable opaque ticket store: выполнено
+
+Реализовано:
+
+- отдельный dependency-light `kilogram-ticket-store` не зависит от identity,
+  protocol, ratchet, runtime IPC и transport crates и никогда не декодирует
+  HPKE envelope;
+- loopback-only bounded HTTP/1.1 предназначен для HTTPS reverse proxy и
+  отказывается слушать public cleartext address;
+- Redb transaction атомарно создаёт/replaces opaque value: greater generation
+  принимается, exact same-generation replay идемпотентен, rollback и
+  same-generation different body получают HTTP 409;
+- fixed service retention 30–3600 секунд не продлевается GET/exact retry;
+  startup, periodic cleanup и expired GET удаляют старые records;
+- body/channel/total-bytes/connections/header/target/time limits, per-IP/global
+  fixed-window rate limits, HTTP 429/507 и optional trusted-proxy `X-Real-IP`
+  ограничивают ресурсы без заявления о Sybil/DDoS защите;
+- runtime publication regression вместо временного mock теперь использует этот
+  реальный store между двумя live actors;
+- русский Internet procedure описывает HTTPS proxy, publish/fetch, restart и
+  retention test без ложного утверждения об анонимности.
+
+Проверки:
+
+- store regression проходит durable reopen, generation jump, exact replay,
+  conflict/rollback, capacity и TTL expiry;
+- реальный HTTP regression проверяет content type/path/generation, body limit,
+  trusted `X-Real-IP` и точный 429;
+- live runtime regression проходит publish/fetch/install/idempotent replay через
+  production store implementation;
+- rustfmt, strict workspace Clippy, все 193 workspace tests и release workspace
+  build проходят;
+- release process smoke `.tmp/m0930-release-smoke-final` подтвердил HTTP
+  `201/200/409/204`, exact GET generation 2/body `06070809`, принудительное
+  завершение отдельного EXE и durable GET после нового запуска на том же Redb;
+- release-mode runtime lifecycle повторно прошёл publish/fetch/install и
+  idempotent replay двух live actors через production store;
+- contracts зафиксированы в
+  [`../docs/RFC-0052-self-hostable-opaque-ticket-store.md`](../docs/RFC-0052-self-hostable-opaque-ticket-store.md)
+  и
+  [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md).
+
 ### Следующий этап
 
-1. M0.9.30: добавить минимальный self-hostable opaque publication service с
-   fixed retention, conditional generation replacement, size/rate limits и
-   Internet test procedure; он не должен разбирать ticket plaintext или
-   принимать application identifiers.
-2. После наблюдаемого service contract добавить opt-in automatic
-   publish/refresh policy; foreground runtime остаётся стандартным режимом.
+1. M0.9.31: добавить opt-in automatic publish/refresh policy с expiry-aware
+   schedule, bounded retry/backoff, network-class constraints и явными
+   foreground/background/UI состояниями.
+2. После наблюдаемого service contract спроектировать unlinkable write
+   capability/admission: M0.9.30 ограничивает ресурсы, но channel-aware writer
+   может вызвать availability failure.
 3. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 4. Добавить macOS/Linux/mobile providers той же platform boundary.

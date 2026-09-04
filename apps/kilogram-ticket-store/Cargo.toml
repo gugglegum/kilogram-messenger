@@ -1,0 +1,22 @@
+[package]
+name = "kilogram-ticket-store"
+description = "Self-hostable opaque runtime ticket publication service for Kilogram"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+postcard.workspace = true
+redb.workspace = true
+serde.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+reqwest.workspace = true
+tempfile.workspace = true
+
+[lints]
+workspace = true

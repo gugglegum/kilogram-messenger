@@ -3161,6 +3161,7 @@ dependencies = [
  "kilogram-session",
  "kilogram-state",
  "kilogram-store",
+ "kilogram-ticket-store",
  "kilogram-transport-iroh",
  "postcard",
  "qrcode",
@@ -3286,6 +3287,20 @@ dependencies = [
  "kilogram-ratchet",
  "tempfile",
  "thiserror 2.0.20",
+]
+
+[[package]]
+name = "kilogram-ticket-store"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "postcard",
+ "redb",
+ "reqwest",
+ "serde",
+ "tempfile",
+ "tokio",
 ]
 
 [[package]]

@@ -182,7 +182,11 @@ sessions, distribution, removal и key epochs и не решены этим пр
   отдельного authenticated candidate-set/gossip контракта.
 - Репликация или erasure coding: сколько случайных узлов и какие гарантии нужны?
 - Как выдавать storage capability и ограничивать spam/Sybil без глобального
-  аккаунта и утечки социального графа?
+  аккаунта и утечки социального графа? M0.9.30 применяет только per-IP/global/
+  capacity limits и unauthenticated monotonic generation: знающий channel может
+  записать высокий generation, а распределённый attacker — занять channel cap.
+  Нужен unlinkable write capability или иная admission модель без открытого
+  Account ID.
 - M0.9.18 уже позволяет вручную добавить несколько recipient-bound plans,
   запускает по одной bounded attempt и честно показывает
   `incomplete`/`single-source`/`agreed`/`divergent`. Как desktop безопасно
