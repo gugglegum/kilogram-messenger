@@ -84,6 +84,8 @@ kilogram-bootstrap account-recovery-restore \
   --account-root-dir <NEW_ROOT> \
   --package-file <PACKAGE.karp> \
   --witness-file <WITNESS.karw> \
+  --expected-package-id <INSPECTED_PACKAGE_ID> \
+  --expected-authority-revision <INSPECTED_AUTHORITY_REVISION> \
   --recovery-phrase-stdin
 ```
 
@@ -98,12 +100,15 @@ binding without reading the phrase. Inputs are bounded regular files and direct
 symlinks are rejected.
 
 Restore reads the phrase only from standard input, derives the Account ID, and
-requires it to match the authenticated package. The destination must not exist.
-The helper creates a same-parent staging directory, writes a fresh platform
-Root-key envelope plus the exact sequence, revocations, device list, and
-membership heads, regenerates and compares all authority views byte-for-byte,
-then performs one no-clobber directory rename. Any error leaves the destination
-absent. On Windows the recovered Root key is wrapped anew with DPAPI CurrentUser.
+requires it to match the authenticated package. It also requires the package ID
+and authority revision shown by inspect; both are recalculated after reading the
+artifacts so a valid same-path replacement between inspect and restore fails
+before staging begins. The destination must not exist. The helper creates a
+same-parent staging directory, writes a fresh platform Root-key envelope plus
+the exact sequence, revocations, device list, and membership heads, regenerates
+and compares all authority views byte-for-byte, then performs one no-clobber
+directory rename. Any error leaves the destination absent. On Windows the
+recovered Root key is wrapped anew with DPAPI CurrentUser.
 
 ## 5. Required recovery sequence
 
@@ -116,6 +121,8 @@ absent. On Windows the recovered Root key is wrapped anew with DPAPI CurrentUser
    device; then recover its history from one or more existing devices.
 6. Immediately export and independently retain a new package/witness pair after
    the authority revision changes.
+
+The implemented desktop orchestration is specified in RFC-0047.
 
 Recovery does not overwrite an existing Root, silently reset authority state,
 copy any device secret, claim message-history completeness, or revoke a lost

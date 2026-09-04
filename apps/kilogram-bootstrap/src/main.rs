@@ -80,6 +80,10 @@ enum Command {
         package_file: PathBuf,
         #[arg(long)]
         witness_file: PathBuf,
+        #[arg(long)]
+        expected_package_id: String,
+        #[arg(long)]
+        expected_authority_revision: u64,
         #[arg(long, action = clap::ArgAction::SetTrue)]
         recovery_phrase_stdin: bool,
     },
@@ -140,6 +144,8 @@ fn main() -> Result<()> {
             account_root_dir,
             package_file,
             witness_file,
+            expected_package_id,
+            expected_authority_revision,
             recovery_phrase_stdin,
         } => {
             anyhow::ensure!(
@@ -152,6 +158,8 @@ fn main() -> Result<()> {
                 package_file,
                 witness_file,
                 &phrase,
+                &expected_package_id,
+                expected_authority_revision,
             )?)?
         }
     };

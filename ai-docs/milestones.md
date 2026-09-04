@@ -2252,18 +2252,46 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - release process smoke `.tmp/m0919-release-smoke-20260904-112123` прошёл create
   → export → inspect → stdin phrase restore с DPAPI CurrentUser provider.
 
+### M0.9.20 — desktop Account Root recovery ceremony: выполнено
+
+Реализовано:
+
+- Windows desktop добавил offline Root recovery panel: export current Root в
+  новые package/witness paths, dedicated drop targets, strict inspect и restore
+  только при stopped runtime;
+- UI показывает Account ID, authority revision, package ID и captured counts,
+  отдельно предупреждает, что signature validity не доказывает global freshness,
+  и требует explicit confirmation newest independently retained witness;
+- редактирование/drop artifacts и новый inspect заранее сбрасывают прежний gate,
+  confirmation и введённую phrase;
+- phrase masked, хранится в zeroizing type, redacted из WorkerRequest Debug,
+  удаляется из UI сразу после enqueue и передаётся helper только bounded stdin;
+- restore связан с inspected package ID/revision: helper повторно сравнивает их
+  после чтения exact package/witness и до staging, поэтому valid same-path
+  replacement fail closed;
+- результат заполняет Account ID и restored Root path существующей device-link
+  ceremony; enrollment и multi-source history recovery не запускаются неявно;
+- полный контракт —
+  [`../docs/RFC-0047-desktop-account-root-recovery.md`](../docs/RFC-0047-desktop-account-root-recovery.md).
+
+Проверки:
+
+- targeted bootstrap/desktop tests покрывают strict output, secret redaction,
+  wrong/stale inputs и same-path replacement;
+- configured debug и release process smoke прошёл реальный create → export →
+  inspect → stdin-only restore adapter с DPAPI CurrentUser;
+- formatting, strict workspace Clippy, все 162 serial workspace tests и release
+  workspace build проходят; hashes зафиксированы в `development-environment.md`.
+
 ### Следующий этап
 
-1. M0.9.20: добавить desktop ceremony для export/inspect/phrase restore,
-   раздельного хранения latest witness и явного перехода к device-link/history
-   recovery без передачи seed в command line.
-2. Спроектировать согласованный monotonic witness/current-device quorum и
-   lifecycle обязательного обновления recovery package после authority changes.
-3. Optional autostart/background mode оставить отдельной явной настройкой, не
+1. M0.9.21: спроектировать согласованный monotonic witness/current-device quorum
+   и обязательный lifecycle обновления recovery package после Root mutations.
+2. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
-4. Добавить macOS/Linux/mobile providers той же platform boundary.
-5. Спроектировать privacy-preserving wide-area publication/gossip/mailbox и
+3. Добавить macOS/Linux/mobile providers той же platform boundary.
+4. Спроектировать privacy-preserving wide-area publication/gossip/mailbox и
    first-contact freshness; M0.9.4 закрывает только явный LAN opt-in.
-6. Membership removal и group governance проектировать вместе с ordered
+5. Membership removal и group governance проектировать вместе с ordered
    security events и MLS epoch; compact Merkle/range summary и независимый
    криптографический аудит остаются до публичного выпуска.

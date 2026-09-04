@@ -1,6 +1,7 @@
 use std::{
     collections::BTreeMap,
     ffi::{OsStr, OsString},
+    io::Write as _,
     path::{Path, PathBuf},
     process::{Command, Stdio},
     str::FromStr as _,
@@ -11,6 +12,7 @@ use kilogram_identity::{AccountId, DeviceId};
 use serde::Deserialize;
 
 pub(crate) const MAX_WIZARD_OUTPUT_BYTES: usize = 256 * 1024;
+const MAX_WIZARD_STDIN_BYTES: usize = 4 * 1024;
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -69,6 +71,29 @@ pub(crate) struct DeviceLinkAcceptOutput {
     pub(crate) prekey_pool_file: PathBuf,
     pub(crate) vault_key_protection: String,
     pub(crate) history_recovery: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct AccountRecoveryOutput {
+    pub(crate) status: String,
+    pub(crate) account_id: String,
+    pub(crate) authority_revision: u64,
+    pub(crate) device_count: usize,
+    pub(crate) conversation_membership_count: usize,
+    pub(crate) package_id: String,
+    pub(crate) package_file: PathBuf,
+    pub(crate) witness_file: PathBuf,
+    pub(crate) account_root_dir: Option<PathBuf>,
+    pub(crate) root_key_protection: Option<String>,
+    pub(crate) freshness_scope: String,
+}
+
+impl AccountRecoveryOutput {
+    pub(crate) fn validate_expected_status(&self, expected: &str) -> Result<()> {
+        self.validate()?;
+        validate_status(&self.status, expected)
+    }
 }
 
 pub(crate) trait WizardJsonOutput: Sized + for<'de> Deserialize<'de> {
@@ -156,6 +181,60 @@ impl WizardJsonOutput for DeviceLinkAcceptOutput {
     }
 }
 
+impl WizardJsonOutput for AccountRecoveryOutput {
+    fn validate(&self) -> Result<()> {
+        ensure!(
+            matches!(
+                self.status.as_str(),
+                "account-root-recovery-exported"
+                    | "account-root-recovery-verified"
+                    | "account-root-recovery-restored"
+            ),
+            "wizard helper returned an unknown Account Root recovery status"
+        );
+        AccountId::from_str(&self.account_id)
+            .context("Account Root recovery Account ID is invalid")?;
+        ensure!(
+            self.authority_revision > 0,
+            "Account Root recovery authority revision is missing"
+        );
+        ensure!(
+            self.device_count > 0,
+            "Account Root recovery device list is empty"
+        );
+        validate_hex_id(&self.package_id, "Account Root recovery package ID")?;
+        validate_absolute_file_path(&self.package_file, "package_file")?;
+        validate_absolute_file_path(&self.witness_file, "witness_file")?;
+        ensure!(
+            self.package_file != self.witness_file,
+            "Account Root recovery package and witness paths are identical"
+        );
+        ensure!(
+            self.freshness_scope == "exact-independent-witness-not-global-monotonic-service",
+            "Account Root recovery freshness scope is invalid"
+        );
+        if self.status == "account-root-recovery-restored" {
+            let root = self
+                .account_root_dir
+                .as_ref()
+                .context("restored Account Root path is missing")?;
+            ensure!(root.is_absolute(), "restored Account Root path is relative");
+            ensure!(
+                self.root_key_protection
+                    .as_ref()
+                    .is_some_and(|value| !value.is_empty()),
+                "restored Account Root key protection is missing"
+            );
+        } else {
+            ensure!(
+                self.account_root_dir.is_none() && self.root_key_protection.is_none(),
+                "non-restore output unexpectedly contains local Root state"
+            );
+        }
+        Ok(())
+    }
+}
+
 fn validate_status(actual: &str, expected: &str) -> Result<()> {
     ensure!(
         actual == expected,
@@ -225,6 +304,26 @@ where
     Ok(value)
 }
 
+pub(crate) fn run_json_with_stdin<T>(
+    executable: &Path,
+    subcommand: &str,
+    arguments: impl IntoIterator<Item = OsString>,
+    input: &[u8],
+) -> Result<T>
+where
+    T: WizardJsonOutput,
+{
+    ensure!(
+        input.len() <= MAX_WIZARD_STDIN_BYTES,
+        "wizard command input is too large"
+    );
+    let output = run_process_with_stdin(executable, subcommand, arguments, Some(input))?;
+    ensure_process_success(subcommand, &output)?;
+    let value: T = serde_json::from_slice(&output.stdout).context("decode wizard helper JSON")?;
+    value.validate()?;
+    Ok(value)
+}
+
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub(crate) struct RecoveryCommandOutput {
     pub(crate) fields: BTreeMap<String, String>,
@@ -281,11 +380,24 @@ fn run_process(
     subcommand: &str,
     arguments: impl IntoIterator<Item = OsString>,
 ) -> Result<ProcessOutput> {
+    run_process_with_stdin(executable, subcommand, arguments, None)
+}
+
+fn run_process_with_stdin(
+    executable: &Path,
+    subcommand: &str,
+    arguments: impl IntoIterator<Item = OsString>,
+    input: Option<&[u8]>,
+) -> Result<ProcessOutput> {
     let mut command = Command::new(executable);
     command
         .arg(subcommand)
         .args(arguments)
-        .stdin(Stdio::null())
+        .stdin(if input.is_some() {
+            Stdio::piped()
+        } else {
+            Stdio::null()
+        })
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     #[cfg(windows)]
@@ -294,9 +406,24 @@ fn run_process(
         const CREATE_NO_WINDOW: u32 = 0x0800_0000;
         command.creation_flags(CREATE_NO_WINDOW);
     }
-    let output = command
-        .output()
+    let mut child = command
+        .spawn()
         .with_context(|| format!("start {} {subcommand}", executable.display()))?;
+    if let Some(input) = input {
+        let mut stdin = child.stdin.take().context("open wizard helper stdin")?;
+        stdin
+            .write_all(input)
+            .context("write wizard helper standard input")?;
+        stdin
+            .write_all(b"\n")
+            .context("finish wizard helper standard input")?;
+        stdin
+            .flush()
+            .context("flush wizard helper standard input")?;
+    }
+    let output = child
+        .wait_with_output()
+        .context("wait for wizard helper process")?;
     ensure!(
         output.stdout.len() <= MAX_WIZARD_OUTPUT_BYTES,
         "wizard command output is too large"
@@ -437,6 +564,38 @@ mod tests {
 
         value["unexpected"] = serde_json::Value::Bool(true);
         assert!(serde_json::from_value::<DeviceLinkRequestOutput>(value).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn account_recovery_json_is_strict_absolute_and_honest_about_freshness() -> Result<()> {
+        let temporary = tempfile::tempdir()?;
+        let package = temporary.path().join("root.karp");
+        let witness = temporary.path().join("latest.karw");
+        let mut value = serde_json::json!({
+            "status": "account-root-recovery-verified",
+            "account_id": "0101010101010101010101010101010101010101010101010101010101010101",
+            "authority_revision": 7,
+            "device_count": 2,
+            "conversation_membership_count": 3,
+            "package_id": "0202020202020202020202020202020202020202020202020202020202020202",
+            "package_file": package,
+            "witness_file": witness,
+            "account_root_dir": null,
+            "root_key_protection": null,
+            "freshness_scope": "exact-independent-witness-not-global-monotonic-service"
+        });
+        let output: AccountRecoveryOutput = serde_json::from_value(value.clone())?;
+        output.validate_expected_status("account-root-recovery-verified")?;
+
+        value["freshness_scope"] = serde_json::Value::String("globally-fresh".to_owned());
+        let dishonest: AccountRecoveryOutput = serde_json::from_value(value.clone())?;
+        assert!(dishonest.validate().is_err());
+        value["freshness_scope"] = serde_json::Value::String(
+            "exact-independent-witness-not-global-monotonic-service".to_owned(),
+        );
+        value["unexpected"] = serde_json::Value::Bool(true);
+        assert!(serde_json::from_value::<AccountRecoveryOutput>(value).is_err());
         Ok(())
     }
 }

@@ -806,3 +806,26 @@ retirement остальных compatibility shadows ещё не реализов
   `269FF629D275393AC3D8000CCA7539C5B07F030D8D6C23C1082618D0F0EC2166`;
   `target/release/kilogram-cli.exe` — 22,564,864 bytes, SHA-256
   `D1D7D8A56AFD0CFC839D3E32A3A7D198A03BEA7716D00D67D5BABEA469519DF2`.
+
+## M0.9.20 verification snapshot (2026-09-04)
+
+- `kilogram-windows` добавил stopped-runtime Account Root export/inspect/restore
+  panel, dedicated artifact drop targets, explicit newest-witness confirmation
+  и переход к существующей device-link ceremony.
+- Wizard adapter принимает bounded strict recovery JSON; phrase находится в
+  zeroizing/redacted state и поступает в helper только через bounded stdin.
+- Helper restore требует inspected package ID/revision и сверяет их до staging;
+  regression отклоняет valid same-path package replacement без создания target.
+- Configured real-process smoke отдельно прошёл с debug и release
+  `kilogram-bootstrap.exe`: create → export → inspect → stdin-only restore,
+  восстановленный Windows provider — `windows-dpapi-current-user`.
+- `cargo fmt --all -- --check`, strict
+  `cargo clippy --workspace --all-targets --all-features -- -D warnings`, все
+  162 workspace tests (`--test-threads=1`) и
+  `cargo build --release --workspace` проходят.
+- Windows artifacts: `target/release/kilogram-bootstrap.exe` — 3,773,440 bytes,
+  SHA-256 `C331BB7E8EE978C8A2921D750806A73A08F93B284AEA3DF74C125AAEC1E0CCDE`;
+  `target/release/kilogram-windows.exe` — 7,203,840 bytes, SHA-256
+  `0BFD06F2C0056E77809CDD72DAB821C70DCFCB7FD115B8BD920022193AB62968`;
+  `target/release/kilogram-cli.exe` — 22,564,864 bytes, SHA-256
+  `D1D7D8A56AFD0CFC839D3E32A3A7D198A03BEA7716D00D67D5BABEA469519DF2`.

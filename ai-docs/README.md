@@ -157,7 +157,12 @@ multi-source claim reconciliation. M0.7.9 добавил signed append-only chec
   witness фиксирует exact package digest/revision; phrase restore выполняется
   только в новый staged Root и заново использует local platform key provider.
   Old package + latest witness отклоняется, но matching rollback обоих файлов
-  всё ещё требует global monotonic witness/current-device quorum. OS peer
+  всё ещё требует global monotonic witness/current-device quorum. M0.9.20
+  добавил desktop export/inspect/restore: stopped-runtime one-shot helper остаётся
+  единственным Root writer, phrase идёт только bounded stdin и zeroize-ится после
+  enqueue, а restore связан с exact inspected package ID/revision для защиты от
+  same-path replacement. После успеха GUI только заполняет device-link поля.
+  OS peer
   credentials остаются дальше. Reconciliation выбирает
   inventory только при совпадении двух или более полных явно собранных claims и
   всё равно не обещает global completeness.
@@ -319,10 +324,11 @@ global prekey discovery/witness, автоматический recovery source di
 
 ## План ближайших работ
 
-1. M0.9.20: добавить desktop export/inspect/restore ceremony для реализованного
-   Root-signed authority package + independently retained exact witness.
-2. Спроектировать global/monotonic witness или current-device quorum: M0.9.19
-   отклоняет old package с latest witness, но не matching rollback обоих файлов.
+1. M0.9.21: спроектировать global/monotonic witness или current-device quorum:
+   M0.9.19/M0.9.20 отклоняют old package с latest witness, но не matching rollback
+   обоих файлов; определить обязательный checkpoint-update lifecycle.
+2. Реализовать выбранный freshness protocol и интегрировать его в desktop
+   recovery ceremony без превращения инфраструктуры в holder Root secrets.
 3. Optional autostart/background mode оставить отдельной явной настройкой, а не
    обязательным Task Scheduler этапом.
 4. Добавить production macOS/Linux local key provider, согласованный monotonic
@@ -437,5 +443,9 @@ global prekey discovery/witness, автоматический recovery source di
   реализованный M0.9.17 short-lived SAS-gated device request, Root enrollment, recipient-encrypted authority transfer и DB-primary accept.
 - [`../docs/RFC-0045-desktop-device-link-and-recovery-wizard.md`](../docs/RFC-0045-desktop-device-link-and-recovery-wizard.md) —
   реализованный M0.9.18 desktop enrollment/recovery wizard, bounded helper adapters и honest multi-source reconciliation UI.
+- [`../docs/RFC-0046-account-root-authority-recovery.md`](../docs/RFC-0046-account-root-authority-recovery.md) —
+  реализованный M0.9.19 portable Root authority package, exact witness и atomic phrase restore.
+- [`../docs/RFC-0047-desktop-account-root-recovery.md`](../docs/RFC-0047-desktop-account-root-recovery.md) —
+  реализованный M0.9.20 desktop export/inspect/stdin restore и exact inspected-artifact gate.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.

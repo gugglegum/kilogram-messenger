@@ -105,6 +105,8 @@ pub fn restore_account_root(
     package_file: impl AsRef<Path>,
     witness_file: impl AsRef<Path>,
     phrase: &AccountRecoveryPhrase,
+    expected_package_id: &str,
+    expected_authority_revision: u64,
 ) -> Result<AccountRecoveryReport> {
     let package_file = canonical_regular_artifact(
         package_file.as_ref(),
@@ -118,6 +120,18 @@ pub fn restore_account_root(
     )?;
     let package = read_package(&package_file)?;
     let witness = read_witness(&witness_file)?;
+    ensure!(
+        encode_hex(
+            &package
+                .package_id()
+                .context("calculate recovery package ID")?
+        ) == expected_package_id,
+        "recovery package changed after inspection"
+    );
+    ensure!(
+        package.authority_revision() == expected_authority_revision,
+        "recovery authority revision changed after inspection"
+    );
     let root = AccountRootState::recover(account_root_dir.as_ref(), phrase, &package, &witness)
         .context("restore Account Root from authenticated authority checkpoint")?;
     let account_root_dir = fs::canonicalize(account_root_dir.as_ref()).with_context(|| {
@@ -352,8 +366,14 @@ mod tests {
         );
 
         let restored_path = parent.path().join("restored-root");
-        let restored_report =
-            restore_account_root(&restored_path, &old_package, &old_witness, &phrase)?;
+        let restored_report = restore_account_root(
+            &restored_path,
+            &old_package,
+            &old_witness,
+            &phrase,
+            &exported.package_id,
+            exported.authority_revision,
+        )?;
         assert_eq!(restored_report.status, "account-root-recovery-restored");
         let restored = AccountRootState::load(&restored_path)?;
         assert_eq!(restored.account_id(), root.account_id());
@@ -380,7 +400,15 @@ mod tests {
         let wrong_phrase = AccountRecoveryPhrase::parse(wrong.recovery_phrase())?;
         let wrong_target = parent.path().join("wrong-target");
         assert!(
-            restore_account_root(&wrong_target, &old_package, &old_witness, &wrong_phrase).is_err()
+            restore_account_root(
+                &wrong_target,
+                &old_package,
+                &old_witness,
+                &wrong_phrase,
+                &exported.package_id,
+                exported.authority_revision,
+            )
+            .is_err()
         );
         assert!(!wrong_target.exists());
 
@@ -392,12 +420,69 @@ mod tests {
         )?;
         let new_package = parent.path().join("new.karp");
         let new_witness = parent.path().join("new.karw");
-        export_account_root(created.account_root_dir(), &new_package, &new_witness)?;
+        let new_exported =
+            export_account_root(created.account_root_dir(), &new_package, &new_witness)?;
         let stale_target = parent.path().join("stale-target");
-        assert!(restore_account_root(&stale_target, &old_package, &new_witness, &phrase).is_err());
+        assert!(
+            restore_account_root(
+                &stale_target,
+                &old_package,
+                &new_witness,
+                &phrase,
+                &new_exported.package_id,
+                new_exported.authority_revision,
+            )
+            .is_err()
+        );
         assert!(!stale_target.exists());
 
-        assert!(restore_account_root(&restored_path, &new_package, &new_witness, &phrase).is_err());
+        assert!(
+            restore_account_root(
+                &restored_path,
+                &new_package,
+                &new_witness,
+                &phrase,
+                &new_exported.package_id,
+                new_exported.authority_revision,
+            )
+            .is_err()
+        );
+        fs::copy(&new_package, &old_package)?;
+        fs::copy(&new_witness, &old_witness)?;
+        let changed_target = parent.path().join("changed-target");
+        let changed_result = restore_account_root(
+            &changed_target,
+            &old_package,
+            &old_witness,
+            &phrase,
+            &exported.package_id,
+            exported.authority_revision,
+        );
+        assert!(changed_result.is_err());
+        let changed_error = changed_result
+            .err()
+            .context("same-path package replacement must be rejected")?;
+        assert!(format!("{changed_error:#}").contains("recovery package changed after inspection"));
+        assert!(!changed_target.exists());
+
+        let revision_target = parent.path().join("revision-target");
+        let revision_result = restore_account_root(
+            &revision_target,
+            &old_package,
+            &old_witness,
+            &phrase,
+            &new_exported.package_id,
+            exported.authority_revision,
+        );
+        assert!(revision_result.is_err());
+        let revision_error = revision_result
+            .err()
+            .context("authority revision mismatch must be rejected")?;
+        assert!(
+            format!("{revision_error:#}")
+                .contains("recovery authority revision changed after inspection")
+        );
+        assert!(!revision_target.exists());
         Ok(())
     }
 

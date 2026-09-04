@@ -62,7 +62,9 @@ M0.9.19 добавил portable Root-signed authority package и exact independe
 retained witness: phrase restore больше не обнуляет sequence/revocations/list/
 membership heads, а old package с latest witness отклоняется. Совместный rollback
 старого matching package+witness остаётся неразрешимым без внешнего monotonic
-источника или current-device quorum.
+источника или current-device quorum. M0.9.20 добавил desktop ceremony, exact
+inspected package ID/revision gate и stdin-only phrase handling, но explicit
+checkbox newest witness является только human assertion, не freshness proof.
 Следующие вопросы относятся к production recovery, rotation, asynchronous
 sessions, distribution, removal и key epochs и не решены этим прототипом.
 

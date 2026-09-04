@@ -97,12 +97,15 @@ specified in
 The desktop enrollment and multi-source recovery orchestration boundary is
 specified in
 [`docs/RFC-0045-desktop-device-link-and-recovery-wizard.md`](docs/RFC-0045-desktop-device-link-and-recovery-wizard.md).
+Portable Account Root authority recovery and its desktop ceremony are specified
+in [`docs/RFC-0046-account-root-authority-recovery.md`](docs/RFC-0046-account-root-authority-recovery.md)
+and [`docs/RFC-0047-desktop-account-root-recovery.md`](docs/RFC-0047-desktop-account-root-recovery.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.19 Account Root authority recovery — complete
+## Current milestone: M0.9.20 desktop Account Root recovery — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -360,6 +363,15 @@ an existing Root. An old package paired with the newest witness is rejected.
 The witness must be stored independently and kept current: rolling back both
 files together still requires a future monotonic service or current-device
 quorum to detect.
+
+M0.9.20 exposes export, offline inspect, and phrase restore in the desktop
+client while retaining `kilogram-bootstrap` as the only Root writer. The phrase
+is masked, zeroized after submission, redacted from diagnostics, and sent to the
+helper only over stdin. Restore is bound to the exact package ID and authority
+revision displayed by inspect, requires an explicit newest-witness confirmation,
+and writes only a new Root directory. Success pre-fills the existing device-link
+ceremony; device enrollment and message-history recovery remain explicit later
+steps.
 
 M0.8.1 adds a reversible encrypted shadow snapshot of the entire device state.
 `state-vault-migrate` publishes encrypted records and a keyed manifest in one
@@ -764,7 +776,8 @@ before that profile can be saved and the runtime started. Account Root recovery
 is an explicit helper ceremony and remains separate from device enrollment and
 message-history recovery.
 
-Until the desktop wizard is added, link an existing account with the helper:
+The desktop client now includes both existing-account link and Account Root
+recovery panels. The same operations remain available through the helper:
 
 ```powershell
 # New device
@@ -804,6 +817,8 @@ $RecoveryPhrase | kilogram-bootstrap account-recovery-restore `
   --account-root-dir .\kilogram-account-restored\account-root `
   --package-file .\kilogram-root-20260904.karp `
   --witness-file .\kilogram-root-latest.karw `
+  --expected-package-id <PACKAGE_ID_SHOWN_BY_INSPECT> `
+  --expected-authority-revision <REVISION_SHOWN_BY_INSPECT> `
   --recovery-phrase-stdin
 $RecoveryPhrase = $null
 ```
@@ -812,7 +827,9 @@ The package and the latest witness must be retained in independent places; a
 matching old pair cannot by itself prove global freshness. Neither file contains
 the phrase or a private key, but both expose account/device/membership metadata.
 The full contract is in
-[`docs/RFC-0046-account-root-authority-recovery.md`](docs/RFC-0046-account-root-authority-recovery.md).
+[`docs/RFC-0046-account-root-authority-recovery.md`](docs/RFC-0046-account-root-authority-recovery.md),
+with the desktop boundary in
+[`docs/RFC-0047-desktop-account-root-recovery.md`](docs/RFC-0047-desktop-account-root-recovery.md).
 
 The queue command prints `runtime_ipc_request_id` before connecting. If its
 result is uncertain, repeat the same message with `--request-id <PRINTED_ID>`;
