@@ -37,10 +37,11 @@ use kilogram_ratchet::{
 };
 use kilogram_runtime_ipc::{
     RuntimeIpcCommand, RuntimeIpcConversationSummary, RuntimeIpcDescriptor,
-    RuntimeIpcDeviceDirectoryUpdate, RuntimeIpcHistoryCursor, RuntimeIpcHistoryMessage,
-    RuntimeIpcHistoryPage, RuntimeIpcMessagePreview, RuntimeIpcOutboxStatus, RuntimeIpcQueueItem,
-    RuntimeIpcQueueState, RuntimeIpcRequestId, RuntimeIpcResponse, RuntimeIpcRoutePolicy,
-    RuntimeIpcServer, RuntimeIpcWork, RuntimeLaunchProfile, RuntimeLaunchSettings,
+    RuntimeIpcDeviceDirectoryStatus, RuntimeIpcDeviceDirectoryUpdate, RuntimeIpcHistoryCursor,
+    RuntimeIpcHistoryMessage, RuntimeIpcHistoryPage, RuntimeIpcMessagePreview,
+    RuntimeIpcOutboxStatus, RuntimeIpcQueueItem, RuntimeIpcQueueState, RuntimeIpcRequestId,
+    RuntimeIpcResponse, RuntimeIpcRoutePolicy, RuntimeIpcServer, RuntimeIpcWork,
+    RuntimeLaunchProfile, RuntimeLaunchSettings,
 };
 use kilogram_session::{
     MAX_SYNC_ROUNDS, ServerInventoryOutcome, SessionStore, SyncClient, SyncServer,
@@ -107,8 +108,9 @@ use recovery_scheduler::{
     persist_recovery_scheduler_state,
 };
 use runtime_queue::{
-    MAX_RUNTIME_RECORD_BYTES, RuntimeContactId, RuntimeQueueId, SignedDeliveredMessage,
-    SignedMaterializedMessage, SignedQueuedMessage, SignedRuntimeContact, SignedRuntimeRetryState,
+    MAX_RUNTIME_RECORD_BYTES, RuntimeContactId, RuntimeDeviceDirectoryReceiptId, RuntimeQueueId,
+    SignedDeliveredMessage, SignedMaterializedMessage, SignedQueuedMessage, SignedRuntimeContact,
+    SignedRuntimeDeviceDirectoryReceipt, SignedRuntimeRetryState,
 };
 
 const EVENT_STORE_DIRECTORY: &str = "events";
@@ -118,6 +120,9 @@ const HISTORY_RECOVERY_STORE_DIRECTORY: &str = "history-recovery";
 const RUNTIME_STATE_DIRECTORY: &str = "runtime";
 const RUNTIME_CONTACTS_DIRECTORY: &str = "contacts";
 const RUNTIME_OUTBOX_DIRECTORY: &str = "outbox";
+const RUNTIME_DEVICE_DIRECTORY: &str = "device-directory";
+const MAX_RUNTIME_DEVICE_DIRECTORY_RECEIPTS: usize = 1_024;
+const RUNTIME_DEVICE_LIST_DIGEST_DOMAIN: &[u8] = b"kilogram:runtime-device-list:v1\0";
 const DIRECT_PATH_DIAGNOSTIC_WAIT: Duration = Duration::from_secs(3);
 const ROUTE_POLICY_WAIT: Duration = Duration::from_secs(15);
 const CONNECTION_TIMEOUT: Duration = Duration::from_secs(30);
@@ -476,6 +481,13 @@ enum Command {
         /// Root-signed complete local-account device list after revocation.
         #[arg(long)]
         device_list_file: PathBuf,
+    },
+
+    /// Inspect the authenticated own-device directory applied by the runtime.
+    RuntimeIpcDeviceDirectoryStatus {
+        /// Runtime-owned local IPC descriptor.
+        #[arg(long)]
+        ipc_file: PathBuf,
     },
 
     /// Connect to a listener, send one message, print its acknowledgement, then exit.
@@ -1321,6 +1333,7 @@ impl Command {
             | Self::RuntimeIpcQueueMessage { .. }
             | Self::RuntimeIpcOutboxStatus { .. }
             | Self::RuntimeIpcApplyDeviceDirectory { .. }
+            | Self::RuntimeIpcDeviceDirectoryStatus { .. }
             | Self::PlatformContext => None,
         }
     }
@@ -2099,6 +2112,9 @@ async fn run_command(command: Command) -> Result<()> {
             ipc_file,
             device_list_file,
         } => runtime_ipc_apply_device_directory(ipc_file, device_list_file).await,
+        Command::RuntimeIpcDeviceDirectoryStatus { ipc_file } => {
+            runtime_ipc_device_directory_status(ipc_file).await
+        }
         Command::Connect {
             state_dir,
             ticket,
@@ -3274,6 +3290,7 @@ struct RuntimeStateSnapshot {
     materialized: BTreeMap<RuntimeQueueId, SignedMaterializedMessage>,
     delivered: BTreeMap<RuntimeQueueId, SignedDeliveredMessage>,
     retries: BTreeMap<RuntimeQueueId, Vec<SignedRuntimeRetryState>>,
+    device_directory_receipts: Vec<SignedRuntimeDeviceDirectoryReceipt>,
 }
 
 impl RuntimeStateSnapshot {
@@ -3286,6 +3303,10 @@ impl RuntimeStateSnapshot {
 
     fn latest_retry(&self, queue_id: RuntimeQueueId) -> Option<&SignedRuntimeRetryState> {
         self.retries.get(&queue_id).and_then(|states| states.last())
+    }
+
+    fn latest_device_directory_receipt(&self) -> Option<&SignedRuntimeDeviceDirectoryReceipt> {
+        self.device_directory_receipts.last()
     }
 }
 
@@ -3317,6 +3338,26 @@ fn runtime_retry_relative_path(queue_id: RuntimeQueueId, generation: u32) -> Pat
     PathBuf::from(RUNTIME_STATE_DIRECTORY)
         .join(RUNTIME_OUTBOX_DIRECTORY)
         .join(format!("{queue_id}.retry-{generation:010}"))
+}
+
+fn runtime_device_directory_receipt_relative_path(
+    generation: u64,
+    receipt_id: RuntimeDeviceDirectoryReceiptId,
+) -> PathBuf {
+    PathBuf::from(RUNTIME_STATE_DIRECTORY)
+        .join(RUNTIME_DEVICE_DIRECTORY)
+        .join(format!("{generation:020}-{receipt_id}.directory-receipt"))
+}
+
+fn runtime_device_list_digest(device_list: &AccountDeviceListSnapshot) -> Result<[u8; 32]> {
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(RUNTIME_DEVICE_LIST_DIGEST_DOMAIN);
+    hasher.update(
+        &device_list
+            .encode()
+            .context("encode runtime device list for authenticated digest")?,
+    );
+    Ok(*hasher.finalize().as_bytes())
 }
 
 fn persist_runtime_record(
@@ -3396,7 +3437,11 @@ fn read_runtime_record_files(state_directory: &Path) -> Result<Vec<(PathBuf, Vec
     }
 
     let mut records = Vec::new();
-    for directory in [RUNTIME_CONTACTS_DIRECTORY, RUNTIME_OUTBOX_DIRECTORY] {
+    for directory in [
+        RUNTIME_CONTACTS_DIRECTORY,
+        RUNTIME_OUTBOX_DIRECTORY,
+        RUNTIME_DEVICE_DIRECTORY,
+    ] {
         let root = state_directory
             .join(RUNTIME_STATE_DIRECTORY)
             .join(directory);
@@ -3448,7 +3493,23 @@ fn load_runtime_state_snapshot(
             .file_name()
             .and_then(|name| name.to_str())
             .context("runtime record filename is not UTF-8")?;
-        if file_name.ends_with(".contact") {
+        if file_name.ends_with(".directory-receipt") {
+            let value = SignedRuntimeDeviceDirectoryReceipt::decode(&bytes)?;
+            ensure!(
+                value.account_id() == local_account_id
+                    && value.local_device_id() == local_device_id,
+                "runtime device-directory receipt belongs to another local identity"
+            );
+            ensure!(
+                relative_path
+                    == runtime_device_directory_receipt_relative_path(
+                        value.generation(),
+                        value.receipt_id()?,
+                    ),
+                "runtime device-directory receipt filename does not match its authenticated state"
+            );
+            snapshot.device_directory_receipts.push(value);
+        } else if file_name.ends_with(".contact") {
             let value = SignedRuntimeContact::decode(&bytes)?;
             value.verify_local(local_account_id, local_device_id)?;
             ensure!(
@@ -3543,6 +3604,10 @@ fn load_runtime_state_snapshot(
         retry_count <= MAX_RUNTIME_RETRY_STATES,
         "runtime retry state limit exceeded"
     );
+    ensure!(
+        snapshot.device_directory_receipts.len() <= MAX_RUNTIME_DEVICE_DIRECTORY_RECEIPTS,
+        "runtime device-directory receipt limit exceeded"
+    );
     for states in snapshot.retries.values_mut() {
         states.sort_by_key(SignedRuntimeRetryState::generation);
         let mut previous = None;
@@ -3550,6 +3615,14 @@ fn load_runtime_state_snapshot(
             state.verify(previous)?;
             previous = Some(state);
         }
+    }
+    snapshot
+        .device_directory_receipts
+        .sort_by_key(SignedRuntimeDeviceDirectoryReceipt::generation);
+    let mut previous = None;
+    for receipt in &snapshot.device_directory_receipts {
+        receipt.verify(previous)?;
+        previous = Some(receipt);
     }
     for queued in snapshot.queued.values() {
         let contact = snapshot
@@ -4384,6 +4457,49 @@ async fn runtime_ipc_apply_device_directory(
     }
 }
 
+async fn runtime_ipc_device_directory_status(ipc_file: PathBuf) -> Result<()> {
+    match kilogram_runtime_ipc::call(&ipc_file, RuntimeIpcCommand::OwnDeviceDirectoryStatus).await?
+    {
+        RuntimeIpcResponse::OwnDeviceDirectoryStatus(status) => {
+            print_runtime_device_directory_status(&status);
+            println!("status=runtime-own-device-directory-inspected");
+            Ok(())
+        }
+        RuntimeIpcResponse::Error { message } => {
+            bail!("runtime IPC rejected device-directory status: {message}")
+        }
+        _ => bail!("runtime IPC returned an unexpected device-directory status response"),
+    }
+}
+
+fn print_runtime_device_directory_status(status: &RuntimeIpcDeviceDirectoryStatus) {
+    println!("account_id={}", status.account_id);
+    println!("device_id={}", status.local_device_id);
+    println!("state_dir={}", status.state_dir.display());
+    println!("authority_revision={}", status.authority_revision);
+    println!("active_device_count={}", status.active_device_count);
+    if let Some(receipt_id) = &status.receipt_id {
+        println!("directory_receipt_id={receipt_id}");
+    }
+    if let Some(generation) = status.receipt_generation {
+        println!("directory_receipt_generation={generation}");
+    }
+    println!("device_list_digest={}", status.device_list_digest);
+    println!(
+        "applied_device_list_file={}",
+        status.applied_device_list_file.display()
+    );
+    println!(
+        "launch_device_list_file={}",
+        status.launch_device_list_file.display()
+    );
+    println!(
+        "profile_convergence_status={}",
+        status.profile_convergence_status
+    );
+    println!("restart_recovery_status={}", status.restart_recovery_status);
+}
+
 fn print_runtime_device_directory_update(update: &RuntimeIpcDeviceDirectoryUpdate) {
     println!("account_id={}", update.account_id);
     println!("device_id={}", update.local_device_id);
@@ -4429,6 +4545,7 @@ fn print_runtime_device_directory_update(update: &RuntimeIpcDeviceDirectoryUpdat
         "history_availability_status={}",
         update.history_availability_status
     );
+    print_runtime_device_directory_status(&update.directory_status);
 }
 
 struct RuntimeIpcDispatchOutcome {
@@ -4440,7 +4557,7 @@ fn handle_runtime_ipc_work(
     state_directory: &Path,
     endpoint: &Endpoint,
     ticket: &mut ConnectionTicket,
-    launch_device_list_file: &Path,
+    directory_state: &mut RuntimeDeviceDirectoryState,
     ticket_file: Option<&Path>,
     work: RuntimeIpcWork,
 ) -> RuntimeIpcDispatchOutcome {
@@ -4522,21 +4639,28 @@ fn handle_runtime_ipc_work(
                     state_directory,
                     endpoint,
                     ticket,
-                    launch_device_list_file,
+                    directory_state,
                     ticket_file,
                     &device_list_file,
                 )
             }) {
-                Ok((replacement, update)) => {
+                Ok((replacement, replacement_directory_state, update)) => {
                     *ticket = replacement;
+                    *directory_state = replacement_directory_state;
                     state_changed = true;
-                    RuntimeIpcResponse::OwnDeviceDirectoryApplied(update)
+                    RuntimeIpcResponse::OwnDeviceDirectoryApplied(Box::new(update))
                 }
                 Err(error) => RuntimeIpcResponse::Error {
                     message: format!("{error:#}"),
                 },
             }
         }
+        RuntimeIpcCommand::OwnDeviceDirectoryStatus => match directory_state.status(ticket) {
+            Ok(status) => RuntimeIpcResponse::OwnDeviceDirectoryStatus(status),
+            Err(error) => RuntimeIpcResponse::Error {
+                message: format!("{error:#}"),
+            },
+        },
         RuntimeIpcCommand::ConversationList => {
             let conversations = StateDirectoryLock::acquire(state_directory)
                 .context("lock runtime state for IPC conversation snapshot")
@@ -4618,16 +4742,60 @@ struct PreparedRuntimeListener {
     listener_directory: AccountPrekeyDirectory,
     listener_prekey_pool: SignedPrekeyPool,
     authority_snapshot_store: AuthoritySnapshotStoreOutcome,
+    device_directory_state: RuntimeDeviceDirectoryState,
+}
+
+#[derive(Clone)]
+struct RuntimeDeviceDirectoryState {
+    state_dir: PathBuf,
+    launch_device_list_file: PathBuf,
+    applied_device_list_file: PathBuf,
+    device_list_digest: [u8; 32],
+    latest_receipt: Option<SignedRuntimeDeviceDirectoryReceipt>,
+    profile_convergence_status: &'static str,
+    restart_recovery_status: &'static str,
+}
+
+impl RuntimeDeviceDirectoryState {
+    fn status(&self, ticket: &ConnectionTicket) -> Result<RuntimeIpcDeviceDirectoryStatus> {
+        let receipt_id = self
+            .latest_receipt
+            .as_ref()
+            .map(SignedRuntimeDeviceDirectoryReceipt::receipt_id)
+            .transpose()?
+            .map(|receipt_id| receipt_id.to_string());
+        Ok(RuntimeIpcDeviceDirectoryStatus {
+            account_id: ticket.listener_account_id(),
+            local_device_id: ticket.listener_device_id(),
+            state_dir: self.state_dir.clone(),
+            authority_revision: ticket.listener_authority_snapshot().revision(),
+            active_device_count: ticket.listener_directory().device_list().devices().len(),
+            receipt_id,
+            receipt_generation: self
+                .latest_receipt
+                .as_ref()
+                .map(SignedRuntimeDeviceDirectoryReceipt::generation),
+            device_list_digest: encode_hex(&self.device_list_digest),
+            applied_device_list_file: self.applied_device_list_file.clone(),
+            launch_device_list_file: self.launch_device_list_file.clone(),
+            profile_convergence_status: self.profile_convergence_status.to_owned(),
+            restart_recovery_status: self.restart_recovery_status.to_owned(),
+        })
+    }
 }
 
 fn apply_runtime_own_device_directory(
     state_directory: &Path,
     endpoint: &Endpoint,
     current_ticket: &ConnectionTicket,
-    launch_device_list_file: &Path,
+    current_directory_state: &RuntimeDeviceDirectoryState,
     ticket_file: Option<&Path>,
     device_list_file: &Path,
-) -> Result<(ConnectionTicket, RuntimeIpcDeviceDirectoryUpdate)> {
+) -> Result<(
+    ConnectionTicket,
+    RuntimeDeviceDirectoryState,
+    RuntimeIpcDeviceDirectoryUpdate,
+)> {
     ensure!(
         device_list_file.is_absolute(),
         "refreshed runtime device-list path must be absolute"
@@ -4657,6 +4825,7 @@ fn apply_runtime_own_device_directory(
         })?,
     )
     .context("decode and verify refreshed runtime device list")?;
+    let device_list_digest = runtime_device_list_digest(&new_device_list)?;
     let old_device_list = current_ticket.listener_directory().device_list();
     new_device_list
         .verify_for_account(current_ticket.listener_account_id())
@@ -4734,6 +4903,32 @@ fn apply_runtime_own_device_directory(
         current_ticket.listener_account_id(),
         current_ticket.listener_device_id(),
     )?;
+    let previous_receipt = snapshot.latest_device_directory_receipt();
+    let directory_receipt = match previous_receipt {
+        Some(receipt)
+            if receipt.authority_revision() == new_device_list.revision()
+                && receipt.device_list_digest() == device_list_digest
+                && receipt.active_device_count() == new_device_list.devices().len()
+                && receipt.device_list_file() == device_list_file =>
+        {
+            receipt.clone()
+        }
+        previous => SignedRuntimeDeviceDirectoryReceipt::sign(
+            device_state.identity(),
+            current_ticket.listener_account_id(),
+            new_device_list.revision(),
+            device_list_digest,
+            new_device_list.devices().len(),
+            device_list_file.clone(),
+            previous,
+        )?,
+    };
+    let directory_receipt_id = directory_receipt.receipt_id()?;
+    let directory_receipt_path = runtime_device_directory_receipt_relative_path(
+        directory_receipt.generation(),
+        directory_receipt_id,
+    );
+    let directory_receipt_bytes = directory_receipt.encode()?;
     let mut pending_unmaterialized_messages = 0_usize;
     let mut pending_materialized_messages = 0_usize;
     for (queue_id, _) in snapshot
@@ -4748,24 +4943,34 @@ fn apply_runtime_own_device_directory(
         pending_materialized_messages += 1;
     }
 
-    let (authority_store, ratchet_session_records_retired, prekey_observations_retired) =
-        run_state_transaction(state_directory, |transaction| {
-            transaction.prepare_trust_workspace()?;
-            let authority_store = device_state
-                .install_own_authority_snapshot(new_device_list.authority_snapshot())
-                .context("install refreshed own authority in DB-primary trust workspace")?;
-            let ratchet_state = transaction.load_ratchet_state()?;
-            let mut sessions = 0_usize;
-            let mut observations = 0_usize;
-            for device_id in &revoked_device_ids {
-                let retirement = ratchet_state
-                    .retire_peer_device(*device_id)
-                    .with_context(|| format!("retire ratchet state for device {device_id}"))?;
-                sessions += usize::from(retirement.session_removed);
-                observations += usize::from(retirement.prekey_observation_removed);
-            }
-            Ok((authority_store, sessions, observations))
-        })?;
+    let (
+        authority_store,
+        ratchet_session_records_retired,
+        prekey_observations_retired,
+        directory_receipt_store,
+    ) = run_state_transaction(state_directory, |transaction| {
+        transaction.prepare_trust_workspace()?;
+        let authority_store = device_state
+            .install_own_authority_snapshot(new_device_list.authority_snapshot())
+            .context("install refreshed own authority in DB-primary trust workspace")?;
+        let ratchet_state = transaction.load_ratchet_state()?;
+        let mut sessions = 0_usize;
+        let mut observations = 0_usize;
+        for device_id in &revoked_device_ids {
+            let retirement = ratchet_state
+                .retire_peer_device(*device_id)
+                .with_context(|| format!("retire ratchet state for device {device_id}"))?;
+            sessions += usize::from(retirement.session_removed);
+            observations += usize::from(retirement.prekey_observation_removed);
+        }
+        let receipt_store = persist_runtime_record(
+            state_directory,
+            &directory_receipt_path,
+            &directory_receipt_bytes,
+            transaction,
+        )?;
+        Ok((authority_store, sessions, observations, receipt_store))
+    })?;
 
     let replacement = ConnectionTicket::new(
         endpoint.addr(),
@@ -4783,14 +4988,37 @@ fn apply_runtime_own_device_directory(
         false
     };
     println!("runtime_directory_authority_store={authority_store:?}");
+    println!("runtime_directory_receipt_id={directory_receipt_id}");
+    println!(
+        "runtime_directory_receipt_generation={}",
+        directory_receipt.generation()
+    );
+    println!("runtime_directory_receipt_store={directory_receipt_store:?}");
     println!("runtime_directory_ticket={encoded}");
     if let Some(path) = ticket_file {
         println!("runtime_directory_ticket_file={}", path.display());
         println!("runtime_directory_ticket_publish=atomic-replace");
     }
 
+    let directory_state = RuntimeDeviceDirectoryState {
+        state_dir: current_directory_state.state_dir.clone(),
+        launch_device_list_file: current_directory_state.launch_device_list_file.clone(),
+        applied_device_list_file: device_list_file.clone(),
+        device_list_digest,
+        latest_receipt: Some(directory_receipt),
+        profile_convergence_status: if device_list_file
+            == current_directory_state.launch_device_list_file
+        {
+            "current"
+        } else {
+            "convergence-required"
+        },
+        restart_recovery_status: "authenticated-receipt-current",
+    };
+    let directory_status = directory_state.status(&replacement)?;
     Ok((
         replacement,
+        directory_state,
         RuntimeIpcDeviceDirectoryUpdate {
             account_id: current_ticket.listener_account_id(),
             local_device_id: current_ticket.listener_device_id(),
@@ -4803,11 +5031,13 @@ fn apply_runtime_own_device_directory(
             pending_unmaterialized_messages,
             pending_materialized_messages,
             ticket_published,
-            launch_profile_update_required: device_list_file != launch_device_list_file,
+            launch_profile_update_required: device_list_file
+                != current_directory_state.launch_device_list_file,
             future_recipient_slot_status: "removed-devices-excluded-by-refreshed-ticket".to_owned(),
             preexisting_recipient_slot_status: "immutable-cannot-be-remotely-rewritten-or-erased"
                 .to_owned(),
             history_availability_status: "existing-copies-remain-readable".to_owned(),
+            directory_status,
         },
     ))
 }
@@ -4844,6 +5074,7 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
     let prepared = with_locked_state(&state_dir, || {
         prepare_runtime_listener(&state_dir, &device_list_file, &peer_prekey_pool_files)
     })?;
+    let mut device_directory_state = prepared.device_directory_state;
     let endpoint = endpoint_builder_with_relay(route_policy, relay_url)
         .alpns(vec![ALPN.to_vec()])
         .bind()
@@ -4895,6 +5126,7 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
         ticket.listener_authority_snapshot().revision()
     );
     println!("authority_store={:?}", prepared.authority_snapshot_store);
+    print_runtime_device_directory_status(&device_directory_state.status(&ticket)?);
     println!("runtime_max_sessions={max_sessions}");
     println!("runtime_idle_seconds={idle_seconds}");
     println!("runtime_poll_milliseconds={poll_milliseconds}");
@@ -4946,7 +5178,7 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                     &state_dir,
                     &endpoint,
                     &mut ticket,
-                    &device_list_file,
+                    &mut device_directory_state,
                     ticket_file.as_deref(),
                     work,
                 );
@@ -5110,15 +5342,76 @@ fn prepare_runtime_listener(
     let listener_certificate = trust
         .load_certificate()
         .context("load runtime Account Root certificate")?;
+    let canonical_state_dir = fs::canonicalize(state_directory)
+        .context("resolve state directory for runtime device-directory status")?;
+    let snapshot = load_runtime_state_snapshot(
+        state_directory,
+        listener_certificate.account_id(),
+        device_state.identity().device_id(),
+    )?;
+    let latest_receipt = snapshot.latest_device_directory_receipt().cloned();
+    let launch_device_list_file = match fs::canonicalize(device_list_file) {
+        Ok(path) => path,
+        Err(error) if latest_receipt.is_some() && error.kind() == io::ErrorKind::NotFound => {
+            device_list_file.to_path_buf()
+        }
+        Err(error) => {
+            return Err(error).with_context(|| {
+                format!(
+                    "resolve runtime launch-profile device list {}",
+                    device_list_file.display()
+                )
+            });
+        }
+    };
+    let applied_device_list_file = latest_receipt
+        .as_ref()
+        .map(|receipt| receipt.device_list_file().to_path_buf())
+        .unwrap_or_else(|| launch_device_list_file.clone());
+    let metadata = fs::symlink_metadata(&applied_device_list_file).with_context(|| {
+        format!(
+            "inspect authenticated runtime device list {}",
+            applied_device_list_file.display()
+        )
+    })?;
+    ensure!(
+        metadata.file_type().is_file() && !metadata.file_type().is_symlink(),
+        "authenticated runtime device list must be a regular non-symlink file"
+    );
+    let applied_device_list_file =
+        fs::canonicalize(&applied_device_list_file).with_context(|| {
+            format!(
+                "resolve authenticated runtime device list {}",
+                applied_device_list_file.display()
+            )
+        })?;
     let listener_device_list = AccountDeviceListSnapshot::decode_and_verify(
-        &fs::read(device_list_file).with_context(|| {
+        &fs::read(&applied_device_list_file).with_context(|| {
             format!(
                 "read runtime device list from {}",
-                device_list_file.display()
+                applied_device_list_file.display()
             )
         })?,
     )
     .context("decode and verify runtime account device list")?;
+    let device_list_digest = runtime_device_list_digest(&listener_device_list)?;
+    if let Some(receipt) = latest_receipt.as_ref() {
+        ensure!(
+            receipt.device_list_file() == applied_device_list_file,
+            "authenticated runtime device-directory receipt path changed on disk"
+        );
+        ensure!(
+            receipt.account_id() == listener_certificate.account_id()
+                && receipt.local_device_id() == device_state.identity().device_id(),
+            "authenticated runtime device-directory receipt belongs to another identity"
+        );
+        ensure!(
+            receipt.authority_revision() == listener_device_list.revision()
+                && receipt.active_device_count() == listener_device_list.devices().len()
+                && receipt.device_list_digest() == device_list_digest,
+            "authenticated runtime device-directory receipt does not match its device-list file"
+        );
+    }
     ensure!(
         listener_device_list.certificate_for(listener_certificate.device_id())
             == Some(&listener_certificate),
@@ -5144,12 +5437,35 @@ fn prepare_runtime_listener(
     })?;
     let mut prekey_pools = vec![listener_prekey_pool.clone()];
     for path in peer_prekey_pool_files {
-        prekey_pools.push(
-            SignedPrekeyPool::decode(&fs::read(path).with_context(|| {
-                format!("read runtime peer prekey pool from {}", path.display())
-            })?)
-            .with_context(|| format!("verify runtime peer prekey pool from {}", path.display()))?,
-        );
+        let bytes = match fs::read(path) {
+            Ok(bytes) => bytes,
+            Err(error) if latest_receipt.is_some() && error.kind() == io::ErrorKind::NotFound => {
+                continue;
+            }
+            Err(error) => {
+                return Err(error).with_context(|| {
+                    format!("read runtime peer prekey pool from {}", path.display())
+                });
+            }
+        };
+        let pool = SignedPrekeyPool::decode(&bytes)
+            .with_context(|| format!("verify runtime peer prekey pool from {}", path.display()))?;
+        if listener_device_list
+            .certificate_for(pool.device_id())
+            .is_some()
+        {
+            prekey_pools.push(pool);
+        } else {
+            ensure!(
+                latest_receipt.is_some()
+                    && listener_device_list
+                        .authority_snapshot()
+                        .revocations()
+                        .iter()
+                        .any(|revocation| revocation.device_id() == pool.device_id()),
+                "runtime peer prekey pool belongs to a device absent without a persisted revocation"
+            );
+        }
     }
     let listener_directory = AccountPrekeyDirectory::new(listener_device_list, prekey_pools)
         .context("assemble complete runtime account prekey directory")?;
@@ -5162,6 +5478,23 @@ fn prepare_runtime_listener(
         listener_directory,
         listener_prekey_pool,
         authority_snapshot_store,
+        device_directory_state: RuntimeDeviceDirectoryState {
+            state_dir: canonical_state_dir,
+            profile_convergence_status: if applied_device_list_file == launch_device_list_file {
+                "current"
+            } else {
+                "convergence-required"
+            },
+            restart_recovery_status: if latest_receipt.is_some() {
+                "authenticated-receipt-recovered"
+            } else {
+                "launch-profile-directory"
+            },
+            launch_device_list_file,
+            applied_device_list_file,
+            device_list_digest,
+            latest_receipt,
+        },
     })
 }
 
@@ -12488,6 +12821,7 @@ mod tests {
             now,
         )?;
         drop(retained_ratchet);
+        EncryptedStateVault::open_or_create(&retained_state)?.migrate_legacy_snapshot()?;
 
         let profile_file = directory.path().join("runtime.launch.json");
         let ticket_file = directory.path().join("runtime.ticket");
@@ -12498,7 +12832,7 @@ mod tests {
                 state_dir: retained_state.clone(),
                 allowed_requester_account_id: root.account_id(),
                 device_list_file: initial_list_file.clone(),
-                peer_prekey_pool_files: vec![removed_pool_file],
+                peer_prekey_pool_files: vec![removed_pool_file.clone()],
                 ticket_file: Some(ticket_file.clone()),
                 relay_wait_seconds: 0,
                 route_policy: RuntimeIpcRoutePolicy::DirectOnly,
@@ -12544,6 +12878,11 @@ mod tests {
         assert_eq!(update.prekey_observations_retired, 1);
         assert!(update.ticket_published);
         assert!(update.launch_profile_update_required);
+        assert_eq!(update.directory_status.receipt_generation, Some(1));
+        assert_eq!(
+            update.directory_status.profile_convergence_status,
+            "convergence-required"
+        );
         assert_eq!(
             update.history_availability_status,
             "existing-copies-remain-readable"
@@ -12573,6 +12912,7 @@ mod tests {
         assert_eq!(retry.authority_revision, refreshed_list.revision());
         assert_eq!(retry.ratchet_session_records_retired, 0);
         assert_eq!(retry.prekey_observations_retired, 0);
+        assert_eq!(retry.directory_status.receipt_generation, Some(1));
         let retained_ratchet = RatchetState::load_or_create(&retained_state)?;
         assert!(!retained_ratchet.has_session(removed.identity().device_id()));
         assert_eq!(
@@ -12583,6 +12923,49 @@ mod tests {
             .await
             .context("runtime did not stop after directory-update test")?
             .context("join directory-update runtime")??;
+        fs::remove_file(&removed_pool_file)?;
+
+        let restarted = tokio::spawn(runtime(runtime_options_from_profile(&profile_file)?));
+        timeout(Duration::from_secs(10), async {
+            while !ipc_file.is_file() {
+                tokio::time::sleep(Duration::from_millis(20)).await;
+            }
+        })
+        .await
+        .context("runtime did not restart from its authenticated directory receipt")?;
+        let status =
+            kilogram_runtime_ipc::call(&ipc_file, RuntimeIpcCommand::OwnDeviceDirectoryStatus)
+                .await?;
+        let RuntimeIpcResponse::OwnDeviceDirectoryStatus(status) = status else {
+            bail!("runtime returned an unexpected directory-status response")
+        };
+        assert_eq!(status.authority_revision, refreshed_list.revision());
+        assert_eq!(status.active_device_count, 1);
+        assert_eq!(status.receipt_generation, Some(1));
+        assert_eq!(status.profile_convergence_status, "convergence-required");
+        assert_eq!(
+            status.restart_recovery_status,
+            "authenticated-receipt-recovered"
+        );
+        let republished = ConnectionTicket::decode(&fs::read_to_string(&ticket_file)?)?;
+        assert_eq!(
+            republished.listener_authority_snapshot().revision(),
+            refreshed_list.revision()
+        );
+        assert!(
+            republished
+                .listener_directory()
+                .certificate_for(removed.identity().device_id())
+                .is_none()
+        );
+        assert_eq!(
+            kilogram_runtime_ipc::call(&ipc_file, RuntimeIpcCommand::Shutdown).await?,
+            RuntimeIpcResponse::ShutdownAccepted
+        );
+        timeout(Duration::from_secs(10), restarted)
+            .await
+            .context("receipt-recovered runtime did not stop")?
+            .context("join receipt-recovered runtime")??;
         Ok(())
     }
 

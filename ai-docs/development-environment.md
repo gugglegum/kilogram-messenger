@@ -1029,3 +1029,33 @@ retirement остальных compatibility shadows ещё не реализов
   `6C310932824B3485E2866EC2ACA78F10BE44246B20970E467D83064B189F654C`;
   `target/release/kilogram-cli.exe` — 22,645,760 bytes, SHA-256
   `C6F7E65436F1B19696BB47D424036FBA36208B72C6DF09B0AC3274C09F6B1AC8`.
+
+## M0.9.28 verification snapshot (2026-09-04)
+
+- Receipt-chain regression отвергает tamper, rollback и same-revision digest
+  equivocation; exact live-apply retry сохраняет generation 1 и не повторяет
+  ratchet/prekey retirement.
+- DB-primary runtime regression атомарно коммитит Root-signed roster `2 -> 1`,
+  ratchet retirement и signed receipt, затем останавливает actor, удаляет
+  уже ненужный prekey-файл отозванного device и запускается со старым launch
+  profile. Runtime выбирает receipt roster, публикует новый ticket без
+  отозванного device и сообщает `authenticated-receipt-recovered` вместе с
+  `convergence-required`.
+- Windows adapter после authenticated ping запрашивает IPC v6 directory status.
+  Bounded profile-reconcile повторно проверяет Root signature, Account/Device,
+  revision/count и digest, заменяет только `device_list_file` и отказывается
+  работать после внешнего path или roster-content drift.
+- `cargo fmt --all -- --check`, strict
+  `cargo clippy --workspace --all-targets --all-features -- -D warnings`, все
+  185 workspace tests (`--test-threads=1`) и
+  `cargo build --release --workspace` проходят.
+- Release-mode smoke
+  `cargo test --release -p kilogram-cli
+  live_runtime_applies_revocation_republishes_ticket_and_retires_ratchet`
+  проходит полный DB-primary apply/retry/restart lifecycle.
+- Windows artifacts: `target/release/kilogram-bootstrap.exe` — 19,014,144 bytes,
+  SHA-256 `FCD1ED29600B466AE4A0111C2A559C423697DBE502BFC75CA1E3630C1AE5DBA5`;
+  `target/release/kilogram-windows.exe` — 7,913,472 bytes, SHA-256
+  `D8DADA49E93CD348C26C1968A708DA030CDD92ACE96E64A9A733CC351EF5D3A0`;
+  `target/release/kilogram-cli.exe` — 22,723,584 bytes, SHA-256
+  `842663CA448DE3707728C1FA3BE231CBD9668F915D87C2D88864A6BAE38B2EB1`.

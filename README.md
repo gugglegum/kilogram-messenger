@@ -105,12 +105,15 @@ Recovery freshness modes and the exact-export lifecycle are specified in
 Live application of a Root-signed device removal to the running actor is
 specified in
 [`docs/RFC-0049-live-runtime-device-directory-refresh.md`](docs/RFC-0049-live-runtime-device-directory-refresh.md).
+Restart-safe persistence of that applied roster and bounded launch-profile
+convergence are specified in
+[`docs/RFC-0050-restart-safe-runtime-device-directory.md`](docs/RFC-0050-restart-safe-runtime-device-directory.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.27 live device-directory refresh — complete
+## Current milestone: M0.9.28 restart-safe device directory — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -1023,8 +1026,29 @@ the same state transaction. A previously materialized recipient table is part
 of an immutable signed event and is not rewritten. The CLI and desktop report
 that boundary separately: future fanout is updated, old signed slots are
 immutable, and existing history copies remain readable. If the applied list
-path differs from the launch profile, the UI also requires that profile path to
-be saved before restart.
+path differs from the launch profile, the UI reports profile convergence as a
+separate state.
+
+M0.9.28 removes that restart gap. The live update now appends a device-signed,
+hash-chained directory receipt inside the same vault-primary transaction that
+installs authority and retires ratchet state. On restart the actor verifies the
+receipt chain and exact Root-signed list digest before opening IPC or publishing
+a ticket; an older launch-profile roster is not used as fallback. Missing or
+replaced receipt input fails closed and names the repair path.
+
+Runtime IPC v6 exposes the applied revision, receipt generation, roster digest,
+launch/applied paths and explicit convergence/restart state:
+
+```powershell
+cargo run -p kilogram-cli -- runtime-ipc-device-directory-status `
+  --ipc-file C:\Kilogram\private\runtime.ipc.json
+```
+
+The desktop reads this status on connect. When profile convergence is required,
+`Reconcile launch profile` verifies the exact connected IPC descriptor, state
+directory, old path, new canonical non-symlink path and unchanged profile bytes;
+it then atomically changes only `device_list_file` and reloads the result. The
+runtime itself still has no general configuration-file write authority.
 
 The queue command prints `runtime_ipc_request_id` before connecting. If its
 result is uncertain, repeat the same message with `--request-id <PRINTED_ID>`;

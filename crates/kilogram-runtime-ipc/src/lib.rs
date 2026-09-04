@@ -21,7 +21,7 @@ use tokio::{
     time::timeout,
 };
 
-const IPC_VERSION: u8 = 5;
+const IPC_VERSION: u8 = 6;
 const MAX_DESCRIPTOR_BYTES: u64 = 16 * 1024;
 const MAX_LAUNCH_PROFILE_BYTES: u64 = 64 * 1024;
 const MAX_LAUNCH_PROFILE_PATHS: usize = 64;
@@ -36,7 +36,7 @@ const MAX_FRAME_BYTES: usize = 256 * 1024;
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(3);
 const IO_TIMEOUT: Duration = Duration::from_secs(30);
 const REQUEST_CHANNEL_CAPACITY: usize = 64;
-const DESCRIPTOR_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-ipc-descriptor:v5\0";
+const DESCRIPTOR_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-ipc-descriptor:v6\0";
 pub const RUNTIME_LAUNCH_PROFILE_VERSION: u8 = 1;
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -155,6 +155,12 @@ impl RuntimeLaunchProfile {
 
     pub fn settings(&self) -> &RuntimeLaunchSettings {
         &self.settings
+    }
+
+    pub fn with_device_list_file(&self, device_list_file: PathBuf) -> Result<Self> {
+        let mut settings = self.settings.clone();
+        settings.device_list_file = device_list_file;
+        Self::new(settings)
     }
 
     fn validate(&self) -> Result<()> {
@@ -358,6 +364,7 @@ pub enum RuntimeIpcCommand {
     ApplyOwnDeviceDirectory {
         device_list_file: PathBuf,
     },
+    OwnDeviceDirectoryStatus,
     ConversationList,
     HistoryPage {
         conversation: String,
@@ -577,6 +584,23 @@ pub struct RuntimeIpcDeviceDirectoryUpdate {
     pub future_recipient_slot_status: String,
     pub preexisting_recipient_slot_status: String,
     pub history_availability_status: String,
+    pub directory_status: RuntimeIpcDeviceDirectoryStatus,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcDeviceDirectoryStatus {
+    pub account_id: AccountId,
+    pub local_device_id: DeviceId,
+    pub state_dir: PathBuf,
+    pub authority_revision: u64,
+    pub active_device_count: usize,
+    pub receipt_id: Option<String>,
+    pub receipt_generation: Option<u64>,
+    pub device_list_digest: String,
+    pub applied_device_list_file: PathBuf,
+    pub launch_device_list_file: PathBuf,
+    pub profile_convergence_status: String,
+    pub restart_recovery_status: String,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -597,7 +621,8 @@ pub enum RuntimeIpcResponse {
         inserted: bool,
     },
     OutboxStatus(RuntimeIpcOutboxStatus),
-    OwnDeviceDirectoryApplied(RuntimeIpcDeviceDirectoryUpdate),
+    OwnDeviceDirectoryApplied(Box<RuntimeIpcDeviceDirectoryUpdate>),
+    OwnDeviceDirectoryStatus(RuntimeIpcDeviceDirectoryStatus),
     ConversationList(Vec<RuntimeIpcConversationSummary>),
     HistoryPage(RuntimeIpcHistoryPage),
     ChangeState {

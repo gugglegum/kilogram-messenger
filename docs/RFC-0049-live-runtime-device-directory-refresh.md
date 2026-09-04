@@ -145,11 +145,9 @@ Regression covers:
   vault delta on commit;
 - the Windows worker's exact selected device-list path and typed response path.
 
-## 8. Next stage
+## 8. Implemented continuation
 
-M0.9.28 should make the live choice survive restart without broadening runtime
-authority: persist an authenticated directory-application receipt and reconcile
-the launch profile with the applied canonical path through a bounded desktop
-operation. Crash or restart between state commit, public ticket replacement and
-profile convergence must have an explicit repairable state rather than silently
-falling back to the revoked roster.
+M0.9.28 implements the restart-safe receipt and bounded profile convergence in
+[`RFC-0050-restart-safe-runtime-device-directory.md`](RFC-0050-restart-safe-runtime-device-directory.md).
+The runtime no longer falls back to a revoked launch-profile roster after its
+new authority state has committed.

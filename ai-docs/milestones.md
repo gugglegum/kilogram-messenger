@@ -2532,12 +2532,44 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - подробный contract зафиксирован в
   [`../docs/RFC-0049-live-runtime-device-directory-refresh.md`](../docs/RFC-0049-live-runtime-device-directory-refresh.md).
 
+### M0.9.28 — restart-safe runtime device directory: выполнено
+
+Реализовано:
+
+- live apply создаёт device-signed append-only receipt, связывающий Account,
+  local Device, authority revision, canonical device-list digest/path, active
+  count, generation и previous receipt ID;
+- receipt append, own-authority high-water и revoked-device ratchet/prekey
+  retirement входят в одну vault-primary transaction; exact retry сохраняет
+  ту же generation;
+- startup до ticket/IPC проверяет bounded contiguous receipt chain и выбирает
+  exact applied roster вместо stale profile; missing/symlink/tamper fail closed,
+  revoked peer-prekey paths больше не мешают восстановлению;
+- IPC v6 `OwnDeviceDirectoryStatus` сообщает receipt, revision/digest,
+  launch/applied paths и `current`/`convergence-required`/restart source;
+- Windows desktop читает status сразу после Ping и предлагает bounded
+  `Reconcile launch profile`: exact state/IPC/old/new path и unchanged-bytes
+  gates, atomic replace только `device_list_file`, reload equality;
+- runtime по-прежнему не получает general launch-profile write authority.
+
+Проверки:
+
+- receipt unit regression отклоняет tamper, rollback, fork/equivocation и
+  разорванную chain;
+- DB-primary live regression проходит `2 -> 1`, receipt generation 1,
+  idempotent retry, stop и restart с намеренно stale profile, затем проверяет
+  republished ticket без revoked device;
+- desktop regression проверяет status-after-ping, exact one-field convergence и
+  отказ при внешнем path drift;
+- contract зафиксирован в
+  [`../docs/RFC-0050-restart-safe-runtime-device-directory.md`](../docs/RFC-0050-restart-safe-runtime-device-directory.md).
+
 ### Следующий этап
 
-1. M0.9.28: записывать authenticated receipt применённого runtime directory и
-   bounded desktop-операцией согласовывать launch profile с canonical applied
-   path; crash/restart между state commit, ticket replace и profile convergence
-   должен иметь явный repairable status и не возвращать revoked roster молча.
+1. M0.9.29: заменить synchronized ticket-file adapter минимальным signed
+   wide-area publication/fetch contract с explicit freshness, rollback и
+   first-contact boundaries; privacy-sensitive lookup не должен публиковать
+   социальный граф в открытом виде.
 2. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.

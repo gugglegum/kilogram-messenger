@@ -1,4 +1,7 @@
-use std::{fmt, path::PathBuf};
+use std::{
+    fmt,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{Context, Result, ensure};
 use kilogram_crypto::SealedMessage;
@@ -12,12 +15,16 @@ const QUEUED_MESSAGE_VERSION: u8 = 1;
 const MATERIALIZATION_VERSION: u8 = 1;
 const DELIVERY_VERSION: u8 = 1;
 const RETRY_VERSION: u8 = 1;
+const DEVICE_DIRECTORY_RECEIPT_VERSION: u8 = 1;
 const CONTACT_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-contact:v1\0";
 const QUEUE_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-queue:v1\0";
 const QUEUE_HPKE_INFO: &[u8] = b"kilogram:runtime-queue-body:v1";
 const MATERIALIZATION_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-materialized:v1\0";
 const DELIVERY_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-delivered:v1\0";
 const RETRY_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-retry:v1\0";
+const DEVICE_DIRECTORY_RECEIPT_SIGNATURE_DOMAIN: &[u8] =
+    b"kilogram:runtime-device-directory-receipt:v1\0";
+const MAX_RUNTIME_DIRECTORY_PATH_BYTES: usize = 16 * 1024;
 pub const MAX_RUNTIME_MESSAGE_BYTES: usize = 64 * 1024;
 pub const MAX_RUNTIME_RECORD_BYTES: usize = 8 * 1024 * 1024;
 
@@ -52,6 +59,215 @@ impl RuntimeQueueId {
 impl fmt::Display for RuntimeQueueId {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         write_hex(formatter, &self.0)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub struct RuntimeDeviceDirectoryReceiptId([u8; 32]);
+
+impl fmt::Display for RuntimeDeviceDirectoryReceiptId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write_hex(formatter, &self.0)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+struct RuntimeDeviceDirectoryReceiptContent {
+    version: u8,
+    account_id: AccountId,
+    local_device_id: DeviceId,
+    generation: u64,
+    previous_receipt_id: Option<RuntimeDeviceDirectoryReceiptId>,
+    authority_revision: u64,
+    device_list_digest: [u8; 32],
+    active_device_count: u32,
+    device_list_file: PathBuf,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct SignedRuntimeDeviceDirectoryReceipt {
+    content: RuntimeDeviceDirectoryReceiptContent,
+    signature: Vec<u8>,
+}
+
+impl SignedRuntimeDeviceDirectoryReceipt {
+    #[allow(clippy::too_many_arguments)]
+    pub fn sign(
+        identity: &DeviceIdentity,
+        account_id: AccountId,
+        authority_revision: u64,
+        device_list_digest: [u8; 32],
+        active_device_count: usize,
+        device_list_file: PathBuf,
+        previous: Option<&Self>,
+    ) -> Result<Self> {
+        let active_device_count = u32::try_from(active_device_count)
+            .context("runtime device-directory active count overflow")?;
+        let (generation, previous_receipt_id) = match previous {
+            Some(previous) => {
+                previous.verify_signature()?;
+                let expected_generation = previous
+                    .generation()
+                    .checked_add(1)
+                    .context("runtime device-directory receipt generation overflow")?;
+                ensure!(
+                    previous.account_id() == account_id
+                        && previous.local_device_id() == identity.device_id(),
+                    "runtime device-directory receipt chain belongs to another identity"
+                );
+                ensure!(
+                    authority_revision >= previous.authority_revision(),
+                    "runtime device-directory receipt rolls authority back"
+                );
+                if authority_revision == previous.authority_revision() {
+                    ensure!(
+                        device_list_digest == previous.device_list_digest(),
+                        "runtime device-directory receipt equivocates at one authority revision"
+                    );
+                }
+                (expected_generation, Some(previous.receipt_id()?))
+            }
+            None => (1, None),
+        };
+        let content = RuntimeDeviceDirectoryReceiptContent {
+            version: DEVICE_DIRECTORY_RECEIPT_VERSION,
+            account_id,
+            local_device_id: identity.device_id(),
+            generation,
+            previous_receipt_id,
+            authority_revision,
+            device_list_digest,
+            active_device_count,
+            device_list_file,
+        };
+        let signature = identity
+            .sign(&signing_bytes(
+                DEVICE_DIRECTORY_RECEIPT_SIGNATURE_DOMAIN,
+                &content,
+            )?)
+            .to_vec();
+        let receipt = Self { content, signature };
+        receipt.verify(previous)?;
+        Ok(receipt)
+    }
+
+    pub fn encode(&self) -> Result<Vec<u8>> {
+        self.verify_signature()?;
+        postcard::to_allocvec(self).context("encode runtime device-directory receipt")
+    }
+
+    pub fn decode(bytes: &[u8]) -> Result<Self> {
+        ensure!(
+            bytes.len() <= MAX_RUNTIME_RECORD_BYTES,
+            "runtime device-directory receipt is too large"
+        );
+        let receipt: Self =
+            postcard::from_bytes(bytes).context("decode runtime device-directory receipt")?;
+        receipt.verify_signature()?;
+        Ok(receipt)
+    }
+
+    pub fn verify(&self, previous: Option<&Self>) -> Result<()> {
+        self.verify_signature()?;
+        match previous {
+            Some(previous) => {
+                previous.verify_signature()?;
+                let expected_generation = previous
+                    .generation()
+                    .checked_add(1)
+                    .context("runtime device-directory receipt generation overflow")?;
+                ensure!(
+                    self.account_id() == previous.account_id()
+                        && self.local_device_id() == previous.local_device_id(),
+                    "runtime device-directory receipt chain changes identity"
+                );
+                ensure!(
+                    self.generation() == expected_generation
+                        && self.content.previous_receipt_id == Some(previous.receipt_id()?),
+                    "runtime device-directory receipt chain is not contiguous"
+                );
+                ensure!(
+                    self.authority_revision() >= previous.authority_revision(),
+                    "runtime device-directory receipt chain rolls authority back"
+                );
+                if self.authority_revision() == previous.authority_revision() {
+                    ensure!(
+                        self.device_list_digest() == previous.device_list_digest(),
+                        "runtime device-directory receipt chain equivocates at one authority revision"
+                    );
+                }
+            }
+            None => ensure!(
+                self.generation() == 1 && self.content.previous_receipt_id.is_none(),
+                "runtime device-directory receipt chain has an invalid first entry"
+            ),
+        }
+        Ok(())
+    }
+
+    fn verify_signature(&self) -> Result<()> {
+        ensure!(
+            self.content.version == DEVICE_DIRECTORY_RECEIPT_VERSION,
+            "unsupported runtime device-directory receipt version"
+        );
+        ensure!(
+            self.content.active_device_count != 0,
+            "runtime device-directory receipt has an empty active roster"
+        );
+        ensure!(
+            self.content.device_list_file.is_absolute(),
+            "runtime device-directory receipt path must be absolute"
+        );
+        let path = self
+            .content
+            .device_list_file
+            .to_str()
+            .context("runtime device-directory receipt path is not UTF-8")?;
+        ensure!(
+            !path.is_empty() && path.len() <= MAX_RUNTIME_DIRECTORY_PATH_BYTES,
+            "runtime device-directory receipt path is invalid"
+        );
+        self.content
+            .local_device_id
+            .verify(
+                &signing_bytes(DEVICE_DIRECTORY_RECEIPT_SIGNATURE_DOMAIN, &self.content)?,
+                &self.signature,
+            )
+            .context("verify runtime device-directory receipt signature")
+    }
+
+    pub fn receipt_id(&self) -> Result<RuntimeDeviceDirectoryReceiptId> {
+        Ok(RuntimeDeviceDirectoryReceiptId(
+            *blake3::hash(&self.encode()?).as_bytes(),
+        ))
+    }
+
+    pub fn account_id(&self) -> AccountId {
+        self.content.account_id
+    }
+
+    pub fn local_device_id(&self) -> DeviceId {
+        self.content.local_device_id
+    }
+
+    pub fn generation(&self) -> u64 {
+        self.content.generation
+    }
+
+    pub fn authority_revision(&self) -> u64 {
+        self.content.authority_revision
+    }
+
+    pub fn device_list_digest(&self) -> [u8; 32] {
+        self.content.device_list_digest
+    }
+
+    pub fn active_device_count(&self) -> usize {
+        self.content.active_device_count as usize
+    }
+
+    pub fn device_list_file(&self) -> &Path {
+        &self.content.device_list_file
     }
 }
 
@@ -732,6 +948,67 @@ mod tests {
         let last = tampered.len() - 1;
         tampered[last] ^= 1;
         assert!(SignedQueuedMessage::decode(&tampered).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn device_directory_receipt_chain_rejects_tamper_equivocation_and_rollback()
+    -> Result<(), Box<dyn Error>> {
+        let directory = tempfile::tempdir()?;
+        let root = AccountRootState::create(directory.path().join("root"))?;
+        let identity = DeviceIdentity::generate()?;
+        let first = SignedRuntimeDeviceDirectoryReceipt::sign(
+            &identity,
+            root.account_id(),
+            7,
+            [11_u8; 32],
+            3,
+            directory.path().join("roster-7.kadl"),
+            None,
+        )?;
+        let restarted_first = SignedRuntimeDeviceDirectoryReceipt::decode(&first.encode()?)?;
+        restarted_first.verify(None)?;
+        let second = SignedRuntimeDeviceDirectoryReceipt::sign(
+            &identity,
+            root.account_id(),
+            8,
+            [12_u8; 32],
+            2,
+            directory.path().join("roster-8.kadl"),
+            Some(&restarted_first),
+        )?;
+        let restarted_second = SignedRuntimeDeviceDirectoryReceipt::decode(&second.encode()?)?;
+        restarted_second.verify(Some(&restarted_first))?;
+        assert_eq!(restarted_second.generation(), 2);
+        assert!(
+            SignedRuntimeDeviceDirectoryReceipt::sign(
+                &identity,
+                root.account_id(),
+                8,
+                [13_u8; 32],
+                2,
+                directory.path().join("equivocation.kadl"),
+                Some(&restarted_second),
+            )
+            .is_err()
+        );
+        assert!(
+            SignedRuntimeDeviceDirectoryReceipt::sign(
+                &identity,
+                root.account_id(),
+                7,
+                [11_u8; 32],
+                3,
+                directory.path().join("rollback.kadl"),
+                Some(&restarted_second),
+            )
+            .is_err()
+        );
+        let mut tampered = restarted_second.encode()?;
+        let last = tampered.len() - 1;
+        tampered[last] ^= 1;
+        assert!(SignedRuntimeDeviceDirectoryReceipt::decode(&tampered).is_err());
+        assert!(restarted_second.verify(None).is_err());
         Ok(())
     }
 }

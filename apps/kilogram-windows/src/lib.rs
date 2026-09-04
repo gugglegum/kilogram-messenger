@@ -13,12 +13,12 @@ use std::{
 use anyhow::{Context, Result, bail, ensure};
 use eframe::egui;
 use kilogram_bootstrap_contract::{DesktopBootstrapOutput, MAX_DESKTOP_BOOTSTRAP_OUTPUT_BYTES};
-use kilogram_identity::{AccountId, AccountRecoveryPhrase};
+use kilogram_identity::{AccountDeviceListSnapshot, AccountId, AccountRecoveryPhrase};
 use kilogram_runtime_ipc::{
-    RuntimeIpcCommand, RuntimeIpcConversationSummary, RuntimeIpcDeviceDirectoryUpdate,
-    RuntimeIpcHistoryCursor, RuntimeIpcHistoryMessage, RuntimeIpcHistoryPage,
-    RuntimeIpcOutboxStatus, RuntimeIpcQueueState, RuntimeIpcRequestId, RuntimeIpcResponse,
-    RuntimeIpcRoutePolicy, RuntimeLaunchProfile, RuntimeLaunchSettings,
+    RuntimeIpcCommand, RuntimeIpcConversationSummary, RuntimeIpcDeviceDirectoryStatus,
+    RuntimeIpcDeviceDirectoryUpdate, RuntimeIpcHistoryCursor, RuntimeIpcHistoryMessage,
+    RuntimeIpcHistoryPage, RuntimeIpcOutboxStatus, RuntimeIpcQueueState, RuntimeIpcRequestId,
+    RuntimeIpcResponse, RuntimeIpcRoutePolicy, RuntimeLaunchProfile, RuntimeLaunchSettings,
 };
 use zeroize::{Zeroize as _, Zeroizing};
 
@@ -44,6 +44,7 @@ const RUNTIME_START_TIMEOUT: Duration = Duration::from_secs(60);
 const RUNTIME_START_RETRY_INTERVAL: Duration = Duration::from_millis(500);
 const RUNTIME_STOP_TIMEOUT: Duration = Duration::from_secs(3);
 const MAX_DESCRIPTOR_PATH_BYTES: usize = 32 * 1024;
+const RUNTIME_DEVICE_LIST_DIGEST_DOMAIN: &[u8] = b"kilogram:runtime-device-list-digest:v1\0";
 
 pub fn run() -> eframe::Result {
     let options = DesktopOptions::from_arguments(std::env::args_os().skip(1));
@@ -225,6 +226,7 @@ enum RuntimeUiAction {
     LoadProfile,
     SaveProfile,
     ApplyDeviceDirectory,
+    ReconcileProfile,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -812,6 +814,7 @@ struct ViewModel {
     queue_attempt: Option<QueueAttempt>,
     outbox: Option<OutboxView>,
     device_directory_update: Option<RuntimeIpcDeviceDirectoryUpdate>,
+    device_directory_status: Option<RuntimeIpcDeviceDirectoryStatus>,
     notice: Option<String>,
     error: Option<String>,
 }
@@ -837,6 +840,7 @@ impl ViewModel {
             queue_attempt: None,
             outbox: None,
             device_directory_update: None,
+            device_directory_status: None,
             notice: None,
             error: None,
         }
@@ -926,6 +930,7 @@ impl ViewModel {
         if operation == Operation::Connect {
             self.connection = ConnectionState::Connecting;
             self.notice = None;
+            self.device_directory_status = None;
         }
     }
 
@@ -951,10 +956,12 @@ impl ViewModel {
             Ok(WorkerSuccess::Connected {
                 account_id,
                 device_id,
+                directory_status,
             }) => {
                 self.connection = ConnectionState::Connected;
                 self.account_id = Some(account_id);
                 self.device_id = Some(device_id);
+                self.device_directory_status = Some(directory_status);
                 self.notice = Some("Authenticated runtime connection established".to_owned());
                 self.error = None;
             }
@@ -1005,6 +1012,7 @@ impl ViewModel {
                     "Runtime directory applied at authority revision {}. {} ratchet session record(s) retired; old history copies remain readable.",
                     update.authority_revision, update.ratchet_session_records_retired
                 ));
+                self.device_directory_status = Some(update.directory_status.clone());
                 self.device_directory_update = Some(update);
                 self.error = None;
             }
@@ -1332,6 +1340,7 @@ enum WorkerSuccess {
     Connected {
         account_id: String,
         device_id: String,
+        directory_status: RuntimeIpcDeviceDirectoryStatus,
     },
     Queued {
         queue_id: String,
@@ -2091,10 +2100,30 @@ async fn execute_request(request: WorkerRequest) -> Result<WorkerSuccess> {
                 RuntimeIpcResponse::Pong {
                     account_id,
                     device_id,
-                } => Ok(WorkerSuccess::Connected {
-                    account_id: account_id.to_string(),
-                    device_id: device_id.to_string(),
-                }),
+                } => {
+                    let directory_status = match kilogram_runtime_ipc::call(
+                        &descriptor,
+                        RuntimeIpcCommand::OwnDeviceDirectoryStatus,
+                    )
+                    .await?
+                    {
+                        RuntimeIpcResponse::OwnDeviceDirectoryStatus(status) => status,
+                        RuntimeIpcResponse::Error { message } => {
+                            bail!("Runtime rejected device-directory status: {message}")
+                        }
+                        _ => bail!("Runtime returned an unexpected device-directory status"),
+                    };
+                    ensure!(
+                        directory_status.account_id == account_id
+                            && directory_status.local_device_id == device_id,
+                        "Runtime device-directory status identity differs from ping"
+                    );
+                    Ok(WorkerSuccess::Connected {
+                        account_id: account_id.to_string(),
+                        device_id: device_id.to_string(),
+                        directory_status,
+                    })
+                }
                 RuntimeIpcResponse::Error { message } => bail!("Runtime rejected ping: {message}"),
                 _ => bail!("Runtime returned an unexpected ping response"),
             }
@@ -2166,7 +2195,7 @@ async fn execute_request(request: WorkerRequest) -> Result<WorkerSuccess> {
             let command = RuntimeIpcCommand::ApplyOwnDeviceDirectory { device_list_file };
             match kilogram_runtime_ipc::call(&descriptor, command).await? {
                 RuntimeIpcResponse::OwnDeviceDirectoryApplied(update) => {
-                    Ok(WorkerSuccess::DeviceDirectoryApplied(update))
+                    Ok(WorkerSuccess::DeviceDirectoryApplied(*update))
                 }
                 RuntimeIpcResponse::Error { message } => {
                     bail!("Runtime rejected the device directory: {message}")
@@ -3837,6 +3866,48 @@ impl KilogramApp {
                 self.model.error = None;
             }
             Err(error) => self.model.error = Some(format!("Save runtime profile: {error:#}")),
+        }
+    }
+
+    fn reconcile_runtime_profile(&mut self) {
+        let result: Result<RuntimeLaunchProfile> = (|| {
+            ensure!(
+                self.model.connection == ConnectionState::Connected,
+                "Connect to the running runtime first"
+            );
+            let status = self
+                .model
+                .device_directory_status
+                .as_ref()
+                .context("Runtime device-directory status is unavailable")?;
+            let profile_path = required_path(&self.runtime_profile_path, "Runtime profile")?;
+            let descriptor_path = self.model.descriptor()?;
+            reconcile_runtime_launch_profile(&profile_path, &descriptor_path, status)
+        })();
+        match result {
+            Ok(profile) => {
+                self.model.descriptor_path = profile.settings().ipc_file.display().to_string();
+                self.runtime_profile_draft = RuntimeProfileDraft::from_profile(&profile);
+                if let Some(status) = self.model.device_directory_status.as_mut() {
+                    status.launch_device_list_file = status.applied_device_list_file.clone();
+                    status.profile_convergence_status =
+                        "current-after-verified-profile-write".to_owned();
+                }
+                if let Some(update) = self.model.device_directory_update.as_mut() {
+                    update.launch_profile_update_required = false;
+                    update.directory_status.launch_device_list_file =
+                        update.directory_status.applied_device_list_file.clone();
+                    update.directory_status.profile_convergence_status =
+                        "current-after-verified-profile-write".to_owned();
+                }
+                self.model.notice = Some(
+                    "Launch profile reconciled to the authenticated runtime roster".to_owned(),
+                );
+                self.model.error = None;
+            }
+            Err(error) => {
+                self.model.error = Some(format!("Reconcile runtime profile: {error:#}"));
+            }
         }
     }
 
@@ -5694,7 +5765,53 @@ impl KilogramApp {
             {
                 action = RuntimeUiAction::ApplyDeviceDirectory;
             }
+            let convergence_required = self
+                .model
+                .device_directory_status
+                .as_ref()
+                .is_some_and(|status| status.profile_convergence_status == "convergence-required");
+            if ui
+                .add_enabled(
+                    self.model.pending.is_none()
+                        && self.model.connection == ConnectionState::Connected
+                        && convergence_required,
+                    egui::Button::new("Reconcile launch profile"),
+                )
+                .clicked()
+            {
+                action = RuntimeUiAction::ReconcileProfile;
+            }
         });
+        if let Some(status) = self.model.device_directory_status.as_ref() {
+            let converged = status.profile_convergence_status != "convergence-required";
+            ui.colored_label(
+                if converged {
+                    egui::Color32::from_rgb(92, 201, 137)
+                } else {
+                    egui::Color32::from_rgb(246, 195, 93)
+                },
+                format!(
+                    "Authenticated roster: revision {} · {} device(s) · profile {}",
+                    status.authority_revision,
+                    status.active_device_count,
+                    status.profile_convergence_status
+                ),
+            );
+            ui.small(format!(
+                "Restart source: {} · receipt generation {}",
+                status.restart_recovery_status,
+                status
+                    .receipt_generation
+                    .map(|generation| generation.to_string())
+                    .unwrap_or_else(|| "none (launch profile)".to_owned())
+            ));
+            if !converged {
+                ui.small(format!(
+                    "Runtime will keep using {} after a crash; the bounded action only updates the stale device-list path in the selected profile.",
+                    status.applied_device_list_file.display()
+                ));
+            }
+        }
         if let Some(update) = self.model.device_directory_update.as_ref() {
             ui.colored_label(
                 egui::Color32::from_rgb(92, 201, 137),
@@ -5713,7 +5830,7 @@ impl KilogramApp {
             if update.launch_profile_update_required {
                 ui.colored_label(
                     egui::Color32::from_rgb(246, 195, 93),
-                    "Save the same device-list path into the launch profile after stopping runtime.",
+                    "The launch profile still points at the previous roster; use the bounded reconcile action above.",
                 );
             }
             ui.small("The refreshed ticket excludes removed devices from future peer fanout. Previously signed recipient slots cannot be rewritten, and history already copied to a removed device cannot be erased.");
@@ -6000,6 +6117,149 @@ fn absolute_new_directory_path(value: &str, label: &str) -> Result<PathBuf> {
         .join(name);
     ensure!(!resolved.exists(), "{label} already exists");
     Ok(resolved)
+}
+
+fn reconcile_runtime_launch_profile(
+    profile_path: &std::path::Path,
+    descriptor_path: &std::path::Path,
+    status: &RuntimeIpcDeviceDirectoryStatus,
+) -> Result<RuntimeLaunchProfile> {
+    ensure!(
+        status.profile_convergence_status == "convergence-required",
+        "Runtime does not report profile convergence as required"
+    );
+    ensure!(
+        status.receipt_id.is_some() && status.receipt_generation.is_some(),
+        "Runtime roster has no authenticated persistence receipt"
+    );
+    let profile_metadata = fs::symlink_metadata(profile_path)
+        .with_context(|| format!("Inspect runtime profile {}", profile_path.display()))?;
+    ensure!(
+        profile_metadata.is_file() && !profile_metadata.file_type().is_symlink(),
+        "Runtime profile must be a regular non-symlink file"
+    );
+    let original_bytes = fs::read(profile_path)
+        .with_context(|| format!("Read runtime profile {}", profile_path.display()))?;
+    let profile = RuntimeLaunchProfile::load(profile_path)?;
+    ensure!(
+        fs::read(profile_path)
+            .with_context(|| format!("Re-read runtime profile {}", profile_path.display()))?
+            == original_bytes,
+        "Runtime profile changed while it was being verified"
+    );
+    ensure!(
+        profile.settings().state_dir == status.state_dir,
+        "Runtime profile state directory differs from the authenticated running runtime"
+    );
+    let canonical_descriptor = fs::canonicalize(descriptor_path)
+        .with_context(|| format!("Resolve IPC descriptor {}", descriptor_path.display()))?;
+    let canonical_profile_descriptor = fs::canonicalize(&profile.settings().ipc_file)
+        .with_context(|| {
+            format!(
+                "Resolve profile IPC descriptor {}",
+                profile.settings().ipc_file.display()
+            )
+        })?;
+    ensure!(
+        canonical_descriptor == canonical_profile_descriptor,
+        "Runtime profile IPC path differs from the authenticated connected runtime"
+    );
+    ensure!(
+        profile.settings().device_list_file == status.launch_device_list_file,
+        "Runtime profile device-list path changed since runtime launch"
+    );
+    let applied_metadata =
+        fs::symlink_metadata(&status.applied_device_list_file).with_context(|| {
+            format!(
+                "Inspect authenticated device list {}",
+                status.applied_device_list_file.display()
+            )
+        })?;
+    ensure!(
+        applied_metadata.is_file() && !applied_metadata.file_type().is_symlink(),
+        "Authenticated device list must remain a regular non-symlink file"
+    );
+    let canonical_applied =
+        fs::canonicalize(&status.applied_device_list_file).with_context(|| {
+            format!(
+                "Resolve authenticated device list {}",
+                status.applied_device_list_file.display()
+            )
+        })?;
+    ensure!(
+        canonical_applied == status.applied_device_list_file,
+        "Authenticated device-list path changed since runtime verification"
+    );
+    let applied_bytes = fs::read(&canonical_applied).with_context(|| {
+        format!(
+            "Read authenticated device list {}",
+            canonical_applied.display()
+        )
+    })?;
+    let applied_device_list = AccountDeviceListSnapshot::decode_and_verify(&applied_bytes)
+        .context("Verify authenticated device-list signature")?;
+    applied_device_list
+        .verify_for_account(status.account_id)
+        .context("Verify authenticated device-list account")?;
+    ensure!(
+        applied_device_list.revision() == status.authority_revision
+            && applied_device_list.devices().len() == status.active_device_count
+            && applied_device_list
+                .certificate_for(status.local_device_id)
+                .is_some(),
+        "Authenticated device list differs from the running runtime roster"
+    );
+    let mut digest = blake3::Hasher::new();
+    digest.update(RUNTIME_DEVICE_LIST_DIGEST_DOMAIN);
+    digest.update(
+        &applied_device_list
+            .encode()
+            .context("Encode authenticated device list for digest verification")?,
+    );
+    ensure!(
+        digest.finalize().to_hex().as_str() == status.device_list_digest,
+        "Authenticated device-list digest differs from the running runtime"
+    );
+    let replacement = profile.with_device_list_file(canonical_applied)?;
+    ensure!(
+        fs::read(profile_path)
+            .with_context(|| format!("Re-read runtime profile {}", profile_path.display()))?
+            == original_bytes,
+        "Runtime profile changed before the bounded replacement"
+    );
+    let final_applied_metadata = fs::symlink_metadata(&status.applied_device_list_file)
+        .with_context(|| {
+            format!(
+                "Re-inspect authenticated device list {}",
+                status.applied_device_list_file.display()
+            )
+        })?;
+    ensure!(
+        final_applied_metadata.is_file() && !final_applied_metadata.file_type().is_symlink(),
+        "Authenticated device list changed before profile replacement"
+    );
+    ensure!(
+        fs::canonicalize(&status.applied_device_list_file).with_context(|| {
+            format!(
+                "Re-resolve authenticated device list {}",
+                status.applied_device_list_file.display()
+            )
+        })? == status.applied_device_list_file
+            && fs::read(&status.applied_device_list_file).with_context(|| {
+                format!(
+                    "Re-read authenticated device list {}",
+                    status.applied_device_list_file.display()
+                )
+            })? == applied_bytes,
+        "Authenticated device list changed before profile replacement"
+    );
+    replacement.write_replace(profile_path)?;
+    let verified = RuntimeLaunchProfile::load(profile_path)?;
+    ensure!(
+        verified == replacement,
+        "Runtime profile verification failed after replacement"
+    );
+    Ok(verified)
 }
 
 fn canonical_input_path(value: &str, label: &str, require_file: bool) -> Result<PathBuf> {
@@ -6394,6 +6654,8 @@ impl eframe::App for KilogramApp {
             self.save_runtime_profile();
         } else if runtime_action == RuntimeUiAction::ApplyDeviceDirectory {
             self.start_apply_device_directory();
+        } else if runtime_action == RuntimeUiAction::ReconcileProfile {
+            self.reconcile_runtime_profile();
         } else if add_contact_clicked {
             self.start_add_contact();
         } else if let Some(contact_id) = selected_contact {
@@ -6425,7 +6687,7 @@ fn compact_id(value: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use kilogram_identity::{AccountRootState, DeviceIdentity};
+    use kilogram_identity::{AccountRootState, DeviceCapability, DeviceIdentity, DeviceState};
     use kilogram_runtime_ipc::{
         ConversationId, RuntimeIpcOutboxStatus, RuntimeIpcRoutePolicy, RuntimeIpcServer,
     };
@@ -6463,6 +6725,95 @@ mod tests {
 
         let unknown = DesktopOptions::from_arguments([OsString::from("--unknown")]);
         assert!(unknown.startup_error.is_some());
+    }
+
+    #[test]
+    fn runtime_profile_reconciliation_is_bounded_and_rejects_path_drift()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let directory = tempfile::tempdir()?;
+        let root_path = fs::canonicalize(directory.path())?;
+        let state_dir = root_path.join("state");
+        fs::create_dir(&state_dir)?;
+        let state_dir = fs::canonicalize(state_dir)?;
+        let descriptor = root_path.join("runtime.ipc.json");
+        fs::write(&descriptor, b"authenticated descriptor placeholder")?;
+        let descriptor = fs::canonicalize(descriptor)?;
+        let old_roster = root_path.join("old.kadl");
+        let applied_roster = root_path.join("applied.kadl");
+        let unexpected_roster = root_path.join("unexpected.kadl");
+        fs::write(&old_roster, b"old")?;
+        let root = AccountRootState::create(root_path.join("root"))?;
+        let device = DeviceState::load_or_create(root_path.join("device"))?;
+        let certificate = root.issue_device_certificate(
+            device.identity().device_id(),
+            device.encryption().public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let applied_device_list = root.publish_device_list(&[certificate])?;
+        let applied_bytes = applied_device_list.encode()?;
+        fs::write(&applied_roster, &applied_bytes)?;
+        fs::write(&unexpected_roster, b"unexpected")?;
+        let old_roster = fs::canonicalize(old_roster)?;
+        let applied_roster = fs::canonicalize(applied_roster)?;
+        let unexpected_roster = fs::canonicalize(unexpected_roster)?;
+        let profile_path = root_path.join("runtime.launch.json");
+        let profile = RuntimeLaunchProfile::new(RuntimeLaunchSettings {
+            state_dir: state_dir.clone(),
+            allowed_requester_account_id: root.account_id(),
+            device_list_file: old_roster.clone(),
+            peer_prekey_pool_files: Vec::new(),
+            ticket_file: Some(root_path.join("runtime.ticket")),
+            relay_wait_seconds: 15,
+            route_policy: RuntimeIpcRoutePolicy::Auto,
+            relay_url: None,
+            poll_milliseconds: 250,
+            retry_base_seconds: 1,
+            retry_max_seconds: 60,
+            auto_sync_seconds: 30,
+            ipc_file: descriptor.clone(),
+        })?;
+        profile.write_new(&profile_path)?;
+        let status = RuntimeIpcDeviceDirectoryStatus {
+            account_id: root.account_id(),
+            local_device_id: device.identity().device_id(),
+            state_dir,
+            authority_revision: applied_device_list.revision(),
+            active_device_count: 1,
+            receipt_id: Some("55".repeat(32)),
+            receipt_generation: Some(1),
+            device_list_digest: {
+                let mut digest = blake3::Hasher::new();
+                digest.update(RUNTIME_DEVICE_LIST_DIGEST_DOMAIN);
+                digest.update(&applied_bytes);
+                digest.finalize().to_hex().to_string()
+            },
+            applied_device_list_file: applied_roster.clone(),
+            launch_device_list_file: old_roster,
+            profile_convergence_status: "convergence-required".to_owned(),
+            restart_recovery_status: "authenticated-receipt-current".to_owned(),
+        };
+
+        let reconciled = reconcile_runtime_launch_profile(&profile_path, &descriptor, &status)?;
+        assert_eq!(reconciled.settings().device_list_file, applied_roster);
+        assert_eq!(reconciled, RuntimeLaunchProfile::load(&profile_path)?);
+
+        profile.write_replace(&profile_path)?;
+        fs::write(&status.applied_device_list_file, b"tampered")?;
+        assert!(
+            reconcile_runtime_launch_profile(&profile_path, &descriptor, &status).is_err(),
+            "device-list content drift must be rejected"
+        );
+        assert_eq!(RuntimeLaunchProfile::load(&profile_path)?, profile);
+        fs::write(&status.applied_device_list_file, &applied_bytes)?;
+
+        let drifted = reconciled.with_device_list_file(unexpected_roster)?;
+        drifted.write_replace(&profile_path)?;
+        assert!(
+            reconcile_runtime_launch_profile(&profile_path, &descriptor, &status).is_err(),
+            "a profile changed outside the exact old-path precondition must be rejected"
+        );
+        assert_eq!(RuntimeLaunchProfile::load(&profile_path)?, drifted);
+        Ok(())
     }
 
     #[test]
@@ -6771,6 +7122,23 @@ mod tests {
         let account_id = root.account_id();
         let device_id = identity.device_id();
         let peer_account_id = AccountId::from_bytes([7_u8; 32]);
+        let state_dir = fs::canonicalize(directory.path())?;
+        let launch_device_list_file = state_dir.join("launch.kadl");
+        let applied_device_list_file = state_dir.join("applied.kadl");
+        let directory_status = RuntimeIpcDeviceDirectoryStatus {
+            account_id,
+            local_device_id: device_id,
+            state_dir,
+            authority_revision: 3,
+            active_device_count: 2,
+            receipt_id: Some("33".repeat(32)),
+            receipt_generation: Some(1),
+            device_list_digest: "44".repeat(32),
+            applied_device_list_file,
+            launch_device_list_file,
+            profile_convergence_status: "convergence-required".to_owned(),
+            restart_recovery_status: "authenticated-receipt-current".to_owned(),
+        };
         let (server, mut requests) =
             RuntimeIpcServer::start(descriptor.clone(), account_id, &identity).await?;
         let actor = tokio::spawn(async move {
@@ -6783,6 +7151,21 @@ mod tests {
                     device_id,
                 })
                 .map_err(|_| anyhow::anyhow!("send GUI ping response"))?;
+
+            let status = requests
+                .recv()
+                .await
+                .context("receive GUI device-directory status")?;
+            let (command, response) = status.into_parts();
+            ensure!(matches!(
+                command,
+                RuntimeIpcCommand::OwnDeviceDirectoryStatus
+            ));
+            response
+                .send(RuntimeIpcResponse::OwnDeviceDirectoryStatus(
+                    directory_status.clone(),
+                ))
+                .map_err(|_| anyhow::anyhow!("send GUI device-directory status response"))?;
 
             let contact = requests.recv().await.context("receive GUI contact")?;
             let (command, response) = contact.into_parts();
@@ -6894,7 +7277,7 @@ mod tests {
                     if device_list_file == std::path::Path::new("refreshed.kadl")
             ));
             response
-                .send(RuntimeIpcResponse::OwnDeviceDirectoryApplied(
+                .send(RuntimeIpcResponse::OwnDeviceDirectoryApplied(Box::new(
                     RuntimeIpcDeviceDirectoryUpdate {
                         account_id,
                         local_device_id: device_id,
@@ -6913,8 +7296,13 @@ mod tests {
                         preexisting_recipient_slot_status:
                             "immutable-cannot-be-remotely-rewritten-or-erased".to_owned(),
                         history_availability_status: "existing-copies-remain-readable".to_owned(),
+                        directory_status: RuntimeIpcDeviceDirectoryStatus {
+                            authority_revision: 4,
+                            active_device_count: 1,
+                            ..directory_status
+                        },
                     },
-                ))
+                )))
                 .map_err(|_| anyhow::anyhow!("send GUI device-directory response"))?;
 
             let shutdown = requests.recv().await.context("receive GUI shutdown")?;
@@ -6935,6 +7323,7 @@ mod tests {
             WorkerSuccess::Connected {
                 account_id: connected_account,
                 device_id: connected_device,
+                ..
             } if connected_account == account_id.to_string()
                 && connected_device == device_id.to_string()
         ));

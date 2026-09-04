@@ -177,7 +177,12 @@ multi-source claim reconciliation. M0.7.9 добавил signed append-only chec
   транзакцией устанавливает authority и удаляет revoked-device ratchet/prekey
   state, затем атомарно заменяет public ticket. Новый peer fanout исключает
   removed device после наблюдения ticket; уже подписанные recipient slots не
-  переписываются, а старые копии истории остаются читаемыми.
+  переписываются, а старые копии истории остаются читаемыми. M0.9.28 поднял
+  IPC до v6 и добавил device-signed append-only receipt в тот же vault commit.
+  Restart проверяет receipt chain и exact digest применённого Root-signed list,
+  поэтому stale profile больше не возвращает revoked roster. Desktop получает
+  explicit `current`/`convergence-required` status и может bounded-операцией
+  заменить только проверенный `device_list_file` path.
   OS peer
   credentials остаются дальше. Reconciliation выбирает
   inventory только при совпадении двух или более полных явно собранных claims и
@@ -340,13 +345,13 @@ global prekey discovery/witness, автоматический recovery source di
 
 ## План ближайших работ
 
-1. M0.9.28: сохранить authenticated receipt применённого live device directory
-   и bounded desktop-операцией согласовать launch-profile path, чтобы restart
-   не мог молча вернуть revoked roster; промежуточное состояние должно быть
-   явно repairable.
-2. Уже реализованный M0.9.27 применяет removal через authenticated runtime IPC,
-   обновляет ticket и retire ratchet/prekey state crash-consistently. Future
-   fanout и immutable old slots/history показываются как разные claims.
+1. M0.9.29: спроектировать и реализовать минимальный signed wide-area
+   publication/fetch contract для public runtime ticket/device-directory head с
+   явной freshness/rollback моделью; synchronized file остаётся только M0
+   adapter.
+2. Уже реализованный M0.9.28 сохраняет device-signed receipt применённого live
+   roster в vault-primary transaction, восстанавливает его раньше stale launch
+   profile и bounded desktop-операцией согласует exact canonical path.
 3. Optional autostart/background mode оставить отдельной явной настройкой, а не
    обязательным Task Scheduler этапом.
 4. Добавить production macOS/Linux local key provider, согласованный monotonic
@@ -469,5 +474,7 @@ global prekey discovery/witness, автоматический recovery source di
   реализованный M0.9.21–M0.9.27 recovery lifecycle, quorum/policy transitions и runtime activation removal.
 - [`../docs/RFC-0049-live-runtime-device-directory-refresh.md`](../docs/RFC-0049-live-runtime-device-directory-refresh.md) —
   реализованный M0.9.27 authenticated live roster refresh, crash-consistent ratchet retirement и honest immutable-history boundary.
+- [`../docs/RFC-0050-restart-safe-runtime-device-directory.md`](../docs/RFC-0050-restart-safe-runtime-device-directory.md) —
+  реализованный M0.9.28 device-signed receipt chain, restart recovery и bounded launch-profile convergence.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
   внешний тест pause/reconnect со сменой интерфейса.
