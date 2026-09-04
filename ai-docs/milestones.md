@@ -2363,11 +2363,48 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
   workspace build проходят; release smoke и hashes зафиксированы в
   `development-environment.md`.
 
+### M0.9.23 — networked recovery quorum ceremony: выполнено
+
+Реализовано:
+
+- device-signed bounded `.kart` связывает exact Account/Request ID, expiry,
+  candidate-roster certificate, Iroh endpoint, 256-bit bearer capability и
+  route policy;
+- one-shot listener сначала выполняет неизменную DB-primary rollback/
+  equivocation проверку и коммитит approval head, только затем no-clobber
+  публикует ticket и отдаёт `.kara` предъявителю exact request+bearer;
+- Iroh переносит approval по `auto`, `direct-only` или strict `relay-only`, а
+  collector проверяет endpoint ticket, exact current roster и сам device-signed
+  response;
+- collector принимает до bounded account roster tickets, запрещает duplicate
+  Device IDs, идемпотентно сохраняет `{device_id}.kara` и передаёт distinct set
+  прежнему strict-majority verifier без отдельной сетевой трактовки claim;
+- `--require-majority` остаётся hard gate; partial collection сохраняет честный
+  weaker claim и не превращается в majority;
+- Windows desktop получил полный request → current-device listener →
+  multi-ticket collect/verify flow и literal claim/threshold display;
+- restore gate принимает только majority для exact inspected package либо
+  отдельный explicit reduced-assurance offline fallback; cross-roster safety
+  остаётся false.
+
+Проверки:
+
+- direct loopback regression проходит полный signed ticket → bearer fetch →
+  committed approval → exact verifier flow и отдельно проверяет tampered
+  request/route signature отказ;
+- real debug process smoke
+  `.tmp/m0923-process-smoke-20260904-190155` прошёл one-shot `direct-only`
+  listener/collector с `current-device-majority-observed`, 1/1 approvals и
+  `cross_roster_fork_safety=false`;
+- targeted bootstrap/desktop regression проходит 29 tests; strict Clippy,
+  все 172 serial workspace tests, release workspace build и release process
+  smoke проходят, hashes записаны в `development-environment.md`.
+
 ### Следующий этап
 
-1. M0.9.23: добавить authenticated local/LAN-or-relay доставку `.karq` к
-   current devices, сбор distinct `.kara` и desktop claim display поверх
-   неизменного strict verifier.
+1. M0.9.24: добавить recovery-policy epoch и joint old/new strict-majority
+   transition certificate, чтобы enrollment/revocation мог безопасно менять
+   recovery roster и давать честный cross-roster fork-safety claim.
 2. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.

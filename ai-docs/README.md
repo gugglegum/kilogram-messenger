@@ -331,13 +331,12 @@ global prekey discovery/witness, автоматический recovery source di
 
 ## План ближайших работ
 
-1. M0.9.22: реализовать bounded challenge/request/approval artifacts,
-   DB-primary anti-equivocation head, exact recovery-roster binding и
-   strict-majority verification для current-device recovery ceremony.
-2. Интегрировать quorum collection/claims в desktop recovery ceremony и
-   сохранить явно более слабый offline fallback без превращения инфраструктуры
-   в holder Root secrets. До cross-roster fork-safety добавить recovery-policy
-   epochs и joint-majority transition старого и нового roster.
+1. M0.9.24: реализовать recovery-policy epochs и joint-majority transition
+   старого и нового roster поверх завершённых `.karq`/`.kara`/`.kart`, прежде
+   чем разрешать enrollment/revocation менять recovery electorate.
+2. Сохранить desktop literal claim display и явно более слабый offline fallback
+   без превращения transport/relay в holder Root secrets; добавить usability
+   вокруг нескольких одновременных current-device listeners после epoch core.
 3. Optional autostart/background mode оставить отдельной явной настройкой, а не
    обязательным Task Scheduler этапом.
 4. Добавить production macOS/Linux local key provider, согласованный monotonic

@@ -105,6 +105,92 @@ pub(crate) struct AccountRecoveryStatusOutput {
     pub(crate) lifecycle_scope: String,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct RecoveryQuorumRequestOutput {
+    pub(crate) status: String,
+    pub(crate) account_id: String,
+    pub(crate) request_id: String,
+    pub(crate) package_id: String,
+    pub(crate) authority_revision: u64,
+    pub(crate) recovery_roster_digest: String,
+    pub(crate) roster_count: usize,
+    pub(crate) required_approvals: usize,
+    pub(crate) issued_at_unix_seconds: u64,
+    pub(crate) expires_at_unix_seconds: u64,
+    pub(crate) request_file: PathBuf,
+    pub(crate) freshness_scope: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct RecoveryQuorumListenOutput {
+    pub(crate) status: String,
+    pub(crate) account_id: String,
+    pub(crate) request_id: String,
+    pub(crate) package_id: String,
+    pub(crate) approver_device_id: String,
+    pub(crate) approval_id: String,
+    pub(crate) ticket_file: PathBuf,
+    pub(crate) route_policy: String,
+    pub(crate) transport_path: String,
+    pub(crate) transport_remote_address: String,
+    pub(crate) transport_rtt_milliseconds: u64,
+    pub(crate) transport_open_paths: usize,
+    pub(crate) approval_head_source: String,
+    pub(crate) approval_head_committed_before_ticket_publish: bool,
+    pub(crate) reused_committed_approval: bool,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct RecoveryQuorumTransportObservation {
+    pub(crate) approver_device_id: String,
+    pub(crate) ticket_file: PathBuf,
+    pub(crate) approval_file: PathBuf,
+    pub(crate) route_policy: String,
+    pub(crate) transport_path: String,
+    pub(crate) transport_remote_address: String,
+    pub(crate) transport_rtt_milliseconds: u64,
+    pub(crate) transport_open_paths: usize,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct RecoveryQuorumCollectOutput {
+    pub(crate) status: String,
+    pub(crate) account_id: String,
+    pub(crate) request_id: String,
+    pub(crate) package_id: String,
+    pub(crate) authority_revision: u64,
+    pub(crate) recovery_roster_digest: String,
+    pub(crate) roster_count: usize,
+    pub(crate) observed_approvals: usize,
+    pub(crate) required_approvals: usize,
+    pub(crate) majority_satisfied: bool,
+    pub(crate) freshness_claim: String,
+    pub(crate) cross_roster_fork_safety: bool,
+    pub(crate) approval_directory: PathBuf,
+    pub(crate) transports: Vec<RecoveryQuorumTransportObservation>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct RecoveryQuorumVerifyOutput {
+    pub(crate) status: String,
+    pub(crate) account_id: String,
+    pub(crate) request_id: String,
+    pub(crate) package_id: String,
+    pub(crate) authority_revision: u64,
+    pub(crate) recovery_roster_digest: String,
+    pub(crate) roster_count: usize,
+    pub(crate) observed_approvals: usize,
+    pub(crate) required_approvals: usize,
+    pub(crate) majority_satisfied: bool,
+    pub(crate) freshness_claim: String,
+    pub(crate) cross_roster_fork_safety: bool,
+}
+
 impl AccountRecoveryOutput {
     pub(crate) fn validate_expected_status(&self, expected: &str) -> Result<()> {
         self.validate()?;
@@ -316,6 +402,230 @@ impl WizardJsonOutput for AccountRecoveryStatusOutput {
         }
         Ok(())
     }
+}
+
+impl WizardJsonOutput for RecoveryQuorumRequestOutput {
+    fn validate(&self) -> Result<()> {
+        validate_status(&self.status, "account-recovery-quorum-request-created")?;
+        AccountId::from_str(&self.account_id).context("quorum request Account ID is invalid")?;
+        validate_hex_id(&self.request_id, "quorum request ID")?;
+        validate_hex_id(&self.package_id, "quorum request package ID")?;
+        validate_hex_id(&self.recovery_roster_digest, "quorum roster digest")?;
+        ensure!(
+            self.authority_revision > 0,
+            "quorum authority revision is missing"
+        );
+        ensure!(
+            self.roster_count > 0 && self.required_approvals == self.roster_count / 2 + 1,
+            "quorum request threshold is invalid"
+        );
+        ensure!(
+            self.issued_at_unix_seconds <= self.expires_at_unix_seconds,
+            "quorum request timestamps are invalid"
+        );
+        validate_absolute_file_path(&self.request_file, "request_file")?;
+        ensure!(
+            self.freshness_scope == "exact-roster-current-device-observation",
+            "quorum request freshness scope is invalid"
+        );
+        Ok(())
+    }
+}
+
+impl WizardJsonOutput for RecoveryQuorumListenOutput {
+    fn validate(&self) -> Result<()> {
+        validate_status(
+            &self.status,
+            "account-recovery-quorum-approved-over-transport",
+        )?;
+        validate_quorum_identity_fields(
+            &self.account_id,
+            &self.request_id,
+            &self.package_id,
+            &self.approver_device_id,
+        )?;
+        validate_hex_id(&self.approval_id, "transported approval ID")?;
+        validate_absolute_file_path(&self.ticket_file, "ticket_file")?;
+        validate_transport_fields(
+            &self.route_policy,
+            &self.transport_path,
+            &self.transport_remote_address,
+            self.transport_open_paths,
+        )?;
+        ensure!(
+            self.approval_head_source == "db-primary"
+                && self.approval_head_committed_before_ticket_publish,
+            "network approval was not committed before ticket publication"
+        );
+        let _ = self.transport_rtt_milliseconds;
+        let _ = self.reused_committed_approval;
+        Ok(())
+    }
+}
+
+impl WizardJsonOutput for RecoveryQuorumCollectOutput {
+    fn validate(&self) -> Result<()> {
+        ensure!(
+            matches!(
+                self.status.as_str(),
+                "account-recovery-quorum-majority-collected"
+                    | "account-recovery-quorum-partial-collected"
+            ),
+            "unknown quorum collection status"
+        );
+        validate_quorum_report(
+            &self.account_id,
+            &self.request_id,
+            &self.package_id,
+            &self.recovery_roster_digest,
+            self.authority_revision,
+            self.roster_count,
+            self.observed_approvals,
+            self.required_approvals,
+            self.majority_satisfied,
+            &self.freshness_claim,
+            self.cross_roster_fork_safety,
+        )?;
+        ensure!(
+            (self.status == "account-recovery-quorum-majority-collected")
+                == self.majority_satisfied,
+            "quorum collection status disagrees with majority result"
+        );
+        ensure!(
+            self.approval_directory.is_absolute(),
+            "approval directory is relative"
+        );
+        ensure!(
+            self.transports.len() == self.observed_approvals,
+            "quorum transport count disagrees with approvals"
+        );
+        let mut devices = BTreeMap::new();
+        for transport in &self.transports {
+            DeviceId::from_str(&transport.approver_device_id)
+                .context("quorum transport Device ID is invalid")?;
+            ensure!(
+                devices
+                    .insert(transport.approver_device_id.clone(), ())
+                    .is_none(),
+                "duplicate quorum transport device"
+            );
+            validate_absolute_file_path(&transport.ticket_file, "transport ticket_file")?;
+            validate_absolute_file_path(&transport.approval_file, "transport approval_file")?;
+            validate_transport_fields(
+                &transport.route_policy,
+                &transport.transport_path,
+                &transport.transport_remote_address,
+                transport.transport_open_paths,
+            )?;
+            let _ = transport.transport_rtt_milliseconds;
+        }
+        Ok(())
+    }
+}
+
+impl WizardJsonOutput for RecoveryQuorumVerifyOutput {
+    fn validate(&self) -> Result<()> {
+        validate_status(&self.status, "account-recovery-quorum-verified")?;
+        validate_quorum_report(
+            &self.account_id,
+            &self.request_id,
+            &self.package_id,
+            &self.recovery_roster_digest,
+            self.authority_revision,
+            self.roster_count,
+            self.observed_approvals,
+            self.required_approvals,
+            self.majority_satisfied,
+            &self.freshness_claim,
+            self.cross_roster_fork_safety,
+        )
+    }
+}
+
+fn validate_quorum_identity_fields(
+    account: &str,
+    request: &str,
+    package: &str,
+    device: &str,
+) -> Result<()> {
+    AccountId::from_str(account).context("quorum Account ID is invalid")?;
+    DeviceId::from_str(device).context("quorum Device ID is invalid")?;
+    validate_hex_id(request, "quorum request ID")?;
+    validate_hex_id(package, "quorum package ID")
+}
+
+#[allow(clippy::too_many_arguments)]
+fn validate_quorum_report(
+    account: &str,
+    request: &str,
+    package: &str,
+    roster_digest: &str,
+    authority_revision: u64,
+    roster_count: usize,
+    observed_approvals: usize,
+    required_approvals: usize,
+    majority_satisfied: bool,
+    freshness_claim: &str,
+    cross_roster_fork_safety: bool,
+) -> Result<()> {
+    AccountId::from_str(account).context("quorum report Account ID is invalid")?;
+    validate_hex_id(request, "quorum report request ID")?;
+    validate_hex_id(package, "quorum report package ID")?;
+    validate_hex_id(roster_digest, "quorum report roster digest")?;
+    ensure!(
+        authority_revision > 0,
+        "quorum report authority revision is missing"
+    );
+    ensure!(
+        roster_count > 0
+            && required_approvals == roster_count / 2 + 1
+            && observed_approvals <= roster_count
+            && majority_satisfied == (observed_approvals >= required_approvals),
+        "quorum report threshold fields disagree"
+    );
+    ensure!(
+        freshness_claim
+            == if majority_satisfied {
+                "current-device-majority-observed"
+            } else if observed_approvals == 1 {
+                "single-current-device-observed"
+            } else {
+                "artifact-integrity-only"
+            },
+        "quorum freshness claim disagrees with observed approvals"
+    );
+    ensure!(
+        !cross_roster_fork_safety,
+        "M0 quorum must not claim cross-roster fork safety"
+    );
+    Ok(())
+}
+
+fn validate_transport_fields(
+    route_policy: &str,
+    transport_path: &str,
+    remote_address: &str,
+    open_paths: usize,
+) -> Result<()> {
+    ensure!(
+        matches!(route_policy, "auto" | "direct-only" | "relay-only"),
+        "unknown recovery approval route policy"
+    );
+    ensure!(
+        matches!(transport_path, "direct" | "relay" | "custom"),
+        "unknown recovery approval transport path"
+    );
+    ensure!(
+        !(route_policy == "direct-only" && transport_path != "direct")
+            && !(route_policy == "relay-only" && transport_path != "relay"),
+        "recovery approval transport violated its route policy"
+    );
+    ensure!(
+        !remote_address.is_empty(),
+        "transport remote address is empty"
+    );
+    ensure!(open_paths > 0, "transport has no open path");
+    Ok(())
 }
 
 fn validate_status(actual: &str, expected: &str) -> Result<()> {
@@ -695,6 +1005,47 @@ mod tests {
             "lifecycle_scope": "local-exact-export-receipt-not-global-freshness-proof"
         }))?;
         status.validate()?;
+        Ok(())
+    }
+
+    #[test]
+    fn recovery_quorum_json_requires_exact_claim_and_route_policy() -> Result<()> {
+        let temporary = tempfile::tempdir()?;
+        let mut value = serde_json::json!({
+            "status": "account-recovery-quorum-majority-collected",
+            "account_id": "0101010101010101010101010101010101010101010101010101010101010101",
+            "request_id": "0202020202020202020202020202020202020202020202020202020202020202",
+            "package_id": "0303030303030303030303030303030303030303030303030303030303030303",
+            "authority_revision": 7,
+            "recovery_roster_digest": "0404040404040404040404040404040404040404040404040404040404040404",
+            "roster_count": 1,
+            "observed_approvals": 1,
+            "required_approvals": 1,
+            "majority_satisfied": true,
+            "freshness_claim": "current-device-majority-observed",
+            "cross_roster_fork_safety": false,
+            "approval_directory": temporary.path().join("approvals"),
+            "transports": [{
+                "approver_device_id": "0505050505050505050505050505050505050505050505050505050505050505",
+                "ticket_file": temporary.path().join("device.kart"),
+                "approval_file": temporary.path().join("device.kara"),
+                "route_policy": "relay-only",
+                "transport_path": "relay",
+                "transport_remote_address": "relay:https://example.invalid/",
+                "transport_rtt_milliseconds": 42,
+                "transport_open_paths": 1
+            }]
+        });
+        let output: RecoveryQuorumCollectOutput = serde_json::from_value(value.clone())?;
+        output.validate()?;
+
+        value["cross_roster_fork_safety"] = serde_json::Value::Bool(true);
+        let dishonest: RecoveryQuorumCollectOutput = serde_json::from_value(value.clone())?;
+        assert!(dishonest.validate().is_err());
+        value["cross_roster_fork_safety"] = serde_json::Value::Bool(false);
+        value["transports"][0]["transport_path"] = serde_json::Value::String("direct".to_owned());
+        let route_violation: RecoveryQuorumCollectOutput = serde_json::from_value(value)?;
+        assert!(route_violation.validate().is_err());
         Ok(())
     }
 }

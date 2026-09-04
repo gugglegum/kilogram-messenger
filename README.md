@@ -107,7 +107,7 @@ The current two-network Windows procedure is in
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.22 current-device recovery quorum core — complete
+## Current milestone: M0.9.23 networked recovery quorum ceremony — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -872,10 +872,40 @@ kilogram-bootstrap account-recovery-quorum-verify `
   --require-majority
 ```
 
-This stage implements the bounded artifacts, exact-roster majority verifier and
-DB-primary anti-equivocation head. The helper does not yet discover or contact
-the other devices: M0.9.23 will add authenticated local/LAN-or-relay collection
-and desktop orchestration. A roster change remains rejected until joint
+For a live ceremony, each current device instead starts a one-shot listener and
+shares its signed `.kart` ticket. The recovering device may collect several
+distinct approvals in one command:
+
+```powershell
+# Run once on each current device. The .kart file appears only after the
+# DB-primary approval head has committed; the process then waits for collection.
+kilogram-bootstrap account-recovery-quorum-listen `
+  --state-dir .\kilogram-account\device `
+  --request-file .\recovery-attempt.karq `
+  --ticket-file .\device-1.kart `
+  --route-policy auto
+
+# Run on the recovering device after receiving the signed tickets.
+kilogram-bootstrap account-recovery-quorum-collect `
+  --request-file .\recovery-attempt.karq `
+  --ticket-file .\device-1.kart `
+  --ticket-file .\device-2.kart `
+  --approval-dir .\recovery-approvals `
+  --require-majority
+```
+
+The ticket binds the exact Request ID, expiry, approver certificate, Iroh
+endpoint, bearer capability and route policy under the current device's
+signature. QUIC authenticates that endpoint; the returned `.kara` is checked
+again by the unchanged exact-roster verifier. The ticket is an explicit
+one-shot consent capability because a disaster-recovery client is not yet an
+enrolled device and therefore cannot mutually authenticate as one.
+
+The Windows recovery panel now creates requests, runs current-device listeners,
+collects multiple tickets, verifies saved approvals and displays the exact
+freshness claim. Restore is enabled by an exact-package majority or by a
+separately explicit reduced-assurance offline fallback; it never silently
+downgrades a required majority. A roster change remains rejected until joint
 old/new-majority transitions exist.
 
 The queue command prints `runtime_ipc_request_id` before connecting. If its

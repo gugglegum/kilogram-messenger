@@ -5,11 +5,12 @@ use std::{
 };
 
 use anyhow::{Context as _, Result};
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use kilogram_identity::{
     AccountId, AccountRecoveryPhrase, DEFAULT_ACCOUNT_ROOT_RECOVERY_APPROVAL_VALIDITY_SECONDS,
     MAX_ACCOUNT_ROOT_RECOVERY_APPROVAL_VALIDITY_SECONDS,
 };
+use kilogram_transport_iroh::RoutePolicy;
 use zeroize::Zeroizing;
 
 #[derive(Debug, Parser)]
@@ -128,9 +129,55 @@ enum Command {
         #[arg(long, action = clap::ArgAction::SetTrue)]
         require_majority: bool,
     },
+    /// Commit an approval and expose it once over a signed LAN-or-relay ticket.
+    AccountRecoveryQuorumListen {
+        #[arg(long)]
+        state_dir: PathBuf,
+        #[arg(long)]
+        request_file: PathBuf,
+        #[arg(long)]
+        ticket_file: PathBuf,
+        #[arg(long, value_enum, default_value_t = RoutePolicyArg::Auto)]
+        route_policy: RoutePolicyArg,
+        #[arg(long)]
+        relay_url: Option<String>,
+        #[arg(long, default_value_t = 30)]
+        relay_wait_seconds: u64,
+    },
+    /// Collect distinct signed approvals from one-shot LAN-or-relay tickets.
+    AccountRecoveryQuorumCollect {
+        #[arg(long)]
+        request_file: PathBuf,
+        #[arg(long = "ticket-file", required = true)]
+        ticket_files: Vec<PathBuf>,
+        #[arg(long)]
+        approval_dir: PathBuf,
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        require_majority: bool,
+        #[arg(long, default_value_t = 30)]
+        relay_wait_seconds: u64,
+    },
 }
 
-fn main() -> Result<()> {
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+enum RoutePolicyArg {
+    Auto,
+    DirectOnly,
+    RelayOnly,
+}
+
+impl From<RoutePolicyArg> for RoutePolicy {
+    fn from(value: RoutePolicyArg) -> Self {
+        match value {
+            RoutePolicyArg::Auto => Self::Auto,
+            RoutePolicyArg::DirectOnly => Self::DirectOnly,
+            RoutePolicyArg::RelayOnly => Self::RelayOnly,
+        }
+    }
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
     let output = match Arguments::parse().command {
         Command::Create { workspace_dir } => kilogram_bootstrap::create_account(workspace_dir)?
             .encode()?
@@ -235,6 +282,45 @@ fn main() -> Result<()> {
             &approval_files,
             require_majority,
         )?)?,
+        Command::AccountRecoveryQuorumListen {
+            state_dir,
+            request_file,
+            ticket_file,
+            route_policy,
+            relay_url,
+            relay_wait_seconds,
+        } => {
+            let relay_url = relay_url
+                .map(|url| url.parse().context("parse recovery approval relay URL"))
+                .transpose()?;
+            serde_json::to_vec(
+                &kilogram_bootstrap::recovery_quorum::listen_for_approval_collection(
+                    state_dir,
+                    request_file,
+                    ticket_file,
+                    route_policy.into(),
+                    relay_url,
+                    relay_wait_seconds,
+                )
+                .await?,
+            )?
+        }
+        Command::AccountRecoveryQuorumCollect {
+            request_file,
+            ticket_files,
+            approval_dir,
+            require_majority,
+            relay_wait_seconds,
+        } => serde_json::to_vec(
+            &kilogram_bootstrap::recovery_quorum::collect_approvals(
+                request_file,
+                &ticket_files,
+                approval_dir,
+                require_majority,
+                relay_wait_seconds,
+            )
+            .await?,
+        )?,
     };
     let mut stdout = std::io::stdout().lock();
     stdout.write_all(&output)?;

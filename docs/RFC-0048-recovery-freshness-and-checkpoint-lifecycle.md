@@ -1,7 +1,8 @@
 # RFC-0048: Recovery freshness and checkpoint lifecycle
 
-Status: M0.9.22 quorum cryptographic/storage core implemented (2026-09-04).
-Network collection and desktop orchestration are scheduled for M0.9.23.
+Status: M0.9.23 network collection and desktop orchestration implemented
+(2026-09-04). Recovery-policy epochs and joint roster transitions remain future
+work.
 
 ## 1. Problem and impossibility boundary
 
@@ -210,11 +211,48 @@ stale membership omission, same-revision membership fork and different-roster
 rejection. Revocation is enforced both by candidate dominance and by checking
 each voter against the package's exact current authority.
 
-## 6. Next stage
+## 6. Implemented M0.9.23 transport and desktop ceremony
 
-M0.9.23 will transport the same artifacts to current devices over authenticated
-local/LAN-or-relay paths, collect distinct approvals, and expose the exact claim
-in the desktop recovery ceremony. It must not weaken the implemented verifier
-or silently fall back from required majority to offline integrity. Recovery-policy
-epochs and joint roster transitions remain a later prerequisite for any
-cross-roster fork-safety claim.
+The one-shot helper now exposes two additional commands:
+
+```text
+kilogram-bootstrap account-recovery-quorum-listen
+kilogram-bootstrap account-recovery-quorum-collect
+```
+
+An approver binds an Iroh endpoint, validates the exact `.karq` against its
+DB-primary state, commits or reuses the local approval head, and only then
+publishes a no-clobber `.kart` ticket. The ticket is signed by that current
+device and binds the request/account/expiry, exact candidate certificate,
+endpoint, bearer capability and `auto`, `direct-only`, or `relay-only` policy.
+The listener releases the already committed `.kara` exactly once after a peer
+presents the bound Request ID and bearer capability over the ticket endpoint;
+an uncollected listener exits no later than the request expiry.
+
+The transport gives the collector authenticated possession of the named current
+device endpoint and an end-to-end encrypted QUIC path through LAN, hole-punched
+Internet, or Iroh relay. Authentication is intentionally asymmetric: a
+disaster-recovery client is not yet enrolled, so the `.kart` is an explicit
+short-lived bearer consent. A stolen ticket can consume that one attempt and
+observe privacy-sensitive public recovery metadata, but cannot forge another
+device approval, change its request binding, obtain device/Root/vault secrets,
+or satisfy a different quorum.
+
+The collector rejects duplicate ticket Device IDs, validates every ticket
+against the exact request roster, writes each response under its Device ID with
+idempotent no-clobber semantics, then invokes the unchanged M0.9.22 verifier.
+`--require-majority` remains a hard gate; a partial result is never relabelled as
+majority.
+
+The Windows recovery panel orchestrates request creation, current-device
+listener, multi-ticket collection and verification of saved `.kara` files. It
+shows the literal freshness claim and approval threshold and continues to show
+`cross-roster fork safety: false`. Restore is gated by a majority for the exact
+inspected package or an explicit reduced-assurance offline confirmation.
+
+## 7. Next stage
+
+M0.9.24 should introduce a versioned recovery-policy epoch and a joint
+old/new-roster transition certificate. Until both old and new strict majorities
+authorize a voter-set change, existing approval heads continue to reject roster
+changes and no component may claim cross-roster fork safety.

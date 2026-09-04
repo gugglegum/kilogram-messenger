@@ -1,4 +1,5 @@
 use std::{
+    collections::BTreeSet,
     ffi::OsString,
     fs,
     path::PathBuf,
@@ -26,7 +27,9 @@ mod wizard;
 use wizard::{
     AccountRecoveryOutput, AccountRecoveryStatusOutput, DeviceLinkAcceptOutput,
     DeviceLinkAuthorizeOutput, DeviceLinkInspectOutput, DeviceLinkRequestOutput,
-    RecoveryCommandOutput, command_arguments, run_json, run_json_with_stdin, run_recovery_command,
+    RecoveryCommandOutput, RecoveryQuorumCollectOutput, RecoveryQuorumListenOutput,
+    RecoveryQuorumRequestOutput, RecoveryQuorumVerifyOutput, command_arguments, run_json,
+    run_json_with_stdin, run_recovery_command,
 };
 
 const CHANGE_WAIT_MILLISECONDS: u32 = 20_000;
@@ -181,6 +184,10 @@ enum Operation {
     AccountRecoveryExport,
     AccountRecoveryInspect,
     AccountRecoveryRestore,
+    AccountRecoveryQuorumRequest,
+    AccountRecoveryQuorumListen,
+    AccountRecoveryQuorumCollect,
+    AccountRecoveryQuorumVerify,
     DeviceLinkRequest,
     DeviceLinkInspect,
     DeviceLinkAuthorize,
@@ -232,6 +239,10 @@ enum AccountRecoveryUiAction {
     Export,
     Inspect,
     Restore,
+    QuorumRequest,
+    QuorumListen,
+    QuorumCollect,
+    QuorumVerify,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -269,6 +280,17 @@ struct AccountRecoveryView {
     confirm_latest_witness: bool,
     restore_root_dir: String,
     restored: Option<AccountRecoveryOutput>,
+    quorum_request_file: String,
+    quorum_request: Option<RecoveryQuorumRequestOutput>,
+    quorum_state_dir: String,
+    quorum_ticket_output_file: String,
+    quorum_route_policy: RuntimeIpcRoutePolicy,
+    quorum_listener: Option<RecoveryQuorumListenOutput>,
+    quorum_ticket_files: String,
+    quorum_approval_directory: String,
+    quorum_collection: Option<RecoveryQuorumCollectOutput>,
+    quorum_approval_files: String,
+    quorum_verification: Option<RecoveryQuorumVerifyOutput>,
 }
 
 impl Default for AccountRecoveryView {
@@ -288,6 +310,17 @@ impl Default for AccountRecoveryView {
             confirm_latest_witness: false,
             restore_root_dir: "kilogram-account-restored/account-root".to_owned(),
             restored: None,
+            quorum_request_file: "kilogram-root-recovery.karq".to_owned(),
+            quorum_request: None,
+            quorum_state_dir: "kilogram-account/device".to_owned(),
+            quorum_ticket_output_file: "kilogram-recovery-approval.kart".to_owned(),
+            quorum_route_policy: RuntimeIpcRoutePolicy::Auto,
+            quorum_listener: None,
+            quorum_ticket_files: String::new(),
+            quorum_approval_directory: "kilogram-recovery-approvals".to_owned(),
+            quorum_collection: None,
+            quorum_approval_files: String::new(),
+            quorum_verification: None,
         }
     }
 }
@@ -887,6 +920,10 @@ impl ViewModel {
                 | WorkerSuccess::AccountRecoveryExported(_)
                 | WorkerSuccess::AccountRecoveryInspected { .. }
                 | WorkerSuccess::AccountRecoveryRestored(_)
+                | WorkerSuccess::AccountRecoveryQuorumRequested(_)
+                | WorkerSuccess::AccountRecoveryQuorumListened(_)
+                | WorkerSuccess::AccountRecoveryQuorumCollected(_)
+                | WorkerSuccess::AccountRecoveryQuorumVerified(_)
                 | WorkerSuccess::DeviceLinkRequested(_)
                 | WorkerSuccess::DeviceLinkInspected { .. }
                 | WorkerSuccess::DeviceLinkAuthorized(_)
@@ -932,6 +969,30 @@ enum WorkerRequest {
         expected_package_id: String,
         expected_authority_revision: u64,
         recovery_phrase: AccountRecoveryPhrase,
+    },
+    AccountRecoveryQuorumRequest {
+        executable: PathBuf,
+        package_file: PathBuf,
+        witness_file: PathBuf,
+        request_file: PathBuf,
+    },
+    AccountRecoveryQuorumListen {
+        executable: PathBuf,
+        state_dir: PathBuf,
+        request_file: PathBuf,
+        ticket_file: PathBuf,
+        route_policy: RuntimeIpcRoutePolicy,
+    },
+    AccountRecoveryQuorumCollect {
+        executable: PathBuf,
+        request_file: PathBuf,
+        ticket_files: Vec<PathBuf>,
+        approval_directory: PathBuf,
+    },
+    AccountRecoveryQuorumVerify {
+        executable: PathBuf,
+        request_file: PathBuf,
+        approval_files: Vec<PathBuf>,
     },
     DeviceLinkRequest {
         executable: PathBuf,
@@ -1022,6 +1083,10 @@ impl WorkerRequest {
             Self::AccountRecoveryExport { .. } => Operation::AccountRecoveryExport,
             Self::AccountRecoveryInspect { .. } => Operation::AccountRecoveryInspect,
             Self::AccountRecoveryRestore { .. } => Operation::AccountRecoveryRestore,
+            Self::AccountRecoveryQuorumRequest { .. } => Operation::AccountRecoveryQuorumRequest,
+            Self::AccountRecoveryQuorumListen { .. } => Operation::AccountRecoveryQuorumListen,
+            Self::AccountRecoveryQuorumCollect { .. } => Operation::AccountRecoveryQuorumCollect,
+            Self::AccountRecoveryQuorumVerify { .. } => Operation::AccountRecoveryQuorumVerify,
             Self::DeviceLinkRequest { .. } => Operation::DeviceLinkRequest,
             Self::DeviceLinkInspect { .. } => Operation::DeviceLinkInspect,
             Self::DeviceLinkAuthorize { .. } => Operation::DeviceLinkAuthorize,
@@ -1053,6 +1118,10 @@ enum WorkerSuccess {
         output: Box<AccountRecoveryOutput>,
     },
     AccountRecoveryRestored(Box<AccountRecoveryOutput>),
+    AccountRecoveryQuorumRequested(Box<RecoveryQuorumRequestOutput>),
+    AccountRecoveryQuorumListened(Box<RecoveryQuorumListenOutput>),
+    AccountRecoveryQuorumCollected(Box<RecoveryQuorumCollectOutput>),
+    AccountRecoveryQuorumVerified(Box<RecoveryQuorumVerifyOutput>),
     DeviceLinkRequested(Box<DeviceLinkRequestOutput>),
     DeviceLinkInspected {
         request_file: PathBuf,
@@ -1421,6 +1490,95 @@ async fn execute_request(request: WorkerRequest) -> Result<WorkerSuccess> {
                 "Account Root recovery helper restored different paths"
             );
             Ok(WorkerSuccess::AccountRecoveryRestored(Box::new(output)))
+        }
+        WorkerRequest::AccountRecoveryQuorumRequest {
+            executable,
+            package_file,
+            witness_file,
+            request_file,
+        } => {
+            let output: RecoveryQuorumRequestOutput = run_json(
+                &executable,
+                "account-recovery-quorum-request",
+                command_arguments([
+                    ("--package-file", package_file.as_os_str()),
+                    ("--witness-file", witness_file.as_os_str()),
+                    ("--request-file", request_file.as_os_str()),
+                ]),
+            )?;
+            ensure!(
+                output.request_file == request_file,
+                "quorum helper returned a different request path"
+            );
+            Ok(WorkerSuccess::AccountRecoveryQuorumRequested(Box::new(
+                output,
+            )))
+        }
+        WorkerRequest::AccountRecoveryQuorumListen {
+            executable,
+            state_dir,
+            request_file,
+            ticket_file,
+            route_policy,
+        } => {
+            let route_policy = route_policy_argument(route_policy);
+            let output: RecoveryQuorumListenOutput = run_json(
+                &executable,
+                "account-recovery-quorum-listen",
+                command_arguments([
+                    ("--state-dir", state_dir.as_os_str()),
+                    ("--request-file", request_file.as_os_str()),
+                    ("--ticket-file", ticket_file.as_os_str()),
+                    ("--route-policy", std::ffi::OsStr::new(route_policy)),
+                ]),
+            )?;
+            ensure!(
+                output.ticket_file == ticket_file,
+                "quorum listener returned a different ticket path"
+            );
+            Ok(WorkerSuccess::AccountRecoveryQuorumListened(Box::new(
+                output,
+            )))
+        }
+        WorkerRequest::AccountRecoveryQuorumCollect {
+            executable,
+            request_file,
+            ticket_files,
+            approval_directory,
+        } => {
+            let mut arguments = command_arguments([
+                ("--request-file", request_file.as_os_str()),
+                ("--approval-dir", approval_directory.as_os_str()),
+            ]);
+            for ticket_file in &ticket_files {
+                arguments.push("--ticket-file".into());
+                arguments.push(ticket_file.as_os_str().into());
+            }
+            let output: RecoveryQuorumCollectOutput =
+                run_json(&executable, "account-recovery-quorum-collect", arguments)?;
+            ensure!(
+                output.approval_directory == approval_directory,
+                "quorum collector returned a different approval directory"
+            );
+            Ok(WorkerSuccess::AccountRecoveryQuorumCollected(Box::new(
+                output,
+            )))
+        }
+        WorkerRequest::AccountRecoveryQuorumVerify {
+            executable,
+            request_file,
+            approval_files,
+        } => {
+            let mut arguments = command_arguments([("--request-file", request_file.as_os_str())]);
+            for approval_file in &approval_files {
+                arguments.push("--approval-file".into());
+                arguments.push(approval_file.as_os_str().into());
+            }
+            let output: RecoveryQuorumVerifyOutput =
+                run_json(&executable, "account-recovery-quorum-verify", arguments)?;
+            Ok(WorkerSuccess::AccountRecoveryQuorumVerified(Box::new(
+                output,
+            )))
         }
         WorkerRequest::DeviceLinkRequest {
             executable,
@@ -1797,6 +1955,10 @@ impl KilogramApp {
                     | Operation::AccountRecoveryExport
                     | Operation::AccountRecoveryInspect
                     | Operation::AccountRecoveryRestore
+                    | Operation::AccountRecoveryQuorumRequest
+                    | Operation::AccountRecoveryQuorumListen
+                    | Operation::AccountRecoveryQuorumCollect
+                    | Operation::AccountRecoveryQuorumVerify
                     | Operation::DeviceLinkRequest
                     | Operation::DeviceLinkInspect
                     | Operation::DeviceLinkAuthorize
@@ -1878,6 +2040,10 @@ impl KilogramApp {
                 self.account_recovery.inspected_witness_file = None;
                 self.account_recovery.confirm_latest_witness = false;
                 self.account_recovery.restored = None;
+                self.account_recovery.quorum_request = None;
+                self.account_recovery.quorum_listener = None;
+                self.account_recovery.quorum_collection = None;
+                self.account_recovery.quorum_verification = None;
                 self.model.notice = Some(
                     "Root authority package exported. Store the latest witness independently, then inspect the exact pair before recovery."
                         .to_owned(),
@@ -1893,6 +2059,10 @@ impl KilogramApp {
                 self.account_recovery.inspected = Some(*output);
                 self.account_recovery.confirm_latest_witness = false;
                 self.account_recovery.restored = None;
+                self.account_recovery.quorum_request = None;
+                self.account_recovery.quorum_listener = None;
+                self.account_recovery.quorum_collection = None;
+                self.account_recovery.quorum_verification = None;
                 self.model.notice = Some(
                     "Package signatures and exact witness binding verified. Confirm independently that this witness is the newest before entering the phrase."
                         .to_owned(),
@@ -1916,6 +2086,46 @@ impl KilogramApp {
                     "Account Root restored. Use the device-link ceremony below to enroll a new device, then recover message history separately."
                         .to_owned(),
                 );
+            }
+            WorkerSuccess::AccountRecoveryQuorumRequested(output) => {
+                self.account_recovery.quorum_request_file =
+                    output.request_file.display().to_string();
+                self.account_recovery.quorum_listener = None;
+                self.account_recovery.quorum_collection = None;
+                self.account_recovery.quorum_verification = None;
+                self.account_recovery.quorum_request = Some(*output);
+                self.model.notice = Some(
+                    "Fresh exact-roster recovery request created. Obtain one signed ticket from each available current device, then collect their approvals before expiry."
+                        .to_owned(),
+                );
+            }
+            WorkerSuccess::AccountRecoveryQuorumListened(output) => {
+                self.model.notice = Some(format!(
+                    "Approval delivered over {} and was committed before ticket publication.",
+                    output.transport_path
+                ));
+                self.account_recovery.quorum_listener = Some(*output);
+            }
+            WorkerSuccess::AccountRecoveryQuorumCollected(output) => {
+                self.account_recovery.quorum_approval_files = output
+                    .transports
+                    .iter()
+                    .map(|transport| transport.approval_file.display().to_string())
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                self.model.notice = Some(format!(
+                    "Recovery freshness claim: {} ({}/{} approvals).",
+                    output.freshness_claim, output.observed_approvals, output.required_approvals
+                ));
+                self.account_recovery.quorum_verification = None;
+                self.account_recovery.quorum_collection = Some(*output);
+            }
+            WorkerSuccess::AccountRecoveryQuorumVerified(output) => {
+                self.model.notice = Some(format!(
+                    "Recovery freshness claim: {} ({}/{} approvals).",
+                    output.freshness_claim, output.observed_approvals, output.required_approvals
+                ));
+                self.account_recovery.quorum_verification = Some(*output);
             }
             WorkerSuccess::DeviceLinkRequested(output) => {
                 self.device_link.joining_workspace = output.workspace_dir.display().to_string();
@@ -2316,9 +2526,23 @@ impl KilogramApp {
                 .inspected
                 .as_ref()
                 .context("Inspect the exact recovery package and witness before restore")?;
+            let quorum_majority = self
+                .account_recovery
+                .quorum_collection
+                .as_ref()
+                .is_some_and(|report| {
+                    report.majority_satisfied && report.package_id == inspected.package_id
+                })
+                || self
+                    .account_recovery
+                    .quorum_verification
+                    .as_ref()
+                    .is_some_and(|report| {
+                        report.majority_satisfied && report.package_id == inspected.package_id
+                    });
             ensure!(
-                self.account_recovery.confirm_latest_witness,
-                "Confirm that the independently retained witness is the newest known checkpoint"
+                quorum_majority || self.account_recovery.confirm_latest_witness,
+                "Collect and verify a current-device majority, or explicitly confirm the reduced-assurance offline fallback"
             );
             let executable = canonical_input_path(
                 &self.bootstrap_executable_path,
@@ -2367,6 +2591,159 @@ impl KilogramApp {
             Err(error) => self
                 .model
                 .fail(Operation::AccountRecoveryRestore, format!("{error:#}")),
+        }
+    }
+
+    fn start_account_recovery_quorum_request(&mut self) {
+        let result: Result<WorkerRequest> = (|| {
+            self.require_offline_wizard()?;
+            let executable = canonical_input_path(
+                &self.bootstrap_executable_path,
+                "Bootstrap executable",
+                true,
+            )?;
+            let package_file = canonical_nonsymlink_input_file(
+                &self.account_recovery.package_input_file,
+                "Account Root recovery package",
+            )?;
+            let witness_file = canonical_nonsymlink_input_file(
+                &self.account_recovery.witness_input_file,
+                "Account Root recovery witness",
+            )?;
+            ensure!(
+                self.account_recovery.inspected_package_file.as_ref() == Some(&package_file)
+                    && self.account_recovery.inspected_witness_file.as_ref() == Some(&witness_file),
+                "Inspect the exact package and witness before creating a quorum request"
+            );
+            let request_file = absolute_artifact_output_path(
+                &self.account_recovery.quorum_request_file,
+                "Recovery quorum request",
+            )?;
+            ensure!(
+                !request_file.exists(),
+                "Quorum request output must be a new file"
+            );
+            Ok(WorkerRequest::AccountRecoveryQuorumRequest {
+                executable,
+                package_file,
+                witness_file,
+                request_file,
+            })
+        })();
+        match result {
+            Ok(request) => self.submit(Operation::AccountRecoveryQuorumRequest, request),
+            Err(error) => self.model.fail(
+                Operation::AccountRecoveryQuorumRequest,
+                format!("{error:#}"),
+            ),
+        }
+    }
+
+    fn start_account_recovery_quorum_listen(&mut self) {
+        let result: Result<WorkerRequest> = (|| {
+            self.require_offline_wizard()?;
+            let executable = canonical_input_path(
+                &self.bootstrap_executable_path,
+                "Bootstrap executable",
+                true,
+            )?;
+            let state_dir = canonical_input_path(
+                &self.account_recovery.quorum_state_dir,
+                "Approving device state",
+                false,
+            )?;
+            let request_file = canonical_nonsymlink_input_file(
+                &self.account_recovery.quorum_request_file,
+                "Recovery quorum request",
+            )?;
+            let ticket_file = absolute_output_path(
+                &self.account_recovery.quorum_ticket_output_file,
+                "Recovery approval ticket",
+                &state_dir,
+            )?;
+            ensure!(
+                !ticket_file.exists(),
+                "Approval ticket output must be a new file"
+            );
+            Ok(WorkerRequest::AccountRecoveryQuorumListen {
+                executable,
+                state_dir,
+                request_file,
+                ticket_file,
+                route_policy: self.account_recovery.quorum_route_policy,
+            })
+        })();
+        match result {
+            Ok(request) => self.submit(Operation::AccountRecoveryQuorumListen, request),
+            Err(error) => self
+                .model
+                .fail(Operation::AccountRecoveryQuorumListen, format!("{error:#}")),
+        }
+    }
+
+    fn start_account_recovery_quorum_collect(&mut self) {
+        let result: Result<WorkerRequest> = (|| {
+            self.require_offline_wizard()?;
+            let executable = canonical_input_path(
+                &self.bootstrap_executable_path,
+                "Bootstrap executable",
+                true,
+            )?;
+            let request_file = canonical_nonsymlink_input_file(
+                &self.account_recovery.quorum_request_file,
+                "Recovery quorum request",
+            )?;
+            let ticket_files = canonical_artifact_lines(
+                &self.account_recovery.quorum_ticket_files,
+                "Recovery approval ticket",
+            )?;
+            let approval_directory = absolute_directory_target(
+                &self.account_recovery.quorum_approval_directory,
+                "Recovery approval directory",
+            )?;
+            Ok(WorkerRequest::AccountRecoveryQuorumCollect {
+                executable,
+                request_file,
+                ticket_files,
+                approval_directory,
+            })
+        })();
+        match result {
+            Ok(request) => self.submit(Operation::AccountRecoveryQuorumCollect, request),
+            Err(error) => self.model.fail(
+                Operation::AccountRecoveryQuorumCollect,
+                format!("{error:#}"),
+            ),
+        }
+    }
+
+    fn start_account_recovery_quorum_verify(&mut self) {
+        let result: Result<WorkerRequest> = (|| {
+            self.require_offline_wizard()?;
+            let executable = canonical_input_path(
+                &self.bootstrap_executable_path,
+                "Bootstrap executable",
+                true,
+            )?;
+            let request_file = canonical_nonsymlink_input_file(
+                &self.account_recovery.quorum_request_file,
+                "Recovery quorum request",
+            )?;
+            let approval_files = canonical_artifact_lines(
+                &self.account_recovery.quorum_approval_files,
+                "Recovery device approval",
+            )?;
+            Ok(WorkerRequest::AccountRecoveryQuorumVerify {
+                executable,
+                request_file,
+                approval_files,
+            })
+        })();
+        match result {
+            Ok(request) => self.submit(Operation::AccountRecoveryQuorumVerify, request),
+            Err(error) => self
+                .model
+                .fail(Operation::AccountRecoveryQuorumVerify, format!("{error:#}")),
         }
     }
 
@@ -2910,6 +3287,9 @@ impl KilogramApp {
                         self.account_recovery.inspected_witness_file = None;
                         self.account_recovery.confirm_latest_witness = false;
                         self.account_recovery.recovery_phrase.zeroize();
+                        self.account_recovery.quorum_request = None;
+                        self.account_recovery.quorum_collection = None;
+                        self.account_recovery.quorum_verification = None;
                         self.model.notice =
                             Some("Account Root recovery package path updated".to_owned());
                     }
@@ -2920,6 +3300,9 @@ impl KilogramApp {
                         self.account_recovery.inspected_witness_file = None;
                         self.account_recovery.confirm_latest_witness = false;
                         self.account_recovery.recovery_phrase.zeroize();
+                        self.account_recovery.quorum_request = None;
+                        self.account_recovery.quorum_collection = None;
+                        self.account_recovery.quorum_verification = None;
                         self.model.notice =
                             Some("Account Root recovery witness path updated".to_owned());
                     }
@@ -2957,7 +3340,7 @@ impl KilogramApp {
     fn draw_header(&self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             ui.heading(egui::RichText::new("Kilogram").size(28.0).strong());
-            ui.label(egui::RichText::new("M0.9.21").color(egui::Color32::from_rgb(88, 166, 255)));
+            ui.label(egui::RichText::new("M0.9.23").color(egui::Color32::from_rgb(88, 166, 255)));
         });
         ui.label("Desktop client · authenticated local runtime IPC");
     }
@@ -3192,6 +3575,9 @@ impl KilogramApp {
                     self.account_recovery.confirm_latest_witness = false;
                     self.account_recovery.recovery_phrase.zeroize();
                     self.account_recovery.restored = None;
+                    self.account_recovery.quorum_request = None;
+                    self.account_recovery.quorum_collection = None;
+                    self.account_recovery.quorum_verification = None;
                 }
                 if matches!(
                     self.drop_target,
@@ -3207,6 +3593,186 @@ impl KilogramApp {
                     .clicked()
                 {
                     action = AccountRecoveryUiAction::Inspect;
+                }
+
+                ui.separator();
+                ui.label("Live current-device quorum");
+                ui.small("The request contains the exact package and witness. Each current device commits one approval locally, then exposes it through a signed one-shot Iroh ticket over LAN or relay.");
+                ui.horizontal(|ui| {
+                    ui.label("Quorum request (.karq)");
+                    ui.add_enabled(
+                        idle,
+                        egui::TextEdit::singleline(
+                            &mut self.account_recovery.quorum_request_file,
+                        )
+                        .desired_width(f32::INFINITY),
+                    );
+                });
+                if ui
+                    .add_enabled(
+                        idle && self.account_recovery.inspected.is_some(),
+                        egui::Button::new("1 · Create fresh quorum request"),
+                    )
+                    .clicked()
+                {
+                    action = AccountRecoveryUiAction::QuorumRequest;
+                }
+                if let Some(request) = self.account_recovery.quorum_request.as_ref() {
+                    ui.monospace(format!("Request: {}", request.request_id));
+                    ui.label(format!(
+                        "Need {} of {} current devices · expires at Unix {}",
+                        request.required_approvals,
+                        request.roster_count,
+                        request.expires_at_unix_seconds
+                    ));
+                }
+
+                ui.group(|ui| {
+                    ui.label("On each current device: approve and listen once");
+                    ui.horizontal(|ui| {
+                        ui.label("Device state directory");
+                        ui.add_enabled(
+                            idle,
+                            egui::TextEdit::singleline(
+                                &mut self.account_recovery.quorum_state_dir,
+                            )
+                            .desired_width(f32::INFINITY),
+                        );
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label("New signed ticket (.kart)");
+                        ui.add_enabled(
+                            idle,
+                            egui::TextEdit::singleline(
+                                &mut self.account_recovery.quorum_ticket_output_file,
+                            )
+                            .desired_width(f32::INFINITY),
+                        );
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label("Route");
+                        ui.add_enabled_ui(idle, |ui| {
+                            ui.selectable_value(
+                                &mut self.account_recovery.quorum_route_policy,
+                                RuntimeIpcRoutePolicy::Auto,
+                                "Auto",
+                            );
+                            ui.selectable_value(
+                                &mut self.account_recovery.quorum_route_policy,
+                                RuntimeIpcRoutePolicy::DirectOnly,
+                                "Direct only",
+                            );
+                            ui.selectable_value(
+                                &mut self.account_recovery.quorum_route_policy,
+                                RuntimeIpcRoutePolicy::RelayOnly,
+                                "Relay only",
+                            );
+                        });
+                    });
+                    if ui
+                        .add_enabled(idle, egui::Button::new("2A · Approve and wait for collector"))
+                        .clicked()
+                    {
+                        action = AccountRecoveryUiAction::QuorumListen;
+                    }
+                    if self.model.pending == Some(Operation::AccountRecoveryQuorumListen) {
+                        ui.colored_label(
+                            egui::Color32::from_rgb(246, 195, 93),
+                            "The helper is validating local state. The .kart file appears only after the approval head commits; send that ticket to the recovering device and keep this one-shot listener running until collection or request expiry.",
+                        );
+                    }
+                    if let Some(listener) = self.account_recovery.quorum_listener.as_ref() {
+                        ui.colored_label(
+                            egui::Color32::from_rgb(92, 201, 137),
+                            format!(
+                                "Delivered by {} · device {} · {} ms",
+                                listener.transport_path,
+                                compact_id(&listener.approver_device_id),
+                                listener.transport_rtt_milliseconds
+                            ),
+                        );
+                    }
+                });
+
+                ui.group(|ui| {
+                    ui.label("On the recovering device: collect distinct approvals");
+                    ui.label("Signed ticket files, one path per line");
+                    ui.add_enabled(
+                        idle,
+                        egui::TextEdit::multiline(
+                            &mut self.account_recovery.quorum_ticket_files,
+                        )
+                        .desired_rows(2)
+                        .desired_width(f32::INFINITY),
+                    );
+                    ui.horizontal(|ui| {
+                        ui.label("Approval directory");
+                        ui.add_enabled(
+                            idle,
+                            egui::TextEdit::singleline(
+                                &mut self.account_recovery.quorum_approval_directory,
+                            )
+                            .desired_width(f32::INFINITY),
+                        );
+                    });
+                    if ui
+                        .add_enabled(idle, egui::Button::new("2B · Collect listed tickets"))
+                        .clicked()
+                    {
+                        action = AccountRecoveryUiAction::QuorumCollect;
+                    }
+                    ui.label("Existing .kara files, one path per line");
+                    ui.add_enabled(
+                        idle,
+                        egui::TextEdit::multiline(
+                            &mut self.account_recovery.quorum_approval_files,
+                        )
+                        .desired_rows(2)
+                        .desired_width(f32::INFINITY),
+                    );
+                    if ui
+                        .add_enabled(idle, egui::Button::new("Verify saved approvals"))
+                        .clicked()
+                    {
+                        action = AccountRecoveryUiAction::QuorumVerify;
+                    }
+                });
+
+                let claim = self
+                    .account_recovery
+                    .quorum_verification
+                    .as_ref()
+                    .map(|report| {
+                        (
+                            report.freshness_claim.as_str(),
+                            report.observed_approvals,
+                            report.required_approvals,
+                            report.majority_satisfied,
+                            report.package_id.as_str(),
+                        )
+                    })
+                    .or_else(|| {
+                        self.account_recovery.quorum_collection.as_ref().map(|report| {
+                            (
+                                report.freshness_claim.as_str(),
+                                report.observed_approvals,
+                                report.required_approvals,
+                                report.majority_satisfied,
+                                report.package_id.as_str(),
+                            )
+                        })
+                    });
+                if let Some((claim, observed, required, majority, package_id)) = claim {
+                    ui.colored_label(
+                        if majority {
+                            egui::Color32::from_rgb(92, 201, 137)
+                        } else {
+                            egui::Color32::from_rgb(246, 195, 93)
+                        },
+                        format!("Freshness: {claim} · {observed}/{required} approvals"),
+                    );
+                    ui.monospace(format!("Approved package: {package_id}"));
+                    ui.small("Cross-roster fork safety: false. Roster epochs and joint old/new-majority transitions are not implemented yet.");
                 }
 
                 if let Some(inspected) = self.account_recovery.inspected.as_ref() {
@@ -3226,10 +3792,22 @@ impl KilogramApp {
                         egui::Color32::from_rgb(246, 195, 93),
                         "Cryptographic validity does not prove global freshness. A matching old package and old witness can still be rolled back together.",
                     );
-                    ui.checkbox(
-                        &mut self.account_recovery.confirm_latest_witness,
-                        "I independently verified that this is my newest known witness",
+                    let quorum_majority = claim.is_some_and(
+                        |(_, _, _, majority, package_id)| {
+                            majority && package_id == inspected.package_id
+                        },
                     );
+                    if quorum_majority {
+                        ui.colored_label(
+                            egui::Color32::from_rgb(92, 201, 137),
+                            "Restore gate: current-device majority observed for this exact package.",
+                        );
+                    } else {
+                        ui.checkbox(
+                            &mut self.account_recovery.confirm_latest_witness,
+                            "Proceed with reduced-assurance offline fallback: I independently verified this as my newest known witness",
+                        );
+                    }
                     ui.horizontal(|ui| {
                         ui.label("24-word recovery phrase");
                         ui.add_enabled(
@@ -3270,7 +3848,8 @@ impl KilogramApp {
                     if ui
                         .add_enabled(
                             idle
-                                && self.account_recovery.confirm_latest_witness
+                                && (quorum_majority
+                                    || self.account_recovery.confirm_latest_witness)
                                 && self
                                     .account_recovery
                                     .recovery_phrase
@@ -4217,6 +4796,88 @@ fn canonical_nonsymlink_input_file(value: &str, label: &str) -> Result<PathBuf> 
     fs::canonicalize(&path).with_context(|| format!("Resolve {label} path {}", path.display()))
 }
 
+fn canonical_artifact_lines(value: &str, label: &str) -> Result<Vec<PathBuf>> {
+    let paths = value
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(|line| canonical_nonsymlink_input_file(line, label))
+        .collect::<Result<Vec<_>>>()?;
+    ensure!(!paths.is_empty(), "At least one {label} path is required");
+    ensure!(paths.len() <= 32, "Too many {label} paths");
+    let mut distinct = BTreeSet::new();
+    for path in &paths {
+        ensure!(
+            distinct.insert(path.clone()),
+            "Duplicate {label} path: {}",
+            path.display()
+        );
+    }
+    Ok(paths)
+}
+
+fn absolute_artifact_output_path(value: &str, label: &str) -> Result<PathBuf> {
+    let path = required_path(value, label)?;
+    let absolute = if path.is_absolute() {
+        path
+    } else {
+        std::env::current_dir()
+            .context("Read current directory for recovery artifact")?
+            .join(path)
+    };
+    let file_name = absolute
+        .file_name()
+        .context(format!("{label} path has no file name"))?;
+    let parent = absolute
+        .parent()
+        .context(format!("{label} path has no parent"))?;
+    fs::create_dir_all(parent)
+        .with_context(|| format!("Create {label} directory {}", parent.display()))?;
+    Ok(fs::canonicalize(parent)
+        .with_context(|| format!("Resolve {label} directory {}", parent.display()))?
+        .join(file_name))
+}
+
+fn absolute_directory_target(value: &str, label: &str) -> Result<PathBuf> {
+    let path = required_path(value, label)?;
+    let absolute = if path.is_absolute() {
+        path
+    } else {
+        std::env::current_dir()
+            .context("Read current directory for recovery directory")?
+            .join(path)
+    };
+    if absolute.exists() {
+        let metadata = fs::symlink_metadata(&absolute)
+            .with_context(|| format!("Inspect {label} {}", absolute.display()))?;
+        ensure!(
+            !metadata.file_type().is_symlink() && metadata.is_dir(),
+            "{label} must be a regular directory"
+        );
+        return fs::canonicalize(&absolute)
+            .with_context(|| format!("Resolve {label} {}", absolute.display()));
+    }
+    let name = absolute
+        .file_name()
+        .context(format!("{label} path has no final component"))?;
+    let parent = absolute
+        .parent()
+        .context(format!("{label} path has no parent"))?;
+    fs::create_dir_all(parent)
+        .with_context(|| format!("Create {label} parent {}", parent.display()))?;
+    Ok(fs::canonicalize(parent)
+        .with_context(|| format!("Resolve {label} parent {}", parent.display()))?
+        .join(name))
+}
+
+fn route_policy_argument(policy: RuntimeIpcRoutePolicy) -> &'static str {
+    match policy {
+        RuntimeIpcRoutePolicy::Auto => "auto",
+        RuntimeIpcRoutePolicy::DirectOnly => "direct-only",
+        RuntimeIpcRoutePolicy::RelayOnly => "relay-only",
+    }
+}
+
 fn absolute_output_path(
     value: &str,
     label: &str,
@@ -4443,6 +5104,14 @@ impl eframe::App for KilogramApp {
             self.start_account_recovery_inspect();
         } else if account_recovery_action == AccountRecoveryUiAction::Restore {
             self.start_account_recovery_restore();
+        } else if account_recovery_action == AccountRecoveryUiAction::QuorumRequest {
+            self.start_account_recovery_quorum_request();
+        } else if account_recovery_action == AccountRecoveryUiAction::QuorumListen {
+            self.start_account_recovery_quorum_listen();
+        } else if account_recovery_action == AccountRecoveryUiAction::QuorumCollect {
+            self.start_account_recovery_quorum_collect();
+        } else if account_recovery_action == AccountRecoveryUiAction::QuorumVerify {
+            self.start_account_recovery_quorum_verify();
         } else if device_link_action == DeviceLinkUiAction::Request {
             self.start_device_link_request();
         } else if device_link_action == DeviceLinkUiAction::Inspect {

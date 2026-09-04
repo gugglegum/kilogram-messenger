@@ -889,3 +889,31 @@ retirement остальных compatibility shadows ещё не реализов
   `3EF59BF8ADA6377C5FA9586E3923D81A75D231E1DA6D44BC03B849E59D154E46`;
   `target/release/kilogram-cli.exe` — 22,579,712 bytes, SHA-256
   `4594E21006566BC6E11B09EF36D91AF9803AEF463A2407C60ED7B33667B6F116`.
+
+## M0.9.23 verification snapshot (2026-09-04)
+
+- `kilogram-bootstrap` получил signed one-shot `.kart` listener/collector поверх
+  Iroh с exact request/expiry/certificate/endpoint/bearer/route binding.
+- Approval head коммитится в DB-primary до публикации ticket; network response
+  повторно проходит unchanged `.kara` verifier, duplicate ticket Device IDs и
+  route-policy mismatch fail closed.
+- Direct loopback unit regression прошёл полный ticket publication → bearer
+  fetch → signed approval → majority verification; отдельный regression
+  отклоняет tampered request/route ticket fields.
+- Debug process smoke `.tmp/m0923-process-smoke-20260904-190155` и release smoke
+  в той же изолированной workspace прошли one-shot `direct-only` listener →
+  collector: 1/1 approvals, `current-device-majority-observed`,
+  `cross_roster_fork_safety=false`.
+- Windows desktop adapter строго валидирует все новые JSON outputs/paths/route
+  diagnostics, показывает literal claim и отделяет majority gate от explicit
+  reduced-assurance offline fallback.
+- `cargo fmt --all -- --check`, strict
+  `cargo clippy --workspace --all-targets --all-features -- -D warnings`, все
+  172 workspace tests (`--test-threads=1`) и
+  `cargo build --release --workspace` проходят.
+- Windows artifacts: `target/release/kilogram-bootstrap.exe` — 18,395,136 bytes,
+  SHA-256 `E567028012600C23CFFEF3A36A1B4EA6B0AE3298E3B1F0BBACA9F6A256DF1C0E`;
+  `target/release/kilogram-windows.exe` — 7,482,368 bytes, SHA-256
+  `B87D7263A514668D7E17C466878B620103481AFFD15F71909AE7A4812FEFDC65`;
+  `target/release/kilogram-cli.exe` — 22,579,712 bytes, SHA-256
+  `4594E21006566BC6E11B09EF36D91AF9803AEF463A2407C60ED7B33667B6F116`.
