@@ -331,12 +331,13 @@ global prekey discovery/witness, автоматический recovery source di
 
 ## План ближайших работ
 
-1. M0.9.25: перенести recovery-policy `.karpa` на существующий one-shot
-   LAN/hole-punch/relay transport и встроить M0.9.24 joint old/new-majority
-   epoch transition в desktop device-link/revocation ceremony.
-2. Сохранить desktop literal claim display и явно более слабый offline fallback
-   без превращения transport/relay в holder Root secrets; Root operation,
-   policy activation и multi-source history recovery показывать раздельно.
+1. M0.9.26: сделать device removal/revocation first-class Root operation в
+   Windows, публиковать новый active device list и fresh recovery checkpoint,
+   затем передавать exact before/after artifacts в реализованный M0.9.25
+   networked recovery-policy transition.
+2. Removal, policy activation, runtime peer-directory refresh, ratchet/session
+   retirement и multi-source history availability показывать раздельно;
+   transport/relay не становится holder Root secrets.
 3. Optional autostart/background mode оставить отдельной явной настройкой, а не
    обязательным Task Scheduler этапом.
 4. Добавить production macOS/Linux local key provider, согласованный monotonic

@@ -1,8 +1,6 @@
 # RFC-0048: Recovery freshness and checkpoint lifecycle
 
-Status: M0.9.24 recovery-policy epoch and joint transition implemented
-(2026-09-04). Recovery-policy epochs and joint roster transitions remain future
-work.
+Status: M0.9.25 networked recovery-policy activation implemented (2026-09-04).
 
 ## 1. Problem and impossibility boundary
 
@@ -300,9 +298,49 @@ kilogram-bootstrap account-recovery-policy-transition-verify
 kilogram-bootstrap account-recovery-policy-transition-install
 ```
 
-## 8. Next stage
+## 8. Implemented M0.9.25 network collection and desktop activation
 
-M0.9.25 should reuse the one-shot LAN/Iroh relay transport for `.karpa`
-collection and integrate request, threshold progress, certification and install
-into the Windows device-link/revocation workflow. The GUI must keep the Root
-operation, recovery-policy activation and history recovery as separate claims.
+Every old/new-roster voter can now commit its transition approval and publish a
+signed one-shot `.karpticket`. The ticket binds the exact Account and Request
+IDs, request expiry, exact voter certificate, Iroh endpoint, 256-bit bearer
+capability and `auto`, `direct-only` or `relay-only` policy. The DB-primary
+transition-approval head is committed before ticket publication. A listener
+then returns exactly one `.karpa` only after an authorized fetch presents the
+matching Request ID and bearer.
+
+The collector revalidates the ticket signature and exact old/new voter
+membership, authenticates the Iroh endpoint, enforces the signed route policy,
+and independently verifies the transported `.karpa`. Duplicate signer Device
+IDs fail closed. Each approval is stored idempotently as
+`{device_id}.karpa`, after which the unchanged joint-quorum verifier reports
+old and new progress separately. Even a complete collection reports
+`cross_roster_fork_safety=false`: the permanent claim begins only after
+canonical `.karpc` certification.
+
+The additional helper commands are:
+
+```text
+kilogram-bootstrap account-recovery-policy-transition-listen
+kilogram-bootstrap account-recovery-policy-transition-collect
+```
+
+The Windows device-roster panel now orchestrates `.karpt` creation, one-shot
+approval listeners, multi-ticket collection, certification and per-device
+installation. Its status display deliberately separates three facts:
+
+1. whether the Account Root roster mutation has happened;
+2. whether a joint-majority recovery-policy certificate has been installed on
+   this device;
+3. whether message history has been recovered through the separate multi-source
+   recovery workflow.
+
+The GUI never transports Root/device private keys and does not infer policy or
+history completion from a successful device-link operation.
+
+## 9. Next stage
+
+M0.9.26 should make device removal a first-class desktop Root operation, publish
+the resulting active device list/checkpoint, and hand the exact before/after
+artifacts directly into the same recovery-policy transition workflow. Removal,
+policy activation, runtime peer-directory refresh, ratchet/session retirement,
+and history availability must remain separately observable states.

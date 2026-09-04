@@ -191,6 +191,110 @@ pub(crate) struct RecoveryQuorumVerifyOutput {
     pub(crate) cross_roster_fork_safety: bool,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct RecoveryPolicyTransitionRequestOutput {
+    pub(crate) status: String,
+    pub(crate) account_id: String,
+    pub(crate) request_id: String,
+    pub(crate) old_epoch: u64,
+    pub(crate) new_epoch: u64,
+    pub(crate) previous_transition_id: String,
+    pub(crate) old_recovery_roster_digest: String,
+    pub(crate) new_recovery_roster_digest: String,
+    pub(crate) old_roster_count: usize,
+    pub(crate) new_roster_count: usize,
+    pub(crate) old_required_approvals: usize,
+    pub(crate) new_required_approvals: usize,
+    pub(crate) expires_at_unix_seconds: u64,
+    pub(crate) request_file: PathBuf,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct RecoveryPolicyTransitionListenOutput {
+    pub(crate) status: String,
+    pub(crate) account_id: String,
+    pub(crate) request_id: String,
+    pub(crate) old_epoch: u64,
+    pub(crate) new_epoch: u64,
+    pub(crate) approver_device_id: String,
+    pub(crate) approval_id: String,
+    pub(crate) ticket_file: PathBuf,
+    pub(crate) route_policy: String,
+    pub(crate) transport_path: String,
+    pub(crate) transport_remote_address: String,
+    pub(crate) transport_rtt_milliseconds: u64,
+    pub(crate) transport_open_paths: usize,
+    pub(crate) approval_head_source: String,
+    pub(crate) approval_head_committed_before_ticket_publish: bool,
+    pub(crate) reused_committed_approval: bool,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct RecoveryPolicyTransitionTransportObservation {
+    pub(crate) approver_device_id: String,
+    pub(crate) ticket_file: PathBuf,
+    pub(crate) approval_file: PathBuf,
+    pub(crate) route_policy: String,
+    pub(crate) transport_path: String,
+    pub(crate) transport_remote_address: String,
+    pub(crate) transport_rtt_milliseconds: u64,
+    pub(crate) transport_open_paths: usize,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct RecoveryPolicyTransitionCollectOutput {
+    pub(crate) status: String,
+    pub(crate) account_id: String,
+    pub(crate) request_id: String,
+    pub(crate) old_epoch: u64,
+    pub(crate) new_epoch: u64,
+    pub(crate) old_observed_approvals: usize,
+    pub(crate) old_required_approvals: usize,
+    pub(crate) new_observed_approvals: usize,
+    pub(crate) new_required_approvals: usize,
+    pub(crate) joint_majority_satisfied: bool,
+    pub(crate) cross_roster_fork_safety: bool,
+    pub(crate) approval_directory: PathBuf,
+    pub(crate) transports: Vec<RecoveryPolicyTransitionTransportObservation>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct RecoveryPolicyTransitionCertificateOutput {
+    pub(crate) status: String,
+    pub(crate) account_id: String,
+    pub(crate) certificate_id: String,
+    pub(crate) old_epoch: u64,
+    pub(crate) new_epoch: u64,
+    pub(crate) previous_transition_id: String,
+    pub(crate) old_recovery_roster_digest: String,
+    pub(crate) new_recovery_roster_digest: String,
+    pub(crate) old_observed_approvals: usize,
+    pub(crate) old_required_approvals: usize,
+    pub(crate) new_observed_approvals: usize,
+    pub(crate) new_required_approvals: usize,
+    pub(crate) joint_majority_satisfied: bool,
+    pub(crate) cross_roster_fork_safety: bool,
+    pub(crate) certificate_file: PathBuf,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct RecoveryPolicyInstallOutput {
+    pub(crate) status: String,
+    pub(crate) account_id: String,
+    pub(crate) policy_epoch: u64,
+    pub(crate) recovery_roster_digest: String,
+    pub(crate) latest_transition_id: String,
+    pub(crate) policy_state_source: String,
+    pub(crate) installed_certificate_file: PathBuf,
+    pub(crate) cross_roster_fork_safety: bool,
+}
+
 impl AccountRecoveryOutput {
     pub(crate) fn validate_expected_status(&self, expected: &str) -> Result<()> {
         self.validate()?;
@@ -540,6 +644,225 @@ impl WizardJsonOutput for RecoveryQuorumVerifyOutput {
             self.cross_roster_fork_safety,
         )
     }
+}
+
+impl WizardJsonOutput for RecoveryPolicyTransitionRequestOutput {
+    fn validate(&self) -> Result<()> {
+        validate_status(
+            &self.status,
+            "account-recovery-policy-transition-request-created",
+        )?;
+        AccountId::from_str(&self.account_id).context("policy request Account ID is invalid")?;
+        validate_hex_id(&self.request_id, "policy request ID")?;
+        validate_hex_id(
+            &self.previous_transition_id,
+            "previous policy transition ID",
+        )?;
+        validate_hex_id(&self.old_recovery_roster_digest, "old policy roster digest")?;
+        validate_hex_id(&self.new_recovery_roster_digest, "new policy roster digest")?;
+        ensure!(
+            self.new_epoch == self.old_epoch.saturating_add(1),
+            "policy request epoch transition is invalid"
+        );
+        validate_policy_threshold(self.old_roster_count, self.old_required_approvals, "old")?;
+        validate_policy_threshold(self.new_roster_count, self.new_required_approvals, "new")?;
+        ensure!(
+            self.expires_at_unix_seconds > 0,
+            "policy request expiry is missing"
+        );
+        validate_absolute_file_path(&self.request_file, "request_file")
+    }
+}
+
+impl WizardJsonOutput for RecoveryPolicyTransitionListenOutput {
+    fn validate(&self) -> Result<()> {
+        validate_status(
+            &self.status,
+            "account-recovery-policy-transition-approved-over-transport",
+        )?;
+        AccountId::from_str(&self.account_id).context("policy listener Account ID is invalid")?;
+        DeviceId::from_str(&self.approver_device_id)
+            .context("policy listener Device ID is invalid")?;
+        validate_hex_id(&self.request_id, "policy listener request ID")?;
+        validate_hex_id(&self.approval_id, "policy listener approval ID")?;
+        ensure!(
+            self.new_epoch == self.old_epoch.saturating_add(1),
+            "policy listener epoch transition is invalid"
+        );
+        validate_absolute_file_path(&self.ticket_file, "ticket_file")?;
+        validate_transport_fields(
+            &self.route_policy,
+            &self.transport_path,
+            &self.transport_remote_address,
+            self.transport_open_paths,
+        )?;
+        ensure!(
+            self.approval_head_source == "db-primary"
+                && self.approval_head_committed_before_ticket_publish,
+            "policy approval was not committed before ticket publication"
+        );
+        let _ = self.transport_rtt_milliseconds;
+        let _ = self.reused_committed_approval;
+        Ok(())
+    }
+}
+
+impl WizardJsonOutput for RecoveryPolicyTransitionCollectOutput {
+    fn validate(&self) -> Result<()> {
+        ensure!(
+            matches!(
+                self.status.as_str(),
+                "account-recovery-policy-transition-joint-majority-collected"
+                    | "account-recovery-policy-transition-partial-collected"
+            ),
+            "unknown policy collection status"
+        );
+        validate_policy_report(
+            &self.account_id,
+            &self.request_id,
+            self.old_epoch,
+            self.new_epoch,
+            self.old_observed_approvals,
+            self.old_required_approvals,
+            self.new_observed_approvals,
+            self.new_required_approvals,
+            self.joint_majority_satisfied,
+            self.cross_roster_fork_safety,
+        )?;
+        ensure!(
+            (self.status == "account-recovery-policy-transition-joint-majority-collected")
+                == self.joint_majority_satisfied,
+            "policy collection status disagrees with threshold result"
+        );
+        ensure!(
+            self.approval_directory.is_absolute(),
+            "policy approval directory is relative"
+        );
+        ensure!(
+            !self.transports.is_empty(),
+            "policy collection has no transport observations"
+        );
+        let mut devices = BTreeMap::new();
+        for transport in &self.transports {
+            DeviceId::from_str(&transport.approver_device_id)
+                .context("policy transport Device ID is invalid")?;
+            ensure!(
+                devices
+                    .insert(transport.approver_device_id.clone(), ())
+                    .is_none(),
+                "duplicate policy transport device"
+            );
+            validate_absolute_file_path(&transport.ticket_file, "transport ticket_file")?;
+            validate_absolute_file_path(&transport.approval_file, "transport approval_file")?;
+            validate_transport_fields(
+                &transport.route_policy,
+                &transport.transport_path,
+                &transport.transport_remote_address,
+                transport.transport_open_paths,
+            )?;
+            let _ = transport.transport_rtt_milliseconds;
+        }
+        Ok(())
+    }
+}
+
+impl WizardJsonOutput for RecoveryPolicyTransitionCertificateOutput {
+    fn validate(&self) -> Result<()> {
+        validate_status(&self.status, "account-recovery-policy-transition-certified")?;
+        validate_policy_report(
+            &self.account_id,
+            &self.certificate_id,
+            self.old_epoch,
+            self.new_epoch,
+            self.old_observed_approvals,
+            self.old_required_approvals,
+            self.new_observed_approvals,
+            self.new_required_approvals,
+            self.joint_majority_satisfied,
+            self.cross_roster_fork_safety,
+        )?;
+        validate_hex_id(
+            &self.previous_transition_id,
+            "previous policy transition ID",
+        )?;
+        validate_hex_id(&self.old_recovery_roster_digest, "old policy roster digest")?;
+        validate_hex_id(&self.new_recovery_roster_digest, "new policy roster digest")?;
+        ensure!(
+            self.joint_majority_satisfied && self.cross_roster_fork_safety,
+            "certified transition lacks joint-majority fork safety"
+        );
+        validate_absolute_file_path(&self.certificate_file, "certificate_file")
+    }
+}
+
+impl WizardJsonOutput for RecoveryPolicyInstallOutput {
+    fn validate(&self) -> Result<()> {
+        validate_status(&self.status, "account-recovery-policy-transition-installed")?;
+        AccountId::from_str(&self.account_id).context("installed policy Account ID is invalid")?;
+        validate_hex_id(
+            &self.recovery_roster_digest,
+            "installed policy roster digest",
+        )?;
+        validate_hex_id(&self.latest_transition_id, "installed policy transition ID")?;
+        ensure!(self.policy_epoch > 0, "installed policy epoch is missing");
+        ensure!(
+            matches!(
+                self.policy_state_source.as_str(),
+                "db-primary-installed" | "db-primary-idempotent"
+            ),
+            "installed policy source is invalid"
+        );
+        ensure!(
+            self.cross_roster_fork_safety,
+            "installed policy lacks cross-roster fork safety"
+        );
+        validate_absolute_file_path(
+            &self.installed_certificate_file,
+            "installed_certificate_file",
+        )
+    }
+}
+
+fn validate_policy_threshold(roster: usize, required: usize, label: &str) -> Result<()> {
+    ensure!(
+        roster > 0 && required == roster / 2 + 1,
+        "{label} policy threshold is invalid"
+    );
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn validate_policy_report(
+    account: &str,
+    id: &str,
+    old_epoch: u64,
+    new_epoch: u64,
+    old_observed: usize,
+    old_required: usize,
+    new_observed: usize,
+    new_required: usize,
+    joint_majority: bool,
+    cross_roster_fork_safety: bool,
+) -> Result<()> {
+    AccountId::from_str(account).context("policy report Account ID is invalid")?;
+    validate_hex_id(id, "policy report ID")?;
+    ensure!(
+        new_epoch == old_epoch.saturating_add(1),
+        "policy report epoch transition is invalid"
+    );
+    ensure!(
+        old_required > 0 && new_required > 0,
+        "policy report thresholds are missing"
+    );
+    ensure!(
+        joint_majority == (old_observed >= old_required && new_observed >= new_required),
+        "policy report threshold fields disagree"
+    );
+    ensure!(
+        !cross_roster_fork_safety || joint_majority,
+        "policy report claims fork safety without joint majority"
+    );
+    Ok(())
 }
 
 fn validate_quorum_identity_fields(
@@ -1046,6 +1369,42 @@ mod tests {
         value["transports"][0]["transport_path"] = serde_json::Value::String("direct".to_owned());
         let route_violation: RecoveryQuorumCollectOutput = serde_json::from_value(value)?;
         assert!(route_violation.validate().is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn recovery_policy_json_separates_collection_from_certified_fork_safety() -> Result<()> {
+        let temporary = tempfile::tempdir()?;
+        let mut value = serde_json::json!({
+            "status": "account-recovery-policy-transition-joint-majority-collected",
+            "account_id": "0101010101010101010101010101010101010101010101010101010101010101",
+            "request_id": "0202020202020202020202020202020202020202020202020202020202020202",
+            "old_epoch": 0,
+            "new_epoch": 1,
+            "old_observed_approvals": 1,
+            "old_required_approvals": 1,
+            "new_observed_approvals": 2,
+            "new_required_approvals": 2,
+            "joint_majority_satisfied": true,
+            "cross_roster_fork_safety": false,
+            "approval_directory": temporary.path().join("approvals"),
+            "transports": [{
+                "approver_device_id": "0505050505050505050505050505050505050505050505050505050505050505",
+                "ticket_file": temporary.path().join("device.karpticket"),
+                "approval_file": temporary.path().join("device.karpa"),
+                "route_policy": "relay-only",
+                "transport_path": "relay",
+                "transport_remote_address": "relay:https://example.invalid/",
+                "transport_rtt_milliseconds": 42,
+                "transport_open_paths": 1
+            }]
+        });
+        let output: RecoveryPolicyTransitionCollectOutput = serde_json::from_value(value.clone())?;
+        output.validate()?;
+
+        value["joint_majority_satisfied"] = serde_json::Value::Bool(false);
+        let dishonest: RecoveryPolicyTransitionCollectOutput = serde_json::from_value(value)?;
+        assert!(dishonest.validate().is_err());
         Ok(())
     }
 }

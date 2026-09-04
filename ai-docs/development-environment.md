@@ -942,3 +942,36 @@ retirement остальных compatibility shadows ещё не реализов
   `EFC678CCC8C145A732B072D17DC56AA77D88A49180733FD8D047DE029ED747A5`;
   `target/release/kilogram-cli.exe` — 22,584,320 bytes, SHA-256
   `E6D93BC70A82307D8CBF05F9A13BEB30AE33BBA4E34178D4A977EDB82AB3BF34`.
+
+## M0.9.25 verification snapshot (2026-09-04)
+
+- Recovery-policy `.karpa` теперь передаётся через signed one-shot
+  `.karpticket` по Iroh `auto`/`direct-only`/`relay-only`; request, expiry,
+  exact union-roster certificate, endpoint, bearer и route подписаны voter
+  device key, а anti-equivocation head коммитится до ticket publication.
+- Direct loopback regression запускает два listener для transition `1 -> 2`,
+  собирает old 1/1 и new 2/2, отклоняет tampered route-policy ticket и создаёт
+  canonical `.karpc`; collection claim остаётся false до certificate.
+- Debug smoke `.tmp/m0925-process-smoke-20260904-205930` прошёл два реальных
+  helper listener process, direct-only collect, certify и install epoch 1 на
+  обоих devices.
+- Release smoke `.tmp/m0925-release-process-smoke-20260904-210137` повторил
+  lifecycle: request
+  `d4fd7fa1a1c7e99bc2ccc10e52d3f339d8dc0bb85cfc39391a9b554179d0b33b`,
+  certificate
+  `ddb57ee11e787f2b2eb093ccfa836ed48d93dce5f6574afdb506d2c85da58095`,
+  old 1/1, new 2/2, collection fork-safety false, certificate true, epoch 1
+  installed on both devices.
+- Windows desktop получил strict JSON-validated transition request/listen/
+  collect/certify/install lifecycle и раздельные Root-operation,
+  recovery-policy activation и history-recovery состояния.
+- `cargo fmt --all -- --check`, strict
+  `cargo clippy --workspace --all-targets --all-features -- -D warnings`, все
+  177 workspace tests (`--test-threads=1`) и
+  `cargo build --release --workspace` проходят.
+- Windows artifacts: `target/release/kilogram-bootstrap.exe` — 18,939,904 bytes,
+  SHA-256 `D8D6EE0D402E6356D541659DE5547BCEA10685FBCA911AEAF5BF08173F3DABDA`;
+  `target/release/kilogram-windows.exe` — 7,740,416 bytes, SHA-256
+  `8EAAB811C067AE132C4B158F09B1BE0D52CA4EFD260913CC25291B5FF956C77E`;
+  `target/release/kilogram-cli.exe` — 22,584,320 bytes, SHA-256
+  `E6D93BC70A82307D8CBF05F9A13BEB30AE33BBA4E34178D4A977EDB82AB3BF34`.

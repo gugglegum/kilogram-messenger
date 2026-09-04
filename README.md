@@ -107,7 +107,7 @@ The current two-network Windows procedure is in
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.24 recovery-policy epoch transition — complete
+## Current milestone: M0.9.25 networked recovery-policy activation — complete
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -932,6 +932,21 @@ kilogram-bootstrap account-recovery-policy-transition-approve `
   --request-file .\roster-change.karpt `
   --approval-file .\device-1.karpa
 
+# Or publish each committed approval through a signed one-shot ticket. Keep
+# the listener running while the collector fetches the exact .karpa.
+kilogram-bootstrap account-recovery-policy-transition-listen `
+  --state-dir .\kilogram-account\device `
+  --request-file .\roster-change.karpt `
+  --ticket-file .\device-1.karpticket `
+  --route-policy auto
+
+kilogram-bootstrap account-recovery-policy-transition-collect `
+  --request-file .\roster-change.karpt `
+  --ticket-file .\device-1.karpticket `
+  --ticket-file .\device-2.karpticket `
+  --approval-dir .\policy-approvals `
+  --require-joint-majority
+
 kilogram-bootstrap account-recovery-policy-transition-certify `
   --request-file .\roster-change.karpt `
   --approval-file .\device-1.karpa `
@@ -950,8 +965,21 @@ new roster. A later recovery verification may add
 `--policy-certificate-file .\roster-change.karpc`; only an exact-package device
 majority whose package extends that certified new policy receives
 `cross_roster_fork_safety=true`. File exchange is implemented in this stage;
-network collection and the desktop wizard for policy transitions remain the
-next integration step.
+M0.9.25 also carries `.karpa` over the existing Iroh LAN/hole-punch/relay
+transport. Its signed `.karpticket` binds the exact transition request,
+approver certificate, endpoint, bearer token, expiry and route policy. The
+collector rejects duplicate Device IDs, writes `{device_id}.karpa`
+idempotently, and reports old/new thresholds separately. Collection alone
+continues to report `cross_roster_fork_safety=false`; only the canonical
+`.karpc` and its installation activate the new policy.
+
+The Windows desktop places this lifecycle next to device-link. It shows three
+independent states instead of one ambiguous success flag: the Root roster
+operation, recovery-policy activation, and message-history recovery. It can
+create `.karpt`, run a voter listener, collect multiple tickets, certify the
+joint majority and install `.karpc` into one selected active device. Root and
+device private keys remain inside their protected stores; the GUI passes only
+public artifact paths and invokes the one-shot helper.
 
 The queue command prints `runtime_ipc_request_id` before connecting. If its
 result is uncertain, repeat the same message with `--request-id <PRINTED_ID>`;

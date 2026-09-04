@@ -2435,12 +2435,47 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - прежние rollback/equivocation, roster freeze, DB-primary commit-before-publish
   и direct `.kart` regressions остаются зелёными.
 
+### M0.9.25 — networked recovery-policy activation: выполнено
+
+Реализовано:
+
+- signed `.karpticket` связывает exact transition Request ID/expiry, voter
+  certificate из union old/new roster, Iroh endpoint, one-shot bearer и
+  `auto`/`direct-only`/`relay-only` route policy;
+- listener коммитит DB-primary transition approval anti-equivocation head до
+  no-clobber публикации ticket и отдаёт ровно один independently verifiable
+  `.karpa` только по exact request+bearer fetch;
+- collector отклоняет duplicate signer Device IDs, повторно проверяет ticket,
+  endpoint, route и response, идемпотентно сохраняет `{device_id}.karpa` и
+  показывает old/new quorum progress отдельно;
+- joint collection сама по себе честно сохраняет
+  `cross_roster_fork_safety=false`; true появляется только в canonical `.karpc`
+  и установленном policy epoch;
+- bootstrap CLI получил `account-recovery-policy-transition-listen` и
+  `account-recovery-policy-transition-collect`, включая hard
+  `--require-joint-majority` gate;
+- Windows wizard рядом с device-link ведёт request → network approvals →
+  certificate → per-device install и отдельно показывает Root roster operation,
+  recovery-policy activation и multi-source history recovery;
+- строгий desktop JSON boundary проверяет absolute paths, exact statuses,
+  independent thresholds, transport route consistency и невозможность claim
+  fork safety без joint majority.
+
+Проверки:
+
+- direct loopback regression собирает old 1/1 и new 2/2 через два независимых
+  one-shot listener, затем создаёт canonical `.karpc`;
+- M0.9.24 end-to-end policy/install/recovery regression и Windows wizard suite
+  остаются зелёными; финальные workspace/release проверки записываются в
+  `development-environment.md`.
+
 ### Следующий этап
 
-1. M0.9.25: перенести `.karpa` collection на существующий one-shot
-   LAN/hole-punch/relay transport и встроить policy transition в Windows
-   device-link/revocation ceremony с отдельными Root-operation, activation и
-   history-recovery состояниями.
+1. M0.9.26: сделать removal/revocation first-class Root operation в Windows,
+   атомарно публиковать active device list и fresh recovery checkpoint, затем
+   передавать exact before/after artifacts в уже готовый policy transition;
+   отдельно показывать removal, policy activation, runtime directory refresh,
+   ratchet retirement и history availability.
 2. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.

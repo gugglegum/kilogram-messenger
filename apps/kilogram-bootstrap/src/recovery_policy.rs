@@ -1,17 +1,20 @@
 use std::{
+    collections::BTreeSet,
     fs::{self, OpenOptions},
     io::Write as _,
     path::{Path, PathBuf},
-    time::{SystemTime, UNIX_EPOCH},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-use anyhow::{Context, Result, ensure};
+use anyhow::{Context, Result, bail, ensure};
+use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
+use iroh::{Endpoint, EndpointAddr, RelayUrl, endpoint::Connection};
 use kilogram_identity::{
     AccountAuthoritySnapshot, AccountRecoveryPolicyState, AccountRecoveryPolicyTransitionApproval,
     AccountRecoveryPolicyTransitionCertificate, AccountRecoveryPolicyTransitionRequest,
     AccountRootRecoveryApproval, AccountRootRecoveryPackage, AccountRootRecoveryWitness,
-    ConversationMembershipSnapshot, DeviceCapability, DeviceCertificate, DeviceState,
-    MAX_ACCOUNT_RECOVERY_POLICY_CERTIFICATE_BYTES,
+    ConversationMembershipSnapshot, DeviceCapability, DeviceCertificate, DeviceIdentity,
+    DeviceState, MAX_ACCOUNT_RECOVERY_POLICY_CERTIFICATE_BYTES,
     MAX_ACCOUNT_RECOVERY_POLICY_TRANSITION_APPROVAL_BYTES,
     MAX_ACCOUNT_RECOVERY_POLICY_TRANSITION_APPROVALS,
     MAX_ACCOUNT_RECOVERY_POLICY_TRANSITION_REQUEST_BYTES, MAX_ACCOUNT_ROOT_RECOVERY_PACKAGE_BYTES,
@@ -22,8 +25,13 @@ use kilogram_state::{
     DeviceIdentityStateRepository, EncryptedStateVault, StateDirectoryLock, StateMirrorRepository,
     StateRecordKind, StateTransaction, TrustStateRepository, VaultPrimaryWriteRepository,
 };
-use serde::Serialize;
+use kilogram_transport_iroh::{
+    RoutePolicy, SelectedPathDiagnostics, await_route_policy, endpoint_builder_for_remote,
+    endpoint_builder_with_relay,
+};
+use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
+use tokio::time::timeout;
 
 const DEVICE_CERTIFICATE_PATH: &str = "device-certificate.cert";
 const AUTHORITY_SNAPSHOT_PATH: &str = "account-authority.snapshot";
@@ -32,6 +40,16 @@ pub(crate) const RECOVERY_APPROVAL_HEAD_PATH: &str = "recovery-approval/latest.a
 pub(crate) const RECOVERY_POLICY_STATE_PATH: &str = "recovery-policy/current.policy";
 pub(crate) const RECOVERY_POLICY_CERTIFICATE_PATH: &str = "recovery-policy/latest-transition.karpc";
 const RECOVERY_POLICY_APPROVAL_HEAD_PATH: &str = "recovery-policy/latest-transition-approval.karpa";
+const POLICY_APPROVAL_ALPN: &[u8] = b"kilogram/m0/recovery-policy-approval/1";
+const POLICY_APPROVAL_TICKET_VERSION: u8 = 1;
+const POLICY_APPROVAL_FETCH_VERSION: u8 = 1;
+const POLICY_APPROVAL_TICKET_SIGNATURE_DOMAIN: &[u8] =
+    b"kilogram:recovery-policy-approval-ticket:v1\0";
+const MAX_POLICY_APPROVAL_TICKET_BYTES: usize = 256 * 1024;
+const MAX_POLICY_APPROVAL_FETCH_BYTES: usize = 16 * 1024;
+const CONNECTION_TIMEOUT: Duration = Duration::from_secs(30);
+const ROUTE_POLICY_WAIT: Duration = Duration::from_secs(15);
+const WIRE_IO_TIMEOUT: Duration = Duration::from_secs(15);
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -100,6 +118,194 @@ pub struct RecoveryPolicyInstallOutput {
     cross_roster_fork_safety: bool,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct RecoveryPolicyTransitionListenOutput {
+    status: &'static str,
+    account_id: String,
+    request_id: String,
+    old_epoch: u64,
+    new_epoch: u64,
+    approver_device_id: String,
+    approval_id: String,
+    ticket_file: PathBuf,
+    route_policy: &'static str,
+    transport_path: &'static str,
+    transport_remote_address: String,
+    transport_rtt_milliseconds: u64,
+    transport_open_paths: usize,
+    approval_head_source: &'static str,
+    approval_head_committed_before_ticket_publish: bool,
+    reused_committed_approval: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct RecoveryPolicyTransitionTransportObservation {
+    approver_device_id: String,
+    ticket_file: PathBuf,
+    approval_file: PathBuf,
+    route_policy: &'static str,
+    transport_path: &'static str,
+    transport_remote_address: String,
+    transport_rtt_milliseconds: u64,
+    transport_open_paths: usize,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct RecoveryPolicyTransitionCollectOutput {
+    status: &'static str,
+    account_id: String,
+    request_id: String,
+    old_epoch: u64,
+    new_epoch: u64,
+    old_observed_approvals: usize,
+    old_required_approvals: usize,
+    new_observed_approvals: usize,
+    new_required_approvals: usize,
+    joint_majority_satisfied: bool,
+    cross_roster_fork_safety: bool,
+    approval_directory: PathBuf,
+    transports: Vec<RecoveryPolicyTransitionTransportObservation>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+struct PolicyApprovalTicketContent {
+    version: u8,
+    endpoint: EndpointAddr,
+    account_id: kilogram_identity::AccountId,
+    request_id: [u8; 32],
+    request_expires_at_unix_seconds: u64,
+    approver_certificate: DeviceCertificate,
+    bearer_token: [u8; 32],
+    route_policy: RoutePolicy,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+struct PolicyApprovalTicket {
+    content: PolicyApprovalTicketContent,
+    signature: Vec<u8>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+struct PolicyApprovalFetch {
+    version: u8,
+    request_id: [u8; 32],
+    bearer_token: [u8; 32],
+}
+
+struct CommittedTransitionApproval {
+    approval: AccountRecoveryPolicyTransitionApproval,
+    reused: bool,
+    ticket: Option<PolicyApprovalTicket>,
+}
+
+impl PolicyApprovalTicket {
+    fn issue(
+        request: &AccountRecoveryPolicyTransitionRequest,
+        endpoint: EndpointAddr,
+        approver_identity: &DeviceIdentity,
+        approver_certificate: DeviceCertificate,
+        bearer_token: [u8; 32],
+        route_policy: RoutePolicy,
+    ) -> Result<Self> {
+        ensure!(
+            approver_certificate.device_id() == approver_identity.device_id(),
+            "recovery-policy ticket certificate belongs to a different device"
+        );
+        let content = PolicyApprovalTicketContent {
+            version: POLICY_APPROVAL_TICKET_VERSION,
+            endpoint,
+            account_id: request.account_id(),
+            request_id: request.request_id()?,
+            request_expires_at_unix_seconds: request.expires_at_unix_seconds(),
+            approver_certificate,
+            bearer_token,
+            route_policy,
+        };
+        let signature = approver_identity
+            .sign(&policy_ticket_signing_bytes(&content)?)
+            .to_vec();
+        let ticket = Self { content, signature };
+        ticket.verify_for_request(request, unix_time_now()?)?;
+        Ok(ticket)
+    }
+
+    fn encode(&self) -> Result<String> {
+        let encoded = serde_json::to_vec(self).context("serialize recovery-policy ticket")?;
+        ensure!(
+            encoded.len() <= MAX_POLICY_APPROVAL_TICKET_BYTES,
+            "recovery-policy ticket is too large"
+        );
+        Ok(URL_SAFE_NO_PAD.encode(encoded))
+    }
+
+    fn decode(encoded: &str) -> Result<Self> {
+        ensure!(
+            encoded.len() <= MAX_POLICY_APPROVAL_TICKET_BYTES.saturating_mul(2),
+            "encoded recovery-policy ticket is too large"
+        );
+        let bytes = URL_SAFE_NO_PAD
+            .decode(encoded.trim())
+            .context("decode recovery-policy ticket as base64url")?;
+        ensure!(
+            bytes.len() <= MAX_POLICY_APPROVAL_TICKET_BYTES,
+            "recovery-policy ticket is too large"
+        );
+        serde_json::from_slice(&bytes).context("decode recovery-policy ticket")
+    }
+
+    fn verify_for_request(
+        &self,
+        request: &AccountRecoveryPolicyTransitionRequest,
+        now: u64,
+    ) -> Result<()> {
+        request.verify_at(now)?;
+        ensure!(
+            self.content.version == POLICY_APPROVAL_TICKET_VERSION,
+            "unsupported recovery-policy ticket version"
+        );
+        ensure!(
+            self.content.account_id == request.account_id()
+                && self.content.request_id == request.request_id()?
+                && self.content.request_expires_at_unix_seconds
+                    == request.expires_at_unix_seconds(),
+            "recovery-policy ticket is bound to a different transition request"
+        );
+        ensure!(
+            now <= self.content.request_expires_at_unix_seconds,
+            "recovery-policy ticket has expired"
+        );
+        self.content.approver_certificate.verify()?;
+        ensure!(
+            package_authorizes_certificate(
+                request.old_package(),
+                &self.content.approver_certificate,
+            ) || package_authorizes_certificate(
+                request.new_package(),
+                &self.content.approver_certificate,
+            ),
+            "recovery-policy ticket signer is not exact and active in either roster"
+        );
+        self.content
+            .approver_certificate
+            .device_id()
+            .verify(
+                &policy_ticket_signing_bytes(&self.content)?,
+                &self.signature,
+            )
+            .context("verify device signature on recovery-policy ticket")?;
+        if self.content.route_policy == RoutePolicy::RelayOnly {
+            ensure!(
+                self.content.endpoint.relay_urls().next().is_some(),
+                "relay-only recovery-policy ticket has no relay address"
+            );
+        }
+        Ok(())
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn create_transition_request(
     old_package_file: impl AsRef<Path>,
@@ -140,10 +346,26 @@ pub fn approve_transition(
 ) -> Result<RecoveryPolicyTransitionApprovalOutput> {
     let now = unix_time_now()?;
     let request = read_transition_request(request_file.as_ref(), now)?;
-    let state_dir = fs::canonicalize(state_dir.as_ref()).with_context(|| {
+    let committed = approve_decoded_transition(state_dir.as_ref(), &request, None, now)?;
+    let encoded = committed.approval.encode()?;
+    write_idempotent(approval_file.as_ref(), &encoded)?;
+    transition_approval_output(
+        &committed.approval,
+        absolute_existing_path(approval_file.as_ref())?,
+        committed.reused,
+    )
+}
+
+fn approve_decoded_transition(
+    state_dir: &Path,
+    request: &AccountRecoveryPolicyTransitionRequest,
+    ticket_draft: Option<(EndpointAddr, [u8; 32], RoutePolicy)>,
+    now: u64,
+) -> Result<CommittedTransitionApproval> {
+    let state_dir = fs::canonicalize(state_dir).with_context(|| {
         format!(
             "resolve recovery-policy approving device state {}",
-            state_dir.as_ref().display()
+            state_dir.display()
         )
     })?;
     ensure!(
@@ -204,22 +426,37 @@ pub fn approve_transition(
     if in_old {
         match policy_state.as_ref() {
             Some(policy) => policy
-                .verify_transition_anchor(&request)
+                .verify_transition_anchor(request)
                 .context("transition does not extend the DB-primary recovery-policy anchor")?,
-            None => verify_legacy_genesis_anchor(&trust, &request)?,
+            None => verify_legacy_genesis_anchor(&trust, request)?,
         }
     }
     let existing = optional_transition_approval(&trust)?;
     if let Some(existing) = existing.as_ref()
         && existing.request_id() == &request.request_id()?
     {
-        let encoded = existing.encode()?;
-        write_idempotent(approval_file.as_ref(), &encoded)?;
-        return transition_approval_output(
-            existing,
-            absolute_existing_path(approval_file.as_ref())?,
-            true,
+        existing.verify_for_request(request)?;
+        ensure!(
+            existing.approver_device_id() == device.identity().device_id(),
+            "committed recovery-policy approval belongs to a different device"
         );
+        let ticket = ticket_draft
+            .map(|(endpoint, bearer_token, route_policy)| {
+                PolicyApprovalTicket::issue(
+                    request,
+                    endpoint,
+                    device.identity(),
+                    certificate.clone(),
+                    bearer_token,
+                    route_policy,
+                )
+            })
+            .transpose()?;
+        return Ok(CommittedTransitionApproval {
+            approval: existing.clone(),
+            reused: true,
+            ticket,
+        });
     }
     if let Some(existing) = existing.as_ref() {
         ensure!(
@@ -235,7 +472,7 @@ pub fn approve_transition(
         .unwrap_or([0_u8; 32]);
     let approval = AccountRecoveryPolicyTransitionApproval::issue(
         device.identity(),
-        &request,
+        request,
         previous_approval_id,
         now,
     )?;
@@ -260,12 +497,352 @@ pub fn approve_transition(
         .finish_dual_write()
         .context("complete policy approval vault mirror");
     combine_dual_write(commit_result, mirror_result.map(|_| ()))?;
-    write_idempotent(approval_file.as_ref(), &approval_bytes)?;
-    transition_approval_output(
-        &approval,
-        absolute_existing_path(approval_file.as_ref())?,
-        false,
+    let ticket = ticket_draft
+        .map(|(endpoint, bearer_token, route_policy)| {
+            PolicyApprovalTicket::issue(
+                request,
+                endpoint,
+                device.identity(),
+                certificate,
+                bearer_token,
+                route_policy,
+            )
+        })
+        .transpose()?;
+    Ok(CommittedTransitionApproval {
+        approval,
+        reused: false,
+        ticket,
+    })
+}
+
+pub async fn listen_for_transition_approval(
+    state_dir: impl AsRef<Path>,
+    request_file: impl AsRef<Path>,
+    ticket_file: impl AsRef<Path>,
+    route_policy: RoutePolicy,
+    relay_url: Option<RelayUrl>,
+    relay_wait_seconds: u64,
+) -> Result<RecoveryPolicyTransitionListenOutput> {
+    let endpoint = endpoint_builder_with_relay(route_policy, relay_url)
+        .alpns(vec![POLICY_APPROVAL_ALPN.to_vec()])
+        .bind()
+        .await
+        .context("bind recovery-policy approval listener")?;
+    wait_for_relay(&endpoint, route_policy, relay_wait_seconds).await?;
+    listen_for_transition_approval_on_endpoint(
+        state_dir.as_ref(),
+        request_file.as_ref(),
+        ticket_file.as_ref(),
+        route_policy,
+        endpoint,
     )
+    .await
+}
+
+async fn listen_for_transition_approval_on_endpoint(
+    state_dir: &Path,
+    request_file: &Path,
+    ticket_file: &Path,
+    route_policy: RoutePolicy,
+    endpoint: Endpoint,
+) -> Result<RecoveryPolicyTransitionListenOutput> {
+    let now = unix_time_now()?;
+    let request = read_transition_request(request_file, now)?;
+    let mut bearer_token = [0_u8; 32];
+    getrandom::fill(&mut bearer_token).context("generate recovery-policy approval bearer token")?;
+    let committed = approve_decoded_transition(
+        state_dir,
+        &request,
+        Some((endpoint.addr(), bearer_token, route_policy)),
+        now,
+    )?;
+    let ticket = committed
+        .ticket
+        .as_ref()
+        .context("network transition approval did not produce a ticket")?;
+    write_new(ticket_file, ticket.encode()?.as_bytes())?;
+    let ticket_file = absolute_existing_path(ticket_file)?;
+
+    let remaining = request
+        .expires_at_unix_seconds()
+        .checked_sub(unix_time_now()?)
+        .context("recovery-policy request expired before listener publication")?;
+    let connection =
+        accept_authenticated_connection(&endpoint, Duration::from_secs(remaining)).await?;
+    let diagnostics = await_route_policy(&connection, route_policy, ROUTE_POLICY_WAIT)
+        .await
+        .context("wait for a path allowed by the recovery-policy ticket")?;
+    let (mut send, mut receive) = timeout(WIRE_IO_TIMEOUT, connection.accept_bi())
+        .await
+        .context("accept recovery-policy approval stream timed out")?
+        .context("accept recovery-policy approval stream")?;
+    let fetch_bytes = timeout(
+        WIRE_IO_TIMEOUT,
+        receive.read_to_end(MAX_POLICY_APPROVAL_FETCH_BYTES),
+    )
+    .await
+    .context("read recovery-policy approval fetch timed out")?
+    .context("read recovery-policy approval fetch")?;
+    let fetch: PolicyApprovalFetch =
+        postcard::from_bytes(&fetch_bytes).context("decode recovery-policy approval fetch")?;
+    ensure!(
+        fetch.version == POLICY_APPROVAL_FETCH_VERSION
+            && fetch.request_id == request.request_id()?
+            && fetch.bearer_token == bearer_token,
+        "recovery-policy approval fetch is not authorized by this one-shot ticket"
+    );
+    let approval_bytes = committed.approval.encode()?;
+    timeout(WIRE_IO_TIMEOUT, send.write_all(&approval_bytes))
+        .await
+        .context("send recovery-policy approval timed out")?
+        .context("send recovery-policy approval")?;
+    send.finish()
+        .context("finish recovery-policy approval response")?;
+    let _ = timeout(WIRE_IO_TIMEOUT, connection.closed()).await;
+    endpoint.close().await;
+
+    Ok(RecoveryPolicyTransitionListenOutput {
+        status: "account-recovery-policy-transition-approved-over-transport",
+        account_id: committed.approval.account_id().to_string(),
+        request_id: encode_hex(committed.approval.request_id()),
+        old_epoch: committed.approval.old_epoch(),
+        new_epoch: committed.approval.new_epoch(),
+        approver_device_id: committed.approval.approver_device_id().to_string(),
+        approval_id: encode_hex(&committed.approval.approval_id()?),
+        ticket_file,
+        route_policy: route_policy.as_str(),
+        transport_path: diagnostics.kind.as_str(),
+        transport_remote_address: diagnostics.remote_address,
+        transport_rtt_milliseconds: duration_milliseconds(diagnostics.round_trip_time),
+        transport_open_paths: diagnostics.open_paths,
+        approval_head_source: "db-primary",
+        approval_head_committed_before_ticket_publish: true,
+        reused_committed_approval: committed.reused,
+    })
+}
+
+pub async fn collect_transition_approvals(
+    request_file: impl AsRef<Path>,
+    ticket_files: &[PathBuf],
+    approval_directory: impl AsRef<Path>,
+    require_joint_majority: bool,
+    relay_wait_seconds: u64,
+) -> Result<RecoveryPolicyTransitionCollectOutput> {
+    ensure!(
+        !ticket_files.is_empty(),
+        "at least one recovery-policy approval ticket is required"
+    );
+    ensure!(
+        ticket_files.len() <= MAX_ACCOUNT_RECOVERY_POLICY_TRANSITION_APPROVALS,
+        "too many recovery-policy approval tickets"
+    );
+    let request = read_transition_request(request_file.as_ref(), unix_time_now()?)?;
+    let approval_directory = resolve_approval_directory(approval_directory.as_ref())?;
+    let mut ticket_approvers = BTreeSet::new();
+    let mut approvals = Vec::with_capacity(ticket_files.len());
+    let mut transports = Vec::with_capacity(ticket_files.len());
+
+    for ticket_file in ticket_files {
+        let ticket_text = String::from_utf8(read_bounded_regular_file(
+            ticket_file,
+            MAX_POLICY_APPROVAL_TICKET_BYTES.saturating_mul(2),
+            "recovery-policy approval ticket",
+        )?)
+        .context("recovery-policy approval ticket is not UTF-8")?;
+        let ticket = PolicyApprovalTicket::decode(&ticket_text)?;
+        ticket.verify_for_request(&request, unix_time_now()?)?;
+        let approver = ticket.content.approver_certificate.device_id();
+        ensure!(
+            ticket_approvers.insert(approver.to_string()),
+            "duplicate recovery-policy approval ticket for device {approver}"
+        );
+        let (approval, diagnostics) =
+            collect_one_transition_approval(&request, &ticket, relay_wait_seconds).await?;
+        ensure!(
+            approval.approver_device_id() == approver,
+            "recovery-policy approval response came from a different device"
+        );
+        let approval_file = approval_directory.join(format!("{approver}.karpa"));
+        write_idempotent(&approval_file, &approval.encode()?)?;
+        let approval_file = absolute_existing_path(&approval_file)?;
+        transports.push(RecoveryPolicyTransitionTransportObservation {
+            approver_device_id: approver.to_string(),
+            ticket_file: absolute_existing_path(ticket_file)?,
+            approval_file,
+            route_policy: ticket.content.route_policy.as_str(),
+            transport_path: diagnostics.kind.as_str(),
+            transport_remote_address: diagnostics.remote_address,
+            transport_rtt_milliseconds: duration_milliseconds(diagnostics.round_trip_time),
+            transport_open_paths: diagnostics.open_paths,
+        });
+        approvals.push(approval);
+    }
+
+    let report = verify_account_recovery_policy_transition(&request, &approvals)
+        .context("verify collected recovery-policy transition approvals")?;
+    if require_joint_majority {
+        report
+            .require_joint_majority()
+            .context("require old and new strict-majority transition quorums")?;
+    }
+    let joint_majority_satisfied = report.joint_majority_satisfied();
+    Ok(RecoveryPolicyTransitionCollectOutput {
+        status: if joint_majority_satisfied {
+            "account-recovery-policy-transition-joint-majority-collected"
+        } else {
+            "account-recovery-policy-transition-partial-collected"
+        },
+        account_id: request.account_id().to_string(),
+        request_id: encode_hex(&request.request_id()?),
+        old_epoch: request.old_epoch(),
+        new_epoch: request.new_epoch(),
+        old_observed_approvals: report.old_observed(),
+        old_required_approvals: report.old_required(),
+        new_observed_approvals: report.new_observed(),
+        new_required_approvals: report.new_required(),
+        joint_majority_satisfied,
+        cross_roster_fork_safety: false,
+        approval_directory,
+        transports,
+    })
+}
+
+async fn collect_one_transition_approval(
+    request: &AccountRecoveryPolicyTransitionRequest,
+    ticket: &PolicyApprovalTicket,
+    relay_wait_seconds: u64,
+) -> Result<(
+    AccountRecoveryPolicyTransitionApproval,
+    SelectedPathDiagnostics,
+)> {
+    let route_policy = ticket.content.route_policy;
+    let endpoint = endpoint_builder_for_remote(route_policy, &ticket.content.endpoint)?
+        .alpns(vec![POLICY_APPROVAL_ALPN.to_vec()])
+        .bind()
+        .await
+        .context("bind recovery-policy approval collector")?;
+    wait_for_relay(&endpoint, route_policy, relay_wait_seconds).await?;
+    let connection = timeout(
+        CONNECTION_TIMEOUT,
+        endpoint.connect(ticket.content.endpoint.clone(), POLICY_APPROVAL_ALPN),
+    )
+    .await
+    .context("connect recovery-policy approval endpoint timed out")?
+    .context("connect recovery-policy approval endpoint")?;
+    let diagnostics = await_route_policy(&connection, route_policy, ROUTE_POLICY_WAIT)
+        .await
+        .context("wait for a path allowed by recovery-policy ticket")?;
+    let (mut send, mut receive) = timeout(WIRE_IO_TIMEOUT, connection.open_bi())
+        .await
+        .context("open recovery-policy approval stream timed out")?
+        .context("open recovery-policy approval stream")?;
+    let fetch = PolicyApprovalFetch {
+        version: POLICY_APPROVAL_FETCH_VERSION,
+        request_id: request.request_id()?,
+        bearer_token: ticket.content.bearer_token,
+    };
+    let fetch_bytes =
+        postcard::to_allocvec(&fetch).context("encode recovery-policy approval fetch")?;
+    ensure!(
+        fetch_bytes.len() <= MAX_POLICY_APPROVAL_FETCH_BYTES,
+        "recovery-policy approval fetch is too large"
+    );
+    timeout(WIRE_IO_TIMEOUT, send.write_all(&fetch_bytes))
+        .await
+        .context("send recovery-policy approval fetch timed out")?
+        .context("send recovery-policy approval fetch")?;
+    send.finish()
+        .context("finish recovery-policy approval fetch")?;
+    let approval_bytes = timeout(
+        WIRE_IO_TIMEOUT,
+        receive.read_to_end(MAX_ACCOUNT_RECOVERY_POLICY_TRANSITION_APPROVAL_BYTES),
+    )
+    .await
+    .context("read recovery-policy approval timed out")?
+    .context("read recovery-policy approval")?;
+    let approval = AccountRecoveryPolicyTransitionApproval::decode_and_verify(&approval_bytes)?;
+    approval
+        .verify_for_request(request)
+        .context("verify transported recovery-policy approval")?;
+    connection.close(0_u32.into(), b"recovery-policy approval collected");
+    endpoint.close().await;
+    Ok((approval, diagnostics))
+}
+
+async fn wait_for_relay(
+    endpoint: &Endpoint,
+    route_policy: RoutePolicy,
+    relay_wait_seconds: u64,
+) -> Result<()> {
+    if relay_wait_seconds == 0 {
+        ensure!(
+            route_policy != RoutePolicy::RelayOnly,
+            "relay-only requires a positive relay wait"
+        );
+        return Ok(());
+    }
+    match timeout(Duration::from_secs(relay_wait_seconds), endpoint.online()).await {
+        Ok(()) => Ok(()),
+        Err(_) if route_policy == RoutePolicy::RelayOnly => {
+            bail!("required relay did not become online within {relay_wait_seconds}s")
+        }
+        Err(_) => Ok(()),
+    }
+}
+
+async fn accept_authenticated_connection(
+    endpoint: &Endpoint,
+    remaining_request_lifetime: Duration,
+) -> Result<Connection> {
+    timeout(remaining_request_lifetime, async {
+        loop {
+            let incoming = endpoint
+                .accept()
+                .await
+                .context("recovery-policy endpoint closed before a connection arrived")?;
+            let accepting = match incoming.accept() {
+                Ok(accepting) => accepting,
+                Err(_) => continue,
+            };
+            match timeout(CONNECTION_TIMEOUT, accepting).await {
+                Ok(Ok(connection)) => return Ok(connection),
+                Ok(Err(_)) | Err(_) => continue,
+            }
+        }
+    })
+    .await
+    .context("recovery-policy listener reached the request expiry")?
+}
+
+fn policy_ticket_signing_bytes(content: &PolicyApprovalTicketContent) -> Result<Vec<u8>> {
+    let encoded =
+        serde_json::to_vec(content).context("serialize recovery-policy ticket content")?;
+    let mut bytes =
+        Vec::with_capacity(POLICY_APPROVAL_TICKET_SIGNATURE_DOMAIN.len() + encoded.len());
+    bytes.extend_from_slice(POLICY_APPROVAL_TICKET_SIGNATURE_DOMAIN);
+    bytes.extend_from_slice(&encoded);
+    Ok(bytes)
+}
+
+fn resolve_approval_directory(path: &Path) -> Result<PathBuf> {
+    ensure!(
+        !path.as_os_str().is_empty(),
+        "approval directory path is empty"
+    );
+    fs::create_dir_all(path)
+        .with_context(|| format!("create approval directory {}", path.display()))?;
+    let metadata = fs::symlink_metadata(path)
+        .with_context(|| format!("inspect approval directory {}", path.display()))?;
+    ensure!(
+        !metadata.file_type().is_symlink() && metadata.is_dir(),
+        "approval output must be a regular directory"
+    );
+    fs::canonicalize(path).context("resolve approval directory")
+}
+
+fn duration_milliseconds(duration: Duration) -> u64 {
+    u64::try_from(duration.as_millis()).unwrap_or(u64::MAX)
 }
 
 pub fn certify_transition(
@@ -794,9 +1371,17 @@ fn decode_hex_32(value: &str) -> Result<[u8; 32]> {
 mod tests {
     use std::error::Error;
 
+    use iroh::{RelayMode, endpoint::Builder};
     use kilogram_identity::AccountRootState;
 
     use super::*;
+
+    fn local_test_endpoint_builder() -> Result<Builder> {
+        Ok(endpoint_builder_with_relay(RoutePolicy::Auto, None)
+            .relay_mode(RelayMode::Disabled)
+            .clear_ip_transports()
+            .bind_addr((std::net::Ipv4Addr::LOCALHOST, 0))?)
+    }
 
     #[test]
     fn one_to_two_transition_requires_both_and_unfreezes_new_roster() -> Result<(), Box<dyn Error>>
@@ -925,6 +1510,159 @@ mod tests {
             AccountRootState::load(first.account_root_dir())?.account_id(),
             state.account_id()
         );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn one_shot_transport_collects_joint_transition_majority() -> Result<(), Box<dyn Error>> {
+        let parent = tempfile::tempdir()?;
+        let owner = parent.path().join("owner");
+        let first = crate::create_account(&owner)?;
+        let old_package = parent.path().join("old.karp");
+        let old_witness = parent.path().join("old.karw");
+        crate::account_recovery::export_account_root(
+            first.account_root_dir(),
+            &old_package,
+            &old_witness,
+        )?;
+        let old_request = parent.path().join("old.karq");
+        crate::recovery_quorum::create_request(&old_package, &old_witness, &old_request, 600)?;
+        crate::recovery_quorum::approve_request(
+            first.state_dir(),
+            &old_request,
+            parent.path().join("old.kara"),
+        )?;
+
+        let joining = parent.path().join("joining");
+        let link = crate::device_link::create_request(&joining, first.account_id())?;
+        let response = parent.path().join("link.kdl");
+        crate::device_link::authorize_request(
+            first.account_root_dir(),
+            link.request_file(),
+            link.sas(),
+            &response,
+            owner.join("public").join("account-device-list.snapshot"),
+        )?;
+        let joined = crate::device_link::accept_response(&joining, &response)?;
+        let new_package = parent.path().join("new.karp");
+        let new_witness = parent.path().join("new.karw");
+        crate::account_recovery::export_account_root(
+            first.account_root_dir(),
+            &new_package,
+            &new_witness,
+        )?;
+        let request_file = parent.path().join("transition.karpt");
+        create_transition_request(
+            &old_package,
+            &old_witness,
+            &new_package,
+            &new_witness,
+            0,
+            &"0".repeat(64),
+            &request_file,
+            600,
+        )?;
+
+        let first_ticket = parent.path().join("first.karpticket");
+        let second_ticket = parent.path().join("second.karpticket");
+        let first_endpoint = local_test_endpoint_builder()?
+            .alpns(vec![POLICY_APPROVAL_ALPN.to_vec()])
+            .bind()
+            .await?;
+        let second_endpoint = local_test_endpoint_builder()?
+            .alpns(vec![POLICY_APPROVAL_ALPN.to_vec()])
+            .bind()
+            .await?;
+        let first_listener = tokio::spawn({
+            let state_dir = first.state_dir().to_path_buf();
+            let request_file = request_file.clone();
+            let ticket_file = first_ticket.clone();
+            async move {
+                listen_for_transition_approval_on_endpoint(
+                    &state_dir,
+                    &request_file,
+                    &ticket_file,
+                    RoutePolicy::Auto,
+                    first_endpoint,
+                )
+                .await
+            }
+        });
+        let second_listener = tokio::spawn({
+            let state_dir = joined.state_dir().to_path_buf();
+            let request_file = request_file.clone();
+            let ticket_file = second_ticket.clone();
+            async move {
+                listen_for_transition_approval_on_endpoint(
+                    &state_dir,
+                    &request_file,
+                    &ticket_file,
+                    RoutePolicy::Auto,
+                    second_endpoint,
+                )
+                .await
+            }
+        });
+        timeout(Duration::from_secs(5), async {
+            while !first_ticket.is_file() || !second_ticket.is_file() {
+                tokio::time::sleep(Duration::from_millis(20)).await;
+            }
+        })
+        .await?;
+
+        let request = read_transition_request(&request_file, unix_time_now()?)?;
+        let ticket_text = fs::read_to_string(&first_ticket)?;
+        let mut tampered_ticket = PolicyApprovalTicket::decode(&ticket_text)?;
+        tampered_ticket.content.route_policy = RoutePolicy::DirectOnly;
+        assert!(
+            tampered_ticket
+                .verify_for_request(&request, unix_time_now()?)
+                .is_err()
+        );
+
+        let approval_dir = parent.path().join("transition-approvals");
+        let collected = collect_transition_approvals(
+            &request_file,
+            &[first_ticket, second_ticket],
+            &approval_dir,
+            true,
+            0,
+        )
+        .await?;
+        let first_listened = first_listener.await??;
+        let second_listened = second_listener.await??;
+        assert_eq!(
+            (
+                collected.old_observed_approvals,
+                collected.old_required_approvals,
+                collected.new_observed_approvals,
+                collected.new_required_approvals,
+            ),
+            (1, 1, 2, 2)
+        );
+        assert!(collected.joint_majority_satisfied);
+        assert!(!collected.cross_roster_fork_safety);
+        assert!(
+            collected
+                .transports
+                .iter()
+                .all(|transport| transport.transport_path == "direct")
+        );
+        assert!(first_listened.approval_head_committed_before_ticket_publish);
+        assert!(second_listened.approval_head_committed_before_ticket_publish);
+
+        let approval_files = collected
+            .transports
+            .iter()
+            .map(|transport| transport.approval_file.clone())
+            .collect::<Vec<_>>();
+        let certificate = certify_transition(
+            &request_file,
+            &approval_files,
+            parent.path().join("transition.karpc"),
+        )?;
+        assert!(certificate.joint_majority_satisfied);
+        assert!(certificate.cross_roster_fork_safety);
         Ok(())
     }
 }

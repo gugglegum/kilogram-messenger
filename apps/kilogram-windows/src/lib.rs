@@ -27,7 +27,9 @@ mod wizard;
 use wizard::{
     AccountRecoveryOutput, AccountRecoveryStatusOutput, DeviceLinkAcceptOutput,
     DeviceLinkAuthorizeOutput, DeviceLinkInspectOutput, DeviceLinkRequestOutput,
-    RecoveryCommandOutput, RecoveryQuorumCollectOutput, RecoveryQuorumListenOutput,
+    RecoveryCommandOutput, RecoveryPolicyInstallOutput, RecoveryPolicyTransitionCertificateOutput,
+    RecoveryPolicyTransitionCollectOutput, RecoveryPolicyTransitionListenOutput,
+    RecoveryPolicyTransitionRequestOutput, RecoveryQuorumCollectOutput, RecoveryQuorumListenOutput,
     RecoveryQuorumRequestOutput, RecoveryQuorumVerifyOutput, command_arguments, run_json,
     run_json_with_stdin, run_recovery_command,
 };
@@ -188,6 +190,11 @@ enum Operation {
     AccountRecoveryQuorumListen,
     AccountRecoveryQuorumCollect,
     AccountRecoveryQuorumVerify,
+    RecoveryPolicyRequest,
+    RecoveryPolicyListen,
+    RecoveryPolicyCollect,
+    RecoveryPolicyCertify,
+    RecoveryPolicyInstall,
     DeviceLinkRequest,
     DeviceLinkInspect,
     DeviceLinkAuthorize,
@@ -230,6 +237,16 @@ enum DeviceLinkUiAction {
     Inspect,
     Authorize,
     Accept,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum RecoveryPolicyUiAction {
+    None,
+    Request,
+    Listen,
+    Collect,
+    Certify,
+    Install,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -340,6 +357,58 @@ struct DeviceLinkView {
     authorization: Option<DeviceLinkAuthorizeOutput>,
     response_input_file: String,
     accepted: Option<DeviceLinkAcceptOutput>,
+    policy: RecoveryPolicyView,
+}
+
+#[derive(Debug)]
+struct RecoveryPolicyView {
+    old_package_file: String,
+    old_witness_file: String,
+    new_package_file: String,
+    new_witness_file: String,
+    old_epoch: String,
+    previous_transition_id: String,
+    request_file: String,
+    request: Option<RecoveryPolicyTransitionRequestOutput>,
+    approver_state_dir: String,
+    ticket_output_file: String,
+    route_policy: RuntimeIpcRoutePolicy,
+    listener: Option<RecoveryPolicyTransitionListenOutput>,
+    ticket_files: String,
+    approval_directory: String,
+    collection: Option<RecoveryPolicyTransitionCollectOutput>,
+    approval_files: String,
+    certificate_file: String,
+    certificate: Option<RecoveryPolicyTransitionCertificateOutput>,
+    install_state_dir: String,
+    installation: Option<RecoveryPolicyInstallOutput>,
+}
+
+impl Default for RecoveryPolicyView {
+    fn default() -> Self {
+        Self {
+            old_package_file: "kilogram-root-before-change.karp".to_owned(),
+            old_witness_file: "kilogram-root-before-change.karw".to_owned(),
+            new_package_file: "kilogram-root-after-change.karp".to_owned(),
+            new_witness_file: "kilogram-root-after-change.karw".to_owned(),
+            old_epoch: "0".to_owned(),
+            previous_transition_id: "0".repeat(64),
+            request_file: "kilogram-recovery-policy-transition.karpt".to_owned(),
+            request: None,
+            approver_state_dir: "kilogram-account/device".to_owned(),
+            ticket_output_file: "kilogram-recovery-policy-approval.karpticket".to_owned(),
+            route_policy: RuntimeIpcRoutePolicy::Auto,
+            listener: None,
+            ticket_files: String::new(),
+            approval_directory: "kilogram-recovery-policy-approvals".to_owned(),
+            collection: None,
+            approval_files: String::new(),
+            certificate_file: "kilogram-recovery-policy-transition.karpc".to_owned(),
+            certificate: None,
+            install_state_dir: "kilogram-account/device".to_owned(),
+            installation: None,
+        }
+    }
 }
 
 impl Default for DeviceLinkView {
@@ -358,6 +427,7 @@ impl Default for DeviceLinkView {
             authorization: None,
             response_input_file: String::new(),
             accepted: None,
+            policy: RecoveryPolicyView::default(),
         }
     }
 }
@@ -924,6 +994,11 @@ impl ViewModel {
                 | WorkerSuccess::AccountRecoveryQuorumListened(_)
                 | WorkerSuccess::AccountRecoveryQuorumCollected(_)
                 | WorkerSuccess::AccountRecoveryQuorumVerified(_)
+                | WorkerSuccess::RecoveryPolicyRequested(_)
+                | WorkerSuccess::RecoveryPolicyListened(_)
+                | WorkerSuccess::RecoveryPolicyCollected(_)
+                | WorkerSuccess::RecoveryPolicyCertified(_)
+                | WorkerSuccess::RecoveryPolicyInstalled(_)
                 | WorkerSuccess::DeviceLinkRequested(_)
                 | WorkerSuccess::DeviceLinkInspected { .. }
                 | WorkerSuccess::DeviceLinkAuthorized(_)
@@ -993,6 +1068,40 @@ enum WorkerRequest {
         executable: PathBuf,
         request_file: PathBuf,
         approval_files: Vec<PathBuf>,
+    },
+    RecoveryPolicyRequest {
+        executable: PathBuf,
+        old_package_file: PathBuf,
+        old_witness_file: PathBuf,
+        new_package_file: PathBuf,
+        new_witness_file: PathBuf,
+        old_epoch: u64,
+        previous_transition_id: String,
+        request_file: PathBuf,
+    },
+    RecoveryPolicyListen {
+        executable: PathBuf,
+        state_dir: PathBuf,
+        request_file: PathBuf,
+        ticket_file: PathBuf,
+        route_policy: RuntimeIpcRoutePolicy,
+    },
+    RecoveryPolicyCollect {
+        executable: PathBuf,
+        request_file: PathBuf,
+        ticket_files: Vec<PathBuf>,
+        approval_directory: PathBuf,
+    },
+    RecoveryPolicyCertify {
+        executable: PathBuf,
+        request_file: PathBuf,
+        approval_files: Vec<PathBuf>,
+        certificate_file: PathBuf,
+    },
+    RecoveryPolicyInstall {
+        executable: PathBuf,
+        state_dir: PathBuf,
+        certificate_file: PathBuf,
     },
     DeviceLinkRequest {
         executable: PathBuf,
@@ -1087,6 +1196,11 @@ impl WorkerRequest {
             Self::AccountRecoveryQuorumListen { .. } => Operation::AccountRecoveryQuorumListen,
             Self::AccountRecoveryQuorumCollect { .. } => Operation::AccountRecoveryQuorumCollect,
             Self::AccountRecoveryQuorumVerify { .. } => Operation::AccountRecoveryQuorumVerify,
+            Self::RecoveryPolicyRequest { .. } => Operation::RecoveryPolicyRequest,
+            Self::RecoveryPolicyListen { .. } => Operation::RecoveryPolicyListen,
+            Self::RecoveryPolicyCollect { .. } => Operation::RecoveryPolicyCollect,
+            Self::RecoveryPolicyCertify { .. } => Operation::RecoveryPolicyCertify,
+            Self::RecoveryPolicyInstall { .. } => Operation::RecoveryPolicyInstall,
             Self::DeviceLinkRequest { .. } => Operation::DeviceLinkRequest,
             Self::DeviceLinkInspect { .. } => Operation::DeviceLinkInspect,
             Self::DeviceLinkAuthorize { .. } => Operation::DeviceLinkAuthorize,
@@ -1122,6 +1236,11 @@ enum WorkerSuccess {
     AccountRecoveryQuorumListened(Box<RecoveryQuorumListenOutput>),
     AccountRecoveryQuorumCollected(Box<RecoveryQuorumCollectOutput>),
     AccountRecoveryQuorumVerified(Box<RecoveryQuorumVerifyOutput>),
+    RecoveryPolicyRequested(Box<RecoveryPolicyTransitionRequestOutput>),
+    RecoveryPolicyListened(Box<RecoveryPolicyTransitionListenOutput>),
+    RecoveryPolicyCollected(Box<RecoveryPolicyTransitionCollectOutput>),
+    RecoveryPolicyCertified(Box<RecoveryPolicyTransitionCertificateOutput>),
+    RecoveryPolicyInstalled(Box<RecoveryPolicyInstallOutput>),
     DeviceLinkRequested(Box<DeviceLinkRequestOutput>),
     DeviceLinkInspected {
         request_file: PathBuf,
@@ -1580,6 +1699,128 @@ async fn execute_request(request: WorkerRequest) -> Result<WorkerSuccess> {
                 output,
             )))
         }
+        WorkerRequest::RecoveryPolicyRequest {
+            executable,
+            old_package_file,
+            old_witness_file,
+            new_package_file,
+            new_witness_file,
+            old_epoch,
+            previous_transition_id,
+            request_file,
+        } => {
+            let old_epoch = old_epoch.to_string();
+            let output: RecoveryPolicyTransitionRequestOutput = run_json(
+                &executable,
+                "account-recovery-policy-transition-request",
+                command_arguments([
+                    ("--old-package-file", old_package_file.as_os_str()),
+                    ("--old-witness-file", old_witness_file.as_os_str()),
+                    ("--new-package-file", new_package_file.as_os_str()),
+                    ("--new-witness-file", new_witness_file.as_os_str()),
+                    ("--old-epoch", std::ffi::OsStr::new(&old_epoch)),
+                    (
+                        "--previous-transition-id",
+                        std::ffi::OsStr::new(&previous_transition_id),
+                    ),
+                    ("--request-file", request_file.as_os_str()),
+                ]),
+            )?;
+            ensure!(
+                output.request_file == request_file,
+                "policy helper returned a different request path"
+            );
+            Ok(WorkerSuccess::RecoveryPolicyRequested(Box::new(output)))
+        }
+        WorkerRequest::RecoveryPolicyListen {
+            executable,
+            state_dir,
+            request_file,
+            ticket_file,
+            route_policy,
+        } => {
+            let route_policy = route_policy_argument(route_policy);
+            let output: RecoveryPolicyTransitionListenOutput = run_json(
+                &executable,
+                "account-recovery-policy-transition-listen",
+                command_arguments([
+                    ("--state-dir", state_dir.as_os_str()),
+                    ("--request-file", request_file.as_os_str()),
+                    ("--ticket-file", ticket_file.as_os_str()),
+                    ("--route-policy", std::ffi::OsStr::new(route_policy)),
+                ]),
+            )?;
+            ensure!(
+                output.ticket_file == ticket_file,
+                "policy listener returned a different ticket path"
+            );
+            Ok(WorkerSuccess::RecoveryPolicyListened(Box::new(output)))
+        }
+        WorkerRequest::RecoveryPolicyCollect {
+            executable,
+            request_file,
+            ticket_files,
+            approval_directory,
+        } => {
+            let mut arguments = command_arguments([
+                ("--request-file", request_file.as_os_str()),
+                ("--approval-dir", approval_directory.as_os_str()),
+            ]);
+            for ticket_file in &ticket_files {
+                arguments.push("--ticket-file".into());
+                arguments.push(ticket_file.as_os_str().into());
+            }
+            let output: RecoveryPolicyTransitionCollectOutput = run_json(
+                &executable,
+                "account-recovery-policy-transition-collect",
+                arguments,
+            )?;
+            ensure!(
+                output.approval_directory == approval_directory,
+                "policy collector returned a different approval directory"
+            );
+            Ok(WorkerSuccess::RecoveryPolicyCollected(Box::new(output)))
+        }
+        WorkerRequest::RecoveryPolicyCertify {
+            executable,
+            request_file,
+            approval_files,
+            certificate_file,
+        } => {
+            let mut arguments = command_arguments([
+                ("--request-file", request_file.as_os_str()),
+                ("--certificate-file", certificate_file.as_os_str()),
+            ]);
+            for approval_file in &approval_files {
+                arguments.push("--approval-file".into());
+                arguments.push(approval_file.as_os_str().into());
+            }
+            let output: RecoveryPolicyTransitionCertificateOutput = run_json(
+                &executable,
+                "account-recovery-policy-transition-certify",
+                arguments,
+            )?;
+            ensure!(
+                output.certificate_file == certificate_file,
+                "policy helper returned a different certificate path"
+            );
+            Ok(WorkerSuccess::RecoveryPolicyCertified(Box::new(output)))
+        }
+        WorkerRequest::RecoveryPolicyInstall {
+            executable,
+            state_dir,
+            certificate_file,
+        } => {
+            let output: RecoveryPolicyInstallOutput = run_json(
+                &executable,
+                "account-recovery-policy-transition-install",
+                command_arguments([
+                    ("--state-dir", state_dir.as_os_str()),
+                    ("--certificate-file", certificate_file.as_os_str()),
+                ]),
+            )?;
+            Ok(WorkerSuccess::RecoveryPolicyInstalled(Box::new(output)))
+        }
         WorkerRequest::DeviceLinkRequest {
             executable,
             workspace,
@@ -1959,6 +2200,11 @@ impl KilogramApp {
                     | Operation::AccountRecoveryQuorumListen
                     | Operation::AccountRecoveryQuorumCollect
                     | Operation::AccountRecoveryQuorumVerify
+                    | Operation::RecoveryPolicyRequest
+                    | Operation::RecoveryPolicyListen
+                    | Operation::RecoveryPolicyCollect
+                    | Operation::RecoveryPolicyCertify
+                    | Operation::RecoveryPolicyInstall
                     | Operation::DeviceLinkRequest
                     | Operation::DeviceLinkInspect
                     | Operation::DeviceLinkAuthorize
@@ -2127,6 +2373,65 @@ impl KilogramApp {
                 ));
                 self.account_recovery.quorum_verification = Some(*output);
             }
+            WorkerSuccess::RecoveryPolicyRequested(output) => {
+                self.device_link.policy.request_file = output.request_file.display().to_string();
+                self.device_link.policy.listener = None;
+                self.device_link.policy.collection = None;
+                self.device_link.policy.certificate = None;
+                self.device_link.policy.installation = None;
+                self.model.notice = Some(format!(
+                    "Recovery-policy transition {}→{} created; Root roster mutation is already complete, but policy activation and history recovery are still separate.",
+                    output.old_epoch, output.new_epoch
+                ));
+                self.device_link.policy.request = Some(*output);
+            }
+            WorkerSuccess::RecoveryPolicyListened(output) => {
+                self.model.notice = Some(format!(
+                    "Policy approval delivered over {} after its DB-primary anti-equivocation head was committed.",
+                    output.transport_path
+                ));
+                self.device_link.policy.listener = Some(*output);
+            }
+            WorkerSuccess::RecoveryPolicyCollected(output) => {
+                self.device_link.policy.approval_files = output
+                    .transports
+                    .iter()
+                    .map(|transport| transport.approval_file.display().to_string())
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                self.model.notice = Some(format!(
+                    "Policy approvals: old {}/{}, new {}/{}. Activation is {}.",
+                    output.old_observed_approvals,
+                    output.old_required_approvals,
+                    output.new_observed_approvals,
+                    output.new_required_approvals,
+                    if output.joint_majority_satisfied {
+                        "ready for certification"
+                    } else {
+                        "still incomplete"
+                    }
+                ));
+                self.device_link.policy.certificate = None;
+                self.device_link.policy.installation = None;
+                self.device_link.policy.collection = Some(*output);
+            }
+            WorkerSuccess::RecoveryPolicyCertified(output) => {
+                self.device_link.policy.certificate_file =
+                    output.certificate_file.display().to_string();
+                self.model.notice = Some(
+                    "Joint old/new-majority policy certificate created. Activation remains incomplete on each device until that device installs it."
+                        .to_owned(),
+                );
+                self.device_link.policy.installation = None;
+                self.device_link.policy.certificate = Some(*output);
+            }
+            WorkerSuccess::RecoveryPolicyInstalled(output) => {
+                self.model.notice = Some(format!(
+                    "Recovery policy epoch {} activated on this device. Message-history recovery has not been implied or started.",
+                    output.policy_epoch
+                ));
+                self.device_link.policy.installation = Some(*output);
+            }
             WorkerSuccess::DeviceLinkRequested(output) => {
                 self.device_link.joining_workspace = output.workspace_dir.display().to_string();
                 self.device_link.owner_request_file = output.request_file.display().to_string();
@@ -2158,7 +2463,7 @@ impl KilogramApp {
                 self.device_link.response_input_file = output.response_file.display().to_string();
                 self.device_link.authorization = Some(*output);
                 self.model.notice = Some(
-                    "Exact device enrolled; return the recipient-encrypted response and updated public device list."
+                    "Exact device enrolled at the Root layer. Return the encrypted response, export the new Root checkpoint, and complete recovery-policy activation separately."
                         .to_owned(),
                 );
             }
@@ -2185,8 +2490,9 @@ impl KilogramApp {
                 self.show_profile_editor = true;
                 self.recovery.state_dir = output.state_dir.display().to_string();
                 self.device_link.accepted = Some(*output);
+                self.device_link.policy.install_state_dir = self.recovery.state_dir.clone();
                 self.model.notice = Some(
-                    "Device link accepted. Runtime profile paths are filled; add peer routing data, save the profile, then recover history from one or more devices."
+                    "Device link accepted at the Root layer. Runtime setup, recovery-policy activation, and message-history recovery are three separate remaining states."
                         .to_owned(),
                 );
             }
@@ -2744,6 +3050,224 @@ impl KilogramApp {
             Err(error) => self
                 .model
                 .fail(Operation::AccountRecoveryQuorumVerify, format!("{error:#}")),
+        }
+    }
+
+    fn start_recovery_policy_request(&mut self) {
+        let result: Result<WorkerRequest> = (|| {
+            self.require_offline_wizard()?;
+            let executable = canonical_input_path(
+                &self.bootstrap_executable_path,
+                "Bootstrap executable",
+                true,
+            )?;
+            let old_package_file = canonical_nonsymlink_input_file(
+                &self.device_link.policy.old_package_file,
+                "Old recovery package",
+            )?;
+            let old_witness_file = canonical_nonsymlink_input_file(
+                &self.device_link.policy.old_witness_file,
+                "Old recovery witness",
+            )?;
+            let new_package_file = canonical_nonsymlink_input_file(
+                &self.device_link.policy.new_package_file,
+                "New recovery package",
+            )?;
+            let new_witness_file = canonical_nonsymlink_input_file(
+                &self.device_link.policy.new_witness_file,
+                "New recovery witness",
+            )?;
+            let old_epoch = self
+                .device_link
+                .policy
+                .old_epoch
+                .trim()
+                .parse::<u64>()
+                .context("Old recovery-policy epoch is invalid")?;
+            let previous_transition_id = self
+                .device_link
+                .policy
+                .previous_transition_id
+                .trim()
+                .to_ascii_lowercase();
+            ensure!(
+                previous_transition_id.len() == 64
+                    && previous_transition_id
+                        .bytes()
+                        .all(|byte| byte.is_ascii_hexdigit()),
+                "Previous transition ID must contain 64 hexadecimal characters"
+            );
+            let request_file = absolute_artifact_output_path(
+                &self.device_link.policy.request_file,
+                "Recovery-policy transition request",
+            )?;
+            ensure!(
+                !request_file.exists(),
+                "Policy transition request output must be a new file"
+            );
+            Ok(WorkerRequest::RecoveryPolicyRequest {
+                executable,
+                old_package_file,
+                old_witness_file,
+                new_package_file,
+                new_witness_file,
+                old_epoch,
+                previous_transition_id,
+                request_file,
+            })
+        })();
+        match result {
+            Ok(request) => self.submit(Operation::RecoveryPolicyRequest, request),
+            Err(error) => self
+                .model
+                .fail(Operation::RecoveryPolicyRequest, format!("{error:#}")),
+        }
+    }
+
+    fn start_recovery_policy_listen(&mut self) {
+        let result: Result<WorkerRequest> = (|| {
+            self.require_offline_wizard()?;
+            let executable = canonical_input_path(
+                &self.bootstrap_executable_path,
+                "Bootstrap executable",
+                true,
+            )?;
+            let state_dir = canonical_input_path(
+                &self.device_link.policy.approver_state_dir,
+                "Policy approving device state",
+                false,
+            )?;
+            let request_file = canonical_nonsymlink_input_file(
+                &self.device_link.policy.request_file,
+                "Recovery-policy transition request",
+            )?;
+            let ticket_file = absolute_output_path(
+                &self.device_link.policy.ticket_output_file,
+                "Recovery-policy approval ticket",
+                &state_dir,
+            )?;
+            ensure!(
+                !ticket_file.exists(),
+                "Policy approval ticket output must be a new file"
+            );
+            Ok(WorkerRequest::RecoveryPolicyListen {
+                executable,
+                state_dir,
+                request_file,
+                ticket_file,
+                route_policy: self.device_link.policy.route_policy,
+            })
+        })();
+        match result {
+            Ok(request) => self.submit(Operation::RecoveryPolicyListen, request),
+            Err(error) => self
+                .model
+                .fail(Operation::RecoveryPolicyListen, format!("{error:#}")),
+        }
+    }
+
+    fn start_recovery_policy_collect(&mut self) {
+        let result: Result<WorkerRequest> = (|| {
+            self.require_offline_wizard()?;
+            let executable = canonical_input_path(
+                &self.bootstrap_executable_path,
+                "Bootstrap executable",
+                true,
+            )?;
+            let request_file = canonical_nonsymlink_input_file(
+                &self.device_link.policy.request_file,
+                "Recovery-policy transition request",
+            )?;
+            let ticket_files = canonical_artifact_lines(
+                &self.device_link.policy.ticket_files,
+                "Recovery-policy approval ticket",
+            )?;
+            let approval_directory = absolute_directory_target(
+                &self.device_link.policy.approval_directory,
+                "Recovery-policy approval directory",
+            )?;
+            Ok(WorkerRequest::RecoveryPolicyCollect {
+                executable,
+                request_file,
+                ticket_files,
+                approval_directory,
+            })
+        })();
+        match result {
+            Ok(request) => self.submit(Operation::RecoveryPolicyCollect, request),
+            Err(error) => self
+                .model
+                .fail(Operation::RecoveryPolicyCollect, format!("{error:#}")),
+        }
+    }
+
+    fn start_recovery_policy_certify(&mut self) {
+        let result: Result<WorkerRequest> = (|| {
+            self.require_offline_wizard()?;
+            let executable = canonical_input_path(
+                &self.bootstrap_executable_path,
+                "Bootstrap executable",
+                true,
+            )?;
+            let request_file = canonical_nonsymlink_input_file(
+                &self.device_link.policy.request_file,
+                "Recovery-policy transition request",
+            )?;
+            let approval_files = canonical_artifact_lines(
+                &self.device_link.policy.approval_files,
+                "Recovery-policy transition approval",
+            )?;
+            let certificate_file = absolute_artifact_output_path(
+                &self.device_link.policy.certificate_file,
+                "Recovery-policy transition certificate",
+            )?;
+            ensure!(
+                !certificate_file.exists(),
+                "Policy certificate output must be a new file"
+            );
+            Ok(WorkerRequest::RecoveryPolicyCertify {
+                executable,
+                request_file,
+                approval_files,
+                certificate_file,
+            })
+        })();
+        match result {
+            Ok(request) => self.submit(Operation::RecoveryPolicyCertify, request),
+            Err(error) => self
+                .model
+                .fail(Operation::RecoveryPolicyCertify, format!("{error:#}")),
+        }
+    }
+
+    fn start_recovery_policy_install(&mut self) {
+        let result: Result<WorkerRequest> = (|| {
+            self.require_offline_wizard()?;
+            let executable = canonical_input_path(
+                &self.bootstrap_executable_path,
+                "Bootstrap executable",
+                true,
+            )?;
+            let state_dir = canonical_input_path(
+                &self.device_link.policy.install_state_dir,
+                "Policy install device state",
+                false,
+            )?;
+            let certificate_file = canonical_nonsymlink_input_file(
+                &self.device_link.policy.certificate_file,
+                "Recovery-policy transition certificate",
+            )?;
+            Ok(WorkerRequest::RecoveryPolicyInstall {
+                executable,
+                state_dir,
+                certificate_file,
+            })
+        })();
+        match result {
+            Ok(request) => self.submit(Operation::RecoveryPolicyInstall, request),
+            Err(error) => self
+                .model
+                .fail(Operation::RecoveryPolicyInstall, format!("{error:#}")),
         }
     }
 
@@ -4079,6 +4603,298 @@ impl KilogramApp {
         action
     }
 
+    fn draw_recovery_policy(&mut self, ui: &mut egui::Ui) -> RecoveryPolicyUiAction {
+        let mut action = RecoveryPolicyUiAction::None;
+        let idle = self.model.pending.is_none()
+            && self.runtime_process.is_none()
+            && self.model.connection == ConnectionState::Disconnected;
+        egui::CollapsingHeader::new("Device roster change · activate recovery policy")
+            .default_open(self.device_link.policy.request.is_some())
+            .show(ui, |ui| {
+                let root_state = if self.device_link.authorization.is_some()
+                    || self.device_link.accepted.is_some()
+                {
+                    "Root operation: device roster changed"
+                } else {
+                    "Root operation: not observed in this desktop session"
+                };
+                let policy_state = if let Some(installed) =
+                    self.device_link.policy.installation.as_ref()
+                {
+                    format!(
+                        "Recovery-policy activation: installed at epoch {}",
+                        installed.policy_epoch
+                    )
+                } else if self.device_link.policy.certificate.is_some() {
+                    "Recovery-policy activation: certified, not installed on this device"
+                        .to_owned()
+                } else if let Some(collected) = self.device_link.policy.collection.as_ref() {
+                    if collected.joint_majority_satisfied {
+                        "Recovery-policy activation: joint majority collected, not certified"
+                            .to_owned()
+                    } else {
+                        "Recovery-policy activation: approvals incomplete".to_owned()
+                    }
+                } else if self.device_link.policy.request.is_some() {
+                    "Recovery-policy activation: request created, approvals incomplete".to_owned()
+                } else {
+                    "Recovery-policy activation: not started".to_owned()
+                };
+                ui.label(root_state);
+                ui.label(policy_state);
+                ui.label("Message-history recovery: separate; use the recovery panel below");
+                ui.small("A successful device-link or revocation changes Root authority immediately. It does not by itself activate the new recovery voter set or copy message history.");
+
+                ui.separator();
+                ui.label("1 · Bind the exact Root checkpoints before and after the roster change");
+                for (label, value) in [
+                    (
+                        "Old package (.karp)",
+                        &mut self.device_link.policy.old_package_file,
+                    ),
+                    (
+                        "Old witness (.karw)",
+                        &mut self.device_link.policy.old_witness_file,
+                    ),
+                    (
+                        "New package (.karp)",
+                        &mut self.device_link.policy.new_package_file,
+                    ),
+                    (
+                        "New witness (.karw)",
+                        &mut self.device_link.policy.new_witness_file,
+                    ),
+                ] {
+                    ui.horizontal(|ui| {
+                        ui.label(label);
+                        ui.add_enabled(
+                            idle,
+                            egui::TextEdit::singleline(value).desired_width(f32::INFINITY),
+                        );
+                    });
+                }
+                ui.horizontal(|ui| {
+                    ui.label("Old policy epoch");
+                    ui.add_enabled(
+                        idle,
+                        egui::TextEdit::singleline(&mut self.device_link.policy.old_epoch)
+                            .desired_width(80.0),
+                    );
+                    ui.label("Previous transition ID");
+                    ui.add_enabled(
+                        idle,
+                        egui::TextEdit::singleline(
+                            &mut self.device_link.policy.previous_transition_id,
+                        )
+                        .desired_width(f32::INFINITY),
+                    );
+                });
+                ui.horizontal(|ui| {
+                    ui.label("New transition request (.karpt)");
+                    ui.add_enabled(
+                        idle,
+                        egui::TextEdit::singleline(&mut self.device_link.policy.request_file)
+                            .desired_width(f32::INFINITY),
+                    );
+                });
+                if ui
+                    .add_enabled(idle, egui::Button::new("Create transition request"))
+                    .clicked()
+                {
+                    action = RecoveryPolicyUiAction::Request;
+                }
+                if let Some(request) = self.device_link.policy.request.as_ref() {
+                    ui.label(format!(
+                        "Epoch {}→{} · old threshold {}/{} · new threshold {}/{}",
+                        request.old_epoch,
+                        request.new_epoch,
+                        request.old_required_approvals,
+                        request.old_roster_count,
+                        request.new_required_approvals,
+                        request.new_roster_count
+                    ));
+                    ui.monospace(format!("Request: {}", request.request_id));
+                }
+
+                ui.separator();
+                ui.group(|ui| {
+                    ui.label("2A · On each old/new voter: approve and listen once");
+                    ui.horizontal(|ui| {
+                        ui.label("Device state directory");
+                        ui.add_enabled(
+                            idle,
+                            egui::TextEdit::singleline(
+                                &mut self.device_link.policy.approver_state_dir,
+                            )
+                            .desired_width(f32::INFINITY),
+                        );
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label("New ticket (.karpticket)");
+                        ui.add_enabled(
+                            idle,
+                            egui::TextEdit::singleline(
+                                &mut self.device_link.policy.ticket_output_file,
+                            )
+                            .desired_width(f32::INFINITY),
+                        );
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label("Route");
+                        ui.add_enabled_ui(idle, |ui| {
+                            ui.selectable_value(
+                                &mut self.device_link.policy.route_policy,
+                                RuntimeIpcRoutePolicy::Auto,
+                                "Auto",
+                            );
+                            ui.selectable_value(
+                                &mut self.device_link.policy.route_policy,
+                                RuntimeIpcRoutePolicy::DirectOnly,
+                                "Direct only",
+                            );
+                            ui.selectable_value(
+                                &mut self.device_link.policy.route_policy,
+                                RuntimeIpcRoutePolicy::RelayOnly,
+                                "Relay only",
+                            );
+                        });
+                    });
+                    if ui
+                        .add_enabled(idle, egui::Button::new("Approve and wait for collector"))
+                        .clicked()
+                    {
+                        action = RecoveryPolicyUiAction::Listen;
+                    }
+                    if self.model.pending == Some(Operation::RecoveryPolicyListen) {
+                        ui.colored_label(
+                            egui::Color32::from_rgb(246, 195, 93),
+                            "The ticket appears only after the DB-primary anti-equivocation head commits. Share it and keep this one-shot listener open.",
+                        );
+                    }
+                    if let Some(listener) = self.device_link.policy.listener.as_ref() {
+                        ui.colored_label(
+                            egui::Color32::from_rgb(92, 201, 137),
+                            format!(
+                                "Delivered by {} · device {} · {} ms",
+                                listener.transport_path,
+                                compact_id(&listener.approver_device_id),
+                                listener.transport_rtt_milliseconds
+                            ),
+                        );
+                    }
+                });
+
+                ui.group(|ui| {
+                    ui.label("2B · Collector: fetch distinct signed approvals");
+                    ui.label("Ticket files, one path per line");
+                    ui.add_enabled(
+                        idle,
+                        egui::TextEdit::multiline(&mut self.device_link.policy.ticket_files)
+                            .desired_rows(2)
+                            .desired_width(f32::INFINITY),
+                    );
+                    ui.horizontal(|ui| {
+                        ui.label("Approval directory");
+                        ui.add_enabled(
+                            idle,
+                            egui::TextEdit::singleline(
+                                &mut self.device_link.policy.approval_directory,
+                            )
+                            .desired_width(f32::INFINITY),
+                        );
+                    });
+                    if ui
+                        .add_enabled(idle, egui::Button::new("Collect listed tickets"))
+                        .clicked()
+                    {
+                        action = RecoveryPolicyUiAction::Collect;
+                    }
+                    if let Some(collection) = self.device_link.policy.collection.as_ref() {
+                        ui.colored_label(
+                            if collection.joint_majority_satisfied {
+                                egui::Color32::from_rgb(92, 201, 137)
+                            } else {
+                                egui::Color32::from_rgb(246, 195, 93)
+                            },
+                            format!(
+                                "Old {}/{} · new {}/{} · joint majority: {}",
+                                collection.old_observed_approvals,
+                                collection.old_required_approvals,
+                                collection.new_observed_approvals,
+                                collection.new_required_approvals,
+                                collection.joint_majority_satisfied
+                            ),
+                        );
+                    }
+                });
+
+                ui.separator();
+                ui.label("3 · Certify once, then install on every active new-roster device");
+                ui.label("Approval files, one path per line");
+                ui.add_enabled(
+                    idle,
+                    egui::TextEdit::multiline(&mut self.device_link.policy.approval_files)
+                        .desired_rows(2)
+                        .desired_width(f32::INFINITY),
+                );
+                ui.horizontal(|ui| {
+                    ui.label("New certificate (.karpc)");
+                    ui.add_enabled(
+                        idle,
+                        egui::TextEdit::singleline(&mut self.device_link.policy.certificate_file)
+                            .desired_width(f32::INFINITY),
+                    );
+                });
+                if ui
+                    .add_enabled(
+                        idle && !self.device_link.policy.approval_files.trim().is_empty(),
+                        egui::Button::new("Certify joint majority"),
+                    )
+                    .clicked()
+                {
+                    action = RecoveryPolicyUiAction::Certify;
+                }
+                if let Some(certificate) = self.device_link.policy.certificate.as_ref() {
+                    ui.colored_label(
+                        egui::Color32::from_rgb(92, 201, 137),
+                        format!(
+                            "Certified epoch {} · cross-roster fork safety: {}",
+                            certificate.new_epoch, certificate.cross_roster_fork_safety
+                        ),
+                    );
+                }
+                ui.horizontal(|ui| {
+                    ui.label("Install into device state");
+                    ui.add_enabled(
+                        idle,
+                        egui::TextEdit::singleline(
+                            &mut self.device_link.policy.install_state_dir,
+                        )
+                        .desired_width(f32::INFINITY),
+                    );
+                });
+                if ui
+                    .add_enabled(
+                        idle && !self.device_link.policy.certificate_file.trim().is_empty(),
+                        egui::Button::new("Install certified policy on this device"),
+                    )
+                    .clicked()
+                {
+                    action = RecoveryPolicyUiAction::Install;
+                }
+                if let Some(installed) = self.device_link.policy.installation.as_ref() {
+                    ui.colored_label(
+                        egui::Color32::from_rgb(92, 201, 137),
+                        format!(
+                            "Installed epoch {} · source {}",
+                            installed.policy_epoch, installed.policy_state_source
+                        ),
+                    );
+                }
+            });
+        action
+    }
+
     fn draw_recovery(&mut self, ui: &mut egui::Ui) -> RecoveryUiAction {
         let mut action = RecoveryUiAction::None;
         let idle = self.model.pending.is_none()
@@ -5048,6 +5864,7 @@ impl eframe::App for KilogramApp {
         let mut bootstrap_action = BootstrapUiAction::None;
         let mut account_recovery_action = AccountRecoveryUiAction::None;
         let mut device_link_action = DeviceLinkUiAction::None;
+        let mut recovery_policy_action = RecoveryPolicyUiAction::None;
         let mut recovery_action = RecoveryUiAction::None;
         let mut add_contact_clicked = false;
         let mut queue_clicked = false;
@@ -5065,6 +5882,8 @@ impl eframe::App for KilogramApp {
                     account_recovery_action = self.draw_account_recovery(ui);
                     ui.add_space(4.0);
                     device_link_action = self.draw_device_link(ui);
+                    ui.add_space(4.0);
+                    recovery_policy_action = self.draw_recovery_policy(ui);
                     ui.add_space(4.0);
                     recovery_action = self.draw_recovery(ui);
                     ui.add_space(4.0);
@@ -5120,6 +5939,16 @@ impl eframe::App for KilogramApp {
             self.start_device_link_authorize();
         } else if device_link_action == DeviceLinkUiAction::Accept {
             self.start_device_link_accept();
+        } else if recovery_policy_action == RecoveryPolicyUiAction::Request {
+            self.start_recovery_policy_request();
+        } else if recovery_policy_action == RecoveryPolicyUiAction::Listen {
+            self.start_recovery_policy_listen();
+        } else if recovery_policy_action == RecoveryPolicyUiAction::Collect {
+            self.start_recovery_policy_collect();
+        } else if recovery_policy_action == RecoveryPolicyUiAction::Certify {
+            self.start_recovery_policy_certify();
+        } else if recovery_policy_action == RecoveryPolicyUiAction::Install {
+            self.start_recovery_policy_install();
         } else if recovery_action == RecoveryUiAction::Approve {
             self.start_recovery_approve();
         } else if recovery_action == RecoveryUiAction::AddExisting {

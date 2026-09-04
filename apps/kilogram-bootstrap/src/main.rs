@@ -195,6 +195,34 @@ enum Command {
         #[arg(long)]
         approval_file: PathBuf,
     },
+    /// Commit a transition approval and expose it once over a signed LAN-or-relay ticket.
+    AccountRecoveryPolicyTransitionListen {
+        #[arg(long)]
+        state_dir: PathBuf,
+        #[arg(long)]
+        request_file: PathBuf,
+        #[arg(long)]
+        ticket_file: PathBuf,
+        #[arg(long, value_enum, default_value_t = RoutePolicyArg::Auto)]
+        route_policy: RoutePolicyArg,
+        #[arg(long)]
+        relay_url: Option<String>,
+        #[arg(long, default_value_t = 30)]
+        relay_wait_seconds: u64,
+    },
+    /// Collect distinct transition approvals from one-shot LAN-or-relay tickets.
+    AccountRecoveryPolicyTransitionCollect {
+        #[arg(long)]
+        request_file: PathBuf,
+        #[arg(long = "ticket-file", required = true)]
+        ticket_files: Vec<PathBuf>,
+        #[arg(long)]
+        approval_dir: PathBuf,
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        require_joint_majority: bool,
+        #[arg(long, default_value_t = 30)]
+        relay_wait_seconds: u64,
+    },
     /// Build a permanent certificate only when both old and new strict majorities sign.
     AccountRecoveryPolicyTransitionCertify {
         #[arg(long)]
@@ -421,6 +449,48 @@ async fn main() -> Result<()> {
             request_file,
             approval_file,
         )?)?,
+        Command::AccountRecoveryPolicyTransitionListen {
+            state_dir,
+            request_file,
+            ticket_file,
+            route_policy,
+            relay_url,
+            relay_wait_seconds,
+        } => {
+            let relay_url = relay_url
+                .map(|url| {
+                    url.parse()
+                        .context("parse recovery-policy approval relay URL")
+                })
+                .transpose()?;
+            serde_json::to_vec(
+                &kilogram_bootstrap::recovery_policy::listen_for_transition_approval(
+                    state_dir,
+                    request_file,
+                    ticket_file,
+                    route_policy.into(),
+                    relay_url,
+                    relay_wait_seconds,
+                )
+                .await?,
+            )?
+        }
+        Command::AccountRecoveryPolicyTransitionCollect {
+            request_file,
+            ticket_files,
+            approval_dir,
+            require_joint_majority,
+            relay_wait_seconds,
+        } => serde_json::to_vec(
+            &kilogram_bootstrap::recovery_policy::collect_transition_approvals(
+                request_file,
+                &ticket_files,
+                approval_dir,
+                require_joint_majority,
+                relay_wait_seconds,
+            )
+            .await?,
+        )?,
         Command::AccountRecoveryPolicyTransitionCertify {
             request_file,
             approval_files,
