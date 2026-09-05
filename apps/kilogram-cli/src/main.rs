@@ -123,9 +123,10 @@ use recovery_scheduler::{
 use runtime_endpoint_announcement::{
     AcceptedEndpointObservationId, ContactEndpointAnnouncement,
     DEFAULT_ENDPOINT_ANNOUNCEMENT_VALIDITY_SECONDS, EncryptedEndpointAnnouncementBundle,
-    EndpointAnnouncementBundleId, EndpointCandidateAnnouncement, MAX_ENDPOINT_ANNOUNCEMENT_BYTES,
-    MAX_ENDPOINT_ANNOUNCEMENT_VALIDITY_SECONDS, SignedAcceptedEndpointObservation,
-    SignedEndpointAnnouncementAcknowledgement, SignedEndpointAnnouncementBundle,
+    EndpointAnnouncementBundleId, EndpointCandidateAnnouncement, EndpointObservationAnnouncement,
+    MAX_ENDPOINT_ANNOUNCEMENT_BYTES, MAX_ENDPOINT_ANNOUNCEMENT_VALIDITY_SECONDS,
+    SignedAcceptedEndpointObservation, SignedEndpointAnnouncementAcknowledgement,
+    SignedEndpointAnnouncementBundle,
 };
 use runtime_own_device_automation::{
     DEFAULT_OWN_DEVICE_ANNOUNCEMENT_INTERVAL_SECONDS,
@@ -4058,6 +4059,21 @@ impl RuntimeStateSnapshot {
         &self,
         channel_id: TicketPublicationChannelId,
     ) -> Result<Option<(u64, TicketPublicationId, [u8; 32])>> {
+        Ok(self
+            .latest_accepted_endpoint_observation(channel_id)?
+            .map(|value| {
+                (
+                    value.publication_generation(),
+                    value.publication_id(),
+                    value.ticket_digest(),
+                )
+            }))
+    }
+
+    fn latest_accepted_endpoint_observation(
+        &self,
+        channel_id: TicketPublicationChannelId,
+    ) -> Result<Option<&SignedAcceptedEndpointObservation>> {
         let Some(evidence) = self.accepted_endpoint_observations.get(&channel_id) else {
             return Ok(None);
         };
@@ -4074,18 +4090,14 @@ impl RuntimeStateSnapshot {
         let first = highest
             .next()
             .context("accepted endpoint observation high-water is empty")?;
-        let value = (
-            first.publication_generation(),
-            first.publication_id(),
-            first.ticket_digest(),
-        );
         ensure!(
             highest.all(|candidate| {
-                candidate.publication_id() == value.1 && candidate.ticket_digest() == value.2
+                candidate.publication_id() == first.publication_id()
+                    && candidate.ticket_digest() == first.ticket_digest()
             }),
             "authorized devices equivocated at the imported publication high-water"
         );
-        Ok(Some(value))
+        Ok(Some(first))
     }
 
     fn latest_ticket_automation_policy(
@@ -4944,6 +4956,25 @@ fn load_runtime_state_snapshot(
             previous = Some(observation);
         }
     }
+    for (channel_id, evidence) in &mut snapshot.accepted_endpoint_observations {
+        evidence.sort_by_key(SignedAcceptedEndpointObservation::publication_generation);
+        if let Some((generation, publication_id, ticket_digest, record_id)) = snapshot
+            .ticket_checkpoint
+            .as_ref()
+            .and_then(|checkpoint| checkpoint.accepted_endpoint_observation_anchor(*channel_id))
+        {
+            let head = evidence
+                .first()
+                .context("runtime ticket checkpoint accepted-observation anchor is absent")?;
+            ensure!(
+                head.publication_generation() == generation
+                    && head.publication_id() == publication_id
+                    && head.ticket_digest() == ticket_digest
+                    && head.evidence_id()? == record_id,
+                "runtime ticket checkpoint accepted-observation anchor does not match retained high-water"
+            );
+        }
+    }
     for (contact_id, policies) in &mut snapshot.ticket_automation_policies {
         policies.sort_by_key(SignedTicketAutomationPolicy::generation);
         let mut remaining = policies.iter();
@@ -5135,6 +5166,11 @@ fn load_runtime_state_snapshot(
                 RuntimeTicketChainAnchor::OwnDeviceRosterPolicy { .. } => {
                     !snapshot.own_device_roster_policies.is_empty()
                 }
+                RuntimeTicketChainAnchor::AcceptedEndpointObservation { channel_id, .. } => {
+                    snapshot
+                        .accepted_endpoint_observations
+                        .contains_key(channel_id)
+                }
             };
             ensure!(
                 present,
@@ -5256,6 +5292,10 @@ fn runtime_ticket_state_needs_compaction(snapshot: &RuntimeStateSnapshot) -> boo
             .values()
             .any(|records| records.len() > MAX_RUNTIME_TICKET_CHAIN_RECORDS_BEFORE_COMPACTION)
         || snapshot
+            .accepted_endpoint_observations
+            .values()
+            .any(|records| records.len() > MAX_RUNTIME_TICKET_CHAIN_RECORDS_BEFORE_COMPACTION)
+        || snapshot
             .ticket_automation_policies
             .values()
             .any(|records| records.len() > MAX_RUNTIME_TICKET_CHAIN_RECORDS_BEFORE_COMPACTION)
@@ -5362,6 +5402,22 @@ fn compact_runtime_ticket_state_if_needed(
                     record.observation_generation(),
                     record.observation_id()?,
                 ),
+                record.encode()?,
+            )?;
+        }
+    }
+    for records in snapshot.accepted_endpoint_observations.values() {
+        let head = records
+            .last()
+            .context("runtime accepted endpoint observation set is empty")?;
+        anchors.push(RuntimeTicketChainAnchor::accepted_endpoint_observation(
+            head,
+        )?);
+        for record in &records[..records.len() - 1] {
+            add_runtime_ticket_compaction_record(
+                state_directory,
+                &mut removed,
+                runtime_accepted_endpoint_observation_relative_path(record.evidence_id()?),
                 record.encode()?,
             )?;
         }
@@ -6480,7 +6536,7 @@ fn build_runtime_endpoint_announcements(
                 "endpoint announcement descriptor changed its authenticated endpoint contract"
             );
             let channel_id = binding.ticket_publication_write_key().channel_id();
-            let observation = snapshot.latest_ticket_observation(channel_id).cloned();
+            let observation = runtime_endpoint_observation_announcement(&snapshot, channel_id)?;
             observation_count += usize::from(observation.is_some());
             endpoint_count += 1;
             endpoints.push(EndpointCandidateAnnouncement::new(
@@ -6519,6 +6575,34 @@ fn build_runtime_endpoint_announcements(
         observation_count,
         expires_at_unix_seconds: bundle.expires_at_unix_seconds(),
         envelope,
+    })
+}
+
+fn runtime_endpoint_observation_announcement(
+    snapshot: &RuntimeStateSnapshot,
+    channel_id: TicketPublicationChannelId,
+) -> Result<Option<EndpointObservationAnnouncement>> {
+    let direct = snapshot.latest_ticket_observation(channel_id);
+    let accepted = snapshot.latest_accepted_endpoint_observation(channel_id)?;
+    if let (Some(direct), Some(accepted)) = (direct, accepted)
+        && direct.publication_generation() == accepted.publication_generation()
+    {
+        ensure!(
+            direct.publication_id() == accepted.publication_id()
+                && direct.ticket_digest() == accepted.ticket_digest(),
+            "local and accepted sibling observations equivocate at publication generation {}",
+            direct.publication_generation()
+        );
+    }
+    Ok(match (direct, accepted) {
+        (Some(direct), Some(accepted))
+            if accepted.publication_generation() > direct.publication_generation() =>
+        {
+            Some(EndpointObservationAnnouncement::Accepted(accepted.clone()))
+        }
+        (Some(direct), _) => Some(EndpointObservationAnnouncement::Direct(direct.clone())),
+        (None, Some(accepted)) => Some(EndpointObservationAnnouncement::Accepted(accepted.clone())),
+        (None, None) => None,
     })
 }
 
@@ -6954,6 +7038,7 @@ fn prepare_runtime_endpoint_announcement_import(
     let mut observation_evidence_count = 0_usize;
     let mut planned_contact_ids = BTreeSet::new();
     let mut planned_endpoint_ids = BTreeSet::new();
+    let mut planned_publication_observations = BTreeSet::new();
     let mut known_observations =
         BTreeMap::<(TicketPublicationChannelId, u64), (TicketPublicationId, [u8; 32])>::new();
     for observations in snapshot.ticket_observations.values() {
@@ -7156,10 +7241,10 @@ fn prepare_runtime_endpoint_announcement_import(
             {
                 fresh_tickets.push(fresh);
             }
-            if let Some(source_observation) = endpoint.latest_observation() {
+            if let Some(observation_announcement) = endpoint.latest_observation() {
+                let source_observation = observation_announcement.source_observation();
                 ensure!(
                     source_observation.local_account_id() == local_certificate.account_id()
-                        && source_observation.local_device_id() == bundle.source_device_id()
                         && source_observation.publisher_account_id()
                             == announcement.peer_account_id()
                         && source_observation.publisher_device_id() == endpoint.peer_device_id()
@@ -7174,19 +7259,42 @@ fn prepare_runtime_endpoint_announcement_import(
                     source_observation.publication_id(),
                     source_observation.ticket_digest(),
                 )?;
-                let evidence = SignedAcceptedEndpointObservation::sign(
-                    identity,
-                    local_certificate.account_id(),
-                    bundle.source_device_id(),
-                    bundle_id,
-                    bundle.created_at_unix_seconds(),
-                    source_observation.clone(),
-                )?;
-                relative_records.push((
-                    runtime_accepted_endpoint_observation_relative_path(evidence.evidence_id()?),
-                    evidence.encode()?,
-                ));
                 observation_evidence_count += 1;
+                let publication_observation = (
+                    source_observation.channel_id(),
+                    source_observation.publication_generation(),
+                    source_observation.publication_id(),
+                    source_observation.ticket_digest(),
+                );
+                let already_accepted = snapshot
+                    .accepted_endpoint_observations
+                    .get(&source_observation.channel_id())
+                    .is_some_and(|evidence| {
+                        evidence.iter().any(|value| {
+                            value.publication_generation()
+                                == source_observation.publication_generation()
+                                && value.publication_id() == source_observation.publication_id()
+                                && value.ticket_digest() == source_observation.ticket_digest()
+                        })
+                    });
+                if !already_accepted
+                    && planned_publication_observations.insert(publication_observation)
+                {
+                    let evidence = SignedAcceptedEndpointObservation::sign(
+                        identity,
+                        local_certificate.account_id(),
+                        source_observation.local_device_id(),
+                        bundle_id,
+                        bundle.created_at_unix_seconds(),
+                        source_observation.clone(),
+                    )?;
+                    relative_records.push((
+                        runtime_accepted_endpoint_observation_relative_path(
+                            evidence.evidence_id()?,
+                        ),
+                        evidence.encode()?,
+                    ));
+                }
             }
         }
     }
@@ -20692,8 +20800,10 @@ mod tests {
         let local_root = AccountRootState::create(directory.path().join("local-root"))?;
         let source_state_dir = directory.path().join("source-state");
         let recipient_state_dir = directory.path().join("recipient-state");
+        let third_state_dir = directory.path().join("third-state");
         let source = DeviceState::load_or_create(&source_state_dir)?;
         let recipient = DeviceState::load_or_create(&recipient_state_dir)?;
+        let third = DeviceState::load_or_create(&third_state_dir)?;
         let source_certificate = local_root.issue_device_certificate(
             source.identity().device_id(),
             source.encryption().public_key(),
@@ -20704,12 +20814,21 @@ mod tests {
             recipient.encryption().public_key(),
             &DeviceCapability::MESSAGING,
         )?;
+        let third_certificate = local_root.issue_device_certificate(
+            third.identity().device_id(),
+            third.encryption().public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
         let local_authority = local_root.authority_snapshot()?;
-        let local_device_list = local_root
-            .publish_device_list(&[source_certificate.clone(), recipient_certificate.clone()])?;
+        let local_device_list = local_root.publish_device_list(&[
+            source_certificate.clone(),
+            recipient_certificate.clone(),
+            third_certificate.clone(),
+        ])?;
         for (state, certificate) in [
             (&source, &source_certificate),
             (&recipient, &recipient_certificate),
+            (&third, &third_certificate),
         ] {
             state.install_certificate(certificate)?;
             state.install_own_authority_snapshot(&local_authority)?;
@@ -20749,6 +20868,7 @@ mod tests {
         )?;
         source.install_conversation_membership(&membership)?;
         recipient.install_conversation_membership(&membership)?;
+        third.install_conversation_membership(&membership)?;
         let receipt = add_runtime_contact_record(
             &source_state_dir,
             conversation.to_owned(),
@@ -20798,14 +20918,20 @@ mod tests {
             now,
             DEFAULT_PREKEY_POOL_VALIDITY_SECONDS,
         )?;
+        let third_pool = RatchetState::load_or_create(&third_state_dir)?.prekey_pool(
+            third.identity(),
+            4,
+            now,
+            DEFAULT_PREKEY_POOL_VALIDITY_SECONDS,
+        )?;
         let local_directory = AccountPrekeyDirectory::new(
             local_device_list.clone(),
-            vec![source_pool, recipient_pool],
+            vec![source_pool, recipient_pool, third_pool],
         )?;
         let source_ticket = ConnectionTicket::new(
             EndpointAddr::new(SecretKey::generate().public()),
             source.identity(),
-            source_certificate,
+            source_certificate.clone(),
             local_directory.clone(),
             peer_root.account_id(),
             RoutePolicy::Auto,
@@ -20813,7 +20939,15 @@ mod tests {
         let recipient_ticket = ConnectionTicket::new(
             EndpointAddr::new(SecretKey::generate().public()),
             recipient.identity(),
-            recipient_certificate,
+            recipient_certificate.clone(),
+            local_directory.clone(),
+            peer_root.account_id(),
+            RoutePolicy::Auto,
+        )?;
+        let third_ticket = ConnectionTicket::new(
+            EndpointAddr::new(SecretKey::generate().public()),
+            third.identity(),
+            third_certificate,
             local_directory,
             peer_root.account_id(),
             RoutePolicy::Auto,
@@ -20879,6 +21013,182 @@ mod tests {
         assert_eq!(repeated.endpoint_added_count, 0);
         assert_eq!(repeated.publication_binding_added_count, 0);
         assert_eq!(repeated.observation_evidence_added_count, 0);
+
+        let forwarded_bundle_file = directory.path().join("recipient-to-third.eab");
+        let forwarded = export_runtime_endpoint_announcements(
+            &recipient_state_dir,
+            &recipient_ticket,
+            third.identity().device_id(),
+            forwarded_bundle_file.clone(),
+            300,
+        )?;
+        assert_eq!(forwarded.observation_count, 1);
+        let third_descriptors = directory.path().join("third-descriptors");
+        let imported_forwarded = import_runtime_endpoint_announcements(
+            &third_state_dir,
+            &third_ticket,
+            &forwarded_bundle_file,
+            &third_descriptors,
+        )?;
+        assert_eq!(imported_forwarded.observation_evidence_count, 1);
+        assert_eq!(imported_forwarded.observation_evidence_added_count, 1);
+        let third_snapshot = load_runtime_state_snapshot(
+            &third_state_dir,
+            local_root.account_id(),
+            third.identity().device_id(),
+        )?;
+        assert_eq!(
+            third_snapshot.accepted_endpoint_observation_high_water(observation.channel_id())?,
+            Some((
+                publication.generation(),
+                publication.publication_id()?,
+                publication.ticket_digest(),
+            ))
+        );
+
+        let conflicting_publication = SignedTicketPublication::sign(
+            &peer,
+            peer_ticket.ticket_publication_write_key().channel_id(),
+            peer_root.account_id(),
+            local_root.account_id(),
+            "conflicting-ticket".to_owned(),
+            now,
+            300,
+            None,
+        )?;
+        let conflicting_observation = SignedTicketPublicationObservation::sign(
+            recipient.identity(),
+            local_root.account_id(),
+            &conflicting_publication,
+            now,
+            None,
+        )?;
+        let conflicting_endpoint = EndpointCandidateAnnouncement::new(
+            peer.device_id(),
+            true,
+            RoutePolicy::Auto,
+            peer_ticket.ticket_publication_write_key(),
+            peer_ticket.encode()?,
+            Some(EndpointObservationAnnouncement::Direct(
+                conflicting_observation,
+            )),
+        )?;
+        let conflicting_contact = ContactEndpointAnnouncement::new(
+            conversation.to_owned(),
+            peer_root.account_id(),
+            vec![conflicting_endpoint],
+        )?;
+        let conflicting_bundle = SignedEndpointAnnouncementBundle::sign(
+            recipient.identity(),
+            local_device_list,
+            third.identity().device_id(),
+            now,
+            300,
+            vec![conflicting_contact],
+        )?;
+        let conflicting_file = directory.path().join("conflicting.eab");
+        fs::write(
+            &conflicting_file,
+            EncryptedEndpointAnnouncementBundle::seal(&conflicting_bundle)?.encode()?,
+        )?;
+        let evidence_before = third_snapshot
+            .accepted_endpoint_observations
+            .values()
+            .map(Vec::len)
+            .sum::<usize>();
+        let error = import_runtime_endpoint_announcements(
+            &third_state_dir,
+            &third_ticket,
+            &conflicting_file,
+            &third_descriptors,
+        )
+        .err()
+        .context("same-generation sibling conflict was imported")?;
+        assert!(format!("{error:#}").contains("equivocated"));
+        let after_conflict = load_runtime_state_snapshot(
+            &third_state_dir,
+            local_root.account_id(),
+            third.identity().device_id(),
+        )?;
+        assert_eq!(
+            after_conflict
+                .accepted_endpoint_observations
+                .values()
+                .map(Vec::len)
+                .sum::<usize>(),
+            evidence_before
+        );
+
+        let evidence_bundle_id = conflicting_bundle.bundle_id()?;
+        let mut previous_publication = publication.clone();
+        let mut previous_recipient_observation = None;
+        for index in 1..=MAX_RUNTIME_TICKET_CHAIN_RECORDS_BEFORE_COMPACTION {
+            let next_publication = SignedTicketPublication::sign(
+                &peer,
+                peer_ticket.ticket_publication_write_key().channel_id(),
+                peer_root.account_id(),
+                local_root.account_id(),
+                format!("newer-ticket-{index}"),
+                now + index as u64,
+                300,
+                Some(&previous_publication),
+            )?;
+            let next_observation = SignedTicketPublicationObservation::sign(
+                recipient.identity(),
+                local_root.account_id(),
+                &next_publication,
+                now + index as u64,
+                previous_recipient_observation.as_ref(),
+            )?;
+            let evidence = SignedAcceptedEndpointObservation::sign(
+                third.identity(),
+                local_root.account_id(),
+                recipient.identity().device_id(),
+                evidence_bundle_id,
+                now + index as u64,
+                next_observation.clone(),
+            )?;
+            run_state_transaction(&third_state_dir, |transaction| {
+                persist_runtime_record(
+                    &third_state_dir,
+                    &runtime_accepted_endpoint_observation_relative_path(evidence.evidence_id()?),
+                    &evidence.encode()?,
+                    transaction,
+                )
+            })?;
+            previous_publication = next_publication;
+            previous_recipient_observation = Some(next_observation);
+        }
+        let compacted = compact_runtime_ticket_state_if_needed(&third_state_dir)?
+            .context("accepted sibling evidence did not trigger compaction")?;
+        assert_eq!(
+            compacted.removed_records,
+            MAX_RUNTIME_TICKET_CHAIN_RECORDS_BEFORE_COMPACTION
+        );
+        let compacted_snapshot = load_runtime_state_snapshot(
+            &third_state_dir,
+            local_root.account_id(),
+            third.identity().device_id(),
+        )?;
+        assert_eq!(
+            compacted_snapshot.accepted_endpoint_observations[&observation.channel_id()].len(),
+            1
+        );
+        assert_eq!(
+            compacted_snapshot
+                .accepted_endpoint_observation_high_water(observation.channel_id())?
+                .map(|value| value.0),
+            Some(previous_publication.generation())
+        );
+        assert!(
+            compacted_snapshot
+                .ticket_checkpoint
+                .as_ref()
+                .and_then(|checkpoint| {
+                    checkpoint.accepted_endpoint_observation_anchor(observation.channel_id())
+                })
+                .is_some()
+        );
         Ok(())
     }
 

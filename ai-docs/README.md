@@ -365,23 +365,26 @@ global prekey discovery/witness, автоматический recovery source di
 
 ## План ближайших работ
 
-1. M0.9.42: автоматически сводить accepted sibling publication evidence и
-   обнаруживать conflicting same-generation observations между устройствами,
-   не превращая opaque store или один Device в глобальный источник истины.
-2. Уже реализованный M0.9.41 заменяет ручную настройку каждой пары одной
+1. M0.9.43: сохранять проверяемое conflict proof, карантинить спорный
+   publication channel и показывать recovery/removal решение через IPC/desktop,
+   не выдавая локально увиденный конфликт за глобальный консенсус.
+2. Уже реализованный M0.9.42 транзитивно переносит direct или accepted
+   publication high-water через bundle v2, отклоняет same-generation конфликт
+   до mutation и compact-ит `.aeo` до checkpoint-защищённого head.
+3. Уже реализованный M0.9.41 заменяет ручную настройку каждой пары одной
    local-Device-signed roster policy: active recipients получают существующие
    discovery/announcement schedules, revoked recipients немедленно
    выключаются, а actor выполняет не более одного foreground workflow.
-3. Уже реализованный M0.9.40 даёт exact-current sibling Devices directional
+4. Уже реализованный M0.9.40 даёт exact-current sibling Devices directional
    pairwise store capabilities, recipient-HPKE публикацию свежего runtime ticket
    и автоматический fetch в runtime-managed path без общей папки.
-4. Уже реализованный M0.9.39 даёт одному listener primary peer и exact-current
+5. Уже реализованный M0.9.39 даёт одному listener primary peer и exact-current
    own-account аудитории, stable own-device ticket и Device-signed restart-safe
    foreground schedule с network permissions, backoff и compaction.
-5. Уже реализованный M0.9.38 переносит M0.9.37 recipient-encrypted bundle по
+6. Уже реализованный M0.9.38 переносит M0.9.37 recipient-encrypted bundle по
    authenticated same-account Device session, вызывает общий import gate и
    возвращает recipient-signed session-bound replay acknowledgement.
-6. Уже реализованный M0.9.37 переносит bounded endpoint candidates и signed
+7. Уже реализованный M0.9.37 переносит bounded endpoint candidates и signed
    publication high-water между exact-current authorized own Devices через
    source-signed recipient-HPKE file, не принимая bundle как Root authority.
 7. Уже реализованный M0.9.36 хранит local-device-signed expiry-independent
@@ -554,6 +557,8 @@ global prekey discovery/witness, автоматический recovery source di
   реализованный M0.9.40 directional pairwise store capability, source-signed recipient-HPKE runtime-ticket locator и foreground publish/fetch/push без общей папки.
 - [`../docs/RFC-0063-roster-wide-own-device-availability.md`](../docs/RFC-0063-roster-wide-own-device-availability.md) —
   реализованный M0.9.41 local-Device-signed roster policy, transactional child reconciliation, live revocation disable и serialized foreground availability workflow.
+- [`../docs/RFC-0064-convergent-sibling-publication-evidence.md`](../docs/RFC-0064-convergent-sibling-publication-evidence.md) —
+  реализованный M0.9.42 transitive accepted publication evidence, fail-closed same-generation divergence и checkpointed per-channel high-water compaction.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

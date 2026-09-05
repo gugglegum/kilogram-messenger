@@ -5,6 +5,9 @@ use kilogram_identity::{AccountId, DeviceId, DeviceIdentity};
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    runtime_endpoint_announcement::{
+        AcceptedEndpointObservationId, SignedAcceptedEndpointObservation,
+    },
     runtime_own_device_automation::{
         OwnDeviceAnnouncementAttemptId, OwnDeviceAnnouncementPolicyId,
         SignedOwnDeviceAnnouncementAttempt, SignedOwnDeviceAnnouncementPolicy,
@@ -91,6 +94,13 @@ pub enum RuntimeTicketChainAnchor {
         generation: u64,
         record_id: OwnDeviceRosterPolicyId,
     },
+    AcceptedEndpointObservation {
+        channel_id: TicketPublicationChannelId,
+        generation: u64,
+        publication_id: TicketPublicationId,
+        ticket_digest: [u8; 32],
+        record_id: AcceptedEndpointObservationId,
+    },
 }
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -103,6 +113,7 @@ enum RuntimeTicketChainKey {
     OwnDeviceAttempt(DeviceId),
     OwnDeviceTicketDiscoveryPolicy(DeviceId),
     OwnDeviceRosterPolicy,
+    AcceptedEndpointObservation(TicketPublicationChannelId),
 }
 
 impl RuntimeTicketChainAnchor {
@@ -183,6 +194,19 @@ impl RuntimeTicketChainAnchor {
         })
     }
 
+    pub fn accepted_endpoint_observation(
+        value: &SignedAcceptedEndpointObservation,
+    ) -> Result<Self> {
+        value.verify()?;
+        Ok(Self::AcceptedEndpointObservation {
+            channel_id: value.channel_id(),
+            generation: value.publication_generation(),
+            publication_id: value.publication_id(),
+            ticket_digest: value.ticket_digest(),
+            record_id: value.evidence_id()?,
+        })
+    }
+
     fn key(&self) -> RuntimeTicketChainKey {
         match self {
             Self::Publication { channel_id, .. } => RuntimeTicketChainKey::Publication(*channel_id),
@@ -204,6 +228,9 @@ impl RuntimeTicketChainAnchor {
                 ..
             } => RuntimeTicketChainKey::OwnDeviceTicketDiscoveryPolicy(*recipient_device_id),
             Self::OwnDeviceRosterPolicy { .. } => RuntimeTicketChainKey::OwnDeviceRosterPolicy,
+            Self::AcceptedEndpointObservation { channel_id, .. } => {
+                RuntimeTicketChainKey::AcceptedEndpointObservation(*channel_id)
+            }
         }
     }
 
@@ -216,7 +243,8 @@ impl RuntimeTicketChainAnchor {
             | Self::OwnDevicePolicy { generation, .. }
             | Self::OwnDeviceAttempt { generation, .. }
             | Self::OwnDeviceTicketDiscoveryPolicy { generation, .. }
-            | Self::OwnDeviceRosterPolicy { generation, .. } => *generation,
+            | Self::OwnDeviceRosterPolicy { generation, .. }
+            | Self::AcceptedEndpointObservation { generation, .. } => *generation,
         }
     }
 }
@@ -567,6 +595,29 @@ impl SignedRuntimeTicketCheckpoint {
             _ => None,
         })
     }
+
+    pub fn accepted_endpoint_observation_anchor(
+        &self,
+        expected_channel: TicketPublicationChannelId,
+    ) -> Option<(
+        u64,
+        TicketPublicationId,
+        [u8; 32],
+        AcceptedEndpointObservationId,
+    )> {
+        self.content.anchors.iter().find_map(|anchor| match anchor {
+            RuntimeTicketChainAnchor::AcceptedEndpointObservation {
+                channel_id,
+                generation,
+                publication_id,
+                ticket_digest,
+                record_id,
+            } if *channel_id == expected_channel => {
+                Some((*generation, *publication_id, *ticket_digest, *record_id))
+            }
+            _ => None,
+        })
+    }
 }
 
 fn validate_anchors(anchors: &[RuntimeTicketChainAnchor]) -> Result<()> {
@@ -604,7 +655,8 @@ fn validate_anchors(anchors: &[RuntimeTicketChainAnchor]) -> Result<()> {
             | RuntimeTicketChainAnchor::Policy { .. }
             | RuntimeTicketChainAnchor::OwnDevicePolicy { .. }
             | RuntimeTicketChainAnchor::OwnDeviceTicketDiscoveryPolicy { .. }
-            | RuntimeTicketChainAnchor::OwnDeviceRosterPolicy { .. } => {}
+            | RuntimeTicketChainAnchor::OwnDeviceRosterPolicy { .. }
+            | RuntimeTicketChainAnchor::AcceptedEndpointObservation { .. } => {}
         }
     }
     Ok(())

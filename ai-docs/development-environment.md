@@ -1460,3 +1460,31 @@ retirement остальных compatibility shadows ещё не реализов
   `C1DF3B54316D41BF6378F9D72C201E4B39E9493662C0FE3DCDD69727EC04BAF0`;
   `target/release/kilogram-ticket-store.exe` — 2,581,504 bytes, SHA-256
   `123887E3B8F607F77A5BEE8969B5B9B73ABC189BAEC1BD51AFFA925183020191`.
+
+## M0.9.42 verification snapshot (2026-09-05)
+
+- Existing endpoint-announcement regression расширен до трёх authorized
+  Devices: A direct observation импортируется B, B экспортирует signed accepted
+  evidence, C принимает тот же publication high-water без A -> C session.
+- Тот же regression создаёт validly signed conflicting same-generation claim
+  от B; C отклоняет bundle до external descriptor/vault mutation, а число
+  accepted records остаётся прежним.
+- Девять monotonic `.aeo` generations запускают existing transactional
+  compaction; после reload остаётся один highest record и matching
+  `AcceptedEndpointObservation` checkpoint anchor.
+- `cargo test --workspace`: 213 tests, 0 failed. `cargo fmt --all -- --check`,
+  `git diff --check` и strict `cargo clippy --workspace --all-targets
+  --all-features -- -D warnings` проходят.
+- Dedicated `cargo test --release -p kilogram-cli
+  tests::endpoint_announcements_transfer_enrollments_and_high_water_between_own_devices
+  -- --exact` и `cargo build --workspace --release` проходят; stable-name
+  CLI/bootstrap/store `--help` и hidden GUI launch smoke успешны.
+- Windows artifacts со стабильными именами:
+  `target/release/kilogram-bootstrap.exe` — 20,480,512 bytes, SHA-256
+  `BF65E44B6F815DD91B4A456E12E713319CB07935079B3ECAF0EF692F42D5F692`;
+  `target/release/kilogram-cli.exe` — 25,764,864 bytes, SHA-256
+  `3F7B957D3EB79D1C791D65DFEF8633631C9852828226ABAE37C801EF84F583A4`;
+  `target/release/kilogram-windows.exe` — 8,025,088 bytes, SHA-256
+  `C1DF3B54316D41BF6378F9D72C201E4B39E9493662C0FE3DCDD69727EC04BAF0`;
+  `target/release/kilogram-ticket-store.exe` — 2,581,504 bytes, SHA-256
+  `123887E3B8F607F77A5BEE8969B5B9B73ABC189BAEC1BD51AFFA925183020191`.

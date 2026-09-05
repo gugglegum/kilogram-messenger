@@ -195,9 +195,12 @@ sessions, distribution, removal и key epochs и не решены этим пр
   local-Device-signed exact-roster policy во все pairwise child schedules,
   добавляет recipients после полного startup roster и немедленно выключает их
   после live Root revocation; один runtime не запускает parallel fan-out.
-  Открыты compaction принятой sibling evidence, обнаружение equivocation между
-  устройствами, которые никогда не обменивались bundle, и действительно
-  распределённая cross-machine координация без доверенного scheduler.
+  M0.9.42 переносит higher direct/accepted high-water транзитивно через bundle
+  v2, отклоняет same-generation mismatch до mutation и сохраняет один
+  checkpointed `.aeo` head после compaction. Открыты durable conflict proof и
+  quarantine UX, обнаружение equivocation между устройствами, которые никогда
+  не обменивались bundle, и действительно распределённая cross-machine
+  координация без доверенного scheduler.
 - M0.9.32 compact/checkpoint-ит runtime publication, observation, policy и
   attempt chains до exact signed heads за device-signed cumulative checkpoint;
   DB-primary checkpoint/removals атомарны и crash-safe. Открытым остаётся

@@ -2965,11 +2965,36 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - contract зафиксирован в
   [`../docs/RFC-0063-roster-wide-own-device-availability.md`](../docs/RFC-0063-roster-wide-own-device-availability.md).
 
+### M0.9.42 — convergent sibling publication evidence: выполнено
+
+Реализовано:
+
+- endpoint-announcement bundle/signature domain v2 несёт на endpoint максимум
+  один higher direct либо accepted observation, причём accepted variant
+  сохраняет original observer signature и source Device acceptance signature;
+- exact-current source выбирает максимум local direct и accepted high-water;
+  equal generation с разными publication ID/ticket digest блокирует export;
+- recipient unwrap-ит forwarded evidence до original observation, объединяет
+  его со всеми local direct/accepted claims до любых descriptor/vault writes и
+  fail-closed отклоняет same-generation equivocation;
+- совместимый claim получает новую local-Device-signed `.aeo` acceptance и
+  может идти дальше A -> B -> C; уже сохранённый publication tuple не создаёт
+  новый record при другом bundle/witness;
+- accepted evidence вошла в existing compaction trigger: после восьми records
+  остаётся один highest signed `.aeo`, а checkpoint anchor связывает exact
+  channel/generation/publication ID/ticket digest/evidence ID;
+- старые checkpoint discriminants и `.aeo` v1 сохраняются, IPC остаётся v15;
+  bundle v1 как короткоживущий artifact намеренно несовместим и пересоздаётся;
+- regression с тремя Devices проверяет forwarded convergence, atomic rejection
+  signed conflict, отсутствие mutation и reload одного compacted high-water;
+- contract зафиксирован в
+  [`../docs/RFC-0064-convergent-sibling-publication-evidence.md`](../docs/RFC-0064-convergent-sibling-publication-evidence.md).
+
 ### Следующий этап
 
-1. M0.9.42: автоматически сводить accepted sibling publication evidence и
-   обнаруживать conflicting same-generation observations между Devices,
-   сохраняя local trust high-water и не назначая store глобальным witness.
+1. M0.9.43: сохранять проверяемый signed conflict proof, карантинить спорный
+   publication channel и выводить explicit recovery/removal state через
+   IPC/desktop, не выдавая local detection за global consensus.
 2. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.

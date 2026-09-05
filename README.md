@@ -143,12 +143,29 @@ opaque store is specified in
 Roster-wide projection of the current Root device list into those pairwise
 availability schedules is specified in
 [`docs/RFC-0063-roster-wide-own-device-availability.md`](docs/RFC-0063-roster-wide-own-device-availability.md).
+Transitive accepted-observation convergence and its bounded high-water
+compaction are specified in
+[`docs/RFC-0064-convergent-sibling-publication-evidence.md`](docs/RFC-0064-convergent-sibling-publication-evidence.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.41 roster-wide own-device availability — complete
+## Current milestone: M0.9.42 convergent sibling publication evidence — complete
+
+An endpoint-announcement source now forwards either its latest direct
+publication observation or its higher signed acceptance of another Account
+Device's observation. The recipient validates the original observer, the
+forwarding witness and the exact current Root roster, then creates its own
+Device-signed acceptance. Evidence therefore converges across A -> B -> C
+without a shared folder or a trusted store.
+
+Every import compares the claim with all local direct and accepted observations
+before any descriptor or vault write. Different publication IDs or ticket
+digests at one channel generation reject the complete bundle. Repeated claims
+are not stored again, and accepted evidence now compacts after eight records to
+one signed per-channel high-water protected by the cumulative runtime-ticket
+checkpoint. Endpoint-announcement bundles advance to v2; IPC remains v15.
 
 One local Device-signed roster policy now configures availability exchange with
 every other active Device in the exact current Root-signed Account list. The

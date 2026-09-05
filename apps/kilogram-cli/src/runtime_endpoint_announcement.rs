@@ -14,12 +14,12 @@ use crate::runtime_publication::{
     SignedTicketPublicationObservation, TicketPublicationChannelId, TicketPublicationId,
 };
 
-const BUNDLE_VERSION: u8 = 1;
+const BUNDLE_VERSION: u8 = 2;
 const ENVELOPE_VERSION: u8 = 1;
 const EVIDENCE_VERSION: u8 = 1;
 const ACKNOWLEDGEMENT_VERSION: u8 = 1;
-const BUNDLE_SIGNATURE_DOMAIN: &[u8] = b"kilogram:endpoint-announcement-bundle:v1\0";
-const BUNDLE_ID_DOMAIN: &[u8] = b"kilogram:endpoint-announcement-bundle-id:v1\0";
+const BUNDLE_SIGNATURE_DOMAIN: &[u8] = b"kilogram:endpoint-announcement-bundle:v2\0";
+const BUNDLE_ID_DOMAIN: &[u8] = b"kilogram:endpoint-announcement-bundle-id:v2\0";
 const ENVELOPE_HPKE_INFO: &[u8] = b"kilogram:endpoint-announcement-envelope:v1";
 const EVIDENCE_SIGNATURE_DOMAIN: &[u8] = b"kilogram:accepted-endpoint-observation:v1\0";
 const EVIDENCE_ID_DOMAIN: &[u8] = b"kilogram:accepted-endpoint-observation-id:v1\0";
@@ -226,13 +226,49 @@ impl SignedEndpointAnnouncementAcknowledgement {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub enum EndpointObservationAnnouncement {
+    Direct(SignedTicketPublicationObservation),
+    Accepted(SignedAcceptedEndpointObservation),
+}
+
+impl EndpointObservationAnnouncement {
+    fn verify(&self) -> Result<()> {
+        match self {
+            Self::Direct(observation) => observation.verify_signature(),
+            Self::Accepted(evidence) => evidence.verify(),
+        }
+    }
+
+    pub fn source_observation(&self) -> &SignedTicketPublicationObservation {
+        match self {
+            Self::Direct(observation) => observation,
+            Self::Accepted(evidence) => evidence.source_observation(),
+        }
+    }
+
+    pub fn witness_account_id(&self) -> AccountId {
+        match self {
+            Self::Direct(observation) => observation.local_account_id(),
+            Self::Accepted(evidence) => evidence.local_account_id(),
+        }
+    }
+
+    pub fn witness_device_id(&self) -> DeviceId {
+        match self {
+            Self::Direct(observation) => observation.local_device_id(),
+            Self::Accepted(evidence) => evidence.local_device_id(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct EndpointCandidateAnnouncement {
     peer_device_id: DeviceId,
     primary: bool,
     route_policy: RoutePolicy,
     ticket_publication_write_key: TicketPublicationWriteKey,
     ticket: String,
-    latest_observation: Option<SignedTicketPublicationObservation>,
+    latest_observation: Option<EndpointObservationAnnouncement>,
 }
 
 impl EndpointCandidateAnnouncement {
@@ -242,7 +278,7 @@ impl EndpointCandidateAnnouncement {
         route_policy: RoutePolicy,
         ticket_publication_write_key: TicketPublicationWriteKey,
         ticket: String,
-        latest_observation: Option<SignedTicketPublicationObservation>,
+        latest_observation: Option<EndpointObservationAnnouncement>,
     ) -> Result<Self> {
         let value = Self {
             peer_device_id,
@@ -265,10 +301,11 @@ impl EndpointCandidateAnnouncement {
             .verify()
             .context("verify endpoint announcement publication key")?;
         if let Some(observation) = &self.latest_observation {
-            observation.verify_signature()?;
+            observation.verify()?;
+            let source_observation = observation.source_observation();
             ensure!(
-                observation.channel_id() == self.ticket_publication_write_key.channel_id()
-                    && observation.publisher_device_id() == self.peer_device_id,
+                source_observation.channel_id() == self.ticket_publication_write_key.channel_id()
+                    && source_observation.publisher_device_id() == self.peer_device_id,
                 "endpoint announcement observation does not match its endpoint"
             );
         }
@@ -295,7 +332,7 @@ impl EndpointCandidateAnnouncement {
         &self.ticket
     }
 
-    pub fn latest_observation(&self) -> Option<&SignedTicketPublicationObservation> {
+    pub fn latest_observation(&self) -> Option<&EndpointObservationAnnouncement> {
         self.latest_observation.as_ref()
     }
 }
@@ -354,7 +391,7 @@ impl ContactEndpointAnnouncement {
             );
             if let Some(observation) = endpoint.latest_observation() {
                 ensure!(
-                    observation.publisher_account_id() == self.peer_account_id,
+                    observation.source_observation().publisher_account_id() == self.peer_account_id,
                     "endpoint announcement observation names another peer account"
                 );
             }
@@ -510,10 +547,10 @@ impl SignedEndpointAnnouncementBundle {
             for endpoint in contact.endpoints() {
                 if let Some(observation) = endpoint.latest_observation() {
                     ensure!(
-                        observation.local_account_id()
+                        observation.witness_account_id()
                             == self.content.account_device_list.account_id()
-                            && observation.local_device_id() == self.content.source_device_id,
-                        "endpoint announcement observation was not made by its source device"
+                            && observation.witness_device_id() == self.content.source_device_id,
+                        "endpoint announcement observation was not witnessed by its source device"
                     );
                 }
             }
@@ -768,6 +805,18 @@ impl SignedAcceptedEndpointObservation {
             EVIDENCE_ID_DOMAIN,
             &self.encode()?,
         )))
+    }
+
+    pub fn local_account_id(&self) -> AccountId {
+        self.content.local_account_id
+    }
+
+    pub fn local_device_id(&self) -> DeviceId {
+        self.content.local_device_id
+    }
+
+    pub fn source_observation(&self) -> &SignedTicketPublicationObservation {
+        &self.content.source_observation
     }
 
     pub fn channel_id(&self) -> TicketPublicationChannelId {
