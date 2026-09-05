@@ -41,6 +41,8 @@ const ACCOUNT_DEVICE_LIST_VERSION: u8 = 1;
 const ACCOUNT_DEVICE_LIST_SIGNATURE_DOMAIN: &[u8] = b"kilogram:account-device-list-signature:v1\0";
 const DEVICE_LINK_AUTHORIZATION_SIGNATURE_DOMAIN: &[u8] =
     b"kilogram:device-link-authorization-signature:v1\0";
+const PUBLICATION_CONFLICT_RESOLUTION_SIGNATURE_DOMAIN: &[u8] =
+    b"kilogram:publication-conflict-resolution-root-signature:v1\0";
 const ACCOUNT_ROOT_RECOVERY_PACKAGE_MAGIC: &[u8; 16] = b"KILOGRAM-ARPKG01";
 const ACCOUNT_ROOT_RECOVERY_WITNESS_MAGIC: &[u8; 16] = b"KILOGRAM-ARWIT01";
 const ACCOUNT_ROOT_RECOVERY_CHECKPOINT_FILE: &str = "latest-recovery-checkpoint.witness";
@@ -91,6 +93,21 @@ impl AccountId {
         let mut message =
             Vec::with_capacity(DEVICE_LINK_AUTHORIZATION_SIGNATURE_DOMAIN.len() + payload.len());
         message.extend_from_slice(DEVICE_LINK_AUTHORIZATION_SIGNATURE_DOMAIN);
+        message.extend_from_slice(payload);
+        self.verify(&message, signature)
+    }
+
+    /// Verifies the narrowly scoped Account Root authorization used to retire
+    /// a quarantined ticket-publication channel in favor of a different one.
+    pub fn verify_publication_conflict_resolution(
+        &self,
+        payload: &[u8],
+        signature: &[u8],
+    ) -> Result<(), IdentityError> {
+        let mut message = Vec::with_capacity(
+            PUBLICATION_CONFLICT_RESOLUTION_SIGNATURE_DOMAIN.len() + payload.len(),
+        );
+        message.extend_from_slice(PUBLICATION_CONFLICT_RESOLUTION_SIGNATURE_DOMAIN);
         message.extend_from_slice(payload);
         self.verify(&message, signature)
     }
@@ -878,6 +895,17 @@ impl AccountRootState {
         let mut message =
             Vec::with_capacity(DEVICE_LINK_AUTHORIZATION_SIGNATURE_DOMAIN.len() + payload.len());
         message.extend_from_slice(DEVICE_LINK_AUTHORIZATION_SIGNATURE_DOMAIN);
+        message.extend_from_slice(payload);
+        self.identity.sign(&message).to_vec()
+    }
+
+    /// Signs one canonical publication-conflict resolution payload under a
+    /// protocol-specific domain. This does not expose a generic Root signer.
+    pub fn sign_publication_conflict_resolution(&self, payload: &[u8]) -> Vec<u8> {
+        let mut message = Vec::with_capacity(
+            PUBLICATION_CONFLICT_RESOLUTION_SIGNATURE_DOMAIN.len() + payload.len(),
+        );
+        message.extend_from_slice(PUBLICATION_CONFLICT_RESOLUTION_SIGNATURE_DOMAIN);
         message.extend_from_slice(payload);
         self.identity.sign(&message).to_vec()
     }

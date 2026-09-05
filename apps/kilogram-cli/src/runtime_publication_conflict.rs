@@ -9,12 +9,25 @@ use crate::runtime_publication::{SignedTicketPublicationObservation, TicketPubli
 const CONFLICT_PROOF_VERSION: u8 = 1;
 const CONFLICT_PROOF_SIGNATURE_DOMAIN: &[u8] = b"kilogram:ticket-publication-conflict-proof:v1\0";
 const CONFLICT_PROOF_ID_DOMAIN: &[u8] = b"kilogram:ticket-publication-conflict-proof-id:v1\0";
+const CONFLICT_EVIDENCE_ID_DOMAIN: &[u8] = b"kilogram:ticket-publication-conflict-evidence-id:v1\0";
 pub const MAX_PUBLICATION_CONFLICT_PROOF_BYTES: usize = 128 * 1024;
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub struct PublicationConflictProofId([u8; 32]);
 
 impl fmt::Display for PublicationConflictProofId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for byte in &self.0 {
+            write!(formatter, "{byte:02x}")?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub struct PublicationConflictEvidenceId([u8; 32]);
+
+impl fmt::Display for PublicationConflictEvidenceId {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         for byte in &self.0 {
             write!(formatter, "{byte:02x}")?;
@@ -74,12 +87,12 @@ impl SignedPublicationConflictProof {
         };
         let signature = identity.sign(&signing_bytes(&content)?).to_vec();
         let proof = Self { content, signature };
-        proof.verify_signature()?;
+        proof.verify()?;
         Ok(proof)
     }
 
     pub fn encode(&self) -> Result<Vec<u8>> {
-        self.verify_signature()?;
+        self.verify()?;
         let bytes = postcard::to_allocvec(self).context("encode publication conflict proof")?;
         ensure!(
             bytes.len() <= MAX_PUBLICATION_CONFLICT_PROOF_BYTES,
@@ -95,7 +108,7 @@ impl SignedPublicationConflictProof {
         );
         let proof: Self =
             postcard::from_bytes(bytes).context("decode publication conflict proof")?;
-        proof.verify_signature()?;
+        proof.verify()?;
         Ok(proof)
     }
 
@@ -104,7 +117,7 @@ impl SignedPublicationConflictProof {
         expected_account_id: AccountId,
         expected_device_id: DeviceId,
     ) -> Result<()> {
-        self.verify_signature()?;
+        self.verify()?;
         ensure!(
             self.local_account_id() == expected_account_id
                 && self.detector_device_id() == expected_device_id,
@@ -113,7 +126,10 @@ impl SignedPublicationConflictProof {
         Ok(())
     }
 
-    fn verify_signature(&self) -> Result<()> {
+    /// Verifies the complete detector-signed proof without asserting that the
+    /// detector is this process' local Device. This is the gate used when an
+    /// exact-current sibling forwards a proof to another Account Device.
+    pub fn verify(&self) -> Result<()> {
         ensure!(
             self.content.version == CONFLICT_PROOF_VERSION,
             "unsupported publication conflict proof version"
@@ -152,6 +168,24 @@ impl SignedPublicationConflictProof {
         Ok(PublicationConflictProofId(*hasher.finalize().as_bytes()))
     }
 
+    /// Stable ID of the canonical signed-observation pair. Unlike `proof_id`,
+    /// this intentionally excludes detector identity, detection time and the
+    /// forwarding Device signature so one Root authorization can be applied by
+    /// every exact-current sibling that retained the same evidence.
+    pub fn evidence_id(&self) -> Result<PublicationConflictEvidenceId> {
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(CONFLICT_EVIDENCE_ID_DOMAIN);
+        for observation in [
+            &self.content.first_observation,
+            &self.content.conflicting_observation,
+        ] {
+            let encoded = observation.encode()?;
+            hasher.update(&(encoded.len() as u64).to_be_bytes());
+            hasher.update(&encoded);
+        }
+        Ok(PublicationConflictEvidenceId(*hasher.finalize().as_bytes()))
+    }
+
     pub fn local_account_id(&self) -> AccountId {
         self.content.local_account_id
     }
@@ -178,6 +212,18 @@ impl SignedPublicationConflictProof {
 
     pub fn publisher_device_id(&self) -> DeviceId {
         self.content.first_observation.publisher_device_id()
+    }
+
+    pub fn observations(
+        &self,
+    ) -> (
+        &SignedTicketPublicationObservation,
+        &SignedTicketPublicationObservation,
+    ) {
+        (
+            &self.content.first_observation,
+            &self.content.conflicting_observation,
+        )
     }
 }
 

@@ -3016,11 +3016,36 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - contract зафиксирован в
   [`../docs/RFC-0065-durable-publication-conflict-quarantine.md`](../docs/RFC-0065-durable-publication-conflict-quarantine.md).
 
+### M0.9.44 — sibling conflict proof и Root channel rotation: выполнено
+
+Реализовано:
+
+- endpoint-announcement bundle v3 переносит либо monotonic observation, либо
+  полный detector-Device-signed conflict proof; detector обязан входить в
+  byte-exact current Root roster, а recipient сохраняет собственный `.pcf`;
+- detector-specific proof ID остаётся локальным, но canonical signed
+  observation pair имеет stable evidence ID, одинаковый на всех siblings;
+- ticket v11 подписывает publication channel epoch; epoch 0 сохраняет старую
+  derivation, non-zero epoch domain-separates новый write key/channel;
+- `runtime-publication-channel-rotate` ведёт append-only Device-signed `.pcrn`
+  chain и требует restart runtime для публикации нового ticket;
+- Root-signed `.pcr` связывает exact authority revision, evidence ID, peer
+  Account/Device, old/new keys и digest свежего replacement ticket;
+- apply заменяет descriptor fail-closed, сохраняет старый binding и `.pcf`, а
+  effective channel меняется только после transactional resolution commit;
+- один portable resolution применим на A/B/C с разными local proof IDs;
+  tampering, wrong ticket, stale authority, same channel и conflicting second
+  resolution отклоняются;
+- IPC v17 и network ACK отдельно считают propagated conflict evidence;
+- contract зафиксирован в
+  [`../docs/RFC-0066-sibling-conflict-proof-and-root-channel-rotation.md`](../docs/RFC-0066-sibling-conflict-proof-and-root-channel-rotation.md).
+
 ### Следующий этап
 
-1. M0.9.44: переносить signed conflict proof между exact-current sibling
-   Devices и определить явную Root-authorized resolution/channel-rotation
-   ceremony без silent quarantine removal.
+1. M0.9.45: отделить Root signer от online runtime через bounded
+   request/response artifact, переносить Root resolution к exact-current
+   siblings и добавить guided desktop incident-recovery UI без передачи Root
+   secret в GUI/runtime.
 2. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.

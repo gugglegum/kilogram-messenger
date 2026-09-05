@@ -151,7 +151,29 @@ The current two-network Windows procedure is in
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.43 durable publication-conflict quarantine — complete
+## Current milestone: M0.9.44 sibling proof propagation and Root channel rotation — complete
+
+An exact-current Account Device now forwards a retained publication-conflict
+proof inside the recipient-encrypted endpoint-announcement bundle. The
+recipient verifies the original observation signatures, the detector signature
+and exact current Root roster, then signs and stores the same canonical pair as
+its own durable proof. Detector-specific proof IDs remain local, while a stable
+evidence ID lets one audited Root decision apply across sibling Devices.
+
+Ticket v11 adds an authenticated publication-channel epoch. An explicit
+Device-signed rotation changes the derived opaque write capability, rather than
+reissuing the same conflicted channel. The Account Root can then authorize one
+exact fresh peer-signed replacement ticket, old/new channel pair and retained
+evidence ID. Applying that artifact keeps the original `.pcf` and immutable
+binding for audit, adds an append-only `.pcr`, and makes only the authorized new
+channel effective. Tampered artifacts, wrong tickets, stale Root revisions and
+silent replacements fail closed.
+
+Endpoint-announcement bundles advance to v3 and IPC to v17. The full manual
+ceremony, crash behavior and remaining limits are specified in
+[`docs/RFC-0066-sibling-conflict-proof-and-root-channel-rotation.md`](docs/RFC-0066-sibling-conflict-proof-and-root-channel-rotation.md).
+
+## Previous milestone: M0.9.43 durable publication-conflict quarantine — complete
 
 A same-generation mismatch no longer disappears as a transient import error.
 The first detector stores one append-only local-Device-signed proof containing
@@ -170,10 +192,10 @@ the GUI nor the opaque store can clear quarantine.
 This proof establishes contradictory assertions by Account Devices at one
 local detector; it is not global consensus and does not by itself prove that
 the peer publisher signed two publications. The exact security boundary and
-remaining resolution work are specified in
+original quarantine boundary is specified in
 [`docs/RFC-0065-durable-publication-conflict-quarantine.md`](docs/RFC-0065-durable-publication-conflict-quarantine.md).
 
-## Previous milestone: M0.9.42 convergent sibling publication evidence — complete
+## Earlier milestone: M0.9.42 convergent sibling publication evidence — complete
 
 An endpoint-announcement source now forwards either its latest direct
 publication observation or its higher signed acceptance of another Account
@@ -792,7 +814,7 @@ seconds for Iroh relay-to-direct migration and print `transport_path` (`direct`,
 and number of open paths. These development diagnostics made the two-host LAN
 test distinguish a real direct path from a successful relay fallback.
 
-The listener signs one of three application route policies into ticket v10:
+The listener signs one of three application route policies into ticket v11:
 
 - `auto` accepts Iroh's selected direct or relay path;
 - `direct-only` permits relay-assisted connection establishment and NAT traversal,
@@ -1230,7 +1252,7 @@ runtime itself still has no general configuration-file write authority.
 
 M0.9.29 introduced an explicit wide-area publication/fetch adapter. M0.9.33
 now addresses each publisher-device/recipient-account pair through the hash of
-an unrelated Ed25519 write key carried in signed connection ticket v10. The
+an unrelated Ed25519 write key carried in signed connection ticket v11. The
 private capability is deterministically derived under a separate KDF domain
 from protected local device material and is never persisted or uploaded. The
 store can verify PUT authority without learning an Account ID or Device ID.

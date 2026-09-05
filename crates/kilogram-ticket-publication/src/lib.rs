@@ -16,6 +16,8 @@ const CHANNEL_ID_DOMAIN: &[u8] = b"kilogram:ticket-publication-capability-channe
 const WRITE_AUTHORIZATION_DOMAIN: &[u8] = b"kilogram:ticket-publication-write-authorization:v1\0";
 const WRITE_CAPABILITY_DERIVATION_CONTEXT: &str =
     "kilogram ticket publication per-peer write capability v1";
+const ROTATED_WRITE_CAPABILITY_DERIVATION_CONTEXT: &str =
+    "kilogram ticket publication per-peer rotated write capability v1";
 const KEY_BYTES: usize = 32;
 const SIGNATURE_BYTES: usize = 64;
 
@@ -119,12 +121,30 @@ impl TicketPublicationWriteCapability {
     /// Derives a distinct write capability from a protected local device seed
     /// and a peer-specific opaque scope. Neither input is sent to the store.
     pub fn derive(device_secret: [u8; KEY_BYTES], peer_scope: &[u8]) -> Self {
+        Self::derive_with_epoch(device_secret, peer_scope, 0)
+    }
+
+    /// Derives an independently scoped channel for an explicit monotonically
+    /// increasing rotation epoch. Epoch zero preserves the original wire key.
+    pub fn derive_with_epoch(
+        device_secret: [u8; KEY_BYTES],
+        peer_scope: &[u8],
+        epoch: u64,
+    ) -> Self {
         let device_secret = Zeroizing::new(device_secret);
-        let mut material = Zeroizing::new(Vec::with_capacity(KEY_BYTES + peer_scope.len()));
+        let mut material = Zeroizing::new(Vec::with_capacity(KEY_BYTES + peer_scope.len() + 1 + 8));
         material.extend_from_slice(device_secret.as_ref());
         material.extend_from_slice(peer_scope);
+        if epoch != 0 {
+            material.push(0);
+            material.extend_from_slice(&epoch.to_be_bytes());
+        }
         let capability_secret = Zeroizing::new(blake3::derive_key(
-            WRITE_CAPABILITY_DERIVATION_CONTEXT,
+            if epoch == 0 {
+                WRITE_CAPABILITY_DERIVATION_CONTEXT
+            } else {
+                ROTATED_WRITE_CAPABILITY_DERIVATION_CONTEXT
+            },
             material.as_slice(),
         ));
         Self {
@@ -237,8 +257,15 @@ mod tests {
         let first = TicketPublicationWriteCapability::derive([7_u8; 32], b"peer-a");
         let restarted = TicketPublicationWriteCapability::derive([7_u8; 32], b"peer-a");
         let other_peer = TicketPublicationWriteCapability::derive([7_u8; 32], b"peer-b");
+        let rotated = TicketPublicationWriteCapability::derive_with_epoch([7_u8; 32], b"peer-a", 1);
         assert_eq!(first.write_key(), restarted.write_key());
         assert_ne!(first.write_key(), other_peer.write_key());
+        assert_ne!(first.write_key(), rotated.write_key());
+        assert_eq!(
+            TicketPublicationWriteCapability::derive_with_epoch([7_u8; 32], b"peer-a", 0)
+                .write_key(),
+            first.write_key()
+        );
         let channel = first.write_key().channel_id();
         let signature = first.authorize(channel, 4, b"opaque body");
         first

@@ -13,13 +13,14 @@ use serde::{Deserialize, Serialize};
 use crate::runtime_publication::{
     SignedTicketPublicationObservation, TicketPublicationChannelId, TicketPublicationId,
 };
+use crate::runtime_publication_conflict::SignedPublicationConflictProof;
 
-const BUNDLE_VERSION: u8 = 2;
+const BUNDLE_VERSION: u8 = 3;
 const ENVELOPE_VERSION: u8 = 1;
 const EVIDENCE_VERSION: u8 = 1;
 const ACKNOWLEDGEMENT_VERSION: u8 = 1;
-const BUNDLE_SIGNATURE_DOMAIN: &[u8] = b"kilogram:endpoint-announcement-bundle:v2\0";
-const BUNDLE_ID_DOMAIN: &[u8] = b"kilogram:endpoint-announcement-bundle-id:v2\0";
+const BUNDLE_SIGNATURE_DOMAIN: &[u8] = b"kilogram:endpoint-announcement-bundle:v3\0";
+const BUNDLE_ID_DOMAIN: &[u8] = b"kilogram:endpoint-announcement-bundle-id:v3\0";
 const ENVELOPE_HPKE_INFO: &[u8] = b"kilogram:endpoint-announcement-envelope:v1";
 const EVIDENCE_SIGNATURE_DOMAIN: &[u8] = b"kilogram:accepted-endpoint-observation:v1\0";
 const EVIDENCE_ID_DOMAIN: &[u8] = b"kilogram:accepted-endpoint-observation-id:v1\0";
@@ -67,6 +68,8 @@ struct EndpointAnnouncementAcknowledgementContent {
     publication_binding_added_count: usize,
     observation_evidence_count: usize,
     observation_evidence_added_count: usize,
+    publication_conflict_count: usize,
+    publication_conflict_added_count: usize,
 }
 
 /// Recipient-signed proof that one exact announcement bundle passed the local import gate.
@@ -94,6 +97,8 @@ impl SignedEndpointAnnouncementAcknowledgement {
         publication_binding_added_count: usize,
         observation_evidence_count: usize,
         observation_evidence_added_count: usize,
+        publication_conflict_count: usize,
+        publication_conflict_added_count: usize,
     ) -> Result<Self> {
         let content = EndpointAnnouncementAcknowledgementContent {
             version: ACKNOWLEDGEMENT_VERSION,
@@ -109,6 +114,8 @@ impl SignedEndpointAnnouncementAcknowledgement {
             publication_binding_added_count,
             observation_evidence_count,
             observation_evidence_added_count,
+            publication_conflict_count,
+            publication_conflict_added_count,
         };
         let signature = identity
             .sign(&signing_bytes(ACKNOWLEDGEMENT_SIGNATURE_DOMAIN, &content)?)
@@ -173,7 +180,10 @@ impl SignedEndpointAnnouncementAcknowledgement {
                 && self.content.publication_binding_added_count <= self.content.endpoint_count
                 && self.content.observation_evidence_count <= self.content.endpoint_count
                 && self.content.observation_evidence_added_count
-                    <= self.content.observation_evidence_count,
+                    <= self.content.observation_evidence_count
+                && self.content.publication_conflict_count <= self.content.endpoint_count
+                && self.content.publication_conflict_added_count
+                    <= self.content.publication_conflict_count,
             "endpoint announcement acknowledgement contains inconsistent counts"
         );
         ensure!(
@@ -223,6 +233,14 @@ impl SignedEndpointAnnouncementAcknowledgement {
     pub fn observation_evidence_added_count(&self) -> usize {
         self.content.observation_evidence_added_count
     }
+
+    pub fn publication_conflict_count(&self) -> usize {
+        self.content.publication_conflict_count
+    }
+
+    pub fn publication_conflict_added_count(&self) -> usize {
+        self.content.publication_conflict_added_count
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -269,6 +287,7 @@ pub struct EndpointCandidateAnnouncement {
     ticket_publication_write_key: TicketPublicationWriteKey,
     ticket: String,
     latest_observation: Option<EndpointObservationAnnouncement>,
+    publication_conflict: Option<SignedPublicationConflictProof>,
 }
 
 impl EndpointCandidateAnnouncement {
@@ -279,6 +298,7 @@ impl EndpointCandidateAnnouncement {
         ticket_publication_write_key: TicketPublicationWriteKey,
         ticket: String,
         latest_observation: Option<EndpointObservationAnnouncement>,
+        publication_conflict: Option<SignedPublicationConflictProof>,
     ) -> Result<Self> {
         let value = Self {
             peer_device_id,
@@ -287,6 +307,7 @@ impl EndpointCandidateAnnouncement {
             ticket_publication_write_key,
             ticket,
             latest_observation,
+            publication_conflict,
         };
         value.verify()?;
         Ok(value)
@@ -300,6 +321,10 @@ impl EndpointCandidateAnnouncement {
         self.ticket_publication_write_key
             .verify()
             .context("verify endpoint announcement publication key")?;
+        ensure!(
+            self.latest_observation.is_none() || self.publication_conflict.is_none(),
+            "endpoint announcement cannot carry both an observation and a conflict proof"
+        );
         if let Some(observation) = &self.latest_observation {
             observation.verify()?;
             let source_observation = observation.source_observation();
@@ -307,6 +332,14 @@ impl EndpointCandidateAnnouncement {
                 source_observation.channel_id() == self.ticket_publication_write_key.channel_id()
                     && source_observation.publisher_device_id() == self.peer_device_id,
                 "endpoint announcement observation does not match its endpoint"
+            );
+        }
+        if let Some(proof) = &self.publication_conflict {
+            proof.verify()?;
+            ensure!(
+                proof.channel_id() == self.ticket_publication_write_key.channel_id()
+                    && proof.publisher_device_id() == self.peer_device_id,
+                "endpoint announcement conflict proof does not match its endpoint"
             );
         }
         Ok(())
@@ -334,6 +367,10 @@ impl EndpointCandidateAnnouncement {
 
     pub fn latest_observation(&self) -> Option<&EndpointObservationAnnouncement> {
         self.latest_observation.as_ref()
+    }
+
+    pub fn publication_conflict(&self) -> Option<&SignedPublicationConflictProof> {
+        self.publication_conflict.as_ref()
     }
 }
 
@@ -393,6 +430,12 @@ impl ContactEndpointAnnouncement {
                 ensure!(
                     observation.source_observation().publisher_account_id() == self.peer_account_id,
                     "endpoint announcement observation names another peer account"
+                );
+            }
+            if let Some(proof) = endpoint.publication_conflict() {
+                ensure!(
+                    proof.publisher_account_id() == self.peer_account_id,
+                    "endpoint announcement conflict proof names another peer account"
                 );
             }
             previous = Some(endpoint.peer_device_id);
@@ -551,6 +594,17 @@ impl SignedEndpointAnnouncementBundle {
                             == self.content.account_device_list.account_id()
                             && observation.witness_device_id() == self.content.source_device_id,
                         "endpoint announcement observation was not witnessed by its source device"
+                    );
+                }
+                if let Some(proof) = endpoint.publication_conflict() {
+                    ensure!(
+                        proof.local_account_id() == self.content.account_device_list.account_id()
+                            && self
+                                .content
+                                .account_device_list
+                                .certificate_for(proof.detector_device_id())
+                                .is_some(),
+                        "endpoint announcement conflict proof detector is not an exact-current Account Device"
                     );
                 }
             }
@@ -947,6 +1001,8 @@ mod tests {
             bundle.bundle_id()?,
             source.device_id(),
             list.revision(),
+            0,
+            0,
             0,
             0,
             0,

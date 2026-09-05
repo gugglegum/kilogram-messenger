@@ -21,7 +21,7 @@ use tokio::{
     time::timeout,
 };
 
-const IPC_VERSION: u8 = 16;
+const IPC_VERSION: u8 = 17;
 const MAX_DESCRIPTOR_BYTES: u64 = 16 * 1024;
 const MAX_LAUNCH_PROFILE_BYTES: u64 = 64 * 1024;
 const MAX_LAUNCH_PROFILE_PATHS: usize = 64;
@@ -836,6 +836,7 @@ pub struct RuntimeIpcEndpointAnnouncementExport {
     pub contact_count: usize,
     pub endpoint_count: usize,
     pub observation_count: usize,
+    pub publication_conflict_count: usize,
     pub expires_at_unix_seconds: u64,
     pub output_file: PathBuf,
     pub protection: String,
@@ -854,6 +855,8 @@ pub struct RuntimeIpcEndpointAnnouncementImport {
     pub publication_binding_added_count: usize,
     pub observation_evidence_count: usize,
     pub observation_evidence_added_count: usize,
+    pub publication_conflict_count: usize,
+    pub publication_conflict_added_count: usize,
     pub descriptor_directory: PathBuf,
     pub authority_status: String,
 }
@@ -867,11 +870,13 @@ pub struct RuntimeIpcEndpointAnnouncementPush {
     pub contact_count: usize,
     pub endpoint_count: usize,
     pub observation_count: usize,
+    pub publication_conflict_count: usize,
     pub encrypted_bundle_bytes: usize,
     pub recipient_contact_added_count: usize,
     pub recipient_endpoint_added_count: usize,
     pub recipient_publication_binding_added_count: usize,
     pub recipient_observation_evidence_added_count: usize,
+    pub recipient_publication_conflict_added_count: usize,
     pub transport_path: String,
     pub acknowledgement_status: String,
 }

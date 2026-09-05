@@ -196,12 +196,13 @@ sessions, distribution, removal и key epochs и не решены этим пр
   добавляет recipients после полного startup roster и немедленно выключает их
   после live Root revocation; один runtime не запускает parallel fan-out.
   M0.9.42 переносит higher direct/accepted high-water транзитивно через bundle
-  v2, а M0.9.43 сохраняет первый mismatch в local-Device-signed `.pcf`,
-  карантинит channel across restart и показывает explicit IPC/desktop state.
-  Открыты распространение proof к siblings, Root-authorized resolution/channel
-  rotation, обнаружение конфликта между устройствами, которые никогда не
-  обменивались bundle, и действительно распределённая cross-machine
-  координация без доверенного scheduler.
+  v2, M0.9.43 сохраняет первый mismatch в local-Device-signed `.pcf`, а
+  M0.9.44 распространяет canonical proof через bundle v3 и разрешает только
+  Root-authorized переход на peer-signed ticket v11 с новым channel epoch.
+  Открыты offline request/response Root signer и автоматический перенос
+  resolution к siblings, обнаружение конфликта между устройствами, которые
+  никогда не обменивались bundle, и действительно распределённая
+  cross-machine координация без доверенного scheduler.
 - M0.9.32 compact/checkpoint-ит runtime publication, observation, policy и
   attempt chains до exact signed heads за device-signed cumulative checkpoint;
   DB-primary checkpoint/removals атомарны и crash-safe. Открытым остаётся
