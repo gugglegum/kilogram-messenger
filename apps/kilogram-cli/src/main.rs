@@ -25,10 +25,10 @@ use kilogram_protocol::{
     AuthorizedEvent, ClientRequest, ConversationId, DeviceAuthorizationAccepted,
     DeviceAuthorizationRejected, EventPayload, HistoryRewrapBundle, HistoryRewrapRejected,
     HistoryRewrapRejectionReason, HistoryRewrapSas, LocalTextProjection,
-    MAX_HISTORY_REWRAP_ENTRIES, MAX_INVENTORY_EVENT_IDS, RatchetRecipient, ServerResponse,
-    SignedDeviceSessionAuthorization, SignedEvent, SignedHistoryRecoveryCheckpoint,
-    SignedHistoryRewrapRequest, SignedHistoryRewrapTransfer, SignedSyncInventory, SyncPause,
-    SyncPaused, SyncSessionBinding,
+    MAX_ENDPOINT_ANNOUNCEMENT_WIRE_BYTES, MAX_HISTORY_REWRAP_ENTRIES, MAX_INVENTORY_EVENT_IDS,
+    RatchetRecipient, ServerResponse, SignedDeviceSessionAuthorization, SignedEvent,
+    SignedHistoryRecoveryCheckpoint, SignedHistoryRewrapRequest, SignedHistoryRewrapTransfer,
+    SignedSyncInventory, SyncPause, SyncPaused, SyncSessionBinding,
 };
 use kilogram_ratchet::{
     AccountPrekeyDirectory, DEFAULT_PREKEY_POOL_SIZE, DEFAULT_PREKEY_POOL_VALIDITY_SECONDS,
@@ -39,11 +39,11 @@ use kilogram_runtime_ipc::{
     RuntimeIpcCommand, RuntimeIpcContactTicketRefresh, RuntimeIpcConversationSummary,
     RuntimeIpcDescriptor, RuntimeIpcDeviceDirectoryStatus, RuntimeIpcDeviceDirectoryUpdate,
     RuntimeIpcEndpointAnnouncementExport, RuntimeIpcEndpointAnnouncementImport,
-    RuntimeIpcEndpointCandidateState, RuntimeIpcEndpointCandidateStatus,
-    RuntimeIpcEndpointTicketRefresh, RuntimeIpcHistoryCursor, RuntimeIpcHistoryMessage,
-    RuntimeIpcHistoryPage, RuntimeIpcMessagePreview, RuntimeIpcNetworkClass,
-    RuntimeIpcOutboxStatus, RuntimeIpcQueueItem, RuntimeIpcQueueState, RuntimeIpcRequestId,
-    RuntimeIpcResponse, RuntimeIpcRoutePolicy, RuntimeIpcServer,
+    RuntimeIpcEndpointAnnouncementPush, RuntimeIpcEndpointCandidateState,
+    RuntimeIpcEndpointCandidateStatus, RuntimeIpcEndpointTicketRefresh, RuntimeIpcHistoryCursor,
+    RuntimeIpcHistoryMessage, RuntimeIpcHistoryPage, RuntimeIpcMessagePreview,
+    RuntimeIpcNetworkClass, RuntimeIpcOutboxStatus, RuntimeIpcQueueItem, RuntimeIpcQueueState,
+    RuntimeIpcRequestId, RuntimeIpcResponse, RuntimeIpcRoutePolicy, RuntimeIpcServer,
     RuntimeIpcTicketAutomationActionStatus, RuntimeIpcTicketAutomationStatus,
     RuntimeIpcTicketPublication, RuntimeIpcWork, RuntimeLaunchProfile, RuntimeLaunchSettings,
 };
@@ -118,9 +118,9 @@ use recovery_scheduler::{
 use runtime_endpoint_announcement::{
     AcceptedEndpointObservationId, ContactEndpointAnnouncement,
     DEFAULT_ENDPOINT_ANNOUNCEMENT_VALIDITY_SECONDS, EncryptedEndpointAnnouncementBundle,
-    EndpointCandidateAnnouncement, MAX_ENDPOINT_ANNOUNCEMENT_BYTES,
+    EndpointAnnouncementBundleId, EndpointCandidateAnnouncement, MAX_ENDPOINT_ANNOUNCEMENT_BYTES,
     MAX_ENDPOINT_ANNOUNCEMENT_VALIDITY_SECONDS, SignedAcceptedEndpointObservation,
-    SignedEndpointAnnouncementBundle,
+    SignedEndpointAnnouncementAcknowledgement, SignedEndpointAnnouncementBundle,
 };
 use runtime_publication::{
     DEFAULT_TICKET_PUBLICATION_TTL_SECONDS, EncryptedTicketPublication,
@@ -672,6 +672,21 @@ enum Command {
         /// Runtime-managed directory for imported public connection tickets.
         #[arg(long)]
         descriptor_directory: PathBuf,
+    },
+
+    /// Push endpoint candidates to another running device of the same account.
+    RuntimeIpcPushEndpointAnnouncements {
+        /// Runtime-owned local IPC descriptor.
+        #[arg(long)]
+        ipc_file: PathBuf,
+
+        /// Fresh connection ticket published by the recipient runtime for this account.
+        #[arg(long)]
+        recipient_ticket_file: PathBuf,
+
+        /// Short replay window for the recipient-encrypted bundle.
+        #[arg(long, default_value_t = DEFAULT_ENDPOINT_ANNOUNCEMENT_VALIDITY_SECONDS)]
+        validity_seconds: u64,
     },
 
     /// Connect to a listener, send one message, print its acknowledgement, then exit.
@@ -1524,6 +1539,7 @@ impl Command {
             | Self::RuntimeIpcTicketAutomationStatus { .. }
             | Self::RuntimeIpcExportEndpointAnnouncements { .. }
             | Self::RuntimeIpcImportEndpointAnnouncements { .. }
+            | Self::RuntimeIpcPushEndpointAnnouncements { .. }
             | Self::PlatformContext => None,
         }
     }
@@ -2450,6 +2466,18 @@ async fn run_command(command: Command) -> Result<()> {
         } => {
             runtime_ipc_import_endpoint_announcements(ipc_file, bundle_file, descriptor_directory)
                 .await
+        }
+        Command::RuntimeIpcPushEndpointAnnouncements {
+            ipc_file,
+            recipient_ticket_file,
+            validity_seconds,
+        } => {
+            runtime_ipc_push_endpoint_announcements(
+                ipc_file,
+                recipient_ticket_file,
+                validity_seconds,
+            )
+            .await
         }
         Command::Connect {
             state_dir,
@@ -5643,13 +5671,24 @@ fn add_runtime_contact_record(
     })
 }
 
-fn export_runtime_endpoint_announcements(
+struct PreparedRuntimeEndpointAnnouncementExport {
+    bundle_id: EndpointAnnouncementBundleId,
+    source_device_id: DeviceId,
+    recipient_device_id: DeviceId,
+    authority_revision: u64,
+    contact_count: usize,
+    endpoint_count: usize,
+    observation_count: usize,
+    expires_at_unix_seconds: u64,
+    envelope: EncryptedEndpointAnnouncementBundle,
+}
+
+fn build_runtime_endpoint_announcements(
     state_directory: &Path,
     current_ticket: &ConnectionTicket,
     recipient_device_id: DeviceId,
-    output_file: PathBuf,
     validity_seconds: u64,
-) -> Result<RuntimeIpcEndpointAnnouncementExport> {
+) -> Result<PreparedRuntimeEndpointAnnouncementExport> {
     ensure!(
         (1..=MAX_ENDPOINT_ANNOUNCEMENT_VALIDITY_SECONDS).contains(&validity_seconds),
         "endpoint announcement validity must be between 1 and {MAX_ENDPOINT_ANNOUNCEMENT_VALIDITY_SECONDS} seconds"
@@ -5758,15 +5797,8 @@ fn export_runtime_endpoint_announcements(
     )?;
     let bundle_id = bundle.bundle_id()?;
     let envelope = EncryptedEndpointAnnouncementBundle::seal(&bundle)?;
-    let output_file = absolute_new_external_path(state_directory, &output_file)?;
-    write_new_authority_file(&output_file, &envelope.encode()?).with_context(|| {
-        format!(
-            "write recipient-encrypted endpoint announcement to {}",
-            output_file.display()
-        )
-    })?;
-    Ok(RuntimeIpcEndpointAnnouncementExport {
-        bundle_id: bundle_id.to_string(),
+    Ok(PreparedRuntimeEndpointAnnouncementExport {
+        bundle_id,
         source_device_id: bundle.source_device_id(),
         recipient_device_id,
         authority_revision: account_device_list.revision(),
@@ -5774,6 +5806,39 @@ fn export_runtime_endpoint_announcements(
         endpoint_count,
         observation_count,
         expires_at_unix_seconds: bundle.expires_at_unix_seconds(),
+        envelope,
+    })
+}
+
+fn export_runtime_endpoint_announcements(
+    state_directory: &Path,
+    current_ticket: &ConnectionTicket,
+    recipient_device_id: DeviceId,
+    output_file: PathBuf,
+    validity_seconds: u64,
+) -> Result<RuntimeIpcEndpointAnnouncementExport> {
+    let prepared = build_runtime_endpoint_announcements(
+        state_directory,
+        current_ticket,
+        recipient_device_id,
+        validity_seconds,
+    )?;
+    let output_file = absolute_new_external_path(state_directory, &output_file)?;
+    write_new_authority_file(&output_file, &prepared.envelope.encode()?).with_context(|| {
+        format!(
+            "write recipient-encrypted endpoint announcement to {}",
+            output_file.display()
+        )
+    })?;
+    Ok(RuntimeIpcEndpointAnnouncementExport {
+        bundle_id: prepared.bundle_id.to_string(),
+        source_device_id: prepared.source_device_id,
+        recipient_device_id: prepared.recipient_device_id,
+        authority_revision: prepared.authority_revision,
+        contact_count: prepared.contact_count,
+        endpoint_count: prepared.endpoint_count,
+        observation_count: prepared.observation_count,
+        expires_at_unix_seconds: prepared.expires_at_unix_seconds,
         output_file,
         protection: "source-device-signed-recipient-device-hpke-exact-root-roster".to_owned(),
     })
@@ -5798,24 +5863,6 @@ fn import_runtime_endpoint_announcements(
     bundle_file: &Path,
     descriptor_directory: &Path,
 ) -> Result<RuntimeIpcEndpointAnnouncementImport> {
-    let device_state = load_command_device_state(state_directory)?;
-    let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
-    let local_certificate = trust
-        .load_certificate()
-        .context("load local certificate for endpoint announcement import")?;
-    let local_authority = trust
-        .load_own_authority_snapshot(&local_certificate)
-        .context("load local authority for endpoint announcement import")?;
-    let current_device_list = current_ticket.listener_directory().device_list();
-    ensure!(
-        current_ticket.listener_account_id() == local_certificate.account_id()
-            && current_ticket.listener_device_id() == device_state.identity().device_id()
-            && current_device_list.authority_snapshot() == &local_authority
-            && current_device_list.certificate_for(local_certificate.device_id())
-                == Some(&local_certificate),
-        "running endpoint announcement authority does not match local authenticated state"
-    );
-
     let bundle_file = fs::canonicalize(bundle_file).with_context(|| {
         format!(
             "resolve encrypted endpoint announcement {}",
@@ -5833,6 +5880,39 @@ fn import_runtime_endpoint_announcements(
     let envelope = EncryptedEndpointAnnouncementBundle::decode(
         &fs::read(&bundle_file).context("read encrypted endpoint announcement")?,
     )?;
+    import_runtime_endpoint_announcement_envelope(
+        state_directory,
+        current_ticket,
+        envelope,
+        descriptor_directory,
+        None,
+    )
+}
+
+fn import_runtime_endpoint_announcement_envelope(
+    state_directory: &Path,
+    current_ticket: &ConnectionTicket,
+    envelope: EncryptedEndpointAnnouncementBundle,
+    descriptor_directory: &Path,
+    expected_source_device_id: Option<DeviceId>,
+) -> Result<RuntimeIpcEndpointAnnouncementImport> {
+    let device_state = load_command_device_state(state_directory)?;
+    let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+    let local_certificate = trust
+        .load_certificate()
+        .context("load local certificate for endpoint announcement import")?;
+    let local_authority = trust
+        .load_own_authority_snapshot(&local_certificate)
+        .context("load local authority for endpoint announcement import")?;
+    let current_device_list = current_ticket.listener_directory().device_list();
+    ensure!(
+        current_ticket.listener_account_id() == local_certificate.account_id()
+            && current_ticket.listener_device_id() == device_state.identity().device_id()
+            && current_device_list.authority_snapshot() == &local_authority
+            && current_device_list.certificate_for(local_certificate.device_id())
+                == Some(&local_certificate),
+        "running endpoint announcement authority does not match local authenticated state"
+    );
     let now_unix_seconds = unix_time_now()?;
     let bundle = envelope.open(
         local_certificate.device_id(),
@@ -5848,6 +5928,12 @@ fn import_runtime_endpoint_announcements(
         bundle.source_device_id() != local_certificate.device_id(),
         "endpoint announcement source must be another device"
     );
+    if let Some(expected_source_device_id) = expected_source_device_id {
+        ensure!(
+            bundle.source_device_id() == expected_source_device_id,
+            "endpoint announcement source does not match the authenticated Device session"
+        );
+    }
     ensure!(
         bundle.account_device_list() == current_device_list,
         "endpoint announcement does not carry the exact current Root-signed device list"
@@ -5869,6 +5955,13 @@ fn import_runtime_endpoint_announcements(
             descriptor_directory.display()
         )
     })?;
+    let unresolved_descriptor_metadata = fs::symlink_metadata(descriptor_directory)
+        .context("inspect unresolved endpoint announcement descriptor directory")?;
+    ensure!(
+        unresolved_descriptor_metadata.file_type().is_dir()
+            && !unresolved_descriptor_metadata.file_type().is_symlink(),
+        "endpoint announcement descriptor path must be a regular non-symlink directory"
+    );
     let descriptor_directory = fs::canonicalize(descriptor_directory).with_context(|| {
         format!(
             "resolve endpoint announcement descriptor directory {}",
@@ -5955,6 +6048,163 @@ fn import_runtime_endpoint_announcements(
         observation_evidence_added_count: evidence_added_count,
         descriptor_directory,
         authority_status: "exact-current-root-signed-device-list".to_owned(),
+    })
+}
+
+async fn push_runtime_endpoint_announcements(
+    state_directory: &Path,
+    endpoint: &Endpoint,
+    current_ticket: &ConnectionTicket,
+    recipient_ticket_file: &Path,
+    validity_seconds: u64,
+) -> Result<RuntimeIpcEndpointAnnouncementPush> {
+    let (recipient_ticket, prepared, envelope_bytes) = {
+        let _state_lock = StateDirectoryLock::acquire(state_directory)
+            .context("lock runtime state for endpoint announcement network push")?;
+        let recipient_ticket_file = fs::canonicalize(recipient_ticket_file).with_context(|| {
+            format!(
+                "resolve endpoint announcement recipient ticket {}",
+                recipient_ticket_file.display()
+            )
+        })?;
+        let metadata = fs::symlink_metadata(&recipient_ticket_file)
+            .context("inspect endpoint announcement recipient ticket")?;
+        ensure!(
+            metadata.file_type().is_file()
+                && !metadata.file_type().is_symlink()
+                && metadata.len() <= MAX_RUNTIME_RECORD_BYTES as u64,
+            "endpoint announcement recipient ticket must be a bounded regular non-symlink file"
+        );
+        let recipient_ticket = ConnectionTicket::decode(
+            &fs::read_to_string(&recipient_ticket_file)
+                .context("read endpoint announcement recipient ticket")?,
+        )
+        .context("verify endpoint announcement recipient ticket")?;
+        let local_account_id = current_ticket.listener_account_id();
+        ensure!(
+            recipient_ticket.listener_account_id() == local_account_id
+                && recipient_ticket.allowed_requester_account_id() == local_account_id,
+            "endpoint announcement recipient ticket is not a same-account Device session"
+        );
+        ensure!(
+            recipient_ticket.listener_device_id() != current_ticket.listener_device_id(),
+            "endpoint announcement recipient must be another device"
+        );
+        ensure!(
+            recipient_ticket.listener_directory().device_list()
+                == current_ticket.listener_directory().device_list(),
+            "endpoint announcement recipient ticket does not carry the exact current own-device list"
+        );
+        recipient_ticket
+            .verify_listener_authorization(local_account_id)
+            .context("verify endpoint announcement recipient authorization")?;
+        let prepared = build_runtime_endpoint_announcements(
+            state_directory,
+            current_ticket,
+            recipient_ticket.listener_device_id(),
+            validity_seconds,
+        )?;
+        let envelope_bytes = prepared.envelope.encode()?;
+        ensure!(
+            envelope_bytes.len() <= MAX_ENDPOINT_ANNOUNCEMENT_WIRE_BYTES,
+            "endpoint announcement encrypted bundle is too large for one bounded network transfer"
+        );
+        (recipient_ticket, prepared, envelope_bytes)
+    };
+
+    let route_policy = recipient_ticket.route_policy();
+    let connection = timeout(
+        CONNECTION_TIMEOUT,
+        endpoint.connect(recipient_ticket.endpoint().clone(), ALPN),
+    )
+    .await
+    .with_context(|| {
+        timeout_message(
+            "connect endpoint announcement push to recipient runtime",
+            CONNECTION_TIMEOUT,
+        )
+    })?
+    .context("connect endpoint announcement push to recipient runtime")?;
+    let ready_path = await_route_policy(&connection, route_policy, ROUTE_POLICY_WAIT)
+        .await
+        .context("wait for an endpoint announcement path allowed by the recipient ticket")?;
+    let session_binding =
+        SyncSessionBinding::from_transport_label(&recipient_ticket.endpoint().id.to_string());
+    let device_state = load_command_device_state(state_directory)?;
+    let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+    let local_certificate = trust
+        .load_certificate()
+        .context("load endpoint announcement source certificate")?;
+    let local_authority = trust
+        .load_own_authority_snapshot(&local_certificate)
+        .context("load endpoint announcement source authority")?;
+    ensure!(
+        current_ticket
+            .listener_directory()
+            .device_list()
+            .authority_snapshot()
+            == &local_authority,
+        "endpoint announcement source authority changed during network transfer"
+    );
+    authorize_with_listener(
+        &connection,
+        device_state.identity(),
+        local_certificate,
+        local_authority,
+        session_binding,
+    )
+    .await?;
+    let (mut send, mut receive) =
+        open_bi(&connection, "open endpoint announcement push stream").await?;
+    write_client_request(
+        &mut send,
+        &ClientRequest::EndpointAnnouncementPush(envelope_bytes.clone()),
+    )
+    .await?;
+    let acknowledgement_bytes = match read_server_response(&mut receive).await? {
+        ServerResponse::EndpointAnnouncementAcknowledged(bytes) => bytes,
+        ServerResponse::EndpointAnnouncementRejected => {
+            bail!("recipient rejected the endpoint announcement bundle")
+        }
+        _ => bail!("endpoint announcement push received an unexpected response"),
+    };
+    let acknowledgement =
+        SignedEndpointAnnouncementAcknowledgement::decode(&acknowledgement_bytes)?;
+    acknowledgement.verify_for_session(
+        session_binding,
+        prepared.bundle_id,
+        prepared.source_device_id,
+        prepared.recipient_device_id,
+    )?;
+    ensure!(
+        acknowledgement.authority_revision() == prepared.authority_revision
+            && acknowledgement.contact_count() == prepared.contact_count
+            && acknowledgement.endpoint_count() == prepared.endpoint_count
+            && acknowledgement.observation_evidence_count() == prepared.observation_count,
+        "endpoint announcement acknowledgement does not match the transferred inventory"
+    );
+    let transport_path = ready_path.kind.as_str().to_owned();
+    connection.close(
+        0_u32.into(),
+        b"kilogram endpoint announcement push complete",
+    );
+    Ok(RuntimeIpcEndpointAnnouncementPush {
+        bundle_id: prepared.bundle_id.to_string(),
+        source_device_id: prepared.source_device_id,
+        recipient_device_id: prepared.recipient_device_id,
+        authority_revision: prepared.authority_revision,
+        contact_count: prepared.contact_count,
+        endpoint_count: prepared.endpoint_count,
+        observation_count: prepared.observation_count,
+        encrypted_bundle_bytes: envelope_bytes.len(),
+        recipient_contact_added_count: acknowledgement.contact_added_count(),
+        recipient_endpoint_added_count: acknowledgement.endpoint_added_count(),
+        recipient_publication_binding_added_count: acknowledgement
+            .publication_binding_added_count(),
+        recipient_observation_evidence_added_count: acknowledgement
+            .observation_evidence_added_count(),
+        transport_path,
+        acknowledgement_status: "recipient-device-signed-session-bound".to_owned(),
     })
 }
 
@@ -7240,6 +7490,33 @@ async fn runtime_ipc_import_endpoint_announcements(
     }
 }
 
+async fn runtime_ipc_push_endpoint_announcements(
+    ipc_file: PathBuf,
+    recipient_ticket_file: PathBuf,
+    validity_seconds: u64,
+) -> Result<()> {
+    match kilogram_runtime_ipc::call(
+        &ipc_file,
+        RuntimeIpcCommand::PushEndpointAnnouncements {
+            recipient_ticket_file,
+            validity_seconds,
+        },
+    )
+    .await?
+    {
+        RuntimeIpcResponse::EndpointAnnouncementsPushed(report) => {
+            print_runtime_endpoint_announcement_push(&report);
+            Ok(())
+        }
+        RuntimeIpcResponse::Error { message } => {
+            bail!("runtime IPC rejected endpoint announcement push: {message}")
+        }
+        response => bail!(
+            "runtime IPC returned an unexpected endpoint announcement push response: {response:?}"
+        ),
+    }
+}
+
 fn print_runtime_endpoint_announcement_export(report: &RuntimeIpcEndpointAnnouncementExport) {
     println!("endpoint_announcement_bundle_id={}", report.bundle_id);
     println!("source_device_id={}", report.source_device_id);
@@ -7281,6 +7558,36 @@ fn print_runtime_endpoint_announcement_import(report: &RuntimeIpcEndpointAnnounc
     );
     println!("authority_status={}", report.authority_status);
     println!("status=endpoint-announcements-imported");
+}
+
+fn print_runtime_endpoint_announcement_push(report: &RuntimeIpcEndpointAnnouncementPush) {
+    println!("endpoint_announcement_bundle_id={}", report.bundle_id);
+    println!("source_device_id={}", report.source_device_id);
+    println!("recipient_device_id={}", report.recipient_device_id);
+    println!("authority_revision={}", report.authority_revision);
+    println!("contact_count={}", report.contact_count);
+    println!("endpoint_count={}", report.endpoint_count);
+    println!("observation_count={}", report.observation_count);
+    println!("encrypted_bundle_bytes={}", report.encrypted_bundle_bytes);
+    println!(
+        "recipient_contact_added_count={}",
+        report.recipient_contact_added_count
+    );
+    println!(
+        "recipient_endpoint_added_count={}",
+        report.recipient_endpoint_added_count
+    );
+    println!(
+        "recipient_publication_binding_added_count={}",
+        report.recipient_publication_binding_added_count
+    );
+    println!(
+        "recipient_observation_evidence_added_count={}",
+        report.recipient_observation_evidence_added_count
+    );
+    println!("transport_path={}", report.transport_path);
+    println!("acknowledgement_status={}", report.acknowledgement_status);
+    println!("status=endpoint-announcements-pushed");
 }
 
 fn print_runtime_ticket_automation_status(status: &RuntimeIpcTicketAutomationStatus) {
@@ -7750,6 +8057,23 @@ async fn handle_runtime_ipc_work(
                 message: format!("{error:#}"),
             },
         },
+        RuntimeIpcCommand::PushEndpointAnnouncements {
+            recipient_ticket_file,
+            validity_seconds,
+        } => match push_runtime_endpoint_announcements(
+            state_directory,
+            endpoint,
+            ticket,
+            &recipient_ticket_file,
+            validity_seconds,
+        )
+        .await
+        {
+            Ok(report) => RuntimeIpcResponse::EndpointAnnouncementsPushed(Box::new(report)),
+            Err(error) => RuntimeIpcResponse::Error {
+                message: format!("{error:#}"),
+            },
+        },
         RuntimeIpcCommand::ConversationList => {
             let conversations = StateDirectoryLock::acquire(state_directory)
                 .context("lock runtime state for IPC conversation snapshot")
@@ -7819,6 +8143,46 @@ fn resolve_runtime_ipc_descriptor_path(
         "runtime IPC descriptor must live outside the protected state directory"
     );
     Ok(resolved)
+}
+
+fn resolve_runtime_received_endpoint_descriptor_directory(
+    state_directory: &Path,
+    ipc_file: Option<&Path>,
+    ticket_file: Option<&Path>,
+) -> Result<Option<PathBuf>> {
+    let Some(anchor) = ipc_file.or(ticket_file) else {
+        return Ok(None);
+    };
+    let absolute = if anchor.is_absolute() {
+        anchor.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .context("read current directory for received endpoint descriptors")?
+            .join(anchor)
+    };
+    let parent = absolute
+        .parent()
+        .context("runtime endpoint-announcement anchor has no parent")?;
+    fs::create_dir_all(parent).with_context(|| {
+        format!(
+            "create received endpoint descriptor parent {}",
+            parent.display()
+        )
+    })?;
+    let parent = fs::canonicalize(parent).with_context(|| {
+        format!(
+            "resolve received endpoint descriptor parent {}",
+            parent.display()
+        )
+    })?;
+    let directory = parent.join("kilogram-received-endpoints");
+    let canonical_state = fs::canonicalize(state_directory)
+        .context("resolve protected state for received endpoint descriptors")?;
+    ensure!(
+        !directory.starts_with(canonical_state),
+        "received endpoint descriptor directory must live outside protected runtime state"
+    );
+    Ok(Some(directory))
 }
 
 fn listen(options: ListenOptions) -> CommandFuture {
@@ -9098,6 +9462,12 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
         max_outbound_actions,
         ipc_file,
     } = options;
+    let endpoint_announcement_descriptor_directory =
+        resolve_runtime_received_endpoint_descriptor_directory(
+            &state_dir,
+            ipc_file.as_deref(),
+            ticket_file.as_deref(),
+        )?;
     let prepared = with_locked_state(&state_dir, || {
         prepare_runtime_listener(&state_dir, &device_list_file, &peer_prekey_pool_files)
     })?;
@@ -9174,6 +9544,12 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
     println!("runtime_ticket_automation_scope=only-while-runtime-process-is-running");
     println!("runtime_ticket_automation_os_background_service=false");
     println!("runtime_max_outbound_actions={max_outbound_actions}");
+    if let Some(directory) = &endpoint_announcement_descriptor_directory {
+        println!(
+            "runtime_received_endpoint_descriptor_directory={}",
+            directory.display()
+        );
+    }
     println!("ticket={encoded_ticket}");
     if let Some(path) = &ticket_file {
         publish_runtime_ticket(path, encoded_ticket.as_bytes())?;
@@ -9328,6 +9704,7 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                         match handle_runtime_application_connection(
                             &connection,
                             &state_dir,
+                            endpoint_announcement_descriptor_directory.as_deref(),
                             &ticket,
                             session_binding,
                             allowed_requester_account_id,
@@ -10286,6 +10663,7 @@ async fn acquire_runtime_state_lock(state_directory: &Path) -> Result<Option<Sta
 async fn handle_runtime_application_connection(
     connection: &Connection,
     state_directory: &Path,
+    endpoint_announcement_descriptor_directory: Option<&Path>,
     ticket: &ConnectionTicket,
     session_binding: SyncSessionBinding,
     allowed_requester_account_id: AccountId,
@@ -10343,8 +10721,10 @@ async fn handle_runtime_application_connection(
                 session_binding,
                 allowed_requester_account_id,
                 route_policy,
+                ticket,
                 ticket.listener_directory().device_list(),
                 None,
+                endpoint_announcement_descriptor_directory,
             )
             .await
         }
@@ -10663,8 +11043,10 @@ async fn listen_inner(options: ListenOptions) -> Result<()> {
         session_binding,
         allowed_requester_account_id,
         route_policy,
+        &ticket,
         ticket.listener_directory().device_list(),
         history_rewrap_approval.as_ref(),
+        None,
     )
     .await?;
     let _ = timeout(Duration::from_secs(2), connection.closed()).await;
@@ -10685,8 +11067,10 @@ async fn handle_authorized_application_connection(
     session_binding: SyncSessionBinding,
     allowed_requester_account_id: AccountId,
     route_policy: RoutePolicy,
+    current_ticket: &ConnectionTicket,
     listener_device_list: &AccountDeviceListSnapshot,
     history_rewrap_approval: Option<&HistoryRewrapApproval>,
+    endpoint_announcement_descriptor_directory: Option<&Path>,
 ) -> Result<()> {
     let authorized_requester = accept_device_authorization(
         connection,
@@ -10694,6 +11078,7 @@ async fn handle_authorized_application_connection(
         device_state,
         session_binding,
         allowed_requester_account_id,
+        listener_certificate.account_id(),
     )
     .await?;
 
@@ -10760,6 +11145,58 @@ async fn handle_authorized_application_connection(
             )
             .await?;
             false
+        }
+        ClientRequest::EndpointAnnouncementPush(envelope_bytes) => {
+            let descriptor_directory = endpoint_announcement_descriptor_directory.context(
+                "endpoint announcement network push requires a long-lived runtime descriptor directory",
+            )?;
+            ensure!(
+                authorized_requester.account_id() == listener_certificate.account_id(),
+                "endpoint announcement network push requires a same-account Device session"
+            );
+            let import = (|| {
+                let envelope = EncryptedEndpointAnnouncementBundle::decode(&envelope_bytes)?;
+                let bundle_id = envelope.bundle_id();
+                let report = import_runtime_endpoint_announcement_envelope(
+                    state_directory,
+                    current_ticket,
+                    envelope,
+                    descriptor_directory,
+                    Some(authorized_requester.device_id()),
+                )?;
+                Ok::<_, anyhow::Error>((bundle_id, report))
+            })();
+            let (bundle_id, report) = match import {
+                Ok(imported) => imported,
+                Err(error) => {
+                    write_server_response(&mut send, &ServerResponse::EndpointAnnouncementRejected)
+                        .await?;
+                    return Err(error).context("reject endpoint announcement network push");
+                }
+            };
+            let acknowledgement = SignedEndpointAnnouncementAcknowledgement::sign(
+                device_state.identity(),
+                session_binding,
+                bundle_id,
+                authorized_requester.device_id(),
+                report.authority_revision,
+                report.contact_count,
+                report.contact_added_count,
+                report.endpoint_count,
+                report.endpoint_added_count,
+                report.publication_binding_added_count,
+                report.observation_evidence_count,
+                report.observation_evidence_added_count,
+            )?;
+            write_server_response(
+                &mut send,
+                &ServerResponse::EndpointAnnouncementAcknowledged(acknowledgement.encode()?),
+            )
+            .await?;
+            print_runtime_endpoint_announcement_import(&report);
+            println!("endpoint_announcement_transport=authenticated-same-account-device-session");
+            println!("endpoint_announcement_acknowledgement=session-bound-recipient-signed");
+            true
         }
         ClientRequest::AuthorizeDevice(_) => {
             bail!("device authorization cannot be repeated on an authorized connection")
@@ -11050,6 +11487,7 @@ async fn accept_device_authorization(
     device_state: &DeviceState,
     expected_session: SyncSessionBinding,
     allowed_account: AccountId,
+    listener_account: AccountId,
 ) -> Result<AuthorizedDevice> {
     let (mut send, mut receive) =
         accept_bi(connection, "accept device authorization stream").await?;
@@ -11062,12 +11500,27 @@ async fn accept_device_authorization(
         authorization
             .authority_snapshot()
             .verify_for_account(allowed_account)?;
-        let snapshot_store = pin_peer_authority_primary(
-            state_directory,
-            device_state,
-            authorization.authority_snapshot(),
-        )
-        .context("pin requester authority snapshot and reject rollback")?;
+        let snapshot_store = if allowed_account == listener_account {
+            let trust = CommandTrustReadRepository::open(state_directory, device_state)?;
+            let listener_certificate = trust
+                .load_certificate()
+                .context("load listener certificate for same-account authorization")?;
+            let own_authority = trust
+                .load_own_authority_snapshot(&listener_certificate)
+                .context("load current own authority for same-account authorization")?;
+            ensure!(
+                authorization.authority_snapshot() == &own_authority,
+                "same-account Device session does not carry the exact current Root authority"
+            );
+            AuthoritySnapshotStoreOutcome::Unchanged
+        } else {
+            pin_peer_authority_primary(
+                state_directory,
+                device_state,
+                authorization.authority_snapshot(),
+            )
+            .context("pin requester authority snapshot and reject rollback")?
+        };
         let authorized = authorize_device_session(
             allowed_account,
             &authorization,
@@ -17476,6 +17929,196 @@ mod tests {
         Ok(())
     }
 
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn runtime_pushes_endpoint_announcements_over_authenticated_own_device_session()
+    -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let root = AccountRootState::create(directory.path().join("root"))?;
+        let source_state_dir = directory.path().join("source-state");
+        let recipient_state_dir = directory.path().join("recipient-state");
+        let source = DeviceState::load_or_create(&source_state_dir)?;
+        let recipient = DeviceState::load_or_create(&recipient_state_dir)?;
+        let source_certificate = root.issue_device_certificate(
+            source.identity().device_id(),
+            source.encryption().public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let recipient_certificate = root.issue_device_certificate(
+            recipient.identity().device_id(),
+            recipient.encryption().public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let device_list =
+            root.publish_device_list(&[source_certificate.clone(), recipient_certificate.clone()])?;
+        let authority = device_list.authority_snapshot().clone();
+        for (state, certificate) in [
+            (&source, &source_certificate),
+            (&recipient, &recipient_certificate),
+        ] {
+            state.install_certificate(certificate)?;
+            state.install_own_authority_snapshot(&authority)?;
+        }
+
+        let peer_root = AccountRootState::create(directory.path().join("peer-root"))?;
+        let peer = DeviceIdentity::generate()?;
+        let peer_encryption = DeviceEncryptionIdentity::generate()?;
+        let peer_certificate = peer_root.issue_device_certificate(
+            peer.device_id(),
+            peer_encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let peer_devices =
+            peer_root.publish_device_list(std::slice::from_ref(&peer_certificate))?;
+        let now = unix_time_now()?;
+        let peer_pool = RatchetState::load_or_create(directory.path().join("peer-ratchet"))?
+            .prekey_pool(&peer, 4, now, DEFAULT_PREKEY_POOL_VALIDITY_SECONDS)?;
+        let peer_ticket = ConnectionTicket::new(
+            EndpointAddr::new(SecretKey::generate().public()),
+            &peer,
+            peer_certificate,
+            AccountPrekeyDirectory::new(peer_devices, vec![peer_pool])?,
+            root.account_id(),
+            RoutePolicy::DirectOnly,
+        )?;
+        let peer_ticket_file = directory.path().join("peer.ticket");
+        fs::write(&peer_ticket_file, peer_ticket.encode()?)?;
+        let conversation = "network-own-device-endpoint-announcements";
+        let membership = root.create_conversation_membership(
+            ConversationId::from_label(conversation).scope_id(),
+            &[peer_root.account_id()],
+        )?;
+        source.install_conversation_membership(&membership)?;
+        recipient.install_conversation_membership(&membership)?;
+        add_runtime_contact_record(
+            &source_state_dir,
+            conversation.to_owned(),
+            peer_root.account_id(),
+            peer_ticket_file,
+        )?;
+
+        let source_pool_file = directory.path().join("source.prekeys");
+        let recipient_pool_file = directory.path().join("recipient.prekeys");
+        let source_pool = RatchetState::load_or_create(&source_state_dir)?.prekey_pool(
+            source.identity(),
+            4,
+            now,
+            DEFAULT_PREKEY_POOL_VALIDITY_SECONDS,
+        )?;
+        let recipient_pool = RatchetState::load_or_create(&recipient_state_dir)?.prekey_pool(
+            recipient.identity(),
+            4,
+            now,
+            DEFAULT_PREKEY_POOL_VALIDITY_SECONDS,
+        )?;
+        fs::write(&source_pool_file, source_pool.encode()?)?;
+        fs::write(&recipient_pool_file, recipient_pool.encode()?)?;
+        let device_list_file = directory.path().join("own-devices.snapshot");
+        fs::write(&device_list_file, device_list.encode()?)?;
+        let source_ticket_file = directory.path().join("source-runtime.ticket");
+        let recipient_ticket_file = directory.path().join("recipient-runtime.ticket");
+        let source_ipc = directory.path().join("source-runtime.ipc.json");
+        let recipient_ipc = directory.path().join("recipient-runtime.ipc.json");
+        let source_task = tokio::spawn(runtime(RuntimeOptions {
+            state_dir: source_state_dir.clone(),
+            allowed_requester_account_id: root.account_id(),
+            device_list_file: device_list_file.clone(),
+            peer_prekey_pool_files: vec![recipient_pool_file],
+            ticket_file: Some(source_ticket_file.clone()),
+            relay_wait_seconds: 0,
+            route_policy: RoutePolicy::DirectOnly,
+            relay_url: None,
+            max_sessions: 0,
+            idle_seconds: 0,
+            poll_milliseconds: 500,
+            retry_base_seconds: 1,
+            retry_max_seconds: 1,
+            auto_sync_seconds: 0,
+            max_outbound_actions: 0,
+            ipc_file: Some(source_ipc.clone()),
+        }));
+        let recipient_task = tokio::spawn(runtime(RuntimeOptions {
+            state_dir: recipient_state_dir.clone(),
+            allowed_requester_account_id: root.account_id(),
+            device_list_file,
+            peer_prekey_pool_files: vec![source_pool_file],
+            ticket_file: Some(recipient_ticket_file.clone()),
+            relay_wait_seconds: 0,
+            route_policy: RoutePolicy::DirectOnly,
+            relay_url: None,
+            max_sessions: 0,
+            idle_seconds: 0,
+            poll_milliseconds: 500,
+            retry_base_seconds: 1,
+            retry_max_seconds: 1,
+            auto_sync_seconds: 0,
+            max_outbound_actions: 0,
+            ipc_file: Some(recipient_ipc.clone()),
+        }));
+        timeout(Duration::from_secs(10), async {
+            while !source_ipc.is_file()
+                || !recipient_ipc.is_file()
+                || !source_ticket_file.is_file()
+                || !recipient_ticket_file.is_file()
+            {
+                tokio::time::sleep(Duration::from_millis(20)).await;
+            }
+        })
+        .await
+        .context("own-device endpoint announcement runtimes did not become ready")?;
+
+        let response = kilogram_runtime_ipc::call(
+            &source_ipc,
+            RuntimeIpcCommand::PushEndpointAnnouncements {
+                recipient_ticket_file: recipient_ticket_file.clone(),
+                validity_seconds: 300,
+            },
+        )
+        .await?;
+        let RuntimeIpcResponse::EndpointAnnouncementsPushed(push) = response else {
+            bail!("source runtime returned an unexpected endpoint announcement response")
+        };
+        assert_eq!(push.source_device_id, source.identity().device_id());
+        assert_eq!(push.recipient_device_id, recipient.identity().device_id());
+        assert_eq!(push.contact_count, 1);
+        assert_eq!(push.endpoint_count, 1);
+        assert_eq!(push.recipient_contact_added_count, 1);
+        assert_eq!(push.recipient_endpoint_added_count, 1);
+        assert_eq!(push.recipient_publication_binding_added_count, 1);
+        assert_eq!(push.transport_path, "direct");
+        assert_eq!(
+            push.acknowledgement_status,
+            "recipient-device-signed-session-bound"
+        );
+
+        for ipc in [&source_ipc, &recipient_ipc] {
+            assert!(matches!(
+                kilogram_runtime_ipc::call(ipc, RuntimeIpcCommand::Shutdown).await?,
+                RuntimeIpcResponse::ShutdownAccepted
+            ));
+        }
+        for task in [source_task, recipient_task] {
+            timeout(Duration::from_secs(10), task)
+                .await
+                .context("own-device endpoint announcement runtime did not stop")?
+                .context("join own-device endpoint announcement runtime")??;
+        }
+        let recipient_snapshot = load_runtime_state_snapshot(
+            &recipient_state_dir,
+            root.account_id(),
+            recipient.identity().device_id(),
+        )?;
+        assert_eq!(recipient_snapshot.contacts.len(), 1);
+        assert_eq!(recipient_snapshot.endpoint_publication_bindings.len(), 1);
+        let expected_descriptor_directory =
+            fs::canonicalize(directory.path().join("kilogram-received-endpoints"))?;
+        assert!(recipient_snapshot.contacts.values().all(|contact| {
+            contact
+                .descriptor_file()
+                .starts_with(&expected_descriptor_directory)
+        }));
+        Ok(())
+    }
+
     #[test]
     fn runtime_ticket_compaction_covers_observation_policy_and_attempt_heads() -> Result<()> {
         let directory = tempfile::tempdir()?;
@@ -19480,6 +20123,9 @@ mod tests {
         let listener_device_directory = tempfile::tempdir()?;
         let listener_state_path = listener_device_directory.path().to_path_buf();
         let listener_device_state = DeviceState::load_or_create(&listener_state_path)?;
+        let listener_root_directory = tempfile::tempdir()?;
+        let listener_account_id =
+            AccountRootState::create(listener_root_directory.path())?.account_id();
         let listener = local_test_endpoint_builder()?
             .alpns(vec![ALPN.to_vec()])
             .bind()
@@ -19496,6 +20142,7 @@ mod tests {
                     &listener_device_state,
                     session_binding,
                     requester_account_id,
+                    listener_account_id,
                 )
                 .await?;
                 connection.closed().await;
@@ -19540,6 +20187,9 @@ mod tests {
 
         let listener_device_directory = tempfile::tempdir()?;
         let listener_state_path = listener_device_directory.path().to_path_buf();
+        let listener_root_directory = tempfile::tempdir()?;
+        let listener_account_id =
+            AccountRootState::create(listener_root_directory.path())?.account_id();
         let listener = local_test_endpoint_builder()?
             .alpns(vec![ALPN.to_vec()])
             .bind()
@@ -19558,6 +20208,7 @@ mod tests {
                     &listener_state,
                     session_binding,
                     requester_account_id,
+                    listener_account_id,
                 )
                 .await
             }

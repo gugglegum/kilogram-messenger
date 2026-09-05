@@ -184,8 +184,10 @@ sessions, distribution, removal и key epochs и не решены этим пр
   per-channel high-water. M0.9.36 хранит проверенный expiry-independent local
   binding. M0.9.37 вручную переносит candidate set/bindings и signed sibling
   observation evidence в recipient-HPKE bundle, требует exact current Root
-  roster и не принимает bundle как authority. Открыты automatic same-account
-  session transport, acknowledgement/compaction этой evidence и обнаружение
+  roster и не принимает bundle как authority. M0.9.38 переносит exact bundle
+  по authenticated same-account session и возвращает session-bound recipient
+  ACK с bounded one-shot backpressure. Открыты multi-audience discovery/
+  durable foreground schedule, compaction этой evidence и обнаружение
   equivocation между устройствами, которые никогда не обменивались bundle.
 - M0.9.32 compact/checkpoint-ит runtime publication, observation, policy и
   attempt chains до exact signed heads за device-signed cumulative checkpoint;

@@ -21,7 +21,7 @@ use tokio::{
     time::timeout,
 };
 
-const IPC_VERSION: u8 = 11;
+const IPC_VERSION: u8 = 12;
 const MAX_DESCRIPTOR_BYTES: u64 = 16 * 1024;
 const MAX_LAUNCH_PROFILE_BYTES: u64 = 64 * 1024;
 const MAX_LAUNCH_PROFILE_PATHS: usize = 64;
@@ -399,6 +399,10 @@ pub enum RuntimeIpcCommand {
     ImportEndpointAnnouncements {
         bundle_file: PathBuf,
         descriptor_directory: PathBuf,
+    },
+    PushEndpointAnnouncements {
+        recipient_ticket_file: PathBuf,
+        validity_seconds: u64,
     },
     ConversationList,
     HistoryPage {
@@ -805,6 +809,24 @@ pub struct RuntimeIpcEndpointAnnouncementImport {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcEndpointAnnouncementPush {
+    pub bundle_id: String,
+    pub source_device_id: DeviceId,
+    pub recipient_device_id: DeviceId,
+    pub authority_revision: u64,
+    pub contact_count: usize,
+    pub endpoint_count: usize,
+    pub observation_count: usize,
+    pub encrypted_bundle_bytes: usize,
+    pub recipient_contact_added_count: usize,
+    pub recipient_endpoint_added_count: usize,
+    pub recipient_publication_binding_added_count: usize,
+    pub recipient_observation_evidence_added_count: usize,
+    pub transport_path: String,
+    pub acknowledgement_status: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum RuntimeIpcResponse {
     Pong {
         account_id: AccountId,
@@ -832,6 +854,7 @@ pub enum RuntimeIpcResponse {
     TicketAutomationStatus(Vec<RuntimeIpcTicketAutomationStatus>),
     EndpointAnnouncementsExported(Box<RuntimeIpcEndpointAnnouncementExport>),
     EndpointAnnouncementsImported(Box<RuntimeIpcEndpointAnnouncementImport>),
+    EndpointAnnouncementsPushed(Box<RuntimeIpcEndpointAnnouncementPush>),
     ConversationList(Vec<RuntimeIpcConversationSummary>),
     HistoryPage(RuntimeIpcHistoryPage),
     ChangeState {

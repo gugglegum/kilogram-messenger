@@ -12,6 +12,8 @@ use crate::{
 
 pub const MAX_INVENTORY_EVENT_IDS: usize = 4096;
 pub const MAX_SYNC_EVENTS_PER_BATCH: usize = 64;
+pub const MAX_ENDPOINT_ANNOUNCEMENT_WIRE_BYTES: usize = 7 * 1024 * 1024;
+pub const MAX_ENDPOINT_ANNOUNCEMENT_ACKNOWLEDGEMENT_WIRE_BYTES: usize = 4 * 1024;
 
 const SYNC_VERSION: u8 = 6;
 const SYNC_DIFF_SIGNATURE_DOMAIN: &[u8] = b"kilogram:sync-diff-signature:v6\0";
@@ -541,6 +543,7 @@ pub enum ClientRequest {
     SyncEvents(SyncEventBatch),
     SyncPause(SyncPause),
     HistoryRewrap(SignedHistoryRewrapRequest),
+    EndpointAnnouncementPush(Vec<u8>),
 }
 
 impl ClientRequest {
@@ -563,6 +566,9 @@ impl ClientRequest {
             Self::SyncEvents(batch) => batch.validate(),
             Self::SyncPause(pause) => pause.validate(),
             Self::HistoryRewrap(request) => request.verify_signature(),
+            Self::EndpointAnnouncementPush(envelope) => {
+                validate_endpoint_announcement_frame(envelope, MAX_ENDPOINT_ANNOUNCEMENT_WIRE_BYTES)
+            }
         }
     }
 }
@@ -578,6 +584,8 @@ pub enum ServerResponse {
     SyncPaused(SyncPaused),
     HistoryRewrapTransfer(Box<SignedHistoryRewrapTransfer>),
     HistoryRewrapRejected(HistoryRewrapRejected),
+    EndpointAnnouncementAcknowledged(Vec<u8>),
+    EndpointAnnouncementRejected,
 }
 
 impl ServerResponse {
@@ -603,8 +611,28 @@ impl ServerResponse {
             Self::SyncPaused(paused) => paused.validate(),
             Self::HistoryRewrapTransfer(transfer) => transfer.verify_signature(),
             Self::HistoryRewrapRejected(rejected) => rejected.validate(),
+            Self::EndpointAnnouncementAcknowledged(acknowledgement) => {
+                validate_endpoint_announcement_frame(
+                    acknowledgement,
+                    MAX_ENDPOINT_ANNOUNCEMENT_ACKNOWLEDGEMENT_WIRE_BYTES,
+                )
+            }
+            Self::EndpointAnnouncementRejected => Ok(()),
         }
     }
+}
+
+fn validate_endpoint_announcement_frame(bytes: &[u8], maximum: usize) -> Result<(), ProtocolError> {
+    if bytes.is_empty() {
+        return Err(ProtocolError::EmptyEndpointAnnouncementFrame);
+    }
+    if bytes.len() > maximum {
+        return Err(ProtocolError::EndpointAnnouncementFrameTooLarge {
+            actual: bytes.len(),
+            maximum,
+        });
+    }
+    Ok(())
 }
 
 fn device_authorization_signing_bytes(
@@ -916,6 +944,29 @@ mod tests {
                 vec![event_id, event_id]
             ),
             Err(ProtocolError::DuplicateSyncEventId(_))
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn endpoint_announcement_frames_are_bounded_and_round_trip()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let request = ClientRequest::EndpointAnnouncementPush(vec![1, 2, 3]);
+        assert_eq!(ClientRequest::decode(&request.encode()?)?, request);
+        let response = ServerResponse::EndpointAnnouncementAcknowledged(vec![4, 5, 6]);
+        assert_eq!(ServerResponse::decode(&response.encode()?)?, response);
+        assert!(matches!(
+            ClientRequest::EndpointAnnouncementPush(Vec::new()).encode(),
+            Err(ProtocolError::EmptyEndpointAnnouncementFrame)
+        ));
+        assert!(matches!(
+            ServerResponse::EndpointAnnouncementAcknowledged(vec![
+                0;
+                MAX_ENDPOINT_ANNOUNCEMENT_ACKNOWLEDGEMENT_WIRE_BYTES
+                    + 1
+            ])
+            .encode(),
+            Err(ProtocolError::EndpointAnnouncementFrameTooLarge { .. })
         ));
         Ok(())
     }

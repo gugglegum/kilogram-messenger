@@ -25,7 +25,8 @@ pub use rewrap::{
 
 pub use wire::{
     ClientRequest, DeviceAuthorizationAccepted, DeviceAuthorizationRejected, HistoryRewrapRejected,
-    HistoryRewrapRejectionReason, MAX_INVENTORY_EVENT_IDS, MAX_SYNC_EVENTS_PER_BATCH,
+    HistoryRewrapRejectionReason, MAX_ENDPOINT_ANNOUNCEMENT_ACKNOWLEDGEMENT_WIRE_BYTES,
+    MAX_ENDPOINT_ANNOUNCEMENT_WIRE_BYTES, MAX_INVENTORY_EVENT_IDS, MAX_SYNC_EVENTS_PER_BATCH,
     ServerResponse, SignedDeviceSessionAuthorization, SignedSyncInventory, SyncComplete, SyncDiff,
     SyncEventBatch, SyncPause, SyncPaused, SyncRejected, SyncRejectionReason, SyncSessionBinding,
 };
@@ -1002,6 +1003,12 @@ pub enum ProtocolError {
 
     #[error("device session authorization is bound to a different transport session")]
     DeviceAuthorizationSessionMismatch,
+
+    #[error("endpoint announcement wire frame must not be empty")]
+    EmptyEndpointAnnouncementFrame,
+
+    #[error("endpoint announcement wire frame has {actual} bytes; maximum is {maximum}")]
+    EndpointAnnouncementFrameTooLarge { actual: usize, maximum: usize },
 
     #[error("device authorization response belongs to account {actual}; expected {expected}")]
     DeviceAuthorizationAccountMismatch {

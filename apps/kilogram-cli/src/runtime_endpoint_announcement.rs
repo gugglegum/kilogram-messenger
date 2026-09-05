@@ -5,7 +5,7 @@ use kilogram_crypto::SealedMessage;
 use kilogram_identity::{
     AccountDeviceListSnapshot, AccountId, DeviceEncryptionIdentity, DeviceId, DeviceIdentity,
 };
-use kilogram_protocol::ConversationId;
+use kilogram_protocol::{ConversationId, SyncSessionBinding};
 use kilogram_ticket_publication::TicketPublicationWriteKey;
 use kilogram_transport_iroh::RoutePolicy;
 use serde::{Deserialize, Serialize};
@@ -17,15 +17,19 @@ use crate::runtime_publication::{
 const BUNDLE_VERSION: u8 = 1;
 const ENVELOPE_VERSION: u8 = 1;
 const EVIDENCE_VERSION: u8 = 1;
+const ACKNOWLEDGEMENT_VERSION: u8 = 1;
 const BUNDLE_SIGNATURE_DOMAIN: &[u8] = b"kilogram:endpoint-announcement-bundle:v1\0";
 const BUNDLE_ID_DOMAIN: &[u8] = b"kilogram:endpoint-announcement-bundle-id:v1\0";
 const ENVELOPE_HPKE_INFO: &[u8] = b"kilogram:endpoint-announcement-envelope:v1";
 const EVIDENCE_SIGNATURE_DOMAIN: &[u8] = b"kilogram:accepted-endpoint-observation:v1\0";
 const EVIDENCE_ID_DOMAIN: &[u8] = b"kilogram:accepted-endpoint-observation-id:v1\0";
+const ACKNOWLEDGEMENT_SIGNATURE_DOMAIN: &[u8] =
+    b"kilogram:endpoint-announcement-acknowledgement:v1\0";
 const MAX_CLOCK_SKEW_SECONDS: u64 = 5 * 60;
 pub const DEFAULT_ENDPOINT_ANNOUNCEMENT_VALIDITY_SECONDS: u64 = 15 * 60;
 pub const MAX_ENDPOINT_ANNOUNCEMENT_VALIDITY_SECONDS: u64 = 60 * 60;
 pub const MAX_ENDPOINT_ANNOUNCEMENT_BYTES: usize = 16 * 1024 * 1024;
+pub const MAX_ENDPOINT_ANNOUNCEMENT_ACKNOWLEDGEMENT_BYTES: usize = 4 * 1024;
 pub const MAX_ENDPOINT_ANNOUNCEMENT_CONTACTS: usize = 256;
 pub const MAX_ENDPOINTS_PER_ANNOUNCEMENT_CONTACT: usize = 4;
 const MAX_TICKET_BYTES: usize = 8 * 1024 * 1024;
@@ -45,6 +49,179 @@ pub struct AcceptedEndpointObservationId([u8; 32]);
 impl fmt::Display for AcceptedEndpointObservationId {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         write_hex(formatter, &self.0)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+struct EndpointAnnouncementAcknowledgementContent {
+    version: u8,
+    session_binding: SyncSessionBinding,
+    bundle_id: EndpointAnnouncementBundleId,
+    source_device_id: DeviceId,
+    recipient_device_id: DeviceId,
+    authority_revision: u64,
+    contact_count: usize,
+    contact_added_count: usize,
+    endpoint_count: usize,
+    endpoint_added_count: usize,
+    publication_binding_added_count: usize,
+    observation_evidence_count: usize,
+    observation_evidence_added_count: usize,
+}
+
+/// Recipient-signed proof that one exact announcement bundle passed the local import gate.
+///
+/// The transport-session binding makes a captured acknowledgement unusable for a later push.
+/// Retrying the encrypted bundle itself remains safe because the import operation is idempotent.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct SignedEndpointAnnouncementAcknowledgement {
+    content: EndpointAnnouncementAcknowledgementContent,
+    signature: Vec<u8>,
+}
+
+impl SignedEndpointAnnouncementAcknowledgement {
+    #[allow(clippy::too_many_arguments)]
+    pub fn sign(
+        identity: &DeviceIdentity,
+        session_binding: SyncSessionBinding,
+        bundle_id: EndpointAnnouncementBundleId,
+        source_device_id: DeviceId,
+        authority_revision: u64,
+        contact_count: usize,
+        contact_added_count: usize,
+        endpoint_count: usize,
+        endpoint_added_count: usize,
+        publication_binding_added_count: usize,
+        observation_evidence_count: usize,
+        observation_evidence_added_count: usize,
+    ) -> Result<Self> {
+        let content = EndpointAnnouncementAcknowledgementContent {
+            version: ACKNOWLEDGEMENT_VERSION,
+            session_binding,
+            bundle_id,
+            source_device_id,
+            recipient_device_id: identity.device_id(),
+            authority_revision,
+            contact_count,
+            contact_added_count,
+            endpoint_count,
+            endpoint_added_count,
+            publication_binding_added_count,
+            observation_evidence_count,
+            observation_evidence_added_count,
+        };
+        let signature = identity
+            .sign(&signing_bytes(ACKNOWLEDGEMENT_SIGNATURE_DOMAIN, &content)?)
+            .to_vec();
+        let acknowledgement = Self { content, signature };
+        acknowledgement.verify_signature()?;
+        Ok(acknowledgement)
+    }
+
+    pub fn encode(&self) -> Result<Vec<u8>> {
+        self.verify_signature()?;
+        let bytes =
+            postcard::to_allocvec(self).context("encode endpoint announcement acknowledgement")?;
+        ensure!(
+            bytes.len() <= MAX_ENDPOINT_ANNOUNCEMENT_ACKNOWLEDGEMENT_BYTES,
+            "endpoint announcement acknowledgement is too large"
+        );
+        Ok(bytes)
+    }
+
+    pub fn decode(bytes: &[u8]) -> Result<Self> {
+        ensure!(
+            !bytes.is_empty() && bytes.len() <= MAX_ENDPOINT_ANNOUNCEMENT_ACKNOWLEDGEMENT_BYTES,
+            "endpoint announcement acknowledgement size is invalid"
+        );
+        let acknowledgement: Self =
+            postcard::from_bytes(bytes).context("decode endpoint announcement acknowledgement")?;
+        acknowledgement.verify_signature()?;
+        Ok(acknowledgement)
+    }
+
+    pub fn verify_for_session(
+        &self,
+        session_binding: SyncSessionBinding,
+        bundle_id: EndpointAnnouncementBundleId,
+        source_device_id: DeviceId,
+        recipient_device_id: DeviceId,
+    ) -> Result<()> {
+        self.verify_signature()?;
+        ensure!(
+            self.content.session_binding == session_binding
+                && self.content.bundle_id == bundle_id
+                && self.content.source_device_id == source_device_id
+                && self.content.recipient_device_id == recipient_device_id,
+            "endpoint announcement acknowledgement does not match this transfer session"
+        );
+        Ok(())
+    }
+
+    fn verify_signature(&self) -> Result<()> {
+        ensure!(
+            self.content.version == ACKNOWLEDGEMENT_VERSION,
+            "unsupported endpoint announcement acknowledgement version"
+        );
+        ensure!(
+            self.content.source_device_id != self.content.recipient_device_id,
+            "endpoint announcement acknowledgement names the same source and recipient"
+        );
+        ensure!(
+            self.content.contact_added_count <= self.content.contact_count
+                && self.content.endpoint_added_count <= self.content.endpoint_count
+                && self.content.publication_binding_added_count <= self.content.endpoint_count
+                && self.content.observation_evidence_count <= self.content.endpoint_count
+                && self.content.observation_evidence_added_count
+                    <= self.content.observation_evidence_count,
+            "endpoint announcement acknowledgement contains inconsistent counts"
+        );
+        ensure!(
+            self.content.contact_count <= MAX_ENDPOINT_ANNOUNCEMENT_CONTACTS
+                && self.content.endpoint_count
+                    <= MAX_ENDPOINT_ANNOUNCEMENT_CONTACTS
+                        .saturating_mul(MAX_ENDPOINTS_PER_ANNOUNCEMENT_CONTACT),
+            "endpoint announcement acknowledgement counts exceed protocol bounds"
+        );
+        self.content
+            .recipient_device_id
+            .verify(
+                &signing_bytes(ACKNOWLEDGEMENT_SIGNATURE_DOMAIN, &self.content)?,
+                &self.signature,
+            )
+            .context("verify endpoint announcement acknowledgement signature")
+    }
+
+    pub fn authority_revision(&self) -> u64 {
+        self.content.authority_revision
+    }
+
+    pub fn contact_count(&self) -> usize {
+        self.content.contact_count
+    }
+
+    pub fn contact_added_count(&self) -> usize {
+        self.content.contact_added_count
+    }
+
+    pub fn endpoint_count(&self) -> usize {
+        self.content.endpoint_count
+    }
+
+    pub fn endpoint_added_count(&self) -> usize {
+        self.content.endpoint_added_count
+    }
+
+    pub fn publication_binding_added_count(&self) -> usize {
+        self.content.publication_binding_added_count
+    }
+
+    pub fn observation_evidence_count(&self) -> usize {
+        self.content.observation_evidence_count
+    }
+
+    pub fn observation_evidence_added_count(&self) -> usize {
+        self.content.observation_evidence_added_count
     }
 }
 
@@ -481,6 +658,10 @@ impl EncryptedEndpointAnnouncementBundle {
         Ok(bundle)
     }
 
+    pub fn bundle_id(&self) -> EndpointAnnouncementBundleId {
+        self.aad.bundle_id
+    }
+
     fn verify_outer(&self) -> Result<()> {
         ensure!(
             self.aad.version == ENVELOPE_VERSION,
@@ -694,6 +875,53 @@ mod tests {
         assert!(
             decoded
                 .open(recipient.device_id(), &recipient_encryption, 1_061)
+                .is_err()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn acknowledgement_is_recipient_signed_and_session_bound() -> Result<()> {
+        let (source, _, recipient, _, list) = fixture()?;
+        let bundle = SignedEndpointAnnouncementBundle::sign(
+            &source,
+            list.clone(),
+            recipient.device_id(),
+            1_000,
+            300,
+            Vec::new(),
+        )?;
+        let session = SyncSessionBinding::from_transport_label("recipient-endpoint");
+        let acknowledgement = SignedEndpointAnnouncementAcknowledgement::sign(
+            &recipient,
+            session,
+            bundle.bundle_id()?,
+            source.device_id(),
+            list.revision(),
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+        )?;
+        let decoded =
+            SignedEndpointAnnouncementAcknowledgement::decode(&acknowledgement.encode()?)?;
+        decoded.verify_for_session(
+            session,
+            bundle.bundle_id()?,
+            source.device_id(),
+            recipient.device_id(),
+        )?;
+        assert!(
+            decoded
+                .verify_for_session(
+                    SyncSessionBinding::from_transport_label("replayed-session"),
+                    bundle.bundle_id()?,
+                    source.device_id(),
+                    recipient.device_id(),
+                )
                 .is_err()
         );
         Ok(())

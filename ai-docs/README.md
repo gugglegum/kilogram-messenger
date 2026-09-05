@@ -365,48 +365,51 @@ global prekey discovery/witness, автоматический recovery source di
 
 ## План ближайших работ
 
-1. M0.9.38: перенести тот же recipient-encrypted announcement bundle по
-   authenticated same-account Device session с replay acknowledgement и
-   backpressure, оставив M0.9.37 import gate единственным writer path.
-2. Уже реализованный M0.9.37 переносит bounded endpoint candidates и signed
+1. M0.9.39: расширить long-lived runtime до multi-audience inbound
+   authorization и durable bounded own-device transfer schedule, сохранив
+   foreground-only default и отдельную optional OS-autostart настройку.
+2. Уже реализованный M0.9.38 переносит M0.9.37 recipient-encrypted bundle по
+   authenticated same-account Device session, вызывает общий import gate и
+   возвращает recipient-signed session-bound replay acknowledgement.
+3. Уже реализованный M0.9.37 переносит bounded endpoint candidates и signed
    publication high-water между exact-current authorized own Devices через
    source-signed recipient-HPKE file, не принимая bundle как Root authority.
-3. Уже реализованный M0.9.36 хранит local-device-signed expiry-independent
+4. Уже реализованный M0.9.36 хранит local-device-signed expiry-independent
    publication binding и обновляет long-offline endpoint без принятия
    просроченного transport/prekey ticket.
-4. Уже реализованный M0.9.35 обновляет все enrolled Device channels одной
+5. Уже реализованный M0.9.35 обновляет все enrolled Device channels одной
    bounded action, хранит independent observation high-water и показывает
    desktop `usable`/`stale` состояния.
-5. Уже реализованный M0.9.33 даёт self-authenticating per-peer capability
+6. Уже реализованный M0.9.33 даёт self-authenticating per-peer capability
    channel и exact Ed25519 PUT authorization без Account/Device ID на store.
-6. Уже реализованные M0.9.31–M0.9.32 дают opt-in foreground automation и
+7. Уже реализованные M0.9.31–M0.9.32 дают opt-in foreground automation и
    crash-safe bounded compaction его signed runtime chains.
-7. Уже реализованный M0.9.30 даёт self-hostable loopback-only opaque store за
+8. Уже реализованный M0.9.30 даёт self-hostable loopback-only opaque store за
    HTTPS reverse proxy: durable Redb, fixed retention, monotonic replacement,
    size/channel/connection/rate limits и Internet test procedure.
-8. Уже реализованный M0.9.29 заменяет synchronized steady-state ticket refresh
+9. Уже реализованный M0.9.29 заменяет synchronized steady-state ticket refresh
    на explicit HTTPS publication/fetch: device-signed expiring chain, per-device
    HPKE slots, local rollback high-water, IPC v7 и Windows UI. Initial verified
    contact остаётся out-of-band, store traffic metadata видимы.
-9. Уже реализованный M0.9.28 сохраняет device-signed receipt применённого live
+10. Уже реализованный M0.9.28 сохраняет device-signed receipt применённого live
    roster в vault-primary transaction, восстанавливает его раньше stale launch
    profile и bounded desktop-операцией согласует exact canonical path.
-10. Optional autostart/background mode оставить отдельной явной настройкой, а не
+11. Optional autostart/background mode оставить отдельной явной настройкой, а не
    обязательным Task Scheduler этапом.
-11. Добавить production macOS/Linux local key provider, согласованный monotonic
+12. Добавить production macOS/Linux local key provider, согласованный monotonic
    witness и lifecycle обновления portable recovery package; затем mobile
    providers. Расширить pseudonymous M0.9.29 lookup до privacy-preserving
    gossip/mailbox. Live camera/clipboard оставить platform UI.
-12. Спроектировать membership removal вместе с ordered security log и MLS epoch;
+13. Спроектировать membership removal вместе с ordered security log и MLS epoch;
    отдельно — gossip/witness для first-contact freshness.
-13. Спроектировать полное seed/recovery authority с monotonic history/witness,
+14. Спроектировать полное seed/recovery authority с monotonic history/witness,
    root rotation и конфликтующие authority operations.
-14. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
-15. Спроектировать финальный wire format подписанного события и алгоритм
+15. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
+16. Спроектировать финальный wire format подписанного события и алгоритм
    линеаризации.
-16. Спроектировать compact Merkle/range summary и переносимый signed cursor.
-17. Добавить небольшие MLS-группы.
-18. Перед публичным выпуском провести независимый криптографический аудит.
+17. Спроектировать compact Merkle/range summary и переносимый signed cursor.
+18. Добавить небольшие MLS-группы.
+19. Перед публичным выпуском провести независимый криптографический аудит.
 
 ## Навигация
 
@@ -533,6 +536,8 @@ global prekey discovery/witness, автоматический recovery source di
   реализованный M0.9.36 local-device-signed immutable channel binding, legacy backfill from authenticated expired ticket и fresh-only endpoint installation.
 - [`../docs/RFC-0059-authenticated-own-device-endpoint-announcements.md`](../docs/RFC-0059-authenticated-own-device-endpoint-announcements.md) —
   реализованный M0.9.37 source-signed recipient-HPKE endpoint bundle, exact own-roster import gate и sibling publication high-water evidence.
+- [`../docs/RFC-0060-network-own-device-endpoint-announcements.md`](../docs/RFC-0060-network-own-device-endpoint-announcements.md) —
+  реализованный M0.9.38 authenticated same-account network push, общий import gate, session-bound recipient ACK и bounded backpressure.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

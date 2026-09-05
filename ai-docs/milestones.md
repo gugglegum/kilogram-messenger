@@ -2853,11 +2853,36 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - contract зафиксирован в
   [`../docs/RFC-0059-authenticated-own-device-endpoint-announcements.md`](../docs/RFC-0059-authenticated-own-device-endpoint-announcements.md).
 
+### M0.9.38 — network own-device endpoint announcements: выполнено
+
+Реализовано:
+
+- IPC v12 команда `PushEndpointAnnouncements` принимает fresh recipient runtime
+  ticket, требует same listener/requester Account, другого active Device и
+  byte-exact current own roster, затем строит M0.9.37 envelope в памяти;
+- wire ALPN v8 переносит один recipient-HPKE envelope до 7 MiB после обычной
+  Root/session Device authorization; source bundle Device обязан совпасть с
+  authenticated requester;
+- recipient вызывает тот же `import_runtime_endpoint_announcement_envelope`
+  gate, не принимает authority/membership из сети и выбирает собственный
+  external `kilogram-received-endpoints` directory;
+- после commit recipient подписывает ACK по bundle ID, source/recipient,
+  authority revision, result counts и current session binding; exact replay
+  idempotent, captured ACK в новой сессии недействителен;
+- один bundle/ACK на connection, actor-serialized IPC и transport deadlines
+  дают bounded backpressure; это foreground online transfer, а не mailbox,
+  gossip, autostart или durable background retry;
+- network regression с двумя runtime одного Root Account проверяет direct
+  transfer, local materialization и source-side signed ACK verification;
+- contract зафиксирован в
+  [`../docs/RFC-0060-network-own-device-endpoint-announcements.md`](../docs/RFC-0060-network-own-device-endpoint-announcements.md).
+
 ### Следующий этап
 
-1. M0.9.38: автоматическая передача того же encrypted bundle по authenticated
-   same-account Device session с replay acknowledgement и bounded backpressure,
-   не дублируя import trust logic.
+1. M0.9.39: дать long-lived runtime multi-audience inbound authorization и
+   durable bounded own-device transfer schedule, чтобы foreground clients могли
+   обмениваться announcement без переключения single-requester ticket; OS
+   autostart остаётся отдельной опцией.
 2. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.

@@ -131,29 +131,29 @@ Expiry-independent locally signed publication-channel bindings are specified in
 Recipient-encrypted endpoint/high-water transfer between authorized devices is
 specified in
 [`docs/RFC-0059-authenticated-own-device-endpoint-announcements.md`](docs/RFC-0059-authenticated-own-device-endpoint-announcements.md).
+Authenticated online transport and recipient-signed acknowledgement for that
+same envelope are specified in
+[`docs/RFC-0060-network-own-device-endpoint-announcements.md`](docs/RFC-0060-network-own-device-endpoint-announcements.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.37 authenticated endpoint announcements — complete
+## Current milestone: M0.9.38 network endpoint announcements — complete
 
-An active device can now export its bounded contact endpoint set and signed
-publication observation heads to another active device of the same account.
-The canonical bundle carries the exact current Root-signed roster, is signed by
-the source Device, expires within a bounded window and is HPKE-encrypted only
-for the selected recipient Device. IPC v11 import requires that roster to match
-the running recipient byte-for-byte and never installs Account authority or
-membership from the bundle.
+An active device can now push its bounded contact endpoint set and signed
+publication observation heads directly to another running device of the same
+account. IPC v12 accepts the recipient runtime ticket, verifies an exact current
+same-account roster, builds the existing source-signed/recipient-HPKE envelope
+in memory and carries it over the normal Root- and session-authenticated Device
+connection. Manual encrypted-file exchange remains available for diagnostics.
 
-The recipient creates fresh local-Device-signed contact/candidate/binding
-records instead of copying installation-specific state. Expired announced
-tickets remain unusable but retain enough authenticated lookup state to fetch a
-fresh ticket. Imported sibling observation heads become separately signed
-anti-rollback evidence: later refresh rejects a lower generation or conflicting
-same-generation publication. Explicit file transfer is the current transport;
-automatic exchange over an authenticated same-account session is the next
-bounded slice.
+The recipient invokes the same M0.9.37 import gate, creates fresh
+local-Device-signed records and returns a recipient-signed acknowledgement
+bound to the exact bundle and current transport session. Replay is idempotent;
+a captured acknowledgement is invalid on another session. One session carries
+one envelope, capped at 7 MiB, and one acknowledgement, capped at 4 KiB. The
+sender cannot choose recipient descriptor paths, Root authority or membership.
 
 One peer account/conversation contact can now enroll up to four independently
 signed Device endpoints without changing its stable contact ID or queued
@@ -168,11 +168,11 @@ Ticket refresh now snapshots every enrolled Device candidate, performs the
 bounded publication lookups concurrently, and serializes authenticated local
 commits per candidate. A partial result preserves successful descriptor and
 observation updates while foreground automation records a normal backoff
-failure until every candidate succeeds. Runtime IPC v11 retains the v10 read
+failure until every candidate succeeds. Runtime IPC v12 retains the v10 read
 model through which the Windows desktop shows exact `usable`/`stale` counts,
 per-Device diagnostics and each opaque
-channel's local publication high-water. Runtime and desktop binaries must be
-upgraded together.
+channel's local publication high-water and adds the network announcement
+command. Runtime and desktop binaries must be upgraded together.
 
 Each enrolled endpoint now also has a local-device-signed, vault-primary
 publication binding that pins its contact, peer Device, route/path contract and
