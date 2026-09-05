@@ -41,12 +41,28 @@ pub(crate) fn render_recovery_link_qr_png(
     payload: &str,
     output: &Path,
 ) -> Result<RecoveryQrRenderReport> {
-    validate_payload_shape(payload)?;
+    render_bounded_ascii_qr_png(
+        payload,
+        output,
+        HISTORY_RECOVERY_LINK_PREFIX,
+        MAX_HISTORY_RECOVERY_LINK_TEXT_BYTES,
+        "history recovery link",
+    )
+}
+
+pub(crate) fn render_bounded_ascii_qr_png(
+    payload: &str,
+    output: &Path,
+    expected_prefix: &str,
+    max_payload_bytes: usize,
+    label: &str,
+) -> Result<RecoveryQrRenderReport> {
+    validate_payload_shape(payload, expected_prefix, max_payload_bytes, label)?;
     let code = QrCode::with_error_correction_level(payload.as_bytes(), EcLevel::L)
-        .context("encode history recovery link as QR")?;
+        .with_context(|| format!("encode {label} as QR"))?;
     let qr_version = match code.version() {
         Version::Normal(version) => version,
-        Version::Micro(_) => bail!("history recovery link unexpectedly encoded as Micro QR"),
+        Version::Micro(_) => bail!("{label} unexpectedly encoded as Micro QR"),
     };
     let module_count = code.width();
     let image = code
@@ -58,7 +74,7 @@ pub(crate) fn render_recovery_link_qr_png(
     let pixel_height = image.height();
     ensure!(
         pixel_width <= MAX_QR_IMAGE_DIMENSION && pixel_height <= MAX_QR_IMAGE_DIMENSION,
-        "rendered recovery QR exceeds the image dimension limit"
+        "rendered {label} QR exceeds the image dimension limit"
     );
 
     let mut png = Vec::new();
@@ -69,10 +85,10 @@ pub(crate) fn render_recovery_link_qr_png(
             pixel_height,
             ColorType::L8.into(),
         )
-        .context("encode history recovery QR as PNG")?;
+        .with_context(|| format!("encode {label} QR as PNG"))?;
     ensure!(
         png.len() as u64 <= MAX_QR_IMAGE_FILE_BYTES,
-        "rendered recovery QR exceeds the PNG size limit"
+        "rendered {label} QR exceeds the PNG size limit"
     );
     persist_noclobber(output, &png)?;
 
@@ -86,23 +102,37 @@ pub(crate) fn render_recovery_link_qr_png(
 }
 
 pub(crate) fn decode_recovery_link_qr_image(path: &Path) -> Result<RecoveryQrDecodeReport> {
-    let metadata = fs::metadata(path)
-        .with_context(|| format!("read recovery QR metadata from {}", path.display()))?;
+    decode_bounded_ascii_qr_image(
+        path,
+        HISTORY_RECOVERY_LINK_PREFIX,
+        MAX_HISTORY_RECOVERY_LINK_TEXT_BYTES,
+        "history recovery link",
+    )
+}
+
+pub(crate) fn decode_bounded_ascii_qr_image(
+    path: &Path,
+    expected_prefix: &str,
+    max_payload_bytes: usize,
+    label: &str,
+) -> Result<RecoveryQrDecodeReport> {
+    let metadata = fs::symlink_metadata(path)
+        .with_context(|| format!("read {label} QR metadata from {}", path.display()))?;
     ensure!(
-        metadata.is_file(),
-        "recovery QR input is not a regular file"
+        metadata.file_type().is_file() && !metadata.file_type().is_symlink(),
+        "{label} QR input is not a regular non-symlink file"
     );
-    ensure!(metadata.len() > 0, "recovery QR image is empty");
+    ensure!(metadata.len() > 0, "{label} QR image is empty");
     ensure!(
         metadata.len() <= MAX_QR_IMAGE_FILE_BYTES,
-        "recovery QR image exceeds the 16 MiB file limit"
+        "{label} QR image exceeds the 16 MiB file limit"
     );
 
     let file =
-        File::open(path).with_context(|| format!("open recovery QR image {}", path.display()))?;
+        File::open(path).with_context(|| format!("open {label} QR image {}", path.display()))?;
     let mut reader = ImageReader::new(BufReader::new(file))
         .with_guessed_format()
-        .context("detect recovery QR image format")?;
+        .with_context(|| format!("detect {label} QR image format"))?;
     let image_format = match reader.format() {
         Some(ImageFormat::Png) => "png",
         Some(ImageFormat::Jpeg) => "jpeg",
@@ -116,18 +146,20 @@ pub(crate) fn decode_recovery_link_qr_image(path: &Path) -> Result<RecoveryQrDec
     reader.limits(limits);
     let image = reader
         .decode()
-        .context("decode bounded recovery QR image")?;
+        .with_context(|| format!("decode bounded {label} QR image"))?;
     let image_width = image.width();
     let image_height = image.height();
     let mut prepared = rqrr::PreparedImage::prepare(image.to_luma8());
     let grids = prepared.detect_grids();
     ensure!(
         grids.len() == 1,
-        "recovery QR image must contain exactly one QR code; detected {}",
+        "{label} QR image must contain exactly one QR code; detected {}",
         grids.len()
     );
-    let (_, payload) = grids[0].decode().context("decode recovery QR payload")?;
-    validate_payload_shape(&payload)?;
+    let (_, payload) = grids[0]
+        .decode()
+        .with_context(|| format!("decode {label} QR payload"))?;
+    validate_payload_shape(&payload, expected_prefix, max_payload_bytes, label)?;
 
     Ok(RecoveryQrDecodeReport {
         payload,
@@ -138,18 +170,20 @@ pub(crate) fn decode_recovery_link_qr_image(path: &Path) -> Result<RecoveryQrDec
     })
 }
 
-fn validate_payload_shape(payload: &str) -> Result<()> {
+fn validate_payload_shape(
+    payload: &str,
+    expected_prefix: &str,
+    max_payload_bytes: usize,
+    label: &str,
+) -> Result<()> {
+    ensure!(payload.is_ascii(), "{label} QR payload is not ASCII");
     ensure!(
-        payload.is_ascii(),
-        "history recovery QR payload is not ASCII"
+        payload.len() <= max_payload_bytes,
+        "{label} QR payload exceeds its size limit"
     );
     ensure!(
-        payload.len() <= MAX_HISTORY_RECOVERY_LINK_TEXT_BYTES,
-        "history recovery QR payload exceeds the signed-link size limit"
-    );
-    ensure!(
-        payload.starts_with(HISTORY_RECOVERY_LINK_PREFIX),
-        "history recovery QR payload has an unsupported URI prefix"
+        payload.starts_with(expected_prefix),
+        "{label} QR payload has an unsupported URI prefix"
     );
     Ok(())
 }

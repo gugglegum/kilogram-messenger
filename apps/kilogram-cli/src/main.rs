@@ -78,6 +78,7 @@ use tempfile::NamedTempFile;
 use tokio::time::timeout;
 use zeroize::Zeroizing;
 
+mod publication_conflict_ceremony;
 mod recovery_discovery;
 mod recovery_link;
 mod recovery_plan;
@@ -95,6 +96,11 @@ mod runtime_queue;
 mod runtime_ticket_automation;
 mod runtime_ticket_checkpoint;
 
+use publication_conflict_ceremony::{
+    PublicationConflictRequestInspection, PublicationConflictResponseInspection,
+    inspect_publication_conflict_request, inspect_publication_conflict_response,
+    render_request_verification_qr, render_response_verification_qr,
+};
 use recovery_discovery::{
     DEFAULT_DISCOVERY_CANDIDATES, DEFAULT_DISCOVERY_WAIT_SECONDS, MAX_DISCOVERY_CANDIDATES,
     MAX_DISCOVERY_WAIT_SECONDS, discover_recovery_links, loopback_target, multicast_target,
@@ -533,6 +539,21 @@ enum Command {
         output_file: PathBuf,
     },
 
+    /// Publicly inspect a signed conflict request and optionally create or verify its QR claim.
+    PublicationConflictRequestInspect {
+        /// Device-signed request carried on removable media.
+        #[arg(long)]
+        request_file: PathBuf,
+
+        /// New no-clobber PNG containing only the compact public verification claim.
+        #[arg(long)]
+        qr_output_file: Option<PathBuf>,
+
+        /// Existing QR image received over a separate visual channel and matched exactly.
+        #[arg(long)]
+        verification_qr_file: Option<PathBuf>,
+    },
+
     /// Offline Root-authorize one exact Device-signed conflict-resolution request.
     AccountPublicationConflictAuthorize {
         /// Offline Account Root directory for this local account.
@@ -543,9 +564,32 @@ enum Command {
         #[arg(long)]
         request_file: PathBuf,
 
+        /// Exact KPC1 code shown by the public request inspection step.
+        #[arg(long)]
+        confirm_code: String,
+
+        /// Optional QR claim that must match the exact signed request before Root is loaded.
+        #[arg(long)]
+        verification_qr_file: Option<PathBuf>,
+
         /// New self-contained Root response copied back to an online device.
         #[arg(long)]
         output_file: PathBuf,
+    },
+
+    /// Publicly inspect a Root-signed response and optionally create or verify its QR claim.
+    PublicationConflictResponseInspect {
+        /// Self-contained Root response carried back on removable media.
+        #[arg(long)]
+        response_file: PathBuf,
+
+        /// New no-clobber PNG containing only the compact public verification claim.
+        #[arg(long)]
+        qr_output_file: Option<PathBuf>,
+
+        /// Existing QR image received over a separate visual channel and matched exactly.
+        #[arg(long)]
+        verification_qr_file: Option<PathBuf>,
     },
 
     /// Apply a self-contained Root response and atomically install its replacement descriptor.
@@ -1855,7 +1899,9 @@ impl Command {
             | Self::AccountShow { .. }
             | Self::AccountSnapshot { .. }
             | Self::AccountDeviceList { .. }
+            | Self::PublicationConflictRequestInspect { .. }
             | Self::AccountPublicationConflictAuthorize { .. }
+            | Self::PublicationConflictResponseInspect { .. }
             | Self::ConversationCreate { .. }
             | Self::ConversationMemberAdd { .. }
             | Self::DeviceRevoke { .. }
@@ -2743,14 +2789,36 @@ async fn run_command(command: Command) -> Result<()> {
             replacement_ticket_file,
             output_file,
         ),
+        Command::PublicationConflictRequestInspect {
+            request_file,
+            qr_output_file,
+            verification_qr_file,
+        } => inspect_publication_conflict_request_command(
+            request_file,
+            qr_output_file,
+            verification_qr_file,
+        ),
         Command::AccountPublicationConflictAuthorize {
             account_dir,
             request_file,
+            confirm_code,
+            verification_qr_file,
             output_file,
         } => authorize_account_publication_conflict_resolution(
             account_dir,
             request_file,
+            confirm_code,
+            verification_qr_file,
             output_file,
+        ),
+        Command::PublicationConflictResponseInspect {
+            response_file,
+            qr_output_file,
+            verification_qr_file,
+        } => inspect_publication_conflict_response_command(
+            response_file,
+            qr_output_file,
+            verification_qr_file,
         ),
         Command::RuntimePublicationConflictApplyResponse {
             state_dir,
@@ -7539,10 +7607,18 @@ fn create_runtime_publication_conflict_resolution_request_report(
     let request_id = request.request_id()?;
     let output_file = absolute_new_external_path(state_directory, output_file)?;
     write_new_authority_file(&output_file, &request.encode()?)?;
+    let inspected = inspect_publication_conflict_request(&output_file, None)
+        .context("inspect newly created publication-conflict request")?;
+    ensure!(
+        inspected.report().request_id == request_id.to_string(),
+        "new publication-conflict request inspection returned a different request ID"
+    );
     Ok(RuntimeIpcPublicationConflictRequest {
         publication_conflict_proof_id: proof.proof_id()?.to_string(),
         publication_conflict_evidence_id: proof.evidence_id()?.to_string(),
         publication_conflict_resolution_request_id: request_id.to_string(),
+        request_artifact_digest: inspected.report().artifact_digest.clone(),
+        confirmation_code: inspected.report().confirmation_code.clone(),
         old_publication_channel_id: channel_id.to_string(),
         new_publication_channel_id: replacement
             .ticket_publication_write_key()
@@ -7570,6 +7646,11 @@ fn print_runtime_publication_conflict_request(request: &RuntimeIpcPublicationCon
         request.publication_conflict_resolution_request_id
     );
     println!(
+        "request_artifact_digest={}",
+        request.request_artifact_digest
+    );
+    println!("confirmation_code={}", request.confirmation_code);
+    println!(
         "old_publication_channel_id={}",
         request.old_publication_channel_id
     );
@@ -7590,19 +7671,54 @@ fn print_runtime_publication_conflict_request(request: &RuntimeIpcPublicationCon
     println!("incident_next_action={}", request.next_action);
 }
 
+fn inspect_publication_conflict_request_command(
+    request_file: PathBuf,
+    qr_output_file: Option<PathBuf>,
+    verification_qr_file: Option<PathBuf>,
+) -> Result<()> {
+    let inspected =
+        inspect_publication_conflict_request(&request_file, verification_qr_file.as_deref())?;
+    print_publication_conflict_request_inspection(inspected.report());
+    if let Some(qr_output_file) = qr_output_file {
+        let qr_output_file = absolute_command_path(qr_output_file)?;
+        let rendered = render_request_verification_qr(&inspected, &qr_output_file)?;
+        print_publication_conflict_qr_render(&rendered, &qr_output_file);
+    }
+    println!("root_secret_loaded=false");
+    println!("runtime_state_loaded=false");
+    println!("inspection_assurance=authenticated-public-evidence");
+    println!("status=publication-conflict-request-inspected");
+    Ok(())
+}
+
 fn authorize_account_publication_conflict_resolution(
     account_directory: PathBuf,
     request_file: PathBuf,
+    confirm_code: String,
+    verification_qr_file: Option<PathBuf>,
     output_file: PathBuf,
 ) -> Result<()> {
-    let root = AccountRootState::load(&account_directory)
+    let inspected =
+        inspect_publication_conflict_request(&request_file, verification_qr_file.as_deref())?;
+    ensure!(
+        confirm_code
+            .trim()
+            .eq_ignore_ascii_case(inspected.report().confirmation_code.as_str()),
+        "operator confirmation code does not match the exact inspected request; Account Root was not loaded"
+    );
+    let canonical_account_directory =
+        fs::canonicalize(&account_directory).context("resolve offline Account Root directory")?;
+    ensure!(
+        !inspected
+            .report()
+            .request_file
+            .starts_with(&canonical_account_directory),
+        "untrusted conflict request must live outside the offline Account Root directory"
+    );
+    let output_file = absolute_new_external_path(&canonical_account_directory, &output_file)?;
+    let root = AccountRootState::load(&canonical_account_directory)
         .context("load offline Account Root for publication conflict resolution")?;
-    let request_bytes = read_bounded_regular_file(
-        &request_file,
-        runtime_publication_resolution::MAX_PUBLICATION_CONFLICT_RESOLUTION_REQUEST_BYTES as u64,
-        "publication conflict resolution request",
-    )?;
-    let request = SignedPublicationConflictResolutionRequest::decode(&request_bytes)?;
+    let request = inspected.request();
     let authority = root.authority_snapshot()?;
     let devices = root.published_device_list()?;
     ensure!(
@@ -7631,21 +7747,6 @@ fn authorize_account_publication_conflict_resolution(
         &DeviceCapability::MESSAGING,
     )
     .context("conflict detector is not currently authorized for messaging")?;
-    let replacement = ConnectionTicket::decode(
-        std::str::from_utf8(request.replacement_ticket())
-            .context("request replacement peer ticket is not UTF-8")?,
-    )
-    .context("verify request replacement peer ticket")?;
-    ensure!(
-        replacement.listener_account_id() == request.peer_account_id()
-            && replacement.listener_device_id() == request.peer_device_id()
-            && replacement.allowed_requester_account_id() == root.account_id()
-            && replacement.route_policy() == request.route_policy()
-            && replacement.ticket_publication_write_key() == request.new_write_key()
-            && replacement.ticket_publication_channel_epoch() == request.new_channel_epoch()
-            && request.new_channel_epoch() > request.old_channel_epoch(),
-        "request replacement ticket does not match the Device-signed rotation summary"
-    );
     let request_id = request.request_id()?;
     let resolution = RootSignedPublicationConflictResolution::sign(
         &root,
@@ -7659,7 +7760,7 @@ fn authorize_account_publication_conflict_resolution(
         request.replacement_ticket_digest(),
         unix_time_now()?,
     )?;
-    let response = PublicationConflictResolutionResponse::new(&request, resolution.clone())?;
+    let response = PublicationConflictResolutionResponse::new(request, resolution.clone())?;
     write_new_authority_file(&output_file, &response.encode()?)?;
     println!("publication_conflict_resolution_request_id={request_id}");
     println!(
@@ -7679,14 +7780,168 @@ fn authorize_account_publication_conflict_resolution(
         request.new_write_key().channel_id()
     );
     println!("authority_revision={}", authority.revision());
+    println!("confirmation_code={}", inspected.report().confirmation_code);
+    println!("operator_confirmation=exact-match");
+    println!(
+        "verification_qr_status={}",
+        inspected.report().verification_qr_status
+    );
     println!(
         "authorized_at_unix_seconds={}",
         resolution.authorized_at_unix_seconds()
     );
     println!("response_file={}", output_file.display());
+    println!("root_secret_loaded=true");
     println!("runtime_state_loaded=false");
     println!("status=publication-conflict-resolution-authorized");
     Ok(())
+}
+
+fn inspect_publication_conflict_response_command(
+    response_file: PathBuf,
+    qr_output_file: Option<PathBuf>,
+    verification_qr_file: Option<PathBuf>,
+) -> Result<()> {
+    let inspected =
+        inspect_publication_conflict_response(&response_file, verification_qr_file.as_deref())?;
+    print_publication_conflict_response_inspection(inspected.report());
+    if let Some(qr_output_file) = qr_output_file {
+        let qr_output_file = absolute_command_path(qr_output_file)?;
+        let rendered = render_response_verification_qr(&inspected, &qr_output_file)?;
+        print_publication_conflict_qr_render(&rendered, &qr_output_file);
+    }
+    println!("root_secret_loaded=false");
+    println!("runtime_state_loaded=false");
+    println!("inspection_assurance=authenticated-root-response");
+    println!("status=publication-conflict-response-inspected");
+    Ok(())
+}
+
+fn print_publication_conflict_request_inspection(report: &PublicationConflictRequestInspection) {
+    println!("artifact_kind=request");
+    println!("request_file={}", report.request_file.display());
+    println!("artifact_bytes={}", report.artifact_bytes);
+    println!("artifact_digest={}", report.artifact_digest);
+    println!(
+        "publication_conflict_resolution_request_id={}",
+        report.request_id
+    );
+    println!("local_account_id={}", report.local_account_id);
+    println!("requester_device_id={}", report.requester_device_id);
+    println!("authority_revision={}", report.authority_revision);
+    println!("publication_conflict_proof_id={}", report.conflict_proof_id);
+    println!(
+        "publication_conflict_evidence_id={}",
+        report.conflict_evidence_id
+    );
+    println!("detector_device_id={}", report.detector_device_id);
+    println!(
+        "detected_at_unix_seconds={}",
+        report.detected_at_unix_seconds
+    );
+    println!("publication_generation={}", report.publication_generation);
+    println!("peer_account_id={}", report.peer_account_id);
+    println!("peer_device_id={}", report.peer_device_id);
+    println!(
+        "old_publication_channel_id={}",
+        report.old_publication_channel_id
+    );
+    println!(
+        "new_publication_channel_id={}",
+        report.new_publication_channel_id
+    );
+    println!("old_channel_epoch={}", report.old_channel_epoch);
+    println!("new_channel_epoch={}", report.new_channel_epoch);
+    println!("route_policy={}", report.route_policy);
+    println!(
+        "replacement_ticket_digest={}",
+        report.replacement_ticket_digest
+    );
+    println!("replacement_endpoint_id={}", report.replacement_endpoint_id);
+    println!(
+        "replacement_peer_authority_revision={}",
+        report.replacement_peer_authority_revision
+    );
+    println!(
+        "replacement_peer_device_count={}",
+        report.replacement_peer_device_count
+    );
+    println!(
+        "requested_at_unix_seconds={}",
+        report.requested_at_unix_seconds
+    );
+    println!("confirmation_code={}", report.confirmation_code);
+    println!("verification_qr_status={}", report.verification_qr_status);
+    println!("request_signature=valid");
+    println!("conflict_evidence_signatures=valid");
+    println!("replacement_ticket_signature=valid");
+}
+
+fn print_publication_conflict_response_inspection(report: &PublicationConflictResponseInspection) {
+    println!("artifact_kind=response");
+    println!("response_file={}", report.response_file.display());
+    println!("artifact_bytes={}", report.artifact_bytes);
+    println!("artifact_digest={}", report.artifact_digest);
+    println!(
+        "publication_conflict_resolution_request_id={}",
+        report.request_id
+    );
+    println!(
+        "publication_conflict_resolution_id={}",
+        report.resolution_id
+    );
+    println!("local_account_id={}", report.local_account_id);
+    println!("authority_revision={}", report.authority_revision);
+    println!(
+        "publication_conflict_evidence_id={}",
+        report.conflict_evidence_id
+    );
+    println!("peer_account_id={}", report.peer_account_id);
+    println!("peer_device_id={}", report.peer_device_id);
+    println!(
+        "old_publication_channel_id={}",
+        report.old_publication_channel_id
+    );
+    println!(
+        "new_publication_channel_id={}",
+        report.new_publication_channel_id
+    );
+    println!("new_channel_epoch={}", report.new_channel_epoch);
+    println!("route_policy={}", report.route_policy);
+    println!(
+        "replacement_ticket_digest={}",
+        report.replacement_ticket_digest
+    );
+    println!("replacement_endpoint_id={}", report.replacement_endpoint_id);
+    println!(
+        "replacement_peer_authority_revision={}",
+        report.replacement_peer_authority_revision
+    );
+    println!(
+        "replacement_peer_device_count={}",
+        report.replacement_peer_device_count
+    );
+    println!(
+        "authorized_at_unix_seconds={}",
+        report.authorized_at_unix_seconds
+    );
+    println!("confirmation_code={}", report.confirmation_code);
+    println!("verification_qr_status={}", report.verification_qr_status);
+    println!("root_resolution_signature=valid");
+    println!("replacement_ticket_signature=valid");
+}
+
+fn print_publication_conflict_qr_render(report: &RecoveryQrRenderReport, path: &Path) {
+    println!("verification_qr_error_correction=L");
+    println!("verification_qr_version={}", report.qr_version);
+    println!("verification_qr_module_count={}", report.module_count);
+    println!(
+        "verification_qr_image_dimensions={}x{}",
+        report.pixel_width, report.pixel_height
+    );
+    println!("verification_qr_png_bytes={}", report.png_bytes);
+    println!("verification_qr_file={}", path.display());
+    println!("verification_qr_content=compact-public-claim-not-full-artifact");
 }
 
 fn apply_runtime_publication_conflict_resolution_response(
@@ -23135,6 +23390,35 @@ mod tests {
             request_report.request_file,
             fs::canonicalize(&request_file)?
         );
+        assert_eq!(request_report.request_artifact_digest.len(), 64);
+        assert!(
+            request_report
+                .request_artifact_digest
+                .bytes()
+                .all(|byte| byte.is_ascii_hexdigit())
+        );
+        assert!(request_report.confirmation_code.starts_with("KPC1-"));
+        let request_inspection = inspect_publication_conflict_request(&request_file, None)?;
+        assert_eq!(
+            request_inspection.report().request_id,
+            request_report.publication_conflict_resolution_request_id
+        );
+        assert_eq!(
+            request_inspection.report().artifact_digest,
+            request_report.request_artifact_digest
+        );
+        assert_eq!(
+            request_inspection.report().confirmation_code,
+            request_report.confirmation_code
+        );
+        let request_qr_file = directory.path().join("publication-conflict-request.png");
+        render_request_verification_qr(&request_inspection, &request_qr_file)?;
+        assert_eq!(
+            inspect_publication_conflict_request(&request_file, Some(&request_qr_file))?
+                .report()
+                .verification_qr_status,
+            "exact-match"
+        );
         let portable_request =
             SignedPublicationConflictResolutionRequest::decode(&fs::read(&request_file)?)?;
         assert_eq!(
@@ -23153,19 +23437,56 @@ mod tests {
         let response_file = directory
             .path()
             .join("publication-conflict-resolution.pcrp");
+        let wrong_confirmation_output = directory.path().join("wrong-code-response.pcrp");
+        let wrong_confirmation = match authorize_account_publication_conflict_resolution(
+            directory.path().join("missing-root-must-not-be-loaded"),
+            request_file.clone(),
+            "KPC1-0000-0000-0000-0000-0000-0000".to_owned(),
+            Some(request_qr_file.clone()),
+            wrong_confirmation_output.clone(),
+        ) {
+            Ok(()) => bail!("wrong confirmation code unexpectedly authorized conflict resolution"),
+            Err(error) => error,
+        };
+        assert!(format!("{wrong_confirmation:#}").contains("Account Root was not loaded"));
+        assert!(!wrong_confirmation_output.exists());
         assert!(
             authorize_account_publication_conflict_resolution(
                 directory.path().join("peer-root"),
                 request_file.clone(),
+                request_report.confirmation_code.clone(),
+                Some(request_qr_file.clone()),
                 directory.path().join("wrong-root-response.pcrp"),
             )
             .is_err()
         );
         authorize_account_publication_conflict_resolution(
             directory.path().join("local-root"),
-            request_file,
+            request_file.clone(),
+            request_report.confirmation_code.clone(),
+            Some(request_qr_file.clone()),
             response_file.clone(),
         )?;
+        let response_inspection = inspect_publication_conflict_response(&response_file, None)?;
+        assert_eq!(
+            response_inspection.report().request_id,
+            request_report.publication_conflict_resolution_request_id
+        );
+        assert_eq!(
+            response_inspection.report().confirmation_code,
+            request_report.confirmation_code
+        );
+        let response_qr_file = directory.path().join("publication-conflict-response.png");
+        render_response_verification_qr(&response_inspection, &response_qr_file)?;
+        assert_eq!(
+            inspect_publication_conflict_response(&response_file, Some(&response_qr_file))?
+                .report()
+                .verification_qr_status,
+            "exact-match"
+        );
+        assert!(
+            inspect_publication_conflict_response(&response_file, Some(&request_qr_file)).is_err()
+        );
         let portable_response =
             PublicationConflictResolutionResponse::decode(&fs::read(&response_file)?)?;
         let portable_resolution = portable_response.resolution();

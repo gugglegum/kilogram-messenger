@@ -21,7 +21,7 @@ use tokio::{
     time::timeout,
 };
 
-const IPC_VERSION: u8 = 19;
+const IPC_VERSION: u8 = 20;
 const MAX_DESCRIPTOR_BYTES: u64 = 16 * 1024;
 const MAX_LAUNCH_PROFILE_BYTES: u64 = 64 * 1024;
 const MAX_LAUNCH_PROFILE_PATHS: usize = 64;
@@ -771,6 +771,8 @@ pub struct RuntimeIpcPublicationConflictRequest {
     pub publication_conflict_proof_id: String,
     pub publication_conflict_evidence_id: String,
     pub publication_conflict_resolution_request_id: String,
+    pub request_artifact_digest: String,
+    pub confirmation_code: String,
     pub old_publication_channel_id: String,
     pub new_publication_channel_id: String,
     pub authority_revision: u64,

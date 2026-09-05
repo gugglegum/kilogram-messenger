@@ -2327,7 +2327,15 @@ async fn execute_request(request: WorkerRequest) -> Result<WorkerSuccess> {
             ensure!(
                 output.field("process_exit_success") == Some("true")
                     && output.status() == "publication-conflict-resolution-requested"
-                    && output.field("runtime_restart_required") == Some("false"),
+                    && output.field("runtime_restart_required") == Some("false")
+                    && output
+                        .field("request_artifact_digest")
+                        .is_some_and(|value| {
+                            value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
+                        })
+                    && output
+                        .field("confirmation_code")
+                        .is_some_and(valid_publication_conflict_confirmation_code),
                 "Conflict-resolution request helper did not complete successfully"
             );
             Ok(WorkerSuccess::PublicationConflictRequested(output))
@@ -6331,6 +6339,10 @@ impl KilogramApp {
                     action = PublicationConflictUiAction::CreateRequest;
                 }
                 if let Some(output) = self.publication_conflict_recovery.request_result.as_ref() {
+                    let request_file = output.field("request_file").unwrap_or("request.pcrq");
+                    let confirmation_code = output
+                        .field("confirmation_code")
+                        .unwrap_or("missing-confirmation-code");
                     ui.colored_label(
                         egui::Color32::from_rgb(92, 201, 137),
                         format!(
@@ -6343,11 +6355,25 @@ impl KilogramApp {
                             output.field("request_file").unwrap_or("unknown")
                         ),
                     );
-                    ui.small("The runtime remains online. On the isolated Root host, inspect the IDs and run:");
+                    ui.colored_label(
+                        egui::Color32::from_rgb(246, 195, 93),
+                        format!("Independent confirmation code: {confirmation_code}"),
+                    );
+                    ui.small(format!(
+                        "Request digest: {}",
+                        output.field("request_artifact_digest").unwrap_or("unknown")
+                    ));
+                    ui.small("Keep the full .pcrq on removable media. Its QR is a compact exact-match claim, not the request itself. On a public inspection host, run:");
                     ui.label(
                         egui::RichText::new(format!(
-                            "kilogram-cli account-publication-conflict-authorize --account-dir <offline-root> --request-file \"{}\" --output-file publication-conflict-resolution.pcrp",
-                            output.field("request_file").unwrap_or("request.pcrq")
+                            "kilogram-cli publication-conflict-request-inspect --request-file \"{request_file}\" --qr-output-file publication-conflict-request.png"
+                        ))
+                        .monospace(),
+                    );
+                    ui.small("Compare the KPC1 code through an independent channel. Then, on the isolated Root host, inspect the artifact (and optionally its QR) before authorizing:");
+                    ui.label(
+                        egui::RichText::new(format!(
+                            "kilogram-cli account-publication-conflict-authorize --account-dir <offline-root> --request-file \"{request_file}\" --confirm-code \"{confirmation_code}\" --verification-qr-file publication-conflict-request.png --output-file publication-conflict-resolution.pcrp"
                         ))
                         .monospace(),
                     );
@@ -6365,6 +6391,21 @@ impl KilogramApp {
                         .desired_width(f32::INFINITY),
                     );
                 });
+                if !self
+                    .publication_conflict_recovery
+                    .response_input_file
+                    .trim()
+                    .is_empty()
+                {
+                    ui.small("Optional public verification before import:");
+                    ui.label(
+                        egui::RichText::new(format!(
+                            "kilogram-cli publication-conflict-response-inspect --response-file \"{}\" --qr-output-file publication-conflict-response.png",
+                            self.publication_conflict_recovery.response_input_file.trim()
+                        ))
+                        .monospace(),
+                    );
+                }
                 if ui
                     .add_enabled(
                         connected_idle
@@ -7762,6 +7803,18 @@ fn compact_id(value: &str) -> String {
     format!("{}…{}", &value[..EDGE], &value[value.len() - EDGE..])
 }
 
+fn valid_publication_conflict_confirmation_code(value: &str) -> bool {
+    let Some(groups) = value.strip_prefix("KPC1-") else {
+        return false;
+    };
+    let mut groups = groups.split('-');
+    (0..6).all(|_| {
+        groups.next().is_some_and(|group| {
+            group.len() == 4 && group.bytes().all(|byte| byte.is_ascii_hexdigit())
+        })
+    }) && groups.next().is_none()
+}
+
 #[cfg(test)]
 mod tests {
     use kilogram_identity::{AccountRootState, DeviceCapability, DeviceIdentity, DeviceState};
@@ -8206,6 +8259,22 @@ mod tests {
     fn compact_identifier_keeps_both_ends() {
         assert_eq!(compact_id("1234567890abcdef"), "123456…abcdef");
         assert_eq!(compact_id("short"), "short");
+    }
+
+    #[test]
+    fn publication_conflict_confirmation_code_shape_is_exact() {
+        assert!(valid_publication_conflict_confirmation_code(
+            "KPC1-0123-4567-89AB-CDEF-0000-FFFF"
+        ));
+        assert!(!valid_publication_conflict_confirmation_code(
+            "KPC1-0123-4567-89AB-CDEF-0000"
+        ));
+        assert!(!valid_publication_conflict_confirmation_code(
+            "KPC1-0123-4567-89AB-CDEF-0000-GGGG"
+        ));
+        assert!(!valid_publication_conflict_confirmation_code(
+            "kpc1-0123-4567-89AB-CDEF-0000-FFFF"
+        ));
     }
 
     #[tokio::test]

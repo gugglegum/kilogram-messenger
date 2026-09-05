@@ -308,11 +308,15 @@ M0.8.15 вводит schema-v3 DB-only identity layout. Upgrade сначала �
 identity в effective snapshot, typed shadow показывает для неё 0 records, а
 primary-shadow recovery больше не создаёт plaintext keys. Mismatched
 повторно появившаяся копия блокируется без импорта.
-Полное seed/root recovery с authority history, non-Windows root provider,
-защищённое хранение оставшихся ratchet shadows, дальнейшее shadow retirement,
-global prekey discovery/witness, автоматический recovery source discovery,
-постоянный scheduler, QR/device-link UX, sync summaries, membership removal и
-группы ещё не реализованы.
+К M0.9.47 поверх этого уже реализованы recoverable seed/Account Root lifecycle,
+device link/removal, current-device quorum, desktop/runtime IPC, wide-area
+ticket publication, multi-Device endpoint convergence и полный
+publication-conflict incident flow. Последний этап публично инспектирует
+`.pcrq`/`.pcrp`, связывает их compact QR claim и mandatory 96-bit KPC1 gate до
+offline Root load. Production non-Windows/mobile Root provider, hardware-backed
+и purpose-built minimal signer, global freshness/completeness witness,
+privacy-preserving mailbox/gossip, membership removal semantics и MLS-группы
+ещё не реализованы.
 
 ## Цель продукта
 
@@ -365,80 +369,82 @@ global prekey discovery/witness, автоматический recovery source di
 
 ## План ближайших работ
 
-1. M0.9.47: сделать hardened offline evidence viewer и переносимую
-   removable-media/QR церемонию подписи `.pcrq` -> `.pcrp`, сохранив Root вне
-   GUI и online runtime.
-2. Уже реализованный M0.9.46 вращает собственный publication channel через
+1. M0.9.48: выделить минимальный offline signer/viewer с меньшим TCB и
+   воспроизводимым переносимым пакетом, не включающим network/runtime surface.
+2. Уже реализованный M0.9.47 публично проверяет полные `.pcrq`/`.pcrp`, создаёт
+   compact exact-match QR claim и требует 96-bit KPC1-код до загрузки Root;
+   IPC v20 и Windows показывают digest, код и точные команды церемонии.
+3. Уже реализованный M0.9.46 вращает собственный publication channel через
    authenticated live actor, атомарно переиздаёт ticket на том же endpoint и
    создаёт/применяет conflict request/response без restart; Windows показывает
    единый incident lifecycle, а IPC v19 возвращает typed результаты.
-3. Уже реализованный M0.9.45 разделяет online Device-signed `.pcrq` и offline
+4. Уже реализованный M0.9.45 разделяет online Device-signed `.pcrq` и offline
    Root-signed self-contained `.pcrp`, автоматически переносит resolution через
    bundle v4 к exact-current siblings и даёт Windows incident UI без Root path;
    ACK v2 и IPC v18 отдельно считают resolution evidence.
-4. Уже реализованный M0.9.44 переносит conflict proof через bundle v3,
+5. Уже реализованный M0.9.44 переносит conflict proof через bundle v3,
    конвергирует разные local proof ID в stable evidence ID, вращает настоящий
    ticket v11 channel epoch и применяет exact Root-signed `.pcr` без удаления
    исходного `.pcf`; IPC v17 отдельно считает conflict evidence.
-5. Уже реализованный M0.9.43 сохраняет canonical signed observation conflict
+6. Уже реализованный M0.9.43 сохраняет canonical signed observation conflict
    в одном append-only `.pcf`, карантинит channel для delivery/sync/refresh и
    показывает proof/generation/time через IPC v16 и Windows UI. Это local
    conflict evidence, не peer equivocation proof и не global consensus.
-6. Уже реализованный M0.9.42 транзитивно переносит direct или accepted
+7. Уже реализованный M0.9.42 транзитивно переносит direct или accepted
    publication high-water через bundle v2, отклоняет same-generation конфликт
    до mutation и compact-ит `.aeo` до checkpoint-защищённого head.
-7. Уже реализованный M0.9.41 заменяет ручную настройку каждой пары одной
+8. Уже реализованный M0.9.41 заменяет ручную настройку каждой пары одной
    local-Device-signed roster policy: active recipients получают существующие
    discovery/announcement schedules, revoked recipients немедленно
    выключаются, а actor выполняет не более одного foreground workflow.
-8. Уже реализованный M0.9.40 даёт exact-current sibling Devices directional
+9. Уже реализованный M0.9.40 даёт exact-current sibling Devices directional
    pairwise store capabilities, recipient-HPKE публикацию свежего runtime ticket
    и автоматический fetch в runtime-managed path без общей папки.
-9. Уже реализованный M0.9.39 даёт одному listener primary peer и exact-current
+10. Уже реализованный M0.9.39 даёт одному listener primary peer и exact-current
    own-account аудитории, stable own-device ticket и Device-signed restart-safe
    foreground schedule с network permissions, backoff и compaction.
-10. Уже реализованный M0.9.38 переносит M0.9.37 recipient-encrypted bundle по
+11. Уже реализованный M0.9.38 переносит M0.9.37 recipient-encrypted bundle по
    authenticated same-account Device session, вызывает общий import gate и
    возвращает recipient-signed session-bound replay acknowledgement.
-11. Уже реализованный M0.9.37 переносит bounded endpoint candidates и signed
+12. Уже реализованный M0.9.37 переносит bounded endpoint candidates и signed
    publication high-water между exact-current authorized own Devices через
    source-signed recipient-HPKE file, не принимая bundle как Root authority.
-12. Уже реализованный M0.9.36 хранит local-device-signed expiry-independent
+13. Уже реализованный M0.9.36 хранит local-device-signed expiry-independent
    publication binding и обновляет long-offline endpoint без принятия
    просроченного transport/prekey ticket.
-13. Уже реализованный M0.9.35 обновляет все enrolled Device channels одной
+14. Уже реализованный M0.9.35 обновляет все enrolled Device channels одной
    bounded action, хранит independent observation high-water и показывает
    desktop `usable`/`stale` состояния.
-14. Уже реализованный M0.9.33 даёт self-authenticating per-peer capability
+15. Уже реализованный M0.9.33 даёт self-authenticating per-peer capability
    channel и exact Ed25519 PUT authorization без Account/Device ID на store.
-15. Уже реализованные M0.9.31–M0.9.32 дают opt-in foreground automation и
+16. Уже реализованные M0.9.31–M0.9.32 дают opt-in foreground automation и
    crash-safe bounded compaction его signed runtime chains.
-16. Уже реализованный M0.9.30 даёт self-hostable loopback-only opaque store за
+17. Уже реализованный M0.9.30 даёт self-hostable loopback-only opaque store за
    HTTPS reverse proxy: durable Redb, fixed retention, monotonic replacement,
    size/channel/connection/rate limits и Internet test procedure.
-17. Уже реализованный M0.9.29 заменяет synchronized steady-state ticket refresh
+18. Уже реализованный M0.9.29 заменяет synchronized steady-state ticket refresh
    на explicit HTTPS publication/fetch: device-signed expiring chain, per-device
    HPKE slots, local rollback high-water, IPC v7 и Windows UI. Initial verified
    contact остаётся out-of-band, store traffic metadata видимы.
-18. Уже реализованный M0.9.28 сохраняет device-signed receipt применённого live
+19. Уже реализованный M0.9.28 сохраняет device-signed receipt применённого live
    roster в vault-primary transaction, восстанавливает его раньше stale launch
    profile и bounded desktop-операцией согласует exact canonical path.
-19. Optional autostart/background mode оставить отдельной явной настройкой, а не
+20. Optional autostart/background mode оставить отдельной явной настройкой, а не
    обязательным Task Scheduler этапом.
-20. Добавить production macOS/Linux local key provider, согласованный monotonic
+21. Добавить production macOS/Linux local key provider, согласованный monotonic
    witness и lifecycle обновления portable recovery package; затем mobile
    providers. Расширить pseudonymous M0.9.29 lookup до privacy-preserving
    gossip/mailbox. Live camera/clipboard оставить platform UI.
-21. Спроектировать membership removal вместе с ordered security log и MLS epoch;
+22. Спроектировать membership removal вместе с ordered security log и MLS epoch;
    отдельно — gossip/witness для first-contact freshness.
-22. Спроектировать полное seed/recovery authority с monotonic history/witness,
+23. Спроектировать полное seed/recovery authority с monotonic history/witness,
    root rotation и конфликтующие authority operations.
-23. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
-24. Спроектировать финальный wire format подписанного события и алгоритм
+24. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
+25. Спроектировать финальный wire format подписанного события и алгоритм
    линеаризации.
-25. Спроектировать compact Merkle/range summary и переносимый signed cursor.
-26. Добавить небольшие MLS-группы.
-27. Перед публичным выпуском провести независимый криптографический аудит.
+26. Спроектировать compact Merkle/range summary и переносимый signed cursor.
+27. Добавить небольшие MLS-группы.
+28. Перед публичным выпуском провести независимый криптографический аудит.
 
 ## Навигация
 
@@ -583,6 +589,8 @@ global prekey discovery/witness, автоматический recovery source di
   реализованный M0.9.45 split Device-request/offline-Root-response flow, automatic resolution propagation через bundle v4 и guided Windows incident UI без Root secret.
 - [`../docs/RFC-0068-live-publication-incident-lifecycle.md`](../docs/RFC-0068-live-publication-incident-lifecycle.md) —
   реализованный M0.9.46 authenticated live channel rotation, actor-owned request/apply и единый Windows incident lifecycle без остановки runtime или доступа к Root.
+- [`../docs/RFC-0069-hardened-offline-publication-conflict-ceremony.md`](../docs/RFC-0069-hardened-offline-publication-conflict-ceremony.md) —
+  реализованный M0.9.47 bounded public request/response viewer, compact exact-match QR claim и mandatory KPC1 gate до загрузки offline Root.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

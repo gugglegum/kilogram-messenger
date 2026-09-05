@@ -146,12 +146,40 @@ availability schedules is specified in
 Transitive accepted-observation convergence and its bounded high-water
 compaction are specified in
 [`docs/RFC-0064-convergent-sibling-publication-evidence.md`](docs/RFC-0064-convergent-sibling-publication-evidence.md).
+Durable quarantine, sibling proof propagation, offline Root recovery and its
+live incident lifecycle are specified in
+[`docs/RFC-0065-durable-publication-conflict-quarantine.md`](docs/RFC-0065-durable-publication-conflict-quarantine.md),
+[`docs/RFC-0066-sibling-conflict-proof-and-root-channel-rotation.md`](docs/RFC-0066-sibling-conflict-proof-and-root-channel-rotation.md),
+[`docs/RFC-0067-offline-root-conflict-recovery.md`](docs/RFC-0067-offline-root-conflict-recovery.md),
+and [`docs/RFC-0068-live-publication-incident-lifecycle.md`](docs/RFC-0068-live-publication-incident-lifecycle.md).
+The hardened public viewer, compact QR claim and confirmation-gated offline
+signer ceremony are specified in
+[`docs/RFC-0069-hardened-offline-publication-conflict-ceremony.md`](docs/RFC-0069-hardened-offline-publication-conflict-ceremony.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.46 live publication incident lifecycle — complete
+## Current milestone: M0.9.47 hardened offline conflict ceremony — complete
+
+Publication-conflict request and response artifacts now have bounded public
+inspectors that authenticate every signature and exact embedded replacement
+ticket without loading Root or runtime state. They can emit or verify a compact
+no-clobber QR claim; the complete multi-MiB-capable `.pcrq`/`.pcrp` remains on
+removable media rather than being hidden inside a QR code.
+
+The offline Root signer requires an exact 96-bit KPC1 confirmation code before
+it resolves or loads the Root directory. The same code binds request and
+response to the account, authority revision, evidence, peer, channel transition
+and ticket digest. IPC v20 and the Windows incident panel show the request
+digest, code and exact inspect/authorize commands while keeping Root material
+outside the GUI and live runtime.
+
+The format, validation order and honest human/media trust boundary are specified
+in
+[`docs/RFC-0069-hardened-offline-publication-conflict-ceremony.md`](docs/RFC-0069-hardened-offline-publication-conflict-ceremony.md).
+
+## Previous milestone: M0.9.46 live publication incident lifecycle — complete
 
 Publication-channel recovery no longer requires stopping the messaging
 runtime. Authenticated IPC v19 serializes three live actor operations: rotate
@@ -171,7 +199,7 @@ The actor contract, crash/retry ordering, UI phases and remaining manual ticket
 transfer boundary are specified in
 [`docs/RFC-0068-live-publication-incident-lifecycle.md`](docs/RFC-0068-live-publication-incident-lifecycle.md).
 
-## Previous milestone: M0.9.45 offline Root recovery and sibling convergence — complete
+## Earlier milestone: M0.9.45 offline Root recovery and sibling convergence — complete
 
 Publication-conflict recovery no longer loads online runtime state and the
 Account Root in one process. The affected Device creates a bounded

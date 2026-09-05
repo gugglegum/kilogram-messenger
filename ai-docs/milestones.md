@@ -3092,11 +3092,38 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - contract зафиксирован в
   [`../docs/RFC-0068-live-publication-incident-lifecycle.md`](../docs/RFC-0068-live-publication-incident-lifecycle.md).
 
+### M0.9.47 — hardened offline publication-conflict ceremony: выполнено
+
+Реализовано:
+
+- публичные `publication-conflict-request-inspect` и
+  `publication-conflict-response-inspect` bounded-проверяют подписи, evidence,
+  embedded replacement ticket и показывают exact account/peer/channel/epoch/
+  digest данные без Root или runtime state;
+- full `.pcrq`/`.pcrp` остаются на removable media, а no-clobber PNG содержит
+  только compact versioned claim `kilogram://publication-conflict/v1/`;
+- optional `--verification-qr-file` принимает ровно один bounded PNG/JPEG QR и
+  требует field-for-field совпадения claim с signed artifact; request/response
+  kind и artifact ID не взаимозаменяемы;
+- 96-bit KPC1 code domain-separated от request ID, account/revision, evidence,
+  peer, old/new channels и ticket digest одинаков для matching request/response;
+- offline authorize требует `--confirm-code`, выполняет public inspection и
+  optional QR match до resolve/load Root, запрещает untrusted request/response
+  внутри Root directory и сохраняет no-clobber output;
+- IPC v20 возвращает artifact digest и confirmation code, а Windows incident
+  UI проверяет их форму, показывает код, digest и точные inspect/sign/response
+  команды, не получая Root material;
+- regression проверяет QR round-trip/exact match, cross-kind rejection,
+  неправильный код до отсутствующего Root, wrong Root, correct signing,
+  одинаковый request/response code, tampering и live idempotent apply;
+- contract зафиксирован в
+  [`../docs/RFC-0069-hardened-offline-publication-conflict-ceremony.md`](../docs/RFC-0069-hardened-offline-publication-conflict-ceremony.md).
+
 ### Следующий этап
 
-1. M0.9.47: hardened offline evidence viewer и переносимая removable-media/QR
-   церемония `.pcrq` -> `.pcrp`, которая показывает exact IDs/authority/peer/
-   epochs до подписи и не переносит Root в desktop или online runtime.
+1. M0.9.48: выделить purpose-built offline publication-conflict signer/viewer
+   с минимальным command/dependency surface, воспроизводимым переносимым
+   пакетом и явным read-only inspection -> confirmation -> signing flow.
 2. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.

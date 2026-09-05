@@ -202,9 +202,11 @@ sessions, distribution, removal и key epochs и не решены этим пр
   online `.pcrq`/offline `.pcrp`, а bundle v4 автоматически переносит готовый
   resolution к exact-current siblings с тем же local evidence. M0.9.46
   выполняет собственную rotation, request и apply через authenticated live
-  actor без restart, но всё ещё требует человеческой передачи свежего ticket и
-  offline public artifacts. Открыты hardened offline evidence viewer,
-  обнаружение конфликта между устройствами, которые никогда не обменивались
+  actor без restart. M0.9.47 добавляет public evidence viewer, compact QR claim
+  и mandatory KPC1 gate до Root load, но всё ещё требует человеческой передачи
+  свежего ticket и offline artifacts. Открыты purpose-built minimal offline
+  signer/reproducible media image, обнаружение конфликта между устройствами,
+  которые никогда не обменивались
   bundle, и действительно распределённая
   cross-machine координация без доверенного scheduler.
 - M0.9.32 compact/checkpoint-ит runtime publication, observation, policy и
