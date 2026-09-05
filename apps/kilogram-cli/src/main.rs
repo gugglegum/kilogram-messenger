@@ -43,11 +43,11 @@ use kilogram_runtime_ipc::{
     RuntimeIpcEndpointCandidateStatus, RuntimeIpcEndpointTicketRefresh, RuntimeIpcHistoryCursor,
     RuntimeIpcHistoryMessage, RuntimeIpcHistoryPage, RuntimeIpcMessagePreview,
     RuntimeIpcNetworkClass, RuntimeIpcOutboxStatus,
-    RuntimeIpcOwnDeviceAnnouncementAutomationStatus, RuntimeIpcOwnDeviceTicketDiscoveryStatus,
-    RuntimeIpcQueueItem, RuntimeIpcQueueState, RuntimeIpcRequestId, RuntimeIpcResponse,
-    RuntimeIpcRoutePolicy, RuntimeIpcServer, RuntimeIpcTicketAutomationActionStatus,
-    RuntimeIpcTicketAutomationStatus, RuntimeIpcTicketPublication, RuntimeIpcWork,
-    RuntimeLaunchProfile, RuntimeLaunchSettings,
+    RuntimeIpcOwnDeviceAnnouncementAutomationStatus, RuntimeIpcOwnDeviceRosterAutomationStatus,
+    RuntimeIpcOwnDeviceTicketDiscoveryStatus, RuntimeIpcQueueItem, RuntimeIpcQueueState,
+    RuntimeIpcRequestId, RuntimeIpcResponse, RuntimeIpcRoutePolicy, RuntimeIpcServer,
+    RuntimeIpcTicketAutomationActionStatus, RuntimeIpcTicketAutomationStatus,
+    RuntimeIpcTicketPublication, RuntimeIpcWork, RuntimeLaunchProfile, RuntimeLaunchSettings,
 };
 use kilogram_session::{
     MAX_SYNC_ROUNDS, ServerInventoryOutcome, SessionStore, SyncClient, SyncServer,
@@ -84,6 +84,7 @@ mod recovery_scheduler;
 mod runtime_endpoint_announcement;
 mod runtime_own_device_automation;
 mod runtime_own_device_discovery;
+mod runtime_own_device_roster;
 mod runtime_publication;
 mod runtime_queue;
 mod runtime_ticket_automation;
@@ -138,6 +139,7 @@ use runtime_own_device_automation::{
 use runtime_own_device_discovery::{
     OwnDeviceTicketDiscoveryPolicyId, SignedOwnDeviceTicketDiscoveryPolicy,
 };
+use runtime_own_device_roster::{OwnDeviceRosterPolicyId, SignedOwnDeviceRosterPolicy};
 use runtime_publication::{
     DEFAULT_TICKET_PUBLICATION_TTL_SECONDS, EncryptedTicketPublication,
     MAX_TICKET_PUBLICATION_TTL_SECONDS, MIN_TICKET_PUBLICATION_TTL_SECONDS,
@@ -181,6 +183,7 @@ const RUNTIME_OWN_DEVICE_ANNOUNCEMENT_POLICIES_DIRECTORY: &str = "own-device-ann
 const RUNTIME_OWN_DEVICE_ANNOUNCEMENT_ATTEMPTS_DIRECTORY: &str = "own-device-announcement-attempts";
 const RUNTIME_OWN_DEVICE_TICKET_DISCOVERY_POLICIES_DIRECTORY: &str =
     "own-device-ticket-discovery-policies";
+const RUNTIME_OWN_DEVICE_ROSTER_POLICIES_DIRECTORY: &str = "own-device-roster-policies";
 const RUNTIME_TICKET_CHECKPOINTS_DIRECTORY: &str = "ticket-checkpoints";
 const MAX_RUNTIME_DEVICE_DIRECTORY_RECEIPTS: usize = 1_024;
 const MAX_RUNTIME_ENDPOINT_CANDIDATES_PER_CONTACT: usize = 4;
@@ -188,6 +191,7 @@ const MAX_RUNTIME_TICKET_PUBLICATION_RECORDS: usize = 4_096;
 const MAX_RUNTIME_TICKET_AUTOMATION_RECORDS: usize = 4_096;
 const MAX_RUNTIME_OWN_DEVICE_ANNOUNCEMENT_RECORDS: usize = 4_096;
 const MAX_RUNTIME_OWN_DEVICE_TICKET_DISCOVERY_RECORDS: usize = 4_096;
+const MAX_RUNTIME_OWN_DEVICE_ROSTER_RECORDS: usize = 1_024;
 const MAX_RUNTIME_TICKET_CHAIN_RECORDS_BEFORE_COMPACTION: usize = 8;
 const RUNTIME_TICKET_AUTOMATION_CHECK_INTERVAL: Duration = Duration::from_secs(5);
 const RUNTIME_DEVICE_LIST_DIGEST_DOMAIN: &[u8] = b"kilogram:runtime-device-list:v1\0";
@@ -830,6 +834,68 @@ enum Command {
 
     /// Inspect pairwise opaque-store own-device ticket discovery schedules.
     RuntimeIpcOwnDeviceDiscoveryStatus {
+        /// Runtime-owned local IPC descriptor.
+        #[arg(long)]
+        ipc_file: PathBuf,
+    },
+
+    /// Configure one bounded policy for every other active device in this account.
+    RuntimeIpcConfigureOwnDeviceRoster {
+        /// Runtime-owned local IPC descriptor.
+        #[arg(long)]
+        ipc_file: PathBuf,
+
+        /// Set false to disable every managed own-device schedule.
+        #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
+        enabled: bool,
+
+        /// HTTPS base URL of the opaque ticket-publication store.
+        #[arg(long)]
+        service_base_url: String,
+
+        /// Lifetime of each pairwise encrypted locator publication.
+        #[arg(long, default_value_t = DEFAULT_TICKET_PUBLICATION_TTL_SECONDS)]
+        ttl_seconds: u64,
+
+        /// Renew local publications this many seconds before expiry.
+        #[arg(long, default_value_t = DEFAULT_REFRESH_BEFORE_SECONDS)]
+        refresh_before_seconds: u64,
+
+        /// Minimum interval between successful transfers to each device.
+        #[arg(long, default_value_t = DEFAULT_OWN_DEVICE_ANNOUNCEMENT_INTERVAL_SECONDS)]
+        interval_seconds: u64,
+
+        /// Lifetime of each recipient-encrypted endpoint-announcement bundle.
+        #[arg(long, default_value_t = DEFAULT_ENDPOINT_ANNOUNCEMENT_VALIDITY_SECONDS)]
+        validity_seconds: u64,
+
+        /// Initial retry delay after a failed workflow.
+        #[arg(long, default_value_t = DEFAULT_OWN_DEVICE_ANNOUNCEMENT_RETRY_BASE_SECONDS)]
+        retry_base_seconds: u64,
+
+        /// Maximum exponential retry delay.
+        #[arg(long, default_value_t = DEFAULT_OWN_DEVICE_ANNOUNCEMENT_RETRY_MAX_SECONDS)]
+        retry_max_seconds: u64,
+
+        /// Deny automatic work on wired networks.
+        #[arg(long)]
+        deny_ethernet: bool,
+
+        /// Deny automatic work on Wi-Fi.
+        #[arg(long)]
+        deny_wifi: bool,
+
+        /// Explicitly allow automatic work on metered/mobile networks.
+        #[arg(long)]
+        allow_mobile: bool,
+
+        /// Explicitly allow work when the OS cannot classify the network.
+        #[arg(long)]
+        allow_unknown_network: bool,
+    },
+
+    /// Inspect the roster-wide own-device availability policy.
+    RuntimeIpcOwnDeviceRosterStatus {
         /// Runtime-owned local IPC descriptor.
         #[arg(long)]
         ipc_file: PathBuf,
@@ -1690,6 +1756,8 @@ impl Command {
             | Self::RuntimeIpcOwnDeviceAnnouncementStatus { .. }
             | Self::RuntimeIpcConfigureOwnDeviceDiscovery { .. }
             | Self::RuntimeIpcOwnDeviceDiscoveryStatus { .. }
+            | Self::RuntimeIpcConfigureOwnDeviceRoster { .. }
+            | Self::RuntimeIpcOwnDeviceRosterStatus { .. }
             | Self::PlatformContext => None,
         }
     }
@@ -2696,6 +2764,41 @@ async fn run_command(command: Command) -> Result<()> {
         }
         Command::RuntimeIpcOwnDeviceDiscoveryStatus { ipc_file } => {
             runtime_ipc_own_device_discovery_status(ipc_file).await
+        }
+        Command::RuntimeIpcConfigureOwnDeviceRoster {
+            ipc_file,
+            enabled,
+            service_base_url,
+            ttl_seconds,
+            refresh_before_seconds,
+            interval_seconds,
+            validity_seconds,
+            retry_base_seconds,
+            retry_max_seconds,
+            deny_ethernet,
+            deny_wifi,
+            allow_mobile,
+            allow_unknown_network,
+        } => {
+            runtime_ipc_configure_own_device_roster(
+                ipc_file,
+                enabled,
+                service_base_url,
+                ttl_seconds,
+                refresh_before_seconds,
+                interval_seconds,
+                validity_seconds,
+                retry_base_seconds,
+                retry_max_seconds,
+                !deny_ethernet,
+                !deny_wifi,
+                allow_mobile,
+                allow_unknown_network,
+            )
+            .await
+        }
+        Command::RuntimeIpcOwnDeviceRosterStatus { ipc_file } => {
+            runtime_ipc_own_device_roster_status(ipc_file).await
         }
         Command::Connect {
             state_dir,
@@ -3913,6 +4016,7 @@ struct RuntimeStateSnapshot {
     own_device_announcement_attempts: BTreeMap<DeviceId, Vec<SignedOwnDeviceAnnouncementAttempt>>,
     own_device_ticket_discovery_policies:
         BTreeMap<DeviceId, Vec<SignedOwnDeviceTicketDiscoveryPolicy>>,
+    own_device_roster_policies: Vec<SignedOwnDeviceRosterPolicy>,
     ticket_checkpoint: Option<SignedRuntimeTicketCheckpoint>,
 }
 
@@ -4028,6 +4132,10 @@ impl RuntimeStateSnapshot {
         self.own_device_ticket_discovery_policies
             .get(&recipient_device_id)
             .and_then(|policies| policies.last())
+    }
+
+    fn latest_own_device_roster_policy(&self) -> Option<&SignedOwnDeviceRosterPolicy> {
+        self.own_device_roster_policies.last()
     }
 }
 
@@ -4154,6 +4262,12 @@ fn runtime_own_device_ticket_discovery_policy_relative_path(
         .join(format!("{policy_id}.odtdp"))
 }
 
+fn runtime_own_device_roster_policy_relative_path(policy_id: OwnDeviceRosterPolicyId) -> PathBuf {
+    PathBuf::from(RUNTIME_STATE_DIRECTORY)
+        .join(RUNTIME_OWN_DEVICE_ROSTER_POLICIES_DIRECTORY)
+        .join(format!("{policy_id}.odrp"))
+}
+
 fn runtime_ticket_checkpoint_relative_path(checkpoint_id: RuntimeTicketCheckpointId) -> PathBuf {
     PathBuf::from(RUNTIME_STATE_DIRECTORY)
         .join(RUNTIME_TICKET_CHECKPOINTS_DIRECTORY)
@@ -4262,6 +4376,7 @@ fn read_runtime_record_files(state_directory: &Path) -> Result<Vec<(PathBuf, Vec
         RUNTIME_OWN_DEVICE_ANNOUNCEMENT_POLICIES_DIRECTORY,
         RUNTIME_OWN_DEVICE_ANNOUNCEMENT_ATTEMPTS_DIRECTORY,
         RUNTIME_OWN_DEVICE_TICKET_DISCOVERY_POLICIES_DIRECTORY,
+        RUNTIME_OWN_DEVICE_ROSTER_POLICIES_DIRECTORY,
         RUNTIME_TICKET_CHECKPOINTS_DIRECTORY,
     ] {
         let root = state_directory
@@ -4485,6 +4600,18 @@ fn load_runtime_state_snapshot(
                 .entry(value.recipient_device_id())
                 .or_default()
                 .push(value);
+        } else if file_name.ends_with(".odrp") {
+            let value = SignedOwnDeviceRosterPolicy::decode(&bytes)?;
+            ensure!(
+                value.local_account_id() == local_account_id
+                    && value.local_device_id() == local_device_id,
+                "own-device roster policy belongs to another local identity"
+            );
+            ensure!(
+                relative_path == runtime_own_device_roster_policy_relative_path(value.policy_id()?),
+                "own-device roster policy filename does not match its authenticated state"
+            );
+            snapshot.own_device_roster_policies.push(value);
         } else if file_name.ends_with(".epb") {
             let value = SignedRuntimeEndpointPublicationBinding::decode(&bytes)?;
             value.verify_local(local_account_id, local_device_id)?;
@@ -4745,6 +4872,10 @@ fn load_runtime_state_snapshot(
             <= kilogram_identity::MAX_ACCOUNT_DEVICES.saturating_sub(1),
         "runtime own-device ticket discovery recipient limit exceeded"
     );
+    ensure!(
+        snapshot.own_device_roster_policies.len() <= MAX_RUNTIME_OWN_DEVICE_ROSTER_RECORDS,
+        "runtime own-device roster policy record limit exceeded"
+    );
     for states in snapshot.retries.values_mut() {
         states.sort_by_key(SignedRuntimeRetryState::generation);
         let mut previous = None;
@@ -4941,6 +5072,31 @@ fn load_runtime_state_snapshot(
             previous = Some(policy);
         }
     }
+    snapshot
+        .own_device_roster_policies
+        .sort_by_key(SignedOwnDeviceRosterPolicy::generation);
+    let mut remaining = snapshot.own_device_roster_policies.iter();
+    let mut previous = if let Some((generation, record_id)) = snapshot
+        .ticket_checkpoint
+        .as_ref()
+        .and_then(SignedRuntimeTicketCheckpoint::own_device_roster_policy_anchor)
+    {
+        let head = remaining
+            .next()
+            .context("runtime ticket checkpoint own-device roster policy anchor is absent")?;
+        head.verify_signature()?;
+        ensure!(
+            head.generation() == generation && head.policy_id()? == record_id,
+            "runtime ticket checkpoint own-device roster policy anchor does not match retained head"
+        );
+        Some(head)
+    } else {
+        None
+    };
+    for policy in remaining {
+        policy.verify(previous)?;
+        previous = Some(policy);
+    }
     if let Some(checkpoint) = &snapshot.ticket_checkpoint {
         for anchor in checkpoint.anchors() {
             let present = match anchor {
@@ -4976,6 +5132,9 @@ fn load_runtime_state_snapshot(
                 } => snapshot
                     .own_device_ticket_discovery_policies
                     .contains_key(recipient_device_id),
+                RuntimeTicketChainAnchor::OwnDeviceRosterPolicy { .. } => {
+                    !snapshot.own_device_roster_policies.is_empty()
+                }
             };
             ensure!(
                 present,
@@ -5116,6 +5275,8 @@ fn runtime_ticket_state_needs_compaction(snapshot: &RuntimeStateSnapshot) -> boo
             .own_device_ticket_discovery_policies
             .values()
             .any(|records| records.len() > MAX_RUNTIME_TICKET_CHAIN_RECORDS_BEFORE_COMPACTION)
+        || snapshot.own_device_roster_policies.len()
+            > MAX_RUNTIME_TICKET_CHAIN_RECORDS_BEFORE_COMPACTION
 }
 
 fn canonical_runtime_record_name(path: &Path) -> Result<String> {
@@ -5271,6 +5432,19 @@ fn compact_runtime_ticket_state_if_needed(
                 state_directory,
                 &mut removed,
                 runtime_own_device_ticket_discovery_policy_relative_path(record.policy_id()?),
+                record.encode()?,
+            )?;
+        }
+    }
+    if let Some(head) = snapshot.own_device_roster_policies.last() {
+        anchors.push(RuntimeTicketChainAnchor::own_device_roster_policy(head)?);
+        for record in
+            &snapshot.own_device_roster_policies[..snapshot.own_device_roster_policies.len() - 1]
+        {
+            add_runtime_ticket_compaction_record(
+                state_directory,
+                &mut removed,
+                runtime_own_device_roster_policy_relative_path(record.policy_id()?),
                 record.encode()?,
             )?;
         }
@@ -8213,6 +8387,81 @@ async fn runtime_ipc_own_device_discovery_status(ipc_file: PathBuf) -> Result<()
     }
 }
 
+#[allow(clippy::too_many_arguments)]
+async fn runtime_ipc_configure_own_device_roster(
+    ipc_file: PathBuf,
+    enabled: bool,
+    service_base_url: String,
+    ttl_seconds: u64,
+    refresh_before_seconds: u64,
+    interval_seconds: u64,
+    validity_seconds: u64,
+    retry_base_seconds: u64,
+    retry_max_seconds: u64,
+    allow_ethernet: bool,
+    allow_wifi: bool,
+    allow_mobile: bool,
+    allow_unknown_network: bool,
+) -> Result<()> {
+    match kilogram_runtime_ipc::call(
+        &ipc_file,
+        RuntimeIpcCommand::ConfigureOwnDeviceRosterAutomation {
+            enabled,
+            service_base_url,
+            ttl_seconds,
+            refresh_before_seconds,
+            interval_seconds,
+            validity_seconds,
+            retry_base_seconds,
+            retry_max_seconds,
+            allow_ethernet,
+            allow_wifi,
+            allow_mobile,
+            allow_unknown_network,
+        },
+    )
+    .await?
+    {
+        RuntimeIpcResponse::OwnDeviceRosterAutomationConfigured(status) => {
+            print_runtime_own_device_roster_status(&status);
+            println!("status=runtime-own-device-roster-automation-configured");
+            Ok(())
+        }
+        RuntimeIpcResponse::Error { message } => {
+            bail!("runtime IPC rejected own-device roster policy: {message}")
+        }
+        response => {
+            bail!("runtime IPC returned an unexpected own-device roster response: {response:?}")
+        }
+    }
+}
+
+async fn runtime_ipc_own_device_roster_status(ipc_file: PathBuf) -> Result<()> {
+    match kilogram_runtime_ipc::call(
+        &ipc_file,
+        RuntimeIpcCommand::OwnDeviceRosterAutomationStatus,
+    )
+    .await?
+    {
+        RuntimeIpcResponse::OwnDeviceRosterAutomationStatus(Some(status)) => {
+            print_runtime_own_device_roster_status(&status);
+            println!("status=runtime-own-device-roster-automation-status");
+            Ok(())
+        }
+        RuntimeIpcResponse::OwnDeviceRosterAutomationStatus(None) => {
+            println!("own_device_roster_policy_present=false");
+            println!("status=runtime-own-device-roster-automation-status");
+            Ok(())
+        }
+        RuntimeIpcResponse::Error { message } => {
+            bail!("runtime IPC rejected own-device roster status: {message}")
+        }
+        response => bail!(
+            "runtime IPC returned an unexpected own-device roster status response: {response:?}"
+        ),
+    }
+}
+
 fn print_runtime_endpoint_announcement_export(report: &RuntimeIpcEndpointAnnouncementExport) {
     println!("endpoint_announcement_bundle_id={}", report.bundle_id);
     println!("source_device_id={}", report.source_device_id);
@@ -8378,6 +8627,91 @@ fn print_runtime_own_device_announcement_status(
         "own_device_announcement_os_background_service_enabled={}",
         status.os_background_service_enabled
     );
+}
+
+fn print_runtime_own_device_roster_status(status: &RuntimeIpcOwnDeviceRosterAutomationStatus) {
+    println!("own_device_roster_policy_present=true");
+    println!("own_device_roster_enabled={}", status.enabled);
+    println!(
+        "own_device_roster_policy_generation={}",
+        status.policy_generation
+    );
+    println!(
+        "own_device_roster_service_base_url={}",
+        status.service_base_url
+    );
+    println!("own_device_roster_ttl_seconds={}", status.ttl_seconds);
+    println!(
+        "own_device_roster_refresh_before_seconds={}",
+        status.refresh_before_seconds
+    );
+    println!(
+        "own_device_roster_interval_seconds={}",
+        status.interval_seconds
+    );
+    println!(
+        "own_device_roster_validity_seconds={}",
+        status.validity_seconds
+    );
+    println!(
+        "own_device_roster_retry_base_seconds={}",
+        status.retry_base_seconds
+    );
+    println!(
+        "own_device_roster_retry_max_seconds={}",
+        status.retry_max_seconds
+    );
+    println!("own_device_roster_allow_ethernet={}", status.allow_ethernet);
+    println!("own_device_roster_allow_wifi={}", status.allow_wifi);
+    println!("own_device_roster_allow_mobile={}", status.allow_mobile);
+    println!(
+        "own_device_roster_allow_unknown_network={}",
+        status.allow_unknown_network
+    );
+    println!(
+        "own_device_roster_current_network={}",
+        status.current_network.as_str()
+    );
+    println!(
+        "own_device_roster_network_allowed={}",
+        status.network_allowed
+    );
+    println!(
+        "own_device_roster_authority_revision={}",
+        status.authority_revision
+    );
+    println!(
+        "own_device_roster_active_recipient_count={}",
+        status.active_recipient_count
+    );
+    println!(
+        "own_device_roster_configured_recipient_count={}",
+        status.configured_recipient_count
+    );
+    println!(
+        "own_device_roster_retired_recipient_count={}",
+        status.retired_recipient_count
+    );
+    println!(
+        "own_device_roster_max_parallel_workflows={}",
+        status.max_parallel_workflows
+    );
+    println!("own_device_roster_state={}", status.state);
+    println!(
+        "own_device_roster_execution_scope={}",
+        status.execution_scope
+    );
+    println!(
+        "own_device_roster_os_background_service_enabled={}",
+        status.os_background_service_enabled
+    );
+    println!(
+        "own_device_roster_recipient_status_count={}",
+        status.recipients.len()
+    );
+    for recipient in &status.recipients {
+        print_runtime_own_device_discovery_status(recipient);
+    }
 }
 
 fn print_runtime_own_device_discovery_status(status: &RuntimeIpcOwnDeviceTicketDiscoveryStatus) {
@@ -8787,15 +9121,31 @@ async fn handle_runtime_ipc_work(
                     *ticket = replacement;
                     *directory_state = replacement_directory_state;
                     state_changed = true;
-                    match publish_runtime_own_device_ticket(
-                        state_directory,
-                        endpoint,
-                        ticket,
-                        public_paths.own_device_ticket,
-                    ) {
+                    let reconcile = public_paths.own_device_discovery_directory.map_or(
+                        Ok(false),
+                        |directory| {
+                            with_locked_state(state_directory, || {
+                                reconcile_runtime_own_device_roster_policy(
+                                    state_directory,
+                                    ticket,
+                                    directory,
+                                )
+                            })
+                        },
+                    );
+                    match reconcile.and_then(|_| {
+                        publish_runtime_own_device_ticket(
+                            state_directory,
+                            endpoint,
+                            ticket,
+                            public_paths.own_device_ticket,
+                        )
+                    }) {
                         Ok(_) => RuntimeIpcResponse::OwnDeviceDirectoryApplied(Box::new(update)),
                         Err(error) => RuntimeIpcResponse::Error {
-                            message: format!("refresh own-device runtime ticket: {error:#}"),
+                            message: format!(
+                                "reconcile own-device availability after directory refresh: {error:#}"
+                            ),
                         },
                     }
                 }
@@ -9033,6 +9383,74 @@ async fn handle_runtime_ipc_work(
                 });
             match status {
                 Ok(status) => RuntimeIpcResponse::OwnDeviceTicketDiscoveryStatus(status),
+                Err(error) => RuntimeIpcResponse::Error {
+                    message: format!("{error:#}"),
+                },
+            }
+        }
+        RuntimeIpcCommand::ConfigureOwnDeviceRosterAutomation {
+            enabled,
+            service_base_url,
+            ttl_seconds,
+            refresh_before_seconds,
+            interval_seconds,
+            validity_seconds,
+            retry_base_seconds,
+            retry_max_seconds,
+            allow_ethernet,
+            allow_wifi,
+            allow_mobile,
+            allow_unknown_network,
+        } => {
+            let status = public_paths
+                .own_device_discovery_directory
+                .context("runtime has no public own-device discovery directory")
+                .and_then(|directory| {
+                    with_locked_state(state_directory, || {
+                        configure_runtime_own_device_roster(
+                            state_directory,
+                            ticket,
+                            directory,
+                            enabled,
+                            service_base_url,
+                            ttl_seconds,
+                            refresh_before_seconds,
+                            interval_seconds,
+                            validity_seconds,
+                            retry_base_seconds,
+                            retry_max_seconds,
+                            allow_ethernet,
+                            allow_wifi,
+                            allow_mobile,
+                            allow_unknown_network,
+                            current_runtime_network_class(),
+                        )
+                    })
+                });
+            match status {
+                Ok(status) => {
+                    state_changed = true;
+                    RuntimeIpcResponse::OwnDeviceRosterAutomationConfigured(Box::new(status))
+                }
+                Err(error) => RuntimeIpcResponse::Error {
+                    message: format!("{error:#}"),
+                },
+            }
+        }
+        RuntimeIpcCommand::OwnDeviceRosterAutomationStatus => {
+            let status = StateDirectoryLock::acquire(state_directory)
+                .context("lock runtime state for own-device roster status")
+                .and_then(|_lock| {
+                    collect_runtime_own_device_roster_status(
+                        state_directory,
+                        ticket,
+                        current_runtime_network_class(),
+                    )
+                });
+            match status {
+                Ok(status) => {
+                    RuntimeIpcResponse::OwnDeviceRosterAutomationStatus(status.map(Box::new))
+                }
                 Err(error) => RuntimeIpcResponse::Error {
                     message: format!("{error:#}"),
                 },
@@ -10618,6 +11036,10 @@ fn configure_runtime_own_device_announcement_automation(
         local_account_id,
         device_state.identity().device_id(),
     )?;
+    ensure!(
+        snapshot.latest_own_device_roster_policy().is_none(),
+        "roster-wide own-device policy controls this schedule; update it through the roster command"
+    );
     let recipient_device_id = recipient_ticket.listener_device_id();
     ensure!(
         snapshot
@@ -10733,6 +11155,366 @@ fn own_device_ticket_locator_capability(
 }
 
 #[allow(clippy::too_many_arguments)]
+fn configure_runtime_own_device_roster(
+    state_directory: &Path,
+    current_ticket: &ConnectionTicket,
+    discovery_ticket_directory: &Path,
+    enabled: bool,
+    service_base_url: String,
+    ttl_seconds: u64,
+    refresh_before_seconds: u64,
+    interval_seconds: u64,
+    validity_seconds: u64,
+    retry_base_seconds: u64,
+    retry_max_seconds: u64,
+    allow_ethernet: bool,
+    allow_wifi: bool,
+    allow_mobile: bool,
+    allow_unknown_network: bool,
+    current_network: RuntimeIpcNetworkClass,
+) -> Result<RuntimeIpcOwnDeviceRosterAutomationStatus> {
+    let store_client = TicketPublicationStoreClient::new(&service_base_url)?;
+    let discovery_ticket_directory = validate_runtime_own_device_discovery_directory(
+        state_directory,
+        discovery_ticket_directory,
+    )?;
+    let local_account_id = current_ticket.listener_account_id();
+    let local_device_id = current_ticket.listener_device_id();
+    let device_state = load_command_device_state(state_directory)?;
+    ensure!(
+        device_state.identity().device_id() == local_device_id,
+        "running own-device roster identity changed"
+    );
+    let snapshot = load_runtime_state_snapshot(state_directory, local_account_id, local_device_id)?;
+    let previous = snapshot.latest_own_device_roster_policy();
+    let device_list = current_ticket.listener_directory().device_list();
+    let candidate = SignedOwnDeviceRosterPolicy::sign(
+        device_state.identity(),
+        local_account_id,
+        unix_time_now()?,
+        device_list.revision(),
+        runtime_device_list_digest(device_list)?,
+        enabled,
+        store_client.base_url().to_owned(),
+        ttl_seconds,
+        refresh_before_seconds,
+        interval_seconds,
+        validity_seconds,
+        retry_base_seconds,
+        retry_max_seconds,
+        allow_ethernet,
+        allow_wifi,
+        allow_mobile,
+        allow_unknown_network,
+        previous,
+    )?;
+    let parent_changed = !previous.is_some_and(|previous| previous.same_configuration(&candidate));
+    let child_records = build_runtime_own_device_roster_child_records(
+        &snapshot,
+        &device_state,
+        current_ticket,
+        &discovery_ticket_directory,
+        &candidate,
+        parent_changed,
+    )?;
+    if parent_changed || !child_records.is_empty() {
+        run_state_transaction(state_directory, |transaction| {
+            if parent_changed {
+                persist_runtime_record(
+                    state_directory,
+                    &runtime_own_device_roster_policy_relative_path(candidate.policy_id()?),
+                    &candidate.encode()?,
+                    transaction,
+                )?;
+            }
+            for (path, bytes) in &child_records {
+                persist_runtime_record(state_directory, path, bytes, transaction)?;
+            }
+            Ok(())
+        })?;
+    }
+    collect_runtime_own_device_roster_status(state_directory, current_ticket, current_network)?
+        .context("own-device roster policy was not persisted")
+}
+
+fn validate_runtime_own_device_discovery_directory(
+    state_directory: &Path,
+    discovery_ticket_directory: &Path,
+) -> Result<PathBuf> {
+    let canonical_state = fs::canonicalize(state_directory)
+        .context("resolve protected state for own-device roster automation")?;
+    let discovery_ticket_directory = fs::canonicalize(discovery_ticket_directory)
+        .context("resolve runtime-managed own-device ticket discovery directory")?;
+    ensure!(
+        !discovery_ticket_directory.starts_with(canonical_state),
+        "own-device ticket discovery directory must live outside protected runtime state"
+    );
+    Ok(discovery_ticket_directory)
+}
+
+fn build_runtime_own_device_roster_child_records(
+    snapshot: &RuntimeStateSnapshot,
+    device_state: &DeviceState,
+    current_ticket: &ConnectionTicket,
+    discovery_ticket_directory: &Path,
+    policy: &SignedOwnDeviceRosterPolicy,
+    force_generation: bool,
+) -> Result<Vec<(PathBuf, Vec<u8>)>> {
+    let local_device_id = device_state.identity().device_id();
+    let device_list = current_ticket.listener_directory().device_list();
+    ensure!(
+        policy.local_account_id() == current_ticket.listener_account_id()
+            && policy.local_device_id() == local_device_id
+            && policy.authority_revision() == device_list.revision()
+            && policy.device_list_digest() == runtime_device_list_digest(device_list)?,
+        "own-device roster policy is not bound to the exact current roster"
+    );
+    let active_recipients = device_list
+        .devices()
+        .iter()
+        .filter(|certificate| certificate.device_id() != local_device_id)
+        .map(|certificate| certificate.device_id())
+        .collect::<BTreeSet<_>>();
+    for recipient_device_id in &active_recipients {
+        let certificate = device_list
+            .certificate_for(*recipient_device_id)
+            .context("active own-device roster recipient disappeared")?;
+        verify_device_authorization_with_snapshot(
+            policy.local_account_id(),
+            certificate,
+            device_list.authority_snapshot(),
+            &DeviceCapability::MESSAGING,
+        )
+        .context("verify roster-wide own-device recipient authorization")?;
+    }
+    let mut recipients = active_recipients.clone();
+    recipients.extend(
+        snapshot
+            .own_device_ticket_discovery_policies
+            .keys()
+            .copied(),
+    );
+    recipients.extend(snapshot.own_device_announcement_policies.keys().copied());
+    ensure!(
+        recipients.len() <= kilogram_identity::MAX_ACCOUNT_DEVICES.saturating_sub(1),
+        "own-device roster recipient limit exceeded"
+    );
+
+    let configured_at = unix_time_now()?;
+    let mut records = Vec::with_capacity(recipients.len().saturating_mul(2));
+    for recipient_device_id in recipients {
+        let enabled = policy.enabled() && active_recipients.contains(&recipient_device_id);
+        let previous_discovery =
+            snapshot.latest_own_device_ticket_discovery_policy(recipient_device_id);
+        let discovery = SignedOwnDeviceTicketDiscoveryPolicy::sign(
+            device_state.identity(),
+            policy.local_account_id(),
+            recipient_device_id,
+            configured_at,
+            enabled,
+            policy.service_base_url().to_owned(),
+            policy.ttl_seconds(),
+            policy.refresh_before_seconds(),
+            previous_discovery,
+        )?;
+        if force_generation
+            || !previous_discovery.is_some_and(|previous| previous.same_configuration(&discovery))
+        {
+            records.push((
+                runtime_own_device_ticket_discovery_policy_relative_path(discovery.policy_id()?),
+                discovery.encode()?,
+            ));
+        }
+
+        let previous_announcement =
+            snapshot.latest_own_device_announcement_policy(recipient_device_id);
+        let announcement = SignedOwnDeviceAnnouncementPolicy::sign(
+            device_state.identity(),
+            policy.local_account_id(),
+            recipient_device_id,
+            configured_at,
+            enabled,
+            own_device_discovery_ticket_path(discovery_ticket_directory, recipient_device_id),
+            policy.interval_seconds(),
+            policy.validity_seconds(),
+            policy.retry_base_seconds(),
+            policy.retry_max_seconds(),
+            policy.allow_ethernet(),
+            policy.allow_wifi(),
+            policy.allow_mobile(),
+            policy.allow_unknown_network(),
+            previous_announcement,
+        )?;
+        if force_generation
+            || !previous_announcement
+                .is_some_and(|previous| previous.same_configuration(&announcement))
+        {
+            records.push((
+                runtime_own_device_announcement_policy_relative_path(announcement.policy_id()?),
+                announcement.encode()?,
+            ));
+        }
+    }
+    Ok(records)
+}
+
+fn reconcile_runtime_own_device_roster_policy(
+    state_directory: &Path,
+    current_ticket: &ConnectionTicket,
+    discovery_ticket_directory: &Path,
+) -> Result<bool> {
+    let discovery_ticket_directory = validate_runtime_own_device_discovery_directory(
+        state_directory,
+        discovery_ticket_directory,
+    )?;
+    let device_state = load_command_device_state(state_directory)?;
+    let local_account_id = current_ticket.listener_account_id();
+    let local_device_id = current_ticket.listener_device_id();
+    ensure!(
+        device_state.identity().device_id() == local_device_id,
+        "running own-device roster identity changed"
+    );
+    let snapshot = load_runtime_state_snapshot(state_directory, local_account_id, local_device_id)?;
+    let Some(previous) = snapshot.latest_own_device_roster_policy() else {
+        return Ok(false);
+    };
+    let device_list = current_ticket.listener_directory().device_list();
+    let candidate = SignedOwnDeviceRosterPolicy::sign(
+        device_state.identity(),
+        local_account_id,
+        unix_time_now()?,
+        device_list.revision(),
+        runtime_device_list_digest(device_list)?,
+        previous.enabled(),
+        previous.service_base_url().to_owned(),
+        previous.ttl_seconds(),
+        previous.refresh_before_seconds(),
+        previous.interval_seconds(),
+        previous.validity_seconds(),
+        previous.retry_base_seconds(),
+        previous.retry_max_seconds(),
+        previous.allow_ethernet(),
+        previous.allow_wifi(),
+        previous.allow_mobile(),
+        previous.allow_unknown_network(),
+        Some(previous),
+    )?;
+    let parent_changed = !previous.same_configuration(&candidate);
+    let child_records = build_runtime_own_device_roster_child_records(
+        &snapshot,
+        &device_state,
+        current_ticket,
+        &discovery_ticket_directory,
+        &candidate,
+        parent_changed,
+    )?;
+    if !parent_changed && child_records.is_empty() {
+        return Ok(false);
+    }
+    run_state_transaction(state_directory, |transaction| {
+        if parent_changed {
+            persist_runtime_record(
+                state_directory,
+                &runtime_own_device_roster_policy_relative_path(candidate.policy_id()?),
+                &candidate.encode()?,
+                transaction,
+            )?;
+        }
+        for (path, bytes) in &child_records {
+            persist_runtime_record(state_directory, path, bytes, transaction)?;
+        }
+        Ok(())
+    })?;
+    Ok(true)
+}
+
+fn collect_runtime_own_device_roster_status(
+    state_directory: &Path,
+    current_ticket: &ConnectionTicket,
+    current_network: RuntimeIpcNetworkClass,
+) -> Result<Option<RuntimeIpcOwnDeviceRosterAutomationStatus>> {
+    let device_state = load_command_device_state(state_directory)?;
+    let snapshot = load_runtime_state_snapshot(
+        state_directory,
+        current_ticket.listener_account_id(),
+        device_state.identity().device_id(),
+    )?;
+    let Some(policy) = snapshot.latest_own_device_roster_policy() else {
+        return Ok(None);
+    };
+    let now_unix_seconds = unix_time_now()?;
+    let recipients = snapshot
+        .own_device_ticket_discovery_policies
+        .values()
+        .filter_map(|policies| policies.last())
+        .map(|policy| {
+            own_device_ticket_discovery_status_for_policy(
+                &snapshot,
+                &device_state,
+                current_ticket,
+                policy,
+                current_network,
+                now_unix_seconds,
+            )
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let device_list = current_ticket.listener_directory().device_list();
+    let active_recipient_count = device_list
+        .devices()
+        .iter()
+        .filter(|certificate| certificate.device_id() != policy.local_device_id())
+        .count();
+    let retired_recipient_count = recipients
+        .iter()
+        .filter(|status| {
+            device_list
+                .certificate_for(status.recipient_device_id)
+                .is_none()
+        })
+        .count();
+    let network_allowed = policy.allows_network(current_network);
+    let roster_current = policy.authority_revision() == device_list.revision()
+        && policy.device_list_digest() == runtime_device_list_digest(device_list)?;
+    let state = if !roster_current {
+        "roster-reconciliation-required"
+    } else if !policy.enabled() {
+        "disabled"
+    } else if !network_allowed {
+        "network-blocked"
+    } else if active_recipient_count == 0 {
+        "no-other-active-devices"
+    } else {
+        "active-serialized"
+    };
+    Ok(Some(RuntimeIpcOwnDeviceRosterAutomationStatus {
+        enabled: policy.enabled(),
+        policy_generation: policy.generation(),
+        service_base_url: policy.service_base_url().to_owned(),
+        ttl_seconds: policy.ttl_seconds(),
+        refresh_before_seconds: policy.refresh_before_seconds(),
+        interval_seconds: policy.interval_seconds(),
+        validity_seconds: policy.validity_seconds(),
+        retry_base_seconds: policy.retry_base_seconds(),
+        retry_max_seconds: policy.retry_max_seconds(),
+        allow_ethernet: policy.allow_ethernet(),
+        allow_wifi: policy.allow_wifi(),
+        allow_mobile: policy.allow_mobile(),
+        allow_unknown_network: policy.allow_unknown_network(),
+        current_network,
+        network_allowed,
+        authority_revision: policy.authority_revision(),
+        active_recipient_count,
+        configured_recipient_count: recipients.len(),
+        retired_recipient_count,
+        max_parallel_workflows: 1,
+        state: state.to_owned(),
+        execution_scope: "one-serialized-workflow-while-runtime-process-is-running".to_owned(),
+        os_background_service_enabled: false,
+        recipients,
+    }))
+}
+
+#[allow(clippy::too_many_arguments)]
 fn configure_runtime_own_device_ticket_discovery(
     state_directory: &Path,
     current_ticket: &ConnectionTicket,
@@ -10812,6 +11594,10 @@ fn configure_runtime_own_device_ticket_discovery(
         "running own-device ticket discovery identity changed"
     );
     let snapshot = load_runtime_state_snapshot(state_directory, local_account_id, local_device_id)?;
+    ensure!(
+        snapshot.latest_own_device_roster_policy().is_none(),
+        "roster-wide own-device policy controls discovery; update it through the roster command"
+    );
     ensure!(
         snapshot
             .own_device_ticket_discovery_policies
@@ -11659,6 +12445,8 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
     println!("runtime_own_device_announcement_automation=opt-in");
     println!("runtime_own_device_announcement_scope=only-while-runtime-process-is-running");
     println!("runtime_own_device_announcement_os_background_service=false");
+    println!("runtime_own_device_roster_automation=opt-in");
+    println!("runtime_own_device_roster_max_parallel_workflows=1");
     println!("runtime_max_outbound_actions={max_outbound_actions}");
     if let Some(directory) = &endpoint_announcement_descriptor_directory {
         println!(
@@ -11682,6 +12470,12 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
         publish_runtime_own_device_ticket(&state_dir, &endpoint, &ticket, Some(path))?;
         println!("own_device_ticket_file={}", path.display());
         println!("own_device_ticket_publish=atomic-replace");
+    }
+    if let Some(directory) = &own_device_discovery_ticket_directory {
+        let reconciled = with_locked_state(&state_dir, || {
+            reconcile_runtime_own_device_roster_policy(&state_dir, &ticket, directory)
+        })?;
+        println!("runtime_own_device_roster_reconciled={reconciled}");
     }
     println!("status=runtime-listening");
 
@@ -20088,6 +20882,253 @@ mod tests {
         Ok(())
     }
 
+    #[test]
+    fn roster_wide_own_device_policy_reconciles_addition_revocation_and_restart() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let root = AccountRootState::create(directory.path().join("root"))?;
+        let local_state_dir = directory.path().join("local-state");
+        let local = DeviceState::load_or_create(&local_state_dir)?;
+        let first = DeviceIdentity::generate()?;
+        let second = DeviceIdentity::generate()?;
+        let first_encryption = DeviceEncryptionIdentity::generate()?;
+        let second_encryption = DeviceEncryptionIdentity::generate()?;
+        let local_certificate = root.issue_device_certificate(
+            local.identity().device_id(),
+            local.encryption().public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let first_certificate = root.issue_device_certificate(
+            first.device_id(),
+            first_encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let second_certificate = root.issue_device_certificate(
+            second.device_id(),
+            second_encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let initial_list = root.publish_device_list(&[
+            local_certificate.clone(),
+            first_certificate.clone(),
+            second_certificate.clone(),
+        ])?;
+        local.install_certificate(&local_certificate)?;
+        local.install_own_authority_snapshot(initial_list.authority_snapshot())?;
+        let now = unix_time_now()?;
+        let local_pool = RatchetState::load_or_create(&local_state_dir)?.prekey_pool(
+            local.identity(),
+            4,
+            now,
+            DEFAULT_PREKEY_POOL_VALIDITY_SECONDS,
+        )?;
+        let first_pool = RatchetState::load_or_create(directory.path().join("first-ratchet"))?
+            .prekey_pool(&first, 4, now, DEFAULT_PREKEY_POOL_VALIDITY_SECONDS)?;
+        let second_pool = RatchetState::load_or_create(directory.path().join("second-ratchet"))?
+            .prekey_pool(&second, 4, now, DEFAULT_PREKEY_POOL_VALIDITY_SECONDS)?;
+        let initial_ticket = ConnectionTicket::new(
+            EndpointAddr::new(SecretKey::generate().public()),
+            local.identity(),
+            local_certificate.clone(),
+            AccountPrekeyDirectory::new(
+                initial_list.clone(),
+                vec![local_pool.clone(), first_pool.clone(), second_pool.clone()],
+            )?,
+            root.account_id(),
+            RoutePolicy::Auto,
+        )?;
+        let public_directory = directory.path().join("public");
+        fs::create_dir_all(&public_directory)?;
+
+        let initial_status = configure_runtime_own_device_roster(
+            &local_state_dir,
+            &initial_ticket,
+            &public_directory,
+            true,
+            "http://127.0.0.1:1".to_owned(),
+            300,
+            60,
+            MIN_OWN_DEVICE_ANNOUNCEMENT_INTERVAL_SECONDS,
+            300,
+            1,
+            1,
+            true,
+            true,
+            false,
+            true,
+            RuntimeIpcNetworkClass::Unknown,
+        )?;
+        assert_eq!(initial_status.policy_generation, 1);
+        assert_eq!(initial_status.active_recipient_count, 2);
+        assert_eq!(initial_status.configured_recipient_count, 2);
+        assert_eq!(initial_status.retired_recipient_count, 0);
+        assert_eq!(initial_status.max_parallel_workflows, 1);
+        assert_eq!(initial_status.state, "active-serialized");
+        assert!(
+            initial_status
+                .recipients
+                .iter()
+                .all(|status| status.enabled)
+        );
+
+        let repeated = configure_runtime_own_device_roster(
+            &local_state_dir,
+            &initial_ticket,
+            &public_directory,
+            true,
+            "http://127.0.0.1:1".to_owned(),
+            300,
+            60,
+            MIN_OWN_DEVICE_ANNOUNCEMENT_INTERVAL_SECONDS,
+            300,
+            1,
+            1,
+            true,
+            true,
+            false,
+            true,
+            RuntimeIpcNetworkClass::Unknown,
+        )?;
+        assert_eq!(repeated.policy_generation, 1);
+        let manual_override = configure_runtime_own_device_ticket_discovery(
+            &local_state_dir,
+            &initial_ticket,
+            &public_directory,
+            first.device_id(),
+            false,
+            "http://127.0.0.1:1".to_owned(),
+            300,
+            60,
+            MIN_OWN_DEVICE_ANNOUNCEMENT_INTERVAL_SECONDS,
+            300,
+            1,
+            1,
+            true,
+            true,
+            false,
+            true,
+            RuntimeIpcNetworkClass::Unknown,
+        );
+        let Err(manual_override) = manual_override else {
+            bail!("manual child policy overrode a roster-wide policy")
+        };
+        assert!(
+            format!("{manual_override:#}")
+                .contains("roster-wide own-device policy controls discovery")
+        );
+
+        let third = DeviceIdentity::generate()?;
+        let third_encryption = DeviceEncryptionIdentity::generate()?;
+        let third_certificate = root.issue_device_certificate(
+            third.device_id(),
+            third_encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let expanded_list = root.publish_device_list(&[
+            local_certificate.clone(),
+            first_certificate.clone(),
+            second_certificate.clone(),
+            third_certificate.clone(),
+        ])?;
+        local.install_own_authority_snapshot(expanded_list.authority_snapshot())?;
+        let third_pool = RatchetState::load_or_create(directory.path().join("third-ratchet"))?
+            .prekey_pool(&third, 4, now, DEFAULT_PREKEY_POOL_VALIDITY_SECONDS)?;
+        let expanded_ticket = ConnectionTicket::new(
+            EndpointAddr::new(SecretKey::generate().public()),
+            local.identity(),
+            local_certificate.clone(),
+            AccountPrekeyDirectory::new(
+                expanded_list.clone(),
+                vec![
+                    local_pool.clone(),
+                    first_pool.clone(),
+                    second_pool.clone(),
+                    third_pool.clone(),
+                ],
+            )?,
+            root.account_id(),
+            RoutePolicy::Auto,
+        )?;
+        assert!(reconcile_runtime_own_device_roster_policy(
+            &local_state_dir,
+            &expanded_ticket,
+            &public_directory,
+        )?);
+        let expanded_status = collect_runtime_own_device_roster_status(
+            &local_state_dir,
+            &expanded_ticket,
+            RuntimeIpcNetworkClass::Unknown,
+        )?
+        .context("expanded roster policy status is absent")?;
+        assert_eq!(expanded_status.policy_generation, 2);
+        assert_eq!(expanded_status.active_recipient_count, 3);
+        assert_eq!(expanded_status.configured_recipient_count, 3);
+        assert!(
+            expanded_status
+                .recipients
+                .iter()
+                .all(|status| status.enabled && status.announcement.state == "due")
+        );
+
+        let (_, reduced_list) = root.revoke_and_publish_device_list(second.device_id())?;
+        local.install_own_authority_snapshot(reduced_list.authority_snapshot())?;
+        let reduced_ticket = ConnectionTicket::new(
+            EndpointAddr::new(SecretKey::generate().public()),
+            local.identity(),
+            local_certificate,
+            AccountPrekeyDirectory::new(reduced_list, vec![local_pool, first_pool, third_pool])?,
+            root.account_id(),
+            RoutePolicy::Auto,
+        )?;
+        assert!(reconcile_runtime_own_device_roster_policy(
+            &local_state_dir,
+            &reduced_ticket,
+            &public_directory,
+        )?);
+        assert!(!reconcile_runtime_own_device_roster_policy(
+            &local_state_dir,
+            &reduced_ticket,
+            &public_directory,
+        )?);
+        let reduced_status = collect_runtime_own_device_roster_status(
+            &local_state_dir,
+            &reduced_ticket,
+            RuntimeIpcNetworkClass::Unknown,
+        )?
+        .context("reduced roster policy status is absent")?;
+        assert_eq!(reduced_status.policy_generation, 3);
+        assert_eq!(reduced_status.active_recipient_count, 2);
+        assert_eq!(reduced_status.configured_recipient_count, 3);
+        assert_eq!(reduced_status.retired_recipient_count, 1);
+        let retired = reduced_status
+            .recipients
+            .iter()
+            .find(|status| status.recipient_device_id == second.device_id())
+            .context("revoked recipient status is absent")?;
+        assert!(!retired.enabled);
+        assert_eq!(retired.announcement.state, "disabled");
+        let snapshot = load_runtime_state_snapshot(
+            &local_state_dir,
+            root.account_id(),
+            local.identity().device_id(),
+        )?;
+        assert_eq!(snapshot.own_device_roster_policies.len(), 3);
+        assert_eq!(
+            snapshot.own_device_ticket_discovery_policies[&first.device_id()].len(),
+            3
+        );
+        assert_eq!(
+            snapshot.own_device_ticket_discovery_policies[&third.device_id()].len(),
+            2
+        );
+        assert!(
+            !snapshot.own_device_ticket_discovery_policies[&second.device_id()]
+                .last()
+                .context("revoked discovery policy is absent")?
+                .enabled()
+        );
+        Ok(())
+    }
+
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
     async fn runtime_pairwise_store_discovers_ticket_and_pushes_own_device_announcements()
     -> Result<()> {
@@ -20569,6 +21610,7 @@ mod tests {
         let mut previous_own_policy = None;
         let mut previous_own_attempt = None;
         let mut previous_own_discovery_policy = None;
+        let mut previous_own_roster_policy = None;
         for index in 0..=MAX_RUNTIME_TICKET_CHAIN_RECORDS_BEFORE_COMPACTION {
             let publication = SignedTicketPublication::sign(
                 &peer_device,
@@ -20660,6 +21702,26 @@ mod tests {
                 60,
                 previous_own_discovery_policy.as_ref(),
             )?;
+            let own_roster_policy = SignedOwnDeviceRosterPolicy::sign(
+                device.identity(),
+                root.account_id(),
+                started_at + index as u64,
+                1,
+                [9_u8; 32],
+                true,
+                "https://ticket-store.invalid/".to_owned(),
+                300,
+                60,
+                300,
+                300,
+                1,
+                8,
+                true,
+                true,
+                false,
+                true,
+                previous_own_roster_policy.as_ref(),
+            )?;
             let records = [
                 (
                     runtime_ticket_observation_relative_path(
@@ -20697,6 +21759,10 @@ mod tests {
                     ),
                     own_discovery_policy.encode()?,
                 ),
+                (
+                    runtime_own_device_roster_policy_relative_path(own_roster_policy.policy_id()?),
+                    own_roster_policy.encode()?,
+                ),
             ];
             run_state_transaction(&state_dir, |transaction| {
                 for (path, bytes) in &records {
@@ -20712,12 +21778,13 @@ mod tests {
             previous_own_policy = Some(own_policy);
             previous_own_attempt = Some(own_attempt);
             previous_own_discovery_policy = Some(own_discovery_policy);
+            previous_own_roster_policy = Some(own_roster_policy);
         }
 
         let report = compact_runtime_ticket_state_if_needed(&state_dir)?
             .context("multi-chain runtime ticket compaction was not triggered")?;
-        assert_eq!(report.removed_records, 56);
-        assert_eq!(report.retained_anchors, 7);
+        assert_eq!(report.removed_records, 64);
+        assert_eq!(report.retained_anchors, 8);
         let restarted = load_runtime_state_snapshot(
             &state_dir,
             root.account_id(),
@@ -20767,13 +21834,15 @@ mod tests {
                 .generation(),
             9
         );
+        assert_eq!(restarted.own_device_roster_policies.len(), 1);
+        assert_eq!(restarted.own_device_roster_policies[0].generation(), 9);
         assert_eq!(
             restarted
                 .ticket_checkpoint
                 .context("multi-chain runtime ticket checkpoint is absent")?
                 .anchors()
                 .len(),
-            7
+            8
         );
         Ok(())
     }
@@ -21583,6 +22652,32 @@ mod tests {
         .await
         .context("runtime did not publish its IPC descriptor")?;
 
+        let roster = kilogram_runtime_ipc::call(
+            &ipc_file,
+            RuntimeIpcCommand::ConfigureOwnDeviceRosterAutomation {
+                enabled: false,
+                service_base_url: "http://127.0.0.1:1".to_owned(),
+                ttl_seconds: 300,
+                refresh_before_seconds: 60,
+                interval_seconds: MIN_OWN_DEVICE_ANNOUNCEMENT_INTERVAL_SECONDS,
+                validity_seconds: 300,
+                retry_base_seconds: 1,
+                retry_max_seconds: 1,
+                allow_ethernet: true,
+                allow_wifi: true,
+                allow_mobile: true,
+                allow_unknown_network: true,
+            },
+        )
+        .await?;
+        let RuntimeIpcResponse::OwnDeviceRosterAutomationConfigured(roster) = roster else {
+            bail!("runtime returned an unexpected roster policy response")
+        };
+        assert_eq!(roster.policy_generation, 1);
+        assert_eq!(roster.active_recipient_count, 1);
+        assert_eq!(roster.configured_recipient_count, 1);
+        assert_eq!(roster.state, "disabled");
+
         let (_, refreshed_list) =
             root.revoke_and_publish_device_list(removed.identity().device_id())?;
         let refreshed_list_file = directory.path().join("devices-after.snapshot");
@@ -21617,6 +22712,19 @@ mod tests {
             update.history_availability_status,
             "existing-copies-remain-readable"
         );
+        let roster = kilogram_runtime_ipc::call(
+            &ipc_file,
+            RuntimeIpcCommand::OwnDeviceRosterAutomationStatus,
+        )
+        .await?;
+        let RuntimeIpcResponse::OwnDeviceRosterAutomationStatus(Some(roster)) = roster else {
+            bail!("runtime omitted reconciled roster policy status")
+        };
+        assert_eq!(roster.policy_generation, 2);
+        assert_eq!(roster.active_recipient_count, 0);
+        assert_eq!(roster.configured_recipient_count, 1);
+        assert_eq!(roster.retired_recipient_count, 1);
+        assert_eq!(roster.recipients[0].announcement.state, "disabled");
         let published = ConnectionTicket::decode(&fs::read_to_string(&ticket_file)?)?;
         assert_eq!(
             published.listener_authority_snapshot().revision(),

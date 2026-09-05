@@ -21,7 +21,7 @@ use tokio::{
     time::timeout,
 };
 
-const IPC_VERSION: u8 = 14;
+const IPC_VERSION: u8 = 15;
 const MAX_DESCRIPTOR_BYTES: u64 = 16 * 1024;
 const MAX_LAUNCH_PROFILE_BYTES: u64 = 64 * 1024;
 const MAX_LAUNCH_PROFILE_PATHS: usize = 64;
@@ -433,6 +433,21 @@ pub enum RuntimeIpcCommand {
         allow_unknown_network: bool,
     },
     OwnDeviceTicketDiscoveryStatus,
+    ConfigureOwnDeviceRosterAutomation {
+        enabled: bool,
+        service_base_url: String,
+        ttl_seconds: u64,
+        refresh_before_seconds: u64,
+        interval_seconds: u64,
+        validity_seconds: u64,
+        retry_base_seconds: u64,
+        retry_max_seconds: u64,
+        allow_ethernet: bool,
+        allow_wifi: bool,
+        allow_mobile: bool,
+        allow_unknown_network: bool,
+    },
+    OwnDeviceRosterAutomationStatus,
     ConversationList,
     HistoryPage {
         conversation: String,
@@ -898,6 +913,34 @@ pub struct RuntimeIpcOwnDeviceTicketDiscoveryStatus {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcOwnDeviceRosterAutomationStatus {
+    pub enabled: bool,
+    pub policy_generation: u64,
+    pub service_base_url: String,
+    pub ttl_seconds: u64,
+    pub refresh_before_seconds: u64,
+    pub interval_seconds: u64,
+    pub validity_seconds: u64,
+    pub retry_base_seconds: u64,
+    pub retry_max_seconds: u64,
+    pub allow_ethernet: bool,
+    pub allow_wifi: bool,
+    pub allow_mobile: bool,
+    pub allow_unknown_network: bool,
+    pub current_network: RuntimeIpcNetworkClass,
+    pub network_allowed: bool,
+    pub authority_revision: u64,
+    pub active_recipient_count: usize,
+    pub configured_recipient_count: usize,
+    pub retired_recipient_count: usize,
+    pub max_parallel_workflows: u8,
+    pub state: String,
+    pub execution_scope: String,
+    pub os_background_service_enabled: bool,
+    pub recipients: Vec<RuntimeIpcOwnDeviceTicketDiscoveryStatus>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum RuntimeIpcResponse {
     Pong {
         account_id: AccountId,
@@ -930,6 +973,8 @@ pub enum RuntimeIpcResponse {
     OwnDeviceAnnouncementAutomationStatus(Vec<RuntimeIpcOwnDeviceAnnouncementAutomationStatus>),
     OwnDeviceTicketDiscoveryConfigured(Box<RuntimeIpcOwnDeviceTicketDiscoveryStatus>),
     OwnDeviceTicketDiscoveryStatus(Vec<RuntimeIpcOwnDeviceTicketDiscoveryStatus>),
+    OwnDeviceRosterAutomationConfigured(Box<RuntimeIpcOwnDeviceRosterAutomationStatus>),
+    OwnDeviceRosterAutomationStatus(Option<Box<RuntimeIpcOwnDeviceRosterAutomationStatus>>),
     ConversationList(Vec<RuntimeIpcConversationSummary>),
     HistoryPage(RuntimeIpcHistoryPage),
     ChangeState {

@@ -2934,11 +2934,42 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - contract зафиксирован в
   [`../docs/RFC-0062-pairwise-own-device-ticket-discovery.md`](../docs/RFC-0062-pairwise-own-device-ticket-discovery.md).
 
+### M0.9.41 — roster-wide own-device availability: выполнено
+
+Реализовано:
+
+- одна local-Device-signed append-only policy pin-ит exact Root roster
+  revision/digest, store URL, locator TTL/refresh, announcement
+  interval/validity/retry и отдельные Ethernet/Wi-Fi/mobile/unknown permissions;
+- deterministic reconciliation проецирует parent в существующие discovery и
+  announcement child chains для каждого другого active Device, а historical
+  revoked recipient получает disabled generation;
+- одна vault-primary transaction сохраняет parent и все изменённые children;
+  одинаковая конфигурация и повторный restart reconcile не создают records;
+- startup подхватывает Device из полного обновлённого launch roster, а live
+  removal-only Root update немедленно отключает отозванный recipient; hot
+  enrollment намеренно не обходит существующий fresh-prekey/profile gate;
+- IPC v15 даёт единые configure/status операции, active/configured/retired
+  counts и полный per-recipient diagnostic; старые ручные child-команды после
+  появления global policy fail closed;
+- foreground actor обрабатывает ровно один due child за automation check и
+  завершает publish/fetch/push до выбора следующего, сохраняя общий outbound
+  limit и signed per-recipient backoff; это local process bound, не
+  cross-machine distributed mutex;
+- новая parent chain имеет отдельный 1024-record defensive limit, входит в
+  общий 4096-record bound и compact-ится до authenticated head существующим
+  transactional Device-signed checkpoint;
+- pure regression проверяет initial projection, idempotence, expanded roster,
+  revocation и restart no-op; live IPC regression проверяет немедленный disable
+  после Root removal и сохранение после authenticated receipt restart;
+- contract зафиксирован в
+  [`../docs/RFC-0063-roster-wide-own-device-availability.md`](../docs/RFC-0063-roster-wide-own-device-availability.md).
+
 ### Следующий этап
 
-1. M0.9.41: заменить per-recipient configuration одним bounded roster-wide
-   own-device availability policy, который добавляет и прекращает schedules по
-   live Root roster без параллельного network storm.
+1. M0.9.42: автоматически сводить accepted sibling publication evidence и
+   обнаруживать conflicting same-generation observations между Devices,
+   сохраняя local trust high-water и не назначая store глобальным witness.
 2. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.

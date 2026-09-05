@@ -191,10 +191,13 @@ sessions, distribution, removal и key epochs и не решены этим пр
   foreground schedule с backoff/network policy/compaction. M0.9.40 убирает
   общую папку: exact-current siblings выводят directional pairwise capability,
   публикуют source-signed recipient-HPKE ticket в opaque store и выполняют
-  existing push из runtime-managed path. Открыты roster-wide автоматизация без
-  ручной настройки каждой пары, compaction принятой sibling evidence и
-  обнаружение equivocation между устройствами, которые никогда не обменивались
-  bundle.
+  existing push из runtime-managed path. M0.9.41 проецирует одну
+  local-Device-signed exact-roster policy во все pairwise child schedules,
+  добавляет recipients после полного startup roster и немедленно выключает их
+  после live Root revocation; один runtime не запускает parallel fan-out.
+  Открыты compaction принятой sibling evidence, обнаружение equivocation между
+  устройствами, которые никогда не обменивались bundle, и действительно
+  распределённая cross-machine координация без доверенного scheduler.
 - M0.9.32 compact/checkpoint-ит runtime publication, observation, policy и
   attempt chains до exact signed heads за device-signed cumulative checkpoint;
   DB-primary checkpoint/removals атомарны и crash-safe. Открытым остаётся

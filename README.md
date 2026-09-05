@@ -140,12 +140,32 @@ announcement schedules are specified in
 Pairwise private discovery of fresh sibling-device runtime tickets through the
 opaque store is specified in
 [`docs/RFC-0062-pairwise-own-device-ticket-discovery.md`](docs/RFC-0062-pairwise-own-device-ticket-discovery.md).
+Roster-wide projection of the current Root device list into those pairwise
+availability schedules is specified in
+[`docs/RFC-0063-roster-wide-own-device-availability.md`](docs/RFC-0063-roster-wide-own-device-availability.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.40 pairwise own-device ticket discovery — complete
+## Current milestone: M0.9.41 roster-wide own-device availability — complete
+
+One local Device-signed roster policy now configures availability exchange with
+every other active Device in the exact current Root-signed Account list. The
+runtime deterministically materializes the existing pairwise discovery and
+announcement policy chains, preserves their network limits and backoff, and
+serializes the complete publish/fetch/push workflow to at most one active child
+inside the foreground actor. The detailed IPC status distinguishes active,
+historical revoked and network-blocked recipients and states that no OS
+background service is enabled.
+
+A complete expanded launch roster automatically creates schedules for newly
+enrolled Devices at runtime start. The existing authenticated live update is
+still deliberately removal-only because hot enrollment also needs fresh signed
+prekeys and launch-profile convergence; a valid live Root revocation disables
+the removed recipient immediately. Parent and child changes commit together,
+identical reconciliation is a no-op, and the new policy chain joins bounded
+transactional checkpoint compaction. IPC advances to v15.
 
 Two already-authorized Devices with the byte-exact current Root roster can now
 derive directional pairwise opaque-store channels from their certified X25519
@@ -208,7 +228,7 @@ Ticket refresh now snapshots every enrolled Device candidate, performs the
 bounded publication lookups concurrently, and serializes authenticated local
 commits per candidate. A partial result preserves successful descriptor and
 observation updates while foreground automation records a normal backoff
-failure until every candidate succeeds. Runtime IPC v14 retains the v10 read
+failure until every candidate succeeds. Runtime IPC v15 retains the v10 read
 model through which the Windows desktop shows exact `usable`/`stale` counts,
 per-Device diagnostics and each opaque
 channel's local publication high-water and adds the network announcement,

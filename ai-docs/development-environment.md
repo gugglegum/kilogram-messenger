@@ -1426,3 +1426,37 @@ retirement остальных compatibility shadows ещё не реализов
   `8224E35A2A2B5EC75F60169B7718A4CEB9B31846020EF1A4AA2590B98B973113`;
   `target/release/kilogram-ticket-store.exe` — 2,581,504 bytes, SHA-256
   `123887E3B8F607F77A5BEE8969B5B9B73ABC189BAEC1BD51AFFA925183020191`.
+
+## M0.9.41 verification snapshot (2026-09-05)
+
+- Новый pure roster regression проверяет initial projection на два sibling
+  Devices, idempotent repeated configuration, запрет manual child override,
+  automatic child creation после complete expanded roster, disabled generation
+  после Root revocation и no-op repeated/restart reconciliation.
+- Existing live runtime removal regression теперь сначала устанавливает
+  roster-wide policy через IPC v15, применяет authenticated Root removal,
+  проверяет parent generation 2, `active=0/configured=1/retired=1`, disabled
+  child и то же состояние после receipt-based restart.
+- Compaction regression сохраняет восемь authenticated heads, включая новую
+  roster policy chain; после transactional checkpoint удаляются 64 verified
+  prefix records, restart принимает retained generation 9.
+- Первый полный прогон обнаружил ошибку только в старом test fixture: шаг с
+  сообщением `re-enable discovery` передавал `enabled=false`. После исправления
+  dedicated M0.9.40 two-runtime regression и повторный полный прогон успешны.
+- `cargo test --workspace --all-targets`: 213 tests, 0 failed.
+- `cargo fmt --all -- --check`, `git diff --check` и strict
+  `cargo clippy --workspace --all-targets --all-features -- -D warnings`
+  проходят.
+- Dedicated `cargo test --release -p kilogram-cli
+  tests::roster_wide_own_device_policy_reconciles_addition_revocation_and_restart
+  -- --exact` и `cargo build --workspace --release` проходят; stable-name
+  CLI/bootstrap/store `--help` и hidden GUI launch smoke успешны.
+- Windows artifacts со стабильными именами:
+  `target/release/kilogram-bootstrap.exe` — 20,480,512 bytes, SHA-256
+  `BF65E44B6F815DD91B4A456E12E713319CB07935079B3ECAF0EF692F42D5F692`;
+  `target/release/kilogram-cli.exe` — 25,729,536 bytes, SHA-256
+  `48E44CA130BF95EAF968EDDE9BBFF322434414563B3A7274527EBDE43EA36201`;
+  `target/release/kilogram-windows.exe` — 8,025,088 bytes, SHA-256
+  `C1DF3B54316D41BF6378F9D72C201E4B39E9493662C0FE3DCDD69727EC04BAF0`;
+  `target/release/kilogram-ticket-store.exe` — 2,581,504 bytes, SHA-256
+  `123887E3B8F607F77A5BEE8969B5B9B73ABC189BAEC1BD51AFFA925183020191`.
