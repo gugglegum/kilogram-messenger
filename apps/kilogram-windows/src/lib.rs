@@ -6487,15 +6487,16 @@ impl KilogramApp {
         });
         if let Some(summary) = summary {
             ui.small(format!(
-                "Peer {} · {} · {} endpoint(s): {} usable / {} stale",
+                "Peer {} · {} · {} endpoint(s): {} usable / {} stale / {} quarantined",
                 compact_id(&summary.peer_account_id.to_string()),
                 summary.route_policy.as_str(),
                 summary.endpoint_candidate_count,
                 summary.usable_endpoint_candidate_count,
-                summary.stale_endpoint_candidate_count
+                summary.stale_endpoint_candidate_count,
+                summary.quarantined_endpoint_candidate_count
             ));
             for candidate in &summary.endpoint_candidates {
-                ui.small(format!(
+                let line = format!(
                     "{} device {} · {} · {} · publication high-water {}",
                     if candidate.primary {
                         "Primary"
@@ -6508,7 +6509,22 @@ impl KilogramApp {
                     candidate
                         .observed_publication_generation
                         .map_or_else(|| "none".to_owned(), |value| value.to_string())
-                ));
+                );
+                if candidate.publication_conflict_proof_id.is_some() {
+                    ui.colored_label(egui::Color32::LIGHT_RED, line);
+                    ui.small(format!(
+                        "Conflict generation {} · signed proof {} · manual device audit and contact re-enrollment required",
+                        candidate
+                            .publication_conflict_generation
+                            .map_or_else(|| "unknown".to_owned(), |value| value.to_string()),
+                        candidate
+                            .publication_conflict_proof_id
+                            .as_deref()
+                            .map_or_else(|| "unknown".to_owned(), compact_id)
+                    ));
+                } else {
+                    ui.small(line);
+                }
             }
         }
         let load_older = self.model.history_next_cursor.is_some()
@@ -7625,6 +7641,7 @@ mod tests {
             endpoint_candidate_count: 1,
             usable_endpoint_candidate_count: 1,
             stale_endpoint_candidate_count: 0,
+            quarantined_endpoint_candidate_count: 0,
             endpoint_candidates: vec![RuntimeIpcEndpointCandidateStatus {
                 peer_device_id: peer_device.device_id(),
                 primary: true,
@@ -7635,6 +7652,9 @@ mod tests {
                 publication_channel_id: Some("44".repeat(32)),
                 observed_publication_generation: Some(2),
                 observed_at_unix_seconds: Some(123_000),
+                publication_conflict_generation: None,
+                publication_conflict_proof_id: None,
+                publication_conflict_detected_at_unix_seconds: None,
                 detail: "authenticated-current-authority".to_owned(),
             }],
             route_policy: RuntimeIpcRoutePolicy::Auto,
@@ -7805,6 +7825,7 @@ mod tests {
                         endpoint_candidate_count: 1,
                         usable_endpoint_candidate_count: 1,
                         stale_endpoint_candidate_count: 0,
+                        quarantined_endpoint_candidate_count: 0,
                         endpoint_candidates: vec![RuntimeIpcEndpointCandidateStatus {
                             peer_device_id: device_id,
                             primary: true,
@@ -7815,6 +7836,9 @@ mod tests {
                             publication_channel_id: Some("77".repeat(32)),
                             observed_publication_generation: Some(4),
                             observed_at_unix_seconds: Some(123_789),
+                            publication_conflict_generation: None,
+                            publication_conflict_proof_id: None,
+                            publication_conflict_detected_at_unix_seconds: None,
                             detail: "authenticated-current-authority".to_owned(),
                         }],
                         route_policy: RuntimeIpcRoutePolicy::Auto,

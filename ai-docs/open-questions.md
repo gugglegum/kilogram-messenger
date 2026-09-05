@@ -196,10 +196,11 @@ sessions, distribution, removal и key epochs и не решены этим пр
   добавляет recipients после полного startup roster и немедленно выключает их
   после live Root revocation; один runtime не запускает parallel fan-out.
   M0.9.42 переносит higher direct/accepted high-water транзитивно через bundle
-  v2, отклоняет same-generation mismatch до mutation и сохраняет один
-  checkpointed `.aeo` head после compaction. Открыты durable conflict proof и
-  quarantine UX, обнаружение equivocation между устройствами, которые никогда
-  не обменивались bundle, и действительно распределённая cross-machine
+  v2, а M0.9.43 сохраняет первый mismatch в local-Device-signed `.pcf`,
+  карантинит channel across restart и показывает explicit IPC/desktop state.
+  Открыты распространение proof к siblings, Root-authorized resolution/channel
+  rotation, обнаружение конфликта между устройствами, которые никогда не
+  обменивались bundle, и действительно распределённая cross-machine
   координация без доверенного scheduler.
 - M0.9.32 compact/checkpoint-ит runtime publication, observation, policy и
   attempt chains до exact signed heads за device-signed cumulative checkpoint;

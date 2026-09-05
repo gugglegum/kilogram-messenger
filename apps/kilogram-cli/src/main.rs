@@ -1,5 +1,6 @@
 use std::{
     collections::{BTreeMap, BTreeSet},
+    fmt,
     fs::{self, OpenOptions},
     future::Future,
     io::{self, Write},
@@ -86,6 +87,7 @@ mod runtime_own_device_automation;
 mod runtime_own_device_discovery;
 mod runtime_own_device_roster;
 mod runtime_publication;
+mod runtime_publication_conflict;
 mod runtime_queue;
 mod runtime_ticket_automation;
 mod runtime_ticket_checkpoint;
@@ -148,6 +150,7 @@ use runtime_publication::{
     TicketPublicationId, TicketPublicationObservationId, TicketPublicationStoreClient,
     TicketPublicationWriteCapability, TicketPublicationWriteKey,
 };
+use runtime_publication_conflict::{PublicationConflictProofId, SignedPublicationConflictProof};
 use runtime_queue::{
     MAX_RUNTIME_RECORD_BYTES, RuntimeContactId, RuntimeDeviceDirectoryReceiptId,
     RuntimeEndpointCandidateId, RuntimeQueueId, SignedDeliveredMessage, SignedMaterializedMessage,
@@ -178,6 +181,7 @@ const RUNTIME_DEVICE_DIRECTORY: &str = "device-directory";
 const RUNTIME_TICKET_PUBLICATIONS_DIRECTORY: &str = "ticket-publications";
 const RUNTIME_TICKET_OBSERVATIONS_DIRECTORY: &str = "ticket-observations";
 const RUNTIME_ACCEPTED_ENDPOINT_OBSERVATIONS_DIRECTORY: &str = "accepted-endpoint-observations";
+const RUNTIME_PUBLICATION_CONFLICTS_DIRECTORY: &str = "publication-conflicts";
 const RUNTIME_TICKET_AUTOMATION_POLICIES_DIRECTORY: &str = "ticket-automation-policies";
 const RUNTIME_TICKET_AUTOMATION_ATTEMPTS_DIRECTORY: &str = "ticket-automation-attempts";
 const RUNTIME_OWN_DEVICE_ANNOUNCEMENT_POLICIES_DIRECTORY: &str = "own-device-announcement-policies";
@@ -189,6 +193,7 @@ const RUNTIME_TICKET_CHECKPOINTS_DIRECTORY: &str = "ticket-checkpoints";
 const MAX_RUNTIME_DEVICE_DIRECTORY_RECEIPTS: usize = 1_024;
 const MAX_RUNTIME_ENDPOINT_CANDIDATES_PER_CONTACT: usize = 4;
 const MAX_RUNTIME_TICKET_PUBLICATION_RECORDS: usize = 4_096;
+const MAX_RUNTIME_PUBLICATION_CONFLICTS: usize = 1_024;
 const MAX_RUNTIME_TICKET_AUTOMATION_RECORDS: usize = 4_096;
 const MAX_RUNTIME_OWN_DEVICE_ANNOUNCEMENT_RECORDS: usize = 4_096;
 const MAX_RUNTIME_OWN_DEVICE_TICKET_DISCOVERY_RECORDS: usize = 4_096;
@@ -4010,6 +4015,7 @@ struct RuntimeStateSnapshot {
         BTreeMap<TicketPublicationChannelId, Vec<SignedTicketPublicationObservation>>,
     accepted_endpoint_observations:
         BTreeMap<TicketPublicationChannelId, Vec<SignedAcceptedEndpointObservation>>,
+    publication_conflicts: BTreeMap<TicketPublicationChannelId, SignedPublicationConflictProof>,
     ticket_automation_policies: BTreeMap<RuntimeContactId, Vec<SignedTicketAutomationPolicy>>,
     ticket_automation_attempts:
         BTreeMap<(RuntimeContactId, TicketAutomationAction), Vec<SignedTicketAutomationAttempt>>,
@@ -4098,6 +4104,13 @@ impl RuntimeStateSnapshot {
             "authorized devices equivocated at the imported publication high-water"
         );
         Ok(Some(first))
+    }
+
+    fn publication_conflict(
+        &self,
+        channel_id: TicketPublicationChannelId,
+    ) -> Option<&SignedPublicationConflictProof> {
+        self.publication_conflicts.get(&channel_id)
     }
 
     fn latest_ticket_automation_policy(
@@ -4234,6 +4247,12 @@ fn runtime_accepted_endpoint_observation_relative_path(
     PathBuf::from(RUNTIME_STATE_DIRECTORY)
         .join(RUNTIME_ACCEPTED_ENDPOINT_OBSERVATIONS_DIRECTORY)
         .join(format!("{evidence_id}.aeo"))
+}
+
+fn runtime_publication_conflict_relative_path(proof_id: PublicationConflictProofId) -> PathBuf {
+    PathBuf::from(RUNTIME_STATE_DIRECTORY)
+        .join(RUNTIME_PUBLICATION_CONFLICTS_DIRECTORY)
+        .join(format!("{proof_id}.pcf"))
 }
 
 fn runtime_ticket_automation_policy_relative_path(policy_id: TicketAutomationPolicyId) -> PathBuf {
@@ -4383,6 +4402,7 @@ fn read_runtime_record_files(state_directory: &Path) -> Result<Vec<(PathBuf, Vec
         RUNTIME_TICKET_PUBLICATIONS_DIRECTORY,
         RUNTIME_TICKET_OBSERVATIONS_DIRECTORY,
         RUNTIME_ACCEPTED_ENDPOINT_OBSERVATIONS_DIRECTORY,
+        RUNTIME_PUBLICATION_CONFLICTS_DIRECTORY,
         RUNTIME_TICKET_AUTOMATION_POLICIES_DIRECTORY,
         RUNTIME_TICKET_AUTOMATION_ATTEMPTS_DIRECTORY,
         RUNTIME_OWN_DEVICE_ANNOUNCEMENT_POLICIES_DIRECTORY,
@@ -4528,6 +4548,20 @@ fn load_runtime_state_snapshot(
                 .entry(value.channel_id())
                 .or_default()
                 .push(value);
+        } else if file_name.ends_with(".pcf") {
+            let value = SignedPublicationConflictProof::decode(&bytes)?;
+            value.verify_local(local_account_id, local_device_id)?;
+            ensure!(
+                relative_path == runtime_publication_conflict_relative_path(value.proof_id()?),
+                "publication conflict proof filename does not match its authenticated ID"
+            );
+            ensure!(
+                snapshot
+                    .publication_conflicts
+                    .insert(value.channel_id(), value)
+                    .is_none(),
+                "runtime state contains more than one conflict proof for a publication channel"
+            );
         } else if file_name.ends_with(".tap") {
             let value = SignedTicketAutomationPolicy::decode(&bytes)?;
             ensure!(
@@ -4782,6 +4816,23 @@ fn load_runtime_state_snapshot(
         }
         snapshot.accepted_endpoint_observation_high_water(*channel_id)?;
     }
+    for (channel_id, proof) in &snapshot.publication_conflicts {
+        ensure!(
+            proof.channel_id() == *channel_id,
+            "publication conflict map key is inconsistent"
+        );
+        ensure!(
+            snapshot
+                .endpoint_publication_bindings
+                .values()
+                .any(|binding| {
+                    binding.ticket_publication_write_key().channel_id() == *channel_id
+                        && binding.peer_account_id() == proof.publisher_account_id()
+                        && binding.peer_device_id() == proof.publisher_device_id()
+                }),
+            "publication conflict proof has no matching enrolled endpoint"
+        );
+    }
     let mut candidate_counts = BTreeMap::<RuntimeContactId, usize>::new();
     for candidate in snapshot.endpoint_candidates.values() {
         let count = candidate_counts.entry(candidate.contact_id()).or_insert(1);
@@ -4832,6 +4883,10 @@ fn load_runtime_state_snapshot(
     ensure!(
         publication_record_count <= MAX_RUNTIME_TICKET_PUBLICATION_RECORDS,
         "runtime ticket-publication record limit exceeded"
+    );
+    ensure!(
+        snapshot.publication_conflicts.len() <= MAX_RUNTIME_PUBLICATION_CONFLICTS,
+        "runtime publication-conflict record limit exceeded"
     );
     let automation_record_count = snapshot
         .ticket_automation_policies
@@ -5709,6 +5764,58 @@ fn exact_runtime_endpoint_publication_binding<'a>(
     Ok(binding)
 }
 
+#[derive(Debug)]
+struct RuntimePublicationObservationConflict {
+    existing: SignedTicketPublicationObservation,
+    incoming: SignedTicketPublicationObservation,
+}
+
+impl fmt::Display for RuntimePublicationObservationConflict {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            formatter,
+            "authorized-device publication equivocation: conflicting publications for channel {} generation {}",
+            self.existing.channel_id(),
+            self.existing.publication_generation()
+        )
+    }
+}
+
+impl std::error::Error for RuntimePublicationObservationConflict {}
+
+#[derive(Clone, Copy, Debug)]
+struct RuntimePublicationChannelQuarantined {
+    channel_id: TicketPublicationChannelId,
+    publication_generation: u64,
+    proof_id: PublicationConflictProofId,
+}
+
+impl fmt::Display for RuntimePublicationChannelQuarantined {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            formatter,
+            "publication channel {} is quarantined at conflicting generation {}; local signed conflict proof {} requires manual device audit and contact re-enrollment",
+            self.channel_id, self.publication_generation, self.proof_id
+        )
+    }
+}
+
+impl std::error::Error for RuntimePublicationChannelQuarantined {}
+
+fn publication_channel_quarantine(
+    snapshot: &RuntimeStateSnapshot,
+    channel_id: TicketPublicationChannelId,
+) -> Result<()> {
+    if let Some(proof) = snapshot.publication_conflict(channel_id) {
+        return Err(anyhow::Error::new(RuntimePublicationChannelQuarantined {
+            channel_id,
+            publication_generation: proof.publication_generation(),
+            proof_id: proof.proof_id()?,
+        }));
+    }
+    Ok(())
+}
+
 fn verify_runtime_endpoint_publication_binding_if_present(
     snapshot: &RuntimeStateSnapshot,
     local_account_id: AccountId,
@@ -5725,6 +5832,10 @@ fn verify_runtime_endpoint_publication_binding_if_present(
         return Ok(());
     };
     exact_runtime_endpoint_publication_binding(snapshot, local_account_id, contact, enrollment)?;
+    publication_channel_quarantine(
+        snapshot,
+        binding.ticket_publication_write_key().channel_id(),
+    )?;
     ensure!(
         ticket.ticket_publication_write_key() == binding.ticket_publication_write_key(),
         "runtime descriptor changes the pinned publication-channel binding"
@@ -5876,19 +5987,35 @@ fn collect_runtime_endpoint_candidate_statuses(
                     .map(|write_key| write_key.channel_id());
                 let observation = channel_id
                     .and_then(|channel_id| snapshot.latest_ticket_observation(channel_id));
+                let conflict = channel_id.and_then(|channel_id| {
+                    snapshot.publication_conflict(channel_id)
+                });
                 RuntimeIpcEndpointCandidateStatus {
                     peer_device_id: enrollment.peer_device_id,
                     primary: enrollment.primary,
                     route_policy: runtime_ipc_route_policy(enrollment.route_policy),
                     descriptor_file: enrollment.descriptor_file,
-                    state: RuntimeIpcEndpointCandidateState::Stale,
+                    state: if conflict.is_some() {
+                        RuntimeIpcEndpointCandidateState::Quarantined
+                    } else {
+                        RuntimeIpcEndpointCandidateState::Stale
+                    },
                     authority_revision: None,
                     publication_channel_id: channel_id.map(|channel_id| channel_id.to_string()),
                     observed_publication_generation: observation
                         .map(SignedTicketPublicationObservation::publication_generation),
                     observed_at_unix_seconds: observation
                         .map(SignedTicketPublicationObservation::observed_at_unix_seconds),
-                    detail: if channel_id.is_some() {
+                    publication_conflict_generation: conflict
+                        .map(SignedPublicationConflictProof::publication_generation),
+                    publication_conflict_proof_id: conflict
+                        .and_then(|proof| proof.proof_id().ok())
+                        .map(|proof_id| proof_id.to_string()),
+                    publication_conflict_detected_at_unix_seconds: conflict
+                        .map(SignedPublicationConflictProof::detected_at_unix_seconds),
+                    detail: if conflict.is_some() {
+                        "signed-publication-conflict-proof; manual-device-audit-and-contact-re-enrollment-required".to_owned()
+                    } else if channel_id.is_some() {
                         format!("descriptor-unusable-refresh-channel-pinned: {error:#}")
                     } else {
                         format!("descriptor-unusable-no-refresh-binding: {error:#}")
@@ -5940,6 +6067,9 @@ fn collect_runtime_endpoint_candidate_statuses(
                         .map(SignedTicketPublicationObservation::publication_generation),
                     observed_at_unix_seconds: observation
                         .map(SignedTicketPublicationObservation::observed_at_unix_seconds),
+                    publication_conflict_generation: None,
+                    publication_conflict_proof_id: None,
+                    publication_conflict_detected_at_unix_seconds: None,
                     detail,
                 }
             }
@@ -5999,6 +6129,7 @@ fn load_runtime_endpoint_candidate_set(
     contact: &SignedRuntimeContact,
     local_certificate: &DeviceCertificate,
     local_authority: &AccountAuthoritySnapshot,
+    pinned_peer_authority: &AccountAuthoritySnapshot,
 ) -> Result<Vec<ResolvedRuntimeEndpointCandidate>> {
     let mut candidates = Vec::new();
     let mut rejected = Vec::new();
@@ -6085,9 +6216,14 @@ fn load_runtime_endpoint_candidate_set(
                     .cmp(right.peer_device_id.as_bytes())
             })
     });
+    ensure!(
+        !candidates.is_empty(),
+        "no authenticated endpoint candidate is usable: {}",
+        rejected.join(" | ")
+    );
     let authoritative = candidates
         .first()
-        .context("runtime endpoint candidate set is empty")?;
+        .context("runtime endpoint candidate set disappeared")?;
     let authority_revision = authoritative
         .ticket
         .listener_authority_snapshot()
@@ -6097,6 +6233,16 @@ fn load_runtime_endpoint_candidate_set(
         .listener_authority_snapshot()
         .encode()
         .context("encode authoritative endpoint-candidate snapshot")?;
+    ensure!(
+        authority_revision >= pinned_peer_authority.revision(),
+        "endpoint candidates are behind the pinned peer authority high-water"
+    );
+    if authority_revision == pinned_peer_authority.revision() {
+        ensure!(
+            authority_bytes == pinned_peer_authority.encode()?,
+            "endpoint candidates equivocate against the pinned peer authority high-water"
+        );
+    }
     let active_certificates = authoritative
         .ticket
         .listener_directory()
@@ -6582,6 +6728,9 @@ fn runtime_endpoint_observation_announcement(
     snapshot: &RuntimeStateSnapshot,
     channel_id: TicketPublicationChannelId,
 ) -> Result<Option<EndpointObservationAnnouncement>> {
+    if snapshot.publication_conflict(channel_id).is_some() {
+        return Ok(None);
+    }
     let direct = snapshot.latest_ticket_observation(channel_id);
     let accepted = snapshot.latest_accepted_endpoint_observation(channel_id)?;
     if let (Some(direct), Some(accepted)) = (direct, accepted)
@@ -6651,6 +6800,60 @@ struct RuntimeEndpointAnnouncementImportPlan {
     endpoint_added_count: usize,
     publication_binding_added_count: usize,
     observation_evidence_count: usize,
+}
+
+fn persist_runtime_publication_conflict(
+    state_directory: &Path,
+    snapshot: &RuntimeStateSnapshot,
+    identity: &DeviceIdentity,
+    local_account_id: AccountId,
+    detected_at_unix_seconds: u64,
+    conflict: &RuntimePublicationObservationConflict,
+) -> Result<RuntimePublicationChannelQuarantined> {
+    let channel_id = conflict.existing.channel_id();
+    if let Some(existing) = snapshot.publication_conflict(channel_id) {
+        return Ok(RuntimePublicationChannelQuarantined {
+            channel_id,
+            publication_generation: existing.publication_generation(),
+            proof_id: existing.proof_id()?,
+        });
+    }
+    ensure!(
+        snapshot.publication_conflicts.len() < MAX_RUNTIME_PUBLICATION_CONFLICTS,
+        "runtime publication-conflict record limit exceeded"
+    );
+    ensure!(
+        snapshot
+            .endpoint_publication_bindings
+            .values()
+            .any(|binding| {
+                binding.ticket_publication_write_key().channel_id() == channel_id
+                    && binding.peer_account_id() == conflict.existing.publisher_account_id()
+                    && binding.peer_device_id() == conflict.existing.publisher_device_id()
+            }),
+        "conflicting publication observations have no matching enrolled endpoint"
+    );
+    let proof = SignedPublicationConflictProof::sign(
+        identity,
+        local_account_id,
+        detected_at_unix_seconds,
+        conflict.existing.clone(),
+        conflict.incoming.clone(),
+    )?;
+    let proof_id = proof.proof_id()?;
+    let relative_path = runtime_publication_conflict_relative_path(proof_id);
+    let bytes = proof.encode()?;
+    run_state_transaction(state_directory, |transaction| {
+        persist_runtime_record(state_directory, &relative_path, &bytes, transaction)?;
+        Ok(())
+    })?;
+    load_runtime_state_snapshot(state_directory, local_account_id, identity.device_id())
+        .context("verify runtime state after quarantining publication channel")?;
+    Ok(RuntimePublicationChannelQuarantined {
+        channel_id,
+        publication_generation: proof.publication_generation(),
+        proof_id,
+    })
 }
 
 fn import_runtime_endpoint_announcements(
@@ -6783,7 +6986,7 @@ fn import_runtime_endpoint_announcement_envelope(
         device_state.identity().device_id(),
     )?;
     let bundle_id = bundle.bundle_id()?;
-    let plan = prepare_runtime_endpoint_announcement_import(
+    let plan = match prepare_runtime_endpoint_announcement_import(
         &snapshot,
         &trust,
         &local_certificate,
@@ -6791,7 +6994,24 @@ fn import_runtime_endpoint_announcement_envelope(
         &bundle,
         bundle_id,
         &descriptor_directory,
-    )?;
+    ) {
+        Ok(plan) => plan,
+        Err(error) => {
+            let Some(conflict) = error.downcast_ref::<RuntimePublicationObservationConflict>()
+            else {
+                return Err(error);
+            };
+            let quarantined = persist_runtime_publication_conflict(
+                state_directory,
+                &snapshot,
+                device_state.identity(),
+                local_certificate.account_id(),
+                now_unix_seconds,
+                conflict,
+            )?;
+            return Err(anyhow::Error::new(quarantined));
+        }
+    };
 
     for (path, bytes) in &plan.external_descriptors {
         write_new_or_verify_identical(path, bytes)?;
@@ -7040,26 +7260,17 @@ fn prepare_runtime_endpoint_announcement_import(
     let mut planned_endpoint_ids = BTreeSet::new();
     let mut planned_publication_observations = BTreeSet::new();
     let mut known_observations =
-        BTreeMap::<(TicketPublicationChannelId, u64), (TicketPublicationId, [u8; 32])>::new();
+        BTreeMap::<(TicketPublicationChannelId, u64), SignedTicketPublicationObservation>::new();
     for observations in snapshot.ticket_observations.values() {
         for observation in observations {
-            merge_runtime_publication_observation(
-                &mut known_observations,
-                observation.channel_id(),
-                observation.publication_generation(),
-                observation.publication_id(),
-                observation.ticket_digest(),
-            )?;
+            merge_runtime_publication_observation(&mut known_observations, observation)?;
         }
     }
     for evidence in snapshot.accepted_endpoint_observations.values() {
         for observation in evidence {
             merge_runtime_publication_observation(
                 &mut known_observations,
-                observation.channel_id(),
-                observation.publication_generation(),
-                observation.publication_id(),
-                observation.ticket_digest(),
+                observation.source_observation(),
             )?;
         }
     }
@@ -7252,13 +7463,8 @@ fn prepare_runtime_endpoint_announcement_import(
                             == endpoint.ticket_publication_write_key().channel_id(),
                     "announced publication observation changes endpoint identity"
                 );
-                merge_runtime_publication_observation(
-                    &mut known_observations,
-                    source_observation.channel_id(),
-                    source_observation.publication_generation(),
-                    source_observation.publication_id(),
-                    source_observation.ticket_digest(),
-                )?;
+                publication_channel_quarantine(snapshot, source_observation.channel_id())?;
+                merge_runtime_publication_observation(&mut known_observations, source_observation)?;
                 observation_evidence_count += 1;
                 let publication_observation = (
                     source_observation.channel_id(),
@@ -7340,19 +7546,24 @@ fn prepare_runtime_endpoint_announcement_import(
 }
 
 fn merge_runtime_publication_observation(
-    known: &mut BTreeMap<(TicketPublicationChannelId, u64), (TicketPublicationId, [u8; 32])>,
-    channel_id: TicketPublicationChannelId,
-    generation: u64,
-    publication_id: TicketPublicationId,
-    ticket_digest: [u8; 32],
+    known: &mut BTreeMap<(TicketPublicationChannelId, u64), SignedTicketPublicationObservation>,
+    observation: &SignedTicketPublicationObservation,
 ) -> Result<()> {
-    if let Some((known_id, known_digest)) = known.get(&(channel_id, generation)) {
-        ensure!(
-            *known_id == publication_id && *known_digest == ticket_digest,
-            "authorized devices equivocated at publication generation {generation}"
-        );
+    let key = (
+        observation.channel_id(),
+        observation.publication_generation(),
+    );
+    if let Some(known_observation) = known.get(&key) {
+        if known_observation.publication_id() != observation.publication_id()
+            || known_observation.ticket_digest() != observation.ticket_digest()
+        {
+            return Err(anyhow::Error::new(RuntimePublicationObservationConflict {
+                existing: known_observation.clone(),
+                incoming: observation.clone(),
+            }));
+        }
     } else {
-        known.insert((channel_id, generation), (publication_id, ticket_digest));
+        known.insert(key, observation.clone());
     }
     Ok(())
 }
@@ -7839,6 +8050,15 @@ fn collect_runtime_conversation_list(
                 .count(),
         )
         .context("stale runtime endpoint-candidate count exceeds IPC representation")?;
+        let quarantined_endpoint_candidate_count = u8::try_from(
+            endpoint_candidates
+                .iter()
+                .filter(|candidate| {
+                    candidate.state == RuntimeIpcEndpointCandidateState::Quarantined
+                })
+                .count(),
+        )
+        .context("quarantined runtime endpoint-candidate count exceeds IPC representation")?;
         summaries.push(RuntimeIpcConversationSummary {
             contact_id: contact.contact_id().to_string(),
             conversation_label: contact.conversation_label().to_owned(),
@@ -7849,6 +8069,7 @@ fn collect_runtime_conversation_list(
                 .context("runtime endpoint-candidate count exceeds IPC representation")?,
             usable_endpoint_candidate_count,
             stale_endpoint_candidate_count,
+            quarantined_endpoint_candidate_count,
             endpoint_candidates,
             route_policy: runtime_ipc_route_policy(contact.route_policy()),
             message_count: u32::try_from(text_events.len())
@@ -9353,9 +9574,17 @@ async fn handle_runtime_ipc_work(
                     || report.observation_evidence_added_count != 0;
                 RuntimeIpcResponse::EndpointAnnouncementsImported(Box::new(report))
             }
-            Err(error) => RuntimeIpcResponse::Error {
-                message: format!("{error:#}"),
-            },
+            Err(error) => {
+                if error
+                    .downcast_ref::<RuntimePublicationChannelQuarantined>()
+                    .is_some()
+                {
+                    state_changed = true;
+                }
+                RuntimeIpcResponse::Error {
+                    message: format!("{error:#}"),
+                }
+            }
         },
         RuntimeIpcCommand::PushEndpointAnnouncements {
             recipient_ticket_file,
@@ -10183,11 +10412,15 @@ async fn publish_runtime_own_ticket(
             local_certificate.account_id(),
             peer_account_id,
         )?;
+        let pinned_peer_authority = trust
+            .load_peer_authority_snapshot(peer_account_id)
+            .context("load recipient peer authority high-water for ticket publication")?;
         let recipient_candidates = load_runtime_endpoint_candidate_set(
             &snapshot,
             contact,
             &local_certificate,
             &local_authority,
+            &pinned_peer_authority,
         )
         .context("load recipient endpoint set for ticket publication")?;
         let recipient_ticket = &recipient_candidates
@@ -10316,7 +10549,9 @@ fn runtime_endpoint_ticket_refresh_channel(
             contact,
             &current_enrollment,
         ) {
-            return Ok(binding.ticket_publication_write_key().channel_id());
+            let channel_id = binding.ticket_publication_write_key().channel_id();
+            publication_channel_quarantine(&snapshot, channel_id)?;
+            return Ok(channel_id);
         }
 
         // Compatibility migration for contacts enrolled before the durable
@@ -10401,6 +10636,7 @@ fn install_runtime_endpoint_ticket_refresh(
             expected_channel_id == channel_id,
             "ticket publication contact changed during fetch"
         );
+        publication_channel_quarantine(&snapshot, channel_id)?;
         let now_unix_seconds = unix_time_now().context("read time for ticket publication fetch")?;
         let publication = encrypted.open(
             device_state.identity().device_id(),
@@ -10671,13 +10907,22 @@ fn failed_runtime_endpoint_ticket_refresh(
     channel_id: Option<TicketPublicationChannelId>,
     error: anyhow::Error,
 ) -> RuntimeIpcEndpointTicketRefresh {
+    let quarantined = error
+        .downcast_ref::<RuntimePublicationChannelQuarantined>()
+        .copied();
     RuntimeIpcEndpointTicketRefresh {
         peer_device_id: enrollment.peer_device_id,
         primary: enrollment.primary,
         route_policy: runtime_ipc_route_policy(enrollment.route_policy),
         descriptor_file: enrollment.descriptor_file,
-        state: RuntimeIpcEndpointCandidateState::Stale,
-        channel_id: channel_id.map(|channel_id| channel_id.to_string()),
+        state: if quarantined.is_some() {
+            RuntimeIpcEndpointCandidateState::Quarantined
+        } else {
+            RuntimeIpcEndpointCandidateState::Stale
+        },
+        channel_id: channel_id
+            .or_else(|| quarantined.map(|value| value.channel_id))
+            .map(|channel_id| channel_id.to_string()),
         publication_id: None,
         publication_generation: None,
         expires_at_unix_seconds: None,
@@ -10688,7 +10933,14 @@ fn failed_runtime_endpoint_ticket_refresh(
         descriptor_publish_status: None,
         freshness_status: None,
         first_contact_freshness: None,
-        detail: format!("refresh-failed: {error:#}"),
+        detail: if let Some(quarantined) = quarantined {
+            format!(
+                "refresh-blocked-publication-conflict generation={} proof_id={}; manual-device-audit-and-contact-re-enrollment-required",
+                quarantined.publication_generation, quarantined.proof_id
+            )
+        } else {
+            format!("refresh-failed: {error:#}")
+        },
     }
 }
 
@@ -10857,6 +11109,8 @@ fn ticket_automation_action_status(
     network_allowed: bool,
     now_unix_seconds: u64,
 ) -> RuntimeIpcTicketAutomationActionStatus {
+    let publication_conflict_quarantined = action == TicketAutomationAction::Refresh
+        && runtime_contact_all_publication_channels_quarantined(snapshot, policy.contact_id());
     let attempts = snapshot
         .ticket_automation_attempts
         .get(&(policy.contact_id(), action));
@@ -10872,6 +11126,8 @@ fn ticket_automation_action_status(
         "disabled"
     } else if !network_allowed {
         "network-blocked"
+    } else if publication_conflict_quarantined {
+        "publication-conflict-quarantined"
     } else if latest.is_some_and(|attempt| attempt.not_before_unix_seconds() > now_unix_seconds) {
         if latest.is_some_and(SignedTicketAutomationAttempt::succeeded) {
             "fresh"
@@ -10888,8 +11144,11 @@ fn ticket_automation_action_status(
             .map(SignedTicketAutomationAttempt::attempted_at_unix_seconds),
         last_success_unix_seconds: latest_success
             .map(SignedTicketAutomationAttempt::attempted_at_unix_seconds),
-        next_attempt_unix_seconds: latest
-            .map(SignedTicketAutomationAttempt::not_before_unix_seconds),
+        next_attempt_unix_seconds: if publication_conflict_quarantined {
+            None
+        } else {
+            latest.map(SignedTicketAutomationAttempt::not_before_unix_seconds)
+        },
         consecutive_failures: latest.map_or(0, SignedTicketAutomationAttempt::consecutive_failures),
         publication_generation: latest_success
             .and_then(SignedTicketAutomationAttempt::publication_generation),
@@ -10905,6 +11164,23 @@ fn ticket_automation_action_status(
             })
             .to_owned(),
     }
+}
+
+fn runtime_contact_all_publication_channels_quarantined(
+    snapshot: &RuntimeStateSnapshot,
+    contact_id: RuntimeContactId,
+) -> bool {
+    let bindings = snapshot
+        .endpoint_publication_bindings
+        .values()
+        .filter(|binding| binding.contact_id() == contact_id)
+        .collect::<Vec<_>>();
+    !bindings.is_empty()
+        && bindings.iter().all(|binding| {
+            snapshot
+                .publication_conflict(binding.ticket_publication_write_key().channel_id())
+                .is_some()
+        })
 }
 
 #[derive(Clone, Copy)]
@@ -10942,6 +11218,14 @@ async fn attempt_next_runtime_ticket_automation(
             ]
             .into_iter()
             .find(|action| {
+                if *action == TicketAutomationAction::Refresh
+                    && runtime_contact_all_publication_channels_quarantined(
+                        &snapshot,
+                        policy.contact_id(),
+                    )
+                {
+                    return false;
+                }
                 snapshot
                     .latest_ticket_automation_attempt(policy.contact_id(), *action)
                     .filter(|attempt| attempt.policy_generation() == policy.generation())
@@ -10979,11 +11263,18 @@ async fn attempt_next_runtime_ticket_automation(
         )
         .await
         .and_then(|refresh| {
+            let refreshable_endpoint_count = refresh
+                .results
+                .iter()
+                .filter(|result| result.state != RuntimeIpcEndpointCandidateState::Quarantined)
+                .count();
             ensure!(
-                refresh.complete,
-                "multi-endpoint ticket refresh completed only {}/{} candidates",
+                refreshable_endpoint_count != 0
+                    && usize::from(refresh.refreshed_endpoint_candidate_count)
+                        == refreshable_endpoint_count,
+                "multi-endpoint ticket refresh completed only {}/{} non-quarantined candidates",
                 refresh.refreshed_endpoint_candidate_count,
-                refresh.endpoint_candidate_count
+                refreshable_endpoint_count
             );
             let publication_generation = refresh
                 .results
@@ -13160,11 +13451,15 @@ async fn prepare_runtime_delivery(
             .contacts
             .get(&queued.contact_id())
             .context("selected runtime queue contact disappeared")?;
+        let pinned_peer_authority = trust
+            .load_peer_authority_snapshot(contact.peer_account_id())
+            .context("load peer authority high-water for runtime delivery")?;
         let endpoint_candidates = load_runtime_endpoint_candidate_set(
             &snapshot,
             contact,
             &local_certificate,
             &local_authority,
+            &pinned_peer_authority,
         )?;
         let ticket = endpoint_candidates
             .first()
@@ -13578,12 +13873,20 @@ async fn attempt_runtime_contact_sync(
             return Ok(None);
         };
         last_attempts.insert(contact.contact_id(), now);
-        let candidates =
-            load_runtime_endpoint_candidate_set(&snapshot, &contact, &certificate, &authority)?
-                .into_iter()
-                .filter(|candidate| candidate.authority_current)
-                .map(|candidate| Ok((candidate.peer_device_id, candidate.ticket.encode()?)))
-                .collect::<Result<Vec<_>>>()?;
+        let pinned_peer_authority = trust
+            .load_peer_authority_snapshot(contact.peer_account_id())
+            .context("load peer authority high-water for automatic sync")?;
+        let candidates = load_runtime_endpoint_candidate_set(
+            &snapshot,
+            &contact,
+            &certificate,
+            &authority,
+            &pinned_peer_authority,
+        )?
+        .into_iter()
+        .filter(|candidate| candidate.authority_current)
+        .map(|candidate| Ok((candidate.peer_device_id, candidate.ticket.encode()?)))
+        .collect::<Result<Vec<_>>>()?;
         ensure!(
             !candidates.is_empty(),
             "automatic sync has no endpoint candidate at the authority high-water revision"
@@ -14225,6 +14528,21 @@ async fn handle_authorized_application_connection(
                 Err(error) => {
                     write_server_response(&mut send, &ServerResponse::EndpointAnnouncementRejected)
                         .await?;
+                    if let Some(quarantined) =
+                        error.downcast_ref::<RuntimePublicationChannelQuarantined>()
+                    {
+                        println!("publication_channel_status=quarantined");
+                        println!("publication_channel_id={}", quarantined.channel_id);
+                        println!(
+                            "publication_conflict_generation={}",
+                            quarantined.publication_generation
+                        );
+                        println!("publication_conflict_proof_id={}", quarantined.proof_id);
+                        println!(
+                            "publication_conflict_resolution=manual-device-audit-and-contact-re-enrollment-required"
+                        );
+                        return Ok(());
+                    }
                     return Err(error).context("reject endpoint announcement network push");
                 }
             };
@@ -20448,24 +20766,27 @@ mod tests {
             300,
             None,
         )?;
-        let mut known = BTreeMap::new();
-        merge_runtime_publication_observation(
-            &mut known,
-            channel,
-            first.generation(),
-            first.publication_id()?,
-            first.ticket_digest(),
+        let first_observation = SignedTicketPublicationObservation::sign(
+            &recipient,
+            recipient_account,
+            &first,
+            now,
+            None,
         )?;
-        let error = merge_runtime_publication_observation(
-            &mut known,
-            channel,
-            conflicting.generation(),
-            conflicting.publication_id()?,
-            conflicting.ticket_digest(),
-        )
-        .err()
-        .context("same-generation publication equivocation was accepted")?;
-        assert!(format!("{error:#}").contains("equivocated"));
+        let conflicting_observer = DeviceIdentity::generate()?;
+        let conflicting_observation = SignedTicketPublicationObservation::sign(
+            &conflicting_observer,
+            recipient_account,
+            &conflicting,
+            now,
+            None,
+        )?;
+        let mut known = BTreeMap::new();
+        merge_runtime_publication_observation(&mut known, &first_observation)?;
+        let error = merge_runtime_publication_observation(&mut known, &conflicting_observation)
+            .err()
+            .context("same-generation publication equivocation was accepted")?;
+        assert!(format!("{error:#}").contains("equivocation"));
         Ok(())
     }
 
@@ -20714,11 +21035,14 @@ mod tests {
             .contacts
             .get(&first.contact_id)
             .context("runtime contact disappeared")?;
+        let pinned_peer_authority =
+            local_state.load_peer_authority_snapshot(peer_root.account_id())?;
         let candidates = load_runtime_endpoint_candidate_set(
             &snapshot,
             contact,
             &local_certificate,
             &local_authority,
+            &pinned_peer_authority,
         )?;
         assert_eq!(
             candidates.len(),
@@ -20726,8 +21050,6 @@ mod tests {
         );
         assert!(candidates[0].primary);
         assert_eq!(candidates[0].peer_device_id, peer_identities[0].device_id());
-        let pinned_peer_authority =
-            local_state.load_peer_authority_snapshot(peer_root.account_id())?;
         let statuses = collect_runtime_endpoint_candidate_statuses(
             &snapshot,
             contact,
@@ -20747,6 +21069,7 @@ mod tests {
             contact,
             &local_certificate,
             &local_authority,
+            &pinned_peer_authority,
         )?;
         assert_eq!(
             surviving.len(),
@@ -21104,7 +21427,7 @@ mod tests {
         )
         .err()
         .context("same-generation sibling conflict was imported")?;
-        assert!(format!("{error:#}").contains("equivocated"));
+        assert!(format!("{error:#}").contains("is quarantined"));
         let after_conflict = load_runtime_state_snapshot(
             &third_state_dir,
             local_root.account_id(),
@@ -21118,6 +21441,107 @@ mod tests {
                 .sum::<usize>(),
             evidence_before
         );
+        assert_eq!(after_conflict.publication_conflicts.len(), 1);
+        let proof = after_conflict
+            .publication_conflict(observation.channel_id())
+            .context("publication conflict proof was not persisted")?;
+        assert_eq!(proof.publication_generation(), publication.generation());
+        let proof_id = proof.proof_id()?;
+        assert!(
+            third_state_dir
+                .join(runtime_publication_conflict_relative_path(proof_id))
+                .is_file()
+        );
+        let mut tampered_proof = proof.encode()?;
+        let last = tampered_proof
+            .last_mut()
+            .context("encoded publication conflict proof is empty")?;
+        *last ^= 1;
+        assert!(SignedPublicationConflictProof::decode(&tampered_proof).is_err());
+        let third_trust = CommandTrustReadRepository::open(&third_state_dir, &third)?;
+        let third_local_certificate = third_trust.load_certificate()?;
+        let third_local_authority =
+            third_trust.load_own_authority_snapshot(&third_local_certificate)?;
+        let third_peer_authority =
+            third_trust.load_peer_authority_snapshot(peer_root.account_id())?;
+        let third_contact = after_conflict
+            .contacts
+            .values()
+            .next()
+            .context("third device imported contact disappeared")?;
+        assert!(runtime_contact_all_publication_channels_quarantined(
+            &after_conflict,
+            third_contact.contact_id()
+        ));
+        let statuses = collect_runtime_endpoint_candidate_statuses(
+            &after_conflict,
+            third_contact,
+            &third_local_certificate,
+            &third_local_authority,
+            &third_peer_authority,
+        )?;
+        assert_eq!(statuses.len(), 1);
+        assert_eq!(
+            statuses[0].state,
+            RuntimeIpcEndpointCandidateState::Quarantined
+        );
+        let proof_id_text = proof_id.to_string();
+        assert_eq!(
+            statuses[0].publication_conflict_proof_id.as_deref(),
+            Some(proof_id_text.as_str())
+        );
+        let third_enrollment = runtime_endpoint_enrollments(&after_conflict, third_contact)?
+            .into_iter()
+            .next()
+            .context("quarantined endpoint enrollment disappeared")?;
+        let refresh_error = runtime_endpoint_ticket_refresh_channel(
+            &third_state_dir,
+            conversation,
+            peer_root.account_id(),
+            &third_enrollment,
+        )
+        .err()
+        .context("quarantined publication channel reached network lookup")?;
+        let blocked_refresh =
+            failed_runtime_endpoint_ticket_refresh(third_enrollment, None, refresh_error);
+        assert_eq!(
+            blocked_refresh.state,
+            RuntimeIpcEndpointCandidateState::Quarantined
+        );
+        assert!(blocked_refresh.detail.contains(&proof_id_text));
+        let candidate_error = load_runtime_endpoint_candidate_set(
+            &after_conflict,
+            third_contact,
+            &third_local_certificate,
+            &third_local_authority,
+            &third_peer_authority,
+        )
+        .err()
+        .context("quarantined endpoint remained usable")?;
+        assert!(format!("{candidate_error:#}").contains("is quarantined"));
+
+        let repeated_conflict = import_runtime_endpoint_announcements(
+            &third_state_dir,
+            &third_ticket,
+            &conflicting_file,
+            &third_descriptors,
+        )
+        .err()
+        .context("repeated publication conflict was imported")?;
+        assert!(format!("{repeated_conflict:#}").contains(&proof_id_text));
+        let restarted_after_conflict = load_runtime_state_snapshot(
+            &third_state_dir,
+            local_root.account_id(),
+            third.identity().device_id(),
+        )?;
+        assert_eq!(restarted_after_conflict.publication_conflicts.len(), 1);
+        let quarantined_forward = build_runtime_endpoint_announcements(
+            &third_state_dir,
+            &third_ticket,
+            source.identity().device_id(),
+            300,
+        )?;
+        assert_eq!(quarantined_forward.observation_count, 0);
 
         let evidence_bundle_id = conflicting_bundle.bundle_id()?;
         let mut previous_publication = publication.clone();

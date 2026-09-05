@@ -2990,11 +2990,37 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - contract зафиксирован в
   [`../docs/RFC-0064-convergent-sibling-publication-evidence.md`](../docs/RFC-0064-convergent-sibling-publication-evidence.md).
 
+### M0.9.43 — durable publication-conflict quarantine: выполнено
+
+Реализовано:
+
+- первый same-channel/same-generation mismatch сохраняет один append-only
+  `.pcf` с canonical pair исходных signed observations, local Account/detector,
+  временем и detector Device signature; proof ID content-addressed;
+- restart проверяет обе observation signatures, реальный mismatch, canonical
+  order, detector signature, local identity, exact filename и matching durable
+  endpoint binding; tampered proof не принимается;
+- повторный конфликт возвращает существующий proof ID и не создаёт record;
+  conflicting bundle не пишет descriptor или accepted evidence;
+- quarantined endpoint исключён из delivery, auto-sync и HTTP ticket refresh
+  до network I/O, а install повторно проверяет stop после in-flight fetch;
+- healthy endpoints остаются доступны только при exact pinned peer-authority
+  high-water, поэтому fallback не может откатиться к revoked authority;
+- IPC v16 добавляет explicit `quarantined`, proof/generation/time и отдельный
+  count; Windows client показывает красное manual audit/re-enrollment состояние;
+- successful network proof persistence отвечает rejection, но сохраняет
+  long-lived runtime и публикует IPC change; неожиданные local-state failures
+  всё ещё останавливают runtime fail closed;
+- proof не compact-ится и не имеет GUI/store delete/override API; это local
+  conflict evidence, а не peer equivocation proof или global consensus;
+- contract зафиксирован в
+  [`../docs/RFC-0065-durable-publication-conflict-quarantine.md`](../docs/RFC-0065-durable-publication-conflict-quarantine.md).
+
 ### Следующий этап
 
-1. M0.9.43: сохранять проверяемый signed conflict proof, карантинить спорный
-   publication channel и выводить explicit recovery/removal state через
-   IPC/desktop, не выдавая local detection за global consensus.
+1. M0.9.44: переносить signed conflict proof между exact-current sibling
+   Devices и определить явную Root-authorized resolution/channel-rotation
+   ceremony без silent quarantine removal.
 2. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.

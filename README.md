@@ -151,7 +151,29 @@ The current two-network Windows procedure is in
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.42 convergent sibling publication evidence — complete
+## Current milestone: M0.9.43 durable publication-conflict quarantine — complete
+
+A same-generation mismatch no longer disappears as a transient import error.
+The first detector stores one append-only local-Device-signed proof containing
+both canonical signed observations, reload-verifies it against the local
+identity and durable endpoint binding, and quarantines that publication channel
+across restart. Replays return the existing proof instead of producing records.
+
+Delivery, automatic sync and ticket refresh exclude the quarantined endpoint;
+pre-network lookup and post-fetch installation both enforce the stop. Healthy
+independent endpoints remain usable only at the pinned peer-authority
+high-water, preventing fallback to an older descriptor. IPC v16 exposes a
+distinct quarantined state, proof ID, generation and detection time, while the
+Windows client displays an explicit red audit/re-enrollment warning. Neither
+the GUI nor the opaque store can clear quarantine.
+
+This proof establishes contradictory assertions by Account Devices at one
+local detector; it is not global consensus and does not by itself prove that
+the peer publisher signed two publications. The exact security boundary and
+remaining resolution work are specified in
+[`docs/RFC-0065-durable-publication-conflict-quarantine.md`](docs/RFC-0065-durable-publication-conflict-quarantine.md).
+
+## Previous milestone: M0.9.42 convergent sibling publication evidence — complete
 
 An endpoint-announcement source now forwards either its latest direct
 publication observation or its higher signed acceptance of another Account

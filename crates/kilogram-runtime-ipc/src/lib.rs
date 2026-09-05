@@ -21,7 +21,7 @@ use tokio::{
     time::timeout,
 };
 
-const IPC_VERSION: u8 = 15;
+const IPC_VERSION: u8 = 16;
 const MAX_DESCRIPTOR_BYTES: u64 = 16 * 1024;
 const MAX_LAUNCH_PROFILE_BYTES: u64 = 64 * 1024;
 const MAX_LAUNCH_PROFILE_PATHS: usize = 64;
@@ -588,6 +588,7 @@ pub struct RuntimeIpcMessagePreview {
 pub enum RuntimeIpcEndpointCandidateState {
     Usable,
     Stale,
+    Quarantined,
 }
 
 impl RuntimeIpcEndpointCandidateState {
@@ -595,6 +596,7 @@ impl RuntimeIpcEndpointCandidateState {
         match self {
             Self::Usable => "usable",
             Self::Stale => "stale",
+            Self::Quarantined => "quarantined",
         }
     }
 }
@@ -610,6 +612,9 @@ pub struct RuntimeIpcEndpointCandidateStatus {
     pub publication_channel_id: Option<String>,
     pub observed_publication_generation: Option<u64>,
     pub observed_at_unix_seconds: Option<u64>,
+    pub publication_conflict_generation: Option<u64>,
+    pub publication_conflict_proof_id: Option<String>,
+    pub publication_conflict_detected_at_unix_seconds: Option<u64>,
     pub detail: String,
 }
 
@@ -623,6 +628,7 @@ pub struct RuntimeIpcConversationSummary {
     pub endpoint_candidate_count: u8,
     pub usable_endpoint_candidate_count: u8,
     pub stale_endpoint_candidate_count: u8,
+    pub quarantined_endpoint_candidate_count: u8,
     pub endpoint_candidates: Vec<RuntimeIpcEndpointCandidateStatus>,
     pub route_policy: RuntimeIpcRoutePolicy,
     pub message_count: u32,
@@ -1544,6 +1550,14 @@ mod tests {
                 .is_err()
         );
         Ok(())
+    }
+
+    #[test]
+    fn endpoint_candidate_quarantine_state_is_explicit() {
+        assert_eq!(
+            RuntimeIpcEndpointCandidateState::Quarantined.as_str(),
+            "quarantined"
+        );
     }
 
     #[test]
