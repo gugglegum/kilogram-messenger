@@ -219,6 +219,7 @@ enum Operation {
     RecoveryRun,
     RecoveryCancel,
     RecoveryReconcile,
+    PublicationChannelRotate,
     PublicationConflictRequest,
     PublicationConflictApply,
     Connect,
@@ -301,6 +302,7 @@ enum RecoveryUiAction {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum PublicationConflictUiAction {
     None,
+    RotateOwnChannel,
     CreateRequest,
     ApplyResponse,
 }
@@ -582,6 +584,7 @@ struct PublicationConflictRecoveryView {
     replacement_ticket_file: String,
     request_output_file: String,
     response_input_file: String,
+    rotation_result: Option<RecoveryCommandOutput>,
     request_result: Option<RecoveryCommandOutput>,
     apply_result: Option<RecoveryCommandOutput>,
 }
@@ -593,6 +596,7 @@ impl Default for PublicationConflictRecoveryView {
             replacement_ticket_file: String::new(),
             request_output_file: "publication-conflict-resolution.pcrq".to_owned(),
             response_input_file: String::new(),
+            rotation_result: None,
             request_result: None,
             apply_result: None,
         }
@@ -1186,6 +1190,7 @@ impl ViewModel {
                 | WorkerSuccess::RecoveryRan { .. }
                 | WorkerSuccess::RecoveryCancelled { .. }
                 | WorkerSuccess::RecoveryReconciled(_)
+                | WorkerSuccess::PublicationChannelRotated(_)
                 | WorkerSuccess::PublicationConflictRequested(_)
                 | WorkerSuccess::PublicationConflictApplied(_),
             ) => {
@@ -1347,16 +1352,21 @@ enum WorkerRequest {
         state_dir: PathBuf,
         conversation: String,
     },
+    PublicationChannelRotate {
+        executable: PathBuf,
+        ipc_file: PathBuf,
+        peer_account_id: AccountId,
+    },
     PublicationConflictRequest {
         executable: PathBuf,
-        state_dir: PathBuf,
+        ipc_file: PathBuf,
         channel_id: String,
         replacement_ticket_file: PathBuf,
         request_file: PathBuf,
     },
     PublicationConflictApply {
         executable: PathBuf,
-        state_dir: PathBuf,
+        ipc_file: PathBuf,
         response_file: PathBuf,
     },
     Connect {
@@ -1444,6 +1454,7 @@ impl WorkerRequest {
             Self::RecoveryRun { .. } => Operation::RecoveryRun,
             Self::RecoveryCancel { .. } => Operation::RecoveryCancel,
             Self::RecoveryReconcile { .. } => Operation::RecoveryReconcile,
+            Self::PublicationChannelRotate { .. } => Operation::PublicationChannelRotate,
             Self::PublicationConflictRequest { .. } => Operation::PublicationConflictRequest,
             Self::PublicationConflictApply { .. } => Operation::PublicationConflictApply,
             Self::Connect { .. } => Operation::Connect,
@@ -1504,6 +1515,7 @@ enum WorkerSuccess {
         output: RecoveryCommandOutput,
     },
     RecoveryReconciled(RecoveryCommandOutput),
+    PublicationChannelRotated(RecoveryCommandOutput),
     PublicationConflictRequested(RecoveryCommandOutput),
     PublicationConflictApplied(RecoveryCommandOutput),
     Connected {
@@ -2270,18 +2282,40 @@ async fn execute_request(request: WorkerRequest) -> Result<WorkerSuccess> {
             ]),
         )
         .map(WorkerSuccess::RecoveryReconciled),
+        WorkerRequest::PublicationChannelRotate {
+            executable,
+            ipc_file,
+            peer_account_id,
+        } => {
+            let peer_account_id = peer_account_id.to_string();
+            let output = run_recovery_command(
+                &executable,
+                "runtime-ipc-rotate-publication-channel",
+                command_arguments([
+                    ("--ipc-file", ipc_file.as_os_str()),
+                    ("--peer-account", std::ffi::OsStr::new(&peer_account_id)),
+                ]),
+            )?;
+            ensure!(
+                output.field("process_exit_success") == Some("true")
+                    && output.status() == "runtime-publication-channel-rotated"
+                    && output.field("runtime_restart_required") == Some("false"),
+                "Live publication-channel rotation did not complete successfully"
+            );
+            Ok(WorkerSuccess::PublicationChannelRotated(output))
+        }
         WorkerRequest::PublicationConflictRequest {
             executable,
-            state_dir,
+            ipc_file,
             channel_id,
             replacement_ticket_file,
             request_file,
         } => {
             let output = run_recovery_command(
                 &executable,
-                "runtime-publication-conflict-create-request",
+                "runtime-ipc-publication-conflict-create-request",
                 command_arguments([
-                    ("--state-dir", state_dir.as_os_str()),
+                    ("--ipc-file", ipc_file.as_os_str()),
                     ("--channel", std::ffi::OsStr::new(&channel_id)),
                     (
                         "--replacement-ticket-file",
@@ -2292,27 +2326,29 @@ async fn execute_request(request: WorkerRequest) -> Result<WorkerSuccess> {
             )?;
             ensure!(
                 output.field("process_exit_success") == Some("true")
-                    && output.status() == "publication-conflict-resolution-requested",
+                    && output.status() == "publication-conflict-resolution-requested"
+                    && output.field("runtime_restart_required") == Some("false"),
                 "Conflict-resolution request helper did not complete successfully"
             );
             Ok(WorkerSuccess::PublicationConflictRequested(output))
         }
         WorkerRequest::PublicationConflictApply {
             executable,
-            state_dir,
+            ipc_file,
             response_file,
         } => {
             let output = run_recovery_command(
                 &executable,
-                "runtime-publication-conflict-apply-response",
+                "runtime-ipc-publication-conflict-apply-response",
                 command_arguments([
-                    ("--state-dir", state_dir.as_os_str()),
+                    ("--ipc-file", ipc_file.as_os_str()),
                     ("--response-file", response_file.as_os_str()),
                 ]),
             )?;
             ensure!(
                 output.field("process_exit_success") == Some("true")
-                    && output.status() == "publication-conflict-resolved",
+                    && output.status() == "publication-conflict-resolved"
+                    && output.field("runtime_restart_required") == Some("false"),
                 "Conflict-resolution apply helper did not complete successfully"
             );
             Ok(WorkerSuccess::PublicationConflictApplied(output))
@@ -2684,6 +2720,7 @@ impl KilogramApp {
                     | Operation::RecoveryRun
                     | Operation::RecoveryCancel
                     | Operation::RecoveryReconcile
+                    | Operation::PublicationChannelRotate
                     | Operation::PublicationConflictRequest
                     | Operation::PublicationConflictApply
             ) {
@@ -3044,7 +3081,15 @@ impl KilogramApp {
                 ));
                 self.recovery.reconciliation = Some(output);
             }
+            WorkerSuccess::PublicationChannelRotated(output) => {
+                self.publication_conflict_recovery.rotation_result = Some(output);
+                self.model.notice = Some(
+                    "Publication channel rotated by the live runtime. No restart is required; transfer or publish the refreshed ticket to the peer."
+                        .to_owned(),
+                );
+            }
             WorkerSuccess::PublicationConflictRequested(output) => {
+                self.publication_conflict_recovery.apply_result = None;
                 self.publication_conflict_recovery.request_result = Some(output);
                 self.model.notice = Some(
                     "Offline Root request created. Copy only the .pcrq artifact to the isolated Root signer."
@@ -3054,7 +3099,7 @@ impl KilogramApp {
             WorkerSuccess::PublicationConflictApplied(output) => {
                 self.publication_conflict_recovery.apply_result = Some(output);
                 self.model.notice = Some(
-                    "Root-authorized replacement applied. Restart the runtime; exact-current sibling devices can receive the same resolution automatically."
+                    "Root-authorized replacement applied live. No restart is required; exact-current sibling devices can receive the same resolution automatically."
                         .to_owned(),
                 );
             }
@@ -4162,9 +4207,43 @@ impl KilogramApp {
         }
     }
 
+    fn start_publication_channel_rotation(&mut self) {
+        let result: Result<WorkerRequest> = (|| {
+            ensure!(
+                self.model.connection == ConnectionState::Connected,
+                "Connect to the running runtime first"
+            );
+            ensure!(
+                self.model.selected_contact_id.is_some(),
+                "Select an enrolled contact first"
+            );
+            let executable = canonical_input_path(
+                &self.runtime_executable_path,
+                "Kilogram CLI executable",
+                true,
+            )?;
+            let peer_account_id = AccountId::from_str(self.model.peer_account_id.trim())
+                .context("Selected peer Account ID is invalid")?;
+            Ok(WorkerRequest::PublicationChannelRotate {
+                executable,
+                ipc_file: self.model.descriptor()?,
+                peer_account_id,
+            })
+        })();
+        match result {
+            Ok(request) => self.submit(Operation::PublicationChannelRotate, request),
+            Err(error) => self
+                .model
+                .fail(Operation::PublicationChannelRotate, format!("{error:#}")),
+        }
+    }
+
     fn start_publication_conflict_request(&mut self) {
         let result: Result<WorkerRequest> = (|| {
-            self.require_offline_wizard()?;
+            ensure!(
+                self.model.connection == ConnectionState::Connected,
+                "Connect to the running runtime first"
+            );
             let executable = canonical_input_path(
                 &self.runtime_executable_path,
                 "Kilogram CLI executable",
@@ -4196,7 +4275,7 @@ impl KilogramApp {
             )?;
             Ok(WorkerRequest::PublicationConflictRequest {
                 executable,
-                state_dir,
+                ipc_file: self.model.descriptor()?,
                 channel_id,
                 replacement_ticket_file,
                 request_file,
@@ -4212,16 +4291,14 @@ impl KilogramApp {
 
     fn start_publication_conflict_apply(&mut self) {
         let result: Result<WorkerRequest> = (|| {
-            self.require_offline_wizard()?;
+            ensure!(
+                self.model.connection == ConnectionState::Connected,
+                "Connect to the running runtime first"
+            );
             let executable = canonical_input_path(
                 &self.runtime_executable_path,
                 "Kilogram CLI executable",
                 true,
-            )?;
-            let state_dir = canonical_input_path(
-                &self.runtime_profile_draft.state_dir,
-                "Runtime state",
-                false,
             )?;
             let response_file = canonical_input_path(
                 &self.publication_conflict_recovery.response_input_file,
@@ -4230,7 +4307,7 @@ impl KilogramApp {
             )?;
             Ok(WorkerRequest::PublicationConflictApply {
                 executable,
-                state_dir,
+                ipc_file: self.model.descriptor()?,
                 response_file,
             })
         })();
@@ -6112,20 +6189,73 @@ impl KilogramApp {
                 ))
             })
             .collect::<Vec<_>>();
-        let idle = self.model.pending.is_none()
-            && self.runtime_process.is_none()
-            && self.model.connection == ConnectionState::Disconnected;
+        let selected_peer_account = self
+            .model
+            .conversations
+            .iter()
+            .find(|summary| {
+                self.model.selected_contact_id.as_deref() == Some(summary.contact_id.as_str())
+            })
+            .map(|summary| summary.peer_account_id.to_string());
+        let idle = self.model.pending.is_none();
+        let connected_idle = idle && self.model.connection == ConnectionState::Connected;
         egui::CollapsingHeader::new("Security incident · publication conflict")
             .default_open(!conflicts.is_empty())
             .show(ui, |ui| {
-                ui.small("Use this only after comparing the conflicting peer claims out of band. The desktop creates and applies public artifacts; it never opens or receives the Account Root secret.");
+                ui.small("One live incident workflow: the publishing peer rotates its channel, the affected side creates a public request, the isolated Root signs it, and the running client applies the response. The desktop never opens or receives the Account Root secret.");
+                if self.publication_conflict_recovery.apply_result.is_some() {
+                    ui.colored_label(
+                        egui::Color32::from_rgb(92, 201, 137),
+                        "Phase: resolved locally · sibling propagation pending · restart not required",
+                    );
+                } else if self.publication_conflict_recovery.request_result.is_some() {
+                    ui.colored_label(
+                        egui::Color32::from_rgb(246, 195, 93),
+                        "Phase: offline Root authorization pending · runtime remains online",
+                    );
+                } else if !conflicts.is_empty() {
+                    ui.colored_label(
+                        egui::Color32::from_rgb(239, 112, 112),
+                        "Phase: quarantined · obtain the peer's rotated ticket",
+                    );
+                }
+                if self.model.connection != ConnectionState::Connected {
+                    ui.colored_label(
+                        egui::Color32::from_rgb(246, 195, 93),
+                        "Connect to the authenticated local runtime to perform incident actions.",
+                    );
+                }
+
+                ui.separator();
+                ui.strong("0. Peer-side action: rotate my channel for this contact");
+                ui.small("Use this only when the peer reports a conflicting publication from this Device. The runtime atomically republishes its ticket and stays online.");
+                if ui
+                    .add_enabled(
+                        connected_idle && selected_peer_account.is_some(),
+                        egui::Button::new("Rotate my publication channel live"),
+                    )
+                    .clicked()
+                {
+                    action = PublicationConflictUiAction::RotateOwnChannel;
+                }
+                if let Some(output) = self.publication_conflict_recovery.rotation_result.as_ref() {
+                    ui.colored_label(
+                        egui::Color32::from_rgb(92, 201, 137),
+                        format!(
+                            "My channel rotated to epoch {} · restart required: {}",
+                            output.field("publication_channel_epoch").unwrap_or("unknown"),
+                            output.field("runtime_restart_required").unwrap_or("unknown")
+                        ),
+                    );
+                    ui.small(format!(
+                        "Refreshed ticket: {} · next: {}",
+                        output.field("ticket_file").unwrap_or("not configured"),
+                        output.field("incident_next_action").unwrap_or("transfer fresh ticket to peer")
+                    ));
+                }
                 if conflicts.is_empty() {
                     ui.small("The selected chat has no unresolved publication-channel conflict.");
                 } else {
-                    ui.colored_label(
-                        egui::Color32::from_rgb(239, 112, 112),
-                        "Stop the runtime before creating or applying recovery artifacts.",
-                    );
                     for (channel, device, proof) in &conflicts {
                         ui.horizontal_wrapped(|ui| {
                             ui.label(format!(
@@ -6141,6 +6271,8 @@ impl KilogramApp {
                                 self.publication_conflict_recovery
                                     .channel_id
                                     .clone_from(channel);
+                                self.publication_conflict_recovery.request_result = None;
+                                self.publication_conflict_recovery.apply_result = None;
                             }
                         });
                     }
@@ -6182,7 +6314,7 @@ impl KilogramApp {
                 });
                 if ui
                     .add_enabled(
-                        idle
+                        connected_idle
                             && !self
                                 .publication_conflict_recovery
                                 .channel_id
@@ -6211,7 +6343,7 @@ impl KilogramApp {
                             output.field("request_file").unwrap_or("unknown")
                         ),
                     );
-                    ui.small("On the isolated Root host, inspect the IDs and run:");
+                    ui.small("The runtime remains online. On the isolated Root host, inspect the IDs and run:");
                     ui.label(
                         egui::RichText::new(format!(
                             "kilogram-cli account-publication-conflict-authorize --account-dir <offline-root> --request-file \"{}\" --output-file publication-conflict-resolution.pcrp",
@@ -6235,7 +6367,7 @@ impl KilogramApp {
                 });
                 if ui
                     .add_enabled(
-                        idle
+                        connected_idle
                             && !self
                                 .publication_conflict_recovery
                                 .response_input_file
@@ -6264,7 +6396,7 @@ impl KilogramApp {
                             )
                         ),
                     );
-                    ui.small("Restart the runtime. The retained proof and Root resolution will be propagated to exact-current sibling devices through their encrypted announcement exchange.");
+                    ui.small("No restart is required. The retained proof and Root resolution will be propagated to exact-current sibling devices through their encrypted announcement exchange.");
                 }
             });
         action
@@ -7570,6 +7702,8 @@ impl eframe::App for KilogramApp {
             self.start_recovery_cancel();
         } else if recovery_action == RecoveryUiAction::Reconcile {
             self.start_recovery_reconcile();
+        } else if publication_conflict_action == PublicationConflictUiAction::RotateOwnChannel {
+            self.start_publication_channel_rotation();
         } else if publication_conflict_action == PublicationConflictUiAction::CreateRequest {
             self.start_publication_conflict_request();
         } else if publication_conflict_action == PublicationConflictUiAction::ApplyResponse {
@@ -7602,6 +7736,7 @@ impl eframe::App for KilogramApp {
             self.start_add_contact();
         } else if let Some(contact_id) = selected_contact {
             if self.model.select_conversation(&contact_id) {
+                self.publication_conflict_recovery = PublicationConflictRecoveryView::default();
                 self.start_history(false);
             }
         } else if load_older_clicked {

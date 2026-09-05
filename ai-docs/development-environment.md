@@ -1587,3 +1587,29 @@ retirement остальных compatibility shadows ещё не реализов
   `2788F97D1926BEBBB6429B776C344E5D90E01F0D7D477673229423D5F7D3FC8D`;
   `target/release/kilogram-ticket-store.exe` — 2,581,504 bytes, SHA-256
   `4C90CDE6CEB527B1D02243A01EEFDA2DA043450A9127AE653F366B251CADAC7C`.
+
+## M0.9.46 verification snapshot (2026-09-06)
+
+- Long-lived publication regression вращает собственный channel через IPC v19,
+  сохраняет тот же Iroh Endpoint ID, атомарно заменяет public ticket, оставляет
+  runtime online и после shutdown reload-ит durable epoch 1.
+- Three-Device regression создаёт `.pcrq` и применяет `.pcrp` через работающий
+  actor: первый apply даёт `Inserted`, повторный — `Unchanged`, Root secret не
+  загружается, IPC ping после обеих mutations успешен; дальнейшая C -> A -> B
+  propagation остаётся неизменной.
+- `cargo test --workspace --no-fail-fast -- --test-threads=1`: 214 tests,
+  0 failed. `cargo test -p kilogram-windows`: 21 tests, 0 failed.
+- Оба новых focused regressions также проходят в release profile. `cargo fmt
+  --all -- --check`, `git diff --check` и strict `cargo clippy --workspace
+  --all-targets --all-features -- -D warnings` проходят.
+- `cargo build --workspace --release`, справка всех трёх IPC v19 команд,
+  bootstrap/store help и bounded hidden GUI event-loop smoke успешны.
+- Windows artifacts со стабильными именами:
+  `target/release/kilogram-bootstrap.exe` — 20,480,512 bytes, SHA-256
+  `84DB5B0B426A1C3F69D2B0E69BFC601BF138570B7590E983A2ECA93A535EE35E`;
+  `target/release/kilogram-cli.exe` — 26,120,704 bytes, SHA-256
+  `8A0857A209B572A69CC232FE52B25F2077C9455C612CADA973A4DF342C9AF806`;
+  `target/release/kilogram-windows.exe` — 8,082,944 bytes, SHA-256
+  `B00033395E08AD2BD3E1FFFF8BF7990381109912A730C57EE91E9E5B47668906`;
+  `target/release/kilogram-ticket-store.exe` — 2,581,504 bytes, SHA-256
+  `4C90CDE6CEB527B1D02243A01EEFDA2DA043450A9127AE653F366B251CADAC7C`.

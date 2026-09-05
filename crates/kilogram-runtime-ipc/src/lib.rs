@@ -21,7 +21,7 @@ use tokio::{
     time::timeout,
 };
 
-const IPC_VERSION: u8 = 18;
+const IPC_VERSION: u8 = 19;
 const MAX_DESCRIPTOR_BYTES: u64 = 16 * 1024;
 const MAX_LAUNCH_PROFILE_BYTES: u64 = 64 * 1024;
 const MAX_LAUNCH_PROFILE_PATHS: usize = 64;
@@ -365,6 +365,17 @@ pub enum RuntimeIpcCommand {
         device_list_file: PathBuf,
     },
     OwnDeviceDirectoryStatus,
+    RotatePublicationChannel {
+        peer_account_id: AccountId,
+    },
+    CreatePublicationConflictRequest {
+        channel_id: String,
+        replacement_ticket_file: PathBuf,
+        output_file: PathBuf,
+    },
+    ApplyPublicationConflictResponse {
+        response_file: PathBuf,
+    },
     PublishOwnTicket {
         conversation: String,
         peer_account_id: AccountId,
@@ -742,6 +753,49 @@ pub struct RuntimeIpcTicketPublication {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcPublicationChannelRotation {
+    pub peer_account_id: AccountId,
+    pub previous_publication_channel_id: String,
+    pub publication_channel_id: String,
+    pub publication_channel_epoch: u64,
+    pub publication_channel_rotation_id: String,
+    pub publication_channel_rotation_store: String,
+    pub ticket_file: PathBuf,
+    pub ticket_publish_status: String,
+    pub runtime_restart_required: bool,
+    pub peer_delivery_status: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcPublicationConflictRequest {
+    pub publication_conflict_proof_id: String,
+    pub publication_conflict_evidence_id: String,
+    pub publication_conflict_resolution_request_id: String,
+    pub old_publication_channel_id: String,
+    pub new_publication_channel_id: String,
+    pub authority_revision: u64,
+    pub requested_at_unix_seconds: u64,
+    pub request_file: PathBuf,
+    pub runtime_restart_required: bool,
+    pub next_action: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcPublicationConflictResolution {
+    pub publication_conflict_resolution_request_id: String,
+    pub publication_conflict_proof_id: String,
+    pub publication_conflict_evidence_id: String,
+    pub publication_conflict_resolution_id: String,
+    pub old_publication_channel_id: String,
+    pub new_publication_channel_id: String,
+    pub publication_conflict_resolution_store: String,
+    pub authorized_at_unix_seconds: u64,
+    pub conflict_proof_retained: bool,
+    pub runtime_restart_required: bool,
+    pub next_action: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct RuntimeIpcEndpointTicketRefresh {
     pub peer_device_id: DeviceId,
     pub primary: bool,
@@ -978,6 +1032,9 @@ pub enum RuntimeIpcResponse {
     OutboxStatus(RuntimeIpcOutboxStatus),
     OwnDeviceDirectoryApplied(Box<RuntimeIpcDeviceDirectoryUpdate>),
     OwnDeviceDirectoryStatus(RuntimeIpcDeviceDirectoryStatus),
+    PublicationChannelRotated(Box<RuntimeIpcPublicationChannelRotation>),
+    PublicationConflictRequestCreated(Box<RuntimeIpcPublicationConflictRequest>),
+    PublicationConflictResponseApplied(Box<RuntimeIpcPublicationConflictResolution>),
     OwnTicketPublished(Box<RuntimeIpcTicketPublication>),
     ContactTicketRefreshed(Box<RuntimeIpcContactTicketRefresh>),
     TicketAutomationConfigured(Box<RuntimeIpcTicketAutomationStatus>),

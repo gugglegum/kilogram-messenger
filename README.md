@@ -151,7 +151,27 @@ The current two-network Windows procedure is in
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.45 offline Root recovery and sibling convergence — complete
+## Current milestone: M0.9.46 live publication incident lifecycle — complete
+
+Publication-channel recovery no longer requires stopping the messaging
+runtime. Authenticated IPC v19 serializes three live actor operations: rotate
+this listener's channel for its exact primary peer, create a Device-signed
+`.pcrq`, and apply a self-contained Root-signed `.pcrp`. Live rotation advances
+the durable epoch, atomically republishes the configured ticket for the same
+Iroh endpoint and reconciles a commit-without-publish retry without skipping an
+epoch. Every operation explicitly reports that no restart is required.
+
+The Windows client combines peer-side rotation, request creation, the isolated
+Root handoff and response application into one incident lifecycle. It never
+receives Root material and only enables mutations while connected to the
+authenticated runtime. Applying the response is idempotent and leaves the
+original conflict proof available for audit and sibling propagation.
+
+The actor contract, crash/retry ordering, UI phases and remaining manual ticket
+transfer boundary are specified in
+[`docs/RFC-0068-live-publication-incident-lifecycle.md`](docs/RFC-0068-live-publication-incident-lifecycle.md).
+
+## Previous milestone: M0.9.45 offline Root recovery and sibling convergence — complete
 
 Publication-conflict recovery no longer loads online runtime state and the
 Account Root in one process. The affected Device creates a bounded
@@ -172,7 +192,7 @@ The split ceremony, propagation gates, crash behavior and honest boundary are
 specified in
 [`docs/RFC-0067-offline-root-conflict-recovery.md`](docs/RFC-0067-offline-root-conflict-recovery.md).
 
-## Previous milestone: M0.9.44 sibling proof propagation and Root channel rotation — complete
+## Earlier milestone: M0.9.44 sibling proof propagation and Root channel rotation — complete
 
 An exact-current Account Device now forwards a retained publication-conflict
 proof inside the recipient-encrypted endpoint-announcement bundle. The

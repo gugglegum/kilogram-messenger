@@ -45,10 +45,12 @@ use kilogram_runtime_ipc::{
     RuntimeIpcHistoryMessage, RuntimeIpcHistoryPage, RuntimeIpcMessagePreview,
     RuntimeIpcNetworkClass, RuntimeIpcOutboxStatus,
     RuntimeIpcOwnDeviceAnnouncementAutomationStatus, RuntimeIpcOwnDeviceRosterAutomationStatus,
-    RuntimeIpcOwnDeviceTicketDiscoveryStatus, RuntimeIpcQueueItem, RuntimeIpcQueueState,
-    RuntimeIpcRequestId, RuntimeIpcResponse, RuntimeIpcRoutePolicy, RuntimeIpcServer,
-    RuntimeIpcTicketAutomationActionStatus, RuntimeIpcTicketAutomationStatus,
-    RuntimeIpcTicketPublication, RuntimeIpcWork, RuntimeLaunchProfile, RuntimeLaunchSettings,
+    RuntimeIpcOwnDeviceTicketDiscoveryStatus, RuntimeIpcPublicationChannelRotation,
+    RuntimeIpcPublicationConflictRequest, RuntimeIpcPublicationConflictResolution,
+    RuntimeIpcQueueItem, RuntimeIpcQueueState, RuntimeIpcRequestId, RuntimeIpcResponse,
+    RuntimeIpcRoutePolicy, RuntimeIpcServer, RuntimeIpcTicketAutomationActionStatus,
+    RuntimeIpcTicketAutomationStatus, RuntimeIpcTicketPublication, RuntimeIpcWork,
+    RuntimeLaunchProfile, RuntimeLaunchSettings,
 };
 use kilogram_session::{
     MAX_SYNC_ROUNDS, ServerInventoryOutcome, SessionStore, SyncClient, SyncServer,
@@ -636,6 +638,47 @@ enum Command {
         /// Runtime-owned local IPC descriptor.
         #[arg(long)]
         ipc_file: PathBuf,
+    },
+
+    /// Rotate this live runtime's outgoing publication channel without restarting it.
+    RuntimeIpcRotatePublicationChannel {
+        /// Runtime-owned local IPC descriptor.
+        #[arg(long)]
+        ipc_file: PathBuf,
+
+        /// Peer Account whose pairwise publication channel must change.
+        #[arg(long)]
+        peer_account: AccountId,
+    },
+
+    /// Create an offline-Root request through the authenticated live runtime actor.
+    RuntimeIpcPublicationConflictCreateRequest {
+        /// Runtime-owned local IPC descriptor.
+        #[arg(long)]
+        ipc_file: PathBuf,
+
+        /// Quarantined publication channel selected after operator audit.
+        #[arg(long)]
+        channel: TicketPublicationChannelId,
+
+        /// Fresh peer-signed descriptor whose publication channel is different.
+        #[arg(long)]
+        replacement_ticket_file: PathBuf,
+
+        /// New no-clobber request artifact for transfer to an offline Root signer.
+        #[arg(long)]
+        output_file: PathBuf,
+    },
+
+    /// Apply a self-contained Root response through the authenticated live runtime actor.
+    RuntimeIpcPublicationConflictApplyResponse {
+        /// Runtime-owned local IPC descriptor.
+        #[arg(long)]
+        ipc_file: PathBuf,
+
+        /// Root-authorized response containing the exact replacement descriptor.
+        #[arg(long)]
+        response_file: PathBuf,
     },
 
     /// Publish this runtime's current connection ticket for one enrolled contact.
@@ -1821,6 +1864,9 @@ impl Command {
             | Self::RuntimeIpcOutboxStatus { .. }
             | Self::RuntimeIpcApplyDeviceDirectory { .. }
             | Self::RuntimeIpcDeviceDirectoryStatus { .. }
+            | Self::RuntimeIpcRotatePublicationChannel { .. }
+            | Self::RuntimeIpcPublicationConflictCreateRequest { .. }
+            | Self::RuntimeIpcPublicationConflictApplyResponse { .. }
             | Self::RuntimeIpcPublishTicket { .. }
             | Self::RuntimeIpcRefreshContactTicket { .. }
             | Self::RuntimeIpcConfigureTicketAutomation { .. }
@@ -2736,6 +2782,28 @@ async fn run_command(command: Command) -> Result<()> {
         Command::RuntimeIpcDeviceDirectoryStatus { ipc_file } => {
             runtime_ipc_device_directory_status(ipc_file).await
         }
+        Command::RuntimeIpcRotatePublicationChannel {
+            ipc_file,
+            peer_account,
+        } => runtime_ipc_rotate_publication_channel(ipc_file, peer_account).await,
+        Command::RuntimeIpcPublicationConflictCreateRequest {
+            ipc_file,
+            channel,
+            replacement_ticket_file,
+            output_file,
+        } => {
+            runtime_ipc_create_publication_conflict_request(
+                ipc_file,
+                channel,
+                replacement_ticket_file,
+                output_file,
+            )
+            .await
+        }
+        Command::RuntimeIpcPublicationConflictApplyResponse {
+            ipc_file,
+            response_file,
+        } => runtime_ipc_apply_publication_conflict_response(ipc_file, response_file).await,
         Command::RuntimeIpcPublishTicket {
             ipc_file,
             conversation,
@@ -7182,11 +7250,23 @@ fn rotate_runtime_publication_channel(
     state_directory: PathBuf,
     peer_account_id: AccountId,
 ) -> Result<()> {
-    let device_state = load_command_device_state(&state_directory)?;
-    let trust = CommandTrustReadRepository::open(&state_directory, &device_state)?;
+    let rotation =
+        create_runtime_publication_channel_rotation(&state_directory, peer_account_id, None)?;
+    print_runtime_publication_channel_rotation(&rotation);
+    println!("status=publication-channel-rotated");
+    Ok(())
+}
+
+fn create_runtime_publication_channel_rotation(
+    state_directory: &Path,
+    peer_account_id: AccountId,
+    current_epoch: Option<u64>,
+) -> Result<RuntimeIpcPublicationChannelRotation> {
+    let device_state = load_command_device_state(state_directory)?;
+    let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
     let local_certificate = trust.load_certificate()?;
     let snapshot = load_runtime_state_snapshot(
-        &state_directory,
+        state_directory,
         local_certificate.account_id(),
         device_state.identity().device_id(),
     )?;
@@ -7197,31 +7277,50 @@ fn rotate_runtime_publication_channel(
             .any(|contact| contact.peer_account_id() == peer_account_id),
         "publication channel rotation peer is not an enrolled runtime contact"
     );
+    let durable_epoch = snapshot.publication_channel_epoch(peer_account_id);
+    let previous_epoch = current_epoch.unwrap_or(durable_epoch);
     ensure!(
-        snapshot
-            .publication_channel_rotations
-            .values()
-            .map(Vec::len)
-            .sum::<usize>()
-            < MAX_RUNTIME_PUBLICATION_ROTATIONS,
-        "runtime publication-channel rotation record limit exceeded"
+        durable_epoch >= previous_epoch,
+        "running publication channel epoch is ahead of durable rotation state"
     );
-    let previous_epoch = snapshot.publication_channel_epoch(peer_account_id);
-    let epoch = previous_epoch
-        .checked_add(1)
-        .context("publication channel rotation epoch overflow")?;
-    let rotation = SignedPublicationChannelRotation::sign(
-        device_state.identity(),
-        local_certificate.account_id(),
-        peer_account_id,
-        epoch,
-        unix_time_now()?,
-    )?;
-    let rotation_id = rotation.rotation_id()?;
-    let path = runtime_publication_rotation_relative_path(peer_account_id, epoch, rotation_id);
-    let store = run_state_transaction(&state_directory, |transaction| {
-        persist_runtime_record(&state_directory, &path, &rotation.encode()?, transaction)
-    })?;
+    let (epoch, rotation_id, store) = if durable_epoch > previous_epoch {
+        let rotation = snapshot
+            .publication_channel_rotations
+            .get(peer_account_id.as_bytes())
+            .and_then(|rotations| rotations.last())
+            .context("pending durable publication-channel rotation disappeared")?;
+        (
+            durable_epoch,
+            rotation.rotation_id()?,
+            StoreOutcome::AlreadyPresent,
+        )
+    } else {
+        ensure!(
+            snapshot
+                .publication_channel_rotations
+                .values()
+                .map(Vec::len)
+                .sum::<usize>()
+                < MAX_RUNTIME_PUBLICATION_ROTATIONS,
+            "runtime publication-channel rotation record limit exceeded"
+        );
+        let epoch = durable_epoch
+            .checked_add(1)
+            .context("publication channel rotation epoch overflow")?;
+        let rotation = SignedPublicationChannelRotation::sign(
+            device_state.identity(),
+            local_certificate.account_id(),
+            peer_account_id,
+            epoch,
+            unix_time_now()?,
+        )?;
+        let rotation_id = rotation.rotation_id()?;
+        let path = runtime_publication_rotation_relative_path(peer_account_id, epoch, rotation_id);
+        let store = run_state_transaction(state_directory, |transaction| {
+            persist_runtime_record(state_directory, &path, &rotation.encode()?, transaction)
+        })?;
+        (epoch, rotation_id, store)
+    };
     let old_key = ticket_publication_write_capability(
         device_state.identity(),
         peer_account_id,
@@ -7235,20 +7334,106 @@ fn rotate_runtime_publication_channel(
         old_key != new_key,
         "publication channel rotation did not change the key"
     );
-    load_runtime_state_snapshot(
-        &state_directory,
+    let reloaded = load_runtime_state_snapshot(
+        state_directory,
         local_certificate.account_id(),
         device_state.identity().device_id(),
     )?;
-    println!("peer_account_id={peer_account_id}");
-    println!("previous_publication_channel_id={}", old_key.channel_id());
-    println!("publication_channel_id={}", new_key.channel_id());
-    println!("publication_channel_epoch={epoch}");
-    println!("publication_channel_rotation_id={rotation_id}");
-    println!("publication_channel_rotation_store={store:?}");
-    println!("runtime_restart_required=true");
-    println!("status=publication-channel-rotated");
-    Ok(())
+    ensure!(
+        reloaded.publication_channel_epoch(peer_account_id) == epoch,
+        "publication channel rotation did not become durable"
+    );
+    Ok(RuntimeIpcPublicationChannelRotation {
+        peer_account_id,
+        previous_publication_channel_id: old_key.channel_id().to_string(),
+        publication_channel_id: new_key.channel_id().to_string(),
+        publication_channel_epoch: epoch,
+        publication_channel_rotation_id: rotation_id.to_string(),
+        publication_channel_rotation_store: store_outcome_name(store).to_owned(),
+        ticket_file: PathBuf::new(),
+        ticket_publish_status: "restart-required-to-reissue-runtime-ticket".to_owned(),
+        runtime_restart_required: current_epoch.is_none(),
+        peer_delivery_status: "fresh-ticket-transfer-required".to_owned(),
+    })
+}
+
+fn print_runtime_publication_channel_rotation(rotation: &RuntimeIpcPublicationChannelRotation) {
+    println!("peer_account_id={}", rotation.peer_account_id);
+    println!(
+        "previous_publication_channel_id={}",
+        rotation.previous_publication_channel_id
+    );
+    println!("publication_channel_id={}", rotation.publication_channel_id);
+    println!(
+        "publication_channel_epoch={}",
+        rotation.publication_channel_epoch
+    );
+    println!(
+        "publication_channel_rotation_id={}",
+        rotation.publication_channel_rotation_id
+    );
+    println!(
+        "publication_channel_rotation_store={}",
+        rotation.publication_channel_rotation_store
+    );
+    if !rotation.ticket_file.as_os_str().is_empty() {
+        println!("ticket_file={}", rotation.ticket_file.display());
+    }
+    println!("ticket_publish_status={}", rotation.ticket_publish_status);
+    println!(
+        "runtime_restart_required={}",
+        rotation.runtime_restart_required
+    );
+    println!("peer_delivery_status={}", rotation.peer_delivery_status);
+    println!("incident_next_action={}", rotation.peer_delivery_status);
+}
+
+fn rotate_live_runtime_publication_channel(
+    state_directory: &Path,
+    endpoint: &Endpoint,
+    current_ticket: &ConnectionTicket,
+    ticket_file: Option<&Path>,
+    peer_account_id: AccountId,
+) -> Result<(ConnectionTicket, RuntimeIpcPublicationChannelRotation)> {
+    ensure!(
+        current_ticket.allowed_requester_account_id() == peer_account_id,
+        "live runtime serves another primary peer account"
+    );
+    let ticket_file = ticket_file.context(
+        "live publication-channel rotation requires the runtime's atomic public ticket file",
+    )?;
+    let mut report = create_runtime_publication_channel_rotation(
+        state_directory,
+        peer_account_id,
+        Some(current_ticket.ticket_publication_channel_epoch()),
+    )?;
+    let device_state = load_command_device_state(state_directory)?;
+    ensure!(
+        device_state.identity().device_id() == current_ticket.listener_device_id(),
+        "live publication-channel rotation identity differs from the running listener"
+    );
+    let replacement = ConnectionTicket::new_with_publication_channel_epoch(
+        endpoint.addr(),
+        device_state.identity(),
+        current_ticket.listener_certificate().clone(),
+        current_ticket.listener_directory().clone(),
+        peer_account_id,
+        current_ticket.route_policy(),
+        report.publication_channel_epoch,
+    )?;
+    ensure!(
+        replacement
+            .ticket_publication_write_key()
+            .channel_id()
+            .to_string()
+            == report.publication_channel_id,
+        "live replacement ticket does not select the durable rotated publication channel"
+    );
+    publish_runtime_ticket(ticket_file, replacement.encode()?.as_bytes())?;
+    report.ticket_file = ticket_file.to_path_buf();
+    report.ticket_publish_status = "atomic-replace".to_owned();
+    report.runtime_restart_required = false;
+    Ok((replacement, report))
 }
 
 fn create_runtime_publication_conflict_resolution_request(
@@ -7257,12 +7442,31 @@ fn create_runtime_publication_conflict_resolution_request(
     replacement_ticket_file: PathBuf,
     output_file: PathBuf,
 ) -> Result<()> {
-    let device_state = load_command_device_state(&state_directory)?;
-    let trust = CommandTrustReadRepository::open(&state_directory, &device_state)?;
+    let request = create_runtime_publication_conflict_resolution_request_report(
+        &state_directory,
+        channel_id,
+        &replacement_ticket_file,
+        &output_file,
+    )?;
+    print_runtime_publication_conflict_request(&request);
+    println!("root_secret_loaded=false");
+    println!("conflict_proof_retention=required");
+    println!("status=publication-conflict-resolution-requested");
+    Ok(())
+}
+
+fn create_runtime_publication_conflict_resolution_request_report(
+    state_directory: &Path,
+    channel_id: TicketPublicationChannelId,
+    replacement_ticket_file: &Path,
+    output_file: &Path,
+) -> Result<RuntimeIpcPublicationConflictRequest> {
+    let device_state = load_command_device_state(state_directory)?;
+    let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
     let local_certificate = trust.load_certificate()?;
     let local_authority = trust.load_own_authority_snapshot(&local_certificate)?;
     let snapshot = load_runtime_state_snapshot(
-        &state_directory,
+        state_directory,
         local_certificate.account_id(),
         device_state.identity().device_id(),
     )?;
@@ -7285,7 +7489,7 @@ fn create_runtime_publication_conflict_resolution_request(
         })
         .context("quarantined publication channel has no exact endpoint binding")?;
     let replacement_bytes = read_bounded_regular_file(
-        &replacement_ticket_file,
+        replacement_ticket_file,
         MAX_RUNTIME_RECORD_BYTES as u64,
         "replacement peer ticket",
     )?;
@@ -7333,26 +7537,57 @@ fn create_runtime_publication_conflict_resolution_request(
         unix_time_now()?,
     )?;
     let request_id = request.request_id()?;
-    let output_file = absolute_new_external_path(&state_directory, &output_file)?;
+    let output_file = absolute_new_external_path(state_directory, output_file)?;
     write_new_authority_file(&output_file, &request.encode()?)?;
-    println!("publication_conflict_proof_id={}", proof.proof_id()?);
-    println!("publication_conflict_evidence_id={}", proof.evidence_id()?);
-    println!("publication_conflict_resolution_request_id={request_id}");
-    println!("old_publication_channel_id={channel_id}");
+    Ok(RuntimeIpcPublicationConflictRequest {
+        publication_conflict_proof_id: proof.proof_id()?.to_string(),
+        publication_conflict_evidence_id: proof.evidence_id()?.to_string(),
+        publication_conflict_resolution_request_id: request_id.to_string(),
+        old_publication_channel_id: channel_id.to_string(),
+        new_publication_channel_id: replacement
+            .ticket_publication_write_key()
+            .channel_id()
+            .to_string(),
+        authority_revision: local_authority.revision(),
+        requested_at_unix_seconds: request.requested_at_unix_seconds(),
+        request_file: output_file,
+        runtime_restart_required: false,
+        next_action: "copy-request-to-offline-root-signer".to_owned(),
+    })
+}
+
+fn print_runtime_publication_conflict_request(request: &RuntimeIpcPublicationConflictRequest) {
+    println!(
+        "publication_conflict_proof_id={}",
+        request.publication_conflict_proof_id
+    );
+    println!(
+        "publication_conflict_evidence_id={}",
+        request.publication_conflict_evidence_id
+    );
+    println!(
+        "publication_conflict_resolution_request_id={}",
+        request.publication_conflict_resolution_request_id
+    );
+    println!(
+        "old_publication_channel_id={}",
+        request.old_publication_channel_id
+    );
     println!(
         "new_publication_channel_id={}",
-        replacement.ticket_publication_write_key().channel_id()
+        request.new_publication_channel_id
     );
-    println!("authority_revision={}", local_authority.revision());
+    println!("authority_revision={}", request.authority_revision);
     println!(
         "requested_at_unix_seconds={}",
-        request.requested_at_unix_seconds()
+        request.requested_at_unix_seconds
     );
-    println!("request_file={}", output_file.display());
-    println!("root_secret_loaded=false");
-    println!("conflict_proof_retention=required");
-    println!("status=publication-conflict-resolution-requested");
-    Ok(())
+    println!("request_file={}", request.request_file.display());
+    println!(
+        "runtime_restart_required={}",
+        request.runtime_restart_required
+    );
+    println!("incident_next_action={}", request.next_action);
 }
 
 fn authorize_account_publication_conflict_resolution(
@@ -7458,28 +7693,43 @@ fn apply_runtime_publication_conflict_resolution_response(
     state_directory: PathBuf,
     response_file: PathBuf,
 ) -> Result<()> {
-    let response_bytes = read_bounded_regular_file(
+    let resolution = apply_runtime_publication_conflict_resolution_response_report(
+        &state_directory,
         &response_file,
+    )?;
+    print_runtime_publication_conflict_resolution(&resolution);
+    println!("status=publication-conflict-resolved");
+    Ok(())
+}
+
+fn apply_runtime_publication_conflict_resolution_response_report(
+    state_directory: &Path,
+    response_file: &Path,
+) -> Result<RuntimeIpcPublicationConflictResolution> {
+    let response_bytes = read_bounded_regular_file(
+        response_file,
         runtime_publication_resolution::MAX_PUBLICATION_CONFLICT_RESOLUTION_RESPONSE_BYTES as u64,
         "publication conflict resolution response",
     )?;
     let response = PublicationConflictResolutionResponse::decode(&response_bytes)?;
-    println!(
-        "publication_conflict_resolution_request_id={}",
-        response.request_id()
-    );
-    apply_runtime_publication_conflict_resolution(
-        state_directory,
+    let request_id = response.request_id();
+    let report = apply_runtime_publication_conflict_resolution(
+        state_directory.to_path_buf(),
         response.resolution().clone(),
         response.replacement_ticket().to_vec(),
-    )
+    )?;
+    ensure!(
+        report.publication_conflict_resolution_request_id == request_id.to_string(),
+        "applied resolution report changed the response request ID"
+    );
+    Ok(report)
 }
 
 fn apply_runtime_publication_conflict_resolution(
     state_directory: PathBuf,
     resolution: RootSignedPublicationConflictResolution,
     replacement_bytes: Vec<u8>,
-) -> Result<()> {
+) -> Result<RuntimeIpcPublicationConflictResolution> {
     ensure!(
         *blake3::hash(&replacement_bytes).as_bytes() == resolution.replacement_ticket_digest(),
         "replacement peer ticket is not the exact Root-authorized artifact"
@@ -7502,6 +7752,9 @@ fn apply_runtime_publication_conflict_resolution(
         device_state.identity().device_id(),
     )?;
     let old_channel_id = resolution.old_write_key().channel_id();
+    let proof = snapshot
+        .publication_conflict(old_channel_id)
+        .context("Root resolution has no retained local conflict proof")?;
     if let Some(existing) = snapshot
         .publication_conflict_resolutions
         .get(&old_channel_id)
@@ -7510,17 +7763,8 @@ fn apply_runtime_publication_conflict_resolution(
             existing == &resolution,
             "a different Root resolution already exists for the quarantined channel"
         );
-        println!(
-            "publication_conflict_resolution_id={}",
-            resolution.resolution_id()?
-        );
-        println!("publication_conflict_resolution_store=Unchanged");
-        println!("status=publication-conflict-resolved");
-        return Ok(());
+        return publication_conflict_resolution_report(proof, &resolution, "Unchanged");
     }
-    let proof = snapshot
-        .publication_conflict(old_channel_id)
-        .context("Root resolution has no retained local conflict proof")?;
     ensure!(
         proof.evidence_id()? == resolution.conflict_evidence_id()
             && proof.publisher_account_id() == resolution.peer_account_id()
@@ -7583,22 +7827,73 @@ fn apply_runtime_publication_conflict_resolution(
             .is_none(),
         "Root-authorized conflict resolution did not release the old quarantine"
     );
-    println!("publication_conflict_proof_id={}", proof.proof_id()?);
-    println!("publication_conflict_evidence_id={}", proof.evidence_id()?);
-    println!("publication_conflict_proof_retained=true");
-    println!("publication_conflict_resolution_id={resolution_id}");
-    println!("old_publication_channel_id={old_channel_id}");
+    publication_conflict_resolution_report(proof, &resolution, store_outcome_name(store))
+}
+
+fn publication_conflict_resolution_report(
+    proof: &SignedPublicationConflictProof,
+    resolution: &RootSignedPublicationConflictResolution,
+    store: &str,
+) -> Result<RuntimeIpcPublicationConflictResolution> {
+    Ok(RuntimeIpcPublicationConflictResolution {
+        publication_conflict_resolution_request_id: resolution.request_id().to_string(),
+        publication_conflict_proof_id: proof.proof_id()?.to_string(),
+        publication_conflict_evidence_id: proof.evidence_id()?.to_string(),
+        publication_conflict_resolution_id: resolution.resolution_id()?.to_string(),
+        old_publication_channel_id: resolution.old_write_key().channel_id().to_string(),
+        new_publication_channel_id: resolution.new_write_key().channel_id().to_string(),
+        publication_conflict_resolution_store: store.to_owned(),
+        authorized_at_unix_seconds: resolution.authorized_at_unix_seconds(),
+        conflict_proof_retained: true,
+        runtime_restart_required: false,
+        next_action: "propagate-resolution-to-exact-current-sibling-devices".to_owned(),
+    })
+}
+
+fn print_runtime_publication_conflict_resolution(
+    resolution: &RuntimeIpcPublicationConflictResolution,
+) {
+    println!(
+        "publication_conflict_resolution_request_id={}",
+        resolution.publication_conflict_resolution_request_id
+    );
+    println!(
+        "publication_conflict_proof_id={}",
+        resolution.publication_conflict_proof_id
+    );
+    println!(
+        "publication_conflict_evidence_id={}",
+        resolution.publication_conflict_evidence_id
+    );
+    println!(
+        "publication_conflict_proof_retained={}",
+        resolution.conflict_proof_retained
+    );
+    println!(
+        "publication_conflict_resolution_id={}",
+        resolution.publication_conflict_resolution_id
+    );
+    println!(
+        "old_publication_channel_id={}",
+        resolution.old_publication_channel_id
+    );
     println!(
         "new_publication_channel_id={}",
-        resolution.new_write_key().channel_id()
+        resolution.new_publication_channel_id
     );
-    println!("publication_conflict_resolution_store={store:?}");
+    println!(
+        "publication_conflict_resolution_store={}",
+        resolution.publication_conflict_resolution_store
+    );
     println!(
         "authorized_at_unix_seconds={}",
-        resolution.authorized_at_unix_seconds()
+        resolution.authorized_at_unix_seconds
     );
-    println!("status=publication-conflict-resolved");
-    Ok(())
+    println!(
+        "runtime_restart_required={}",
+        resolution.runtime_restart_required
+    );
+    println!("incident_next_action={}", resolution.next_action);
 }
 
 fn read_bounded_regular_file(path: &Path, max_bytes: u64, label: &str) -> Result<Vec<u8>> {
@@ -9272,6 +9567,105 @@ async fn runtime_ipc_device_directory_status(ipc_file: PathBuf) -> Result<()> {
     }
 }
 
+async fn runtime_ipc_rotate_publication_channel(
+    ipc_file: PathBuf,
+    peer_account_id: AccountId,
+) -> Result<()> {
+    match kilogram_runtime_ipc::call(
+        &ipc_file,
+        RuntimeIpcCommand::RotatePublicationChannel { peer_account_id },
+    )
+    .await?
+    {
+        RuntimeIpcResponse::PublicationChannelRotated(rotation) => {
+            print_runtime_publication_channel_rotation(&rotation);
+            println!("status=runtime-publication-channel-rotated");
+            Ok(())
+        }
+        RuntimeIpcResponse::Error { message } => {
+            bail!("runtime IPC rejected publication-channel rotation: {message}")
+        }
+        _ => bail!("runtime IPC returned an unexpected publication-channel rotation response"),
+    }
+}
+
+async fn runtime_ipc_create_publication_conflict_request(
+    ipc_file: PathBuf,
+    channel_id: TicketPublicationChannelId,
+    replacement_ticket_file: PathBuf,
+    output_file: PathBuf,
+) -> Result<()> {
+    let replacement_ticket_file =
+        fs::canonicalize(&replacement_ticket_file).with_context(|| {
+            format!(
+                "resolve replacement peer ticket {}",
+                replacement_ticket_file.display()
+            )
+        })?;
+    let output_file = absolute_command_path(output_file)?;
+    match kilogram_runtime_ipc::call(
+        &ipc_file,
+        RuntimeIpcCommand::CreatePublicationConflictRequest {
+            channel_id: channel_id.to_string(),
+            replacement_ticket_file,
+            output_file,
+        },
+    )
+    .await?
+    {
+        RuntimeIpcResponse::PublicationConflictRequestCreated(request) => {
+            print_runtime_publication_conflict_request(&request);
+            println!("root_secret_loaded=false");
+            println!("conflict_proof_retention=required");
+            println!("status=publication-conflict-resolution-requested");
+            Ok(())
+        }
+        RuntimeIpcResponse::Error { message } => {
+            bail!("runtime IPC rejected conflict-resolution request: {message}")
+        }
+        _ => bail!("runtime IPC returned an unexpected conflict-resolution request response"),
+    }
+}
+
+async fn runtime_ipc_apply_publication_conflict_response(
+    ipc_file: PathBuf,
+    response_file: PathBuf,
+) -> Result<()> {
+    let response_file = fs::canonicalize(&response_file).with_context(|| {
+        format!(
+            "resolve publication conflict response {}",
+            response_file.display()
+        )
+    })?;
+    match kilogram_runtime_ipc::call(
+        &ipc_file,
+        RuntimeIpcCommand::ApplyPublicationConflictResponse { response_file },
+    )
+    .await?
+    {
+        RuntimeIpcResponse::PublicationConflictResponseApplied(resolution) => {
+            print_runtime_publication_conflict_resolution(&resolution);
+            println!("root_secret_loaded=false");
+            println!("status=publication-conflict-resolved");
+            Ok(())
+        }
+        RuntimeIpcResponse::Error { message } => {
+            bail!("runtime IPC rejected conflict-resolution response: {message}")
+        }
+        _ => bail!("runtime IPC returned an unexpected conflict-resolution apply response"),
+    }
+}
+
+fn absolute_command_path(path: PathBuf) -> Result<PathBuf> {
+    if path.is_absolute() {
+        Ok(path)
+    } else {
+        Ok(std::env::current_dir()
+            .context("read current directory for IPC output path")?
+            .join(path))
+    }
+}
+
 async fn runtime_ipc_publish_ticket(
     ipc_file: PathBuf,
     conversation: String,
@@ -10441,6 +10835,81 @@ async fn handle_runtime_ipc_work(
                 message: format!("{error:#}"),
             },
         },
+        RuntimeIpcCommand::RotatePublicationChannel { peer_account_id } => {
+            match with_locked_state(state_directory, || {
+                rotate_live_runtime_publication_channel(
+                    state_directory,
+                    endpoint,
+                    ticket,
+                    public_paths.primary_ticket,
+                    peer_account_id,
+                )
+            }) {
+                Ok((replacement, report)) => {
+                    *ticket = replacement;
+                    state_changed = true;
+                    RuntimeIpcResponse::PublicationChannelRotated(Box::new(report))
+                }
+                Err(error) => RuntimeIpcResponse::Error {
+                    message: format!("{error:#}"),
+                },
+            }
+        }
+        RuntimeIpcCommand::CreatePublicationConflictRequest {
+            channel_id,
+            replacement_ticket_file,
+            output_file,
+        } => {
+            let request = channel_id
+                .parse::<TicketPublicationChannelId>()
+                .context("parse quarantined publication channel")
+                .and_then(|channel_id| {
+                    ensure!(
+                        replacement_ticket_file.is_absolute() && output_file.is_absolute(),
+                        "live conflict-recovery artifact paths must be absolute"
+                    );
+                    with_locked_state(state_directory, || {
+                        create_runtime_publication_conflict_resolution_request_report(
+                            state_directory,
+                            channel_id,
+                            &replacement_ticket_file,
+                            &output_file,
+                        )
+                    })
+                });
+            match request {
+                Ok(report) => {
+                    state_changed = true;
+                    RuntimeIpcResponse::PublicationConflictRequestCreated(Box::new(report))
+                }
+                Err(error) => RuntimeIpcResponse::Error {
+                    message: format!("{error:#}"),
+                },
+            }
+        }
+        RuntimeIpcCommand::ApplyPublicationConflictResponse { response_file } => {
+            let resolution = (|| {
+                ensure!(
+                    response_file.is_absolute(),
+                    "live conflict-resolution response path must be absolute"
+                );
+                with_locked_state(state_directory, || {
+                    apply_runtime_publication_conflict_resolution_response_report(
+                        state_directory,
+                        &response_file,
+                    )
+                })
+            })();
+            match resolution {
+                Ok(report) => {
+                    state_changed = true;
+                    RuntimeIpcResponse::PublicationConflictResponseApplied(Box::new(report))
+                }
+                Err(error) => RuntimeIpcResponse::Error {
+                    message: format!("{error:#}"),
+                },
+            }
+        }
         RuntimeIpcCommand::PublishOwnTicket {
             conversation,
             peer_account_id,
@@ -22091,9 +22560,9 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn endpoint_announcements_transfer_enrollments_and_high_water_between_own_devices() -> Result<()>
-    {
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn endpoint_announcements_transfer_enrollments_and_high_water_between_own_devices()
+    -> Result<()> {
         let directory = tempfile::tempdir()?;
         let local_root = AccountRootState::create(directory.path().join("local-root"))?;
         let source_state_dir = directory.path().join("source-state");
@@ -22123,6 +22592,8 @@ mod tests {
             recipient_certificate.clone(),
             third_certificate.clone(),
         ])?;
+        let local_device_list_file = directory.path().join("local.devices");
+        write_new_authority_file(&local_device_list_file, &local_device_list.encode()?)?;
         for (state, certificate) in [
             (&source, &source_certificate),
             (&recipient, &recipient_certificate),
@@ -22224,8 +22695,12 @@ mod tests {
         )?;
         let local_directory = AccountPrekeyDirectory::new(
             local_device_list.clone(),
-            vec![source_pool, recipient_pool, third_pool],
+            vec![source_pool.clone(), recipient_pool.clone(), third_pool],
         )?;
+        let source_pool_file = directory.path().join("source.prekeys");
+        let recipient_pool_file = directory.path().join("recipient.prekeys");
+        write_new_authority_file(&source_pool_file, &source_pool.encode()?)?;
+        write_new_authority_file(&recipient_pool_file, &recipient_pool.encode()?)?;
         let source_ticket = ConnectionTicket::new(
             EndpointAddr::new(SecretKey::generate().public()),
             source.identity(),
@@ -22380,7 +22855,7 @@ mod tests {
         )?;
         let conflicting_bundle = SignedEndpointAnnouncementBundle::sign(
             recipient.identity(),
-            local_device_list,
+            local_device_list.clone(),
             third.identity().device_id(),
             now,
             300,
@@ -22614,12 +23089,52 @@ mod tests {
         let request_file = directory
             .path()
             .join("publication-conflict-resolution.pcrq");
-        create_runtime_publication_conflict_resolution_request(
-            third_state_dir.clone(),
-            observation.channel_id(),
-            replacement_ticket_file.clone(),
-            request_file.clone(),
-        )?;
+        let third_runtime_ticket_file = directory.path().join("third-live.ticket");
+        let third_ipc_file = directory.path().join("third-live.ipc.json");
+        let third_runtime_task = tokio::spawn(runtime(RuntimeOptions {
+            state_dir: third_state_dir.clone(),
+            allowed_requester_account_id: peer_root.account_id(),
+            device_list_file: local_device_list_file,
+            peer_prekey_pool_files: vec![source_pool_file, recipient_pool_file],
+            ticket_file: Some(third_runtime_ticket_file.clone()),
+            relay_wait_seconds: 0,
+            route_policy: RoutePolicy::Auto,
+            relay_url: None,
+            max_sessions: 0,
+            idle_seconds: 0,
+            poll_milliseconds: 500,
+            retry_base_seconds: 1,
+            retry_max_seconds: 1,
+            auto_sync_seconds: 0,
+            max_outbound_actions: 0,
+            ipc_file: Some(third_ipc_file.clone()),
+        }));
+        timeout(Duration::from_secs(10), async {
+            while !third_runtime_ticket_file.is_file() || !third_ipc_file.is_file() {
+                tokio::time::sleep(Duration::from_millis(20)).await;
+            }
+        })
+        .await
+        .context("third runtime did not become ready for live conflict recovery")?;
+        let request_response = kilogram_runtime_ipc::call(
+            &third_ipc_file,
+            RuntimeIpcCommand::CreatePublicationConflictRequest {
+                channel_id: observation.channel_id().to_string(),
+                replacement_ticket_file: replacement_ticket_file.clone(),
+                output_file: request_file.clone(),
+            },
+        )
+        .await?;
+        let RuntimeIpcResponse::PublicationConflictRequestCreated(request_report) =
+            request_response
+        else {
+            bail!("third runtime returned an unexpected conflict-request response")
+        };
+        assert!(!request_report.runtime_restart_required);
+        assert_eq!(
+            request_report.request_file,
+            fs::canonicalize(&request_file)?
+        );
         let portable_request =
             SignedPublicationConflictResolutionRequest::decode(&fs::read(&request_file)?)?;
         assert_eq!(
@@ -22668,10 +23183,46 @@ mod tests {
             .context("encoded publication conflict response is empty")? ^= 1;
         assert!(PublicationConflictResolutionResponse::decode(&tampered_response).is_err());
 
-        apply_runtime_publication_conflict_resolution_response(
-            third_state_dir.clone(),
-            response_file.clone(),
-        )?;
+        let applied = kilogram_runtime_ipc::call(
+            &third_ipc_file,
+            RuntimeIpcCommand::ApplyPublicationConflictResponse {
+                response_file: response_file.clone(),
+            },
+        )
+        .await?;
+        let RuntimeIpcResponse::PublicationConflictResponseApplied(applied) = applied else {
+            bail!("third runtime returned an unexpected conflict-apply response")
+        };
+        assert!(!applied.runtime_restart_required);
+        assert!(applied.conflict_proof_retained);
+        assert_eq!(applied.publication_conflict_resolution_store, "Inserted");
+        let repeated_apply = kilogram_runtime_ipc::call(
+            &third_ipc_file,
+            RuntimeIpcCommand::ApplyPublicationConflictResponse {
+                response_file: response_file.clone(),
+            },
+        )
+        .await?;
+        let RuntimeIpcResponse::PublicationConflictResponseApplied(repeated_apply) = repeated_apply
+        else {
+            bail!("third runtime returned an unexpected idempotent conflict-apply response")
+        };
+        assert_eq!(
+            repeated_apply.publication_conflict_resolution_store,
+            "Unchanged"
+        );
+        assert!(matches!(
+            kilogram_runtime_ipc::call(&third_ipc_file, RuntimeIpcCommand::Ping).await?,
+            RuntimeIpcResponse::Pong { .. }
+        ));
+        assert!(matches!(
+            kilogram_runtime_ipc::call(&third_ipc_file, RuntimeIpcCommand::Shutdown).await?,
+            RuntimeIpcResponse::ShutdownAccepted
+        ));
+        timeout(Duration::from_secs(10), third_runtime_task)
+            .await
+            .context("third runtime did not stop after live conflict recovery")?
+            .context("join third live conflict-recovery runtime")??;
         let resolved_third = load_runtime_state_snapshot(
             &third_state_dir,
             local_root.account_id(),
@@ -22710,10 +23261,6 @@ mod tests {
             resolved_candidates[0].ticket.ticket_publication_write_key(),
             replacement_ticket.ticket_publication_write_key()
         );
-        apply_runtime_publication_conflict_resolution_response(
-            third_state_dir.clone(),
-            response_file,
-        )?;
         let post_resolution_bundle = directory.path().join("resolved-third-to-source.eab");
         let post_resolution_export = export_runtime_endpoint_announcements(
             &third_state_dir,
@@ -24166,6 +24713,40 @@ mod tests {
         assert_eq!(disabled.policy_generation, 2);
         assert_eq!(disabled.publish.state, "disabled");
         assert_eq!(disabled.refresh.state, "disabled");
+        let before_rotation = ConnectionTicket::decode(&fs::read_to_string(&bob_ticket)?)?;
+        let rotation = kilogram_runtime_ipc::call(
+            &bob_ipc,
+            RuntimeIpcCommand::RotatePublicationChannel {
+                peer_account_id: alice_root.account_id(),
+            },
+        )
+        .await?;
+        let RuntimeIpcResponse::PublicationChannelRotated(rotation) = rotation else {
+            bail!("Bob runtime returned an unexpected publication-channel rotation response")
+        };
+        assert_eq!(rotation.publication_channel_epoch, 1);
+        assert!(!rotation.runtime_restart_required);
+        assert_eq!(rotation.publication_channel_rotation_store, "Inserted");
+        assert_eq!(rotation.ticket_publish_status, "atomic-replace");
+        assert_eq!(rotation.ticket_file, bob_ticket);
+        assert_ne!(
+            rotation.previous_publication_channel_id,
+            rotation.publication_channel_id
+        );
+        let after_rotation = ConnectionTicket::decode(&fs::read_to_string(&bob_ticket)?)?;
+        assert_eq!(after_rotation.ticket_publication_channel_epoch(), 1);
+        assert_eq!(after_rotation.endpoint().id, before_rotation.endpoint().id);
+        assert_eq!(
+            after_rotation
+                .ticket_publication_write_key()
+                .channel_id()
+                .to_string(),
+            rotation.publication_channel_id
+        );
+        assert!(matches!(
+            kilogram_runtime_ipc::call(&bob_ipc, RuntimeIpcCommand::Ping).await?,
+            RuntimeIpcResponse::Pong { .. }
+        ));
         let _ = store_shutdown_sender.send(());
         timeout(Duration::from_secs(5), store_task)
             .await
@@ -24184,11 +24765,32 @@ mod tests {
                 .with_context(|| format!("join {name} publication runtime"))??;
         }
 
+        let reconciled_rotation = with_locked_state(&bob_state, || {
+            create_runtime_publication_channel_rotation(
+                &bob_state,
+                alice_root.account_id(),
+                Some(before_rotation.ticket_publication_channel_epoch()),
+            )
+        })?;
+        assert_eq!(reconciled_rotation.publication_channel_epoch, 1);
+        assert_eq!(
+            reconciled_rotation.publication_channel_rotation_store,
+            "AlreadyPresent"
+        );
+        assert_eq!(
+            reconciled_rotation.publication_channel_rotation_id,
+            rotation.publication_channel_rotation_id
+        );
+
         let bob_snapshot = load_runtime_state_snapshot(
             &bob_state,
             bob_root.account_id(),
             bob_device.identity().device_id(),
         )?;
+        assert_eq!(
+            bob_snapshot.publication_channel_epoch(alice_root.account_id()),
+            1
+        );
         assert!(
             bob_snapshot
                 .ticket_publications

@@ -200,9 +200,12 @@ sessions, distribution, removal и key epochs и не решены этим пр
   M0.9.44 распространяет canonical proof и разрешает только Root-authorized
   переход на peer-signed ticket v11 с новым channel epoch. M0.9.45 разделяет
   online `.pcrq`/offline `.pcrp`, а bundle v4 автоматически переносит готовый
-  resolution к exact-current siblings с тем же local evidence. Открыты live
-  rotation без restart, обнаружение конфликта между устройствами, которые
-  никогда не обменивались bundle, и действительно распределённая
+  resolution к exact-current siblings с тем же local evidence. M0.9.46
+  выполняет собственную rotation, request и apply через authenticated live
+  actor без restart, но всё ещё требует человеческой передачи свежего ticket и
+  offline public artifacts. Открыты hardened offline evidence viewer,
+  обнаружение конфликта между устройствами, которые никогда не обменивались
+  bundle, и действительно распределённая
   cross-machine координация без доверенного scheduler.
 - M0.9.32 compact/checkpoint-ит runtime publication, observation, policy и
   attempt chains до exact signed heads за device-signed cumulative checkpoint;

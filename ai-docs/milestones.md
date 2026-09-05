@@ -3066,12 +3066,37 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - contract зафиксирован в
   [`../docs/RFC-0067-offline-root-conflict-recovery.md`](../docs/RFC-0067-offline-root-conflict-recovery.md).
 
+### M0.9.46 — live publication incident lifecycle: выполнено
+
+Реализовано:
+
+- IPC v19 добавляет authenticated actor-команды для live rotation собственной
+  publication capability, создания `.pcrq` и применения `.pcrp`;
+- live rotation разрешена только для exact primary peer текущего listener,
+  сохраняет Iroh Endpoint/route/certificate/device directory, transactionally
+  пишет signed epoch rotation и атомарно заменяет public ticket;
+- state-first порядок имеет retry reconciliation: committed epoch без
+  опубликованного ticket переиздаётся как `AlreadyPresent`, не создавая лишний
+  epoch; running state ahead of durable state отклоняется;
+- request/apply используют текущий actor state, absolute bounded artifact
+  paths, не принимают Root secret и возвращают typed reports с
+  `runtime_restart_required=false`;
+- повторный apply остаётся `Unchanged`, исходный `.pcf` не удаляется, а
+  resolution продолжает распространяться существующим bundle v4;
+- Windows incident panel объединяет peer-side rotation, request, offline Root
+  handoff и response apply и показывает `quarantined` / `authorization pending`
+  / `resolved locally` без требования остановить runtime;
+- live regressions проверяют сохранение endpoint ID, atomic ticket replacement,
+  crash/retry reconciliation boundary, durable epoch, online request/apply,
+  idempotence и IPC ping после mutation;
+- contract зафиксирован в
+  [`../docs/RFC-0068-live-publication-incident-lifecycle.md`](../docs/RFC-0068-live-publication-incident-lifecycle.md).
+
 ### Следующий этап
 
-1. M0.9.46: убрать restart requirement для собственной publication-channel
-   rotation через authenticated live runtime reconfiguration и связать
-   peer-side rotation/request/apply в один наблюдаемый incident lifecycle без
-   фонового Root доступа.
+1. M0.9.47: hardened offline evidence viewer и переносимая removable-media/QR
+   церемония `.pcrq` -> `.pcrp`, которая показывает exact IDs/authority/peer/
+   epochs до подписи и не переносит Root в desktop или online runtime.
 2. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.
