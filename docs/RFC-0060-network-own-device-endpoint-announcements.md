@@ -115,4 +115,6 @@ the OS background, authorize a peer Account, hide traffic correlation, provide
 offline delivery or automatically retry after process restart. Seamless
 foreground exchange needs a multi-audience runtime listener plus a durable,
 bounded own-device endpoint/transfer schedule; optional OS autostart remains a
-separate user setting.
+separate user setting. The listener and foreground schedule are implemented by
+M0.9.39 in
+[`RFC-0061-multi-audience-own-device-automation.md`](RFC-0061-multi-audience-own-device-automation.md).

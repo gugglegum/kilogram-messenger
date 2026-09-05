@@ -365,51 +365,54 @@ global prekey discovery/witness, автоматический recovery source di
 
 ## План ближайших работ
 
-1. M0.9.39: расширить long-lived runtime до multi-audience inbound
-   authorization и durable bounded own-device transfer schedule, сохранив
-   foreground-only default и отдельную optional OS-autostart настройку.
-2. Уже реализованный M0.9.38 переносит M0.9.37 recipient-encrypted bundle по
+1. M0.9.40: распространить свежие recipient-specific own-device tickets через
+   authenticated privacy-preserving bounded channel, чтобы M0.9.39 schedule не
+   зависел от общей папки или ручного копирования.
+2. Уже реализованный M0.9.39 даёт одному listener primary peer и exact-current
+   own-account аудитории, stable own-device ticket и Device-signed restart-safe
+   foreground schedule с network permissions, backoff и compaction.
+3. Уже реализованный M0.9.38 переносит M0.9.37 recipient-encrypted bundle по
    authenticated same-account Device session, вызывает общий import gate и
    возвращает recipient-signed session-bound replay acknowledgement.
-3. Уже реализованный M0.9.37 переносит bounded endpoint candidates и signed
+4. Уже реализованный M0.9.37 переносит bounded endpoint candidates и signed
    publication high-water между exact-current authorized own Devices через
    source-signed recipient-HPKE file, не принимая bundle как Root authority.
-4. Уже реализованный M0.9.36 хранит local-device-signed expiry-independent
+5. Уже реализованный M0.9.36 хранит local-device-signed expiry-independent
    publication binding и обновляет long-offline endpoint без принятия
    просроченного transport/prekey ticket.
-5. Уже реализованный M0.9.35 обновляет все enrolled Device channels одной
+6. Уже реализованный M0.9.35 обновляет все enrolled Device channels одной
    bounded action, хранит independent observation high-water и показывает
    desktop `usable`/`stale` состояния.
-6. Уже реализованный M0.9.33 даёт self-authenticating per-peer capability
+7. Уже реализованный M0.9.33 даёт self-authenticating per-peer capability
    channel и exact Ed25519 PUT authorization без Account/Device ID на store.
-7. Уже реализованные M0.9.31–M0.9.32 дают opt-in foreground automation и
+8. Уже реализованные M0.9.31–M0.9.32 дают opt-in foreground automation и
    crash-safe bounded compaction его signed runtime chains.
-8. Уже реализованный M0.9.30 даёт self-hostable loopback-only opaque store за
+9. Уже реализованный M0.9.30 даёт self-hostable loopback-only opaque store за
    HTTPS reverse proxy: durable Redb, fixed retention, monotonic replacement,
    size/channel/connection/rate limits и Internet test procedure.
-9. Уже реализованный M0.9.29 заменяет synchronized steady-state ticket refresh
+10. Уже реализованный M0.9.29 заменяет synchronized steady-state ticket refresh
    на explicit HTTPS publication/fetch: device-signed expiring chain, per-device
    HPKE slots, local rollback high-water, IPC v7 и Windows UI. Initial verified
    contact остаётся out-of-band, store traffic metadata видимы.
-10. Уже реализованный M0.9.28 сохраняет device-signed receipt применённого live
+11. Уже реализованный M0.9.28 сохраняет device-signed receipt применённого live
    roster в vault-primary transaction, восстанавливает его раньше stale launch
    profile и bounded desktop-операцией согласует exact canonical path.
-11. Optional autostart/background mode оставить отдельной явной настройкой, а не
+12. Optional autostart/background mode оставить отдельной явной настройкой, а не
    обязательным Task Scheduler этапом.
-12. Добавить production macOS/Linux local key provider, согласованный monotonic
+13. Добавить production macOS/Linux local key provider, согласованный monotonic
    witness и lifecycle обновления portable recovery package; затем mobile
    providers. Расширить pseudonymous M0.9.29 lookup до privacy-preserving
    gossip/mailbox. Live camera/clipboard оставить platform UI.
-13. Спроектировать membership removal вместе с ordered security log и MLS epoch;
+14. Спроектировать membership removal вместе с ordered security log и MLS epoch;
    отдельно — gossip/witness для first-contact freshness.
-14. Спроектировать полное seed/recovery authority с monotonic history/witness,
+15. Спроектировать полное seed/recovery authority с monotonic history/witness,
    root rotation и конфликтующие authority operations.
-15. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
-16. Спроектировать финальный wire format подписанного события и алгоритм
+16. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
+17. Спроектировать финальный wire format подписанного события и алгоритм
    линеаризации.
-17. Спроектировать compact Merkle/range summary и переносимый signed cursor.
-18. Добавить небольшие MLS-группы.
-19. Перед публичным выпуском провести независимый криптографический аудит.
+18. Спроектировать compact Merkle/range summary и переносимый signed cursor.
+19. Добавить небольшие MLS-группы.
+20. Перед публичным выпуском провести независимый криптографический аудит.
 
 ## Навигация
 
@@ -538,6 +541,8 @@ global prekey discovery/witness, автоматический recovery source di
   реализованный M0.9.37 source-signed recipient-HPKE endpoint bundle, exact own-roster import gate и sibling publication high-water evidence.
 - [`../docs/RFC-0060-network-own-device-endpoint-announcements.md`](../docs/RFC-0060-network-own-device-endpoint-announcements.md) —
   реализованный M0.9.38 authenticated same-account network push, общий import gate, session-bound recipient ACK и bounded backpressure.
+- [`../docs/RFC-0061-multi-audience-own-device-automation.md`](../docs/RFC-0061-multi-audience-own-device-automation.md) —
+  реализованный M0.9.39 dual signed ticket views, bounded multi-audience listener и Device-signed foreground own-device schedule с backoff/compaction.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

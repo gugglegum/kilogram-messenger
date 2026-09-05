@@ -186,9 +186,12 @@ sessions, distribution, removal и key epochs и не решены этим пр
   observation evidence в recipient-HPKE bundle, требует exact current Root
   roster и не принимает bundle как authority. M0.9.38 переносит exact bundle
   по authenticated same-account session и возвращает session-bound recipient
-  ACK с bounded one-shot backpressure. Открыты multi-audience discovery/
-  durable foreground schedule, compaction этой evidence и обнаружение
-  equivocation между устройствами, которые никогда не обменивались bundle.
+  ACK с bounded one-shot backpressure. M0.9.39 даёт одному listener bounded
+  primary+own Account аудитории, stable own-device ticket и signed durable
+  foreground schedule с backoff/network policy/compaction. Открыты
+  privacy-preserving distribution этих recipient ticket без общей папки,
+  compaction принятой sibling evidence и обнаружение equivocation между
+  устройствами, которые никогда не обменивались bundle.
 - M0.9.32 compact/checkpoint-ит runtime publication, observation, policy и
   attempt chains до exact signed heads за device-signed cumulative checkpoint;
   DB-primary checkpoint/removals атомарны и crash-safe. Открытым остаётся

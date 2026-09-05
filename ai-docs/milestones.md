@@ -2877,12 +2877,38 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - contract зафиксирован в
   [`../docs/RFC-0060-network-own-device-endpoint-announcements.md`](../docs/RFC-0060-network-own-device-endpoint-announcements.md).
 
+### M0.9.39 — multi-audience own-device automation: выполнено
+
+Реализовано:
+
+- один long-lived Iroh endpoint теперь публикует обычный per-peer ticket и
+  отдельный stable own-account ticket; runtime принимает exact primary Account
+  либо exact-current собственный Root Account, не расширяя аудиторию дальше;
+- own-device ticket атомарно заменяется рядом с IPC/primary ticket под полным
+  Device ID и переиздаётся после live Root-signed roster update;
+- IPC v13 конфигурирует opt-in Device-signed policy chain на каждый active
+  sibling Device: interval, envelope validity, bounded retry и отдельные
+  Ethernet/Wi-Fi/mobile/unknown permissions;
+- foreground actor выполняет максимум один due push за automation check через
+  тот же M0.9.38 session/import/recipient-ACK gate, сохраняет Device-signed
+  success/backoff attempt и учитывает общий outbound-action limit;
+- schedule переживает restart из vault-primary state, честно показывает
+  `due`/`fresh`/`backoff`/`network-blocked`/`recipient-revoked`/`disabled` и не
+  включает Windows Task Scheduler или иной OS background service;
+- policy/attempt chains имеют global record bound и входят в существующую
+  transactional Device-signed checkpoint compaction;
+- сквозной regression использует внешний peer Account как primary audience,
+  успешно принимает собственный Device по второму ticket, выполняет explicit и
+  automatic direct push, затем проверяет сохранённые policy/attempt heads;
+- contract зафиксирован в
+  [`../docs/RFC-0061-multi-audience-own-device-automation.md`](../docs/RFC-0061-multi-audience-own-device-automation.md).
+
 ### Следующий этап
 
-1. M0.9.39: дать long-lived runtime multi-audience inbound authorization и
-   durable bounded own-device transfer schedule, чтобы foreground clients могли
-   обмениваться announcement без переключения single-requester ticket; OS
-   autostart остаётся отдельной опцией.
+1. M0.9.40: дать authenticated privacy-preserving bounded distribution свежих
+   recipient-specific own-device tickets, чтобы schedule не зависел от общей
+   папки или ручного копирования; offline store остаётся непрозрачным carrier,
+   а Root roster — единственной authority.
 2. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.

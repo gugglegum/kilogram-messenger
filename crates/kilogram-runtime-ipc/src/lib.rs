@@ -21,7 +21,7 @@ use tokio::{
     time::timeout,
 };
 
-const IPC_VERSION: u8 = 12;
+const IPC_VERSION: u8 = 13;
 const MAX_DESCRIPTOR_BYTES: u64 = 16 * 1024;
 const MAX_LAUNCH_PROFILE_BYTES: u64 = 64 * 1024;
 const MAX_LAUNCH_PROFILE_PATHS: usize = 64;
@@ -404,6 +404,19 @@ pub enum RuntimeIpcCommand {
         recipient_ticket_file: PathBuf,
         validity_seconds: u64,
     },
+    ConfigureOwnDeviceAnnouncementAutomation {
+        recipient_ticket_file: PathBuf,
+        enabled: bool,
+        interval_seconds: u64,
+        validity_seconds: u64,
+        retry_base_seconds: u64,
+        retry_max_seconds: u64,
+        allow_ethernet: bool,
+        allow_wifi: bool,
+        allow_mobile: bool,
+        allow_unknown_network: bool,
+    },
+    OwnDeviceAnnouncementAutomationStatus,
     ConversationList,
     HistoryPage {
         conversation: String,
@@ -827,6 +840,33 @@ pub struct RuntimeIpcEndpointAnnouncementPush {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcOwnDeviceAnnouncementAutomationStatus {
+    pub recipient_device_id: DeviceId,
+    pub enabled: bool,
+    pub policy_generation: u64,
+    pub recipient_ticket_file: PathBuf,
+    pub interval_seconds: u64,
+    pub validity_seconds: u64,
+    pub retry_base_seconds: u64,
+    pub retry_max_seconds: u64,
+    pub allow_ethernet: bool,
+    pub allow_wifi: bool,
+    pub allow_mobile: bool,
+    pub allow_unknown_network: bool,
+    pub current_network: RuntimeIpcNetworkClass,
+    pub network_allowed: bool,
+    pub state: String,
+    pub last_attempt_unix_seconds: Option<u64>,
+    pub last_success_unix_seconds: Option<u64>,
+    pub next_attempt_unix_seconds: Option<u64>,
+    pub consecutive_failures: u32,
+    pub last_bundle_id: Option<String>,
+    pub last_transport_path: Option<String>,
+    pub execution_scope: String,
+    pub os_background_service_enabled: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum RuntimeIpcResponse {
     Pong {
         account_id: AccountId,
@@ -855,6 +895,8 @@ pub enum RuntimeIpcResponse {
     EndpointAnnouncementsExported(Box<RuntimeIpcEndpointAnnouncementExport>),
     EndpointAnnouncementsImported(Box<RuntimeIpcEndpointAnnouncementImport>),
     EndpointAnnouncementsPushed(Box<RuntimeIpcEndpointAnnouncementPush>),
+    OwnDeviceAnnouncementAutomationConfigured(Box<RuntimeIpcOwnDeviceAnnouncementAutomationStatus>),
+    OwnDeviceAnnouncementAutomationStatus(Vec<RuntimeIpcOwnDeviceAnnouncementAutomationStatus>),
     ConversationList(Vec<RuntimeIpcConversationSummary>),
     HistoryPage(RuntimeIpcHistoryPage),
     ChangeState {

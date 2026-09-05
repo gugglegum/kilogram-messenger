@@ -1361,3 +1361,35 @@ retirement остальных compatibility shadows ещё не реализов
   `F9D06E5D2BA6A8F44714ACE88701FCBAF475E47C98F5F78DF740CAD7E82EA3DC`;
   `target/release/kilogram-ticket-store.exe` — 2,581,504 bytes, SHA-256
   `123887E3B8F607F77A5BEE8969B5B9B73ABC189BAEC1BD51AFFA925183020191`.
+
+## M0.9.39 verification snapshot (2026-09-05)
+
+- Новый two-runtime regression запускает оба listener с внешним peer Account
+  как primary audience, ждёт автоматически опубликованные own-device tickets,
+  выполняет explicit и scheduled same-account push по тому же endpoint и
+  проверяет direct ACK, idempotent recipient import и persisted signed
+  policy/attempt heads.
+- Compaction regression теперь покрывает одновременно observation, ordinary
+  policy/publish/refresh attempt и own-device policy/attempt chains: после
+  transactional checkpoint остаётся шесть authenticated heads и restart
+  принимает их без discarded prefix.
+- Случайная гонка существующего ticket-automation regression устранена:
+  сначала подтверждается Bob publication generation 2, затем convergence ждёт
+  требуемую generation, а не любой ранее успешный refresh.
+- `cargo test --workspace --all-targets`: 209 tests, 0 failed.
+- `cargo fmt --all -- --check`, `git diff --check` и strict
+  `cargo clippy --workspace --all-targets --all-features -- -D warnings`
+  проходят.
+- Dedicated `cargo test --release -p kilogram-cli
+  runtime_multi_audience_pushes_and_automates_own_device_announcements` и
+  `cargo build --workspace --release` проходят; stable-name
+  CLI/bootstrap/store `--help` и hidden GUI launch smoke успешны.
+- Windows artifacts со стабильными именами:
+  `target/release/kilogram-bootstrap.exe` — 20,476,928 bytes, SHA-256
+  `078CA596836462B2D1340A33A3FD2CAD5CE5F5A7BD8B69B043864526E706787A`;
+  `target/release/kilogram-cli.exe` — 25,308,160 bytes, SHA-256
+  `674F9842DBA0AA8A91C926AF89F8A1E537BDD0A1EADA1BD0DA254CB9ED496B5C`;
+  `target/release/kilogram-windows.exe` — 8,008,192 bytes, SHA-256
+  `470689F8B2BBB4356BEEB7DCF575601C2294F86BAD5A365145B60D8AF6B4EEA8`;
+  `target/release/kilogram-ticket-store.exe` — 2,581,504 bytes, SHA-256
+  `123887E3B8F607F77A5BEE8969B5B9B73ABC189BAEC1BD51AFFA925183020191`.

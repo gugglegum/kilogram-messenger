@@ -5,6 +5,10 @@ use kilogram_identity::{AccountId, DeviceId, DeviceIdentity};
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    runtime_own_device_automation::{
+        OwnDeviceAnnouncementAttemptId, OwnDeviceAnnouncementPolicyId,
+        SignedOwnDeviceAnnouncementAttempt, SignedOwnDeviceAnnouncementPolicy,
+    },
     runtime_publication::{
         SignedTicketPublication, SignedTicketPublicationObservation, TicketPublicationChannelId,
         TicketPublicationId, TicketPublicationObservationId,
@@ -63,6 +67,17 @@ pub enum RuntimeTicketChainAnchor {
         policy_generation: u64,
         record_id: TicketAutomationAttemptId,
     },
+    OwnDevicePolicy {
+        recipient_device_id: DeviceId,
+        generation: u64,
+        record_id: OwnDeviceAnnouncementPolicyId,
+    },
+    OwnDeviceAttempt {
+        recipient_device_id: DeviceId,
+        generation: u64,
+        policy_generation: u64,
+        record_id: OwnDeviceAnnouncementAttemptId,
+    },
 }
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -71,6 +86,8 @@ enum RuntimeTicketChainKey {
     Observation(TicketPublicationChannelId),
     Policy(RuntimeContactId),
     Attempt(RuntimeContactId, TicketAutomationAction),
+    OwnDevicePolicy(DeviceId),
+    OwnDeviceAttempt(DeviceId),
 }
 
 impl RuntimeTicketChainAnchor {
@@ -113,6 +130,25 @@ impl RuntimeTicketChainAnchor {
         })
     }
 
+    pub fn own_device_policy(value: &SignedOwnDeviceAnnouncementPolicy) -> Result<Self> {
+        value.verify_signature()?;
+        Ok(Self::OwnDevicePolicy {
+            recipient_device_id: value.recipient_device_id(),
+            generation: value.generation(),
+            record_id: value.policy_id()?,
+        })
+    }
+
+    pub fn own_device_attempt(value: &SignedOwnDeviceAnnouncementAttempt) -> Result<Self> {
+        value.verify_signature()?;
+        Ok(Self::OwnDeviceAttempt {
+            recipient_device_id: value.recipient_device_id(),
+            generation: value.generation(),
+            policy_generation: value.policy_generation(),
+            record_id: value.attempt_id()?,
+        })
+    }
+
     fn key(&self) -> RuntimeTicketChainKey {
         match self {
             Self::Publication { channel_id, .. } => RuntimeTicketChainKey::Publication(*channel_id),
@@ -121,6 +157,14 @@ impl RuntimeTicketChainAnchor {
             Self::Attempt {
                 contact_id, action, ..
             } => RuntimeTicketChainKey::Attempt(*contact_id, *action),
+            Self::OwnDevicePolicy {
+                recipient_device_id,
+                ..
+            } => RuntimeTicketChainKey::OwnDevicePolicy(*recipient_device_id),
+            Self::OwnDeviceAttempt {
+                recipient_device_id,
+                ..
+            } => RuntimeTicketChainKey::OwnDeviceAttempt(*recipient_device_id),
         }
     }
 
@@ -129,7 +173,9 @@ impl RuntimeTicketChainAnchor {
             Self::Publication { generation, .. }
             | Self::Observation { generation, .. }
             | Self::Policy { generation, .. }
-            | Self::Attempt { generation, .. } => *generation,
+            | Self::Attempt { generation, .. }
+            | Self::OwnDevicePolicy { generation, .. }
+            | Self::OwnDeviceAttempt { generation, .. } => *generation,
         }
     }
 }
@@ -425,6 +471,37 @@ impl SignedRuntimeTicketCheckpoint {
             _ => None,
         })
     }
+
+    pub fn own_device_policy_anchor(
+        &self,
+        expected_recipient: DeviceId,
+    ) -> Option<(u64, OwnDeviceAnnouncementPolicyId)> {
+        self.content.anchors.iter().find_map(|anchor| match anchor {
+            RuntimeTicketChainAnchor::OwnDevicePolicy {
+                recipient_device_id,
+                generation,
+                record_id,
+            } if *recipient_device_id == expected_recipient => Some((*generation, *record_id)),
+            _ => None,
+        })
+    }
+
+    pub fn own_device_attempt_anchor(
+        &self,
+        expected_recipient: DeviceId,
+    ) -> Option<(u64, u64, OwnDeviceAnnouncementAttemptId)> {
+        self.content.anchors.iter().find_map(|anchor| match anchor {
+            RuntimeTicketChainAnchor::OwnDeviceAttempt {
+                recipient_device_id,
+                generation,
+                policy_generation,
+                record_id,
+            } if *recipient_device_id == expected_recipient => {
+                Some((*generation, *policy_generation, *record_id))
+            }
+            _ => None,
+        })
+    }
 }
 
 fn validate_anchors(anchors: &[RuntimeTicketChainAnchor]) -> Result<()> {
@@ -450,12 +527,17 @@ fn validate_anchors(anchors: &[RuntimeTicketChainAnchor]) -> Result<()> {
             | RuntimeTicketChainAnchor::Attempt {
                 policy_generation: publication_generation,
                 ..
+            }
+            | RuntimeTicketChainAnchor::OwnDeviceAttempt {
+                policy_generation: publication_generation,
+                ..
             } => ensure!(
                 *publication_generation != 0,
                 "runtime ticket checkpoint contains a zero high-water generation"
             ),
             RuntimeTicketChainAnchor::Publication { .. }
-            | RuntimeTicketChainAnchor::Policy { .. } => {}
+            | RuntimeTicketChainAnchor::Policy { .. }
+            | RuntimeTicketChainAnchor::OwnDevicePolicy { .. } => {}
         }
     }
     Ok(())
