@@ -1554,3 +1554,36 @@ retirement остальных compatibility shadows ещё не реализов
   `90126471E85AA39C7B03B6D88192C12F700C6963D45C392B1FE6648D97EF8AF5`;
   `target/release/kilogram-ticket-store.exe` — 2,581,504 bytes, SHA-256
   `4C90CDE6CEB527B1D02243A01EEFDA2DA043450A9127AE653F366B251CADAC7C`.
+
+## M0.9.45 verification snapshot (2026-09-06)
+
+- Three-Device regression проверяет разделённую recovery ceremony: C создаёт
+  Device-signed `.pcrq`, offline Account Root независимо проверяет evidence,
+  authority revision и replacement ticket и выпускает self-contained `.pcrp`.
+  Tampered request/response и подпись чужого Root отклоняются.
+- Только C применяет response вручную. Затем C -> A -> B endpoint-announcement
+  propagation переносит exact Root resolution и replacement descriptor;
+  все три Devices снимают quarantine, сохраняют один `.pcr` и сходятся на
+  новом publication channel. Повторное применение остаётся идемпотентным.
+- Desktop incident panel создаёт online request и применяет offline response,
+  но не получает Account Root path или secret. IPC contract обновлён до v18,
+  endpoint-announcement bundle до v4, acknowledgement до v2.
+- Первый `cargo test --workspace --no-fail-fast -- --test-threads=1` дал
+  213 passed / 1 failed из-за уже наблюдавшегося transient Windows race при
+  создании temp transaction directory (`os error 3`). Точный повтор
+  `runtime_outbox_delivers_and_automatic_sync_converges` успешен: 1 passed,
+  0 failed за 109.02 s. Новый focused regression также успешен в debug и
+  release profiles.
+- `cargo fmt --all -- --check`, `git diff --check` и strict
+  `cargo clippy --workspace --all-targets --all-features -- -D warnings`
+  проходят. `cargo build --workspace --release`, справка CLI/new offline
+  recovery commands/bootstrap/store и hidden GUI launch smoke успешны.
+- Windows artifacts со стабильными именами:
+  `target/release/kilogram-bootstrap.exe` — 20,480,512 bytes, SHA-256
+  `84DB5B0B426A1C3F69D2B0E69BFC601BF138570B7590E983A2ECA93A535EE35E`;
+  `target/release/kilogram-cli.exe` — 26,003,456 bytes, SHA-256
+  `3058D030C9E136647F480322A4F08BDBCBCDE63B1FC7BB2D91483DBFBF745395`;
+  `target/release/kilogram-windows.exe` — 8,055,808 bytes, SHA-256
+  `2788F97D1926BEBBB6429B776C344E5D90E01F0D7D477673229423D5F7D3FC8D`;
+  `target/release/kilogram-ticket-store.exe` — 2,581,504 bytes, SHA-256
+  `4C90CDE6CEB527B1D02243A01EEFDA2DA043450A9127AE653F366B251CADAC7C`.

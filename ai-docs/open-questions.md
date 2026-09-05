@@ -197,10 +197,11 @@ sessions, distribution, removal и key epochs и не решены этим пр
   после live Root revocation; один runtime не запускает parallel fan-out.
   M0.9.42 переносит higher direct/accepted high-water транзитивно через bundle
   v2, M0.9.43 сохраняет первый mismatch в local-Device-signed `.pcf`, а
-  M0.9.44 распространяет canonical proof через bundle v3 и разрешает только
-  Root-authorized переход на peer-signed ticket v11 с новым channel epoch.
-  Открыты offline request/response Root signer и автоматический перенос
-  resolution к siblings, обнаружение конфликта между устройствами, которые
+  M0.9.44 распространяет canonical proof и разрешает только Root-authorized
+  переход на peer-signed ticket v11 с новым channel epoch. M0.9.45 разделяет
+  online `.pcrq`/offline `.pcrp`, а bundle v4 автоматически переносит готовый
+  resolution к exact-current siblings с тем же local evidence. Открыты live
+  rotation без restart, обнаружение конфликта между устройствами, которые
   никогда не обменивались bundle, и действительно распределённая
   cross-machine координация без доверенного scheduler.
 - M0.9.32 compact/checkpoint-ит runtime publication, observation, policy и

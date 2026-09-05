@@ -14,18 +14,19 @@ use crate::runtime_publication::{
     SignedTicketPublicationObservation, TicketPublicationChannelId, TicketPublicationId,
 };
 use crate::runtime_publication_conflict::SignedPublicationConflictProof;
+use crate::runtime_publication_resolution::RootSignedPublicationConflictResolution;
 
-const BUNDLE_VERSION: u8 = 3;
+const BUNDLE_VERSION: u8 = 4;
 const ENVELOPE_VERSION: u8 = 1;
 const EVIDENCE_VERSION: u8 = 1;
-const ACKNOWLEDGEMENT_VERSION: u8 = 1;
-const BUNDLE_SIGNATURE_DOMAIN: &[u8] = b"kilogram:endpoint-announcement-bundle:v3\0";
-const BUNDLE_ID_DOMAIN: &[u8] = b"kilogram:endpoint-announcement-bundle-id:v3\0";
+const ACKNOWLEDGEMENT_VERSION: u8 = 2;
+const BUNDLE_SIGNATURE_DOMAIN: &[u8] = b"kilogram:endpoint-announcement-bundle:v4\0";
+const BUNDLE_ID_DOMAIN: &[u8] = b"kilogram:endpoint-announcement-bundle-id:v4\0";
 const ENVELOPE_HPKE_INFO: &[u8] = b"kilogram:endpoint-announcement-envelope:v1";
 const EVIDENCE_SIGNATURE_DOMAIN: &[u8] = b"kilogram:accepted-endpoint-observation:v1\0";
 const EVIDENCE_ID_DOMAIN: &[u8] = b"kilogram:accepted-endpoint-observation-id:v1\0";
 const ACKNOWLEDGEMENT_SIGNATURE_DOMAIN: &[u8] =
-    b"kilogram:endpoint-announcement-acknowledgement:v1\0";
+    b"kilogram:endpoint-announcement-acknowledgement:v2\0";
 const MAX_CLOCK_SKEW_SECONDS: u64 = 5 * 60;
 pub const DEFAULT_ENDPOINT_ANNOUNCEMENT_VALIDITY_SECONDS: u64 = 15 * 60;
 pub const MAX_ENDPOINT_ANNOUNCEMENT_VALIDITY_SECONDS: u64 = 60 * 60;
@@ -70,6 +71,8 @@ struct EndpointAnnouncementAcknowledgementContent {
     observation_evidence_added_count: usize,
     publication_conflict_count: usize,
     publication_conflict_added_count: usize,
+    publication_resolution_count: usize,
+    publication_resolution_added_count: usize,
 }
 
 /// Recipient-signed proof that one exact announcement bundle passed the local import gate.
@@ -99,6 +102,8 @@ impl SignedEndpointAnnouncementAcknowledgement {
         observation_evidence_added_count: usize,
         publication_conflict_count: usize,
         publication_conflict_added_count: usize,
+        publication_resolution_count: usize,
+        publication_resolution_added_count: usize,
     ) -> Result<Self> {
         let content = EndpointAnnouncementAcknowledgementContent {
             version: ACKNOWLEDGEMENT_VERSION,
@@ -116,6 +121,8 @@ impl SignedEndpointAnnouncementAcknowledgement {
             observation_evidence_added_count,
             publication_conflict_count,
             publication_conflict_added_count,
+            publication_resolution_count,
+            publication_resolution_added_count,
         };
         let signature = identity
             .sign(&signing_bytes(ACKNOWLEDGEMENT_SIGNATURE_DOMAIN, &content)?)
@@ -183,7 +190,10 @@ impl SignedEndpointAnnouncementAcknowledgement {
                     <= self.content.observation_evidence_count
                 && self.content.publication_conflict_count <= self.content.endpoint_count
                 && self.content.publication_conflict_added_count
-                    <= self.content.publication_conflict_count,
+                    <= self.content.publication_conflict_count
+                && self.content.publication_resolution_count <= self.content.endpoint_count
+                && self.content.publication_resolution_added_count
+                    <= self.content.publication_resolution_count,
             "endpoint announcement acknowledgement contains inconsistent counts"
         );
         ensure!(
@@ -241,6 +251,14 @@ impl SignedEndpointAnnouncementAcknowledgement {
     pub fn publication_conflict_added_count(&self) -> usize {
         self.content.publication_conflict_added_count
     }
+
+    pub fn publication_resolution_count(&self) -> usize {
+        self.content.publication_resolution_count
+    }
+
+    pub fn publication_resolution_added_count(&self) -> usize {
+        self.content.publication_resolution_added_count
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -288,9 +306,11 @@ pub struct EndpointCandidateAnnouncement {
     ticket: String,
     latest_observation: Option<EndpointObservationAnnouncement>,
     publication_conflict: Option<SignedPublicationConflictProof>,
+    publication_resolution: Option<RootSignedPublicationConflictResolution>,
 }
 
 impl EndpointCandidateAnnouncement {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         peer_device_id: DeviceId,
         primary: bool,
@@ -299,6 +319,7 @@ impl EndpointCandidateAnnouncement {
         ticket: String,
         latest_observation: Option<EndpointObservationAnnouncement>,
         publication_conflict: Option<SignedPublicationConflictProof>,
+        publication_resolution: Option<RootSignedPublicationConflictResolution>,
     ) -> Result<Self> {
         let value = Self {
             peer_device_id,
@@ -308,6 +329,7 @@ impl EndpointCandidateAnnouncement {
             ticket,
             latest_observation,
             publication_conflict,
+            publication_resolution,
         };
         value.verify()?;
         Ok(value)
@@ -325,6 +347,10 @@ impl EndpointCandidateAnnouncement {
             self.latest_observation.is_none() || self.publication_conflict.is_none(),
             "endpoint announcement cannot carry both an observation and a conflict proof"
         );
+        ensure!(
+            self.publication_conflict.is_none() || self.publication_resolution.is_none(),
+            "endpoint announcement cannot carry both an active conflict and its resolution"
+        );
         if let Some(observation) = &self.latest_observation {
             observation.verify()?;
             let source_observation = observation.source_observation();
@@ -340,6 +366,16 @@ impl EndpointCandidateAnnouncement {
                 proof.channel_id() == self.ticket_publication_write_key.channel_id()
                     && proof.publisher_device_id() == self.peer_device_id,
                 "endpoint announcement conflict proof does not match its endpoint"
+            );
+        }
+        if let Some(resolution) = &self.publication_resolution {
+            resolution.verify()?;
+            ensure!(
+                resolution.peer_device_id() == self.peer_device_id
+                    && resolution.new_write_key() == self.ticket_publication_write_key
+                    && resolution.replacement_ticket_digest()
+                        == *blake3::hash(self.ticket.as_bytes()).as_bytes(),
+                "endpoint announcement resolution does not match its replacement endpoint"
             );
         }
         Ok(())
@@ -371,6 +407,10 @@ impl EndpointCandidateAnnouncement {
 
     pub fn publication_conflict(&self) -> Option<&SignedPublicationConflictProof> {
         self.publication_conflict.as_ref()
+    }
+
+    pub fn publication_resolution(&self) -> Option<&RootSignedPublicationConflictResolution> {
+        self.publication_resolution.as_ref()
     }
 }
 
@@ -436,6 +476,12 @@ impl ContactEndpointAnnouncement {
                 ensure!(
                     proof.publisher_account_id() == self.peer_account_id,
                     "endpoint announcement conflict proof names another peer account"
+                );
+            }
+            if let Some(resolution) = endpoint.publication_resolution() {
+                ensure!(
+                    resolution.peer_account_id() == self.peer_account_id,
+                    "endpoint announcement resolution names another peer account"
                 );
             }
             previous = Some(endpoint.peer_device_id);
@@ -605,6 +651,15 @@ impl SignedEndpointAnnouncementBundle {
                                 .certificate_for(proof.detector_device_id())
                                 .is_some(),
                         "endpoint announcement conflict proof detector is not an exact-current Account Device"
+                    );
+                }
+                if let Some(resolution) = endpoint.publication_resolution() {
+                    ensure!(
+                        resolution.local_account_id()
+                            == self.content.account_device_list.account_id()
+                            && resolution.authority_revision()
+                                == self.content.account_device_list.revision(),
+                        "endpoint announcement resolution is not for its exact Account authority"
                     );
                 }
             }
@@ -1001,6 +1056,8 @@ mod tests {
             bundle.bundle_id()?,
             source.device_id(),
             list.revision(),
+            0,
+            0,
             0,
             0,
             0,

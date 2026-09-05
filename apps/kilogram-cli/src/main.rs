@@ -154,7 +154,8 @@ use runtime_publication::{
 use runtime_publication_conflict::{PublicationConflictProofId, SignedPublicationConflictProof};
 use runtime_publication_resolution::{
     PublicationChannelRotationId, PublicationConflictResolutionId,
-    RootSignedPublicationConflictResolution, SignedPublicationChannelRotation,
+    PublicationConflictResolutionResponse, RootSignedPublicationConflictResolution,
+    SignedPublicationChannelRotation, SignedPublicationConflictResolutionRequest,
 };
 use runtime_queue::{
     MAX_RUNTIME_RECORD_BYTES, RuntimeContactId, RuntimeDeviceDirectoryReceiptId,
@@ -511,15 +512,11 @@ enum Command {
         peer_account: AccountId,
     },
 
-    /// Root-authorize one exact quarantined channel replacement after manual audit.
-    RuntimePublicationConflictAuthorizeResolution {
+    /// Create a bounded Device-signed request for an offline Root signer.
+    RuntimePublicationConflictCreateRequest {
         /// Directory containing the quarantined runtime state.
         #[arg(long)]
         state_dir: PathBuf,
-
-        /// Offline Account Root directory for this local account.
-        #[arg(long)]
-        account_dir: PathBuf,
 
         /// Quarantined publication channel selected after operator audit.
         #[arg(long)]
@@ -529,24 +526,35 @@ enum Command {
         #[arg(long)]
         replacement_ticket_file: PathBuf,
 
-        /// New no-clobber Root-signed resolution artifact.
+        /// New no-clobber request artifact for transfer to an offline Root signer.
         #[arg(long)]
         output_file: PathBuf,
     },
 
-    /// Apply a Root-authorized conflict resolution and atomically install its exact replacement descriptor.
-    RuntimePublicationConflictApplyResolution {
+    /// Offline Root-authorize one exact Device-signed conflict-resolution request.
+    AccountPublicationConflictAuthorize {
+        /// Offline Account Root directory for this local account.
+        #[arg(long)]
+        account_dir: PathBuf,
+
+        /// Device-signed request copied from the online runtime host.
+        #[arg(long)]
+        request_file: PathBuf,
+
+        /// New self-contained Root response copied back to an online device.
+        #[arg(long)]
+        output_file: PathBuf,
+    },
+
+    /// Apply a self-contained Root response and atomically install its replacement descriptor.
+    RuntimePublicationConflictApplyResponse {
         /// Directory containing the quarantined runtime state.
         #[arg(long)]
         state_dir: PathBuf,
 
-        /// Root-signed resolution artifact.
+        /// Root-authorized response containing the exact replacement descriptor.
         #[arg(long)]
-        resolution_file: PathBuf,
-
-        /// Exact fresh peer-signed descriptor bound by the resolution.
-        #[arg(long)]
-        replacement_ticket_file: PathBuf,
+        response_file: PathBuf,
     },
 
     /// Add one locally encrypted message to the durable runtime outbox.
@@ -1762,8 +1770,8 @@ impl Command {
             | Self::Runtime { state_dir, .. }
             | Self::RuntimeContactAdd { state_dir, .. }
             | Self::RuntimePublicationChannelRotate { state_dir, .. }
-            | Self::RuntimePublicationConflictAuthorizeResolution { state_dir, .. }
-            | Self::RuntimePublicationConflictApplyResolution { state_dir, .. }
+            | Self::RuntimePublicationConflictCreateRequest { state_dir, .. }
+            | Self::RuntimePublicationConflictApplyResponse { state_dir, .. }
             | Self::RuntimeQueueMessage { state_dir, .. }
             | Self::RuntimeOutboxStatus { state_dir, .. }
             | Self::Connect { state_dir, .. }
@@ -1804,6 +1812,7 @@ impl Command {
             | Self::AccountShow { .. }
             | Self::AccountSnapshot { .. }
             | Self::AccountDeviceList { .. }
+            | Self::AccountPublicationConflictAuthorize { .. }
             | Self::ConversationCreate { .. }
             | Self::ConversationMemberAdd { .. }
             | Self::DeviceRevoke { .. }
@@ -1841,7 +1850,7 @@ impl Command {
                     | Self::StateVaultKeyImport { .. }
                     | Self::StateVaultRestore { .. }
                     | Self::Runtime { .. }
-                    | Self::RuntimePublicationConflictAuthorizeResolution { .. }
+                    | Self::RuntimePublicationConflictCreateRequest { .. }
                     | Self::HistoryRecoveryPlanRun { .. }
                     | Self::HistoryRecoveryPlanWatch { .. }
             )
@@ -2677,28 +2686,30 @@ async fn run_command(command: Command) -> Result<()> {
             state_dir,
             peer_account,
         } => rotate_runtime_publication_channel(state_dir, peer_account),
-        Command::RuntimePublicationConflictAuthorizeResolution {
+        Command::RuntimePublicationConflictCreateRequest {
             state_dir,
-            account_dir,
             channel,
             replacement_ticket_file,
             output_file,
-        } => authorize_runtime_publication_conflict_resolution(
+        } => create_runtime_publication_conflict_resolution_request(
             state_dir,
-            account_dir,
             channel,
             replacement_ticket_file,
             output_file,
         ),
-        Command::RuntimePublicationConflictApplyResolution {
-            state_dir,
-            resolution_file,
-            replacement_ticket_file,
-        } => apply_runtime_publication_conflict_resolution(
-            state_dir,
-            resolution_file,
-            replacement_ticket_file,
+        Command::AccountPublicationConflictAuthorize {
+            account_dir,
+            request_file,
+            output_file,
+        } => authorize_account_publication_conflict_resolution(
+            account_dir,
+            request_file,
+            output_file,
         ),
+        Command::RuntimePublicationConflictApplyResponse {
+            state_dir,
+            response_file,
+        } => apply_runtime_publication_conflict_resolution_response(state_dir, response_file),
         Command::RuntimeQueueMessage {
             state_dir,
             conversation,
@@ -4265,6 +4276,14 @@ impl RuntimeStateSnapshot {
                 || binding.ticket_publication_write_key(),
                 RootSignedPublicationConflictResolution::new_write_key,
             )
+    }
+
+    fn publication_conflict_resolution(
+        &self,
+        binding: &SignedRuntimeEndpointPublicationBinding,
+    ) -> Option<&RootSignedPublicationConflictResolution> {
+        self.publication_conflict_resolutions
+            .get(&binding.ticket_publication_write_key().channel_id())
     }
 
     fn latest_ticket_automation_policy(
@@ -6880,6 +6899,7 @@ struct PreparedRuntimeEndpointAnnouncementExport {
     endpoint_count: usize,
     observation_count: usize,
     publication_conflict_count: usize,
+    publication_resolution_count: usize,
     expires_at_unix_seconds: u64,
     envelope: EncryptedEndpointAnnouncementBundle,
 }
@@ -6928,6 +6948,7 @@ fn build_runtime_endpoint_announcements(
     let mut endpoint_count = 0_usize;
     let mut observation_count = 0_usize;
     let mut publication_conflict_count = 0_usize;
+    let mut publication_resolution_count = 0_usize;
     for contact in snapshot.contacts.values() {
         let membership = trust
             .load_conversation_membership(contact.conversation_id().scope_id())
@@ -6972,8 +6993,10 @@ fn build_runtime_endpoint_announcements(
             let channel_id = effective_write_key.channel_id();
             let observation = runtime_endpoint_observation_announcement(&snapshot, channel_id)?;
             let publication_conflict = snapshot.publication_conflict(channel_id).cloned();
+            let publication_resolution = snapshot.publication_conflict_resolution(binding).cloned();
             observation_count += usize::from(observation.is_some());
             publication_conflict_count += usize::from(publication_conflict.is_some());
+            publication_resolution_count += usize::from(publication_resolution.is_some());
             endpoint_count += 1;
             endpoints.push(EndpointCandidateAnnouncement::new(
                 enrollment.peer_device_id,
@@ -6983,6 +7006,7 @@ fn build_runtime_endpoint_announcements(
                 encoded,
                 observation,
                 publication_conflict,
+                publication_resolution,
             )?);
         }
         announcements.push(ContactEndpointAnnouncement::new(
@@ -7011,6 +7035,7 @@ fn build_runtime_endpoint_announcements(
         endpoint_count,
         observation_count,
         publication_conflict_count,
+        publication_resolution_count,
         expires_at_unix_seconds: bundle.expires_at_unix_seconds(),
         envelope,
     })
@@ -7076,6 +7101,7 @@ fn export_runtime_endpoint_announcements(
         endpoint_count: prepared.endpoint_count,
         observation_count: prepared.observation_count,
         publication_conflict_count: prepared.publication_conflict_count,
+        publication_resolution_count: prepared.publication_resolution_count,
         expires_at_unix_seconds: prepared.expires_at_unix_seconds,
         output_file,
         protection: "source-device-signed-recipient-device-hpke-exact-root-roster".to_owned(),
@@ -7086,6 +7112,7 @@ fn export_runtime_endpoint_announcements(
 struct RuntimeEndpointAnnouncementImportPlan {
     relative_records: Vec<(PathBuf, Vec<u8>)>,
     external_descriptors: Vec<(PathBuf, Vec<u8>)>,
+    external_descriptor_replacements: Vec<(PathBuf, Vec<u8>)>,
     fresh_tickets: Vec<ConnectionTicket>,
     contact_count: usize,
     contact_added_count: usize,
@@ -7094,6 +7121,7 @@ struct RuntimeEndpointAnnouncementImportPlan {
     publication_binding_added_count: usize,
     observation_evidence_count: usize,
     publication_conflict_count: usize,
+    publication_resolution_count: usize,
 }
 
 fn persist_runtime_publication_conflict(
@@ -7223,25 +7251,16 @@ fn rotate_runtime_publication_channel(
     Ok(())
 }
 
-fn authorize_runtime_publication_conflict_resolution(
+fn create_runtime_publication_conflict_resolution_request(
     state_directory: PathBuf,
-    account_directory: PathBuf,
     channel_id: TicketPublicationChannelId,
     replacement_ticket_file: PathBuf,
     output_file: PathBuf,
 ) -> Result<()> {
-    let root = AccountRootState::load(&account_directory)
-        .context("load Account Root for publication conflict resolution")?;
     let device_state = load_command_device_state(&state_directory)?;
     let trust = CommandTrustReadRepository::open(&state_directory, &device_state)?;
     let local_certificate = trust.load_certificate()?;
     let local_authority = trust.load_own_authority_snapshot(&local_certificate)?;
-    ensure!(
-        root.account_id() == local_certificate.account_id()
-            && root.authority_snapshot()? == local_authority
-            && root.published_device_list()?.authority_snapshot() == &local_authority,
-        "Account Root is not at the exact runtime authority revision"
-    );
     let snapshot = load_runtime_state_snapshot(
         &state_directory,
         local_certificate.account_id(),
@@ -7300,24 +7319,25 @@ fn authorize_runtime_publication_conflict_resolution(
             .is_none(),
         "replacement peer ticket selects another quarantined channel"
     );
-    let replacement_digest = *blake3::hash(&replacement_bytes).as_bytes();
-    let resolution = RootSignedPublicationConflictResolution::sign(
-        &root,
+    let request = SignedPublicationConflictResolutionRequest::sign(
+        device_state.identity(),
+        local_certificate.account_id(),
         local_authority.revision(),
-        proof.evidence_id()?,
-        binding.peer_account_id(),
-        binding.peer_device_id(),
+        proof.clone(),
         binding.ticket_publication_write_key(),
         replacement.ticket_publication_write_key(),
-        replacement_digest,
+        current.ticket_publication_channel_epoch(),
+        replacement.ticket_publication_channel_epoch(),
+        binding.route_policy(),
+        replacement_bytes,
         unix_time_now()?,
     )?;
-    let resolution_id = resolution.resolution_id()?;
+    let request_id = request.request_id()?;
     let output_file = absolute_new_external_path(&state_directory, &output_file)?;
-    write_new_authority_file(&output_file, &resolution.encode()?)?;
+    write_new_authority_file(&output_file, &request.encode()?)?;
     println!("publication_conflict_proof_id={}", proof.proof_id()?);
     println!("publication_conflict_evidence_id={}", proof.evidence_id()?);
-    println!("publication_conflict_resolution_id={resolution_id}");
+    println!("publication_conflict_resolution_request_id={request_id}");
     println!("old_publication_channel_id={channel_id}");
     println!(
         "new_publication_channel_id={}",
@@ -7325,31 +7345,141 @@ fn authorize_runtime_publication_conflict_resolution(
     );
     println!("authority_revision={}", local_authority.revision());
     println!(
+        "requested_at_unix_seconds={}",
+        request.requested_at_unix_seconds()
+    );
+    println!("request_file={}", output_file.display());
+    println!("root_secret_loaded=false");
+    println!("conflict_proof_retention=required");
+    println!("status=publication-conflict-resolution-requested");
+    Ok(())
+}
+
+fn authorize_account_publication_conflict_resolution(
+    account_directory: PathBuf,
+    request_file: PathBuf,
+    output_file: PathBuf,
+) -> Result<()> {
+    let root = AccountRootState::load(&account_directory)
+        .context("load offline Account Root for publication conflict resolution")?;
+    let request_bytes = read_bounded_regular_file(
+        &request_file,
+        runtime_publication_resolution::MAX_PUBLICATION_CONFLICT_RESOLUTION_REQUEST_BYTES as u64,
+        "publication conflict resolution request",
+    )?;
+    let request = SignedPublicationConflictResolutionRequest::decode(&request_bytes)?;
+    let authority = root.authority_snapshot()?;
+    let devices = root.published_device_list()?;
+    ensure!(
+        request.local_account_id() == root.account_id()
+            && request.authority_revision() == authority.revision()
+            && devices.authority_snapshot() == &authority,
+        "resolution request is not for the exact current offline Root authority"
+    );
+    let requester_certificate = devices
+        .certificate_for(request.requester_device_id())
+        .context("resolution requester is not an exact-current Account Device")?;
+    verify_device_authorization_with_snapshot(
+        root.account_id(),
+        requester_certificate,
+        &authority,
+        &DeviceCapability::MESSAGING,
+    )
+    .context("resolution requester is not currently authorized for messaging")?;
+    let detector_certificate = devices
+        .certificate_for(request.conflict_proof().detector_device_id())
+        .context("conflict detector is not an exact-current Account Device")?;
+    verify_device_authorization_with_snapshot(
+        root.account_id(),
+        detector_certificate,
+        &authority,
+        &DeviceCapability::MESSAGING,
+    )
+    .context("conflict detector is not currently authorized for messaging")?;
+    let replacement = ConnectionTicket::decode(
+        std::str::from_utf8(request.replacement_ticket())
+            .context("request replacement peer ticket is not UTF-8")?,
+    )
+    .context("verify request replacement peer ticket")?;
+    ensure!(
+        replacement.listener_account_id() == request.peer_account_id()
+            && replacement.listener_device_id() == request.peer_device_id()
+            && replacement.allowed_requester_account_id() == root.account_id()
+            && replacement.route_policy() == request.route_policy()
+            && replacement.ticket_publication_write_key() == request.new_write_key()
+            && replacement.ticket_publication_channel_epoch() == request.new_channel_epoch()
+            && request.new_channel_epoch() > request.old_channel_epoch(),
+        "request replacement ticket does not match the Device-signed rotation summary"
+    );
+    let request_id = request.request_id()?;
+    let resolution = RootSignedPublicationConflictResolution::sign(
+        &root,
+        request_id,
+        authority.revision(),
+        request.conflict_proof().evidence_id()?,
+        request.peer_account_id(),
+        request.peer_device_id(),
+        request.old_write_key(),
+        request.new_write_key(),
+        request.replacement_ticket_digest(),
+        unix_time_now()?,
+    )?;
+    let response = PublicationConflictResolutionResponse::new(&request, resolution.clone())?;
+    write_new_authority_file(&output_file, &response.encode()?)?;
+    println!("publication_conflict_resolution_request_id={request_id}");
+    println!(
+        "publication_conflict_evidence_id={}",
+        request.conflict_proof().evidence_id()?
+    );
+    println!(
+        "publication_conflict_resolution_id={}",
+        resolution.resolution_id()?
+    );
+    println!(
+        "old_publication_channel_id={}",
+        request.old_write_key().channel_id()
+    );
+    println!(
+        "new_publication_channel_id={}",
+        request.new_write_key().channel_id()
+    );
+    println!("authority_revision={}", authority.revision());
+    println!(
         "authorized_at_unix_seconds={}",
         resolution.authorized_at_unix_seconds()
     );
-    println!("resolution_file={}", output_file.display());
-    println!("conflict_proof_retention=required");
+    println!("response_file={}", output_file.display());
+    println!("runtime_state_loaded=false");
     println!("status=publication-conflict-resolution-authorized");
     Ok(())
 }
 
+fn apply_runtime_publication_conflict_resolution_response(
+    state_directory: PathBuf,
+    response_file: PathBuf,
+) -> Result<()> {
+    let response_bytes = read_bounded_regular_file(
+        &response_file,
+        runtime_publication_resolution::MAX_PUBLICATION_CONFLICT_RESOLUTION_RESPONSE_BYTES as u64,
+        "publication conflict resolution response",
+    )?;
+    let response = PublicationConflictResolutionResponse::decode(&response_bytes)?;
+    println!(
+        "publication_conflict_resolution_request_id={}",
+        response.request_id()
+    );
+    apply_runtime_publication_conflict_resolution(
+        state_directory,
+        response.resolution().clone(),
+        response.replacement_ticket().to_vec(),
+    )
+}
+
 fn apply_runtime_publication_conflict_resolution(
     state_directory: PathBuf,
-    resolution_file: PathBuf,
-    replacement_ticket_file: PathBuf,
+    resolution: RootSignedPublicationConflictResolution,
+    replacement_bytes: Vec<u8>,
 ) -> Result<()> {
-    let resolution_bytes = read_bounded_regular_file(
-        &resolution_file,
-        runtime_publication_resolution::MAX_PUBLICATION_CONFLICT_RESOLUTION_BYTES as u64,
-        "publication conflict resolution",
-    )?;
-    let resolution = RootSignedPublicationConflictResolution::decode(&resolution_bytes)?;
-    let replacement_bytes = read_bounded_regular_file(
-        &replacement_ticket_file,
-        MAX_RUNTIME_RECORD_BYTES as u64,
-        "replacement peer ticket",
-    )?;
     ensure!(
         *blake3::hash(&replacement_bytes).as_bytes() == resolution.replacement_ticket_digest(),
         "replacement peer ticket is not the exact Root-authorized artifact"
@@ -7643,8 +7773,25 @@ fn import_runtime_endpoint_announcement_envelope(
     for (path, bytes) in &plan.external_descriptors {
         write_new_or_verify_identical(path, bytes)?;
     }
+    for (path, bytes) in &plan.external_descriptor_replacements {
+        let existing = fs::read(path).with_context(|| {
+            format!(
+                "read endpoint descriptor before Root resolution {}",
+                path.display()
+            )
+        })?;
+        if existing != *bytes {
+            publish_runtime_ticket(path, bytes).with_context(|| {
+                format!(
+                    "install Root-authorized endpoint descriptor {}",
+                    path.display()
+                )
+            })?;
+        }
+    }
     let mut evidence_added_count = 0_usize;
     let mut publication_conflict_added_count = 0_usize;
+    let mut publication_resolution_added_count = 0_usize;
     run_state_transaction(state_directory, |transaction| {
         if !plan.fresh_tickets.is_empty() {
             transaction.prepare_trust_workspace()?;
@@ -7675,6 +7822,13 @@ fn import_runtime_endpoint_announcement_envelope(
             {
                 publication_conflict_added_count += 1;
             }
+            if relative_path
+                .extension()
+                .is_some_and(|extension| extension == "pcr")
+                && outcome == StoreOutcome::Inserted
+            {
+                publication_resolution_added_count += 1;
+            }
         }
         Ok(())
     })?;
@@ -7699,6 +7853,8 @@ fn import_runtime_endpoint_announcement_envelope(
         observation_evidence_added_count: evidence_added_count,
         publication_conflict_count: plan.publication_conflict_count,
         publication_conflict_added_count,
+        publication_resolution_count: plan.publication_resolution_count,
+        publication_resolution_added_count,
         descriptor_directory,
         authority_status: "exact-current-root-signed-device-list".to_owned(),
     })
@@ -7848,7 +8004,9 @@ async fn push_runtime_endpoint_announcements(
             && acknowledgement.contact_count() == prepared.contact_count
             && acknowledgement.endpoint_count() == prepared.endpoint_count
             && acknowledgement.observation_evidence_count() == prepared.observation_count
-            && acknowledgement.publication_conflict_count() == prepared.publication_conflict_count,
+            && acknowledgement.publication_conflict_count() == prepared.publication_conflict_count
+            && acknowledgement.publication_resolution_count()
+                == prepared.publication_resolution_count,
         "endpoint announcement acknowledgement does not match the transferred inventory"
     );
     let transport_path = ready_path.kind.as_str().to_owned();
@@ -7865,6 +8023,7 @@ async fn push_runtime_endpoint_announcements(
         endpoint_count: prepared.endpoint_count,
         observation_count: prepared.observation_count,
         publication_conflict_count: prepared.publication_conflict_count,
+        publication_resolution_count: prepared.publication_resolution_count,
         encrypted_bundle_bytes: envelope_bytes.len(),
         recipient_contact_added_count: acknowledgement.contact_added_count(),
         recipient_endpoint_added_count: acknowledgement.endpoint_added_count(),
@@ -7874,6 +8033,8 @@ async fn push_runtime_endpoint_announcements(
             .observation_evidence_added_count(),
         recipient_publication_conflict_added_count: acknowledgement
             .publication_conflict_added_count(),
+        recipient_publication_resolution_added_count: acknowledgement
+            .publication_resolution_added_count(),
         transport_path,
         acknowledgement_status: "recipient-device-signed-session-bound".to_owned(),
     })
@@ -7891,6 +8052,7 @@ fn prepare_runtime_endpoint_announcement_import(
 ) -> Result<RuntimeEndpointAnnouncementImportPlan> {
     let mut relative_records = Vec::new();
     let mut external_descriptors = Vec::new();
+    let mut external_descriptor_replacements = Vec::new();
     let mut fresh_tickets = Vec::new();
     let mut contact_added_count = 0_usize;
     let mut endpoint_count = 0_usize;
@@ -7898,10 +8060,12 @@ fn prepare_runtime_endpoint_announcement_import(
     let mut publication_binding_added_count = 0_usize;
     let mut observation_evidence_count = 0_usize;
     let mut publication_conflict_count = 0_usize;
+    let mut publication_resolution_count = 0_usize;
     let mut planned_contact_ids = BTreeSet::new();
     let mut planned_endpoint_ids = BTreeSet::new();
     let mut planned_publication_observations = BTreeSet::new();
     let mut planned_publication_conflicts = BTreeSet::new();
+    let mut planned_publication_resolutions = BTreeSet::new();
     let mut known_observations =
         BTreeMap::<(TicketPublicationChannelId, u64), SignedTicketPublicationObservation>::new();
     for observations in snapshot.ticket_observations.values() {
@@ -8063,7 +8227,66 @@ fn prepare_runtime_endpoint_announcement_import(
                 contact.contact_id(),
                 endpoint.peer_device_id(),
             );
+            let mut imports_resolution = false;
             if let Some(existing) = snapshot.endpoint_publication_bindings.get(&binding_id) {
+                let expected_write_key = if let Some(resolution) = endpoint.publication_resolution()
+                {
+                    publication_resolution_count += 1;
+                    ensure!(
+                        resolution.local_account_id() == local_certificate.account_id()
+                            && resolution.authority_revision()
+                                == bundle.account_device_list().revision()
+                            && resolution.peer_account_id() == announcement.peer_account_id()
+                            && resolution.peer_device_id() == endpoint.peer_device_id()
+                            && resolution.old_write_key()
+                                == existing.ticket_publication_write_key()
+                            && resolution.new_write_key()
+                                == endpoint.ticket_publication_write_key()
+                            && resolution.replacement_ticket_digest()
+                                == *blake3::hash(endpoint.ticket().as_bytes()).as_bytes(),
+                        "announced Root resolution changes its bound endpoint contract"
+                    );
+                    let proof = snapshot
+                        .publication_conflict(resolution.old_write_key().channel_id())
+                        .context(
+                            "announced Root resolution has no retained local conflict proof",
+                        )?;
+                    ensure!(
+                        proof.evidence_id()? == resolution.conflict_evidence_id()
+                            && proof.publisher_account_id() == resolution.peer_account_id()
+                            && proof.publisher_device_id() == resolution.peer_device_id()
+                            && snapshot
+                                .publication_conflict(resolution.new_write_key().channel_id())
+                                .is_none(),
+                        "announced Root resolution does not match local conflict evidence"
+                    );
+                    if let Some(stored) = snapshot
+                        .publication_conflict_resolutions
+                        .get(&resolution.old_write_key().channel_id())
+                    {
+                        ensure!(
+                            stored == resolution,
+                            "a different Root resolution already exists for the announced channel"
+                        );
+                    } else if planned_publication_resolutions
+                        .insert(resolution.old_write_key().channel_id())
+                    {
+                        relative_records.push((
+                            runtime_publication_resolution_relative_path(
+                                resolution.resolution_id()?,
+                            ),
+                            resolution.encode()?,
+                        ));
+                        imports_resolution = true;
+                    }
+                    external_descriptor_replacements.push((
+                        existing.descriptor_file().clone(),
+                        endpoint.ticket().as_bytes().to_vec(),
+                    ));
+                    resolution.new_write_key()
+                } else {
+                    snapshot.effective_publication_write_key(existing)
+                };
                 ensure!(
                     existing.contact_id() == contact.contact_id()
                         && existing.peer_account_id() == announcement.peer_account_id()
@@ -8071,11 +8294,14 @@ fn prepare_runtime_endpoint_announcement_import(
                         && existing.conversation_id() == announcement.conversation_id()
                         && existing.route_policy() == endpoint.route_policy()
                         && existing.descriptor_file() == &enrollment.descriptor_file
-                        && snapshot.effective_publication_write_key(existing)
-                            == endpoint.ticket_publication_write_key(),
+                        && expected_write_key == endpoint.ticket_publication_write_key(),
                     "announced endpoint conflicts with its durable publication binding"
                 );
             } else {
+                ensure!(
+                    endpoint.publication_resolution().is_none(),
+                    "announced Root resolution requires an existing durable endpoint binding"
+                );
                 let binding = sign_runtime_endpoint_publication_binding(
                     identity,
                     local_certificate.account_id(),
@@ -8090,7 +8316,7 @@ fn prepare_runtime_endpoint_announcement_import(
                 publication_binding_added_count += 1;
             }
 
-            if existing_enrollment.is_none()
+            if (existing_enrollment.is_none() || imports_resolution)
                 && let Ok(fresh) = ConnectionTicket::decode(endpoint.ticket())
             {
                 fresh_tickets.push(fresh);
@@ -8210,9 +8436,15 @@ fn prepare_runtime_endpoint_announcement_import(
             <= MAX_RUNTIME_TICKET_PUBLICATION_RECORDS,
         "endpoint announcement would exceed the bounded ticket-observation record limit"
     );
+    ensure!(
+        snapshot.publication_conflict_resolutions.len() + planned_publication_resolutions.len()
+            <= MAX_RUNTIME_PUBLICATION_RESOLUTIONS,
+        "endpoint announcement would exceed the bounded publication-resolution limit"
+    );
     Ok(RuntimeEndpointAnnouncementImportPlan {
         relative_records,
         external_descriptors,
+        external_descriptor_replacements,
         fresh_tickets,
         contact_count: bundle.contacts().len(),
         contact_added_count,
@@ -8221,6 +8453,7 @@ fn prepare_runtime_endpoint_announcement_import(
         publication_binding_added_count,
         observation_evidence_count,
         publication_conflict_count,
+        publication_resolution_count,
     })
 }
 
@@ -9482,6 +9715,10 @@ fn print_runtime_endpoint_announcement_export(report: &RuntimeIpcEndpointAnnounc
         "publication_conflict_count={}",
         report.publication_conflict_count
     );
+    println!(
+        "publication_resolution_count={}",
+        report.publication_resolution_count
+    );
     println!("expires_at_unix_seconds={}", report.expires_at_unix_seconds);
     println!("output_file={}", report.output_file.display());
     println!("protection={}", report.protection);
@@ -9518,6 +9755,14 @@ fn print_runtime_endpoint_announcement_import(report: &RuntimeIpcEndpointAnnounc
         report.publication_conflict_added_count
     );
     println!(
+        "publication_resolution_count={}",
+        report.publication_resolution_count
+    );
+    println!(
+        "publication_resolution_added_count={}",
+        report.publication_resolution_added_count
+    );
+    println!(
         "descriptor_directory={}",
         report.descriptor_directory.display()
     );
@@ -9536,6 +9781,10 @@ fn print_runtime_endpoint_announcement_push(report: &RuntimeIpcEndpointAnnouncem
     println!(
         "publication_conflict_count={}",
         report.publication_conflict_count
+    );
+    println!(
+        "publication_resolution_count={}",
+        report.publication_resolution_count
     );
     println!("encrypted_bundle_bytes={}", report.encrypted_bundle_bytes);
     println!(
@@ -9557,6 +9806,10 @@ fn print_runtime_endpoint_announcement_push(report: &RuntimeIpcEndpointAnnouncem
     println!(
         "recipient_publication_conflict_added_count={}",
         report.recipient_publication_conflict_added_count
+    );
+    println!(
+        "recipient_publication_resolution_added_count={}",
+        report.recipient_publication_resolution_added_count
     );
     println!("transport_path={}", report.transport_path);
     println!("acknowledgement_status={}", report.acknowledgement_status);
@@ -15278,6 +15531,8 @@ async fn handle_authorized_application_connection(
                 report.observation_evidence_added_count,
                 report.publication_conflict_count,
                 report.publication_conflict_added_count,
+                report.publication_resolution_count,
+                report.publication_resolution_added_count,
             )?;
             write_server_response(
                 &mut send,
@@ -22116,6 +22371,7 @@ mod tests {
                 conflicting_observation,
             )),
             None,
+            None,
         )?;
         let conflicting_contact = ContactEndpointAnnouncement::new(
             conversation.to_owned(),
@@ -22355,42 +22611,67 @@ mod tests {
         );
         let replacement_ticket_file = directory.path().join("peer-rotated.ticket");
         fs::write(&replacement_ticket_file, replacement_ticket.encode()?)?;
-        let resolution_file = directory.path().join("publication-conflict-resolution.pcr");
-        authorize_runtime_publication_conflict_resolution(
+        let request_file = directory
+            .path()
+            .join("publication-conflict-resolution.pcrq");
+        create_runtime_publication_conflict_resolution_request(
             third_state_dir.clone(),
-            directory.path().join("local-root"),
             observation.channel_id(),
             replacement_ticket_file.clone(),
-            resolution_file.clone(),
+            request_file.clone(),
         )?;
-        let portable_resolution =
-            RootSignedPublicationConflictResolution::decode(&fs::read(&resolution_file)?)?;
+        let portable_request =
+            SignedPublicationConflictResolutionRequest::decode(&fs::read(&request_file)?)?;
+        assert_eq!(
+            portable_request.conflict_proof().evidence_id()?,
+            proof.evidence_id()?
+        );
+        assert_eq!(
+            portable_request.requester_device_id(),
+            third.identity().device_id()
+        );
+        let mut tampered_request = portable_request.encode()?;
+        *tampered_request
+            .last_mut()
+            .context("encoded publication conflict request is empty")? ^= 1;
+        assert!(SignedPublicationConflictResolutionRequest::decode(&tampered_request).is_err());
+        let response_file = directory
+            .path()
+            .join("publication-conflict-resolution.pcrp");
+        assert!(
+            authorize_account_publication_conflict_resolution(
+                directory.path().join("peer-root"),
+                request_file.clone(),
+                directory.path().join("wrong-root-response.pcrp"),
+            )
+            .is_err()
+        );
+        authorize_account_publication_conflict_resolution(
+            directory.path().join("local-root"),
+            request_file,
+            response_file.clone(),
+        )?;
+        let portable_response =
+            PublicationConflictResolutionResponse::decode(&fs::read(&response_file)?)?;
+        let portable_resolution = portable_response.resolution();
+        assert_eq!(
+            portable_resolution.request_id(),
+            portable_request.request_id()?
+        );
         assert_eq!(
             portable_resolution.conflict_evidence_id(),
             proof.evidence_id()?
         );
-        let mut tampered_resolution = portable_resolution.encode()?;
-        *tampered_resolution
+        let mut tampered_response = portable_response.encode()?;
+        *tampered_response
             .last_mut()
-            .context("encoded publication conflict resolution is empty")? ^= 1;
-        assert!(RootSignedPublicationConflictResolution::decode(&tampered_resolution).is_err());
-        let wrong_replacement = directory.path().join("wrong-replacement.ticket");
-        fs::write(&wrong_replacement, peer_ticket.encode()?)?;
-        assert!(
-            apply_runtime_publication_conflict_resolution(
-                third_state_dir.clone(),
-                resolution_file.clone(),
-                wrong_replacement,
-            )
-            .is_err()
-        );
-        for state_dir in [&third_state_dir, &source_state_dir, &recipient_state_dir] {
-            apply_runtime_publication_conflict_resolution(
-                state_dir.clone(),
-                resolution_file.clone(),
-                replacement_ticket_file.clone(),
-            )?;
-        }
+            .context("encoded publication conflict response is empty")? ^= 1;
+        assert!(PublicationConflictResolutionResponse::decode(&tampered_response).is_err());
+
+        apply_runtime_publication_conflict_resolution_response(
+            third_state_dir.clone(),
+            response_file.clone(),
+        )?;
         let resolved_third = load_runtime_state_snapshot(
             &third_state_dir,
             local_root.account_id(),
@@ -22429,10 +22710,9 @@ mod tests {
             resolved_candidates[0].ticket.ticket_publication_write_key(),
             replacement_ticket.ticket_publication_write_key()
         );
-        apply_runtime_publication_conflict_resolution(
+        apply_runtime_publication_conflict_resolution_response(
             third_state_dir.clone(),
-            resolution_file,
-            replacement_ticket_file,
+            response_file,
         )?;
         let post_resolution_bundle = directory.path().join("resolved-third-to-source.eab");
         let post_resolution_export = export_runtime_endpoint_announcements(
@@ -22443,6 +22723,7 @@ mod tests {
             300,
         )?;
         assert_eq!(post_resolution_export.publication_conflict_count, 0);
+        assert_eq!(post_resolution_export.publication_resolution_count, 1);
         let post_resolution_import = import_runtime_endpoint_announcements(
             &source_state_dir,
             &source_ticket,
@@ -22451,6 +22732,40 @@ mod tests {
         )?;
         assert_eq!(post_resolution_import.publication_conflict_count, 0);
         assert_eq!(post_resolution_import.publication_conflict_added_count, 0);
+        assert_eq!(post_resolution_import.publication_resolution_count, 1);
+        assert_eq!(post_resolution_import.publication_resolution_added_count, 1);
+        let source_to_recipient_resolution =
+            directory.path().join("resolved-source-to-recipient.eab");
+        let relayed_resolution = export_runtime_endpoint_announcements(
+            &source_state_dir,
+            &source_ticket,
+            recipient.identity().device_id(),
+            source_to_recipient_resolution.clone(),
+            300,
+        )?;
+        assert_eq!(relayed_resolution.publication_resolution_count, 1);
+        let imported_resolution = import_runtime_endpoint_announcements(
+            &recipient_state_dir,
+            &recipient_ticket,
+            &source_to_recipient_resolution,
+            &descriptors,
+        )?;
+        assert_eq!(imported_resolution.publication_resolution_count, 1);
+        assert_eq!(imported_resolution.publication_resolution_added_count, 1);
+        for (state_dir, device_id) in [
+            (&third_state_dir, third.identity().device_id()),
+            (&source_state_dir, source.identity().device_id()),
+            (&recipient_state_dir, recipient.identity().device_id()),
+        ] {
+            let resolved =
+                load_runtime_state_snapshot(state_dir, local_root.account_id(), device_id)?;
+            assert!(
+                resolved
+                    .active_publication_conflict(observation.channel_id())
+                    .is_none()
+            );
+            assert_eq!(resolved.publication_conflict_resolutions.len(), 1);
+        }
 
         let evidence_bundle_id = conflicting_bundle.bundle_id()?;
         let mut previous_publication = publication.clone();

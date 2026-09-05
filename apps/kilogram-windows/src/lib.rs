@@ -219,6 +219,8 @@ enum Operation {
     RecoveryRun,
     RecoveryCancel,
     RecoveryReconcile,
+    PublicationConflictRequest,
+    PublicationConflictApply,
     Connect,
     AddContact,
     Queue,
@@ -294,6 +296,13 @@ enum RecoveryUiAction {
     RunSelected,
     CancelSelected,
     Reconcile,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum PublicationConflictUiAction {
+    None,
+    CreateRequest,
+    ApplyResponse,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -563,6 +572,29 @@ impl Default for RecoveryView {
             selected: None,
             confirm_cancel: false,
             reconciliation: None,
+        }
+    }
+}
+
+#[derive(Debug)]
+struct PublicationConflictRecoveryView {
+    channel_id: String,
+    replacement_ticket_file: String,
+    request_output_file: String,
+    response_input_file: String,
+    request_result: Option<RecoveryCommandOutput>,
+    apply_result: Option<RecoveryCommandOutput>,
+}
+
+impl Default for PublicationConflictRecoveryView {
+    fn default() -> Self {
+        Self {
+            channel_id: String::new(),
+            replacement_ticket_file: String::new(),
+            request_output_file: "publication-conflict-resolution.pcrq".to_owned(),
+            response_input_file: String::new(),
+            request_result: None,
+            apply_result: None,
         }
     }
 }
@@ -1153,7 +1185,9 @@ impl ViewModel {
                 | WorkerSuccess::RecoveryApproved { .. }
                 | WorkerSuccess::RecoveryRan { .. }
                 | WorkerSuccess::RecoveryCancelled { .. }
-                | WorkerSuccess::RecoveryReconciled(_),
+                | WorkerSuccess::RecoveryReconciled(_)
+                | WorkerSuccess::PublicationConflictRequested(_)
+                | WorkerSuccess::PublicationConflictApplied(_),
             ) => {
                 self.error = Some("Wizard result reached the runtime view model".to_owned());
             }
@@ -1313,6 +1347,18 @@ enum WorkerRequest {
         state_dir: PathBuf,
         conversation: String,
     },
+    PublicationConflictRequest {
+        executable: PathBuf,
+        state_dir: PathBuf,
+        channel_id: String,
+        replacement_ticket_file: PathBuf,
+        request_file: PathBuf,
+    },
+    PublicationConflictApply {
+        executable: PathBuf,
+        state_dir: PathBuf,
+        response_file: PathBuf,
+    },
     Connect {
         descriptor: PathBuf,
     },
@@ -1398,6 +1444,8 @@ impl WorkerRequest {
             Self::RecoveryRun { .. } => Operation::RecoveryRun,
             Self::RecoveryCancel { .. } => Operation::RecoveryCancel,
             Self::RecoveryReconcile { .. } => Operation::RecoveryReconcile,
+            Self::PublicationConflictRequest { .. } => Operation::PublicationConflictRequest,
+            Self::PublicationConflictApply { .. } => Operation::PublicationConflictApply,
             Self::Connect { .. } => Operation::Connect,
             Self::AddContact { .. } => Operation::AddContact,
             Self::Queue { .. } => Operation::Queue,
@@ -1456,6 +1504,8 @@ enum WorkerSuccess {
         output: RecoveryCommandOutput,
     },
     RecoveryReconciled(RecoveryCommandOutput),
+    PublicationConflictRequested(RecoveryCommandOutput),
+    PublicationConflictApplied(RecoveryCommandOutput),
     Connected {
         account_id: String,
         device_id: String,
@@ -2220,6 +2270,53 @@ async fn execute_request(request: WorkerRequest) -> Result<WorkerSuccess> {
             ]),
         )
         .map(WorkerSuccess::RecoveryReconciled),
+        WorkerRequest::PublicationConflictRequest {
+            executable,
+            state_dir,
+            channel_id,
+            replacement_ticket_file,
+            request_file,
+        } => {
+            let output = run_recovery_command(
+                &executable,
+                "runtime-publication-conflict-create-request",
+                command_arguments([
+                    ("--state-dir", state_dir.as_os_str()),
+                    ("--channel", std::ffi::OsStr::new(&channel_id)),
+                    (
+                        "--replacement-ticket-file",
+                        replacement_ticket_file.as_os_str(),
+                    ),
+                    ("--output-file", request_file.as_os_str()),
+                ]),
+            )?;
+            ensure!(
+                output.field("process_exit_success") == Some("true")
+                    && output.status() == "publication-conflict-resolution-requested",
+                "Conflict-resolution request helper did not complete successfully"
+            );
+            Ok(WorkerSuccess::PublicationConflictRequested(output))
+        }
+        WorkerRequest::PublicationConflictApply {
+            executable,
+            state_dir,
+            response_file,
+        } => {
+            let output = run_recovery_command(
+                &executable,
+                "runtime-publication-conflict-apply-response",
+                command_arguments([
+                    ("--state-dir", state_dir.as_os_str()),
+                    ("--response-file", response_file.as_os_str()),
+                ]),
+            )?;
+            ensure!(
+                output.field("process_exit_success") == Some("true")
+                    && output.status() == "publication-conflict-resolved",
+                "Conflict-resolution apply helper did not complete successfully"
+            );
+            Ok(WorkerSuccess::PublicationConflictApplied(output))
+        }
         WorkerRequest::Connect { descriptor } => {
             match kilogram_runtime_ipc::call(&descriptor, RuntimeIpcCommand::Ping).await? {
                 RuntimeIpcResponse::Pong {
@@ -2493,6 +2590,7 @@ struct KilogramApp {
     account_recovery: AccountRecoveryView,
     device_link: DeviceLinkView,
     recovery: RecoveryView,
+    publication_conflict_recovery: PublicationConflictRecoveryView,
     drop_target: Option<DropTarget>,
     runtime_process: Option<Child>,
     runtime_start_deadline: Option<Instant>,
@@ -2547,6 +2645,7 @@ impl KilogramApp {
             account_recovery: AccountRecoveryView::default(),
             device_link: DeviceLinkView::default(),
             recovery: RecoveryView::default(),
+            publication_conflict_recovery: PublicationConflictRecoveryView::default(),
             drop_target: None,
             runtime_process: None,
             runtime_start_deadline: None,
@@ -2585,6 +2684,8 @@ impl KilogramApp {
                     | Operation::RecoveryRun
                     | Operation::RecoveryCancel
                     | Operation::RecoveryReconcile
+                    | Operation::PublicationConflictRequest
+                    | Operation::PublicationConflictApply
             ) {
                 self.apply_wizard_response(response);
                 continue;
@@ -2942,6 +3043,20 @@ impl KilogramApp {
                     "Recovery sources reconciled: {agreement}; global completeness remains unproven"
                 ));
                 self.recovery.reconciliation = Some(output);
+            }
+            WorkerSuccess::PublicationConflictRequested(output) => {
+                self.publication_conflict_recovery.request_result = Some(output);
+                self.model.notice = Some(
+                    "Offline Root request created. Copy only the .pcrq artifact to the isolated Root signer."
+                        .to_owned(),
+                );
+            }
+            WorkerSuccess::PublicationConflictApplied(output) => {
+                self.publication_conflict_recovery.apply_result = Some(output);
+                self.model.notice = Some(
+                    "Root-authorized replacement applied. Restart the runtime; exact-current sibling devices can receive the same resolution automatically."
+                        .to_owned(),
+                );
             }
             _ => {
                 self.model.error = Some(format!(
@@ -4044,6 +4159,86 @@ impl KilogramApp {
             Err(error) => self
                 .model
                 .fail(Operation::RecoveryReconcile, format!("{error:#}")),
+        }
+    }
+
+    fn start_publication_conflict_request(&mut self) {
+        let result: Result<WorkerRequest> = (|| {
+            self.require_offline_wizard()?;
+            let executable = canonical_input_path(
+                &self.runtime_executable_path,
+                "Kilogram CLI executable",
+                true,
+            )?;
+            let state_dir = canonical_input_path(
+                &self.runtime_profile_draft.state_dir,
+                "Runtime state",
+                false,
+            )?;
+            let channel_id = self
+                .publication_conflict_recovery
+                .channel_id
+                .trim()
+                .to_owned();
+            ensure!(
+                channel_id.len() == 64 && channel_id.bytes().all(|byte| byte.is_ascii_hexdigit()),
+                "Select a quarantined 64-hex publication channel"
+            );
+            let replacement_ticket_file = canonical_input_path(
+                &self.publication_conflict_recovery.replacement_ticket_file,
+                "Rotated peer ticket",
+                true,
+            )?;
+            let request_file = absolute_output_path(
+                &self.publication_conflict_recovery.request_output_file,
+                "Conflict-resolution request",
+                &state_dir,
+            )?;
+            Ok(WorkerRequest::PublicationConflictRequest {
+                executable,
+                state_dir,
+                channel_id,
+                replacement_ticket_file,
+                request_file,
+            })
+        })();
+        match result {
+            Ok(request) => self.submit(Operation::PublicationConflictRequest, request),
+            Err(error) => self
+                .model
+                .fail(Operation::PublicationConflictRequest, format!("{error:#}")),
+        }
+    }
+
+    fn start_publication_conflict_apply(&mut self) {
+        let result: Result<WorkerRequest> = (|| {
+            self.require_offline_wizard()?;
+            let executable = canonical_input_path(
+                &self.runtime_executable_path,
+                "Kilogram CLI executable",
+                true,
+            )?;
+            let state_dir = canonical_input_path(
+                &self.runtime_profile_draft.state_dir,
+                "Runtime state",
+                false,
+            )?;
+            let response_file = canonical_input_path(
+                &self.publication_conflict_recovery.response_input_file,
+                "Offline Root response",
+                true,
+            )?;
+            Ok(WorkerRequest::PublicationConflictApply {
+                executable,
+                state_dir,
+                response_file,
+            })
+        })();
+        match result {
+            Ok(request) => self.submit(Operation::PublicationConflictApply, request),
+            Err(error) => self
+                .model
+                .fail(Operation::PublicationConflictApply, format!("{error:#}")),
         }
     }
 
@@ -5896,6 +6091,185 @@ impl KilogramApp {
         action
     }
 
+    fn draw_publication_conflict_recovery(
+        &mut self,
+        ui: &mut egui::Ui,
+    ) -> PublicationConflictUiAction {
+        let mut action = PublicationConflictUiAction::None;
+        let conflicts = self
+            .model
+            .conversations
+            .iter()
+            .filter(|summary| {
+                self.model.selected_contact_id.as_deref() == Some(summary.contact_id.as_str())
+            })
+            .flat_map(|summary| summary.endpoint_candidates.iter())
+            .filter_map(|candidate| {
+                Some((
+                    candidate.publication_channel_id.clone()?,
+                    candidate.peer_device_id.to_string(),
+                    candidate.publication_conflict_proof_id.clone()?,
+                ))
+            })
+            .collect::<Vec<_>>();
+        let idle = self.model.pending.is_none()
+            && self.runtime_process.is_none()
+            && self.model.connection == ConnectionState::Disconnected;
+        egui::CollapsingHeader::new("Security incident · publication conflict")
+            .default_open(!conflicts.is_empty())
+            .show(ui, |ui| {
+                ui.small("Use this only after comparing the conflicting peer claims out of band. The desktop creates and applies public artifacts; it never opens or receives the Account Root secret.");
+                if conflicts.is_empty() {
+                    ui.small("The selected chat has no unresolved publication-channel conflict.");
+                } else {
+                    ui.colored_label(
+                        egui::Color32::from_rgb(239, 112, 112),
+                        "Stop the runtime before creating or applying recovery artifacts.",
+                    );
+                    for (channel, device, proof) in &conflicts {
+                        ui.horizontal_wrapped(|ui| {
+                            ui.label(format!(
+                                "Peer device {} · channel {} · proof {}",
+                                compact_id(device),
+                                compact_id(channel),
+                                compact_id(proof)
+                            ));
+                            if ui
+                                .add_enabled(idle, egui::Button::new("Select conflict"))
+                                .clicked()
+                            {
+                                self.publication_conflict_recovery
+                                    .channel_id
+                                    .clone_from(channel);
+                            }
+                        });
+                    }
+                }
+
+                ui.separator();
+                ui.strong("1. Create a request for the offline Root signer");
+                ui.horizontal(|ui| {
+                    ui.label("Quarantined channel");
+                    ui.add_enabled(
+                        false,
+                        egui::TextEdit::singleline(
+                            &mut self.publication_conflict_recovery.channel_id,
+                        )
+                        .desired_width(f32::INFINITY),
+                    );
+                });
+                ui.horizontal(|ui| {
+                    ui.label("Peer's rotated ticket");
+                    ui.add_enabled(
+                        idle,
+                        egui::TextEdit::singleline(
+                            &mut self
+                                .publication_conflict_recovery
+                                .replacement_ticket_file,
+                        )
+                        .desired_width(f32::INFINITY),
+                    );
+                });
+                ui.horizontal(|ui| {
+                    ui.label("Request output (.pcrq)");
+                    ui.add_enabled(
+                        idle,
+                        egui::TextEdit::singleline(
+                            &mut self.publication_conflict_recovery.request_output_file,
+                        )
+                        .desired_width(f32::INFINITY),
+                    );
+                });
+                if ui
+                    .add_enabled(
+                        idle
+                            && !self
+                                .publication_conflict_recovery
+                                .channel_id
+                                .is_empty()
+                            && !self
+                                .publication_conflict_recovery
+                                .replacement_ticket_file
+                                .trim()
+                                .is_empty(),
+                        egui::Button::new("Create offline Root request"),
+                    )
+                    .clicked()
+                {
+                    action = PublicationConflictUiAction::CreateRequest;
+                }
+                if let Some(output) = self.publication_conflict_recovery.request_result.as_ref() {
+                    ui.colored_label(
+                        egui::Color32::from_rgb(92, 201, 137),
+                        format!(
+                            "Request {} created at {}",
+                            compact_id(
+                                output
+                                    .field("publication_conflict_resolution_request_id")
+                                    .unwrap_or("unknown")
+                            ),
+                            output.field("request_file").unwrap_or("unknown")
+                        ),
+                    );
+                    ui.small("On the isolated Root host, inspect the IDs and run:");
+                    ui.label(
+                        egui::RichText::new(format!(
+                            "kilogram-cli account-publication-conflict-authorize --account-dir <offline-root> --request-file \"{}\" --output-file publication-conflict-resolution.pcrp",
+                            output.field("request_file").unwrap_or("request.pcrq")
+                        ))
+                        .monospace(),
+                    );
+                }
+
+                ui.separator();
+                ui.strong("2. Apply the self-contained Root response");
+                ui.horizontal(|ui| {
+                    ui.label("Root response (.pcrp)");
+                    ui.add_enabled(
+                        idle,
+                        egui::TextEdit::singleline(
+                            &mut self.publication_conflict_recovery.response_input_file,
+                        )
+                        .desired_width(f32::INFINITY),
+                    );
+                });
+                if ui
+                    .add_enabled(
+                        idle
+                            && !self
+                                .publication_conflict_recovery
+                                .response_input_file
+                                .trim()
+                                .is_empty(),
+                        egui::Button::new("Verify and apply Root response"),
+                    )
+                    .clicked()
+                {
+                    action = PublicationConflictUiAction::ApplyResponse;
+                }
+                if let Some(output) = self.publication_conflict_recovery.apply_result.as_ref() {
+                    ui.colored_label(
+                        egui::Color32::from_rgb(92, 201, 137),
+                        format!(
+                            "Resolved: {} → {}",
+                            compact_id(
+                                output
+                                    .field("old_publication_channel_id")
+                                    .unwrap_or("unknown")
+                            ),
+                            compact_id(
+                                output
+                                    .field("new_publication_channel_id")
+                                    .unwrap_or("unknown")
+                            )
+                        ),
+                    );
+                    ui.small("Restart the runtime. The retained proof and Root resolution will be propagated to exact-current sibling devices through their encrypted announcement exchange.");
+                }
+            });
+        action
+    }
+
     fn draw_runtime(&mut self, ui: &mut egui::Ui) -> RuntimeUiAction {
         let mut action = RuntimeUiAction::None;
         let color = match self.model.connection {
@@ -6513,7 +6887,7 @@ impl KilogramApp {
                 if candidate.publication_conflict_proof_id.is_some() {
                     ui.colored_label(egui::Color32::LIGHT_RED, line);
                     ui.small(format!(
-                        "Conflict generation {} · signed proof {} · manual device audit and contact re-enrollment required",
+                        "Conflict generation {} · signed proof {} · audit the claims, rotate the peer channel, then use Security incident recovery below",
                         candidate
                             .publication_conflict_generation
                             .map_or_else(|| "unknown".to_owned(), |value| value.to_string()),
@@ -7093,6 +7467,7 @@ impl eframe::App for KilogramApp {
         let mut device_link_action = DeviceLinkUiAction::None;
         let mut recovery_policy_action = RecoveryPolicyUiAction::None;
         let mut recovery_action = RecoveryUiAction::None;
+        let mut publication_conflict_action = PublicationConflictUiAction::None;
         let mut add_contact_clicked = false;
         let mut queue_clicked = false;
         let mut refresh_clicked = false;
@@ -7118,6 +7493,8 @@ impl eframe::App for KilogramApp {
                     recovery_policy_action = self.draw_recovery_policy(ui);
                     ui.add_space(4.0);
                     recovery_action = self.draw_recovery(ui);
+                    ui.add_space(4.0);
+                    publication_conflict_action = self.draw_publication_conflict_recovery(ui);
                     ui.add_space(4.0);
                     runtime_action = self.draw_runtime(ui);
                     self.draw_identity(ui);
@@ -7193,6 +7570,10 @@ impl eframe::App for KilogramApp {
             self.start_recovery_cancel();
         } else if recovery_action == RecoveryUiAction::Reconcile {
             self.start_recovery_reconcile();
+        } else if publication_conflict_action == PublicationConflictUiAction::CreateRequest {
+            self.start_publication_conflict_request();
+        } else if publication_conflict_action == PublicationConflictUiAction::ApplyResponse {
+            self.start_publication_conflict_apply();
         } else if runtime_action == RuntimeUiAction::Connect {
             self.start_connect();
         } else if runtime_action == RuntimeUiAction::Start {

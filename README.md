@@ -151,7 +151,28 @@ The current two-network Windows procedure is in
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.44 sibling proof propagation and Root channel rotation — complete
+## Current milestone: M0.9.45 offline Root recovery and sibling convergence — complete
+
+Publication-conflict recovery no longer loads online runtime state and the
+Account Root in one process. The affected Device creates a bounded
+Device-signed `.pcrq` containing the retained proof and exact rotated peer
+ticket. A separate offline command verifies it against the Root's exact current
+device list and produces a self-contained Root-signed `.pcrp`; the online
+Device applies only that response. The Root signer never opens runtime state,
+and the desktop client never receives a Root path or secret.
+
+An applied resolution now travels with the exact replacement endpoint in
+source-signed, recipient-HPKE own-device announcements. A sibling accepts it
+only with the same exact Root roster, old durable binding and stable local
+conflict evidence. Bundle v4, acknowledgement v2 and IPC v18 expose separate
+resolution counts. The Windows client guides request creation and response
+application while the runtime is stopped.
+
+The split ceremony, propagation gates, crash behavior and honest boundary are
+specified in
+[`docs/RFC-0067-offline-root-conflict-recovery.md`](docs/RFC-0067-offline-root-conflict-recovery.md).
+
+## Previous milestone: M0.9.44 sibling proof propagation and Root channel rotation — complete
 
 An exact-current Account Device now forwards a retained publication-conflict
 proof inside the recipient-encrypted endpoint-announcement bundle. The
@@ -173,7 +194,7 @@ Endpoint-announcement bundles advance to v3 and IPC to v17. The full manual
 ceremony, crash behavior and remaining limits are specified in
 [`docs/RFC-0066-sibling-conflict-proof-and-root-channel-rotation.md`](docs/RFC-0066-sibling-conflict-proof-and-root-channel-rotation.md).
 
-## Previous milestone: M0.9.43 durable publication-conflict quarantine — complete
+## Earlier milestone: M0.9.43 durable publication-conflict quarantine — complete
 
 A same-generation mismatch no longer disappears as a transient import error.
 The first detector stores one append-only local-Device-signed proof containing

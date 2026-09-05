@@ -3040,12 +3040,38 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - contract зафиксирован в
   [`../docs/RFC-0066-sibling-conflict-proof-and-root-channel-rotation.md`](../docs/RFC-0066-sibling-conflict-proof-and-root-channel-rotation.md).
 
+### M0.9.45 — offline Root conflict recovery и sibling convergence: выполнено
+
+Реализовано:
+
+- online Device создаёт bounded Device-signed `.pcrq` с exact-current authority
+  revision, полным conflict proof, old/new channel summary и byte-exact peer
+  replacement ticket, не принимая и не загружая Root secret;
+- отдельная `account-publication-conflict-authorize` открывает только offline
+  Root и request, независимо проверяет active requester/detector, embedded peer
+  ticket, epoch/route/key и выпускает self-contained `.pcrp`;
+- Root resolution v2 подписывает request ID вместе с stable evidence, peer,
+  old/new keys, ticket digest и authority revision;
+- runtime apply принимает один response, сохраняет `.pcf`, использует прежний
+  descriptor-first fail-closed commit и остаётся idempotent;
+- endpoint-announcement bundle v4 переносит resolution с exact replacement
+  endpoint; sibling принимает его только при совпадающем Root roster, local
+  proof и old binding, после чего C -> A -> B автоматически сходятся;
+- ACK v2 и IPC v18 отдельно считают resolution inventory/insertions;
+- Windows incident panel выбирает quarantined channel, создаёт `.pcrq`,
+  показывает offline CLI-команду и применяет `.pcrp`, но не имеет Root path или
+  Root-signing action;
+- regression проверяет tampering, wrong Root, idempotence и автоматическое
+  трёхустройственное распространение;
+- contract зафиксирован в
+  [`../docs/RFC-0067-offline-root-conflict-recovery.md`](../docs/RFC-0067-offline-root-conflict-recovery.md).
+
 ### Следующий этап
 
-1. M0.9.45: отделить Root signer от online runtime через bounded
-   request/response artifact, переносить Root resolution к exact-current
-   siblings и добавить guided desktop incident-recovery UI без передачи Root
-   secret в GUI/runtime.
+1. M0.9.46: убрать restart requirement для собственной publication-channel
+   rotation через authenticated live runtime reconfiguration и связать
+   peer-side rotation/request/apply в один наблюдаемый incident lifecycle без
+   фонового Root доступа.
 2. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.
