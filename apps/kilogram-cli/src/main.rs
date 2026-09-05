@@ -38,6 +38,7 @@ use kilogram_ratchet::{
 use kilogram_runtime_ipc::{
     RuntimeIpcCommand, RuntimeIpcContactTicketRefresh, RuntimeIpcConversationSummary,
     RuntimeIpcDescriptor, RuntimeIpcDeviceDirectoryStatus, RuntimeIpcDeviceDirectoryUpdate,
+    RuntimeIpcEndpointAnnouncementExport, RuntimeIpcEndpointAnnouncementImport,
     RuntimeIpcEndpointCandidateState, RuntimeIpcEndpointCandidateStatus,
     RuntimeIpcEndpointTicketRefresh, RuntimeIpcHistoryCursor, RuntimeIpcHistoryMessage,
     RuntimeIpcHistoryPage, RuntimeIpcMessagePreview, RuntimeIpcNetworkClass,
@@ -78,6 +79,7 @@ mod recovery_plan;
 mod recovery_platform;
 mod recovery_qr;
 mod recovery_scheduler;
+mod runtime_endpoint_announcement;
 mod runtime_publication;
 mod runtime_queue;
 mod runtime_ticket_automation;
@@ -112,6 +114,13 @@ use recovery_scheduler::{
     MAX_RECOVERY_RETRY_MAX_SECONDS, RecoveryBackoffConfig, RecoverySchedulerLifecycle,
     RecoverySchedulerReadiness, SignedRecoverySchedulerState, load_recovery_scheduler_state,
     persist_recovery_scheduler_state,
+};
+use runtime_endpoint_announcement::{
+    AcceptedEndpointObservationId, ContactEndpointAnnouncement,
+    DEFAULT_ENDPOINT_ANNOUNCEMENT_VALIDITY_SECONDS, EncryptedEndpointAnnouncementBundle,
+    EndpointCandidateAnnouncement, MAX_ENDPOINT_ANNOUNCEMENT_BYTES,
+    MAX_ENDPOINT_ANNOUNCEMENT_VALIDITY_SECONDS, SignedAcceptedEndpointObservation,
+    SignedEndpointAnnouncementBundle,
 };
 use runtime_publication::{
     DEFAULT_TICKET_PUBLICATION_TTL_SECONDS, EncryptedTicketPublication,
@@ -149,6 +158,7 @@ const RUNTIME_OUTBOX_DIRECTORY: &str = "outbox";
 const RUNTIME_DEVICE_DIRECTORY: &str = "device-directory";
 const RUNTIME_TICKET_PUBLICATIONS_DIRECTORY: &str = "ticket-publications";
 const RUNTIME_TICKET_OBSERVATIONS_DIRECTORY: &str = "ticket-observations";
+const RUNTIME_ACCEPTED_ENDPOINT_OBSERVATIONS_DIRECTORY: &str = "accepted-endpoint-observations";
 const RUNTIME_TICKET_AUTOMATION_POLICIES_DIRECTORY: &str = "ticket-automation-policies";
 const RUNTIME_TICKET_AUTOMATION_ATTEMPTS_DIRECTORY: &str = "ticket-automation-attempts";
 const RUNTIME_TICKET_CHECKPOINTS_DIRECTORY: &str = "ticket-checkpoints";
@@ -628,6 +638,40 @@ enum Command {
         /// Runtime-owned local IPC descriptor.
         #[arg(long)]
         ipc_file: PathBuf,
+    },
+
+    /// Export bounded endpoint candidates to another authorized device of this account.
+    RuntimeIpcExportEndpointAnnouncements {
+        /// Runtime-owned local IPC descriptor.
+        #[arg(long)]
+        ipc_file: PathBuf,
+
+        /// Existing active account device that alone can decrypt the bundle.
+        #[arg(long)]
+        recipient_device: DeviceId,
+
+        /// New output file for the encrypted, source-signed bundle.
+        #[arg(long)]
+        output_file: PathBuf,
+
+        /// Short replay window for transferring the bundle.
+        #[arg(long, default_value_t = DEFAULT_ENDPOINT_ANNOUNCEMENT_VALIDITY_SECONDS)]
+        validity_seconds: u64,
+    },
+
+    /// Import endpoint candidates announced by another authorized device of this account.
+    RuntimeIpcImportEndpointAnnouncements {
+        /// Runtime-owned local IPC descriptor.
+        #[arg(long)]
+        ipc_file: PathBuf,
+
+        /// Recipient-encrypted endpoint announcement bundle.
+        #[arg(long)]
+        bundle_file: PathBuf,
+
+        /// Runtime-managed directory for imported public connection tickets.
+        #[arg(long)]
+        descriptor_directory: PathBuf,
     },
 
     /// Connect to a listener, send one message, print its acknowledgement, then exit.
@@ -1478,6 +1522,8 @@ impl Command {
             | Self::RuntimeIpcRefreshContactTicket { .. }
             | Self::RuntimeIpcConfigureTicketAutomation { .. }
             | Self::RuntimeIpcTicketAutomationStatus { .. }
+            | Self::RuntimeIpcExportEndpointAnnouncements { .. }
+            | Self::RuntimeIpcImportEndpointAnnouncements { .. }
             | Self::PlatformContext => None,
         }
     }
@@ -2382,6 +2428,28 @@ async fn run_command(command: Command) -> Result<()> {
         }
         Command::RuntimeIpcTicketAutomationStatus { ipc_file } => {
             runtime_ipc_ticket_automation_status(ipc_file).await
+        }
+        Command::RuntimeIpcExportEndpointAnnouncements {
+            ipc_file,
+            recipient_device,
+            output_file,
+            validity_seconds,
+        } => {
+            runtime_ipc_export_endpoint_announcements(
+                ipc_file,
+                recipient_device,
+                output_file,
+                validity_seconds,
+            )
+            .await
+        }
+        Command::RuntimeIpcImportEndpointAnnouncements {
+            ipc_file,
+            bundle_file,
+            descriptor_directory,
+        } => {
+            runtime_ipc_import_endpoint_announcements(ipc_file, bundle_file, descriptor_directory)
+                .await
         }
         Command::Connect {
             state_dir,
@@ -3590,6 +3658,8 @@ struct RuntimeStateSnapshot {
     ticket_publications: BTreeMap<TicketPublicationChannelId, Vec<SignedTicketPublication>>,
     ticket_observations:
         BTreeMap<TicketPublicationChannelId, Vec<SignedTicketPublicationObservation>>,
+    accepted_endpoint_observations:
+        BTreeMap<TicketPublicationChannelId, Vec<SignedAcceptedEndpointObservation>>,
     ticket_automation_policies: BTreeMap<RuntimeContactId, Vec<SignedTicketAutomationPolicy>>,
     ticket_automation_attempts:
         BTreeMap<(RuntimeContactId, TicketAutomationAction), Vec<SignedTicketAutomationAttempt>>,
@@ -3628,6 +3698,40 @@ impl RuntimeStateSnapshot {
         self.ticket_observations
             .get(&channel_id)
             .and_then(|observations| observations.last())
+    }
+
+    fn accepted_endpoint_observation_high_water(
+        &self,
+        channel_id: TicketPublicationChannelId,
+    ) -> Result<Option<(u64, TicketPublicationId, [u8; 32])>> {
+        let Some(evidence) = self.accepted_endpoint_observations.get(&channel_id) else {
+            return Ok(None);
+        };
+        let Some(highest_generation) = evidence
+            .iter()
+            .map(SignedAcceptedEndpointObservation::publication_generation)
+            .max()
+        else {
+            return Ok(None);
+        };
+        let mut highest = evidence
+            .iter()
+            .filter(|value| value.publication_generation() == highest_generation);
+        let first = highest
+            .next()
+            .context("accepted endpoint observation high-water is empty")?;
+        let value = (
+            first.publication_generation(),
+            first.publication_id(),
+            first.ticket_digest(),
+        );
+        ensure!(
+            highest.all(|candidate| {
+                candidate.publication_id() == value.1 && candidate.ticket_digest() == value.2
+            }),
+            "authorized devices equivocated at the imported publication high-water"
+        );
+        Ok(Some(value))
     }
 
     fn latest_ticket_automation_policy(
@@ -3725,6 +3829,14 @@ fn runtime_ticket_observation_relative_path(
         .join(format!(
             "{channel_id}-{observation_generation:020}-{observation_id}.ticket-observation"
         ))
+}
+
+fn runtime_accepted_endpoint_observation_relative_path(
+    evidence_id: AcceptedEndpointObservationId,
+) -> PathBuf {
+    PathBuf::from(RUNTIME_STATE_DIRECTORY)
+        .join(RUNTIME_ACCEPTED_ENDPOINT_OBSERVATIONS_DIRECTORY)
+        .join(format!("{evidence_id}.aeo"))
 }
 
 fn runtime_ticket_automation_policy_relative_path(policy_id: TicketAutomationPolicyId) -> PathBuf {
@@ -3843,6 +3955,7 @@ fn read_runtime_record_files(state_directory: &Path) -> Result<Vec<(PathBuf, Vec
         RUNTIME_DEVICE_DIRECTORY,
         RUNTIME_TICKET_PUBLICATIONS_DIRECTORY,
         RUNTIME_TICKET_OBSERVATIONS_DIRECTORY,
+        RUNTIME_ACCEPTED_ENDPOINT_OBSERVATIONS_DIRECTORY,
         RUNTIME_TICKET_AUTOMATION_POLICIES_DIRECTORY,
         RUNTIME_TICKET_AUTOMATION_ATTEMPTS_DIRECTORY,
         RUNTIME_TICKET_CHECKPOINTS_DIRECTORY,
@@ -3968,6 +4081,19 @@ fn load_runtime_state_snapshot(
             );
             snapshot
                 .ticket_observations
+                .entry(value.channel_id())
+                .or_default()
+                .push(value);
+        } else if file_name.ends_with(".aeo") {
+            let value = SignedAcceptedEndpointObservation::decode(&bytes)?;
+            value.verify_local(local_account_id, local_device_id)?;
+            ensure!(
+                relative_path
+                    == runtime_accepted_endpoint_observation_relative_path(value.evidence_id()?),
+                "accepted endpoint observation filename does not match its authenticated state"
+            );
+            snapshot
+                .accepted_endpoint_observations
                 .entry(value.channel_id())
                 .or_default()
                 .push(value);
@@ -4142,6 +4268,26 @@ fn load_runtime_state_snapshot(
             "runtime endpoint-publication binding does not match its authenticated endpoint enrollment"
         );
     }
+    for (channel_id, evidence) in &snapshot.accepted_endpoint_observations {
+        for value in evidence {
+            ensure!(
+                value.channel_id() == *channel_id,
+                "accepted endpoint observation map key is inconsistent"
+            );
+            ensure!(
+                snapshot
+                    .endpoint_publication_bindings
+                    .values()
+                    .any(|binding| {
+                        binding.ticket_publication_write_key().channel_id() == *channel_id
+                            && binding.peer_account_id() == value.publisher_account_id()
+                            && binding.peer_device_id() == value.publisher_device_id()
+                    }),
+                "accepted endpoint observation has no matching enrolled endpoint"
+            );
+        }
+        snapshot.accepted_endpoint_observation_high_water(*channel_id)?;
+    }
     let mut candidate_counts = BTreeMap::<RuntimeContactId, usize>::new();
     for candidate in snapshot.endpoint_candidates.values() {
         let count = candidate_counts.entry(candidate.contact_id()).or_insert(1);
@@ -4178,6 +4324,13 @@ fn load_runtime_state_snapshot(
         .saturating_add(
             snapshot
                 .ticket_observations
+                .values()
+                .map(Vec::len)
+                .sum::<usize>(),
+        )
+        .saturating_add(
+            snapshot
+                .accepted_endpoint_observations
                 .values()
                 .map(Vec::len)
                 .sum::<usize>(),
@@ -5490,6 +5643,708 @@ fn add_runtime_contact_record(
     })
 }
 
+fn export_runtime_endpoint_announcements(
+    state_directory: &Path,
+    current_ticket: &ConnectionTicket,
+    recipient_device_id: DeviceId,
+    output_file: PathBuf,
+    validity_seconds: u64,
+) -> Result<RuntimeIpcEndpointAnnouncementExport> {
+    ensure!(
+        (1..=MAX_ENDPOINT_ANNOUNCEMENT_VALIDITY_SECONDS).contains(&validity_seconds),
+        "endpoint announcement validity must be between 1 and {MAX_ENDPOINT_ANNOUNCEMENT_VALIDITY_SECONDS} seconds"
+    );
+    let device_state = load_command_device_state(state_directory)?;
+    let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+    let local_certificate = trust
+        .load_certificate()
+        .context("load local certificate for endpoint announcement export")?;
+    let local_authority = trust
+        .load_own_authority_snapshot(&local_certificate)
+        .context("load local authority for endpoint announcement export")?;
+    let account_device_list = current_ticket.listener_directory().device_list();
+    ensure!(
+        current_ticket.listener_account_id() == local_certificate.account_id()
+            && current_ticket.listener_device_id() == device_state.identity().device_id()
+            && account_device_list.authority_snapshot() == &local_authority
+            && account_device_list.certificate_for(local_certificate.device_id())
+                == Some(&local_certificate),
+        "running endpoint announcement authority does not match local authenticated state"
+    );
+    ensure!(
+        recipient_device_id != local_certificate.device_id(),
+        "endpoint announcements must target another device"
+    );
+    account_device_list
+        .certificate_for(recipient_device_id)
+        .context("endpoint announcement recipient is not an active device in this account")?;
+
+    let snapshot = load_runtime_state_snapshot(
+        state_directory,
+        local_certificate.account_id(),
+        device_state.identity().device_id(),
+    )?;
+    let mut announcements = Vec::with_capacity(snapshot.contacts.len());
+    let mut endpoint_count = 0_usize;
+    let mut observation_count = 0_usize;
+    for contact in snapshot.contacts.values() {
+        let membership = trust
+            .load_conversation_membership(contact.conversation_id().scope_id())
+            .context("load conversation membership for endpoint announcement export")?;
+        require_conversation_participants(
+            &membership,
+            local_certificate.account_id(),
+            contact.peer_account_id(),
+        )?;
+        let mut endpoints = Vec::new();
+        for enrollment in runtime_endpoint_enrollments(&snapshot, contact)? {
+            let binding = exact_runtime_endpoint_publication_binding(
+                &snapshot,
+                local_certificate.account_id(),
+                contact,
+                &enrollment,
+            )?;
+            let encoded = fs::read_to_string(&enrollment.descriptor_file).with_context(|| {
+                format!(
+                    "read endpoint announcement descriptor {}",
+                    enrollment.descriptor_file.display()
+                )
+            })?;
+            ensure!(
+                encoded.len() <= MAX_RUNTIME_RECORD_BYTES,
+                "endpoint announcement descriptor is too large"
+            );
+            let authenticated = ConnectionTicket::decode_authenticated(&encoded)
+                .context("authenticate descriptor for endpoint announcement export")?;
+            authenticated.verify_authenticated_listener_account(enrollment.peer_account_id)?;
+            let peer = authenticated
+                .verify_authenticated_listener_authorization(enrollment.peer_account_id)?;
+            ensure!(
+                peer.device_id() == enrollment.peer_device_id
+                    && authenticated.allowed_requester_account_id()
+                        == local_certificate.account_id()
+                    && authenticated.route_policy() == enrollment.route_policy
+                    && authenticated.ticket_publication_write_key()
+                        == binding.ticket_publication_write_key(),
+                "endpoint announcement descriptor changed its authenticated endpoint contract"
+            );
+            let channel_id = binding.ticket_publication_write_key().channel_id();
+            let observation = snapshot.latest_ticket_observation(channel_id).cloned();
+            observation_count += usize::from(observation.is_some());
+            endpoint_count += 1;
+            endpoints.push(EndpointCandidateAnnouncement::new(
+                enrollment.peer_device_id,
+                enrollment.primary,
+                enrollment.route_policy,
+                binding.ticket_publication_write_key(),
+                encoded,
+                observation,
+            )?);
+        }
+        announcements.push(ContactEndpointAnnouncement::new(
+            contact.conversation_label().to_owned(),
+            contact.peer_account_id(),
+            endpoints,
+        )?);
+    }
+    let now_unix_seconds = unix_time_now()?;
+    let bundle = SignedEndpointAnnouncementBundle::sign(
+        device_state.identity(),
+        account_device_list.clone(),
+        recipient_device_id,
+        now_unix_seconds,
+        validity_seconds,
+        announcements,
+    )?;
+    let bundle_id = bundle.bundle_id()?;
+    let envelope = EncryptedEndpointAnnouncementBundle::seal(&bundle)?;
+    let output_file = absolute_new_external_path(state_directory, &output_file)?;
+    write_new_authority_file(&output_file, &envelope.encode()?).with_context(|| {
+        format!(
+            "write recipient-encrypted endpoint announcement to {}",
+            output_file.display()
+        )
+    })?;
+    Ok(RuntimeIpcEndpointAnnouncementExport {
+        bundle_id: bundle_id.to_string(),
+        source_device_id: bundle.source_device_id(),
+        recipient_device_id,
+        authority_revision: account_device_list.revision(),
+        contact_count: bundle.contacts().len(),
+        endpoint_count,
+        observation_count,
+        expires_at_unix_seconds: bundle.expires_at_unix_seconds(),
+        output_file,
+        protection: "source-device-signed-recipient-device-hpke-exact-root-roster".to_owned(),
+    })
+}
+
+#[derive(Debug)]
+struct RuntimeEndpointAnnouncementImportPlan {
+    relative_records: Vec<(PathBuf, Vec<u8>)>,
+    external_descriptors: Vec<(PathBuf, Vec<u8>)>,
+    fresh_tickets: Vec<ConnectionTicket>,
+    contact_count: usize,
+    contact_added_count: usize,
+    endpoint_count: usize,
+    endpoint_added_count: usize,
+    publication_binding_added_count: usize,
+    observation_evidence_count: usize,
+}
+
+fn import_runtime_endpoint_announcements(
+    state_directory: &Path,
+    current_ticket: &ConnectionTicket,
+    bundle_file: &Path,
+    descriptor_directory: &Path,
+) -> Result<RuntimeIpcEndpointAnnouncementImport> {
+    let device_state = load_command_device_state(state_directory)?;
+    let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+    let local_certificate = trust
+        .load_certificate()
+        .context("load local certificate for endpoint announcement import")?;
+    let local_authority = trust
+        .load_own_authority_snapshot(&local_certificate)
+        .context("load local authority for endpoint announcement import")?;
+    let current_device_list = current_ticket.listener_directory().device_list();
+    ensure!(
+        current_ticket.listener_account_id() == local_certificate.account_id()
+            && current_ticket.listener_device_id() == device_state.identity().device_id()
+            && current_device_list.authority_snapshot() == &local_authority
+            && current_device_list.certificate_for(local_certificate.device_id())
+                == Some(&local_certificate),
+        "running endpoint announcement authority does not match local authenticated state"
+    );
+
+    let bundle_file = fs::canonicalize(bundle_file).with_context(|| {
+        format!(
+            "resolve encrypted endpoint announcement {}",
+            bundle_file.display()
+        )
+    })?;
+    let metadata = fs::symlink_metadata(&bundle_file)
+        .context("inspect encrypted endpoint announcement input")?;
+    ensure!(
+        metadata.file_type().is_file()
+            && !metadata.file_type().is_symlink()
+            && metadata.len() <= MAX_ENDPOINT_ANNOUNCEMENT_BYTES as u64,
+        "endpoint announcement input must be a bounded regular non-symlink file"
+    );
+    let envelope = EncryptedEndpointAnnouncementBundle::decode(
+        &fs::read(&bundle_file).context("read encrypted endpoint announcement")?,
+    )?;
+    let now_unix_seconds = unix_time_now()?;
+    let bundle = envelope.open(
+        local_certificate.device_id(),
+        device_state.encryption(),
+        now_unix_seconds,
+    )?;
+    ensure!(
+        bundle.account_id() == local_certificate.account_id()
+            && bundle.recipient_device_id() == local_certificate.device_id(),
+        "endpoint announcement belongs to another account or recipient"
+    );
+    ensure!(
+        bundle.source_device_id() != local_certificate.device_id(),
+        "endpoint announcement source must be another device"
+    );
+    ensure!(
+        bundle.account_device_list() == current_device_list,
+        "endpoint announcement does not carry the exact current Root-signed device list"
+    );
+    let source_certificate = current_device_list
+        .certificate_for(bundle.source_device_id())
+        .context("endpoint announcement source is not an active account device")?;
+    verify_device_authorization_with_snapshot(
+        local_certificate.account_id(),
+        source_certificate,
+        &local_authority,
+        &DeviceCapability::MESSAGING,
+    )
+    .context("endpoint announcement source is no longer authorized")?;
+
+    fs::create_dir_all(descriptor_directory).with_context(|| {
+        format!(
+            "create endpoint announcement descriptor directory {}",
+            descriptor_directory.display()
+        )
+    })?;
+    let descriptor_directory = fs::canonicalize(descriptor_directory).with_context(|| {
+        format!(
+            "resolve endpoint announcement descriptor directory {}",
+            descriptor_directory.display()
+        )
+    })?;
+    let descriptor_metadata = fs::symlink_metadata(&descriptor_directory)
+        .context("inspect endpoint announcement descriptor directory")?;
+    ensure!(
+        descriptor_metadata.file_type().is_dir() && !descriptor_metadata.file_type().is_symlink(),
+        "endpoint announcement descriptor path must be a regular non-symlink directory"
+    );
+    let canonical_state = fs::canonicalize(state_directory)
+        .context("resolve state directory for endpoint announcement import")?;
+    ensure!(
+        !descriptor_directory.starts_with(&canonical_state),
+        "imported endpoint descriptors must live outside the protected state directory"
+    );
+
+    let snapshot = load_runtime_state_snapshot(
+        state_directory,
+        local_certificate.account_id(),
+        device_state.identity().device_id(),
+    )?;
+    let bundle_id = bundle.bundle_id()?;
+    let plan = prepare_runtime_endpoint_announcement_import(
+        &snapshot,
+        &trust,
+        &local_certificate,
+        device_state.identity(),
+        &bundle,
+        bundle_id,
+        &descriptor_directory,
+    )?;
+
+    for (path, bytes) in &plan.external_descriptors {
+        write_new_or_verify_identical(path, bytes)?;
+    }
+    let mut evidence_added_count = 0_usize;
+    run_state_transaction(state_directory, |transaction| {
+        if !plan.fresh_tickets.is_empty() {
+            transaction.prepare_trust_workspace()?;
+        }
+        for ticket in &plan.fresh_tickets {
+            device_state
+                .pin_peer_authority_snapshot(ticket.listener_authority_snapshot())
+                .context("pin fresh announced peer authority in DB-primary trust workspace")?;
+            transaction
+                .load_ratchet_state()?
+                .observe_prekey_directory(ticket.listener_directory(), now_unix_seconds)
+                .context("observe fresh announced peer prekey directory")?;
+        }
+        for (relative_path, bytes) in &plan.relative_records {
+            let outcome =
+                persist_runtime_record(state_directory, relative_path, bytes, transaction)?;
+            if relative_path
+                .extension()
+                .is_some_and(|extension| extension == "aeo")
+                && outcome == StoreOutcome::Inserted
+            {
+                evidence_added_count += 1;
+            }
+        }
+        Ok(())
+    })?;
+    load_runtime_state_snapshot(
+        state_directory,
+        local_certificate.account_id(),
+        device_state.identity().device_id(),
+    )
+    .context("verify runtime state after endpoint announcement import")?;
+
+    Ok(RuntimeIpcEndpointAnnouncementImport {
+        bundle_id: bundle_id.to_string(),
+        source_device_id: bundle.source_device_id(),
+        recipient_device_id: bundle.recipient_device_id(),
+        authority_revision: bundle.account_device_list().revision(),
+        contact_count: plan.contact_count,
+        contact_added_count: plan.contact_added_count,
+        endpoint_count: plan.endpoint_count,
+        endpoint_added_count: plan.endpoint_added_count,
+        publication_binding_added_count: plan.publication_binding_added_count,
+        observation_evidence_count: plan.observation_evidence_count,
+        observation_evidence_added_count: evidence_added_count,
+        descriptor_directory,
+        authority_status: "exact-current-root-signed-device-list".to_owned(),
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+fn prepare_runtime_endpoint_announcement_import(
+    snapshot: &RuntimeStateSnapshot,
+    trust: &CommandTrustReadRepository,
+    local_certificate: &DeviceCertificate,
+    identity: &DeviceIdentity,
+    bundle: &SignedEndpointAnnouncementBundle,
+    bundle_id: runtime_endpoint_announcement::EndpointAnnouncementBundleId,
+    descriptor_directory: &Path,
+) -> Result<RuntimeEndpointAnnouncementImportPlan> {
+    let mut relative_records = Vec::new();
+    let mut external_descriptors = Vec::new();
+    let mut fresh_tickets = Vec::new();
+    let mut contact_added_count = 0_usize;
+    let mut endpoint_count = 0_usize;
+    let mut endpoint_added_count = 0_usize;
+    let mut publication_binding_added_count = 0_usize;
+    let mut observation_evidence_count = 0_usize;
+    let mut planned_contact_ids = BTreeSet::new();
+    let mut planned_endpoint_ids = BTreeSet::new();
+    let mut known_observations =
+        BTreeMap::<(TicketPublicationChannelId, u64), (TicketPublicationId, [u8; 32])>::new();
+    for observations in snapshot.ticket_observations.values() {
+        for observation in observations {
+            merge_runtime_publication_observation(
+                &mut known_observations,
+                observation.channel_id(),
+                observation.publication_generation(),
+                observation.publication_id(),
+                observation.ticket_digest(),
+            )?;
+        }
+    }
+    for evidence in snapshot.accepted_endpoint_observations.values() {
+        for observation in evidence {
+            merge_runtime_publication_observation(
+                &mut known_observations,
+                observation.channel_id(),
+                observation.publication_generation(),
+                observation.publication_id(),
+                observation.ticket_digest(),
+            )?;
+        }
+    }
+
+    for announcement in bundle.contacts() {
+        let membership = trust
+            .load_conversation_membership(announcement.conversation_id().scope_id())
+            .context("load conversation membership for endpoint announcement import")?;
+        require_conversation_participants(
+            &membership,
+            local_certificate.account_id(),
+            announcement.peer_account_id(),
+        )?;
+        let existing_contact = snapshot.contacts.values().find(|contact| {
+            contact.peer_account_id() == announcement.peer_account_id()
+                && contact.conversation_id() == announcement.conversation_id()
+                && contact.conversation_label() == announcement.conversation_label()
+        });
+        let primary_announcement = announcement
+            .endpoints()
+            .iter()
+            .find(|endpoint| endpoint.primary())
+            .context("endpoint announcement contact has no primary endpoint")?;
+        let primary_descriptor = imported_endpoint_descriptor_path(
+            descriptor_directory,
+            bundle_id,
+            announcement.peer_account_id(),
+            announcement.conversation_id(),
+            primary_announcement.peer_device_id(),
+        );
+        let contact = if let Some(contact) = existing_contact {
+            contact.clone()
+        } else {
+            let contact = SignedRuntimeContact::sign(
+                identity,
+                local_certificate.account_id(),
+                announcement.peer_account_id(),
+                primary_announcement.peer_device_id(),
+                announcement.conversation_label().to_owned(),
+                announcement.conversation_id(),
+                primary_announcement.route_policy(),
+                primary_descriptor,
+            )?;
+            ensure!(
+                planned_contact_ids.insert(contact.contact_id()),
+                "endpoint announcement creates a duplicate contact"
+            );
+            relative_records.push((
+                runtime_contact_relative_path(contact.contact_id()),
+                contact.encode()?,
+            ));
+            contact_added_count += 1;
+            contact
+        };
+        let existing_enrollments = if existing_contact.is_some() {
+            runtime_endpoint_enrollments(snapshot, &contact)?
+        } else {
+            Vec::new()
+        };
+        let new_endpoint_count = announcement
+            .endpoints()
+            .iter()
+            .filter(|endpoint| {
+                !existing_enrollments
+                    .iter()
+                    .any(|value| value.peer_device_id == endpoint.peer_device_id())
+            })
+            .count();
+        ensure!(
+            existing_enrollments.len() + new_endpoint_count
+                <= MAX_RUNTIME_ENDPOINT_CANDIDATES_PER_CONTACT,
+            "endpoint announcement would exceed the bounded endpoint-candidate limit"
+        );
+
+        for endpoint in announcement.endpoints() {
+            endpoint_count += 1;
+            let authenticated = ConnectionTicket::decode_authenticated(endpoint.ticket())
+                .context("authenticate imported endpoint descriptor")?;
+            authenticated.verify_authenticated_listener_account(announcement.peer_account_id())?;
+            let peer = authenticated
+                .verify_authenticated_listener_authorization(announcement.peer_account_id())?;
+            ensure!(
+                peer.device_id() == endpoint.peer_device_id()
+                    && authenticated.allowed_requester_account_id()
+                        == local_certificate.account_id()
+                    && authenticated.route_policy() == endpoint.route_policy()
+                    && authenticated.ticket_publication_write_key()
+                        == endpoint.ticket_publication_write_key(),
+                "imported endpoint descriptor changes its announced contract"
+            );
+
+            let existing_enrollment = existing_enrollments
+                .iter()
+                .find(|value| value.peer_device_id == endpoint.peer_device_id());
+            let enrollment = if let Some(existing) = existing_enrollment {
+                ensure!(
+                    existing.peer_account_id == announcement.peer_account_id()
+                        && existing.route_policy == endpoint.route_policy(),
+                    "announced endpoint conflicts with an existing enrollment"
+                );
+                existing.clone()
+            } else {
+                let descriptor_file = imported_endpoint_descriptor_path(
+                    descriptor_directory,
+                    bundle_id,
+                    announcement.peer_account_id(),
+                    announcement.conversation_id(),
+                    endpoint.peer_device_id(),
+                );
+                external_descriptors.push((
+                    descriptor_file.clone(),
+                    endpoint.ticket().as_bytes().to_vec(),
+                ));
+                let primary = existing_contact.is_none() && endpoint.primary();
+                if !primary {
+                    let candidate = SignedRuntimeEndpointCandidate::sign(
+                        identity,
+                        local_certificate.account_id(),
+                        contact.contact_id(),
+                        announcement.peer_account_id(),
+                        endpoint.peer_device_id(),
+                        announcement.conversation_id(),
+                        endpoint.route_policy(),
+                        descriptor_file.clone(),
+                    )?;
+                    ensure!(
+                        planned_endpoint_ids.insert(candidate.candidate_id()),
+                        "endpoint announcement creates a duplicate endpoint candidate"
+                    );
+                    relative_records.push((
+                        runtime_endpoint_candidate_relative_path(candidate.candidate_id()),
+                        candidate.encode()?,
+                    ));
+                }
+                endpoint_added_count += 1;
+                RuntimeEndpointEnrollment {
+                    peer_account_id: announcement.peer_account_id(),
+                    peer_device_id: endpoint.peer_device_id(),
+                    route_policy: endpoint.route_policy(),
+                    descriptor_file,
+                    primary,
+                }
+            };
+
+            let binding_id = runtime_endpoint_publication_binding_id(
+                local_certificate.account_id(),
+                contact.contact_id(),
+                endpoint.peer_device_id(),
+            );
+            if let Some(existing) = snapshot.endpoint_publication_bindings.get(&binding_id) {
+                ensure!(
+                    existing.contact_id() == contact.contact_id()
+                        && existing.peer_account_id() == announcement.peer_account_id()
+                        && existing.peer_device_id() == endpoint.peer_device_id()
+                        && existing.conversation_id() == announcement.conversation_id()
+                        && existing.route_policy() == endpoint.route_policy()
+                        && existing.descriptor_file() == &enrollment.descriptor_file
+                        && existing.ticket_publication_write_key()
+                            == endpoint.ticket_publication_write_key(),
+                    "announced endpoint conflicts with its durable publication binding"
+                );
+            } else {
+                let binding = sign_runtime_endpoint_publication_binding(
+                    identity,
+                    local_certificate.account_id(),
+                    &contact,
+                    &enrollment,
+                    endpoint.ticket_publication_write_key(),
+                )?;
+                relative_records.push((
+                    runtime_endpoint_publication_binding_relative_path(binding.binding_id()),
+                    binding.encode()?,
+                ));
+                publication_binding_added_count += 1;
+            }
+
+            if existing_enrollment.is_none()
+                && let Ok(fresh) = ConnectionTicket::decode(endpoint.ticket())
+            {
+                fresh_tickets.push(fresh);
+            }
+            if let Some(source_observation) = endpoint.latest_observation() {
+                ensure!(
+                    source_observation.local_account_id() == local_certificate.account_id()
+                        && source_observation.local_device_id() == bundle.source_device_id()
+                        && source_observation.publisher_account_id()
+                            == announcement.peer_account_id()
+                        && source_observation.publisher_device_id() == endpoint.peer_device_id()
+                        && source_observation.channel_id()
+                            == endpoint.ticket_publication_write_key().channel_id(),
+                    "announced publication observation changes endpoint identity"
+                );
+                merge_runtime_publication_observation(
+                    &mut known_observations,
+                    source_observation.channel_id(),
+                    source_observation.publication_generation(),
+                    source_observation.publication_id(),
+                    source_observation.ticket_digest(),
+                )?;
+                let evidence = SignedAcceptedEndpointObservation::sign(
+                    identity,
+                    local_certificate.account_id(),
+                    bundle.source_device_id(),
+                    bundle_id,
+                    bundle.created_at_unix_seconds(),
+                    source_observation.clone(),
+                )?;
+                relative_records.push((
+                    runtime_accepted_endpoint_observation_relative_path(evidence.evidence_id()?),
+                    evidence.encode()?,
+                ));
+                observation_evidence_count += 1;
+            }
+        }
+    }
+    ensure!(
+        snapshot.contacts.len() + contact_added_count <= MAX_RUNTIME_CONTACTS,
+        "endpoint announcement would exceed the bounded runtime contact limit"
+    );
+    let existing_publication_records = snapshot
+        .ticket_publications
+        .values()
+        .map(Vec::len)
+        .sum::<usize>()
+        .saturating_add(
+            snapshot
+                .ticket_observations
+                .values()
+                .map(Vec::len)
+                .sum::<usize>(),
+        )
+        .saturating_add(
+            snapshot
+                .accepted_endpoint_observations
+                .values()
+                .map(Vec::len)
+                .sum::<usize>(),
+        );
+    ensure!(
+        existing_publication_records.saturating_add(observation_evidence_count)
+            <= MAX_RUNTIME_TICKET_PUBLICATION_RECORDS,
+        "endpoint announcement would exceed the bounded ticket-observation record limit"
+    );
+    Ok(RuntimeEndpointAnnouncementImportPlan {
+        relative_records,
+        external_descriptors,
+        fresh_tickets,
+        contact_count: bundle.contacts().len(),
+        contact_added_count,
+        endpoint_count,
+        endpoint_added_count,
+        publication_binding_added_count,
+        observation_evidence_count,
+    })
+}
+
+fn merge_runtime_publication_observation(
+    known: &mut BTreeMap<(TicketPublicationChannelId, u64), (TicketPublicationId, [u8; 32])>,
+    channel_id: TicketPublicationChannelId,
+    generation: u64,
+    publication_id: TicketPublicationId,
+    ticket_digest: [u8; 32],
+) -> Result<()> {
+    if let Some((known_id, known_digest)) = known.get(&(channel_id, generation)) {
+        ensure!(
+            *known_id == publication_id && *known_digest == ticket_digest,
+            "authorized devices equivocated at publication generation {generation}"
+        );
+    } else {
+        known.insert((channel_id, generation), (publication_id, ticket_digest));
+    }
+    Ok(())
+}
+
+fn absolute_new_external_path(state_directory: &Path, path: &Path) -> Result<PathBuf> {
+    let absolute = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .context("read current directory for endpoint announcement output")?
+            .join(path)
+    };
+    let parent = absolute
+        .parent()
+        .context("endpoint announcement output has no parent")?;
+    fs::create_dir_all(parent).with_context(|| {
+        format!(
+            "create endpoint announcement output directory {}",
+            parent.display()
+        )
+    })?;
+    let parent = fs::canonicalize(parent).with_context(|| {
+        format!(
+            "resolve endpoint announcement output directory {}",
+            parent.display()
+        )
+    })?;
+    let file_name = absolute
+        .file_name()
+        .context("endpoint announcement output has no file name")?;
+    let resolved = parent.join(file_name);
+    let canonical_state = fs::canonicalize(state_directory)
+        .context("resolve protected state directory for endpoint announcement output")?;
+    ensure!(
+        !resolved.starts_with(canonical_state),
+        "endpoint announcement output must live outside the protected state directory"
+    );
+    Ok(resolved)
+}
+
+fn imported_endpoint_descriptor_path(
+    descriptor_directory: &Path,
+    bundle_id: runtime_endpoint_announcement::EndpointAnnouncementBundleId,
+    peer_account_id: AccountId,
+    conversation_id: ConversationId,
+    peer_device_id: DeviceId,
+) -> PathBuf {
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(b"kilogram:imported-endpoint-descriptor:v1\0");
+    hasher.update(peer_account_id.as_bytes());
+    hasher.update(conversation_id.as_bytes());
+    hasher.update(peer_device_id.as_bytes());
+    hasher.update(bundle_id.to_string().as_bytes());
+    descriptor_directory.join(format!("{}.ticket", hasher.finalize().to_hex()))
+}
+
+fn write_new_or_verify_identical(path: &Path, bytes: &[u8]) -> Result<()> {
+    if path.exists() {
+        let metadata = fs::symlink_metadata(path)
+            .with_context(|| format!("inspect imported endpoint descriptor {}", path.display()))?;
+        ensure!(
+            metadata.file_type().is_file() && !metadata.file_type().is_symlink(),
+            "imported endpoint descriptor path is not a regular non-symlink file"
+        );
+        ensure!(
+            fs::read(path)
+                .with_context(|| format!("read imported endpoint descriptor {}", path.display()))?
+                == bytes,
+            "imported endpoint descriptor already exists with different content"
+        );
+        return Ok(());
+    }
+    write_new_authority_file(path, bytes)
+        .with_context(|| format!("write imported endpoint descriptor {}", path.display()))
+}
+
 fn queue_runtime_message(
     state_directory: PathBuf,
     conversation: String,
@@ -6329,6 +7184,105 @@ async fn runtime_ipc_ticket_automation_status(ipc_file: PathBuf) -> Result<()> {
     }
 }
 
+async fn runtime_ipc_export_endpoint_announcements(
+    ipc_file: PathBuf,
+    recipient_device_id: DeviceId,
+    output_file: PathBuf,
+    validity_seconds: u64,
+) -> Result<()> {
+    match kilogram_runtime_ipc::call(
+        &ipc_file,
+        RuntimeIpcCommand::ExportEndpointAnnouncements {
+            recipient_device_id,
+            output_file,
+            validity_seconds,
+        },
+    )
+    .await?
+    {
+        RuntimeIpcResponse::EndpointAnnouncementsExported(report) => {
+            print_runtime_endpoint_announcement_export(&report);
+            Ok(())
+        }
+        RuntimeIpcResponse::Error { message } => {
+            bail!("runtime IPC rejected endpoint announcement export: {message}")
+        }
+        response => bail!(
+            "runtime IPC returned an unexpected endpoint announcement export response: {response:?}"
+        ),
+    }
+}
+
+async fn runtime_ipc_import_endpoint_announcements(
+    ipc_file: PathBuf,
+    bundle_file: PathBuf,
+    descriptor_directory: PathBuf,
+) -> Result<()> {
+    match kilogram_runtime_ipc::call(
+        &ipc_file,
+        RuntimeIpcCommand::ImportEndpointAnnouncements {
+            bundle_file,
+            descriptor_directory,
+        },
+    )
+    .await?
+    {
+        RuntimeIpcResponse::EndpointAnnouncementsImported(report) => {
+            print_runtime_endpoint_announcement_import(&report);
+            Ok(())
+        }
+        RuntimeIpcResponse::Error { message } => {
+            bail!("runtime IPC rejected endpoint announcement import: {message}")
+        }
+        response => bail!(
+            "runtime IPC returned an unexpected endpoint announcement import response: {response:?}"
+        ),
+    }
+}
+
+fn print_runtime_endpoint_announcement_export(report: &RuntimeIpcEndpointAnnouncementExport) {
+    println!("endpoint_announcement_bundle_id={}", report.bundle_id);
+    println!("source_device_id={}", report.source_device_id);
+    println!("recipient_device_id={}", report.recipient_device_id);
+    println!("authority_revision={}", report.authority_revision);
+    println!("contact_count={}", report.contact_count);
+    println!("endpoint_count={}", report.endpoint_count);
+    println!("observation_count={}", report.observation_count);
+    println!("expires_at_unix_seconds={}", report.expires_at_unix_seconds);
+    println!("output_file={}", report.output_file.display());
+    println!("protection={}", report.protection);
+    println!("status=endpoint-announcements-exported");
+}
+
+fn print_runtime_endpoint_announcement_import(report: &RuntimeIpcEndpointAnnouncementImport) {
+    println!("endpoint_announcement_bundle_id={}", report.bundle_id);
+    println!("source_device_id={}", report.source_device_id);
+    println!("recipient_device_id={}", report.recipient_device_id);
+    println!("authority_revision={}", report.authority_revision);
+    println!("contact_count={}", report.contact_count);
+    println!("contact_added_count={}", report.contact_added_count);
+    println!("endpoint_count={}", report.endpoint_count);
+    println!("endpoint_added_count={}", report.endpoint_added_count);
+    println!(
+        "publication_binding_added_count={}",
+        report.publication_binding_added_count
+    );
+    println!(
+        "observation_evidence_count={}",
+        report.observation_evidence_count
+    );
+    println!(
+        "observation_evidence_added_count={}",
+        report.observation_evidence_added_count
+    );
+    println!(
+        "descriptor_directory={}",
+        report.descriptor_directory.display()
+    );
+    println!("authority_status={}", report.authority_status);
+    println!("status=endpoint-announcements-imported");
+}
+
 fn print_runtime_ticket_automation_status(status: &RuntimeIpcTicketAutomationStatus) {
     println!("ticket_automation_contact_id={}", status.contact_id);
     println!("ticket_automation_conversation={}", status.conversation);
@@ -6746,6 +7700,51 @@ async fn handle_runtime_ipc_work(
             Ok(refresh) => {
                 state_changed = refresh.refreshed_endpoint_candidate_count != 0;
                 RuntimeIpcResponse::ContactTicketRefreshed(Box::new(refresh))
+            }
+            Err(error) => RuntimeIpcResponse::Error {
+                message: format!("{error:#}"),
+            },
+        },
+        RuntimeIpcCommand::ExportEndpointAnnouncements {
+            recipient_device_id,
+            output_file,
+            validity_seconds,
+        } => {
+            let export = StateDirectoryLock::acquire(state_directory)
+                .context("lock runtime state for endpoint announcement export")
+                .and_then(|_lock| {
+                    export_runtime_endpoint_announcements(
+                        state_directory,
+                        ticket,
+                        recipient_device_id,
+                        output_file,
+                        validity_seconds,
+                    )
+                });
+            match export {
+                Ok(report) => RuntimeIpcResponse::EndpointAnnouncementsExported(Box::new(report)),
+                Err(error) => RuntimeIpcResponse::Error {
+                    message: format!("{error:#}"),
+                },
+            }
+        }
+        RuntimeIpcCommand::ImportEndpointAnnouncements {
+            bundle_file,
+            descriptor_directory,
+        } => match with_locked_state(state_directory, || {
+            import_runtime_endpoint_announcements(
+                state_directory,
+                ticket,
+                &bundle_file,
+                &descriptor_directory,
+            )
+        }) {
+            Ok(report) => {
+                state_changed = report.contact_added_count != 0
+                    || report.endpoint_added_count != 0
+                    || report.publication_binding_added_count != 0
+                    || report.observation_evidence_added_count != 0;
+                RuntimeIpcResponse::EndpointAnnouncementsImported(Box::new(report))
             }
             Err(error) => RuntimeIpcResponse::Error {
                 message: format!("{error:#}"),
@@ -7440,9 +8439,21 @@ fn install_runtime_endpoint_ticket_refresh(
         )
         .context("local device is not authorized by the published ticket")?;
 
+        let imported_high_water = snapshot.accepted_endpoint_observation_high_water(channel_id)?;
+        if let Some((generation, publication_id, ticket_digest)) = imported_high_water {
+            ensure!(
+                publication.generation() > generation
+                    || (publication.generation() == generation
+                        && publication.publication_id()? == publication_id
+                        && publication.ticket_digest() == ticket_digest),
+                "ticket publication rolls back or equivocates against an authorized sibling-device high-water"
+            );
+        }
         let previous_observation = snapshot.latest_ticket_observation(channel_id);
         let first_contact_freshness = if previous_observation.is_some() {
             "local-monotonic-high-water"
+        } else if imported_high_water.is_some() {
+            "authorized-sibling-high-water"
         } else {
             "non-expired-signed-first-observation-no-global-freshness"
         };
@@ -15894,6 +16905,57 @@ mod tests {
     }
 
     #[test]
+    fn sibling_publication_high_water_rejects_same_generation_equivocation() -> Result<()> {
+        let publisher = DeviceIdentity::generate()?;
+        let recipient = DeviceIdentity::generate()?;
+        let (publisher_account, _, _, _) = authority_for(&publisher)?;
+        let (recipient_account, _, _, _) = authority_for(&recipient)?;
+        let channel = ticket_publication_write_capability(&publisher, recipient_account)
+            .write_key()
+            .channel_id();
+        let now = unix_time_now()?;
+        let first = SignedTicketPublication::sign(
+            &publisher,
+            channel,
+            publisher_account,
+            recipient_account,
+            "first-ticket".to_owned(),
+            now,
+            300,
+            None,
+        )?;
+        let conflicting = SignedTicketPublication::sign(
+            &publisher,
+            channel,
+            publisher_account,
+            recipient_account,
+            "conflicting-ticket".to_owned(),
+            now,
+            300,
+            None,
+        )?;
+        let mut known = BTreeMap::new();
+        merge_runtime_publication_observation(
+            &mut known,
+            channel,
+            first.generation(),
+            first.publication_id()?,
+            first.ticket_digest(),
+        )?;
+        let error = merge_runtime_publication_observation(
+            &mut known,
+            channel,
+            conflicting.generation(),
+            conflicting.publication_id()?,
+            conflicting.ticket_digest(),
+        )
+        .err()
+        .context("same-generation publication equivocation was accepted")?;
+        assert!(format!("{error:#}").contains("equivocated"));
+        Ok(())
+    }
+
+    #[test]
     fn runtime_ticket_compaction_preserves_signed_head_and_bounded_restart_state() -> Result<()> {
         let directory = tempfile::tempdir()?;
         let root_dir = directory.path().join("root");
@@ -16214,6 +17276,203 @@ mod tests {
                 && (status.detail.contains("descriptor-unusable")
                     || status.detail == "authority-behind-local-high-water")
         }));
+        Ok(())
+    }
+
+    #[test]
+    fn endpoint_announcements_transfer_enrollments_and_high_water_between_own_devices() -> Result<()>
+    {
+        let directory = tempfile::tempdir()?;
+        let local_root = AccountRootState::create(directory.path().join("local-root"))?;
+        let source_state_dir = directory.path().join("source-state");
+        let recipient_state_dir = directory.path().join("recipient-state");
+        let source = DeviceState::load_or_create(&source_state_dir)?;
+        let recipient = DeviceState::load_or_create(&recipient_state_dir)?;
+        let source_certificate = local_root.issue_device_certificate(
+            source.identity().device_id(),
+            source.encryption().public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let recipient_certificate = local_root.issue_device_certificate(
+            recipient.identity().device_id(),
+            recipient.encryption().public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let local_authority = local_root.authority_snapshot()?;
+        let local_device_list = local_root
+            .publish_device_list(&[source_certificate.clone(), recipient_certificate.clone()])?;
+        for (state, certificate) in [
+            (&source, &source_certificate),
+            (&recipient, &recipient_certificate),
+        ] {
+            state.install_certificate(certificate)?;
+            state.install_own_authority_snapshot(&local_authority)?;
+        }
+
+        let peer_root = AccountRootState::create(directory.path().join("peer-root"))?;
+        let peer = DeviceIdentity::generate()?;
+        let peer_encryption = DeviceEncryptionIdentity::generate()?;
+        let peer_certificate = peer_root.issue_device_certificate(
+            peer.device_id(),
+            peer_encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let peer_device_list =
+            peer_root.publish_device_list(std::slice::from_ref(&peer_certificate))?;
+        let now = unix_time_now()?;
+        let peer_pool = RatchetState::load_or_create(directory.path().join("peer-ratchet"))?
+            .prekey_pool(&peer, 4, now, DEFAULT_PREKEY_POOL_VALIDITY_SECONDS)?;
+        let peer_directory =
+            AccountPrekeyDirectory::new(peer_device_list, vec![peer_pool.clone()])?;
+        let peer_ticket = ConnectionTicket::new(
+            EndpointAddr::new(SecretKey::generate().public()),
+            &peer,
+            peer_certificate,
+            peer_directory.clone(),
+            local_root.account_id(),
+            RoutePolicy::Auto,
+        )?;
+        let peer_ticket_file = directory.path().join("peer.ticket");
+        fs::write(&peer_ticket_file, peer_ticket.encode()?)?;
+
+        let conversation = "own-device-endpoint-announcements";
+        let conversation_id = ConversationId::from_label(conversation);
+        let membership = local_root.create_conversation_membership(
+            conversation_id.scope_id(),
+            &[peer_root.account_id()],
+        )?;
+        source.install_conversation_membership(&membership)?;
+        recipient.install_conversation_membership(&membership)?;
+        let receipt = add_runtime_contact_record(
+            &source_state_dir,
+            conversation.to_owned(),
+            peer_root.account_id(),
+            peer_ticket_file,
+        )?;
+
+        let publication = SignedTicketPublication::sign(
+            &peer,
+            peer_ticket.ticket_publication_write_key().channel_id(),
+            peer_root.account_id(),
+            local_root.account_id(),
+            peer_ticket.encode()?,
+            now,
+            300,
+            None,
+        )?;
+        let observation = SignedTicketPublicationObservation::sign(
+            source.identity(),
+            local_root.account_id(),
+            &publication,
+            now,
+            None,
+        )?;
+        run_state_transaction(&source_state_dir, |transaction| {
+            persist_runtime_record(
+                &source_state_dir,
+                &runtime_ticket_observation_relative_path(
+                    observation.channel_id(),
+                    observation.observation_generation(),
+                    observation.observation_id()?,
+                ),
+                &observation.encode()?,
+                transaction,
+            )
+        })?;
+
+        let source_pool = RatchetState::load_or_create(&source_state_dir)?.prekey_pool(
+            source.identity(),
+            4,
+            now,
+            DEFAULT_PREKEY_POOL_VALIDITY_SECONDS,
+        )?;
+        let recipient_pool = RatchetState::load_or_create(&recipient_state_dir)?.prekey_pool(
+            recipient.identity(),
+            4,
+            now,
+            DEFAULT_PREKEY_POOL_VALIDITY_SECONDS,
+        )?;
+        let local_directory = AccountPrekeyDirectory::new(
+            local_device_list.clone(),
+            vec![source_pool, recipient_pool],
+        )?;
+        let source_ticket = ConnectionTicket::new(
+            EndpointAddr::new(SecretKey::generate().public()),
+            source.identity(),
+            source_certificate,
+            local_directory.clone(),
+            peer_root.account_id(),
+            RoutePolicy::Auto,
+        )?;
+        let recipient_ticket = ConnectionTicket::new(
+            EndpointAddr::new(SecretKey::generate().public()),
+            recipient.identity(),
+            recipient_certificate,
+            local_directory,
+            peer_root.account_id(),
+            RoutePolicy::Auto,
+        )?;
+
+        let bundle_file = directory.path().join("source-to-recipient.eab");
+        let export = export_runtime_endpoint_announcements(
+            &source_state_dir,
+            &source_ticket,
+            recipient.identity().device_id(),
+            bundle_file.clone(),
+            300,
+        )?;
+        assert_eq!(export.contact_count, 1);
+        assert_eq!(export.endpoint_count, 1);
+        assert_eq!(export.observation_count, 1);
+
+        let descriptors = directory.path().join("recipient-descriptors");
+        let imported = import_runtime_endpoint_announcements(
+            &recipient_state_dir,
+            &recipient_ticket,
+            &bundle_file,
+            &descriptors,
+        )?;
+        assert_eq!(imported.contact_added_count, 1);
+        assert_eq!(imported.endpoint_added_count, 1);
+        assert_eq!(imported.publication_binding_added_count, 1);
+        assert_eq!(imported.observation_evidence_added_count, 1);
+        let recipient_snapshot = load_runtime_state_snapshot(
+            &recipient_state_dir,
+            local_root.account_id(),
+            recipient.identity().device_id(),
+        )?;
+        assert_eq!(recipient_snapshot.contacts.len(), 1);
+        assert_eq!(recipient_snapshot.endpoint_candidates.len(), 0);
+        assert_eq!(recipient_snapshot.endpoint_publication_bindings.len(), 1);
+        assert_eq!(recipient_snapshot.accepted_endpoint_observations.len(), 1);
+        assert_eq!(
+            recipient_snapshot
+                .accepted_endpoint_observation_high_water(observation.channel_id())?,
+            Some((
+                publication.generation(),
+                publication.publication_id()?,
+                publication.ticket_digest(),
+            ))
+        );
+        assert_eq!(
+            recipient_snapshot
+                .contacts
+                .get(&receipt.contact_id)
+                .context("imported runtime contact is absent")?
+                .peer_device_id(),
+            peer.device_id()
+        );
+
+        let repeated = import_runtime_endpoint_announcements(
+            &recipient_state_dir,
+            &recipient_ticket,
+            &bundle_file,
+            &descriptors,
+        )?;
+        assert_eq!(repeated.contact_added_count, 0);
+        assert_eq!(repeated.endpoint_added_count, 0);
+        assert_eq!(repeated.publication_binding_added_count, 0);
+        assert_eq!(repeated.observation_evidence_added_count, 0);
         Ok(())
     }
 

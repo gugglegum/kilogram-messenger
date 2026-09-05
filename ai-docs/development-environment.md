@@ -1303,3 +1303,29 @@ retirement остальных compatibility shadows ещё не реализов
   `91153956775543D3F38822C063BB13EE99E847C6F45990EA1AA6F3192E300E9B`;
   `target/release/kilogram-ticket-store.exe` — 2,581,504 bytes, SHA-256
   `123887E3B8F607F77A5BEE8969B5B9B73ABC189BAEC1BD51AFFA925183020191`.
+
+## M0.9.37 verification snapshot (2026-09-05)
+
+- Новый endpoint-announcement crypto regression проверяет recipient-only HPKE
+  open, bounded expiry, wrong-recipient rejection и ciphertext tamper rejection.
+- Сквозной two-own-device regression создаёт exact Root-signed roster,
+  переносит contact/endpoint/binding/latest observation с source на recipient,
+  проверяет recipient-local records, sibling high-water и idempotent повторный
+  import без дубликатов.
+- `cargo test --workspace --all-targets`: 204 tests, 0 failed; final dedicated
+  same-generation sibling-equivocation regression also passes, bringing the
+  current suite to 205 tests.
+- `cargo fmt --all -- --check`, `git diff --check` и strict
+  `cargo clippy --workspace --all-targets --all-features -- -D warnings`
+  проходят.
+- `cargo build --workspace --release` проходит; stable-name
+  CLI/bootstrap/store `--help` и hidden GUI launch smoke успешны.
+- Windows artifacts со стабильными именами:
+  `target/release/kilogram-bootstrap.exe` — 20,476,928 bytes, SHA-256
+  `1AB47A618A813F83E6E1243BD0855A708837B3BF2B47E5CA891BB353E9D507D9`;
+  `target/release/kilogram-cli.exe` — 25,040,384 bytes, SHA-256
+  `B4C5BD1DF510239609EE4FD0FC6D936CB0E416181C115017DCBDE868643382EE`;
+  `target/release/kilogram-windows.exe` — 8,021,504 bytes, SHA-256
+  `9A99122A795464923815660BE6E43925FFA7BEEBD14FC281BFE78EC0BB3CE71B`;
+  `target/release/kilogram-ticket-store.exe` — 2,581,504 bytes, SHA-256
+  `123887E3B8F607F77A5BEE8969B5B9B73ABC189BAEC1BD51AFFA925183020191`.

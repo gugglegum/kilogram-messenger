@@ -2831,12 +2831,33 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - contract зафиксирован в
   [`../docs/RFC-0058-expiry-independent-publication-binding.md`](../docs/RFC-0058-expiry-independent-publication-binding.md).
 
+### M0.9.37 — authenticated own-device endpoint announcements: выполнено
+
+Реализовано:
+
+- IPC v11 экспортирует bounded canonical bundle: максимум 256 contacts и четыре
+  endpoints, exact current Root-signed own roster, source/recipient, короткий
+  expiry, authenticated ticket/binding и latest local observation;
+- source Device подписывает plaintext, затем весь bundle HPKE-seal-ится exact
+  active recipient Device; output создаётся no-clobber вне protected state;
+- import требует exact byte-equal current roster, active source/recipient,
+  existing membership и полный immutable ticket/endpoint contract; bundle не
+  обновляет Root authority или membership;
+- recipient создаёт собственные signed contact/candidate/`.epb` records и
+  canonical external descriptors одной vault-primary transaction; fresh ticket
+  может pin-ить только собственную peer Root authority/prekeys, expired ticket
+  остаётся non-dialable и даёт лишь refresh binding;
+- source observation сохраняется внутри local-device-signed `.aeo` evidence;
+  lower generation, same-generation conflict и sibling equivocation fail
+  closed, повторный import byte-exact idempotent;
+- contract зафиксирован в
+  [`../docs/RFC-0059-authenticated-own-device-endpoint-announcements.md`](../docs/RFC-0059-authenticated-own-device-endpoint-announcements.md).
+
 ### Следующий этап
 
-1. M0.9.37: authenticated endpoint announcements — переносить bounded endpoint
-   candidates и publication observation evidence между уже авторизованными
-   устройствами аккаунта, сохраняя per-device signatures/high-water и не делая
-   gossip/store источником identity authority.
+1. M0.9.38: автоматическая передача того же encrypted bundle по authenticated
+   same-account Device session с replay acknowledgement и bounded backpressure,
+   не дублируя import trust logic.
 2. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.

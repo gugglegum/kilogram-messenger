@@ -128,12 +128,32 @@ specified in
 [`docs/RFC-0057-multi-candidate-ticket-refresh.md`](docs/RFC-0057-multi-candidate-ticket-refresh.md).
 Expiry-independent locally signed publication-channel bindings are specified in
 [`docs/RFC-0058-expiry-independent-publication-binding.md`](docs/RFC-0058-expiry-independent-publication-binding.md).
+Recipient-encrypted endpoint/high-water transfer between authorized devices is
+specified in
+[`docs/RFC-0059-authenticated-own-device-endpoint-announcements.md`](docs/RFC-0059-authenticated-own-device-endpoint-announcements.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.36 expiry-independent publication binding — complete
+## Current milestone: M0.9.37 authenticated endpoint announcements — complete
+
+An active device can now export its bounded contact endpoint set and signed
+publication observation heads to another active device of the same account.
+The canonical bundle carries the exact current Root-signed roster, is signed by
+the source Device, expires within a bounded window and is HPKE-encrypted only
+for the selected recipient Device. IPC v11 import requires that roster to match
+the running recipient byte-for-byte and never installs Account authority or
+membership from the bundle.
+
+The recipient creates fresh local-Device-signed contact/candidate/binding
+records instead of copying installation-specific state. Expired announced
+tickets remain unusable but retain enough authenticated lookup state to fetch a
+fresh ticket. Imported sibling observation heads become separately signed
+anti-rollback evidence: later refresh rejects a lower generation or conflicting
+same-generation publication. Explicit file transfer is the current transport;
+automatic exchange over an authenticated same-account session is the next
+bounded slice.
 
 One peer account/conversation contact can now enroll up to four independently
 signed Device endpoints without changing its stable contact ID or queued
@@ -148,8 +168,9 @@ Ticket refresh now snapshots every enrolled Device candidate, performs the
 bounded publication lookups concurrently, and serializes authenticated local
 commits per candidate. A partial result preserves successful descriptor and
 observation updates while foreground automation records a normal backoff
-failure until every candidate succeeds. Runtime IPC v10 and the Windows desktop
-show exact `usable`/`stale` counts, per-Device diagnostics and each opaque
+failure until every candidate succeeds. Runtime IPC v11 retains the v10 read
+model through which the Windows desktop shows exact `usable`/`stale` counts,
+per-Device diagnostics and each opaque
 channel's local publication high-water. Runtime and desktop binaries must be
 upgraded together.
 

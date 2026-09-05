@@ -21,7 +21,7 @@ use tokio::{
     time::timeout,
 };
 
-const IPC_VERSION: u8 = 10;
+const IPC_VERSION: u8 = 11;
 const MAX_DESCRIPTOR_BYTES: u64 = 16 * 1024;
 const MAX_LAUNCH_PROFILE_BYTES: u64 = 64 * 1024;
 const MAX_LAUNCH_PROFILE_PATHS: usize = 64;
@@ -391,6 +391,15 @@ pub enum RuntimeIpcCommand {
         allow_unknown_network: bool,
     },
     TicketAutomationStatus,
+    ExportEndpointAnnouncements {
+        recipient_device_id: DeviceId,
+        output_file: PathBuf,
+        validity_seconds: u64,
+    },
+    ImportEndpointAnnouncements {
+        bundle_file: PathBuf,
+        descriptor_directory: PathBuf,
+    },
     ConversationList,
     HistoryPage {
         conversation: String,
@@ -765,6 +774,37 @@ pub struct RuntimeIpcTicketAutomationStatus {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcEndpointAnnouncementExport {
+    pub bundle_id: String,
+    pub source_device_id: DeviceId,
+    pub recipient_device_id: DeviceId,
+    pub authority_revision: u64,
+    pub contact_count: usize,
+    pub endpoint_count: usize,
+    pub observation_count: usize,
+    pub expires_at_unix_seconds: u64,
+    pub output_file: PathBuf,
+    pub protection: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcEndpointAnnouncementImport {
+    pub bundle_id: String,
+    pub source_device_id: DeviceId,
+    pub recipient_device_id: DeviceId,
+    pub authority_revision: u64,
+    pub contact_count: usize,
+    pub contact_added_count: usize,
+    pub endpoint_count: usize,
+    pub endpoint_added_count: usize,
+    pub publication_binding_added_count: usize,
+    pub observation_evidence_count: usize,
+    pub observation_evidence_added_count: usize,
+    pub descriptor_directory: PathBuf,
+    pub authority_status: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum RuntimeIpcResponse {
     Pong {
         account_id: AccountId,
@@ -790,6 +830,8 @@ pub enum RuntimeIpcResponse {
     ContactTicketRefreshed(Box<RuntimeIpcContactTicketRefresh>),
     TicketAutomationConfigured(Box<RuntimeIpcTicketAutomationStatus>),
     TicketAutomationStatus(Vec<RuntimeIpcTicketAutomationStatus>),
+    EndpointAnnouncementsExported(Box<RuntimeIpcEndpointAnnouncementExport>),
+    EndpointAnnouncementsImported(Box<RuntimeIpcEndpointAnnouncementImport>),
     ConversationList(Vec<RuntimeIpcConversationSummary>),
     HistoryPage(RuntimeIpcHistoryPage),
     ChangeState {
