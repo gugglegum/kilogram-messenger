@@ -365,42 +365,45 @@ global prekey discovery/witness, автоматический recovery source di
 
 ## План ближайших работ
 
-1. M0.9.36: добавить signed expiry-independent publication-channel binding,
-   чтобы already-enrolled contact после долгого offline мог получить свежий
-   transport ticket без доверия просроченному endpoint.
-2. Уже реализованный M0.9.35 обновляет все enrolled Device channels одной
+1. M0.9.37: спроектировать authenticated endpoint announcements для обмена
+   enrolled Device candidates и publication observation evidence между уже
+   авторизованными собственными устройствами без доверия gossip/store.
+2. Уже реализованный M0.9.36 хранит local-device-signed expiry-independent
+   publication binding и обновляет long-offline endpoint без принятия
+   просроченного transport/prekey ticket.
+3. Уже реализованный M0.9.35 обновляет все enrolled Device channels одной
    bounded action, хранит independent observation high-water и показывает
    desktop `usable`/`stale` состояния.
-3. Уже реализованный M0.9.33 даёт self-authenticating per-peer capability
+4. Уже реализованный M0.9.33 даёт self-authenticating per-peer capability
    channel и exact Ed25519 PUT authorization без Account/Device ID на store.
-4. Уже реализованные M0.9.31–M0.9.32 дают opt-in foreground automation и
+5. Уже реализованные M0.9.31–M0.9.32 дают opt-in foreground automation и
    crash-safe bounded compaction его signed runtime chains.
-5. Уже реализованный M0.9.30 даёт self-hostable loopback-only opaque store за
+6. Уже реализованный M0.9.30 даёт self-hostable loopback-only opaque store за
    HTTPS reverse proxy: durable Redb, fixed retention, monotonic replacement,
    size/channel/connection/rate limits и Internet test procedure.
-6. Уже реализованный M0.9.29 заменяет synchronized steady-state ticket refresh
+7. Уже реализованный M0.9.29 заменяет synchronized steady-state ticket refresh
    на explicit HTTPS publication/fetch: device-signed expiring chain, per-device
    HPKE slots, local rollback high-water, IPC v7 и Windows UI. Initial verified
    contact остаётся out-of-band, store traffic metadata видимы.
-7. Уже реализованный M0.9.28 сохраняет device-signed receipt применённого live
+8. Уже реализованный M0.9.28 сохраняет device-signed receipt применённого live
    roster в vault-primary transaction, восстанавливает его раньше stale launch
    profile и bounded desktop-операцией согласует exact canonical path.
-8. Optional autostart/background mode оставить отдельной явной настройкой, а не
+9. Optional autostart/background mode оставить отдельной явной настройкой, а не
    обязательным Task Scheduler этапом.
-9. Добавить production macOS/Linux local key provider, согласованный monotonic
+10. Добавить production macOS/Linux local key provider, согласованный monotonic
    witness и lifecycle обновления portable recovery package; затем mobile
    providers. Расширить pseudonymous M0.9.29 lookup до privacy-preserving
    gossip/mailbox. Live camera/clipboard оставить platform UI.
-10. Спроектировать membership removal вместе с ordered security log и MLS epoch;
+11. Спроектировать membership removal вместе с ordered security log и MLS epoch;
    отдельно — gossip/witness для first-contact freshness.
-11. Спроектировать полное seed/recovery authority с monotonic history/witness,
+12. Спроектировать полное seed/recovery authority с monotonic history/witness,
    root rotation и конфликтующие authority operations.
-12. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
-13. Спроектировать финальный wire format подписанного события и алгоритм
+13. Подготовить ADR по Iroh против rust-libp2p и проверить мобильные платформы.
+14. Спроектировать финальный wire format подписанного события и алгоритм
    линеаризации.
-14. Спроектировать compact Merkle/range summary и переносимый signed cursor.
-15. Добавить небольшие MLS-группы.
-16. Перед публичным выпуском провести независимый криптографический аудит.
+15. Спроектировать compact Merkle/range summary и переносимый signed cursor.
+16. Добавить небольшие MLS-группы.
+17. Перед публичным выпуском провести независимый криптографический аудит.
 
 ## Навигация
 
@@ -523,6 +526,8 @@ global prekey discovery/witness, автоматический recovery source di
   реализованный M0.9.34 bounded authenticated multi-device endpoint set, deterministic delivery/sync failover и stable contact compatibility.
 - [`../docs/RFC-0057-multi-candidate-ticket-refresh.md`](../docs/RFC-0057-multi-candidate-ticket-refresh.md) —
   реализованный M0.9.35 parallel network/sequential commit refresh всех enrolled Device channels, independent observation high-water и typed `usable`/`stale` desktop state.
+- [`../docs/RFC-0058-expiry-independent-publication-binding.md`](../docs/RFC-0058-expiry-independent-publication-binding.md) —
+  реализованный M0.9.36 local-device-signed immutable channel binding, legacy backfill from authenticated expired ticket и fresh-only endpoint installation.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

@@ -1276,3 +1276,30 @@ retirement остальных compatibility shadows ещё не реализов
   `91153956775543D3F38822C063BB13EE99E847C6F45990EA1AA6F3192E300E9B`;
   `target/release/kilogram-ticket-store.exe` — 2,581,504 bytes, SHA-256
   `123887E3B8F607F77A5BEE8969B5B9B73ABC189BAEC1BD51AFFA925183020191`.
+
+## M0.9.36 verification snapshot (2026-09-05)
+
+- Runtime binding unit regression проверяет signed round-trip, deterministic
+  endpoint ID, exact channel key и tamper rejection.
+- Live two-endpoint production-store regression сначала создаёт два durable
+  bindings, удаляет один для симуляции M0.9.35 state и делает оба descriptors
+  cryptographically valid, но expired. Первый refresh мигрирует legacy binding
+  и даёт честный partial `1/2`; второй endpoint остаётся unusable до публикации,
+  затем complete refresh даёт fresh `2/2` и две bindings/observation chains.
+- `cargo test --workspace --all-targets`: 201 tests, 0 failed.
+- `cargo fmt --all -- --check`, `git diff --check` и strict
+  `cargo clippy --workspace --all-targets --all-features -- -D warnings`
+  проходят.
+- `cargo test --release -p kilogram-cli
+  runtime_refreshes_each_enrolled_endpoint_channel_independently` и
+  `cargo build --workspace --release` проходят; stable-name CLI/bootstrap/store
+  `--help` и hidden GUI launch smoke успешны.
+- Windows artifacts со стабильными именами:
+  `target/release/kilogram-bootstrap.exe` — 20,476,928 bytes, SHA-256
+  `1AB47A618A813F83E6E1243BD0855A708837B3BF2B47E5CA891BB353E9D507D9`;
+  `target/release/kilogram-cli.exe` — 24,861,696 bytes, SHA-256
+  `BE9017F96B06482449FC32C6651E53C5543BF5888595084F2213C5A4FC68FE37`;
+  `target/release/kilogram-windows.exe` — 8,013,312 bytes, SHA-256
+  `91153956775543D3F38822C063BB13EE99E847C6F45990EA1AA6F3192E300E9B`;
+  `target/release/kilogram-ticket-store.exe` — 2,581,504 bytes, SHA-256
+  `123887E3B8F607F77A5BEE8969B5B9B73ABC189BAEC1BD51AFFA925183020191`.

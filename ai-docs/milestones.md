@@ -2805,11 +2805,38 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - contract зафиксирован в
   [`../docs/RFC-0057-multi-candidate-ticket-refresh.md`](../docs/RFC-0057-multi-candidate-ticket-refresh.md).
 
+### M0.9.36 — expiry-independent signed publication binding: выполнено
+
+Реализовано:
+
+- каждый primary/alternate endpoint получает отдельный local-device-signed
+  vault-primary `.epb` record с exact contact, peer Account/Device,
+  conversation, route/path contract и self-authenticating publication write
+  key;
+- binding не содержит network address/prekey и не истекает: он разрешает только
+  opaque publication GET, тогда как expired descriptor остаётся `stale` и не
+  участвует в delivery/sync;
+- refresh channel берётся из binding, а fetched ticket до установки проходит
+  полный normal expiry, Root/device authority, membership, requester,
+  anti-rollback и exact pinned-write-key gate;
+- existing M0.9.35 enrollment без binding мигрируется до network fetch из exact
+  authenticated legacy ticket; пропускается только current-time validity его
+  signed prekey pools, все подписи/identity/contract поля обязательны;
+- resolver отклоняет valid signed descriptor, если он меняет уже pinned
+  publication capability; stale endpoint status сохраняет известный channel и
+  observation high-water;
+- live two-endpoint regression проверяет одновременно expired pinned-binding
+  refresh, expired legacy backfill, partial `1/2`, запрет использования второго
+  stale endpoint и итоговый fresh `2/2`;
+- contract зафиксирован в
+  [`../docs/RFC-0058-expiry-independent-publication-binding.md`](../docs/RFC-0058-expiry-independent-publication-binding.md).
+
 ### Следующий этап
 
-1. M0.9.36: expiry-independent signed publication-channel binding — позволить
-   already-enrolled contact восстановить свежий transport ticket после долгого
-   offline периода, не принимая просроченный endpoint и не меняя stable contact.
+1. M0.9.37: authenticated endpoint announcements — переносить bounded endpoint
+   candidates и publication observation evidence между уже авторизованными
+   устройствами аккаунта, сохраняя per-device signatures/high-water и не делая
+   gossip/store источником identity authority.
 2. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.

@@ -10,8 +10,11 @@ use kilogram_protocol::{AuthorizedEvent, ConversationId, EventId};
 use kilogram_transport_iroh::RoutePolicy;
 use serde::{Deserialize, Serialize};
 
+use crate::runtime_publication::TicketPublicationWriteKey;
+
 const CONTACT_VERSION: u8 = 1;
 const ENDPOINT_CANDIDATE_VERSION: u8 = 1;
+const ENDPOINT_PUBLICATION_BINDING_VERSION: u8 = 1;
 const QUEUED_MESSAGE_VERSION: u8 = 1;
 const MATERIALIZATION_VERSION: u8 = 1;
 const DELIVERY_VERSION: u8 = 1;
@@ -19,6 +22,8 @@ const RETRY_VERSION: u8 = 1;
 const DEVICE_DIRECTORY_RECEIPT_VERSION: u8 = 1;
 const CONTACT_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-contact:v1\0";
 const ENDPOINT_CANDIDATE_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-endpoint-candidate:v1\0";
+const ENDPOINT_PUBLICATION_BINDING_SIGNATURE_DOMAIN: &[u8] =
+    b"kilogram:runtime-endpoint-publication-binding:v1\0";
 const QUEUE_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-queue:v1\0";
 const QUEUE_HPKE_INFO: &[u8] = b"kilogram:runtime-queue-body:v1";
 const MATERIALIZATION_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-materialized:v1\0";
@@ -56,6 +61,21 @@ pub struct RuntimeEndpointCandidateId([u8; 32]);
 impl fmt::Display for RuntimeEndpointCandidateId {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         write_hex(formatter, &self.0)
+    }
+}
+
+impl RuntimeEndpointCandidateId {
+    pub fn for_endpoint(
+        local_account_id: AccountId,
+        contact_id: RuntimeContactId,
+        peer_device_id: DeviceId,
+    ) -> Self {
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(b"kilogram:runtime-endpoint-candidate-id:v1\0");
+        hasher.update(local_account_id.as_bytes());
+        hasher.update(contact_id.as_bytes());
+        hasher.update(peer_device_id.as_bytes());
+        Self(*hasher.finalize().as_bytes())
     }
 }
 
@@ -555,12 +575,11 @@ impl SignedRuntimeEndpointCandidate {
     }
 
     pub fn candidate_id(&self) -> RuntimeEndpointCandidateId {
-        let mut hasher = blake3::Hasher::new();
-        hasher.update(b"kilogram:runtime-endpoint-candidate-id:v1\0");
-        hasher.update(self.content.local_account_id.as_bytes());
-        hasher.update(self.content.contact_id.as_bytes());
-        hasher.update(self.content.peer_device_id.as_bytes());
-        RuntimeEndpointCandidateId(*hasher.finalize().as_bytes())
+        RuntimeEndpointCandidateId::for_endpoint(
+            self.content.local_account_id,
+            self.content.contact_id,
+            self.content.peer_device_id,
+        )
     }
 
     pub fn local_account_id(&self) -> AccountId {
@@ -593,6 +612,168 @@ impl SignedRuntimeEndpointCandidate {
 
     pub fn descriptor_file(&self) -> &PathBuf {
         &self.content.descriptor_file
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+struct RuntimeEndpointPublicationBindingContent {
+    version: u8,
+    local_account_id: AccountId,
+    local_device_id: DeviceId,
+    contact_id: RuntimeContactId,
+    peer_account_id: AccountId,
+    peer_device_id: DeviceId,
+    conversation_id: ConversationId,
+    route_policy: RoutePolicy,
+    descriptor_file: PathBuf,
+    ticket_publication_write_key: TicketPublicationWriteKey,
+}
+
+/// A durable local signature over the immutable lookup capability of one
+/// enrolled endpoint. Unlike a transport ticket, this record has no prekey
+/// expiry and therefore remains usable solely to discover a fresh ticket.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct SignedRuntimeEndpointPublicationBinding {
+    content: RuntimeEndpointPublicationBindingContent,
+    signature: Vec<u8>,
+}
+
+impl SignedRuntimeEndpointPublicationBinding {
+    #[allow(clippy::too_many_arguments)]
+    pub fn sign(
+        identity: &DeviceIdentity,
+        local_account_id: AccountId,
+        contact_id: RuntimeContactId,
+        peer_account_id: AccountId,
+        peer_device_id: DeviceId,
+        conversation_id: ConversationId,
+        route_policy: RoutePolicy,
+        descriptor_file: PathBuf,
+        ticket_publication_write_key: TicketPublicationWriteKey,
+    ) -> Result<Self> {
+        ensure!(
+            descriptor_file.is_absolute(),
+            "runtime endpoint-publication binding descriptor path must be absolute"
+        );
+        ticket_publication_write_key
+            .verify()
+            .context("verify runtime endpoint-publication write key")?;
+        let content = RuntimeEndpointPublicationBindingContent {
+            version: ENDPOINT_PUBLICATION_BINDING_VERSION,
+            local_account_id,
+            local_device_id: identity.device_id(),
+            contact_id,
+            peer_account_id,
+            peer_device_id,
+            conversation_id,
+            route_policy,
+            descriptor_file,
+            ticket_publication_write_key,
+        };
+        let signature = identity
+            .sign(&signing_bytes(
+                ENDPOINT_PUBLICATION_BINDING_SIGNATURE_DOMAIN,
+                &content,
+            )?)
+            .to_vec();
+        let binding = Self { content, signature };
+        binding.verify()?;
+        Ok(binding)
+    }
+
+    pub fn encode(&self) -> Result<Vec<u8>> {
+        self.verify()?;
+        postcard::to_allocvec(self).context("encode signed runtime endpoint-publication binding")
+    }
+
+    pub fn decode(bytes: &[u8]) -> Result<Self> {
+        ensure!(
+            bytes.len() <= MAX_RUNTIME_RECORD_BYTES,
+            "runtime endpoint-publication binding is too large"
+        );
+        let binding: Self = postcard::from_bytes(bytes)
+            .context("decode signed runtime endpoint-publication binding")?;
+        binding.verify()?;
+        Ok(binding)
+    }
+
+    pub fn verify(&self) -> Result<()> {
+        ensure!(
+            self.content.version == ENDPOINT_PUBLICATION_BINDING_VERSION,
+            "unsupported runtime endpoint-publication binding version"
+        );
+        ensure!(
+            self.content.descriptor_file.is_absolute(),
+            "runtime endpoint-publication binding descriptor path must be absolute"
+        );
+        self.content
+            .ticket_publication_write_key
+            .verify()
+            .context("verify runtime endpoint-publication binding write key")?;
+        self.content
+            .local_device_id
+            .verify(
+                &signing_bytes(ENDPOINT_PUBLICATION_BINDING_SIGNATURE_DOMAIN, &self.content)?,
+                &self.signature,
+            )
+            .context("verify runtime endpoint-publication binding signature")
+    }
+
+    pub fn verify_local(&self, account_id: AccountId, device_id: DeviceId) -> Result<()> {
+        self.verify()?;
+        ensure!(
+            self.local_account_id() == account_id,
+            "runtime endpoint-publication binding belongs to another local account"
+        );
+        ensure!(
+            self.local_device_id() == device_id,
+            "runtime endpoint-publication binding belongs to another local device"
+        );
+        Ok(())
+    }
+
+    pub fn binding_id(&self) -> RuntimeEndpointCandidateId {
+        RuntimeEndpointCandidateId::for_endpoint(
+            self.content.local_account_id,
+            self.content.contact_id,
+            self.content.peer_device_id,
+        )
+    }
+
+    pub fn local_account_id(&self) -> AccountId {
+        self.content.local_account_id
+    }
+
+    pub fn local_device_id(&self) -> DeviceId {
+        self.content.local_device_id
+    }
+
+    pub fn contact_id(&self) -> RuntimeContactId {
+        self.content.contact_id
+    }
+
+    pub fn peer_account_id(&self) -> AccountId {
+        self.content.peer_account_id
+    }
+
+    pub fn peer_device_id(&self) -> DeviceId {
+        self.content.peer_device_id
+    }
+
+    pub fn conversation_id(&self) -> ConversationId {
+        self.content.conversation_id
+    }
+
+    pub fn route_policy(&self) -> RoutePolicy {
+        self.content.route_policy
+    }
+
+    pub fn descriptor_file(&self) -> &PathBuf {
+        &self.content.descriptor_file
+    }
+
+    pub fn ticket_publication_write_key(&self) -> TicketPublicationWriteKey {
+        self.content.ticket_publication_write_key
     }
 }
 
@@ -1109,6 +1290,43 @@ mod tests {
         let last = tampered_candidate.len() - 1;
         tampered_candidate[last] ^= 1;
         assert!(SignedRuntimeEndpointCandidate::decode(&tampered_candidate).is_err());
+
+        let publication_write_key =
+            crate::runtime_publication::TicketPublicationWriteCapability::derive(
+                peer_identity.secret_bytes(),
+                local_root.account_id().as_bytes(),
+            )
+            .write_key();
+        let publication_binding = SignedRuntimeEndpointPublicationBinding::sign(
+            &local_identity,
+            local_root.account_id(),
+            contact.contact_id(),
+            peer_root.account_id(),
+            peer_identity.device_id(),
+            conversation_id,
+            RoutePolicy::RelayOnly,
+            contact.descriptor_file().clone(),
+            publication_write_key,
+        )?;
+        let restarted_binding =
+            SignedRuntimeEndpointPublicationBinding::decode(&publication_binding.encode()?)?;
+        assert_eq!(restarted_binding, publication_binding);
+        assert_eq!(
+            restarted_binding.binding_id(),
+            RuntimeEndpointCandidateId::for_endpoint(
+                local_root.account_id(),
+                contact.contact_id(),
+                peer_identity.device_id(),
+            )
+        );
+        assert_eq!(
+            restarted_binding.ticket_publication_write_key(),
+            publication_write_key
+        );
+        let mut tampered_binding = publication_binding.encode()?;
+        let last = tampered_binding.len() - 1;
+        tampered_binding[last] ^= 1;
+        assert!(SignedRuntimeEndpointPublicationBinding::decode(&tampered_binding).is_err());
 
         let body = "plaintext that must not be retained in the queue record";
         let queued =

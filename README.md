@@ -126,12 +126,14 @@ specified in
 Independent per-Device publication refresh and typed endpoint health are
 specified in
 [`docs/RFC-0057-multi-candidate-ticket-refresh.md`](docs/RFC-0057-multi-candidate-ticket-refresh.md).
+Expiry-independent locally signed publication-channel bindings are specified in
+[`docs/RFC-0058-expiry-independent-publication-binding.md`](docs/RFC-0058-expiry-independent-publication-binding.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.35 multi-candidate ticket refresh — complete
+## Current milestone: M0.9.36 expiry-independent publication binding — complete
 
 One peer account/conversation contact can now enroll up to four independently
 signed Device endpoints without changing its stable contact ID or queued
@@ -150,6 +152,16 @@ failure until every candidate succeeds. Runtime IPC v10 and the Windows desktop
 show exact `usable`/`stale` counts, per-Device diagnostics and each opaque
 channel's local publication high-water. Runtime and desktop binaries must be
 upgraded together.
+
+Each enrolled endpoint now also has a local-device-signed, vault-primary
+publication binding that pins its contact, peer Device, route/path contract and
+self-authenticating opaque channel independently of prekey expiry. A long-
+offline client can use that binding to fetch a fresh ticket while the expired
+descriptor remains explicitly stale and cannot be used for transport. Existing
+M0.9.35 contacts lazily create the binding from the exact authenticated legacy
+ticket, skipping only current prekey time validity, before any network fetch.
+The fetched ticket still passes the complete normal freshness, authority,
+membership, anti-rollback and exact-channel checks before atomic installation.
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list

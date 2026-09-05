@@ -124,7 +124,8 @@ use runtime_queue::{
     MAX_RUNTIME_RECORD_BYTES, RuntimeContactId, RuntimeDeviceDirectoryReceiptId,
     RuntimeEndpointCandidateId, RuntimeQueueId, SignedDeliveredMessage, SignedMaterializedMessage,
     SignedQueuedMessage, SignedRuntimeContact, SignedRuntimeDeviceDirectoryReceipt,
-    SignedRuntimeEndpointCandidate, SignedRuntimeRetryState,
+    SignedRuntimeEndpointCandidate, SignedRuntimeEndpointPublicationBinding,
+    SignedRuntimeRetryState,
 };
 use runtime_ticket_automation::{
     DEFAULT_AUTOMATION_RETRY_BASE_SECONDS, DEFAULT_AUTOMATION_RETRY_MAX_SECONDS,
@@ -143,6 +144,7 @@ const HISTORY_RECOVERY_STORE_DIRECTORY: &str = "history-recovery";
 const RUNTIME_STATE_DIRECTORY: &str = "runtime";
 const RUNTIME_CONTACTS_DIRECTORY: &str = "contacts";
 const RUNTIME_ENDPOINT_CANDIDATES_DIRECTORY: &str = "endpoint-candidates";
+const RUNTIME_ENDPOINT_PUBLICATION_BINDINGS_DIRECTORY: &str = "endpoint-publication-bindings";
 const RUNTIME_OUTBOX_DIRECTORY: &str = "outbox";
 const RUNTIME_DEVICE_DIRECTORY: &str = "device-directory";
 const RUNTIME_TICKET_PUBLICATIONS_DIRECTORY: &str = "ticket-publications";
@@ -1808,12 +1810,21 @@ impl ConnectionTicket {
     }
 
     fn decode(encoded: &str) -> Result<Self> {
+        let ticket = Self::decode_authenticated(encoded)?;
+        ticket.verify()?;
+        Ok(ticket)
+    }
+
+    /// Decodes and authenticates all immutable ticket fields without treating
+    /// an expired prekey pool as a usable transport credential. This is only
+    /// used to migrate the self-authenticating publication-channel binding.
+    fn decode_authenticated(encoded: &str) -> Result<Self> {
         let bytes = URL_SAFE_NO_PAD
             .decode(encoded.trim())
             .context("decode connection ticket as base64url")?;
         let ticket: Self =
             serde_json::from_slice(&bytes).context("decode connection ticket payload")?;
-        ticket.verify()?;
+        ticket.verify_authenticated()?;
         Ok(ticket)
     }
 
@@ -1854,6 +1865,14 @@ impl ConnectionTicket {
     }
 
     fn verify(&self) -> Result<()> {
+        self.verify_authenticated()?;
+        self.content
+            .listener_directory
+            .verify_at(unix_time_now()?)?;
+        Ok(())
+    }
+
+    fn verify_authenticated(&self) -> Result<()> {
         ensure!(
             self.content.version == TICKET_VERSION,
             "unsupported connection ticket version: {}",
@@ -1864,9 +1883,7 @@ impl ConnectionTicket {
             .verify()
             .context("verify ticket publication write key")?;
         self.content.listener_certificate.verify()?;
-        self.content
-            .listener_directory
-            .verify_at(unix_time_now()?)?;
+        self.content.listener_directory.verify()?;
         ensure!(
             self.content.listener_directory.account_id()
                 == self.content.listener_certificate.account_id(),
@@ -1884,6 +1901,29 @@ impl ConnectionTicket {
             .device_id()
             .verify(&ticket_signing_bytes(&self.content)?, &self.signature)
             .context("verify listener signature on connection ticket")
+    }
+
+    fn verify_authenticated_listener_authorization(
+        &self,
+        expected_account: AccountId,
+    ) -> Result<AuthorizedDevice> {
+        self.verify_authenticated()?;
+        verify_device_authorization_with_snapshot(
+            expected_account,
+            &self.content.listener_certificate,
+            self.content.listener_directory.authority_snapshot(),
+            &DeviceCapability::MESSAGING,
+        )
+        .context("verify listener Account Root authorization")
+    }
+
+    fn verify_authenticated_listener_account(&self, expected_account: AccountId) -> Result<()> {
+        self.verify_authenticated()?;
+        self.content
+            .listener_directory
+            .authority_snapshot()
+            .verify_for_account(expected_account)
+            .context("verify expected listener Account ID")
     }
 
     fn verify_listener_authorization(
@@ -3540,6 +3580,8 @@ fn install_membership_primary(
 struct RuntimeStateSnapshot {
     contacts: BTreeMap<RuntimeContactId, SignedRuntimeContact>,
     endpoint_candidates: BTreeMap<RuntimeEndpointCandidateId, SignedRuntimeEndpointCandidate>,
+    endpoint_publication_bindings:
+        BTreeMap<RuntimeEndpointCandidateId, SignedRuntimeEndpointPublicationBinding>,
     queued: BTreeMap<RuntimeQueueId, SignedQueuedMessage>,
     materialized: BTreeMap<RuntimeQueueId, SignedMaterializedMessage>,
     delivered: BTreeMap<RuntimeQueueId, SignedDeliveredMessage>,
@@ -3618,6 +3660,14 @@ fn runtime_endpoint_candidate_relative_path(candidate_id: RuntimeEndpointCandida
     PathBuf::from(RUNTIME_STATE_DIRECTORY)
         .join(RUNTIME_ENDPOINT_CANDIDATES_DIRECTORY)
         .join(format!("{candidate_id}.endpoint-candidate"))
+}
+
+fn runtime_endpoint_publication_binding_relative_path(
+    binding_id: RuntimeEndpointCandidateId,
+) -> PathBuf {
+    PathBuf::from(RUNTIME_STATE_DIRECTORY)
+        .join(RUNTIME_ENDPOINT_PUBLICATION_BINDINGS_DIRECTORY)
+        .join(format!("{binding_id}.epb"))
 }
 
 fn runtime_queued_relative_path(queue_id: RuntimeQueueId) -> PathBuf {
@@ -3788,6 +3838,7 @@ fn read_runtime_record_files(state_directory: &Path) -> Result<Vec<(PathBuf, Vec
     for directory in [
         RUNTIME_CONTACTS_DIRECTORY,
         RUNTIME_ENDPOINT_CANDIDATES_DIRECTORY,
+        RUNTIME_ENDPOINT_PUBLICATION_BINDINGS_DIRECTORY,
         RUNTIME_OUTBOX_DIRECTORY,
         RUNTIME_DEVICE_DIRECTORY,
         RUNTIME_TICKET_PUBLICATIONS_DIRECTORY,
@@ -3953,6 +4004,21 @@ fn load_runtime_state_snapshot(
                 .entry((value.contact_id(), value.action()))
                 .or_default()
                 .push(value);
+        } else if file_name.ends_with(".epb") {
+            let value = SignedRuntimeEndpointPublicationBinding::decode(&bytes)?;
+            value.verify_local(local_account_id, local_device_id)?;
+            ensure!(
+                relative_path
+                    == runtime_endpoint_publication_binding_relative_path(value.binding_id()),
+                "runtime endpoint-publication binding filename does not match its authenticated ID"
+            );
+            ensure!(
+                snapshot
+                    .endpoint_publication_bindings
+                    .insert(value.binding_id(), value)
+                    .is_none(),
+                "duplicate runtime endpoint-publication binding ID"
+            );
         } else if file_name.ends_with(".endpoint-candidate") {
             let value = SignedRuntimeEndpointCandidate::decode(&bytes)?;
             value.verify_local(local_account_id, local_device_id)?;
@@ -4059,6 +4125,21 @@ fn load_runtime_state_snapshot(
                 && candidate.conversation_id() == contact.conversation_id()
                 && candidate.peer_device_id() != contact.peer_device_id(),
             "runtime endpoint candidate does not match its authenticated contact"
+        );
+    }
+    for binding in snapshot.endpoint_publication_bindings.values() {
+        let contact = snapshot
+            .contacts
+            .get(&binding.contact_id())
+            .context("runtime endpoint-publication binding names an absent contact")?;
+        let enrollment =
+            exact_runtime_endpoint_enrollment(&snapshot, contact, binding.peer_device_id())?;
+        ensure!(
+            binding.peer_account_id() == enrollment.peer_account_id
+                && binding.conversation_id() == contact.conversation_id()
+                && binding.route_policy() == enrollment.route_policy
+                && binding.descriptor_file() == &enrollment.descriptor_file,
+            "runtime endpoint-publication binding does not match its authenticated endpoint enrollment"
         );
     }
     let mut candidate_counts = BTreeMap::<RuntimeContactId, usize>::new();
@@ -4581,6 +4662,127 @@ struct RuntimeEndpointEnrollment {
     primary: bool,
 }
 
+fn runtime_endpoint_publication_binding_id(
+    local_account_id: AccountId,
+    contact_id: RuntimeContactId,
+    peer_device_id: DeviceId,
+) -> RuntimeEndpointCandidateId {
+    RuntimeEndpointCandidateId::for_endpoint(local_account_id, contact_id, peer_device_id)
+}
+
+fn load_authenticated_runtime_endpoint_ticket_for_binding(
+    enrollment: &RuntimeEndpointEnrollment,
+    local_certificate: &DeviceCertificate,
+    local_authority: &AccountAuthoritySnapshot,
+) -> Result<ConnectionTicket> {
+    let encoded = fs::read_to_string(&enrollment.descriptor_file).with_context(|| {
+        format!(
+            "read runtime peer descriptor {}",
+            enrollment.descriptor_file.display()
+        )
+    })?;
+    ensure!(
+        encoded.len() <= MAX_RUNTIME_RECORD_BYTES,
+        "runtime peer descriptor is too large"
+    );
+    let ticket = ConnectionTicket::decode_authenticated(&encoded)
+        .context("authenticate runtime peer descriptor for publication binding")?;
+    ticket.verify_authenticated_listener_account(enrollment.peer_account_id)?;
+    let peer = ticket
+        .verify_authenticated_listener_authorization(enrollment.peer_account_id)
+        .context("authenticate publication-binding peer authorization")?;
+    ensure!(
+        peer.device_id() == enrollment.peer_device_id,
+        "runtime descriptor names a different peer device"
+    );
+    ensure!(
+        ticket.route_policy() == enrollment.route_policy,
+        "runtime descriptor route policy changed"
+    );
+    ensure!(
+        ticket.allowed_requester_account_id() == local_certificate.account_id(),
+        "runtime descriptor does not authorize this local account"
+    );
+    verify_device_authorization_with_snapshot(
+        ticket.allowed_requester_account_id(),
+        local_certificate,
+        local_authority,
+        &DeviceCapability::MESSAGING,
+    )
+    .context("local device is not authorized by the runtime descriptor")?;
+    Ok(ticket)
+}
+
+fn sign_runtime_endpoint_publication_binding(
+    identity: &DeviceIdentity,
+    local_account_id: AccountId,
+    contact: &SignedRuntimeContact,
+    enrollment: &RuntimeEndpointEnrollment,
+    ticket_publication_write_key: TicketPublicationWriteKey,
+) -> Result<SignedRuntimeEndpointPublicationBinding> {
+    SignedRuntimeEndpointPublicationBinding::sign(
+        identity,
+        local_account_id,
+        contact.contact_id(),
+        enrollment.peer_account_id,
+        enrollment.peer_device_id,
+        contact.conversation_id(),
+        enrollment.route_policy,
+        enrollment.descriptor_file.clone(),
+        ticket_publication_write_key,
+    )
+}
+
+fn exact_runtime_endpoint_publication_binding<'a>(
+    snapshot: &'a RuntimeStateSnapshot,
+    local_account_id: AccountId,
+    contact: &SignedRuntimeContact,
+    enrollment: &RuntimeEndpointEnrollment,
+) -> Result<&'a SignedRuntimeEndpointPublicationBinding> {
+    let binding_id = runtime_endpoint_publication_binding_id(
+        local_account_id,
+        contact.contact_id(),
+        enrollment.peer_device_id,
+    );
+    let binding = snapshot
+        .endpoint_publication_bindings
+        .get(&binding_id)
+        .context("runtime endpoint has no durable publication-channel binding")?;
+    ensure!(
+        binding.contact_id() == contact.contact_id()
+            && binding.peer_account_id() == enrollment.peer_account_id
+            && binding.peer_device_id() == enrollment.peer_device_id
+            && binding.conversation_id() == contact.conversation_id()
+            && binding.route_policy() == enrollment.route_policy
+            && binding.descriptor_file() == &enrollment.descriptor_file,
+        "runtime endpoint-publication binding changed its endpoint contract"
+    );
+    Ok(binding)
+}
+
+fn verify_runtime_endpoint_publication_binding_if_present(
+    snapshot: &RuntimeStateSnapshot,
+    local_account_id: AccountId,
+    contact: &SignedRuntimeContact,
+    enrollment: &RuntimeEndpointEnrollment,
+    ticket: &ConnectionTicket,
+) -> Result<()> {
+    let binding_id = runtime_endpoint_publication_binding_id(
+        local_account_id,
+        contact.contact_id(),
+        enrollment.peer_device_id,
+    );
+    let Some(binding) = snapshot.endpoint_publication_bindings.get(&binding_id) else {
+        return Ok(());
+    };
+    exact_runtime_endpoint_publication_binding(snapshot, local_account_id, contact, enrollment)?;
+    ensure!(
+        ticket.ticket_publication_write_key() == binding.ticket_publication_write_key(),
+        "runtime descriptor changes the pinned publication-channel binding"
+    );
+    Ok(())
+}
+
 fn exact_runtime_endpoint_enrollment(
     snapshot: &RuntimeStateSnapshot,
     contact: &SignedRuntimeContact,
@@ -4653,7 +4855,17 @@ fn collect_runtime_endpoint_candidate_statuses(
                 &enrollment.descriptor_file,
                 local_certificate,
                 local_authority,
-            );
+            )
+            .and_then(|ticket| {
+                verify_runtime_endpoint_publication_binding_if_present(
+                    snapshot,
+                    local_certificate.account_id(),
+                    contact,
+                    &enrollment,
+                    &ticket,
+                )?;
+                Ok(ticket)
+            });
             (enrollment, ticket)
         })
         .collect::<Vec<_>>();
@@ -4702,18 +4914,38 @@ fn collect_runtime_endpoint_candidate_statuses(
     Ok(loaded
         .drain(..)
         .map(|(enrollment, ticket)| match ticket {
-            Err(error) => RuntimeIpcEndpointCandidateStatus {
-                peer_device_id: enrollment.peer_device_id,
-                primary: enrollment.primary,
-                route_policy: runtime_ipc_route_policy(enrollment.route_policy),
-                descriptor_file: enrollment.descriptor_file,
-                state: RuntimeIpcEndpointCandidateState::Stale,
-                authority_revision: None,
-                publication_channel_id: None,
-                observed_publication_generation: None,
-                observed_at_unix_seconds: None,
-                detail: format!("descriptor-unusable: {error:#}"),
-            },
+            Err(error) => {
+                let binding_id = runtime_endpoint_publication_binding_id(
+                    local_certificate.account_id(),
+                    contact.contact_id(),
+                    enrollment.peer_device_id,
+                );
+                let channel_id = snapshot
+                    .endpoint_publication_bindings
+                    .get(&binding_id)
+                    .map(SignedRuntimeEndpointPublicationBinding::ticket_publication_write_key)
+                    .map(|write_key| write_key.channel_id());
+                let observation = channel_id
+                    .and_then(|channel_id| snapshot.latest_ticket_observation(channel_id));
+                RuntimeIpcEndpointCandidateStatus {
+                    peer_device_id: enrollment.peer_device_id,
+                    primary: enrollment.primary,
+                    route_policy: runtime_ipc_route_policy(enrollment.route_policy),
+                    descriptor_file: enrollment.descriptor_file,
+                    state: RuntimeIpcEndpointCandidateState::Stale,
+                    authority_revision: None,
+                    publication_channel_id: channel_id.map(|channel_id| channel_id.to_string()),
+                    observed_publication_generation: observation
+                        .map(SignedTicketPublicationObservation::publication_generation),
+                    observed_at_unix_seconds: observation
+                        .map(SignedTicketPublicationObservation::observed_at_unix_seconds),
+                    detail: if channel_id.is_some() {
+                        format!("descriptor-unusable-refresh-channel-pinned: {error:#}")
+                    } else {
+                        format!("descriptor-unusable-no-refresh-binding: {error:#}")
+                    },
+                }
+            }
             Ok(ticket) => {
                 let revision = ticket.listener_authority_snapshot().revision();
                 let channel_id = ticket.ticket_publication_write_key().channel_id();
@@ -4821,7 +5053,25 @@ fn load_runtime_endpoint_candidate_set(
 ) -> Result<Vec<ResolvedRuntimeEndpointCandidate>> {
     let mut candidates = Vec::new();
     let mut rejected = Vec::new();
-    match load_runtime_contact_ticket(contact, local_certificate, local_authority) {
+    let primary_enrollment = RuntimeEndpointEnrollment {
+        peer_account_id: contact.peer_account_id(),
+        peer_device_id: contact.peer_device_id(),
+        route_policy: contact.route_policy(),
+        descriptor_file: contact.descriptor_file().clone(),
+        primary: true,
+    };
+    match load_runtime_contact_ticket(contact, local_certificate, local_authority).and_then(
+        |ticket| {
+            verify_runtime_endpoint_publication_binding_if_present(
+                snapshot,
+                local_certificate.account_id(),
+                contact,
+                &primary_enrollment,
+                &ticket,
+            )?;
+            Ok(ticket)
+        },
+    ) {
         Ok(ticket) => candidates.push(ResolvedRuntimeEndpointCandidate {
             ticket,
             peer_device_id: contact.peer_device_id(),
@@ -4835,6 +5085,13 @@ fn load_runtime_endpoint_candidate_set(
         .values()
         .filter(|candidate| candidate.contact_id() == contact.contact_id())
     {
+        let enrollment = RuntimeEndpointEnrollment {
+            peer_account_id: candidate.peer_account_id(),
+            peer_device_id: candidate.peer_device_id(),
+            route_policy: candidate.route_policy(),
+            descriptor_file: candidate.descriptor_file().clone(),
+            primary: false,
+        };
         match load_runtime_endpoint_ticket(
             candidate.peer_account_id(),
             candidate.peer_device_id(),
@@ -4842,7 +5099,17 @@ fn load_runtime_endpoint_candidate_set(
             candidate.descriptor_file(),
             local_certificate,
             local_authority,
-        ) {
+        )
+        .and_then(|ticket| {
+            verify_runtime_endpoint_publication_binding_if_present(
+                snapshot,
+                local_certificate.account_id(),
+                contact,
+                &enrollment,
+                &ticket,
+            )?;
+            Ok(ticket)
+        }) {
             Ok(ticket) => candidates.push(ResolvedRuntimeEndpointCandidate {
                 ticket,
                 peer_device_id: candidate.peer_device_id(),
@@ -5046,6 +5313,28 @@ fn add_runtime_contact_record(
                 "primary peer device is already enrolled with another descriptor contract"
             );
             load_runtime_contact_ticket(contact, &local_certificate, &local_authority)?;
+            let enrollment = RuntimeEndpointEnrollment {
+                peer_account_id: contact.peer_account_id(),
+                peer_device_id: contact.peer_device_id(),
+                route_policy: contact.route_policy(),
+                descriptor_file: contact.descriptor_file().clone(),
+                primary: true,
+            };
+            let binding = sign_runtime_endpoint_publication_binding(
+                device_state.identity(),
+                local_certificate.account_id(),
+                contact,
+                &enrollment,
+                ticket.ticket_publication_write_key(),
+            )?;
+            run_state_transaction(state_directory, |transaction| {
+                persist_runtime_record(
+                    state_directory,
+                    &runtime_endpoint_publication_binding_relative_path(binding.binding_id()),
+                    &binding.encode()?,
+                    transaction,
+                )
+            })?;
             return Ok(RuntimeContactReceipt {
                 contact_id: contact.contact_id(),
                 peer_account_id: contact.peer_account_id(),
@@ -5092,6 +5381,20 @@ fn add_runtime_contact_record(
             &local_certificate,
             &local_authority,
         )?;
+        let enrollment = RuntimeEndpointEnrollment {
+            peer_account_id: candidate.peer_account_id(),
+            peer_device_id: candidate.peer_device_id(),
+            route_policy: candidate.route_policy(),
+            descriptor_file: candidate.descriptor_file().clone(),
+            primary: false,
+        };
+        let binding = sign_runtime_endpoint_publication_binding(
+            device_state.identity(),
+            local_certificate.account_id(),
+            contact,
+            &enrollment,
+            ticket.ticket_publication_write_key(),
+        )?;
         let outcome = run_state_transaction(state_directory, |transaction| {
             transaction.prepare_trust_workspace()?;
             device_state
@@ -5100,12 +5403,19 @@ fn add_runtime_contact_record(
             transaction
                 .load_ratchet_state()?
                 .observe_prekey_directory(ticket.listener_directory(), unix_time_now()?)?;
-            persist_runtime_record(
+            let outcome = persist_runtime_record(
                 state_directory,
                 &runtime_endpoint_candidate_relative_path(candidate.candidate_id()),
                 &candidate.encode()?,
                 transaction,
-            )
+            )?;
+            persist_runtime_record(
+                state_directory,
+                &runtime_endpoint_publication_binding_relative_path(binding.binding_id()),
+                &binding.encode()?,
+                transaction,
+            )?;
+            Ok(outcome)
         })?;
         return Ok(RuntimeContactReceipt {
             contact_id: contact.contact_id(),
@@ -5132,6 +5442,20 @@ fn add_runtime_contact_record(
     )?;
     load_runtime_contact_ticket(&contact, &local_certificate, &local_authority)?;
     let encoded = contact.encode()?;
+    let enrollment = RuntimeEndpointEnrollment {
+        peer_account_id: contact.peer_account_id(),
+        peer_device_id: contact.peer_device_id(),
+        route_policy: contact.route_policy(),
+        descriptor_file: contact.descriptor_file().clone(),
+        primary: true,
+    };
+    let binding = sign_runtime_endpoint_publication_binding(
+        device_state.identity(),
+        local_certificate.account_id(),
+        &contact,
+        &enrollment,
+        ticket.ticket_publication_write_key(),
+    )?;
     let outcome = run_state_transaction(state_directory, |transaction| {
         transaction.prepare_trust_workspace()?;
         device_state
@@ -5140,12 +5464,19 @@ fn add_runtime_contact_record(
         transaction
             .load_ratchet_state()?
             .observe_prekey_directory(ticket.listener_directory(), unix_time_now()?)?;
-        persist_runtime_record(
+        let outcome = persist_runtime_record(
             state_directory,
             &runtime_contact_relative_path(contact.contact_id()),
             &encoded,
             transaction,
-        )
+        )?;
+        persist_runtime_record(
+            state_directory,
+            &runtime_endpoint_publication_binding_relative_path(binding.binding_id()),
+            &binding.encode()?,
+            transaction,
+        )?;
+        Ok(outcome)
     })?;
     Ok(RuntimeContactReceipt {
         contact_id: contact.contact_id(),
@@ -6985,16 +7316,41 @@ fn runtime_endpoint_ticket_refresh_channel(
         let local_authority = trust
             .load_own_authority_snapshot(&local_certificate)
             .context("load local authority for ticket publication lookup")?;
-        let peer_ticket = load_runtime_endpoint_ticket(
-            current_enrollment.peer_account_id,
-            current_enrollment.peer_device_id,
-            current_enrollment.route_policy,
-            &current_enrollment.descriptor_file,
+        if let Ok(binding) = exact_runtime_endpoint_publication_binding(
+            &snapshot,
+            local_certificate.account_id(),
+            contact,
+            &current_enrollment,
+        ) {
+            return Ok(binding.ticket_publication_write_key().channel_id());
+        }
+
+        // Compatibility migration for contacts enrolled before the durable
+        // binding existed. The exact old ticket must still authenticate every
+        // immutable identity and contract field, but its prekeys may be
+        // expired because it is never returned as a connection candidate.
+        let authenticated_ticket = load_authenticated_runtime_endpoint_ticket_for_binding(
+            &current_enrollment,
             &local_certificate,
             &local_authority,
         )
-        .context("load endpoint ticket publication write capability")?;
-        Ok(peer_ticket.ticket_publication_write_key().channel_id())
+        .context("recover publication-channel binding from legacy endpoint descriptor")?;
+        let binding = sign_runtime_endpoint_publication_binding(
+            device_state.identity(),
+            local_certificate.account_id(),
+            contact,
+            &current_enrollment,
+            authenticated_ticket.ticket_publication_write_key(),
+        )?;
+        run_state_transaction(state_directory, |transaction| {
+            persist_runtime_record(
+                state_directory,
+                &runtime_endpoint_publication_binding_relative_path(binding.binding_id()),
+                &binding.encode()?,
+                transaction,
+            )
+        })?;
+        Ok(binding.ticket_publication_write_key().channel_id())
     })
 }
 
@@ -7039,18 +7395,14 @@ fn install_runtime_endpoint_ticket_refresh(
             local_certificate.account_id(),
             peer_account_id,
         )?;
-        let current_peer_ticket = load_runtime_endpoint_ticket(
-            current_enrollment.peer_account_id,
-            current_enrollment.peer_device_id,
-            current_enrollment.route_policy,
-            &current_enrollment.descriptor_file,
-            &local_certificate,
-            &local_authority,
+        let binding = exact_runtime_endpoint_publication_binding(
+            &snapshot,
+            local_certificate.account_id(),
+            contact,
+            &current_enrollment,
         )
-        .context("reload endpoint ticket publication write capability")?;
-        let expected_channel_id = current_peer_ticket
-            .ticket_publication_write_key()
-            .channel_id();
+        .context("reload durable endpoint publication-channel binding")?;
+        let expected_channel_id = binding.ticket_publication_write_key().channel_id();
         ensure!(
             expected_channel_id == channel_id,
             "ticket publication contact changed during fetch"
@@ -7076,6 +7428,7 @@ fn install_runtime_endpoint_ticket_refresh(
             authorized_peer.device_id() == current_enrollment.peer_device_id
                 && ticket.route_policy() == current_enrollment.route_policy
                 && ticket.allowed_requester_account_id() == local_certificate.account_id()
+                && ticket.ticket_publication_write_key() == binding.ticket_publication_write_key()
                 && ticket.ticket_publication_write_key().channel_id() == channel_id,
             "published ticket does not match the selected endpoint-candidate contract"
         );
@@ -16520,6 +16873,78 @@ mod tests {
                 RuntimeIpcResponse::ContactAdded { inserted: true, .. }
             ));
         }
+        let enrolled_snapshot = load_runtime_state_snapshot(
+            &alice_state,
+            alice_root.account_id(),
+            alice_device.identity().device_id(),
+        )?;
+        assert_eq!(enrolled_snapshot.endpoint_publication_bindings.len(), 2);
+        let contact = enrolled_snapshot
+            .contacts
+            .values()
+            .next()
+            .context("multi-endpoint test contact is absent")?;
+        let legacy_binding_id = runtime_endpoint_publication_binding_id(
+            alice_root.account_id(),
+            contact.contact_id(),
+            bob_identities[0].device_id(),
+        );
+        run_state_transaction(&alice_state, |transaction| {
+            transaction.compact_runtime_record(runtime_endpoint_publication_binding_relative_path(
+                legacy_binding_id,
+            ))
+        })?;
+        let legacy_snapshot = load_runtime_state_snapshot(
+            &alice_state,
+            alice_root.account_id(),
+            alice_device.identity().device_id(),
+        )?;
+        assert_eq!(legacy_snapshot.endpoint_publication_bindings.len(), 1);
+
+        let expired_published_at = unix_time_now()?
+            .saturating_sub(DEFAULT_PREKEY_POOL_VALIDITY_SECONDS.saturating_add(3_600));
+        let mut expired_pools = Vec::new();
+        for (index, identity) in bob_identities.iter().enumerate() {
+            expired_pools.push(
+                RatchetState::load_or_create(
+                    directory
+                        .path()
+                        .join(format!("bob-expired-ratchet-{index}")),
+                )?
+                .prekey_pool(
+                    identity,
+                    4,
+                    expired_published_at,
+                    DEFAULT_PREKEY_POOL_VALIDITY_SECONDS,
+                )?,
+            );
+        }
+        let expired_directory =
+            AccountPrekeyDirectory::new(bob_directory.device_list().clone(), expired_pools)?;
+        for index in 0..2 {
+            let expired_content = ConnectionTicketContent {
+                version: TICKET_VERSION,
+                endpoint: bob_tickets[index].endpoint().clone(),
+                listener_certificate: bob_certificates[index].clone(),
+                listener_directory: expired_directory.clone(),
+                allowed_requester_account_id: alice_root.account_id(),
+                ticket_publication_write_key: bob_tickets[index].ticket_publication_write_key(),
+                route_policy: RoutePolicy::Auto,
+            };
+            let expired_ticket = ConnectionTicket {
+                signature: bob_identities[index]
+                    .sign(&ticket_signing_bytes(&expired_content)?)
+                    .to_vec(),
+                content: expired_content,
+            };
+            expired_ticket.verify_authenticated()?;
+            assert!(expired_ticket.verify().is_err());
+            let expired_ticket_text = URL_SAFE_NO_PAD.encode(serde_json::to_vec(&expired_ticket)?);
+            fs::write(&bob_ticket_files[index], expired_ticket_text)?;
+            assert!(
+                ConnectionTicket::decode(&fs::read_to_string(&bob_ticket_files[index])?).is_err()
+            );
+        }
 
         let store_server = TicketStoreServer::bind(StoreConfig::local_test(
             directory.path().join("multi-endpoint-publication-store"),
@@ -16590,6 +17015,26 @@ mod tests {
                 .count(),
             1
         );
+        assert_eq!(
+            ConnectionTicket::decode(&fs::read_to_string(&bob_ticket_files[0])?)?
+                .listener_device_id(),
+            bob_identities[0].device_id(),
+            "refresh must replace an unusable expired descriptor through its durable channel binding"
+        );
+        let migrated_snapshot = load_runtime_state_snapshot(
+            &alice_state,
+            alice_root.account_id(),
+            alice_device.identity().device_id(),
+        )?;
+        assert_eq!(
+            migrated_snapshot.endpoint_publication_bindings.len(),
+            2,
+            "legacy enrollment must receive a durable binding before the remote fetch"
+        );
+        assert!(
+            ConnectionTicket::decode(&fs::read_to_string(&bob_ticket_files[1])?).is_err(),
+            "the still-unpublished second endpoint must remain unusable while expired"
+        );
 
         store_client
             .put(&encrypted_publications[1].0, &encrypted_publications[1].1)
@@ -16623,6 +17068,13 @@ mod tests {
             alice_device.identity().device_id(),
         )?;
         assert_eq!(snapshot.ticket_observations.len(), 2);
+        assert_eq!(snapshot.endpoint_publication_bindings.len(), 2);
+        for (ticket_file, identity) in bob_ticket_files.iter().zip(&bob_identities) {
+            assert_eq!(
+                ConnectionTicket::decode(&fs::read_to_string(ticket_file)?)?.listener_device_id(),
+                identity.device_id()
+            );
+        }
 
         let _ = store_shutdown_sender.send(());
         timeout(Duration::from_secs(5), store_task)

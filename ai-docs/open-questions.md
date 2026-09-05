@@ -181,10 +181,12 @@ sessions, distribution, removal и key epochs и не решены этим пр
   signature/expiry. M0.9.34 уже хранит bounded authenticated candidate set и
   делает delivery/automatic-sync failover между явно импортированными Devices.
   M0.9.35 независимо обновляет все их publication channels и показывает local
-  per-channel high-water, но не распространяет candidate set через gossip и не
-  согласует observations между local account devices. Как хранить проверенный
-  expiry-independent channel binding, чтобы долгий offline не требовал нового
-  bootstrap ticket, — следующий M0.9.36 вопрос.
+  per-channel high-water. M0.9.36 хранит проверенный expiry-independent local
+  binding и устраняет long-offline dead end для already-enrolled endpoint, но
+  не распространяет candidate set/bindings через gossip и не согласует
+  observations между local account devices. Как передавать это evidence между
+  уже авторизованными устройствами без принятия их local signatures как Root
+  authority — следующий M0.9.37 вопрос.
 - M0.9.32 compact/checkpoint-ит runtime publication, observation, policy и
   attempt chains до exact signed heads за device-signed cumulative checkpoint;
   DB-primary checkpoint/removals атомарны и crash-safe. Открытым остаётся
