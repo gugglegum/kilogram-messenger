@@ -137,12 +137,31 @@ same envelope are specified in
 Multi-audience runtime authorization and durable foreground own-device
 announcement schedules are specified in
 [`docs/RFC-0061-multi-audience-own-device-automation.md`](docs/RFC-0061-multi-audience-own-device-automation.md).
+Pairwise private discovery of fresh sibling-device runtime tickets through the
+opaque store is specified in
+[`docs/RFC-0062-pairwise-own-device-ticket-discovery.md`](docs/RFC-0062-pairwise-own-device-ticket-discovery.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.39 multi-audience own-device automation — complete
+## Current milestone: M0.9.40 pairwise own-device ticket discovery — complete
+
+Two already-authorized Devices with the byte-exact current Root roster can now
+derive directional pairwise opaque-store channels from their certified X25519
+keys. Each runtime publishes its fresh own-device ticket as a source-signed,
+recipient-HPKE ciphertext and fetches the sibling's inverse channel. The store
+learns no explicit Account/Device ID and cannot decrypt the ticket, although IP,
+timing, size and repeated channel access remain visible.
+
+IPC v14 installs one Device-signed discovery policy together with the existing
+announcement schedule. The foreground actor publishes, fetches, verifies and
+atomically installs the recipient ticket under its managed public directory,
+then performs the unchanged M0.9.39 authenticated announcement push. Signed
+publication observations reject rollback/equivocation, policy chains join the
+existing bounded checkpoint compaction, and revocation/network policy stop new
+work. This is authenticated online discovery, not device enrollment, a durable
+mailbox, OS background execution or anonymity.
 
 One long-lived runtime endpoint now serves its configured peer Account and the
 exact current Devices of its own Account simultaneously. It atomically
@@ -189,12 +208,12 @@ Ticket refresh now snapshots every enrolled Device candidate, performs the
 bounded publication lookups concurrently, and serializes authenticated local
 commits per candidate. A partial result preserves successful descriptor and
 observation updates while foreground automation records a normal backoff
-failure until every candidate succeeds. Runtime IPC v13 retains the v10 read
+failure until every candidate succeeds. Runtime IPC v14 retains the v10 read
 model through which the Windows desktop shows exact `usable`/`stale` counts,
 per-Device diagnostics and each opaque
-channel's local publication high-water and adds the network announcement and
-own-device automation commands. Runtime and desktop binaries must be upgraded
-together.
+channel's local publication high-water and adds the network announcement,
+own-device automation and pairwise discovery commands. Runtime and desktop
+binaries must be upgraded together.
 
 Each enrolled endpoint now also has a local-device-signed, vault-primary
 publication binding that pins its contact, peer Device, route/path contract and

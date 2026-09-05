@@ -139,7 +139,8 @@ application is closed, register Windows Task Scheduler, provide offline
 mailbox delivery, hide traffic correlation or create/revoke Devices. It remains
 an explicitly configured foreground mechanism.
 
-The next availability slice should distribute recipient-specific own-device
-tickets through an authenticated, privacy-preserving and bounded channel so a
-shared folder is no longer required. OS autostart remains a separate explicit
-user choice.
+M0.9.40 implements the next availability slice in
+[`RFC-0062-pairwise-own-device-ticket-discovery.md`](RFC-0062-pairwise-own-device-ticket-discovery.md):
+already-authorized sibling Devices derive directional pairwise capabilities and
+exchange recipient-HPKE ticket publications through the opaque store. OS
+autostart remains a separate explicit user choice.

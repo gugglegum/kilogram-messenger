@@ -21,7 +21,7 @@ use tokio::{
     time::timeout,
 };
 
-const IPC_VERSION: u8 = 13;
+const IPC_VERSION: u8 = 14;
 const MAX_DESCRIPTOR_BYTES: u64 = 16 * 1024;
 const MAX_LAUNCH_PROFILE_BYTES: u64 = 64 * 1024;
 const MAX_LAUNCH_PROFILE_PATHS: usize = 64;
@@ -417,6 +417,22 @@ pub enum RuntimeIpcCommand {
         allow_unknown_network: bool,
     },
     OwnDeviceAnnouncementAutomationStatus,
+    ConfigureOwnDeviceTicketDiscovery {
+        recipient_device_id: DeviceId,
+        enabled: bool,
+        service_base_url: String,
+        ttl_seconds: u64,
+        refresh_before_seconds: u64,
+        interval_seconds: u64,
+        validity_seconds: u64,
+        retry_base_seconds: u64,
+        retry_max_seconds: u64,
+        allow_ethernet: bool,
+        allow_wifi: bool,
+        allow_mobile: bool,
+        allow_unknown_network: bool,
+    },
+    OwnDeviceTicketDiscoveryStatus,
     ConversationList,
     HistoryPage {
         conversation: String,
@@ -867,6 +883,21 @@ pub struct RuntimeIpcOwnDeviceAnnouncementAutomationStatus {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcOwnDeviceTicketDiscoveryStatus {
+    pub recipient_device_id: DeviceId,
+    pub enabled: bool,
+    pub policy_generation: u64,
+    pub service_base_url: String,
+    pub ttl_seconds: u64,
+    pub refresh_before_seconds: u64,
+    pub outbound_channel_id: String,
+    pub inbound_channel_id: String,
+    pub recipient_ticket_file: PathBuf,
+    pub privacy_status: String,
+    pub announcement: RuntimeIpcOwnDeviceAnnouncementAutomationStatus,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum RuntimeIpcResponse {
     Pong {
         account_id: AccountId,
@@ -897,6 +928,8 @@ pub enum RuntimeIpcResponse {
     EndpointAnnouncementsPushed(Box<RuntimeIpcEndpointAnnouncementPush>),
     OwnDeviceAnnouncementAutomationConfigured(Box<RuntimeIpcOwnDeviceAnnouncementAutomationStatus>),
     OwnDeviceAnnouncementAutomationStatus(Vec<RuntimeIpcOwnDeviceAnnouncementAutomationStatus>),
+    OwnDeviceTicketDiscoveryConfigured(Box<RuntimeIpcOwnDeviceTicketDiscoveryStatus>),
+    OwnDeviceTicketDiscoveryStatus(Vec<RuntimeIpcOwnDeviceTicketDiscoveryStatus>),
     ConversationList(Vec<RuntimeIpcConversationSummary>),
     HistoryPage(RuntimeIpcHistoryPage),
     ChangeState {

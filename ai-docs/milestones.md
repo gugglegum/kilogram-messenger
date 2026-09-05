@@ -2903,12 +2903,42 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - contract зафиксирован в
   [`../docs/RFC-0061-multi-audience-own-device-automation.md`](../docs/RFC-0061-multi-audience-own-device-automation.md).
 
+### M0.9.40 — pairwise own-device ticket discovery: выполнено
+
+Реализовано:
+
+- certified long-lived X25519 Device keys дают симметричный pairwise secret;
+  domain-separated KDF дополнительно связывает Account ID, digest byte-exact
+  current Root roster и направленные source/recipient Device IDs;
+- каждое направление получает отдельную существующую self-authenticating
+  store capability; store видит только pseudorandom channel, generation,
+  expiry, public write proof и opaque ciphertext, но сохраняет visibility
+  IP/timing/size/access correlation;
+- source публикует fresh own-device connection ticket как Device-signed
+  monotonic publication, HPKE-sealed только exact active recipient Device;
+- recipient проверяет HPKE slot, source signature, exact account/roster,
+  listener/requester binding и freshness, затем применяет существующий signed
+  observation anti-rollback/equivocation gate и атомарно заменяет ticket в
+  runtime-managed public directory;
+- IPC v14 одним вызовом устанавливает Device-signed discovery policy и
+  M0.9.39 announcement schedule; foreground workflow последовательно делает
+  publish → fetch → authenticated push, сохраняя общий action limit и signed
+  success/backoff chain;
+- revoked recipient больше не планируется и остаётся доступен в status как
+  `recipient-revoked`; discovery policy chains входят в 4096-record bound и
+  существующую transactional signed checkpoint compaction;
+- live regression с двумя runtime одного Root Account и отдельными public
+  directories доказал отсутствие shared ticket file, directional channel
+  symmetry, store lookup, managed ticket installation и последующий direct
+  authenticated announcement push;
+- contract зафиксирован в
+  [`../docs/RFC-0062-pairwise-own-device-ticket-discovery.md`](../docs/RFC-0062-pairwise-own-device-ticket-discovery.md).
+
 ### Следующий этап
 
-1. M0.9.40: дать authenticated privacy-preserving bounded distribution свежих
-   recipient-specific own-device tickets, чтобы schedule не зависел от общей
-   папки или ручного копирования; offline store остаётся непрозрачным carrier,
-   а Root roster — единственной authority.
+1. M0.9.41: заменить per-recipient configuration одним bounded roster-wide
+   own-device availability policy, который добавляет и прекращает schedules по
+   live Root roster без параллельного network storm.
 2. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.

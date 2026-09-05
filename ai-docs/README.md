@@ -365,29 +365,32 @@ global prekey discovery/witness, автоматический recovery source di
 
 ## План ближайших работ
 
-1. M0.9.40: распространить свежие recipient-specific own-device tickets через
-   authenticated privacy-preserving bounded channel, чтобы M0.9.39 schedule не
-   зависел от общей папки или ручного копирования.
-2. Уже реализованный M0.9.39 даёт одному listener primary peer и exact-current
+1. M0.9.41: заменить ручную настройку каждой пары одним bounded roster-wide
+   own-device availability policy с безопасной реакцией на live Root roster
+   add/remove и без параллельного publish/fetch/push storm.
+2. Уже реализованный M0.9.40 даёт exact-current sibling Devices directional
+   pairwise store capabilities, recipient-HPKE публикацию свежего runtime ticket
+   и автоматический fetch в runtime-managed path без общей папки.
+3. Уже реализованный M0.9.39 даёт одному listener primary peer и exact-current
    own-account аудитории, stable own-device ticket и Device-signed restart-safe
    foreground schedule с network permissions, backoff и compaction.
-3. Уже реализованный M0.9.38 переносит M0.9.37 recipient-encrypted bundle по
+4. Уже реализованный M0.9.38 переносит M0.9.37 recipient-encrypted bundle по
    authenticated same-account Device session, вызывает общий import gate и
    возвращает recipient-signed session-bound replay acknowledgement.
-4. Уже реализованный M0.9.37 переносит bounded endpoint candidates и signed
+5. Уже реализованный M0.9.37 переносит bounded endpoint candidates и signed
    publication high-water между exact-current authorized own Devices через
    source-signed recipient-HPKE file, не принимая bundle как Root authority.
-5. Уже реализованный M0.9.36 хранит local-device-signed expiry-independent
+6. Уже реализованный M0.9.36 хранит local-device-signed expiry-independent
    publication binding и обновляет long-offline endpoint без принятия
    просроченного transport/prekey ticket.
-6. Уже реализованный M0.9.35 обновляет все enrolled Device channels одной
+7. Уже реализованный M0.9.35 обновляет все enrolled Device channels одной
    bounded action, хранит independent observation high-water и показывает
    desktop `usable`/`stale` состояния.
-7. Уже реализованный M0.9.33 даёт self-authenticating per-peer capability
+8. Уже реализованный M0.9.33 даёт self-authenticating per-peer capability
    channel и exact Ed25519 PUT authorization без Account/Device ID на store.
-8. Уже реализованные M0.9.31–M0.9.32 дают opt-in foreground automation и
+9. Уже реализованные M0.9.31–M0.9.32 дают opt-in foreground automation и
    crash-safe bounded compaction его signed runtime chains.
-9. Уже реализованный M0.9.30 даёт self-hostable loopback-only opaque store за
+10. Уже реализованный M0.9.30 даёт self-hostable loopback-only opaque store за
    HTTPS reverse proxy: durable Redb, fixed retention, monotonic replacement,
    size/channel/connection/rate limits и Internet test procedure.
 10. Уже реализованный M0.9.29 заменяет synchronized steady-state ticket refresh
@@ -543,6 +546,8 @@ global prekey discovery/witness, автоматический recovery source di
   реализованный M0.9.38 authenticated same-account network push, общий import gate, session-bound recipient ACK и bounded backpressure.
 - [`../docs/RFC-0061-multi-audience-own-device-automation.md`](../docs/RFC-0061-multi-audience-own-device-automation.md) —
   реализованный M0.9.39 dual signed ticket views, bounded multi-audience listener и Device-signed foreground own-device schedule с backoff/compaction.
+- [`../docs/RFC-0062-pairwise-own-device-ticket-discovery.md`](../docs/RFC-0062-pairwise-own-device-ticket-discovery.md) —
+  реализованный M0.9.40 directional pairwise store capability, source-signed recipient-HPKE runtime-ticket locator и foreground publish/fetch/push без общей папки.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

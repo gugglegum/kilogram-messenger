@@ -8,7 +8,7 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use zeroize::ZeroizeOnDrop;
+use zeroize::{ZeroizeOnDrop, Zeroizing};
 
 pub const ENCRYPTION_KEY_BYTES: usize = 32;
 
@@ -47,6 +47,35 @@ impl DeviceEncryptionIdentity {
     pub fn public_key(&self) -> EncryptionPublicKey {
         let (_, public_key) = Kem::derive_keypair(&self.key_seed);
         EncryptionPublicKey(copy_fixed(&public_key.to_bytes()))
+    }
+
+    /// Derives a symmetric, domain-separated key with another persistent
+    /// Device encryption identity. The raw X25519 result is never returned.
+    pub fn derive_pairwise_key(
+        &self,
+        peer: EncryptionPublicKey,
+        context: &str,
+    ) -> Result<[u8; ENCRYPTION_KEY_BYTES], CryptoError> {
+        if context.is_empty() {
+            return Err(CryptoError::InvalidPairwiseContext);
+        }
+        let (private_key, public_key) = Kem::derive_keypair(&self.key_seed);
+        let private_key = Zeroizing::new(copy_fixed(&private_key.to_bytes()));
+        let local_public_key = copy_fixed(&public_key.to_bytes());
+        let shared_secret = Zeroizing::new(x25519_dalek::x25519(*private_key, peer.0));
+        if shared_secret.iter().all(|byte| *byte == 0) {
+            return Err(CryptoError::NonContributoryPairwiseKey);
+        }
+        let (first_public_key, second_public_key) = if local_public_key <= peer.0 {
+            (local_public_key, peer.0)
+        } else {
+            (peer.0, local_public_key)
+        };
+        let mut material = Zeroizing::new(Vec::with_capacity(96));
+        material.extend_from_slice(shared_secret.as_ref());
+        material.extend_from_slice(&first_public_key);
+        material.extend_from_slice(&second_public_key);
+        Ok(blake3::derive_key(context, material.as_slice()))
     }
 
     pub fn open(
@@ -122,6 +151,12 @@ pub enum CryptoError {
 
     #[error("HPKE operation failed: {0}")]
     Hpke(#[from] hpke::HpkeError),
+
+    #[error("pairwise key context must not be empty")]
+    InvalidPairwiseContext,
+
+    #[error("pairwise X25519 key agreement is non-contributory")]
+    NonContributoryPairwiseKey,
 }
 
 #[cfg(test)]
@@ -158,6 +193,26 @@ mod tests {
                 .open(&sealed, b"kilogram test", b"tampered")
                 .is_err()
         );
+        Ok(())
+    }
+
+    #[test]
+    fn pairwise_key_is_symmetric_context_bound_and_peer_specific() -> Result<(), CryptoError> {
+        let first = DeviceEncryptionIdentity::generate()?;
+        let second = DeviceEncryptionIdentity::generate()?;
+        let third = DeviceEncryptionIdentity::generate()?;
+        let left = first.derive_pairwise_key(second.public_key(), "kilogram pairwise test v1")?;
+        let right = second.derive_pairwise_key(first.public_key(), "kilogram pairwise test v1")?;
+        assert_eq!(left, right);
+        assert_ne!(
+            left,
+            first.derive_pairwise_key(third.public_key(), "kilogram pairwise test v1")?
+        );
+        assert_ne!(
+            left,
+            first.derive_pairwise_key(second.public_key(), "kilogram pairwise test v2")?
+        );
+        assert!(first.derive_pairwise_key(second.public_key(), "").is_err());
         Ok(())
     }
 }

@@ -188,10 +188,13 @@ sessions, distribution, removal и key epochs и не решены этим пр
   по authenticated same-account session и возвращает session-bound recipient
   ACK с bounded one-shot backpressure. M0.9.39 даёт одному listener bounded
   primary+own Account аудитории, stable own-device ticket и signed durable
-  foreground schedule с backoff/network policy/compaction. Открыты
-  privacy-preserving distribution этих recipient ticket без общей папки,
-  compaction принятой sibling evidence и обнаружение equivocation между
-  устройствами, которые никогда не обменивались bundle.
+  foreground schedule с backoff/network policy/compaction. M0.9.40 убирает
+  общую папку: exact-current siblings выводят directional pairwise capability,
+  публикуют source-signed recipient-HPKE ticket в opaque store и выполняют
+  existing push из runtime-managed path. Открыты roster-wide автоматизация без
+  ручной настройки каждой пары, compaction принятой sibling evidence и
+  обнаружение equivocation между устройствами, которые никогда не обменивались
+  bundle.
 - M0.9.32 compact/checkpoint-ит runtime publication, observation, policy и
   attempt chains до exact signed heads за device-signed cumulative checkpoint;
   DB-primary checkpoint/removals атомарны и crash-safe. Открытым остаётся

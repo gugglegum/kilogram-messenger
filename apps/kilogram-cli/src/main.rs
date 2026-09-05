@@ -43,10 +43,11 @@ use kilogram_runtime_ipc::{
     RuntimeIpcEndpointCandidateStatus, RuntimeIpcEndpointTicketRefresh, RuntimeIpcHistoryCursor,
     RuntimeIpcHistoryMessage, RuntimeIpcHistoryPage, RuntimeIpcMessagePreview,
     RuntimeIpcNetworkClass, RuntimeIpcOutboxStatus,
-    RuntimeIpcOwnDeviceAnnouncementAutomationStatus, RuntimeIpcQueueItem, RuntimeIpcQueueState,
-    RuntimeIpcRequestId, RuntimeIpcResponse, RuntimeIpcRoutePolicy, RuntimeIpcServer,
-    RuntimeIpcTicketAutomationActionStatus, RuntimeIpcTicketAutomationStatus,
-    RuntimeIpcTicketPublication, RuntimeIpcWork, RuntimeLaunchProfile, RuntimeLaunchSettings,
+    RuntimeIpcOwnDeviceAnnouncementAutomationStatus, RuntimeIpcOwnDeviceTicketDiscoveryStatus,
+    RuntimeIpcQueueItem, RuntimeIpcQueueState, RuntimeIpcRequestId, RuntimeIpcResponse,
+    RuntimeIpcRoutePolicy, RuntimeIpcServer, RuntimeIpcTicketAutomationActionStatus,
+    RuntimeIpcTicketAutomationStatus, RuntimeIpcTicketPublication, RuntimeIpcWork,
+    RuntimeLaunchProfile, RuntimeLaunchSettings,
 };
 use kilogram_session::{
     MAX_SYNC_ROUNDS, ServerInventoryOutcome, SessionStore, SyncClient, SyncServer,
@@ -82,6 +83,7 @@ mod recovery_qr;
 mod recovery_scheduler;
 mod runtime_endpoint_announcement;
 mod runtime_own_device_automation;
+mod runtime_own_device_discovery;
 mod runtime_publication;
 mod runtime_queue;
 mod runtime_ticket_automation;
@@ -133,6 +135,9 @@ use runtime_own_device_automation::{
     OwnDeviceAnnouncementPolicyId, SignedOwnDeviceAnnouncementAttempt,
     SignedOwnDeviceAnnouncementPolicy,
 };
+use runtime_own_device_discovery::{
+    OwnDeviceTicketDiscoveryPolicyId, SignedOwnDeviceTicketDiscoveryPolicy,
+};
 use runtime_publication::{
     DEFAULT_TICKET_PUBLICATION_TTL_SECONDS, EncryptedTicketPublication,
     MAX_TICKET_PUBLICATION_TTL_SECONDS, MIN_TICKET_PUBLICATION_TTL_SECONDS,
@@ -174,15 +179,22 @@ const RUNTIME_TICKET_AUTOMATION_POLICIES_DIRECTORY: &str = "ticket-automation-po
 const RUNTIME_TICKET_AUTOMATION_ATTEMPTS_DIRECTORY: &str = "ticket-automation-attempts";
 const RUNTIME_OWN_DEVICE_ANNOUNCEMENT_POLICIES_DIRECTORY: &str = "own-device-announcement-policies";
 const RUNTIME_OWN_DEVICE_ANNOUNCEMENT_ATTEMPTS_DIRECTORY: &str = "own-device-announcement-attempts";
+const RUNTIME_OWN_DEVICE_TICKET_DISCOVERY_POLICIES_DIRECTORY: &str =
+    "own-device-ticket-discovery-policies";
 const RUNTIME_TICKET_CHECKPOINTS_DIRECTORY: &str = "ticket-checkpoints";
 const MAX_RUNTIME_DEVICE_DIRECTORY_RECEIPTS: usize = 1_024;
 const MAX_RUNTIME_ENDPOINT_CANDIDATES_PER_CONTACT: usize = 4;
 const MAX_RUNTIME_TICKET_PUBLICATION_RECORDS: usize = 4_096;
 const MAX_RUNTIME_TICKET_AUTOMATION_RECORDS: usize = 4_096;
 const MAX_RUNTIME_OWN_DEVICE_ANNOUNCEMENT_RECORDS: usize = 4_096;
+const MAX_RUNTIME_OWN_DEVICE_TICKET_DISCOVERY_RECORDS: usize = 4_096;
 const MAX_RUNTIME_TICKET_CHAIN_RECORDS_BEFORE_COMPACTION: usize = 8;
 const RUNTIME_TICKET_AUTOMATION_CHECK_INTERVAL: Duration = Duration::from_secs(5);
 const RUNTIME_DEVICE_LIST_DIGEST_DOMAIN: &[u8] = b"kilogram:runtime-device-list:v1\0";
+const OWN_DEVICE_TICKET_PAIRWISE_KEY_CONTEXT: &str =
+    "kilogram own-device ticket pairwise locator key v1";
+const OWN_DEVICE_TICKET_CAPABILITY_SCOPE_DOMAIN: &[u8] =
+    b"kilogram:own-device-ticket-locator-capability:v1\0";
 const DIRECT_PATH_DIAGNOSTIC_WAIT: Duration = Duration::from_secs(3);
 const ROUTE_POLICY_WAIT: Duration = Duration::from_secs(15);
 const CONNECTION_TIMEOUT: Duration = Duration::from_secs(30);
@@ -752,6 +764,72 @@ enum Command {
 
     /// Inspect durable own-device endpoint-announcement schedules.
     RuntimeIpcOwnDeviceAnnouncementStatus {
+        /// Runtime-owned local IPC descriptor.
+        #[arg(long)]
+        ipc_file: PathBuf,
+    },
+
+    /// Discover one own-device ticket through a pairwise private opaque-store channel.
+    RuntimeIpcConfigureOwnDeviceDiscovery {
+        /// Runtime-owned local IPC descriptor.
+        #[arg(long)]
+        ipc_file: PathBuf,
+
+        /// Another active Device in the exact current Root-signed roster.
+        #[arg(long)]
+        recipient_device: DeviceId,
+
+        /// Set false to disable both discovery and its announcement schedule.
+        #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
+        enabled: bool,
+
+        /// HTTPS base URL of the opaque ticket-publication store.
+        #[arg(long)]
+        service_base_url: String,
+
+        /// Lifetime of each pairwise encrypted locator publication.
+        #[arg(long, default_value_t = DEFAULT_TICKET_PUBLICATION_TTL_SECONDS)]
+        ttl_seconds: u64,
+
+        /// Renew the local publication this many seconds before expiry.
+        #[arg(long, default_value_t = DEFAULT_REFRESH_BEFORE_SECONDS)]
+        refresh_before_seconds: u64,
+
+        /// Minimum interval between successful endpoint-announcement transfers.
+        #[arg(long, default_value_t = DEFAULT_OWN_DEVICE_ANNOUNCEMENT_INTERVAL_SECONDS)]
+        interval_seconds: u64,
+
+        /// Lifetime of each recipient-encrypted endpoint-announcement bundle.
+        #[arg(long, default_value_t = DEFAULT_ENDPOINT_ANNOUNCEMENT_VALIDITY_SECONDS)]
+        validity_seconds: u64,
+
+        /// Initial retry delay after a failed publish, lookup, or transfer.
+        #[arg(long, default_value_t = DEFAULT_OWN_DEVICE_ANNOUNCEMENT_RETRY_BASE_SECONDS)]
+        retry_base_seconds: u64,
+
+        /// Maximum exponential retry delay.
+        #[arg(long, default_value_t = DEFAULT_OWN_DEVICE_ANNOUNCEMENT_RETRY_MAX_SECONDS)]
+        retry_max_seconds: u64,
+
+        /// Deny automatic discovery and transfer on wired networks.
+        #[arg(long)]
+        deny_ethernet: bool,
+
+        /// Deny automatic discovery and transfer on Wi-Fi.
+        #[arg(long)]
+        deny_wifi: bool,
+
+        /// Explicitly allow discovery and transfer on metered/mobile networks.
+        #[arg(long)]
+        allow_mobile: bool,
+
+        /// Explicitly allow work when the OS cannot classify the network.
+        #[arg(long)]
+        allow_unknown_network: bool,
+    },
+
+    /// Inspect pairwise opaque-store own-device ticket discovery schedules.
+    RuntimeIpcOwnDeviceDiscoveryStatus {
         /// Runtime-owned local IPC descriptor.
         #[arg(long)]
         ipc_file: PathBuf,
@@ -1610,6 +1688,8 @@ impl Command {
             | Self::RuntimeIpcPushEndpointAnnouncements { .. }
             | Self::RuntimeIpcConfigureOwnDeviceAnnouncements { .. }
             | Self::RuntimeIpcOwnDeviceAnnouncementStatus { .. }
+            | Self::RuntimeIpcConfigureOwnDeviceDiscovery { .. }
+            | Self::RuntimeIpcOwnDeviceDiscoveryStatus { .. }
             | Self::PlatformContext => None,
         }
     }
@@ -2579,6 +2659,43 @@ async fn run_command(command: Command) -> Result<()> {
         }
         Command::RuntimeIpcOwnDeviceAnnouncementStatus { ipc_file } => {
             runtime_ipc_own_device_announcement_status(ipc_file).await
+        }
+        Command::RuntimeIpcConfigureOwnDeviceDiscovery {
+            ipc_file,
+            recipient_device,
+            enabled,
+            service_base_url,
+            ttl_seconds,
+            refresh_before_seconds,
+            interval_seconds,
+            validity_seconds,
+            retry_base_seconds,
+            retry_max_seconds,
+            deny_ethernet,
+            deny_wifi,
+            allow_mobile,
+            allow_unknown_network,
+        } => {
+            runtime_ipc_configure_own_device_discovery(
+                ipc_file,
+                recipient_device,
+                enabled,
+                service_base_url,
+                ttl_seconds,
+                refresh_before_seconds,
+                interval_seconds,
+                validity_seconds,
+                retry_base_seconds,
+                retry_max_seconds,
+                !deny_ethernet,
+                !deny_wifi,
+                allow_mobile,
+                allow_unknown_network,
+            )
+            .await
+        }
+        Command::RuntimeIpcOwnDeviceDiscoveryStatus { ipc_file } => {
+            runtime_ipc_own_device_discovery_status(ipc_file).await
         }
         Command::Connect {
             state_dir,
@@ -3794,6 +3911,8 @@ struct RuntimeStateSnapshot {
         BTreeMap<(RuntimeContactId, TicketAutomationAction), Vec<SignedTicketAutomationAttempt>>,
     own_device_announcement_policies: BTreeMap<DeviceId, Vec<SignedOwnDeviceAnnouncementPolicy>>,
     own_device_announcement_attempts: BTreeMap<DeviceId, Vec<SignedOwnDeviceAnnouncementAttempt>>,
+    own_device_ticket_discovery_policies:
+        BTreeMap<DeviceId, Vec<SignedOwnDeviceTicketDiscoveryPolicy>>,
     ticket_checkpoint: Option<SignedRuntimeTicketCheckpoint>,
 }
 
@@ -3900,6 +4019,15 @@ impl RuntimeStateSnapshot {
         self.own_device_announcement_attempts
             .get(&recipient_device_id)
             .and_then(|attempts| attempts.last())
+    }
+
+    fn latest_own_device_ticket_discovery_policy(
+        &self,
+        recipient_device_id: DeviceId,
+    ) -> Option<&SignedOwnDeviceTicketDiscoveryPolicy> {
+        self.own_device_ticket_discovery_policies
+            .get(&recipient_device_id)
+            .and_then(|policies| policies.last())
     }
 }
 
@@ -4018,6 +4146,14 @@ fn runtime_own_device_announcement_attempt_relative_path(
         .join(format!("{attempt_id}.odaa"))
 }
 
+fn runtime_own_device_ticket_discovery_policy_relative_path(
+    policy_id: OwnDeviceTicketDiscoveryPolicyId,
+) -> PathBuf {
+    PathBuf::from(RUNTIME_STATE_DIRECTORY)
+        .join(RUNTIME_OWN_DEVICE_TICKET_DISCOVERY_POLICIES_DIRECTORY)
+        .join(format!("{policy_id}.odtdp"))
+}
+
 fn runtime_ticket_checkpoint_relative_path(checkpoint_id: RuntimeTicketCheckpointId) -> PathBuf {
     PathBuf::from(RUNTIME_STATE_DIRECTORY)
         .join(RUNTIME_TICKET_CHECKPOINTS_DIRECTORY)
@@ -4125,6 +4261,7 @@ fn read_runtime_record_files(state_directory: &Path) -> Result<Vec<(PathBuf, Vec
         RUNTIME_TICKET_AUTOMATION_ATTEMPTS_DIRECTORY,
         RUNTIME_OWN_DEVICE_ANNOUNCEMENT_POLICIES_DIRECTORY,
         RUNTIME_OWN_DEVICE_ANNOUNCEMENT_ATTEMPTS_DIRECTORY,
+        RUNTIME_OWN_DEVICE_TICKET_DISCOVERY_POLICIES_DIRECTORY,
         RUNTIME_TICKET_CHECKPOINTS_DIRECTORY,
     ] {
         let root = state_directory
@@ -4328,6 +4465,23 @@ fn load_runtime_state_snapshot(
             );
             snapshot
                 .own_device_announcement_attempts
+                .entry(value.recipient_device_id())
+                .or_default()
+                .push(value);
+        } else if file_name.ends_with(".odtdp") {
+            let value = SignedOwnDeviceTicketDiscoveryPolicy::decode(&bytes)?;
+            ensure!(
+                value.local_account_id() == local_account_id
+                    && value.local_device_id() == local_device_id,
+                "own-device ticket discovery policy belongs to another local identity"
+            );
+            ensure!(
+                relative_path
+                    == runtime_own_device_ticket_discovery_policy_relative_path(value.policy_id()?),
+                "own-device ticket discovery policy filename does not match its authenticated state"
+            );
+            snapshot
+                .own_device_ticket_discovery_policies
                 .entry(value.recipient_device_id())
                 .or_default()
                 .push(value);
@@ -4577,6 +4731,20 @@ fn load_runtime_state_snapshot(
             <= kilogram_identity::MAX_ACCOUNT_DEVICES.saturating_sub(1),
         "runtime own-device announcement recipient limit exceeded"
     );
+    let own_device_ticket_discovery_record_count = snapshot
+        .own_device_ticket_discovery_policies
+        .values()
+        .map(Vec::len)
+        .sum::<usize>();
+    ensure!(
+        own_device_ticket_discovery_record_count <= MAX_RUNTIME_OWN_DEVICE_TICKET_DISCOVERY_RECORDS,
+        "runtime own-device ticket discovery record limit exceeded"
+    );
+    ensure!(
+        snapshot.own_device_ticket_discovery_policies.len()
+            <= kilogram_identity::MAX_ACCOUNT_DEVICES.saturating_sub(1),
+        "runtime own-device ticket discovery recipient limit exceeded"
+    );
     for states in snapshot.retries.values_mut() {
         states.sort_by_key(SignedRuntimeRetryState::generation);
         let mut previous = None;
@@ -4749,6 +4917,30 @@ fn load_runtime_state_snapshot(
             previous = Some(attempt);
         }
     }
+    for (recipient_device_id, policies) in &mut snapshot.own_device_ticket_discovery_policies {
+        policies.sort_by_key(SignedOwnDeviceTicketDiscoveryPolicy::generation);
+        let mut remaining = policies.iter();
+        let mut previous = if let Some((generation, record_id)) =
+            snapshot.ticket_checkpoint.as_ref().and_then(|checkpoint| {
+                checkpoint.own_device_ticket_discovery_policy_anchor(*recipient_device_id)
+            }) {
+            let head = remaining.next().context(
+                "runtime ticket checkpoint own-device discovery policy anchor is absent",
+            )?;
+            head.verify_signature()?;
+            ensure!(
+                head.generation() == generation && head.policy_id()? == record_id,
+                "runtime ticket checkpoint own-device discovery policy anchor does not match retained head"
+            );
+            Some(head)
+        } else {
+            None
+        };
+        for policy in remaining {
+            policy.verify(previous)?;
+            previous = Some(policy);
+        }
+    }
     if let Some(checkpoint) = &snapshot.ticket_checkpoint {
         for anchor in checkpoint.anchors() {
             let present = match anchor {
@@ -4777,6 +4969,12 @@ fn load_runtime_state_snapshot(
                     ..
                 } => snapshot
                     .own_device_announcement_attempts
+                    .contains_key(recipient_device_id),
+                RuntimeTicketChainAnchor::OwnDeviceTicketDiscoveryPolicy {
+                    recipient_device_id,
+                    ..
+                } => snapshot
+                    .own_device_ticket_discovery_policies
                     .contains_key(recipient_device_id),
             };
             ensure!(
@@ -4837,6 +5035,14 @@ fn load_runtime_state_snapshot(
                 "own-device announcement attempt references an absent policy generation"
             );
         }
+    }
+    for recipient_device_id in snapshot.own_device_ticket_discovery_policies.keys() {
+        ensure!(
+            snapshot
+                .own_device_announcement_policies
+                .contains_key(recipient_device_id),
+            "own-device ticket discovery policy has no announcement policy"
+        );
     }
     for queued in snapshot.queued.values() {
         let contact = snapshot
@@ -4904,6 +5110,10 @@ fn runtime_ticket_state_needs_compaction(snapshot: &RuntimeStateSnapshot) -> boo
             .any(|records| records.len() > MAX_RUNTIME_TICKET_CHAIN_RECORDS_BEFORE_COMPACTION)
         || snapshot
             .own_device_announcement_attempts
+            .values()
+            .any(|records| records.len() > MAX_RUNTIME_TICKET_CHAIN_RECORDS_BEFORE_COMPACTION)
+        || snapshot
+            .own_device_ticket_discovery_policies
             .values()
             .any(|records| records.len() > MAX_RUNTIME_TICKET_CHAIN_RECORDS_BEFORE_COMPACTION)
 }
@@ -5047,6 +5257,20 @@ fn compact_runtime_ticket_state_if_needed(
                 state_directory,
                 &mut removed,
                 runtime_own_device_announcement_attempt_relative_path(record.attempt_id()?),
+                record.encode()?,
+            )?;
+        }
+    }
+    for records in snapshot.own_device_ticket_discovery_policies.values() {
+        let head = records
+            .last()
+            .context("runtime own-device ticket discovery policy chain is empty")?;
+        anchors.push(RuntimeTicketChainAnchor::own_device_ticket_discovery_policy(head)?);
+        for record in &records[..records.len() - 1] {
+            add_runtime_ticket_compaction_record(
+                state_directory,
+                &mut removed,
+                runtime_own_device_ticket_discovery_policy_relative_path(record.policy_id()?),
                 record.encode()?,
             )?;
         }
@@ -7914,6 +8138,81 @@ async fn runtime_ipc_own_device_announcement_status(ipc_file: PathBuf) -> Result
     }
 }
 
+#[allow(clippy::too_many_arguments)]
+async fn runtime_ipc_configure_own_device_discovery(
+    ipc_file: PathBuf,
+    recipient_device_id: DeviceId,
+    enabled: bool,
+    service_base_url: String,
+    ttl_seconds: u64,
+    refresh_before_seconds: u64,
+    interval_seconds: u64,
+    validity_seconds: u64,
+    retry_base_seconds: u64,
+    retry_max_seconds: u64,
+    allow_ethernet: bool,
+    allow_wifi: bool,
+    allow_mobile: bool,
+    allow_unknown_network: bool,
+) -> Result<()> {
+    match kilogram_runtime_ipc::call(
+        &ipc_file,
+        RuntimeIpcCommand::ConfigureOwnDeviceTicketDiscovery {
+            recipient_device_id,
+            enabled,
+            service_base_url,
+            ttl_seconds,
+            refresh_before_seconds,
+            interval_seconds,
+            validity_seconds,
+            retry_base_seconds,
+            retry_max_seconds,
+            allow_ethernet,
+            allow_wifi,
+            allow_mobile,
+            allow_unknown_network,
+        },
+    )
+    .await?
+    {
+        RuntimeIpcResponse::OwnDeviceTicketDiscoveryConfigured(status) => {
+            print_runtime_own_device_discovery_status(&status);
+            println!("status=runtime-own-device-ticket-discovery-configured");
+            Ok(())
+        }
+        RuntimeIpcResponse::Error { message } => {
+            bail!("runtime IPC rejected own-device ticket discovery policy: {message}")
+        }
+        response => bail!(
+            "runtime IPC returned an unexpected own-device ticket discovery response: {response:?}"
+        ),
+    }
+}
+
+async fn runtime_ipc_own_device_discovery_status(ipc_file: PathBuf) -> Result<()> {
+    match kilogram_runtime_ipc::call(&ipc_file, RuntimeIpcCommand::OwnDeviceTicketDiscoveryStatus)
+        .await?
+    {
+        RuntimeIpcResponse::OwnDeviceTicketDiscoveryStatus(statuses) => {
+            println!(
+                "own_device_ticket_discovery_policy_count={}",
+                statuses.len()
+            );
+            for status in &statuses {
+                print_runtime_own_device_discovery_status(status);
+            }
+            println!("status=runtime-own-device-ticket-discovery-status");
+            Ok(())
+        }
+        RuntimeIpcResponse::Error { message } => {
+            bail!("runtime IPC rejected own-device ticket discovery status: {message}")
+        }
+        response => bail!(
+            "runtime IPC returned an unexpected own-device ticket discovery status response: {response:?}"
+        ),
+    }
+}
+
 fn print_runtime_endpoint_announcement_export(report: &RuntimeIpcEndpointAnnouncementExport) {
     println!("endpoint_announcement_bundle_id={}", report.bundle_id);
     println!("source_device_id={}", report.source_device_id);
@@ -8079,6 +8378,41 @@ fn print_runtime_own_device_announcement_status(
         "own_device_announcement_os_background_service_enabled={}",
         status.os_background_service_enabled
     );
+}
+
+fn print_runtime_own_device_discovery_status(status: &RuntimeIpcOwnDeviceTicketDiscoveryStatus) {
+    println!(
+        "own_device_discovery_recipient_device_id={}",
+        status.recipient_device_id
+    );
+    println!("own_device_discovery_enabled={}", status.enabled);
+    println!(
+        "own_device_discovery_policy_generation={}",
+        status.policy_generation
+    );
+    println!(
+        "own_device_discovery_service_base_url={}",
+        status.service_base_url
+    );
+    println!("own_device_discovery_ttl_seconds={}", status.ttl_seconds);
+    println!(
+        "own_device_discovery_refresh_before_seconds={}",
+        status.refresh_before_seconds
+    );
+    println!(
+        "own_device_discovery_outbound_channel_id={}",
+        status.outbound_channel_id
+    );
+    println!(
+        "own_device_discovery_inbound_channel_id={}",
+        status.inbound_channel_id
+    );
+    println!(
+        "own_device_discovery_recipient_ticket_file={}",
+        status.recipient_ticket_file.display()
+    );
+    println!("own_device_discovery_privacy={}", status.privacy_status);
+    print_runtime_own_device_announcement_status(&status.announcement);
 }
 
 fn print_runtime_ticket_automation_status(status: &RuntimeIpcTicketAutomationStatus) {
@@ -8293,13 +8627,19 @@ struct RuntimeIpcDispatchOutcome {
     state_changed: bool,
 }
 
+#[derive(Clone, Copy)]
+struct RuntimePublicPaths<'a> {
+    primary_ticket: Option<&'a Path>,
+    own_device_ticket: Option<&'a Path>,
+    own_device_discovery_directory: Option<&'a Path>,
+}
+
 async fn handle_runtime_ipc_work(
     state_directory: &Path,
     endpoint: &Endpoint,
     ticket: &mut ConnectionTicket,
     directory_state: &mut RuntimeDeviceDirectoryState,
-    ticket_file: Option<&Path>,
-    own_device_ticket_file: Option<&Path>,
+    public_paths: RuntimePublicPaths<'_>,
     work: RuntimeIpcWork,
 ) -> RuntimeIpcDispatchOutcome {
     let (command, response_sender) = work.into_parts();
@@ -8439,7 +8779,7 @@ async fn handle_runtime_ipc_work(
                     endpoint,
                     ticket,
                     directory_state,
-                    ticket_file,
+                    public_paths.primary_ticket,
                     &device_list_file,
                 )
             }) {
@@ -8451,7 +8791,7 @@ async fn handle_runtime_ipc_work(
                         state_directory,
                         endpoint,
                         ticket,
-                        own_device_ticket_file,
+                        public_paths.own_device_ticket,
                     ) {
                         Ok(_) => RuntimeIpcResponse::OwnDeviceDirectoryApplied(Box::new(update)),
                         Err(error) => RuntimeIpcResponse::Error {
@@ -8630,6 +8970,74 @@ async fn handle_runtime_ipc_work(
                 },
             }
         }
+        RuntimeIpcCommand::ConfigureOwnDeviceTicketDiscovery {
+            recipient_device_id,
+            enabled,
+            service_base_url,
+            ttl_seconds,
+            refresh_before_seconds,
+            interval_seconds,
+            validity_seconds,
+            retry_base_seconds,
+            retry_max_seconds,
+            allow_ethernet,
+            allow_wifi,
+            allow_mobile,
+            allow_unknown_network,
+        } => {
+            let status = public_paths
+                .own_device_discovery_directory
+                .context("runtime has no public own-device discovery directory")
+                .and_then(|directory| {
+                    with_locked_state(state_directory, || {
+                        configure_runtime_own_device_ticket_discovery(
+                            state_directory,
+                            ticket,
+                            directory,
+                            recipient_device_id,
+                            enabled,
+                            service_base_url,
+                            ttl_seconds,
+                            refresh_before_seconds,
+                            interval_seconds,
+                            validity_seconds,
+                            retry_base_seconds,
+                            retry_max_seconds,
+                            allow_ethernet,
+                            allow_wifi,
+                            allow_mobile,
+                            allow_unknown_network,
+                            current_runtime_network_class(),
+                        )
+                    })
+                });
+            match status {
+                Ok(status) => {
+                    state_changed = true;
+                    RuntimeIpcResponse::OwnDeviceTicketDiscoveryConfigured(Box::new(status))
+                }
+                Err(error) => RuntimeIpcResponse::Error {
+                    message: format!("{error:#}"),
+                },
+            }
+        }
+        RuntimeIpcCommand::OwnDeviceTicketDiscoveryStatus => {
+            let status = StateDirectoryLock::acquire(state_directory)
+                .context("lock runtime state for own-device ticket discovery status")
+                .and_then(|_lock| {
+                    collect_runtime_own_device_ticket_discovery_status(
+                        state_directory,
+                        ticket,
+                        current_runtime_network_class(),
+                    )
+                });
+            match status {
+                Ok(status) => RuntimeIpcResponse::OwnDeviceTicketDiscoveryStatus(status),
+                Err(error) => RuntimeIpcResponse::Error {
+                    message: format!("{error:#}"),
+                },
+            }
+        }
         RuntimeIpcCommand::ConversationList => {
             let conversations = StateDirectoryLock::acquire(state_directory)
                 .context("lock runtime state for IPC conversation snapshot")
@@ -8780,6 +9188,72 @@ fn resolve_runtime_own_device_ticket_path(
         "own-device runtime ticket must live outside protected runtime state"
     );
     Ok(Some(path))
+}
+
+fn resolve_runtime_own_device_discovery_ticket_directory(
+    state_directory: &Path,
+    ipc_file: Option<&Path>,
+    ticket_file: Option<&Path>,
+) -> Result<Option<PathBuf>> {
+    let Some(anchor) = ipc_file.or(ticket_file) else {
+        return Ok(None);
+    };
+    let absolute = if anchor.is_absolute() {
+        anchor.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .context("read current directory for own-device ticket discovery")?
+            .join(anchor)
+    };
+    let parent = absolute
+        .parent()
+        .context("own-device ticket discovery anchor has no parent")?;
+    fs::create_dir_all(parent).with_context(|| {
+        format!(
+            "create own-device ticket discovery parent {}",
+            parent.display()
+        )
+    })?;
+    let parent = fs::canonicalize(parent).with_context(|| {
+        format!(
+            "resolve own-device ticket discovery parent {}",
+            parent.display()
+        )
+    })?;
+    let directory = parent.join("kilogram-discovered-own-devices");
+    fs::create_dir_all(&directory).with_context(|| {
+        format!(
+            "create own-device ticket discovery directory {}",
+            directory.display()
+        )
+    })?;
+    let metadata = fs::symlink_metadata(&directory).with_context(|| {
+        format!(
+            "inspect own-device ticket discovery directory {}",
+            directory.display()
+        )
+    })?;
+    ensure!(
+        metadata.file_type().is_dir() && !metadata.file_type().is_symlink(),
+        "own-device ticket discovery path must be a real directory, not a symlink"
+    );
+    let directory = fs::canonicalize(&directory).with_context(|| {
+        format!(
+            "resolve own-device ticket discovery directory {}",
+            directory.display()
+        )
+    })?;
+    let canonical_state = fs::canonicalize(state_directory)
+        .context("resolve protected state for own-device ticket discovery")?;
+    ensure!(
+        !directory.starts_with(canonical_state),
+        "own-device ticket discovery directory must live outside protected runtime state"
+    );
+    Ok(Some(directory))
+}
+
+fn own_device_discovery_ticket_path(directory: &Path, source_device_id: DeviceId) -> PathBuf {
+    directory.join(format!("kilogram-own-device-{source_device_id}.ticket"))
 }
 
 fn build_runtime_own_device_ticket(
@@ -10197,6 +10671,335 @@ fn configure_runtime_own_device_announcement_automation(
     )
 }
 
+fn own_device_ticket_locator_capability(
+    device_state: &DeviceState,
+    device_list: &AccountDeviceListSnapshot,
+    source_device_id: DeviceId,
+    recipient_device_id: DeviceId,
+) -> Result<TicketPublicationWriteCapability> {
+    ensure!(
+        source_device_id != recipient_device_id,
+        "own-device ticket locator source and recipient must differ"
+    );
+    let local_device_id = device_state.identity().device_id();
+    ensure!(
+        local_device_id == source_device_id || local_device_id == recipient_device_id,
+        "local device is not a party to the own-device ticket locator"
+    );
+    device_list
+        .verify()
+        .context("verify own-device ticket locator roster")?;
+    let local_certificate = device_list
+        .certificate_for(local_device_id)
+        .context("local device is absent from own-device ticket locator roster")?;
+    ensure!(
+        local_certificate.encryption_public_key() == device_state.encryption().public_key(),
+        "local encryption identity differs from own-device ticket locator roster"
+    );
+    let peer_device_id = if local_device_id == source_device_id {
+        recipient_device_id
+    } else {
+        source_device_id
+    };
+    let peer_certificate = device_list
+        .certificate_for(peer_device_id)
+        .context("peer device is absent from own-device ticket locator roster")?;
+    for certificate in [local_certificate, peer_certificate] {
+        verify_device_authorization_with_snapshot(
+            device_list.account_id(),
+            certificate,
+            device_list.authority_snapshot(),
+            &DeviceCapability::MESSAGING,
+        )
+        .context("verify own-device ticket locator Device authorization")?;
+    }
+    let pairwise_key = device_state
+        .encryption()
+        .derive_pairwise_key(
+            peer_certificate.encryption_public_key(),
+            OWN_DEVICE_TICKET_PAIRWISE_KEY_CONTEXT,
+        )
+        .context("derive own-device ticket pairwise locator key")?;
+    let mut scope = Vec::with_capacity(OWN_DEVICE_TICKET_CAPABILITY_SCOPE_DOMAIN.len() + 128);
+    scope.extend_from_slice(OWN_DEVICE_TICKET_CAPABILITY_SCOPE_DOMAIN);
+    scope.extend_from_slice(device_list.account_id().as_bytes());
+    scope.extend_from_slice(&runtime_device_list_digest(device_list)?);
+    scope.extend_from_slice(source_device_id.as_bytes());
+    scope.extend_from_slice(recipient_device_id.as_bytes());
+    Ok(TicketPublicationWriteCapability::derive(
+        pairwise_key,
+        &scope,
+    ))
+}
+
+#[allow(clippy::too_many_arguments)]
+fn configure_runtime_own_device_ticket_discovery(
+    state_directory: &Path,
+    current_ticket: &ConnectionTicket,
+    discovery_ticket_directory: &Path,
+    recipient_device_id: DeviceId,
+    enabled: bool,
+    service_base_url: String,
+    ttl_seconds: u64,
+    refresh_before_seconds: u64,
+    interval_seconds: u64,
+    validity_seconds: u64,
+    retry_base_seconds: u64,
+    retry_max_seconds: u64,
+    allow_ethernet: bool,
+    allow_wifi: bool,
+    allow_mobile: bool,
+    allow_unknown_network: bool,
+    current_network: RuntimeIpcNetworkClass,
+) -> Result<RuntimeIpcOwnDeviceTicketDiscoveryStatus> {
+    let store_client = TicketPublicationStoreClient::new(&service_base_url)?;
+    ensure!(
+        (MIN_TICKET_PUBLICATION_TTL_SECONDS..=MAX_TICKET_PUBLICATION_TTL_SECONDS)
+            .contains(&ttl_seconds),
+        "own-device ticket discovery TTL is outside bounds"
+    );
+    ensure!(
+        (MIN_REFRESH_BEFORE_SECONDS..=MAX_REFRESH_BEFORE_SECONDS).contains(&refresh_before_seconds)
+            && refresh_before_seconds < ttl_seconds,
+        "own-device ticket discovery refresh lead is outside bounds"
+    );
+    ensure!(
+        (MIN_OWN_DEVICE_ANNOUNCEMENT_INTERVAL_SECONDS
+            ..=MAX_OWN_DEVICE_ANNOUNCEMENT_INTERVAL_SECONDS)
+            .contains(&interval_seconds),
+        "own-device announcement interval is outside bounds"
+    );
+    ensure!(
+        (1..=MAX_ENDPOINT_ANNOUNCEMENT_VALIDITY_SECONDS).contains(&validity_seconds),
+        "own-device announcement validity is outside bounds"
+    );
+    ensure!(
+        (1..=MAX_OWN_DEVICE_ANNOUNCEMENT_RETRY_SECONDS).contains(&retry_base_seconds)
+            && retry_max_seconds >= retry_base_seconds
+            && retry_max_seconds <= MAX_OWN_DEVICE_ANNOUNCEMENT_RETRY_SECONDS,
+        "own-device announcement retry bounds are invalid"
+    );
+    let canonical_state = fs::canonicalize(state_directory)
+        .context("resolve protected state for own-device ticket discovery")?;
+    let discovery_ticket_directory = fs::canonicalize(discovery_ticket_directory)
+        .context("resolve runtime-managed own-device ticket discovery directory")?;
+    ensure!(
+        !discovery_ticket_directory.starts_with(canonical_state),
+        "own-device ticket discovery directory must live outside protected runtime state"
+    );
+
+    let local_account_id = current_ticket.listener_account_id();
+    let local_device_id = current_ticket.listener_device_id();
+    ensure!(
+        recipient_device_id != local_device_id,
+        "own-device ticket discovery recipient must be another device"
+    );
+    let device_list = current_ticket.listener_directory().device_list();
+    let recipient_certificate = device_list
+        .certificate_for(recipient_device_id)
+        .context("own-device ticket discovery recipient is absent from the current roster")?;
+    verify_device_authorization_with_snapshot(
+        local_account_id,
+        recipient_certificate,
+        device_list.authority_snapshot(),
+        &DeviceCapability::MESSAGING,
+    )
+    .context("verify own-device ticket discovery recipient authorization")?;
+
+    let device_state = load_command_device_state(state_directory)?;
+    ensure!(
+        device_state.identity().device_id() == local_device_id,
+        "running own-device ticket discovery identity changed"
+    );
+    let snapshot = load_runtime_state_snapshot(state_directory, local_account_id, local_device_id)?;
+    ensure!(
+        snapshot
+            .own_device_ticket_discovery_policies
+            .contains_key(&recipient_device_id)
+            || snapshot.own_device_ticket_discovery_policies.len()
+                < kilogram_identity::MAX_ACCOUNT_DEVICES.saturating_sub(1),
+        "own-device ticket discovery recipient limit reached"
+    );
+    ensure!(
+        snapshot
+            .own_device_announcement_policies
+            .contains_key(&recipient_device_id)
+            || snapshot.own_device_announcement_policies.len()
+                < kilogram_identity::MAX_ACCOUNT_DEVICES.saturating_sub(1),
+        "own-device announcement recipient limit reached"
+    );
+    let configured_at = unix_time_now()?;
+    let service_base_url = store_client.base_url().to_owned();
+    let previous_discovery =
+        snapshot.latest_own_device_ticket_discovery_policy(recipient_device_id);
+    let discovery_candidate = SignedOwnDeviceTicketDiscoveryPolicy::sign(
+        device_state.identity(),
+        local_account_id,
+        recipient_device_id,
+        configured_at,
+        enabled,
+        service_base_url,
+        ttl_seconds,
+        refresh_before_seconds,
+        previous_discovery,
+    )?;
+    let recipient_ticket_file =
+        own_device_discovery_ticket_path(&discovery_ticket_directory, recipient_device_id);
+    let previous_announcement = snapshot.latest_own_device_announcement_policy(recipient_device_id);
+    let announcement_candidate = SignedOwnDeviceAnnouncementPolicy::sign(
+        device_state.identity(),
+        local_account_id,
+        recipient_device_id,
+        configured_at,
+        enabled,
+        recipient_ticket_file,
+        interval_seconds,
+        validity_seconds,
+        retry_base_seconds,
+        retry_max_seconds,
+        allow_ethernet,
+        allow_wifi,
+        allow_mobile,
+        allow_unknown_network,
+        previous_announcement,
+    )?;
+    let discovery_changed = !previous_discovery
+        .is_some_and(|previous| previous.same_configuration(&discovery_candidate));
+    let announcement_changed = !previous_announcement
+        .is_some_and(|previous| previous.same_configuration(&announcement_candidate));
+    if discovery_changed || announcement_changed {
+        run_state_transaction(state_directory, |transaction| {
+            if discovery_changed {
+                persist_runtime_record(
+                    state_directory,
+                    &runtime_own_device_ticket_discovery_policy_relative_path(
+                        discovery_candidate.policy_id()?,
+                    ),
+                    &discovery_candidate.encode()?,
+                    transaction,
+                )?;
+            }
+            if announcement_changed {
+                persist_runtime_record(
+                    state_directory,
+                    &runtime_own_device_announcement_policy_relative_path(
+                        announcement_candidate.policy_id()?,
+                    ),
+                    &announcement_candidate.encode()?,
+                    transaction,
+                )?;
+            }
+            Ok(())
+        })?;
+    }
+    let snapshot = load_runtime_state_snapshot(state_directory, local_account_id, local_device_id)?;
+    let policy = snapshot
+        .latest_own_device_ticket_discovery_policy(recipient_device_id)
+        .context("own-device ticket discovery policy was not persisted")?;
+    own_device_ticket_discovery_status_for_policy(
+        &snapshot,
+        &device_state,
+        current_ticket,
+        policy,
+        current_network,
+        unix_time_now()?,
+    )
+}
+
+fn collect_runtime_own_device_ticket_discovery_status(
+    state_directory: &Path,
+    current_ticket: &ConnectionTicket,
+    current_network: RuntimeIpcNetworkClass,
+) -> Result<Vec<RuntimeIpcOwnDeviceTicketDiscoveryStatus>> {
+    let device_state = load_command_device_state(state_directory)?;
+    let snapshot = load_runtime_state_snapshot(
+        state_directory,
+        current_ticket.listener_account_id(),
+        device_state.identity().device_id(),
+    )?;
+    let now = unix_time_now()?;
+    snapshot
+        .own_device_ticket_discovery_policies
+        .values()
+        .filter_map(|policies| policies.last())
+        .map(|policy| {
+            own_device_ticket_discovery_status_for_policy(
+                &snapshot,
+                &device_state,
+                current_ticket,
+                policy,
+                current_network,
+                now,
+            )
+        })
+        .collect()
+}
+
+fn own_device_ticket_discovery_status_for_policy(
+    snapshot: &RuntimeStateSnapshot,
+    device_state: &DeviceState,
+    current_ticket: &ConnectionTicket,
+    policy: &SignedOwnDeviceTicketDiscoveryPolicy,
+    current_network: RuntimeIpcNetworkClass,
+    now_unix_seconds: u64,
+) -> Result<RuntimeIpcOwnDeviceTicketDiscoveryStatus> {
+    let announcement_policy = snapshot
+        .latest_own_device_announcement_policy(policy.recipient_device_id())
+        .context("own-device ticket discovery policy has no announcement policy")?;
+    let device_list = current_ticket.listener_directory().device_list();
+    let recipient_is_active = device_list
+        .certificate_for(policy.recipient_device_id())
+        .is_some();
+    let (outbound_channel_id, inbound_channel_id) = if recipient_is_active {
+        (
+            own_device_ticket_locator_capability(
+                device_state,
+                device_list,
+                policy.local_device_id(),
+                policy.recipient_device_id(),
+            )?
+            .write_key()
+            .channel_id()
+            .to_string(),
+            own_device_ticket_locator_capability(
+                device_state,
+                device_list,
+                policy.recipient_device_id(),
+                policy.local_device_id(),
+            )?
+            .write_key()
+            .channel_id()
+            .to_string(),
+        )
+    } else {
+        (
+            "unavailable-recipient-revoked".to_owned(),
+            "unavailable-recipient-revoked".to_owned(),
+        )
+    };
+    Ok(RuntimeIpcOwnDeviceTicketDiscoveryStatus {
+        recipient_device_id: policy.recipient_device_id(),
+        enabled: policy.enabled(),
+        policy_generation: policy.generation(),
+        service_base_url: policy.service_base_url().to_owned(),
+        ttl_seconds: policy.ttl_seconds(),
+        refresh_before_seconds: policy.refresh_before_seconds(),
+        outbound_channel_id,
+        inbound_channel_id,
+        recipient_ticket_file: announcement_policy.recipient_ticket_file().to_owned(),
+        privacy_status:
+            "pairwise-x25519-derived-directional-capability-hpke-recipient-only-traffic-analysis-visible"
+                .to_owned(),
+        announcement: own_device_announcement_status_for_policy(
+            snapshot,
+            current_ticket,
+            announcement_policy,
+            current_network,
+            now_unix_seconds,
+        )?,
+    })
+}
+
 fn collect_runtime_own_device_announcement_status(
     state_directory: &Path,
     current_ticket: &ConnectionTicket,
@@ -10299,10 +11102,268 @@ fn own_device_announcement_status_for_policy(
     })
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct RuntimeOwnDeviceTicketLocatorResult {
+    channel_id: TicketPublicationChannelId,
+    publication_generation: u64,
+    expires_at_unix_seconds: u64,
+}
+
+async fn publish_runtime_own_device_ticket_locator(
+    state_directory: &Path,
+    endpoint: &Endpoint,
+    current_ticket: &ConnectionTicket,
+    policy: &SignedOwnDeviceTicketDiscoveryPolicy,
+) -> Result<RuntimeOwnDeviceTicketLocatorResult> {
+    let store_client = TicketPublicationStoreClient::new(policy.service_base_url())?;
+    let (publication, pending_upload) = with_locked_state(state_directory, || {
+        let device_state = load_command_device_state(state_directory)?;
+        let local_account_id = current_ticket.listener_account_id();
+        let local_device_id = current_ticket.listener_device_id();
+        let snapshot =
+            load_runtime_state_snapshot(state_directory, local_account_id, local_device_id)?;
+        let current_policy = snapshot
+            .latest_own_device_ticket_discovery_policy(policy.recipient_device_id())
+            .context("own-device ticket discovery policy disappeared before publish")?;
+        ensure!(
+            current_policy.policy_id()? == policy.policy_id()? && current_policy.enabled(),
+            "own-device ticket discovery policy changed before publish"
+        );
+        let device_list = current_ticket.listener_directory().device_list();
+        let recipient_certificate = device_list
+            .certificate_for(policy.recipient_device_id())
+            .context("own-device ticket discovery recipient was revoked before publish")?;
+        let capability = own_device_ticket_locator_capability(
+            &device_state,
+            device_list,
+            local_device_id,
+            policy.recipient_device_id(),
+        )?;
+        let channel_id = capability.write_key().channel_id();
+        let own_ticket =
+            build_runtime_own_device_ticket(state_directory, endpoint, current_ticket)?;
+        let encoded_ticket = own_ticket.encode()?;
+        let now = unix_time_now()?;
+        let previous = snapshot.latest_ticket_publication(channel_id);
+        let last_attempt_confirmed_the_workflow = snapshot
+            .latest_own_device_announcement_attempt(policy.recipient_device_id())
+            .is_some_and(|attempt| {
+                attempt.policy_generation() == policy.generation() && attempt.succeeded()
+            });
+        let reusable = previous.filter(|previous| {
+            last_attempt_confirmed_the_workflow
+                && previous.ticket() == encoded_ticket
+                && previous.expires_at_unix_seconds()
+                    > now.saturating_add(policy.refresh_before_seconds())
+        });
+        if let Some(publication) = reusable {
+            return Ok((publication.clone(), None));
+        }
+        let publication = SignedTicketPublication::sign(
+            device_state.identity(),
+            channel_id,
+            local_account_id,
+            local_account_id,
+            encoded_ticket,
+            now,
+            policy.ttl_seconds(),
+            previous,
+        )?;
+        let publication_path = runtime_ticket_publication_relative_path(
+            channel_id,
+            publication.generation(),
+            publication.publication_id()?,
+        );
+        let publication_bytes = publication.encode()?;
+        run_state_transaction(state_directory, |transaction| {
+            persist_runtime_record(
+                state_directory,
+                &publication_path,
+                &publication_bytes,
+                transaction,
+            )
+        })?;
+        let encrypted = EncryptedTicketPublication::seal(
+            &publication,
+            &[(
+                policy.recipient_device_id(),
+                recipient_certificate.encryption_public_key(),
+            )],
+        )?;
+        Ok((publication, Some((encrypted, capability))))
+    })?;
+    if let Some((encrypted, capability)) = pending_upload {
+        store_client.put(&encrypted, &capability).await?;
+    }
+    Ok(RuntimeOwnDeviceTicketLocatorResult {
+        channel_id: publication.channel_id(),
+        publication_generation: publication.generation(),
+        expires_at_unix_seconds: publication.expires_at_unix_seconds(),
+    })
+}
+
+async fn fetch_runtime_own_device_ticket_locator(
+    state_directory: &Path,
+    current_ticket: &ConnectionTicket,
+    policy: &SignedOwnDeviceTicketDiscoveryPolicy,
+    recipient_ticket_file: &Path,
+) -> Result<RuntimeOwnDeviceTicketLocatorResult> {
+    let store_client = TicketPublicationStoreClient::new(policy.service_base_url())?;
+    let channel_id = with_locked_state(state_directory, || {
+        let device_state = load_command_device_state(state_directory)?;
+        let snapshot = load_runtime_state_snapshot(
+            state_directory,
+            current_ticket.listener_account_id(),
+            current_ticket.listener_device_id(),
+        )?;
+        let current_policy = snapshot
+            .latest_own_device_ticket_discovery_policy(policy.recipient_device_id())
+            .context("own-device ticket discovery policy disappeared before lookup")?;
+        ensure!(
+            current_policy.policy_id()? == policy.policy_id()? && current_policy.enabled(),
+            "own-device ticket discovery policy changed before lookup"
+        );
+        Ok(own_device_ticket_locator_capability(
+            &device_state,
+            current_ticket.listener_directory().device_list(),
+            policy.recipient_device_id(),
+            current_ticket.listener_device_id(),
+        )?
+        .write_key()
+        .channel_id())
+    })?;
+    let encrypted = store_client.get(channel_id).await?;
+    ensure!(
+        encrypted.channel_id() == channel_id,
+        "own-device ticket discovery store returned another channel"
+    );
+    with_locked_state(state_directory, || {
+        let device_state = load_command_device_state(state_directory)?;
+        let local_account_id = current_ticket.listener_account_id();
+        let local_device_id = current_ticket.listener_device_id();
+        let snapshot =
+            load_runtime_state_snapshot(state_directory, local_account_id, local_device_id)?;
+        let current_policy = snapshot
+            .latest_own_device_ticket_discovery_policy(policy.recipient_device_id())
+            .context("own-device ticket discovery policy disappeared during lookup")?;
+        ensure!(
+            current_policy.policy_id()? == policy.policy_id()? && current_policy.enabled(),
+            "own-device ticket discovery policy changed during lookup"
+        );
+        let expected_channel_id = own_device_ticket_locator_capability(
+            &device_state,
+            current_ticket.listener_directory().device_list(),
+            policy.recipient_device_id(),
+            local_device_id,
+        )?
+        .write_key()
+        .channel_id();
+        ensure!(
+            expected_channel_id == channel_id,
+            "own-device ticket discovery authority changed during lookup"
+        );
+        let now = unix_time_now()?;
+        let publication = encrypted.open(local_device_id, device_state.encryption(), now)?;
+        ensure!(
+            publication.channel_id() == channel_id
+                && publication.publisher_account_id() == local_account_id
+                && publication.publisher_device_id() == policy.recipient_device_id()
+                && publication.recipient_account_id() == local_account_id,
+            "own-device ticket locator publication identity is invalid"
+        );
+        let device_list = current_ticket.listener_directory().device_list();
+        let recipient_certificate = device_list
+            .certificate_for(policy.recipient_device_id())
+            .context("own-device ticket discovery recipient was revoked during lookup")?;
+        ensure!(
+            recipient_certificate.device_id() == publication.publisher_device_id(),
+            "own-device ticket locator publisher is not the selected recipient"
+        );
+        verify_device_authorization_with_snapshot(
+            local_account_id,
+            recipient_certificate,
+            device_list.authority_snapshot(),
+            &DeviceCapability::MESSAGING,
+        )
+        .context("verify own-device ticket locator publisher authorization")?;
+        let ticket = ConnectionTicket::decode(publication.ticket())
+            .context("decode discovered own-device connection ticket")?;
+        ensure!(
+            ticket.listener_account_id() == local_account_id
+                && ticket.listener_device_id() == policy.recipient_device_id()
+                && ticket.allowed_requester_account_id() == local_account_id
+                && ticket.listener_directory().device_list() == device_list,
+            "discovered own-device ticket does not match the exact current roster"
+        );
+        ticket
+            .verify_listener_authorization(local_account_id)
+            .context("verify discovered own-device ticket listener authorization")?;
+        verify_device_authorization_with_snapshot(
+            local_account_id,
+            current_ticket.listener_certificate(),
+            ticket.listener_authority_snapshot(),
+            &DeviceCapability::MESSAGING,
+        )
+        .context("discovered own-device ticket does not authorize the local Device")?;
+
+        let previous = snapshot.latest_ticket_observation(channel_id);
+        let observation = match previous {
+            Some(previous)
+                if publication.generation() == previous.publication_generation()
+                    && publication.publication_id()? == previous.publication_id()
+                    && publication.ticket_digest() == previous.ticket_digest() =>
+            {
+                previous.clone()
+            }
+            Some(previous) => {
+                ensure!(
+                    publication.generation() > previous.publication_generation(),
+                    "own-device ticket locator rolls back or equivocates"
+                );
+                SignedTicketPublicationObservation::sign(
+                    device_state.identity(),
+                    local_account_id,
+                    &publication,
+                    now,
+                    Some(previous),
+                )?
+            }
+            None => SignedTicketPublicationObservation::sign(
+                device_state.identity(),
+                local_account_id,
+                &publication,
+                now,
+                None,
+            )?,
+        };
+        publish_runtime_ticket(recipient_ticket_file, publication.ticket().as_bytes())?;
+        let observation_path = runtime_ticket_observation_relative_path(
+            channel_id,
+            observation.observation_generation(),
+            observation.observation_id()?,
+        );
+        let observation_bytes = observation.encode()?;
+        run_state_transaction(state_directory, |transaction| {
+            persist_runtime_record(
+                state_directory,
+                &observation_path,
+                &observation_bytes,
+                transaction,
+            )
+        })?;
+        Ok(RuntimeOwnDeviceTicketLocatorResult {
+            channel_id,
+            publication_generation: publication.generation(),
+            expires_at_unix_seconds: publication.expires_at_unix_seconds(),
+        })
+    })
+}
+
 async fn attempt_next_runtime_own_device_announcement(
     state_directory: &Path,
     endpoint: &Endpoint,
     current_ticket: &ConnectionTicket,
+    discovery_ticket_directory: Option<&Path>,
 ) -> Result<RuntimeTicketAutomationAttempt> {
     let current_network = current_runtime_network_class();
     let selection_lock = acquire_runtime_state_lock(state_directory)
@@ -10315,7 +11376,7 @@ async fn attempt_next_runtime_own_device_announcement(
         device_state.identity().device_id(),
     )?;
     let now = unix_time_now()?;
-    let selected = snapshot
+    let selected_policy = snapshot
         .own_device_announcement_policies
         .values()
         .filter_map(|policies| policies.last())
@@ -10333,19 +11394,62 @@ async fn attempt_next_runtime_own_device_announcement(
                     .is_none_or(|attempt| attempt.not_before_unix_seconds() <= now)
         })
         .cloned();
+    let selected = selected_policy.map(|policy| {
+        let discovery = snapshot
+            .latest_own_device_ticket_discovery_policy(policy.recipient_device_id())
+            .filter(|discovery| discovery.enabled())
+            .cloned();
+        (policy, discovery)
+    });
     drop(selection_lock);
-    let Some(policy) = selected else {
+    let Some((policy, discovery_policy)) = selected else {
         return Ok(RuntimeTicketAutomationAttempt::NoWork);
     };
 
-    let operation = push_runtime_endpoint_announcements(
-        state_directory,
-        endpoint,
-        current_ticket,
-        policy.recipient_ticket_file(),
-        Some(policy.recipient_device_id()),
-        policy.validity_seconds(),
-    )
+    let operation = async {
+        if let Some(discovery_policy) = &discovery_policy {
+            let directory = discovery_ticket_directory.context(
+                "runtime has an own-device discovery policy but no public discovery directory",
+            )?;
+            ensure!(
+                own_device_discovery_ticket_path(directory, policy.recipient_device_id())
+                    == policy.recipient_ticket_file(),
+                "own-device discovery policy does not use the runtime-managed ticket path"
+            );
+            let published = publish_runtime_own_device_ticket_locator(
+                state_directory,
+                endpoint,
+                current_ticket,
+                discovery_policy,
+            )
+            .await?;
+            let discovered = fetch_runtime_own_device_ticket_locator(
+                state_directory,
+                current_ticket,
+                discovery_policy,
+                policy.recipient_ticket_file(),
+            )
+            .await?;
+            println!(
+                "runtime_own_device_ticket_discovery_status=resolved recipient_device_id={} outbound_channel_id={} outbound_generation={} inbound_channel_id={} inbound_generation={} inbound_expires_at_unix_seconds={}",
+                policy.recipient_device_id(),
+                published.channel_id,
+                published.publication_generation,
+                discovered.channel_id,
+                discovered.publication_generation,
+                discovered.expires_at_unix_seconds
+            );
+        }
+        push_runtime_endpoint_announcements(
+            state_directory,
+            endpoint,
+            current_ticket,
+            policy.recipient_ticket_file(),
+            Some(policy.recipient_device_id()),
+            policy.validity_seconds(),
+        )
+        .await
+    }
     .await;
     if let Err(error) = &operation {
         eprintln!(
@@ -10369,6 +11473,15 @@ async fn attempt_next_runtime_own_device_announcement(
     if current_policy.policy_id()? != policy.policy_id()? {
         drop(persist_lock);
         return Ok(RuntimeTicketAutomationAttempt::Completed);
+    }
+    if let Some(discovery_policy) = &discovery_policy {
+        let current_discovery_policy = snapshot
+            .latest_own_device_ticket_discovery_policy(policy.recipient_device_id())
+            .context("own-device ticket discovery policy disappeared during network operation")?;
+        if current_discovery_policy.policy_id()? != discovery_policy.policy_id()? {
+            drop(persist_lock);
+            return Ok(RuntimeTicketAutomationAttempt::Completed);
+        }
     }
     let result = operation
         .ok()
@@ -10439,6 +11552,12 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
     } = options;
     let endpoint_announcement_descriptor_directory =
         resolve_runtime_received_endpoint_descriptor_directory(
+            &state_dir,
+            ipc_file.as_deref(),
+            ticket_file.as_deref(),
+        )?;
+    let own_device_discovery_ticket_directory =
+        resolve_runtime_own_device_discovery_ticket_directory(
             &state_dir,
             ipc_file.as_deref(),
             ticket_file.as_deref(),
@@ -10547,6 +11666,12 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
             directory.display()
         );
     }
+    if let Some(directory) = &own_device_discovery_ticket_directory {
+        println!(
+            "runtime_own_device_discovery_ticket_directory={}",
+            directory.display()
+        );
+    }
     println!("ticket={encoded_ticket}");
     if let Some(path) = &ticket_file {
         publish_runtime_ticket(path, encoded_ticket.as_bytes())?;
@@ -10603,8 +11728,12 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                     &endpoint,
                     &mut ticket,
                     &mut device_directory_state,
-                    ticket_file.as_deref(),
-                    own_device_ticket_file.as_deref(),
+                    RuntimePublicPaths {
+                        primary_ticket: ticket_file.as_deref(),
+                        own_device_ticket: own_device_ticket_file.as_deref(),
+                        own_device_discovery_directory: own_device_discovery_ticket_directory
+                            .as_deref(),
+                    },
                     work,
                 )
                 .await;
@@ -10670,7 +11799,10 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                     let own_device_automation =
                         if matches!(ticket_automation, RuntimeTicketAutomationAttempt::NoWork) {
                             attempt_next_runtime_own_device_announcement(
-                                &state_dir, &endpoint, &ticket,
+                                &state_dir,
+                                &endpoint,
+                                &ticket,
+                                own_device_discovery_ticket_directory.as_deref(),
                             )
                             .await?
                         } else {
@@ -18957,7 +20089,8 @@ mod tests {
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-    async fn runtime_multi_audience_pushes_and_automates_own_device_announcements() -> Result<()> {
+    async fn runtime_pairwise_store_discovers_ticket_and_pushes_own_device_announcements()
+    -> Result<()> {
         let directory = tempfile::tempdir()?;
         let root = AccountRootState::create(directory.path().join("root"))?;
         let source_state_dir = directory.path().join("source-state");
@@ -19040,10 +20173,14 @@ mod tests {
         fs::write(&recipient_pool_file, recipient_pool.encode()?)?;
         let device_list_file = directory.path().join("own-devices.snapshot");
         fs::write(&device_list_file, device_list.encode()?)?;
-        let source_ticket_file = directory.path().join("source-runtime.ticket");
-        let recipient_ticket_file = directory.path().join("recipient-runtime.ticket");
-        let source_ipc = directory.path().join("source-runtime.ipc.json");
-        let recipient_ipc = directory.path().join("recipient-runtime.ipc.json");
+        let source_public = directory.path().join("source-public");
+        let recipient_public = directory.path().join("recipient-public");
+        fs::create_dir_all(&source_public)?;
+        fs::create_dir_all(&recipient_public)?;
+        let source_ticket_file = source_public.join("source-runtime.ticket");
+        let recipient_ticket_file = recipient_public.join("recipient-runtime.ticket");
+        let source_ipc = source_public.join("source-runtime.ipc.json");
+        let recipient_ipc = recipient_public.join("recipient-runtime.ipc.json");
         let source_own_ticket_file = resolve_runtime_own_device_ticket_path(
             &source_state_dir,
             Some(&source_ipc),
@@ -19108,35 +20245,155 @@ mod tests {
         .await
         .context("own-device endpoint announcement runtimes did not become ready")?;
 
-        let response = kilogram_runtime_ipc::call(
-            &source_ipc,
-            RuntimeIpcCommand::PushEndpointAnnouncements {
-                recipient_ticket_file: recipient_own_ticket_file.clone(),
-                validity_seconds: 300,
-            },
-        )
+        let store_server = TicketStoreServer::bind(StoreConfig::local_test(
+            directory.path().join("own-device-discovery-store"),
+        ))
         .await?;
-        let RuntimeIpcResponse::EndpointAnnouncementsPushed(push) = response else {
-            bail!("source runtime returned an unexpected endpoint announcement response")
-        };
-        assert_eq!(push.source_device_id, source.identity().device_id());
-        assert_eq!(push.recipient_device_id, recipient.identity().device_id());
-        assert_eq!(push.contact_count, 1);
-        assert_eq!(push.endpoint_count, 1);
-        assert_eq!(push.recipient_contact_added_count, 1);
-        assert_eq!(push.recipient_endpoint_added_count, 1);
-        assert_eq!(push.recipient_publication_binding_added_count, 1);
-        assert_eq!(push.transport_path, "direct");
+        let service_base_url = format!("http://{}", store_server.local_addr());
+        let (store_shutdown_sender, store_shutdown_receiver) = oneshot::channel();
+        let store_task = tokio::spawn(store_server.run_until(async {
+            store_shutdown_receiver
+                .await
+                .map_err(|_| anyhow::anyhow!("own-device discovery store shutdown sender dropped"))
+        }));
+
+        let mut configured = Vec::new();
+        for (ipc, recipient_device_id) in [
+            (&recipient_ipc, source.identity().device_id()),
+            (&source_ipc, recipient.identity().device_id()),
+        ] {
+            let response = kilogram_runtime_ipc::call(
+                ipc,
+                RuntimeIpcCommand::ConfigureOwnDeviceTicketDiscovery {
+                    recipient_device_id,
+                    enabled: true,
+                    service_base_url: service_base_url.clone(),
+                    ttl_seconds: 300,
+                    refresh_before_seconds: 60,
+                    interval_seconds: MIN_OWN_DEVICE_ANNOUNCEMENT_INTERVAL_SECONDS,
+                    validity_seconds: 300,
+                    retry_base_seconds: 1,
+                    retry_max_seconds: 1,
+                    allow_ethernet: true,
+                    allow_wifi: true,
+                    allow_mobile: true,
+                    allow_unknown_network: true,
+                },
+            )
+            .await?;
+            let RuntimeIpcResponse::OwnDeviceTicketDiscoveryConfigured(status) = response else {
+                bail!("runtime returned an unexpected own-device discovery response")
+            };
+            assert_eq!(status.recipient_device_id, recipient_device_id);
+            assert_eq!(status.announcement.state, "due");
+            configured.push(status);
+            if configured.len() == 1 {
+                timeout(Duration::from_secs(10), async {
+                    loop {
+                        let response = kilogram_runtime_ipc::call(
+                            &recipient_ipc,
+                            RuntimeIpcCommand::OwnDeviceTicketDiscoveryStatus,
+                        )
+                        .await?;
+                        let RuntimeIpcResponse::OwnDeviceTicketDiscoveryStatus(statuses) = response
+                        else {
+                            bail!("recipient runtime returned an unexpected discovery status")
+                        };
+                        if statuses
+                            .first()
+                            .is_some_and(|status| status.announcement.consecutive_failures != 0)
+                        {
+                            break Ok::<_, anyhow::Error>(());
+                        }
+                        tokio::time::sleep(Duration::from_millis(50)).await;
+                    }
+                })
+                .await
+                .context("recipient did not persist its expected initial lookup failure")??;
+                let response = kilogram_runtime_ipc::call(
+                    &recipient_ipc,
+                    RuntimeIpcCommand::ConfigureOwnDeviceTicketDiscovery {
+                        recipient_device_id,
+                        enabled: false,
+                        service_base_url: service_base_url.clone(),
+                        ttl_seconds: 300,
+                        refresh_before_seconds: 60,
+                        interval_seconds: MIN_OWN_DEVICE_ANNOUNCEMENT_INTERVAL_SECONDS,
+                        validity_seconds: 300,
+                        retry_base_seconds: 1,
+                        retry_max_seconds: 1,
+                        allow_ethernet: true,
+                        allow_wifi: true,
+                        allow_mobile: true,
+                        allow_unknown_network: true,
+                    },
+                )
+                .await?;
+                let RuntimeIpcResponse::OwnDeviceTicketDiscoveryConfigured(status) = response
+                else {
+                    bail!("recipient runtime did not disable discovery")
+                };
+                assert_eq!(status.announcement.state, "disabled");
+                configured[0] = status;
+            }
+        }
         assert_eq!(
-            push.acknowledgement_status,
-            "recipient-device-signed-session-bound"
+            configured[0].outbound_channel_id,
+            configured[1].inbound_channel_id
+        );
+        assert_eq!(
+            configured[0].inbound_channel_id,
+            configured[1].outbound_channel_id
+        );
+        assert_ne!(
+            configured[0].outbound_channel_id,
+            configured[0].inbound_channel_id
+        );
+        assert!(!configured[1].recipient_ticket_file.is_file());
+        assert_ne!(
+            configured[1].recipient_ticket_file, recipient_own_ticket_file,
+            "source must not read the recipient's locally published file"
         );
 
-        let configured = kilogram_runtime_ipc::call(
-            &source_ipc,
-            RuntimeIpcCommand::ConfigureOwnDeviceAnnouncementAutomation {
-                recipient_ticket_file: recipient_own_ticket_file.clone(),
+        let completed = timeout(Duration::from_secs(25), async {
+            loop {
+                let source_response = kilogram_runtime_ipc::call(
+                    &source_ipc,
+                    RuntimeIpcCommand::OwnDeviceTicketDiscoveryStatus,
+                )
+                .await?;
+                let RuntimeIpcResponse::OwnDeviceTicketDiscoveryStatus(source_statuses) =
+                    source_response
+                else {
+                    bail!("source runtime returned an unexpected discovery status response")
+                };
+                let source_status = source_statuses
+                    .into_iter()
+                    .next()
+                    .context("source runtime omitted own-device discovery status")?;
+                if source_status.announcement.last_bundle_id.is_some() {
+                    break Ok::<_, anyhow::Error>(source_status);
+                }
+                tokio::time::sleep(Duration::from_millis(50)).await;
+            }
+        })
+        .await
+        .context("own-device ticket discovery and announcement did not complete")??;
+        assert_eq!(completed.announcement.state, "fresh");
+        assert_eq!(completed.announcement.consecutive_failures, 0);
+        assert_eq!(
+            completed.announcement.last_transport_path.as_deref(),
+            Some("direct")
+        );
+
+        let response = kilogram_runtime_ipc::call(
+            &recipient_ipc,
+            RuntimeIpcCommand::ConfigureOwnDeviceTicketDiscovery {
+                recipient_device_id: source.identity().device_id(),
                 enabled: true,
+                service_base_url: service_base_url.clone(),
+                ttl_seconds: 300,
+                refresh_before_seconds: 60,
                 interval_seconds: MIN_OWN_DEVICE_ANNOUNCEMENT_INTERVAL_SECONDS,
                 validity_seconds: 300,
                 retry_base_seconds: 1,
@@ -19148,47 +20405,56 @@ mod tests {
             },
         )
         .await?;
-        let RuntimeIpcResponse::OwnDeviceAnnouncementAutomationConfigured(configured) = configured
-        else {
-            bail!("source runtime returned an unexpected automation configuration response")
+        let RuntimeIpcResponse::OwnDeviceTicketDiscoveryConfigured(status) = response else {
+            bail!("recipient runtime did not re-enable discovery")
         };
-        assert_eq!(
-            configured.recipient_device_id,
-            recipient.identity().device_id()
-        );
-        assert_eq!(configured.state, "due");
-        assert_eq!(
-            configured.execution_scope,
-            "only-while-runtime-process-is-running"
-        );
-        assert!(!configured.os_background_service_enabled);
-
-        let completed = timeout(Duration::from_secs(15), async {
+        assert_eq!(status.announcement.state, "due");
+        let recipient_completed = timeout(Duration::from_secs(25), async {
             loop {
                 let response = kilogram_runtime_ipc::call(
-                    &source_ipc,
-                    RuntimeIpcCommand::OwnDeviceAnnouncementAutomationStatus,
+                    &recipient_ipc,
+                    RuntimeIpcCommand::OwnDeviceTicketDiscoveryStatus,
                 )
                 .await?;
-                let RuntimeIpcResponse::OwnDeviceAnnouncementAutomationStatus(statuses) = response
-                else {
-                    bail!("source runtime returned an unexpected automation status response")
+                let RuntimeIpcResponse::OwnDeviceTicketDiscoveryStatus(statuses) = response else {
+                    bail!("recipient runtime returned an unexpected discovery status response")
                 };
                 let status = statuses
                     .into_iter()
                     .next()
-                    .context("source runtime omitted own-device automation status")?;
-                if status.last_bundle_id.is_some() {
+                    .context("recipient runtime omitted own-device discovery status")?;
+                if status.announcement.last_bundle_id.is_some() {
                     break Ok::<_, anyhow::Error>(status);
                 }
                 tokio::time::sleep(Duration::from_millis(50)).await;
             }
         })
         .await
-        .context("own-device endpoint announcement automation did not complete")??;
-        assert_eq!(completed.state, "fresh");
-        assert_eq!(completed.consecutive_failures, 0);
-        assert_eq!(completed.last_transport_path.as_deref(), Some("direct"));
+        .context("reverse own-device discovery and announcement did not complete")??;
+        assert_eq!(recipient_completed.announcement.state, "fresh");
+        assert_eq!(recipient_completed.announcement.consecutive_failures, 0);
+        assert_eq!(
+            recipient_completed
+                .announcement
+                .last_transport_path
+                .as_deref(),
+            Some("direct")
+        );
+        assert!(completed.recipient_ticket_file.is_file());
+        assert!(recipient_completed.recipient_ticket_file.is_file());
+        let discovered_recipient_ticket =
+            ConnectionTicket::decode(&fs::read_to_string(&completed.recipient_ticket_file)?)?;
+        assert_eq!(
+            discovered_recipient_ticket.listener_device_id(),
+            recipient.identity().device_id()
+        );
+        let discovered_source_ticket = ConnectionTicket::decode(&fs::read_to_string(
+            &recipient_completed.recipient_ticket_file,
+        )?)?;
+        assert_eq!(
+            discovered_source_ticket.listener_device_id(),
+            source.identity().device_id()
+        );
 
         for ipc in [&source_ipc, &recipient_ipc] {
             assert!(matches!(
@@ -19202,6 +20468,13 @@ mod tests {
                 .context("own-device endpoint announcement runtime did not stop")?
                 .context("join own-device endpoint announcement runtime")??;
         }
+        store_shutdown_sender
+            .send(())
+            .map_err(|_| anyhow::anyhow!("own-device discovery store stopped early"))?;
+        timeout(Duration::from_secs(10), store_task)
+            .await
+            .context("own-device discovery store did not stop")?
+            .context("join own-device discovery store")??;
         let recipient_snapshot = load_runtime_state_snapshot(
             &recipient_state_dir,
             root.account_id(),
@@ -19209,8 +20482,15 @@ mod tests {
         )?;
         assert_eq!(recipient_snapshot.contacts.len(), 1);
         assert_eq!(recipient_snapshot.endpoint_publication_bindings.len(), 1);
+        assert!(
+            recipient_snapshot.own_device_announcement_attempts[&source.identity().device_id()]
+                .iter()
+                .any(SignedOwnDeviceAnnouncementAttempt::succeeded)
+        );
+        assert!(!recipient_snapshot.ticket_publications.is_empty());
+        assert!(!recipient_snapshot.ticket_observations.is_empty());
         let expected_descriptor_directory =
-            fs::canonicalize(directory.path().join("kilogram-received-endpoints"))?;
+            fs::canonicalize(recipient_public.join("kilogram-received-endpoints"))?;
         assert!(recipient_snapshot.contacts.values().all(|contact| {
             contact
                 .descriptor_file()
@@ -19226,15 +20506,22 @@ mod tests {
                 .len(),
             1
         );
-        assert_eq!(
+        assert!(
+            !source_snapshot.own_device_announcement_attempts[&recipient.identity().device_id()]
+                .is_empty()
+        );
+        assert!(
             source_snapshot.own_device_announcement_attempts[&recipient.identity().device_id()]
+                .iter()
+                .any(SignedOwnDeviceAnnouncementAttempt::succeeded)
+        );
+        assert_eq!(
+            source_snapshot.own_device_ticket_discovery_policies[&recipient.identity().device_id()]
                 .len(),
             1
         );
-        assert!(
-            source_snapshot.own_device_announcement_attempts[&recipient.identity().device_id()][0]
-                .succeeded()
-        );
+        assert!(!source_snapshot.ticket_publications.is_empty());
+        assert!(!source_snapshot.ticket_observations.is_empty());
         Ok(())
     }
 
@@ -19281,6 +20568,7 @@ mod tests {
         let mut previous_refresh_attempt = None;
         let mut previous_own_policy = None;
         let mut previous_own_attempt = None;
+        let mut previous_own_discovery_policy = None;
         for index in 0..=MAX_RUNTIME_TICKET_CHAIN_RECORDS_BEFORE_COMPACTION {
             let publication = SignedTicketPublication::sign(
                 &peer_device,
@@ -19361,6 +20649,17 @@ mod tests {
                 Some(("ab".repeat(32), "direct".to_owned())),
                 previous_own_attempt.as_ref(),
             )?;
+            let own_discovery_policy = SignedOwnDeviceTicketDiscoveryPolicy::sign(
+                device.identity(),
+                root.account_id(),
+                own_recipient.device_id(),
+                started_at + index as u64,
+                true,
+                "https://ticket-store.invalid/".to_owned(),
+                300,
+                60,
+                previous_own_discovery_policy.as_ref(),
+            )?;
             let records = [
                 (
                     runtime_ticket_observation_relative_path(
@@ -19392,6 +20691,12 @@ mod tests {
                     ),
                     own_attempt.encode()?,
                 ),
+                (
+                    runtime_own_device_ticket_discovery_policy_relative_path(
+                        own_discovery_policy.policy_id()?,
+                    ),
+                    own_discovery_policy.encode()?,
+                ),
             ];
             run_state_transaction(&state_dir, |transaction| {
                 for (path, bytes) in &records {
@@ -19406,12 +20711,13 @@ mod tests {
             previous_refresh_attempt = Some(refresh_attempt);
             previous_own_policy = Some(own_policy);
             previous_own_attempt = Some(own_attempt);
+            previous_own_discovery_policy = Some(own_discovery_policy);
         }
 
         let report = compact_runtime_ticket_state_if_needed(&state_dir)?
             .context("multi-chain runtime ticket compaction was not triggered")?;
-        assert_eq!(report.removed_records, 48);
-        assert_eq!(report.retained_anchors, 6);
+        assert_eq!(report.removed_records, 56);
+        assert_eq!(report.retained_anchors, 7);
         let restarted = load_runtime_state_snapshot(
             &state_dir,
             root.account_id(),
@@ -19453,12 +20759,21 @@ mod tests {
             9
         );
         assert_eq!(
+            restarted.own_device_ticket_discovery_policies[&own_recipient.device_id()].len(),
+            1
+        );
+        assert_eq!(
+            restarted.own_device_ticket_discovery_policies[&own_recipient.device_id()][0]
+                .generation(),
+            9
+        );
+        assert_eq!(
             restarted
                 .ticket_checkpoint
                 .context("multi-chain runtime ticket checkpoint is absent")?
                 .anchors()
                 .len(),
-            6
+            7
         );
         Ok(())
     }

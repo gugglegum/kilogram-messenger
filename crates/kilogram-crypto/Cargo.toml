@@ -9,8 +9,10 @@ publish = false
 [dependencies]
 getrandom.workspace = true
 hpke.workspace = true
+blake3.workspace = true
 serde.workspace = true
 thiserror.workspace = true
+x25519-dalek.workspace = true
 zeroize.workspace = true
 
 [lints]

@@ -9,6 +9,9 @@ use crate::{
         OwnDeviceAnnouncementAttemptId, OwnDeviceAnnouncementPolicyId,
         SignedOwnDeviceAnnouncementAttempt, SignedOwnDeviceAnnouncementPolicy,
     },
+    runtime_own_device_discovery::{
+        OwnDeviceTicketDiscoveryPolicyId, SignedOwnDeviceTicketDiscoveryPolicy,
+    },
     runtime_publication::{
         SignedTicketPublication, SignedTicketPublicationObservation, TicketPublicationChannelId,
         TicketPublicationId, TicketPublicationObservationId,
@@ -78,6 +81,11 @@ pub enum RuntimeTicketChainAnchor {
         policy_generation: u64,
         record_id: OwnDeviceAnnouncementAttemptId,
     },
+    OwnDeviceTicketDiscoveryPolicy {
+        recipient_device_id: DeviceId,
+        generation: u64,
+        record_id: OwnDeviceTicketDiscoveryPolicyId,
+    },
 }
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -88,6 +96,7 @@ enum RuntimeTicketChainKey {
     Attempt(RuntimeContactId, TicketAutomationAction),
     OwnDevicePolicy(DeviceId),
     OwnDeviceAttempt(DeviceId),
+    OwnDeviceTicketDiscoveryPolicy(DeviceId),
 }
 
 impl RuntimeTicketChainAnchor {
@@ -149,6 +158,17 @@ impl RuntimeTicketChainAnchor {
         })
     }
 
+    pub fn own_device_ticket_discovery_policy(
+        value: &SignedOwnDeviceTicketDiscoveryPolicy,
+    ) -> Result<Self> {
+        value.verify_signature()?;
+        Ok(Self::OwnDeviceTicketDiscoveryPolicy {
+            recipient_device_id: value.recipient_device_id(),
+            generation: value.generation(),
+            record_id: value.policy_id()?,
+        })
+    }
+
     fn key(&self) -> RuntimeTicketChainKey {
         match self {
             Self::Publication { channel_id, .. } => RuntimeTicketChainKey::Publication(*channel_id),
@@ -165,6 +185,10 @@ impl RuntimeTicketChainAnchor {
                 recipient_device_id,
                 ..
             } => RuntimeTicketChainKey::OwnDeviceAttempt(*recipient_device_id),
+            Self::OwnDeviceTicketDiscoveryPolicy {
+                recipient_device_id,
+                ..
+            } => RuntimeTicketChainKey::OwnDeviceTicketDiscoveryPolicy(*recipient_device_id),
         }
     }
 
@@ -175,7 +199,8 @@ impl RuntimeTicketChainAnchor {
             | Self::Policy { generation, .. }
             | Self::Attempt { generation, .. }
             | Self::OwnDevicePolicy { generation, .. }
-            | Self::OwnDeviceAttempt { generation, .. } => *generation,
+            | Self::OwnDeviceAttempt { generation, .. }
+            | Self::OwnDeviceTicketDiscoveryPolicy { generation, .. } => *generation,
         }
     }
 }
@@ -502,6 +527,20 @@ impl SignedRuntimeTicketCheckpoint {
             _ => None,
         })
     }
+
+    pub fn own_device_ticket_discovery_policy_anchor(
+        &self,
+        expected_recipient: DeviceId,
+    ) -> Option<(u64, OwnDeviceTicketDiscoveryPolicyId)> {
+        self.content.anchors.iter().find_map(|anchor| match anchor {
+            RuntimeTicketChainAnchor::OwnDeviceTicketDiscoveryPolicy {
+                recipient_device_id,
+                generation,
+                record_id,
+            } if *recipient_device_id == expected_recipient => Some((*generation, *record_id)),
+            _ => None,
+        })
+    }
 }
 
 fn validate_anchors(anchors: &[RuntimeTicketChainAnchor]) -> Result<()> {
@@ -537,7 +576,8 @@ fn validate_anchors(anchors: &[RuntimeTicketChainAnchor]) -> Result<()> {
             ),
             RuntimeTicketChainAnchor::Publication { .. }
             | RuntimeTicketChainAnchor::Policy { .. }
-            | RuntimeTicketChainAnchor::OwnDevicePolicy { .. } => {}
+            | RuntimeTicketChainAnchor::OwnDevicePolicy { .. }
+            | RuntimeTicketChainAnchor::OwnDeviceTicketDiscoveryPolicy { .. } => {}
         }
     }
     Ok(())
