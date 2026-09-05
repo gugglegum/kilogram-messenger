@@ -179,9 +179,12 @@ sessions, distribution, removal и key epochs и не решены этим пр
   аккаунта и обнаруживать valid publisher equivocation между получателями без
   доверенного global log? Первый recipient observation пока защищён только
   signature/expiry. M0.9.34 уже хранит bounded authenticated candidate set и
-  делает delivery/automatic-sync failover между явно импортированными Devices,
-  но не распространяет set через gossip и не обновляет все Device publication
-  channels одной automation action; per-candidate refresh/status — M0.9.35.
+  делает delivery/automatic-sync failover между явно импортированными Devices.
+  M0.9.35 независимо обновляет все их publication channels и показывает local
+  per-channel high-water, но не распространяет candidate set через gossip и не
+  согласует observations между local account devices. Как хранить проверенный
+  expiry-independent channel binding, чтобы долгий offline не требовал нового
+  bootstrap ticket, — следующий M0.9.36 вопрос.
 - M0.9.32 compact/checkpoint-ит runtime publication, observation, policy и
   attempt chains до exact signed heads за device-signed cumulative checkpoint;
   DB-primary checkpoint/removals атомарны и crash-safe. Открытым остаётся

@@ -123,12 +123,15 @@ The current self-authenticating store write capability is specified in
 Authenticated multi-device endpoint enrollment and bounded runtime failover are
 specified in
 [`docs/RFC-0056-authenticated-endpoint-candidate-failover.md`](docs/RFC-0056-authenticated-endpoint-candidate-failover.md).
+Independent per-Device publication refresh and typed endpoint health are
+specified in
+[`docs/RFC-0057-multi-candidate-ticket-refresh.md`](docs/RFC-0057-multi-candidate-ticket-refresh.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.34 authenticated multi-device endpoint failover — complete
+## Current milestone: M0.9.35 multi-candidate ticket refresh — complete
 
 One peer account/conversation contact can now enroll up to four independently
 signed Device endpoints without changing its stable contact ID or queued
@@ -137,8 +140,16 @@ signed candidate. The runtime deterministically tries usable candidates for
 delivery and current-authority candidates for automatic sync, materializes one
 immutable ratchet fan-out event, and accepts an acknowledgement only from the
 Device endpoint currently being tried. Invalid or missing candidate files are
-isolated instead of disabling the whole contact. Runtime IPC is now v9, so the
-runtime and Windows desktop binaries must be upgraded together.
+isolated instead of disabling the whole contact.
+
+Ticket refresh now snapshots every enrolled Device candidate, performs the
+bounded publication lookups concurrently, and serializes authenticated local
+commits per candidate. A partial result preserves successful descriptor and
+observation updates while foreground automation records a normal backoff
+failure until every candidate succeeds. Runtime IPC v10 and the Windows desktop
+show exact `usable`/`stale` counts, per-Device diagnostics and each opaque
+channel's local publication high-water. Runtime and desktop binaries must be
+upgraded together.
 
 Plaintext `Text` events and static peer HPKE boxes no longer exist in the
 replicated protocol. Account Root now signs one complete canonical device list
@@ -778,6 +789,9 @@ Run the same command with Bob's second Device ticket and the same conversation
 and Account ID to add an authenticated failover endpoint. The contact ID and
 existing queue remain unchanged; at most four Device endpoints are enrolled.
 The desktop `+ Contact` form has the same behavior and shows the endpoint count.
+The chat header additionally shows which enrolled endpoints are currently
+`usable` or `stale`; the ticket refresh action updates all enrolled Device
+publication channels rather than only the primary descriptor.
 
 Then run Alice's own runtime with a private, machine-local IPC descriptor. It
 sends queued work to Bob, retries failures with persistent bounded backoff,

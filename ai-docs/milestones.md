@@ -2779,11 +2779,37 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - contract зафиксирован в
   [`../docs/RFC-0056-authenticated-endpoint-candidate-failover.md`](../docs/RFC-0056-authenticated-endpoint-candidate-failover.md).
 
+### M0.9.35 — multi-candidate publication refresh and endpoint health: выполнено
+
+Реализовано:
+
+- одна refresh action snapshot-ит stable contact и максимум четыре signed
+  endpoint candidates, независимо готовит opaque publication channel каждого
+  peer Device;
+- подготовленные HTTP GET выполняются параллельно, но authority pin, ratchet
+  retirement/prekey observation, per-channel signed observation high-water и
+  atomic descriptor replace коммитятся последовательно без state-lock race;
+- partial success не откатывает успешные endpoints: IPC возвращает typed result
+  каждого Device и exact `refreshed/total`, а automation считает action failed и
+  применяет существующий bounded exponential backoff;
+- complete automation success планируется по самому раннему expiry всех
+  кандидатов; cross-channel generation не объявляется общей последовательностью;
+- IPC v10 conversation read model содержит каждый candidate, `usable`/`stale`
+  counts, authority revision, opaque channel и local observed publication
+  high-water;
+- Windows GUI показывает aggregate health, per-Device role/state/reason/high-
+  water и честный partial refresh result;
+- missing/expired/invalid descriptor, older/pinned-high-water authority,
+  inactive certificate и same-revision authority equivocation становятся явным
+  `stale`, не скрывая остальные usable endpoints;
+- contract зафиксирован в
+  [`../docs/RFC-0057-multi-candidate-ticket-refresh.md`](../docs/RFC-0057-multi-candidate-ticket-refresh.md).
+
 ### Следующий этап
 
-1. M0.9.35: multi-candidate publication refresh — независимо обновлять каждый
-   enrolled Device channel, сохранять per-candidate observation high-water и
-   показывать `usable`/`stale` состояния в desktop.
+1. M0.9.36: expiry-independent signed publication-channel binding — позволить
+   already-enrolled contact восстановить свежий transport ticket после долгого
+   offline периода, не принимая просроченный endpoint и не меняя stable contact.
 2. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.

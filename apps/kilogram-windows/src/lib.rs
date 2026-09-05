@@ -23,7 +23,11 @@ use kilogram_runtime_ipc::{
     RuntimeLaunchSettings,
 };
 #[cfg(test)]
-use kilogram_runtime_ipc::{RuntimeIpcNetworkClass, RuntimeIpcTicketAutomationActionStatus};
+use kilogram_runtime_ipc::{
+    RuntimeIpcEndpointCandidateState, RuntimeIpcEndpointCandidateStatus,
+    RuntimeIpcEndpointTicketRefresh, RuntimeIpcNetworkClass,
+    RuntimeIpcTicketAutomationActionStatus,
+};
 use zeroize::{Zeroize as _, Zeroizing};
 
 mod wizard;
@@ -1061,10 +1065,19 @@ impl ViewModel {
             }
             Ok(WorkerSuccess::ContactTicketRefreshed(refresh)) => {
                 self.connection = ConnectionState::Connected;
-                self.notice = Some(format!(
-                    "Contact ticket refreshed to generation {} and installed atomically.",
-                    refresh.publication_generation
-                ));
+                self.notice = Some(if refresh.complete {
+                    format!(
+                        "All {}/{} endpoint ticket(s) refreshed and installed atomically.",
+                        refresh.refreshed_endpoint_candidate_count,
+                        refresh.endpoint_candidate_count
+                    )
+                } else {
+                    format!(
+                        "Partial endpoint refresh: {}/{} usable. Stale candidates still require retry.",
+                        refresh.refreshed_endpoint_candidate_count,
+                        refresh.endpoint_candidate_count
+                    )
+                });
                 self.contact_ticket_refresh = Some(refresh);
                 self.error = None;
             }
@@ -6312,18 +6325,30 @@ impl KilogramApp {
             }
             if let Some(refresh) = self.model.contact_ticket_refresh.as_ref() {
                 ui.colored_label(
-                    egui::Color32::from_rgb(92, 201, 137),
+                    if refresh.complete {
+                        egui::Color32::from_rgb(92, 201, 137)
+                    } else {
+                        egui::Color32::from_rgb(236, 184, 75)
+                    },
                     format!(
-                        "Peer generation {} installed · authority revision {} · {} active device(s)",
-                        refresh.publication_generation,
-                        refresh.authority_revision,
-                        refresh.active_device_count
+                        "Endpoint refresh: {}/{} usable · complete {}",
+                        refresh.refreshed_endpoint_candidate_count,
+                        refresh.endpoint_candidate_count,
+                        refresh.complete
                     ),
                 );
-                ui.small(format!(
-                    "Freshness: {} · first observation: {}",
-                    refresh.freshness_status, refresh.first_contact_freshness
-                ));
+                for result in &refresh.results {
+                    ui.small(format!(
+                        "{} device {} · {} · generation {} · {}",
+                        if result.primary { "Primary" } else { "Alternate" },
+                        compact_id(&result.peer_device_id.to_string()),
+                        result.state.as_str(),
+                        result
+                            .publication_generation
+                            .map_or_else(|| "none".to_owned(), |value| value.to_string()),
+                        result.detail
+                    ));
+                }
             }
         });
         action
@@ -6462,11 +6487,29 @@ impl KilogramApp {
         });
         if let Some(summary) = summary {
             ui.small(format!(
-                "Peer {} · {} · {} endpoint(s)",
+                "Peer {} · {} · {} endpoint(s): {} usable / {} stale",
                 compact_id(&summary.peer_account_id.to_string()),
                 summary.route_policy.as_str(),
-                summary.endpoint_candidate_count
+                summary.endpoint_candidate_count,
+                summary.usable_endpoint_candidate_count,
+                summary.stale_endpoint_candidate_count
             ));
+            for candidate in &summary.endpoint_candidates {
+                ui.small(format!(
+                    "{} device {} · {} · {} · publication high-water {}",
+                    if candidate.primary {
+                        "Primary"
+                    } else {
+                        "Alternate"
+                    },
+                    compact_id(&candidate.peer_device_id.to_string()),
+                    candidate.state.as_str(),
+                    candidate.detail,
+                    candidate
+                        .observed_publication_generation
+                        .map_or_else(|| "none".to_owned(), |value| value.to_string())
+                ));
+            }
         }
         let load_older = self.model.history_next_cursor.is_some()
             && ui
@@ -7580,6 +7623,20 @@ mod tests {
             peer_account_id: peer,
             peer_device_id: peer_device.device_id(),
             endpoint_candidate_count: 1,
+            usable_endpoint_candidate_count: 1,
+            stale_endpoint_candidate_count: 0,
+            endpoint_candidates: vec![RuntimeIpcEndpointCandidateStatus {
+                peer_device_id: peer_device.device_id(),
+                primary: true,
+                route_policy: RuntimeIpcRoutePolicy::Auto,
+                descriptor_file: PathBuf::from("peer-runtime.ticket"),
+                state: RuntimeIpcEndpointCandidateState::Usable,
+                authority_revision: Some(1),
+                publication_channel_id: Some("44".repeat(32)),
+                observed_publication_generation: Some(2),
+                observed_at_unix_seconds: Some(123_000),
+                detail: "authenticated-current-authority".to_owned(),
+            }],
             route_policy: RuntimeIpcRoutePolicy::Auto,
             message_count: 0,
             latest_message: None,
@@ -7746,6 +7803,20 @@ mod tests {
                         peer_account_id,
                         peer_device_id: device_id,
                         endpoint_candidate_count: 1,
+                        usable_endpoint_candidate_count: 1,
+                        stale_endpoint_candidate_count: 0,
+                        endpoint_candidates: vec![RuntimeIpcEndpointCandidateStatus {
+                            peer_device_id: device_id,
+                            primary: true,
+                            route_policy: RuntimeIpcRoutePolicy::Auto,
+                            descriptor_file: PathBuf::from("peer-runtime.ticket"),
+                            state: RuntimeIpcEndpointCandidateState::Usable,
+                            authority_revision: Some(5),
+                            publication_channel_id: Some("77".repeat(32)),
+                            observed_publication_generation: Some(4),
+                            observed_at_unix_seconds: Some(123_789),
+                            detail: "authenticated-current-authority".to_owned(),
+                        }],
                         route_policy: RuntimeIpcRoutePolicy::Auto,
                         message_count: 0,
                         latest_message: None,
@@ -7827,19 +7898,30 @@ mod tests {
                 .send(RuntimeIpcResponse::ContactTicketRefreshed(Box::new(
                     RuntimeIpcContactTicketRefresh {
                         contact_id: "22".repeat(32),
-                        channel_id: "77".repeat(32),
-                        publication_id: "88".repeat(32),
-                        publication_generation: 4,
-                        expires_at_unix_seconds: 123_789,
-                        publisher_account_id: peer_account_id,
-                        publisher_device_id: device_id,
-                        authority_revision: 5,
-                        active_device_count: 2,
-                        descriptor_file: PathBuf::from("peer-runtime.ticket"),
-                        local_observation_status: "Inserted".to_owned(),
-                        descriptor_publish_status: "atomic-replace".to_owned(),
-                        freshness_status: "signed-non-expired-local-high-water".to_owned(),
-                        first_contact_freshness: "local-monotonic-high-water".to_owned(),
+                        endpoint_candidate_count: 1,
+                        refreshed_endpoint_candidate_count: 1,
+                        complete: true,
+                        results: vec![RuntimeIpcEndpointTicketRefresh {
+                            peer_device_id: device_id,
+                            primary: true,
+                            route_policy: RuntimeIpcRoutePolicy::Auto,
+                            descriptor_file: PathBuf::from("peer-runtime.ticket"),
+                            state: RuntimeIpcEndpointCandidateState::Usable,
+                            channel_id: Some("77".repeat(32)),
+                            publication_id: Some("88".repeat(32)),
+                            publication_generation: Some(4),
+                            expires_at_unix_seconds: Some(123_789),
+                            publisher_account_id: Some(peer_account_id),
+                            authority_revision: Some(5),
+                            active_device_count: Some(2),
+                            local_observation_status: Some("Inserted".to_owned()),
+                            descriptor_publish_status: Some("atomic-replace".to_owned()),
+                            freshness_status: Some(
+                                "signed-non-expired-local-high-water".to_owned(),
+                            ),
+                            first_contact_freshness: Some("local-monotonic-high-water".to_owned()),
+                            detail: "refreshed-and-installed".to_owned(),
+                        }],
                     },
                 )))
                 .map_err(|_| anyhow::anyhow!("send GUI contact-ticket response"))?;
@@ -8081,8 +8163,9 @@ mod tests {
         assert!(matches!(
             ticket_refresh,
             WorkerSuccess::ContactTicketRefreshed(RuntimeIpcContactTicketRefresh {
-                publication_generation: 4,
-                authority_revision: 5,
+                endpoint_candidate_count: 1,
+                refreshed_endpoint_candidate_count: 1,
+                complete: true,
                 ..
             })
         ));

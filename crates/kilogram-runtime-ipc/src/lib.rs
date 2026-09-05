@@ -21,7 +21,7 @@ use tokio::{
     time::timeout,
 };
 
-const IPC_VERSION: u8 = 9;
+const IPC_VERSION: u8 = 10;
 const MAX_DESCRIPTOR_BYTES: u64 = 16 * 1024;
 const MAX_LAUNCH_PROFILE_BYTES: u64 = 64 * 1024;
 const MAX_LAUNCH_PROFILE_PATHS: usize = 64;
@@ -527,6 +527,35 @@ pub struct RuntimeIpcMessagePreview {
     pub truncated: bool,
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub enum RuntimeIpcEndpointCandidateState {
+    Usable,
+    Stale,
+}
+
+impl RuntimeIpcEndpointCandidateState {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Usable => "usable",
+            Self::Stale => "stale",
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcEndpointCandidateStatus {
+    pub peer_device_id: DeviceId,
+    pub primary: bool,
+    pub route_policy: RuntimeIpcRoutePolicy,
+    pub descriptor_file: PathBuf,
+    pub state: RuntimeIpcEndpointCandidateState,
+    pub authority_revision: Option<u64>,
+    pub publication_channel_id: Option<String>,
+    pub observed_publication_generation: Option<u64>,
+    pub observed_at_unix_seconds: Option<u64>,
+    pub detail: String,
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct RuntimeIpcConversationSummary {
     pub contact_id: String,
@@ -535,6 +564,9 @@ pub struct RuntimeIpcConversationSummary {
     pub peer_account_id: AccountId,
     pub peer_device_id: DeviceId,
     pub endpoint_candidate_count: u8,
+    pub usable_endpoint_candidate_count: u8,
+    pub stale_endpoint_candidate_count: u8,
+    pub endpoint_candidates: Vec<RuntimeIpcEndpointCandidateStatus>,
     pub route_policy: RuntimeIpcRoutePolicy,
     pub message_count: u32,
     pub latest_message: Option<RuntimeIpcMessagePreview>,
@@ -647,21 +679,33 @@ pub struct RuntimeIpcTicketPublication {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcEndpointTicketRefresh {
+    pub peer_device_id: DeviceId,
+    pub primary: bool,
+    pub route_policy: RuntimeIpcRoutePolicy,
+    pub descriptor_file: PathBuf,
+    pub state: RuntimeIpcEndpointCandidateState,
+    pub channel_id: Option<String>,
+    pub publication_id: Option<String>,
+    pub publication_generation: Option<u64>,
+    pub expires_at_unix_seconds: Option<u64>,
+    pub publisher_account_id: Option<AccountId>,
+    pub authority_revision: Option<u64>,
+    pub active_device_count: Option<usize>,
+    pub local_observation_status: Option<String>,
+    pub descriptor_publish_status: Option<String>,
+    pub freshness_status: Option<String>,
+    pub first_contact_freshness: Option<String>,
+    pub detail: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct RuntimeIpcContactTicketRefresh {
     pub contact_id: String,
-    pub channel_id: String,
-    pub publication_id: String,
-    pub publication_generation: u64,
-    pub expires_at_unix_seconds: u64,
-    pub publisher_account_id: AccountId,
-    pub publisher_device_id: DeviceId,
-    pub authority_revision: u64,
-    pub active_device_count: usize,
-    pub descriptor_file: PathBuf,
-    pub local_observation_status: String,
-    pub descriptor_publish_status: String,
-    pub freshness_status: String,
-    pub first_contact_freshness: String,
+    pub endpoint_candidate_count: u8,
+    pub refreshed_endpoint_candidate_count: u8,
+    pub complete: bool,
+    pub results: Vec<RuntimeIpcEndpointTicketRefresh>,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
