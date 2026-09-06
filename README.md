@@ -167,12 +167,37 @@ specified in
 The blind asynchronous-delivery capability contract and bounded durable store
 are specified in
 [`docs/RFC-0073-blind-mailbox-contract-and-durable-store.md`](docs/RFC-0073-blind-mailbox-contract-and-durable-store.md).
+The bounded mailbox HTTP adapter and crash-safe client ledger are specified in
+[`docs/RFC-0074-bounded-mailbox-http-and-client-ledger.md`](docs/RFC-0074-bounded-mailbox-http-and-client-ledger.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.51 blind mailbox contract and durable store — complete
+## Current milestone: M0.9.52 bounded mailbox HTTP and client ledger — complete
+
+The exact blind-mailbox objects now have versioned bounded Postcard framing,
+signed cursor pagination of at most eight ciphertexts and three HTTP routes in
+the existing `kilogram-ticket-store` process. The service still binds only to
+loopback behind a required HTTPS reverse proxy, persists one receipt-signing
+identity and exposes its public store key without adding another executable.
+
+The new `kilogram-mailbox-client` library rejects redirects and non-HTTPS
+remote URLs, verifies every positive response against the configured store key
+and keeps a crash-safe Redb ledger. Identical encrypted uploads can be retried
+until a signed acceptance receipt; a received item cannot become eligible for
+conditional deletion until the caller records a durable application commit.
+Logical receipt replays are idempotent and expired ledger records are boundedly
+cleaned. The library intentionally has no Account, Device, conversation, event
+or runtime dependency.
+
+Only six network-free contract/client tests and one filtered pure server-route
+test were executed. Network-bearing harnesses remain compile-only; no listener,
+release build or ZIP package was started. Live actor integration and secure
+capability/store provisioning are the next milestone. Details are in
+[`docs/RFC-0074-bounded-mailbox-http-and-client-ledger.md`](docs/RFC-0074-bounded-mailbox-http-and-client-ledger.md).
+
+## Previous milestone: M0.9.51 blind mailbox contract and durable store — complete
 
 The new network-free `kilogram-mailbox` crate defines unrelated read/write
 Ed25519 capabilities, a registration-free opaque mailbox ID and random item

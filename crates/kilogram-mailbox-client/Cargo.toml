@@ -1,0 +1,23 @@
+[package]
+name = "kilogram-mailbox-client"
+description = "Bounded HTTPS adapter and crash-safe blind mailbox client ledger for Kilogram"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+blake3.workspace = true
+kilogram-crypto = { path = "../kilogram-crypto" }
+kilogram-mailbox = { path = "../kilogram-mailbox" }
+postcard.workspace = true
+redb.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

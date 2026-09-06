@@ -9,13 +9,16 @@ publish = false
 [dependencies]
 anyhow.workspace = true
 clap.workspace = true
+kilogram-mailbox = { path = "../../crates/kilogram-mailbox" }
 kilogram-ticket-publication = { path = "../../crates/kilogram-ticket-publication" }
 postcard.workspace = true
 redb.workspace = true
 serde.workspace = true
 tokio.workspace = true
+zeroize.workspace = true
 
 [dev-dependencies]
+kilogram-crypto = { path = "../../crates/kilogram-crypto" }
 reqwest.workspace = true
 tempfile.workspace = true
 

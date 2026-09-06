@@ -1,13 +1,20 @@
 use std::{
     collections::{BTreeMap, HashMap},
+    fs::{self, OpenOptions},
     future::Future,
+    io::{Read, Write},
     net::{IpAddr, Ipv4Addr, SocketAddr},
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::{Arc, Mutex},
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
 use anyhow::{Context, Result, ensure};
+use kilogram_mailbox::{
+    BlindMailboxStore, MailboxDeleteRequest, MailboxDeleteResponse, MailboxId, MailboxItemId,
+    MailboxListRequest, MailboxListResponse, MailboxPutRequest, MailboxPutResponse,
+    MailboxStoreConfig, MailboxStoreIdentity, MailboxStoreKey,
+};
 use kilogram_ticket_publication::{
     TicketPublicationChannelId, TicketPublicationWriteKey, WRITE_KEY_HEADER,
     WRITE_SIGNATURE_HEADER, decode_signature,
@@ -23,6 +30,10 @@ use tokio::{
     task::JoinSet,
     time::{MissedTickBehavior, timeout},
 };
+use zeroize::Zeroizing;
+
+#[cfg(unix)]
+use std::os::unix::fs::OpenOptionsExt;
 
 const DATABASE_FILE: &str = "ticket-publications.redb";
 const RECORD_TABLE: TableDefinition<&[u8], &[u8]> =
@@ -45,6 +56,10 @@ const HTTP_IO_TIMEOUT: Duration = Duration::from_secs(20);
 const RATE_WINDOW: Duration = Duration::from_secs(60);
 const PUBLICATION_PATH_PREFIX: &str = "/v1/ticket-publications/";
 const PUBLICATION_CONTENT_TYPE: &str = "application/vnd.kilogram.ticket-publication";
+const MAILBOX_PATH_PREFIX: &str = "/v1/mailboxes/";
+const MAILBOX_CONTENT_TYPE: &str = "application/vnd.kilogram.blind-mailbox-v1";
+const MAILBOX_DATA_DIRECTORY: &str = "blind-mailbox";
+const MAILBOX_IDENTITY_FILE: &str = "blind-mailbox-store-secret.key";
 
 pub const DEFAULT_RETENTION_SECONDS: u64 = 15 * 60;
 pub const DEFAULT_MAX_RECORD_BYTES: usize = MAX_ABSOLUTE_RECORD_BYTES;
@@ -569,6 +584,7 @@ impl RateLimiter {
 
 struct ServerState {
     store: OpaqueStore,
+    mailbox_store: BlindMailboxStore,
     limiter: Mutex<RateLimiter>,
     permits: Arc<Semaphore>,
     max_record_bytes: usize,
@@ -591,11 +607,18 @@ impl TicketStoreServer {
             live_channels <= config.max_channels && live_bytes <= config.max_total_bytes,
             "existing live ticket-store data exceeds the configured capacity"
         );
+        let mailbox_identity = load_or_create_mailbox_identity(&config.data_dir)?;
+        let mailbox_store = BlindMailboxStore::open(
+            MailboxStoreConfig::new(config.data_dir.join(MAILBOX_DATA_DIRECTORY)),
+            mailbox_identity,
+        )?;
+        mailbox_store.cleanup(unix_time_now()?)?;
         let listener = TcpListener::bind(config.listen)
             .await
             .with_context(|| format!("bind opaque ticket store on {}", config.listen))?;
         let state = Arc::new(ServerState {
             store,
+            mailbox_store,
             limiter: Mutex::new(RateLimiter::new(
                 config.per_ip_requests_per_minute,
                 config.global_requests_per_minute,
@@ -619,6 +642,10 @@ impl TicketStoreServer {
         &self.config
     }
 
+    pub fn mailbox_store_key(&self) -> MailboxStoreKey {
+        self.state.mailbox_store.store_key()
+    }
+
     pub async fn run_until<F>(self, shutdown: F) -> Result<()>
     where
         F: Future<Output = Result<()>>,
@@ -634,6 +661,7 @@ impl TicketStoreServer {
                 shutdown_result = &mut shutdown => break shutdown_result,
                 _ = cleanup_interval.tick() => {
                     self.state.store.cleanup(unix_time_now()?)?;
+                    self.state.mailbox_store.cleanup(unix_time_now()?)?;
                 }
                 completed = connections.join_next(), if !connections.is_empty() => {
                     if let Some(Err(error)) = completed {
@@ -721,6 +749,15 @@ impl HttpProblem {
         }
     }
 
+    const fn internal(message: &'static str) -> Self {
+        Self {
+            status: 500,
+            reason: "Internal Server Error",
+            message,
+            retry_after: None,
+        }
+    }
+
     const fn too_many_requests() -> Self {
         Self {
             status: 429,
@@ -788,7 +825,7 @@ async fn handle_connection(
         write_problem(&mut stream, HttpProblem::too_many_requests()).await?;
         return Ok(());
     }
-    let response = route_request(&state.store, request, unix_time_now()?);
+    let response = route_request(&state, request, unix_time_now()?);
     match response {
         Ok(response) => write_response(&mut stream, response).await?,
         Err(problem) => write_problem(&mut stream, problem).await?,
@@ -797,7 +834,7 @@ async fn handle_connection(
 }
 
 fn route_request(
-    store: &OpaqueStore,
+    state: &ServerState,
     request: HttpRequest,
     now: u64,
 ) -> std::result::Result<HttpResponse, HttpProblem> {
@@ -811,6 +848,9 @@ fn route_request(
             });
         }
         return Ok(HttpResponse::text(200, "OK", b"ok\n".to_vec()));
+    }
+    if request.target.starts_with(MAILBOX_PATH_PREFIX) {
+        return route_mailbox_request(&state.mailbox_store, request, now);
     }
     let channel_text = request
         .target
@@ -865,7 +905,8 @@ fn route_request(
             write_key
                 .verify_authorization(channel_id, generation, &request.body, &write_signature)
                 .map_err(|_| HttpProblem::forbidden("write capability authorization failed"))?;
-            let outcome = store
+            let outcome = state
+                .store
                 .put(channel, generation, request.body, now)
                 .map_err(|_| HttpProblem {
                     status: 500,
@@ -895,7 +936,7 @@ fn route_request(
             if !request.body.is_empty() {
                 return Err(HttpProblem::bad_request("GET request body is forbidden"));
             }
-            let value = store.get(channel, now).map_err(|_| HttpProblem {
+            let value = state.store.get(channel, now).map_err(|_| HttpProblem {
                 status: 500,
                 reason: "Internal Server Error",
                 message: "durable publication read failed",
@@ -918,6 +959,196 @@ fn route_request(
             retry_after: None,
         }),
     }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum MailboxHttpResource {
+    List(MailboxId),
+    Item(MailboxId, MailboxItemId),
+}
+
+fn route_mailbox_request(
+    store: &BlindMailboxStore,
+    request: HttpRequest,
+    now: u64,
+) -> std::result::Result<HttpResponse, HttpProblem> {
+    let resource = parse_mailbox_resource(&request.target)?;
+    let content_type = request.headers.get("content-type").ok_or(HttpProblem {
+        status: 415,
+        reason: "Unsupported Media Type",
+        message: "mailbox content type is required",
+        retry_after: None,
+    })?;
+    if content_type != MAILBOX_CONTENT_TYPE {
+        return Err(HttpProblem {
+            status: 415,
+            reason: "Unsupported Media Type",
+            message: "mailbox content type is unsupported",
+            retry_after: None,
+        });
+    }
+    if request.body.is_empty() {
+        return Err(HttpProblem::bad_request("mailbox request body is empty"));
+    }
+    let store_key = store.store_key();
+    match (request.method.as_str(), resource) {
+        ("PUT", MailboxHttpResource::Item(mailbox_id, item_id)) => {
+            let mailbox_request = MailboxPutRequest::decode_and_verify(&request.body)
+                .map_err(|_| HttpProblem::forbidden("mailbox write authorization failed"))?;
+            if mailbox_request.mailbox_id() != mailbox_id || mailbox_request.item_id() != item_id {
+                return Err(HttpProblem::bad_request(
+                    "mailbox request does not match resource path",
+                ));
+            }
+            let request_for_response = mailbox_request.clone();
+            let (address, authorization, envelope) = mailbox_request.into_parts();
+            let outcome = store
+                .put(address, &authorization, envelope, now)
+                .map_err(|_| HttpProblem::internal("durable mailbox write failed"))?;
+            let response = MailboxPutResponse::from_outcome(outcome);
+            let status = if matches!(response, MailboxPutResponse::Stored { created: true, .. }) {
+                (201, "Created")
+            } else {
+                (200, "OK")
+            };
+            let body = response
+                .encode(&request_for_response, store_key)
+                .map_err(|_| HttpProblem::internal("mailbox put response encoding failed"))?;
+            Ok(HttpResponse::mailbox(status.0, status.1, body))
+        }
+        ("POST", MailboxHttpResource::List(mailbox_id)) => {
+            let mailbox_request = MailboxListRequest::decode_and_verify(&request.body)
+                .map_err(|_| HttpProblem::forbidden("mailbox read authorization failed"))?;
+            if mailbox_request.mailbox_id() != mailbox_id {
+                return Err(HttpProblem::bad_request(
+                    "mailbox request does not match resource path",
+                ));
+            }
+            let page = store
+                .list_page(
+                    mailbox_request.address(),
+                    mailbox_request.authorization(),
+                    now,
+                )
+                .map_err(|_| HttpProblem::internal("durable mailbox list failed"))?;
+            let response = MailboxListResponse::new(page);
+            let body = response
+                .encode(&mailbox_request, store_key)
+                .map_err(|_| HttpProblem::internal("mailbox list response encoding failed"))?;
+            Ok(HttpResponse::mailbox(200, "OK", body))
+        }
+        ("DELETE", MailboxHttpResource::Item(mailbox_id, item_id)) => {
+            let mailbox_request = MailboxDeleteRequest::decode_and_verify(&request.body)
+                .map_err(|_| HttpProblem::forbidden("mailbox delete authorization failed"))?;
+            if mailbox_request.mailbox_id() != mailbox_id || mailbox_request.item_id() != item_id {
+                return Err(HttpProblem::bad_request(
+                    "mailbox request does not match resource path",
+                ));
+            }
+            let outcome = store
+                .delete(
+                    mailbox_request.address(),
+                    mailbox_request.authorization(),
+                    now,
+                )
+                .map_err(|_| HttpProblem::internal("durable mailbox delete failed"))?;
+            let response = MailboxDeleteResponse::from_outcome(outcome);
+            let body = response
+                .encode(&mailbox_request, store_key)
+                .map_err(|_| HttpProblem::internal("mailbox delete response encoding failed"))?;
+            Ok(HttpResponse::mailbox(200, "OK", body))
+        }
+        _ => Err(HttpProblem {
+            status: 405,
+            reason: "Method Not Allowed",
+            message: "mailbox resource method is unsupported",
+            retry_after: None,
+        }),
+    }
+}
+
+fn parse_mailbox_resource(target: &str) -> std::result::Result<MailboxHttpResource, HttpProblem> {
+    let suffix = target
+        .strip_prefix(MAILBOX_PATH_PREFIX)
+        .ok_or(HttpProblem {
+            status: 404,
+            reason: "Not Found",
+            message: "resource not found",
+            retry_after: None,
+        })?;
+    let parts = suffix.split('/').collect::<Vec<_>>();
+    match parts.as_slice() {
+        [mailbox, "list"] => {
+            Ok(MailboxHttpResource::List(mailbox.parse().map_err(
+                |_| HttpProblem::bad_request("invalid mailbox ID"),
+            )?))
+        }
+        [mailbox, "items", item] => Ok(MailboxHttpResource::Item(
+            mailbox
+                .parse()
+                .map_err(|_| HttpProblem::bad_request("invalid mailbox ID"))?,
+            item.parse()
+                .map_err(|_| HttpProblem::bad_request("invalid mailbox item ID"))?,
+        )),
+        _ => Err(HttpProblem {
+            status: 404,
+            reason: "Not Found",
+            message: "mailbox resource not found",
+            retry_after: None,
+        }),
+    }
+}
+
+fn load_or_create_mailbox_identity(data_dir: &Path) -> Result<MailboxStoreIdentity> {
+    fs::create_dir_all(data_dir)
+        .with_context(|| format!("create opaque service directory {}", data_dir.display()))?;
+    let path = data_dir.join(MAILBOX_IDENTITY_FILE);
+    if let Some(identity) = load_mailbox_identity(&path)? {
+        return Ok(identity);
+    }
+    let identity = MailboxStoreIdentity::generate()?;
+    let secret = Zeroizing::new(identity.secret_bytes());
+    let mut options = OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    options.mode(0o600);
+    match options.open(&path) {
+        Ok(mut file) => {
+            file.write_all(secret.as_ref())
+                .context("write blind mailbox store identity")?;
+            file.sync_all()
+                .context("sync blind mailbox store identity")?;
+            Ok(identity)
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+            load_mailbox_identity(&path)?.context("mailbox identity appeared but is unreadable")
+        }
+        Err(error) => Err(error).context("create blind mailbox store identity"),
+    }
+}
+
+fn load_mailbox_identity(path: &Path) -> Result<Option<MailboxStoreIdentity>> {
+    let metadata = match fs::symlink_metadata(path) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(error).context("inspect blind mailbox store identity"),
+    };
+    ensure!(
+        metadata.is_file() && !metadata.file_type().is_symlink(),
+        "blind mailbox store identity must be a regular file, not a symlink"
+    );
+    let mut file = fs::File::open(path).context("open blind mailbox store identity")?;
+    let mut secret = Zeroizing::new([0_u8; 32]);
+    file.read_exact(secret.as_mut())
+        .context("read blind mailbox store identity")?;
+    let mut trailing = [0_u8; 1];
+    ensure!(
+        file.read(&mut trailing)
+            .context("check blind mailbox store identity length")?
+            == 0,
+        "blind mailbox store identity has trailing bytes"
+    );
+    Ok(Some(MailboxStoreIdentity::from_secret_bytes(*secret)))
 }
 
 async fn read_http_request(
@@ -1027,11 +1258,11 @@ async fn read_http_request(
         Some(value) => value
             .parse::<usize>()
             .map_err(|_| HttpProblem::bad_request("Content-Length is invalid"))?,
-        None if method == "PUT" => {
+        None if matches!(method.as_str(), "PUT" | "POST" | "DELETE") => {
             return Err(HttpProblem {
                 status: 411,
                 reason: "Length Required",
-                message: "PUT requires Content-Length",
+                message: "request method requires Content-Length",
                 retry_after: None,
             });
         }
@@ -1113,6 +1344,16 @@ impl HttpResponse {
                 ),
             ],
             body: value.body,
+        }
+    }
+
+    fn mailbox(status: u16, reason: &'static str, body: Vec<u8>) -> Self {
+        Self {
+            status,
+            reason,
+            content_type: MAILBOX_CONTENT_TYPE,
+            headers: Vec::new(),
+            body,
         }
     }
 }
@@ -1256,6 +1497,123 @@ mod tests {
             PutOutcome::CapacityExceeded
         );
         Ok(())
+    }
+
+    #[test]
+    fn blind_mailbox_routes_preserve_signed_wire_contract_without_network() -> Result<()> {
+        use kilogram_crypto::DeviceEncryptionIdentity;
+        use kilogram_mailbox::{
+            MailboxAddress, MailboxEnvelope, MailboxReadCapability, MailboxRequestNonce,
+            MailboxWriteCapability,
+        };
+
+        let directory = tempfile::tempdir()?;
+        let identity_directory = directory.path().join("service");
+        let identity = load_or_create_mailbox_identity(&identity_directory)?;
+        let store_key = identity.store_key();
+        assert_eq!(
+            load_or_create_mailbox_identity(&identity_directory)?.store_key(),
+            store_key
+        );
+        let store = BlindMailboxStore::open(
+            MailboxStoreConfig::new(identity_directory.join("mailbox")),
+            identity,
+        )?;
+        let read = MailboxReadCapability::from_secret_bytes([1_u8; 32]);
+        let write = MailboxWriteCapability::from_secret_bytes([2_u8; 32]);
+        let address = MailboxAddress::new(read.read_key(), write.write_key());
+        let recipient = DeviceEncryptionIdentity::from_secret_bytes([3_u8; 32]);
+        let item_id = MailboxItemId::from_bytes([4_u8; 32]);
+        let envelope = MailboxEnvelope::seal(
+            address.mailbox_id(),
+            item_id,
+            1_000,
+            1_600,
+            recipient.public_key(),
+            b"opaque-event",
+        )?
+        .encode()?;
+        let put = MailboxPutRequest::new(
+            address,
+            write.authorize(address, item_id, 600, &envelope)?,
+            envelope,
+        )?;
+        let response = route_mailbox_request(
+            &store,
+            mailbox_test_request(
+                "PUT",
+                format!(
+                    "{MAILBOX_PATH_PREFIX}{}/items/{item_id}",
+                    address.mailbox_id()
+                ),
+                put.encode()?,
+            ),
+            1_000,
+        )
+        .map_err(|problem| anyhow::anyhow!("mailbox PUT failed: {problem:?}"))?;
+        assert_eq!(response.status, 201);
+        let put_response = MailboxPutResponse::decode_and_verify(&response.body, &put, store_key)?;
+        let receipt = put_response
+            .stored_receipt()
+            .context("mailbox PUT response has no receipt")?;
+
+        let list = MailboxListRequest::new(
+            address,
+            read.authorize_list_page(
+                address,
+                MailboxRequestNonce::from_bytes([5_u8; 32]),
+                None,
+                1,
+            )?,
+        )?;
+        let response = route_mailbox_request(
+            &store,
+            mailbox_test_request(
+                "POST",
+                format!("{MAILBOX_PATH_PREFIX}{}/list", address.mailbox_id()),
+                list.encode()?,
+            ),
+            1_001,
+        )
+        .map_err(|problem| anyhow::anyhow!("mailbox LIST failed: {problem:?}"))?;
+        let list_response =
+            MailboxListResponse::decode_and_verify(&response.body, &list, store_key)?;
+        assert_eq!(list_response.page().items.len(), 1);
+
+        let delete = MailboxDeleteRequest::new(
+            address,
+            read.authorize_delete(address, item_id, receipt.receipt_id()?)?,
+        )?;
+        let response = route_mailbox_request(
+            &store,
+            mailbox_test_request(
+                "DELETE",
+                format!(
+                    "{MAILBOX_PATH_PREFIX}{}/items/{item_id}",
+                    address.mailbox_id()
+                ),
+                delete.encode()?,
+            ),
+            1_002,
+        )
+        .map_err(|problem| anyhow::anyhow!("mailbox DELETE failed: {problem:?}"))?;
+        assert!(matches!(
+            MailboxDeleteResponse::decode_and_verify(&response.body, &delete, store_key)?,
+            MailboxDeleteResponse::Deleted {
+                newly_deleted: true,
+                ..
+            }
+        ));
+        Ok(())
+    }
+
+    fn mailbox_test_request(method: &str, target: String, body: Vec<u8>) -> HttpRequest {
+        HttpRequest {
+            method: method.to_owned(),
+            target,
+            headers: BTreeMap::from([("content-type".to_owned(), MAILBOX_CONTENT_TYPE.to_owned())]),
+            body,
+        }
     }
 
     #[tokio::test]

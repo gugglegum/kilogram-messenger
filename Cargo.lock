@@ -3226,6 +3226,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "kilogram-mailbox-client"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "blake3",
+ "kilogram-crypto",
+ "kilogram-mailbox",
+ "postcard",
+ "redb",
+ "reqwest",
+ "serde",
+ "tempfile",
+]
+
+[[package]]
 name = "kilogram-offline"
 version = "0.1.0"
 dependencies = [
@@ -3362,6 +3377,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
+ "kilogram-crypto",
+ "kilogram-mailbox",
  "kilogram-ticket-publication",
  "postcard",
  "redb",
@@ -3369,6 +3386,7 @@ dependencies = [
  "serde",
  "tempfile",
  "tokio",
+ "zeroize",
 ]
 
 [[package]]

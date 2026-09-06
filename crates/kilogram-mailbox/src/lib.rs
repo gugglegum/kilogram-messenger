@@ -5,6 +5,7 @@
 //! receives a Kilogram Account, Device, conversation or event identifier.
 
 mod store;
+mod wire;
 
 use std::{fmt, str::FromStr};
 
@@ -16,7 +17,12 @@ use zeroize::Zeroizing;
 
 pub use store::{
     BlindMailboxStore, CleanupReport, DeleteOutcome, MailboxPutOutcome, MailboxStoreConfig,
-    StoredMailboxItem,
+    StoredMailboxItem, StoredMailboxPage,
+};
+pub use wire::{
+    MAX_MAILBOX_WIRE_REQUEST_BYTES, MAX_MAILBOX_WIRE_RESPONSE_BYTES, MailboxDeleteRequest,
+    MailboxDeleteResponse, MailboxListRequest, MailboxListResponse, MailboxPutRequest,
+    MailboxPutResponse,
 };
 
 const MAILBOX_ID_DOMAIN: &[u8] = b"kilogram:blind-mailbox-id:v1\0";
@@ -37,6 +43,7 @@ pub const MIN_MAILBOX_TTL_SECONDS: u64 = 60;
 pub const MAX_MAILBOX_TTL_SECONDS: u64 = 7 * 24 * 60 * 60;
 pub const MAX_MAILBOX_PLAINTEXT_BYTES: usize = 512 * 1024;
 pub const MAX_MAILBOX_ENVELOPE_BYTES: usize = 1024 * 1024;
+pub const MAX_MAILBOX_PAGE_ITEMS: u16 = 8;
 
 macro_rules! public_key_type {
     ($name:ident, $kind:literal) => {
@@ -223,7 +230,29 @@ impl MailboxReadCapability {
         address: MailboxAddress,
         nonce: MailboxRequestNonce,
     ) -> Result<MailboxReadAuthorization, MailboxError> {
-        self.authorize(address, MailboxReadOperation::List { nonce })
+        self.authorize_list_page(address, nonce, None, MAX_MAILBOX_PAGE_ITEMS)
+    }
+
+    pub fn authorize_list_page(
+        &self,
+        address: MailboxAddress,
+        nonce: MailboxRequestNonce,
+        after_item_id: Option<MailboxItemId>,
+        limit: u16,
+    ) -> Result<MailboxReadAuthorization, MailboxError> {
+        if !(1..=MAX_MAILBOX_PAGE_ITEMS).contains(&limit) {
+            return Err(MailboxError::Invalid(
+                "mailbox list page limit is outside protocol bounds",
+            ));
+        }
+        self.authorize(
+            address,
+            MailboxReadOperation::List {
+                nonce,
+                after_item_id,
+                limit,
+            },
+        )
     }
 
     pub fn authorize_delete(
@@ -472,6 +501,8 @@ impl MailboxWriteAuthorization {
 pub enum MailboxReadOperation {
     List {
         nonce: MailboxRequestNonce,
+        after_item_id: Option<MailboxItemId>,
+        limit: u16,
     },
     Delete {
         item_id: MailboxItemId,
@@ -496,6 +527,13 @@ pub struct MailboxReadAuthorization {
 impl MailboxReadAuthorization {
     pub fn verify(&self, address: MailboxAddress) -> Result<(), MailboxError> {
         address.verify()?;
+        if let MailboxReadOperation::List { limit, .. } = self.content.operation
+            && !(1..=MAX_MAILBOX_PAGE_ITEMS).contains(&limit)
+        {
+            return Err(MailboxError::Invalid(
+                "mailbox list page limit is outside protocol bounds",
+            ));
+        }
         if self.content.version != VERSION
             || self.content.mailbox_id != address.mailbox_id()
             || self.content.read_key != address.read_key()
@@ -694,7 +732,7 @@ impl MailboxStoredReceipt {
     }
 
     pub fn encode(&self) -> Result<Vec<u8>, MailboxError> {
-        self.verify_signature_only()?;
+        self.verify_signature()?;
         let bytes = postcard::to_allocvec(self)?;
         if bytes.len() > MAX_RECEIPT_BYTES {
             return Err(MailboxError::Invalid("mailbox stored receipt is too large"));
@@ -714,7 +752,7 @@ impl MailboxStoredReceipt {
     }
 
     pub fn receipt_id(&self) -> Result<MailboxReceiptId, MailboxError> {
-        self.verify_signature_only()?;
+        self.verify_signature()?;
         let encoded = self.encode()?;
         let mut hasher = blake3::Hasher::new();
         hasher.update(RECEIPT_ID_DOMAIN);
@@ -742,7 +780,7 @@ impl MailboxStoredReceipt {
         self.content.expires_at_unix_seconds
     }
 
-    fn verify_signature_only(&self) -> Result<(), MailboxError> {
+    pub fn verify_signature(&self) -> Result<(), MailboxError> {
         if self.content.version != VERSION
             || self.content.stored_at_unix_seconds >= self.content.expires_at_unix_seconds
         {
@@ -756,6 +794,14 @@ impl MailboxStoredReceipt {
             &self.content,
             &self.signature,
         )
+    }
+
+    pub fn envelope_bytes(&self) -> u64 {
+        self.content.envelope_bytes
+    }
+
+    pub fn envelope_digest(&self) -> [u8; KEY_BYTES] {
+        self.content.envelope_digest
     }
 }
 
@@ -824,6 +870,10 @@ impl MailboxDeleteReceipt {
 
     pub fn stored_receipt_id(&self) -> MailboxReceiptId {
         self.content.stored_receipt_id
+    }
+
+    pub fn store_key(&self) -> MailboxStoreKey {
+        self.content.store_key
     }
 
     pub fn mailbox_id(&self) -> MailboxId {

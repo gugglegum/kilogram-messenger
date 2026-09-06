@@ -200,12 +200,19 @@ pub enum MailboxPutOutcome {
     CapacityExceeded,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct StoredMailboxItem {
     pub item_id: MailboxItemId,
     pub expires_at_unix_seconds: u64,
     pub envelope: Vec<u8>,
     pub receipt: MailboxStoredReceipt,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct StoredMailboxPage {
+    pub items: Vec<StoredMailboxItem>,
+    pub next_after_item_id: Option<MailboxItemId>,
+    pub more_available: bool,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -451,13 +458,28 @@ impl BlindMailboxStore {
         authorization: &MailboxReadAuthorization,
         now_unix_seconds: u64,
     ) -> Result<Vec<StoredMailboxItem>> {
+        Ok(self
+            .list_page(address, authorization, now_unix_seconds)?
+            .items)
+    }
+
+    pub fn list_page(
+        &self,
+        address: MailboxAddress,
+        authorization: &MailboxReadAuthorization,
+        now_unix_seconds: u64,
+    ) -> Result<StoredMailboxPage> {
         authorization
             .verify(address)
             .context("verify mailbox list authorization")?;
-        ensure!(
-            matches!(authorization.operation(), MailboxReadOperation::List { .. }),
-            "mailbox read authorization is not a list operation"
-        );
+        let MailboxReadOperation::List {
+            after_item_id,
+            limit,
+            ..
+        } = authorization.operation()
+        else {
+            anyhow::bail!("mailbox read authorization is not a list operation");
+        };
         self.cleanup(now_unix_seconds)?;
         let mailbox_id = address.mailbox_id();
         let read = self.database.begin_read().context("begin mailbox list")?;
@@ -472,6 +494,9 @@ impl BlindMailboxStore {
             let mut item_bytes = [0_u8; 32];
             item_bytes.copy_from_slice(&key[32..]);
             let item_id = MailboxItemId::from_bytes(item_bytes);
+            if after_item_id.is_some_and(|after| item_id <= after) {
+                continue;
+            }
             let record = StoredRecord::decode(value.value())?;
             ensure!(
                 record.receipt.mailbox_id() == mailbox_id && record.receipt.item_id() == item_id,
@@ -483,12 +508,24 @@ impl BlindMailboxStore {
                 envelope: record.envelope,
                 receipt: record.receipt,
             });
+            if items.len() > limit as usize {
+                break;
+            }
         }
-        ensure!(
-            items.len() as u64 <= self.config.max_items_per_mailbox,
-            "mailbox list exceeds configured bound"
-        );
-        Ok(items)
+        let more_available = items.len() > limit as usize;
+        if more_available {
+            items.truncate(limit as usize);
+        }
+        let next_after_item_id = if more_available {
+            items.last().map(|item| item.item_id)
+        } else {
+            None
+        };
+        Ok(StoredMailboxPage {
+            items,
+            next_after_item_id,
+            more_available,
+        })
     }
 
     pub fn delete(

@@ -1747,3 +1747,25 @@ retirement остальных compatibility shadows ещё не реализов
 - Focused и full-workspace debug check/strict Clippy прошли. Network-free
   mailbox harness: 3/3 passed. Все 22 workspace harness artifacts собраны под
   stable names compile-only; network-bearing EXE не запускались.
+
+## M0.9.52 verification snapshot (2026-09-06)
+
+- `cargo check --workspace --all-targets --all-features --locked`, strict full
+  workspace Clippy, formatting и `git diff --check` проходят с BelowNormal и 12
+  Cargo jobs.
+- `scripts/verify-kilogram-mailbox-boundary.ps1` повторно подтвердил 77 normal
+  dependency records без network/runtime/application IDs;
+  `verify-kilogram-mailbox-client-boundary.ps1` подтвердил 177 records,
+  Reqwest+Redb expected boundary, отсутствие Iroh/runtime/application IDs и
+  отсутствие нового binary.
+- Network-free stable harnesses: `kilogram-mailbox` 4/4 и
+  `kilogram-mailbox-client` 2/2 passed. Один filtered pure
+  `kilogram-ticket-store` route test прошёл без bind/listener и проверил
+  signed PUT/LIST/DELETE chain.
+- Все 23 workspace test artifacts собраны под stable names только compile-only;
+  ни один network-bearing harness не запущен. Новый Windows Firewall prompt не
+  создавался.
+- После focused rebuild exact `target` содержит 17,947 files / 8.14 GiB:
+  debug 2.95 GiB, verification 3.46 GiB, retained old release cache 1.73 GiB.
+  Это ниже 40 GiB warning threshold; release cache не пересобирался.
+- Release build и ZIP package в M0.9.52 не выполнялись.

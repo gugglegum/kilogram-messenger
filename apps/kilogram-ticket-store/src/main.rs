@@ -10,7 +10,7 @@ use kilogram_ticket_store::{
 
 #[derive(Debug, Parser)]
 #[command(name = "kilogram-ticket-store")]
-#[command(about = "Loopback-only opaque ticket publication store for an HTTPS reverse proxy")]
+#[command(about = "Loopback-only opaque ticket and blind mailbox store for an HTTPS reverse proxy")]
 struct Arguments {
     /// Loopback HTTP address used by the local HTTPS reverse proxy.
     #[arg(long, default_value = "127.0.0.1:8787")]
@@ -73,6 +73,8 @@ async fn main() -> Result<()> {
     println!("listen_address={}", server.local_addr());
     println!("transport_security=reverse-proxy-https-required");
     println!("storage_format=opaque-redb-v1");
+    println!("blind_mailbox_store_key={}", server.mailbox_store_key());
+    println!("blind_mailbox_transport=reverse-proxy-https-required");
     println!("retention_seconds={}", server.config().retention_seconds);
     println!("max_record_bytes={}", server.config().max_record_bytes);
     println!("max_channels={}", server.config().max_channels);

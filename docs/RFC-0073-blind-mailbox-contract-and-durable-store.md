@@ -132,14 +132,15 @@ tombstone replay protection, persistence across reopen and store-identity pinnin
 
 ## 7. Deferred work
 
-M0.9.52 should add a bounded adapter and client integration without moving
-application semantics into the store:
+M0.9.52 adds the bounded wire/HTTPS adapter and crash-safe client ledger in
+[`RFC-0074`](RFC-0074-bounded-mailbox-http-and-client-ledger.md). The following
+live integration remains deferred:
 
-1. define authenticated HTTP/P2P request and response framing around these
-   exact bounded encodings;
-2. connect persistent client outbox retry to `put` receipts;
-3. poll/list, decrypt, validate and transactionally ingest an item before
-   conditional delete;
+1. provision mailbox capabilities and authenticated store URL/key through the
+   contact/device protocol;
+2. connect runtime outbox retry to the implemented ledger and `put` receipts;
+3. transactionally ingest opened application events before the implemented
+   conditional-delete boundary;
 4. expose honest pending/delivered/expired states in runtime IPC;
 5. retain direct/relay delivery as the preferred path and mailbox as fallback.
 

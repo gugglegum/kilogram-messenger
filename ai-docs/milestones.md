@@ -1,6 +1,6 @@
 # Технические этапы
 
-Актуально на: 2026-09-04.
+Актуально на: 2026-09-06.
 
 ## Правило нумерации и отчётов
 
@@ -3237,12 +3237,43 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - contract зафиксирован в
   [`../docs/RFC-0073-blind-mailbox-contract-and-durable-store.md`](../docs/RFC-0073-blind-mailbox-contract-and-durable-store.md).
 
+### M0.9.52 — bounded mailbox HTTP и crash-safe client ledger: выполнено
+
+Реализовано:
+
+- `kilogram-mailbox` теперь владеет versioned bounded Postcard wire objects для
+  `put`, paged `list` и conditional `delete`; signed list authorization включает
+  fresh nonce, exclusive cursor и limit не более 8 ciphertext items;
+- existing `kilogram-ticket-store` обслуживает `/v1/mailboxes/...` в том же
+  loopback-only процессе за обязательным HTTPS reverse proxy; второй EXE не
+  создан;
+- сервис создаёт exclusive 32-byte store signing secret, запрещает symlink/
+  неверную длину, pin-ит public key в отдельной mailbox Redb и сохраняет key
+  между restart;
+- `kilogram-mailbox-client` запрещает redirects и remote plain HTTP, bounded
+  читает ответы и проверяет positive stored/delete receipts по заранее
+  известному store key;
+- durable client ledger хранит exact encrypted pending request, signed outbound
+  receipt, application commit marker и signed deletion receipt в четырёх
+  отдельных bounded Redb tables; mailbox/read/HPKE secret keys туда не пишутся;
+- delete request невозможно получить до записи stable application commit ID;
+  logical receipt/commit replay идемпотентен при новом local timestamp, cleanup
+  удаляет expired pending ciphertext и receipts;
+- fail-closed boundary gate запрещает client library зависеть от Iroh,
+  identity/protocol/ratchet/runtime/session/state/store/transport и запрещает
+  application identifier types или новый binary;
+- network-free tests: 4 mailbox + 2 client прошли; отдельный filtered pure test
+  проверил все три server routes без bind/listener. Сетевые harnesses не
+  запускались, release и ZIP не создавались;
+- contract зафиксирован в
+  [`../docs/RFC-0074-bounded-mailbox-http-and-client-ledger.md`](../docs/RFC-0074-bounded-mailbox-http-and-client-ledger.md).
+
 ### Следующий этап
 
-1. M0.9.52: добавить bounded transport adapter и persistent client integration
-   поверх exact blind-mailbox encodings: outbox retry до signed receipt,
-   recipient poll/decrypt/validate/transactional ingest и delete только после
-   durable local commit; direct/relay остаются preferred delivery path.
+1. M0.9.53: provision-ить per-contact/per-device mailbox capabilities и
+   authenticated store URL/key, затем встроить ledger в serialized runtime
+   actor: direct/relay first, mailbox fallback по bounded policy, receive commit
+   в existing event/projection transaction до delete и honest IPC states.
 2. Добавить independent second-builder reproduction и подписанный public
    release provenance поверх M0.9.50 same-host clean-root gate.
 3. Optional autostart/background mode оставить отдельной явной настройкой, не

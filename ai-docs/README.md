@@ -11,7 +11,8 @@
 `kilogram-identity`, `kilogram-protocol`, `kilogram-ratchet`, `kilogram-state`,
 `kilogram-store`, `kilogram-runtime-ipc`, `kilogram-bootstrap-contract`,
 `kilogram-session`, `kilogram-ticket-publication`, `kilogram-transport-iroh`,
-`kilogram-publication-conflict`, `kilogram-cli`, purpose-built
+`kilogram-publication-conflict`, network-free `kilogram-mailbox`, bounded
+`kilogram-mailbox-client`, `kilogram-cli`, purpose-built
 `kilogram-offline`, отдельный
 `kilogram-bootstrap` и первый GUI package
 `kilogram-windows`.
@@ -380,14 +381,16 @@ removal semantics и MLS-группы ещё не реализованы.
 
 ## План ближайших работ
 
-Реализованный M0.9.51 выделяет network-free `kilogram-mailbox` с independent
-read/write capabilities, recipient-HPKE envelope, TTL/quota, signed
-stored/delete receipts, replay-safe tombstone и dependency/API gate.
+Реализованный M0.9.52 добавляет versioned paged wire contract, три HTTPS routes
+в existing loopback opaque service и отдельный `kilogram-mailbox-client` с
+no-redirect HTTPS adapter и crash-safe Redb ledger. Exact ciphertext retry
+переходит в stored только по signed receipt, а conditional delete становится
+доступен только после durable application commit marker. Второй EXE не создан.
 
-1. M0.9.52: добавить bounded network adapter и persistent client flow поверх
-   реализованного blind mailbox: outbox retry до signed receipt,
-   poll/decrypt/validate/transactional ingest и conditional delete только после
-   durable local commit; direct/relay остаются preferred path.
+1. M0.9.53: provision-ить authenticated mailbox capabilities/store URL+key и
+   подключить ledger к serialized runtime actor: direct/relay first, bounded
+   mailbox fallback, idempotent event/projection commit до delete и honest IPC
+   delivery states.
 2. Уже реализованный M0.9.50 дважды строит `kilogram-offline` из exact
    SHA-256-manifested source в отдельных clean source/target roots, требует
    byte-identical EXE и fail-closed связывает clean package с проверенным
@@ -632,6 +635,9 @@ stored/delete receipts, replay-safe tombstone и dependency/API gate.
 - [`../docs/RFC-0073-blind-mailbox-contract-and-durable-store.md`](../docs/RFC-0073-blind-mailbox-contract-and-durable-store.md) —
   реализованный M0.9.51 network-free opaque capability/envelope contract,
   bounded Redb store, signed receipts и replay-safe conditional deletion.
+- [`../docs/RFC-0074-bounded-mailbox-http-and-client-ledger.md`](../docs/RFC-0074-bounded-mailbox-http-and-client-ledger.md) —
+  реализованный M0.9.52 bounded paged wire/HTTPS adapter в existing service и
+  crash-safe client ledger с application-commit-before-delete invariant.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
