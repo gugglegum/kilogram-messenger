@@ -381,16 +381,17 @@ removal semantics и MLS-группы ещё не реализованы.
 
 ## План ближайших работ
 
-Реализованный M0.9.52 добавляет versioned paged wire contract, три HTTPS routes
-в existing loopback opaque service и отдельный `kilogram-mailbox-client` с
-no-redirect HTTPS adapter и crash-safe Redb ledger. Exact ciphertext retry
-переходит в stored только по signed receipt, а conditional delete становится
-доступен только после durable application commit marker. Второй EXE не создан.
+Реализованный M0.9.53 добавляет recipient-bound mailbox provisioning: full
+read/write capability остаётся Device-подписанной и HPKE-sealed локально, peer
+получает только write capability в подписанном offer, зашифрованном к exact
+Device. Import bind-ит contact/conversation/current Root authority, canonical
+HTTPS URL и pinned store key. Runtime state честно сообщает
+`provisioned-not-yet-enabled`; второй EXE не создан.
 
-1. M0.9.53: provision-ить authenticated mailbox capabilities/store URL+key и
-   подключить ledger к serialized runtime actor: direct/relay first, bounded
-   mailbox fallback, idempotent event/projection commit до delete и honest IPC
-   delivery states.
+1. M0.9.54: подключить verified bindings и M0.9.52 ledger к одному serialized
+   runtime actor: direct/relay first, bounded mailbox fallback, отдельное
+   `mailbox-stored`, idempotent event/projection commit до delete,
+   reverse-mailbox ACK и honest IPC delivery states.
 2. Уже реализованный M0.9.50 дважды строит `kilogram-offline` из exact
    SHA-256-manifested source в отдельных clean source/target roots, требует
    byte-identical EXE и fail-closed связывает clean package с проверенным

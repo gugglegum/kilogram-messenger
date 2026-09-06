@@ -1769,3 +1769,21 @@ retirement остальных compatibility shadows ещё не реализов
   debug 2.95 GiB, verification 3.46 GiB, retained old release cache 1.73 GiB.
   Это ниже 40 GiB warning threshold; release cache не пересобирался.
 - Release build и ZIP package в M0.9.52 не выполнялись.
+
+## M0.9.53 verification snapshot (2026-09-06)
+
+- `kilogram-mailbox-provisioning` и `kilogram-cli --all-targets` проходят
+  resource-bounded debug check и strict Clippy при BelowNormal/12 Cargo jobs.
+- `verify-kilogram-mailbox-provisioning-boundary.ps1` подтвердил отсутствие
+  direct network/runtime/storage dependencies и нового executable; normal
+  dependency graph содержит 131 record, включая ожидаемые identity/crypto/
+  mailbox/url boundaries.
+- Network-free stable-name provisioning harness: 4/4 tests passed (local sealed
+  binding, recipient/source/scope/expiry binding, tamper rejection, URL policy).
+- Runtime CLI harness компилируется, но не запускается; listener/socket не
+  стартовал и нового Windows Firewall prompt этап не создавал.
+- Release build и ZIP package в M0.9.53 не выполнялись. После focused build и
+  compile-only CLI harness exact `target` содержит 19,511 files / 10.23 GiB
+  (debug 4.30, verification 4.20, retained old release cache 1.73 GiB), ниже
+  40 GiB warning threshold; cache управляется прежним bounded maintenance
+  policy.

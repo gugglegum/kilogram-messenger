@@ -133,10 +133,12 @@ Network-free regressions cover:
 Network-bearing workspace harnesses are compile-only. This milestone does not
 run a listener, produce a release build or create a ZIP package.
 
-## 6. Deferred work
+## 6. Follow-up work
 
-M0.9.53 should provision per-contact/per-device mailbox capabilities and the
-authenticated store URL/key, then connect the ledger to the serialized runtime
+M0.9.53 added recipient-bound per-contact/per-device capability and
+authenticated store URL/key provisioning in
+[`RFC-0075`](RFC-0075-recipient-bound-mailbox-provisioning.md). M0.9.54 should
+connect those verified bindings and this ledger to the serialized runtime
 actor:
 
 1. attempt direct/relay delivery first and enqueue mailbox fallback only under

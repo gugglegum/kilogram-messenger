@@ -3155,6 +3155,8 @@ dependencies = [
  "iroh",
  "kilogram-crypto",
  "kilogram-identity",
+ "kilogram-mailbox",
+ "kilogram-mailbox-provisioning",
  "kilogram-offline",
  "kilogram-protocol",
  "kilogram-publication-conflict",
@@ -3238,6 +3240,22 @@ dependencies = [
  "reqwest",
  "serde",
  "tempfile",
+]
+
+[[package]]
+name = "kilogram-mailbox-provisioning"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "blake3",
+ "kilogram-crypto",
+ "kilogram-identity",
+ "kilogram-mailbox",
+ "postcard",
+ "serde",
+ "tempfile",
+ "url",
+ "zeroize",
 ]
 
 [[package]]

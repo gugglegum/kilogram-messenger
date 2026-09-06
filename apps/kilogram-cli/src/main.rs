@@ -22,6 +22,11 @@ use kilogram_identity::{
     ConversationMembershipStoreOutcome, ConversationScopeId, DeviceCapability, DeviceCertificate,
     DeviceId, DeviceIdentity, DeviceState, verify_device_authorization_with_snapshot,
 };
+use kilogram_mailbox::MailboxStoreKey;
+use kilogram_mailbox_provisioning::{
+    EncryptedMailboxOffer, MAX_MAILBOX_OFFER_VALIDITY_SECONDS, MailboxBindingId,
+    MailboxServiceDescriptor, SealedLocalMailboxBinding,
+};
 use kilogram_protocol::{
     AuthorizedEvent, ClientRequest, ConversationId, DeviceAuthorizationAccepted,
     DeviceAuthorizationRejected, EventPayload, HistoryRewrapBundle, HistoryRewrapRejected,
@@ -86,6 +91,7 @@ mod recovery_platform;
 mod recovery_qr;
 mod recovery_scheduler;
 mod runtime_endpoint_announcement;
+mod runtime_mailbox;
 mod runtime_own_device_automation;
 mod runtime_own_device_discovery;
 mod runtime_own_device_roster;
@@ -138,6 +144,9 @@ use runtime_endpoint_announcement::{
     MAX_ENDPOINT_ANNOUNCEMENT_BYTES, MAX_ENDPOINT_ANNOUNCEMENT_VALIDITY_SECONDS,
     SignedAcceptedEndpointObservation, SignedEndpointAnnouncementAcknowledgement,
     SignedEndpointAnnouncementBundle,
+};
+use runtime_mailbox::{
+    SignedRuntimeLocalMailboxBinding, SignedRuntimePeerMailboxBinding, mailbox_scope,
 };
 use runtime_own_device_automation::{
     DEFAULT_OWN_DEVICE_ANNOUNCEMENT_INTERVAL_SECONDS,
@@ -206,6 +215,8 @@ const RUNTIME_OWN_DEVICE_TICKET_DISCOVERY_POLICIES_DIRECTORY: &str =
     "own-device-ticket-discovery-policies";
 const RUNTIME_OWN_DEVICE_ROSTER_POLICIES_DIRECTORY: &str = "own-device-roster-policies";
 const RUNTIME_TICKET_CHECKPOINTS_DIRECTORY: &str = "ticket-checkpoints";
+const RUNTIME_LOCAL_MAILBOX_BINDINGS_DIRECTORY: &str = "local-mailbox-bindings";
+const RUNTIME_PEER_MAILBOX_BINDINGS_DIRECTORY: &str = "peer-mailbox-bindings";
 const MAX_RUNTIME_DEVICE_DIRECTORY_RECEIPTS: usize = 1_024;
 const MAX_RUNTIME_ENDPOINT_CANDIDATES_PER_CONTACT: usize = 4;
 const MAX_RUNTIME_TICKET_PUBLICATION_RECORDS: usize = 4_096;
@@ -217,6 +228,7 @@ const MAX_RUNTIME_OWN_DEVICE_ANNOUNCEMENT_RECORDS: usize = 4_096;
 const MAX_RUNTIME_OWN_DEVICE_TICKET_DISCOVERY_RECORDS: usize = 4_096;
 const MAX_RUNTIME_OWN_DEVICE_ROSTER_RECORDS: usize = 1_024;
 const MAX_RUNTIME_TICKET_CHAIN_RECORDS_BEFORE_COMPACTION: usize = 8;
+const MAX_RUNTIME_MAILBOX_BINDINGS: usize = 1_024;
 const RUNTIME_TICKET_AUTOMATION_CHECK_INTERVAL: Duration = Duration::from_secs(5);
 const RUNTIME_DEVICE_LIST_DIGEST_DOMAIN: &[u8] = b"kilogram:runtime-device-list:v1\0";
 const OWN_DEVICE_TICKET_PAIRWISE_KEY_CONTEXT: &str =
@@ -620,6 +632,67 @@ enum Command {
         /// UTF-8 plaintext sealed immediately to this local device.
         #[arg(long)]
         message: String,
+    },
+
+    /// Create this Device's encrypted receive mailbox and a recipient-bound offer for one peer Device.
+    RuntimeMailboxOfferCreate {
+        /// Directory containing this application's persistent device state.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Contact conversation label.
+        #[arg(long)]
+        conversation: String,
+
+        /// Peer account selecting the exact signed runtime contact.
+        #[arg(long)]
+        peer_account: AccountId,
+
+        /// Exact enrolled peer Device allowed to use this mailbox write capability.
+        #[arg(long)]
+        peer_device: DeviceId,
+
+        /// HTTPS base URL of the blind mailbox store.
+        #[arg(long)]
+        service_base_url: String,
+
+        /// Authenticated Ed25519 public key printed by the selected mailbox store.
+        #[arg(long)]
+        store_key: MailboxStoreKey,
+
+        /// Lifetime of the recipient-bound offer; a replacement rotates the capability.
+        #[arg(long, default_value_t = 7 * 24 * 60 * 60)]
+        valid_for_seconds: u64,
+
+        /// New no-clobber HPKE offer artifact to transfer to the exact peer Device.
+        #[arg(long)]
+        output_file: PathBuf,
+    },
+
+    /// Import and pin a peer Device's signed mailbox offer after HPKE decryption and identity checks.
+    RuntimeMailboxOfferImport {
+        /// Directory containing this application's persistent device state.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Contact conversation label.
+        #[arg(long)]
+        conversation: String,
+
+        /// Expected peer account selecting the exact signed runtime contact.
+        #[arg(long)]
+        peer_account: AccountId,
+
+        /// Recipient-bound encrypted offer received from the peer Device.
+        #[arg(long)]
+        offer_file: PathBuf,
+    },
+
+    /// Verify locally encrypted receive bindings and imported peer write capabilities.
+    RuntimeMailboxStatus {
+        /// Directory containing this application's persistent device state.
+        #[arg(long)]
+        state_dir: PathBuf,
     },
 
     /// Verify and summarize the durable runtime contact/outbox state.
@@ -1860,6 +1933,9 @@ impl Command {
             | Self::RuntimePublicationConflictCreateRequest { state_dir, .. }
             | Self::RuntimePublicationConflictApplyResponse { state_dir, .. }
             | Self::RuntimeQueueMessage { state_dir, .. }
+            | Self::RuntimeMailboxOfferCreate { state_dir, .. }
+            | Self::RuntimeMailboxOfferImport { state_dir, .. }
+            | Self::RuntimeMailboxStatus { state_dir }
             | Self::RuntimeOutboxStatus { state_dir, .. }
             | Self::Connect { state_dir, .. }
             | Self::Sync { state_dir, .. }
@@ -2830,6 +2906,32 @@ async fn run_command(command: Command) -> Result<()> {
             peer_account,
             message,
         } => queue_runtime_message(state_dir, conversation, peer_account, message),
+        Command::RuntimeMailboxOfferCreate {
+            state_dir,
+            conversation,
+            peer_account,
+            peer_device,
+            service_base_url,
+            store_key,
+            valid_for_seconds,
+            output_file,
+        } => create_runtime_mailbox_offer(
+            state_dir,
+            conversation,
+            peer_account,
+            peer_device,
+            service_base_url,
+            store_key,
+            valid_for_seconds,
+            output_file,
+        ),
+        Command::RuntimeMailboxOfferImport {
+            state_dir,
+            conversation,
+            peer_account,
+            offer_file,
+        } => import_runtime_mailbox_offer(state_dir, conversation, peer_account, offer_file),
+        Command::RuntimeMailboxStatus { state_dir } => runtime_mailbox_status(state_dir),
         Command::RuntimeOutboxStatus { state_dir } => runtime_outbox_status(state_dir),
         Command::RuntimeIpcPing { ipc_file } => runtime_ipc_ping(ipc_file).await,
         Command::RuntimeIpcQueueMessage {
@@ -4296,6 +4398,8 @@ struct RuntimeStateSnapshot {
         BTreeMap<DeviceId, Vec<SignedOwnDeviceTicketDiscoveryPolicy>>,
     own_device_roster_policies: Vec<SignedOwnDeviceRosterPolicy>,
     ticket_checkpoint: Option<SignedRuntimeTicketCheckpoint>,
+    local_mailbox_bindings: BTreeMap<MailboxBindingId, SignedRuntimeLocalMailboxBinding>,
+    peer_mailbox_bindings: BTreeMap<MailboxBindingId, SignedRuntimePeerMailboxBinding>,
 }
 
 impl RuntimeStateSnapshot {
@@ -4632,6 +4736,18 @@ fn runtime_ticket_checkpoint_relative_path(checkpoint_id: RuntimeTicketCheckpoin
         .join(format!("{checkpoint_id}.rtc"))
 }
 
+fn runtime_local_mailbox_binding_relative_path(binding_id: MailboxBindingId) -> PathBuf {
+    PathBuf::from(RUNTIME_STATE_DIRECTORY)
+        .join(RUNTIME_LOCAL_MAILBOX_BINDINGS_DIRECTORY)
+        .join(format!("{binding_id}.lmb"))
+}
+
+fn runtime_peer_mailbox_binding_relative_path(binding_id: MailboxBindingId) -> PathBuf {
+    PathBuf::from(RUNTIME_STATE_DIRECTORY)
+        .join(RUNTIME_PEER_MAILBOX_BINDINGS_DIRECTORY)
+        .join(format!("{binding_id}.pmb"))
+}
+
 fn runtime_device_list_digest(device_list: &AccountDeviceListSnapshot) -> Result<[u8; 32]> {
     let mut hasher = blake3::Hasher::new();
     hasher.update(RUNTIME_DEVICE_LIST_DIGEST_DOMAIN);
@@ -4739,6 +4855,8 @@ fn read_runtime_record_files(state_directory: &Path) -> Result<Vec<(PathBuf, Vec
         RUNTIME_OWN_DEVICE_TICKET_DISCOVERY_POLICIES_DIRECTORY,
         RUNTIME_OWN_DEVICE_ROSTER_POLICIES_DIRECTORY,
         RUNTIME_TICKET_CHECKPOINTS_DIRECTORY,
+        RUNTIME_LOCAL_MAILBOX_BINDINGS_DIRECTORY,
+        RUNTIME_PEER_MAILBOX_BINDINGS_DIRECTORY,
     ] {
         let root = state_directory
             .join(RUNTIME_STATE_DIRECTORY)
@@ -5051,6 +5169,34 @@ fn load_runtime_state_snapshot(
                     .is_none(),
                 "duplicate runtime endpoint-candidate ID"
             );
+        } else if file_name.ends_with(".lmb") {
+            let value = SignedRuntimeLocalMailboxBinding::decode(&bytes)?;
+            value.verify_local(local_account_id, local_device_id)?;
+            ensure!(
+                relative_path == runtime_local_mailbox_binding_relative_path(value.binding_id()),
+                "runtime local mailbox binding filename does not match its authenticated ID"
+            );
+            ensure!(
+                snapshot
+                    .local_mailbox_bindings
+                    .insert(value.binding_id(), value)
+                    .is_none(),
+                "duplicate runtime local mailbox binding ID"
+            );
+        } else if file_name.ends_with(".pmb") {
+            let value = SignedRuntimePeerMailboxBinding::decode(&bytes)?;
+            value.verify_local(local_account_id, local_device_id)?;
+            ensure!(
+                relative_path == runtime_peer_mailbox_binding_relative_path(value.binding_id()),
+                "runtime peer mailbox binding filename does not match its authenticated ID"
+            );
+            ensure!(
+                snapshot
+                    .peer_mailbox_bindings
+                    .insert(value.binding_id(), value)
+                    .is_none(),
+                "duplicate runtime peer mailbox binding ID"
+            );
         } else if file_name.ends_with(".contact") {
             let value = SignedRuntimeContact::decode(&bytes)?;
             value.verify_local(local_account_id, local_device_id)?;
@@ -5143,6 +5289,34 @@ fn load_runtime_state_snapshot(
                 && candidate.conversation_id() == contact.conversation_id()
                 && candidate.peer_device_id() != contact.peer_device_id(),
             "runtime endpoint candidate does not match its authenticated contact"
+        );
+    }
+    for binding in snapshot.local_mailbox_bindings.values() {
+        let contact = snapshot
+            .contacts
+            .get(&binding.contact_id())
+            .context("runtime local mailbox binding names an absent contact")?;
+        ensure!(
+            binding.peer_account_id() == contact.peer_account_id()
+                && binding.conversation_id() == contact.conversation_id()
+                && runtime_endpoint_enrollments(&snapshot, contact)?
+                    .iter()
+                    .any(|candidate| candidate.peer_device_id == binding.peer_device_id()),
+            "runtime local mailbox binding does not match its authenticated contact"
+        );
+    }
+    for binding in snapshot.peer_mailbox_bindings.values() {
+        let contact = snapshot
+            .contacts
+            .get(&binding.contact_id())
+            .context("runtime peer mailbox binding names an absent contact")?;
+        ensure!(
+            binding.peer_account_id() == contact.peer_account_id()
+                && binding.conversation_id() == contact.conversation_id()
+                && runtime_endpoint_enrollments(&snapshot, contact)?
+                    .iter()
+                    .any(|candidate| candidate.peer_device_id == binding.peer_device_id()),
+            "runtime peer mailbox binding does not match its authenticated contact"
         );
     }
     for binding in snapshot.endpoint_publication_bindings.values() {
@@ -5291,6 +5465,14 @@ fn load_runtime_state_snapshot(
     ensure!(
         snapshot.device_directory_receipts.len() <= MAX_RUNTIME_DEVICE_DIRECTORY_RECEIPTS,
         "runtime device-directory receipt limit exceeded"
+    );
+    ensure!(
+        snapshot
+            .local_mailbox_bindings
+            .len()
+            .saturating_add(snapshot.peer_mailbox_bindings.len())
+            <= MAX_RUNTIME_MAILBOX_BINDINGS,
+        "runtime mailbox binding limit exceeded"
     );
     let publication_record_count = snapshot
         .ticket_publications
@@ -9201,6 +9383,417 @@ fn queue_runtime_message_with_id(
         contact_id: queued.contact_id(),
         inserted: outcome == StoreOutcome::Inserted,
     })
+}
+
+#[allow(clippy::too_many_arguments)]
+fn create_runtime_mailbox_offer(
+    state_directory: PathBuf,
+    conversation: String,
+    peer_account_id: AccountId,
+    peer_device_id: DeviceId,
+    service_base_url: String,
+    store_key: MailboxStoreKey,
+    valid_for_seconds: u64,
+    output_file: PathBuf,
+) -> Result<()> {
+    ensure!(
+        (kilogram_mailbox_provisioning::MIN_MAILBOX_OFFER_VALIDITY_SECONDS
+            ..=MAX_MAILBOX_OFFER_VALIDITY_SECONDS)
+            .contains(&valid_for_seconds),
+        "mailbox offer validity is outside protocol bounds"
+    );
+    let now = unix_time_now()?;
+    let expires_at = now
+        .checked_add(valid_for_seconds)
+        .context("mailbox offer expiry overflows")?;
+    let device_state = load_command_device_state(&state_directory)?;
+    let trust = CommandTrustReadRepository::open(&state_directory, &device_state)?;
+    let local_certificate = trust.load_certificate()?;
+    let local_authority = trust.load_own_authority_snapshot(&local_certificate)?;
+    let snapshot = load_runtime_state_snapshot(
+        &state_directory,
+        local_certificate.account_id(),
+        device_state.identity().device_id(),
+    )?;
+    ensure!(
+        snapshot
+            .local_mailbox_bindings
+            .len()
+            .saturating_add(snapshot.peer_mailbox_bindings.len())
+            < MAX_RUNTIME_MAILBOX_BINDINGS,
+        "runtime mailbox binding capacity exceeded"
+    );
+    let contact = exact_runtime_contact(&snapshot, &conversation, peer_account_id)?;
+    let peer_authority = trust
+        .load_peer_authority_snapshot(peer_account_id)
+        .context("load peer authority high-water for mailbox provisioning")?;
+    let candidates = load_runtime_endpoint_candidate_set(
+        &snapshot,
+        contact,
+        &local_certificate,
+        &local_authority,
+        &peer_authority,
+    )?;
+    let candidate = candidates
+        .iter()
+        .find(|candidate| candidate.peer_device_id == peer_device_id && candidate.authority_current)
+        .context("mailbox recipient Device is not an enrolled current-authority endpoint")?;
+    let peer_certificate = candidate
+        .ticket
+        .listener_directory()
+        .device_list()
+        .certificate_for(peer_device_id)
+        .context("mailbox recipient certificate is absent from the current peer roster")?;
+    verify_device_authorization_with_snapshot(
+        peer_account_id,
+        peer_certificate,
+        candidate.ticket.listener_authority_snapshot(),
+        &DeviceCapability::MESSAGING,
+    )
+    .context("mailbox recipient Device is not authorized at the current peer high-water")?;
+    pin_peer_authority_primary(
+        &state_directory,
+        &device_state,
+        candidate.ticket.listener_authority_snapshot(),
+    )?;
+    let service = MailboxServiceDescriptor::new(&service_base_url, store_key)?;
+    let sealed = SealedLocalMailboxBinding::create(
+        device_state.identity(),
+        device_state.encryption(),
+        &local_certificate,
+        peer_certificate,
+        mailbox_scope(contact.conversation_id()),
+        service,
+        now,
+    )?;
+    let local_binding = sealed.open(
+        device_state.identity(),
+        device_state.encryption(),
+        &local_certificate,
+    )?;
+    let offer = local_binding.offer_for(
+        device_state.identity(),
+        &local_certificate,
+        peer_certificate,
+        expires_at,
+    )?;
+    let runtime_binding = SignedRuntimeLocalMailboxBinding::sign(
+        device_state.identity(),
+        local_certificate.account_id(),
+        contact.contact_id(),
+        peer_account_id,
+        peer_device_id,
+        contact.conversation_id(),
+        now,
+        &sealed,
+    )?;
+    let binding_id = runtime_binding.binding_id();
+    let encoded_offer = offer.encode()?;
+    run_state_transaction(&state_directory, |transaction| {
+        persist_runtime_record(
+            &state_directory,
+            &runtime_local_mailbox_binding_relative_path(binding_id),
+            &runtime_binding.encode()?,
+            transaction,
+        )
+    })
+    .context("persist local mailbox capability before offer export")?;
+    write_new_authority_file(&output_file, &encoded_offer)
+        .context("write recipient-bound mailbox offer without overwriting")?;
+    println!("mailbox_binding_id={binding_id}");
+    println!("mailbox_id={}", local_binding.address().mailbox_id());
+    println!("peer_account_id={peer_account_id}");
+    println!("peer_device_id={peer_device_id}");
+    println!("mailbox_service_url={}", local_binding.service().base_url());
+    println!("mailbox_store_key={store_key}");
+    println!("mailbox_offer_expires_at_unix_seconds={expires_at}");
+    println!("mailbox_offer_file={}", output_file.display());
+    println!("mailbox_local_capability=hpke-sealed-to-local-device");
+    println!("mailbox_shared_capability=write-only-hpke-sealed-to-peer-device");
+    println!("status=runtime-mailbox-offer-created");
+    Ok(())
+}
+
+fn import_runtime_mailbox_offer(
+    state_directory: PathBuf,
+    conversation: String,
+    peer_account_id: AccountId,
+    offer_file: PathBuf,
+) -> Result<()> {
+    let bytes = fs::read(&offer_file)
+        .with_context(|| format!("read mailbox offer {}", offer_file.display()))?;
+    let offer = EncryptedMailboxOffer::decode(&bytes)?;
+    let now = unix_time_now()?;
+    let device_state = load_command_device_state(&state_directory)?;
+    let trust = CommandTrustReadRepository::open(&state_directory, &device_state)?;
+    let local_certificate = trust.load_certificate()?;
+    let local_authority = trust.load_own_authority_snapshot(&local_certificate)?;
+    let snapshot = load_runtime_state_snapshot(
+        &state_directory,
+        local_certificate.account_id(),
+        local_certificate.device_id(),
+    )?;
+    ensure!(
+        snapshot
+            .local_mailbox_bindings
+            .len()
+            .saturating_add(snapshot.peer_mailbox_bindings.len())
+            < MAX_RUNTIME_MAILBOX_BINDINGS
+            || snapshot
+                .peer_mailbox_bindings
+                .contains_key(&offer.binding_id()),
+        "runtime mailbox binding capacity exceeded"
+    );
+    let contact = exact_runtime_contact(&snapshot, &conversation, peer_account_id)?;
+    let peer_authority = trust
+        .load_peer_authority_snapshot(peer_account_id)
+        .context("load peer authority high-water for mailbox offer import")?;
+    let candidates = load_runtime_endpoint_candidate_set(
+        &snapshot,
+        contact,
+        &local_certificate,
+        &local_authority,
+        &peer_authority,
+    )?;
+    let mut opened = None;
+    let mut failures = Vec::new();
+    for candidate in candidates
+        .iter()
+        .filter(|candidate| candidate.authority_current)
+    {
+        let Some(peer_certificate) = candidate
+            .ticket
+            .listener_directory()
+            .device_list()
+            .certificate_for(candidate.peer_device_id)
+        else {
+            continue;
+        };
+        match offer.open(
+            device_state.encryption(),
+            &local_certificate,
+            peer_certificate,
+            mailbox_scope(contact.conversation_id()),
+            now,
+        ) {
+            Ok(binding) => {
+                ensure!(
+                    opened.is_none(),
+                    "mailbox offer authenticated as more than one peer Device"
+                );
+                opened = Some((
+                    peer_certificate.clone(),
+                    candidate.ticket.listener_authority_snapshot().clone(),
+                    binding,
+                ));
+            }
+            Err(error) => failures.push(format!("{}: {error:#}", candidate.peer_device_id)),
+        }
+    }
+    let (peer_certificate, current_peer_authority, peer_binding) = opened.with_context(|| {
+        format!(
+            "mailbox offer was not signed by an enrolled current peer Device: {}",
+            failures.join(" | ")
+        )
+    })?;
+    verify_device_authorization_with_snapshot(
+        peer_account_id,
+        &peer_certificate,
+        &current_peer_authority,
+        &DeviceCapability::MESSAGING,
+    )
+    .context("mailbox offer signer is not authorized at the current peer high-water")?;
+    pin_peer_authority_primary(&state_directory, &device_state, &current_peer_authority)?;
+    let binding_id = offer.binding_id();
+    let outcome = match snapshot.peer_mailbox_bindings.get(&binding_id) {
+        Some(existing) => {
+            ensure!(
+                existing.matches_offer(&offer)?,
+                "imported mailbox binding ID already exists with another encrypted offer"
+            );
+            StoreOutcome::AlreadyPresent
+        }
+        None => {
+            let runtime_binding = SignedRuntimePeerMailboxBinding::sign(
+                device_state.identity(),
+                local_certificate.account_id(),
+                contact.contact_id(),
+                peer_account_id,
+                peer_certificate.device_id(),
+                contact.conversation_id(),
+                now,
+                &offer,
+            )?;
+            run_state_transaction(&state_directory, |transaction| {
+                persist_runtime_record(
+                    &state_directory,
+                    &runtime_peer_mailbox_binding_relative_path(binding_id),
+                    &runtime_binding.encode()?,
+                    transaction,
+                )
+            })?
+        }
+    };
+    println!("mailbox_binding_id={binding_id}");
+    println!("mailbox_id={}", peer_binding.address().mailbox_id());
+    println!("peer_account_id={peer_account_id}");
+    println!("peer_device_id={}", peer_certificate.device_id());
+    println!("mailbox_service_url={}", peer_binding.service().base_url());
+    println!(
+        "mailbox_store_key={}",
+        peer_binding.service().expected_store_key()
+    );
+    println!(
+        "mailbox_offer_expires_at_unix_seconds={}",
+        peer_binding.expires_at_unix_seconds()
+    );
+    println!("mailbox_peer_binding_store={outcome:?}");
+    println!("mailbox_shared_capability=write-only-local-device-encrypted");
+    println!("status=runtime-mailbox-offer-imported");
+    Ok(())
+}
+
+fn runtime_mailbox_status(state_directory: PathBuf) -> Result<()> {
+    let device_state = load_command_device_state(&state_directory)?;
+    let trust = CommandTrustReadRepository::open(&state_directory, &device_state)?;
+    let local_certificate = trust.load_certificate()?;
+    let local_authority = trust.load_own_authority_snapshot(&local_certificate)?;
+    let snapshot = load_runtime_state_snapshot(
+        &state_directory,
+        local_certificate.account_id(),
+        local_certificate.device_id(),
+    )?;
+    let now = unix_time_now()?;
+    let mut local_usable = 0_usize;
+    let mut local_unusable = 0_usize;
+    for binding in snapshot.local_mailbox_bindings.values() {
+        let opened = binding.open(
+            device_state.identity(),
+            device_state.encryption(),
+            &local_certificate,
+        )?;
+        let current_peer = (|| {
+            let contact = snapshot
+                .contacts
+                .get(&binding.contact_id())
+                .context("local mailbox binding contact disappeared")?;
+            let peer_authority = trust.load_peer_authority_snapshot(binding.peer_account_id())?;
+            let candidates = load_runtime_endpoint_candidate_set(
+                &snapshot,
+                contact,
+                &local_certificate,
+                &local_authority,
+                &peer_authority,
+            )?;
+            ensure!(
+                candidates.iter().any(|candidate| {
+                    candidate.peer_device_id == binding.peer_device_id()
+                        && candidate.authority_current
+                }),
+                "mailbox writer Device is not active at the peer authority high-water"
+            );
+            Ok::<_, anyhow::Error>(())
+        })();
+        match current_peer {
+            Ok(()) => {
+                local_usable += 1;
+                println!(
+                    "mailbox_local_binding_id={} peer_device_id={} mailbox_id={} service_url={} created_at_unix_seconds={} state=usable",
+                    binding.binding_id(),
+                    binding.peer_device_id(),
+                    opened.address().mailbox_id(),
+                    opened.service().base_url(),
+                    binding.created_at_unix_seconds()
+                );
+            }
+            Err(error) => {
+                local_unusable += 1;
+                println!(
+                    "mailbox_local_binding_id={} peer_device_id={} state=unusable detail={}",
+                    binding.binding_id(),
+                    binding.peer_device_id(),
+                    format!("{error:#}").replace(['\r', '\n'], " ")
+                );
+            }
+        }
+    }
+    let mut peer_usable = 0_usize;
+    let mut peer_expired_or_stale = 0_usize;
+    for binding in snapshot.peer_mailbox_bindings.values() {
+        let contact = snapshot
+            .contacts
+            .get(&binding.contact_id())
+            .context("peer mailbox binding contact disappeared")?;
+        let state = (|| {
+            let peer_authority = trust.load_peer_authority_snapshot(binding.peer_account_id())?;
+            let candidates = load_runtime_endpoint_candidate_set(
+                &snapshot,
+                contact,
+                &local_certificate,
+                &local_authority,
+                &peer_authority,
+            )?;
+            let peer_certificate = candidates
+                .iter()
+                .find(|candidate| {
+                    candidate.peer_device_id == binding.peer_device_id()
+                        && candidate.authority_current
+                })
+                .and_then(|candidate| {
+                    candidate
+                        .ticket
+                        .listener_directory()
+                        .device_list()
+                        .certificate_for(candidate.peer_device_id)
+                })
+                .context("peer mailbox signer is no longer a current endpoint")?;
+            binding.open(
+                device_state.encryption(),
+                &local_certificate,
+                peer_certificate,
+                now,
+            )
+        })();
+        match state {
+            Ok(opened) => {
+                peer_usable += 1;
+                println!(
+                    "mailbox_peer_binding_id={} peer_device_id={} mailbox_id={} service_url={} imported_at_unix_seconds={} expires_at_unix_seconds={} state=usable",
+                    binding.binding_id(),
+                    binding.peer_device_id(),
+                    opened.address().mailbox_id(),
+                    opened.service().base_url(),
+                    binding.imported_at_unix_seconds(),
+                    opened.expires_at_unix_seconds()
+                );
+            }
+            Err(error) => {
+                peer_expired_or_stale += 1;
+                println!(
+                    "mailbox_peer_binding_id={} peer_device_id={} state=unusable detail={}",
+                    binding.binding_id(),
+                    binding.peer_device_id(),
+                    format!("{error:#}").replace(['\r', '\n'], " ")
+                );
+            }
+        }
+    }
+    println!(
+        "mailbox_local_binding_count={}",
+        snapshot.local_mailbox_bindings.len()
+    );
+    println!("mailbox_local_usable_count={local_usable}");
+    println!("mailbox_local_unusable_count={local_unusable}");
+    println!(
+        "mailbox_peer_binding_count={}",
+        snapshot.peer_mailbox_bindings.len()
+    );
+    println!("mailbox_peer_usable_count={peer_usable}");
+    println!("mailbox_peer_unusable_count={peer_expired_or_stale}");
+    println!("mailbox_public_ticket_contains_capability=false");
+    println!("mailbox_runtime_delivery_status=provisioned-not-yet-enabled");
+    println!("status=runtime-mailbox-inspected");
+    Ok(())
 }
 
 fn runtime_outbox_status(state_directory: PathBuf) -> Result<()> {

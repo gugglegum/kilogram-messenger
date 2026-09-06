@@ -1,0 +1,24 @@
+[package]
+name = "kilogram-mailbox-provisioning"
+description = "Recipient-bound provisioning for Kilogram blind mailbox capabilities"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+blake3.workspace = true
+kilogram-crypto = { path = "../kilogram-crypto" }
+kilogram-identity = { path = "../kilogram-identity" }
+kilogram-mailbox = { path = "../kilogram-mailbox" }
+postcard.workspace = true
+serde.workspace = true
+url.workspace = true
+zeroize.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

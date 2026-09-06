@@ -3268,12 +3268,39 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - contract зафиксирован в
   [`../docs/RFC-0074-bounded-mailbox-http-and-client-ledger.md`](../docs/RFC-0074-bounded-mailbox-http-and-client-ledger.md).
 
+### M0.9.53 — recipient-bound mailbox provisioning: выполнено
+
+Реализовано:
+
+- новый network-free `kilogram-mailbox-provisioning` crate разделяет локальную
+  full read/write capability и экспортируемую peer write-only capability;
+- локальная capability Device-подписана и HPKE-sealed к собственному encryption
+  key; peer offer Device-подписан и HPKE-sealed к exact recipient Device;
+- подпись/AAD связывают обе Account/Device стороны, owner encryption key,
+  opaque conversation scope, mailbox address, canonical HTTPS URL, pinned store
+  key, creation и bounded expiry;
+- импорт требует exact local recipient, current enrolled peer endpoint,
+  pinned Root-signed peer authority high-water, exact conversation/contact scope
+  и неистёкший offer;
+- runtime append-only vault state получил bounded local/peer mailbox records;
+  секреты не попадают в tickets, endpoint publications или mailbox-client
+  ledger;
+- CLI `runtime-mailbox-offer-create`, `runtime-mailbox-offer-import` и
+  `runtime-mailbox-status` создают no-clobber artifact, идемпотентно импортируют
+  exact replay и честно сообщают `provisioned-not-yet-enabled`;
+- fail-closed boundary script запрещает provisioning crate network/runtime/
+  protocol/event-store dependencies и новый executable;
+- 4 network-free tests прошли; CLI/workspace network-bearing harnesses не
+  запускались, release и ZIP не создавались;
+- contract зафиксирован в
+  [`../docs/RFC-0075-recipient-bound-mailbox-provisioning.md`](../docs/RFC-0075-recipient-bound-mailbox-provisioning.md).
+
 ### Следующий этап
 
-1. M0.9.53: provision-ить per-contact/per-device mailbox capabilities и
-   authenticated store URL/key, затем встроить ledger в serialized runtime
-   actor: direct/relay first, mailbox fallback по bounded policy, receive commit
-   в existing event/projection transaction до delete и honest IPC states.
+1. M0.9.54: встроить verified mailbox bindings и client ledger в serialized
+   runtime actor: direct/relay first, mailbox fallback по bounded policy,
+   отдельное `mailbox-stored` состояние, receive commit в existing event/
+   projection transaction до delete, reverse-mailbox ACK и honest IPC states.
 2. Добавить independent second-builder reproduction и подписанный public
    release provenance поверх M0.9.50 same-host clean-root gate.
 3. Optional autostart/background mode оставить отдельной явной настройкой, не

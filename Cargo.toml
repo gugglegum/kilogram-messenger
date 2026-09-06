@@ -10,6 +10,7 @@ members = [
     "crates/kilogram-identity",
     "crates/kilogram-mailbox",
     "crates/kilogram-mailbox-client",
+    "crates/kilogram-mailbox-provisioning",
     "crates/kilogram-protocol",
     "crates/kilogram-publication-conflict",
     "crates/kilogram-ratchet",
@@ -51,6 +52,7 @@ tempfile = "3.0"
 thiserror = "2.0"
 tokio = { version = "1.0", features = ["fs", "io-util", "macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
 zeroize = { version = "1.8", features = ["zeroize_derive"] }
+url = "2.5"
 vodozemac = "0.10.0"
 x25519-dalek = "3.0.0"
 
