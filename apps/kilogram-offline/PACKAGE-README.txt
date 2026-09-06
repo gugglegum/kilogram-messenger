@@ -5,6 +5,16 @@ This package is intended for a dedicated offline Windows account or computer.
 It contains no network, runtime, message-store, session, transport or GUI code.
 It never creates an Account Root and never modifies an existing Root directory.
 
+For a release package, BUILD-INFO.txt records reproducibility_verified=true and
+binds this executable to REPRODUCIBILITY.json plus SOURCE-MANIFEST.sha256. The
+two clean-root builds recorded there must have the same SHA-256. SHA256SUMS
+authenticates accidental corruption only; obtain expected release hashes over
+an independent authenticated channel.
+
+The current reproducibility gate uses two separate clean source and target
+roots on one host. It is not a claim that a second independent machine or
+builder image has reproduced the binary.
+
 Recommended ceremony
 --------------------
 

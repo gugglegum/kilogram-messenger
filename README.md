@@ -161,12 +161,40 @@ specified in
 The single network-free implementation of the signed publication-conflict
 artifact chain is specified in
 [`docs/RFC-0071-shared-publication-conflict-artifacts.md`](docs/RFC-0071-shared-publication-conflict-artifacts.md).
+The two-clean-root offline release gate and bounded Cargo cache policy are
+specified in
+[`docs/RFC-0072-reproducible-offline-release-and-bounded-cargo-cache.md`](docs/RFC-0072-reproducible-offline-release-and-bounded-cargo-cache.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.49 shared publication-conflict artifacts — complete
+## Current milestone: M0.9.50 reproducible offline release — complete
+
+`kilogram-offline` is now built twice from the exact same SHA-256-manifested
+source set in separate clean source and Cargo target roots. Both builds are
+frozen, non-incremental, path-remapped and linked with `/Brepro`; a bounded
+machine-verifiable record is emitted only when executable size and SHA-256 are
+identical. A clean portable package requires that verified record to match the
+current `HEAD` and includes its source manifest, lockfile and pinned toolchain.
+
+This proves same-host clean-root reproducibility, not reproduction by a second
+independent builder. Signed release provenance and a separately administered
+rebuild remain later public-release work.
+
+Cargo verification now uses a separate non-incremental, line-table-only
+profile, while everyday `cargo check` keeps its fast incremental cache. A
+read-only cache monitor warns at 40 GiB and provides explicit guarded commands
+for pruning only verification output or performing a full reset and warmup.
+The one-time reset reduced `target` from 105.66 GiB to 3.99 GiB after initial
+warmup. Heavy project scripts additionally run at below-normal priority with
+half of the logical processors by default, keeping Windows and local VMs
+responsive during a cold rebuild. Details are in
+[`docs/RFC-0072-reproducible-offline-release-and-bounded-cargo-cache.md`](docs/RFC-0072-reproducible-offline-release-and-bounded-cargo-cache.md).
+
+Network-bearing Rust harnesses were compiled only and not executed.
+
+## Previous milestone: M0.9.49 shared publication-conflict artifacts — complete
 
 The new `kilogram-publication-conflict` crate is the single implementation of
 signed ticket publications/observations, conflict proofs, Device requests,

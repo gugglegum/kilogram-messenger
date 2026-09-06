@@ -1697,3 +1697,34 @@ retirement остальных compatibility shadows ещё не реализов
   `9308D12FCB3D8D2835E0C25F6FAAE013D5972E42330C3040B5A292A884D28D85`.
   Это проверяет deterministic packaging готового payload; отдельная повторная
   линковка пока не заявлена воспроизводимой и является целью M0.9.50.
+
+## M0.9.50 verification snapshot (2026-09-06)
+
+- Перед изменением cache policy exact workspace `target` содержал 145,230
+  файлов и занимал 105.66 GiB; основная масса приходилась на
+  `debug/incremental` (57.87 GiB) и `debug/deps` (42.68 GiB, включая 24.63 GiB
+  PDB). По явному решению владельца весь `target` разово удалён.
+- `[profile.verification]` наследует test, использует `line-tables-only` и
+  `incremental=false`; `scripts/run-cargo-tests-stable.ps1` компилирует туда и
+  по-прежнему не запускает harness без `-Run`.
+- После clean `cargo check --workspace --all-targets --locked`, полного
+  verification compile и первого offline release build target занимал 3.99
+  GiB: debug total 1.14, debug incremental 0.39, verification 2.46, release
+  0.40 GiB.
+- `scripts/cargo-cache-maintenance.ps1` read-only по умолчанию, предупреждает
+  после 40 GiB; `-PruneVerification` и `-VacuumAndWarm` являются explicit
+  guarded destructive modes.
+- После наблюдаемой 100% CPU загрузки на холодной release-сборке heavy scripts
+  переведены на inherited BelowNormal priority и dynamic half-logical-CPU
+  default: 12 Cargo jobs на текущих 24 logical processors. Для ad-hoc команд
+  используется `scripts/invoke-cargo-friendly.ps1`; override — `-CargoJobs`
+  либо `KILOGRAM_CARGO_JOBS`.
+- Development reproducibility run из двух разных clean roots прошёл: оба
+  `kilogram-offline.exe` по 2,458,112 bytes, SHA-256
+  `C93BD111444649727CCAFCAEA01A953AAD65861B34D6459A48A490299FA76E56`.
+  Это pre-commit evidence; clean exact-HEAD record создаётся после milestone
+  commit.
+- Scope machine-readable record — `same-host-separate-clean-roots`. Он не
+  объявляется independent second-host reproduction или signed provenance.
+- Сетевые test harnesses не запускались; дополнительного Windows Firewall
+  prompt этот этап не создаёт.

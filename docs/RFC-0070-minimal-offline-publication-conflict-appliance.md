@@ -115,6 +115,12 @@ deterministic packaging of identical inputs, not a complete reproducible-build
 claim. A pinned clean builder image, independent rebuild, signed provenance and
 published source/toolchain hashes remain required for a public release.
 
+M0.9.50 closes the single-local-binary release fallback: a clean package now
+requires the verified two-clean-root record described by
+[`RFC-0072-reproducible-offline-release-and-bounded-cargo-cache.md`](RFC-0072-reproducible-offline-release-and-bounded-cargo-cache.md).
+That is a same-host reproducibility gate; a second independent builder and
+signed provenance remain future release requirements.
+
 ## 7. Desktop integration
 
 The Windows incident panel now renders `kilogram-offline inspect-request`,

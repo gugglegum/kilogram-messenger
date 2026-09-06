@@ -207,9 +207,10 @@ sessions, distribution, removal и key epochs и не решены этим пр
   network-free binary и deterministic portable package, но всё ещё требует
   человеческой передачи свежего ticket и offline artifacts. M0.9.49 устраняет
   двойную реализацию signed artifact codec через общий network-free crate и
-  dependency/duplicate gates. Открыты independently reproducible builder, обнаружение
-  конфликта между устройствами, которые никогда не обменивались
-  bundle, и действительно распределённая
+  dependency/duplicate gates. M0.9.50 добавляет same-host two-clean-root
+  reproducibility gate, но независимый second builder и signed provenance
+  остаются открыты. Также открыты обнаружение конфликта между устройствами,
+  которые никогда не обменивались bundle, и действительно распределённая
   cross-machine координация без доверенного scheduler.
 - M0.9.32 compact/checkpoint-ит runtime publication, observation, policy и
   attempt chains до exact signed heads за device-signed cumulative checkpoint;
@@ -254,9 +255,8 @@ sessions, distribution, removal и key epochs и не решены этим пр
 - Справедливые лимиты добровольных relay/storage nodes без накручиваемой
   токен-экономики.
 - Push-уведомления на Android/iOS без утечки содержания и социального графа.
-- Воспроизводимые сборки, обновления клиента и защита supply chain.
-- Как вынести продублированный `.pcrq/.pcrp` codec в общий audited minimal crate,
-  не протащив Iroh/runtime зависимости обратно в offline Root package?
+- Независимый second-builder, подписанный release provenance, обновления клиента
+  и дальнейшая защита supply chain поверх M0.9.50 same-host gate.
 - Миграция криптоалгоритмов и wire protocol без разделения сети.
 
 ## Инварианты при выборе ответов

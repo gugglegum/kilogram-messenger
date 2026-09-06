@@ -2,6 +2,8 @@
 param(
     [string[]]$Package = @(),
     [string]$Filter,
+    [string]$Profile = 'verification',
+    [int]$CargoJobs = 0,
     [switch]$Run,
     [switch]$NoFailFast,
     [switch]$NoCapture
@@ -9,6 +11,9 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+. (Join-Path $PSScriptRoot 'cargo-resource-policy.ps1')
+$cargoJobsResolved = Set-KilogramCargoResourcePolicy -RequestedJobs $CargoJobs
 
 $workspaceRoot = Split-Path -Parent $PSScriptRoot
 $manifestPath = Join-Path $workspaceRoot 'Cargo.toml'
@@ -26,6 +31,8 @@ $cargoArguments = @(
     'test'
     '--manifest-path', $manifestPath
     '--locked'
+    '--jobs', $cargoJobsResolved
+    '--profile', $Profile
     '--no-run'
     '--message-format=json-render-diagnostics'
 )
@@ -41,7 +48,7 @@ if ($Package.Count -eq 0) {
     }
 }
 
-Write-Host 'Compiling Rust test harnesses without executing them...'
+Write-Host "Compiling Rust test harnesses with profile '$Profile' without executing them..."
 Push-Location $workspaceRoot
 try {
     $cargoOutput = @(& cargo @cargoArguments)
@@ -107,8 +114,13 @@ foreach ($artifact in $stableArtifacts) {
 }
 
 if (-not $Run) {
+    Write-Host "test_profile=$Profile"
     Write-Host 'status=compiled-only'
     Write-Host 'No test executable was started. Pass -Run explicitly when it is safe to run tests.'
+    & powershell -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'cargo-cache-maintenance.ps1')
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Cargo cache status check failed.'
+    }
     exit 0
 }
 
@@ -146,3 +158,7 @@ if ($failedArtifacts.Count -ne 0) {
 }
 
 Write-Host 'status=passed'
+& powershell -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'cargo-cache-maintenance.ps1')
+if ($LASTEXITCODE -ne 0) {
+    throw 'Cargo cache status check failed.'
+}

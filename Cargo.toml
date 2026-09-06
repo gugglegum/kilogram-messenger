@@ -62,3 +62,11 @@ panic = "deny"
 todo = "deny"
 unimplemented = "deny"
 unwrap_used = "deny"
+
+# Full test-harness verification is intentionally separated from the fast
+# incremental development cache. It keeps file/line backtraces while avoiding
+# the multi-generation incremental and full-PDB growth seen in target/debug.
+[profile.verification]
+inherits = "test"
+debug = "line-tables-only"
+incremental = false

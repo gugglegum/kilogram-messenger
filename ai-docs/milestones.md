@@ -3176,16 +3176,52 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - contract зафиксирован в
   [`../docs/RFC-0071-shared-publication-conflict-artifacts.md`](../docs/RFC-0071-shared-publication-conflict-artifacts.md).
 
+### M0.9.50 — reproducible offline release и bounded Cargo cache: выполнено
+
+Реализовано:
+
+- exact clean Git source set дважды копируется в независимые source roots с
+  отдельными Cargo target roots и одним SHA-256 manifest;
+- обе `kilogram-offline` сборки используют `--frozen --release`, pinned Rust
+  1.98.0/MSVC target, disabled incremental, commit `SOURCE_DATE_EPOCH`, общий
+  path remap и `/Brepro`;
+- bounded `REPRODUCIBILITY.json` создаётся только при exact равенстве размера и
+  SHA-256 двух EXE; отдельный verifier повторно проверяет inputs, безопасные
+  filenames, build boundary и оба artifacts;
+- clean package fail closed требует record exact текущего `HEAD` и включает
+  source manifest, `Cargo.lock`, `rust-toolchain.toml` и
+  `reproducibility_verified=true`; dirty development package остаётся явным
+  unverified escape hatch;
+- record честно сообщает `same-host-separate-clean-roots`: отдельный host/
+  builder image и signed public provenance пока не заявлены;
+- новый `verification` Cargo profile сохраняет line tables, но отключает
+  incremental; stable harness script использует его и по умолчанию не запускает
+  EXE;
+- heavy Cargo scripts запускают parent с BelowNormal и по умолчанию оставляют
+  половину logical processors свободной; `-CargoJobs`/environment позволяют
+  explicit override;
+- cache maintenance read-only по умолчанию показывает debug/incremental,
+  verification, release и total, автоматически вызывается stable harness
+  workflow, предупреждает после 40 GiB и имеет guarded explicit prune/reset
+  modes;
+- разовая exact очистка удалила 145,230 файлов / 105.66 GiB; после первичного
+  warmup target занимал 3.99 GiB;
+- contract зафиксирован в
+  [`../docs/RFC-0072-reproducible-offline-release-and-bounded-cargo-cache.md`](../docs/RFC-0072-reproducible-offline-release-and-bounded-cargo-cache.md).
+
 ### Следующий этап
 
-1. M0.9.50: pinned independently repeatable build/provenance для
-   `kilogram-offline`, включая отдельные clean build roots и сравнение payload
-   artifacts, а не только deterministic ZIP одного локального binary.
-2. Optional autostart/background mode оставить отдельной явной настройкой, не
+1. M0.9.51: минимальный blind mailbox contract и bounded offline-delivery flow
+   для временно недоступного получателя: opaque capability/address, recipient-
+   encrypted envelope, TTL, quotas, replay-safe authenticated receipt и
+   удаление после получения без раскрытия message/contact IDs storage node.
+2. Добавить independent second-builder reproduction и подписанный public
+   release provenance поверх M0.9.50 same-host clean-root gate.
+3. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
-3. Добавить macOS/Linux/mobile providers той же platform boundary.
-4. Спроектировать privacy-preserving gossip/mailbox и first-contact freshness;
+4. Добавить macOS/Linux/mobile providers той же platform boundary.
+5. Спроектировать privacy-preserving gossip и first-contact freshness;
    M0.9.29 скрывает payload/явные IDs, но не access correlation.
-5. Membership removal и group governance проектировать вместе с ordered
+6. Membership removal и group governance проектировать вместе с ordered
    security events и MLS epoch; compact Merkle/range summary и независимый
    криптографический аудит остаются до публичного выпуска.
