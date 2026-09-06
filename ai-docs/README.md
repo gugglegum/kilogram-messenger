@@ -381,16 +381,20 @@ removal semantics и MLS-группы ещё не реализованы.
 
 ## План ближайших работ
 
-Реализованный M0.9.56 вынес mailbox capability convergence в network-free
-`kilogram-mailbox-provisioning`: signed update/ACK records однозначно задают
-eligible retry, current head, owner receive overlap и immediate revocation после
-любого restart. Тот же автомат теперь используют state load, automatic sender,
-recipient apply и read/write binding selection. Deterministic regression
-проверяет activation, потерянный ACK, два encode/decode restart, idempotent
-retry, rotation и revoke без sockets/Firewall. Второй EXE не создан.
+Реализованный M0.9.57 вывел mailbox activation/status/rotation/revocation в
+существующий Windows client через authenticated IPC v23. Единственный
+serialized runtime остаётся state owner, desktop выбирает exact enrolled peer
+Device и передаёт только public service URL/store key, а обратно получает
+opaque binding/update IDs, generation и convergence state. IPC workflow не
+создаёт manual offer, не раскрывает read/write capability, Root/device secrets
+и не добавляет EXE. Network-bearing targets только compile/clippy-verified;
+release/ZIP не создавались.
 
-1. M0.9.57: вывести mailbox create/status/rotate/revoke через authenticated IPC
-   и минимальный Windows UI без выдачи GUI Root/device/mailbox secrets.
+1. M0.9.58: подготовить controlled two-device mailbox lifecycle field test для
+   activation, forced lost ACK/restart, rotation overlap и revocation через
+   direct/relay, с проверкой convergence GUI и opaque-only store state. Сам
+   сетевой запуск и переносимый debug-набор выполнять только в согласованное
+   тестовое окно.
 2. Уже реализованный M0.9.50 дважды строит `kilogram-offline` из exact
    SHA-256-manifested source в отдельных clean source/target roots, требует
    byte-identical EXE и fail-closed связывает clean package с проверенным
@@ -650,6 +654,9 @@ retry, rotation и revoke без sockets/Firewall. Второй EXE не соз�
 - [`../docs/RFC-0078-transport-independent-mailbox-capability-convergence.md`](../docs/RFC-0078-transport-independent-mailbox-capability-convergence.md) —
   реализованный M0.9.56 pure signed-artifact convergence автомат и
   deterministic lost-ACK/restart/rotation/revocation regression.
+- [`../docs/RFC-0079-authenticated-mailbox-desktop-control.md`](../docs/RFC-0079-authenticated-mailbox-desktop-control.md) —
+  реализованный M0.9.57 authenticated IPC v23 и Windows mailbox
+  activation/status/rotation/revocation без передачи capability secrets в GUI.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

@@ -175,12 +175,31 @@ lifecycle exchange and deterministic convergence are specified in
 [`docs/RFC-0076-runtime-mailbox-fallback-and-ack.md`](docs/RFC-0076-runtime-mailbox-fallback-and-ack.md),
 [`docs/RFC-0077-authenticated-mailbox-capability-lifecycle.md`](docs/RFC-0077-authenticated-mailbox-capability-lifecycle.md), and
 [`docs/RFC-0078-transport-independent-mailbox-capability-convergence.md`](docs/RFC-0078-transport-independent-mailbox-capability-convergence.md).
+Authenticated secret-free lifecycle control from the Windows client is
+specified in
+[`docs/RFC-0079-authenticated-mailbox-desktop-control.md`](docs/RFC-0079-authenticated-mailbox-desktop-control.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.56 mailbox capability convergence — complete
+## Current milestone: M0.9.57 authenticated mailbox desktop control — complete
+
+The existing Windows client can now activate, inspect, rotate and revoke a
+mailbox capability for an exact enrolled peer Device through authenticated IPC
+v23. The single serialized runtime remains the only state owner; the GUI sees
+only public service parameters plus opaque IDs, generations and convergence
+states. Mailbox read/write capabilities and Root/device secrets never cross
+the desktop IPC boundary.
+
+The desktop automatically refreshes secret-free lifecycle status after a
+mutation. A fail-closed verifier guards command mapping, locked runtime
+ownership, absence of manual offer export and absence of another executable.
+The network-bearing targets were compiled but not launched; no release build or
+ZIP package was produced. Details are in
+[`docs/RFC-0079-authenticated-mailbox-desktop-control.md`](docs/RFC-0079-authenticated-mailbox-desktop-control.md).
+
+## Previous milestone: M0.9.56 mailbox capability convergence — complete
 
 Mailbox activation, rotation, revocation and recipient ACK state now converge
 through one transport-independent `kilogram-mailbox-provisioning` state
@@ -196,7 +215,7 @@ triggering Windows Firewall. Six provisioning tests pass; no release build or
 ZIP package is produced. Details are in
 [`docs/RFC-0078-transport-independent-mailbox-capability-convergence.md`](docs/RFC-0078-transport-independent-mailbox-capability-convergence.md).
 
-## Previous milestone: M0.9.55 authenticated mailbox capability lifecycle — complete
+## Earlier milestone: M0.9.55 authenticated mailbox capability lifecycle — complete
 
 Device-signed contiguous activation/rotation/revocation updates are exchanged
 through the existing authenticated Device session. A recipient durably applies

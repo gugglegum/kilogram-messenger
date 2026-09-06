@@ -13,19 +13,19 @@ use std::{
 use anyhow::{Context, Result, bail, ensure};
 use eframe::egui;
 use kilogram_bootstrap_contract::{DesktopBootstrapOutput, MAX_DESKTOP_BOOTSTRAP_OUTPUT_BYTES};
-use kilogram_identity::{AccountDeviceListSnapshot, AccountId, AccountRecoveryPhrase};
+use kilogram_identity::{AccountDeviceListSnapshot, AccountId, AccountRecoveryPhrase, DeviceId};
 use kilogram_runtime_ipc::{
     RuntimeIpcCommand, RuntimeIpcContactTicketRefresh, RuntimeIpcConversationSummary,
-    RuntimeIpcDeviceDirectoryStatus, RuntimeIpcDeviceDirectoryUpdate, RuntimeIpcHistoryCursor,
-    RuntimeIpcHistoryMessage, RuntimeIpcHistoryPage, RuntimeIpcOutboxStatus, RuntimeIpcQueueState,
-    RuntimeIpcRequestId, RuntimeIpcResponse, RuntimeIpcRoutePolicy,
-    RuntimeIpcTicketAutomationStatus, RuntimeIpcTicketPublication, RuntimeLaunchProfile,
-    RuntimeLaunchSettings,
+    RuntimeIpcDeviceDirectoryStatus, RuntimeIpcDeviceDirectoryUpdate,
+    RuntimeIpcEndpointCandidateState, RuntimeIpcHistoryCursor, RuntimeIpcHistoryMessage,
+    RuntimeIpcHistoryPage, RuntimeIpcMailboxCapabilityTransition, RuntimeIpcMailboxStatus,
+    RuntimeIpcOutboxStatus, RuntimeIpcQueueState, RuntimeIpcRequestId, RuntimeIpcResponse,
+    RuntimeIpcRoutePolicy, RuntimeIpcTicketAutomationStatus, RuntimeIpcTicketPublication,
+    RuntimeLaunchProfile, RuntimeLaunchSettings,
 };
 #[cfg(test)]
 use kilogram_runtime_ipc::{
-    RuntimeIpcEndpointCandidateState, RuntimeIpcEndpointCandidateStatus,
-    RuntimeIpcEndpointTicketRefresh, RuntimeIpcNetworkClass,
+    RuntimeIpcEndpointCandidateStatus, RuntimeIpcEndpointTicketRefresh, RuntimeIpcNetworkClass,
     RuntimeIpcTicketAutomationActionStatus,
 };
 use zeroize::{Zeroize as _, Zeroizing};
@@ -52,6 +52,7 @@ const RUNTIME_START_TIMEOUT: Duration = Duration::from_secs(60);
 const RUNTIME_START_RETRY_INTERVAL: Duration = Duration::from_millis(500);
 const RUNTIME_STOP_TIMEOUT: Duration = Duration::from_secs(3);
 const MAX_DESCRIPTOR_PATH_BYTES: usize = 32 * 1024;
+const DEFAULT_MAILBOX_VALIDITY_SECONDS: u64 = 7 * 24 * 60 * 60;
 const RUNTIME_DEVICE_LIST_DIGEST_DOMAIN: &[u8] = b"kilogram:runtime-device-list-digest:v1\0";
 
 pub fn run() -> eframe::Result {
@@ -215,6 +216,10 @@ enum Operation {
     RefreshContactTicket,
     ConfigureTicketAutomation,
     TicketAutomationStatus,
+    MailboxCreate,
+    MailboxRotate,
+    MailboxRevoke,
+    MailboxStatus,
     RecoveryApprove,
     RecoveryRun,
     RecoveryCancel,
@@ -247,6 +252,10 @@ enum RuntimeUiAction {
     EnableTicketAutomation,
     DisableTicketAutomation,
     RefreshTicketAutomationStatus,
+    CreateMailbox,
+    RotateMailbox,
+    RevokeMailbox,
+    RefreshMailboxStatus,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -888,6 +897,12 @@ struct ViewModel {
     ticket_automation_allow_mobile: bool,
     ticket_automation_allow_unknown_network: bool,
     ticket_automation_statuses: Vec<RuntimeIpcTicketAutomationStatus>,
+    mailbox_peer_device_id: String,
+    mailbox_service_base_url: String,
+    mailbox_store_key: String,
+    mailbox_valid_for_seconds: String,
+    mailbox_status: Option<RuntimeIpcMailboxStatus>,
+    mailbox_transition: Option<RuntimeIpcMailboxCapabilityTransition>,
     notice: Option<String>,
     error: Option<String>,
 }
@@ -922,6 +937,12 @@ impl ViewModel {
             ticket_automation_allow_mobile: false,
             ticket_automation_allow_unknown_network: false,
             ticket_automation_statuses: Vec::new(),
+            mailbox_peer_device_id: String::new(),
+            mailbox_service_base_url: String::new(),
+            mailbox_store_key: String::new(),
+            mailbox_valid_for_seconds: DEFAULT_MAILBOX_VALIDITY_SECONDS.to_string(),
+            mailbox_status: None,
+            mailbox_transition: None,
             notice: None,
             error: None,
         }
@@ -950,10 +971,26 @@ impl ViewModel {
             return false;
         };
         let changed = self.selected_contact_id.as_deref() != Some(contact_id);
+        let mailbox_peer_device_id = summary
+            .endpoint_candidates
+            .iter()
+            .find(|candidate| {
+                candidate.primary && candidate.state == RuntimeIpcEndpointCandidateState::Usable
+            })
+            .or_else(|| {
+                summary
+                    .endpoint_candidates
+                    .iter()
+                    .find(|candidate| candidate.state == RuntimeIpcEndpointCandidateState::Usable)
+            })
+            .map_or(summary.peer_device_id, |candidate| candidate.peer_device_id)
+            .to_string();
         self.selected_contact_id = Some(contact_id.to_owned());
         self.conversation.clone_from(&summary.conversation_label);
         self.peer_account_id = summary.peer_account_id.to_string();
         if changed {
+            self.mailbox_peer_device_id = mailbox_peer_device_id;
+            self.mailbox_transition = None;
             self.history.clear();
             self.history_total = 0;
             self.history_next_cursor = None;
@@ -982,6 +1019,8 @@ impl ViewModel {
             self.selected_contact_id = None;
             self.conversation.clear();
             self.peer_account_id.clear();
+            self.mailbox_peer_device_id.clear();
+            self.mailbox_transition = None;
             self.history.clear();
             self.history_total = 0;
             self.history_next_cursor = None;
@@ -1012,6 +1051,8 @@ impl ViewModel {
             self.connection = ConnectionState::Connecting;
             self.notice = None;
             self.device_directory_status = None;
+            self.mailbox_status = None;
+            self.mailbox_transition = None;
         }
     }
 
@@ -1153,6 +1194,24 @@ impl ViewModel {
                 self.notice = Some("Automatic ticket-exchange status refreshed".to_owned());
                 self.error = None;
             }
+            Ok(WorkerSuccess::MailboxChanged(transition)) => {
+                self.connection = ConnectionState::Connected;
+                self.notice = Some(format!(
+                    "Mailbox capability {} at generation {} for device {} ({})",
+                    transition.action,
+                    transition.generation,
+                    compact_id(&transition.peer_device_id.to_string()),
+                    transition.delivery_state
+                ));
+                self.mailbox_transition = Some(transition);
+                self.mailbox_status = None;
+                self.error = None;
+            }
+            Ok(WorkerSuccess::MailboxStatus(status)) => {
+                self.connection = ConnectionState::Connected;
+                self.mailbox_status = Some(status);
+                self.error = None;
+            }
             Ok(WorkerSuccess::Conversations(conversations)) => {
                 self.connection = ConnectionState::Connected;
                 self.apply_conversations(conversations);
@@ -1175,6 +1234,8 @@ impl ViewModel {
                 self.connection = ConnectionState::Disconnected;
                 self.account_id = None;
                 self.device_id = None;
+                self.mailbox_status = None;
+                self.mailbox_transition = None;
                 self.notice = Some("Runtime stopped cleanly".to_owned());
                 self.error = None;
             }
@@ -1426,6 +1487,33 @@ enum WorkerRequest {
     TicketAutomationStatus {
         descriptor: PathBuf,
     },
+    MailboxCreate {
+        descriptor: PathBuf,
+        conversation: String,
+        peer_account_id: AccountId,
+        peer_device_id: DeviceId,
+        service_base_url: String,
+        store_key: String,
+        valid_for_seconds: u64,
+    },
+    MailboxRotate {
+        descriptor: PathBuf,
+        conversation: String,
+        peer_account_id: AccountId,
+        peer_device_id: DeviceId,
+        service_base_url: String,
+        store_key: String,
+        valid_for_seconds: u64,
+    },
+    MailboxRevoke {
+        descriptor: PathBuf,
+        conversation: String,
+        peer_account_id: AccountId,
+        peer_device_id: DeviceId,
+    },
+    MailboxStatus {
+        descriptor: PathBuf,
+    },
     Conversations {
         descriptor: PathBuf,
     },
@@ -1478,6 +1566,10 @@ impl WorkerRequest {
             Self::RefreshContactTicket { .. } => Operation::RefreshContactTicket,
             Self::ConfigureTicketAutomation { .. } => Operation::ConfigureTicketAutomation,
             Self::TicketAutomationStatus { .. } => Operation::TicketAutomationStatus,
+            Self::MailboxCreate { .. } => Operation::MailboxCreate,
+            Self::MailboxRotate { .. } => Operation::MailboxRotate,
+            Self::MailboxRevoke { .. } => Operation::MailboxRevoke,
+            Self::MailboxStatus { .. } => Operation::MailboxStatus,
             Self::Conversations { .. } => Operation::Conversations,
             Self::History { older: false, .. } => Operation::History,
             Self::History { older: true, .. } => Operation::HistoryOlder,
@@ -1554,6 +1646,8 @@ enum WorkerSuccess {
     ContactTicketRefreshed(RuntimeIpcContactTicketRefresh),
     TicketAutomationConfigured(RuntimeIpcTicketAutomationStatus),
     TicketAutomationStatus(Vec<RuntimeIpcTicketAutomationStatus>),
+    MailboxChanged(RuntimeIpcMailboxCapabilityTransition),
+    MailboxStatus(RuntimeIpcMailboxStatus),
     Conversations(Vec<RuntimeIpcConversationSummary>),
     History {
         page: RuntimeIpcHistoryPage,
@@ -2576,6 +2670,92 @@ async fn execute_request(request: WorkerRequest) -> Result<WorkerSuccess> {
                 _ => bail!("Runtime returned an unexpected ticket-automation status response"),
             }
         }
+        WorkerRequest::MailboxCreate {
+            descriptor,
+            conversation,
+            peer_account_id,
+            peer_device_id,
+            service_base_url,
+            store_key,
+            valid_for_seconds,
+        } => {
+            let command = RuntimeIpcCommand::CreateMailboxCapability {
+                conversation,
+                peer_account_id,
+                peer_device_id,
+                service_base_url,
+                store_key,
+                valid_for_seconds,
+            };
+            match kilogram_runtime_ipc::call(&descriptor, command).await? {
+                RuntimeIpcResponse::MailboxCapabilityChanged(transition) => {
+                    Ok(WorkerSuccess::MailboxChanged(*transition))
+                }
+                RuntimeIpcResponse::Error { message } => {
+                    bail!("Runtime rejected mailbox activation: {message}")
+                }
+                _ => bail!("Runtime returned an unexpected mailbox-activation response"),
+            }
+        }
+        WorkerRequest::MailboxRotate {
+            descriptor,
+            conversation,
+            peer_account_id,
+            peer_device_id,
+            service_base_url,
+            store_key,
+            valid_for_seconds,
+        } => {
+            let command = RuntimeIpcCommand::RotateMailboxCapability {
+                conversation,
+                peer_account_id,
+                peer_device_id,
+                service_base_url,
+                store_key,
+                valid_for_seconds,
+            };
+            match kilogram_runtime_ipc::call(&descriptor, command).await? {
+                RuntimeIpcResponse::MailboxCapabilityChanged(transition) => {
+                    Ok(WorkerSuccess::MailboxChanged(*transition))
+                }
+                RuntimeIpcResponse::Error { message } => {
+                    bail!("Runtime rejected mailbox rotation: {message}")
+                }
+                _ => bail!("Runtime returned an unexpected mailbox-rotation response"),
+            }
+        }
+        WorkerRequest::MailboxRevoke {
+            descriptor,
+            conversation,
+            peer_account_id,
+            peer_device_id,
+        } => {
+            let command = RuntimeIpcCommand::RevokeMailboxCapability {
+                conversation,
+                peer_account_id,
+                peer_device_id,
+            };
+            match kilogram_runtime_ipc::call(&descriptor, command).await? {
+                RuntimeIpcResponse::MailboxCapabilityChanged(transition) => {
+                    Ok(WorkerSuccess::MailboxChanged(*transition))
+                }
+                RuntimeIpcResponse::Error { message } => {
+                    bail!("Runtime rejected mailbox revocation: {message}")
+                }
+                _ => bail!("Runtime returned an unexpected mailbox-revocation response"),
+            }
+        }
+        WorkerRequest::MailboxStatus { descriptor } => {
+            match kilogram_runtime_ipc::call(&descriptor, RuntimeIpcCommand::MailboxStatus).await? {
+                RuntimeIpcResponse::MailboxStatus(status) => {
+                    Ok(WorkerSuccess::MailboxStatus(status))
+                }
+                RuntimeIpcResponse::Error { message } => {
+                    bail!("Runtime rejected mailbox status: {message}")
+                }
+                _ => bail!("Runtime returned an unexpected mailbox-status response"),
+            }
+        }
         WorkerRequest::Conversations { descriptor } => {
             match kilogram_runtime_ipc::call(&descriptor, RuntimeIpcCommand::ConversationList)
                 .await?
@@ -2764,6 +2944,8 @@ impl KilogramApp {
                 response.result,
                 Ok(WorkerSuccess::History { older: false, .. })
             );
+            let refreshed = matches!(response.result, Ok(WorkerSuccess::Refreshed(_)));
+            let mailbox_changed = matches!(response.result, Ok(WorkerSuccess::MailboxChanged(_)));
             self.model.apply(response);
             if connected {
                 self.runtime_start_deadline = None;
@@ -2779,6 +2961,8 @@ impl KilogramApp {
                 self.start_history(false);
             } else if conversations || initial_history {
                 self.start_refresh();
+            } else if refreshed || mailbox_changed {
+                self.start_mailbox_status();
             }
         }
     }
@@ -4647,6 +4831,104 @@ impl KilogramApp {
         }
     }
 
+    fn start_mailbox_change(&mut self, operation: Operation) {
+        let result: Result<WorkerRequest> = (|| {
+            ensure!(
+                self.model.connection == ConnectionState::Connected,
+                "Connect to the running runtime first"
+            );
+            ensure!(
+                self.model.selected_contact_id.is_some(),
+                "Select an enrolled contact first"
+            );
+            let descriptor = self.model.descriptor()?;
+            let conversation = self.model.conversation.trim();
+            ensure!(!conversation.is_empty(), "Conversation label is required");
+            let peer_account_id = AccountId::from_str(self.model.peer_account_id.trim())
+                .context("Peer Account ID is invalid")?;
+            let peer_device_id = DeviceId::from_str(self.model.mailbox_peer_device_id.trim())
+                .context("Peer Device ID is invalid")?;
+            if operation == Operation::MailboxRevoke {
+                return Ok(WorkerRequest::MailboxRevoke {
+                    descriptor,
+                    conversation: conversation.to_owned(),
+                    peer_account_id,
+                    peer_device_id,
+                });
+            }
+            let service_base_url = self.model.mailbox_service_base_url.trim();
+            ensure!(
+                !service_base_url.is_empty(),
+                "Mailbox service URL is required"
+            );
+            let store_key = self.model.mailbox_store_key.trim();
+            ensure!(
+                !store_key.is_empty(),
+                "Mailbox public store key is required"
+            );
+            let valid_for_seconds = self
+                .model
+                .mailbox_valid_for_seconds
+                .trim()
+                .parse::<u64>()
+                .context("Mailbox validity seconds must be an integer")?;
+            ensure!(valid_for_seconds > 0, "Mailbox validity must be positive");
+            let fields = (
+                descriptor,
+                conversation.to_owned(),
+                peer_account_id,
+                peer_device_id,
+                service_base_url.to_owned(),
+                store_key.to_owned(),
+                valid_for_seconds,
+            );
+            match operation {
+                Operation::MailboxCreate => Ok(WorkerRequest::MailboxCreate {
+                    descriptor: fields.0,
+                    conversation: fields.1,
+                    peer_account_id: fields.2,
+                    peer_device_id: fields.3,
+                    service_base_url: fields.4,
+                    store_key: fields.5,
+                    valid_for_seconds: fields.6,
+                }),
+                Operation::MailboxRotate => Ok(WorkerRequest::MailboxRotate {
+                    descriptor: fields.0,
+                    conversation: fields.1,
+                    peer_account_id: fields.2,
+                    peer_device_id: fields.3,
+                    service_base_url: fields.4,
+                    store_key: fields.5,
+                    valid_for_seconds: fields.6,
+                }),
+                _ => bail!("Unsupported mailbox lifecycle operation"),
+            }
+        })();
+        match result {
+            Ok(request) => self.submit(operation, request),
+            Err(error) => self.model.fail(operation, format!("{error:#}")),
+        }
+    }
+
+    fn start_mailbox_status(&mut self) {
+        if self.model.pending.is_some() {
+            return;
+        }
+        let result = self.model.descriptor().and_then(|descriptor| {
+            ensure!(
+                self.model.connection == ConnectionState::Connected,
+                "Connect to the running runtime first"
+            );
+            Ok(WorkerRequest::MailboxStatus { descriptor })
+        });
+        match result {
+            Ok(request) => self.submit(Operation::MailboxStatus, request),
+            Err(error) => self
+                .model
+                .fail(Operation::MailboxStatus, format!("{error:#}")),
+        }
+    }
+
     fn start_conversations(&mut self) {
         if self.model.pending.is_some() {
             return;
@@ -4719,6 +5001,8 @@ impl KilogramApp {
                 self.model.connection = ConnectionState::Disconnected;
                 self.model.account_id = None;
                 self.model.device_id = None;
+                self.model.mailbox_status = None;
+                self.model.mailbox_transition = None;
                 self.stop_change_subscription();
                 if was_starting {
                     let detail = self
@@ -4823,6 +5107,8 @@ impl KilogramApp {
             } else if self.runtime_process.is_none() {
                 self.model.descriptor_path = path.display().to_string();
                 self.model.connection = ConnectionState::Disconnected;
+                self.model.mailbox_status = None;
+                self.model.mailbox_transition = None;
                 self.model.notice = Some("Runtime descriptor path updated".to_owned());
             }
         }
@@ -4831,7 +5117,7 @@ impl KilogramApp {
     fn draw_header(&self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             ui.heading(egui::RichText::new("Kilogram").size(28.0).strong());
-            ui.label(egui::RichText::new("M0.9.23").color(egui::Color32::from_rgb(88, 166, 255)));
+            ui.label(egui::RichText::new("M0.9.57").color(egui::Color32::from_rgb(88, 166, 255)));
         });
         ui.label("Desktop client · authenticated local runtime IPC");
     }
@@ -6910,6 +7196,197 @@ impl KilogramApp {
                 }
             }
         });
+        let mailbox_candidates = self
+            .model
+            .selected_contact_id
+            .as_deref()
+            .and_then(|contact_id| {
+                self.model
+                    .conversations
+                    .iter()
+                    .find(|summary| summary.contact_id == contact_id)
+            })
+            .map(|summary| {
+                summary
+                    .endpoint_candidates
+                    .iter()
+                    .map(|candidate| {
+                        (
+                            candidate.peer_device_id.to_string(),
+                            candidate.primary,
+                            candidate.state,
+                        )
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        ui.collapsing("Blind mailbox fallback", |ui| {
+            ui.small("Direct or relay delivery remains preferred. A blind mailbox stores only padded ciphertext for bounded offline delivery; its operator can still observe timing and volume.");
+            if mailbox_candidates.is_empty() {
+                ui.horizontal(|ui| {
+                    ui.label("Exact peer Device ID");
+                    ui.add_enabled(
+                        false,
+                        egui::TextEdit::singleline(&mut self.model.mailbox_peer_device_id)
+                            .hint_text("Select an enrolled contact"),
+                    );
+                });
+            } else {
+                egui::ComboBox::from_label("Exact peer device")
+                    .selected_text(compact_id(&self.model.mailbox_peer_device_id))
+                    .show_ui(ui, |ui| {
+                        for (device_id, primary, state) in &mailbox_candidates {
+                            ui.add_enabled_ui(
+                                *state == RuntimeIpcEndpointCandidateState::Usable,
+                                |ui| {
+                                    ui.selectable_value(
+                                        &mut self.model.mailbox_peer_device_id,
+                                        device_id.clone(),
+                                        format!(
+                                            "{} · {}{}",
+                                            compact_id(device_id),
+                                            state.as_str(),
+                                            if *primary { " · primary" } else { "" }
+                                        ),
+                                    );
+                                },
+                            );
+                        }
+                    });
+            }
+            ui.horizontal(|ui| {
+                ui.label("Mailbox service");
+                ui.add_enabled(
+                    self.model.pending.is_none(),
+                    egui::TextEdit::singleline(&mut self.model.mailbox_service_base_url)
+                        .hint_text("https://mailbox-store.example")
+                        .desired_width(f32::INFINITY),
+                );
+            });
+            ui.horizontal(|ui| {
+                ui.label("Public store key");
+                ui.add_enabled(
+                    self.model.pending.is_none(),
+                    egui::TextEdit::singleline(&mut self.model.mailbox_store_key)
+                        .hint_text("Mailbox service public key")
+                        .desired_width(f32::INFINITY),
+                );
+            });
+            ui.horizontal(|ui| {
+                ui.label("Validity (seconds)");
+                ui.add_enabled(
+                    self.model.pending.is_none(),
+                    egui::TextEdit::singleline(&mut self.model.mailbox_valid_for_seconds)
+                        .desired_width(140.0),
+                );
+            });
+            let selected_device_usable = mailbox_candidates.iter().any(
+                |(device_id, _, state)| {
+                    device_id == &self.model.mailbox_peer_device_id
+                        && *state == RuntimeIpcEndpointCandidateState::Usable
+                },
+            );
+            let mailbox_selected = self.model.pending.is_none()
+                && self.model.connection == ConnectionState::Connected
+                && self.model.selected_contact_id.is_some()
+                && selected_device_usable;
+            let mailbox_configured = mailbox_selected
+                && !self.model.mailbox_service_base_url.trim().is_empty()
+                && !self.model.mailbox_store_key.trim().is_empty()
+                && !self.model.mailbox_valid_for_seconds.trim().is_empty();
+            ui.horizontal_wrapped(|ui| {
+                if ui
+                    .add_enabled(mailbox_configured, egui::Button::new("Activate"))
+                    .clicked()
+                {
+                    action = RuntimeUiAction::CreateMailbox;
+                }
+                if ui
+                    .add_enabled(mailbox_configured, egui::Button::new("Rotate"))
+                    .clicked()
+                {
+                    action = RuntimeUiAction::RotateMailbox;
+                }
+                if ui
+                    .add_enabled(mailbox_selected, egui::Button::new("Revoke"))
+                    .clicked()
+                {
+                    action = RuntimeUiAction::RevokeMailbox;
+                }
+                if ui
+                    .add_enabled(
+                        self.model.pending.is_none()
+                            && self.model.connection == ConnectionState::Connected,
+                        egui::Button::new("Refresh status"),
+                    )
+                    .clicked()
+                {
+                    action = RuntimeUiAction::RefreshMailboxStatus;
+                }
+            });
+            ui.small("The service URL and store key are public connection parameters. Read/write capabilities, the Account Root and device keys stay inside the single runtime owner and never cross desktop IPC.");
+            if let Some(transition) = self.model.mailbox_transition.as_ref() {
+                ui.colored_label(
+                    egui::Color32::from_rgb(92, 201, 137),
+                    format!(
+                        "Last change: {} · generation {} · update {} · {}",
+                        transition.action,
+                        transition.generation,
+                        compact_id(&transition.update_id),
+                        transition.delivery_state
+                    ),
+                );
+            }
+            if let Some(status) = self.model.mailbox_status.as_ref() {
+                ui.horizontal_wrapped(|ui| {
+                    metric(ui, "Local capabilities", status.local_binding_count);
+                    metric(ui, "Peer capabilities", status.peer_binding_count);
+                    metric(ui, "Pending uploads", status.pending_upload_count as usize);
+                    metric(ui, "Stored uploads", status.stored_upload_count as usize);
+                });
+                ui.small(format!(
+                    "Capability convergence: {}/{} local updates acknowledged · delivery {}",
+                    status.local_acknowledged_update_count,
+                    status.local_update_count,
+                    status.delivery_state
+                ));
+                let selected_contact_id = self.model.selected_contact_id.as_deref();
+                for capability in status
+                    .capabilities
+                    .iter()
+                    .filter(|capability| Some(capability.contact_id.as_str()) == selected_contact_id)
+                {
+                    let healthy = capability.state == "active" && !capability.revoked;
+                    let acknowledgement = capability.acknowledged.map_or_else(
+                        || "peer-observed".to_owned(),
+                        |acknowledged| {
+                            if acknowledged {
+                                "acknowledged".to_owned()
+                            } else {
+                                "awaiting-ack".to_owned()
+                            }
+                        },
+                    );
+                    ui.colored_label(
+                        if healthy {
+                            egui::Color32::from_rgb(92, 201, 137)
+                        } else {
+                            egui::Color32::from_rgb(246, 195, 93)
+                        },
+                        format!(
+                            "{} · device {} · generation {} · {} · {}",
+                            capability.direction,
+                            compact_id(&capability.peer_device_id.to_string()),
+                            capability
+                                .generation
+                                .map_or_else(|| "legacy".to_owned(), |value| value.to_string()),
+                            capability.state,
+                            acknowledgement
+                        ),
+                    );
+                }
+            }
+        });
         action
     }
 
@@ -7789,6 +8266,14 @@ impl eframe::App for KilogramApp {
             self.start_configure_ticket_automation(false);
         } else if runtime_action == RuntimeUiAction::RefreshTicketAutomationStatus {
             self.start_ticket_automation_status();
+        } else if runtime_action == RuntimeUiAction::CreateMailbox {
+            self.start_mailbox_change(Operation::MailboxCreate);
+        } else if runtime_action == RuntimeUiAction::RotateMailbox {
+            self.start_mailbox_change(Operation::MailboxRotate);
+        } else if runtime_action == RuntimeUiAction::RevokeMailbox {
+            self.start_mailbox_change(Operation::MailboxRevoke);
+        } else if runtime_action == RuntimeUiAction::RefreshMailboxStatus {
+            self.start_mailbox_status();
         } else if add_contact_clicked {
             self.start_add_contact();
         } else if let Some(contact_id) = selected_contact {
@@ -8249,6 +8734,10 @@ mod tests {
         assert_eq!(model.selected_contact_id.as_deref(), Some("contact-a"));
         assert_eq!(model.conversation, "alice-bob");
         assert_eq!(model.peer_account_id, peer.to_string());
+        assert_eq!(
+            model.mailbox_peer_device_id,
+            peer_device.device_id().to_string()
+        );
         Ok(())
     }
 
@@ -8639,6 +9128,151 @@ mod tests {
                 ]))
                 .map_err(|_| anyhow::anyhow!("send GUI ticket-automation status response"))?;
 
+            let mailbox_create = requests
+                .recv()
+                .await
+                .context("receive GUI mailbox activation")?;
+            let (command, response) = mailbox_create.into_parts();
+            ensure!(matches!(
+                command,
+                RuntimeIpcCommand::CreateMailboxCapability {
+                    conversation,
+                    peer_account_id: requested_peer,
+                    peer_device_id: requested_device,
+                    service_base_url,
+                    store_key,
+                    valid_for_seconds: DEFAULT_MAILBOX_VALIDITY_SECONDS,
+                } if conversation == "desktop-test"
+                    && requested_peer == peer_account_id
+                    && requested_device == device_id
+                    && service_base_url == "https://mailbox.example"
+                    && store_key == "public-store-key"
+            ));
+            response
+                .send(RuntimeIpcResponse::MailboxCapabilityChanged(Box::new(
+                    RuntimeIpcMailboxCapabilityTransition {
+                        contact_id: "22".repeat(32),
+                        conversation_id: ConversationId::from_label("desktop-test"),
+                        peer_account_id,
+                        peer_device_id: device_id,
+                        binding_id: "91".repeat(32),
+                        update_id: "92".repeat(32),
+                        generation: 1,
+                        action: "activated".to_owned(),
+                        delivery_state: "queued-for-authenticated-runtime-session".to_owned(),
+                    },
+                )))
+                .map_err(|_| anyhow::anyhow!("send GUI mailbox activation response"))?;
+
+            let mailbox_rotate = requests
+                .recv()
+                .await
+                .context("receive GUI mailbox rotation")?;
+            let (command, response) = mailbox_rotate.into_parts();
+            ensure!(matches!(
+                command,
+                RuntimeIpcCommand::RotateMailboxCapability {
+                    conversation,
+                    peer_account_id: requested_peer,
+                    peer_device_id: requested_device,
+                    service_base_url,
+                    store_key,
+                    valid_for_seconds: DEFAULT_MAILBOX_VALIDITY_SECONDS,
+                } if conversation == "desktop-test"
+                    && requested_peer == peer_account_id
+                    && requested_device == device_id
+                    && service_base_url == "https://mailbox.example"
+                    && store_key == "public-store-key"
+            ));
+            response
+                .send(RuntimeIpcResponse::MailboxCapabilityChanged(Box::new(
+                    RuntimeIpcMailboxCapabilityTransition {
+                        contact_id: "22".repeat(32),
+                        conversation_id: ConversationId::from_label("desktop-test"),
+                        peer_account_id,
+                        peer_device_id: device_id,
+                        binding_id: "93".repeat(32),
+                        update_id: "94".repeat(32),
+                        generation: 2,
+                        action: "rotated".to_owned(),
+                        delivery_state: "queued-for-authenticated-runtime-session".to_owned(),
+                    },
+                )))
+                .map_err(|_| anyhow::anyhow!("send GUI mailbox rotation response"))?;
+
+            let mailbox_revoke = requests
+                .recv()
+                .await
+                .context("receive GUI mailbox revocation")?;
+            let (command, response) = mailbox_revoke.into_parts();
+            ensure!(matches!(
+                command,
+                RuntimeIpcCommand::RevokeMailboxCapability {
+                    conversation,
+                    peer_account_id: requested_peer,
+                    peer_device_id: requested_device,
+                } if conversation == "desktop-test"
+                    && requested_peer == peer_account_id
+                    && requested_device == device_id
+            ));
+            response
+                .send(RuntimeIpcResponse::MailboxCapabilityChanged(Box::new(
+                    RuntimeIpcMailboxCapabilityTransition {
+                        contact_id: "22".repeat(32),
+                        conversation_id: ConversationId::from_label("desktop-test"),
+                        peer_account_id,
+                        peer_device_id: device_id,
+                        binding_id: "93".repeat(32),
+                        update_id: "95".repeat(32),
+                        generation: 3,
+                        action: "revoked".to_owned(),
+                        delivery_state: "queued-for-authenticated-runtime-session".to_owned(),
+                    },
+                )))
+                .map_err(|_| anyhow::anyhow!("send GUI mailbox revocation response"))?;
+
+            let mailbox_status = requests
+                .recv()
+                .await
+                .context("receive GUI mailbox status")?;
+            let (command, response) = mailbox_status.into_parts();
+            ensure!(matches!(command, RuntimeIpcCommand::MailboxStatus));
+            response
+                .send(RuntimeIpcResponse::MailboxStatus(RuntimeIpcMailboxStatus {
+                    local_binding_count: 1,
+                    local_usable_count: 0,
+                    peer_binding_count: 0,
+                    peer_usable_count: 0,
+                    local_update_count: 3,
+                    local_acknowledged_update_count: 2,
+                    local_unacknowledged_update_count: 1,
+                    peer_update_count: 0,
+                    local_revoked_head_count: 1,
+                    peer_revoked_head_count: 0,
+                    dispatch_count: 0,
+                    pending_upload_count: 0,
+                    stored_upload_count: 0,
+                    received_commit_count: 0,
+                    deleted_inbound_count: 0,
+                    expired_dispatch_count: 0,
+                    failed_dispatch_count: 0,
+                    delivery_state: "revoked".to_owned(),
+                    capabilities: vec![kilogram_runtime_ipc::RuntimeIpcMailboxCapabilityStatus {
+                        contact_id: "22".repeat(32),
+                        conversation_id: ConversationId::from_label("desktop-test"),
+                        peer_account_id,
+                        peer_device_id: device_id,
+                        direction: "receive".to_owned(),
+                        binding_id: "93".repeat(32),
+                        update_id: Some("95".repeat(32)),
+                        generation: Some(3),
+                        acknowledged: Some(false),
+                        revoked: true,
+                        state: "revocation-pending".to_owned(),
+                    }],
+                }))
+                .map_err(|_| anyhow::anyhow!("send GUI mailbox status response"))?;
+
             let directory_update = requests
                 .recv()
                 .await
@@ -8830,6 +9464,74 @@ mod tests {
             WorkerSuccess::TicketAutomationStatus(statuses)
                 if statuses.len() == 1 && statuses[0].execution_scope
                     == "only-while-runtime-process-is-running"
+        ));
+
+        let mailbox_created = execute_request(WorkerRequest::MailboxCreate {
+            descriptor: descriptor.clone(),
+            conversation: "desktop-test".to_owned(),
+            peer_account_id,
+            peer_device_id: device_id,
+            service_base_url: "https://mailbox.example".to_owned(),
+            store_key: "public-store-key".to_owned(),
+            valid_for_seconds: DEFAULT_MAILBOX_VALIDITY_SECONDS,
+        })
+        .await?;
+        assert!(matches!(
+            mailbox_created,
+            WorkerSuccess::MailboxChanged(RuntimeIpcMailboxCapabilityTransition {
+                action,
+                generation: 1,
+                ..
+            }) if action == "activated"
+        ));
+
+        let mailbox_rotated = execute_request(WorkerRequest::MailboxRotate {
+            descriptor: descriptor.clone(),
+            conversation: "desktop-test".to_owned(),
+            peer_account_id,
+            peer_device_id: device_id,
+            service_base_url: "https://mailbox.example".to_owned(),
+            store_key: "public-store-key".to_owned(),
+            valid_for_seconds: DEFAULT_MAILBOX_VALIDITY_SECONDS,
+        })
+        .await?;
+        assert!(matches!(
+            mailbox_rotated,
+            WorkerSuccess::MailboxChanged(RuntimeIpcMailboxCapabilityTransition {
+                action,
+                generation: 2,
+                ..
+            }) if action == "rotated"
+        ));
+
+        let mailbox_revoked = execute_request(WorkerRequest::MailboxRevoke {
+            descriptor: descriptor.clone(),
+            conversation: "desktop-test".to_owned(),
+            peer_account_id,
+            peer_device_id: device_id,
+        })
+        .await?;
+        assert!(matches!(
+            mailbox_revoked,
+            WorkerSuccess::MailboxChanged(RuntimeIpcMailboxCapabilityTransition {
+                action,
+                generation: 3,
+                ..
+            }) if action == "revoked"
+        ));
+
+        let mailbox_status = execute_request(WorkerRequest::MailboxStatus {
+            descriptor: descriptor.clone(),
+        })
+        .await?;
+        assert!(matches!(
+            mailbox_status,
+            WorkerSuccess::MailboxStatus(RuntimeIpcMailboxStatus {
+                local_revoked_head_count: 1,
+                capabilities,
+                ..
+            }) if capabilities.len() == 1
+                && capabilities[0].state == "revocation-pending"
         ));
 
         let directory_update = execute_request(WorkerRequest::ApplyDeviceDirectory {

@@ -21,7 +21,7 @@ use tokio::{
     time::timeout,
 };
 
-const IPC_VERSION: u8 = 22;
+const IPC_VERSION: u8 = 23;
 const MAX_DESCRIPTOR_BYTES: u64 = 16 * 1024;
 const MAX_LAUNCH_PROFILE_BYTES: u64 = 64 * 1024;
 const MAX_LAUNCH_PROFILE_PATHS: usize = 64;
@@ -362,6 +362,27 @@ pub enum RuntimeIpcCommand {
     },
     OutboxStatus,
     MailboxStatus,
+    CreateMailboxCapability {
+        conversation: String,
+        peer_account_id: AccountId,
+        peer_device_id: DeviceId,
+        service_base_url: String,
+        store_key: String,
+        valid_for_seconds: u64,
+    },
+    RotateMailboxCapability {
+        conversation: String,
+        peer_account_id: AccountId,
+        peer_device_id: DeviceId,
+        service_base_url: String,
+        store_key: String,
+        valid_for_seconds: u64,
+    },
+    RevokeMailboxCapability {
+        conversation: String,
+        peer_account_id: AccountId,
+        peer_device_id: DeviceId,
+    },
     ApplyOwnDeviceDirectory {
         device_list_file: PathBuf,
     },
@@ -733,6 +754,37 @@ pub struct RuntimeIpcMailboxStatus {
     pub expired_dispatch_count: usize,
     pub failed_dispatch_count: usize,
     pub delivery_state: String,
+    pub capabilities: Vec<RuntimeIpcMailboxCapabilityStatus>,
+}
+
+/// Secret-free lifecycle projection for one current mailbox capability chain.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcMailboxCapabilityStatus {
+    pub contact_id: String,
+    pub conversation_id: ConversationId,
+    pub peer_account_id: AccountId,
+    pub peer_device_id: DeviceId,
+    pub direction: String,
+    pub binding_id: String,
+    pub update_id: Option<String>,
+    pub generation: Option<u64>,
+    pub acknowledged: Option<bool>,
+    pub revoked: bool,
+    pub state: String,
+}
+
+/// Secret-free result of a runtime-owned mailbox lifecycle mutation.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcMailboxCapabilityTransition {
+    pub contact_id: String,
+    pub conversation_id: ConversationId,
+    pub peer_account_id: AccountId,
+    pub peer_device_id: DeviceId,
+    pub binding_id: String,
+    pub update_id: String,
+    pub generation: u64,
+    pub action: String,
+    pub delivery_state: String,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -1068,6 +1120,7 @@ pub enum RuntimeIpcResponse {
     },
     OutboxStatus(RuntimeIpcOutboxStatus),
     MailboxStatus(RuntimeIpcMailboxStatus),
+    MailboxCapabilityChanged(Box<RuntimeIpcMailboxCapabilityTransition>),
     OwnDeviceDirectoryApplied(Box<RuntimeIpcDeviceDirectoryUpdate>),
     OwnDeviceDirectoryStatus(RuntimeIpcDeviceDirectoryStatus),
     PublicationChannelRotated(Box<RuntimeIpcPublicationChannelRotation>),
@@ -1654,6 +1707,72 @@ mod tests {
                 .parse::<RuntimeIpcRequestId>()
                 .is_err()
         );
+        Ok(())
+    }
+
+    #[test]
+    fn mailbox_lifecycle_ipc_round_trips_without_capability_secrets() -> Result<(), Box<dyn Error>>
+    {
+        let peer_account_id = AccountId::from_bytes([8_u8; 32]);
+        let peer_device_id = kilogram_identity::DeviceIdentity::generate()?.device_id();
+        for command in [
+            RuntimeIpcCommand::CreateMailboxCapability {
+                conversation: "ipc-mailbox".to_owned(),
+                peer_account_id,
+                peer_device_id,
+                service_base_url: "https://mailbox.example".to_owned(),
+                store_key: "public-store-key".to_owned(),
+                valid_for_seconds: 86_400,
+            },
+            RuntimeIpcCommand::RotateMailboxCapability {
+                conversation: "ipc-mailbox".to_owned(),
+                peer_account_id,
+                peer_device_id,
+                service_base_url: "https://mailbox.example".to_owned(),
+                store_key: "public-store-key".to_owned(),
+                valid_for_seconds: 86_400,
+            },
+            RuntimeIpcCommand::RevokeMailboxCapability {
+                conversation: "ipc-mailbox".to_owned(),
+                peer_account_id,
+                peer_device_id,
+            },
+        ] {
+            let encoded = postcard::to_allocvec(&command)?;
+            assert_eq!(
+                postcard::from_bytes::<RuntimeIpcCommand>(&encoded)?,
+                command
+            );
+        }
+
+        let response = RuntimeIpcResponse::MailboxCapabilityChanged(Box::new(
+            RuntimeIpcMailboxCapabilityTransition {
+                contact_id: "11".repeat(32),
+                conversation_id: ConversationId::from_label("ipc-mailbox"),
+                peer_account_id,
+                peer_device_id,
+                binding_id: "22".repeat(32),
+                update_id: "33".repeat(32),
+                generation: 2,
+                action: "rotated".to_owned(),
+                delivery_state: "queued-for-authenticated-runtime-session".to_owned(),
+            },
+        ));
+        let encoded = postcard::to_allocvec(&response)?;
+        assert_eq!(
+            postcard::from_bytes::<RuntimeIpcResponse>(&encoded)?,
+            response
+        );
+        let public_projection = serde_json::to_string(&response)?;
+        for forbidden in [
+            "read_capability",
+            "write_capability",
+            "root_secret",
+            "device_secret",
+            "encrypted_offer",
+        ] {
+            assert!(!public_projection.contains(forbidden));
+        }
         Ok(())
     }
 

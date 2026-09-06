@@ -59,8 +59,9 @@ use kilogram_runtime_ipc::{
     RuntimeIpcEndpointAnnouncementExport, RuntimeIpcEndpointAnnouncementImport,
     RuntimeIpcEndpointAnnouncementPush, RuntimeIpcEndpointCandidateState,
     RuntimeIpcEndpointCandidateStatus, RuntimeIpcEndpointTicketRefresh, RuntimeIpcHistoryCursor,
-    RuntimeIpcHistoryMessage, RuntimeIpcHistoryPage, RuntimeIpcMailboxStatus,
-    RuntimeIpcMessagePreview, RuntimeIpcNetworkClass, RuntimeIpcOutboxStatus,
+    RuntimeIpcHistoryMessage, RuntimeIpcHistoryPage, RuntimeIpcMailboxCapabilityStatus,
+    RuntimeIpcMailboxCapabilityTransition, RuntimeIpcMailboxStatus, RuntimeIpcMessagePreview,
+    RuntimeIpcNetworkClass, RuntimeIpcOutboxStatus,
     RuntimeIpcOwnDeviceAnnouncementAutomationStatus, RuntimeIpcOwnDeviceRosterAutomationStatus,
     RuntimeIpcOwnDeviceTicketDiscoveryStatus, RuntimeIpcPublicationChannelRotation,
     RuntimeIpcPublicationConflictRequest, RuntimeIpcPublicationConflictResolution,
@@ -9830,7 +9831,7 @@ fn create_runtime_mailbox_offer(
     valid_for_seconds: u64,
     output_file: PathBuf,
 ) -> Result<()> {
-    provision_runtime_mailbox(
+    let report = provision_runtime_mailbox(
         state_directory,
         conversation,
         peer_account_id,
@@ -9840,7 +9841,9 @@ fn create_runtime_mailbox_offer(
         valid_for_seconds,
         Some(output_file),
         false,
-    )
+    )?;
+    print_runtime_mailbox_provisioning_report(&report);
+    Ok(())
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -9853,7 +9856,7 @@ fn rotate_runtime_mailbox(
     store_key: MailboxStoreKey,
     valid_for_seconds: u64,
 ) -> Result<()> {
-    provision_runtime_mailbox(
+    let report = provision_runtime_mailbox(
         state_directory,
         conversation,
         peer_account_id,
@@ -9863,7 +9866,57 @@ fn rotate_runtime_mailbox(
         valid_for_seconds,
         None,
         true,
-    )
+    )?;
+    print_runtime_mailbox_provisioning_report(&report);
+    Ok(())
+}
+
+struct RuntimeMailboxProvisioningReport {
+    transition: RuntimeIpcMailboxCapabilityTransition,
+    mailbox_id: String,
+    service_base_url: String,
+    store_key: String,
+    expires_at_unix_seconds: u64,
+    offer_file: Option<PathBuf>,
+}
+
+fn print_runtime_mailbox_provisioning_report(report: &RuntimeMailboxProvisioningReport) {
+    if let Some(output_file) = &report.offer_file {
+        println!("mailbox_offer_file={}", output_file.display());
+    }
+    println!("mailbox_binding_id={}", report.transition.binding_id);
+    println!(
+        "mailbox_capability_update_id={}",
+        report.transition.update_id
+    );
+    println!(
+        "mailbox_capability_generation={}",
+        report.transition.generation
+    );
+    println!("mailbox_capability_action={}", report.transition.action);
+    println!("mailbox_id={}", report.mailbox_id);
+    println!("peer_account_id={}", report.transition.peer_account_id);
+    println!("peer_device_id={}", report.transition.peer_device_id);
+    println!("mailbox_service_url={}", report.service_base_url);
+    println!("mailbox_store_key={}", report.store_key);
+    println!(
+        "mailbox_offer_expires_at_unix_seconds={}",
+        report.expires_at_unix_seconds
+    );
+    println!("mailbox_local_capability=hpke-sealed-to-local-device");
+    println!("mailbox_shared_capability=write-only-hpke-sealed-to-peer-device");
+    println!(
+        "mailbox_capability_delivery={}",
+        report.transition.delivery_state
+    );
+    println!(
+        "status={}",
+        if report.transition.action == "rotated" {
+            "runtime-mailbox-rotated"
+        } else {
+            "runtime-mailbox-offer-created"
+        }
+    );
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -9877,7 +9930,7 @@ fn provision_runtime_mailbox(
     valid_for_seconds: u64,
     output_file: Option<PathBuf>,
     require_existing_chain: bool,
-) -> Result<()> {
+) -> Result<RuntimeMailboxProvisioningReport> {
     ensure!(
         (kilogram_mailbox_provisioning::MIN_MAILBOX_OFFER_VALIDITY_SECONDS
             ..=MAX_MAILBOX_OFFER_VALIDITY_SECONDS)
@@ -10025,7 +10078,7 @@ fn provision_runtime_mailbox(
     )?;
     update.verify_chain_link(previous_update.as_ref())?;
     let update_id = update.update_id()?;
-    let encoded_offer = offer.encode()?;
+    let encoded_offer = output_file.as_ref().map(|_| offer.encode()).transpose()?;
     run_state_transaction(&state_directory, |transaction| {
         persist_runtime_record(
             &state_directory,
@@ -10042,40 +10095,32 @@ fn provision_runtime_mailbox(
         Ok(())
     })
     .context("persist local mailbox capability and ordered update")?;
-    if let Some(output_file) = &output_file {
-        write_new_authority_file(output_file, &encoded_offer)
+    if let (Some(output_file), Some(encoded_offer)) = (&output_file, encoded_offer.as_deref()) {
+        write_new_authority_file(output_file, encoded_offer)
             .context("write recipient-bound mailbox offer without overwriting")?;
-        println!("mailbox_offer_file={}", output_file.display());
     }
-    println!("mailbox_binding_id={binding_id}");
-    println!("mailbox_capability_update_id={update_id}");
-    println!("mailbox_capability_generation={generation}");
-    println!(
-        "mailbox_capability_action={}",
-        if require_existing_chain {
-            "rotated"
-        } else {
-            "activated"
-        }
-    );
-    println!("mailbox_id={}", local_binding.address().mailbox_id());
-    println!("peer_account_id={peer_account_id}");
-    println!("peer_device_id={peer_device_id}");
-    println!("mailbox_service_url={}", local_binding.service().base_url());
-    println!("mailbox_store_key={store_key}");
-    println!("mailbox_offer_expires_at_unix_seconds={expires_at}");
-    println!("mailbox_local_capability=hpke-sealed-to-local-device");
-    println!("mailbox_shared_capability=write-only-hpke-sealed-to-peer-device");
-    println!("mailbox_capability_delivery=queued-for-authenticated-runtime-session");
-    println!(
-        "status={}",
-        if require_existing_chain {
-            "runtime-mailbox-rotated"
-        } else {
-            "runtime-mailbox-offer-created"
-        }
-    );
-    Ok(())
+    Ok(RuntimeMailboxProvisioningReport {
+        transition: RuntimeIpcMailboxCapabilityTransition {
+            contact_id: contact.contact_id().to_string(),
+            conversation_id: contact.conversation_id(),
+            peer_account_id,
+            peer_device_id,
+            binding_id: binding_id.to_string(),
+            update_id: update_id.to_string(),
+            generation,
+            action: if require_existing_chain {
+                "rotated".to_owned()
+            } else {
+                "activated".to_owned()
+            },
+            delivery_state: "queued-for-authenticated-runtime-session".to_owned(),
+        },
+        mailbox_id: local_binding.address().mailbox_id().to_string(),
+        service_base_url: local_binding.service().base_url().to_owned(),
+        store_key: store_key.to_string(),
+        expires_at_unix_seconds: expires_at,
+        offer_file: output_file,
+    })
 }
 
 fn revoke_runtime_mailbox(
@@ -10084,6 +10129,29 @@ fn revoke_runtime_mailbox(
     peer_account_id: AccountId,
     peer_device_id: DeviceId,
 ) -> Result<()> {
+    let transition = revoke_runtime_mailbox_capability(
+        state_directory,
+        conversation,
+        peer_account_id,
+        peer_device_id,
+    )?;
+    println!("mailbox_binding_id={}", transition.binding_id);
+    println!("mailbox_capability_update_id={}", transition.update_id);
+    println!("mailbox_capability_generation={}", transition.generation);
+    println!("mailbox_capability_action={}", transition.action);
+    println!("peer_account_id={}", transition.peer_account_id);
+    println!("peer_device_id={}", transition.peer_device_id);
+    println!("mailbox_capability_delivery={}", transition.delivery_state);
+    println!("status=runtime-mailbox-revoked");
+    Ok(())
+}
+
+fn revoke_runtime_mailbox_capability(
+    state_directory: PathBuf,
+    conversation: String,
+    peer_account_id: AccountId,
+    peer_device_id: DeviceId,
+) -> Result<RuntimeIpcMailboxCapabilityTransition> {
     let now = unix_time_now()?;
     let device_state = load_command_device_state(&state_directory)?;
     let trust = CommandTrustReadRepository::open(&state_directory, &device_state)?;
@@ -10174,15 +10242,17 @@ fn revoke_runtime_mailbox(
             transaction,
         )
     })?;
-    println!("mailbox_binding_id={}", update.binding_id());
-    println!("mailbox_capability_update_id={update_id}");
-    println!("mailbox_capability_generation={generation}");
-    println!("mailbox_capability_action=revoked");
-    println!("peer_account_id={peer_account_id}");
-    println!("peer_device_id={peer_device_id}");
-    println!("mailbox_capability_delivery=queued-for-authenticated-runtime-session");
-    println!("status=runtime-mailbox-revoked");
-    Ok(())
+    Ok(RuntimeIpcMailboxCapabilityTransition {
+        contact_id: contact.contact_id().to_string(),
+        conversation_id: contact.conversation_id(),
+        peer_account_id,
+        peer_device_id,
+        binding_id: update.binding_id().to_string(),
+        update_id: update_id.to_string(),
+        generation,
+        action: "revoked".to_owned(),
+        delivery_state: "queued-for-authenticated-runtime-session".to_owned(),
+    })
 }
 
 fn import_runtime_mailbox_offer(
@@ -10565,13 +10635,48 @@ fn collect_runtime_mailbox_status(state_directory: &Path) -> Result<RuntimeIpcMa
         })
         .collect::<BTreeSet<_>>();
     let mut local_revoked_head_count = 0_usize;
+    let mut capabilities = Vec::new();
     for (account_id, device_id, scope) in local_update_scopes {
-        if snapshot
-            .local_mailbox_update_head(AccountId::from_bytes(account_id), device_id, scope)?
-            .is_some_and(SignedMailboxCapabilityUpdate::is_revocation)
-        {
+        let peer_account_id = AccountId::from_bytes(account_id);
+        let head = snapshot
+            .local_mailbox_update_head(peer_account_id, device_id, scope)?
+            .context("local mailbox capability chain unexpectedly has no head")?;
+        let acknowledged = snapshot
+            .mailbox_update_acknowledgements
+            .contains_key(&head.update_id()?);
+        if head.is_revocation() {
             local_revoked_head_count += 1;
         }
+        let binding = snapshot
+            .local_mailbox_bindings
+            .get(&head.binding_id())
+            .context("local mailbox capability head lost its retained binding")?;
+        capabilities.push(RuntimeIpcMailboxCapabilityStatus {
+            contact_id: binding.contact_id().to_string(),
+            conversation_id: binding.conversation_id(),
+            peer_account_id,
+            peer_device_id: device_id,
+            direction: "receive".to_owned(),
+            binding_id: head.binding_id().to_string(),
+            update_id: Some(head.update_id()?.to_string()),
+            generation: Some(head.generation()),
+            acknowledged: Some(acknowledged),
+            revoked: head.is_revocation(),
+            state: if head.is_revocation() {
+                if acknowledged {
+                    "revoked"
+                } else {
+                    "revocation-pending"
+                }
+            } else if acknowledged {
+                "active"
+            } else if head.generation() == 1 {
+                "activation-pending"
+            } else {
+                "rotation-pending"
+            }
+            .to_owned(),
+        });
     }
     let peer_update_scopes = snapshot
         .peer_mailbox_updates
@@ -10586,13 +10691,42 @@ fn collect_runtime_mailbox_status(state_directory: &Path) -> Result<RuntimeIpcMa
         .collect::<BTreeSet<_>>();
     let mut peer_revoked_head_count = 0_usize;
     for (account_id, device_id, scope) in peer_update_scopes {
-        if snapshot
-            .peer_mailbox_update_head(AccountId::from_bytes(account_id), device_id, scope)?
-            .is_some_and(SignedMailboxCapabilityUpdate::is_revocation)
-        {
+        let peer_account_id = AccountId::from_bytes(account_id);
+        let head = snapshot
+            .peer_mailbox_update_head(peer_account_id, device_id, scope)?
+            .context("peer mailbox capability chain unexpectedly has no head")?;
+        if head.is_revocation() {
             peer_revoked_head_count += 1;
         }
+        let binding = snapshot
+            .peer_mailbox_bindings
+            .get(&head.binding_id())
+            .context("peer mailbox capability head lost its retained binding")?;
+        capabilities.push(RuntimeIpcMailboxCapabilityStatus {
+            contact_id: binding.contact_id().to_string(),
+            conversation_id: binding.conversation_id(),
+            peer_account_id,
+            peer_device_id: device_id,
+            direction: "write".to_owned(),
+            binding_id: head.binding_id().to_string(),
+            update_id: Some(head.update_id()?.to_string()),
+            generation: Some(head.generation()),
+            acknowledged: None,
+            revoked: head.is_revocation(),
+            state: if head.is_revocation() {
+                "revoked"
+            } else {
+                "active"
+            }
+            .to_owned(),
+        });
     }
+    capabilities.sort_by(|left, right| {
+        left.contact_id
+            .cmp(&right.contact_id)
+            .then_with(|| left.direction.cmp(&right.direction))
+            .then_with(|| left.peer_device_id.cmp(&right.peer_device_id))
+    });
     let local_acknowledged_update_count = snapshot.mailbox_update_acknowledgements.len();
     Ok(RuntimeIpcMailboxStatus {
         local_binding_count: snapshot.local_mailbox_bindings.len(),
@@ -10616,6 +10750,7 @@ fn collect_runtime_mailbox_status(state_directory: &Path) -> Result<RuntimeIpcMa
         expired_dispatch_count,
         failed_dispatch_count,
         delivery_state: "active-direct-relay-first-mailbox-fallback".to_owned(),
+        capabilities,
     })
 }
 
@@ -10677,6 +10812,27 @@ fn print_runtime_mailbox_status(status: &RuntimeIpcMailboxStatus) {
         status.failed_dispatch_count
     );
     println!("mailbox_delivery_state={}", status.delivery_state);
+    println!("mailbox_capability_count={}", status.capabilities.len());
+    for capability in &status.capabilities {
+        println!(
+            "mailbox_capability_contact_id={} conversation_id={} peer_account_id={} peer_device_id={} direction={} binding_id={} update_id={} generation={} acknowledged={} revoked={} state={}",
+            capability.contact_id,
+            capability.conversation_id,
+            capability.peer_account_id,
+            capability.peer_device_id,
+            capability.direction,
+            capability.binding_id,
+            capability.update_id.as_deref().unwrap_or("none"),
+            capability
+                .generation
+                .map_or_else(|| "none".to_owned(), |value| value.to_string()),
+            capability
+                .acknowledged
+                .map_or_else(|| "not-applicable".to_owned(), |value| value.to_string()),
+            capability.revoked,
+            capability.state,
+        );
+    }
 }
 
 fn runtime_outbox_status(state_directory: PathBuf) -> Result<()> {
@@ -12615,6 +12771,98 @@ async fn handle_runtime_ipc_work(
                 },
             }
         }
+        RuntimeIpcCommand::CreateMailboxCapability {
+            conversation,
+            peer_account_id,
+            peer_device_id,
+            service_base_url,
+            store_key,
+            valid_for_seconds,
+        } => {
+            let result = store_key
+                .parse::<MailboxStoreKey>()
+                .context("parse mailbox store public key")
+                .and_then(|store_key| {
+                    with_locked_state(state_directory, || {
+                        provision_runtime_mailbox(
+                            state_directory.to_path_buf(),
+                            conversation,
+                            peer_account_id,
+                            peer_device_id,
+                            service_base_url,
+                            store_key,
+                            valid_for_seconds,
+                            None,
+                            false,
+                        )
+                    })
+                });
+            match result {
+                Ok(report) => {
+                    state_changed = true;
+                    RuntimeIpcResponse::MailboxCapabilityChanged(Box::new(report.transition))
+                }
+                Err(error) => RuntimeIpcResponse::Error {
+                    message: format!("{error:#}"),
+                },
+            }
+        }
+        RuntimeIpcCommand::RotateMailboxCapability {
+            conversation,
+            peer_account_id,
+            peer_device_id,
+            service_base_url,
+            store_key,
+            valid_for_seconds,
+        } => {
+            let result = store_key
+                .parse::<MailboxStoreKey>()
+                .context("parse mailbox store public key")
+                .and_then(|store_key| {
+                    with_locked_state(state_directory, || {
+                        provision_runtime_mailbox(
+                            state_directory.to_path_buf(),
+                            conversation,
+                            peer_account_id,
+                            peer_device_id,
+                            service_base_url,
+                            store_key,
+                            valid_for_seconds,
+                            None,
+                            true,
+                        )
+                    })
+                });
+            match result {
+                Ok(report) => {
+                    state_changed = true;
+                    RuntimeIpcResponse::MailboxCapabilityChanged(Box::new(report.transition))
+                }
+                Err(error) => RuntimeIpcResponse::Error {
+                    message: format!("{error:#}"),
+                },
+            }
+        }
+        RuntimeIpcCommand::RevokeMailboxCapability {
+            conversation,
+            peer_account_id,
+            peer_device_id,
+        } => match with_locked_state(state_directory, || {
+            revoke_runtime_mailbox_capability(
+                state_directory.to_path_buf(),
+                conversation,
+                peer_account_id,
+                peer_device_id,
+            )
+        }) {
+            Ok(transition) => {
+                state_changed = true;
+                RuntimeIpcResponse::MailboxCapabilityChanged(Box::new(transition))
+            }
+            Err(error) => RuntimeIpcResponse::Error {
+                message: format!("{error:#}"),
+            },
+        },
         RuntimeIpcCommand::ApplyOwnDeviceDirectory { device_list_file } => {
             match with_locked_state(state_directory, || {
                 apply_runtime_own_device_directory(

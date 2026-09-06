@@ -3389,9 +3389,37 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 
 ### Следующий этап
 
-1. M0.9.57: добавить authenticated IPC и минимальный Windows UI для создания,
-   просмотра, ротации и отзыва mailbox capability без CLI, сохранив единственного
-   runtime owner и не передавая GUI Root/device/mailbox secrets.
+### M0.9.57 — authenticated mailbox desktop control: выполнено
+
+Реализовано:
+
+- IPC v23 добавляет typed activation/rotation/revocation commands и secret-free
+  lifecycle result; `MailboxStatus` теперь включает current managed heads,
+  generations, ACK/revocation и convergence state по exact peer Device;
+- activation/rotation принимают только public HTTPS service URL, pinned public
+  store key и validity; ни read/write capability, ни Root/device secret не
+  возвращаются в GUI;
+- serialized runtime actor выполняет mutation под existing state lock,
+  persistent commit предшествует success response, state change публикуется;
+- desktop IPC path не создаёт manual offer artifact и не запускает отдельный
+  CLI mailbox subprocess;
+- Windows panel выбирает exact enrolled endpoint Device, даёт Activate/Rotate/
+  Revoke/Refresh и показывает aggregate delivery плюс per-device lifecycle
+  convergence;
+- integrated authenticated IPC test покрывает mapping четырёх desktop actions,
+  а fail-closed gate запрещает secret fields, обход single owner/manual export и
+  новый executable;
+- network-bearing tests/processes не запускались; targets compile/clippy-
+  verified, release и ZIP не создавались;
+- contract зафиксирован в
+  [`../docs/RFC-0079-authenticated-mailbox-desktop-control.md`](../docs/RFC-0079-authenticated-mailbox-desktop-control.md).
+
+### Следующий этап
+
+1. M0.9.58: подготовить controlled two-device field test для activation,
+   forced lost ACK/restart, rotation overlap и revocation через direct/relay;
+   подтвердить convergence GUI и opaque-only mailbox store. Не запускать сеть и
+   не собирать переносимый debug-набор вне согласованного тестового окна.
 2. Добавить independent second-builder reproduction и подписанный public
    release provenance поверх M0.9.50 same-host clean-root gate.
 3. Optional autostart/background mode оставить отдельной явной настройкой, не
