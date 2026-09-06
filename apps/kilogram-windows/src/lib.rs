@@ -813,6 +813,10 @@ struct OutboxView {
     pending_count: usize,
     materialized_count: usize,
     delivered_count: usize,
+    mailbox_pending_count: usize,
+    mailbox_stored_count: usize,
+    mailbox_expired_count: usize,
+    mailbox_failed_count: usize,
     retry_state_count: usize,
     items: Vec<OutboxItemView>,
 }
@@ -825,6 +829,10 @@ impl From<RuntimeIpcOutboxStatus> for OutboxView {
             pending_count: status.pending_count,
             materialized_count: status.materialized_count,
             delivered_count: status.delivered_count,
+            mailbox_pending_count: status.mailbox_pending_count,
+            mailbox_stored_count: status.mailbox_stored_count,
+            mailbox_expired_count: status.mailbox_expired_count,
+            mailbox_failed_count: status.mailbox_failed_count,
             retry_state_count: status.retry_state_count,
             items: status
                 .items
@@ -837,6 +845,10 @@ impl From<RuntimeIpcOutboxStatus> for OutboxView {
                         RuntimeIpcQueueState::Queued => "queued",
                         RuntimeIpcQueueState::Materialized => "materialized",
                         RuntimeIpcQueueState::Delivered => "delivered",
+                        RuntimeIpcQueueState::MailboxPending => "mailbox-pending",
+                        RuntimeIpcQueueState::MailboxStored => "mailbox-stored",
+                        RuntimeIpcQueueState::MailboxExpired => "mailbox-expired",
+                        RuntimeIpcQueueState::MailboxFailed => "mailbox-failed",
                     },
                     acknowledgement_event_id: item
                         .acknowledgement_event_id
@@ -7130,6 +7142,10 @@ impl KilogramApp {
             metric(ui, "Pending", outbox.pending_count);
             metric(ui, "Materialized", outbox.materialized_count);
             metric(ui, "Delivered", outbox.delivered_count);
+            metric(ui, "Mailbox pending", outbox.mailbox_pending_count);
+            metric(ui, "Mailbox stored", outbox.mailbox_stored_count);
+            metric(ui, "Mailbox expired", outbox.mailbox_expired_count);
+            metric(ui, "Mailbox failed", outbox.mailbox_failed_count);
             metric(ui, "Retries", outbox.retry_state_count);
         });
         if outbox.items.is_empty() {
@@ -8388,6 +8404,10 @@ mod tests {
                     pending_count: 1,
                     materialized_count: 0,
                     delivered_count: 0,
+                    mailbox_pending_count: 0,
+                    mailbox_stored_count: 0,
+                    mailbox_expired_count: 0,
+                    mailbox_failed_count: 0,
                     retry_state_count: 0,
                     items: Vec::new(),
                 }))

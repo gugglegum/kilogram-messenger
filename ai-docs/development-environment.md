@@ -1787,3 +1787,23 @@ retirement остальных compatibility shadows ещё не реализов
   (debug 4.30, verification 4.20, retained old release cache 1.73 GiB), ниже
   40 GiB warning threshold; cache управляется прежним bounded maintenance
   policy.
+
+## M0.9.54 verification snapshot (2026-09-06)
+
+- `cargo check --workspace --all-targets --all-features --locked`, strict full
+  workspace Clippy с `-D warnings`, formatting и `git diff --check` проходят с
+  BelowNormal priority и 12 Cargo jobs.
+- `verify-kilogram-runtime-mailbox-flow.ps1` подтвердил direct/relay-before-
+  fallback, application-commit-before-delete, durable reverse ACK, signed
+  payload/dispatch, orphan-dispatch repair, honest IPC states и отсутствие
+  нового executable.
+- Mailbox contract/client/provisioning boundary gates повторно прошли: normal
+  dependency graphs 77/177/131 records соответственно, запрещённые runtime/
+  application/network crossings отсутствуют.
+- Network-free stable-name `kilogram-mailbox-client` harness: 2/2 tests passed,
+  включая новый `Pending -> Stored -> cleanup` ledger state query. CLI harness
+  полностью скомпилирован под stable name, но не запущен: socket/listener не
+  стартовал и Windows Firewall prompt не создавался.
+- Release build и ZIP package в M0.9.54 не выполнялись. Exact `target` после
+  verification содержит 19,686 files / 11.32 GiB (debug 5.19, verification
+  4.39, retained old release 1.73 GiB), ниже 40 GiB warning threshold.

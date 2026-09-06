@@ -11,5 +11,6 @@ mod ledger;
 pub use http::{MAILBOX_HTTP_CONTENT_TYPE, MailboxHttpClient};
 pub use ledger::{
     MailboxClientCleanupReport, MailboxClientLedger, MailboxClientLedgerConfig,
-    OutboundEnqueueOutcome, PendingMailboxUpload, PreparedInboundItem, StoredOutboundReceipt,
+    MailboxOutboundState, OutboundEnqueueOutcome, PendingMailboxUpload, PreparedInboundItem,
+    StoredOutboundReceipt,
 };

@@ -17,6 +17,7 @@ iroh.workspace = true
 kilogram-crypto = { path = "../../crates/kilogram-crypto" }
 kilogram-identity = { path = "../../crates/kilogram-identity" }
 kilogram-mailbox = { path = "../../crates/kilogram-mailbox" }
+kilogram-mailbox-client = { path = "../../crates/kilogram-mailbox-client" }
 kilogram-mailbox-provisioning = { path = "../../crates/kilogram-mailbox-provisioning" }
 kilogram-protocol = { path = "../../crates/kilogram-protocol" }
 kilogram-publication-conflict = { path = "../../crates/kilogram-publication-conflict" }

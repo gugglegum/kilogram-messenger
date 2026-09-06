@@ -21,7 +21,7 @@ use tokio::{
     time::timeout,
 };
 
-const IPC_VERSION: u8 = 20;
+const IPC_VERSION: u8 = 21;
 const MAX_DESCRIPTOR_BYTES: u64 = 16 * 1024;
 const MAX_LAUNCH_PROFILE_BYTES: u64 = 64 * 1024;
 const MAX_LAUNCH_PROFILE_PATHS: usize = 64;
@@ -361,6 +361,7 @@ pub enum RuntimeIpcCommand {
         message: String,
     },
     OutboxStatus,
+    MailboxStatus,
     ApplyOwnDeviceDirectory {
         device_list_file: PathBuf,
     },
@@ -668,6 +669,10 @@ pub enum RuntimeIpcQueueState {
     Queued,
     Materialized,
     Delivered,
+    MailboxPending,
+    MailboxStored,
+    MailboxExpired,
+    MailboxFailed,
 }
 
 impl RuntimeIpcQueueState {
@@ -676,6 +681,10 @@ impl RuntimeIpcQueueState {
             Self::Queued => "queued",
             Self::Materialized => "materialized",
             Self::Delivered => "delivered",
+            Self::MailboxPending => "mailbox-pending",
+            Self::MailboxStored => "mailbox-stored",
+            Self::MailboxExpired => "mailbox-expired",
+            Self::MailboxFailed => "mailbox-failed",
         }
     }
 }
@@ -696,8 +705,28 @@ pub struct RuntimeIpcOutboxStatus {
     pub pending_count: usize,
     pub materialized_count: usize,
     pub delivered_count: usize,
+    pub mailbox_pending_count: usize,
+    pub mailbox_stored_count: usize,
+    pub mailbox_expired_count: usize,
+    pub mailbox_failed_count: usize,
     pub retry_state_count: usize,
     pub items: Vec<RuntimeIpcQueueItem>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcMailboxStatus {
+    pub local_binding_count: usize,
+    pub local_usable_count: usize,
+    pub peer_binding_count: usize,
+    pub peer_usable_count: usize,
+    pub dispatch_count: usize,
+    pub pending_upload_count: u64,
+    pub stored_upload_count: u64,
+    pub received_commit_count: u64,
+    pub deleted_inbound_count: u64,
+    pub expired_dispatch_count: usize,
+    pub failed_dispatch_count: usize,
+    pub delivery_state: String,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -1032,6 +1061,7 @@ pub enum RuntimeIpcResponse {
         inserted: bool,
     },
     OutboxStatus(RuntimeIpcOutboxStatus),
+    MailboxStatus(RuntimeIpcMailboxStatus),
     OwnDeviceDirectoryApplied(Box<RuntimeIpcDeviceDirectoryUpdate>),
     OwnDeviceDirectoryStatus(RuntimeIpcDeviceDirectoryStatus),
     PublicationChannelRotated(Box<RuntimeIpcPublicationChannelRotation>),

@@ -292,6 +292,12 @@ pub enum OutboundEnqueueOutcome {
     Conflict,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum MailboxOutboundState {
+    Pending(PendingMailboxUpload),
+    Stored(StoredOutboundReceipt),
+}
+
 pub struct PreparedInboundItem {
     address: MailboxAddress,
     item: StoredMailboxItem,
@@ -433,6 +439,38 @@ impl MailboxClientLedger {
             expected_store_key: record.expected_store_key,
             queued_at_unix_seconds: record.queued_at_unix_seconds,
         }))
+    }
+
+    pub fn outbound_state(
+        &self,
+        mailbox_id: MailboxId,
+        item_id: MailboxItemId,
+    ) -> Result<Option<MailboxOutboundState>> {
+        let read = self
+            .database
+            .begin_read()
+            .context("begin mailbox outbound-state read")?;
+        let key = item_key(mailbox_id, item_id);
+        if let Some(value) = read
+            .open_table(STORED_OUTBOUND_TABLE)?
+            .get(key.as_slice())?
+        {
+            return Ok(Some(MailboxOutboundState::Stored(
+                StoredOutboundReceipt::decode(value.value())?,
+            )));
+        }
+        if let Some(value) = read
+            .open_table(PENDING_OUTBOUND_TABLE)?
+            .get(key.as_slice())?
+        {
+            let record = PendingOutboundRecord::decode(value.value())?;
+            return Ok(Some(MailboxOutboundState::Pending(PendingMailboxUpload {
+                request: record.request,
+                expected_store_key: record.expected_store_key,
+                queued_at_unix_seconds: record.queued_at_unix_seconds,
+            })));
+        }
+        Ok(None)
     }
 
     pub fn mark_outbound_stored(
@@ -851,6 +889,10 @@ mod tests {
             ledger.enqueue_outbound(request.clone(), store_key, 1_000)?,
             OutboundEnqueueOutcome::Created
         );
+        assert!(matches!(
+            ledger.outbound_state(address.mailbox_id(), item_id)?,
+            Some(MailboxOutboundState::Pending(_))
+        ));
         let pending = ledger
             .next_pending_outbound()?
             .context("pending outbound mailbox upload")?;
@@ -862,6 +904,10 @@ mod tests {
             1_000,
         )?);
         ledger.mark_outbound_stored(&pending.request, &put_response, store_key, 1_001)?;
+        assert!(matches!(
+            ledger.outbound_state(address.mailbox_id(), item_id)?,
+            Some(MailboxOutboundState::Stored(_))
+        ));
         let replayed =
             ledger.mark_outbound_stored(&pending.request, &put_response, store_key, 1_002)?;
         assert_eq!(replayed.recorded_at_unix_seconds(), 1_001);
@@ -908,6 +954,11 @@ mod tests {
             }
         );
         assert_eq!(ledger.counts()?, (0, 0, 0, 0));
+        assert!(
+            ledger
+                .outbound_state(address.mailbox_id(), item_id)?
+                .is_none()
+        );
         Ok(())
     }
 }

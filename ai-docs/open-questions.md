@@ -172,11 +172,11 @@ sessions, distribution, removal и key epochs и не решены этим пр
   time; нужны epoch-bound/expiring authorizations, ordered witness или другая
   явная модель исторической валидности.
 - M0.9.51 фиксирует blind mailbox contract, M0.9.52 добавляет bounded paged
-  wire/HTTPS adapter и persistent client ledger, а M0.9.53 — recipient-bound
-  Device-signed/HPKE provisioning write-only peer capability и authenticated
-  URL/store key с current-authority import. Открыты live runtime outbox/inbox
-  integration, reverse-mailbox ACK, automatic online provisioning exchange,
-  capability rotation/revocation, multi-store replication/erasure coding,
+  wire/HTTPS adapter и persistent client ledger, M0.9.53 — recipient-bound
+  Device-signed/HPKE provisioning, а M0.9.54 — live-first serialized runtime
+  fallback, commit-before-delete inbox и reverse-mailbox ACK. Открыты automatic
+  authenticated online offer exchange, capability rotation/revocation,
+  multi-store replication/erasure coding, private retrieval/push wakeup,
   Sybil/admission limits и unlinkability: один storage node всё ещё видит IP,
   timing, size и повторный доступ к одному pseudonymous mailbox.
 - Как синхронизировать M0.9.29 observation high-water между устройствами одного

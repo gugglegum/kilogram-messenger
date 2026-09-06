@@ -22,14 +22,21 @@ use kilogram_identity::{
     ConversationMembershipStoreOutcome, ConversationScopeId, DeviceCapability, DeviceCertificate,
     DeviceId, DeviceIdentity, DeviceState, verify_device_authorization_with_snapshot,
 };
-use kilogram_mailbox::MailboxStoreKey;
+use kilogram_mailbox::{
+    MAX_MAILBOX_PAGE_ITEMS, MAX_MAILBOX_TTL_SECONDS, MIN_MAILBOX_TTL_SECONDS, MailboxEnvelope,
+    MailboxListRequest, MailboxPutRequest, MailboxRequestNonce, MailboxStoreKey,
+};
+use kilogram_mailbox_client::{
+    MailboxClientLedger, MailboxClientLedgerConfig, MailboxHttpClient, MailboxOutboundState,
+    OutboundEnqueueOutcome, PendingMailboxUpload,
+};
 use kilogram_mailbox_provisioning::{
-    EncryptedMailboxOffer, MAX_MAILBOX_OFFER_VALIDITY_SECONDS, MailboxBindingId,
-    MailboxServiceDescriptor, SealedLocalMailboxBinding,
+    EncryptedMailboxOffer, LocalMailboxBinding, MAX_MAILBOX_OFFER_VALIDITY_SECONDS,
+    MailboxBindingId, MailboxServiceDescriptor, PeerMailboxBinding, SealedLocalMailboxBinding,
 };
 use kilogram_protocol::{
     AuthorizedEvent, ClientRequest, ConversationId, DeviceAuthorizationAccepted,
-    DeviceAuthorizationRejected, EventPayload, HistoryRewrapBundle, HistoryRewrapRejected,
+    DeviceAuthorizationRejected, EventId, EventPayload, HistoryRewrapBundle, HistoryRewrapRejected,
     HistoryRewrapRejectionReason, HistoryRewrapSas, LocalTextProjection,
     MAX_ENDPOINT_ANNOUNCEMENT_WIRE_BYTES, MAX_HISTORY_REWRAP_ENTRIES, MAX_INVENTORY_EVENT_IDS,
     RatchetRecipient, ServerResponse, SignedDeviceSessionAuthorization, SignedEvent,
@@ -47,8 +54,8 @@ use kilogram_runtime_ipc::{
     RuntimeIpcEndpointAnnouncementExport, RuntimeIpcEndpointAnnouncementImport,
     RuntimeIpcEndpointAnnouncementPush, RuntimeIpcEndpointCandidateState,
     RuntimeIpcEndpointCandidateStatus, RuntimeIpcEndpointTicketRefresh, RuntimeIpcHistoryCursor,
-    RuntimeIpcHistoryMessage, RuntimeIpcHistoryPage, RuntimeIpcMessagePreview,
-    RuntimeIpcNetworkClass, RuntimeIpcOutboxStatus,
+    RuntimeIpcHistoryMessage, RuntimeIpcHistoryPage, RuntimeIpcMailboxStatus,
+    RuntimeIpcMessagePreview, RuntimeIpcNetworkClass, RuntimeIpcOutboxStatus,
     RuntimeIpcOwnDeviceAnnouncementAutomationStatus, RuntimeIpcOwnDeviceRosterAutomationStatus,
     RuntimeIpcOwnDeviceTicketDiscoveryStatus, RuntimeIpcPublicationChannelRotation,
     RuntimeIpcPublicationConflictRequest, RuntimeIpcPublicationConflictResolution,
@@ -146,7 +153,8 @@ use runtime_endpoint_announcement::{
     SignedEndpointAnnouncementBundle,
 };
 use runtime_mailbox::{
-    SignedRuntimeLocalMailboxBinding, SignedRuntimePeerMailboxBinding, mailbox_scope,
+    RuntimeMailboxPayload, SignedRuntimeLocalMailboxBinding, SignedRuntimeMailboxDispatch,
+    SignedRuntimePeerMailboxBinding, mailbox_scope, runtime_mailbox_event_item_id,
 };
 use runtime_own_device_automation::{
     DEFAULT_OWN_DEVICE_ANNOUNCEMENT_INTERVAL_SECONDS,
@@ -217,6 +225,8 @@ const RUNTIME_OWN_DEVICE_ROSTER_POLICIES_DIRECTORY: &str = "own-device-roster-po
 const RUNTIME_TICKET_CHECKPOINTS_DIRECTORY: &str = "ticket-checkpoints";
 const RUNTIME_LOCAL_MAILBOX_BINDINGS_DIRECTORY: &str = "local-mailbox-bindings";
 const RUNTIME_PEER_MAILBOX_BINDINGS_DIRECTORY: &str = "peer-mailbox-bindings";
+const RUNTIME_MAILBOX_DISPATCHES_DIRECTORY: &str = "mailbox-dispatches";
+const MAILBOX_CLIENT_LEDGER_DIRECTORY: &str = "mailbox-client";
 const MAX_RUNTIME_DEVICE_DIRECTORY_RECEIPTS: usize = 1_024;
 const MAX_RUNTIME_ENDPOINT_CANDIDATES_PER_CONTACT: usize = 4;
 const MAX_RUNTIME_TICKET_PUBLICATION_RECORDS: usize = 4_096;
@@ -229,6 +239,9 @@ const MAX_RUNTIME_OWN_DEVICE_TICKET_DISCOVERY_RECORDS: usize = 4_096;
 const MAX_RUNTIME_OWN_DEVICE_ROSTER_RECORDS: usize = 1_024;
 const MAX_RUNTIME_TICKET_CHAIN_RECORDS_BEFORE_COMPACTION: usize = 8;
 const MAX_RUNTIME_MAILBOX_BINDINGS: usize = 1_024;
+const MAX_RUNTIME_MAILBOX_DISPATCHES: usize = 4_096;
+const DEFAULT_RUNTIME_MAILBOX_TTL_SECONDS: u64 = 24 * 60 * 60;
+const RUNTIME_MAILBOX_POLL_INTERVAL: Duration = Duration::from_secs(5);
 const RUNTIME_TICKET_AUTOMATION_CHECK_INTERVAL: Duration = Duration::from_secs(5);
 const RUNTIME_DEVICE_LIST_DIGEST_DOMAIN: &[u8] = b"kilogram:runtime-device-list:v1\0";
 const OWN_DEVICE_TICKET_PAIRWISE_KEY_CONTEXT: &str =
@@ -734,6 +747,13 @@ enum Command {
 
     /// Read structured outbox status through the running runtime actor.
     RuntimeIpcOutboxStatus {
+        /// Runtime-owned local IPC descriptor.
+        #[arg(long)]
+        ipc_file: PathBuf,
+    },
+
+    /// Read mailbox binding, dispatch and durable ledger status through the running runtime actor.
+    RuntimeIpcMailboxStatus {
         /// Runtime-owned local IPC descriptor.
         #[arg(long)]
         ipc_file: PathBuf,
@@ -1984,6 +2004,7 @@ impl Command {
             | Self::RuntimeIpcPing { .. }
             | Self::RuntimeIpcQueueMessage { .. }
             | Self::RuntimeIpcOutboxStatus { .. }
+            | Self::RuntimeIpcMailboxStatus { .. }
             | Self::RuntimeIpcApplyDeviceDirectory { .. }
             | Self::RuntimeIpcDeviceDirectoryStatus { .. }
             | Self::RuntimeIpcRotatePublicationChannel { .. }
@@ -2945,6 +2966,7 @@ async fn run_command(command: Command) -> Result<()> {
                 .await
         }
         Command::RuntimeIpcOutboxStatus { ipc_file } => runtime_ipc_outbox_status(ipc_file).await,
+        Command::RuntimeIpcMailboxStatus { ipc_file } => runtime_ipc_mailbox_status(ipc_file).await,
         Command::RuntimeIpcApplyDeviceDirectory {
             ipc_file,
             device_list_file,
@@ -4400,6 +4422,7 @@ struct RuntimeStateSnapshot {
     ticket_checkpoint: Option<SignedRuntimeTicketCheckpoint>,
     local_mailbox_bindings: BTreeMap<MailboxBindingId, SignedRuntimeLocalMailboxBinding>,
     peer_mailbox_bindings: BTreeMap<MailboxBindingId, SignedRuntimePeerMailboxBinding>,
+    mailbox_dispatches: BTreeMap<RuntimeQueueId, SignedRuntimeMailboxDispatch>,
 }
 
 impl RuntimeStateSnapshot {
@@ -4748,6 +4771,19 @@ fn runtime_peer_mailbox_binding_relative_path(binding_id: MailboxBindingId) -> P
         .join(format!("{binding_id}.pmb"))
 }
 
+fn runtime_mailbox_dispatch_relative_path(queue_id: RuntimeQueueId) -> PathBuf {
+    PathBuf::from(RUNTIME_STATE_DIRECTORY)
+        .join(RUNTIME_MAILBOX_DISPATCHES_DIRECTORY)
+        .join(format!("{queue_id}.mbd"))
+}
+
+fn runtime_mailbox_ledger(state_directory: &Path) -> Result<MailboxClientLedger> {
+    MailboxClientLedger::open(MailboxClientLedgerConfig::new(
+        state_directory.join(MAILBOX_CLIENT_LEDGER_DIRECTORY),
+    ))
+    .context("open runtime mailbox client ledger")
+}
+
 fn runtime_device_list_digest(device_list: &AccountDeviceListSnapshot) -> Result<[u8; 32]> {
     let mut hasher = blake3::Hasher::new();
     hasher.update(RUNTIME_DEVICE_LIST_DIGEST_DOMAIN);
@@ -4857,6 +4893,7 @@ fn read_runtime_record_files(state_directory: &Path) -> Result<Vec<(PathBuf, Vec
         RUNTIME_TICKET_CHECKPOINTS_DIRECTORY,
         RUNTIME_LOCAL_MAILBOX_BINDINGS_DIRECTORY,
         RUNTIME_PEER_MAILBOX_BINDINGS_DIRECTORY,
+        RUNTIME_MAILBOX_DISPATCHES_DIRECTORY,
     ] {
         let root = state_directory
             .join(RUNTIME_STATE_DIRECTORY)
@@ -5197,6 +5234,20 @@ fn load_runtime_state_snapshot(
                     .is_none(),
                 "duplicate runtime peer mailbox binding ID"
             );
+        } else if file_name.ends_with(".mbd") {
+            let value = SignedRuntimeMailboxDispatch::decode(&bytes)?;
+            value.verify_local(local_account_id, local_device_id)?;
+            ensure!(
+                relative_path == runtime_mailbox_dispatch_relative_path(value.queue_id()),
+                "runtime mailbox dispatch filename does not match its authenticated queue"
+            );
+            ensure!(
+                snapshot
+                    .mailbox_dispatches
+                    .insert(value.queue_id(), value)
+                    .is_none(),
+                "duplicate runtime mailbox dispatch queue ID"
+            );
         } else if file_name.ends_with(".contact") {
             let value = SignedRuntimeContact::decode(&bytes)?;
             value.verify_local(local_account_id, local_device_id)?;
@@ -5317,6 +5368,30 @@ fn load_runtime_state_snapshot(
                     .iter()
                     .any(|candidate| candidate.peer_device_id == binding.peer_device_id()),
             "runtime peer mailbox binding does not match its authenticated contact"
+        );
+    }
+    for (queue_id, dispatch) in &snapshot.mailbox_dispatches {
+        let queued = snapshot
+            .queued
+            .get(queue_id)
+            .context("runtime mailbox dispatch references an absent queue record")?;
+        let materialized = snapshot
+            .materialized
+            .get(queue_id)
+            .context("runtime mailbox dispatch references an unmaterialized queue record")?;
+        let peer_binding = snapshot
+            .peer_mailbox_bindings
+            .get(&dispatch.binding_id())
+            .context("runtime mailbox dispatch references an absent peer binding")?;
+        ensure!(
+            dispatch.contact_id() == queued.contact_id()
+                && dispatch.peer_account_id() == queued.peer_account_id()
+                && dispatch.conversation_id() == queued.conversation_id()
+                && dispatch.peer_device_id() == peer_binding.peer_device_id()
+                && dispatch.contact_id() == peer_binding.contact_id()
+                && dispatch.conversation_id() == peer_binding.conversation_id()
+                && dispatch.event_id() == materialized.event().event().event_id()?,
+            "runtime mailbox dispatch does not match its queue, event, or peer binding"
         );
     }
     for binding in snapshot.endpoint_publication_bindings.values() {
@@ -5456,6 +5531,10 @@ fn load_runtime_state_snapshot(
     ensure!(
         snapshot.queued.len() <= MAX_RUNTIME_QUEUE_ITEMS,
         "runtime queue limit exceeded"
+    );
+    ensure!(
+        snapshot.mailbox_dispatches.len() <= MAX_RUNTIME_MAILBOX_DISPATCHES,
+        "runtime mailbox dispatch limit exceeded"
     );
     let retry_count: usize = snapshot.retries.values().map(Vec::len).sum();
     ensure!(
@@ -9778,22 +9857,158 @@ fn runtime_mailbox_status(state_directory: PathBuf) -> Result<()> {
             }
         }
     }
-    println!(
-        "mailbox_local_binding_count={}",
-        snapshot.local_mailbox_bindings.len()
+    let status = collect_runtime_mailbox_status(&state_directory)?;
+    ensure!(
+        status.local_usable_count == local_usable
+            && status
+                .local_binding_count
+                .saturating_sub(status.local_usable_count)
+                == local_unusable
+            && status.peer_usable_count == peer_usable
+            && status
+                .peer_binding_count
+                .saturating_sub(status.peer_usable_count)
+                == peer_expired_or_stale,
+        "runtime mailbox detail and summary status diverged"
     );
-    println!("mailbox_local_usable_count={local_usable}");
-    println!("mailbox_local_unusable_count={local_unusable}");
-    println!(
-        "mailbox_peer_binding_count={}",
-        snapshot.peer_mailbox_bindings.len()
-    );
-    println!("mailbox_peer_usable_count={peer_usable}");
-    println!("mailbox_peer_unusable_count={peer_expired_or_stale}");
+    print_runtime_mailbox_status(&status);
     println!("mailbox_public_ticket_contains_capability=false");
-    println!("mailbox_runtime_delivery_status=provisioned-not-yet-enabled");
+    println!("mailbox_runtime_delivery_status={}", status.delivery_state);
     println!("status=runtime-mailbox-inspected");
     Ok(())
+}
+
+fn collect_runtime_mailbox_status(state_directory: &Path) -> Result<RuntimeIpcMailboxStatus> {
+    let device_state = load_command_device_state(state_directory)?;
+    let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+    let local_certificate = trust.load_certificate()?;
+    let local_authority = trust.load_own_authority_snapshot(&local_certificate)?;
+    let snapshot = load_runtime_state_snapshot(
+        state_directory,
+        local_certificate.account_id(),
+        local_certificate.device_id(),
+    )?;
+    let now = unix_time_now()?;
+    let local_usable_count = snapshot
+        .local_mailbox_bindings
+        .values()
+        .filter(|binding| {
+            open_verified_local_mailbox_binding(
+                &snapshot,
+                &trust,
+                &device_state,
+                &local_certificate,
+                &local_authority,
+                binding,
+            )
+            .is_ok()
+        })
+        .count();
+    let peer_usable_count = snapshot
+        .peer_mailbox_bindings
+        .values()
+        .filter(|binding| {
+            open_verified_peer_mailbox_binding(
+                &snapshot,
+                &trust,
+                &device_state,
+                &local_certificate,
+                &local_authority,
+                binding,
+                now,
+            )
+            .is_ok()
+        })
+        .count();
+    let ledger = runtime_mailbox_ledger(state_directory)?;
+    let (pending_upload_count, stored_upload_count, received_commit_count, deleted_inbound_count) =
+        ledger.counts()?;
+    let mut expired_dispatch_count = 0_usize;
+    let mut failed_dispatch_count = 0_usize;
+    for dispatch in snapshot.mailbox_dispatches.values() {
+        if dispatch.expires_at_unix_seconds() <= now {
+            expired_dispatch_count += 1;
+            continue;
+        }
+        let binding_usable = snapshot
+            .peer_mailbox_bindings
+            .get(&dispatch.binding_id())
+            .is_some_and(|binding| {
+                open_verified_peer_mailbox_binding(
+                    &snapshot,
+                    &trust,
+                    &device_state,
+                    &local_certificate,
+                    &local_authority,
+                    binding,
+                    now,
+                )
+                .is_ok()
+            });
+        if !binding_usable
+            || ledger
+                .outbound_state(dispatch.mailbox_id(), dispatch.item_id())?
+                .is_none()
+        {
+            failed_dispatch_count += 1;
+        }
+    }
+    Ok(RuntimeIpcMailboxStatus {
+        local_binding_count: snapshot.local_mailbox_bindings.len(),
+        local_usable_count,
+        peer_binding_count: snapshot.peer_mailbox_bindings.len(),
+        peer_usable_count,
+        dispatch_count: snapshot.mailbox_dispatches.len(),
+        pending_upload_count,
+        stored_upload_count,
+        received_commit_count,
+        deleted_inbound_count,
+        expired_dispatch_count,
+        failed_dispatch_count,
+        delivery_state: "active-direct-relay-first-mailbox-fallback".to_owned(),
+    })
+}
+
+fn print_runtime_mailbox_status(status: &RuntimeIpcMailboxStatus) {
+    println!("mailbox_local_binding_count={}", status.local_binding_count);
+    println!("mailbox_local_usable_count={}", status.local_usable_count);
+    println!(
+        "mailbox_local_unusable_count={}",
+        status
+            .local_binding_count
+            .saturating_sub(status.local_usable_count)
+    );
+    println!("mailbox_peer_binding_count={}", status.peer_binding_count);
+    println!("mailbox_peer_usable_count={}", status.peer_usable_count);
+    println!(
+        "mailbox_peer_unusable_count={}",
+        status
+            .peer_binding_count
+            .saturating_sub(status.peer_usable_count)
+    );
+    println!("mailbox_dispatch_count={}", status.dispatch_count);
+    println!(
+        "mailbox_pending_upload_count={}",
+        status.pending_upload_count
+    );
+    println!("mailbox_stored_upload_count={}", status.stored_upload_count);
+    println!(
+        "mailbox_received_commit_count={}",
+        status.received_commit_count
+    );
+    println!(
+        "mailbox_deleted_inbound_count={}",
+        status.deleted_inbound_count
+    );
+    println!(
+        "mailbox_expired_dispatch_count={}",
+        status.expired_dispatch_count
+    );
+    println!(
+        "mailbox_failed_dispatch_count={}",
+        status.failed_dispatch_count
+    );
+    println!("mailbox_delivery_state={}", status.delivery_state);
 }
 
 fn runtime_outbox_status(state_directory: PathBuf) -> Result<()> {
@@ -9812,15 +10027,63 @@ fn collect_runtime_outbox_status(state_directory: &Path) -> Result<RuntimeIpcOut
         local_certificate.account_id(),
         device_state.identity().device_id(),
     )?;
+    let local_authority = trust.load_own_authority_snapshot(&local_certificate)?;
+    let ledger = runtime_mailbox_ledger(state_directory)?;
+    let now = unix_time_now()?;
     let mut items = Vec::with_capacity(snapshot.queued.len());
+    let mut mailbox_pending_count = 0_usize;
+    let mut mailbox_stored_count = 0_usize;
+    let mut mailbox_expired_count = 0_usize;
+    let mut mailbox_failed_count = 0_usize;
     for (queue_id, queued) in &snapshot.queued {
         let state = if snapshot.delivered.contains_key(queue_id) {
             RuntimeIpcQueueState::Delivered
+        } else if let Some(dispatch) = snapshot.mailbox_dispatches.get(queue_id) {
+            let binding_current = snapshot
+                .peer_mailbox_bindings
+                .get(&dispatch.binding_id())
+                .is_some_and(|binding| {
+                    open_verified_peer_mailbox_binding(
+                        &snapshot,
+                        &trust,
+                        &device_state,
+                        &local_certificate,
+                        &local_authority,
+                        binding,
+                        now,
+                    )
+                    .is_ok()
+                });
+            match ledger.outbound_state(dispatch.mailbox_id(), dispatch.item_id())? {
+                Some(MailboxOutboundState::Stored(_)) => RuntimeIpcQueueState::MailboxStored,
+                Some(MailboxOutboundState::Pending(_))
+                    if dispatch.expires_at_unix_seconds() <= now =>
+                {
+                    RuntimeIpcQueueState::MailboxExpired
+                }
+                Some(MailboxOutboundState::Pending(_)) if binding_current => {
+                    RuntimeIpcQueueState::MailboxPending
+                }
+                Some(MailboxOutboundState::Pending(_)) => RuntimeIpcQueueState::MailboxFailed,
+                None if dispatch.expires_at_unix_seconds() <= now => {
+                    RuntimeIpcQueueState::MailboxExpired
+                }
+                None => RuntimeIpcQueueState::MailboxFailed,
+            }
         } else if snapshot.materialized.contains_key(queue_id) {
             RuntimeIpcQueueState::Materialized
         } else {
             RuntimeIpcQueueState::Queued
         };
+        match state {
+            RuntimeIpcQueueState::MailboxPending => mailbox_pending_count += 1,
+            RuntimeIpcQueueState::MailboxStored => mailbox_stored_count += 1,
+            RuntimeIpcQueueState::MailboxExpired => mailbox_expired_count += 1,
+            RuntimeIpcQueueState::MailboxFailed => mailbox_failed_count += 1,
+            RuntimeIpcQueueState::Queued
+            | RuntimeIpcQueueState::Materialized
+            | RuntimeIpcQueueState::Delivered => {}
+        }
         items.push(RuntimeIpcQueueItem {
             queue_id: queue_id.to_string(),
             peer_account_id: queued.peer_account_id(),
@@ -9838,6 +10101,10 @@ fn collect_runtime_outbox_status(state_directory: &Path) -> Result<RuntimeIpcOut
         pending_count: snapshot.pending_count(),
         materialized_count: snapshot.materialized.len(),
         delivered_count: snapshot.delivered.len(),
+        mailbox_pending_count,
+        mailbox_stored_count,
+        mailbox_expired_count,
+        mailbox_failed_count,
         retry_state_count: snapshot.retries.values().map(Vec::len).sum(),
         items,
     })
@@ -10276,6 +10543,22 @@ fn print_runtime_outbox_status(status: &RuntimeIpcOutboxStatus) {
     println!("runtime_pending_count={}", status.pending_count);
     println!("runtime_materialized_count={}", status.materialized_count);
     println!("runtime_delivered_count={}", status.delivered_count);
+    println!(
+        "runtime_mailbox_pending_count={}",
+        status.mailbox_pending_count
+    );
+    println!(
+        "runtime_mailbox_stored_count={}",
+        status.mailbox_stored_count
+    );
+    println!(
+        "runtime_mailbox_expired_count={}",
+        status.mailbox_expired_count
+    );
+    println!(
+        "runtime_mailbox_failed_count={}",
+        status.mailbox_failed_count
+    );
     println!("runtime_retry_state_count={}", status.retry_state_count);
     for item in &status.items {
         println!(
@@ -10379,6 +10662,20 @@ async fn runtime_ipc_outbox_status(ipc_file: PathBuf) -> Result<()> {
             bail!("runtime IPC rejected outbox status: {message}")
         }
         _ => bail!("runtime IPC returned an unexpected outbox response"),
+    }
+}
+
+async fn runtime_ipc_mailbox_status(ipc_file: PathBuf) -> Result<()> {
+    match kilogram_runtime_ipc::call(&ipc_file, RuntimeIpcCommand::MailboxStatus).await? {
+        RuntimeIpcResponse::MailboxStatus(status) => {
+            print_runtime_mailbox_status(&status);
+            println!("status=runtime-ipc-mailbox-inspected");
+            Ok(())
+        }
+        RuntimeIpcResponse::Error { message } => {
+            bail!("runtime IPC rejected mailbox status: {message}")
+        }
+        _ => bail!("runtime IPC returned an unexpected mailbox response"),
     }
 }
 
@@ -11634,6 +11931,17 @@ async fn handle_runtime_ipc_work(
                 .and_then(|_lock| collect_runtime_outbox_status(state_directory));
             match status {
                 Ok(status) => RuntimeIpcResponse::OutboxStatus(status),
+                Err(error) => RuntimeIpcResponse::Error {
+                    message: format!("{error:#}"),
+                },
+            }
+        }
+        RuntimeIpcCommand::MailboxStatus => {
+            let status = StateDirectoryLock::acquire(state_directory)
+                .context("lock runtime state for IPC mailbox snapshot")
+                .and_then(|_lock| collect_runtime_mailbox_status(state_directory));
+            match status {
+                Ok(status) => RuntimeIpcResponse::MailboxStatus(status),
                 Err(error) => RuntimeIpcResponse::Error {
                     message: format!("{error:#}"),
                 },
@@ -15183,6 +15491,8 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
     let mut last_sync_attempts = BTreeMap::new();
     let mut last_ticket_automation_check =
         tokio::time::Instant::now() - RUNTIME_TICKET_AUTOMATION_CHECK_INTERVAL;
+    let mut last_mailbox_check = tokio::time::Instant::now() - RUNTIME_MAILBOX_POLL_INTERVAL;
+    let mut last_mailbox_polls = BTreeMap::new();
     // Keep the accept future alive across polling ticks. Dropping an Iroh
     // Incoming while a handshake is in progress actively rejects that peer.
     let mut accept: Pin<Box<dyn Future<Output = Result<Connection>> + Send + '_>> =
@@ -15247,7 +15557,9 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                 .await?;
                 match delivery_attempt {
                     RuntimeDeliveryAttempt::NoWork => {}
-                    RuntimeDeliveryAttempt::Delivered | RuntimeDeliveryAttempt::RetryScheduled => {
+                    RuntimeDeliveryAttempt::Delivered
+                    | RuntimeDeliveryAttempt::MailboxStored
+                    | RuntimeDeliveryAttempt::RetryScheduled => {
                         if let Some(server) = ipc_server.as_ref() {
                             server.publish_change();
                         }
@@ -15258,7 +15570,44 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                         }
                     }
                 }
+                let mut mailbox_action = false;
+                if matches!(delivery_attempt, RuntimeDeliveryAttempt::NoWork)
+                    && last_mailbox_check.elapsed() >= RUNTIME_MAILBOX_POLL_INTERVAL
+                {
+                    last_mailbox_check = tokio::time::Instant::now();
+                    match attempt_pending_runtime_mailbox_upload(&state_dir).await {
+                        Ok(true) => {
+                            mailbox_action = true;
+                            if let Some(server) = ipc_server.as_ref() {
+                                server.publish_change();
+                            }
+                            last_activity = tokio::time::Instant::now();
+                        }
+                        Ok(false) => {
+                            mailbox_action = true;
+                            match attempt_runtime_mailbox_poll(&state_dir, &mut last_mailbox_polls)
+                                .await
+                            {
+                                Ok(RuntimeMailboxPollAttempt::StateChanged) => {
+                                    if let Some(server) = ipc_server.as_ref() {
+                                        server.publish_change();
+                                    }
+                                    last_activity = tokio::time::Instant::now();
+                                }
+                                Ok(RuntimeMailboxPollAttempt::NoChange) => {}
+                                Err(error) => eprintln!(
+                                    "runtime_mailbox_inbound_status=failed error={error:#}"
+                                ),
+                            }
+                        }
+                        Err(error) => {
+                            mailbox_action = true;
+                            eprintln!("runtime_mailbox_upload_status=failed error={error:#}");
+                        }
+                    }
+                }
                 let sync_attempted = matches!(delivery_attempt, RuntimeDeliveryAttempt::NoWork)
+                    && !mailbox_action
                     && auto_sync_seconds != 0
                     && automatic_sync_started_at.elapsed()
                         >= Duration::from_secs(auto_sync_seconds)
@@ -15279,6 +15628,7 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                     }
                 }
                 if matches!(delivery_attempt, RuntimeDeliveryAttempt::NoWork)
+                    && !mailbox_action
                     && !sync_attempted
                     && last_ticket_automation_check.elapsed()
                         >= RUNTIME_TICKET_AUTOMATION_CHECK_INTERVAL
@@ -15626,6 +15976,7 @@ fn publish_runtime_ticket(path: &Path, encoded_ticket: &[u8]) -> Result<()> {
 enum RuntimeDeliveryAttempt {
     NoWork,
     Delivered,
+    MailboxStored,
     RetryScheduled,
 }
 
@@ -15637,6 +15988,1068 @@ struct PreparedRuntimeDelivery {
     local_certificate: DeviceCertificate,
     local_authority: AccountAuthoritySnapshot,
     peer_account_id: AccountId,
+}
+
+struct PreparedRuntimeMailboxUpload {
+    pending: PendingMailboxUpload,
+    service_base_url: String,
+    queue_id: Option<RuntimeQueueId>,
+}
+
+fn open_current_peer_mailbox_binding(
+    signed: &SignedRuntimePeerMailboxBinding,
+    prepared: &PreparedRuntimeDelivery,
+    device_state: &DeviceState,
+    now_unix_seconds: u64,
+) -> Result<PeerMailboxBinding> {
+    let candidate = prepared
+        .endpoint_candidates
+        .iter()
+        .find(|candidate| {
+            candidate.peer_device_id == signed.peer_device_id() && candidate.authority_current
+        })
+        .context("peer mailbox owner is not a current endpoint candidate")?;
+    let owner_certificate = candidate
+        .ticket
+        .listener_directory()
+        .device_list()
+        .certificate_for(candidate.peer_device_id)
+        .context("peer mailbox owner certificate is absent from its current roster")?;
+    signed.open(
+        device_state.encryption(),
+        &prepared.local_certificate,
+        owner_certificate,
+        now_unix_seconds,
+    )
+}
+
+fn open_verified_peer_mailbox_binding(
+    snapshot: &RuntimeStateSnapshot,
+    trust: &CommandTrustReadRepository<'_>,
+    device_state: &DeviceState,
+    local_certificate: &DeviceCertificate,
+    local_authority: &AccountAuthoritySnapshot,
+    signed: &SignedRuntimePeerMailboxBinding,
+    now_unix_seconds: u64,
+) -> Result<PeerMailboxBinding> {
+    let contact = snapshot
+        .contacts
+        .get(&signed.contact_id())
+        .context("peer mailbox contact disappeared")?;
+    let peer_authority = trust
+        .load_peer_authority_snapshot(signed.peer_account_id())
+        .context("load peer authority for runtime mailbox")?;
+    let candidate = load_runtime_endpoint_candidate_set(
+        snapshot,
+        contact,
+        local_certificate,
+        local_authority,
+        &peer_authority,
+    )?
+    .into_iter()
+    .find(|candidate| {
+        candidate.peer_device_id == signed.peer_device_id() && candidate.authority_current
+    })
+    .context("peer mailbox signer is not a current endpoint")?;
+    let peer_certificate = candidate
+        .ticket
+        .listener_directory()
+        .device_list()
+        .certificate_for(candidate.peer_device_id)
+        .context("peer mailbox signer certificate is absent from its current roster")?;
+    signed.open(
+        device_state.encryption(),
+        local_certificate,
+        peer_certificate,
+        now_unix_seconds,
+    )
+}
+
+fn open_verified_local_mailbox_binding(
+    snapshot: &RuntimeStateSnapshot,
+    trust: &CommandTrustReadRepository<'_>,
+    device_state: &DeviceState,
+    local_certificate: &DeviceCertificate,
+    local_authority: &AccountAuthoritySnapshot,
+    signed: &SignedRuntimeLocalMailboxBinding,
+) -> Result<LocalMailboxBinding> {
+    let contact = snapshot
+        .contacts
+        .get(&signed.contact_id())
+        .context("local mailbox contact disappeared")?;
+    let peer_authority = trust
+        .load_peer_authority_snapshot(signed.peer_account_id())
+        .context("load peer authority for local runtime mailbox")?;
+    let current = load_runtime_endpoint_candidate_set(
+        snapshot,
+        contact,
+        local_certificate,
+        local_authority,
+        &peer_authority,
+    )?
+    .into_iter()
+    .any(|candidate| {
+        candidate.peer_device_id == signed.peer_device_id() && candidate.authority_current
+    });
+    ensure!(
+        current,
+        "local mailbox writer is not a current peer endpoint"
+    );
+    signed.open(
+        device_state.identity(),
+        device_state.encryption(),
+        local_certificate,
+    )
+}
+
+async fn upload_runtime_mailbox_request(
+    state_directory: &Path,
+    upload: PreparedRuntimeMailboxUpload,
+) -> Result<()> {
+    let client =
+        MailboxHttpClient::new(&upload.service_base_url, upload.pending.expected_store_key)?;
+    let response = client
+        .put(&upload.pending.request)
+        .await
+        .context("upload runtime mailbox item")?;
+    let ledger = runtime_mailbox_ledger(state_directory)?;
+    let stored = ledger.mark_outbound_stored(
+        &upload.pending.request,
+        &response,
+        upload.pending.expected_store_key,
+        unix_time_now()?,
+    )?;
+    println!("runtime_mailbox_id={}", stored.mailbox_id());
+    println!("runtime_mailbox_item_id={}", stored.item_id());
+    if let Some(queue_id) = upload.queue_id {
+        println!("runtime_queue_id={queue_id}");
+        println!("runtime_outbound_status=mailbox-stored");
+    } else {
+        println!("runtime_mailbox_payload=reverse-acknowledgement");
+        println!("runtime_mailbox_status=mailbox-stored");
+    }
+    Ok(())
+}
+
+async fn prepare_orphan_runtime_mailbox_dispatch(
+    state_directory: &Path,
+    now: u64,
+) -> Result<Option<PreparedRuntimeMailboxUpload>> {
+    let state_lock = acquire_runtime_state_lock(state_directory)
+        .await?
+        .context("runtime state lock remained busy while repairing mailbox dispatch")?;
+    let result = (|| {
+        let device_state = load_command_device_state(state_directory)?;
+        let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+        let local_certificate = trust.load_certificate()?;
+        let local_authority = trust.load_own_authority_snapshot(&local_certificate)?;
+        let snapshot = load_runtime_state_snapshot(
+            state_directory,
+            local_certificate.account_id(),
+            local_certificate.device_id(),
+        )?;
+        let ledger = runtime_mailbox_ledger(state_directory)?;
+        for dispatch in snapshot.mailbox_dispatches.values() {
+            if dispatch.expires_at_unix_seconds() <= now
+                || ledger
+                    .outbound_state(dispatch.mailbox_id(), dispatch.item_id())?
+                    .is_some()
+            {
+                continue;
+            }
+            let Some(queued) = snapshot.queued.get(&dispatch.queue_id()) else {
+                continue;
+            };
+            let Some(materialized) = snapshot.materialized.get(&dispatch.queue_id()) else {
+                continue;
+            };
+            let Some(signed_binding) = snapshot.peer_mailbox_bindings.get(&dispatch.binding_id())
+            else {
+                continue;
+            };
+            let Ok(binding) = open_verified_peer_mailbox_binding(
+                &snapshot,
+                &trust,
+                &device_state,
+                &local_certificate,
+                &local_authority,
+                signed_binding,
+                now,
+            ) else {
+                continue;
+            };
+            let event = materialized.event();
+            ensure!(
+                queued.contact_id() == dispatch.contact_id()
+                    && queued.peer_account_id() == dispatch.peer_account_id()
+                    && queued.conversation_id() == dispatch.conversation_id()
+                    && signed_binding.peer_device_id() == dispatch.peer_device_id()
+                    && signed_binding.contact_id() == dispatch.contact_id()
+                    && signed_binding.conversation_id() == dispatch.conversation_id()
+                    && binding.address().mailbox_id() == dispatch.mailbox_id()
+                    && dispatch.expires_at_unix_seconds() <= binding.expires_at_unix_seconds()
+                    && event.event().event_id()? == dispatch.event_id()
+                    && event.event().conversation_id() == dispatch.conversation_id(),
+                "orphan runtime mailbox dispatch no longer matches its queue, event, or binding"
+            );
+            let payload = RuntimeMailboxPayload::new(
+                dispatch.binding_id(),
+                local_certificate.account_id(),
+                local_certificate.device_id(),
+                dispatch.peer_account_id(),
+                dispatch.peer_device_id(),
+                dispatch.conversation_id(),
+                event.clone(),
+            )?;
+            let envelope = MailboxEnvelope::seal(
+                dispatch.mailbox_id(),
+                dispatch.item_id(),
+                dispatch.created_at_unix_seconds(),
+                dispatch.expires_at_unix_seconds(),
+                binding.recipient_encryption_public_key(),
+                &payload.encode()?,
+            )?
+            .encode()?;
+            let ttl = dispatch
+                .expires_at_unix_seconds()
+                .checked_sub(dispatch.created_at_unix_seconds())
+                .context("orphan runtime mailbox dispatch TTL underflow")?;
+            let request = MailboxPutRequest::new(
+                binding.address(),
+                binding.write_capability().authorize(
+                    binding.address(),
+                    dispatch.item_id(),
+                    ttl,
+                    &envelope,
+                )?,
+                envelope,
+            )?;
+            match ledger.enqueue_outbound(request, binding.service().expected_store_key(), now)? {
+                OutboundEnqueueOutcome::Created | OutboundEnqueueOutcome::AlreadyPending => {}
+                OutboundEnqueueOutcome::AlreadyStored => return Ok(None),
+                OutboundEnqueueOutcome::CapacityExceeded => {
+                    bail!("orphan runtime mailbox dispatch repair exceeded ledger capacity")
+                }
+                OutboundEnqueueOutcome::Conflict => {
+                    bail!("orphan runtime mailbox dispatch conflicts with retained ledger state")
+                }
+            }
+            let Some(MailboxOutboundState::Pending(pending)) =
+                ledger.outbound_state(dispatch.mailbox_id(), dispatch.item_id())?
+            else {
+                bail!("repaired runtime mailbox dispatch did not retain its exact request")
+            };
+            println!("runtime_queue_id={}", dispatch.queue_id());
+            println!("runtime_mailbox_dispatch_status=repaired-pending-upload");
+            return Ok(Some(PreparedRuntimeMailboxUpload {
+                pending,
+                service_base_url: binding.service().base_url().to_owned(),
+                queue_id: Some(dispatch.queue_id()),
+            }));
+        }
+        Ok(None)
+    })();
+    drop(state_lock);
+    result
+}
+
+async fn attempt_pending_runtime_mailbox_upload(state_directory: &Path) -> Result<bool> {
+    let ledger = runtime_mailbox_ledger(state_directory)?;
+    let now = unix_time_now()?;
+    let cleanup = ledger.cleanup(now)?;
+    if cleanup.removed_pending_uploads != 0
+        || cleanup.removed_stored_receipts != 0
+        || cleanup.removed_inbound_commits != 0
+        || cleanup.removed_deleted_receipts != 0
+    {
+        println!(
+            "runtime_mailbox_cleanup=pending:{} stored:{} received:{} deleted:{}",
+            cleanup.removed_pending_uploads,
+            cleanup.removed_stored_receipts,
+            cleanup.removed_inbound_commits,
+            cleanup.removed_deleted_receipts
+        );
+    }
+    let pending = ledger.next_pending_outbound()?;
+    drop(ledger);
+    let Some(pending) = pending else {
+        let Some(upload) = prepare_orphan_runtime_mailbox_dispatch(state_directory, now).await?
+        else {
+            return Ok(false);
+        };
+        upload_runtime_mailbox_request(state_directory, upload).await?;
+        return Ok(true);
+    };
+    let state_lock = acquire_runtime_state_lock(state_directory)
+        .await?
+        .context("runtime state lock remained busy while resolving pending mailbox upload")?;
+    let resolution = (|| {
+        let device_state = load_command_device_state(state_directory)?;
+        let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+        let local_certificate = trust.load_certificate()?;
+        let local_authority = trust.load_own_authority_snapshot(&local_certificate)?;
+        let snapshot = load_runtime_state_snapshot(
+            state_directory,
+            local_certificate.account_id(),
+            local_certificate.device_id(),
+        )?;
+        let binding = snapshot
+            .peer_mailbox_bindings
+            .values()
+            .filter_map(|signed| {
+                open_verified_peer_mailbox_binding(
+                    &snapshot,
+                    &trust,
+                    &device_state,
+                    &local_certificate,
+                    &local_authority,
+                    signed,
+                    now,
+                )
+                .ok()
+            })
+            .find(|binding| {
+                binding.address().mailbox_id() == pending.request.mailbox_id()
+                    && binding.service().expected_store_key() == pending.expected_store_key
+            })
+            .context("pending mailbox upload has no current recipient-bound capability")?;
+        let queue_id = snapshot
+            .mailbox_dispatches
+            .values()
+            .find(|dispatch| {
+                dispatch.mailbox_id() == pending.request.mailbox_id()
+                    && dispatch.item_id() == pending.request.item_id()
+            })
+            .map(SignedRuntimeMailboxDispatch::queue_id);
+        Ok::<_, anyhow::Error>(PreparedRuntimeMailboxUpload {
+            pending,
+            service_base_url: binding.service().base_url().to_owned(),
+            queue_id,
+        })
+    })();
+    drop(state_lock);
+    upload_runtime_mailbox_request(state_directory, resolution?).await?;
+    Ok(true)
+}
+
+async fn attempt_runtime_mailbox_fallback(
+    state_directory: &Path,
+    prepared: &PreparedRuntimeDelivery,
+) -> Result<()> {
+    let state_lock = acquire_runtime_state_lock(state_directory)
+        .await?
+        .context("runtime state lock remained busy while preparing mailbox fallback")?;
+    let vault_guard = VaultDualWriteGuard::prepare(state_directory)?;
+    let operation_result = (|| {
+        let device_state = load_command_device_state(state_directory)?;
+        let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+        let certificate = trust.load_certificate()?;
+        let snapshot = load_runtime_state_snapshot(
+            state_directory,
+            certificate.account_id(),
+            device_state.identity().device_id(),
+        )?;
+        let queued = snapshot
+            .queued
+            .get(&prepared.queue_id)
+            .context("runtime mailbox fallback queue disappeared")?;
+        ensure!(
+            queued.contact_id()
+                == snapshot
+                    .contacts
+                    .get(&queued.contact_id())
+                    .context("runtime mailbox fallback contact disappeared")?
+                    .contact_id(),
+            "runtime mailbox fallback contact mismatch"
+        );
+        let now = unix_time_now()?;
+        let (dispatch, peer_binding) = if let Some(dispatch) =
+            snapshot.mailbox_dispatches.get(&prepared.queue_id)
+        {
+            let signed_binding = snapshot
+                .peer_mailbox_bindings
+                .get(&dispatch.binding_id())
+                .context("runtime mailbox dispatch binding disappeared")?;
+            let opened =
+                open_current_peer_mailbox_binding(signed_binding, prepared, &device_state, now)?;
+            ensure!(
+                dispatch.mailbox_id() == opened.address().mailbox_id()
+                    && dispatch.expires_at_unix_seconds() <= opened.expires_at_unix_seconds()
+                    && dispatch.expires_at_unix_seconds() > now,
+                "runtime mailbox dispatch no longer matches a live peer binding"
+            );
+            (dispatch.clone(), opened)
+        } else {
+            let (signed_binding, opened) = snapshot
+                .peer_mailbox_bindings
+                .values()
+                .filter(|binding| {
+                    binding.contact_id() == queued.contact_id()
+                        && binding.peer_account_id() == prepared.peer_account_id
+                        && binding.conversation_id() == prepared.event.event().conversation_id()
+                })
+                .filter_map(|binding| {
+                    open_current_peer_mailbox_binding(binding, prepared, &device_state, now)
+                        .ok()
+                        .map(|opened| (binding, opened))
+                })
+                .find(|(_, opened)| {
+                    opened.expires_at_unix_seconds() >= now.saturating_add(MIN_MAILBOX_TTL_SECONDS)
+                })
+                .context("no current recipient-bound peer mailbox is available for this message")?;
+            let expires_at = now
+                .checked_add(DEFAULT_RUNTIME_MAILBOX_TTL_SECONDS)
+                .context("runtime mailbox expiry overflows")?
+                .min(opened.expires_at_unix_seconds());
+            let dispatch = SignedRuntimeMailboxDispatch::sign(
+                device_state.identity(),
+                certificate.account_id(),
+                prepared.queue_id,
+                queued.contact_id(),
+                prepared.peer_account_id,
+                signed_binding.peer_device_id(),
+                prepared.event.event().conversation_id(),
+                signed_binding.binding_id(),
+                opened.address().mailbox_id(),
+                prepared.event.event().event_id()?,
+                now,
+                expires_at,
+            )?;
+            run_state_transaction(state_directory, |transaction| {
+                persist_runtime_record(
+                    state_directory,
+                    &runtime_mailbox_dispatch_relative_path(prepared.queue_id),
+                    &dispatch.encode()?,
+                    transaction,
+                )
+            })?;
+            (dispatch, opened)
+        };
+        let ledger = runtime_mailbox_ledger(state_directory)?;
+        let state = ledger.outbound_state(dispatch.mailbox_id(), dispatch.item_id())?;
+        match state {
+            Some(MailboxOutboundState::Stored(_)) => Ok(None),
+            Some(MailboxOutboundState::Pending(pending)) => {
+                ensure!(
+                    pending.request.mailbox_id() == dispatch.mailbox_id()
+                        && pending.request.item_id() == dispatch.item_id()
+                        && pending.expected_store_key
+                            == peer_binding.service().expected_store_key(),
+                    "pending runtime mailbox request does not match its signed dispatch"
+                );
+                Ok(Some(PreparedRuntimeMailboxUpload {
+                    pending,
+                    service_base_url: peer_binding.service().base_url().to_owned(),
+                    queue_id: Some(prepared.queue_id),
+                }))
+            }
+            None => {
+                let payload = RuntimeMailboxPayload::new(
+                    dispatch.binding_id(),
+                    certificate.account_id(),
+                    certificate.device_id(),
+                    dispatch.peer_account_id(),
+                    dispatch.peer_device_id(),
+                    dispatch.conversation_id(),
+                    prepared.event.clone(),
+                )?;
+                let envelope = MailboxEnvelope::seal(
+                    dispatch.mailbox_id(),
+                    dispatch.item_id(),
+                    dispatch.created_at_unix_seconds(),
+                    dispatch.expires_at_unix_seconds(),
+                    peer_binding.recipient_encryption_public_key(),
+                    &payload.encode()?,
+                )?
+                .encode()?;
+                let ttl = dispatch
+                    .expires_at_unix_seconds()
+                    .checked_sub(dispatch.created_at_unix_seconds())
+                    .context("runtime mailbox dispatch TTL underflow")?;
+                ensure!(
+                    (MIN_MAILBOX_TTL_SECONDS..=MAX_MAILBOX_TTL_SECONDS).contains(&ttl),
+                    "runtime mailbox dispatch TTL is outside protocol bounds"
+                );
+                let request = MailboxPutRequest::new(
+                    peer_binding.address(),
+                    peer_binding.write_capability().authorize(
+                        peer_binding.address(),
+                        dispatch.item_id(),
+                        ttl,
+                        &envelope,
+                    )?,
+                    envelope,
+                )?;
+                match ledger.enqueue_outbound(
+                    request,
+                    peer_binding.service().expected_store_key(),
+                    now,
+                )? {
+                    OutboundEnqueueOutcome::Created | OutboundEnqueueOutcome::AlreadyPending => {}
+                    OutboundEnqueueOutcome::AlreadyStored => return Ok(None),
+                    OutboundEnqueueOutcome::CapacityExceeded => {
+                        bail!("runtime mailbox pending-upload capacity exceeded")
+                    }
+                    OutboundEnqueueOutcome::Conflict => {
+                        bail!("runtime mailbox deterministic item conflicts with retained state")
+                    }
+                }
+                let Some(MailboxOutboundState::Pending(pending)) =
+                    ledger.outbound_state(dispatch.mailbox_id(), dispatch.item_id())?
+                else {
+                    bail!("runtime mailbox enqueue did not retain its exact request")
+                };
+                Ok(Some(PreparedRuntimeMailboxUpload {
+                    pending,
+                    service_base_url: peer_binding.service().base_url().to_owned(),
+                    queue_id: Some(prepared.queue_id),
+                }))
+            }
+        }
+    })();
+    let mirror_result = match vault_guard {
+        Some(guard) => guard.finish(),
+        None => Ok(()),
+    };
+    drop(state_lock);
+    let upload = combine_operation_and_mirror(operation_result, mirror_result)?;
+    if let Some(upload) = upload {
+        upload_runtime_mailbox_request(state_directory, upload).await?;
+    } else {
+        println!("runtime_queue_id={}", prepared.queue_id);
+        println!("runtime_outbound_status=mailbox-stored");
+    }
+    Ok(())
+}
+
+struct RuntimeMailboxTextCommit {
+    event_id: EventId,
+    acknowledgement: AuthorizedEvent,
+}
+
+async fn commit_runtime_mailbox_text(
+    state_directory: &Path,
+    binding: &SignedRuntimeLocalMailboxBinding,
+    event: &AuthorizedEvent,
+) -> Result<RuntimeMailboxTextCommit> {
+    let state_lock = acquire_runtime_state_lock(state_directory)
+        .await?
+        .context("runtime state lock remained busy while committing mailbox message")?;
+    let vault_guard = VaultDualWriteGuard::prepare(state_directory)?;
+    let operation_result = (|| {
+        let device_state = load_command_device_state(state_directory)?;
+        let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+        let listener_certificate = trust.load_certificate()?;
+        let listener_authority = trust.load_own_authority_snapshot(&listener_certificate)?;
+        let membership = trust
+            .load_conversation_membership(binding.conversation_id().scope_id())
+            .context("load membership for mailbox message")?;
+        require_conversation_participants(
+            &membership,
+            listener_certificate.account_id(),
+            binding.peer_account_id(),
+        )?;
+        event
+            .verify_for_membership(&membership)
+            .context("verify mailbox event membership")?;
+        let signed_event = event.event();
+        ensure!(
+            event.author_account_id() == binding.peer_account_id()
+                && signed_event.author_device_id() == binding.peer_device_id()
+                && signed_event.conversation_id() == binding.conversation_id(),
+            "mailbox text author or conversation does not match its receive binding"
+        );
+        let EventPayload::RatchetText { .. } = signed_event.payload() else {
+            bail!("mailbox message commit expected a ratchet text event")
+        };
+        ensure!(
+            signed_event.recipient_device_list()?.account_id() == listener_certificate.account_id(),
+            "mailbox ratchet text targets another account"
+        );
+        let local_device_id = device_state.identity().device_id();
+        ensure!(
+            signed_event.ratchet_message_for(local_device_id).is_ok(),
+            "mailbox ratchet text has no ciphertext for this Device"
+        );
+        let event_id = signed_event.event_id()?;
+        let event_store = open_event_store(state_directory)?;
+        let local_message_store = open_local_message_store(state_directory)?;
+        event_store
+            .authorized_inventory(binding.conversation_id(), &membership)
+            .context("validate existing history before mailbox commit")?;
+        if let Some(acknowledgement) = event_store
+            .load_authorized_conversation(binding.conversation_id(), &membership)?
+            .into_iter()
+            .find(|candidate| {
+                candidate.event.event().author_device_id() == local_device_id
+                    && matches!(
+                        candidate.event.event().payload(),
+                        EventPayload::Acknowledgement {
+                            acknowledged_event_id
+                        } if acknowledged_event_id == &event_id
+                    )
+                    && candidate.event.event().parents() == [event_id]
+            })
+            .map(|stored| stored.event)
+        {
+            open_local_text_projection_if_present(
+                &local_message_store,
+                &device_state,
+                listener_certificate.account_id(),
+                signed_event,
+            )?
+            .context("replayed mailbox message has no retained local projection")?;
+            println!("runtime_mailbox_received_event_id={event_id}");
+            println!("runtime_mailbox_receive_store=AlreadyPresent");
+            return Ok(RuntimeMailboxTextCommit {
+                event_id,
+                acknowledgement,
+            });
+        }
+        let (
+            local_projection_store,
+            received_store,
+            acknowledgement,
+            acknowledgement_id,
+            acknowledgement_store,
+        ) = run_state_transaction(state_directory, |transaction| {
+            let local_projection_store = match open_local_text_projection_if_present(
+                &local_message_store,
+                &device_state,
+                listener_certificate.account_id(),
+                signed_event,
+            )? {
+                Some(_) => StoreOutcome::AlreadyPresent,
+                None => {
+                    let mut ratchet_state = transaction.load_ratchet_state()?;
+                    let (sender_ratchet_identity, ciphertext) =
+                        signed_event.ratchet_message_for(local_device_id)?;
+                    let (decrypted, _) = ratchet_state
+                        .decrypt(device_state.identity(), sender_ratchet_identity, ciphertext)
+                        .context("decrypt mailbox text through persistent ratchet")?;
+                    let (outcome, receipt) = ensure_received_local_text_projection(
+                        &local_message_store,
+                        &device_state,
+                        listener_certificate.account_id(),
+                        signed_event,
+                        &decrypted,
+                    )?;
+                    transaction.register_store_receipt(&receipt)?;
+                    outcome
+                }
+            };
+            let (received_store, received_receipt) =
+                event_store.put_authorized_with_receipt(event, &membership)?;
+            transaction.register_store_receipt(&received_receipt)?;
+            let acknowledgement_sequence = transaction.allocate_sequence(&device_state)?;
+            let acknowledgement = AuthorizedEvent::new(
+                SignedEvent::sign_acknowledgement(
+                    device_state.identity(),
+                    binding.conversation_id(),
+                    acknowledgement_sequence,
+                    vec![event_id],
+                    event_id,
+                )?,
+                listener_certificate.clone(),
+                listener_authority.clone(),
+            )?;
+            let acknowledgement_id = acknowledgement.event().event_id()?;
+            let (acknowledgement_store, acknowledgement_receipt) =
+                event_store.put_authorized_with_receipt(&acknowledgement, &membership)?;
+            transaction.register_store_receipt(&acknowledgement_receipt)?;
+            Ok((
+                local_projection_store,
+                received_store,
+                acknowledgement,
+                acknowledgement_id,
+                acknowledgement_store,
+            ))
+        })?;
+        println!("runtime_mailbox_received_event_id={event_id}");
+        println!("runtime_mailbox_local_projection={local_projection_store:?}");
+        println!("runtime_mailbox_receive_store={received_store:?}");
+        println!("runtime_mailbox_acknowledgement_event_id={acknowledgement_id}");
+        println!("runtime_mailbox_acknowledgement_store={acknowledgement_store:?}");
+        Ok(RuntimeMailboxTextCommit {
+            event_id,
+            acknowledgement,
+        })
+    })();
+    let mirror_result = match vault_guard {
+        Some(guard) => guard.finish(),
+        None => Ok(()),
+    };
+    drop(state_lock);
+    combine_operation_and_mirror(operation_result, mirror_result)
+}
+
+async fn commit_runtime_mailbox_acknowledgement(
+    state_directory: &Path,
+    binding: &SignedRuntimeLocalMailboxBinding,
+    acknowledgement: &AuthorizedEvent,
+) -> Result<(RuntimeQueueId, EventId)> {
+    let state_lock = acquire_runtime_state_lock(state_directory)
+        .await?
+        .context("runtime state lock remained busy while committing mailbox acknowledgement")?;
+    let vault_guard = VaultDualWriteGuard::prepare(state_directory)?;
+    let operation_result = (|| {
+        let device_state = load_command_device_state(state_directory)?;
+        let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+        let local_certificate = trust.load_certificate()?;
+        let membership = trust
+            .load_conversation_membership(binding.conversation_id().scope_id())
+            .context("load membership for mailbox acknowledgement")?;
+        acknowledgement.verify_for_membership(&membership)?;
+        let signed = acknowledgement.event();
+        ensure!(
+            acknowledgement.author_account_id() == binding.peer_account_id()
+                && signed.author_device_id() == binding.peer_device_id()
+                && signed.conversation_id() == binding.conversation_id(),
+            "mailbox acknowledgement author or conversation does not match its receive binding"
+        );
+        let EventPayload::Acknowledgement {
+            acknowledged_event_id,
+        } = signed.payload()
+        else {
+            bail!("mailbox acknowledgement commit expected an acknowledgement event")
+        };
+        ensure!(
+            signed.parents() == [*acknowledged_event_id],
+            "mailbox acknowledgement has invalid causal parents"
+        );
+        let snapshot = load_runtime_state_snapshot(
+            state_directory,
+            local_certificate.account_id(),
+            local_certificate.device_id(),
+        )?;
+        let (queue_id, materialized) = snapshot
+            .materialized
+            .iter()
+            .find(|(queue_id, materialized)| {
+                materialized.event().event().event_id().ok() == Some(*acknowledged_event_id)
+                    && snapshot.queued.get(queue_id).is_some_and(|queued| {
+                        queued.contact_id() == binding.contact_id()
+                            && queued.peer_account_id() == binding.peer_account_id()
+                            && queued.conversation_id() == binding.conversation_id()
+                    })
+            })
+            .context("mailbox acknowledgement has no matching local outbox event")?;
+        let acknowledgement_id = signed.event_id()?;
+        if let Some(delivered) = snapshot.delivered.get(queue_id) {
+            ensure!(
+                delivered.event_id() == *acknowledged_event_id
+                    && delivered.acknowledgement_event_id() == acknowledgement_id,
+                "mailbox acknowledgement conflicts with retained delivery state"
+            );
+            println!("runtime_queue_id={queue_id}");
+            println!("runtime_outbound_status=delivered");
+            return Ok((*queue_id, acknowledgement_id));
+        }
+        ensure!(
+            materialized.event().event().event_id()? == *acknowledged_event_id,
+            "mailbox acknowledgement event changed before commit"
+        );
+        let marker = SignedDeliveredMessage::sign(
+            device_state.identity(),
+            *queue_id,
+            *acknowledged_event_id,
+            acknowledgement_id,
+        )?;
+        let event_store = open_event_store(state_directory)?;
+        run_state_transaction(state_directory, |transaction| {
+            let (_, receipt) =
+                event_store.put_authorized_with_receipt(acknowledgement, &membership)?;
+            transaction.register_store_receipt(&receipt)?;
+            persist_runtime_record(
+                state_directory,
+                &runtime_delivered_relative_path(*queue_id),
+                &marker.encode()?,
+                transaction,
+            )?;
+            Ok(())
+        })?;
+        println!("runtime_queue_id={queue_id}");
+        println!("runtime_acknowledgement_event_id={acknowledgement_id}");
+        println!("runtime_outbound_status=delivered");
+        Ok((*queue_id, acknowledgement_id))
+    })();
+    let mirror_result = match vault_guard {
+        Some(guard) => guard.finish(),
+        None => Ok(()),
+    };
+    drop(state_lock);
+    combine_operation_and_mirror(operation_result, mirror_result)
+}
+
+async fn prepare_runtime_reverse_mailbox_acknowledgement(
+    state_directory: &Path,
+    receive_binding: &SignedRuntimeLocalMailboxBinding,
+    acknowledgement: AuthorizedEvent,
+) -> Result<Option<PreparedRuntimeMailboxUpload>> {
+    let state_lock = acquire_runtime_state_lock(state_directory).await?.context(
+        "runtime state lock remained busy while preparing reverse mailbox acknowledgement",
+    )?;
+    let result = (|| {
+        let device_state = load_command_device_state(state_directory)?;
+        let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+        let local_certificate = trust.load_certificate()?;
+        let local_authority = trust.load_own_authority_snapshot(&local_certificate)?;
+        let snapshot = load_runtime_state_snapshot(
+            state_directory,
+            local_certificate.account_id(),
+            local_certificate.device_id(),
+        )?;
+        let now = unix_time_now()?;
+        let (signed, binding) = snapshot
+            .peer_mailbox_bindings
+            .values()
+            .filter(|candidate| {
+                candidate.contact_id() == receive_binding.contact_id()
+                    && candidate.peer_account_id() == receive_binding.peer_account_id()
+                    && candidate.peer_device_id() == receive_binding.peer_device_id()
+                    && candidate.conversation_id() == receive_binding.conversation_id()
+            })
+            .filter_map(|signed| {
+                open_verified_peer_mailbox_binding(
+                    &snapshot,
+                    &trust,
+                    &device_state,
+                    &local_certificate,
+                    &local_authority,
+                    signed,
+                    now,
+                )
+                .ok()
+                .map(|binding| (signed, binding))
+            })
+            .find(|(_, binding)| {
+                binding.expires_at_unix_seconds() >= now.saturating_add(MIN_MAILBOX_TTL_SECONDS)
+            })
+            .context("reverse acknowledgement has no current peer mailbox binding")?;
+        let acknowledgement_id = acknowledgement.event().event_id()?;
+        let item_id = runtime_mailbox_event_item_id(acknowledgement_id, signed.binding_id());
+        let ledger = runtime_mailbox_ledger(state_directory)?;
+        match ledger.outbound_state(binding.address().mailbox_id(), item_id)? {
+            Some(MailboxOutboundState::Stored(_)) => return Ok(None),
+            Some(MailboxOutboundState::Pending(pending)) => {
+                return Ok(Some(PreparedRuntimeMailboxUpload {
+                    pending,
+                    service_base_url: binding.service().base_url().to_owned(),
+                    queue_id: None,
+                }));
+            }
+            None => {}
+        }
+        let expires_at = now
+            .checked_add(DEFAULT_RUNTIME_MAILBOX_TTL_SECONDS)
+            .context("reverse mailbox acknowledgement expiry overflows")?
+            .min(binding.expires_at_unix_seconds());
+        let payload = RuntimeMailboxPayload::new(
+            signed.binding_id(),
+            local_certificate.account_id(),
+            local_certificate.device_id(),
+            signed.peer_account_id(),
+            signed.peer_device_id(),
+            signed.conversation_id(),
+            acknowledgement,
+        )?;
+        let envelope = MailboxEnvelope::seal(
+            binding.address().mailbox_id(),
+            item_id,
+            now,
+            expires_at,
+            binding.recipient_encryption_public_key(),
+            &payload.encode()?,
+        )?
+        .encode()?;
+        let ttl = expires_at
+            .checked_sub(now)
+            .context("reverse mailbox acknowledgement TTL underflow")?;
+        let request = MailboxPutRequest::new(
+            binding.address(),
+            binding
+                .write_capability()
+                .authorize(binding.address(), item_id, ttl, &envelope)?,
+            envelope,
+        )?;
+        match ledger.enqueue_outbound(request, binding.service().expected_store_key(), now)? {
+            OutboundEnqueueOutcome::Created | OutboundEnqueueOutcome::AlreadyPending => {}
+            OutboundEnqueueOutcome::AlreadyStored => return Ok(None),
+            OutboundEnqueueOutcome::CapacityExceeded => {
+                bail!("reverse mailbox acknowledgement capacity exceeded")
+            }
+            OutboundEnqueueOutcome::Conflict => {
+                bail!("reverse mailbox acknowledgement item conflicts")
+            }
+        }
+        let Some(MailboxOutboundState::Pending(pending)) =
+            ledger.outbound_state(binding.address().mailbox_id(), item_id)?
+        else {
+            bail!("reverse mailbox acknowledgement enqueue was not retained")
+        };
+        Ok(Some(PreparedRuntimeMailboxUpload {
+            pending,
+            service_base_url: binding.service().base_url().to_owned(),
+            queue_id: None,
+        }))
+    })();
+    drop(state_lock);
+    result
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum RuntimeMailboxPollAttempt {
+    NoChange,
+    StateChanged,
+}
+
+struct PreparedRuntimeMailboxPoll {
+    signed: SignedRuntimeLocalMailboxBinding,
+    binding: LocalMailboxBinding,
+}
+
+async fn attempt_runtime_mailbox_poll(
+    state_directory: &Path,
+    last_polls: &mut BTreeMap<MailboxBindingId, tokio::time::Instant>,
+) -> Result<RuntimeMailboxPollAttempt> {
+    let state_lock = acquire_runtime_state_lock(state_directory)
+        .await?
+        .context("runtime state lock remained busy while preparing mailbox poll")?;
+    let preparation = (|| {
+        let device_state = load_command_device_state(state_directory)?;
+        let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+        let local_certificate = trust.load_certificate()?;
+        let local_authority = trust.load_own_authority_snapshot(&local_certificate)?;
+        let snapshot = load_runtime_state_snapshot(
+            state_directory,
+            local_certificate.account_id(),
+            local_certificate.device_id(),
+        )?;
+        let selected = snapshot
+            .local_mailbox_bindings
+            .values()
+            .filter_map(|signed| {
+                open_verified_local_mailbox_binding(
+                    &snapshot,
+                    &trust,
+                    &device_state,
+                    &local_certificate,
+                    &local_authority,
+                    signed,
+                )
+                .ok()
+                .map(|binding| (signed.clone(), binding))
+            })
+            .min_by_key(|(signed, _)| last_polls.get(&signed.binding_id()).copied());
+        Ok::<_, anyhow::Error>(
+            selected.map(|(signed, binding)| PreparedRuntimeMailboxPoll { signed, binding }),
+        )
+    })();
+    drop(state_lock);
+    let Some(prepared) = preparation? else {
+        return Ok(RuntimeMailboxPollAttempt::NoChange);
+    };
+    last_polls.insert(prepared.signed.binding_id(), tokio::time::Instant::now());
+    let service = prepared.binding.service();
+    let client = MailboxHttpClient::new(service.base_url(), service.expected_store_key())?;
+    let ledger = runtime_mailbox_ledger(state_directory)?;
+    if let Some(delete_request) = ledger.pending_delete(
+        prepared.binding.address(),
+        &prepared.binding.read_capability(),
+    )? {
+        let response = client.delete(&delete_request).await?;
+        ledger.mark_inbound_deleted(
+            &delete_request,
+            &response,
+            service.expected_store_key(),
+            unix_time_now()?,
+        )?;
+        println!("runtime_mailbox_item_id={}", delete_request.item_id());
+        println!("runtime_mailbox_inbound_status=deleted-after-commit");
+        return Ok(RuntimeMailboxPollAttempt::StateChanged);
+    }
+    let authorization = prepared.binding.read_capability().authorize_list_page(
+        prepared.binding.address(),
+        MailboxRequestNonce::generate()?,
+        None,
+        MAX_MAILBOX_PAGE_ITEMS,
+    )?;
+    let request = MailboxListRequest::new(prepared.binding.address(), authorization)?;
+    let response = client.list(&request).await?;
+    let Some(item) = response.into_page().items.into_iter().next() else {
+        return Ok(RuntimeMailboxPollAttempt::NoChange);
+    };
+    let device_state = load_command_device_state(state_directory)?;
+    let inbound = ledger.prepare_inbound(
+        prepared.binding.address(),
+        item,
+        service.expected_store_key(),
+        device_state.encryption(),
+        unix_time_now()?,
+    )?;
+    drop(ledger);
+    let payload = RuntimeMailboxPayload::decode_and_verify(
+        inbound.plaintext(),
+        prepared.signed.binding_id(),
+        prepared.signed.peer_account_id(),
+        prepared.signed.peer_device_id(),
+        prepared.signed.local_account_id(),
+        prepared.signed.local_device_id(),
+        prepared.signed.conversation_id(),
+    )?;
+    let application_commit_id;
+    let mut reverse_upload = None;
+    match payload.event().event().payload() {
+        EventPayload::RatchetText { .. } => {
+            let committed =
+                commit_runtime_mailbox_text(state_directory, &prepared.signed, payload.event())
+                    .await?;
+            application_commit_id = *committed.event_id.as_bytes();
+            reverse_upload = prepare_runtime_reverse_mailbox_acknowledgement(
+                state_directory,
+                &prepared.signed,
+                committed.acknowledgement,
+            )
+            .await?;
+        }
+        EventPayload::Acknowledgement { .. } => {
+            let (_, acknowledgement_id) = commit_runtime_mailbox_acknowledgement(
+                state_directory,
+                &prepared.signed,
+                payload.event(),
+            )
+            .await?;
+            application_commit_id = *acknowledgement_id.as_bytes();
+        }
+    }
+    let ledger = runtime_mailbox_ledger(state_directory)?;
+    ledger.record_inbound_commit(&inbound, application_commit_id, unix_time_now()?)?;
+    let delete_request = ledger
+        .pending_delete(
+            prepared.binding.address(),
+            &prepared.binding.read_capability(),
+        )?
+        .context("mailbox application commit did not become eligible for deletion")?;
+    ensure!(
+        delete_request.item_id() == inbound.item_id(),
+        "mailbox deletion selected another item after application commit"
+    );
+    let delete_response = client.delete(&delete_request).await?;
+    ledger.mark_inbound_deleted(
+        &delete_request,
+        &delete_response,
+        service.expected_store_key(),
+        unix_time_now()?,
+    )?;
+    println!("runtime_mailbox_item_id={}", inbound.item_id());
+    println!("runtime_mailbox_inbound_status=deleted-after-commit");
+    drop(ledger);
+    if let Some(upload) = reverse_upload
+        && let Err(error) = upload_runtime_mailbox_request(state_directory, upload).await
+    {
+        eprintln!("runtime_reverse_mailbox_acknowledgement_status=pending error={error:#}");
+    }
+    Ok(RuntimeMailboxPollAttempt::StateChanged)
 }
 
 fn select_due_runtime_queue(state_directory: &Path) -> Result<Option<RuntimeQueueId>> {
@@ -15651,6 +17064,7 @@ fn select_due_runtime_queue(state_directory: &Path) -> Result<Option<RuntimeQueu
     let now = unix_time_now()?;
     Ok(snapshot.queued.keys().copied().find(|queue_id| {
         !snapshot.delivered.contains_key(queue_id)
+            && !snapshot.mailbox_dispatches.contains_key(queue_id)
             && snapshot
                 .latest_retry(*queue_id)
                 .is_none_or(|retry| retry.not_before_unix_seconds() <= now)
@@ -15706,14 +17120,22 @@ async fn attempt_next_runtime_delivery(
             eprintln!(
                 "runtime_outbound_status=failed runtime_queue_id={queue_id} stage=network error={error:#}"
             );
-            persist_runtime_retry(
-                state_directory,
-                queue_id,
-                retry_base_seconds,
-                retry_max_seconds,
-            )
-            .await?;
-            Ok(RuntimeDeliveryAttempt::RetryScheduled)
+            match attempt_runtime_mailbox_fallback(state_directory, &prepared).await {
+                Ok(()) => Ok(RuntimeDeliveryAttempt::MailboxStored),
+                Err(mailbox_error) => {
+                    eprintln!(
+                        "runtime_mailbox_status=failed runtime_queue_id={queue_id} error={mailbox_error:#}"
+                    );
+                    persist_runtime_retry(
+                        state_directory,
+                        queue_id,
+                        retry_base_seconds,
+                        retry_max_seconds,
+                    )
+                    .await?;
+                    Ok(RuntimeDeliveryAttempt::RetryScheduled)
+                }
+            }
         }
     }
 }

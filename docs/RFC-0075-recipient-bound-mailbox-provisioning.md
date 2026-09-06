@@ -128,10 +128,10 @@ network-free tests cover:
 Network-bearing test harnesses remain compile-only. M0.9.53 does not run a
 listener, build a release binary or create a ZIP package.
 
-## 7. Deferred runtime data path
+## 7. Runtime data path follow-up
 
-M0.9.54 should connect these verified bindings and the RFC-0074 ledger to the
-single serialized runtime actor:
+M0.9.54 implemented the runtime data path in
+[`RFC-0076`](RFC-0076-runtime-mailbox-fallback-and-ack.md):
 
 1. try current direct/relay endpoint candidates first;
 2. on bounded policy failure, create one deterministic mailbox item and retry

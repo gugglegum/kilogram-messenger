@@ -3295,12 +3295,45 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - contract зафиксирован в
   [`../docs/RFC-0075-recipient-bound-mailbox-provisioning.md`](../docs/RFC-0075-recipient-bound-mailbox-provisioning.md).
 
+### M0.9.54 — runtime mailbox fallback и reverse ACK: выполнено
+
+Реализовано:
+
+- verified peer mailbox binding подключён к existing materialized outbox только
+  после bounded failure всех direct/relay endpoint candidates;
+- Device-signed append-only dispatch связывает queue/contact/peer,
+  conversation, binding/mailbox/item/event и expiry; deterministic item ID и
+  exact retained PUT делают crash/retry идемпотентным;
+- crash между dispatch commit и ledger enqueue автоматически восстанавливает
+  pending envelope после повторной проверки exact queue/event/current binding;
+- store-signed receipt переводит очередь только в `mailbox-stored`; delivered
+  marker создаётся исключительно после peer-signed acknowledgement;
+- local receive bindings опрашиваются bounded страницами по 8 items, payload
+  HPKE-open-ится и проверяется против exact source/recipient/conversation/
+  binding до обычной membership/ratchet/event проверки;
+- AuthorizedEvent, local projection и ACK либо acknowledgement+delivered marker
+  коммитятся existing state transaction до client-ledger commit и conditional
+  delete; повтор после crash безопасен;
+- reverse acknowledgement получает собственный deterministic mailbox item,
+  durable enqueue до network PUT и exact retry при сбое;
+- serialized actor сначала обслуживает live delivery, затем не чаще одного
+  mailbox действия за 5 секунд; network waits не удерживают state lock и ошибка
+  mailbox не завершает runtime;
+- authenticated runtime IPC v21 и Windows projection различают
+  `mailbox-pending`, `mailbox-stored`, `mailbox-expired`, `mailbox-failed`, а
+  MailboxStatus показывает binding/dispatch и ledger received/deleted counts;
+- fail-closed script проверяет live-before-fallback, commit-before-delete,
+  reverse ACK, signed state, IPC contract и отсутствие нового EXE;
+- network-free mailbox-client tests прошли; network-bearing harnesses только
+  компилируются, release и ZIP не создаются;
+- contract зафиксирован в
+  [`../docs/RFC-0076-runtime-mailbox-fallback-and-ack.md`](../docs/RFC-0076-runtime-mailbox-fallback-and-ack.md).
+
 ### Следующий этап
 
-1. M0.9.54: встроить verified mailbox bindings и client ledger в serialized
-   runtime actor: direct/relay first, mailbox fallback по bounded policy,
-   отдельное `mailbox-stored` состояние, receive commit в existing event/
-   projection transaction до delete, reverse-mailbox ACK и honest IPC states.
+1. M0.9.55: automatic authenticated online mailbox offer exchange, explicit
+   capability rotation/revocation и deterministic convergence current bindings
+   без secrets в tickets/endpoint publications.
 2. Добавить independent second-builder reproduction и подписанный public
    release provenance поверх M0.9.50 same-host clean-root gate.
 3. Optional autostart/background mode оставить отдельной явной настройкой, не

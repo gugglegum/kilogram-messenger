@@ -381,17 +381,18 @@ removal semantics и MLS-группы ещё не реализованы.
 
 ## План ближайших работ
 
-Реализованный M0.9.53 добавляет recipient-bound mailbox provisioning: full
-read/write capability остаётся Device-подписанной и HPKE-sealed локально, peer
-получает только write capability в подписанном offer, зашифрованном к exact
-Device. Import bind-ит contact/conversation/current Root authority, canonical
-HTTPS URL и pinned store key. Runtime state честно сообщает
-`provisioned-not-yet-enabled`; второй EXE не создан.
+Реализованный M0.9.54 подключает recipient-bound mailbox bindings и crash-safe
+client ledger к единственному serialized runtime actor. Direct/relay остаётся
+первым путём, после его bounded failure создаётся deterministic durable mailbox
+dispatch; store receipt даёт только `mailbox-stored`, а `delivered` требует
+peer-signed ACK. Inbound AuthorizedEvent и projection коммитятся до conditional
+delete, ACK уходит через reverse mailbox. IPC v21 честно показывает pending,
+stored, expired, failed, received/deleted counts; второй EXE не создан.
 
-1. M0.9.54: подключить verified bindings и M0.9.52 ledger к одному serialized
-   runtime actor: direct/relay first, bounded mailbox fallback, отдельное
-   `mailbox-stored`, idempotent event/projection commit до delete,
-   reverse-mailbox ACK и honest IPC delivery states.
+1. M0.9.55: перенести тот же recipient-encrypted mailbox offer через уже
+   authenticated online session, добавить explicit capability rotation/
+   revocation и deterministic convergence current bindings без помещения
+   secrets в public tickets или endpoint publications.
 2. Уже реализованный M0.9.50 дважды строит `kilogram-offline` из exact
    SHA-256-manifested source в отдельных clean source/target roots, требует
    byte-identical EXE и fail-closed связывает clean package с проверенным
@@ -639,6 +640,12 @@ HTTPS URL и pinned store key. Runtime state честно сообщает
 - [`../docs/RFC-0074-bounded-mailbox-http-and-client-ledger.md`](../docs/RFC-0074-bounded-mailbox-http-and-client-ledger.md) —
   реализованный M0.9.52 bounded paged wire/HTTPS adapter в existing service и
   crash-safe client ledger с application-commit-before-delete invariant.
+- [`../docs/RFC-0075-recipient-bound-mailbox-provisioning.md`](../docs/RFC-0075-recipient-bound-mailbox-provisioning.md) —
+  реализованный M0.9.53 recipient-bound Device-signed/HPKE mailbox capability
+  provisioning с exact current-authority import.
+- [`../docs/RFC-0076-runtime-mailbox-fallback-and-ack.md`](../docs/RFC-0076-runtime-mailbox-fallback-and-ack.md) —
+  реализованный M0.9.54 direct/relay-first runtime mailbox fallback,
+  application-commit-before-delete и reverse-mailbox acknowledgement.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
