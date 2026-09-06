@@ -1647,3 +1647,26 @@ retirement остальных compatibility shadows ещё не реализов
   `C50B4509127E588986742EEE844917B721DB9673707F9921D62C3B3160F8F19E`;
   `target/release/kilogram-ticket-store.exe` — 2,581,504 bytes, SHA-256
   `4C90CDE6CEB527B1D02243A01EEFDA2DA043450A9127AE653F366B251CADAC7C`.
+
+## M0.9.48 verification snapshot (2026-09-06)
+
+- Новый `kilogram-offline` проходит `cargo check`, focused unit regression и
+  cross-component Three-Device lifecycle: online runtime создаёт `.pcrq`,
+  purpose-built offline decoder проверяет его, wrong KPC1 блокирует Root load,
+  offline Root выпускает `.pcrp`, а online runtime принимает response и
+  продолжает sibling convergence.
+- Strict workspace clippy проходит. Dependency gate насчитал 204 normal
+  packages для offline binary против 480 для CLI и не обнаружил Iroh, Tokio,
+  Reqwest или запрещённых Kilogram runtime/state/transport crates.
+- Два development package одного source/toolchain/binary получили одинаковый
+  ZIP SHA-256
+  `5C6AD38064C434E802FF253DBC3D94504903F8A22DCB3DBCB2F4FEAD5E3FAF62`;
+  `kilogram-offline.exe` имел SHA-256
+  `C23B50A336EBA4CA0FC8417516B6F426395F226297974775381455B41762FC6F`.
+- Полный direct `cargo test --workspace` был остановлен после нового Windows
+  Firewall prompt от `kilogram_cli-<hash>.exe`. Предыдущая loopback-only мера
+  ограничивает сеть, но не предотвращает application-path prompt. Добавлен
+  `scripts/run-cargo-tests-stable.ps1`: default делает только locked `--no-run`
+  и stable-name copy, а запуск требует explicit `-Run`. В этой сессии сетевой
+  stable harness намеренно не запускался, чтобы не вызвать первый prompt без
+  согласованного времени.

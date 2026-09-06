@@ -203,10 +203,11 @@ sessions, distribution, removal и key epochs и не решены этим пр
   resolution к exact-current siblings с тем же local evidence. M0.9.46
   выполняет собственную rotation, request и apply через authenticated live
   actor без restart. M0.9.47 добавляет public evidence viewer, compact QR claim
-  и mandatory KPC1 gate до Root load, но всё ещё требует человеческой передачи
-  свежего ticket и offline artifacts. Открыты purpose-built minimal offline
-  signer/reproducible media image, обнаружение конфликта между устройствами,
-  которые никогда не обменивались
+  и mandatory KPC1 gate до Root load; M0.9.48 выносит signer/viewer в отдельный
+  network-free binary и deterministic portable package, но всё ещё требует
+  человеческой передачи свежего ticket и offline artifacts. Открыты общий
+  audited artifact codec, independently reproducible builder, обнаружение
+  конфликта между устройствами, которые никогда не обменивались
   bundle, и действительно распределённая
   cross-machine координация без доверенного scheduler.
 - M0.9.32 compact/checkpoint-ит runtime publication, observation, policy и
@@ -253,6 +254,8 @@ sessions, distribution, removal и key epochs и не решены этим пр
   токен-экономики.
 - Push-уведомления на Android/iOS без утечки содержания и социального графа.
 - Воспроизводимые сборки, обновления клиента и защита supply chain.
+- Как вынести продублированный `.pcrq/.pcrp` codec в общий audited minimal crate,
+  не протащив Iroh/runtime зависимости обратно в offline Root package?
 - Миграция криптоалгоритмов и wire protocol без разделения сети.
 
 ## Инварианты при выборе ответов

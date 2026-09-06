@@ -23411,12 +23411,35 @@ mod tests {
             request_inspection.report().confirmation_code,
             request_report.confirmation_code
         );
+        let offline_request_inspection =
+            kilogram_offline::inspect_publication_conflict_request(&request_file, None)?;
+        assert_eq!(
+            offline_request_inspection.report().request_id,
+            request_inspection.report().request_id
+        );
+        assert_eq!(
+            offline_request_inspection.report().artifact_digest,
+            request_inspection.report().artifact_digest
+        );
+        assert_eq!(
+            offline_request_inspection.report().confirmation_code,
+            request_inspection.report().confirmation_code
+        );
         let request_qr_file = directory.path().join("publication-conflict-request.png");
         render_request_verification_qr(&request_inspection, &request_qr_file)?;
         assert_eq!(
             inspect_publication_conflict_request(&request_file, Some(&request_qr_file))?
                 .report()
                 .verification_qr_status,
+            "exact-match"
+        );
+        assert_eq!(
+            kilogram_offline::inspect_publication_conflict_request(
+                &request_file,
+                Some(&request_qr_file)
+            )?
+            .report()
+            .verification_qr_status,
             "exact-match"
         );
         let portable_request =
@@ -23450,6 +23473,22 @@ mod tests {
         };
         assert!(format!("{wrong_confirmation:#}").contains("Account Root was not loaded"));
         assert!(!wrong_confirmation_output.exists());
+        let offline_wrong_confirmation_output =
+            directory.path().join("offline-wrong-code-response.pcrp");
+        let offline_wrong_confirmation = match kilogram_offline::authorize_publication_conflict(
+            &directory
+                .path()
+                .join("offline-missing-root-must-not-be-loaded"),
+            &request_file,
+            "KPC1-0000-0000-0000-0000-0000-0000",
+            Some(&request_qr_file),
+            &offline_wrong_confirmation_output,
+        ) {
+            Ok(_) => bail!("offline wrong confirmation code unexpectedly loaded Account Root"),
+            Err(error) => error,
+        };
+        assert!(format!("{offline_wrong_confirmation:#}").contains("Account Root was not loaded"));
+        assert!(!offline_wrong_confirmation_output.exists());
         assert!(
             authorize_account_publication_conflict_resolution(
                 directory.path().join("peer-root"),
@@ -23460,13 +23499,18 @@ mod tests {
             )
             .is_err()
         );
-        authorize_account_publication_conflict_resolution(
-            directory.path().join("local-root"),
-            request_file.clone(),
-            request_report.confirmation_code.clone(),
-            Some(request_qr_file.clone()),
-            response_file.clone(),
+        let offline_authorization = kilogram_offline::authorize_publication_conflict(
+            &directory.path().join("local-root"),
+            &request_file,
+            &request_report.confirmation_code,
+            Some(&request_qr_file),
+            &response_file,
         )?;
+        assert_eq!(
+            offline_authorization.request_id,
+            request_report.publication_conflict_resolution_request_id
+        );
+        assert_eq!(offline_authorization.verification_qr_status, "exact-match");
         let response_inspection = inspect_publication_conflict_response(&response_file, None)?;
         assert_eq!(
             response_inspection.report().request_id,
@@ -23476,12 +23520,35 @@ mod tests {
             response_inspection.report().confirmation_code,
             request_report.confirmation_code
         );
+        let offline_response_inspection =
+            kilogram_offline::inspect_publication_conflict_response(&response_file, None)?;
+        assert_eq!(
+            offline_response_inspection.report().request_id,
+            response_inspection.report().request_id
+        );
+        assert_eq!(
+            offline_response_inspection.report().resolution_id,
+            response_inspection.report().resolution_id
+        );
+        assert_eq!(
+            offline_response_inspection.report().confirmation_code,
+            response_inspection.report().confirmation_code
+        );
         let response_qr_file = directory.path().join("publication-conflict-response.png");
         render_response_verification_qr(&response_inspection, &response_qr_file)?;
         assert_eq!(
             inspect_publication_conflict_response(&response_file, Some(&response_qr_file))?
                 .report()
                 .verification_qr_status,
+            "exact-match"
+        );
+        assert_eq!(
+            kilogram_offline::inspect_publication_conflict_response(
+                &response_file,
+                Some(&response_qr_file)
+            )?
+            .report()
+            .verification_qr_status,
             "exact-match"
         );
         assert!(

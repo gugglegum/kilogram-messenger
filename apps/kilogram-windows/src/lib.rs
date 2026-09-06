@@ -6363,17 +6363,17 @@ impl KilogramApp {
                         "Request digest: {}",
                         output.field("request_artifact_digest").unwrap_or("unknown")
                     ));
-                    ui.small("Keep the full .pcrq on removable media. Its QR is a compact exact-match claim, not the request itself. On a public inspection host, run:");
+                    ui.small("Keep the full .pcrq on removable media. Its QR is a compact exact-match claim, not the request itself. With the minimal offline package, run:");
                     ui.label(
                         egui::RichText::new(format!(
-                            "kilogram-cli publication-conflict-request-inspect --request-file \"{request_file}\" --qr-output-file publication-conflict-request.png"
+                            "kilogram-offline inspect-request --request-file \"{request_file}\" --qr-output-file publication-conflict-request.png"
                         ))
                         .monospace(),
                     );
                     ui.small("Compare the KPC1 code through an independent channel. Then, on the isolated Root host, inspect the artifact (and optionally its QR) before authorizing:");
                     ui.label(
                         egui::RichText::new(format!(
-                            "kilogram-cli account-publication-conflict-authorize --account-dir <offline-root> --request-file \"{request_file}\" --confirm-code \"{confirmation_code}\" --verification-qr-file publication-conflict-request.png --output-file publication-conflict-resolution.pcrp"
+                            "kilogram-offline authorize --account-dir <offline-root> --request-file \"{request_file}\" --confirm-code \"{confirmation_code}\" --verification-qr-file publication-conflict-request.png --output-file publication-conflict-resolution.pcrp"
                         ))
                         .monospace(),
                     );
@@ -6400,7 +6400,7 @@ impl KilogramApp {
                     ui.small("Optional public verification before import:");
                     ui.label(
                         egui::RichText::new(format!(
-                            "kilogram-cli publication-conflict-response-inspect --response-file \"{}\" --qr-output-file publication-conflict-response.png",
+                            "kilogram-offline inspect-response --response-file \"{}\" --qr-output-file publication-conflict-response.png",
                             self.publication_conflict_recovery.response_input_file.trim()
                         ))
                         .monospace(),

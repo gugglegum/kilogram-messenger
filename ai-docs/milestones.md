@@ -3119,11 +3119,44 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - contract зафиксирован в
   [`../docs/RFC-0069-hardened-offline-publication-conflict-ceremony.md`](../docs/RFC-0069-hardened-offline-publication-conflict-ceremony.md).
 
+### M0.9.48 — minimal offline publication-conflict appliance: выполнено
+
+Реализовано:
+
+- отдельный `kilogram-offline.exe` имеет ровно три команды: read-only
+  `inspect-request`, confirmation-gated `authorize` и read-only
+  `inspect-response`; Root загружается только второй командой;
+- normal dependency graph не содержит Iroh, Tokio, Reqwest,
+  `kilogram-runtime-ipc`, `kilogram-protocol`, `kilogram-session`,
+  `kilogram-state`, `kilogram-store` или `kilogram-transport-iroh`;
+- offline ticket verifier сохраняет byte-exact raw JSON endpoint при проверке
+  v11 Device signature, отдельно bounded-разбирает public endpoint summary и
+  полностью проверяет certificate, current prekey directory и write key;
+- `.pcrq`, `.pcrp`, Root resolution v2, KPC1 и QR claim v1 не изменились;
+  cross-component Three-Device regression принимает online request новым
+  decoder, подписывает его offline Root и применяет response прежним runtime;
+- `scripts/verify-kilogram-offline-boundary.ps1` fail-closed отклоняет появление
+  запрещённых network/runtime packages в normal dependency graph;
+- `scripts/package-kilogram-offline.ps1` использует locked release build,
+  запрещает чистовую упаковку dirty worktree, не перезаписывает output и создаёт
+  stable-name directory/ZIP с README, build provenance и SHA-256 manifest;
+- ZIP entries имеют детерминированные порядок и timestamp; две упаковки одного
+  source/toolchain/binary дали byte-identical archive hash;
+- Windows incident UI теперь показывает команды `kilogram-offline`, оставляя
+  совместимые general-CLI команды только fallback/debug surface;
+- Windows test workflow больше не полагается на ошибочное предположение, что
+  loopback bind никогда не вызывает Firewall prompt: обычный запуск по
+  hash-suffixed Cargo path запрещён, а
+  `scripts/run-cargo-tests-stable.ps1` по умолчанию только компилирует и копирует
+  harness под постоянным именем; реальный запуск требует явного `-Run`;
+- contract зафиксирован в
+  [`../docs/RFC-0070-minimal-offline-publication-conflict-appliance.md`](../docs/RFC-0070-minimal-offline-publication-conflict-appliance.md).
+
 ### Следующий этап
 
-1. M0.9.48: выделить purpose-built offline publication-conflict signer/viewer
-   с минимальным command/dependency surface, воспроизводимым переносимым
-   пакетом и явным read-only inspection -> confirmation -> signing flow.
+1. M0.9.49: вынести publication-conflict artifacts/verification в один audited
+   minimal crate, разделяемый online и offline сторонами без возвращения
+   network/runtime dependencies в `kilogram-offline`.
 2. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.

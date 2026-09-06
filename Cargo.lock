@@ -3155,6 +3155,7 @@ dependencies = [
  "iroh",
  "kilogram-crypto",
  "kilogram-identity",
+ "kilogram-offline",
  "kilogram-protocol",
  "kilogram-ratchet",
  "kilogram-runtime-ipc",
@@ -3204,6 +3205,27 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.20",
  "zeroize",
+]
+
+[[package]]
+name = "kilogram-offline"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64",
+ "blake3",
+ "clap",
+ "getrandom 0.4.3",
+ "image",
+ "kilogram-identity",
+ "kilogram-ratchet",
+ "kilogram-ticket-publication",
+ "postcard",
+ "qrcode",
+ "rqrr",
+ "serde",
+ "serde_json",
+ "tempfile",
 ]
 
 [[package]]

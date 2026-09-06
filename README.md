@@ -155,12 +155,47 @@ and [`docs/RFC-0068-live-publication-incident-lifecycle.md`](docs/RFC-0068-live-
 The hardened public viewer, compact QR claim and confirmation-gated offline
 signer ceremony are specified in
 [`docs/RFC-0069-hardened-offline-publication-conflict-ceremony.md`](docs/RFC-0069-hardened-offline-publication-conflict-ceremony.md).
+The purpose-built offline signer/viewer and deterministic portable package are
+specified in
+[`docs/RFC-0070-minimal-offline-publication-conflict-appliance.md`](docs/RFC-0070-minimal-offline-publication-conflict-appliance.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.47 hardened offline conflict ceremony — complete
+## Current milestone: M0.9.48 minimal offline conflict appliance — complete
+
+`kilogram-offline` is a separate purpose-built executable with exactly three
+commands: read-only request inspection, confirmation-gated Account Root
+authorization and read-only response inspection. It does not depend on Iroh,
+Tokio, Reqwest, runtime IPC, protocol/session, state or store crates, and has no
+network or live-runtime command surface. The Windows client now tells the user
+to perform the isolated phase with this binary rather than the general CLI.
+
+The offline decoder is byte-compatible with the existing `.pcrq`, `.pcrp`,
+connection-ticket v11 and QR claim v1 formats. A cross-component regression
+uses a request created by the online runtime, signs it with `kilogram-offline`,
+then verifies and applies the response through the original runtime. A checked
+dependency-boundary script rejects accidental network/runtime dependencies.
+
+`scripts/package-kilogram-offline.ps1` builds with `--locked`, rejects a dirty
+worktree by default and creates a stable-name portable directory and
+deterministic ZIP containing `kilogram-offline.exe`, instructions, build
+provenance and SHA-256 checksums. The same inputs produced byte-identical ZIPs
+in the release check. The design and remaining duplicated-codec maintenance
+risk are documented in
+[`docs/RFC-0070-minimal-offline-publication-conflict-appliance.md`](docs/RFC-0070-minimal-offline-publication-conflict-appliance.md).
+
+On Windows, network-bearing Rust tests must not be started directly with
+`cargo test`: Cargo executes a new hash-named EXE whenever the harness changes,
+which can repeatedly open Windows Firewall approval dialogs. Use
+`scripts/run-cargo-tests-stable.ps1` instead. Its safe default only compiles and
+copies every harness beside the Cargo artifact under a stable name; `-Run` is
+required explicitly to start tests. The first network-listening run of a new
+stable path can still require one approval, so it should be scheduled rather
+than launched during unrelated user activity.
+
+## Previous milestone: M0.9.47 hardened offline conflict ceremony — complete
 
 Publication-conflict request and response artifacts now have bounded public
 inspectors that authenticate every signature and exact embedded replacement

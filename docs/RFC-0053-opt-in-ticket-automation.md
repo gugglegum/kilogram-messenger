@@ -110,8 +110,11 @@ new generation, and reloads the durable vault-primary state.
 
 The Windows adapter regression checks the exact IPC v8 configuration, safe
 defaults, typed status, and execution-scope claim. The test harness keeps Iroh
-strictly on loopback, so Cargo's changing hashed test executable does not need a
-Windows Firewall exception.
+strictly on loopback to limit exposure. Later Windows validation showed that a
+loopback listener can still trigger an application-path Firewall prompt. Local
+network-bearing regressions therefore compile with Cargo `--no-run` and execute
+only an explicitly requested stable-name copy via
+`scripts/run-cargo-tests-stable.ps1`.
 
 ## 9. Honest limits and next work
 
