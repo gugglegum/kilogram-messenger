@@ -381,20 +381,21 @@ removal semantics и MLS-группы ещё не реализованы.
 
 ## План ближайших работ
 
-Реализованный M0.9.57 вывел mailbox activation/status/rotation/revocation в
-существующий Windows client через authenticated IPC v23. Единственный
-serialized runtime остаётся state owner, desktop выбирает exact enrolled peer
-Device и передаёт только public service URL/store key, а обратно получает
-opaque binding/update IDs, generation и convergence state. IPC workflow не
-создаёт manual offer, не раскрывает read/write capability, Root/device secrets
-и не добавляет EXE. Network-bearing targets только compile/clippy-verified;
-release/ZIP не создавались.
+M0.9.58 подготовил controlled two-device mailbox lifecycle field harness:
+debug-only one-shot hook обрывает recipient ACK строго после durable apply и до
+подписи, затем runtime завершает vault mirror и сам останавливается на явной
+restart boundary. Release build отвергает hook до открытия endpoint. No-clobber
+helpers пишут phase logs и secret-free IPC status, а fail-closed evidence
+verifier связывает exact update/binding IDs для activation retry, rotation,
+mailbox round trip и revocation, требует direct+relay и отвергает store log с
+application identifiers. Сетевой прогон ещё не выполнялся; release/ZIP и новый
+EXE не создавались.
 
-1. M0.9.58: подготовить controlled two-device mailbox lifecycle field test для
-   activation, forced lost ACK/restart, rotation overlap и revocation через
-   direct/relay, с проверкой convergence GUI и opaque-only store state. Сам
-   сетевой запуск и переносимый debug-набор выполнять только в согласованное
-   тестовое окно.
+1. Провести подготовленный M0.9.58 field test на Alice/Bob: activation с
+   forced lost ACK/restart, rotation overlap, opaque mailbox round trip и
+   revocation через direct/relay; после машинной проверки отдельно подтвердить
+   GUI states. Сетевой запуск и переносимый debug-набор выполнять только в
+   согласованное тестовое окно.
 2. Уже реализованный M0.9.50 дважды строит `kilogram-offline` из exact
    SHA-256-manifested source в отдельных clean source/target roots, требует
    byte-identical EXE и fail-closed связывает clean package с проверенным
@@ -657,6 +658,11 @@ release/ZIP не создавались.
 - [`../docs/RFC-0079-authenticated-mailbox-desktop-control.md`](../docs/RFC-0079-authenticated-mailbox-desktop-control.md) —
   реализованный M0.9.57 authenticated IPC v23 и Windows mailbox
   activation/status/rotation/revocation без передачи capability secrets в GUI.
+- [`../docs/RFC-0080-controlled-mailbox-lifecycle-field-test.md`](../docs/RFC-0080-controlled-mailbox-lifecycle-field-test.md) —
+  реализованный M0.9.58 debug-only post-commit lost-ACK hook, controlled
+  restart boundary и fail-closed direct/relay/mailbox evidence contract.
+- [`../docs/M0.9.58-MAILBOX-LIFECYCLE-FIELD-TEST-RU.md`](../docs/M0.9.58-MAILBOX-LIFECYCLE-FIELD-TEST-RU.md) —
+  пошаговый двухмашинный lifecycle test без state/IPC secrets в общей папке.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

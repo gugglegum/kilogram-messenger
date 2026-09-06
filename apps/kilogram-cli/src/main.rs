@@ -253,6 +253,8 @@ const MAX_RUNTIME_MAILBOX_CAPABILITY_UPDATES: usize = 4_096;
 const DEFAULT_RUNTIME_MAILBOX_TTL_SECONDS: u64 = 24 * 60 * 60;
 const RUNTIME_MAILBOX_POLL_INTERVAL: Duration = Duration::from_secs(5);
 const RUNTIME_MAILBOX_CAPABILITY_UPDATE_INTERVAL: Duration = Duration::from_secs(30);
+const RUNTIME_TEST_DROP_MAILBOX_CAPABILITY_ACK_ONCE_ENV: &str =
+    "KILOGRAM_TEST_DROP_MAILBOX_CAPABILITY_ACK_ONCE";
 const RUNTIME_TICKET_AUTOMATION_CHECK_INTERVAL: Duration = Duration::from_secs(5);
 const RUNTIME_DEVICE_LIST_DIGEST_DOMAIN: &[u8] = b"kilogram:runtime-device-list:v1\0";
 const OWN_DEVICE_TICKET_PAIRWISE_KEY_CONTEXT: &str =
@@ -16226,6 +16228,59 @@ enum RuntimeEvent {
     Shutdown,
 }
 
+#[derive(Default)]
+struct RuntimeSessionTestFaults {
+    #[cfg(debug_assertions)]
+    drop_mailbox_capability_ack_once: bool,
+}
+
+impl RuntimeSessionTestFaults {
+    fn from_environment() -> Result<Self> {
+        let Some(value) = std::env::var_os(RUNTIME_TEST_DROP_MAILBOX_CAPABILITY_ACK_ONCE_ENV)
+        else {
+            return Ok(Self::default());
+        };
+
+        #[cfg(not(debug_assertions))]
+        {
+            let _ = value;
+            bail!(
+                "{RUNTIME_TEST_DROP_MAILBOX_CAPABILITY_ACK_ONCE_ENV} is available only in debug builds"
+            );
+        }
+
+        #[cfg(debug_assertions)]
+        {
+            ensure!(
+                value == "1",
+                "{RUNTIME_TEST_DROP_MAILBOX_CAPABILITY_ACK_ONCE_ENV} must be exactly 1"
+            );
+            Ok(Self {
+                drop_mailbox_capability_ack_once: true,
+            })
+        }
+    }
+
+    #[cfg(debug_assertions)]
+    fn take_mailbox_capability_ack_drop(&mut self) -> bool {
+        std::mem::take(&mut self.drop_mailbox_capability_ack_once)
+    }
+}
+
+#[cfg(debug_assertions)]
+#[derive(Debug)]
+struct RuntimeMailboxCapabilityAckDropped;
+
+#[cfg(debug_assertions)]
+impl fmt::Display for RuntimeMailboxCapabilityAckDropped {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("debug field-test dropped mailbox capability ACK after durable apply")
+    }
+}
+
+#[cfg(debug_assertions)]
+impl std::error::Error for RuntimeMailboxCapabilityAckDropped {}
+
 async fn runtime(options: RuntimeOptions) -> Result<()> {
     validate_runtime_options(&options)?;
     let RuntimeOptions {
@@ -16246,6 +16301,7 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
         max_outbound_actions,
         ipc_file,
     } = options;
+    let mut runtime_test_faults = RuntimeSessionTestFaults::from_environment()?;
     let endpoint_announcement_descriptor_directory =
         resolve_runtime_received_endpoint_descriptor_directory(
             &state_dir,
@@ -16412,6 +16468,11 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
         tokio::time::Instant::now() - RUNTIME_MAILBOX_CAPABILITY_UPDATE_INTERVAL;
     let mut last_mailbox_capability_update_attempts = BTreeMap::new();
     let mut last_mailbox_polls = BTreeMap::new();
+    #[cfg(debug_assertions)]
+    if runtime_test_faults.drop_mailbox_capability_ack_once {
+        println!("runtime_test_fault_armed=mailbox-capability-ack-drop-after-durable-apply-once");
+        println!("runtime_test_fault_release_available=false");
+    }
     // Keep the accept future alive across polling ticks. Dropping an Iroh
     // Incoming while a handshake is in progress actively rejects that peer.
     let mut accept: Pin<Box<dyn Future<Output = Result<Connection>> + Send + '_>> =
@@ -16422,7 +16483,7 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
     let mut poll_tick =
         tokio::time::interval_at(tokio::time::Instant::now() + poll_interval, poll_interval);
     poll_tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-    let stop_reason = loop {
+    let stop_reason = 'runtime_loop: loop {
         let idle_deadline =
             (idle_seconds != 0).then(|| last_activity + Duration::from_secs(idle_seconds));
         let runtime_event = wait_for_runtime_event(
@@ -16645,6 +16706,7 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                             session_binding,
                             allowed_requester_account_id,
                             route_policy,
+                            &mut runtime_test_faults,
                         )
                         .await
                         {
@@ -16669,6 +16731,20 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                 match session_result {
                     Ok(()) => println!("runtime_session_status=completed"),
                     Err(error) => {
+                        #[cfg(debug_assertions)]
+                        if error
+                            .downcast_ref::<RuntimeMailboxCapabilityAckDropped>()
+                            .is_some()
+                        {
+                            println!(
+                                "runtime_test_fault_status=triggered-after-durable-apply-and-vault-mirror"
+                            );
+                            connection.close(
+                                2_u32.into(),
+                                b"kilogram debug field-test dropped mailbox capability ack",
+                            );
+                            break 'runtime_loop "debug-mailbox-capability-ack-drop";
+                        }
                         eprintln!(
                             "runtime_session_status=failed runtime_session={accepted_sessions} error={error:#}"
                         );
@@ -18951,6 +19027,7 @@ async fn acquire_runtime_state_lock(state_directory: &Path) -> Result<Option<Sta
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn handle_runtime_application_connection(
     connection: &Connection,
     state_directory: &Path,
@@ -18959,6 +19036,7 @@ async fn handle_runtime_application_connection(
     session_binding: SyncSessionBinding,
     allowed_requester_account_id: AccountId,
     route_policy: RoutePolicy,
+    runtime_test_faults: &mut RuntimeSessionTestFaults,
 ) -> Result<Result<()>> {
     let Some(state_lock) = acquire_runtime_state_lock(state_directory).await? else {
         return Ok(Err(anyhow::Error::msg(format!(
@@ -19017,6 +19095,7 @@ async fn handle_runtime_application_connection(
                 ticket.listener_directory().device_list(),
                 None,
                 endpoint_announcement_descriptor_directory,
+                Some(runtime_test_faults),
             )
             .await
         }
@@ -19340,6 +19419,7 @@ async fn listen_inner(options: ListenOptions) -> Result<()> {
         ticket.listener_directory().device_list(),
         history_rewrap_approval.as_ref(),
         None,
+        None,
     )
     .await?;
     let _ = timeout(Duration::from_secs(2), connection.closed()).await;
@@ -19365,7 +19445,10 @@ async fn handle_authorized_application_connection(
     listener_device_list: &AccountDeviceListSnapshot,
     history_rewrap_approval: Option<&HistoryRewrapApproval>,
     endpoint_announcement_descriptor_directory: Option<&Path>,
+    runtime_test_faults: Option<&mut RuntimeSessionTestFaults>,
 ) -> Result<()> {
+    #[cfg(not(debug_assertions))]
+    let _ = runtime_test_faults;
     let authorized_requester = accept_device_authorization(
         connection,
         state_directory,
@@ -19540,6 +19623,17 @@ async fn handle_authorized_application_connection(
                     return Err(error).context("reject mailbox capability update");
                 }
             };
+            #[cfg(debug_assertions)]
+            if runtime_test_faults
+                .is_some_and(RuntimeSessionTestFaults::take_mailbox_capability_ack_drop)
+            {
+                println!("mailbox_capability_update_id={update_id}");
+                println!("mailbox_capability_generation={}", update.generation());
+                println!("mailbox_capability_update_store={outcome:?}");
+                println!("runtime_test_fault=mailbox-capability-ack-dropped-after-durable-apply");
+                println!("runtime_test_fault_ack_written=false");
+                return Err(RuntimeMailboxCapabilityAckDropped.into());
+            }
             let acknowledgement = SignedMailboxCapabilityAcknowledgement::sign(
                 device_state.identity(),
                 mailbox_capability_session_binding(session_binding),
@@ -25254,6 +25348,17 @@ mod tests {
     use tokio::sync::oneshot;
 
     const UNSUPPORTED_TEST_ALPN: &[u8] = b"kilogram/test/unsupported/1";
+
+    #[cfg(debug_assertions)]
+    #[test]
+    fn mailbox_capability_ack_drop_fault_is_one_shot() {
+        let mut faults = RuntimeSessionTestFaults {
+            drop_mailbox_capability_ack_once: true,
+        };
+
+        assert!(faults.take_mailbox_capability_ack_drop());
+        assert!(!faults.take_mailbox_capability_ack_drop());
+    }
 
     fn local_test_endpoint_builder() -> Result<Builder> {
         Ok(endpoint_builder(RoutePolicy::Auto)

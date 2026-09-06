@@ -178,12 +178,35 @@ lifecycle exchange and deterministic convergence are specified in
 Authenticated secret-free lifecycle control from the Windows client is
 specified in
 [`docs/RFC-0079-authenticated-mailbox-desktop-control.md`](docs/RFC-0079-authenticated-mailbox-desktop-control.md).
+The controlled debug-only lost-ACK/restart field harness and fail-closed
+evidence contract are specified in
+[`docs/RFC-0080-controlled-mailbox-lifecycle-field-test.md`](docs/RFC-0080-controlled-mailbox-lifecycle-field-test.md),
+with the Russian operator procedure in
+[`docs/M0.9.58-MAILBOX-LIFECYCLE-FIELD-TEST-RU.md`](docs/M0.9.58-MAILBOX-LIFECYCLE-FIELD-TEST-RU.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.57 authenticated mailbox desktop control — complete
+## Current milestone: M0.9.58 controlled mailbox field harness — complete
+
+A debug build can now perform a deterministic one-shot recipient fault exactly
+after a signed mailbox capability update is durably applied and before its ACK
+is signed. The runtime completes its vault mirror, closes the connection and
+stops at an explicit restart boundary. Release builds reject the fault setting
+before opening a network endpoint.
+
+No-clobber PowerShell helpers capture foreground runtime logs and authenticated
+IPC mailbox status. A fail-closed verifier correlates exact update/binding IDs
+across activation retry, rotation and revocation; requires both direct and relay
+paths plus a store-signed opaque mailbox round trip; and rejects supplied store
+logs that expose application identifiers. Its network-free self-test accepts a
+valid fixture and rejects a metadata leak. No network process, release build,
+ZIP or additional executable was created. The actual two-device run remains an
+explicit field operation. Details are in
+[`docs/RFC-0080-controlled-mailbox-lifecycle-field-test.md`](docs/RFC-0080-controlled-mailbox-lifecycle-field-test.md).
+
+## Previous milestone: M0.9.57 authenticated mailbox desktop control — complete
 
 The existing Windows client can now activate, inspect, rotate and revoke a
 mailbox capability for an exact enrolled peer Device through authenticated IPC

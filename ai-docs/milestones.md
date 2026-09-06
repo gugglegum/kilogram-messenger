@@ -3387,8 +3387,6 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - contract зафиксирован в
   [`../docs/RFC-0078-transport-independent-mailbox-capability-convergence.md`](../docs/RFC-0078-transport-independent-mailbox-capability-convergence.md).
 
-### Следующий этап
-
 ### M0.9.57 — authenticated mailbox desktop control: выполнено
 
 Реализовано:
@@ -3416,10 +3414,43 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 
 ### Следующий этап
 
-1. M0.9.58: подготовить controlled two-device field test для activation,
-   forced lost ACK/restart, rotation overlap и revocation через direct/relay;
-   подтвердить convergence GUI и opaque-only mailbox store. Не запускать сеть и
-   не собирать переносимый debug-набор вне согласованного тестового окна.
+### M0.9.58 — controlled mailbox lifecycle field harness: выполнено
+
+Реализовано:
+
+- debug runtime получил explicit one-shot fault только через process env:
+  recipient durable применяет authenticated capability update, не подписывает
+  ACK, завершает vault mirror и автоматически останавливается на точной restart
+  boundary;
+- non-debug build отвергает fault setting до открытия endpoint; hook нельзя
+  передать через IPC/profile/GUI, он не сохраняется в state и не добавляет EXE;
+- foreground PowerShell helper запускает existing debug CLI from profile,
+  no-clobber пишет phase log и восстанавливает process environment;
+- отдельный helper снимает только secret-free authenticated IPC mailbox status
+  в фиксированные evidence filenames;
+- fail-closed evidence verifier связывает exact Account/Device/conversation,
+  update/binding IDs и generations для lost ACK, `AlreadyPresent` retry,
+  rotation и revocation, требует direct+relay route evidence;
+- тот же verifier требует store-signed `mailbox-stored`, recipient
+  `deleted-after-commit`, durable ledger counters и `opaque-redb-v1` startup log,
+  отклоняет application identifiers в предоставленном store output;
+- network-free verifier self-test принимает полный synthetic evidence set и
+  отклоняет добавленную metadata leak; static gate проверяет debug/release
+  boundary, apply/drop/sign ordering, vault mirror stop и отсутствие package/
+  нового executable;
+- реальный Alice/Bob прогон, перенос debug EXE и GUI observation отложены до
+  согласованного test window; сеть не запускалась, release/ZIP не создавались;
+- contract и процедура зафиксированы в
+  [`../docs/RFC-0080-controlled-mailbox-lifecycle-field-test.md`](../docs/RFC-0080-controlled-mailbox-lifecycle-field-test.md)
+  и
+  [`../docs/M0.9.58-MAILBOX-LIFECYCLE-FIELD-TEST-RU.md`](../docs/M0.9.58-MAILBOX-LIFECYCLE-FIELD-TEST-RU.md).
+
+### Следующий этап
+
+1. Провести подготовленный M0.9.58 controlled Alice/Bob field run и сохранить
+   машинно проверяемые direct/relay/mailbox evidence плюс отдельное человеческое
+   подтверждение GUI states. Не запускать сеть и не собирать переносимый
+   debug-набор вне согласованного тестового окна.
 2. Добавить independent second-builder reproduction и подписанный public
    release provenance поверх M0.9.50 same-host clean-root gate.
 3. Optional autostart/background mode оставить отдельной явной настройкой, не

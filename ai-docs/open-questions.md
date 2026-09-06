@@ -178,8 +178,10 @@ sessions, distribution, removal и key epochs и не решены этим пр
   automatic authenticated offer exchange, contiguous Device-signed rotation/
   revocation и current-head convergence; M0.9.56 закрывает deterministic
   socket-free lost-ACK/restart regression, M0.9.57 — secret-free authenticated
-  IPC и Windows lifecycle UI. Открыты controlled two-device field test,
-  multi-store replication/erasure coding, private retrieval/push wakeup,
+  IPC и Windows lifecycle UI. M0.9.58 подготовил debug-only exact post-commit
+  lost-ACK hook, no-clobber field logs и fail-closed evidence verifier, но
+  реальный Alice/Bob direct+relay прогон ещё не выполнен. Открыты multi-store
+  replication/erasure coding, private retrieval/push wakeup,
   Sybil/admission limits и unlinkability: один storage node всё ещё видит IP,
   timing, size и повторный доступ к одному pseudonymous mailbox.
 - Как синхронизировать M0.9.29 observation high-water между устройствами одного

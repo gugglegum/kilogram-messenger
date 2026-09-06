@@ -1831,3 +1831,25 @@ retirement остальных compatibility shadows ещё не реализов
 - Exact `target` после проверки содержит 20,214 files / 11.63 GiB (debug 5.39,
   verification 4.50, retained old release 1.73 GiB), ниже 40 GiB warning
   threshold; автоматическая очистка не требовалась.
+
+## M0.9.58 verification snapshot (2026-09-06)
+
+- Изменение собирается только в обычном debug/test profile с BelowNormal и 12
+  Cargo jobs; release build и ZIP package не выполняются.
+- Focused network-free CLI test
+  `mailbox_capability_ack_drop_fault_is_one_shot` прошёл 1/1; он проверяет
+  одноразовое потребление fault flag и не открывает socket/listener.
+- `kilogram-cli --all-targets --all-features --locked` проходит strict Clippy с
+  `-D warnings`; rustfmt и `git diff --check` проходят.
+- `verify-kilogram-mailbox-field-evidence.ps1 -SelfTest` принял valid synthetic
+  lifecycle set и fail closed отклонил store output после добавления
+  `conversation_id`.
+- `verify-kilogram-mailbox-field-test-boundary.ps1` подтвердил debug-only fault,
+  durable-apply-before-drop-before-sign ordering, runtime stop только после
+  vault mirror, отсутствие build/release/ZIP в operator helpers и отсутствие
+  нового executable.
+- Все предыдущие blind-mailbox, runtime flow, capability lifecycle,
+  convergence и desktop-control boundary gates повторно прошли.
+- Реальный network field test не запускался, поэтому Windows Firewall surface
+  не создавался. Переносимый debug test kit будет подготовлен только по явному
+  запросу перед согласованным Alice/Bob окном.
