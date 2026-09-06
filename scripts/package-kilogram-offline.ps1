@@ -31,6 +31,10 @@ try {
         throw 'Refusing a release package from a dirty worktree; commit first or use -AllowDirty for a development-only package'
     }
 
+    & powershell -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'verify-publication-conflict-boundary.ps1')
+    if ($LASTEXITCODE -ne 0) {
+        throw 'publication-conflict dependency boundary verification failed'
+    }
     & powershell -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'verify-kilogram-offline-boundary.ps1')
     if ($LASTEXITCODE -ne 0) {
         throw 'offline dependency boundary verification failed'

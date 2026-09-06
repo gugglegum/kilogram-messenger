@@ -3152,11 +3152,35 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - contract зафиксирован в
   [`../docs/RFC-0070-minimal-offline-publication-conflict-appliance.md`](../docs/RFC-0070-minimal-offline-publication-conflict-appliance.md).
 
+### M0.9.49 — shared publication-conflict artifacts: выполнено
+
+Реализовано:
+
+- новый `kilogram-publication-conflict` является единственным владельцем
+  signed publication/observation, proof/evidence, Device request, Root
+  resolution/response и compact KPC1 claim;
+- прежние реализации удалены из `kilogram-cli` и `kilogram-offline`; transport,
+  HTTP/HPKE, QR image, filesystem и runtime adapters остаются снаружи;
+- wire versions, serde/postcard field order, signature domains, IDs, bounds и
+  KPC1 не изменены; online `RoutePolicy` переходит в transport-independent
+  artifact enum через явное сопоставление;
+- locked dependency gate подтверждает отсутствие Iroh/Tokio/Reqwest,
+  image/QR, runtime/state/store/session/protocol/transport crates в shared
+  boundary и отклоняет duplicate wire definitions вне неё;
+- offline dependency gate требует общий crate и по-прежнему не допускает
+  network/runtime surface;
+- focused network-free regression строит полную conflict chain и требует
+  одинаковые online/offline IDs, digests, KPC1 и byte-exact response round-trip;
+- network-bearing harnesses только скомпилированы под stable names и намеренно
+  не запускались без согласованного окна для Windows Firewall;
+- contract зафиксирован в
+  [`../docs/RFC-0071-shared-publication-conflict-artifacts.md`](../docs/RFC-0071-shared-publication-conflict-artifacts.md).
+
 ### Следующий этап
 
-1. M0.9.49: вынести publication-conflict artifacts/verification в один audited
-   minimal crate, разделяемый online и offline сторонами без возвращения
-   network/runtime dependencies в `kilogram-offline`.
+1. M0.9.50: pinned independently repeatable build/provenance для
+   `kilogram-offline`, включая отдельные clean build roots и сравнение payload
+   artifacts, а не только deterministic ZIP одного локального binary.
 2. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 3. Добавить macOS/Linux/mobile providers той же platform boundary.

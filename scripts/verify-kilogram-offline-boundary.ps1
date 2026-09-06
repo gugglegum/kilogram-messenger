@@ -27,8 +27,12 @@ try {
     if ($violations) {
         throw "offline dependency boundary contains forbidden packages:`n$($violations -join "`n")"
     }
+    if (-not ($tree | Where-Object { $_ -match '^kilogram-publication-conflict v' })) {
+        throw 'offline dependency boundary is missing the shared publication-conflict crate'
+    }
 
     Write-Output 'offline_boundary=verified'
+    Write-Output 'shared_publication_conflict_codec=true'
     Write-Output 'network_dependencies=false'
     Write-Output 'runtime_dependencies=false'
     Write-Output "normal_dependency_records=$($tree.Count)"

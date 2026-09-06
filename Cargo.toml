@@ -9,6 +9,7 @@ members = [
     "crates/kilogram-crypto",
     "crates/kilogram-identity",
     "crates/kilogram-protocol",
+    "crates/kilogram-publication-conflict",
     "crates/kilogram-ratchet",
     "crates/kilogram-runtime-ipc",
     "crates/kilogram-session",

@@ -205,8 +205,9 @@ sessions, distribution, removal и key epochs и не решены этим пр
   actor без restart. M0.9.47 добавляет public evidence viewer, compact QR claim
   и mandatory KPC1 gate до Root load; M0.9.48 выносит signer/viewer в отдельный
   network-free binary и deterministic portable package, но всё ещё требует
-  человеческой передачи свежего ticket и offline artifacts. Открыты общий
-  audited artifact codec, independently reproducible builder, обнаружение
+  человеческой передачи свежего ticket и offline artifacts. M0.9.49 устраняет
+  двойную реализацию signed artifact codec через общий network-free crate и
+  dependency/duplicate gates. Открыты independently reproducible builder, обнаружение
   конфликта между устройствами, которые никогда не обменивались
   bundle, и действительно распределённая
   cross-machine координация без доверенного scheduler.

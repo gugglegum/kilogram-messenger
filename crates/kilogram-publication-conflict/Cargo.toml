@@ -1,0 +1,22 @@
+[package]
+name = "kilogram-publication-conflict"
+description = "Minimal signed publication-conflict artifacts and human verification claims for Kilogram"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+base64.workspace = true
+blake3.workspace = true
+kilogram-identity = { path = "../kilogram-identity" }
+kilogram-ticket-publication = { path = "../kilogram-ticket-publication" }
+postcard.workspace = true
+serde.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

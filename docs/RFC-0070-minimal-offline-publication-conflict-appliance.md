@@ -91,9 +91,9 @@ both inspectors must report identical request ID/digest/KPC1, the offline
 library authorizes it, both sides must report the same response IDs, and the
 online runtime must apply it and continue sibling convergence.
 
-Maintaining two format implementations is an explicit residual risk. M0.9.49
-should extract one audited minimal artifact crate used by both sides without
-introducing network/runtime dependencies into the offline graph.
+This duplicated-format residual risk was removed in M0.9.49: online and offline
+paths now share the network-free artifact implementation specified by
+[`RFC-0071-shared-publication-conflict-artifacts.md`](RFC-0071-shared-publication-conflict-artifacts.md).
 
 ## 6. Portable package
 

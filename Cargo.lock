@@ -3157,6 +3157,7 @@ dependencies = [
  "kilogram-identity",
  "kilogram-offline",
  "kilogram-protocol",
+ "kilogram-publication-conflict",
  "kilogram-ratchet",
  "kilogram-runtime-ipc",
  "kilogram-session",
@@ -3215,12 +3216,11 @@ dependencies = [
  "base64",
  "blake3",
  "clap",
- "getrandom 0.4.3",
  "image",
  "kilogram-identity",
+ "kilogram-publication-conflict",
  "kilogram-ratchet",
  "kilogram-ticket-publication",
- "postcard",
  "qrcode",
  "rqrr",
  "serde",
@@ -3240,6 +3240,20 @@ dependencies = [
  "serde",
  "tempfile",
  "thiserror 2.0.20",
+]
+
+[[package]]
+name = "kilogram-publication-conflict"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64",
+ "blake3",
+ "kilogram-identity",
+ "kilogram-ticket-publication",
+ "postcard",
+ "serde",
+ "tempfile",
 ]
 
 [[package]]

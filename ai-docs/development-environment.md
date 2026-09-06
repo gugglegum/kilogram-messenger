@@ -1670,3 +1670,30 @@ retirement остальных compatibility shadows ещё не реализов
   и stable-name copy, а запуск требует explicit `-Run`. В этой сессии сетевой
   stable harness намеренно не запускался, чтобы не вызвать первый prompt без
   согласованного времени.
+
+## M0.9.49 verification snapshot (2026-09-06)
+
+- `kilogram-publication-conflict` стал общим владельцем signed publication,
+  observation, proof/evidence, request, Root resolution/response и KPC1 claim;
+  из CLI удалено около 1,200, из offline library около 800 строк дублированного
+  wire/verification кода.
+- `scripts/verify-publication-conflict-boundary.ps1` подтвердил 94 normal
+  dependency records, отсутствие network/runtime/image dependencies и
+  duplicate wire implementations. Offline gate подтвердил общий codec и 206
+  normal records без network/runtime packages.
+- `cargo check --workspace --all-targets`, strict workspace Clippy и formatting
+  проходят. Общий unit test и три network-free CLI regressions запущены только
+  через stable-name harness; все четыре прошли.
+- Новый cross-component regression требует одинаковые online/offline request и
+  response IDs, artifact digests, KPC1 и byte-exact response re-encode.
+- Network-bearing regressions намеренно только компилируются: их запуск остаётся
+  отдельным согласованным действием, чтобы Windows Firewall prompt не возникал
+  во время другой работы пользователя.
+- `cargo build --workspace --release --locked` и offline help smoke проходят.
+  Два development package содержали один и тот же отдельно собранный
+  `kilogram-offline.exe` — 2,458,112 bytes, SHA-256
+  `B90AF46F5A10B1CB2CDDB521B4963B260E0D896B380575C3346200496264C095`
+  — и получили одинаковый ZIP SHA-256
+  `9308D12FCB3D8D2835E0C25F6FAAE013D5972E42330C3040B5A292A884D28D85`.
+  Это проверяет deterministic packaging готового payload; отдельная повторная
+  линковка пока не заявлена воспроизводимой и является целью M0.9.50.

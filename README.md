@@ -158,12 +158,35 @@ signer ceremony are specified in
 The purpose-built offline signer/viewer and deterministic portable package are
 specified in
 [`docs/RFC-0070-minimal-offline-publication-conflict-appliance.md`](docs/RFC-0070-minimal-offline-publication-conflict-appliance.md).
+The single network-free implementation of the signed publication-conflict
+artifact chain is specified in
+[`docs/RFC-0071-shared-publication-conflict-artifacts.md`](docs/RFC-0071-shared-publication-conflict-artifacts.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.48 minimal offline conflict appliance — complete
+## Current milestone: M0.9.49 shared publication-conflict artifacts — complete
+
+The new `kilogram-publication-conflict` crate is the single implementation of
+signed ticket publications/observations, conflict proofs, Device requests,
+Root resolutions/responses and compact KPC1 claims. Both the online CLI and
+`kilogram-offline` now use those exact encoders and verifiers; the duplicated
+wire implementations have been removed without changing a wire version.
+
+The shared crate has no Iroh, Tokio, Reqwest, image/QR, runtime IPC, protocol,
+session, state, store or transport dependency. A locked dependency gate also
+rejects duplicate wire definitions outside the crate. A network-free
+cross-component regression requires online and offline inspectors to agree on
+request/response IDs, artifact digests and KPC1, with byte-exact response
+round-trip. Details are in
+[`docs/RFC-0071-shared-publication-conflict-artifacts.md`](docs/RFC-0071-shared-publication-conflict-artifacts.md).
+
+Network-bearing Rust harnesses are still only compiled by default and were not
+started for this milestone, so development verification cannot unexpectedly
+open a Windows Firewall dialog.
+
+## Previous milestone: M0.9.48 minimal offline conflict appliance — complete
 
 `kilogram-offline` is a separate purpose-built executable with exactly three
 commands: read-only request inspection, confirmation-gated Account Root
@@ -182,8 +205,8 @@ dependency-boundary script rejects accidental network/runtime dependencies.
 worktree by default and creates a stable-name portable directory and
 deterministic ZIP containing `kilogram-offline.exe`, instructions, build
 provenance and SHA-256 checksums. The same inputs produced byte-identical ZIPs
-in the release check. The design and remaining duplicated-codec maintenance
-risk are documented in
+in the release check. The design and the now-resolved duplicated-codec risk are
+documented in
 [`docs/RFC-0070-minimal-offline-publication-conflict-appliance.md`](docs/RFC-0070-minimal-offline-publication-conflict-appliance.md).
 
 On Windows, network-bearing Rust tests must not be started directly with

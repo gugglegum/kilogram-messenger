@@ -7600,7 +7600,17 @@ fn create_runtime_publication_conflict_resolution_request_report(
         replacement.ticket_publication_write_key(),
         current.ticket_publication_channel_epoch(),
         replacement.ticket_publication_channel_epoch(),
-        binding.route_policy(),
+        match binding.route_policy() {
+            RoutePolicy::Auto => {
+                kilogram_publication_conflict::PublicationConflictRoutePolicy::Auto
+            }
+            RoutePolicy::DirectOnly => {
+                kilogram_publication_conflict::PublicationConflictRoutePolicy::DirectOnly
+            }
+            RoutePolicy::RelayOnly => {
+                kilogram_publication_conflict::PublicationConflictRoutePolicy::RelayOnly
+            }
+        },
         replacement_bytes,
         unix_time_now()?,
     )?;
@@ -22485,6 +22495,153 @@ mod tests {
             .err()
             .context("same-generation publication equivocation was accepted")?;
         assert!(format!("{error:#}").contains("equivocation"));
+        Ok(())
+    }
+
+    #[test]
+    fn shared_publication_conflict_codec_is_online_offline_compatible() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let local_root_directory = directory.path().join("local-root");
+        let local_root = AccountRootState::create(&local_root_directory)?;
+        let local_device = DeviceIdentity::generate()?;
+        let local_encryption = DeviceEncryptionIdentity::generate()?;
+        let local_certificate = local_root.issue_device_certificate(
+            local_device.device_id(),
+            local_encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        local_root.publish_device_list(std::slice::from_ref(&local_certificate))?;
+        let local_authority = local_root.authority_snapshot()?;
+
+        let peer_root = AccountRootState::create(directory.path().join("peer-root"))?;
+        let peer_device = DeviceIdentity::generate()?;
+        let peer_encryption = DeviceEncryptionIdentity::generate()?;
+        let peer_certificate = peer_root.issue_device_certificate(
+            peer_device.device_id(),
+            peer_encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let peer_list = peer_root.publish_device_list(std::slice::from_ref(&peer_certificate))?;
+        let peer_directory =
+            AccountPrekeyDirectory::new(peer_list, vec![prekey_pool_for(&peer_device)?])?;
+        let replacement_ticket = ConnectionTicket::new_with_publication_channel_epoch(
+            EndpointAddr::new(SecretKey::generate().public()),
+            &peer_device,
+            peer_certificate,
+            peer_directory,
+            local_root.account_id(),
+            RoutePolicy::Auto,
+            1,
+        )?;
+        let old_write_key =
+            ticket_publication_write_capability(&peer_device, local_root.account_id(), 0)
+                .write_key();
+        let now = unix_time_now()?;
+        let first = SignedTicketPublication::sign(
+            &peer_device,
+            old_write_key.channel_id(),
+            peer_root.account_id(),
+            local_root.account_id(),
+            "first-conflicting-ticket".to_owned(),
+            now,
+            300,
+            None,
+        )?;
+        let second = SignedTicketPublication::sign(
+            &peer_device,
+            old_write_key.channel_id(),
+            peer_root.account_id(),
+            local_root.account_id(),
+            "second-conflicting-ticket".to_owned(),
+            now,
+            300,
+            None,
+        )?;
+        let first_observation = SignedTicketPublicationObservation::sign(
+            &local_device,
+            local_root.account_id(),
+            &first,
+            now,
+            None,
+        )?;
+        let second_observation = SignedTicketPublicationObservation::sign(
+            &local_device,
+            local_root.account_id(),
+            &second,
+            now,
+            None,
+        )?;
+        let proof = SignedPublicationConflictProof::sign(
+            &local_device,
+            local_root.account_id(),
+            now,
+            first_observation,
+            second_observation,
+        )?;
+        let replacement_bytes = replacement_ticket.encode()?.into_bytes();
+        let request = SignedPublicationConflictResolutionRequest::sign(
+            &local_device,
+            local_root.account_id(),
+            local_authority.revision(),
+            proof,
+            old_write_key,
+            replacement_ticket.ticket_publication_write_key(),
+            0,
+            replacement_ticket.ticket_publication_channel_epoch(),
+            kilogram_publication_conflict::PublicationConflictRoutePolicy::Auto,
+            replacement_bytes,
+            now,
+        )?;
+        let request_file = directory.path().join("shared-codec.pcrq");
+        fs::write(&request_file, request.encode()?)?;
+
+        let online_request = inspect_publication_conflict_request(&request_file, None)?;
+        let offline_request =
+            kilogram_offline::inspect_publication_conflict_request(&request_file, None)?;
+        assert_eq!(
+            online_request.report().request_id,
+            offline_request.report().request_id
+        );
+        assert_eq!(
+            online_request.report().artifact_digest,
+            offline_request.report().artifact_digest
+        );
+        assert_eq!(
+            online_request.report().confirmation_code,
+            offline_request.report().confirmation_code
+        );
+
+        let response_file = directory.path().join("shared-codec.pcrp");
+        kilogram_offline::authorize_publication_conflict(
+            &local_root_directory,
+            &request_file,
+            &online_request.report().confirmation_code,
+            None,
+            &response_file,
+        )?;
+        let online_response = inspect_publication_conflict_response(&response_file, None)?;
+        let offline_response =
+            kilogram_offline::inspect_publication_conflict_response(&response_file, None)?;
+        assert_eq!(
+            online_response.report().request_id,
+            offline_response.report().request_id
+        );
+        assert_eq!(
+            online_response.report().resolution_id,
+            offline_response.report().resolution_id
+        );
+        assert_eq!(
+            online_response.report().artifact_digest,
+            offline_response.report().artifact_digest
+        );
+        assert_eq!(
+            online_response.report().confirmation_code,
+            offline_response.report().confirmation_code
+        );
+        assert_eq!(
+            PublicationConflictResolutionResponse::decode(&fs::read(&response_file)?)?.encode()?,
+            fs::read(&response_file)?
+        );
         Ok(())
     }
 
