@@ -217,8 +217,10 @@ sessions, distribution, removal и key epochs и не решены этим пр
   человеческой передачи свежего ticket и offline artifacts. M0.9.49 устраняет
   двойную реализацию signed artifact codec через общий network-free crate и
   dependency/duplicate gates. M0.9.50 добавляет same-host two-clean-root
-  reproducibility gate, но независимый second builder и signed provenance
-  остаются открыты. Также открыты обнаружение конфликта между устройствами,
+  reproducibility gate, а M0.9.59 — manual GitHub-hosted second-builder и
+  fail-closed signed-attestation verification foundation. Реальный external run
+  ещё не выполнен; pinned immutable builder, trusted reusable workflow и
+  release/update signing остаются открыты. Также открыты обнаружение конфликта между устройствами,
   которые никогда не обменивались bundle, и действительно распределённая
   cross-machine координация без доверенного scheduler.
 - M0.9.32 compact/checkpoint-ит runtime publication, observation, policy и

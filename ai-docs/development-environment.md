@@ -1853,3 +1853,21 @@ retirement остальных compatibility shadows ещё не реализов
 - Реальный network field test не запускался, поэтому Windows Firewall surface
   не создавался. Переносимый debug test kit будет подготовлен только по явному
   запросу перед согласованным Alice/Bob окном.
+
+## M0.9.59 verification snapshot (2026-09-06)
+
+- Добавлен manual-only GitHub Actions second-builder contract; push/PR/schedule/
+  release triggers отсутствуют, поэтому первоначальная публикация repository не
+  запускает release build.
+- `verify-kilogram-independent-builder.ps1 -SelfTest` прошёл coherent synthetic
+  evidence и доказал fail-closed rejection после изменения external EXE.
+- `verify-kilogram-independent-builder-boundary.ps1` подтвердил exact action
+  pins, least job permissions, exact commit/hash inputs, attest-only-on-match,
+  stable EXE name, отсутствие local ZIP/package и mandatory production
+  attestation constraints.
+- `git diff --check` проходит. Rust source не менялся, поэтому Cargo check/test/
+  Clippy не запускались; release build, ZIP и Kilogram network process не
+  запускались, Windows Firewall surface не создавался.
+- Реальный GitHub workflow сознательно не запускался. Внешний hash/attestation
+  появятся только после отдельного clean M0.9.50 run и ручного dispatch для
+  exact commit.

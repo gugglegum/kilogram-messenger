@@ -3445,14 +3445,44 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
   и
   [`../docs/M0.9.58-MAILBOX-LIFECYCLE-FIELD-TEST-RU.md`](../docs/M0.9.58-MAILBOX-LIFECYCLE-FIELD-TEST-RU.md).
 
+### M0.9.59 — independent builder и signed provenance foundation: выполнено
+
+Реализовано:
+
+- добавлен только ручной `workflow_dispatch` для GitHub-hosted `windows-2025`;
+  push/PR/schedule/release не запускают тяжёлую сборку;
+- оператор обязан передать exact clean commit и SHA-256, уже подтверждённый
+  двумя M0.9.50 local clean-root builds; выбранный workflow commit обязан
+  совпасть с input;
+- independent builder повторяет pinned Rust target, commit epoch, disabled
+  incremental, source path remap и `/Brepro`, после locked fetch строит только
+  network-free `kilogram-offline.exe` двумя Cargo jobs;
+- GitHub attestation создаётся только при byte-identical совпадении; divergent
+  artifact сохраняется на 14 дней только как bounded diagnosis и job падает;
+- actions pinned к exact commits, checkout не сохраняет credentials, job имеет
+  только read/OIDC/attestation/artifact-metadata permissions;
+- production verifier требует оба M0.9.50 artifacts, external executable и
+  record одного commit/hash/length, затем через `gh` проверяет attestation обоих
+  external subjects, exact repository, signer workflow, source digest и запрет
+  self-hosted runner;
+- network-free self-test принимает coherent synthetic evidence и отклоняет
+  tampered EXE; отдельный static boundary запрещает automatic triggers,
+  floating actions, packaging и production attestation bypass;
+- workflow создан, но не запускался: independent reproduction/signed release
+  ещё не заявлены, release/ZIP/network process не создавались;
+- contract зафиксирован в
+  [`../docs/RFC-0081-independent-builder-and-signed-provenance.md`](../docs/RFC-0081-independent-builder-and-signed-provenance.md).
+
 ### Следующий этап
 
 1. Провести подготовленный M0.9.58 controlled Alice/Bob field run и сохранить
    машинно проверяемые direct/relay/mailbox evidence плюс отдельное человеческое
    подтверждение GUI states. Не запускать сеть и не собирать переносимый
    debug-набор вне согласованного тестового окна.
-2. Добавить independent second-builder reproduction и подписанный public
-   release provenance поверх M0.9.50 same-host clean-root gate.
+2. Когда потребуется первый публичный security artifact, выполнить clean exact-
+   HEAD M0.9.50 local reproduction, вручную запустить M0.9.59 workflow и
+   проверить скачанные attested subjects production verifier-ом. До этого не
+   называть foundation завершённой independent reproduction.
 3. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 4. Добавить macOS/Linux/mobile providers той же platform boundary.

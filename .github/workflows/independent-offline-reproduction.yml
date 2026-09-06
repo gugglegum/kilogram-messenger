@@ -1,0 +1,194 @@
+name: Independent offline reproduction
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_revision:
+        description: Exact 40-character lowercase Git commit already reproduced locally
+        required: true
+        type: string
+      expected_local_sha256:
+        description: SHA-256 from the verified M0.9.50 same-host reproducibility record
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+  artifact-metadata: write
+
+jobs:
+  reproduce:
+    name: Reproduce kilogram-offline on independent Windows builder
+    runs-on: windows-2025
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      CARGO_INCREMENTAL: "0"
+      CARGO_TERM_COLOR: always
+      EXPECTED_LOCAL_SHA256: ${{ inputs.expected_local_sha256 }}
+      SOURCE_REVISION_INPUT: ${{ inputs.source_revision }}
+      KILOGRAM_REPOSITORY: ${{ github.repository }}
+      KILOGRAM_WORKFLOW_NAME: ${{ github.workflow }}
+      KILOGRAM_WORKFLOW_REF: ${{ github.workflow_ref }}
+
+    steps:
+      - name: Check out the exact requested revision
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Validate immutable inputs and source state
+        env:
+          GITHUB_COMMIT: ${{ github.sha }}
+        run: |
+          if ($env:SOURCE_REVISION_INPUT -cnotmatch '^[0-9a-f]{40}$') {
+            throw 'source_revision must be an exact lowercase 40-character Git commit.'
+          }
+          if ($env:EXPECTED_LOCAL_SHA256 -cnotmatch '^[0-9a-f]{64}$') {
+            throw 'expected_local_sha256 must be an exact lowercase SHA-256.'
+          }
+          if ($env:SOURCE_REVISION_INPUT -cne $env:GITHUB_COMMIT) {
+            throw "Selected workflow commit does not match source_revision: $env:GITHUB_COMMIT"
+          }
+          $resolved = (& git rev-parse HEAD).Trim()
+          if ($LASTEXITCODE -ne 0 -or $resolved -cne $env:SOURCE_REVISION_INPUT) {
+            throw "Checked-out commit does not match source_revision: $resolved"
+          }
+          $dirty = @(& git status --porcelain --untracked-files=normal)
+          if ($LASTEXITCODE -ne 0 -or $dirty.Count -ne 0) {
+            throw 'Independent builder source tree is not clean.'
+          }
+
+      - name: Resolve pinned Rust toolchain
+        run: |
+          rustup show active-toolchain
+          rustc -vV
+          cargo -vV
+
+      - name: Fetch locked dependencies
+        run: cargo fetch --locked --target x86_64-pc-windows-msvc
+
+      - name: Build and compare independent artifact
+        id: reproduce
+        env:
+          GITHUB_COMMIT: ${{ github.sha }}
+          GITHUB_EVENT_NAME_VALUE: ${{ github.event_name }}
+          GITHUB_REF_VALUE: ${{ github.ref }}
+          GITHUB_RUN_ATTEMPT_VALUE: ${{ github.run_attempt }}
+          GITHUB_RUN_ID_VALUE: ${{ github.run_id }}
+          GITHUB_WORKSPACE_VALUE: ${{ github.workspace }}
+          RUNNER_ARCH_VALUE: ${{ runner.arch }}
+          RUNNER_ENVIRONMENT_VALUE: ${{ runner.environment }}
+          RUNNER_NAME_VALUE: ${{ runner.name }}
+          RUNNER_OS_VALUE: ${{ runner.os }}
+        run: |
+          $sourceEpoch = (& git show -s --format=%ct HEAD).Trim()
+          if ($LASTEXITCODE -ne 0 -or $sourceEpoch -notmatch '^[0-9]+$') {
+            throw 'Could not resolve source commit epoch.'
+          }
+          $env:SOURCE_DATE_EPOCH = $sourceEpoch
+          $unitSeparator = [char]0x1f
+          $env:CARGO_ENCODED_RUSTFLAGS = @(
+            "--remap-path-prefix=$env:GITHUB_WORKSPACE_VALUE=Z:/kilogram-source",
+            '-C',
+            'link-arg=/Brepro'
+          ) -join $unitSeparator
+
+          cargo build --jobs 2 --frozen --release --target x86_64-pc-windows-msvc --package kilogram-offline
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Independent kilogram-offline build failed.'
+          }
+
+          $output = Join-Path $env:GITHUB_WORKSPACE_VALUE 'independent-builder'
+          New-Item -ItemType Directory -Path $output -Force | Out-Null
+          $built = Join-Path $env:GITHUB_WORKSPACE_VALUE 'target\x86_64-pc-windows-msvc\release\kilogram-offline.exe'
+          $artifact = Join-Path $output 'kilogram-offline.exe'
+          Copy-Item -LiteralPath $built -Destination $artifact
+          $artifactHash = (Get-FileHash -LiteralPath $artifact -Algorithm SHA256).Hash.ToLowerInvariant()
+          $artifactBytes = (Get-Item -LiteralPath $artifact).Length
+          $matched = $artifactHash -ceq $env:EXPECTED_LOCAL_SHA256
+
+          $record = [ordered]@{
+            format_version = 1
+            status = if ($matched) { 'matched' } else { 'divergent' }
+            builder_scope = 'github-hosted-windows-independent'
+            repository = $env:KILOGRAM_REPOSITORY
+            source_revision = $env:GITHUB_COMMIT
+            source_epoch = [int64]$sourceEpoch
+            expected_local_sha256 = $env:EXPECTED_LOCAL_SHA256
+            matches_expected_local_sha256 = $matched
+            dependency_mode = 'cargo-fetch-locked-then-frozen'
+            target = 'x86_64-pc-windows-msvc'
+            cargo_jobs = 2
+            incremental = $false
+            path_remap = '<BUILD_ROOT>=Z:/kilogram-source'
+            linker_reproducibility_flag = '/Brepro'
+            network_surface_compiled = $false
+            runtime_surface_compiled = $false
+            rustc = ((& rustc -vV) -join "`n")
+            cargo = ((& cargo -vV) -join "`n")
+            runner = [ordered]@{
+              os = $env:RUNNER_OS_VALUE
+              arch = $env:RUNNER_ARCH_VALUE
+              environment = $env:RUNNER_ENVIRONMENT_VALUE
+              name = $env:RUNNER_NAME_VALUE
+              image_os = $env:ImageOS
+              image_version = $env:ImageVersion
+            }
+            workflow = [ordered]@{
+              event = $env:GITHUB_EVENT_NAME_VALUE
+              name = $env:KILOGRAM_WORKFLOW_NAME
+              ref = $env:GITHUB_REF_VALUE
+              workflow_ref = $env:KILOGRAM_WORKFLOW_REF
+              run_id = $env:GITHUB_RUN_ID_VALUE
+              run_attempt = $env:GITHUB_RUN_ATTEMPT_VALUE
+            }
+            artifact = [ordered]@{
+              file = 'kilogram-offline.exe'
+              sha256 = $artifactHash
+              bytes = $artifactBytes
+            }
+          }
+          $json = $record | ConvertTo-Json -Depth 6
+          [System.IO.File]::WriteAllLines(
+            (Join-Path $output 'INDEPENDENT-BUILDER.json'),
+            @($json),
+            [System.Text.UTF8Encoding]::new($false)
+          )
+          [System.IO.File]::WriteAllLines(
+            (Join-Path $output 'SHA256SUMS'),
+            @("$artifactHash  kilogram-offline.exe"),
+            [System.Text.UTF8Encoding]::new($false)
+          )
+          "artifact_sha256=$artifactHash" >> $env:GITHUB_OUTPUT
+          "matches_expected=$($matched.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+
+      - name: Attest matching executable and builder record
+        if: steps.reproduce.outputs.matches_expected == 'true'
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+        with:
+          subject-path: |
+            independent-builder/kilogram-offline.exe
+            independent-builder/INDEPENDENT-BUILDER.json
+
+      - name: Preserve bounded comparison evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: kilogram-offline-independent-${{ github.sha }}
+          path: |
+            independent-builder/kilogram-offline.exe
+            independent-builder/INDEPENDENT-BUILDER.json
+            independent-builder/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Fail closed on byte divergence
+        if: steps.reproduce.outputs.matches_expected != 'true'
+        run: throw 'Independent artifact does not match the locally reproduced SHA-256.'

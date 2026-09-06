@@ -183,12 +183,31 @@ evidence contract are specified in
 [`docs/RFC-0080-controlled-mailbox-lifecycle-field-test.md`](docs/RFC-0080-controlled-mailbox-lifecycle-field-test.md),
 with the Russian operator procedure in
 [`docs/M0.9.58-MAILBOX-LIFECYCLE-FIELD-TEST-RU.md`](docs/M0.9.58-MAILBOX-LIFECYCLE-FIELD-TEST-RU.md).
+The manual independent Windows builder, byte-equality gate and GitHub-signed
+provenance verification foundation are specified in
+[`docs/RFC-0081-independent-builder-and-signed-provenance.md`](docs/RFC-0081-independent-builder-and-signed-provenance.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.58 controlled mailbox field harness — complete
+## Current milestone: M0.9.59 independent builder foundation — complete
+
+A manual-only GitHub-hosted Windows workflow can now rebuild the isolated
+`kilogram-offline.exe` for an exact commit and compare it with the SHA-256 from
+M0.9.50's two local clean-root builds. A mismatch is retained only as bounded
+diagnostic evidence and fails closed; only an exact byte match is attested.
+
+The production verifier requires matching local and external records plus
+GitHub attestations for both the executable and builder record. It constrains
+the repository, exact source commit, signer workflow and GitHub-hosted runner.
+The workflow has no push, pull-request, schedule or release trigger. This
+milestone did not run it, perform a release build, create a ZIP or launch a
+network process; independent reproduction remains unclaimed until a manual run
+and verification succeed. Details are in
+[`docs/RFC-0081-independent-builder-and-signed-provenance.md`](docs/RFC-0081-independent-builder-and-signed-provenance.md).
+
+## Previous milestone: M0.9.58 controlled mailbox field harness — complete
 
 A debug build can now perform a deterministic one-shot recipient fault exactly
 after a signed mailbox capability update is durably applied and before its ACK

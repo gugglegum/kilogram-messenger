@@ -381,7 +381,13 @@ removal semantics и MLS-группы ещё не реализованы.
 
 ## План ближайших работ
 
-M0.9.58 подготовил controlled two-device mailbox lifecycle field harness:
+M0.9.59 подготовил manual-only independent Windows builder поверх M0.9.50:
+exact clean commit и локальный reproduced SHA обязательны, external artifact
+аттестуется только при byte-identical совпадении, а production verifier
+проверяет executable и record по repository, signer workflow, source digest и
+запрещает self-hosted runner. Workflow не запускается от push/PR/release и ещё
+не выполнялся, поэтому independent reproduction пока не заявлена. M0.9.58
+подготовил controlled two-device mailbox lifecycle field harness:
 debug-only one-shot hook обрывает recipient ACK строго после durable apply и до
 подписи, затем runtime завершает vault mirror и сам останавливается на явной
 restart boundary. Release build отвергает hook до открытия endpoint. No-clobber
@@ -396,22 +402,26 @@ EXE не создавались.
    revocation через direct/relay; после машинной проверки отдельно подтвердить
    GUI states. Сетевой запуск и переносимый debug-набор выполнять только в
    согласованное тестовое окно.
-2. Уже реализованный M0.9.50 дважды строит `kilogram-offline` из exact
+2. При первом реальном public artifact выполнить M0.9.50 exact-HEAD local
+   reproduction, вручную dispatch-нуть M0.9.59 external workflow и прогнать
+   production attestation verifier по скачанным EXE/record. Foundation уже
+   реализован, но ни external build, ни provenance ещё не создавались.
+3. Уже реализованный M0.9.50 дважды строит `kilogram-offline` из exact
    SHA-256-manifested source в отдельных clean source/target roots, требует
    byte-identical EXE и fail-closed связывает clean package с проверенным
    record exact `HEAD`; отдельный verification profile удерживает Cargo cache.
    Это same-host gate, а не независимый второй builder.
-3. Уже реализованный M0.9.49 выделяет единый
+4. Уже реализованный M0.9.49 выделяет единый
    `kilogram-publication-conflict`: online/offline используют один signed codec,
    dependency gate запрещает network/runtime/image crates и отдельный guard
    отклоняет повторное появление дублирующих wire definitions.
-4. Уже реализованный M0.9.48 выделяет `kilogram-offline` с тремя командами,
+5. Уже реализованный M0.9.48 выделяет `kilogram-offline` с тремя командами,
    dependency deny gate и deterministic portable package; cross-component
    regression доказывает byte compatibility с online `.pcrq/.pcrp`.
-5. Уже реализованный M0.9.47 публично проверяет полные `.pcrq`/`.pcrp`, создаёт
+6. Уже реализованный M0.9.47 публично проверяет полные `.pcrq`/`.pcrp`, создаёт
    compact exact-match QR claim и требует 96-bit KPC1-код до загрузки Root;
    IPC v20 и Windows показывают digest, код и точные команды церемонии.
-6. Уже реализованный M0.9.46 вращает собственный publication channel через
+7. Уже реализованный M0.9.46 вращает собственный publication channel через
    authenticated live actor, атомарно переиздаёт ticket на том же endpoint и
    создаёт/применяет conflict request/response без restart; Windows показывает
    единый incident lifecycle, а IPC v19 возвращает typed результаты.
@@ -663,6 +673,9 @@ EXE не создавались.
   restart boundary и fail-closed direct/relay/mailbox evidence contract.
 - [`../docs/M0.9.58-MAILBOX-LIFECYCLE-FIELD-TEST-RU.md`](../docs/M0.9.58-MAILBOX-LIFECYCLE-FIELD-TEST-RU.md) —
   пошаговый двухмашинный lifecycle test без state/IPC secrets в общей папке.
+- [`../docs/RFC-0081-independent-builder-and-signed-provenance.md`](../docs/RFC-0081-independent-builder-and-signed-provenance.md) —
+  реализованный M0.9.59 manual-only GitHub-hosted Windows second-builder,
+  byte-equality gate и fail-closed signed provenance verifier foundation.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
