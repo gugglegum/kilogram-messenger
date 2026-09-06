@@ -3209,6 +3209,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "kilogram-mailbox"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "blake3",
+ "ed25519-dalek 3.0.0",
+ "getrandom 0.4.3",
+ "kilogram-crypto",
+ "postcard",
+ "redb",
+ "serde",
+ "tempfile",
+ "thiserror 2.0.20",
+ "zeroize",
+]
+
+[[package]]
 name = "kilogram-offline"
 version = "0.1.0"
 dependencies = [

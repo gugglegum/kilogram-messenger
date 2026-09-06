@@ -171,10 +171,13 @@ sessions, distribution, removal и key epochs и не решены этим пр
   device revocation? Embedded authority snapshot сам по себе не даёт trusted
   time; нужны epoch-bound/expiring authorizations, ordered witness или другая
   явная модель исторической валидности.
-- Схема blind mailbox: вычисление адресов, TTL, подтверждение получения,
-  повторная доставка и unlinkability. M0.9.29 решает только short-lived runtime
-  ticket head для already-enrolled contact: deterministic pseudonymous channel
-  и access pattern ещё не являются blind capability или mailbox.
+- M0.9.51 фиксирует первый blind mailbox contract: unrelated read/write
+  capabilities, random item ID, recipient-HPKE envelope, bounded TTL/quota,
+  store-signed receipt и conditional delete с replay-safe tombstone. Открыты
+  network adapter, client outbox/inbox integration, capability rotation,
+  multi-store replication/erasure coding, Sybil/admission limits и unlinkability:
+  один storage node всё ещё видит IP, timing, size и повторный доступ к одному
+  pseudonymous mailbox.
 - Как синхронизировать M0.9.29 observation high-water между устройствами одного
   аккаунта и обнаруживать valid publisher equivocation между получателями без
   доверенного global log? Первый recipient observation пока защищён только

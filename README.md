@@ -164,12 +164,35 @@ artifact chain is specified in
 The two-clean-root offline release gate and bounded Cargo cache policy are
 specified in
 [`docs/RFC-0072-reproducible-offline-release-and-bounded-cargo-cache.md`](docs/RFC-0072-reproducible-offline-release-and-bounded-cargo-cache.md).
+The blind asynchronous-delivery capability contract and bounded durable store
+are specified in
+[`docs/RFC-0073-blind-mailbox-contract-and-durable-store.md`](docs/RFC-0073-blind-mailbox-contract-and-durable-store.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.50 reproducible offline release — complete
+## Current milestone: M0.9.51 blind mailbox contract and durable store — complete
+
+The new network-free `kilogram-mailbox` crate defines unrelated read/write
+Ed25519 capabilities, a registration-free opaque mailbox ID and random item
+IDs. Recipient-encrypted HPKE envelopes bind mailbox/item IDs and expiry;
+storage nodes receive no Kilogram Account, Device, conversation, message or
+event identifiers.
+
+The Redb store enforces TTL, envelope, per-mailbox, global item and global byte
+bounds. Exact `put` retries are idempotent, the store returns signed acceptance
+receipts, and read-capability-authorized conditional deletion leaves a signed
+replay-safe tombstone until the original expiry. A locked fail-closed boundary
+gate rejects network/runtime dependencies and application identifier types.
+Details and honest metadata limitations are in
+[`docs/RFC-0073-blind-mailbox-contract-and-durable-store.md`](docs/RFC-0073-blind-mailbox-contract-and-durable-store.md).
+
+Development verification now stays on debug/verification profiles. Release
+builds and ZIP packaging remain available for an actual external test or
+release, but are not run for routine milestones.
+
+## Previous milestone: M0.9.50 reproducible offline release — complete
 
 `kilogram-offline` is now built twice from the exact same SHA-256-manifested
 source set in separate clean source and Cargo target roots. Both builds are

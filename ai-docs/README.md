@@ -310,7 +310,7 @@ M0.8.15 вводит schema-v3 DB-only identity layout. Upgrade сначала �
 identity в effective snapshot, typed shadow показывает для неё 0 records, а
 primary-shadow recovery больше не создаёт plaintext keys. Mismatched
 повторно появившаяся копия блокируется без импорта.
-К M0.9.50 поверх этого уже реализованы recoverable seed/Account Root lifecycle,
+К M0.9.51 поверх этого уже реализованы recoverable seed/Account Root lifecycle,
 device link/removal, current-device quorum, desktop/runtime IPC, wide-area
 ticket publication, multi-Device endpoint convergence и полный
 publication-conflict incident flow. Purpose-built `kilogram-offline` оставляет
@@ -318,8 +318,13 @@ publication-conflict incident flow. Purpose-built `kilogram-offline` остав�
 network/runtime crates, а deterministic portable package несёт provenance и
 checksums. Общий `kilogram-publication-conflict` теперь является единственным
 владельцем signed publication/observation/proof/request/response/KPC1 codec для
-online и offline сторон без network/runtime/image dependencies. Production
-non-Windows/mobile Root provider, hardware-backed signer, independently
+online и offline сторон без network/runtime/image dependencies.
+`kilogram-mailbox` теперь отдельно фиксирует network-free blind asynchronous
+delivery contract: unrelated read/write capabilities, recipient-HPKE envelope,
+bounded Redb store, signed receipts и replay-safe conditional deletion без
+прикладных identifier types. Network adapter и client outbox/inbox integration
+ещё не реализованы. Production non-Windows/mobile Root provider,
+hardware-backed signer, independently
 reproducible builder, global
 freshness/completeness witness, privacy-preserving mailbox/gossip, membership
 removal semantics и MLS-группы ещё не реализованы.
@@ -375,10 +380,14 @@ removal semantics и MLS-группы ещё не реализованы.
 
 ## План ближайших работ
 
-1. M0.9.51: реализовать минимальный blind mailbox для bounded offline delivery:
-   opaque capability/address, recipient-encrypted envelope, TTL/quota,
-   replay-safe receipt и delete-after-receive без открытых message/contact IDs
-   на storage node.
+Реализованный M0.9.51 выделяет network-free `kilogram-mailbox` с independent
+read/write capabilities, recipient-HPKE envelope, TTL/quota, signed
+stored/delete receipts, replay-safe tombstone и dependency/API gate.
+
+1. M0.9.52: добавить bounded network adapter и persistent client flow поверх
+   реализованного blind mailbox: outbox retry до signed receipt,
+   poll/decrypt/validate/transactional ingest и conditional delete только после
+   durable local commit; direct/relay остаются preferred path.
 2. Уже реализованный M0.9.50 дважды строит `kilogram-offline` из exact
    SHA-256-manifested source в отдельных clean source/target roots, требует
    byte-identical EXE и fail-closed связывает clean package с проверенным
@@ -620,6 +629,9 @@ removal semantics и MLS-группы ещё не реализованы.
 - [`../docs/RFC-0072-reproducible-offline-release-and-bounded-cargo-cache.md`](../docs/RFC-0072-reproducible-offline-release-and-bounded-cargo-cache.md) —
   реализованный M0.9.50 same-host two-clean-root reproducibility gate, clean
   package provenance и bounded Cargo cache policy.
+- [`../docs/RFC-0073-blind-mailbox-contract-and-durable-store.md`](../docs/RFC-0073-blind-mailbox-contract-and-durable-store.md) —
+  реализованный M0.9.51 network-free opaque capability/envelope contract,
+  bounded Redb store, signed receipts и replay-safe conditional deletion.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

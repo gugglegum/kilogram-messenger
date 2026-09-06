@@ -3209,12 +3209,40 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - contract зафиксирован в
   [`../docs/RFC-0072-reproducible-offline-release-and-bounded-cargo-cache.md`](../docs/RFC-0072-reproducible-offline-release-and-bounded-cargo-cache.md).
 
+### M0.9.51 — blind mailbox contract и durable bounded store: выполнено
+
+Реализовано:
+
+- отдельный network-free `kilogram-mailbox` crate владеет opaque asynchronous
+  delivery boundary и не зависит от runtime/session/state/event store/transport;
+- mailbox address состоит из независимых Ed25519 read/write public capabilities,
+  а registration-free Mailbox ID является domain-separated hash этих keys;
+- write authorization подписывает exact mailbox/item, TTL, ciphertext length и
+  digest; list/delete требуют отдельной read capability;
+- recipient-encrypted HPKE envelope AAD связывает mailbox/item и bounded
+  creation/expiry, plaintext не появляется в storage API;
+- Redb store pin-ит store signing identity, атомарно поддерживает live counters,
+  TTL и per-mailbox/global item/byte limits;
+- exact put replay возвращает прежнюю signed stored receipt, conflicting reuse
+  отклоняется, conditional delete требует receipt ID и оставляет signed
+  tombstone до исходного expiry;
+- address, authorization и receipt ingress имеют bounded decode-and-verify;
+- fail-closed boundary script запрещает network/runtime/image зависимости и
+  Account/Device/conversation/event/message identifier types;
+- три network-free regression tests проверяют HPKE binding, capability failure,
+  expiry, quota, idempotence, conditional deletion, tombstone replay,
+  persistence и store-key pinning;
+- release builds и ZIP packaging для обычных внутренних этапов не запускаются:
+  используются debug `check`/Clippy и отдельный unoptimized verification profile;
+- contract зафиксирован в
+  [`../docs/RFC-0073-blind-mailbox-contract-and-durable-store.md`](../docs/RFC-0073-blind-mailbox-contract-and-durable-store.md).
+
 ### Следующий этап
 
-1. M0.9.51: минимальный blind mailbox contract и bounded offline-delivery flow
-   для временно недоступного получателя: opaque capability/address, recipient-
-   encrypted envelope, TTL, quotas, replay-safe authenticated receipt и
-   удаление после получения без раскрытия message/contact IDs storage node.
+1. M0.9.52: добавить bounded transport adapter и persistent client integration
+   поверх exact blind-mailbox encodings: outbox retry до signed receipt,
+   recipient poll/decrypt/validate/transactional ingest и delete только после
+   durable local commit; direct/relay остаются preferred delivery path.
 2. Добавить independent second-builder reproduction и подписанный public
    release provenance поверх M0.9.50 same-host clean-root gate.
 3. Optional autostart/background mode оставить отдельной явной настройкой, не

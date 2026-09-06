@@ -8,6 +8,7 @@ members = [
     "crates/kilogram-bootstrap-contract",
     "crates/kilogram-crypto",
     "crates/kilogram-identity",
+    "crates/kilogram-mailbox",
     "crates/kilogram-protocol",
     "crates/kilogram-publication-conflict",
     "crates/kilogram-ratchet",

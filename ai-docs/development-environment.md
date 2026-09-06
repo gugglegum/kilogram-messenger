@@ -1728,3 +1728,22 @@ retirement остальных compatibility shadows ещё не реализов
   объявляется independent second-host reproduction или signed provenance.
 - Сетевые test harnesses не запускались; дополнительного Windows Firewall
   prompt этот этап не создаёт.
+
+## M0.9.51 verification snapshot (2026-09-06)
+
+- Workspace lockfile расширен локальным `kilogram-mailbox`; все зависимости
+  разрешились из существующего offline Cargo cache.
+- Routine milestone policy изменена: release и ZIP не строятся без реальной
+  потребности во внешнем artifact. Основные команды — resource-bounded debug
+  `check`, strict Clippy и unoptimized `verification` harness.
+- `scripts/run-cargo-tests-stable.ps1 -Package kilogram-mailbox -Run` запустил
+  только network-free stable-name harness: 3 tests passed.
+- `scripts/verify-kilogram-mailbox-boundary.ps1` подтвердил отсутствие
+  network/runtime/application-ID dependencies; locked normal graph содержит 77
+  records и включает только ожидаемые `kilogram-crypto`/Redb boundaries.
+- После full compile-only verification target занимает 6.60 GiB, ниже 40 GiB
+  warning threshold; release output 1.73 GiB является сохранённым cache
+  предыдущего этапа и в M0.9.51 не пересобирался.
+- Focused и full-workspace debug check/strict Clippy прошли. Network-free
+  mailbox harness: 3/3 passed. Все 22 workspace harness artifacts собраны под
+  stable names compile-only; network-bearing EXE не запускались.
