@@ -381,19 +381,16 @@ removal semantics и MLS-группы ещё не реализованы.
 
 ## План ближайших работ
 
-Реализованный M0.9.55 добавляет к direct/relay-first mailbox fallback
-Device-signed contiguous capability chain и automatic bounded exchange через
-existing authenticated Device session. Create/rotate/revoke atomic сохраняют
-local head, recipient atomic импортирует binding/update до session-bound signed
-ACK, а runtime fallback принимает current non-revoked head; receive polling
-сохраняет previous acknowledged binding только на время pending rotation.
-Секрет остаётся внутри recipient-HPKE offer и не попадает в public tickets или
-endpoint publications. IPC v22 показывает pending convergence и revoked heads;
-второй EXE не создан.
+Реализованный M0.9.56 вынес mailbox capability convergence в network-free
+`kilogram-mailbox-provisioning`: signed update/ACK records однозначно задают
+eligible retry, current head, owner receive overlap и immediate revocation после
+любого restart. Тот же автомат теперь используют state load, automatic sender,
+recipient apply и read/write binding selection. Deterministic regression
+проверяет activation, потерянный ACK, два encode/decode restart, idempotent
+retry, rotation и revoke без sockets/Firewall. Второй EXE не создан.
 
-1. M0.9.56: выделить transport-independent mailbox capability convergence
-   state machine и deterministic network-free crash/retry regression без
-   socket/Windows Firewall.
+1. M0.9.57: вывести mailbox create/status/rotate/revoke через authenticated IPC
+   и минимальный Windows UI без выдачи GUI Root/device/mailbox secrets.
 2. Уже реализованный M0.9.50 дважды строит `kilogram-offline` из exact
    SHA-256-manifested source в отдельных clean source/target roots, требует
    byte-identical EXE и fail-closed связывает clean package с проверенным
@@ -650,6 +647,9 @@ endpoint publications. IPC v22 показывает pending convergence и revok
 - [`../docs/RFC-0077-authenticated-mailbox-capability-lifecycle.md`](../docs/RFC-0077-authenticated-mailbox-capability-lifecycle.md) —
   реализованный M0.9.55 Device-signed ordered mailbox capability lifecycle,
   authenticated automatic exchange, rotation/revocation и session-bound ACK.
+- [`../docs/RFC-0078-transport-independent-mailbox-capability-convergence.md`](../docs/RFC-0078-transport-independent-mailbox-capability-convergence.md) —
+  реализованный M0.9.56 pure signed-artifact convergence автомат и
+  deterministic lost-ACK/restart/rotation/revocation regression.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

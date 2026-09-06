@@ -95,7 +95,7 @@ so the chain can advance; its embedded expiry remains unchanged, so it is never
 usable for message delivery at the current time.
 
 Only after durable application does the receiver return a
-`SignedRuntimeMailboxCapabilityAcknowledgement`. The ACK is signed by the exact
+`SignedMailboxCapabilityAcknowledgement`. The ACK is signed by the exact
 recipient Device and binds the transport session, update ID, both identities,
 generation, binding and activation/revocation bit. The sender verifies it and
 persists it append-only before considering that generation converged.
@@ -156,11 +156,12 @@ with the stable-executable/firewall policy, no network-bearing Cargo harness or
 runtime executable is launched automatically, and no release/ZIP artifact is
 created.
 
-## 9. Deferred work
+## 9. M0.9.56 follow-up and deferred work
 
-The next milestone should make the complete activation/rotation/revocation and
-crash/retry convergence state machine independently executable without opening
-a socket, then use that seam for deterministic runtime regression coverage.
+M0.9.56 completed the transport-independent convergence state machine and
+deterministic activation/lost-ACK/restart/rotation/revocation regression. The
+shared contract and runtime wiring are specified in
+[`RFC-0078`](RFC-0078-transport-independent-mailbox-capability-convergence.md).
 A controlled two-device live run remains necessary before claiming the online
 path field-verified.
 

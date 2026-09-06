@@ -6,10 +6,10 @@ use kilogram_mailbox::{
     MailboxItemId,
 };
 use kilogram_mailbox_provisioning::{
-    EncryptedMailboxOffer, LocalMailboxBinding, MailboxBindingId, MailboxCapabilityUpdateId,
-    MailboxScope, PeerMailboxBinding, SealedLocalMailboxBinding, SignedMailboxCapabilityUpdate,
+    EncryptedMailboxOffer, LocalMailboxBinding, MailboxBindingId, MailboxScope, PeerMailboxBinding,
+    SealedLocalMailboxBinding,
 };
-use kilogram_protocol::{AuthorizedEvent, ConversationId, EventId, SyncSessionBinding};
+use kilogram_protocol::{AuthorizedEvent, ConversationId, EventId};
 use serde::{Deserialize, Serialize};
 
 use crate::runtime_queue::{MAX_RUNTIME_RECORD_BYTES, RuntimeContactId};
@@ -20,9 +20,6 @@ const PEER_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-peer-mailbox-binding:v1\
 const DISPATCH_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-mailbox-dispatch:v1\0";
 const ITEM_ID_DOMAIN: &[u8] = b"kilogram:runtime-mailbox-item-id:v1\0";
 const EVENT_ITEM_ID_DOMAIN: &[u8] = b"kilogram:runtime-mailbox-event-item-id:v1\0";
-const CAPABILITY_ACKNOWLEDGEMENT_VERSION: u8 = 1;
-const CAPABILITY_ACKNOWLEDGEMENT_SIGNATURE_DOMAIN: &[u8] =
-    b"kilogram:runtime-mailbox-capability-acknowledgement:v1\0";
 const PAYLOAD_VERSION: u8 = 1;
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -350,130 +347,6 @@ impl SignedRuntimePeerMailboxBinding {
 
 pub fn mailbox_scope(conversation_id: ConversationId) -> MailboxScope {
     MailboxScope::from_bytes(*conversation_id.as_bytes())
-}
-
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-struct RuntimeMailboxCapabilityAcknowledgementContent {
-    version: u8,
-    session_binding: SyncSessionBinding,
-    update_id: MailboxCapabilityUpdateId,
-    owner_account_id: AccountId,
-    owner_device_id: DeviceId,
-    recipient_account_id: AccountId,
-    recipient_device_id: DeviceId,
-    generation: u64,
-    binding_id: MailboxBindingId,
-    revoked: bool,
-}
-
-/// Recipient-signed proof that one exact ordered capability update was
-/// accepted during one authenticated transport session.
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct SignedRuntimeMailboxCapabilityAcknowledgement {
-    content: RuntimeMailboxCapabilityAcknowledgementContent,
-    signature: Vec<u8>,
-}
-
-impl SignedRuntimeMailboxCapabilityAcknowledgement {
-    pub fn sign(
-        recipient_identity: &DeviceIdentity,
-        session_binding: SyncSessionBinding,
-        update: &SignedMailboxCapabilityUpdate,
-    ) -> Result<Self> {
-        update.verify_signature()?;
-        ensure!(
-            recipient_identity.device_id() == update.recipient_device_id(),
-            "mailbox capability acknowledgement signer is not the update recipient"
-        );
-        let content = RuntimeMailboxCapabilityAcknowledgementContent {
-            version: CAPABILITY_ACKNOWLEDGEMENT_VERSION,
-            session_binding,
-            update_id: update.update_id()?,
-            owner_account_id: update.owner_account_id(),
-            owner_device_id: update.owner_device_id(),
-            recipient_account_id: update.recipient_account_id(),
-            recipient_device_id: update.recipient_device_id(),
-            generation: update.generation(),
-            binding_id: update.binding_id(),
-            revoked: update.is_revocation(),
-        };
-        let signature = recipient_identity
-            .sign(&signing_bytes(
-                CAPABILITY_ACKNOWLEDGEMENT_SIGNATURE_DOMAIN,
-                &content,
-            )?)
-            .to_vec();
-        let acknowledgement = Self { content, signature };
-        acknowledgement.verify_signature()?;
-        Ok(acknowledgement)
-    }
-
-    pub fn encode(&self) -> Result<Vec<u8>> {
-        self.verify_signature()?;
-        let bytes = postcard::to_allocvec(self)
-            .context("encode runtime mailbox capability acknowledgement")?;
-        ensure!(
-            !bytes.is_empty() && bytes.len() <= 4 * 1024,
-            "runtime mailbox capability acknowledgement is too large"
-        );
-        Ok(bytes)
-    }
-
-    pub fn decode(bytes: &[u8]) -> Result<Self> {
-        ensure!(
-            !bytes.is_empty() && bytes.len() <= 4 * 1024,
-            "runtime mailbox capability acknowledgement size is invalid"
-        );
-        let acknowledgement: Self = postcard::from_bytes(bytes)
-            .context("decode runtime mailbox capability acknowledgement")?;
-        acknowledgement.verify_signature()?;
-        Ok(acknowledgement)
-    }
-
-    pub fn verify_for(
-        &self,
-        session_binding: SyncSessionBinding,
-        update: &SignedMailboxCapabilityUpdate,
-    ) -> Result<()> {
-        self.verify_signature()?;
-        update.verify_signature()?;
-        ensure!(
-            self.content.session_binding == session_binding
-                && self.update_id() == update.update_id()?
-                && self.content.owner_account_id == update.owner_account_id()
-                && self.content.owner_device_id == update.owner_device_id()
-                && self.content.recipient_account_id == update.recipient_account_id()
-                && self.content.recipient_device_id == update.recipient_device_id()
-                && self.content.generation == update.generation()
-                && self.content.binding_id == update.binding_id()
-                && self.content.revoked == update.is_revocation(),
-            "mailbox capability acknowledgement does not match this update or session"
-        );
-        Ok(())
-    }
-
-    fn verify_signature(&self) -> Result<()> {
-        ensure!(
-            self.content.version == CAPABILITY_ACKNOWLEDGEMENT_VERSION
-                && self.content.owner_account_id != self.content.recipient_account_id
-                && self.content.owner_device_id != self.content.recipient_device_id
-                && self.content.generation != 0,
-            "runtime mailbox capability acknowledgement metadata is invalid"
-        );
-        self.content.recipient_device_id.verify(
-            &signing_bytes(CAPABILITY_ACKNOWLEDGEMENT_SIGNATURE_DOMAIN, &self.content)?,
-            &self.signature,
-        )?;
-        Ok(())
-    }
-
-    pub fn update_id(&self) -> MailboxCapabilityUpdateId {
-        self.content.update_id
-    }
-
-    pub fn session_binding(&self) -> SyncSessionBinding {
-        self.content.session_binding
-    }
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]

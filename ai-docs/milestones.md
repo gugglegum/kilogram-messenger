@@ -3363,11 +3363,35 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - contract зафиксирован в
   [`../docs/RFC-0077-authenticated-mailbox-capability-lifecycle.md`](../docs/RFC-0077-authenticated-mailbox-capability-lifecycle.md).
 
+### M0.9.56 — transport-independent mailbox capability convergence: выполнено
+
+Реализовано:
+
+- `MailboxCapabilityConvergence` вынесен в network-free provisioning crate и
+  полностью реконструируется из signed update/ACK records без clock, socket,
+  filesystem или hidden mutable state;
+- recipient-signed session-bound ACK codec перенесён из CLI в shared contract,
+  а protocol session отображается в opaque 32-byte boundary type;
+- один автомат проверяет owner predecessor-ACK progression, выбирает максимум
+  один eligible retry, классифицирует inbound append/idempotent replay и
+  определяет current/rotation-overlap/inactive binding states;
+- runtime snapshot loading, automatic control retry, recipient apply, peer
+  write selection и owner receive overlap используют этот общий автомат;
+- deterministic network-free regression проходит activation, lost ACK,
+  encode/decode restart, idempotent retry, rotation overlap, второй restart,
+  revocation и final convergence;
+- fail-closed gate запрещает duplicate CLI ACK codec, network/runtime
+  dependency, потерю runtime wiring и новый executable;
+- provisioning tests: 6 passed; network-bearing processes не запускались,
+  release и ZIP не создавались;
+- contract зафиксирован в
+  [`../docs/RFC-0078-transport-independent-mailbox-capability-convergence.md`](../docs/RFC-0078-transport-independent-mailbox-capability-convergence.md).
+
 ### Следующий этап
 
-1. M0.9.56: выделить transport-independent mailbox capability convergence
-   state machine и deterministic network-free scenario activation -> ACK ->
-   rotation -> retry -> revocation, включая crash boundaries без socket/Firewall.
+1. M0.9.57: добавить authenticated IPC и минимальный Windows UI для создания,
+   просмотра, ротации и отзыва mailbox capability без CLI, сохранив единственного
+   runtime owner и не передавая GUI Root/device/mailbox secrets.
 2. Добавить independent second-builder reproduction и подписанный public
    release provenance поверх M0.9.50 same-host clean-root gate.
 3. Optional autostart/background mode оставить отдельной явной настройкой, не

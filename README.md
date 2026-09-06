@@ -169,12 +169,60 @@ are specified in
 [`docs/RFC-0073-blind-mailbox-contract-and-durable-store.md`](docs/RFC-0073-blind-mailbox-contract-and-durable-store.md).
 The bounded mailbox HTTP adapter and crash-safe client ledger are specified in
 [`docs/RFC-0074-bounded-mailbox-http-and-client-ledger.md`](docs/RFC-0074-bounded-mailbox-http-and-client-ledger.md).
+Recipient-bound capability provisioning, runtime fallback, authenticated
+lifecycle exchange and deterministic convergence are specified in
+[`docs/RFC-0075-recipient-bound-mailbox-provisioning.md`](docs/RFC-0075-recipient-bound-mailbox-provisioning.md),
+[`docs/RFC-0076-runtime-mailbox-fallback-and-ack.md`](docs/RFC-0076-runtime-mailbox-fallback-and-ack.md),
+[`docs/RFC-0077-authenticated-mailbox-capability-lifecycle.md`](docs/RFC-0077-authenticated-mailbox-capability-lifecycle.md), and
+[`docs/RFC-0078-transport-independent-mailbox-capability-convergence.md`](docs/RFC-0078-transport-independent-mailbox-capability-convergence.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.52 bounded mailbox HTTP and client ledger — complete
+## Current milestone: M0.9.56 mailbox capability convergence — complete
+
+Mailbox activation, rotation, revocation and recipient ACK state now converge
+through one transport-independent `kilogram-mailbox-provisioning` state
+machine. It is reconstructed only from signed retained artifacts and decides
+the sole eligible retry, idempotent recipient replay, active write head,
+bounded receive overlap during rotation and immediate revocation.
+
+Runtime loading, automatic control delivery, recipient application and mailbox
+binding selection use the same fail-closed implementation. A deterministic
+network-free regression covers activation, lost ACK, encode/decode restart,
+retry, rotation, another restart and revocation without opening a listener or
+triggering Windows Firewall. Six provisioning tests pass; no release build or
+ZIP package is produced. Details are in
+[`docs/RFC-0078-transport-independent-mailbox-capability-convergence.md`](docs/RFC-0078-transport-independent-mailbox-capability-convergence.md).
+
+## Previous milestone: M0.9.55 authenticated mailbox capability lifecycle — complete
+
+Device-signed contiguous activation/rotation/revocation updates are exchanged
+through the existing authenticated Device session. A recipient durably applies
+an update before returning its session-bound signed ACK; the sender cannot
+advance another generation until that ACK is retained. Capability material
+does not enter public endpoint discovery. Details are in
+[`docs/RFC-0077-authenticated-mailbox-capability-lifecycle.md`](docs/RFC-0077-authenticated-mailbox-capability-lifecycle.md).
+
+## Earlier milestone: M0.9.54 runtime mailbox fallback and ACK — complete
+
+After bounded direct/relay failure, the existing runtime can upload an
+encrypted message through a provisioned blind mailbox. Store receipts mean
+stored, while only a peer-signed acknowledgement means delivered. Application
+commit precedes conditional deletion and reverse ACKs use the same durable
+fallback. Details are in
+[`docs/RFC-0076-runtime-mailbox-fallback-and-ack.md`](docs/RFC-0076-runtime-mailbox-fallback-and-ack.md).
+
+## Earlier milestone: M0.9.53 recipient-bound provisioning — complete
+
+The network-free provisioning layer keeps read authority on the owner Device
+and exports only an exact-recipient HPKE-encrypted write offer, bound to
+current Device authority, conversation scope, service URL, pinned store key and
+expiry. Details are in
+[`docs/RFC-0075-recipient-bound-mailbox-provisioning.md`](docs/RFC-0075-recipient-bound-mailbox-provisioning.md).
+
+## Earlier milestone: M0.9.52 bounded mailbox HTTP and client ledger — complete
 
 The exact blind-mailbox objects now have versioned bounded Postcard framing,
 signed cursor pagination of at most eight ciphertexts and three HTTP routes in
@@ -191,13 +239,13 @@ Logical receipt replays are idempotent and expired ledger records are boundedly
 cleaned. The library intentionally has no Account, Device, conversation, event
 or runtime dependency.
 
-Only six network-free contract/client tests and one filtered pure server-route
-test were executed. Network-bearing harnesses remain compile-only; no listener,
-release build or ZIP package was started. Live actor integration and secure
-capability/store provisioning are the next milestone. Details are in
+At that milestone, six network-free contract/client tests and one filtered pure
+server-route test were executed. Network-bearing harnesses remained
+compile-only; no listener, release build or ZIP package was started. Details
+are in
 [`docs/RFC-0074-bounded-mailbox-http-and-client-ledger.md`](docs/RFC-0074-bounded-mailbox-http-and-client-ledger.md).
 
-## Previous milestone: M0.9.51 blind mailbox contract and durable store — complete
+## Earlier milestone: M0.9.51 blind mailbox contract and durable store — complete
 
 The new network-free `kilogram-mailbox` crate defines unrelated read/write
 Ed25519 capabilities, a registration-free opaque mailbox ID and random item

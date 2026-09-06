@@ -6,7 +6,7 @@
 //! Device and exports only the write half inside a Device-signed HPKE envelope
 //! addressed to one exact peer Device.
 
-use std::{fmt, net::IpAddr};
+use std::{collections::BTreeMap, fmt, net::IpAddr};
 
 use anyhow::{Context, Result, bail, ensure};
 use kilogram_crypto::{DeviceEncryptionIdentity, EncryptionPublicKey, SealedMessage};
@@ -30,7 +30,11 @@ const BINDING_ID_DOMAIN: &[u8] = b"kilogram:mailbox-binding-id:v1\0";
 const CAPABILITY_UPDATE_VERSION: u8 = 1;
 const CAPABILITY_UPDATE_SIGNATURE_DOMAIN: &[u8] = b"kilogram:mailbox-capability-update:v1\0";
 const CAPABILITY_UPDATE_ID_DOMAIN: &[u8] = b"kilogram:mailbox-capability-update-id:v1\0";
+const CAPABILITY_ACKNOWLEDGEMENT_VERSION: u8 = 1;
+const CAPABILITY_ACKNOWLEDGEMENT_SIGNATURE_DOMAIN: &[u8] =
+    b"kilogram:runtime-mailbox-capability-acknowledgement:v1\0";
 pub const MAX_MAILBOX_CAPABILITY_UPDATE_BYTES: usize = 32 * 1024;
+pub const MAX_MAILBOX_CAPABILITY_ACKNOWLEDGEMENT_BYTES: usize = 4 * 1024;
 
 pub const MIN_MAILBOX_OFFER_VALIDITY_SECONDS: u64 = 60;
 pub const MAX_MAILBOX_OFFER_VALIDITY_SECONDS: u64 = 30 * 24 * 60 * 60;
@@ -934,6 +938,331 @@ impl SignedMailboxCapabilityUpdate {
     }
 }
 
+/// Opaque binding to the authenticated transport session that carried a
+/// capability update. The provisioning layer intentionally treats these bytes
+/// as an application-supplied value and has no transport dependency.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub struct MailboxCapabilitySessionBinding([u8; KEY_BYTES]);
+
+impl MailboxCapabilitySessionBinding {
+    pub fn from_bytes(bytes: [u8; KEY_BYTES]) -> Self {
+        Self(bytes)
+    }
+
+    pub fn as_bytes(&self) -> &[u8; KEY_BYTES] {
+        &self.0
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+struct MailboxCapabilityAcknowledgementContent {
+    version: u8,
+    session_binding: MailboxCapabilitySessionBinding,
+    update_id: MailboxCapabilityUpdateId,
+    owner_account_id: AccountId,
+    owner_device_id: DeviceId,
+    recipient_account_id: AccountId,
+    recipient_device_id: DeviceId,
+    generation: u64,
+    binding_id: MailboxBindingId,
+    revoked: bool,
+}
+
+/// Recipient-signed proof that one exact ordered capability update was
+/// accepted during one authenticated session.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct SignedMailboxCapabilityAcknowledgement {
+    content: MailboxCapabilityAcknowledgementContent,
+    signature: Vec<u8>,
+}
+
+impl SignedMailboxCapabilityAcknowledgement {
+    pub fn sign(
+        recipient_identity: &DeviceIdentity,
+        session_binding: MailboxCapabilitySessionBinding,
+        update: &SignedMailboxCapabilityUpdate,
+    ) -> Result<Self> {
+        update.verify_signature()?;
+        ensure!(
+            recipient_identity.device_id() == update.recipient_device_id(),
+            "mailbox capability acknowledgement signer is not the update recipient"
+        );
+        let content = MailboxCapabilityAcknowledgementContent {
+            version: CAPABILITY_ACKNOWLEDGEMENT_VERSION,
+            session_binding,
+            update_id: update.update_id()?,
+            owner_account_id: update.owner_account_id(),
+            owner_device_id: update.owner_device_id(),
+            recipient_account_id: update.recipient_account_id(),
+            recipient_device_id: update.recipient_device_id(),
+            generation: update.generation(),
+            binding_id: update.binding_id(),
+            revoked: update.is_revocation(),
+        };
+        let signature = recipient_identity
+            .sign(&signing_bytes(
+                CAPABILITY_ACKNOWLEDGEMENT_SIGNATURE_DOMAIN,
+                &content,
+            )?)
+            .to_vec();
+        let acknowledgement = Self { content, signature };
+        acknowledgement.verify_signature()?;
+        Ok(acknowledgement)
+    }
+
+    pub fn encode(&self) -> Result<Vec<u8>> {
+        self.verify_signature()?;
+        let bytes =
+            postcard::to_allocvec(self).context("encode mailbox capability acknowledgement")?;
+        ensure!(
+            !bytes.is_empty() && bytes.len() <= MAX_MAILBOX_CAPABILITY_ACKNOWLEDGEMENT_BYTES,
+            "mailbox capability acknowledgement is too large"
+        );
+        Ok(bytes)
+    }
+
+    pub fn decode(bytes: &[u8]) -> Result<Self> {
+        ensure!(
+            !bytes.is_empty() && bytes.len() <= MAX_MAILBOX_CAPABILITY_ACKNOWLEDGEMENT_BYTES,
+            "mailbox capability acknowledgement size is invalid"
+        );
+        let acknowledgement: Self =
+            postcard::from_bytes(bytes).context("decode mailbox capability acknowledgement")?;
+        acknowledgement.verify_signature()?;
+        Ok(acknowledgement)
+    }
+
+    pub fn verify_for(
+        &self,
+        session_binding: MailboxCapabilitySessionBinding,
+        update: &SignedMailboxCapabilityUpdate,
+    ) -> Result<()> {
+        self.verify_signature()?;
+        update.verify_signature()?;
+        ensure!(
+            self.content.session_binding == session_binding
+                && self.update_id() == update.update_id()?
+                && self.content.owner_account_id == update.owner_account_id()
+                && self.content.owner_device_id == update.owner_device_id()
+                && self.content.recipient_account_id == update.recipient_account_id()
+                && self.content.recipient_device_id == update.recipient_device_id()
+                && self.content.generation == update.generation()
+                && self.content.binding_id == update.binding_id()
+                && self.content.revoked == update.is_revocation(),
+            "mailbox capability acknowledgement does not match this update or session"
+        );
+        Ok(())
+    }
+
+    pub fn verify_signature(&self) -> Result<()> {
+        ensure!(
+            self.content.version == CAPABILITY_ACKNOWLEDGEMENT_VERSION
+                && self.content.owner_account_id != self.content.recipient_account_id
+                && self.content.owner_device_id != self.content.recipient_device_id
+                && self.content.generation != 0,
+            "mailbox capability acknowledgement metadata is invalid"
+        );
+        self.content.recipient_device_id.verify(
+            &signing_bytes(CAPABILITY_ACKNOWLEDGEMENT_SIGNATURE_DOMAIN, &self.content)?,
+            &self.signature,
+        )?;
+        Ok(())
+    }
+
+    pub fn update_id(&self) -> MailboxCapabilityUpdateId {
+        self.content.update_id
+    }
+
+    pub fn session_binding(&self) -> MailboxCapabilitySessionBinding {
+        self.content.session_binding
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MailboxCapabilityBindingState {
+    /// No ordered lifecycle exists yet, so legacy bindings remain eligible.
+    Unmanaged,
+    /// The binding is the active chain head.
+    Current,
+    /// The binding is the active predecessor retained while its rotation has
+    /// not yet been acknowledged by the recipient.
+    RotationOverlap,
+    /// The binding is revoked, superseded, or unrelated to this chain.
+    Inactive,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MailboxCapabilityInboundDisposition {
+    AlreadyPresent,
+    Append,
+}
+
+/// Transport-independent convergence view over one exact
+/// owner/recipient/scope capability chain.
+///
+/// Callers reconstruct this value from durable signed updates and ACKs after
+/// every restart. No timers, sockets, mutable hidden state, or delivery-side
+/// effects participate in its decisions.
+#[derive(Debug)]
+pub struct MailboxCapabilityConvergence<'a> {
+    ordered_updates: Vec<&'a SignedMailboxCapabilityUpdate>,
+    acknowledgements:
+        BTreeMap<MailboxCapabilityUpdateId, &'a SignedMailboxCapabilityAcknowledgement>,
+}
+
+impl<'a> MailboxCapabilityConvergence<'a> {
+    pub fn new(
+        updates: impl IntoIterator<Item = &'a SignedMailboxCapabilityUpdate>,
+        acknowledgements: impl IntoIterator<Item = &'a SignedMailboxCapabilityAcknowledgement>,
+    ) -> Result<Self> {
+        let mut ordered_updates = updates.into_iter().collect::<Vec<_>>();
+        ordered_updates.sort_by_key(|update| update.generation());
+        let mut previous = None;
+        let mut updates_by_id = BTreeMap::new();
+        for update in &ordered_updates {
+            update.verify_chain_link(previous)?;
+            let update_id = update.update_id()?;
+            ensure!(
+                updates_by_id.insert(update_id, *update).is_none(),
+                "duplicate mailbox capability update ID"
+            );
+            previous = Some(*update);
+        }
+
+        let mut acknowledgements_by_id = BTreeMap::new();
+        for acknowledgement in acknowledgements {
+            let update_id = acknowledgement.update_id();
+            let update = updates_by_id
+                .get(&update_id)
+                .context("mailbox capability acknowledgement references an absent update")?;
+            acknowledgement.verify_for(acknowledgement.session_binding(), update)?;
+            ensure!(
+                acknowledgements_by_id
+                    .insert(update_id, acknowledgement)
+                    .is_none(),
+                "duplicate mailbox capability acknowledgement"
+            );
+        }
+
+        Ok(Self {
+            ordered_updates,
+            acknowledgements: acknowledgements_by_id,
+        })
+    }
+
+    /// Owner-side retained history cannot contain generation N+1 unless the
+    /// recipient acknowledged generation N first.
+    pub fn validate_owner_progression(&self) -> Result<()> {
+        for update in self.ordered_updates.iter().skip(1) {
+            let predecessor = update
+                .previous_update_id()
+                .context("non-initial mailbox capability update has no predecessor")?;
+            ensure!(
+                self.acknowledgements.contains_key(&predecessor),
+                "mailbox capability chain advanced before its predecessor was acknowledged"
+            );
+        }
+        Ok(())
+    }
+
+    pub fn head(&self) -> Option<&'a SignedMailboxCapabilityUpdate> {
+        self.ordered_updates.last().copied()
+    }
+
+    /// Returns the one transition eligible for retry. Later generations stay
+    /// blocked until their exact predecessor ACK has been durably retained.
+    pub fn next_outbound_update(&self) -> Result<Option<&'a SignedMailboxCapabilityUpdate>> {
+        self.validate_owner_progression()?;
+        for update in &self.ordered_updates {
+            let update_id = update.update_id()?;
+            if !self.acknowledgements.contains_key(&update_id)
+                && update
+                    .previous_update_id()
+                    .is_none_or(|predecessor| self.acknowledgements.contains_key(&predecessor))
+            {
+                return Ok(Some(*update));
+            }
+        }
+        Ok(None)
+    }
+
+    pub fn is_fully_acknowledged(&self) -> Result<bool> {
+        Ok(self.next_outbound_update()?.is_none()
+            && self.ordered_updates.iter().all(|update| {
+                update
+                    .update_id()
+                    .is_ok_and(|id| self.acknowledgements.contains_key(&id))
+            }))
+    }
+
+    /// Binding eligibility on the capability owner's receive side. The old
+    /// binding overlaps only while an active rotation head lacks its ACK.
+    pub fn owner_receive_binding_state(
+        &self,
+        binding_id: MailboxBindingId,
+    ) -> Result<MailboxCapabilityBindingState> {
+        let Some(head) = self.head() else {
+            return Ok(MailboxCapabilityBindingState::Unmanaged);
+        };
+        if head.is_revocation() {
+            return Ok(MailboxCapabilityBindingState::Inactive);
+        }
+        if head.binding_id() == binding_id {
+            return Ok(MailboxCapabilityBindingState::Current);
+        }
+        if self.acknowledgements.contains_key(&head.update_id()?) {
+            return Ok(MailboxCapabilityBindingState::Inactive);
+        }
+        let Some(previous_id) = head.previous_update_id() else {
+            return Ok(MailboxCapabilityBindingState::Inactive);
+        };
+        Ok(self
+            .ordered_updates
+            .iter()
+            .find(|update| update.update_id().is_ok_and(|id| id == previous_id))
+            .filter(|previous| !previous.is_revocation() && previous.binding_id() == binding_id)
+            .map_or(MailboxCapabilityBindingState::Inactive, |_| {
+                MailboxCapabilityBindingState::RotationOverlap
+            }))
+    }
+
+    /// Binding eligibility on the recipient's write side. A recipient switches
+    /// to an appended activation immediately and never writes through overlap.
+    pub fn recipient_write_binding_state(
+        &self,
+        binding_id: MailboxBindingId,
+    ) -> MailboxCapabilityBindingState {
+        match self.head() {
+            None => MailboxCapabilityBindingState::Unmanaged,
+            Some(head) if !head.is_revocation() && head.binding_id() == binding_id => {
+                MailboxCapabilityBindingState::Current
+            }
+            Some(_) => MailboxCapabilityBindingState::Inactive,
+        }
+    }
+
+    pub fn classify_inbound_update(
+        &self,
+        update: &SignedMailboxCapabilityUpdate,
+    ) -> Result<MailboxCapabilityInboundDisposition> {
+        update.verify_signature()?;
+        let update_id = update.update_id()?;
+        if let Some(existing) = self
+            .ordered_updates
+            .iter()
+            .find(|existing| existing.update_id().is_ok_and(|id| id == update_id))
+        {
+            ensure!(
+                *existing == update,
+                "mailbox capability update ID already exists with different content"
+            );
+            return Ok(MailboxCapabilityInboundDisposition::AlreadyPresent);
+        }
+        update.verify_chain_link(self.head())?;
+        Ok(MailboxCapabilityInboundDisposition::Append)
+    }
+}
+
 fn binding_id(content: &LocalBindingContent) -> Result<MailboxBindingId> {
     content.validate()?;
     let mut hasher = blake3::Hasher::new();
@@ -1065,6 +1394,46 @@ mod tests {
         MailboxServiceDescriptor::new(
             "https://mailbox.example.invalid/kilogram",
             MailboxStoreIdentity::generate()?.store_key(),
+        )
+    }
+
+    fn capability_activation(
+        owner: &TestDevice,
+        recipient: &TestDevice,
+        scope: MailboxScope,
+        generation: u64,
+        previous_update_id: Option<MailboxCapabilityUpdateId>,
+        created_at_unix_seconds: u64,
+    ) -> Result<SignedMailboxCapabilityUpdate> {
+        let sealed = SealedLocalMailboxBinding::create(
+            owner.state.identity(),
+            owner.state.encryption(),
+            &owner.certificate,
+            &recipient.certificate,
+            scope,
+            service()?,
+            created_at_unix_seconds,
+        )?;
+        let local = sealed.open(
+            owner.state.identity(),
+            owner.state.encryption(),
+            &owner.certificate,
+        )?;
+        let offer = local.offer_for(
+            owner.state.identity(),
+            &owner.certificate,
+            &recipient.certificate,
+            created_at_unix_seconds + 1_000,
+        )?;
+        SignedMailboxCapabilityUpdate::activate(
+            owner.state.identity(),
+            &owner.certificate,
+            &recipient.certificate,
+            scope,
+            generation,
+            previous_update_id,
+            created_at_unix_seconds,
+            &offer,
         )
     }
 
@@ -1365,6 +1734,234 @@ mod tests {
             10_004,
         )?;
         assert!(wrong_revocation.verify_chain_link(Some(&rotated)).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn convergence_survives_lost_ack_restart_rotation_and_revocation() -> Result<()> {
+        let alice = test_device()?;
+        let bob = test_device()?;
+        let scope = MailboxScope::from_bytes([13_u8; 32]);
+        let first = capability_activation(&alice, &bob, scope, 1, None, 20_000)?;
+        let first_binding_id = first.binding_id();
+
+        // Activation is immediately usable by its owner, but remains the one
+        // deterministic retry candidate until an exact recipient ACK is kept.
+        let mut owner_updates = vec![SignedMailboxCapabilityUpdate::decode(&first.encode()?)?];
+        let mut owner_acknowledgements = Vec::new();
+        {
+            let owner = MailboxCapabilityConvergence::new(&owner_updates, &owner_acknowledgements)?;
+            assert_eq!(
+                owner
+                    .next_outbound_update()?
+                    .context("initial activation is not pending")?
+                    .update_id()?,
+                first.update_id()?
+            );
+            assert_eq!(
+                owner.owner_receive_binding_state(first_binding_id)?,
+                MailboxCapabilityBindingState::Current
+            );
+            assert!(!owner.is_fully_acknowledged()?);
+        }
+
+        let mut recipient_updates = Vec::new();
+        {
+            let recipient =
+                MailboxCapabilityConvergence::new(&recipient_updates, std::iter::empty())?;
+            assert_eq!(
+                recipient.classify_inbound_update(&first)?,
+                MailboxCapabilityInboundDisposition::Append
+            );
+        }
+        recipient_updates.push(SignedMailboxCapabilityUpdate::decode(&first.encode()?)?);
+        let lost_ack = SignedMailboxCapabilityAcknowledgement::sign(
+            bob.state.identity(),
+            MailboxCapabilitySessionBinding::from_bytes([1_u8; 32]),
+            &first,
+        )?;
+        assert!(
+            lost_ack
+                .verify_for(
+                    MailboxCapabilitySessionBinding::from_bytes([2_u8; 32]),
+                    &first,
+                )
+                .is_err()
+        );
+
+        // After an owner restart with no retained ACK, the same update is
+        // selected again and the recipient treats it as an idempotent replay.
+        owner_updates = owner_updates
+            .iter()
+            .map(|update| SignedMailboxCapabilityUpdate::decode(&update.encode()?))
+            .collect::<Result<Vec<_>>>()?;
+        {
+            let restarted =
+                MailboxCapabilityConvergence::new(&owner_updates, &owner_acknowledgements)?;
+            assert_eq!(
+                restarted
+                    .next_outbound_update()?
+                    .context("lost activation ACK did not schedule a retry")?
+                    .update_id()?,
+                first.update_id()?
+            );
+        }
+        {
+            let recipient =
+                MailboxCapabilityConvergence::new(&recipient_updates, std::iter::empty())?;
+            assert_eq!(
+                recipient.classify_inbound_update(&first)?,
+                MailboxCapabilityInboundDisposition::AlreadyPresent
+            );
+        }
+        let first_ack = SignedMailboxCapabilityAcknowledgement::sign(
+            bob.state.identity(),
+            MailboxCapabilitySessionBinding::from_bytes([3_u8; 32]),
+            &first,
+        )?;
+        owner_acknowledgements.push(SignedMailboxCapabilityAcknowledgement::decode(
+            &first_ack.encode()?,
+        )?);
+        {
+            let converged =
+                MailboxCapabilityConvergence::new(&owner_updates, &owner_acknowledgements)?;
+            assert!(converged.is_fully_acknowledged()?);
+        }
+
+        let rotation =
+            capability_activation(&alice, &bob, scope, 2, Some(first.update_id()?), 20_001)?;
+        let rotation_binding_id = rotation.binding_id();
+        owner_updates.push(SignedMailboxCapabilityUpdate::decode(&rotation.encode()?)?);
+        {
+            let rotating =
+                MailboxCapabilityConvergence::new(&owner_updates, &owner_acknowledgements)?;
+            assert_eq!(
+                rotating
+                    .next_outbound_update()?
+                    .context("rotation is not pending")?
+                    .update_id()?,
+                rotation.update_id()?
+            );
+            assert_eq!(
+                rotating.owner_receive_binding_state(rotation_binding_id)?,
+                MailboxCapabilityBindingState::Current
+            );
+            assert_eq!(
+                rotating.owner_receive_binding_state(first_binding_id)?,
+                MailboxCapabilityBindingState::RotationOverlap
+            );
+        }
+        {
+            let recipient =
+                MailboxCapabilityConvergence::new(&recipient_updates, std::iter::empty())?;
+            assert_eq!(
+                recipient.classify_inbound_update(&rotation)?,
+                MailboxCapabilityInboundDisposition::Append
+            );
+        }
+        recipient_updates.push(SignedMailboxCapabilityUpdate::decode(&rotation.encode()?)?);
+
+        // A crash after the recipient append but before ACK retention again
+        // yields the rotation as the sole retry and preserves receive overlap.
+        owner_updates = owner_updates
+            .iter()
+            .map(|update| SignedMailboxCapabilityUpdate::decode(&update.encode()?))
+            .collect::<Result<Vec<_>>>()?;
+        owner_acknowledgements = owner_acknowledgements
+            .iter()
+            .map(|acknowledgement| {
+                SignedMailboxCapabilityAcknowledgement::decode(&acknowledgement.encode()?)
+            })
+            .collect::<Result<Vec<_>>>()?;
+        {
+            let restarted =
+                MailboxCapabilityConvergence::new(&owner_updates, &owner_acknowledgements)?;
+            assert_eq!(
+                restarted
+                    .next_outbound_update()?
+                    .context("lost rotation ACK did not schedule a retry")?
+                    .update_id()?,
+                rotation.update_id()?
+            );
+            assert_eq!(
+                restarted.owner_receive_binding_state(first_binding_id)?,
+                MailboxCapabilityBindingState::RotationOverlap
+            );
+        }
+        let rotation_ack = SignedMailboxCapabilityAcknowledgement::sign(
+            bob.state.identity(),
+            MailboxCapabilitySessionBinding::from_bytes([4_u8; 32]),
+            &rotation,
+        )?;
+        owner_acknowledgements.push(rotation_ack);
+        {
+            let rotated =
+                MailboxCapabilityConvergence::new(&owner_updates, &owner_acknowledgements)?;
+            assert_eq!(
+                rotated.owner_receive_binding_state(first_binding_id)?,
+                MailboxCapabilityBindingState::Inactive
+            );
+            assert!(rotated.is_fully_acknowledged()?);
+        }
+
+        let revocation = SignedMailboxCapabilityUpdate::revoke(
+            alice.state.identity(),
+            &alice.certificate,
+            &bob.certificate,
+            scope,
+            3,
+            rotation.update_id()?,
+            rotation_binding_id,
+            20_002,
+        )?;
+        owner_updates.push(SignedMailboxCapabilityUpdate::decode(
+            &revocation.encode()?,
+        )?);
+        {
+            let revoking =
+                MailboxCapabilityConvergence::new(&owner_updates, &owner_acknowledgements)?;
+            assert_eq!(
+                revoking
+                    .next_outbound_update()?
+                    .context("revocation is not pending")?
+                    .update_id()?,
+                revocation.update_id()?
+            );
+            assert_eq!(
+                revoking.owner_receive_binding_state(rotation_binding_id)?,
+                MailboxCapabilityBindingState::Inactive
+            );
+        }
+        {
+            let recipient =
+                MailboxCapabilityConvergence::new(&recipient_updates, std::iter::empty())?;
+            assert_eq!(
+                recipient.classify_inbound_update(&revocation)?,
+                MailboxCapabilityInboundDisposition::Append
+            );
+        }
+        recipient_updates.push(revocation.clone());
+        let recipient = MailboxCapabilityConvergence::new(&recipient_updates, std::iter::empty())?;
+        assert_eq!(
+            recipient.recipient_write_binding_state(rotation_binding_id),
+            MailboxCapabilityBindingState::Inactive
+        );
+
+        let revocation_ack = SignedMailboxCapabilityAcknowledgement::sign(
+            bob.state.identity(),
+            MailboxCapabilitySessionBinding::from_bytes([5_u8; 32]),
+            &revocation,
+        )?;
+        owner_acknowledgements.push(revocation_ack);
+        let converged = MailboxCapabilityConvergence::new(&owner_updates, &owner_acknowledgements)?;
+        assert!(converged.is_fully_acknowledged()?);
+
+        let no_acknowledgements: Vec<SignedMailboxCapabilityAcknowledgement> = Vec::new();
+        assert!(
+            MailboxCapabilityConvergence::new(&owner_updates, &no_acknowledgements)?
+                .validate_owner_progression()
+                .is_err()
+        );
         Ok(())
     }
 

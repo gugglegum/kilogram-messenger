@@ -8,14 +8,12 @@ $workspace = Split-Path -Parent $PSScriptRoot
 $provisioningPath = Join-Path $workspace 'crates\kilogram-mailbox-provisioning\src\lib.rs'
 $protocolPath = Join-Path $workspace 'crates\kilogram-protocol\src\wire.rs'
 $mainPath = Join-Path $workspace 'apps\kilogram-cli\src\main.rs'
-$mailboxPath = Join-Path $workspace 'apps\kilogram-cli\src\runtime_mailbox.rs'
 $ipcPath = Join-Path $workspace 'crates\kilogram-runtime-ipc\src\lib.rs'
 $manifestPath = Join-Path $workspace 'apps\kilogram-cli\Cargo.toml'
 
 $provisioning = Get-Content -LiteralPath $provisioningPath -Raw
 $protocol = Get-Content -LiteralPath $protocolPath -Raw
 $main = Get-Content -LiteralPath $mainPath -Raw
-$mailbox = Get-Content -LiteralPath $mailboxPath -Raw
 $ipc = Get-Content -LiteralPath $ipcPath -Raw
 $manifest = Get-Content -LiteralPath $manifestPath -Raw
 
@@ -68,19 +66,19 @@ if ($automaticPush -lt 0 -or $ordinaryDelivery -le $automaticPush) {
 }
 
 $incomingApply = $main.IndexOf('apply_runtime_mailbox_capability_update(')
-$incomingAck = $main.IndexOf('SignedRuntimeMailboxCapabilityAcknowledgement::sign(', $incomingApply)
+$incomingAck = $main.IndexOf('SignedMailboxCapabilityAcknowledgement::sign(', $incomingApply)
 if ($incomingApply -lt 0 -or $incomingAck -le $incomingApply) {
     throw 'recipient ACK is not ordered after durable mailbox capability application'
 }
 
 foreach ($required in @(
-    'SignedRuntimeMailboxCapabilityAcknowledgement',
+    'SignedMailboxCapabilityAcknowledgement',
     'CAPABILITY_ACKNOWLEDGEMENT_SIGNATURE_DOMAIN',
     'session_binding',
     'recipient_identity.device_id() == update.recipient_device_id()'
 )) {
-    if (-not $mailbox.Contains($required)) {
-        throw "runtime mailbox capability acknowledgement is missing '$required'"
+    if (-not $provisioning.Contains($required)) {
+        throw "shared mailbox capability acknowledgement is missing '$required'"
     }
 }
 

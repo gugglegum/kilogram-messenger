@@ -36,6 +36,10 @@ impl SyncSessionBinding {
         hasher.update(label.as_bytes());
         Self(*hasher.finalize().as_bytes())
     }
+
+    pub fn as_bytes(&self) -> &[u8; 32] {
+        &self.0
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]

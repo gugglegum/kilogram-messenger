@@ -32,8 +32,11 @@ use kilogram_mailbox_client::{
 };
 use kilogram_mailbox_provisioning::{
     EncryptedMailboxOffer, LocalMailboxBinding, MAX_MAILBOX_OFFER_VALIDITY_SECONDS,
-    MailboxBindingId, MailboxCapabilityUpdateId, MailboxServiceDescriptor, PeerMailboxBinding,
-    SealedLocalMailboxBinding, SignedMailboxCapabilityUpdate,
+    MailboxBindingId, MailboxCapabilityBindingState, MailboxCapabilityConvergence,
+    MailboxCapabilityInboundDisposition, MailboxCapabilitySessionBinding,
+    MailboxCapabilityUpdateId, MailboxServiceDescriptor, PeerMailboxBinding,
+    SealedLocalMailboxBinding, SignedMailboxCapabilityAcknowledgement,
+    SignedMailboxCapabilityUpdate,
 };
 use kilogram_protocol::{
     AuthorizedEvent, ClientRequest, ConversationId, DeviceAuthorizationAccepted,
@@ -155,8 +158,7 @@ use runtime_endpoint_announcement::{
     SignedEndpointAnnouncementBundle,
 };
 use runtime_mailbox::{
-    RuntimeMailboxPayload, SignedRuntimeLocalMailboxBinding,
-    SignedRuntimeMailboxCapabilityAcknowledgement, SignedRuntimeMailboxDispatch,
+    RuntimeMailboxPayload, SignedRuntimeLocalMailboxBinding, SignedRuntimeMailboxDispatch,
     SignedRuntimePeerMailboxBinding, mailbox_scope, runtime_mailbox_event_item_id,
 };
 use runtime_own_device_automation::{
@@ -4509,7 +4511,7 @@ struct RuntimeStateSnapshot {
     local_mailbox_updates: BTreeMap<MailboxCapabilityUpdateId, SignedMailboxCapabilityUpdate>,
     peer_mailbox_updates: BTreeMap<MailboxCapabilityUpdateId, SignedMailboxCapabilityUpdate>,
     mailbox_update_acknowledgements:
-        BTreeMap<MailboxCapabilityUpdateId, SignedRuntimeMailboxCapabilityAcknowledgement>,
+        BTreeMap<MailboxCapabilityUpdateId, SignedMailboxCapabilityAcknowledgement>,
 }
 
 impl RuntimeStateSnapshot {
@@ -4692,11 +4694,9 @@ impl RuntimeStateSnapshot {
         recipient_device_id: DeviceId,
         scope: kilogram_mailbox_provisioning::MailboxScope,
     ) -> Result<Option<&SignedMailboxCapabilityUpdate>> {
-        mailbox_capability_update_head(self.local_mailbox_updates.values().filter(|update| {
-            update.recipient_account_id() == recipient_account_id
-                && update.recipient_device_id() == recipient_device_id
-                && update.scope() == scope
-        }))
+        Ok(self
+            .local_mailbox_capability_convergence(recipient_account_id, recipient_device_id, scope)?
+            .head())
     }
 
     fn peer_mailbox_update_head(
@@ -4705,61 +4705,90 @@ impl RuntimeStateSnapshot {
         owner_device_id: DeviceId,
         scope: kilogram_mailbox_provisioning::MailboxScope,
     ) -> Result<Option<&SignedMailboxCapabilityUpdate>> {
-        mailbox_capability_update_head(self.peer_mailbox_updates.values().filter(|update| {
-            update.owner_account_id() == owner_account_id
-                && update.owner_device_id() == owner_device_id
-                && update.scope() == scope
-        }))
+        Ok(self
+            .peer_mailbox_capability_convergence(owner_account_id, owner_device_id, scope)?
+            .head())
     }
-}
 
-fn mailbox_capability_update_head<'a>(
-    updates: impl Iterator<Item = &'a SignedMailboxCapabilityUpdate>,
-) -> Result<Option<&'a SignedMailboxCapabilityUpdate>> {
-    let mut ordered = updates.collect::<Vec<_>>();
-    ordered.sort_by_key(|update| update.generation());
-    let mut previous = None;
-    for update in &ordered {
-        update.verify_chain_link(previous)?;
-        previous = Some(*update);
+    fn local_mailbox_capability_convergence(
+        &self,
+        recipient_account_id: AccountId,
+        recipient_device_id: DeviceId,
+        scope: kilogram_mailbox_provisioning::MailboxScope,
+    ) -> Result<MailboxCapabilityConvergence<'_>> {
+        let updates = self.local_mailbox_updates.values().filter(|update| {
+            update.recipient_account_id() == recipient_account_id
+                && update.recipient_device_id() == recipient_device_id
+                && update.scope() == scope
+        });
+        let acknowledgements =
+            self.mailbox_update_acknowledgements
+                .values()
+                .filter(|acknowledgement| {
+                    self.local_mailbox_updates
+                        .get(&acknowledgement.update_id())
+                        .is_some_and(|update| {
+                            update.recipient_account_id() == recipient_account_id
+                                && update.recipient_device_id() == recipient_device_id
+                                && update.scope() == scope
+                        })
+                });
+        MailboxCapabilityConvergence::new(updates, acknowledgements)
     }
-    Ok(previous)
+
+    fn peer_mailbox_capability_convergence(
+        &self,
+        owner_account_id: AccountId,
+        owner_device_id: DeviceId,
+        scope: kilogram_mailbox_provisioning::MailboxScope,
+    ) -> Result<MailboxCapabilityConvergence<'_>> {
+        MailboxCapabilityConvergence::new(
+            self.peer_mailbox_updates.values().filter(|update| {
+                update.owner_account_id() == owner_account_id
+                    && update.owner_device_id() == owner_device_id
+                    && update.scope() == scope
+            }),
+            std::iter::empty(),
+        )
+    }
 }
 
 fn local_mailbox_binding_is_accepted_head_or_rotation_overlap(
     snapshot: &RuntimeStateSnapshot,
     binding: &SignedRuntimeLocalMailboxBinding,
 ) -> Result<bool> {
-    let Some(head) = snapshot.local_mailbox_update_head(
+    let convergence = snapshot.local_mailbox_capability_convergence(
         binding.peer_account_id(),
         binding.peer_device_id(),
         mailbox_scope(binding.conversation_id()),
-    )?
-    else {
-        return Ok(true);
-    };
-    if head.is_revocation() {
-        return Ok(false);
-    }
-    if head.binding_id() == binding.binding_id() {
-        return Ok(true);
-    }
-    let head_id = head.update_id()?;
-    if snapshot
-        .mailbox_update_acknowledgements
-        .contains_key(&head_id)
-    {
-        return Ok(false);
-    }
-    let Some(previous_id) = head.previous_update_id() else {
-        return Ok(false);
-    };
-    Ok(snapshot
-        .local_mailbox_updates
-        .get(&previous_id)
-        .is_some_and(|previous| {
-            !previous.is_revocation() && previous.binding_id() == binding.binding_id()
-        }))
+    )?;
+    Ok(matches!(
+        convergence.owner_receive_binding_state(binding.binding_id())?,
+        MailboxCapabilityBindingState::Unmanaged
+            | MailboxCapabilityBindingState::Current
+            | MailboxCapabilityBindingState::RotationOverlap
+    ))
+}
+
+fn peer_mailbox_binding_is_current(
+    snapshot: &RuntimeStateSnapshot,
+    binding: &SignedRuntimePeerMailboxBinding,
+) -> Result<bool> {
+    let convergence = snapshot.peer_mailbox_capability_convergence(
+        binding.peer_account_id(),
+        binding.peer_device_id(),
+        mailbox_scope(binding.conversation_id()),
+    )?;
+    Ok(matches!(
+        convergence.recipient_write_binding_state(binding.binding_id()),
+        MailboxCapabilityBindingState::Unmanaged | MailboxCapabilityBindingState::Current
+    ))
+}
+
+fn mailbox_capability_session_binding(
+    session_binding: SyncSessionBinding,
+) -> MailboxCapabilitySessionBinding {
+    MailboxCapabilitySessionBinding::from_bytes(*session_binding.as_bytes())
 }
 
 fn runtime_contact_relative_path(contact_id: RuntimeContactId) -> PathBuf {
@@ -5472,7 +5501,7 @@ fn load_runtime_state_snapshot(
                 "duplicate runtime peer mailbox update ID"
             );
         } else if file_name.ends_with(".mua") {
-            let value = SignedRuntimeMailboxCapabilityAcknowledgement::decode(&bytes)?;
+            let value = SignedMailboxCapabilityAcknowledgement::decode(&bytes)?;
             let update_id = value.update_id();
             ensure!(
                 relative_path == runtime_mailbox_update_acknowledgement_relative_path(update_id),
@@ -5658,13 +5687,15 @@ fn load_runtime_state_snapshot(
         ));
     }
     for (recipient_account_id, recipient_device_id, scope) in local_update_scopes {
-        snapshot
-            .local_mailbox_update_head(
-                AccountId::from_bytes(recipient_account_id),
-                recipient_device_id,
-                scope,
-            )?
+        let convergence = snapshot.local_mailbox_capability_convergence(
+            AccountId::from_bytes(recipient_account_id),
+            recipient_device_id,
+            scope,
+        )?;
+        convergence
+            .head()
             .context("runtime local mailbox capability chain is empty")?;
+        convergence.validate_owner_progression()?;
     }
     let mut peer_update_scopes = BTreeSet::new();
     for (update_id, update) in &snapshot.peer_mailbox_updates {
@@ -5694,11 +5725,12 @@ fn load_runtime_state_snapshot(
     }
     for (owner_account_id, owner_device_id, scope) in peer_update_scopes {
         snapshot
-            .peer_mailbox_update_head(
+            .peer_mailbox_capability_convergence(
                 AccountId::from_bytes(owner_account_id),
                 owner_device_id,
                 scope,
             )?
+            .head()
             .context("runtime peer mailbox capability chain is empty")?;
     }
     for (update_id, acknowledgement) in &snapshot.mailbox_update_acknowledgements {
@@ -10368,16 +10400,10 @@ fn runtime_mailbox_status(state_directory: PathBuf) -> Result<()> {
             .get(&binding.contact_id())
             .context("peer mailbox binding contact disappeared")?;
         let state = (|| {
-            if let Some(head) = snapshot.peer_mailbox_update_head(
-                binding.peer_account_id(),
-                binding.peer_device_id(),
-                mailbox_scope(binding.conversation_id()),
-            )? {
-                ensure!(
-                    !head.is_revocation() && head.binding_id() == binding.binding_id(),
-                    "peer mailbox binding is not the active capability-chain head"
-                );
-            }
+            ensure!(
+                peer_mailbox_binding_is_current(&snapshot, binding)?,
+                "peer mailbox binding is not the active capability-chain head"
+            );
             let peer_authority = trust.load_peer_authority_snapshot(binding.peer_account_id())?;
             let candidates = load_runtime_endpoint_candidate_set(
                 &snapshot,
@@ -16686,19 +16712,28 @@ async fn attempt_next_runtime_mailbox_capability_update(
             local_certificate.device_id(),
         )?;
         let mut pending = Vec::new();
-        for update in snapshot.local_mailbox_updates.values() {
+        let update_scopes = snapshot
+            .local_mailbox_updates
+            .values()
+            .map(|update| {
+                (
+                    *update.recipient_account_id().as_bytes(),
+                    update.recipient_device_id(),
+                    update.scope(),
+                )
+            })
+            .collect::<BTreeSet<_>>();
+        for (recipient_account_id, recipient_device_id, scope) in update_scopes {
+            let convergence = snapshot.local_mailbox_capability_convergence(
+                AccountId::from_bytes(recipient_account_id),
+                recipient_device_id,
+                scope,
+            )?;
+            let Some(update) = convergence.next_outbound_update()? else {
+                continue;
+            };
             let update_id = update.update_id()?;
-            if !snapshot
-                .mailbox_update_acknowledgements
-                .contains_key(&update_id)
-                && update.previous_update_id().is_none_or(|previous| {
-                    snapshot
-                        .mailbox_update_acknowledgements
-                        .contains_key(&previous)
-                })
-            {
-                pending.push((update_id, update.clone()));
-            }
+            pending.push((update_id, update.clone()));
         }
         pending.sort_by(|(left_id, left), (right_id, right)| {
             match (last_attempts.get(left_id), last_attempts.get(right_id)) {
@@ -16814,9 +16849,11 @@ async fn send_runtime_mailbox_capability_update(
         }
         _ => bail!("mailbox capability update received an unexpected response"),
     };
-    let acknowledgement =
-        SignedRuntimeMailboxCapabilityAcknowledgement::decode(&acknowledgement_bytes)?;
-    acknowledgement.verify_for(session_binding, &prepared.update)?;
+    let acknowledgement = SignedMailboxCapabilityAcknowledgement::decode(&acknowledgement_bytes)?;
+    acknowledgement.verify_for(
+        mailbox_capability_session_binding(session_binding),
+        &prepared.update,
+    )?;
     ensure!(
         acknowledgement.update_id() == update_id,
         "mailbox capability acknowledgement changed the update ID"
@@ -16845,7 +16882,10 @@ async fn send_runtime_mailbox_capability_update(
             retained == &prepared.update,
             "mailbox capability update changed before ACK commit"
         );
-        acknowledgement.verify_for(session_binding, retained)?;
+        acknowledgement.verify_for(
+            mailbox_capability_session_binding(session_binding),
+            retained,
+        )?;
         if let Some(existing) = snapshot.mailbox_update_acknowledgements.get(&update_id) {
             ensure!(
                 existing == &acknowledgement,
@@ -16948,16 +16988,10 @@ fn open_verified_peer_mailbox_binding(
     signed: &SignedRuntimePeerMailboxBinding,
     now_unix_seconds: u64,
 ) -> Result<PeerMailboxBinding> {
-    if let Some(head) = snapshot.peer_mailbox_update_head(
-        signed.peer_account_id(),
-        signed.peer_device_id(),
-        mailbox_scope(signed.conversation_id()),
-    )? {
-        ensure!(
-            !head.is_revocation() && head.binding_id() == signed.binding_id(),
-            "peer mailbox binding is not the active capability-chain head"
-        );
-    }
+    ensure!(
+        peer_mailbox_binding_is_current(snapshot, signed)?,
+        "peer mailbox binding is not the active capability-chain head"
+    );
     let contact = snapshot
         .contacts
         .get(&signed.contact_id())
@@ -17300,16 +17334,10 @@ async fn attempt_runtime_mailbox_fallback(
                 .peer_mailbox_bindings
                 .get(&dispatch.binding_id())
                 .context("runtime mailbox dispatch binding disappeared")?;
-            if let Some(head) = snapshot.peer_mailbox_update_head(
-                signed_binding.peer_account_id(),
-                signed_binding.peer_device_id(),
-                mailbox_scope(signed_binding.conversation_id()),
-            )? {
-                ensure!(
-                    !head.is_revocation() && head.binding_id() == signed_binding.binding_id(),
-                    "runtime mailbox dispatch binding is no longer the active capability head"
-                );
-            }
+            ensure!(
+                peer_mailbox_binding_is_current(&snapshot, signed_binding)?,
+                "runtime mailbox dispatch binding is no longer the active capability head"
+            );
             let opened =
                 open_current_peer_mailbox_binding(signed_binding, prepared, &device_state, now)?;
             ensure!(
@@ -17329,18 +17357,7 @@ async fn attempt_runtime_mailbox_fallback(
                         && binding.conversation_id() == prepared.event.event().conversation_id()
                 })
                 .filter_map(|binding| {
-                    if !snapshot
-                        .peer_mailbox_update_head(
-                            binding.peer_account_id(),
-                            binding.peer_device_id(),
-                            mailbox_scope(binding.conversation_id()),
-                        )
-                        .is_ok_and(|head| {
-                            head.is_none_or(|head| {
-                                !head.is_revocation() && head.binding_id() == binding.binding_id()
-                            })
-                        })
-                    {
+                    if !peer_mailbox_binding_is_current(&snapshot, binding).unwrap_or(false) {
                         return None;
                     }
                     open_current_peer_mailbox_binding(binding, prepared, &device_state, now)
@@ -19275,9 +19292,9 @@ async fn handle_authorized_application_connection(
                     return Err(error).context("reject mailbox capability update");
                 }
             };
-            let acknowledgement = SignedRuntimeMailboxCapabilityAcknowledgement::sign(
+            let acknowledgement = SignedMailboxCapabilityAcknowledgement::sign(
                 device_state.identity(),
-                session_binding,
+                mailbox_capability_session_binding(session_binding),
                 &update,
             )?;
             write_server_response(
@@ -19333,12 +19350,16 @@ fn apply_runtime_mailbox_capability_update(
         listener_certificate.account_id(),
         listener_certificate.device_id(),
     )?;
-    if let Some(existing) = snapshot.peer_mailbox_updates.get(&update.update_id()?) {
-        ensure!(
-            existing == update,
-            "mailbox capability update ID already exists with different content"
-        );
-        return Ok(StoreOutcome::AlreadyPresent);
+    let convergence = snapshot.peer_mailbox_capability_convergence(
+        update.owner_account_id(),
+        update.owner_device_id(),
+        update.scope(),
+    )?;
+    match convergence.classify_inbound_update(update)? {
+        MailboxCapabilityInboundDisposition::AlreadyPresent => {
+            return Ok(StoreOutcome::AlreadyPresent);
+        }
+        MailboxCapabilityInboundDisposition::Append => {}
     }
     ensure!(
         snapshot
@@ -19349,12 +19370,6 @@ fn apply_runtime_mailbox_capability_update(
             < MAX_RUNTIME_MAILBOX_CAPABILITY_UPDATES,
         "runtime mailbox capability update capacity exceeded"
     );
-    let current = snapshot.peer_mailbox_update_head(
-        update.owner_account_id(),
-        update.owner_device_id(),
-        update.scope(),
-    )?;
-    update.verify_chain_link(current)?;
     let mut contacts = snapshot.contacts.values().filter(|contact| {
         contact.peer_account_id() == update.owner_account_id()
             && mailbox_scope(contact.conversation_id()) == update.scope()
