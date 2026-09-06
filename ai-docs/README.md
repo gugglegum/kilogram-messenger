@@ -381,18 +381,19 @@ removal semantics и MLS-группы ещё не реализованы.
 
 ## План ближайших работ
 
-Реализованный M0.9.54 подключает recipient-bound mailbox bindings и crash-safe
-client ledger к единственному serialized runtime actor. Direct/relay остаётся
-первым путём, после его bounded failure создаётся deterministic durable mailbox
-dispatch; store receipt даёт только `mailbox-stored`, а `delivered` требует
-peer-signed ACK. Inbound AuthorizedEvent и projection коммитятся до conditional
-delete, ACK уходит через reverse mailbox. IPC v21 честно показывает pending,
-stored, expired, failed, received/deleted counts; второй EXE не создан.
+Реализованный M0.9.55 добавляет к direct/relay-first mailbox fallback
+Device-signed contiguous capability chain и automatic bounded exchange через
+existing authenticated Device session. Create/rotate/revoke atomic сохраняют
+local head, recipient atomic импортирует binding/update до session-bound signed
+ACK, а runtime fallback принимает current non-revoked head; receive polling
+сохраняет previous acknowledged binding только на время pending rotation.
+Секрет остаётся внутри recipient-HPKE offer и не попадает в public tickets или
+endpoint publications. IPC v22 показывает pending convergence и revoked heads;
+второй EXE не создан.
 
-1. M0.9.55: перенести тот же recipient-encrypted mailbox offer через уже
-   authenticated online session, добавить explicit capability rotation/
-   revocation и deterministic convergence current bindings без помещения
-   secrets в public tickets или endpoint publications.
+1. M0.9.56: выделить transport-independent mailbox capability convergence
+   state machine и deterministic network-free crash/retry regression без
+   socket/Windows Firewall.
 2. Уже реализованный M0.9.50 дважды строит `kilogram-offline` из exact
    SHA-256-manifested source в отдельных clean source/target roots, требует
    byte-identical EXE и fail-closed связывает clean package с проверенным
@@ -646,6 +647,9 @@ stored, expired, failed, received/deleted counts; второй EXE не созд
 - [`../docs/RFC-0076-runtime-mailbox-fallback-and-ack.md`](../docs/RFC-0076-runtime-mailbox-fallback-and-ack.md) —
   реализованный M0.9.54 direct/relay-first runtime mailbox fallback,
   application-commit-before-delete и reverse-mailbox acknowledgement.
+- [`../docs/RFC-0077-authenticated-mailbox-capability-lifecycle.md`](../docs/RFC-0077-authenticated-mailbox-capability-lifecycle.md) —
+  реализованный M0.9.55 Device-signed ordered mailbox capability lifecycle,
+  authenticated automatic exchange, rotation/revocation и session-bound ACK.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

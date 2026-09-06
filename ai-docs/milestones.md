@@ -3329,11 +3329,45 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - contract зафиксирован в
   [`../docs/RFC-0076-runtime-mailbox-fallback-and-ack.md`](../docs/RFC-0076-runtime-mailbox-fallback-and-ack.md).
 
+### M0.9.55 — authenticated mailbox capability lifecycle: выполнено
+
+Реализовано:
+
+- network-free provisioning contract получил Device-signed ordered update с
+  exact owner/recipient Account+Device, opaque scope, generation, predecessor,
+  binding и activate/revoke action;
+- first activation, rotation и revocation fail closed проверяют contiguous
+  chain, gap/fork, wrong target и повторный binding;
+- `runtime-mailbox-offer-create` теперь atomic persist-ит generation one вместе
+  с local binding; `runtime-mailbox-rotate` и `runtime-mailbox-revoke` делают
+  последующие явные transitions;
+- serialized runtime раз в 30 секунд выбирает максимум один unacknowledged
+  update и отправляет его exact current recipient endpoint только после ACK
+  predecessor;
+- wire transfer идёт через existing authenticated Device session; bounded
+  request/ack/rejection не помещают capability в public discovery;
+- recipient сверяет update с authenticated session, exact enrolled contact и
+  full retained chain, затем atomic persist-ит peer binding/update до
+  session-bound recipient-signed ACK;
+- current non-revoked chain head стал обязательным для receive polling,
+  fallback selection и retained dispatch; при pending rotation previous
+  acknowledged receive binding временно poll-ится как safe handover overlap,
+  следующий transition до ACK запрещён, old append-only records не удаляются;
+- runtime state получил bounded `.lmu`/`.pmu`/`.mua`, а IPC v22 показывает
+  local acknowledged/unacknowledged updates и local/peer revoked heads;
+- отдельный fail-closed gate проверяет chain, ordering, ACK, public discovery
+  boundary и отсутствие нового executable;
+- network-free provisioning/protocol regressions проходят; complete runtime
+  path compile/clippy-verified, но не запускался по сети без controlled test
+  window, release/ZIP не создавались;
+- contract зафиксирован в
+  [`../docs/RFC-0077-authenticated-mailbox-capability-lifecycle.md`](../docs/RFC-0077-authenticated-mailbox-capability-lifecycle.md).
+
 ### Следующий этап
 
-1. M0.9.55: automatic authenticated online mailbox offer exchange, explicit
-   capability rotation/revocation и deterministic convergence current bindings
-   без secrets в tickets/endpoint publications.
+1. M0.9.56: выделить transport-independent mailbox capability convergence
+   state machine и deterministic network-free scenario activation -> ACK ->
+   rotation -> retry -> revocation, включая crash boundaries без socket/Firewall.
 2. Добавить independent second-builder reproduction и подписанный public
    release provenance поверх M0.9.50 same-host clean-root gate.
 3. Optional autostart/background mode оставить отдельной явной настройкой, не

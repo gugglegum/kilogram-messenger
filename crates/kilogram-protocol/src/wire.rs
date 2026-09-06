@@ -14,6 +14,8 @@ pub const MAX_INVENTORY_EVENT_IDS: usize = 4096;
 pub const MAX_SYNC_EVENTS_PER_BATCH: usize = 64;
 pub const MAX_ENDPOINT_ANNOUNCEMENT_WIRE_BYTES: usize = 7 * 1024 * 1024;
 pub const MAX_ENDPOINT_ANNOUNCEMENT_ACKNOWLEDGEMENT_WIRE_BYTES: usize = 4 * 1024;
+pub const MAX_MAILBOX_CAPABILITY_UPDATE_WIRE_BYTES: usize = 40 * 1024;
+pub const MAX_MAILBOX_CAPABILITY_ACKNOWLEDGEMENT_WIRE_BYTES: usize = 4 * 1024;
 
 const SYNC_VERSION: u8 = 6;
 const SYNC_DIFF_SIGNATURE_DOMAIN: &[u8] = b"kilogram:sync-diff-signature:v6\0";
@@ -544,6 +546,7 @@ pub enum ClientRequest {
     SyncPause(SyncPause),
     HistoryRewrap(SignedHistoryRewrapRequest),
     EndpointAnnouncementPush(Vec<u8>),
+    MailboxCapabilityUpdatePush(Vec<u8>),
 }
 
 impl ClientRequest {
@@ -569,6 +572,9 @@ impl ClientRequest {
             Self::EndpointAnnouncementPush(envelope) => {
                 validate_endpoint_announcement_frame(envelope, MAX_ENDPOINT_ANNOUNCEMENT_WIRE_BYTES)
             }
+            Self::MailboxCapabilityUpdatePush(update) => {
+                validate_mailbox_capability_frame(update, MAX_MAILBOX_CAPABILITY_UPDATE_WIRE_BYTES)
+            }
         }
     }
 }
@@ -586,6 +592,8 @@ pub enum ServerResponse {
     HistoryRewrapRejected(HistoryRewrapRejected),
     EndpointAnnouncementAcknowledged(Vec<u8>),
     EndpointAnnouncementRejected,
+    MailboxCapabilityUpdateAcknowledged(Vec<u8>),
+    MailboxCapabilityUpdateRejected,
 }
 
 impl ServerResponse {
@@ -618,8 +626,28 @@ impl ServerResponse {
                 )
             }
             Self::EndpointAnnouncementRejected => Ok(()),
+            Self::MailboxCapabilityUpdateAcknowledged(acknowledgement) => {
+                validate_mailbox_capability_frame(
+                    acknowledgement,
+                    MAX_MAILBOX_CAPABILITY_ACKNOWLEDGEMENT_WIRE_BYTES,
+                )
+            }
+            Self::MailboxCapabilityUpdateRejected => Ok(()),
         }
     }
+}
+
+fn validate_mailbox_capability_frame(bytes: &[u8], maximum: usize) -> Result<(), ProtocolError> {
+    if bytes.is_empty() {
+        return Err(ProtocolError::EmptyMailboxCapabilityFrame);
+    }
+    if bytes.len() > maximum {
+        return Err(ProtocolError::MailboxCapabilityFrameTooLarge {
+            actual: bytes.len(),
+            maximum,
+        });
+    }
+    Ok(())
 }
 
 fn validate_endpoint_announcement_frame(bytes: &[u8], maximum: usize) -> Result<(), ProtocolError> {
@@ -967,6 +995,29 @@ mod tests {
             ])
             .encode(),
             Err(ProtocolError::EndpointAnnouncementFrameTooLarge { .. })
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn mailbox_capability_frames_are_bounded_and_round_trip()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let request = ClientRequest::MailboxCapabilityUpdatePush(vec![1, 2, 3]);
+        assert_eq!(ClientRequest::decode(&request.encode()?)?, request);
+        let response = ServerResponse::MailboxCapabilityUpdateAcknowledged(vec![4, 5, 6]);
+        assert_eq!(ServerResponse::decode(&response.encode()?)?, response);
+        assert!(matches!(
+            ClientRequest::MailboxCapabilityUpdatePush(Vec::new()).encode(),
+            Err(ProtocolError::EmptyMailboxCapabilityFrame)
+        ));
+        assert!(matches!(
+            ServerResponse::MailboxCapabilityUpdateAcknowledged(vec![
+                0;
+                MAX_MAILBOX_CAPABILITY_ACKNOWLEDGEMENT_WIRE_BYTES
+                    + 1
+            ])
+            .encode(),
+            Err(ProtocolError::MailboxCapabilityFrameTooLarge { .. })
         ));
         Ok(())
     }

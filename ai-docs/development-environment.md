@@ -1807,3 +1807,27 @@ retirement остальных compatibility shadows ещё не реализов
 - Release build и ZIP package в M0.9.54 не выполнялись. Exact `target` после
   verification содержит 19,686 files / 11.32 GiB (debug 5.19, verification
   4.39, retained old release 1.73 GiB), ниже 40 GiB warning threshold.
+
+## M0.9.55 verification snapshot (2026-09-06)
+
+- `cargo check --workspace --all-targets --all-features --locked`, strict full
+  workspace Clippy с `-D warnings`, formatting и `git diff --check` проходят с
+  BelowNormal priority и 12 Cargo jobs.
+- Новый `verify-kilogram-mailbox-capability-lifecycle.ps1` подтвердил
+  contiguous Device-signed chain, explicit rotation/revocation, bounded
+  authenticated push, durable-apply-before-session-ACK, current-head/rotation-
+  overlap guards, отсутствие capability material в endpoint publication source
+  и отсутствие нового executable.
+- `verify-kilogram-mailbox-provisioning-boundary.ps1` повторно подтвердил 131
+  normal dependency record без network/runtime/direct-storage crossing;
+  `verify-kilogram-runtime-mailbox-flow.ps1` сохранил live-before-fallback,
+  commit-before-delete и reverse-ACK invariants M0.9.54.
+- Network-free stable-name harnesses: `kilogram-mailbox-provisioning` 5/5 и
+  `kilogram-protocol` 15/15 passed, включая contiguous chain gap/fork/wrong-
+  revoke rejection и bounded capability wire frames. Они не создают listener.
+- Network-bearing CLI/runtime harness не запускался; online capability exchange
+  пока compile-verified, а не field-verified. Windows Firewall prompt не
+  инициировался. Release build и ZIP package не создавались.
+- Exact `target` после проверки содержит 20,214 files / 11.63 GiB (debug 5.39,
+  verification 4.50, retained old release 1.73 GiB), ниже 40 GiB warning
+  threshold; автоматическая очистка не требовалась.

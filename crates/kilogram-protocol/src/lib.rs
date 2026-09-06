@@ -26,9 +26,11 @@ pub use rewrap::{
 pub use wire::{
     ClientRequest, DeviceAuthorizationAccepted, DeviceAuthorizationRejected, HistoryRewrapRejected,
     HistoryRewrapRejectionReason, MAX_ENDPOINT_ANNOUNCEMENT_ACKNOWLEDGEMENT_WIRE_BYTES,
-    MAX_ENDPOINT_ANNOUNCEMENT_WIRE_BYTES, MAX_INVENTORY_EVENT_IDS, MAX_SYNC_EVENTS_PER_BATCH,
-    ServerResponse, SignedDeviceSessionAuthorization, SignedSyncInventory, SyncComplete, SyncDiff,
-    SyncEventBatch, SyncPause, SyncPaused, SyncRejected, SyncRejectionReason, SyncSessionBinding,
+    MAX_ENDPOINT_ANNOUNCEMENT_WIRE_BYTES, MAX_INVENTORY_EVENT_IDS,
+    MAX_MAILBOX_CAPABILITY_ACKNOWLEDGEMENT_WIRE_BYTES, MAX_MAILBOX_CAPABILITY_UPDATE_WIRE_BYTES,
+    MAX_SYNC_EVENTS_PER_BATCH, ServerResponse, SignedDeviceSessionAuthorization,
+    SignedSyncInventory, SyncComplete, SyncDiff, SyncEventBatch, SyncPause, SyncPaused,
+    SyncRejected, SyncRejectionReason, SyncSessionBinding,
 };
 
 const EVENT_VERSION: u8 = 5;
@@ -1009,6 +1011,12 @@ pub enum ProtocolError {
 
     #[error("endpoint announcement wire frame has {actual} bytes; maximum is {maximum}")]
     EndpointAnnouncementFrameTooLarge { actual: usize, maximum: usize },
+
+    #[error("mailbox capability wire frame must not be empty")]
+    EmptyMailboxCapabilityFrame,
+
+    #[error("mailbox capability wire frame has {actual} bytes; maximum is {maximum}")]
+    MailboxCapabilityFrameTooLarge { actual: usize, maximum: usize },
 
     #[error("device authorization response belongs to account {actual}; expected {expected}")]
     DeviceAuthorizationAccountMismatch {

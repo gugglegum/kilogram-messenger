@@ -27,6 +27,10 @@ const OFFER_SIGNATURE_DOMAIN: &[u8] = b"kilogram:mailbox-device-offer:v1\0";
 const LOCAL_HPKE_INFO: &[u8] = b"kilogram:mailbox-local-binding-hpke:v1\0";
 const OFFER_HPKE_INFO: &[u8] = b"kilogram:mailbox-device-offer-hpke:v1\0";
 const BINDING_ID_DOMAIN: &[u8] = b"kilogram:mailbox-binding-id:v1\0";
+const CAPABILITY_UPDATE_VERSION: u8 = 1;
+const CAPABILITY_UPDATE_SIGNATURE_DOMAIN: &[u8] = b"kilogram:mailbox-capability-update:v1\0";
+const CAPABILITY_UPDATE_ID_DOMAIN: &[u8] = b"kilogram:mailbox-capability-update-id:v1\0";
+pub const MAX_MAILBOX_CAPABILITY_UPDATE_BYTES: usize = 32 * 1024;
 
 pub const MIN_MAILBOX_OFFER_VALIDITY_SECONDS: u64 = 60;
 pub const MAX_MAILBOX_OFFER_VALIDITY_SECONDS: u64 = 30 * 24 * 60 * 60;
@@ -627,6 +631,309 @@ impl PeerMailboxBinding {
     }
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub struct MailboxCapabilityUpdateId([u8; KEY_BYTES]);
+
+impl MailboxCapabilityUpdateId {
+    pub fn as_bytes(&self) -> &[u8; KEY_BYTES] {
+        &self.0
+    }
+}
+
+impl fmt::Display for MailboxCapabilityUpdateId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for byte in self.0 {
+            write!(formatter, "{byte:02x}")?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+enum MailboxCapabilityUpdateAction {
+    Activate {
+        binding_id: MailboxBindingId,
+        encrypted_offer: Vec<u8>,
+    },
+    Revoke {
+        binding_id: MailboxBindingId,
+    },
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+struct MailboxCapabilityUpdateContent {
+    version: u8,
+    owner_account_id: AccountId,
+    owner_device_id: DeviceId,
+    recipient_account_id: AccountId,
+    recipient_device_id: DeviceId,
+    scope: MailboxScope,
+    generation: u64,
+    previous_update_id: Option<MailboxCapabilityUpdateId>,
+    created_at_unix_seconds: u64,
+    action: MailboxCapabilityUpdateAction,
+}
+
+/// Device-signed ordered lifecycle for one recipient-bound mailbox capability.
+///
+/// Updates are sent only inside an already authenticated encrypted Device
+/// session. The active offer remains independently HPKE-encrypted to the exact
+/// recipient Device, while the signed generation chain prevents rollback,
+/// gaps and same-generation forks in retained local state.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct SignedMailboxCapabilityUpdate {
+    content: MailboxCapabilityUpdateContent,
+    signature: Vec<u8>,
+}
+
+impl SignedMailboxCapabilityUpdate {
+    #[allow(clippy::too_many_arguments)]
+    pub fn activate(
+        owner_identity: &DeviceIdentity,
+        owner_certificate: &DeviceCertificate,
+        recipient_certificate: &DeviceCertificate,
+        scope: MailboxScope,
+        generation: u64,
+        previous_update_id: Option<MailboxCapabilityUpdateId>,
+        created_at_unix_seconds: u64,
+        offer: &EncryptedMailboxOffer,
+    ) -> Result<Self> {
+        owner_certificate.verify()?;
+        recipient_certificate.verify()?;
+        ensure!(
+            owner_identity.device_id() == owner_certificate.device_id(),
+            "mailbox capability update signer does not match its owner certificate"
+        );
+        let content = MailboxCapabilityUpdateContent {
+            version: CAPABILITY_UPDATE_VERSION,
+            owner_account_id: owner_certificate.account_id(),
+            owner_device_id: owner_certificate.device_id(),
+            recipient_account_id: recipient_certificate.account_id(),
+            recipient_device_id: recipient_certificate.device_id(),
+            scope,
+            generation,
+            previous_update_id,
+            created_at_unix_seconds,
+            action: MailboxCapabilityUpdateAction::Activate {
+                binding_id: offer.binding_id(),
+                encrypted_offer: offer.encode()?,
+            },
+        };
+        Self::sign(owner_identity, content)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn revoke(
+        owner_identity: &DeviceIdentity,
+        owner_certificate: &DeviceCertificate,
+        recipient_certificate: &DeviceCertificate,
+        scope: MailboxScope,
+        generation: u64,
+        previous_update_id: MailboxCapabilityUpdateId,
+        revoked_binding_id: MailboxBindingId,
+        created_at_unix_seconds: u64,
+    ) -> Result<Self> {
+        owner_certificate.verify()?;
+        recipient_certificate.verify()?;
+        ensure!(
+            owner_identity.device_id() == owner_certificate.device_id(),
+            "mailbox capability revocation signer does not match its owner certificate"
+        );
+        let content = MailboxCapabilityUpdateContent {
+            version: CAPABILITY_UPDATE_VERSION,
+            owner_account_id: owner_certificate.account_id(),
+            owner_device_id: owner_certificate.device_id(),
+            recipient_account_id: recipient_certificate.account_id(),
+            recipient_device_id: recipient_certificate.device_id(),
+            scope,
+            generation,
+            previous_update_id: Some(previous_update_id),
+            created_at_unix_seconds,
+            action: MailboxCapabilityUpdateAction::Revoke {
+                binding_id: revoked_binding_id,
+            },
+        };
+        Self::sign(owner_identity, content)
+    }
+
+    fn sign(identity: &DeviceIdentity, content: MailboxCapabilityUpdateContent) -> Result<Self> {
+        let signature = identity
+            .sign(&signing_bytes(
+                CAPABILITY_UPDATE_SIGNATURE_DOMAIN,
+                &content,
+            )?)
+            .to_vec();
+        let update = Self { content, signature };
+        update.verify_signature()?;
+        Ok(update)
+    }
+
+    pub fn encode(&self) -> Result<Vec<u8>> {
+        self.verify_signature()?;
+        let bytes = postcard::to_allocvec(self).context("encode mailbox capability update")?;
+        ensure!(
+            !bytes.is_empty() && bytes.len() <= MAX_MAILBOX_CAPABILITY_UPDATE_BYTES,
+            "mailbox capability update is too large"
+        );
+        Ok(bytes)
+    }
+
+    pub fn decode(bytes: &[u8]) -> Result<Self> {
+        ensure!(
+            !bytes.is_empty() && bytes.len() <= MAX_MAILBOX_CAPABILITY_UPDATE_BYTES,
+            "mailbox capability update size is invalid"
+        );
+        let update: Self =
+            postcard::from_bytes(bytes).context("decode mailbox capability update")?;
+        update.verify_signature()?;
+        Ok(update)
+    }
+
+    pub fn verify_signature(&self) -> Result<()> {
+        ensure!(
+            self.content.version == CAPABILITY_UPDATE_VERSION
+                && self.owner_account_id() != self.recipient_account_id()
+                && self.owner_device_id() != self.recipient_device_id()
+                && self.generation() != 0
+                && self.created_at_unix_seconds() != 0
+                && ((self.generation() == 1 && self.previous_update_id().is_none())
+                    || (self.generation() > 1 && self.previous_update_id().is_some())),
+            "mailbox capability update metadata is invalid"
+        );
+        match &self.content.action {
+            MailboxCapabilityUpdateAction::Activate {
+                binding_id,
+                encrypted_offer,
+            } => {
+                let offer = EncryptedMailboxOffer::decode(encrypted_offer)?;
+                ensure!(
+                    offer.binding_id() == *binding_id,
+                    "mailbox capability update offer binding changed"
+                );
+            }
+            MailboxCapabilityUpdateAction::Revoke { .. } => ensure!(
+                self.generation() > 1,
+                "initial mailbox capability update cannot be a revocation"
+            ),
+        }
+        self.owner_device_id()
+            .verify(
+                &signing_bytes(CAPABILITY_UPDATE_SIGNATURE_DOMAIN, &self.content)?,
+                &self.signature,
+            )
+            .context("verify mailbox capability update signature")
+    }
+
+    pub fn verify_chain_link(&self, previous: Option<&Self>) -> Result<()> {
+        self.verify_signature()?;
+        match previous {
+            None => ensure!(
+                self.generation() == 1
+                    && self.previous_update_id().is_none()
+                    && self.offer()?.is_some(),
+                "mailbox capability chain must begin with generation-one activation"
+            ),
+            Some(previous) => {
+                previous.verify_signature()?;
+                let expected_generation = previous
+                    .generation()
+                    .checked_add(1)
+                    .context("mailbox capability generation overflows")?;
+                ensure!(
+                    self.owner_account_id() == previous.owner_account_id()
+                        && self.owner_device_id() == previous.owner_device_id()
+                        && self.recipient_account_id() == previous.recipient_account_id()
+                        && self.recipient_device_id() == previous.recipient_device_id()
+                        && self.scope() == previous.scope()
+                        && self.generation() == expected_generation
+                        && self.previous_update_id() == Some(previous.update_id()?),
+                    "mailbox capability update is not the exact next chain generation"
+                );
+                ensure!(
+                    self.created_at_unix_seconds() >= previous.created_at_unix_seconds(),
+                    "mailbox capability update creation time regressed"
+                );
+                if self.is_revocation() {
+                    ensure!(
+                        !previous.is_revocation() && self.binding_id() == previous.binding_id(),
+                        "mailbox capability revocation does not target the active predecessor"
+                    );
+                } else {
+                    ensure!(
+                        self.binding_id() != previous.binding_id(),
+                        "mailbox capability rotation must install a different binding"
+                    );
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub fn update_id(&self) -> Result<MailboxCapabilityUpdateId> {
+        self.verify_signature()?;
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(CAPABILITY_UPDATE_ID_DOMAIN);
+        hasher.update(&postcard::to_allocvec(&self.content)?);
+        hasher.update(&self.signature);
+        Ok(MailboxCapabilityUpdateId(*hasher.finalize().as_bytes()))
+    }
+
+    pub fn owner_account_id(&self) -> AccountId {
+        self.content.owner_account_id
+    }
+
+    pub fn owner_device_id(&self) -> DeviceId {
+        self.content.owner_device_id
+    }
+
+    pub fn recipient_account_id(&self) -> AccountId {
+        self.content.recipient_account_id
+    }
+
+    pub fn recipient_device_id(&self) -> DeviceId {
+        self.content.recipient_device_id
+    }
+
+    pub fn scope(&self) -> MailboxScope {
+        self.content.scope
+    }
+
+    pub fn generation(&self) -> u64 {
+        self.content.generation
+    }
+
+    pub fn previous_update_id(&self) -> Option<MailboxCapabilityUpdateId> {
+        self.content.previous_update_id
+    }
+
+    pub fn created_at_unix_seconds(&self) -> u64 {
+        self.content.created_at_unix_seconds
+    }
+
+    pub fn binding_id(&self) -> MailboxBindingId {
+        match self.content.action {
+            MailboxCapabilityUpdateAction::Activate { binding_id, .. }
+            | MailboxCapabilityUpdateAction::Revoke { binding_id } => binding_id,
+        }
+    }
+
+    pub fn is_revocation(&self) -> bool {
+        matches!(
+            self.content.action,
+            MailboxCapabilityUpdateAction::Revoke { .. }
+        )
+    }
+
+    pub fn offer(&self) -> Result<Option<EncryptedMailboxOffer>> {
+        match &self.content.action {
+            MailboxCapabilityUpdateAction::Activate {
+                encrypted_offer, ..
+            } => Ok(Some(EncryptedMailboxOffer::decode(encrypted_offer)?)),
+            MailboxCapabilityUpdateAction::Revoke { .. } => Ok(None),
+        }
+    }
+}
+
 fn binding_id(content: &LocalBindingContent) -> Result<MailboxBindingId> {
     content.validate()?;
     let mut hasher = blake3::Hasher::new();
@@ -947,6 +1254,117 @@ mod tests {
                 )
                 .is_err()
         );
+        Ok(())
+    }
+
+    #[test]
+    fn capability_update_chain_rejects_gap_fork_and_wrong_revocation() -> Result<()> {
+        let alice = test_device()?;
+        let bob = test_device()?;
+        let scope = MailboxScope::from_bytes([12_u8; 32]);
+        let first_sealed = SealedLocalMailboxBinding::create(
+            alice.state.identity(),
+            alice.state.encryption(),
+            &alice.certificate,
+            &bob.certificate,
+            scope,
+            service()?,
+            10_000,
+        )?;
+        let first_local = first_sealed.open(
+            alice.state.identity(),
+            alice.state.encryption(),
+            &alice.certificate,
+        )?;
+        let first_offer = first_local.offer_for(
+            alice.state.identity(),
+            &alice.certificate,
+            &bob.certificate,
+            11_000,
+        )?;
+        let first = SignedMailboxCapabilityUpdate::activate(
+            alice.state.identity(),
+            &alice.certificate,
+            &bob.certificate,
+            scope,
+            1,
+            None,
+            10_001,
+            &first_offer,
+        )?;
+        first.verify_chain_link(None)?;
+
+        let revoked = SignedMailboxCapabilityUpdate::revoke(
+            alice.state.identity(),
+            &alice.certificate,
+            &bob.certificate,
+            scope,
+            2,
+            first.update_id()?,
+            first.binding_id(),
+            10_002,
+        )?;
+        revoked.verify_chain_link(Some(&first))?;
+
+        let second_sealed = SealedLocalMailboxBinding::create(
+            alice.state.identity(),
+            alice.state.encryption(),
+            &alice.certificate,
+            &bob.certificate,
+            scope,
+            service()?,
+            10_003,
+        )?;
+        let second_local = second_sealed.open(
+            alice.state.identity(),
+            alice.state.encryption(),
+            &alice.certificate,
+        )?;
+        let second_offer = second_local.offer_for(
+            alice.state.identity(),
+            &alice.certificate,
+            &bob.certificate,
+            11_000,
+        )?;
+        let rotated = SignedMailboxCapabilityUpdate::activate(
+            alice.state.identity(),
+            &alice.certificate,
+            &bob.certificate,
+            scope,
+            3,
+            Some(revoked.update_id()?),
+            10_003,
+            &second_offer,
+        )?;
+        rotated.verify_chain_link(Some(&revoked))?;
+        assert_ne!(rotated.binding_id(), first.binding_id());
+        assert_eq!(
+            SignedMailboxCapabilityUpdate::decode(&rotated.encode()?)?.update_id()?,
+            rotated.update_id()?
+        );
+
+        let gap = SignedMailboxCapabilityUpdate::activate(
+            alice.state.identity(),
+            &alice.certificate,
+            &bob.certificate,
+            scope,
+            4,
+            Some(first.update_id()?),
+            10_004,
+            &second_offer,
+        )?;
+        assert!(gap.verify_chain_link(Some(&revoked)).is_err());
+        let wrong_revocation = SignedMailboxCapabilityUpdate::revoke(
+            alice.state.identity(),
+            &alice.certificate,
+            &bob.certificate,
+            scope,
+            4,
+            rotated.update_id()?,
+            first.binding_id(),
+            10_004,
+        )?;
+        assert!(wrong_revocation.verify_chain_link(Some(&rotated)).is_err());
         Ok(())
     }
 

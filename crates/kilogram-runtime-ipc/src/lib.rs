@@ -21,7 +21,7 @@ use tokio::{
     time::timeout,
 };
 
-const IPC_VERSION: u8 = 21;
+const IPC_VERSION: u8 = 22;
 const MAX_DESCRIPTOR_BYTES: u64 = 16 * 1024;
 const MAX_LAUNCH_PROFILE_BYTES: u64 = 64 * 1024;
 const MAX_LAUNCH_PROFILE_PATHS: usize = 64;
@@ -719,6 +719,12 @@ pub struct RuntimeIpcMailboxStatus {
     pub local_usable_count: usize,
     pub peer_binding_count: usize,
     pub peer_usable_count: usize,
+    pub local_update_count: usize,
+    pub local_acknowledged_update_count: usize,
+    pub local_unacknowledged_update_count: usize,
+    pub peer_update_count: usize,
+    pub local_revoked_head_count: usize,
+    pub peer_revoked_head_count: usize,
     pub dispatch_count: usize,
     pub pending_upload_count: u64,
     pub stored_upload_count: u64,

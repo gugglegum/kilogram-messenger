@@ -171,10 +171,11 @@ release build or ZIP package is produced for this milestone.
 
 ## 8. Deferred work
 
-The next operational gap is capability lifecycle. M0.9.55 should carry the
-same recipient-encrypted offer through an already authenticated online session,
-support explicit rotation/revocation and converge current bindings without
-placing secrets in public tickets or endpoint publications.
+The capability lifecycle gap is implemented by
+[RFC-0077](RFC-0077-authenticated-mailbox-capability-lifecycle.md): the same
+recipient-encrypted offer now travels through an authenticated Device session,
+supports explicit ordered rotation/revocation and converges current bindings
+without placing secrets in public tickets or endpoint publications.
 
 Still deferred are multi-store replication/erasure coding, private retrieval,
 push wakeup, volunteer storage admission and quotas, spam/Sybil resistance,

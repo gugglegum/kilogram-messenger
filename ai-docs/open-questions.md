@@ -174,11 +174,13 @@ sessions, distribution, removal и key epochs и не решены этим пр
 - M0.9.51 фиксирует blind mailbox contract, M0.9.52 добавляет bounded paged
   wire/HTTPS adapter и persistent client ledger, M0.9.53 — recipient-bound
   Device-signed/HPKE provisioning, а M0.9.54 — live-first serialized runtime
-  fallback, commit-before-delete inbox и reverse-mailbox ACK. Открыты automatic
-  authenticated online offer exchange, capability rotation/revocation,
-  multi-store replication/erasure coding, private retrieval/push wakeup,
-  Sybil/admission limits и unlinkability: один storage node всё ещё видит IP,
-  timing, size и повторный доступ к одному pseudonymous mailbox.
+  fallback, commit-before-delete inbox и reverse-mailbox ACK. M0.9.55 добавляет
+  automatic authenticated offer exchange, contiguous Device-signed rotation/
+  revocation и current-head convergence. Открыты deterministic socket-free
+  crash scenario, controlled two-device field test, multi-store replication/
+  erasure coding, private retrieval/push wakeup, Sybil/admission limits и
+  unlinkability: один storage node всё ещё видит IP, timing, size и повторный
+  доступ к одному pseudonymous mailbox.
 - Как синхронизировать M0.9.29 observation high-water между устройствами одного
   аккаунта и обнаруживать valid publisher equivocation между получателями без
   доверенного global log? Первый recipient observation пока защищён только
