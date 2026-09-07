@@ -4,6 +4,7 @@ use std::{
     fs::{self, OpenOptions},
     future::Future,
     io::{self, Write},
+    net::{Ipv4Addr, SocketAddr},
     path::{Path, PathBuf},
     pin::Pin,
     time::Duration,
@@ -54,12 +55,13 @@ use kilogram_ratchet::{
     SignedRatchetIdentity, unix_time_now,
 };
 use kilogram_runtime_ipc::{
-    RuntimeIpcCommand, RuntimeIpcContactTicketRefresh, RuntimeIpcConversationSummary,
-    RuntimeIpcDescriptor, RuntimeIpcDeviceDirectoryStatus, RuntimeIpcDeviceDirectoryUpdate,
-    RuntimeIpcEndpointAnnouncementExport, RuntimeIpcEndpointAnnouncementImport,
-    RuntimeIpcEndpointAnnouncementPush, RuntimeIpcEndpointCandidateState,
-    RuntimeIpcEndpointCandidateStatus, RuntimeIpcEndpointTicketRefresh, RuntimeIpcHistoryCursor,
-    RuntimeIpcHistoryMessage, RuntimeIpcHistoryPage, RuntimeIpcMailboxCapabilityStatus,
+    DEFAULT_VOLUNTEER_STORAGE_LISTEN_PORT, RuntimeIpcCommand, RuntimeIpcContactTicketRefresh,
+    RuntimeIpcConversationSummary, RuntimeIpcDescriptor, RuntimeIpcDeviceDirectoryStatus,
+    RuntimeIpcDeviceDirectoryUpdate, RuntimeIpcEndpointAnnouncementExport,
+    RuntimeIpcEndpointAnnouncementImport, RuntimeIpcEndpointAnnouncementPush,
+    RuntimeIpcEndpointCandidateState, RuntimeIpcEndpointCandidateStatus,
+    RuntimeIpcEndpointTicketRefresh, RuntimeIpcHistoryCursor, RuntimeIpcHistoryMessage,
+    RuntimeIpcHistoryPage, RuntimeIpcMailboxCapabilityStatus,
     RuntimeIpcMailboxCapabilityTransition, RuntimeIpcMailboxStatus, RuntimeIpcMessagePreview,
     RuntimeIpcNetworkClass, RuntimeIpcOutboxStatus,
     RuntimeIpcOwnDeviceAnnouncementAutomationStatus, RuntimeIpcOwnDeviceRosterAutomationStatus,
@@ -68,7 +70,7 @@ use kilogram_runtime_ipc::{
     RuntimeIpcQueueItem, RuntimeIpcQueueState, RuntimeIpcRequestId, RuntimeIpcResponse,
     RuntimeIpcRoutePolicy, RuntimeIpcServer, RuntimeIpcTicketAutomationActionStatus,
     RuntimeIpcTicketAutomationStatus, RuntimeIpcTicketPublication, RuntimeIpcWork,
-    RuntimeLaunchProfile, RuntimeLaunchSettings,
+    RuntimeLaunchProfile, RuntimeLaunchSettings, RuntimeVolunteerStorageSettings,
 };
 use kilogram_session::{
     MAX_SYNC_ROUNDS, ServerInventoryOutcome, SessionStore, SyncClient, SyncServer,
@@ -86,6 +88,7 @@ use kilogram_store::{
     EventReadRepository, EventStore, ImmutableEventReadSnapshot, ImmutableLocalMessageReadSnapshot,
     LocalMessageReadRepository, LocalMessageStore, StoreError, StoreOutcome, StoredAuthorizedEvent,
 };
+use kilogram_ticket_store::{StoreConfig, StoreServiceMode, TicketStoreServer};
 use kilogram_transport_iroh::{
     ALPN, MAX_WIRE_MESSAGE_BYTES, RoutePolicy, SelectedPathDiagnostics, await_route_policy,
     endpoint_builder_for_remote, endpoint_builder_with_relay, read_client_request,
@@ -93,7 +96,7 @@ use kilogram_transport_iroh::{
 };
 use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
-use tokio::time::timeout;
+use tokio::{sync::oneshot, task::JoinHandle, time::timeout};
 use zeroize::Zeroizing;
 
 mod publication_conflict_ceremony;
@@ -293,6 +296,9 @@ const DEFAULT_RUNTIME_RETRY_MAX_SECONDS: u64 = 60;
 const MAX_RUNTIME_RETRY_SECONDS: u64 = 3_600;
 const DEFAULT_RUNTIME_AUTO_SYNC_SECONDS: u64 = 30;
 const MAX_RUNTIME_AUTO_SYNC_SECONDS: u64 = 3_600;
+const DEFAULT_VOLUNTEER_STORAGE_MIB: u64 = 200;
+const DEFAULT_VOLUNTEER_TRANSFER_MIB: u64 = 500;
+const BYTES_PER_MIB: u64 = 1024 * 1024;
 const MAX_RUNTIME_CONTACTS: usize = 256;
 const MAX_RUNTIME_QUEUE_ITEMS: usize = 4_096;
 const MAX_RUNTIME_RETRY_STATES: usize = 4_096;
@@ -519,6 +525,38 @@ enum Command {
         /// Runtime-owned authenticated loopback IPC descriptor.
         #[arg(long)]
         ipc_file: PathBuf,
+
+        /// Disable the default volunteer blind-storage role for this runtime.
+        #[arg(long)]
+        disable_volunteer_storage: bool,
+
+        /// Volunteer ciphertext directory; defaults to a sibling of the client state.
+        #[arg(long)]
+        volunteer_storage_data_dir: Option<PathBuf>,
+
+        /// Loopback adapter port reserved for the future peer-storage ingress.
+        #[arg(long, default_value_t = DEFAULT_VOLUNTEER_STORAGE_LISTEN_PORT)]
+        volunteer_storage_listen_port: u16,
+
+        /// Maximum opaque ciphertext retained for strangers, in MiB.
+        #[arg(long, default_value_t = DEFAULT_VOLUNTEER_STORAGE_MIB)]
+        volunteer_storage_mib: u64,
+
+        /// 30-day application-payload budget on Ethernet, in MiB.
+        #[arg(long, default_value_t = DEFAULT_VOLUNTEER_TRANSFER_MIB)]
+        volunteer_ethernet_transfer_mib: u64,
+
+        /// 30-day application-payload budget on Wi-Fi, in MiB.
+        #[arg(long, default_value_t = DEFAULT_VOLUNTEER_TRANSFER_MIB)]
+        volunteer_wifi_transfer_mib: u64,
+
+        /// 30-day application-payload budget on mobile networks, in MiB.
+        #[arg(long, default_value_t = 0)]
+        volunteer_mobile_transfer_mib: u64,
+
+        /// 30-day application-payload budget when network class is unknown, in MiB.
+        #[arg(long, default_value_t = 0)]
+        volunteer_unknown_transfer_mib: u64,
     },
 
     /// Run from a validated launch profile created for the desktop client.
@@ -2166,6 +2204,7 @@ struct RuntimeOptions {
     auto_sync_seconds: u64,
     max_outbound_actions: usize,
     ipc_file: Option<PathBuf>,
+    volunteer_storage: Option<RuntimeVolunteerStorageSettings>,
 }
 
 fn create_runtime_launch_profile(
@@ -2200,6 +2239,10 @@ fn create_runtime_launch_profile(
         .map(|path| resolve_runtime_profile_output(path, &canonical_state))
         .transpose()?;
     settings.ipc_file = resolve_runtime_profile_output(&settings.ipc_file, &canonical_state)?;
+    if let Some(volunteer_storage) = settings.volunteer_storage.as_mut() {
+        volunteer_storage.data_dir =
+            resolve_runtime_profile_directory(&volunteer_storage.data_dir, &canonical_state)?;
+    }
     let profile = RuntimeLaunchProfile::new(settings)?;
     let options = runtime_options_from_launch_settings(profile.settings())?;
     validate_runtime_options(&options)?;
@@ -2247,6 +2290,7 @@ fn runtime_options_from_launch_settings(
         auto_sync_seconds: settings.auto_sync_seconds,
         max_outbound_actions: 0,
         ipc_file: Some(settings.ipc_file.clone()),
+        volunteer_storage: settings.volunteer_storage.clone(),
     })
 }
 
@@ -2282,6 +2326,55 @@ fn resolve_runtime_profile_output(path: &Path, canonical_state: &Path) -> Result
         "runtime profile output must live outside the protected state directory"
     );
     Ok(resolved)
+}
+
+fn resolve_runtime_profile_directory(path: &Path, canonical_state: &Path) -> Result<PathBuf> {
+    let absolute = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .context("read current directory for runtime profile directory")?
+            .join(path)
+    };
+    ensure!(
+        !absolute.starts_with(canonical_state),
+        "volunteer storage must live outside the protected state directory"
+    );
+    fs::create_dir_all(&absolute).with_context(|| {
+        format!(
+            "create runtime volunteer storage directory {}",
+            absolute.display()
+        )
+    })?;
+    let resolved = fs::canonicalize(&absolute).with_context(|| {
+        format!(
+            "resolve runtime volunteer storage directory {}",
+            absolute.display()
+        )
+    })?;
+    ensure!(
+        !resolved.starts_with(canonical_state),
+        "volunteer storage must live outside the protected state directory"
+    );
+    Ok(resolved)
+}
+
+fn default_runtime_volunteer_storage_directory(state_dir: &Path) -> Result<PathBuf> {
+    let parent = state_dir
+        .parent()
+        .context("runtime state directory has no parent for volunteer storage")?;
+    let state_name = state_dir
+        .file_name()
+        .and_then(|name| name.to_str())
+        .filter(|name| !name.is_empty())
+        .unwrap_or("state");
+    Ok(parent.join(format!("{state_name}-volunteer-storage")))
+}
+
+fn mib_to_bytes(value: u64, label: &str) -> Result<u64> {
+    value
+        .checked_mul(BYTES_PER_MIB)
+        .with_context(|| format!("{label} MiB value overflows"))
 }
 
 #[derive(Clone, Debug)]
@@ -2891,6 +2984,7 @@ async fn run_command(command: Command) -> Result<()> {
                 auto_sync_seconds,
                 max_outbound_actions,
                 ipc_file,
+                volunteer_storage: None,
             })
             .await
         }
@@ -2909,9 +3003,40 @@ async fn run_command(command: Command) -> Result<()> {
             retry_max_seconds,
             auto_sync_seconds,
             ipc_file,
+            disable_volunteer_storage,
+            volunteer_storage_data_dir,
+            volunteer_storage_listen_port,
+            volunteer_storage_mib,
+            volunteer_ethernet_transfer_mib,
+            volunteer_wifi_transfer_mib,
+            volunteer_mobile_transfer_mib,
+            volunteer_unknown_transfer_mib,
         } => create_runtime_launch_profile(
             profile_file,
             RuntimeLaunchSettings {
+                volunteer_storage: if disable_volunteer_storage {
+                    None
+                } else {
+                    let data_dir = match volunteer_storage_data_dir {
+                        Some(path) => path,
+                        None => default_runtime_volunteer_storage_directory(&state_dir)?,
+                    };
+                    Some(RuntimeVolunteerStorageSettings::with_limits(
+                        data_dir,
+                        volunteer_storage_listen_port,
+                        mib_to_bytes(volunteer_storage_mib, "volunteer storage")?,
+                        mib_to_bytes(
+                            volunteer_ethernet_transfer_mib,
+                            "volunteer Ethernet transfer",
+                        )?,
+                        mib_to_bytes(volunteer_wifi_transfer_mib, "volunteer Wi-Fi transfer")?,
+                        mib_to_bytes(volunteer_mobile_transfer_mib, "volunteer mobile transfer")?,
+                        mib_to_bytes(
+                            volunteer_unknown_transfer_mib,
+                            "volunteer unknown-network transfer",
+                        )?,
+                    ))
+                },
                 state_dir,
                 allowed_requester_account_id: allow_account,
                 device_list_file,
@@ -16281,6 +16406,100 @@ impl fmt::Display for RuntimeMailboxCapabilityAckDropped {
 #[cfg(debug_assertions)]
 impl std::error::Error for RuntimeMailboxCapabilityAckDropped {}
 
+struct RuntimeVolunteerStorageServer {
+    shutdown: Option<oneshot::Sender<()>>,
+    task: Option<JoinHandle<Result<()>>>,
+}
+
+impl RuntimeVolunteerStorageServer {
+    async fn shutdown(mut self) -> Result<()> {
+        if let Some(shutdown) = self.shutdown.take() {
+            let _ = shutdown.send(());
+        }
+        if let Some(task) = self.task.take() {
+            task.await
+                .context("join runtime volunteer storage task")??;
+        }
+        println!("runtime_volunteer_storage=stopped");
+        Ok(())
+    }
+}
+
+impl Drop for RuntimeVolunteerStorageServer {
+    fn drop(&mut self) {
+        if let Some(shutdown) = self.shutdown.take() {
+            let _ = shutdown.send(());
+        }
+        if let Some(task) = self.task.take() {
+            task.abort();
+        }
+    }
+}
+
+async fn start_runtime_volunteer_storage(
+    settings: Option<RuntimeVolunteerStorageSettings>,
+    network: RuntimeIpcNetworkClass,
+) -> Result<Option<RuntimeVolunteerStorageServer>> {
+    let Some(settings) = settings else {
+        println!("runtime_volunteer_storage=disabled-by-user");
+        return Ok(None);
+    };
+    let transfer_limit = settings.transfer_bytes_for(network);
+    println!("runtime_volunteer_storage_configured=true");
+    println!("runtime_volunteer_storage_default_policy=enabled");
+    println!("runtime_volunteer_storage_network={}", network.as_str());
+    println!(
+        "runtime_volunteer_storage_capacity_bytes={}",
+        settings.max_total_storage_bytes
+    );
+    println!("runtime_volunteer_storage_transfer_bytes_per_30_days={transfer_limit}");
+    if transfer_limit == 0 {
+        println!("runtime_volunteer_storage=paused-by-network-policy");
+        return Ok(None);
+    }
+    let server = TicketStoreServer::bind(StoreConfig {
+        listen: SocketAddr::new(Ipv4Addr::LOCALHOST.into(), settings.listen_port),
+        data_dir: settings.data_dir.clone(),
+        retention_seconds: settings.retention_seconds,
+        max_record_bytes: settings.max_record_bytes,
+        max_channels: settings.max_channels,
+        max_total_bytes: settings.max_total_storage_bytes,
+        per_ip_requests_per_minute: settings.per_ip_requests_per_minute,
+        global_requests_per_minute: settings.global_requests_per_minute,
+        max_concurrent_connections: settings.max_concurrent_connections,
+        trust_x_real_ip: false,
+        service_mode: StoreServiceMode::MailboxOnly,
+        transfer_accounting_scope: Some(network.as_str().to_owned()),
+        max_transfer_bytes_per_30_days: Some(transfer_limit),
+    })
+    .await
+    .context("start embedded volunteer blind-storage adapter")?;
+    let local_addr = server.local_addr();
+    let store_key = server.mailbox_store_key();
+    let (shutdown_sender, shutdown_receiver) = oneshot::channel();
+    let task = tokio::spawn(server.run_until(async move {
+        let _ = shutdown_receiver.await;
+        Ok(())
+    }));
+    println!("runtime_volunteer_storage=serving");
+    println!("runtime_volunteer_storage_scope=blind-mailbox-only");
+    println!(
+        "runtime_volunteer_storage_data_dir={}",
+        settings.data_dir.display()
+    );
+    println!("runtime_volunteer_storage_local_adapter={local_addr}");
+    println!("runtime_volunteer_storage_store_key={store_key}");
+    println!("runtime_volunteer_storage_ingress=loopback-only-not-yet-peer-advertised");
+    println!("runtime_volunteer_storage_discovery=false");
+    println!("runtime_volunteer_storage_replication=false");
+    println!("runtime_volunteer_storage_policy_refresh=runtime-restart-required");
+    println!("runtime_volunteer_storage_os_background_service=false");
+    Ok(Some(RuntimeVolunteerStorageServer {
+        shutdown: Some(shutdown_sender),
+        task: Some(task),
+    }))
+}
+
 async fn runtime(options: RuntimeOptions) -> Result<()> {
     validate_runtime_options(&options)?;
     let RuntimeOptions {
@@ -16300,6 +16519,7 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
         auto_sync_seconds,
         max_outbound_actions,
         ipc_file,
+        volunteer_storage,
     } = options;
     let mut runtime_test_faults = RuntimeSessionTestFaults::from_environment()?;
     let endpoint_announcement_descriptor_directory =
@@ -16453,6 +16673,9 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
         })?;
         println!("runtime_own_device_roster_reconciled={reconciled}");
     }
+    let current_network = current_runtime_network_class();
+    let volunteer_storage_server =
+        start_runtime_volunteer_storage(volunteer_storage, current_network).await?;
     println!("status=runtime-listening");
 
     let session_binding = SyncSessionBinding::from_transport_label(&endpoint.id().to_string());
@@ -16763,6 +16986,9 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
     drop(accept);
     drop(shutdown);
     if let Some(server) = ipc_server.take() {
+        server.shutdown().await?;
+    }
+    if let Some(server) = volunteer_storage_server {
         server.shutdown().await?;
     }
     endpoint.close().await;
@@ -27071,6 +27297,7 @@ mod tests {
             auto_sync_seconds: 0,
             max_outbound_actions: 0,
             ipc_file: Some(third_ipc_file.clone()),
+            volunteer_storage: None,
         }));
         timeout(Duration::from_secs(10), async {
             while !third_runtime_ticket_file.is_file() || !third_ipc_file.is_file() {
@@ -27879,6 +28106,7 @@ mod tests {
             auto_sync_seconds: 0,
             max_outbound_actions: 0,
             ipc_file: Some(source_ipc.clone()),
+            volunteer_storage: None,
         }));
         let recipient_task = tokio::spawn(runtime(RuntimeOptions {
             state_dir: recipient_state_dir.clone(),
@@ -27897,6 +28125,7 @@ mod tests {
             auto_sync_seconds: 0,
             max_outbound_actions: 0,
             ipc_file: Some(recipient_ipc.clone()),
+            volunteer_storage: None,
         }));
         timeout(Duration::from_secs(10), async {
             while !source_ipc.is_file()
@@ -28505,6 +28734,7 @@ mod tests {
                 retry_max_seconds: 1,
                 auto_sync_seconds: 0,
                 ipc_file: ipc_file.clone(),
+                volunteer_storage: None,
             },
         )?;
         let task = tokio::spawn(runtime(runtime_options_from_profile(&profile_file)?));
@@ -28582,6 +28812,7 @@ mod tests {
             auto_sync_seconds: 0,
             max_outbound_actions: 0,
             ipc_file: Some(alice_ipc.clone()),
+            volunteer_storage: None,
         }));
         let bob_task = tokio::spawn(runtime(RuntimeOptions {
             state_dir: bob_state.clone(),
@@ -28600,6 +28831,7 @@ mod tests {
             auto_sync_seconds: 0,
             max_outbound_actions: 0,
             ipc_file: Some(bob_ipc.clone()),
+            volunteer_storage: None,
         }));
         timeout(Duration::from_secs(10), async {
             while !alice_ticket.is_file()
@@ -29022,6 +29254,7 @@ mod tests {
             auto_sync_seconds: 0,
             max_outbound_actions: 0,
             ipc_file: Some(alice_ipc.clone()),
+            volunteer_storage: None,
         }));
         timeout(Duration::from_secs(10), async {
             while !alice_ticket.is_file() || !alice_ipc.is_file() {
@@ -29325,6 +29558,7 @@ mod tests {
                 retry_max_seconds: 1,
                 auto_sync_seconds: 0,
                 ipc_file: ipc_file.clone(),
+                volunteer_storage: None,
             },
         )?;
         let task = tokio::spawn(runtime(runtime_options_from_profile(&profile_file)?));
@@ -29543,6 +29777,7 @@ mod tests {
             auto_sync_seconds: 0,
             max_outbound_actions: 0,
             ipc_file: Some(bob_ipc.clone()),
+            volunteer_storage: None,
         }));
         timeout(Duration::from_secs(10), async {
             while !bob_ticket.is_file() || !bob_ipc.is_file() {
@@ -29570,6 +29805,7 @@ mod tests {
             auto_sync_seconds: 1,
             max_outbound_actions: 0,
             ipc_file: Some(alice_ipc.clone()),
+            volunteer_storage: None,
         }));
 
         timeout(Duration::from_secs(10), async {

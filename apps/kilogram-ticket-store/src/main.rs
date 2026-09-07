@@ -5,7 +5,7 @@ use clap::Parser;
 use kilogram_ticket_store::{
     DEFAULT_GLOBAL_REQUESTS_PER_MINUTE, DEFAULT_MAX_CHANNELS, DEFAULT_MAX_CONCURRENT_CONNECTIONS,
     DEFAULT_MAX_RECORD_BYTES, DEFAULT_MAX_TOTAL_BYTES, DEFAULT_PER_IP_REQUESTS_PER_MINUTE,
-    DEFAULT_RETENTION_SECONDS, StoreConfig, TicketStoreServer,
+    DEFAULT_RETENTION_SECONDS, StoreConfig, StoreServiceMode, TicketStoreServer,
 };
 
 #[derive(Debug, Parser)]
@@ -67,6 +67,9 @@ async fn main() -> Result<()> {
         global_requests_per_minute: arguments.global_requests_per_minute,
         max_concurrent_connections: arguments.max_concurrent_connections,
         trust_x_real_ip: arguments.trust_x_real_ip,
+        service_mode: StoreServiceMode::Combined,
+        transfer_accounting_scope: None,
+        max_transfer_bytes_per_30_days: None,
     })
     .await?;
     println!("status=listening");

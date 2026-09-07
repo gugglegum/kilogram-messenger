@@ -269,7 +269,10 @@ sessions, distribution, removal и key epochs и не решены этим пр
 - Padding, cover traffic и маскировка под обычный HTTPS без ложных обещаний
   нераспознаваемости для DPI.
 - Справедливые лимиты добровольных relay/storage nodes без накручиваемой
-  токен-экономики.
+  токен-экономики. M0.9.61 задаёт client-local default 200 MiB storage и
+  500 MiB/30 days Ethernet/Wi-Fi с durable application-payload accounting, но
+  ещё не решает Sybil admission, global fairness, relay overhead, signed offer
+  discovery или проверяемость заявленной чужим provider квоты.
 - Push-уведомления на Android/iOS без утечки содержания и социального графа.
 - Независимый second-builder, подписанный release provenance, обновления клиента
   и дальнейшая защита supply chain поверх M0.9.50 same-host gate.

@@ -31,6 +31,14 @@ const MAX_RUNTIME_POLL_MILLISECONDS: u64 = 10_000;
 const MIN_RUNTIME_RETRY_SECONDS: u64 = 1;
 const MAX_RUNTIME_RETRY_SECONDS: u64 = 3_600;
 const MAX_RUNTIME_AUTO_SYNC_SECONDS: u64 = 3_600;
+const MIN_VOLUNTEER_STORAGE_RETENTION_SECONDS: u64 = 30;
+const MAX_VOLUNTEER_STORAGE_RETENTION_SECONDS: u64 = 60 * 60;
+const MAX_VOLUNTEER_STORAGE_RECORD_BYTES: usize = 1024 * 1024;
+const MAX_VOLUNTEER_STORAGE_TOTAL_BYTES: u64 = 1024 * 1024 * 1024 * 1024;
+const MAX_VOLUNTEER_STORAGE_TRANSFER_BYTES: u64 = 16 * 1024 * 1024 * 1024 * 1024;
+const MAX_VOLUNTEER_STORAGE_CHANNELS: u64 = 1_000_000;
+const MAX_VOLUNTEER_STORAGE_REQUESTS_PER_MINUTE: u64 = 1_000_000;
+const MAX_VOLUNTEER_STORAGE_CONNECTIONS: usize = 4_096;
 const MAX_CHANGE_WAIT_MILLISECONDS: u32 = 25_000;
 const MAX_FRAME_BYTES: usize = 256 * 1024;
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(3);
@@ -38,6 +46,12 @@ const IO_TIMEOUT: Duration = Duration::from_secs(30);
 const REQUEST_CHANNEL_CAPACITY: usize = 64;
 const DESCRIPTOR_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-ipc-descriptor:v7\0";
 pub const RUNTIME_LAUNCH_PROFILE_VERSION: u8 = 1;
+pub const DEFAULT_VOLUNTEER_STORAGE_LISTEN_PORT: u16 = 0;
+pub const DEFAULT_VOLUNTEER_STORAGE_TOTAL_BYTES: u64 = 200 * 1024 * 1024;
+pub const DEFAULT_VOLUNTEER_STORAGE_ETHERNET_TRANSFER_BYTES: u64 = 500 * 1024 * 1024;
+pub const DEFAULT_VOLUNTEER_STORAGE_WIFI_TRANSFER_BYTES: u64 = 500 * 1024 * 1024;
+pub const DEFAULT_VOLUNTEER_STORAGE_MOBILE_TRANSFER_BYTES: u64 = 0;
+pub const DEFAULT_VOLUNTEER_STORAGE_UNKNOWN_NETWORK_TRANSFER_BYTES: u64 = 0;
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -55,6 +69,136 @@ pub struct RuntimeLaunchSettings {
     pub retry_max_seconds: u64,
     pub auto_sync_seconds: u64,
     pub ipc_file: PathBuf,
+    #[serde(default)]
+    pub volunteer_storage: Option<RuntimeVolunteerStorageSettings>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct RuntimeVolunteerStorageSettings {
+    pub data_dir: PathBuf,
+    pub listen_port: u16,
+    pub retention_seconds: u64,
+    pub max_record_bytes: usize,
+    pub max_channels: u64,
+    pub per_ip_requests_per_minute: u64,
+    pub global_requests_per_minute: u64,
+    pub max_concurrent_connections: usize,
+    pub max_total_storage_bytes: u64,
+    pub ethernet_transfer_bytes_per_30_days: u64,
+    pub wifi_transfer_bytes_per_30_days: u64,
+    pub mobile_transfer_bytes_per_30_days: u64,
+    pub unknown_network_transfer_bytes_per_30_days: u64,
+}
+
+impl RuntimeVolunteerStorageSettings {
+    pub fn with_limits(
+        data_dir: PathBuf,
+        listen_port: u16,
+        max_total_storage_bytes: u64,
+        ethernet_transfer_bytes_per_30_days: u64,
+        wifi_transfer_bytes_per_30_days: u64,
+        mobile_transfer_bytes_per_30_days: u64,
+        unknown_network_transfer_bytes_per_30_days: u64,
+    ) -> Self {
+        Self {
+            data_dir,
+            listen_port,
+            retention_seconds: 15 * 60,
+            max_record_bytes: 1024 * 1024,
+            max_channels: 100_000,
+            per_ip_requests_per_minute: 120,
+            global_requests_per_minute: 10_000,
+            max_concurrent_connections: 128,
+            max_total_storage_bytes,
+            ethernet_transfer_bytes_per_30_days,
+            wifi_transfer_bytes_per_30_days,
+            mobile_transfer_bytes_per_30_days,
+            unknown_network_transfer_bytes_per_30_days,
+        }
+    }
+
+    pub fn default_enabled(data_dir: PathBuf) -> Self {
+        Self::with_limits(
+            data_dir,
+            DEFAULT_VOLUNTEER_STORAGE_LISTEN_PORT,
+            DEFAULT_VOLUNTEER_STORAGE_TOTAL_BYTES,
+            DEFAULT_VOLUNTEER_STORAGE_ETHERNET_TRANSFER_BYTES,
+            DEFAULT_VOLUNTEER_STORAGE_WIFI_TRANSFER_BYTES,
+            DEFAULT_VOLUNTEER_STORAGE_MOBILE_TRANSFER_BYTES,
+            DEFAULT_VOLUNTEER_STORAGE_UNKNOWN_NETWORK_TRANSFER_BYTES,
+        )
+    }
+
+    pub fn transfer_bytes_for(&self, network: RuntimeIpcNetworkClass) -> u64 {
+        match network {
+            RuntimeIpcNetworkClass::Ethernet => self.ethernet_transfer_bytes_per_30_days,
+            RuntimeIpcNetworkClass::Wifi => self.wifi_transfer_bytes_per_30_days,
+            RuntimeIpcNetworkClass::Mobile => self.mobile_transfer_bytes_per_30_days,
+            RuntimeIpcNetworkClass::Unknown => self.unknown_network_transfer_bytes_per_30_days,
+        }
+    }
+
+    pub fn allows(&self, network: RuntimeIpcNetworkClass) -> bool {
+        self.transfer_bytes_for(network) != 0
+    }
+
+    fn validate(&self, state_dir: &Path) -> Result<()> {
+        ensure!(
+            self.data_dir.is_absolute(),
+            "volunteer storage data directory must be absolute"
+        );
+        ensure!(
+            !self.data_dir.starts_with(state_dir),
+            "volunteer storage data must remain outside the protected client state"
+        );
+        ensure!(
+            (MIN_VOLUNTEER_STORAGE_RETENTION_SECONDS..=MAX_VOLUNTEER_STORAGE_RETENTION_SECONDS)
+                .contains(&self.retention_seconds),
+            "volunteer storage retention is out of range"
+        );
+        ensure!(
+            (1..=MAX_VOLUNTEER_STORAGE_RECORD_BYTES).contains(&self.max_record_bytes),
+            "volunteer storage record limit is out of range"
+        );
+        ensure!(
+            (1..=MAX_VOLUNTEER_STORAGE_CHANNELS).contains(&self.max_channels),
+            "volunteer storage channel limit is out of range"
+        );
+        ensure!(
+            (1..=MAX_VOLUNTEER_STORAGE_REQUESTS_PER_MINUTE)
+                .contains(&self.per_ip_requests_per_minute)
+                && (self.per_ip_requests_per_minute..=MAX_VOLUNTEER_STORAGE_REQUESTS_PER_MINUTE)
+                    .contains(&self.global_requests_per_minute),
+            "volunteer storage request limits are invalid"
+        );
+        ensure!(
+            (1..=MAX_VOLUNTEER_STORAGE_CONNECTIONS).contains(&self.max_concurrent_connections),
+            "volunteer storage connection limit is out of range"
+        );
+        ensure!(
+            (self.max_record_bytes as u64..=MAX_VOLUNTEER_STORAGE_TOTAL_BYTES)
+                .contains(&self.max_total_storage_bytes),
+            "volunteer storage capacity is out of range"
+        );
+        let transfer_budgets = [
+            self.ethernet_transfer_bytes_per_30_days,
+            self.wifi_transfer_bytes_per_30_days,
+            self.mobile_transfer_bytes_per_30_days,
+            self.unknown_network_transfer_bytes_per_30_days,
+        ];
+        ensure!(
+            transfer_budgets.iter().any(|budget| *budget != 0),
+            "volunteer storage must be enabled for at least one network class"
+        );
+        ensure!(
+            transfer_budgets.iter().all(|budget| *budget == 0
+                || ((*budget >= self.max_record_bytes as u64)
+                    && *budget <= MAX_VOLUNTEER_STORAGE_TRANSFER_BYTES)),
+            "volunteer storage transfer budget is out of range"
+        );
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -88,6 +232,7 @@ impl RuntimeLaunchProfile {
         .context("decode runtime launch profile")?;
         profile.validate()?;
         profile.ensure_file_outside_state(path)?;
+        profile.ensure_volunteer_storage_outside_state()?;
         Ok(profile)
     }
 
@@ -101,6 +246,7 @@ impl RuntimeLaunchProfile {
 
     fn write(&self, path: &Path, no_clobber: bool) -> Result<()> {
         self.validate()?;
+        self.ensure_volunteer_storage_outside_state()?;
         let lexical_path = if path.is_absolute() {
             path.to_path_buf()
         } else {
@@ -228,6 +374,9 @@ impl RuntimeLaunchProfile {
             !self.settings.ipc_file.starts_with(&self.settings.state_dir),
             "runtime IPC descriptor must live outside the protected state directory"
         );
+        if let Some(volunteer_storage) = &self.settings.volunteer_storage {
+            volunteer_storage.validate(&self.settings.state_dir)?;
+        }
         Ok(())
     }
 
@@ -238,6 +387,44 @@ impl RuntimeLaunchProfile {
         ensure!(
             !absolute.starts_with(canonical_state),
             "runtime launch profile must live outside the protected state directory"
+        );
+        Ok(())
+    }
+
+    fn ensure_volunteer_storage_outside_state(&self) -> Result<()> {
+        let Some(volunteer) = &self.settings.volunteer_storage else {
+            return Ok(());
+        };
+        let canonical_state = fs::canonicalize(&self.settings.state_dir)
+            .context("resolve state directory for volunteer storage boundary")?;
+        let resolved_data = if volunteer.data_dir.exists() {
+            fs::canonicalize(&volunteer.data_dir).with_context(|| {
+                format!(
+                    "resolve volunteer storage directory {}",
+                    volunteer.data_dir.display()
+                )
+            })?
+        } else {
+            let name = volunteer
+                .data_dir
+                .file_name()
+                .context("volunteer storage directory has no final component")?;
+            let parent = volunteer
+                .data_dir
+                .parent()
+                .context("volunteer storage directory has no parent")?;
+            fs::canonicalize(parent)
+                .with_context(|| {
+                    format!(
+                        "resolve volunteer storage parent directory {}",
+                        parent.display()
+                    )
+                })?
+                .join(name)
+        };
+        ensure!(
+            !resolved_data.starts_with(canonical_state),
+            "volunteer storage data must remain outside the protected client state"
         );
         Ok(())
     }
@@ -1500,7 +1687,84 @@ mod tests {
             retry_max_seconds: 60,
             auto_sync_seconds: 30,
             ipc_file: directory.join("runtime.ipc.json"),
+            volunteer_storage: None,
         })
+    }
+
+    #[test]
+    fn launch_profile_round_trips_bounded_volunteer_storage_policy() -> Result<(), Box<dyn Error>> {
+        let directory = tempfile::tempdir()?;
+        let mut settings = launch_settings(directory.path())?;
+        settings.volunteer_storage = Some(RuntimeVolunteerStorageSettings::with_limits(
+            directory.path().join("volunteer-storage"),
+            DEFAULT_VOLUNTEER_STORAGE_LISTEN_PORT,
+            DEFAULT_VOLUNTEER_STORAGE_TOTAL_BYTES,
+            DEFAULT_VOLUNTEER_STORAGE_ETHERNET_TRANSFER_BYTES,
+            DEFAULT_VOLUNTEER_STORAGE_WIFI_TRANSFER_BYTES,
+            DEFAULT_VOLUNTEER_STORAGE_MOBILE_TRANSFER_BYTES,
+            DEFAULT_VOLUNTEER_STORAGE_UNKNOWN_NETWORK_TRANSFER_BYTES,
+        ));
+        let profile = RuntimeLaunchProfile::new(settings)?;
+        let path = directory.path().join("volunteer.launch.json");
+        profile.write_new(&path)?;
+        assert_eq!(RuntimeLaunchProfile::load(&path)?, profile);
+        let policy = profile
+            .settings()
+            .volunteer_storage
+            .as_ref()
+            .context("volunteer storage policy")?;
+        assert!(policy.allows(RuntimeIpcNetworkClass::Ethernet));
+        assert!(policy.allows(RuntimeIpcNetworkClass::Wifi));
+        assert!(!policy.allows(RuntimeIpcNetworkClass::Mobile));
+        assert!(!policy.allows(RuntimeIpcNetworkClass::Unknown));
+        Ok(())
+    }
+
+    #[test]
+    fn launch_profile_rejects_unsafe_volunteer_storage_boundaries() -> Result<(), Box<dyn Error>> {
+        let directory = tempfile::tempdir()?;
+        let mut settings = launch_settings(directory.path())?;
+        settings.volunteer_storage = Some(RuntimeVolunteerStorageSettings::with_limits(
+            settings.state_dir.join("forbidden"),
+            DEFAULT_VOLUNTEER_STORAGE_LISTEN_PORT,
+            DEFAULT_VOLUNTEER_STORAGE_TOTAL_BYTES,
+            DEFAULT_VOLUNTEER_STORAGE_ETHERNET_TRANSFER_BYTES,
+            0,
+            0,
+            0,
+        ));
+        assert!(RuntimeLaunchProfile::new(settings).is_err());
+
+        let mut settings = launch_settings(directory.path())?;
+        settings.volunteer_storage = Some(RuntimeVolunteerStorageSettings::with_limits(
+            directory.path().join("disabled"),
+            DEFAULT_VOLUNTEER_STORAGE_LISTEN_PORT,
+            DEFAULT_VOLUNTEER_STORAGE_TOTAL_BYTES,
+            0,
+            0,
+            0,
+            0,
+        ));
+        assert!(RuntimeLaunchProfile::new(settings).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn legacy_launch_profile_without_volunteer_field_remains_loadable() -> Result<(), Box<dyn Error>>
+    {
+        let directory = tempfile::tempdir()?;
+        let profile = RuntimeLaunchProfile::new(launch_settings(directory.path())?)?;
+        let mut encoded = serde_json::to_value(&profile)?;
+        encoded
+            .get_mut("settings")
+            .and_then(serde_json::Value::as_object_mut)
+            .context("profile settings object")?
+            .remove("volunteer_storage");
+        let path = directory.path().join("legacy.launch.json");
+        fs::write(&path, serde_json::to_vec_pretty(&encoded)?)?;
+        let loaded = RuntimeLaunchProfile::load(&path)?;
+        assert!(loaded.settings().volunteer_storage.is_none());
+        Ok(())
     }
 
     #[test]

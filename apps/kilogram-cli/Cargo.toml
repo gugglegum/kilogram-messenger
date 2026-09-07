@@ -27,6 +27,7 @@ kilogram-session = { path = "../../crates/kilogram-session" }
 kilogram-state = { path = "../../crates/kilogram-state" }
 kilogram-store = { path = "../../crates/kilogram-store" }
 kilogram-ticket-publication = { path = "../../crates/kilogram-ticket-publication" }
+kilogram-ticket-store = { path = "../kilogram-ticket-store" }
 kilogram-transport-iroh = { path = "../../crates/kilogram-transport-iroh" }
 postcard.workspace = true
 qrcode.workspace = true
@@ -43,7 +44,6 @@ windows = { version = "0.62.2", features = ["Foundation_Collections", "Networkin
 
 [dev-dependencies]
 kilogram-offline = { path = "../kilogram-offline" }
-kilogram-ticket-store = { path = "../kilogram-ticket-store" }
 
 [lints]
 workspace = true

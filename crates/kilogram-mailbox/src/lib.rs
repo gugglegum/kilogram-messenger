@@ -16,8 +16,8 @@ use thiserror::Error;
 use zeroize::Zeroizing;
 
 pub use store::{
-    BlindMailboxStore, CleanupReport, DeleteOutcome, MailboxPutOutcome, MailboxStoreConfig,
-    StoredMailboxItem, StoredMailboxPage,
+    BlindMailboxStore, CleanupReport, DEFAULT_MAX_ITEMS_PER_MAILBOX, DeleteOutcome,
+    MailboxPutOutcome, MailboxStoreConfig, StoredMailboxItem, StoredMailboxPage,
 };
 pub use wire::{
     MAX_MAILBOX_WIRE_REQUEST_BYTES, MAX_MAILBOX_WIRE_RESPONSE_BYTES, MailboxDeleteRequest,

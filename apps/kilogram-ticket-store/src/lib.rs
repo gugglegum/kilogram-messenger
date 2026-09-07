@@ -11,9 +11,10 @@ use std::{
 
 use anyhow::{Context, Result, ensure};
 use kilogram_mailbox::{
-    BlindMailboxStore, MailboxDeleteRequest, MailboxDeleteResponse, MailboxId, MailboxItemId,
-    MailboxListRequest, MailboxListResponse, MailboxPutRequest, MailboxPutResponse,
-    MailboxStoreConfig, MailboxStoreIdentity, MailboxStoreKey,
+    BlindMailboxStore, DEFAULT_MAX_ITEMS_PER_MAILBOX, MAX_MAILBOX_ENVELOPE_BYTES,
+    MailboxDeleteRequest, MailboxDeleteResponse, MailboxId, MailboxItemId, MailboxListRequest,
+    MailboxListResponse, MailboxPutRequest, MailboxPutResponse, MailboxStoreConfig,
+    MailboxStoreIdentity, MailboxStoreKey,
 };
 use kilogram_ticket_publication::{
     TicketPublicationChannelId, TicketPublicationWriteKey, WRITE_KEY_HEADER,
@@ -41,6 +42,7 @@ const RECORD_TABLE: TableDefinition<&[u8], &[u8]> =
 const META_TABLE: TableDefinition<&str, u64> =
     TableDefinition::new("opaque-ticket-publication-meta-v1");
 const TOTAL_BODY_BYTES_KEY: &str = "total-body-bytes";
+const TRANSFER_WINDOW_SECONDS: u64 = 30 * 24 * 60 * 60;
 const RECORD_VERSION: u8 = 1;
 const MAX_HEADER_BYTES: usize = 16 * 1024;
 const MAX_HEADER_COUNT: usize = 64;
@@ -51,6 +53,7 @@ const MAX_RETENTION_SECONDS: u64 = 60 * 60;
 const MAX_RATE_LIMIT: u64 = 10_000_000;
 const MAX_CHANNEL_LIMIT: u64 = 10_000_000;
 const MAX_TOTAL_BYTES_LIMIT: u64 = 1024 * 1024 * 1024 * 1024;
+const MAX_TRANSFER_BYTES_LIMIT: u64 = 16 * 1024 * 1024 * 1024 * 1024;
 const MAX_CONNECTION_LIMIT: usize = 4_096;
 const HTTP_IO_TIMEOUT: Duration = Duration::from_secs(20);
 const RATE_WINDOW: Duration = Duration::from_secs(60);
@@ -81,6 +84,15 @@ pub struct StoreConfig {
     pub global_requests_per_minute: u64,
     pub max_concurrent_connections: usize,
     pub trust_x_real_ip: bool,
+    pub service_mode: StoreServiceMode,
+    pub transfer_accounting_scope: Option<String>,
+    pub max_transfer_bytes_per_30_days: Option<u64>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum StoreServiceMode {
+    Combined,
+    MailboxOnly,
 }
 
 impl StoreConfig {
@@ -96,6 +108,9 @@ impl StoreConfig {
             global_requests_per_minute: DEFAULT_GLOBAL_REQUESTS_PER_MINUTE,
             max_concurrent_connections: DEFAULT_MAX_CONCURRENT_CONNECTIONS,
             trust_x_real_ip: false,
+            service_mode: StoreServiceMode::Combined,
+            transfer_accounting_scope: None,
+            max_transfer_bytes_per_30_days: None,
         }
     }
 
@@ -134,6 +149,28 @@ impl StoreConfig {
             !self.data_dir.as_os_str().is_empty(),
             "ticket-store data directory is empty"
         );
+        ensure!(
+            self.transfer_accounting_scope.is_some()
+                == self.max_transfer_bytes_per_30_days.is_some(),
+            "ticket-store transfer accounting scope and limit must be configured together"
+        );
+        if let (Some(scope), Some(limit)) = (
+            self.transfer_accounting_scope.as_deref(),
+            self.max_transfer_bytes_per_30_days,
+        ) {
+            ensure!(
+                !scope.is_empty()
+                    && scope.len() <= 32
+                    && scope.bytes().all(|byte| byte.is_ascii_lowercase()
+                        || byte.is_ascii_digit()
+                        || byte == b'-'),
+                "ticket-store transfer accounting scope is invalid"
+            );
+            ensure!(
+                (self.max_record_bytes as u64..=MAX_TRANSFER_BYTES_LIMIT).contains(&limit),
+                "ticket-store 30-day transfer limit is outside service bounds"
+            );
+        }
         Ok(())
     }
 }
@@ -518,6 +555,66 @@ impl OpaqueStore {
             .map_or(0, |value| value.value());
         Ok((channels, total_bytes))
     }
+
+    fn reserve_transfer_bytes(
+        &self,
+        scope: &str,
+        limit: u64,
+        bytes: u64,
+        now: u64,
+    ) -> Result<bool> {
+        if bytes == 0 {
+            return Ok(true);
+        }
+        let window = now / TRANSFER_WINDOW_SECONDS;
+        let window_key = format!("transfer-{scope}-window");
+        let bytes_key = format!("transfer-{scope}-bytes");
+        let mut write = self
+            .database
+            .begin_write()
+            .context("begin ticket-store transfer accounting transaction")?;
+        write
+            .set_durability(Durability::Immediate)
+            .context("set ticket-store transfer accounting durability")?;
+        let (stored_window, stored_bytes) = {
+            let meta = write
+                .open_table(META_TABLE)
+                .context("open ticket-store transfer accounting metadata")?;
+            (
+                meta.get(window_key.as_str())
+                    .context("read ticket-store transfer window")?
+                    .map_or(window, |value| value.value()),
+                meta.get(bytes_key.as_str())
+                    .context("read ticket-store transfer bytes")?
+                    .map_or(0, |value| value.value()),
+            )
+        };
+        let current_bytes = if stored_window == window {
+            stored_bytes
+        } else {
+            0
+        };
+        let next_bytes = current_bytes.saturating_add(bytes);
+        let allowed = next_bytes <= limit;
+        {
+            let mut meta = write
+                .open_table(META_TABLE)
+                .context("open ticket-store transfer accounting update")?;
+            meta.insert(window_key.as_str(), window)
+                .context("update ticket-store transfer window")?;
+            if allowed {
+                meta.insert(bytes_key.as_str(), next_bytes)
+                    .context("update ticket-store transfer bytes")?;
+            } else if stored_window != window {
+                meta.insert(bytes_key.as_str(), 0)
+                    .context("reset ticket-store transfer bytes")?;
+            }
+        }
+        write
+            .commit()
+            .context("commit ticket-store transfer accounting transaction")?;
+        Ok(allowed)
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -589,6 +686,9 @@ struct ServerState {
     permits: Arc<Semaphore>,
     max_record_bytes: usize,
     trust_x_real_ip: bool,
+    service_mode: StoreServiceMode,
+    transfer_accounting_scope: Option<String>,
+    max_transfer_bytes_per_30_days: Option<u64>,
 }
 
 pub struct TicketStoreServer {
@@ -608,10 +708,14 @@ impl TicketStoreServer {
             "existing live ticket-store data exceeds the configured capacity"
         );
         let mailbox_identity = load_or_create_mailbox_identity(&config.data_dir)?;
-        let mailbox_store = BlindMailboxStore::open(
-            MailboxStoreConfig::new(config.data_dir.join(MAILBOX_DATA_DIRECTORY)),
-            mailbox_identity,
-        )?;
+        let mut mailbox_config =
+            MailboxStoreConfig::new(config.data_dir.join(MAILBOX_DATA_DIRECTORY));
+        mailbox_config.max_envelope_bytes = config.max_record_bytes.min(MAX_MAILBOX_ENVELOPE_BYTES);
+        mailbox_config.max_items_per_mailbox =
+            config.max_channels.min(DEFAULT_MAX_ITEMS_PER_MAILBOX);
+        mailbox_config.max_total_items = config.max_channels;
+        mailbox_config.max_total_bytes = config.max_total_bytes;
+        let mailbox_store = BlindMailboxStore::open(mailbox_config, mailbox_identity)?;
         mailbox_store.cleanup(unix_time_now()?)?;
         let listener = TcpListener::bind(config.listen)
             .await
@@ -626,6 +730,9 @@ impl TicketStoreServer {
             permits: Arc::new(Semaphore::new(config.max_concurrent_connections)),
             max_record_bytes: config.max_record_bytes,
             trust_x_real_ip: config.trust_x_real_ip,
+            service_mode: config.service_mode,
+            transfer_accounting_scope: config.transfer_accounting_scope.clone(),
+            max_transfer_bytes_per_30_days: config.max_transfer_bytes_per_30_days,
         });
         Ok(Self {
             listener,
@@ -767,6 +874,15 @@ impl HttpProblem {
         }
     }
 
+    const fn transfer_budget_exhausted() -> Self {
+        Self {
+            status: 429,
+            reason: "Too Many Requests",
+            message: "volunteer transfer budget exhausted",
+            retry_after: Some(24 * 60 * 60),
+        }
+    }
+
     const fn unavailable() -> Self {
         Self {
             status: 503,
@@ -825,9 +941,34 @@ async fn handle_connection(
         write_problem(&mut stream, HttpProblem::too_many_requests()).await?;
         return Ok(());
     }
-    let response = route_request(&state, request, unix_time_now()?);
+    let now = unix_time_now()?;
+    if let (Some(scope), Some(limit)) = (
+        state.transfer_accounting_scope.as_deref(),
+        state.max_transfer_bytes_per_30_days,
+    ) && !state
+        .store
+        .reserve_transfer_bytes(scope, limit, request.body.len() as u64, now)?
+    {
+        write_problem(&mut stream, HttpProblem::transfer_budget_exhausted()).await?;
+        return Ok(());
+    }
+    let response = route_request(&state, request, now);
     match response {
-        Ok(response) => write_response(&mut stream, response).await?,
+        Ok(response) => {
+            if let (Some(scope), Some(limit)) = (
+                state.transfer_accounting_scope.as_deref(),
+                state.max_transfer_bytes_per_30_days,
+            ) && !state.store.reserve_transfer_bytes(
+                scope,
+                limit,
+                response.body.len() as u64,
+                now,
+            )? {
+                write_problem(&mut stream, HttpProblem::transfer_budget_exhausted()).await?;
+                return Ok(());
+            }
+            write_response(&mut stream, response).await?
+        }
         Err(problem) => write_problem(&mut stream, problem).await?,
     }
     Ok(())
@@ -851,6 +992,14 @@ fn route_request(
     }
     if request.target.starts_with(MAILBOX_PATH_PREFIX) {
         return route_mailbox_request(&state.mailbox_store, request, now);
+    }
+    if state.service_mode == StoreServiceMode::MailboxOnly {
+        return Err(HttpProblem {
+            status: 404,
+            reason: "Not Found",
+            message: "resource not found",
+            retry_after: None,
+        });
     }
     let channel_text = request
         .target
@@ -1299,6 +1448,7 @@ async fn read_http_request(
     })
 }
 
+#[derive(Debug)]
 struct HttpResponse {
     status: u16,
     reason: &'static str,
@@ -1496,6 +1646,101 @@ mod tests {
             store.put([3_u8; 32], 1, vec![5_u8; 1], 1_001)?,
             PutOutcome::CapacityExceeded
         );
+        Ok(())
+    }
+
+    #[test]
+    fn transfer_budget_is_durable_and_resets_after_thirty_day_window() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let mut config = StoreConfig::local_test(directory.path().to_path_buf());
+        config.max_record_bytes = 8;
+        {
+            let store = OpaqueStore::open(&config)?;
+            assert!(store.reserve_transfer_bytes("wifi", 10, 7, 1_000)?);
+        }
+        let reopened = OpaqueStore::open(&config)?;
+        assert!(!reopened.reserve_transfer_bytes("wifi", 10, 4, 1_001)?);
+        assert!(reopened.reserve_transfer_bytes(
+            "wifi",
+            10,
+            10,
+            TRANSFER_WINDOW_SECONDS + 1_001,
+        )?);
+        assert!(!reopened.reserve_transfer_bytes(
+            "wifi",
+            10,
+            1,
+            TRANSFER_WINDOW_SECONDS + 1_002,
+        )?);
+        assert!(reopened.reserve_transfer_bytes("ethernet", 10, 10, 1_002)?);
+        Ok(())
+    }
+
+    #[test]
+    fn mailbox_only_mode_fails_closed_for_ticket_publication_routes() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let mut config = StoreConfig::local_test(directory.path().to_path_buf());
+        config.service_mode = StoreServiceMode::MailboxOnly;
+        let store = OpaqueStore::open(&config)?;
+        let mailbox_identity = load_or_create_mailbox_identity(&config.data_dir)?;
+        let mailbox_store = BlindMailboxStore::open(
+            MailboxStoreConfig::new(config.data_dir.join(MAILBOX_DATA_DIRECTORY)),
+            mailbox_identity,
+        )?;
+        let state = ServerState {
+            store,
+            mailbox_store,
+            limiter: Mutex::new(RateLimiter::new(10, 10)),
+            permits: Arc::new(Semaphore::new(1)),
+            max_record_bytes: config.max_record_bytes,
+            trust_x_real_ip: false,
+            service_mode: StoreServiceMode::MailboxOnly,
+            transfer_accounting_scope: None,
+            max_transfer_bytes_per_30_days: None,
+        };
+        let health = route_request(
+            &state,
+            HttpRequest {
+                method: "GET".to_owned(),
+                target: "/healthz".to_owned(),
+                headers: BTreeMap::new(),
+                body: Vec::new(),
+            },
+            1_000,
+        )
+        .map_err(|problem| anyhow::anyhow!("health route failed: {problem:?}"))?;
+        assert_eq!(health.status, 200);
+        let publication = match route_request(
+            &state,
+            HttpRequest {
+                method: "GET".to_owned(),
+                target: format!("{PUBLICATION_PATH_PREFIX}{}", "00".repeat(32)),
+                headers: BTreeMap::new(),
+                body: Vec::new(),
+            },
+            1_000,
+        ) {
+            Err(problem) => problem,
+            Ok(_) => anyhow::bail!("mailbox-only mode accepted ticket publication"),
+        };
+        assert_eq!(publication.status, 404);
+        let mailbox = match route_request(
+            &state,
+            HttpRequest {
+                method: "POST".to_owned(),
+                target: format!("{MAILBOX_PATH_PREFIX}{}/list", "00".repeat(32)),
+                headers: BTreeMap::from([(
+                    "content-type".to_owned(),
+                    MAILBOX_CONTENT_TYPE.to_owned(),
+                )]),
+                body: vec![0],
+            },
+            1_000,
+        ) {
+            Err(problem) => problem,
+            Ok(_) => anyhow::bail!("malformed mailbox request was accepted"),
+        };
+        assert_ne!(mailbox.status, 404, "mailbox route must remain reachable");
         Ok(())
     }
 

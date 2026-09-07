@@ -191,12 +191,31 @@ mailbox preflight are specified in
 [`docs/RFC-0082-m1-acceptance-kit-and-mailbox-preflight.md`](docs/RFC-0082-m1-acceptance-kit-and-mailbox-preflight.md),
 with the Russian operator guide in
 [`docs/M0.9.60-M1-ACCEPTANCE-RU.md`](docs/M0.9.60-M1-ACCEPTANCE-RU.md).
+The default-on bounded volunteer blind-storage role is specified in
+[`docs/RFC-0083-default-volunteer-blind-storage-role.md`](docs/RFC-0083-default-volunteer-blind-storage-role.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.60 M1 acceptance kit — complete
+## Current milestone: M0.9.61 default volunteer blind storage — complete
+
+New runtime profiles now enable a bounded volunteer storage role by default:
+200 MiB of opaque ciphertext storage, 500 MiB of application-payload transfer
+per fixed 30-day window on Ethernet, another 500 MiB on Wi-Fi, and zero on
+mobile or unknown networks. The Windows profile editor can disable the role or
+change every limit. Existing profiles remain disabled until their owner opts in
+or recreates them, so an upgrade does not silently start a listener.
+
+The ordinary runtime embeds the mailbox-only storage engine; no additional
+executable, scheduled task or OS service is introduced. Storage lives outside
+the protected messenger state and the transfer counter is durable across
+restarts. This stage intentionally exposes only a loopback adapter: remote peer
+discovery, signed storage offers and replicated P2P ingress remain the next
+milestone. Details are in
+[`docs/RFC-0083-default-volunteer-blind-storage-role.md`](docs/RFC-0083-default-volunteer-blind-storage-role.md).
+
+## Previous milestone: M0.9.60 M1 acceptance kit — complete
 
 An explicit clean-HEAD builder now produces a plain portable directory with
 stable debug `kilogram-cli.exe` and `kilogram-windows.exe` names, exact hashes,

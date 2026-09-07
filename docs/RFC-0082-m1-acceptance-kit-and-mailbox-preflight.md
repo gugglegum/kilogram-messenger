@@ -31,9 +31,15 @@ an opaque mailbox. Its signed receipt proves acceptance, not continued
 availability; the service can still lose, delay or suppress data.
 
 `kilogram-ticket-store` is a Rust executable and is not tied to an operating
-system. Linux is convenient for a permanent VPS deployment. Windows is valid
-for the controlled test. It intentionally binds only to loopback HTTP and must
-remain behind an HTTPS reverse proxy such as Caddy or Nginx.
+system. A Linux VPS is an optional bootstrap/reference deployment, not the
+target default architecture. Windows is valid for the controlled test. The
+standalone adapter intentionally binds only to loopback HTTP and must remain
+behind an HTTPS reverse proxy such as Caddy or Nginx.
+
+M0.9.61 adds a default bounded volunteer storage role to the ordinary client.
+Its first slice is not yet remotely advertised, so this M0.9.60 HTTPS topology
+remains only a controlled acceptance fixture until peer ingress and discovery
+are implemented.
 
 ## 3. Store on Alice
 

@@ -2,7 +2,7 @@ use std::{
     collections::BTreeSet,
     ffi::OsString,
     fs,
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::{Child, Command, Stdio},
     str::FromStr,
     sync::mpsc::{self, Receiver, Sender},
@@ -21,7 +21,7 @@ use kilogram_runtime_ipc::{
     RuntimeIpcHistoryPage, RuntimeIpcMailboxCapabilityTransition, RuntimeIpcMailboxStatus,
     RuntimeIpcOutboxStatus, RuntimeIpcQueueState, RuntimeIpcRequestId, RuntimeIpcResponse,
     RuntimeIpcRoutePolicy, RuntimeIpcTicketAutomationStatus, RuntimeIpcTicketPublication,
-    RuntimeLaunchProfile, RuntimeLaunchSettings,
+    RuntimeLaunchProfile, RuntimeLaunchSettings, RuntimeVolunteerStorageSettings,
 };
 #[cfg(test)]
 use kilogram_runtime_ipc::{
@@ -54,6 +54,7 @@ const RUNTIME_STOP_TIMEOUT: Duration = Duration::from_secs(3);
 const MAX_DESCRIPTOR_PATH_BYTES: usize = 32 * 1024;
 const DEFAULT_MAILBOX_VALIDITY_SECONDS: u64 = 7 * 24 * 60 * 60;
 const RUNTIME_DEVICE_LIST_DIGEST_DOMAIN: &[u8] = b"kilogram:runtime-device-list-digest:v1\0";
+const BYTES_PER_MIB: u64 = 1024 * 1024;
 
 pub fn run() -> eframe::Result {
     let options = DesktopOptions::from_arguments(std::env::args_os().skip(1));
@@ -627,6 +628,13 @@ struct RuntimeProfileDraft {
     retry_base_seconds: String,
     retry_max_seconds: String,
     auto_sync_seconds: String,
+    volunteer_storage_enabled: bool,
+    volunteer_storage_data_dir: String,
+    volunteer_storage_mib: String,
+    volunteer_ethernet_transfer_mib: String,
+    volunteer_wifi_transfer_mib: String,
+    volunteer_mobile_transfer_mib: String,
+    volunteer_unknown_transfer_mib: String,
 }
 
 impl Default for RuntimeProfileDraft {
@@ -645,6 +653,13 @@ impl Default for RuntimeProfileDraft {
             retry_base_seconds: "1".to_owned(),
             retry_max_seconds: "60".to_owned(),
             auto_sync_seconds: "30".to_owned(),
+            volunteer_storage_enabled: true,
+            volunteer_storage_data_dir: String::new(),
+            volunteer_storage_mib: "200".to_owned(),
+            volunteer_ethernet_transfer_mib: "500".to_owned(),
+            volunteer_wifi_transfer_mib: "500".to_owned(),
+            volunteer_mobile_transfer_mib: "0".to_owned(),
+            volunteer_unknown_transfer_mib: "0".to_owned(),
         }
     }
 }
@@ -652,7 +667,7 @@ impl Default for RuntimeProfileDraft {
 impl RuntimeProfileDraft {
     fn from_profile(profile: &RuntimeLaunchProfile) -> Self {
         let settings = profile.settings();
-        Self {
+        let mut draft = Self {
             state_dir: settings.state_dir.display().to_string(),
             allowed_requester_account_id: settings.allowed_requester_account_id.to_string(),
             device_list_file: settings.device_list_file.display().to_string(),
@@ -675,7 +690,24 @@ impl RuntimeProfileDraft {
             retry_base_seconds: settings.retry_base_seconds.to_string(),
             retry_max_seconds: settings.retry_max_seconds.to_string(),
             auto_sync_seconds: settings.auto_sync_seconds.to_string(),
+            ..Self::default()
+        };
+        if let Some(volunteer) = &settings.volunteer_storage {
+            draft.volunteer_storage_enabled = true;
+            draft.volunteer_storage_data_dir = volunteer.data_dir.display().to_string();
+            draft.volunteer_storage_mib = bytes_to_mib(volunteer.max_total_storage_bytes);
+            draft.volunteer_ethernet_transfer_mib =
+                bytes_to_mib(volunteer.ethernet_transfer_bytes_per_30_days);
+            draft.volunteer_wifi_transfer_mib =
+                bytes_to_mib(volunteer.wifi_transfer_bytes_per_30_days);
+            draft.volunteer_mobile_transfer_mib =
+                bytes_to_mib(volunteer.mobile_transfer_bytes_per_30_days);
+            draft.volunteer_unknown_transfer_mib =
+                bytes_to_mib(volunteer.unknown_network_transfer_bytes_per_30_days);
+        } else {
+            draft.volunteer_storage_enabled = false;
         }
+        draft
     }
 
     fn build(&self) -> Result<RuntimeLaunchProfile> {
@@ -690,6 +722,40 @@ impl RuntimeProfileDraft {
             .collect::<Result<Vec<_>>>()?;
         let ticket_file = optional_output_path(&self.ticket_file, "Runtime ticket", &state_dir)?;
         let ipc_file = absolute_output_path(&self.ipc_file, "IPC descriptor", &state_dir)?;
+        let volunteer_storage = if self.volunteer_storage_enabled {
+            let volunteer_data_dir = if self.volunteer_storage_data_dir.trim().is_empty() {
+                default_volunteer_storage_path(&state_dir)?
+            } else {
+                absolute_output_path(
+                    &self.volunteer_storage_data_dir,
+                    "Volunteer storage directory",
+                    &state_dir,
+                )?
+            };
+            Some(RuntimeVolunteerStorageSettings::with_limits(
+                volunteer_data_dir,
+                0,
+                parse_profile_mib(&self.volunteer_storage_mib, "Volunteer storage")?,
+                parse_profile_mib(
+                    &self.volunteer_ethernet_transfer_mib,
+                    "Volunteer Ethernet transfer",
+                )?,
+                parse_profile_mib(
+                    &self.volunteer_wifi_transfer_mib,
+                    "Volunteer Wi-Fi transfer",
+                )?,
+                parse_profile_mib(
+                    &self.volunteer_mobile_transfer_mib,
+                    "Volunteer mobile transfer",
+                )?,
+                parse_profile_mib(
+                    &self.volunteer_unknown_transfer_mib,
+                    "Volunteer unknown-network transfer",
+                )?,
+            ))
+        } else {
+            None
+        };
         RuntimeLaunchProfile::new(RuntimeLaunchSettings {
             state_dir,
             allowed_requester_account_id: AccountId::from_str(
@@ -714,6 +780,7 @@ impl RuntimeProfileDraft {
             retry_max_seconds: parse_profile_number(&self.retry_max_seconds, "Retry max seconds")?,
             auto_sync_seconds: parse_profile_number(&self.auto_sync_seconds, "Auto sync seconds")?,
             ipc_file,
+            volunteer_storage,
         })
     }
 }
@@ -3203,6 +3270,8 @@ impl KilogramApp {
                     .to_string();
                 self.runtime_profile_draft.ipc_file =
                     workspace.join("runtime.ipc.json").display().to_string();
+                self.runtime_profile_draft.volunteer_storage_data_dir =
+                    workspace.join("volunteer-storage").display().to_string();
                 self.runtime_profile_draft.peer_prekey_pool_files.clear();
                 self.show_profile_editor = true;
                 self.recovery.state_dir = output.state_dir.display().to_string();
@@ -3361,6 +3430,8 @@ impl KilogramApp {
         self.runtime_profile_draft.peer_prekey_pool_files.clear();
         self.runtime_profile_draft.ticket_file = runtime_ticket.display().to_string();
         self.runtime_profile_draft.ipc_file = runtime_ipc.display().to_string();
+        self.runtime_profile_draft.volunteer_storage_data_dir =
+            workspace.join("volunteer-storage").display().to_string();
         self.show_profile_editor = true;
         self.bootstrap_workspace_path = workspace.display().to_string();
         self.account_recovery.account_root_dir = output.account_root_dir().display().to_string();
@@ -6900,6 +6971,62 @@ impl KilogramApp {
                                 ui.end_row();
                             }
                         });
+                    ui.separator();
+                    ui.add_enabled(
+                        editable,
+                        egui::Checkbox::new(
+                            &mut self.runtime_profile_draft.volunteer_storage_enabled,
+                            "Help store encrypted offline messages for other users",
+                        ),
+                    );
+                    ui.small(
+                        "Enabled by default. Kilogram cannot read the ciphertext. Mobile and unknown networks are disabled by default.",
+                    );
+                    let volunteer_editable =
+                        editable && self.runtime_profile_draft.volunteer_storage_enabled;
+                    ui.label("Volunteer ciphertext directory");
+                    ui.add_enabled(
+                        volunteer_editable,
+                        egui::TextEdit::singleline(
+                            &mut self.runtime_profile_draft.volunteer_storage_data_dir,
+                        )
+                        .hint_text("Default: beside the protected state directory"),
+                    );
+                    egui::Grid::new("runtime-profile-volunteer-storage")
+                        .num_columns(2)
+                        .show(ui, |ui| {
+                            for (label, value) in [
+                                (
+                                    "Storage limit MiB",
+                                    &mut self.runtime_profile_draft.volunteer_storage_mib,
+                                ),
+                                (
+                                    "Ethernet / 30 days MiB",
+                                    &mut self
+                                        .runtime_profile_draft
+                                        .volunteer_ethernet_transfer_mib,
+                                ),
+                                (
+                                    "Wi-Fi / 30 days MiB",
+                                    &mut self.runtime_profile_draft.volunteer_wifi_transfer_mib,
+                                ),
+                                (
+                                    "Mobile / 30 days MiB",
+                                    &mut self.runtime_profile_draft.volunteer_mobile_transfer_mib,
+                                ),
+                                (
+                                    "Unknown network / 30 days MiB",
+                                    &mut self.runtime_profile_draft.volunteer_unknown_transfer_mib,
+                                ),
+                            ] {
+                                ui.label(label);
+                                ui.add_enabled(
+                                    volunteer_editable,
+                                    egui::TextEdit::singleline(value).desired_width(100.0),
+                                );
+                                ui.end_row();
+                            }
+                        });
                 }
                 ui.small("This profile contains paths and public runtime settings, never device or vault secrets.");
                 ui.small("First-device bootstrap fills these local paths. Peer Account ID and peer prekey pools are added during contact setup.");
@@ -8015,6 +8142,28 @@ fn parse_profile_number(value: &str, label: &str) -> Result<u64> {
         .with_context(|| format!("{label} must be a non-negative integer"))
 }
 
+fn default_volunteer_storage_path(state_dir: &Path) -> Result<PathBuf> {
+    let parent = state_dir
+        .parent()
+        .context("State directory has no parent for volunteer storage")?;
+    let name = state_dir
+        .file_name()
+        .and_then(|value| value.to_str())
+        .filter(|value| !value.is_empty())
+        .unwrap_or("state");
+    Ok(parent.join(format!("{name}-volunteer-storage")))
+}
+
+fn parse_profile_mib(value: &str, label: &str) -> Result<u64> {
+    parse_profile_number(value, label)?
+        .checked_mul(BYTES_PER_MIB)
+        .with_context(|| format!("{label} MiB value overflows"))
+}
+
+fn bytes_to_mib(value: u64) -> String {
+    value.div_ceil(BYTES_PER_MIB).to_string()
+}
+
 fn run_bootstrap_process(
     executable: &std::path::Path,
     workspace: &std::path::Path,
@@ -8402,6 +8551,7 @@ mod tests {
             retry_max_seconds: 60,
             auto_sync_seconds: 30,
             ipc_file: descriptor.clone(),
+            volunteer_storage: None,
         })?;
         profile.write_new(&profile_path)?;
         let status = RuntimeIpcDeviceDirectoryStatus {
@@ -8589,12 +8739,36 @@ mod tests {
         };
         let profile = draft.build()?;
         assert!(profile.settings().peer_prekey_pool_files.is_empty());
+        let volunteer = profile
+            .settings()
+            .volunteer_storage
+            .as_ref()
+            .context("new desktop profiles enable volunteer storage")?;
+        assert_eq!(volunteer.max_total_storage_bytes, 200 * BYTES_PER_MIB);
+        assert_eq!(
+            volunteer.ethernet_transfer_bytes_per_30_days,
+            500 * BYTES_PER_MIB
+        );
+        assert_eq!(
+            volunteer.wifi_transfer_bytes_per_30_days,
+            500 * BYTES_PER_MIB
+        );
+        assert_eq!(volunteer.mobile_transfer_bytes_per_30_days, 0);
         let profile_path = directory.path().join("runtime.launch.json");
         profile.write_replace(&profile_path)?;
         assert_eq!(RuntimeLaunchProfile::load(&profile_path)?, profile);
         assert_eq!(
             RuntimeProfileDraft::from_profile(&profile).route_policy,
             RuntimeIpcRoutePolicy::Auto
+        );
+        let mut disabled_draft = draft.clone();
+        disabled_draft.volunteer_storage_enabled = false;
+        assert!(
+            disabled_draft
+                .build()?
+                .settings()
+                .volunteer_storage
+                .is_none()
         );
         let mut unsafe_draft = draft;
         unsafe_draft.ticket_file = state_dir.join("public.ticket").display().to_string();

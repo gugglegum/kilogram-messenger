@@ -3507,20 +3507,49 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
   и
   [`../docs/M0.9.60-M1-ACCEPTANCE-RU.md`](../docs/M0.9.60-M1-ACCEPTANCE-RU.md).
 
+### M0.9.61 — default embedded volunteer blind storage: выполнено
+
+Реализовано:
+
+- новый runtime launch profile включает volunteer storage по умолчанию для
+  новых пользователей; desktop позволяет отключить роль и изменить каталог и
+  лимиты;
+- default policy разделяет 200 MiB общего ciphertext storage и 30-дневный
+  application-payload traffic: Ethernet 500 MiB, Wi-Fi 500 MiB, mobile 0,
+  unknown 0;
+- обычный `kilogram-cli.exe` runtime владеет embedded `MailboxOnly` store и
+  останавливает его вместе с собой; нового EXE, Windows service или Task
+  Scheduler нет;
+- blind mailbox capacity реально ограничен значением runtime profile, а
+  request/response body traffic хранится durable по network-class scope и не
+  сбрасывается после restart;
+- volunteer data обязаны жить вне protected client state; standalone HTTPS
+  store явно переопределён как optional bootstrap/reference/test fixture, а не
+  целевая централизованная инфраструктура;
+- текущий ingress честно остаётся ephemeral loopback adapter без peer
+  advertisement, discovery и replication; это рабочий embedded storage engine,
+  но ещё не распределённая сеть хранения;
+- network-free tests проверяют profile round trip/unsafe paths, durable
+  30-day quota и mailbox-only fail-closed route; static boundary фиксирует
+  defaults, desktop controls, same-runtime ownership и отсутствие нового EXE;
+- contract зафиксирован в
+  [`../docs/RFC-0083-default-volunteer-blind-storage-role.md`](../docs/RFC-0083-default-volunteer-blind-storage-role.md).
+
 ### Следующий этап
 
-1. В согласованное окно явно создать M0.9.60 debug kit, провести M0.9.58
-   controlled Alice/Bob field run и сохранить
-   машинно проверяемые direct/relay/mailbox evidence плюс отдельное человеческое
-   подтверждение GUI states. Store может быть на Alice только при работающих
-   Alice PC/HTTPS proxy; preflight обязан пройти с Bob-visible trusted URL.
-2. До первого публичного security artifact pin-нуть linker/SDK либо controlled
+1. M0.9.62: добавить dedicated Iroh mailbox ALPN, capability-authenticated
+   blind PUT/LIST/DELETE и signed expiring storage offer для embedded volunteer
+   provider. До этого loopback adapter не считается remote peer storage.
+2. После этого добавить multi-peer selection/replication и провести реальный
+   Alice/Bob/volunteer field run; standalone HTTPS store оставить optional
+   bootstrap/reference path.
+3. До первого публичного security artifact pin-нуть linker/SDK либо controlled
    alternative и повторить M0.9.59 до matched external hash и attestation.
-3. Optional autostart/background mode оставить отдельной явной настройкой, не
+4. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
-4. Добавить macOS/Linux/mobile providers той же platform boundary.
-5. Спроектировать privacy-preserving gossip и first-contact freshness;
+5. Добавить macOS/Linux/mobile providers той же platform boundary.
+6. Спроектировать privacy-preserving gossip и first-contact freshness;
    M0.9.29 скрывает payload/явные IDs, но не access correlation.
-6. Membership removal и group governance проектировать вместе с ordered
+7. Membership removal и group governance проектировать вместе с ordered
    security events и MLS epoch; compact Merkle/range summary и независимый
    криптографический аудит остаются до публичного выпуска.

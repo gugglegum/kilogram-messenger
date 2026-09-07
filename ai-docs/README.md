@@ -681,6 +681,10 @@ EXE не создавались.
   ordered field driver и trusted-HTTPS mailbox preflight.
 - [`../docs/M0.9.60-M1-ACCEPTANCE-RU.md`](../docs/M0.9.60-M1-ACCEPTANCE-RU.md) —
   инструкция приёмки M1, включая ограниченный store-on-Alice вариант.
+- [`../docs/RFC-0083-default-volunteer-blind-storage-role.md`](../docs/RFC-0083-default-volunteer-blind-storage-role.md) —
+  реализованный M0.9.61 default-on embedded volunteer blind store: 200 MiB
+  storage, 500 MiB/30 days на Ethernet/Wi-Fi, durable quota, mobile-off и
+  честная граница до будущего P2P ingress/discovery.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
