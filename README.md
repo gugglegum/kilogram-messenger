@@ -196,26 +196,28 @@ The default-on bounded volunteer blind-storage role is specified in
 Its dedicated Iroh ingress and store-signed expiring provider offer are
 specified in
 [`docs/RFC-0084-volunteer-storage-iroh-ingress-and-offers.md`](docs/RFC-0084-volunteer-storage-iroh-ingress-and-offers.md).
+The bounded client-side provider registry and deterministic transport-distinct
+selection are specified in
+[`docs/RFC-0085-bounded-volunteer-provider-registry-and-selection.md`](docs/RFC-0085-bounded-volunteer-provider-registry-and-selection.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.62 volunteer-storage Iroh ingress — complete
+## Current milestone: M0.9.63 bounded provider registry and selection — complete
 
-The ordinary runtime now conditionally advertises a dedicated
-`kilogram/m0/blind-mailbox/1` ALPN on its existing Iroh endpoint. Bounded PUT,
-LIST and DELETE requests retain their unrelated mailbox capability signatures,
-and each outer response is bound to the exact request digest. Remote endpoint
-identity controls rate limiting but never grants mailbox access.
+The runtime now imports fresh store-signed volunteer offers into a durable
+256-entry default registry and rejects tamper, expiry, noncanonical encoding,
+same-generation forks and rollback. A transport-identity digest is derived
+only after the signed Iroh endpoint parses successfully.
 
-An enabled provider emits a 15-minute store-signed offer binding its exact Iroh
-endpoint, store key, bounded-volunteer policy class and capacity hints. Mailbox
-connections use separately bounded tasks and the durable M0.9.61 disk/traffic
-limits. Offer transfer is still manual: automatic discovery, selection and
-multi-provider replication remain the next milestone. No new executable,
-public TCP listener or background OS service was added. Details are in
-[`docs/RFC-0084-volunteer-storage-iroh-ingress-and-offers.md`](docs/RFC-0084-volunteer-storage-iroh-ingress-and-offers.md).
+An opaque per-item salt deterministically selects at most eight fresh offers
+while returning no more than one store per Iroh endpoint identity. IPC/CLI
+responses expose only public offer metadata and never mailbox capabilities or
+social identifiers. Offer carriage is still explicit/manual; bounded peer
+gossip and real multi-provider replication are next. No new executable,
+listener or background OS service was added. Details are in
+[`docs/RFC-0085-bounded-volunteer-provider-registry-and-selection.md`](docs/RFC-0085-bounded-volunteer-provider-registry-and-selection.md).
 
 ## Previous milestone: M0.9.61 default volunteer blind storage — complete
 

@@ -3564,14 +3564,43 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - contract зафиксирован в
   [`../docs/RFC-0084-volunteer-storage-iroh-ingress-and-offers.md`](../docs/RFC-0084-volunteer-storage-iroh-ingress-and-offers.md).
 
+### M0.9.63 — bounded provider registry и deterministic selection: выполнено
+
+Реализовано:
+
+- `kilogram-mailbox-client` получил отдельный durable Redb registry для exact
+  signed provider offers: default 256, hard max 4096, без Account/Device/
+  conversation/mailbox/capability linkage;
+- import проверяет protocol size, current-time store signature, canonical
+  encoding и валидный Iroh endpoint; exact replay идемпотентен, replacement
+  обязан иметь строго больший signed issue time, same-generation fork/rollback
+  отклоняются;
+- expired authenticated records prune-ятся до capacity check; full live set
+  fail closed не делает attacker-controlled eviction;
+- deterministic BLAKE3 selection принимает opaque 32-byte per-item salt,
+  ограничен 1..=8 и выбирает максимум один store key на parsed Iroh endpoint
+  identity; это diversity floor, но не Sybil resistance;
+- authenticated runtime IPC v24 и диагностический CLI добавили import/select,
+  возвращая только public offer metadata; raw endpoint остаётся внутри actor,
+  capabilities и social IDs не проецируются;
+- provider startup теперь честно сообщает bounded manual import/registry и
+  deterministic transport-distinct selection; automatic peer gossip и actual
+  replication пока false;
+- network-free tests и новый static gate проверяют tamper/expiry/canonical,
+  replay/replacement/capacity/prune, stable selection/dedup, privacy projection
+  и отсутствие нового executable;
+- contract зафиксирован в
+  [`../docs/RFC-0085-bounded-volunteer-provider-registry-and-selection.md`](../docs/RFC-0085-bounded-volunteer-provider-registry-and-selection.md).
+
 ### Следующий этап
 
-1. M0.9.63: добавить privacy-bounded signed-offer discovery/import, client-side
-   provider set и deterministic multi-provider selection без смешивания
-   mailbox capability с provider identity.
-2. После этого добавить replication и провести реальный Alice/Bob/volunteer
-   field run; standalone HTTPS store оставить optional bootstrap/reference
-   path.
+1. M0.9.64: переносить bounded randomized subset fresh verified offers через
+   уже authenticated peer sessions с hop/age/count limits, без Account/Device/
+   conversation IDs в offer payload и без глобального directory.
+2. Затем связать per-item random selection salt с outbox dispatch, добавить
+   actual multi-provider replication/store receipts и провести реальный
+   Alice/Bob/volunteer field run; standalone HTTPS store оставить optional
+   bootstrap/reference path.
 3. До первого публичного security artifact pin-нуть linker/SDK либо controlled
    alternative и повторить M0.9.59 до matched external hash и attestation.
 4. Optional autostart/background mode оставить отдельной явной настройкой, не

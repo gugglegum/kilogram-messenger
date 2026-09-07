@@ -25,12 +25,14 @@ use kilogram_identity::{
     DeviceId, DeviceIdentity, DeviceState, verify_device_authorization_with_snapshot,
 };
 use kilogram_mailbox::{
-    MAX_MAILBOX_PAGE_ITEMS, MAX_MAILBOX_TTL_SECONDS, MIN_MAILBOX_TTL_SECONDS, MailboxEnvelope,
-    MailboxListRequest, MailboxPutRequest, MailboxRequestNonce, MailboxStoreKey,
+    MAX_MAILBOX_PAGE_ITEMS, MAX_MAILBOX_STORAGE_OFFER_BYTES, MAX_MAILBOX_TTL_SECONDS,
+    MIN_MAILBOX_TTL_SECONDS, MailboxEnvelope, MailboxListRequest, MailboxPutRequest,
+    MailboxRequestNonce, MailboxStoragePolicyClass, MailboxStoreKey, SignedMailboxStorageOffer,
 };
 use kilogram_mailbox_client::{
     MailboxClientLedger, MailboxClientLedgerConfig, MailboxHttpClient, MailboxOutboundState,
-    OutboundEnqueueOutcome, PendingMailboxUpload,
+    MailboxProviderImportOutcome, MailboxProviderOffer, MailboxProviderRegistry,
+    MailboxProviderRegistryConfig, OutboundEnqueueOutcome, PendingMailboxUpload,
 };
 use kilogram_mailbox_provisioning::{
     EncryptedMailboxOffer, LocalMailboxBinding, MAX_MAILBOX_OFFER_VALIDITY_SECONDS,
@@ -70,8 +72,10 @@ use kilogram_runtime_ipc::{
     RuntimeIpcPublicationConflictRequest, RuntimeIpcPublicationConflictResolution,
     RuntimeIpcQueueItem, RuntimeIpcQueueState, RuntimeIpcRequestId, RuntimeIpcResponse,
     RuntimeIpcRoutePolicy, RuntimeIpcServer, RuntimeIpcTicketAutomationActionStatus,
-    RuntimeIpcTicketAutomationStatus, RuntimeIpcTicketPublication, RuntimeIpcWork,
-    RuntimeLaunchProfile, RuntimeLaunchSettings, RuntimeVolunteerStorageSettings,
+    RuntimeIpcTicketAutomationStatus, RuntimeIpcTicketPublication,
+    RuntimeIpcVolunteerStorageOfferImport, RuntimeIpcVolunteerStorageProvider,
+    RuntimeIpcVolunteerStorageProviderSet, RuntimeIpcWork, RuntimeLaunchProfile,
+    RuntimeLaunchSettings, RuntimeVolunteerStorageSettings,
 };
 use kilogram_session::{
     MAX_SYNC_ROUNDS, ServerInventoryOutcome, SessionStore, SyncClient, SyncServer,
@@ -95,9 +99,9 @@ use kilogram_ticket_store::{
 use kilogram_transport_iroh::{
     ALPN, MAILBOX_ALPN, MAX_WIRE_MESSAGE_BYTES, RoutePolicy, SelectedPathDiagnostics,
     await_route_policy, encode_mailbox_provider_endpoint, endpoint_builder_for_remote,
-    endpoint_builder_with_relay, read_client_request, read_mailbox_peer_request,
-    read_server_response, selected_path_diagnostics, write_client_request,
-    write_mailbox_peer_response, write_server_response,
+    endpoint_builder_with_relay, mailbox_provider_endpoint_from_offer, read_client_request,
+    read_mailbox_peer_request, read_server_response, selected_path_diagnostics,
+    write_client_request, write_mailbox_peer_response, write_server_response,
 };
 use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
@@ -248,6 +252,9 @@ const RUNTIME_LOCAL_MAILBOX_UPDATES_DIRECTORY: &str = "local-mailbox-updates";
 const RUNTIME_PEER_MAILBOX_UPDATES_DIRECTORY: &str = "peer-mailbox-updates";
 const RUNTIME_MAILBOX_UPDATE_ACKNOWLEDGEMENTS_DIRECTORY: &str = "mailbox-update-acknowledgements";
 const MAILBOX_CLIENT_LEDGER_DIRECTORY: &str = "mailbox-client";
+const MAILBOX_PROVIDER_REGISTRY_DIRECTORY: &str = "mailbox-providers";
+const MAILBOX_PROVIDER_TRANSPORT_IDENTITY_DOMAIN: &[u8] =
+    b"kilogram:mailbox-provider-transport-identity:v1\0";
 const MAX_RUNTIME_DEVICE_DIRECTORY_RECEIPTS: usize = 1_024;
 const MAX_RUNTIME_ENDPOINT_CANDIDATES_PER_CONTACT: usize = 4;
 const MAX_RUNTIME_TICKET_PUBLICATION_RECORDS: usize = 4_096;
@@ -868,6 +875,32 @@ enum Command {
         /// Runtime-owned local IPC descriptor.
         #[arg(long)]
         ipc_file: PathBuf,
+    },
+
+    /// Import one fresh store-signed volunteer provider offer through the running runtime actor.
+    RuntimeIpcVolunteerProviderImport {
+        /// Runtime-owned local IPC descriptor.
+        #[arg(long)]
+        ipc_file: PathBuf,
+
+        /// UTF-8 file containing exactly one base64url provider offer.
+        #[arg(long)]
+        offer_file: PathBuf,
+    },
+
+    /// Deterministically select independent fresh volunteer providers without exposing capabilities.
+    RuntimeIpcVolunteerProviderSelect {
+        /// Runtime-owned local IPC descriptor.
+        #[arg(long)]
+        ipc_file: PathBuf,
+
+        /// Optional 64-hex-character opaque selection salt; generated when omitted.
+        #[arg(long)]
+        selection_salt: Option<String>,
+
+        /// Desired number of distinct transport identities (maximum 8).
+        #[arg(long, default_value_t = 3)]
+        count: u8,
     },
 
     /// Apply a refreshed Root-signed own device directory to a running runtime.
@@ -2118,6 +2151,8 @@ impl Command {
             | Self::RuntimeIpcQueueMessage { .. }
             | Self::RuntimeIpcOutboxStatus { .. }
             | Self::RuntimeIpcMailboxStatus { .. }
+            | Self::RuntimeIpcVolunteerProviderImport { .. }
+            | Self::RuntimeIpcVolunteerProviderSelect { .. }
             | Self::RuntimeIpcApplyDeviceDirectory { .. }
             | Self::RuntimeIpcDeviceDirectoryStatus { .. }
             | Self::RuntimeIpcRotatePublicationChannel { .. }
@@ -3190,6 +3225,15 @@ async fn run_command(command: Command) -> Result<()> {
         }
         Command::RuntimeIpcOutboxStatus { ipc_file } => runtime_ipc_outbox_status(ipc_file).await,
         Command::RuntimeIpcMailboxStatus { ipc_file } => runtime_ipc_mailbox_status(ipc_file).await,
+        Command::RuntimeIpcVolunteerProviderImport {
+            ipc_file,
+            offer_file,
+        } => runtime_ipc_volunteer_provider_import(ipc_file, offer_file).await,
+        Command::RuntimeIpcVolunteerProviderSelect {
+            ipc_file,
+            selection_salt,
+            count,
+        } => runtime_ipc_volunteer_provider_select(ipc_file, selection_salt, count).await,
         Command::RuntimeIpcApplyDeviceDirectory {
             ipc_file,
             device_list_file,
@@ -5131,6 +5175,22 @@ fn runtime_mailbox_ledger(state_directory: &Path) -> Result<MailboxClientLedger>
         state_directory.join(MAILBOX_CLIENT_LEDGER_DIRECTORY),
     ))
     .context("open runtime mailbox client ledger")
+}
+
+fn runtime_mailbox_provider_registry(state_directory: &Path) -> Result<MailboxProviderRegistry> {
+    MailboxProviderRegistry::open(MailboxProviderRegistryConfig::new(
+        state_directory.join(MAILBOX_PROVIDER_REGISTRY_DIRECTORY),
+    ))
+    .context("open runtime mailbox provider registry")
+}
+
+fn mailbox_provider_transport_identity(offer: &SignedMailboxStorageOffer) -> Result<[u8; 32]> {
+    let endpoint = mailbox_provider_endpoint_from_offer(offer)
+        .context("parse signed volunteer provider endpoint")?;
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(MAILBOX_PROVIDER_TRANSPORT_IDENTITY_DOMAIN);
+    hasher.update(endpoint.id.to_string().as_bytes());
+    Ok(*hasher.finalize().as_bytes())
 }
 
 fn runtime_device_list_digest(device_list: &AccountDeviceListSnapshot) -> Result<[u8; 32]> {
@@ -11640,6 +11700,101 @@ async fn runtime_ipc_mailbox_status(ipc_file: PathBuf) -> Result<()> {
     }
 }
 
+async fn runtime_ipc_volunteer_provider_import(
+    ipc_file: PathBuf,
+    offer_file: PathBuf,
+) -> Result<()> {
+    let text = fs::read_to_string(&offer_file)
+        .with_context(|| format!("read volunteer provider offer {}", offer_file.display()))?;
+    let encoded_offer = text.trim();
+    ensure!(
+        !encoded_offer.is_empty()
+            && encoded_offer.len() <= MAX_MAILBOX_STORAGE_OFFER_BYTES * 2
+            && encoded_offer.is_ascii()
+            && !encoded_offer.chars().any(char::is_whitespace),
+        "volunteer provider offer file must contain one bounded base64url value"
+    );
+    match kilogram_runtime_ipc::call(
+        &ipc_file,
+        RuntimeIpcCommand::ImportVolunteerStorageOffer {
+            encoded_offer: encoded_offer.to_owned(),
+        },
+    )
+    .await?
+    {
+        RuntimeIpcResponse::VolunteerStorageOfferImported(import) => {
+            println!("provider_import={}", import.outcome);
+            println!("active_provider_count={}", import.active_provider_count);
+            print_runtime_volunteer_storage_provider(&import.provider);
+            println!("status=runtime-volunteer-provider-imported");
+            Ok(())
+        }
+        RuntimeIpcResponse::Error { message } => {
+            bail!("runtime IPC rejected volunteer provider offer: {message}")
+        }
+        _ => bail!("runtime IPC returned an unexpected volunteer provider import response"),
+    }
+}
+
+async fn runtime_ipc_volunteer_provider_select(
+    ipc_file: PathBuf,
+    selection_salt: Option<String>,
+    requested: u8,
+) -> Result<()> {
+    let selection_salt = match selection_salt {
+        Some(value) => decode_hex_32(&value, "volunteer provider selection salt")?,
+        None => {
+            let mut generated = [0_u8; 32];
+            getrandom::fill(&mut generated)
+                .context("generate volunteer provider selection salt")?;
+            generated
+        }
+    };
+    match kilogram_runtime_ipc::call(
+        &ipc_file,
+        RuntimeIpcCommand::SelectVolunteerStorageProviders {
+            selection_salt,
+            requested,
+        },
+    )
+    .await?
+    {
+        RuntimeIpcResponse::VolunteerStorageProviders(provider_set) => {
+            println!("provider_selection_salt={}", provider_set.selection_salt);
+            println!("provider_requested_count={}", provider_set.requested);
+            println!("provider_selected_count={}", provider_set.selected_count);
+            println!(
+                "active_provider_count={}",
+                provider_set.active_provider_count
+            );
+            for provider in &provider_set.providers {
+                print_runtime_volunteer_storage_provider(provider);
+            }
+            println!("status=runtime-volunteer-providers-selected");
+            Ok(())
+        }
+        RuntimeIpcResponse::Error { message } => {
+            bail!("runtime IPC rejected volunteer provider selection: {message}")
+        }
+        _ => bail!("runtime IPC returned an unexpected volunteer provider selection response"),
+    }
+}
+
+fn print_runtime_volunteer_storage_provider(provider: &RuntimeIpcVolunteerStorageProvider) {
+    println!(
+        "provider_offer_id={} transport_identity={} store_key={} policy_class={} capacity_hint_bytes={} max_record_bytes={} issued_at_unix_seconds={} expires_at_unix_seconds={} observed_at_unix_seconds={}",
+        provider.offer_id,
+        provider.transport_identity,
+        provider.store_key,
+        provider.policy_class,
+        provider.capacity_hint_bytes,
+        provider.max_record_bytes,
+        provider.issued_at_unix_seconds,
+        provider.expires_at_unix_seconds,
+        provider.observed_at_unix_seconds
+    );
+}
+
 async fn runtime_ipc_apply_device_directory(
     ipc_file: PathBuf,
     device_list_file: PathBuf,
@@ -12747,6 +12902,83 @@ fn print_runtime_device_directory_update(update: &RuntimeIpcDeviceDirectoryUpdat
     print_runtime_device_directory_status(&update.directory_status);
 }
 
+fn runtime_volunteer_storage_provider_projection(
+    offer: &MailboxProviderOffer,
+) -> RuntimeIpcVolunteerStorageProvider {
+    RuntimeIpcVolunteerStorageProvider {
+        offer_id: offer.offer_id().to_string(),
+        transport_identity: encode_hex(offer.transport_identity()),
+        store_key: offer.store_key().to_string(),
+        policy_class: match offer.policy_class() {
+            MailboxStoragePolicyClass::BoundedVolunteer => "bounded-volunteer".to_owned(),
+        },
+        capacity_hint_bytes: offer.capacity_hint_bytes(),
+        max_record_bytes: offer.max_record_bytes(),
+        issued_at_unix_seconds: offer.issued_at_unix_seconds(),
+        expires_at_unix_seconds: offer.expires_at_unix_seconds(),
+        observed_at_unix_seconds: offer.observed_at_unix_seconds(),
+    }
+}
+
+fn import_runtime_volunteer_storage_offer(
+    state_directory: &Path,
+    encoded_offer: &str,
+) -> Result<RuntimeIpcVolunteerStorageOfferImport> {
+    ensure!(
+        !encoded_offer.is_empty()
+            && encoded_offer.len() <= MAX_MAILBOX_STORAGE_OFFER_BYTES * 2
+            && encoded_offer.is_ascii()
+            && !encoded_offer.chars().any(char::is_whitespace),
+        "volunteer provider offer must be one bounded base64url value"
+    );
+    let bytes = URL_SAFE_NO_PAD
+        .decode(encoded_offer)
+        .context("decode volunteer provider offer as base64url")?;
+    ensure!(
+        !bytes.is_empty() && bytes.len() <= MAX_MAILBOX_STORAGE_OFFER_BYTES,
+        "decoded volunteer provider offer size is invalid"
+    );
+    let now = unix_time_now()?;
+    let signed_offer = SignedMailboxStorageOffer::decode_and_verify(&bytes, now)
+        .context("verify volunteer provider offer")?;
+    let transport_identity = mailbox_provider_transport_identity(&signed_offer)?;
+    let registry = runtime_mailbox_provider_registry(state_directory)?;
+    let (outcome, provider) = registry.import_offer(&bytes, transport_identity, now)?;
+    let active_provider_count = registry.active_offers(now)?.len();
+    Ok(RuntimeIpcVolunteerStorageOfferImport {
+        outcome: match outcome {
+            MailboxProviderImportOutcome::Inserted => "inserted",
+            MailboxProviderImportOutcome::Replaced => "replaced",
+            MailboxProviderImportOutcome::AlreadyPresent => "already-present",
+        }
+        .to_owned(),
+        active_provider_count,
+        provider: runtime_volunteer_storage_provider_projection(&provider),
+    })
+}
+
+fn select_runtime_volunteer_storage_providers(
+    state_directory: &Path,
+    selection_salt: [u8; 32],
+    requested: u8,
+) -> Result<RuntimeIpcVolunteerStorageProviderSet> {
+    let now = unix_time_now()?;
+    let registry = runtime_mailbox_provider_registry(state_directory)?;
+    let active_provider_count = registry.active_offers(now)?.len();
+    let providers = registry
+        .select(selection_salt, requested, now)?
+        .iter()
+        .map(runtime_volunteer_storage_provider_projection)
+        .collect::<Vec<_>>();
+    Ok(RuntimeIpcVolunteerStorageProviderSet {
+        selection_salt: encode_hex(&selection_salt),
+        requested,
+        selected_count: providers.len(),
+        active_provider_count,
+        providers,
+    })
+}
+
 struct RuntimeIpcDispatchOutcome {
     shutdown_requested: bool,
     state_changed: bool,
@@ -12903,6 +13135,39 @@ async fn handle_runtime_ipc_work(
                 .and_then(|_lock| collect_runtime_mailbox_status(state_directory));
             match status {
                 Ok(status) => RuntimeIpcResponse::MailboxStatus(status),
+                Err(error) => RuntimeIpcResponse::Error {
+                    message: format!("{error:#}"),
+                },
+            }
+        }
+        RuntimeIpcCommand::ImportVolunteerStorageOffer { encoded_offer } => {
+            match with_locked_state(state_directory, || {
+                import_runtime_volunteer_storage_offer(state_directory, &encoded_offer)
+            }) {
+                Ok(import) => {
+                    state_changed = import.outcome != "already-present";
+                    RuntimeIpcResponse::VolunteerStorageOfferImported(Box::new(import))
+                }
+                Err(error) => RuntimeIpcResponse::Error {
+                    message: format!("{error:#}"),
+                },
+            }
+        }
+        RuntimeIpcCommand::SelectVolunteerStorageProviders {
+            selection_salt,
+            requested,
+        } => {
+            let selection = StateDirectoryLock::acquire(state_directory)
+                .context("lock runtime state for volunteer provider selection")
+                .and_then(|_lock| {
+                    select_runtime_volunteer_storage_providers(
+                        state_directory,
+                        selection_salt,
+                        requested,
+                    )
+                });
+            match selection {
+                Ok(selection) => RuntimeIpcResponse::VolunteerStorageProviders(Box::new(selection)),
                 Err(error) => RuntimeIpcResponse::Error {
                     message: format!("{error:#}"),
                 },
@@ -16532,8 +16797,9 @@ async fn start_runtime_volunteer_storage(
         "runtime_volunteer_storage_offer_expires_at_unix_seconds={}",
         offer.expires_at_unix_seconds()
     );
-    println!("runtime_volunteer_storage_offer_distribution=manual-export-only");
-    println!("runtime_volunteer_storage_discovery=false");
+    println!("runtime_volunteer_storage_offer_distribution=manual-export-plus-bounded-import");
+    println!("runtime_volunteer_storage_discovery=verified-expiring-offer-registry");
+    println!("runtime_volunteer_storage_selection=deterministic-transport-distinct");
     println!("runtime_volunteer_storage_replication=false");
     println!("runtime_volunteer_storage_policy_refresh=runtime-restart-required");
     println!("runtime_volunteer_storage_os_background_service=false");
@@ -25225,6 +25491,20 @@ fn encode_hex(bytes: &[u8]) -> String {
     encoded
 }
 
+fn decode_hex_32(value: &str, kind: &str) -> Result<[u8; 32]> {
+    ensure!(
+        value.len() == 64 && value.is_ascii(),
+        "{kind} must contain exactly 64 hexadecimal characters"
+    );
+    let mut decoded = [0_u8; 32];
+    for (index, byte) in decoded.iter_mut().enumerate() {
+        let offset = index * 2;
+        *byte = u8::from_str_radix(&value[offset..offset + 2], 16)
+            .with_context(|| format!("{kind} contains non-hexadecimal characters"))?;
+    }
+    Ok(decoded)
+}
+
 fn seed_history(
     state_dir: PathBuf,
     conversation: String,
@@ -25729,6 +26009,77 @@ mod tests {
             .portmapper_config(iroh::endpoint::PortmapperConfig::Disabled)
             .net_report_config(iroh::endpoint::NetReportConfig::minimal())
             .bind_addr((std::net::Ipv4Addr::LOCALHOST, 0))?)
+    }
+
+    #[test]
+    fn runtime_provider_import_and_selection_are_capability_free_and_deterministic() -> Result<()> {
+        use kilogram_mailbox::MailboxStoreIdentity;
+
+        let directory = tempfile::tempdir()?;
+        let state_directory = directory.path().join("state");
+        fs::create_dir_all(&state_directory)?;
+        let now = unix_time_now()?;
+        let endpoint_a = EndpointAddr::new(SecretKey::generate().public());
+        let endpoint_b = EndpointAddr::new(SecretKey::generate().public());
+
+        let invalid_endpoint_offer = MailboxStoreIdentity::from_secret_bytes([44_u8; 32])
+            .storage_offer(vec![1_u8], 1024, 512, now, 300)?;
+        assert!(
+            import_runtime_volunteer_storage_offer(
+                &state_directory,
+                &URL_SAFE_NO_PAD.encode(invalid_endpoint_offer.encode(now)?),
+            )
+            .is_err()
+        );
+
+        for (store_secret, endpoint) in [
+            (11_u8, endpoint_a.clone()),
+            (22_u8, endpoint_b),
+            // A second store key on the same endpoint must not increase the
+            // selected provider diversity.
+            (33_u8, endpoint_a),
+        ] {
+            let identity = MailboxStoreIdentity::from_secret_bytes([store_secret; 32]);
+            let offer = identity.storage_offer(
+                encode_mailbox_provider_endpoint(&endpoint)?,
+                200 * 1024 * 1024,
+                1024 * 1024,
+                now,
+                300,
+            )?;
+            let encoded = URL_SAFE_NO_PAD.encode(offer.encode(now)?);
+            let imported = import_runtime_volunteer_storage_offer(&state_directory, &encoded)?;
+            assert_eq!(imported.outcome, "inserted");
+            assert!(!imported.provider.offer_id.is_empty());
+        }
+
+        let first = select_runtime_volunteer_storage_providers(&state_directory, [91_u8; 32], 3)?;
+        let second = select_runtime_volunteer_storage_providers(&state_directory, [91_u8; 32], 3)?;
+        assert_eq!(first, second);
+        assert_eq!(first.active_provider_count, 3);
+        assert_eq!(first.selected_count, 2);
+        assert_eq!(
+            first
+                .providers
+                .iter()
+                .map(|provider| provider.transport_identity.as_str())
+                .collect::<BTreeSet<_>>()
+                .len(),
+            2
+        );
+
+        let projection = serde_json::to_string(&first)?;
+        for forbidden in [
+            "mailbox_id",
+            "read_capability",
+            "write_capability",
+            "account_id",
+            "device_id",
+            "conversation_id",
+        ] {
+            assert!(!projection.contains(forbidden));
+        }
+        Ok(())
     }
 
     #[test]

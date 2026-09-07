@@ -273,8 +273,10 @@ sessions, distribution, removal и key epochs и не решены этим пр
   500 MiB/30 days Ethernet/Wi-Fi с durable application-payload accounting, но
   ещё не решает Sybil admission, global fairness, relay overhead или
   проверяемость заявленной чужим provider квоты. M0.9.62 добавляет
-  store-signed expiring offer и ручной Iroh ingress, но privacy-preserving
-  discovery, provider diversity и replication policy остаются открытыми.
+  store-signed expiring offer и ручной Iroh ingress. M0.9.63 добавляет
+  bounded verified local registry и deterministic transport-distinct selection,
+  но automatic privacy-preserving offer gossip, Sybil-resistant diversity и
+  replication policy остаются открытыми.
 - Push-уведомления на Android/iOS без утечки содержания и социального графа.
 - Независимый second-builder, подписанный release provenance, обновления клиента
   и дальнейшая защита supply chain поверх M0.9.50 same-host gate.

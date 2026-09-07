@@ -1,6 +1,6 @@
 [package]
 name = "kilogram-mailbox-client"
-description = "Bounded HTTPS adapter and crash-safe blind mailbox client ledger for Kilogram"
+description = "Bounded mailbox adapters and durable client ledger/provider state for Kilogram"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

@@ -1924,3 +1924,21 @@ retirement остальных compatibility shadows ещё не реализов
 - `cargo fmt --check` и `git diff --check` проходят. Network-bearing test или
   runtime не запускался, поэтому новый Firewall prompt не инициировался;
   release build и ZIP не создавались.
+
+## M0.9.63 verification snapshot (2026-09-08)
+
+- Разработка и проверки используют offline debug/test profile, BelowNormal
+  priority и максимум четыре Cargo jobs; release build и ZIP не выполняются.
+- `kilogram-mailbox-client` 5/5 и `kilogram-runtime-ipc` 15/15 network-free
+  tests прошли; focused CLI provider import/selection test прошёл 1/1 без
+  bind/listen/connect.
+- Runtime integration compile-проверен; provider registry import тестирует
+  real signed Iroh `EndpointAddr`, но endpoint не запускает.
+- `verify-kilogram-volunteer-provider-selection-boundary.ps1` проверяет
+  durable bounded registry, monotonic/canonical import, deterministic
+  transport-distinct selection, capability-free IPC и no-new-EXE boundary.
+- Предыдущие volunteer storage и Iroh gates обновлены только на честный current
+  discovery status (`verified-expiring-offer-registry`) и повторно проходят.
+- Full workspace offline check и strict Clippy `-D warnings`, rustfmt и diff
+  check прошли. Network-bearing runtime не запускался, поэтому Windows Firewall
+  surface не создавался.

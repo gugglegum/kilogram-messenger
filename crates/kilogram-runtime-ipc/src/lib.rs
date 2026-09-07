@@ -21,7 +21,7 @@ use tokio::{
     time::timeout,
 };
 
-const IPC_VERSION: u8 = 23;
+const IPC_VERSION: u8 = 24;
 const MAX_DESCRIPTOR_BYTES: u64 = 16 * 1024;
 const MAX_LAUNCH_PROFILE_BYTES: u64 = 64 * 1024;
 const MAX_LAUNCH_PROFILE_PATHS: usize = 64;
@@ -549,6 +549,13 @@ pub enum RuntimeIpcCommand {
     },
     OutboxStatus,
     MailboxStatus,
+    ImportVolunteerStorageOffer {
+        encoded_offer: String,
+    },
+    SelectVolunteerStorageProviders {
+        selection_salt: [u8; 32],
+        requested: u8,
+    },
     CreateMailboxCapability {
         conversation: String,
         peer_account_id: AccountId,
@@ -944,6 +951,36 @@ pub struct RuntimeIpcMailboxStatus {
     pub capabilities: Vec<RuntimeIpcMailboxCapabilityStatus>,
 }
 
+/// Public, capability-free projection of one verified volunteer provider.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcVolunteerStorageProvider {
+    pub offer_id: String,
+    pub transport_identity: String,
+    pub store_key: String,
+    pub policy_class: String,
+    pub capacity_hint_bytes: u64,
+    pub max_record_bytes: u64,
+    pub issued_at_unix_seconds: u64,
+    pub expires_at_unix_seconds: u64,
+    pub observed_at_unix_seconds: u64,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcVolunteerStorageOfferImport {
+    pub outcome: String,
+    pub active_provider_count: usize,
+    pub provider: RuntimeIpcVolunteerStorageProvider,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcVolunteerStorageProviderSet {
+    pub selection_salt: String,
+    pub requested: u8,
+    pub selected_count: usize,
+    pub active_provider_count: usize,
+    pub providers: Vec<RuntimeIpcVolunteerStorageProvider>,
+}
+
 /// Secret-free lifecycle projection for one current mailbox capability chain.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct RuntimeIpcMailboxCapabilityStatus {
@@ -1307,6 +1344,8 @@ pub enum RuntimeIpcResponse {
     },
     OutboxStatus(RuntimeIpcOutboxStatus),
     MailboxStatus(RuntimeIpcMailboxStatus),
+    VolunteerStorageOfferImported(Box<RuntimeIpcVolunteerStorageOfferImport>),
+    VolunteerStorageProviders(Box<RuntimeIpcVolunteerStorageProviderSet>),
     MailboxCapabilityChanged(Box<RuntimeIpcMailboxCapabilityTransition>),
     OwnDeviceDirectoryApplied(Box<RuntimeIpcDeviceDirectoryUpdate>),
     OwnDeviceDirectoryStatus(RuntimeIpcDeviceDirectoryStatus),
@@ -2033,6 +2072,64 @@ mod tests {
             "write_capability",
             "root_secret",
             "device_secret",
+            "encrypted_offer",
+        ] {
+            assert!(!public_projection.contains(forbidden));
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn volunteer_provider_ipc_is_bounded_and_capability_free() -> Result<(), Box<dyn Error>> {
+        for command in [
+            RuntimeIpcCommand::ImportVolunteerStorageOffer {
+                encoded_offer: "public-signed-offer".to_owned(),
+            },
+            RuntimeIpcCommand::SelectVolunteerStorageProviders {
+                selection_salt: [7_u8; 32],
+                requested: 3,
+            },
+        ] {
+            let encoded = postcard::to_allocvec(&command)?;
+            assert_eq!(
+                postcard::from_bytes::<RuntimeIpcCommand>(&encoded)?,
+                command
+            );
+        }
+
+        let provider = RuntimeIpcVolunteerStorageProvider {
+            offer_id: "11".repeat(32),
+            transport_identity: "22".repeat(32),
+            store_key: "33".repeat(32),
+            policy_class: "bounded-volunteer".to_owned(),
+            capacity_hint_bytes: 200 * 1024 * 1024,
+            max_record_bytes: 1024 * 1024,
+            issued_at_unix_seconds: 1_000,
+            expires_at_unix_seconds: 1_900,
+            observed_at_unix_seconds: 1_001,
+        };
+        let response = RuntimeIpcResponse::VolunteerStorageProviders(Box::new(
+            RuntimeIpcVolunteerStorageProviderSet {
+                selection_salt: "44".repeat(32),
+                requested: 3,
+                selected_count: 1,
+                active_provider_count: 1,
+                providers: vec![provider],
+            },
+        ));
+        let encoded = postcard::to_allocvec(&response)?;
+        assert_eq!(
+            postcard::from_bytes::<RuntimeIpcResponse>(&encoded)?,
+            response
+        );
+        let public_projection = serde_json::to_string(&response)?;
+        for forbidden in [
+            "mailbox_id",
+            "read_capability",
+            "write_capability",
+            "account_id",
+            "device_id",
+            "conversation_id",
             "encrypted_offer",
         ] {
             assert!(!public_projection.contains(forbidden));
