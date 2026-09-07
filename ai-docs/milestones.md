@@ -1,6 +1,6 @@
 # Технические этапы
 
-Актуально на: 2026-09-06.
+Актуально на: 2026-09-08.
 
 ## Правило нумерации и отчётов
 
@@ -3468,21 +3468,54 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - network-free self-test принимает coherent synthetic evidence и отклоняет
   tampered EXE; отдельный static boundary запрещает automatic triggers,
   floating actions, packaging и production attestation bypass;
-- workflow создан, но не запускался: independent reproduction/signed release
-  ещё не заявлены, release/ZIP/network process не создавались;
+- последующий manual run exact commit успешно скомпилировал target на GitHub,
+  но fail closed обнаружил расхождение 1024 bytes: local MSVC linker 14.44,
+  hosted 14.51; attestation не создавался, а strict cross-environment
+  reproducibility перенесена в public-release hardening и не блокирует M1;
 - contract зафиксирован в
   [`../docs/RFC-0081-independent-builder-and-signed-provenance.md`](../docs/RFC-0081-independent-builder-and-signed-provenance.md).
 
+### M0.9.60 — portable M1 acceptance kit и HTTPS mailbox preflight: выполнено
+
+Реализовано:
+
+- explicit clean-HEAD builder создаёт обычную no-clobber папку, а не ZIP;
+  собирает только debug `kilogram-cli.exe`/`kilogram-windows.exe` с bounded
+  Cargo jobs и stable names, не запускает network process;
+- `BUILD-INFO.json` связывает exact commit, debug profile, длину и SHA-256 обоих
+  EXE; ordered driver проверяет эти значения перед каждым действием;
+- переносимый driver перечисляет 23 фиксированных шага M0.9.58 и вызывает
+  existing foreground runtime/status/evidence helpers с exact phase filenames;
+- actual Alice/Bob role config, runtime profile, bearer-bearing IPC descriptor,
+  state и keys обязаны находиться вне shared kit/evidence; записи evidence
+  остаются no-clobber;
+- mailbox preflight до phase 01 проверяет absolute HTTPS URL, default Windows
+  TLS trust, disabled redirects, exact bounded `ok\n`, startup log,
+  `opaque-redb-v1` и pinned store key, отклоняя application IDs;
+- documented store-on-Alice topology оставляет Alice PC, loopback-only store и
+  HTTPS proxy online при остановленном messenger; whole-PC-off delivery честно
+  требует external always-on store/peer;
+- network-free preflight self-test отвергает wrong key и remote HTTP; новый
+  static gate проверяет trust/no-redirect, stable hashes, private-state
+  boundary, debug/no-archive policy, полный step inventory и отсутствие нового
+  executable;
+- negative dirty-worktree generator guard прошёл до build; clean generator
+  path, Cargo build и реальная сеть на этом этапе не запускались, поэтому
+  release/ZIP/Firewall surface не создавались;
+- contract и operator guide зафиксированы в
+  [`../docs/RFC-0082-m1-acceptance-kit-and-mailbox-preflight.md`](../docs/RFC-0082-m1-acceptance-kit-and-mailbox-preflight.md)
+  и
+  [`../docs/M0.9.60-M1-ACCEPTANCE-RU.md`](../docs/M0.9.60-M1-ACCEPTANCE-RU.md).
+
 ### Следующий этап
 
-1. Провести подготовленный M0.9.58 controlled Alice/Bob field run и сохранить
+1. В согласованное окно явно создать M0.9.60 debug kit, провести M0.9.58
+   controlled Alice/Bob field run и сохранить
    машинно проверяемые direct/relay/mailbox evidence плюс отдельное человеческое
-   подтверждение GUI states. Не запускать сеть и не собирать переносимый
-   debug-набор вне согласованного тестового окна.
-2. Когда потребуется первый публичный security artifact, выполнить clean exact-
-   HEAD M0.9.50 local reproduction, вручную запустить M0.9.59 workflow и
-   проверить скачанные attested subjects production verifier-ом. До этого не
-   называть foundation завершённой independent reproduction.
+   подтверждение GUI states. Store может быть на Alice только при работающих
+   Alice PC/HTTPS proxy; preflight обязан пройти с Bob-visible trusted URL.
+2. До первого публичного security artifact pin-нуть linker/SDK либо controlled
+   alternative и повторить M0.9.59 до matched external hash и attestation.
 3. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 4. Добавить macOS/Linux/mobile providers той же platform boundary.

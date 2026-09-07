@@ -1871,3 +1871,39 @@ retirement остальных compatibility shadows ещё не реализов
 - Реальный GitHub workflow сознательно не запускался. Внешний hash/attestation
   появятся только после отдельного clean M0.9.50 run и ручного dispatch для
   exact commit.
+
+## M0.9.59 external execution addendum (2026-09-08)
+
+- Manual GitHub Actions run `34152872647` на exact commit
+  `e84d557dd80e07721296777aebe8ebbc6a8af392` успешно собрал isolated
+  `kilogram-offline.exe`, но strict byte gate завершился ожидаемым failure.
+- Local artifact: SHA-256
+  `c93bd111444649727ccafcaea01a953aad65861b34d6459a48a490299fa76e56`,
+  2,458,112 bytes, PE linker 14.44. Hosted artifact: SHA-256
+  `53bc307e9ab1aee35fb98332af2044177421613756dc94e8c22775de0a3c3bb2`,
+  2,459,136 bytes, PE linker 14.51.
+- GitHub runner `win25-vs2026`, image `20260824.214.3`; rustc/cargo 1.98.0 на
+  обеих сторонах. Attestation step был skipped, divergent evidence сохранён
+  bounded artifact-ом. Это independent compile evidence, не reproducibility.
+
+## M0.9.60 verification snapshot (2026-09-08)
+
+- `test-kilogram-mailbox-store-preflight.ps1 -SelfTest` network-free принял
+  coherent trusted-HTTPS/startup-log fixture и отверг wrong pinned key и remote
+  cleartext HTTP.
+- Portable driver `-ListSteps` детерминированно вывел 23 шага от
+  `store-preflight` до `verify`; source parse прошёл без PowerShell syntax
+  errors.
+- `verify-kilogram-mailbox-field-evidence.ps1 -SelfTest` повторно принял valid
+  lifecycle evidence и отверг metadata leak.
+- Все семь static gates прошли: blind mailbox, runtime flow, capability
+  lifecycle, convergence, desktop control, field harness и новый M1 acceptance
+  kit boundary.
+- Новый gate подтвердил default Windows TLS trust без redirect/certificate
+  bypass, stable debug EXE hashes, local-private profile/IPC/state boundary,
+  complete prerequisite-ordered step map, отсутствие release/ZIP и нового EXE.
+- Negative generator check с одним Cargo job fail closed остановился на dirty
+  worktree до output/build; clean build path оставлен до test window.
+- `git diff --check` прошёл. Rust source не менялся; Cargo check/Clippy не
+  требовались. Debug EXE не пересобирались, network/Firewall surface и архив не
+  создавались.

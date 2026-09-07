@@ -1,6 +1,7 @@
 # RFC-0081: Independent builder and signed provenance foundation (M0.9.59)
 
-Status: implemented but not externally executed in M0.9.59.
+Status: implemented in M0.9.59; externally exercised after the milestone with
+a diagnostic byte divergence and no attestation.
 
 ## 1. Problem
 
@@ -86,3 +87,23 @@ allowed only after:
 
 No release, tag, GitHub workflow run, local release build, ZIP or network-bearing
 Kilogram process is created by this milestone itself.
+
+## 6. First external result
+
+The later manual GitHub run for commit
+`e84d557dd80e07721296777aebe8ebbc6a8af392` rebuilt the intended offline target
+but did not pass byte equality:
+
+- local: SHA-256
+  `c93bd111444649727ccafcaea01a953aad65861b34d6459a48a490299fa76e56`,
+  2,458,112 bytes, MSVC linker 14.44;
+- GitHub: SHA-256
+  `53bc307e9ab1aee35fb98332af2044177421613756dc94e8c22775de0a3c3bb2`,
+  2,459,136 bytes, MSVC linker 14.51.
+
+The fail-closed workflow behaved correctly: it retained bounded diagnostic
+evidence, skipped attestation and failed the job. The independent build itself
+is useful evidence that the source builds elsewhere, but it is not a
+reproducibility or provenance claim. Pinning the linker/SDK or adopting another
+controlled linker remains release-hardening work and is not an M1 messenger
+acceptance blocker.

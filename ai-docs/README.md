@@ -1,6 +1,6 @@
 # Память проекта Kilogram
 
-Актуально на: 2026-09-06.
+Актуально на: 2026-09-08.
 
 Эта папка — краткая проектная память и дорожная карта. Подробная техническая
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
@@ -676,6 +676,11 @@ EXE не создавались.
 - [`../docs/RFC-0081-independent-builder-and-signed-provenance.md`](../docs/RFC-0081-independent-builder-and-signed-provenance.md) —
   реализованный M0.9.59 manual-only GitHub-hosted Windows second-builder,
   byte-equality gate и fail-closed signed provenance verifier foundation.
+- [`../docs/RFC-0082-m1-acceptance-kit-and-mailbox-preflight.md`](../docs/RFC-0082-m1-acceptance-kit-and-mailbox-preflight.md) —
+  реализованный M0.9.60 no-archive debug kit, stable binary hash checks,
+  ordered field driver и trusted-HTTPS mailbox preflight.
+- [`../docs/M0.9.60-M1-ACCEPTANCE-RU.md`](../docs/M0.9.60-M1-ACCEPTANCE-RU.md) —
+  инструкция приёмки M1, включая ограниченный store-on-Alice вариант.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

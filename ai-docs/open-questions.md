@@ -179,8 +179,11 @@ sessions, distribution, removal и key epochs и не решены этим пр
   revocation и current-head convergence; M0.9.56 закрывает deterministic
   socket-free lost-ACK/restart regression, M0.9.57 — secret-free authenticated
   IPC и Windows lifecycle UI. M0.9.58 подготовил debug-only exact post-commit
-  lost-ACK hook, no-clobber field logs и fail-closed evidence verifier, но
-  реальный Alice/Bob direct+relay прогон ещё не выполнен. Открыты multi-store
+  lost-ACK hook, no-clobber field logs и fail-closed evidence verifier, а
+  M0.9.60 — stable debug kit и Bob-visible trusted-HTTPS preflight. Реальный
+  Alice/Bob direct+relay прогон ещё не выполнен. Store-on-Alice проверяет только
+  offline messenger при online Alice PC/proxy; whole-PC-off topology и
+  production deployment остаются открыты. Также открыты multi-store
   replication/erasure coding, private retrieval/push wakeup,
   Sybil/admission limits и unlinkability: один storage node всё ещё видит IP,
   timing, size и повторный доступ к одному pseudonymous mailbox.
@@ -218,8 +221,10 @@ sessions, distribution, removal и key epochs и не решены этим пр
   двойную реализацию signed artifact codec через общий network-free crate и
   dependency/duplicate gates. M0.9.50 добавляет same-host two-clean-root
   reproducibility gate, а M0.9.59 — manual GitHub-hosted second-builder и
-  fail-closed signed-attestation verification foundation. Реальный external run
-  ещё не выполнен; pinned immutable builder, trusted reusable workflow и
+  fail-closed signed-attestation verification foundation. Первый external run
+  скомпилировал target, но корректно fail closed разошёлся на 1024 bytes из-за
+  как минимум MSVC linker 14.44/14.51 и не получил attestation; pinned
+  linker/SDK или controlled alternative, trusted reusable workflow и
   release/update signing остаются открыты. Также открыты обнаружение конфликта между устройствами,
   которые никогда не обменивались bundle, и действительно распределённая
   cross-machine координация без доверенного scheduler.
