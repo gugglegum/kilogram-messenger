@@ -842,6 +842,19 @@ impl VolunteerMailboxService {
         self.state.mailbox_store.store_key()
     }
 
+    pub fn signed_storage_offer(
+        &self,
+        provider_endpoint: Vec<u8>,
+        issued_at_unix_seconds: u64,
+        validity_seconds: u64,
+    ) -> Result<SignedMailboxStorageOffer> {
+        self.state.mailbox_store.storage_offer(
+            provider_endpoint,
+            issued_at_unix_seconds,
+            validity_seconds,
+        )
+    }
+
     pub fn handle_peer_request(
         &self,
         authenticated_peer_id: &str,

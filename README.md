@@ -199,25 +199,28 @@ specified in
 The bounded client-side provider registry and deterministic transport-distinct
 selection are specified in
 [`docs/RFC-0085-bounded-volunteer-provider-registry-and-selection.md`](docs/RFC-0085-bounded-volunteer-provider-registry-and-selection.md).
+Authenticated bounded provider-offer gossip over existing peer sessions is
+specified in
+[`docs/RFC-0086-authenticated-bounded-volunteer-provider-gossip.md`](docs/RFC-0086-authenticated-bounded-volunteer-provider-gossip.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.63 bounded provider registry and selection — complete
+## Current milestone: M0.9.64 authenticated bounded provider gossip — complete
 
-The runtime now imports fresh store-signed volunteer offers into a durable
-256-entry default registry and rejects tamper, expiry, noncanonical encoding,
-same-generation forks and rollback. A transport-identity digest is derived
-only after the signed Iroh endpoint parses successfully.
+The runtime now imports its own fresh store-signed volunteer offer and exchanges
+randomized subsets with authority-current contacts over Root-authorized Device
+sessions. An exchange is globally limited to once per five minutes, eight
+offers, 2 KiB per offer, 20 KiB per canonical frame, two honest-client hops and
+a 15-minute offer age. Replies are bound to the exact request digest.
 
-An opaque per-item salt deterministically selects at most eight fresh offers
-while returning no more than one store per Iroh endpoint identity. IPC/CLI
-responses expose only public offer metadata and never mailbox capabilities or
-social identifiers. Offer carriage is still explicit/manual; bounded peer
-gossip and real multi-provider replication are next. No new executable,
-listener or background OS service was added. Details are in
-[`docs/RFC-0085-bounded-volunteer-provider-registry-and-selection.md`](docs/RFC-0085-bounded-volunteer-provider-registry-and-selection.md).
+The gossip payload contains no Account, Device, conversation or mailbox IDs
+and no mailbox capability. It uses no global directory, new executable,
+listener or background OS service. Hop metadata is a bandwidth bound for honest
+clients, not a cryptographic path proof; actual multi-provider mailbox
+replication remains the next step. Details are in
+[`docs/RFC-0086-authenticated-bounded-volunteer-provider-gossip.md`](docs/RFC-0086-authenticated-bounded-volunteer-provider-gossip.md).
 
 ## Previous milestone: M0.9.61 default volunteer blind storage — complete
 

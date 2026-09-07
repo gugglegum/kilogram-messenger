@@ -18,7 +18,10 @@ pub use ledger::{
     StoredOutboundReceipt,
 };
 pub use provider::{
-    DEFAULT_MAX_PROVIDER_OFFERS, MAX_PROVIDER_SELECTION, MailboxProviderImportOutcome,
+    DEFAULT_MAX_PROVIDER_OFFERS, MAX_PROVIDER_GOSSIP_AGE_SECONDS, MAX_PROVIDER_GOSSIP_FRAME_BYTES,
+    MAX_PROVIDER_GOSSIP_FRAME_VALIDITY_SECONDS, MAX_PROVIDER_GOSSIP_HOPS,
+    MAX_PROVIDER_GOSSIP_OFFER_BYTES, MAX_PROVIDER_GOSSIP_OFFERS, MAX_PROVIDER_SELECTION,
+    MailboxProviderGossipEntry, MailboxProviderGossipFrame, MailboxProviderImportOutcome,
     MailboxProviderOffer, MailboxProviderOfferId, MailboxProviderRegistry,
     MailboxProviderRegistryConfig,
 };

@@ -1942,3 +1942,23 @@ retirement остальных compatibility shadows ещё не реализов
 - Full workspace offline check и strict Clippy `-D warnings`, rustfmt и diff
   check прошли. Network-bearing runtime не запускался, поэтому Windows Firewall
   surface не создавался.
+
+## M0.9.64 verification snapshot (2026-09-08)
+
+- Реализован automatic bidirectional provider-offer gossip поверх existing
+  Root-authorized Device/Iroh session: максимум 8 offers, 2 KiB/offer, 2 hops,
+  15-minute age, 60-second frame, 24 KiB protocol wire и один exchange максимум
+  раз в пять минут; global directory отсутствует.
+- Registry сохраняет hop provenance в отдельной Redb table, поэтому прежний
+  M0.9.63 offer record остаётся совместим; direct observation может сбросить hop
+  в 0, но обычный gossip replay сохранённый hop не уменьшает.
+- Runtime импортирует собственный store-signed offer, обновляет его раз в пять
+  минут и не чаще раза в пять минут выбирает authority-current contact для
+  bounded exchange;
+  actual mailbox replication пока отключена.
+- `kilogram-mailbox-client` 7/7 и `kilogram-protocol` 16/16 network-free tests,
+  focused CLI reply-binding/endpoint-import test 1/1 прошли в debug profile с
+  BelowNormal priority и четырьмя Cargo jobs.
+- Новый provider-gossip gate и три предыдущих volunteer gates проходят;
+  release/ZIP не создавались, network endpoint/EXE не запускался, поэтому новый
+  Windows Firewall prompt не инициировался.

@@ -30,7 +30,8 @@ use kilogram_mailbox::{
     MailboxRequestNonce, MailboxStoragePolicyClass, MailboxStoreKey, SignedMailboxStorageOffer,
 };
 use kilogram_mailbox_client::{
-    MailboxClientLedger, MailboxClientLedgerConfig, MailboxHttpClient, MailboxOutboundState,
+    MAX_PROVIDER_GOSSIP_FRAME_BYTES, MAX_PROVIDER_GOSSIP_OFFER_BYTES, MailboxClientLedger,
+    MailboxClientLedgerConfig, MailboxHttpClient, MailboxOutboundState, MailboxProviderGossipFrame,
     MailboxProviderImportOutcome, MailboxProviderOffer, MailboxProviderRegistry,
     MailboxProviderRegistryConfig, OutboundEnqueueOutcome, PendingMailboxUpload,
 };
@@ -47,10 +48,10 @@ use kilogram_protocol::{
     DeviceAuthorizationRejected, EventId, EventPayload, HistoryRewrapBundle, HistoryRewrapRejected,
     HistoryRewrapRejectionReason, HistoryRewrapSas, LocalTextProjection,
     MAX_ENDPOINT_ANNOUNCEMENT_WIRE_BYTES, MAX_HISTORY_REWRAP_ENTRIES, MAX_INVENTORY_EVENT_IDS,
-    MAX_MAILBOX_CAPABILITY_UPDATE_WIRE_BYTES, RatchetRecipient, ServerResponse,
-    SignedDeviceSessionAuthorization, SignedEvent, SignedHistoryRecoveryCheckpoint,
-    SignedHistoryRewrapRequest, SignedHistoryRewrapTransfer, SignedSyncInventory, SyncPause,
-    SyncPaused, SyncSessionBinding,
+    MAX_MAILBOX_CAPABILITY_UPDATE_WIRE_BYTES, MAX_MAILBOX_PROVIDER_GOSSIP_WIRE_BYTES,
+    RatchetRecipient, ServerResponse, SignedDeviceSessionAuthorization, SignedEvent,
+    SignedHistoryRecoveryCheckpoint, SignedHistoryRewrapRequest, SignedHistoryRewrapTransfer,
+    SignedSyncInventory, SyncPause, SyncPaused, SyncSessionBinding,
 };
 use kilogram_ratchet::{
     AccountPrekeyDirectory, DEFAULT_PREKEY_POOL_SIZE, DEFAULT_PREKEY_POOL_VALIDITY_SECONDS,
@@ -272,6 +273,8 @@ const MAX_RUNTIME_MAILBOX_CAPABILITY_UPDATES: usize = 4_096;
 const DEFAULT_RUNTIME_MAILBOX_TTL_SECONDS: u64 = 24 * 60 * 60;
 const RUNTIME_MAILBOX_POLL_INTERVAL: Duration = Duration::from_secs(5);
 const RUNTIME_MAILBOX_CAPABILITY_UPDATE_INTERVAL: Duration = Duration::from_secs(30);
+const RUNTIME_MAILBOX_PROVIDER_GOSSIP_INTERVAL: Duration = Duration::from_secs(5 * 60);
+const RUNTIME_MAILBOX_PROVIDER_OFFER_REFRESH_INTERVAL: Duration = Duration::from_secs(5 * 60);
 const RUNTIME_TEST_DROP_MAILBOX_CAPABILITY_ACK_ONCE_ENV: &str =
     "KILOGRAM_TEST_DROP_MAILBOX_CAPABILITY_ACK_ONCE";
 const RUNTIME_TICKET_AUTOMATION_CHECK_INTERVAL: Duration = Duration::from_secs(5);
@@ -5191,6 +5194,93 @@ fn mailbox_provider_transport_identity(offer: &SignedMailboxStorageOffer) -> Res
     hasher.update(MAILBOX_PROVIDER_TRANSPORT_IDENTITY_DOMAIN);
     hasher.update(endpoint.id.to_string().as_bytes());
     Ok(*hasher.finalize().as_bytes())
+}
+
+fn random_mailbox_provider_gossip_entropy() -> Result<[u8; 32]> {
+    let mut entropy = [0_u8; 32];
+    getrandom::fill(&mut entropy).context("generate mailbox provider gossip entropy")?;
+    Ok(entropy)
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+struct RuntimeMailboxProviderGossipImport {
+    inserted: usize,
+    replaced: usize,
+    already_present: usize,
+    rejected: usize,
+    active_provider_count: usize,
+}
+
+impl RuntimeMailboxProviderGossipImport {
+    fn state_changed(self) -> bool {
+        self.inserted != 0 || self.replaced != 0
+    }
+}
+
+fn import_runtime_mailbox_provider_gossip(
+    state_directory: &Path,
+    encoded_frame: &[u8],
+    expected_reply_to: Option<[u8; 32]>,
+) -> Result<(
+    MailboxProviderGossipFrame,
+    RuntimeMailboxProviderGossipImport,
+)> {
+    ensure!(
+        encoded_frame.len() <= MAX_MAILBOX_PROVIDER_GOSSIP_WIRE_BYTES
+            && encoded_frame.len() <= MAX_PROVIDER_GOSSIP_FRAME_BYTES,
+        "mailbox provider gossip exceeds its bounded wire limit"
+    );
+    let now = unix_time_now()?;
+    let frame = MailboxProviderGossipFrame::decode_and_verify(encoded_frame, now)?;
+    ensure!(
+        frame.reply_to() == expected_reply_to,
+        "mailbox provider gossip reply binding is invalid"
+    );
+
+    // Parse every signed endpoint before starting durable imports. A malformed
+    // transport address rejects the whole frame without partial mutation.
+    let parsed = frame
+        .entries()
+        .iter()
+        .map(|entry| {
+            let offer = SignedMailboxStorageOffer::decode_and_verify(entry.encoded_offer(), now)?;
+            Ok::<_, anyhow::Error>((entry, mailbox_provider_transport_identity(&offer)?))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let registry = runtime_mailbox_provider_registry(state_directory)?;
+    let mut report = RuntimeMailboxProviderGossipImport::default();
+    for (entry, transport_identity) in parsed {
+        match registry.import_gossiped_offer(
+            entry.encoded_offer(),
+            transport_identity,
+            entry.transmitted_hops(),
+            now,
+        ) {
+            Ok((MailboxProviderImportOutcome::Inserted, _)) => report.inserted += 1,
+            Ok((MailboxProviderImportOutcome::Replaced, _)) => report.replaced += 1,
+            Ok((MailboxProviderImportOutcome::AlreadyPresent, _)) => {
+                report.already_present += 1;
+            }
+            Err(error) => {
+                report.rejected += 1;
+                eprintln!("runtime_mailbox_provider_gossip_offer_status=rejected error={error:#}");
+            }
+        }
+    }
+    report.active_provider_count = registry.active_offers(now)?.len();
+    Ok((frame, report))
+}
+
+fn import_runtime_own_mailbox_provider_offer(
+    state_directory: &Path,
+    encoded_offer: &[u8],
+) -> Result<MailboxProviderImportOutcome> {
+    let now = unix_time_now()?;
+    let offer = SignedMailboxStorageOffer::decode_and_verify(encoded_offer, now)?;
+    let transport_identity = mailbox_provider_transport_identity(&offer)?;
+    Ok(runtime_mailbox_provider_registry(state_directory)?
+        .import_offer(encoded_offer, transport_identity, now)?
+        .0)
 }
 
 fn runtime_device_list_digest(device_list: &AccountDeviceListSnapshot) -> Result<[u8; 32]> {
@@ -16686,6 +16776,8 @@ struct RuntimeVolunteerStorageServer {
     task: Option<JoinHandle<Result<()>>>,
     peer_service: VolunteerMailboxService,
     peer_permits: Arc<Semaphore>,
+    provider_endpoint: Vec<u8>,
+    provider_offer: Vec<u8>,
 }
 
 impl RuntimeVolunteerStorageServer {
@@ -16695,6 +16787,33 @@ impl RuntimeVolunteerStorageServer {
 
     fn try_peer_permit(&self) -> Option<OwnedSemaphorePermit> {
         Arc::clone(&self.peer_permits).try_acquire_owned().ok()
+    }
+
+    fn provider_offer(&self) -> &[u8] {
+        &self.provider_offer
+    }
+
+    fn refresh_provider_offer(&mut self, now_unix_seconds: u64) -> Result<&[u8]> {
+        let offer = self.peer_service.signed_storage_offer(
+            self.provider_endpoint.clone(),
+            now_unix_seconds,
+            VOLUNTEER_STORAGE_OFFER_VALIDITY_SECONDS,
+        )?;
+        self.provider_offer = offer.encode(now_unix_seconds)?;
+        println!(
+            "runtime_volunteer_storage_offer={}",
+            URL_SAFE_NO_PAD.encode(&self.provider_offer)
+        );
+        println!(
+            "runtime_volunteer_storage_offer_expires_at_unix_seconds={}",
+            offer.expires_at_unix_seconds()
+        );
+        println!(
+            "runtime_volunteer_storage_offer_gossip_eligible={}",
+            self.provider_offer.len() <= MAX_PROVIDER_GOSSIP_OFFER_BYTES
+        );
+        println!("runtime_volunteer_storage_offer_refresh=completed");
+        Ok(&self.provider_offer)
     }
 
     async fn shutdown(mut self) -> Result<()> {
@@ -16764,8 +16883,9 @@ async fn start_runtime_volunteer_storage(
     let store_key = server.mailbox_store_key();
     let peer_service = server.mailbox_peer_service();
     let offer_issued_at = unix_time_now()?;
+    let provider_endpoint = encode_mailbox_provider_endpoint(&endpoint.addr())?;
     let offer = server.signed_mailbox_storage_offer(
-        encode_mailbox_provider_endpoint(&endpoint.addr())?,
+        provider_endpoint.clone(),
         offer_issued_at,
         VOLUNTEER_STORAGE_OFFER_VALIDITY_SECONDS,
     )?;
@@ -16791,23 +16911,29 @@ async fn start_runtime_volunteer_storage(
     println!("runtime_volunteer_storage_ingress=dedicated-iroh-alpn-plus-loopback");
     println!(
         "runtime_volunteer_storage_offer={}",
-        URL_SAFE_NO_PAD.encode(offer_encoded)
+        URL_SAFE_NO_PAD.encode(&offer_encoded)
     );
     println!(
         "runtime_volunteer_storage_offer_expires_at_unix_seconds={}",
         offer.expires_at_unix_seconds()
     );
-    println!("runtime_volunteer_storage_offer_distribution=manual-export-plus-bounded-import");
+    println!(
+        "runtime_volunteer_storage_offer_gossip_eligible={}",
+        offer_encoded.len() <= MAX_PROVIDER_GOSSIP_OFFER_BYTES
+    );
+    println!("runtime_volunteer_storage_offer_distribution=authenticated-bounded-peer-gossip");
     println!("runtime_volunteer_storage_discovery=verified-expiring-offer-registry");
     println!("runtime_volunteer_storage_selection=deterministic-transport-distinct");
     println!("runtime_volunteer_storage_replication=false");
-    println!("runtime_volunteer_storage_policy_refresh=runtime-restart-required");
+    println!("runtime_volunteer_storage_policy_refresh=automatic-five-minutes");
     println!("runtime_volunteer_storage_os_background_service=false");
     Ok(Some(RuntimeVolunteerStorageServer {
         shutdown: Some(shutdown_sender),
         task: Some(task),
         peer_service,
         peer_permits,
+        provider_endpoint,
+        provider_offer: offer_encoded,
     }))
 }
 
@@ -17015,8 +17141,16 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
         })?;
         println!("runtime_own_device_roster_reconciled={reconciled}");
     }
-    let volunteer_storage_server =
+    let mut volunteer_storage_server =
         start_runtime_volunteer_storage(volunteer_storage, current_network, &endpoint).await?;
+    if let Some(server) = volunteer_storage_server.as_ref() {
+        match import_runtime_own_mailbox_provider_offer(&state_dir, server.provider_offer()) {
+            Ok(outcome) => println!("runtime_volunteer_storage_provider_registry={outcome:?}"),
+            Err(error) => {
+                eprintln!("runtime_volunteer_storage_provider_registry=failed error={error:#}")
+            }
+        }
+    }
     println!("status=runtime-listening");
 
     let session_binding = SyncSessionBinding::from_transport_label(&endpoint.id().to_string());
@@ -17034,6 +17168,9 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
         tokio::time::Instant::now() - RUNTIME_MAILBOX_CAPABILITY_UPDATE_INTERVAL;
     let mut last_mailbox_capability_update_attempts = BTreeMap::new();
     let mut last_mailbox_polls = BTreeMap::new();
+    let mut last_mailbox_provider_gossip_attempts = BTreeMap::new();
+    let mut last_mailbox_provider_gossip_check = tokio::time::Instant::now();
+    let mut last_mailbox_provider_offer_refresh = tokio::time::Instant::now();
     #[cfg(debug_assertions)]
     if runtime_test_faults.drop_mailbox_capability_ack_once {
         println!("runtime_test_fault_armed=mailbox-capability-ack-drop-after-durable-apply-once");
@@ -17108,6 +17245,29 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                 }
             }
             RuntimeEvent::Tick => {
+                if last_mailbox_provider_offer_refresh.elapsed()
+                    >= RUNTIME_MAILBOX_PROVIDER_OFFER_REFRESH_INTERVAL
+                    && let Some(server) = volunteer_storage_server.as_mut()
+                {
+                    last_mailbox_provider_offer_refresh = tokio::time::Instant::now();
+                    let refresh =
+                        server
+                            .refresh_provider_offer(unix_time_now()?)
+                            .and_then(|offer| {
+                                import_runtime_own_mailbox_provider_offer(&state_dir, offer)
+                            });
+                    match refresh {
+                        Ok(outcome) => {
+                            println!("runtime_volunteer_storage_provider_registry={outcome:?}");
+                            if let Some(ipc_server) = ipc_server.as_ref() {
+                                ipc_server.publish_change();
+                            }
+                        }
+                        Err(error) => eprintln!(
+                            "runtime_volunteer_storage_offer_refresh=failed error={error:#}"
+                        ),
+                    }
+                }
                 if last_mailbox_capability_update_check.elapsed()
                     >= RUNTIME_MAILBOX_CAPABILITY_UPDATE_INTERVAL
                 {
@@ -17195,8 +17355,44 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                         }
                     }
                 }
+                let gossip_attempted = if matches!(delivery_attempt, RuntimeDeliveryAttempt::NoWork)
+                    && !mailbox_action
+                    && last_mailbox_provider_gossip_check.elapsed()
+                        >= RUNTIME_MAILBOX_PROVIDER_GOSSIP_INTERVAL
+                {
+                    last_mailbox_provider_gossip_check = tokio::time::Instant::now();
+                    match attempt_runtime_mailbox_provider_gossip(
+                        &endpoint,
+                        &state_dir,
+                        RUNTIME_MAILBOX_PROVIDER_GOSSIP_INTERVAL,
+                        &mut last_mailbox_provider_gossip_attempts,
+                    )
+                    .await
+                    {
+                        Ok(attempted) => attempted,
+                        Err(error) => {
+                            eprintln!(
+                                "runtime_mailbox_provider_gossip_status=failed error={error:#}"
+                            );
+                            false
+                        }
+                    }
+                } else {
+                    false
+                };
+                if gossip_attempted {
+                    if let Some(server) = ipc_server.as_ref() {
+                        server.publish_change();
+                    }
+                    outbound_actions += 1;
+                    last_activity = tokio::time::Instant::now();
+                    if max_outbound_actions != 0 && outbound_actions >= max_outbound_actions {
+                        break "outbound-action-limit";
+                    }
+                }
                 let sync_attempted = matches!(delivery_attempt, RuntimeDeliveryAttempt::NoWork)
                     && !mailbox_action
+                    && !gossip_attempted
                     && auto_sync_seconds != 0
                     && automatic_sync_started_at.elapsed()
                         >= Duration::from_secs(auto_sync_seconds)
@@ -17218,6 +17414,7 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                 }
                 if matches!(delivery_attempt, RuntimeDeliveryAttempt::NoWork)
                     && !mailbox_action
+                    && !gossip_attempted
                     && !sync_attempted
                     && last_ticket_automation_check.elapsed()
                         >= RUNTIME_TICKET_AUTOMATION_CHECK_INTERVAL
@@ -17885,6 +18082,208 @@ async fn send_runtime_mailbox_capability_update(
     println!("mailbox_capability_acknowledgement=session-bound-recipient-signed");
     println!("runtime_mailbox_capability_update_status=acknowledged");
     Ok(())
+}
+
+struct PreparedRuntimeMailboxProviderGossip {
+    contact_id: RuntimeContactId,
+    candidates: Vec<ResolvedRuntimeEndpointCandidate>,
+    local_certificate: DeviceCertificate,
+    local_authority: AccountAuthoritySnapshot,
+    request_frame: MailboxProviderGossipFrame,
+}
+
+async fn attempt_runtime_mailbox_provider_gossip(
+    endpoint: &Endpoint,
+    state_directory: &Path,
+    interval: Duration,
+    last_attempts: &mut BTreeMap<RuntimeContactId, tokio::time::Instant>,
+) -> Result<bool> {
+    let state_lock = acquire_runtime_state_lock(state_directory)
+        .await?
+        .context("runtime state lock remained busy while preparing provider gossip")?;
+    let preparation = (|| {
+        let device_state = load_command_device_state(state_directory)?;
+        let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+        let local_certificate = trust.load_certificate()?;
+        let local_authority = trust.load_own_authority_snapshot(&local_certificate)?;
+        let snapshot = load_runtime_state_snapshot(
+            state_directory,
+            local_certificate.account_id(),
+            local_certificate.device_id(),
+        )?;
+        let now = tokio::time::Instant::now();
+        let contact = snapshot
+            .contacts
+            .values()
+            .filter(|contact| {
+                last_attempts
+                    .get(&contact.contact_id())
+                    .is_none_or(|last| now.duration_since(*last) >= interval)
+            })
+            .min_by_key(|contact| last_attempts.get(&contact.contact_id()).copied())
+            .cloned();
+        let Some(contact) = contact else {
+            return Ok(None);
+        };
+        last_attempts.insert(contact.contact_id(), now);
+        let peer_authority = trust
+            .load_peer_authority_snapshot(contact.peer_account_id())
+            .context("load provider gossip peer authority high-water")?;
+        let candidates = load_runtime_endpoint_candidate_set(
+            &snapshot,
+            &contact,
+            &local_certificate,
+            &local_authority,
+            &peer_authority,
+        )?
+        .into_iter()
+        .filter(|candidate| candidate.authority_current)
+        .collect::<Vec<_>>();
+        ensure!(
+            !candidates.is_empty(),
+            "provider gossip contact has no current authenticated endpoint"
+        );
+        let now_unix_seconds = unix_time_now()?;
+        let registry = runtime_mailbox_provider_registry(state_directory)?;
+        let request_frame = MailboxProviderGossipFrame::from_registry(
+            &registry,
+            random_mailbox_provider_gossip_entropy()?,
+            None,
+            now_unix_seconds,
+        )?;
+        Ok(Some(PreparedRuntimeMailboxProviderGossip {
+            contact_id: contact.contact_id(),
+            candidates,
+            local_certificate,
+            local_authority,
+            request_frame,
+        }))
+    })();
+    drop(state_lock);
+    let Some(prepared) = preparation? else {
+        return Ok(false);
+    };
+
+    let mut failures = Vec::new();
+    for (index, candidate) in prepared.candidates.iter().enumerate() {
+        println!(
+            "runtime_mailbox_provider_gossip_endpoint_attempt={}",
+            index + 1
+        );
+        match send_runtime_mailbox_provider_gossip(endpoint, state_directory, &prepared, candidate)
+            .await
+        {
+            Ok(report) => {
+                println!(
+                    "runtime_mailbox_provider_gossip_contact_id={}",
+                    prepared.contact_id
+                );
+                println!("runtime_mailbox_provider_gossip_direction=bidirectional");
+                println!(
+                    "runtime_mailbox_provider_gossip_inserted={}",
+                    report.inserted
+                );
+                println!(
+                    "runtime_mailbox_provider_gossip_replaced={}",
+                    report.replaced
+                );
+                println!(
+                    "runtime_mailbox_provider_gossip_already_present={}",
+                    report.already_present
+                );
+                println!(
+                    "runtime_mailbox_provider_gossip_rejected={}",
+                    report.rejected
+                );
+                println!(
+                    "runtime_mailbox_provider_gossip_active_providers={}",
+                    report.active_provider_count
+                );
+                println!(
+                    "runtime_mailbox_provider_gossip_state_changed={}",
+                    report.state_changed()
+                );
+                println!("runtime_mailbox_provider_gossip_endpoint_failover_count={index}");
+                println!("runtime_mailbox_provider_gossip_payload_social_ids=false");
+                println!("runtime_mailbox_provider_gossip_status=completed");
+                return Ok(true);
+            }
+            Err(error) => {
+                failures.push(format!("{}: {error:#}", candidate.peer_device_id));
+                eprintln!(
+                    "runtime_mailbox_provider_gossip_endpoint_status=failed peer_device_id={} error={error:#}",
+                    candidate.peer_device_id
+                );
+            }
+        }
+    }
+    bail!(
+        "all {} authenticated provider gossip endpoint candidates failed: {}",
+        prepared.candidates.len(),
+        failures.join(" | ")
+    )
+}
+
+async fn send_runtime_mailbox_provider_gossip(
+    endpoint: &Endpoint,
+    state_directory: &Path,
+    prepared: &PreparedRuntimeMailboxProviderGossip,
+    candidate: &ResolvedRuntimeEndpointCandidate,
+) -> Result<RuntimeMailboxProviderGossipImport> {
+    let ticket = &candidate.ticket;
+    let route_policy = ticket.route_policy();
+    let connection = timeout(
+        CONNECTION_TIMEOUT,
+        endpoint.connect(ticket.endpoint().clone(), ALPN),
+    )
+    .await
+    .with_context(|| timeout_message("connect mailbox provider gossip peer", CONNECTION_TIMEOUT))?
+    .context("connect mailbox provider gossip peer")?;
+    let ready_path = await_route_policy(&connection, route_policy, ROUTE_POLICY_WAIT)
+        .await
+        .context("wait for a provider gossip path allowed by the contact")?;
+    print_ready_path(&ready_path);
+    let session_binding =
+        SyncSessionBinding::from_transport_label(&ticket.endpoint().id.to_string());
+    let device_state = load_command_device_state(state_directory)?;
+    ensure!(
+        device_state.identity().device_id() == prepared.local_certificate.device_id(),
+        "provider gossip source identity changed during network transfer"
+    );
+    authorize_with_listener(
+        &connection,
+        device_state.identity(),
+        prepared.local_certificate.clone(),
+        prepared.local_authority.clone(),
+        session_binding,
+    )
+    .await?;
+    let now = unix_time_now()?;
+    let request_bytes = prepared.request_frame.encode(now)?;
+    let request_id = prepared.request_frame.frame_id()?;
+    let (mut send, mut receive) =
+        open_bi(&connection, "open mailbox provider gossip stream").await?;
+    write_client_request(
+        &mut send,
+        &ClientRequest::MailboxProviderGossip(request_bytes),
+    )
+    .await?;
+    let response_bytes = match read_server_response(&mut receive).await? {
+        ServerResponse::MailboxProviderGossipAcknowledged(bytes) => bytes,
+        ServerResponse::MailboxProviderGossipRejected => {
+            bail!("peer rejected mailbox provider gossip")
+        }
+        _ => bail!("mailbox provider gossip received an unexpected response"),
+    };
+    let state_lock = acquire_runtime_state_lock(state_directory)
+        .await?
+        .context("runtime state lock remained busy while importing provider gossip")?;
+    let (_, report) =
+        import_runtime_mailbox_provider_gossip(state_directory, &response_bytes, Some(request_id))?;
+    drop(state_lock);
+    print_transport_diagnostics(&connection, route_policy).await?;
+    connection.close(0_u32.into(), b"kilogram provider gossip complete");
+    Ok(report)
 }
 
 struct PreparedRuntimeDelivery {
@@ -20284,6 +20683,58 @@ async fn handle_authorized_application_connection(
             println!("mailbox_capability_update_store={outcome:?}");
             println!("mailbox_capability_acknowledgement=session-bound-recipient-signed");
             println!("status=runtime-mailbox-capability-updated");
+            true
+        }
+        ClientRequest::MailboxProviderGossip(frame_bytes) => {
+            let imported =
+                import_runtime_mailbox_provider_gossip(state_directory, &frame_bytes, None);
+            let (request_frame, report) = match imported {
+                Ok(imported) => imported,
+                Err(error) => {
+                    write_server_response(
+                        &mut send,
+                        &ServerResponse::MailboxProviderGossipRejected,
+                    )
+                    .await?;
+                    return Err(error).context("reject mailbox provider gossip");
+                }
+            };
+            let now = unix_time_now()?;
+            let registry = runtime_mailbox_provider_registry(state_directory)?;
+            let response_frame = MailboxProviderGossipFrame::from_registry(
+                &registry,
+                random_mailbox_provider_gossip_entropy()?,
+                Some(request_frame.frame_id()?),
+                now,
+            )?;
+            write_server_response(
+                &mut send,
+                &ServerResponse::MailboxProviderGossipAcknowledged(response_frame.encode(now)?),
+            )
+            .await?;
+            println!("runtime_mailbox_provider_gossip_direction=inbound");
+            println!(
+                "runtime_mailbox_provider_gossip_inserted={}",
+                report.inserted
+            );
+            println!(
+                "runtime_mailbox_provider_gossip_replaced={}",
+                report.replaced
+            );
+            println!(
+                "runtime_mailbox_provider_gossip_already_present={}",
+                report.already_present
+            );
+            println!(
+                "runtime_mailbox_provider_gossip_rejected={}",
+                report.rejected
+            );
+            println!(
+                "runtime_mailbox_provider_gossip_active_providers={}",
+                report.active_provider_count
+            );
+            println!("runtime_mailbox_provider_gossip_payload_social_ids=false");
+            println!("status=runtime-mailbox-provider-gossip-exchanged");
             true
         }
         ClientRequest::AuthorizeDevice(_) => {
@@ -26078,6 +26529,72 @@ mod tests {
             "conversation_id",
         ] {
             assert!(!projection.contains(forbidden));
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn runtime_provider_gossip_is_reply_bound_and_imports_verified_endpoints() -> Result<()> {
+        use kilogram_mailbox::MailboxStoreIdentity;
+
+        let directory = tempfile::tempdir()?;
+        let source_state = directory.path().join("source");
+        let target_state = directory.path().join("target");
+        fs::create_dir_all(&source_state)?;
+        fs::create_dir_all(&target_state)?;
+        let now = unix_time_now()?;
+        let endpoint = EndpointAddr::new(SecretKey::generate().public());
+        let offer = MailboxStoreIdentity::from_secret_bytes([71_u8; 32]).storage_offer(
+            encode_mailbox_provider_endpoint(&endpoint)?,
+            200 * 1024 * 1024,
+            1024 * 1024,
+            now,
+            300,
+        )?;
+        let encoded_offer = offer.encode(now)?;
+        import_runtime_own_mailbox_provider_offer(&source_state, &encoded_offer)?;
+        let source_registry = runtime_mailbox_provider_registry(&source_state)?;
+        let request =
+            MailboxProviderGossipFrame::from_registry(&source_registry, [81_u8; 32], None, now)?;
+        drop(source_registry);
+        let request_id = request.frame_id()?;
+        let (_, imported) =
+            import_runtime_mailbox_provider_gossip(&target_state, &request.encode(now)?, None)?;
+        assert_eq!(imported.inserted, 1);
+        assert_eq!(imported.active_provider_count, 1);
+
+        let target_registry = runtime_mailbox_provider_registry(&target_state)?;
+        let response = MailboxProviderGossipFrame::from_registry(
+            &target_registry,
+            [82_u8; 32],
+            Some(request_id),
+            now,
+        )?;
+        let (_, replayed) = import_runtime_mailbox_provider_gossip(
+            &source_state,
+            &response.encode(now)?,
+            Some(request_id),
+        )?;
+        assert_eq!(replayed.already_present, 1);
+        assert!(
+            import_runtime_mailbox_provider_gossip(
+                &source_state,
+                &response.encode(now)?,
+                Some([0_u8; 32]),
+            )
+            .is_err()
+        );
+
+        let debug = format!("{request:?}").to_ascii_lowercase();
+        for forbidden in [
+            "account_id",
+            "device_id",
+            "conversation_id",
+            "mailbox_id",
+            "read_capability",
+            "write_capability",
+        ] {
+            assert!(!debug.contains(forbidden));
         }
         Ok(())
     }

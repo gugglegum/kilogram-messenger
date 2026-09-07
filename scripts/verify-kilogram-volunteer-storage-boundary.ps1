@@ -38,7 +38,7 @@ foreach ($required in @(
     'runtime_volunteer_storage=disabled-by-user',
     'runtime_volunteer_storage=paused-by-network-policy',
     'runtime_volunteer_storage_ingress=dedicated-iroh-alpn-plus-loopback',
-    'runtime_volunteer_storage_offer_distribution=manual-export-plus-bounded-import',
+    'runtime_volunteer_storage_offer_distribution=authenticated-bounded-peer-gossip',
     'runtime_volunteer_storage_discovery=verified-expiring-offer-registry',
     'runtime_volunteer_storage_replication=false',
     'server.shutdown().await?'
@@ -94,5 +94,5 @@ Write-Output 'default_mobile_transfer_mib_per_30_days=0'
 Write-Output 'transfer_accounting=durable-application-payload'
 Write-Output 'runtime_scope=embedded-mailbox-only'
 Write-Output 'current_ingress=iroh-dedicated-alpn-plus-loopback'
-Write-Output 'peer_discovery=verified-bounded-import'
+Write-Output 'peer_discovery=authenticated-bounded-peer-gossip'
 Write-Output 'new_executable=false'

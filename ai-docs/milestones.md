@@ -3592,22 +3592,46 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - contract зафиксирован в
   [`../docs/RFC-0085-bounded-volunteer-provider-registry-and-selection.md`](../docs/RFC-0085-bounded-volunteer-provider-registry-and-selection.md).
 
+### M0.9.64 — authenticated bounded volunteer provider gossip: выполнено
+
+Реализовано:
+
+- existing Kilogram Iroh ALPN и Root-authorized Device handshake переносят
+  отдельный bidirectional provider-gossip request/response без нового listener,
+  executable или глобального directory;
+- canonical short-lived frame ограничен 8 offers, 2 KiB/offer, 24 KiB wire,
+  60 seconds;
+  каждый offer повторно проверяется по store signature, current expiry,
+  15-minute age, unique store key и parsed Iroh endpoint;
+- Redb registry получил совместимую отдельную hop-provenance table: direct=0,
+  transmission increments, max=2; gossip replay не может снизить сохранённый
+  hop, direct observation может;
+- subset выбирается fresh random entropy и domain-separated BLAKE3, максимум
+  один store key на transport identity; response связан с exact request digest;
+- runtime автоматически обменивается offers с authority-current contact не чаще
+  раза в пять минут, использует endpoint failover, импортирует собственный provider offer
+  и обновляет его каждые пять минут;
+- payload не содержит Account/Device/conversation/mailbox IDs или mailbox
+  capabilities; hop остаётся honest-client bound, не cryptographic path proof;
+- unit/runtime/protocol tests и static gate проходят без запуска endpoint;
+  actual mailbox replication остаётся false;
+- contract зафиксирован в
+  [`../docs/RFC-0086-authenticated-bounded-volunteer-provider-gossip.md`](../docs/RFC-0086-authenticated-bounded-volunteer-provider-gossip.md).
+
 ### Следующий этап
 
-1. M0.9.64: переносить bounded randomized subset fresh verified offers через
-   уже authenticated peer sessions с hop/age/count limits, без Account/Device/
-   conversation IDs в offer payload и без глобального directory.
-2. Затем связать per-item random selection salt с outbox dispatch, добавить
+1. M0.9.65: связать per-item random selection salt с durable outbox dispatch,
+   добавить
    actual multi-provider replication/store receipts и провести реальный
    Alice/Bob/volunteer field run; standalone HTTPS store оставить optional
    bootstrap/reference path.
-3. До первого публичного security artifact pin-нуть linker/SDK либо controlled
+2. До первого публичного security artifact pin-нуть linker/SDK либо controlled
    alternative и повторить M0.9.59 до matched external hash и attestation.
-4. Optional autostart/background mode оставить отдельной явной настройкой, не
+3. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
-5. Добавить macOS/Linux/mobile providers той же platform boundary.
-6. Спроектировать privacy-preserving gossip и first-contact freshness;
+4. Добавить macOS/Linux/mobile providers той же platform boundary.
+5. Спроектировать privacy-preserving gossip и first-contact freshness;
    M0.9.29 скрывает payload/явные IDs, но не access correlation.
-7. Membership removal и group governance проектировать вместе с ordered
+6. Membership removal и group governance проектировать вместе с ordered
    security events и MLS epoch; compact Merkle/range summary и независимый
    криптографический аудит остаются до публичного выпуска.

@@ -274,9 +274,13 @@ sessions, distribution, removal и key epochs и не решены этим пр
   ещё не решает Sybil admission, global fairness, relay overhead или
   проверяемость заявленной чужим provider квоты. M0.9.62 добавляет
   store-signed expiring offer и ручной Iroh ingress. M0.9.63 добавляет
-  bounded verified local registry и deterministic transport-distinct selection,
-  но automatic privacy-preserving offer gossip, Sybil-resistant diversity и
-  replication policy остаются открытыми.
+  bounded verified local registry и deterministic transport-distinct selection.
+  M0.9.64 добавляет automatic authenticated bounded gossip: 8 offers/frame,
+  2 honest-client hops, 15-minute offer age, 2 KiB/offer, 20 KiB/frame,
+  one exchange per five minutes и randomized
+  transport-distinct subset без social IDs/capabilities в payload. Открытыми
+  остаются Sybil-resistant diversity, cryptographic hop proof, access-correlation
+  privacy и actual replication policy.
 - Push-уведомления на Android/iOS без утечки содержания и социального графа.
 - Независимый second-builder, подписанный release provenance, обновления клиента
   и дальнейшая защита supply chain поверх M0.9.50 same-host gate.

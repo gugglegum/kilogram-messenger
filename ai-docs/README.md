@@ -689,6 +689,13 @@ EXE не создавались.
   реализованный M0.9.62 dedicated Iroh mailbox ALPN, capability-authenticated
   PUT/LIST/DELETE, bounded provider dispatch и store-signed expiring manual
   offer без нового EXE или public TCP listener.
+- [`../docs/RFC-0085-bounded-volunteer-provider-registry-and-selection.md`](../docs/RFC-0085-bounded-volunteer-provider-registry-and-selection.md) —
+  реализованный M0.9.63 durable bounded signed-offer registry и per-item
+  transport-distinct deterministic selection без social/capability linkage.
+- [`../docs/RFC-0086-authenticated-bounded-volunteer-provider-gossip.md`](../docs/RFC-0086-authenticated-bounded-volunteer-provider-gossip.md) —
+  реализованный M0.9.64 automatic short-lived offer exchange через existing
+  authenticated peer sessions с count/size/age/hop/rate limits, reply binding,
+  automatic own-offer refresh и без глобального directory.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

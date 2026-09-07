@@ -83,7 +83,7 @@ foreach ($required in @(
     'handle_runtime_volunteer_storage_connection',
     'try_peer_permit',
     'JoinSet::new()',
-    'runtime_volunteer_storage_offer_distribution=manual-export-plus-bounded-import',
+    'runtime_volunteer_storage_offer_distribution=authenticated-bounded-peer-gossip',
     'runtime_volunteer_storage_discovery=verified-expiring-offer-registry',
     'runtime_volunteer_storage_replication=false'
 )) {
@@ -102,6 +102,6 @@ Write-Output 'operations=capability-authenticated-put-list-delete'
 Write-Output 'offer=store-signed-expiring-endpoint-bound'
 Write-Output 'rate_limit=authenticated-iroh-endpoint-id'
 Write-Output 'transfer_limit=durable-shared-network-class-budget'
-Write-Output 'discovery=verified-bounded-import'
+Write-Output 'discovery=authenticated-bounded-peer-gossip'
 Write-Output 'replication=false'
 Write-Output 'new_executable=false'

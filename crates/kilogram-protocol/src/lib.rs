@@ -28,9 +28,9 @@ pub use wire::{
     HistoryRewrapRejectionReason, MAX_ENDPOINT_ANNOUNCEMENT_ACKNOWLEDGEMENT_WIRE_BYTES,
     MAX_ENDPOINT_ANNOUNCEMENT_WIRE_BYTES, MAX_INVENTORY_EVENT_IDS,
     MAX_MAILBOX_CAPABILITY_ACKNOWLEDGEMENT_WIRE_BYTES, MAX_MAILBOX_CAPABILITY_UPDATE_WIRE_BYTES,
-    MAX_SYNC_EVENTS_PER_BATCH, ServerResponse, SignedDeviceSessionAuthorization,
-    SignedSyncInventory, SyncComplete, SyncDiff, SyncEventBatch, SyncPause, SyncPaused,
-    SyncRejected, SyncRejectionReason, SyncSessionBinding,
+    MAX_MAILBOX_PROVIDER_GOSSIP_WIRE_BYTES, MAX_SYNC_EVENTS_PER_BATCH, ServerResponse,
+    SignedDeviceSessionAuthorization, SignedSyncInventory, SyncComplete, SyncDiff, SyncEventBatch,
+    SyncPause, SyncPaused, SyncRejected, SyncRejectionReason, SyncSessionBinding,
 };
 
 const EVENT_VERSION: u8 = 5;
@@ -1017,6 +1017,12 @@ pub enum ProtocolError {
 
     #[error("mailbox capability wire frame has {actual} bytes; maximum is {maximum}")]
     MailboxCapabilityFrameTooLarge { actual: usize, maximum: usize },
+
+    #[error("mailbox provider gossip wire frame must not be empty")]
+    EmptyMailboxProviderGossipFrame,
+
+    #[error("mailbox provider gossip wire frame has {actual} bytes; maximum is {maximum}")]
+    MailboxProviderGossipFrameTooLarge { actual: usize, maximum: usize },
 
     #[error("device authorization response belongs to account {actual}; expected {expected}")]
     DeviceAuthorizationAccountMismatch {
