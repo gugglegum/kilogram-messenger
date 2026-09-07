@@ -1907,3 +1907,20 @@ retirement остальных compatibility shadows ещё не реализов
 - `git diff --check` прошёл. Rust source не менялся; Cargo check/Clippy не
   требовались. Debug EXE не пересобирались, network/Firewall surface и архив не
   создавались.
+
+## M0.9.62 verification snapshot (2026-09-08)
+
+- Affected mailbox/store/Iroh/runtime packages прошли offline `cargo check` и
+  strict all-target Clippy с `-D warnings`, BelowNormal priority и четырьмя
+  Cargo jobs.
+- Четыре focused network-free tests прошли 1/1 каждый: signed offer
+  tamper/expiry, request-digest peer frame, offer EndpointAddr round trip и
+  durable peer-service PUT/idempotent replay/rate limit.
+- Старый volunteer-storage gate повторно подтвердил default 200 MiB,
+  500+500 MiB/30 days, mobile-off, durable quota и no-new-EXE boundary.
+- Новый `verify-kilogram-volunteer-iroh-boundary.ps1` подтвердил dedicated ALPN,
+  capability-authenticated PUT/LIST/DELETE, endpoint-bound expiring offer,
+  peer-identity rate limit, bounded runtime tasks и manual-only discovery.
+- `cargo fmt --check` и `git diff --check` проходят. Network-bearing test или
+  runtime не запускался, поэтому новый Firewall prompt не инициировался;
+  release build и ZIP не создавались.

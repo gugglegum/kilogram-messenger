@@ -20,8 +20,10 @@ pub use store::{
     MailboxPutOutcome, MailboxStoreConfig, StoredMailboxItem, StoredMailboxPage,
 };
 pub use wire::{
+    MAX_MAILBOX_PEER_REQUEST_BYTES, MAX_MAILBOX_PEER_RESPONSE_BYTES,
     MAX_MAILBOX_WIRE_REQUEST_BYTES, MAX_MAILBOX_WIRE_RESPONSE_BYTES, MailboxDeleteRequest,
-    MailboxDeleteResponse, MailboxListRequest, MailboxListResponse, MailboxPutRequest,
+    MailboxDeleteResponse, MailboxListRequest, MailboxListResponse, MailboxPeerOperation,
+    MailboxPeerRejection, MailboxPeerRequest, MailboxPeerResponse, MailboxPutRequest,
     MailboxPutResponse,
 };
 
@@ -30,6 +32,7 @@ const WRITE_AUTHORIZATION_DOMAIN: &[u8] = b"kilogram:blind-mailbox-write:v1\0";
 const READ_AUTHORIZATION_DOMAIN: &[u8] = b"kilogram:blind-mailbox-read:v1\0";
 const STORED_RECEIPT_DOMAIN: &[u8] = b"kilogram:blind-mailbox-stored-receipt:v1\0";
 const DELETE_RECEIPT_DOMAIN: &[u8] = b"kilogram:blind-mailbox-delete-receipt:v1\0";
+const STORAGE_OFFER_DOMAIN: &[u8] = b"kilogram:blind-mailbox-storage-offer:v1\0";
 const RECEIPT_ID_DOMAIN: &[u8] = b"kilogram:blind-mailbox-receipt-id:v1\0";
 const DELETE_RECEIPT_ID_DOMAIN: &[u8] = b"kilogram:blind-mailbox-delete-id:v1\0";
 const ENVELOPE_HPKE_INFO: &[u8] = b"kilogram:blind-mailbox-envelope:v1\0";
@@ -38,6 +41,10 @@ const KEY_BYTES: usize = 32;
 const MAX_ADDRESS_BYTES: usize = 256;
 const MAX_AUTHORIZATION_BYTES: usize = 1_024;
 const MAX_RECEIPT_BYTES: usize = 1_024;
+pub const MAX_MAILBOX_STORAGE_ENDPOINT_BYTES: usize = 16 * 1024;
+pub const MAX_MAILBOX_STORAGE_OFFER_BYTES: usize = 24 * 1024;
+pub const MIN_MAILBOX_STORAGE_OFFER_VALIDITY_SECONDS: u64 = 30;
+pub const MAX_MAILBOX_STORAGE_OFFER_VALIDITY_SECONDS: u64 = 60 * 60;
 
 pub const MIN_MAILBOX_TTL_SECONDS: u64 = 60;
 pub const MAX_MAILBOX_TTL_SECONDS: u64 = 7 * 24 * 60 * 60;
@@ -365,6 +372,40 @@ impl MailboxStoreIdentity {
         MailboxStoreKey(self.0.verifying_key().to_bytes())
     }
 
+    pub fn storage_offer(
+        &self,
+        provider_endpoint: Vec<u8>,
+        capacity_hint_bytes: u64,
+        max_record_bytes: u64,
+        issued_at_unix_seconds: u64,
+        validity_seconds: u64,
+    ) -> Result<SignedMailboxStorageOffer, MailboxError> {
+        let expires_at_unix_seconds =
+            issued_at_unix_seconds
+                .checked_add(validity_seconds)
+                .ok_or(MailboxError::Invalid(
+                    "mailbox storage offer expiry overflow",
+                ))?;
+        let content = MailboxStorageOfferContent {
+            version: VERSION,
+            provider_endpoint,
+            store_key: self.store_key(),
+            policy_class: MailboxStoragePolicyClass::BoundedVolunteer,
+            capacity_hint_bytes,
+            max_record_bytes,
+            issued_at_unix_seconds,
+            expires_at_unix_seconds,
+            nonce: random_bytes()?,
+        };
+        let signature = self.0.sign(&signing_bytes(STORAGE_OFFER_DOMAIN, &content)?);
+        let offer = SignedMailboxStorageOffer {
+            content,
+            signature: signature.to_bytes().to_vec(),
+        };
+        offer.verify_at(issued_at_unix_seconds)?;
+        Ok(offer)
+    }
+
     pub(crate) fn stored_receipt(
         &self,
         mailbox_id: MailboxId,
@@ -416,6 +457,114 @@ impl MailboxStoreIdentity {
             content,
             signature: signature.to_bytes().to_vec(),
         })
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub enum MailboxStoragePolicyClass {
+    BoundedVolunteer,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+struct MailboxStorageOfferContent {
+    version: u8,
+    provider_endpoint: Vec<u8>,
+    store_key: MailboxStoreKey,
+    policy_class: MailboxStoragePolicyClass,
+    capacity_hint_bytes: u64,
+    max_record_bytes: u64,
+    issued_at_unix_seconds: u64,
+    expires_at_unix_seconds: u64,
+    nonce: [u8; KEY_BYTES],
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct SignedMailboxStorageOffer {
+    content: MailboxStorageOfferContent,
+    signature: Vec<u8>,
+}
+
+impl SignedMailboxStorageOffer {
+    pub fn verify_at(&self, now_unix_seconds: u64) -> Result<(), MailboxError> {
+        let validity = self
+            .content
+            .expires_at_unix_seconds
+            .checked_sub(self.content.issued_at_unix_seconds)
+            .ok_or(MailboxError::Invalid(
+                "mailbox storage offer time is invalid",
+            ))?;
+        if self.content.version != VERSION
+            || self.content.provider_endpoint.is_empty()
+            || self.content.provider_endpoint.len() > MAX_MAILBOX_STORAGE_ENDPOINT_BYTES
+            || !(MIN_MAILBOX_STORAGE_OFFER_VALIDITY_SECONDS
+                ..=MAX_MAILBOX_STORAGE_OFFER_VALIDITY_SECONDS)
+                .contains(&validity)
+            || self.content.capacity_hint_bytes == 0
+            || self.content.max_record_bytes == 0
+            || self.content.max_record_bytes > self.content.capacity_hint_bytes
+            || now_unix_seconds < self.content.issued_at_unix_seconds
+            || now_unix_seconds >= self.content.expires_at_unix_seconds
+        {
+            return Err(MailboxError::Invalid(
+                "mailbox storage offer fields or lifetime are invalid",
+            ));
+        }
+        verify_signature(
+            self.content.store_key.verifying_key()?,
+            STORAGE_OFFER_DOMAIN,
+            &self.content,
+            &self.signature,
+        )
+    }
+
+    pub fn encode(&self, now_unix_seconds: u64) -> Result<Vec<u8>, MailboxError> {
+        self.verify_at(now_unix_seconds)?;
+        let bytes = postcard::to_allocvec(self)?;
+        if bytes.is_empty() || bytes.len() > MAX_MAILBOX_STORAGE_OFFER_BYTES {
+            return Err(MailboxError::Invalid(
+                "mailbox storage offer size is invalid",
+            ));
+        }
+        Ok(bytes)
+    }
+
+    pub fn decode_and_verify(bytes: &[u8], now_unix_seconds: u64) -> Result<Self, MailboxError> {
+        if bytes.is_empty() || bytes.len() > MAX_MAILBOX_STORAGE_OFFER_BYTES {
+            return Err(MailboxError::Invalid(
+                "mailbox storage offer size is invalid",
+            ));
+        }
+        let offer: Self = postcard::from_bytes(bytes)?;
+        offer.verify_at(now_unix_seconds)?;
+        Ok(offer)
+    }
+
+    pub fn provider_endpoint(&self) -> &[u8] {
+        &self.content.provider_endpoint
+    }
+
+    pub fn store_key(&self) -> MailboxStoreKey {
+        self.content.store_key
+    }
+
+    pub fn policy_class(&self) -> MailboxStoragePolicyClass {
+        self.content.policy_class
+    }
+
+    pub fn capacity_hint_bytes(&self) -> u64 {
+        self.content.capacity_hint_bytes
+    }
+
+    pub fn max_record_bytes(&self) -> u64 {
+        self.content.max_record_bytes
+    }
+
+    pub fn issued_at_unix_seconds(&self) -> u64 {
+        self.content.issued_at_unix_seconds
+    }
+
+    pub fn expires_at_unix_seconds(&self) -> u64 {
+        self.content.expires_at_unix_seconds
     }
 }
 
@@ -1058,6 +1207,33 @@ mod tests {
             !encoded
                 .windows(b"authorized-event-bytes".len())
                 .any(|window| window == b"authorized-event-bytes")
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn storage_offer_is_store_signed_bounded_and_expiring() -> Result<()> {
+        let identity = MailboxStoreIdentity::from_secret_bytes([9_u8; 32]);
+        let offer = identity.storage_offer(vec![7_u8; 128], 200 * 1024 * 1024, 1024, 1_000, 300)?;
+        let encoded = offer.encode(1_001)?;
+        let decoded = SignedMailboxStorageOffer::decode_and_verify(&encoded, 1_001)?;
+        assert_eq!(decoded.store_key(), identity.store_key());
+        assert_eq!(
+            decoded.policy_class(),
+            MailboxStoragePolicyClass::BoundedVolunteer
+        );
+        assert_eq!(decoded.capacity_hint_bytes(), 200 * 1024 * 1024);
+        assert_eq!(decoded.max_record_bytes(), 1024);
+        assert_eq!(decoded.provider_endpoint(), &[7_u8; 128]);
+        assert!(SignedMailboxStorageOffer::decode_and_verify(&encoded, 1_300).is_err());
+
+        let mut tampered = decoded;
+        tampered.content.capacity_hint_bytes += 1;
+        assert!(tampered.verify_at(1_001).is_err());
+        assert!(
+            identity
+                .storage_offer(Vec::new(), 200, 100, 1_000, 300)
+                .is_err()
         );
         Ok(())
     }

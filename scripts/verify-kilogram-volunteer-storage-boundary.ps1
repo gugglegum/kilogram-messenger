@@ -37,7 +37,8 @@ foreach ($required in @(
     'Ipv4Addr::LOCALHOST',
     'runtime_volunteer_storage=disabled-by-user',
     'runtime_volunteer_storage=paused-by-network-policy',
-    'runtime_volunteer_storage_ingress=loopback-only-not-yet-peer-advertised',
+    'runtime_volunteer_storage_ingress=dedicated-iroh-alpn-plus-loopback',
+    'runtime_volunteer_storage_offer_distribution=manual-export-only',
     'runtime_volunteer_storage_discovery=false',
     'runtime_volunteer_storage_replication=false',
     'server.shutdown().await?'
@@ -92,6 +93,6 @@ Write-Output 'default_wifi_transfer_mib_per_30_days=500'
 Write-Output 'default_mobile_transfer_mib_per_30_days=0'
 Write-Output 'transfer_accounting=durable-application-payload'
 Write-Output 'runtime_scope=embedded-mailbox-only'
-Write-Output 'current_ingress=loopback-only'
-Write-Output 'peer_discovery=next-stage'
+Write-Output 'current_ingress=iroh-dedicated-alpn-plus-loopback'
+Write-Output 'peer_discovery=manual-offer-only'
 Write-Output 'new_executable=false'

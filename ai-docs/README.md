@@ -685,6 +685,10 @@ EXE не создавались.
   реализованный M0.9.61 default-on embedded volunteer blind store: 200 MiB
   storage, 500 MiB/30 days на Ethernet/Wi-Fi, durable quota, mobile-off и
   честная граница до будущего P2P ingress/discovery.
+- [`../docs/RFC-0084-volunteer-storage-iroh-ingress-and-offers.md`](../docs/RFC-0084-volunteer-storage-iroh-ingress-and-offers.md) —
+  реализованный M0.9.62 dedicated Iroh mailbox ALPN, capability-authenticated
+  PUT/LIST/DELETE, bounded provider dispatch и store-signed expiring manual
+  offer без нового EXE или public TCP listener.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

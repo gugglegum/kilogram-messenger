@@ -9,11 +9,219 @@ use crate::{
 
 const WIRE_VERSION: u8 = 1;
 const WIRE_OVERHEAD_BYTES: usize = 4 * 1024;
+const PEER_REQUEST_DIGEST_DOMAIN: &[u8] = b"kilogram:blind-mailbox-peer-request:v1\0";
 
 pub const MAX_MAILBOX_WIRE_REQUEST_BYTES: usize = MAX_MAILBOX_ENVELOPE_BYTES + WIRE_OVERHEAD_BYTES;
 pub const MAX_MAILBOX_WIRE_RESPONSE_BYTES: usize = MAX_MAILBOX_PAGE_ITEMS as usize
     * (MAX_MAILBOX_ENVELOPE_BYTES + WIRE_OVERHEAD_BYTES)
     + WIRE_OVERHEAD_BYTES;
+pub const MAX_MAILBOX_PEER_REQUEST_BYTES: usize =
+    MAX_MAILBOX_WIRE_REQUEST_BYTES + WIRE_OVERHEAD_BYTES;
+pub const MAX_MAILBOX_PEER_RESPONSE_BYTES: usize =
+    MAX_MAILBOX_WIRE_RESPONSE_BYTES + WIRE_OVERHEAD_BYTES;
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub enum MailboxPeerOperation {
+    Put,
+    List,
+    Delete,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct MailboxPeerRequest {
+    version: u8,
+    operation: MailboxPeerOperation,
+    payload: Vec<u8>,
+}
+
+impl MailboxPeerRequest {
+    pub fn put(request: &MailboxPutRequest) -> Result<Self, MailboxError> {
+        Self::new(MailboxPeerOperation::Put, request.encode()?)
+    }
+
+    pub fn list(request: &MailboxListRequest) -> Result<Self, MailboxError> {
+        Self::new(MailboxPeerOperation::List, request.encode()?)
+    }
+
+    pub fn delete(request: &MailboxDeleteRequest) -> Result<Self, MailboxError> {
+        Self::new(MailboxPeerOperation::Delete, request.encode()?)
+    }
+
+    fn new(operation: MailboxPeerOperation, payload: Vec<u8>) -> Result<Self, MailboxError> {
+        let request = Self {
+            version: WIRE_VERSION,
+            operation,
+            payload,
+        };
+        request.validate()?;
+        Ok(request)
+    }
+
+    pub fn encode(&self) -> Result<Vec<u8>, MailboxError> {
+        self.validate()?;
+        encode_bounded(self, MAX_MAILBOX_PEER_REQUEST_BYTES, "mailbox peer request")
+    }
+
+    pub fn decode_and_verify(bytes: &[u8]) -> Result<Self, MailboxError> {
+        let request: Self = decode_bounded(
+            bytes,
+            MAX_MAILBOX_PEER_REQUEST_BYTES,
+            "mailbox peer request",
+        )?;
+        request.validate()?;
+        Ok(request)
+    }
+
+    fn validate(&self) -> Result<(), MailboxError> {
+        if self.version != WIRE_VERSION {
+            return Err(MailboxError::Invalid(
+                "unsupported mailbox peer request version",
+            ));
+        }
+        match self.operation {
+            MailboxPeerOperation::Put => {
+                MailboxPutRequest::decode_and_verify(&self.payload)?;
+            }
+            MailboxPeerOperation::List => {
+                MailboxListRequest::decode_and_verify(&self.payload)?;
+            }
+            MailboxPeerOperation::Delete => {
+                MailboxDeleteRequest::decode_and_verify(&self.payload)?;
+            }
+        }
+        Ok(())
+    }
+
+    pub fn operation(&self) -> MailboxPeerOperation {
+        self.operation
+    }
+
+    pub fn payload(&self) -> &[u8] {
+        &self.payload
+    }
+
+    pub fn request_digest(&self) -> Result<[u8; 32], MailboxError> {
+        let encoded = self.encode()?;
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(PEER_REQUEST_DIGEST_DOMAIN);
+        hasher.update(&encoded);
+        Ok(*hasher.finalize().as_bytes())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub enum MailboxPeerRejection {
+    RateLimited,
+    TransferBudgetExhausted,
+    InvalidCapability,
+    StoreUnavailable,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+enum MailboxPeerOutcome {
+    Success(Vec<u8>),
+    Rejected(MailboxPeerRejection),
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct MailboxPeerResponse {
+    version: u8,
+    operation: MailboxPeerOperation,
+    request_digest: [u8; 32],
+    outcome: MailboxPeerOutcome,
+}
+
+impl MailboxPeerResponse {
+    pub fn success(request: &MailboxPeerRequest, payload: Vec<u8>) -> Result<Self, MailboxError> {
+        if payload.is_empty() || payload.len() > MAX_MAILBOX_WIRE_RESPONSE_BYTES {
+            return Err(MailboxError::Invalid(
+                "mailbox peer success payload size is invalid",
+            ));
+        }
+        let response = Self {
+            version: WIRE_VERSION,
+            operation: request.operation(),
+            request_digest: request.request_digest()?,
+            outcome: MailboxPeerOutcome::Success(payload),
+        };
+        response.validate_against(request)?;
+        Ok(response)
+    }
+
+    pub fn rejected(
+        request: &MailboxPeerRequest,
+        rejection: MailboxPeerRejection,
+    ) -> Result<Self, MailboxError> {
+        let response = Self {
+            version: WIRE_VERSION,
+            operation: request.operation(),
+            request_digest: request.request_digest()?,
+            outcome: MailboxPeerOutcome::Rejected(rejection),
+        };
+        response.validate_against(request)?;
+        Ok(response)
+    }
+
+    pub fn encode(&self, request: &MailboxPeerRequest) -> Result<Vec<u8>, MailboxError> {
+        self.validate_against(request)?;
+        encode_bounded(
+            self,
+            MAX_MAILBOX_PEER_RESPONSE_BYTES,
+            "mailbox peer response",
+        )
+    }
+
+    pub fn decode_and_verify(
+        bytes: &[u8],
+        request: &MailboxPeerRequest,
+    ) -> Result<Self, MailboxError> {
+        let response: Self = decode_bounded(
+            bytes,
+            MAX_MAILBOX_PEER_RESPONSE_BYTES,
+            "mailbox peer response",
+        )?;
+        response.validate_against(request)?;
+        Ok(response)
+    }
+
+    fn validate_against(&self, request: &MailboxPeerRequest) -> Result<(), MailboxError> {
+        request.validate()?;
+        if self.version != WIRE_VERSION
+            || self.operation != request.operation()
+            || self.request_digest != request.request_digest()?
+        {
+            return Err(MailboxError::Invalid(
+                "mailbox peer response does not match request",
+            ));
+        }
+        if let MailboxPeerOutcome::Success(payload) = &self.outcome
+            && (payload.is_empty() || payload.len() > MAX_MAILBOX_WIRE_RESPONSE_BYTES)
+        {
+            return Err(MailboxError::Invalid(
+                "mailbox peer success payload size is invalid",
+            ));
+        }
+        Ok(())
+    }
+
+    pub fn operation(&self) -> MailboxPeerOperation {
+        self.operation
+    }
+
+    pub fn success_payload(&self) -> Option<&[u8]> {
+        match &self.outcome {
+            MailboxPeerOutcome::Success(payload) => Some(payload),
+            MailboxPeerOutcome::Rejected(_) => None,
+        }
+    }
+
+    pub fn rejection(&self) -> Option<MailboxPeerRejection> {
+        match self.outcome {
+            MailboxPeerOutcome::Success(_) => None,
+            MailboxPeerOutcome::Rejected(rejection) => Some(rejection),
+        }
+    }
+}
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct MailboxPutRequest {
@@ -676,6 +884,60 @@ mod tests {
                 ..
             }
         ));
+        Ok(())
+    }
+
+    #[test]
+    fn peer_frame_authenticates_capability_and_binds_response_digest() -> Result<()> {
+        let read = MailboxReadCapability::from_secret_bytes([1_u8; 32]);
+        let write = MailboxWriteCapability::from_secret_bytes([2_u8; 32]);
+        let address = MailboxAddress::new(read.read_key(), write.write_key());
+        let recipient = DeviceEncryptionIdentity::from_secret_bytes([3_u8; 32]);
+        let item_id = MailboxItemId::from_bytes([4_u8; 32]);
+        let envelope = crate::MailboxEnvelope::seal(
+            address.mailbox_id(),
+            item_id,
+            1_000,
+            1_600,
+            recipient.public_key(),
+            b"opaque-peer-payload",
+        )?
+        .encode()?;
+        let authorization = write.authorize(address, item_id, 600, &envelope)?;
+        let put = MailboxPutRequest::new(address, authorization, envelope)?;
+        let request = MailboxPeerRequest::put(&put)?;
+        let request = MailboxPeerRequest::decode_and_verify(&request.encode()?)?;
+        assert_eq!(request.operation(), MailboxPeerOperation::Put);
+
+        let rejected =
+            MailboxPeerResponse::rejected(&request, MailboxPeerRejection::TransferBudgetExhausted)?;
+        let decoded =
+            MailboxPeerResponse::decode_and_verify(&rejected.encode(&request)?, &request)?;
+        assert_eq!(
+            decoded.rejection(),
+            Some(MailboxPeerRejection::TransferBudgetExhausted)
+        );
+
+        let other_item_id = MailboxItemId::from_bytes([5_u8; 32]);
+        let other_envelope = crate::MailboxEnvelope::seal(
+            address.mailbox_id(),
+            other_item_id,
+            1_000,
+            1_600,
+            recipient.public_key(),
+            b"other-opaque-peer-payload",
+        )?
+        .encode()?;
+        let other_authorization = write.authorize(address, other_item_id, 600, &other_envelope)?;
+        let other_request = MailboxPeerRequest::put(&MailboxPutRequest::new(
+            address,
+            other_authorization,
+            other_envelope,
+        )?)?;
+        assert!(
+            MailboxPeerResponse::decode_and_verify(&rejected.encode(&request)?, &other_request,)
+                .is_err()
+        );
         Ok(())
     }
 }

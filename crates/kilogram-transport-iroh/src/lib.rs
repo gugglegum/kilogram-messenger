@@ -5,13 +5,19 @@ use iroh::{
     Endpoint, EndpointAddr, RelayMode, RelayUrl,
     endpoint::{Builder, Connection, RecvStream, SendStream, presets},
 };
+use kilogram_mailbox::{
+    MAX_MAILBOX_PEER_REQUEST_BYTES, MAX_MAILBOX_PEER_RESPONSE_BYTES, MailboxPeerRequest,
+    MailboxPeerResponse, SignedMailboxStorageOffer,
+};
 use kilogram_protocol::{ClientRequest, ServerResponse};
 use serde::{Deserialize, Serialize};
 use tokio::time::{Instant, sleep, timeout};
 
 pub const ALPN: &[u8] = b"kilogram/m0/sync/8";
+pub const MAILBOX_ALPN: &[u8] = b"kilogram/m0/blind-mailbox/1";
 pub const MAX_WIRE_MESSAGE_BYTES: usize = 8 * 1024 * 1024;
 pub const WIRE_IO_TIMEOUT: Duration = Duration::from_secs(15);
+const MAX_MAILBOX_ENDPOINT_DESCRIPTOR_BYTES: usize = 16 * 1024;
 
 /// Controls which transport may carry Kilogram application protocol frames.
 ///
@@ -211,6 +217,79 @@ pub async fn write_server_response(send: &mut SendStream, response: &ServerRespo
     Ok(())
 }
 
+pub fn encode_mailbox_provider_endpoint(endpoint: &EndpointAddr) -> Result<Vec<u8>> {
+    let bytes = serde_json::to_vec(endpoint).context("encode mailbox provider endpoint")?;
+    ensure!(
+        !bytes.is_empty() && bytes.len() <= MAX_MAILBOX_ENDPOINT_DESCRIPTOR_BYTES,
+        "mailbox provider endpoint descriptor size is invalid"
+    );
+    Ok(bytes)
+}
+
+pub fn mailbox_provider_endpoint_from_offer(
+    offer: &SignedMailboxStorageOffer,
+) -> Result<EndpointAddr> {
+    let bytes = offer.provider_endpoint();
+    ensure!(
+        !bytes.is_empty() && bytes.len() <= MAX_MAILBOX_ENDPOINT_DESCRIPTOR_BYTES,
+        "mailbox provider endpoint descriptor size is invalid"
+    );
+    serde_json::from_slice(bytes).context("decode mailbox provider endpoint")
+}
+
+pub async fn read_mailbox_peer_request(receive: &mut RecvStream) -> Result<MailboxPeerRequest> {
+    let bytes = timeout(
+        WIRE_IO_TIMEOUT,
+        receive.read_to_end(MAX_MAILBOX_PEER_REQUEST_BYTES),
+    )
+    .await
+    .with_context(|| wire_timeout_message("read blind mailbox peer request"))?
+    .context("read blind mailbox peer request")?;
+    MailboxPeerRequest::decode_and_verify(&bytes)
+        .context("decode and authenticate blind mailbox peer request")
+}
+
+pub async fn write_mailbox_peer_request(
+    send: &mut SendStream,
+    request: &MailboxPeerRequest,
+) -> Result<()> {
+    timeout(WIRE_IO_TIMEOUT, send.write_all(&request.encode()?))
+        .await
+        .with_context(|| wire_timeout_message("send blind mailbox peer request"))?
+        .context("send blind mailbox peer request")?;
+    send.finish().context("finish blind mailbox peer request")?;
+    Ok(())
+}
+
+pub async fn read_mailbox_peer_response(
+    receive: &mut RecvStream,
+    request: &MailboxPeerRequest,
+) -> Result<MailboxPeerResponse> {
+    let bytes = timeout(
+        WIRE_IO_TIMEOUT,
+        receive.read_to_end(MAX_MAILBOX_PEER_RESPONSE_BYTES),
+    )
+    .await
+    .with_context(|| wire_timeout_message("read blind mailbox peer response"))?
+    .context("read blind mailbox peer response")?;
+    MailboxPeerResponse::decode_and_verify(&bytes, request)
+        .context("decode and bind blind mailbox peer response")
+}
+
+pub async fn write_mailbox_peer_response(
+    send: &mut SendStream,
+    request: &MailboxPeerRequest,
+    response: &MailboxPeerResponse,
+) -> Result<()> {
+    timeout(WIRE_IO_TIMEOUT, send.write_all(&response.encode(request)?))
+        .await
+        .with_context(|| wire_timeout_message("send blind mailbox peer response"))?
+        .context("send blind mailbox peer response")?;
+    send.finish()
+        .context("finish blind mailbox peer response")?;
+    Ok(())
+}
+
 fn wire_timeout_message(operation: &str) -> String {
     format!(
         "{operation} timed out after {:.1}s",
@@ -222,6 +301,7 @@ fn wire_timeout_message(operation: &str) -> String {
 mod tests {
     use super::*;
     use iroh::SecretKey;
+    use kilogram_mailbox::MailboxStoreIdentity;
 
     #[test]
     fn strict_route_policies_accept_only_the_requested_path() {
@@ -259,6 +339,24 @@ mod tests {
             endpoint_builder_for_remote(RoutePolicy::RelayOnly, &remote_without_relay).is_err()
         );
         assert!(endpoint_builder_for_remote(RoutePolicy::RelayOnly, &remote_with_relay).is_ok());
+        Ok(())
+    }
+
+    #[test]
+    fn signed_mailbox_offer_carries_a_bounded_iroh_endpoint() -> Result<()> {
+        let endpoint_id = SecretKey::generate().public();
+        let endpoint = EndpointAddr::new(endpoint_id)
+            .with_relay_url("https://euc1-1.relay.n0.iroh.link./".parse()?);
+        let identity = MailboxStoreIdentity::from_secret_bytes([9_u8; 32]);
+        let offer = identity.storage_offer(
+            encode_mailbox_provider_endpoint(&endpoint)?,
+            200 * 1024 * 1024,
+            1024 * 1024,
+            1_000,
+            300,
+        )?;
+        offer.verify_at(1_001)?;
+        assert_eq!(mailbox_provider_endpoint_from_offer(&offer)?, endpoint);
         Ok(())
     }
 }

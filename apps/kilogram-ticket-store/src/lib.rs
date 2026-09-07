@@ -2,6 +2,7 @@ use std::{
     collections::{BTreeMap, HashMap},
     fs::{self, OpenOptions},
     future::Future,
+    hash::Hash,
     io::{Read, Write},
     net::{IpAddr, Ipv4Addr, SocketAddr},
     path::{Path, PathBuf},
@@ -13,8 +14,9 @@ use anyhow::{Context, Result, ensure};
 use kilogram_mailbox::{
     BlindMailboxStore, DEFAULT_MAX_ITEMS_PER_MAILBOX, MAX_MAILBOX_ENVELOPE_BYTES,
     MailboxDeleteRequest, MailboxDeleteResponse, MailboxId, MailboxItemId, MailboxListRequest,
-    MailboxListResponse, MailboxPutRequest, MailboxPutResponse, MailboxStoreConfig,
-    MailboxStoreIdentity, MailboxStoreKey,
+    MailboxListResponse, MailboxPeerOperation, MailboxPeerRejection, MailboxPeerRequest,
+    MailboxPeerResponse, MailboxPutRequest, MailboxPutResponse, MailboxStoreConfig,
+    MailboxStoreIdentity, MailboxStoreKey, SignedMailboxStorageOffer,
 };
 use kilogram_ticket_publication::{
     TicketPublicationChannelId, TicketPublicationWriteKey, WRITE_KEY_HEADER,
@@ -624,43 +626,46 @@ struct WindowCounter {
 }
 
 #[derive(Debug)]
-struct RateLimiter {
+struct RateLimiter<K> {
     global: WindowCounter,
-    per_ip: HashMap<IpAddr, WindowCounter>,
-    per_ip_limit: u64,
+    per_subject: HashMap<K, WindowCounter>,
+    per_subject_limit: u64,
     global_limit: u64,
 }
 
-impl RateLimiter {
-    fn new(per_ip_limit: u64, global_limit: u64) -> Self {
+impl<K> RateLimiter<K>
+where
+    K: Eq + Hash,
+{
+    fn new(per_subject_limit: u64, global_limit: u64) -> Self {
         let now = Instant::now();
         Self {
             global: WindowCounter {
                 started: now,
                 count: 0,
             },
-            per_ip: HashMap::new(),
-            per_ip_limit,
+            per_subject: HashMap::new(),
+            per_subject_limit,
             global_limit,
         }
     }
 
-    fn allow(&mut self, address: IpAddr) -> bool {
+    fn allow(&mut self, subject: K) -> bool {
         let now = Instant::now();
         if now.duration_since(self.global.started) >= RATE_WINDOW {
             self.global = WindowCounter {
                 started: now,
                 count: 0,
             };
-            self.per_ip.clear();
+            self.per_subject.clear();
         } else {
-            self.per_ip
+            self.per_subject
                 .retain(|_, counter| now.duration_since(counter.started) < RATE_WINDOW);
         }
         if self.global.count >= self.global_limit {
             return false;
         }
-        let counter = self.per_ip.entry(address).or_insert(WindowCounter {
+        let counter = self.per_subject.entry(subject).or_insert(WindowCounter {
             started: now,
             count: 0,
         });
@@ -670,7 +675,7 @@ impl RateLimiter {
                 count: 0,
             };
         }
-        if counter.count >= self.per_ip_limit {
+        if counter.count >= self.per_subject_limit {
             return false;
         }
         self.global.count += 1;
@@ -682,7 +687,8 @@ impl RateLimiter {
 struct ServerState {
     store: OpaqueStore,
     mailbox_store: BlindMailboxStore,
-    limiter: Mutex<RateLimiter>,
+    limiter: Mutex<RateLimiter<IpAddr>>,
+    peer_limiter: Mutex<RateLimiter<String>>,
     permits: Arc<Semaphore>,
     max_record_bytes: usize,
     trust_x_real_ip: bool,
@@ -727,6 +733,10 @@ impl TicketStoreServer {
                 config.per_ip_requests_per_minute,
                 config.global_requests_per_minute,
             )),
+            peer_limiter: Mutex::new(RateLimiter::new(
+                config.per_ip_requests_per_minute,
+                config.global_requests_per_minute,
+            )),
             permits: Arc::new(Semaphore::new(config.max_concurrent_connections)),
             max_record_bytes: config.max_record_bytes,
             trust_x_real_ip: config.trust_x_real_ip,
@@ -751,6 +761,25 @@ impl TicketStoreServer {
 
     pub fn mailbox_store_key(&self) -> MailboxStoreKey {
         self.state.mailbox_store.store_key()
+    }
+
+    pub fn mailbox_peer_service(&self) -> VolunteerMailboxService {
+        VolunteerMailboxService {
+            state: Arc::clone(&self.state),
+        }
+    }
+
+    pub fn signed_mailbox_storage_offer(
+        &self,
+        provider_endpoint: Vec<u8>,
+        issued_at_unix_seconds: u64,
+        validity_seconds: u64,
+    ) -> Result<SignedMailboxStorageOffer> {
+        self.state.mailbox_store.storage_offer(
+            provider_endpoint,
+            issued_at_unix_seconds,
+            validity_seconds,
+        )
     }
 
     pub async fn run_until<F>(self, shutdown: F) -> Result<()>
@@ -800,6 +829,153 @@ impl TicketStoreServer {
         connections.abort_all();
         while connections.join_next().await.is_some() {}
         result
+    }
+}
+
+#[derive(Clone)]
+pub struct VolunteerMailboxService {
+    state: Arc<ServerState>,
+}
+
+impl VolunteerMailboxService {
+    pub fn store_key(&self) -> MailboxStoreKey {
+        self.state.mailbox_store.store_key()
+    }
+
+    pub fn handle_peer_request(
+        &self,
+        authenticated_peer_id: &str,
+        request: &MailboxPeerRequest,
+        now_unix_seconds: u64,
+    ) -> Result<MailboxPeerResponse> {
+        ensure!(
+            !authenticated_peer_id.is_empty() && authenticated_peer_id.len() <= 128,
+            "authenticated mailbox peer id is invalid"
+        );
+        if !self
+            .state
+            .peer_limiter
+            .lock()
+            .map_err(|_| anyhow::anyhow!("mailbox peer rate limiter lock poisoned"))?
+            .allow(authenticated_peer_id.to_owned())
+        {
+            return MailboxPeerResponse::rejected(request, MailboxPeerRejection::RateLimited)
+                .context("encode mailbox peer rate-limit response");
+        }
+        let request_bytes = request.encode()?.len() as u64;
+        if !self.reserve_transfer(request_bytes, now_unix_seconds)? {
+            return MailboxPeerResponse::rejected(
+                request,
+                MailboxPeerRejection::TransferBudgetExhausted,
+            )
+            .context("encode mailbox peer transfer-limit response");
+        }
+        let response = match request.operation() {
+            MailboxPeerOperation::Put => self.handle_peer_put(request, now_unix_seconds),
+            MailboxPeerOperation::List => self.handle_peer_list(request, now_unix_seconds),
+            MailboxPeerOperation::Delete => self.handle_peer_delete(request, now_unix_seconds),
+        }?;
+        let response_bytes = response.encode(request)?.len() as u64;
+        if !self.reserve_transfer(response_bytes, now_unix_seconds)? {
+            return MailboxPeerResponse::rejected(
+                request,
+                MailboxPeerRejection::TransferBudgetExhausted,
+            )
+            .context("encode mailbox peer response transfer-limit response");
+        }
+        Ok(response)
+    }
+
+    fn reserve_transfer(&self, bytes: u64, now_unix_seconds: u64) -> Result<bool> {
+        match (
+            self.state.transfer_accounting_scope.as_deref(),
+            self.state.max_transfer_bytes_per_30_days,
+        ) {
+            (Some(scope), Some(limit)) => {
+                self.state
+                    .store
+                    .reserve_transfer_bytes(scope, limit, bytes, now_unix_seconds)
+            }
+            (None, None) => Ok(true),
+            _ => anyhow::bail!("mailbox peer transfer accounting is partially configured"),
+        }
+    }
+
+    fn handle_peer_put(
+        &self,
+        request: &MailboxPeerRequest,
+        now_unix_seconds: u64,
+    ) -> Result<MailboxPeerResponse> {
+        let put = match MailboxPutRequest::decode_and_verify(request.payload()) {
+            Ok(put) => put,
+            Err(_) => {
+                return MailboxPeerResponse::rejected(
+                    request,
+                    MailboxPeerRejection::InvalidCapability,
+                )
+                .context("encode invalid mailbox put response");
+            }
+        };
+        let request_for_response = put.clone();
+        let (address, authorization, envelope) = put.into_parts();
+        let outcome = self
+            .state
+            .mailbox_store
+            .put(address, &authorization, envelope, now_unix_seconds)
+            .context("durable peer mailbox put")?;
+        let payload = MailboxPutResponse::from_outcome(outcome)
+            .encode(&request_for_response, self.store_key())?;
+        MailboxPeerResponse::success(request, payload).context("encode mailbox peer put response")
+    }
+
+    fn handle_peer_list(
+        &self,
+        request: &MailboxPeerRequest,
+        now_unix_seconds: u64,
+    ) -> Result<MailboxPeerResponse> {
+        let list = match MailboxListRequest::decode_and_verify(request.payload()) {
+            Ok(list) => list,
+            Err(_) => {
+                return MailboxPeerResponse::rejected(
+                    request,
+                    MailboxPeerRejection::InvalidCapability,
+                )
+                .context("encode invalid mailbox list response");
+            }
+        };
+        let page = self
+            .state
+            .mailbox_store
+            .list_page(list.address(), list.authorization(), now_unix_seconds)
+            .context("durable peer mailbox list")?;
+        let payload = MailboxListResponse::new(page).encode(&list, self.store_key())?;
+        MailboxPeerResponse::success(request, payload).context("encode mailbox peer list response")
+    }
+
+    fn handle_peer_delete(
+        &self,
+        request: &MailboxPeerRequest,
+        now_unix_seconds: u64,
+    ) -> Result<MailboxPeerResponse> {
+        let delete = match MailboxDeleteRequest::decode_and_verify(request.payload()) {
+            Ok(delete) => delete,
+            Err(_) => {
+                return MailboxPeerResponse::rejected(
+                    request,
+                    MailboxPeerRejection::InvalidCapability,
+                )
+                .context("encode invalid mailbox delete response");
+            }
+        };
+        let outcome = self
+            .state
+            .mailbox_store
+            .delete(delete.address(), delete.authorization(), now_unix_seconds)
+            .context("durable peer mailbox delete")?;
+        let payload =
+            MailboxDeleteResponse::from_outcome(outcome).encode(&delete, self.store_key())?;
+        MailboxPeerResponse::success(request, payload)
+            .context("encode mailbox peer delete response")
     }
 }
 
@@ -1691,6 +1867,7 @@ mod tests {
             store,
             mailbox_store,
             limiter: Mutex::new(RateLimiter::new(10, 10)),
+            peer_limiter: Mutex::new(RateLimiter::new(10, 10)),
             permits: Arc::new(Semaphore::new(1)),
             max_record_bytes: config.max_record_bytes,
             trust_x_real_ip: false,
@@ -1741,6 +1918,82 @@ mod tests {
             Ok(_) => anyhow::bail!("malformed mailbox request was accepted"),
         };
         assert_ne!(mailbox.status, 404, "mailbox route must remain reachable");
+        Ok(())
+    }
+
+    #[test]
+    fn peer_service_executes_capability_request_and_rate_limits_endpoint_identity() -> Result<()> {
+        use kilogram_crypto::DeviceEncryptionIdentity;
+        use kilogram_mailbox::{
+            MailboxAddress, MailboxEnvelope, MailboxPeerRejection, MailboxPeerRequest,
+            MailboxReadCapability, MailboxWriteCapability,
+        };
+
+        let directory = tempfile::tempdir()?;
+        let config = StoreConfig::local_test(directory.path().to_path_buf());
+        let opaque_store = OpaqueStore::open(&config)?;
+        let mailbox_identity = MailboxStoreIdentity::from_secret_bytes([9_u8; 32]);
+        let store_key = mailbox_identity.store_key();
+        let mailbox_store = BlindMailboxStore::open(
+            MailboxStoreConfig::new(config.data_dir.join(MAILBOX_DATA_DIRECTORY)),
+            mailbox_identity,
+        )?;
+        let service = VolunteerMailboxService {
+            state: Arc::new(ServerState {
+                store: opaque_store,
+                mailbox_store,
+                limiter: Mutex::new(RateLimiter::new(10, 10)),
+                peer_limiter: Mutex::new(RateLimiter::new(1, 10)),
+                permits: Arc::new(Semaphore::new(1)),
+                max_record_bytes: config.max_record_bytes,
+                trust_x_real_ip: false,
+                service_mode: StoreServiceMode::MailboxOnly,
+                transfer_accounting_scope: None,
+                max_transfer_bytes_per_30_days: None,
+            }),
+        };
+        let read = MailboxReadCapability::from_secret_bytes([1_u8; 32]);
+        let write = MailboxWriteCapability::from_secret_bytes([2_u8; 32]);
+        let address = MailboxAddress::new(read.read_key(), write.write_key());
+        let recipient = DeviceEncryptionIdentity::from_secret_bytes([3_u8; 32]);
+        let item_id = MailboxItemId::from_bytes([4_u8; 32]);
+        let envelope = MailboxEnvelope::seal(
+            address.mailbox_id(),
+            item_id,
+            1_000,
+            1_600,
+            recipient.public_key(),
+            b"peer-service-opaque-event",
+        )?
+        .encode()?;
+        let put = MailboxPutRequest::new(
+            address,
+            write.authorize(address, item_id, 600, &envelope)?,
+            envelope,
+        )?;
+        let request = MailboxPeerRequest::put(&put)?;
+        let response = service.handle_peer_request("iroh-endpoint-a", &request, 1_000)?;
+        let payload = response
+            .success_payload()
+            .context("peer mailbox PUT was not successful")?;
+        assert!(matches!(
+            MailboxPutResponse::decode_and_verify(payload, &put, store_key)?,
+            MailboxPutResponse::Stored { created: true, .. }
+        ));
+
+        let limited = service.handle_peer_request("iroh-endpoint-a", &request, 1_001)?;
+        assert_eq!(limited.rejection(), Some(MailboxPeerRejection::RateLimited));
+        let idempotent = service.handle_peer_request("iroh-endpoint-b", &request, 1_001)?;
+        assert!(matches!(
+            MailboxPutResponse::decode_and_verify(
+                idempotent
+                    .success_payload()
+                    .context("idempotent peer mailbox PUT was not successful")?,
+                &put,
+                store_key,
+            )?,
+            MailboxPutResponse::Stored { created: false, .. }
+        ));
         Ok(())
     }
 

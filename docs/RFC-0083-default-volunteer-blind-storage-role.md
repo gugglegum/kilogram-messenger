@@ -1,7 +1,8 @@
 # RFC-0083: Default volunteer blind-storage role (M0.9.61)
 
-Status: implemented as an embedded bounded storage engine and local adapter;
-peer advertisement, selection and replication remain the next protocol slice.
+Status: implemented. RFC-0084 subsequently added dedicated Iroh ingress and a
+manual store-signed offer; automatic discovery, selection and replication
+remain later protocol slices.
 
 ## 1. Product decision
 
@@ -61,30 +62,29 @@ effect.
 
 ## 4. Current ingress boundary
 
-M0.9.61 deliberately does not pretend that decentralised selection is already
-complete. The embedded engine currently exposes only an ephemeral loopback
-mailbox adapter. It prints its public store key and honest status markers, but:
+At the M0.9.61 boundary, the embedded engine exposed only an ephemeral loopback
+mailbox adapter. M0.9.62 and RFC-0084 have since added dedicated Iroh ingress
+plus a manual signed offer, but decentralised selection remains incomplete:
 
-- it is not advertised to strangers;
-- remote peers cannot yet discover or select it;
-- there is no signed short-lived storage offer;
+- it is not automatically advertised to strangers;
+- remote peers cannot yet discover or select it automatically;
+- its signed short-lived storage offer must still be transferred manually;
 - there is no multi-peer replication or erasure coding;
 - no HTTPS reverse proxy is installed or required by the client.
 
-The loopback adapter is an integration boundary for the next P2P ingress layer,
-not a recommendation to deploy a central HTTPS mailbox. The standalone
-`kilogram-ticket-store` remains useful as an optional bootstrap/reference store
-and controlled test fixture, but it is not the target default topology.
+The loopback adapter remains a local integration/compatibility boundary, not a
+recommendation to deploy a central HTTPS mailbox. Remote provider traffic now
+uses RFC-0084's Iroh ALPN. The standalone `kilogram-ticket-store` remains useful
+as an optional bootstrap/reference store and controlled test fixture, but it is
+not the target default topology.
 
-## 5. Next slice
+## 5. Subsequent slice
 
-M0.9.62 should make the embedded role remotely useful without a public TCP
-listener: define a dedicated Iroh mailbox ALPN, capability-authenticated blind
-PUT/LIST/DELETE frames, and a signed expiring storage-offer record containing
-the provider endpoint, store public key, policy class and capacity hint. Only
-then can clients select several unrelated volunteer peers and replicate an
-offline envelope. Sybil resistance, reputation and erasure coding remain later
-work and must not be claimed by the first discovery implementation.
+M0.9.62 completed the dedicated Iroh mailbox ALPN, capability-authenticated
+blind PUT/LIST/DELETE frames and signed expiring storage offer described by the
+original next-step plan. Automatic privacy-bounded discovery, multi-provider
+selection and replication are now the next slice. Sybil resistance, reputation
+and erasure coding remain later work.
 
 ## 6. Verification
 

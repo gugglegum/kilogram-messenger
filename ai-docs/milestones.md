@@ -3535,14 +3535,43 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - contract зафиксирован в
   [`../docs/RFC-0083-default-volunteer-blind-storage-role.md`](../docs/RFC-0083-default-volunteer-blind-storage-role.md).
 
+### M0.9.62 — dedicated Iroh ingress и signed volunteer offer: выполнено
+
+Реализовано:
+
+- обычный runtime условно добавляет отдельный
+  `kilogram/m0/blind-mailbox/1` ALPN на тот же Iroh endpoint только когда
+  volunteer policy разрешает текущий network class;
+- bounded peer frames переносят existing capability-authenticated
+  PUT/LIST/DELETE; outer response фиксирует operation и domain-separated digest
+  exact request, а inner successful response сохраняет store-signed receipts;
+- Iroh remote endpoint identity используется для per-peer rate limit, но не
+  даёт mailbox authority; blind wire не получает Account/Device/conversation
+  IDs;
+- provider connections исполняются отдельно от messenger sessions в bounded
+  tasks с semaphore и одним bidirectional request на connection, не блокируя
+  основной accept loop;
+- peer path использует тот же durable network-class application-payload budget
+  и реальный blind-store capacity из M0.9.61;
+- runtime создаёт 15-minute store-signed base64url offer с exact serialized
+  Iroh endpoint, store key, `BoundedVolunteer`, capacity/max-record hints,
+  issue/expiry и random nonce;
+- offer distribution пока manual-only; automatic discovery, provider selection
+  и replication не заявлены;
+- pure tests проверяют offer tamper/expiry, Iroh EndpointAddr round trip,
+  capability frame/request digest, durable PUT/idempotent replay и peer rate
+  limit; static gate запрещает потерю ALPN/limits/no-new-EXE boundary;
+- contract зафиксирован в
+  [`../docs/RFC-0084-volunteer-storage-iroh-ingress-and-offers.md`](../docs/RFC-0084-volunteer-storage-iroh-ingress-and-offers.md).
+
 ### Следующий этап
 
-1. M0.9.62: добавить dedicated Iroh mailbox ALPN, capability-authenticated
-   blind PUT/LIST/DELETE и signed expiring storage offer для embedded volunteer
-   provider. До этого loopback adapter не считается remote peer storage.
-2. После этого добавить multi-peer selection/replication и провести реальный
-   Alice/Bob/volunteer field run; standalone HTTPS store оставить optional
-   bootstrap/reference path.
+1. M0.9.63: добавить privacy-bounded signed-offer discovery/import, client-side
+   provider set и deterministic multi-provider selection без смешивания
+   mailbox capability с provider identity.
+2. После этого добавить replication и провести реальный Alice/Bob/volunteer
+   field run; standalone HTTPS store оставить optional bootstrap/reference
+   path.
 3. До первого публичного security artifact pin-нуть linker/SDK либо controlled
    alternative и повторить M0.9.59 до matched external hash и attestation.
 4. Optional autostart/background mode оставить отдельной явной настройкой, не

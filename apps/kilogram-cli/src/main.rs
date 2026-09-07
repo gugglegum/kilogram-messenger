@@ -7,6 +7,7 @@ use std::{
     net::{Ipv4Addr, SocketAddr},
     path::{Path, PathBuf},
     pin::Pin,
+    sync::Arc,
     time::Duration,
 };
 
@@ -88,15 +89,23 @@ use kilogram_store::{
     EventReadRepository, EventStore, ImmutableEventReadSnapshot, ImmutableLocalMessageReadSnapshot,
     LocalMessageReadRepository, LocalMessageStore, StoreError, StoreOutcome, StoredAuthorizedEvent,
 };
-use kilogram_ticket_store::{StoreConfig, StoreServiceMode, TicketStoreServer};
+use kilogram_ticket_store::{
+    StoreConfig, StoreServiceMode, TicketStoreServer, VolunteerMailboxService,
+};
 use kilogram_transport_iroh::{
-    ALPN, MAX_WIRE_MESSAGE_BYTES, RoutePolicy, SelectedPathDiagnostics, await_route_policy,
-    endpoint_builder_for_remote, endpoint_builder_with_relay, read_client_request,
-    read_server_response, selected_path_diagnostics, write_client_request, write_server_response,
+    ALPN, MAILBOX_ALPN, MAX_WIRE_MESSAGE_BYTES, RoutePolicy, SelectedPathDiagnostics,
+    await_route_policy, encode_mailbox_provider_endpoint, endpoint_builder_for_remote,
+    endpoint_builder_with_relay, read_client_request, read_mailbox_peer_request,
+    read_server_response, selected_path_diagnostics, write_client_request,
+    write_mailbox_peer_response, write_server_response,
 };
 use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
-use tokio::{sync::oneshot, task::JoinHandle, time::timeout};
+use tokio::{
+    sync::{OwnedSemaphorePermit, Semaphore, oneshot},
+    task::{JoinHandle, JoinSet},
+    time::timeout,
+};
 use zeroize::Zeroizing;
 
 mod publication_conflict_ceremony;
@@ -298,6 +307,7 @@ const DEFAULT_RUNTIME_AUTO_SYNC_SECONDS: u64 = 30;
 const MAX_RUNTIME_AUTO_SYNC_SECONDS: u64 = 3_600;
 const DEFAULT_VOLUNTEER_STORAGE_MIB: u64 = 200;
 const DEFAULT_VOLUNTEER_TRANSFER_MIB: u64 = 500;
+const VOLUNTEER_STORAGE_OFFER_VALIDITY_SECONDS: u64 = 15 * 60;
 const BYTES_PER_MIB: u64 = 1024 * 1024;
 const MAX_RUNTIME_CONTACTS: usize = 256;
 const MAX_RUNTIME_QUEUE_ITEMS: usize = 4_096;
@@ -16409,9 +16419,19 @@ impl std::error::Error for RuntimeMailboxCapabilityAckDropped {}
 struct RuntimeVolunteerStorageServer {
     shutdown: Option<oneshot::Sender<()>>,
     task: Option<JoinHandle<Result<()>>>,
+    peer_service: VolunteerMailboxService,
+    peer_permits: Arc<Semaphore>,
 }
 
 impl RuntimeVolunteerStorageServer {
+    fn peer_service(&self) -> VolunteerMailboxService {
+        self.peer_service.clone()
+    }
+
+    fn try_peer_permit(&self) -> Option<OwnedSemaphorePermit> {
+        Arc::clone(&self.peer_permits).try_acquire_owned().ok()
+    }
+
     async fn shutdown(mut self) -> Result<()> {
         if let Some(shutdown) = self.shutdown.take() {
             let _ = shutdown.send(());
@@ -16439,6 +16459,7 @@ impl Drop for RuntimeVolunteerStorageServer {
 async fn start_runtime_volunteer_storage(
     settings: Option<RuntimeVolunteerStorageSettings>,
     network: RuntimeIpcNetworkClass,
+    endpoint: &Endpoint,
 ) -> Result<Option<RuntimeVolunteerStorageServer>> {
     let Some(settings) = settings else {
         println!("runtime_volunteer_storage=disabled-by-user");
@@ -16476,6 +16497,15 @@ async fn start_runtime_volunteer_storage(
     .context("start embedded volunteer blind-storage adapter")?;
     let local_addr = server.local_addr();
     let store_key = server.mailbox_store_key();
+    let peer_service = server.mailbox_peer_service();
+    let offer_issued_at = unix_time_now()?;
+    let offer = server.signed_mailbox_storage_offer(
+        encode_mailbox_provider_endpoint(&endpoint.addr())?,
+        offer_issued_at,
+        VOLUNTEER_STORAGE_OFFER_VALIDITY_SECONDS,
+    )?;
+    let offer_encoded = offer.encode(offer_issued_at)?;
+    let peer_permits = Arc::new(Semaphore::new(settings.max_concurrent_connections));
     let (shutdown_sender, shutdown_receiver) = oneshot::channel();
     let task = tokio::spawn(server.run_until(async move {
         let _ = shutdown_receiver.await;
@@ -16489,7 +16519,20 @@ async fn start_runtime_volunteer_storage(
     );
     println!("runtime_volunteer_storage_local_adapter={local_addr}");
     println!("runtime_volunteer_storage_store_key={store_key}");
-    println!("runtime_volunteer_storage_ingress=loopback-only-not-yet-peer-advertised");
+    println!(
+        "runtime_volunteer_storage_iroh_alpn={}",
+        String::from_utf8_lossy(MAILBOX_ALPN)
+    );
+    println!("runtime_volunteer_storage_ingress=dedicated-iroh-alpn-plus-loopback");
+    println!(
+        "runtime_volunteer_storage_offer={}",
+        URL_SAFE_NO_PAD.encode(offer_encoded)
+    );
+    println!(
+        "runtime_volunteer_storage_offer_expires_at_unix_seconds={}",
+        offer.expires_at_unix_seconds()
+    );
+    println!("runtime_volunteer_storage_offer_distribution=manual-export-only");
     println!("runtime_volunteer_storage_discovery=false");
     println!("runtime_volunteer_storage_replication=false");
     println!("runtime_volunteer_storage_policy_refresh=runtime-restart-required");
@@ -16497,7 +16540,32 @@ async fn start_runtime_volunteer_storage(
     Ok(Some(RuntimeVolunteerStorageServer {
         shutdown: Some(shutdown_sender),
         task: Some(task),
+        peer_service,
+        peer_permits,
     }))
+}
+
+async fn handle_runtime_volunteer_storage_connection(
+    connection: Connection,
+    service: VolunteerMailboxService,
+    route_policy: RoutePolicy,
+    _permit: OwnedSemaphorePermit,
+) -> Result<()> {
+    let ready_path = await_route_policy(&connection, route_policy, ROUTE_POLICY_WAIT)
+        .await
+        .context("wait for an incoming volunteer-storage path allowed by runtime policy")?;
+    println!(
+        "runtime_volunteer_storage_ready_path={}",
+        ready_path.kind.as_str()
+    );
+    let (mut send, mut receive) =
+        accept_bi(&connection, "accept blind mailbox peer stream").await?;
+    let request = read_mailbox_peer_request(&mut receive).await?;
+    let peer_id = connection.remote_id().to_string();
+    let response = service.handle_peer_request(&peer_id, &request, unix_time_now()?)?;
+    write_mailbox_peer_response(&mut send, &request, &response).await?;
+    connection.close(0_u32.into(), b"kilogram blind mailbox request complete");
+    Ok(())
 }
 
 async fn runtime(options: RuntimeOptions) -> Result<()> {
@@ -16544,6 +16612,10 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
         prepared.device_state.identity().device_id(),
     )?;
     let mut device_directory_state = prepared.device_directory_state;
+    let current_network = current_runtime_network_class();
+    let volunteer_iroh_enabled = volunteer_storage
+        .as_ref()
+        .is_some_and(|settings| settings.allows(current_network));
     let endpoint_builder = endpoint_builder_with_relay(route_policy, relay_url);
     #[cfg(test)]
     let endpoint_builder = endpoint_builder
@@ -16554,8 +16626,12 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
         .net_report_config(iroh::endpoint::NetReportConfig::minimal())
         .bind_addr((std::net::Ipv4Addr::LOCALHOST, 0))
         .context("bind test runtime endpoint exclusively to IPv4 loopback")?;
+    let mut runtime_alpns = vec![ALPN.to_vec()];
+    if volunteer_iroh_enabled {
+        runtime_alpns.push(MAILBOX_ALPN.to_vec());
+    }
     let endpoint = endpoint_builder
-        .alpns(vec![ALPN.to_vec()])
+        .alpns(runtime_alpns)
         .bind()
         .await
         .context("bind long-lived Iroh runtime endpoint")?;
@@ -16673,13 +16749,14 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
         })?;
         println!("runtime_own_device_roster_reconciled={reconciled}");
     }
-    let current_network = current_runtime_network_class();
     let volunteer_storage_server =
-        start_runtime_volunteer_storage(volunteer_storage, current_network).await?;
+        start_runtime_volunteer_storage(volunteer_storage, current_network, &endpoint).await?;
     println!("status=runtime-listening");
 
     let session_binding = SyncSessionBinding::from_transport_label(&endpoint.id().to_string());
     let mut accepted_sessions = 0_usize;
+    let mut accepted_volunteer_storage_sessions = 0_u64;
+    let mut volunteer_storage_tasks = JoinSet::new();
     let mut outbound_actions = 0_usize;
     let mut last_activity = tokio::time::Instant::now();
     let automatic_sync_started_at = tokio::time::Instant::now();
@@ -16717,6 +16794,20 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
             &mut poll_tick,
         )
         .await?;
+        while let Some(completed) = volunteer_storage_tasks.try_join_next() {
+            match completed {
+                Ok(Ok(())) => {
+                    println!("runtime_volunteer_storage_session_status=completed");
+                }
+                Ok(Err(error)) => {
+                    eprintln!("runtime_volunteer_storage_session_status=failed error={error:#}")
+                }
+                Err(error) if error.is_cancelled() => {}
+                Err(error) => {
+                    eprintln!("runtime_volunteer_storage_session_status=task-failed error={error}")
+                }
+            }
+        }
         if matches!(runtime_event, RuntimeEvent::Connection(_)) {
             accept = Box::pin(accept_authenticated_connection(&endpoint));
         }
@@ -16911,6 +17002,47 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                 }
             }
             RuntimeEvent::Connection(connection) => {
+                if connection.alpn() == MAILBOX_ALPN {
+                    last_activity = tokio::time::Instant::now();
+                    accepted_volunteer_storage_sessions =
+                        accepted_volunteer_storage_sessions.saturating_add(1);
+                    println!(
+                        "runtime_volunteer_storage_session={accepted_volunteer_storage_sessions}"
+                    );
+                    println!(
+                        "runtime_volunteer_storage_peer_endpoint_id={}",
+                        connection.remote_id()
+                    );
+                    if let Some(server) = volunteer_storage_server.as_ref() {
+                        if let Some(permit) = server.try_peer_permit() {
+                            let service = server.peer_service();
+                            volunteer_storage_tasks.spawn(async move {
+                                handle_runtime_volunteer_storage_connection(
+                                    connection,
+                                    service,
+                                    route_policy,
+                                    permit,
+                                )
+                                .await
+                            });
+                        } else {
+                            println!("runtime_volunteer_storage_session_status=capacity-rejected");
+                            connection.close(
+                                3_u32.into(),
+                                b"kilogram volunteer storage connection capacity reached",
+                            );
+                        }
+                    } else {
+                        println!("runtime_volunteer_storage_session_status=disabled-rejected");
+                        connection.close(3_u32.into(), b"kilogram volunteer storage disabled");
+                    }
+                    continue;
+                }
+                if connection.alpn() != ALPN {
+                    eprintln!("runtime_session_status=unsupported-alpn-rejected");
+                    connection.close(3_u32.into(), b"kilogram runtime unsupported ALPN");
+                    continue;
+                }
                 accepted_sessions += 1;
                 last_activity = tokio::time::Instant::now();
                 println!("runtime_session={accepted_sessions}");
@@ -16985,6 +17117,8 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
 
     drop(accept);
     drop(shutdown);
+    volunteer_storage_tasks.abort_all();
+    while volunteer_storage_tasks.join_next().await.is_some() {}
     if let Some(server) = ipc_server.take() {
         server.shutdown().await?;
     }
@@ -16993,6 +17127,7 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
     }
     endpoint.close().await;
     println!("runtime_sessions_accepted={accepted_sessions}");
+    println!("runtime_volunteer_storage_sessions_accepted={accepted_volunteer_storage_sessions}");
     println!("runtime_outbound_actions={outbound_actions}");
     println!("runtime_stop_reason={stop_reason}");
     println!("status=runtime-stopped");

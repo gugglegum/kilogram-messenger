@@ -10,6 +10,7 @@ use crate::{
     MAX_MAILBOX_ENVELOPE_BYTES, MAX_MAILBOX_TTL_SECONDS, MIN_MAILBOX_TTL_SECONDS, MailboxAddress,
     MailboxDeleteReceipt, MailboxId, MailboxItemId, MailboxReadAuthorization, MailboxReadOperation,
     MailboxReceiptId, MailboxStoreIdentity, MailboxStoredReceipt, MailboxWriteAuthorization,
+    SignedMailboxStorageOffer,
 };
 
 const DATABASE_FILE: &str = "blind-mailbox.redb";
@@ -328,6 +329,23 @@ impl BlindMailboxStore {
 
     pub fn store_key(&self) -> crate::MailboxStoreKey {
         self.identity.store_key()
+    }
+
+    pub fn storage_offer(
+        &self,
+        provider_endpoint: Vec<u8>,
+        issued_at_unix_seconds: u64,
+        validity_seconds: u64,
+    ) -> Result<SignedMailboxStorageOffer> {
+        self.identity
+            .storage_offer(
+                provider_endpoint,
+                self.config.max_total_bytes,
+                self.config.max_envelope_bytes as u64,
+                issued_at_unix_seconds,
+                validity_seconds,
+            )
+            .context("sign mailbox storage offer")
     }
 
     pub fn put(

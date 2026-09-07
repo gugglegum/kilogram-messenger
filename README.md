@@ -193,12 +193,31 @@ with the Russian operator guide in
 [`docs/M0.9.60-M1-ACCEPTANCE-RU.md`](docs/M0.9.60-M1-ACCEPTANCE-RU.md).
 The default-on bounded volunteer blind-storage role is specified in
 [`docs/RFC-0083-default-volunteer-blind-storage-role.md`](docs/RFC-0083-default-volunteer-blind-storage-role.md).
+Its dedicated Iroh ingress and store-signed expiring provider offer are
+specified in
+[`docs/RFC-0084-volunteer-storage-iroh-ingress-and-offers.md`](docs/RFC-0084-volunteer-storage-iroh-ingress-and-offers.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.61 default volunteer blind storage — complete
+## Current milestone: M0.9.62 volunteer-storage Iroh ingress — complete
+
+The ordinary runtime now conditionally advertises a dedicated
+`kilogram/m0/blind-mailbox/1` ALPN on its existing Iroh endpoint. Bounded PUT,
+LIST and DELETE requests retain their unrelated mailbox capability signatures,
+and each outer response is bound to the exact request digest. Remote endpoint
+identity controls rate limiting but never grants mailbox access.
+
+An enabled provider emits a 15-minute store-signed offer binding its exact Iroh
+endpoint, store key, bounded-volunteer policy class and capacity hints. Mailbox
+connections use separately bounded tasks and the durable M0.9.61 disk/traffic
+limits. Offer transfer is still manual: automatic discovery, selection and
+multi-provider replication remain the next milestone. No new executable,
+public TCP listener or background OS service was added. Details are in
+[`docs/RFC-0084-volunteer-storage-iroh-ingress-and-offers.md`](docs/RFC-0084-volunteer-storage-iroh-ingress-and-offers.md).
+
+## Previous milestone: M0.9.61 default volunteer blind storage — complete
 
 New runtime profiles now enable a bounded volunteer storage role by default:
 200 MiB of opaque ciphertext storage, 500 MiB of application-payload transfer
@@ -210,9 +229,8 @@ or recreates them, so an upgrade does not silently start a listener.
 The ordinary runtime embeds the mailbox-only storage engine; no additional
 executable, scheduled task or OS service is introduced. Storage lives outside
 the protected messenger state and the transfer counter is durable across
-restarts. This stage intentionally exposes only a loopback adapter: remote peer
-discovery, signed storage offers and replicated P2P ingress remain the next
-milestone. Details are in
+restarts. At this stage the engine exposed only a loopback adapter; M0.9.62
+subsequently added dedicated Iroh ingress and signed manual offers. Details are in
 [`docs/RFC-0083-default-volunteer-blind-storage-role.md`](docs/RFC-0083-default-volunteer-blind-storage-role.md).
 
 ## Previous milestone: M0.9.60 M1 acceptance kit — complete
