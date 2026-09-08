@@ -2012,6 +2012,11 @@ retirement остальных compatibility shadows ещё не реализов
 - Два provider-only runtime могут работать на одном Alice host с отдельными
   identity/state/store key. Это mechanism evidence, не operator-independent
   durability.
+- Первый clean generator run обнаружил несовместимость UTF-8-without-BOM с
+  вложенным Windows PowerShell 5; проверки переведены на текущий PowerShell host,
+  после чего clean-HEAD generator успешно создал debug kit.
+- Собранный kit проверен отдельно: exact source revision, один stable-name EXE,
+  8 parseable operator scripts, совпадающий SHA-256, ноль архивов и успешный
+  copied-verifier self-test.
 - Реальный Iroh/HTTPS runtime здесь не запускался, поэтому Firewall surface не
-  создавался. Clean generator и собранный kit проверяются после отдельного
-  коммита; внешний field result пока pending.
+  создавался; внешний field result пока pending.
