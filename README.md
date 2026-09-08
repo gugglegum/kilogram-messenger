@@ -207,7 +207,25 @@ The current two-network Windows procedure is in
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.66 bounded volunteer mailbox retrieval — complete
+## Current milestone: M0.9.67 volunteer mailbox field kit — ready
+
+A clean-HEAD, no-archive builder now prepares one stable debug
+`kilogram-cli.exe`, two private provider bootstrap helpers, no-clobber
+Alice/Bob/provider capture scripts and a fail-closed evidence verifier. The
+scenario requires two independent store keys and transport identities, two
+sender PUT receipts, a stopped-Alice IPC boundary, two Bob Iroh commits and
+signed deletes, restart without volunteer redelivery and exactly one local
+history occurrence.
+
+Two provider identities may run on one operator host for mechanism evidence,
+but that does not prove operator or physical independence. The kit does not
+copy Root/device/state/IPC secrets, create a ZIP/release build, launch network
+during generation or add another executable. The actual cross-network run is
+still pending. See
+[`docs/M0.9.67-VOLUNTEER-MAILBOX-FIELD-TEST-RU.md`](docs/M0.9.67-VOLUNTEER-MAILBOX-FIELD-TEST-RU.md)
+and [`docs/RFC-0089-volunteer-mailbox-field-kit.md`](docs/RFC-0089-volunteer-mailbox-field-kit.md).
+
+## Previous milestone: M0.9.66 bounded volunteer mailbox retrieval — complete
 
 The ordinary recipient runtime now probes at most three verified,
 transport-distinct volunteer providers concurrently over the dedicated blind

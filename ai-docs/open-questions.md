@@ -235,6 +235,10 @@ sessions, distribution, removal и key epochs и не решены этим пр
   outbox/recovery/event repositories; локальная `.rtc` цепочка сама по себе не
   является global freshness proof.
 - Репликация или erasure coding: сколько случайных узлов и какие гарантии нужны?
+- M0.9.67 field kit готов для двух volunteer stores и offline-recipient run, но
+  внешний результат ещё не получен. Два providers на одном host подтверждают
+  механику разных identity/store/transport, но не независимость операторов или
+  физических отказов; HTTPS compatibility copy пока остаётся обязательной.
 - Как ограничивать spam/Sybil без глобального аккаунта и утечки социального
   графа? M0.9.33 защищает существующий channel от постороннего высокого
   generation через self-authenticating per-peer Ed25519 write capability без

@@ -704,6 +704,13 @@ EXE не создавались.
   реализованный M0.9.66 recipient-side bounded three-provider/one-item Iroh
   LIST/DELETE, durable application-commit-before-delete, store-specific signed
   deletion receipts и restart resume при сохранённом HTTPS fallback.
+- [`../docs/RFC-0089-volunteer-mailbox-field-kit.md`](../docs/RFC-0089-volunteer-mailbox-field-kit.md) —
+  готовый M0.9.67 clean-HEAD no-archive debug field kit для two-provider
+  replication, sender-offline boundary, recipient Iroh commit/delete и restart
+  verification при сохранённой HTTPS compatibility-копии.
+- [`../docs/M0.9.67-VOLUNTEER-MAILBOX-FIELD-TEST-RU.md`](../docs/M0.9.67-VOLUNTEER-MAILBOX-FIELD-TEST-RU.md) —
+  русская пошаговая инструкция внешнего M0.9.67 теста с двумя private provider
+  профилями и bounded shared evidence без секретов.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

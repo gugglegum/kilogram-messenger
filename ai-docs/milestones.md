@@ -3662,14 +3662,37 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - новый EXE/listener/service/directory не добавлен; contract зафиксирован в
   [`../docs/RFC-0088-bounded-volunteer-mailbox-retrieval.md`](../docs/RFC-0088-bounded-volunteer-mailbox-retrieval.md).
 
+### M0.9.67 — no-archive volunteer mailbox field kit: готов к внешнему тесту
+
+Реализовано:
+
+- clean-HEAD generator создаёт обычную debug-папку без ZIP, release build и
+  автоматического запуска сетевого executable;
+- provider bootstrap создаёт два независимых private профиля с разными Account
+  Root, Device/state, endpoint и volunteer store key; secrets не копируются в
+  shared evidence;
+- no-clobber PowerShell driver покрывает provider offers, Alice/Bob import,
+  sender two-of-two receipts, явную остановку Alice, Bob Iroh LIST/commit/
+  signed DELETE и restart без повторной volunteer delivery;
+- fail-closed verifier связывает один run manifest с двумя store keys, двумя
+  transport identities, Alice offline boundary, двумя Bob commits/deletes и
+  единственным marker в локальной history;
+- два providers можно запустить на одном operator host, но такой результат
+  доказывает только protocol/transport/store mechanics, а не независимость
+  операторов, физических отказов или Sybil resistance;
+- HTTPS mailbox остаётся обязательной compatibility-копией для этого теста:
+  field kit не заявляет полностью server-free offline delivery;
+- contract и русская инструкция зафиксированы в
+  [`../docs/RFC-0089-volunteer-mailbox-field-kit.md`](../docs/RFC-0089-volunteer-mailbox-field-kit.md)
+  и
+  [`../docs/M0.9.67-VOLUNTEER-MAILBOX-FIELD-TEST-RU.md`](../docs/M0.9.67-VOLUNTEER-MAILBOX-FIELD-TEST-RU.md).
+
 ### Следующий этап
 
-1. M0.9.67: собрать no-archive debug Alice/Bob/volunteer field kit и провести
-   реальный cross-network offline-recipient run с two-of-three PUT receipts,
-   sender stop, recipient Iroh LIST, application commit, signed DELETE и restart.
-   Несколько providers на одном operator host дают mechanism evidence, но не
-   operator-independent durability.
-2. Спроектировать authenticated replica-set locator/commitment, чтобы recipient
+1. Провести реальный M0.9.67 cross-network offline-recipient run и сохранить
+   bounded evidence. До успешного результата не отключать HTTPS compatibility
+   path и не заявлять server-free availability.
+2. M0.9.68: спроектировать authenticated replica-set locator/commitment, чтобы recipient
    не полагался на случайное сканирование большой registry; не добавлять global
    social directory и не раскрывать Account/Device/conversation IDs providers.
 3. До первого публичного security artifact pin-нуть linker/SDK либо controlled

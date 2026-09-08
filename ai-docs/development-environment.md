@@ -1997,3 +1997,21 @@ retirement остальных compatibility shadows ещё не реализов
   поэтому Windows Firewall surface не создавался.
 - HTTPS остаётся compatibility fallback до M0.9.67 field evidence. Random
   bounded provider sampling не считается scalable exact replica discovery.
+
+## M0.9.67 verification snapshot (2026-09-08)
+
+- Добавлен clean-HEAD no-archive generator обычной debug-папки с одним
+  stable-name `kilogram-cli.exe`; release profile, ZIP и автоматический network
+  launch запрещены static gate-ом.
+- Provider bootstrap реально проверен network-free: созданы отдельные Account
+  Root, Device enrollment, runtime profile и volunteer policy, после чего
+  identity успешно прочитана; временный self-test state удалён.
+- Все field PowerShell scripts проходят AST parse; fail-closed evidence verifier
+  проходит synthetic self-test, а field-kit boundary gate подтверждает private
+  secret boundary, no-clobber evidence и отсутствие нового EXE.
+- Два provider-only runtime могут работать на одном Alice host с отдельными
+  identity/state/store key. Это mechanism evidence, не operator-independent
+  durability.
+- Реальный Iroh/HTTPS runtime здесь не запускался, поэтому Firewall surface не
+  создавался. Clean generator и собранный kit проверяются после отдельного
+  коммита; внешний field result пока pending.
