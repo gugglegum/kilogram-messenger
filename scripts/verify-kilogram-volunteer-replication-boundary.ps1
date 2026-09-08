@@ -97,7 +97,7 @@ foreach ($required in @(
     'replication_ledger.next_due(now, DEFAULT_REPLICATION_RETRY_SECONDS)',
     'runtime_mailbox_replication_http_delivery_compatibility=true',
     'runtime_volunteer_storage_replication=sender-three-target-two-receipt',
-    'runtime_volunteer_storage_replica_retrieval=https-compatible-pending-iroh-read',
+    'runtime_volunteer_storage_replica_retrieval=bounded-three-provider-iroh-list-delete',
     'match attempt_runtime_mailbox_fallback(endpoint, state_directory, &prepared).await'
 )) {
     if (-not $runtime.Contains($required)) {
@@ -123,5 +123,5 @@ Write-Output 'retry=durable-60-second-cooldown'
 Write-Output 'carrier=existing-blind-mailbox-iroh-alpn'
 Write-Output 'direct_delivery_preferred=true'
 Write-Output 'https_delivery_compatibility=true'
-Write-Output 'iroh_replica_retrieval=pending'
+Write-Output 'iroh_replica_retrieval=bounded-list-delete-active'
 Write-Output 'new_executable=false'

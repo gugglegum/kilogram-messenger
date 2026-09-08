@@ -1,7 +1,7 @@
 # RFC-0087: Resumable volunteer mailbox replication (M0.9.65)
 
 Status: implemented for sender-side replication and independent durable
-receipts. Recipient-side Iroh LIST/DELETE scheduling is intentionally deferred.
+receipts. Recipient-side bounded Iroh LIST/DELETE was added by RFC-0088.
 
 ## 1. Outcome
 
@@ -99,12 +99,12 @@ mailbox path.
 
 ## 6. Remaining boundary
 
-M0.9.65 does not yet let the recipient discover and poll the exact volunteer
-replica set. The next slice should add bounded Iroh LIST/DELETE retrieval over
-verified provider offers, preserve application-commit-before-delete semantics,
-and produce an Alice/Bob/volunteer field kit. Only after that path is proven may
-the HTTPS mailbox copy become optional at runtime rather than merely optional
-in the target architecture.
+M0.9.66 now lets the recipient poll a bounded random sample of verified
+provider offers and perform commit-before-delete Iroh retrieval. It does not
+yet convey the sender's exact replica-set commitment, so a large or divergent
+provider registry can delay discovery. RFC-0088 defines the implemented read
+boundary and the external field-evidence plan. HTTPS remains enabled until that
+cross-network path is proven.
 
 Provider reputation, proof of capacity, erasure coding, private retrieval,
 Sybil resistance and push wakeup remain deferred.

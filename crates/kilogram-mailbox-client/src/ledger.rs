@@ -306,6 +306,10 @@ pub struct PreparedInboundItem {
 }
 
 impl PreparedInboundItem {
+    pub fn address(&self) -> MailboxAddress {
+        self.address
+    }
+
     pub fn mailbox_id(&self) -> MailboxId {
         self.address.mailbox_id()
     }
@@ -316,6 +320,14 @@ impl PreparedInboundItem {
 
     pub fn plaintext(&self) -> &[u8] {
         &self.plaintext
+    }
+
+    pub fn expected_store_key(&self) -> MailboxStoreKey {
+        self.expected_store_key
+    }
+
+    pub fn stored_receipt(&self) -> &MailboxStoredReceipt {
+        &self.item.receipt
     }
 
     pub fn stored_receipt_id(&self) -> Result<MailboxReceiptId> {

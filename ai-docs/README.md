@@ -700,6 +700,10 @@ EXE не создавались.
   реализованный M0.9.65 sender-side three-target/two-receipt Iroh replication,
   durable per-dispatch random salt, exact encrypted request, independent signed
   receipts и resumable cooldown при сохранённом HTTPS compatibility delivery.
+- [`../docs/RFC-0088-bounded-volunteer-mailbox-retrieval.md`](../docs/RFC-0088-bounded-volunteer-mailbox-retrieval.md) —
+  реализованный M0.9.66 recipient-side bounded three-provider/one-item Iroh
+  LIST/DELETE, durable application-commit-before-delete, store-specific signed
+  deletion receipts и restart resume при сохранённом HTTPS fallback.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

@@ -32,7 +32,7 @@ foreach ($required in @(
 }
 
 $direct = $main.IndexOf('send_runtime_delivery_with_failover(endpoint, state_directory, &prepared).await')
-$fallback = $main.IndexOf('attempt_runtime_mailbox_fallback(state_directory, &prepared).await', $direct)
+$fallback = $main.IndexOf('attempt_runtime_mailbox_fallback(endpoint, state_directory, &prepared).await', $direct)
 if ($direct -lt 0 -or $fallback -lt 0 -or $fallback -le $direct) {
     throw 'mailbox fallback is not ordered after bounded direct/relay delivery'
 }
@@ -45,7 +45,7 @@ if ($applicationCommit -lt 0 -or $delete -lt 0 -or $delete -le $applicationCommi
 
 $repair = $main.IndexOf('async fn prepare_orphan_runtime_mailbox_dispatch')
 $repairEnqueue = $main.IndexOf('ledger.enqueue_outbound(request', $repair)
-$repairUpload = $main.IndexOf('upload_runtime_mailbox_request(state_directory, upload).await?', $repairEnqueue)
+$repairUpload = $main.IndexOf('upload_runtime_mailbox_request(endpoint, state_directory, upload).await?', $repairEnqueue)
 if ($repair -lt 0 -or $repairEnqueue -le $repair -or $repairUpload -le $repairEnqueue) {
     throw 'orphan mailbox dispatch is not durably re-enqueued before network upload'
 }

@@ -28,7 +28,8 @@ pub use provider::{
 };
 pub use replication::{
     DEFAULT_REPLICATION_RETRY_SECONDS, DEFAULT_REPLICATION_TARGETS,
-    DEFAULT_REQUIRED_REPLICA_RECEIPTS, MAX_REPLICATION_TARGETS, MailboxReplicaReceipt,
-    MailboxReplicationCleanupReport, MailboxReplicationLedger, MailboxReplicationLedgerConfig,
-    MailboxReplicationPlan, MailboxReplicationStatus, ReplicationPlanOutcome,
+    DEFAULT_REQUIRED_REPLICA_RECEIPTS, MAX_REPLICA_DELETE_BATCH, MAX_REPLICATION_TARGETS,
+    MailboxReplicaReceipt, MailboxReplicationCleanupReport, MailboxReplicationLedger,
+    MailboxReplicationLedgerConfig, MailboxReplicationPlan, MailboxReplicationStatus,
+    PendingReplicaDelete, ReplicationPlanOutcome,
 };

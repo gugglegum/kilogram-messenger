@@ -1978,3 +1978,22 @@ retirement остальных compatibility shadows ещё не реализов
 - Проверки выполняются debug/test/verification profile с BelowNormal priority и
   максимум четырьмя Cargo jobs. Network endpoint/EXE, release и ZIP не должны
   запускаться в локальной automated verification.
+
+## M0.9.66 verification snapshot (2026-09-08)
+
+- `kilogram-mailbox-client` получил отдельные Immediate-durable inbound commit
+  и deletion records по exact mailbox/item/store/transport/stored receipt;
+  delete authorization недоступна до application commit, а signed delete
+  receipt сохраняется до bounded expiry.
+- Runtime concurrently выполняет capability-authenticated Iroh LIST максимум к
+  трём verified providers, запрашивает один item с каждого, исключает own
+  endpoint и переиспользует общий HTTPS/volunteer application commit path.
+- Незавершённые DELETE возобновляются по fresh matching offer после restart;
+  одинаковый item на разных stores не схлопывается в одну запись.
+- `kilogram-mailbox-client` 9/9 network-free tests и targeted CLI compile check
+  прошли в debug/test profile с BelowNormal priority и четырьмя Cargo jobs.
+- Старый replication gate и новый volunteer retrieval gate проходят; rustfmt и
+  diff check проходят. Network runtime/EXE, release и ZIP не запускались,
+  поэтому Windows Firewall surface не создавался.
+- HTTPS остаётся compatibility fallback до M0.9.67 field evidence. Random
+  bounded provider sampling не считается scalable exact replica discovery.

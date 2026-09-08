@@ -207,7 +207,25 @@ The current two-network Windows procedure is in
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.65 resumable volunteer mailbox replication — complete
+## Current milestone: M0.9.66 bounded volunteer mailbox retrieval — complete
+
+The ordinary recipient runtime now probes at most three verified,
+transport-distinct volunteer providers concurrently over the dedicated blind
+mailbox Iroh ALPN and requests one opaque item from each. A valid event is
+durably committed to local append-only history before any source DELETE is
+authorized. Store-specific commit/deletion evidence survives restart, verifies
+the signed deletion receipt and resumes an interrupted delete independently for
+every replica.
+
+HTTPS remains a compatibility fallback until a real cross-network
+Alice/Bob/volunteer run is captured. The receiver currently samples its local
+authenticated provider registry; it does not yet know the sender's exact
+replica set, so discovery is bounded and probabilistic rather than immediate at
+large scale. This milestone adds no executable, listener, task or global
+directory. Details are in
+[`docs/RFC-0088-bounded-volunteer-mailbox-retrieval.md`](docs/RFC-0088-bounded-volunteer-mailbox-retrieval.md).
+
+## Previous milestone: M0.9.65 resumable volunteer mailbox replication — complete
 
 After direct delivery fails, the runtime now binds a fresh random provider
 selection salt to the exact signed outbox dispatch and copies the same opaque
@@ -218,13 +236,13 @@ independent store-signed receipts; two receipts satisfy the current durability
 policy.
 
 The existing HTTPS mailbox upload remains enabled as a compatibility delivery
-path until recipients can discover and poll the selected volunteer providers.
+path until recipient volunteer retrieval has external field evidence.
 Provider failures never suppress or delay it; replicas are resumable independent
 work after the exact plan is durable. This milestone adds no executable,
 listener, global directory, scheduled task or OS service. Details are in
 [`docs/RFC-0087-resumable-volunteer-mailbox-replication.md`](docs/RFC-0087-resumable-volunteer-mailbox-replication.md).
 
-## Previous milestone: M0.9.61 default volunteer blind storage — complete
+## Earlier milestone: M0.9.61 default volunteer blind storage — complete
 
 New runtime profiles now enable a bounded volunteer storage role by default:
 200 MiB of opaque ciphertext storage, 500 MiB of application-payload transfer

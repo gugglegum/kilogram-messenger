@@ -2,13 +2,17 @@ use std::path::PathBuf;
 
 use anyhow::{Context, Result, ensure};
 use kilogram_mailbox::{
-    MAX_MAILBOX_WIRE_REQUEST_BYTES, MailboxEnvelope, MailboxId, MailboxItemId, MailboxPutRequest,
-    MailboxPutResponse, MailboxStoreKey, MailboxStoredReceipt,
+    MAX_MAILBOX_WIRE_REQUEST_BYTES, MailboxAddress, MailboxDeleteReceipt, MailboxDeleteRequest,
+    MailboxDeleteResponse, MailboxEnvelope, MailboxId, MailboxItemId, MailboxPutRequest,
+    MailboxPutResponse, MailboxReadCapability, MailboxReceiptId, MailboxStoreKey,
+    MailboxStoredReceipt,
 };
 use redb::{
     Database, Durability, ReadableDatabase, ReadableTable, ReadableTableMetadata, TableDefinition,
 };
 use serde::{Deserialize, Serialize};
+
+use crate::ledger::PreparedInboundItem;
 
 const DATABASE_FILE: &str = "mailbox-replication-ledger.redb";
 const PLAN_TABLE: TableDefinition<&[u8], &[u8]> =
@@ -17,6 +21,10 @@ const RECEIPT_TABLE: TableDefinition<&[u8], &[u8]> =
     TableDefinition::new("mailbox-replication-receipts-v1");
 const ATTEMPT_TABLE: TableDefinition<&[u8], &[u8]> =
     TableDefinition::new("mailbox-replication-attempts-v1");
+const INBOUND_COMMIT_TABLE: TableDefinition<&[u8], &[u8]> =
+    TableDefinition::new("mailbox-replica-inbound-commits-v1");
+const INBOUND_DELETED_TABLE: TableDefinition<&[u8], &[u8]> =
+    TableDefinition::new("mailbox-replica-inbound-deleted-v1");
 const RECORD_VERSION: u8 = 1;
 const ITEM_KEY_BYTES: usize = 64;
 const RECEIPT_KEY_BYTES: usize = ITEM_KEY_BYTES + 32;
@@ -30,6 +38,7 @@ pub const MAX_REPLICATION_TARGETS: u8 = 8;
 pub const DEFAULT_MAX_REPLICATION_PLANS: u64 = 4_096;
 pub const DEFAULT_MAX_REPLICA_RECEIPTS: u64 = 32_768;
 pub const DEFAULT_REPLICATION_RETRY_SECONDS: u64 = 60;
+pub const MAX_REPLICA_DELETE_BATCH: u8 = 8;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MailboxReplicationLedgerConfig {
@@ -258,6 +267,124 @@ impl MailboxReplicaReceipt {
     }
 }
 
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+struct ReplicaInboundCommitRecord {
+    version: u8,
+    mailbox_id: MailboxId,
+    item_id: MailboxItemId,
+    transport_identity: [u8; 32],
+    expected_store_key: MailboxStoreKey,
+    stored_receipt: MailboxStoredReceipt,
+    application_commit_id: [u8; 32],
+    committed_at_unix_seconds: u64,
+}
+
+impl ReplicaInboundCommitRecord {
+    fn validate(&self) -> Result<()> {
+        self.stored_receipt.verify_signature()?;
+        ensure!(
+            self.version == RECORD_VERSION
+                && self.transport_identity != [0_u8; 32]
+                && self.stored_receipt.mailbox_id() == self.mailbox_id
+                && self.stored_receipt.item_id() == self.item_id
+                && self.stored_receipt.store_key() == self.expected_store_key,
+            "inbound replica commit metadata is invalid"
+        );
+        Ok(())
+    }
+
+    fn encode(&self) -> Result<Vec<u8>> {
+        self.validate()?;
+        encode_receipt_record(self, "inbound replica commit")
+    }
+
+    fn decode(bytes: &[u8]) -> Result<Self> {
+        let record: Self = decode_receipt_record(bytes, "inbound replica commit")?;
+        record.validate()?;
+        Ok(record)
+    }
+
+    fn same_logical_record(&self, other: &Self) -> bool {
+        self.version == other.version
+            && self.mailbox_id == other.mailbox_id
+            && self.item_id == other.item_id
+            && self.transport_identity == other.transport_identity
+            && self.expected_store_key == other.expected_store_key
+            && self.stored_receipt == other.stored_receipt
+            && self.application_commit_id == other.application_commit_id
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+struct ReplicaInboundDeletedRecord {
+    version: u8,
+    mailbox_id: MailboxId,
+    item_id: MailboxItemId,
+    transport_identity: [u8; 32],
+    expected_store_key: MailboxStoreKey,
+    stored_receipt_id: MailboxReceiptId,
+    delete_receipt: MailboxDeleteReceipt,
+    recorded_at_unix_seconds: u64,
+}
+
+impl ReplicaInboundDeletedRecord {
+    fn validate(&self) -> Result<()> {
+        self.delete_receipt.verify()?;
+        ensure!(
+            self.version == RECORD_VERSION
+                && self.transport_identity != [0_u8; 32]
+                && self.delete_receipt.mailbox_id() == self.mailbox_id
+                && self.delete_receipt.item_id() == self.item_id
+                && self.delete_receipt.store_key() == self.expected_store_key
+                && self.delete_receipt.stored_receipt_id() == self.stored_receipt_id,
+            "deleted inbound replica metadata is invalid"
+        );
+        Ok(())
+    }
+
+    fn encode(&self) -> Result<Vec<u8>> {
+        self.validate()?;
+        encode_receipt_record(self, "deleted inbound replica")
+    }
+
+    fn decode(bytes: &[u8]) -> Result<Self> {
+        let record: Self = decode_receipt_record(bytes, "deleted inbound replica")?;
+        record.validate()?;
+        Ok(record)
+    }
+
+    fn same_logical_record(&self, other: &Self) -> bool {
+        self.version == other.version
+            && self.mailbox_id == other.mailbox_id
+            && self.item_id == other.item_id
+            && self.transport_identity == other.transport_identity
+            && self.expected_store_key == other.expected_store_key
+            && self.stored_receipt_id == other.stored_receipt_id
+            && self.delete_receipt == other.delete_receipt
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PendingReplicaDelete {
+    request: MailboxDeleteRequest,
+    expected_store_key: MailboxStoreKey,
+    transport_identity: [u8; 32],
+}
+
+impl PendingReplicaDelete {
+    pub fn request(&self) -> &MailboxDeleteRequest {
+        &self.request
+    }
+
+    pub fn expected_store_key(&self) -> MailboxStoreKey {
+        self.expected_store_key
+    }
+
+    pub fn transport_identity(&self) -> &[u8; 32] {
+        &self.transport_identity
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MailboxReplicationStatus {
     pub plan: MailboxReplicationPlan,
@@ -275,6 +402,8 @@ pub struct MailboxReplicationCleanupReport {
     pub removed_plans: u64,
     pub removed_receipts: u64,
     pub removed_attempts: u64,
+    pub removed_inbound_commits: u64,
+    pub removed_inbound_deletions: u64,
 }
 
 pub struct MailboxReplicationLedger {
@@ -307,6 +436,8 @@ impl MailboxReplicationLedger {
         write.open_table(PLAN_TABLE)?;
         write.open_table(RECEIPT_TABLE)?;
         write.open_table(ATTEMPT_TABLE)?;
+        write.open_table(INBOUND_COMMIT_TABLE)?;
+        write.open_table(INBOUND_DELETED_TABLE)?;
         write
             .commit()
             .context("commit mailbox replication ledger initialization")?;
@@ -588,6 +719,224 @@ impl MailboxReplicationLedger {
             .map(ReplicationPlanRecord::into_public))
     }
 
+    /// Record this only after the caller's event/history transaction has
+    /// durably committed. Each provider source is tracked independently so an
+    /// already committed replicated item can still be deleted from every store.
+    pub fn record_inbound_commit(
+        &self,
+        prepared: &PreparedInboundItem,
+        transport_identity: [u8; 32],
+        application_commit_id: [u8; 32],
+        committed_at_unix_seconds: u64,
+    ) -> Result<()> {
+        let record = ReplicaInboundCommitRecord {
+            version: RECORD_VERSION,
+            mailbox_id: prepared.mailbox_id(),
+            item_id: prepared.item_id(),
+            transport_identity,
+            expected_store_key: prepared.expected_store_key(),
+            stored_receipt: prepared.stored_receipt().clone(),
+            application_commit_id,
+            committed_at_unix_seconds,
+        };
+        let encoded = record.encode()?;
+        let key = receipt_key(record.mailbox_id, record.item_id, record.expected_store_key);
+        let mut write = self.database.begin_write()?;
+        write.set_durability(Durability::Immediate)?;
+        if let Some(deleted) = read_value(&write, INBOUND_DELETED_TABLE, key.as_slice())? {
+            let deleted = ReplicaInboundDeletedRecord::decode(&deleted)?;
+            ensure!(
+                deleted.transport_identity == transport_identity
+                    && deleted.expected_store_key == prepared.expected_store_key()
+                    && deleted.stored_receipt_id == prepared.stored_receipt_id()?,
+                "already-deleted inbound replica conflicts with prepared input"
+            );
+            write.commit()?;
+            return Ok(());
+        }
+        if let Some(current) = read_value(&write, INBOUND_COMMIT_TABLE, key.as_slice())? {
+            let current = ReplicaInboundCommitRecord::decode(&current)?;
+            ensure!(
+                current.same_logical_record(&record),
+                "inbound replica commit replay conflicts"
+            );
+            write.commit()?;
+            return Ok(());
+        }
+        ensure!(
+            write.open_table(INBOUND_COMMIT_TABLE)?.len()? < self.config.max_receipts,
+            "inbound replica commit capacity exceeded"
+        );
+        write
+            .open_table(INBOUND_COMMIT_TABLE)?
+            .insert(key.as_slice(), encoded.as_slice())?;
+        write.commit()?;
+        Ok(())
+    }
+
+    pub fn pending_inbound_delete(
+        &self,
+        address: MailboxAddress,
+        read_capability: &MailboxReadCapability,
+    ) -> Result<Option<PendingReplicaDelete>> {
+        Ok(self
+            .pending_inbound_deletes(address, read_capability, 1)?
+            .into_iter()
+            .next())
+    }
+
+    pub fn pending_inbound_delete_for(
+        &self,
+        address: MailboxAddress,
+        read_capability: &MailboxReadCapability,
+        item_id: MailboxItemId,
+        expected_store_key: MailboxStoreKey,
+    ) -> Result<Option<PendingReplicaDelete>> {
+        ensure!(
+            address.read_key() == read_capability.read_key(),
+            "mailbox read capability does not match replica delete address"
+        );
+        let key = receipt_key(address.mailbox_id(), item_id, expected_store_key);
+        let read = self.database.begin_read()?;
+        let table = read.open_table(INBOUND_COMMIT_TABLE)?;
+        let Some(value) = table.get(key.as_slice())? else {
+            return Ok(None);
+        };
+        let record = ReplicaInboundCommitRecord::decode(value.value())?;
+        ensure!(
+            record.mailbox_id == address.mailbox_id()
+                && record.item_id == item_id
+                && record.expected_store_key == expected_store_key,
+            "inbound replica commit key does not match its record"
+        );
+        let authorization = read_capability.authorize_delete(
+            address,
+            item_id,
+            record.stored_receipt.receipt_id()?,
+        )?;
+        Ok(Some(PendingReplicaDelete {
+            request: MailboxDeleteRequest::new(address, authorization)?,
+            expected_store_key,
+            transport_identity: record.transport_identity,
+        }))
+    }
+
+    pub fn pending_inbound_deletes(
+        &self,
+        address: MailboxAddress,
+        read_capability: &MailboxReadCapability,
+        limit: u8,
+    ) -> Result<Vec<PendingReplicaDelete>> {
+        ensure!(
+            address.read_key() == read_capability.read_key(),
+            "mailbox read capability does not match replica delete address"
+        );
+        ensure!(
+            (1..=MAX_REPLICA_DELETE_BATCH).contains(&limit),
+            "mailbox replica delete batch size is invalid"
+        );
+        let read = self.database.begin_read()?;
+        let table = read.open_table(INBOUND_COMMIT_TABLE)?;
+        let mut pending = Vec::new();
+        for entry in table.iter()? {
+            let (key, value) = entry?;
+            ensure!(
+                key.value().len() == RECEIPT_KEY_BYTES,
+                "mailbox replication ledger contains an invalid inbound commit key"
+            );
+            let record = ReplicaInboundCommitRecord::decode(value.value())?;
+            ensure!(
+                key.value()
+                    == receipt_key(record.mailbox_id, record.item_id, record.expected_store_key),
+                "inbound replica commit key does not match its record"
+            );
+            if record.mailbox_id != address.mailbox_id() {
+                continue;
+            }
+            let authorization = read_capability.authorize_delete(
+                address,
+                record.item_id,
+                record.stored_receipt.receipt_id()?,
+            )?;
+            pending.push(PendingReplicaDelete {
+                request: MailboxDeleteRequest::new(address, authorization)?,
+                expected_store_key: record.expected_store_key,
+                transport_identity: record.transport_identity,
+            });
+            if pending.len() == usize::from(limit) {
+                break;
+            }
+        }
+        Ok(pending)
+    }
+
+    pub fn mark_inbound_deleted(
+        &self,
+        pending: &PendingReplicaDelete,
+        response: &MailboxDeleteResponse,
+        recorded_at_unix_seconds: u64,
+    ) -> Result<()> {
+        let delete_receipt = response
+            .delete_receipt()
+            .context("volunteer mailbox delete response has no signed deletion proof")?;
+        MailboxDeleteResponse::decode_and_verify(
+            &response.encode(pending.request(), pending.expected_store_key())?,
+            pending.request(),
+            pending.expected_store_key(),
+        )?;
+        let record = ReplicaInboundDeletedRecord {
+            version: RECORD_VERSION,
+            mailbox_id: pending.request().mailbox_id(),
+            item_id: pending.request().item_id(),
+            transport_identity: *pending.transport_identity(),
+            expected_store_key: pending.expected_store_key(),
+            stored_receipt_id: pending.request().stored_receipt_id(),
+            delete_receipt: delete_receipt.clone(),
+            recorded_at_unix_seconds,
+        };
+        let encoded = record.encode()?;
+        let key = receipt_key(record.mailbox_id, record.item_id, record.expected_store_key);
+        let mut write = self.database.begin_write()?;
+        write.set_durability(Durability::Immediate)?;
+        if let Some(current) = read_value(&write, INBOUND_DELETED_TABLE, key.as_slice())? {
+            let current = ReplicaInboundDeletedRecord::decode(&current)?;
+            ensure!(
+                current.same_logical_record(&record),
+                "deleted inbound replica replay conflicts"
+            );
+            write.commit()?;
+            return Ok(());
+        }
+        let committed = read_value(&write, INBOUND_COMMIT_TABLE, key.as_slice())?
+            .context("application commit is absent before replica deletion")?;
+        let committed = ReplicaInboundCommitRecord::decode(&committed)?;
+        ensure!(
+            committed.transport_identity == record.transport_identity
+                && committed.stored_receipt.receipt_id()? == record.stored_receipt_id,
+            "replica deletion does not match its durable application commit"
+        );
+        ensure!(
+            write.open_table(INBOUND_DELETED_TABLE)?.len()? < self.config.max_receipts,
+            "deleted inbound replica capacity exceeded"
+        );
+        write
+            .open_table(INBOUND_DELETED_TABLE)?
+            .insert(key.as_slice(), encoded.as_slice())?;
+        write
+            .open_table(INBOUND_COMMIT_TABLE)?
+            .remove(key.as_slice())?;
+        write.commit()?;
+        Ok(())
+    }
+
+    pub fn inbound_counts(&self) -> Result<(u64, u64)> {
+        let read = self.database.begin_read()?;
+        Ok((
+            read.open_table(INBOUND_COMMIT_TABLE)?.len()?,
+            read.open_table(INBOUND_DELETED_TABLE)?.len()?,
+        ))
+    }
+
     pub fn cleanup(&self, now_unix_seconds: u64) -> Result<MailboxReplicationCleanupReport> {
         let mut write = self.database.begin_write()?;
         write.set_durability(Durability::Immediate)?;
@@ -646,11 +995,61 @@ impl MailboxReplicationLedger {
         for key in &expired_receipts {
             write.open_table(RECEIPT_TABLE)?.remove(key.as_slice())?;
         }
+        let expired_inbound_commits = {
+            let table = write.open_table(INBOUND_COMMIT_TABLE)?;
+            let mut expired = Vec::new();
+            for entry in table.iter()? {
+                let (key, value) = entry?;
+                ensure!(
+                    key.value().len() == RECEIPT_KEY_BYTES,
+                    "mailbox replication ledger contains an invalid inbound commit key"
+                );
+                if ReplicaInboundCommitRecord::decode(value.value())?
+                    .stored_receipt
+                    .expires_at_unix_seconds()
+                    <= now_unix_seconds
+                {
+                    expired.push(key.value().to_vec());
+                }
+            }
+            expired
+        };
+        for key in &expired_inbound_commits {
+            write
+                .open_table(INBOUND_COMMIT_TABLE)?
+                .remove(key.as_slice())?;
+        }
+        let expired_inbound_deletions = {
+            let table = write.open_table(INBOUND_DELETED_TABLE)?;
+            let mut expired = Vec::new();
+            for entry in table.iter()? {
+                let (key, value) = entry?;
+                ensure!(
+                    key.value().len() == RECEIPT_KEY_BYTES,
+                    "mailbox replication ledger contains an invalid inbound deletion key"
+                );
+                if ReplicaInboundDeletedRecord::decode(value.value())?
+                    .delete_receipt
+                    .expires_at_unix_seconds()
+                    <= now_unix_seconds
+                {
+                    expired.push(key.value().to_vec());
+                }
+            }
+            expired
+        };
+        for key in &expired_inbound_deletions {
+            write
+                .open_table(INBOUND_DELETED_TABLE)?
+                .remove(key.as_slice())?;
+        }
         write.commit()?;
         Ok(MailboxReplicationCleanupReport {
             removed_plans: expired_items.len() as u64,
             removed_receipts: expired_receipts.len() as u64,
             removed_attempts,
+            removed_inbound_commits: expired_inbound_commits.len() as u64,
+            removed_inbound_deletions: expired_inbound_deletions.len() as u64,
         })
     }
 }
@@ -822,8 +1221,81 @@ mod tests {
                 removed_plans: 1,
                 removed_receipts: 2,
                 removed_attempts: 1,
+                removed_inbound_commits: 0,
+                removed_inbound_deletions: 0,
             }
         );
+        Ok(())
+    }
+
+    #[test]
+    fn replica_delete_requires_durable_application_commit() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let replication = MailboxReplicationLedger::open(MailboxReplicationLedgerConfig::new(
+            directory.path().join("replication"),
+        ))?;
+        let client = crate::MailboxClientLedger::open(crate::MailboxClientLedgerConfig::new(
+            directory.path().join("client"),
+        ))?;
+        let identity = MailboxStoreIdentity::from_secret_bytes([21_u8; 32]);
+        let store_key = identity.store_key();
+        let store = BlindMailboxStore::open(
+            MailboxStoreConfig::new(directory.path().join("store")),
+            identity,
+        )?;
+        let write = MailboxWriteCapability::from_secret_bytes([22_u8; 32]);
+        let read = kilogram_mailbox::MailboxReadCapability::from_secret_bytes([23_u8; 32]);
+        let address = MailboxAddress::new(read.read_key(), write.write_key());
+        let item_id = MailboxItemId::from_bytes([24_u8; 32]);
+        let recipient = DeviceEncryptionIdentity::from_secret_bytes([25_u8; 32]);
+        let envelope = MailboxEnvelope::seal(
+            address.mailbox_id(),
+            item_id,
+            2_000,
+            2_600,
+            recipient.public_key(),
+            b"replicated opaque event",
+        )?
+        .encode()?;
+        let authorization = write.authorize(address, item_id, 600, &envelope)?;
+        store.put(address, &authorization, envelope, 2_000)?;
+        let list_authorization = read.authorize_list(
+            address,
+            kilogram_mailbox::MailboxRequestNonce::from_bytes([26_u8; 32]),
+        )?;
+        let item = store
+            .list(address, &list_authorization, 2_001)?
+            .into_iter()
+            .next()
+            .context("stored replica")?;
+        let prepared = client.prepare_inbound(address, item, store_key, &recipient, 2_001)?;
+        assert!(
+            replication
+                .pending_inbound_delete(address, &read)?
+                .is_none()
+        );
+        replication.record_inbound_commit(&prepared, [27_u8; 32], [28_u8; 32], 2_002)?;
+        assert!(
+            replication
+                .pending_inbound_delete_for(address, &read, item_id, store.store_key())?
+                .is_some()
+        );
+        let pending = replication
+            .pending_inbound_delete(address, &read)?
+            .context("replica delete after application commit")?;
+        let delete_response = MailboxDeleteResponse::from_outcome(store.delete(
+            address,
+            pending.request().authorization(),
+            2_003,
+        )?);
+        replication.mark_inbound_deleted(&pending, &delete_response, 2_003)?;
+        replication.mark_inbound_deleted(&pending, &delete_response, 2_004)?;
+        assert_eq!(replication.inbound_counts()?, (0, 1));
+        assert!(store.list(address, &list_authorization, 2_004)?.is_empty());
+        let cleanup = replication.cleanup(2_600)?;
+        assert_eq!(cleanup.removed_inbound_commits, 0);
+        assert_eq!(cleanup.removed_inbound_deletions, 1);
+        assert_eq!(replication.inbound_counts()?, (0, 0));
         Ok(())
     }
 }

@@ -3640,19 +3640,45 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
   в
   [`../docs/RFC-0087-resumable-volunteer-mailbox-replication.md`](../docs/RFC-0087-resumable-volunteer-mailbox-replication.md).
 
+### M0.9.66 — bounded volunteer mailbox retrieval: выполнено
+
+Реализовано:
+
+- recipient runtime выбирает fresh bounded sample из verified provider registry,
+  исключает own endpoint и одновременно опрашивает не более 3 transport-distinct
+  providers по existing blind-mailbox Iroh ALPN;
+- каждый LIST просит ровно 1 item; outer reply, store key, stored receipt,
+  scoped read capability и E2EE runtime payload проверяются до локальной записи;
+- общий commit path для HTTPS и volunteer source сначала durable добавляет event
+  в append-only history и лишь затем создаёт delete eligibility;
+- отдельные Redb inbound commit/deletion tables связывают exact
+  mailbox/item/store/transport/stored receipt с application commit и signed
+  delete receipt; interrupted DELETE возобновляется после restart;
+- одинаковая реплика на разных stores учитывается независимо; cleanup bounded
+  исходным receipt expiry;
+- HTTPS mailbox остаётся compatibility fallback до внешнего evidence. Random
+  local-registry sampling не заменяет exact replica locator и не гарантирует
+  немедленное обнаружение в большой сети;
+- новый EXE/listener/service/directory не добавлен; contract зафиксирован в
+  [`../docs/RFC-0088-bounded-volunteer-mailbox-retrieval.md`](../docs/RFC-0088-bounded-volunteer-mailbox-retrieval.md).
+
 ### Следующий этап
 
-1. M0.9.66: добавить recipient-side bounded Iroh LIST/DELETE по verified
-   volunteer offers, сохранив application-commit-before-delete, затем собрать
-   Alice/Bob/volunteer field kit и провести реальный cross-network run. До этой
-   проверки HTTPS mailbox остаётся compatibility delivery path.
-2. До первого публичного security artifact pin-нуть linker/SDK либо controlled
+1. M0.9.67: собрать no-archive debug Alice/Bob/volunteer field kit и провести
+   реальный cross-network offline-recipient run с two-of-three PUT receipts,
+   sender stop, recipient Iroh LIST, application commit, signed DELETE и restart.
+   Несколько providers на одном operator host дают mechanism evidence, но не
+   operator-independent durability.
+2. Спроектировать authenticated replica-set locator/commitment, чтобы recipient
+   не полагался на случайное сканирование большой registry; не добавлять global
+   social directory и не раскрывать Account/Device/conversation IDs providers.
+3. До первого публичного security artifact pin-нуть linker/SDK либо controlled
    alternative и повторить M0.9.59 до matched external hash и attestation.
-3. Optional autostart/background mode оставить отдельной явной настройкой, не
+4. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
-4. Добавить macOS/Linux/mobile providers той же platform boundary.
-5. Спроектировать privacy-preserving gossip и first-contact freshness;
+5. Добавить macOS/Linux/mobile providers той же platform boundary.
+6. Спроектировать privacy-preserving gossip и first-contact freshness;
    M0.9.29 скрывает payload/явные IDs, но не access correlation.
-6. Membership removal и group governance проектировать вместе с ordered
+7. Membership removal и group governance проектировать вместе с ordered
    security events и MLS epoch; compact Merkle/range summary и независимый
    криптографический аудит остаются до публичного выпуска.
