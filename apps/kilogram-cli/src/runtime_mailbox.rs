@@ -18,6 +18,8 @@ const VERSION: u8 = 1;
 const LOCAL_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-local-mailbox-binding:v1\0";
 const PEER_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-peer-mailbox-binding:v1\0";
 const DISPATCH_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-mailbox-dispatch:v1\0";
+const DISPATCH_REPLICATION_BINDING_DOMAIN: &[u8] =
+    b"kilogram:runtime-mailbox-dispatch-replication-binding:v1\0";
 const ITEM_ID_DOMAIN: &[u8] = b"kilogram:runtime-mailbox-item-id:v1\0";
 const EVENT_ITEM_ID_DOMAIN: &[u8] = b"kilogram:runtime-mailbox-event-item-id:v1\0";
 const PAYLOAD_VERSION: u8 = 1;
@@ -640,6 +642,14 @@ impl SignedRuntimeMailboxDispatch {
 
     pub fn expires_at_unix_seconds(&self) -> u64 {
         self.content.expires_at_unix_seconds
+    }
+
+    pub fn replication_binding(&self) -> Result<[u8; 32]> {
+        let encoded = self.encode()?;
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(DISPATCH_REPLICATION_BINDING_DOMAIN);
+        hasher.update(&encoded);
+        Ok(*hasher.finalize().as_bytes())
     }
 }
 

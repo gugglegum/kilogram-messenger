@@ -26,14 +26,18 @@ use kilogram_identity::{
 };
 use kilogram_mailbox::{
     MAX_MAILBOX_PAGE_ITEMS, MAX_MAILBOX_STORAGE_OFFER_BYTES, MAX_MAILBOX_TTL_SECONDS,
-    MIN_MAILBOX_TTL_SECONDS, MailboxEnvelope, MailboxListRequest, MailboxPutRequest,
-    MailboxRequestNonce, MailboxStoragePolicyClass, MailboxStoreKey, SignedMailboxStorageOffer,
+    MIN_MAILBOX_TTL_SECONDS, MailboxEnvelope, MailboxListRequest, MailboxPeerRequest,
+    MailboxPutRequest, MailboxPutResponse, MailboxRequestNonce, MailboxStoragePolicyClass,
+    MailboxStoreKey, SignedMailboxStorageOffer,
 };
 use kilogram_mailbox_client::{
-    MAX_PROVIDER_GOSSIP_FRAME_BYTES, MAX_PROVIDER_GOSSIP_OFFER_BYTES, MailboxClientLedger,
+    DEFAULT_REPLICATION_RETRY_SECONDS, DEFAULT_REPLICATION_TARGETS,
+    DEFAULT_REQUIRED_REPLICA_RECEIPTS, MAX_PROVIDER_GOSSIP_FRAME_BYTES,
+    MAX_PROVIDER_GOSSIP_OFFER_BYTES, MAX_PROVIDER_SELECTION, MailboxClientLedger,
     MailboxClientLedgerConfig, MailboxHttpClient, MailboxOutboundState, MailboxProviderGossipFrame,
     MailboxProviderImportOutcome, MailboxProviderOffer, MailboxProviderRegistry,
-    MailboxProviderRegistryConfig, OutboundEnqueueOutcome, PendingMailboxUpload,
+    MailboxProviderRegistryConfig, MailboxReplicationLedger, MailboxReplicationLedgerConfig,
+    OutboundEnqueueOutcome, PendingMailboxUpload,
 };
 use kilogram_mailbox_provisioning::{
     EncryptedMailboxOffer, LocalMailboxBinding, MAX_MAILBOX_OFFER_VALIDITY_SECONDS,
@@ -101,8 +105,9 @@ use kilogram_transport_iroh::{
     ALPN, MAILBOX_ALPN, MAX_WIRE_MESSAGE_BYTES, RoutePolicy, SelectedPathDiagnostics,
     await_route_policy, encode_mailbox_provider_endpoint, endpoint_builder_for_remote,
     endpoint_builder_with_relay, mailbox_provider_endpoint_from_offer, read_client_request,
-    read_mailbox_peer_request, read_server_response, selected_path_diagnostics,
-    write_client_request, write_mailbox_peer_response, write_server_response,
+    read_mailbox_peer_request, read_mailbox_peer_response, read_server_response,
+    selected_path_diagnostics, write_client_request, write_mailbox_peer_request,
+    write_mailbox_peer_response, write_server_response,
 };
 use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
@@ -5178,6 +5183,13 @@ fn runtime_mailbox_ledger(state_directory: &Path) -> Result<MailboxClientLedger>
         state_directory.join(MAILBOX_CLIENT_LEDGER_DIRECTORY),
     ))
     .context("open runtime mailbox client ledger")
+}
+
+fn runtime_mailbox_replication_ledger(state_directory: &Path) -> Result<MailboxReplicationLedger> {
+    MailboxReplicationLedger::open(MailboxReplicationLedgerConfig::new(
+        state_directory.join(MAILBOX_CLIENT_LEDGER_DIRECTORY),
+    ))
+    .context("open runtime mailbox replication ledger")
 }
 
 fn runtime_mailbox_provider_registry(state_directory: &Path) -> Result<MailboxProviderRegistry> {
@@ -16924,7 +16936,9 @@ async fn start_runtime_volunteer_storage(
     println!("runtime_volunteer_storage_offer_distribution=authenticated-bounded-peer-gossip");
     println!("runtime_volunteer_storage_discovery=verified-expiring-offer-registry");
     println!("runtime_volunteer_storage_selection=deterministic-transport-distinct");
-    println!("runtime_volunteer_storage_replication=false");
+    println!("runtime_volunteer_storage_replication=sender-three-target-two-receipt");
+    println!("runtime_volunteer_storage_replication_retry_seconds=60");
+    println!("runtime_volunteer_storage_replica_retrieval=https-compatible-pending-iroh-read");
     println!("runtime_volunteer_storage_policy_refresh=automatic-five-minutes");
     println!("runtime_volunteer_storage_os_background_service=false");
     Ok(Some(RuntimeVolunteerStorageServer {
@@ -17324,7 +17338,7 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                     && last_mailbox_check.elapsed() >= RUNTIME_MAILBOX_POLL_INTERVAL
                 {
                     last_mailbox_check = tokio::time::Instant::now();
-                    match attempt_pending_runtime_mailbox_upload(&state_dir).await {
+                    match attempt_pending_runtime_mailbox_upload(&endpoint, &state_dir).await {
                         Ok(true) => {
                             mailbox_action = true;
                             if let Some(server) = ipc_server.as_ref() {
@@ -17334,8 +17348,12 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                         }
                         Ok(false) => {
                             mailbox_action = true;
-                            match attempt_runtime_mailbox_poll(&state_dir, &mut last_mailbox_polls)
-                                .await
+                            match attempt_runtime_mailbox_poll(
+                                &endpoint,
+                                &state_dir,
+                                &mut last_mailbox_polls,
+                            )
+                            .await
                             {
                                 Ok(RuntimeMailboxPollAttempt::StateChanged) => {
                                     if let Some(server) = ipc_server.as_ref() {
@@ -18300,6 +18318,7 @@ struct PreparedRuntimeMailboxUpload {
     pending: PendingMailboxUpload,
     service_base_url: String,
     queue_id: Option<RuntimeQueueId>,
+    replication_dispatch_binding: Option<[u8; 32]>,
 }
 
 fn open_current_peer_mailbox_binding(
@@ -18416,16 +18435,218 @@ fn open_verified_local_mailbox_binding(
     )
 }
 
+fn random_mailbox_replication_selection_salt() -> Result<[u8; 32]> {
+    let mut salt = [0_u8; 32];
+    getrandom::fill(&mut salt).context("generate mailbox replication selection salt")?;
+    ensure!(
+        salt != [0_u8; 32],
+        "mailbox replication selection salt is invalid"
+    );
+    Ok(salt)
+}
+
+async fn put_runtime_volunteer_mailbox_replica(
+    endpoint: &Endpoint,
+    offer: &MailboxProviderOffer,
+    request: &MailboxPutRequest,
+) -> Result<MailboxPutResponse> {
+    let provider_endpoint = mailbox_provider_endpoint_from_offer(offer.signed_offer())
+        .context("parse selected volunteer mailbox endpoint")?;
+    let connection = timeout(
+        CONNECTION_TIMEOUT,
+        endpoint.connect(provider_endpoint, MAILBOX_ALPN),
+    )
+    .await
+    .with_context(|| timeout_message("connect volunteer mailbox provider", CONNECTION_TIMEOUT))?
+    .context("connect volunteer mailbox provider")?;
+    let peer_request = MailboxPeerRequest::put(request)?;
+    let (mut send, mut receive) = open_bi(&connection, "open volunteer mailbox PUT stream").await?;
+    write_mailbox_peer_request(&mut send, &peer_request).await?;
+    let peer_response = read_mailbox_peer_response(&mut receive, &peer_request).await?;
+    let payload = peer_response.success_payload().with_context(|| {
+        format!(
+            "volunteer mailbox provider rejected PUT: {:?}",
+            peer_response.rejection()
+        )
+    })?;
+    let response = MailboxPutResponse::decode_and_verify(payload, request, offer.store_key())?;
+    ensure!(
+        response.stored_receipt().is_some(),
+        "volunteer mailbox provider did not return a durable stored receipt"
+    );
+    connection.close(0_u32.into(), b"kilogram volunteer mailbox replica stored");
+    Ok(response)
+}
+
+async fn attempt_runtime_volunteer_mailbox_replication(
+    endpoint: &Endpoint,
+    state_directory: &Path,
+    request: &MailboxPutRequest,
+    dispatch_binding: [u8; 32],
+) -> Result<bool> {
+    let now = unix_time_now()?;
+    let ledger = runtime_mailbox_replication_ledger(state_directory)?;
+    let cleanup = ledger.cleanup(now)?;
+    if cleanup.removed_plans != 0 || cleanup.removed_receipts != 0 || cleanup.removed_attempts != 0
+    {
+        println!(
+            "runtime_mailbox_replication_cleanup=plans:{} receipts:{} attempts:{}",
+            cleanup.removed_plans, cleanup.removed_receipts, cleanup.removed_attempts
+        );
+    }
+    let (_, plan) = ledger.ensure_plan(
+        request,
+        dispatch_binding,
+        random_mailbox_replication_selection_salt()?,
+        DEFAULT_REPLICATION_TARGETS,
+        DEFAULT_REQUIRED_REPLICA_RECEIPTS,
+        now,
+    )?;
+    ensure!(
+        plan.dispatch_binding() == &dispatch_binding
+            && plan.mailbox_id() == request.mailbox_id()
+            && plan.item_id() == request.item_id(),
+        "durable mailbox replication plan does not match its outbox dispatch"
+    );
+    let before = ledger
+        .status(plan.mailbox_id(), plan.item_id())?
+        .context("mailbox replication plan disappeared")?;
+    if before.is_satisfied() {
+        println!(
+            "runtime_mailbox_replication_receipts={}/{}",
+            before.receipts.len(),
+            before.plan.required_receipts()
+        );
+        println!("runtime_mailbox_replication_status=satisfied");
+        return Ok(true);
+    }
+    if !ledger.mark_attempt(&plan, now, DEFAULT_REPLICATION_RETRY_SECONDS)? {
+        println!("runtime_mailbox_replication_status=retry-cooldown");
+        return Ok(false);
+    }
+    let retained_store_keys = before
+        .receipts
+        .iter()
+        .map(|receipt| receipt.store_key())
+        .collect::<BTreeSet<_>>();
+    let retained_transport_identities = before
+        .receipts
+        .iter()
+        .map(|receipt| *receipt.transport_identity())
+        .collect::<BTreeSet<_>>();
+    let mut own_transport_hasher = blake3::Hasher::new();
+    own_transport_hasher.update(MAILBOX_PROVIDER_TRANSPORT_IDENTITY_DOMAIN);
+    own_transport_hasher.update(endpoint.id().to_string().as_bytes());
+    let own_transport_identity = *own_transport_hasher.finalize().as_bytes();
+    let selection_count = plan
+        .requested_replicas()
+        .saturating_add(1)
+        .min(MAX_PROVIDER_SELECTION);
+    let registry = runtime_mailbox_provider_registry(state_directory)?;
+    let selected = registry
+        .select(plan.selection_salt(), selection_count, now)?
+        .into_iter()
+        .filter(|offer| offer.transport_identity() != &own_transport_identity)
+        .filter(|offer| !retained_transport_identities.contains(offer.transport_identity()))
+        .filter(|offer| offer.max_record_bytes() >= request.envelope().len() as u64)
+        .filter(|offer| !retained_store_keys.contains(&offer.store_key()))
+        .take(usize::from(plan.requested_replicas()).saturating_sub(before.receipts.len()))
+        .collect::<Vec<_>>();
+    let mut failures = Vec::new();
+    for offer in selected {
+        println!(
+            "runtime_mailbox_replication_provider_attempt_store_key={}",
+            offer.store_key()
+        );
+        match put_runtime_volunteer_mailbox_replica(endpoint, &offer, request).await {
+            Ok(response) => {
+                let receipt = ledger.record_receipt(
+                    request,
+                    dispatch_binding,
+                    *offer.transport_identity(),
+                    offer.store_key(),
+                    &response,
+                    unix_time_now()?,
+                )?;
+                println!(
+                    "runtime_mailbox_replication_receipt_store_key={}",
+                    receipt.store_key()
+                );
+            }
+            Err(error) => {
+                failures.push(format!("{}: {error:#}", offer.store_key()));
+                eprintln!(
+                    "runtime_mailbox_replication_provider_status=failed store_key={} error={error:#}",
+                    offer.store_key()
+                );
+            }
+        }
+    }
+    let status = ledger
+        .status(plan.mailbox_id(), plan.item_id())?
+        .context("mailbox replication plan disappeared after PUT attempts")?;
+    println!(
+        "runtime_mailbox_replication_receipts={}/{}",
+        status.receipts.len(),
+        status.plan.required_receipts()
+    );
+    println!(
+        "runtime_mailbox_replication_targets={}",
+        status.plan.requested_replicas()
+    );
+    println!("runtime_mailbox_replication_transport_distinct=true");
+    println!("runtime_mailbox_replication_http_delivery_compatibility=true");
+    if status.is_satisfied() {
+        println!("runtime_mailbox_replication_status=satisfied");
+        Ok(true)
+    } else {
+        println!("runtime_mailbox_replication_status=incomplete");
+        if !failures.is_empty() {
+            eprintln!(
+                "runtime_mailbox_replication_failures={}",
+                failures.join(" | ")
+            );
+        }
+        Ok(false)
+    }
+}
+
 async fn upload_runtime_mailbox_request(
+    endpoint: &Endpoint,
     state_directory: &Path,
     upload: PreparedRuntimeMailboxUpload,
 ) -> Result<()> {
+    if let Some(dispatch_binding) = upload.replication_dispatch_binding {
+        let replication_ledger = runtime_mailbox_replication_ledger(state_directory)?;
+        replication_ledger.ensure_plan(
+            &upload.pending.request,
+            dispatch_binding,
+            random_mailbox_replication_selection_salt()?,
+            DEFAULT_REPLICATION_TARGETS,
+            DEFAULT_REQUIRED_REPLICA_RECEIPTS,
+            unix_time_now()?,
+        )?;
+        println!("runtime_mailbox_replication_status=durable-plan-ready");
+    }
     let client =
         MailboxHttpClient::new(&upload.service_base_url, upload.pending.expected_store_key)?;
-    let response = client
-        .put(&upload.pending.request)
-        .await
-        .context("upload runtime mailbox item")?;
+    let response = match client.put(&upload.pending.request).await {
+        Ok(response) => response,
+        Err(error) => {
+            if let Some(dispatch_binding) = upload.replication_dispatch_binding
+                && let Err(replication_error) = attempt_runtime_volunteer_mailbox_replication(
+                    endpoint,
+                    state_directory,
+                    &upload.pending.request,
+                    dispatch_binding,
+                )
+                .await
+            {
+                eprintln!("runtime_mailbox_replication_status=failed error={replication_error:#}");
+            }
+            return Err(error).context("upload runtime mailbox item");
+        }
+    };
     let ledger = runtime_mailbox_ledger(state_directory)?;
     let stored = ledger.mark_outbound_stored(
         &upload.pending.request,
@@ -18559,6 +18780,7 @@ async fn prepare_orphan_runtime_mailbox_dispatch(
                 pending,
                 service_base_url: binding.service().base_url().to_owned(),
                 queue_id: Some(dispatch.queue_id()),
+                replication_dispatch_binding: Some(dispatch.replication_binding()?),
             }));
         }
         Ok(None)
@@ -18567,7 +18789,10 @@ async fn prepare_orphan_runtime_mailbox_dispatch(
     result
 }
 
-async fn attempt_pending_runtime_mailbox_upload(state_directory: &Path) -> Result<bool> {
+async fn attempt_pending_runtime_mailbox_upload(
+    endpoint: &Endpoint,
+    state_directory: &Path,
+) -> Result<bool> {
     let ledger = runtime_mailbox_ledger(state_directory)?;
     let now = unix_time_now()?;
     let cleanup = ledger.cleanup(now)?;
@@ -18587,12 +18812,36 @@ async fn attempt_pending_runtime_mailbox_upload(state_directory: &Path) -> Resul
     let pending = ledger.next_pending_outbound()?;
     drop(ledger);
     let Some(pending) = pending else {
-        let Some(upload) = prepare_orphan_runtime_mailbox_dispatch(state_directory, now).await?
-        else {
-            return Ok(false);
-        };
-        upload_runtime_mailbox_request(state_directory, upload).await?;
-        return Ok(true);
+        if let Some(upload) = prepare_orphan_runtime_mailbox_dispatch(state_directory, now).await? {
+            upload_runtime_mailbox_request(endpoint, state_directory, upload).await?;
+            return Ok(true);
+        }
+        let replication_ledger = runtime_mailbox_replication_ledger(state_directory)?;
+        let replication_cleanup = replication_ledger.cleanup(now)?;
+        if replication_cleanup.removed_plans != 0
+            || replication_cleanup.removed_receipts != 0
+            || replication_cleanup.removed_attempts != 0
+        {
+            println!(
+                "runtime_mailbox_replication_cleanup=plans:{} receipts:{} attempts:{}",
+                replication_cleanup.removed_plans,
+                replication_cleanup.removed_receipts,
+                replication_cleanup.removed_attempts
+            );
+        }
+        let due = replication_ledger.next_due(now, DEFAULT_REPLICATION_RETRY_SECONDS)?;
+        drop(replication_ledger);
+        if let Some(plan) = due {
+            attempt_runtime_volunteer_mailbox_replication(
+                endpoint,
+                state_directory,
+                plan.request(),
+                *plan.dispatch_binding(),
+            )
+            .await?;
+            return Ok(true);
+        }
+        return Ok(false);
     };
     let state_lock = acquire_runtime_state_lock(state_directory)
         .await?
@@ -18627,26 +18876,28 @@ async fn attempt_pending_runtime_mailbox_upload(state_directory: &Path) -> Resul
                     && binding.service().expected_store_key() == pending.expected_store_key
             })
             .context("pending mailbox upload has no current recipient-bound capability")?;
-        let queue_id = snapshot
-            .mailbox_dispatches
-            .values()
-            .find(|dispatch| {
-                dispatch.mailbox_id() == pending.request.mailbox_id()
-                    && dispatch.item_id() == pending.request.item_id()
-            })
-            .map(SignedRuntimeMailboxDispatch::queue_id);
+        let dispatch = snapshot.mailbox_dispatches.values().find(|dispatch| {
+            dispatch.mailbox_id() == pending.request.mailbox_id()
+                && dispatch.item_id() == pending.request.item_id()
+        });
+        let queue_id = dispatch.map(SignedRuntimeMailboxDispatch::queue_id);
+        let replication_dispatch_binding = dispatch
+            .map(SignedRuntimeMailboxDispatch::replication_binding)
+            .transpose()?;
         Ok::<_, anyhow::Error>(PreparedRuntimeMailboxUpload {
             pending,
             service_base_url: binding.service().base_url().to_owned(),
             queue_id,
+            replication_dispatch_binding,
         })
     })();
     drop(state_lock);
-    upload_runtime_mailbox_request(state_directory, resolution?).await?;
+    upload_runtime_mailbox_request(endpoint, state_directory, resolution?).await?;
     Ok(true)
 }
 
 async fn attempt_runtime_mailbox_fallback(
+    endpoint: &Endpoint,
     state_directory: &Path,
     prepared: &PreparedRuntimeDelivery,
 ) -> Result<()> {
@@ -18762,6 +19013,7 @@ async fn attempt_runtime_mailbox_fallback(
                     pending,
                     service_base_url: peer_binding.service().base_url().to_owned(),
                     queue_id: Some(prepared.queue_id),
+                    replication_dispatch_binding: Some(dispatch.replication_binding()?),
                 }))
             }
             None => {
@@ -18824,6 +19076,7 @@ async fn attempt_runtime_mailbox_fallback(
                     pending,
                     service_base_url: peer_binding.service().base_url().to_owned(),
                     queue_id: Some(prepared.queue_id),
+                    replication_dispatch_binding: Some(dispatch.replication_binding()?),
                 }))
             }
         }
@@ -18835,7 +19088,7 @@ async fn attempt_runtime_mailbox_fallback(
     drop(state_lock);
     let upload = combine_operation_and_mirror(operation_result, mirror_result)?;
     if let Some(upload) = upload {
-        upload_runtime_mailbox_request(state_directory, upload).await?;
+        upload_runtime_mailbox_request(endpoint, state_directory, upload).await?;
     } else {
         println!("runtime_queue_id={}", prepared.queue_id);
         println!("runtime_outbound_status=mailbox-stored");
@@ -19157,6 +19410,7 @@ async fn prepare_runtime_reverse_mailbox_acknowledgement(
                     pending,
                     service_base_url: binding.service().base_url().to_owned(),
                     queue_id: None,
+                    replication_dispatch_binding: None,
                 }));
             }
             None => {}
@@ -19212,6 +19466,7 @@ async fn prepare_runtime_reverse_mailbox_acknowledgement(
             pending,
             service_base_url: binding.service().base_url().to_owned(),
             queue_id: None,
+            replication_dispatch_binding: None,
         }))
     })();
     drop(state_lock);
@@ -19230,6 +19485,7 @@ struct PreparedRuntimeMailboxPoll {
 }
 
 async fn attempt_runtime_mailbox_poll(
+    endpoint: &Endpoint,
     state_directory: &Path,
     last_polls: &mut BTreeMap<MailboxBindingId, tokio::time::Instant>,
 ) -> Result<RuntimeMailboxPollAttempt> {
@@ -19366,7 +19622,7 @@ async fn attempt_runtime_mailbox_poll(
     println!("runtime_mailbox_inbound_status=deleted-after-commit");
     drop(ledger);
     if let Some(upload) = reverse_upload
-        && let Err(error) = upload_runtime_mailbox_request(state_directory, upload).await
+        && let Err(error) = upload_runtime_mailbox_request(endpoint, state_directory, upload).await
     {
         eprintln!("runtime_reverse_mailbox_acknowledgement_status=pending error={error:#}");
     }
@@ -19441,7 +19697,7 @@ async fn attempt_next_runtime_delivery(
             eprintln!(
                 "runtime_outbound_status=failed runtime_queue_id={queue_id} stage=network error={error:#}"
             );
-            match attempt_runtime_mailbox_fallback(state_directory, &prepared).await {
+            match attempt_runtime_mailbox_fallback(endpoint, state_directory, &prepared).await {
                 Ok(()) => Ok(RuntimeDeliveryAttempt::MailboxStored),
                 Err(mailbox_error) => {
                     eprintln!(

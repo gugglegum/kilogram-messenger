@@ -85,7 +85,7 @@ foreach ($required in @(
     'JoinSet::new()',
     'runtime_volunteer_storage_offer_distribution=authenticated-bounded-peer-gossip',
     'runtime_volunteer_storage_discovery=verified-expiring-offer-registry',
-    'runtime_volunteer_storage_replication=false'
+    'runtime_volunteer_storage_replication=sender-three-target-two-receipt'
 )) {
     if (-not $runtime.Contains($required)) {
         throw "ordinary runtime volunteer Iroh integration is missing '$required'"
@@ -103,5 +103,5 @@ Write-Output 'offer=store-signed-expiring-endpoint-bound'
 Write-Output 'rate_limit=authenticated-iroh-endpoint-id'
 Write-Output 'transfer_limit=durable-shared-network-class-budget'
 Write-Output 'discovery=authenticated-bounded-peer-gossip'
-Write-Output 'replication=false'
+Write-Output 'replication=sender-three-target-two-receipt'
 Write-Output 'new_executable=false'

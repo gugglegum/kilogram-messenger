@@ -10,6 +10,7 @@
 mod http;
 mod ledger;
 mod provider;
+mod replication;
 
 pub use http::{MAILBOX_HTTP_CONTENT_TYPE, MailboxHttpClient};
 pub use ledger::{
@@ -24,4 +25,10 @@ pub use provider::{
     MailboxProviderGossipEntry, MailboxProviderGossipFrame, MailboxProviderImportOutcome,
     MailboxProviderOffer, MailboxProviderOfferId, MailboxProviderRegistry,
     MailboxProviderRegistryConfig,
+};
+pub use replication::{
+    DEFAULT_REPLICATION_RETRY_SECONDS, DEFAULT_REPLICATION_TARGETS,
+    DEFAULT_REQUIRED_REPLICA_RECEIPTS, MAX_REPLICATION_TARGETS, MailboxReplicaReceipt,
+    MailboxReplicationCleanupReport, MailboxReplicationLedger, MailboxReplicationLedgerConfig,
+    MailboxReplicationPlan, MailboxReplicationStatus, ReplicationPlanOutcome,
 };

@@ -3618,13 +3618,34 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - contract зафиксирован в
   [`../docs/RFC-0086-authenticated-bounded-volunteer-provider-gossip.md`](../docs/RFC-0086-authenticated-bounded-volunteer-provider-gossip.md).
 
+### M0.9.65 — resumable volunteer mailbox replication: выполнено
+
+Реализовано:
+
+- exact encrypted mailbox PUT связан с digest полного Device-signed durable
+  outbox dispatch и fresh random 32-byte provider-selection salt;
+- отдельный backwards-compatible Redb ledger сохраняет immutable plan, exact
+  request, independent store-signed receipts и durable attempt timestamps;
+- default policy выбирает до 3 remote transport-distinct providers и требует 2
+  receipts; own endpoint, duplicate transport identity, retained store key и
+  provider с малым max-record исключаются;
+- PUT идёт по existing `kilogram/m0/blind-mailbox/1`, outer response связан с
+  exact request digest, inner receipt проверяется против request и store key;
+- incomplete plans достраиваются после restart и после завершения primary
+  upload с 60-second cooldown; expiry удаляет plan/attempt/receipts вместе;
+- direct delivery остаётся первым. HTTPS upload пока сохраняется для recipient
+  compatibility и не блокируется volunteer failures; recipient Iroh read ещё
+  не заявлен;
+- новый EXE/listener/service/global directory не добавлен; contract зафиксирован
+  в
+  [`../docs/RFC-0087-resumable-volunteer-mailbox-replication.md`](../docs/RFC-0087-resumable-volunteer-mailbox-replication.md).
+
 ### Следующий этап
 
-1. M0.9.65: связать per-item random selection salt с durable outbox dispatch,
-   добавить
-   actual multi-provider replication/store receipts и провести реальный
-   Alice/Bob/volunteer field run; standalone HTTPS store оставить optional
-   bootstrap/reference path.
+1. M0.9.66: добавить recipient-side bounded Iroh LIST/DELETE по verified
+   volunteer offers, сохранив application-commit-before-delete, затем собрать
+   Alice/Bob/volunteer field kit и провести реальный cross-network run. До этой
+   проверки HTTPS mailbox остаётся compatibility delivery path.
 2. До первого публичного security artifact pin-нуть linker/SDK либо controlled
    alternative и повторить M0.9.59 до matched external hash и attestation.
 3. Optional autostart/background mode оставить отдельной явной настройкой, не

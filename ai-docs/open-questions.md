@@ -279,8 +279,11 @@ sessions, distribution, removal и key epochs и не решены этим пр
   2 honest-client hops, 15-minute offer age, 2 KiB/offer, 20 KiB/frame,
   one exchange per five minutes и randomized
   transport-distinct subset без social IDs/capabilities в payload. Открытыми
-  остаются Sybil-resistant diversity, cryptographic hop proof, access-correlation
-  privacy и actual replication policy.
+  M0.9.65 добавляет sender-side three-target/two-receipt replication с durable
+  per-dispatch random salt, exact encrypted PUT, transport-distinct receipts и
+  resumable cooldown. Открытыми остаются recipient discovery/polling выбранных
+  replicas, Sybil-resistant diversity, cryptographic hop proof и
+  access-correlation privacy.
 - Push-уведомления на Android/iOS без утечки содержания и социального графа.
 - Независимый second-builder, подписанный release provenance, обновления клиента
   и дальнейшая защита supply chain поверх M0.9.50 same-host gate.

@@ -696,6 +696,10 @@ EXE не создавались.
   реализованный M0.9.64 automatic short-lived offer exchange через existing
   authenticated peer sessions с count/size/age/hop/rate limits, reply binding,
   automatic own-offer refresh и без глобального directory.
+- [`../docs/RFC-0087-resumable-volunteer-mailbox-replication.md`](../docs/RFC-0087-resumable-volunteer-mailbox-replication.md) —
+  реализованный M0.9.65 sender-side three-target/two-receipt Iroh replication,
+  durable per-dispatch random salt, exact encrypted request, independent signed
+  receipts и resumable cooldown при сохранённом HTTPS compatibility delivery.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

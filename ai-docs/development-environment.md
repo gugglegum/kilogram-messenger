@@ -1962,3 +1962,19 @@ retirement остальных compatibility shadows ещё не реализов
 - Новый provider-gossip gate и три предыдущих volunteer gates проходят;
   release/ZIP не создавались, network endpoint/EXE не запускался, поэтому новый
   Windows Firewall prompt не инициировался.
+
+## M0.9.65 verification snapshot (2026-09-08)
+
+- `kilogram-mailbox-client::replication` сохраняет в отдельном Redb exact
+  encrypted PUT, dispatch binding, immutable random salt, 3/2 policy, attempts
+  и transport-distinct store receipts; retry остаётся возможен после завершения
+  primary HTTPS upload.
+- Runtime после direct failure выбирает remote offers, исключает own endpoint,
+  уже использованные transport identities и недостаточный max-record, затем
+  выполняет capability-authenticated PUT через existing mailbox ALPN.
+- Volunteer failure не блокирует existing HTTPS delivery; Iroh LIST/DELETE
+  retrieval остаётся M0.9.66, поэтому runtime честно печатает
+  `https-compatible-pending-iroh-read`.
+- Проверки выполняются debug/test/verification profile с BelowNormal priority и
+  максимум четырьмя Cargo jobs. Network endpoint/EXE, release и ZIP не должны
+  запускаться в локальной automated verification.

@@ -207,20 +207,22 @@ The current two-network Windows procedure is in
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.64 authenticated bounded provider gossip — complete
+## Current milestone: M0.9.65 resumable volunteer mailbox replication — complete
 
-The runtime now imports its own fresh store-signed volunteer offer and exchanges
-randomized subsets with authority-current contacts over Root-authorized Device
-sessions. An exchange is globally limited to once per five minutes, eight
-offers, 2 KiB per offer, 20 KiB per canonical frame, two honest-client hops and
-a 15-minute offer age. Replies are bound to the exact request digest.
+After direct delivery fails, the runtime now binds a fresh random provider
+selection salt to the exact signed outbox dispatch and copies the same opaque
+E2EE mailbox PUT to up to three transport-distinct remote volunteers over the
+existing blind-mailbox Iroh ALPN. A separate crash-safe ledger retains the exact
+encrypted request, its immutable plan, a durable 60-second retry cooldown and
+independent store-signed receipts; two receipts satisfy the current durability
+policy.
 
-The gossip payload contains no Account, Device, conversation or mailbox IDs
-and no mailbox capability. It uses no global directory, new executable,
-listener or background OS service. Hop metadata is a bandwidth bound for honest
-clients, not a cryptographic path proof; actual multi-provider mailbox
-replication remains the next step. Details are in
-[`docs/RFC-0086-authenticated-bounded-volunteer-provider-gossip.md`](docs/RFC-0086-authenticated-bounded-volunteer-provider-gossip.md).
+The existing HTTPS mailbox upload remains enabled as a compatibility delivery
+path until recipients can discover and poll the selected volunteer providers.
+Provider failures never suppress or delay it; replicas are resumable independent
+work after the exact plan is durable. This milestone adds no executable,
+listener, global directory, scheduled task or OS service. Details are in
+[`docs/RFC-0087-resumable-volunteer-mailbox-replication.md`](docs/RFC-0087-resumable-volunteer-mailbox-replication.md).
 
 ## Previous milestone: M0.9.61 default volunteer blind storage — complete
 

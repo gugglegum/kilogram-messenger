@@ -40,7 +40,7 @@ foreach ($required in @(
     'runtime_volunteer_storage_ingress=dedicated-iroh-alpn-plus-loopback',
     'runtime_volunteer_storage_offer_distribution=authenticated-bounded-peer-gossip',
     'runtime_volunteer_storage_discovery=verified-expiring-offer-registry',
-    'runtime_volunteer_storage_replication=false',
+    'runtime_volunteer_storage_replication=sender-three-target-two-receipt',
     'server.shutdown().await?'
 )) {
     if (-not $runtime.Contains($required)) {
@@ -95,4 +95,5 @@ Write-Output 'transfer_accounting=durable-application-payload'
 Write-Output 'runtime_scope=embedded-mailbox-only'
 Write-Output 'current_ingress=iroh-dedicated-alpn-plus-loopback'
 Write-Output 'peer_discovery=authenticated-bounded-peer-gossip'
+Write-Output 'replication=sender-three-target-two-receipt'
 Write-Output 'new_executable=false'
