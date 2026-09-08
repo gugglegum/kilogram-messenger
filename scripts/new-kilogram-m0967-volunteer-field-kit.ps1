@@ -45,10 +45,14 @@ try {
     )
     $boundaryLines = [Collections.Generic.List[string]]::new()
     foreach ($check in $checks) {
-        $checkOutput = @(& powershell -NoProfile -ExecutionPolicy Bypass `
-            -File (Join-Path $PSScriptRoot $check) 2>&1)
-        if ($LASTEXITCODE -ne 0) {
-            throw "$check failed.`n$($checkOutput -join [Environment]::NewLine)"
+        try {
+            # Keep the current PowerShell host and its UTF-8 decoding. Starting
+            # Windows PowerShell 5 here corrupts UTF-8-without-BOM Cyrillic in
+            # the Russian field-guide boundary check.
+            $checkOutput = @(& (Join-Path $PSScriptRoot $check) 2>&1)
+        }
+        catch {
+            throw "$check failed.`n$($_ | Out-String)"
         }
         foreach ($line in $checkOutput) { $boundaryLines.Add([string]$line) }
     }
