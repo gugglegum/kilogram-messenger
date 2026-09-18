@@ -716,6 +716,10 @@ EXE не создавались.
   упрощённый six-launch Windows harness: `1`=Alice, `2`=два providers,
   `3`=Bob, automatic disposable identity/contact/mailbox setup и unchanged
   fail-closed M0.9.67 evidence.
+- [`../docs/RFC-0091-authenticated-volunteer-replica-set-locator.md`](../docs/RFC-0091-authenticated-volunteer-replica-set-locator.md) —
+  реализованный M0.9.68 recipient-selected Device-signed exact store-key
+  commitment, durable per-item locator и indexed sender/recipient provider
+  resolution без global directory или раскрытия social IDs providers.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

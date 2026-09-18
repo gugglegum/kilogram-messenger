@@ -8,7 +8,8 @@ use kilogram_mailbox::{
     MailboxStoredReceipt,
 };
 use redb::{
-    Database, Durability, ReadableDatabase, ReadableTable, ReadableTableMetadata, TableDefinition,
+    Database, Durability, ReadOnlyDatabase, ReadableDatabase, ReadableTable, ReadableTableMetadata,
+    TableDefinition,
 };
 use serde::{Deserialize, Serialize};
 
@@ -19,6 +20,8 @@ const PLAN_TABLE: TableDefinition<&[u8], &[u8]> =
     TableDefinition::new("mailbox-replication-plans-v1");
 const RECEIPT_TABLE: TableDefinition<&[u8], &[u8]> =
     TableDefinition::new("mailbox-replication-receipts-v1");
+const REPLICA_SET_LOCATOR_TABLE: TableDefinition<&[u8], &[u8]> =
+    TableDefinition::new("mailbox-replica-set-locators-v1");
 const ATTEMPT_TABLE: TableDefinition<&[u8], &[u8]> =
     TableDefinition::new("mailbox-replication-attempts-v1");
 const INBOUND_COMMIT_TABLE: TableDefinition<&[u8], &[u8]> =
@@ -30,11 +33,14 @@ const ITEM_KEY_BYTES: usize = 64;
 const RECEIPT_KEY_BYTES: usize = ITEM_KEY_BYTES + 32;
 const MAX_PLAN_RECORD_BYTES: usize = MAX_MAILBOX_WIRE_REQUEST_BYTES + 4 * 1024;
 const MAX_RECEIPT_RECORD_BYTES: usize = 4 * 1024;
+const MAX_REPLICA_SET_LOCATOR_RECORD_BYTES: usize = 2 * 1024;
 const MAX_ABSOLUTE_RECORDS: u64 = 1_000_000;
 
 pub const DEFAULT_REPLICATION_TARGETS: u8 = 3;
 pub const DEFAULT_REQUIRED_REPLICA_RECEIPTS: u8 = 2;
 pub const MAX_REPLICATION_TARGETS: u8 = 8;
+pub const MIN_REPLICA_SET_LOCATOR_STORES: usize = 2;
+pub const MAX_REPLICA_SET_LOCATOR_STORES: usize = MAX_REPLICATION_TARGETS as usize;
 pub const DEFAULT_MAX_REPLICATION_PLANS: u64 = 4_096;
 pub const DEFAULT_MAX_REPLICA_RECEIPTS: u64 = 32_768;
 pub const DEFAULT_REPLICATION_RETRY_SECONDS: u64 = 60;
@@ -389,6 +395,7 @@ impl PendingReplicaDelete {
 pub struct MailboxReplicationStatus {
     pub plan: MailboxReplicationPlan,
     pub receipts: Vec<MailboxReplicaReceipt>,
+    pub replica_set_locator: Option<MailboxReplicaSetLocator>,
 }
 
 impl MailboxReplicationStatus {
@@ -401,9 +408,100 @@ impl MailboxReplicationStatus {
 pub struct MailboxReplicationCleanupReport {
     pub removed_plans: u64,
     pub removed_receipts: u64,
+    pub removed_replica_set_locators: u64,
     pub removed_attempts: u64,
     pub removed_inbound_commits: u64,
     pub removed_inbound_deletions: u64,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MailboxReplicationReadOnlyInspection {
+    pub next_due: Option<MailboxReplicationPlan>,
+    pub cleanup_required: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+struct ReplicaSetLocatorRecord {
+    version: u8,
+    mailbox_id: MailboxId,
+    item_id: MailboxItemId,
+    dispatch_binding: [u8; 32],
+    commitment_id: [u8; 32],
+    store_keys: Vec<MailboxStoreKey>,
+    recorded_at_unix_seconds: u64,
+    expires_at_unix_seconds: u64,
+}
+
+impl ReplicaSetLocatorRecord {
+    fn validate(&self) -> Result<()> {
+        ensure!(
+            self.version == RECORD_VERSION
+                && self.dispatch_binding != [0_u8; 32]
+                && self.commitment_id != [0_u8; 32]
+                && self.recorded_at_unix_seconds < self.expires_at_unix_seconds
+                && (MIN_REPLICA_SET_LOCATOR_STORES..=MAX_REPLICA_SET_LOCATOR_STORES)
+                    .contains(&self.store_keys.len())
+                && self.store_keys.windows(2).all(|pair| pair[0] < pair[1]),
+            "mailbox replica-set locator metadata is invalid"
+        );
+        Ok(())
+    }
+
+    fn encode(&self) -> Result<Vec<u8>> {
+        self.validate()?;
+        let bytes = postcard::to_allocvec(self).context("encode mailbox replica-set locator")?;
+        ensure!(
+            bytes.len() <= MAX_REPLICA_SET_LOCATOR_RECORD_BYTES,
+            "mailbox replica-set locator is too large"
+        );
+        Ok(bytes)
+    }
+
+    fn decode(bytes: &[u8]) -> Result<Self> {
+        ensure!(
+            bytes.len() <= MAX_REPLICA_SET_LOCATOR_RECORD_BYTES,
+            "mailbox replica-set locator is too large"
+        );
+        let record: Self =
+            postcard::from_bytes(bytes).context("decode mailbox replica-set locator")?;
+        record.validate()?;
+        Ok(record)
+    }
+
+    fn into_public(self) -> MailboxReplicaSetLocator {
+        MailboxReplicaSetLocator {
+            commitment_id: self.commitment_id,
+            store_keys: self.store_keys,
+            recorded_at_unix_seconds: self.recorded_at_unix_seconds,
+            expires_at_unix_seconds: self.expires_at_unix_seconds,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MailboxReplicaSetLocator {
+    commitment_id: [u8; 32],
+    store_keys: Vec<MailboxStoreKey>,
+    recorded_at_unix_seconds: u64,
+    expires_at_unix_seconds: u64,
+}
+
+impl MailboxReplicaSetLocator {
+    pub fn commitment_id(&self) -> &[u8; 32] {
+        &self.commitment_id
+    }
+
+    pub fn store_keys(&self) -> &[MailboxStoreKey] {
+        &self.store_keys
+    }
+
+    pub fn recorded_at_unix_seconds(&self) -> u64 {
+        self.recorded_at_unix_seconds
+    }
+
+    pub fn expires_at_unix_seconds(&self) -> u64 {
+        self.expires_at_unix_seconds
+    }
 }
 
 pub struct MailboxReplicationLedger {
@@ -412,6 +510,65 @@ pub struct MailboxReplicationLedger {
 }
 
 impl MailboxReplicationLedger {
+    /// Inspect retry and expiry state without a writable redb open. This keeps
+    /// byte-exact authenticated vault mirrors stable during idle runtime polls.
+    pub fn inspect_read_only(
+        config: MailboxReplicationLedgerConfig,
+        now_unix_seconds: u64,
+        retry_seconds: u64,
+    ) -> Result<MailboxReplicationReadOnlyInspection> {
+        config.validate()?;
+        ensure!(
+            retry_seconds != 0,
+            "mailbox replication retry interval is zero"
+        );
+        let empty = || MailboxReplicationReadOnlyInspection {
+            next_due: None,
+            cleanup_required: false,
+        };
+        let directory_metadata = match std::fs::symlink_metadata(&config.data_dir) {
+            Ok(metadata) => metadata,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(empty()),
+            Err(error) => {
+                return Err(error).with_context(|| {
+                    format!(
+                        "inspect mailbox replication ledger directory {}",
+                        config.data_dir.display()
+                    )
+                });
+            }
+        };
+        ensure!(
+            directory_metadata.is_dir() && !directory_metadata.file_type().is_symlink(),
+            "mailbox replication ledger directory must be a real directory, not a symlink"
+        );
+        let canonical = std::fs::canonicalize(&config.data_dir)
+            .context("canonicalize mailbox replication ledger directory")?;
+        let database_path = canonical.join(DATABASE_FILE);
+        let database_metadata = match std::fs::symlink_metadata(&database_path) {
+            Ok(metadata) => metadata,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(empty()),
+            Err(error) => {
+                return Err(error).with_context(|| {
+                    format!(
+                        "inspect mailbox replication ledger {}",
+                        database_path.display()
+                    )
+                });
+            }
+        };
+        ensure!(
+            database_metadata.is_file() && !database_metadata.file_type().is_symlink(),
+            "mailbox replication ledger must be a real file, not a symlink"
+        );
+        let database = ReadOnlyDatabase::open(&database_path)
+            .context("open mailbox replication ledger read-only")?;
+        Ok(MailboxReplicationReadOnlyInspection {
+            next_due: next_due_from_database(&database, now_unix_seconds, retry_seconds)?,
+            cleanup_required: replication_cleanup_required(&database, now_unix_seconds)?,
+        })
+    }
+
     pub fn open(config: MailboxReplicationLedgerConfig) -> Result<Self> {
         config.validate()?;
         std::fs::create_dir_all(&config.data_dir).with_context(|| {
@@ -435,6 +592,7 @@ impl MailboxReplicationLedger {
             .context("begin mailbox replication ledger initialization")?;
         write.open_table(PLAN_TABLE)?;
         write.open_table(RECEIPT_TABLE)?;
+        write.open_table(REPLICA_SET_LOCATOR_TABLE)?;
         write.open_table(ATTEMPT_TABLE)?;
         write.open_table(INBOUND_COMMIT_TABLE)?;
         write.open_table(INBOUND_DELETED_TABLE)?;
@@ -513,6 +671,20 @@ impl MailboxReplicationLedger {
             return Ok(None);
         };
         let plan = ReplicationPlanRecord::decode(plan.value())?;
+        let replica_set_locator = read
+            .open_table(REPLICA_SET_LOCATOR_TABLE)?
+            .get(item_key.as_slice())?
+            .map(|value| ReplicaSetLocatorRecord::decode(value.value()))
+            .transpose()?;
+        if let Some(locator) = &replica_set_locator {
+            ensure!(
+                locator.mailbox_id == plan.mailbox_id
+                    && locator.item_id == plan.item_id
+                    && locator.dispatch_binding == plan.dispatch_binding
+                    && locator.expires_at_unix_seconds == plan.expires_at_unix_seconds,
+                "mailbox replica-set locator does not match its durable plan"
+            );
+        }
         let mut receipts = Vec::new();
         for entry in read.open_table(RECEIPT_TABLE)?.iter()? {
             let (key, value) = entry?;
@@ -536,7 +708,59 @@ impl MailboxReplicationLedger {
         Ok(Some(MailboxReplicationStatus {
             plan: plan.into_public(),
             receipts,
+            replica_set_locator: replica_set_locator.map(ReplicaSetLocatorRecord::into_public),
         }))
+    }
+
+    pub fn ensure_replica_set_locator(
+        &self,
+        plan: &MailboxReplicationPlan,
+        commitment_id: [u8; 32],
+        store_keys: &[MailboxStoreKey],
+        recorded_at_unix_seconds: u64,
+    ) -> Result<MailboxReplicaSetLocator> {
+        let record = ReplicaSetLocatorRecord {
+            version: RECORD_VERSION,
+            mailbox_id: plan.mailbox_id(),
+            item_id: plan.item_id(),
+            dispatch_binding: *plan.dispatch_binding(),
+            commitment_id,
+            store_keys: store_keys.to_vec(),
+            recorded_at_unix_seconds,
+            expires_at_unix_seconds: plan.expires_at_unix_seconds(),
+        };
+        let encoded = record.encode()?;
+        let key = item_key(record.mailbox_id, record.item_id);
+        let mut write = self.database.begin_write()?;
+        write.set_durability(Durability::Immediate)?;
+        let durable_plan = read_value(&write, PLAN_TABLE, key.as_slice())?
+            .context("mailbox replication plan is absent before locator commit")?;
+        let durable_plan = ReplicationPlanRecord::decode(&durable_plan)?;
+        ensure!(
+            durable_plan.dispatch_binding == record.dispatch_binding
+                && durable_plan.expires_at_unix_seconds == record.expires_at_unix_seconds
+                && durable_plan.required_receipts as usize <= record.store_keys.len(),
+            "mailbox replica-set locator does not satisfy its durable plan"
+        );
+        if let Some(current) = read_value(&write, REPLICA_SET_LOCATOR_TABLE, key.as_slice())? {
+            let current = ReplicaSetLocatorRecord::decode(&current)?;
+            ensure!(
+                current == record,
+                "mailbox replica-set locator replay conflicts"
+            );
+            let public = current.into_public();
+            write.commit()?;
+            return Ok(public);
+        }
+        ensure!(
+            write.open_table(REPLICA_SET_LOCATOR_TABLE)?.len()? < self.config.max_plans,
+            "mailbox replica-set locator capacity exceeded"
+        );
+        write
+            .open_table(REPLICA_SET_LOCATOR_TABLE)?
+            .insert(key.as_slice(), encoded.as_slice())?;
+        write.commit()?;
+        Ok(record.into_public())
     }
 
     pub fn record_receipt(
@@ -656,67 +880,7 @@ impl MailboxReplicationLedger {
         now_unix_seconds: u64,
         retry_seconds: u64,
     ) -> Result<Option<MailboxReplicationPlan>> {
-        ensure!(
-            retry_seconds != 0,
-            "mailbox replication retry interval is zero"
-        );
-        let read = self.database.begin_read()?;
-        let attempts = read.open_table(ATTEMPT_TABLE)?;
-        let receipts = read.open_table(RECEIPT_TABLE)?;
-        let mut due = Vec::new();
-        for entry in read.open_table(PLAN_TABLE)?.iter()? {
-            let (key, value) = entry?;
-            ensure!(
-                key.value().len() == ITEM_KEY_BYTES,
-                "mailbox replication ledger contains an invalid plan key"
-            );
-            let plan = ReplicationPlanRecord::decode(value.value())?;
-            if plan.expires_at_unix_seconds <= now_unix_seconds {
-                continue;
-            }
-            let mut receipt_count = 0_usize;
-            let mut receipt_transports = std::collections::BTreeSet::new();
-            for receipt_entry in receipts.iter()? {
-                let (receipt_key, receipt_value) = receipt_entry?;
-                ensure!(
-                    receipt_key.value().len() == RECEIPT_KEY_BYTES,
-                    "mailbox replication ledger contains an invalid receipt key"
-                );
-                if receipt_key.value()[..ITEM_KEY_BYTES] == key.value()[..] {
-                    let receipt = ReplicaReceiptRecord::decode(receipt_value.value())?;
-                    ensure!(
-                        receipt.request_digest == plan.request_digest
-                            && receipt.dispatch_binding == plan.dispatch_binding
-                            && receipt_key.value()
-                                == crate::replication::receipt_key(
-                                    receipt.mailbox_id,
-                                    receipt.item_id,
-                                    receipt.store_key,
-                                )
-                            && receipt_transports.insert(receipt.transport_identity),
-                        "mailbox replica receipt does not match its durable plan"
-                    );
-                    receipt_count += 1;
-                }
-            }
-            if receipt_count >= usize::from(plan.required_receipts) {
-                continue;
-            }
-            let last_attempt = attempts
-                .get(key.value())?
-                .map(|value| decode_attempt_time(value.value()))
-                .transpose()?;
-            if last_attempt
-                .is_none_or(|last| now_unix_seconds.saturating_sub(last) >= retry_seconds)
-            {
-                due.push(plan);
-            }
-        }
-        due.sort_by_key(|plan| (plan.created_at_unix_seconds, plan.item_id));
-        Ok(due
-            .into_iter()
-            .next()
-            .map(ReplicationPlanRecord::into_public))
+        next_due_from_database(&self.database, now_unix_seconds, retry_seconds)
     }
 
     /// Record this only after the caller's event/history transaction has
@@ -960,6 +1124,16 @@ impl MailboxReplicationLedger {
         for key in &expired_items {
             write.open_table(PLAN_TABLE)?.remove(key.as_slice())?;
         }
+        let mut removed_replica_set_locators = 0_u64;
+        for key in &expired_items {
+            if write
+                .open_table(REPLICA_SET_LOCATOR_TABLE)?
+                .remove(key.as_slice())?
+                .is_some()
+            {
+                removed_replica_set_locators += 1;
+            }
+        }
         let mut removed_attempts = 0_u64;
         for key in &expired_items {
             if write
@@ -1047,11 +1221,139 @@ impl MailboxReplicationLedger {
         Ok(MailboxReplicationCleanupReport {
             removed_plans: expired_items.len() as u64,
             removed_receipts: expired_receipts.len() as u64,
+            removed_replica_set_locators,
             removed_attempts,
             removed_inbound_commits: expired_inbound_commits.len() as u64,
             removed_inbound_deletions: expired_inbound_deletions.len() as u64,
         })
     }
+}
+
+fn next_due_from_database(
+    database: &impl ReadableDatabase,
+    now_unix_seconds: u64,
+    retry_seconds: u64,
+) -> Result<Option<MailboxReplicationPlan>> {
+    ensure!(
+        retry_seconds != 0,
+        "mailbox replication retry interval is zero"
+    );
+    let read = database.begin_read()?;
+    let attempts = read.open_table(ATTEMPT_TABLE)?;
+    let receipts = read.open_table(RECEIPT_TABLE)?;
+    let mut due = Vec::new();
+    for entry in read.open_table(PLAN_TABLE)?.iter()? {
+        let (key, value) = entry?;
+        ensure!(
+            key.value().len() == ITEM_KEY_BYTES,
+            "mailbox replication ledger contains an invalid plan key"
+        );
+        let plan = ReplicationPlanRecord::decode(value.value())?;
+        if plan.expires_at_unix_seconds <= now_unix_seconds {
+            continue;
+        }
+        let mut receipt_count = 0_usize;
+        let mut receipt_transports = std::collections::BTreeSet::new();
+        for receipt_entry in receipts.iter()? {
+            let (receipt_entry_key, receipt_value) = receipt_entry?;
+            ensure!(
+                receipt_entry_key.value().len() == RECEIPT_KEY_BYTES,
+                "mailbox replication ledger contains an invalid receipt key"
+            );
+            if receipt_entry_key.value()[..ITEM_KEY_BYTES] == key.value()[..] {
+                let receipt = ReplicaReceiptRecord::decode(receipt_value.value())?;
+                ensure!(
+                    receipt.request_digest == plan.request_digest
+                        && receipt.dispatch_binding == plan.dispatch_binding
+                        && receipt_entry_key.value()
+                            == receipt_key(receipt.mailbox_id, receipt.item_id, receipt.store_key,)
+                        && receipt_transports.insert(receipt.transport_identity),
+                    "mailbox replica receipt does not match its durable plan"
+                );
+                receipt_count += 1;
+            }
+        }
+        if receipt_count >= usize::from(plan.required_receipts) {
+            continue;
+        }
+        let last_attempt = attempts
+            .get(key.value())?
+            .map(|value| decode_attempt_time(value.value()))
+            .transpose()?;
+        if last_attempt.is_none_or(|last| now_unix_seconds.saturating_sub(last) >= retry_seconds) {
+            due.push(plan);
+        }
+    }
+    due.sort_by_key(|plan| (plan.created_at_unix_seconds, plan.item_id));
+    Ok(due
+        .into_iter()
+        .next()
+        .map(ReplicationPlanRecord::into_public))
+}
+
+fn replication_cleanup_required(
+    database: &impl ReadableDatabase,
+    now_unix_seconds: u64,
+) -> Result<bool> {
+    let read = database.begin_read()?;
+    let mut expired_items = Vec::new();
+    for entry in read.open_table(PLAN_TABLE)?.iter()? {
+        let (key, value) = entry?;
+        ensure!(
+            key.value().len() == ITEM_KEY_BYTES,
+            "mailbox replication ledger contains an invalid plan key"
+        );
+        if ReplicationPlanRecord::decode(value.value())?.expires_at_unix_seconds <= now_unix_seconds
+        {
+            expired_items.push(key.value().to_vec());
+        }
+    }
+    if !expired_items.is_empty() {
+        return Ok(true);
+    }
+    for entry in read.open_table(RECEIPT_TABLE)?.iter()? {
+        let (key, value) = entry?;
+        ensure!(
+            key.value().len() == RECEIPT_KEY_BYTES,
+            "mailbox replication ledger contains an invalid receipt key"
+        );
+        if ReplicaReceiptRecord::decode(value.value())?
+            .receipt
+            .expires_at_unix_seconds()
+            <= now_unix_seconds
+        {
+            return Ok(true);
+        }
+    }
+    for entry in read.open_table(INBOUND_COMMIT_TABLE)?.iter()? {
+        let (key, value) = entry?;
+        ensure!(
+            key.value().len() == RECEIPT_KEY_BYTES,
+            "mailbox replication ledger contains an invalid inbound commit key"
+        );
+        if ReplicaInboundCommitRecord::decode(value.value())?
+            .stored_receipt
+            .expires_at_unix_seconds()
+            <= now_unix_seconds
+        {
+            return Ok(true);
+        }
+    }
+    for entry in read.open_table(INBOUND_DELETED_TABLE)?.iter()? {
+        let (key, value) = entry?;
+        ensure!(
+            key.value().len() == RECEIPT_KEY_BYTES,
+            "mailbox replication ledger contains an invalid inbound deletion key"
+        );
+        if ReplicaInboundDeletedRecord::decode(value.value())?
+            .delete_receipt
+            .expires_at_unix_seconds()
+            <= now_unix_seconds
+        {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 fn request_digest(request: &MailboxPutRequest) -> Result<[u8; 32]> {
@@ -1124,6 +1426,64 @@ mod tests {
     };
 
     #[test]
+    fn read_only_inspection_does_not_create_or_rewrite_replication_ledger() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let ledger_dir = directory.path().join("replication");
+        let config = MailboxReplicationLedgerConfig::new(ledger_dir.clone());
+        assert_eq!(
+            MailboxReplicationLedger::inspect_read_only(config.clone(), 1, 60)?,
+            MailboxReplicationReadOnlyInspection {
+                next_due: None,
+                cleanup_required: false,
+            }
+        );
+        assert!(!ledger_dir.exists());
+
+        let ledger = MailboxReplicationLedger::open(config.clone())?;
+        let write = MailboxWriteCapability::from_secret_bytes([31_u8; 32]);
+        let read = kilogram_mailbox::MailboxReadCapability::from_secret_bytes([32_u8; 32]);
+        let address = MailboxAddress::new(read.read_key(), write.write_key());
+        let item_id = MailboxItemId::from_bytes([33_u8; 32]);
+        let recipient = DeviceEncryptionIdentity::from_secret_bytes([34_u8; 32]);
+        let envelope = MailboxEnvelope::seal(
+            address.mailbox_id(),
+            item_id,
+            1_000,
+            1_600,
+            recipient.public_key(),
+            b"read-only replication inspection",
+        )?
+        .encode()?;
+        let request = MailboxPutRequest::new(
+            address,
+            write.authorize(address, item_id, 600, &envelope)?,
+            envelope,
+        )?;
+        ledger.ensure_plan(
+            &request,
+            [35_u8; 32],
+            [36_u8; 32],
+            DEFAULT_REPLICATION_TARGETS,
+            DEFAULT_REQUIRED_REPLICA_RECEIPTS,
+            1_000,
+        )?;
+        drop(ledger);
+        let database_path = ledger_dir.join(DATABASE_FILE);
+        let before = blake3::hash(&std::fs::read(&database_path)?);
+        let inspection = MailboxReplicationLedger::inspect_read_only(config, 1_001, 60)?;
+        assert_eq!(
+            inspection
+                .next_due
+                .context("due replication plan")?
+                .item_id(),
+            item_id
+        );
+        assert!(!inspection.cleanup_required);
+        assert_eq!(blake3::hash(&std::fs::read(database_path)?), before);
+        Ok(())
+    }
+
+    #[test]
     fn plan_and_transport_distinct_receipts_survive_restart() -> Result<()> {
         let directory = tempfile::tempdir()?;
         let ledger_dir = directory.path().join("replication");
@@ -1159,6 +1519,24 @@ mod tests {
         )?;
         assert_eq!(outcome, ReplicationPlanOutcome::Created);
         assert_eq!(plan.selection_salt(), [6_u8; 32]);
+        let mut locator_store_keys = vec![
+            MailboxStoreIdentity::from_secret_bytes([7_u8; 32]).store_key(),
+            MailboxStoreIdentity::from_secret_bytes([9_u8; 32]).store_key(),
+        ];
+        locator_store_keys.sort_unstable();
+        let locator =
+            ledger.ensure_replica_set_locator(&plan, [44_u8; 32], &locator_store_keys, 1_000)?;
+        assert_eq!(locator.commitment_id(), &[44_u8; 32]);
+        assert_eq!(locator.store_keys(), locator_store_keys);
+        assert_eq!(
+            ledger.ensure_replica_set_locator(&plan, [44_u8; 32], &locator_store_keys, 1_000,)?,
+            locator
+        );
+        assert!(
+            ledger
+                .ensure_replica_set_locator(&plan, [45_u8; 32], &locator_store_keys, 1_000)
+                .is_err()
+        );
         assert!(ledger.next_due(1_000, 60)?.is_some());
         assert!(ledger.mark_attempt(&plan, 1_000, 60)?);
         assert!(!ledger.mark_attempt(&plan, 1_001, 60)?);
@@ -1193,6 +1571,7 @@ mod tests {
             .context("replication status")?;
         assert!(status.is_satisfied());
         assert_eq!(status.receipts.len(), 2);
+        assert_eq!(status.replica_set_locator, Some(locator.clone()));
         assert!(ledger.next_due(1_001, 60)?.is_none());
         drop(ledger);
 
@@ -1209,17 +1588,17 @@ mod tests {
         assert_eq!(outcome, ReplicationPlanOutcome::AlreadyPresent);
         assert_eq!(replayed.selection_salt(), [6_u8; 32]);
         assert_eq!(replayed.request(), &request);
-        assert!(
-            ledger
-                .status(address.mailbox_id(), item_id)?
-                .context("reopened replication status")?
-                .is_satisfied()
-        );
+        let reopened_status = ledger
+            .status(address.mailbox_id(), item_id)?
+            .context("reopened replication status")?;
+        assert!(reopened_status.is_satisfied());
+        assert_eq!(reopened_status.replica_set_locator, Some(locator));
         assert_eq!(
             ledger.cleanup(1_600)?,
             MailboxReplicationCleanupReport {
                 removed_plans: 1,
                 removed_receipts: 2,
+                removed_replica_set_locators: 1,
                 removed_attempts: 1,
                 removed_inbound_commits: 0,
                 removed_inbound_deletions: 0,

@@ -9,7 +9,8 @@ use kilogram_mailbox::{
     StoredMailboxItem,
 };
 use redb::{
-    Database, Durability, ReadableDatabase, ReadableTable, ReadableTableMetadata, TableDefinition,
+    Database, Durability, ReadOnlyDatabase, ReadableDatabase, ReadableTable, ReadableTableMetadata,
+    TableDefinition,
 };
 use serde::{Deserialize, Serialize};
 
@@ -112,6 +113,14 @@ impl PendingOutboundRecord {
         let value: Self = postcard::from_bytes(bytes).context("decode pending mailbox upload")?;
         value.validate()?;
         Ok(value)
+    }
+
+    fn into_public(self) -> PendingMailboxUpload {
+        PendingMailboxUpload {
+            request: self.request,
+            expected_store_key: self.expected_store_key,
+            queued_at_unix_seconds: self.queued_at_unix_seconds,
+        }
     }
 }
 
@@ -284,6 +293,12 @@ pub struct PendingMailboxUpload {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MailboxClientReadOnlyInspection {
+    pub next_pending_outbound: Option<PendingMailboxUpload>,
+    pub cleanup_required: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum OutboundEnqueueOutcome {
     Created,
     AlreadyPending,
@@ -341,6 +356,115 @@ pub struct MailboxClientLedger {
 }
 
 impl MailboxClientLedger {
+    /// Reads the live queue without opening the redb file for write. This is
+    /// important for runtimes whose state tree is mirrored byte-for-byte into
+    /// an authenticated vault: writable redb open/close bookkeeping may alter
+    /// database bytes even when the logical tables remain unchanged.
+    pub fn inspect_read_only(
+        config: MailboxClientLedgerConfig,
+        now_unix_seconds: u64,
+    ) -> Result<MailboxClientReadOnlyInspection> {
+        config.validate()?;
+        let directory_metadata = match std::fs::symlink_metadata(&config.data_dir) {
+            Ok(metadata) => metadata,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                return Ok(MailboxClientReadOnlyInspection {
+                    next_pending_outbound: None,
+                    cleanup_required: false,
+                });
+            }
+            Err(error) => {
+                return Err(error).with_context(|| {
+                    format!(
+                        "inspect mailbox client ledger directory {}",
+                        config.data_dir.display()
+                    )
+                });
+            }
+        };
+        ensure!(
+            directory_metadata.is_dir() && !directory_metadata.file_type().is_symlink(),
+            "mailbox client ledger directory must be a real directory, not a symlink"
+        );
+        let canonical = std::fs::canonicalize(&config.data_dir)
+            .context("canonicalize mailbox client ledger directory")?;
+        let database_path = canonical.join(DATABASE_FILE);
+        let database_metadata = match std::fs::symlink_metadata(&database_path) {
+            Ok(metadata) => metadata,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                return Ok(MailboxClientReadOnlyInspection {
+                    next_pending_outbound: None,
+                    cleanup_required: false,
+                });
+            }
+            Err(error) => {
+                return Err(error).with_context(|| {
+                    format!("inspect mailbox client ledger {}", database_path.display())
+                });
+            }
+        };
+        ensure!(
+            database_metadata.is_file() && !database_metadata.file_type().is_symlink(),
+            "mailbox client ledger must be a real file, not a symlink"
+        );
+        let database = ReadOnlyDatabase::open(&database_path)
+            .context("open mailbox client ledger read-only")?;
+        let read = database
+            .begin_read()
+            .context("begin read-only mailbox client inspection")?;
+        let pending_table = read.open_table(PENDING_OUTBOUND_TABLE)?;
+        let mut next_pending_outbound = None;
+        let mut cleanup_required = false;
+        for entry in pending_table.iter()? {
+            let (key, value) = entry?;
+            ensure!(
+                key.value().len() == MAILBOX_ITEM_KEY_BYTES,
+                "mailbox client ledger contains an invalid item key"
+            );
+            let record = PendingOutboundRecord::decode(value.value())?;
+            let envelope = MailboxEnvelope::decode(record.request.envelope())?;
+            if envelope.expires_at_unix_seconds() <= now_unix_seconds {
+                cleanup_required = true;
+            } else if next_pending_outbound.is_none() {
+                next_pending_outbound = Some(record.into_public());
+            }
+        }
+        for entry in read.open_table(STORED_OUTBOUND_TABLE)?.iter()? {
+            let (_, value) = entry?;
+            if StoredOutboundReceipt::decode(value.value())?
+                .receipt
+                .expires_at_unix_seconds()
+                <= now_unix_seconds
+            {
+                cleanup_required = true;
+            }
+        }
+        for entry in read.open_table(INBOUND_COMMIT_TABLE)?.iter()? {
+            let (_, value) = entry?;
+            if InboundCommitRecord::decode(value.value())?
+                .stored_receipt
+                .expires_at_unix_seconds()
+                <= now_unix_seconds
+            {
+                cleanup_required = true;
+            }
+        }
+        for entry in read.open_table(DELETED_INBOUND_TABLE)?.iter()? {
+            let (_, value) = entry?;
+            if DeletedInboundRecord::decode(value.value())?
+                .delete_receipt
+                .expires_at_unix_seconds()
+                <= now_unix_seconds
+            {
+                cleanup_required = true;
+            }
+        }
+        Ok(MailboxClientReadOnlyInspection {
+            next_pending_outbound,
+            cleanup_required,
+        })
+    }
+
     pub fn open(config: MailboxClientLedgerConfig) -> Result<Self> {
         config.validate()?;
         std::fs::create_dir_all(&config.data_dir).with_context(|| {
@@ -865,6 +989,32 @@ mod tests {
         BlindMailboxStore, MailboxPutResponse, MailboxStoreConfig, MailboxStoreIdentity,
         MailboxWriteCapability,
     };
+
+    #[test]
+    fn read_only_inspection_does_not_rewrite_database() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let data_dir = directory.path().join("client");
+        let config = MailboxClientLedgerConfig::new(data_dir.clone());
+        assert_eq!(
+            MailboxClientLedger::inspect_read_only(config.clone(), 1)?,
+            MailboxClientReadOnlyInspection {
+                next_pending_outbound: None,
+                cleanup_required: false,
+            }
+        );
+        drop(MailboxClientLedger::open(config.clone())?);
+        let database_path = data_dir.join(DATABASE_FILE);
+        let before = blake3::hash(&std::fs::read(&database_path)?);
+        assert_eq!(
+            MailboxClientLedger::inspect_read_only(config, 2)?,
+            MailboxClientReadOnlyInspection {
+                next_pending_outbound: None,
+                cleanup_required: false,
+            }
+        );
+        assert_eq!(blake3::hash(&std::fs::read(database_path)?), before);
+        Ok(())
+    }
 
     #[test]
     fn durable_ledger_requires_application_commit_before_delete() -> Result<()> {

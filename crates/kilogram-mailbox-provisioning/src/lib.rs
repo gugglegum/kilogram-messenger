@@ -6,7 +6,11 @@
 //! Device and exports only the write half inside a Device-signed HPKE envelope
 //! addressed to one exact peer Device.
 
-use std::{collections::BTreeMap, fmt, net::IpAddr};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt,
+    net::IpAddr,
+};
 
 use anyhow::{Context, Result, bail, ensure};
 use kilogram_crypto::{DeviceEncryptionIdentity, EncryptionPublicKey, SealedMessage};
@@ -30,11 +34,14 @@ const BINDING_ID_DOMAIN: &[u8] = b"kilogram:mailbox-binding-id:v1\0";
 const CAPABILITY_UPDATE_VERSION: u8 = 1;
 const CAPABILITY_UPDATE_SIGNATURE_DOMAIN: &[u8] = b"kilogram:mailbox-capability-update:v1\0";
 const CAPABILITY_UPDATE_ID_DOMAIN: &[u8] = b"kilogram:mailbox-capability-update-id:v1\0";
+const REPLICA_SET_COMMITMENT_ID_DOMAIN: &[u8] = b"kilogram:mailbox-replica-set-commitment-id:v1\0";
 const CAPABILITY_ACKNOWLEDGEMENT_VERSION: u8 = 1;
 const CAPABILITY_ACKNOWLEDGEMENT_SIGNATURE_DOMAIN: &[u8] =
     b"kilogram:runtime-mailbox-capability-acknowledgement:v1\0";
 pub const MAX_MAILBOX_CAPABILITY_UPDATE_BYTES: usize = 32 * 1024;
 pub const MAX_MAILBOX_CAPABILITY_ACKNOWLEDGEMENT_BYTES: usize = 4 * 1024;
+pub const MIN_MAILBOX_REPLICA_SET_STORES: usize = 2;
+pub const MAX_MAILBOX_REPLICA_SET_STORES: usize = 8;
 
 pub const MIN_MAILBOX_OFFER_VALIDITY_SECONDS: u64 = 60;
 pub const MAX_MAILBOX_OFFER_VALIDITY_SECONDS: u64 = 30 * 24 * 60 * 60;
@@ -653,6 +660,78 @@ impl fmt::Display for MailboxCapabilityUpdateId {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct MailboxReplicaSetCommitmentId([u8; KEY_BYTES]);
+
+impl MailboxReplicaSetCommitmentId {
+    pub fn as_bytes(&self) -> &[u8; KEY_BYTES] {
+        &self.0
+    }
+}
+
+impl fmt::Display for MailboxReplicaSetCommitmentId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for byte in self.0 {
+            write!(formatter, "{byte:02x}")?;
+        }
+        Ok(())
+    }
+}
+
+/// Exact volunteer stores selected by the mailbox owner before it may go
+/// offline. The commitment is carried only inside the existing Device-signed
+/// capability update; it contains no Account, Device, conversation or mailbox
+/// identifier of its own.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct MailboxReplicaSetCommitment {
+    version: u8,
+    store_keys: Vec<MailboxStoreKey>,
+}
+
+impl MailboxReplicaSetCommitment {
+    pub fn new(mut store_keys: Vec<MailboxStoreKey>) -> Result<Self> {
+        store_keys.sort_unstable();
+        let commitment = Self {
+            version: VERSION,
+            store_keys,
+        };
+        commitment.validate()?;
+        Ok(commitment)
+    }
+
+    pub fn store_keys(&self) -> &[MailboxStoreKey] {
+        &self.store_keys
+    }
+
+    pub fn commitment_id(
+        &self,
+        binding_id: MailboxBindingId,
+    ) -> Result<MailboxReplicaSetCommitmentId> {
+        self.validate()?;
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(REPLICA_SET_COMMITMENT_ID_DOMAIN);
+        hasher.update(binding_id.as_bytes());
+        hasher.update(&postcard::to_allocvec(self).context("encode mailbox replica set")?);
+        Ok(MailboxReplicaSetCommitmentId(*hasher.finalize().as_bytes()))
+    }
+
+    fn validate(&self) -> Result<()> {
+        ensure!(
+            self.version == VERSION
+                && (MIN_MAILBOX_REPLICA_SET_STORES..=MAX_MAILBOX_REPLICA_SET_STORES)
+                    .contains(&self.store_keys.len()),
+            "mailbox replica-set commitment size or version is invalid"
+        );
+        let distinct = self.store_keys.iter().copied().collect::<BTreeSet<_>>();
+        ensure!(
+            distinct.len() == self.store_keys.len()
+                && self.store_keys.windows(2).all(|pair| pair[0] < pair[1]),
+            "mailbox replica-set commitment store keys are not canonical and distinct"
+        );
+        Ok(())
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 enum MailboxCapabilityUpdateAction {
     Activate {
@@ -661,6 +740,11 @@ enum MailboxCapabilityUpdateAction {
     },
     Revoke {
         binding_id: MailboxBindingId,
+    },
+    ActivateWithReplicaSet {
+        binding_id: MailboxBindingId,
+        encrypted_offer: Vec<u8>,
+        replica_set: MailboxReplicaSetCommitment,
     },
 }
 
@@ -721,6 +805,44 @@ impl SignedMailboxCapabilityUpdate {
             action: MailboxCapabilityUpdateAction::Activate {
                 binding_id: offer.binding_id(),
                 encrypted_offer: offer.encode()?,
+            },
+        };
+        Self::sign(owner_identity, content)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn activate_with_replica_set(
+        owner_identity: &DeviceIdentity,
+        owner_certificate: &DeviceCertificate,
+        recipient_certificate: &DeviceCertificate,
+        scope: MailboxScope,
+        generation: u64,
+        previous_update_id: Option<MailboxCapabilityUpdateId>,
+        created_at_unix_seconds: u64,
+        offer: &EncryptedMailboxOffer,
+        replica_set: MailboxReplicaSetCommitment,
+    ) -> Result<Self> {
+        owner_certificate.verify()?;
+        recipient_certificate.verify()?;
+        replica_set.validate()?;
+        ensure!(
+            owner_identity.device_id() == owner_certificate.device_id(),
+            "mailbox capability update signer does not match its owner certificate"
+        );
+        let content = MailboxCapabilityUpdateContent {
+            version: CAPABILITY_UPDATE_VERSION,
+            owner_account_id: owner_certificate.account_id(),
+            owner_device_id: owner_certificate.device_id(),
+            recipient_account_id: recipient_certificate.account_id(),
+            recipient_device_id: recipient_certificate.device_id(),
+            scope,
+            generation,
+            previous_update_id,
+            created_at_unix_seconds,
+            action: MailboxCapabilityUpdateAction::ActivateWithReplicaSet {
+                binding_id: offer.binding_id(),
+                encrypted_offer: offer.encode()?,
+                replica_set,
             },
         };
         Self::sign(owner_identity, content)
@@ -808,12 +930,23 @@ impl SignedMailboxCapabilityUpdate {
             MailboxCapabilityUpdateAction::Activate {
                 binding_id,
                 encrypted_offer,
+            }
+            | MailboxCapabilityUpdateAction::ActivateWithReplicaSet {
+                binding_id,
+                encrypted_offer,
+                ..
             } => {
                 let offer = EncryptedMailboxOffer::decode(encrypted_offer)?;
                 ensure!(
                     offer.binding_id() == *binding_id,
                     "mailbox capability update offer binding changed"
                 );
+                if let MailboxCapabilityUpdateAction::ActivateWithReplicaSet {
+                    replica_set, ..
+                } = &self.content.action
+                {
+                    replica_set.validate()?;
+                }
             }
             MailboxCapabilityUpdateAction::Revoke { .. } => ensure!(
                 self.generation() > 1,
@@ -917,6 +1050,7 @@ impl SignedMailboxCapabilityUpdate {
     pub fn binding_id(&self) -> MailboxBindingId {
         match self.content.action {
             MailboxCapabilityUpdateAction::Activate { binding_id, .. }
+            | MailboxCapabilityUpdateAction::ActivateWithReplicaSet { binding_id, .. }
             | MailboxCapabilityUpdateAction::Revoke { binding_id } => binding_id,
         }
     }
@@ -932,9 +1066,29 @@ impl SignedMailboxCapabilityUpdate {
         match &self.content.action {
             MailboxCapabilityUpdateAction::Activate {
                 encrypted_offer, ..
+            }
+            | MailboxCapabilityUpdateAction::ActivateWithReplicaSet {
+                encrypted_offer, ..
             } => Ok(Some(EncryptedMailboxOffer::decode(encrypted_offer)?)),
             MailboxCapabilityUpdateAction::Revoke { .. } => Ok(None),
         }
+    }
+
+    pub fn replica_set(&self) -> Option<&MailboxReplicaSetCommitment> {
+        match &self.content.action {
+            MailboxCapabilityUpdateAction::ActivateWithReplicaSet { replica_set, .. } => {
+                Some(replica_set)
+            }
+            MailboxCapabilityUpdateAction::Activate { .. }
+            | MailboxCapabilityUpdateAction::Revoke { .. } => None,
+        }
+    }
+
+    pub fn replica_set_commitment_id(&self) -> Result<Option<MailboxReplicaSetCommitmentId>> {
+        self.verify_signature()?;
+        self.replica_set()
+            .map(|replica_set| replica_set.commitment_id(self.binding_id()))
+            .transpose()
     }
 }
 
@@ -1435,6 +1589,68 @@ mod tests {
             created_at_unix_seconds,
             &offer,
         )
+    }
+
+    #[test]
+    fn capability_update_authenticates_canonical_replica_set() -> Result<()> {
+        let owner = test_device()?;
+        let recipient = test_device()?;
+        let scope = MailboxScope::from_bytes([6_u8; 32]);
+        let sealed = SealedLocalMailboxBinding::create(
+            owner.state.identity(),
+            owner.state.encryption(),
+            &owner.certificate,
+            &recipient.certificate,
+            scope,
+            service()?,
+            1_000,
+        )?;
+        let local = sealed.open(
+            owner.state.identity(),
+            owner.state.encryption(),
+            &owner.certificate,
+        )?;
+        let offer = local.offer_for(
+            owner.state.identity(),
+            &owner.certificate,
+            &recipient.certificate,
+            2_000,
+        )?;
+        let first = MailboxStoreIdentity::from_secret_bytes([31_u8; 32]).store_key();
+        let second = MailboxStoreIdentity::from_secret_bytes([32_u8; 32]).store_key();
+        let replica_set = MailboxReplicaSetCommitment::new(vec![second, first])?;
+        assert_eq!(replica_set.store_keys(), &[first, second]);
+        let update = SignedMailboxCapabilityUpdate::activate_with_replica_set(
+            owner.state.identity(),
+            &owner.certificate,
+            &recipient.certificate,
+            scope,
+            1,
+            None,
+            1_000,
+            &offer,
+            replica_set,
+        )?;
+        let commitment_id = update
+            .replica_set_commitment_id()?
+            .context("replica-set commitment")?;
+        let decoded = SignedMailboxCapabilityUpdate::decode(&update.encode()?)?;
+        assert_eq!(
+            decoded
+                .replica_set()
+                .context("decoded replica set")?
+                .store_keys(),
+            &[first, second]
+        );
+        assert_eq!(
+            decoded
+                .replica_set_commitment_id()?
+                .context("decoded replica-set commitment")?,
+            commitment_id
+        );
+        assert!(MailboxReplicaSetCommitment::new(vec![first]).is_err());
+        assert!(MailboxReplicaSetCommitment::new(vec![first, first]).is_err());
+        Ok(())
     }
 
     #[test]

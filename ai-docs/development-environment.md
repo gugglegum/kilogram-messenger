@@ -2138,3 +2138,30 @@ retirement остальных compatibility shadows ещё не реализов
   restart observation. Final `03_VERIFY.ps1` разрешает безопасный повтор после
   уже скопированного identical `06-boundaries.log` и не читает stale/unset
   `$LASTEXITCODE` после успешного вложенного PowerShell script.
+
+## M0.9.68 verification snapshot (2026-09-19)
+
+- Добавлен recipient-selected Device-signed `MailboxReplicaSetCommitment`:
+  canonical 2–8 store keys, current runtime fan-out 3, domain-separated
+  commitment ID и новый append-only `ActivateWithReplicaSet` action без
+  Account/Device/conversation/mailbox IDs или capability secrets.
+- Sender сохраняет exact commitment рядом с per-item replication plan в
+  Immediate-durable `mailbox-replica-set-locators-v1`; conflict replay fail
+  closed, restart удерживает set, expiry удаляет locator вместе с plan.
+- Sender и recipient используют exact store-key lookup по fresh signed provider
+  offers. Старый `Activate` остаётся совместимым и явно маркируется
+  `legacy-random-fallback`; global directory, server/listener и новый EXE не
+  добавлены.
+- Во время полного CLI regression найден delayed state-vault mismatch: writable
+  Redb open/close менял служебные байты client/replication DB без логического
+  изменения. Idle queue, provider и replication inspection переведены на
+  `ReadOnlyDatabase`; cleanup выполняется только как явная vault-mirrored write.
+- Отдельные unit tests сравнивают BLAKE3 DB до/после read-only inspection и
+  подтверждают, что отсутствующая DB не создаётся.
+- Проверки: `kilogram-mailbox-provisioning` 7/7,
+  `kilogram-mailbox-client` 13/13, полный `kilogram-cli` 74/74; targeted
+  long-lived revocation runtime regression прошёл отдельно. `cargo fmt --check`,
+  Clippy `-D warnings` для трёх затронутых packages и
+  `verify-kilogram-volunteer-replica-locator-boundary.ps1` проходят.
+- Сборки и тесты выполнены только в debug/dev с `CARGO_BUILD_JOBS=2`; release и
+  ZIP не создавались, network listener не запускался.

@@ -44,8 +44,8 @@ use kilogram_mailbox_provisioning::{
     EncryptedMailboxOffer, LocalMailboxBinding, MAX_MAILBOX_OFFER_VALIDITY_SECONDS,
     MailboxBindingId, MailboxCapabilityBindingState, MailboxCapabilityConvergence,
     MailboxCapabilityInboundDisposition, MailboxCapabilitySessionBinding,
-    MailboxCapabilityUpdateId, MailboxServiceDescriptor, PeerMailboxBinding,
-    SealedLocalMailboxBinding, SignedMailboxCapabilityAcknowledgement,
+    MailboxCapabilityUpdateId, MailboxReplicaSetCommitment, MailboxServiceDescriptor,
+    PeerMailboxBinding, SealedLocalMailboxBinding, SignedMailboxCapabilityAcknowledgement,
     SignedMailboxCapabilityUpdate,
 };
 use kilogram_protocol::{
@@ -282,6 +282,7 @@ const RUNTIME_MAILBOX_CAPABILITY_UPDATE_INTERVAL: Duration = Duration::from_secs
 const RUNTIME_MAILBOX_PROVIDER_GOSSIP_INTERVAL: Duration = Duration::from_secs(5 * 60);
 const RUNTIME_MAILBOX_PROVIDER_OFFER_REFRESH_INTERVAL: Duration = Duration::from_secs(5 * 60);
 const RUNTIME_MAILBOX_REPLICA_POLL_PROVIDERS: u8 = 3;
+const RUNTIME_MAILBOX_REPLICA_LOCATOR_PROVIDERS: u8 = DEFAULT_REPLICATION_TARGETS;
 const RUNTIME_MAILBOX_REPLICA_LIST_ITEMS: u16 = 1;
 const RUNTIME_TEST_DROP_MAILBOX_CAPABILITY_ACK_ONCE_ENV: &str =
     "KILOGRAM_TEST_DROP_MAILBOX_CAPABILITY_ACK_ONCE";
@@ -4946,6 +4947,54 @@ impl RuntimeStateSnapshot {
     }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct RuntimeMailboxReplicaSetLocator {
+    commitment_id: [u8; 32],
+    store_keys: Vec<MailboxStoreKey>,
+}
+
+fn mailbox_replica_set_locator_for_binding<'a>(
+    updates: impl Iterator<Item = &'a SignedMailboxCapabilityUpdate>,
+    binding_id: MailboxBindingId,
+) -> Result<Option<RuntimeMailboxReplicaSetLocator>> {
+    let mut activations = updates.filter(|update| {
+        !update.is_revocation()
+            && update.binding_id() == binding_id
+            && update.replica_set().is_some()
+    });
+    let Some(update) = activations.next() else {
+        return Ok(None);
+    };
+    ensure!(
+        activations.next().is_none(),
+        "mailbox binding has multiple authenticated replica-set commitments"
+    );
+    let replica_set = update
+        .replica_set()
+        .context("mailbox replica-set activation lost its commitment")?;
+    let commitment_id = update
+        .replica_set_commitment_id()?
+        .context("mailbox replica-set activation has no commitment ID")?;
+    Ok(Some(RuntimeMailboxReplicaSetLocator {
+        commitment_id: *commitment_id.as_bytes(),
+        store_keys: replica_set.store_keys().to_vec(),
+    }))
+}
+
+fn local_mailbox_replica_set_locator(
+    snapshot: &RuntimeStateSnapshot,
+    binding_id: MailboxBindingId,
+) -> Result<Option<RuntimeMailboxReplicaSetLocator>> {
+    mailbox_replica_set_locator_for_binding(snapshot.local_mailbox_updates.values(), binding_id)
+}
+
+fn peer_mailbox_replica_set_locator(
+    snapshot: &RuntimeStateSnapshot,
+    binding_id: MailboxBindingId,
+) -> Result<Option<RuntimeMailboxReplicaSetLocator>> {
+    mailbox_replica_set_locator_for_binding(snapshot.peer_mailbox_updates.values(), binding_id)
+}
+
 fn local_mailbox_binding_is_accepted_head_or_rotation_overlap(
     snapshot: &RuntimeStateSnapshot,
     binding: &SignedRuntimeLocalMailboxBinding,
@@ -5189,17 +5238,25 @@ fn runtime_mailbox_ledger(state_directory: &Path) -> Result<MailboxClientLedger>
 }
 
 fn runtime_mailbox_replication_ledger(state_directory: &Path) -> Result<MailboxReplicationLedger> {
-    MailboxReplicationLedger::open(MailboxReplicationLedgerConfig::new(
-        state_directory.join(MAILBOX_CLIENT_LEDGER_DIRECTORY),
-    ))
-    .context("open runtime mailbox replication ledger")
+    MailboxReplicationLedger::open(runtime_mailbox_replication_ledger_config(state_directory))
+        .context("open runtime mailbox replication ledger")
+}
+
+fn runtime_mailbox_replication_ledger_config(
+    state_directory: &Path,
+) -> MailboxReplicationLedgerConfig {
+    MailboxReplicationLedgerConfig::new(state_directory.join(MAILBOX_CLIENT_LEDGER_DIRECTORY))
 }
 
 fn runtime_mailbox_provider_registry(state_directory: &Path) -> Result<MailboxProviderRegistry> {
-    MailboxProviderRegistry::open(MailboxProviderRegistryConfig::new(
-        state_directory.join(MAILBOX_PROVIDER_REGISTRY_DIRECTORY),
-    ))
-    .context("open runtime mailbox provider registry")
+    MailboxProviderRegistry::open(runtime_mailbox_provider_registry_config(state_directory))
+        .context("open runtime mailbox provider registry")
+}
+
+fn runtime_mailbox_provider_registry_config(
+    state_directory: &Path,
+) -> MailboxProviderRegistryConfig {
+    MailboxProviderRegistryConfig::new(state_directory.join(MAILBOX_PROVIDER_REGISTRY_DIRECTORY))
 }
 
 fn mailbox_provider_transport_identity(offer: &SignedMailboxStorageOffer) -> Result<[u8; 32]> {
@@ -10180,6 +10237,8 @@ struct RuntimeMailboxProvisioningReport {
     store_key: String,
     expires_at_unix_seconds: u64,
     offer_file: Option<PathBuf>,
+    replica_set_commitment_id: Option<String>,
+    replica_set_store_count: usize,
 }
 
 fn print_runtime_mailbox_provisioning_report(report: &RuntimeMailboxProvisioningReport) {
@@ -10207,6 +10266,16 @@ fn print_runtime_mailbox_provisioning_report(report: &RuntimeMailboxProvisioning
     );
     println!("mailbox_local_capability=hpke-sealed-to-local-device");
     println!("mailbox_shared_capability=write-only-hpke-sealed-to-peer-device");
+    if let Some(commitment_id) = &report.replica_set_commitment_id {
+        println!("mailbox_replica_set_commitment_id={commitment_id}");
+        println!(
+            "mailbox_replica_set_store_count={}",
+            report.replica_set_store_count
+        );
+        println!("mailbox_replica_set_discovery=exact-authenticated");
+    } else {
+        println!("mailbox_replica_set_discovery=legacy-random-fallback");
+    }
     println!(
         "mailbox_capability_delivery={}",
         report.transition.delivery_state
@@ -10368,18 +10437,55 @@ fn provision_runtime_mailbox(
         .as_ref()
         .map(SignedMailboxCapabilityUpdate::update_id)
         .transpose()?;
-    let update = SignedMailboxCapabilityUpdate::activate(
-        device_state.identity(),
-        &local_certificate,
-        peer_certificate,
-        scope,
-        generation,
-        previous_update_id,
-        now,
-        &offer,
-    )?;
+    let registry = runtime_mailbox_provider_registry(&state_directory)?;
+    let mut replica_store_keys = registry
+        .select(
+            random_mailbox_replication_selection_salt()?,
+            RUNTIME_MAILBOX_REPLICA_LOCATOR_PROVIDERS,
+            now,
+        )?
+        .into_iter()
+        .map(|provider| provider.store_key())
+        .collect::<Vec<_>>();
+    replica_store_keys.sort_unstable();
+    let replica_set = if replica_store_keys.len() >= usize::from(DEFAULT_REQUIRED_REPLICA_RECEIPTS)
+    {
+        Some(MailboxReplicaSetCommitment::new(replica_store_keys)?)
+    } else {
+        None
+    };
+    let update = if let Some(replica_set) = replica_set {
+        SignedMailboxCapabilityUpdate::activate_with_replica_set(
+            device_state.identity(),
+            &local_certificate,
+            peer_certificate,
+            scope,
+            generation,
+            previous_update_id,
+            now,
+            &offer,
+            replica_set,
+        )?
+    } else {
+        SignedMailboxCapabilityUpdate::activate(
+            device_state.identity(),
+            &local_certificate,
+            peer_certificate,
+            scope,
+            generation,
+            previous_update_id,
+            now,
+            &offer,
+        )?
+    };
     update.verify_chain_link(previous_update.as_ref())?;
     let update_id = update.update_id()?;
+    let replica_set_commitment_id = update
+        .replica_set_commitment_id()?
+        .map(|commitment_id| commitment_id.to_string());
+    let replica_set_store_count = update
+        .replica_set()
+        .map_or(0, |replica_set| replica_set.store_keys().len());
     let encoded_offer = output_file.as_ref().map(|_| offer.encode()).transpose()?;
     run_state_transaction(&state_directory, |transaction| {
         persist_runtime_record(
@@ -10422,6 +10528,8 @@ fn provision_runtime_mailbox(
         store_key: store_key.to_string(),
         expires_at_unix_seconds: expires_at,
         offer_file: output_file,
+        replica_set_commitment_id,
+        replica_set_store_count,
     })
 }
 
@@ -18334,6 +18442,7 @@ struct PreparedRuntimeMailboxUpload {
     service_base_url: String,
     queue_id: Option<RuntimeQueueId>,
     replication_dispatch_binding: Option<[u8; 32]>,
+    replica_set_locator: Option<RuntimeMailboxReplicaSetLocator>,
 }
 
 fn open_current_peer_mailbox_binding(
@@ -18460,6 +18569,10 @@ fn random_mailbox_replication_selection_salt() -> Result<[u8; 32]> {
     Ok(salt)
 }
 
+fn mailbox_commitment_hex(value: &[u8; 32]) -> String {
+    value.iter().map(|byte| format!("{byte:02x}")).collect()
+}
+
 async fn put_runtime_volunteer_mailbox_replica(
     endpoint: &Endpoint,
     offer: &MailboxProviderOffer,
@@ -18559,11 +18672,17 @@ async fn attempt_runtime_volunteer_mailbox_replication(
     let now = unix_time_now()?;
     let ledger = runtime_mailbox_replication_ledger(state_directory)?;
     let cleanup = ledger.cleanup(now)?;
-    if cleanup.removed_plans != 0 || cleanup.removed_receipts != 0 || cleanup.removed_attempts != 0
+    if cleanup.removed_plans != 0
+        || cleanup.removed_receipts != 0
+        || cleanup.removed_replica_set_locators != 0
+        || cleanup.removed_attempts != 0
     {
         println!(
-            "runtime_mailbox_replication_cleanup=plans:{} receipts:{} attempts:{}",
-            cleanup.removed_plans, cleanup.removed_receipts, cleanup.removed_attempts
+            "runtime_mailbox_replication_cleanup=plans:{} receipts:{} locators:{} attempts:{}",
+            cleanup.removed_plans,
+            cleanup.removed_receipts,
+            cleanup.removed_replica_set_locators,
+            cleanup.removed_attempts
         );
     }
     let (_, plan) = ledger.ensure_plan(
@@ -18610,22 +18729,51 @@ async fn attempt_runtime_volunteer_mailbox_replication(
     own_transport_hasher.update(MAILBOX_PROVIDER_TRANSPORT_IDENTITY_DOMAIN);
     own_transport_hasher.update(endpoint.id().to_string().as_bytes());
     let own_transport_identity = *own_transport_hasher.finalize().as_bytes();
-    let selection_count = plan
-        .requested_replicas()
-        .saturating_add(1)
-        .min(MAX_PROVIDER_SELECTION);
-    let registry = runtime_mailbox_provider_registry(state_directory)?;
-    let selected = registry
-        .select(plan.selection_salt(), selection_count, now)?
+    let candidates = if let Some(locator) = &before.replica_set_locator {
+        let resolved = MailboxProviderRegistry::active_offers_for_store_keys_read_only(
+            runtime_mailbox_provider_registry_config(state_directory),
+            locator.store_keys(),
+            now,
+        )?;
+        println!(
+            "runtime_mailbox_replica_set_commitment_id={}",
+            mailbox_commitment_hex(locator.commitment_id())
+        );
+        println!(
+            "runtime_mailbox_replica_set_resolved={}/{}",
+            resolved.len(),
+            locator.store_keys().len()
+        );
+        println!("runtime_mailbox_replica_set_discovery=exact-authenticated");
+        resolved
+    } else {
+        let selection_count = plan
+            .requested_replicas()
+            .saturating_add(1)
+            .min(MAX_PROVIDER_SELECTION);
+        println!("runtime_mailbox_replica_set_discovery=legacy-random-fallback");
+        MailboxProviderRegistry::select_from_active_offers(
+            MailboxProviderRegistry::active_offers_read_only(
+                runtime_mailbox_provider_registry_config(state_directory),
+                now,
+            )?,
+            plan.selection_salt(),
+            selection_count,
+        )?
+    };
+    let selected = candidates
         .into_iter()
         .filter(|offer| offer.transport_identity() != &own_transport_identity)
         .filter(|offer| !retained_transport_identities.contains(offer.transport_identity()))
         .filter(|offer| offer.max_record_bytes() >= request.envelope().len() as u64)
         .filter(|offer| !retained_store_keys.contains(&offer.store_key()))
-        .take(usize::from(plan.requested_replicas()).saturating_sub(before.receipts.len()))
         .collect::<Vec<_>>();
     let mut failures = Vec::new();
+    let mut receipt_count = before.receipts.len();
     for offer in selected {
+        if receipt_count >= usize::from(plan.requested_replicas()) {
+            break;
+        }
         println!(
             "runtime_mailbox_replication_provider_attempt_store_key={}",
             offer.store_key()
@@ -18644,6 +18792,7 @@ async fn attempt_runtime_volunteer_mailbox_replication(
                     "runtime_mailbox_replication_receipt_store_key={}",
                     receipt.store_key()
                 );
+                receipt_count += 1;
             }
             Err(error) => {
                 failures.push(format!("{}: {error:#}", offer.store_key()));
@@ -18690,14 +18839,34 @@ async fn upload_runtime_mailbox_request(
 ) -> Result<()> {
     if let Some(dispatch_binding) = upload.replication_dispatch_binding {
         let replication_ledger = runtime_mailbox_replication_ledger(state_directory)?;
-        replication_ledger.ensure_plan(
+        let now = unix_time_now()?;
+        let (_, plan) = replication_ledger.ensure_plan(
             &upload.pending.request,
             dispatch_binding,
             random_mailbox_replication_selection_salt()?,
             DEFAULT_REPLICATION_TARGETS,
             DEFAULT_REQUIRED_REPLICA_RECEIPTS,
-            unix_time_now()?,
+            now,
         )?;
+        if let Some(locator) = &upload.replica_set_locator {
+            replication_ledger.ensure_replica_set_locator(
+                &plan,
+                locator.commitment_id,
+                &locator.store_keys,
+                now,
+            )?;
+            println!(
+                "runtime_mailbox_replica_set_commitment_id={}",
+                mailbox_commitment_hex(&locator.commitment_id)
+            );
+            println!(
+                "runtime_mailbox_replica_set_store_count={}",
+                locator.store_keys.len()
+            );
+            println!("runtime_mailbox_replica_set_discovery=exact-authenticated");
+        } else {
+            println!("runtime_mailbox_replica_set_discovery=legacy-random-fallback");
+        }
         println!("runtime_mailbox_replication_status=durable-plan-ready");
     }
     let client =
@@ -18745,6 +18914,7 @@ async fn prepare_orphan_runtime_mailbox_dispatch(
     let state_lock = acquire_runtime_state_lock(state_directory)
         .await?
         .context("runtime state lock remained busy while repairing mailbox dispatch")?;
+    let vault_guard = VaultDualWriteGuard::prepare(state_directory)?;
     let result = (|| {
         let device_state = load_command_device_state(state_directory)?;
         let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
@@ -18853,26 +19023,45 @@ async fn prepare_orphan_runtime_mailbox_dispatch(
                 service_base_url: binding.service().base_url().to_owned(),
                 queue_id: Some(dispatch.queue_id()),
                 replication_dispatch_binding: Some(dispatch.replication_binding()?),
+                replica_set_locator: peer_mailbox_replica_set_locator(
+                    &snapshot,
+                    signed_binding.binding_id(),
+                )?,
             }));
         }
         Ok(None)
     })();
+    let mirror_result = match vault_guard {
+        Some(guard) => guard.finish(),
+        None => Ok(()),
+    };
     drop(state_lock);
-    result
+    combine_operation_and_mirror(result, mirror_result)
 }
 
 async fn attempt_pending_runtime_mailbox_upload(
     endpoint: &Endpoint,
     state_directory: &Path,
 ) -> Result<bool> {
-    let ledger = runtime_mailbox_ledger(state_directory)?;
     let now = unix_time_now()?;
-    let cleanup = ledger.cleanup(now)?;
-    if cleanup.removed_pending_uploads != 0
-        || cleanup.removed_stored_receipts != 0
-        || cleanup.removed_inbound_commits != 0
-        || cleanup.removed_deleted_receipts != 0
-    {
+    let ledger_config =
+        MailboxClientLedgerConfig::new(state_directory.join(MAILBOX_CLIENT_LEDGER_DIRECTORY));
+    let mut inspection = MailboxClientLedger::inspect_read_only(ledger_config, now)?;
+    if inspection.cleanup_required {
+        let state_lock = acquire_runtime_state_lock(state_directory)
+            .await?
+            .context("runtime state lock remained busy while cleaning mailbox ledger")?;
+        let vault_guard = VaultDualWriteGuard::prepare(state_directory)?;
+        let cleanup_result = (|| {
+            let ledger = runtime_mailbox_ledger(state_directory)?;
+            ledger.cleanup(now)
+        })();
+        let mirror_result = match vault_guard {
+            Some(guard) => guard.finish(),
+            None => Ok(()),
+        };
+        drop(state_lock);
+        let cleanup = combine_operation_and_mirror(cleanup_result, mirror_result)?;
         println!(
             "runtime_mailbox_cleanup=pending:{} stored:{} received:{} deleted:{}",
             cleanup.removed_pending_uploads,
@@ -18880,33 +19069,62 @@ async fn attempt_pending_runtime_mailbox_upload(
             cleanup.removed_inbound_commits,
             cleanup.removed_deleted_receipts
         );
+        inspection = MailboxClientLedger::inspect_read_only(
+            MailboxClientLedgerConfig::new(state_directory.join(MAILBOX_CLIENT_LEDGER_DIRECTORY)),
+            now,
+        )?;
+        ensure!(
+            !inspection.cleanup_required,
+            "mailbox ledger cleanup left expired records behind"
+        );
     }
-    let pending = ledger.next_pending_outbound()?;
-    drop(ledger);
+    let pending = inspection.next_pending_outbound;
     let Some(pending) = pending else {
         if let Some(upload) = prepare_orphan_runtime_mailbox_dispatch(state_directory, now).await? {
             upload_runtime_mailbox_request(endpoint, state_directory, upload).await?;
             return Ok(true);
         }
-        let replication_ledger = runtime_mailbox_replication_ledger(state_directory)?;
-        let replication_cleanup = replication_ledger.cleanup(now)?;
-        if replication_cleanup.removed_plans != 0
-            || replication_cleanup.removed_receipts != 0
-            || replication_cleanup.removed_attempts != 0
-            || replication_cleanup.removed_inbound_commits != 0
-            || replication_cleanup.removed_inbound_deletions != 0
-        {
+        let replication_config = runtime_mailbox_replication_ledger_config(state_directory);
+        let mut replication_inspection = MailboxReplicationLedger::inspect_read_only(
+            replication_config,
+            now,
+            DEFAULT_REPLICATION_RETRY_SECONDS,
+        )?;
+        if replication_inspection.cleanup_required {
+            let state_lock = acquire_runtime_state_lock(state_directory)
+                .await?
+                .context("runtime state lock remained busy while cleaning replication ledger")?;
+            let vault_guard = VaultDualWriteGuard::prepare(state_directory)?;
+            let cleanup_result = (|| {
+                let ledger = runtime_mailbox_replication_ledger(state_directory)?;
+                ledger.cleanup(now)
+            })();
+            let mirror_result = match vault_guard {
+                Some(guard) => guard.finish(),
+                None => Ok(()),
+            };
+            drop(state_lock);
+            let replication_cleanup = combine_operation_and_mirror(cleanup_result, mirror_result)?;
             println!(
-                "runtime_mailbox_replication_cleanup=plans:{} receipts:{} attempts:{} inbound_commits:{} inbound_deletions:{}",
+                "runtime_mailbox_replication_cleanup=plans:{} receipts:{} locators:{} attempts:{} inbound_commits:{} inbound_deletions:{}",
                 replication_cleanup.removed_plans,
                 replication_cleanup.removed_receipts,
+                replication_cleanup.removed_replica_set_locators,
                 replication_cleanup.removed_attempts,
                 replication_cleanup.removed_inbound_commits,
                 replication_cleanup.removed_inbound_deletions
             );
+            replication_inspection = MailboxReplicationLedger::inspect_read_only(
+                runtime_mailbox_replication_ledger_config(state_directory),
+                now,
+                DEFAULT_REPLICATION_RETRY_SECONDS,
+            )?;
+            ensure!(
+                !replication_inspection.cleanup_required,
+                "mailbox replication cleanup left expired records behind"
+            );
         }
-        let due = replication_ledger.next_due(now, DEFAULT_REPLICATION_RETRY_SECONDS)?;
-        drop(replication_ledger);
+        let due = replication_inspection.next_due;
         if let Some(plan) = due {
             attempt_runtime_volunteer_mailbox_replication(
                 endpoint,
@@ -18932,7 +19150,7 @@ async fn attempt_pending_runtime_mailbox_upload(
             local_certificate.account_id(),
             local_certificate.device_id(),
         )?;
-        let binding = snapshot
+        let (signed_binding, binding) = snapshot
             .peer_mailbox_bindings
             .values()
             .filter_map(|signed| {
@@ -18946,8 +19164,9 @@ async fn attempt_pending_runtime_mailbox_upload(
                     now,
                 )
                 .ok()
+                .map(|binding| (signed, binding))
             })
-            .find(|binding| {
+            .find(|(_, binding)| {
                 binding.address().mailbox_id() == pending.request.mailbox_id()
                     && binding.service().expected_store_key() == pending.expected_store_key
             })
@@ -18965,6 +19184,10 @@ async fn attempt_pending_runtime_mailbox_upload(
             service_base_url: binding.service().base_url().to_owned(),
             queue_id,
             replication_dispatch_binding,
+            replica_set_locator: peer_mailbox_replica_set_locator(
+                &snapshot,
+                signed_binding.binding_id(),
+            )?,
         })
     })();
     drop(state_lock);
@@ -19073,6 +19296,8 @@ async fn attempt_runtime_mailbox_fallback(
             })?;
             (dispatch, opened)
         };
+        let replica_set_locator =
+            peer_mailbox_replica_set_locator(&snapshot, dispatch.binding_id())?;
         let ledger = runtime_mailbox_ledger(state_directory)?;
         let state = ledger.outbound_state(dispatch.mailbox_id(), dispatch.item_id())?;
         match state {
@@ -19090,6 +19315,7 @@ async fn attempt_runtime_mailbox_fallback(
                     service_base_url: peer_binding.service().base_url().to_owned(),
                     queue_id: Some(prepared.queue_id),
                     replication_dispatch_binding: Some(dispatch.replication_binding()?),
+                    replica_set_locator: replica_set_locator.clone(),
                 }))
             }
             None => {
@@ -19153,6 +19379,7 @@ async fn attempt_runtime_mailbox_fallback(
                     service_base_url: peer_binding.service().base_url().to_owned(),
                     queue_id: Some(prepared.queue_id),
                     replication_dispatch_binding: Some(dispatch.replication_binding()?),
+                    replica_set_locator,
                 }))
             }
         }
@@ -19487,6 +19714,7 @@ async fn prepare_runtime_reverse_mailbox_acknowledgement(
                     service_base_url: binding.service().base_url().to_owned(),
                     queue_id: None,
                     replication_dispatch_binding: None,
+                    replica_set_locator: None,
                 }));
             }
             None => {}
@@ -19543,6 +19771,7 @@ async fn prepare_runtime_reverse_mailbox_acknowledgement(
             service_base_url: binding.service().base_url().to_owned(),
             queue_id: None,
             replication_dispatch_binding: None,
+            replica_set_locator: None,
         }))
     })();
     drop(state_lock);
@@ -19572,6 +19801,7 @@ enum RuntimeMailboxPollAttempt {
 struct PreparedRuntimeMailboxPoll {
     signed: SignedRuntimeLocalMailboxBinding,
     binding: LocalMailboxBinding,
+    replica_set_locator: Option<RuntimeMailboxReplicaSetLocator>,
 }
 
 async fn commit_runtime_mailbox_payload(
@@ -19625,26 +19855,43 @@ async fn attempt_runtime_volunteer_mailbox_poll(
     prepared: &PreparedRuntimeMailboxPoll,
 ) -> Result<RuntimeMailboxPollAttempt> {
     let now = unix_time_now()?;
+    let active = if let Some(locator) = &prepared.replica_set_locator {
+        MailboxProviderRegistry::active_offers_for_store_keys_read_only(
+            runtime_mailbox_provider_registry_config(state_directory),
+            &locator.store_keys,
+            now,
+        )?
+    } else {
+        MailboxProviderRegistry::active_offers_read_only(
+            runtime_mailbox_provider_registry_config(state_directory),
+            now,
+        )?
+    };
+    // Avoid a writable redb open in an idle runtime. redb may update internal
+    // bookkeeping on open/close even without a logical table mutation, while
+    // the authenticated state vault deliberately mirrors exact file bytes.
+    if active.is_empty() {
+        return Ok(RuntimeMailboxPollAttempt::NoChange);
+    }
     let replication = runtime_mailbox_replication_ledger(state_directory)?;
     let cleanup = replication.cleanup(now)?;
     if cleanup.removed_plans != 0
         || cleanup.removed_receipts != 0
+        || cleanup.removed_replica_set_locators != 0
         || cleanup.removed_attempts != 0
         || cleanup.removed_inbound_commits != 0
         || cleanup.removed_inbound_deletions != 0
     {
         println!(
-            "runtime_mailbox_replication_cleanup=plans:{} receipts:{} attempts:{} inbound_commits:{} inbound_deletions:{}",
+            "runtime_mailbox_replication_cleanup=plans:{} receipts:{} locators:{} attempts:{} inbound_commits:{} inbound_deletions:{}",
             cleanup.removed_plans,
             cleanup.removed_receipts,
+            cleanup.removed_replica_set_locators,
             cleanup.removed_attempts,
             cleanup.removed_inbound_commits,
             cleanup.removed_inbound_deletions
         );
     }
-    let registry = runtime_mailbox_provider_registry(state_directory)?;
-    let active = registry.active_offers(now)?;
-
     // A previous poll may have committed locally but lost the connection before
     // the signed DELETE receipt arrived. Resume those deletions before listing.
     for pending in replication.pending_inbound_deletes(
@@ -19681,19 +19928,37 @@ async fn attempt_runtime_volunteer_mailbox_poll(
     own_transport_hasher.update(MAILBOX_PROVIDER_TRANSPORT_IDENTITY_DOMAIN);
     own_transport_hasher.update(endpoint.id().to_string().as_bytes());
     let own_transport_identity = *own_transport_hasher.finalize().as_bytes();
-    let selection_count = RUNTIME_MAILBOX_REPLICA_POLL_PROVIDERS
-        .saturating_add(1)
-        .min(MAX_PROVIDER_SELECTION);
-    let selected = registry
-        .select(
+    let selected = if let Some(locator) = &prepared.replica_set_locator {
+        let selected = active
+            .into_iter()
+            .filter(|offer| offer.transport_identity() != &own_transport_identity)
+            .collect::<Vec<_>>();
+        println!(
+            "runtime_mailbox_replica_set_commitment_id={}",
+            mailbox_commitment_hex(&locator.commitment_id)
+        );
+        println!(
+            "runtime_mailbox_replica_set_resolved={}/{}",
+            selected.len(),
+            locator.store_keys.len()
+        );
+        println!("runtime_mailbox_replica_set_discovery=exact-authenticated");
+        selected
+    } else {
+        let selection_count = RUNTIME_MAILBOX_REPLICA_POLL_PROVIDERS
+            .saturating_add(1)
+            .min(MAX_PROVIDER_SELECTION);
+        println!("runtime_mailbox_replica_set_discovery=legacy-random-fallback");
+        MailboxProviderRegistry::select_from_active_offers(
+            active,
             random_mailbox_replication_selection_salt()?,
             selection_count,
-            now,
         )?
         .into_iter()
         .filter(|offer| offer.transport_identity() != &own_transport_identity)
         .take(usize::from(RUNTIME_MAILBOX_REPLICA_POLL_PROVIDERS))
-        .collect::<Vec<_>>();
+        .collect::<Vec<_>>()
+    };
     let mut probes = JoinSet::new();
     for offer in selected {
         println!(
@@ -19821,9 +20086,17 @@ async fn attempt_runtime_mailbox_poll(
                 .map(|binding| (signed.clone(), binding))
             })
             .min_by_key(|(signed, _)| last_polls.get(&signed.binding_id()).copied());
-        Ok::<_, anyhow::Error>(
-            selected.map(|(signed, binding)| PreparedRuntimeMailboxPoll { signed, binding }),
-        )
+        selected
+            .map(|(signed, binding)| {
+                let replica_set_locator =
+                    local_mailbox_replica_set_locator(&snapshot, signed.binding_id())?;
+                Ok::<_, anyhow::Error>(PreparedRuntimeMailboxPoll {
+                    signed,
+                    binding,
+                    replica_set_locator,
+                })
+            })
+            .transpose()
     })();
     drop(state_lock);
     let Some(prepared) = preparation? else {

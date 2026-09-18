@@ -3727,18 +3727,54 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
   идентичный boundary log после исправления verifier, но fail closed отвергает
   отличающийся файл.
 
+### M0.9.68 — authenticated volunteer replica-set locator: выполнено
+
+Реализовано:
+
+- mailbox owner выбирает до трёх transport-distinct volunteer stores из уже
+  проверенных offers и включает их canonical store keys в новый
+  `ActivateWithReplicaSet` action существующей Device-signed capability chain;
+- commitment содержит только 2–8 store keys, связан domain-separated ID с
+  mailbox binding и не несёт Account/Device/conversation/mailbox IDs или
+  capability secret; полный набор не отправляется providers;
+- legacy `Activate` wire variant не изменён; capability, созданная до появления
+  минимум двух offers, явно остаётся в `legacy-random-fallback`;
+- sender до сетевого PUT durable сохраняет exact commitment в отдельной Redb
+  locator table рядом с replication plan; конфликтующий replay fail closed,
+  restart сохраняет маршрут, expiry удаляет locator вместе с plan;
+- sender и recipient разрешают committed store keys индексированными lookup в
+  bounded provider registry и используют fresh signed endpoint offer того же
+  store; unrelated random providers в locator-capable path не сканируются;
+- recipient по-прежнему спрашивает максимум один opaque item у каждого из не
+  более чем трёх stores и сохраняет application-commit-before-signed-DELETE;
+- endpoint gossip остаётся нужен, но только как transport resolution для точно
+  известного store key; global directory, новый listener/EXE/server не добавлен;
+- provider/queue/replication idle inspection переведён на настоящий Redb
+  read-only режим; отсутствующая DB не создаётся, byte-exact vault shadow не
+  дрейфует от одного open/close, а expiry cleanup остаётся явной mirrored write;
+- HTTPS upload пока остаётся compatibility copy до clean external evidence
+  exact-locator path и решения для legacy bindings;
+- contract зафиксирован в
+  [`../docs/RFC-0091-authenticated-volunteer-replica-set-locator.md`](../docs/RFC-0091-authenticated-volunteer-replica-set-locator.md),
+  fail-closed static gate —
+  `scripts/verify-kilogram-volunteer-replica-locator-boundary.ps1`.
+
 ### Следующий этап
 
-1. M0.9.68: спроектировать authenticated replica-set locator/commitment, чтобы recipient
-   не полагался на случайное сканирование большой registry; не добавлять global
-   social directory и не раскрывать Account/Device/conversation IDs providers.
-2. До первого публичного security artifact pin-нуть linker/SDK либо controlled
+1. M0.9.69: добавить clean external exact-locator field run: provider offers
+   должны существовать до mailbox activation/rotation, Alice должна durable
+   доказать committed set и receipts, Bob — адресный lookup/commit/delete без
+   строк `legacy-random-fallback`; случайное registry sampling в этом run
+   запрещено fail-closed verifier.
+2. После field evidence спроектировать безопасный automatic upgrade/rotation
+   legacy mailbox bindings и условия удаления HTTPS compatibility copy.
+3. До первого публичного security artifact pin-нуть linker/SDK либо controlled
    alternative и повторить M0.9.59 до matched external hash и attestation.
-3. Optional autostart/background mode оставить отдельной явной настройкой, не
+4. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
-4. Добавить macOS/Linux/mobile providers той же platform boundary.
-5. Спроектировать privacy-preserving gossip и first-contact freshness;
+5. Добавить macOS/Linux/mobile providers той же platform boundary.
+6. Спроектировать privacy-preserving gossip и first-contact freshness;
    M0.9.29 скрывает payload/явные IDs, но не access correlation.
-6. Membership removal и group governance проектировать вместе с ordered
+7. Membership removal и group governance проектировать вместе с ordered
    security events и MLS epoch; compact Merkle/range summary и независимый
    криптографический аудит остаются до публичного выпуска.

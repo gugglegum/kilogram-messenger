@@ -6,7 +6,8 @@ use kilogram_mailbox::{
     SignedMailboxStorageOffer,
 };
 use redb::{
-    Database, Durability, ReadableDatabase, ReadableTable, ReadableTableMetadata, TableDefinition,
+    Database, Durability, ReadOnlyDatabase, ReadableDatabase, ReadableTable, ReadableTableMetadata,
+    TableDefinition,
 };
 use serde::{Deserialize, Serialize};
 
@@ -424,6 +425,36 @@ pub struct MailboxProviderRegistry {
 }
 
 impl MailboxProviderRegistry {
+    /// Read provider discovery state without opening the redb file for write.
+    /// Writable redb open/close bookkeeping may change database bytes even
+    /// when no logical record changes, which would invalidate a byte-exact
+    /// authenticated state-vault mirror.
+    pub fn active_offers_read_only(
+        config: MailboxProviderRegistryConfig,
+        now_unix_seconds: u64,
+    ) -> Result<Vec<MailboxProviderOffer>> {
+        config.validate()?;
+        let Some(database) = open_provider_registry_read_only(&config)? else {
+            return Ok(Vec::new());
+        };
+        active_offers_from_database(&database, now_unix_seconds)
+    }
+
+    /// Resolve an authenticated replica set by indexed store-key lookup while
+    /// retaining the same no-write guarantee as `active_offers_read_only`.
+    pub fn active_offers_for_store_keys_read_only(
+        config: MailboxProviderRegistryConfig,
+        store_keys: &[MailboxStoreKey],
+        now_unix_seconds: u64,
+    ) -> Result<Vec<MailboxProviderOffer>> {
+        validate_replica_set_lookup_keys(store_keys)?;
+        config.validate()?;
+        let Some(database) = open_provider_registry_read_only(&config)? else {
+            return Ok(Vec::new());
+        };
+        active_offers_for_store_keys_from_database(&database, store_keys, now_unix_seconds)
+    }
+
     pub fn open(config: MailboxProviderRegistryConfig) -> Result<Self> {
         config.validate()?;
         std::fs::create_dir_all(&config.data_dir).with_context(|| {
@@ -617,31 +648,21 @@ impl MailboxProviderRegistry {
     }
 
     pub fn active_offers(&self, now_unix_seconds: u64) -> Result<Vec<MailboxProviderOffer>> {
-        let read = self
-            .database
-            .begin_read()
-            .context("begin mailbox provider registry read")?;
-        let table = read.open_table(OFFER_TABLE)?;
-        let gossip_hops = read.open_table(GOSSIP_HOP_TABLE)?;
-        let mut offers = Vec::new();
-        for entry in table.iter()? {
-            let (key, value) = entry?;
-            let record = ProviderOfferRecord::decode(value.value())?;
-            ensure!(
-                key.value() == record.store_key.as_bytes(),
-                "mailbox provider registry key does not match its signed offer"
-            );
-            if record.expires_at_unix_seconds > now_unix_seconds {
-                let observed_gossip_hops = gossip_hops
-                    .get(key.value())?
-                    .map(|value| decode_gossip_hops(value.value()))
-                    .transpose()?
-                    .unwrap_or(0);
-                offers.push(record.into_public(now_unix_seconds, observed_gossip_hops)?);
-            }
-        }
-        offers.sort_by_key(|offer| (offer.store_key(), offer.offer_id()));
-        Ok(offers)
+        active_offers_from_database(&self.database, now_unix_seconds)
+    }
+
+    /// Resolve a recipient-authenticated, bounded replica-set commitment by
+    /// exact store key. This performs indexed lookups instead of sampling or
+    /// scanning the provider registry. Missing/expired providers are omitted
+    /// so the caller can wait for a fresh signed offer without changing the
+    /// committed set.
+    pub fn active_offers_for_store_keys(
+        &self,
+        store_keys: &[MailboxStoreKey],
+        now_unix_seconds: u64,
+    ) -> Result<Vec<MailboxProviderOffer>> {
+        validate_replica_set_lookup_keys(store_keys)?;
+        active_offers_for_store_keys_from_database(&self.database, store_keys, now_unix_seconds)
     }
 
     /// Deterministic rendezvous-style selection. The caller supplies a fresh,
@@ -657,36 +678,22 @@ impl MailboxProviderRegistry {
             (1..=MAX_PROVIDER_SELECTION).contains(&requested),
             "mailbox provider selection size is invalid"
         );
-        let mut ranked = self
-            .active_offers(now_unix_seconds)?
-            .into_iter()
-            .map(|offer| {
-                let mut hasher = blake3::Hasher::new();
-                hasher.update(SELECTION_DOMAIN);
-                hasher.update(&selection_salt);
-                hasher.update(offer.store_key().as_bytes());
-                hasher.update(offer.transport_identity());
-                hasher.update(offer.offer_id().as_bytes());
-                (*hasher.finalize().as_bytes(), offer)
-            })
-            .collect::<Vec<_>>();
-        ranked.sort_by(|left, right| {
-            left.0
-                .cmp(&right.0)
-                .then_with(|| left.1.store_key().cmp(&right.1.store_key()))
-        });
+        select_active_offers(
+            self.active_offers(now_unix_seconds)?,
+            selection_salt,
+            requested,
+        )
+    }
 
-        let mut selected_identities = BTreeSet::new();
-        let mut selected = Vec::new();
-        for (_, offer) in ranked {
-            if selected_identities.insert(*offer.transport_identity()) {
-                selected.push(offer);
-                if selected.len() == usize::from(requested) {
-                    break;
-                }
-            }
-        }
-        Ok(selected)
+    /// Apply the same bounded rendezvous selection to an already authenticated
+    /// read-only snapshot. This lets long-running runtimes avoid reopening the
+    /// provider registry in writable mode merely to choose peers.
+    pub fn select_from_active_offers(
+        active_offers: Vec<MailboxProviderOffer>,
+        selection_salt: [u8; 32],
+        requested: u8,
+    ) -> Result<Vec<MailboxProviderOffer>> {
+        select_active_offers(active_offers, selection_salt, requested)
     }
 
     pub fn select_for_gossip(
@@ -723,6 +730,7 @@ impl MailboxProviderRegistry {
                 .cmp(&right.0)
                 .then_with(|| left.1.store_key().cmp(&right.1.store_key()))
         });
+
         let mut selected_identities = BTreeSet::new();
         let mut selected = Vec::new();
         for (_, offer) in ranked {
@@ -743,6 +751,165 @@ impl MailboxProviderRegistry {
             .context("begin mailbox provider registry count")?;
         Ok(read.open_table(OFFER_TABLE)?.len()?)
     }
+}
+
+fn open_provider_registry_read_only(
+    config: &MailboxProviderRegistryConfig,
+) -> Result<Option<ReadOnlyDatabase>> {
+    let directory_metadata = match std::fs::symlink_metadata(&config.data_dir) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => {
+            return Err(error).with_context(|| {
+                format!(
+                    "inspect mailbox provider registry directory {}",
+                    config.data_dir.display()
+                )
+            });
+        }
+    };
+    ensure!(
+        directory_metadata.is_dir() && !directory_metadata.file_type().is_symlink(),
+        "mailbox provider registry directory must be a real directory, not a symlink"
+    );
+    let canonical = std::fs::canonicalize(&config.data_dir)
+        .context("canonicalize mailbox provider registry directory")?;
+    let database_path = canonical.join(DATABASE_FILE);
+    let database_metadata = match std::fs::symlink_metadata(&database_path) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => {
+            return Err(error).with_context(|| {
+                format!(
+                    "inspect mailbox provider registry {}",
+                    database_path.display()
+                )
+            });
+        }
+    };
+    ensure!(
+        database_metadata.is_file() && !database_metadata.file_type().is_symlink(),
+        "mailbox provider registry must be a real file, not a symlink"
+    );
+    Ok(Some(
+        ReadOnlyDatabase::open(&database_path)
+            .context("open mailbox provider registry read-only")?,
+    ))
+}
+
+fn validate_replica_set_lookup_keys(store_keys: &[MailboxStoreKey]) -> Result<()> {
+    ensure!(
+        !store_keys.is_empty() && store_keys.len() <= usize::from(MAX_PROVIDER_SELECTION),
+        "mailbox replica-set lookup size is invalid"
+    );
+    ensure!(
+        store_keys.windows(2).all(|pair| pair[0] < pair[1]),
+        "mailbox replica-set lookup keys are not canonical and distinct"
+    );
+    Ok(())
+}
+
+fn active_offers_for_store_keys_from_database(
+    database: &impl ReadableDatabase,
+    store_keys: &[MailboxStoreKey],
+    now_unix_seconds: u64,
+) -> Result<Vec<MailboxProviderOffer>> {
+    let read = database
+        .begin_read()
+        .context("begin exact mailbox provider lookup")?;
+    let table = read.open_table(OFFER_TABLE)?;
+    let gossip_hops = read.open_table(GOSSIP_HOP_TABLE)?;
+    let mut offers = Vec::new();
+    for store_key in store_keys {
+        let Some(value) = table.get(store_key.as_bytes().as_slice())? else {
+            continue;
+        };
+        let record = ProviderOfferRecord::decode(value.value())?;
+        ensure!(
+            record.store_key == *store_key,
+            "mailbox provider registry key does not match its signed offer"
+        );
+        if record.expires_at_unix_seconds <= now_unix_seconds {
+            continue;
+        }
+        let observed_gossip_hops = gossip_hops
+            .get(store_key.as_bytes().as_slice())?
+            .map(|value| decode_gossip_hops(value.value()))
+            .transpose()?
+            .unwrap_or(0);
+        offers.push(record.into_public(now_unix_seconds, observed_gossip_hops)?);
+    }
+    Ok(offers)
+}
+
+fn active_offers_from_database(
+    database: &impl ReadableDatabase,
+    now_unix_seconds: u64,
+) -> Result<Vec<MailboxProviderOffer>> {
+    let read = database
+        .begin_read()
+        .context("begin mailbox provider registry read")?;
+    let table = read.open_table(OFFER_TABLE)?;
+    let gossip_hops = read.open_table(GOSSIP_HOP_TABLE)?;
+    let mut offers = Vec::new();
+    for entry in table.iter()? {
+        let (key, value) = entry?;
+        let record = ProviderOfferRecord::decode(value.value())?;
+        ensure!(
+            key.value() == record.store_key.as_bytes(),
+            "mailbox provider registry key does not match its signed offer"
+        );
+        if record.expires_at_unix_seconds > now_unix_seconds {
+            let observed_gossip_hops = gossip_hops
+                .get(key.value())?
+                .map(|value| decode_gossip_hops(value.value()))
+                .transpose()?
+                .unwrap_or(0);
+            offers.push(record.into_public(now_unix_seconds, observed_gossip_hops)?);
+        }
+    }
+    offers.sort_by_key(|offer| (offer.store_key(), offer.offer_id()));
+    Ok(offers)
+}
+
+fn select_active_offers(
+    active_offers: Vec<MailboxProviderOffer>,
+    selection_salt: [u8; 32],
+    requested: u8,
+) -> Result<Vec<MailboxProviderOffer>> {
+    ensure!(
+        (1..=MAX_PROVIDER_SELECTION).contains(&requested),
+        "mailbox provider selection size is invalid"
+    );
+    let mut ranked = active_offers
+        .into_iter()
+        .map(|offer| {
+            let mut hasher = blake3::Hasher::new();
+            hasher.update(SELECTION_DOMAIN);
+            hasher.update(&selection_salt);
+            hasher.update(offer.store_key().as_bytes());
+            hasher.update(offer.transport_identity());
+            hasher.update(offer.offer_id().as_bytes());
+            (*hasher.finalize().as_bytes(), offer)
+        })
+        .collect::<Vec<_>>();
+    ranked.sort_by(|left, right| {
+        left.0
+            .cmp(&right.0)
+            .then_with(|| left.1.store_key().cmp(&right.1.store_key()))
+    });
+
+    let mut selected_identities = BTreeSet::new();
+    let mut selected = Vec::new();
+    for (_, offer) in ranked {
+        if selected_identities.insert(*offer.transport_identity()) {
+            selected.push(offer);
+            if selected.len() == usize::from(requested) {
+                break;
+            }
+        }
+    }
+    Ok(selected)
 }
 
 fn decode_gossip_hops(bytes: &[u8]) -> Result<u8> {
@@ -779,6 +946,32 @@ mod tests {
             300,
         )?;
         Ok((offer.encode(issued_at)?, [endpoint; 32]))
+    }
+
+    #[test]
+    fn read_only_discovery_does_not_create_or_rewrite_registry() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let data_dir = directory.path().join("providers");
+        let config = MailboxProviderRegistryConfig::new(data_dir.clone());
+        assert!(MailboxProviderRegistry::active_offers_read_only(config.clone(), 1)?.is_empty());
+        assert!(!data_dir.exists());
+
+        let registry = MailboxProviderRegistry::open(config.clone())?;
+        let (encoded, endpoint) = offer(1, 11, 1_000)?;
+        registry.import_offer(&encoded, endpoint, 1_000)?;
+        drop(registry);
+        let database_path = data_dir.join(DATABASE_FILE);
+        let before = blake3::hash(&std::fs::read(&database_path)?);
+        let active = MailboxProviderRegistry::active_offers_read_only(config, 1_001)?;
+        assert_eq!(active.len(), 1);
+        let exact = MailboxProviderRegistry::active_offers_for_store_keys_read_only(
+            MailboxProviderRegistryConfig::new(data_dir.clone()),
+            &[active[0].store_key()],
+            1_001,
+        )?;
+        assert_eq!(exact.len(), 1);
+        assert_eq!(blake3::hash(&std::fs::read(database_path)?), before);
+        Ok(())
     }
 
     #[test]
@@ -863,6 +1056,44 @@ mod tests {
         assert!(
             registry
                 .select([1; 32], MAX_PROVIDER_SELECTION + 1, 1_001)
+                .is_err()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn exact_replica_set_lookup_is_indexed_bounded_and_expiry_aware() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let registry = MailboxProviderRegistry::open(MailboxProviderRegistryConfig::new(
+            directory.path().join("providers"),
+        ))?;
+        let mut committed = Vec::new();
+        for (store, endpoint) in [(1, 11), (2, 22), (3, 33)] {
+            let (encoded, _) = offer(store, endpoint, 1_000)?;
+            let (_, imported) = registry.import_offer(&encoded, [endpoint; 32], 1_000)?;
+            if store != 2 {
+                committed.push(imported.store_key());
+            }
+        }
+        committed.sort_unstable();
+        let resolved = registry.active_offers_for_store_keys(&committed, 1_001)?;
+        assert_eq!(
+            resolved
+                .iter()
+                .map(MailboxProviderOffer::store_key)
+                .collect::<Vec<_>>(),
+            committed
+        );
+        assert!(
+            registry
+                .active_offers_for_store_keys(&committed, 1_300)?
+                .is_empty()
+        );
+        let mut reversed = committed.clone();
+        reversed.reverse();
+        assert!(
+            registry
+                .active_offers_for_store_keys(&reversed, 1_001)
                 .is_err()
         );
         Ok(())

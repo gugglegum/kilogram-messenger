@@ -285,14 +285,17 @@ sessions, distribution, removal и key epochs и не решены этим пр
   M0.9.64 добавляет automatic authenticated bounded gossip: 8 offers/frame,
   2 honest-client hops, 15-minute offer age, 2 KiB/offer, 20 KiB/frame,
   one exchange per five minutes и randomized
-  transport-distinct subset без social IDs/capabilities в payload. Открытыми
-  M0.9.65 добавляет sender-side three-target/two-receipt replication с durable
+  transport-distinct subset без social IDs/capabilities в payload. M0.9.65
+  добавляет sender-side three-target/two-receipt replication с durable
   per-dispatch random salt, exact encrypted PUT, transport-distinct receipts и
   resumable cooldown. M0.9.66 добавляет bounded recipient Iroh LIST/DELETE с
   application-commit-before-delete и restart-resumable store-specific deletion.
-  Открытыми остаются authenticated exact replica-set locator/commitment вместо
-  random registry sampling, Sybil-resistant diversity, cryptographic hop proof
-  и access-correlation privacy.
+  M0.9.68 добавляет recipient-selected Device-signed exact replica-set
+  commitment в capability update, durable per-item locator и indexed store-key
+  lookup на sender/recipient; legacy bindings пока сохраняют явно обозначенный
+  random fallback. Открытыми остаются automatic safe upgrade/rotation legacy
+  bindings, clean external exact-locator evidence, retirement HTTPS copy,
+  Sybil-resistant diversity, cryptographic hop proof и access-correlation privacy.
 - Push-уведомления на Android/iOS без утечки содержания и социального графа.
 - Независимый second-builder, подписанный release provenance, обновления клиента
   и дальнейшая защита supply chain поверх M0.9.50 same-host gate.

@@ -1,7 +1,7 @@
 # RFC-0088: Bounded volunteer mailbox retrieval (M0.9.66)
 
-Status: implemented in the ordinary runtime; external multi-node field evidence
-is pending.
+Status: implemented in the ordinary runtime and externally exercised by
+M0.9.67. RFC-0091 adds exact lookup for locator-capable mailbox bindings.
 
 ## 1. Outcome
 
@@ -27,11 +27,14 @@ each stored receipt is verified against the selected store key, mailbox, item
 and ciphertext before decryption. A page requests one item per provider, so one
 poll cannot become an unbounded download or scan.
 
-This is bounded probabilistic discovery, not a global lookup service. A client
-that has not learned fresh offers for the stores selected by the sender may
-need later gossip rounds and repeated samples; it does not guarantee immediate discovery.
-The present provider count also leaks the mailbox pseudonym, timing, size and
-requester's network identity to the queried volunteers.
+For legacy bindings this remains bounded probabilistic discovery, not a global
+lookup service. RFC-0091 lets a mailbox owner authenticate an exact bounded
+store-key set in its capability update. Such a recipient performs indexed
+lookup of those keys and never samples unrelated providers, although it may
+still need later gossip to learn a fresh endpoint offer for a committed store.
+The legacy sampling path does not guarantee immediate discovery.
+The provider request leaks the mailbox pseudonym, timing, size and requester's
+network identity to each queried volunteer.
 
 ## 3. Commit-before-delete boundary
 
@@ -69,9 +72,12 @@ prevent DELETE. Later authenticated history sync can still carry the retained
 acknowledgement.
 
 Transport identity diversity is not operator independence or Sybil resistance.
-The recipient does not yet receive the sender's exact replica-set commitment,
-so provider churn can delay discovery. Private information retrieval, padding,
-push wakeup, erasure coding, reputation and proof of deletion remain deferred.
+New locator-capable bindings retain the exact recipient-selected replica-set
+commitment on both endpoints; old bindings and activations made before two
+offers are known retain the visible random fallback. Provider churn can still
+delay retrieval until a fresh signed offer for a committed store arrives.
+Private information retrieval, padding, push wakeup, erasure coding, reputation
+and proof of deletion remain deferred.
 
 ## 5. Field-evidence plan
 

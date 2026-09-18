@@ -207,31 +207,32 @@ The current two-network Windows procedure is in
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.67 volunteer mailbox field run — complete with recovery evidence
+## Current milestone: M0.9.68 authenticated volunteer replica-set locator — complete
 
-A clean-HEAD, no-archive builder now prepares one stable debug
-`kilogram-cli.exe`, two private provider identities, no-clobber evidence and a
-fail-closed verifier. A simplified three-folder harness automatically creates
-the disposable Alice/Bob accounts, membership, contacts and mailbox binding;
-the operator runs six numbered scripts without copying IDs or editing paths.
-The scenario still requires two independent store keys and transport
-identities, two sender PUT receipts, a stopped-Alice IPC boundary, two Bob Iroh
-commits and signed deletes, restart without volunteer redelivery and exactly
-one local history occurrence.
+For a newly activated or rotated mailbox, the owner now selects up to three
+transport-distinct volunteer store keys and authenticates that exact set in the
+existing Device-signed capability update. Sender and recipient retain the same
+commitment. The sender durably binds it to each replication plan; both sides
+resolve only those exact keys through indexed lookups of fresh signed endpoint
+offers instead of sampling unrelated providers from a large registry.
 
-The cross-network run completed with two volunteer commits and signed deletes,
-no volunteer redelivery after Bob restart, and exactly one message in Bob's
-history. The fail-closed verifier returned `result=verified`; it correlates the
-resumed sender evidence through the exact durable queue ID. Because defects were
-repaired while preserving the same durable run, this is qualified recovery
-evidence rather than a clean single-revision release attestation.
+The commitment itself contains no Account, Device, conversation or mailbox ID
+and is never sent to volunteer stores. Existing capability actions remain
+compatible. If fewer than two providers are known during activation, the
+runtime visibly retains the old bounded random fallback until an explicit
+rotation installs a locator. HTTPS remains a compatibility copy pending a clean
+external exact-locator run. No global directory, listener, server or executable
+was added. Details are in
+[`docs/RFC-0091-authenticated-volunteer-replica-set-locator.md`](docs/RFC-0091-authenticated-volunteer-replica-set-locator.md).
 
-Two provider identities may run on one operator host for mechanism evidence,
-but that does not prove operator or physical independence. Live state is kept
-out of the synchronized folder to avoid copying an open database; the accounts
-are disposable test identities. Generation creates no ZIP/release build and
-launches no network process. The next milestone is an authenticated replica-set
-locator/commitment so recipients do not depend on random registry scanning. See
+## Previous milestone: M0.9.67 volunteer mailbox field run — complete with recovery evidence
+
+The simplified three-folder field harness completed a cross-network run with
+two volunteer commits and signed deletes, no redelivery after Bob restart and
+exactly one message in local history. Its fail-closed verifier returned
+`result=verified`; because defects were repaired while preserving the same
+durable run, this is qualified recovery evidence rather than a clean
+single-revision release attestation. See
 [`docs/M0.9.67-VOLUNTEER-MAILBOX-FIELD-TEST-RU.md`](docs/M0.9.67-VOLUNTEER-MAILBOX-FIELD-TEST-RU.md)
 and [`docs/RFC-0090-three-folder-m0967-harness.md`](docs/RFC-0090-three-folder-m0967-harness.md).
 
