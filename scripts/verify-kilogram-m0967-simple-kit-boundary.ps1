@@ -15,10 +15,12 @@ $required = @(
     (Join-Path $source '1\03_VERIFY.ps1'),
     (Join-Path $source '2\01_START_PROVIDERS.ps1'),
     (Join-Path $source '2\02_RESTART_PROVIDERS_AFTER_FIX.ps1'),
+    (Join-Path $source '2\03_PUBLISH_OFFERS_FOR_CURRENT_RUN.ps1'),
     (Join-Path $source '3\01_PREPARE_BOB.ps1'),
     (Join-Path $source '3\02_RECEIVE_BOB.ps1'),
     (Join-Path $source '3\03_RETRY_BOB_AFTER_OFFER_SYNC_FIX.ps1'),
-    (Join-Path $source '3\04_RETRY_BOB_EXACT_VERSION.ps1')
+    (Join-Path $source '3\04_RETRY_BOB_EXACT_VERSION.ps1'),
+    (Join-Path $source '3\05_RETRY_BOB_FRESH_OFFERS.ps1')
 )
 foreach ($path in $required) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "simple kit source is missing: $path" }
@@ -30,10 +32,12 @@ $alicePrepare = Get-Content -LiteralPath (Join-Path $source '1\01_PREPARE_ALICE.
 $aliceSend = Get-Content -LiteralPath (Join-Path $source '1\02_SEND_ALICE.ps1') -Raw
 $providers = Get-Content -LiteralPath (Join-Path $source '2\01_START_PROVIDERS.ps1') -Raw
 $providerRestart = Get-Content -LiteralPath (Join-Path $source '2\02_RESTART_PROVIDERS_AFTER_FIX.ps1') -Raw
+$offerPublisher = Get-Content -LiteralPath (Join-Path $source '2\03_PUBLISH_OFFERS_FOR_CURRENT_RUN.ps1') -Raw
 $bobPrepare = Get-Content -LiteralPath (Join-Path $source '3\01_PREPARE_BOB.ps1') -Raw
 $bobReceive = Get-Content -LiteralPath (Join-Path $source '3\02_RECEIVE_BOB.ps1') -Raw
 $bobRetry = Get-Content -LiteralPath (Join-Path $source '3\03_RETRY_BOB_AFTER_OFFER_SYNC_FIX.ps1') -Raw
 $bobExactRetry = Get-Content -LiteralPath (Join-Path $source '3\04_RETRY_BOB_EXACT_VERSION.ps1') -Raw
+$bobFreshRetry = Get-Content -LiteralPath (Join-Path $source '3\05_RETRY_BOB_FRESH_OFFERS.ps1') -Raw
 
 foreach ($value in @(
     'cargo build --jobs $cargoJobsResolved --locked --package kilogram-cli --package kilogram-ticket-store',
@@ -50,7 +54,9 @@ foreach ($value in @(
     '$script:KitRoot = [IO.Path]::GetFullPath($PSScriptRoot)', '$env:LOCALAPPDATA',
     'Wait-M0967File', 'Wait-M0967IpcReady', 'Move-M0967FailedAttemptAside',
     'Update-M0967ProviderOfferFiles', 'Wait-M0967ProviderOfferFile',
-    'Start-M0967Process', 'Import-M0967Providers'
+    'Start-M0967Process', 'Import-M0967Providers',
+    'KILOGRAM_M0967_PROVIDER_OFFER_DIRECTORY', "`$ErrorActionPreference = 'SilentlyContinue'",
+    'field_error='
 )) {
     if (-not $common.Contains($value)) { throw "simple kit common helper is missing '$value'" }
 }
@@ -76,6 +82,12 @@ foreach ($value in @(
 )) {
     if (-not $providerRestart.Contains($value)) { throw "provider restart is missing '$value'" }
 }
+foreach ($value in @(
+    '01-provider-offers-publication.json', 'expires_at_unix_seconds', 'Get-FileHash',
+    'Move-Item -LiteralPath $manifestTemp -Destination $manifestPath -Force'
+)) {
+    if (-not $offerPublisher.Contains($value)) { throw "provider offer publisher is missing '$value'" }
+}
 foreach ($value in @('account-create', 'conversation-membership-install', 'runtime-contact-add', 'runtime-mailbox-offer-create')) {
     if (-not $bobPrepare.Contains($value)) { throw "Bob preparation is missing '$value'" }
 }
@@ -91,6 +103,13 @@ foreach ($value in @('Wait-M0967ProviderOfferFile', 'RETRYING BOB BEFORE THE FIR
 }
 foreach ($value in @('Get-FileHash', 'expectedCommonHash', 'expectedReceiveHash', 'EXACT BOB RETRY FILES ARE SYNCHRONIZED')) {
     if (-not $bobExactRetry.Contains($value)) { throw "Bob exact recovery wrapper is missing '$value'" }
+}
+foreach ($value in @(
+    '01-provider-offers-publication.json', 'expires_at_unix_seconds', 'Get-FileHash',
+    'offer-snapshots', 'KILOGRAM_M0967_PROVIDER_OFFER_DIRECTORY',
+    'FRESH MATCHING PROVIDER OFFERS ARE SYNCHRONIZED'
+)) {
+    if (-not $bobFreshRetry.Contains($value)) { throw "Bob fresh-offer recovery wrapper is missing '$value'" }
 }
 
 Write-Output 'm0967_simple_kit_boundary=verified'

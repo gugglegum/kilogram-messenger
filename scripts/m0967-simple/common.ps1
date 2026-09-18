@@ -168,7 +168,12 @@ function Wait-M0967ProviderOfferFile {
         [Parameter(Mandatory)] [string] $Provider,
         [int] $TimeoutSeconds = 180
     )
-    $path = Join-Path $script:EvidenceDirectory "01-$Provider.offer"
+    $offerDirectory = if ([string]::IsNullOrWhiteSpace($env:KILOGRAM_M0967_PROVIDER_OFFER_DIRECTORY)) {
+        $script:EvidenceDirectory
+    } else {
+        [IO.Path]::GetFullPath($env:KILOGRAM_M0967_PROVIDER_OFFER_DIRECTORY)
+    }
+    $path = Join-Path $offerDirectory "01-$Provider.offer"
     $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
     while ([DateTime]::UtcNow -lt $deadline) {
         if (Test-Path -LiteralPath $path -PathType Leaf) {
@@ -209,10 +214,18 @@ function Stop-M0967Process {
 
 function Invoke-M0967Cli {
     param([Parameter(Mandatory)] [string[]] $Arguments)
-    $output = @(& $script:CliPath @Arguments 2>&1)
-    $exitCode = $LASTEXITCODE
-    if ($exitCode -ne 0) { throw "kilogram-cli failed ($exitCode): $($Arguments -join ' ')" }
-    return [string[]]$output
+    $previousErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'SilentlyContinue'
+        $output = @(& $script:CliPath @Arguments 2>&1)
+        $exitCode = $LASTEXITCODE
+    }
+    finally { $ErrorActionPreference = $previousErrorActionPreference }
+    $text = @($output | ForEach-Object { [string]$_ })
+    if ($exitCode -ne 0) {
+        throw "kilogram-cli failed ($exitCode): $($Arguments -join ' ')`n$($text -join "`n")"
+    }
+    return [string[]]$text
 }
 
 function Get-M0967ExactValue {
@@ -242,13 +255,22 @@ function Import-M0967Providers {
     if (Test-Path -LiteralPath $outputPath) { throw "Provider import evidence exists: $outputPath" }
     $lines = [Collections.Generic.List[string]]::new()
     $lines.Add("field_role=$Role")
-    foreach ($provider in @('provider1', 'provider2')) {
-        $offer = Wait-M0967ProviderOfferFile $provider 180
-        $result = @(Invoke-M0967Cli @('runtime-ipc-volunteer-provider-import', '--ipc-file', $IpcFile, '--offer-file', $offer))
-        $lines.Add("field_provider=$provider")
-        foreach ($line in $result) { $lines.Add([string]$line) }
+    try {
+        foreach ($provider in @('provider1', 'provider2')) {
+            $offer = Wait-M0967ProviderOfferFile $provider 180
+            $result = @(Invoke-M0967Cli @('runtime-ipc-volunteer-provider-import', '--ipc-file', $IpcFile, '--offer-file', $offer))
+            $lines.Add("field_provider=$provider")
+            foreach ($line in $result) { $lines.Add([string]$line) }
+        }
+        $selection = @(Invoke-M0967Cli @('runtime-ipc-volunteer-provider-select', '--ipc-file', $IpcFile, '--count', '3'))
+        foreach ($line in $selection) { $lines.Add([string]$line) }
+        [IO.File]::WriteAllLines($outputPath, $lines, [Text.UTF8Encoding]::new($false))
     }
-    $selection = @(Invoke-M0967Cli @('runtime-ipc-volunteer-provider-select', '--ipc-file', $IpcFile, '--count', '3'))
-    foreach ($line in $selection) { $lines.Add([string]$line) }
-    [IO.File]::WriteAllLines($outputPath, $lines, [Text.UTF8Encoding]::new($false))
+    catch {
+        $message = ([string]$_.Exception.Message) -replace "`r?`n", ' | '
+        $lines.Add("field_error=$message")
+        $failedPath = "$outputPath.failed-$([DateTime]::UtcNow.ToString('yyyyMMddTHHmmssZ'))"
+        [IO.File]::WriteAllLines($failedPath, $lines, [Text.UTF8Encoding]::new($false))
+        throw
+    }
 }

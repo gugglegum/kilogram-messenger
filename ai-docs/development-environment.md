@@ -2081,3 +2081,11 @@ retirement остальных compatibility shadows ещё не реализов
   дошёл до ноутбука. Для текущего external run добавлен exact-version wrapper с
   SHA-256 пары `common.ps1` + `02_RECEIVE_BOB.ps1`; deployment этих файлов и
   wrapper выполняется atomic rename в sync-root.
+- Повтор с exact script hashes показал, что этого недостаточно: Yandex Disk
+  способен доставить два `.offer` и publication state разными поколениями.
+  Current-run publisher теперь атомарно пишет JSON manifest с SHA-256/expiry,
+  а Bob recovery ждёт согласованный набор с запасом срока, копирует его в
+  immutable local snapshot и только затем запускает importer. Native CLI stderr
+  больше не теряется из-за Windows PowerShell 5: failure сохраняется отдельным
+  timestamped evidence-файлом. Предыдущие Bob attempts подтверждены как
+  pre-inbound (`0` commit, `0` delete), поэтому bounded retry остаётся безопасным.
