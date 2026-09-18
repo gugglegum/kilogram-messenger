@@ -2102,3 +2102,15 @@ retirement остальных compatibility shadows ещё не реализов
   import и read-only selection bounded 12 x 750 ms, выбирает два существующих
   provider и пишет native stderr через temporary file, обходя PowerShell 5
   stderr conversion.
+- Последующий Bob attempt подтвердил network и storage path: event
+  `6a868866...` был локально `Inserted`, acknowledgement `46aee504...` также
+  записан, а повторные polls видели `AlreadyPresent`. STDERR показал точную
+  причину отсутствия DELETE: `reverse acknowledgement has no current peer
+  mailbox binding`. Это не transport failure и не потеря сообщения, а неверная
+  связь optional reverse upload с mandatory post-commit replica lifecycle.
+- Исправление делает reverse acknowledgement preparation best-effort после
+  durable application commit. Targeted regression test проходит; static
+  volunteer-retrieval и simple-kit gates проходят. Полный CLI suite: 73/74,
+  один отдельный existing live-runtime test стабильно падает на DB-primary
+  typed-shadow mismatch в background mailbox upload и не проходит даже при
+  отдельном запуске; этот результат не маскируется как успех текущего fix.

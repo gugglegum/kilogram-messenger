@@ -3700,6 +3700,14 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
   [`../docs/M0.9.67-VOLUNTEER-MAILBOX-FIELD-TEST-RU.md`](../docs/M0.9.67-VOLUNTEER-MAILBOX-FIELD-TEST-RU.md).
   Упрощённый operator contract зафиксирован в
   [`../docs/RFC-0090-three-folder-m0967-harness.md`](../docs/RFC-0090-three-folder-m0967-harness.md).
+- Реальный Bob runtime durable записал тестовое событие и acknowledgement, но
+  не дошёл до replica ledger/DELETE: подготовка необязательного reverse mailbox
+  acknowledgement вернула `no current peer mailbox binding` и ошибочно прервала
+  уже состоявшийся application commit. Runtime теперь сохраняет этот сбой как
+  `unavailable-after-commit`, после чего продолжает exact replica commit/delete;
+  harness распознаёт единственный durable post-commit event и возобновляет его
+  idempotently без второго сообщения. Долгое ожидание печатает прогресс каждые
+  15 секунд.
 
 ### Следующий этап
 

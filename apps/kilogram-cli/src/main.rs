@@ -19549,6 +19549,20 @@ async fn prepare_runtime_reverse_mailbox_acknowledgement(
     result
 }
 
+fn tolerate_unavailable_runtime_reverse_mailbox_acknowledgement(
+    result: Result<Option<PreparedRuntimeMailboxUpload>>,
+) -> Option<PreparedRuntimeMailboxUpload> {
+    match result {
+        Ok(upload) => upload,
+        Err(error) => {
+            eprintln!(
+                "runtime_reverse_mailbox_acknowledgement_status=unavailable-after-commit error={error:#}"
+            );
+            None
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum RuntimeMailboxPollAttempt {
     NoChange,
@@ -19579,12 +19593,18 @@ async fn commit_runtime_mailbox_payload(
             let committed =
                 commit_runtime_mailbox_text(state_directory, &prepared.signed, payload.event())
                     .await?;
-            let acknowledgement = prepare_runtime_reverse_mailbox_acknowledgement(
-                state_directory,
-                &prepared.signed,
-                committed.acknowledgement,
-            )
-            .await?;
+            // The message is already durably committed at this point. A reverse
+            // mailbox capability is optional and may legitimately be absent in
+            // an asymmetric Alice -> Bob setup. Its absence must not prevent
+            // recording the inbound commit and deleting the opaque replica.
+            let acknowledgement = tolerate_unavailable_runtime_reverse_mailbox_acknowledgement(
+                prepare_runtime_reverse_mailbox_acknowledgement(
+                    state_directory,
+                    &prepared.signed,
+                    committed.acknowledgement,
+                )
+                .await,
+            );
             Ok((*committed.event_id.as_bytes(), acknowledgement))
         }
         EventPayload::Acknowledgement { .. } => {
@@ -26966,6 +26986,17 @@ mod tests {
 
         assert!(faults.take_mailbox_capability_ack_drop());
         assert!(!faults.take_mailbox_capability_ack_drop());
+    }
+
+    #[test]
+    fn unavailable_reverse_mailbox_acknowledgement_does_not_undo_application_commit() {
+        let unavailable: Result<Option<PreparedRuntimeMailboxUpload>> =
+            Err(anyhow::anyhow!("no reverse mailbox binding"));
+
+        assert!(
+            tolerate_unavailable_runtime_reverse_mailbox_acknowledgement(unavailable).is_none()
+        );
+        assert!(tolerate_unavailable_runtime_reverse_mailbox_acknowledgement(Ok(None)).is_none());
     }
 
     fn local_test_endpoint_builder() -> Result<Builder> {

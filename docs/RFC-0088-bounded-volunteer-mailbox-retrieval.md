@@ -61,7 +61,12 @@ This slice adds no executable, listener, scheduled task, Account directory or
 central mailbox requirement. Provider LIST and DELETE reuse the same dedicated
 Iroh ALPN and capability model as PUT. HTTPS compatibility fallback remains
 enabled, and reverse acknowledgements still use the existing compatible upload
-path while their own replicated-outbox lifecycle is designed.
+path while their own replicated-outbox lifecycle is designed. A reverse
+mailbox binding is optional: once the inbound event and acknowledgement are
+durably in local history, inability to prepare the reverse upload is logged but
+cannot roll back the application commit, suppress the replica-ledger record or
+prevent DELETE. Later authenticated history sync can still carry the retained
+acknowledgement.
 
 Transport identity diversity is not operator independence or Sybil resistance.
 The recipient does not yet receive the sender's exact replica-set commitment,

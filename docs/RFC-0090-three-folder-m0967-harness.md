@@ -62,3 +62,10 @@ restart with the corrected stable-path executable. The optional provider
 restart script reuses their existing private identities and stores, archives
 the pre-fix transport logs, publishes fresh signed offers and leaves the same
 final fail-closed evidence contract in force.
+
+The first real Bob retrieval also exposed a boundary between the durable local
+application commit and the volunteer replica ledger: an absent optional reverse
+mailbox binding used to abort the poll after the message was already stored.
+The runtime now treats reverse-ack upload preparation as best effort after that
+commit, while the harness recognizes the exact single-event post-commit state
+and resumes it idempotently instead of claiming that nothing was consumed.

@@ -92,16 +92,24 @@ function Wait-M0967LogCount {
         [int] $TimeoutSeconds = 240
     )
     $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    $nextProgress = [DateTime]::UtcNow
     while ([DateTime]::UtcNow -lt $deadline) {
+        $matched = 0
         if (Test-Path -LiteralPath $Path -PathType Leaf) {
             $text = Get-Content -LiteralPath $Path -Raw -ErrorAction SilentlyContinue
-            if ($null -ne $text -and [regex]::Matches(
-                $text, $Pattern, [Text.RegularExpressions.RegexOptions]::Multiline
-            ).Count -ge $Count) {
-                return $text
+            if ($null -ne $text) {
+                $matched = [regex]::Matches(
+                    $text, $Pattern, [Text.RegularExpressions.RegexOptions]::Multiline
+                ).Count
+                if ($matched -ge $Count) { return $text }
             }
         }
         if ($Process.HasExited) { throw "Background process exited before $Count matches of '$Pattern'." }
+        if ([DateTime]::UtcNow -ge $nextProgress) {
+            $remaining = [Math]::Max(0, [Math]::Ceiling(($deadline - [DateTime]::UtcNow).TotalSeconds))
+            Write-Host "Still working: observed $matched/$Count required events; timeout in ${remaining}s."
+            $nextProgress = [DateTime]::UtcNow.AddSeconds(15)
+        }
         Start-Sleep -Seconds 1
     }
     throw "Timed out waiting for $Count matches of '$Pattern' in $Path"

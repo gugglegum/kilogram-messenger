@@ -67,6 +67,8 @@ foreach ($required in @(
     'MailboxDeleteResponse::decode_and_verify',
     'pending_inbound_delete_for(',
     'commit_runtime_mailbox_payload',
+    'tolerate_unavailable_runtime_reverse_mailbox_acknowledgement',
+    'runtime_reverse_mailbox_acknowledgement_status=unavailable-after-commit',
     'runtime_mailbox_replica_delete_status=deleted-after-commit',
     'runtime_mailbox_inbound_source=volunteer-iroh',
     'runtime_volunteer_storage_replica_retrieval=bounded-three-provider-iroh-list-delete',

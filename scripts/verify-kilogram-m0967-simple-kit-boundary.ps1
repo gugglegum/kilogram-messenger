@@ -56,7 +56,8 @@ foreach ($value in @(
     'Update-M0967ProviderOfferFiles', 'Wait-M0967ProviderOfferFile',
     'Start-M0967Process', 'Import-M0967Providers', 'Invoke-M0967CliWithRetry',
     'KILOGRAM_M0967_PROVIDER_OFFER_DIRECTORY', "`$ErrorActionPreference = 'SilentlyContinue'",
-    'field_error=', '2> $stderrPath', "'--count', '2'"
+    'field_error=', '2> $stderrPath', "'--count', '2'",
+    'Still working: observed $matched/$Count required events'
 )) {
     if (-not $common.Contains($value)) { throw "simple kit common helper is missing '$value'" }
 }
@@ -96,7 +97,9 @@ foreach ($value in @(
     '05-restart-bob.log', 'history', "'pre-inbound'",
     'RETRYING BOB BEFORE THE FIRST INBOUND COMMIT', 'attempt-logs',
     'start-runtime-local-log', 'Publish-M0967BobAttemptLogs',
-    '04-receive-bob.failure-'
+    '04-receive-bob.failure-',
+    'post-application-commit',
+    'RESUMING AFTER THE EXISTING DURABLE BOB COMMIT'
 )) {
     if (-not $bobReceive.Contains($value)) { throw "Bob receive is missing '$value'" }
 }

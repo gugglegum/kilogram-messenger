@@ -57,15 +57,34 @@ try {
     Set-M0967BobReceiveStage 'guard-previous-attempt'
     if (Test-Path -LiteralPath $receiveLog -PathType Leaf) {
         $previousReceive = @(Get-Content -LiteralPath $receiveLog)
-        $hasInboundCommit = @($previousReceive | Where-Object {
+        $hasReplicaLedgerEvidence = @($previousReceive | Where-Object {
             $_ -cmatch '^runtime_mailbox_inbound_source=' -or
-            $_ -cmatch '^runtime_mailbox_replica_delete_status='
+            $_ -cmatch '^runtime_mailbox_replica_delete_status=' -or
+            $_ -cmatch '^runtime_mailbox_replica_source_store_key='
         }).Count -gt 0
-        if ($hasInboundCommit) {
-            throw 'Bob has partial inbound evidence; refusing an ambiguous receive retry.'
+        if ($hasReplicaLedgerEvidence) {
+            throw 'Bob has partial replica-ledger evidence; refusing an ambiguous receive retry.'
         }
-        Move-M0967FailedAttemptAside @($receiveLog, $providerLog) 'pre-inbound'
-        Write-Host 'RETRYING BOB BEFORE THE FIRST INBOUND COMMIT; NO MESSAGE WAS CONSUMED.'
+        $receivedEventIds = @($previousReceive | ForEach-Object {
+            if ($_ -cmatch '^runtime_mailbox_received_event_id=([0-9a-f]{64})$') { $Matches[1] }
+        } | Sort-Object -Unique)
+        if ($receivedEventIds.Count -gt 1) {
+            throw 'Bob previous attempt contains more than one received event; refusing an ambiguous retry.'
+        }
+        if ($receivedEventIds.Count -eq 1) {
+            $receiveOutcomes = @($previousReceive | Where-Object {
+                $_ -cmatch '^runtime_mailbox_receive_store=(Inserted|AlreadyPresent)$'
+            })
+            if ($receiveOutcomes.Count -lt 1) {
+                throw 'Bob received-event evidence has no durable store outcome.'
+            }
+            Move-M0967FailedAttemptAside @($receiveLog, $providerLog) 'post-application-commit'
+            Write-Host 'RESUMING AFTER THE EXISTING DURABLE BOB COMMIT; NO MESSAGE WILL BE INSERTED TWICE.'
+        }
+        else {
+            Move-M0967FailedAttemptAside @($receiveLog, $providerLog) 'pre-inbound'
+            Write-Host 'RETRYING BOB BEFORE THE FIRST INBOUND COMMIT; NO MESSAGE WAS CONSUMED.'
+        }
     }
 
     $runtime = $null
