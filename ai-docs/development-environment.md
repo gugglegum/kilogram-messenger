@@ -2059,3 +2059,8 @@ retirement остальных compatibility shadows ещё не реализов
 - Актуальный recovery kit содержит девять parseable PowerShell files: стандартный
   six-launch flow неизменен, а `2\02_RESTART_PROVIDERS_AFTER_FIX.ps1` является
   одноразовым recovery action только для уже начатого external run.
+- Первый recovery resume был безопасно остановлен до runtime launch из-за
+  CRLF-sensitive regex над `03-alice-queue.log`: evidence содержал exact queued
+  status, но multiline `$` видел остающийся `\r`. Resume guard переведён на
+  line-wise `Get-M0967ExactValue` и проверяет совпадение request/queue ID,
+  durable store outcome, encrypted-at-rest marker и exact queued status.

@@ -21,20 +21,26 @@ foreach ($path in @($offlinePath, $sentMarker)) {
     }
 }
 if ($resumeQueuedMessage) {
-    $queueText = Get-Content -LiteralPath $queuePath -Raw
-    if (-not [regex]::IsMatch($queueText, '(?m)^status=runtime-message-queued$')) {
-        throw 'Alice queue evidence is incomplete; refusing an ambiguous resume.'
+    $queueLines = @(Get-Content -LiteralPath $queuePath)
+    $queueRequestId = Get-M0967ExactValue $queueLines 'runtime_ipc_request_id' '[0-9a-f]{64}'
+    $queueId = Get-M0967ExactValue $queueLines 'runtime_queue_id' '[0-9a-f]{64}'
+    $queueStore = Get-M0967ExactValue $queueLines 'runtime_queue_store' 'Inserted|AlreadyPresent'
+    $queueBody = Get-M0967ExactValue $queueLines 'runtime_queue_body' 'encrypted-at-rest'
+    $queueStatus = Get-M0967ExactValue $queueLines 'status' 'runtime-message-queued'
+    if ($queueRequestId -cne $queueId -or $queueStore -notin @('Inserted', 'AlreadyPresent') -or
+        $queueBody -cne 'encrypted-at-rest' -or $queueStatus -cne 'runtime-message-queued') {
+        throw 'Alice queue evidence is internally inconsistent; refusing an ambiguous resume.'
     }
     if (-not (Test-Path -LiteralPath $sendLog -PathType Leaf)) {
         throw 'Alice queued message has no prior send log; refusing an ambiguous resume.'
     }
-    $previousSend = Get-Content -LiteralPath $sendLog -Raw
-    foreach ($pattern in @(
-        '(?m)^runtime_outbound_status=mailbox-stored$',
-        '(?m)^runtime_mailbox_replication_status=incomplete$'
+    $previousSend = @(Get-Content -LiteralPath $sendLog)
+    foreach ($line in @(
+        'runtime_outbound_status=mailbox-stored',
+        'runtime_mailbox_replication_status=incomplete'
     )) {
-        if (-not [regex]::IsMatch($previousSend, $pattern)) {
-            throw "Alice queued message is not at the expected resumable boundary: $pattern"
+        if ($line -cnotin $previousSend) {
+            throw "Alice queued message is not at the expected resumable boundary: $line"
         }
     }
     Move-M0967FailedAttemptAside @($storeLog, $sendLog, $providerLog) 'post-queue'
