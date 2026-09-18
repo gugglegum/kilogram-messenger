@@ -2114,3 +2114,14 @@ retirement остальных compatibility shadows ещё не реализов
   один отдельный existing live-runtime test стабильно падает на DB-primary
   typed-shadow mismatch в background mailbox upload и не проходит даже при
   отдельном запуске; этот результат не маскируется как успех текущего fix.
+- Fix commit `b095d7a` собран debug с `--jobs 2`/below-normal. В existing
+  `C:\Users\Paul\YandexDisk\!M\M0.9.67` атомарно установлен stable-path CLI
+  SHA-256 `07f61075...`, обновлены `BUILD-INFO.json`, `common.ps1` и Bob receive.
+  Те же provider identities перезапущены на новом binary; store keys сохранились
+  (`ead890...`, `c524c6...`), endpoints новые, fresh offer publication активна.
+- На Bob добавлен exact recovery entrypoint
+  `3\06_RESUME_BOB_AFTER_POST_COMMIT_FIX.ps1`: он ждёт exact CLI/build/script
+  hashes и согласованный fresh two-offer snapshot, затем повторно обрабатывает
+  уже durable event idempotently и не создаёт новое сообщение. Deployed script
+  проходит Windows PowerShell 5 AST parse; provider processes остаются запущены
+  до финального `1\03_VERIFY.ps1`.

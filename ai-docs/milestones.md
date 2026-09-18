@@ -3708,6 +3708,11 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
   harness распознаёт единственный durable post-commit event и возобновляет его
   idempotently без второго сообщения. Долгое ожидание печатает прогресс каждые
   15 секунд.
+- Recovery build `b095d7a` развернут в existing shared kit без нового имени EXE;
+  те же два provider states перезапущены, fresh offers публикуются. Bob должен
+  продолжить единственной командой
+  `3\06_RESUME_BOB_AFTER_POST_COMMIT_FIX.ps1`; после его успеха остаётся обычный
+  Alice `1\03_VERIFY.ps1`.
 
 ### Следующий этап
 
