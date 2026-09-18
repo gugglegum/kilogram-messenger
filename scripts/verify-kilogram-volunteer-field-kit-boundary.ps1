@@ -66,7 +66,11 @@ foreach ($required in @('runtime-ipc-volunteer-provider-import', 'runtime-ipc-vo
 foreach ($required in @('runtime-ipc-queue-message', 'message_marker', 'bob_account_id')) {
     if (-not $queue.Contains($required)) { throw "field queue action is missing '$required'" }
 }
-foreach ($required in @('runtime_mailbox_replication_receipts=2/2', 'runtime_mailbox_replication_status=satisfied', 'runtime-ipc-ping', 'alice_runtime_ipc_reachable=false')) {
+foreach ($required in @(
+    'runtime_mailbox_replication_receipts=2/2', 'runtime_mailbox_replication_status=satisfied',
+    'runtime-ipc-ping', 'alice_runtime_ipc_reachable=false',
+    "`$ErrorActionPreference = 'SilentlyContinue'"
+)) {
     if (-not $offline.Contains($required)) { throw "sender-offline boundary is missing '$required'" }
 }
 foreach ($required in @('history --state-dir', 'conversation_label', '05-bob-history.log')) {

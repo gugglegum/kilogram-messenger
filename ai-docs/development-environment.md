@@ -2064,3 +2064,10 @@ retirement остальных compatibility shadows ещё не реализов
   status, но multiline `$` видел остающийся `\r`. Resume guard переведён на
   line-wise `Get-M0967ExactValue` и проверяет совпадение request/queue ID,
   durable store outcome, encrypted-at-rest marker и exact queued status.
+- Следующий recovery run успешно получил две независимые volunteer receipts и
+  достиг `runtime_mailbox_replication_status=satisfied`, но Windows PowerShell 5
+  превратил ожидаемый stderr отрицательного post-stop `runtime-ipc-ping` в
+  terminating `NativeCommandError`. Alice send теперь умеет отдельно завершить
+  уже satisfied attempt без network retry, подавляет stderr только у ожидаемого
+  отрицательного probe и разбирает receipt keys построчно, независимо от CRLF.
+  Та же безопасная probe-семантика применена к standalone sender-offline helper.

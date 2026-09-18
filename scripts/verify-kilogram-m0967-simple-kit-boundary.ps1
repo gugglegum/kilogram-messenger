@@ -56,7 +56,9 @@ foreach ($value in @(
     'runtime-ipc-queue-message', 'runtime_mailbox_replication_receipts=2/2',
     'alice_runtime_ipc_reachable=false', "'pre-queue'", "'post-queue'",
     'RESUMING THE EXISTING DURABLE ALICE QUEUE ITEM', 'runtime-message-queued',
-    "Get-M0967ExactValue `$queueLines 'runtime_queue_id' '[0-9a-f]{64}'"
+    "Get-M0967ExactValue `$queueLines 'runtime_queue_id' '[0-9a-f]{64}'",
+    'FINALIZING THE ALREADY SATISFIED ALICE SEND', '$replicationAlreadySatisfied',
+    "`$ErrorActionPreference = 'SilentlyContinue'"
 )) {
     if (-not $aliceSend.Contains($value)) { throw "Alice send is missing '$value'" }
 }

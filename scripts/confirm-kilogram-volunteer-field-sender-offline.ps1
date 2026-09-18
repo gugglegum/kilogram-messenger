@@ -25,8 +25,13 @@ if (-not [regex]::IsMatch($sendText, '(?m)^runtime_mailbox_replication_receipts=
     -not [regex]::IsMatch($sendText, '(?m)^runtime_mailbox_replication_status=satisfied$')) {
     throw 'Alice runtime has not retained the required two volunteer receipts'
 }
-$probe = @(& $CliPath runtime-ipc-ping --ipc-file $IpcFile 2>&1)
-$probeExitCode = $LASTEXITCODE
+$previousErrorActionPreference = $ErrorActionPreference
+try {
+    $ErrorActionPreference = 'SilentlyContinue'
+    & $CliPath runtime-ipc-ping --ipc-file $IpcFile 1>$null 2>$null
+    $probeExitCode = $LASTEXITCODE
+}
+finally { $ErrorActionPreference = $previousErrorActionPreference }
 if ($probeExitCode -eq 0) {
     throw 'Alice runtime is still reachable; stop it before recording the offline boundary'
 }
