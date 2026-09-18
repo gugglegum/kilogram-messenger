@@ -2095,3 +2095,10 @@ retirement остальных compatibility shadows ещё не реализов
   delete по всем attempts остались `0/0`. Bob runtime/restart logs перенесены в
   unique local attempt directory и публикуются в evidence только после process
   close; outer catch теперь всегда публикует exact stage/exception/script stack.
+- Local-first retry подтвердил корректный fresh snapshot и runtime IPC. Первая
+  попытка импортировала оба provider, но немедленный select завершился code 1;
+  следующая заменила provider1, после чего provider2 import завершился code 1.
+  Inbound/delete остались `0/0`. Recovery теперь повторяет monotonic/idempotent
+  import и read-only selection bounded 12 x 750 ms, выбирает два существующих
+  provider и пишет native stderr через temporary file, обходя PowerShell 5
+  stderr conversion.

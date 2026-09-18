@@ -215,17 +215,50 @@ function Stop-M0967Process {
 function Invoke-M0967Cli {
     param([Parameter(Mandatory)] [string[]] $Arguments)
     $previousErrorActionPreference = $ErrorActionPreference
+    $stderrPath = [IO.Path]::GetTempFileName()
+    $output = @()
+    $stderr = @()
+    $exitCode = -1
     try {
         $ErrorActionPreference = 'SilentlyContinue'
-        $output = @(& $script:CliPath @Arguments 2>&1)
+        $output = @(& $script:CliPath @Arguments 2> $stderrPath)
         $exitCode = $LASTEXITCODE
+        if (Test-Path -LiteralPath $stderrPath -PathType Leaf) {
+            $stderr = @([IO.File]::ReadAllLines($stderrPath))
+        }
     }
-    finally { $ErrorActionPreference = $previousErrorActionPreference }
-    $text = @($output | ForEach-Object { [string]$_ })
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+        Remove-Item -LiteralPath $stderrPath -Force -ErrorAction SilentlyContinue
+    }
+    $text = @(
+        @($output | ForEach-Object { [string]$_ })
+        @($stderr | ForEach-Object { [string]$_ })
+    )
     if ($exitCode -ne 0) {
         throw "kilogram-cli failed ($exitCode): $($Arguments -join ' ')`n$($text -join "`n")"
     }
     return [string[]]$text
+}
+
+function Invoke-M0967CliWithRetry {
+    param(
+        [Parameter(Mandatory)] [string[]] $Arguments,
+        [ValidateRange(1, 30)] [int] $Attempts = 12,
+        [ValidateRange(100, 10000)] [int] $DelayMilliseconds = 750,
+        [Collections.Generic.List[string]] $Evidence
+    )
+    for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
+        try { return @(Invoke-M0967Cli $Arguments) }
+        catch {
+            $message = ([string]$_.Exception.Message) -replace "`r?`n", ' | '
+            if ($null -ne $Evidence) {
+                $Evidence.Add("field_retry_attempt=$attempt/$Attempts error=$message")
+            }
+            if ($attempt -eq $Attempts) { throw }
+            Start-Sleep -Milliseconds $DelayMilliseconds
+        }
+    }
 }
 
 function Get-M0967ExactValue {
@@ -258,11 +291,15 @@ function Import-M0967Providers {
     try {
         foreach ($provider in @('provider1', 'provider2')) {
             $offer = Wait-M0967ProviderOfferFile $provider 180
-            $result = @(Invoke-M0967Cli @('runtime-ipc-volunteer-provider-import', '--ipc-file', $IpcFile, '--offer-file', $offer))
+            $result = @(Invoke-M0967CliWithRetry `
+                @('runtime-ipc-volunteer-provider-import', '--ipc-file', $IpcFile, '--offer-file', $offer) `
+                12 750 $lines)
             $lines.Add("field_provider=$provider")
             foreach ($line in $result) { $lines.Add([string]$line) }
         }
-        $selection = @(Invoke-M0967Cli @('runtime-ipc-volunteer-provider-select', '--ipc-file', $IpcFile, '--count', '3'))
+        $selection = @(Invoke-M0967CliWithRetry `
+            @('runtime-ipc-volunteer-provider-select', '--ipc-file', $IpcFile, '--count', '2') `
+            12 750 $lines)
         foreach ($line in $selection) { $lines.Add([string]$line) }
         [IO.File]::WriteAllLines($outputPath, $lines, [Text.UTF8Encoding]::new($false))
     }

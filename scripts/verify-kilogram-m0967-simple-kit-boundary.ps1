@@ -54,9 +54,9 @@ foreach ($value in @(
     '$script:KitRoot = [IO.Path]::GetFullPath($PSScriptRoot)', '$env:LOCALAPPDATA',
     'Wait-M0967File', 'Wait-M0967IpcReady', 'Move-M0967FailedAttemptAside',
     'Update-M0967ProviderOfferFiles', 'Wait-M0967ProviderOfferFile',
-    'Start-M0967Process', 'Import-M0967Providers',
+    'Start-M0967Process', 'Import-M0967Providers', 'Invoke-M0967CliWithRetry',
     'KILOGRAM_M0967_PROVIDER_OFFER_DIRECTORY', "`$ErrorActionPreference = 'SilentlyContinue'",
-    'field_error='
+    'field_error=', '2> $stderrPath', "'--count', '2'"
 )) {
     if (-not $common.Contains($value)) { throw "simple kit common helper is missing '$value'" }
 }
