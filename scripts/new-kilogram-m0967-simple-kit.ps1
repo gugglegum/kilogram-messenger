@@ -109,6 +109,7 @@ try {
         '6. Desktop: run 1\03_VERIFY.ps1. It stops providers and verifies all evidence.',
         '',
         'RECOVERY ONLY: 2\02_RESTART_PROVIDERS_AFTER_FIX.ps1 reuses existing provider identities after a binary fix.',
+        'RECOVERY ONLY: 3\06_RESUME_BOB_AFTER_POST_COMMIT_FIX.ps1 resumes the exact durable Bob commit after the fixed CLI arrives.',
         'A repeated 1\02_SEND_ALICE.ps1 resumes an exact incomplete durable queue item and never creates a duplicate.',
         '',
         'Always start scripts with:',

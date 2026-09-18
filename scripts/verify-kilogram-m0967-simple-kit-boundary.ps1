@@ -20,7 +20,8 @@ $required = @(
     (Join-Path $source '3\02_RECEIVE_BOB.ps1'),
     (Join-Path $source '3\03_RETRY_BOB_AFTER_OFFER_SYNC_FIX.ps1'),
     (Join-Path $source '3\04_RETRY_BOB_EXACT_VERSION.ps1'),
-    (Join-Path $source '3\05_RETRY_BOB_FRESH_OFFERS.ps1')
+    (Join-Path $source '3\05_RETRY_BOB_FRESH_OFFERS.ps1'),
+    (Join-Path $source '3\06_RESUME_BOB_AFTER_POST_COMMIT_FIX.ps1')
 )
 foreach ($path in $required) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "simple kit source is missing: $path" }
@@ -38,11 +39,13 @@ $bobReceive = Get-Content -LiteralPath (Join-Path $source '3\02_RECEIVE_BOB.ps1'
 $bobRetry = Get-Content -LiteralPath (Join-Path $source '3\03_RETRY_BOB_AFTER_OFFER_SYNC_FIX.ps1') -Raw
 $bobExactRetry = Get-Content -LiteralPath (Join-Path $source '3\04_RETRY_BOB_EXACT_VERSION.ps1') -Raw
 $bobFreshRetry = Get-Content -LiteralPath (Join-Path $source '3\05_RETRY_BOB_FRESH_OFFERS.ps1') -Raw
+$bobPostCommitRetry = Get-Content -LiteralPath (Join-Path $source '3\06_RESUME_BOB_AFTER_POST_COMMIT_FIX.ps1') -Raw
 
 foreach ($value in @(
     'cargo build --jobs $cargoJobsResolved --locked --package kilogram-cli --package kilogram-ticket-store',
     "profile = 'debug'", "archive = `$false", "network_executed = `$false",
     "@('1', '2', '3')", 'README-RU.txt', '02_RESTART_PROVIDERS_AFTER_FIX.ps1',
+    '06_RESUME_BOB_AFTER_POST_COMMIT_FIX.ps1',
     'resumes an exact incomplete durable queue item'
 )) {
     if (-not $generator.Contains($value)) { throw "simple kit generator is missing '$value'" }
@@ -115,6 +118,15 @@ foreach ($value in @(
     'FRESH MATCHING PROVIDER OFFERS ARE SYNCHRONIZED'
 )) {
     if (-not $bobFreshRetry.Contains($value)) { throw "Bob fresh-offer recovery wrapper is missing '$value'" }
+}
+foreach ($value in @(
+    'expectedRevision', 'expectedCliHash', 'expectedCliBytes', 'BUILD-INFO.json',
+    'offer-snapshots', 'KILOGRAM_M0967_PROVIDER_OFFER_DIRECTORY',
+    'Resuming the one already committed Bob message'
+)) {
+    if (-not $bobPostCommitRetry.Contains($value)) {
+        throw "Bob post-commit recovery wrapper is missing '$value'"
+    }
 }
 
 Write-Output 'm0967_simple_kit_boundary=verified'
