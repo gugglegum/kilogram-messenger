@@ -711,6 +711,10 @@ EXE не создавались.
 - [`../docs/M0.9.67-VOLUNTEER-MAILBOX-FIELD-TEST-RU.md`](../docs/M0.9.67-VOLUNTEER-MAILBOX-FIELD-TEST-RU.md) —
   русская пошаговая инструкция внешнего M0.9.67 теста с двумя private provider
   профилями и bounded shared evidence без секретов.
+- [`../docs/RFC-0090-three-folder-m0967-harness.md`](../docs/RFC-0090-three-folder-m0967-harness.md) —
+  упрощённый six-launch Windows harness: `1`=Alice, `2`=два providers,
+  `3`=Bob, automatic disposable identity/contact/mailbox setup и unchanged
+  fail-closed M0.9.67 evidence.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

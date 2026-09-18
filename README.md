@@ -210,20 +210,22 @@ the pause/reconnect procedure is in
 ## Current milestone: M0.9.67 volunteer mailbox field kit — ready
 
 A clean-HEAD, no-archive builder now prepares one stable debug
-`kilogram-cli.exe`, two private provider bootstrap helpers, no-clobber
-Alice/Bob/provider capture scripts and a fail-closed evidence verifier. The
-scenario requires two independent store keys and transport identities, two
-sender PUT receipts, a stopped-Alice IPC boundary, two Bob Iroh commits and
-signed deletes, restart without volunteer redelivery and exactly one local
-history occurrence.
+`kilogram-cli.exe`, two private provider identities, no-clobber evidence and a
+fail-closed verifier. A simplified three-folder harness automatically creates
+the disposable Alice/Bob accounts, membership, contacts and mailbox binding;
+the operator runs six numbered scripts without copying IDs or editing paths.
+The scenario still requires two independent store keys and transport
+identities, two sender PUT receipts, a stopped-Alice IPC boundary, two Bob Iroh
+commits and signed deletes, restart without volunteer redelivery and exactly
+one local history occurrence.
 
 Two provider identities may run on one operator host for mechanism evidence,
-but that does not prove operator or physical independence. The kit does not
-copy Root/device/state/IPC secrets, create a ZIP/release build, launch network
-during generation or add another executable. The actual cross-network run is
-still pending. See
+but that does not prove operator or physical independence. Live state is kept
+out of the synchronized folder to avoid copying an open database; the accounts
+are disposable test identities. Generation creates no ZIP/release build and
+launches no network process. The actual cross-network run is still pending. See
 [`docs/M0.9.67-VOLUNTEER-MAILBOX-FIELD-TEST-RU.md`](docs/M0.9.67-VOLUNTEER-MAILBOX-FIELD-TEST-RU.md)
-and [`docs/RFC-0089-volunteer-mailbox-field-kit.md`](docs/RFC-0089-volunteer-mailbox-field-kit.md).
+and [`docs/RFC-0090-three-folder-m0967-harness.md`](docs/RFC-0090-three-folder-m0967-harness.md).
 
 ## Previous milestone: M0.9.66 bounded volunteer mailbox retrieval — complete
 

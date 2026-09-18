@@ -3682,10 +3682,17 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
   операторов, физических отказов или Sybil resistance;
 - HTTPS mailbox остаётся обязательной compatibility-копией для этого теста:
   field kit не заявляет полностью server-free offline delivery;
+- добавлен простой three-folder harness: `1`=Alice, `2`=два providers,
+  `3`=Bob; шесть scripts автоматически создают disposable identities,
+  membership, contacts, loopback compatibility mailbox и весь evidence;
+- live state автоматически хранится в `%LOCALAPPDATA%`, чтобы Yandex Disk не
+  синхронизировал открытые Redb-файлы; оператор не вводит ID и пути вручную;
 - contract и русская инструкция зафиксированы в
   [`../docs/RFC-0089-volunteer-mailbox-field-kit.md`](../docs/RFC-0089-volunteer-mailbox-field-kit.md)
   и
   [`../docs/M0.9.67-VOLUNTEER-MAILBOX-FIELD-TEST-RU.md`](../docs/M0.9.67-VOLUNTEER-MAILBOX-FIELD-TEST-RU.md).
+  Упрощённый operator contract зафиксирован в
+  [`../docs/RFC-0090-three-folder-m0967-harness.md`](../docs/RFC-0090-three-folder-m0967-harness.md).
 
 ### Следующий этап
 

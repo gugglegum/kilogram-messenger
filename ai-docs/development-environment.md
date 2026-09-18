@@ -2020,3 +2020,11 @@ retirement остальных compatibility shadows ещё не реализов
   copied-verifier self-test.
 - Реальный Iroh/HTTPS runtime здесь не запускался, поэтому Firewall surface не
   создавался; внешний field result пока pending.
+- На 2026-09-18 добавлен three-folder operator harness с шестью запускаемыми
+  scripts, одним stable-path `kilogram-cli.exe` и loopback-only compatibility
+  store. Он автоматически создаёт fresh Alice/Bob/provider identities и не
+  требует ручных ID, config или абсолютных путей.
+- Девять новых PowerShell files проходят AST parse; static simple-kit gate
+  подтверждает relative path bootstrap, `%LOCALAPPDATA%` live-state boundary,
+  two-provider process, Alice 2/2/offline evidence и Bob receive/restart/history.
+  Network runtime при этой проверке не запускался; внешний run pending.
