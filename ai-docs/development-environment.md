@@ -2165,3 +2165,34 @@ retirement остальных compatibility shadows ещё не реализов
   `verify-kilogram-volunteer-replica-locator-boundary.ps1` проходят.
 - Сборки и тесты выполнены только в debug/dev с `CARGO_BUILD_JOBS=2`; release и
   ZIP не создавались, network listener не запускался.
+
+## M0.9.69 verification snapshot (2026-09-19)
+
+- Добавлен `scripts/m0969-exact` — отдельный clean-run three-folder harness без
+  repair wrappers. Порядок шести запусков: Alice prepare, providers start, Bob
+  prepare, Alice send, Bob receive, Alice verify.
+- Provider script больше не ждёт готовности клиентов: один publication manifest
+  с SHA-256/expiry двух offers появляется до Bob mailbox activation. Consumers
+  копируют только согласованный fresh set в local immutable snapshot.
+- Bob pre-activation import сохраняется отдельным evidence; первая capability
+  обязана иметь `mailbox_replica_set_store_count=2` и
+  `mailbox_replica_set_discovery=exact-authenticated`.
+- Prepare phase не заканчивается до bidirectional convergence: Alice durable
+  пишет exact capability update, Bob durable пишет session-bound ACK. Update ID
+  проверяется на обеих сторонах.
+- Bootstrap runtimes больше не оставляют двусмысленный endpoint race: каждый
+  final runtime атомарно заменяет свой ticket, peer ждёт отличный SHA-256 и
+  валидирует fresh signed descriptor через новый CLI surface
+  `runtime-ipc-contact-add` поверх уже существующего actor `AddContact`. Account,
+  Device и исходный controlled descriptor path должны остаться теми же.
+- Sender/recipient scripts требуют один activation commitment ID, exact resolved
+  `2/2` и равенство provider keys с attempts/receipts/polls/committed sources;
+  любая legacy fallback строка завершает run ошибкой.
+- Evidence verifier self-test проходит positive fixture и доказывает fail-closed
+  отклонение legacy marker, substituted poll key и stale bootstrap ticket.
+  Static kit gate также проходит; PowerShell AST parse успешен для всех 10
+  новых scripts. Полный `kilogram-cli` regression: 74/74.
+- Generator использует debug profile, stable EXE names и `CargoJobs=2`, а
+  `BUILD-INFO.json` связывает SHA-256/length обоих EXE, шести operator scripts,
+  common helper, verifier и boundary log. ZIP/release/network launch отсутствуют.
+  Реальный внешний run и итоговый `result=verified` ещё ожидаются.

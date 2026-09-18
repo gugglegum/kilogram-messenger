@@ -293,8 +293,12 @@ sessions, distribution, removal и key epochs и не решены этим пр
   M0.9.68 добавляет recipient-selected Device-signed exact replica-set
   commitment в capability update, durable per-item locator и indexed store-key
   lookup на sender/recipient; legacy bindings пока сохраняют явно обозначенный
-  random fallback. Открытыми остаются automatic safe upgrade/rotation legacy
-  bindings, clean external exact-locator evidence, retirement HTTPS copy,
+  random fallback. M0.9.69 добавляет clean external harness и fail-closed
+  evidence contract с providers-before-activation, fresh live endpoint tickets,
+  capability apply/ACK и exact two-store equality, но реальный двуххостовый run
+  ещё не выполнен. Открытыми
+  остаются automatic safe upgrade/rotation legacy bindings, принятие clean field
+  evidence, retirement HTTPS copy,
   Sybil-resistant diversity, cryptographic hop proof и access-correlation privacy.
 - Push-уведомления на Android/iOS без утечки содержания и социального графа.
 - Независимый second-builder, подписанный release provenance, обновления клиента

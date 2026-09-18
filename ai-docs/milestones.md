@@ -3759,14 +3759,50 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
   fail-closed static gate —
   `scripts/verify-kilogram-volunteer-replica-locator-boundary.ps1`.
 
+### M0.9.69 — clean external exact-locator field kit: реализовано, внешний run ожидается
+
+Реализовано:
+
+- новый three-folder/six-launch harness сохраняет привычные роли `1`=Alice,
+  `2`=два providers, `3`=Bob, но provider runtimes и hash-consistent fresh
+  offer publication теперь обязательно существуют до первой mailbox activation;
+- Bob импортирует оба transport-distinct offers через authenticated runtime IPC,
+  затем создаёт `exact-authenticated` capability с двумя store keys; static gate
+  проверяет причинный порядок import-before-activation;
+- Bob и Alice одновременно запускают runtimes до отправки сообщения: Alice
+  durable применяет exact signed capability update, Bob получает session-bound
+  acknowledgement, и только после этого prepare scripts завершаются;
+- перед convergence оба клиента требуют, чтобы final runtime заменил bootstrap
+  ticket, и через authenticated live IPC проверяют fresh descriptor того же
+  enrolled Account/Device; stale ticket или identity substitution fail closed;
+- sender import-ит fresh offer snapshot, durable ставит одно сообщение, доказывает
+  exact commitment/resolution `2/2`, attempts и store-signed receipts ровно от
+  precommitted stores, затем останавливает Alice runtime и loopback HTTPS fixture;
+- Bob использует тот же commitment, адресно poll-ит ровно два committed store,
+  durable commit-ит и signed-delete-ит обе replicas; restart не доставляет их
+  повторно, history содержит marker один раз;
+- fail-closed evidence verifier связывает fresh endpoint validation, activation, capability apply/ACK,
+  sender и recipient одним commitment ID, запрещает `legacy-random-fallback`,
+  partial resolution и provider substitution; synthetic self-test отдельно
+  доказывает отклонение stale ticket, legacy marker и чужого poll key;
+- Yandex Disk получает только bounded public artifacts/evidence; live Redb/state
+  остаётся в `%LOCALAPPDATA%`. Offers читаются из immutable local snapshot только
+  после совпадения двух SHA-256/expiry с одним publication manifest;
+- generator требует clean HEAD, создаёт stable-name debug binaries с двумя Cargo
+  jobs по умолчанию, не создаёт ZIP/release и не запускает сеть;
+- HTTPS остаётся loopback compatibility copy и не используется Bob после
+  sender-offline boundary. Удалять compatibility path до успешного внешнего run
+  и решения legacy upgrade policy нельзя;
+- contract зафиксирован в
+  [`../docs/RFC-0092-clean-external-exact-locator-field-run.md`](../docs/RFC-0092-clean-external-exact-locator-field-run.md),
+  gates — `scripts/verify-kilogram-m0969-exact-locator-kit-boundary.ps1` и
+  `scripts/verify-kilogram-m0969-exact-locator-evidence.ps1`.
+
 ### Следующий этап
 
-1. M0.9.69: добавить clean external exact-locator field run: provider offers
-   должны существовать до mailbox activation/rotation, Alice должна durable
-   доказать committed set и receipts, Bob — адресный lookup/commit/delete без
-   строк `legacy-random-fallback`; случайное registry sampling в этом run
-   запрещено fail-closed verifier.
-2. После field evidence спроектировать безопасный automatic upgrade/rotation
+1. Выполнить один clean external M0.9.69 run на Alice/Bob из разных сетей и
+   принять evidence только при `result=verified` без recovery chain.
+2. После clean field evidence спроектировать безопасный automatic upgrade/rotation
    legacy mailbox bindings и условия удаления HTTPS compatibility copy.
 3. До первого публичного security artifact pin-нуть linker/SDK либо controlled
    alternative и повторить M0.9.59 до matched external hash и attestation.

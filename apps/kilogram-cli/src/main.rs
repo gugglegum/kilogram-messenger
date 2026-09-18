@@ -852,6 +852,25 @@ enum Command {
         ipc_file: PathBuf,
     },
 
+    /// Enroll or refresh a signed peer endpoint through the running runtime actor.
+    RuntimeIpcContactAdd {
+        /// Runtime-owned local IPC descriptor.
+        #[arg(long)]
+        ipc_file: PathBuf,
+
+        /// Contact conversation label whose membership is already installed.
+        #[arg(long)]
+        conversation: String,
+
+        /// Trusted peer Account ID expected in the signed descriptor.
+        #[arg(long)]
+        expect_account: AccountId,
+
+        /// Fresh peer runtime ticket published by the currently running peer.
+        #[arg(long)]
+        descriptor_file: PathBuf,
+    },
+
     /// Queue one message through the running runtime actor.
     RuntimeIpcQueueMessage {
         /// Runtime-owned local IPC descriptor.
@@ -2160,6 +2179,7 @@ impl Command {
             | Self::ConversationMemberAdd { .. }
             | Self::DeviceRevoke { .. }
             | Self::RuntimeIpcPing { .. }
+            | Self::RuntimeIpcContactAdd { .. }
             | Self::RuntimeIpcQueueMessage { .. }
             | Self::RuntimeIpcOutboxStatus { .. }
             | Self::RuntimeIpcMailboxStatus { .. }
@@ -3225,6 +3245,12 @@ async fn run_command(command: Command) -> Result<()> {
         Command::RuntimeMailboxStatus { state_dir } => runtime_mailbox_status(state_dir),
         Command::RuntimeOutboxStatus { state_dir } => runtime_outbox_status(state_dir),
         Command::RuntimeIpcPing { ipc_file } => runtime_ipc_ping(ipc_file).await,
+        Command::RuntimeIpcContactAdd {
+            ipc_file,
+            conversation,
+            expect_account,
+            descriptor_file,
+        } => runtime_ipc_contact_add(ipc_file, conversation, expect_account, descriptor_file).await,
         Command::RuntimeIpcQueueMessage {
             ipc_file,
             conversation,
@@ -11829,6 +11855,58 @@ async fn runtime_ipc_ping(ipc_file: PathBuf) -> Result<()> {
         }
         RuntimeIpcResponse::Error { message } => bail!("runtime IPC rejected ping: {message}"),
         _ => bail!("runtime IPC returned an unexpected ping response"),
+    }
+}
+
+async fn runtime_ipc_contact_add(
+    ipc_file: PathBuf,
+    conversation: String,
+    expected_peer_account_id: AccountId,
+    descriptor_file: PathBuf,
+) -> Result<()> {
+    let response = kilogram_runtime_ipc::call(
+        &ipc_file,
+        RuntimeIpcCommand::AddContact {
+            conversation,
+            expected_peer_account_id,
+            descriptor_file,
+        },
+    )
+    .await?;
+    match response {
+        RuntimeIpcResponse::ContactAdded {
+            contact_id,
+            peer_account_id,
+            peer_device_id,
+            endpoint_candidate_count,
+            endpoint_candidate_added,
+            inserted,
+        } => {
+            ensure!(
+                peer_account_id == expected_peer_account_id,
+                "runtime IPC added a contact for a different peer account"
+            );
+            println!("runtime_contact_id={contact_id}");
+            println!("peer_account_id={peer_account_id}");
+            println!("peer_device_id={peer_device_id}");
+            println!("endpoint_candidate_count={endpoint_candidate_count}");
+            println!("endpoint_candidate_added={endpoint_candidate_added}");
+            println!("runtime_contact_update=live-ipc");
+            println!(
+                "runtime_contact_store={}",
+                if inserted {
+                    "Inserted"
+                } else {
+                    "AlreadyPresent"
+                }
+            );
+            println!("status=runtime-contact-ready");
+            Ok(())
+        }
+        RuntimeIpcResponse::Error { message } => {
+            bail!("runtime IPC rejected contact update: {message}")
+        }
+        _ => bail!("runtime IPC returned an unexpected contact update response"),
     }
 }
 
