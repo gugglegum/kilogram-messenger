@@ -146,21 +146,41 @@ function Update-M0967ProviderOfferFiles {
     foreach ($provider in @('provider1', 'provider2')) {
         $logPath = Wait-M0967File `
             (Join-Path $script:EvidenceDirectory "01-$provider.log") 900 "$provider runtime log"
-        $text = Get-Content -LiteralPath $logPath -Raw
-        $matches = [regex]::Matches(
-            $text,
-            '(?m)^runtime_volunteer_storage_offer=([A-Za-z0-9_-]+)$'
-        )
-        if ($matches.Count -lt 1) { throw "$provider runtime log contains no complete offer" }
+        $offers = @(Get-Content -LiteralPath $logPath | ForEach-Object {
+            if ($_ -cmatch '^runtime_volunteer_storage_offer=([A-Za-z0-9_-]+)$') {
+                $Matches[1]
+            }
+        })
+        if ($offers.Count -lt 1) { throw "$provider runtime log contains no complete offer" }
         $offerPath = Join-Path $script:EvidenceDirectory "01-$provider.offer"
         $temporary = "$offerPath.refresh-$PID"
         [IO.File]::WriteAllText(
             $temporary,
-            ($matches[$matches.Count - 1].Groups[1].Value + "`n"),
+            ($offers[$offers.Count - 1] + "`n"),
             [Text.UTF8Encoding]::new($false)
         )
         Move-Item -LiteralPath $temporary -Destination $offerPath -Force
     }
+}
+
+function Wait-M0967ProviderOfferFile {
+    param(
+        [Parameter(Mandatory)] [string] $Provider,
+        [int] $TimeoutSeconds = 180
+    )
+    $path = Join-Path $script:EvidenceDirectory "01-$Provider.offer"
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    while ([DateTime]::UtcNow -lt $deadline) {
+        if (Test-Path -LiteralPath $path -PathType Leaf) {
+            try { $lines = @(Get-Content -LiteralPath $path -ErrorAction Stop) }
+            catch { $lines = @() }
+            if ($lines.Count -eq 1 -and $lines[0] -cmatch '^[A-Za-z0-9_-]+$') {
+                return $path
+            }
+        }
+        Start-Sleep -Seconds 2
+    }
+    throw "Timed out waiting for complete $Provider offer file: $path"
 }
 
 function Start-M0967Process {
@@ -220,11 +240,10 @@ function Import-M0967Providers {
     param([Parameter(Mandatory)] [string] $Role, [Parameter(Mandatory)] [string] $IpcFile)
     $outputPath = Join-Path $script:EvidenceDirectory "02-$Role-providers.log"
     if (Test-Path -LiteralPath $outputPath) { throw "Provider import evidence exists: $outputPath" }
-    Update-M0967ProviderOfferFiles
     $lines = [Collections.Generic.List[string]]::new()
     $lines.Add("field_role=$Role")
     foreach ($provider in @('provider1', 'provider2')) {
-        $offer = Wait-M0967File (Join-Path $script:EvidenceDirectory "01-$provider.offer") 900 "$provider offer"
+        $offer = Wait-M0967ProviderOfferFile $provider 180
         $result = @(Invoke-M0967Cli @('runtime-ipc-volunteer-provider-import', '--ipc-file', $IpcFile, '--offer-file', $offer))
         $lines.Add("field_provider=$provider")
         foreach ($line in $result) { $lines.Add([string]$line) }

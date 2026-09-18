@@ -51,9 +51,14 @@ try {
         "ready-after-wire-fix`n"
     )
     Write-Host 'FIXED PROVIDERS ARE READY. Leave this window open until final verification.'
+    $nextOfferRefresh = [DateTime]::UtcNow
     while (-not (Test-Path -LiteralPath $stop -PathType Leaf)) {
         foreach ($entry in $processes.GetEnumerator()) {
             if ($entry.Value.HasExited) { throw "$($entry.Key) stopped unexpectedly" }
+        }
+        if ([DateTime]::UtcNow -ge $nextOfferRefresh) {
+            Update-M0967ProviderOfferFiles
+            $nextOfferRefresh = [DateTime]::UtcNow.AddSeconds(10)
         }
         Start-Sleep -Seconds 2
     }

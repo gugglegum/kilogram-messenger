@@ -16,7 +16,8 @@ $required = @(
     (Join-Path $source '2\01_START_PROVIDERS.ps1'),
     (Join-Path $source '2\02_RESTART_PROVIDERS_AFTER_FIX.ps1'),
     (Join-Path $source '3\01_PREPARE_BOB.ps1'),
-    (Join-Path $source '3\02_RECEIVE_BOB.ps1')
+    (Join-Path $source '3\02_RECEIVE_BOB.ps1'),
+    (Join-Path $source '3\03_RETRY_BOB_AFTER_OFFER_SYNC_FIX.ps1')
 )
 foreach ($path in $required) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "simple kit source is missing: $path" }
@@ -30,6 +31,7 @@ $providers = Get-Content -LiteralPath (Join-Path $source '2\01_START_PROVIDERS.p
 $providerRestart = Get-Content -LiteralPath (Join-Path $source '2\02_RESTART_PROVIDERS_AFTER_FIX.ps1') -Raw
 $bobPrepare = Get-Content -LiteralPath (Join-Path $source '3\01_PREPARE_BOB.ps1') -Raw
 $bobReceive = Get-Content -LiteralPath (Join-Path $source '3\02_RECEIVE_BOB.ps1') -Raw
+$bobRetry = Get-Content -LiteralPath (Join-Path $source '3\03_RETRY_BOB_AFTER_OFFER_SYNC_FIX.ps1') -Raw
 
 foreach ($value in @(
     'cargo build --jobs $cargoJobsResolved --locked --package kilogram-cli --package kilogram-ticket-store',
@@ -45,7 +47,8 @@ foreach ($forbidden in @('--release', 'Compress-Archive', '.zip', 'runtime-from-
 foreach ($value in @(
     '$script:KitRoot = [IO.Path]::GetFullPath($PSScriptRoot)', '$env:LOCALAPPDATA',
     'Wait-M0967File', 'Wait-M0967IpcReady', 'Move-M0967FailedAttemptAside',
-    'Update-M0967ProviderOfferFiles', 'Start-M0967Process', 'Import-M0967Providers'
+    'Update-M0967ProviderOfferFiles', 'Wait-M0967ProviderOfferFile',
+    'Start-M0967Process', 'Import-M0967Providers'
 )) {
     if (-not $common.Contains($value)) { throw "simple kit common helper is missing '$value'" }
 }
@@ -74,8 +77,15 @@ foreach ($value in @(
 foreach ($value in @('account-create', 'conversation-membership-install', 'runtime-contact-add', 'runtime-mailbox-offer-create')) {
     if (-not $bobPrepare.Contains($value)) { throw "Bob preparation is missing '$value'" }
 }
-foreach ($value in @('runtime_mailbox_inbound_source=volunteer-iroh', 'deleted-after-commit', '05-restart-bob.log', 'history')) {
+foreach ($value in @(
+    'runtime_mailbox_inbound_source=volunteer-iroh', 'deleted-after-commit',
+    '05-restart-bob.log', 'history', "'pre-inbound'",
+    'RETRYING BOB BEFORE THE FIRST INBOUND COMMIT'
+)) {
     if (-not $bobReceive.Contains($value)) { throw "Bob receive is missing '$value'" }
+}
+foreach ($value in @('Wait-M0967ProviderOfferFile', 'RETRYING BOB BEFORE THE FIRST INBOUND COMMIT')) {
+    if (-not $bobRetry.Contains($value)) { throw "Bob recovery wrapper is missing '$value'" }
 }
 
 Write-Output 'm0967_simple_kit_boundary=verified'

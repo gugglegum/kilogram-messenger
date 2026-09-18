@@ -2071,3 +2071,8 @@ retirement остальных compatibility shadows ещё не реализов
   уже satisfied attempt без network retry, подавляет stderr только у ожидаемого
   отрицательного probe и разбирает receipt keys построчно, независимо от CRLF.
   Та же безопасная probe-семантика применена к standalone sender-offline helper.
+- Первый Bob receive завершился до provider import: удалённый harness пытался
+  извлечь offer из активно синхронизируемого provider log и увидел его временно
+  неполную Yandex Disk версию. Provider host теперь атомарно refresh-ит короткие
+  `.offer` files каждые 10 секунд; consumers читают только их. Bob receive может
+  архивировать и повторить attempt лишь до первого inbound commit/delete.

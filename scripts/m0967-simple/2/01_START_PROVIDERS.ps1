@@ -50,9 +50,14 @@ try {
     [IO.File]::WriteAllText((Join-Path $script:SharedDirectory 'providers-ready.marker'), "ready`n")
     Write-Host 'PROVIDERS ARE READY. Leave this window open until the final verification stops them.'
     $stop = Join-Path $script:SharedDirectory 'STOP-PROVIDERS.marker'
+    $nextOfferRefresh = [DateTime]::UtcNow
     while (-not (Test-Path -LiteralPath $stop -PathType Leaf)) {
         foreach ($entry in $processes.GetEnumerator()) {
             if ($entry.Value.HasExited) { throw "$($entry.Key) stopped unexpectedly" }
+        }
+        if ([DateTime]::UtcNow -ge $nextOfferRefresh) {
+            Update-M0967ProviderOfferFiles
+            $nextOfferRefresh = [DateTime]::UtcNow.AddSeconds(10)
         }
         Start-Sleep -Seconds 2
     }
@@ -62,4 +67,3 @@ finally {
     [IO.File]::WriteAllText((Join-Path $script:SharedDirectory 'providers-stopped.marker'), "stopped`n")
 }
 Write-Host 'PROVIDERS STOPPED.'
-
