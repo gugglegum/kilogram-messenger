@@ -65,6 +65,7 @@ function Wait-M0967LogPattern {
         [int] $TimeoutSeconds = 180
     )
     $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    $nextProgress = [DateTime]::UtcNow
     while ([DateTime]::UtcNow -lt $deadline) {
         if (Test-Path -LiteralPath $Path -PathType Leaf) {
             $text = Get-Content -LiteralPath $Path -Raw -ErrorAction SilentlyContinue
@@ -77,6 +78,11 @@ function Wait-M0967LogPattern {
                 Get-Content -LiteralPath "$Path.stderr" -Raw
             } else { '' }
             throw "Background process exited before '$Pattern'. $errorText"
+        }
+        if ([DateTime]::UtcNow -ge $nextProgress) {
+            $remaining = [Math]::Max(0, [Math]::Ceiling(($deadline - [DateTime]::UtcNow).TotalSeconds))
+            Write-Host "Still working: waiting for runtime evidence; timeout in ${remaining}s."
+            $nextProgress = [DateTime]::UtcNow.AddSeconds(15)
         }
         Start-Sleep -Milliseconds 500
     }
@@ -122,6 +128,7 @@ function Wait-M0967IpcReady {
         [int] $TimeoutSeconds = 120
     )
     $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    $nextProgress = [DateTime]::UtcNow
     while ([DateTime]::UtcNow -lt $deadline) {
         if ($Process.HasExited) {
             throw "Runtime exited before its IPC endpoint became ready: $IpcFile"
@@ -129,6 +136,11 @@ function Wait-M0967IpcReady {
         if (Test-Path -LiteralPath $IpcFile -PathType Leaf) {
             & $script:CliPath runtime-ipc-ping --ipc-file $IpcFile 1>$null 2>$null
             if ($LASTEXITCODE -eq 0) { return }
+        }
+        if ([DateTime]::UtcNow -ge $nextProgress) {
+            $remaining = [Math]::Max(0, [Math]::Ceiling(($deadline - [DateTime]::UtcNow).TotalSeconds))
+            Write-Host "Still working: waiting for the local runtime IPC; timeout in ${remaining}s."
+            $nextProgress = [DateTime]::UtcNow.AddSeconds(15)
         }
         Start-Sleep -Milliseconds 500
     }
@@ -257,7 +269,10 @@ function Invoke-M0967CliWithRetry {
         [Collections.Generic.List[string]] $Evidence
     )
     for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
-        try { return @(Invoke-M0967Cli $Arguments) }
+        try {
+            Write-Host "Running $($Arguments[0]) (attempt $attempt/$Attempts)..."
+            return @(Invoke-M0967Cli $Arguments)
+        }
         catch {
             $message = ([string]$_.Exception.Message) -replace "`r?`n", ' | '
             if ($null -ne $Evidence) {
@@ -298,6 +313,7 @@ function Import-M0967Providers {
     $lines.Add("field_role=$Role")
     try {
         foreach ($provider in @('provider1', 'provider2')) {
+            Write-Host "Importing the fresh $provider offer..."
             $offer = Wait-M0967ProviderOfferFile $provider 180
             $result = @(Invoke-M0967CliWithRetry `
                 @('runtime-ipc-volunteer-provider-import', '--ipc-file', $IpcFile, '--offer-file', $offer) `
@@ -305,6 +321,7 @@ function Import-M0967Providers {
             $lines.Add("field_provider=$provider")
             foreach ($line in $result) { $lines.Add([string]$line) }
         }
+        Write-Host 'Selecting the two imported volunteer providers...'
         $selection = @(Invoke-M0967CliWithRetry `
             @('runtime-ipc-volunteer-provider-select', '--ipc-file', $IpcFile, '--count', '2') `
             12 750 $lines)

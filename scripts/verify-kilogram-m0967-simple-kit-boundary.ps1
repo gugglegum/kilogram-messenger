@@ -31,6 +31,7 @@ $generator = Get-Content -LiteralPath $generatorPath -Raw
 $common = Get-Content -LiteralPath (Join-Path $source 'common.ps1') -Raw
 $alicePrepare = Get-Content -LiteralPath (Join-Path $source '1\01_PREPARE_ALICE.ps1') -Raw
 $aliceSend = Get-Content -LiteralPath (Join-Path $source '1\02_SEND_ALICE.ps1') -Raw
+$aliceVerify = Get-Content -LiteralPath (Join-Path $source '1\03_VERIFY.ps1') -Raw
 $providers = Get-Content -LiteralPath (Join-Path $source '2\01_START_PROVIDERS.ps1') -Raw
 $providerRestart = Get-Content -LiteralPath (Join-Path $source '2\02_RESTART_PROVIDERS_AFTER_FIX.ps1') -Raw
 $offerPublisher = Get-Content -LiteralPath (Join-Path $source '2\03_PUBLISH_OFFERS_FOR_CURRENT_RUN.ps1') -Raw
@@ -60,7 +61,10 @@ foreach ($value in @(
     'Start-M0967Process', 'Import-M0967Providers', 'Invoke-M0967CliWithRetry',
     'KILOGRAM_M0967_PROVIDER_OFFER_DIRECTORY', "`$ErrorActionPreference = 'SilentlyContinue'",
     'field_error=', '2> $stderrPath', "'--count', '2'",
-    'Still working: observed $matched/$Count required events'
+    'Still working: observed $matched/$Count required events',
+    'Still working: waiting for the local runtime IPC',
+    'Running $($Arguments[0]) (attempt $attempt/$Attempts)',
+    'Importing the fresh $provider offer'
 )) {
     if (-not $common.Contains($value)) { throw "simple kit common helper is missing '$value'" }
 }
@@ -76,6 +80,16 @@ foreach ($value in @(
     "`$ErrorActionPreference = 'SilentlyContinue'"
 )) {
     if (-not $aliceSend.Contains($value)) { throw "Alice send is missing '$value'" }
+}
+foreach ($value in @(
+    'RESUMING FINAL VERIFICATION WITH THE EXISTING IDENTICAL BOUNDARY EVIDENCE',
+    'Existing boundary evidence differs from the tested kit',
+    'M0.9.67 SIMPLE THREE-FOLDER TEST COMPLETED SUCCESSFULLY.'
+)) {
+    if (-not $aliceVerify.Contains($value)) { throw "Alice verification is missing '$value'" }
+}
+if ($aliceVerify.Contains('$LASTEXITCODE')) {
+    throw 'Alice verification must rely on terminating script errors, not stale LASTEXITCODE state'
 }
 foreach ($value in @("@('provider1', 'provider2')", 'runtime-profile-create', 'STOP-PROVIDERS.marker')) {
     if (-not $providers.Contains($value)) { throw "provider runner is missing '$value'" }
@@ -102,7 +116,9 @@ foreach ($value in @(
     'start-runtime-local-log', 'Publish-M0967BobAttemptLogs',
     '04-receive-bob.failure-',
     'post-application-commit',
-    'RESUMING AFTER THE EXISTING DURABLE BOB COMMIT'
+    'RESUMING AFTER THE EXISTING DURABLE BOB COMMIT',
+    'Bob receive stage: $Stage',
+    'observing it for 20 seconds to reject replica redelivery'
 )) {
     if (-not $bobReceive.Contains($value)) { throw "Bob receive is missing '$value'" }
 }

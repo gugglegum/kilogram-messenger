@@ -26,6 +26,7 @@ function Set-M0967BobReceiveStage {
         "stage=$Stage`n",
         [Text.UTF8Encoding]::new($false)
     )
+    Write-Host "Bob receive stage: $Stage"
 }
 
 function Publish-M0967BobAttemptFile {
@@ -119,6 +120,7 @@ try {
             $script:CliPath @('runtime-from-profile', '--profile-file', $profile) $localRestartLog
         Wait-M0967IpcReady $ipc $restart 180
         $null = Wait-M0967LogPattern $localRestartLog '^status=runtime-listening$' $restart 30
+        Write-Host 'Bob restart is healthy; observing it for 20 seconds to reject replica redelivery...'
         Start-Sleep -Seconds 20
     }
     finally {

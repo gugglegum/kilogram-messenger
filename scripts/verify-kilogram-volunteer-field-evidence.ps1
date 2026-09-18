@@ -99,7 +99,42 @@ function Test-VolunteerFieldEvidence {
     $queue = Read-FieldText $Directory '03-alice-queue.log'
     Assert-FieldMatch $queue '^status=runtime-message-queued$' 'Alice durable queue insertion'
     $send = Read-FieldText $Directory '03-send-alice.log'
-    Assert-FieldMatch $send '^runtime_outbound_status=mailbox-stored$' 'compatibility mailbox acceptance before asynchronous replication'
+    $sendAcceptance = $send
+    $senderEvidenceMode = 'single-log'
+    if (-not [regex]::IsMatch(
+        $sendAcceptance,
+        '^runtime_outbound_status=mailbox-stored$',
+        [Text.RegularExpressions.RegexOptions]::Multiline
+    )) {
+        $queueIds = @(Get-UniqueMatches $queue '^runtime_queue_id=([0-9a-f]{64})$')
+        if ($queueIds.Count -ne 1) {
+            throw 'Alice recovery evidence has no unique durable queue ID'
+        }
+        $matchingRecoveryLogs = [Collections.Generic.List[string]]::new()
+        foreach ($item in @(Get-ChildItem -LiteralPath $Directory -File |
+            Where-Object { $_.Name -clike '03-send-alice.log.failed-post-queue-*' })) {
+            if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or $item.Length -gt 4MB) {
+                throw "volunteer field recovery evidence must be a bounded regular file: $($item.Name)"
+            }
+            $candidate = (Get-Content -LiteralPath $item.FullName -Raw).Replace("`r`n", "`n")
+            $candidateQueueIds = @(Get-UniqueMatches $candidate '^runtime_queue_id=([0-9a-f]{64})$')
+            if ($candidateQueueIds.Count -eq 1 -and
+                $candidateQueueIds[0] -ceq $queueIds[0] -and
+                [regex]::IsMatch(
+                    $candidate,
+                    '^runtime_outbound_status=mailbox-stored$',
+                    [Text.RegularExpressions.RegexOptions]::Multiline
+                )) {
+                $matchingRecoveryLogs.Add($candidate)
+            }
+        }
+        if ($matchingRecoveryLogs.Count -ne 1) {
+            throw 'volunteer field evidence does not prove one recovery-linked compatibility mailbox acceptance'
+        }
+        $sendAcceptance = $matchingRecoveryLogs[0]
+        $senderEvidenceMode = 'recovered-log-chain'
+    }
+    Assert-FieldMatch $sendAcceptance '^runtime_outbound_status=mailbox-stored$' 'compatibility mailbox acceptance before asynchronous replication'
     Assert-FieldMatch $send '^runtime_mailbox_replication_receipts=2/2$' 'two-of-three volunteer receipt threshold'
     Assert-FieldMatch $send '^runtime_mailbox_replication_status=satisfied$' 'completed volunteer replication plan'
     $senderReceiptKeys = @(Get-UniqueMatches $send '^runtime_mailbox_replication_receipt_store_key=([0-9a-f]{64})$')
@@ -152,6 +187,7 @@ function Test-VolunteerFieldEvidence {
         provider_store_keys = ($providerKeys -join ',')
         independent_transport_identities = 2
         sender_replication = 'two-of-three-satisfied'
+        sender_evidence = $senderEvidenceMode
         sender_offline_before_receive = $true
         recipient_retrieval = 'two-volunteer-replicas-committed-and-deleted'
         restart_redelivery = 'absent'
@@ -229,6 +265,24 @@ if ($SelfTest) {
         New-VolunteerFieldSelfTest $temporary
         $result = Test-VolunteerFieldEvidence $temporary
         if ($result.result -ne 'verified') { throw 'volunteer field evidence self-test did not verify' }
+        $queueId = '51' * 32
+        Set-Content -LiteralPath (Join-Path $temporary '03-alice-queue.log') -Encoding utf8 -Value @(
+            "runtime_queue_id=$queueId", 'status=runtime-message-queued'
+        )
+        Set-Content -LiteralPath (Join-Path $temporary '03-send-alice.log') -Encoding utf8 -Value @(
+            "runtime_mailbox_replication_receipt_store_key=$('11' * 32)",
+            "runtime_mailbox_replication_receipt_store_key=$('22' * 32)",
+            'runtime_mailbox_replication_receipts=2/2',
+            'runtime_mailbox_replication_status=satisfied'
+        )
+        Set-Content `
+            -LiteralPath (Join-Path $temporary '03-send-alice.log.failed-post-queue-20260908T120001Z') `
+            -Encoding utf8 `
+            -Value @("runtime_queue_id=$queueId", 'runtime_outbound_status=mailbox-stored')
+        $recovered = Test-VolunteerFieldEvidence $temporary
+        if ($recovered.sender_evidence -ne 'recovered-log-chain') {
+            throw 'volunteer field recovery-chain self-test did not verify the expected evidence mode'
+        }
         Write-Output 'volunteer_field_evidence_self_test=verified'
     }
     finally {

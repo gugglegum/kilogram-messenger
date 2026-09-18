@@ -3662,7 +3662,7 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - новый EXE/listener/service/directory не добавлен; contract зафиксирован в
   [`../docs/RFC-0088-bounded-volunteer-mailbox-retrieval.md`](../docs/RFC-0088-bounded-volunteer-mailbox-retrieval.md).
 
-### M0.9.67 — no-archive volunteer mailbox field kit: готов к внешнему тесту
+### M0.9.67 — no-archive volunteer mailbox field test: выполнено с recovery evidence
 
 Реализовано:
 
@@ -3709,26 +3709,36 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
   idempotently без второго сообщения. Долгое ожидание печатает прогресс каждые
   15 секунд.
 - Recovery build `b095d7a` развернут в existing shared kit без нового имени EXE;
-  те же два provider states перезапущены, fresh offers публикуются. Bob должен
-  продолжить единственной командой
-  `3\06_RESUME_BOB_AFTER_POST_COMMIT_FIX.ps1`; после его успеха остаётся обычный
-  Alice `1\03_VERIFY.ps1`.
+  те же два provider states перезапущены, а Bob idempotently продолжил уже
+  durable application commit. Обе volunteer replicas были прочитаны по Iroh,
+  записаны в store-specific inbound ledger и удалены только после commit;
+  restart не доставил их повторно, history содержит marker ровно один раз.
+- Финальный fail-closed verifier вернул `result=verified` для run
+  `20260918-231823`: два разных store key/transport identity, sender 2/2
+  receipts, Alice-offline boundary, Bob 2 commits/2 deletes и отсутствие
+  redelivery подтверждены. Поскольку run продолжался через несколько repair
+  builds, sender acceptance и завершённая replication связаны как
+  `sender_evidence=recovered-log-chain` через один exact durable queue ID;
+  это квалифицированный recovery field evidence, а не clean single-revision
+  release attestation.
+- Harness теперь печатает текущую Bob stage и heartbeat не только при ожидании
+  inbound events, но также во время IPC readiness, provider import/retry и
+  restart observation. Финальная проверка идемпотентно принимает уже записанный
+  идентичный boundary log после исправления verifier, но fail closed отвергает
+  отличающийся файл.
 
 ### Следующий этап
 
-1. Провести реальный M0.9.67 cross-network offline-recipient run и сохранить
-   bounded evidence. До успешного результата не отключать HTTPS compatibility
-   path и не заявлять server-free availability.
-2. M0.9.68: спроектировать authenticated replica-set locator/commitment, чтобы recipient
+1. M0.9.68: спроектировать authenticated replica-set locator/commitment, чтобы recipient
    не полагался на случайное сканирование большой registry; не добавлять global
    social directory и не раскрывать Account/Device/conversation IDs providers.
-3. До первого публичного security artifact pin-нуть linker/SDK либо controlled
+2. До первого публичного security artifact pin-нуть linker/SDK либо controlled
    alternative и повторить M0.9.59 до matched external hash и attestation.
-4. Optional autostart/background mode оставить отдельной явной настройкой, не
+3. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
-5. Добавить macOS/Linux/mobile providers той же platform boundary.
-6. Спроектировать privacy-preserving gossip и first-contact freshness;
+4. Добавить macOS/Linux/mobile providers той же platform boundary.
+5. Спроектировать privacy-preserving gossip и first-contact freshness;
    M0.9.29 скрывает payload/явные IDs, но не access correlation.
-7. Membership removal и group governance проектировать вместе с ordered
+6. Membership removal и group governance проектировать вместе с ordered
    security events и MLS epoch; compact Merkle/range summary и независимый
    криптографический аудит остаются до публичного выпуска.

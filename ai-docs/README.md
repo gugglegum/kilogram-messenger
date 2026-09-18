@@ -705,9 +705,10 @@ EXE не создавались.
   LIST/DELETE, durable application-commit-before-delete, store-specific signed
   deletion receipts и restart resume при сохранённом HTTPS fallback.
 - [`../docs/RFC-0089-volunteer-mailbox-field-kit.md`](../docs/RFC-0089-volunteer-mailbox-field-kit.md) —
-  готовый M0.9.67 clean-HEAD no-archive debug field kit для two-provider
+  успешно применённый M0.9.67 no-archive debug field kit для two-provider
   replication, sender-offline boundary, recipient Iroh commit/delete и restart
-  verification при сохранённой HTTPS compatibility-копии.
+  verification при сохранённой HTTPS compatibility-копии; итоговый recovery
+  evidence имеет `result=verified`.
 - [`../docs/M0.9.67-VOLUNTEER-MAILBOX-FIELD-TEST-RU.md`](../docs/M0.9.67-VOLUNTEER-MAILBOX-FIELD-TEST-RU.md) —
   русская пошаговая инструкция внешнего M0.9.67 теста с двумя private provider
   профилями и bounded shared evidence без секретов.

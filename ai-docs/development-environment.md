@@ -2125,3 +2125,16 @@ retirement остальных compatibility shadows ещё не реализов
   уже durable event idempotently и не создаёт новое сообщение. Deployed script
   проходит Windows PowerShell 5 AST parse; provider processes остаются запущены
   до финального `1\03_VERIFY.ps1`.
+- Bob recovery завершён успешно. Shared evidence содержит по две строки
+  `runtime_mailbox_inbound_source=volunteer-iroh` и
+  `runtime_mailbox_replica_delete_status=deleted-after-commit`; restart log не
+  содержит повторной delivery, history содержит marker ровно один раз.
+  Финальный verifier вернул `result=verified`,
+  `sender_evidence=recovered-log-chain` и
+  `recipient_retrieval=two-volunteer-replicas-committed-and-deleted`.
+- Первоначально `06` выглядел зависшим, потому что 15-second heartbeat начинался
+  только после runtime startup/IPC/provider import. Common harness теперь
+  печатает Bob stage, IPC/log wait, provider import, каждый bounded retry и
+  restart observation. Final `03_VERIFY.ps1` разрешает безопасный повтор после
+  уже скопированного identical `06-boundaries.log` и не читает stale/unset
+  `$LASTEXITCODE` после успешного вложенного PowerShell script.

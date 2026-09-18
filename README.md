@@ -207,7 +207,7 @@ The current two-network Windows procedure is in
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.67 volunteer mailbox field kit — ready
+## Current milestone: M0.9.67 volunteer mailbox field run — complete with recovery evidence
 
 A clean-HEAD, no-archive builder now prepares one stable debug
 `kilogram-cli.exe`, two private provider identities, no-clobber evidence and a
@@ -219,11 +219,19 @@ identities, two sender PUT receipts, a stopped-Alice IPC boundary, two Bob Iroh
 commits and signed deletes, restart without volunteer redelivery and exactly
 one local history occurrence.
 
+The cross-network run completed with two volunteer commits and signed deletes,
+no volunteer redelivery after Bob restart, and exactly one message in Bob's
+history. The fail-closed verifier returned `result=verified`; it correlates the
+resumed sender evidence through the exact durable queue ID. Because defects were
+repaired while preserving the same durable run, this is qualified recovery
+evidence rather than a clean single-revision release attestation.
+
 Two provider identities may run on one operator host for mechanism evidence,
 but that does not prove operator or physical independence. Live state is kept
 out of the synchronized folder to avoid copying an open database; the accounts
 are disposable test identities. Generation creates no ZIP/release build and
-launches no network process. The actual cross-network run is still pending. See
+launches no network process. The next milestone is an authenticated replica-set
+locator/commitment so recipients do not depend on random registry scanning. See
 [`docs/M0.9.67-VOLUNTEER-MAILBOX-FIELD-TEST-RU.md`](docs/M0.9.67-VOLUNTEER-MAILBOX-FIELD-TEST-RU.md)
 and [`docs/RFC-0090-three-folder-m0967-harness.md`](docs/RFC-0090-three-folder-m0967-harness.md).
 
