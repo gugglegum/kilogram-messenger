@@ -94,7 +94,9 @@ foreach ($value in @('account-create', 'conversation-membership-install', 'runti
 foreach ($value in @(
     'runtime_mailbox_inbound_source=volunteer-iroh', 'deleted-after-commit',
     '05-restart-bob.log', 'history', "'pre-inbound'",
-    'RETRYING BOB BEFORE THE FIRST INBOUND COMMIT'
+    'RETRYING BOB BEFORE THE FIRST INBOUND COMMIT', 'attempt-logs',
+    'start-runtime-local-log', 'Publish-M0967BobAttemptLogs',
+    '04-receive-bob.failure-'
 )) {
     if (-not $bobReceive.Contains($value)) { throw "Bob receive is missing '$value'" }
 }

@@ -2089,3 +2089,9 @@ retirement остальных compatibility shadows ещё не реализов
   больше не теряется из-за Windows PowerShell 5: failure сохраняется отдельным
   timestamped evidence-файлом. Предыдущие Bob attempts подтверждены как
   pre-inbound (`0` commit, `0` delete), поэтому bounded retry остаётся безопасным.
+- Следующая recovery attempt приняла exact scripts и fresh offer snapshot, затем
+  атомарно архивировала прежний `04-receive-bob.log`, но не смогла создать новый
+  shared redirect log; provider import/failure evidence не начались, inbound и
+  delete по всем attempts остались `0/0`. Bob runtime/restart logs перенесены в
+  unique local attempt directory и публикуются в evidence только после process
+  close; outer catch теперь всегда публикует exact stage/exception/script stack.
