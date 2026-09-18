@@ -17,7 +17,8 @@ $required = @(
     (Join-Path $source '2\02_RESTART_PROVIDERS_AFTER_FIX.ps1'),
     (Join-Path $source '3\01_PREPARE_BOB.ps1'),
     (Join-Path $source '3\02_RECEIVE_BOB.ps1'),
-    (Join-Path $source '3\03_RETRY_BOB_AFTER_OFFER_SYNC_FIX.ps1')
+    (Join-Path $source '3\03_RETRY_BOB_AFTER_OFFER_SYNC_FIX.ps1'),
+    (Join-Path $source '3\04_RETRY_BOB_EXACT_VERSION.ps1')
 )
 foreach ($path in $required) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "simple kit source is missing: $path" }
@@ -32,6 +33,7 @@ $providerRestart = Get-Content -LiteralPath (Join-Path $source '2\02_RESTART_PRO
 $bobPrepare = Get-Content -LiteralPath (Join-Path $source '3\01_PREPARE_BOB.ps1') -Raw
 $bobReceive = Get-Content -LiteralPath (Join-Path $source '3\02_RECEIVE_BOB.ps1') -Raw
 $bobRetry = Get-Content -LiteralPath (Join-Path $source '3\03_RETRY_BOB_AFTER_OFFER_SYNC_FIX.ps1') -Raw
+$bobExactRetry = Get-Content -LiteralPath (Join-Path $source '3\04_RETRY_BOB_EXACT_VERSION.ps1') -Raw
 
 foreach ($value in @(
     'cargo build --jobs $cargoJobsResolved --locked --package kilogram-cli --package kilogram-ticket-store',
@@ -86,6 +88,9 @@ foreach ($value in @(
 }
 foreach ($value in @('Wait-M0967ProviderOfferFile', 'RETRYING BOB BEFORE THE FIRST INBOUND COMMIT')) {
     if (-not $bobRetry.Contains($value)) { throw "Bob recovery wrapper is missing '$value'" }
+}
+foreach ($value in @('Get-FileHash', 'expectedCommonHash', 'expectedReceiveHash', 'EXACT BOB RETRY FILES ARE SYNCHRONIZED')) {
+    if (-not $bobExactRetry.Contains($value)) { throw "Bob exact recovery wrapper is missing '$value'" }
 }
 
 Write-Output 'm0967_simple_kit_boundary=verified'

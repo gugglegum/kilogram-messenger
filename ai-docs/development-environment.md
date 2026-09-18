@@ -2076,3 +2076,8 @@ retirement остальных compatibility shadows ещё не реализов
   неполную Yandex Disk версию. Provider host теперь атомарно refresh-ит короткие
   `.offer` files каждые 10 секунд; consumers читают только их. Bob receive может
   архивировать и повторить attempt лишь до первого inbound commit/delete.
+- Первый recovery wrapper проверял semantic markers и мог стартовать на
+  промежуточной Yandex Disk версии `common.ps1`, пока atomic replacement ещё не
+  дошёл до ноутбука. Для текущего external run добавлен exact-version wrapper с
+  SHA-256 пары `common.ps1` + `02_RECEIVE_BOB.ps1`; deployment этих файлов и
+  wrapper выполняется atomic rename в sync-root.
