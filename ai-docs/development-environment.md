@@ -2028,3 +2028,12 @@ retirement остальных compatibility shadows ещё не реализов
   подтверждает relative path bootstrap, `%LOCALAPPDATA%` live-state boundary,
   two-provider process, Alice 2/2/offline evidence и Bob receive/restart/history.
   Network runtime при этой проверке не запускался; внешний run pending.
+- Clean commit `cbca23c` собран прямо в requested
+  `C:\Users\Paul\YandexDisk\!M\M0.9.67`: exact folders `1/2/3`, один общий
+  stable-path CLI, loopback store, 8 scripts, два hash-verified debug artifacts
+  и ноль архивов. Copied evidence verifier self-test и AST parse проходят как
+  в PowerShell 7, так и в штатном Windows PowerShell 5.
+- Background-process helper отдельно проверен без сети через real `identity`
+  child process, redirected log и pattern wait. Ни runtime endpoint, ни store
+  listener при генерации/verification не запускались; Firewall prompt не
+  инициировался.
