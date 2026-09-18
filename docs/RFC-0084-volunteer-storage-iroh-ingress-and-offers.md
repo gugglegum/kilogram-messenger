@@ -44,8 +44,11 @@ the blind-storage wire format.
 Mailbox connections are dispatched separately from messenger sessions after
 ALPN negotiation. They run in bounded tasks guarded by the configured
 connection semaphore, so a slow stranger cannot monopolize the main runtime
-accept loop. Each connection accepts one bounded bidirectional request and
-then closes.
+accept loop. Each connection accepts one bounded bidirectional request. After
+finishing the response stream, the provider waits for transport acknowledgement
+of every response byte before closing the QUIC connection; the requester keeps
+the connection alive until that graceful close. An application-success close
+code is therefore not allowed to race with or discard the store-signed receipt.
 
 The provider reuses M0.9.61's durable network-class transfer counter and blind
 store capacity. Request and successful response frames consume the same

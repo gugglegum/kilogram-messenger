@@ -2046,3 +2046,16 @@ retirement остальных compatibility shadows ещё не реализов
   log ещё не содержит outbound result. Pre-queue logs сохраняются с
   `.failed-pre-queue-<UTC>` suffix, а два текущих provider offers перед import
   атомарно обновляются последними complete значениями из live logs.
+- Второй Alice send создал queue item, успешно записал compatibility copy и
+  дошёл до двух реальных direct Iroh provider sessions. Оба providers завершили
+  request, но requester получил `connection lost: closed by peer ... code 0`:
+  provider закрывал connection сразу после `SendStream::finish()`, не дожидаясь
+  подтверждения response bytes. Одновременно offline Bob automatic sync через
+  early `ensure!` завершал весь runtime.
+- Исправление ждёт `send.stopped()` после response FIN, удерживает requester до
+  graceful close и превращает failed automatic sync в logged non-fatal attempt.
+  Existing Alice queue/replication ledger сохраняются; harness умеет resume
+  exact queued item и перезапуск тех же provider identities после замены CLI.
+- Актуальный recovery kit содержит девять parseable PowerShell files: стандартный
+  six-launch flow неизменен, а `2\02_RESTART_PROVIDERS_AFTER_FIX.ps1` является
+  одноразовым recovery action только для уже начатого external run.

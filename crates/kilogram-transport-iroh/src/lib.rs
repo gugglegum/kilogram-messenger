@@ -287,6 +287,14 @@ pub async fn write_mailbox_peer_response(
         .context("send blind mailbox peer response")?;
     send.finish()
         .context("finish blind mailbox peer response")?;
+    let stopped = timeout(WIRE_IO_TIMEOUT, send.stopped())
+        .await
+        .with_context(|| wire_timeout_message("confirm blind mailbox peer response delivery"))?
+        .context("confirm blind mailbox peer response delivery")?;
+    ensure!(
+        stopped.is_none(),
+        "blind mailbox peer stopped the response stream with code {stopped:?}"
+    );
     Ok(())
 }
 

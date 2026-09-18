@@ -104,11 +104,11 @@ use kilogram_ticket_store::{
 };
 use kilogram_transport_iroh::{
     ALPN, MAILBOX_ALPN, MAX_WIRE_MESSAGE_BYTES, RoutePolicy, SelectedPathDiagnostics,
-    await_route_policy, encode_mailbox_provider_endpoint, endpoint_builder_for_remote,
-    endpoint_builder_with_relay, mailbox_provider_endpoint_from_offer, read_client_request,
-    read_mailbox_peer_request, read_mailbox_peer_response, read_server_response,
-    selected_path_diagnostics, write_client_request, write_mailbox_peer_request,
-    write_mailbox_peer_response, write_server_response,
+    WIRE_IO_TIMEOUT, await_route_policy, encode_mailbox_provider_endpoint,
+    endpoint_builder_for_remote, endpoint_builder_with_relay, mailbox_provider_endpoint_from_offer,
+    read_client_request, read_mailbox_peer_request, read_mailbox_peer_response,
+    read_server_response, selected_path_diagnostics, write_client_request,
+    write_mailbox_peer_request, write_mailbox_peer_response, write_server_response,
 };
 use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
@@ -17412,18 +17412,29 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                         break "outbound-action-limit";
                     }
                 }
-                let sync_attempted = matches!(delivery_attempt, RuntimeDeliveryAttempt::NoWork)
+                let sync_due = matches!(delivery_attempt, RuntimeDeliveryAttempt::NoWork)
                     && !mailbox_action
                     && !gossip_attempted
                     && auto_sync_seconds != 0
                     && automatic_sync_started_at.elapsed()
-                        >= Duration::from_secs(auto_sync_seconds)
-                    && attempt_runtime_contact_sync(
+                        >= Duration::from_secs(auto_sync_seconds);
+                let sync_attempted = if sync_due {
+                    match attempt_runtime_contact_sync(
                         &state_dir,
                         Duration::from_secs(auto_sync_seconds),
                         &mut last_sync_attempts,
                     )
-                    .await?;
+                    .await
+                    {
+                        Ok(attempted) => attempted,
+                        Err(error) => {
+                            eprintln!("runtime_sync_status=failed error={error:#}");
+                            false
+                        }
+                    }
+                } else {
+                    false
+                };
                 if sync_attempted {
                     if let Some(server) = ipc_server.as_ref() {
                         server.publish_change();
@@ -18489,6 +18500,10 @@ async fn exchange_runtime_volunteer_mailbox_request(
     let (mut send, mut receive) = open_bi(&connection, "open volunteer mailbox stream").await?;
     write_mailbox_peer_request(&mut send, peer_request).await?;
     let peer_response = read_mailbox_peer_response(&mut receive, peer_request).await?;
+    // The provider waits for acknowledgement of every response byte before
+    // closing the QUIC connection. Keep this side alive until that graceful
+    // close arrives so an immediate CONNECTION_CLOSE cannot discard the FIN.
+    let _ = timeout(WIRE_IO_TIMEOUT, connection.closed()).await;
     connection.close(0_u32.into(), b"kilogram volunteer mailbox request complete");
     ensure!(
         peer_response.success_payload().is_some(),
@@ -20470,13 +20485,15 @@ async fn attempt_runtime_contact_sync(
                     }
                 }
             }
-            ensure!(
-                synchronized,
-                "all {} authenticated sync endpoint candidates failed: {}",
-                candidates.len(),
-                failures.join(" | ")
-            );
-            Ok(())
+            if synchronized {
+                Ok(())
+            } else {
+                Err(anyhow::anyhow!(
+                    "all {} authenticated sync endpoint candidates failed: {}",
+                    candidates.len(),
+                    failures.join(" | ")
+                ))
+            }
         }
         Ok(None) => {
             let mirror_result = match vault_guard {

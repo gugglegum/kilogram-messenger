@@ -56,6 +56,8 @@ foreach ($required in @(
     'write_mailbox_peer_request',
     'read_mailbox_peer_response',
     'write_mailbox_peer_response',
+    'confirm blind mailbox peer response delivery',
+    'send.stopped()',
     'signed_mailbox_offer_carries_a_bounded_iroh_endpoint'
 )) {
     if (-not $transport.Contains($required)) {
@@ -83,6 +85,9 @@ foreach ($required in @(
     'handle_runtime_volunteer_storage_connection',
     'try_peer_permit',
     'JoinSet::new()',
+    'timeout(WIRE_IO_TIMEOUT, connection.closed()).await',
+    'runtime_sync_status=failed error={error:#}',
+    'Err(anyhow::anyhow!(',
     'runtime_volunteer_storage_offer_distribution=authenticated-bounded-peer-gossip',
     'runtime_volunteer_storage_discovery=verified-expiring-offer-registry',
     'runtime_volunteer_storage_replication=sender-three-target-two-receipt'

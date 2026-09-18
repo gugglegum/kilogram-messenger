@@ -3690,6 +3690,10 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - stale bootstrap IPC descriptor больше не принимается за готовый runtime:
   scripts требуют успешный ping, а pre-queue Alice failure можно безопасно
   повторить без удаления identities/state и без риска duplicate queue;
+- первый real provider PUT выявил response-flush race и runtime-fatal offline
+  sync; provider теперь подтверждает доставку полного response stream до close,
+  sync failure остаётся non-fatal, а post-queue run возобновляет exact durable
+  replication plan без второго сообщения;
 - contract и русская инструкция зафиксированы в
   [`../docs/RFC-0089-volunteer-mailbox-field-kit.md`](../docs/RFC-0089-volunteer-mailbox-field-kit.md)
   и

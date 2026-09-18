@@ -14,6 +14,7 @@ $required = @(
     (Join-Path $source '1\02_SEND_ALICE.ps1'),
     (Join-Path $source '1\03_VERIFY.ps1'),
     (Join-Path $source '2\01_START_PROVIDERS.ps1'),
+    (Join-Path $source '2\02_RESTART_PROVIDERS_AFTER_FIX.ps1'),
     (Join-Path $source '3\01_PREPARE_BOB.ps1'),
     (Join-Path $source '3\02_RECEIVE_BOB.ps1')
 )
@@ -26,13 +27,15 @@ $common = Get-Content -LiteralPath (Join-Path $source 'common.ps1') -Raw
 $alicePrepare = Get-Content -LiteralPath (Join-Path $source '1\01_PREPARE_ALICE.ps1') -Raw
 $aliceSend = Get-Content -LiteralPath (Join-Path $source '1\02_SEND_ALICE.ps1') -Raw
 $providers = Get-Content -LiteralPath (Join-Path $source '2\01_START_PROVIDERS.ps1') -Raw
+$providerRestart = Get-Content -LiteralPath (Join-Path $source '2\02_RESTART_PROVIDERS_AFTER_FIX.ps1') -Raw
 $bobPrepare = Get-Content -LiteralPath (Join-Path $source '3\01_PREPARE_BOB.ps1') -Raw
 $bobReceive = Get-Content -LiteralPath (Join-Path $source '3\02_RECEIVE_BOB.ps1') -Raw
 
 foreach ($value in @(
     'cargo build --jobs $cargoJobsResolved --locked --package kilogram-cli --package kilogram-ticket-store',
     "profile = 'debug'", "archive = `$false", "network_executed = `$false",
-    "@('1', '2', '3')", 'README-RU.txt'
+    "@('1', '2', '3')", 'README-RU.txt', '02_RESTART_PROVIDERS_AFTER_FIX.ps1',
+    'resumes an exact incomplete durable queue item'
 )) {
     if (-not $generator.Contains($value)) { throw "simple kit generator is missing '$value'" }
 }
@@ -51,12 +54,19 @@ foreach ($value in @('account-create', 'conversation-create', 'runtime-contact-a
 }
 foreach ($value in @(
     'runtime-ipc-queue-message', 'runtime_mailbox_replication_receipts=2/2',
-    'alice_runtime_ipc_reachable=false', 'safe retry boundary', "'pre-queue'"
+    'alice_runtime_ipc_reachable=false', "'pre-queue'", "'post-queue'",
+    'RESUMING THE EXISTING DURABLE ALICE QUEUE ITEM', 'runtime-message-queued'
 )) {
     if (-not $aliceSend.Contains($value)) { throw "Alice send is missing '$value'" }
 }
 foreach ($value in @("@('provider1', 'provider2')", 'runtime-profile-create', 'STOP-PROVIDERS.marker')) {
     if (-not $providers.Contains($value)) { throw "provider runner is missing '$value'" }
+}
+foreach ($value in @(
+    'runtime-profile.json', 'old providers stopped marker', "'pre-wire-fix'",
+    'FIXED PROVIDERS ARE READY'
+)) {
+    if (-not $providerRestart.Contains($value)) { throw "provider restart is missing '$value'" }
 }
 foreach ($value in @('account-create', 'conversation-membership-install', 'runtime-contact-add', 'runtime-mailbox-offer-create')) {
     if (-not $bobPrepare.Contains($value)) { throw "Bob preparation is missing '$value'" }

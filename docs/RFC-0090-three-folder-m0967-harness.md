@@ -49,3 +49,16 @@ M0.9.67 verifier. Thus operator simplification does not weaken the required two
 store keys, two transport identities, two sender receipts, sender-offline
 boundary, two Bob commits/deletes, restart and exact history checks.
 
+## Interrupted-run recovery
+
+File existence alone is not runtime readiness: launch scripts remove a stale
+IPC descriptor and wait for a successful authenticated ping. A failure before
+queue insertion archives its logs and may retry normally. If queue evidence,
+the compatibility-store receipt and an incomplete durable volunteer plan all
+exist, Alice resumes that exact plan without creating another message.
+
+The field-discovered response-flush fix requires already running providers to
+restart with the corrected stable-path executable. The optional provider
+restart script reuses their existing private identities and stores, archives
+the pre-fix transport logs, publishes fresh signed offers and leaves the same
+final fail-closed evidence contract in force.

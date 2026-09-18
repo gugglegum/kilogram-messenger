@@ -14,16 +14,38 @@ $providerLog = Join-Path $script:EvidenceDirectory '02-alice-providers.log'
 $queuePath = Join-Path $script:EvidenceDirectory '03-alice-queue.log'
 $offlinePath = Join-Path $script:EvidenceDirectory '03-alice-offline.boundary'
 $sentMarker = Join-Path $script:SharedDirectory 'alice-sent.marker'
-foreach ($path in @($queuePath, $offlinePath, $sentMarker)) {
+$resumeQueuedMessage = Test-Path -LiteralPath $queuePath -PathType Leaf
+foreach ($path in @($offlinePath, $sentMarker)) {
     if (Test-Path -LiteralPath $path) {
-        throw "Alice send has already progressed past the safe retry boundary: $path"
+        throw "Alice send has already completed: $path"
     }
 }
-if ((Test-Path -LiteralPath $sendLog) -and
-    [regex]::IsMatch((Get-Content -LiteralPath $sendLog -Raw), '(?m)^runtime_outbound_status=')) {
-    throw 'Alice send log already contains an outbound result; refusing to risk a duplicate send.'
+if ($resumeQueuedMessage) {
+    $queueText = Get-Content -LiteralPath $queuePath -Raw
+    if (-not [regex]::IsMatch($queueText, '(?m)^status=runtime-message-queued$')) {
+        throw 'Alice queue evidence is incomplete; refusing an ambiguous resume.'
+    }
+    if (-not (Test-Path -LiteralPath $sendLog -PathType Leaf)) {
+        throw 'Alice queued message has no prior send log; refusing an ambiguous resume.'
+    }
+    $previousSend = Get-Content -LiteralPath $sendLog -Raw
+    foreach ($pattern in @(
+        '(?m)^runtime_outbound_status=mailbox-stored$',
+        '(?m)^runtime_mailbox_replication_status=incomplete$'
+    )) {
+        if (-not [regex]::IsMatch($previousSend, $pattern)) {
+            throw "Alice queued message is not at the expected resumable boundary: $pattern"
+        }
+    }
+    Move-M0967FailedAttemptAside @($storeLog, $sendLog, $providerLog) 'post-queue'
+    Write-Host 'RESUMING THE EXISTING DURABLE ALICE QUEUE ITEM; NO NEW MESSAGE WILL BE CREATED.'
+} else {
+    if ((Test-Path -LiteralPath $sendLog) -and
+        [regex]::IsMatch((Get-Content -LiteralPath $sendLog -Raw), '(?m)^runtime_outbound_status=')) {
+        throw 'Alice send log already contains an outbound result without queue evidence.'
+    }
+    Move-M0967FailedAttemptAside @($storeLog, $sendLog, $providerLog) 'pre-queue'
 }
-Move-M0967FailedAttemptAside @($storeLog, $sendLog, $providerLog) 'pre-queue'
 $store = $null
 $runtime = $null
 try {
@@ -34,14 +56,16 @@ try {
     Wait-M0967IpcReady $ipc $runtime 120
     Import-M0967Providers 'alice' $ipc
 
-    $queueOutput = @(Invoke-M0967Cli @(
-        'runtime-ipc-queue-message', '--ipc-file', $ipc,
-        '--conversation', ([string]$run.conversation_label),
-        '--peer-account', ([string]$role.bob_account_id),
-        '--message', ([string]$run.message_marker)
-    ))
-    [IO.File]::WriteAllLines($queuePath, $queueOutput, [Text.UTF8Encoding]::new($false))
-    $null = Wait-M0967LogPattern $sendLog '^runtime_outbound_status=mailbox-stored$' $runtime 240
+    if (-not $resumeQueuedMessage) {
+        $queueOutput = @(Invoke-M0967Cli @(
+            'runtime-ipc-queue-message', '--ipc-file', $ipc,
+            '--conversation', ([string]$run.conversation_label),
+            '--peer-account', ([string]$role.bob_account_id),
+            '--message', ([string]$run.message_marker)
+        ))
+        [IO.File]::WriteAllLines($queuePath, $queueOutput, [Text.UTF8Encoding]::new($false))
+        $null = Wait-M0967LogPattern $sendLog '^runtime_outbound_status=mailbox-stored$' $runtime 240
+    }
     $sendText = Wait-M0967LogPattern $sendLog '^runtime_mailbox_replication_status=satisfied$' $runtime 240
     if (-not [regex]::IsMatch($sendText, '(?m)^runtime_mailbox_replication_receipts=2/2$')) {
         throw 'Alice did not retain the required 2/2 volunteer receipts.'
