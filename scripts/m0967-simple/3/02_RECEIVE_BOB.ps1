@@ -11,9 +11,9 @@ $state = [string]$role.state
 $receiveLog = Join-Path $script:EvidenceDirectory '04-receive-bob.log'
 $runtime = $null
 try {
+    if (Test-Path -LiteralPath $ipc) { Remove-Item -LiteralPath $ipc -Force }
     $runtime = Start-M0967Process $script:CliPath @('runtime-from-profile', '--profile-file', $profile) $receiveLog
-    $null = Wait-M0967File $ipc 120 'Bob runtime IPC'
-    $null = Invoke-M0967Cli @('runtime-ipc-ping', '--ipc-file', $ipc)
+    Wait-M0967IpcReady $ipc $runtime 120
     Import-M0967Providers 'bob' $ipc
     $null = Wait-M0967LogCount $receiveLog '^runtime_mailbox_inbound_source=volunteer-iroh$' 2 $runtime 300
     $null = Wait-M0967LogCount $receiveLog '^runtime_mailbox_replica_delete_status=deleted-after-commit$' 2 $runtime 120
@@ -25,7 +25,8 @@ $restart = $null
 try {
     if (Test-Path -LiteralPath $ipc) { Remove-Item -LiteralPath $ipc -Force }
     $restart = Start-M0967Process $script:CliPath @('runtime-from-profile', '--profile-file', $profile) $restartLog
-    $null = Wait-M0967LogPattern $restartLog '^status=runtime-listening$' $restart 180
+    Wait-M0967IpcReady $ipc $restart 180
+    $null = Wait-M0967LogPattern $restartLog '^status=runtime-listening$' $restart 30
     Start-Sleep -Seconds 20
 }
 finally { Stop-M0967Process $restart }
@@ -37,4 +38,3 @@ $history = @(Invoke-M0967Cli @('history', '--state-dir', $state, '--conversation
 [IO.File]::WriteAllLines($historyPath, $history, [Text.UTF8Encoding]::new($false))
 [IO.File]::WriteAllText((Join-Path $script:SharedDirectory 'bob-complete.marker'), "complete`n")
 Write-Host 'BOB RECEIVE AND RESTART COMPLETED SUCCESSFULLY.'
-

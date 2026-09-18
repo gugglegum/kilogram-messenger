@@ -3687,6 +3687,9 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
   membership, contacts, loopback compatibility mailbox и весь evidence;
 - live state автоматически хранится в `%LOCALAPPDATA%`, чтобы Yandex Disk не
   синхронизировал открытые Redb-файлы; оператор не вводит ID и пути вручную;
+- stale bootstrap IPC descriptor больше не принимается за готовый runtime:
+  scripts требуют успешный ping, а pre-queue Alice failure можно безопасно
+  повторить без удаления identities/state и без риска duplicate queue;
 - contract и русская инструкция зафиксированы в
   [`../docs/RFC-0089-volunteer-mailbox-field-kit.md`](../docs/RFC-0089-volunteer-mailbox-field-kit.md)
   и

@@ -10,17 +10,30 @@ $storeData = [string]$role.store_data
 
 $storeLog = Join-Path $private 'compatibility-store-send.log'
 $sendLog = Join-Path $script:EvidenceDirectory '03-send-alice.log'
+$providerLog = Join-Path $script:EvidenceDirectory '02-alice-providers.log'
+$queuePath = Join-Path $script:EvidenceDirectory '03-alice-queue.log'
+$offlinePath = Join-Path $script:EvidenceDirectory '03-alice-offline.boundary'
+$sentMarker = Join-Path $script:SharedDirectory 'alice-sent.marker'
+foreach ($path in @($queuePath, $offlinePath, $sentMarker)) {
+    if (Test-Path -LiteralPath $path) {
+        throw "Alice send has already progressed past the safe retry boundary: $path"
+    }
+}
+if ((Test-Path -LiteralPath $sendLog) -and
+    [regex]::IsMatch((Get-Content -LiteralPath $sendLog -Raw), '(?m)^runtime_outbound_status=')) {
+    throw 'Alice send log already contains an outbound result; refusing to risk a duplicate send.'
+}
+Move-M0967FailedAttemptAside @($storeLog, $sendLog, $providerLog) 'pre-queue'
 $store = $null
 $runtime = $null
 try {
     $store = Start-M0967Process $script:StorePath @('--data-dir', $storeData) $storeLog
     $null = Wait-M0967LogPattern $storeLog '^status=listening$' $store 60
+    if (Test-Path -LiteralPath $ipc) { Remove-Item -LiteralPath $ipc -Force }
     $runtime = Start-M0967Process $script:CliPath @('runtime-from-profile', '--profile-file', $profile) $sendLog
-    $null = Wait-M0967File $ipc 120 'Alice runtime IPC'
-    $null = Invoke-M0967Cli @('runtime-ipc-ping', '--ipc-file', $ipc)
+    Wait-M0967IpcReady $ipc $runtime 120
     Import-M0967Providers 'alice' $ipc
 
-    $queuePath = Join-Path $script:EvidenceDirectory '03-alice-queue.log'
     $queueOutput = @(Invoke-M0967Cli @(
         'runtime-ipc-queue-message', '--ipc-file', $ipc,
         '--conversation', ([string]$run.conversation_label),
@@ -45,12 +58,11 @@ $sendText = Get-Content -LiteralPath $sendLog -Raw
 $receiptKeys = @([regex]::Matches($sendText, '(?m)^runtime_mailbox_replication_receipt_store_key=([0-9a-f]{64})$') |
     ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
 if ($receiptKeys.Count -lt 2) { throw 'Alice send log has fewer than two distinct receipt keys.' }
-[IO.File]::WriteAllLines((Join-Path $script:EvidenceDirectory '03-alice-offline.boundary'), @(
+[IO.File]::WriteAllLines($offlinePath, @(
     'alice_replication_status=satisfied',
     "alice_replica_receipt_store_keys=$($receiptKeys -join ',')",
     'alice_runtime_ipc_reachable=false',
     "sender_stop_observed_utc=$([DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ'))"
 ), [Text.UTF8Encoding]::new($false))
-[IO.File]::WriteAllText((Join-Path $script:SharedDirectory 'alice-sent.marker'), "sent`n")
+[IO.File]::WriteAllText($sentMarker, "sent`n")
 Write-Host 'ALICE SEND COMPLETED AND ALICE RUNTIME IS OFFLINE.'
-

@@ -107,6 +107,62 @@ function Wait-M0967LogCount {
     throw "Timed out waiting for $Count matches of '$Pattern' in $Path"
 }
 
+function Wait-M0967IpcReady {
+    param(
+        [Parameter(Mandatory)] [string] $IpcFile,
+        [Parameter(Mandatory)] [Diagnostics.Process] $Process,
+        [int] $TimeoutSeconds = 120
+    )
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    while ([DateTime]::UtcNow -lt $deadline) {
+        if ($Process.HasExited) {
+            throw "Runtime exited before its IPC endpoint became ready: $IpcFile"
+        }
+        if (Test-Path -LiteralPath $IpcFile -PathType Leaf) {
+            & $script:CliPath runtime-ipc-ping --ipc-file $IpcFile 1>$null 2>$null
+            if ($LASTEXITCODE -eq 0) { return }
+        }
+        Start-Sleep -Milliseconds 500
+    }
+    throw "Timed out waiting for a reachable runtime IPC endpoint: $IpcFile"
+}
+
+function Move-M0967FailedAttemptAside {
+    param(
+        [Parameter(Mandatory)] [string[]] $Paths,
+        [Parameter(Mandatory)] [string] $AttemptName
+    )
+    $stamp = [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssZ')
+    foreach ($path in $Paths) {
+        foreach ($candidate in @($path, "$path.stderr")) {
+            if (-not (Test-Path -LiteralPath $candidate)) { continue }
+            $destination = "$candidate.failed-$AttemptName-$stamp"
+            Move-Item -LiteralPath $candidate -Destination $destination
+        }
+    }
+}
+
+function Update-M0967ProviderOfferFiles {
+    foreach ($provider in @('provider1', 'provider2')) {
+        $logPath = Wait-M0967File `
+            (Join-Path $script:EvidenceDirectory "01-$provider.log") 900 "$provider runtime log"
+        $text = Get-Content -LiteralPath $logPath -Raw
+        $matches = [regex]::Matches(
+            $text,
+            '(?m)^runtime_volunteer_storage_offer=([A-Za-z0-9_-]+)$'
+        )
+        if ($matches.Count -lt 1) { throw "$provider runtime log contains no complete offer" }
+        $offerPath = Join-Path $script:EvidenceDirectory "01-$provider.offer"
+        $temporary = "$offerPath.refresh-$PID"
+        [IO.File]::WriteAllText(
+            $temporary,
+            ($matches[$matches.Count - 1].Groups[1].Value + "`n"),
+            [Text.UTF8Encoding]::new($false)
+        )
+        Move-Item -LiteralPath $temporary -Destination $offerPath -Force
+    }
+}
+
 function Start-M0967Process {
     param(
         [Parameter(Mandatory)] [string] $FilePath,
@@ -164,6 +220,7 @@ function Import-M0967Providers {
     param([Parameter(Mandatory)] [string] $Role, [Parameter(Mandatory)] [string] $IpcFile)
     $outputPath = Join-Path $script:EvidenceDirectory "02-$Role-providers.log"
     if (Test-Path -LiteralPath $outputPath) { throw "Provider import evidence exists: $outputPath" }
+    Update-M0967ProviderOfferFiles
     $lines = [Collections.Generic.List[string]]::new()
     $lines.Add("field_role=$Role")
     foreach ($provider in @('provider1', 'provider2')) {

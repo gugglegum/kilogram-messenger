@@ -2037,3 +2037,12 @@ retirement остальных compatibility shadows ещё не реализов
   child process, redirected log и pattern wait. Ни runtime endpoint, ни store
   listener при генерации/verification не запускались; Firewall prompt не
   инициировался.
+- Первый внешний запуск simple harness дошёл до Alice send и выявил stale IPC
+  descriptor от bootstrap: file wait завершался до перезаписи descriptor новым
+  runtime, после чего `runtime-ipc-ping` попадал в уже остановленный процесс.
+  Исправление удаляет descriptor перед launch и ждёт успешный ping; synthetic
+  probe с фактическим stale descriptor подтвердил fail-closed ожидание.
+- Повтор Alice send разрешён только если отсутствуют queue/offline/marker и send
+  log ещё не содержит outbound result. Pre-queue logs сохраняются с
+  `.failed-pre-queue-<UTC>` suffix, а два текущих provider offers перед import
+  атомарно обновляются последними complete значениями из live logs.

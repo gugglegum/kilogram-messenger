@@ -41,14 +41,18 @@ foreach ($forbidden in @('--release', 'Compress-Archive', '.zip', 'runtime-from-
 }
 foreach ($value in @(
     '$script:KitRoot = [IO.Path]::GetFullPath($PSScriptRoot)', '$env:LOCALAPPDATA',
-    'Wait-M0967File', 'Start-M0967Process', 'Import-M0967Providers'
+    'Wait-M0967File', 'Wait-M0967IpcReady', 'Move-M0967FailedAttemptAside',
+    'Update-M0967ProviderOfferFiles', 'Start-M0967Process', 'Import-M0967Providers'
 )) {
     if (-not $common.Contains($value)) { throw "simple kit common helper is missing '$value'" }
 }
 foreach ($value in @('account-create', 'conversation-create', 'runtime-contact-add', 'runtime-mailbox-offer-import', '127.0.0.1:8787')) {
     if (-not $alicePrepare.Contains($value)) { throw "Alice preparation is missing '$value'" }
 }
-foreach ($value in @('runtime-ipc-queue-message', 'runtime_mailbox_replication_receipts=2/2', 'alice_runtime_ipc_reachable=false')) {
+foreach ($value in @(
+    'runtime-ipc-queue-message', 'runtime_mailbox_replication_receipts=2/2',
+    'alice_runtime_ipc_reachable=false', 'safe retry boundary', "'pre-queue'"
+)) {
     if (-not $aliceSend.Contains($value)) { throw "Alice send is missing '$value'" }
 }
 foreach ($value in @("@('provider1', 'provider2')", 'runtime-profile-create', 'STOP-PROVIDERS.marker')) {
