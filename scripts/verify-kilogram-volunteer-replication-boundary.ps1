@@ -96,7 +96,12 @@ foreach ($required in @(
     'ledger.mark_attempt(&plan, now, DEFAULT_REPLICATION_RETRY_SECONDS)',
     'MailboxReplicationLedger::inspect_read_only(',
     'let due = replication_inspection.next_due;',
-    'runtime_mailbox_replication_http_delivery_compatibility=true',
+    'RuntimeMailboxHttpsCompatibilityCopy',
+    'runtime_mailbox_https_compatibility_copy={}',
+    'runtime_mailbox_http_put=not-attempted',
+    'runtime_mailbox_http_put=attempted',
+    'runtime_mailbox_delivery_durability=exact-volunteer-replication',
+    'runtime_mailbox_delivery_durability=https-compatibility',
     'runtime_volunteer_storage_replication=sender-three-target-two-receipt',
     'runtime_volunteer_storage_replica_retrieval=bounded-three-provider-iroh-list-delete',
     'match attempt_runtime_mailbox_fallback(endpoint, state_directory, &prepared).await'
@@ -123,6 +128,7 @@ Write-Output 'required_independent_receipts=2'
 Write-Output 'retry=durable-60-second-cooldown'
 Write-Output 'carrier=existing-blind-mailbox-iroh-alpn'
 Write-Output 'direct_delivery_preferred=true'
-Write-Output 'https_delivery_compatibility=true'
+Write-Output 'exact_https_copy=retired-after-authenticated-two-receipt-durability'
+Write-Output 'https_delivery_compatibility=legacy-incomplete-and-reverse-ack'
 Write-Output 'iroh_replica_retrieval=bounded-list-delete-active'
 Write-Output 'new_executable=false'

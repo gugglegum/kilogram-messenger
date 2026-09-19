@@ -2343,5 +2343,9 @@ retirement остальных compatibility shadows ещё не реализов
 - PowerShell AST parse всех изменённых/new scripts — без ошибок. Старый M0.9.69
   boundary/self-test, новый M0.9.72 boundary/self-test, HTTPS-retirement gate и
   M1 acceptance-kit boundary проходят.
+- Первый clean-HEAD generator preflight обнаружил устаревшее утверждение
+  M0.9.65 replication gate о безусловной HTTPS compatibility copy. Gate приведён
+  к M0.9.71: exact `2/2` требует no-PUT, а legacy/incomplete/reverse-ACK всё ещё
+  требуют compatibility path.
 - External two-host run ещё не выполнялся; сгенерированный clean kit и его exact
   source revision будут записаны после первого clean-HEAD build.
