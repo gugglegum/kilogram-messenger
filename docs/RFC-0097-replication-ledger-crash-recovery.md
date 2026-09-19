@@ -1,6 +1,6 @@
 # RFC-0097: Crash recovery for the mailbox replication ledger (M0.9.74)
 
-Status: implemented locally; a fresh M0.9.74 replacement field run is pending.
+Status: implemented and field-verified by M0.9.74 run `20260919-203722`.
 
 ## 1. Problem
 
@@ -78,3 +78,24 @@ The M0.9.74 field run must still prove two exact signed volunteer receipts,
 Alice offline before Bob retrieval, application commit before two signed
 deletes, restart without redelivery, `http_put=not-attempted`, and identical
 clean source revision. Local recovery tests do not replace that external run.
+
+## 6. Field result
+
+The clean two-network run `20260919-203722` used source revision
+`aa295dfd183cc4edaf1347f0555916285a9a9cb0` and passed the independent
+fail-closed verifier with `result=verified`. It proved:
+
+- exact authenticated provider resolution and signed receipts `2/2`;
+- `exact-volunteer-replication` with `http_put=not-attempted`;
+- Alice offline before Bob retrieval;
+- two volunteer-Iroh inbound copies, each deleted only after application
+  commit;
+- no redelivery after Bob restart and exactly one message occurrence in local
+  history;
+- the inherited M0.9.72/M0.9.73 and M0.9.74 recovery boundaries from the exact
+  clean build revision.
+
+No repair-status marker was required in this particular fresh-state run. The
+deterministic child-process regression remains the direct proof of the recovery
+branch; the field run proves that the complete no-HTTPS delivery lifecycle is
+not regressed by the change.

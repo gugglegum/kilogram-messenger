@@ -309,9 +309,10 @@ sessions, distribution, removal и key epochs и не решены этим пр
   run подтвердил convergence и sender durability `2/2`, но выявил Redb
   `RepairAborted` на recipient replication ledger после force-stop. M0.9.74
   добавил узкое typed crash recovery под state lock/vault guard и реальный
-  child-process regression. Открытыми остаются fresh M0.9.74 clean field
-  evidence, полное удаление
-  descriptor/protocol после совместимости старых клиентов, Sybil-resistant
+  child-process regression; clean run `20260919-203722` принят с exact `2/2`,
+  no HTTPS PUT, commit-before-delete и restart без redelivery. Открытыми
+  остаются полное versioned удаление descriptor/protocol после совместимости
+  старых клиентов, Sybil-resistant
   diversity, cryptographic hop proof и access-correlation privacy.
 - Push-уведомления на Android/iOS без утечки содержания и социального графа.
 - Независимый second-builder, подписанный release provenance, обновления клиента

@@ -1,7 +1,7 @@
 # RFC-0096: Cooperative runtime outbound scheduling (M0.9.73)
 
-Status: implemented locally; a fresh M0.9.73 replacement field kit is defined
-and its external run is pending.
+Status: implemented; peer convergence was confirmed by the M0.9.73 diagnostic
+run and the complete successor M0.9.74 field run is verified.
 
 ## 1. Problem
 

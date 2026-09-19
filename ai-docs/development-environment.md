@@ -2435,3 +2435,12 @@ retirement остальных compatibility shadows ещё не реализов
   `C:\Users\Paul\YandexDisk\!M\M0.9.74`; SHA-256 всех 13 source/copy файлов
   совпал. Перед запуском на втором хосте нужно дождаться полной синхронизации
   новой папки; M0.9.73 state/evidence не переносить.
+- External run `20260919-203722` завершён и независимо проверен kit verifier-ом:
+  `result=verified`, `build_commit=aa295dfd183cc4edaf1347f0555916285a9a9cb0`,
+  conversation=`m0974-20260919-203722`. Sender: exact resolve/receipts `2/2`,
+  exact volunteer durability, no HTTP PUT. Recipient: два distinct store keys,
+  два `volunteer-iroh`, два `deleted-after-commit`; restart без inbound
+  redelivery, history `event_count=2` и verifier подтвердил один message marker.
+  Все completion/provider-stop markers присутствуют. Fresh state не потребовал
+  runtime repair marker; deterministic crash test остаётся прямым recovery
+  proof, field run — полным lifecycle proof.

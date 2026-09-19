@@ -4004,7 +4004,7 @@ runtime повторял `open mailbox replication ledger read-only: Database re
 aborted`: принудительная остановка предыдущей фазы оставила Redb recovery
 marker, а read-only inspection принципиально не мог его снять.
 
-### M0.9.74 — crash recovery mailbox replication ledger: локально завершено
+### M0.9.74 — crash recovery mailbox replication ledger: завершено
 
 Реализовано:
 
@@ -4042,11 +4042,30 @@ Replacement field kit должен иметь отдельные milestone/label
 `BOUNDARIES.log` содержит inherited M0.9.72/M0.9.73, cooperative scheduling,
 replication recovery и M0.9.74 gates.
 
+Clean two-network run `20260919-203722` независимо перепроверен по полностью
+синхронизированному evidence и принят с `result=verified`. Exact source revision
+совпала с kit: `aa295dfd183cc4edaf1347f0555916285a9a9cb0`. Итог:
+
+- provider resolution и signed receipts на sender — `2/2`;
+- `runtime_mailbox_delivery_durability=exact-volunteer-replication` и
+  `runtime_mailbox_http_put=not-attempted`;
+- Alice offline до Bob retrieval;
+- Bob получил обе replicas через volunteer-Iroh и для каждой записал
+  `deleted-after-commit`;
+- restart Bob не дал redelivery, history содержит один message occurrence
+  (`event_count=2` вместе со служебным событием);
+- сохранённые boundaries включают no-HTTPS, cooperative scheduling,
+  replication recovery и M0.9.74 kit gate.
+
+Fresh-state field run не потребовал repair marker; сам recovery branch доказан
+отдельным real child-process crash regression. Вместе эти проверки закрывают и
+узкую crash boundary, и полный внешний no-HTTPS lifecycle.
+
 ### Следующий этап
 
-1. После полной синхронизации выполнить подготовленный M0.9.74 clean no-HTTPS
-   Alice/Bob run через разные сети. Принимать его только после fail-closed
-   результата `verified`; M0.9.72/M0.9.73 runs не возобновлять.
+1. Спроектировать versioned удаление inert HTTPS service tuple из нового exact
+   mailbox capability, сохранив ограниченный read/migration path для старых
+   клиентов; новый wire variant не должен возвращать central mailbox authority.
 2. До первого публичного security artifact pin-нуть linker/SDK либо controlled
    alternative и повторить M0.9.59 до matched external hash и attestation.
 3. Optional autostart/background mode оставить отдельной явной настройкой, не
