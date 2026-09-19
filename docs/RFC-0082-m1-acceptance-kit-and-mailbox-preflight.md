@@ -137,3 +137,8 @@ SHA-256-recorded `rust-lld.exe` bundled in the pinned Rust toolchain. See
 format-v3 contract also normalizes only parsed LLD/PDB timestamps and CodeView
 GUID metadata. A fresh external match and attestation remain explicit post-push
 work.
+
+M0.9.78 continues this boundary with format-v4 exact native link-input
+provenance in
+[`RFC-0101`](RFC-0101-exact-native-link-input-provenance.md); the transient
+LLD archive is not part of the retained acceptance kit.

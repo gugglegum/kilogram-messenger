@@ -52,7 +52,7 @@ if ($recordItem.Length -le 0 -or $recordItem.Length -gt 64KB) {
     throw 'Reproducibility record size is invalid.'
 }
 $record = Get-Content -LiteralPath $recordPath -Raw | ConvertFrom-Json
-if ($record.format_version -ne 3 -or $record.status -ne 'reproducible') {
+if ($record.format_version -ne 4 -or $record.status -ne 'reproducible') {
     throw 'Reproducibility record version or status is invalid.'
 }
 if ($record.builder_scope -ne 'same-host-separate-clean-roots' -or
@@ -72,6 +72,12 @@ if ($record.builder_scope -ne 'same-host-separate-clean-roots' -or
     $record.linker.flavor -ne 'lld-link' -or
     [int64]$record.linker.bytes -le 0 -or
     $record.linker.reproducibility_flag -ne '/Brepro' -or
+    $record.native_link_inputs.capture_mode -ne 'lld-link-reproduce-archive' -or
+    $record.native_link_inputs.manifest_format -ne 'sha256-bytes-logical-path-v1' -or
+    $record.native_link_inputs.file -ne 'NATIVE-LINK-INPUTS.sha256' -or
+    [int]$record.native_link_inputs.count -le 0 -or
+    [int]$record.native_link_inputs.count -gt 256 -or
+    $record.native_link_inputs.archive_retained -ne $false -or
     $record.network_surface_compiled -ne $false -or
     $record.runtime_surface_compiled -ne $false) {
     throw 'Reproducibility record build boundary is invalid.'
@@ -87,6 +93,7 @@ foreach ($hashField in @(
     @{ Value = [string]$record.cargo_lock_sha256; Name = 'cargo_lock_sha256' },
     @{ Value = [string]$record.rust_toolchain_sha256; Name = 'rust_toolchain_sha256' },
     @{ Value = [string]$record.linker.sha256; Name = 'linker.sha256' },
+    @{ Value = [string]$record.native_link_inputs.sha256; Name = 'native_link_inputs.sha256' },
     @{ Value = [string]$record.build_a.sha256; Name = 'build_a.sha256' },
     @{ Value = [string]$record.build_b.sha256; Name = 'build_b.sha256' }
 )) {
@@ -100,10 +107,18 @@ if ($record.build_a.file -ne 'kilogram-offline-build-a.exe' -or
 $manifestPath = Resolve-RecordFile 'SOURCE-MANIFEST.sha256'
 $lockPath = Resolve-RecordFile 'Cargo.lock'
 $toolchainPath = Resolve-RecordFile 'rust-toolchain.toml'
+$nativeLinkManifestPath = Resolve-RecordFile 'NATIVE-LINK-INPUTS.sha256'
 if ((Get-Sha256 $manifestPath) -ne $record.source_manifest_sha256 -or
     (Get-Sha256 $lockPath) -ne $record.cargo_lock_sha256 -or
-    (Get-Sha256 $toolchainPath) -ne $record.rust_toolchain_sha256) {
+    (Get-Sha256 $toolchainPath) -ne $record.rust_toolchain_sha256 -or
+    (Get-Sha256 $nativeLinkManifestPath) -ne $record.native_link_inputs.sha256) {
     throw 'Reproducibility record input hash mismatch.'
+}
+$nativeLinkInputs = Assert-KilogramNativeLinkInputManifest -Path $nativeLinkManifestPath
+if ([string]$nativeLinkInputs.file -cne [string]$record.native_link_inputs.file -or
+    [string]$nativeLinkInputs.sha256 -cne [string]$record.native_link_inputs.sha256 -or
+    [int]$nativeLinkInputs.count -ne [int]$record.native_link_inputs.count) {
+    throw 'Reproducibility record native link-input manifest mismatch.'
 }
 
 $buildAPath = Resolve-RecordFile $record.build_a.file
@@ -131,6 +146,8 @@ Write-Output "artifact_bytes=$buildALength"
 Write-Output "target=$($record.target)"
 Write-Output "blake3_codegen=$($record.blake3_codegen)"
 Write-Output "linker_sha256=$($record.linker.sha256)"
+Write-Output "native_link_inputs_sha256=$($record.native_link_inputs.sha256)"
+Write-Output "native_link_inputs_count=$($record.native_link_inputs.count)"
 Write-Output "pe_metadata_normalization=$($record.pe_metadata_normalization)"
 Write-Output 'network_surface_compiled=false'
 Write-Output 'runtime_surface_compiled=false'

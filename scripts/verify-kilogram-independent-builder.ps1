@@ -79,7 +79,7 @@ function Assert-IndependentEvidence {
     if ($localRecord.source_revision -cnotmatch '^[0-9a-f]{40}$') {
         throw 'Local reproducibility record must identify a clean exact Git commit.'
     }
-    if ($builderRecord.format_version -ne 3 -or
+    if ($builderRecord.format_version -ne 4 -or
         $builderRecord.status -ne 'matched' -or
         $builderRecord.builder_scope -ne 'github-hosted-windows-independent' -or
         $builderRecord.repository -cne $ExpectedRepository -or
@@ -99,6 +99,12 @@ function Assert-IndependentEvidence {
         $builderRecord.linker.flavor -ne 'lld-link' -or
         [int64]$builderRecord.linker.bytes -le 0 -or
         $builderRecord.linker.reproducibility_flag -ne '/Brepro' -or
+        $builderRecord.native_link_inputs.capture_mode -ne 'lld-link-reproduce-archive' -or
+        $builderRecord.native_link_inputs.manifest_format -ne 'sha256-bytes-logical-path-v1' -or
+        $builderRecord.native_link_inputs.file -ne 'NATIVE-LINK-INPUTS.sha256' -or
+        [int]$builderRecord.native_link_inputs.count -le 0 -or
+        [int]$builderRecord.native_link_inputs.count -gt 256 -or
+        $builderRecord.native_link_inputs.archive_retained -ne $false -or
         $builderRecord.network_surface_compiled -ne $false -or
         $builderRecord.runtime_surface_compiled -ne $false -or
         $builderRecord.workflow.event -ne 'workflow_dispatch' -or
@@ -130,19 +136,45 @@ function Assert-IndependentEvidence {
         [string]$builderRecord.pe_metadata_normalization -cne [string]$localRecord.pe_metadata_normalization) {
         throw 'Independent builder did not use the exact locally recorded bundled LLD linker.'
     }
+    if ($localRecord.native_link_inputs.capture_mode -ne 'lld-link-reproduce-archive' -or
+        $localRecord.native_link_inputs.manifest_format -ne 'sha256-bytes-logical-path-v1' -or
+        $localRecord.native_link_inputs.file -ne 'NATIVE-LINK-INPUTS.sha256' -or
+        $localRecord.native_link_inputs.archive_retained -ne $false) {
+        throw 'Local native link-input identity is invalid.'
+    }
     if ($builderRecord.artifact.file -ne 'kilogram-offline.exe') {
         throw 'Independent builder record contains an unexpected artifact name.'
     }
+
+    $localNativeManifest = Resolve-PlainFile `
+        (Join-Path $localDirectory ([string]$localRecord.native_link_inputs.file)) `
+        'Local native link-input manifest'
+    $independentDirectory = Split-Path -Parent $builderRecordPathResolved
+    $independentNativeManifest = Resolve-PlainFile `
+        (Join-Path $independentDirectory ([string]$builderRecord.native_link_inputs.file)) `
+        'Independent native link-input manifest'
+    $localNativeIdentity = Assert-KilogramNativeLinkInputManifest -Path $localNativeManifest
+    $independentNativeIdentity = Assert-KilogramNativeLinkInputManifest -Path $independentNativeManifest
 
     foreach ($hashField in @(
         @{ Value = [string]$localRecord.build_a.sha256; Name = 'local.build_a.sha256' },
         @{ Value = [string]$localRecord.build_b.sha256; Name = 'local.build_b.sha256' },
         @{ Value = [string]$localRecord.linker.sha256; Name = 'local.linker.sha256' },
+        @{ Value = [string]$localRecord.native_link_inputs.sha256; Name = 'local.native_link_inputs.sha256' },
         @{ Value = [string]$builderRecord.linker.sha256; Name = 'builder.linker.sha256' },
+        @{ Value = [string]$builderRecord.native_link_inputs.sha256; Name = 'builder.native_link_inputs.sha256' },
         @{ Value = [string]$builderRecord.expected_local_sha256; Name = 'expected_local_sha256' },
         @{ Value = [string]$builderRecord.artifact.sha256; Name = 'artifact.sha256' }
     )) {
         Assert-Sha256 $hashField.Value $hashField.Name
+    }
+    if ([string]$localNativeIdentity.sha256 -cne [string]$localRecord.native_link_inputs.sha256 -or
+        [int]$localNativeIdentity.count -ne [int]$localRecord.native_link_inputs.count -or
+        [string]$independentNativeIdentity.sha256 -cne [string]$builderRecord.native_link_inputs.sha256 -or
+        [int]$independentNativeIdentity.count -ne [int]$builderRecord.native_link_inputs.count -or
+        [string]$independentNativeIdentity.sha256 -cne [string]$localNativeIdentity.sha256 -or
+        [int]$independentNativeIdentity.count -ne [int]$localNativeIdentity.count) {
+        throw 'Independent builder did not consume the exact locally recorded native link inputs.'
     }
 
     $actualHash = Get-Sha256 $artifact
@@ -164,7 +196,7 @@ function Assert-IndependentEvidence {
             throw 'GitHub CLI (gh) is required to verify signed provenance.'
         }
         $workflowIdentity = "$ExpectedRepository/.github/workflows/independent-offline-reproduction.yml"
-        foreach ($subject in @($artifact, $builderRecordPathResolved)) {
+        foreach ($subject in @($artifact, $builderRecordPathResolved, $independentNativeManifest)) {
             & $gh.Source attestation verify $subject --repo $ExpectedRepository --signer-workflow $workflowIdentity --source-digest $localRecord.source_revision --deny-self-hosted-runners
             if ($LASTEXITCODE -ne 0) {
                 throw "GitHub artifact attestation verification failed: $subject"
@@ -179,6 +211,8 @@ function Assert-IndependentEvidence {
     Write-Output "artifact_bytes=$actualBytes"
     Write-Output "blake3_codegen=$($builderRecord.blake3_codegen)"
     Write-Output "linker_sha256=$($builderRecord.linker.sha256)"
+    Write-Output "native_link_inputs_sha256=$($builderRecord.native_link_inputs.sha256)"
+    Write-Output "native_link_inputs_count=$($builderRecord.native_link_inputs.count)"
     Write-Output "pe_metadata_normalization=$($builderRecord.pe_metadata_normalization)"
     Write-Output "attestation_verified=$(((-not $SkipAttestation)).ToString().ToLowerInvariant())"
 }
@@ -274,8 +308,34 @@ function Invoke-SelfTest {
         [System.IO.File]::WriteAllText((Join-Path $local 'rust-toolchain.toml'), 'self-test', [System.Text.UTF8Encoding]::new($false))
         $hash = Get-Sha256 $artifact
         $length = (Get-Item -LiteralPath $artifact).Length
+        $nativeManifestLines = @(
+            "$hash  1  msvc/14.0.self-test/lib/x64/msvcrt.lib",
+            "$hash  1  windows-sdk/10.0.self-test/ucrt/x64/ucrt.lib",
+            "$hash  1  windows-sdk/10.0.self-test/um/x64/kernel32.lib"
+        )
+        $localNativeManifest = Join-Path $local 'NATIVE-LINK-INPUTS.sha256'
+        $independentNativeManifest = Join-Path $independent 'NATIVE-LINK-INPUTS.sha256'
+        [System.IO.File]::WriteAllLines($localNativeManifest, $nativeManifestLines, [System.Text.UTF8Encoding]::new($false))
+        [System.IO.File]::WriteAllLines($independentNativeManifest, $nativeManifestLines, [System.Text.UTF8Encoding]::new($false))
+        $nativeIdentity = Assert-KilogramNativeLinkInputManifest -Path $localNativeManifest
+        $invalidNativeManifest = Join-Path $independent 'INVALID-NATIVE-LINK-INPUTS.sha256'
+        [System.IO.File]::WriteAllLines(
+            $invalidNativeManifest,
+            @("$hash  1  unclassified/unknown.lib"),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+        $invalidNativeManifestRejected = $false
+        try {
+            Assert-KilogramNativeLinkInputManifest -Path $invalidNativeManifest | Out-Null
+        }
+        catch {
+            $invalidNativeManifestRejected = $true
+        }
+        if (-not $invalidNativeManifestRejected) {
+            throw 'Self-test accepted a malformed native link-input manifest.'
+        }
         $localRecord = [ordered]@{
-            format_version = 3
+            format_version = 4
             status = 'reproducible'
             builder_scope = 'same-host-separate-clean-roots'
             build_root_count = 2
@@ -303,6 +363,14 @@ function Invoke-SelfTest {
                 bytes = 1
                 reproducibility_flag = '/Brepro'
             }
+            native_link_inputs = [ordered]@{
+                capture_mode = 'lld-link-reproduce-archive'
+                manifest_format = 'sha256-bytes-logical-path-v1'
+                file = 'NATIVE-LINK-INPUTS.sha256'
+                sha256 = $nativeIdentity.sha256
+                count = $nativeIdentity.count
+                archive_retained = $false
+            }
             network_surface_compiled = $false
             runtime_surface_compiled = $false
             build_a = [ordered]@{ file = 'kilogram-offline-build-a.exe'; sha256 = $hash; bytes = $length }
@@ -311,7 +379,7 @@ function Invoke-SelfTest {
         [System.IO.File]::WriteAllText((Join-Path $local 'REPRODUCIBILITY.json'), ($localRecord | ConvertTo-Json -Depth 5), [System.Text.UTF8Encoding]::new($false))
 
         $builderRecord = [ordered]@{
-            format_version = 3
+            format_version = 4
             status = 'matched'
             builder_scope = 'github-hosted-windows-independent'
             repository = 'gugglegum/kilogram-messenger'
@@ -334,6 +402,14 @@ function Invoke-SelfTest {
                 sha256 = $hash
                 bytes = 1
                 reproducibility_flag = '/Brepro'
+            }
+            native_link_inputs = [ordered]@{
+                capture_mode = 'lld-link-reproduce-archive'
+                manifest_format = 'sha256-bytes-logical-path-v1'
+                file = 'NATIVE-LINK-INPUTS.sha256'
+                sha256 = $nativeIdentity.sha256
+                count = $nativeIdentity.count
+                archive_retained = $false
             }
             network_surface_compiled = $false
             runtime_surface_compiled = $false
@@ -361,6 +437,20 @@ function Invoke-SelfTest {
         }
         $builderRecord.linker.sha256 = $hash
         [System.IO.File]::WriteAllText($builderRecordPath, ($builderRecord | ConvertTo-Json -Depth 6), [System.Text.UTF8Encoding]::new($false))
+        $builderRecord.native_link_inputs.sha256 = '0000000000000000000000000000000000000000000000000000000000000000'
+        [System.IO.File]::WriteAllText($builderRecordPath, ($builderRecord | ConvertTo-Json -Depth 6), [System.Text.UTF8Encoding]::new($false))
+        $nativeInputsRejected = $false
+        try {
+            Assert-IndependentEvidence -IndependentArtifact $artifact -IndependentRecord $builderRecordPath -SameHostDirectory $local -ExpectedRepository 'gugglegum/kilogram-messenger' -SkipAttestation | Out-Null
+        }
+        catch {
+            $nativeInputsRejected = $true
+        }
+        if (-not $nativeInputsRejected) {
+            throw 'Self-test verifier accepted mismatched native link inputs.'
+        }
+        $builderRecord.native_link_inputs.sha256 = $nativeIdentity.sha256
+        [System.IO.File]::WriteAllText($builderRecordPath, ($builderRecord | ConvertTo-Json -Depth 6), [System.Text.UTF8Encoding]::new($false))
         Add-Content -LiteralPath $artifact -Value 'tamper'
         $rejected = $false
         try {
@@ -377,6 +467,8 @@ function Invoke-SelfTest {
         Write-Output 'checksum_bearing_pe=rejected'
         Write-Output 'authenticode_bearing_pe=rejected'
         Write-Output 'mismatched_linker=rejected'
+        Write-Output 'mismatched_native_link_inputs=rejected'
+        Write-Output 'malformed_native_link_manifest=rejected'
         Write-Output 'tampered_artifact=rejected'
     }
     finally {

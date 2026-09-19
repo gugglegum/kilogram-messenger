@@ -82,50 +82,81 @@ function New-SourceManifest([string]$SourceRoot, [string[]]$RelativeFiles, [stri
     Write-Utf8Lines $ManifestPath @($lines | Sort-Object)
 }
 
-function Invoke-CleanBuild([string]$SourceRoot, [string]$TargetRoot, [string]$ArtifactName) {
+function Invoke-CleanBuild(
+    [string]$SourceRoot,
+    [string]$TargetRoot,
+    [string]$ArtifactName,
+    [string]$NativeManifestName,
+    [string]$LinkReproName
+) {
     $oldTarget = $env:CARGO_TARGET_DIR
     $oldIncremental = $env:CARGO_INCREMENTAL
     $oldEpoch = $env:SOURCE_DATE_EPOCH
     $oldEncodedFlags = $env:CARGO_ENCODED_RUSTFLAGS
+    $linkRepro = [System.IO.Path]::GetFullPath((Join-Path $output $LinkReproName))
+    $linkReproArgument = $linkRepro.Replace('\', '/')
+    $nativeManifest = [System.IO.Path]::GetFullPath((Join-Path $output $NativeManifestName))
     try {
-        $env:CARGO_TARGET_DIR = $TargetRoot
-        $env:CARGO_INCREMENTAL = '0'
-        $env:SOURCE_DATE_EPOCH = $sourceEpoch
-        $unitSeparator = [char]0x1f
-        $env:CARGO_ENCODED_RUSTFLAGS = @(
-            New-KilogramReproducibleRustFlags `
-                -SourceRoot $SourceRoot `
-                -LinkerIdentity $linkerIdentity
-        ) -join $unitSeparator
-        Push-Location $SourceRoot
         try {
-            & cargo build --jobs $cargoJobsResolved --frozen --release --target x86_64-pc-windows-msvc --package kilogram-offline
-            if ($LASTEXITCODE -ne 0) {
-                throw "offline build failed in $SourceRoot"
+            $env:CARGO_TARGET_DIR = $TargetRoot
+            $env:CARGO_INCREMENTAL = '0'
+            $env:SOURCE_DATE_EPOCH = $sourceEpoch
+            $unitSeparator = [char]0x1f
+            $env:CARGO_ENCODED_RUSTFLAGS = @(
+                New-KilogramReproducibleRustFlags `
+                    -SourceRoot $SourceRoot `
+                    -LinkerIdentity $linkerIdentity
+            ) -join $unitSeparator
+            Push-Location $SourceRoot
+            try {
+                & cargo rustc --jobs $cargoJobsResolved --frozen --release --target x86_64-pc-windows-msvc --package kilogram-offline --bin kilogram-offline -- -C "link-arg=/reproduce:$linkReproArgument"
+                if ($LASTEXITCODE -ne 0) {
+                    throw "offline build failed in $SourceRoot"
+                }
+            }
+            finally {
+                Pop-Location
             }
         }
         finally {
-            Pop-Location
+            $env:CARGO_TARGET_DIR = $oldTarget
+            $env:CARGO_INCREMENTAL = $oldIncremental
+            $env:SOURCE_DATE_EPOCH = $oldEpoch
+            $env:CARGO_ENCODED_RUSTFLAGS = $oldEncodedFlags
+        }
+
+        $built = Join-Path $TargetRoot 'x86_64-pc-windows-msvc\release\kilogram-offline.exe'
+        if (-not (Test-Path -LiteralPath $built -PathType Leaf)) {
+            throw "offline build artifact is missing: $built"
+        }
+        $nativeLinkInputs = Write-KilogramNativeLinkInputManifest `
+            -ArchivePath $linkRepro `
+            -ManifestPath $nativeManifest
+        $artifact = Join-Path $output $ArtifactName
+        Copy-Item -LiteralPath $built -Destination $artifact
+        Normalize-KilogramPeReproducibilityMetadata -Path $artifact
+        [PSCustomObject]@{
+            file = $ArtifactName
+            sha256 = Get-Sha256 $artifact
+            bytes = (Get-Item -LiteralPath $artifact).Length
+            native_link_inputs = $nativeLinkInputs
         }
     }
     finally {
-        $env:CARGO_TARGET_DIR = $oldTarget
-        $env:CARGO_INCREMENTAL = $oldIncremental
-        $env:SOURCE_DATE_EPOCH = $oldEpoch
-        $env:CARGO_ENCODED_RUSTFLAGS = $oldEncodedFlags
-    }
-
-    $built = Join-Path $TargetRoot 'x86_64-pc-windows-msvc\release\kilogram-offline.exe'
-    if (-not (Test-Path -LiteralPath $built -PathType Leaf)) {
-        throw "offline build artifact is missing: $built"
-    }
-    $artifact = Join-Path $output $ArtifactName
-    Copy-Item -LiteralPath $built -Destination $artifact
-    Normalize-KilogramPeReproducibilityMetadata -Path $artifact
-    [PSCustomObject]@{
-        file = $ArtifactName
-        sha256 = Get-Sha256 $artifact
-        bytes = (Get-Item -LiteralPath $artifact).Length
+        if (Test-Path -LiteralPath $linkRepro -PathType Leaf) {
+            $resolvedLinkRepro = [System.IO.Path]::GetFullPath($linkRepro)
+            if (-not $resolvedLinkRepro.StartsWith(
+                $output.TrimEnd('\') + '\',
+                [System.StringComparison]::OrdinalIgnoreCase
+            ) -or
+                -not ([System.IO.Path]::GetFileName($resolvedLinkRepro).Equals(
+                    $LinkReproName,
+                    [System.StringComparison]::Ordinal
+                ))) {
+                throw "Refusing unexpected LLD link-reproduction cleanup path: $resolvedLinkRepro"
+            }
+            Remove-Item -LiteralPath $resolvedLinkRepro -Force
+        }
     }
 }
 
@@ -178,8 +209,18 @@ try {
     Copy-Item -LiteralPath (Join-Path $sourceA 'Cargo.lock') -Destination (Join-Path $output 'Cargo.lock')
     Copy-Item -LiteralPath (Join-Path $sourceA 'rust-toolchain.toml') -Destination (Join-Path $output 'rust-toolchain.toml')
 
-    $buildA = Invoke-CleanBuild $sourceA $targetA 'kilogram-offline-build-a.exe'
-    $buildB = Invoke-CleanBuild $sourceB $targetB 'kilogram-offline-build-b.exe'
+    $buildA = Invoke-CleanBuild `
+        $sourceA `
+        $targetA `
+        'kilogram-offline-build-a.exe' `
+        'NATIVE-LINK-INPUTS-A.sha256' `
+        'link-repro-a.tar'
+    $buildB = Invoke-CleanBuild `
+        $sourceB `
+        $targetB `
+        'kilogram-offline-build-b.exe' `
+        'NATIVE-LINK-INPUTS-B.sha256' `
+        'link-repro-b.tar'
     $linkerAfterBuild = Get-KilogramBundledLldIdentity
     if ([string]$linkerAfterBuild.sha256 -cne [string]$linkerIdentity.sha256 -or
         [int64]$linkerAfterBuild.bytes -ne [int64]$linkerIdentity.bytes -or
@@ -189,7 +230,27 @@ try {
         )) {
         throw 'The bundled LLD linker changed during the two clean builds.'
     }
+    if ([string]$buildA.native_link_inputs.sha256 -cne [string]$buildB.native_link_inputs.sha256 -or
+        [int]$buildA.native_link_inputs.count -ne [int]$buildB.native_link_inputs.count) {
+        throw 'The two clean builds did not consume identical native link inputs.'
+    }
+    $nativeManifestA = Join-Path $output 'NATIVE-LINK-INPUTS-A.sha256'
+    $nativeManifestB = Join-Path $output 'NATIVE-LINK-INPUTS-B.sha256'
+    $nativeManifest = Join-Path $output 'NATIVE-LINK-INPUTS.sha256'
+    Move-Item -LiteralPath $nativeManifestA -Destination $nativeManifest
+    Remove-Item -LiteralPath $nativeManifestB
+    $nativeLinkInputs = Assert-KilogramNativeLinkInputManifest -Path $nativeManifest
     $equal = $buildA.sha256 -eq $buildB.sha256 -and $buildA.bytes -eq $buildB.bytes
+    $buildARecord = [ordered]@{
+        file = $buildA.file
+        sha256 = $buildA.sha256
+        bytes = $buildA.bytes
+    }
+    $buildBRecord = [ordered]@{
+        file = $buildB.file
+        sha256 = $buildB.sha256
+        bytes = $buildB.bytes
+    }
 
     Push-Location $sourceA
     try {
@@ -200,7 +261,7 @@ try {
         Pop-Location
     }
     $record = [ordered]@{
-        format_version = 3
+        format_version = 4
         status = if ($equal) { 'reproducible' } else { 'divergent' }
         builder_scope = 'same-host-separate-clean-roots'
         build_root_count = 2
@@ -228,10 +289,18 @@ try {
             bytes = $linkerIdentity.bytes
             reproducibility_flag = $linkerIdentity.reproducibility_flag
         }
+        native_link_inputs = [ordered]@{
+            capture_mode = 'lld-link-reproduce-archive'
+            manifest_format = 'sha256-bytes-logical-path-v1'
+            file = $nativeLinkInputs.file
+            sha256 = $nativeLinkInputs.sha256
+            count = $nativeLinkInputs.count
+            archive_retained = $false
+        }
         network_surface_compiled = $false
         runtime_surface_compiled = $false
-        build_a = $buildA
-        build_b = $buildB
+        build_a = $buildARecord
+        build_b = $buildBRecord
     }
     $json = $record | ConvertTo-Json -Depth 5
     Write-Utf8Lines (Join-Path $output 'REPRODUCIBILITY.json') @($json)
@@ -242,6 +311,7 @@ try {
         'SOURCE-MANIFEST.sha256',
         'Cargo.lock',
         'rust-toolchain.toml',
+        'NATIVE-LINK-INPUTS.sha256',
         'REPRODUCIBILITY.json'
     )
     $checksums = foreach ($name in $checksumFiles) {

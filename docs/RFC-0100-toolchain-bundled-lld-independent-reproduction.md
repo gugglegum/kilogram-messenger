@@ -1,7 +1,8 @@
 # RFC-0100: Toolchain-bundled LLD independent reproduction (M0.9.77)
 
-Status: clean local format-v3 release pair verified; a matching GitHub-hosted
-build and attestation still require an explicit post-push workflow dispatch.
+Status: clean local format-v3 release pair verified; the first GitHub-hosted
+run used the exact same LLD but exposed a remaining native-input divergence,
+continued by RFC-0101.
 
 ## 1. Problem
 
@@ -142,3 +143,9 @@ cross-environment reproduction. That stronger claim requires:
 If the normalized artifacts still differ while the linker SHA-256 matches, the
 remaining mutable input is diagnosed separately, with Windows SDK/import
 libraries as the next candidate. No attestation is created on such a mismatch.
+
+Run `35469391445` exercised that boundary for commit `4711dd3...`. It retained
+the same Rust/Cargo and bundled-LLD identity, but the normalized GitHub artifact
+was 1,024 bytes larger and structurally different, so the workflow correctly
+failed without attestations. RFC-0101 adds exact native `.lib` provenance
+instead of broadening normalization.

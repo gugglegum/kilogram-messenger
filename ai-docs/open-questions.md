@@ -227,10 +227,14 @@ sessions, distribution, removal и key epochs и не решены этим пр
   mutable MSVC linker на exact-hashed `rust-lld.exe`, а BLAKE3 C/ASM — на
   pure-Rust intrinsics. Первый LLD pair отличался только 20 PDB-derived bytes;
   format-v3 gate дополнительно фиксирует parser-bounded PE normalization v1.
-  Fresh GitHub match/attestation ещё не выполнен. Если normalized artifact
-  снова разойдётся при одинаковом LLD hash, остаётся pinning Windows SDK/import
-  libraries. Trusted reusable workflow и release/update signing
-  также открыты. Также открыты обнаружение конфликта между устройствами,
+  Fresh GitHub run `35469391445` использовал exact same LLD, но снова fail
+  closed с structural +1024-byte artifact divergence. M0.9.78 теперь получает
+  через transient LLD `/reproduce` exact hashes десяти фактически
+  использованных SDK/UCRT/MSVC `.lib`, удаляет большой TAR и связывает bounded
+  manifest с format-v4 evidence. Открыты fresh external manifest comparison и
+  затем pinning отличающихся native inputs; если manifests совпадут, остаются
+  response arguments/Rust archives. Trusted reusable workflow и release/update
+  signing также открыты. Также открыты обнаружение конфликта между устройствами,
   которые никогда не обменивались bundle, и действительно распределённая
   cross-machine координация без доверенного scheduler.
 - M0.9.32 compact/checkpoint-ит runtime publication, observation, policy и

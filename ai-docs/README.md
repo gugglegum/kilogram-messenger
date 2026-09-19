@@ -381,25 +381,20 @@ removal semantics и MLS-группы ещё не реализованы.
 
 ## План ближайших работ
 
-M0.9.76 уже имеет принятое внешнее service-free v2 evidence. M0.9.77 закрыл
-локальную controlled-linker часть release hardening: local и GitHub builders
-явно используют `rust-lld.exe` из pinned Rust toolchain, format-v3 records
-фиксируют его SHA-256/length/flavor, а verifier отвергает mismatched linker до
-проверки artifact/attestation. Offline target также включает BLAKE3 `pure`,
-исключая linked MSVC-built C/ASM. Реальный debug `kilogram-offline` собран и
-запущен с PE linker 14.00. Первый LLD release pair отличался ровно 20 байтами
-COFF/debug timestamp и CodeView GUID; bounded PE normalization v1 обнуляет
-только эти parser-validated поля, после чего retained fixtures byte-identical.
-Clean format-v3 pair для commit
-`788a3c4ff0152c78a43e8875315a93eba51925a8` verified: оба 2,433,536-byte
-artifacts имеют SHA-256
-`25b24880f3f7f8ee34da48b4239b0dd730f5799e22275ef508640747cb9b6540`.
-Внешний exact match пока не заявлен.
+M0.9.76 уже имеет принятое внешнее service-free v2 evidence. M0.9.77 закрепил
+bundled `rust-lld.exe`, BLAKE3 pure-Rust codegen и bounded PE normalization.
+External run `35469391445` использовал exact same Rust/LLD, но правильно fail
+closed: GitHub EXE оказался структурно на 1,024 bytes больше local artifact.
+M0.9.78 поэтому не ослабляет сравнение, а фиксирует фактические platform inputs:
+оба builders создают transient LLD `/reproduce` TAR, сохраняют только bounded
+`NATIVE-LINK-INPUTS.sha256` и удаляют TAR. Format-v4 evidence требует exact
+local/GitHub manifest equality. Local probe подтвердил 10 libraries из MSVC
+`14.44.35207` и Windows SDK `10.0.28000.0`; manifest SHA-256
+`182c33c504ac2bce811459acd1a9f3fcd35fcb414be1b710b32651c9c794d61c`.
 
-1. Push exact revision `788a3c4...`, вручную dispatch-нуть external workflow с
-   указанным local SHA-256 и проверить downloaded EXE/record +
-   attestations production verifier-ом. Если LLD hash совпадёт, но EXE нет,
-   исследовать и закрепить Windows SDK/import libraries.
+1. После clean committed format-v4 pair dispatch-нуть external workflow и
+   сравнить exact native manifests. Отличающиеся SDK/UCRT/MSVC inputs pin/bundle
+   отдельно; при identical manifests проверить response arguments/Rust archives.
 2. Спроектировать Sybil-resistant provider diversity и проверить exact replicas
    на физических/операторски независимых volunteer hosts.
 3. Optional autostart/background mode оставить отдельной явной настройкой;
@@ -761,8 +756,14 @@ artifacts имеют SHA-256
   builders используют exact `rust-lld.exe` из pinned Rust toolchain, format-v3
   records связывают linker hash, BLAKE3 pure-Rust codegen и bounded PE metadata
   normalization v1 с artifact, mismatch fail closed; local format-v3 pair для
-  `788a3c4...` verified, fresh external match/attestation ещё требует явного
-  post-push dispatch.
+  `788a3c4...` verified; external run с exact same LLD корректно обнаружил
+  оставшееся structural divergence и передал диагностику RFC-0101.
+- [`../docs/RFC-0101-exact-native-link-input-provenance.md`](../docs/RFC-0101-exact-native-link-input-provenance.md) —
+  реализованный локально M0.9.78 exact native link-input provenance: final
+  `cargo rustc` link создаёт transient LLD `/reproduce` archive, сохраняет
+  только bounded `NATIVE-LINK-INPUTS.sha256` с exact hashes/lengths реально
+  использованных Windows SDK/MSVC libraries и немедленно удаляет большой TAR;
+  format-v4 local/GitHub records и verifier требуют identical manifest.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

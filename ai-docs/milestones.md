@@ -4204,12 +4204,53 @@ privacy остаются отдельными задачами.
 - контракт зафиксирован в
   [`../docs/RFC-0100-toolchain-bundled-lld-independent-reproduction.md`](../docs/RFC-0100-toolchain-bundled-lld-independent-reproduction.md).
 
+External workflow run `35469391445` для pushed commit
+`4711dd337dce4ba82c19d50970dc29f75b6bd260` подтвердил exact Rust/Cargo и
+bundled-LLD identity, но правильно завершился fail closed. Local normalized
+artifact: 2,433,536 bytes,
+`25b24880f3f7f8ee34da48b4239b0dd730f5799e22275ef508640747cb9b6540`;
+GitHub: 2,434,560 bytes,
+`3dd8e4b78e4326663393c126a3a1533dc1fdd7f9a5dcf45751e80034b96253ff`.
+Размеры `.rdata`/subsequent sections и entry point отличаются, поэтому это не
+metadata-only divergence и расширять normalization нельзя.
+
+### M0.9.78 — exact native link-input provenance: implemented locally
+
+Реализовано:
+
+- final `kilogram-offline` link выполняется через `cargo rustc --bin` с
+  bounded LLD `/reproduce:<tar>`; flag не распространяется на произвольные
+  dependency targets;
+- из TAR извлекаются только реально переданные LLD `.lib` под распознанными
+  Windows SDK и `VC/Tools/MSVC` layouts; unsafe/unclassified/duplicate/empty
+  inputs fail closed;
+- retained `NATIVE-LINK-INPUTS.sha256` содержит exact SHA-256, byte length и
+  path-independent logical platform name, без username/absolute host path;
+- large reproduction TAR и guarded extraction root удаляются сразу, в Git и
+  GitHub artifact не попадают;
+- same-host builder независимо снимает manifest для обоих clean roots и
+  требует exact equality;
+- local/external evidence подняты до format v4; manifest входит в checksums,
+  GitHub evidence и successful attestation subjects;
+- production verifier требует exact local/external native manifest до
+  artifact acceptance; self-test отдельно отвергает substituted native-input
+  identity;
+- реальный local probe нашёл 10 native libraries: MSVC `14.44.35207`
+  `msvcrt`/`vcruntime`, Windows SDK `10.0.28000.0` UCRT и семь UM import libs;
+  manifest SHA-256
+  `182c33c504ac2bce811459acd1a9f3fcd35fcb414be1b710b32651c9c794d61c`;
+- 157,723,136-byte probe TAR удалён; `/reproduce` не изменил normalized EXE
+  hash или 2,433,536-byte length;
+- контракт зафиксирован в
+  [`../docs/RFC-0101-exact-native-link-input-provenance.md`](../docs/RFC-0101-exact-native-link-input-provenance.md).
+
 ### Следующий этап
 
-1. Push exact revision `788a3c4...`, вручную повторить GitHub independent build
-   с local SHA-256 и получить matched external hash + attestations. Если exact
-   LLD совпадает, но normalized EXE нет,
-   следующим кандидатом на pinning является Windows SDK/import libraries.
+1. После clean format-v4 local pair push exact M0.9.78 revision и вручную
+   повторить GitHub independent build. Сравнить два exact native manifests;
+   при различии pin/bundle необходимый Windows SDK/UCRT/MSVC input set, при
+   совпадении исследовать response arguments/Rust archives без ослабления
+   byte-equality.
 2. Спроектировать Sybil-resistant provider diversity и проверить replicas на
    физически/операторски независимых volunteer hosts.
 3. Optional autostart/background mode оставить отдельной явной настройкой, не

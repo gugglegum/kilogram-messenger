@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       expected_local_sha256:
-        description: SHA-256 from the verified M0.9.50 same-host reproducibility record
+        description: SHA-256 from the verified same-host reproducibility record for this exact commit
         required: true
         type: string
 
@@ -108,9 +108,23 @@ jobs:
               -LinkerIdentity $linker
           ) -join $unitSeparator
 
-          cargo build --jobs 2 --frozen --release --target x86_64-pc-windows-msvc --package kilogram-offline
-          if ($LASTEXITCODE -ne 0) {
-            throw 'Independent kilogram-offline build failed.'
+          $output = Join-Path $env:GITHUB_WORKSPACE_VALUE 'independent-builder'
+          New-Item -ItemType Directory -Path $output -Force | Out-Null
+          $linkRepro = Join-Path $output 'link-repro.tar'
+          $linkReproArgument = $linkRepro.Replace('\', '/')
+          try {
+            cargo rustc --jobs 2 --frozen --release --target x86_64-pc-windows-msvc --package kilogram-offline --bin kilogram-offline -- -C "link-arg=/reproduce:$linkReproArgument"
+            if ($LASTEXITCODE -ne 0) {
+              throw 'Independent kilogram-offline build failed.'
+            }
+            $nativeLinkInputs = Write-KilogramNativeLinkInputManifest `
+              -ArchivePath $linkRepro `
+              -ManifestPath (Join-Path $output 'NATIVE-LINK-INPUTS.sha256')
+          }
+          finally {
+            if (Test-Path -LiteralPath $linkRepro -PathType Leaf) {
+              Remove-Item -LiteralPath $linkRepro -Force
+            }
           }
           $linkerAfterBuild = Get-KilogramBundledLldIdentity
           if ([string]$linkerAfterBuild.sha256 -cne [string]$linker.sha256 -or
@@ -122,8 +136,6 @@ jobs:
             throw 'The bundled LLD linker changed during the independent build.'
           }
 
-          $output = Join-Path $env:GITHUB_WORKSPACE_VALUE 'independent-builder'
-          New-Item -ItemType Directory -Path $output -Force | Out-Null
           $built = Join-Path $env:GITHUB_WORKSPACE_VALUE 'target\x86_64-pc-windows-msvc\release\kilogram-offline.exe'
           $artifact = Join-Path $output 'kilogram-offline.exe'
           Copy-Item -LiteralPath $built -Destination $artifact
@@ -133,7 +145,7 @@ jobs:
           $matched = $artifactHash -ceq $env:EXPECTED_LOCAL_SHA256
 
           $record = [ordered]@{
-            format_version = 3
+            format_version = 4
             status = if ($matched) { 'matched' } else { 'divergent' }
             builder_scope = 'github-hosted-windows-independent'
             repository = $env:KILOGRAM_REPOSITORY
@@ -156,6 +168,14 @@ jobs:
               sha256 = $linker.sha256
               bytes = $linker.bytes
               reproducibility_flag = $linker.reproducibility_flag
+            }
+            native_link_inputs = [ordered]@{
+              capture_mode = 'lld-link-reproduce-archive'
+              manifest_format = 'sha256-bytes-logical-path-v1'
+              file = $nativeLinkInputs.file
+              sha256 = $nativeLinkInputs.sha256
+              count = $nativeLinkInputs.count
+              archive_retained = $false
             }
             network_surface_compiled = $false
             runtime_surface_compiled = $false
@@ -191,7 +211,10 @@ jobs:
           )
           [System.IO.File]::WriteAllLines(
             (Join-Path $output 'SHA256SUMS'),
-            @("$artifactHash  kilogram-offline.exe"),
+            @(
+              "$artifactHash  kilogram-offline.exe",
+              "$($nativeLinkInputs.sha256)  NATIVE-LINK-INPUTS.sha256"
+            ),
             [System.Text.UTF8Encoding]::new($false)
           )
           "artifact_sha256=$artifactHash" >> $env:GITHUB_OUTPUT
@@ -204,6 +227,7 @@ jobs:
           subject-path: |
             independent-builder/kilogram-offline.exe
             independent-builder/INDEPENDENT-BUILDER.json
+            independent-builder/NATIVE-LINK-INPUTS.sha256
 
       - name: Preserve bounded comparison evidence
         if: always()
@@ -213,6 +237,7 @@ jobs:
           path: |
             independent-builder/kilogram-offline.exe
             independent-builder/INDEPENDENT-BUILDER.json
+            independent-builder/NATIVE-LINK-INPUTS.sha256
             independent-builder/SHA256SUMS
           if-no-files-found: error
           retention-days: 14

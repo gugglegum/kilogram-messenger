@@ -71,6 +71,194 @@ function New-KilogramReproducibleRustFlags {
     )
 }
 
+function Assert-KilogramNativeLinkInputManifest {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    $resolved = [System.IO.Path]::GetFullPath($Path)
+    if (-not (Test-Path -LiteralPath $resolved -PathType Leaf)) {
+        throw "Native link-input manifest is missing: $resolved"
+    }
+    $item = Get-Item -LiteralPath $resolved -Force
+    if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0 -or
+        $item.Length -le 0 -or $item.Length -gt 64KB) {
+        throw "Native link-input manifest has an invalid file boundary: $resolved"
+    }
+
+    $lines = @(Get-Content -LiteralPath $resolved)
+    if ($lines.Count -le 0 -or $lines.Count -gt 256) {
+        throw "Native link-input manifest has an invalid entry count: $resolved"
+    }
+    $seen = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+    $logicalNames = [System.Collections.Generic.List[string]]::new()
+    $hasWindowsUm = $false
+    $hasWindowsUcrt = $false
+    $hasMsvc = $false
+    foreach ($line in $lines) {
+        if ($line -cnotmatch '^([0-9a-f]{64})  ([1-9][0-9]*)  ((?:windows-sdk/[A-Za-z0-9._-]+/(?:um|ucrt)/x64/[a-z0-9._-]+\.lib)|(?:msvc/[A-Za-z0-9._-]+/lib/x64/[a-z0-9._-]+\.lib))$') {
+            throw "Native link-input manifest contains an invalid entry: $line"
+        }
+        $logicalName = $Matches[3]
+        if (-not $seen.Add($logicalName)) {
+            throw "Native link-input manifest contains a duplicate logical path: $logicalName"
+        }
+        $logicalNames.Add($logicalName)
+        if ($logicalName.StartsWith('windows-sdk/', [System.StringComparison]::Ordinal)) {
+            if ($logicalName.Contains('/um/')) {
+                $hasWindowsUm = $true
+            }
+            if ($logicalName.Contains('/ucrt/')) {
+                $hasWindowsUcrt = $true
+            }
+        }
+        elseif ($logicalName.StartsWith('msvc/', [System.StringComparison]::Ordinal)) {
+            $hasMsvc = $true
+        }
+    }
+    $sortedLogicalNames = @($logicalNames | Sort-Object)
+    for ($index = 0; $index -lt $logicalNames.Count; $index++) {
+        if ($logicalNames[$index] -cne $sortedLogicalNames[$index]) {
+            throw 'Native link-input manifest entries are not sorted by logical path.'
+        }
+    }
+    if (-not $hasWindowsUm -or -not $hasWindowsUcrt -or -not $hasMsvc) {
+        throw 'Native link-input manifest does not cover Windows UM, UCRT, and MSVC libraries.'
+    }
+
+    [PSCustomObject]@{
+        file = [System.IO.Path]::GetFileName($resolved)
+        sha256 = (Get-FileHash -LiteralPath $resolved -Algorithm SHA256).Hash.ToLowerInvariant()
+        count = $lines.Count
+    }
+}
+
+function Write-KilogramNativeLinkInputManifest {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ArchivePath,
+
+        [Parameter(Mandatory = $true)]
+        [string]$ManifestPath
+    )
+
+    $archive = [System.IO.Path]::GetFullPath($ArchivePath)
+    $manifest = [System.IO.Path]::GetFullPath($ManifestPath)
+    if (-not (Test-Path -LiteralPath $archive -PathType Leaf)) {
+        throw "LLD link-reproduction archive is missing: $archive"
+    }
+    $archiveItem = Get-Item -LiteralPath $archive -Force
+    if (($archiveItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0 -or
+        $archiveItem.Length -le 0 -or $archiveItem.Length -gt 2GB) {
+        throw "LLD link-reproduction archive has an invalid file boundary: $archive"
+    }
+    if (Test-Path -LiteralPath $manifest) {
+        throw "Native link-input manifest already exists: $manifest"
+    }
+    $manifestParent = Split-Path -Parent $manifest
+    if (-not (Test-Path -LiteralPath $manifestParent -PathType Container)) {
+        throw "Native link-input manifest directory is missing: $manifestParent"
+    }
+    $tar = Get-Command tar.exe -ErrorAction SilentlyContinue
+    if ($null -eq $tar) {
+        throw 'Windows tar.exe is required to inspect the bounded LLD reproduction archive.'
+    }
+
+    $archiveEntries = @(& $tar.Source -tf $archive)
+    if ($LASTEXITCODE -ne 0 -or $archiveEntries.Count -le 0) {
+        throw "Could not list the LLD link-reproduction archive: $archive"
+    }
+    $nativeEntries = @($archiveEntries | Where-Object { $_ -cmatch '(?i)\.lib$' })
+    if ($nativeEntries.Count -le 0 -or $nativeEntries.Count -gt 256) {
+        throw "LLD link-reproduction archive has an invalid native library count: $($nativeEntries.Count)"
+    }
+
+    $extractRoot = Join-Path ([System.IO.Path]::GetTempPath()) (
+        'kilogram-native-link-inputs-' + [Guid]::NewGuid().ToString('N')
+    )
+    New-Item -ItemType Directory -Path $extractRoot | Out-Null
+    $extractRootResolved = [System.IO.Path]::GetFullPath($extractRoot)
+    $extractPrefix = $extractRootResolved.TrimEnd('\') + '\'
+    $records = [System.Collections.Generic.List[object]]::new()
+    $logicalNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+    try {
+        foreach ($entry in $nativeEntries) {
+            if ([string]::IsNullOrWhiteSpace($entry) -or
+                $entry.StartsWith('/', [System.StringComparison]::Ordinal) -or
+                $entry.Contains('\') -or
+                $entry.Contains(':') -or
+                $entry -match '(^|/)\.\.(/|$)') {
+                throw "LLD link-reproduction archive contains an unsafe native library path: $entry"
+            }
+
+            $logicalName = $null
+            if ($entry -match '(?i)/Windows Kits/10/lib/([^/]+)/(um|ucrt)/(x64)/([^/]+\.lib)$') {
+                $logicalName = 'windows-sdk/{0}/{1}/{2}/{3}' -f
+                    $Matches[1],
+                    $Matches[2].ToLowerInvariant(),
+                    $Matches[3].ToLowerInvariant(),
+                    $Matches[4].ToLowerInvariant()
+            }
+            elseif ($entry -match '(?i)/VC/Tools/MSVC/([^/]+)/lib/(x64)/([^/]+\.lib)$') {
+                $logicalName = 'msvc/{0}/lib/{1}/{2}' -f
+                    $Matches[1],
+                    $Matches[2].ToLowerInvariant(),
+                    $Matches[3].ToLowerInvariant()
+            }
+            else {
+                throw "LLD consumed an unclassified native library: $entry"
+            }
+            if (-not $logicalNames.Add($logicalName)) {
+                throw "LLD consumed duplicate native library identities: $logicalName"
+            }
+
+            & $tar.Source -xf $archive -C $extractRootResolved -- $entry
+            if ($LASTEXITCODE -ne 0) {
+                throw "Could not extract a native link input from the LLD archive: $entry"
+            }
+            $extracted = [System.IO.Path]::GetFullPath((Join-Path $extractRootResolved $entry.Replace('/', '\')))
+            if (-not $extracted.StartsWith($extractPrefix, [System.StringComparison]::OrdinalIgnoreCase) -or
+                -not (Test-Path -LiteralPath $extracted -PathType Leaf)) {
+                throw "Extracted native link input escaped or is missing: $entry"
+            }
+            $extractedItem = Get-Item -LiteralPath $extracted -Force
+            if (($extractedItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0 -or
+                $extractedItem.Length -le 0) {
+                throw "Extracted native link input has an invalid file boundary: $entry"
+            }
+            $records.Add([PSCustomObject]@{
+                logical_name = $logicalName
+                sha256 = (Get-FileHash -LiteralPath $extracted -Algorithm SHA256).Hash.ToLowerInvariant()
+                bytes = [int64]$extractedItem.Length
+            })
+        }
+
+        $lines = @($records | Sort-Object logical_name | ForEach-Object {
+            "$($_.sha256)  $($_.bytes)  $($_.logical_name)"
+        })
+        [System.IO.File]::WriteAllLines(
+            $manifest,
+            $lines,
+            [System.Text.UTF8Encoding]::new($false)
+        )
+        Assert-KilogramNativeLinkInputManifest -Path $manifest
+    }
+    finally {
+        $resolvedTemp = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath()).TrimEnd('\') + '\'
+        if ($extractRootResolved.StartsWith($resolvedTemp, [System.StringComparison]::OrdinalIgnoreCase) -and
+            [System.IO.Path]::GetFileName($extractRootResolved).StartsWith(
+                'kilogram-native-link-inputs-',
+                [System.StringComparison]::Ordinal
+            ) -and
+            (Test-Path -LiteralPath $extractRootResolved)) {
+            Remove-Item -LiteralPath $extractRootResolved -Recurse -Force
+        }
+    }
+}
+
 function Read-KilogramPeReproducibilityMetadata {
     [CmdletBinding()]
     param(

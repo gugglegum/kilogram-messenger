@@ -118,3 +118,8 @@ and the same bounded PE metadata-normalization policy before accepting an
 independently built executable. The original divergent run remains diagnostic
 history; the new contract still needs a fresh explicit GitHub dispatch before
 cross-environment reproducibility can be claimed.
+
+The fresh same-LLD run remained structurally divergent. M0.9.78 therefore
+upgrades the contract to format v4 and attests a bounded manifest of the exact
+native `.lib` inputs; see
+[`RFC-0101`](RFC-0101-exact-native-link-input-provenance.md).

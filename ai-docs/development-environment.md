@@ -2556,3 +2556,36 @@ retirement остальных compatibility shadows ещё не реализов
   Record повторно verified, offline EXE `--help` запускается, temporary
   source/target roots удалены; evidence directory:
   `.tmp/repro/m0977-788a3c4-v3`.
+
+## M0.9.78 verification snapshot (2026-09-20)
+
+- GitHub run `35469391445` для `4711dd337dce4ba82c19d50970dc29f75b6bd260`
+  прошёл source/toolchain/offline build с exact local LLD hash, но fail closed:
+  external normalized artifact SHA-256
+  `3dd8e4b78e4326663393c126a3a1533dc1fdd7f9a5dcf45751e80034b96253ff`,
+  2,434,560 bytes против local
+  `25b24880f3f7f8ee34da48b4239b0dd730f5799e22275ef508640747cb9b6540`,
+  2,433,536 bytes. `.rdata` и следующие sections сдвинуты; это не metadata-only
+  difference, attestations ожидаемо не созданы.
+- Real `cargo rustc --bin kilogram-offline` с LLD `/reproduce` создал
+  157,723,136-byte/175-entry diagnostic TAR. В нём ровно 10 `.lib`: MSVC
+  `14.44.35207` `msvcrt`/`vcruntime`, Windows SDK `10.0.28000.0` UCRT и семь
+  UM import libraries.
+- Новый helper классифицирует только Windows SDK/MSVC x64 paths, хэширует exact
+  bytes, пишет sorted path-independent `NATIVE-LINK-INPUTS.sha256`, требует
+  UM+UCRT+MSVC coverage и отвергает unsafe/unclassified/duplicate/empty inputs.
+- Local manifest SHA-256
+  `182c33c504ac2bce811459acd1a9f3fcd35fcb414be1b710b32651c9c794d61c`,
+  count=10. Probe TAR/extraction root удалены; normalized artifact не изменился.
+- Format-v4 local/GitHub records связывают manifest hash/count/format и
+  `archive_retained=false`; same-host roots требуют identical manifests,
+  external verifier требует local/GitHub equality и attests manifest вместе с
+  EXE/record только при exact artifact match.
+- Static independent-builder boundary и network-free verifier self-test прошли;
+  self-test отдельно отверг `mismatched_native_link_inputs`.
+- Dirty development two-clean-root run
+  `.tmp/repro/m0978-dev-native-inputs-v4` прошёл с Cargo jobs=2/BelowNormal:
+  оба EXE имеют прежний SHA-256
+  `25b24880f3f7f8ee34da48b4239b0dd730f5799e22275ef508640747cb9b6540`,
+  2,433,536 bytes, а оба native manifests — exact SHA-256 выше/count=10.
+  `source-a/b`, `target-a/b` и оба TAR удалены; retained TAR count=0.

@@ -45,6 +45,9 @@ origin and flavor plus the exact bounded PE metadata-normalization policy. This
 avoids the mutable Microsoft linker selection and host-local PDB identity that
 made earlier artifacts differ. The full contract is in
 [`RFC-0100`](RFC-0100-toolchain-bundled-lld-independent-reproduction.md).
+M0.9.78 upgrades new evidence to format v4 and adds the exact bounded native
+SDK/UCRT/MSVC input manifest described in
+[`RFC-0101`](RFC-0101-exact-native-link-input-provenance.md).
 
 `scripts/verify-kilogram-offline-reproducibility-record.ps1` is a separate
 bounded verifier. It rejects unknown build-boundary values, unsafe file names,
