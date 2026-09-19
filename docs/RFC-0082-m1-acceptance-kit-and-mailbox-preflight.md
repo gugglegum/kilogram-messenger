@@ -133,5 +133,7 @@ acceptance requirement.
 
 M0.9.77 subsequently replaces the mutable MSVC linker selection with the
 SHA-256-recorded `rust-lld.exe` bundled in the pinned Rust toolchain. See
-[`RFC-0100`](RFC-0100-toolchain-bundled-lld-independent-reproduction.md). A
-fresh external match and attestation remain explicit post-push work.
+[`RFC-0100`](RFC-0100-toolchain-bundled-lld-independent-reproduction.md). Its
+format-v3 contract also normalizes only parsed LLD/PDB timestamps and CodeView
+GUID metadata. A fresh external match and attestation remain explicit post-push
+work.

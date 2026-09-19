@@ -2534,9 +2534,17 @@ retirement остальных compatibility shadows ещё не реализов
   implementations не попадают в итоговый artifact.
 - `-C linker-features=+lld` в Rust 1.98.0 всё ещё unstable и поэтому явно не
   используется; static boundary запрещает его появление.
-- Format-v2 local/external records фиксируют exact linker identity; independent
+- Первый clean release pair с LLD имел одинаковые 2,433,536 bytes и отличался
+  только 20 байтами: COFF timestamp, два debug timestamps и первые восемь байт
+  CodeView GUID. Parser-bounded normalization v1 обнуляет все эти timestamp
+  fields и полный 16-byte GUID; retained copies после неё имеют одинаковый
+  SHA-256 `25b24880f3f7f8ee34da48b4239b0dd730f5799e22275ef508640747cb9b6540`.
+- Format-v3 local/external records фиксируют exact linker identity и exact
+  PE-normalization policy; independent
   verifier self-test принял coherent evidence и отверг mismatched linker hash и
   tampered artifact.
 - `verify-kilogram-independent-builder-boundary.ps1`, PowerShell parse всех
   изменённых scripts и real debug Cargo build прошли. Сборка использовала
-  BelowNormal и `--jobs 2`; ZIP, network process и release pair не создавались.
+  BelowNormal и `--jobs 2`; ZIP и network process не создавались. Первый
+  release pair сохранён как bounded divergent diagnostic fixture; clean
+  format-v3 pair должен быть создан из следующего clean commit.

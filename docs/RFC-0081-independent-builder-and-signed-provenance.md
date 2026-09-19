@@ -113,7 +113,8 @@ acceptance blocker.
 M0.9.77 implements the controlled-linker follow-up in
 [`RFC-0100`](RFC-0100-toolchain-bundled-lld-independent-reproduction.md).
 Both builders now use and record the exact `rust-lld.exe` bundled with the
-pinned Rust toolchain, and the format-v2 verifier requires equal linker hashes
-before accepting an independently built executable. The original divergent
-run remains diagnostic history; the new contract still needs a fresh explicit
-GitHub dispatch before cross-environment reproducibility can be claimed.
+pinned Rust toolchain, and the format-v3 verifier requires equal linker hashes
+and the same bounded PE metadata-normalization policy before accepting an
+independently built executable. The original divergent run remains diagnostic
+history; the new contract still needs a fresh explicit GitHub dispatch before
+cross-environment reproducibility can be claimed.

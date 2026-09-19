@@ -127,12 +127,13 @@ jobs:
           $built = Join-Path $env:GITHUB_WORKSPACE_VALUE 'target\x86_64-pc-windows-msvc\release\kilogram-offline.exe'
           $artifact = Join-Path $output 'kilogram-offline.exe'
           Copy-Item -LiteralPath $built -Destination $artifact
+          Normalize-KilogramPeReproducibilityMetadata -Path $artifact
           $artifactHash = (Get-FileHash -LiteralPath $artifact -Algorithm SHA256).Hash.ToLowerInvariant()
           $artifactBytes = (Get-Item -LiteralPath $artifact).Length
           $matched = $artifactHash -ceq $env:EXPECTED_LOCAL_SHA256
 
           $record = [ordered]@{
-            format_version = 2
+            format_version = 3
             status = if ($matched) { 'matched' } else { 'divergent' }
             builder_scope = 'github-hosted-windows-independent'
             repository = $env:KILOGRAM_REPOSITORY
@@ -146,6 +147,7 @@ jobs:
             incremental = $false
             path_remap = '<BUILD_ROOT>=Z:/kilogram-source'
             blake3_codegen = 'pure-rust-intrinsics'
+            pe_metadata_normalization = 'coff-and-debug-timestamps-plus-codeview-guid-zeroed-v1'
             linker = [ordered]@{
               mode = $linker.mode
               source = $linker.source

@@ -383,13 +383,16 @@ removal semantics и MLS-группы ещё не реализованы.
 
 M0.9.76 уже имеет принятое внешнее service-free v2 evidence. M0.9.77 закрыл
 локальную controlled-linker часть release hardening: local и GitHub builders
-явно используют `rust-lld.exe` из pinned Rust toolchain, format-v2 records
+явно используют `rust-lld.exe` из pinned Rust toolchain, format-v3 records
 фиксируют его SHA-256/length/flavor, а verifier отвергает mismatched linker до
 проверки artifact/attestation. Offline target также включает BLAKE3 `pure`,
 исключая linked MSVC-built C/ASM. Реальный debug `kilogram-offline` собран и
-запущен с PE linker 14.00; внешний exact match пока не заявлен.
+запущен с PE linker 14.00. Первый LLD release pair отличался ровно 20 байтами
+COFF/debug timestamp и CodeView GUID; bounded PE normalization v1 обнуляет
+только эти parser-validated поля, после чего retained fixtures byte-identical.
+Внешний exact match пока не заявлен.
 
-1. После clean commit/push создать exact-HEAD local format-v2 two-root record,
+1. После clean commit/push создать exact-HEAD local format-v3 two-root record,
    вручную dispatch-нуть external workflow и проверить downloaded EXE/record +
    attestations production verifier-ом. Если LLD hash совпадёт, но EXE нет,
    исследовать и закрепить Windows SDK/import libraries.
@@ -751,10 +754,10 @@ M0.9.76 уже имеет принятое внешнее service-free v2 eviden
   redelivery; retry run `20260920-001614` принят с `result=verified`.
 - [`../docs/RFC-0100-toolchain-bundled-lld-independent-reproduction.md`](../docs/RFC-0100-toolchain-bundled-lld-independent-reproduction.md) —
   реализованный локально M0.9.77 controlled-linker contract: local/GitHub
-  builders используют exact `rust-lld.exe` из pinned Rust toolchain, format-v2
-  records связывают linker hash и BLAKE3 pure-Rust codegen с artifact, mismatch
-  fail closed; fresh external match/attestation ещё требует явного post-push
-  dispatch.
+  builders используют exact `rust-lld.exe` из pinned Rust toolchain, format-v3
+  records связывают linker hash, BLAKE3 pure-Rust codegen и bounded PE metadata
+  normalization v1 с artifact, mismatch fail closed; fresh external
+  match/attestation ещё требует явного post-push dispatch.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

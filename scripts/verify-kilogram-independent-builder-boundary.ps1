@@ -39,7 +39,9 @@ foreach ($required in @(
     'kilogram-reproducible-linker.ps1',
     'Get-KilogramBundledLldIdentity',
     'New-KilogramReproducibleRustFlags',
-    'format_version = 2',
+    'Normalize-KilogramPeReproducibilityMetadata -Path $artifact',
+    'format_version = 3',
+    "pe_metadata_normalization = 'coff-and-debug-timestamps-plus-codeview-guid-zeroed-v1'",
     'sha256 = $linker.sha256',
     'The bundled LLD linker changed during the independent build.',
     'actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10',
@@ -75,11 +77,15 @@ foreach ($actionUse in [regex]::Matches($workflow, '(?m)^\s*uses:\s+([^\s#]+)'))
 }
 
 foreach ($required in @(
-    'format_version -ne 2',
+    'format_version -ne 3',
     "builder_scope -ne 'github-hosted-windows-independent'",
     "linker.mode -ne 'rust-toolchain-bundled-lld'",
+    "pe_metadata_normalization -ne 'coff-and-debug-timestamps-plus-codeview-guid-zeroed-v1'",
     "blake3_codegen -ne 'pure-rust-intrinsics'",
     'builderRecord.linker.sha256 -cne [string]$localRecord.linker.sha256',
+    'non_normalized_pe=rejected',
+    'checksum_bearing_pe=rejected',
+    'authenticode_bearing_pe=rejected',
     'mismatched_linker=rejected',
     "workflow.event -ne 'workflow_dispatch'",
     "workflow.name -ne 'Independent offline reproduction'",
@@ -104,8 +110,10 @@ foreach ($required in @(
     'kilogram-reproducible-linker.ps1',
     'Get-KilogramBundledLldIdentity',
     'New-KilogramReproducibleRustFlags',
+    'Normalize-KilogramPeReproducibilityMetadata -Path $artifact',
     'verify-kilogram-offline-boundary.ps1',
-    'format_version = 2',
+    'format_version = 3',
+    "pe_metadata_normalization = 'coff-and-debug-timestamps-plus-codeview-guid-zeroed-v1'",
     "blake3_codegen = 'pure-rust-intrinsics'",
     'sha256 = $linkerIdentity.sha256',
     'The bundled LLD linker changed during the two clean builds.'
@@ -124,6 +132,10 @@ foreach ($required in @(
     "reproducibility_flag = '/Brepro'",
     'linker-flavor=lld-link',
     'link-arg=/Brepro',
+    'function Normalize-KilogramPeReproducibilityMetadata',
+    'function Assert-KilogramPeReproducibilityMetadataNormalized',
+    'Refusing to normalize a PE image with a non-zero checksum',
+    'Refusing to normalize an Authenticode-bearing PE image',
     'Get-FileHash -LiteralPath $path -Algorithm SHA256'
 )) {
     if ($linkerHelper.IndexOf($required, [System.StringComparison]::Ordinal) -lt 0) {

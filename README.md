@@ -220,17 +220,22 @@ the pause/reconnect procedure is in
 
 The local two-clean-root builder and manual GitHub-hosted builder now resolve
 `rust-lld.exe` from the pinned Rust toolchain, pass it explicitly as
-`lld-link`, and record its exact SHA-256 and length in format-v2 evidence. The
+`lld-link`, and record its exact SHA-256 and length in format-v3 evidence. The
 production verifier requires identical linker bytes before accepting artifact
 equality or signed provenance; its self-test rejects both a substituted linker
 and a modified executable. The isolated offline target also enables BLAKE3's
 supported `pure` feature so a mutable MSVC compiler cannot contribute linked
-C/assembly objects.
+C/assembly objects. A bounded PE post-link pass zeroes only the COFF/debug
+timestamps and CodeView GUID that LLD derives from host-local PDB inputs; it
+parses and bounds every touched field, records its exact v1 policy and leaves
+all code, section layout, imports and addresses subject to byte equality.
 
 A real debug `kilogram-offline.exe` linked and ran with this contract and has a
-PE linker field of 14.00. No ZIP or network process was created. A clean local
-release-pair record and fresh manual GitHub dispatch are still required before
-independent byte equality and attestation can be claimed. Details are in
+PE linker field of 14.00. A retained divergent release pair differed in only
+20 LLD/PDB metadata bytes and becomes byte-identical under the bounded policy.
+No ZIP or network process was created. A clean local format-v3 release-pair
+record and fresh manual GitHub dispatch are still required before independent
+byte equality and attestation can be claimed. Details are in
 [`docs/RFC-0100-toolchain-bundled-lld-independent-reproduction.md`](docs/RFC-0100-toolchain-bundled-lld-independent-reproduction.md).
 
 ## Previous milestone: M0.9.76 service-free v2 field lifecycle — verified
@@ -429,8 +434,9 @@ independent build but correctly failed the strict byte gate: the GitHub binary
 was 1024 bytes larger than the local one, with MSVC linker 14.51 versus 14.44.
 No attestation was issued. This diagnostic result does not block M1; exact
 cross-environment reproducibility was deferred to public-release hardening.
-M0.9.77 now supplies the controlled bundled-LLD replacement, but still needs a
-fresh external run. Historical details are in
+M0.9.77 now supplies the controlled bundled-LLD replacement plus narrowly
+bounded PE metadata normalization, but still needs a fresh external run.
+Historical details are in
 [`docs/RFC-0081-independent-builder-and-signed-provenance.md`](docs/RFC-0081-independent-builder-and-signed-provenance.md).
 
 ## Previous milestone: M0.9.58 controlled mailbox field harness — complete
@@ -556,7 +562,8 @@ release, but are not run for routine milestones.
 
 `kilogram-offline` is now built twice from the exact same SHA-256-manifested
 source set in separate clean source and Cargo target roots. Both builds are
-frozen, non-incremental, path-remapped and linked with `/Brepro`; a bounded
+frozen, non-incremental, path-remapped and linked with `/Brepro`. M0.9.77 also
+normalizes only parsed LLD/PDB identity metadata; a bounded
 machine-verifiable record is emitted only when executable size and SHA-256 are
 identical. A clean portable package requires that verified record to match the
 current `HEAD` and includes its source manifest, lockfile and pinned toolchain.

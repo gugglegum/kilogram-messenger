@@ -28,19 +28,22 @@ by default and:
    `cargo --frozen --release`, `CARGO_INCREMENTAL=0`, the commit timestamp as
    `SOURCE_DATE_EPOCH`, a common source-path remap, the exact `rust-lld.exe`
    bundled in the pinned Rust toolchain, `lld-link` flavor and `/Brepro`;
-5. requires the two executable lengths and SHA-256 hashes to match exactly;
-6. writes a bounded JSON record with source, lockfile, toolchain, command
+5. parses each PE image and zeroes only COFF/debug timestamps and the CodeView
+   GUID under the recorded normalization-v1 policy;
+6. requires the two executable lengths and SHA-256 hashes to match exactly;
+7. writes a bounded JSON record with source, lockfile, toolchain, command
    boundary and both artifact identities; and
-7. removes the temporary source and target roots unless explicitly retained.
+8. removes the temporary source and target roots unless explicitly retained.
 
 The repository pins Rust 1.98.0, the minimal rustup profile, rustfmt, Clippy and
 the Windows MSVC target in `rust-toolchain.toml`. `Cargo.lock` and the toolchain
 file are copied into the record and hashed. `--frozen` prevents an unnoticed
 lockfile update or network fetch during either comparison build.
 
-Since M0.9.77, record format v2 also stores the bundled linker SHA-256, length,
-origin and flavor. This avoids the mutable Microsoft linker selection that made
-the first external M0.9.59 artifacts differ. The full contract is in
+Since M0.9.77, record format v3 also stores the bundled linker SHA-256, length,
+origin and flavor plus the exact bounded PE metadata-normalization policy. This
+avoids the mutable Microsoft linker selection and host-local PDB identity that
+made earlier artifacts differ. The full contract is in
 [`RFC-0100`](RFC-0100-toolchain-bundled-lld-independent-reproduction.md).
 
 `scripts/verify-kilogram-offline-reproducibility-record.ps1` is a separate

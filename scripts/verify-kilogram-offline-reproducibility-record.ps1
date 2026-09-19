@@ -7,6 +7,8 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+. (Join-Path $PSScriptRoot 'kilogram-reproducible-linker.ps1')
+
 $directory = [System.IO.Path]::GetFullPath($RecordDirectory)
 if (-not (Test-Path -LiteralPath $directory -PathType Container)) {
     throw "Reproducibility record directory does not exist: $directory"
@@ -50,7 +52,7 @@ if ($recordItem.Length -le 0 -or $recordItem.Length -gt 64KB) {
     throw 'Reproducibility record size is invalid.'
 }
 $record = Get-Content -LiteralPath $recordPath -Raw | ConvertFrom-Json
-if ($record.format_version -ne 2 -or $record.status -ne 'reproducible') {
+if ($record.format_version -ne 3 -or $record.status -ne 'reproducible') {
     throw 'Reproducibility record version or status is invalid.'
 }
 if ($record.builder_scope -ne 'same-host-separate-clean-roots' -or
@@ -63,6 +65,7 @@ if ($record.builder_scope -ne 'same-host-separate-clean-roots' -or
     $record.incremental -ne $false -or
     $record.path_remap -ne '<BUILD_ROOT>=Z:/kilogram-source' -or
     $record.blake3_codegen -ne 'pure-rust-intrinsics' -or
+    $record.pe_metadata_normalization -ne 'coff-and-debug-timestamps-plus-codeview-guid-zeroed-v1' -or
     $record.linker.mode -ne 'rust-toolchain-bundled-lld' -or
     $record.linker.source -ne 'rustc-sysroot-target-bin' -or
     $record.linker.file -ne 'rust-lld.exe' -or
@@ -107,6 +110,8 @@ $buildAPath = Resolve-RecordFile $record.build_a.file
 $buildBPath = Resolve-RecordFile $record.build_b.file
 $buildAHash = Get-Sha256 $buildAPath
 $buildBHash = Get-Sha256 $buildBPath
+Assert-KilogramPeReproducibilityMetadataNormalized -Path $buildAPath
+Assert-KilogramPeReproducibilityMetadataNormalized -Path $buildBPath
 $buildALength = (Get-Item -LiteralPath $buildAPath).Length
 $buildBLength = (Get-Item -LiteralPath $buildBPath).Length
 if ($buildAHash -ne $record.build_a.sha256 -or
@@ -126,5 +131,6 @@ Write-Output "artifact_bytes=$buildALength"
 Write-Output "target=$($record.target)"
 Write-Output "blake3_codegen=$($record.blake3_codegen)"
 Write-Output "linker_sha256=$($record.linker.sha256)"
+Write-Output "pe_metadata_normalization=$($record.pe_metadata_normalization)"
 Write-Output 'network_surface_compiled=false'
 Write-Output 'runtime_surface_compiled=false'

@@ -10,6 +10,8 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+. (Join-Path $PSScriptRoot 'kilogram-reproducible-linker.ps1')
+
 function Get-Sha256([string]$Path) {
     (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
 }
@@ -77,7 +79,7 @@ function Assert-IndependentEvidence {
     if ($localRecord.source_revision -cnotmatch '^[0-9a-f]{40}$') {
         throw 'Local reproducibility record must identify a clean exact Git commit.'
     }
-    if ($builderRecord.format_version -ne 2 -or
+    if ($builderRecord.format_version -ne 3 -or
         $builderRecord.status -ne 'matched' -or
         $builderRecord.builder_scope -ne 'github-hosted-windows-independent' -or
         $builderRecord.repository -cne $ExpectedRepository -or
@@ -90,6 +92,7 @@ function Assert-IndependentEvidence {
         $builderRecord.incremental -ne $false -or
         $builderRecord.path_remap -ne '<BUILD_ROOT>=Z:/kilogram-source' -or
         $builderRecord.blake3_codegen -ne 'pure-rust-intrinsics' -or
+        $builderRecord.pe_metadata_normalization -ne 'coff-and-debug-timestamps-plus-codeview-guid-zeroed-v1' -or
         $builderRecord.linker.mode -ne 'rust-toolchain-bundled-lld' -or
         $builderRecord.linker.source -ne 'rustc-sysroot-target-bin' -or
         $builderRecord.linker.file -ne 'rust-lld.exe' -or
@@ -123,7 +126,8 @@ function Assert-IndependentEvidence {
         [string]$builderRecord.linker.source -cne [string]$localRecord.linker.source -or
         [string]$builderRecord.linker.file -cne [string]$localRecord.linker.file -or
         [string]$builderRecord.linker.flavor -cne [string]$localRecord.linker.flavor -or
-        [string]$builderRecord.linker.reproducibility_flag -cne [string]$localRecord.linker.reproducibility_flag) {
+        [string]$builderRecord.linker.reproducibility_flag -cne [string]$localRecord.linker.reproducibility_flag -or
+        [string]$builderRecord.pe_metadata_normalization -cne [string]$localRecord.pe_metadata_normalization) {
         throw 'Independent builder did not use the exact locally recorded bundled LLD linker.'
     }
     if ($builderRecord.artifact.file -ne 'kilogram-offline.exe') {
@@ -154,6 +158,7 @@ function Assert-IndependentEvidence {
     }
 
     if (-not $SkipAttestation) {
+        Assert-KilogramPeReproducibilityMetadataNormalized -Path $artifact
         $gh = Get-Command gh -ErrorAction SilentlyContinue
         if ($null -eq $gh) {
             throw 'GitHub CLI (gh) is required to verify signed provenance.'
@@ -174,6 +179,7 @@ function Assert-IndependentEvidence {
     Write-Output "artifact_bytes=$actualBytes"
     Write-Output "blake3_codegen=$($builderRecord.blake3_codegen)"
     Write-Output "linker_sha256=$($builderRecord.linker.sha256)"
+    Write-Output "pe_metadata_normalization=$($builderRecord.pe_metadata_normalization)"
     Write-Output "attestation_verified=$(((-not $SkipAttestation)).ToString().ToLowerInvariant())"
 }
 
@@ -184,20 +190,92 @@ function Invoke-SelfTest {
     New-Item -ItemType Directory -Path $local, $independent | Out-Null
     try {
         $revision = '1234567890abcdef1234567890abcdef12345678'
-        $artifactBytes = [System.Text.Encoding]::UTF8.GetBytes('kilogram independent builder self-test')
+        $artifactBytes = [byte[]]::new(1024)
+        $artifactBytes[0] = 0x4d
+        $artifactBytes[1] = 0x5a
+        [System.BitConverter]::GetBytes([uint32]0x80).CopyTo($artifactBytes, 0x3c)
+        $artifactBytes[0x80] = 0x50
+        $artifactBytes[0x81] = 0x45
+        [System.BitConverter]::GetBytes([uint32]0x11223344).CopyTo($artifactBytes, 0x88)
+        [System.BitConverter]::GetBytes([uint16]1).CopyTo($artifactBytes, 0x86)
+        [System.BitConverter]::GetBytes([uint16]240).CopyTo($artifactBytes, 0x94)
+        [System.BitConverter]::GetBytes([uint16]0x20b).CopyTo($artifactBytes, 0x98)
+        [System.BitConverter]::GetBytes([uint32]16).CopyTo($artifactBytes, 0x104)
+        [System.BitConverter]::GetBytes([uint32]0x1000).CopyTo($artifactBytes, 0x138)
+        [System.BitConverter]::GetBytes([uint32]56).CopyTo($artifactBytes, 0x13c)
+        [System.Text.Encoding]::ASCII.GetBytes('.rdata').CopyTo($artifactBytes, 0x188)
+        [System.BitConverter]::GetBytes([uint32]0x200).CopyTo($artifactBytes, 0x190)
+        [System.BitConverter]::GetBytes([uint32]0x1000).CopyTo($artifactBytes, 0x194)
+        [System.BitConverter]::GetBytes([uint32]0x200).CopyTo($artifactBytes, 0x198)
+        [System.BitConverter]::GetBytes([uint32]0x200).CopyTo($artifactBytes, 0x19c)
+        [System.BitConverter]::GetBytes([uint32]0x55667788).CopyTo($artifactBytes, 0x204)
+        [System.BitConverter]::GetBytes([uint32]2).CopyTo($artifactBytes, 0x20c)
+        [System.BitConverter]::GetBytes([uint32]32).CopyTo($artifactBytes, 0x210)
+        [System.BitConverter]::GetBytes([uint32]0x1038).CopyTo($artifactBytes, 0x214)
+        [System.BitConverter]::GetBytes([uint32]0x238).CopyTo($artifactBytes, 0x218)
+        [System.BitConverter]::GetBytes([uint32]0x33445566).CopyTo($artifactBytes, 0x220)
+        [System.BitConverter]::GetBytes([uint32]16).CopyTo($artifactBytes, 0x228)
+        [System.Text.Encoding]::ASCII.GetBytes('RSDS').CopyTo($artifactBytes, 0x238)
+        for ($index = 0; $index -lt 16; $index++) {
+            $artifactBytes[0x23c + $index] = [byte]($index + 1)
+        }
+        [System.BitConverter]::GetBytes([uint32]1).CopyTo($artifactBytes, 0x24c)
+        [System.Text.Encoding]::ASCII.GetBytes("self.pdb`0").CopyTo($artifactBytes, 0x250)
         $buildA = Join-Path $local 'kilogram-offline-build-a.exe'
         $buildB = Join-Path $local 'kilogram-offline-build-b.exe'
         $artifact = Join-Path $independent 'kilogram-offline.exe'
         [System.IO.File]::WriteAllBytes($buildA, $artifactBytes)
         [System.IO.File]::WriteAllBytes($buildB, $artifactBytes)
         [System.IO.File]::WriteAllBytes($artifact, $artifactBytes)
+        $nonNormalizedRejected = $false
+        try {
+            Assert-KilogramPeReproducibilityMetadataNormalized -Path $artifact
+        }
+        catch {
+            $nonNormalizedRejected = $true
+        }
+        if (-not $nonNormalizedRejected) {
+            throw 'Self-test verifier accepted non-normalized PE metadata.'
+        }
+        $checksumFixture = Join-Path $independent 'checksum-bearing.exe'
+        $checksumBytes = [byte[]]$artifactBytes.Clone()
+        [System.BitConverter]::GetBytes([uint32]1).CopyTo($checksumBytes, 0xd8)
+        [System.IO.File]::WriteAllBytes($checksumFixture, $checksumBytes)
+        $checksumRejected = $false
+        try {
+            Normalize-KilogramPeReproducibilityMetadata -Path $checksumFixture
+        }
+        catch {
+            $checksumRejected = $true
+        }
+        if (-not $checksumRejected) {
+            throw 'Self-test normalizer accepted a PE image with a non-zero checksum.'
+        }
+        $signedFixture = Join-Path $independent 'authenticode-bearing.exe'
+        $signedBytes = [byte[]]$artifactBytes.Clone()
+        [System.BitConverter]::GetBytes([uint32]0x300).CopyTo($signedBytes, 0x128)
+        [System.BitConverter]::GetBytes([uint32]8).CopyTo($signedBytes, 0x12c)
+        [System.IO.File]::WriteAllBytes($signedFixture, $signedBytes)
+        $authenticodeRejected = $false
+        try {
+            Normalize-KilogramPeReproducibilityMetadata -Path $signedFixture
+        }
+        catch {
+            $authenticodeRejected = $true
+        }
+        if (-not $authenticodeRejected) {
+            throw 'Self-test normalizer accepted an Authenticode-bearing PE image.'
+        }
+        Normalize-KilogramPeReproducibilityMetadata -Path $buildA
+        Normalize-KilogramPeReproducibilityMetadata -Path $buildB
+        Normalize-KilogramPeReproducibilityMetadata -Path $artifact
         [System.IO.File]::WriteAllText((Join-Path $local 'SOURCE-MANIFEST.sha256'), 'self-test', [System.Text.UTF8Encoding]::new($false))
         [System.IO.File]::WriteAllText((Join-Path $local 'Cargo.lock'), 'self-test', [System.Text.UTF8Encoding]::new($false))
         [System.IO.File]::WriteAllText((Join-Path $local 'rust-toolchain.toml'), 'self-test', [System.Text.UTF8Encoding]::new($false))
         $hash = Get-Sha256 $artifact
         $length = (Get-Item -LiteralPath $artifact).Length
         $localRecord = [ordered]@{
-            format_version = 2
+            format_version = 3
             status = 'reproducible'
             builder_scope = 'same-host-separate-clean-roots'
             build_root_count = 2
@@ -215,6 +293,7 @@ function Invoke-SelfTest {
             incremental = $false
             path_remap = '<BUILD_ROOT>=Z:/kilogram-source'
             blake3_codegen = 'pure-rust-intrinsics'
+            pe_metadata_normalization = 'coff-and-debug-timestamps-plus-codeview-guid-zeroed-v1'
             linker = [ordered]@{
                 mode = 'rust-toolchain-bundled-lld'
                 source = 'rustc-sysroot-target-bin'
@@ -232,7 +311,7 @@ function Invoke-SelfTest {
         [System.IO.File]::WriteAllText((Join-Path $local 'REPRODUCIBILITY.json'), ($localRecord | ConvertTo-Json -Depth 5), [System.Text.UTF8Encoding]::new($false))
 
         $builderRecord = [ordered]@{
-            format_version = 2
+            format_version = 3
             status = 'matched'
             builder_scope = 'github-hosted-windows-independent'
             repository = 'gugglegum/kilogram-messenger'
@@ -246,6 +325,7 @@ function Invoke-SelfTest {
             incremental = $false
             path_remap = '<BUILD_ROOT>=Z:/kilogram-source'
             blake3_codegen = 'pure-rust-intrinsics'
+            pe_metadata_normalization = 'coff-and-debug-timestamps-plus-codeview-guid-zeroed-v1'
             linker = [ordered]@{
                 mode = 'rust-toolchain-bundled-lld'
                 source = 'rustc-sysroot-target-bin'
@@ -293,6 +373,9 @@ function Invoke-SelfTest {
             throw 'Self-test verifier accepted a tampered independent artifact.'
         }
         Write-Output 'independent_builder_self_test=passed'
+        Write-Output 'non_normalized_pe=rejected'
+        Write-Output 'checksum_bearing_pe=rejected'
+        Write-Output 'authenticode_bearing_pe=rejected'
         Write-Output 'mismatched_linker=rejected'
         Write-Output 'tampered_artifact=rejected'
     }

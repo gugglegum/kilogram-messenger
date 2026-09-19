@@ -121,6 +121,7 @@ function Invoke-CleanBuild([string]$SourceRoot, [string]$TargetRoot, [string]$Ar
     }
     $artifact = Join-Path $output $ArtifactName
     Copy-Item -LiteralPath $built -Destination $artifact
+    Normalize-KilogramPeReproducibilityMetadata -Path $artifact
     [PSCustomObject]@{
         file = $ArtifactName
         sha256 = Get-Sha256 $artifact
@@ -199,7 +200,7 @@ try {
         Pop-Location
     }
     $record = [ordered]@{
-        format_version = 2
+        format_version = 3
         status = if ($equal) { 'reproducible' } else { 'divergent' }
         builder_scope = 'same-host-separate-clean-roots'
         build_root_count = 2
@@ -217,6 +218,7 @@ try {
         incremental = $false
         path_remap = '<BUILD_ROOT>=Z:/kilogram-source'
         blake3_codegen = 'pure-rust-intrinsics'
+        pe_metadata_normalization = 'coff-and-debug-timestamps-plus-codeview-guid-zeroed-v1'
         linker = [ordered]@{
             mode = $linkerIdentity.mode
             source = $linkerIdentity.source

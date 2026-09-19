@@ -4180,21 +4180,28 @@ privacy остаются отдельными задачами.
 - `kilogram-offline` отдельно включает штатный BLAKE3 feature `pure`; resolved
   target graph использует Rust intrinsics и не линкует BLAKE3 C/ASM objects,
   что убирает MSVC `cl.exe` как ещё один artifact input;
-- reproducibility records подняты до format v2 и фиксируют mode/source/file,
-  SHA-256, размер, flavor и reproducibility flag линкера;
+- первый clean LLD release pair имел одинаковый размер и отличался ровно 20
+  host-local PDB-derived bytes: COFF timestamp, два debug-directory timestamps
+  и часть CodeView GUID; code/layout/imports/RVAs совпали;
+- parser-bounded PE normalization v1 валидирует DOS/PE32+/sections/debug
+  bounds и обнуляет только COFF/debug timestamps и 16-byte RSDS GUID; retained
+  divergent fixtures после неё byte-identical, любое иное отличие остаётся;
+- reproducibility records подняты до format v3 и фиксируют mode/source/file,
+  SHA-256, размер, flavor и reproducibility flag линкера, а также exact
+  PE-normalization policy;
 - production verifier требует exact equality linker identity между local и
   GitHub records до artifact/attestation acceptance;
 - self-test отдельно отвергает mismatched linker hash и tampered EXE;
 - real debug `kilogram-offline.exe` успешно собран и запущен через bundled LLD,
   PE header показывает linker version 14.00;
-- release-pair/ZIP/network process на этапе реализации не создавались; exact
-  external match остаётся отдельным явным post-push workflow run;
+- ZIP/network process на этапе реализации не создавались; exact external match
+  остаётся отдельным явным post-push workflow run;
 - контракт зафиксирован в
   [`../docs/RFC-0100-toolchain-bundled-lld-independent-reproduction.md`](../docs/RFC-0100-toolchain-bundled-lld-independent-reproduction.md).
 
 ### Следующий этап
 
-1. Из clean committed/pushed M0.9.77 revision создать local format-v2
+1. Из clean committed/pushed M0.9.77 revision создать local format-v3
    two-root record, вручную повторить GitHub independent build и получить
    matched external hash + attestations. Если exact LLD совпадает, но EXE нет,
    следующим кандидатом на pinning является Windows SDK/import libraries.
