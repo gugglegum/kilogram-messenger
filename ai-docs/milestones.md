@@ -3865,11 +3865,42 @@ pinned `aps1`; markers `alice-sent`, `bob-complete` и `providers-stopped`
   static gate —
   `scripts/verify-kilogram-mailbox-legacy-upgrade-boundary.ps1`.
 
+### M0.9.71 — exact mailbox HTTPS-copy retirement: завершено
+
+Реализовано:
+
+- sender с authenticated exact locator теперь сначала выполняет volunteer Iroh
+  replication, а не HTTPS PUT;
+- suppression разрешён только после durable plan/dispatch binding, exact
+  equality commitment/store keys и минимум двух signed transport-distinct
+  receipts именно из committed set;
+- legacy receipt от прежнего random provider не считается qualifying после
+  установки exact locator;
+- pending HTTP upload и новый `ReplicatedOutboundCommit` меняются одной
+  Immediate-durable Redb transaction; restart до commit повторяет только
+  локальный переход по сохранённым receipts, а после commit не воскрешает HTTP;
+- старый формат HTTPS stored receipt сохранён byte-compatible в той же таблице
+  через однозначный framed тип новой записи;
+- legacy capability, incomplete exact threshold и reverse acknowledgement
+  сохраняют HTTPS compatibility; уже созданная HTTP copy задним числом не
+  удаляется;
+- runtime evidence явно различает `http_put=not-attempted` и `attempted`, а
+  durability — `exact-volunteer-replication` и `https-compatibility`; IPC v25
+  не менялся;
+- mailbox-client tests проверяют atomic transition, replay, expiry и запрет двух
+  receipts от одного transport; replication test исключает legacy receipt из
+  exact threshold; CLI test фиксирует три policy branches;
+- contract зафиксирован в
+  [`../docs/RFC-0094-exact-mailbox-https-copy-retirement.md`](../docs/RFC-0094-exact-mailbox-https-copy-retirement.md),
+  static gate —
+  `scripts/verify-kilogram-mailbox-https-retirement-boundary.ps1`.
+
 ### Следующий этап
 
-1. Спроектировать и доказать безопасное retirement HTTPS compatibility copy
-   после convergence exact capability, включая поведение старых клиентов и
-   временно недоступных volunteer providers.
+1. Провести clean external M0.9.72 exact-delivery run, в котором HTTPS fixture
+   отсутствует с самого начала, sender доказывает `http_put=not-attempted`, а
+   recipient получает, commit-ит и удаляет обе volunteer replicas после ухода
+   Alice offline.
 2. До первого публичного security artifact pin-нуть linker/SDK либо controlled
    alternative и повторить M0.9.59 до matched external hash и attestation.
 3. Optional autostart/background mode оставить отдельной явной настройкой, не

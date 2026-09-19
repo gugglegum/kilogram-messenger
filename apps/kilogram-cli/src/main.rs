@@ -11366,7 +11366,9 @@ fn collect_runtime_outbox_status(state_directory: &Path) -> Result<RuntimeIpcOut
                     .is_ok()
                 });
             match ledger.outbound_state(dispatch.mailbox_id(), dispatch.item_id())? {
-                Some(MailboxOutboundState::Stored(_)) => RuntimeIpcQueueState::MailboxStored,
+                Some(MailboxOutboundState::Stored(_) | MailboxOutboundState::Replicated(_)) => {
+                    RuntimeIpcQueueState::MailboxStored
+                }
                 Some(MailboxOutboundState::Pending(_))
                     if dispatch.expires_at_unix_seconds() <= now =>
                 {
@@ -18731,6 +18733,33 @@ struct PreparedRuntimeMailboxUpload {
     replica_set_locator: Option<RuntimeMailboxReplicaSetLocator>,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum RuntimeMailboxHttpsCompatibilityCopy {
+    RetainedLegacyCapability,
+    RetainedIncompleteExactReplication,
+    RetainedCompatibilityOnlyPayload,
+    SuppressedExactVolunteerDurability,
+}
+
+impl RuntimeMailboxHttpsCompatibilityCopy {
+    fn for_delivery(exact_replica_set: bool, volunteer_durability_satisfied: bool) -> Self {
+        match (exact_replica_set, volunteer_durability_satisfied) {
+            (true, true) => Self::SuppressedExactVolunteerDurability,
+            (true, false) => Self::RetainedIncompleteExactReplication,
+            (false, _) => Self::RetainedLegacyCapability,
+        }
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::RetainedLegacyCapability => "retained-legacy-capability",
+            Self::RetainedIncompleteExactReplication => "retained-incomplete-exact-replication",
+            Self::RetainedCompatibilityOnlyPayload => "retained-compatibility-only-payload",
+            Self::SuppressedExactVolunteerDurability => "suppressed-exact-volunteer-durability",
+        }
+    }
+}
+
 fn open_current_peer_mailbox_binding(
     signed: &SignedRuntimePeerMailboxBinding,
     prepared: &PreparedRuntimeDelivery,
@@ -18991,7 +19020,7 @@ async fn attempt_runtime_volunteer_mailbox_replication(
     if before.is_satisfied() {
         println!(
             "runtime_mailbox_replication_receipts={}/{}",
-            before.receipts.len(),
+            before.qualifying_receipt_count(),
             before.plan.required_receipts()
         );
         println!("runtime_mailbox_replication_status=satisfied");
@@ -19055,7 +19084,7 @@ async fn attempt_runtime_volunteer_mailbox_replication(
         .filter(|offer| !retained_store_keys.contains(&offer.store_key()))
         .collect::<Vec<_>>();
     let mut failures = Vec::new();
-    let mut receipt_count = before.receipts.len();
+    let mut receipt_count = before.qualifying_receipt_count();
     for offer in selected {
         if receipt_count >= usize::from(plan.requested_replicas()) {
             break;
@@ -19094,7 +19123,7 @@ async fn attempt_runtime_volunteer_mailbox_replication(
         .context("mailbox replication plan disappeared after PUT attempts")?;
     println!(
         "runtime_mailbox_replication_receipts={}/{}",
-        status.receipts.len(),
+        status.qualifying_receipt_count(),
         status.plan.required_receipts()
     );
     println!(
@@ -19102,7 +19131,6 @@ async fn attempt_runtime_volunteer_mailbox_replication(
         status.plan.requested_replicas()
     );
     println!("runtime_mailbox_replication_transport_distinct=true");
-    println!("runtime_mailbox_replication_http_delivery_compatibility=true");
     if status.is_satisfied() {
         println!("runtime_mailbox_replication_status=satisfied");
         Ok(true)
@@ -19123,44 +19151,153 @@ async fn upload_runtime_mailbox_request(
     state_directory: &Path,
     upload: PreparedRuntimeMailboxUpload,
 ) -> Result<()> {
+    let mut exact_replication_attempted = false;
     if let Some(dispatch_binding) = upload.replication_dispatch_binding {
-        let replication_ledger = runtime_mailbox_replication_ledger(state_directory)?;
-        let now = unix_time_now()?;
-        let (_, plan) = replication_ledger.ensure_plan(
-            &upload.pending.request,
-            dispatch_binding,
-            random_mailbox_replication_selection_salt()?,
-            DEFAULT_REPLICATION_TARGETS,
-            DEFAULT_REQUIRED_REPLICA_RECEIPTS,
-            now,
-        )?;
-        if let Some(locator) = &upload.replica_set_locator {
-            replication_ledger.ensure_replica_set_locator(
-                &plan,
-                locator.commitment_id,
-                &locator.store_keys,
+        {
+            let replication_ledger = runtime_mailbox_replication_ledger(state_directory)?;
+            let now = unix_time_now()?;
+            let (_, plan) = replication_ledger.ensure_plan(
+                &upload.pending.request,
+                dispatch_binding,
+                random_mailbox_replication_selection_salt()?,
+                DEFAULT_REPLICATION_TARGETS,
+                DEFAULT_REQUIRED_REPLICA_RECEIPTS,
                 now,
             )?;
-            println!(
-                "runtime_mailbox_replica_set_commitment_id={}",
-                mailbox_commitment_hex(&locator.commitment_id)
-            );
-            println!(
-                "runtime_mailbox_replica_set_store_count={}",
-                locator.store_keys.len()
-            );
-            println!("runtime_mailbox_replica_set_discovery=exact-authenticated");
-        } else {
-            println!("runtime_mailbox_replica_set_discovery=legacy-random-fallback");
+            if let Some(locator) = &upload.replica_set_locator {
+                replication_ledger.ensure_replica_set_locator(
+                    &plan,
+                    locator.commitment_id,
+                    &locator.store_keys,
+                    now,
+                )?;
+                println!(
+                    "runtime_mailbox_replica_set_commitment_id={}",
+                    mailbox_commitment_hex(&locator.commitment_id)
+                );
+                println!(
+                    "runtime_mailbox_replica_set_store_count={}",
+                    locator.store_keys.len()
+                );
+                println!("runtime_mailbox_replica_set_discovery=exact-authenticated");
+            } else {
+                println!("runtime_mailbox_replica_set_discovery=legacy-random-fallback");
+            }
+            println!("runtime_mailbox_replication_status=durable-plan-ready");
         }
-        println!("runtime_mailbox_replication_status=durable-plan-ready");
+
+        if let Some(expected_locator) = &upload.replica_set_locator {
+            exact_replication_attempted = true;
+            let volunteer_durability_satisfied =
+                match attempt_runtime_volunteer_mailbox_replication(
+                    endpoint,
+                    state_directory,
+                    &upload.pending.request,
+                    dispatch_binding,
+                )
+                .await
+                {
+                    Ok(satisfied) => satisfied,
+                    Err(error) => {
+                        eprintln!("runtime_mailbox_replication_status=failed error={error:#}");
+                        false
+                    }
+                };
+            if volunteer_durability_satisfied {
+                let exact_commit = (|| {
+                    let replication_ledger = runtime_mailbox_replication_ledger(state_directory)?;
+                    let status = replication_ledger
+                        .status(
+                            upload.pending.request.mailbox_id(),
+                            upload.pending.request.item_id(),
+                        )?
+                        .context("exact volunteer replication status disappeared")?;
+                    let durable_locator = status
+                        .replica_set_locator
+                        .as_ref()
+                        .context("satisfied volunteer replication has no exact locator")?;
+                    ensure!(
+                        status.plan.dispatch_binding() == &dispatch_binding
+                            && durable_locator.commitment_id() == &expected_locator.commitment_id
+                            && durable_locator.store_keys()
+                                == expected_locator.store_keys.as_slice()
+                            && status.is_satisfied(),
+                        "satisfied volunteer replication does not match the authenticated exact locator"
+                    );
+                    let receipts = status
+                        .qualifying_receipts()
+                        .into_iter()
+                        .map(|receipt| (*receipt.transport_identity(), receipt.receipt().clone()))
+                        .collect::<Vec<_>>();
+                    let required_receipts = status.plan.required_receipts();
+                    let commitment_id = *durable_locator.commitment_id();
+                    let store_keys = durable_locator.store_keys().to_vec();
+                    drop(replication_ledger);
+
+                    let ledger = runtime_mailbox_ledger(state_directory)?;
+                    ledger.mark_outbound_replicated(
+                        &upload.pending.request,
+                        upload.pending.expected_store_key,
+                        dispatch_binding,
+                        commitment_id,
+                        &store_keys,
+                        required_receipts,
+                        &receipts,
+                        unix_time_now()?,
+                    )
+                })();
+                match exact_commit {
+                    Ok(committed) => {
+                        let compatibility =
+                            RuntimeMailboxHttpsCompatibilityCopy::for_delivery(true, true);
+                        println!(
+                            "runtime_mailbox_https_compatibility_copy={}",
+                            compatibility.label()
+                        );
+                        println!("runtime_mailbox_id={}", committed.mailbox_id());
+                        println!("runtime_mailbox_item_id={}", committed.item_id());
+                        println!("runtime_mailbox_delivery_durability=exact-volunteer-replication");
+                        println!("runtime_mailbox_http_put=not-attempted");
+                        if let Some(queue_id) = upload.queue_id {
+                            println!("runtime_queue_id={queue_id}");
+                            println!("runtime_outbound_status=mailbox-stored");
+                        } else {
+                            println!("runtime_mailbox_payload=reverse-acknowledgement");
+                            println!("runtime_mailbox_status=mailbox-stored");
+                        }
+                        return Ok(());
+                    }
+                    Err(error) => {
+                        eprintln!("runtime_mailbox_exact_completion_status=failed error={error:#}");
+                    }
+                }
+            }
+            let compatibility = RuntimeMailboxHttpsCompatibilityCopy::for_delivery(true, false);
+            println!(
+                "runtime_mailbox_https_compatibility_copy={}",
+                compatibility.label()
+            );
+        } else {
+            let compatibility = RuntimeMailboxHttpsCompatibilityCopy::for_delivery(false, false);
+            println!(
+                "runtime_mailbox_https_compatibility_copy={}",
+                compatibility.label()
+            );
+        }
+    } else {
+        println!(
+            "runtime_mailbox_https_compatibility_copy={}",
+            RuntimeMailboxHttpsCompatibilityCopy::RetainedCompatibilityOnlyPayload.label()
+        );
     }
+    println!("runtime_mailbox_http_put=attempted");
     let client =
         MailboxHttpClient::new(&upload.service_base_url, upload.pending.expected_store_key)?;
     let response = match client.put(&upload.pending.request).await {
         Ok(response) => response,
         Err(error) => {
-            if let Some(dispatch_binding) = upload.replication_dispatch_binding
+            if !exact_replication_attempted
+                && let Some(dispatch_binding) = upload.replication_dispatch_binding
                 && let Err(replication_error) = attempt_runtime_volunteer_mailbox_replication(
                     endpoint,
                     state_directory,
@@ -19183,6 +19320,7 @@ async fn upload_runtime_mailbox_request(
     )?;
     println!("runtime_mailbox_id={}", stored.mailbox_id());
     println!("runtime_mailbox_item_id={}", stored.item_id());
+    println!("runtime_mailbox_delivery_durability=https-compatibility");
     if let Some(queue_id) = upload.queue_id {
         println!("runtime_queue_id={queue_id}");
         println!("runtime_outbound_status=mailbox-stored");
@@ -19623,7 +19761,7 @@ async fn attempt_runtime_mailbox_fallback(
         let ledger = runtime_mailbox_ledger(state_directory)?;
         let state = ledger.outbound_state(dispatch.mailbox_id(), dispatch.item_id())?;
         match state {
-            Some(MailboxOutboundState::Stored(_)) => Ok(None),
+            Some(MailboxOutboundState::Stored(_) | MailboxOutboundState::Replicated(_)) => Ok(None),
             Some(MailboxOutboundState::Pending(pending)) => {
                 ensure!(
                     pending.request.mailbox_id() == dispatch.mailbox_id()
@@ -20029,7 +20167,9 @@ async fn prepare_runtime_reverse_mailbox_acknowledgement(
         let item_id = runtime_mailbox_event_item_id(acknowledgement_id, signed.binding_id());
         let ledger = runtime_mailbox_ledger(state_directory)?;
         match ledger.outbound_state(binding.address().mailbox_id(), item_id)? {
-            Some(MailboxOutboundState::Stored(_)) => return Ok(None),
+            Some(MailboxOutboundState::Stored(_) | MailboxOutboundState::Replicated(_)) => {
+                return Ok(None);
+            }
             Some(MailboxOutboundState::Pending(pending)) => {
                 return Ok(Some(PreparedRuntimeMailboxUpload {
                     pending,
@@ -27578,6 +27718,26 @@ mod tests {
             .context("open mailbox client ledger read-only");
         assert!(redb_repair_required(&error));
         assert!(!redb_repair_required(&anyhow::anyhow!("permission denied")));
+    }
+
+    #[test]
+    fn https_compatibility_copy_is_suppressed_only_after_exact_volunteer_durability() {
+        assert_eq!(
+            RuntimeMailboxHttpsCompatibilityCopy::for_delivery(false, false),
+            RuntimeMailboxHttpsCompatibilityCopy::RetainedLegacyCapability
+        );
+        assert_eq!(
+            RuntimeMailboxHttpsCompatibilityCopy::for_delivery(false, true),
+            RuntimeMailboxHttpsCompatibilityCopy::RetainedLegacyCapability
+        );
+        assert_eq!(
+            RuntimeMailboxHttpsCompatibilityCopy::for_delivery(true, false),
+            RuntimeMailboxHttpsCompatibilityCopy::RetainedIncompleteExactReplication
+        );
+        assert_eq!(
+            RuntimeMailboxHttpsCompatibilityCopy::for_delivery(true, true),
+            RuntimeMailboxHttpsCompatibilityCopy::SuppressedExactVolunteerDurability
+        );
     }
 
     #[cfg(debug_assertions)]

@@ -732,6 +732,11 @@ EXE не создавались.
   до exact authenticated replica set из минимум двух transport-distinct stores;
   ordered overlap сохраняется до нового ACK, message replay отсутствует,
   IPC v25 показывает locator state, HTTPS compatibility пока сохранена.
+- [`../docs/RFC-0094-exact-mailbox-https-copy-retirement.md`](../docs/RFC-0094-exact-mailbox-https-copy-retirement.md) —
+  реализованный M0.9.71 per-item retirement HTTPS compatibility copy: exact
+  capability сначала получает два transport-distinct signed volunteer receipt,
+  затем атомарно фиксируется как replicated и не вызывает HTTP; legacy,
+  incomplete exact и reverse-ACK пути сохраняют совместимость.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

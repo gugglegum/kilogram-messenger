@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{collections::BTreeSet, path::PathBuf};
 
 use anyhow::{Context, Result, ensure};
 use kilogram_crypto::DeviceEncryptionIdentity;
@@ -26,6 +26,10 @@ const DELETED_INBOUND_TABLE: TableDefinition<&[u8], &[u8]> =
 const RECORD_VERSION: u8 = 1;
 const MAILBOX_ITEM_KEY_BYTES: usize = 64;
 const MAX_COMPACT_RECORD_BYTES: usize = 4 * 1024;
+const REPLICATED_OUTBOUND_RECORD_PREFIX: &[u8] = b"\xffKRP1";
+const MAX_REPLICATED_OUTBOUND_RECORD_BYTES: usize = 16 * 1024;
+const MIN_REPLICATED_OUTBOUND_RECEIPTS: usize = 2;
+const MAX_REPLICATED_OUTBOUND_RECEIPTS: usize = 8;
 const MAX_ABSOLUTE_RECORDS: u64 = 1_000_000;
 
 pub const DEFAULT_MAX_PENDING_UPLOADS: u64 = 4_096;
@@ -189,6 +193,174 @@ impl StoredOutboundReceipt {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+struct ReplicatedOutboundReceipt {
+    transport_identity: [u8; 32],
+    receipt: MailboxStoredReceipt,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct ReplicatedOutboundCommit {
+    version: u8,
+    mailbox_id: MailboxId,
+    item_id: MailboxItemId,
+    request_digest: [u8; 32],
+    expected_service_store_key: MailboxStoreKey,
+    dispatch_binding: [u8; 32],
+    replica_set_commitment_id: [u8; 32],
+    replica_set_store_keys: Vec<MailboxStoreKey>,
+    required_receipts: u8,
+    receipts: Vec<ReplicatedOutboundReceipt>,
+    recorded_at_unix_seconds: u64,
+    expires_at_unix_seconds: u64,
+}
+
+impl ReplicatedOutboundCommit {
+    fn validate(&self) -> Result<()> {
+        ensure!(
+            self.version == RECORD_VERSION
+                && self.dispatch_binding != [0_u8; 32]
+                && self.replica_set_commitment_id != [0_u8; 32]
+                && (MIN_REPLICATED_OUTBOUND_RECEIPTS..=MAX_REPLICATED_OUTBOUND_RECEIPTS)
+                    .contains(&usize::from(self.required_receipts))
+                && usize::from(self.required_receipts) <= self.receipts.len()
+                && self.receipts.len() <= self.replica_set_store_keys.len()
+                && self.replica_set_store_keys.len() <= MAX_REPLICATED_OUTBOUND_RECEIPTS
+                && self.recorded_at_unix_seconds < self.expires_at_unix_seconds
+                && self
+                    .replica_set_store_keys
+                    .windows(2)
+                    .all(|pair| pair[0] < pair[1])
+                && self
+                    .receipts
+                    .windows(2)
+                    .all(|pair| { pair[0].receipt.store_key() < pair[1].receipt.store_key() }),
+            "replicated outbound mailbox commit metadata is invalid"
+        );
+        let mut transport_identities = BTreeSet::new();
+        for evidence in &self.receipts {
+            evidence.receipt.verify_signature()?;
+            ensure!(
+                evidence.transport_identity != [0_u8; 32]
+                    && evidence.receipt.mailbox_id() == self.mailbox_id
+                    && evidence.receipt.item_id() == self.item_id
+                    && evidence.receipt.expires_at_unix_seconds() >= self.expires_at_unix_seconds
+                    && self
+                        .replica_set_store_keys
+                        .binary_search(&evidence.receipt.store_key())
+                        .is_ok()
+                    && transport_identities.insert(evidence.transport_identity),
+                "replicated outbound mailbox receipt is inconsistent"
+            );
+        }
+        Ok(())
+    }
+
+    fn encode(&self) -> Result<Vec<u8>> {
+        self.validate()?;
+        let payload =
+            postcard::to_allocvec(self).context("encode replicated outbound mailbox commit")?;
+        ensure!(
+            payload.len() + REPLICATED_OUTBOUND_RECORD_PREFIX.len()
+                <= MAX_REPLICATED_OUTBOUND_RECORD_BYTES,
+            "replicated outbound mailbox commit is too large"
+        );
+        let mut encoded =
+            Vec::with_capacity(REPLICATED_OUTBOUND_RECORD_PREFIX.len() + payload.len());
+        encoded.extend_from_slice(REPLICATED_OUTBOUND_RECORD_PREFIX);
+        encoded.extend_from_slice(&payload);
+        Ok(encoded)
+    }
+
+    fn decode(bytes: &[u8]) -> Result<Self> {
+        ensure!(
+            bytes.starts_with(REPLICATED_OUTBOUND_RECORD_PREFIX)
+                && bytes.len() <= MAX_REPLICATED_OUTBOUND_RECORD_BYTES,
+            "replicated outbound mailbox commit framing is invalid"
+        );
+        let value: Self = postcard::from_bytes(&bytes[REPLICATED_OUTBOUND_RECORD_PREFIX.len()..])
+            .context("decode replicated outbound mailbox commit")?;
+        value.validate()?;
+        Ok(value)
+    }
+
+    pub fn mailbox_id(&self) -> MailboxId {
+        self.mailbox_id
+    }
+
+    pub fn item_id(&self) -> MailboxItemId {
+        self.item_id
+    }
+
+    pub fn replica_set_commitment_id(&self) -> &[u8; 32] {
+        &self.replica_set_commitment_id
+    }
+
+    pub fn receipt_count(&self) -> usize {
+        self.receipts.len()
+    }
+
+    pub fn required_receipts(&self) -> u8 {
+        self.required_receipts
+    }
+
+    pub fn recorded_at_unix_seconds(&self) -> u64 {
+        self.recorded_at_unix_seconds
+    }
+
+    fn same_logical_record(&self, other: &Self) -> bool {
+        self.version == other.version
+            && self.mailbox_id == other.mailbox_id
+            && self.item_id == other.item_id
+            && self.request_digest == other.request_digest
+            && self.expected_service_store_key == other.expected_service_store_key
+            && self.dispatch_binding == other.dispatch_binding
+            && self.replica_set_commitment_id == other.replica_set_commitment_id
+            && self.replica_set_store_keys == other.replica_set_store_keys
+            && self.required_receipts == other.required_receipts
+            && self.receipts == other.receipts
+            && self.expires_at_unix_seconds == other.expires_at_unix_seconds
+    }
+}
+
+enum DurableOutboundRecord {
+    Https(StoredOutboundReceipt),
+    ExactVolunteer(ReplicatedOutboundCommit),
+}
+
+impl DurableOutboundRecord {
+    fn decode(bytes: &[u8]) -> Result<Self> {
+        if bytes.starts_with(REPLICATED_OUTBOUND_RECORD_PREFIX) {
+            Ok(Self::ExactVolunteer(ReplicatedOutboundCommit::decode(
+                bytes,
+            )?))
+        } else {
+            Ok(Self::Https(StoredOutboundReceipt::decode(bytes)?))
+        }
+    }
+
+    fn request_digest(&self) -> &[u8; 32] {
+        match self {
+            Self::Https(record) => &record.request_digest,
+            Self::ExactVolunteer(record) => &record.request_digest,
+        }
+    }
+
+    fn expected_service_store_key(&self) -> MailboxStoreKey {
+        match self {
+            Self::Https(record) => record.expected_store_key,
+            Self::ExactVolunteer(record) => record.expected_service_store_key,
+        }
+    }
+
+    fn expires_at_unix_seconds(&self) -> u64 {
+        match self {
+            Self::Https(record) => record.receipt.expires_at_unix_seconds(),
+            Self::ExactVolunteer(record) => record.expires_at_unix_seconds,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 struct InboundCommitRecord {
     version: u8,
     mailbox_id: MailboxId,
@@ -311,6 +483,7 @@ pub enum OutboundEnqueueOutcome {
 pub enum MailboxOutboundState {
     Pending(PendingMailboxUpload),
     Stored(StoredOutboundReceipt),
+    Replicated(ReplicatedOutboundCommit),
 }
 
 pub struct PreparedInboundItem {
@@ -431,9 +604,7 @@ impl MailboxClientLedger {
         }
         for entry in read.open_table(STORED_OUTBOUND_TABLE)?.iter()? {
             let (_, value) = entry?;
-            if StoredOutboundReceipt::decode(value.value())?
-                .receipt
-                .expires_at_unix_seconds()
+            if DurableOutboundRecord::decode(value.value())?.expires_at_unix_seconds()
                 <= now_unix_seconds
             {
                 cleanup_required = true;
@@ -518,9 +689,9 @@ impl MailboxClientLedger {
             .set_durability(Durability::Immediate)
             .context("set mailbox enqueue durability")?;
         if let Some(current) = read_value(&write, STORED_OUTBOUND_TABLE, &key)? {
-            let current = StoredOutboundReceipt::decode(&current)?;
-            let outcome = if current.request_digest == request_digest(&record.request)?
-                && current.expected_store_key == expected_store_key
+            let current = DurableOutboundRecord::decode(&current)?;
+            let outcome = if current.request_digest() == &request_digest(&record.request)?
+                && current.expected_service_store_key() == expected_store_key
             {
                 OutboundEnqueueOutcome::AlreadyStored
             } else {
@@ -591,9 +762,12 @@ impl MailboxClientLedger {
             .open_table(STORED_OUTBOUND_TABLE)?
             .get(key.as_slice())?
         {
-            return Ok(Some(MailboxOutboundState::Stored(
-                StoredOutboundReceipt::decode(value.value())?,
-            )));
+            return Ok(Some(match DurableOutboundRecord::decode(value.value())? {
+                DurableOutboundRecord::Https(record) => MailboxOutboundState::Stored(record),
+                DurableOutboundRecord::ExactVolunteer(record) => {
+                    MailboxOutboundState::Replicated(record)
+                }
+            }));
         }
         if let Some(value) = read
             .open_table(PENDING_OUTBOUND_TABLE)?
@@ -650,13 +824,19 @@ impl MailboxClientLedger {
                 "pending mailbox upload changed before receipt commit"
             );
         } else if let Some(current) = read_value(&write, STORED_OUTBOUND_TABLE, &key)? {
-            let current = StoredOutboundReceipt::decode(&current)?;
-            ensure!(
-                current.same_logical_record(&record),
-                "stored mailbox receipt replay conflicts"
-            );
-            write.commit().context("commit mailbox receipt replay")?;
-            return Ok(current);
+            match DurableOutboundRecord::decode(&current)? {
+                DurableOutboundRecord::Https(current) => {
+                    ensure!(
+                        current.same_logical_record(&record),
+                        "stored mailbox receipt replay conflicts"
+                    );
+                    write.commit().context("commit mailbox receipt replay")?;
+                    return Ok(current);
+                }
+                DurableOutboundRecord::ExactVolunteer(_) => {
+                    anyhow::bail!("mailbox item already completed by exact volunteer replication")
+                }
+            }
         } else {
             anyhow::bail!("pending mailbox upload disappeared before receipt commit");
         }
@@ -675,6 +855,109 @@ impl MailboxClientLedger {
             .open_table(PENDING_OUTBOUND_TABLE)?
             .remove(key.as_slice())?;
         write.commit().context("commit mailbox stored receipt")?;
+        Ok(record)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn mark_outbound_replicated(
+        &self,
+        request: &MailboxPutRequest,
+        expected_service_store_key: MailboxStoreKey,
+        dispatch_binding: [u8; 32],
+        replica_set_commitment_id: [u8; 32],
+        replica_set_store_keys: &[MailboxStoreKey],
+        required_receipts: u8,
+        receipts: &[([u8; 32], MailboxStoredReceipt)],
+        recorded_at_unix_seconds: u64,
+    ) -> Result<ReplicatedOutboundCommit> {
+        MailboxPutRequest::decode_and_verify(&request.encode()?)?;
+        let envelope = MailboxEnvelope::decode(request.envelope())?;
+        let mut canonical_store_keys = replica_set_store_keys.to_vec();
+        canonical_store_keys.sort_unstable();
+        ensure!(
+            canonical_store_keys.len() == replica_set_store_keys.len()
+                && canonical_store_keys
+                    .windows(2)
+                    .all(|pair| pair[0] < pair[1]),
+            "exact replica-set store keys are not unique"
+        );
+        let mut canonical_receipts = receipts
+            .iter()
+            .map(|(transport_identity, receipt)| ReplicatedOutboundReceipt {
+                transport_identity: *transport_identity,
+                receipt: receipt.clone(),
+            })
+            .collect::<Vec<_>>();
+        canonical_receipts.sort_by_key(|evidence| evidence.receipt.store_key());
+        for evidence in &canonical_receipts {
+            evidence.receipt.verify(request.envelope())?;
+        }
+        let record = ReplicatedOutboundCommit {
+            version: RECORD_VERSION,
+            mailbox_id: request.mailbox_id(),
+            item_id: request.item_id(),
+            request_digest: request_digest(request)?,
+            expected_service_store_key,
+            dispatch_binding,
+            replica_set_commitment_id,
+            replica_set_store_keys: canonical_store_keys,
+            required_receipts,
+            receipts: canonical_receipts,
+            recorded_at_unix_seconds,
+            expires_at_unix_seconds: envelope.expires_at_unix_seconds(),
+        };
+        let encoded = record.encode()?;
+        let key = item_key(record.mailbox_id, record.item_id);
+        let mut write = self
+            .database
+            .begin_write()
+            .context("begin exact volunteer replication commit")?;
+        write
+            .set_durability(Durability::Immediate)
+            .context("set exact volunteer replication commit durability")?;
+        if let Some(pending) = read_value(&write, PENDING_OUTBOUND_TABLE, &key)? {
+            let pending = PendingOutboundRecord::decode(&pending)?;
+            ensure!(
+                pending.request == *request
+                    && pending.expected_store_key == expected_service_store_key,
+                "pending mailbox upload changed before exact replication commit"
+            );
+        } else if let Some(current) = read_value(&write, STORED_OUTBOUND_TABLE, &key)? {
+            match DurableOutboundRecord::decode(&current)? {
+                DurableOutboundRecord::ExactVolunteer(current) => {
+                    ensure!(
+                        current.same_logical_record(&record),
+                        "exact volunteer replication commit replay conflicts"
+                    );
+                    write
+                        .commit()
+                        .context("commit exact volunteer replication replay")?;
+                    return Ok(current);
+                }
+                DurableOutboundRecord::Https(_) => {
+                    anyhow::bail!("mailbox item already completed by HTTPS compatibility storage")
+                }
+            }
+        } else {
+            anyhow::bail!("pending mailbox upload disappeared before exact replication commit");
+        }
+        let receipt_count = write
+            .open_table(STORED_OUTBOUND_TABLE)?
+            .len()
+            .context("count durable outbound mailbox commits")?;
+        ensure!(
+            receipt_count < self.config.max_retained_receipts,
+            "durable outbound mailbox commit capacity exceeded"
+        );
+        write
+            .open_table(STORED_OUTBOUND_TABLE)?
+            .insert(key.as_slice(), encoded.as_slice())?;
+        write
+            .open_table(PENDING_OUTBOUND_TABLE)?
+            .remove(key.as_slice())?;
+        write
+            .commit()
+            .context("commit exact volunteer replicated outbound mailbox item")?;
         Ok(record)
     }
 
@@ -877,8 +1160,10 @@ impl MailboxClientLedger {
             })?;
         let removed_stored_receipts =
             remove_expired_records(&write, STORED_OUTBOUND_TABLE, |bytes| {
-                let record = StoredOutboundReceipt::decode(bytes)?;
-                Ok(record.receipt.expires_at_unix_seconds() > now_unix_seconds)
+                Ok(
+                    DurableOutboundRecord::decode(bytes)?.expires_at_unix_seconds()
+                        > now_unix_seconds,
+                )
             })?;
         let removed_inbound_commits =
             remove_expired_records(&write, INBOUND_COMMIT_TABLE, |bytes| {
@@ -1120,6 +1405,129 @@ mod tests {
             ledger
                 .outbound_state(address.mailbox_id(), item_id)?
                 .is_none()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn exact_volunteer_receipts_atomically_replace_pending_https_upload() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let ledger = MailboxClientLedger::open(MailboxClientLedgerConfig::new(
+            directory.path().join("client"),
+        ))?;
+        let service_store_key = MailboxStoreIdentity::from_secret_bytes([9_u8; 32]).store_key();
+        let read_capability = MailboxReadCapability::from_secret_bytes([1_u8; 32]);
+        let write_capability = MailboxWriteCapability::from_secret_bytes([2_u8; 32]);
+        let address = MailboxAddress::new(read_capability.read_key(), write_capability.write_key());
+        let recipient = DeviceEncryptionIdentity::from_secret_bytes([3_u8; 32]);
+        let item_id = MailboxItemId::from_bytes([4_u8; 32]);
+        let envelope = MailboxEnvelope::seal(
+            address.mailbox_id(),
+            item_id,
+            1_000,
+            1_600,
+            recipient.public_key(),
+            b"exact-volunteer-replication",
+        )?
+        .encode()?;
+        let request = MailboxPutRequest::new(
+            address,
+            write_capability.authorize(address, item_id, 600, &envelope)?,
+            envelope,
+        )?;
+        assert_eq!(
+            ledger.enqueue_outbound(request.clone(), service_store_key, 1_000)?,
+            OutboundEnqueueOutcome::Created
+        );
+
+        let mut evidence = Vec::new();
+        let mut replica_set_store_keys = Vec::new();
+        for (secret, transport_identity) in [(11_u8, [21_u8; 32]), (12_u8, [22_u8; 32])] {
+            let identity = MailboxStoreIdentity::from_secret_bytes([secret; 32]);
+            let store_key = identity.store_key();
+            let store = BlindMailboxStore::open(
+                MailboxStoreConfig::new(directory.path().join(format!("store-{secret}"))),
+                identity,
+            )?;
+            let (put_address, authorization, envelope) = request.clone().into_parts();
+            let response = MailboxPutResponse::from_outcome(store.put(
+                put_address,
+                &authorization,
+                envelope,
+                1_001,
+            )?);
+            evidence.push((
+                transport_identity,
+                response
+                    .stored_receipt()
+                    .context("volunteer receipt")?
+                    .clone(),
+            ));
+            replica_set_store_keys.push(store_key);
+        }
+        replica_set_store_keys.sort_unstable();
+
+        assert!(
+            ledger
+                .mark_outbound_replicated(
+                    &request,
+                    service_store_key,
+                    [31_u8; 32],
+                    [32_u8; 32],
+                    &replica_set_store_keys,
+                    2,
+                    &[
+                        (evidence[0].0, evidence[0].1.clone()),
+                        (evidence[0].0, evidence[1].1.clone())
+                    ],
+                    1_002,
+                )
+                .is_err(),
+            "two receipts from one transport must not suppress HTTPS"
+        );
+        let committed = ledger.mark_outbound_replicated(
+            &request,
+            service_store_key,
+            [31_u8; 32],
+            [32_u8; 32],
+            &replica_set_store_keys,
+            2,
+            &evidence,
+            1_002,
+        )?;
+        assert_eq!(committed.receipt_count(), 2);
+        assert_eq!(committed.required_receipts(), 2);
+        assert_eq!(committed.replica_set_commitment_id(), &[32_u8; 32]);
+        assert!(ledger.next_pending_outbound()?.is_none());
+        drop(ledger);
+        let ledger = MailboxClientLedger::open(MailboxClientLedgerConfig::new(
+            directory.path().join("client"),
+        ))?;
+        assert!(ledger.next_pending_outbound()?.is_none());
+        assert!(matches!(
+            ledger.outbound_state(address.mailbox_id(), item_id)?,
+            Some(MailboxOutboundState::Replicated(_))
+        ));
+        let replayed = ledger.mark_outbound_replicated(
+            &request,
+            service_store_key,
+            [31_u8; 32],
+            [32_u8; 32],
+            &replica_set_store_keys,
+            2,
+            &evidence,
+            1_003,
+        )?;
+        assert_eq!(replayed.recorded_at_unix_seconds(), 1_002);
+        assert_eq!(ledger.counts()?, (0, 1, 0, 0));
+        assert_eq!(
+            ledger.cleanup(1_600)?,
+            MailboxClientCleanupReport {
+                removed_pending_uploads: 0,
+                removed_stored_receipts: 1,
+                removed_inbound_commits: 0,
+                removed_deleted_receipts: 0,
+            }
         );
         Ok(())
     }

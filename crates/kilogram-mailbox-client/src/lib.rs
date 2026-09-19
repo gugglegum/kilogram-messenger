@@ -16,7 +16,7 @@ pub use http::{MAILBOX_HTTP_CONTENT_TYPE, MailboxHttpClient};
 pub use ledger::{
     MailboxClientCleanupReport, MailboxClientLedger, MailboxClientLedgerConfig,
     MailboxClientReadOnlyInspection, MailboxOutboundState, OutboundEnqueueOutcome,
-    PendingMailboxUpload, PreparedInboundItem, StoredOutboundReceipt,
+    PendingMailboxUpload, PreparedInboundItem, ReplicatedOutboundCommit, StoredOutboundReceipt,
 };
 pub use provider::{
     DEFAULT_MAX_PROVIDER_OFFERS, MAX_PROVIDER_GOSSIP_AGE_SECONDS, MAX_PROVIDER_GOSSIP_FRAME_BYTES,

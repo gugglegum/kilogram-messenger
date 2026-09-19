@@ -2303,3 +2303,28 @@ retirement остальных compatibility shadows ещё не реализов
   `cargo fmt --check`, `git diff --check` и static gates legacy-upgrade,
   desktop-control IPC v25, provider-selection, runtime-mailbox и M1 acceptance
   прошли.
+
+## M0.9.71 verification snapshot (2026-09-19)
+
+- Exact authenticated outbound delivery теперь выполняет volunteer replication
+  до создания `MailboxHttpClient`. Suppression HTTPS фиксируется только после
+  durable `ReplicatedOutboundCommit`; ошибка проверки или локального commit
+  сохраняет pending request и переходит к compatibility HTTP.
+- Новый replicated record хранится во прежней stored-outbound таблице с
+  однозначным `0xffKRP1` prefix; старый unprefixed HTTPS receipt decoder не
+  изменён. Insert replicated record и remove pending выполняются одной Redb
+  Immediate transaction, поэтому restart не создаёт ambiguous queue state.
+- Exact threshold считает только receipts, чьи store keys входят в durable
+  locator. Transport identities остаются distinct; legacy/random receipt после
+  rotation не может сам увеличить exact count.
+- Mailbox-client regression прошёл 14/14, полный CLI regression — 77/77.
+  Clippy `-D warnings` для `kilogram-mailbox-client` и `kilogram-cli`, новый
+  HTTPS-retirement gate, legacy-upgrade gate и M1 acceptance-kit gate прошли.
+- Первый CLI-прогон с неограниченным числом test-harness threads один раз
+  поймал Windows race `os error 183` при параллельном создании backup ratchet
+  directory. Тот же тест отдельно прошёл, а полный повтор с
+  `-- --test-threads=2` прошёл 77/77. Поэтому на Windows ограничивать нужно не
+  только Cargo `--jobs 2`, но и число одновременно исполняемых Rust-тестов.
+- Все проверки выполнялись debug/dev toolchain с `--jobs 2`; release/ZIP и
+  network listener не запускались. Реальный clean external no-HTTPS run остаётся
+  следующим M0.9.72 evidence этапом.

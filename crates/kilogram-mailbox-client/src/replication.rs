@@ -399,8 +399,28 @@ pub struct MailboxReplicationStatus {
 }
 
 impl MailboxReplicationStatus {
+    pub fn qualifying_receipts(&self) -> Vec<&MailboxReplicaReceipt> {
+        match &self.replica_set_locator {
+            Some(locator) => self
+                .receipts
+                .iter()
+                .filter(|receipt| {
+                    locator
+                        .store_keys()
+                        .binary_search(&receipt.store_key())
+                        .is_ok()
+                })
+                .collect(),
+            None => self.receipts.iter().collect(),
+        }
+    }
+
+    pub fn qualifying_receipt_count(&self) -> usize {
+        self.qualifying_receipts().len()
+    }
+
     pub fn is_satisfied(&self) -> bool {
-        self.receipts.len() >= usize::from(self.plan.required_receipts())
+        self.qualifying_receipt_count() >= usize::from(self.plan.required_receipts())
     }
 }
 
@@ -1543,6 +1563,34 @@ mod tests {
         assert!(ledger.next_due(1_059, 60)?.is_none());
         assert!(ledger.next_due(1_060, 60)?.is_some());
 
+        let legacy_identity = MailboxStoreIdentity::from_secret_bytes([13_u8; 32]);
+        let legacy_store_key = legacy_identity.store_key();
+        let legacy_store = BlindMailboxStore::open(
+            MailboxStoreConfig::new(directory.path().join("store-legacy")),
+            legacy_identity,
+        )?;
+        let (put_address, authorization, envelope) = request.clone().into_parts();
+        let legacy_response = MailboxPutResponse::from_outcome(legacy_store.put(
+            put_address,
+            &authorization,
+            envelope,
+            1_001,
+        )?);
+        ledger.record_receipt(
+            &request,
+            [5_u8; 32],
+            [12_u8; 32],
+            legacy_store_key,
+            &legacy_response,
+            1_001,
+        )?;
+        let legacy_only_status = ledger
+            .status(address.mailbox_id(), item_id)?
+            .context("legacy-only replication status")?;
+        assert_eq!(legacy_only_status.receipts.len(), 1);
+        assert_eq!(legacy_only_status.qualifying_receipt_count(), 0);
+        assert!(!legacy_only_status.is_satisfied());
+
         for (secret, transport) in [(7_u8, 8_u8), (9_u8, 10_u8)] {
             let identity = MailboxStoreIdentity::from_secret_bytes([secret; 32]);
             let store_key = identity.store_key();
@@ -1570,7 +1618,8 @@ mod tests {
             .status(address.mailbox_id(), item_id)?
             .context("replication status")?;
         assert!(status.is_satisfied());
-        assert_eq!(status.receipts.len(), 2);
+        assert_eq!(status.receipts.len(), 3);
+        assert_eq!(status.qualifying_receipt_count(), 2);
         assert_eq!(status.replica_set_locator, Some(locator.clone()));
         assert!(ledger.next_due(1_001, 60)?.is_none());
         drop(ledger);
@@ -1597,7 +1646,7 @@ mod tests {
             ledger.cleanup(1_600)?,
             MailboxReplicationCleanupReport {
                 removed_plans: 1,
-                removed_receipts: 2,
+                removed_receipts: 3,
                 removed_replica_set_locators: 1,
                 removed_attempts: 1,
                 removed_inbound_commits: 0,

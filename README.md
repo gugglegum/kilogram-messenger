@@ -207,7 +207,22 @@ The current two-network Windows procedure is in
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.70 automatic legacy mailbox upgrade — complete
+## Current milestone: M0.9.71 exact mailbox HTTPS-copy retirement — complete
+
+For an authenticated exact replica-set capability, the sender now writes the
+encrypted item to the committed volunteer stores first. Two verified
+transport-distinct signed receipts are durably committed as the delivery
+result before the HTTPS client can be reached; that item therefore creates no
+HTTPS compatibility copy. A legacy capability, incomplete exact replication
+or reverse mailbox acknowledgement keeps the compatibility path.
+
+The pending-to-replicated transition is crash-safe and old HTTPS receipt
+records remain byte-compatible. Receipts from an earlier random provider set
+cannot satisfy a later exact locator. No IPC change, server or executable was
+added. Details are in
+[`docs/RFC-0094-exact-mailbox-https-copy-retirement.md`](docs/RFC-0094-exact-mailbox-https-copy-retirement.md).
+
+## Previous milestone: M0.9.70 automatic legacy mailbox upgrade — complete
 
 A running client now upgrades an acknowledged legacy receive-mailbox
 capability automatically once it knows at least two active transport-distinct
@@ -218,8 +233,9 @@ across restart. Incomplete provider state or an unacknowledged/revoked head
 leaves the old chain unchanged.
 
 Authenticated runtime IPC v25 exposes the locator mode, commitment ID and
-store count to the diagnostic CLI and Windows GUI. HTTPS remains a compatibility
-copy; removing it is a separate migration. Details are in
+store count to the diagnostic CLI and Windows GUI. At this milestone HTTPS was
+still retained for every delivery; M0.9.71 narrows it per item after exact
+volunteer durability. Details are in
 [`docs/RFC-0093-automatic-legacy-mailbox-upgrade.md`](docs/RFC-0093-automatic-legacy-mailbox-upgrade.md).
 
 ## Previous milestone: M0.9.69 clean external exact-locator field run — complete
