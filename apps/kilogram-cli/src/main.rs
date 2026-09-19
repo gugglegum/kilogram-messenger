@@ -16969,9 +16969,80 @@ enum RuntimeEvent {
     Connection(Connection),
     Ipc(RuntimeIpcWork),
     IpcClosed,
+    OutboundCompleted(RuntimeOutboundCycleCompletion),
     Tick,
     IdleTimeout,
     Shutdown,
+}
+
+type RuntimeOutboundCycleTask = JoinHandle<RuntimeOutboundCycleCompletion>;
+
+struct RuntimeOutboundScheduler {
+    automatic_sync_started_at: tokio::time::Instant,
+    last_sync_attempts: BTreeMap<RuntimeContactId, tokio::time::Instant>,
+    last_ticket_automation_check: tokio::time::Instant,
+    last_mailbox_check: tokio::time::Instant,
+    last_mailbox_legacy_upgrade_check: tokio::time::Instant,
+    last_mailbox_capability_update_check: tokio::time::Instant,
+    last_mailbox_capability_update_attempts:
+        BTreeMap<MailboxCapabilityUpdateId, tokio::time::Instant>,
+    last_mailbox_polls: BTreeMap<MailboxBindingId, tokio::time::Instant>,
+    last_mailbox_provider_gossip_attempts: BTreeMap<RuntimeContactId, tokio::time::Instant>,
+    last_mailbox_provider_gossip_check: tokio::time::Instant,
+}
+
+impl RuntimeOutboundScheduler {
+    fn new() -> Self {
+        let now = tokio::time::Instant::now();
+        Self {
+            automatic_sync_started_at: now,
+            last_sync_attempts: BTreeMap::new(),
+            last_ticket_automation_check: now - RUNTIME_TICKET_AUTOMATION_CHECK_INTERVAL,
+            last_mailbox_check: now - RUNTIME_MAILBOX_POLL_INTERVAL,
+            last_mailbox_legacy_upgrade_check: now - RUNTIME_MAILBOX_LEGACY_UPGRADE_INTERVAL,
+            last_mailbox_capability_update_check: now - RUNTIME_MAILBOX_CAPABILITY_UPDATE_INTERVAL,
+            last_mailbox_capability_update_attempts: BTreeMap::new(),
+            last_mailbox_polls: BTreeMap::new(),
+            last_mailbox_provider_gossip_attempts: BTreeMap::new(),
+            last_mailbox_provider_gossip_check: now,
+        }
+    }
+}
+
+struct RuntimeOutboundCycleContext {
+    endpoint: Endpoint,
+    state_directory: PathBuf,
+    ticket: ConnectionTicket,
+    own_device_discovery_ticket_directory: Option<PathBuf>,
+    retry_base_seconds: u64,
+    retry_max_seconds: u64,
+    auto_sync_seconds: u64,
+}
+
+struct RuntimeOutboundCycleCompletion {
+    scheduler: RuntimeOutboundScheduler,
+    result: Result<RuntimeOutboundCycleReport>,
+}
+
+#[derive(Default)]
+struct RuntimeOutboundCycleReport {
+    state_changed: bool,
+    outbound_actions: usize,
+}
+
+impl RuntimeOutboundCycleReport {
+    fn mark_state_changed(&mut self) {
+        self.state_changed = true;
+    }
+
+    fn mark_outbound_action(&mut self) {
+        self.state_changed = true;
+        self.outbound_actions += 1;
+    }
+
+    fn observed_activity(&self) -> bool {
+        self.state_changed || self.outbound_actions != 0
+    }
 }
 
 #[derive(Default)]
@@ -17418,19 +17489,8 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
     let mut volunteer_storage_tasks = JoinSet::new();
     let mut outbound_actions = 0_usize;
     let mut last_activity = tokio::time::Instant::now();
-    let automatic_sync_started_at = tokio::time::Instant::now();
-    let mut last_sync_attempts = BTreeMap::new();
-    let mut last_ticket_automation_check =
-        tokio::time::Instant::now() - RUNTIME_TICKET_AUTOMATION_CHECK_INTERVAL;
-    let mut last_mailbox_check = tokio::time::Instant::now() - RUNTIME_MAILBOX_POLL_INTERVAL;
-    let mut last_mailbox_legacy_upgrade_check =
-        tokio::time::Instant::now() - RUNTIME_MAILBOX_LEGACY_UPGRADE_INTERVAL;
-    let mut last_mailbox_capability_update_check =
-        tokio::time::Instant::now() - RUNTIME_MAILBOX_CAPABILITY_UPDATE_INTERVAL;
-    let mut last_mailbox_capability_update_attempts = BTreeMap::new();
-    let mut last_mailbox_polls = BTreeMap::new();
-    let mut last_mailbox_provider_gossip_attempts = BTreeMap::new();
-    let mut last_mailbox_provider_gossip_check = tokio::time::Instant::now();
+    let mut outbound_scheduler = Some(RuntimeOutboundScheduler::new());
+    let mut outbound_cycle: Option<RuntimeOutboundCycleTask> = None;
     let mut last_mailbox_provider_offer_refresh = tokio::time::Instant::now();
     #[cfg(debug_assertions)]
     if runtime_test_faults.drop_mailbox_capability_ack_once {
@@ -17456,6 +17516,7 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
             &mut ipc_receiver,
             idle_deadline,
             &mut poll_tick,
+            &mut outbound_cycle,
         )
         .await?;
         while let Some(completed) = volunteer_storage_tasks.try_join_next() {
@@ -17505,7 +17566,27 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                     break "ipc-shutdown";
                 }
             }
+            RuntimeEvent::OutboundCompleted(completion) => {
+                outbound_cycle = None;
+                outbound_scheduler = Some(completion.scheduler);
+                let report = completion.result?;
+                if report.state_changed
+                    && let Some(server) = ipc_server.as_ref()
+                {
+                    server.publish_change();
+                }
+                outbound_actions = outbound_actions.saturating_add(report.outbound_actions);
+                if report.observed_activity() {
+                    last_activity = tokio::time::Instant::now();
+                }
+                if max_outbound_actions != 0 && outbound_actions >= max_outbound_actions {
+                    break "outbound-action-limit";
+                }
+            }
             RuntimeEvent::Tick => {
+                if outbound_cycle.is_some() {
+                    continue;
+                }
                 if last_mailbox_provider_offer_refresh.elapsed()
                     >= RUNTIME_MAILBOX_PROVIDER_OFFER_REFRESH_INTERVAL
                     && let Some(server) = volunteer_storage_server.as_mut()
@@ -17529,233 +17610,22 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                         ),
                     }
                 }
-                if last_mailbox_legacy_upgrade_check.elapsed()
-                    >= RUNTIME_MAILBOX_LEGACY_UPGRADE_INTERVAL
-                {
-                    last_mailbox_legacy_upgrade_check = tokio::time::Instant::now();
-                    match attempt_runtime_mailbox_legacy_upgrade(&state_dir).await {
-                        Ok(RuntimeMailboxLegacyUpgradeAttempt::Upgraded) => {
-                            if let Some(server) = ipc_server.as_ref() {
-                                server.publish_change();
-                            }
-                            last_activity = tokio::time::Instant::now();
-                        }
-                        Ok(RuntimeMailboxLegacyUpgradeAttempt::NoWork) => {}
-                        Err(error) => eprintln!(
-                            "runtime_mailbox_legacy_upgrade_status=failed error={error:#}"
-                        ),
-                    }
-                }
-                if last_mailbox_capability_update_check.elapsed()
-                    >= RUNTIME_MAILBOX_CAPABILITY_UPDATE_INTERVAL
-                {
-                    last_mailbox_capability_update_check = tokio::time::Instant::now();
-                    match attempt_next_runtime_mailbox_capability_update(
-                        &endpoint,
-                        &state_dir,
-                        &mut last_mailbox_capability_update_attempts,
-                    )
-                    .await
-                    {
-                        Ok(RuntimeMailboxCapabilityPushAttempt::Completed) => {
-                            if let Some(server) = ipc_server.as_ref() {
-                                server.publish_change();
-                            }
-                            outbound_actions += 1;
-                            last_activity = tokio::time::Instant::now();
-                            if max_outbound_actions != 0 && outbound_actions >= max_outbound_actions
-                            {
-                                break "outbound-action-limit";
-                            }
-                            continue;
-                        }
-                        Ok(RuntimeMailboxCapabilityPushAttempt::NoWork) => {}
-                        Err(error) => eprintln!(
-                            "runtime_mailbox_capability_update_status=failed error={error:#}"
-                        ),
-                    }
-                }
-                let delivery_attempt = attempt_next_runtime_delivery(
-                    &endpoint,
-                    &state_dir,
-                    retry_base_seconds,
-                    retry_max_seconds,
-                )
-                .await?;
-                match delivery_attempt {
-                    RuntimeDeliveryAttempt::NoWork => {}
-                    RuntimeDeliveryAttempt::Delivered
-                    | RuntimeDeliveryAttempt::MailboxStored
-                    | RuntimeDeliveryAttempt::RetryScheduled => {
-                        if let Some(server) = ipc_server.as_ref() {
-                            server.publish_change();
-                        }
-                        outbound_actions += 1;
-                        last_activity = tokio::time::Instant::now();
-                        if max_outbound_actions != 0 && outbound_actions >= max_outbound_actions {
-                            break "outbound-action-limit";
-                        }
-                    }
-                }
-                let mut mailbox_action = false;
-                if matches!(delivery_attempt, RuntimeDeliveryAttempt::NoWork)
-                    && last_mailbox_check.elapsed() >= RUNTIME_MAILBOX_POLL_INTERVAL
-                {
-                    last_mailbox_check = tokio::time::Instant::now();
-                    match attempt_pending_runtime_mailbox_upload(&endpoint, &state_dir).await {
-                        Ok(true) => {
-                            mailbox_action = true;
-                            if let Some(server) = ipc_server.as_ref() {
-                                server.publish_change();
-                            }
-                            last_activity = tokio::time::Instant::now();
-                        }
-                        Ok(false) => {
-                            mailbox_action = true;
-                            match attempt_runtime_mailbox_poll(
-                                &endpoint,
-                                &state_dir,
-                                &mut last_mailbox_polls,
-                            )
-                            .await
-                            {
-                                Ok(RuntimeMailboxPollAttempt::StateChanged) => {
-                                    if let Some(server) = ipc_server.as_ref() {
-                                        server.publish_change();
-                                    }
-                                    last_activity = tokio::time::Instant::now();
-                                }
-                                Ok(RuntimeMailboxPollAttempt::NoChange) => {}
-                                Err(error) => eprintln!(
-                                    "runtime_mailbox_inbound_status=failed error={error:#}"
-                                ),
-                            }
-                        }
-                        Err(error) => {
-                            mailbox_action = true;
-                            eprintln!("runtime_mailbox_upload_status=failed error={error:#}");
-                        }
-                    }
-                }
-                let gossip_attempted = if matches!(delivery_attempt, RuntimeDeliveryAttempt::NoWork)
-                    && !mailbox_action
-                    && last_mailbox_provider_gossip_check.elapsed()
-                        >= RUNTIME_MAILBOX_PROVIDER_GOSSIP_INTERVAL
-                {
-                    last_mailbox_provider_gossip_check = tokio::time::Instant::now();
-                    match attempt_runtime_mailbox_provider_gossip(
-                        &endpoint,
-                        &state_dir,
-                        RUNTIME_MAILBOX_PROVIDER_GOSSIP_INTERVAL,
-                        &mut last_mailbox_provider_gossip_attempts,
-                    )
-                    .await
-                    {
-                        Ok(attempted) => attempted,
-                        Err(error) => {
-                            eprintln!(
-                                "runtime_mailbox_provider_gossip_status=failed error={error:#}"
-                            );
-                            false
-                        }
-                    }
-                } else {
-                    false
-                };
-                if gossip_attempted {
-                    if let Some(server) = ipc_server.as_ref() {
-                        server.publish_change();
-                    }
-                    outbound_actions += 1;
-                    last_activity = tokio::time::Instant::now();
-                    if max_outbound_actions != 0 && outbound_actions >= max_outbound_actions {
-                        break "outbound-action-limit";
-                    }
-                }
-                let sync_due = matches!(delivery_attempt, RuntimeDeliveryAttempt::NoWork)
-                    && !mailbox_action
-                    && !gossip_attempted
-                    && auto_sync_seconds != 0
-                    && automatic_sync_started_at.elapsed()
-                        >= Duration::from_secs(auto_sync_seconds);
-                let sync_attempted = if sync_due {
-                    match attempt_runtime_contact_sync(
-                        &state_dir,
-                        Duration::from_secs(auto_sync_seconds),
-                        &mut last_sync_attempts,
-                    )
-                    .await
-                    {
-                        Ok(attempted) => attempted,
-                        Err(error) => {
-                            eprintln!("runtime_sync_status=failed error={error:#}");
-                            false
-                        }
-                    }
-                } else {
-                    false
-                };
-                if sync_attempted {
-                    if let Some(server) = ipc_server.as_ref() {
-                        server.publish_change();
-                    }
-                    outbound_actions += 1;
-                    last_activity = tokio::time::Instant::now();
-                    if max_outbound_actions != 0 && outbound_actions >= max_outbound_actions {
-                        break "outbound-action-limit";
-                    }
-                }
-                if matches!(delivery_attempt, RuntimeDeliveryAttempt::NoWork)
-                    && !mailbox_action
-                    && !gossip_attempted
-                    && !sync_attempted
-                    && last_ticket_automation_check.elapsed()
-                        >= RUNTIME_TICKET_AUTOMATION_CHECK_INTERVAL
-                {
-                    last_ticket_automation_check = tokio::time::Instant::now();
-                    let ticket_automation =
-                        attempt_next_runtime_ticket_automation(&state_dir, &ticket).await?;
-                    let own_device_automation =
-                        if matches!(ticket_automation, RuntimeTicketAutomationAttempt::NoWork) {
-                            attempt_next_runtime_own_device_announcement(
-                                &state_dir,
-                                &endpoint,
-                                &ticket,
-                                own_device_discovery_ticket_directory.as_deref(),
-                            )
-                            .await?
-                        } else {
-                            RuntimeTicketAutomationAttempt::NoWork
-                        };
-                    if matches!(ticket_automation, RuntimeTicketAutomationAttempt::Completed)
-                        || matches!(
-                            own_device_automation,
-                            RuntimeTicketAutomationAttempt::Completed
-                        )
-                    {
-                        if let Some(server) = ipc_server.as_ref() {
-                            server.publish_change();
-                        }
-                        outbound_actions += 1;
-                        last_activity = tokio::time::Instant::now();
-                        if max_outbound_actions != 0 && outbound_actions >= max_outbound_actions {
-                            break "outbound-action-limit";
-                        }
-                    }
-                    if let Some(report) = attempt_runtime_ticket_compaction(&state_dir).await? {
-                        println!(
-                            "runtime_ticket_compaction_status=committed checkpoint_generation={} removed_records={} retained_anchors={} compacted_total_records={}",
-                            report.checkpoint_generation,
-                            report.removed_records,
-                            report.retained_anchors,
-                            report.compacted_total_records
-                        );
-                        if let Some(server) = ipc_server.as_ref() {
-                            server.publish_change();
-                        }
-                        last_activity = tokio::time::Instant::now();
-                    }
-                }
+                let scheduler = outbound_scheduler.take().context(
+                    "runtime outbound scheduler was unavailable without an active cycle",
+                )?;
+                outbound_cycle = Some(tokio::spawn(run_runtime_outbound_cycle(
+                    RuntimeOutboundCycleContext {
+                        endpoint: endpoint.clone(),
+                        state_directory: state_dir.clone(),
+                        ticket: ticket.clone(),
+                        own_device_discovery_ticket_directory:
+                            own_device_discovery_ticket_directory.clone(),
+                        retry_base_seconds,
+                        retry_max_seconds,
+                        auto_sync_seconds,
+                    },
+                    scheduler,
+                )));
             }
             RuntimeEvent::Connection(connection) => {
                 if connection.alpn() == MAILBOX_ALPN {
@@ -17873,6 +17743,10 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
 
     drop(accept);
     drop(shutdown);
+    if let Some(task) = outbound_cycle.take() {
+        task.abort();
+        let _ = task.await;
+    }
     volunteer_storage_tasks.abort_all();
     while volunteer_storage_tasks.join_next().await.is_some() {}
     if let Some(server) = ipc_server.take() {
@@ -17888,6 +17762,183 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
     println!("runtime_stop_reason={stop_reason}");
     println!("status=runtime-stopped");
     Ok(())
+}
+
+async fn run_runtime_outbound_cycle(
+    context: RuntimeOutboundCycleContext,
+    mut scheduler: RuntimeOutboundScheduler,
+) -> RuntimeOutboundCycleCompletion {
+    let result = run_runtime_outbound_cycle_inner(&context, &mut scheduler).await;
+    RuntimeOutboundCycleCompletion { scheduler, result }
+}
+
+async fn run_runtime_outbound_cycle_inner(
+    context: &RuntimeOutboundCycleContext,
+    scheduler: &mut RuntimeOutboundScheduler,
+) -> Result<RuntimeOutboundCycleReport> {
+    let mut report = RuntimeOutboundCycleReport::default();
+
+    if scheduler.last_mailbox_legacy_upgrade_check.elapsed()
+        >= RUNTIME_MAILBOX_LEGACY_UPGRADE_INTERVAL
+    {
+        scheduler.last_mailbox_legacy_upgrade_check = tokio::time::Instant::now();
+        match attempt_runtime_mailbox_legacy_upgrade(&context.state_directory).await {
+            Ok(RuntimeMailboxLegacyUpgradeAttempt::Upgraded) => report.mark_state_changed(),
+            Ok(RuntimeMailboxLegacyUpgradeAttempt::NoWork) => {}
+            Err(error) => {
+                eprintln!("runtime_mailbox_legacy_upgrade_status=failed error={error:#}")
+            }
+        }
+    }
+
+    if scheduler.last_mailbox_capability_update_check.elapsed()
+        >= RUNTIME_MAILBOX_CAPABILITY_UPDATE_INTERVAL
+    {
+        scheduler.last_mailbox_capability_update_check = tokio::time::Instant::now();
+        match attempt_next_runtime_mailbox_capability_update(
+            &context.endpoint,
+            &context.state_directory,
+            &mut scheduler.last_mailbox_capability_update_attempts,
+        )
+        .await
+        {
+            Ok(RuntimeMailboxCapabilityPushAttempt::Completed) => {
+                report.mark_outbound_action();
+                return Ok(report);
+            }
+            Ok(RuntimeMailboxCapabilityPushAttempt::NoWork) => {}
+            Err(error) => {
+                eprintln!("runtime_mailbox_capability_update_status=failed error={error:#}")
+            }
+        }
+    }
+
+    let delivery_attempt = attempt_next_runtime_delivery(
+        &context.endpoint,
+        &context.state_directory,
+        context.retry_base_seconds,
+        context.retry_max_seconds,
+    )
+    .await?;
+    if !matches!(delivery_attempt, RuntimeDeliveryAttempt::NoWork) {
+        report.mark_outbound_action();
+        return Ok(report);
+    }
+
+    if scheduler.last_mailbox_check.elapsed() >= RUNTIME_MAILBOX_POLL_INTERVAL {
+        scheduler.last_mailbox_check = tokio::time::Instant::now();
+        match attempt_pending_runtime_mailbox_upload(&context.endpoint, &context.state_directory)
+            .await
+        {
+            Ok(true) => report.mark_state_changed(),
+            Ok(false) => {
+                match attempt_runtime_mailbox_poll(
+                    &context.endpoint,
+                    &context.state_directory,
+                    &mut scheduler.last_mailbox_polls,
+                )
+                .await
+                {
+                    Ok(RuntimeMailboxPollAttempt::StateChanged) => report.mark_state_changed(),
+                    Ok(RuntimeMailboxPollAttempt::NoChange) => {}
+                    Err(error) => {
+                        eprintln!("runtime_mailbox_inbound_status=failed error={error:#}")
+                    }
+                }
+            }
+            Err(error) => eprintln!("runtime_mailbox_upload_status=failed error={error:#}"),
+        }
+        return Ok(report);
+    }
+
+    if scheduler.last_mailbox_provider_gossip_check.elapsed()
+        >= RUNTIME_MAILBOX_PROVIDER_GOSSIP_INTERVAL
+    {
+        scheduler.last_mailbox_provider_gossip_check = tokio::time::Instant::now();
+        let attempted = match attempt_runtime_mailbox_provider_gossip(
+            &context.endpoint,
+            &context.state_directory,
+            RUNTIME_MAILBOX_PROVIDER_GOSSIP_INTERVAL,
+            &mut scheduler.last_mailbox_provider_gossip_attempts,
+        )
+        .await
+        {
+            Ok(attempted) => attempted,
+            Err(error) => {
+                eprintln!("runtime_mailbox_provider_gossip_status=failed error={error:#}");
+                false
+            }
+        };
+        if attempted {
+            report.mark_outbound_action();
+            return Ok(report);
+        }
+    }
+
+    let sync_due = context.auto_sync_seconds != 0
+        && scheduler.automatic_sync_started_at.elapsed()
+            >= Duration::from_secs(context.auto_sync_seconds);
+    if sync_due {
+        let attempted = match attempt_runtime_contact_sync(
+            &context.state_directory,
+            Duration::from_secs(context.auto_sync_seconds),
+            &mut scheduler.last_sync_attempts,
+        )
+        .await
+        {
+            Ok(attempted) => attempted,
+            Err(error) => {
+                eprintln!("runtime_sync_status=failed error={error:#}");
+                false
+            }
+        };
+        if attempted {
+            report.mark_outbound_action();
+            return Ok(report);
+        }
+    }
+
+    if scheduler.last_ticket_automation_check.elapsed() >= RUNTIME_TICKET_AUTOMATION_CHECK_INTERVAL
+    {
+        scheduler.last_ticket_automation_check = tokio::time::Instant::now();
+        let ticket_automation =
+            attempt_next_runtime_ticket_automation(&context.state_directory, &context.ticket)
+                .await?;
+        let own_device_automation =
+            if matches!(ticket_automation, RuntimeTicketAutomationAttempt::NoWork) {
+                attempt_next_runtime_own_device_announcement(
+                    &context.state_directory,
+                    &context.endpoint,
+                    &context.ticket,
+                    context.own_device_discovery_ticket_directory.as_deref(),
+                )
+                .await?
+            } else {
+                RuntimeTicketAutomationAttempt::NoWork
+            };
+        if matches!(ticket_automation, RuntimeTicketAutomationAttempt::Completed)
+            || matches!(
+                own_device_automation,
+                RuntimeTicketAutomationAttempt::Completed
+            )
+        {
+            report.mark_outbound_action();
+        }
+        if let Some(compaction) =
+            attempt_runtime_ticket_compaction(&context.state_directory).await?
+        {
+            println!(
+                "runtime_ticket_compaction_status=committed checkpoint_generation={} removed_records={} retained_anchors={} compacted_total_records={}",
+                compaction.checkpoint_generation,
+                compaction.removed_records,
+                compaction.retained_anchors,
+                compaction.compacted_total_records
+            );
+            report.mark_state_changed();
+        }
+    }
+
+    Ok(report)
 }
 
 fn validate_runtime_options(options: &RuntimeOptions) -> Result<()> {
@@ -21149,6 +21200,19 @@ struct PreparedRuntimeSync {
     candidates: Vec<(DeviceId, String)>,
 }
 
+fn runtime_automatic_sync_initiator(
+    local_account_id: AccountId,
+    local_device_id: DeviceId,
+    peer_account_id: AccountId,
+    peer_device_id: DeviceId,
+) -> bool {
+    match local_account_id.as_bytes().cmp(peer_account_id.as_bytes()) {
+        std::cmp::Ordering::Less => true,
+        std::cmp::Ordering::Greater => false,
+        std::cmp::Ordering::Equal => local_device_id < peer_device_id,
+    }
+}
+
 async fn attempt_runtime_contact_sync(
     state_directory: &Path,
     interval: Duration,
@@ -21182,6 +21246,21 @@ async fn attempt_runtime_contact_sync(
             return Ok(None);
         };
         last_attempts.insert(contact.contact_id(), now);
+        if !runtime_automatic_sync_initiator(
+            certificate.account_id(),
+            device_state.identity().device_id(),
+            contact.peer_account_id(),
+            contact.peer_device_id(),
+        ) {
+            println!("runtime_sync_role=passive");
+            println!("runtime_sync_contact_id={}", contact.contact_id());
+            println!("runtime_sync_peer_account_id={}", contact.peer_account_id());
+            println!("runtime_sync_peer_device_id={}", contact.peer_device_id());
+            return Ok(None);
+        }
+        println!("runtime_sync_role=initiator");
+        println!("runtime_sync_peer_account_id={}", contact.peer_account_id());
+        println!("runtime_sync_peer_device_id={}", contact.peer_device_id());
         let pinned_peer_authority = trust
             .load_peer_authority_snapshot(contact.peer_account_id())
             .context("load peer authority high-water for automatic sync")?;
@@ -21280,28 +21359,53 @@ async fn wait_for_runtime_event(
     ipc_receiver: &mut tokio::sync::mpsc::Receiver<RuntimeIpcWork>,
     idle_deadline: Option<tokio::time::Instant>,
     poll_tick: &mut tokio::time::Interval,
+    outbound_cycle: &mut Option<RuntimeOutboundCycleTask>,
 ) -> Result<RuntimeEvent> {
+    let accept_ipc_work = outbound_cycle.is_none();
     if let Some(idle_deadline) = idle_deadline {
         tokio::select! {
+            biased;
             connection = accept.as_mut() => connection.map(RuntimeEvent::Connection),
             signal = shutdown.as_mut() => {
                 signal.context("install or receive Ctrl+C runtime signal")?;
                 Ok(RuntimeEvent::Shutdown)
             }
-            work = ipc_receiver.recv() => Ok(work.map_or(RuntimeEvent::IpcClosed, RuntimeEvent::Ipc)),
+            work = ipc_receiver.recv(), if accept_ipc_work => {
+                Ok(work.map_or(RuntimeEvent::IpcClosed, RuntimeEvent::Ipc))
+            }
+            completed = wait_for_runtime_outbound_cycle(outbound_cycle) => {
+                completed.map(RuntimeEvent::OutboundCompleted)
+            }
             _ = poll_tick.tick() => Ok(RuntimeEvent::Tick),
             () = tokio::time::sleep_until(idle_deadline) => Ok(RuntimeEvent::IdleTimeout),
         }
     } else {
         tokio::select! {
+            biased;
             connection = accept.as_mut() => connection.map(RuntimeEvent::Connection),
             signal = shutdown.as_mut() => {
                 signal.context("install or receive Ctrl+C runtime signal")?;
                 Ok(RuntimeEvent::Shutdown)
             }
-            work = ipc_receiver.recv() => Ok(work.map_or(RuntimeEvent::IpcClosed, RuntimeEvent::Ipc)),
+            work = ipc_receiver.recv(), if accept_ipc_work => {
+                Ok(work.map_or(RuntimeEvent::IpcClosed, RuntimeEvent::Ipc))
+            }
+            completed = wait_for_runtime_outbound_cycle(outbound_cycle) => {
+                completed.map(RuntimeEvent::OutboundCompleted)
+            }
             _ = poll_tick.tick() => Ok(RuntimeEvent::Tick),
         }
+    }
+}
+
+async fn wait_for_runtime_outbound_cycle(
+    outbound_cycle: &mut Option<RuntimeOutboundCycleTask>,
+) -> Result<RuntimeOutboundCycleCompletion> {
+    match outbound_cycle {
+        Some(task) => task
+            .await
+            .context("join the single runtime outbound cycle task"),
+        None => std::future::pending().await,
     }
 }
 
@@ -32221,6 +32325,152 @@ mod tests {
             .await
             .context("receipt-recovered runtime did not stop")?
             .context("join receipt-recovered runtime")??;
+        Ok(())
+    }
+
+    #[test]
+    fn automatic_sync_elects_exactly_one_initiator() {
+        let account_a = AccountId::from_bytes([1_u8; 32]);
+        let account_b = AccountId::from_bytes([2_u8; 32]);
+        let device_a = DeviceId::from_bytes([3_u8; 32]);
+        let device_b = DeviceId::from_bytes([4_u8; 32]);
+
+        let a_to_b = runtime_automatic_sync_initiator(account_a, device_a, account_b, device_b);
+        let b_to_a = runtime_automatic_sync_initiator(account_b, device_b, account_a, device_a);
+        assert_ne!(a_to_b, b_to_a);
+
+        let first_device =
+            runtime_automatic_sync_initiator(account_a, device_a, account_a, device_b);
+        let second_device =
+            runtime_automatic_sync_initiator(account_a, device_b, account_a, device_a);
+        assert_ne!(first_device, second_device);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn mutual_automatic_sync_does_not_starve_inbound_accept() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let alice_root_dir = directory.path().join("alice-root");
+        let bob_root_dir = directory.path().join("bob-root");
+        let alice_state = directory.path().join("alice-state");
+        let bob_state = directory.path().join("bob-state");
+        create_account(alice_root_dir.clone())?;
+        create_account(bob_root_dir.clone())?;
+        enroll_device(alice_root_dir.clone(), alice_state.clone(), None)?;
+        enroll_device(bob_root_dir.clone(), bob_state.clone(), None)?;
+
+        let alice_root = AccountRootState::load(&alice_root_dir)?;
+        let bob_root = AccountRootState::load(&bob_root_dir)?;
+        let alice_device = DeviceState::load_or_create(&alice_state)?;
+        let bob_device = DeviceState::load_or_create(&bob_state)?;
+        let alice_certificate = alice_device.load_certificate()?;
+        let bob_certificate = bob_device.load_certificate()?;
+        let alice_devices =
+            alice_root.publish_device_list(std::slice::from_ref(&alice_certificate))?;
+        let bob_devices = bob_root.publish_device_list(std::slice::from_ref(&bob_certificate))?;
+        let alice_devices_file = directory.path().join("alice.devices");
+        let bob_devices_file = directory.path().join("bob.devices");
+        write_new_authority_file(&alice_devices_file, &alice_devices.encode()?)?;
+        write_new_authority_file(&bob_devices_file, &bob_devices.encode()?)?;
+
+        let conversation_label = "mutual-automatic-sync-accept-test";
+        let conversation_id = ConversationId::from_label(conversation_label);
+        let membership = alice_root
+            .create_conversation_membership(conversation_id.scope_id(), &[bob_root.account_id()])?;
+        alice_device.install_conversation_membership(&membership)?;
+        bob_device.install_conversation_membership(&membership)?;
+
+        let alice_ticket = directory.path().join("alice-runtime.ticket");
+        let bob_ticket = directory.path().join("bob-runtime.ticket");
+        let alice_ipc = directory.path().join("alice-runtime.ipc.json");
+        let bob_ipc = directory.path().join("bob-runtime.ipc.json");
+        let bob_task = tokio::spawn(runtime(RuntimeOptions {
+            state_dir: bob_state.clone(),
+            allowed_requester_account_id: alice_root.account_id(),
+            device_list_file: bob_devices_file,
+            peer_prekey_pool_files: Vec::new(),
+            ticket_file: Some(bob_ticket.clone()),
+            relay_wait_seconds: 0,
+            route_policy: RoutePolicy::DirectOnly,
+            relay_url: None,
+            max_sessions: 1,
+            idle_seconds: 0,
+            poll_milliseconds: 20,
+            retry_base_seconds: 1,
+            retry_max_seconds: 1,
+            auto_sync_seconds: 10,
+            max_outbound_actions: 1,
+            ipc_file: Some(bob_ipc.clone()),
+            volunteer_storage: None,
+        }));
+        let alice_task = tokio::spawn(runtime(RuntimeOptions {
+            state_dir: alice_state.clone(),
+            allowed_requester_account_id: bob_root.account_id(),
+            device_list_file: alice_devices_file,
+            peer_prekey_pool_files: Vec::new(),
+            ticket_file: Some(alice_ticket.clone()),
+            relay_wait_seconds: 0,
+            route_policy: RoutePolicy::DirectOnly,
+            relay_url: None,
+            max_sessions: 1,
+            idle_seconds: 0,
+            poll_milliseconds: 20,
+            retry_base_seconds: 1,
+            retry_max_seconds: 1,
+            auto_sync_seconds: 10,
+            max_outbound_actions: 1,
+            ipc_file: Some(alice_ipc.clone()),
+            volunteer_storage: None,
+        }));
+        timeout(Duration::from_secs(10), async {
+            while !alice_ticket.is_file()
+                || !bob_ticket.is_file()
+                || !alice_ipc.is_file()
+                || !bob_ipc.is_file()
+            {
+                tokio::time::sleep(Duration::from_millis(20)).await;
+            }
+        })
+        .await
+        .context("mutual-sync runtimes did not publish their descriptors")?;
+
+        assert!(matches!(
+            kilogram_runtime_ipc::call(
+                &alice_ipc,
+                RuntimeIpcCommand::AddContact {
+                    conversation: conversation_label.to_owned(),
+                    expected_peer_account_id: bob_root.account_id(),
+                    descriptor_file: bob_ticket,
+                },
+            )
+            .await?,
+            RuntimeIpcResponse::ContactAdded { inserted: true, .. }
+        ));
+        assert!(matches!(
+            kilogram_runtime_ipc::call(
+                &bob_ipc,
+                RuntimeIpcCommand::AddContact {
+                    conversation: conversation_label.to_owned(),
+                    expected_peer_account_id: alice_root.account_id(),
+                    descriptor_file: alice_ticket,
+                },
+            )
+            .await?,
+            RuntimeIpcResponse::ContactAdded { inserted: true, .. }
+        ));
+
+        let (alice_result, bob_result) = timeout(Duration::from_secs(25), async {
+            tokio::join!(alice_task, bob_task)
+        })
+        .await
+        .context("mutual automatic sync starved inbound connection acceptance")?;
+        alice_result.context("join mutual-sync Alice runtime")??;
+        bob_result.context("join mutual-sync Bob runtime")??;
+
+        let alice_events = open_event_store(&alice_state)?
+            .load_authorized_conversation(conversation_id, &membership)?;
+        let bob_events = open_event_store(&bob_state)?
+            .load_authorized_conversation(conversation_id, &membership)?;
+        assert_eq!(alice_events, bob_events);
         Ok(())
     }
 

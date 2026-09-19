@@ -742,7 +742,12 @@ EXE не создавались.
   `kilogram-ticket-store.exe`: inert unreachable descriptor, обязательные
   `http_put=not-attempted` и exact volunteer durability `2/2`, Alice offline,
   Bob commit/delete/restart и дополнительный fail-closed evidence verifier;
-  внешний two-host run ещё ожидается.
+  первый внешний two-host run остановился до send и evidence не принят.
+- [`../docs/RFC-0096-cooperative-runtime-outbound-scheduling.md`](../docs/RFC-0096-cooperative-runtime-outbound-scheduling.md) —
+  реализованный M0.9.73 cooperative runtime scheduling: ровно одна owned
+  outbound-cycle task, постоянно poll-able Iroh accept, IPC между cycles и
+  детерминированный единственный initiator reciprocal auto-sync; fresh
+  двухсетевой no-HTTPS field run ещё обязателен.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

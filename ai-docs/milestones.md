@@ -3940,10 +3940,54 @@ artifacts совпали по SHA-256/length, PowerShell parse errors — 0,
 `kilogram-ticket-store.exe`/ZIP/предсозданный `1\shared` отсутствуют, профиль —
 debug, Cargo jobs — 2, generator network execution — false.
 
+Первый внешний запуск `20260919-170816` выполнен между Alice на проводном ПК и
+Bob через мобильную сеть, без VPN. Он не дошёл до send и не является clean
+evidence. Обе стороны получили `relay_status=online` и один и тот же pinned
+`aps1`; Bob разрешил exact provider set `2/2` и успешно открывал direct sessions
+к обоим providers. При этом Alice -> Bob automatic sync шесть раз завершился
+30-second timeout, Bob -> Alice capability update также завершался timeout, а
+обе стороны позднее зарегистрировали соответствующие входящие Initial/handshake
+attempts как timeout. Это исключает ошибку порядка запуска и отсутствие provider
+publication; рабочая гипотеза — accept starvation/symmetric lockstep внутри
+runtime actor: tick handler последовательно await-ит долгие outbound операции и
+в это время не poll-ит сохранённый accept future. Нужен детерминированный
+regression и исправление responsiveness accept loop до нового field kit.
+
+### M0.9.73 — cooperative runtime outbound scheduling: локально завершено
+
+Реализовано:
+
+- deterministic mutual-auto-sync regression сначала воспроизвёл прежний
+  symmetric outbound/accept timeout, поэтому полевая гипотеза стала локально
+  подтверждённым scheduling defect;
+- runtime держит не более одной owned outbound-cycle task, а основной actor во
+  время её network waits продолжает poll постоянного Iroh accept, shutdown и
+  завершение task;
+- authenticated IPC mutation принимается только между outbound cycles, а
+  существующий state-directory lock сериализует background mutation с accepted
+  application session;
+- reciprocal automatic sync выбирает ровно одного initiator по Account ID, а
+  для устройств одного аккаунта — по Device ID; passive peer обслуживает
+  elected inbound session;
+- wire formats, device/account authority, executables и network services не
+  изменились;
+- новый regression стал green, прежний durable outbox/automatic-sync test
+  сохранён, полный `kilogram-cli` suite дал 79 passed, 0 failed за 291.41s при
+  `--jobs 2 --test-threads=2`;
+- граница описана в
+  [`../docs/RFC-0096-cooperative-runtime-outbound-scheduling.md`](../docs/RFC-0096-cooperative-runtime-outbound-scheduling.md)
+  и закреплена `scripts/verify-kilogram-runtime-cooperative-scheduling.ps1`,
+  включённым в M1 acceptance kit.
+
+Run `20260919-170816` остаётся неуспешным и не принимается задним числом.
+M0.9.73 локально завершён, но его исправление ещё требует свежего clean
+двухсетевого no-HTTPS evidence run.
+
 ### Следующий этап
 
-1. Выполнить подготовленный clean external M0.9.72 kit на двух хостах/сетях и
-   принять evidence только после fail-closed результата `verified`.
+1. Создать fresh M0.9.73 clean no-HTTPS field kit из нового clean revision и
+   повторить Alice/Bob run через разные сети. Принимать его только после
+   fail-closed результата `verified`; старый M0.9.72 run не возобновлять.
 2. До первого публичного security artifact pin-нуть linker/SDK либо controlled
    alternative и повторить M0.9.59 до matched external hash и attestation.
 3. Optional autostart/background mode оставить отдельной явной настройкой, не

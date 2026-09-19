@@ -2351,4 +2351,36 @@ retirement остальных compatibility shadows ещё не реализов
   `.tmp\m0972-no-https-36a4a6c`: debug, Cargo jobs=2, 11/11 payload artifacts
   совпадают по SHA-256/length, PowerShell parse errors=0, 13 файлов/57,690,277
   bytes, ZIP=0, ticket-store EXE отсутствует, `1\shared` до запуска отсутствует.
-  Generator network execution=false. External two-host run ещё не выполнялся.
+  Generator network execution=false.
+- Первый external run `20260919-170816` не дошёл до send. Alice и Bob были
+  online на pinned `aps1`; Bob разрешил exact providers `2/2` и соединялся с
+  ними direct, но взаимные runtime automatic-sync/capability sessions попадали
+  в повторяющиеся 30-second outbound и incoming Initial/handshake timeout.
+  Provider publication, Yandex synchronization и порядок шагов корректны.
+- Runtime event loop сохраняет accept future между ticks, но сам tick handler
+  последовательно await-ит capability push, delivery, mailbox poll/gossip и
+  automatic sync. Пока выполняется один такой outbound await, accept future не
+  poll-ится; одинаковый startup schedule двух peers может создать symmetric
+  lockstep. Это рабочая гипотеза для M0.9.73 и должна быть закреплена локальным
+  deterministic regression до следующего внешнего запуска.
+
+## M0.9.73 verification snapshot (2026-09-19)
+
+- Детерминированный mutual-auto-sync regression сначала воспроизвёл прежний
+  symmetric timeout примерно за 90 секунд: два runtime одновременно начали
+  outbound sync и не обслужили входящие application sessions.
+- Runtime actor теперь запускает не более одной owned outbound-cycle task и во
+  время её network waits продолжает poll постоянного Iroh accept. IPC mutation
+  принимается между cycles; существующий state-directory lock сериализует
+  background mutation и accepted application session.
+- Reciprocal automatic sync выбирает одного initiator детерминированно по
+  Account ID, а для устройств одного аккаунта — по Device ID. Passive peer
+  остаётся доступным для elected inbound session; wire format и authority не
+  менялись.
+- Новый mutual-runtime regression и прежний outbox/sync regression проходят;
+  полный `kilogram-cli` suite: 79 passed, 0 failed, 291.41s, `--jobs 2` и
+  `--test-threads=2`.
+- Контракт описан в RFC-0096 и закреплён статическим fail-closed verifier,
+  включённым в M1 acceptance-kit builder/boundary. Fresh двухсетевой no-HTTPS
+  field run ещё обязателен: локальный green не превращает run
+  `20260919-170816` в принятое evidence.

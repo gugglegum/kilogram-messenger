@@ -301,8 +301,12 @@ sessions, distribution, removal и key epochs и не решены этим пр
   rotation с overlap и без message replay. M0.9.71 уже не создаёт HTTPS copy для
   нового item после exact signed threshold `2/2`; legacy, incomplete exact и
   reverse ACK сохраняют compatibility. M0.9.72 подготовил clean two-host harness
-  без store binary/fixture и с обязательным `http_put=not-attempted`, но внешний
-  run ещё не выполнен. Открытыми остаются его field evidence, полное удаление
+  без store binary/fixture и с обязательным `http_put=not-attempted`; первый
+  внешний run `20260919-170816` остановился до send на symmetric peer handshake
+  timeout при online `aps1` и рабочих provider sessions. M0.9.73 устранил
+  локально воспроизведённый accept starvation через single owned outbound task,
+  постоянно poll-able accept и deterministic one-sided auto-sync. Открытыми
+  остаются fresh clean field evidence для этого исправления, полное удаление
   descriptor/protocol после совместимости старых клиентов, Sybil-resistant
   diversity, cryptographic hop proof и access-correlation privacy.
 - Push-уведомления на Android/iOS без утечки содержания и социального графа.
