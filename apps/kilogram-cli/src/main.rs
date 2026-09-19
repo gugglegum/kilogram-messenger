@@ -38,7 +38,8 @@ use kilogram_mailbox_client::{
     MailboxClientLedger, MailboxClientLedgerConfig, MailboxHttpClient, MailboxOutboundState,
     MailboxProviderGossipFrame, MailboxProviderImportOutcome, MailboxProviderOffer,
     MailboxProviderRegistry, MailboxProviderRegistryConfig, MailboxReplicationLedger,
-    MailboxReplicationLedgerConfig, OutboundEnqueueOutcome, PendingMailboxUpload,
+    MailboxReplicationLedgerConfig, MailboxReplicationReadOnlyInspection, OutboundEnqueueOutcome,
+    PendingMailboxUpload,
 };
 use kilogram_mailbox_provisioning::{
     EncryptedMailboxOffer, LocalMailboxBinding, MAX_MAILBOX_OFFER_VALIDITY_SECONDS,
@@ -19588,12 +19589,12 @@ async fn attempt_pending_runtime_mailbox_upload(
             upload_runtime_mailbox_request(endpoint, state_directory, upload).await?;
             return Ok(true);
         }
-        let replication_config = runtime_mailbox_replication_ledger_config(state_directory);
-        let mut replication_inspection = MailboxReplicationLedger::inspect_read_only(
-            replication_config,
+        let mut replication_inspection = inspect_runtime_mailbox_replication_ledger(
+            state_directory,
             now,
             DEFAULT_REPLICATION_RETRY_SECONDS,
-        )?;
+        )
+        .await?;
         if replication_inspection.cleanup_required {
             let state_lock = acquire_runtime_state_lock(state_directory)
                 .await?
@@ -19697,6 +19698,42 @@ async fn attempt_pending_runtime_mailbox_upload(
     drop(state_lock);
     upload_runtime_mailbox_request(endpoint, state_directory, resolution?).await?;
     Ok(true)
+}
+
+async fn inspect_runtime_mailbox_replication_ledger(
+    state_directory: &Path,
+    now_unix_seconds: u64,
+    retry_seconds: u64,
+) -> Result<MailboxReplicationReadOnlyInspection> {
+    let inspect = || {
+        MailboxReplicationLedger::inspect_read_only(
+            runtime_mailbox_replication_ledger_config(state_directory),
+            now_unix_seconds,
+            retry_seconds,
+        )
+    };
+    match inspect() {
+        Ok(inspection) => Ok(inspection),
+        Err(error) if redb_repair_required(&error) => {
+            let state_lock = acquire_runtime_state_lock(state_directory)
+                .await?
+                .context("runtime state lock remained busy while repairing replication ledger")?;
+            let vault_guard = VaultDualWriteGuard::prepare(state_directory)?;
+            let repair_result = runtime_mailbox_replication_ledger(state_directory).map(drop);
+            let mirror_result = match vault_guard {
+                Some(guard) => guard.finish(),
+                None => Ok(()),
+            };
+            drop(state_lock);
+            combine_operation_and_mirror(repair_result, mirror_result)
+                .context("repair mailbox replication ledger after interrupted runtime")?;
+            println!(
+                "runtime_mailbox_replication_ledger_repair_status=repaired-after-interrupted-runtime"
+            );
+            inspect().context("inspect repaired mailbox replication ledger read-only")
+        }
+        Err(error) => Err(error),
+    }
 }
 
 fn redb_repair_required(error: &anyhow::Error) -> bool {
@@ -27815,6 +27852,65 @@ mod tests {
     use tokio::sync::oneshot;
 
     const UNSUPPORTED_TEST_ALPN: &[u8] = b"kilogram/test/unsupported/1";
+    const REPLICATION_LEDGER_UNCLEAN_EXIT_DIRECTORY_ENV: &str =
+        "KILOGRAM_TEST_REPLICATION_LEDGER_UNCLEAN_EXIT_DIRECTORY";
+
+    #[test]
+    fn replication_ledger_unclean_exit_helper() -> Result<()> {
+        let Some(state_directory) = std::env::var_os(REPLICATION_LEDGER_UNCLEAN_EXIT_DIRECTORY_ENV)
+        else {
+            return Ok(());
+        };
+        let state_directory = PathBuf::from(state_directory);
+        fs::create_dir_all(&state_directory).context("create unclean-exit test state directory")?;
+        let ledger = runtime_mailbox_replication_ledger(&state_directory)
+            .context("open replication ledger before unclean test exit")?;
+        std::mem::forget(ledger);
+        std::process::exit(73)
+    }
+
+    #[tokio::test]
+    async fn interrupted_replication_ledger_is_repaired_before_read_only_inspection() -> Result<()>
+    {
+        let directory = tempfile::tempdir()?;
+        let state_directory = directory.path().join("state");
+        let status = std::process::Command::new(std::env::current_exe()?)
+            .arg("--exact")
+            .arg("tests::replication_ledger_unclean_exit_helper")
+            .env(
+                REPLICATION_LEDGER_UNCLEAN_EXIT_DIRECTORY_ENV,
+                &state_directory,
+            )
+            .status()
+            .context("run unclean replication-ledger child process")?;
+        assert_eq!(status.code(), Some(73));
+
+        let interrupted = match MailboxReplicationLedger::inspect_read_only(
+            runtime_mailbox_replication_ledger_config(&state_directory),
+            1,
+            DEFAULT_REPLICATION_RETRY_SECONDS,
+        ) {
+            Ok(_) => bail!("unclean replication ledger unexpectedly opened read-only"),
+            Err(error) => error,
+        };
+        assert!(redb_repair_required(&interrupted));
+
+        let repaired = inspect_runtime_mailbox_replication_ledger(
+            &state_directory,
+            1,
+            DEFAULT_REPLICATION_RETRY_SECONDS,
+        )
+        .await?;
+        assert_eq!(repaired.next_due, None);
+        assert!(!repaired.cleanup_required);
+        let reopened = MailboxReplicationLedger::inspect_read_only(
+            runtime_mailbox_replication_ledger_config(&state_directory),
+            1,
+            DEFAULT_REPLICATION_RETRY_SECONDS,
+        )?;
+        assert_eq!(reopened, repaired);
+        Ok(())
+    }
 
     #[test]
     fn interrupted_redb_open_is_recognized_as_repairable() {

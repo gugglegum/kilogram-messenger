@@ -49,6 +49,7 @@ try {
         'verify-kilogram-m0972-no-https-kit-boundary.ps1',
         'verify-kilogram-m0973-no-https-kit-boundary.ps1',
         'verify-kilogram-runtime-cooperative-scheduling.ps1',
+        'verify-kilogram-runtime-mailbox-replication-recovery.ps1',
         'verify-kilogram-mailbox-desktop-control.ps1',
         'verify-kilogram-mailbox-field-test-boundary.ps1',
         'verify-kilogram-m1-acceptance-kit-boundary.ps1'

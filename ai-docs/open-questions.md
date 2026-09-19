@@ -305,8 +305,12 @@ sessions, distribution, removal и key epochs и не решены этим пр
   внешний run `20260919-170816` остановился до send на symmetric peer handshake
   timeout при online `aps1` и рабочих provider sessions. M0.9.73 устранил
   локально воспроизведённый accept starvation через single owned outbound task,
-  постоянно poll-able accept и deterministic one-sided auto-sync. Открытыми
-  остаются fresh clean field evidence для этого исправления, полное удаление
+  постоянно poll-able accept и deterministic one-sided auto-sync. Его внешний
+  run подтвердил convergence и sender durability `2/2`, но выявил Redb
+  `RepairAborted` на recipient replication ledger после force-stop. M0.9.74
+  добавил узкое typed crash recovery под state lock/vault guard и реальный
+  child-process regression. Открытыми остаются fresh M0.9.74 clean field
+  evidence, полное удаление
   descriptor/protocol после совместимости старых клиентов, Sybil-resistant
   diversity, cryptographic hop proof и access-correlation privacy.
 - Push-уведомления на Android/iOS без утечки содержания и социального графа.

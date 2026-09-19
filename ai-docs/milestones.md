@@ -3996,11 +3996,44 @@ artifacts совпадают, PowerShell parse errors — 0, 13 файлов з�
 bytes, ZIP/ticket-store/precreated shared отсутствуют. Внешний run ещё не
 выполнен и должен начинаться только после полной синхронизации этой новой папки.
 
+Внешний M0.9.73 run `20260919-192354` подтвердил scheduling исправление: Alice
+и Bob завершили setup/convergence, Alice получила exact signed receipts `2/2`,
+зафиксировала `exact-volunteer-replication`, не пыталась выполнить HTTPS PUT и
+ушла offline. Run не принят, потому что Bob не получил ни одной replica. Его
+runtime повторял `open mailbox replication ledger read-only: Database repair
+aborted`: принудительная остановка предыдущей фазы оставила Redb recovery
+marker, а read-only inspection принципиально не мог его снять.
+
+### M0.9.74 — crash recovery mailbox replication ledger: локально завершено
+
+Реализовано:
+
+- нормальная idle inspection остаётся read-only и не меняет byte-authenticated
+  state;
+- только typed `redb::DatabaseError::RepairAborted` разрешает один writable
+  recovery open под runtime state-directory lock и `VaultDualWriteGuard`;
+- после recovery обязательно повторяется исходная read-only inspection;
+  permission/I/O/corruption не маскируются, ledger не удаляется и не
+  пересоздаётся;
+- regression запускает child test process, реально открывает Redb и завершает
+  его через `process::exit`, подтверждает первоначальный read-only failure,
+  recovery и последующий чистый read-only reopen;
+- targeted crash regression, strict clippy и полный `kilogram-cli` suite прошли:
+  81 passed, 0 failed за 299.75s при `--jobs 2 --test-threads=2`;
+- контракт зафиксирован в
+  [`../docs/RFC-0097-replication-ledger-crash-recovery.md`](../docs/RFC-0097-replication-ledger-crash-recovery.md)
+  и `scripts/verify-kilogram-runtime-mailbox-replication-recovery.ps1`, который
+  включён в M1 acceptance-kit builder/boundary.
+
+M0.9.73 run остаётся полезным diagnostic evidence, но не clean acceptance.
+Replacement field kit должен иметь отдельные milestone/label/private root
+`M0.9.74`/`m0974`/`M0974` и не переиспользовать старое состояние.
+
 ### Следующий этап
 
-1. Выполнить подготовленный M0.9.73 clean no-HTTPS Alice/Bob run через разные
-   сети. Принимать его только после fail-closed результата `verified`; старый
-   M0.9.72 run не возобновлять.
+1. Собрать из clean revision и выполнить M0.9.74 clean no-HTTPS Alice/Bob run
+   через разные сети. Принимать его только после fail-closed результата
+   `verified`; M0.9.72/M0.9.73 runs не возобновлять.
 2. До первого публичного security artifact pin-нуть linker/SDK либо controlled
    alternative и повторить M0.9.59 до matched external hash и attestation.
 3. Optional autostart/background mode оставить отдельной явной настройкой, не

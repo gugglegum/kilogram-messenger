@@ -749,6 +749,11 @@ EXE не создавались.
   детерминированный единственный initiator reciprocal auto-sync; replacement
   harness использует отдельный `m0973` label и полный унаследованный no-HTTPS
   contract, fresh двухсетевой field run ещё обязателен.
+- [`../docs/RFC-0097-replication-ledger-crash-recovery.md`](../docs/RFC-0097-replication-ledger-crash-recovery.md) —
+  реализованное M0.9.74 восстановление Redb replication ledger после
+  принудительной остановки: только typed `RepairAborted`, state lock, vault
+  dual-write, обязательный повтор read-only inspection и реальный
+  child-process crash regression; M0.9.73 run остаётся диагностическим.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

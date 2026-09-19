@@ -2399,3 +2399,24 @@ retirement остальных compatibility shadows ещё не реализов
   `kilogram-ticket-store.exe`=0, precreated `1\shared`=false. `BOUNDARIES.log`
   содержит M0.9.72 inherited no-HTTPS, cooperative scheduling и M0.9.73 gates;
   generator network execution=false.
+
+## M0.9.74 verification snapshot (2026-09-19)
+
+- M0.9.73 external run `20260919-192354` дошёл дальше прежнего: обе peer
+  стороны завершили convergence, Alice получила exact volunteer receipts `2/2`,
+  записала `runtime_mailbox_delivery_durability=exact-volunteer-replication`,
+  `runtime_mailbox_http_put=not-attempted` и остановилась. Это подтверждает
+  исправление cooperative scheduling, но не завершает field acceptance.
+- Bob не выполнил retrieval: runtime повторял
+  `open mailbox replication ledger read-only: Database repair aborted` и не
+  зарегистрировал inbound replica. Причина — unclean runtime stop оставил Redb
+  recovery marker; прежний read-only inspection не мог выполнить recovery.
+- Новый helper сохраняет read-only fast path. Только typed `RepairAborted`
+  выполняет один writable open под state lock и `VaultDualWriteGuard`, затем
+  повторяет read-only inspection. Все другие ошибки остаются fail closed.
+- Regression создаёт настоящий interrupted Redb через child `process::exit(73)`;
+  targeted test и полный CLI suite прошли. Итог полного прогона: 81 passed,
+  0 failed, 299.75s, Cargo jobs=2, test threads=2. Strict clippy также clean.
+- RFC-0097 и новый static gate включены в M1 acceptance builder/boundary.
+  Release/ZIP/network listener не запускались; VPN не влияет на эти локальные
+  проверки. Следующая внешняя попытка обязана использовать fresh M0.9.74 kit.
