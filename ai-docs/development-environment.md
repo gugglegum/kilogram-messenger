@@ -2328,3 +2328,20 @@ retirement остальных compatibility shadows ещё не реализов
 - Все проверки выполнялись debug/dev toolchain с `--jobs 2`; release/ZIP и
   network listener не запускались. Реальный clean external no-HTTPS run остаётся
   следующим M0.9.72 evidence этапом.
+
+## M0.9.72 verification snapshot (2026-09-19)
+
+- M0.9.69 orchestration templates сделаны milestone-aware без дублирования
+  provider/Bob logic: старый kit по-прежнему требует ticket-store, новый
+  M0.9.72 fail closed запрещает присутствие этого EXE.
+- No-HTTPS mode использует inert RFC 8032 store key и unreachable
+  `http://127.0.0.1:18787`, проверяет отсутствие binary/listener до identity
+  setup, непосредственно перед send и после остановки Alice.
+- Новый verifier наследует полный exact-locator evidence contract и дополнительно
+  требует suppression, `http_put=not-attempted` и exact volunteer durability;
+  self-test отклоняет attempted PUT и reachable endpoint.
+- PowerShell AST parse всех изменённых/new scripts — без ошибок. Старый M0.9.69
+  boundary/self-test, новый M0.9.72 boundary/self-test, HTTPS-retirement gate и
+  M1 acceptance-kit boundary проходят.
+- External two-host run ещё не выполнялся; сгенерированный clean kit и его exact
+  source revision будут записаны после первого clean-HEAD build.

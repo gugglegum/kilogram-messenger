@@ -737,6 +737,12 @@ EXE не создавались.
   capability сначала получает два transport-distinct signed volunteer receipt,
   затем атомарно фиксируется как replicated и не вызывает HTTP; legacy,
   incomplete exact и reverse-ACK пути сохраняют совместимость.
+- [`../docs/RFC-0095-clean-no-https-volunteer-field-run.md`](../docs/RFC-0095-clean-no-https-volunteer-field-run.md) —
+  подготовленный M0.9.72 three-folder/six-launch field harness без
+  `kilogram-ticket-store.exe`: inert unreachable descriptor, обязательные
+  `http_put=not-attempted` и exact volunteer durability `2/2`, Alice offline,
+  Bob commit/delete/restart и дополнительный fail-closed evidence verifier;
+  внешний two-host run ещё ожидается.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

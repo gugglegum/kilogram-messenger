@@ -9,14 +9,29 @@ $script:EvidenceDirectory = Join-Path $script:SharedDirectory 'evidence'
 $script:BuildInfoPath = Join-Path $script:KitRoot 'BUILD-INFO.json'
 $script:M0969FieldRoutePolicy = 'auto'
 $script:M0969FieldRelayUrl = 'https://aps1-1.relay.n0.iroh.link./'
+$script:M0972CompatibilityStoreUrl = 'http://127.0.0.1:18787'
+$script:M0972CompatibilityStoreKey = 'd75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a'
+$script:FieldMilestone = $null
 
 function Assert-M0969Kit {
-    foreach ($path in @($script:CliPath, $script:StorePath, $script:BuildInfoPath)) {
+    foreach ($path in @($script:CliPath, $script:BuildInfoPath)) {
         if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
             throw "M0.9.69 kit file is missing: $path"
         }
     }
     $build = Get-Content -LiteralPath $script:BuildInfoPath -Raw | ConvertFrom-Json
+    $milestone = [string]$build.milestone
+    if ($milestone -cnotin @('M0.9.69', 'M0.9.72')) {
+        throw "Unsupported exact-locator field milestone: $milestone"
+    }
+    if ($milestone -ceq 'M0.9.69' -and
+        -not (Test-Path -LiteralPath $script:StorePath -PathType Leaf)) {
+        throw "M0.9.69 compatibility store is missing: $script:StorePath"
+    }
+    if ($milestone -ceq 'M0.9.72' -and
+        (Test-Path -LiteralPath $script:StorePath)) {
+        throw 'M0.9.72 must not contain the HTTPS compatibility store executable.'
+    }
     foreach ($artifact in @($build.artifacts)) {
         $path = Join-Path $script:KitRoot ([string]$artifact.file).Replace('/', '\')
         $item = Get-Item -LiteralPath $path
@@ -25,7 +40,28 @@ function Assert-M0969Kit {
             throw "M0.9.69 kit artifact differs from BUILD-INFO.json: $path"
         }
     }
+    $script:FieldMilestone = $milestone
     return $build
+}
+
+function Test-M0972CompatibilityEndpointReachable {
+    $client = [Net.Sockets.TcpClient]::new()
+    try {
+        $pending = $client.ConnectAsync('127.0.0.1', 18787)
+        if (-not $pending.Wait(750)) { return $false }
+        return $client.Connected
+    }
+    catch { return $false }
+    finally { $client.Dispose() }
+}
+
+function Assert-M0972HttpsFixtureAbsent {
+    if (Test-Path -LiteralPath $script:StorePath) {
+        throw 'M0.9.72 contains a forbidden HTTPS compatibility store executable.'
+    }
+    if (Test-M0972CompatibilityEndpointReachable) {
+        throw "M0.9.72 compatibility endpoint is unexpectedly reachable: $script:M0972CompatibilityStoreUrl"
+    }
 }
 
 function New-M0969Directory {
@@ -295,7 +331,8 @@ function Get-M0969Run {
 
 function Get-M0969PrivateRoot {
     param([Parameter(Mandatory)] [string] $Role, [Parameter(Mandatory)] [string] $RunId)
-    return Join-Path $env:LOCALAPPDATA "Kilogram\M0969\$RunId\$Role"
+    $rootName = if ($script:FieldMilestone -ceq 'M0.9.72') { 'M0972' } else { 'M0969' }
+    return Join-Path $env:LOCALAPPDATA "Kilogram\$rootName\$RunId\$Role"
 }
 
 function Publish-M0969ProviderOffers {

@@ -3895,12 +3895,49 @@ pinned `aps1`; markers `alice-sent`, `bob-complete` и `providers-stopped`
   static gate —
   `scripts/verify-kilogram-mailbox-https-retirement-boundary.ps1`.
 
+### M0.9.72 — clean no-HTTPS volunteer field harness: готово к внешнему запуску
+
+Реализовано:
+
+- существующий clean exact-locator harness расширен новым milestone mode без
+  копирования второго набора сложных PowerShell orchestration helpers;
+- M0.9.72 kit не содержит `kilogram-ticket-store.exe`, не запускает loopback
+  mailbox fixture и дважды fail closed проверяет недоступность inert endpoint
+  `http://127.0.0.1:18787` — до identity/capability setup и перед send;
+- совместимый capability tuple пока сохраняет валидный публичный Ed25519 key из
+  RFC 8032 test vector и unreachable loopback URL, поскольку удаление самого
+  legacy descriptor требует отдельной wire migration;
+- sender требует ровно по одной строке suppression,
+  `runtime_mailbox_http_put=not-attempted` и
+  `runtime_mailbox_delivery_durability=exact-volunteer-replication`; attempted
+  HTTP, compatibility durability, retained-copy reason или exact completion
+  failure останавливают run;
+- post-send offline boundary повторно доказывает отсутствующий binary,
+  недоступный endpoint, no-PUT и остановленный Alice runtime до Bob retrieval;
+- Bob сохраняет проверенный M0.9.69 контракт: тот же exact commitment/store-key
+  set, две volunteer-Iroh replicas, application commit перед двумя signed
+  DELETE, отсутствие redelivery после restart и один marker в history;
+- общий exact-locator evidence verifier теперь принимает строго ограниченный
+  label prefix `m0969|m0972`; новый verifier сначала применяет весь старый
+  контракт, затем дополнительные no-HTTPS условия;
+- synthetic negative tests отвергают attempted HTTP PUT и reachable
+  compatibility endpoint;
+- generator сохраняет три папки и шесть запусков, собирает только stable-name
+  debug `kilogram-cli.exe` с двумя Cargo jobs, не создаёт release/ZIP и не
+  запускает сеть;
+- contract зафиксирован в
+  [`../docs/RFC-0095-clean-no-https-volunteer-field-run.md`](../docs/RFC-0095-clean-no-https-volunteer-field-run.md),
+  gates — `scripts/verify-kilogram-m0972-no-https-kit-boundary.ps1` и
+  `scripts/verify-kilogram-m0972-no-https-evidence.ps1`.
+
+Внешний two-host run ещё не выполнен, поэтому M0.9.72 пока не имеет статуса
+`завершено`. Прерванный или неуспешный запуск не возобновляется как clean
+evidence: для новой попытки создаётся новый kit/run.
+
 ### Следующий этап
 
-1. Провести clean external M0.9.72 exact-delivery run, в котором HTTPS fixture
-   отсутствует с самого начала, sender доказывает `http_put=not-attempted`, а
-   recipient получает, commit-ит и удаляет обе volunteer replicas после ухода
-   Alice offline.
+1. Выполнить подготовленный clean external M0.9.72 kit на двух хостах/сетях и
+   принять evidence только после fail-closed результата `verified`.
 2. До первого публичного security artifact pin-нуть linker/SDK либо controlled
    alternative и повторить M0.9.59 до matched external hash и attestation.
 3. Optional autostart/background mode оставить отдельной явной настройкой, не

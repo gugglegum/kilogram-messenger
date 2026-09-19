@@ -207,7 +207,24 @@ The current two-network Windows procedure is in
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.71 exact mailbox HTTPS-copy retirement — complete
+## Current milestone: M0.9.72 clean no-HTTPS field harness — ready for external run
+
+The six-launch, three-folder Windows harness now repeats the authenticated
+exact-locator topology without shipping or starting `kilogram-ticket-store`.
+An inert unreachable loopback descriptor remains only because the compatible
+capability format still requires it. Before activation and immediately before
+send, the harness proves that the binary is absent and the endpoint is
+unreachable.
+
+Success requires two exact signed volunteer receipts followed by
+`runtime_mailbox_http_put=not-attempted`, Alice going offline, Bob committing
+and deleting both replicas, no restart redelivery and exactly one history
+event. The generator uses only a stable debug `kilogram-cli.exe`, two Cargo jobs,
+no ZIP and no release build. The external two-host execution is still pending.
+Details are in
+[`docs/RFC-0095-clean-no-https-volunteer-field-run.md`](docs/RFC-0095-clean-no-https-volunteer-field-run.md).
+
+## Previous milestone: M0.9.71 exact mailbox HTTPS-copy retirement — complete
 
 For an authenticated exact replica-set capability, the sender now writes the
 encrypted item to the committed volunteer stores first. Two verified

@@ -46,6 +46,7 @@ try {
         'verify-kilogram-mailbox-capability-convergence.ps1',
         'verify-kilogram-mailbox-legacy-upgrade-boundary.ps1',
         'verify-kilogram-mailbox-https-retirement-boundary.ps1',
+        'verify-kilogram-m0972-no-https-kit-boundary.ps1',
         'verify-kilogram-mailbox-desktop-control.ps1',
         'verify-kilogram-mailbox-field-test-boundary.ps1',
         'verify-kilogram-m1-acceptance-kit-boundary.ps1'

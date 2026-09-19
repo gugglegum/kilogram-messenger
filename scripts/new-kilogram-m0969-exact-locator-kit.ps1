@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [string] $OutputDirectory,
-    [ValidateRange(1, 64)] [int] $CargoJobs = 2
+    [ValidateRange(1, 64)] [int] $CargoJobs = 2,
+    [ValidateSet('M0.9.69', 'M0.9.72')] [string] $Milestone = 'M0.9.69'
 )
 
 Set-StrictMode -Version Latest
@@ -11,18 +12,20 @@ $ErrorActionPreference = 'Stop'
 $cargoJobsResolved = Set-KilogramCargoResourcePolicy -RequestedJobs $CargoJobs
 $workspace = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $templateRoot = Join-Path $PSScriptRoot 'm0969-exact'
+$noHttpsCompatibility = $Milestone -ceq 'M0.9.72'
 
 Push-Location $workspace
 try {
     $dirty = & git status --porcelain --untracked-files=normal
     if ($LASTEXITCODE -ne 0) { throw 'git status failed.' }
-    if ($dirty) { throw 'Refusing to create the M0.9.69 kit from a dirty worktree.' }
+    if ($dirty) { throw "Refusing to create the $Milestone kit from a dirty worktree." }
     $revision = (& git rev-parse HEAD).Trim()
     if ($LASTEXITCODE -ne 0 -or $revision -cnotmatch '^[0-9a-f]{40}$') {
         throw 'Cannot resolve clean HEAD.'
     }
     if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
-        $OutputDirectory = ".tmp\m0969-exact-$($revision.Substring(0, 12))"
+        $kitName = if ($noHttpsCompatibility) { 'm0972-no-https' } else { 'm0969-exact' }
+        $OutputDirectory = ".tmp\$kitName-$($revision.Substring(0, 12))"
     }
     $output = if ([IO.Path]::IsPathRooted($OutputDirectory)) {
         [IO.Path]::GetFullPath($OutputDirectory)
@@ -48,16 +51,26 @@ try {
         'verify-kilogram-volunteer-replica-locator-boundary.ps1',
         'verify-kilogram-m0969-exact-locator-kit-boundary.ps1'
     )
+    if ($noHttpsCompatibility) {
+        $checks += @(
+            'verify-kilogram-mailbox-https-retirement-boundary.ps1',
+            'verify-kilogram-m0972-no-https-kit-boundary.ps1'
+        )
+    }
     $boundaries = [Collections.Generic.List[string]]::new()
     foreach ($check in $checks) {
         $lines = @(& (Join-Path $PSScriptRoot $check) 2>&1)
         foreach ($line in $lines) { $boundaries.Add([string]$line) }
     }
 
-    & cargo build --jobs $cargoJobsResolved --locked --package kilogram-cli --package kilogram-ticket-store
-    if ($LASTEXITCODE -ne 0) { throw 'M0.9.69 debug binaries failed to build.' }
+    if ($noHttpsCompatibility) {
+        & cargo build --jobs $cargoJobsResolved --locked --package kilogram-cli
+    } else {
+        & cargo build --jobs $cargoJobsResolved --locked --package kilogram-cli --package kilogram-ticket-store
+    }
+    if ($LASTEXITCODE -ne 0) { throw "$Milestone debug binaries failed to build." }
     if (& git status --porcelain --untracked-files=normal) {
-        throw 'Worktree changed during M0.9.69 kit build.'
+        throw "Worktree changed during $Milestone kit build."
     }
 
     foreach ($directory in @('1', '2', '3')) {
@@ -65,8 +78,10 @@ try {
     }
     Copy-Item -LiteralPath (Join-Path $workspace 'target\debug\kilogram-cli.exe') `
         -Destination (Join-Path $output 'kilogram-cli.exe')
-    Copy-Item -LiteralPath (Join-Path $workspace 'target\debug\kilogram-ticket-store.exe') `
-        -Destination (Join-Path $output 'kilogram-ticket-store.exe')
+    if (-not $noHttpsCompatibility) {
+        Copy-Item -LiteralPath (Join-Path $workspace 'target\debug\kilogram-ticket-store.exe') `
+            -Destination (Join-Path $output 'kilogram-ticket-store.exe')
+    }
     Copy-Item -LiteralPath (Join-Path $templateRoot 'common.ps1') `
         -Destination (Join-Path $output 'common.ps1')
     foreach ($role in @('1', '2', '3')) {
@@ -77,6 +92,11 @@ try {
     Copy-Item `
         -LiteralPath (Join-Path $PSScriptRoot 'verify-kilogram-m0969-exact-locator-evidence.ps1') `
         -Destination (Join-Path $output 'verify-kilogram-m0969-exact-locator-evidence.ps1')
+    if ($noHttpsCompatibility) {
+        Copy-Item `
+            -LiteralPath (Join-Path $PSScriptRoot 'verify-kilogram-m0972-no-https-evidence.ps1') `
+            -Destination (Join-Path $output 'verify-kilogram-m0972-no-https-evidence.ps1')
+    }
     [IO.File]::WriteAllLines(
         (Join-Path $output 'BOUNDARIES.log'),
         $boundaries,
@@ -85,7 +105,6 @@ try {
 
     $artifactNames = @(
         'kilogram-cli.exe',
-        'kilogram-ticket-store.exe',
         'common.ps1',
         'verify-kilogram-m0969-exact-locator-evidence.ps1',
         'BOUNDARIES.log',
@@ -96,6 +115,11 @@ try {
         '3/01_PREPARE_BOB.ps1',
         '3/02_RECEIVE_BOB.ps1'
     )
+    if ($noHttpsCompatibility) {
+        $artifactNames += 'verify-kilogram-m0972-no-https-evidence.ps1'
+    } else {
+        $artifactNames += 'kilogram-ticket-store.exe'
+    }
     $artifacts = @()
     foreach ($name in $artifactNames) {
         $item = Get-Item -LiteralPath (Join-Path $output $name.Replace('/', '\'))
@@ -107,7 +131,7 @@ try {
     }
     $buildInfo = [ordered]@{
         schema = 1
-        milestone = 'M0.9.69'
+        milestone = $Milestone
         source_revision = $revision
         source_dirty = $false
         profile = 'debug'
@@ -117,6 +141,8 @@ try {
         network_executed = $false
         field_route_policy = 'auto'
         field_relay_url = 'https://aps1-1.relay.n0.iroh.link./'
+        https_fixture_included = (-not $noHttpsCompatibility)
+        compatibility_endpoint = if ($noHttpsCompatibility) { 'http://127.0.0.1:18787' } else { 'http://127.0.0.1:8787' }
         artifacts = $artifacts
     }
     [IO.File]::WriteAllText(
@@ -125,7 +151,31 @@ try {
         [Text.UTF8Encoding]::new($false)
     )
 
-    $readme = @(
+    $readme = if ($noHttpsCompatibility) { @(
+        'M0.9.72 - CLEAN VOLUNTEER DELIVERY WITH NO HTTPS MAILBOX FIXTURE',
+        '',
+        'Folders synchronize through 1\shared. Live Redb state stays under %LOCALAPPDATA%.',
+        'Use one fresh generated kit for one run; clean evidence intentionally cannot be resumed.',
+        '',
+        'RUN ORDER:',
+        '1. Desktop: run 1\01_PREPARE_ALICE.ps1 and leave it waiting.',
+        '2. Desktop: run 2\01_START_PROVIDERS.ps1 and leave that window open.',
+        '3. Laptop: run 3\01_PREPARE_BOB.ps1; wait until both preparation windows report success.',
+        '4. Desktop: run 1\02_SEND_ALICE.ps1; wait for success.',
+        '5. Laptop: run 3\02_RECEIVE_BOB.ps1; wait for success and Yandex synchronization.',
+        '6. Desktop: run 1\03_VERIFY.ps1. It stops providers and verifies all evidence.',
+        '',
+        'Always start scripts with:',
+        'powershell -NoProfile -ExecutionPolicy Bypass -File .\SCRIPT_NAME.ps1',
+        '',
+        'The kit contains no kilogram-ticket-store.exe and starts no HTTPS compatibility fixture.',
+        'The legacy capability tuple points at an unreachable loopback endpoint and is never used.',
+        'Success requires http_put=not-attempted, exact volunteer durability with two signed receipts,',
+        'Alice offline before Bob retrieval, two commit-before-delete results, and no legacy fallback.',
+        '',
+        'This controlled field run pins auto-mode relay fallback to aps1; direct upgrade remains allowed.',
+        'The generator creates no ZIP, uses no release build, and starts no network process.'
+    ) } else { @(
         'M0.9.69 - CLEAN AUTHENTICATED EXACT-LOCATOR FIELD TEST',
         '',
         'Folders synchronize through 1\shared. Live Redb state stays under %LOCALAPPDATA%.',
@@ -150,7 +200,7 @@ try {
         'The compatibility HTTP store is loopback-only on Alice and is stopped before Bob receives.',
         'This controlled field run pins auto-mode relay fallback to aps1; direct upgrade remains allowed.',
         'The generator creates no ZIP, uses no release build, and starts no network process.'
-    )
+    ) }
     [IO.File]::WriteAllLines(
         (Join-Path $output 'README-RU.txt'),
         $readme,
@@ -165,6 +215,11 @@ try {
     Write-Output 'kit_script_integrity=sha256-length'
     Write-Output 'archive_created=false'
     Write-Output 'network_executed=false'
-    Write-Output 'status=kilogram-m0969-exact-locator-kit-created'
+    if ($noHttpsCompatibility) {
+        Write-Output 'https_fixture_included=false'
+        Write-Output 'status=kilogram-m0972-no-https-kit-created'
+    } else {
+        Write-Output 'status=kilogram-m0969-exact-locator-kit-created'
+    }
 }
 finally { Pop-Location }

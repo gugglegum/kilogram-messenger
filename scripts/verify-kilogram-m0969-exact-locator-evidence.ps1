@@ -1,7 +1,9 @@
 [CmdletBinding()]
 param(
     [string] $EvidenceDirectory,
-    [switch] $SelfTest
+    [switch] $SelfTest,
+    [ValidateSet('m0969', 'm0972')] [string] $LabelPrefix = 'm0969',
+    [switch] $SuppressReport
 )
 
 Set-StrictMode -Version Latest
@@ -52,7 +54,10 @@ function Assert-M0969SameSet {
 }
 
 function Test-M0969ExactLocatorEvidence {
-    param([Parameter(Mandatory)] [string] $Directory)
+    param(
+        [Parameter(Mandatory)] [string] $Directory,
+        [ValidateSet('m0969', 'm0972')] [string] $ExpectedLabelPrefix = 'm0969'
+    )
 
     $expectedRoutePolicy = 'auto'
     $expectedRelayUrl = 'https://aps1-1.relay.n0.iroh.link./'
@@ -74,8 +79,8 @@ function Test-M0969ExactLocatorEvidence {
         [string]$manifest.build_commit -cnotmatch '^[0-9a-f]{40}$' -or
         [string]$manifest.alice_account_id -cnotmatch '^[0-9a-f]{64}$' -or
         [string]$manifest.bob_account_id -cnotmatch '^[0-9a-f]{64}$' -or
-        [string]$manifest.conversation_label -notmatch '^m0969-[0-9]{8}-[0-9]{6}$' -or
-        [string]$manifest.message_marker -notmatch '^kilogram-m0969-[0-9]{8}-[0-9]{6}$' -or
+        [string]$manifest.conversation_label -notmatch ("^$([regex]::Escape($ExpectedLabelPrefix))-[0-9]{8}-[0-9]{6}`$") -or
+        [string]$manifest.message_marker -notmatch ("^kilogram-$([regex]::Escape($ExpectedLabelPrefix))-[0-9]{8}-[0-9]{6}`$") -or
         [string]$manifest.route_policy -cne $expectedRoutePolicy -or
         [string]$manifest.relay_url -cne $expectedRelayUrl) {
         throw 'M0.9.69 manifest has an invalid canonical identity or label'
@@ -545,5 +550,5 @@ if ([string]::IsNullOrWhiteSpace($EvidenceDirectory)) {
     throw 'EvidenceDirectory is required unless SelfTest is used.'
 }
 $resolved = [IO.Path]::GetFullPath($EvidenceDirectory)
-$report = Test-M0969ExactLocatorEvidence $resolved
-$report | Format-List
+$report = Test-M0969ExactLocatorEvidence $resolved $LabelPrefix
+if (-not $SuppressReport) { $report | Format-List }

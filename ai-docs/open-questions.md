@@ -300,10 +300,11 @@ sessions, distribution, removal и key epochs и не решены этим пр
   head на exact set из минимум двух transport-distinct providers через ordered
   rotation с overlap и без message replay. M0.9.71 уже не создаёт HTTPS copy для
   нового item после exact signed threshold `2/2`; legacy, incomplete exact и
-  reverse ACK сохраняют compatibility. Открытыми остаются clean external
-  no-HTTPS evidence, полное удаление descriptor/protocol после совместимости
-  старых клиентов, Sybil-resistant diversity, cryptographic hop proof и
-  access-correlation privacy.
+  reverse ACK сохраняют compatibility. M0.9.72 подготовил clean two-host harness
+  без store binary/fixture и с обязательным `http_put=not-attempted`, но внешний
+  run ещё не выполнен. Открытыми остаются его field evidence, полное удаление
+  descriptor/protocol после совместимости старых клиентов, Sybil-resistant
+  diversity, cryptographic hop proof и access-correlation privacy.
 - Push-уведомления на Android/iOS без утечки содержания и социального графа.
 - Независимый second-builder, подписанный release provenance, обновления клиента
   и дальнейшая защита supply chain поверх M0.9.50 same-host gate.

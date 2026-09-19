@@ -1,7 +1,23 @@
 . (Join-Path (Split-Path -Parent $PSScriptRoot) 'common.ps1')
 $build = Assert-M0969Kit
+$noHttpsCompatibility = [string]$build.milestone -ceq 'M0.9.72'
+$labelPrefix = if ($noHttpsCompatibility) { 'm0972' } else { 'm0969' }
 New-M0969Directory $script:SharedDirectory
 New-M0969Directory $script:EvidenceDirectory
+if ($noHttpsCompatibility) {
+    Assert-M0972HttpsFixtureAbsent
+    [IO.File]::WriteAllLines(
+        (Join-Path $script:EvidenceDirectory '00-https-fixture-absence.log'),
+        @(
+            'field_phase=before-identity-and-mailbox-activation'
+            'https_fixture_binary_present=false'
+            'https_fixture_process_started=false'
+            "compatibility_endpoint=$script:M0972CompatibilityStoreUrl"
+            'compatibility_endpoint_reachable=false'
+        ),
+        [Text.UTF8Encoding]::new($false)
+    )
+}
 
 $runPath = Join-Path $script:SharedDirectory 'run.json'
 if (Test-Path -LiteralPath $runPath) {
@@ -12,8 +28,8 @@ $run = [ordered]@{
     schema = 1
     run_id = $runId
     build_commit = [string]$build.source_revision
-    conversation_label = "m0969-$runId"
-    message_marker = "kilogram-m0969-$runId"
+    conversation_label = "$labelPrefix-$runId"
+    message_marker = "kilogram-$labelPrefix-$runId"
 }
 Write-M0969JsonNew $runPath $run
 
@@ -26,7 +42,7 @@ $profile = Join-Path $private 'runtime-profile.json'
 $ipc = Join-Path $private 'runtime.ipc.json'
 $deviceCertificate = Join-Path $public 'device.cert'
 $deviceList = Join-Path $public 'device-list.kadl'
-$storeData = Join-Path $private 'compatibility-store'
+$storeData = if ($noHttpsCompatibility) { '' } else { Join-Path $private 'compatibility-store' }
 New-M0969Directory $private
 New-M0969Directory $public
 
@@ -43,24 +59,29 @@ $null = Invoke-M0969Cli @(
 $identityOutput = @(Invoke-M0969Cli @('identity', '--state-dir', $state))
 $aliceDevice = Get-M0969ExactValue $identityOutput 'device_id' '[0-9a-f]{64}'
 
-$storeBootstrapLog = Join-Path $private 'compatibility-store-bootstrap.log'
-$storeProcess = $null
-try {
-    $storeProcess = Start-M0969Process $script:StorePath @('--data-dir', $storeData) $storeBootstrapLog
-    $storeText = Wait-M0969LogPattern `
-        $storeBootstrapLog '^blind_mailbox_store_key=([0-9a-f]{64})$' $storeProcess 60
-    $storeKey = [regex]::Match(
-        $storeText,
-        '(?m)^blind_mailbox_store_key=([0-9a-f]{64})$'
-    ).Groups[1].Value
+$storeKey = $script:M0972CompatibilityStoreKey
+$storeUrl = $script:M0972CompatibilityStoreUrl
+if (-not $noHttpsCompatibility) {
+    $storeBootstrapLog = Join-Path $private 'compatibility-store-bootstrap.log'
+    $storeProcess = $null
+    try {
+        $storeProcess = Start-M0969Process $script:StorePath @('--data-dir', $storeData) $storeBootstrapLog
+        $storeText = Wait-M0969LogPattern `
+            $storeBootstrapLog '^blind_mailbox_store_key=([0-9a-f]{64})$' $storeProcess 60
+        $storeKey = [regex]::Match(
+            $storeText,
+            '(?m)^blind_mailbox_store_key=([0-9a-f]{64})$'
+        ).Groups[1].Value
+        $storeUrl = 'http://127.0.0.1:8787'
+    }
+    finally { Stop-M0969Process $storeProcess }
 }
-finally { Stop-M0969Process $storeProcess }
 
 Write-M0969JsonNew (Join-Path $script:SharedDirectory 'alice-public.json') ([ordered]@{
     account_id = $aliceAccount
     device_id = $aliceDevice
     compatibility_store_key = $storeKey
-    compatibility_store_url = 'http://127.0.0.1:8787'
+    compatibility_store_url = $storeUrl
 })
 Write-Host 'Alice identity is ready. Start providers, then prepare Bob on the laptop.'
 $bobPublicPath = Wait-M0969File `
@@ -169,6 +190,9 @@ Write-M0969JsonNew (Join-Path $script:EvidenceDirectory 'manifest.json') ([order
     message_marker = $run.message_marker
     route_policy = $script:M0969FieldRoutePolicy
     relay_url = $script:M0969FieldRelayUrl
+    evidence_milestone = [string]$build.milestone
+    https_fixture_present_at_start = (-not $noHttpsCompatibility)
+    compatibility_endpoint = $storeUrl
 })
 Write-M0969JsonNew (Join-Path $private 'role.json') ([ordered]@{
     profile = $profile

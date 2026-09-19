@@ -1,5 +1,6 @@
 . (Join-Path (Split-Path -Parent $PSScriptRoot) 'common.ps1')
-$null = Assert-M0969Kit
+$build = Assert-M0969Kit
+$noHttpsCompatibility = [string]$build.milestone -ceq 'M0.9.72'
 $run = Get-M0969Run
 $null = Wait-M0969File (Join-Path $script:SharedDirectory 'alice-ready.marker') 180 'Alice ready marker'
 $null = Wait-M0969File (Join-Path $script:SharedDirectory 'bob-ready.marker') 180 'Bob ready marker'
@@ -26,8 +27,23 @@ $providerKeys = @(Get-M0969ProviderStoreKeys)
 $store = $null
 $runtime = $null
 try {
-    $store = Start-M0969Process $script:StorePath @('--data-dir', $storeData) $storeLog
-    $null = Wait-M0969LogPattern $storeLog '^status=listening$' $store 60
+    if ($noHttpsCompatibility) {
+        Assert-M0972HttpsFixtureAbsent
+        [IO.File]::WriteAllLines(
+            (Join-Path $script:EvidenceDirectory '04-https-fixture-absence.log'),
+            @(
+                'field_phase=immediately-before-send'
+                'https_fixture_binary_present=false'
+                'https_fixture_process_started=false'
+                "compatibility_endpoint=$script:M0972CompatibilityStoreUrl"
+                'compatibility_endpoint_reachable=false'
+            ),
+            [Text.UTF8Encoding]::new($false)
+        )
+    } else {
+        $store = Start-M0969Process $script:StorePath @('--data-dir', $storeData) $storeLog
+        $null = Wait-M0969LogPattern $storeLog '^status=listening$' $store 60
+    }
     if (Test-Path -LiteralPath $ipc) { Remove-Item -LiteralPath $ipc -Force }
     $runtime = Start-M0969Process `
         $script:CliPath @('runtime-from-profile', '--profile-file', $profile) $sendLog
@@ -55,6 +71,27 @@ try {
     }
     if ([regex]::IsMatch($sendText, '(?m)^runtime_mailbox_replica_set_discovery=legacy-random-fallback$')) {
         throw 'Alice used forbidden legacy random provider sampling.'
+    }
+    if ($noHttpsCompatibility) {
+        foreach ($pattern in @(
+            '^runtime_mailbox_https_compatibility_copy=suppressed-exact-volunteer-durability$',
+            '^runtime_mailbox_http_put=not-attempted$',
+            '^runtime_mailbox_delivery_durability=exact-volunteer-replication$'
+        )) {
+            if ([regex]::Matches(
+                $sendText, $pattern, [Text.RegularExpressions.RegexOptions]::Multiline
+            ).Count -ne 1) { throw "Alice no-HTTPS evidence is missing or ambiguous: $pattern" }
+        }
+        foreach ($forbidden in @(
+            '^runtime_mailbox_http_put=attempted$',
+            '^runtime_mailbox_delivery_durability=https-compatibility$',
+            '^runtime_mailbox_exact_completion_status=failed(?: |$)',
+            '^runtime_mailbox_https_compatibility_copy=retained-'
+        )) {
+            if ([regex]::IsMatch(
+                $sendText, $forbidden, [Text.RegularExpressions.RegexOptions]::Multiline
+            )) { throw "Alice unexpectedly entered HTTPS compatibility delivery: $forbidden" }
+        }
     }
     $sendCommitments = @([regex]::Matches(
         $sendText,
@@ -90,14 +127,27 @@ try {
 }
 finally { $ErrorActionPreference = $previous }
 if ($probeExitCode -eq 0) { throw 'Alice runtime is still reachable after stop.' }
+if ($noHttpsCompatibility) { Assert-M0972HttpsFixtureAbsent }
 
-[IO.File]::WriteAllLines($offlinePath, @(
+$offlineEvidence = @(
     'alice_replication_status=satisfied',
     "alice_replica_set_commitment_id=$commitmentId",
     "alice_replica_receipt_store_keys=$($providerKeys -join ',')",
     'alice_replica_discovery=exact-authenticated',
     'alice_runtime_ipc_reachable=false',
     "sender_stop_observed_utc=$([DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ'))"
-), [Text.UTF8Encoding]::new($false))
+)
+if ($noHttpsCompatibility) {
+    $offlineEvidence += @(
+        'https_fixture_binary_present=false',
+        'compatibility_endpoint_reachable=false',
+        'runtime_mailbox_http_put=not-attempted'
+    )
+}
+[IO.File]::WriteAllLines($offlinePath, $offlineEvidence, [Text.UTF8Encoding]::new($false))
 [IO.File]::WriteAllText((Join-Path $script:SharedDirectory 'alice-sent.marker'), "sent`n")
-Write-Host 'ALICE EXACT-LOCATOR SEND COMPLETED; ALICE RUNTIME AND HTTPS FIXTURE ARE OFFLINE.'
+if ($noHttpsCompatibility) {
+    Write-Host 'ALICE NO-HTTPS SEND COMPLETED; EXACT VOLUNTEER DURABILITY IS COMMITTED.'
+} else {
+    Write-Host 'ALICE EXACT-LOCATOR SEND COMPLETED; ALICE RUNTIME AND HTTPS FIXTURE ARE OFFLINE.'
+}

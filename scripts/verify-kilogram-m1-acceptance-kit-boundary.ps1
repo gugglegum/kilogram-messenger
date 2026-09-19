@@ -70,6 +70,7 @@ foreach ($required in @(
     'cargo build --jobs $cargoJobsResolved --locked --package kilogram-cli --package kilogram-windows',
     "'verify-kilogram-mailbox-legacy-upgrade-boundary.ps1'",
     "'verify-kilogram-mailbox-https-retirement-boundary.ps1'",
+    "'verify-kilogram-m0972-no-https-kit-boundary.ps1'",
     "profile = 'debug'",
     'archive = $false',
     'network_executed = $false',
