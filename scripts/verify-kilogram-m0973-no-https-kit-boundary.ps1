@@ -48,7 +48,7 @@ foreach ($required in @(
 }
 
 foreach ($required in @(
-    "[ValidateSet('M0.9.69', 'M0.9.72', 'M0.9.73', 'M0.9.74')] [string] `$Milestone = 'M0.9.69'",
+    "[ValidateSet('M0.9.69', 'M0.9.72', 'M0.9.73', 'M0.9.74', 'M0.9.76')] [string] `$Milestone = 'M0.9.69'",
     "'M0.9.73' { 'm0973-no-https' }",
     "'verify-kilogram-runtime-cooperative-scheduling.ps1'",
     "'verify-kilogram-m0973-no-https-kit-boundary.ps1'",
@@ -69,7 +69,7 @@ foreach ($forbidden in @('--release', 'Compress-Archive', '.zip')) {
 }
 
 foreach ($required in @(
-    "`$milestone -cnotin @('M0.9.69', 'M0.9.72', 'M0.9.73', 'M0.9.74')",
+    "`$milestone -cnotin @('M0.9.69', 'M0.9.72', 'M0.9.73', 'M0.9.74', 'M0.9.76')",
     "'M0.9.73' { 'M0973' }"
 )) {
     if (-not $common.Contains($required)) {
@@ -84,7 +84,7 @@ foreach ($required in @('-LabelPrefix $labelPrefix', 'CLEAN NO-HTTPS VOLUNTEER D
         throw "M0.9.73 final verification is missing '$required'"
     }
 }
-if (-not $baseVerifier.Contains("[ValidateSet('m0969', 'm0972', 'm0973', 'm0974')]")) {
+if (-not $baseVerifier.Contains("[ValidateSet('m0969', 'm0972', 'm0973', 'm0974', 'm0976')]")) {
     throw 'base exact-locator verifier does not accept the m0973 label'
 }
 foreach ($required in @(

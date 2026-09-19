@@ -2473,3 +2473,22 @@ retirement остальных compatibility shadows ещё не реализов
 - Strict Clippy для provisioning/runtime-IPC/CLI/Windows прошёл с
   `-D warnings`; все mailbox compatibility/lifecycle/runtime/v2 static gates,
   M1 acceptance boundary, `cargo fmt --check` и `git diff --check` зелёные.
+
+## M0.9.76 verification snapshot (2026-09-19)
+
+- Новый mode переиспользует существующий three-folder/six-launch harness и
+  добавляет только `M0.9.76`/`m0976`/`M0976` branches, отдельный wrapper и
+  service-free evidence verifier.
+- Bob activation использует `runtime-mailbox-exact-offer-create` без
+  `--service-base-url`/`--store-key`; public coordination, manifest и build info
+  также не сериализуют compatibility endpoint.
+- Успешный v2 exact commit печатает
+  `runtime_mailbox_https_compatibility_copy=absent-v2-exact-volunteer`;
+  legacy v1 exact path сохраняет прежнюю метку `suppressed`.
+- M0.9.72, M0.9.73, M0.9.74, M0.9.76, service-free v2 и M1 acceptance static
+  gates прошли. Negative verifier self-test отверг central URL и legacy
+  suppressed-copy marker.
+- `cargo fmt --check`, targeted CLI unit test и strict CLI Clippy прошли при
+  `--jobs 2`; release/ZIP и сетевые процессы не запускались.
+- Fresh debug kit должен генерироваться только из clean committed revision;
+  внешний two-network lifecycle пока не выполнялся.

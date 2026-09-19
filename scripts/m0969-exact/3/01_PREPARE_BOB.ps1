@@ -1,5 +1,6 @@
 . (Join-Path (Split-Path -Parent $PSScriptRoot) 'common.ps1')
-$null = Assert-M0969Kit
+$build = Assert-M0969Kit
+$serviceFreeV2 = [string]$build.milestone -ceq 'M0.9.76'
 $run = Get-M0969Run
 $null = Wait-M0969File `
     (Join-Path $script:SharedDirectory 'providers-ready.marker') 900 'providers ready before activation'
@@ -69,20 +70,39 @@ $null = Invoke-M0969Cli @(
     'runtime-contact-add', '--state-dir', $state, '--conversation', ([string]$run.conversation_label),
     '--expect-account', ([string]$alice.account_id), '--descriptor-file', $aliceTicket
 )
-$activation = @(Invoke-M0969Cli @(
-    'runtime-mailbox-offer-create', '--state-dir', $state,
+$activationArguments = @(
+    $(if ($serviceFreeV2) { 'runtime-mailbox-exact-offer-create' } else { 'runtime-mailbox-offer-create' }),
+    '--state-dir', $state,
     '--conversation', ([string]$run.conversation_label),
     '--peer-account', ([string]$alice.account_id), '--peer-device', ([string]$alice.device_id),
-    '--service-base-url', ([string]$alice.compatibility_store_url),
-    '--store-key', ([string]$alice.compatibility_store_key),
     '--output-file', (Join-Path $script:SharedDirectory 'bob-mailbox.offer')
-))
+)
+if (-not $serviceFreeV2) {
+    $activationArguments += @(
+        '--service-base-url', ([string]$alice.compatibility_store_url),
+        '--store-key', ([string]$alice.compatibility_store_key)
+    )
+}
+$activation = @(Invoke-M0969Cli $activationArguments)
 $activationPath = Join-Path $script:EvidenceDirectory '03-bob-mailbox-capability.log'
 [IO.File]::WriteAllLines($activationPath, $activation, [Text.UTF8Encoding]::new($false))
 if ('mailbox_replica_set_discovery=exact-authenticated' -cnotin $activation -or
     'mailbox_replica_set_store_count=2' -cnotin $activation -or
     'mailbox_replica_set_discovery=legacy-random-fallback' -cin $activation) {
     throw 'Bob mailbox activation did not commit the exact two-provider replica set.'
+}
+if ($serviceFreeV2) {
+    foreach ($required in @(
+        'mailbox_capability_format=v2-exact-volunteer',
+        'mailbox_service_descriptor=absent'
+    )) {
+        if ($required -cnotin $activation) {
+            throw "Bob service-free v2 activation is missing '$required'."
+        }
+    }
+    if ($activation -match '^(mailbox_service_url|mailbox_store_key)=') {
+        throw 'Bob service-free v2 activation unexpectedly emitted a central service tuple.'
+    }
 }
 $commitmentId = Get-M0969ExactValue `
     $activation 'mailbox_replica_set_commitment_id' '[0-9a-f]{64}'
@@ -146,4 +166,8 @@ finally {
 
 [IO.File]::WriteAllText((Join-Path $script:SharedDirectory 'bob-ready.marker'), "ready`n")
 $null = Wait-M0969File (Join-Path $script:SharedDirectory 'alice-ready.marker') 180 'Alice prepared marker'
-Write-Host 'BOB PREPARED: PROVIDERS PRECEDED ACTIVATION AND CAPABILITY IS ACKNOWLEDGED.'
+if ($serviceFreeV2) {
+    Write-Host 'BOB PREPARED: SERVICE-FREE V2 CAPABILITY IS ACKNOWLEDGED.'
+} else {
+    Write-Host 'BOB PREPARED: PROVIDERS PRECEDED ACTIVATION AND CAPABILITY IS ACKNOWLEDGED.'
+}

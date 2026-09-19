@@ -754,6 +754,14 @@ EXE не создавались.
   dual-write, обязательный повтор read-only inspection и реальный
   child-process crash regression; clean field run `20260919-203722` принят с
   `result=verified`.
+- [`../docs/RFC-0098-service-free-exact-mailbox-capability-v2.md`](../docs/RFC-0098-service-free-exact-mailbox-capability-v2.md) —
+  реализованный M0.9.75 exact-volunteer capability v2 без HTTPS URL и central
+  store key, с bounded чтением/миграцией v1 и запретом downgrade `v2 -> v1`.
+- [`../docs/RFC-0099-service-free-v2-field-run.md`](../docs/RFC-0099-service-free-v2-field-run.md) —
+  реализованный локально M0.9.76 fresh three-folder/six-launch harness: только
+  v2 exact activation, отсутствие compatibility tuple/fixture, обязательные
+  exact receipts `2/2`, sender-offline, commit-before-delete и restart без
+  redelivery; внешний two-network run ещё не выполнен.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

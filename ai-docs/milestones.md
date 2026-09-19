@@ -4092,11 +4092,40 @@ authority. Legacy v1 остаётся только совместимым read/m
 external v2 field run, Sybil-resistant provider diversity и access-correlation
 privacy в этот этап не входят.
 
+### M0.9.76 — fresh service-free v2 field harness: завершено локально
+
+Реализовано:
+
+- existing M0.9.69/M0.9.74 three-folder/six-launch orchestration расширена
+  отдельными `M0.9.76`/`m0976`/`M0976` branches без копирования harness;
+- Bob создаёт receive capability только через
+  `runtime-mailbox-exact-offer-create`; Alice public coordination, manifest,
+  activation/import evidence и generated `BUILD-INFO.json` не содержат
+  compatibility URL или central store key;
+- успешная v2 отправка теперь честно сообщает
+  `runtime_mailbox_https_compatibility_copy=absent-v2-exact-volunteer`, а не
+  legacy-семантику `suppressed`;
+- новый fail-closed verifier наследует полный exact-locator lifecycle и
+  дополнительно отвергает central tuple, compatibility endpoint, legacy
+  retained/suppressed copy и attempted HTTP PUT;
+- acceptance по-прежнему требует exact receipts `2/2`, Alice offline до Bob
+  retrieval, два commit-before-delete, одно сообщение и отсутствие redelivery
+  после restart;
+- generator использует stable debug EXE, Cargo jobs=2, не создаёт ZIP/release,
+  не запускает сеть и не добавляет executable/server;
+- M0.9.72/73/74 boundaries, service-free v2 gate, M1 boundary, PowerShell parse,
+  targeted Rust test, strict Clippy и `cargo fmt --check` проходят;
+- контракт зафиксирован в
+  [`../docs/RFC-0099-service-free-v2-field-run.md`](../docs/RFC-0099-service-free-v2-field-run.md).
+
+Граница этапа: локально доказана корректность harness и fail-closed evidence
+contract. Реальный service-free v2 lifecycle считается внешне подтверждённым
+только после fresh two-network запуска этого комплекта.
+
 ### Следующий этап
 
-1. Подготовить fresh M0.9.76 cross-network harness, который создаёт capability
-   только через v2 exact command, вообще не содержит compatibility URL/store
-   key и доказывает полный send/offline-retrieve/restart lifecycle.
+1. Выполнить fresh M0.9.76 two-network run без VPN/Wi-Fi ambiguity и принять
+   результат только через bundled fail-closed evidence verifier.
 2. До первого публичного security artifact pin-нуть linker/SDK либо controlled
    alternative и повторить M0.9.59 до matched external hash и attestation.
 3. Optional autostart/background mode оставить отдельной явной настройкой, не

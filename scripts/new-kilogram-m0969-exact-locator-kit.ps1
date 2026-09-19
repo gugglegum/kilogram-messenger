@@ -2,7 +2,7 @@
 param(
     [string] $OutputDirectory,
     [ValidateRange(1, 64)] [int] $CargoJobs = 2,
-    [ValidateSet('M0.9.69', 'M0.9.72', 'M0.9.73', 'M0.9.74')] [string] $Milestone = 'M0.9.69'
+    [ValidateSet('M0.9.69', 'M0.9.72', 'M0.9.73', 'M0.9.74', 'M0.9.76')] [string] $Milestone = 'M0.9.69'
 )
 
 Set-StrictMode -Version Latest
@@ -13,6 +13,8 @@ $cargoJobsResolved = Set-KilogramCargoResourcePolicy -RequestedJobs $CargoJobs
 $workspace = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $templateRoot = Join-Path $PSScriptRoot 'm0969-exact'
 $noHttpsCompatibility = $Milestone -cne 'M0.9.69'
+$serviceFreeV2 = $Milestone -ceq 'M0.9.76'
+$legacyNoHttpsCompatibility = $noHttpsCompatibility -and -not $serviceFreeV2
 
 Push-Location $workspace
 try {
@@ -25,6 +27,7 @@ try {
     }
     if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
         $kitName = switch ($Milestone) {
+            'M0.9.76' { 'm0976-service-free-v2' }
             'M0.9.74' { 'm0974-no-https' }
             'M0.9.73' { 'm0973-no-https' }
             'M0.9.72' { 'm0972-no-https' }
@@ -62,13 +65,19 @@ try {
             'verify-kilogram-m0972-no-https-kit-boundary.ps1',
             'verify-kilogram-runtime-cooperative-scheduling.ps1'
         )
-        if ($Milestone -cin @('M0.9.73', 'M0.9.74')) {
+        if ($Milestone -cin @('M0.9.73', 'M0.9.74', 'M0.9.76')) {
             $checks += 'verify-kilogram-m0973-no-https-kit-boundary.ps1'
         }
-        if ($Milestone -ceq 'M0.9.74') {
+        if ($Milestone -cin @('M0.9.74', 'M0.9.76')) {
             $checks += @(
                 'verify-kilogram-runtime-mailbox-replication-recovery.ps1',
                 'verify-kilogram-m0974-no-https-kit-boundary.ps1'
+            )
+        }
+        if ($serviceFreeV2) {
+            $checks += @(
+                'verify-kilogram-service-free-mailbox-capability-v2.ps1',
+                'verify-kilogram-m0976-service-free-v2-kit-boundary.ps1'
             )
         }
     }
@@ -107,10 +116,14 @@ try {
     Copy-Item `
         -LiteralPath (Join-Path $PSScriptRoot 'verify-kilogram-m0969-exact-locator-evidence.ps1') `
         -Destination (Join-Path $output 'verify-kilogram-m0969-exact-locator-evidence.ps1')
-    if ($noHttpsCompatibility) {
+    if ($legacyNoHttpsCompatibility) {
         Copy-Item `
             -LiteralPath (Join-Path $PSScriptRoot 'verify-kilogram-m0972-no-https-evidence.ps1') `
             -Destination (Join-Path $output 'verify-kilogram-m0972-no-https-evidence.ps1')
+    } elseif ($serviceFreeV2) {
+        Copy-Item `
+            -LiteralPath (Join-Path $PSScriptRoot 'verify-kilogram-m0976-service-free-v2-evidence.ps1') `
+            -Destination (Join-Path $output 'verify-kilogram-m0976-service-free-v2-evidence.ps1')
     }
     [IO.File]::WriteAllLines(
         (Join-Path $output 'BOUNDARIES.log'),
@@ -130,8 +143,10 @@ try {
         '3/01_PREPARE_BOB.ps1',
         '3/02_RECEIVE_BOB.ps1'
     )
-    if ($noHttpsCompatibility) {
+    if ($legacyNoHttpsCompatibility) {
         $artifactNames += 'verify-kilogram-m0972-no-https-evidence.ps1'
+    } elseif ($serviceFreeV2) {
+        $artifactNames += 'verify-kilogram-m0976-service-free-v2-evidence.ps1'
     } else {
         $artifactNames += 'kilogram-ticket-store.exe'
     }
@@ -157,8 +172,16 @@ try {
         field_route_policy = 'auto'
         field_relay_url = 'https://aps1-1.relay.n0.iroh.link./'
         https_fixture_included = (-not $noHttpsCompatibility)
-        compatibility_endpoint = if ($noHttpsCompatibility) { 'http://127.0.0.1:18787' } else { 'http://127.0.0.1:8787' }
+        mailbox_capability_format = if ($serviceFreeV2) { 'v2-exact-volunteer' } else { 'v1-legacy-https' }
+        central_service_descriptor_present = (-not $serviceFreeV2)
         artifacts = $artifacts
+    }
+    if (-not $serviceFreeV2) {
+        $buildInfo['compatibility_endpoint'] = if ($noHttpsCompatibility) {
+            'http://127.0.0.1:18787'
+        } else {
+            'http://127.0.0.1:8787'
+        }
     }
     [IO.File]::WriteAllText(
         (Join-Path $output 'BUILD-INFO.json'),
@@ -166,7 +189,32 @@ try {
         [Text.UTF8Encoding]::new($false)
     )
 
-    $readme = if ($noHttpsCompatibility) { @(
+    $readme = if ($serviceFreeV2) { @(
+        'M0.9.76 - SERVICE-FREE EXACT MAILBOX CAPABILITY V2 FIELD TEST',
+        '',
+        'Folders synchronize through 1\shared. Live Redb state stays under %LOCALAPPDATA%.',
+        'Use one fresh generated kit for one run; clean evidence intentionally cannot be resumed.',
+        '',
+        'RUN ORDER:',
+        '1. Desktop: run 1\01_PREPARE_ALICE.ps1 and leave it waiting.',
+        '2. Desktop: run 2\01_START_PROVIDERS.ps1 and leave that window open.',
+        '3. Laptop: run 3\01_PREPARE_BOB.ps1; wait until both preparation windows report success.',
+        '4. Desktop: run 1\02_SEND_ALICE.ps1; wait for success.',
+        '5. Laptop: run 3\02_RECEIVE_BOB.ps1; wait for success and Yandex synchronization.',
+        '6. Desktop: run 1\03_VERIFY.ps1. It stops providers and verifies all evidence.',
+        '',
+        'Always start scripts with:',
+        'powershell -NoProfile -ExecutionPolicy Bypass -File .\SCRIPT_NAME.ps1',
+        '',
+        'The kit creates only a v2-exact-volunteer capability. It has no mailbox URL,',
+        'central store key, HTTPS fixture or kilogram-ticket-store.exe.',
+        'Success requires service_descriptor=absent, two exact signed volunteer receipts,',
+        'http_put=not-attempted, Alice offline before Bob retrieval, two commit-before-delete',
+        'results, one history event, and no redelivery after Bob restart.',
+        '',
+        'This controlled field run pins auto-mode relay fallback to aps1; direct upgrade remains allowed.',
+        'The generator creates no ZIP, uses no release build, and starts no network process.'
+    ) } elseif ($noHttpsCompatibility) { @(
         "$Milestone - CLEAN VOLUNTEER DELIVERY WITH NO HTTPS MAILBOX FIXTURE",
         '',
         'Folders synchronize through 1\shared. Live Redb state stays under %LOCALAPPDATA%.',
@@ -232,7 +280,11 @@ try {
     Write-Output 'network_executed=false'
     if ($noHttpsCompatibility) {
         Write-Output 'https_fixture_included=false'
-        if ($Milestone -ceq 'M0.9.74') {
+        if ($serviceFreeV2) {
+            Write-Output 'mailbox_capability_format=v2-exact-volunteer'
+            Write-Output 'central_service_descriptor_present=false'
+            Write-Output 'status=kilogram-m0976-service-free-v2-kit-created'
+        } elseif ($Milestone -ceq 'M0.9.74') {
             Write-Output 'status=kilogram-m0974-no-https-kit-created'
         } elseif ($Milestone -ceq 'M0.9.73') {
             Write-Output 'status=kilogram-m0973-no-https-kit-created'

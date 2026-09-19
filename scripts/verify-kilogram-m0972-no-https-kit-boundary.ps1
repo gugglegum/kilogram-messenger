@@ -49,7 +49,7 @@ foreach ($value in @(
 }
 
 foreach ($value in @(
-    "[ValidateSet('M0.9.69', 'M0.9.72', 'M0.9.73', 'M0.9.74')] [string] `$Milestone = 'M0.9.69'",
+    "[ValidateSet('M0.9.69', 'M0.9.72', 'M0.9.73', 'M0.9.74', 'M0.9.76')] [string] `$Milestone = 'M0.9.69'",
     "`$noHttpsCompatibility = `$Milestone -cne 'M0.9.69'",
     'cargo build --jobs $cargoJobsResolved --locked --package kilogram-cli',
     "if (-not `$noHttpsCompatibility)",
@@ -87,7 +87,7 @@ foreach ($value in @(
     "`$script:M0972CompatibilityStoreKey = 'd75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a'",
     'Test-M0972CompatibilityEndpointReachable',
     'Assert-M0972HttpsFixtureAbsent',
-    "`$milestone -cnotin @('M0.9.69', 'M0.9.72', 'M0.9.73', 'M0.9.74')",
+    "`$milestone -cnotin @('M0.9.69', 'M0.9.72', 'M0.9.73', 'M0.9.74', 'M0.9.76')",
     "`$milestone -cne 'M0.9.69'",
     "'M0972'"
 )) {
@@ -128,7 +128,7 @@ foreach ($value in @(
 )) {
     if (-not $aliceSend.Contains($value)) { throw "M0.9.72 Alice send is missing '$value'" }
 }
-$sendGuard = $aliceSend.IndexOf('if ($noHttpsCompatibility)')
+$sendGuard = $aliceSend.IndexOf('if ($legacyNoHttpsCompatibility)')
 $legacyStoreStart = $aliceSend.IndexOf('Start-M0969Process $script:StorePath', $sendGuard)
 if ($sendGuard -lt 0 -or $legacyStoreStart -le $sendGuard) {
     throw 'M0.9.72 send does not isolate the legacy compatibility-store start'
@@ -143,7 +143,7 @@ foreach ($value in @(
 }
 
 foreach ($value in @(
-    "[ValidateSet('m0969', 'm0972', 'm0973', 'm0974')] [string] `$LabelPrefix = 'm0969'",
+    "[ValidateSet('m0969', 'm0972', 'm0973', 'm0974', 'm0976')] [string] `$LabelPrefix = 'm0969'",
     '[switch] $SuppressReport',
     '$ExpectedLabelPrefix'
 )) {

@@ -1,6 +1,8 @@
 . (Join-Path (Split-Path -Parent $PSScriptRoot) 'common.ps1')
 $build = Assert-M0969Kit
 $noHttpsCompatibility = [string]$build.milestone -cne 'M0.9.69'
+$serviceFreeV2 = [string]$build.milestone -ceq 'M0.9.76'
+$legacyNoHttpsCompatibility = $noHttpsCompatibility -and -not $serviceFreeV2
 $run = Get-M0969Run
 $null = Wait-M0969File (Join-Path $script:SharedDirectory 'alice-ready.marker') 180 'Alice ready marker'
 $null = Wait-M0969File (Join-Path $script:SharedDirectory 'bob-ready.marker') 180 'Bob ready marker'
@@ -27,7 +29,7 @@ $providerKeys = @(Get-M0969ProviderStoreKeys)
 $store = $null
 $runtime = $null
 try {
-    if ($noHttpsCompatibility) {
+    if ($legacyNoHttpsCompatibility) {
         Assert-M0972HttpsFixtureAbsent
         [IO.File]::WriteAllLines(
             (Join-Path $script:EvidenceDirectory '04-https-fixture-absence.log'),
@@ -73,8 +75,13 @@ try {
         throw 'Alice used forbidden legacy random provider sampling.'
     }
     if ($noHttpsCompatibility) {
+        $compatibilityPattern = if ($serviceFreeV2) {
+            '^runtime_mailbox_https_compatibility_copy=absent-v2-exact-volunteer$'
+        } else {
+            '^runtime_mailbox_https_compatibility_copy=suppressed-exact-volunteer-durability$'
+        }
         foreach ($pattern in @(
-            '^runtime_mailbox_https_compatibility_copy=suppressed-exact-volunteer-durability$',
+            $compatibilityPattern,
             '^runtime_mailbox_http_put=not-attempted$',
             '^runtime_mailbox_delivery_durability=exact-volunteer-replication$'
         )) {
@@ -86,7 +93,12 @@ try {
             '^runtime_mailbox_http_put=attempted$',
             '^runtime_mailbox_delivery_durability=https-compatibility$',
             '^runtime_mailbox_exact_completion_status=failed(?: |$)',
-            '^runtime_mailbox_https_compatibility_copy=retained-'
+            '^runtime_mailbox_https_compatibility_copy=retained-',
+            $(if ($serviceFreeV2) {
+                '^runtime_mailbox_https_compatibility_copy=suppressed-exact-volunteer-durability$'
+            } else {
+                '^runtime_mailbox_https_compatibility_copy=absent-v2-exact-volunteer$'
+            })
         )) {
             if ([regex]::IsMatch(
                 $sendText, $forbidden, [Text.RegularExpressions.RegexOptions]::Multiline
@@ -127,7 +139,7 @@ try {
 }
 finally { $ErrorActionPreference = $previous }
 if ($probeExitCode -eq 0) { throw 'Alice runtime is still reachable after stop.' }
-if ($noHttpsCompatibility) { Assert-M0972HttpsFixtureAbsent }
+if ($legacyNoHttpsCompatibility) { Assert-M0972HttpsFixtureAbsent }
 
 $offlineEvidence = @(
     'alice_replication_status=satisfied',
@@ -137,16 +149,25 @@ $offlineEvidence = @(
     'alice_runtime_ipc_reachable=false',
     "sender_stop_observed_utc=$([DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ'))"
 )
-if ($noHttpsCompatibility) {
+if ($legacyNoHttpsCompatibility) {
     $offlineEvidence += @(
         'https_fixture_binary_present=false',
         'compatibility_endpoint_reachable=false',
         'runtime_mailbox_http_put=not-attempted'
     )
+} elseif ($serviceFreeV2) {
+    $offlineEvidence += @(
+        'mailbox_capability_format=v2-exact-volunteer',
+        'mailbox_service_descriptor=absent',
+        'runtime_mailbox_https_compatibility_copy=absent-v2-exact-volunteer',
+        'runtime_mailbox_http_put=not-attempted'
+    )
 }
 [IO.File]::WriteAllLines($offlinePath, $offlineEvidence, [Text.UTF8Encoding]::new($false))
 [IO.File]::WriteAllText((Join-Path $script:SharedDirectory 'alice-sent.marker'), "sent`n")
-if ($noHttpsCompatibility) {
+if ($serviceFreeV2) {
+    Write-Host 'ALICE SERVICE-FREE V2 SEND COMPLETED; NO CENTRAL MAILBOX DESCRIPTOR EXISTS.'
+} elseif ($noHttpsCompatibility) {
     Write-Host 'ALICE NO-HTTPS SEND COMPLETED; EXACT VOLUNTEER DURABILITY IS COMMITTED.'
 } else {
     Write-Host 'ALICE EXACT-LOCATOR SEND COMPLETED; ALICE RUNTIME AND HTTPS FIXTURE ARE OFFLINE.'

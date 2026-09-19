@@ -1,7 +1,10 @@
 . (Join-Path (Split-Path -Parent $PSScriptRoot) 'common.ps1')
 $build = Assert-M0969Kit
 $noHttpsCompatibility = [string]$build.milestone -cne 'M0.9.69'
+$serviceFreeV2 = [string]$build.milestone -ceq 'M0.9.76'
+$legacyNoHttpsCompatibility = $noHttpsCompatibility -and -not $serviceFreeV2
 $labelPrefix = switch ([string]$build.milestone) {
+    'M0.9.76' { 'm0976' }
     'M0.9.74' { 'm0974' }
     'M0.9.73' { 'm0973' }
     'M0.9.72' { 'm0972' }
@@ -9,7 +12,7 @@ $labelPrefix = switch ([string]$build.milestone) {
 }
 New-M0969Directory $script:SharedDirectory
 New-M0969Directory $script:EvidenceDirectory
-if ($noHttpsCompatibility) {
+if ($legacyNoHttpsCompatibility) {
     Assert-M0972HttpsFixtureAbsent
     [IO.File]::WriteAllLines(
         (Join-Path $script:EvidenceDirectory '00-https-fixture-absence.log'),
@@ -19,6 +22,20 @@ if ($noHttpsCompatibility) {
             'https_fixture_process_started=false'
             "compatibility_endpoint=$script:M0972CompatibilityStoreUrl"
             'compatibility_endpoint_reachable=false'
+        ),
+        [Text.UTF8Encoding]::new($false)
+    )
+} elseif ($serviceFreeV2) {
+    if (Test-Path -LiteralPath $script:StorePath) {
+        throw 'M0.9.76 contains a forbidden HTTPS mailbox executable.'
+    }
+    [IO.File]::WriteAllLines(
+        (Join-Path $script:EvidenceDirectory '00-service-free-v2.boundary'),
+        @(
+            'field_phase=before-identity-and-mailbox-activation'
+            'mailbox_capability_format=v2-exact-volunteer'
+            'mailbox_service_descriptor_input=absent'
+            'https_fixture_binary_present=false'
         ),
         [Text.UTF8Encoding]::new($false)
     )
@@ -82,12 +99,15 @@ if (-not $noHttpsCompatibility) {
     finally { Stop-M0969Process $storeProcess }
 }
 
-Write-M0969JsonNew (Join-Path $script:SharedDirectory 'alice-public.json') ([ordered]@{
+$alicePublic = [ordered]@{
     account_id = $aliceAccount
     device_id = $aliceDevice
-    compatibility_store_key = $storeKey
-    compatibility_store_url = $storeUrl
-})
+}
+if (-not $serviceFreeV2) {
+    $alicePublic['compatibility_store_key'] = $storeKey
+    $alicePublic['compatibility_store_url'] = $storeUrl
+}
+Write-M0969JsonNew (Join-Path $script:SharedDirectory 'alice-public.json') $alicePublic
 Write-Host 'Alice identity is ready. Start providers, then prepare Bob on the laptop.'
 $bobPublicPath = Wait-M0969File `
     (Join-Path $script:SharedDirectory 'bob-public.json') 1800 'Bob public identity'
@@ -137,6 +157,20 @@ $offerImport = @(Invoke-M0969Cli @(
     $offerImport,
     [Text.UTF8Encoding]::new($false)
 )
+if ($serviceFreeV2) {
+    foreach ($required in @(
+        'mailbox_capability_format=v2-exact-volunteer',
+        'mailbox_service_descriptor=absent',
+        'status=runtime-mailbox-offer-imported'
+    )) {
+        if ($required -cnotin $offerImport) {
+            throw "Alice service-free v2 offer import is missing '$required'."
+        }
+    }
+    if ($offerImport -match '^(mailbox_service_url|mailbox_store_key)=') {
+        throw 'Alice service-free v2 offer unexpectedly contained a central service tuple.'
+    }
+}
 
 $convergenceLocal = Join-Path $private 'alice-capability-convergence.log'
 $convergenceShared = Join-Path $script:EvidenceDirectory '03-alice-capability-convergence.log'
@@ -185,7 +219,7 @@ finally {
     Publish-M0969File "$convergenceLocal.stderr" "$convergenceShared.stderr"
 }
 
-Write-M0969JsonNew (Join-Path $script:EvidenceDirectory 'manifest.json') ([ordered]@{
+$manifest = [ordered]@{
     schema = 1
     run_id = $runId
     build_commit = [string]$build.source_revision
@@ -197,8 +231,14 @@ Write-M0969JsonNew (Join-Path $script:EvidenceDirectory 'manifest.json') ([order
     relay_url = $script:M0969FieldRelayUrl
     evidence_milestone = [string]$build.milestone
     https_fixture_present_at_start = (-not $noHttpsCompatibility)
-    compatibility_endpoint = $storeUrl
-})
+}
+if ($serviceFreeV2) {
+    $manifest['mailbox_capability_format'] = 'v2-exact-volunteer'
+    $manifest['central_service_descriptor_present'] = $false
+} else {
+    $manifest['compatibility_endpoint'] = $storeUrl
+}
+Write-M0969JsonNew (Join-Path $script:EvidenceDirectory 'manifest.json') $manifest
 Write-M0969JsonNew (Join-Path $private 'role.json') ([ordered]@{
     profile = $profile
     ipc = $ipc
@@ -208,4 +248,8 @@ Write-M0969JsonNew (Join-Path $private 'role.json') ([ordered]@{
 })
 [IO.File]::WriteAllText((Join-Path $script:SharedDirectory 'alice-ready.marker'), "ready`n")
 $null = Wait-M0969File (Join-Path $script:SharedDirectory 'bob-ready.marker') 180 'Bob prepared marker'
-Write-Host 'ALICE PREPARED WITH THE AUTHENTICATED EXACT LOCATOR.'
+if ($serviceFreeV2) {
+    Write-Host 'ALICE PREPARED WITH THE SERVICE-FREE V2 EXACT LOCATOR.'
+} else {
+    Write-Host 'ALICE PREPARED WITH THE AUTHENTICATED EXACT LOCATOR.'
+}

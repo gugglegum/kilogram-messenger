@@ -52,6 +52,7 @@ try {
         'verify-kilogram-runtime-cooperative-scheduling.ps1',
         'verify-kilogram-runtime-mailbox-replication-recovery.ps1',
         'verify-kilogram-service-free-mailbox-capability-v2.ps1',
+        'verify-kilogram-m0976-service-free-v2-kit-boundary.ps1',
         'verify-kilogram-mailbox-desktop-control.ps1',
         'verify-kilogram-mailbox-field-test-boundary.ps1',
         'verify-kilogram-m1-acceptance-kit-boundary.ps1'

@@ -19607,12 +19607,18 @@ async fn upload_runtime_mailbox_request(
                 })();
                 match exact_commit {
                     Ok(committed) => {
-                        let compatibility =
-                            RuntimeMailboxHttpsCompatibilityCopy::for_delivery(true, true);
-                        println!(
-                            "runtime_mailbox_https_compatibility_copy={}",
-                            compatibility.label()
-                        );
+                        if upload.service_base_url.is_none() {
+                            println!(
+                                "runtime_mailbox_https_compatibility_copy=absent-v2-exact-volunteer"
+                            );
+                        } else {
+                            let compatibility =
+                                RuntimeMailboxHttpsCompatibilityCopy::for_delivery(true, true);
+                            println!(
+                                "runtime_mailbox_https_compatibility_copy={}",
+                                compatibility.label()
+                            );
+                        }
                         println!("runtime_mailbox_id={}", committed.mailbox_id());
                         println!("runtime_mailbox_item_id={}", committed.item_id());
                         println!("runtime_mailbox_delivery_durability=exact-volunteer-replication");
