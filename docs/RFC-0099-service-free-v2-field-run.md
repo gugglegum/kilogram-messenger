@@ -1,6 +1,6 @@
 # RFC-0099: Service-free v2 volunteer mailbox field run (M0.9.76)
 
-Status: implemented and packaged locally; fresh two-network field execution pending.
+Status: implemented and externally verified by fresh two-network run.
 
 ## 1. Goal
 
@@ -118,3 +118,25 @@ the bundled negative verifier and the generated AST store guard passed. Its
 13 files (57,863,913 bytes) were copied byte-identically to
 `C:\Users\Paul\YandexDisk\!M\M0.9.76-retry1`; this is the only kit accepted
 for the next attempt.
+
+## 8. Accepted external result
+
+Fresh retry run `20260920-001614` from exact revision
+`ff38e1b89dc5832abdb2a5d81f7ab3af06e0ceae` passed the bundled fail-closed
+verifier with `result=verified`. The retained evidence proves:
+
+- capability format `v2-exact-volunteer` with no central service descriptor or
+  compatibility endpoint;
+- exact authenticated provider resolution and signed receipts `2/2`;
+- `runtime_mailbox_https_compatibility_copy=absent-v2-exact-volunteer` and
+  `runtime_mailbox_http_put=not-attempted`;
+- Alice runtime offline after durable replication and before Bob retrieval;
+- two volunteer-Iroh inbound applications, each deleted only after commit;
+- zero volunteer redeliveries after Bob restart;
+- the marked message occurs exactly once in Bob history (`event_count=2`
+  including its protocol companion event).
+
+This accepts the M0.9.76 mechanism and two-host lifecycle boundary. It does not
+prove physical/operator independence of the two providers, Sybil resistance or
+access-correlation privacy because both provider processes still ran on Alice's
+host for this controlled test.

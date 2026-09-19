@@ -213,7 +213,7 @@ The current two-network Windows procedure is in
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.76 service-free v2 field harness — complete locally
+## Current milestone: M0.9.76 service-free v2 field lifecycle — verified
 
 The existing three-folder, six-launch Windows harness now has a fresh M0.9.76
 mode which creates the mailbox only through the v2 exact command. The generated
@@ -222,10 +222,12 @@ executable. Its verifier requires exact volunteer receipts `2/2`, no attempted
 HTTP PUT, Alice offline before retrieval, two recipient commit-before-delete
 results and no redelivery after Bob restart.
 
+Fresh two-network run `20260920-001614` from revision `ff38e1b89dc5` passed the
+bundled fail-closed verifier. It proved exact signed receipts `2/2`, no central
+descriptor or HTTP PUT, Alice offline before retrieval, two recipient
+commit-before-delete results, one message occurrence and no restart redelivery.
 The generator remains debug-only, limits Cargo to two jobs, creates no archive
-and starts no network process. Local fail-closed checks pass; a fresh external
-two-network run is still required before the milestone is called field-verified.
-Details are in
+and starts no network process. Details are in
 [`docs/RFC-0099-service-free-v2-field-run.md`](docs/RFC-0099-service-free-v2-field-run.md).
 
 ## Previous milestone: M0.9.75 service-free exact mailbox capability v2 — complete locally

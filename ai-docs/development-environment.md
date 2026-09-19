@@ -2512,3 +2512,8 @@ retirement остальных compatibility shadows ещё не реализов
   store-start под exact AST guard, bundled verifier green, 13 files и
   57,863,913 bytes. Byte-identical external copy:
   `C:\Users\Paul\YandexDisk\!M\M0.9.76-retry1`.
+- External retry run `20260920-001614` прошёл bundled evidence verifier:
+  `result=verified`, build commit `ff38e1b89dc5832abdb2a5d81f7ab3af06e0ceae`,
+  v2 descriptor/compatibility endpoint absent, exact resolution/receipts 2/2,
+  HTTP PUT not attempted, Alice offline, Bob volunteer-Iroh commit/delete 2/2,
+  restart inbound count 0, history event count 2 и marker occurrence 1.

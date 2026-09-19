@@ -4092,7 +4092,7 @@ authority. Legacy v1 остаётся только совместимым read/m
 external v2 field run, Sybil-resistant provider diversity и access-correlation
 privacy в этот этап не входят.
 
-### M0.9.76 — fresh service-free v2 field harness: завершено локально
+### M0.9.76 — fresh service-free v2 field lifecycle: завершено и externally verified
 
 Реализовано:
 
@@ -4144,15 +4144,35 @@ Alice runtime/queue/message: `02_SEND_ALICE.ps1` ошибочно трактов
 `.tmp\m0976-service-free-v2-ff38e1b89dc5` прошёл 11/11 artifact hashes,
 bundled negative verifier и generated AST guard; 13 файлов/57,863,913 bytes
 byte-identical скопированы в
-`C:\Users\Paul\YandexDisk\!M\M0.9.76-retry1`. Следующая попытка использует
-только эту папку после полной синхронизации на ноутбук.
+`C:\Users\Paul\YandexDisk\!M\M0.9.76-retry1`; принятый retry использовал
+только эту полностью синхронизированную папку.
+
+Fresh retry run `20260920-001614` из exact revision
+`ff38e1b89dc5832abdb2a5d81f7ab3af06e0ceae` независимо перепроверен bundled
+verifier-ом и принят с `result=verified`. Подтверждены:
+
+- `v2-exact-volunteer`, отсутствие central service descriptor и compatibility
+  endpoint;
+- sender exact resolution/receipts `2/2`, exact volunteer durability и
+  `runtime_mailbox_http_put=not-attempted`;
+- Alice runtime offline до Bob retrieval;
+- два `volunteer-iroh` inbound commit и два `deleted-after-commit`;
+- restart без redelivery, history `event_count=2` и ровно одно вхождение
+  message marker;
+- service-free v2, cooperative scheduling, replication recovery и M0.9.76 kit
+  boundaries в retained evidence.
+
+Этап доказывает controlled two-host mechanism/lifecycle, но не физическую или
+операторскую независимость двух providers, поскольку оба provider process в
+этом тесте работали на Alice host. Sybil resistance и access-correlation
+privacy остаются отдельными задачами.
 
 ### Следующий этап
 
-1. Выполнить fresh M0.9.76 two-network run без VPN/Wi-Fi ambiguity и принять
-   результат только через bundled fail-closed evidence verifier.
-2. До первого публичного security artifact pin-нуть linker/SDK либо controlled
+1. До первого публичного security artifact pin-нуть linker/SDK либо controlled
    alternative и повторить M0.9.59 до matched external hash и attestation.
+2. Спроектировать Sybil-resistant provider diversity и проверить replicas на
+   физически/операторски независимых volunteer hosts.
 3. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 4. Добавить macOS/Linux/mobile providers той же platform boundary.
