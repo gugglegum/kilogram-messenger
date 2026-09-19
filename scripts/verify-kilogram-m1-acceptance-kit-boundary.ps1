@@ -71,6 +71,7 @@ foreach ($required in @(
     "'verify-kilogram-mailbox-legacy-upgrade-boundary.ps1'",
     "'verify-kilogram-mailbox-https-retirement-boundary.ps1'",
     "'verify-kilogram-m0972-no-https-kit-boundary.ps1'",
+    "'verify-kilogram-m0973-no-https-kit-boundary.ps1'",
     "'verify-kilogram-runtime-cooperative-scheduling.ps1'",
     "profile = 'debug'",
     'archive = $false',

@@ -21,16 +21,16 @@ function Assert-M0969Kit {
     }
     $build = Get-Content -LiteralPath $script:BuildInfoPath -Raw | ConvertFrom-Json
     $milestone = [string]$build.milestone
-    if ($milestone -cnotin @('M0.9.69', 'M0.9.72')) {
+    if ($milestone -cnotin @('M0.9.69', 'M0.9.72', 'M0.9.73')) {
         throw "Unsupported exact-locator field milestone: $milestone"
     }
     if ($milestone -ceq 'M0.9.69' -and
         -not (Test-Path -LiteralPath $script:StorePath -PathType Leaf)) {
         throw "M0.9.69 compatibility store is missing: $script:StorePath"
     }
-    if ($milestone -ceq 'M0.9.72' -and
+    if ($milestone -cne 'M0.9.69' -and
         (Test-Path -LiteralPath $script:StorePath)) {
-        throw 'M0.9.72 must not contain the HTTPS compatibility store executable.'
+        throw "$milestone must not contain the HTTPS compatibility store executable."
     }
     foreach ($artifact in @($build.artifacts)) {
         $path = Join-Path $script:KitRoot ([string]$artifact.file).Replace('/', '\')
@@ -57,10 +57,10 @@ function Test-M0972CompatibilityEndpointReachable {
 
 function Assert-M0972HttpsFixtureAbsent {
     if (Test-Path -LiteralPath $script:StorePath) {
-        throw 'M0.9.72 contains a forbidden HTTPS compatibility store executable.'
+        throw "$script:FieldMilestone contains a forbidden HTTPS compatibility store executable."
     }
     if (Test-M0972CompatibilityEndpointReachable) {
-        throw "M0.9.72 compatibility endpoint is unexpectedly reachable: $script:M0972CompatibilityStoreUrl"
+        throw "$script:FieldMilestone compatibility endpoint is unexpectedly reachable: $script:M0972CompatibilityStoreUrl"
     }
 }
 
@@ -331,7 +331,11 @@ function Get-M0969Run {
 
 function Get-M0969PrivateRoot {
     param([Parameter(Mandatory)] [string] $Role, [Parameter(Mandatory)] [string] $RunId)
-    $rootName = if ($script:FieldMilestone -ceq 'M0.9.72') { 'M0972' } else { 'M0969' }
+    $rootName = switch ($script:FieldMilestone) {
+        'M0.9.73' { 'M0973' }
+        'M0.9.72' { 'M0972' }
+        default { 'M0969' }
+    }
     return Join-Path $env:LOCALAPPDATA "Kilogram\$rootName\$RunId\$Role"
 }
 

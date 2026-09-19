@@ -3978,6 +3978,12 @@ regression и исправление responsiveness accept loop до новог�
   [`../docs/RFC-0096-cooperative-runtime-outbound-scheduling.md`](../docs/RFC-0096-cooperative-runtime-outbound-scheduling.md)
   и закреплена `scripts/verify-kilogram-runtime-cooperative-scheduling.ps1`,
   включённым в M1 acceptance kit.
+- replacement harness получил отдельный wrapper
+  `new-kilogram-m0973-no-https-kit.ps1`, milestone/label/private-root
+  `M0.9.73`/`m0973`/`M0973` и новый fail-closed boundary. Он наследует полный
+  M0.9.72 no-HTTPS evidence contract, но также требует cooperative scheduling и
+  отклоняет milestone mismatch; шесть запусков, debug-only build, два Cargo job,
+  отсутствие ZIP/release и server fixture сохранены.
 
 Run `20260919-170816` остаётся неуспешным и не принимается задним числом.
 M0.9.73 локально завершён, но его исправление ещё требует свежего clean

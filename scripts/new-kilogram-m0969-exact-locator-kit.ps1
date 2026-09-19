@@ -2,7 +2,7 @@
 param(
     [string] $OutputDirectory,
     [ValidateRange(1, 64)] [int] $CargoJobs = 2,
-    [ValidateSet('M0.9.69', 'M0.9.72')] [string] $Milestone = 'M0.9.69'
+    [ValidateSet('M0.9.69', 'M0.9.72', 'M0.9.73')] [string] $Milestone = 'M0.9.69'
 )
 
 Set-StrictMode -Version Latest
@@ -12,7 +12,7 @@ $ErrorActionPreference = 'Stop'
 $cargoJobsResolved = Set-KilogramCargoResourcePolicy -RequestedJobs $CargoJobs
 $workspace = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $templateRoot = Join-Path $PSScriptRoot 'm0969-exact'
-$noHttpsCompatibility = $Milestone -ceq 'M0.9.72'
+$noHttpsCompatibility = $Milestone -cne 'M0.9.69'
 
 Push-Location $workspace
 try {
@@ -24,7 +24,11 @@ try {
         throw 'Cannot resolve clean HEAD.'
     }
     if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
-        $kitName = if ($noHttpsCompatibility) { 'm0972-no-https' } else { 'm0969-exact' }
+        $kitName = switch ($Milestone) {
+            'M0.9.73' { 'm0973-no-https' }
+            'M0.9.72' { 'm0972-no-https' }
+            default { 'm0969-exact' }
+        }
         $OutputDirectory = ".tmp\$kitName-$($revision.Substring(0, 12))"
     }
     $output = if ([IO.Path]::IsPathRooted($OutputDirectory)) {
@@ -54,8 +58,12 @@ try {
     if ($noHttpsCompatibility) {
         $checks += @(
             'verify-kilogram-mailbox-https-retirement-boundary.ps1',
-            'verify-kilogram-m0972-no-https-kit-boundary.ps1'
+            'verify-kilogram-m0972-no-https-kit-boundary.ps1',
+            'verify-kilogram-runtime-cooperative-scheduling.ps1'
         )
+        if ($Milestone -ceq 'M0.9.73') {
+            $checks += 'verify-kilogram-m0973-no-https-kit-boundary.ps1'
+        }
     }
     $boundaries = [Collections.Generic.List[string]]::new()
     foreach ($check in $checks) {
@@ -152,7 +160,7 @@ try {
     )
 
     $readme = if ($noHttpsCompatibility) { @(
-        'M0.9.72 - CLEAN VOLUNTEER DELIVERY WITH NO HTTPS MAILBOX FIXTURE',
+        "$Milestone - CLEAN VOLUNTEER DELIVERY WITH NO HTTPS MAILBOX FIXTURE",
         '',
         'Folders synchronize through 1\shared. Live Redb state stays under %LOCALAPPDATA%.',
         'Use one fresh generated kit for one run; clean evidence intentionally cannot be resumed.',
@@ -217,7 +225,11 @@ try {
     Write-Output 'network_executed=false'
     if ($noHttpsCompatibility) {
         Write-Output 'https_fixture_included=false'
-        Write-Output 'status=kilogram-m0972-no-https-kit-created'
+        if ($Milestone -ceq 'M0.9.73') {
+            Write-Output 'status=kilogram-m0973-no-https-kit-created'
+        } else {
+            Write-Output 'status=kilogram-m0972-no-https-kit-created'
+        }
     } else {
         Write-Output 'status=kilogram-m0969-exact-locator-kit-created'
     }

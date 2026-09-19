@@ -1,7 +1,11 @@
 . (Join-Path (Split-Path -Parent $PSScriptRoot) 'common.ps1')
 $build = Assert-M0969Kit
-$noHttpsCompatibility = [string]$build.milestone -ceq 'M0.9.72'
-$labelPrefix = if ($noHttpsCompatibility) { 'm0972' } else { 'm0969' }
+$noHttpsCompatibility = [string]$build.milestone -cne 'M0.9.69'
+$labelPrefix = switch ([string]$build.milestone) {
+    'M0.9.73' { 'm0973' }
+    'M0.9.72' { 'm0972' }
+    default { 'm0969' }
+}
 New-M0969Directory $script:SharedDirectory
 New-M0969Directory $script:EvidenceDirectory
 if ($noHttpsCompatibility) {

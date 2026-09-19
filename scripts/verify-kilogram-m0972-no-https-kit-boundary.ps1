@@ -49,8 +49,8 @@ foreach ($value in @(
 }
 
 foreach ($value in @(
-    "[ValidateSet('M0.9.69', 'M0.9.72')] [string] `$Milestone = 'M0.9.69'",
-    "`$noHttpsCompatibility = `$Milestone -ceq 'M0.9.72'",
+    "[ValidateSet('M0.9.69', 'M0.9.72', 'M0.9.73')] [string] `$Milestone = 'M0.9.69'",
+    "`$noHttpsCompatibility = `$Milestone -cne 'M0.9.69'",
     'cargo build --jobs $cargoJobsResolved --locked --package kilogram-cli',
     "if (-not `$noHttpsCompatibility)",
     "`$artifactNames += 'kilogram-ticket-store.exe'",
@@ -87,15 +87,15 @@ foreach ($value in @(
     "`$script:M0972CompatibilityStoreKey = 'd75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a'",
     'Test-M0972CompatibilityEndpointReachable',
     'Assert-M0972HttpsFixtureAbsent',
-    "`$milestone -cnotin @('M0.9.69', 'M0.9.72')",
-    "`$milestone -ceq 'M0.9.72'",
+    "`$milestone -cnotin @('M0.9.69', 'M0.9.72', 'M0.9.73')",
+    "`$milestone -cne 'M0.9.69'",
     "'M0972'"
 )) {
     if (-not $common.Contains($value)) { throw "M0.9.72 common helper is missing '$value'" }
 }
 
 foreach ($value in @(
-    "`$labelPrefix = if (`$noHttpsCompatibility) { 'm0972' } else { 'm0969' }",
+    "'M0.9.72' { 'm0972' }",
     '00-https-fixture-absence.log',
     'field_phase=before-identity-and-mailbox-activation',
     'https_fixture_binary_present=false',
@@ -136,25 +136,28 @@ if ($sendGuard -lt 0 -or $legacyStoreStart -le $sendGuard) {
 
 foreach ($value in @(
     'verify-kilogram-m0972-no-https-evidence.ps1',
-    'M0.9.72 CLEAN NO-HTTPS VOLUNTEER DELIVERY TEST COMPLETED SUCCESSFULLY.'
+    '-LabelPrefix $labelPrefix',
+    'CLEAN NO-HTTPS VOLUNTEER DELIVERY TEST COMPLETED SUCCESSFULLY.'
 )) {
     if (-not $aliceVerify.Contains($value)) { throw "M0.9.72 final verification is missing '$value'" }
 }
 
 foreach ($value in @(
-    "[ValidateSet('m0969', 'm0972')] [string] `$LabelPrefix = 'm0969'",
+    "[ValidateSet('m0969', 'm0972', 'm0973')] [string] `$LabelPrefix = 'm0969'",
     '[switch] $SuppressReport',
     '$ExpectedLabelPrefix'
 )) {
     if (-not $baseVerifier.Contains($value)) { throw "shared exact-locator verifier is missing '$value'" }
 }
 foreach ($value in @(
+    "[ValidateSet('m0972', 'm0973')] [string] `$LabelPrefix = 'm0972'",
+    "[ValidateSet('M0.9.72', 'M0.9.73')] [string] `$ExpectedMilestone = 'M0.9.72'",
     'runtime_mailbox_https_compatibility_copy=suppressed-exact-volunteer-durability',
     'runtime_mailbox_http_put=not-attempted',
     'runtime_mailbox_delivery_durability=exact-volunteer-replication',
     'runtime_mailbox_http_put=attempted',
     'compatibility_endpoint_reachable=true',
-    '-LabelPrefix m0972 -SuppressReport',
+    '-LabelPrefix $LabelPrefix -SuppressReport',
     'm0972_no_https_evidence_self_test=verified'
 )) {
     if (-not $verifier.Contains($value)) { throw "M0.9.72 evidence verifier is missing '$value'" }

@@ -1,6 +1,7 @@
 . (Join-Path (Split-Path -Parent $PSScriptRoot) 'common.ps1')
 $build = Assert-M0969Kit
-$noHttpsCompatibility = [string]$build.milestone -ceq 'M0.9.72'
+$noHttpsCompatibility = [string]$build.milestone -cne 'M0.9.69'
+$labelPrefix = if ([string]$build.milestone -ceq 'M0.9.73') { 'm0973' } else { 'm0972' }
 $null = Wait-M0969File `
     (Join-Path $script:SharedDirectory 'bob-complete.marker') 1800 'Bob completion marker'
 [IO.File]::WriteAllText(
@@ -17,8 +18,8 @@ if (Test-Path -LiteralPath $boundaryDestination) {
 Copy-Item -LiteralPath $boundarySource -Destination $boundaryDestination
 if ($noHttpsCompatibility) {
     & (Join-Path $script:KitRoot 'verify-kilogram-m0972-no-https-evidence.ps1') `
-        -EvidenceDirectory $script:EvidenceDirectory
-    Write-Host 'M0.9.72 CLEAN NO-HTTPS VOLUNTEER DELIVERY TEST COMPLETED SUCCESSFULLY.'
+        -EvidenceDirectory $script:EvidenceDirectory -LabelPrefix $labelPrefix
+    Write-Host "$([string]$build.milestone) CLEAN NO-HTTPS VOLUNTEER DELIVERY TEST COMPLETED SUCCESSFULLY."
 } else {
     & (Join-Path $script:KitRoot 'verify-kilogram-m0969-exact-locator-evidence.ps1') `
         -EvidenceDirectory $script:EvidenceDirectory

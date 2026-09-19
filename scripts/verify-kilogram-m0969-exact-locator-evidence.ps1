@@ -2,7 +2,7 @@
 param(
     [string] $EvidenceDirectory,
     [switch] $SelfTest,
-    [ValidateSet('m0969', 'm0972')] [string] $LabelPrefix = 'm0969',
+    [ValidateSet('m0969', 'm0972', 'm0973')] [string] $LabelPrefix = 'm0969',
     [switch] $SuppressReport
 )
 
@@ -56,7 +56,7 @@ function Assert-M0969SameSet {
 function Test-M0969ExactLocatorEvidence {
     param(
         [Parameter(Mandatory)] [string] $Directory,
-        [ValidateSet('m0969', 'm0972')] [string] $ExpectedLabelPrefix = 'm0969'
+        [ValidateSet('m0969', 'm0972', 'm0973')] [string] $ExpectedLabelPrefix = 'm0969'
     )
 
     $expectedRoutePolicy = 'auto'

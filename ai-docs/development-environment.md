@@ -2384,3 +2384,11 @@ retirement остальных compatibility shadows ещё не реализов
   включённым в M1 acceptance-kit builder/boundary. Fresh двухсетевой no-HTTPS
   field run ещё обязателен: локальный green не превращает run
   `20260919-170816` в принятое evidence.
+- Existing exact-locator generator расширен отдельным `M0.9.73` mode без
+  копирования orchestration: wrapper, `m0973` conversation/message label,
+  `%LOCALAPPDATA%\Kilogram\M0973` private root и milestone-aware no-HTTPS
+  evidence verifier. Mismatch `M0.9.72`/`M0.9.73` отклоняется self-test.
+- Новый `verify-kilogram-m0973-no-https-kit-boundary.ps1` наследует весь
+  M0.9.72 contract и дополнительно требует cooperative scheduling. M1
+  acceptance-kit включает эту границу; профиль остаётся debug, Cargo jobs=2,
+  ZIP/release/new EXE/network launch отсутствуют.

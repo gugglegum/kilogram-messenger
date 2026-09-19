@@ -1,6 +1,7 @@
 # RFC-0096: Cooperative runtime outbound scheduling (M0.9.73)
 
-Status: implemented locally; external M0.9.72 replacement run is pending.
+Status: implemented locally; a fresh M0.9.73 replacement field kit is defined
+and its external run is pending.
 
 ## 1. Problem
 
@@ -81,6 +82,12 @@ The regression suite contains:
 `scripts/verify-kilogram-runtime-cooperative-scheduling.ps1` pins these source
 and test boundaries. A successful local regression is necessary but not a
 replacement for a fresh two-network no-HTTPS field run.
+
+The replacement harness uses the complete M0.9.72 no-HTTPS evidence contract
+with a distinct `M0.9.73` build milestone and `m0973` conversation/message
+prefix. `scripts/verify-kilogram-m0973-no-https-kit-boundary.ps1` requires this
+identity, the cooperative-scheduling boundary, no HTTPS fixture, debug-only
+compilation and the same six operator launches. A failed M0.9.72 run cannot be resumed or relabelled as M0.9.73 evidence.
 
 ## 6. Remaining limits
 

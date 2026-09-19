@@ -1,6 +1,6 @@
 . (Join-Path (Split-Path -Parent $PSScriptRoot) 'common.ps1')
 $build = Assert-M0969Kit
-$noHttpsCompatibility = [string]$build.milestone -ceq 'M0.9.72'
+$noHttpsCompatibility = [string]$build.milestone -cne 'M0.9.69'
 $run = Get-M0969Run
 $null = Wait-M0969File (Join-Path $script:SharedDirectory 'alice-ready.marker') 180 'Alice ready marker'
 $null = Wait-M0969File (Join-Path $script:SharedDirectory 'bob-ready.marker') 180 'Bob ready marker'

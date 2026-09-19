@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [string] $EvidenceDirectory,
-    [switch] $SelfTest
+    [switch] $SelfTest,
+    [ValidateSet('m0972', 'm0973')] [string] $LabelPrefix = 'm0972'
 )
 
 Set-StrictMode -Version Latest
@@ -48,7 +49,10 @@ function Assert-M0972Absent {
 }
 
 function Test-M0972NoHttpsEvidence {
-    param([Parameter(Mandatory)] [string] $Directory)
+    param(
+        [Parameter(Mandatory)] [string] $Directory,
+        [ValidateSet('M0.9.72', 'M0.9.73')] [string] $ExpectedMilestone = 'M0.9.72'
+    )
 
     $expectedEndpoint = 'http://127.0.0.1:18787'
     $manifest = (Read-M0972Evidence $Directory 'manifest.json') | ConvertFrom-Json
@@ -59,10 +63,10 @@ function Test-M0972NoHttpsEvidence {
             throw "M0.9.72 manifest value is missing: $name"
         }
     }
-    if ([string]$manifest.evidence_milestone -cne 'M0.9.72' -or
+    if ([string]$manifest.evidence_milestone -cne $ExpectedMilestone -or
         [bool]$manifest.https_fixture_present_at_start -ne $false -or
         [string]$manifest.compatibility_endpoint -cne $expectedEndpoint) {
-        throw 'M0.9.72 manifest does not declare the canonical absent HTTPS fixture'
+        throw "$ExpectedMilestone manifest does not declare the canonical absent HTTPS fixture"
     }
 
     foreach ($entry in @(
@@ -101,10 +105,17 @@ function Test-M0972NoHttpsEvidence {
     Assert-M0972ExactLine $offline 'runtime_mailbox_http_put=not-attempted' 'offline no-PUT boundary'
 
     $boundaries = Read-M0972Evidence $Directory '08-boundaries.log'
-    foreach ($line in @(
+    $requiredBoundaries = @(
         'mailbox_https_retirement_boundary=verified',
         'm0972_no_https_kit_boundary=verified'
-    )) {
+    )
+    if ($ExpectedMilestone -ceq 'M0.9.73') {
+        $requiredBoundaries += @(
+            'runtime_cooperative_scheduling=verified',
+            'm0973_no_https_kit_boundary=verified'
+        )
+    }
+    foreach ($line in $requiredBoundaries) {
         Assert-M0972ExactLine $boundaries $line $line
     }
 
@@ -122,14 +133,17 @@ function Test-M0972NoHttpsEvidence {
 }
 
 function New-M0972SelfTestEvidence {
-    param([Parameter(Mandatory)] [string] $Directory)
+    param(
+        [Parameter(Mandatory)] [string] $Directory,
+        [ValidateSet('M0.9.72', 'M0.9.73')] [string] $Milestone = 'M0.9.72'
+    )
     New-Item -ItemType Directory -Path $Directory | Out-Null
     [IO.File]::WriteAllText(
         (Join-Path $Directory 'manifest.json'),
         (([ordered]@{
             run_id = '20260919-160000'
             build_commit = ('ab' * 20)
-            evidence_milestone = 'M0.9.72'
+            evidence_milestone = $Milestone
             https_fixture_present_at_start = $false
             compatibility_endpoint = 'http://127.0.0.1:18787'
         } | ConvertTo-Json) + "`n"),
@@ -158,10 +172,21 @@ function New-M0972SelfTestEvidence {
         'compatibility_endpoint_reachable=false',
         'runtime_mailbox_http_put=not-attempted'
     ), [Text.UTF8Encoding]::new($false))
-    [IO.File]::WriteAllLines((Join-Path $Directory '08-boundaries.log'), @(
+    $boundaryLines = @(
         'mailbox_https_retirement_boundary=verified',
         'm0972_no_https_kit_boundary=verified'
-    ), [Text.UTF8Encoding]::new($false))
+    )
+    if ($Milestone -ceq 'M0.9.73') {
+        $boundaryLines += @(
+            'runtime_cooperative_scheduling=verified',
+            'm0973_no_https_kit_boundary=verified'
+        )
+    }
+    [IO.File]::WriteAllLines(
+        (Join-Path $Directory '08-boundaries.log'),
+        $boundaryLines,
+        [Text.UTF8Encoding]::new($false)
+    )
 }
 
 if ($SelfTest) {
@@ -171,6 +196,17 @@ if ($SelfTest) {
         if ((Test-M0972NoHttpsEvidence $root).result -cne 'verified') {
             throw 'positive M0.9.72 verifier self-test failed'
         }
+        Remove-Item -LiteralPath $root -Recurse -Force
+        New-M0972SelfTestEvidence $root 'M0.9.73'
+        if ((Test-M0972NoHttpsEvidence $root 'M0.9.73').result -cne 'verified') {
+            throw 'positive M0.9.73 verifier self-test failed'
+        }
+        $rejected = $false
+        try { $null = Test-M0972NoHttpsEvidence $root 'M0.9.72' } catch { $rejected = $true }
+        if (-not $rejected) { throw 'M0.9.73 verifier accepted mismatched milestone evidence' }
+
+        Remove-Item -LiteralPath $root -Recurse -Force
+        New-M0972SelfTestEvidence $root
         $sendPath = Join-Path $root '04-send-alice.log'
         $send = Get-Content -LiteralPath $sendPath -Raw
         [IO.File]::WriteAllText(
@@ -196,6 +232,8 @@ if ($SelfTest) {
         if (-not $rejected) { throw 'M0.9.72 verifier accepted a reachable compatibility endpoint' }
 
         Write-Output 'm0972_no_https_evidence_self_test=verified'
+        Write-Output 'm0973_no_https_evidence_self_test=verified'
+        Write-Output 'mismatched_milestone_rejected=true'
         Write-Output 'attempted_http_put_rejected=true'
         Write-Output 'reachable_compatibility_endpoint_rejected=true'
         return
@@ -209,7 +247,8 @@ if ([string]::IsNullOrWhiteSpace($EvidenceDirectory)) {
     throw 'EvidenceDirectory is required unless SelfTest is used.'
 }
 $resolved = [IO.Path]::GetFullPath($EvidenceDirectory)
+$expectedMilestone = if ($LabelPrefix -ceq 'm0973') { 'M0.9.73' } else { 'M0.9.72' }
 & (Join-Path $PSScriptRoot 'verify-kilogram-m0969-exact-locator-evidence.ps1') `
-    -EvidenceDirectory $resolved -LabelPrefix m0972 -SuppressReport
-$report = Test-M0972NoHttpsEvidence $resolved
+    -EvidenceDirectory $resolved -LabelPrefix $LabelPrefix -SuppressReport
+$report = Test-M0972NoHttpsEvidence $resolved $expectedMilestone
 $report | Format-List

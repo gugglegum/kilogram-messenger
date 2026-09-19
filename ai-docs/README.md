@@ -746,8 +746,9 @@ EXE не создавались.
 - [`../docs/RFC-0096-cooperative-runtime-outbound-scheduling.md`](../docs/RFC-0096-cooperative-runtime-outbound-scheduling.md) —
   реализованный M0.9.73 cooperative runtime scheduling: ровно одна owned
   outbound-cycle task, постоянно poll-able Iroh accept, IPC между cycles и
-  детерминированный единственный initiator reciprocal auto-sync; fresh
-  двухсетевой no-HTTPS field run ещё обязателен.
+  детерминированный единственный initiator reciprocal auto-sync; replacement
+  harness использует отдельный `m0973` label и полный унаследованный no-HTTPS
+  contract, fresh двухсетевой field run ещё обязателен.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —
