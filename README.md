@@ -207,23 +207,30 @@ The current two-network Windows procedure is in
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.69 clean external exact-locator field kit — implemented, field run pending
+## Current milestone: M0.9.70 automatic legacy mailbox upgrade — complete
 
-The new three-folder Windows harness makes provider availability precede Bob's
-mailbox activation, delivers and acknowledges the resulting Device-signed
-capability while both clients are online, then proves that Alice and Bob use
-the same exact two-store commitment. Before convergence, each live runtime
-validates the peer's freshly replaced signed endpoint ticket through local IPC;
-a stale bootstrap ticket fails closed. The final verifier rejects any legacy
-random fallback, substituted provider, partial resolution or restart redelivery.
-The operator still performs six numbered launches; the generator uses
-stable-name debug binaries, two Cargo jobs by default, no ZIP/release build and
-no automatic network launch.
+A running client now upgrades an acknowledged legacy receive-mailbox
+capability automatically once it knows at least two active transport-distinct
+volunteer providers. The migration appends the existing Device-signed exact
+replica-set rotation, retains the predecessor in safe overlap until the new
+generation is acknowledged, queues no conversation message and is idempotent
+across restart. Incomplete provider state or an unacknowledged/revoked head
+leaves the old chain unchanged.
 
-The kit is implemented and tested without network access. One clean external
-two-host run is still needed before M0.9.69 can claim field evidence. HTTPS is
-retained as a loopback compatibility copy on Alice and is stopped before Bob
-retrieves from the volunteer stores. Details are in
+Authenticated runtime IPC v25 exposes the locator mode, commitment ID and
+store count to the diagnostic CLI and Windows GUI. HTTPS remains a compatibility
+copy; removing it is a separate migration. Details are in
+[`docs/RFC-0093-automatic-legacy-mailbox-upgrade.md`](docs/RFC-0093-automatic-legacy-mailbox-upgrade.md).
+
+## Previous milestone: M0.9.69 clean external exact-locator field run — complete
+
+The three-folder Windows harness makes provider availability precede mailbox
+activation and proves that sender and recipient use one exact two-store
+commitment. Clean cross-network run `20260919-144857` passed its fail-closed
+verifier: capability apply/ACK converged, both volunteer replicas were stored,
+committed and deleted, Alice was offline before retrieval, restart produced no
+redelivery, and history contained the message once. HTTPS was retained only as
+a stopped loopback compatibility copy. Details are in
 [`docs/RFC-0092-clean-external-exact-locator-field-run.md`](docs/RFC-0092-clean-external-exact-locator-field-run.md).
 
 ## Previous milestone: M0.9.68 authenticated volunteer replica-set locator — complete

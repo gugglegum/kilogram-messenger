@@ -295,10 +295,10 @@ sessions, distribution, removal и key epochs и не решены этим пр
   lookup на sender/recipient; legacy bindings пока сохраняют явно обозначенный
   random fallback. M0.9.69 добавляет clean external harness и fail-closed
   evidence contract с providers-before-activation, fresh live endpoint tickets,
-  capability apply/ACK и exact two-store equality, но реальный двуххостовый run
-  ещё не выполнен. Открытыми
-  остаются automatic safe upgrade/rotation legacy bindings, принятие clean field
-  evidence, retirement HTTPS copy,
+  capability apply/ACK и exact two-store equality; clean two-host run
+  `20260919-144857` принят. M0.9.70 автоматически переводит acknowledged legacy
+  head на exact set из минимум двух transport-distinct providers через ordered
+  rotation с overlap и без message replay. Открытыми остаются retirement HTTPS copy,
   Sybil-resistant diversity, cryptographic hop proof и access-correlation privacy.
 - Push-уведомления на Android/iOS без утечки содержания и социального графа.
 - Независимый second-builder, подписанный release provenance, обновления клиента

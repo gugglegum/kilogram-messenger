@@ -7501,14 +7501,16 @@ impl KilogramApp {
                             egui::Color32::from_rgb(246, 195, 93)
                         },
                         format!(
-                            "{} · device {} · generation {} · {} · {}",
+                            "{} · device {} · generation {} · {} · {} · locator {} ({})",
                             capability.direction,
                             compact_id(&capability.peer_device_id.to_string()),
                             capability
                                 .generation
                                 .map_or_else(|| "legacy".to_owned(), |value| value.to_string()),
                             capability.state,
-                            acknowledgement
+                            acknowledgement,
+                            capability.replica_set_discovery,
+                            capability.replica_set_store_count,
                         ),
                     );
                 }
@@ -9443,6 +9445,9 @@ mod tests {
                         acknowledged: Some(false),
                         revoked: true,
                         state: "revocation-pending".to_owned(),
+                        replica_set_discovery: "not-applicable".to_owned(),
+                        replica_set_commitment_id: None,
+                        replica_set_store_count: 0,
                     }],
                 }))
                 .map_err(|_| anyhow::anyhow!("send GUI mailbox status response"))?;

@@ -727,6 +727,11 @@ EXE не создавались.
   sampling и provider substitution; после transport-only clean2 failure harness
   pin-ит проверенный `aps1` relay fallback при сохранённом `auto`/direct upgrade;
   clean3 run `20260919-144857` прошёл с `result=verified` и закрыл M0.9.69.
+- [`../docs/RFC-0093-automatic-legacy-mailbox-upgrade.md`](../docs/RFC-0093-automatic-legacy-mailbox-upgrade.md) —
+  реализованный M0.9.70 automatic upgrade acknowledged legacy receive bindings
+  до exact authenticated replica set из минимум двух transport-distinct stores;
+  ordered overlap сохраняется до нового ACK, message replay отсутствует,
+  IPC v25 показывает locator state, HTTPS compatibility пока сохранена.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

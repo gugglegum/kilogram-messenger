@@ -27,8 +27,8 @@ function Get-RustStructBlock {
     return $match.Value
 }
 
-if (-not $ipc.Contains('const IPC_VERSION: u8 = 24;')) {
-    throw 'mailbox desktop-control contract must use authenticated IPC version 24'
+if (-not $ipc.Contains('const IPC_VERSION: u8 = 25;')) {
+    throw 'mailbox desktop-control contract must use authenticated IPC version 25'
 }
 
 foreach ($required in @(
@@ -38,7 +38,10 @@ foreach ($required in @(
     'MailboxCapabilityChanged',
     'RuntimeIpcMailboxCapabilityStatus',
     'RuntimeIpcMailboxCapabilityTransition',
-    'pub capabilities: Vec<RuntimeIpcMailboxCapabilityStatus>'
+    'pub capabilities: Vec<RuntimeIpcMailboxCapabilityStatus>',
+    'replica_set_discovery',
+    'replica_set_commitment_id',
+    'replica_set_store_count'
 )) {
     if (-not $ipc.Contains($required)) {
         throw "mailbox desktop IPC contract is missing '$required'"
@@ -116,6 +119,7 @@ foreach ($required in @(
     'mailbox_peer_device_id',
     'Exact peer device',
     'Public store key',
+    'locator {} ({})',
     'never cross desktop IPC'
 )) {
     if (-not $desktop.Contains($required)) {
@@ -145,10 +149,10 @@ foreach ($manifestPath in @(
 }
 
 Write-Output 'mailbox_desktop_control=verified'
-Write-Output 'ipc_version=24'
+Write-Output 'ipc_version=25'
 Write-Output 'runtime_owner=single-locked-actor'
 Write-Output 'mutations=activate-rotate-revoke'
-Write-Output 'status=lifecycle-heads-and-convergence'
+Write-Output 'status=lifecycle-heads-convergence-and-exact-locator'
 Write-Output 'recipient_selection=exact-device-id'
 Write-Output 'secret_material_in_ipc=false'
 Write-Output 'manual_offer_export=false'

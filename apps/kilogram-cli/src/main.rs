@@ -277,8 +277,10 @@ const MAX_RUNTIME_MAILBOX_BINDINGS: usize = 1_024;
 const MAX_RUNTIME_MAILBOX_DISPATCHES: usize = 4_096;
 const MAX_RUNTIME_MAILBOX_CAPABILITY_UPDATES: usize = 4_096;
 const DEFAULT_RUNTIME_MAILBOX_TTL_SECONDS: u64 = 24 * 60 * 60;
+const DEFAULT_RUNTIME_MAILBOX_CAPABILITY_VALIDITY_SECONDS: u64 = 7 * 24 * 60 * 60;
 const RUNTIME_MAILBOX_POLL_INTERVAL: Duration = Duration::from_secs(5);
 const RUNTIME_MAILBOX_CAPABILITY_UPDATE_INTERVAL: Duration = Duration::from_secs(30);
+const RUNTIME_MAILBOX_LEGACY_UPGRADE_INTERVAL: Duration = Duration::from_secs(30);
 const RUNTIME_MAILBOX_PROVIDER_GOSSIP_INTERVAL: Duration = Duration::from_secs(5 * 60);
 const RUNTIME_MAILBOX_PROVIDER_OFFER_REFRESH_INTERVAL: Duration = Duration::from_secs(5 * 60);
 const RUNTIME_MAILBOX_REPLICA_POLL_PROVIDERS: u8 = 3;
@@ -754,7 +756,10 @@ enum Command {
         store_key: MailboxStoreKey,
 
         /// Lifetime of the recipient-bound offer; a replacement rotates the capability.
-        #[arg(long, default_value_t = 7 * 24 * 60 * 60)]
+        #[arg(
+            long,
+            default_value_t = DEFAULT_RUNTIME_MAILBOX_CAPABILITY_VALIDITY_SECONDS
+        )]
         valid_for_seconds: u64,
 
         /// New no-clobber HPKE offer artifact to transfer to the exact peer Device.
@@ -789,7 +794,10 @@ enum Command {
         store_key: MailboxStoreKey,
 
         /// Lifetime of the recipient-bound replacement offer.
-        #[arg(long, default_value_t = 7 * 24 * 60 * 60)]
+        #[arg(
+            long,
+            default_value_t = DEFAULT_RUNTIME_MAILBOX_CAPABILITY_VALIDITY_SECONDS
+        )]
         valid_for_seconds: u64,
     },
 
@@ -10226,6 +10234,7 @@ fn create_runtime_mailbox_offer(
         valid_for_seconds,
         Some(output_file),
         false,
+        false,
     )?;
     print_runtime_mailbox_provisioning_report(&report);
     Ok(())
@@ -10251,6 +10260,7 @@ fn rotate_runtime_mailbox(
         valid_for_seconds,
         None,
         true,
+        false,
     )?;
     print_runtime_mailbox_provisioning_report(&report);
     Ok(())
@@ -10327,6 +10337,7 @@ fn provision_runtime_mailbox(
     valid_for_seconds: u64,
     output_file: Option<PathBuf>,
     require_existing_chain: bool,
+    require_exact_replica_set: bool,
 ) -> Result<RuntimeMailboxProvisioningReport> {
     ensure!(
         (kilogram_mailbox_provisioning::MIN_MAILBOX_OFFER_VALIDITY_SECONDS
@@ -10463,16 +10474,17 @@ fn provision_runtime_mailbox(
         .as_ref()
         .map(SignedMailboxCapabilityUpdate::update_id)
         .transpose()?;
-    let registry = runtime_mailbox_provider_registry(&state_directory)?;
-    let mut replica_store_keys = registry
-        .select(
-            random_mailbox_replication_selection_salt()?,
-            RUNTIME_MAILBOX_REPLICA_LOCATOR_PROVIDERS,
+    let mut replica_store_keys = MailboxProviderRegistry::select_from_active_offers(
+        MailboxProviderRegistry::active_offers_read_only(
+            runtime_mailbox_provider_registry_config(&state_directory),
             now,
-        )?
-        .into_iter()
-        .map(|provider| provider.store_key())
-        .collect::<Vec<_>>();
+        )?,
+        random_mailbox_replication_selection_salt()?,
+        RUNTIME_MAILBOX_REPLICA_LOCATOR_PROVIDERS,
+    )?
+    .into_iter()
+    .map(|provider| provider.store_key())
+    .collect::<Vec<_>>();
     replica_store_keys.sort_unstable();
     let replica_set = if replica_store_keys.len() >= usize::from(DEFAULT_REQUIRED_REPLICA_RECEIPTS)
     {
@@ -10480,6 +10492,10 @@ fn provision_runtime_mailbox(
     } else {
         None
     };
+    ensure!(
+        !require_exact_replica_set || replica_set.is_some(),
+        "automatic legacy mailbox upgrade requires at least two active transport-distinct volunteer providers"
+    );
     let update = if let Some(replica_set) = replica_set {
         SignedMailboxCapabilityUpdate::activate_with_replica_set(
             device_state.identity(),
@@ -11087,6 +11103,8 @@ fn collect_runtime_mailbox_status(state_directory: &Path) -> Result<RuntimeIpcMa
             .local_mailbox_bindings
             .get(&head.binding_id())
             .context("local mailbox capability head lost its retained binding")?;
+        let (replica_set_discovery, replica_set_commitment_id, replica_set_store_count) =
+            runtime_mailbox_capability_replica_set_status(head)?;
         capabilities.push(RuntimeIpcMailboxCapabilityStatus {
             contact_id: binding.contact_id().to_string(),
             conversation_id: binding.conversation_id(),
@@ -11112,6 +11130,9 @@ fn collect_runtime_mailbox_status(state_directory: &Path) -> Result<RuntimeIpcMa
                 "rotation-pending"
             }
             .to_owned(),
+            replica_set_discovery,
+            replica_set_commitment_id,
+            replica_set_store_count,
         });
     }
     let peer_update_scopes = snapshot
@@ -11138,6 +11159,8 @@ fn collect_runtime_mailbox_status(state_directory: &Path) -> Result<RuntimeIpcMa
             .peer_mailbox_bindings
             .get(&head.binding_id())
             .context("peer mailbox capability head lost its retained binding")?;
+        let (replica_set_discovery, replica_set_commitment_id, replica_set_store_count) =
+            runtime_mailbox_capability_replica_set_status(head)?;
         capabilities.push(RuntimeIpcMailboxCapabilityStatus {
             contact_id: binding.contact_id().to_string(),
             conversation_id: binding.conversation_id(),
@@ -11155,6 +11178,9 @@ fn collect_runtime_mailbox_status(state_directory: &Path) -> Result<RuntimeIpcMa
                 "active"
             }
             .to_owned(),
+            replica_set_discovery,
+            replica_set_commitment_id,
+            replica_set_store_count,
         });
     }
     capabilities.sort_by(|left, right| {
@@ -11188,6 +11214,25 @@ fn collect_runtime_mailbox_status(state_directory: &Path) -> Result<RuntimeIpcMa
         delivery_state: "active-direct-relay-first-mailbox-fallback".to_owned(),
         capabilities,
     })
+}
+
+fn runtime_mailbox_capability_replica_set_status(
+    head: &SignedMailboxCapabilityUpdate,
+) -> Result<(String, Option<String>, usize)> {
+    if head.is_revocation() {
+        return Ok(("not-applicable".to_owned(), None, 0));
+    }
+    let Some(replica_set) = head.replica_set() else {
+        return Ok(("legacy-random-fallback".to_owned(), None, 0));
+    };
+    let commitment_id = head
+        .replica_set_commitment_id()?
+        .context("mailbox replica-set activation lost its commitment ID")?;
+    Ok((
+        "exact-authenticated".to_owned(),
+        Some(commitment_id.to_string()),
+        replica_set.store_keys().len(),
+    ))
 }
 
 fn print_runtime_mailbox_status(status: &RuntimeIpcMailboxStatus) {
@@ -11251,7 +11296,7 @@ fn print_runtime_mailbox_status(status: &RuntimeIpcMailboxStatus) {
     println!("mailbox_capability_count={}", status.capabilities.len());
     for capability in &status.capabilities {
         println!(
-            "mailbox_capability_contact_id={} conversation_id={} peer_account_id={} peer_device_id={} direction={} binding_id={} update_id={} generation={} acknowledged={} revoked={} state={}",
+            "mailbox_capability_contact_id={} conversation_id={} peer_account_id={} peer_device_id={} direction={} binding_id={} update_id={} generation={} acknowledged={} revoked={} state={} replica_set_discovery={} replica_set_commitment_id={} replica_set_store_count={}",
             capability.contact_id,
             capability.conversation_id,
             capability.peer_account_id,
@@ -11267,6 +11312,12 @@ fn print_runtime_mailbox_status(status: &RuntimeIpcMailboxStatus) {
                 .map_or_else(|| "not-applicable".to_owned(), |value| value.to_string()),
             capability.revoked,
             capability.state,
+            capability.replica_set_discovery,
+            capability
+                .replica_set_commitment_id
+                .as_deref()
+                .unwrap_or("none"),
+            capability.replica_set_store_count,
         );
     }
 }
@@ -13487,6 +13538,7 @@ async fn handle_runtime_ipc_work(
                             valid_for_seconds,
                             None,
                             false,
+                            false,
                         )
                     })
                 });
@@ -13523,6 +13575,7 @@ async fn handle_runtime_ipc_work(
                             valid_for_seconds,
                             None,
                             true,
+                            false,
                         )
                     })
                 });
@@ -17368,6 +17421,8 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
     let mut last_ticket_automation_check =
         tokio::time::Instant::now() - RUNTIME_TICKET_AUTOMATION_CHECK_INTERVAL;
     let mut last_mailbox_check = tokio::time::Instant::now() - RUNTIME_MAILBOX_POLL_INTERVAL;
+    let mut last_mailbox_legacy_upgrade_check =
+        tokio::time::Instant::now() - RUNTIME_MAILBOX_LEGACY_UPGRADE_INTERVAL;
     let mut last_mailbox_capability_update_check =
         tokio::time::Instant::now() - RUNTIME_MAILBOX_CAPABILITY_UPDATE_INTERVAL;
     let mut last_mailbox_capability_update_attempts = BTreeMap::new();
@@ -17469,6 +17524,23 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                         }
                         Err(error) => eprintln!(
                             "runtime_volunteer_storage_offer_refresh=failed error={error:#}"
+                        ),
+                    }
+                }
+                if last_mailbox_legacy_upgrade_check.elapsed()
+                    >= RUNTIME_MAILBOX_LEGACY_UPGRADE_INTERVAL
+                {
+                    last_mailbox_legacy_upgrade_check = tokio::time::Instant::now();
+                    match attempt_runtime_mailbox_legacy_upgrade(&state_dir).await {
+                        Ok(RuntimeMailboxLegacyUpgradeAttempt::Upgraded) => {
+                            if let Some(server) = ipc_server.as_ref() {
+                                server.publish_change();
+                            }
+                            last_activity = tokio::time::Instant::now();
+                        }
+                        Ok(RuntimeMailboxLegacyUpgradeAttempt::NoWork) => {}
+                        Err(error) => eprintln!(
+                            "runtime_mailbox_legacy_upgrade_status=failed error={error:#}"
                         ),
                     }
                 }
@@ -18045,6 +18117,142 @@ enum RuntimeDeliveryAttempt {
     Delivered,
     MailboxStored,
     RetryScheduled,
+}
+
+struct RuntimeMailboxLegacyUpgradeCandidate {
+    conversation: String,
+    peer_account_id: AccountId,
+    peer_device_id: DeviceId,
+    predecessor_binding_id: MailboxBindingId,
+    service_base_url: String,
+    store_key: MailboxStoreKey,
+}
+
+enum RuntimeMailboxLegacyUpgradeAttempt {
+    NoWork,
+    Upgraded,
+}
+
+fn prepare_runtime_mailbox_legacy_upgrade(
+    state_directory: &Path,
+) -> Result<Option<RuntimeMailboxLegacyUpgradeCandidate>> {
+    let now = unix_time_now()?;
+    let available = MailboxProviderRegistry::select_from_active_offers(
+        MailboxProviderRegistry::active_offers_read_only(
+            runtime_mailbox_provider_registry_config(state_directory),
+            now,
+        )?,
+        random_mailbox_replication_selection_salt()?,
+        RUNTIME_MAILBOX_REPLICA_LOCATOR_PROVIDERS,
+    )?;
+    if available.len() < usize::from(DEFAULT_REQUIRED_REPLICA_RECEIPTS) {
+        return Ok(None);
+    }
+
+    let device_state = load_command_device_state(state_directory)?;
+    let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+    let local_certificate = trust.load_certificate()?;
+    let local_authority = trust.load_own_authority_snapshot(&local_certificate)?;
+    let snapshot = load_runtime_state_snapshot(
+        state_directory,
+        local_certificate.account_id(),
+        local_certificate.device_id(),
+    )?;
+    let scopes = snapshot
+        .local_mailbox_updates
+        .values()
+        .map(|update| {
+            (
+                *update.recipient_account_id().as_bytes(),
+                update.recipient_device_id(),
+                update.scope(),
+            )
+        })
+        .collect::<BTreeSet<_>>();
+    for (account_id, peer_device_id, scope) in scopes {
+        let peer_account_id = AccountId::from_bytes(account_id);
+        let head = snapshot
+            .local_mailbox_update_head(peer_account_id, peer_device_id, scope)?
+            .context("local mailbox capability chain unexpectedly has no head")?;
+        if head.is_revocation()
+            || head.replica_set().is_some()
+            || !snapshot
+                .mailbox_update_acknowledgements
+                .contains_key(&head.update_id()?)
+        {
+            continue;
+        }
+        let binding = snapshot
+            .local_mailbox_bindings
+            .get(&head.binding_id())
+            .context("legacy mailbox capability head lost its retained binding")?;
+        let contact = snapshot
+            .contacts
+            .get(&binding.contact_id())
+            .context("legacy mailbox capability contact disappeared")?;
+        ensure!(
+            contact.peer_account_id() == peer_account_id
+                && contact.conversation_id() == binding.conversation_id()
+                && mailbox_scope(contact.conversation_id()) == scope,
+            "legacy mailbox capability no longer matches its runtime contact"
+        );
+        let opened = open_verified_local_mailbox_binding(
+            &snapshot,
+            &trust,
+            &device_state,
+            &local_certificate,
+            &local_authority,
+            binding,
+        )?;
+        return Ok(Some(RuntimeMailboxLegacyUpgradeCandidate {
+            conversation: contact.conversation_label().to_owned(),
+            peer_account_id,
+            peer_device_id,
+            predecessor_binding_id: head.binding_id(),
+            service_base_url: opened.service().base_url().to_owned(),
+            store_key: opened.service().expected_store_key(),
+        }));
+    }
+    Ok(None)
+}
+
+async fn attempt_runtime_mailbox_legacy_upgrade(
+    state_directory: &Path,
+) -> Result<RuntimeMailboxLegacyUpgradeAttempt> {
+    let state_lock = acquire_runtime_state_lock(state_directory)
+        .await?
+        .context("runtime state lock remained busy while preparing legacy mailbox upgrade")?;
+    let Some(candidate) = prepare_runtime_mailbox_legacy_upgrade(state_directory)? else {
+        drop(state_lock);
+        return Ok(RuntimeMailboxLegacyUpgradeAttempt::NoWork);
+    };
+    let vault_guard = VaultDualWriteGuard::prepare(state_directory)?;
+    let operation = provision_runtime_mailbox(
+        state_directory.to_path_buf(),
+        candidate.conversation,
+        candidate.peer_account_id,
+        candidate.peer_device_id,
+        candidate.service_base_url,
+        candidate.store_key,
+        DEFAULT_RUNTIME_MAILBOX_CAPABILITY_VALIDITY_SECONDS,
+        None,
+        true,
+        true,
+    );
+    let mirror = match vault_guard {
+        Some(guard) => guard.finish(),
+        None => Ok(()),
+    };
+    drop(state_lock);
+    let report = combine_operation_and_mirror(operation, mirror)?;
+    println!("runtime_mailbox_legacy_upgrade=queued");
+    println!(
+        "runtime_mailbox_legacy_predecessor_binding_id={}",
+        candidate.predecessor_binding_id
+    );
+    print_runtime_mailbox_provisioning_report(&report);
+    println!("runtime_mailbox_legacy_upgrade_status=rotated");
+    Ok(RuntimeMailboxLegacyUpgradeAttempt::Upgraded)
 }
 
 #[derive(Clone, Copy)]
@@ -27472,6 +27680,192 @@ mod tests {
         ] {
             assert!(!projection.contains(forbidden));
         }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn acknowledged_legacy_mailbox_upgrades_once_to_exact_replica_set() -> Result<()> {
+        use kilogram_mailbox::MailboxStoreIdentity;
+
+        let directory = tempfile::tempdir()?;
+        let local_root_directory = directory.path().join("local-root");
+        let local_state_directory = directory.path().join("local-state");
+        create_account(local_root_directory.clone())?;
+        enroll_device(
+            local_root_directory.clone(),
+            local_state_directory.clone(),
+            None,
+        )?;
+        let local_root = AccountRootState::load(&local_root_directory)?;
+        let local_state = DeviceState::load_or_create(&local_state_directory)?;
+
+        let peer_root = AccountRootState::create(directory.path().join("peer-root"))?;
+        let peer_identity = DeviceIdentity::generate()?;
+        let peer_encryption = DeviceEncryptionIdentity::generate()?;
+        let peer_certificate = peer_root.issue_device_certificate(
+            peer_identity.device_id(),
+            peer_encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let peer_pool = RatchetState::load_or_create(directory.path().join("peer-ratchet"))?
+            .prekey_pool(
+                &peer_identity,
+                4,
+                unix_time_now()?,
+                DEFAULT_PREKEY_POOL_VALIDITY_SECONDS,
+            )?;
+        let peer_devices =
+            peer_root.publish_device_list(std::slice::from_ref(&peer_certificate))?;
+        let conversation = "legacy-mailbox-auto-upgrade";
+        let conversation_id = ConversationId::from_label(conversation);
+        let membership = local_root.create_conversation_membership(
+            conversation_id.scope_id(),
+            &[peer_root.account_id()],
+        )?;
+        local_state.install_conversation_membership(&membership)?;
+        let ticket = ConnectionTicket::new(
+            EndpointAddr::new(SecretKey::generate().public()),
+            &peer_identity,
+            peer_certificate,
+            AccountPrekeyDirectory::new(peer_devices, vec![peer_pool])?,
+            local_root.account_id(),
+            RoutePolicy::Auto,
+        )?;
+        let ticket_file = directory.path().join("peer.ticket");
+        fs::write(&ticket_file, ticket.encode()?)?;
+        add_runtime_contact_record(
+            &local_state_directory,
+            conversation.to_owned(),
+            peer_root.account_id(),
+            ticket_file,
+        )?;
+
+        let legacy_store = MailboxStoreIdentity::from_secret_bytes([41_u8; 32]);
+        let legacy = provision_runtime_mailbox(
+            local_state_directory.clone(),
+            conversation.to_owned(),
+            peer_root.account_id(),
+            peer_identity.device_id(),
+            "https://mailbox.example.test".to_owned(),
+            legacy_store.store_key(),
+            DEFAULT_RUNTIME_MAILBOX_CAPABILITY_VALIDITY_SECONDS,
+            None,
+            false,
+            false,
+        )?;
+        assert!(legacy.replica_set_commitment_id.is_none());
+        assert_eq!(legacy.transition.generation, 1);
+
+        let now = unix_time_now()?;
+        for (secret, endpoint) in [
+            (51_u8, EndpointAddr::new(SecretKey::generate().public())),
+            (61_u8, EndpointAddr::new(SecretKey::generate().public())),
+        ] {
+            let provider = MailboxStoreIdentity::from_secret_bytes([secret; 32]);
+            let offer = provider.storage_offer(
+                encode_mailbox_provider_endpoint(&endpoint)?,
+                200 * 1024 * 1024,
+                1024 * 1024,
+                now,
+                3_600,
+            )?;
+            import_runtime_volunteer_storage_offer(
+                &local_state_directory,
+                &URL_SAFE_NO_PAD.encode(offer.encode(now)?),
+            )?;
+        }
+        assert!(
+            prepare_runtime_mailbox_legacy_upgrade(&local_state_directory)?.is_none(),
+            "an unacknowledged legacy capability must not rotate"
+        );
+
+        let before_ack = load_runtime_state_snapshot(
+            &local_state_directory,
+            local_root.account_id(),
+            local_state.identity().device_id(),
+        )?;
+        let legacy_update = before_ack
+            .local_mailbox_update_head(
+                peer_root.account_id(),
+                peer_identity.device_id(),
+                mailbox_scope(conversation_id),
+            )?
+            .context("legacy mailbox activation disappeared")?
+            .clone();
+        let legacy_update_id = legacy_update.update_id()?;
+        let legacy_binding_id = legacy_update.binding_id();
+        let acknowledgement = SignedMailboxCapabilityAcknowledgement::sign(
+            &peer_identity,
+            MailboxCapabilitySessionBinding::from_bytes([71_u8; 32]),
+            &legacy_update,
+        )?;
+        run_state_transaction(&local_state_directory, |transaction| {
+            persist_runtime_record(
+                &local_state_directory,
+                &runtime_mailbox_update_acknowledgement_relative_path(legacy_update_id),
+                &acknowledgement.encode()?,
+                transaction,
+            )
+        })?;
+
+        assert!(matches!(
+            attempt_runtime_mailbox_legacy_upgrade(&local_state_directory).await?,
+            RuntimeMailboxLegacyUpgradeAttempt::Upgraded
+        ));
+        let upgraded = load_runtime_state_snapshot(
+            &local_state_directory,
+            local_root.account_id(),
+            local_state.identity().device_id(),
+        )?;
+        let head = upgraded
+            .local_mailbox_update_head(
+                peer_root.account_id(),
+                peer_identity.device_id(),
+                mailbox_scope(conversation_id),
+            )?
+            .context("upgraded mailbox capability disappeared")?;
+        assert_eq!(head.generation(), 2);
+        assert_eq!(head.previous_update_id(), Some(legacy_update_id));
+        assert_eq!(
+            head.replica_set()
+                .context("automatic mailbox upgrade remained probabilistic")?
+                .store_keys()
+                .len(),
+            2
+        );
+        assert_ne!(head.binding_id(), legacy_binding_id);
+        assert_eq!(
+            upgraded
+                .local_mailbox_capability_convergence(
+                    peer_root.account_id(),
+                    peer_identity.device_id(),
+                    mailbox_scope(conversation_id),
+                )?
+                .owner_receive_binding_state(legacy_binding_id)?,
+            MailboxCapabilityBindingState::RotationOverlap
+        );
+        assert!(upgraded.queued.is_empty());
+
+        let status = collect_runtime_mailbox_status(&local_state_directory)?;
+        let receive = status
+            .capabilities
+            .iter()
+            .find(|capability| capability.direction == "receive")
+            .context("receive mailbox status disappeared")?;
+        assert_eq!(receive.state, "rotation-pending");
+        assert_eq!(receive.replica_set_discovery, "exact-authenticated");
+        assert!(receive.replica_set_commitment_id.is_some());
+        assert_eq!(receive.replica_set_store_count, 2);
+        assert!(matches!(
+            attempt_runtime_mailbox_legacy_upgrade(&local_state_directory).await?,
+            RuntimeMailboxLegacyUpgradeAttempt::NoWork
+        ));
+        let restarted = load_runtime_state_snapshot(
+            &local_state_directory,
+            local_root.account_id(),
+            local_state.identity().device_id(),
+        )?;
+        assert_eq!(restarted.local_mailbox_updates.len(), 2);
         Ok(())
     }
 

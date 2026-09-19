@@ -2296,3 +2296,10 @@ retirement остальных compatibility shadows ещё не реализов
   `relay_home_url=https://aps1-1.relay.n0.iroh.link./`. Это закрывает clean
   external M0.9.69 evidence; HTTPS compatibility retirement остаётся отдельным
   следующим архитектурным этапом.
+- M0.9.70 проверен только verification/debug toolchain с ограничением
+  `--jobs 2`; release/ZIP/network launch не выполнялись. Targeted automatic
+  legacy-upgrade test прошёл, затем полные затронутые suites дали CLI 76/76,
+  runtime IPC 15/15 и Windows 22/22. Clippy `-D warnings` для трёх пакетов,
+  `cargo fmt --check`, `git diff --check` и static gates legacy-upgrade,
+  desktop-control IPC v25, provider-selection, runtime-mailbox и M1 acceptance
+  прошли.

@@ -21,7 +21,7 @@ use tokio::{
     time::timeout,
 };
 
-const IPC_VERSION: u8 = 24;
+const IPC_VERSION: u8 = 25;
 const MAX_DESCRIPTOR_BYTES: u64 = 16 * 1024;
 const MAX_LAUNCH_PROFILE_BYTES: u64 = 64 * 1024;
 const MAX_LAUNCH_PROFILE_PATHS: usize = 64;
@@ -995,6 +995,9 @@ pub struct RuntimeIpcMailboxCapabilityStatus {
     pub acknowledged: Option<bool>,
     pub revoked: bool,
     pub state: String,
+    pub replica_set_discovery: String,
+    pub replica_set_commitment_id: Option<String>,
+    pub replica_set_store_count: usize,
 }
 
 /// Secret-free result of a runtime-owned mailbox lifecycle mutation.
@@ -2074,6 +2077,34 @@ mod tests {
             "device_secret",
             "encrypted_offer",
         ] {
+            assert!(!public_projection.contains(forbidden));
+        }
+
+        let capability_status = RuntimeIpcMailboxCapabilityStatus {
+            contact_id: "44".repeat(32),
+            conversation_id: ConversationId::from_label("ipc-mailbox"),
+            peer_account_id,
+            peer_device_id,
+            direction: "receive".to_owned(),
+            binding_id: "55".repeat(32),
+            update_id: Some("66".repeat(32)),
+            generation: Some(2),
+            acknowledged: Some(false),
+            revoked: false,
+            state: "rotation-pending".to_owned(),
+            replica_set_discovery: "exact-authenticated".to_owned(),
+            replica_set_commitment_id: Some("77".repeat(32)),
+            replica_set_store_count: 2,
+        };
+        let encoded = postcard::to_allocvec(&capability_status)?;
+        assert_eq!(
+            postcard::from_bytes::<RuntimeIpcMailboxCapabilityStatus>(&encoded)?,
+            capability_status
+        );
+        let public_projection = serde_json::to_string(&capability_status)?;
+        assert!(public_projection.contains("exact-authenticated"));
+        assert!(public_projection.contains("replica_set_commitment_id"));
+        for forbidden in ["read_capability", "write_capability", "encrypted_offer"] {
             assert!(!public_projection.contains(forbidden));
         }
         Ok(())

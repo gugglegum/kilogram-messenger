@@ -68,6 +68,7 @@ foreach ($forbidden in @('cargo build', '--release', 'Compress-Archive', '.zip')
 foreach ($required in @(
     'git status --porcelain --untracked-files=normal',
     'cargo build --jobs $cargoJobsResolved --locked --package kilogram-cli --package kilogram-windows',
+    "'verify-kilogram-mailbox-legacy-upgrade-boundary.ps1'",
     "profile = 'debug'",
     'archive = $false',
     'network_executed = $false',

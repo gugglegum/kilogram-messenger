@@ -3839,10 +3839,37 @@ history ровно один раз. Все runtime phases подтвердили
 pinned `aps1`; markers `alice-sent`, `bob-complete` и `providers-stopped`
 присутствуют. M0.9.69 закрыт.
 
+### M0.9.70 — automatic legacy mailbox upgrade: завершено
+
+Реализовано:
+
+- long-running runtime каждые 30 секунд ищет не более одной локальной receive
+  capability с активным `legacy-random-fallback` head;
+- автоматическая ротация разрешена только после durable recipient-signed ACK
+  текущего head и при наличии минимум двух active transport-distinct volunteer
+  providers; повторная проверка внутри provisioning fail closed запрещает
+  сохранить ещё одну legacy generation при race/expiry;
+- миграция переиспользует ordered `ActivateWithReplicaSet`: новый binding
+  получает exact signed locator, старый остаётся `RotationOverlap` до ACK новой
+  generation, а exact/revoked/unacknowledged heads повторно не вращаются;
+- migration не создаёт outbox item, не меняет event/history и не переотправляет
+  сообщение; после restart exact head исключает duplicate rotation;
+- authenticated runtime IPC v25 и CLI/GUI mailbox status раскрывают для каждого head discovery mode,
+  commitment ID и store count без capability secret;
+- HTTPS mailbox descriptor/copy сохранён как compatibility path; его retirement
+  остаётся отдельным следующим решением;
+- integration test проходит полный legacy -> ACK -> exact 2-provider rotation,
+  predecessor overlap, no-message-requeue и no-duplicate checks;
+- contract зафиксирован в
+  [`../docs/RFC-0093-automatic-legacy-mailbox-upgrade.md`](../docs/RFC-0093-automatic-legacy-mailbox-upgrade.md),
+  static gate —
+  `scripts/verify-kilogram-mailbox-legacy-upgrade-boundary.ps1`.
+
 ### Следующий этап
 
-1. После clean field evidence спроектировать безопасный automatic upgrade/rotation
-   legacy mailbox bindings и условия удаления HTTPS compatibility copy.
+1. Спроектировать и доказать безопасное retirement HTTPS compatibility copy
+   после convergence exact capability, включая поведение старых клиентов и
+   временно недоступных volunteer providers.
 2. До первого публичного security artifact pin-нуть linker/SDK либо controlled
    alternative и повторить M0.9.59 до matched external hash и attestation.
 3. Optional autostart/background mode оставить отдельной явной настройкой, не
