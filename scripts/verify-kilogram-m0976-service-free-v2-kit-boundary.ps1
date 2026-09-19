@@ -116,6 +116,8 @@ foreach ($required in @(
     "'^runtime_mailbox_https_compatibility_copy=absent-v2-exact-volunteer$'",
     "'mailbox_capability_format=v2-exact-volunteer'",
     "'mailbox_service_descriptor=absent'",
+    'if (-not $noHttpsCompatibility)',
+    'M0.9.76 must not contain or start the HTTPS compatibility store.',
     'ALICE SERVICE-FREE V2 SEND COMPLETED'
 )) {
     if (-not $aliceSend.Contains($required)) {

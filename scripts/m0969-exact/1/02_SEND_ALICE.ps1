@@ -42,7 +42,10 @@ try {
             ),
             [Text.UTF8Encoding]::new($false)
         )
-    } else {
+    } elseif ($serviceFreeV2 -and (Test-Path -LiteralPath $script:StorePath)) {
+        throw 'M0.9.76 must not contain or start the HTTPS compatibility store.'
+    }
+    if (-not $noHttpsCompatibility) {
         $store = Start-M0969Process $script:StorePath @('--data-dir', $storeData) $storeLog
         $null = Wait-M0969LogPattern $storeLog '^status=listening$' $store 60
     }

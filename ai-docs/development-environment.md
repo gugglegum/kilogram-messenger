@@ -2499,3 +2499,11 @@ retirement остальных compatibility shadows ещё не реализов
   PowerShell parse, bundled negative evidence self-test green, 13 files,
   57,863,721 bytes, ZIP=0, ticket-store EXE=0, compatibility endpoint property
   absent, profile=debug, Cargo jobs=2, generator network execution=false.
+- Первый внешний run остановился в `02_SEND_ALICE.ps1` до runtime/queue/message:
+  service-free v2 попал в общий `else`, предназначенный для запуска legacy
+  HTTPS fixture. `04-send`, queue и offline evidence не появились; локальные
+  provider процессы после ошибки остановлены.
+- Исправленный send запускает store только под явным
+  `if (-not $noHttpsCompatibility)`. M0.9.72 gate дополнен AST-проверкой
+  structural ownership store-start command; inherited M0.9.72/73/74, M0.9.76
+  и M1 boundaries проходят. Нужен новый clean committed retry kit.

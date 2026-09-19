@@ -11,6 +11,7 @@ $wrapperPath = Join-Path $workspace 'scripts\new-kilogram-m0972-no-https-kit.ps1
 $baseVerifierPath = Join-Path $workspace 'scripts\verify-kilogram-m0969-exact-locator-evidence.ps1'
 $verifierPath = Join-Path $workspace 'scripts\verify-kilogram-m0972-no-https-evidence.ps1'
 $rfcPath = Join-Path $workspace 'docs\RFC-0095-clean-no-https-volunteer-field-run.md'
+$aliceSendPath = Join-Path $source '1\02_SEND_ALICE.ps1'
 $required = @(
     $generatorPath,
     $wrapperPath,
@@ -19,7 +20,7 @@ $required = @(
     $rfcPath,
     (Join-Path $source 'common.ps1'),
     (Join-Path $source '1\01_PREPARE_ALICE.ps1'),
-    (Join-Path $source '1\02_SEND_ALICE.ps1'),
+    $aliceSendPath,
     (Join-Path $source '1\03_VERIFY.ps1'),
     (Join-Path $source '2\01_START_PROVIDERS.ps1'),
     (Join-Path $source '3\01_PREPARE_BOB.ps1'),
@@ -35,7 +36,7 @@ $generator = Get-Content -LiteralPath $generatorPath -Raw
 $wrapper = Get-Content -LiteralPath $wrapperPath -Raw
 $common = Get-Content -LiteralPath (Join-Path $source 'common.ps1') -Raw
 $alicePrepare = Get-Content -LiteralPath (Join-Path $source '1\01_PREPARE_ALICE.ps1') -Raw
-$aliceSend = Get-Content -LiteralPath (Join-Path $source '1\02_SEND_ALICE.ps1') -Raw
+$aliceSend = Get-Content -LiteralPath $aliceSendPath -Raw
 $aliceVerify = Get-Content -LiteralPath (Join-Path $source '1\03_VERIFY.ps1') -Raw
 $baseVerifier = Get-Content -LiteralPath $baseVerifierPath -Raw
 $verifier = Get-Content -LiteralPath $verifierPath -Raw
@@ -128,10 +129,38 @@ foreach ($value in @(
 )) {
     if (-not $aliceSend.Contains($value)) { throw "M0.9.72 Alice send is missing '$value'" }
 }
-$sendGuard = $aliceSend.IndexOf('if ($legacyNoHttpsCompatibility)')
+$sendGuard = $aliceSend.IndexOf('if (-not $noHttpsCompatibility)')
 $legacyStoreStart = $aliceSend.IndexOf('Start-M0969Process $script:StorePath', $sendGuard)
 if ($sendGuard -lt 0 -or $legacyStoreStart -le $sendGuard) {
     throw 'M0.9.72 send does not isolate the legacy compatibility-store start'
+}
+$tokens = $null
+$parseErrors = $null
+$aliceSendAst = [Management.Automation.Language.Parser]::ParseFile(
+    $aliceSendPath,
+    [ref]$tokens,
+    [ref]$parseErrors
+)
+if ($parseErrors.Count -ne 0) {
+    throw 'M0.9.72 Alice send script does not parse cleanly.'
+}
+$storeStarts = @($aliceSendAst.FindAll({
+    param($node)
+    $node -is [Management.Automation.Language.CommandAst] -and
+        $node.GetCommandName() -ceq 'Start-M0969Process' -and
+        $node.Extent.Text.Contains('$script:StorePath')
+}, $true))
+if ($storeStarts.Count -ne 1) {
+    throw "M0.9.72 Alice send must contain exactly one compatibility-store start, found $($storeStarts.Count)."
+}
+$storeGuardAst = $storeStarts[0].Parent
+while ($null -ne $storeGuardAst -and
+    $storeGuardAst -isnot [Management.Automation.Language.IfStatementAst]) {
+    $storeGuardAst = $storeGuardAst.Parent
+}
+if ($null -eq $storeGuardAst -or
+    $storeGuardAst.Extent.Text -cnotmatch '^if \(-not \$noHttpsCompatibility\)') {
+    throw 'Compatibility store start is not structurally guarded by legacy HTTPS mode.'
 }
 
 foreach ($value in @(

@@ -4129,7 +4129,15 @@ ZIP=0, `kilogram-ticket-store.exe`=0, compatibility endpoint в BUILD-INFO
 отсутствует. Bundled verifier self-test отвергает central tuple и legacy
 suppressed-copy marker. Все 13 файлов затем byte-identical скопированы в
 `C:\Users\Paul\YandexDisk\!M\M0.9.76`; перед запуском нужно дождаться полной
-синхронизации этой fresh папки на ноутбук. Сетевой test run ещё не выполнялся.
+синхронизации этой fresh папки на ноутбук.
+
+Первый внешний запуск дошёл до capability convergence, но был отклонён до
+Alice runtime/queue/message: `02_SEND_ALICE.ps1` ошибочно трактовал false
+`legacyNoHttpsCompatibility` как необходимость запустить отсутствующий
+`kilogram-ticket-store.exe`. Исправление отделяет явный
+`if (-not $noHttpsCompatibility)` legacy start; AST-based gate теперь требует,
+чтобы единственный store-start структурно принадлежал именно этому guard.
+Старый run не возобновляется; требуется fresh `M0.9.76-retry1`.
 
 ### Следующий этап
 

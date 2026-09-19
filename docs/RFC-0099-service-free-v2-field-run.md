@@ -94,4 +94,20 @@ contains neither a ZIP archive nor `kilogram-ticket-store.exe`.
 This local path is intentionally not a release artifact or external evidence.
 Its 13 files were copied byte-identically to
 `C:\Users\Paul\YandexDisk\!M\M0.9.76`; the field run must wait for complete
-second-host synchronization. No network process has been started yet.
+second-host synchronization. Kit generation and copying themselves started no
+network process.
+
+## 7. Rejected first attempt and harness correction
+
+The first external attempt reached successful Alice/Bob capability convergence
+but stopped before Alice runtime start, queue insertion or message creation.
+`02_SEND_ALICE.ps1` incorrectly sent both legacy M0.9.69 and service-free
+M0.9.76 through the `else` branch that starts `kilogram-ticket-store.exe`.
+Because the v2 kit intentionally has no such executable, PowerShell rejected an
+empty process argument before any delivery evidence was created.
+
+The correction starts the compatibility process only under the explicit
+`if (-not $noHttpsCompatibility)` guard. The boundary verifier now walks the
+PowerShell AST and requires the sole store-start command to be structurally
+owned by that exact guard. The interrupted run is rejected rather than resumed;
+a new committed `M0.9.76-retry1` kit and fresh private state are required.
