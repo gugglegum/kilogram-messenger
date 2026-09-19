@@ -1,7 +1,8 @@
 # RFC-0104: M1 candidate evidence composition (M0.9.81)
 
-Status: implemented locally; the exact committed candidate must pass the
-production verifier before an M1 tag is considered.
+Status: accepted. Committed candidate
+`485857ec29c838ddcea7cc61fc74ecae629d2d84` passed the production verifier;
+publishing or tagging M1 remains a separate explicit action.
 
 ## 1. Purpose
 
@@ -67,4 +68,7 @@ production signing and update distribution remain later work.
 M0.9.81 is network-free and build-free. It creates no release executable, ZIP,
 background service or Git tag. The production verifier is run only after the
 candidate files are committed so that `HEAD` and every protected surface are
-unambiguous. Tagging and publishing M1 remain separate explicit actions.
+unambiguous. It reported `runtime_protocol_surface=unchanged`,
+`independent_artifact_surface=unchanged` and `m1_candidate_status=verified` for
+the committed candidate. Tagging and publishing M1 remain separate explicit
+actions.

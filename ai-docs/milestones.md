@@ -4333,7 +4333,7 @@ External result:
 - attestation `48691093` создана только после equality gate; M0.9.80 принят и
   расследование cross-host divergence закрыто.
 
-### M0.9.81 — M1 candidate evidence composition: реализовано локально
+### M0.9.81 — M1 candidate evidence composition: принято
 
 Реализовано:
 
@@ -4357,14 +4357,20 @@ External result:
   ZIP, background process и verification bypass; stage не создаёт Git tag;
 - контракт зафиксирован в
   [`../docs/RFC-0104-m1-candidate-evidence-composition.md`](../docs/RFC-0104-m1-candidate-evidence-composition.md).
+- committed candidate `485857ec29c838ddcea7cc61fc74ecae629d2d84`
+  прошёл production verifier: обе evidence revisions являются ancestors,
+  обе protected surfaces неизменны, итог
+  `m1_candidate_status=verified`;
+- новый network run, release build, ZIP, background service и Git tag не
+  создавались.
 
 ### Следующий этап
 
-1. Commit-нуть exact M0.9.81 candidate и запустить production verifier на
-   clean HEAD. Только его `m1_candidate_status=verified` закрывает этап.
-2. После фиксации M1 baseline спроектировать Sybil-resistant provider diversity
-   и проверить replicas на
-   физически/операторски независимых volunteer hosts.
+1. Отдельным явным действием можно опубликовать накопленные коммиты и поставить
+   M1 tag; M0.9.81 намеренно не делает этого автоматически.
+2. Следующий инженерный этап: спроектировать Sybil-resistant provider diversity
+   и проверить exact replicas на физических/операторски независимых volunteer
+   hosts.
 3. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 4. Добавить macOS/Linux/mobile providers той же platform boundary.

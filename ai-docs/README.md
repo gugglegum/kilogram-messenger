@@ -401,11 +401,11 @@ Clean exact revision `4e9054ab...` дал локальный artifact 2,432,000 
 SHA-256 `d9f9f450...cacb4`; GitHub run `35474774356` воспроизвёл его
 byte-for-byte и создал attestation `48691093`. Cross-host divergence закрыт.
 
-1. M0.9.81 реализует fail-closed `M1-CANDIDATE.json`: связывает принятое
-   M0.9.76 service-free field evidence, доказывает отсутствие последующих
-   runtime/protocol изменений и включает успешную M0.9.80 attestation. После
-   clean commit production verifier должен подтвердить exact candidate HEAD.
-2. После M1 baseline спроектировать Sybil-resistant provider diversity и проверить exact replicas
+1. M0.9.81 принят: fail-closed `M1-CANDIDATE.json` связал принятое M0.9.76
+   service-free field evidence с успешной M0.9.80 attestation; production
+   verifier подтвердил exact committed candidate `485857ec...d2d84`, ancestor
+   relations и отсутствие drift в обеих protected Git surfaces.
+2. Следующий инженерный этап — спроектировать Sybil-resistant provider diversity и проверить exact replicas
    на физических/операторски независимых volunteer hosts.
 3. Optional autostart/background mode оставить отдельной явной настройкой;
    Windows Task Scheduler не является обязательной частью мессенджера.

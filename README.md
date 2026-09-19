@@ -226,7 +226,7 @@ The current two-network Windows procedure is in
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.81 M1 candidate evidence composition
+## Current milestone: M0.9.81 M1 candidate evidence composition — accepted
 
 `M1-CANDIDATE.json` composes the accepted service-free M0.9.76 field result
 with the accepted M0.9.80 independent reproduction. Its verifier recomputes
@@ -237,6 +237,9 @@ identity fails closed.
 
 M0.9.81 runs no network process, compiles no release target, creates no archive,
 background service or Git tag, and does not claim a public security release.
+The production verifier accepted committed candidate revision
+`485857ec29c838ddcea7cc61fc74ecae629d2d84`: both evidence revisions are
+ancestors and both protected Git surfaces remain unchanged.
 Run the committed candidate check with:
 
 ```powershell

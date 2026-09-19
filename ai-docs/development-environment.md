@@ -2666,7 +2666,7 @@ retirement остальных compatibility shadows ещё не реализов
   revision. The next bounded stage is an M1 candidate record that composes the
   accepted M0.9.76 network evidence with this supply-chain evidence.
 
-## M0.9.81 pre-commit verification snapshot (2026-09-20)
+## M0.9.81 accepted candidate verification (2026-09-20)
 
 - Added `M1-CANDIDATE.json`, production/static verifiers and RFC-0104.
 - Accepted field baseline surface: 83 Git entries, SHA-256
@@ -2675,6 +2675,10 @@ retirement остальных compatibility shadows ещё не реализов
   `4ada929ce28d5e152923f746d339d168c5620767f8270443e2a63baf4553e294`.
 - PowerShell parse, JSON parse, verifier negative self-test and static boundary
   pass. Self-test rejects field revision/hash/path/risk weakening.
-- Production candidate verification intentionally waits for a clean committed
-  HEAD. No network process, Cargo build, release target, ZIP, service or Git tag
-  was created during implementation.
+- Candidate commit `485857ec29c838ddcea7cc61fc74ecae629d2d84` passed the
+  production verifier: both evidence revisions are ancestors,
+  `runtime_protocol_surface=unchanged`,
+  `independent_artifact_surface=unchanged` and
+  `m1_candidate_status=verified`.
+- No network process, Cargo build, release target, ZIP, service or Git tag was
+  created during implementation or acceptance.
