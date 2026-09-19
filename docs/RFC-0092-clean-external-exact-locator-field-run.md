@@ -76,6 +76,14 @@ performs exactly one writable recovery under the runtime state lock and the
 vault dual-write guard, then retries read-only inspection. Other inspection
 errors remain fail closed.
 
+The controlled field harness pins every client and provider profile to the
+previously field-proven `https://aps1-1.relay.n0.iroh.link./` relay while
+retaining route policy `auto`. Direct-path upgrade therefore remains allowed;
+only relay fallback selection is deterministic. This is a test-fixture choice,
+not a production singleton, central-service dependency or product default.
+The evidence verifier requires the exact route policy and relay URL in the
+manifest and every retained runtime phase, and rejects a divergent relay.
+
 The replica set remains inside the Device-signed capability exchanged by the
 two contacts. Providers receive only requests for their own store. No global
 directory, central mailbox service, additional executable or listener is
@@ -102,3 +110,20 @@ SHA-256 and length; every numbered step checks that manifest before acting. It
 creates no ZIP, performs no release build and starts no network process.
 Network activity begins only when an operator explicitly runs the numbered
 scripts.
+
+## 7. Failed clean attempt and retry rule
+
+The clean2 external attempt correctly formed identities, exact provider offers,
+membership, fresh signed endpoint tickets and the `2/2` capability commitment.
+Both convergence runtimes then selected the automatically assigned `euc1`
+relay, and both directions repeatedly timed out before capability delivery.
+The same environment had previously completed strict relay delivery and sync
+through `aps1`, while `euc1` had already produced the same failure signature.
+The run therefore failed at transport availability, not at Yandex Disk, Redb,
+VPN hygiene or operator ordering.
+
+The provider runner's open logs and publication manifest may remain in a
+continuous synchronization state while it refreshes signed offers. They are
+not causal input for consumers and are not a failure signal. After a failed
+attempt the providers are stopped and a newly generated clean kit is required;
+the old run is never resumed as clean evidence.

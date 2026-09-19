@@ -80,7 +80,9 @@ $null = Invoke-M0969Cli @(
     'runtime-profile-create', '--profile-file', $profile, '--state-dir', $state,
     '--allow-account', ([string]$bob.account_id), '--device-list-file', $deviceList,
     '--ticket-file', (Join-Path $script:SharedDirectory 'alice.ticket'), '--ipc-file', $ipc,
-    '--route-policy', 'auto', '--relay-wait-seconds', '30', '--disable-volunteer-storage'
+    '--route-policy', $script:M0969FieldRoutePolicy,
+    '--relay-url', $script:M0969FieldRelayUrl,
+    '--relay-wait-seconds', '30', '--disable-volunteer-storage'
 )
 
 $bootstrapLog = Join-Path $private 'alice-ticket-bootstrap.log'
@@ -165,6 +167,8 @@ Write-M0969JsonNew (Join-Path $script:EvidenceDirectory 'manifest.json') ([order
     alice_account_id = $aliceAccount
     bob_account_id = [string]$bob.account_id
     message_marker = $run.message_marker
+    route_policy = $script:M0969FieldRoutePolicy
+    relay_url = $script:M0969FieldRelayUrl
 })
 Write-M0969JsonNew (Join-Path $private 'role.json') ([ordered]@{
     profile = $profile

@@ -2263,3 +2263,18 @@ retirement остальных compatibility shadows ещё не реализов
   artifact SHA-256/length совпадают, PowerShell parse errors — 0, ZIP — 0,
   release/network execution — false, `1\shared` до полевого запуска отсутствует.
   Clean external run ещё ожидается.
+- Clean2 field run `20260919-141905` при заранее отключённых VPN и mobile Wi-Fi
+  успешно создал providers, membership, fresh Alice/Bob tickets и exact
+  commitment `2/2`, но оба capability-convergence направления повторяли
+  30-секундный timeout через автоматически выбранный
+  `https://euc1-1.relay.n0.iroh.link./`. Это совпадает с ранним M0.3 failure
+  signature; `aps1` в той же home-to-cellular topology ранее успешно перенёс
+  strict relay delivery и restart sync. Provider processes остановлены через
+  `STOP-PROVIDERS.marker`; три постоянно синхронизировавшихся файла были live
+  logs/refreshing publication, а не causal inputs.
+- Следующий clean kit pin-ит все Alice/Bob/provider profiles к
+  `https://aps1-1.relay.n0.iroh.link./`, сохраняя `route_policy=auto` и direct
+  upgrade. Manifest/build info фиксируют выбор, а fail-closed evidence verifier
+  требует совпавший relay во всех retained phases и synthetic negative test
+  отвергает `euc1` divergence. Это детерминизация field fixture, не production
+  relay default.

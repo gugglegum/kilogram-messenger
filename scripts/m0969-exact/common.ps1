@@ -7,6 +7,8 @@ $script:StorePath = Join-Path $script:KitRoot 'kilogram-ticket-store.exe'
 $script:SharedDirectory = Join-Path $script:KitRoot '1\shared'
 $script:EvidenceDirectory = Join-Path $script:SharedDirectory 'evidence'
 $script:BuildInfoPath = Join-Path $script:KitRoot 'BUILD-INFO.json'
+$script:M0969FieldRoutePolicy = 'auto'
+$script:M0969FieldRelayUrl = 'https://aps1-1.relay.n0.iroh.link./'
 
 function Assert-M0969Kit {
     foreach ($path in @($script:CliPath, $script:StorePath, $script:BuildInfoPath)) {

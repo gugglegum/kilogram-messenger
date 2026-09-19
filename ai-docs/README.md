@@ -724,7 +724,9 @@ EXE не создавались.
   реализованный M0.9.69 clean-run harness: providers до mailbox activation,
   fresh live endpoint validation, обязательный capability apply/ACK, один exact
   commitment на sender/recipient, fail-closed запрет stale ticket, legacy
-  sampling и provider substitution; внешний evidence ещё ожидается.
+  sampling и provider substitution; после transport-only clean2 failure harness
+  pin-ит проверенный `aps1` relay fallback при сохранённом `auto`/direct upgrade;
+  внешний clean evidence ещё ожидается.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

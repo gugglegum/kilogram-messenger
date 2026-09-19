@@ -115,6 +115,8 @@ try {
         created_utc = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
         archive = $false
         network_executed = $false
+        field_route_policy = 'auto'
+        field_relay_url = 'https://aps1-1.relay.n0.iroh.link./'
         artifacts = $artifacts
     }
     [IO.File]::WriteAllText(
@@ -146,6 +148,7 @@ try {
         'Alice offline before Bob retrieval, two commit-before-delete results, and no legacy fallback.',
         '',
         'The compatibility HTTP store is loopback-only on Alice and is stopped before Bob receives.',
+        'This controlled field run pins auto-mode relay fallback to aps1; direct upgrade remains allowed.',
         'The generator creates no ZIP, uses no release build, and starts no network process.'
     )
     [IO.File]::WriteAllLines(

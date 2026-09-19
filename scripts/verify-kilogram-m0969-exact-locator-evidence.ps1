@@ -54,12 +54,16 @@ function Assert-M0969SameSet {
 function Test-M0969ExactLocatorEvidence {
     param([Parameter(Mandatory)] [string] $Directory)
 
+    $expectedRoutePolicy = 'auto'
+    $expectedRelayUrl = 'https://aps1-1.relay.n0.iroh.link./'
+    $expectedRoutePattern = '^route_policy=' + [regex]::Escape($expectedRoutePolicy) + '$'
+    $expectedRelayPattern = '^relay_home_url=' + [regex]::Escape($expectedRelayUrl) + '$'
     $manifestText = Read-M0969Evidence $Directory 'manifest.json'
     $manifest = $manifestText | ConvertFrom-Json
     if ([int]$manifest.schema -ne 1) { throw 'M0.9.69 manifest schema must be exactly 1' }
     foreach ($name in @(
         'run_id', 'build_commit', 'conversation_label', 'alice_account_id',
-        'bob_account_id', 'message_marker'
+        'bob_account_id', 'message_marker', 'route_policy', 'relay_url'
     )) {
         if (-not ($manifest.PSObject.Properties.Name -contains $name) -or
             [string]::IsNullOrWhiteSpace([string]$manifest.$name)) {
@@ -71,7 +75,9 @@ function Test-M0969ExactLocatorEvidence {
         [string]$manifest.alice_account_id -cnotmatch '^[0-9a-f]{64}$' -or
         [string]$manifest.bob_account_id -cnotmatch '^[0-9a-f]{64}$' -or
         [string]$manifest.conversation_label -notmatch '^m0969-[0-9]{8}-[0-9]{6}$' -or
-        [string]$manifest.message_marker -notmatch '^kilogram-m0969-[0-9]{8}-[0-9]{6}$') {
+        [string]$manifest.message_marker -notmatch '^kilogram-m0969-[0-9]{8}-[0-9]{6}$' -or
+        [string]$manifest.route_policy -cne $expectedRoutePolicy -or
+        [string]$manifest.relay_url -cne $expectedRelayUrl) {
         throw 'M0.9.69 manifest has an invalid canonical identity or label'
     }
 
@@ -83,6 +89,8 @@ function Test-M0969ExactLocatorEvidence {
         Assert-M0969Match `
             $log '^runtime_volunteer_storage_iroh_alpn=kilogram/m0/blind-mailbox/1$' `
             "$provider Iroh ALPN"
+        Assert-M0969Match $log $expectedRoutePattern "$provider auto route policy"
+        Assert-M0969Match $log $expectedRelayPattern "$provider pinned field relay"
         Assert-M0969Match $log '^status=runtime-listening$' "$provider listening state"
         $keys = @(Get-M0969Matches $log '^runtime_volunteer_storage_store_key=([0-9a-f]{64})$')
         $transports = @(Get-M0969Matches $log '^transport_endpoint_id=([0-9a-f]{64})$')
@@ -175,6 +183,10 @@ function Test-M0969ExactLocatorEvidence {
 
     $aliceConvergence = Read-M0969Evidence $Directory '03-alice-capability-convergence.log'
     $bobConvergence = Read-M0969Evidence $Directory '03-bob-capability-convergence.log'
+    Assert-M0969Match $aliceConvergence $expectedRoutePattern 'Alice convergence auto route policy'
+    Assert-M0969Match $aliceConvergence $expectedRelayPattern 'Alice convergence pinned field relay'
+    Assert-M0969Match $bobConvergence $expectedRoutePattern 'Bob convergence auto route policy'
+    Assert-M0969Match $bobConvergence $expectedRelayPattern 'Bob convergence pinned field relay'
     Assert-M0969Match `
         $aliceConvergence "^mailbox_capability_update_id=$([regex]::Escape($updateId))$" `
         'Alice application of the exact capability update'
@@ -191,6 +203,8 @@ function Test-M0969ExactLocatorEvidence {
     $queue = Read-M0969Evidence $Directory '04-alice-queue.log'
     Assert-M0969Match $queue '^status=runtime-message-queued$' 'Alice durable queue insertion'
     $send = Read-M0969Evidence $Directory '04-send-alice.log'
+    Assert-M0969Match $send $expectedRoutePattern 'Alice send auto route policy'
+    Assert-M0969Match $send $expectedRelayPattern 'Alice send pinned field relay'
     Assert-M0969Match $send '^runtime_outbound_status=mailbox-stored$' 'compatibility acceptance'
     Assert-M0969Match `
         $send '^runtime_mailbox_replica_set_discovery=exact-authenticated$' `
@@ -218,6 +232,8 @@ function Test-M0969ExactLocatorEvidence {
     Assert-M0969Match $offline '^alice_runtime_ipc_reachable=false$' 'Alice offline before Bob receive'
 
     $receive = Read-M0969Evidence $Directory '06-receive-bob.log'
+    Assert-M0969Match $receive $expectedRoutePattern 'Bob receive auto route policy'
+    Assert-M0969Match $receive $expectedRelayPattern 'Bob receive pinned field relay'
     Assert-M0969Match `
         $receive '^runtime_mailbox_replica_set_discovery=exact-authenticated$' `
         'Bob exact provider discovery'
@@ -240,6 +256,8 @@ function Test-M0969ExactLocatorEvidence {
     }
 
     $restart = Read-M0969Evidence $Directory '07-restart-bob.log'
+    Assert-M0969Match $restart $expectedRoutePattern 'Bob restart auto route policy'
+    Assert-M0969Match $restart $expectedRelayPattern 'Bob restart pinned field relay'
     Assert-M0969Match $restart '^status=runtime-listening$' 'Bob restart from retained state'
     if ([regex]::IsMatch($restart, '(?m)^runtime_mailbox_inbound_source=volunteer-iroh$')) {
         throw 'a deleted volunteer replica was delivered again after restart'
@@ -278,6 +296,8 @@ function Test-M0969ExactLocatorEvidence {
     [PSCustomObject]@{
         run_id = [string]$manifest.run_id
         build_commit = [string]$manifest.build_commit
+        route_policy = $expectedRoutePolicy
+        relay_url = $expectedRelayUrl
         replica_set_commitment_id = $commitmentId
         provider_store_keys = ($providerSet -join ',')
         activation = 'providers-before-capability'
@@ -313,10 +333,14 @@ function New-M0969SelfTestEvidence {
         alice_account_id = 'aa' * 32
         bob_account_id = 'bb' * 32
         message_marker = $message
+        route_policy = 'auto'
+        relay_url = 'https://aps1-1.relay.n0.iroh.link./'
     } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $Directory 'manifest.json') -Encoding utf8
     foreach ($entry in @(@('provider1', $p1, $t1), @('provider2', $p2, $t2))) {
         Set-Content -LiteralPath (Join-Path $Directory "01-$($entry[0]).log") -Encoding utf8 -Value @(
             "transport_endpoint_id=$($entry[2])",
+            'route_policy=auto',
+            'relay_home_url=https://aps1-1.relay.n0.iroh.link./',
             'runtime_volunteer_storage=serving',
             "runtime_volunteer_storage_store_key=$($entry[1])",
             'runtime_volunteer_storage_iroh_alpn=kilogram/m0/blind-mailbox/1',
@@ -373,17 +397,23 @@ function New-M0969SelfTestEvidence {
         )
     }
     Set-Content -LiteralPath (Join-Path $Directory '03-alice-capability-convergence.log') -Encoding utf8 -Value @(
+        'route_policy=auto',
+        'relay_home_url=https://aps1-1.relay.n0.iroh.link./',
         "mailbox_capability_update_id=$update",
         'mailbox_capability_update_store=Inserted',
         'status=runtime-mailbox-capability-updated'
     )
     Set-Content -LiteralPath (Join-Path $Directory '03-bob-capability-convergence.log') -Encoding utf8 -Value @(
+        'route_policy=auto',
+        'relay_home_url=https://aps1-1.relay.n0.iroh.link./',
         "mailbox_capability_update_id=$update",
         'runtime_mailbox_capability_update_status=acknowledged'
     )
     Set-Content -LiteralPath (Join-Path $Directory '04-alice-queue.log') `
         -Encoding utf8 -Value 'status=runtime-message-queued'
     Set-Content -LiteralPath (Join-Path $Directory '04-send-alice.log') -Encoding utf8 -Value @(
+        'route_policy=auto',
+        'relay_home_url=https://aps1-1.relay.n0.iroh.link./',
         'runtime_outbound_status=mailbox-stored',
         "runtime_mailbox_replica_set_commitment_id=$commitment",
         'runtime_mailbox_replica_set_resolved=2/2',
@@ -402,6 +432,8 @@ function New-M0969SelfTestEvidence {
         'alice_runtime_ipc_reachable=false'
     )
     Set-Content -LiteralPath (Join-Path $Directory '06-receive-bob.log') -Encoding utf8 -Value @(
+        'route_policy=auto',
+        'relay_home_url=https://aps1-1.relay.n0.iroh.link./',
         "runtime_mailbox_replica_set_commitment_id=$commitment",
         'runtime_mailbox_replica_set_resolved=2/2',
         'runtime_mailbox_replica_set_discovery=exact-authenticated',
@@ -415,7 +447,11 @@ function New-M0969SelfTestEvidence {
         'runtime_mailbox_replica_delete_status=deleted-after-commit'
     )
     Set-Content -LiteralPath (Join-Path $Directory '07-restart-bob.log') `
-        -Encoding utf8 -Value 'status=runtime-listening'
+        -Encoding utf8 -Value @(
+            'route_policy=auto',
+            'relay_home_url=https://aps1-1.relay.n0.iroh.link./',
+            'status=runtime-listening'
+        )
     Set-Content -LiteralPath (Join-Path $Directory '07-bob-history.log') `
         -Encoding utf8 -Value "payload=text body=`"$message`""
     Set-Content -LiteralPath (Join-Path $Directory '08-boundaries.log') -Encoding utf8 -Value @(
@@ -478,11 +514,26 @@ if ($SelfTest) {
         try { $null = Test-M0969ExactLocatorEvidence $root }
         catch { $staleTicketRejected = $true }
         if (-not $staleTicketRejected) { throw 'verifier accepted a stale bootstrap endpoint ticket' }
+        Set-Content -LiteralPath $refreshPath -Encoding utf8 -Value $refreshOriginal
+
+        $bobConvergencePath = Join-Path $root '03-bob-capability-convergence.log'
+        $bobConvergenceOriginal = Get-Content -LiteralPath $bobConvergencePath -Raw
+        Set-Content -LiteralPath $bobConvergencePath -Encoding utf8 -Value (
+            $bobConvergenceOriginal.Replace(
+                'relay_home_url=https://aps1-1.relay.n0.iroh.link./',
+                'relay_home_url=https://euc1-1.relay.n0.iroh.link./'
+            )
+        )
+        $relayMismatchRejected = $false
+        try { $null = Test-M0969ExactLocatorEvidence $root }
+        catch { $relayMismatchRejected = $true }
+        if (-not $relayMismatchRejected) { throw 'verifier accepted a divergent field relay' }
 
         Write-Output 'm0969_exact_locator_evidence_self_test=verified'
         Write-Output 'legacy_random_fallback_rejected=true'
         Write-Output 'provider_substitution_rejected=true'
         Write-Output 'stale_endpoint_ticket_rejected=true'
+        Write-Output 'relay_mismatch_rejected=true'
         return
     }
     finally {

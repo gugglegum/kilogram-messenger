@@ -33,7 +33,9 @@ foreach ($name in @('provider1', 'provider2')) {
         '--allow-account', $accountId, '--device-list-file', $deviceList,
         '--ticket-file', (Join-Path $private 'runtime.ticket'),
         '--ipc-file', (Join-Path $private 'runtime.ipc.json'),
-        '--route-policy', 'auto', '--relay-wait-seconds', '30',
+        '--route-policy', $script:M0969FieldRoutePolicy,
+        '--relay-url', $script:M0969FieldRelayUrl,
+        '--relay-wait-seconds', '30',
         '--volunteer-storage-data-dir', (Join-Path $private 'volunteer-storage')
     )
     $profiles[$name] = $profile

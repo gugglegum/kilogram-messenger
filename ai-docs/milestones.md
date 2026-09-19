@@ -3799,6 +3799,11 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - после аварийного завершения runtime специальный Redb `RepairAborted` при
   read-only mailbox-ledger inspection запускает ровно один mirrored writable
   repair под state lock; остальные ошибки по-прежнему fail closed;
+- clean2 подтвердил корректные identity/membership/fresh-ticket/exact-capability
+  фазы, но автоматически выбранный `euc1` повторил известный connection timeout
+  в обе стороны. Следующий одноразовый kit сохраняет `auto`, явно pin-ит все
+  четыре runtime profile к ранее проверенному `aps1` и fail closed проверяет
+  relay URL во всех retained phases; direct upgrade остаётся разрешён;
 - contract зафиксирован в
   [`../docs/RFC-0092-clean-external-exact-locator-field-run.md`](../docs/RFC-0092-clean-external-exact-locator-field-run.md),
   gates — `scripts/verify-kilogram-m0969-exact-locator-kit-boundary.ps1` и
@@ -3810,6 +3815,13 @@ source sets, получены и committed две volunteer-Iroh replicas, об�
 restart redelivery отсутствует, history содержит marker один раз. HTTPS fixture
 в этот момент был offline. Из-за repair/retry chain этот результат не закрывает
 требование clean single-revision attestation, поэтому статус этапа не меняется.
+
+Clean2 run `20260919-141905` не является protocol failure: оба provider offer,
+fresh peer tickets и exact `2/2` commitment были созданы и проверены, после чего
+Alice sync и Bob capability update одновременно завершались timeout через
+`euc1`. Открытые provider logs и меняющийся publication manifest объясняют
+постоянный статус Yandex synchronization, но consumers их не читают. Provider
+processes штатно остановлены marker-ом; этот run не возобновляется.
 
 ### Следующий этап
 

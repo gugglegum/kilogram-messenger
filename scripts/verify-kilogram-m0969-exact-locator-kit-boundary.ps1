@@ -54,6 +54,7 @@ foreach ($value in @(
     "'1/01_PREPARE_ALICE.ps1'",
     "'3/02_RECEIVE_BOB.ps1'",
     'kit_script_integrity=sha256-length',
+    "field_relay_url = 'https://aps1-1.relay.n0.iroh.link./'",
     'README-RU.txt'
 )) {
     if (-not $generator.Contains($value)) { throw "M0.9.69 generator is missing '$value'" }
@@ -78,7 +79,9 @@ foreach ($value in @(
     'Wait-M0969FileHashChange',
     '02-bob-providers-before-activation.log',
     'Still waiting for complete Bob pre-activation provider evidence from Yandex Disk...',
-    'Timed out waiting for complete Bob pre-activation provider evidence'
+    'Timed out waiting for complete Bob pre-activation provider evidence',
+    "`$script:M0969FieldRoutePolicy = 'auto'",
+    "`$script:M0969FieldRelayUrl = 'https://aps1-1.relay.n0.iroh.link./'"
 )) {
     if (-not $common.Contains($value)) { throw "M0.9.69 common helper is missing '$value'" }
 }
@@ -93,7 +96,8 @@ foreach ($value in @(
     'runtime-mailbox-offer-import',
     'status=runtime-mailbox-capability-updated',
     'bob-capability-acked.marker',
-    '127.0.0.1:8787'
+    '127.0.0.1:8787',
+    "'--relay-url', `$script:M0969FieldRelayUrl"
 )) {
     if (-not $alicePrepare.Contains($value)) { throw "M0.9.69 Alice preparation is missing '$value'" }
 }
@@ -122,7 +126,8 @@ foreach ($value in @(
     'Publish-M0969ProviderOffers',
     'providers-ready.marker',
     'ready-before-mailbox-activation',
-    'STOP-PROVIDERS.marker'
+    'STOP-PROVIDERS.marker',
+    "'--relay-url', `$script:M0969FieldRelayUrl"
 )) {
     if (-not $providers.Contains($value)) { throw "M0.9.69 provider runner is missing '$value'" }
 }
@@ -140,7 +145,8 @@ foreach ($value in @(
     '03-bob-live-contact-refresh.log',
     'Alice live convergence ticket',
     'runtime_mailbox_capability_update_status=acknowledged',
-    'alice-capability-applied.marker'
+    'alice-capability-applied.marker',
+    "'--relay-url', `$script:M0969FieldRelayUrl"
 )) {
     if (-not $bobPrepare.Contains($value)) { throw "M0.9.69 Bob preparation is missing '$value'" }
 }
@@ -184,7 +190,9 @@ foreach ($value in @(
     'recipient_resolution',
     'https_compatibility_copy',
     'provider_substitution_rejected=true',
-    'stale_endpoint_ticket_rejected=true'
+    'stale_endpoint_ticket_rejected=true',
+    'relay_mismatch_rejected=true',
+    'https://aps1-1.relay.n0.iroh.link./'
 )) {
     if (-not $verifier.Contains($value)) { throw "M0.9.69 evidence verifier is missing '$value'" }
 }
@@ -202,6 +210,7 @@ foreach ($value in @(
     'fresh runtime tickets',
     'legacy-random-fallback',
     'HTTPS compatibility',
+    'aps1',
     'no ZIP',
     'debug'
 )) {
@@ -214,6 +223,8 @@ Write-Output 'm0969_exact_locator_kit_boundary=verified'
 Write-Output 'provider_activation_order=providers-before-mailbox-capability'
 Write-Output 'capability_convergence=recipient-applied-owner-acknowledged'
 Write-Output 'live_endpoint_refresh=validated-before-convergence'
+Write-Output 'field_route_policy=auto'
+Write-Output 'field_relay_url=https://aps1-1.relay.n0.iroh.link./'
 Write-Output 'sender_provider_resolution=exact-2-of-2'
 Write-Output 'recipient_provider_resolution=exact-2-of-2'
 Write-Output 'legacy_random_fallback=forbidden'

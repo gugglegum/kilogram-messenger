@@ -46,7 +46,9 @@ $null = Invoke-M0969Cli @(
     'runtime-profile-create', '--profile-file', $profile, '--state-dir', $state,
     '--allow-account', ([string]$alice.account_id), '--device-list-file', $deviceList,
     '--ticket-file', (Join-Path $script:SharedDirectory 'bob.ticket'), '--ipc-file', $ipc,
-    '--route-policy', 'auto', '--relay-wait-seconds', '30', '--disable-volunteer-storage'
+    '--route-policy', $script:M0969FieldRoutePolicy,
+    '--relay-url', $script:M0969FieldRelayUrl,
+    '--relay-wait-seconds', '30', '--disable-volunteer-storage'
 )
 
 $bootstrapLog = Join-Path $private 'bob-ticket-and-provider-bootstrap.log'
