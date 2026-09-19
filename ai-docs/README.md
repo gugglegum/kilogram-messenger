@@ -395,14 +395,16 @@ hash/length до build, передают ordered `-L native` только final 
 Run `35473329174` подтвердил exact native match, но затем fail closed обнаружил
 новый 1,024-byte mismatch. В retained EXE остались разные user-profile paths к
 Cargo registry: `C:\Users\Paul\.cargo\registry\src` против
-`C:\Users\runneradmin\.cargo\registry\src`. M0.9.80 добавляет второй rustc
+`C:\Users\runneradmin\.cargo\registry\src`. M0.9.80 добавил второй rustc
 remap в `Z:/cargo-registry-src`, post-build PE leak check и format-v6 evidence.
+Clean exact revision `4e9054ab...` дал локальный artifact 2,432,000 bytes с
+SHA-256 `d9f9f450...cacb4`; GitHub run `35474774356` воспроизвёл его
+byte-for-byte и создал attestation `48691093`. Cross-host divergence закрыт.
 
-1. После clean committed format-v6 pair вручную dispatch-нуть external workflow
-   для exact M0.9.80 revision. Потребовать byte-identical EXE и signed
-   attestations; любой новый mismatch оставить fail closed и исследовать по
-   bounded evidence.
-2. Спроектировать Sybil-resistant provider diversity и проверить exact replicas
+1. M0.9.81 должен собрать fail-closed M1 candidate record: связать принятое
+   M0.9.76 service-free field evidence, доказать отсутствие последующих
+   runtime/protocol изменений и включить успешную M0.9.80 attestation.
+2. После M1 baseline спроектировать Sybil-resistant provider diversity и проверить exact replicas
    на физических/операторски независимых volunteer hosts.
 3. Optional autostart/background mode оставить отдельной явной настройкой;
    Windows Task Scheduler не является обязательной частью мессенджера.
@@ -778,10 +780,10 @@ remap в `Z:/cargo-registry-src`, post-build PE leak check и format-v6 evidence
   final `rustc -L native`, повторно подтверждаются LLD manifest и связываются с
   format-v5 evidence без vendoring Microsoft binaries.
 - [`../docs/RFC-0103-canonical-cargo-registry-path-remapping.md`](../docs/RFC-0103-canonical-cargo-registry-path-remapping.md) —
-  реализованный локально M0.9.80 dual path-remap boundary: checkout и Cargo
-  registry получают разные canonical virtual roots, post-build PE gate требует
-  canonical dependency marker и запрещает raw host Cargo path, format-v6
-  evidence связывает результат; fresh external equality ещё требуется.
+  принятый M0.9.80 dual path-remap boundary: checkout и Cargo registry получают
+  разные canonical virtual roots, post-build PE gate требует canonical marker
+  и запрещает raw host Cargo path; run `35474774356` подтвердил byte-identical
+  format-v6 artifact и создал attestation `48691093`.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

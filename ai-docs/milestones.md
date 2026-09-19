@@ -4301,7 +4301,7 @@ External result:
   содержат `C:\Users\Paul\.cargo\registry\src`, hosted diagnostics —
   `C:\Users\runneradmin\.cargo\registry\src`.
 
-### M0.9.80 — canonical Cargo registry source paths: implemented locally
+### M0.9.80 — canonical Cargo registry source paths: accepted externally
 
 Реализовано:
 
@@ -4322,13 +4322,26 @@ External result:
 - контракт зафиксирован в
   [`../docs/RFC-0103-canonical-cargo-registry-path-remapping.md`](../docs/RFC-0103-canonical-cargo-registry-path-remapping.md).
 
+External result:
+
+- clean exact revision `4e9054ab2ccc6a4c542fb37d486b70e53027dd08`
+  локально дал byte-identical format-v6 pair: 2,432,000 bytes,
+  SHA-256 `d9f9f450f915cd238137c8498ba965b0dfac92c17982d237c0f18790cb6cacb4`;
+- manual GitHub run `35474774356` завершился успешно за 3m49s: independent
+  artifact совпал с local SHA-256, native lock/observed manifest и dual-remap
+  boundary прошли;
+- attestation `48691093` создана только после equality gate; M0.9.80 принят и
+  расследование cross-host divergence закрыто.
+
 ### Следующий этап
 
-1. Создать clean format-v6 local pair exact M0.9.80 revision, push и вручную
-   повторить GitHub independent build. Exact toolchain/native/path-remap set
-   должен дать byte-identical EXE/attestation либо снова fail closed с bounded
-   evidence; ослаблять normalization запрещено.
-2. Спроектировать Sybil-resistant provider diversity и проверить replicas на
+1. M0.9.81: собрать единый fail-closed M1 candidate record. Он должен связать
+   принятое service-free v2 field evidence M0.9.76, доказать отсутствие
+   runtime/protocol изменений после его exact revision, связать успешную
+   M0.9.80 independent attestation и явно перечислить остаточные non-M1 risks.
+   Никакой новый network run, release ZIP или фоновый сервис для этого не нужен.
+2. После фиксации M1 baseline спроектировать Sybil-resistant provider diversity
+   и проверить replicas на
    физически/операторски независимых volunteer hosts.
 3. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.

@@ -224,7 +224,7 @@ The current two-network Windows procedure is in
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.80 canonical Cargo registry paths — local gate implemented
+## Current milestone: M0.9.80 canonical Cargo registry paths — accepted
 
 GitHub run `35473329174` proved that the M0.9.79 native boundary works: Rust,
 bundled LLD, MSVC 14.44.35207, Windows SDK 10.0.19041.0 and all ten observed
@@ -237,8 +237,9 @@ contained `C:\Users\Paul\.cargo\registry\src` locally and
 to `Z:/cargo-registry-src` in addition to the existing checkout remap. A
 post-build PE gate requires the canonical marker and rejects raw Cargo registry
 or known host-root leakage. Format v6 binds both mappings and their verified
-result. A fresh exact-commit local pair and GitHub dispatch are still required
-before cross-host byte equality can be claimed. Details are in
+result. Exact revision `4e9054ab...` was reproduced locally and by GitHub run
+`35474774356`; both normalized executables are 2,432,000 bytes with SHA-256
+`d9f9f450...cacb4`, and GitHub created attestation `48691093`. Details are in
 [`docs/RFC-0103-canonical-cargo-registry-path-remapping.md`](docs/RFC-0103-canonical-cargo-registry-path-remapping.md).
 
 ## Previous milestone: M0.9.76 service-free v2 field lifecycle — verified

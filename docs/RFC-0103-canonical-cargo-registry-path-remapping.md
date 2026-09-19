@@ -1,6 +1,6 @@
 # RFC-0103: Canonical Cargo registry path remapping (M0.9.80)
 
-Status: implemented locally; a fresh exact-commit GitHub run is required.
+Status: accepted after exact local and GitHub reproduction.
 
 ## 1. Problem
 
@@ -70,3 +70,22 @@ Acceptance requires a clean format-v6 local two-root record for the exact
 M0.9.80 commit followed by a manual independent GitHub build of that commit.
 Only byte equality may enable GitHub attestation; any further difference must
 again fail closed and be investigated from bounded evidence.
+
+## 6. Accepted external result
+
+Exact revision `4e9054ab2ccc6a4c542fb37d486b70e53027dd08` produced a clean
+same-host format-v6 pair and GitHub Actions run `35474774356`. The independent
+Windows build completed successfully in 3m49s and matched the local normalized
+artifact byte-for-byte:
+
+- artifact SHA-256
+  `d9f9f450f915cd238137c8498ba965b0dfac92c17982d237c0f18790cb6cacb4`;
+- artifact length `2,432,000` bytes;
+- native lock and observed manifest SHA-256
+  `e478c6daf61551607f8502c7ef97537403f4da24ddbab0b7a6a8fcb94d835027`;
+- canonical Cargo marker present and raw host Cargo registry path absent;
+- GitHub artifact attestation `48691093` created only after the equality gate.
+
+This closes the M0.9.80 reproducibility investigation. The downloaded GitHub
+artifact ZIP digest is a transport-container digest and is not the executable
+SHA-256 above.

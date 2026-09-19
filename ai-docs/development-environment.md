@@ -2649,4 +2649,19 @@ retirement остальных compatibility shadows ещё не реализов
   validation и PE leak check. Records/verifiers подняты до format v6.
 - Static boundary и network-free independent verifier self-test проходят;
   self-test отдельно отвергает raw hosted-user Cargo registry path.
-- Clean exact-commit two-root build и fresh GitHub dispatch ещё предстоят.
+- На момент local snapshot clean exact-commit two-root build и fresh GitHub
+  dispatch ещё предстояли; принятый результат записан ниже.
+
+### M0.9.80 accepted external result (2026-09-20)
+
+- Clean committed revision `4e9054ab2ccc6a4c542fb37d486b70e53027dd08`
+  independently reproduced locally and on GitHub.
+- Local format-v6 pair and GitHub run `35474774356` produced the same normalized
+  `kilogram-offline.exe`: 2,432,000 bytes, SHA-256
+  `d9f9f450f915cd238137c8498ba965b0dfac92c17982d237c0f18790cb6cacb4`.
+- GitHub run succeeded in 3m49s, created artifact attestation `48691093`, and
+  retained one bounded artifact. No artifact ZIP was downloaded during the
+  accepted run.
+- Repository branch `master` and `origin/master` both point to the accepted
+  revision. The next bounded stage is an M1 candidate record that composes the
+  accepted M0.9.76 network evidence with this supply-chain evidence.
