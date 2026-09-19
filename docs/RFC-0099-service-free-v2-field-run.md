@@ -92,5 +92,6 @@ bundled negative verifier self-test. The 13-file kit is 57,863,721 bytes and
 contains neither a ZIP archive nor `kilogram-ticket-store.exe`.
 
 This local path is intentionally not a release artifact or external evidence.
-Copying it to the synchronized two-host test directory and starting network
-processes remain explicit later actions.
+Its 13 files were copied byte-identically to
+`C:\Users\Paul\YandexDisk\!M\M0.9.76`; the field run must wait for complete
+second-host synchronization. No network process has been started yet.

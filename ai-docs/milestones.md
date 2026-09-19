@@ -4127,7 +4127,9 @@ contract. Реальный service-free v2 lifecycle считается внеш
 artifacts, 9 PowerShell файлов без parse errors, 13 файлов/57,863,721 bytes,
 ZIP=0, `kilogram-ticket-store.exe`=0, compatibility endpoint в BUILD-INFO
 отсутствует. Bundled verifier self-test отвергает central tuple и legacy
-suppressed-copy marker. Комплект пока не копировался наружу и не запускал сеть.
+suppressed-copy marker. Все 13 файлов затем byte-identical скопированы в
+`C:\Users\Paul\YandexDisk\!M\M0.9.76`; перед запуском нужно дождаться полной
+синхронизации этой fresh папки на ноутбук. Сетевой test run ещё не выполнялся.
 
 ### Следующий этап
 
