@@ -4333,13 +4333,35 @@ External result:
 - attestation `48691093` создана только после equality gate; M0.9.80 принят и
   расследование cross-host divergence закрыто.
 
+### M0.9.81 — M1 candidate evidence composition: реализовано локально
+
+Реализовано:
+
+- root `M1-CANDIDATE.json` pin-ит accepted M0.9.76 run/revision и M0.9.80
+  GitHub run/attestation/artifact identity без копирования private field state
+  или GitHub ZIP;
+- field-tested runtime/protocol surface фиксируется 83-entry canonical
+  `git ls-tree` manifest SHA-256
+  `a67580165a166e22d6c52b52e93d29c562f1bb6289e2497e220fe3ff1e788a3d`;
+- independently reproduced offline surface фиксируется 63-entry manifest
+  SHA-256 `4ada929ce28d5e152923f746d339d168c5620767f8270443e2a63baf4553e294`;
+- production verifier требует обе accepted revisions ancestors текущего HEAD,
+  пересчитывает оба baseline/current manifests и отвергает tracked, staged или
+  untracked drift в protected paths;
+- JSON schema fail closed связывает exact run/revisions/hash/attestation,
+  stage boundary и пять честных residual risks; self-test отвергает tampered
+  field revision, artifact hash, narrowed runtime surface и omitted risk;
+- prerequisite gates повторно проверяют M0.9.76 service-free field contract,
+  independent builder и M1 acceptance kit;
+- отдельный static boundary запрещает network/download, Cargo build/release,
+  ZIP, background process и verification bypass; stage не создаёт Git tag;
+- контракт зафиксирован в
+  [`../docs/RFC-0104-m1-candidate-evidence-composition.md`](../docs/RFC-0104-m1-candidate-evidence-composition.md).
+
 ### Следующий этап
 
-1. M0.9.81: собрать единый fail-closed M1 candidate record. Он должен связать
-   принятое service-free v2 field evidence M0.9.76, доказать отсутствие
-   runtime/protocol изменений после его exact revision, связать успешную
-   M0.9.80 independent attestation и явно перечислить остаточные non-M1 risks.
-   Никакой новый network run, release ZIP или фоновый сервис для этого не нужен.
+1. Commit-нуть exact M0.9.81 candidate и запустить production verifier на
+   clean HEAD. Только его `m1_candidate_status=verified` закрывает этап.
 2. После фиксации M1 baseline спроектировать Sybil-resistant provider diversity
    и проверить replicas на
    физически/операторски независимых volunteer hosts.

@@ -219,12 +219,32 @@ and
 Canonical Cargo-registry source-path remapping and its post-build PE leak gate
 are specified in
 [`docs/RFC-0103-canonical-cargo-registry-path-remapping.md`](docs/RFC-0103-canonical-cargo-registry-path-remapping.md).
+The fail-closed M1 candidate record and continuity proof are specified in
+[`docs/RFC-0104-m1-candidate-evidence-composition.md`](docs/RFC-0104-m1-candidate-evidence-composition.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.80 canonical Cargo registry paths — accepted
+## Current milestone: M0.9.81 M1 candidate evidence composition
+
+`M1-CANDIDATE.json` composes the accepted service-free M0.9.76 field result
+with the accepted M0.9.80 independent reproduction. Its verifier recomputes
+canonical Git manifests for the complete field-tested runtime/protocol surface
+and the independently reproduced offline artifact surface. Any drift, missing
+ancestor, dirty protected path, weakened residual-risk list or changed evidence
+identity fails closed.
+
+M0.9.81 runs no network process, compiles no release target, creates no archive,
+background service or Git tag, and does not claim a public security release.
+Run the committed candidate check with:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File .\scripts\verify-kilogram-m1-candidate.ps1
+```
+
+## Previous milestone: M0.9.80 canonical Cargo registry paths — accepted
 
 GitHub run `35473329174` proved that the M0.9.79 native boundary works: Rust,
 bundled LLD, MSVC 14.44.35207, Windows SDK 10.0.19041.0 and all ten observed

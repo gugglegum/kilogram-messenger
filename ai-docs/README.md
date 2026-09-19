@@ -401,9 +401,10 @@ Clean exact revision `4e9054ab...` дал локальный artifact 2,432,000 
 SHA-256 `d9f9f450...cacb4`; GitHub run `35474774356` воспроизвёл его
 byte-for-byte и создал attestation `48691093`. Cross-host divergence закрыт.
 
-1. M0.9.81 должен собрать fail-closed M1 candidate record: связать принятое
-   M0.9.76 service-free field evidence, доказать отсутствие последующих
-   runtime/protocol изменений и включить успешную M0.9.80 attestation.
+1. M0.9.81 реализует fail-closed `M1-CANDIDATE.json`: связывает принятое
+   M0.9.76 service-free field evidence, доказывает отсутствие последующих
+   runtime/protocol изменений и включает успешную M0.9.80 attestation. После
+   clean commit production verifier должен подтвердить exact candidate HEAD.
 2. После M1 baseline спроектировать Sybil-resistant provider diversity и проверить exact replicas
    на физических/операторски независимых volunteer hosts.
 3. Optional autostart/background mode оставить отдельной явной настройкой;
@@ -784,6 +785,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   разные canonical virtual roots, post-build PE gate требует canonical marker
   и запрещает raw host Cargo path; run `35474774356` подтвердил byte-identical
   format-v6 artifact и создал attestation `48691093`.
+- [`../docs/RFC-0104-m1-candidate-evidence-composition.md`](../docs/RFC-0104-m1-candidate-evidence-composition.md) —
+  M0.9.81 fail-closed composition accepted M0.9.76 field evidence и M0.9.80
+  independent attestation: exact Git surfaces, ancestor/dirty-tree guards,
+  обязательный residual-risk список и no-network/no-build/no-archive boundary.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

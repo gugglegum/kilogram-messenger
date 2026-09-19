@@ -1,0 +1,80 @@
+{
+  "format_version": 1,
+  "milestone": "M0.9.81",
+  "status": "candidate",
+  "scope": "windows-technical-proof-of-concept",
+  "field_evidence": {
+    "milestone": "M0.9.76",
+    "run_id": "20260920-001614",
+    "source_revision": "ff38e1b89dc5832abdb2a5d81f7ab3af06e0ceae",
+    "result": "verified",
+    "verifier": "scripts/verify-kilogram-m0976-service-free-v2-evidence.ps1",
+    "runtime_surface": {
+      "mode": "git-ls-tree-sha256-v1",
+      "manifest_sha256": "a67580165a166e22d6c52b52e93d29c562f1bb6289e2497e220fe3ff1e788a3d",
+      "file_count": 83,
+      "paths": [
+        "Cargo.toml",
+        "Cargo.lock",
+        "rust-toolchain.toml",
+        "apps/kilogram-bootstrap",
+        "apps/kilogram-cli",
+        "apps/kilogram-ticket-store",
+        "apps/kilogram-windows",
+        "crates"
+      ]
+    }
+  },
+  "independent_reproduction": {
+    "milestone": "M0.9.80",
+    "source_revision": "4e9054ab2ccc6a4c542fb37d486b70e53027dd08",
+    "repository": "gugglegum/kilogram-messenger",
+    "workflow": ".github/workflows/independent-offline-reproduction.yml",
+    "workflow_run_id": "35474774356",
+    "attestation_id": "48691093",
+    "result": "verified",
+    "artifact": {
+      "file": "kilogram-offline.exe",
+      "sha256": "d9f9f450f915cd238137c8498ba965b0dfac92c17982d237c0f18790cb6cacb4",
+      "bytes": 2432000
+    },
+    "protected_surface": {
+      "mode": "git-ls-tree-sha256-v1",
+      "manifest_sha256": "4ada929ce28d5e152923f746d339d168c5620767f8270443e2a63baf4553e294",
+      "file_count": 63,
+      "paths": [
+        ".gitattributes",
+        ".github/workflows/independent-offline-reproduction.yml",
+        "Cargo.toml",
+        "Cargo.lock",
+        "rust-toolchain.toml",
+        "WINDOWS-NATIVE-LINK-INPUTS.lock",
+        "apps/kilogram-offline",
+        "crates",
+        "scripts/cargo-resource-policy.ps1",
+        "scripts/build-kilogram-offline-reproducible.ps1",
+        "scripts/kilogram-reproducible-linker.ps1",
+        "scripts/package-kilogram-offline.ps1",
+        "scripts/verify-kilogram-independent-builder-boundary.ps1",
+        "scripts/verify-kilogram-independent-builder.ps1",
+        "scripts/verify-kilogram-offline-boundary.ps1",
+        "scripts/verify-kilogram-offline-reproducibility-record.ps1"
+      ]
+    }
+  },
+  "stage_boundary": {
+    "network_retest_required": false,
+    "network_executed": false,
+    "release_build": false,
+    "archive_created": false,
+    "background_service_created": false,
+    "git_tag_created": false
+  },
+  "residual_risks": [
+    "volunteer-providers-not-operator-independent",
+    "sybil-resistance-not-implemented",
+    "access-correlation-not-hidden",
+    "windows-only-field-evidence",
+    "not-a-public-security-release"
+  ]
+}

@@ -2665,3 +2665,16 @@ retirement остальных compatibility shadows ещё не реализов
 - Repository branch `master` and `origin/master` both point to the accepted
   revision. The next bounded stage is an M1 candidate record that composes the
   accepted M0.9.76 network evidence with this supply-chain evidence.
+
+## M0.9.81 pre-commit verification snapshot (2026-09-20)
+
+- Added `M1-CANDIDATE.json`, production/static verifiers and RFC-0104.
+- Accepted field baseline surface: 83 Git entries, SHA-256
+  `a67580165a166e22d6c52b52e93d29c562f1bb6289e2497e220fe3ff1e788a3d`.
+- Accepted independent-artifact surface: 63 Git entries, SHA-256
+  `4ada929ce28d5e152923f746d339d168c5620767f8270443e2a63baf4553e294`.
+- PowerShell parse, JSON parse, verifier negative self-test and static boundary
+  pass. Self-test rejects field revision/hash/path/risk weakening.
+- Production candidate verification intentionally waits for a clean committed
+  HEAD. No network process, Cargo build, release target, ZIP, service or Git tag
+  was created during implementation.
