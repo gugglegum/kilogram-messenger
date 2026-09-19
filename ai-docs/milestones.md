@@ -4167,7 +4167,7 @@ verifier-ом и принят с `result=verified`. Подтверждены:
 этом тесте работали на Alice host. Sybil resistance и access-correlation
 privacy остаются отдельными задачами.
 
-### M0.9.77 — controlled toolchain-bundled LLD reproduction: реализовано локально
+### M0.9.77 — controlled toolchain-bundled LLD reproduction: local gate verified
 
 Реализовано:
 
@@ -4196,14 +4196,19 @@ privacy остаются отдельными задачами.
   PE header показывает linker version 14.00;
 - ZIP/network process на этапе реализации не создавались; exact external match
   остаётся отдельным явным post-push workflow run;
+- clean commit `788a3c4ff0152c78a43e8875315a93eba51925a8` собран в двух
+  независимых source/target roots; format-v3 verifier подтвердил одинаковые
+  2,433,536-byte artifacts с SHA-256
+  `25b24880f3f7f8ee34da48b4239b0dd730f5799e22275ef508640747cb9b6540`,
+  после чего тяжёлые временные roots удалены;
 - контракт зафиксирован в
   [`../docs/RFC-0100-toolchain-bundled-lld-independent-reproduction.md`](../docs/RFC-0100-toolchain-bundled-lld-independent-reproduction.md).
 
 ### Следующий этап
 
-1. Из clean committed/pushed M0.9.77 revision создать local format-v3
-   two-root record, вручную повторить GitHub independent build и получить
-   matched external hash + attestations. Если exact LLD совпадает, но EXE нет,
+1. Push exact revision `788a3c4...`, вручную повторить GitHub independent build
+   с local SHA-256 и получить matched external hash + attestations. Если exact
+   LLD совпадает, но normalized EXE нет,
    следующим кандидатом на pinning является Windows SDK/import libraries.
 2. Спроектировать Sybil-resistant provider diversity и проверить replicas на
    физически/операторски независимых volunteer hosts.

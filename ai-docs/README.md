@@ -390,10 +390,14 @@ M0.9.76 уже имеет принятое внешнее service-free v2 eviden
 запущен с PE linker 14.00. Первый LLD release pair отличался ровно 20 байтами
 COFF/debug timestamp и CodeView GUID; bounded PE normalization v1 обнуляет
 только эти parser-validated поля, после чего retained fixtures byte-identical.
+Clean format-v3 pair для commit
+`788a3c4ff0152c78a43e8875315a93eba51925a8` verified: оба 2,433,536-byte
+artifacts имеют SHA-256
+`25b24880f3f7f8ee34da48b4239b0dd730f5799e22275ef508640747cb9b6540`.
 Внешний exact match пока не заявлен.
 
-1. После clean commit/push создать exact-HEAD local format-v3 two-root record,
-   вручную dispatch-нуть external workflow и проверить downloaded EXE/record +
+1. Push exact revision `788a3c4...`, вручную dispatch-нуть external workflow с
+   указанным local SHA-256 и проверить downloaded EXE/record +
    attestations production verifier-ом. Если LLD hash совпадёт, но EXE нет,
    исследовать и закрепить Windows SDK/import libraries.
 2. Спроектировать Sybil-resistant provider diversity и проверить exact replicas
@@ -756,8 +760,9 @@ COFF/debug timestamp и CodeView GUID; bounded PE normalization v1 обнуля�
   реализованный локально M0.9.77 controlled-linker contract: local/GitHub
   builders используют exact `rust-lld.exe` из pinned Rust toolchain, format-v3
   records связывают linker hash, BLAKE3 pure-Rust codegen и bounded PE metadata
-  normalization v1 с artifact, mismatch fail closed; fresh external
-  match/attestation ещё требует явного post-push dispatch.
+  normalization v1 с artifact, mismatch fail closed; local format-v3 pair для
+  `788a3c4...` verified, fresh external match/attestation ещё требует явного
+  post-push dispatch.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

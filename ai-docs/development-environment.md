@@ -2547,4 +2547,12 @@ retirement остальных compatibility shadows ещё не реализов
   изменённых scripts и real debug Cargo build прошли. Сборка использовала
   BelowNormal и `--jobs 2`; ZIP и network process не создавались. Первый
   release pair сохранён как bounded divergent diagnostic fixture; clean
-  format-v3 pair должен быть создан из следующего clean commit.
+  format-v3 pair для commit
+  `788a3c4ff0152c78a43e8875315a93eba51925a8` затем завершился успешно:
+  artifact SHA-256
+  `25b24880f3f7f8ee34da48b4239b0dd730f5799e22275ef508640747cb9b6540`,
+  2,433,536 bytes; source-manifest SHA-256
+  `d3ccdbfb56741f1d5eed74ad2856fea4ccc1b5b124d46aaf13b0a11a3147c46b`.
+  Record повторно verified, offline EXE `--help` запускается, temporary
+  source/target roots удалены; evidence directory:
+  `.tmp/repro/m0977-788a3c4-v3`.

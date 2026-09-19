@@ -216,7 +216,7 @@ The current two-network Windows procedure is in
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.77 toolchain-bundled LLD reproduction — implemented locally
+## Current milestone: M0.9.77 toolchain-bundled LLD reproduction — local gate verified
 
 The local two-clean-root builder and manual GitHub-hosted builder now resolve
 `rust-lld.exe` from the pinned Rust toolchain, pass it explicitly as
@@ -233,9 +233,11 @@ all code, section layout, imports and addresses subject to byte equality.
 A real debug `kilogram-offline.exe` linked and ran with this contract and has a
 PE linker field of 14.00. A retained divergent release pair differed in only
 20 LLD/PDB metadata bytes and becomes byte-identical under the bounded policy.
-No ZIP or network process was created. A clean local format-v3 release-pair
-record and fresh manual GitHub dispatch are still required before independent
-byte equality and attestation can be claimed. Details are in
+No ZIP or network process was created. The clean format-v3 pair for commit
+`788a3c4ff0152c78a43e8875315a93eba51925a8` is byte-identical at SHA-256
+`25b24880f3f7f8ee34da48b4239b0dd730f5799e22275ef508640747cb9b6540`
+(2,433,536 bytes). A fresh manual GitHub dispatch is still required before
+independent cross-host equality and attestation can be claimed. Details are in
 [`docs/RFC-0100-toolchain-bundled-lld-independent-reproduction.md`](docs/RFC-0100-toolchain-bundled-lld-independent-reproduction.md).
 
 ## Previous milestone: M0.9.76 service-free v2 field lifecycle — verified

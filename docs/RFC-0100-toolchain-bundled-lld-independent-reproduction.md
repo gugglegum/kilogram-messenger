@@ -1,7 +1,7 @@
 # RFC-0100: Toolchain-bundled LLD independent reproduction (M0.9.77)
 
-Status: implemented and fixture-verified; a clean format-v3 release pair and a
-matching GitHub-hosted build still require the explicit post-commit gates.
+Status: clean local format-v3 release pair verified; a matching GitHub-hosted
+build and attestation still require an explicit post-push workflow dispatch.
 
 ## 1. Problem
 
@@ -118,17 +118,26 @@ network dependency to Kilogram. A local smoke build confirmed that the real
 `kilogram-offline` target links and runs with the bundled LLD, whose PE linker
 field is 14.00 under the currently pinned Rust toolchain.
 
+The clean two-root record for source revision
+`788a3c4ff0152c78a43e8875315a93eba51925a8` verified both 2,433,536-byte
+artifacts at SHA-256
+`25b24880f3f7f8ee34da48b4239b0dd730f5799e22275ef508640747cb9b6540`.
+The retained record also identifies source-manifest SHA-256
+`d3ccdbfb56741f1d5eed74ad2856fea4ccc1b5b124d46aaf13b0a11a3147c46b`
+and bundled-LLD SHA-256
+`f436ddda2f519c5ad18b7c7b09a3eadc2d4fc1be88cd9280cc472740fc3b7389`.
+The temporary source and target roots were removed after verification.
+
 ## 6. Completion boundary
 
 Local implementation and fail-closed verification do not prove independent
 cross-environment reproduction. That stronger claim requires:
 
-1. committing and pushing the exact source revision;
-2. producing the two-clean-root local format-v3 record for that clean commit;
-3. manually dispatching the GitHub workflow with the exact commit and local
+1. pushing the exact source revision;
+2. manually dispatching the GitHub workflow with the exact commit and local
    artifact SHA-256;
-4. obtaining an exact external match and GitHub attestations; and
-5. running the production verifier against the downloaded evidence.
+3. obtaining an exact external match and GitHub attestations; and
+4. running the production verifier against the downloaded evidence.
 
 If the normalized artifacts still differ while the linker SHA-256 matches, the
 remaining mutable input is diagnosed separately, with Windows SDK/import
