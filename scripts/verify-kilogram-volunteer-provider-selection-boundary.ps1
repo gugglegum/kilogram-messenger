@@ -59,7 +59,7 @@ foreach ($forbiddenDependency in @(
 }
 
 foreach ($required in @(
-    'const IPC_VERSION: u8 = 25',
+    'const IPC_VERSION: u8 = 26;',
     'ImportVolunteerStorageOffer',
     'SelectVolunteerStorageProviders',
     'RuntimeIpcVolunteerStorageProvider',
