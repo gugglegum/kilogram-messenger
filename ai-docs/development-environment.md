@@ -2255,3 +2255,11 @@ retirement остальных compatibility shadows ещё не реализов
   connection-refused строки), поэтому доставка фактически выполнена volunteer
   Iroh providers. Это подтверждает repair/recovery semantics, но из-за цепочки
   retry не является clean single-revision M0.9.69 field attestation.
+- После публикации commits `60b5a8b` и `2cd9cb6` с clean HEAD создан новый
+  одноразовый комплект
+  `C:\Users\Paul\YandexDisk\!M\M0.9.69-clean2` из revision
+  `2cd9cb63075d8cbe84b2b8b05e93d25a4a2220c2`. Generator и все static gates
+  прошли; debug build использовал два Cargo jobs. Проверка комплекта: 11/11
+  artifact SHA-256/length совпадают, PowerShell parse errors — 0, ZIP — 0,
+  release/network execution — false, `1\shared` до полевого запуска отсутствует.
+  Clean external run ещё ожидается.
