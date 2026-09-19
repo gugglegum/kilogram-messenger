@@ -2278,3 +2278,10 @@ retirement остальных compatibility shadows ещё не реализов
   требует совпавший relay во всех retained phases и synthetic negative test
   отвергает `euc1` divergence. Это детерминизация field fixture, не production
   relay default.
+- После прохождения static gate и verifier self-test из clean revision
+  `6cea6074fbb4116639db3f79dddc0bb4bf373fe9` создан комплект
+  `C:\Users\Paul\YandexDisk\!M\M0.9.69-clean3`. Debug build занял два Cargo
+  jobs; 11/11 artifacts прошли SHA-256/length, PowerShell parse errors — 0,
+  размер 61.46 MiB, ZIP — 0, `1\shared` до запуска отсутствует. BUILD-INFO
+  фиксирует `field_route_policy=auto` и
+  `field_relay_url=https://aps1-1.relay.n0.iroh.link./`.

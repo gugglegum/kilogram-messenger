@@ -3823,6 +3823,12 @@ Alice sync и Bob capability update одновременно завершали�
 постоянный статус Yandex synchronization, но consumers их не читают. Provider
 processes штатно остановлены marker-ом; этот run не возобновляется.
 
+Из clean revision `6cea6074fbb4116639db3f79dddc0bb4bf373fe9`
+создан одноразовый `C:\Users\Paul\YandexDisk\!M\M0.9.69-clean3` с pinned
+`aps1`. Все 11/11 artifacts совпали с BUILD-INFO по SHA-256/length,
+PowerShell parse errors — 0, до запуска `1\shared` отсутствует, ZIP — 0,
+профиль debug, Cargo jobs — 2, generator network execution — false.
+
 ### Следующий этап
 
 1. Выполнить один clean external M0.9.69 run на Alice/Bob из разных сетей и
