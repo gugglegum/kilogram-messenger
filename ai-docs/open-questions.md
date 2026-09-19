@@ -234,9 +234,13 @@ sessions, distribution, removal и key epochs и не решены этим пр
   manifest с format-v4 evidence. Run `35471719378` подтвердил различие всех
   MSVC/SDK inputs кроме UCRT. M0.9.79 теперь hash-lock-ит installed MSVC
   `14.44.35207` + SDK `10.0.19041.0`, передаёт explicit final `-L native` и
-  требует observed manifest равным lock в format-v5 evidence. Открыты fresh
-  external availability/byte-equality/attestation; при exact native match и
-  оставшемся artifact mismatch исследуются response arguments/Rust archives.
+  требует observed manifest равным lock в format-v5 evidence. Run
+  `35473329174` подтвердил exact native match, но выявил embedded Cargo registry
+  user-profile paths как следующий 1024-byte input. M0.9.80 remap-ит registry в
+  `Z:/cargo-registry-src`, проверяет отсутствие raw host path и связывает это в
+  format-v6 evidence. Открыты fresh external byte-equality/attestation; при
+  новом mismatch исследуются только новые bounded inputs, без расширения PE
+  normalization.
   Trusted reusable workflow и release/update
   signing также открыты. Также открыты обнаружение конфликта между устройствами,
   которые никогда не обменивались bundle, и действительно распределённая

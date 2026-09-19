@@ -392,11 +392,16 @@ M0.9.79 закрепляет repository lock из десяти exact libraries: 
 hash/length до build, передают ordered `-L native` только final binary и затем
 требуют observed LLD manifest равным lock. Библиотеки не vendored; workflow
 использует `windows-2022`, но доверяет hashes, а не mutable image label.
+Run `35473329174` подтвердил exact native match, но затем fail closed обнаружил
+новый 1,024-byte mismatch. В retained EXE остались разные user-profile paths к
+Cargo registry: `C:\Users\Paul\.cargo\registry\src` против
+`C:\Users\runneradmin\.cargo\registry\src`. M0.9.80 добавляет второй rustc
+remap в `Z:/cargo-registry-src`, post-build PE leak check и format-v6 evidence.
 
-1. После clean committed format-v5 pair вручную dispatch-нуть external workflow
-   для exact M0.9.79 revision. При наличии hash-locked inputs потребовать
-   byte-identical EXE и signed attestations; отсутствие exact toolset не
-   заменять newest-version fallback.
+1. После clean committed format-v6 pair вручную dispatch-нуть external workflow
+   для exact M0.9.80 revision. Потребовать byte-identical EXE и signed
+   attestations; любой новый mismatch оставить fail closed и исследовать по
+   bounded evidence.
 2. Спроектировать Sybil-resistant provider diversity и проверить exact replicas
    на физических/операторски независимых volunteer hosts.
 3. Optional autostart/background mode оставить отдельной явной настройкой;
@@ -772,6 +777,11 @@ hash/length до build, передают ordered `-L native` только final 
   MSVC 14.44/Windows SDK 19041 libraries проверяются до build, явно выбираются
   final `rustc -L native`, повторно подтверждаются LLD manifest и связываются с
   format-v5 evidence без vendoring Microsoft binaries.
+- [`../docs/RFC-0103-canonical-cargo-registry-path-remapping.md`](../docs/RFC-0103-canonical-cargo-registry-path-remapping.md) —
+  реализованный локально M0.9.80 dual path-remap boundary: checkout и Cargo
+  registry получают разные canonical virtual roots, post-build PE gate требует
+  canonical dependency marker и запрещает raw host Cargo path, format-v6
+  evidence связывает результат; fresh external equality ещё требуется.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

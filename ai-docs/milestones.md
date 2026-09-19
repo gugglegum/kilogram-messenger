@@ -4286,12 +4286,48 @@ External result:
 - контракт зафиксирован в
   [`../docs/RFC-0102-hash-locked-windows-native-toolchain.md`](../docs/RFC-0102-hash-locked-windows-native-toolchain.md).
 
+External result:
+
+- manual GitHub run `35473329174` для exact revision
+  `a7c5fe0ab7372958959985b54fc2b813c5c4f620` нашёл и использовал exact
+  repository-locked MSVC/SDK set; native lock и observed manifest совпали;
+- local EXE: 2,433,536 bytes/
+  `3e5419e14fadeca66068ffdccda7a4cde7584cae03e0430b745e2c3ca700e878`;
+  GitHub EXE: 2,434,560 bytes/
+  `bea3fd37a9190f33e30fe31c3ea1c92416d47367cb739b7c5c6ecaf65c85bd78`;
+- workflow корректно fail closed, attestation не создана, bounded artifact
+  сохранён на 14 дней;
+- binary inspection установил новый exact input: local dependency diagnostics
+  содержат `C:\Users\Paul\.cargo\registry\src`, hosted diagnostics —
+  `C:\Users\runneradmin\.cargo\registry\src`.
+
+### M0.9.80 — canonical Cargo registry source paths: implemented locally
+
+Реализовано:
+
+- reproducible rustflags теперь remap-ят и clean source root в
+  `Z:/kilogram-source`, и реально используемый Cargo registry source root в
+  `Z:/cargo-registry-src`;
+- explicit absolute `CARGO_HOME` поддерживается; default root берётся из
+  `%USERPROFILE%`, отсутствие directory и reparse-point fail closed;
+- после normalization каждый retained EXE обязан содержать canonical Cargo
+  marker и не содержать raw `.cargo\\registry\\src`, checkout root или resolved
+  Cargo registry root;
+- local/external evidence поднято до format v6 со structured `path_remap` и
+  двумя результатами PE leak check;
+- production verifier сравнивает полный path-remap contract и повторно сканирует
+  local/external artifacts; self-test отвергает synthetic hosted-user Cargo
+  path;
+- runtime/protocol/network surface не изменён, ZIP/release package не создан;
+- контракт зафиксирован в
+  [`../docs/RFC-0103-canonical-cargo-registry-path-remapping.md`](../docs/RFC-0103-canonical-cargo-registry-path-remapping.md).
+
 ### Следующий этап
 
-1. Создать clean format-v5 local pair exact M0.9.79 revision, push и вручную
-   повторить GitHub independent build. Exact installed set должен либо дать
-   byte-identical EXE/attestation, либо fail closed до build при отсутствии
-   pinned files; newest-version fallback запрещён.
+1. Создать clean format-v6 local pair exact M0.9.80 revision, push и вручную
+   повторить GitHub independent build. Exact toolchain/native/path-remap set
+   должен дать byte-identical EXE/attestation либо снова fail closed с bounded
+   evidence; ослаблять normalization запрещено.
 2. Спроектировать Sybil-resistant provider diversity и проверить replicas на
    физически/операторски независимых volunteer hosts.
 3. Optional autostart/background mode оставить отдельной явной настройкой, не

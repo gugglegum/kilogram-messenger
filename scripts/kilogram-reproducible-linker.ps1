@@ -1,5 +1,33 @@
 Set-StrictMode -Version Latest
 
+function Get-KilogramCargoRegistrySourceRoot {
+    [CmdletBinding()]
+    param()
+
+    $cargoHome = if (-not [string]::IsNullOrWhiteSpace($env:CARGO_HOME)) {
+        if (-not [System.IO.Path]::IsPathRooted($env:CARGO_HOME)) {
+            throw 'CARGO_HOME must be an absolute path for a reproducible build.'
+        }
+        [System.IO.Path]::GetFullPath($env:CARGO_HOME)
+    }
+    else {
+        if ([string]::IsNullOrWhiteSpace($env:USERPROFILE) -or
+            -not [System.IO.Path]::IsPathRooted($env:USERPROFILE)) {
+            throw 'Could not resolve the user profile used by the default Cargo home.'
+        }
+        [System.IO.Path]::GetFullPath((Join-Path $env:USERPROFILE '.cargo'))
+    }
+    $registrySource = [System.IO.Path]::GetFullPath((Join-Path $cargoHome 'registry\src'))
+    if (-not (Test-Path -LiteralPath $registrySource -PathType Container)) {
+        throw "Cargo registry source root is missing; fetch locked dependencies first: $registrySource"
+    }
+    $item = Get-Item -LiteralPath $registrySource -Force
+    if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+        throw "Cargo registry source root must not be a reparse point: $registrySource"
+    }
+    $registrySource
+}
+
 function Get-KilogramBundledLldIdentity {
     [CmdletBinding()]
     param(
@@ -46,10 +74,17 @@ function New-KilogramReproducibleRustFlags {
         [string]$SourceRoot,
 
         [Parameter(Mandatory = $true)]
+        [string]$CargoRegistrySourceRoot,
+
+        [Parameter(Mandatory = $true)]
         [object]$LinkerIdentity
     )
 
     $source = [System.IO.Path]::GetFullPath($SourceRoot)
+    $cargoRegistrySource = [System.IO.Path]::GetFullPath($CargoRegistrySourceRoot)
+    if (-not (Test-Path -LiteralPath $cargoRegistrySource -PathType Container)) {
+        throw "Cargo registry source root is missing: $cargoRegistrySource"
+    }
     $linker = [System.IO.Path]::GetFullPath([string]$LinkerIdentity.path)
     if (-not (Test-Path -LiteralPath $linker -PathType Leaf)) {
         throw "The recorded reproducible linker is missing: $linker"
@@ -62,6 +97,7 @@ function New-KilogramReproducibleRustFlags {
 
     @(
         "--remap-path-prefix=$source=Z:/kilogram-source",
+        "--remap-path-prefix=$cargoRegistrySource=Z:/cargo-registry-src",
         '-C',
         "linker=$linker",
         '-C',
@@ -69,6 +105,58 @@ function New-KilogramReproducibleRustFlags {
         '-C',
         'link-arg=/Brepro'
     )
+}
+
+function Assert-KilogramPeCanonicalPathRemapping {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path,
+
+        [string]$HostSourceRoot,
+
+        [string]$CargoRegistrySourceRoot
+    )
+
+    $resolved = [System.IO.Path]::GetFullPath($Path)
+    if (-not (Test-Path -LiteralPath $resolved -PathType Leaf)) {
+        throw "PE artifact is missing for embedded-path verification: $resolved"
+    }
+    $item = Get-Item -LiteralPath $resolved -Force
+    if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0 -or
+        $item.Length -le 0 -or $item.Length -gt 256MB) {
+        throw "PE artifact has an invalid embedded-path verification boundary: $resolved"
+    }
+
+    $ascii = [System.Text.Encoding]::ASCII.GetString([System.IO.File]::ReadAllBytes($resolved))
+    $canonicalCargoRegistryRoot = 'Z:/cargo-registry-src'
+    if ($ascii.IndexOf($canonicalCargoRegistryRoot, [System.StringComparison]::Ordinal) -lt 0) {
+        throw 'PE artifact does not contain the canonical Cargo registry source root.'
+    }
+    foreach ($rawCargoMarker in @('.cargo\registry\src', '.cargo/registry/src')) {
+        if ($ascii.IndexOf($rawCargoMarker, [System.StringComparison]::OrdinalIgnoreCase) -ge 0) {
+            throw "PE artifact leaks a host Cargo registry source path: $rawCargoMarker"
+        }
+    }
+    foreach ($hostRoot in @($HostSourceRoot, $CargoRegistrySourceRoot)) {
+        if ([string]::IsNullOrWhiteSpace($hostRoot)) {
+            continue
+        }
+        $fullRoot = [System.IO.Path]::GetFullPath($hostRoot)
+        foreach ($variant in @($fullRoot, $fullRoot.Replace('\', '/'))) {
+            if ($ascii.IndexOf($variant, [System.StringComparison]::OrdinalIgnoreCase) -ge 0) {
+                throw "PE artifact leaks a host build path: $variant"
+            }
+        }
+    }
+
+    [PSCustomObject]@{
+        mode = 'rustc-dual-prefix-remap-with-pe-leak-check-v1'
+        source_root = '<BUILD_ROOT>=Z:/kilogram-source'
+        cargo_registry_source_root = '<CARGO_REGISTRY_SOURCE_ROOT>=Z:/cargo-registry-src'
+        canonical_cargo_registry_source_present = $true
+        raw_cargo_registry_source_absent = $true
+    }
 }
 
 function Assert-KilogramNativeLinkInputManifest {

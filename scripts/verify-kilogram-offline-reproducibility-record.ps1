@@ -52,7 +52,7 @@ if ($recordItem.Length -le 0 -or $recordItem.Length -gt 64KB) {
     throw 'Reproducibility record size is invalid.'
 }
 $record = Get-Content -LiteralPath $recordPath -Raw | ConvertFrom-Json
-if ($record.format_version -ne 5 -or $record.status -ne 'reproducible') {
+if ($record.format_version -ne 6 -or $record.status -ne 'reproducible') {
     throw 'Reproducibility record version or status is invalid.'
 }
 if ($record.builder_scope -ne 'same-host-separate-clean-roots' -or
@@ -63,7 +63,11 @@ if ($record.builder_scope -ne 'same-host-separate-clean-roots' -or
     [int]$record.cargo_jobs -gt 256 -or
     $record.target -ne 'x86_64-pc-windows-msvc' -or
     $record.incremental -ne $false -or
-    $record.path_remap -ne '<BUILD_ROOT>=Z:/kilogram-source' -or
+    $record.path_remap.mode -ne 'rustc-dual-prefix-remap-with-pe-leak-check-v1' -or
+    $record.path_remap.source_root -ne '<BUILD_ROOT>=Z:/kilogram-source' -or
+    $record.path_remap.cargo_registry_source_root -ne '<CARGO_REGISTRY_SOURCE_ROOT>=Z:/cargo-registry-src' -or
+    $record.path_remap.canonical_cargo_registry_source_present -ne $true -or
+    $record.path_remap.raw_cargo_registry_source_absent -ne $true -or
     $record.blake3_codegen -ne 'pure-rust-intrinsics' -or
     $record.pe_metadata_normalization -ne 'coff-and-debug-timestamps-plus-codeview-guid-zeroed-v1' -or
     $record.linker.mode -ne 'rust-toolchain-bundled-lld' -or
@@ -147,6 +151,8 @@ $buildAHash = Get-Sha256 $buildAPath
 $buildBHash = Get-Sha256 $buildBPath
 Assert-KilogramPeReproducibilityMetadataNormalized -Path $buildAPath
 Assert-KilogramPeReproducibilityMetadataNormalized -Path $buildBPath
+$null = Assert-KilogramPeCanonicalPathRemapping -Path $buildAPath
+$null = Assert-KilogramPeCanonicalPathRemapping -Path $buildBPath
 $buildALength = (Get-Item -LiteralPath $buildAPath).Length
 $buildBLength = (Get-Item -LiteralPath $buildBPath).Length
 if ($buildAHash -ne $record.build_a.sha256 -or

@@ -216,28 +216,30 @@ continuation are specified in
 [`docs/RFC-0101-exact-native-link-input-provenance.md`](docs/RFC-0101-exact-native-link-input-provenance.md)
 and
 [`docs/RFC-0102-hash-locked-windows-native-toolchain.md`](docs/RFC-0102-hash-locked-windows-native-toolchain.md).
+Canonical Cargo-registry source-path remapping and its post-build PE leak gate
+are specified in
+[`docs/RFC-0103-canonical-cargo-registry-path-remapping.md`](docs/RFC-0103-canonical-cargo-registry-path-remapping.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.79 hash-locked Windows native toolchain — local gate implemented
+## Current milestone: M0.9.80 canonical Cargo registry paths — local gate implemented
 
-The independent Windows boundary now controls all native linker inputs, not
-only Rust and LLD. `WINDOWS-NATIVE-LINK-INPUTS.lock` identifies the exact ten
-MSVC 14.44.35207 and Windows SDK 10.0.19041.0 libraries by SHA-256, byte length
-and path-independent name. Both builders verify their installed files, pass
-their directories explicitly to the final Rust binary, capture what LLD really
-used and require the observed manifest to equal the lock. The Microsoft files
-are not vendored or packaged.
+GitHub run `35473329174` proved that the M0.9.79 native boundary works: Rust,
+bundled LLD, MSVC 14.44.35207, Windows SDK 10.0.19041.0 and all ten observed
+native inputs matched exactly. The workflow nevertheless found another honest
+1,024-byte executable divergence and created no attestation.
 
-This follows GitHub run `35471719378`, which proved that the previous remaining
-1,024-byte divergence came from local MSVC 14.44/SDK 28000 versus hosted MSVC
-14.51/SDK 26100. The workflow failed closed and created no attestation. Format
-v5 now binds the repository lock and observed manifest; a fresh exact-commit
-local pair and GitHub dispatch are still required before cross-host equality
-can be claimed. Details are in
-[`docs/RFC-0102-hash-locked-windows-native-toolchain.md`](docs/RFC-0102-hash-locked-windows-native-toolchain.md).
+The retained binaries identified the remaining host input: release diagnostics
+contained `C:\Users\Paul\.cargo\registry\src` locally and
+`C:\Users\runneradmin\.cargo\registry\src` on GitHub. M0.9.80 remaps that root
+to `Z:/cargo-registry-src` in addition to the existing checkout remap. A
+post-build PE gate requires the canonical marker and rejects raw Cargo registry
+or known host-root leakage. Format v6 binds both mappings and their verified
+result. A fresh exact-commit local pair and GitHub dispatch are still required
+before cross-host byte equality can be claimed. Details are in
+[`docs/RFC-0103-canonical-cargo-registry-path-remapping.md`](docs/RFC-0103-canonical-cargo-registry-path-remapping.md).
 
 ## Previous milestone: M0.9.76 service-free v2 field lifecycle — verified
 

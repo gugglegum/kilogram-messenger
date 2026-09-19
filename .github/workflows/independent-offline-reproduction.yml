@@ -108,12 +108,14 @@ jobs:
           $env:SOURCE_DATE_EPOCH = $sourceEpoch
           . .\scripts\kilogram-reproducible-linker.ps1
           $linker = Get-KilogramBundledLldIdentity
+          $cargoRegistrySourceRoot = Get-KilogramCargoRegistrySourceRoot
           $nativeToolchain = Get-KilogramPinnedNativeToolchainIdentity `
             -LockPath .\WINDOWS-NATIVE-LINK-INPUTS.lock
           $unitSeparator = [char]0x1f
           $env:CARGO_ENCODED_RUSTFLAGS = @(
             New-KilogramReproducibleRustFlags `
               -SourceRoot $env:GITHUB_WORKSPACE_VALUE `
+              -CargoRegistrySourceRoot $cargoRegistrySourceRoot `
               -LinkerIdentity $linker
           ) -join $unitSeparator
 
@@ -162,12 +164,16 @@ jobs:
           $artifact = Join-Path $output 'kilogram-offline.exe'
           Copy-Item -LiteralPath $built -Destination $artifact
           Normalize-KilogramPeReproducibilityMetadata -Path $artifact
+          $pathRemap = Assert-KilogramPeCanonicalPathRemapping `
+            -Path $artifact `
+            -HostSourceRoot $env:GITHUB_WORKSPACE_VALUE `
+            -CargoRegistrySourceRoot $cargoRegistrySourceRoot
           $artifactHash = (Get-FileHash -LiteralPath $artifact -Algorithm SHA256).Hash.ToLowerInvariant()
           $artifactBytes = (Get-Item -LiteralPath $artifact).Length
           $matched = $artifactHash -ceq $env:EXPECTED_LOCAL_SHA256
 
           $record = [ordered]@{
-            format_version = 5
+            format_version = 6
             status = if ($matched) { 'matched' } else { 'divergent' }
             builder_scope = 'github-hosted-windows-independent'
             repository = $env:KILOGRAM_REPOSITORY
@@ -179,7 +185,13 @@ jobs:
             target = 'x86_64-pc-windows-msvc'
             cargo_jobs = 2
             incremental = $false
-            path_remap = '<BUILD_ROOT>=Z:/kilogram-source'
+            path_remap = [ordered]@{
+              mode = $pathRemap.mode
+              source_root = $pathRemap.source_root
+              cargo_registry_source_root = $pathRemap.cargo_registry_source_root
+              canonical_cargo_registry_source_present = $pathRemap.canonical_cargo_registry_source_present
+              raw_cargo_registry_source_absent = $pathRemap.raw_cargo_registry_source_absent
+            }
             blake3_codegen = 'pure-rust-intrinsics'
             pe_metadata_normalization = 'coff-and-debug-timestamps-plus-codeview-guid-zeroed-v1'
             linker = [ordered]@{

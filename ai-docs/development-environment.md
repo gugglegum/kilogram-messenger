@@ -2628,3 +2628,25 @@ retirement остальных compatibility shadows ещё не реализов
   официальный current runner-image inventory перечисляет SDK 10.0.19041.0 и
   VC x86/x64 tools, но не доказывает exact file payloads. Наличие pinned set и
   cross-host byte equality ещё требуют fresh committed external run.
+
+## M0.9.80 verification snapshot (2026-09-20)
+
+- Exact M0.9.79 commit `a7c5fe0ab7372958959985b54fc2b813c5c4f620`
+  push-нут; manual workflow run `35473329174` прошёл Rust/LLD/native-toolchain
+  gates, но корректно fail closed на final SHA-256 mismatch без attestation.
+- Native boundary действительно совпал: lock/observed SHA-256
+  `e478c6daf61551607f8502c7ef97537403f4da24ddbab0b7a6a8fcb94d835027`,
+  MSVC `14.44.35207`, Windows SDK `10.0.19041.0`, count=10.
+- Local artifact: 2,433,536 bytes,
+  `3e5419e14fadeca66068ffdccda7a4cde7584cae03e0430b745e2c3ca700e878`;
+  GitHub artifact: 2,434,560 bytes,
+  `bea3fd37a9190f33e30fe31c3ea1c92416d47367cb739b7c5c6ecaf65c85bd78`.
+- `rg -a` по retained executables показал exact cause: local embedded path
+  `C:\Users\Paul\.cargo\registry\src`, hosted path
+  `C:\Users\runneradmin\.cargo\registry\src`. Source-root remap не покрывал
+  registry dependencies вне checkout.
+- M0.9.80 добавляет canonical `Z:/cargo-registry-src`, explicit resolved-root
+  validation и PE leak check. Records/verifiers подняты до format v6.
+- Static boundary и network-free independent verifier self-test проходят;
+  self-test отдельно отвергает raw hosted-user Cargo registry path.
+- Clean exact-commit two-root build и fresh GitHub dispatch ещё предстоят.

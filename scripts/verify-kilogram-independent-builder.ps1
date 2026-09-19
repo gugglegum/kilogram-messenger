@@ -79,7 +79,7 @@ function Assert-IndependentEvidence {
     if ($localRecord.source_revision -cnotmatch '^[0-9a-f]{40}$') {
         throw 'Local reproducibility record must identify a clean exact Git commit.'
     }
-    if ($builderRecord.format_version -ne 5 -or
+    if ($builderRecord.format_version -ne 6 -or
         $builderRecord.status -ne 'matched' -or
         $builderRecord.builder_scope -ne 'github-hosted-windows-independent' -or
         $builderRecord.repository -cne $ExpectedRepository -or
@@ -90,7 +90,11 @@ function Assert-IndependentEvidence {
         $builderRecord.target -ne 'x86_64-pc-windows-msvc' -or
         [int]$builderRecord.cargo_jobs -ne 2 -or
         $builderRecord.incremental -ne $false -or
-        $builderRecord.path_remap -ne '<BUILD_ROOT>=Z:/kilogram-source' -or
+        $builderRecord.path_remap.mode -ne 'rustc-dual-prefix-remap-with-pe-leak-check-v1' -or
+        $builderRecord.path_remap.source_root -ne '<BUILD_ROOT>=Z:/kilogram-source' -or
+        $builderRecord.path_remap.cargo_registry_source_root -ne '<CARGO_REGISTRY_SOURCE_ROOT>=Z:/cargo-registry-src' -or
+        $builderRecord.path_remap.canonical_cargo_registry_source_present -ne $true -or
+        $builderRecord.path_remap.raw_cargo_registry_source_absent -ne $true -or
         $builderRecord.blake3_codegen -ne 'pure-rust-intrinsics' -or
         $builderRecord.pe_metadata_normalization -ne 'coff-and-debug-timestamps-plus-codeview-guid-zeroed-v1' -or
         $builderRecord.linker.mode -ne 'rust-toolchain-bundled-lld' -or
@@ -133,6 +137,13 @@ function Assert-IndependentEvidence {
     if ([string]$builderRecord.rustc -cne [string]$localRecord.rustc -or
         [string]$builderRecord.cargo -cne [string]$localRecord.cargo) {
         throw 'Independent builder did not use the locally recorded pinned Rust/Cargo toolchain.'
+    }
+    if ([string]$builderRecord.path_remap.mode -cne [string]$localRecord.path_remap.mode -or
+        [string]$builderRecord.path_remap.source_root -cne [string]$localRecord.path_remap.source_root -or
+        [string]$builderRecord.path_remap.cargo_registry_source_root -cne [string]$localRecord.path_remap.cargo_registry_source_root -or
+        $builderRecord.path_remap.canonical_cargo_registry_source_present -ne $localRecord.path_remap.canonical_cargo_registry_source_present -or
+        $builderRecord.path_remap.raw_cargo_registry_source_absent -ne $localRecord.path_remap.raw_cargo_registry_source_absent) {
+        throw 'Independent builder did not use the exact locally recorded path-remapping boundary.'
     }
     if ([string]$builderRecord.linker.sha256 -cne [string]$localRecord.linker.sha256 -or
         [int64]$builderRecord.linker.bytes -ne [int64]$localRecord.linker.bytes -or
@@ -225,6 +236,7 @@ function Assert-IndependentEvidence {
 
     $actualHash = Get-Sha256 $artifact
     $actualBytes = (Get-Item -LiteralPath $artifact).Length
+    $null = Assert-KilogramPeCanonicalPathRemapping -Path $artifact
     if ($localRecord.build_a.sha256 -cne $localRecord.build_b.sha256 -or
         $builderRecord.expected_local_sha256 -cne $localRecord.build_a.sha256 -or
         $builderRecord.artifact.sha256 -cne $localRecord.build_a.sha256 -or
@@ -304,6 +316,7 @@ function Invoke-SelfTest {
         }
         [System.BitConverter]::GetBytes([uint32]1).CopyTo($artifactBytes, 0x24c)
         [System.Text.Encoding]::ASCII.GetBytes("self.pdb`0").CopyTo($artifactBytes, 0x250)
+        [System.Text.Encoding]::ASCII.GetBytes("Z:/cargo-registry-src/index.crates.io-self-test`0").CopyTo($artifactBytes, 0x300)
         $buildA = Join-Path $local 'kilogram-offline-build-a.exe'
         $buildB = Join-Path $local 'kilogram-offline-build-b.exe'
         $artifact = Join-Path $independent 'kilogram-offline.exe'
@@ -348,6 +361,20 @@ function Invoke-SelfTest {
         }
         if (-not $authenticodeRejected) {
             throw 'Self-test normalizer accepted an Authenticode-bearing PE image.'
+        }
+        $rawCargoPathFixture = Join-Path $independent 'host-cargo-registry-path-bearing.exe'
+        $rawCargoPathBytes = [byte[]]$artifactBytes.Clone()
+        [System.Text.Encoding]::ASCII.GetBytes("C:\Users\runneradmin\.cargo\registry\src\index.crates.io-self-test`0").CopyTo($rawCargoPathBytes, 0x340)
+        [System.IO.File]::WriteAllBytes($rawCargoPathFixture, $rawCargoPathBytes)
+        $rawCargoPathRejected = $false
+        try {
+            Assert-KilogramPeCanonicalPathRemapping -Path $rawCargoPathFixture | Out-Null
+        }
+        catch {
+            $rawCargoPathRejected = $true
+        }
+        if (-not $rawCargoPathRejected) {
+            throw 'Self-test path verifier accepted a host Cargo registry source path.'
         }
         Normalize-KilogramPeReproducibilityMetadata -Path $buildA
         Normalize-KilogramPeReproducibilityMetadata -Path $buildB
@@ -396,7 +423,7 @@ function Invoke-SelfTest {
             throw 'Self-test accepted a malformed native link-input manifest.'
         }
         $localRecord = [ordered]@{
-            format_version = 5
+            format_version = 6
             status = 'reproducible'
             builder_scope = 'same-host-separate-clean-roots'
             build_root_count = 2
@@ -412,7 +439,13 @@ function Invoke-SelfTest {
             cargo = 'cargo self-test'
             target = 'x86_64-pc-windows-msvc'
             incremental = $false
-            path_remap = '<BUILD_ROOT>=Z:/kilogram-source'
+            path_remap = [ordered]@{
+                mode = 'rustc-dual-prefix-remap-with-pe-leak-check-v1'
+                source_root = '<BUILD_ROOT>=Z:/kilogram-source'
+                cargo_registry_source_root = '<CARGO_REGISTRY_SOURCE_ROOT>=Z:/cargo-registry-src'
+                canonical_cargo_registry_source_present = $true
+                raw_cargo_registry_source_absent = $true
+            }
             blake3_codegen = 'pure-rust-intrinsics'
             pe_metadata_normalization = 'coff-and-debug-timestamps-plus-codeview-guid-zeroed-v1'
             linker = [ordered]@{
@@ -451,7 +484,7 @@ function Invoke-SelfTest {
         [System.IO.File]::WriteAllText((Join-Path $local 'REPRODUCIBILITY.json'), ($localRecord | ConvertTo-Json -Depth 5), [System.Text.UTF8Encoding]::new($false))
 
         $builderRecord = [ordered]@{
-            format_version = 5
+            format_version = 6
             status = 'matched'
             builder_scope = 'github-hosted-windows-independent'
             repository = 'gugglegum/kilogram-messenger'
@@ -463,7 +496,13 @@ function Invoke-SelfTest {
             target = 'x86_64-pc-windows-msvc'
             cargo_jobs = 2
             incremental = $false
-            path_remap = '<BUILD_ROOT>=Z:/kilogram-source'
+            path_remap = [ordered]@{
+                mode = 'rustc-dual-prefix-remap-with-pe-leak-check-v1'
+                source_root = '<BUILD_ROOT>=Z:/kilogram-source'
+                cargo_registry_source_root = '<CARGO_REGISTRY_SOURCE_ROOT>=Z:/cargo-registry-src'
+                canonical_cargo_registry_source_present = $true
+                raw_cargo_registry_source_absent = $true
+            }
             blake3_codegen = 'pure-rust-intrinsics'
             pe_metadata_normalization = 'coff-and-debug-timestamps-plus-codeview-guid-zeroed-v1'
             linker = [ordered]@{
@@ -581,6 +620,7 @@ function Invoke-SelfTest {
         Write-Output 'non_normalized_pe=rejected'
         Write-Output 'checksum_bearing_pe=rejected'
         Write-Output 'authenticode_bearing_pe=rejected'
+        Write-Output 'host_cargo_registry_path=rejected'
         Write-Output 'mismatched_linker=rejected'
         Write-Output 'tampered_native_toolchain_lock=rejected'
         Write-Output 'mismatched_native_toolchain_lock=rejected'

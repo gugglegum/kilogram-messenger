@@ -16,12 +16,14 @@ $cargoJobsResolved = Set-KilogramCargoResourcePolicy -RequestedJobs $CargoJobs
 $workspace = [System.IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $linkerIdentity = $null
 $nativeToolchainIdentity = $null
+$cargoRegistrySourceRoot = $null
 $nativeToolchainLockPath = Join-Path $workspace 'WINDOWS-NATIVE-LINK-INPUTS.lock'
 Push-Location $workspace
 try {
     $linkerIdentity = Get-KilogramBundledLldIdentity
     $nativeToolchainIdentity = Get-KilogramPinnedNativeToolchainIdentity `
         -LockPath $nativeToolchainLockPath
+    $cargoRegistrySourceRoot = Get-KilogramCargoRegistrySourceRoot
 }
 finally {
     Pop-Location
@@ -109,6 +111,7 @@ function Invoke-CleanBuild(
             $env:CARGO_ENCODED_RUSTFLAGS = @(
                 New-KilogramReproducibleRustFlags `
                     -SourceRoot $SourceRoot `
+                    -CargoRegistrySourceRoot $cargoRegistrySourceRoot `
                     -LinkerIdentity $linkerIdentity
             ) -join $unitSeparator
             Push-Location $SourceRoot
@@ -159,11 +162,16 @@ function Invoke-CleanBuild(
         $artifact = Join-Path $output $ArtifactName
         Copy-Item -LiteralPath $built -Destination $artifact
         Normalize-KilogramPeReproducibilityMetadata -Path $artifact
+        $pathRemap = Assert-KilogramPeCanonicalPathRemapping `
+            -Path $artifact `
+            -HostSourceRoot $SourceRoot `
+            -CargoRegistrySourceRoot $cargoRegistrySourceRoot
         [PSCustomObject]@{
             file = $ArtifactName
             sha256 = Get-Sha256 $artifact
             bytes = (Get-Item -LiteralPath $artifact).Length
             native_link_inputs = $nativeLinkInputs
+            path_remap = $pathRemap
         }
     }
     finally {
@@ -288,7 +296,7 @@ try {
         Pop-Location
     }
     $record = [ordered]@{
-        format_version = 5
+        format_version = 6
         status = if ($equal) { 'reproducible' } else { 'divergent' }
         builder_scope = 'same-host-separate-clean-roots'
         build_root_count = 2
@@ -304,7 +312,13 @@ try {
         cargo = $cargoVersion
         target = 'x86_64-pc-windows-msvc'
         incremental = $false
-        path_remap = '<BUILD_ROOT>=Z:/kilogram-source'
+        path_remap = [ordered]@{
+            mode = $buildA.path_remap.mode
+            source_root = $buildA.path_remap.source_root
+            cargo_registry_source_root = $buildA.path_remap.cargo_registry_source_root
+            canonical_cargo_registry_source_present = $buildA.path_remap.canonical_cargo_registry_source_present
+            raw_cargo_registry_source_absent = $buildA.path_remap.raw_cargo_registry_source_absent
+        }
         blake3_codegen = 'pure-rust-intrinsics'
         pe_metadata_normalization = 'coff-and-debug-timestamps-plus-codeview-guid-zeroed-v1'
         linker = [ordered]@{
