@@ -2425,3 +2425,13 @@ retirement остальных compatibility shadows ещё не реализов
   требует recovery gate, debug/two jobs/six launches/no ZIP/no release/no
   generator network. Все M0.9.72/73/74 gates, verifier self-tests, M1 boundary
   и PowerShell AST parse проходят.
+- Clean harness revision `aa295dfd183cc4edaf1347f0555916285a9a9cb0`
+  создан отдельным коммитом. Генератор с below-normal Cargo priority/jobs=2
+  собрал `.tmp\m0974-no-https-aa295dfd183c` за 24.50s; рабочее дерево осталось
+  clean. Проверка комплекта: 11/11 manifest artifacts, 13 files/57,748,745
+  bytes, PowerShell parse errors=0, ZIP=0, ticket-store EXE=0, precreated
+  `1\shared`=false, profile=debug, archive/network execution=false.
+- Комплект без перезаписи скопирован в
+  `C:\Users\Paul\YandexDisk\!M\M0.9.74`; SHA-256 всех 13 source/copy файлов
+  совпал. Перед запуском на втором хосте нужно дождаться полной синхронизации
+  новой папки; M0.9.73 state/evidence не переносить.

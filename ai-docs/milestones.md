@@ -4034,13 +4034,19 @@ marker, а read-only inspection принципиально не мог его с
 M0.9.73 run остаётся полезным diagnostic evidence, но не clean acceptance.
 Replacement field kit должен иметь отдельные milestone/label/private root
 `M0.9.74`/`m0974`/`M0974` и не переиспользовать старое состояние. Harness
-готов; clean-HEAD binary kit ещё должен быть собран и скопирован наружу.
+готов. Из clean revision `aa295dfd183cc4edaf1347f0555916285a9a9cb0`
+собран `.tmp\m0974-no-https-aa295dfd183c` и byte-identical скопирован в
+`C:\Users\Paul\YandexDisk\!M\M0.9.74`: 11/11 manifest artifacts, 13 файлов,
+57,748,745 bytes, PowerShell parse errors=0, ZIP/ticket-store/precreated shared
+отсутствуют, profile=debug, Cargo jobs=2, generator network execution=false.
+`BOUNDARIES.log` содержит inherited M0.9.72/M0.9.73, cooperative scheduling,
+replication recovery и M0.9.74 gates.
 
 ### Следующий этап
 
-1. Собрать из clean revision и выполнить M0.9.74 clean no-HTTPS Alice/Bob run
-   через разные сети. Принимать его только после fail-closed результата
-   `verified`; M0.9.72/M0.9.73 runs не возобновлять.
+1. После полной синхронизации выполнить подготовленный M0.9.74 clean no-HTTPS
+   Alice/Bob run через разные сети. Принимать его только после fail-closed
+   результата `verified`; M0.9.72/M0.9.73 runs не возобновлять.
 2. До первого публичного security artifact pin-нуть linker/SDK либо controlled
    alternative и повторить M0.9.59 до matched external hash и attestation.
 3. Optional autostart/background mode оставить отдельной явной настройкой, не
