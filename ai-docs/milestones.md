@@ -3934,6 +3934,12 @@ pinned `aps1`; markers `alice-sent`, `bob-complete` и `providers-stopped`
 `завершено`. Прерванный или неуспешный запуск не возобновляется как clean
 evidence: для новой попытки создаётся новый kit/run.
 
+Из clean revision `36a4a6c76a02d9f8d6ff70adc5a259951b8b2885` создан
+локальный комплект `.tmp\m0972-no-https-36a4a6c`. Все 11/11 записанных payload
+artifacts совпали по SHA-256/length, PowerShell parse errors — 0,
+`kilogram-ticket-store.exe`/ZIP/предсозданный `1\shared` отсутствуют, профиль —
+debug, Cargo jobs — 2, generator network execution — false.
+
 ### Следующий этап
 
 1. Выполнить подготовленный clean external M0.9.72 kit на двух хостах/сетях и

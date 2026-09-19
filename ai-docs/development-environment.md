@@ -2347,5 +2347,8 @@ retirement остальных compatibility shadows ещё не реализов
   M0.9.65 replication gate о безусловной HTTPS compatibility copy. Gate приведён
   к M0.9.71: exact `2/2` требует no-PUT, а legacy/incomplete/reverse-ACK всё ещё
   требуют compatibility path.
-- External two-host run ещё не выполнялся; сгенерированный clean kit и его exact
-  source revision будут записаны после первого clean-HEAD build.
+- Из clean revision `36a4a6c76a02d9f8d6ff70adc5a259951b8b2885` создан
+  `.tmp\m0972-no-https-36a4a6c`: debug, Cargo jobs=2, 11/11 payload artifacts
+  совпадают по SHA-256/length, PowerShell parse errors=0, 13 файлов/57,690,277
+  bytes, ZIP=0, ticket-store EXE отсутствует, `1\shared` до запуска отсутствует.
+  Generator network execution=false. External two-host run ещё не выполнялся.

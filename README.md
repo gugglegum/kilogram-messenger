@@ -221,6 +221,9 @@ Success requires two exact signed volunteer receipts followed by
 and deleting both replicas, no restart redelivery and exactly one history
 event. The generator uses only a stable debug `kilogram-cli.exe`, two Cargo jobs,
 no ZIP and no release build. The external two-host execution is still pending.
+One clean kit from revision `36a4a6c76a02d9f8d6ff70adc5a259951b8b2885`
+has passed its local artifact-integrity and PowerShell-parse checks and is ready
+for transfer to the two test hosts.
 Details are in
 [`docs/RFC-0095-clean-no-https-volunteer-field-run.md`](docs/RFC-0095-clean-no-https-volunteer-field-run.md).
 
