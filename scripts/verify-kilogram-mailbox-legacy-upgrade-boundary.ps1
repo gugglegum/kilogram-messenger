@@ -9,8 +9,9 @@ $runtimePath = Join-Path $workspace 'apps\kilogram-cli\src\main.rs'
 $ipcPath = Join-Path $workspace 'crates\kilogram-runtime-ipc\src\lib.rs'
 $manifestPath = Join-Path $workspace 'apps\kilogram-cli\Cargo.toml'
 $rfcPath = Join-Path $workspace 'docs\RFC-0093-automatic-legacy-mailbox-upgrade.md'
+$v2RfcPath = Join-Path $workspace 'docs\RFC-0098-service-free-exact-mailbox-capability-v2.md'
 
-foreach ($path in @($runtimePath, $ipcPath, $manifestPath, $rfcPath)) {
+foreach ($path in @($runtimePath, $ipcPath, $manifestPath, $rfcPath, $v2RfcPath)) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
         throw "automatic legacy mailbox upgrade boundary file is missing: $path"
     }
@@ -19,18 +20,19 @@ foreach ($path in @($runtimePath, $ipcPath, $manifestPath, $rfcPath)) {
 $runtime = Get-Content -LiteralPath $runtimePath -Raw
 $ipc = Get-Content -LiteralPath $ipcPath -Raw
 $rfc = Get-Content -LiteralPath $rfcPath -Raw
+$v2Rfc = Get-Content -LiteralPath $v2RfcPath -Raw
 
 foreach ($required in @(
     'RUNTIME_MAILBOX_LEGACY_UPGRADE_INTERVAL',
     'prepare_runtime_mailbox_legacy_upgrade',
     'attempt_runtime_mailbox_legacy_upgrade',
-    'head.replica_set().is_some()',
+    'head.is_exact_volunteer()',
     'mailbox_update_acknowledgements',
-    'require_exact_replica_set',
-    'automatic legacy mailbox upgrade requires at least two active transport-distinct volunteer providers',
+    'RuntimeMailboxProvisioningMode::ExactVolunteer',
+    'exact volunteer mailbox capability requires at least two active transport-distinct providers',
     'MailboxCapabilityBindingState::RotationOverlap',
     'runtime_mailbox_legacy_upgrade_status=rotated',
-    'acknowledged_legacy_mailbox_upgrades_once_to_exact_replica_set',
+    'acknowledged_legacy_mailbox_upgrades_once_to_service_free_v2',
     'assert!(upgraded.queued.is_empty())'
 )) {
     if (-not $runtime.Contains($required)) {
@@ -38,14 +40,17 @@ foreach ($required in @(
     }
 }
 
-$tick = $runtime.IndexOf('attempt_runtime_mailbox_legacy_upgrade(&state_dir).await')
+$tick = $runtime.IndexOf('attempt_runtime_mailbox_legacy_upgrade(&context.state_directory).await')
+if ($tick -lt 0) {
+    throw 'automatic legacy upgrade scheduler call is missing'
+}
 $push = $runtime.IndexOf('attempt_next_runtime_mailbox_capability_update(', $tick)
-if ($tick -lt 0 -or $push -le $tick) {
+if ($push -le $tick) {
     throw 'automatic legacy upgrade is not ordered before authenticated capability delivery'
 }
 
-if (-not $ipc.Contains('const IPC_VERSION: u8 = 25;')) {
-    throw 'automatic legacy mailbox upgrade requires authenticated IPC version 25'
+if (-not $ipc.Contains('const IPC_VERSION: u8 = 26;')) {
+    throw 'service-free automatic legacy mailbox upgrade requires authenticated IPC version 26'
 }
 
 foreach ($required in @(
@@ -62,12 +67,22 @@ foreach ($required in @(
     'durable recipient-signed acknowledgement',
     'RotationOverlap',
     'does not retransmit conversation history',
-    'keeps the HTTPS mailbox descriptor and upload copy',
     'automatic check runs only while',
     'normal Kilogram runtime'
 )) {
     if (-not $rfc.Contains($required)) {
         throw "automatic legacy mailbox upgrade RFC is missing '$required'"
+    }
+}
+
+foreach ($required in @(
+    'v1 -> v2',
+    'v2 -> v1',
+    'does not contain an HTTPS URL',
+    'does not attempt HTTPS fallback'
+)) {
+    if (-not $v2Rfc.Contains($required)) {
+        throw "service-free legacy migration RFC is missing '$required'"
     }
 }
 
@@ -79,5 +94,5 @@ Write-Output 'mailbox_legacy_upgrade_boundary=verified'
 Write-Output 'eligibility=acknowledged-legacy-head-and-two-transport-distinct-providers'
 Write-Output 'transition=ordered-rotation-with-predecessor-overlap'
 Write-Output 'message_requeue=false'
-Write-Output 'https_compatibility=retained'
+Write-Output 'https_compatibility=legacy-v1-only'
 Write-Output 'new_executable=false'

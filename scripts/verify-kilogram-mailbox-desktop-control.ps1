@@ -27,18 +27,21 @@ function Get-RustStructBlock {
     return $match.Value
 }
 
-if (-not $ipc.Contains('const IPC_VERSION: u8 = 25;')) {
-    throw 'mailbox desktop-control contract must use authenticated IPC version 25'
+if (-not $ipc.Contains('const IPC_VERSION: u8 = 26;')) {
+    throw 'mailbox desktop-control contract must use authenticated IPC version 26'
 }
 
 foreach ($required in @(
     'CreateMailboxCapability',
     'RotateMailboxCapability',
+    'CreateExactMailboxCapability',
+    'RotateExactMailboxCapability',
     'RevokeMailboxCapability',
     'MailboxCapabilityChanged',
     'RuntimeIpcMailboxCapabilityStatus',
     'RuntimeIpcMailboxCapabilityTransition',
     'pub capabilities: Vec<RuntimeIpcMailboxCapabilityStatus>',
+    'pub capability_format: String',
     'replica_set_discovery',
     'replica_set_commitment_id',
     'replica_set_store_count'
@@ -68,8 +71,8 @@ foreach ($type in @(
 }
 
 foreach ($required in @(
-    'RuntimeIpcCommand::CreateMailboxCapability',
-    'RuntimeIpcCommand::RotateMailboxCapability',
+    'RuntimeIpcCommand::CreateExactMailboxCapability',
+    'RuntimeIpcCommand::RotateExactMailboxCapability',
     'RuntimeIpcCommand::RevokeMailboxCapability',
     'with_locked_state(state_directory',
     'MailboxCapabilityChanged(Box::new(report.transition))',
@@ -83,17 +86,18 @@ foreach ($required in @(
 
 $createHandler = [regex]::Match(
     $runtime,
-    '(?s)RuntimeIpcCommand::CreateMailboxCapability\s*\{.*?(?=RuntimeIpcCommand::RotateMailboxCapability)'
+    '(?s)RuntimeIpcCommand::CreateExactMailboxCapability\s*\{.*?(?=RuntimeIpcCommand::RotateExactMailboxCapability)'
 ).Value
 $rotateHandler = [regex]::Match(
     $runtime,
-    '(?s)RuntimeIpcCommand::RotateMailboxCapability\s*\{.*?(?=RuntimeIpcCommand::RevokeMailboxCapability)'
+    '(?s)RuntimeIpcCommand::RotateExactMailboxCapability\s*\{.*?(?=RuntimeIpcCommand::RevokeMailboxCapability)'
 ).Value
 foreach ($entry in @(
     @{ Name = 'activation'; Body = $createHandler },
     @{ Name = 'rotation'; Body = $rotateHandler }
 )) {
     if (-not $entry.Body.Contains('provision_runtime_mailbox(') -or
+        -not $entry.Body.Contains('RuntimeMailboxProvisioningMode::ExactVolunteer') -or
         -not $entry.Body.Contains('None,') -or
         -not $entry.Body.Contains('state_changed = true')) {
         throw "runtime mailbox $($entry.Name) is not a locked mutation without a manual offer export"
@@ -118,12 +122,22 @@ foreach ($required in @(
     'RuntimeIpcResponse::MailboxStatus',
     'mailbox_peer_device_id',
     'Exact peer device',
-    'Public store key',
+    'Storage: exact signed volunteer replica set (no central HTTPS mailbox)',
+    'capability.capability_format',
     'locator {} ({})',
     'never cross desktop IPC'
 )) {
     if (-not $desktop.Contains($required)) {
         throw "Windows mailbox control is missing '$required'"
+    }
+}
+
+foreach ($forbidden in @(
+    'mailbox_service_base_url',
+    'mailbox_store_key'
+)) {
+    if ($desktop.Contains($forbidden)) {
+        throw "Windows exact mailbox control still exposes legacy field '$forbidden'"
     }
 }
 
@@ -149,11 +163,12 @@ foreach ($manifestPath in @(
 }
 
 Write-Output 'mailbox_desktop_control=verified'
-Write-Output 'ipc_version=25'
+Write-Output 'ipc_version=26'
 Write-Output 'runtime_owner=single-locked-actor'
-Write-Output 'mutations=activate-rotate-revoke'
+Write-Output 'mutations=activate-v2-exact-rotate-v2-exact-revoke'
 Write-Output 'status=lifecycle-heads-convergence-and-exact-locator'
 Write-Output 'recipient_selection=exact-device-id'
+Write-Output 'central_https_fields_in_desktop=false'
 Write-Output 'secret_material_in_ipc=false'
 Write-Output 'manual_offer_export=false'
 Write-Output 'new_executable=false'

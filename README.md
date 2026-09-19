@@ -202,30 +202,38 @@ selection are specified in
 Authenticated bounded provider-offer gossip over existing peer sessions is
 specified in
 [`docs/RFC-0086-authenticated-bounded-volunteer-provider-gossip.md`](docs/RFC-0086-authenticated-bounded-volunteer-provider-gossip.md).
+The service-free exact-volunteer mailbox capability v2 and bounded v1 migration
+are specified in
+[`docs/RFC-0098-service-free-exact-mailbox-capability-v2.md`](docs/RFC-0098-service-free-exact-mailbox-capability-v2.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.72 clean no-HTTPS field harness — ready for external run
+## Current milestone: M0.9.75 service-free exact mailbox capability v2 — complete locally
 
-The six-launch, three-folder Windows harness now repeats the authenticated
-exact-locator topology without shipping or starting `kilogram-ticket-store`.
-An inert unreachable loopback descriptor remains only because the compatible
-capability format still requires it. Before activation and immediately before
-send, the harness proves that the binary is absent and the endpoint is
-unreachable.
+New exact-volunteer mailbox bindings and recipient offers no longer serialize
+an HTTPS URL, central store key or `MailboxServiceDescriptor`. Their
+Device-signed v2 activation commits the exact volunteer set and fails closed
+unless at least two active transport-distinct providers are available. New
+outbound messages and reverse acknowledgements use only that set; incomplete
+v2 replication remains pending and cannot fall back to HTTPS.
 
-Success requires two exact signed volunteer receipts followed by
-`runtime_mailbox_http_put=not-attempted`, Alice going offline, Bob committing
-and deleting both replicas, no restart redelivery and exactly one history
-event. The generator uses only a stable debug `kilogram-cli.exe`, two Cargo jobs,
-no ZIP and no release build. The external two-host execution is still pending.
-One clean kit from revision `36a4a6c76a02d9f8d6ff70adc5a259951b8b2885`
-has passed its local artifact-integrity and PowerShell-parse checks and is ready
-for transfer to the two test hosts.
-Details are in
-[`docs/RFC-0095-clean-no-https-volunteer-field-run.md`](docs/RFC-0095-clean-no-https-volunteer-field-run.md).
+Bounded v1 decoding and explicit legacy commands remain for migration. An
+acknowledged active v1 head rotates automatically to v2, while chain validation
+forbids v2-to-v1 downgrade. Authenticated IPC v26 and the Windows desktop use
+service-free create/rotate commands and expose the capability format without
+secrets. No server or executable was added. Details are in
+[`docs/RFC-0098-service-free-exact-mailbox-capability-v2.md`](docs/RFC-0098-service-free-exact-mailbox-capability-v2.md).
+
+## Previous milestone: M0.9.74 no-HTTPS lifecycle and crash recovery — verified
+
+Clean two-network run `20260919-203722` verified exact volunteer durability
+`2/2`, Alice offline before retrieval, two recipient commits and signed deletes,
+no restart redelivery and no HTTP PUT. The replication ledger also has a
+separate real-process-crash regression with typed, non-destructive Redb
+recovery. The accepted run used the legacy wire tuple only as inert data;
+M0.9.75 removes it from newly created exact capabilities.
 
 ## Previous milestone: M0.9.71 exact mailbox HTTPS-copy retirement — complete
 

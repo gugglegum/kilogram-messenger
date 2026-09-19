@@ -21,7 +21,7 @@ use tokio::{
     time::timeout,
 };
 
-const IPC_VERSION: u8 = 25;
+const IPC_VERSION: u8 = 26;
 const MAX_DESCRIPTOR_BYTES: u64 = 16 * 1024;
 const MAX_LAUNCH_PROFILE_BYTES: u64 = 64 * 1024;
 const MAX_LAUNCH_PROFILE_PATHS: usize = 64;
@@ -686,6 +686,18 @@ pub enum RuntimeIpcCommand {
         timeout_milliseconds: u32,
     },
     Shutdown,
+    CreateExactMailboxCapability {
+        conversation: String,
+        peer_account_id: AccountId,
+        peer_device_id: DeviceId,
+        valid_for_seconds: u64,
+    },
+    RotateExactMailboxCapability {
+        conversation: String,
+        peer_account_id: AccountId,
+        peer_device_id: DeviceId,
+        valid_for_seconds: u64,
+    },
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -989,6 +1001,7 @@ pub struct RuntimeIpcMailboxCapabilityStatus {
     pub peer_account_id: AccountId,
     pub peer_device_id: DeviceId,
     pub direction: String,
+    pub capability_format: String,
     pub binding_id: String,
     pub update_id: Option<String>,
     pub generation: Option<u64>,
@@ -2043,6 +2056,18 @@ mod tests {
                 peer_account_id,
                 peer_device_id,
             },
+            RuntimeIpcCommand::CreateExactMailboxCapability {
+                conversation: "ipc-mailbox".to_owned(),
+                peer_account_id,
+                peer_device_id,
+                valid_for_seconds: 86_400,
+            },
+            RuntimeIpcCommand::RotateExactMailboxCapability {
+                conversation: "ipc-mailbox".to_owned(),
+                peer_account_id,
+                peer_device_id,
+                valid_for_seconds: 86_400,
+            },
         ] {
             let encoded = postcard::to_allocvec(&command)?;
             assert_eq!(
@@ -2086,6 +2111,7 @@ mod tests {
             peer_account_id,
             peer_device_id,
             direction: "receive".to_owned(),
+            capability_format: "v2-exact-volunteer".to_owned(),
             binding_id: "55".repeat(32),
             update_id: Some("66".repeat(32)),
             generation: Some(2),

@@ -27,9 +27,9 @@ use kilogram_identity::{
 use kilogram_mailbox::{
     MAX_MAILBOX_PAGE_ITEMS, MAX_MAILBOX_STORAGE_OFFER_BYTES, MAX_MAILBOX_TTL_SECONDS,
     MIN_MAILBOX_TTL_SECONDS, MailboxDeleteRequest, MailboxDeleteResponse, MailboxEnvelope,
-    MailboxListRequest, MailboxListResponse, MailboxPeerRequest, MailboxPeerResponse,
-    MailboxPutRequest, MailboxPutResponse, MailboxRequestNonce, MailboxStoragePolicyClass,
-    MailboxStoreKey, SignedMailboxStorageOffer,
+    MailboxItemId, MailboxListRequest, MailboxListResponse, MailboxPeerRequest,
+    MailboxPeerResponse, MailboxPutRequest, MailboxPutResponse, MailboxRequestNonce,
+    MailboxStoragePolicyClass, MailboxStoreKey, SignedMailboxStorageOffer,
 };
 use kilogram_mailbox_client::{
     DEFAULT_REPLICATION_RETRY_SECONDS, DEFAULT_REPLICATION_TARGETS,
@@ -768,6 +768,36 @@ enum Command {
         output_file: PathBuf,
     },
 
+    /// Create a v2 receive mailbox committed only to exact volunteer providers.
+    RuntimeMailboxExactOfferCreate {
+        /// Directory containing this application's persistent device state.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Contact conversation label.
+        #[arg(long)]
+        conversation: String,
+
+        /// Peer account selecting the exact signed runtime contact.
+        #[arg(long)]
+        peer_account: AccountId,
+
+        /// Exact enrolled peer Device allowed to use this mailbox write capability.
+        #[arg(long)]
+        peer_device: DeviceId,
+
+        /// Lifetime of the recipient-bound offer.
+        #[arg(
+            long,
+            default_value_t = DEFAULT_RUNTIME_MAILBOX_CAPABILITY_VALIDITY_SECONDS
+        )]
+        valid_for_seconds: u64,
+
+        /// New no-clobber HPKE offer artifact to transfer to the exact peer Device.
+        #[arg(long)]
+        output_file: PathBuf,
+    },
+
     /// Rotate this Device's receive mailbox and queue the replacement capability for delivery.
     RuntimeMailboxRotate {
         /// Directory containing this application's persistent device state.
@@ -793,6 +823,32 @@ enum Command {
         /// Authenticated Ed25519 public key printed by the selected mailbox store.
         #[arg(long)]
         store_key: MailboxStoreKey,
+
+        /// Lifetime of the recipient-bound replacement offer.
+        #[arg(
+            long,
+            default_value_t = DEFAULT_RUNTIME_MAILBOX_CAPABILITY_VALIDITY_SECONDS
+        )]
+        valid_for_seconds: u64,
+    },
+
+    /// Rotate to a v2 mailbox committed only to exact volunteer providers.
+    RuntimeMailboxExactRotate {
+        /// Directory containing this application's persistent device state.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Contact conversation label.
+        #[arg(long)]
+        conversation: String,
+
+        /// Peer account selecting the exact signed runtime contact.
+        #[arg(long)]
+        peer_account: AccountId,
+
+        /// Exact enrolled peer Device receiving the replacement capability.
+        #[arg(long)]
+        peer_device: DeviceId,
 
         /// Lifetime of the recipient-bound replacement offer.
         #[arg(
@@ -2138,7 +2194,9 @@ impl Command {
             | Self::RuntimePublicationConflictApplyResponse { state_dir, .. }
             | Self::RuntimeQueueMessage { state_dir, .. }
             | Self::RuntimeMailboxOfferCreate { state_dir, .. }
+            | Self::RuntimeMailboxExactOfferCreate { state_dir, .. }
             | Self::RuntimeMailboxRotate { state_dir, .. }
+            | Self::RuntimeMailboxExactRotate { state_dir, .. }
             | Self::RuntimeMailboxRevoke { state_dir, .. }
             | Self::RuntimeMailboxOfferImport { state_dir, .. }
             | Self::RuntimeMailboxStatus { state_dir }
@@ -3222,6 +3280,21 @@ async fn run_command(command: Command) -> Result<()> {
             valid_for_seconds,
             output_file,
         ),
+        Command::RuntimeMailboxExactOfferCreate {
+            state_dir,
+            conversation,
+            peer_account,
+            peer_device,
+            valid_for_seconds,
+            output_file,
+        } => create_runtime_exact_mailbox_offer(
+            state_dir,
+            conversation,
+            peer_account,
+            peer_device,
+            valid_for_seconds,
+            output_file,
+        ),
         Command::RuntimeMailboxRotate {
             state_dir,
             conversation,
@@ -3237,6 +3310,19 @@ async fn run_command(command: Command) -> Result<()> {
             peer_device,
             service_base_url,
             store_key,
+            valid_for_seconds,
+        ),
+        Command::RuntimeMailboxExactRotate {
+            state_dir,
+            conversation,
+            peer_account,
+            peer_device,
+            valid_for_seconds,
+        } => rotate_runtime_exact_mailbox(
+            state_dir,
+            conversation,
+            peer_account,
+            peer_device,
             valid_for_seconds,
         ),
         Command::RuntimeMailboxRevoke {
@@ -5028,6 +5114,44 @@ fn peer_mailbox_replica_set_locator(
     binding_id: MailboxBindingId,
 ) -> Result<Option<RuntimeMailboxReplicaSetLocator>> {
     mailbox_replica_set_locator_for_binding(snapshot.peer_mailbox_updates.values(), binding_id)
+}
+
+fn peer_mailbox_delivery_target(
+    binding: &PeerMailboxBinding,
+    locator: Option<&RuntimeMailboxReplicaSetLocator>,
+) -> Result<(MailboxStoreKey, Option<String>)> {
+    if let Some(service) = binding.service() {
+        ensure!(
+            !binding.is_exact_volunteer(),
+            "exact volunteer mailbox binding unexpectedly retained an HTTPS descriptor"
+        );
+        return Ok((
+            service.expected_store_key(),
+            Some(service.base_url().to_owned()),
+        ));
+    }
+    ensure!(
+        binding.is_exact_volunteer(),
+        "legacy mailbox binding lost its HTTPS descriptor"
+    );
+    let locator = locator.context("exact volunteer mailbox binding has no signed replica set")?;
+    let store_key = locator
+        .store_keys
+        .first()
+        .copied()
+        .context("exact volunteer mailbox replica set is empty")?;
+    Ok((store_key, None))
+}
+
+fn reverse_mailbox_replication_binding(
+    binding_id: MailboxBindingId,
+    item_id: MailboxItemId,
+) -> [u8; 32] {
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(b"kilogram:runtime-reverse-mailbox-replication:v1\0");
+    hasher.update(binding_id.as_bytes());
+    hasher.update(item_id.as_bytes());
+    *hasher.finalize().as_bytes()
 }
 
 fn local_mailbox_binding_is_accepted_head_or_rotation_overlap(
@@ -10230,11 +10354,35 @@ fn create_runtime_mailbox_offer(
         conversation,
         peer_account_id,
         peer_device_id,
-        service_base_url,
-        store_key,
+        RuntimeMailboxProvisioningMode::LegacyHttps {
+            service_base_url,
+            store_key,
+        },
         valid_for_seconds,
         Some(output_file),
         false,
+    )?;
+    print_runtime_mailbox_provisioning_report(&report);
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn create_runtime_exact_mailbox_offer(
+    state_directory: PathBuf,
+    conversation: String,
+    peer_account_id: AccountId,
+    peer_device_id: DeviceId,
+    valid_for_seconds: u64,
+    output_file: PathBuf,
+) -> Result<()> {
+    let report = provision_runtime_mailbox(
+        state_directory,
+        conversation,
+        peer_account_id,
+        peer_device_id,
+        RuntimeMailboxProvisioningMode::ExactVolunteer,
+        valid_for_seconds,
+        Some(output_file),
         false,
     )?;
     print_runtime_mailbox_provisioning_report(&report);
@@ -10256,12 +10404,34 @@ fn rotate_runtime_mailbox(
         conversation,
         peer_account_id,
         peer_device_id,
-        service_base_url,
-        store_key,
+        RuntimeMailboxProvisioningMode::LegacyHttps {
+            service_base_url,
+            store_key,
+        },
         valid_for_seconds,
         None,
         true,
-        false,
+    )?;
+    print_runtime_mailbox_provisioning_report(&report);
+    Ok(())
+}
+
+fn rotate_runtime_exact_mailbox(
+    state_directory: PathBuf,
+    conversation: String,
+    peer_account_id: AccountId,
+    peer_device_id: DeviceId,
+    valid_for_seconds: u64,
+) -> Result<()> {
+    let report = provision_runtime_mailbox(
+        state_directory,
+        conversation,
+        peer_account_id,
+        peer_device_id,
+        RuntimeMailboxProvisioningMode::ExactVolunteer,
+        valid_for_seconds,
+        None,
+        true,
     )?;
     print_runtime_mailbox_provisioning_report(&report);
     Ok(())
@@ -10270,8 +10440,9 @@ fn rotate_runtime_mailbox(
 struct RuntimeMailboxProvisioningReport {
     transition: RuntimeIpcMailboxCapabilityTransition,
     mailbox_id: String,
-    service_base_url: String,
-    store_key: String,
+    service_base_url: Option<String>,
+    store_key: Option<String>,
+    capability_format: &'static str,
     expires_at_unix_seconds: u64,
     offer_file: Option<PathBuf>,
     replica_set_commitment_id: Option<String>,
@@ -10295,8 +10466,15 @@ fn print_runtime_mailbox_provisioning_report(report: &RuntimeMailboxProvisioning
     println!("mailbox_id={}", report.mailbox_id);
     println!("peer_account_id={}", report.transition.peer_account_id);
     println!("peer_device_id={}", report.transition.peer_device_id);
-    println!("mailbox_service_url={}", report.service_base_url);
-    println!("mailbox_store_key={}", report.store_key);
+    println!("mailbox_capability_format={}", report.capability_format);
+    if let (Some(service_base_url), Some(store_key)) = (&report.service_base_url, &report.store_key)
+    {
+        println!("mailbox_service_url={service_base_url}");
+        println!("mailbox_store_key={store_key}");
+        println!("mailbox_service_descriptor=legacy-present");
+    } else {
+        println!("mailbox_service_descriptor=absent");
+    }
     println!(
         "mailbox_offer_expires_at_unix_seconds={}",
         report.expires_at_unix_seconds
@@ -10327,18 +10505,24 @@ fn print_runtime_mailbox_provisioning_report(report: &RuntimeMailboxProvisioning
     );
 }
 
+enum RuntimeMailboxProvisioningMode {
+    LegacyHttps {
+        service_base_url: String,
+        store_key: MailboxStoreKey,
+    },
+    ExactVolunteer,
+}
+
 #[allow(clippy::too_many_arguments)]
 fn provision_runtime_mailbox(
     state_directory: PathBuf,
     conversation: String,
     peer_account_id: AccountId,
     peer_device_id: DeviceId,
-    service_base_url: String,
-    store_key: MailboxStoreKey,
+    mode: RuntimeMailboxProvisioningMode,
     valid_for_seconds: u64,
     output_file: Option<PathBuf>,
     require_existing_chain: bool,
-    require_exact_replica_set: bool,
 ) -> Result<RuntimeMailboxProvisioningReport> {
     ensure!(
         (kilogram_mailbox_provisioning::MIN_MAILBOX_OFFER_VALIDITY_SECONDS
@@ -10429,16 +10613,52 @@ fn provision_runtime_mailbox(
         &device_state,
         candidate.ticket.listener_authority_snapshot(),
     )?;
-    let service = MailboxServiceDescriptor::new(&service_base_url, store_key)?;
-    let sealed = SealedLocalMailboxBinding::create(
-        device_state.identity(),
-        device_state.encryption(),
-        &local_certificate,
-        peer_certificate,
-        scope,
-        service,
-        now,
-    )?;
+    let mut replica_store_keys = MailboxProviderRegistry::select_from_active_offers(
+        MailboxProviderRegistry::active_offers_read_only(
+            runtime_mailbox_provider_registry_config(&state_directory),
+            now,
+        )?,
+        random_mailbox_replication_selection_salt()?,
+        RUNTIME_MAILBOX_REPLICA_LOCATOR_PROVIDERS,
+    )?
+    .into_iter()
+    .map(|provider| provider.store_key())
+    .collect::<Vec<_>>();
+    replica_store_keys.sort_unstable();
+    let replica_set = if replica_store_keys.len() >= usize::from(DEFAULT_REQUIRED_REPLICA_RECEIPTS)
+    {
+        Some(MailboxReplicaSetCommitment::new(replica_store_keys)?)
+    } else {
+        None
+    };
+    ensure!(
+        !matches!(&mode, RuntimeMailboxProvisioningMode::ExactVolunteer) || replica_set.is_some(),
+        "exact volunteer mailbox capability requires at least two active transport-distinct providers"
+    );
+    let sealed = match &mode {
+        RuntimeMailboxProvisioningMode::LegacyHttps {
+            service_base_url,
+            store_key,
+        } => SealedLocalMailboxBinding::create(
+            device_state.identity(),
+            device_state.encryption(),
+            &local_certificate,
+            peer_certificate,
+            scope,
+            MailboxServiceDescriptor::new(service_base_url, *store_key)?,
+            now,
+        )?,
+        RuntimeMailboxProvisioningMode::ExactVolunteer => {
+            SealedLocalMailboxBinding::create_exact_volunteer(
+                device_state.identity(),
+                device_state.encryption(),
+                &local_certificate,
+                peer_certificate,
+                scope,
+                now,
+            )?
+        }
+    };
     let local_binding = sealed.open(
         device_state.identity(),
         device_state.encryption(),
@@ -10475,29 +10695,19 @@ fn provision_runtime_mailbox(
         .as_ref()
         .map(SignedMailboxCapabilityUpdate::update_id)
         .transpose()?;
-    let mut replica_store_keys = MailboxProviderRegistry::select_from_active_offers(
-        MailboxProviderRegistry::active_offers_read_only(
-            runtime_mailbox_provider_registry_config(&state_directory),
+    let update = if local_binding.is_exact_volunteer() {
+        SignedMailboxCapabilityUpdate::activate_exact_volunteer(
+            device_state.identity(),
+            &local_certificate,
+            peer_certificate,
+            scope,
+            generation,
+            previous_update_id,
             now,
-        )?,
-        random_mailbox_replication_selection_salt()?,
-        RUNTIME_MAILBOX_REPLICA_LOCATOR_PROVIDERS,
-    )?
-    .into_iter()
-    .map(|provider| provider.store_key())
-    .collect::<Vec<_>>();
-    replica_store_keys.sort_unstable();
-    let replica_set = if replica_store_keys.len() >= usize::from(DEFAULT_REQUIRED_REPLICA_RECEIPTS)
-    {
-        Some(MailboxReplicaSetCommitment::new(replica_store_keys)?)
-    } else {
-        None
-    };
-    ensure!(
-        !require_exact_replica_set || replica_set.is_some(),
-        "automatic legacy mailbox upgrade requires at least two active transport-distinct volunteer providers"
-    );
-    let update = if let Some(replica_set) = replica_set {
+            &offer,
+            replica_set.context("exact volunteer mailbox capability lost its replica set")?,
+        )?
+    } else if let Some(replica_set) = replica_set {
         SignedMailboxCapabilityUpdate::activate_with_replica_set(
             device_state.identity(),
             &local_certificate,
@@ -10567,8 +10777,17 @@ fn provision_runtime_mailbox(
             delivery_state: "queued-for-authenticated-runtime-session".to_owned(),
         },
         mailbox_id: local_binding.address().mailbox_id().to_string(),
-        service_base_url: local_binding.service().base_url().to_owned(),
-        store_key: store_key.to_string(),
+        service_base_url: local_binding
+            .service()
+            .map(|service| service.base_url().to_owned()),
+        store_key: local_binding
+            .service()
+            .map(|service| service.expected_store_key().to_string()),
+        capability_format: if local_binding.is_exact_volunteer() {
+            "v2-exact-volunteer"
+        } else {
+            "v1-legacy-https"
+        },
         expires_at_unix_seconds: expires_at,
         offer_file: output_file,
         replica_set_commitment_id,
@@ -10671,20 +10890,15 @@ fn revoke_runtime_mailbox_capability(
         &device_state,
         candidate.ticket.listener_authority_snapshot(),
     )?;
-    let generation = current
-        .generation()
-        .checked_add(1)
-        .context("mailbox generation overflows")?;
-    let update = SignedMailboxCapabilityUpdate::revoke(
+    let update = SignedMailboxCapabilityUpdate::revoke_successor(
         device_state.identity(),
         &local_certificate,
         peer_certificate,
         scope,
-        generation,
-        current.update_id()?,
-        current.binding_id(),
+        current,
         now,
     )?;
+    let generation = update.generation();
     update.verify_chain_link(Some(current))?;
     let update_id = update.update_id()?;
     run_state_transaction(&state_directory, |transaction| {
@@ -10832,11 +11046,21 @@ fn import_runtime_mailbox_offer(
     println!("mailbox_id={}", peer_binding.address().mailbox_id());
     println!("peer_account_id={peer_account_id}");
     println!("peer_device_id={}", peer_certificate.device_id());
-    println!("mailbox_service_url={}", peer_binding.service().base_url());
     println!(
-        "mailbox_store_key={}",
-        peer_binding.service().expected_store_key()
+        "mailbox_capability_format={}",
+        if peer_binding.is_exact_volunteer() {
+            "v2-exact-volunteer"
+        } else {
+            "v1-legacy-https"
+        }
     );
+    if let Some(service) = peer_binding.service() {
+        println!("mailbox_service_url={}", service.base_url());
+        println!("mailbox_store_key={}", service.expected_store_key());
+        println!("mailbox_service_descriptor=legacy-present");
+    } else {
+        println!("mailbox_service_descriptor=absent");
+    }
     println!(
         "mailbox_offer_expires_at_unix_seconds={}",
         peer_binding.expires_at_unix_seconds()
@@ -10896,11 +11120,18 @@ fn runtime_mailbox_status(state_directory: PathBuf) -> Result<()> {
             Ok(()) => {
                 local_usable += 1;
                 println!(
-                    "mailbox_local_binding_id={} peer_device_id={} mailbox_id={} service_url={} created_at_unix_seconds={} state=usable",
+                    "mailbox_local_binding_id={} peer_device_id={} mailbox_id={} capability_format={} service_url={} created_at_unix_seconds={} state=usable",
                     binding.binding_id(),
                     binding.peer_device_id(),
                     opened.address().mailbox_id(),
-                    opened.service().base_url(),
+                    if opened.is_exact_volunteer() {
+                        "v2-exact-volunteer"
+                    } else {
+                        "v1-legacy-https"
+                    },
+                    opened
+                        .service()
+                        .map_or("absent", MailboxServiceDescriptor::base_url),
                     binding.created_at_unix_seconds()
                 );
             }
@@ -10960,11 +11191,18 @@ fn runtime_mailbox_status(state_directory: PathBuf) -> Result<()> {
             Ok(opened) => {
                 peer_usable += 1;
                 println!(
-                    "mailbox_peer_binding_id={} peer_device_id={} mailbox_id={} service_url={} imported_at_unix_seconds={} expires_at_unix_seconds={} state=usable",
+                    "mailbox_peer_binding_id={} peer_device_id={} mailbox_id={} capability_format={} service_url={} imported_at_unix_seconds={} expires_at_unix_seconds={} state=usable",
                     binding.binding_id(),
                     binding.peer_device_id(),
                     opened.address().mailbox_id(),
-                    opened.service().base_url(),
+                    if opened.is_exact_volunteer() {
+                        "v2-exact-volunteer"
+                    } else {
+                        "v1-legacy-https"
+                    },
+                    opened
+                        .service()
+                        .map_or("absent", MailboxServiceDescriptor::base_url),
                     binding.imported_at_unix_seconds(),
                     opened.expires_at_unix_seconds()
                 );
@@ -11112,6 +11350,12 @@ fn collect_runtime_mailbox_status(state_directory: &Path) -> Result<RuntimeIpcMa
             peer_account_id,
             peer_device_id: device_id,
             direction: "receive".to_owned(),
+            capability_format: if head.is_exact_volunteer() {
+                "v2-exact-volunteer"
+            } else {
+                "v1-legacy-https"
+            }
+            .to_owned(),
             binding_id: head.binding_id().to_string(),
             update_id: Some(head.update_id()?.to_string()),
             generation: Some(head.generation()),
@@ -11168,6 +11412,12 @@ fn collect_runtime_mailbox_status(state_directory: &Path) -> Result<RuntimeIpcMa
             peer_account_id,
             peer_device_id: device_id,
             direction: "write".to_owned(),
+            capability_format: if head.is_exact_volunteer() {
+                "v2-exact-volunteer"
+            } else {
+                "v1-legacy-https"
+            }
+            .to_owned(),
             binding_id: head.binding_id().to_string(),
             update_id: Some(head.update_id()?.to_string()),
             generation: Some(head.generation()),
@@ -11297,12 +11547,13 @@ fn print_runtime_mailbox_status(status: &RuntimeIpcMailboxStatus) {
     println!("mailbox_capability_count={}", status.capabilities.len());
     for capability in &status.capabilities {
         println!(
-            "mailbox_capability_contact_id={} conversation_id={} peer_account_id={} peer_device_id={} direction={} binding_id={} update_id={} generation={} acknowledged={} revoked={} state={} replica_set_discovery={} replica_set_commitment_id={} replica_set_store_count={}",
+            "mailbox_capability_contact_id={} conversation_id={} peer_account_id={} peer_device_id={} direction={} capability_format={} binding_id={} update_id={} generation={} acknowledged={} revoked={} state={} replica_set_discovery={} replica_set_commitment_id={} replica_set_store_count={}",
             capability.contact_id,
             capability.conversation_id,
             capability.peer_account_id,
             capability.peer_device_id,
             capability.direction,
+            capability.capability_format,
             capability.binding_id,
             capability.update_id.as_deref().unwrap_or("none"),
             capability
@@ -13536,11 +13787,12 @@ async fn handle_runtime_ipc_work(
                             conversation,
                             peer_account_id,
                             peer_device_id,
-                            service_base_url,
-                            store_key,
+                            RuntimeMailboxProvisioningMode::LegacyHttps {
+                                service_base_url,
+                                store_key,
+                            },
                             valid_for_seconds,
                             None,
-                            false,
                             false,
                         )
                     })
@@ -13573,15 +13825,72 @@ async fn handle_runtime_ipc_work(
                             conversation,
                             peer_account_id,
                             peer_device_id,
-                            service_base_url,
-                            store_key,
+                            RuntimeMailboxProvisioningMode::LegacyHttps {
+                                service_base_url,
+                                store_key,
+                            },
                             valid_for_seconds,
                             None,
                             true,
-                            false,
                         )
                     })
                 });
+            match result {
+                Ok(report) => {
+                    state_changed = true;
+                    RuntimeIpcResponse::MailboxCapabilityChanged(Box::new(report.transition))
+                }
+                Err(error) => RuntimeIpcResponse::Error {
+                    message: format!("{error:#}"),
+                },
+            }
+        }
+        RuntimeIpcCommand::CreateExactMailboxCapability {
+            conversation,
+            peer_account_id,
+            peer_device_id,
+            valid_for_seconds,
+        } => {
+            let result = with_locked_state(state_directory, || {
+                provision_runtime_mailbox(
+                    state_directory.to_path_buf(),
+                    conversation,
+                    peer_account_id,
+                    peer_device_id,
+                    RuntimeMailboxProvisioningMode::ExactVolunteer,
+                    valid_for_seconds,
+                    None,
+                    false,
+                )
+            });
+            match result {
+                Ok(report) => {
+                    state_changed = true;
+                    RuntimeIpcResponse::MailboxCapabilityChanged(Box::new(report.transition))
+                }
+                Err(error) => RuntimeIpcResponse::Error {
+                    message: format!("{error:#}"),
+                },
+            }
+        }
+        RuntimeIpcCommand::RotateExactMailboxCapability {
+            conversation,
+            peer_account_id,
+            peer_device_id,
+            valid_for_seconds,
+        } => {
+            let result = with_locked_state(state_directory, || {
+                provision_runtime_mailbox(
+                    state_directory.to_path_buf(),
+                    conversation,
+                    peer_account_id,
+                    peer_device_id,
+                    RuntimeMailboxProvisioningMode::ExactVolunteer,
+                    valid_for_seconds,
+                    None,
+                    true,
+                )
+            });
             match result {
                 Ok(report) => {
                     state_changed = true;
@@ -18178,8 +18487,6 @@ struct RuntimeMailboxLegacyUpgradeCandidate {
     peer_account_id: AccountId,
     peer_device_id: DeviceId,
     predecessor_binding_id: MailboxBindingId,
-    service_base_url: String,
-    store_key: MailboxStoreKey,
 }
 
 enum RuntimeMailboxLegacyUpgradeAttempt {
@@ -18229,7 +18536,7 @@ fn prepare_runtime_mailbox_legacy_upgrade(
             .local_mailbox_update_head(peer_account_id, peer_device_id, scope)?
             .context("local mailbox capability chain unexpectedly has no head")?;
         if head.is_revocation()
-            || head.replica_set().is_some()
+            || head.is_exact_volunteer()
             || !snapshot
                 .mailbox_update_acknowledgements
                 .contains_key(&head.update_id()?)
@@ -18258,13 +18565,15 @@ fn prepare_runtime_mailbox_legacy_upgrade(
             &local_authority,
             binding,
         )?;
+        ensure!(
+            !opened.is_exact_volunteer() && opened.service().is_some(),
+            "legacy mailbox upgrade candidate has an inconsistent wire format"
+        );
         return Ok(Some(RuntimeMailboxLegacyUpgradeCandidate {
             conversation: contact.conversation_label().to_owned(),
             peer_account_id,
             peer_device_id,
             predecessor_binding_id: head.binding_id(),
-            service_base_url: opened.service().base_url().to_owned(),
-            store_key: opened.service().expected_store_key(),
         }));
     }
     Ok(None)
@@ -18286,11 +18595,9 @@ async fn attempt_runtime_mailbox_legacy_upgrade(
         candidate.conversation,
         candidate.peer_account_id,
         candidate.peer_device_id,
-        candidate.service_base_url,
-        candidate.store_key,
+        RuntimeMailboxProvisioningMode::ExactVolunteer,
         DEFAULT_RUNTIME_MAILBOX_CAPABILITY_VALIDITY_SECONDS,
         None,
-        true,
         true,
     );
     let mirror = match vault_guard {
@@ -18779,7 +19086,7 @@ struct PreparedRuntimeDelivery {
 
 struct PreparedRuntimeMailboxUpload {
     pending: PendingMailboxUpload,
-    service_base_url: String,
+    service_base_url: Option<String>,
     queue_id: Option<RuntimeQueueId>,
     replication_dispatch_binding: Option<[u8; 32]>,
     replica_set_locator: Option<RuntimeMailboxReplicaSetLocator>,
@@ -19324,11 +19631,15 @@ async fn upload_runtime_mailbox_request(
                     }
                 }
             }
-            let compatibility = RuntimeMailboxHttpsCompatibilityCopy::for_delivery(true, false);
-            println!(
-                "runtime_mailbox_https_compatibility_copy={}",
-                compatibility.label()
-            );
+            if upload.service_base_url.is_none() {
+                println!("runtime_mailbox_https_compatibility_copy=absent-v2-exact-volunteer");
+            } else {
+                let compatibility = RuntimeMailboxHttpsCompatibilityCopy::for_delivery(true, false);
+                println!(
+                    "runtime_mailbox_https_compatibility_copy={}",
+                    compatibility.label()
+                );
+            }
         } else {
             let compatibility = RuntimeMailboxHttpsCompatibilityCopy::for_delivery(false, false);
             println!(
@@ -19342,9 +19653,14 @@ async fn upload_runtime_mailbox_request(
             RuntimeMailboxHttpsCompatibilityCopy::RetainedCompatibilityOnlyPayload.label()
         );
     }
+    let Some(service_base_url) = upload.service_base_url.as_deref() else {
+        println!("runtime_mailbox_http_put=not-attempted");
+        bail!(
+            "exact volunteer replication is incomplete and the v2 capability has no HTTPS fallback"
+        );
+    };
     println!("runtime_mailbox_http_put=attempted");
-    let client =
-        MailboxHttpClient::new(&upload.service_base_url, upload.pending.expected_store_key)?;
+    let client = MailboxHttpClient::new(service_base_url, upload.pending.expected_store_key)?;
     let response = match client.put(&upload.pending.request).await {
         Ok(response) => response,
         Err(error) => {
@@ -19477,7 +19793,11 @@ async fn prepare_orphan_runtime_mailbox_dispatch(
                 )?,
                 envelope,
             )?;
-            match ledger.enqueue_outbound(request, binding.service().expected_store_key(), now)? {
+            let replica_set_locator =
+                peer_mailbox_replica_set_locator(&snapshot, signed_binding.binding_id())?;
+            let (expected_store_key, service_base_url) =
+                peer_mailbox_delivery_target(&binding, replica_set_locator.as_ref())?;
+            match ledger.enqueue_outbound(request, expected_store_key, now)? {
                 OutboundEnqueueOutcome::Created | OutboundEnqueueOutcome::AlreadyPending => {}
                 OutboundEnqueueOutcome::AlreadyStored => return Ok(None),
                 OutboundEnqueueOutcome::CapacityExceeded => {
@@ -19496,13 +19816,10 @@ async fn prepare_orphan_runtime_mailbox_dispatch(
             println!("runtime_mailbox_dispatch_status=repaired-pending-upload");
             return Ok(Some(PreparedRuntimeMailboxUpload {
                 pending,
-                service_base_url: binding.service().base_url().to_owned(),
+                service_base_url,
                 queue_id: Some(dispatch.queue_id()),
                 replication_dispatch_binding: Some(dispatch.replication_binding()?),
-                replica_set_locator: peer_mailbox_replica_set_locator(
-                    &snapshot,
-                    signed_binding.binding_id(),
-                )?,
+                replica_set_locator,
             }));
         }
         Ok(None)
@@ -19671,10 +19988,7 @@ async fn attempt_pending_runtime_mailbox_upload(
                 .ok()
                 .map(|binding| (signed, binding))
             })
-            .find(|(_, binding)| {
-                binding.address().mailbox_id() == pending.request.mailbox_id()
-                    && binding.service().expected_store_key() == pending.expected_store_key
-            })
+            .find(|(_, binding)| binding.address().mailbox_id() == pending.request.mailbox_id())
             .context("pending mailbox upload has no current recipient-bound capability")?;
         let dispatch = snapshot.mailbox_dispatches.values().find(|dispatch| {
             dispatch.mailbox_id() == pending.request.mailbox_id()
@@ -19684,15 +19998,20 @@ async fn attempt_pending_runtime_mailbox_upload(
         let replication_dispatch_binding = dispatch
             .map(SignedRuntimeMailboxDispatch::replication_binding)
             .transpose()?;
+        let replica_set_locator =
+            peer_mailbox_replica_set_locator(&snapshot, signed_binding.binding_id())?;
+        let (expected_store_key, service_base_url) =
+            peer_mailbox_delivery_target(&binding, replica_set_locator.as_ref())?;
+        ensure!(
+            expected_store_key == pending.expected_store_key,
+            "pending mailbox upload store anchor does not match its capability"
+        );
         Ok::<_, anyhow::Error>(PreparedRuntimeMailboxUpload {
             pending,
-            service_base_url: binding.service().base_url().to_owned(),
+            service_base_url,
             queue_id,
             replication_dispatch_binding,
-            replica_set_locator: peer_mailbox_replica_set_locator(
-                &snapshot,
-                signed_binding.binding_id(),
-            )?,
+            replica_set_locator,
         })
     })();
     drop(state_lock);
@@ -19846,6 +20165,8 @@ async fn attempt_runtime_mailbox_fallback(
         };
         let replica_set_locator =
             peer_mailbox_replica_set_locator(&snapshot, dispatch.binding_id())?;
+        let (expected_store_key, service_base_url) =
+            peer_mailbox_delivery_target(&peer_binding, replica_set_locator.as_ref())?;
         let ledger = runtime_mailbox_ledger(state_directory)?;
         let state = ledger.outbound_state(dispatch.mailbox_id(), dispatch.item_id())?;
         match state {
@@ -19854,13 +20175,12 @@ async fn attempt_runtime_mailbox_fallback(
                 ensure!(
                     pending.request.mailbox_id() == dispatch.mailbox_id()
                         && pending.request.item_id() == dispatch.item_id()
-                        && pending.expected_store_key
-                            == peer_binding.service().expected_store_key(),
+                        && pending.expected_store_key == expected_store_key,
                     "pending runtime mailbox request does not match its signed dispatch"
                 );
                 Ok(Some(PreparedRuntimeMailboxUpload {
                     pending,
-                    service_base_url: peer_binding.service().base_url().to_owned(),
+                    service_base_url: service_base_url.clone(),
                     queue_id: Some(prepared.queue_id),
                     replication_dispatch_binding: Some(dispatch.replication_binding()?),
                     replica_set_locator: replica_set_locator.clone(),
@@ -19903,11 +20223,7 @@ async fn attempt_runtime_mailbox_fallback(
                     )?,
                     envelope,
                 )?;
-                match ledger.enqueue_outbound(
-                    request,
-                    peer_binding.service().expected_store_key(),
-                    now,
-                )? {
+                match ledger.enqueue_outbound(request, expected_store_key, now)? {
                     OutboundEnqueueOutcome::Created | OutboundEnqueueOutcome::AlreadyPending => {}
                     OutboundEnqueueOutcome::AlreadyStored => return Ok(None),
                     OutboundEnqueueOutcome::CapacityExceeded => {
@@ -19924,7 +20240,7 @@ async fn attempt_runtime_mailbox_fallback(
                 };
                 Ok(Some(PreparedRuntimeMailboxUpload {
                     pending,
-                    service_base_url: peer_binding.service().base_url().to_owned(),
+                    service_base_url,
                     queue_id: Some(prepared.queue_id),
                     replication_dispatch_binding: Some(dispatch.replication_binding()?),
                     replica_set_locator,
@@ -20253,18 +20569,28 @@ async fn prepare_runtime_reverse_mailbox_acknowledgement(
             .context("reverse acknowledgement has no current peer mailbox binding")?;
         let acknowledgement_id = acknowledgement.event().event_id()?;
         let item_id = runtime_mailbox_event_item_id(acknowledgement_id, signed.binding_id());
+        let replica_set_locator = peer_mailbox_replica_set_locator(&snapshot, signed.binding_id())?;
+        let (expected_store_key, service_base_url) =
+            peer_mailbox_delivery_target(&binding, replica_set_locator.as_ref())?;
+        let replication_dispatch_binding = replica_set_locator
+            .as_ref()
+            .map(|_| reverse_mailbox_replication_binding(signed.binding_id(), item_id));
         let ledger = runtime_mailbox_ledger(state_directory)?;
         match ledger.outbound_state(binding.address().mailbox_id(), item_id)? {
             Some(MailboxOutboundState::Stored(_) | MailboxOutboundState::Replicated(_)) => {
                 return Ok(None);
             }
             Some(MailboxOutboundState::Pending(pending)) => {
+                ensure!(
+                    pending.expected_store_key == expected_store_key,
+                    "reverse mailbox acknowledgement pending store key no longer matches the current capability"
+                );
                 return Ok(Some(PreparedRuntimeMailboxUpload {
                     pending,
-                    service_base_url: binding.service().base_url().to_owned(),
+                    service_base_url: service_base_url.clone(),
                     queue_id: None,
-                    replication_dispatch_binding: None,
-                    replica_set_locator: None,
+                    replication_dispatch_binding,
+                    replica_set_locator: replica_set_locator.clone(),
                 }));
             }
             None => {}
@@ -20301,7 +20627,7 @@ async fn prepare_runtime_reverse_mailbox_acknowledgement(
                 .authorize(binding.address(), item_id, ttl, &envelope)?,
             envelope,
         )?;
-        match ledger.enqueue_outbound(request, binding.service().expected_store_key(), now)? {
+        match ledger.enqueue_outbound(request, expected_store_key, now)? {
             OutboundEnqueueOutcome::Created | OutboundEnqueueOutcome::AlreadyPending => {}
             OutboundEnqueueOutcome::AlreadyStored => return Ok(None),
             OutboundEnqueueOutcome::CapacityExceeded => {
@@ -20318,10 +20644,10 @@ async fn prepare_runtime_reverse_mailbox_acknowledgement(
         };
         Ok(Some(PreparedRuntimeMailboxUpload {
             pending,
-            service_base_url: binding.service().base_url().to_owned(),
+            service_base_url,
             queue_id: None,
-            replication_dispatch_binding: None,
-            replica_set_locator: None,
+            replication_dispatch_binding,
+            replica_set_locator,
         }))
     })();
     drop(state_lock);
@@ -20660,7 +20986,10 @@ async fn attempt_runtime_mailbox_poll(
         Ok(RuntimeMailboxPollAttempt::NoChange) => {}
         Err(error) => eprintln!("runtime_mailbox_replica_poll_status=failed error={error:#}"),
     }
-    let service = prepared.binding.service();
+    let Some(service) = prepared.binding.service() else {
+        println!("runtime_mailbox_http_poll=not-attempted-v2-exact-volunteer");
+        return Ok(RuntimeMailboxPollAttempt::NoChange);
+    };
     let client = MailboxHttpClient::new(service.base_url(), service.expected_store_key())?;
     let ledger = runtime_mailbox_ledger(state_directory)?;
     if let Some(delete_request) = ledger.pending_delete(
@@ -28044,7 +28373,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn acknowledged_legacy_mailbox_upgrades_once_to_exact_replica_set() -> Result<()> {
+    async fn acknowledged_legacy_mailbox_upgrades_once_to_service_free_v2() -> Result<()> {
         use kilogram_mailbox::MailboxStoreIdentity;
 
         let directory = tempfile::tempdir()?;
@@ -28106,11 +28435,12 @@ mod tests {
             conversation.to_owned(),
             peer_root.account_id(),
             peer_identity.device_id(),
-            "https://mailbox.example.test".to_owned(),
-            legacy_store.store_key(),
+            RuntimeMailboxProvisioningMode::LegacyHttps {
+                service_base_url: "https://mailbox.example.test".to_owned(),
+                store_key: legacy_store.store_key(),
+            },
             DEFAULT_RUNTIME_MAILBOX_CAPABILITY_VALIDITY_SECONDS,
             None,
-            false,
             false,
         )?;
         assert!(legacy.replica_set_commitment_id.is_none());
@@ -28185,6 +28515,7 @@ mod tests {
             )?
             .context("upgraded mailbox capability disappeared")?;
         assert_eq!(head.generation(), 2);
+        assert!(head.is_exact_volunteer());
         assert_eq!(head.previous_update_id(), Some(legacy_update_id));
         assert_eq!(
             head.replica_set()
@@ -28194,6 +28525,25 @@ mod tests {
             2
         );
         assert_ne!(head.binding_id(), legacy_binding_id);
+        let upgraded_binding = upgraded
+            .local_mailbox_bindings
+            .get(&head.binding_id())
+            .context("upgraded exact mailbox binding disappeared")?;
+        let upgraded_trust =
+            CommandTrustReadRepository::open(&local_state_directory, &local_state)?;
+        let upgraded_certificate = upgraded_trust.load_certificate()?;
+        let upgraded_authority =
+            upgraded_trust.load_own_authority_snapshot(&upgraded_certificate)?;
+        let upgraded_binding = open_verified_local_mailbox_binding(
+            &upgraded,
+            &upgraded_trust,
+            &local_state,
+            &upgraded_certificate,
+            &upgraded_authority,
+            upgraded_binding,
+        )?;
+        assert!(upgraded_binding.is_exact_volunteer());
+        assert!(upgraded_binding.service().is_none());
         assert_eq!(
             upgraded
                 .local_mailbox_capability_convergence(
@@ -28213,6 +28563,7 @@ mod tests {
             .find(|capability| capability.direction == "receive")
             .context("receive mailbox status disappeared")?;
         assert_eq!(receive.state, "rotation-pending");
+        assert_eq!(receive.capability_format, "v2-exact-volunteer");
         assert_eq!(receive.replica_set_discovery, "exact-authenticated");
         assert!(receive.replica_set_commitment_id.is_some());
         assert_eq!(receive.replica_set_store_count, 2);
@@ -31992,11 +32343,15 @@ mod tests {
             contact.contact_id(),
             bob_identities[0].device_id(),
         );
+        let state_lock = acquire_runtime_state_lock(&alice_state)
+            .await?
+            .context("multi-endpoint regression could not acquire the actor state lock")?;
         run_state_transaction(&alice_state, |transaction| {
             transaction.compact_runtime_record(runtime_endpoint_publication_binding_relative_path(
                 legacy_binding_id,
             ))
         })?;
+        drop(state_lock);
         let legacy_snapshot = load_runtime_state_snapshot(
             &alice_state,
             alice_root.account_id(),

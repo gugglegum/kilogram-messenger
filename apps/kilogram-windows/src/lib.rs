@@ -965,8 +965,6 @@ struct ViewModel {
     ticket_automation_allow_unknown_network: bool,
     ticket_automation_statuses: Vec<RuntimeIpcTicketAutomationStatus>,
     mailbox_peer_device_id: String,
-    mailbox_service_base_url: String,
-    mailbox_store_key: String,
     mailbox_valid_for_seconds: String,
     mailbox_status: Option<RuntimeIpcMailboxStatus>,
     mailbox_transition: Option<RuntimeIpcMailboxCapabilityTransition>,
@@ -1005,8 +1003,6 @@ impl ViewModel {
             ticket_automation_allow_unknown_network: false,
             ticket_automation_statuses: Vec::new(),
             mailbox_peer_device_id: String::new(),
-            mailbox_service_base_url: String::new(),
-            mailbox_store_key: String::new(),
             mailbox_valid_for_seconds: DEFAULT_MAILBOX_VALIDITY_SECONDS.to_string(),
             mailbox_status: None,
             mailbox_transition: None,
@@ -1559,8 +1555,6 @@ enum WorkerRequest {
         conversation: String,
         peer_account_id: AccountId,
         peer_device_id: DeviceId,
-        service_base_url: String,
-        store_key: String,
         valid_for_seconds: u64,
     },
     MailboxRotate {
@@ -1568,8 +1562,6 @@ enum WorkerRequest {
         conversation: String,
         peer_account_id: AccountId,
         peer_device_id: DeviceId,
-        service_base_url: String,
-        store_key: String,
         valid_for_seconds: u64,
     },
     MailboxRevoke {
@@ -2742,16 +2734,12 @@ async fn execute_request(request: WorkerRequest) -> Result<WorkerSuccess> {
             conversation,
             peer_account_id,
             peer_device_id,
-            service_base_url,
-            store_key,
             valid_for_seconds,
         } => {
-            let command = RuntimeIpcCommand::CreateMailboxCapability {
+            let command = RuntimeIpcCommand::CreateExactMailboxCapability {
                 conversation,
                 peer_account_id,
                 peer_device_id,
-                service_base_url,
-                store_key,
                 valid_for_seconds,
             };
             match kilogram_runtime_ipc::call(&descriptor, command).await? {
@@ -2769,16 +2757,12 @@ async fn execute_request(request: WorkerRequest) -> Result<WorkerSuccess> {
             conversation,
             peer_account_id,
             peer_device_id,
-            service_base_url,
-            store_key,
             valid_for_seconds,
         } => {
-            let command = RuntimeIpcCommand::RotateMailboxCapability {
+            let command = RuntimeIpcCommand::RotateExactMailboxCapability {
                 conversation,
                 peer_account_id,
                 peer_device_id,
-                service_base_url,
-                store_key,
                 valid_for_seconds,
             };
             match kilogram_runtime_ipc::call(&descriptor, command).await? {
@@ -4927,16 +4911,6 @@ impl KilogramApp {
                     peer_device_id,
                 });
             }
-            let service_base_url = self.model.mailbox_service_base_url.trim();
-            ensure!(
-                !service_base_url.is_empty(),
-                "Mailbox service URL is required"
-            );
-            let store_key = self.model.mailbox_store_key.trim();
-            ensure!(
-                !store_key.is_empty(),
-                "Mailbox public store key is required"
-            );
             let valid_for_seconds = self
                 .model
                 .mailbox_valid_for_seconds
@@ -4949,8 +4923,6 @@ impl KilogramApp {
                 conversation.to_owned(),
                 peer_account_id,
                 peer_device_id,
-                service_base_url.to_owned(),
-                store_key.to_owned(),
                 valid_for_seconds,
             );
             match operation {
@@ -4959,18 +4931,14 @@ impl KilogramApp {
                     conversation: fields.1,
                     peer_account_id: fields.2,
                     peer_device_id: fields.3,
-                    service_base_url: fields.4,
-                    store_key: fields.5,
-                    valid_for_seconds: fields.6,
+                    valid_for_seconds: fields.4,
                 }),
                 Operation::MailboxRotate => Ok(WorkerRequest::MailboxRotate {
                     descriptor: fields.0,
                     conversation: fields.1,
                     peer_account_id: fields.2,
                     peer_device_id: fields.3,
-                    service_base_url: fields.4,
-                    store_key: fields.5,
-                    valid_for_seconds: fields.6,
+                    valid_for_seconds: fields.4,
                 }),
                 _ => bail!("Unsupported mailbox lifecycle operation"),
             }
@@ -7381,24 +7349,9 @@ impl KilogramApp {
                         }
                     });
             }
-            ui.horizontal(|ui| {
-                ui.label("Mailbox service");
-                ui.add_enabled(
-                    self.model.pending.is_none(),
-                    egui::TextEdit::singleline(&mut self.model.mailbox_service_base_url)
-                        .hint_text("https://mailbox-store.example")
-                        .desired_width(f32::INFINITY),
-                );
-            });
-            ui.horizontal(|ui| {
-                ui.label("Public store key");
-                ui.add_enabled(
-                    self.model.pending.is_none(),
-                    egui::TextEdit::singleline(&mut self.model.mailbox_store_key)
-                        .hint_text("Mailbox service public key")
-                        .desired_width(f32::INFINITY),
-                );
-            });
+            ui.label(
+                "Storage: exact signed volunteer replica set (no central HTTPS mailbox)",
+            );
             ui.horizontal(|ui| {
                 ui.label("Validity (seconds)");
                 ui.add_enabled(
@@ -7418,8 +7371,6 @@ impl KilogramApp {
                 && self.model.selected_contact_id.is_some()
                 && selected_device_usable;
             let mailbox_configured = mailbox_selected
-                && !self.model.mailbox_service_base_url.trim().is_empty()
-                && !self.model.mailbox_store_key.trim().is_empty()
                 && !self.model.mailbox_valid_for_seconds.trim().is_empty();
             ui.horizontal_wrapped(|ui| {
                 if ui
@@ -7501,8 +7452,9 @@ impl KilogramApp {
                             egui::Color32::from_rgb(246, 195, 93)
                         },
                         format!(
-                            "{} · device {} · generation {} · {} · {} · locator {} ({})",
+                            "{} · {} · device {} · generation {} · {} · {} · locator {} ({})",
                             capability.direction,
+                            capability.capability_format,
                             compact_id(&capability.peer_device_id.to_string()),
                             capability
                                 .generation
@@ -9311,18 +9263,14 @@ mod tests {
             let (command, response) = mailbox_create.into_parts();
             ensure!(matches!(
                 command,
-                RuntimeIpcCommand::CreateMailboxCapability {
+                RuntimeIpcCommand::CreateExactMailboxCapability {
                     conversation,
                     peer_account_id: requested_peer,
                     peer_device_id: requested_device,
-                    service_base_url,
-                    store_key,
                     valid_for_seconds: DEFAULT_MAILBOX_VALIDITY_SECONDS,
                 } if conversation == "desktop-test"
                     && requested_peer == peer_account_id
                     && requested_device == device_id
-                    && service_base_url == "https://mailbox.example"
-                    && store_key == "public-store-key"
             ));
             response
                 .send(RuntimeIpcResponse::MailboxCapabilityChanged(Box::new(
@@ -9347,18 +9295,14 @@ mod tests {
             let (command, response) = mailbox_rotate.into_parts();
             ensure!(matches!(
                 command,
-                RuntimeIpcCommand::RotateMailboxCapability {
+                RuntimeIpcCommand::RotateExactMailboxCapability {
                     conversation,
                     peer_account_id: requested_peer,
                     peer_device_id: requested_device,
-                    service_base_url,
-                    store_key,
                     valid_for_seconds: DEFAULT_MAILBOX_VALIDITY_SECONDS,
                 } if conversation == "desktop-test"
                     && requested_peer == peer_account_id
                     && requested_device == device_id
-                    && service_base_url == "https://mailbox.example"
-                    && store_key == "public-store-key"
             ));
             response
                 .send(RuntimeIpcResponse::MailboxCapabilityChanged(Box::new(
@@ -9439,6 +9383,7 @@ mod tests {
                         peer_account_id,
                         peer_device_id: device_id,
                         direction: "receive".to_owned(),
+                        capability_format: "v2-exact-volunteer".to_owned(),
                         binding_id: "93".repeat(32),
                         update_id: Some("95".repeat(32)),
                         generation: Some(3),
@@ -9650,8 +9595,6 @@ mod tests {
             conversation: "desktop-test".to_owned(),
             peer_account_id,
             peer_device_id: device_id,
-            service_base_url: "https://mailbox.example".to_owned(),
-            store_key: "public-store-key".to_owned(),
             valid_for_seconds: DEFAULT_MAILBOX_VALIDITY_SECONDS,
         })
         .await?;
@@ -9669,8 +9612,6 @@ mod tests {
             conversation: "desktop-test".to_owned(),
             peer_account_id,
             peer_device_id: device_id,
-            service_base_url: "https://mailbox.example".to_owned(),
-            store_key: "public-store-key".to_owned(),
             valid_for_seconds: DEFAULT_MAILBOX_VALIDITY_SECONDS,
         })
         .await?;

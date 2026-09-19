@@ -10,8 +10,9 @@ $ledgerPath = Join-Path $workspace 'crates\kilogram-mailbox-client\src\ledger.rs
 $replicationPath = Join-Path $workspace 'crates\kilogram-mailbox-client\src\replication.rs'
 $manifestPath = Join-Path $workspace 'apps\kilogram-cli\Cargo.toml'
 $rfcPath = Join-Path $workspace 'docs\RFC-0094-exact-mailbox-https-copy-retirement.md'
+$v2RfcPath = Join-Path $workspace 'docs\RFC-0098-service-free-exact-mailbox-capability-v2.md'
 
-foreach ($path in @($runtimePath, $ledgerPath, $replicationPath, $manifestPath, $rfcPath)) {
+foreach ($path in @($runtimePath, $ledgerPath, $replicationPath, $manifestPath, $rfcPath, $v2RfcPath)) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
         throw "HTTPS compatibility retirement boundary file is missing: $path"
     }
@@ -21,6 +22,7 @@ $runtime = Get-Content -LiteralPath $runtimePath -Raw
 $ledger = Get-Content -LiteralPath $ledgerPath -Raw
 $replication = Get-Content -LiteralPath $replicationPath -Raw
 $rfc = Get-Content -LiteralPath $rfcPath -Raw
+$v2Rfc = Get-Content -LiteralPath $v2RfcPath -Raw
 
 foreach ($required in @(
     'RuntimeMailboxHttpsCompatibilityCopy',
@@ -39,6 +41,17 @@ foreach ($required in @(
 )) {
     if (-not $runtime.Contains($required)) {
         throw "runtime HTTPS compatibility retirement boundary is missing '$required'"
+    }
+}
+
+foreach ($required in @(
+    'runtime_mailbox_https_compatibility_copy=absent-v2-exact-volunteer',
+    'exact volunteer replication is incomplete and the v2 capability has no HTTPS fallback',
+    'runtime_mailbox_http_poll=not-attempted-v2-exact-volunteer',
+    'let Some(service_base_url) = upload.service_base_url.as_deref() else'
+)) {
+    if (-not $runtime.Contains($required)) {
+        throw "service-free v2 HTTPS absence boundary is missing '$required'"
     }
 }
 
@@ -64,6 +77,17 @@ foreach ($required in @(
 )) {
     if (-not $upload.Contains($required)) {
         throw "exact volunteer suppression guard is missing '$required'"
+    }
+}
+
+foreach ($required in @(
+    'both ordinary outbound messages and reverse acknowledgements',
+    'does not attempt HTTPS fallback',
+    'v2 polling',
+    'Legacy v1 state may continue to use its retained'
+)) {
+    if (-not $v2Rfc.Contains($required)) {
+        throw "service-free v2 HTTPS retirement RFC is missing '$required'"
     }
 }
 if ($upload -notmatch 'durable_locator\.store_keys\(\)\s*==\s*expected_locator\.store_keys\.as_slice\(\)') {
@@ -138,8 +162,9 @@ if (Select-String -LiteralPath $manifestPath -Pattern '^\s*\[\[bin\]\]\s*$') {
 Write-Output 'mailbox_https_retirement_boundary=verified'
 Write-Output 'suppression=exact-authenticated-plus-two-transport-distinct-signed-receipts'
 Write-Output 'legacy_https_compatibility=retained'
-Write-Output 'incomplete_exact_https_compatibility=retained'
-Write-Output 'reverse_ack_https_compatibility=retained'
+Write-Output 'legacy_v1_incomplete_exact_https_compatibility=retained'
+Write-Output 'v2_exact_https_compatibility=absent'
+Write-Output 'v2_reverse_ack=exact-volunteer-only'
 Write-Output 'retroactive_https_delete=false'
 Write-Output 'new_executable=false'
-Write-Output 'ipc_schema_change=false'
+Write-Output 'ipc_schema=v26-service-free-v2'

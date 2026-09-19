@@ -2444,3 +2444,32 @@ retirement остальных compatibility shadows ещё не реализов
   Все completion/provider-stop markers присутствуют. Fresh state не потребовал
   runtime repair marker; deterministic crash test остаётся прямым recovery
   proof, field run — полным lifecycle proof.
+
+## M0.9.75 verification snapshot (2026-09-19)
+
+- Новый exact-volunteer provisioning wire v2 не содержит
+  `MailboxServiceDescriptor`, HTTPS URL или central store key; v2 binding/offer
+  используют отдельные signature, HPKE и content-ID domains.
+- Ordered capability update получил append-only action `ActivateExactVolunteer`;
+  v1 decode/read сохранён, `v1 -> v2` migration разрешена, `v2 -> v1`
+  fail-closed запрещена, v2 revocation сохраняет версию chain.
+- Automatic upgrade теперь переводит любой acknowledged active v1 head в
+  service-free v2 при наличии двух transport-distinct providers. Targeted
+  regression подтверждает отсутствие service descriptor после persisted
+  rotation и restart-idempotence.
+- Runtime upload/poll и reverse ACK для v2 используют exact provider locator;
+  неполная репликация остаётся pending и не вызывает HTTPS fallback.
+- Runtime IPC v26 и Windows desktop используют exact create/rotate без URL/key;
+  status явно показывает `v2-exact-volunteer` или `v1-legacy-https`.
+- Новый static gate включён в M1 acceptance builder/boundary. Проверки этапа
+  выполняются только debug/dev toolchain с Cargo jobs=2; release/ZIP/network
+  listener не запускаются.
+- Mailbox provisioning 8/8, runtime IPC 15/15 и Windows 22/22 прошли. Первый
+  полный CLI run выявил старый test-only race: multi-endpoint regression открыл
+  direct state transaction рядом с работающим actor без state lock. Regression
+  переведён на штатный `acquire_runtime_state_lock`; отдельный повтор прошёл,
+  затем полный CLI suite завершился 81/81 за 313.65s с `--jobs 2` и
+  `--test-threads=2`.
+- Strict Clippy для provisioning/runtime-IPC/CLI/Windows прошёл с
+  `-D warnings`; все mailbox compatibility/lifecycle/runtime/v2 static gates,
+  M1 acceptance boundary, `cargo fmt --check` и `git diff --check` зелёные.

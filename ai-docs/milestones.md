@@ -4061,11 +4061,42 @@ Fresh-state field run не потребовал repair marker; сам recovery b
 отдельным real child-process crash regression. Вместе эти проверки закрывают и
 узкую crash boundary, и полный внешний no-HTTPS lifecycle.
 
+### M0.9.75 — service-free exact mailbox capability v2: завершено локально
+
+Реализовано:
+
+- новый v2 local binding и recipient offer больше не сериализуют HTTPS URL,
+  `MailboxServiceDescriptor` или singleton central store key; применяются
+  отдельные v2 signature/HPKE/content-ID domains;
+- `ActivateExactVolunteer` связывает v2 offer с canonical Device-signed exact
+  replica-set commitment; создание/ротация fail closed требуют минимум двух
+  active transport-distinct volunteer providers;
+- bounded v1 decode/read/revoke и explicit legacy CLI/IPC commands сохранены
+  для совместимости; acknowledged active v1 head автоматически ротируется в
+  v2 без message replay, а chain validation разрешает `v1 -> v2`, сохраняет v2
+  revocation и запрещает `v2 -> v1` downgrade;
+- v2 outbound message и reverse acknowledgement используют только exact set;
+  неполный threshold остаётся durable pending и не имеет HTTPS fallback,
+  recipient v2 polling также никогда не создаёт HTTP client;
+- authenticated runtime IPC поднят до v26, secret-free mailbox status показывает
+  `v1-legacy-https`/`v2-exact-volunteer`; desktop default create/rotate больше не
+  спрашивает URL/store key и использует только exact commands;
+- targeted provisioning и automatic migration regressions проходят; static
+  `verify-kilogram-service-free-mailbox-capability-v2.ps1` включён в M1
+  acceptance builder/boundary;
+- контракт зафиксирован в
+  [`../docs/RFC-0098-service-free-exact-mailbox-capability-v2.md`](../docs/RFC-0098-service-free-exact-mailbox-capability-v2.md).
+
+Граница этапа: новый protocol path больше не несёт фиктивную central mailbox
+authority. Legacy v1 остаётся только совместимым read/migration surface. Новый
+external v2 field run, Sybil-resistant provider diversity и access-correlation
+privacy в этот этап не входят.
+
 ### Следующий этап
 
-1. Спроектировать versioned удаление inert HTTPS service tuple из нового exact
-   mailbox capability, сохранив ограниченный read/migration path для старых
-   клиентов; новый wire variant не должен возвращать central mailbox authority.
+1. Подготовить fresh M0.9.76 cross-network harness, который создаёт capability
+   только через v2 exact command, вообще не содержит compatibility URL/store
+   key и доказывает полный send/offline-retrieve/restart lifecycle.
 2. До первого публичного security artifact pin-нуть linker/SDK либо controlled
    alternative и повторить M0.9.59 до matched external hash и attestation.
 3. Optional autostart/background mode оставить отдельной явной настройкой, не

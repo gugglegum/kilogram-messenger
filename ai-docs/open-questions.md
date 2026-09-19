@@ -241,7 +241,8 @@ sessions, distribution, removal и key epochs и не решены этим пр
   независимость операторов/физических отказов или Sybil resistance; run прошёл
   через несколько repair builds, поэтому clean single-revision repeat остаётся
   полезным release-кандидатным тестом, но не блокирует M0.9.68 locator work.
-  HTTPS compatibility copy пока не удаляется автоматически.
+  Для новых v2 exact capabilities HTTPS descriptor/copy отсутствует; bounded v1
+  read/migration сохраняется для существующего state.
 - Как ограничивать spam/Sybil без глобального аккаунта и утечки социального
   графа? M0.9.33 защищает существующий channel от постороннего высокого
   generation через self-authenticating per-peer Ed25519 write capability без
@@ -310,9 +311,10 @@ sessions, distribution, removal и key epochs и не решены этим пр
   `RepairAborted` на recipient replication ledger после force-stop. M0.9.74
   добавил узкое typed crash recovery под state lock/vault guard и реальный
   child-process regression; clean run `20260919-203722` принят с exact `2/2`,
-  no HTTPS PUT, commit-before-delete и restart без redelivery. Открытыми
-  остаются полное versioned удаление descriptor/protocol после совместимости
-  старых клиентов, Sybil-resistant
+  no HTTPS PUT, commit-before-delete и restart без redelivery. M0.9.75 удалил
+  descriptor/central store key из нового v2 wire path, сохранил bounded v1
+  read/migration и запретил downgrade. Открытыми остаются внешний v2 field run,
+  окончательный срок удаления legacy v1, Sybil-resistant
   diversity, cryptographic hop proof и access-correlation privacy.
 - Push-уведомления на Android/iOS без утечки содержания и социального графа.
 - Независимый second-builder, подписанный release provenance, обновления клиента

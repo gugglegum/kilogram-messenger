@@ -23,6 +23,7 @@ use url::Url;
 use zeroize::Zeroize;
 
 const VERSION: u8 = 1;
+const EXACT_VOLUNTEER_VERSION: u8 = 2;
 const KEY_BYTES: usize = 32;
 const MAX_SERVICE_URL_BYTES: usize = 2_048;
 const MAX_PROVISIONING_BYTES: usize = 16 * 1024;
@@ -34,6 +35,13 @@ const BINDING_ID_DOMAIN: &[u8] = b"kilogram:mailbox-binding-id:v1\0";
 const CAPABILITY_UPDATE_VERSION: u8 = 1;
 const CAPABILITY_UPDATE_SIGNATURE_DOMAIN: &[u8] = b"kilogram:mailbox-capability-update:v1\0";
 const CAPABILITY_UPDATE_ID_DOMAIN: &[u8] = b"kilogram:mailbox-capability-update-id:v1\0";
+const EXACT_LOCAL_SIGNATURE_DOMAIN: &[u8] = b"kilogram:mailbox-local-binding:v2\0";
+const EXACT_OFFER_SIGNATURE_DOMAIN: &[u8] = b"kilogram:mailbox-device-offer:v2\0";
+const EXACT_LOCAL_HPKE_INFO: &[u8] = b"kilogram:mailbox-local-binding-hpke:v2\0";
+const EXACT_OFFER_HPKE_INFO: &[u8] = b"kilogram:mailbox-device-offer-hpke:v2\0";
+const EXACT_BINDING_ID_DOMAIN: &[u8] = b"kilogram:mailbox-binding-id:v2\0";
+const EXACT_CAPABILITY_UPDATE_SIGNATURE_DOMAIN: &[u8] = b"kilogram:mailbox-capability-update:v2\0";
+const EXACT_CAPABILITY_UPDATE_ID_DOMAIN: &[u8] = b"kilogram:mailbox-capability-update-id:v2\0";
 const REPLICA_SET_COMMITMENT_ID_DOMAIN: &[u8] = b"kilogram:mailbox-replica-set-commitment-id:v1\0";
 const CAPABILITY_ACKNOWLEDGEMENT_VERSION: u8 = 1;
 const CAPABILITY_ACKNOWLEDGEMENT_SIGNATURE_DOMAIN: &[u8] =
@@ -136,6 +144,27 @@ struct LocalBindingContent {
     created_at_unix_seconds: u64,
 }
 
+#[derive(Clone, Deserialize, Eq, PartialEq, Serialize)]
+struct ExactLocalBindingContent {
+    version: u8,
+    owner_account_id: AccountId,
+    owner_device_id: DeviceId,
+    peer_account_id: AccountId,
+    peer_device_id: DeviceId,
+    scope: MailboxScope,
+    address: MailboxAddress,
+    read_secret: [u8; KEY_BYTES],
+    write_secret: [u8; KEY_BYTES],
+    created_at_unix_seconds: u64,
+}
+
+impl Drop for ExactLocalBindingContent {
+    fn drop(&mut self) {
+        self.read_secret.zeroize();
+        self.write_secret.zeroize();
+    }
+}
+
 impl Drop for LocalBindingContent {
     fn drop(&mut self) {
         self.read_secret.zeroize();
@@ -146,6 +175,12 @@ impl Drop for LocalBindingContent {
 #[derive(Deserialize, Serialize)]
 struct SignedLocalBinding {
     content: LocalBindingContent,
+    signature: Vec<u8>,
+}
+
+#[derive(Deserialize, Serialize)]
+struct SignedExactLocalBinding {
+    content: ExactLocalBindingContent,
     signature: Vec<u8>,
 }
 
@@ -223,6 +258,69 @@ impl SealedLocalMailboxBinding {
         Ok(Self { header, sealed })
     }
 
+    /// Creates the v2 receive capability used by exact volunteer replication.
+    ///
+    /// Unlike the legacy v1 format, the sealed capability contains no HTTPS
+    /// service URL or central store key. Availability is committed separately
+    /// by the Device-signed exact replica set carried by the capability update.
+    #[allow(clippy::too_many_arguments)]
+    pub fn create_exact_volunteer(
+        owner_identity: &DeviceIdentity,
+        owner_encryption: &DeviceEncryptionIdentity,
+        owner_certificate: &DeviceCertificate,
+        peer_certificate: &DeviceCertificate,
+        scope: MailboxScope,
+        created_at_unix_seconds: u64,
+    ) -> Result<Self> {
+        validate_owner(owner_identity, owner_encryption, owner_certificate)?;
+        peer_certificate.verify()?;
+        ensure!(
+            peer_certificate.account_id() != owner_certificate.account_id(),
+            "contact mailbox peer must belong to another account"
+        );
+        ensure!(
+            created_at_unix_seconds != 0,
+            "mailbox creation time is zero"
+        );
+        let read = MailboxReadCapability::generate()?;
+        let write = MailboxWriteCapability::generate()?;
+        let content = ExactLocalBindingContent {
+            version: EXACT_VOLUNTEER_VERSION,
+            owner_account_id: owner_certificate.account_id(),
+            owner_device_id: owner_certificate.device_id(),
+            peer_account_id: peer_certificate.account_id(),
+            peer_device_id: peer_certificate.device_id(),
+            scope,
+            address: MailboxAddress::new(read.read_key(), write.write_key()),
+            read_secret: read.secret_bytes(),
+            write_secret: write.secret_bytes(),
+            created_at_unix_seconds,
+        };
+        content.validate()?;
+        let binding_id = exact_binding_id(&content)?;
+        let signature = owner_identity
+            .sign(&signing_bytes(EXACT_LOCAL_SIGNATURE_DOMAIN, &content)?)
+            .to_vec();
+        let signed = SignedExactLocalBinding { content, signature };
+        let plaintext = zeroize::Zeroizing::new(
+            postcard::to_allocvec(&signed).context("encode exact local mailbox binding")?,
+        );
+        ensure!(
+            plaintext.len() <= MAX_PROVISIONING_BYTES,
+            "local mailbox binding is too large"
+        );
+        let header = LocalBindingHeader {
+            version: EXACT_VOLUNTEER_VERSION,
+            binding_id,
+        };
+        let aad = postcard::to_allocvec(&header).context("encode local mailbox header")?;
+        let sealed = owner_encryption
+            .public_key()
+            .seal(&plaintext, EXACT_LOCAL_HPKE_INFO, &aad)
+            .context("seal exact local mailbox capability")?;
+        Ok(Self { header, sealed })
+    }
+
     pub fn encode(&self) -> Result<Vec<u8>> {
         self.validate_shape()?;
         let bytes = postcard::to_allocvec(self).context("encode sealed local mailbox binding")?;
@@ -245,6 +343,10 @@ impl SealedLocalMailboxBinding {
         self.header.binding_id
     }
 
+    pub fn is_exact_volunteer(&self) -> bool {
+        self.header.version == EXACT_VOLUNTEER_VERSION
+    }
+
     pub fn open(
         &self,
         owner_identity: &DeviceIdentity,
@@ -254,36 +356,67 @@ impl SealedLocalMailboxBinding {
         self.validate_shape()?;
         validate_owner(owner_identity, owner_encryption, owner_certificate)?;
         let aad = postcard::to_allocvec(&self.header).context("encode local mailbox header")?;
+        let hpke_info = match self.header.version {
+            VERSION => LOCAL_HPKE_INFO,
+            EXACT_VOLUNTEER_VERSION => EXACT_LOCAL_HPKE_INFO,
+            _ => bail!("unsupported sealed local mailbox binding version"),
+        };
         let plaintext = zeroize::Zeroizing::new(
             owner_encryption
-                .open(&self.sealed, LOCAL_HPKE_INFO, &aad)
+                .open(&self.sealed, hpke_info, &aad)
                 .context("open local mailbox capability")?,
         );
         validate_encoded_size(&plaintext, "opened local mailbox binding")?;
-        let signed: SignedLocalBinding =
-            postcard::from_bytes(&plaintext).context("decode opened local mailbox binding")?;
-        signed.content.validate()?;
-        ensure!(
-            signed.content.owner_account_id == owner_certificate.account_id()
-                && signed.content.owner_device_id == owner_certificate.device_id(),
-            "local mailbox binding belongs to another owner"
-        );
-        signed.content.owner_device_id.verify(
-            &signing_bytes(LOCAL_SIGNATURE_DOMAIN, &signed.content)?,
-            &signed.signature,
-        )?;
-        ensure!(
-            binding_id(&signed.content)? == self.binding_id(),
-            "local mailbox binding ID mismatch"
-        );
-        Ok(LocalMailboxBinding {
-            content: signed.content,
-        })
+        match self.header.version {
+            VERSION => {
+                let signed: SignedLocalBinding = postcard::from_bytes(&plaintext)
+                    .context("decode opened local mailbox binding")?;
+                signed.content.validate()?;
+                ensure!(
+                    signed.content.owner_account_id == owner_certificate.account_id()
+                        && signed.content.owner_device_id == owner_certificate.device_id(),
+                    "local mailbox binding belongs to another owner"
+                );
+                signed.content.owner_device_id.verify(
+                    &signing_bytes(LOCAL_SIGNATURE_DOMAIN, &signed.content)?,
+                    &signed.signature,
+                )?;
+                ensure!(
+                    binding_id(&signed.content)? == self.binding_id(),
+                    "local mailbox binding ID mismatch"
+                );
+                Ok(LocalMailboxBinding {
+                    content: LocalMailboxBindingContent::Legacy(signed.content),
+                })
+            }
+            EXACT_VOLUNTEER_VERSION => {
+                let signed: SignedExactLocalBinding = postcard::from_bytes(&plaintext)
+                    .context("decode opened exact local mailbox binding")?;
+                signed.content.validate()?;
+                ensure!(
+                    signed.content.owner_account_id == owner_certificate.account_id()
+                        && signed.content.owner_device_id == owner_certificate.device_id(),
+                    "local mailbox binding belongs to another owner"
+                );
+                signed.content.owner_device_id.verify(
+                    &signing_bytes(EXACT_LOCAL_SIGNATURE_DOMAIN, &signed.content)?,
+                    &signed.signature,
+                )?;
+                ensure!(
+                    exact_binding_id(&signed.content)? == self.binding_id(),
+                    "local mailbox binding ID mismatch"
+                );
+                Ok(LocalMailboxBinding {
+                    content: LocalMailboxBindingContent::Exact(signed.content),
+                })
+            }
+            _ => bail!("unsupported sealed local mailbox binding version"),
+        }
     }
 
     fn validate_shape(&self) -> Result<()> {
         ensure!(
-            self.header.version == VERSION
+            matches!(self.header.version, VERSION | EXACT_VOLUNTEER_VERSION)
                 && self.sealed.encapsulated_key.len() == KEY_BYTES
                 && !self.sealed.ciphertext.is_empty(),
             "sealed local mailbox binding is invalid"
@@ -292,53 +425,145 @@ impl SealedLocalMailboxBinding {
     }
 }
 
+enum LocalMailboxBindingContent {
+    Legacy(LocalBindingContent),
+    Exact(ExactLocalBindingContent),
+}
+
+impl LocalMailboxBindingContent {
+    fn binding_id(&self) -> Result<MailboxBindingId> {
+        match self {
+            Self::Legacy(content) => binding_id(content),
+            Self::Exact(content) => exact_binding_id(content),
+        }
+    }
+
+    fn owner_account_id(&self) -> AccountId {
+        match self {
+            Self::Legacy(content) => content.owner_account_id,
+            Self::Exact(content) => content.owner_account_id,
+        }
+    }
+
+    fn owner_device_id(&self) -> DeviceId {
+        match self {
+            Self::Legacy(content) => content.owner_device_id,
+            Self::Exact(content) => content.owner_device_id,
+        }
+    }
+
+    fn peer_account_id(&self) -> AccountId {
+        match self {
+            Self::Legacy(content) => content.peer_account_id,
+            Self::Exact(content) => content.peer_account_id,
+        }
+    }
+
+    fn peer_device_id(&self) -> DeviceId {
+        match self {
+            Self::Legacy(content) => content.peer_device_id,
+            Self::Exact(content) => content.peer_device_id,
+        }
+    }
+
+    fn scope(&self) -> MailboxScope {
+        match self {
+            Self::Legacy(content) => content.scope,
+            Self::Exact(content) => content.scope,
+        }
+    }
+
+    fn service(&self) -> Option<&MailboxServiceDescriptor> {
+        match self {
+            Self::Legacy(content) => Some(&content.service),
+            Self::Exact(_) => None,
+        }
+    }
+
+    fn address(&self) -> MailboxAddress {
+        match self {
+            Self::Legacy(content) => content.address,
+            Self::Exact(content) => content.address,
+        }
+    }
+
+    fn read_secret(&self) -> [u8; KEY_BYTES] {
+        match self {
+            Self::Legacy(content) => content.read_secret,
+            Self::Exact(content) => content.read_secret,
+        }
+    }
+
+    fn write_secret(&self) -> [u8; KEY_BYTES] {
+        match self {
+            Self::Legacy(content) => content.write_secret,
+            Self::Exact(content) => content.write_secret,
+        }
+    }
+
+    fn created_at_unix_seconds(&self) -> u64 {
+        match self {
+            Self::Legacy(content) => content.created_at_unix_seconds,
+            Self::Exact(content) => content.created_at_unix_seconds,
+        }
+    }
+
+    fn is_exact_volunteer(&self) -> bool {
+        matches!(self, Self::Exact(_))
+    }
+}
+
 pub struct LocalMailboxBinding {
-    content: LocalBindingContent,
+    content: LocalMailboxBindingContent,
 }
 
 impl LocalMailboxBinding {
     pub fn binding_id(&self) -> Result<MailboxBindingId> {
-        binding_id(&self.content)
+        self.content.binding_id()
     }
 
     pub fn owner_account_id(&self) -> AccountId {
-        self.content.owner_account_id
+        self.content.owner_account_id()
     }
 
     pub fn owner_device_id(&self) -> DeviceId {
-        self.content.owner_device_id
+        self.content.owner_device_id()
     }
 
     pub fn peer_account_id(&self) -> AccountId {
-        self.content.peer_account_id
+        self.content.peer_account_id()
     }
 
     pub fn peer_device_id(&self) -> DeviceId {
-        self.content.peer_device_id
+        self.content.peer_device_id()
     }
 
     pub fn scope(&self) -> MailboxScope {
-        self.content.scope
+        self.content.scope()
     }
 
-    pub fn service(&self) -> &MailboxServiceDescriptor {
-        &self.content.service
+    pub fn service(&self) -> Option<&MailboxServiceDescriptor> {
+        self.content.service()
+    }
+
+    pub fn is_exact_volunteer(&self) -> bool {
+        self.content.is_exact_volunteer()
     }
 
     pub fn address(&self) -> MailboxAddress {
-        self.content.address
+        self.content.address()
     }
 
     pub fn read_capability(&self) -> MailboxReadCapability {
-        MailboxReadCapability::from_secret_bytes(self.content.read_secret)
+        MailboxReadCapability::from_secret_bytes(self.content.read_secret())
     }
 
     pub fn write_capability(&self) -> MailboxWriteCapability {
-        MailboxWriteCapability::from_secret_bytes(self.content.write_secret)
+        MailboxWriteCapability::from_secret_bytes(self.content.write_secret())
     }
 
     pub fn created_at_unix_seconds(&self) -> u64 {
-        self.content.created_at_unix_seconds
+        self.content.created_at_unix_seconds()
     }
 
     pub fn offer_for(
@@ -366,42 +591,70 @@ impl LocalMailboxBinding {
                 .contains(&validity),
             "mailbox offer validity is outside protocol bounds"
         );
-        let content = MailboxOfferContent {
-            version: VERSION,
-            owner_account_id: self.owner_account_id(),
-            owner_device_id: self.owner_device_id(),
-            owner_encryption_public_key: owner_certificate.encryption_public_key(),
-            recipient_account_id: self.peer_account_id(),
-            recipient_device_id: self.peer_device_id(),
-            scope: self.scope(),
-            service: self.service().clone(),
-            address: self.address(),
-            write_secret: self.content.write_secret,
-            created_at_unix_seconds: self.created_at_unix_seconds(),
-            expires_at_unix_seconds,
-        };
-        content.validate()?;
-        let signature = owner_identity
-            .sign(&signing_bytes(OFFER_SIGNATURE_DOMAIN, &content)?)
-            .to_vec();
-        let signed = SignedMailboxOffer { content, signature };
-        let plaintext = zeroize::Zeroizing::new(
-            postcard::to_allocvec(&signed).context("encode mailbox offer")?,
-        );
-        ensure!(
-            plaintext.len() <= MAX_PROVISIONING_BYTES,
-            "mailbox offer is too large"
-        );
-        let header = MailboxOfferHeader {
-            version: VERSION,
-            binding_id: self.binding_id()?,
-        };
-        let aad = postcard::to_allocvec(&header).context("encode mailbox offer header")?;
-        let sealed = peer_certificate
-            .encryption_public_key()
-            .seal(&plaintext, OFFER_HPKE_INFO, &aad)
-            .context("seal mailbox offer to peer Device")?;
-        Ok(EncryptedMailboxOffer { header, sealed })
+        match &self.content {
+            LocalMailboxBindingContent::Legacy(content) => {
+                let offer_content = MailboxOfferContent {
+                    version: VERSION,
+                    owner_account_id: content.owner_account_id,
+                    owner_device_id: content.owner_device_id,
+                    owner_encryption_public_key: owner_certificate.encryption_public_key(),
+                    recipient_account_id: content.peer_account_id,
+                    recipient_device_id: content.peer_device_id,
+                    scope: content.scope,
+                    service: content.service.clone(),
+                    address: content.address,
+                    write_secret: content.write_secret,
+                    created_at_unix_seconds: content.created_at_unix_seconds,
+                    expires_at_unix_seconds,
+                };
+                offer_content.validate()?;
+                let signature = owner_identity
+                    .sign(&signing_bytes(OFFER_SIGNATURE_DOMAIN, &offer_content)?)
+                    .to_vec();
+                seal_mailbox_offer(
+                    VERSION,
+                    self.binding_id()?,
+                    &SignedMailboxOffer {
+                        content: offer_content,
+                        signature,
+                    },
+                    peer_certificate,
+                    OFFER_HPKE_INFO,
+                )
+            }
+            LocalMailboxBindingContent::Exact(content) => {
+                let offer_content = ExactMailboxOfferContent {
+                    version: EXACT_VOLUNTEER_VERSION,
+                    owner_account_id: content.owner_account_id,
+                    owner_device_id: content.owner_device_id,
+                    owner_encryption_public_key: owner_certificate.encryption_public_key(),
+                    recipient_account_id: content.peer_account_id,
+                    recipient_device_id: content.peer_device_id,
+                    scope: content.scope,
+                    address: content.address,
+                    write_secret: content.write_secret,
+                    created_at_unix_seconds: content.created_at_unix_seconds,
+                    expires_at_unix_seconds,
+                };
+                offer_content.validate()?;
+                let signature = owner_identity
+                    .sign(&signing_bytes(
+                        EXACT_OFFER_SIGNATURE_DOMAIN,
+                        &offer_content,
+                    )?)
+                    .to_vec();
+                seal_mailbox_offer(
+                    EXACT_VOLUNTEER_VERSION,
+                    self.binding_id()?,
+                    &SignedExactMailboxOffer {
+                        content: offer_content,
+                        signature,
+                    },
+                    peer_certificate,
+                    EXACT_OFFER_HPKE_INFO,
+                )
+            }
+        }
     }
 }
 
@@ -421,6 +674,27 @@ struct MailboxOfferContent {
     expires_at_unix_seconds: u64,
 }
 
+#[derive(Clone, Deserialize, Eq, PartialEq, Serialize)]
+struct ExactMailboxOfferContent {
+    version: u8,
+    owner_account_id: AccountId,
+    owner_device_id: DeviceId,
+    owner_encryption_public_key: EncryptionPublicKey,
+    recipient_account_id: AccountId,
+    recipient_device_id: DeviceId,
+    scope: MailboxScope,
+    address: MailboxAddress,
+    write_secret: [u8; KEY_BYTES],
+    created_at_unix_seconds: u64,
+    expires_at_unix_seconds: u64,
+}
+
+impl Drop for ExactMailboxOfferContent {
+    fn drop(&mut self) {
+        self.write_secret.zeroize();
+    }
+}
+
 impl Drop for MailboxOfferContent {
     fn drop(&mut self) {
         self.write_secret.zeroize();
@@ -435,6 +709,35 @@ impl MailboxOfferContent {
             "contact mailbox offer cannot target the owner account"
         );
         self.service.validate()?;
+        self.address.verify()?;
+        ensure!(
+            MailboxWriteCapability::from_secret_bytes(self.write_secret).write_key()
+                == self.address.write_key(),
+            "mailbox offer write secret does not match its address"
+        );
+        let validity = self
+            .expires_at_unix_seconds
+            .checked_sub(self.created_at_unix_seconds)
+            .context("mailbox offer expires before it was created")?;
+        ensure!(
+            (MIN_MAILBOX_OFFER_VALIDITY_SECONDS..=MAX_MAILBOX_OFFER_VALIDITY_SECONDS)
+                .contains(&validity),
+            "mailbox offer validity is outside protocol bounds"
+        );
+        Ok(())
+    }
+}
+
+impl ExactMailboxOfferContent {
+    fn validate(&self) -> Result<()> {
+        ensure!(
+            self.version == EXACT_VOLUNTEER_VERSION,
+            "unsupported exact mailbox offer version"
+        );
+        ensure!(
+            self.owner_account_id != self.recipient_account_id,
+            "contact mailbox offer cannot target the owner account"
+        );
         self.address.verify()?;
         ensure!(
             MailboxWriteCapability::from_secret_bytes(self.write_secret).write_key()
@@ -481,9 +784,41 @@ impl LocalBindingContent {
     }
 }
 
+impl ExactLocalBindingContent {
+    fn validate(&self) -> Result<()> {
+        ensure!(
+            self.version == EXACT_VOLUNTEER_VERSION,
+            "unsupported exact local mailbox binding version"
+        );
+        ensure!(
+            self.owner_account_id != self.peer_account_id,
+            "contact mailbox binding cannot target the owner account"
+        );
+        ensure!(
+            self.created_at_unix_seconds != 0,
+            "mailbox creation time is zero"
+        );
+        self.address.verify()?;
+        ensure!(
+            MailboxReadCapability::from_secret_bytes(self.read_secret).read_key()
+                == self.address.read_key()
+                && MailboxWriteCapability::from_secret_bytes(self.write_secret).write_key()
+                    == self.address.write_key(),
+            "local mailbox secrets do not match the address"
+        );
+        Ok(())
+    }
+}
+
 #[derive(Deserialize, Serialize)]
 struct SignedMailboxOffer {
     content: MailboxOfferContent,
+    signature: Vec<u8>,
+}
+
+#[derive(Deserialize, Serialize)]
+struct SignedExactMailboxOffer {
+    content: ExactMailboxOfferContent,
     signature: Vec<u8>,
 }
 
@@ -491,6 +826,31 @@ struct SignedMailboxOffer {
 struct MailboxOfferHeader {
     version: u8,
     binding_id: MailboxBindingId,
+}
+
+fn seal_mailbox_offer<T: Serialize>(
+    version: u8,
+    binding_id: MailboxBindingId,
+    signed: &T,
+    peer_certificate: &DeviceCertificate,
+    hpke_info: &[u8],
+) -> Result<EncryptedMailboxOffer> {
+    let plaintext =
+        zeroize::Zeroizing::new(postcard::to_allocvec(signed).context("encode mailbox offer")?);
+    ensure!(
+        plaintext.len() <= MAX_PROVISIONING_BYTES,
+        "mailbox offer is too large"
+    );
+    let header = MailboxOfferHeader {
+        version,
+        binding_id,
+    };
+    let aad = postcard::to_allocvec(&header).context("encode mailbox offer header")?;
+    let sealed = peer_certificate
+        .encryption_public_key()
+        .seal(&plaintext, hpke_info, &aad)
+        .context("seal mailbox offer to peer Device")?;
+    Ok(EncryptedMailboxOffer { header, sealed })
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -521,6 +881,10 @@ impl EncryptedMailboxOffer {
         self.header.binding_id
     }
 
+    pub fn is_exact_volunteer(&self) -> bool {
+        self.header.version == EXACT_VOLUNTEER_VERSION
+    }
+
     pub fn open(
         &self,
         recipient_encryption: &DeviceEncryptionIdentity,
@@ -537,49 +901,83 @@ impl EncryptedMailboxOffer {
             "mailbox recipient encryption identity does not match its Device certificate"
         );
         let aad = postcard::to_allocvec(&self.header).context("encode mailbox offer header")?;
+        let hpke_info = match self.header.version {
+            VERSION => OFFER_HPKE_INFO,
+            EXACT_VOLUNTEER_VERSION => EXACT_OFFER_HPKE_INFO,
+            _ => bail!("unsupported encrypted mailbox offer version"),
+        };
         let plaintext = zeroize::Zeroizing::new(
             recipient_encryption
-                .open(&self.sealed, OFFER_HPKE_INFO, &aad)
+                .open(&self.sealed, hpke_info, &aad)
                 .context("open mailbox offer")?,
         );
         validate_encoded_size(&plaintext, "opened mailbox offer")?;
-        let signed: SignedMailboxOffer =
-            postcard::from_bytes(&plaintext).context("decode opened mailbox offer")?;
-        signed.content.validate()?;
-        ensure!(
-            signed.content.owner_account_id == expected_owner_certificate.account_id()
-                && signed.content.owner_device_id == expected_owner_certificate.device_id()
-                && signed.content.owner_encryption_public_key
-                    == expected_owner_certificate.encryption_public_key(),
-            "mailbox offer owner does not match the expected Device certificate"
-        );
-        ensure!(
-            signed.content.recipient_account_id == recipient_certificate.account_id()
-                && signed.content.recipient_device_id == recipient_certificate.device_id()
-                && signed.content.scope == expected_scope,
-            "mailbox offer recipient or application scope mismatch"
-        );
-        ensure!(
-            signed.content.expires_at_unix_seconds > now_unix_seconds,
-            "mailbox offer has expired"
-        );
-        signed.content.owner_device_id.verify(
-            &signing_bytes(OFFER_SIGNATURE_DOMAIN, &signed.content)?,
-            &signed.signature,
-        )?;
-        let expected_binding_id = offer_binding_id(&signed.content)?;
-        ensure!(
-            expected_binding_id == self.binding_id(),
-            "mailbox offer binding ID mismatch"
-        );
-        Ok(PeerMailboxBinding {
-            content: signed.content,
-        })
+        match self.header.version {
+            VERSION => {
+                let signed: SignedMailboxOffer =
+                    postcard::from_bytes(&plaintext).context("decode opened mailbox offer")?;
+                signed.content.validate()?;
+                validate_opened_offer(
+                    signed.content.owner_account_id,
+                    signed.content.owner_device_id,
+                    signed.content.owner_encryption_public_key,
+                    signed.content.recipient_account_id,
+                    signed.content.recipient_device_id,
+                    signed.content.scope,
+                    signed.content.expires_at_unix_seconds,
+                    recipient_certificate,
+                    expected_owner_certificate,
+                    expected_scope,
+                    now_unix_seconds,
+                )?;
+                signed.content.owner_device_id.verify(
+                    &signing_bytes(OFFER_SIGNATURE_DOMAIN, &signed.content)?,
+                    &signed.signature,
+                )?;
+                ensure!(
+                    offer_binding_id(&signed.content)? == self.binding_id(),
+                    "mailbox offer binding ID mismatch"
+                );
+                Ok(PeerMailboxBinding {
+                    content: PeerMailboxBindingContent::Legacy(signed.content),
+                })
+            }
+            EXACT_VOLUNTEER_VERSION => {
+                let signed: SignedExactMailboxOffer = postcard::from_bytes(&plaintext)
+                    .context("decode opened exact mailbox offer")?;
+                signed.content.validate()?;
+                validate_opened_offer(
+                    signed.content.owner_account_id,
+                    signed.content.owner_device_id,
+                    signed.content.owner_encryption_public_key,
+                    signed.content.recipient_account_id,
+                    signed.content.recipient_device_id,
+                    signed.content.scope,
+                    signed.content.expires_at_unix_seconds,
+                    recipient_certificate,
+                    expected_owner_certificate,
+                    expected_scope,
+                    now_unix_seconds,
+                )?;
+                signed.content.owner_device_id.verify(
+                    &signing_bytes(EXACT_OFFER_SIGNATURE_DOMAIN, &signed.content)?,
+                    &signed.signature,
+                )?;
+                ensure!(
+                    exact_offer_binding_id(&signed.content)? == self.binding_id(),
+                    "mailbox offer binding ID mismatch"
+                );
+                Ok(PeerMailboxBinding {
+                    content: PeerMailboxBindingContent::Exact(signed.content),
+                })
+            }
+            _ => bail!("unsupported encrypted mailbox offer version"),
+        }
     }
 
     fn validate_shape(&self) -> Result<()> {
         ensure!(
-            self.header.version == VERSION
+            matches!(self.header.version, VERSION | EXACT_VOLUNTEER_VERSION)
                 && self.sealed.encapsulated_key.len() == KEY_BYTES
                 && !self.sealed.ciphertext.is_empty(),
             "encrypted mailbox offer is invalid"
@@ -588,57 +986,142 @@ impl EncryptedMailboxOffer {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
+fn validate_opened_offer(
+    owner_account_id: AccountId,
+    owner_device_id: DeviceId,
+    owner_encryption_public_key: EncryptionPublicKey,
+    recipient_account_id: AccountId,
+    recipient_device_id: DeviceId,
+    scope: MailboxScope,
+    expires_at_unix_seconds: u64,
+    recipient_certificate: &DeviceCertificate,
+    expected_owner_certificate: &DeviceCertificate,
+    expected_scope: MailboxScope,
+    now_unix_seconds: u64,
+) -> Result<()> {
+    ensure!(
+        owner_account_id == expected_owner_certificate.account_id()
+            && owner_device_id == expected_owner_certificate.device_id()
+            && owner_encryption_public_key == expected_owner_certificate.encryption_public_key(),
+        "mailbox offer owner does not match the expected Device certificate"
+    );
+    ensure!(
+        recipient_account_id == recipient_certificate.account_id()
+            && recipient_device_id == recipient_certificate.device_id()
+            && scope == expected_scope,
+        "mailbox offer recipient or application scope mismatch"
+    );
+    ensure!(
+        expires_at_unix_seconds > now_unix_seconds,
+        "mailbox offer has expired"
+    );
+    Ok(())
+}
+
+enum PeerMailboxBindingContent {
+    Legacy(MailboxOfferContent),
+    Exact(ExactMailboxOfferContent),
+}
+
+impl PeerMailboxBindingContent {
+    fn binding_id(&self) -> Result<MailboxBindingId> {
+        match self {
+            Self::Legacy(content) => offer_binding_id(content),
+            Self::Exact(content) => exact_offer_binding_id(content),
+        }
+    }
+}
+
 pub struct PeerMailboxBinding {
-    content: MailboxOfferContent,
+    content: PeerMailboxBindingContent,
 }
 
 impl PeerMailboxBinding {
     pub fn binding_id(&self) -> Result<MailboxBindingId> {
-        offer_binding_id(&self.content)
+        self.content.binding_id()
     }
 
     pub fn owner_account_id(&self) -> AccountId {
-        self.content.owner_account_id
+        match &self.content {
+            PeerMailboxBindingContent::Legacy(content) => content.owner_account_id,
+            PeerMailboxBindingContent::Exact(content) => content.owner_account_id,
+        }
     }
 
     pub fn owner_device_id(&self) -> DeviceId {
-        self.content.owner_device_id
+        match &self.content {
+            PeerMailboxBindingContent::Legacy(content) => content.owner_device_id,
+            PeerMailboxBindingContent::Exact(content) => content.owner_device_id,
+        }
     }
 
     pub fn recipient_account_id(&self) -> AccountId {
-        self.content.recipient_account_id
+        match &self.content {
+            PeerMailboxBindingContent::Legacy(content) => content.recipient_account_id,
+            PeerMailboxBindingContent::Exact(content) => content.recipient_account_id,
+        }
     }
 
     pub fn recipient_device_id(&self) -> DeviceId {
-        self.content.recipient_device_id
+        match &self.content {
+            PeerMailboxBindingContent::Legacy(content) => content.recipient_device_id,
+            PeerMailboxBindingContent::Exact(content) => content.recipient_device_id,
+        }
     }
 
     pub fn recipient_encryption_public_key(&self) -> EncryptionPublicKey {
-        self.content.owner_encryption_public_key
+        match &self.content {
+            PeerMailboxBindingContent::Legacy(content) => content.owner_encryption_public_key,
+            PeerMailboxBindingContent::Exact(content) => content.owner_encryption_public_key,
+        }
     }
 
     pub fn scope(&self) -> MailboxScope {
-        self.content.scope
+        match &self.content {
+            PeerMailboxBindingContent::Legacy(content) => content.scope,
+            PeerMailboxBindingContent::Exact(content) => content.scope,
+        }
     }
 
-    pub fn service(&self) -> &MailboxServiceDescriptor {
-        &self.content.service
+    pub fn service(&self) -> Option<&MailboxServiceDescriptor> {
+        match &self.content {
+            PeerMailboxBindingContent::Legacy(content) => Some(&content.service),
+            PeerMailboxBindingContent::Exact(_) => None,
+        }
+    }
+
+    pub fn is_exact_volunteer(&self) -> bool {
+        matches!(self.content, PeerMailboxBindingContent::Exact(_))
     }
 
     pub fn address(&self) -> MailboxAddress {
-        self.content.address
+        match &self.content {
+            PeerMailboxBindingContent::Legacy(content) => content.address,
+            PeerMailboxBindingContent::Exact(content) => content.address,
+        }
     }
 
     pub fn write_capability(&self) -> MailboxWriteCapability {
-        MailboxWriteCapability::from_secret_bytes(self.content.write_secret)
+        let secret = match &self.content {
+            PeerMailboxBindingContent::Legacy(content) => content.write_secret,
+            PeerMailboxBindingContent::Exact(content) => content.write_secret,
+        };
+        MailboxWriteCapability::from_secret_bytes(secret)
     }
 
     pub fn created_at_unix_seconds(&self) -> u64 {
-        self.content.created_at_unix_seconds
+        match &self.content {
+            PeerMailboxBindingContent::Legacy(content) => content.created_at_unix_seconds,
+            PeerMailboxBindingContent::Exact(content) => content.created_at_unix_seconds,
+        }
     }
 
     pub fn expires_at_unix_seconds(&self) -> u64 {
-        self.content.expires_at_unix_seconds
+        match &self.content {
+            PeerMailboxBindingContent::Legacy(content) => content.expires_at_unix_seconds,
+            PeerMailboxBindingContent::Exact(content) => content.expires_at_unix_seconds,
+        }
     }
 }
 
@@ -746,6 +1229,11 @@ enum MailboxCapabilityUpdateAction {
         encrypted_offer: Vec<u8>,
         replica_set: MailboxReplicaSetCommitment,
     },
+    ActivateExactVolunteer {
+        binding_id: MailboxBindingId,
+        encrypted_offer: Vec<u8>,
+        replica_set: MailboxReplicaSetCommitment,
+    },
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -849,6 +1337,48 @@ impl SignedMailboxCapabilityUpdate {
     }
 
     #[allow(clippy::too_many_arguments)]
+    pub fn activate_exact_volunteer(
+        owner_identity: &DeviceIdentity,
+        owner_certificate: &DeviceCertificate,
+        recipient_certificate: &DeviceCertificate,
+        scope: MailboxScope,
+        generation: u64,
+        previous_update_id: Option<MailboxCapabilityUpdateId>,
+        created_at_unix_seconds: u64,
+        offer: &EncryptedMailboxOffer,
+        replica_set: MailboxReplicaSetCommitment,
+    ) -> Result<Self> {
+        owner_certificate.verify()?;
+        recipient_certificate.verify()?;
+        replica_set.validate()?;
+        ensure!(
+            owner_identity.device_id() == owner_certificate.device_id(),
+            "mailbox capability update signer does not match its owner certificate"
+        );
+        ensure!(
+            offer.is_exact_volunteer(),
+            "exact volunteer capability update requires a v2 service-free offer"
+        );
+        let content = MailboxCapabilityUpdateContent {
+            version: EXACT_VOLUNTEER_VERSION,
+            owner_account_id: owner_certificate.account_id(),
+            owner_device_id: owner_certificate.device_id(),
+            recipient_account_id: recipient_certificate.account_id(),
+            recipient_device_id: recipient_certificate.device_id(),
+            scope,
+            generation,
+            previous_update_id,
+            created_at_unix_seconds,
+            action: MailboxCapabilityUpdateAction::ActivateExactVolunteer {
+                binding_id: offer.binding_id(),
+                encrypted_offer: offer.encode()?,
+                replica_set,
+            },
+        };
+        Self::sign(owner_identity, content)
+    }
+
+    #[allow(clippy::too_many_arguments)]
     pub fn revoke(
         owner_identity: &DeviceIdentity,
         owner_certificate: &DeviceCertificate,
@@ -882,12 +1412,47 @@ impl SignedMailboxCapabilityUpdate {
         Self::sign(owner_identity, content)
     }
 
+    /// Appends a revocation using the predecessor's wire generation. Once a
+    /// chain has migrated to v2, this prevents an accidental v1 downgrade.
+    pub fn revoke_successor(
+        owner_identity: &DeviceIdentity,
+        owner_certificate: &DeviceCertificate,
+        recipient_certificate: &DeviceCertificate,
+        scope: MailboxScope,
+        previous: &Self,
+        created_at_unix_seconds: u64,
+    ) -> Result<Self> {
+        previous.verify_signature()?;
+        owner_certificate.verify()?;
+        recipient_certificate.verify()?;
+        ensure!(
+            owner_identity.device_id() == owner_certificate.device_id(),
+            "mailbox capability revocation signer does not match its owner certificate"
+        );
+        let content = MailboxCapabilityUpdateContent {
+            version: previous.content.version,
+            owner_account_id: owner_certificate.account_id(),
+            owner_device_id: owner_certificate.device_id(),
+            recipient_account_id: recipient_certificate.account_id(),
+            recipient_device_id: recipient_certificate.device_id(),
+            scope,
+            generation: previous
+                .generation()
+                .checked_add(1)
+                .context("mailbox capability generation overflows")?,
+            previous_update_id: Some(previous.update_id()?),
+            created_at_unix_seconds,
+            action: MailboxCapabilityUpdateAction::Revoke {
+                binding_id: previous.binding_id(),
+            },
+        };
+        Self::sign(owner_identity, content)
+    }
+
     fn sign(identity: &DeviceIdentity, content: MailboxCapabilityUpdateContent) -> Result<Self> {
+        let signature_domain = capability_update_signature_domain(content.version)?;
         let signature = identity
-            .sign(&signing_bytes(
-                CAPABILITY_UPDATE_SIGNATURE_DOMAIN,
-                &content,
-            )?)
+            .sign(&signing_bytes(signature_domain, &content)?)
             .to_vec();
         let update = Self { content, signature };
         update.verify_signature()?;
@@ -917,8 +1482,10 @@ impl SignedMailboxCapabilityUpdate {
 
     pub fn verify_signature(&self) -> Result<()> {
         ensure!(
-            self.content.version == CAPABILITY_UPDATE_VERSION
-                && self.owner_account_id() != self.recipient_account_id()
+            matches!(
+                self.content.version,
+                CAPABILITY_UPDATE_VERSION | EXACT_VOLUNTEER_VERSION
+            ) && self.owner_account_id() != self.recipient_account_id()
                 && self.owner_device_id() != self.recipient_device_id()
                 && self.generation() != 0
                 && self.created_at_unix_seconds() != 0
@@ -935,27 +1502,59 @@ impl SignedMailboxCapabilityUpdate {
                 binding_id,
                 encrypted_offer,
                 ..
+            }
+            | MailboxCapabilityUpdateAction::ActivateExactVolunteer {
+                binding_id,
+                encrypted_offer,
+                ..
             } => {
                 let offer = EncryptedMailboxOffer::decode(encrypted_offer)?;
                 ensure!(
                     offer.binding_id() == *binding_id,
                     "mailbox capability update offer binding changed"
                 );
-                if let MailboxCapabilityUpdateAction::ActivateWithReplicaSet {
-                    replica_set, ..
-                } = &self.content.action
-                {
-                    replica_set.validate()?;
+                match &self.content.action {
+                    MailboxCapabilityUpdateAction::Activate { .. } => ensure!(
+                        self.content.version == CAPABILITY_UPDATE_VERSION
+                            && !offer.is_exact_volunteer(),
+                        "legacy mailbox activation has an incompatible offer"
+                    ),
+                    MailboxCapabilityUpdateAction::ActivateWithReplicaSet {
+                        replica_set, ..
+                    } => {
+                        ensure!(
+                            self.content.version == CAPABILITY_UPDATE_VERSION
+                                && !offer.is_exact_volunteer(),
+                            "legacy replica-set activation has an incompatible offer"
+                        );
+                        replica_set.validate()?;
+                    }
+                    MailboxCapabilityUpdateAction::ActivateExactVolunteer {
+                        replica_set, ..
+                    } => {
+                        ensure!(
+                            self.content.version == EXACT_VOLUNTEER_VERSION
+                                && offer.is_exact_volunteer(),
+                            "exact volunteer activation has an incompatible offer"
+                        );
+                        replica_set.validate()?;
+                    }
+                    MailboxCapabilityUpdateAction::Revoke { .. } => unreachable!(),
                 }
             }
-            MailboxCapabilityUpdateAction::Revoke { .. } => ensure!(
-                self.generation() > 1,
-                "initial mailbox capability update cannot be a revocation"
-            ),
+            MailboxCapabilityUpdateAction::Revoke { .. } => {
+                ensure!(
+                    self.generation() > 1,
+                    "initial mailbox capability update cannot be a revocation"
+                );
+            }
         }
         self.owner_device_id()
             .verify(
-                &signing_bytes(CAPABILITY_UPDATE_SIGNATURE_DOMAIN, &self.content)?,
+                &signing_bytes(
+                    capability_update_signature_domain(self.content.version)?,
+                    &self.content,
+                )?,
                 &self.signature,
             )
             .context("verify mailbox capability update signature")
@@ -987,6 +1586,11 @@ impl SignedMailboxCapabilityUpdate {
                     "mailbox capability update is not the exact next chain generation"
                 );
                 ensure!(
+                    previous.content.version != EXACT_VOLUNTEER_VERSION
+                        || self.content.version == EXACT_VOLUNTEER_VERSION,
+                    "mailbox capability chain cannot downgrade from v2 to v1"
+                );
+                ensure!(
                     self.created_at_unix_seconds() >= previous.created_at_unix_seconds(),
                     "mailbox capability update creation time regressed"
                 );
@@ -1009,7 +1613,7 @@ impl SignedMailboxCapabilityUpdate {
     pub fn update_id(&self) -> Result<MailboxCapabilityUpdateId> {
         self.verify_signature()?;
         let mut hasher = blake3::Hasher::new();
-        hasher.update(CAPABILITY_UPDATE_ID_DOMAIN);
+        hasher.update(capability_update_id_domain(self.content.version)?);
         hasher.update(&postcard::to_allocvec(&self.content)?);
         hasher.update(&self.signature);
         Ok(MailboxCapabilityUpdateId(*hasher.finalize().as_bytes()))
@@ -1051,6 +1655,7 @@ impl SignedMailboxCapabilityUpdate {
         match self.content.action {
             MailboxCapabilityUpdateAction::Activate { binding_id, .. }
             | MailboxCapabilityUpdateAction::ActivateWithReplicaSet { binding_id, .. }
+            | MailboxCapabilityUpdateAction::ActivateExactVolunteer { binding_id, .. }
             | MailboxCapabilityUpdateAction::Revoke { binding_id } => binding_id,
         }
     }
@@ -1069,6 +1674,9 @@ impl SignedMailboxCapabilityUpdate {
             }
             | MailboxCapabilityUpdateAction::ActivateWithReplicaSet {
                 encrypted_offer, ..
+            }
+            | MailboxCapabilityUpdateAction::ActivateExactVolunteer {
+                encrypted_offer, ..
             } => Ok(Some(EncryptedMailboxOffer::decode(encrypted_offer)?)),
             MailboxCapabilityUpdateAction::Revoke { .. } => Ok(None),
         }
@@ -1076,12 +1684,17 @@ impl SignedMailboxCapabilityUpdate {
 
     pub fn replica_set(&self) -> Option<&MailboxReplicaSetCommitment> {
         match &self.content.action {
-            MailboxCapabilityUpdateAction::ActivateWithReplicaSet { replica_set, .. } => {
+            MailboxCapabilityUpdateAction::ActivateWithReplicaSet { replica_set, .. }
+            | MailboxCapabilityUpdateAction::ActivateExactVolunteer { replica_set, .. } => {
                 Some(replica_set)
             }
             MailboxCapabilityUpdateAction::Activate { .. }
             | MailboxCapabilityUpdateAction::Revoke { .. } => None,
         }
+    }
+
+    pub fn is_exact_volunteer(&self) -> bool {
+        self.content.version == EXACT_VOLUNTEER_VERSION
     }
 
     pub fn replica_set_commitment_id(&self) -> Result<Option<MailboxReplicaSetCommitmentId>> {
@@ -1430,10 +2043,36 @@ fn binding_id(content: &LocalBindingContent) -> Result<MailboxBindingId> {
     Ok(MailboxBindingId(*hasher.finalize().as_bytes()))
 }
 
+fn exact_binding_id(content: &ExactLocalBindingContent) -> Result<MailboxBindingId> {
+    content.validate()?;
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(EXACT_BINDING_ID_DOMAIN);
+    hasher.update(content.owner_account_id.as_bytes());
+    hasher.update(content.owner_device_id.as_bytes());
+    hasher.update(content.peer_account_id.as_bytes());
+    hasher.update(content.peer_device_id.as_bytes());
+    hasher.update(content.scope.as_bytes());
+    hasher.update(content.address.mailbox_id().as_bytes());
+    Ok(MailboxBindingId(*hasher.finalize().as_bytes()))
+}
+
 fn offer_binding_id(content: &MailboxOfferContent) -> Result<MailboxBindingId> {
     content.validate()?;
     let mut hasher = blake3::Hasher::new();
     hasher.update(BINDING_ID_DOMAIN);
+    hasher.update(content.owner_account_id.as_bytes());
+    hasher.update(content.owner_device_id.as_bytes());
+    hasher.update(content.recipient_account_id.as_bytes());
+    hasher.update(content.recipient_device_id.as_bytes());
+    hasher.update(content.scope.as_bytes());
+    hasher.update(content.address.mailbox_id().as_bytes());
+    Ok(MailboxBindingId(*hasher.finalize().as_bytes()))
+}
+
+fn exact_offer_binding_id(content: &ExactMailboxOfferContent) -> Result<MailboxBindingId> {
+    content.validate()?;
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(EXACT_BINDING_ID_DOMAIN);
     hasher.update(content.owner_account_id.as_bytes());
     hasher.update(content.owner_device_id.as_bytes());
     hasher.update(content.recipient_account_id.as_bytes());
@@ -1455,6 +2094,22 @@ fn validate_owner(
         "mailbox owner identity does not match its Device certificate"
     );
     Ok(())
+}
+
+fn capability_update_signature_domain(version: u8) -> Result<&'static [u8]> {
+    match version {
+        CAPABILITY_UPDATE_VERSION => Ok(CAPABILITY_UPDATE_SIGNATURE_DOMAIN),
+        EXACT_VOLUNTEER_VERSION => Ok(EXACT_CAPABILITY_UPDATE_SIGNATURE_DOMAIN),
+        _ => bail!("unsupported mailbox capability update version"),
+    }
+}
+
+fn capability_update_id_domain(version: u8) -> Result<&'static [u8]> {
+    match version {
+        CAPABILITY_UPDATE_VERSION => Ok(CAPABILITY_UPDATE_ID_DOMAIN),
+        EXACT_VOLUNTEER_VERSION => Ok(EXACT_CAPABILITY_UPDATE_ID_DOMAIN),
+        _ => bail!("unsupported mailbox capability update version"),
+    }
 }
 
 fn signing_bytes<T: Serialize>(domain: &[u8], content: &T) -> Result<Vec<u8>> {
@@ -1650,6 +2305,85 @@ mod tests {
         );
         assert!(MailboxReplicaSetCommitment::new(vec![first]).is_err());
         assert!(MailboxReplicaSetCommitment::new(vec![first, first]).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn exact_volunteer_v2_omits_service_and_migrates_without_downgrade() -> Result<()> {
+        let owner = test_device()?;
+        let recipient = test_device()?;
+        let scope = MailboxScope::from_bytes([19_u8; 32]);
+        let legacy = capability_activation(&owner, &recipient, scope, 1, None, 1_000)?;
+
+        let sealed = SealedLocalMailboxBinding::create_exact_volunteer(
+            owner.state.identity(),
+            owner.state.encryption(),
+            &owner.certificate,
+            &recipient.certificate,
+            scope,
+            2_000,
+        )?;
+        let local = SealedLocalMailboxBinding::decode(&sealed.encode()?)?.open(
+            owner.state.identity(),
+            owner.state.encryption(),
+            &owner.certificate,
+        )?;
+        assert!(local.is_exact_volunteer());
+        assert!(local.service().is_none());
+        let offer = local.offer_for(
+            owner.state.identity(),
+            &owner.certificate,
+            &recipient.certificate,
+            3_000,
+        )?;
+        assert!(offer.is_exact_volunteer());
+        let first = MailboxStoreIdentity::from_secret_bytes([41_u8; 32]).store_key();
+        let second = MailboxStoreIdentity::from_secret_bytes([42_u8; 32]).store_key();
+        let exact = SignedMailboxCapabilityUpdate::activate_exact_volunteer(
+            owner.state.identity(),
+            &owner.certificate,
+            &recipient.certificate,
+            scope,
+            2,
+            Some(legacy.update_id()?),
+            2_000,
+            &offer,
+            MailboxReplicaSetCommitment::new(vec![first, second])?,
+        )?;
+        exact.verify_chain_link(Some(&legacy))?;
+        assert!(exact.is_exact_volunteer());
+
+        let peer = EncryptedMailboxOffer::decode(&offer.encode()?)?.open(
+            recipient.state.encryption(),
+            &recipient.certificate,
+            &owner.certificate,
+            scope,
+            2_500,
+        )?;
+        assert!(peer.is_exact_volunteer());
+        assert!(peer.service().is_none());
+        assert_eq!(peer.binding_id()?, local.binding_id()?);
+
+        let revoke = SignedMailboxCapabilityUpdate::revoke_successor(
+            owner.state.identity(),
+            &owner.certificate,
+            &recipient.certificate,
+            scope,
+            &exact,
+            2_100,
+        )?;
+        revoke.verify_chain_link(Some(&exact))?;
+        assert!(revoke.is_exact_volunteer());
+
+        let legacy_downgrade = capability_activation(
+            &owner,
+            &recipient,
+            scope,
+            3,
+            Some(exact.update_id()?),
+            3_000,
+        )?;
+        assert!(legacy_downgrade.verify_chain_link(Some(&exact)).is_err());
         Ok(())
     }
 
