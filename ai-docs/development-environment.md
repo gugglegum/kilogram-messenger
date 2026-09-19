@@ -2211,3 +2211,14 @@ retirement остальных compatibility shadows ещё не реализов
   `02-bob-providers-before-activation.log`, который причинно предшествует
   capability activation. Progress печатается каждые 15 секунд, timeout — 30
   минут. Static kit gate и evidence verifier self-test проходят.
+- Следующий Bob-only retry обнаружил отдельный продуктовый дефект после
+  возможного принудительного завершения runtime: read-only mailbox-client Redb
+  open возвращал typed `DatabaseError::RepairAborted`, поэтому runtime не
+  доходил до inbound polling, хотя sender уже имел durable exact `2/2`
+  replication receipts. Runtime теперь выполняет ровно один writable recovery
+  под state lock и `VaultDualWriteGuard`, повторяет read-only inspection и
+  оставляет все остальные DB ошибки fail closed.
+- Проверки автоматического восстановления: targeted unit test, полный
+  `kilogram-cli` regression 75/75, `cargo fmt --check`, Clippy `-D warnings`,
+  static M0.9.69 kit gate и `git diff --check` проходят. Сборка и тесты — только
+  debug/dev с `CARGO_BUILD_JOBS=2`; release/ZIP/network launch отсутствуют.

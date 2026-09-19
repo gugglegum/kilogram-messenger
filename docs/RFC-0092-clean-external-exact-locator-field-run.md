@@ -65,6 +65,17 @@ and test evidence. Live Redb databases and private state stay under
 Provider files are consumed only after one publication manifest, two hashes and
 two expiry values form a consistent local snapshot.
 
+Consumers derive the committed provider keys from the closed Bob
+pre-activation import evidence. They never wait for provider runtime logs:
+those logs remain open and change while the providers serve mailbox traffic,
+so a file synchronizer is allowed to defer them until provider shutdown.
+
+An interrupted runtime may leave Redb requiring its normal writable recovery.
+If read-only mailbox-ledger inspection reports Redb `RepairAborted`, the runtime
+performs exactly one writable recovery under the runtime state lock and the
+vault dual-write guard, then retries read-only inspection. Other inspection
+errors remain fail closed.
+
 The replica set remains inside the Device-signed capability exchanged by the
 two contacts. Providers receive only requests for their own store. No global
 directory, central mailbox service, additional executable or listener is

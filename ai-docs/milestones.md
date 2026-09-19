@@ -3793,6 +3793,12 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
 - HTTPS остаётся loopback compatibility copy и не используется Bob после
   sender-offline boundary. Удалять compatibility path до успешного внешнего run
   и решения legacy upgrade policy нельзя;
+- exact store keys для sender/recipient берутся из закрытого Bob
+  pre-activation import evidence, а не из открытых live provider logs, которые
+  Yandex Disk вправе не синхронизировать до остановки providers;
+- после аварийного завершения runtime специальный Redb `RepairAborted` при
+  read-only mailbox-ledger inspection запускает ровно один mirrored writable
+  repair под state lock; остальные ошибки по-прежнему fail closed;
 - contract зафиксирован в
   [`../docs/RFC-0092-clean-external-exact-locator-field-run.md`](../docs/RFC-0092-clean-external-exact-locator-field-run.md),
   gates — `scripts/verify-kilogram-m0969-exact-locator-kit-boundary.ps1` и

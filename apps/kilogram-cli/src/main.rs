@@ -19124,7 +19124,36 @@ async fn attempt_pending_runtime_mailbox_upload(
     let now = unix_time_now()?;
     let ledger_config =
         MailboxClientLedgerConfig::new(state_directory.join(MAILBOX_CLIENT_LEDGER_DIRECTORY));
-    let mut inspection = MailboxClientLedger::inspect_read_only(ledger_config, now)?;
+    let mut inspection = match MailboxClientLedger::inspect_read_only(ledger_config, now) {
+        Ok(inspection) => inspection,
+        Err(error) if redb_repair_required(&error) => {
+            let state_lock = acquire_runtime_state_lock(state_directory)
+                .await?
+                .context("runtime state lock remained busy while repairing mailbox ledger")?;
+            let vault_guard = VaultDualWriteGuard::prepare(state_directory)?;
+            let repair_result = (|| {
+                let ledger = runtime_mailbox_ledger(state_directory)?;
+                let _ = ledger.counts()?;
+                Ok::<_, anyhow::Error>(())
+            })();
+            let mirror_result = match vault_guard {
+                Some(guard) => guard.finish(),
+                None => Ok(()),
+            };
+            drop(state_lock);
+            combine_operation_and_mirror(repair_result, mirror_result)
+                .context("repair mailbox ledger after interrupted runtime")?;
+            println!("runtime_mailbox_ledger_repair_status=repaired-after-interrupted-runtime");
+            MailboxClientLedger::inspect_read_only(
+                MailboxClientLedgerConfig::new(
+                    state_directory.join(MAILBOX_CLIENT_LEDGER_DIRECTORY),
+                ),
+                now,
+            )
+            .context("inspect repaired mailbox client ledger read-only")?
+        }
+        Err(error) => return Err(error),
+    };
     if inspection.cleanup_required {
         let state_lock = acquire_runtime_state_lock(state_directory)
             .await?
@@ -19271,6 +19300,13 @@ async fn attempt_pending_runtime_mailbox_upload(
     drop(state_lock);
     upload_runtime_mailbox_request(endpoint, state_directory, resolution?).await?;
     Ok(true)
+}
+
+fn redb_repair_required(error: &anyhow::Error) -> bool {
+    matches!(
+        error.downcast_ref::<redb::DatabaseError>(),
+        Some(redb::DatabaseError::RepairAborted)
+    )
 }
 
 async fn attempt_runtime_mailbox_fallback(
@@ -27327,6 +27363,14 @@ mod tests {
     use tokio::sync::oneshot;
 
     const UNSUPPORTED_TEST_ALPN: &[u8] = b"kilogram/test/unsupported/1";
+
+    #[test]
+    fn interrupted_redb_open_is_recognized_as_repairable() {
+        let error = anyhow::Error::new(redb::DatabaseError::RepairAborted)
+            .context("open mailbox client ledger read-only");
+        assert!(redb_repair_required(&error));
+        assert!(!redb_repair_required(&anyhow::anyhow!("permission denied")));
+    }
 
     #[cfg(debug_assertions)]
     #[test]
