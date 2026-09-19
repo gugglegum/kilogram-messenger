@@ -4122,6 +4122,13 @@ privacy в этот этап не входят.
 contract. Реальный service-free v2 lifecycle считается внешне подтверждённым
 только после fresh two-network запуска этого комплекта.
 
+Из clean revision `c39f5ce9ec6effd49cf355036119e28d830c9d28`
+собран `.tmp\m0976-service-free-v2-c39f5ce9ec6e`. Проверено: 11/11 manifest
+artifacts, 9 PowerShell файлов без parse errors, 13 файлов/57,863,721 bytes,
+ZIP=0, `kilogram-ticket-store.exe`=0, compatibility endpoint в BUILD-INFO
+отсутствует. Bundled verifier self-test отвергает central tuple и legacy
+suppressed-copy marker. Комплект пока не копировался наружу и не запускал сеть.
+
 ### Следующий этап
 
 1. Выполнить fresh M0.9.76 two-network run без VPN/Wi-Fi ambiguity и принять

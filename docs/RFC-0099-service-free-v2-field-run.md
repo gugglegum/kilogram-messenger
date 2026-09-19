@@ -1,6 +1,6 @@
 # RFC-0099: Service-free v2 volunteer mailbox field run (M0.9.76)
 
-Status: implemented locally; fresh two-network field execution pending.
+Status: implemented and packaged locally; fresh two-network field execution pending.
 
 ## 1. Goal
 
@@ -82,3 +82,15 @@ The generator:
 
 Generating a kit is not field completion. The milestone becomes externally
 verified only after a fresh two-network run passes the final evidence verifier.
+
+## 6. Prepared clean kit
+
+The clean source revision `c39f5ce9ec6effd49cf355036119e28d830c9d28`
+produced `.tmp\m0976-service-free-v2-c39f5ce9ec6e`. Independent local checks
+verified all 11 manifest artifacts, all nine shipped PowerShell files and the
+bundled negative verifier self-test. The 13-file kit is 57,863,721 bytes and
+contains neither a ZIP archive nor `kilogram-ticket-store.exe`.
+
+This local path is intentionally not a release artifact or external evidence.
+Copying it to the synchronized two-host test directory and starting network
+processes remain explicit later actions.

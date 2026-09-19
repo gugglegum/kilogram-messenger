@@ -2492,3 +2492,10 @@ retirement остальных compatibility shadows ещё не реализов
   `--jobs 2`; release/ZIP и сетевые процессы не запускались.
 - Fresh debug kit должен генерироваться только из clean committed revision;
   внешний two-network lifecycle пока не выполнялся.
+- После обновления устаревшего provider-selection static gate с IPC v25 на
+  фактический v26 clean revision `c39f5ce9ec6effd49cf355036119e28d830c9d28`
+  успешно создал `.tmp\m0976-service-free-v2-c39f5ce9ec6e`.
+- Generated kit verification: 11/11 SHA-256+length manifest artifacts, 9/9
+  PowerShell parse, bundled negative evidence self-test green, 13 files,
+  57,863,721 bytes, ZIP=0, ticket-store EXE=0, compatibility endpoint property
+  absent, profile=debug, Cargo jobs=2, generator network execution=false.
