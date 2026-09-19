@@ -211,34 +211,33 @@ contract are specified in
 The pinned Rust-toolchain LLD contract for independent Windows reproduction is
 specified in
 [`docs/RFC-0100-toolchain-bundled-lld-independent-reproduction.md`](docs/RFC-0100-toolchain-bundled-lld-independent-reproduction.md).
+Exact native input capture and the hash-locked installed MSVC/Windows SDK
+continuation are specified in
+[`docs/RFC-0101-exact-native-link-input-provenance.md`](docs/RFC-0101-exact-native-link-input-provenance.md)
+and
+[`docs/RFC-0102-hash-locked-windows-native-toolchain.md`](docs/RFC-0102-hash-locked-windows-native-toolchain.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.77 toolchain-bundled LLD reproduction — local gate verified
+## Current milestone: M0.9.79 hash-locked Windows native toolchain — local gate implemented
 
-The local two-clean-root builder and manual GitHub-hosted builder now resolve
-`rust-lld.exe` from the pinned Rust toolchain, pass it explicitly as
-`lld-link`, and record its exact SHA-256 and length in format-v3 evidence. The
-production verifier requires identical linker bytes before accepting artifact
-equality or signed provenance; its self-test rejects both a substituted linker
-and a modified executable. The isolated offline target also enables BLAKE3's
-supported `pure` feature so a mutable MSVC compiler cannot contribute linked
-C/assembly objects. A bounded PE post-link pass zeroes only the COFF/debug
-timestamps and CodeView GUID that LLD derives from host-local PDB inputs; it
-parses and bounds every touched field, records its exact v1 policy and leaves
-all code, section layout, imports and addresses subject to byte equality.
+The independent Windows boundary now controls all native linker inputs, not
+only Rust and LLD. `WINDOWS-NATIVE-LINK-INPUTS.lock` identifies the exact ten
+MSVC 14.44.35207 and Windows SDK 10.0.19041.0 libraries by SHA-256, byte length
+and path-independent name. Both builders verify their installed files, pass
+their directories explicitly to the final Rust binary, capture what LLD really
+used and require the observed manifest to equal the lock. The Microsoft files
+are not vendored or packaged.
 
-A real debug `kilogram-offline.exe` linked and ran with this contract and has a
-PE linker field of 14.00. A retained divergent release pair differed in only
-20 LLD/PDB metadata bytes and becomes byte-identical under the bounded policy.
-No ZIP or network process was created. The clean format-v3 pair for commit
-`788a3c4ff0152c78a43e8875315a93eba51925a8` is byte-identical at SHA-256
-`25b24880f3f7f8ee34da48b4239b0dd730f5799e22275ef508640747cb9b6540`
-(2,433,536 bytes). A fresh manual GitHub dispatch is still required before
-independent cross-host equality and attestation can be claimed. Details are in
-[`docs/RFC-0100-toolchain-bundled-lld-independent-reproduction.md`](docs/RFC-0100-toolchain-bundled-lld-independent-reproduction.md).
+This follows GitHub run `35471719378`, which proved that the previous remaining
+1,024-byte divergence came from local MSVC 14.44/SDK 28000 versus hosted MSVC
+14.51/SDK 26100. The workflow failed closed and created no attestation. Format
+v5 now binds the repository lock and observed manifest; a fresh exact-commit
+local pair and GitHub dispatch are still required before cross-host equality
+can be claimed. Details are in
+[`docs/RFC-0102-hash-locked-windows-native-toolchain.md`](docs/RFC-0102-hash-locked-windows-native-toolchain.md).
 
 ## Previous milestone: M0.9.76 service-free v2 field lifecycle — verified
 

@@ -4244,13 +4244,54 @@ metadata-only divergence и расширять normalization нельзя.
 - контракт зафиксирован в
   [`../docs/RFC-0101-exact-native-link-input-provenance.md`](../docs/RFC-0101-exact-native-link-input-provenance.md).
 
+External result:
+
+- manual GitHub run `35471719378` для exact revision
+  `c92d25fce192be1ed5094098581ccb082ffa7a53` корректно fail closed;
+- local manifest: MSVC `14.44.35207` + Windows SDK `10.0.28000.0`, SHA-256
+  `182c33c504ac2bce811459acd1a9f3fcd35fcb414be1b710b32651c9c794d61c`;
+- GitHub `windows-2025` manifest: MSVC `14.51.36231` + Windows SDK
+  `10.0.26100.0`, SHA-256
+  `08807e748ddb05aee3278621b17b9024f5278b2de754b2a0868ab86c54f97fbf`;
+- GitHub EXE остался 2,434,560 bytes/
+  `3dd8e4b78e4326663393c126a3a1533dc1fdd7f9a5dcf45751e80034b96253ff`;
+  attestation не создана, bounded evidence скачано локально в ignored `.tmp`.
+
+### M0.9.79 — hash-locked Windows native toolchain: implemented locally
+
+Реализовано:
+
+- repository `WINDOWS-NATIVE-LINK-INPUTS.lock` закрепляет SHA-256, размер и
+  logical path exact ten-library set: MSVC `14.44.35207` и Windows SDK
+  `10.0.19041.0`;
+- helper находит любую Visual Studio edition с exact toolset, проверяет каждый
+  installed file byte-for-byte и не допускает newest-version fallback;
+- final binary получает ordered explicit `-L native` для MSVC/UCRT/UM; отдельный
+  probe доказал, что `LIB` недостаточен, а explicit paths действительно
+  переключают LLD с SDK 28000 на SDK 19041;
+- observed transient LLD manifest обязан line-for-line совпасть с repository
+  lock; canonical lock/observed SHA-256
+  `e478c6daf61551607f8502c7ef97537403f4da24ddbab0b7a6a8fcb94d835027`;
+- Microsoft libraries не vendored и не входят в artifacts/packages; retained
+  evidence содержит только их hashes/lengths/logical identities;
+- records подняты до format v5 с `native_toolchain`; package, local verifier,
+  external verifier, GitHub evidence и attestation subjects включают lock;
+- workflow закреплён на `windows-2022`, но его mutable label не является trust
+  boundary: exact file hashes и post-link manifest остаются обязательными;
+- PowerShell parse, static independent-builder boundary и network-free verifier
+  self-test прошли; self-test отдельно отвергает mismatched toolchain lock;
+- dirty development two-clean-root pair прошёл: оба EXE 2,433,536 bytes,
+  SHA-256 `3e5419e14fadeca66068ffdccda7a4cde7584cae03e0430b745e2c3ca700e878`,
+  observed manifest равен lock, temporary roots/TAR удалены;
+- контракт зафиксирован в
+  [`../docs/RFC-0102-hash-locked-windows-native-toolchain.md`](../docs/RFC-0102-hash-locked-windows-native-toolchain.md).
+
 ### Следующий этап
 
-1. После clean format-v4 local pair push exact M0.9.78 revision и вручную
-   повторить GitHub independent build. Сравнить два exact native manifests;
-   при различии pin/bundle необходимый Windows SDK/UCRT/MSVC input set, при
-   совпадении исследовать response arguments/Rust archives без ослабления
-   byte-equality.
+1. Создать clean format-v5 local pair exact M0.9.79 revision, push и вручную
+   повторить GitHub independent build. Exact installed set должен либо дать
+   byte-identical EXE/attestation, либо fail closed до build при отсутствии
+   pinned files; newest-version fallback запрещён.
 2. Спроектировать Sybil-resistant provider diversity и проверить replicas на
    физически/операторски независимых volunteer hosts.
 3. Optional autostart/background mode оставить отдельной явной настройкой, не

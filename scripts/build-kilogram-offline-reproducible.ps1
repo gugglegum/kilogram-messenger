@@ -15,9 +15,13 @@ $cargoJobsResolved = Set-KilogramCargoResourcePolicy -RequestedJobs $CargoJobs
 
 $workspace = [System.IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $linkerIdentity = $null
+$nativeToolchainIdentity = $null
+$nativeToolchainLockPath = Join-Path $workspace 'WINDOWS-NATIVE-LINK-INPUTS.lock'
 Push-Location $workspace
 try {
     $linkerIdentity = Get-KilogramBundledLldIdentity
+    $nativeToolchainIdentity = Get-KilogramPinnedNativeToolchainIdentity `
+        -LockPath $nativeToolchainLockPath
 }
 finally {
     Pop-Location
@@ -109,7 +113,24 @@ function Invoke-CleanBuild(
             ) -join $unitSeparator
             Push-Location $SourceRoot
             try {
-                & cargo rustc --jobs $cargoJobsResolved --frozen --release --target x86_64-pc-windows-msvc --package kilogram-offline --bin kilogram-offline -- -C "link-arg=/reproduce:$linkReproArgument"
+                $cargoArguments = @(
+                    'rustc',
+                    '--jobs',
+                    [string]$cargoJobsResolved,
+                    '--frozen',
+                    '--release',
+                    '--target',
+                    'x86_64-pc-windows-msvc',
+                    '--package',
+                    'kilogram-offline',
+                    '--bin',
+                    'kilogram-offline',
+                    '--'
+                ) + @($nativeToolchainIdentity.rustc_arguments) + @(
+                    '-C',
+                    "link-arg=/reproduce:$linkReproArgument"
+                )
+                & cargo @cargoArguments
                 if ($LASTEXITCODE -ne 0) {
                     throw "offline build failed in $SourceRoot"
                 }
@@ -132,6 +153,9 @@ function Invoke-CleanBuild(
         $nativeLinkInputs = Write-KilogramNativeLinkInputManifest `
             -ArchivePath $linkRepro `
             -ManifestPath $nativeManifest
+        $nativeLinkInputs = Assert-KilogramNativeLinkInputManifestMatchesLock `
+            -ManifestPath $nativeManifest `
+            -LockPath (Join-Path $SourceRoot $nativeToolchainIdentity.lock_file)
         $artifact = Join-Path $output $ArtifactName
         Copy-Item -LiteralPath $built -Destination $artifact
         Normalize-KilogramPeReproducibilityMetadata -Path $artifact
@@ -208,6 +232,9 @@ try {
 
     Copy-Item -LiteralPath (Join-Path $sourceA 'Cargo.lock') -Destination (Join-Path $output 'Cargo.lock')
     Copy-Item -LiteralPath (Join-Path $sourceA 'rust-toolchain.toml') -Destination (Join-Path $output 'rust-toolchain.toml')
+    Copy-Item `
+        -LiteralPath (Join-Path $sourceA $nativeToolchainIdentity.lock_file) `
+        -Destination (Join-Path $output $nativeToolchainIdentity.lock_file)
 
     $buildA = Invoke-CleanBuild `
         $sourceA `
@@ -261,7 +288,7 @@ try {
         Pop-Location
     }
     $record = [ordered]@{
-        format_version = 4
+        format_version = 5
         status = if ($equal) { 'reproducible' } else { 'divergent' }
         builder_scope = 'same-host-separate-clean-roots'
         build_root_count = 2
@@ -289,6 +316,17 @@ try {
             bytes = $linkerIdentity.bytes
             reproducibility_flag = $linkerIdentity.reproducibility_flag
         }
+        native_toolchain = [ordered]@{
+            mode = $nativeToolchainIdentity.mode
+            selection = $nativeToolchainIdentity.selection
+            lock_file = $nativeToolchainIdentity.lock_file
+            lock_sha256 = $nativeToolchainIdentity.lock_sha256
+            count = $nativeToolchainIdentity.count
+            msvc_version = $nativeToolchainIdentity.msvc_version
+            windows_sdk_version = $nativeToolchainIdentity.windows_sdk_version
+            architecture = $nativeToolchainIdentity.architecture
+            libraries_bundled = $nativeToolchainIdentity.libraries_bundled
+        }
         native_link_inputs = [ordered]@{
             capture_mode = 'lld-link-reproduce-archive'
             manifest_format = 'sha256-bytes-logical-path-v1'
@@ -302,7 +340,7 @@ try {
         build_a = $buildARecord
         build_b = $buildBRecord
     }
-    $json = $record | ConvertTo-Json -Depth 5
+    $json = $record | ConvertTo-Json -Depth 6
     Write-Utf8Lines (Join-Path $output 'REPRODUCIBILITY.json') @($json)
 
     $checksumFiles = @(
@@ -311,6 +349,7 @@ try {
         'SOURCE-MANIFEST.sha256',
         'Cargo.lock',
         'rust-toolchain.toml',
+        'WINDOWS-NATIVE-LINK-INPUTS.lock',
         'NATIVE-LINK-INPUTS.sha256',
         'REPRODUCIBILITY.json'
     )

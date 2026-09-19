@@ -2589,3 +2589,42 @@ retirement остальных compatibility shadows ещё не реализов
   `25b24880f3f7f8ee34da48b4239b0dd730f5799e22275ef508640747cb9b6540`,
   2,433,536 bytes, а оба native manifests — exact SHA-256 выше/count=10.
   `source-a/b`, `target-a/b` и оба TAR удалены; retained TAR count=0.
+
+## M0.9.79 verification snapshot (2026-09-20)
+
+- Commit `c92d25fce192be1ed5094098581ccb082ffa7a53` push-нут в `origin/master`;
+  manual workflow run `35471719378` завершился ожидаемым fail-closed после
+  успешной independent compile и сохранил bounded evidence artifact.
+- External record: `windows-2025`/`win25-vs2026`, MSVC `14.51.36231`, Windows
+  SDK `10.0.26100.0`, native manifest SHA-256
+  `08807e748ddb05aee3278621b17b9024f5278b2de754b2a0868ab86c54f97fbf`;
+  EXE SHA-256
+  `3dd8e4b78e4326663393c126a3a1533dc1fdd7f9a5dcf45751e80034b96253ff`,
+  2,434,560 bytes.
+- Local exact M0.9.78 record использовал MSVC `14.44.35207`, SDK
+  `10.0.28000.0`, native manifest SHA-256
+  `182c33c504ac2bce811459acd1a9f3fcd35fcb414be1b710b32651c9c794d61c`;
+  одинаковым между manifests был только exact `ucrt.lib` payload.
+- Для M0.9.79 выбран installed/non-vendored set MSVC `14.44.35207` + Windows
+  SDK `10.0.19041.0`. `WINDOWS-NATIVE-LINK-INPUTS.lock` содержит exact ten
+  hashes/lengths, canonical identity
+  `e478c6daf61551607f8502c7ef97537403f4da24ddbab0b7a6a8fcb94d835027`.
+- Probe с одним `LIB` всё ещё выбрал SDK 28000. Probe с explicit final
+  `rustc -L native=<MSVC> -L native=<UCRT> -L native=<UM>` выбрал exact SDK
+  19041 manifest; обе проверки использовали BelowNormal/jobs=2, каждая заняла
+  около двух секунд благодаря существующему cache, transient TAR удалён.
+- Format-v5 local/external records связывают repository lock и observed
+  manifest. Static boundary, parse шести PowerShell scripts и independent
+  verifier self-test прошли; negative cases включают mismatched lock, tampered
+  lock file, mismatched observed inputs, malformed manifest, mismatched LLD и
+  PE tamper.
+- Dirty development two-clean-root record `.tmp/repro/m0979-dev-v5` verified:
+  оба normalized EXE byte-identical, 2,433,536 bytes, SHA-256
+  `3e5419e14fadeca66068ffdccda7a4cde7584cae03e0430b745e2c3ca700e878`;
+  observed manifest exact lock SHA-256
+  `e478c6daf61551607f8502c7ef97537403f4da24ddbab0b7a6a8fcb94d835027`,
+  count=10. Source/target roots и reproduction TAR удалены.
+- Workflow переведён на `windows-2022`, но exact hashes остаются обязательными;
+  официальный current runner-image inventory перечисляет SDK 10.0.19041.0 и
+  VC x86/x64 tools, но не доказывает exact file payloads. Наличие pinned set и
+  cross-host byte equality ещё требуют fresh committed external run.

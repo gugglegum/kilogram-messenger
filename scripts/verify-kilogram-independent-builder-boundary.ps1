@@ -10,7 +10,8 @@ $verifierPath = Join-Path $PSScriptRoot 'verify-kilogram-independent-builder.ps1
 $localBuilderPath = Join-Path $PSScriptRoot 'build-kilogram-offline-reproducible.ps1'
 $linkerHelperPath = Join-Path $PSScriptRoot 'kilogram-reproducible-linker.ps1'
 $offlineBoundaryPath = Join-Path $PSScriptRoot 'verify-kilogram-offline-boundary.ps1'
-foreach ($path in @($workflowPath, $verifierPath, $localBuilderPath, $linkerHelperPath, $offlineBoundaryPath)) {
+$nativeLockPath = Join-Path $workspace 'WINDOWS-NATIVE-LINK-INPUTS.lock'
+foreach ($path in @($workflowPath, $verifierPath, $localBuilderPath, $linkerHelperPath, $offlineBoundaryPath, $nativeLockPath)) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
         throw "Independent-builder boundary file is missing: $path"
     }
@@ -21,12 +22,18 @@ $verifier = Get-Content -LiteralPath $verifierPath -Raw
 $localBuilder = Get-Content -LiteralPath $localBuilderPath -Raw
 $linkerHelper = Get-Content -LiteralPath $linkerHelperPath -Raw
 $offlineBoundary = Get-Content -LiteralPath $offlineBoundaryPath -Raw
+$nativeLock = @(Get-Content -LiteralPath $nativeLockPath)
+if ($nativeLock.Count -ne 10 -or
+    @($nativeLock | Where-Object { $_ -cmatch 'msvc/14\.44\.35207/' }).Count -ne 2 -or
+    @($nativeLock | Where-Object { $_ -cmatch 'windows-sdk/10\.0\.19041\.0/' }).Count -ne 8) {
+    throw 'Pinned native link-input lock does not retain the exact M0.9.79 version boundary.'
+}
 
 foreach ($required in @(
     'workflow_dispatch:',
     'source_revision:',
     'expected_local_sha256:',
-    'runs-on: windows-2025',
+    'runs-on: windows-2022',
     'contents: read',
     'id-token: write',
     'attestations: write',
@@ -35,15 +42,19 @@ foreach ($required in @(
     'cargo fetch --locked --target x86_64-pc-windows-msvc',
     'verify-kilogram-offline-boundary.ps1',
     "blake3_codegen = 'pure-rust-intrinsics'",
-    'cargo rustc --jobs 2 --frozen --release --target x86_64-pc-windows-msvc --package kilogram-offline --bin kilogram-offline',
+    "'rustc', '--jobs', '2', '--frozen', '--release'",
+    '@($nativeToolchain.rustc_arguments)',
     'kilogram-reproducible-linker.ps1',
     'Get-KilogramBundledLldIdentity',
     'New-KilogramReproducibleRustFlags',
+    'Get-KilogramPinnedNativeToolchainIdentity',
+    'Assert-KilogramNativeLinkInputManifestMatchesLock',
     'Normalize-KilogramPeReproducibilityMetadata -Path $artifact',
-    'format_version = 4',
+    'format_version = 5',
     'Write-KilogramNativeLinkInputManifest',
     "manifest_format = 'sha256-bytes-logical-path-v1'",
     'NATIVE-LINK-INPUTS.sha256',
+    'WINDOWS-NATIVE-LINK-INPUTS.lock',
     'Remove-Item -LiteralPath $linkRepro -Force',
     "pe_metadata_normalization = 'coff-and-debug-timestamps-plus-codeview-guid-zeroed-v1'",
     'sha256 = $linker.sha256',
@@ -67,6 +78,8 @@ foreach ($forbidden in @(
     'Compress-Archive',
     'package-kilogram-offline.ps1',
     'runs-on: self-hosted',
+    'runs-on: windows-2025',
+    'runs-on: windows-latest',
     'persist-credentials: true',
     'linker-features=+lld',
     'independent-builder/link-repro.tar'
@@ -82,18 +95,21 @@ foreach ($actionUse in [regex]::Matches($workflow, '(?m)^\s*uses:\s+([^\s#]+)'))
 }
 
 foreach ($required in @(
-    'format_version -ne 4',
+    'format_version -ne 5',
     "builder_scope -ne 'github-hosted-windows-independent'",
     "linker.mode -ne 'rust-toolchain-bundled-lld'",
     "pe_metadata_normalization -ne 'coff-and-debug-timestamps-plus-codeview-guid-zeroed-v1'",
     "blake3_codegen -ne 'pure-rust-intrinsics'",
     'builderRecord.linker.sha256 -cne [string]$localRecord.linker.sha256',
     'Independent builder did not consume the exact locally recorded native link inputs.',
+    'Independent builder did not use the exact locally recorded native toolchain lock.',
     'non_normalized_pe=rejected',
     'checksum_bearing_pe=rejected',
     'authenticode_bearing_pe=rejected',
     'mismatched_linker=rejected',
     'mismatched_native_link_inputs=rejected',
+    'tampered_native_toolchain_lock=rejected',
+    'mismatched_native_toolchain_lock=rejected',
     'malformed_native_link_manifest=rejected',
     "workflow.event -ne 'workflow_dispatch'",
     "workflow.name -ne 'Independent offline reproduction'",
@@ -118,13 +134,16 @@ foreach ($required in @(
     'kilogram-reproducible-linker.ps1',
     'Get-KilogramBundledLldIdentity',
     'New-KilogramReproducibleRustFlags',
+    'Get-KilogramPinnedNativeToolchainIdentity',
+    'Assert-KilogramNativeLinkInputManifestMatchesLock',
     'Write-KilogramNativeLinkInputManifest',
-    'cargo rustc --jobs $cargoJobsResolved --frozen --release --target x86_64-pc-windows-msvc --package kilogram-offline --bin kilogram-offline',
+    '@($nativeToolchainIdentity.rustc_arguments)',
     'Normalize-KilogramPeReproducibilityMetadata -Path $artifact',
     'verify-kilogram-offline-boundary.ps1',
-    'format_version = 4',
+    'format_version = 5',
     "manifest_format = 'sha256-bytes-logical-path-v1'",
     'NATIVE-LINK-INPUTS.sha256',
+    'WINDOWS-NATIVE-LINK-INPUTS.lock',
     "pe_metadata_normalization = 'coff-and-debug-timestamps-plus-codeview-guid-zeroed-v1'",
     "blake3_codegen = 'pure-rust-intrinsics'",
     'sha256 = $linkerIdentity.sha256',
@@ -148,6 +167,10 @@ foreach ($required in @(
     'function Assert-KilogramPeReproducibilityMetadataNormalized',
     'function Write-KilogramNativeLinkInputManifest',
     'function Assert-KilogramNativeLinkInputManifest',
+    'function Get-KilogramPinnedNativeToolchainIdentity',
+    'function Assert-KilogramNativeLinkInputManifestMatchesLock',
+    "mode = 'repository-hash-locked-installed-libraries'",
+    "selection = 'explicit-final-rustc-native-search-paths'",
     'LLD consumed an unclassified native library',
     'Refusing to normalize a PE image with a non-zero checksum',
     'Refusing to normalize an Authenticode-bearing PE image',

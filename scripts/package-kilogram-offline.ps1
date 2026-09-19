@@ -114,23 +114,26 @@ try {
         $recordDestination = Join-Path $output 'REPRODUCIBILITY.json'
         $manifestDestination = Join-Path $output 'SOURCE-MANIFEST.sha256'
         $nativeLinkManifestDestination = Join-Path $output 'NATIVE-LINK-INPUTS.sha256'
+        $nativeToolchainLockDestination = Join-Path $output 'WINDOWS-NATIVE-LINK-INPUTS.lock'
         $lockDestination = Join-Path $output 'Cargo.lock'
         $toolchainDestination = Join-Path $output 'rust-toolchain.toml'
         Copy-Item -LiteralPath (Join-Path $recordDirectory 'REPRODUCIBILITY.json') -Destination $recordDestination
         Copy-Item -LiteralPath (Join-Path $recordDirectory 'SOURCE-MANIFEST.sha256') -Destination $manifestDestination
         Copy-Item -LiteralPath (Join-Path $recordDirectory 'NATIVE-LINK-INPUTS.sha256') -Destination $nativeLinkManifestDestination
+        Copy-Item -LiteralPath (Join-Path $recordDirectory 'WINDOWS-NATIVE-LINK-INPUTS.lock') -Destination $nativeToolchainLockDestination
         Copy-Item -LiteralPath (Join-Path $recordDirectory 'Cargo.lock') -Destination $lockDestination
         Copy-Item -LiteralPath (Join-Path $recordDirectory 'rust-toolchain.toml') -Destination $toolchainDestination
         $buildInfo += "reproducibility_record_sha256=$((Get-FileHash -Algorithm SHA256 -LiteralPath $recordDestination).Hash.ToLowerInvariant())"
         $buildInfo += "source_manifest_sha256=$($reproducibilityRecord.source_manifest_sha256)"
         $buildInfo += "native_link_inputs_sha256=$($reproducibilityRecord.native_link_inputs.sha256)"
+        $buildInfo += "native_toolchain_lock_sha256=$($reproducibilityRecord.native_toolchain.lock_sha256)"
         $buildInfo += "reproduced_artifact_sha256=$($reproducibilityRecord.build_a.sha256)"
     }
     [System.IO.File]::WriteAllLines((Join-Path $output 'BUILD-INFO.txt'), $buildInfo, [System.Text.UTF8Encoding]::new($false))
 
     $payloadNames = @('kilogram-offline.exe', 'README.txt', 'BUILD-INFO.txt')
     if ($reproducibilityVerified) {
-        $payloadNames += @('REPRODUCIBILITY.json', 'SOURCE-MANIFEST.sha256', 'NATIVE-LINK-INPUTS.sha256', 'Cargo.lock', 'rust-toolchain.toml')
+        $payloadNames += @('REPRODUCIBILITY.json', 'SOURCE-MANIFEST.sha256', 'WINDOWS-NATIVE-LINK-INPUTS.lock', 'NATIVE-LINK-INPUTS.sha256', 'Cargo.lock', 'rust-toolchain.toml')
     }
     $checksumLines = foreach ($name in $payloadNames) {
         $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $output $name)).Hash.ToLowerInvariant()

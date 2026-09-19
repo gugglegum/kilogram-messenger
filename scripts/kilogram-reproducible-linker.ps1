@@ -135,6 +135,227 @@ function Assert-KilogramNativeLinkInputManifest {
     }
 }
 
+function Get-KilogramCanonicalNativeLinkInputSha256 {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$Lines
+    )
+
+    if ($Lines.Count -le 0) {
+        throw 'Cannot hash an empty native link-input line set.'
+    }
+    $payload = ($Lines -join "`r`n") + "`r`n"
+    $bytes = [System.Text.UTF8Encoding]::new($false).GetBytes($payload)
+    $algorithm = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        ([System.BitConverter]::ToString($algorithm.ComputeHash($bytes))).Replace('-', '').ToLowerInvariant()
+    }
+    finally {
+        $algorithm.Dispose()
+    }
+}
+
+function Test-KilogramLockedNativeFile {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Sha256,
+
+        [Parameter(Mandatory = $true)]
+        [int64]$Bytes
+    )
+
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        return $false
+    }
+    $item = Get-Item -LiteralPath $Path -Force
+    if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0 -or
+        [int64]$item.Length -ne $Bytes) {
+        return $false
+    }
+    ((Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant() -ceq $Sha256)
+}
+
+function Get-KilogramPinnedNativeToolchainIdentity {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$LockPath
+    )
+
+    $lock = [System.IO.Path]::GetFullPath($LockPath)
+    $lockIdentity = Assert-KilogramNativeLinkInputManifest -Path $lock
+    $lines = @(Get-Content -LiteralPath $lock)
+    $entries = [System.Collections.Generic.List[object]]::new()
+    foreach ($line in $lines) {
+        if ($line -cnotmatch '^([0-9a-f]{64})  ([1-9][0-9]*)  (.+)$') {
+            throw "Pinned native link-input lock contains an invalid entry: $line"
+        }
+        $entries.Add([PSCustomObject]@{
+            sha256 = $Matches[1]
+            bytes = [int64]$Matches[2]
+            logical_name = $Matches[3]
+        })
+    }
+
+    $expectedSuffixes = @(
+        'msvc/lib/x64/msvcrt.lib',
+        'msvc/lib/x64/vcruntime.lib',
+        'windows-sdk/ucrt/x64/ucrt.lib',
+        'windows-sdk/um/x64/advapi32.lib',
+        'windows-sdk/um/x64/bcrypt.lib',
+        'windows-sdk/um/x64/dbghelp.lib',
+        'windows-sdk/um/x64/kernel32.lib',
+        'windows-sdk/um/x64/ntdll.lib',
+        'windows-sdk/um/x64/userenv.lib',
+        'windows-sdk/um/x64/ws2_32.lib'
+    )
+    $actualSuffixes = @($entries | ForEach-Object {
+        if ($_.logical_name -cmatch '^msvc/[^/]+/(lib/x64/.+)$') {
+            "msvc/$($Matches[1])"
+        }
+        elseif ($_.logical_name -cmatch '^windows-sdk/[^/]+/((?:um|ucrt)/x64/.+)$') {
+            "windows-sdk/$($Matches[1])"
+        }
+        else {
+            throw "Pinned native link-input lock has an unsupported logical path: $($_.logical_name)"
+        }
+    } | Sort-Object)
+    if (($actualSuffixes -join "`n") -cne (($expectedSuffixes | Sort-Object) -join "`n")) {
+        throw 'Pinned native link-input lock does not contain the exact supported ten-library set.'
+    }
+
+    $msvcVersions = @($entries | ForEach-Object {
+        if ($_.logical_name -cmatch '^msvc/([^/]+)/') { $Matches[1] }
+    } | Sort-Object -Unique)
+    $sdkVersions = @($entries | ForEach-Object {
+        if ($_.logical_name -cmatch '^windows-sdk/([^/]+)/') { $Matches[1] }
+    } | Sort-Object -Unique)
+    if ($msvcVersions.Count -ne 1 -or $sdkVersions.Count -ne 1) {
+        throw 'Pinned native link-input lock must select exactly one MSVC and one Windows SDK version.'
+    }
+    $msvcVersion = [string]$msvcVersions[0]
+    $sdkVersion = [string]$sdkVersions[0]
+
+    $programRoots = @($env:ProgramFiles, ${env:ProgramFiles(x86)}) |
+        Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+        Sort-Object -Unique
+    $msvcCandidates = [System.Collections.Generic.List[string]]::new()
+    foreach ($programRoot in $programRoots) {
+        $visualStudioRoot = Join-Path $programRoot 'Microsoft Visual Studio'
+        if (-not (Test-Path -LiteralPath $visualStudioRoot -PathType Container)) {
+            continue
+        }
+        foreach ($generation in @(Get-ChildItem -LiteralPath $visualStudioRoot -Directory -ErrorAction SilentlyContinue)) {
+            foreach ($edition in @(Get-ChildItem -LiteralPath $generation.FullName -Directory -ErrorAction SilentlyContinue)) {
+                $candidate = Join-Path $edition.FullName "VC\Tools\MSVC\$msvcVersion"
+                if (Test-Path -LiteralPath $candidate -PathType Container) {
+                    $msvcCandidates.Add([System.IO.Path]::GetFullPath($candidate))
+                }
+            }
+        }
+    }
+    $msvcEntries = @($entries | Where-Object { $_.logical_name.StartsWith('msvc/', [System.StringComparison]::Ordinal) })
+    $matchingMsvcRoots = @($msvcCandidates | Sort-Object -Unique | Where-Object {
+        $candidate = $_
+        $valid = $true
+        foreach ($entry in $msvcEntries) {
+            $name = [System.IO.Path]::GetFileName([string]$entry.logical_name)
+            $path = Join-Path $candidate "lib\x64\$name"
+            if (-not (Test-KilogramLockedNativeFile -Path $path -Sha256 $entry.sha256 -Bytes $entry.bytes)) {
+                $valid = $false
+                break
+            }
+        }
+        $valid
+    })
+    if ($matchingMsvcRoots.Count -le 0) {
+        throw "Pinned MSVC native inputs are not installed exactly: $msvcVersion"
+    }
+    $msvcRoot = [string]$matchingMsvcRoots[0]
+
+    $sdkCandidates = [System.Collections.Generic.List[string]]::new()
+    foreach ($programRoot in $programRoots) {
+        $candidate = Join-Path $programRoot "Windows Kits\10\Lib\$sdkVersion"
+        if (Test-Path -LiteralPath $candidate -PathType Container) {
+            $sdkCandidates.Add([System.IO.Path]::GetFullPath($candidate))
+        }
+    }
+    $sdkEntries = @($entries | Where-Object { $_.logical_name.StartsWith('windows-sdk/', [System.StringComparison]::Ordinal) })
+    $matchingSdkRoots = @($sdkCandidates | Sort-Object -Unique | Where-Object {
+        $candidate = $_
+        $valid = $true
+        foreach ($entry in $sdkEntries) {
+            if ($entry.logical_name -cnotmatch '^windows-sdk/[^/]+/(um|ucrt)/x64/([^/]+)$') {
+                $valid = $false
+                break
+            }
+            $path = Join-Path $candidate "$($Matches[1])\x64\$($Matches[2])"
+            if (-not (Test-KilogramLockedNativeFile -Path $path -Sha256 $entry.sha256 -Bytes $entry.bytes)) {
+                $valid = $false
+                break
+            }
+        }
+        $valid
+    })
+    if ($matchingSdkRoots.Count -le 0) {
+        throw "Pinned Windows SDK native inputs are not installed exactly: $sdkVersion"
+    }
+    $sdkRoot = [string]$matchingSdkRoots[0]
+
+    $searchPaths = @(
+        (Join-Path $msvcRoot 'lib\x64'),
+        (Join-Path $sdkRoot 'ucrt\x64'),
+        (Join-Path $sdkRoot 'um\x64')
+    )
+    $rustcArguments = [System.Collections.Generic.List[string]]::new()
+    foreach ($searchPath in $searchPaths) {
+        $rustcArguments.Add('-L')
+        $rustcArguments.Add("native=$searchPath")
+    }
+
+    [PSCustomObject]@{
+        mode = 'repository-hash-locked-installed-libraries'
+        selection = 'explicit-final-rustc-native-search-paths'
+        lock_file = [System.IO.Path]::GetFileName($lock)
+        lock_sha256 = Get-KilogramCanonicalNativeLinkInputSha256 -Lines $lines
+        count = $lockIdentity.count
+        msvc_version = $msvcVersion
+        windows_sdk_version = $sdkVersion
+        architecture = 'x64'
+        libraries_bundled = $false
+        rustc_arguments = @($rustcArguments)
+    }
+}
+
+function Assert-KilogramNativeLinkInputManifestMatchesLock {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ManifestPath,
+
+        [Parameter(Mandatory = $true)]
+        [string]$LockPath
+    )
+
+    $manifestIdentity = Assert-KilogramNativeLinkInputManifest -Path $ManifestPath
+    $null = Assert-KilogramNativeLinkInputManifest -Path $LockPath
+    $manifestLines = @(Get-Content -LiteralPath $ManifestPath)
+    $lockLines = @(Get-Content -LiteralPath $LockPath)
+    if (($manifestLines -join "`n") -cne ($lockLines -join "`n")) {
+        throw 'The final link did not consume the exact repository-locked native input set.'
+    }
+    $canonicalLockHash = Get-KilogramCanonicalNativeLinkInputSha256 -Lines $lockLines
+    if ([string]$manifestIdentity.sha256 -cne $canonicalLockHash) {
+        throw 'The generated native link-input manifest is not in canonical CRLF form.'
+    }
+    $manifestIdentity
+}
+
 function Write-KilogramNativeLinkInputManifest {
     [CmdletBinding()]
     param(
@@ -239,9 +460,9 @@ function Write-KilogramNativeLinkInputManifest {
         $lines = @($records | Sort-Object logical_name | ForEach-Object {
             "$($_.sha256)  $($_.bytes)  $($_.logical_name)"
         })
-        [System.IO.File]::WriteAllLines(
+        [System.IO.File]::WriteAllText(
             $manifest,
-            $lines,
+            (($lines -join "`r`n") + "`r`n"),
             [System.Text.UTF8Encoding]::new($false)
         )
         Assert-KilogramNativeLinkInputManifest -Path $manifest

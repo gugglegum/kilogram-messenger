@@ -231,9 +231,13 @@ sessions, distribution, removal и key epochs и не решены этим пр
   closed с structural +1024-byte artifact divergence. M0.9.78 теперь получает
   через transient LLD `/reproduce` exact hashes десяти фактически
   использованных SDK/UCRT/MSVC `.lib`, удаляет большой TAR и связывает bounded
-  manifest с format-v4 evidence. Открыты fresh external manifest comparison и
-  затем pinning отличающихся native inputs; если manifests совпадут, остаются
-  response arguments/Rust archives. Trusted reusable workflow и release/update
+  manifest с format-v4 evidence. Run `35471719378` подтвердил различие всех
+  MSVC/SDK inputs кроме UCRT. M0.9.79 теперь hash-lock-ит installed MSVC
+  `14.44.35207` + SDK `10.0.19041.0`, передаёт explicit final `-L native` и
+  требует observed manifest равным lock в format-v5 evidence. Открыты fresh
+  external availability/byte-equality/attestation; при exact native match и
+  оставшемся artifact mismatch исследуются response arguments/Rust archives.
+  Trusted reusable workflow и release/update
   signing также открыты. Также открыты обнаружение конфликта между устройствами,
   которые никогда не обменивались bundle, и действительно распределённая
   cross-machine координация без доверенного scheduler.

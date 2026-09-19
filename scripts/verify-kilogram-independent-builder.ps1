@@ -79,7 +79,7 @@ function Assert-IndependentEvidence {
     if ($localRecord.source_revision -cnotmatch '^[0-9a-f]{40}$') {
         throw 'Local reproducibility record must identify a clean exact Git commit.'
     }
-    if ($builderRecord.format_version -ne 4 -or
+    if ($builderRecord.format_version -ne 5 -or
         $builderRecord.status -ne 'matched' -or
         $builderRecord.builder_scope -ne 'github-hosted-windows-independent' -or
         $builderRecord.repository -cne $ExpectedRepository -or
@@ -99,6 +99,14 @@ function Assert-IndependentEvidence {
         $builderRecord.linker.flavor -ne 'lld-link' -or
         [int64]$builderRecord.linker.bytes -le 0 -or
         $builderRecord.linker.reproducibility_flag -ne '/Brepro' -or
+        $builderRecord.native_toolchain.mode -ne 'repository-hash-locked-installed-libraries' -or
+        $builderRecord.native_toolchain.selection -ne 'explicit-final-rustc-native-search-paths' -or
+        $builderRecord.native_toolchain.lock_file -ne 'WINDOWS-NATIVE-LINK-INPUTS.lock' -or
+        [int]$builderRecord.native_toolchain.count -ne 10 -or
+        $builderRecord.native_toolchain.msvc_version -ne '14.44.35207' -or
+        $builderRecord.native_toolchain.windows_sdk_version -ne '10.0.19041.0' -or
+        $builderRecord.native_toolchain.architecture -ne 'x64' -or
+        $builderRecord.native_toolchain.libraries_bundled -ne $false -or
         $builderRecord.native_link_inputs.capture_mode -ne 'lld-link-reproduce-archive' -or
         $builderRecord.native_link_inputs.manifest_format -ne 'sha256-bytes-logical-path-v1' -or
         $builderRecord.native_link_inputs.file -ne 'NATIVE-LINK-INPUTS.sha256' -or
@@ -136,6 +144,17 @@ function Assert-IndependentEvidence {
         [string]$builderRecord.pe_metadata_normalization -cne [string]$localRecord.pe_metadata_normalization) {
         throw 'Independent builder did not use the exact locally recorded bundled LLD linker.'
     }
+    if ([string]$builderRecord.native_toolchain.mode -cne [string]$localRecord.native_toolchain.mode -or
+        [string]$builderRecord.native_toolchain.selection -cne [string]$localRecord.native_toolchain.selection -or
+        [string]$builderRecord.native_toolchain.lock_file -cne [string]$localRecord.native_toolchain.lock_file -or
+        [string]$builderRecord.native_toolchain.lock_sha256 -cne [string]$localRecord.native_toolchain.lock_sha256 -or
+        [int]$builderRecord.native_toolchain.count -ne [int]$localRecord.native_toolchain.count -or
+        [string]$builderRecord.native_toolchain.msvc_version -cne [string]$localRecord.native_toolchain.msvc_version -or
+        [string]$builderRecord.native_toolchain.windows_sdk_version -cne [string]$localRecord.native_toolchain.windows_sdk_version -or
+        [string]$builderRecord.native_toolchain.architecture -cne [string]$localRecord.native_toolchain.architecture -or
+        $builderRecord.native_toolchain.libraries_bundled -ne $localRecord.native_toolchain.libraries_bundled) {
+        throw 'Independent builder did not use the exact locally recorded native toolchain lock.'
+    }
     if ($localRecord.native_link_inputs.capture_mode -ne 'lld-link-reproduce-archive' -or
         $localRecord.native_link_inputs.manifest_format -ne 'sha256-bytes-logical-path-v1' -or
         $localRecord.native_link_inputs.file -ne 'NATIVE-LINK-INPUTS.sha256' -or
@@ -153,15 +172,25 @@ function Assert-IndependentEvidence {
     $independentNativeManifest = Resolve-PlainFile `
         (Join-Path $independentDirectory ([string]$builderRecord.native_link_inputs.file)) `
         'Independent native link-input manifest'
+    $localNativeLock = Resolve-PlainFile `
+        (Join-Path $localDirectory ([string]$localRecord.native_toolchain.lock_file)) `
+        'Local pinned native-toolchain lock'
+    $independentNativeLock = Resolve-PlainFile `
+        (Join-Path $independentDirectory ([string]$builderRecord.native_toolchain.lock_file)) `
+        'Independent pinned native-toolchain lock'
     $localNativeIdentity = Assert-KilogramNativeLinkInputManifest -Path $localNativeManifest
     $independentNativeIdentity = Assert-KilogramNativeLinkInputManifest -Path $independentNativeManifest
+    $localNativeLockIdentity = Assert-KilogramNativeLinkInputManifest -Path $localNativeLock
+    $independentNativeLockIdentity = Assert-KilogramNativeLinkInputManifest -Path $independentNativeLock
 
     foreach ($hashField in @(
         @{ Value = [string]$localRecord.build_a.sha256; Name = 'local.build_a.sha256' },
         @{ Value = [string]$localRecord.build_b.sha256; Name = 'local.build_b.sha256' },
         @{ Value = [string]$localRecord.linker.sha256; Name = 'local.linker.sha256' },
+        @{ Value = [string]$localRecord.native_toolchain.lock_sha256; Name = 'local.native_toolchain.lock_sha256' },
         @{ Value = [string]$localRecord.native_link_inputs.sha256; Name = 'local.native_link_inputs.sha256' },
         @{ Value = [string]$builderRecord.linker.sha256; Name = 'builder.linker.sha256' },
+        @{ Value = [string]$builderRecord.native_toolchain.lock_sha256; Name = 'builder.native_toolchain.lock_sha256' },
         @{ Value = [string]$builderRecord.native_link_inputs.sha256; Name = 'builder.native_link_inputs.sha256' },
         @{ Value = [string]$builderRecord.expected_local_sha256; Name = 'expected_local_sha256' },
         @{ Value = [string]$builderRecord.artifact.sha256; Name = 'artifact.sha256' }
@@ -176,6 +205,23 @@ function Assert-IndependentEvidence {
         [int]$independentNativeIdentity.count -ne [int]$localNativeIdentity.count) {
         throw 'Independent builder did not consume the exact locally recorded native link inputs.'
     }
+    $localLockCanonicalHash = Get-KilogramCanonicalNativeLinkInputSha256 `
+        -Lines @(Get-Content -LiteralPath $localNativeLock)
+    $independentLockCanonicalHash = Get-KilogramCanonicalNativeLinkInputSha256 `
+        -Lines @(Get-Content -LiteralPath $independentNativeLock)
+    if ([int]$localNativeLockIdentity.count -ne [int]$localRecord.native_toolchain.count -or
+        [int]$independentNativeLockIdentity.count -ne [int]$builderRecord.native_toolchain.count -or
+        [string]$localLockCanonicalHash -cne [string]$localRecord.native_toolchain.lock_sha256 -or
+        [string]$independentLockCanonicalHash -cne [string]$builderRecord.native_toolchain.lock_sha256 -or
+        [string]$localLockCanonicalHash -cne [string]$independentLockCanonicalHash) {
+        throw 'Independent builder native toolchain lock is not identical to the local lock.'
+    }
+    $null = Assert-KilogramNativeLinkInputManifestMatchesLock `
+        -ManifestPath $localNativeManifest `
+        -LockPath $localNativeLock
+    $null = Assert-KilogramNativeLinkInputManifestMatchesLock `
+        -ManifestPath $independentNativeManifest `
+        -LockPath $independentNativeLock
 
     $actualHash = Get-Sha256 $artifact
     $actualBytes = (Get-Item -LiteralPath $artifact).Length
@@ -196,7 +242,7 @@ function Assert-IndependentEvidence {
             throw 'GitHub CLI (gh) is required to verify signed provenance.'
         }
         $workflowIdentity = "$ExpectedRepository/.github/workflows/independent-offline-reproduction.yml"
-        foreach ($subject in @($artifact, $builderRecordPathResolved, $independentNativeManifest)) {
+        foreach ($subject in @($artifact, $builderRecordPathResolved, $independentNativeLock, $independentNativeManifest)) {
             & $gh.Source attestation verify $subject --repo $ExpectedRepository --signer-workflow $workflowIdentity --source-digest $localRecord.source_revision --deny-self-hosted-runners
             if ($LASTEXITCODE -ne 0) {
                 throw "GitHub artifact attestation verification failed: $subject"
@@ -211,6 +257,9 @@ function Assert-IndependentEvidence {
     Write-Output "artifact_bytes=$actualBytes"
     Write-Output "blake3_codegen=$($builderRecord.blake3_codegen)"
     Write-Output "linker_sha256=$($builderRecord.linker.sha256)"
+    Write-Output "native_toolchain_lock_sha256=$($builderRecord.native_toolchain.lock_sha256)"
+    Write-Output "native_toolchain_msvc=$($builderRecord.native_toolchain.msvc_version)"
+    Write-Output "native_toolchain_windows_sdk=$($builderRecord.native_toolchain.windows_sdk_version)"
     Write-Output "native_link_inputs_sha256=$($builderRecord.native_link_inputs.sha256)"
     Write-Output "native_link_inputs_count=$($builderRecord.native_link_inputs.count)"
     Write-Output "pe_metadata_normalization=$($builderRecord.pe_metadata_normalization)"
@@ -309,15 +358,27 @@ function Invoke-SelfTest {
         $hash = Get-Sha256 $artifact
         $length = (Get-Item -LiteralPath $artifact).Length
         $nativeManifestLines = @(
-            "$hash  1  msvc/14.0.self-test/lib/x64/msvcrt.lib",
-            "$hash  1  windows-sdk/10.0.self-test/ucrt/x64/ucrt.lib",
-            "$hash  1  windows-sdk/10.0.self-test/um/x64/kernel32.lib"
+            "$hash  1  msvc/14.44.35207/lib/x64/msvcrt.lib",
+            "$hash  1  msvc/14.44.35207/lib/x64/vcruntime.lib",
+            "$hash  1  windows-sdk/10.0.19041.0/ucrt/x64/ucrt.lib",
+            "$hash  1  windows-sdk/10.0.19041.0/um/x64/advapi32.lib",
+            "$hash  1  windows-sdk/10.0.19041.0/um/x64/bcrypt.lib",
+            "$hash  1  windows-sdk/10.0.19041.0/um/x64/dbghelp.lib",
+            "$hash  1  windows-sdk/10.0.19041.0/um/x64/kernel32.lib",
+            "$hash  1  windows-sdk/10.0.19041.0/um/x64/ntdll.lib",
+            "$hash  1  windows-sdk/10.0.19041.0/um/x64/userenv.lib",
+            "$hash  1  windows-sdk/10.0.19041.0/um/x64/ws2_32.lib"
         )
         $localNativeManifest = Join-Path $local 'NATIVE-LINK-INPUTS.sha256'
         $independentNativeManifest = Join-Path $independent 'NATIVE-LINK-INPUTS.sha256'
-        [System.IO.File]::WriteAllLines($localNativeManifest, $nativeManifestLines, [System.Text.UTF8Encoding]::new($false))
-        [System.IO.File]::WriteAllLines($independentNativeManifest, $nativeManifestLines, [System.Text.UTF8Encoding]::new($false))
+        $localNativeLock = Join-Path $local 'WINDOWS-NATIVE-LINK-INPUTS.lock'
+        $independentNativeLock = Join-Path $independent 'WINDOWS-NATIVE-LINK-INPUTS.lock'
+        $canonicalNativeText = ($nativeManifestLines -join "`r`n") + "`r`n"
+        foreach ($path in @($localNativeManifest, $independentNativeManifest, $localNativeLock, $independentNativeLock)) {
+            [System.IO.File]::WriteAllText($path, $canonicalNativeText, [System.Text.UTF8Encoding]::new($false))
+        }
         $nativeIdentity = Assert-KilogramNativeLinkInputManifest -Path $localNativeManifest
+        $nativeLockHash = Get-KilogramCanonicalNativeLinkInputSha256 -Lines $nativeManifestLines
         $invalidNativeManifest = Join-Path $independent 'INVALID-NATIVE-LINK-INPUTS.sha256'
         [System.IO.File]::WriteAllLines(
             $invalidNativeManifest,
@@ -335,7 +396,7 @@ function Invoke-SelfTest {
             throw 'Self-test accepted a malformed native link-input manifest.'
         }
         $localRecord = [ordered]@{
-            format_version = 4
+            format_version = 5
             status = 'reproducible'
             builder_scope = 'same-host-separate-clean-roots'
             build_root_count = 2
@@ -363,6 +424,17 @@ function Invoke-SelfTest {
                 bytes = 1
                 reproducibility_flag = '/Brepro'
             }
+            native_toolchain = [ordered]@{
+                mode = 'repository-hash-locked-installed-libraries'
+                selection = 'explicit-final-rustc-native-search-paths'
+                lock_file = 'WINDOWS-NATIVE-LINK-INPUTS.lock'
+                lock_sha256 = $nativeLockHash
+                count = $nativeIdentity.count
+                msvc_version = '14.44.35207'
+                windows_sdk_version = '10.0.19041.0'
+                architecture = 'x64'
+                libraries_bundled = $false
+            }
             native_link_inputs = [ordered]@{
                 capture_mode = 'lld-link-reproduce-archive'
                 manifest_format = 'sha256-bytes-logical-path-v1'
@@ -379,7 +451,7 @@ function Invoke-SelfTest {
         [System.IO.File]::WriteAllText((Join-Path $local 'REPRODUCIBILITY.json'), ($localRecord | ConvertTo-Json -Depth 5), [System.Text.UTF8Encoding]::new($false))
 
         $builderRecord = [ordered]@{
-            format_version = 4
+            format_version = 5
             status = 'matched'
             builder_scope = 'github-hosted-windows-independent'
             repository = 'gugglegum/kilogram-messenger'
@@ -402,6 +474,17 @@ function Invoke-SelfTest {
                 sha256 = $hash
                 bytes = 1
                 reproducibility_flag = '/Brepro'
+            }
+            native_toolchain = [ordered]@{
+                mode = 'repository-hash-locked-installed-libraries'
+                selection = 'explicit-final-rustc-native-search-paths'
+                lock_file = 'WINDOWS-NATIVE-LINK-INPUTS.lock'
+                lock_sha256 = $nativeLockHash
+                count = $nativeIdentity.count
+                msvc_version = '14.44.35207'
+                windows_sdk_version = '10.0.19041.0'
+                architecture = 'x64'
+                libraries_bundled = $false
             }
             native_link_inputs = [ordered]@{
                 capture_mode = 'lld-link-reproduce-archive'
@@ -451,6 +534,38 @@ function Invoke-SelfTest {
         }
         $builderRecord.native_link_inputs.sha256 = $nativeIdentity.sha256
         [System.IO.File]::WriteAllText($builderRecordPath, ($builderRecord | ConvertTo-Json -Depth 6), [System.Text.UTF8Encoding]::new($false))
+        $tamperedNativeLines = @($nativeManifestLines)
+        $tamperedNativeLines[0] = ('0' * 64) + $tamperedNativeLines[0].Substring(64)
+        [System.IO.File]::WriteAllText(
+            $independentNativeLock,
+            (($tamperedNativeLines -join "`r`n") + "`r`n"),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+        $tamperedNativeToolchainLockRejected = $false
+        try {
+            Assert-IndependentEvidence -IndependentArtifact $artifact -IndependentRecord $builderRecordPath -SameHostDirectory $local -ExpectedRepository 'gugglegum/kilogram-messenger' -SkipAttestation | Out-Null
+        }
+        catch {
+            $tamperedNativeToolchainLockRejected = $true
+        }
+        if (-not $tamperedNativeToolchainLockRejected) {
+            throw 'Self-test verifier accepted a tampered native toolchain lock file.'
+        }
+        [System.IO.File]::WriteAllText($independentNativeLock, $canonicalNativeText, [System.Text.UTF8Encoding]::new($false))
+        $builderRecord.native_toolchain.lock_sha256 = '0000000000000000000000000000000000000000000000000000000000000000'
+        [System.IO.File]::WriteAllText($builderRecordPath, ($builderRecord | ConvertTo-Json -Depth 6), [System.Text.UTF8Encoding]::new($false))
+        $nativeToolchainLockRejected = $false
+        try {
+            Assert-IndependentEvidence -IndependentArtifact $artifact -IndependentRecord $builderRecordPath -SameHostDirectory $local -ExpectedRepository 'gugglegum/kilogram-messenger' -SkipAttestation | Out-Null
+        }
+        catch {
+            $nativeToolchainLockRejected = $true
+        }
+        if (-not $nativeToolchainLockRejected) {
+            throw 'Self-test verifier accepted a mismatched native toolchain lock.'
+        }
+        $builderRecord.native_toolchain.lock_sha256 = $nativeLockHash
+        [System.IO.File]::WriteAllText($builderRecordPath, ($builderRecord | ConvertTo-Json -Depth 6), [System.Text.UTF8Encoding]::new($false))
         Add-Content -LiteralPath $artifact -Value 'tamper'
         $rejected = $false
         try {
@@ -467,6 +582,8 @@ function Invoke-SelfTest {
         Write-Output 'checksum_bearing_pe=rejected'
         Write-Output 'authenticode_bearing_pe=rejected'
         Write-Output 'mismatched_linker=rejected'
+        Write-Output 'tampered_native_toolchain_lock=rejected'
+        Write-Output 'mismatched_native_toolchain_lock=rejected'
         Write-Output 'mismatched_native_link_inputs=rejected'
         Write-Output 'malformed_native_link_manifest=rejected'
         Write-Output 'tampered_artifact=rejected'

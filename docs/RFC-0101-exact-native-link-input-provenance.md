@@ -1,7 +1,7 @@
 # RFC-0101: Exact native link-input provenance (M0.9.78)
 
-Status: implemented locally; a fresh GitHub-hosted run is required to compare
-the independently captured manifest.
+Status: implemented and externally diagnosed; GitHub Actions run
+`35471719378` captured the differing native manifests and failed closed.
 
 ## 1. Problem
 
@@ -106,3 +106,24 @@ than weakening byte equality.
 
 No runtime code, listener, protocol, key material, release ZIP or background
 process is added by this stage.
+
+## 6. External result
+
+Run `35471719378` rebuilt exact source revision
+`c92d25fce192be1ed5094098581ccb082ffa7a53`. Rust 1.98.0, Cargo 1.98.0 and the
+113,421,312-byte bundled LLD were identical to the local record, but the
+native-input manifest differed:
+
+- local: MSVC `14.44.35207` and Windows SDK `10.0.28000.0`, manifest SHA-256
+  `182c33c504ac2bce811459acd1a9f3fcd35fcb414be1b710b32651c9c794d61c`;
+- GitHub `windows-2025`: MSVC `14.51.36231` and Windows SDK `10.0.26100.0`,
+  manifest SHA-256
+  `08807e748ddb05aee3278621b17b9024f5278b2de754b2a0868ab86c54f97fbf`.
+
+All native files except the UCRT import library differed in bytes or logical
+version. The external executable therefore retained the previously observed
+2,434,560-byte size and SHA-256
+`3dd8e4b78e4326663393c126a3a1533dc1fdd7f9a5dcf45751e80034b96253ff`;
+no attestation was issued. This establishes the remaining cause without
+weakening output normalization. The pinned installed-input continuation is
+specified by [`RFC-0102`](RFC-0102-hash-locked-windows-native-toolchain.md).

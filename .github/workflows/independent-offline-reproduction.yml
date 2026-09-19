@@ -21,7 +21,7 @@ permissions:
 jobs:
   reproduce:
     name: Reproduce kilogram-offline on independent Windows builder
-    runs-on: windows-2025
+    runs-on: windows-2022
     timeout-minutes: 45
     defaults:
       run:
@@ -70,6 +70,13 @@ jobs:
           rustc -vV
           cargo -vV
 
+      - name: Resolve hash-locked native toolchain
+        run: |
+          . .\scripts\kilogram-reproducible-linker.ps1
+          $nativeToolchain = Get-KilogramPinnedNativeToolchainIdentity `
+            -LockPath .\WINDOWS-NATIVE-LINK-INPUTS.lock
+          $nativeToolchain | Format-List
+
       - name: Fetch locked dependencies
         run: cargo fetch --locked --target x86_64-pc-windows-msvc
 
@@ -101,6 +108,8 @@ jobs:
           $env:SOURCE_DATE_EPOCH = $sourceEpoch
           . .\scripts\kilogram-reproducible-linker.ps1
           $linker = Get-KilogramBundledLldIdentity
+          $nativeToolchain = Get-KilogramPinnedNativeToolchainIdentity `
+            -LockPath .\WINDOWS-NATIVE-LINK-INPUTS.lock
           $unitSeparator = [char]0x1f
           $env:CARGO_ENCODED_RUSTFLAGS = @(
             New-KilogramReproducibleRustFlags `
@@ -110,16 +119,29 @@ jobs:
 
           $output = Join-Path $env:GITHUB_WORKSPACE_VALUE 'independent-builder'
           New-Item -ItemType Directory -Path $output -Force | Out-Null
+          Copy-Item `
+            -LiteralPath .\WINDOWS-NATIVE-LINK-INPUTS.lock `
+            -Destination (Join-Path $output 'WINDOWS-NATIVE-LINK-INPUTS.lock')
           $linkRepro = Join-Path $output 'link-repro.tar'
           $linkReproArgument = $linkRepro.Replace('\', '/')
           try {
-            cargo rustc --jobs 2 --frozen --release --target x86_64-pc-windows-msvc --package kilogram-offline --bin kilogram-offline -- -C "link-arg=/reproduce:$linkReproArgument"
+            $cargoArguments = @(
+              'rustc', '--jobs', '2', '--frozen', '--release',
+              '--target', 'x86_64-pc-windows-msvc',
+              '--package', 'kilogram-offline', '--bin', 'kilogram-offline', '--'
+            ) + @($nativeToolchain.rustc_arguments) + @(
+              '-C', "link-arg=/reproduce:$linkReproArgument"
+            )
+            & cargo @cargoArguments
             if ($LASTEXITCODE -ne 0) {
               throw 'Independent kilogram-offline build failed.'
             }
             $nativeLinkInputs = Write-KilogramNativeLinkInputManifest `
               -ArchivePath $linkRepro `
               -ManifestPath (Join-Path $output 'NATIVE-LINK-INPUTS.sha256')
+            $nativeLinkInputs = Assert-KilogramNativeLinkInputManifestMatchesLock `
+              -ManifestPath (Join-Path $output 'NATIVE-LINK-INPUTS.sha256') `
+              -LockPath .\WINDOWS-NATIVE-LINK-INPUTS.lock
           }
           finally {
             if (Test-Path -LiteralPath $linkRepro -PathType Leaf) {
@@ -145,7 +167,7 @@ jobs:
           $matched = $artifactHash -ceq $env:EXPECTED_LOCAL_SHA256
 
           $record = [ordered]@{
-            format_version = 4
+            format_version = 5
             status = if ($matched) { 'matched' } else { 'divergent' }
             builder_scope = 'github-hosted-windows-independent'
             repository = $env:KILOGRAM_REPOSITORY
@@ -168,6 +190,17 @@ jobs:
               sha256 = $linker.sha256
               bytes = $linker.bytes
               reproducibility_flag = $linker.reproducibility_flag
+            }
+            native_toolchain = [ordered]@{
+              mode = $nativeToolchain.mode
+              selection = $nativeToolchain.selection
+              lock_file = $nativeToolchain.lock_file
+              lock_sha256 = $nativeToolchain.lock_sha256
+              count = $nativeToolchain.count
+              msvc_version = $nativeToolchain.msvc_version
+              windows_sdk_version = $nativeToolchain.windows_sdk_version
+              architecture = $nativeToolchain.architecture
+              libraries_bundled = $nativeToolchain.libraries_bundled
             }
             native_link_inputs = [ordered]@{
               capture_mode = 'lld-link-reproduce-archive'
@@ -213,6 +246,7 @@ jobs:
             (Join-Path $output 'SHA256SUMS'),
             @(
               "$artifactHash  kilogram-offline.exe",
+              "$((Get-FileHash -LiteralPath (Join-Path $output 'WINDOWS-NATIVE-LINK-INPUTS.lock') -Algorithm SHA256).Hash.ToLowerInvariant())  WINDOWS-NATIVE-LINK-INPUTS.lock",
               "$($nativeLinkInputs.sha256)  NATIVE-LINK-INPUTS.sha256"
             ),
             [System.Text.UTF8Encoding]::new($false)
@@ -227,6 +261,7 @@ jobs:
           subject-path: |
             independent-builder/kilogram-offline.exe
             independent-builder/INDEPENDENT-BUILDER.json
+            independent-builder/WINDOWS-NATIVE-LINK-INPUTS.lock
             independent-builder/NATIVE-LINK-INPUTS.sha256
 
       - name: Preserve bounded comparison evidence
@@ -237,6 +272,7 @@ jobs:
           path: |
             independent-builder/kilogram-offline.exe
             independent-builder/INDEPENDENT-BUILDER.json
+            independent-builder/WINDOWS-NATIVE-LINK-INPUTS.lock
             independent-builder/NATIVE-LINK-INPUTS.sha256
             independent-builder/SHA256SUMS
           if-no-files-found: error
