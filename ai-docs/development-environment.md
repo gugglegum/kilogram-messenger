@@ -2222,3 +2222,36 @@ retirement остальных compatibility shadows ещё не реализов
   `kilogram-cli` regression 75/75, `cargo fmt --check`, Clippy `-D warnings`,
   static M0.9.69 kit gate и `git diff --check` проходят. Сборка и тесты — только
   debug/dev с `CARGO_BUILD_JOBS=2`; release/ZIP/network launch отсутствуют.
+- Полевой `05_REPAIR_AND_RETRY_BOB.ps1` успешно открыл mailbox-client ledger
+  writable (`status=runtime-mailbox-inspected`), но Yandex Disk немедленно
+  восстановил удалённые canonical `06-receive-bob.log*` с другого хоста. Их
+  SHA-256 побайтово совпал с сохранённым первым failed attempt, поэтому `04`
+  отказался создавать новую попытку до runtime launch. Для функционального
+  recovery добавлен внешний `06_RETRY_BOB_WITH_UNIQUE_EVIDENCE.ps1`: он не
+  трогает эти конфликтующие файлы, использует timestamped local/shared paths и
+  повторяет исходные exact-locator проверки. Такой retry остаётся recovery
+  evidence и не превращает run в clean M0.9.69 attestation.
+- Первая ревизия `06` завершалась до runtime из-за CRLF-sensitive regex на
+  последней строке repair evidence. Проверка заменена на exact line membership
+  через `Get-Content`; локально подтверждены PowerShell AST и совпадение
+  `status=runtime-mailbox-inspected` с реальным Windows-журналом.
+- Поскольку повторная ранняя ошибка `06` не создала runtime evidence, добавлен
+  `07_RUN_AND_CAPTURE_BOB_RECOVERY.ps1`: он ждёт exact SHA-256 исправленного
+  `06`, запускает его отдельным PowerShell и с первой строки перенаправляет
+  stdout/stderr/result в timestamped shared evidence. Следующая ошибка больше
+  не требует фотографии консоли.
+- Captured stderr показал второй wrapper-only дефект: `Invoke-Expression`
+  выполнял исходные bootstrap-строки `04`, но динамический script block не имел
+  file-backed `$PSScriptRoot`, из-за чего `Join-Path` получил пустой `Path`.
+  `06` теперь заранее загружает/проверяет `common.ps1`, валидирует первые две
+  строки `04` и исполняет только остальное тело. AST исходного wrapper и
+  получаемого dynamic body проверены; `07` ожидает новый exact SHA-256.
+- Изолированный recovery attempt `20260919T005959Z` завершился успешно. Два
+  pre-activation store key точно совпали с unique poll/source sets; получены две
+  строки `runtime_mailbox_inbound_source=volunteer-iroh`, обе реплики удалены
+  `deleted-after-commit`, exact discovery присутствует, legacy fallback — 0.
+  После restart redelivery — 0; Bob history содержит message marker ровно один
+  раз и acknowledgement. Loopback HTTPS fixture оставался offline (ожидаемые
+  connection-refused строки), поэтому доставка фактически выполнена volunteer
+  Iroh providers. Это подтверждает repair/recovery semantics, но из-за цепочки
+  retry не является clean single-revision M0.9.69 field attestation.

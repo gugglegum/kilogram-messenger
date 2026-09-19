@@ -3804,6 +3804,13 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
   gates — `scripts/verify-kilogram-m0969-exact-locator-kit-boundary.ps1` и
   `scripts/verify-kilogram-m0969-exact-locator-evidence.ps1`.
 
+Полевой recovery run `20260919T005959Z` подтвердил функциональный путь после
+прерванного Bob runtime: оба exact pre-activation store key совпали с poll и
+source sets, получены и committed две volunteer-Iroh replicas, обе удалены,
+restart redelivery отсутствует, history содержит marker один раз. HTTPS fixture
+в этот момент был offline. Из-за repair/retry chain этот результат не закрывает
+требование clean single-revision attestation, поэтому статус этапа не меняется.
+
 ### Следующий этап
 
 1. Выполнить один clean external M0.9.69 run на Alice/Bob из разных сетей и
