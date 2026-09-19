@@ -2204,7 +2204,10 @@ retirement остальных compatibility shadows ещё не реализов
   большие `01-provider1.log`/`01-provider2.log`. Сбой произошёл до запуска Bob
   runtime и до inbound commit, поэтому разрешён точечный Bob-only retry без
   повторной отправки Alice.
-- `Get-M0969ProviderStoreKeys` теперь bounded ждёт не только появления обоих
-  provider runtime logs, но и читаемой единственной строки store key; progress
-  печатается каждые 15 секунд, timeout — 30 минут. Static kit gate и evidence
-  verifier self-test проходят.
+- Причина уточнена: provider runtime logs остаются открытыми и меняются всё
+  время обслуживания, поэтому Yandex Disk может не публиковать их до остановки
+  providers. `Get-M0969ProviderStoreKeys` теперь вообще не использует live logs:
+  он bounded читает два exact store key из закрытого
+  `02-bob-providers-before-activation.log`, который причинно предшествует
+  capability activation. Progress печатается каждые 15 секунд, timeout — 30
+  минут. Static kit gate и evidence verifier self-test проходят.

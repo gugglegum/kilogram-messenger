@@ -439,45 +439,39 @@ function Import-M0969Providers {
 }
 
 function Get-M0969ProviderStoreKeys {
-    $keys = [Collections.Generic.List[string]]::new()
-    foreach ($provider in @('provider1', 'provider2')) {
-        $path = Join-Path $script:EvidenceDirectory "01-$provider.log"
-        $deadline = [DateTime]::UtcNow.AddSeconds(1800)
-        $nextProgress = [DateTime]::UtcNow
-        while ($true) {
-            $matches = @()
-            if (Test-Path -LiteralPath $path -PathType Leaf) {
-                try {
-                    $lines = @(Get-Content -LiteralPath $path -ErrorAction Stop)
-                    $matches = @($lines | ForEach-Object {
-                        if ($_ -cmatch '^runtime_volunteer_storage_store_key=([0-9a-f]{64})$') {
-                            $Matches[1]
-                        }
-                    } | Sort-Object -Unique)
-                }
-                catch {
-                    # Yandex Disk can expose a placeholder before its content is locally readable.
-                    $matches = @()
-                }
+    # Provider runtimes keep their diagnostic logs open while serving mailbox
+    # traffic. Use the closed import evidence that was produced before mailbox
+    # activation instead; it binds the exact provider set causally and can be
+    # synchronized while both providers remain online.
+    $path = Join-Path $script:EvidenceDirectory '02-bob-providers-before-activation.log'
+    $deadline = [DateTime]::UtcNow.AddSeconds(1800)
+    $nextProgress = [DateTime]::UtcNow
+    while ($true) {
+        $keys = @()
+        if (Test-Path -LiteralPath $path -PathType Leaf) {
+            try {
+                $text = Get-Content -LiteralPath $path -Raw -ErrorAction Stop
+                $keys = @([regex]::Matches(
+                    $text,
+                    '(?m)^provider_offer_id=[0-9a-f]{64} .* store_key=([0-9a-f]{64}) .*$'
+                ) | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
             }
-            if ($matches.Count -eq 1) {
-                $keys.Add($matches[0])
-                break
+            catch {
+                # Yandex Disk can expose a placeholder before its content is locally readable.
+                $keys = @()
             }
-            if ($matches.Count -gt 1) {
-                throw "$provider has multiple store keys in its runtime log"
-            }
-            if ([DateTime]::UtcNow -ge $deadline) {
-                throw "Timed out waiting for the complete $provider runtime log: $path"
-            }
-            if ([DateTime]::UtcNow -ge $nextProgress) {
-                Write-Host "Still waiting for the complete $provider runtime log from Yandex Disk..."
-                $nextProgress = [DateTime]::UtcNow.AddSeconds(15)
-            }
-            Start-Sleep -Seconds 2
         }
+        if ($keys.Count -eq 2) { return [string[]]$keys }
+        if ($keys.Count -gt 2) {
+            throw 'Bob pre-activation evidence contains more than two provider store keys.'
+        }
+        if ([DateTime]::UtcNow -ge $deadline) {
+            throw "Timed out waiting for complete Bob pre-activation provider evidence: $path"
+        }
+        if ([DateTime]::UtcNow -ge $nextProgress) {
+            Write-Host 'Still waiting for complete Bob pre-activation provider evidence from Yandex Disk...'
+            $nextProgress = [DateTime]::UtcNow.AddSeconds(15)
+        }
+        Start-Sleep -Seconds 2
     }
-    $result = @($keys | Sort-Object -Unique)
-    if ($result.Count -ne 2) { throw 'Providers do not expose two distinct store keys.' }
-    return [string[]]$result
 }
