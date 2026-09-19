@@ -75,7 +75,9 @@ foreach ($value in @(
     'Import-M0969Providers',
     "'--count', '2'",
     'Still working: observed $matched/$Count required events',
-    'Wait-M0969FileHashChange'
+    'Wait-M0969FileHashChange',
+    'Still waiting for the complete $provider runtime log from Yandex Disk...',
+    'Timed out waiting for the complete $provider runtime log'
 )) {
     if (-not $common.Contains($value)) { throw "M0.9.69 common helper is missing '$value'" }
 }

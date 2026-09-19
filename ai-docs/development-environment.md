@@ -2196,3 +2196,15 @@ retirement остальных compatibility shadows ещё не реализов
   `BUILD-INFO.json` связывает SHA-256/length обоих EXE, шести operator scripts,
   common helper, verifier и boundary log. ZIP/release/network launch отсутствуют.
   Реальный внешний run и итоговый `result=verified` ещё ожидаются.
+
+### External retry observation
+
+- Первый clean external retry без VPN прошёл prepare и Alice send, но Bob
+  receive увидел маленький `alice-sent.marker` раньше, чем Yandex Disk доставил
+  большие `01-provider1.log`/`01-provider2.log`. Сбой произошёл до запуска Bob
+  runtime и до inbound commit, поэтому разрешён точечный Bob-only retry без
+  повторной отправки Alice.
+- `Get-M0969ProviderStoreKeys` теперь bounded ждёт не только появления обоих
+  provider runtime logs, но и читаемой единственной строки store key; progress
+  печатается каждые 15 секунд, timeout — 30 минут. Static kit gate и evidence
+  verifier self-test проходят.

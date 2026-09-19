@@ -442,12 +442,40 @@ function Get-M0969ProviderStoreKeys {
     $keys = [Collections.Generic.List[string]]::new()
     foreach ($provider in @('provider1', 'provider2')) {
         $path = Join-Path $script:EvidenceDirectory "01-$provider.log"
-        $lines = @(Get-Content -LiteralPath $path -ErrorAction Stop)
-        $matches = @($lines | ForEach-Object {
-            if ($_ -cmatch '^runtime_volunteer_storage_store_key=([0-9a-f]{64})$') { $Matches[1] }
-        } | Sort-Object -Unique)
-        if ($matches.Count -ne 1) { throw "$provider has no unique store key in its runtime log" }
-        $keys.Add($matches[0])
+        $deadline = [DateTime]::UtcNow.AddSeconds(1800)
+        $nextProgress = [DateTime]::UtcNow
+        while ($true) {
+            $matches = @()
+            if (Test-Path -LiteralPath $path -PathType Leaf) {
+                try {
+                    $lines = @(Get-Content -LiteralPath $path -ErrorAction Stop)
+                    $matches = @($lines | ForEach-Object {
+                        if ($_ -cmatch '^runtime_volunteer_storage_store_key=([0-9a-f]{64})$') {
+                            $Matches[1]
+                        }
+                    } | Sort-Object -Unique)
+                }
+                catch {
+                    # Yandex Disk can expose a placeholder before its content is locally readable.
+                    $matches = @()
+                }
+            }
+            if ($matches.Count -eq 1) {
+                $keys.Add($matches[0])
+                break
+            }
+            if ($matches.Count -gt 1) {
+                throw "$provider has multiple store keys in its runtime log"
+            }
+            if ([DateTime]::UtcNow -ge $deadline) {
+                throw "Timed out waiting for the complete $provider runtime log: $path"
+            }
+            if ([DateTime]::UtcNow -ge $nextProgress) {
+                Write-Host "Still waiting for the complete $provider runtime log from Yandex Disk..."
+                $nextProgress = [DateTime]::UtcNow.AddSeconds(15)
+            }
+            Start-Sleep -Seconds 2
+        }
     }
     $result = @($keys | Sort-Object -Unique)
     if ($result.Count -ne 2) { throw 'Providers do not expose two distinct store keys.' }
