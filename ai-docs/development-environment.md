@@ -2507,3 +2507,8 @@ retirement остальных compatibility shadows ещё не реализов
   `if (-not $noHttpsCompatibility)`. M0.9.72 gate дополнен AST-проверкой
   structural ownership store-start command; inherited M0.9.72/73/74, M0.9.76
   и M1 boundaries проходят. Нужен новый clean committed retry kit.
+- Revision `ff38e1b89dc5832abdb2a5d81f7ab3af06e0ceae` создал исправленный
+  `.tmp\m0976-service-free-v2-ff38e1b89dc5`: 11/11 hashes, ровно один
+  store-start под exact AST guard, bundled verifier green, 13 files и
+  57,863,913 bytes. Byte-identical external copy:
+  `C:\Users\Paul\YandexDisk\!M\M0.9.76-retry1`.

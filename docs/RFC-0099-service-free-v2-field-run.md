@@ -111,3 +111,10 @@ The correction starts the compatibility process only under the explicit
 PowerShell AST and requires the sole store-start command to be structurally
 owned by that exact guard. The interrupted run is rejected rather than resumed;
 a new committed `M0.9.76-retry1` kit and fresh private state are required.
+
+Correction revision `ff38e1b89dc5832abdb2a5d81f7ab3af06e0ceae` produced
+`.tmp\m0976-service-free-v2-ff38e1b89dc5`. All 11 manifest artifacts,
+the bundled negative verifier and the generated AST store guard passed. Its
+13 files (57,863,913 bytes) were copied byte-identically to
+`C:\Users\Paul\YandexDisk\!M\M0.9.76-retry1`; this is the only kit accepted
+for the next attempt.

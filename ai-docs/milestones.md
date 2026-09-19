@@ -4139,6 +4139,14 @@ Alice runtime/queue/message: `02_SEND_ALICE.ps1` ошибочно трактов
 чтобы единственный store-start структурно принадлежал именно этому guard.
 Старый run не возобновляется; требуется fresh `M0.9.76-retry1`.
 
+Исправление зафиксировано revision
+`ff38e1b89dc5832abdb2a5d81f7ab3af06e0ceae`. Новый local kit
+`.tmp\m0976-service-free-v2-ff38e1b89dc5` прошёл 11/11 artifact hashes,
+bundled negative verifier и generated AST guard; 13 файлов/57,863,913 bytes
+byte-identical скопированы в
+`C:\Users\Paul\YandexDisk\!M\M0.9.76-retry1`. Следующая попытка использует
+только эту папку после полной синхронизации на ноутбук.
+
 ### Следующий этап
 
 1. Выполнить fresh M0.9.76 two-network run без VPN/Wi-Fi ambiguity и принять
