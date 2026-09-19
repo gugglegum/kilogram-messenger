@@ -9,7 +9,7 @@ publish = false
 [dependencies]
 anyhow.workspace = true
 base64.workspace = true
-blake3.workspace = true
+blake3 = { workspace = true, features = ["pure"] }
 clap.workspace = true
 image.workspace = true
 kilogram-identity = { path = "../../crates/kilogram-identity" }

@@ -7,7 +7,10 @@ $ErrorActionPreference = 'Stop'
 $workspace = [System.IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $workflowPath = Join-Path $workspace '.github\workflows\independent-offline-reproduction.yml'
 $verifierPath = Join-Path $PSScriptRoot 'verify-kilogram-independent-builder.ps1'
-foreach ($path in @($workflowPath, $verifierPath)) {
+$localBuilderPath = Join-Path $PSScriptRoot 'build-kilogram-offline-reproducible.ps1'
+$linkerHelperPath = Join-Path $PSScriptRoot 'kilogram-reproducible-linker.ps1'
+$offlineBoundaryPath = Join-Path $PSScriptRoot 'verify-kilogram-offline-boundary.ps1'
+foreach ($path in @($workflowPath, $verifierPath, $localBuilderPath, $linkerHelperPath, $offlineBoundaryPath)) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
         throw "Independent-builder boundary file is missing: $path"
     }
@@ -15,6 +18,9 @@ foreach ($path in @($workflowPath, $verifierPath)) {
 
 $workflow = Get-Content -LiteralPath $workflowPath -Raw
 $verifier = Get-Content -LiteralPath $verifierPath -Raw
+$localBuilder = Get-Content -LiteralPath $localBuilderPath -Raw
+$linkerHelper = Get-Content -LiteralPath $linkerHelperPath -Raw
+$offlineBoundary = Get-Content -LiteralPath $offlineBoundaryPath -Raw
 
 foreach ($required in @(
     'workflow_dispatch:',
@@ -27,7 +33,15 @@ foreach ($required in @(
     'artifact-metadata: write',
     'persist-credentials: false',
     'cargo fetch --locked --target x86_64-pc-windows-msvc',
+    'verify-kilogram-offline-boundary.ps1',
+    "blake3_codegen = 'pure-rust-intrinsics'",
     'cargo build --jobs 2 --frozen --release --target x86_64-pc-windows-msvc --package kilogram-offline',
+    'kilogram-reproducible-linker.ps1',
+    'Get-KilogramBundledLldIdentity',
+    'New-KilogramReproducibleRustFlags',
+    'format_version = 2',
+    'sha256 = $linker.sha256',
+    'The bundled LLD linker changed during the independent build.',
     'actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10',
     'actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6',
     "if: steps.reproduce.outputs.matches_expected == 'true'",
@@ -47,7 +61,8 @@ foreach ($forbidden in @(
     'Compress-Archive',
     'package-kilogram-offline.ps1',
     'runs-on: self-hosted',
-    'persist-credentials: true'
+    'persist-credentials: true',
+    'linker-features=+lld'
 )) {
     if ($workflow.IndexOf($forbidden, [System.StringComparison]::OrdinalIgnoreCase) -ge 0) {
         throw "Independent-builder workflow contains forbidden automatic/package boundary: $forbidden"
@@ -60,7 +75,12 @@ foreach ($actionUse in [regex]::Matches($workflow, '(?m)^\s*uses:\s+([^\s#]+)'))
 }
 
 foreach ($required in @(
+    'format_version -ne 2',
     "builder_scope -ne 'github-hosted-windows-independent'",
+    "linker.mode -ne 'rust-toolchain-bundled-lld'",
+    "blake3_codegen -ne 'pure-rust-intrinsics'",
+    'builderRecord.linker.sha256 -cne [string]$localRecord.linker.sha256',
+    'mismatched_linker=rejected',
     "workflow.event -ne 'workflow_dispatch'",
     "workflow.name -ne 'Independent offline reproduction'",
     "runner.environment -ne 'github-hosted'",
@@ -80,10 +100,59 @@ if ($verifier.IndexOf('SkipAttestationForProduction', [System.StringComparison]:
     throw 'Production independent-builder verification must not expose an attestation bypass.'
 }
 
+foreach ($required in @(
+    'kilogram-reproducible-linker.ps1',
+    'Get-KilogramBundledLldIdentity',
+    'New-KilogramReproducibleRustFlags',
+    'verify-kilogram-offline-boundary.ps1',
+    'format_version = 2',
+    "blake3_codegen = 'pure-rust-intrinsics'",
+    'sha256 = $linkerIdentity.sha256',
+    'The bundled LLD linker changed during the two clean builds.'
+)) {
+    if ($localBuilder.IndexOf($required, [System.StringComparison]::Ordinal) -lt 0) {
+        throw "Local reproducible builder boundary is missing: $required"
+    }
+}
+
+foreach ($required in @(
+    'rustc --print sysroot',
+    'rust-lld.exe',
+    "mode = 'rust-toolchain-bundled-lld'",
+    "source = 'rustc-sysroot-target-bin'",
+    "flavor = 'lld-link'",
+    "reproducibility_flag = '/Brepro'",
+    'linker-flavor=lld-link',
+    'link-arg=/Brepro',
+    'Get-FileHash -LiteralPath $path -Algorithm SHA256'
+)) {
+    if ($linkerHelper.IndexOf($required, [System.StringComparison]::Ordinal) -lt 0) {
+        throw "Bundled LLD helper boundary is missing: $required"
+    }
+}
+if ($linkerHelper.IndexOf('linker-features=+lld', [System.StringComparison]::OrdinalIgnoreCase) -ge 0) {
+    throw 'Bundled LLD helper must not use the unstable linker-features flag.'
+}
+
+foreach ($required in @(
+    'blake3 pure feature',
+    'blake3 feature "pure"$',
+    'blake3_codegen=pure-rust-intrinsics',
+    'linked_blake3_native_objects=false',
+    '--offline --locked',
+    '--target x86_64-pc-windows-msvc'
+)) {
+    if ($offlineBoundary.IndexOf($required, [System.StringComparison]::Ordinal) -lt 0) {
+        throw "Offline pure-Rust code-generation boundary is missing: $required"
+    }
+}
+
 Write-Output 'independent_builder_boundary=verified'
 Write-Output 'trigger=workflow-dispatch-only'
 Write-Output 'builder=github-hosted-windows'
 Write-Output 'artifact=kilogram-offline.exe'
+Write-Output 'linker=rust-toolchain-bundled-lld'
+Write-Output 'blake3_codegen=pure-rust-intrinsics'
 Write-Output 'attestation=required-for-production-verification'
 Write-Output 'automatic_release=false'
 Write-Output 'local_zip=false'

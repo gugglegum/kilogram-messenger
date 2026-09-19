@@ -1,6 +1,6 @@
 # RFC-0072: Reproducible offline release and bounded Cargo cache (M0.9.50)
 
-Status: implemented in M0.9.50.
+Status: implemented in M0.9.50; linker boundary upgraded by M0.9.77.
 
 ## 1. Problem
 
@@ -26,7 +26,8 @@ by default and:
 3. gives each build a separate Cargo target root;
 4. builds only `kilogram-offline` for `x86_64-pc-windows-msvc` using
    `cargo --frozen --release`, `CARGO_INCREMENTAL=0`, the commit timestamp as
-   `SOURCE_DATE_EPOCH`, a common source-path remap and `/Brepro`;
+   `SOURCE_DATE_EPOCH`, a common source-path remap, the exact `rust-lld.exe`
+   bundled in the pinned Rust toolchain, `lld-link` flavor and `/Brepro`;
 5. requires the two executable lengths and SHA-256 hashes to match exactly;
 6. writes a bounded JSON record with source, lockfile, toolchain, command
    boundary and both artifact identities; and
@@ -36,6 +37,11 @@ The repository pins Rust 1.98.0, the minimal rustup profile, rustfmt, Clippy and
 the Windows MSVC target in `rust-toolchain.toml`. `Cargo.lock` and the toolchain
 file are copied into the record and hashed. `--frozen` prevents an unnoticed
 lockfile update or network fetch during either comparison build.
+
+Since M0.9.77, record format v2 also stores the bundled linker SHA-256, length,
+origin and flavor. This avoids the mutable Microsoft linker selection that made
+the first external M0.9.59 artifacts differ. The full contract is in
+[`RFC-0100`](RFC-0100-toolchain-bundled-lld-independent-reproduction.md).
 
 `scripts/verify-kilogram-offline-reproducibility-record.ps1` is a separate
 bounded verifier. It rejects unknown build-boundary values, unsafe file names,

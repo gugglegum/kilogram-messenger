@@ -130,3 +130,8 @@ by 1024 bytes while using MSVC linker versions 14.44 and 14.51 respectively.
 No attestation was issued. Byte-identical cross-environment reproducibility is
 deferred to the public-release hardening track and is not an M1 messenger
 acceptance requirement.
+
+M0.9.77 subsequently replaces the mutable MSVC linker selection with the
+SHA-256-recorded `rust-lld.exe` bundled in the pinned Rust toolchain. See
+[`RFC-0100`](RFC-0100-toolchain-bundled-lld-independent-reproduction.md). A
+fresh external match and attestation remain explicit post-push work.

@@ -10,9 +10,18 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 . (Join-Path $PSScriptRoot 'cargo-resource-policy.ps1')
+. (Join-Path $PSScriptRoot 'kilogram-reproducible-linker.ps1')
 $cargoJobsResolved = Set-KilogramCargoResourcePolicy -RequestedJobs $CargoJobs
 
 $workspace = [System.IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
+$linkerIdentity = $null
+Push-Location $workspace
+try {
+    $linkerIdentity = Get-KilogramBundledLldIdentity
+}
+finally {
+    Pop-Location
+}
 $reproRoot = [System.IO.Path]::GetFullPath((Join-Path $workspace '.tmp\repro'))
 $output = if ([System.IO.Path]::IsPathRooted($OutputDirectory)) {
     [System.IO.Path]::GetFullPath($OutputDirectory)
@@ -84,9 +93,9 @@ function Invoke-CleanBuild([string]$SourceRoot, [string]$TargetRoot, [string]$Ar
         $env:SOURCE_DATE_EPOCH = $sourceEpoch
         $unitSeparator = [char]0x1f
         $env:CARGO_ENCODED_RUSTFLAGS = @(
-            "--remap-path-prefix=$SourceRoot=Z:/kilogram-source",
-            '-C',
-            'link-arg=/Brepro'
+            New-KilogramReproducibleRustFlags `
+                -SourceRoot $SourceRoot `
+                -LinkerIdentity $linkerIdentity
         ) -join $unitSeparator
         Push-Location $SourceRoot
         try {
@@ -121,6 +130,10 @@ function Invoke-CleanBuild([string]$SourceRoot, [string]$TargetRoot, [string]$Ar
 
 Push-Location $workspace
 try {
+    & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'verify-kilogram-offline-boundary.ps1') | Out-Host
+    if ($LASTEXITCODE -ne 0) {
+        throw 'offline dependency/code-generation boundary verification failed'
+    }
     $dirty = @(& git status --porcelain --untracked-files=normal)
     if ($LASTEXITCODE -ne 0) {
         throw 'git status failed'
@@ -166,6 +179,15 @@ try {
 
     $buildA = Invoke-CleanBuild $sourceA $targetA 'kilogram-offline-build-a.exe'
     $buildB = Invoke-CleanBuild $sourceB $targetB 'kilogram-offline-build-b.exe'
+    $linkerAfterBuild = Get-KilogramBundledLldIdentity
+    if ([string]$linkerAfterBuild.sha256 -cne [string]$linkerIdentity.sha256 -or
+        [int64]$linkerAfterBuild.bytes -ne [int64]$linkerIdentity.bytes -or
+        -not ([string]$linkerAfterBuild.path).Equals(
+            [string]$linkerIdentity.path,
+            [System.StringComparison]::OrdinalIgnoreCase
+        )) {
+        throw 'The bundled LLD linker changed during the two clean builds.'
+    }
     $equal = $buildA.sha256 -eq $buildB.sha256 -and $buildA.bytes -eq $buildB.bytes
 
     Push-Location $sourceA
@@ -177,7 +199,7 @@ try {
         Pop-Location
     }
     $record = [ordered]@{
-        format_version = 1
+        format_version = 2
         status = if ($equal) { 'reproducible' } else { 'divergent' }
         builder_scope = 'same-host-separate-clean-roots'
         build_root_count = 2
@@ -194,7 +216,16 @@ try {
         target = 'x86_64-pc-windows-msvc'
         incremental = $false
         path_remap = '<BUILD_ROOT>=Z:/kilogram-source'
-        linker_reproducibility_flag = '/Brepro'
+        blake3_codegen = 'pure-rust-intrinsics'
+        linker = [ordered]@{
+            mode = $linkerIdentity.mode
+            source = $linkerIdentity.source
+            file = $linkerIdentity.file
+            flavor = $linkerIdentity.flavor
+            sha256 = $linkerIdentity.sha256
+            bytes = $linkerIdentity.bytes
+            reproducibility_flag = $linkerIdentity.reproducibility_flag
+        }
         network_surface_compiled = $false
         runtime_surface_compiled = $false
         build_a = $buildA

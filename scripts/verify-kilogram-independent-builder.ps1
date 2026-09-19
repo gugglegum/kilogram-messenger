@@ -77,7 +77,7 @@ function Assert-IndependentEvidence {
     if ($localRecord.source_revision -cnotmatch '^[0-9a-f]{40}$') {
         throw 'Local reproducibility record must identify a clean exact Git commit.'
     }
-    if ($builderRecord.format_version -ne 1 -or
+    if ($builderRecord.format_version -ne 2 -or
         $builderRecord.status -ne 'matched' -or
         $builderRecord.builder_scope -ne 'github-hosted-windows-independent' -or
         $builderRecord.repository -cne $ExpectedRepository -or
@@ -89,7 +89,13 @@ function Assert-IndependentEvidence {
         [int]$builderRecord.cargo_jobs -ne 2 -or
         $builderRecord.incremental -ne $false -or
         $builderRecord.path_remap -ne '<BUILD_ROOT>=Z:/kilogram-source' -or
-        $builderRecord.linker_reproducibility_flag -ne '/Brepro' -or
+        $builderRecord.blake3_codegen -ne 'pure-rust-intrinsics' -or
+        $builderRecord.linker.mode -ne 'rust-toolchain-bundled-lld' -or
+        $builderRecord.linker.source -ne 'rustc-sysroot-target-bin' -or
+        $builderRecord.linker.file -ne 'rust-lld.exe' -or
+        $builderRecord.linker.flavor -ne 'lld-link' -or
+        [int64]$builderRecord.linker.bytes -le 0 -or
+        $builderRecord.linker.reproducibility_flag -ne '/Brepro' -or
         $builderRecord.network_surface_compiled -ne $false -or
         $builderRecord.runtime_surface_compiled -ne $false -or
         $builderRecord.workflow.event -ne 'workflow_dispatch' -or
@@ -111,6 +117,15 @@ function Assert-IndependentEvidence {
         [string]$builderRecord.cargo -cne [string]$localRecord.cargo) {
         throw 'Independent builder did not use the locally recorded pinned Rust/Cargo toolchain.'
     }
+    if ([string]$builderRecord.linker.sha256 -cne [string]$localRecord.linker.sha256 -or
+        [int64]$builderRecord.linker.bytes -ne [int64]$localRecord.linker.bytes -or
+        [string]$builderRecord.linker.mode -cne [string]$localRecord.linker.mode -or
+        [string]$builderRecord.linker.source -cne [string]$localRecord.linker.source -or
+        [string]$builderRecord.linker.file -cne [string]$localRecord.linker.file -or
+        [string]$builderRecord.linker.flavor -cne [string]$localRecord.linker.flavor -or
+        [string]$builderRecord.linker.reproducibility_flag -cne [string]$localRecord.linker.reproducibility_flag) {
+        throw 'Independent builder did not use the exact locally recorded bundled LLD linker.'
+    }
     if ($builderRecord.artifact.file -ne 'kilogram-offline.exe') {
         throw 'Independent builder record contains an unexpected artifact name.'
     }
@@ -118,6 +133,8 @@ function Assert-IndependentEvidence {
     foreach ($hashField in @(
         @{ Value = [string]$localRecord.build_a.sha256; Name = 'local.build_a.sha256' },
         @{ Value = [string]$localRecord.build_b.sha256; Name = 'local.build_b.sha256' },
+        @{ Value = [string]$localRecord.linker.sha256; Name = 'local.linker.sha256' },
+        @{ Value = [string]$builderRecord.linker.sha256; Name = 'builder.linker.sha256' },
         @{ Value = [string]$builderRecord.expected_local_sha256; Name = 'expected_local_sha256' },
         @{ Value = [string]$builderRecord.artifact.sha256; Name = 'artifact.sha256' }
     )) {
@@ -155,6 +172,8 @@ function Assert-IndependentEvidence {
     Write-Output "source_revision=$($localRecord.source_revision)"
     Write-Output "artifact_sha256=$actualHash"
     Write-Output "artifact_bytes=$actualBytes"
+    Write-Output "blake3_codegen=$($builderRecord.blake3_codegen)"
+    Write-Output "linker_sha256=$($builderRecord.linker.sha256)"
     Write-Output "attestation_verified=$(((-not $SkipAttestation)).ToString().ToLowerInvariant())"
 }
 
@@ -178,7 +197,7 @@ function Invoke-SelfTest {
         $hash = Get-Sha256 $artifact
         $length = (Get-Item -LiteralPath $artifact).Length
         $localRecord = [ordered]@{
-            format_version = 1
+            format_version = 2
             status = 'reproducible'
             builder_scope = 'same-host-separate-clean-roots'
             build_root_count = 2
@@ -195,7 +214,16 @@ function Invoke-SelfTest {
             target = 'x86_64-pc-windows-msvc'
             incremental = $false
             path_remap = '<BUILD_ROOT>=Z:/kilogram-source'
-            linker_reproducibility_flag = '/Brepro'
+            blake3_codegen = 'pure-rust-intrinsics'
+            linker = [ordered]@{
+                mode = 'rust-toolchain-bundled-lld'
+                source = 'rustc-sysroot-target-bin'
+                file = 'rust-lld.exe'
+                flavor = 'lld-link'
+                sha256 = $hash
+                bytes = 1
+                reproducibility_flag = '/Brepro'
+            }
             network_surface_compiled = $false
             runtime_surface_compiled = $false
             build_a = [ordered]@{ file = 'kilogram-offline-build-a.exe'; sha256 = $hash; bytes = $length }
@@ -204,7 +232,7 @@ function Invoke-SelfTest {
         [System.IO.File]::WriteAllText((Join-Path $local 'REPRODUCIBILITY.json'), ($localRecord | ConvertTo-Json -Depth 5), [System.Text.UTF8Encoding]::new($false))
 
         $builderRecord = [ordered]@{
-            format_version = 1
+            format_version = 2
             status = 'matched'
             builder_scope = 'github-hosted-windows-independent'
             repository = 'gugglegum/kilogram-messenger'
@@ -217,7 +245,16 @@ function Invoke-SelfTest {
             cargo_jobs = 2
             incremental = $false
             path_remap = '<BUILD_ROOT>=Z:/kilogram-source'
-            linker_reproducibility_flag = '/Brepro'
+            blake3_codegen = 'pure-rust-intrinsics'
+            linker = [ordered]@{
+                mode = 'rust-toolchain-bundled-lld'
+                source = 'rustc-sysroot-target-bin'
+                file = 'rust-lld.exe'
+                flavor = 'lld-link'
+                sha256 = $hash
+                bytes = 1
+                reproducibility_flag = '/Brepro'
+            }
             network_surface_compiled = $false
             runtime_surface_compiled = $false
             rustc = 'rustc self-test'
@@ -230,6 +267,20 @@ function Invoke-SelfTest {
         [System.IO.File]::WriteAllText($builderRecordPath, ($builderRecord | ConvertTo-Json -Depth 6), [System.Text.UTF8Encoding]::new($false))
 
         Assert-IndependentEvidence -IndependentArtifact $artifact -IndependentRecord $builderRecordPath -SameHostDirectory $local -ExpectedRepository 'gugglegum/kilogram-messenger' -SkipAttestation | Out-Null
+        $builderRecord.linker.sha256 = '0000000000000000000000000000000000000000000000000000000000000000'
+        [System.IO.File]::WriteAllText($builderRecordPath, ($builderRecord | ConvertTo-Json -Depth 6), [System.Text.UTF8Encoding]::new($false))
+        $linkerRejected = $false
+        try {
+            Assert-IndependentEvidence -IndependentArtifact $artifact -IndependentRecord $builderRecordPath -SameHostDirectory $local -ExpectedRepository 'gugglegum/kilogram-messenger' -SkipAttestation | Out-Null
+        }
+        catch {
+            $linkerRejected = $true
+        }
+        if (-not $linkerRejected) {
+            throw 'Self-test verifier accepted a mismatched independent linker.'
+        }
+        $builderRecord.linker.sha256 = $hash
+        [System.IO.File]::WriteAllText($builderRecordPath, ($builderRecord | ConvertTo-Json -Depth 6), [System.Text.UTF8Encoding]::new($false))
         Add-Content -LiteralPath $artifact -Value 'tamper'
         $rejected = $false
         try {
@@ -242,6 +293,7 @@ function Invoke-SelfTest {
             throw 'Self-test verifier accepted a tampered independent artifact.'
         }
         Write-Output 'independent_builder_self_test=passed'
+        Write-Output 'mismatched_linker=rejected'
         Write-Output 'tampered_artifact=rejected'
     }
     finally {

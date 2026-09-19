@@ -208,12 +208,32 @@ are specified in
 The fresh service-free v2 two-network field harness and its fail-closed evidence
 contract are specified in
 [`docs/RFC-0099-service-free-v2-field-run.md`](docs/RFC-0099-service-free-v2-field-run.md).
+The pinned Rust-toolchain LLD contract for independent Windows reproduction is
+specified in
+[`docs/RFC-0100-toolchain-bundled-lld-independent-reproduction.md`](docs/RFC-0100-toolchain-bundled-lld-independent-reproduction.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.76 service-free v2 field lifecycle — verified
+## Current milestone: M0.9.77 toolchain-bundled LLD reproduction — implemented locally
+
+The local two-clean-root builder and manual GitHub-hosted builder now resolve
+`rust-lld.exe` from the pinned Rust toolchain, pass it explicitly as
+`lld-link`, and record its exact SHA-256 and length in format-v2 evidence. The
+production verifier requires identical linker bytes before accepting artifact
+equality or signed provenance; its self-test rejects both a substituted linker
+and a modified executable. The isolated offline target also enables BLAKE3's
+supported `pure` feature so a mutable MSVC compiler cannot contribute linked
+C/assembly objects.
+
+A real debug `kilogram-offline.exe` linked and ran with this contract and has a
+PE linker field of 14.00. No ZIP or network process was created. A clean local
+release-pair record and fresh manual GitHub dispatch are still required before
+independent byte equality and attestation can be claimed. Details are in
+[`docs/RFC-0100-toolchain-bundled-lld-independent-reproduction.md`](docs/RFC-0100-toolchain-bundled-lld-independent-reproduction.md).
+
+## Previous milestone: M0.9.76 service-free v2 field lifecycle — verified
 
 The existing three-folder, six-launch Windows harness now has a fresh M0.9.76
 mode which creates the mailbox only through the v2 exact command. The generated
@@ -408,8 +428,9 @@ manual run for commit `e84d557dd80e07721296777aebe8ebbc6a8af392` completed the
 independent build but correctly failed the strict byte gate: the GitHub binary
 was 1024 bytes larger than the local one, with MSVC linker 14.51 versus 14.44.
 No attestation was issued. This diagnostic result does not block M1; exact
-cross-environment reproducibility is deferred to public-release hardening.
-Details are in
+cross-environment reproducibility was deferred to public-release hardening.
+M0.9.77 now supplies the controlled bundled-LLD replacement, but still needs a
+fresh external run. Historical details are in
 [`docs/RFC-0081-independent-builder-and-signed-provenance.md`](docs/RFC-0081-independent-builder-and-signed-provenance.md).
 
 ## Previous milestone: M0.9.58 controlled mailbox field harness — complete

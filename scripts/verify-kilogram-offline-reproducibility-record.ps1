@@ -50,7 +50,7 @@ if ($recordItem.Length -le 0 -or $recordItem.Length -gt 64KB) {
     throw 'Reproducibility record size is invalid.'
 }
 $record = Get-Content -LiteralPath $recordPath -Raw | ConvertFrom-Json
-if ($record.format_version -ne 1 -or $record.status -ne 'reproducible') {
+if ($record.format_version -ne 2 -or $record.status -ne 'reproducible') {
     throw 'Reproducibility record version or status is invalid.'
 }
 if ($record.builder_scope -ne 'same-host-separate-clean-roots' -or
@@ -62,7 +62,13 @@ if ($record.builder_scope -ne 'same-host-separate-clean-roots' -or
     $record.target -ne 'x86_64-pc-windows-msvc' -or
     $record.incremental -ne $false -or
     $record.path_remap -ne '<BUILD_ROOT>=Z:/kilogram-source' -or
-    $record.linker_reproducibility_flag -ne '/Brepro' -or
+    $record.blake3_codegen -ne 'pure-rust-intrinsics' -or
+    $record.linker.mode -ne 'rust-toolchain-bundled-lld' -or
+    $record.linker.source -ne 'rustc-sysroot-target-bin' -or
+    $record.linker.file -ne 'rust-lld.exe' -or
+    $record.linker.flavor -ne 'lld-link' -or
+    [int64]$record.linker.bytes -le 0 -or
+    $record.linker.reproducibility_flag -ne '/Brepro' -or
     $record.network_surface_compiled -ne $false -or
     $record.runtime_surface_compiled -ne $false) {
     throw 'Reproducibility record build boundary is invalid.'
@@ -77,6 +83,7 @@ foreach ($hashField in @(
     @{ Value = [string]$record.source_manifest_sha256; Name = 'source_manifest_sha256' },
     @{ Value = [string]$record.cargo_lock_sha256; Name = 'cargo_lock_sha256' },
     @{ Value = [string]$record.rust_toolchain_sha256; Name = 'rust_toolchain_sha256' },
+    @{ Value = [string]$record.linker.sha256; Name = 'linker.sha256' },
     @{ Value = [string]$record.build_a.sha256; Name = 'build_a.sha256' },
     @{ Value = [string]$record.build_b.sha256; Name = 'build_b.sha256' }
 )) {
@@ -117,5 +124,7 @@ Write-Output "source_manifest_sha256=$($record.source_manifest_sha256)"
 Write-Output "artifact_sha256=$buildAHash"
 Write-Output "artifact_bytes=$buildALength"
 Write-Output "target=$($record.target)"
+Write-Output "blake3_codegen=$($record.blake3_codegen)"
+Write-Output "linker_sha256=$($record.linker.sha256)"
 Write-Output 'network_surface_compiled=false'
 Write-Output 'runtime_surface_compiled=false'

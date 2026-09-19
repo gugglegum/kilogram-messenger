@@ -381,36 +381,22 @@ removal semantics и MLS-группы ещё не реализованы.
 
 ## План ближайших работ
 
-M0.9.59 подготовил manual-only independent Windows builder поверх M0.9.50:
-exact clean commit и локальный reproduced SHA обязательны, external artifact
-аттестуется только при byte-identical совпадении, а production verifier
-проверяет executable и record по repository, signer workflow, source digest и
-запрещает self-hosted runner. Workflow не запускается от push/PR/release и ещё
-не выполнялся, поэтому independent reproduction пока не заявлена. M0.9.58
-подготовил controlled two-device mailbox lifecycle field harness:
-debug-only one-shot hook обрывает recipient ACK строго после durable apply и до
-подписи, затем runtime завершает vault mirror и сам останавливается на явной
-restart boundary. Release build отвергает hook до открытия endpoint. No-clobber
-helpers пишут phase logs и secret-free IPC status, а fail-closed evidence
-verifier связывает exact update/binding IDs для activation retry, rotation,
-mailbox round trip и revocation, требует direct+relay и отвергает store log с
-application identifiers. Сетевой прогон ещё не выполнялся; release/ZIP и новый
-EXE не создавались.
+M0.9.76 уже имеет принятое внешнее service-free v2 evidence. M0.9.77 закрыл
+локальную controlled-linker часть release hardening: local и GitHub builders
+явно используют `rust-lld.exe` из pinned Rust toolchain, format-v2 records
+фиксируют его SHA-256/length/flavor, а verifier отвергает mismatched linker до
+проверки artifact/attestation. Offline target также включает BLAKE3 `pure`,
+исключая linked MSVC-built C/ASM. Реальный debug `kilogram-offline` собран и
+запущен с PE linker 14.00; внешний exact match пока не заявлен.
 
-1. Провести подготовленный M0.9.58 field test на Alice/Bob: activation с
-   forced lost ACK/restart, rotation overlap, opaque mailbox round trip и
-   revocation через direct/relay; после машинной проверки отдельно подтвердить
-   GUI states. Сетевой запуск и переносимый debug-набор выполнять только в
-   согласованное тестовое окно.
-2. При первом реальном public artifact выполнить M0.9.50 exact-HEAD local
-   reproduction, вручную dispatch-нуть M0.9.59 external workflow и прогнать
-   production attestation verifier по скачанным EXE/record. Foundation уже
-   реализован, но ни external build, ни provenance ещё не создавались.
-3. Уже реализованный M0.9.50 дважды строит `kilogram-offline` из exact
-   SHA-256-manifested source в отдельных clean source/target roots, требует
-   byte-identical EXE и fail-closed связывает clean package с проверенным
-   record exact `HEAD`; отдельный verification profile удерживает Cargo cache.
-   Это same-host gate, а не независимый второй builder.
+1. После clean commit/push создать exact-HEAD local format-v2 two-root record,
+   вручную dispatch-нуть external workflow и проверить downloaded EXE/record +
+   attestations production verifier-ом. Если LLD hash совпадёт, но EXE нет,
+   исследовать и закрепить Windows SDK/import libraries.
+2. Спроектировать Sybil-resistant provider diversity и проверить exact replicas
+   на физических/операторски независимых volunteer hosts.
+3. Optional autostart/background mode оставить отдельной явной настройкой;
+   Windows Task Scheduler не является обязательной частью мессенджера.
 4. Уже реализованный M0.9.49 выделяет единый
    `kilogram-publication-conflict`: online/offline используют один signed codec,
    dependency gate запрещает network/runtime/image crates и отдельный guard
@@ -763,6 +749,12 @@ EXE не создавались.
   v2 exact activation, отсутствие compatibility tuple/fixture, обязательные
   exact receipts `2/2`, sender-offline, commit-before-delete и restart без
   redelivery; retry run `20260920-001614` принят с `result=verified`.
+- [`../docs/RFC-0100-toolchain-bundled-lld-independent-reproduction.md`](../docs/RFC-0100-toolchain-bundled-lld-independent-reproduction.md) —
+  реализованный локально M0.9.77 controlled-linker contract: local/GitHub
+  builders используют exact `rust-lld.exe` из pinned Rust toolchain, format-v2
+  records связывают linker hash и BLAKE3 pure-Rust codegen с artifact, mismatch
+  fail closed; fresh external match/attestation ещё требует явного post-push
+  dispatch.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

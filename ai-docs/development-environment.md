@@ -2517,3 +2517,26 @@ retirement остальных compatibility shadows ещё не реализов
   v2 descriptor/compatibility endpoint absent, exact resolution/receipts 2/2,
   HTTP PUT not attempted, Alice offline, Bob volunteer-Iroh commit/delete 2/2,
   restart inbound count 0, history event count 2 и marker occurrence 1.
+
+## M0.9.77 verification snapshot (2026-09-20)
+
+- Pinned Rust: `rustc 1.98.0`, target `x86_64-pc-windows-msvc`; bundled
+  `rust-lld.exe` расположен в target-specific sysroot `bin`.
+- Local bundled linker identity на этой машине: SHA-256
+  `f436ddda2f519c5ad18b7c7b09a3eadc2d4fc1be88cd9280cc472740fc3b7389`,
+  113,421,312 bytes.
+- Stable explicit flags `-C linker=<rust-lld.exe> -C linker-flavor=lld-link
+  -C link-arg=/Brepro` успешно собрали и запустили tiny smoke и настоящий debug
+  `kilogram-offline.exe`; `dumpbin /headers` показывает linker version 14.00.
+- Reverse build-dependency tree offline target содержит `cc` только через
+  BLAKE3. Direct `kilogram-offline` dependency включает официальный feature
+  `pure`; resolved graph подтверждает `blake3 feature "pure"`, поэтому C/ASM
+  implementations не попадают в итоговый artifact.
+- `-C linker-features=+lld` в Rust 1.98.0 всё ещё unstable и поэтому явно не
+  используется; static boundary запрещает его появление.
+- Format-v2 local/external records фиксируют exact linker identity; independent
+  verifier self-test принял coherent evidence и отверг mismatched linker hash и
+  tampered artifact.
+- `verify-kilogram-independent-builder-boundary.ps1`, PowerShell parse всех
+  изменённых scripts и real debug Cargo build прошли. Сборка использовала
+  BelowNormal и `--jobs 2`; ZIP, network process и release pair не создавались.

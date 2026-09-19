@@ -107,3 +107,13 @@ is useful evidence that the source builds elsewhere, but it is not a
 reproducibility or provenance claim. Pinning the linker/SDK or adopting another
 controlled linker remains release-hardening work and is not an M1 messenger
 acceptance blocker.
+
+## 7. M0.9.77 continuation
+
+M0.9.77 implements the controlled-linker follow-up in
+[`RFC-0100`](RFC-0100-toolchain-bundled-lld-independent-reproduction.md).
+Both builders now use and record the exact `rust-lld.exe` bundled with the
+pinned Rust toolchain, and the format-v2 verifier requires equal linker hashes
+before accepting an independently built executable. The original divergent
+run remains diagnostic history; the new contract still needs a fresh explicit
+GitHub dispatch before cross-environment reproducibility can be claimed.

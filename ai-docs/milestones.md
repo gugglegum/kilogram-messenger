@@ -4167,10 +4167,37 @@ verifier-ом и принят с `result=verified`. Подтверждены:
 этом тесте работали на Alice host. Sybil resistance и access-correlation
 privacy остаются отдельными задачами.
 
+### M0.9.77 — controlled toolchain-bundled LLD reproduction: реализовано локально
+
+Реализовано:
+
+- same-host clean-root builder и manual GitHub Windows builder больше не
+  выбирают mutable MSVC `link.exe`; оба явно используют `rust-lld.exe` из
+  target-specific `bin` закреплённого Rust 1.98.0 toolchain;
+- стабильные rustc flags задают explicit linker path, `lld-link` flavor,
+  `/Brepro` и прежний source path remap; нестабильный
+  `linker-features=+lld` запрещён boundary gate-ом;
+- `kilogram-offline` отдельно включает штатный BLAKE3 feature `pure`; resolved
+  target graph использует Rust intrinsics и не линкует BLAKE3 C/ASM objects,
+  что убирает MSVC `cl.exe` как ещё один artifact input;
+- reproducibility records подняты до format v2 и фиксируют mode/source/file,
+  SHA-256, размер, flavor и reproducibility flag линкера;
+- production verifier требует exact equality linker identity между local и
+  GitHub records до artifact/attestation acceptance;
+- self-test отдельно отвергает mismatched linker hash и tampered EXE;
+- real debug `kilogram-offline.exe` успешно собран и запущен через bundled LLD,
+  PE header показывает linker version 14.00;
+- release-pair/ZIP/network process на этапе реализации не создавались; exact
+  external match остаётся отдельным явным post-push workflow run;
+- контракт зафиксирован в
+  [`../docs/RFC-0100-toolchain-bundled-lld-independent-reproduction.md`](../docs/RFC-0100-toolchain-bundled-lld-independent-reproduction.md).
+
 ### Следующий этап
 
-1. До первого публичного security artifact pin-нуть linker/SDK либо controlled
-   alternative и повторить M0.9.59 до matched external hash и attestation.
+1. Из clean committed/pushed M0.9.77 revision создать local format-v2
+   two-root record, вручную повторить GitHub independent build и получить
+   matched external hash + attestations. Если exact LLD совпадает, но EXE нет,
+   следующим кандидатом на pinning является Windows SDK/import libraries.
 2. Спроектировать Sybil-resistant provider diversity и проверить replicas на
    физически/операторски независимых volunteer hosts.
 3. Optional autostart/background mode оставить отдельной явной настройкой, не

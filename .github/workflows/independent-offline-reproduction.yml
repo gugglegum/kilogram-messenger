@@ -73,6 +73,13 @@ jobs:
       - name: Fetch locked dependencies
         run: cargo fetch --locked --target x86_64-pc-windows-msvc
 
+      - name: Verify isolated pure-Rust code-generation boundary
+        run: |
+          & .\scripts\verify-kilogram-offline-boundary.ps1
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Offline dependency/code-generation boundary verification failed.'
+          }
+
       - name: Build and compare independent artifact
         id: reproduce
         env:
@@ -92,16 +99,27 @@ jobs:
             throw 'Could not resolve source commit epoch.'
           }
           $env:SOURCE_DATE_EPOCH = $sourceEpoch
+          . .\scripts\kilogram-reproducible-linker.ps1
+          $linker = Get-KilogramBundledLldIdentity
           $unitSeparator = [char]0x1f
           $env:CARGO_ENCODED_RUSTFLAGS = @(
-            "--remap-path-prefix=$env:GITHUB_WORKSPACE_VALUE=Z:/kilogram-source",
-            '-C',
-            'link-arg=/Brepro'
+            New-KilogramReproducibleRustFlags `
+              -SourceRoot $env:GITHUB_WORKSPACE_VALUE `
+              -LinkerIdentity $linker
           ) -join $unitSeparator
 
           cargo build --jobs 2 --frozen --release --target x86_64-pc-windows-msvc --package kilogram-offline
           if ($LASTEXITCODE -ne 0) {
             throw 'Independent kilogram-offline build failed.'
+          }
+          $linkerAfterBuild = Get-KilogramBundledLldIdentity
+          if ([string]$linkerAfterBuild.sha256 -cne [string]$linker.sha256 -or
+              [int64]$linkerAfterBuild.bytes -ne [int64]$linker.bytes -or
+              -not ([string]$linkerAfterBuild.path).Equals(
+                [string]$linker.path,
+                [System.StringComparison]::OrdinalIgnoreCase
+              )) {
+            throw 'The bundled LLD linker changed during the independent build.'
           }
 
           $output = Join-Path $env:GITHUB_WORKSPACE_VALUE 'independent-builder'
@@ -114,7 +132,7 @@ jobs:
           $matched = $artifactHash -ceq $env:EXPECTED_LOCAL_SHA256
 
           $record = [ordered]@{
-            format_version = 1
+            format_version = 2
             status = if ($matched) { 'matched' } else { 'divergent' }
             builder_scope = 'github-hosted-windows-independent'
             repository = $env:KILOGRAM_REPOSITORY
@@ -127,7 +145,16 @@ jobs:
             cargo_jobs = 2
             incremental = $false
             path_remap = '<BUILD_ROOT>=Z:/kilogram-source'
-            linker_reproducibility_flag = '/Brepro'
+            blake3_codegen = 'pure-rust-intrinsics'
+            linker = [ordered]@{
+              mode = $linker.mode
+              source = $linker.source
+              file = $linker.file
+              flavor = $linker.flavor
+              sha256 = $linker.sha256
+              bytes = $linker.bytes
+              reproducibility_flag = $linker.reproducibility_flag
+            }
             network_surface_compiled = $false
             runtime_surface_compiled = $false
             rustc = ((& rustc -vV) -join "`n")

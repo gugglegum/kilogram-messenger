@@ -223,9 +223,13 @@ sessions, distribution, removal и key epochs и не решены этим пр
   reproducibility gate, а M0.9.59 — manual GitHub-hosted second-builder и
   fail-closed signed-attestation verification foundation. Первый external run
   скомпилировал target, но корректно fail closed разошёлся на 1024 bytes из-за
-  как минимум MSVC linker 14.44/14.51 и не получил attestation; pinned
-  linker/SDK или controlled alternative, trusted reusable workflow и
-  release/update signing остаются открыты. Также открыты обнаружение конфликта между устройствами,
+  как минимум MSVC linker 14.44/14.51 и не получил attestation. M0.9.77 заменил
+  mutable MSVC linker на exact-hashed `rust-lld.exe`, а BLAKE3 C/ASM — на
+  pure-Rust intrinsics; format-v2 equality gate фиксирует оба решения. Fresh
+  GitHub match/attestation ещё не выполнен. Если
+  он снова разойдётся при одинаковом LLD hash, остаётся pinning Windows
+  SDK/import libraries. Trusted reusable workflow и release/update signing
+  также открыты. Также открыты обнаружение конфликта между устройствами,
   которые никогда не обменивались bundle, и действительно распределённая
   cross-machine координация без доверенного scheduler.
 - M0.9.32 compact/checkpoint-ит runtime publication, observation, policy и
