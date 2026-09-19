@@ -49,7 +49,7 @@ foreach ($value in @(
 }
 
 foreach ($value in @(
-    "[ValidateSet('M0.9.69', 'M0.9.72', 'M0.9.73')] [string] `$Milestone = 'M0.9.69'",
+    "[ValidateSet('M0.9.69', 'M0.9.72', 'M0.9.73', 'M0.9.74')] [string] `$Milestone = 'M0.9.69'",
     "`$noHttpsCompatibility = `$Milestone -cne 'M0.9.69'",
     'cargo build --jobs $cargoJobsResolved --locked --package kilogram-cli',
     "if (-not `$noHttpsCompatibility)",
@@ -87,7 +87,7 @@ foreach ($value in @(
     "`$script:M0972CompatibilityStoreKey = 'd75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a'",
     'Test-M0972CompatibilityEndpointReachable',
     'Assert-M0972HttpsFixtureAbsent',
-    "`$milestone -cnotin @('M0.9.69', 'M0.9.72', 'M0.9.73')",
+    "`$milestone -cnotin @('M0.9.69', 'M0.9.72', 'M0.9.73', 'M0.9.74')",
     "`$milestone -cne 'M0.9.69'",
     "'M0972'"
 )) {
@@ -143,15 +143,15 @@ foreach ($value in @(
 }
 
 foreach ($value in @(
-    "[ValidateSet('m0969', 'm0972', 'm0973')] [string] `$LabelPrefix = 'm0969'",
+    "[ValidateSet('m0969', 'm0972', 'm0973', 'm0974')] [string] `$LabelPrefix = 'm0969'",
     '[switch] $SuppressReport',
     '$ExpectedLabelPrefix'
 )) {
     if (-not $baseVerifier.Contains($value)) { throw "shared exact-locator verifier is missing '$value'" }
 }
 foreach ($value in @(
-    "[ValidateSet('m0972', 'm0973')] [string] `$LabelPrefix = 'm0972'",
-    "[ValidateSet('M0.9.72', 'M0.9.73')] [string] `$ExpectedMilestone = 'M0.9.72'",
+    "[ValidateSet('m0972', 'm0973', 'm0974')] [string] `$LabelPrefix = 'm0972'",
+    "[ValidateSet('M0.9.72', 'M0.9.73', 'M0.9.74')] [string] `$ExpectedMilestone = 'M0.9.72'",
     'runtime_mailbox_https_compatibility_copy=suppressed-exact-volunteer-durability',
     'runtime_mailbox_http_put=not-attempted',
     'runtime_mailbox_delivery_durability=exact-volunteer-replication',

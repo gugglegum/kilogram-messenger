@@ -21,7 +21,7 @@ function Assert-M0969Kit {
     }
     $build = Get-Content -LiteralPath $script:BuildInfoPath -Raw | ConvertFrom-Json
     $milestone = [string]$build.milestone
-    if ($milestone -cnotin @('M0.9.69', 'M0.9.72', 'M0.9.73')) {
+    if ($milestone -cnotin @('M0.9.69', 'M0.9.72', 'M0.9.73', 'M0.9.74')) {
         throw "Unsupported exact-locator field milestone: $milestone"
     }
     if ($milestone -ceq 'M0.9.69' -and
@@ -332,6 +332,7 @@ function Get-M0969Run {
 function Get-M0969PrivateRoot {
     param([Parameter(Mandatory)] [string] $Role, [Parameter(Mandatory)] [string] $RunId)
     $rootName = switch ($script:FieldMilestone) {
+        'M0.9.74' { 'M0974' }
         'M0.9.73' { 'M0973' }
         'M0.9.72' { 'M0972' }
         default { 'M0969' }

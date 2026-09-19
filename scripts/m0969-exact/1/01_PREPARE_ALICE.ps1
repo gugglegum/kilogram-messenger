@@ -2,6 +2,7 @@
 $build = Assert-M0969Kit
 $noHttpsCompatibility = [string]$build.milestone -cne 'M0.9.69'
 $labelPrefix = switch ([string]$build.milestone) {
+    'M0.9.74' { 'm0974' }
     'M0.9.73' { 'm0973' }
     'M0.9.72' { 'm0972' }
     default { 'm0969' }

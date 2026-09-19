@@ -2420,3 +2420,8 @@ retirement остальных compatibility shadows ещё не реализов
 - RFC-0097 и новый static gate включены в M1 acceptance builder/boundary.
   Release/ZIP/network listener не запускались; VPN не влияет на эти локальные
   проверки. Следующая внешняя попытка обязана использовать fresh M0.9.74 kit.
+- Generator/common/Alice/verifiers расширены строгими
+  `M0.9.74`/`m0974`/`M0974` branches. Новый M0.9.74 boundary наследует M0.9.73,
+  требует recovery gate, debug/two jobs/six launches/no ZIP/no release/no
+  generator network. Все M0.9.72/73/74 gates, verifier self-tests, M1 boundary
+  и PowerShell AST parse проходят.

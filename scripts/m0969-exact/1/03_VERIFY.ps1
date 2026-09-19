@@ -1,7 +1,11 @@
 . (Join-Path (Split-Path -Parent $PSScriptRoot) 'common.ps1')
 $build = Assert-M0969Kit
 $noHttpsCompatibility = [string]$build.milestone -cne 'M0.9.69'
-$labelPrefix = if ([string]$build.milestone -ceq 'M0.9.73') { 'm0973' } else { 'm0972' }
+$labelPrefix = switch ([string]$build.milestone) {
+    'M0.9.74' { 'm0974' }
+    'M0.9.73' { 'm0973' }
+    default { 'm0972' }
+}
 $null = Wait-M0969File `
     (Join-Path $script:SharedDirectory 'bob-complete.marker') 1800 'Bob completion marker'
 [IO.File]::WriteAllText(

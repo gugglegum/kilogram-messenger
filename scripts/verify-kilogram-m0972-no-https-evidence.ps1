@@ -2,7 +2,7 @@
 param(
     [string] $EvidenceDirectory,
     [switch] $SelfTest,
-    [ValidateSet('m0972', 'm0973')] [string] $LabelPrefix = 'm0972'
+    [ValidateSet('m0972', 'm0973', 'm0974')] [string] $LabelPrefix = 'm0972'
 )
 
 Set-StrictMode -Version Latest
@@ -51,7 +51,7 @@ function Assert-M0972Absent {
 function Test-M0972NoHttpsEvidence {
     param(
         [Parameter(Mandatory)] [string] $Directory,
-        [ValidateSet('M0.9.72', 'M0.9.73')] [string] $ExpectedMilestone = 'M0.9.72'
+        [ValidateSet('M0.9.72', 'M0.9.73', 'M0.9.74')] [string] $ExpectedMilestone = 'M0.9.72'
     )
 
     $expectedEndpoint = 'http://127.0.0.1:18787'
@@ -109,10 +109,16 @@ function Test-M0972NoHttpsEvidence {
         'mailbox_https_retirement_boundary=verified',
         'm0972_no_https_kit_boundary=verified'
     )
-    if ($ExpectedMilestone -ceq 'M0.9.73') {
+    if ($ExpectedMilestone -cin @('M0.9.73', 'M0.9.74')) {
         $requiredBoundaries += @(
             'runtime_cooperative_scheduling=verified',
             'm0973_no_https_kit_boundary=verified'
+        )
+    }
+    if ($ExpectedMilestone -ceq 'M0.9.74') {
+        $requiredBoundaries += @(
+            'runtime_mailbox_replication_recovery=verified',
+            'm0974_no_https_kit_boundary=verified'
         )
     }
     foreach ($line in $requiredBoundaries) {
@@ -135,7 +141,7 @@ function Test-M0972NoHttpsEvidence {
 function New-M0972SelfTestEvidence {
     param(
         [Parameter(Mandatory)] [string] $Directory,
-        [ValidateSet('M0.9.72', 'M0.9.73')] [string] $Milestone = 'M0.9.72'
+        [ValidateSet('M0.9.72', 'M0.9.73', 'M0.9.74')] [string] $Milestone = 'M0.9.72'
     )
     New-Item -ItemType Directory -Path $Directory | Out-Null
     [IO.File]::WriteAllText(
@@ -176,10 +182,16 @@ function New-M0972SelfTestEvidence {
         'mailbox_https_retirement_boundary=verified',
         'm0972_no_https_kit_boundary=verified'
     )
-    if ($Milestone -ceq 'M0.9.73') {
+    if ($Milestone -cin @('M0.9.73', 'M0.9.74')) {
         $boundaryLines += @(
             'runtime_cooperative_scheduling=verified',
             'm0973_no_https_kit_boundary=verified'
+        )
+    }
+    if ($Milestone -ceq 'M0.9.74') {
+        $boundaryLines += @(
+            'runtime_mailbox_replication_recovery=verified',
+            'm0974_no_https_kit_boundary=verified'
         )
     }
     [IO.File]::WriteAllLines(
@@ -204,6 +216,15 @@ if ($SelfTest) {
         $rejected = $false
         try { $null = Test-M0972NoHttpsEvidence $root 'M0.9.72' } catch { $rejected = $true }
         if (-not $rejected) { throw 'M0.9.73 verifier accepted mismatched milestone evidence' }
+
+        Remove-Item -LiteralPath $root -Recurse -Force
+        New-M0972SelfTestEvidence $root 'M0.9.74'
+        if ((Test-M0972NoHttpsEvidence $root 'M0.9.74').result -cne 'verified') {
+            throw 'positive M0.9.74 verifier self-test failed'
+        }
+        $rejected = $false
+        try { $null = Test-M0972NoHttpsEvidence $root 'M0.9.73' } catch { $rejected = $true }
+        if (-not $rejected) { throw 'M0.9.74 verifier accepted mismatched milestone evidence' }
 
         Remove-Item -LiteralPath $root -Recurse -Force
         New-M0972SelfTestEvidence $root
@@ -233,6 +254,7 @@ if ($SelfTest) {
 
         Write-Output 'm0972_no_https_evidence_self_test=verified'
         Write-Output 'm0973_no_https_evidence_self_test=verified'
+        Write-Output 'm0974_no_https_evidence_self_test=verified'
         Write-Output 'mismatched_milestone_rejected=true'
         Write-Output 'attempted_http_put_rejected=true'
         Write-Output 'reachable_compatibility_endpoint_rejected=true'
@@ -247,7 +269,11 @@ if ([string]::IsNullOrWhiteSpace($EvidenceDirectory)) {
     throw 'EvidenceDirectory is required unless SelfTest is used.'
 }
 $resolved = [IO.Path]::GetFullPath($EvidenceDirectory)
-$expectedMilestone = if ($LabelPrefix -ceq 'm0973') { 'M0.9.73' } else { 'M0.9.72' }
+$expectedMilestone = switch ($LabelPrefix) {
+    'm0974' { 'M0.9.74' }
+    'm0973' { 'M0.9.73' }
+    default { 'M0.9.72' }
+}
 & (Join-Path $PSScriptRoot 'verify-kilogram-m0969-exact-locator-evidence.ps1') `
     -EvidenceDirectory $resolved -LabelPrefix $LabelPrefix -SuppressReport
 $report = Test-M0972NoHttpsEvidence $resolved $expectedMilestone

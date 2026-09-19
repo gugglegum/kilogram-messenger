@@ -4023,11 +4023,18 @@ marker, а read-only inspection принципиально не мог его с
 - контракт зафиксирован в
   [`../docs/RFC-0097-replication-ledger-crash-recovery.md`](../docs/RFC-0097-replication-ledger-crash-recovery.md)
   и `scripts/verify-kilogram-runtime-mailbox-replication-recovery.ps1`, который
-  включён в M1 acceptance-kit builder/boundary.
+  включён в M1 acceptance-kit builder/boundary;
+- existing exact-locator harness расширен milestone-aware mode без копирования
+  orchestration: wrapper `new-kilogram-m0974-no-https-kit.ps1`, label/private
+  root `m0974`/`M0974` и новый fail-closed boundary. Evidence verifier требует
+  recovery + inherited cooperative/no-HTTPS границы и отвергает milestone
+  mismatch; debug-only build, два Cargo job, шесть запусков, отсутствие
+  release/ZIP/ticket-store/generator network execution сохранены.
 
 M0.9.73 run остаётся полезным diagnostic evidence, но не clean acceptance.
 Replacement field kit должен иметь отдельные milestone/label/private root
-`M0.9.74`/`m0974`/`M0974` и не переиспользовать старое состояние.
+`M0.9.74`/`m0974`/`M0974` и не переиспользовать старое состояние. Harness
+готов; clean-HEAD binary kit ещё должен быть собран и скопирован наружу.
 
 ### Следующий этап
 

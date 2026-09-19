@@ -2,7 +2,7 @@
 param(
     [string] $OutputDirectory,
     [ValidateRange(1, 64)] [int] $CargoJobs = 2,
-    [ValidateSet('M0.9.69', 'M0.9.72', 'M0.9.73')] [string] $Milestone = 'M0.9.69'
+    [ValidateSet('M0.9.69', 'M0.9.72', 'M0.9.73', 'M0.9.74')] [string] $Milestone = 'M0.9.69'
 )
 
 Set-StrictMode -Version Latest
@@ -25,6 +25,7 @@ try {
     }
     if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
         $kitName = switch ($Milestone) {
+            'M0.9.74' { 'm0974-no-https' }
             'M0.9.73' { 'm0973-no-https' }
             'M0.9.72' { 'm0972-no-https' }
             default { 'm0969-exact' }
@@ -61,8 +62,14 @@ try {
             'verify-kilogram-m0972-no-https-kit-boundary.ps1',
             'verify-kilogram-runtime-cooperative-scheduling.ps1'
         )
-        if ($Milestone -ceq 'M0.9.73') {
+        if ($Milestone -cin @('M0.9.73', 'M0.9.74')) {
             $checks += 'verify-kilogram-m0973-no-https-kit-boundary.ps1'
+        }
+        if ($Milestone -ceq 'M0.9.74') {
+            $checks += @(
+                'verify-kilogram-runtime-mailbox-replication-recovery.ps1',
+                'verify-kilogram-m0974-no-https-kit-boundary.ps1'
+            )
         }
     }
     $boundaries = [Collections.Generic.List[string]]::new()
@@ -225,7 +232,9 @@ try {
     Write-Output 'network_executed=false'
     if ($noHttpsCompatibility) {
         Write-Output 'https_fixture_included=false'
-        if ($Milestone -ceq 'M0.9.73') {
+        if ($Milestone -ceq 'M0.9.74') {
+            Write-Output 'status=kilogram-m0974-no-https-kit-created'
+        } elseif ($Milestone -ceq 'M0.9.73') {
             Write-Output 'status=kilogram-m0973-no-https-kit-created'
         } else {
             Write-Output 'status=kilogram-m0972-no-https-kit-created'
