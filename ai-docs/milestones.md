@@ -3759,7 +3759,7 @@ IPC onboarding, runtime launch/autostart и push subscription ещё не
   fail-closed static gate —
   `scripts/verify-kilogram-volunteer-replica-locator-boundary.ps1`.
 
-### M0.9.69 — clean external exact-locator field kit: реализовано, внешний run ожидается
+### M0.9.69 — clean external exact-locator field evidence: завершено
 
 Реализовано:
 
@@ -3829,19 +3829,27 @@ processes штатно остановлены marker-ом; этот run не в�
 PowerShell parse errors — 0, до запуска `1\shared` отсутствует, ZIP — 0,
 профиль debug, Cargo jobs — 2, generator network execution — false.
 
+Clean external run `20260919-144857` успешно завершён на разных
+Alice/Bob hosts/networks. Машинный verifier вернул `result=verified`:
+activation=`providers-before-capability`, capability convergence=
+`recipient-applied-owner-acknowledged`, sender resolution/receipts=`2/2`, Alice
+offline до receive, recipient resolution/commit-delete=`2/2`, legacy fallback
+отсутствует, restart redelivery отсутствует, message marker встречается в
+history ровно один раз. Все runtime phases подтвердили `route_policy=auto` и
+pinned `aps1`; markers `alice-sent`, `bob-complete` и `providers-stopped`
+присутствуют. M0.9.69 закрыт.
+
 ### Следующий этап
 
-1. Выполнить один clean external M0.9.69 run на Alice/Bob из разных сетей и
-   принять evidence только при `result=verified` без recovery chain.
-2. После clean field evidence спроектировать безопасный automatic upgrade/rotation
+1. После clean field evidence спроектировать безопасный automatic upgrade/rotation
    legacy mailbox bindings и условия удаления HTTPS compatibility copy.
-3. До первого публичного security artifact pin-нуть linker/SDK либо controlled
+2. До первого публичного security artifact pin-нуть linker/SDK либо controlled
    alternative и повторить M0.9.59 до matched external hash и attestation.
-4. Optional autostart/background mode оставить отдельной явной настройкой, не
+3. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
-5. Добавить macOS/Linux/mobile providers той же platform boundary.
-6. Спроектировать privacy-preserving gossip и first-contact freshness;
+4. Добавить macOS/Linux/mobile providers той же platform boundary.
+5. Спроектировать privacy-preserving gossip и first-contact freshness;
    M0.9.29 скрывает payload/явные IDs, но не access correlation.
-7. Membership removal и group governance проектировать вместе с ordered
+6. Membership removal и group governance проектировать вместе с ordered
    security events и MLS epoch; compact Merkle/range summary и независимый
    криптографический аудит остаются до публичного выпуска.

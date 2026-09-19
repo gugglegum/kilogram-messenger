@@ -2285,3 +2285,14 @@ retirement остальных compatibility shadows ещё не реализов
   размер 61.46 MiB, ZIP — 0, `1\shared` до запуска отсутствует. BUILD-INFO
   фиксирует `field_route_policy=auto` и
   `field_relay_url=https://aps1-1.relay.n0.iroh.link./`.
+- Clean3 run `20260919-144857` завершён успешно и независимо перепроверен
+  workspace verifier-ом по синхронизированному evidence. Итог:
+  `result=verified`, activation=`providers-before-capability`, convergence=
+  `recipient-applied-owner-acknowledged`, sender resolution/receipts=`2/2`,
+  recipient resolution/commit-delete=`2/2`, Alice offline before receive,
+  legacy fallback=false, restart redelivery=absent, history occurrence=1.
+  `alice-sent.marker`, `bob-complete.marker` и `providers-stopped.marker`
+  присутствуют. Все retained phases показывают `route_policy=auto` и
+  `relay_home_url=https://aps1-1.relay.n0.iroh.link./`. Это закрывает clean
+  external M0.9.69 evidence; HTTPS compatibility retirement остаётся отдельным
+  следующим архитектурным этапом.

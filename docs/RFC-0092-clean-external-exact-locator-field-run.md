@@ -1,7 +1,6 @@
 # RFC-0092: Clean external exact-locator field run (M0.9.69)
 
-Status: field kit implemented; one clean external two-host run is still required
-before this milestone can claim field evidence.
+Status: implemented and verified by one clean external two-host field run.
 
 ## 1. Purpose
 
@@ -127,3 +126,27 @@ continuous synchronization state while it refreshes signed offers. They are
 not causal input for consumers and are not a failure signal. After a failed
 attempt the providers are stopped and a newly generated clean kit is required;
 the old run is never resumed as clean evidence.
+
+## 8. Verified clean field result
+
+Run `20260919-144857`, built from revision
+`6cea6074fbb4116639db3f79dddc0bb4bf373fe9`, completed on separate Alice and
+Bob hosts/networks. Every retained runtime used `route_policy=auto` with the
+pinned `aps1` relay. The fail-closed verifier reported `result=verified` and
+proved all of the following:
+
+- providers existed before capability activation and both peers completed the
+  durable capability apply/acknowledgement handshake;
+- sender and recipient resolved the same Device-signed commitment to exactly
+  two providers, and Alice obtained two store-signed receipts;
+- Alice runtime and the compatibility HTTP fixture were offline before Bob
+  received two `volunteer-iroh` replicas;
+- Bob committed each replica before its signed delete, restart produced no
+  redelivery, and local history contained the message exactly once;
+- no legacy random fallback or provider substitution occurred.
+
+The final Alice, Bob and provider-stop markers were all present. This closes
+the M0.9.69 clean external evidence requirement. It proves the implemented
+two-provider delivery mechanics under the tested topology; it does not yet
+prove provider operator independence, Sybil resistance or production relay
+failover.
