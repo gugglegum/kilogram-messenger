@@ -2392,3 +2392,10 @@ retirement остальных compatibility shadows ещё не реализов
   M0.9.72 contract и дополнительно требует cooperative scheduling. M1
   acceptance-kit включает эту границу; профиль остаётся debug, Cargo jobs=2,
   ZIP/release/new EXE/network launch отсутствуют.
+- Из clean revision `fe7f46df25c7389291dfb52d06d897d933b7ee15` создан
+  `.tmp\m0973-no-https-fe7f46df25c7` и byte-identical копия
+  `C:\Users\Paul\YandexDisk\!M\M0.9.73`. Проверено: 11/11 manifest artifacts,
+  0 PowerShell parse errors, 13 файлов/57,741,367 bytes, ZIP=0,
+  `kilogram-ticket-store.exe`=0, precreated `1\shared`=false. `BOUNDARIES.log`
+  содержит M0.9.72 inherited no-HTTPS, cooperative scheduling и M0.9.73 gates;
+  generator network execution=false.

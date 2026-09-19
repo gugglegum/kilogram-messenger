@@ -3989,11 +3989,18 @@ Run `20260919-170816` остаётся неуспешным и не приним
 M0.9.73 локально завершён, но его исправление ещё требует свежего clean
 двухсетевого no-HTTPS evidence run.
 
+Из clean harness revision `fe7f46df25c7389291dfb52d06d897d933b7ee15`
+собран fresh комплект `.tmp\m0973-no-https-fe7f46df25c7` и без изменений
+скопирован в `C:\Users\Paul\YandexDisk\!M\M0.9.73`. Его 11/11 manifest
+artifacts совпадают, PowerShell parse errors — 0, 13 файлов занимают 57,741,367
+bytes, ZIP/ticket-store/precreated shared отсутствуют. Внешний run ещё не
+выполнен и должен начинаться только после полной синхронизации этой новой папки.
+
 ### Следующий этап
 
-1. Создать fresh M0.9.73 clean no-HTTPS field kit из нового clean revision и
-   повторить Alice/Bob run через разные сети. Принимать его только после
-   fail-closed результата `verified`; старый M0.9.72 run не возобновлять.
+1. Выполнить подготовленный M0.9.73 clean no-HTTPS Alice/Bob run через разные
+   сети. Принимать его только после fail-closed результата `verified`; старый
+   M0.9.72 run не возобновлять.
 2. До первого публичного security artifact pin-нуть linker/SDK либо controlled
    alternative и повторить M0.9.59 до matched external hash и attestation.
 3. Optional autostart/background mode оставить отдельной явной настройкой, не
