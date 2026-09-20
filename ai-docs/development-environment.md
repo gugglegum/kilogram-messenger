@@ -2697,3 +2697,21 @@ retirement остальных compatibility shadows ещё не реализов
   measured generation remained below one second for a two-offer qualified
   fixture.
 - No release build, ZIP, network field process or background service was used.
+
+## M0.9.83 local provider-observation verification (2026-09-20)
+
+- Added a bounded local-only authenticated observation table with at most eight
+  pseudonymous peer tags per exact signed provider offer.
+- Tags use a BLAKE3 subkey derived from the local Device secret and keyed input
+  from the already authenticated peer Account/Device identity.
+- Wire and IPC remain unchanged; observation tags/social IDs are not
+  transmitted or logged, and provider selection does not yet consume counts.
+- Unit regressions cover deduplication, capacity, replacement reset,
+  persistence, legacy read compatibility and observation-independent gossip
+  bytes. Runtime regression covers deterministic local tag derivation and
+  authenticated inbound/reply-bound import integration.
+- Accepted locally after 16/16 mailbox-client tests, 3/3 focused CLI runtime
+  tests, all 12 mailbox/provider/service-free fail-closed scripts, formatting
+  and Clippy with warnings denied passed under Cargo `-j 2`.
+- No release build, ZIP, network field process, background service, external
+  publication or executable target was created.

@@ -224,12 +224,31 @@ The fail-closed M1 candidate record and continuity proof are specified in
 The bounded identity-creation cost for new volunteer provider offers is
 specified in
 [`docs/RFC-0105-sybil-costed-provider-admission.md`](docs/RFC-0105-sybil-costed-provider-admission.md).
+Local authenticated observation provenance for those offers is specified in
+[`docs/RFC-0106-local-authenticated-provider-observation-provenance.md`](docs/RFC-0106-local-authenticated-provider-observation-provenance.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.82 Sybil-costed provider admission — accepted locally
+## Current milestone: M0.9.83 local authenticated provider observation provenance — accepted locally
+
+Provider offers received through an already Device-authenticated gossip
+session now gain a bounded local pseudonymous observation. Repeated delivery by
+one peer refreshes one row; at most eight distinct observations are retained
+for an exact signed offer, and replacement clears the old provenance.
+
+The tag is derived from the local Device secret and the authenticated remote
+Account/Device identity. Raw social identifiers and tags never enter the offer,
+gossip wire, logs or IPC v26. This stage records evidence but deliberately does
+not rank providers by observation count or claim operator independence.
+
+The network-free debug acceptance passed 16 mailbox-client tests, three
+focused CLI runtime tests, all 12 mailbox/provider/service-free fail-closed
+boundaries, formatting and Clippy with warnings denied. No release build, ZIP,
+new executable, background service or external publication was created.
+
+## Previous milestone: M0.9.82 Sybil-costed provider admission — accepted locally
 
 New volunteer storage offers carry a bounded 18-bit, domain-separated
 Hashcash-style admission proof bound to the signed store key, endpoint,

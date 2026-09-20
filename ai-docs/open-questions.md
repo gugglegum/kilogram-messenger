@@ -340,6 +340,10 @@ sessions, distribution, removal и key epochs и не решены этим пр
   selection/gossip, но это не доказывает operator independence и не защищает
   от resource-rich Sybil. Открыты authenticated observation provenance,
   adaptive/fair cost и physical/operator failure-domain diversity.
+  M0.9.83 уже сохраняет до восьми local pseudonymous observations exact offer
+  из Device-authenticated sessions без передачи tags/social IDs и без ranking.
+  Открыты bootstrap-safe threshold/decay, поведение при local Device rotation,
+  доказательство network/operator diversity и защита от colluding observers.
 - Push-уведомления на Android/iOS без утечки содержания и социального графа.
 - Независимый second-builder, подписанный release provenance, обновления клиента
   и дальнейшая защита supply chain поверх M0.9.50 same-host gate.

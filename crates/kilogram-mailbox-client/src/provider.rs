@@ -1,4 +1,8 @@
-use std::{collections::BTreeSet, fmt, path::PathBuf};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt,
+    path::PathBuf,
+};
 
 use anyhow::{Context, Result, ensure};
 use kilogram_mailbox::{
@@ -17,12 +21,17 @@ const OFFER_TABLE: TableDefinition<&[u8], &[u8]> =
     TableDefinition::new("mailbox-provider-offers-v1");
 const GOSSIP_HOP_TABLE: TableDefinition<&[u8], &[u8]> =
     TableDefinition::new("mailbox-provider-gossip-hops-v1");
+const AUTHENTICATED_OBSERVATION_TABLE: TableDefinition<&[u8], &[u8]> =
+    TableDefinition::new("mailbox-provider-authenticated-observations-v1");
 const RECORD_VERSION: u8 = 1;
+const AUTHENTICATED_OBSERVATION_RECORD_VERSION: u8 = 1;
 const OFFER_ID_DOMAIN: &[u8] = b"kilogram:mailbox-provider-offer-id:v1\0";
 const SELECTION_DOMAIN: &[u8] = b"kilogram:mailbox-provider-selection:v1\0";
 const GOSSIP_SELECTION_DOMAIN: &[u8] = b"kilogram:mailbox-provider-gossip-selection:v1\0";
 const GOSSIP_FRAME_ID_DOMAIN: &[u8] = b"kilogram:mailbox-provider-gossip-frame-id:v1\0";
 const MAX_PROVIDER_RECORD_BYTES: usize = MAX_MAILBOX_STORAGE_OFFER_BYTES + 256;
+const AUTHENTICATED_OBSERVATION_KEY_BYTES: usize = 64;
+const MAX_AUTHENTICATED_OBSERVATION_RECORD_BYTES: usize = 160;
 const MAX_ABSOLUTE_PROVIDER_OFFERS: u64 = 4_096;
 const GOSSIP_FRAME_VERSION: u8 = 1;
 
@@ -38,6 +47,11 @@ pub const MAX_PROVIDER_SELECTION: u8 = 8;
 /// compatibility but are not selected for new volunteer replica sets or gossip.
 pub const DEFAULT_PROVIDER_ADMISSION_WORK_BITS: u8 =
     DEFAULT_MAILBOX_STORAGE_OFFER_ADMISSION_WORK_BITS;
+
+/// Only a bounded number of distinct authenticated peer observations is kept
+/// for one exact signed offer. The opaque tags are local-only and never enter
+/// the offer, gossip frame or IPC projection.
+pub const MAX_AUTHENTICATED_PROVIDER_OBSERVATIONS_PER_OFFER: u8 = 8;
 
 /// No authenticated session can carry more than this many provider offers.
 pub const MAX_PROVIDER_GOSSIP_OFFERS: u8 = 8;
@@ -68,6 +82,29 @@ impl MailboxProviderOfferId {
     }
 }
 
+/// A pseudonymous, installation-local handle derived by the runtime from an
+/// already authenticated peer session. It must never be serialized into a
+/// provider offer, gossip frame or IPC response.
+#[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct MailboxProviderLocalObserverTag([u8; 32]);
+
+impl MailboxProviderLocalObserverTag {
+    pub fn from_bytes(bytes: [u8; 32]) -> Self {
+        Self(bytes)
+    }
+
+    fn as_bytes(&self) -> &[u8; 32] {
+        &self.0
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MailboxProviderObservationOutcome {
+    Added,
+    Refreshed,
+    CapacityReached,
+}
+
 impl fmt::Display for MailboxProviderOfferId {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         for byte in self.0 {
@@ -85,6 +122,7 @@ pub struct MailboxProviderOffer {
     encoded_offer: Vec<u8>,
     observed_at_unix_seconds: u64,
     observed_gossip_hops: u8,
+    authenticated_observation_count: u8,
 }
 
 impl MailboxProviderOffer {
@@ -132,6 +170,10 @@ impl MailboxProviderOffer {
 
     pub fn admission_work_bits(&self) -> u16 {
         self.offer.admission_work_bits()
+    }
+
+    pub fn authenticated_observation_count(&self) -> u8 {
+        self.authenticated_observation_count
     }
 
     /// Exact signed bytes are returned for the transport adapter to decode and
@@ -262,10 +304,15 @@ impl ProviderOfferRecord {
         self,
         now_unix_seconds: u64,
         observed_gossip_hops: u8,
+        authenticated_observation_count: u8,
     ) -> Result<MailboxProviderOffer> {
         ensure!(
             observed_gossip_hops <= MAX_PROVIDER_GOSSIP_HOPS,
             "stored mailbox provider gossip hop count is invalid"
+        );
+        ensure!(
+            authenticated_observation_count <= MAX_AUTHENTICATED_PROVIDER_OBSERVATIONS_PER_OFFER,
+            "stored mailbox provider authenticated observation count is invalid"
         );
         let offer =
             SignedMailboxStorageOffer::decode_and_verify(&self.encoded_offer, now_unix_seconds)
@@ -278,7 +325,73 @@ impl ProviderOfferRecord {
             encoded_offer: self.encoded_offer,
             observed_at_unix_seconds: self.observed_at_unix_seconds,
             observed_gossip_hops,
+            authenticated_observation_count,
         })
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+struct AuthenticatedProviderObservationRecord {
+    version: u8,
+    offer_id: [u8; 32],
+    observer_tag: [u8; 32],
+    first_observed_at_unix_seconds: u64,
+    last_observed_at_unix_seconds: u64,
+}
+
+impl AuthenticatedProviderObservationRecord {
+    fn new(
+        offer_id: MailboxProviderOfferId,
+        observer_tag: MailboxProviderLocalObserverTag,
+        observed_at_unix_seconds: u64,
+    ) -> Self {
+        Self {
+            version: AUTHENTICATED_OBSERVATION_RECORD_VERSION,
+            offer_id: *offer_id.as_bytes(),
+            observer_tag: *observer_tag.as_bytes(),
+            first_observed_at_unix_seconds: observed_at_unix_seconds,
+            last_observed_at_unix_seconds: observed_at_unix_seconds,
+        }
+    }
+
+    fn key(&self) -> [u8; AUTHENTICATED_OBSERVATION_KEY_BYTES] {
+        authenticated_observation_key(self.offer_id, self.observer_tag)
+    }
+
+    fn validate(&self) -> Result<()> {
+        ensure!(
+            self.version == AUTHENTICATED_OBSERVATION_RECORD_VERSION
+                && self.first_observed_at_unix_seconds <= self.last_observed_at_unix_seconds,
+            "stored mailbox provider authenticated observation is invalid"
+        );
+        Ok(())
+    }
+
+    fn encode(&self) -> Result<Vec<u8>> {
+        self.validate()?;
+        let bytes = postcard::to_allocvec(self)
+            .context("encode mailbox provider authenticated observation")?;
+        ensure!(
+            bytes.len() <= MAX_AUTHENTICATED_OBSERVATION_RECORD_BYTES,
+            "mailbox provider authenticated observation is too large"
+        );
+        Ok(bytes)
+    }
+
+    fn decode(key: &[u8], bytes: &[u8]) -> Result<Self> {
+        ensure!(
+            key.len() == AUTHENTICATED_OBSERVATION_KEY_BYTES
+                && bytes.len() <= MAX_AUTHENTICATED_OBSERVATION_RECORD_BYTES,
+            "mailbox provider authenticated observation encoding is invalid"
+        );
+        let record: Self = postcard::from_bytes(bytes)
+            .context("decode mailbox provider authenticated observation")?;
+        record.validate()?;
+        ensure!(
+            record.key().as_slice() == key,
+            "mailbox provider authenticated observation key is inconsistent"
+        );
+        Ok(record)
     }
 }
 
@@ -488,6 +601,7 @@ impl MailboxProviderRegistry {
             .context("begin mailbox provider registry initialization")?;
         write.open_table(OFFER_TABLE)?;
         write.open_table(GOSSIP_HOP_TABLE)?;
+        write.open_table(AUTHENTICATED_OBSERVATION_TABLE)?;
         write
             .commit()
             .context("commit mailbox provider registry initialization")?;
@@ -503,7 +617,18 @@ impl MailboxProviderRegistry {
         transport_identity: [u8; 32],
         now_unix_seconds: u64,
     ) -> Result<(MailboxProviderImportOutcome, MailboxProviderOffer)> {
-        self.import_offer_with_gossip_hops(encoded_offer, transport_identity, 0, now_unix_seconds)
+        let (outcome, observation, offer) = self.import_offer_with_gossip_hops(
+            encoded_offer,
+            transport_identity,
+            0,
+            None,
+            now_unix_seconds,
+        )?;
+        ensure!(
+            observation.is_none(),
+            "direct mailbox provider import created authenticated peer provenance"
+        );
+        Ok((outcome, offer))
     }
 
     pub fn import_gossiped_offer(
@@ -511,18 +636,29 @@ impl MailboxProviderRegistry {
         encoded_offer: &[u8],
         transport_identity: [u8; 32],
         transmitted_hops: u8,
+        authenticated_observer: MailboxProviderLocalObserverTag,
         now_unix_seconds: u64,
-    ) -> Result<(MailboxProviderImportOutcome, MailboxProviderOffer)> {
+    ) -> Result<(
+        MailboxProviderImportOutcome,
+        MailboxProviderObservationOutcome,
+        MailboxProviderOffer,
+    )> {
         ensure!(
             (1..=MAX_PROVIDER_GOSSIP_HOPS).contains(&transmitted_hops),
             "mailbox provider gossip hop count is invalid"
         );
-        self.import_offer_with_gossip_hops(
+        let (outcome, observation, offer) = self.import_offer_with_gossip_hops(
             encoded_offer,
             transport_identity,
             transmitted_hops,
+            Some(authenticated_observer),
             now_unix_seconds,
-        )
+        )?;
+        Ok((
+            outcome,
+            observation.context("authenticated gossip import omitted local provenance")?,
+            offer,
+        ))
     }
 
     fn import_offer_with_gossip_hops(
@@ -530,8 +666,13 @@ impl MailboxProviderRegistry {
         encoded_offer: &[u8],
         transport_identity: [u8; 32],
         observed_gossip_hops: u8,
+        authenticated_observer: Option<MailboxProviderLocalObserverTag>,
         now_unix_seconds: u64,
-    ) -> Result<(MailboxProviderImportOutcome, MailboxProviderOffer)> {
+    ) -> Result<(
+        MailboxProviderImportOutcome,
+        Option<MailboxProviderObservationOutcome>,
+        MailboxProviderOffer,
+    )> {
         ensure!(
             observed_gossip_hops <= MAX_PROVIDER_GOSSIP_HOPS,
             "mailbox provider gossip hop count is invalid"
@@ -562,9 +703,9 @@ impl MailboxProviderRegistry {
             .set_durability(Durability::Immediate)
             .context("set mailbox provider import durability")?;
 
-        let expired_keys = {
+        let expired = {
             let table = write.open_table(OFFER_TABLE)?;
-            let mut expired_keys = Vec::new();
+            let mut expired = Vec::new();
             for entry in table.iter()? {
                 let (candidate_key, candidate_value) = entry?;
                 let candidate = ProviderOfferRecord::decode(candidate_value.value())?;
@@ -573,21 +714,49 @@ impl MailboxProviderRegistry {
                     "mailbox provider registry key does not match its signed offer"
                 );
                 if candidate.expires_at_unix_seconds <= now_unix_seconds {
-                    expired_keys.push(candidate_key.value().to_vec());
+                    expired.push((
+                        candidate_key.value().to_vec(),
+                        *offer_id(&candidate.encoded_offer).as_bytes(),
+                    ));
                 }
             }
-            expired_keys
+            expired
         };
         {
             let mut table = write.open_table(OFFER_TABLE)?;
-            for expired_key in &expired_keys {
+            for (expired_key, _) in &expired {
                 table.remove(expired_key.as_slice())?;
             }
         }
         {
             let mut table = write.open_table(GOSSIP_HOP_TABLE)?;
-            for expired_key in &expired_keys {
+            for (expired_key, _) in &expired {
                 table.remove(expired_key.as_slice())?;
+            }
+        }
+        let expired_offer_ids = expired
+            .iter()
+            .map(|(_, offer_id)| *offer_id)
+            .collect::<BTreeSet<_>>();
+        if !expired_offer_ids.is_empty() {
+            let observation_keys = {
+                let table = write.open_table(AUTHENTICATED_OBSERVATION_TABLE)?;
+                let mut keys = Vec::new();
+                for entry in table.iter()? {
+                    let (observation_key, observation_value) = entry?;
+                    let observation = AuthenticatedProviderObservationRecord::decode(
+                        observation_key.value(),
+                        observation_value.value(),
+                    )?;
+                    if expired_offer_ids.contains(&observation.offer_id) {
+                        keys.push(observation_key.value().to_vec());
+                    }
+                }
+                keys
+            };
+            let mut table = write.open_table(AUTHENTICATED_OBSERVATION_TABLE)?;
+            for observation_key in observation_keys {
+                table.remove(observation_key.as_slice())?;
             }
         }
 
@@ -601,59 +770,146 @@ impl MailboxProviderRegistry {
             .map(|value| decode_gossip_hops(value.value()))
             .transpose()?
             .unwrap_or(0);
-        let (outcome, effective_record, effective_gossip_hops) = if let Some(current) = current {
-            let current = ProviderOfferRecord::decode(&current)?;
-            if current.encoded_offer == record.encoded_offer
-                && current.transport_identity == record.transport_identity
-            {
-                (
-                    MailboxProviderImportOutcome::AlreadyPresent,
-                    current,
-                    if observed_gossip_hops == 0 {
-                        0
-                    } else {
-                        current_gossip_hops
-                    },
-                )
+        let (outcome, effective_record, effective_gossip_hops, replaced_offer_id) =
+            if let Some(current) = current {
+                let current = ProviderOfferRecord::decode(&current)?;
+                if current.encoded_offer == record.encoded_offer
+                    && current.transport_identity == record.transport_identity
+                {
+                    (
+                        MailboxProviderImportOutcome::AlreadyPresent,
+                        current,
+                        if observed_gossip_hops == 0 {
+                            0
+                        } else {
+                            current_gossip_hops
+                        },
+                        None,
+                    )
+                } else {
+                    ensure!(
+                        record.issued_at_unix_seconds > current.issued_at_unix_seconds,
+                        "mailbox provider offer does not advance the current signed offer"
+                    );
+                    write
+                        .open_table(OFFER_TABLE)?
+                        .insert(key.as_slice(), encoded_record.as_slice())?;
+                    (
+                        MailboxProviderImportOutcome::Replaced,
+                        record.clone(),
+                        observed_gossip_hops,
+                        Some(*offer_id(&current.encoded_offer).as_bytes()),
+                    )
+                }
             } else {
+                let count = write.open_table(OFFER_TABLE)?.len()?;
                 ensure!(
-                    record.issued_at_unix_seconds > current.issued_at_unix_seconds,
-                    "mailbox provider offer does not advance the current signed offer"
+                    count < self.config.max_offers,
+                    "mailbox provider registry capacity exceeded"
                 );
                 write
                     .open_table(OFFER_TABLE)?
                     .insert(key.as_slice(), encoded_record.as_slice())?;
                 (
-                    MailboxProviderImportOutcome::Replaced,
+                    MailboxProviderImportOutcome::Inserted,
                     record.clone(),
                     observed_gossip_hops,
+                    None,
                 )
+            };
+        if let Some(replaced_offer_id) = replaced_offer_id {
+            let observation_keys = {
+                let table = write.open_table(AUTHENTICATED_OBSERVATION_TABLE)?;
+                let mut keys = Vec::new();
+                for entry in table.iter()? {
+                    let (observation_key, observation_value) = entry?;
+                    let observation = AuthenticatedProviderObservationRecord::decode(
+                        observation_key.value(),
+                        observation_value.value(),
+                    )?;
+                    if observation.offer_id == replaced_offer_id {
+                        keys.push(observation_key.value().to_vec());
+                    }
+                }
+                keys
+            };
+            let mut table = write.open_table(AUTHENTICATED_OBSERVATION_TABLE)?;
+            for observation_key in observation_keys {
+                table.remove(observation_key.as_slice())?;
             }
-        } else {
-            let count = write.open_table(OFFER_TABLE)?.len()?;
-            ensure!(
-                count < self.config.max_offers,
-                "mailbox provider registry capacity exceeded"
-            );
-            write
-                .open_table(OFFER_TABLE)?
-                .insert(key.as_slice(), encoded_record.as_slice())?;
-            (
-                MailboxProviderImportOutcome::Inserted,
-                record.clone(),
-                observed_gossip_hops,
-            )
-        };
+        }
         let encoded_gossip_hops = [effective_gossip_hops];
         write
             .open_table(GOSSIP_HOP_TABLE)?
             .insert(key.as_slice(), encoded_gossip_hops.as_slice())?;
+        let effective_offer_id = offer_id(&effective_record.encoded_offer);
+        let (observation_outcome, authenticated_observation_count) = {
+            let mut table = write.open_table(AUTHENTICATED_OBSERVATION_TABLE)?;
+            let mut count = 0_u8;
+            for entry in table.iter()? {
+                let (observation_key, observation_value) = entry?;
+                let observation = AuthenticatedProviderObservationRecord::decode(
+                    observation_key.value(),
+                    observation_value.value(),
+                )?;
+                if observation.offer_id == *effective_offer_id.as_bytes() {
+                    count = count
+                        .checked_add(1)
+                        .context("mailbox provider authenticated observation count overflow")?;
+                }
+            }
+            ensure!(
+                count <= MAX_AUTHENTICATED_PROVIDER_OBSERVATIONS_PER_OFFER,
+                "mailbox provider authenticated observation capacity exceeded"
+            );
+            if let Some(observer_tag) = authenticated_observer {
+                let observation = AuthenticatedProviderObservationRecord::new(
+                    effective_offer_id,
+                    observer_tag,
+                    now_unix_seconds,
+                );
+                let observation_key = observation.key();
+                let existing = table
+                    .get(observation_key.as_slice())?
+                    .map(|value| value.value().to_vec());
+                if let Some(existing) = existing {
+                    let mut existing = AuthenticatedProviderObservationRecord::decode(
+                        observation_key.as_slice(),
+                        &existing,
+                    )?;
+                    ensure!(
+                        existing.offer_id == *effective_offer_id.as_bytes()
+                            && existing.observer_tag == *observer_tag.as_bytes(),
+                        "mailbox provider authenticated observation identity is inconsistent"
+                    );
+                    existing.last_observed_at_unix_seconds =
+                        existing.last_observed_at_unix_seconds.max(now_unix_seconds);
+                    table.insert(observation_key.as_slice(), existing.encode()?.as_slice())?;
+                    (Some(MailboxProviderObservationOutcome::Refreshed), count)
+                } else if count >= MAX_AUTHENTICATED_PROVIDER_OBSERVATIONS_PER_OFFER {
+                    (
+                        Some(MailboxProviderObservationOutcome::CapacityReached),
+                        count,
+                    )
+                } else {
+                    table.insert(observation_key.as_slice(), observation.encode()?.as_slice())?;
+                    (Some(MailboxProviderObservationOutcome::Added), count + 1)
+                }
+            } else {
+                (None, count)
+            }
+        };
         write
             .commit()
             .context("commit mailbox provider offer import")?;
         Ok((
             outcome,
-            effective_record.into_public(now_unix_seconds, effective_gossip_hops)?,
+            observation_outcome,
+            effective_record.into_public(
+                now_unix_seconds,
+                effective_gossip_hops,
+                authenticated_observation_count,
+            )?,
         ))
     }
 
@@ -859,6 +1115,26 @@ fn active_offers_for_store_keys_from_database(
         .context("begin exact mailbox provider lookup")?;
     let table = read.open_table(OFFER_TABLE)?;
     let gossip_hops = read.open_table(GOSSIP_HOP_TABLE)?;
+    let mut observation_counts = BTreeMap::<[u8; 32], u8>::new();
+    match read.open_table(AUTHENTICATED_OBSERVATION_TABLE) {
+        Ok(observations) => {
+            for entry in observations.iter()? {
+                let (key, value) = entry?;
+                let observation =
+                    AuthenticatedProviderObservationRecord::decode(key.value(), value.value())?;
+                let count = observation_counts.entry(observation.offer_id).or_default();
+                *count = count
+                    .checked_add(1)
+                    .context("mailbox provider authenticated observation count overflow")?;
+                ensure!(
+                    *count <= MAX_AUTHENTICATED_PROVIDER_OBSERVATIONS_PER_OFFER,
+                    "mailbox provider authenticated observation capacity exceeded"
+                );
+            }
+        }
+        Err(redb::TableError::TableDoesNotExist(_)) => {}
+        Err(error) => return Err(error.into()),
+    }
     let mut offers = Vec::new();
     for store_key in store_keys {
         let Some(value) = table.get(store_key.as_bytes().as_slice())? else {
@@ -877,7 +1153,15 @@ fn active_offers_for_store_keys_from_database(
             .map(|value| decode_gossip_hops(value.value()))
             .transpose()?
             .unwrap_or(0);
-        offers.push(record.into_public(now_unix_seconds, observed_gossip_hops)?);
+        let authenticated_observation_count = observation_counts
+            .get(offer_id(&record.encoded_offer).as_bytes())
+            .copied()
+            .unwrap_or(0);
+        offers.push(record.into_public(
+            now_unix_seconds,
+            observed_gossip_hops,
+            authenticated_observation_count,
+        )?);
     }
     Ok(offers)
 }
@@ -891,6 +1175,26 @@ fn active_offers_from_database(
         .context("begin mailbox provider registry read")?;
     let table = read.open_table(OFFER_TABLE)?;
     let gossip_hops = read.open_table(GOSSIP_HOP_TABLE)?;
+    let mut observation_counts = BTreeMap::<[u8; 32], u8>::new();
+    match read.open_table(AUTHENTICATED_OBSERVATION_TABLE) {
+        Ok(observations) => {
+            for entry in observations.iter()? {
+                let (key, value) = entry?;
+                let observation =
+                    AuthenticatedProviderObservationRecord::decode(key.value(), value.value())?;
+                let count = observation_counts.entry(observation.offer_id).or_default();
+                *count = count
+                    .checked_add(1)
+                    .context("mailbox provider authenticated observation count overflow")?;
+                ensure!(
+                    *count <= MAX_AUTHENTICATED_PROVIDER_OBSERVATIONS_PER_OFFER,
+                    "mailbox provider authenticated observation capacity exceeded"
+                );
+            }
+        }
+        Err(redb::TableError::TableDoesNotExist(_)) => {}
+        Err(error) => return Err(error.into()),
+    }
     let mut offers = Vec::new();
     for entry in table.iter()? {
         let (key, value) = entry?;
@@ -905,7 +1209,15 @@ fn active_offers_from_database(
                 .map(|value| decode_gossip_hops(value.value()))
                 .transpose()?
                 .unwrap_or(0);
-            offers.push(record.into_public(now_unix_seconds, observed_gossip_hops)?);
+            let authenticated_observation_count = observation_counts
+                .get(offer_id(&record.encoded_offer).as_bytes())
+                .copied()
+                .unwrap_or(0);
+            offers.push(record.into_public(
+                now_unix_seconds,
+                observed_gossip_hops,
+                authenticated_observation_count,
+            )?);
         }
     }
     offers.sort_by_key(|offer| (offer.store_key(), offer.offer_id()));
@@ -991,6 +1303,16 @@ fn offer_id(encoded_offer: &[u8]) -> MailboxProviderOfferId {
     MailboxProviderOfferId(*hasher.finalize().as_bytes())
 }
 
+fn authenticated_observation_key(
+    offer_id: [u8; 32],
+    observer_tag: [u8; 32],
+) -> [u8; AUTHENTICATED_OBSERVATION_KEY_BYTES] {
+    let mut key = [0_u8; AUTHENTICATED_OBSERVATION_KEY_BYTES];
+    key[..32].copy_from_slice(&offer_id);
+    key[32..].copy_from_slice(&observer_tag);
+    key
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1030,6 +1352,10 @@ mod tests {
         anyhow::bail!("failed to construct an admission-unqualified test offer")
     }
 
+    fn observer(value: u8) -> MailboxProviderLocalObserverTag {
+        MailboxProviderLocalObserverTag::from_bytes([value; 32])
+    }
+
     #[test]
     fn read_only_discovery_does_not_create_or_rewrite_registry() -> Result<()> {
         let directory = tempfile::tempdir()?;
@@ -1053,6 +1379,32 @@ mod tests {
         )?;
         assert_eq!(exact.len(), 1);
         assert_eq!(blake3::hash(&std::fs::read(database_path)?), before);
+
+        let legacy_data_dir = directory.path().join("legacy-providers");
+        std::fs::create_dir_all(&legacy_data_dir)?;
+        let legacy_database = Database::create(legacy_data_dir.join(DATABASE_FILE))?;
+        let signed = SignedMailboxStorageOffer::decode_and_verify(&encoded, 1_000)?;
+        let record = ProviderOfferRecord::from_verified_offer(&signed, encoded, endpoint, 1_000);
+        let write = legacy_database.begin_write()?;
+        {
+            let mut table = write.open_table(OFFER_TABLE)?;
+            table.insert(
+                record.store_key.as_bytes().as_slice(),
+                record.encode()?.as_slice(),
+            )?;
+        }
+        {
+            let mut table = write.open_table(GOSSIP_HOP_TABLE)?;
+            table.insert(record.store_key.as_bytes().as_slice(), [0_u8].as_slice())?;
+        }
+        write.commit()?;
+        drop(legacy_database);
+        let legacy = MailboxProviderRegistry::active_offers_read_only(
+            MailboxProviderRegistryConfig::new(legacy_data_dir),
+            1_001,
+        )?;
+        assert_eq!(legacy.len(), 1);
+        assert_eq!(legacy[0].authenticated_observation_count(), 0);
         Ok(())
     }
 
@@ -1174,6 +1526,82 @@ mod tests {
     }
 
     #[test]
+    fn authenticated_observations_are_local_bounded_deduplicated_and_offer_bound() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let data_dir = directory.path().join("providers");
+        let registry =
+            MailboxProviderRegistry::open(MailboxProviderRegistryConfig::new(data_dir.clone()))?;
+        let (encoded, endpoint) = offer(1, 11, 1_000)?;
+        let (import, observation, observed) =
+            registry.import_gossiped_offer(&encoded, endpoint, 1, observer(1), 1_001)?;
+        assert_eq!(import, MailboxProviderImportOutcome::Inserted);
+        assert_eq!(observation, MailboxProviderObservationOutcome::Added);
+        assert_eq!(observed.authenticated_observation_count(), 1);
+
+        let (_, observation, observed) =
+            registry.import_gossiped_offer(&encoded, endpoint, 1, observer(1), 1_002)?;
+        assert_eq!(observation, MailboxProviderObservationOutcome::Refreshed);
+        assert_eq!(observed.authenticated_observation_count(), 1);
+        let (_, observation, observed) =
+            registry.import_gossiped_offer(&encoded, endpoint, 1, observer(2), 1_003)?;
+        assert_eq!(observation, MailboxProviderObservationOutcome::Added);
+        assert_eq!(observed.authenticated_observation_count(), 2);
+
+        for value in 3..=MAX_AUTHENTICATED_PROVIDER_OBSERVATIONS_PER_OFFER {
+            let (_, observation, _) = registry.import_gossiped_offer(
+                &encoded,
+                endpoint,
+                1,
+                observer(value),
+                1_003 + u64::from(value),
+            )?;
+            assert_eq!(observation, MailboxProviderObservationOutcome::Added);
+        }
+        let (_, observation, observed) =
+            registry.import_gossiped_offer(&encoded, endpoint, 1, observer(99), 1_020)?;
+        assert_eq!(
+            observation,
+            MailboxProviderObservationOutcome::CapacityReached
+        );
+        assert_eq!(
+            observed.authenticated_observation_count(),
+            MAX_AUTHENTICATED_PROVIDER_OBSERVATIONS_PER_OFFER
+        );
+
+        let control_directory = tempfile::tempdir()?;
+        let control = MailboxProviderRegistry::open(MailboxProviderRegistryConfig::new(
+            control_directory.path().join("providers"),
+        ))?;
+        control.import_gossiped_offer(&encoded, endpoint, 1, observer(77), 1_001)?;
+        let observed_frame =
+            MailboxProviderGossipFrame::from_registry(&registry, [81; 32], None, 1_021)?;
+        let control_frame =
+            MailboxProviderGossipFrame::from_registry(&control, [81; 32], None, 1_021)?;
+        assert_eq!(observed_frame.encode(1_021)?, control_frame.encode(1_021)?);
+
+        let (replacement, replacement_endpoint) = offer(1, 12, 1_100)?;
+        let (import, observation, replacement) = registry.import_gossiped_offer(
+            &replacement,
+            replacement_endpoint,
+            1,
+            observer(9),
+            1_100,
+        )?;
+        assert_eq!(import, MailboxProviderImportOutcome::Replaced);
+        assert_eq!(observation, MailboxProviderObservationOutcome::Added);
+        assert_eq!(replacement.authenticated_observation_count(), 1);
+        drop(registry);
+
+        let active = MailboxProviderRegistry::active_offers_read_only(
+            MailboxProviderRegistryConfig::new(data_dir),
+            1_101,
+        )?;
+        assert_eq!(active.len(), 1);
+        assert_eq!(active[0].authenticated_observation_count(), 1);
+        Ok(())
+    }
+
+    #[test]
     fn exact_replica_set_lookup_is_indexed_bounded_and_expiry_aware() -> Result<()> {
         let directory = tempfile::tempdir()?;
         let registry = MailboxProviderRegistry::open(MailboxProviderRegistryConfig::new(
@@ -1276,7 +1704,10 @@ mod tests {
             first_directory.path().join("providers"),
         ))?;
         let (encoded, endpoint) = offer(7, 77, 1_000)?;
-        let (_, once_relayed) = first.import_gossiped_offer(&encoded, endpoint, 1, 1_001)?;
+        let (_, observation, once_relayed) =
+            first.import_gossiped_offer(&encoded, endpoint, 1, observer(1), 1_001)?;
+        assert_eq!(observation, MailboxProviderObservationOutcome::Added);
+        assert_eq!(once_relayed.authenticated_observation_count(), 1);
         assert_eq!(once_relayed.observed_gossip_hops(), 1);
         let frame = MailboxProviderGossipFrame::from_registry(&first, [5; 32], None, 1_001)?;
         assert_eq!(frame.entries().len(), 1);
@@ -1290,6 +1721,7 @@ mod tests {
             frame.entries()[0].encoded_offer(),
             endpoint,
             frame.entries()[0].transmitted_hops(),
+            observer(2),
             1_001,
         )?;
         assert!(
@@ -1300,7 +1732,10 @@ mod tests {
 
         // Another gossip frame cannot reset already retained provenance by
         // merely claiming a shorter path for the exact same signed offer.
-        let (_, replayed) = second.import_gossiped_offer(&encoded, endpoint, 1, 1_002)?;
+        let (_, observation, replayed) =
+            second.import_gossiped_offer(&encoded, endpoint, 1, observer(2), 1_002)?;
+        assert_eq!(observation, MailboxProviderObservationOutcome::Refreshed);
+        assert_eq!(replayed.authenticated_observation_count(), 1);
         assert_eq!(replayed.observed_gossip_hops(), 2);
 
         // A later direct observation lowers the retained hop count and makes

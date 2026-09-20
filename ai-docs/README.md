@@ -409,10 +409,14 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
    платят bounded 18-bit BLAKE3/Hashcash-style work, а new selection/gossip
    fail closed исключают дешёвые identities. Это cost floor, не доказательство
    независимых операторов и не полная Sybil resistance.
-3. Следующий инженерный этап — authenticated local observation provenance без
-   передачи social graph, затем exact replicas на физических/операторски
-   независимых volunteer hosts.
-4. Optional autostart/background mode оставить отдельной явной настройкой;
+3. M0.9.83 добавляет bounded local authenticated observation provenance:
+   exact offer получает до восьми дедуплицированных pseudonymous observer tags,
+   выведенных из local Device secret и уже authenticated peer session. Tags и
+   social IDs не входят в offer/gossip/IPC; ranking пока не меняется.
+4. Следующий инженерный этап — явная bootstrap-safe policy поверх cost и
+   observations, затем exact replicas на физических/операторски независимых
+   volunteer hosts.
+5. Optional autostart/background mode оставить отдельной явной настройкой;
    Windows Task Scheduler не является обязательной частью мессенджера.
 4. Уже реализованный M0.9.49 выделяет единый
    `kilogram-publication-conflict`: online/offline используют один signed codec,
@@ -799,6 +803,11 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   store/endpoint/capacity/lifetime, low-work offers исключаются из новых
   replica sets и gossip, legacy exact resolution сохраняется; cost floor не
   выдаётся за operator independence или полную Sybil resistance.
+- [`../docs/RFC-0106-local-authenticated-provider-observation-provenance.md`](../docs/RFC-0106-local-authenticated-provider-observation-provenance.md) —
+  M0.9.83 local-only provenance: authenticated peer session превращается в
+  keyed pseudonymous tag, exact offer хранит не более восьми distinct tags,
+  replacement очищает evidence; wire/IPC не несут tags или social IDs и
+  provider ranking пока не меняется.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

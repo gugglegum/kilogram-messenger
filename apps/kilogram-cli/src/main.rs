@@ -37,9 +37,10 @@ use kilogram_mailbox_client::{
     MAX_PROVIDER_GOSSIP_FRAME_BYTES, MAX_PROVIDER_GOSSIP_OFFER_BYTES, MAX_PROVIDER_SELECTION,
     MAX_REPLICA_DELETE_BATCH, MailboxClientLedger, MailboxClientLedgerConfig, MailboxHttpClient,
     MailboxOutboundState, MailboxProviderGossipFrame, MailboxProviderImportOutcome,
-    MailboxProviderOffer, MailboxProviderRegistry, MailboxProviderRegistryConfig,
-    MailboxReplicationLedger, MailboxReplicationLedgerConfig, MailboxReplicationReadOnlyInspection,
-    OutboundEnqueueOutcome, PendingMailboxUpload,
+    MailboxProviderLocalObserverTag, MailboxProviderObservationOutcome, MailboxProviderOffer,
+    MailboxProviderRegistry, MailboxProviderRegistryConfig, MailboxReplicationLedger,
+    MailboxReplicationLedgerConfig, MailboxReplicationReadOnlyInspection, OutboundEnqueueOutcome,
+    PendingMailboxUpload,
 };
 use kilogram_mailbox_provisioning::{
     EncryptedMailboxOffer, LocalMailboxBinding, MAX_MAILBOX_OFFER_VALIDITY_SECONDS,
@@ -263,6 +264,8 @@ const MAILBOX_CLIENT_LEDGER_DIRECTORY: &str = "mailbox-client";
 const MAILBOX_PROVIDER_REGISTRY_DIRECTORY: &str = "mailbox-providers";
 const MAILBOX_PROVIDER_TRANSPORT_IDENTITY_DOMAIN: &[u8] =
     b"kilogram:mailbox-provider-transport-identity:v1\0";
+const MAILBOX_PROVIDER_LOCAL_OBSERVER_KEY_CONTEXT: &str =
+    "kilogram mailbox provider local authenticated observer tag key v1";
 const MAX_RUNTIME_DEVICE_DIRECTORY_RECEIPTS: usize = 1_024;
 const MAX_RUNTIME_ENDPOINT_CANDIDATES_PER_CONTACT: usize = 4;
 const MAX_RUNTIME_TICKET_PUBLICATION_RECORDS: usize = 4_096;
@@ -5427,6 +5430,24 @@ fn mailbox_provider_transport_identity(offer: &SignedMailboxStorageOffer) -> Res
     Ok(*hasher.finalize().as_bytes())
 }
 
+fn runtime_mailbox_provider_local_observer_tag(
+    local_identity: &DeviceIdentity,
+    authenticated_peer_account_id: AccountId,
+    authenticated_peer_device_id: DeviceId,
+) -> MailboxProviderLocalObserverTag {
+    let local_secret = Zeroizing::new(local_identity.secret_bytes());
+    let local_observer_key = Zeroizing::new(blake3::derive_key(
+        MAILBOX_PROVIDER_LOCAL_OBSERVER_KEY_CONTEXT,
+        local_secret.as_slice(),
+    ));
+    let mut observer_material = [0_u8; 64];
+    observer_material[..32].copy_from_slice(authenticated_peer_account_id.as_bytes());
+    observer_material[32..].copy_from_slice(authenticated_peer_device_id.as_bytes());
+    MailboxProviderLocalObserverTag::from_bytes(
+        *blake3::keyed_hash(&local_observer_key, &observer_material).as_bytes(),
+    )
+}
+
 fn random_mailbox_provider_gossip_entropy() -> Result<[u8; 32]> {
     let mut entropy = [0_u8; 32];
     getrandom::fill(&mut entropy).context("generate mailbox provider gossip entropy")?;
@@ -5439,12 +5460,18 @@ struct RuntimeMailboxProviderGossipImport {
     replaced: usize,
     already_present: usize,
     rejected: usize,
+    authenticated_observation_added: usize,
+    authenticated_observation_refreshed: usize,
+    authenticated_observation_capacity_reached: usize,
     active_provider_count: usize,
 }
 
 impl RuntimeMailboxProviderGossipImport {
     fn state_changed(self) -> bool {
-        self.inserted != 0 || self.replaced != 0
+        self.inserted != 0
+            || self.replaced != 0
+            || self.authenticated_observation_added != 0
+            || self.authenticated_observation_refreshed != 0
     }
 }
 
@@ -5452,6 +5479,7 @@ fn import_runtime_mailbox_provider_gossip(
     state_directory: &Path,
     encoded_frame: &[u8],
     expected_reply_to: Option<[u8; 32]>,
+    authenticated_observer: MailboxProviderLocalObserverTag,
 ) -> Result<(
     MailboxProviderGossipFrame,
     RuntimeMailboxProviderGossipImport,
@@ -5485,12 +5513,28 @@ fn import_runtime_mailbox_provider_gossip(
             entry.encoded_offer(),
             transport_identity,
             entry.transmitted_hops(),
+            authenticated_observer,
             now,
         ) {
-            Ok((MailboxProviderImportOutcome::Inserted, _)) => report.inserted += 1,
-            Ok((MailboxProviderImportOutcome::Replaced, _)) => report.replaced += 1,
-            Ok((MailboxProviderImportOutcome::AlreadyPresent, _)) => {
-                report.already_present += 1;
+            Ok((offer_outcome, observation_outcome, _)) => {
+                match offer_outcome {
+                    MailboxProviderImportOutcome::Inserted => report.inserted += 1,
+                    MailboxProviderImportOutcome::Replaced => report.replaced += 1,
+                    MailboxProviderImportOutcome::AlreadyPresent => {
+                        report.already_present += 1;
+                    }
+                }
+                match observation_outcome {
+                    MailboxProviderObservationOutcome::Added => {
+                        report.authenticated_observation_added += 1;
+                    }
+                    MailboxProviderObservationOutcome::Refreshed => {
+                        report.authenticated_observation_refreshed += 1;
+                    }
+                    MailboxProviderObservationOutcome::CapacityReached => {
+                        report.authenticated_observation_capacity_reached += 1;
+                    }
+                }
             }
             Err(error) => {
                 report.rejected += 1;
@@ -18998,6 +19042,18 @@ async fn attempt_runtime_mailbox_provider_gossip(
                     report.rejected
                 );
                 println!(
+                    "runtime_mailbox_provider_authenticated_observation_added={}",
+                    report.authenticated_observation_added
+                );
+                println!(
+                    "runtime_mailbox_provider_authenticated_observation_refreshed={}",
+                    report.authenticated_observation_refreshed
+                );
+                println!(
+                    "runtime_mailbox_provider_authenticated_observation_capacity_reached={}",
+                    report.authenticated_observation_capacity_reached
+                );
+                println!(
                     "runtime_mailbox_provider_gossip_active_providers={}",
                     report.active_provider_count
                 );
@@ -19007,6 +19063,9 @@ async fn attempt_runtime_mailbox_provider_gossip(
                 );
                 println!("runtime_mailbox_provider_gossip_endpoint_failover_count={index}");
                 println!("runtime_mailbox_provider_gossip_payload_social_ids=false");
+                println!("runtime_mailbox_provider_observation_scope=local-only");
+                println!("runtime_mailbox_provider_observation_identifiers_transmitted=false");
+                println!("runtime_mailbox_provider_observation_ipc_exposed=false");
                 println!("runtime_mailbox_provider_gossip_status=completed");
                 return Ok(true);
             }
@@ -19080,8 +19139,17 @@ async fn send_runtime_mailbox_provider_gossip(
     let state_lock = acquire_runtime_state_lock(state_directory)
         .await?
         .context("runtime state lock remained busy while importing provider gossip")?;
-    let (_, report) =
-        import_runtime_mailbox_provider_gossip(state_directory, &response_bytes, Some(request_id))?;
+    let authenticated_observer = runtime_mailbox_provider_local_observer_tag(
+        device_state.identity(),
+        ticket.listener_account_id(),
+        ticket.listener_device_id(),
+    );
+    let (_, report) = import_runtime_mailbox_provider_gossip(
+        state_directory,
+        &response_bytes,
+        Some(request_id),
+        authenticated_observer,
+    )?;
     drop(state_lock);
     print_transport_diagnostics(&connection, route_policy).await?;
     connection.close(0_u32.into(), b"kilogram provider gossip complete");
@@ -22447,8 +22515,17 @@ async fn handle_authorized_application_connection(
             true
         }
         ClientRequest::MailboxProviderGossip(frame_bytes) => {
-            let imported =
-                import_runtime_mailbox_provider_gossip(state_directory, &frame_bytes, None);
+            let authenticated_observer = runtime_mailbox_provider_local_observer_tag(
+                device_state.identity(),
+                authorized_requester.account_id(),
+                authorized_requester.device_id(),
+            );
+            let imported = import_runtime_mailbox_provider_gossip(
+                state_directory,
+                &frame_bytes,
+                None,
+                authenticated_observer,
+            );
             let (request_frame, report) = match imported {
                 Ok(imported) => imported,
                 Err(error) => {
@@ -22491,10 +22568,25 @@ async fn handle_authorized_application_connection(
                 report.rejected
             );
             println!(
+                "runtime_mailbox_provider_authenticated_observation_added={}",
+                report.authenticated_observation_added
+            );
+            println!(
+                "runtime_mailbox_provider_authenticated_observation_refreshed={}",
+                report.authenticated_observation_refreshed
+            );
+            println!(
+                "runtime_mailbox_provider_authenticated_observation_capacity_reached={}",
+                report.authenticated_observation_capacity_reached
+            );
+            println!(
                 "runtime_mailbox_provider_gossip_active_providers={}",
                 report.active_provider_count
             );
             println!("runtime_mailbox_provider_gossip_payload_social_ids=false");
+            println!("runtime_mailbox_provider_observation_scope=local-only");
+            println!("runtime_mailbox_provider_observation_identifiers_transmitted=false");
+            println!("runtime_mailbox_provider_observation_ipc_exposed=false");
             println!("status=runtime-mailbox-provider-gossip-exchanged");
             true
         }
@@ -28636,6 +28728,39 @@ mod tests {
     fn runtime_provider_gossip_is_reply_bound_and_imports_verified_endpoints() -> Result<()> {
         use kilogram_mailbox::MailboxStoreIdentity;
 
+        let local_identity = DeviceIdentity::from_secret_bytes([70_u8; 32]);
+        let peer_account_id = AccountId::from_bytes([80_u8; 32]);
+        let peer_device_id = DeviceId::from_bytes([81_u8; 32]);
+        let local_tag = runtime_mailbox_provider_local_observer_tag(
+            &local_identity,
+            peer_account_id,
+            peer_device_id,
+        );
+        assert!(
+            local_tag
+                == runtime_mailbox_provider_local_observer_tag(
+                    &local_identity,
+                    peer_account_id,
+                    peer_device_id
+                )
+        );
+        assert!(
+            local_tag
+                != runtime_mailbox_provider_local_observer_tag(
+                    &local_identity,
+                    peer_account_id,
+                    DeviceId::from_bytes([82_u8; 32])
+                )
+        );
+        assert!(
+            local_tag
+                != runtime_mailbox_provider_local_observer_tag(
+                    &DeviceIdentity::from_secret_bytes([71_u8; 32]),
+                    peer_account_id,
+                    peer_device_id
+                )
+        );
+
         let directory = tempfile::tempdir()?;
         let source_state = directory.path().join("source");
         let target_state = directory.path().join("target");
@@ -28659,10 +28784,22 @@ mod tests {
             MailboxProviderGossipFrame::from_registry(&source_registry, [81_u8; 32], None, now)?;
         drop(source_registry);
         let request_id = request.frame_id()?;
-        let (_, imported) =
-            import_runtime_mailbox_provider_gossip(&target_state, &request.encode(now)?, None)?;
+        let target_observer = MailboxProviderLocalObserverTag::from_bytes([91_u8; 32]);
+        let source_observer = MailboxProviderLocalObserverTag::from_bytes([92_u8; 32]);
+        let (_, imported) = import_runtime_mailbox_provider_gossip(
+            &target_state,
+            &request.encode(now)?,
+            None,
+            target_observer,
+        )?;
         assert_eq!(imported.inserted, 1);
+        assert_eq!(imported.authenticated_observation_added, 1);
         assert_eq!(imported.active_provider_count, 1);
+        assert_eq!(
+            runtime_mailbox_provider_registry(&target_state)?.active_offers(now)?[0]
+                .authenticated_observation_count(),
+            1
+        );
 
         let target_registry = runtime_mailbox_provider_registry(&target_state)?;
         let response = MailboxProviderGossipFrame::from_registry(
@@ -28675,13 +28812,24 @@ mod tests {
             &source_state,
             &response.encode(now)?,
             Some(request_id),
+            source_observer,
         )?;
         assert_eq!(replayed.already_present, 1);
+        assert_eq!(replayed.authenticated_observation_added, 1);
+        let (_, repeated) = import_runtime_mailbox_provider_gossip(
+            &source_state,
+            &response.encode(now)?,
+            Some(request_id),
+            source_observer,
+        )?;
+        assert_eq!(repeated.already_present, 1);
+        assert_eq!(repeated.authenticated_observation_refreshed, 1);
         assert!(
             import_runtime_mailbox_provider_gossip(
                 &source_state,
                 &response.encode(now)?,
                 Some([0_u8; 32]),
+                source_observer,
             )
             .is_err()
         );
@@ -28694,6 +28842,8 @@ mod tests {
             "mailbox_id",
             "read_capability",
             "write_capability",
+            "observer",
+            "observation",
         ] {
             assert!(!debug.contains(forbidden));
         }

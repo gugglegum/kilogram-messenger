@@ -4395,13 +4395,49 @@ External result:
   30 library tests, 3 focused runtime tests и Clippy `-D warnings` прошли при
   `-j 2` в debug profile.
 
+### M0.9.83 — local authenticated provider observation provenance: принято локально
+
+Реализовано:
+
+- Device-authenticated inbound и reply-bound outbound provider gossip передают
+  registry только local pseudonymous observer tag, выведенный через BLAKE3
+  `derive_key` + keyed mode из local Device secret и authenticated peer
+  Account/Device IDs;
+- raw social IDs не сохраняются в observation table, а tag не входит в offer,
+  gossip frame, protocol request, log или runtime IPC v26;
+- separate redb table хранит exact-offer-ID + observer-tag, first/last time;
+  repeated session refreshes одну запись вместо увеличения diversity;
+- на exact offer сохраняется максимум 8 distinct observations; capacity
+  outcome не отклоняет сам signed offer и не создаёт unbounded graph;
+- expiry и signed-offer replacement атомарно удаляют старые observations;
+  legacy registry без новой таблицы читается с count 0;
+- manual/local import не создаёт authenticated provenance;
+- `MailboxProviderOffer` локально показывает observation count, но IPC его не
+  экспортирует и selection/ranking пока не меняется;
+- regression сравнивает byte-identical gossip frames для одинакового wire
+  state при разных local observation sets;
+- fail-closed static contract —
+  `scripts/verify-kilogram-provider-observation-boundary.ps1`, архитектурная
+  граница —
+  [`../docs/RFC-0106-local-authenticated-provider-observation-provenance.md`](../docs/RFC-0106-local-authenticated-provider-observation-provenance.md);
+- это local corroboration signal, не transferable endorsement, proof of person
+  или доказательство operator/network/physical independence;
+- local Device-secret rotation начинает новый derivation epoch; будущая
+  migration обязана очистить или явно re-key observation table, не смешивая
+  старые и новые tags как независимых observers;
+- acceptance: 16 mailbox-client tests, 3 focused CLI runtime tests, все 12
+  mailbox/provider/service-free static boundaries, formatting и Clippy
+  `-D warnings` прошли с Cargo `-j 2`;
+- stage network-free/debug-only: без release build, ZIP, field network process,
+  background service, external publication и нового executable.
+
 ### Следующий этап
 
-1. Добавить local authenticated observation provenance для provider offers без
-   передачи Account/Device/social-graph identifiers в gossip payload или IPC.
-2. Поверх cost + observation floor спроектировать policy failure-domain
-   diversity и проверить exact replicas на физических/операторски независимых
-   volunteer hosts.
+1. Спроектировать bootstrap-safe selection policy поверх admission work и local
+   observations: не считать несколько Devices доказательством разных operators,
+   явно определить threshold/decay и fallback для нового пользователя.
+2. Добавить separately evidenced network/operator failure-domain diversity и
+   проверить exact replicas на физических/операторски независимых hosts.
 3. Отдельным явным действием можно поставить M1 tag на accepted baseline;
    последующие M0.9.82 изменения намеренно не переписывают M1 evidence.
 4. Optional autostart/background mode оставить отдельной явной настройкой, не
