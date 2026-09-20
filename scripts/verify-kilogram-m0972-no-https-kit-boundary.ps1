@@ -88,7 +88,7 @@ foreach ($value in @(
     "`$script:M0972CompatibilityStoreKey = 'd75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a'",
     'Test-M0972CompatibilityEndpointReachable',
     'Assert-M0972HttpsFixtureAbsent',
-    "`$milestone -cnotin @('M0.9.69', 'M0.9.72', 'M0.9.73', 'M0.9.74', 'M0.9.76')",
+    "`$milestone -cnotin @('M0.9.69', 'M0.9.72', 'M0.9.73', 'M0.9.74', 'M0.9.76', 'M0.9.87')",
     "`$milestone -cne 'M0.9.69'",
     "'M0972'"
 )) {
@@ -172,7 +172,7 @@ foreach ($value in @(
 }
 
 foreach ($value in @(
-    "[ValidateSet('m0969', 'm0972', 'm0973', 'm0974', 'm0976')] [string] `$LabelPrefix = 'm0969'",
+    "[ValidateSet('m0969', 'm0972', 'm0973', 'm0974', 'm0976', 'm0987')] [string] `$LabelPrefix = 'm0969'",
     '[switch] $SuppressReport',
     '$ExpectedLabelPrefix'
 )) {

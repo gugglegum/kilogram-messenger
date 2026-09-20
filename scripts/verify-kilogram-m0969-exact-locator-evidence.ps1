@@ -2,7 +2,7 @@
 param(
     [string] $EvidenceDirectory,
     [switch] $SelfTest,
-    [ValidateSet('m0969', 'm0972', 'm0973', 'm0974', 'm0976')] [string] $LabelPrefix = 'm0969',
+    [ValidateSet('m0969', 'm0972', 'm0973', 'm0974', 'm0976', 'm0987')] [string] $LabelPrefix = 'm0969',
     [switch] $SuppressReport
 )
 
@@ -56,7 +56,7 @@ function Assert-M0969SameSet {
 function Test-M0969ExactLocatorEvidence {
     param(
         [Parameter(Mandatory)] [string] $Directory,
-        [ValidateSet('m0969', 'm0972', 'm0973', 'm0974', 'm0976')] [string] $ExpectedLabelPrefix = 'm0969'
+        [ValidateSet('m0969', 'm0972', 'm0973', 'm0974', 'm0976', 'm0987')] [string] $ExpectedLabelPrefix = 'm0969'
     )
 
     $expectedRoutePolicy = 'auto'
@@ -315,13 +315,17 @@ function Test-M0969ExactLocatorEvidence {
         legacy_random_fallback = $false
         restart_redelivery = 'absent'
         history_message_occurrences = 1
-        https_compatibility_copy = $ExpectedLabelPrefix -cne 'm0976'
+        https_compatibility_copy = $ExpectedLabelPrefix -cnotin @('m0976', 'm0987')
         result = 'verified'
     }
 }
 
 function New-M0969SelfTestEvidence {
-    param([Parameter(Mandatory)] [string] $Directory)
+    param(
+        [Parameter(Mandatory)] [string] $Directory,
+        [ValidateSet('m0969', 'm0972', 'm0973', 'm0974', 'm0976', 'm0987')]
+        [string] $ExpectedLabelPrefix = 'm0969'
+    )
     New-Item -ItemType Directory -Path $Directory | Out-Null
     $p1 = '11' * 32
     $p2 = '22' * 32
@@ -329,12 +333,12 @@ function New-M0969SelfTestEvidence {
     $t2 = '32' * 32
     $commitment = '44' * 32
     $update = '55' * 32
-    $message = 'kilogram-m0969-20260919-120000'
+    $message = "kilogram-$ExpectedLabelPrefix-20260919-120000"
     @{
         schema = 1
         run_id = '20260919-120000'
         build_commit = 'ab' * 20
-        conversation_label = 'm0969-20260919-120000'
+        conversation_label = "$ExpectedLabelPrefix-20260919-120000"
         alice_account_id = 'aa' * 32
         bob_account_id = 'bb' * 32
         message_marker = $message
@@ -475,8 +479,8 @@ function New-M0969SelfTestEvidence {
 if ($SelfTest) {
     $root = Join-Path ([IO.Path]::GetTempPath()) ("kilogram-m0969-verifier-" + [Guid]::NewGuid().ToString('N'))
     try {
-        New-M0969SelfTestEvidence $root
-        $positive = Test-M0969ExactLocatorEvidence $root
+        New-M0969SelfTestEvidence $root $LabelPrefix
+        $positive = Test-M0969ExactLocatorEvidence $root $LabelPrefix
         if ($positive.result -cne 'verified') { throw 'positive M0.9.69 verifier self-test failed' }
 
         $sendPath = Join-Path $root '04-send-alice.log'
@@ -488,7 +492,7 @@ if ($SelfTest) {
             )
         )
         $legacyRejected = $false
-        try { $null = Test-M0969ExactLocatorEvidence $root }
+        try { $null = Test-M0969ExactLocatorEvidence $root $LabelPrefix }
         catch { $legacyRejected = $true }
         if (-not $legacyRejected) { throw 'verifier accepted legacy random fallback' }
         Set-Content -LiteralPath $sendPath -Encoding utf8 -Value $sendOriginal
@@ -502,7 +506,7 @@ if ($SelfTest) {
             )
         )
         $substitutionRejected = $false
-        try { $null = Test-M0969ExactLocatorEvidence $root }
+        try { $null = Test-M0969ExactLocatorEvidence $root $LabelPrefix }
         catch { $substitutionRejected = $true }
         if (-not $substitutionRejected) { throw 'verifier accepted a provider outside the committed set' }
 
@@ -516,7 +520,7 @@ if ($SelfTest) {
             )
         )
         $staleTicketRejected = $false
-        try { $null = Test-M0969ExactLocatorEvidence $root }
+        try { $null = Test-M0969ExactLocatorEvidence $root $LabelPrefix }
         catch { $staleTicketRejected = $true }
         if (-not $staleTicketRejected) { throw 'verifier accepted a stale bootstrap endpoint ticket' }
         Set-Content -LiteralPath $refreshPath -Encoding utf8 -Value $refreshOriginal
@@ -530,7 +534,7 @@ if ($SelfTest) {
             )
         )
         $relayMismatchRejected = $false
-        try { $null = Test-M0969ExactLocatorEvidence $root }
+        try { $null = Test-M0969ExactLocatorEvidence $root $LabelPrefix }
         catch { $relayMismatchRejected = $true }
         if (-not $relayMismatchRejected) { throw 'verifier accepted a divergent field relay' }
 

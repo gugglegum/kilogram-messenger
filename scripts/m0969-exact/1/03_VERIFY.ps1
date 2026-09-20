@@ -1,8 +1,9 @@
 . (Join-Path (Split-Path -Parent $PSScriptRoot) 'common.ps1')
 $build = Assert-M0969Kit
 $noHttpsCompatibility = [string]$build.milestone -cne 'M0.9.69'
-$serviceFreeV2 = [string]$build.milestone -ceq 'M0.9.76'
+$serviceFreeV2 = [string]$build.milestone -cin @('M0.9.76', 'M0.9.87')
 $labelPrefix = switch ([string]$build.milestone) {
+    'M0.9.87' { 'm0987' }
     'M0.9.76' { 'm0976' }
     'M0.9.74' { 'm0974' }
     'M0.9.73' { 'm0973' }
@@ -15,14 +16,20 @@ $null = Wait-M0969File `
     "stop`n"
 )
 $null = Wait-M0969File `
-    (Join-Path $script:SharedDirectory 'providers-stopped.marker') 120 'providers stopped marker'
+    (Join-Path $script:SharedDirectory 'providers-stopped.marker') `
+    $(if ([string]$build.milestone -ceq 'M0.9.87') { 600 } else { 120 }) `
+    'providers stopped marker'
 $boundaryDestination = Join-Path $script:EvidenceDirectory '08-boundaries.log'
 $boundarySource = Join-Path $script:KitRoot 'BOUNDARIES.log'
 if (Test-Path -LiteralPath $boundaryDestination) {
     throw "Final boundary evidence already exists; refusing a resumed clean run: $boundaryDestination"
 }
 Copy-Item -LiteralPath $boundarySource -Destination $boundaryDestination
-if ($serviceFreeV2) {
+if ([string]$build.milestone -ceq 'M0.9.87') {
+    & (Join-Path $script:KitRoot 'verify-kilogram-m0987-independent-provider-evidence.ps1') `
+        -EvidenceDirectory $script:EvidenceDirectory
+    Write-Host 'M0.9.87 INDEPENDENT-PROVIDER SERVICE-FREE FIELD TEST COMPLETED SUCCESSFULLY.'
+} elseif ($serviceFreeV2) {
     & (Join-Path $script:KitRoot 'verify-kilogram-m0976-service-free-v2-evidence.ps1') `
         -EvidenceDirectory $script:EvidenceDirectory
     Write-Host 'M0.9.76 SERVICE-FREE V2 VOLUNTEER DELIVERY TEST COMPLETED SUCCESSFULLY.'

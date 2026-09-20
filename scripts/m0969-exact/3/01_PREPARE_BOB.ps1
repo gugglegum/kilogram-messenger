@@ -1,6 +1,6 @@
 . (Join-Path (Split-Path -Parent $PSScriptRoot) 'common.ps1')
 $build = Assert-M0969Kit
-$serviceFreeV2 = [string]$build.milestone -ceq 'M0.9.76'
+$serviceFreeV2 = [string]$build.milestone -cin @('M0.9.76', 'M0.9.87')
 $run = Get-M0969Run
 $null = Wait-M0969File `
     (Join-Path $script:SharedDirectory 'providers-ready.marker') 900 'providers ready before activation'

@@ -235,12 +235,35 @@ specified in
 Positive-only use of that evidence to avoid a known co-located provider during
 new replica selection is specified in
 [`docs/RFC-0109-positive-provider-path-colocation-avoidance.md`](docs/RFC-0109-positive-provider-path-colocation-avoidance.md).
+The controlled multi-host evidence contract for two separately operated
+volunteer providers is specified in
+[`docs/RFC-0110-independent-provider-field-contract.md`](docs/RFC-0110-independent-provider-field-contract.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.86 positive provider path co-location avoidance — accepted locally
+## Current milestone: M0.9.87 independent-provider field contract — implemented locally
+
+The new debug-only field kit separates Alice, Provider 1, Provider 2 and Bob
+into four synchronized role folders. A full run requires at least three
+physical hosts (four are ideal); the two providers must use different machines,
+access networks and declared operators. Bob may share a host with one provider.
+
+Each provider keeps its private state and open runtime log below
+`%LOCALAPPDATA%`. The synchronized directory receives only atomic public offers,
+closed-schema attestations and closed final logs. Run-scoped SHA-256 pseudonyms
+bind the controlled machine/operator/network claims without retaining raw
+`MachineGuid` or entered labels. Equal claims fail closed. Unequal claims remain
+controlled self-attestation, not a protocol proof or Sybil resistance.
+
+The evidence verifier inherits the service-free exact `2/2` lifecycle and has
+negative fixtures for same-machine, same-operator, same-network and injected
+raw-field evidence. The generator performs a locked debug build with two jobs
+by default and creates no release build, ZIP, HTTPS mailbox service, new
+executable or network process. External three-/four-host acceptance is pending.
+
+## Previous milestone: M0.9.86 positive provider path co-location avoidance — accepted locally
 
 New replica-set creation, automatic legacy upgrade and diagnostic selection
 now defer a second exact offer positively known to share the selected local

@@ -352,7 +352,11 @@ sessions, distribution, removal и key epochs и не решены этим пр
   сохраняет полный доступный fan-out. Открыты отдельно доказуемая
   network/operator diversity, controlled field evidence и защита от colluding
   observers. Разные local tags сами по себе operator independence не
-  доказывают.
+  доказывают. M0.9.87 закрывает только воспроизводимую постановку controlled
+  field experiment: два providers должны иметь разные run-scoped
+  machine/operator/network self-attestations, private/open state не попадает в
+  cloud sync, а verifier отвергает equality и raw claims. Внешний run ещё не
+  выполнен; даже его успех не станет protocol proof против collusion.
 - Push-уведомления на Android/iOS без утечки содержания и социального графа.
 - Независимый second-builder, подписанный release provenance, обновления клиента
   и дальнейшая защита supply chain поверх M0.9.50 same-host gate.

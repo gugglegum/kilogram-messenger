@@ -1,9 +1,10 @@
 . (Join-Path (Split-Path -Parent $PSScriptRoot) 'common.ps1')
 $build = Assert-M0969Kit
 $noHttpsCompatibility = [string]$build.milestone -cne 'M0.9.69'
-$serviceFreeV2 = [string]$build.milestone -ceq 'M0.9.76'
+$serviceFreeV2 = [string]$build.milestone -cin @('M0.9.76', 'M0.9.87')
 $legacyNoHttpsCompatibility = $noHttpsCompatibility -and -not $serviceFreeV2
 $labelPrefix = switch ([string]$build.milestone) {
+    'M0.9.87' { 'm0987' }
     'M0.9.76' { 'm0976' }
     'M0.9.74' { 'm0974' }
     'M0.9.73' { 'm0973' }
@@ -27,7 +28,7 @@ if ($legacyNoHttpsCompatibility) {
     )
 } elseif ($serviceFreeV2) {
     if (Test-Path -LiteralPath $script:StorePath) {
-        throw 'M0.9.76 contains a forbidden HTTPS mailbox executable.'
+        throw "$([string]$build.milestone) contains a forbidden HTTPS mailbox executable."
     }
     [IO.File]::WriteAllLines(
         (Join-Path $script:EvidenceDirectory '00-service-free-v2.boundary'),

@@ -71,7 +71,7 @@ foreach ($forbidden in @('--release', 'Compress-Archive', '.zip')) {
 }
 
 foreach ($required in @(
-    "`$milestone -cnotin @('M0.9.69', 'M0.9.72', 'M0.9.73', 'M0.9.74', 'M0.9.76')",
+    "`$milestone -cnotin @('M0.9.69', 'M0.9.72', 'M0.9.73', 'M0.9.74', 'M0.9.76', 'M0.9.87')",
     "'M0.9.74' { 'M0974' }"
 )) {
     if (-not $common.Contains($required)) {
@@ -90,7 +90,7 @@ foreach ($required in @(
         throw "M0.9.74 final verification is missing '$required'"
     }
 }
-if (-not $baseVerifier.Contains("[ValidateSet('m0969', 'm0972', 'm0973', 'm0974', 'm0976')]")) {
+if (-not $baseVerifier.Contains("[ValidateSet('m0969', 'm0972', 'm0973', 'm0974', 'm0976', 'm0987')]")) {
     throw 'base exact-locator verifier does not accept the m0974 label'
 }
 foreach ($required in @(

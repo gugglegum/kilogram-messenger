@@ -1,6 +1,6 @@
 # Память проекта Kilogram
 
-Актуально на: 2026-09-08.
+Актуально на: 2026-09-20.
 
 Эта папка — краткая проектная память и дорожная карта. Подробная техническая
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
@@ -425,9 +425,14 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
    non-conflicting или path-unknown candidate. Deferred offers возвращаются
    вторым проходом при нехватке альтернатив, поэтому availability не падает;
    разные tags не считаются доказательством независимых операторов.
-7. Следующий инженерный этап — проверить exact replicas на физических и операторски
-   независимых hosts отдельным field run.
-8. Optional autostart/background mode оставить отдельной явной настройкой;
+7. M0.9.87 реализует отдельный four-folder field contract: Alice, два
+   provider hosts и Bob. Минимум нужны три физических устройства, Provider 1 и
+   Provider 2 обязаны иметь разные run-scoped machine/operator/network claims;
+   open logs и private state не синхронизируются. Это controlled
+   self-attestation, а не protocol proof. Внешний прогон пока не принят.
+8. Следующий инженерный этап — собрать свежий комплект и провести M0.9.87 на
+   двух действительно разделённых provider hosts.
+9. Optional autostart/background mode оставить отдельной явной настройкой;
    Windows Task Scheduler не является обязательной частью мессенджера.
 4. Уже реализованный M0.9.49 выделяет единый
    `kilogram-publication-conflict`: online/offline используют один signed codec,
@@ -833,6 +838,13 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   первом проходе, path-unknown candidates остаются допустимыми, deferred
   candidates возвращаются для availability; unequal tags не объявляются
   operator independence, exact commitments и IPC v26 не меняются.
+- [`../docs/RFC-0110-independent-provider-field-contract.md`](../docs/RFC-0110-independent-provider-field-contract.md) —
+  M0.9.87 four-folder controlled field contract: два provider процесса живут
+  на разных физических/network/operator domains, публикуют только run-scoped
+  hashed attestations и closed logs; exact service-free lifecycle наследуется,
+  но external three-/four-host run ещё ожидается.
+- [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
+  краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

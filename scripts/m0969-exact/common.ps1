@@ -21,7 +21,7 @@ function Assert-M0969Kit {
     }
     $build = Get-Content -LiteralPath $script:BuildInfoPath -Raw | ConvertFrom-Json
     $milestone = [string]$build.milestone
-    if ($milestone -cnotin @('M0.9.69', 'M0.9.72', 'M0.9.73', 'M0.9.74', 'M0.9.76')) {
+    if ($milestone -cnotin @('M0.9.69', 'M0.9.72', 'M0.9.73', 'M0.9.74', 'M0.9.76', 'M0.9.87')) {
         throw "Unsupported exact-locator field milestone: $milestone"
     }
     if ($milestone -ceq 'M0.9.69' -and
@@ -332,6 +332,7 @@ function Get-M0969Run {
 function Get-M0969PrivateRoot {
     param([Parameter(Mandatory)] [string] $Role, [Parameter(Mandatory)] [string] $RunId)
     $rootName = switch ($script:FieldMilestone) {
+        'M0.9.87' { 'M0987' }
         'M0.9.76' { 'M0976' }
         'M0.9.74' { 'M0974' }
         'M0.9.73' { 'M0973' }
@@ -339,6 +340,299 @@ function Get-M0969PrivateRoot {
         default { 'M0969' }
     }
     return Join-Path $env:LOCALAPPDATA "Kilogram\$rootName\$RunId\$Role"
+}
+
+function Get-M0987RunScopedDigest {
+    param(
+        [Parameter(Mandatory)] [string] $Domain,
+        [Parameter(Mandatory)] [string] $RunId,
+        [Parameter(Mandatory)] [string] $Value
+    )
+    $normalized = $Value.Trim().ToLowerInvariant()
+    if ($normalized.Length -lt 2 -or $normalized.Length -gt 128) {
+        throw 'M0.9.87 operator and network labels must contain 2..128 characters.'
+    }
+    $bytes = [Text.Encoding]::UTF8.GetBytes("$Domain`0$RunId`0$normalized")
+    $sha = [Security.Cryptography.SHA256]::Create()
+    try { return ([BitConverter]::ToString($sha.ComputeHash($bytes))).Replace('-', '').ToLowerInvariant() }
+    finally { $sha.Dispose() }
+}
+
+function Write-M0987AtomicJson {
+    param([Parameter(Mandatory)] [string] $Path, [Parameter(Mandatory)] [object] $Value)
+    $temporary = "$Path.publish-$PID-$([Guid]::NewGuid().ToString('N'))"
+    [IO.File]::WriteAllText(
+        $temporary,
+        (($Value | ConvertTo-Json -Depth 8) + "`n"),
+        [Text.UTF8Encoding]::new($false)
+    )
+    Move-Item -LiteralPath $temporary -Destination $Path -Force
+}
+
+function Get-M0987LatestProviderOffer {
+    param([Parameter(Mandatory)] [string] $LogPath)
+    $lines = @(Get-Content -LiteralPath $LogPath -ErrorAction Stop)
+    $complete = [Collections.Generic.List[object]]::new()
+    for ($index = 0; $index -lt $lines.Count; $index++) {
+        if ($lines[$index] -cnotmatch '^runtime_volunteer_storage_offer=([A-Za-z0-9_-]+)$') { continue }
+        $encoded = $Matches[1]
+        for ($next = $index + 1; $next -lt [Math]::Min($index + 5, $lines.Count); $next++) {
+            if ($lines[$next] -cmatch '^runtime_volunteer_storage_offer_expires_at_unix_seconds=([0-9]+)$') {
+                $complete.Add([PSCustomObject]@{ encoded = $encoded; expires = [UInt64]$Matches[1] })
+                break
+            }
+        }
+    }
+    if ($complete.Count -lt 1) { throw 'Provider runtime log contains no complete offer and expiry pair.' }
+    return $complete[$complete.Count - 1]
+}
+
+function Publish-M0987ProviderOffer {
+    param(
+        [Parameter(Mandatory)] [ValidateSet('provider1', 'provider2')] [string] $ProviderName,
+        [Parameter(Mandatory)] [string] $RunId,
+        [Parameter(Mandatory)] [string] $BuildCommit,
+        [Parameter(Mandatory)] [string] $LocalLog,
+        [Parameter(Mandatory)] [string] $AttestationPath
+    )
+    $latest = Get-M0987LatestProviderOffer $LocalLog
+    $offerPath = Join-Path $script:EvidenceDirectory "01-$ProviderName.offer"
+    $offerTemporary = "$offerPath.publish-$PID-$([Guid]::NewGuid().ToString('N'))"
+    [IO.File]::WriteAllText($offerTemporary, ($latest.encoded + "`n"), [Text.UTF8Encoding]::new($false))
+    Move-Item -LiteralPath $offerTemporary -Destination $offerPath -Force
+    $publicationPath = Join-Path $script:EvidenceDirectory "01-$ProviderName-publication.json"
+    Write-M0987AtomicJson $publicationPath ([ordered]@{
+        schema = 1
+        evidence_milestone = 'M0.9.87'
+        provider_role = $ProviderName
+        run_id = $RunId
+        build_commit = $BuildCommit
+        offer_sha256 = (Get-FileHash -LiteralPath $offerPath -Algorithm SHA256).Hash.ToLowerInvariant()
+        offer_expires_at_unix_seconds = [UInt64]$latest.expires
+        attestation_sha256 = (Get-FileHash -LiteralPath $AttestationPath -Algorithm SHA256).Hash.ToLowerInvariant()
+        published_at_unix_seconds = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+    })
+}
+
+function Get-M0987ValidatedProviderPublication {
+    param(
+        [Parameter(Mandatory)] [ValidateSet('provider1', 'provider2')] [string] $ProviderName,
+        [Parameter(Mandatory)] [string] $RunId,
+        [Parameter(Mandatory)] [string] $BuildCommit
+    )
+    $publicationPath = Join-Path $script:EvidenceDirectory "01-$ProviderName-publication.json"
+    $attestationPath = Join-Path $script:EvidenceDirectory "01-$ProviderName-attestation.json"
+    $offerPath = Join-Path $script:EvidenceDirectory "01-$ProviderName.offer"
+    foreach ($path in @($publicationPath, $attestationPath, $offerPath)) {
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { return $null }
+    }
+    try {
+        $publication = Get-Content -LiteralPath $publicationPath -Raw -ErrorAction Stop | ConvertFrom-Json
+        $attestation = Get-Content -LiteralPath $attestationPath -Raw -ErrorAction Stop | ConvertFrom-Json
+    }
+    catch { return $null }
+    if ([int]$publication.schema -ne 1 -or [string]$publication.evidence_milestone -cne 'M0.9.87' -or
+        [string]$publication.provider_role -cne $ProviderName -or
+        [string]$publication.run_id -cne $RunId -or [string]$publication.build_commit -cne $BuildCommit) {
+        throw "$ProviderName publication identity does not match this clean run."
+    }
+    if ([int]$attestation.schema -ne 1 -or [string]$attestation.evidence_milestone -cne 'M0.9.87' -or
+        [string]$attestation.provider_role -cne $ProviderName -or
+        [string]$attestation.run_id -cne $RunId -or [string]$attestation.build_commit -cne $BuildCommit -or
+        [string]$attestation.claim_boundary -cne 'controlled-self-attestation-not-protocol-proof' -or
+        [bool]$attestation.private_state_shared -ne $false) {
+        throw "$ProviderName attestation identity or claim boundary is invalid."
+    }
+    foreach ($name in @('machine_pseudonym', 'operator_claim_digest', 'network_claim_digest')) {
+        if ([string]$attestation.$name -cnotmatch '^[0-9a-f]{64}$') {
+            throw "$ProviderName attestation has an invalid $name."
+        }
+    }
+    try {
+        $offerHash = (Get-FileHash -LiteralPath $offerPath -Algorithm SHA256).Hash.ToLowerInvariant()
+        $attestationHash = (Get-FileHash -LiteralPath $attestationPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    }
+    catch { return $null }
+    if ($offerHash -cne [string]$publication.offer_sha256 -or
+        $attestationHash -cne [string]$publication.attestation_sha256) {
+        return $null
+    }
+    return [PSCustomObject]@{
+        name = $ProviderName
+        offer_sha256 = $offerHash
+        expires = [UInt64]$publication.offer_expires_at_unix_seconds
+        machine = [string]$attestation.machine_pseudonym
+        operator = [string]$attestation.operator_claim_digest
+        network = [string]$attestation.network_claim_digest
+    }
+}
+
+function Publish-M0987ProviderPairIfReady {
+    param([Parameter(Mandatory)] [string] $RunId, [Parameter(Mandatory)] [string] $BuildCommit)
+    $providers = @()
+    foreach ($name in @('provider1', 'provider2')) {
+        $provider = Get-M0987ValidatedProviderPublication $name $RunId $BuildCommit
+        if ($null -eq $provider) { return $false }
+        $providers += $provider
+    }
+    $now = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+    foreach ($provider in $providers) {
+        if ([Int64]$provider.expires -le ($now + 180)) { return $false }
+    }
+    foreach ($field in @('machine', 'operator', 'network')) {
+        if (@($providers | ForEach-Object { [string]$_.$field } | Sort-Object -Unique).Count -ne 2) {
+            throw "M0.9.87 rejected the provider pair: self-attested $field domains are not distinct."
+        }
+    }
+    $aggregatePath = Join-Path $script:EvidenceDirectory '01-provider-offers-publication.json'
+    Write-M0987AtomicJson $aggregatePath ([ordered]@{
+        schema = 1
+        evidence_milestone = 'M0.9.87'
+        claim_boundary = 'controlled-self-attestation-not-protocol-proof'
+        published_at_unix_seconds = $now
+        providers = @($providers | ForEach-Object {
+            [ordered]@{
+                name = $_.name
+                sha256 = $_.offer_sha256
+                expires_at_unix_seconds = $_.expires
+            }
+        })
+    })
+    [IO.File]::WriteAllText(
+        (Join-Path $script:SharedDirectory 'providers-ready.marker'),
+        "independent-provider-claims-validated-before-mailbox-activation`n"
+    )
+    return $true
+}
+
+function Wait-M0987ProviderPairStopped {
+    param([Parameter(Mandatory)] [string] $ProviderName)
+    $ownMarker = Join-Path $script:SharedDirectory "$ProviderName-stopped.marker"
+    [IO.File]::WriteAllText($ownMarker, "stopped-after-log-publish`n")
+    $deadline = [DateTime]::UtcNow.AddSeconds(300)
+    $nextProgress = [DateTime]::UtcNow
+    while ([DateTime]::UtcNow -lt $deadline) {
+        $allStopped = $true
+        foreach ($name in @('provider1', 'provider2')) {
+            if (-not (Test-Path -LiteralPath (Join-Path $script:SharedDirectory "$name-stopped.marker") -PathType Leaf)) {
+                $allStopped = $false
+            }
+        }
+        if ($allStopped) {
+            [IO.File]::WriteAllText(
+                (Join-Path $script:SharedDirectory 'providers-stopped.marker'),
+                "both-independent-providers-stopped`n"
+            )
+            return
+        }
+        if ([DateTime]::UtcNow -ge $nextProgress) {
+            Write-Host 'Still waiting for the other provider stop marker from the synchronized folder...'
+            $nextProgress = [DateTime]::UtcNow.AddSeconds(15)
+        }
+        Start-Sleep -Seconds 2
+    }
+    throw 'Timed out waiting for both independent provider stop markers.'
+}
+
+function Start-M0987IndependentProvider {
+    param(
+        [Parameter(Mandatory)] [ValidateSet('provider1', 'provider2')] [string] $ProviderName,
+        [string] $OperatorLabel,
+        [string] $NetworkLabel
+    )
+    $build = Assert-M0969Kit
+    if ([string]$build.milestone -cne 'M0.9.87') { throw 'Independent provider runner requires M0.9.87.' }
+    $run = Get-M0969Run
+    if ([string]::IsNullOrWhiteSpace($OperatorLabel)) {
+        $OperatorLabel = Read-Host "$ProviderName operator label (same operator must use the same label)"
+    }
+    if ([string]::IsNullOrWhiteSpace($NetworkLabel)) {
+        $NetworkLabel = Read-Host "$ProviderName network label (same access network must use the same label)"
+    }
+    New-M0969Directory $script:EvidenceDirectory
+    $private = Get-M0969PrivateRoot $ProviderName ([string]$run.run_id)
+    if (Test-Path -LiteralPath $private) { throw "$ProviderName private directory already exists: $private" }
+    $account = Join-Path $private 'account-root'
+    $state = Join-Path $private 'state'
+    $public = Join-Path $private 'public'
+    $certificate = Join-Path $public 'device.cert'
+    $deviceList = Join-Path $public 'device-list.kadl'
+    $profile = Join-Path $private 'runtime-profile.json'
+    $localLog = Join-Path $private "01-$ProviderName.log"
+    New-M0969Directory $private
+    New-M0969Directory $public
+    $accountOutput = @(Invoke-M0969Cli @('account-create', '--account-dir', $account))
+    $accountId = Get-M0969ExactValue $accountOutput 'account_id' '[0-9a-f]{64}'
+    $null = Invoke-M0969Cli @(
+        'device-enroll', '--account-dir', $account, '--state-dir', $state,
+        '--certificate-file', $certificate
+    )
+    $null = Invoke-M0969Cli @(
+        'account-device-list', '--account-dir', $account, '--device-certificate-file', $certificate,
+        '--device-list-file', $deviceList
+    )
+    $null = Invoke-M0969Cli @(
+        'runtime-profile-create', '--profile-file', $profile, '--state-dir', $state,
+        '--allow-account', $accountId, '--device-list-file', $deviceList,
+        '--ticket-file', (Join-Path $private 'runtime.ticket'),
+        '--ipc-file', (Join-Path $private 'runtime.ipc.json'),
+        '--route-policy', $script:M0969FieldRoutePolicy,
+        '--relay-url', $script:M0969FieldRelayUrl,
+        '--relay-wait-seconds', '30',
+        '--volunteer-storage-data-dir', (Join-Path $private 'volunteer-storage')
+    )
+    $machineGuid = [string](Get-ItemProperty `
+        -LiteralPath 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Cryptography' `
+        -Name MachineGuid -ErrorAction Stop).MachineGuid
+    $attestationPath = Join-Path $script:EvidenceDirectory "01-$ProviderName-attestation.json"
+    Write-M0987AtomicJson $attestationPath ([ordered]@{
+        schema = 1
+        evidence_milestone = 'M0.9.87'
+        provider_role = $ProviderName
+        run_id = [string]$run.run_id
+        build_commit = [string]$build.source_revision
+        machine_pseudonym = Get-M0987RunScopedDigest 'kilogram/m0987/machine/v1' ([string]$run.run_id) $machineGuid
+        operator_claim_digest = Get-M0987RunScopedDigest 'kilogram/m0987/operator/v1' ([string]$run.run_id) $OperatorLabel
+        network_claim_digest = Get-M0987RunScopedDigest 'kilogram/m0987/network/v1' ([string]$run.run_id) $NetworkLabel
+        digest_scope = 'run-scoped-sha256'
+        claim_boundary = 'controlled-self-attestation-not-protocol-proof'
+        private_state_shared = $false
+    })
+
+    $runtime = $null
+    $stopRequested = $false
+    try {
+        $runtime = Start-M0969Process $script:CliPath @(
+            'runtime-from-profile', '--profile-file', $profile
+        ) $localLog
+        $null = Wait-M0969LogPattern $localLog '^status=runtime-listening$' $runtime 180
+        $stopPath = Join-Path $script:SharedDirectory 'STOP-PROVIDERS.marker'
+        $nextPublication = [DateTime]::UtcNow
+        while (-not (Test-Path -LiteralPath $stopPath -PathType Leaf)) {
+            $runtime.Refresh()
+            if ($runtime.HasExited) { throw "$ProviderName stopped unexpectedly." }
+            if ([DateTime]::UtcNow -ge $nextPublication) {
+                Publish-M0987ProviderOffer `
+                    $ProviderName ([string]$run.run_id) ([string]$build.source_revision) $localLog $attestationPath
+                if (Publish-M0987ProviderPairIfReady ([string]$run.run_id) ([string]$build.source_revision)) {
+                    Write-Host 'Both distinct provider claims and fresh offers are synchronized.'
+                } else {
+                    Write-Host 'Waiting for the other independent provider publication...'
+                }
+                $nextPublication = [DateTime]::UtcNow.AddSeconds(10)
+            }
+            Start-Sleep -Seconds 2
+        }
+        $stopRequested = $true
+    }
+    finally {
+        Stop-M0969Process $runtime
+        Publish-M0969File $localLog (Join-Path $script:EvidenceDirectory "01-$ProviderName.log")
+        Publish-M0969File "$localLog.stderr" (Join-Path $script:EvidenceDirectory "01-$ProviderName.log.stderr")
+    }
+    if (-not $stopRequested) { throw "$ProviderName did not reach the coordinated stop boundary." }
+    Wait-M0987ProviderPairStopped $ProviderName
+    Write-Host "$($ProviderName.ToUpperInvariant()) STOPPED AFTER PUBLISHING CLOSED FINAL EVIDENCE."
 }
 
 function Publish-M0969ProviderOffers {

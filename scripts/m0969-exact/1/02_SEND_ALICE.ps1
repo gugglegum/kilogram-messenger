@@ -1,7 +1,7 @@
 . (Join-Path (Split-Path -Parent $PSScriptRoot) 'common.ps1')
 $build = Assert-M0969Kit
 $noHttpsCompatibility = [string]$build.milestone -cne 'M0.9.69'
-$serviceFreeV2 = [string]$build.milestone -ceq 'M0.9.76'
+$serviceFreeV2 = [string]$build.milestone -cin @('M0.9.76', 'M0.9.87')
 $legacyNoHttpsCompatibility = $noHttpsCompatibility -and -not $serviceFreeV2
 $run = Get-M0969Run
 $null = Wait-M0969File (Join-Path $script:SharedDirectory 'alice-ready.marker') 180 'Alice ready marker'
@@ -43,7 +43,10 @@ try {
             [Text.UTF8Encoding]::new($false)
         )
     } elseif ($serviceFreeV2 -and (Test-Path -LiteralPath $script:StorePath)) {
-        throw 'M0.9.76 must not contain or start the HTTPS compatibility store.'
+        if ([string]$build.milestone -ceq 'M0.9.76') {
+            throw 'M0.9.76 must not contain or start the HTTPS compatibility store.'
+        }
+        throw 'M0.9.87 must not contain or start the HTTPS compatibility store.'
     }
     if (-not $noHttpsCompatibility) {
         $store = Start-M0969Process $script:StorePath @('--data-dir', $storeData) $storeLog

@@ -2775,3 +2775,20 @@ retirement остальных compatibility shadows ещё не реализов
   with warnings denied under Cargo `-j 2`.
 - No release build, ZIP, new EXE, background process, network field run or
   external publication was created.
+
+## M0.9.87 independent-provider field-contract verification (2026-09-20)
+
+- Added a four-folder Windows kit generator: Alice, Provider 1, Provider 2 and
+  Bob. Minimum physical topology is three hosts; four are ideal.
+- The provider pair must have distinct run-scoped machine, operator-claim and
+  network-claim SHA-256 values. Raw MachineGuid and entered labels are not
+  serialized; exact evidence schema rejects added raw fields.
+- Provider private state and open logs remain in `%LOCALAPPDATA%`. Shared offer
+  and attestation files are atomic; final provider logs are copied only after
+  the runtime closes them. Both providers wait for the peer stop marker.
+- The evidence verifier inherits the M0.9.69 exact-locator and M0.9.76
+  service-free lifecycle, and rejects same-machine/operator/network fixtures.
+- Stage acceptance is PowerShell/static and network-free because Rust runtime
+  code did not change. External three-/four-host evidence remains pending.
+- No release build, ZIP, HTTPS mailbox process, new EXE, background service,
+  field connection or external publication was created.

@@ -4536,17 +4536,46 @@ External result:
 - stage network-free/debug-only: без release build, ZIP, field network process,
   background service, external publication и нового executable.
 
+### M0.9.87 — independent-provider field contract: реализовано локально, внешний run pending
+
+Реализовано:
+
+- новый debug-only generator создаёт четыре роли: `1` Alice, `2` Provider 1,
+  `3` Provider 2, `4` Bob; минимум нужны три физических hosts, идеально четыре;
+- Provider 1 и Provider 2 запускаются раздельно и публикуют независимые atomic
+  offer/publication/attestation files до mailbox activation;
+- run-scoped SHA-256 pseudonym Windows MachineGuid и digests введённых
+  operator/network labels позволяют fail closed отклонить известное совпадение,
+  не сохраняя raw MachineGuid или labels;
+- закрытая evidence schema отвергает дополнительные raw поля; неравенство
+  трактуется только как controlled self-attestation, не protocol proof;
+- private account/device/Redb/IPC/provider state и открытые runtime logs живут
+  только в `%LOCALAPPDATA%`; synchronized evidence получает final logs лишь
+  после остановки процесса;
+- каждый provider после stop ждёт marker второго, поэтому delayed Yandex sync
+  не оставляет Alice ждать aggregate marker после выхода обоих процессов;
+- Alice/Bob наследуют service-free capability v2, exact commitment, receipts
+  `2/2`, sender-offline, commit-before-delete и restart-no-redelivery contract;
+- новый evidence self-test отвергает same-machine, same-operator, same-network
+  и injected raw-field fixtures;
+- RFC-0110, русская field-инструкция и fail-closed
+  `verify-kilogram-m0987-independent-provider-kit-boundary.ps1` фиксируют
+  границы;
+- stage не меняет Rust/runtime/wire/IPC, не создаёт release, ZIP, HTTPS mailbox,
+  новый EXE, background service или network process.
+
+Следующий этап: после commit собрать чистый M0.9.87 kit и провести внешний
+трёх-/четырёхмашинный run; только его полный `result=verified` закроет field
+acceptance.
+
 ### Следующий этап
 
-1. Подготовить и провести отдельный controlled field run exact replicas на
-   физических и операторски независимых provider hosts, включая direct/relay
-   observations, но не выдавая topology tags или ASN lookup за authenticated
-   operator identity.
-2. Не считать успешный local co-location avoidance доказательством Sybil
-   resistance: colluding offers, observers и multi-address operator остаются
-   residual risks.
+1. Собрать свежий M0.9.87 debug kit и провести controlled field run exact
+   replicas на двух физических и операторски разделённых provider hosts.
+2. Не считать успешный controlled run доказательством Sybil resistance:
+   colluding offers, observers и dishonest labels остаются residual risks.
 3. Отдельным явным действием можно поставить M1 tag на accepted baseline;
-   последующие M0.9.82 изменения намеренно не переписывают M1 evidence.
+   последующие M0.9.82+ изменения намеренно не переписывают M1 evidence.
 4. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
 5. Добавить macOS/Linux/mobile providers той же platform boundary.
