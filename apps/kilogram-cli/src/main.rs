@@ -12471,6 +12471,9 @@ async fn runtime_ipc_volunteer_provider_select(
             );
             println!("provider_authenticated_observation_count_rank_weight=false");
             println!("provider_unobserved_bootstrap_fallback=true");
+            println!("provider_known_path_domain_colocation_avoidance=true");
+            println!("provider_unknown_path_domain_fallback=true");
+            println!("provider_path_domain_inequality_proves_independence=false");
             println!("provider_requested_count={}", provider_set.requested);
             println!("provider_selected_count={}", provider_set.selected_count);
             println!(
@@ -17693,6 +17696,9 @@ async fn start_runtime_volunteer_storage(
     );
     println!("runtime_volunteer_storage_authenticated_observation_count_rank_weight=false");
     println!("runtime_volunteer_storage_unobserved_bootstrap_fallback=true");
+    println!("runtime_volunteer_storage_known_path_domain_colocation_avoidance=true");
+    println!("runtime_volunteer_storage_unknown_path_domain_fallback=true");
+    println!("runtime_volunteer_storage_path_domain_inequality_proves_independence=false");
     println!("runtime_volunteer_storage_replication=sender-three-target-two-receipt");
     println!("runtime_volunteer_storage_replication_retry_seconds=60");
     println!("runtime_volunteer_storage_replica_retrieval=bounded-three-provider-iroh-list-delete");

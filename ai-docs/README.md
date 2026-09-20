@@ -419,13 +419,13 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
 5. M0.9.85 после verified PUT/LIST/DELETE сохраняет local-only keyed tag
    фактически выбранного direct remote IP без порта либо relay origin. Tag
    привязан к exact offer и local Device-secret derivation epoch; raw адреса,
-   tags и epochs не входят в offer/gossip/protocol/IPC, а selection пока не
-   меняется.
-6. Следующий инженерный этап — использовать только положительный сигнал
-   co-location: не выбирать второй известный exact offer с тем же local path
-   domain, но всегда заполнять остаток unknown candidates. Разные tags нельзя
-   называть доказательством независимых операторов.
-7. После этого проверить exact replicas на физических и операторски
+   tags и epochs не входят в offer/gossip/protocol/IPC.
+6. M0.9.86 использует только положительный co-location signal: второй exact
+   offer с тем же known local path domain откладывается, пока есть
+   non-conflicting или path-unknown candidate. Deferred offers возвращаются
+   вторым проходом при нехватке альтернатив, поэтому availability не падает;
+   разные tags не считаются доказательством независимых операторов.
+7. Следующий инженерный этап — проверить exact replicas на физических и операторски
    независимых hosts отдельным field run.
 8. Optional autostart/background mode оставить отдельной явной настройкой;
    Windows Task Scheduler не является обязательной частью мессенджера.
@@ -828,6 +828,11 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   response даёт keyed exact-IP/relay-origin tag, exact-offer replacement и
   local key epoch ограничивают lifetime/comparability; raw addresses/tags не
   передаются, selection и IPC v26 не меняются.
+- [`../docs/RFC-0109-positive-provider-path-colocation-avoidance.md`](../docs/RFC-0109-positive-provider-path-colocation-avoidance.md) —
+  M0.9.86 positive-only path policy: known equal local domains откладываются в
+  первом проходе, path-unknown candidates остаются допустимыми, deferred
+  candidates возвращаются для availability; unequal tags не объявляются
+  operator independence, exact commitments и IPC v26 не меняются.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

@@ -2754,3 +2754,24 @@ retirement остальных compatibility shadows ещё не реализов
   with warnings denied under Cargo `-j 2`.
 - No release build, ZIP, new EXE, background process, network field run or
   external publication was created.
+
+## M0.9.86 positive provider path co-location avoidance verification (2026-09-20)
+
+- `select_bootstrap_safe_active_offers` retains admission work, binary local
+  corroboration, rendezvous order and transport deduplication, but defers a
+  candidate positively known to share a selected path domain.
+- Path-unknown candidates remain eligible in the first pass. A second pass
+  restores deferred co-located candidates in ranked order when alternatives
+  cannot fill the request; unequal tags receive no independence weight.
+- New exact provisioning, automatic legacy upgrade and diagnostic selection
+  consume the policy. Existing exact commitments, gossip/protocol wire and IPC
+  v26 remain unchanged.
+- RFC-0109 and
+  `scripts/verify-kilogram-provider-colocation-avoidance-boundary.ps1` define
+  the fail-closed preference/availability/privacy boundary.
+- Debug-only acceptance passed 19/19 mailbox-client tests, 6/6 transport tests,
+  7/7 mailbox tests, 2/2 focused CLI runtime tests, all 17
+  mailbox/provider/service-free fail-closed boundaries, formatting and Clippy
+  with warnings denied under Cargo `-j 2`.
+- No release build, ZIP, new EXE, background process, network field run or
+  external publication was created.

@@ -4502,23 +4502,56 @@ External result:
 - stage network-free/debug-only: без release build, ZIP, field network process,
   background service, external publication и нового executable.
 
+### M0.9.86 — positive provider path co-location avoidance: принято локально
+
+Реализовано:
+
+- прежний 18-bit admission floor, binary authenticated-observation preference,
+  salted rendezvous rank и transport-identity deduplication сохранены;
+- first pass откладывает exact offer только если он positive-equal по kind,
+  derivation epoch и local path-domain tag уже выбранному offer;
+- path-unknown candidate остаётся first-pass eligible и поэтому может заменить
+  второй known co-located offer без bootstrap deadlock;
+- если non-conflicting/unknown candidates не заполняют request, deferred offers
+  возвращаются исходным ranked порядком, поэтому preference не уменьшает
+  доступный transport-distinct fan-out;
+- unequal tags не получают independence bonus и не объявляются разными
+  operators/networks/hosts;
+- new exact provisioning, automatic legacy upgrade и diagnostic selection
+  используют один policy; существующие exact commitments продолжают indexed
+  resolution без re-ranking;
+- provider offer/gossip/protocol wire, receipt threshold и IPC v26 не менялись;
+  path tag/kind/epoch не экспортируются, logs показывают только constant policy
+  booleans;
+- unit regression принудительно назначает одинаковый domain двум highest-ranked
+  offers, проверяет выбор path-unknown alternative, deterministic повтор и
+  second-pass restoration deferred offer при запросе полного набора;
+- fail-closed static contract —
+  `scripts/verify-kilogram-provider-colocation-avoidance-boundary.ps1`,
+  архитектурная граница —
+  [`../docs/RFC-0109-positive-provider-path-colocation-avoidance.md`](../docs/RFC-0109-positive-provider-path-colocation-avoidance.md);
+- acceptance: 19 mailbox-client tests, 6 transport tests, 7 mailbox tests, 2
+  focused CLI runtime tests, все 17 mailbox/provider/service-free fail-closed
+  boundaries, formatting и Clippy `-D warnings` прошли с Cargo `-j 2`;
+- stage network-free/debug-only: без release build, ZIP, field network process,
+  background service, external publication и нового executable.
+
 ### Следующий этап
 
-1. M0.9.86 может использовать только positive co-location evidence: при new
-   selection сначала избегать второго known offer с тем же local path-domain
-   tag/epoch, затем обязательно заполнять остаток unknown candidates.
-2. Не считать разные tags доказательством разных операторов; separately
-   authenticated operator claim либо independent-host field evidence остаются
-   отдельной задачей.
-3. Проверить exact replicas на физических/операторски независимых hosts, в том
-   числе direct и relay observations, отдельным controlled field run.
-4. Отдельным явным действием можно поставить M1 tag на accepted baseline;
+1. Подготовить и провести отдельный controlled field run exact replicas на
+   физических и операторски независимых provider hosts, включая direct/relay
+   observations, но не выдавая topology tags или ASN lookup за authenticated
+   operator identity.
+2. Не считать успешный local co-location avoidance доказательством Sybil
+   resistance: colluding offers, observers и multi-address operator остаются
+   residual risks.
+3. Отдельным явным действием можно поставить M1 tag на accepted baseline;
    последующие M0.9.82 изменения намеренно не переписывают M1 evidence.
-5. Optional autostart/background mode оставить отдельной явной настройкой, не
+4. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
-6. Добавить macOS/Linux/mobile providers той же platform boundary.
-7. Спроектировать privacy-preserving gossip и first-contact freshness;
+5. Добавить macOS/Linux/mobile providers той же platform boundary.
+6. Спроектировать privacy-preserving gossip и first-contact freshness;
    M0.9.29 скрывает payload/явные IDs, но не access correlation.
-8. Membership removal и group governance проектировать вместе с ordered
+7. Membership removal и group governance проектировать вместе с ordered
    security events и MLS epoch; compact Merkle/range summary и независимый
    криптографический аудит остаются до публичного выпуска.

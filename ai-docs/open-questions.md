@@ -347,9 +347,11 @@ sessions, distribution, removal и key epochs и не решены этим пр
   M0.9.85 отдельно сохраняет keyed exact direct-IP/relay-origin observation
   только после verified mailbox exchange; derivation epoch исключает сравнение
   через смену local Device secret, raw path не сохраняется/не передаётся.
-  Открыты безопасное использование positive co-location signal без unknown
-  deadlock, отдельно доказуемая network/operator diversity и защита от
-  colluding observers. Разные local tags сами по себе operator independence не
+  M0.9.86 использует только positive equality: known co-located offer
+  откладывается, path-unknown остаётся first-pass eligible, а deferred fallback
+  сохраняет полный доступный fan-out. Открыты отдельно доказуемая
+  network/operator diversity, controlled field evidence и защита от colluding
+  observers. Разные local tags сами по себе operator independence не
   доказывают.
 - Push-уведомления на Android/iOS без утечки содержания и социального графа.
 - Независимый second-builder, подписанный release provenance, обновления клиента

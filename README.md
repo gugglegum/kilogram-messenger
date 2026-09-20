@@ -232,12 +232,36 @@ specified in
 Local post-exchange provenance for the selected direct IP or relay origin is
 specified in
 [`docs/RFC-0108-local-provider-path-domain-provenance.md`](docs/RFC-0108-local-provider-path-domain-provenance.md).
+Positive-only use of that evidence to avoid a known co-located provider during
+new replica selection is specified in
+[`docs/RFC-0109-positive-provider-path-colocation-avoidance.md`](docs/RFC-0109-positive-provider-path-colocation-avoidance.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.85 local verified provider path-domain provenance — accepted locally
+## Current milestone: M0.9.86 positive provider path co-location avoidance — accepted locally
+
+New replica-set creation, automatic legacy upgrade and diagnostic selection
+now defer a second exact offer positively known to share the selected local
+path domain while a non-conflicting or path-unknown candidate remains. The
+existing 18-bit admission floor, binary authenticated-observation preference,
+salted rendezvous rank and transport-identity deduplication are preserved.
+
+Missing path evidence remains eligible in the first pass. If alternatives
+cannot fill the request, deferred co-located offers return in their original
+ranked order, so the new preference cannot reduce availability. Different tags
+receive no independence bonus and do not prove different operators, networks
+or hosts. Existing exact replica commitments, wire formats and IPC v26 remain
+unchanged.
+
+The network-free debug acceptance passed 19 mailbox-client tests, six transport
+tests, seven mailbox tests, two focused CLI runtime tests, all 17
+mailbox/provider/service-free fail-closed boundaries, formatting and Clippy
+with warnings denied. It created no release build, ZIP, new executable,
+background service, field connection or external publication.
+
+## Previous milestone: M0.9.85 local verified provider path-domain provenance — accepted locally
 
 After a cryptographically verified volunteer-mailbox PUT, LIST or DELETE,
 Kilogram now derives an installation-local keyed pseudonym for the selected
@@ -247,10 +271,10 @@ expiry removes it, and a local Device-secret derivation epoch prevents old and
 new tags from being treated as different domains.
 
 Raw IP addresses, relay URLs, tags and epochs are not added to provider offers,
-gossip, protocol messages, logs or authenticated IPC v26. This stage records
-evidence but does not yet change provider selection: equal tags corroborate a
-shared local path domain, while unequal tags do not prove different operators,
-networks or physical hosts.
+gossip, protocol messages, logs or authenticated IPC v26. At M0.9.85 this stage
+recorded evidence without changing provider selection: equal tags corroborate
+a shared local path domain, while unequal tags do not prove different
+operators, networks or physical hosts.
 
 The network-free debug acceptance passed 18 mailbox-client tests, six transport
 tests, seven mailbox tests, two focused CLI runtime tests, all 16
@@ -258,7 +282,7 @@ mailbox/provider/service-free fail-closed boundaries, formatting and Clippy
 with warnings denied. It created no release build, ZIP, new executable,
 background service, field connection or external publication.
 
-## Previous milestone: M0.9.84 bootstrap-safe locally corroborated provider selection — accepted locally
+## Earlier milestone: M0.9.84 bootstrap-safe locally corroborated provider selection — accepted locally
 
 New replica-set creation, automatic legacy upgrade and diagnostic selection
 still require the 18-bit admission-work floor, then prefer exact offers seen

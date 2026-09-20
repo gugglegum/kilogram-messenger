@@ -1253,8 +1253,11 @@ impl MailboxProviderRegistry {
     }
 
     /// Select admission-qualified offers with a bootstrap-safe binary local
-    /// corroboration preference. Authenticated observation count above one
-    /// adds no rank, and unobserved offers fill every remaining slot.
+    /// corroboration preference, then avoid a second offer positively known
+    /// to share a selected path domain while any non-conflicting or unknown
+    /// candidate remains. Authenticated observation count above one adds no
+    /// rank, unknown path domains remain eligible, and deferred co-located
+    /// offers fill any otherwise unfilled slot.
     pub fn select_bootstrap_safe(
         &self,
         selection_salt: [u8; 32],
@@ -1629,7 +1632,30 @@ fn select_bootstrap_safe_active_offers(
 
     let mut selected_identities = BTreeSet::new();
     let mut selected = Vec::new();
+    let mut known_colocated = Vec::new();
     for (_, _, offer) in ranked {
+        if selected_identities.contains(offer.transport_identity()) {
+            continue;
+        }
+        if selected
+            .iter()
+            .any(|chosen| offer.shares_verified_path_domain_with(chosen))
+        {
+            known_colocated.push(offer);
+            continue;
+        }
+        selected_identities.insert(*offer.transport_identity());
+        selected.push(offer);
+        if selected.len() == usize::from(requested) {
+            return Ok(selected);
+        }
+    }
+
+    // Co-location evidence is a preference, never an availability gate. If
+    // every non-conflicting and path-unknown candidate has been considered,
+    // retain the old transport-distinct fallback rather than returning an
+    // undersized replica set.
+    for offer in known_colocated {
         if selected_identities.insert(*offer.transport_identity()) {
             selected.push(offer);
             if selected.len() == usize::from(requested) {
@@ -2142,6 +2168,61 @@ mod tests {
         assert!(selected.iter().all(|offer| {
             offer.admission_work_bits() >= u16::from(DEFAULT_PROVIDER_ADMISSION_WORK_BITS)
         }));
+        Ok(())
+    }
+
+    #[test]
+    fn bootstrap_safe_selection_avoids_known_colocation_without_unknown_deadlock() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let registry = MailboxProviderRegistry::open(MailboxProviderRegistryConfig::new(
+            directory.path().join("providers"),
+        ))?;
+        for (store, endpoint) in [(1, 11), (2, 22), (3, 33), (4, 44)] {
+            let (encoded, transport) = offer(store, endpoint, 1_000)?;
+            registry.import_offer(&encoded, transport, 1_001)?;
+        }
+
+        let salt = [86_u8; 32];
+        let mut rendezvous = registry.active_offers(1_002)?;
+        rendezvous.sort_by(|left, right| {
+            provider_selection_rank(left, salt)
+                .cmp(&provider_selection_rank(right, salt))
+                .then_with(|| left.store_key().cmp(&right.store_key()))
+        });
+        for offer in &rendezvous[..2] {
+            registry.record_verified_path_domain(
+                offer.store_key(),
+                offer.offer_id(),
+                MailboxProviderLocalPathDomainKind::DirectRemoteIp,
+                path_domain(7),
+                1_002,
+            )?;
+        }
+
+        let selected = registry.select_bootstrap_safe(salt, 2, 1_003)?;
+        assert_eq!(selected[0].offer_id(), rendezvous[0].offer_id());
+        assert_eq!(selected[1].offer_id(), rendezvous[2].offer_id());
+        assert!(
+            !selected
+                .iter()
+                .any(|offer| offer.offer_id() == rendezvous[1].offer_id())
+        );
+        assert!(!selected[1].has_verified_path_domain());
+        assert_eq!(selected, registry.select_bootstrap_safe(salt, 2, 1_003)?);
+
+        let all = registry.select_bootstrap_safe(salt, 4, 1_003)?;
+        assert_eq!(all.len(), 4);
+        assert_eq!(
+            all.last().map(MailboxProviderOffer::offer_id),
+            Some(rendezvous[1].offer_id())
+        );
+        assert_eq!(
+            all.iter()
+                .map(|offer| *offer.transport_identity())
+                .collect::<BTreeSet<_>>()
+                .len(),
+            4
+        );
         Ok(())
     }
 
