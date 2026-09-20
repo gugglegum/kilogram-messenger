@@ -23,7 +23,8 @@ foreach ($required in @(
     'MailboxProviderRegistryConfig',
     'MailboxProviderImportOutcome',
     'MAX_PROVIDER_SELECTION',
-    'DEFAULT_PROVIDER_ADMISSION_WORK_BITS'
+    'DEFAULT_PROVIDER_ADMISSION_WORK_BITS',
+    'MIN_AUTHENTICATED_PROVIDER_OBSERVATIONS_FOR_PREFERENCE'
 )) {
     if (-not $clientLib.Contains($required)) {
         throw "mailbox client provider API is missing '$required'"
@@ -35,6 +36,7 @@ foreach ($required in @(
     'DEFAULT_MAX_PROVIDER_OFFERS: u64 = 256',
     'MAX_PROVIDER_SELECTION: u8 = 8',
     'DEFAULT_PROVIDER_ADMISSION_WORK_BITS',
+    'MIN_AUTHENTICATED_PROVIDER_OBSERVATIONS_FOR_PREFERENCE: u8 = 1',
     'SignedMailboxStorageOffer::decode_and_verify',
     'canonical == encoded_offer',
     'record.issued_at_unix_seconds > current.issued_at_unix_seconds',
@@ -44,6 +46,7 @@ foreach ($required in @(
     'registry_is_bounded_monotonic_and_prunes_expired_offers',
     'deterministic_selection_deduplicates_transport_identities',
     'admission_qualified_selection_and_gossip_exclude_cheap_identities',
+    'bootstrap_safe_selection_prefers_binary_corroboration_and_fills_fallback',
     'import_rejects_tamper_expiry_and_noncanonical_identity_replay'
 )) {
     if (-not $provider.Contains($required)) {
@@ -84,8 +87,9 @@ foreach ($required in @(
     'select_runtime_volunteer_storage_providers',
     'with_locked_state(state_directory',
     'runtime_volunteer_storage_discovery=verified-expiring-offer-registry',
-    'runtime_volunteer_storage_selection=admission-work-plus-transport-distinct',
+    'runtime_volunteer_storage_selection=bootstrap-safe-admission-plus-local-corroboration',
     'runtime_volunteer_storage_minimum_admission_work_bits=',
+    'runtime_volunteer_storage_unobserved_bootstrap_fallback=true',
     'runtime_provider_import_and_selection_are_capability_free_and_deterministic'
 )) {
     if (-not $runtime.Contains($required)) {
@@ -101,8 +105,10 @@ Write-Output 'volunteer_provider_selection_boundary=verified'
 Write-Output 'registry=durable-bounded-signed-offers'
 Write-Output 'default_registry_capacity=256'
 Write-Output 'maximum_selection=8'
-Write-Output 'selection=admission-work-plus-transport-distinct'
+Write-Output 'selection=admission-work-plus-binary-local-corroboration-plus-transport-distinct'
 Write-Output 'minimum_admission_work_bits=18'
+Write-Output 'minimum_observations_for_preference=1'
+Write-Output 'unobserved_bootstrap_fallback=true'
 Write-Output 'capability_linkage=false'
 Write-Output 'automatic_gossip=true-bounded-authenticated-session'
 Write-Output 'replication=sender-three-target-two-receipt'

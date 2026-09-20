@@ -53,6 +53,11 @@ pub const DEFAULT_PROVIDER_ADMISSION_WORK_BITS: u8 =
 /// the offer, gossip frame or IPC projection.
 pub const MAX_AUTHENTICATED_PROVIDER_OBSERVATIONS_PER_OFFER: u8 = 8;
 
+/// One authenticated peer observation is enough to prefer an offer over a
+/// locally imported bootstrap candidate. Additional observing Devices do not
+/// improve its rank because Devices are not treated as independent operators.
+pub const MIN_AUTHENTICATED_PROVIDER_OBSERVATIONS_FOR_PREFERENCE: u8 = 1;
+
 /// No authenticated session can carry more than this many provider offers.
 pub const MAX_PROVIDER_GOSSIP_OFFERS: u8 = 8;
 
@@ -962,15 +967,16 @@ impl MailboxProviderRegistry {
         select_active_offers(active_offers, selection_salt, requested)
     }
 
-    /// Select only offers that pay the current bounded identity-creation cost.
-    /// This limits cheap endpoint churn but cannot prove operator independence.
-    pub fn select_admission_qualified(
+    /// Select admission-qualified offers with a bootstrap-safe binary local
+    /// corroboration preference. Authenticated observation count above one
+    /// adds no rank, and unobserved offers fill every remaining slot.
+    pub fn select_bootstrap_safe(
         &self,
         selection_salt: [u8; 32],
         requested: u8,
         now_unix_seconds: u64,
     ) -> Result<Vec<MailboxProviderOffer>> {
-        select_admission_qualified_active_offers(
+        select_bootstrap_safe_active_offers(
             self.active_offers(now_unix_seconds)?,
             selection_salt,
             requested,
@@ -978,12 +984,12 @@ impl MailboxProviderRegistry {
         )
     }
 
-    pub fn select_admission_qualified_from_active_offers(
+    pub fn select_bootstrap_safe_from_active_offers(
         active_offers: Vec<MailboxProviderOffer>,
         selection_salt: [u8; 32],
         requested: u8,
     ) -> Result<Vec<MailboxProviderOffer>> {
-        select_admission_qualified_active_offers(
+        select_bootstrap_safe_active_offers(
             active_offers,
             selection_salt,
             requested,
@@ -1235,15 +1241,7 @@ fn select_active_offers(
     );
     let mut ranked = active_offers
         .into_iter()
-        .map(|offer| {
-            let mut hasher = blake3::Hasher::new();
-            hasher.update(SELECTION_DOMAIN);
-            hasher.update(&selection_salt);
-            hasher.update(offer.store_key().as_bytes());
-            hasher.update(offer.transport_identity());
-            hasher.update(offer.offer_id().as_bytes());
-            (*hasher.finalize().as_bytes(), offer)
-        })
+        .map(|offer| (provider_selection_rank(&offer, selection_salt), offer))
         .collect::<Vec<_>>();
     ranked.sort_by(|left, right| {
         left.0
@@ -1264,7 +1262,7 @@ fn select_active_offers(
     Ok(selected)
 }
 
-fn select_admission_qualified_active_offers(
+fn select_bootstrap_safe_active_offers(
     active_offers: Vec<MailboxProviderOffer>,
     selection_salt: [u8; 32],
     requested: u8,
@@ -1274,14 +1272,51 @@ fn select_admission_qualified_active_offers(
         (1..=MAX_MAILBOX_STORAGE_OFFER_ADMISSION_WORK_BITS).contains(&minimum_work_bits),
         "mailbox provider admission work is outside protocol bounds"
     );
-    select_active_offers(
-        active_offers
-            .into_iter()
-            .filter(|offer| offer.admission_work_bits() >= u16::from(minimum_work_bits))
-            .collect(),
-        selection_salt,
-        requested,
-    )
+    ensure!(
+        (1..=MAX_PROVIDER_SELECTION).contains(&requested),
+        "mailbox provider selection size is invalid"
+    );
+    let mut ranked = active_offers
+        .into_iter()
+        .filter(|offer| offer.admission_work_bits() >= u16::from(minimum_work_bits))
+        .map(|offer| {
+            let bootstrap_fallback = offer.authenticated_observation_count()
+                < MIN_AUTHENTICATED_PROVIDER_OBSERVATIONS_FOR_PREFERENCE;
+            (
+                bootstrap_fallback,
+                provider_selection_rank(&offer, selection_salt),
+                offer,
+            )
+        })
+        .collect::<Vec<_>>();
+    ranked.sort_by(|left, right| {
+        left.0
+            .cmp(&right.0)
+            .then_with(|| left.1.cmp(&right.1))
+            .then_with(|| left.2.store_key().cmp(&right.2.store_key()))
+    });
+
+    let mut selected_identities = BTreeSet::new();
+    let mut selected = Vec::new();
+    for (_, _, offer) in ranked {
+        if selected_identities.insert(*offer.transport_identity()) {
+            selected.push(offer);
+            if selected.len() == usize::from(requested) {
+                break;
+            }
+        }
+    }
+    Ok(selected)
+}
+
+fn provider_selection_rank(offer: &MailboxProviderOffer, selection_salt: [u8; 32]) -> [u8; 32] {
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(SELECTION_DOMAIN);
+    hasher.update(&selection_salt);
+    hasher.update(offer.store_key().as_bytes());
+    hasher.update(offer.transport_identity());
+    hasher.update(offer.offer_id().as_bytes());
+    *hasher.finalize().as_bytes()
 }
 
 fn decode_gossip_hops(bytes: &[u8]) -> Result<u8> {
@@ -1509,7 +1544,7 @@ mod tests {
         }
 
         assert_eq!(registry.active_offers(1_001)?.len(), 3);
-        let selected = registry.select_admission_qualified([73; 32], 3, 1_001)?;
+        let selected = registry.select_bootstrap_safe([73; 32], 3, 1_001)?;
         assert_eq!(selected.len(), 2);
         assert!(selected.iter().all(|offer| {
             offer.admission_work_bits() >= u16::from(DEFAULT_PROVIDER_ADMISSION_WORK_BITS)
@@ -1598,6 +1633,74 @@ mod tests {
         )?;
         assert_eq!(active.len(), 1);
         assert_eq!(active[0].authenticated_observation_count(), 1);
+        Ok(())
+    }
+
+    #[test]
+    fn bootstrap_safe_selection_prefers_binary_corroboration_and_fills_fallback() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let registry = MailboxProviderRegistry::open(MailboxProviderRegistryConfig::new(
+            directory.path().join("providers"),
+        ))?;
+        let mut observed_store_keys = BTreeSet::new();
+        let mut first_observed = None;
+        for (store, endpoint) in [(1, 11), (2, 22), (3, 33), (4, 44)] {
+            let (encoded, transport) = offer(store, endpoint, 1_000)?;
+            if store <= 2 {
+                registry.import_gossiped_offer(&encoded, transport, 1, observer(store), 1_001)?;
+                observed_store_keys.insert(
+                    SignedMailboxStorageOffer::decode_and_verify(&encoded, 1_001)?.store_key(),
+                );
+                if store == 1 {
+                    first_observed = Some((encoded, transport));
+                }
+            } else {
+                registry.import_offer(&encoded, transport, 1_001)?;
+            }
+        }
+
+        let salt = [85_u8; 32];
+        let preferred = registry.select_bootstrap_safe(salt, 2, 1_002)?;
+        assert_eq!(preferred.len(), 2);
+        assert!(
+            preferred
+                .iter()
+                .all(|offer| observed_store_keys.contains(&offer.store_key()))
+        );
+
+        let with_fallback = registry.select_bootstrap_safe(salt, 4, 1_002)?;
+        assert_eq!(with_fallback.len(), 4);
+        assert!(with_fallback[..2].iter().all(|offer| {
+            offer.authenticated_observation_count()
+                >= MIN_AUTHENTICATED_PROVIDER_OBSERVATIONS_FOR_PREFERENCE
+        }));
+        assert!(
+            with_fallback[2..]
+                .iter()
+                .all(|offer| offer.authenticated_observation_count() == 0)
+        );
+
+        let (encoded, transport) = first_observed.context("missing observed test offer")?;
+        registry.import_gossiped_offer(&encoded, transport, 1, observer(99), 1_003)?;
+        let after_extra_observer = registry.select_bootstrap_safe(salt, 4, 1_003)?;
+        assert_eq!(
+            with_fallback
+                .iter()
+                .map(MailboxProviderOffer::offer_id)
+                .collect::<Vec<_>>(),
+            after_extra_observer
+                .iter()
+                .map(MailboxProviderOffer::offer_id)
+                .collect::<Vec<_>>()
+        );
+
+        let (cheap, cheap_transport) = unqualified_offer(9, 99, 1_000)?;
+        registry.import_gossiped_offer(&cheap, cheap_transport, 1, observer(9), 1_003)?;
+        let selected = registry.select_bootstrap_safe(salt, 8, 1_003)?;
+        assert_eq!(selected.len(), 4);
+        assert!(selected.iter().all(|offer| {
+            offer.admission_work_bits() >= u16::from(DEFAULT_PROVIDER_ADMISSION_WORK_BITS)
+        }));
         Ok(())
     }
 

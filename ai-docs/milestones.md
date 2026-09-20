@@ -4431,13 +4431,46 @@ External result:
 - stage network-free/debug-only: без release build, ZIP, field network process,
   background service, external publication и нового executable.
 
+### M0.9.84 — bootstrap-safe locally corroborated provider selection: принято локально
+
+Реализовано:
+
+- new replica-set provisioning, automatic acknowledged legacy upgrade и
+  diagnostic provider selection используют единый `select_bootstrap_safe`;
+- 18-bit admission work остаётся hard floor до применения provenance;
+- exact offer с минимум одним local authenticated observation получает binary
+  preferred class; count 2..8 rank не повышает и Devices не объявляются
+  independent operators;
+- внутри preferred и fallback classes сохраняется salted deterministic
+  rendezvous rank; итоговый набор остаётся transport-identity-distinct;
+- если preferred class не заполняет запрос, unobserved admission-qualified
+  offers всегда заполняют оставшиеся места, поэтому fresh install не deadlock;
+- exact committed replica sets продолжают indexed resolution без observation
+  threshold или re-ranking; retrieval/delete/gossip wire не менялись;
+- preference decay привязан к exact offer: replacement/expiry удаляет local
+  provenance и replacement должен быть снова замечен через authenticated gossip;
+- IPC остаётся v26 и не экспортирует observer tags, raw social IDs, observation
+  rows/counts; logs показывают только constant policy/threshold/fallback;
+- library regression проверяет observed-first ordering, deterministic fallback,
+  admission exclusion, transport deduplication и отсутствие rank benefit от
+  extra observers; runtime regression проверяет policy и secret-free projection;
+- fail-closed static contract —
+  `scripts/verify-kilogram-bootstrap-safe-provider-selection-boundary.ps1`,
+  архитектурная граница —
+  [`../docs/RFC-0107-bootstrap-safe-provider-selection.md`](../docs/RFC-0107-bootstrap-safe-provider-selection.md);
+- acceptance: 17 mailbox-client tests, 7 mailbox tests, 3 focused CLI runtime
+  tests, все 13 mailbox/provider/service-free static boundaries, formatting и
+  Clippy `-D warnings` прошли с Cargo `-j 2`;
+- это preference signal, не proof of operator/network/physical independence;
+- stage network-free/debug-only: без release build, ZIP, field network process,
+  background service, external publication и нового executable.
+
 ### Следующий этап
 
-1. Спроектировать bootstrap-safe selection policy поверх admission work и local
-   observations: не считать несколько Devices доказательством разных operators,
-   явно определить threshold/decay и fallback для нового пользователя.
-2. Добавить separately evidenced network/operator failure-domain diversity и
+1. Добавить separately evidenced network/operator failure-domain diversity и
    проверить exact replicas на физических/операторски независимых hosts.
+2. Спроектировать bounded privacy-preserving domain attestations без передачи
+   IP/social graph в provider offer, gossip payload или IPC projection.
 3. Отдельным явным действием можно поставить M1 tag на accepted baseline;
    последующие M0.9.82 изменения намеренно не переписывают M1 evidence.
 4. Optional autostart/background mode оставить отдельной явной настройкой, не

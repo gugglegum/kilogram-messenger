@@ -63,8 +63,8 @@ foreach ($required in @(
 
 foreach ($required in @(
     'DEFAULT_PROVIDER_ADMISSION_WORK_BITS',
-    'select_admission_qualified',
-    'select_admission_qualified_from_active_offers',
+    'select_bootstrap_safe',
+    'select_bootstrap_safe_from_active_offers',
     'offer.admission_work_bits() >= u16::from(DEFAULT_PROVIDER_ADMISSION_WORK_BITS)',
     'admission_qualified_selection_and_gossip_exclude_cheap_identities'
 )) {
@@ -77,11 +77,11 @@ if (-not $clientLib.Contains('DEFAULT_PROVIDER_ADMISSION_WORK_BITS')) {
 }
 
 foreach ($required in @(
-    'select_admission_qualified_from_active_offers',
-    '.select_admission_qualified(selection_salt, requested, now)',
-    'provider_selection_policy=admission-work-plus-transport-distinct',
+    'select_bootstrap_safe_from_active_offers',
+    '.select_bootstrap_safe(selection_salt, requested, now)',
+    'provider_selection_policy=bootstrap-safe-admission-plus-local-corroboration',
     'runtime_volunteer_storage_offer_admission_work_bits=',
-    'runtime_volunteer_storage_selection=admission-work-plus-transport-distinct',
+    'runtime_volunteer_storage_selection=bootstrap-safe-admission-plus-local-corroboration',
     'runtime_volunteer_storage_minimum_admission_work_bits=',
     'admission-unqualified runtime test offer'
 )) {
@@ -119,7 +119,7 @@ foreach ($manifest in @(
 Write-Output 'provider_admission_work_boundary=verified'
 Write-Output 'minimum_admission_work_bits=18'
 Write-Output 'maximum_generation_work_bits=20'
-Write-Output 'selection=admission-work-plus-transport-distinct'
+Write-Output 'selection=admission-work-plus-binary-local-corroboration-plus-transport-distinct'
 Write-Output 'legacy_exact_commitment_resolution=preserved'
 Write-Output 'operator_independence=false'
 Write-Output 'sybil_resistance=cost-floor-not-proof'

@@ -35,12 +35,12 @@ use kilogram_mailbox_client::{
     DEFAULT_PROVIDER_ADMISSION_WORK_BITS, DEFAULT_REPLICATION_RETRY_SECONDS,
     DEFAULT_REPLICATION_TARGETS, DEFAULT_REQUIRED_REPLICA_RECEIPTS,
     MAX_PROVIDER_GOSSIP_FRAME_BYTES, MAX_PROVIDER_GOSSIP_OFFER_BYTES, MAX_PROVIDER_SELECTION,
-    MAX_REPLICA_DELETE_BATCH, MailboxClientLedger, MailboxClientLedgerConfig, MailboxHttpClient,
-    MailboxOutboundState, MailboxProviderGossipFrame, MailboxProviderImportOutcome,
-    MailboxProviderLocalObserverTag, MailboxProviderObservationOutcome, MailboxProviderOffer,
-    MailboxProviderRegistry, MailboxProviderRegistryConfig, MailboxReplicationLedger,
-    MailboxReplicationLedgerConfig, MailboxReplicationReadOnlyInspection, OutboundEnqueueOutcome,
-    PendingMailboxUpload,
+    MAX_REPLICA_DELETE_BATCH, MIN_AUTHENTICATED_PROVIDER_OBSERVATIONS_FOR_PREFERENCE,
+    MailboxClientLedger, MailboxClientLedgerConfig, MailboxHttpClient, MailboxOutboundState,
+    MailboxProviderGossipFrame, MailboxProviderImportOutcome, MailboxProviderLocalObserverTag,
+    MailboxProviderObservationOutcome, MailboxProviderOffer, MailboxProviderRegistry,
+    MailboxProviderRegistryConfig, MailboxReplicationLedger, MailboxReplicationLedgerConfig,
+    MailboxReplicationReadOnlyInspection, OutboundEnqueueOutcome, PendingMailboxUpload,
 };
 use kilogram_mailbox_provisioning::{
     EncryptedMailboxOffer, LocalMailboxBinding, MAX_MAILBOX_OFFER_VALIDITY_SECONDS,
@@ -987,7 +987,7 @@ enum Command {
         offer_file: PathBuf,
     },
 
-    /// Deterministically select independent fresh volunteer providers without exposing capabilities.
+    /// Deterministically select transport-distinct fresh volunteer providers without exposing capabilities.
     RuntimeIpcVolunteerProviderSelect {
         /// Runtime-owned local IPC descriptor.
         #[arg(long)]
@@ -10657,18 +10657,17 @@ fn provision_runtime_mailbox(
         &device_state,
         candidate.ticket.listener_authority_snapshot(),
     )?;
-    let mut replica_store_keys =
-        MailboxProviderRegistry::select_admission_qualified_from_active_offers(
-            MailboxProviderRegistry::active_offers_read_only(
-                runtime_mailbox_provider_registry_config(&state_directory),
-                now,
-            )?,
-            random_mailbox_replication_selection_salt()?,
-            RUNTIME_MAILBOX_REPLICA_LOCATOR_PROVIDERS,
-        )?
-        .into_iter()
-        .map(|provider| provider.store_key())
-        .collect::<Vec<_>>();
+    let mut replica_store_keys = MailboxProviderRegistry::select_bootstrap_safe_from_active_offers(
+        MailboxProviderRegistry::active_offers_read_only(
+            runtime_mailbox_provider_registry_config(&state_directory),
+            now,
+        )?,
+        random_mailbox_replication_selection_salt()?,
+        RUNTIME_MAILBOX_REPLICA_LOCATOR_PROVIDERS,
+    )?
+    .into_iter()
+    .map(|provider| provider.store_key())
+    .collect::<Vec<_>>();
     replica_store_keys.sort_unstable();
     let replica_set = if replica_store_keys.len() >= usize::from(DEFAULT_REQUIRED_REPLICA_RECEIPTS)
     {
@@ -12402,8 +12401,13 @@ async fn runtime_ipc_volunteer_provider_select(
     {
         RuntimeIpcResponse::VolunteerStorageProviders(provider_set) => {
             println!("provider_selection_salt={}", provider_set.selection_salt);
-            println!("provider_selection_policy=admission-work-plus-transport-distinct");
+            println!("provider_selection_policy=bootstrap-safe-admission-plus-local-corroboration");
             println!("provider_minimum_admission_work_bits={DEFAULT_PROVIDER_ADMISSION_WORK_BITS}");
+            println!(
+                "provider_minimum_authenticated_observations_for_preference={MIN_AUTHENTICATED_PROVIDER_OBSERVATIONS_FOR_PREFERENCE}"
+            );
+            println!("provider_authenticated_observation_count_rank_weight=false");
+            println!("provider_unobserved_bootstrap_fallback=true");
             println!("provider_requested_count={}", provider_set.requested);
             println!("provider_selected_count={}", provider_set.selected_count);
             println!(
@@ -13609,7 +13613,7 @@ fn select_runtime_volunteer_storage_providers(
     let registry = runtime_mailbox_provider_registry(state_directory)?;
     let active_provider_count = registry.active_offers(now)?.len();
     let providers = registry
-        .select_admission_qualified(selection_salt, requested, now)?
+        .select_bootstrap_safe(selection_salt, requested, now)?
         .iter()
         .map(runtime_volunteer_storage_provider_projection)
         .collect::<Vec<_>>();
@@ -17615,10 +17619,17 @@ async fn start_runtime_volunteer_storage(
     );
     println!("runtime_volunteer_storage_offer_distribution=authenticated-bounded-peer-gossip");
     println!("runtime_volunteer_storage_discovery=verified-expiring-offer-registry");
-    println!("runtime_volunteer_storage_selection=admission-work-plus-transport-distinct");
+    println!(
+        "runtime_volunteer_storage_selection=bootstrap-safe-admission-plus-local-corroboration"
+    );
     println!(
         "runtime_volunteer_storage_minimum_admission_work_bits={DEFAULT_PROVIDER_ADMISSION_WORK_BITS}"
     );
+    println!(
+        "runtime_volunteer_storage_minimum_authenticated_observations_for_preference={MIN_AUTHENTICATED_PROVIDER_OBSERVATIONS_FOR_PREFERENCE}"
+    );
+    println!("runtime_volunteer_storage_authenticated_observation_count_rank_weight=false");
+    println!("runtime_volunteer_storage_unobserved_bootstrap_fallback=true");
     println!("runtime_volunteer_storage_replication=sender-three-target-two-receipt");
     println!("runtime_volunteer_storage_replication_retry_seconds=60");
     println!("runtime_volunteer_storage_replica_retrieval=bounded-three-provider-iroh-list-delete");
@@ -18556,7 +18567,7 @@ fn prepare_runtime_mailbox_legacy_upgrade(
     state_directory: &Path,
 ) -> Result<Option<RuntimeMailboxLegacyUpgradeCandidate>> {
     let now = unix_time_now()?;
-    let available = MailboxProviderRegistry::select_admission_qualified_from_active_offers(
+    let available = MailboxProviderRegistry::select_bootstrap_safe_from_active_offers(
         MailboxProviderRegistry::active_offers_read_only(
             runtime_mailbox_provider_registry_config(state_directory),
             now,
@@ -28423,6 +28434,7 @@ mod tests {
         let now = unix_time_now()?;
         let endpoint_a = EndpointAddr::new(SecretKey::generate().public());
         let endpoint_b = EndpointAddr::new(SecretKey::generate().public());
+        let mut observed_candidate = None;
 
         let invalid_endpoint_offer = MailboxStoreIdentity::from_secret_bytes([44_u8; 32])
             .storage_offer(vec![1_u8], 1024, 512, now, 300)?;
@@ -28450,7 +28462,15 @@ mod tests {
                 300,
                 DEFAULT_PROVIDER_ADMISSION_WORK_BITS,
             )?;
-            let encoded = URL_SAFE_NO_PAD.encode(offer.encode(now)?);
+            let encoded_bytes = offer.encode(now)?;
+            if store_secret == 11 {
+                observed_candidate = Some((
+                    encoded_bytes.clone(),
+                    mailbox_provider_transport_identity(&offer)?,
+                    identity.store_key().to_string(),
+                ));
+            }
+            let encoded = URL_SAFE_NO_PAD.encode(encoded_bytes);
             let imported = import_runtime_volunteer_storage_offer(&state_directory, &encoded)?;
             assert_eq!(imported.outcome, "inserted");
             assert!(!imported.provider.offer_id.is_empty());
@@ -28501,6 +28521,20 @@ mod tests {
             2
         );
 
+        let (encoded, transport_identity, observed_store_key) =
+            observed_candidate.context("missing runtime observed provider candidate")?;
+        runtime_mailbox_provider_registry(&state_directory)?.import_gossiped_offer(
+            &encoded,
+            transport_identity,
+            1,
+            MailboxProviderLocalObserverTag::from_bytes([77_u8; 32]),
+            now,
+        )?;
+        let preferred =
+            select_runtime_volunteer_storage_providers(&state_directory, [92_u8; 32], 1)?;
+        assert_eq!(preferred.selected_count, 1);
+        assert_eq!(preferred.providers[0].store_key, observed_store_key);
+
         let projection = serde_json::to_string(&first)?;
         for forbidden in [
             "mailbox_id",
@@ -28509,6 +28543,8 @@ mod tests {
             "account_id",
             "device_id",
             "conversation_id",
+            "authenticated_observation",
+            "observation_count",
         ] {
             assert!(!projection.contains(forbidden));
         }

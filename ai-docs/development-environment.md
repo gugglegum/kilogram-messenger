@@ -2715,3 +2715,19 @@ retirement остальных compatibility shadows ещё не реализов
   and Clippy with warnings denied passed under Cargo `-j 2`.
 - No release build, ZIP, network field process, background service, external
   publication or executable target was created.
+
+## M0.9.84 bootstrap-safe provider-selection verification (2026-09-20)
+
+- Added binary observed-first selection after the existing 18-bit admission
+  gate; two through eight observer tags provide no additional rank.
+- Admission-qualified unobserved offers fill every missing slot, retaining a
+  fresh-install bootstrap path while exact transport identities stay distinct.
+- Replacement/expiry clears the exact-offer preference; committed replica-set
+  lookup remains observation-independent and IPC remains v26 without local
+  provenance fields.
+- Debug validation passed 17/17 mailbox-client tests, 7/7 mailbox tests and 3/3
+  focused CLI runtime tests under Cargo `-j 2`.
+- All 13 mailbox/provider/service-free fail-closed scripts, formatting and
+  Clippy with warnings denied passed together.
+- No release build, ZIP, network field process, background service, external
+  publication or executable target was created.

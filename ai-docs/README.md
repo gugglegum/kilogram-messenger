@@ -412,11 +412,13 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
 3. M0.9.83 добавляет bounded local authenticated observation provenance:
    exact offer получает до восьми дедуплицированных pseudonymous observer tags,
    выведенных из local Device secret и уже authenticated peer session. Tags и
-   social IDs не входят в offer/gossip/IPC; ranking пока не меняется.
-4. Следующий инженерный этап — явная bootstrap-safe policy поверх cost и
-   observations, затем exact replicas на физических/операторски независимых
-   volunteer hosts.
-5. Optional autostart/background mode оставить отдельной явной настройкой;
+   social IDs не входят в offer/gossip/IPC.
+4. M0.9.84 принимает bootstrap-safe policy: admission-qualified offers с хотя
+   бы одним authenticated observation идут первыми, количество сверх одного
+   не повышает rank, а unobserved candidates всегда заполняют остаток запроса.
+5. Следующий инженерный этап — separately evidenced network/operator failure
+   domains и exact replicas на физических/операторски независимых hosts.
+6. Optional autostart/background mode оставить отдельной явной настройкой;
    Windows Task Scheduler не является обязательной частью мессенджера.
 4. Уже реализованный M0.9.49 выделяет единый
    `kilogram-publication-conflict`: online/offline используют один signed codec,
@@ -807,7 +809,11 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M0.9.83 local-only provenance: authenticated peer session превращается в
   keyed pseudonymous tag, exact offer хранит не более восьми distinct tags,
   replacement очищает evidence; wire/IPC не несут tags или social IDs и
-  provider ranking пока не меняется.
+  M0.9.83 provider ranking ещё не менял.
+- [`../docs/RFC-0107-bootstrap-safe-provider-selection.md`](../docs/RFC-0107-bootstrap-safe-provider-selection.md) —
+  M0.9.84 binary locally-corroborated preference поверх 18-bit admission:
+  observation count сверх одного не даёт rank, unobserved qualified offers
+  сохраняют bootstrap fallback, exact commitments и IPC v26 не меняются.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

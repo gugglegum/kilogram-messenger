@@ -226,12 +226,35 @@ specified in
 [`docs/RFC-0105-sybil-costed-provider-admission.md`](docs/RFC-0105-sybil-costed-provider-admission.md).
 Local authenticated observation provenance for those offers is specified in
 [`docs/RFC-0106-local-authenticated-provider-observation-provenance.md`](docs/RFC-0106-local-authenticated-provider-observation-provenance.md).
+Bootstrap-safe use of that provenance during new provider selection is
+specified in
+[`docs/RFC-0107-bootstrap-safe-provider-selection.md`](docs/RFC-0107-bootstrap-safe-provider-selection.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.83 local authenticated provider observation provenance — accepted locally
+## Current milestone: M0.9.84 bootstrap-safe locally corroborated provider selection — accepted locally
+
+New replica-set creation, automatic legacy upgrade and diagnostic selection
+still require the 18-bit admission-work floor, then prefer exact offers seen
+through at least one authenticated peer session. The preference is binary:
+additional observing Devices add no rank and are not treated as independent
+operators.
+
+When locally corroborated offers cannot fill the request, deterministic
+transport-distinct rendezvous selection fills every remaining slot from
+unobserved admission-qualified offers. Exact committed sets remain resolvable
+without re-ranking, and replacement/expiry naturally removes the preference.
+IPC remains v26 and exposes no observation count, tag or social identifier.
+
+The network-free debug acceptance passed 17 mailbox-client tests, seven
+mailbox tests, three focused CLI runtime tests, all 13 mailbox/provider/service-
+free fail-closed boundaries, formatting and Clippy with warnings denied. No
+release build, ZIP, new executable, background service or external publication
+was created.
+
+## Previous milestone: M0.9.83 local authenticated provider observation provenance — accepted locally
 
 Provider offers received through an already Device-authenticated gossip
 session now gain a bounded local pseudonymous observation. Repeated delivery by
