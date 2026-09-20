@@ -23,8 +23,11 @@ const GOSSIP_HOP_TABLE: TableDefinition<&[u8], &[u8]> =
     TableDefinition::new("mailbox-provider-gossip-hops-v1");
 const AUTHENTICATED_OBSERVATION_TABLE: TableDefinition<&[u8], &[u8]> =
     TableDefinition::new("mailbox-provider-authenticated-observations-v1");
+const VERIFIED_PATH_DOMAIN_TABLE: TableDefinition<&[u8], &[u8]> =
+    TableDefinition::new("mailbox-provider-verified-path-domains-v1");
 const RECORD_VERSION: u8 = 1;
 const AUTHENTICATED_OBSERVATION_RECORD_VERSION: u8 = 1;
+const VERIFIED_PATH_DOMAIN_RECORD_VERSION: u8 = 1;
 const OFFER_ID_DOMAIN: &[u8] = b"kilogram:mailbox-provider-offer-id:v1\0";
 const SELECTION_DOMAIN: &[u8] = b"kilogram:mailbox-provider-selection:v1\0";
 const GOSSIP_SELECTION_DOMAIN: &[u8] = b"kilogram:mailbox-provider-gossip-selection:v1\0";
@@ -32,6 +35,7 @@ const GOSSIP_FRAME_ID_DOMAIN: &[u8] = b"kilogram:mailbox-provider-gossip-frame-i
 const MAX_PROVIDER_RECORD_BYTES: usize = MAX_MAILBOX_STORAGE_OFFER_BYTES + 256;
 const AUTHENTICATED_OBSERVATION_KEY_BYTES: usize = 64;
 const MAX_AUTHENTICATED_OBSERVATION_RECORD_BYTES: usize = 160;
+const MAX_VERIFIED_PATH_DOMAIN_RECORD_BYTES: usize = 192;
 const MAX_ABSOLUTE_PROVIDER_OFFERS: u64 = 4_096;
 const GOSSIP_FRAME_VERSION: u8 = 1;
 
@@ -103,6 +107,68 @@ impl MailboxProviderLocalObserverTag {
     }
 }
 
+/// The only two path-domain observations currently available from Iroh after
+/// a verified exchange. Equality is useful local evidence of a shared failure
+/// domain; inequality is not proof of different networks or operators.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub enum MailboxProviderLocalPathDomainKind {
+    DirectRemoteIp,
+    RelayOrigin,
+}
+
+impl MailboxProviderLocalPathDomainKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::DirectRemoteIp => "direct-remote-ip",
+            Self::RelayOrigin => "relay-origin",
+        }
+    }
+}
+
+/// A keyed installation-local pseudonym for one selected path domain. The raw
+/// IP address or relay origin is never retained by the provider registry.
+#[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct MailboxProviderLocalPathDomainTag {
+    derivation_epoch: [u8; 32],
+    tag: [u8; 32],
+}
+
+impl MailboxProviderLocalPathDomainTag {
+    pub fn from_parts(derivation_epoch: [u8; 32], tag: [u8; 32]) -> Self {
+        Self {
+            derivation_epoch,
+            tag,
+        }
+    }
+
+    fn derivation_epoch(&self) -> &[u8; 32] {
+        &self.derivation_epoch
+    }
+
+    fn tag(&self) -> &[u8; 32] {
+        &self.tag
+    }
+}
+
+impl fmt::Debug for MailboxProviderLocalPathDomainTag {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("MailboxProviderLocalPathDomainTag(<redacted>)")
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MailboxProviderPathDomainOutcome {
+    Added,
+    Refreshed,
+    Changed,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct VerifiedProviderPathDomain {
+    kind: MailboxProviderLocalPathDomainKind,
+    tag: MailboxProviderLocalPathDomainTag,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum MailboxProviderObservationOutcome {
     Added,
@@ -128,6 +194,7 @@ pub struct MailboxProviderOffer {
     observed_at_unix_seconds: u64,
     observed_gossip_hops: u8,
     authenticated_observation_count: u8,
+    verified_path_domain: Option<VerifiedProviderPathDomain>,
 }
 
 impl MailboxProviderOffer {
@@ -179,6 +246,22 @@ impl MailboxProviderOffer {
 
     pub fn authenticated_observation_count(&self) -> u8 {
         self.authenticated_observation_count
+    }
+
+    pub fn verified_path_domain_kind(&self) -> Option<MailboxProviderLocalPathDomainKind> {
+        self.verified_path_domain.map(|domain| domain.kind)
+    }
+
+    pub fn has_verified_path_domain(&self) -> bool {
+        self.verified_path_domain.is_some()
+    }
+
+    /// Equality is a useful local co-location signal. `false` includes missing
+    /// evidence and must not be interpreted as operator independence.
+    pub fn shares_verified_path_domain_with(&self, other: &Self) -> bool {
+        self.verified_path_domain
+            .zip(other.verified_path_domain)
+            .is_some_and(|(left, right)| left == right)
     }
 
     /// Exact signed bytes are returned for the transport adapter to decode and
@@ -310,6 +393,7 @@ impl ProviderOfferRecord {
         now_unix_seconds: u64,
         observed_gossip_hops: u8,
         authenticated_observation_count: u8,
+        verified_path_domain: Option<VerifiedProviderPathDomain>,
     ) -> Result<MailboxProviderOffer> {
         ensure!(
             observed_gossip_hops <= MAX_PROVIDER_GOSSIP_HOPS,
@@ -331,6 +415,7 @@ impl ProviderOfferRecord {
             observed_at_unix_seconds: self.observed_at_unix_seconds,
             observed_gossip_hops,
             authenticated_observation_count,
+            verified_path_domain,
         })
     }
 }
@@ -395,6 +480,92 @@ impl AuthenticatedProviderObservationRecord {
         ensure!(
             record.key().as_slice() == key,
             "mailbox provider authenticated observation key is inconsistent"
+        );
+        Ok(record)
+    }
+}
+
+#[derive(Clone, Deserialize, Eq, PartialEq, Serialize)]
+struct VerifiedProviderPathDomainRecord {
+    version: u8,
+    offer_id: [u8; 32],
+    kind: MailboxProviderLocalPathDomainKind,
+    derivation_epoch: [u8; 32],
+    domain_tag: [u8; 32],
+    first_verified_at_unix_seconds: u64,
+    last_verified_at_unix_seconds: u64,
+}
+
+impl VerifiedProviderPathDomainRecord {
+    fn new(
+        offer_id: MailboxProviderOfferId,
+        kind: MailboxProviderLocalPathDomainKind,
+        domain_tag: MailboxProviderLocalPathDomainTag,
+        verified_at_unix_seconds: u64,
+    ) -> Self {
+        Self {
+            version: VERIFIED_PATH_DOMAIN_RECORD_VERSION,
+            offer_id: *offer_id.as_bytes(),
+            kind,
+            derivation_epoch: *domain_tag.derivation_epoch(),
+            domain_tag: *domain_tag.tag(),
+            first_verified_at_unix_seconds: verified_at_unix_seconds,
+            last_verified_at_unix_seconds: verified_at_unix_seconds,
+        }
+    }
+
+    fn validate(&self) -> Result<()> {
+        ensure!(
+            self.version == VERIFIED_PATH_DOMAIN_RECORD_VERSION
+                && self.first_verified_at_unix_seconds <= self.last_verified_at_unix_seconds,
+            "stored mailbox provider path-domain evidence is invalid"
+        );
+        Ok(())
+    }
+
+    fn validate_for_offer(&self, offer: &ProviderOfferRecord) -> Result<()> {
+        self.validate()?;
+        ensure!(
+            self.offer_id == *offer_id(&offer.encoded_offer).as_bytes()
+                && self.first_verified_at_unix_seconds >= offer.issued_at_unix_seconds
+                && self.last_verified_at_unix_seconds < offer.expires_at_unix_seconds,
+            "stored mailbox provider path-domain evidence is not bound to the active offer"
+        );
+        Ok(())
+    }
+
+    fn evidence(&self) -> VerifiedProviderPathDomain {
+        VerifiedProviderPathDomain {
+            kind: self.kind,
+            tag: MailboxProviderLocalPathDomainTag::from_parts(
+                self.derivation_epoch,
+                self.domain_tag,
+            ),
+        }
+    }
+
+    fn encode(&self) -> Result<Vec<u8>> {
+        self.validate()?;
+        let bytes =
+            postcard::to_allocvec(self).context("encode mailbox provider path-domain evidence")?;
+        ensure!(
+            bytes.len() <= MAX_VERIFIED_PATH_DOMAIN_RECORD_BYTES,
+            "mailbox provider path-domain evidence is too large"
+        );
+        Ok(bytes)
+    }
+
+    fn decode(key: &[u8], bytes: &[u8]) -> Result<Self> {
+        ensure!(
+            key.len() == 32 && bytes.len() <= MAX_VERIFIED_PATH_DOMAIN_RECORD_BYTES,
+            "mailbox provider path-domain evidence encoding is invalid"
+        );
+        let record: Self =
+            postcard::from_bytes(bytes).context("decode mailbox provider path-domain evidence")?;
+        record.validate()?;
+        ensure!(
+            record.offer_id.as_slice() == key,
+            "mailbox provider path-domain evidence key is inconsistent"
         );
         Ok(record)
     }
@@ -607,6 +778,7 @@ impl MailboxProviderRegistry {
         write.open_table(OFFER_TABLE)?;
         write.open_table(GOSSIP_HOP_TABLE)?;
         write.open_table(AUTHENTICATED_OBSERVATION_TABLE)?;
+        write.open_table(VERIFIED_PATH_DOMAIN_TABLE)?;
         write
             .commit()
             .context("commit mailbox provider registry initialization")?;
@@ -763,6 +935,10 @@ impl MailboxProviderRegistry {
             for observation_key in observation_keys {
                 table.remove(observation_key.as_slice())?;
             }
+            let mut table = write.open_table(VERIFIED_PATH_DOMAIN_TABLE)?;
+            for expired_offer_id in &expired_offer_ids {
+                table.remove(expired_offer_id.as_slice())?;
+            }
         }
 
         let current = write
@@ -842,6 +1018,9 @@ impl MailboxProviderRegistry {
             for observation_key in observation_keys {
                 table.remove(observation_key.as_slice())?;
             }
+            write
+                .open_table(VERIFIED_PATH_DOMAIN_TABLE)?
+                .remove(replaced_offer_id.as_slice())?;
         }
         let encoded_gossip_hops = [effective_gossip_hops];
         write
@@ -904,6 +1083,22 @@ impl MailboxProviderRegistry {
                 (None, count)
             }
         };
+        let verified_path_domain = {
+            let table = write.open_table(VERIFIED_PATH_DOMAIN_TABLE)?;
+            let encoded = table
+                .get(effective_offer_id.as_bytes().as_slice())?
+                .map(|value| value.value().to_vec());
+            encoded
+                .map(|encoded| {
+                    let record = VerifiedProviderPathDomainRecord::decode(
+                        effective_offer_id.as_bytes(),
+                        &encoded,
+                    )?;
+                    record.validate_for_offer(&effective_record)?;
+                    Ok::<_, anyhow::Error>(record.evidence())
+                })
+                .transpose()?
+        };
         write
             .commit()
             .context("commit mailbox provider offer import")?;
@@ -914,8 +1109,98 @@ impl MailboxProviderRegistry {
                 now_unix_seconds,
                 effective_gossip_hops,
                 authenticated_observation_count,
+                verified_path_domain,
             )?,
         ))
+    }
+
+    /// Records the selected path only after the caller has verified a
+    /// successful provider response. The exact signed offer must still be the
+    /// active record for its store key, so a late response cannot lend local
+    /// provenance to a replacement offer.
+    pub fn record_verified_path_domain(
+        &self,
+        store_key: MailboxStoreKey,
+        expected_offer_id: MailboxProviderOfferId,
+        kind: MailboxProviderLocalPathDomainKind,
+        domain_tag: MailboxProviderLocalPathDomainTag,
+        verified_at_unix_seconds: u64,
+    ) -> Result<MailboxProviderPathDomainOutcome> {
+        let mut write = self
+            .database
+            .begin_write()
+            .context("begin mailbox provider path-domain evidence update")?;
+        write
+            .set_durability(Durability::Immediate)
+            .context("set mailbox provider path-domain evidence durability")?;
+        let active_offer = {
+            let table = write.open_table(OFFER_TABLE)?;
+            let encoded = table
+                .get(store_key.as_bytes().as_slice())?
+                .context("mailbox provider offer disappeared before path verification")?
+                .value()
+                .to_vec();
+            ProviderOfferRecord::decode(&encoded)?
+        };
+        ensure!(
+            active_offer.store_key == store_key
+                && offer_id(&active_offer.encoded_offer) == expected_offer_id
+                && verified_at_unix_seconds >= active_offer.issued_at_unix_seconds
+                && verified_at_unix_seconds < active_offer.expires_at_unix_seconds,
+            "mailbox provider path-domain evidence does not match the active signed offer"
+        );
+
+        let fresh = VerifiedProviderPathDomainRecord::new(
+            expected_offer_id,
+            kind,
+            domain_tag,
+            verified_at_unix_seconds,
+        );
+        let outcome = {
+            let mut table = write.open_table(VERIFIED_PATH_DOMAIN_TABLE)?;
+            let current = table
+                .get(expected_offer_id.as_bytes().as_slice())?
+                .map(|value| value.value().to_vec());
+            match current {
+                None => {
+                    table.insert(
+                        expected_offer_id.as_bytes().as_slice(),
+                        fresh.encode()?.as_slice(),
+                    )?;
+                    MailboxProviderPathDomainOutcome::Added
+                }
+                Some(encoded) => {
+                    let mut current = VerifiedProviderPathDomainRecord::decode(
+                        expected_offer_id.as_bytes(),
+                        &encoded,
+                    )?;
+                    current.validate_for_offer(&active_offer)?;
+                    if current.kind == kind
+                        && current.derivation_epoch == *domain_tag.derivation_epoch()
+                        && current.domain_tag == *domain_tag.tag()
+                    {
+                        current.last_verified_at_unix_seconds = current
+                            .last_verified_at_unix_seconds
+                            .max(verified_at_unix_seconds);
+                        table.insert(
+                            expected_offer_id.as_bytes().as_slice(),
+                            current.encode()?.as_slice(),
+                        )?;
+                        MailboxProviderPathDomainOutcome::Refreshed
+                    } else {
+                        table.insert(
+                            expected_offer_id.as_bytes().as_slice(),
+                            fresh.encode()?.as_slice(),
+                        )?;
+                        MailboxProviderPathDomainOutcome::Changed
+                    }
+                }
+            }
+        };
+        write
+            .commit()
+            .context("commit mailbox provider path-domain evidence update")?;
+        Ok(outcome)
     }
 
     pub fn active_offers(&self, now_unix_seconds: u64) -> Result<Vec<MailboxProviderOffer>> {
@@ -1141,6 +1426,21 @@ fn active_offers_for_store_keys_from_database(
         Err(redb::TableError::TableDoesNotExist(_)) => {}
         Err(error) => return Err(error.into()),
     }
+    let mut path_domains = BTreeMap::<[u8; 32], VerifiedProviderPathDomainRecord>::new();
+    match read.open_table(VERIFIED_PATH_DOMAIN_TABLE) {
+        Ok(domains) => {
+            for entry in domains.iter()? {
+                let (key, value) = entry?;
+                let domain = VerifiedProviderPathDomainRecord::decode(key.value(), value.value())?;
+                ensure!(
+                    path_domains.insert(domain.offer_id, domain).is_none(),
+                    "mailbox provider path-domain evidence repeats an offer"
+                );
+            }
+        }
+        Err(redb::TableError::TableDoesNotExist(_)) => {}
+        Err(error) => return Err(error.into()),
+    }
     let mut offers = Vec::new();
     for store_key in store_keys {
         let Some(value) = table.get(store_key.as_bytes().as_slice())? else {
@@ -1163,10 +1463,18 @@ fn active_offers_for_store_keys_from_database(
             .get(offer_id(&record.encoded_offer).as_bytes())
             .copied()
             .unwrap_or(0);
+        let verified_path_domain = path_domains
+            .get(offer_id(&record.encoded_offer).as_bytes())
+            .map(|domain| {
+                domain.validate_for_offer(&record)?;
+                Ok::<_, anyhow::Error>(domain.evidence())
+            })
+            .transpose()?;
         offers.push(record.into_public(
             now_unix_seconds,
             observed_gossip_hops,
             authenticated_observation_count,
+            verified_path_domain,
         )?);
     }
     Ok(offers)
@@ -1201,6 +1509,21 @@ fn active_offers_from_database(
         Err(redb::TableError::TableDoesNotExist(_)) => {}
         Err(error) => return Err(error.into()),
     }
+    let mut path_domains = BTreeMap::<[u8; 32], VerifiedProviderPathDomainRecord>::new();
+    match read.open_table(VERIFIED_PATH_DOMAIN_TABLE) {
+        Ok(domains) => {
+            for entry in domains.iter()? {
+                let (key, value) = entry?;
+                let domain = VerifiedProviderPathDomainRecord::decode(key.value(), value.value())?;
+                ensure!(
+                    path_domains.insert(domain.offer_id, domain).is_none(),
+                    "mailbox provider path-domain evidence repeats an offer"
+                );
+            }
+        }
+        Err(redb::TableError::TableDoesNotExist(_)) => {}
+        Err(error) => return Err(error.into()),
+    }
     let mut offers = Vec::new();
     for entry in table.iter()? {
         let (key, value) = entry?;
@@ -1219,10 +1542,18 @@ fn active_offers_from_database(
                 .get(offer_id(&record.encoded_offer).as_bytes())
                 .copied()
                 .unwrap_or(0);
+            let verified_path_domain = path_domains
+                .get(offer_id(&record.encoded_offer).as_bytes())
+                .map(|domain| {
+                    domain.validate_for_offer(&record)?;
+                    Ok::<_, anyhow::Error>(domain.evidence())
+                })
+                .transpose()?;
             offers.push(record.into_public(
                 now_unix_seconds,
                 observed_gossip_hops,
                 authenticated_observation_count,
+                verified_path_domain,
             )?);
         }
     }
@@ -1389,6 +1720,10 @@ mod tests {
 
     fn observer(value: u8) -> MailboxProviderLocalObserverTag {
         MailboxProviderLocalObserverTag::from_bytes([value; 32])
+    }
+
+    fn path_domain(value: u8) -> MailboxProviderLocalPathDomainTag {
+        MailboxProviderLocalPathDomainTag::from_parts([90; 32], [value; 32])
     }
 
     #[test]
@@ -1633,6 +1968,112 @@ mod tests {
         )?;
         assert_eq!(active.len(), 1);
         assert_eq!(active[0].authenticated_observation_count(), 1);
+        Ok(())
+    }
+
+    #[test]
+    fn verified_path_domains_are_local_exact_offer_bound_and_replaceable() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let data_dir = directory.path().join("providers");
+        let registry =
+            MailboxProviderRegistry::open(MailboxProviderRegistryConfig::new(data_dir.clone()))?;
+        let (encoded, endpoint) = offer(1, 11, 1_000)?;
+        let (_, imported) = registry.import_offer(&encoded, endpoint, 1_000)?;
+        assert!(!imported.has_verified_path_domain());
+        let before = MailboxProviderGossipFrame::from_registry(&registry, [82; 32], None, 1_001)?
+            .entries()[0]
+            .encoded_offer()
+            .to_vec();
+
+        assert_eq!(
+            registry.record_verified_path_domain(
+                imported.store_key(),
+                imported.offer_id(),
+                MailboxProviderLocalPathDomainKind::DirectRemoteIp,
+                path_domain(1),
+                1_001,
+            )?,
+            MailboxProviderPathDomainOutcome::Added
+        );
+        assert_eq!(
+            registry.record_verified_path_domain(
+                imported.store_key(),
+                imported.offer_id(),
+                MailboxProviderLocalPathDomainKind::DirectRemoteIp,
+                path_domain(1),
+                1_002,
+            )?,
+            MailboxProviderPathDomainOutcome::Refreshed
+        );
+        let direct = registry.active_offers(1_002)?.remove(0);
+        assert_eq!(
+            direct.verified_path_domain_kind(),
+            Some(MailboxProviderLocalPathDomainKind::DirectRemoteIp)
+        );
+        assert!(direct.shares_verified_path_domain_with(&direct));
+
+        assert_eq!(
+            registry.record_verified_path_domain(
+                imported.store_key(),
+                imported.offer_id(),
+                MailboxProviderLocalPathDomainKind::DirectRemoteIp,
+                MailboxProviderLocalPathDomainTag::from_parts([91; 32], [1; 32]),
+                1_003,
+            )?,
+            MailboxProviderPathDomainOutcome::Changed
+        );
+        let rotated_epoch = registry.active_offers(1_003)?.remove(0);
+        assert!(!direct.shares_verified_path_domain_with(&rotated_epoch));
+
+        assert_eq!(
+            registry.record_verified_path_domain(
+                imported.store_key(),
+                imported.offer_id(),
+                MailboxProviderLocalPathDomainKind::RelayOrigin,
+                path_domain(2),
+                1_004,
+            )?,
+            MailboxProviderPathDomainOutcome::Changed
+        );
+        let relayed = registry.active_offers(1_004)?.remove(0);
+        assert_eq!(
+            relayed.verified_path_domain_kind(),
+            Some(MailboxProviderLocalPathDomainKind::RelayOrigin)
+        );
+        assert!(!direct.shares_verified_path_domain_with(&relayed));
+        let after = MailboxProviderGossipFrame::from_registry(&registry, [82; 32], None, 1_004)?
+            .entries()[0]
+            .encoded_offer()
+            .to_vec();
+        assert_eq!(before, after);
+
+        let rendered = format!("{:?}", path_domain(2));
+        assert!(rendered.contains("<redacted>"));
+        assert!(!rendered.contains("02020202"));
+
+        let stale_offer_id = imported.offer_id();
+        let (replacement, replacement_endpoint) = offer(1, 12, 1_100)?;
+        let (_, replacement) = registry.import_offer(&replacement, replacement_endpoint, 1_100)?;
+        assert!(!replacement.has_verified_path_domain());
+        assert!(
+            registry
+                .record_verified_path_domain(
+                    replacement.store_key(),
+                    stale_offer_id,
+                    MailboxProviderLocalPathDomainKind::RelayOrigin,
+                    path_domain(2),
+                    1_101,
+                )
+                .is_err()
+        );
+        drop(registry);
+
+        let active = MailboxProviderRegistry::active_offers_read_only(
+            MailboxProviderRegistryConfig::new(data_dir),
+            1_101,
+        )?;
+        assert_eq!(active.len(), 1);
+        assert!(!active[0].has_verified_path_domain());
         Ok(())
     }
 

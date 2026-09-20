@@ -416,9 +416,18 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
 4. M0.9.84 принимает bootstrap-safe policy: admission-qualified offers с хотя
    бы одним authenticated observation идут первыми, количество сверх одного
    не повышает rank, а unobserved candidates всегда заполняют остаток запроса.
-5. Следующий инженерный этап — separately evidenced network/operator failure
-   domains и exact replicas на физических/операторски независимых hosts.
-6. Optional autostart/background mode оставить отдельной явной настройкой;
+5. M0.9.85 после verified PUT/LIST/DELETE сохраняет local-only keyed tag
+   фактически выбранного direct remote IP без порта либо relay origin. Tag
+   привязан к exact offer и local Device-secret derivation epoch; raw адреса,
+   tags и epochs не входят в offer/gossip/protocol/IPC, а selection пока не
+   меняется.
+6. Следующий инженерный этап — использовать только положительный сигнал
+   co-location: не выбирать второй известный exact offer с тем же local path
+   domain, но всегда заполнять остаток unknown candidates. Разные tags нельзя
+   называть доказательством независимых операторов.
+7. После этого проверить exact replicas на физических и операторски
+   независимых hosts отдельным field run.
+8. Optional autostart/background mode оставить отдельной явной настройкой;
    Windows Task Scheduler не является обязательной частью мессенджера.
 4. Уже реализованный M0.9.49 выделяет единый
    `kilogram-publication-conflict`: online/offline используют один signed codec,
@@ -814,6 +823,11 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M0.9.84 binary locally-corroborated preference поверх 18-bit admission:
   observation count сверх одного не даёт rank, unobserved qualified offers
   сохраняют bootstrap fallback, exact commitments и IPC v26 не меняются.
+- [`../docs/RFC-0108-local-provider-path-domain-provenance.md`](../docs/RFC-0108-local-provider-path-domain-provenance.md) —
+  M0.9.85 local post-exchange path provenance: verified successful mailbox
+  response даёт keyed exact-IP/relay-origin tag, exact-offer replacement и
+  local key epoch ограничивают lifetime/comparability; raw addresses/tags не
+  передаются, selection и IPC v26 не меняются.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

@@ -229,12 +229,36 @@ Local authenticated observation provenance for those offers is specified in
 Bootstrap-safe use of that provenance during new provider selection is
 specified in
 [`docs/RFC-0107-bootstrap-safe-provider-selection.md`](docs/RFC-0107-bootstrap-safe-provider-selection.md).
+Local post-exchange provenance for the selected direct IP or relay origin is
+specified in
+[`docs/RFC-0108-local-provider-path-domain-provenance.md`](docs/RFC-0108-local-provider-path-domain-provenance.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.84 bootstrap-safe locally corroborated provider selection — accepted locally
+## Current milestone: M0.9.85 local verified provider path-domain provenance — accepted locally
+
+After a cryptographically verified volunteer-mailbox PUT, LIST or DELETE,
+Kilogram now derives an installation-local keyed pseudonym for the selected
+direct remote IP (without its port) or relay origin. The registry retains only
+the latest verified path domain for the exact signed offer; replacement or
+expiry removes it, and a local Device-secret derivation epoch prevents old and
+new tags from being treated as different domains.
+
+Raw IP addresses, relay URLs, tags and epochs are not added to provider offers,
+gossip, protocol messages, logs or authenticated IPC v26. This stage records
+evidence but does not yet change provider selection: equal tags corroborate a
+shared local path domain, while unequal tags do not prove different operators,
+networks or physical hosts.
+
+The network-free debug acceptance passed 18 mailbox-client tests, six transport
+tests, seven mailbox tests, two focused CLI runtime tests, all 16
+mailbox/provider/service-free fail-closed boundaries, formatting and Clippy
+with warnings denied. It created no release build, ZIP, new executable,
+background service, field connection or external publication.
+
+## Previous milestone: M0.9.84 bootstrap-safe locally corroborated provider selection — accepted locally
 
 New replica-set creation, automatic legacy upgrade and diagnostic selection
 still require the 18-bit admission-work floor, then prefer exact offers seen
@@ -254,7 +278,7 @@ free fail-closed boundaries, formatting and Clippy with warnings denied. No
 release build, ZIP, new executable, background service or external publication
 was created.
 
-## Previous milestone: M0.9.83 local authenticated provider observation provenance — accepted locally
+## Earlier milestone: M0.9.83 local authenticated provider observation provenance — accepted locally
 
 Provider offers received through an already Device-authenticated gossip
 session now gain a bounded local pseudonymous observation. Repeated delivery by

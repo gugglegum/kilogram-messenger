@@ -38,9 +38,11 @@ use kilogram_mailbox_client::{
     MAX_REPLICA_DELETE_BATCH, MIN_AUTHENTICATED_PROVIDER_OBSERVATIONS_FOR_PREFERENCE,
     MailboxClientLedger, MailboxClientLedgerConfig, MailboxHttpClient, MailboxOutboundState,
     MailboxProviderGossipFrame, MailboxProviderImportOutcome, MailboxProviderLocalObserverTag,
-    MailboxProviderObservationOutcome, MailboxProviderOffer, MailboxProviderRegistry,
-    MailboxProviderRegistryConfig, MailboxReplicationLedger, MailboxReplicationLedgerConfig,
-    MailboxReplicationReadOnlyInspection, OutboundEnqueueOutcome, PendingMailboxUpload,
+    MailboxProviderLocalPathDomainKind, MailboxProviderLocalPathDomainTag,
+    MailboxProviderObservationOutcome, MailboxProviderOffer, MailboxProviderPathDomainOutcome,
+    MailboxProviderRegistry, MailboxProviderRegistryConfig, MailboxReplicationLedger,
+    MailboxReplicationLedgerConfig, MailboxReplicationReadOnlyInspection, OutboundEnqueueOutcome,
+    PendingMailboxUpload,
 };
 use kilogram_mailbox_provisioning::{
     EncryptedMailboxOffer, LocalMailboxBinding, MAX_MAILBOX_OFFER_VALIDITY_SECONDS,
@@ -106,11 +108,12 @@ use kilogram_ticket_store::{
 };
 use kilogram_transport_iroh::{
     ALPN, MAILBOX_ALPN, MAX_WIRE_MESSAGE_BYTES, RoutePolicy, SelectedPathDiagnostics,
-    WIRE_IO_TIMEOUT, await_route_policy, encode_mailbox_provider_endpoint,
-    endpoint_builder_for_remote, endpoint_builder_with_relay, mailbox_provider_endpoint_from_offer,
-    read_client_request, read_mailbox_peer_request, read_mailbox_peer_response,
-    read_server_response, selected_path_diagnostics, write_client_request,
-    write_mailbox_peer_request, write_mailbox_peer_response, write_server_response,
+    SelectedPathLocalDomainKind, WIRE_IO_TIMEOUT, await_route_policy,
+    encode_mailbox_provider_endpoint, endpoint_builder_for_remote, endpoint_builder_with_relay,
+    mailbox_provider_endpoint_from_offer, read_client_request, read_mailbox_peer_request,
+    read_mailbox_peer_response, read_server_response, selected_path_diagnostics,
+    write_client_request, write_mailbox_peer_request, write_mailbox_peer_response,
+    write_server_response,
 };
 use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
@@ -266,6 +269,10 @@ const MAILBOX_PROVIDER_TRANSPORT_IDENTITY_DOMAIN: &[u8] =
     b"kilogram:mailbox-provider-transport-identity:v1\0";
 const MAILBOX_PROVIDER_LOCAL_OBSERVER_KEY_CONTEXT: &str =
     "kilogram mailbox provider local authenticated observer tag key v1";
+const MAILBOX_PROVIDER_LOCAL_PATH_DOMAIN_KEY_CONTEXT: &str =
+    "kilogram mailbox provider local selected path domain tag key v1";
+const MAILBOX_PROVIDER_LOCAL_PATH_DOMAIN_EPOCH_CONTEXT: &str =
+    "kilogram mailbox provider local selected path domain epoch v1";
 const MAX_RUNTIME_DEVICE_DIRECTORY_RECEIPTS: usize = 1_024;
 const MAX_RUNTIME_ENDPOINT_CANDIDATES_PER_CONTACT: usize = 4;
 const MAX_RUNTIME_TICKET_PUBLICATION_RECORDS: usize = 4_096;
@@ -4569,6 +4576,10 @@ fn state_transaction_store_error(error: kilogram_state::StateError) -> StoreErro
 }
 
 fn load_command_device_state(state_directory: &Path) -> Result<DeviceState> {
+    load_device_state(state_directory, true)
+}
+
+fn load_device_state(state_directory: &Path, emit_diagnostics: bool) -> Result<DeviceState> {
     if !EncryptedStateVault::is_initialized(state_directory)
         .context("inspect state vault before device identity read")?
     {
@@ -4578,7 +4589,9 @@ fn load_command_device_state(state_directory: &Path) -> Result<DeviceState> {
                 state_directory.display()
             )
         })?;
-        println!("device_identity_read_source=filesystem");
+        if emit_diagnostics {
+            println!("device_identity_read_source=filesystem");
+        }
         return Ok(device_state);
     }
 
@@ -4592,9 +4605,11 @@ fn load_command_device_state(state_directory: &Path) -> Result<DeviceState> {
         *read.signing_secret(),
         *read.encryption_secret(),
     );
-    println!("vault_device_identity_read_source=db-primary");
-    println!("vault_device_identity_read_generation={mirror_generation}");
-    println!("vault_device_identity_record_count=2");
+    if emit_diagnostics {
+        println!("vault_device_identity_read_source=db-primary");
+        println!("vault_device_identity_read_generation={mirror_generation}");
+        println!("vault_device_identity_record_count=2");
+    }
     Ok(device_state)
 }
 
@@ -5446,6 +5461,54 @@ fn runtime_mailbox_provider_local_observer_tag(
     MailboxProviderLocalObserverTag::from_bytes(
         *blake3::keyed_hash(&local_observer_key, &observer_material).as_bytes(),
     )
+}
+
+fn runtime_mailbox_provider_local_path_domain_derivation(
+    local_identity: &DeviceIdentity,
+) -> (Zeroizing<[u8; 32]>, [u8; 32]) {
+    let local_secret = Zeroizing::new(local_identity.secret_bytes());
+    let local_path_domain_key = Zeroizing::new(blake3::derive_key(
+        MAILBOX_PROVIDER_LOCAL_PATH_DOMAIN_KEY_CONTEXT,
+        local_secret.as_slice(),
+    ));
+    let derivation_epoch = blake3::derive_key(
+        MAILBOX_PROVIDER_LOCAL_PATH_DOMAIN_EPOCH_CONTEXT,
+        local_path_domain_key.as_slice(),
+    );
+    (local_path_domain_key, derivation_epoch)
+}
+
+fn record_runtime_mailbox_provider_path_domain(
+    state_directory: &Path,
+    offer: &MailboxProviderOffer,
+    selected_path: Option<&SelectedPathDiagnostics>,
+) -> Result<Option<MailboxProviderPathDomainOutcome>> {
+    let Some(selected_path) = selected_path else {
+        return Ok(None);
+    };
+    let device_state = load_device_state(state_directory, false)
+        .context("load local identity for provider path-domain derivation")?;
+    let (local_path_domain_key, derivation_epoch) =
+        runtime_mailbox_provider_local_path_domain_derivation(device_state.identity());
+    let Some((kind, tag)) = selected_path.local_domain_tag(&local_path_domain_key) else {
+        return Ok(None);
+    };
+    let kind = match kind {
+        SelectedPathLocalDomainKind::DirectRemoteIp => {
+            MailboxProviderLocalPathDomainKind::DirectRemoteIp
+        }
+        SelectedPathLocalDomainKind::RelayOrigin => MailboxProviderLocalPathDomainKind::RelayOrigin,
+    };
+    runtime_mailbox_provider_registry(state_directory)?
+        .record_verified_path_domain(
+            offer.store_key(),
+            offer.offer_id(),
+            kind,
+            MailboxProviderLocalPathDomainTag::from_parts(derivation_epoch, tag.into_bytes()),
+            unix_time_now()?,
+        )
+        .map(Some)
+        .context("record verified local provider path domain")
 }
 
 fn random_mailbox_provider_gossip_entropy() -> Result<[u8; 32]> {
@@ -19340,18 +19403,23 @@ fn mailbox_commitment_hex(value: &[u8; 32]) -> String {
     value.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
+struct VerifiedVolunteerMailboxExchange<T> {
+    response: T,
+    selected_path: Option<SelectedPathDiagnostics>,
+}
+
 async fn put_runtime_volunteer_mailbox_replica(
     endpoint: &Endpoint,
     offer: &MailboxProviderOffer,
     request: &MailboxPutRequest,
-) -> Result<MailboxPutResponse> {
+) -> Result<VerifiedVolunteerMailboxExchange<MailboxPutResponse>> {
     let peer_request = MailboxPeerRequest::put(request)?;
-    let peer_response =
+    let exchange =
         exchange_runtime_volunteer_mailbox_request(endpoint, offer, &peer_request, "PUT").await?;
-    let payload = peer_response.success_payload().with_context(|| {
+    let payload = exchange.response.success_payload().with_context(|| {
         format!(
             "volunteer mailbox provider rejected PUT: {:?}",
-            peer_response.rejection()
+            exchange.response.rejection()
         )
     })?;
     let response = MailboxPutResponse::decode_and_verify(payload, request, offer.store_key())?;
@@ -19359,7 +19427,10 @@ async fn put_runtime_volunteer_mailbox_replica(
         response.stored_receipt().is_some(),
         "volunteer mailbox provider did not return a durable stored receipt"
     );
-    Ok(response)
+    Ok(VerifiedVolunteerMailboxExchange {
+        response,
+        selected_path: exchange.selected_path,
+    })
 }
 
 async fn exchange_runtime_volunteer_mailbox_request(
@@ -19367,7 +19438,7 @@ async fn exchange_runtime_volunteer_mailbox_request(
     offer: &MailboxProviderOffer,
     peer_request: &MailboxPeerRequest,
     operation: &str,
-) -> Result<MailboxPeerResponse> {
+) -> Result<VerifiedVolunteerMailboxExchange<MailboxPeerResponse>> {
     let provider_endpoint = mailbox_provider_endpoint_from_offer(offer.signed_offer())
         .context("parse selected volunteer mailbox endpoint")?;
     let connection = timeout(
@@ -19380,6 +19451,7 @@ async fn exchange_runtime_volunteer_mailbox_request(
     let (mut send, mut receive) = open_bi(&connection, "open volunteer mailbox stream").await?;
     write_mailbox_peer_request(&mut send, peer_request).await?;
     let peer_response = read_mailbox_peer_response(&mut receive, peer_request).await?;
+    let selected_path = selected_path_diagnostics(&connection, Duration::ZERO).await;
     // The provider waits for acknowledgement of every response byte before
     // closing the QUIC connection. Keep this side alive until that graceful
     // close arrives so an immediate CONNECTION_CLOSE cannot discard the FIN.
@@ -19390,44 +19462,57 @@ async fn exchange_runtime_volunteer_mailbox_request(
         "volunteer mailbox provider rejected {operation}: {:?}",
         peer_response.rejection()
     );
-    Ok(peer_response)
+    Ok(VerifiedVolunteerMailboxExchange {
+        response: peer_response,
+        selected_path,
+    })
 }
 
 async fn list_runtime_volunteer_mailbox_replica(
     endpoint: &Endpoint,
     offer: &MailboxProviderOffer,
     request: &MailboxListRequest,
-) -> Result<MailboxListResponse> {
+) -> Result<VerifiedVolunteerMailboxExchange<MailboxListResponse>> {
     let peer_request = MailboxPeerRequest::list(request)?;
-    let response =
+    let exchange =
         exchange_runtime_volunteer_mailbox_request(endpoint, offer, &peer_request, "LIST").await?;
-    MailboxListResponse::decode_and_verify(
-        response
+    let response = MailboxListResponse::decode_and_verify(
+        exchange
+            .response
             .success_payload()
             .context("volunteer mailbox LIST response has no payload")?,
         request,
         offer.store_key(),
     )
-    .context("verify volunteer mailbox LIST response")
+    .context("verify volunteer mailbox LIST response")?;
+    Ok(VerifiedVolunteerMailboxExchange {
+        response,
+        selected_path: exchange.selected_path,
+    })
 }
 
 async fn delete_runtime_volunteer_mailbox_replica(
     endpoint: &Endpoint,
     offer: &MailboxProviderOffer,
     request: &MailboxDeleteRequest,
-) -> Result<MailboxDeleteResponse> {
+) -> Result<VerifiedVolunteerMailboxExchange<MailboxDeleteResponse>> {
     let peer_request = MailboxPeerRequest::delete(request)?;
-    let response =
+    let exchange =
         exchange_runtime_volunteer_mailbox_request(endpoint, offer, &peer_request, "DELETE")
             .await?;
-    MailboxDeleteResponse::decode_and_verify(
-        response
+    let response = MailboxDeleteResponse::decode_and_verify(
+        exchange
+            .response
             .success_payload()
             .context("volunteer mailbox DELETE response has no payload")?,
         request,
         offer.store_key(),
     )
-    .context("verify volunteer mailbox DELETE response")
+    .context("verify volunteer mailbox DELETE response")?;
+    Ok(VerifiedVolunteerMailboxExchange {
+        response,
+        selected_path: exchange.selected_path,
+    })
 }
 
 async fn attempt_runtime_volunteer_mailbox_replication(
@@ -19546,15 +19631,25 @@ async fn attempt_runtime_volunteer_mailbox_replication(
             offer.store_key()
         );
         match put_runtime_volunteer_mailbox_replica(endpoint, &offer, request).await {
-            Ok(response) => {
+            Ok(exchange) => {
                 let receipt = ledger.record_receipt(
                     request,
                     dispatch_binding,
                     *offer.transport_identity(),
                     offer.store_key(),
-                    &response,
+                    &exchange.response,
                     unix_time_now()?,
                 )?;
+                if let Err(error) = record_runtime_mailbox_provider_path_domain(
+                    state_directory,
+                    &offer,
+                    exchange.selected_path.as_ref(),
+                ) {
+                    eprintln!(
+                        "runtime_mailbox_provider_path_domain_status=unavailable store_key={} error={error:#}",
+                        offer.store_key()
+                    );
+                }
                 println!(
                     "runtime_mailbox_replication_receipt_store_key={}",
                     receipt.store_key()
@@ -20881,8 +20976,18 @@ async fn attempt_runtime_volunteer_mailbox_poll(
             continue;
         };
         match delete_runtime_volunteer_mailbox_replica(endpoint, offer, pending.request()).await {
-            Ok(response) => {
-                replication.mark_inbound_deleted(&pending, &response, unix_time_now()?)?;
+            Ok(exchange) => {
+                replication.mark_inbound_deleted(&pending, &exchange.response, unix_time_now()?)?;
+                if let Err(error) = record_runtime_mailbox_provider_path_domain(
+                    state_directory,
+                    offer,
+                    exchange.selected_path.as_ref(),
+                ) {
+                    eprintln!(
+                        "runtime_mailbox_provider_path_domain_status=unavailable store_key={} error={error:#}",
+                        offer.store_key()
+                    );
+                }
                 println!("runtime_mailbox_item_id={}", pending.request().item_id());
                 println!(
                     "runtime_mailbox_replica_source_store_key={}",
@@ -20962,7 +21067,7 @@ async fn attempt_runtime_volunteer_mailbox_poll(
                 continue;
             }
         };
-        let response = match response {
+        let exchange = match response {
             Ok(response) => response,
             Err(error) => {
                 eprintln!(
@@ -20972,6 +21077,17 @@ async fn attempt_runtime_volunteer_mailbox_poll(
                 continue;
             }
         };
+        if let Err(error) = record_runtime_mailbox_provider_path_domain(
+            state_directory,
+            &offer,
+            exchange.selected_path.as_ref(),
+        ) {
+            eprintln!(
+                "runtime_mailbox_provider_path_domain_status=unavailable store_key={} error={error:#}",
+                offer.store_key()
+            );
+        }
+        let response = exchange.response;
         let Some(item) = response.into_page().items.into_iter().next() else {
             continue;
         };
@@ -21006,8 +21122,18 @@ async fn attempt_runtime_volunteer_mailbox_poll(
             offer.store_key()
         );
         match delete_runtime_volunteer_mailbox_replica(endpoint, &offer, pending.request()).await {
-            Ok(response) => {
-                replication.mark_inbound_deleted(&pending, &response, unix_time_now()?)?;
+            Ok(exchange) => {
+                replication.mark_inbound_deleted(&pending, &exchange.response, unix_time_now()?)?;
+                if let Err(error) = record_runtime_mailbox_provider_path_domain(
+                    state_directory,
+                    &offer,
+                    exchange.selected_path.as_ref(),
+                ) {
+                    eprintln!(
+                        "runtime_mailbox_provider_path_domain_status=unavailable store_key={} error={error:#}",
+                        offer.store_key()
+                    );
+                }
                 println!("runtime_mailbox_replica_delete_status=deleted-after-commit");
             }
             Err(error) => eprintln!(
@@ -28796,6 +28922,19 @@ mod tests {
                     peer_device_id
                 )
         );
+
+        let (path_domain_key, path_domain_epoch) =
+            runtime_mailbox_provider_local_path_domain_derivation(&local_identity);
+        let (same_path_domain_key, same_path_domain_epoch) =
+            runtime_mailbox_provider_local_path_domain_derivation(&local_identity);
+        let (other_path_domain_key, other_path_domain_epoch) =
+            runtime_mailbox_provider_local_path_domain_derivation(
+                &DeviceIdentity::from_secret_bytes([72_u8; 32]),
+            );
+        assert_eq!(path_domain_key.as_slice(), same_path_domain_key.as_slice());
+        assert_eq!(path_domain_epoch, same_path_domain_epoch);
+        assert_ne!(path_domain_key.as_slice(), other_path_domain_key.as_slice());
+        assert_ne!(path_domain_epoch, other_path_domain_epoch);
 
         let directory = tempfile::tempdir()?;
         let source_state = directory.path().join("source");

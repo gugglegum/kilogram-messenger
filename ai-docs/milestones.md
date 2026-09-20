@@ -4465,19 +4465,60 @@ External result:
 - stage network-free/debug-only: без release build, ZIP, field network process,
   background service, external publication и нового executable.
 
+### M0.9.85 — local verified provider path-domain provenance: принято локально
+
+Реализовано:
+
+- Iroh selected path получает typed local domain: exact direct remote IP без
+  ephemeral port либо canonical relay URL origin; custom/unknown path evidence
+  не создаёт;
+- только после authenticated peer response и operation-specific verified
+  PUT/LIST/DELETE результата runtime выводит BLAKE3 keyed local pseudonym;
+- отдельный Device-secret-derived subkey и local derivation epoch не позволяют
+  смешивать старые/new tags после смены локального Device secret;
+- registry хранит одну latest verified запись на exact signed offer: kind,
+  epoch, 32-byte tag и bounded first/last timestamps; raw IP/port/relay URL не
+  сохраняются;
+- late response fail closed не может прикрепить provenance к replacement:
+  store key и exact offer ID проверяются в той же immediate redb transaction;
+- same domain refreshes, changed path replaces; exact-offer replacement/expiry
+  удаляет row, legacy registry без таблицы читается как unknown;
+- optional evidence-write failure не отменяет уже verified receipt/application
+  commit и не ломает delivery;
+- `MailboxProviderOffer` поддерживает только local equality/co-location query;
+  different/missing tags не объявляются independent operators/networks;
+- provider ranking, exact replica commitments, gossip/protocol wire и IPC v26
+  не менялись; path kind/tag/epoch/count не экспортируются;
+- unit regression проверяет direct-port stripping, relay-origin normalization,
+  installation scope, redacted Debug, exact binding, refresh/change, key epoch,
+  replacement cleanup и unchanged gossiped offer bytes;
+- fail-closed static contract —
+  `scripts/verify-kilogram-provider-path-domain-boundary.ps1`, архитектурная
+  граница —
+  [`../docs/RFC-0108-local-provider-path-domain-provenance.md`](../docs/RFC-0108-local-provider-path-domain-provenance.md);
+- acceptance: 18 mailbox-client tests, 6 transport tests, 7 mailbox tests, 2
+  focused CLI runtime tests, все 16 mailbox/provider/service-free fail-closed
+  boundaries, formatting и Clippy `-D warnings` прошли с Cargo `-j 2`;
+- stage network-free/debug-only: без release build, ZIP, field network process,
+  background service, external publication и нового executable.
+
 ### Следующий этап
 
-1. Добавить separately evidenced network/operator failure-domain diversity и
-   проверить exact replicas на физических/операторски независимых hosts.
-2. Спроектировать bounded privacy-preserving domain attestations без передачи
-   IP/social graph в provider offer, gossip payload или IPC projection.
-3. Отдельным явным действием можно поставить M1 tag на accepted baseline;
+1. M0.9.86 может использовать только positive co-location evidence: при new
+   selection сначала избегать второго known offer с тем же local path-domain
+   tag/epoch, затем обязательно заполнять остаток unknown candidates.
+2. Не считать разные tags доказательством разных операторов; separately
+   authenticated operator claim либо independent-host field evidence остаются
+   отдельной задачей.
+3. Проверить exact replicas на физических/операторски независимых hosts, в том
+   числе direct и relay observations, отдельным controlled field run.
+4. Отдельным явным действием можно поставить M1 tag на accepted baseline;
    последующие M0.9.82 изменения намеренно не переписывают M1 evidence.
-4. Optional autostart/background mode оставить отдельной явной настройкой, не
+5. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
-5. Добавить macOS/Linux/mobile providers той же platform boundary.
-6. Спроектировать privacy-preserving gossip и first-contact freshness;
+6. Добавить macOS/Linux/mobile providers той же platform boundary.
+7. Спроектировать privacy-preserving gossip и first-contact freshness;
    M0.9.29 скрывает payload/явные IDs, но не access correlation.
-7. Membership removal и group governance проектировать вместе с ordered
+8. Membership removal и group governance проектировать вместе с ordered
    security events и MLS epoch; compact Merkle/range summary и независимый
    криптографический аудит остаются до публичного выпуска.

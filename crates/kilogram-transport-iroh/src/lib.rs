@@ -1,8 +1,8 @@
-use std::time::Duration;
+use std::{fmt, net::IpAddr, time::Duration};
 
 use anyhow::{Context, Result, bail, ensure};
 use iroh::{
-    Endpoint, EndpointAddr, RelayMode, RelayUrl,
+    Endpoint, EndpointAddr, RelayMode, RelayUrl, TransportAddr,
     endpoint::{Builder, Connection, RecvStream, SendStream, presets},
 };
 use kilogram_mailbox::{
@@ -18,6 +18,8 @@ pub const MAILBOX_ALPN: &[u8] = b"kilogram/m0/blind-mailbox/1";
 pub const MAX_WIRE_MESSAGE_BYTES: usize = 8 * 1024 * 1024;
 pub const WIRE_IO_TIMEOUT: Duration = Duration::from_secs(15);
 const MAX_MAILBOX_ENDPOINT_DESCRIPTOR_BYTES: usize = 16 * 1024;
+const SELECTED_PATH_LOCAL_DOMAIN_TAG_DOMAIN: &[u8] =
+    b"kilogram:selected-path-local-domain-tag:v1\0";
 
 /// Controls which transport may carry Kilogram application protocol frames.
 ///
@@ -110,12 +112,103 @@ impl SelectedPathKind {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum SelectedPathLocalDomainKind {
+    DirectRemoteIp,
+    RelayOrigin,
+}
+
+impl SelectedPathLocalDomainKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::DirectRemoteIp => "direct-remote-ip",
+            Self::RelayOrigin => "relay-origin",
+        }
+    }
+}
+
+/// An installation-local pseudonym for the selected network path domain.
+///
+/// The tag is derived with a caller-supplied local subkey. Its consuming byte
+/// handoff exists only for local persistence adapters; `Debug` is redacted and
+/// callers must not log or place the bytes on a wire.
+#[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct SelectedPathLocalDomainTag([u8; 32]);
+
+impl SelectedPathLocalDomainTag {
+    pub fn into_bytes(self) -> [u8; 32] {
+        self.0
+    }
+}
+
+impl fmt::Debug for SelectedPathLocalDomainTag {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("SelectedPathLocalDomainTag(<redacted>)")
+    }
+}
+
+#[derive(Clone, Eq, PartialEq)]
+enum SelectedPathLocalDomain {
+    DirectRemoteIp(IpAddr),
+    RelayOrigin(String),
+}
+
+#[derive(Clone, Eq, PartialEq)]
 pub struct SelectedPathDiagnostics {
     pub kind: SelectedPathKind,
     pub remote_address: String,
     pub round_trip_time: Duration,
     pub open_paths: usize,
+    local_domain: Option<SelectedPathLocalDomain>,
+}
+
+impl fmt::Debug for SelectedPathDiagnostics {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("SelectedPathDiagnostics")
+            .field("kind", &self.kind)
+            .field("remote_address", &self.remote_address)
+            .field("round_trip_time", &self.round_trip_time)
+            .field("open_paths", &self.open_paths)
+            .field("has_local_domain", &self.local_domain.is_some())
+            .finish()
+    }
+}
+
+impl SelectedPathDiagnostics {
+    /// Derives a non-transferable local tag from the exact selected remote IP
+    /// (with its port removed) or relay URL origin. Different tags do not prove
+    /// different networks or operators; equality only corroborates one shared
+    /// locally observed path domain.
+    pub fn local_domain_tag(
+        &self,
+        local_subkey: &[u8; 32],
+    ) -> Option<(SelectedPathLocalDomainKind, SelectedPathLocalDomainTag)> {
+        let mut hasher = blake3::Hasher::new_keyed(local_subkey);
+        hasher.update(SELECTED_PATH_LOCAL_DOMAIN_TAG_DOMAIN);
+        let kind = match &self.local_domain {
+            Some(SelectedPathLocalDomain::DirectRemoteIp(IpAddr::V4(address))) => {
+                hasher.update(b"direct-ip-v4\0");
+                hasher.update(&address.octets());
+                SelectedPathLocalDomainKind::DirectRemoteIp
+            }
+            Some(SelectedPathLocalDomain::DirectRemoteIp(IpAddr::V6(address))) => {
+                hasher.update(b"direct-ip-v6\0");
+                hasher.update(&address.octets());
+                SelectedPathLocalDomainKind::DirectRemoteIp
+            }
+            Some(SelectedPathLocalDomain::RelayOrigin(origin)) => {
+                hasher.update(b"relay-origin\0");
+                hasher.update(origin.as_bytes());
+                SelectedPathLocalDomainKind::RelayOrigin
+            }
+            None => return None,
+        };
+        Some((
+            kind,
+            SelectedPathLocalDomainTag(*hasher.finalize().as_bytes()),
+        ))
+    }
 }
 
 /// Waits until the selected path satisfies the policy or returns a bounded diagnostic error.
@@ -175,11 +268,19 @@ fn selected_path_snapshot(connection: &Connection) -> Option<SelectedPathDiagnos
     } else {
         SelectedPathKind::Custom
     };
+    let local_domain = match selected.remote_addr() {
+        TransportAddr::Ip(address) => Some(SelectedPathLocalDomain::DirectRemoteIp(address.ip())),
+        TransportAddr::Relay(url) => Some(SelectedPathLocalDomain::RelayOrigin(
+            url.origin().ascii_serialization(),
+        )),
+        _ => None,
+    };
     Some(SelectedPathDiagnostics {
         kind,
         remote_address: selected.remote_addr().to_string(),
         round_trip_time: selected.rtt(),
         open_paths,
+        local_domain,
     })
 }
 
@@ -308,7 +409,7 @@ fn wire_timeout_message(operation: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use iroh::SecretKey;
+    use iroh::{SecretKey, TransportAddr};
     use kilogram_mailbox::MailboxStoreIdentity;
 
     #[test]
@@ -365,6 +466,81 @@ mod tests {
         )?;
         offer.verify_at(1_001)?;
         assert_eq!(mailbox_provider_endpoint_from_offer(&offer)?, endpoint);
+        Ok(())
+    }
+
+    fn path_diagnostics(address: TransportAddr) -> SelectedPathDiagnostics {
+        let (kind, local_domain) = match &address {
+            TransportAddr::Ip(address) => (
+                SelectedPathKind::Direct,
+                Some(SelectedPathLocalDomain::DirectRemoteIp(address.ip())),
+            ),
+            TransportAddr::Relay(url) => (
+                SelectedPathKind::Relay,
+                Some(SelectedPathLocalDomain::RelayOrigin(
+                    url.origin().ascii_serialization(),
+                )),
+            ),
+            _ => (SelectedPathKind::Custom, None),
+        };
+        SelectedPathDiagnostics {
+            kind,
+            remote_address: address.to_string(),
+            round_trip_time: Duration::ZERO,
+            open_paths: 1,
+            local_domain,
+        }
+    }
+
+    #[test]
+    fn local_path_domain_tags_strip_direct_ports_and_relay_paths() -> Result<()> {
+        let key = [7_u8; 32];
+        let direct_a = path_diagnostics(TransportAddr::Ip("203.0.113.9:41000".parse()?));
+        let direct_b = path_diagnostics(TransportAddr::Ip("203.0.113.9:51000".parse()?));
+        let direct_other = path_diagnostics(TransportAddr::Ip("203.0.113.10:41000".parse()?));
+        assert_eq!(
+            direct_a.local_domain_tag(&key),
+            direct_b.local_domain_tag(&key)
+        );
+        assert_ne!(
+            direct_a.local_domain_tag(&key),
+            direct_other.local_domain_tag(&key)
+        );
+
+        let relay_a = path_diagnostics(TransportAddr::Relay(
+            "https://relay.example./first".parse()?,
+        ));
+        let relay_b = path_diagnostics(TransportAddr::Relay(
+            "https://relay.example./second".parse()?,
+        ));
+        let relay_other =
+            path_diagnostics(TransportAddr::Relay("https://other.example./".parse()?));
+        assert_eq!(
+            relay_a.local_domain_tag(&key),
+            relay_b.local_domain_tag(&key)
+        );
+        assert_ne!(
+            relay_a.local_domain_tag(&key),
+            relay_other.local_domain_tag(&key)
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn local_path_domain_tags_are_installation_scoped_and_redacted() -> Result<()> {
+        let path = path_diagnostics(TransportAddr::Ip("198.51.100.8:443".parse()?));
+        let first = path.local_domain_tag(&[1_u8; 32]).context("first tag")?;
+        let second = path.local_domain_tag(&[2_u8; 32]).context("second tag")?;
+        assert_ne!(first, second);
+        let rendered = format!("{:?}", first.1);
+        let raw = first
+            .1
+            .into_bytes()
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect::<String>();
+        assert!(rendered.contains("<redacted>"));
+        assert!(!rendered.contains(&raw));
         Ok(())
     }
 }

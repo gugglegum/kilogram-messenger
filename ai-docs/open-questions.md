@@ -344,8 +344,13 @@ sessions, distribution, removal и key epochs и не решены этим пр
   из Device-authenticated sessions без передачи tags/social IDs. M0.9.84
   использует binary threshold 1, exact-offer replacement/expiry decay и
   обязательный unobserved bootstrap fallback; count выше одного rank не даёт.
-  Открыты поведение при local Device rotation, отдельно доказуемая
-  network/operator diversity и защита от colluding observers.
+  M0.9.85 отдельно сохраняет keyed exact direct-IP/relay-origin observation
+  только после verified mailbox exchange; derivation epoch исключает сравнение
+  через смену local Device secret, raw path не сохраняется/не передаётся.
+  Открыты безопасное использование positive co-location signal без unknown
+  deadlock, отдельно доказуемая network/operator diversity и защита от
+  colluding observers. Разные local tags сами по себе operator independence не
+  доказывают.
 - Push-уведомления на Android/iOS без утечки содержания и социального графа.
 - Независимый second-builder, подписанный release provenance, обновления клиента
   и дальнейшая защита supply chain поверх M0.9.50 same-host gate.

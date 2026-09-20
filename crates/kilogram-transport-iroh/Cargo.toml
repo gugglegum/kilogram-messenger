@@ -8,6 +8,7 @@ publish = false
 
 [dependencies]
 anyhow.workspace = true
+blake3.workspace = true
 iroh.workspace = true
 kilogram-mailbox = { path = "../kilogram-mailbox" }
 kilogram-protocol = { path = "../kilogram-protocol" }

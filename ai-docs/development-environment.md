@@ -2731,3 +2731,26 @@ retirement остальных compatibility shadows ещё не реализов
   Clippy with warnings denied passed together.
 - No release build, ZIP, network field process, background service, external
   publication or executable target was created.
+
+## M0.9.85 local provider path-domain provenance verification (2026-09-20)
+
+- `kilogram-transport-iroh` now canonicalizes selected direct paths to the
+  exact remote IP without port and relay paths to URL origin, then exposes a
+  caller-keyed redacted local-tag derivation alongside existing diagnostics.
+- `kilogram-mailbox-client` persists one exact-offer-bound latest tag plus
+  derivation epoch and kind in a separate redb table; replacement/expiry clears
+  it and legacy missing-table reads remain valid.
+- Runtime captures the selected path after authenticated peer response and
+  persists it only after typed PUT/LIST/DELETE verification. Evidence failure
+  cannot discard a verified receipt/application commit.
+- Raw IP, relay URL, tag and epoch are absent from provider offer/gossip,
+  protocol and IPC v26. Selection is intentionally unchanged.
+- RFC-0108 and
+  `scripts/verify-kilogram-provider-path-domain-boundary.ps1` define the
+  fail-closed privacy/ordering boundary.
+- Debug-only acceptance passed 18/18 mailbox-client tests, 6/6 transport tests,
+  7/7 mailbox tests, 2/2 focused CLI runtime tests, all 16
+  mailbox/provider/service-free fail-closed boundaries, formatting and Clippy
+  with warnings denied under Cargo `-j 2`.
+- No release build, ZIP, new EXE, background process, network field run or
+  external publication was created.

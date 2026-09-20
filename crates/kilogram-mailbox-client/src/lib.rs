@@ -25,8 +25,10 @@ pub use provider::{
     MAX_PROVIDER_GOSSIP_HOPS, MAX_PROVIDER_GOSSIP_OFFER_BYTES, MAX_PROVIDER_GOSSIP_OFFERS,
     MAX_PROVIDER_SELECTION, MIN_AUTHENTICATED_PROVIDER_OBSERVATIONS_FOR_PREFERENCE,
     MailboxProviderGossipEntry, MailboxProviderGossipFrame, MailboxProviderImportOutcome,
-    MailboxProviderLocalObserverTag, MailboxProviderObservationOutcome, MailboxProviderOffer,
-    MailboxProviderOfferId, MailboxProviderRegistry, MailboxProviderRegistryConfig,
+    MailboxProviderLocalObserverTag, MailboxProviderLocalPathDomainKind,
+    MailboxProviderLocalPathDomainTag, MailboxProviderObservationOutcome, MailboxProviderOffer,
+    MailboxProviderOfferId, MailboxProviderPathDomainOutcome, MailboxProviderRegistry,
+    MailboxProviderRegistryConfig,
 };
 pub use replication::{
     DEFAULT_REPLICATION_RETRY_SECONDS, DEFAULT_REPLICATION_TARGETS,
