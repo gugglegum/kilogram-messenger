@@ -4364,18 +4364,51 @@ External result:
 - новый network run, release build, ZIP, background service и Git tag не
   создавались.
 
+### M0.9.82 — Sybil-costed volunteer provider admission: принято локально
+
+Реализовано:
+
+- `SignedMailboxStorageOffer` получил domain-separated admission-work digest,
+  bounded generator и дешёвую verification; default 18 bits, разрешённый
+  generation range 1..20 bits, максимум `2^24` attempts;
+- proof связан с store key, полным endpoint, policy/capacity, issue/expiry и
+  nonce, после чего весь content подписывается существующим Ed25519 store key;
+- embedded `BlindMailboxStore` создаёт qualified offers по умолчанию;
+- registry сохраняет low-work offers для compatibility/exact committed lookup,
+  но new exact provisioning, automatic legacy rotation, diagnostic selection
+  и дальнейший gossip используют только admission-qualified offers;
+- transport-identity deduplication применяется после cost filter; extra work
+  не повышает rank и не создаёт mining auction;
+- runtime логирует фактический work score и policy threshold; IPC остаётся v26,
+  новый EXE не добавлен;
+- unit/runtime regressions покрывают generation/verification/content binding,
+  low-work retention и exclusion из selection/gossip;
+- fail-closed static contract добавлен в
+  `scripts/verify-kilogram-provider-admission-work-boundary.ps1`, архитектурная
+  граница — в
+  [`../docs/RFC-0105-sybil-costed-provider-admission.md`](../docs/RFC-0105-sybil-costed-provider-admission.md);
+- это ограниченная цена identity churn, а не доказательство разных операторов,
+  физических failure domains или полная Sybil resistance;
+- stage network-free/debug-only: без release build, ZIP, field network process,
+  background service и нового executable;
+- все 11 mailbox/provider/service-free static boundaries прошли совместно;
+  30 library tests, 3 focused runtime tests и Clippy `-D warnings` прошли при
+  `-j 2` в debug profile.
+
 ### Следующий этап
 
-1. Отдельным явным действием можно опубликовать накопленные коммиты и поставить
-   M1 tag; M0.9.81 намеренно не делает этого автоматически.
-2. Следующий инженерный этап: спроектировать Sybil-resistant provider diversity
-   и проверить exact replicas на физических/операторски независимых volunteer
-   hosts.
-3. Optional autostart/background mode оставить отдельной явной настройкой, не
+1. Добавить local authenticated observation provenance для provider offers без
+   передачи Account/Device/social-graph identifiers в gossip payload или IPC.
+2. Поверх cost + observation floor спроектировать policy failure-domain
+   diversity и проверить exact replicas на физических/операторски независимых
+   volunteer hosts.
+3. Отдельным явным действием можно поставить M1 tag на accepted baseline;
+   последующие M0.9.82 изменения намеренно не переписывают M1 evidence.
+4. Optional autostart/background mode оставить отдельной явной настройкой, не
    обязательным Windows Task Scheduler step.
-4. Добавить macOS/Linux/mobile providers той же platform boundary.
-5. Спроектировать privacy-preserving gossip и first-contact freshness;
+5. Добавить macOS/Linux/mobile providers той же platform boundary.
+6. Спроектировать privacy-preserving gossip и first-contact freshness;
    M0.9.29 скрывает payload/явные IDs, но не access correlation.
-6. Membership removal и group governance проектировать вместе с ordered
+7. Membership removal и group governance проектировать вместе с ordered
    security events и MLS epoch; compact Merkle/range summary и независимый
    криптографический аудит остаются до публичного выпуска.

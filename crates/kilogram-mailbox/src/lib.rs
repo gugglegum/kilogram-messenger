@@ -33,6 +33,8 @@ const READ_AUTHORIZATION_DOMAIN: &[u8] = b"kilogram:blind-mailbox-read:v1\0";
 const STORED_RECEIPT_DOMAIN: &[u8] = b"kilogram:blind-mailbox-stored-receipt:v1\0";
 const DELETE_RECEIPT_DOMAIN: &[u8] = b"kilogram:blind-mailbox-delete-receipt:v1\0";
 const STORAGE_OFFER_DOMAIN: &[u8] = b"kilogram:blind-mailbox-storage-offer:v1\0";
+const STORAGE_OFFER_ADMISSION_WORK_DOMAIN: &[u8] =
+    b"kilogram:blind-mailbox-storage-offer-admission-work:v1\0";
 const RECEIPT_ID_DOMAIN: &[u8] = b"kilogram:blind-mailbox-receipt-id:v1\0";
 const DELETE_RECEIPT_ID_DOMAIN: &[u8] = b"kilogram:blind-mailbox-delete-id:v1\0";
 const ENVELOPE_HPKE_INFO: &[u8] = b"kilogram:blind-mailbox-envelope:v1\0";
@@ -45,6 +47,12 @@ pub const MAX_MAILBOX_STORAGE_ENDPOINT_BYTES: usize = 16 * 1024;
 pub const MAX_MAILBOX_STORAGE_OFFER_BYTES: usize = 24 * 1024;
 pub const MIN_MAILBOX_STORAGE_OFFER_VALIDITY_SECONDS: u64 = 30;
 pub const MAX_MAILBOX_STORAGE_OFFER_VALIDITY_SECONDS: u64 = 60 * 60;
+/// Default Hashcash-style cost attached to newly advertised volunteer stores.
+/// This raises the cost of minting endpoint identities; it is not proof that
+/// two identities have different human operators.
+pub const DEFAULT_MAILBOX_STORAGE_OFFER_ADMISSION_WORK_BITS: u8 = 18;
+pub const MAX_MAILBOX_STORAGE_OFFER_ADMISSION_WORK_BITS: u8 = 20;
+const MAX_MAILBOX_STORAGE_OFFER_ADMISSION_WORK_ATTEMPTS: u32 = 1 << 24;
 
 pub const MIN_MAILBOX_TTL_SECONDS: u64 = 60;
 pub const MAX_MAILBOX_TTL_SECONDS: u64 = 7 * 24 * 60 * 60;
@@ -380,6 +388,64 @@ impl MailboxStoreIdentity {
         issued_at_unix_seconds: u64,
         validity_seconds: u64,
     ) -> Result<SignedMailboxStorageOffer, MailboxError> {
+        let content = self.storage_offer_content(
+            provider_endpoint,
+            capacity_hint_bytes,
+            max_record_bytes,
+            issued_at_unix_seconds,
+            validity_seconds,
+        )?;
+        self.sign_storage_offer(content)
+    }
+
+    /// Create a store offer whose complete signed content satisfies a bounded
+    /// Hashcash-style admission puzzle. Verification is cheap and the work is
+    /// bound to the store key, endpoint, policy, capacity, lifetime and nonce.
+    pub fn storage_offer_with_admission_work(
+        &self,
+        provider_endpoint: Vec<u8>,
+        capacity_hint_bytes: u64,
+        max_record_bytes: u64,
+        issued_at_unix_seconds: u64,
+        validity_seconds: u64,
+        minimum_work_bits: u8,
+    ) -> Result<SignedMailboxStorageOffer, MailboxError> {
+        if !(1..=MAX_MAILBOX_STORAGE_OFFER_ADMISSION_WORK_BITS).contains(&minimum_work_bits) {
+            return Err(MailboxError::Invalid(
+                "mailbox storage offer admission work is outside protocol bounds",
+            ));
+        }
+        let mut content = self.storage_offer_content(
+            provider_endpoint,
+            capacity_hint_bytes,
+            max_record_bytes,
+            issued_at_unix_seconds,
+            validity_seconds,
+        )?;
+        let base_hasher = storage_offer_admission_work_hasher(&content);
+        for _ in 0..MAX_MAILBOX_STORAGE_OFFER_ADMISSION_WORK_ATTEMPTS {
+            if storage_offer_admission_work_bits(&base_hasher, &content.nonce)
+                >= u16::from(minimum_work_bits)
+            {
+                let offer = self.sign_storage_offer(content)?;
+                offer.verify_admission_work(minimum_work_bits)?;
+                return Ok(offer);
+            }
+            increment_admission_nonce(&mut content.nonce);
+        }
+        Err(MailboxError::Invalid(
+            "mailbox storage offer admission work search exhausted its bound",
+        ))
+    }
+
+    fn storage_offer_content(
+        &self,
+        provider_endpoint: Vec<u8>,
+        capacity_hint_bytes: u64,
+        max_record_bytes: u64,
+        issued_at_unix_seconds: u64,
+        validity_seconds: u64,
+    ) -> Result<MailboxStorageOfferContent, MailboxError> {
         let expires_at_unix_seconds =
             issued_at_unix_seconds
                 .checked_add(validity_seconds)
@@ -397,12 +463,20 @@ impl MailboxStoreIdentity {
             expires_at_unix_seconds,
             nonce: random_bytes()?,
         };
+        validate_storage_offer_content(&content, issued_at_unix_seconds)?;
+        Ok(content)
+    }
+
+    fn sign_storage_offer(
+        &self,
+        content: MailboxStorageOfferContent,
+    ) -> Result<SignedMailboxStorageOffer, MailboxError> {
         let signature = self.0.sign(&signing_bytes(STORAGE_OFFER_DOMAIN, &content)?);
         let offer = SignedMailboxStorageOffer {
             content,
             signature: signature.to_bytes().to_vec(),
         };
-        offer.verify_at(issued_at_unix_seconds)?;
+        offer.verify_at(offer.issued_at_unix_seconds())?;
         Ok(offer)
     }
 
@@ -486,29 +560,7 @@ pub struct SignedMailboxStorageOffer {
 
 impl SignedMailboxStorageOffer {
     pub fn verify_at(&self, now_unix_seconds: u64) -> Result<(), MailboxError> {
-        let validity = self
-            .content
-            .expires_at_unix_seconds
-            .checked_sub(self.content.issued_at_unix_seconds)
-            .ok_or(MailboxError::Invalid(
-                "mailbox storage offer time is invalid",
-            ))?;
-        if self.content.version != VERSION
-            || self.content.provider_endpoint.is_empty()
-            || self.content.provider_endpoint.len() > MAX_MAILBOX_STORAGE_ENDPOINT_BYTES
-            || !(MIN_MAILBOX_STORAGE_OFFER_VALIDITY_SECONDS
-                ..=MAX_MAILBOX_STORAGE_OFFER_VALIDITY_SECONDS)
-                .contains(&validity)
-            || self.content.capacity_hint_bytes == 0
-            || self.content.max_record_bytes == 0
-            || self.content.max_record_bytes > self.content.capacity_hint_bytes
-            || now_unix_seconds < self.content.issued_at_unix_seconds
-            || now_unix_seconds >= self.content.expires_at_unix_seconds
-        {
-            return Err(MailboxError::Invalid(
-                "mailbox storage offer fields or lifetime are invalid",
-            ));
-        }
+        validate_storage_offer_content(&self.content, now_unix_seconds)?;
         verify_signature(
             self.content.store_key.verifying_key()?,
             STORAGE_OFFER_DOMAIN,
@@ -565,6 +617,97 @@ impl SignedMailboxStorageOffer {
 
     pub fn expires_at_unix_seconds(&self) -> u64 {
         self.content.expires_at_unix_seconds
+    }
+
+    pub fn admission_work_bits(&self) -> u16 {
+        let base_hasher = storage_offer_admission_work_hasher(&self.content);
+        storage_offer_admission_work_bits(&base_hasher, &self.content.nonce)
+    }
+
+    pub fn verify_admission_work(&self, minimum_work_bits: u8) -> Result<(), MailboxError> {
+        if !(1..=MAX_MAILBOX_STORAGE_OFFER_ADMISSION_WORK_BITS).contains(&minimum_work_bits) {
+            return Err(MailboxError::Invalid(
+                "mailbox storage offer admission work is outside protocol bounds",
+            ));
+        }
+        if self.admission_work_bits() < u16::from(minimum_work_bits) {
+            return Err(MailboxError::Invalid(
+                "mailbox storage offer admission work is insufficient",
+            ));
+        }
+        Ok(())
+    }
+}
+
+fn validate_storage_offer_content(
+    content: &MailboxStorageOfferContent,
+    now_unix_seconds: u64,
+) -> Result<(), MailboxError> {
+    let validity = content
+        .expires_at_unix_seconds
+        .checked_sub(content.issued_at_unix_seconds)
+        .ok_or(MailboxError::Invalid(
+            "mailbox storage offer time is invalid",
+        ))?;
+    if content.version != VERSION
+        || content.provider_endpoint.is_empty()
+        || content.provider_endpoint.len() > MAX_MAILBOX_STORAGE_ENDPOINT_BYTES
+        || !(MIN_MAILBOX_STORAGE_OFFER_VALIDITY_SECONDS
+            ..=MAX_MAILBOX_STORAGE_OFFER_VALIDITY_SECONDS)
+            .contains(&validity)
+        || content.capacity_hint_bytes == 0
+        || content.max_record_bytes == 0
+        || content.max_record_bytes > content.capacity_hint_bytes
+        || now_unix_seconds < content.issued_at_unix_seconds
+        || now_unix_seconds >= content.expires_at_unix_seconds
+    {
+        return Err(MailboxError::Invalid(
+            "mailbox storage offer fields or lifetime are invalid",
+        ));
+    }
+    Ok(())
+}
+
+fn storage_offer_admission_work_hasher(content: &MailboxStorageOfferContent) -> blake3::Hasher {
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(STORAGE_OFFER_ADMISSION_WORK_DOMAIN);
+    hasher.update(&[content.version]);
+    hasher.update(&(content.provider_endpoint.len() as u64).to_be_bytes());
+    hasher.update(&content.provider_endpoint);
+    hasher.update(content.store_key.as_bytes());
+    hasher.update(&[match content.policy_class {
+        MailboxStoragePolicyClass::BoundedVolunteer => 0,
+    }]);
+    hasher.update(&content.capacity_hint_bytes.to_be_bytes());
+    hasher.update(&content.max_record_bytes.to_be_bytes());
+    hasher.update(&content.issued_at_unix_seconds.to_be_bytes());
+    hasher.update(&content.expires_at_unix_seconds.to_be_bytes());
+    hasher
+}
+
+fn storage_offer_admission_work_bits(base_hasher: &blake3::Hasher, nonce: &[u8; KEY_BYTES]) -> u16 {
+    let mut hasher = base_hasher.clone();
+    hasher.update(nonce);
+    let digest = hasher.finalize();
+    let mut bits = 0_u16;
+    for byte in digest.as_bytes() {
+        if *byte == 0 {
+            bits += 8;
+        } else {
+            bits += byte.leading_zeros() as u16;
+            break;
+        }
+    }
+    bits
+}
+
+fn increment_admission_nonce(nonce: &mut [u8; KEY_BYTES]) {
+    for byte in nonce.iter_mut().rev() {
+        let (next, overflow) = byte.overflowing_add(1);
+        *byte = next;
+        if !overflow {
+            break;
+        }
     }
 }
 
@@ -1235,6 +1378,33 @@ mod tests {
                 .storage_offer(Vec::new(), 200, 100, 1_000, 300)
                 .is_err()
         );
+        Ok(())
+    }
+
+    #[test]
+    fn storage_offer_admission_work_is_bounded_bound_and_cheap_to_verify() -> Result<()> {
+        let identity = MailboxStoreIdentity::from_secret_bytes([19_u8; 32]);
+        let offer = identity.storage_offer_with_admission_work(
+            vec![29_u8; 128],
+            200 * 1024 * 1024,
+            1024,
+            1_000,
+            300,
+            8,
+        )?;
+        offer.verify_at(1_001)?;
+        offer.verify_admission_work(8)?;
+        assert!(offer.admission_work_bits() >= 8);
+        assert!(offer.verify_admission_work(0).is_err());
+        assert!(
+            offer
+                .verify_admission_work(MAX_MAILBOX_STORAGE_OFFER_ADMISSION_WORK_BITS + 1)
+                .is_err()
+        );
+
+        let mut changed = offer.clone();
+        changed.content.provider_endpoint[0] ^= 1;
+        assert!(changed.verify_at(1_001).is_err());
         Ok(())
     }
 }

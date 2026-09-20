@@ -7,9 +7,10 @@ use redb::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    MAX_MAILBOX_ENVELOPE_BYTES, MAX_MAILBOX_TTL_SECONDS, MIN_MAILBOX_TTL_SECONDS, MailboxAddress,
-    MailboxDeleteReceipt, MailboxId, MailboxItemId, MailboxReadAuthorization, MailboxReadOperation,
-    MailboxReceiptId, MailboxStoreIdentity, MailboxStoredReceipt, MailboxWriteAuthorization,
+    DEFAULT_MAILBOX_STORAGE_OFFER_ADMISSION_WORK_BITS, MAX_MAILBOX_ENVELOPE_BYTES,
+    MAX_MAILBOX_TTL_SECONDS, MIN_MAILBOX_TTL_SECONDS, MailboxAddress, MailboxDeleteReceipt,
+    MailboxId, MailboxItemId, MailboxReadAuthorization, MailboxReadOperation, MailboxReceiptId,
+    MailboxStoreIdentity, MailboxStoredReceipt, MailboxWriteAuthorization,
     SignedMailboxStorageOffer,
 };
 
@@ -338,14 +339,15 @@ impl BlindMailboxStore {
         validity_seconds: u64,
     ) -> Result<SignedMailboxStorageOffer> {
         self.identity
-            .storage_offer(
+            .storage_offer_with_admission_work(
                 provider_endpoint,
                 self.config.max_total_bytes,
                 self.config.max_envelope_bytes as u64,
                 issued_at_unix_seconds,
                 validity_seconds,
+                DEFAULT_MAILBOX_STORAGE_OFFER_ADMISSION_WORK_BITS,
             )
-            .context("sign mailbox storage offer")
+            .context("create admission-work-qualified mailbox storage offer")
     }
 
     pub fn put(

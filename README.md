@@ -221,12 +221,30 @@ are specified in
 [`docs/RFC-0103-canonical-cargo-registry-path-remapping.md`](docs/RFC-0103-canonical-cargo-registry-path-remapping.md).
 The fail-closed M1 candidate record and continuity proof are specified in
 [`docs/RFC-0104-m1-candidate-evidence-composition.md`](docs/RFC-0104-m1-candidate-evidence-composition.md).
+The bounded identity-creation cost for new volunteer provider offers is
+specified in
+[`docs/RFC-0105-sybil-costed-provider-admission.md`](docs/RFC-0105-sybil-costed-provider-admission.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.81 M1 candidate evidence composition — accepted
+## Current milestone: M0.9.82 Sybil-costed provider admission — accepted locally
+
+New volunteer storage offers carry a bounded 18-bit, domain-separated
+Hashcash-style admission proof bound to the signed store key, endpoint,
+capacity and lifetime. New replica-set selection and authenticated gossip
+exclude offers below that floor while existing exact commitments can still be
+resolved for compatibility and cleanup.
+
+This makes cheap identity churn more expensive; it does not prove that
+providers have different operators or make Kilogram Sybil-proof. M0.9.82 adds
+no executable or IPC schema change and runs no release build, ZIP creation or
+network field test. The admission, mailbox/provider compatibility and service-
+free boundaries pass together; 30 library tests, three focused runtime tests
+and Clippy with warnings denied also pass in the debug profile.
+
+## Previous milestone: M0.9.81 M1 candidate evidence composition — accepted
 
 `M1-CANDIDATE.json` composes the accepted service-free M0.9.76 field result
 with the accepted M0.9.80 independent reproduction. Its verifier recomputes

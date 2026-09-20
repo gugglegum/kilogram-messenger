@@ -334,8 +334,12 @@ sessions, distribution, removal и key epochs и не решены этим пр
   v2-only harness и fail-closed evidence contract без compatibility tuple;
   retry run `20260920-001614` принят с exact receipts `2/2`, no HTTP PUT,
   commit-before-delete и restart без redelivery. Открытыми остаются
-  окончательный срок удаления legacy v1, Sybil-resistant
-  diversity, cryptographic hop proof и access-correlation privacy.
+  окончательный срок удаления legacy v1, cryptographic hop proof и
+  access-correlation privacy. M0.9.82 добавляет bounded 18-bit admission-work
+  cost для новых provider identities и исключает low-work offers из new
+  selection/gossip, но это не доказывает operator independence и не защищает
+  от resource-rich Sybil. Открыты authenticated observation provenance,
+  adaptive/fair cost и physical/operator failure-domain diversity.
 - Push-уведомления на Android/iOS без утечки содержания и социального графа.
 - Независимый second-builder, подписанный release provenance, обновления клиента
   и дальнейшая защита supply chain поверх M0.9.50 same-host gate.

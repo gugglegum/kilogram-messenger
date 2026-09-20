@@ -2682,3 +2682,18 @@ retirement остальных compatibility shadows ещё не реализов
   `m1_candidate_status=verified`.
 - No network process, Cargo build, release target, ZIP, service or Git tag was
   created during implementation or acceptance.
+
+## M0.9.82 local admission-work verification (2026-09-20)
+
+- New embedded volunteer offers use 18-bit domain-separated admission work;
+  generation permits 1..20 bits and is bounded by `2^24` attempts.
+- New exact capability selection, automatic legacy upgrade, diagnostic
+  selection and authenticated gossip exclude low-work offers. Existing exact
+  store-key lookup remains compatible with retained low-work offers.
+- Authenticated IPC remains v26; no executable target was added.
+- Debug validation used at most two Cargo jobs: 30 mailbox/client/store tests,
+  three focused runtime tests and Clippy with `-D warnings` passed. All 11
+  mailbox/provider/service-free static boundaries passed together. Initial
+  measured generation remained below one second for a two-offer qualified
+  fixture.
+- No release build, ZIP, network field process or background service was used.

@@ -405,9 +405,14 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
    service-free field evidence с успешной M0.9.80 attestation; production
    verifier подтвердил exact committed candidate `485857ec...d2d84`, ancestor
    relations и отсутствие drift в обеих protected Git surfaces.
-2. Следующий инженерный этап — спроектировать Sybil-resistant provider diversity и проверить exact replicas
-   на физических/операторски независимых volunteer hosts.
-3. Optional autostart/background mode оставить отдельной явной настройкой;
+2. M0.9.82 принят локально и добавляет первый честный слой Sybil-cost: новые provider offers
+   платят bounded 18-bit BLAKE3/Hashcash-style work, а new selection/gossip
+   fail closed исключают дешёвые identities. Это cost floor, не доказательство
+   независимых операторов и не полная Sybil resistance.
+3. Следующий инженерный этап — authenticated local observation provenance без
+   передачи social graph, затем exact replicas на физических/операторски
+   независимых volunteer hosts.
+4. Optional autostart/background mode оставить отдельной явной настройкой;
    Windows Task Scheduler не является обязательной частью мессенджера.
 4. Уже реализованный M0.9.49 выделяет единый
    `kilogram-publication-conflict`: online/offline используют один signed codec,
@@ -789,6 +794,11 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M0.9.81 fail-closed composition accepted M0.9.76 field evidence и M0.9.80
   independent attestation: exact Git surfaces, ancestor/dirty-tree guards,
   обязательный residual-risk список и no-network/no-build/no-archive boundary.
+- [`../docs/RFC-0105-sybil-costed-provider-admission.md`](../docs/RFC-0105-sybil-costed-provider-admission.md) —
+  M0.9.82 bounded 18-bit provider-offer admission work: proof привязан к
+  store/endpoint/capacity/lifetime, low-work offers исключаются из новых
+  replica sets и gossip, legacy exact resolution сохраняется; cost floor не
+  выдаётся за operator independence или полную Sybil resistance.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
   двухсетевой HTTPS publish/fetch/restart/retention test procedure.
 - [`../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](../docs/M0.4-RESUMABLE-SYNC-TEST-RU.md) —

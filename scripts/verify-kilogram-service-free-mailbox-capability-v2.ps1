@@ -84,7 +84,7 @@ foreach ($required in @(
     'RuntimeMailboxProvisioningMode::ExactVolunteer',
     'SealedLocalMailboxBinding::create_exact_volunteer(',
     'SignedMailboxCapabilityUpdate::activate_exact_volunteer(',
-    'exact volunteer mailbox capability requires at least two active transport-distinct providers',
+    'exact volunteer mailbox capability requires at least two admission-qualified transport-distinct providers',
     'runtime_mailbox_https_compatibility_copy=absent-v2-exact-volunteer',
     'exact volunteer replication is incomplete and the v2 capability has no HTTPS fallback',
     'runtime_mailbox_http_poll=not-attempted-v2-exact-volunteer',

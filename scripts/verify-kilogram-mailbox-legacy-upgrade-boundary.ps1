@@ -29,7 +29,7 @@ foreach ($required in @(
     'head.is_exact_volunteer()',
     'mailbox_update_acknowledgements',
     'RuntimeMailboxProvisioningMode::ExactVolunteer',
-    'exact volunteer mailbox capability requires at least two active transport-distinct providers',
+    'exact volunteer mailbox capability requires at least two admission-qualified transport-distinct providers',
     'MailboxCapabilityBindingState::RotationOverlap',
     'runtime_mailbox_legacy_upgrade_status=rotated',
     'acknowledged_legacy_mailbox_upgrades_once_to_service_free_v2',
@@ -91,7 +91,7 @@ if (Select-String -LiteralPath $manifestPath -Pattern '^\s*\[\[bin\]\]\s*$') {
 }
 
 Write-Output 'mailbox_legacy_upgrade_boundary=verified'
-Write-Output 'eligibility=acknowledged-legacy-head-and-two-transport-distinct-providers'
+Write-Output 'eligibility=acknowledged-legacy-head-and-two-admission-qualified-transport-distinct-providers'
 Write-Output 'transition=ordered-rotation-with-predecessor-overlap'
 Write-Output 'message_requeue=false'
 Write-Output 'https_compatibility=legacy-v1-only'

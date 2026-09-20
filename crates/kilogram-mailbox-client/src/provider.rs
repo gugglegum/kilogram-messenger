@@ -2,8 +2,9 @@ use std::{collections::BTreeSet, fmt, path::PathBuf};
 
 use anyhow::{Context, Result, ensure};
 use kilogram_mailbox::{
-    MAX_MAILBOX_STORAGE_OFFER_BYTES, MailboxStoragePolicyClass, MailboxStoreKey,
-    SignedMailboxStorageOffer,
+    DEFAULT_MAILBOX_STORAGE_OFFER_ADMISSION_WORK_BITS,
+    MAX_MAILBOX_STORAGE_OFFER_ADMISSION_WORK_BITS, MAX_MAILBOX_STORAGE_OFFER_BYTES,
+    MailboxStoragePolicyClass, MailboxStoreKey, SignedMailboxStorageOffer,
 };
 use redb::{
     Database, Durability, ReadOnlyDatabase, ReadableDatabase, ReadableTable, ReadableTableMetadata,
@@ -32,6 +33,11 @@ pub const DEFAULT_MAX_PROVIDER_OFFERS: u64 = 256;
 /// Replication fan-out remains deliberately small even if the registry is
 /// full. A later policy may choose fewer providers for a particular item.
 pub const MAX_PROVIDER_SELECTION: u8 = 8;
+
+/// Offers below this cheap-to-verify, bounded creation cost remain readable for
+/// compatibility but are not selected for new volunteer replica sets or gossip.
+pub const DEFAULT_PROVIDER_ADMISSION_WORK_BITS: u8 =
+    DEFAULT_MAILBOX_STORAGE_OFFER_ADMISSION_WORK_BITS;
 
 /// No authenticated session can carry more than this many provider offers.
 pub const MAX_PROVIDER_GOSSIP_OFFERS: u8 = 8;
@@ -122,6 +128,10 @@ impl MailboxProviderOffer {
 
     pub fn observed_gossip_hops(&self) -> u8 {
         self.observed_gossip_hops
+    }
+
+    pub fn admission_work_bits(&self) -> u16 {
+        self.offer.admission_work_bits()
     }
 
     /// Exact signed bytes are returned for the transport adapter to decode and
@@ -696,6 +706,35 @@ impl MailboxProviderRegistry {
         select_active_offers(active_offers, selection_salt, requested)
     }
 
+    /// Select only offers that pay the current bounded identity-creation cost.
+    /// This limits cheap endpoint churn but cannot prove operator independence.
+    pub fn select_admission_qualified(
+        &self,
+        selection_salt: [u8; 32],
+        requested: u8,
+        now_unix_seconds: u64,
+    ) -> Result<Vec<MailboxProviderOffer>> {
+        select_admission_qualified_active_offers(
+            self.active_offers(now_unix_seconds)?,
+            selection_salt,
+            requested,
+            DEFAULT_PROVIDER_ADMISSION_WORK_BITS,
+        )
+    }
+
+    pub fn select_admission_qualified_from_active_offers(
+        active_offers: Vec<MailboxProviderOffer>,
+        selection_salt: [u8; 32],
+        requested: u8,
+    ) -> Result<Vec<MailboxProviderOffer>> {
+        select_admission_qualified_active_offers(
+            active_offers,
+            selection_salt,
+            requested,
+            DEFAULT_PROVIDER_ADMISSION_WORK_BITS,
+        )
+    }
+
     pub fn select_for_gossip(
         &self,
         selection_salt: [u8; 32],
@@ -710,7 +749,8 @@ impl MailboxProviderRegistry {
             .active_offers(now_unix_seconds)?
             .into_iter()
             .filter(|offer| {
-                offer.observed_gossip_hops < MAX_PROVIDER_GOSSIP_HOPS
+                offer.admission_work_bits() >= u16::from(DEFAULT_PROVIDER_ADMISSION_WORK_BITS)
+                    && offer.observed_gossip_hops < MAX_PROVIDER_GOSSIP_HOPS
                     && offer.encoded_offer.len() <= MAX_PROVIDER_GOSSIP_OFFER_BYTES
                     && now_unix_seconds.saturating_sub(offer.issued_at_unix_seconds())
                         <= MAX_PROVIDER_GOSSIP_AGE_SECONDS
@@ -912,6 +952,26 @@ fn select_active_offers(
     Ok(selected)
 }
 
+fn select_admission_qualified_active_offers(
+    active_offers: Vec<MailboxProviderOffer>,
+    selection_salt: [u8; 32],
+    requested: u8,
+    minimum_work_bits: u8,
+) -> Result<Vec<MailboxProviderOffer>> {
+    ensure!(
+        (1..=MAX_MAILBOX_STORAGE_OFFER_ADMISSION_WORK_BITS).contains(&minimum_work_bits),
+        "mailbox provider admission work is outside protocol bounds"
+    );
+    select_active_offers(
+        active_offers
+            .into_iter()
+            .filter(|offer| offer.admission_work_bits() >= u16::from(minimum_work_bits))
+            .collect(),
+        selection_salt,
+        requested,
+    )
+}
+
 fn decode_gossip_hops(bytes: &[u8]) -> Result<u8> {
     ensure!(
         bytes.len() == 1,
@@ -938,14 +998,36 @@ mod tests {
 
     fn offer(store_secret: u8, endpoint: u8, issued_at: u64) -> Result<(Vec<u8>, [u8; 32])> {
         let identity = MailboxStoreIdentity::from_secret_bytes([store_secret; 32]);
-        let offer = identity.storage_offer(
+        let offer = identity.storage_offer_with_admission_work(
             vec![endpoint; 64],
             200 * 1024 * 1024,
             1024 * 1024,
             issued_at,
             300,
+            DEFAULT_PROVIDER_ADMISSION_WORK_BITS,
         )?;
         Ok((offer.encode(issued_at)?, [endpoint; 32]))
+    }
+
+    fn unqualified_offer(
+        store_secret: u8,
+        endpoint: u8,
+        issued_at: u64,
+    ) -> Result<(Vec<u8>, [u8; 32])> {
+        let identity = MailboxStoreIdentity::from_secret_bytes([store_secret; 32]);
+        for _ in 0..32 {
+            let offer = identity.storage_offer(
+                vec![endpoint; 64],
+                200 * 1024 * 1024,
+                1024 * 1024,
+                issued_at,
+                300,
+            )?;
+            if offer.admission_work_bits() < u16::from(DEFAULT_PROVIDER_ADMISSION_WORK_BITS) {
+                return Ok((offer.encode(issued_at)?, [endpoint; 32]));
+            }
+        }
+        anyhow::bail!("failed to construct an admission-unqualified test offer")
     }
 
     #[test]
@@ -1057,6 +1139,36 @@ mod tests {
             registry
                 .select([1; 32], MAX_PROVIDER_SELECTION + 1, 1_001)
                 .is_err()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn admission_qualified_selection_and_gossip_exclude_cheap_identities() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let registry = MailboxProviderRegistry::open(MailboxProviderRegistryConfig::new(
+            directory.path().join("providers"),
+        ))?;
+        let (cheap, cheap_endpoint) = unqualified_offer(9, 99, 1_000)?;
+        registry.import_offer(&cheap, cheap_endpoint, 1_000)?;
+        for (store, endpoint) in [(1, 11), (2, 22)] {
+            let (encoded, transport) = offer(store, endpoint, 1_000)?;
+            registry.import_offer(&encoded, transport, 1_000)?;
+        }
+
+        assert_eq!(registry.active_offers(1_001)?.len(), 3);
+        let selected = registry.select_admission_qualified([73; 32], 3, 1_001)?;
+        assert_eq!(selected.len(), 2);
+        assert!(selected.iter().all(|offer| {
+            offer.admission_work_bits() >= u16::from(DEFAULT_PROVIDER_ADMISSION_WORK_BITS)
+        }));
+        let gossip = MailboxProviderGossipFrame::from_registry(&registry, [74; 32], None, 1_001)?;
+        assert_eq!(gossip.entries().len(), 2);
+        assert!(
+            gossip
+                .entries()
+                .iter()
+                .all(|entry| entry.encoded_offer() != cheap)
         );
         Ok(())
     }
@@ -1203,12 +1315,13 @@ mod tests {
         );
 
         let stale_identity = MailboxStoreIdentity::from_secret_bytes([8; 32]);
-        let stale = stale_identity.storage_offer(
+        let stale = stale_identity.storage_offer_with_admission_work(
             vec![88; 64],
             200 * 1024 * 1024,
             1024 * 1024,
             1_000,
             3_600,
+            DEFAULT_PROVIDER_ADMISSION_WORK_BITS,
         )?;
         let stale = stale.encode(1_000)?;
         second.import_offer(&stale, [88; 32], 1_000)?;
@@ -1221,12 +1334,13 @@ mod tests {
             MailboxProviderRegistryConfig::new(oversized_directory.path().join("providers")),
         )?;
         let oversized_identity = MailboxStoreIdentity::from_secret_bytes([9; 32]);
-        let oversized = oversized_identity.storage_offer(
+        let oversized = oversized_identity.storage_offer_with_admission_work(
             vec![99; MAX_PROVIDER_GOSSIP_OFFER_BYTES + 1],
             200 * 1024 * 1024,
             1024 * 1024,
             1_000,
             3_600,
+            DEFAULT_PROVIDER_ADMISSION_WORK_BITS,
         )?;
         oversized_registry.import_offer(&oversized.encode(1_000)?, [99; 32], 1_000)?;
         assert!(
