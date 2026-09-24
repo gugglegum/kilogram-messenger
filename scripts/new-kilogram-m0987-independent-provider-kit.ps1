@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [string] $OutputDirectory,
-    [ValidateRange(1, 64)] [int] $CargoJobs = 2
+    [ValidateRange(1, 64)] [int] $CargoJobs = 2,
+    [switch] $TwoHostReduced
 )
 
 Set-StrictMode -Version Latest
@@ -12,6 +13,14 @@ $cargoJobsResolved = Set-KilogramCargoResourcePolicy -RequestedJobs $CargoJobs
 $workspace = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $legacyTemplate = Join-Path $PSScriptRoot 'm0969-exact'
 $providerTemplate = Join-Path $PSScriptRoot 'm0987-independent'
+$topologyMode = if ($TwoHostReduced) { 'two-host-reduced' } else { 'independent-providers' }
+$claimBoundary = if ($TwoHostReduced) {
+    'two-host-reduced-not-independent-field-proof'
+} else {
+    'controlled-self-attestation-not-protocol-proof'
+}
+$minimumHosts = if ($TwoHostReduced) { 2 } else { 3 }
+$idealHosts = if ($TwoHostReduced) { 2 } else { 4 }
 
 Push-Location $workspace
 try {
@@ -23,7 +32,8 @@ try {
         throw 'Cannot resolve clean HEAD.'
     }
     if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
-        $OutputDirectory = ".tmp\m0987-independent-providers-$($revision.Substring(0, 12))"
+        $profileName = if ($TwoHostReduced) { 'two-host-reduced' } else { 'independent-providers' }
+        $OutputDirectory = ".tmp\m0987-$profileName-$($revision.Substring(0, 12))"
     }
     $output = if ([IO.Path]::IsPathRooted($OutputDirectory)) {
         [IO.Path]::GetFullPath($OutputDirectory)
@@ -98,7 +108,12 @@ try {
         $boundaries,
         [Text.UTF8Encoding]::new($false)
     )
-    Copy-Item -LiteralPath (Join-Path $workspace 'docs\M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md') `
+    $guideName = if ($TwoHostReduced) {
+        'M0.9.87-TWO-HOST-REDUCED-TEST-RU.md'
+    } else {
+        'M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md'
+    }
+    Copy-Item -LiteralPath (Join-Path $workspace "docs\$guideName") `
         -Destination (Join-Path $output 'README-RU.md')
 
     $artifactNames = @(
@@ -140,15 +155,16 @@ try {
         https_fixture_included = $false
         mailbox_capability_format = 'v2-exact-volunteer'
         central_service_descriptor_present = $false
+        field_topology_mode = $topologyMode
         field_topology = [ordered]@{
             alice_folder = '1'
             provider1_folder = '2'
             provider2_folder = '3'
             bob_folder = '4'
-            minimum_physical_hosts = 3
-            ideal_physical_hosts = 4
+            minimum_physical_hosts = $minimumHosts
+            ideal_physical_hosts = $idealHosts
         }
-        provider_independence_claim = 'controlled-self-attestation-not-protocol-proof'
+        provider_independence_claim = $claimBoundary
         artifacts = $artifacts
     }
     [IO.File]::WriteAllText(
@@ -157,18 +173,24 @@ try {
         [Text.UTF8Encoding]::new($false)
     )
 
-    Write-Output "independent_provider_kit_directory=$output"
+    Write-Output "m0987_kit_directory=$output"
     Write-Output "source_revision=$revision"
     Write-Output 'folders=1,2,3,4'
     Write-Output 'operator_launches=7'
-    Write-Output 'minimum_physical_hosts=3'
-    Write-Output 'ideal_physical_hosts=4'
+    Write-Output "field_topology_mode=$topologyMode"
+    Write-Output "minimum_physical_hosts=$minimumHosts"
+    Write-Output "ideal_physical_hosts=$idealHosts"
     Write-Output 'profile=debug'
     Write-Output 'archive_created=false'
     Write-Output 'network_executed=false'
     Write-Output 'https_fixture_included=false'
     Write-Output 'central_service_descriptor_present=false'
-    Write-Output 'provider_independence_claim=controlled-self-attestation-not-protocol-proof'
-    Write-Output 'status=kilogram-m0987-independent-provider-kit-created'
+    Write-Output "provider_independence_claim=$claimBoundary"
+    if ($TwoHostReduced) {
+        Write-Output 'independent_provider_field_acceptance=false'
+        Write-Output 'status=kilogram-m0987-two-host-reduced-kit-created'
+    } else {
+        Write-Output 'status=kilogram-m0987-independent-provider-kit-created'
+    }
 }
 finally { Pop-Location }

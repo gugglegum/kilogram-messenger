@@ -236,6 +236,9 @@ $manifest = [ordered]@{
 if ($serviceFreeV2) {
     $manifest['mailbox_capability_format'] = 'v2-exact-volunteer'
     $manifest['central_service_descriptor_present'] = $false
+    if ([string]$build.milestone -ceq 'M0.9.87') {
+        $manifest['field_topology_mode'] = [string]$build.field_topology_mode
+    }
 } else {
     $manifest['compatibility_endpoint'] = $storeUrl
 }

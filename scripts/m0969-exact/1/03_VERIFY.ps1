@@ -27,8 +27,14 @@ if (Test-Path -LiteralPath $boundaryDestination) {
 Copy-Item -LiteralPath $boundarySource -Destination $boundaryDestination
 if ([string]$build.milestone -ceq 'M0.9.87') {
     & (Join-Path $script:KitRoot 'verify-kilogram-m0987-independent-provider-evidence.ps1') `
-        -EvidenceDirectory $script:EvidenceDirectory
-    Write-Host 'M0.9.87 INDEPENDENT-PROVIDER SERVICE-FREE FIELD TEST COMPLETED SUCCESSFULLY.'
+        -EvidenceDirectory $script:EvidenceDirectory `
+        -TopologyMode ([string]$build.field_topology_mode)
+    if ([string]$build.field_topology_mode -ceq 'two-host-reduced') {
+        Write-Host 'M0.9.87 TWO-HOST REDUCED SERVICE-FREE TEST COMPLETED SUCCESSFULLY.'
+        Write-Host 'This result is not independent-provider field acceptance.'
+    } else {
+        Write-Host 'M0.9.87 INDEPENDENT-PROVIDER SERVICE-FREE FIELD TEST COMPLETED SUCCESSFULLY.'
+    }
 } elseif ($serviceFreeV2) {
     & (Join-Path $script:KitRoot 'verify-kilogram-m0976-service-free-v2-evidence.ps1') `
         -EvidenceDirectory $script:EvidenceDirectory

@@ -95,3 +95,14 @@ creates no release build, ZIP, HTTPS mailbox service, background installation,
 new executable target, field connection or external publication. M0.9.87 is
 accepted locally only after static/self-test regression; the stronger field
 claim remains pending until a fresh external three- or four-host run succeeds.
+
+## 7. Two-host reduced profile
+
+The generator may explicitly create a `two-host-reduced` operator harness for
+Alice + Provider 1 on one Windows PC and Provider 2 + Bob on a second Windows
+PC. It still requires two distinct run-scoped machine pseudonyms, but records
+operator/network claims without requiring them to differ. Its verifier reports
+`independent_provider_field_acceptance=false` and a separate
+`verified-reduced-two-host` result. This profile exercises the complete
+service-free delivery lifecycle; it cannot close the independent-provider
+field claim described in sections 1-6.

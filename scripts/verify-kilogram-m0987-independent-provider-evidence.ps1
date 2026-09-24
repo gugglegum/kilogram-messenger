@@ -1,6 +1,8 @@
 [CmdletBinding()]
 param(
     [string] $EvidenceDirectory,
+    [ValidateSet('independent-providers', 'two-host-reduced')]
+    [string] $TopologyMode = 'independent-providers',
     [switch] $SelfTest
 )
 
@@ -59,8 +61,16 @@ function Assert-M0987ExactProperties {
 function Test-M0987IndependentProviderEvidence {
     param(
         [Parameter(Mandatory)] [string] $Directory,
+        [ValidateSet('independent-providers', 'two-host-reduced')]
+        [string] $ExpectedTopologyMode = 'independent-providers',
         [switch] $SkipInheritedExactLocator
     )
+
+    $expectedClaimBoundary = if ($ExpectedTopologyMode -ceq 'two-host-reduced') {
+        'two-host-reduced-not-independent-field-proof'
+    } else {
+        'controlled-self-attestation-not-protocol-proof'
+    }
 
     if (-not $SkipInheritedExactLocator) {
         & (Join-Path $PSScriptRoot 'verify-kilogram-m0969-exact-locator-evidence.ps1') `
@@ -70,7 +80,7 @@ function Test-M0987IndependentProviderEvidence {
     $manifest = (Read-M0987Evidence $Directory 'manifest.json') | ConvertFrom-Json
     foreach ($name in @(
         'run_id', 'build_commit', 'evidence_milestone', 'https_fixture_present_at_start',
-        'mailbox_capability_format', 'central_service_descriptor_present'
+        'mailbox_capability_format', 'central_service_descriptor_present', 'field_topology_mode'
     )) {
         if (-not ($manifest.PSObject.Properties.Name -contains $name)) {
             throw "M0.9.87 manifest value is missing: $name"
@@ -81,6 +91,7 @@ function Test-M0987IndependentProviderEvidence {
         [string]$manifest.evidence_milestone -cne 'M0.9.87' -or
         [bool]$manifest.https_fixture_present_at_start -ne $false -or
         [string]$manifest.mailbox_capability_format -cne 'v2-exact-volunteer' -or
+        [string]$manifest.field_topology_mode -cne $ExpectedTopologyMode -or
         [bool]$manifest.central_service_descriptor_present -ne $false) {
         throw 'M0.9.87 manifest does not declare the canonical independent-provider service-free boundary'
     }
@@ -152,7 +163,7 @@ function Test-M0987IndependentProviderEvidence {
             [string]$attestation.build_commit -cne [string]$manifest.build_commit -or
             [string]$publication.build_commit -cne [string]$manifest.build_commit -or
             [string]$attestation.digest_scope -cne 'run-scoped-sha256' -or
-            [string]$attestation.claim_boundary -cne 'controlled-self-attestation-not-protocol-proof' -or
+            [string]$attestation.claim_boundary -cne $expectedClaimBoundary -or
             [bool]$attestation.private_state_shared -ne $false) {
             throw "$provider attestation/publication is not bound to the accepted controlled run"
         }
@@ -174,7 +185,12 @@ function Test-M0987IndependentProviderEvidence {
         $claims += $attestation
         $publications[$provider] = $publication
     }
-    foreach ($field in @('machine_pseudonym', 'operator_claim_digest', 'network_claim_digest')) {
+    $distinctFields = if ($ExpectedTopologyMode -ceq 'two-host-reduced') {
+        @('machine_pseudonym')
+    } else {
+        @('machine_pseudonym', 'operator_claim_digest', 'network_claim_digest')
+    }
+    foreach ($field in $distinctFields) {
         if (@($claims | ForEach-Object { [string]$_.$field } | Sort-Object -Unique).Count -ne 2) {
             throw "M0.9.87 requires two distinct self-attested $field values"
         }
@@ -182,7 +198,7 @@ function Test-M0987IndependentProviderEvidence {
 
     $aggregate = (Read-M0987Evidence $Directory '01-provider-offers-publication.json') | ConvertFrom-Json
     if ([int]$aggregate.schema -ne 1 -or [string]$aggregate.evidence_milestone -cne 'M0.9.87' -or
-        [string]$aggregate.claim_boundary -cne 'controlled-self-attestation-not-protocol-proof' -or
+        [string]$aggregate.claim_boundary -cne $expectedClaimBoundary -or
         @($aggregate.providers).Count -ne 2) {
         throw 'M0.9.87 aggregate provider publication has an invalid claim boundary or shape'
     }
@@ -204,19 +220,36 @@ function Test-M0987IndependentProviderEvidence {
         'm0976_service_free_v2_kit_boundary=verified',
         'm0987_independent_provider_kit_boundary=verified'
     )) { Assert-M0987ExactLine $boundaries $line $line }
+    if ($ExpectedTopologyMode -ceq 'two-host-reduced') {
+        Assert-M0987ExactLine $boundaries `
+            'm0987_two_host_reduced_profile_boundary=verified' `
+            'm0987 two-host reduced profile boundary'
+    }
+
+    $operatorClaims = if ($ExpectedTopologyMode -ceq 'two-host-reduced') {
+        'recorded-not-required-distinct'
+    } else { 'distinct-2-of-2' }
+    $networkClaims = if ($ExpectedTopologyMode -ceq 'two-host-reduced') {
+        'recorded-not-required-distinct'
+    } else { 'distinct-2-of-2' }
+    $result = if ($ExpectedTopologyMode -ceq 'two-host-reduced') {
+        'verified-reduced-two-host'
+    } else { 'verified' }
 
     [PSCustomObject]@{
         run_id = [string]$manifest.run_id
         build_commit = [string]$manifest.build_commit
         mailbox_capability_format = 'v2-exact-volunteer'
         central_service_descriptor_present = $false
+        field_topology_mode = $ExpectedTopologyMode
         provider_machine_claims = 'distinct-2-of-2'
-        provider_operator_claims = 'distinct-2-of-2'
-        provider_network_claims = 'distinct-2-of-2'
-        claim_strength = 'controlled-self-attestation-not-protocol-proof'
+        provider_operator_claims = $operatorClaims
+        provider_network_claims = $networkClaims
+        claim_strength = $expectedClaimBoundary
+        independent_provider_field_acceptance = ($ExpectedTopologyMode -ceq 'independent-providers')
         sender_offline_before_receive = $true
         volunteer_receipts = '2-of-2'
-        result = 'verified'
+        result = $result
     }
 }
 
@@ -230,14 +263,23 @@ function Write-M0987SelfTestJson {
 }
 
 function New-M0987SpecificSelfTestEvidence {
-    param([Parameter(Mandatory)] [string] $Directory)
+    param(
+        [Parameter(Mandatory)] [string] $Directory,
+        [ValidateSet('independent-providers', 'two-host-reduced')]
+        [string] $ExpectedTopologyMode = 'independent-providers'
+    )
     New-Item -ItemType Directory -Path $Directory | Out-Null
     $runId = '20260920-120000'
     $commit = 'ab' * 20
+    $claimBoundary = if ($ExpectedTopologyMode -ceq 'two-host-reduced') {
+        'two-host-reduced-not-independent-field-proof'
+    } else {
+        'controlled-self-attestation-not-protocol-proof'
+    }
     Write-M0987SelfTestJson (Join-Path $Directory 'manifest.json') ([ordered]@{
         schema = 1; run_id = $runId; build_commit = $commit; evidence_milestone = 'M0.9.87'
         https_fixture_present_at_start = $false; mailbox_capability_format = 'v2-exact-volunteer'
-        central_service_descriptor_present = $false
+        central_service_descriptor_present = $false; field_topology_mode = $ExpectedTopologyMode
     })
     [IO.File]::WriteAllLines((Join-Path $Directory '00-service-free-v2.boundary'), @(
         'field_phase=before-identity-and-mailbox-activation',
@@ -262,7 +304,12 @@ function New-M0987SpecificSelfTestEvidence {
         'runtime_mailbox_http_put=not-attempted'
     ), [Text.UTF8Encoding]::new($false))
     $entries = @()
-    foreach ($item in @(@('provider1', '11', '21', '31'), @('provider2', '12', '22', '32'))) {
+    $providerClaims = if ($ExpectedTopologyMode -ceq 'two-host-reduced') {
+        @(@('provider1', '11', '21', '31'), @('provider2', '12', '21', '31'))
+    } else {
+        @(@('provider1', '11', '21', '31'), @('provider2', '12', '22', '32'))
+    }
+    foreach ($item in $providerClaims) {
         $provider = $item[0]
         $offerPath = Join-Path $Directory "01-$provider.offer"
         [IO.File]::WriteAllText($offerPath, (('A' * 95) + $provider.Substring(8) + "`n"), [Text.UTF8Encoding]::new($false))
@@ -272,7 +319,7 @@ function New-M0987SpecificSelfTestEvidence {
             run_id = $runId; build_commit = $commit; machine_pseudonym = $item[1] * 32
             operator_claim_digest = $item[2] * 32; network_claim_digest = $item[3] * 32
             digest_scope = 'run-scoped-sha256'
-            claim_boundary = 'controlled-self-attestation-not-protocol-proof'
+            claim_boundary = $claimBoundary
             private_state_shared = $false
         })
         $publication = [ordered]@{
@@ -291,7 +338,7 @@ function New-M0987SpecificSelfTestEvidence {
     }
     Write-M0987SelfTestJson (Join-Path $Directory '01-provider-offers-publication.json') ([ordered]@{
         schema = 1; evidence_milestone = 'M0.9.87'
-        claim_boundary = 'controlled-self-attestation-not-protocol-proof'
+        claim_boundary = $claimBoundary
         published_at_unix_seconds = [UInt64]1; providers = $entries
     })
     [IO.File]::WriteAllLines((Join-Path $Directory '08-boundaries.log'), @(
@@ -300,7 +347,8 @@ function New-M0987SpecificSelfTestEvidence {
         'runtime_mailbox_replication_recovery=verified',
         'service_free_mailbox_capability_v2=verified',
         'm0976_service_free_v2_kit_boundary=verified',
-        'm0987_independent_provider_kit_boundary=verified'
+        'm0987_independent_provider_kit_boundary=verified',
+        'm0987_two_host_reduced_profile_boundary=verified'
     ), [Text.UTF8Encoding]::new($false))
 }
 
@@ -325,8 +373,8 @@ if ($SelfTest) {
     try {
         & (Join-Path $PSScriptRoot 'verify-kilogram-m0969-exact-locator-evidence.ps1') `
             -SelfTest -LabelPrefix 'm0987' | Out-Null
-        New-M0987SpecificSelfTestEvidence $root
-        if ((Test-M0987IndependentProviderEvidence $root -SkipInheritedExactLocator).result -cne 'verified') {
+        New-M0987SpecificSelfTestEvidence $root 'independent-providers'
+        if ((Test-M0987IndependentProviderEvidence $root 'independent-providers' -SkipInheritedExactLocator).result -cne 'verified') {
             throw 'positive M0.9.87 verifier self-test failed'
         }
         $negativeCases = @(
@@ -336,14 +384,14 @@ if ($SelfTest) {
         )
         foreach ($case in $negativeCases) {
             Remove-Item -LiteralPath $root -Recurse -Force
-            New-M0987SpecificSelfTestEvidence $root
+            New-M0987SpecificSelfTestEvidence $root 'independent-providers'
             Set-M0987SelfTestClaim $root $case[0] $case[1]
             $rejected = $false
-            try { $null = Test-M0987IndependentProviderEvidence $root -SkipInheritedExactLocator } catch { $rejected = $true }
+            try { $null = Test-M0987IndependentProviderEvidence $root 'independent-providers' -SkipInheritedExactLocator } catch { $rejected = $true }
             if (-not $rejected) { throw "M0.9.87 verifier accepted $($case[2]) claims" }
         }
         Remove-Item -LiteralPath $root -Recurse -Force
-        New-M0987SpecificSelfTestEvidence $root
+        New-M0987SpecificSelfTestEvidence $root 'independent-providers'
         $attestationPath = Join-Path $root '01-provider2-attestation.json'
         $attestation = Get-Content $attestationPath -Raw | ConvertFrom-Json
         $attestation | Add-Member -NotePropertyName raw_operator_label -NotePropertyValue 'forbidden'
@@ -353,14 +401,29 @@ if ($SelfTest) {
         $publication.attestation_sha256 = (Get-FileHash $attestationPath -Algorithm SHA256).Hash.ToLowerInvariant()
         Write-M0987SelfTestJson $publicationPath $publication
         $rejected = $false
-        try { $null = Test-M0987IndependentProviderEvidence $root -SkipInheritedExactLocator } catch { $rejected = $true }
+        try { $null = Test-M0987IndependentProviderEvidence $root 'independent-providers' -SkipInheritedExactLocator } catch { $rejected = $true }
         if (-not $rejected) { throw 'M0.9.87 verifier accepted an unapproved raw claim field' }
+
+        Remove-Item -LiteralPath $root -Recurse -Force
+        New-M0987SpecificSelfTestEvidence $root 'two-host-reduced'
+        if ((Test-M0987IndependentProviderEvidence $root 'two-host-reduced' -SkipInheritedExactLocator).result -cne 'verified-reduced-two-host') {
+            throw 'positive M0.9.87 two-host reduced verifier self-test failed'
+        }
+        Remove-Item -LiteralPath $root -Recurse -Force
+        New-M0987SpecificSelfTestEvidence $root 'two-host-reduced'
+        Set-M0987SelfTestClaim $root 'machine_pseudonym' ('11' * 32)
+        $rejected = $false
+        try { $null = Test-M0987IndependentProviderEvidence $root 'two-host-reduced' -SkipInheritedExactLocator } catch { $rejected = $true }
+        if (-not $rejected) { throw 'M0.9.87 two-host verifier accepted the same machine claim' }
 
         Write-Output 'm0987_independent_provider_evidence_self_test=verified'
         Write-Output 'same_machine_claim_rejected=true'
         Write-Output 'same_operator_claim_rejected=true'
         Write-Output 'same_network_claim_rejected=true'
         Write-Output 'raw_claim_field_rejected=true'
+        Write-Output 'two_host_same_operator_allowed=true'
+        Write-Output 'two_host_same_network_allowed=true'
+        Write-Output 'two_host_same_machine_rejected=true'
         return
     }
     finally {
@@ -372,5 +435,5 @@ if ([string]::IsNullOrWhiteSpace($EvidenceDirectory)) {
     throw 'EvidenceDirectory is required unless SelfTest is used.'
 }
 $resolved = [IO.Path]::GetFullPath($EvidenceDirectory)
-$report = Test-M0987IndependentProviderEvidence $resolved
+$report = Test-M0987IndependentProviderEvidence $resolved $TopologyMode
 $report | Format-List

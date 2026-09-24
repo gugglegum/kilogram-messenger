@@ -12,6 +12,7 @@ $script:M0969FieldRelayUrl = 'https://aps1-1.relay.n0.iroh.link./'
 $script:M0972CompatibilityStoreUrl = 'http://127.0.0.1:18787'
 $script:M0972CompatibilityStoreKey = 'd75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a'
 $script:FieldMilestone = $null
+$script:M0987TopologyMode = 'independent-providers'
 
 function Assert-M0969Kit {
     foreach ($path in @($script:CliPath, $script:BuildInfoPath)) {
@@ -41,6 +42,13 @@ function Assert-M0969Kit {
         }
     }
     $script:FieldMilestone = $milestone
+    if ($milestone -ceq 'M0.9.87') {
+        $topologyMode = [string]$build.field_topology_mode
+        if ($topologyMode -cnotin @('independent-providers', 'two-host-reduced')) {
+            throw "Unsupported M0.9.87 field topology mode: $topologyMode"
+        }
+        $script:M0987TopologyMode = $topologyMode
+    }
     return $build
 }
 
@@ -414,6 +422,13 @@ function Publish-M0987ProviderOffer {
     })
 }
 
+function Get-M0987ClaimBoundary {
+    if ($script:M0987TopologyMode -ceq 'two-host-reduced') {
+        return 'two-host-reduced-not-independent-field-proof'
+    }
+    return 'controlled-self-attestation-not-protocol-proof'
+}
+
 function Get-M0987ValidatedProviderPublication {
     param(
         [Parameter(Mandatory)] [ValidateSet('provider1', 'provider2')] [string] $ProviderName,
@@ -439,7 +454,7 @@ function Get-M0987ValidatedProviderPublication {
     if ([int]$attestation.schema -ne 1 -or [string]$attestation.evidence_milestone -cne 'M0.9.87' -or
         [string]$attestation.provider_role -cne $ProviderName -or
         [string]$attestation.run_id -cne $RunId -or [string]$attestation.build_commit -cne $BuildCommit -or
-        [string]$attestation.claim_boundary -cne 'controlled-self-attestation-not-protocol-proof' -or
+        [string]$attestation.claim_boundary -cne (Get-M0987ClaimBoundary) -or
         [bool]$attestation.private_state_shared -ne $false) {
         throw "$ProviderName attestation identity or claim boundary is invalid."
     }
@@ -479,7 +494,12 @@ function Publish-M0987ProviderPairIfReady {
     foreach ($provider in $providers) {
         if ([Int64]$provider.expires -le ($now + 180)) { return $false }
     }
-    foreach ($field in @('machine', 'operator', 'network')) {
+    $distinctFields = if ($script:M0987TopologyMode -ceq 'two-host-reduced') {
+        @('machine')
+    } else {
+        @('machine', 'operator', 'network')
+    }
+    foreach ($field in $distinctFields) {
         if (@($providers | ForEach-Object { [string]$_.$field } | Sort-Object -Unique).Count -ne 2) {
             throw "M0.9.87 rejected the provider pair: self-attested $field domains are not distinct."
         }
@@ -488,7 +508,7 @@ function Publish-M0987ProviderPairIfReady {
     Write-M0987AtomicJson $aggregatePath ([ordered]@{
         schema = 1
         evidence_milestone = 'M0.9.87'
-        claim_boundary = 'controlled-self-attestation-not-protocol-proof'
+        claim_boundary = Get-M0987ClaimBoundary
         published_at_unix_seconds = $now
         providers = @($providers | ForEach-Object {
             [ordered]@{
@@ -500,7 +520,7 @@ function Publish-M0987ProviderPairIfReady {
     })
     [IO.File]::WriteAllText(
         (Join-Path $script:SharedDirectory 'providers-ready.marker'),
-        "independent-provider-claims-validated-before-mailbox-activation`n"
+        "$script:M0987TopologyMode-provider-claims-validated-before-mailbox-activation`n"
     )
     return $true
 }
@@ -595,7 +615,7 @@ function Start-M0987IndependentProvider {
         operator_claim_digest = Get-M0987RunScopedDigest 'kilogram/m0987/operator/v1' ([string]$run.run_id) $OperatorLabel
         network_claim_digest = Get-M0987RunScopedDigest 'kilogram/m0987/network/v1' ([string]$run.run_id) $NetworkLabel
         digest_scope = 'run-scoped-sha256'
-        claim_boundary = 'controlled-self-attestation-not-protocol-proof'
+        claim_boundary = Get-M0987ClaimBoundary
         private_state_shared = $false
     })
 
@@ -615,7 +635,11 @@ function Start-M0987IndependentProvider {
                 Publish-M0987ProviderOffer `
                     $ProviderName ([string]$run.run_id) ([string]$build.source_revision) $localLog $attestationPath
                 if (Publish-M0987ProviderPairIfReady ([string]$run.run_id) ([string]$build.source_revision)) {
-                    Write-Host 'Both distinct provider claims and fresh offers are synchronized.'
+                    if ($script:M0987TopologyMode -ceq 'two-host-reduced') {
+                        Write-Host 'Two-host provider claims and fresh offers are synchronized.'
+                    } else {
+                        Write-Host 'Both distinct provider claims and fresh offers are synchronized.'
+                    }
                 } else {
                     Write-Host 'Waiting for the other independent provider publication...'
                 }

@@ -16,10 +16,12 @@ $baseVerifierPath = Join-Path $workspace 'scripts\verify-kilogram-m0969-exact-lo
 $verifierPath = Join-Path $workspace 'scripts\verify-kilogram-m0987-independent-provider-evidence.ps1'
 $rfcPath = Join-Path $workspace 'docs\RFC-0110-independent-provider-field-contract.md'
 $guidePath = Join-Path $workspace 'docs\M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md'
+$twoHostGuidePath = Join-Path $workspace 'docs\M0.9.87-TWO-HOST-REDUCED-TEST-RU.md'
 
 foreach ($path in @(
     $generatorPath, $commonPath, $alicePreparePath, $aliceVerifyPath, $bobPreparePath,
-    $provider1Path, $provider2Path, $baseVerifierPath, $verifierPath, $rfcPath, $guidePath
+    $provider1Path, $provider2Path, $baseVerifierPath, $verifierPath, $rfcPath, $guidePath,
+    $twoHostGuidePath
 )) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
         throw "M0.9.87 independent-provider source is missing: $path"
@@ -37,6 +39,7 @@ $baseVerifier = Get-Content -LiteralPath $baseVerifierPath -Raw
 $verifier = Get-Content -LiteralPath $verifierPath -Raw
 $rfc = Get-Content -LiteralPath $rfcPath -Raw
 $guide = Get-Content -LiteralPath $guidePath -Raw
+$twoHostGuide = Get-Content -LiteralPath $twoHostGuidePath -Raw
 
 foreach ($required in @(
     "milestone = 'M0.9.87'",
@@ -45,15 +48,20 @@ foreach ($required in @(
     "'3/01_START_PROVIDER2.ps1'",
     "'4/01_PREPARE_BOB.ps1'",
     "'4/02_RECEIVE_BOB.ps1'",
-    'minimum_physical_hosts = 3',
-    'ideal_physical_hosts = 4',
+    '[switch] $TwoHostReduced',
+    "'two-host-reduced'",
+    'minimum_physical_hosts = $minimumHosts',
+    'ideal_physical_hosts = $idealHosts',
+    'field_topology_mode = $topologyMode',
     'cargo build --jobs $cargoJobsResolved --locked --package kilogram-cli',
     "profile = 'debug'",
     "archive = `$false",
     "network_executed = `$false",
     "https_fixture_included = `$false",
     "central_service_descriptor_present = `$false",
-    'provider_independence_claim=controlled-self-attestation-not-protocol-proof',
+    'provider_independence_claim=$claimBoundary',
+    'independent_provider_field_acceptance=false',
+    'status=kilogram-m0987-two-host-reduced-kit-created',
     'status=kilogram-m0987-independent-provider-kit-created'
 )) {
     if (-not $generator.Contains($required)) { throw "M0.9.87 generator is missing '$required'" }
@@ -68,11 +76,14 @@ foreach ($required in @(
     '$env:LOCALAPPDATA',
     'function Start-M0987IndependentProvider',
     'function Publish-M0987ProviderPairIfReady',
+    'function Get-M0987ClaimBoundary',
     'MachineGuid',
     "'kilogram/m0987/machine/v1'",
     "'kilogram/m0987/operator/v1'",
     "'kilogram/m0987/network/v1'",
     'controlled-self-attestation-not-protocol-proof',
+    'two-host-reduced-not-independent-field-proof',
+    "@('machine')",
     'private_state_shared = $false',
     '01-$ProviderName-publication.json',
     '01-$ProviderName-attestation.json',
@@ -100,7 +111,9 @@ foreach ($entry in @(@($provider1, "Start-M0987IndependentProvider 'provider1'")
         if (-not $entry[0].Contains($required)) { throw "M0.9.87 provider wrapper is missing '$required'" }
     }
 }
-foreach ($required in @("'M0.9.87' { 'm0987' }", "@('M0.9.76', 'M0.9.87')")) {
+foreach ($required in @(
+    "'M0.9.87' { 'm0987' }", "@('M0.9.76', 'M0.9.87')", "`$manifest['field_topology_mode']"
+)) {
     if (-not $alicePrepare.Contains($required)) { throw "M0.9.87 Alice preparation is missing '$required'" }
 }
 if (-not $bobPrepare.Contains("@('M0.9.76', 'M0.9.87')")) {
@@ -109,7 +122,9 @@ if (-not $bobPrepare.Contains("@('M0.9.76', 'M0.9.87')")) {
 foreach ($required in @(
     "'M0.9.87' { 'm0987' }",
     'verify-kilogram-m0987-independent-provider-evidence.ps1',
-    'M0.9.87 INDEPENDENT-PROVIDER SERVICE-FREE FIELD TEST COMPLETED SUCCESSFULLY.'
+    'M0.9.87 INDEPENDENT-PROVIDER SERVICE-FREE FIELD TEST COMPLETED SUCCESSFULLY.',
+    'M0.9.87 TWO-HOST REDUCED SERVICE-FREE TEST COMPLETED SUCCESSFULLY.',
+    '-TopologyMode ([string]$build.field_topology_mode)'
 )) {
     if (-not $aliceVerify.Contains($required)) { throw "M0.9.87 final verification is missing '$required'" }
 }
@@ -123,9 +138,14 @@ foreach ($required in @(
     'operator_claim_digest',
     'network_claim_digest',
     'controlled-self-attestation-not-protocol-proof',
+    'two-host-reduced-not-independent-field-proof',
     'same_machine_claim_rejected=true',
     'same_operator_claim_rejected=true',
     'same_network_claim_rejected=true',
+    'two_host_same_operator_allowed=true',
+    'two_host_same_network_allowed=true',
+    'two_host_same_machine_rejected=true',
+    'independent_provider_field_acceptance',
     'raw_claim_field_rejected=true',
     'm0987_independent_provider_kit_boundary=verified'
 )) {
@@ -149,6 +169,15 @@ foreach ($required in @(
 )) {
     if (-not $guide.Contains($required)) { throw "M0.9.87 Russian field guide is missing '$required'" }
 }
+foreach ($required in @(
+    'M0.9.87 two-host reduced',
+    'Alice + Provider 1',
+    'Provider 2 + Bob',
+    'independent-provider field acceptance',
+    '`03_VERIFY.ps1`'
+)) {
+    if (-not $twoHostGuide.Contains($required)) { throw "M0.9.87 two-host guide is missing '$required'" }
+}
 
 foreach ($path in @($generatorPath, $commonPath, $alicePreparePath, $aliceVerifyPath, $bobPreparePath, $provider1Path, $provider2Path, $verifierPath)) {
     $tokens = $null
@@ -161,6 +190,7 @@ foreach ($path in @($generatorPath, $commonPath, $alicePreparePath, $aliceVerify
 & $verifierPath -SelfTest | Out-Null
 
 Write-Output 'm0987_independent_provider_kit_boundary=verified'
+Write-Output 'm0987_two_host_reduced_profile_boundary=verified'
 Write-Output 'field_folders=alice,provider1,provider2,bob'
 Write-Output 'minimum_physical_hosts=3'
 Write-Output 'ideal_physical_hosts=4'

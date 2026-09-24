@@ -4568,6 +4568,13 @@ External result:
 трёх-/четырёхмашинный run; только его полный `result=verified` закроет field
 acceptance.
 
+Дополнительный операторский профиль `two-host-reduced` позволяет провести
+доступный прогон на ПК и ноутбуке: Alice совмещается с Provider 1, Bob — с
+Provider 2. Он сохраняет два разных физических provider-хоста и весь
+service-free lifecycle, но допускает совпадающие operator/network claims и
+явно выдаёт `independent_provider_field_acceptance=false`; строгий pending
+field acceptance этим результатом не закрывается.
+
 ### Следующий этап
 
 1. Собрать свежий M0.9.87 debug kit и провести controlled field run exact
