@@ -32,7 +32,7 @@ $queue = Get-Content -LiteralPath $queuePath -Raw
 $offline = Get-Content -LiteralPath $offlinePath -Raw
 $history = Get-Content -LiteralPath $historyPath -Raw
 $evidence = Get-Content -LiteralPath $evidencePath -Raw
-$guide = Get-Content -LiteralPath $guidePath -Raw
+$guide = [System.IO.File]::ReadAllText($guidePath, [System.Text.Encoding]::UTF8)
 $manifest = Get-Content -LiteralPath $manifestPath -Raw
 
 foreach ($required in @(
@@ -86,7 +86,17 @@ foreach ($required in @(
 )) {
     if (-not $evidence.Contains($required)) { throw "fail-closed field verifier is missing '$required'" }
 }
-foreach ($required in @('15 минут', 'не', 'Account Root', 'две', 'HTTPS mailbox', 'не доказывает')) {
+foreach ($requiredBase64 in @(
+    'MTUg0LzQuNC90YPRgg==',
+    '0L3QtQ==',
+    'QWNjb3VudCBSb290',
+    '0LTQstC1',
+    'SFRUUFMgbWFpbGJveA==',
+    '0L3QtSDQtNC+0LrQsNC30YvQstCw0LXRgg=='
+)) {
+    $required = [System.Text.Encoding]::UTF8.GetString(
+        [System.Convert]::FromBase64String($requiredBase64)
+    )
     if (-not $guide.Contains($required)) { throw "Russian field guide is missing '$required'" }
 }
 
