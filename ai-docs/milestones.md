@@ -4575,6 +4575,20 @@ service-free lifecycle, но допускает совпадающие operator/
 явно выдаёт `independent_provider_field_acceptance=false`; строгий pending
 field acceptance этим результатом не закрывается.
 
+Диагностический SSH-прогон `20261014-063703` на двух Windows-хостах отклонён
+до создания сообщения. Он подтвердил direct Alice/Bob path по LAN и
+session-bound capability ACK, но выявил две orchestration-границы:
+
+- non-interactive OpenSSH logon не имеет рабочего current-user DPAPI context;
+  удалённые роли должны запускаться с отдельным loaded user profile;
+- оба provider пытались писать общий aggregate manifest, и Provider 2 упал на
+  Windows atomic replace во время синхронизации.
+
+После диагностики общий manifest/ready marker закреплён за Provider 1 как
+single writer, Provider 2 ждёт его публикацию, а atomic shared-file replace
+получил bounded retry. Старый run и его private state не переиспользуются;
+нужен fresh generated kit и чистый повтор.
+
 ### Следующий этап
 
 1. Собрать свежий M0.9.87 debug kit и провести controlled field run exact

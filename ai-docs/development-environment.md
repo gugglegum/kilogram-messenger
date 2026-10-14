@@ -2819,6 +2819,18 @@ retirement остальных compatibility shadows ещё не реализов
   текущих Windows field kits достаточно SCP-доставки готовых EXE/scripts и
   удалённого запуска через встроенный Windows PowerShell. Устанавливать
   toolchain следует только при отдельной необходимости.
+- Обычный процесс, запущенный непосредственно из OpenSSH network logon, не
+  может вызвать current-user DPAPI (`CryptProtectData`, Windows error 5).
+  Для field roles удалённый controller создаёт новый logon того же test user
+  через `Start-Process -Credential -LoadUserProfile`; проверочный
+  `account-create` после этого сообщил
+  `root_key_protection=windows-dpapi-current-user`. Пароль не сохранять в
+  workspace/logs/проектной памяти.
+- При активном `happ-xray` обычные локальные SSH probes могут перехватываться
+  виртуальным интерфейсом. SSH/SCP controller должен использовать
+  `BindAddress=192.168.0.140` (актуальный физический адрес сначала проверять),
+  а доступность ноутбука — подтверждаться реальным key-auth и hostname, не
+  широким TCP scan. Закрытая крышка усыпляет ноутбук и делает SSH недоступным.
 - Учётная запись и ключ предназначены только для временных Kilogram tests.
   После завершения field testing удалить пользователя `test`, его профиль и
   локальный private key; до этого не использовать эту учётную запись для

@@ -260,6 +260,29 @@ function Stop-M0969Process {
     }
 }
 
+function Move-M0969PublishedFile {
+    param(
+        [Parameter(Mandatory)] [string] $Temporary,
+        [Parameter(Mandatory)] [string] $Destination,
+        [ValidateRange(1, 200)] [int] $MaximumAttempts = 80
+    )
+    $lastError = $null
+    for ($attempt = 1; $attempt -le $MaximumAttempts; $attempt++) {
+        try {
+            Move-Item -LiteralPath $Temporary -Destination $Destination -Force -ErrorAction Stop
+            return
+        }
+        catch {
+            $lastError = $_
+            if ($attempt -lt $MaximumAttempts) { Start-Sleep -Milliseconds 125 }
+        }
+    }
+    if (Test-Path -LiteralPath $Temporary -PathType Leaf) {
+        Remove-Item -LiteralPath $Temporary -Force -ErrorAction SilentlyContinue
+    }
+    throw "Timed out publishing $Destination after $MaximumAttempts attempts: $($lastError.Exception.Message)"
+}
+
 function Publish-M0969File {
     param(
         [Parameter(Mandatory)] [string] $Source,
@@ -268,7 +291,7 @@ function Publish-M0969File {
     if (-not (Test-Path -LiteralPath $Source -PathType Leaf)) { return }
     $temporary = "$Destination.publish-$PID-$([Guid]::NewGuid().ToString('N'))"
     [IO.File]::WriteAllBytes($temporary, [IO.File]::ReadAllBytes($Source))
-    Move-Item -LiteralPath $temporary -Destination $Destination -Force
+    Move-M0969PublishedFile $temporary $Destination
 }
 
 function Invoke-M0969Cli {
@@ -374,7 +397,7 @@ function Write-M0987AtomicJson {
         (($Value | ConvertTo-Json -Depth 8) + "`n"),
         [Text.UTF8Encoding]::new($false)
     )
-    Move-Item -LiteralPath $temporary -Destination $Path -Force
+    Move-M0969PublishedFile $temporary $Path
 }
 
 function Get-M0987LatestProviderOffer {
@@ -407,7 +430,7 @@ function Publish-M0987ProviderOffer {
     $offerPath = Join-Path $script:EvidenceDirectory "01-$ProviderName.offer"
     $offerTemporary = "$offerPath.publish-$PID-$([Guid]::NewGuid().ToString('N'))"
     [IO.File]::WriteAllText($offerTemporary, ($latest.encoded + "`n"), [Text.UTF8Encoding]::new($false))
-    Move-Item -LiteralPath $offerTemporary -Destination $offerPath -Force
+    Move-M0969PublishedFile $offerTemporary $offerPath
     $publicationPath = Join-Path $script:EvidenceDirectory "01-$ProviderName-publication.json"
     Write-M0987AtomicJson $publicationPath ([ordered]@{
         schema = 1
@@ -483,7 +506,11 @@ function Get-M0987ValidatedProviderPublication {
 }
 
 function Publish-M0987ProviderPairIfReady {
-    param([Parameter(Mandatory)] [string] $RunId, [Parameter(Mandatory)] [string] $BuildCommit)
+    param(
+        [Parameter(Mandatory)] [string] $RunId,
+        [Parameter(Mandatory)] [string] $BuildCommit,
+        [Parameter(Mandatory)] [ValidateSet('provider1', 'provider2')] [string] $PublisherName
+    )
     $providers = @()
     foreach ($name in @('provider1', 'provider2')) {
         $provider = Get-M0987ValidatedProviderPublication $name $RunId $BuildCommit
@@ -504,6 +531,10 @@ function Publish-M0987ProviderPairIfReady {
             throw "M0.9.87 rejected the provider pair: self-attested $field domains are not distinct."
         }
     }
+    $readyPath = Join-Path $script:SharedDirectory 'providers-ready.marker'
+    if ($PublisherName -cne 'provider1') {
+        return (Test-Path -LiteralPath $readyPath -PathType Leaf)
+    }
     $aggregatePath = Join-Path $script:EvidenceDirectory '01-provider-offers-publication.json'
     Write-M0987AtomicJson $aggregatePath ([ordered]@{
         schema = 1
@@ -519,7 +550,7 @@ function Publish-M0987ProviderPairIfReady {
         })
     })
     [IO.File]::WriteAllText(
-        (Join-Path $script:SharedDirectory 'providers-ready.marker'),
+        $readyPath,
         "$script:M0987TopologyMode-provider-claims-validated-before-mailbox-activation`n"
     )
     return $true
@@ -634,7 +665,8 @@ function Start-M0987IndependentProvider {
             if ([DateTime]::UtcNow -ge $nextPublication) {
                 Publish-M0987ProviderOffer `
                     $ProviderName ([string]$run.run_id) ([string]$build.source_revision) $localLog $attestationPath
-                if (Publish-M0987ProviderPairIfReady ([string]$run.run_id) ([string]$build.source_revision)) {
+                if (Publish-M0987ProviderPairIfReady `
+                    ([string]$run.run_id) ([string]$build.source_revision) $ProviderName) {
                     if ($script:M0987TopologyMode -ceq 'two-host-reduced') {
                         Write-Host 'Two-host provider claims and fresh offers are synchronized.'
                     } else {
@@ -686,7 +718,7 @@ function Publish-M0969ProviderOffers {
         $offerPath = Join-Path $script:EvidenceDirectory "01-$provider.offer"
         $offerTemporary = "$offerPath.publish-$PID"
         [IO.File]::WriteAllText($offerTemporary, ($latest.encoded + "`n"), [Text.UTF8Encoding]::new($false))
-        Move-Item -LiteralPath $offerTemporary -Destination $offerPath -Force
+        Move-M0969PublishedFile $offerTemporary $offerPath
         $publication.providers += [ordered]@{
             name = $provider
             sha256 = (Get-FileHash -LiteralPath $offerPath -Algorithm SHA256).Hash
@@ -700,7 +732,7 @@ function Publish-M0969ProviderOffers {
         (($publication | ConvertTo-Json -Depth 4) + "`n"),
         [Text.UTF8Encoding]::new($false)
     )
-    Move-Item -LiteralPath $manifestTemporary -Destination $manifestPath -Force
+    Move-M0969PublishedFile $manifestTemporary $manifestPath
 }
 
 function Get-M0969ProviderOfferSnapshot {

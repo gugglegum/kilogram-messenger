@@ -50,10 +50,14 @@ only their domain-separated run-scoped digests are retained. The evidence
 schema is closed: additional raw-label fields make verification fail.
 
 Before mailbox activation, a helper validates both offer/publication pairs and
-requires distinct machine, operator and network digests. It then atomically
-publishes the same two-provider aggregate manifest already consumed by the
-exact-locator lifecycle. Missing or temporarily inconsistent cloud files keep
-the run waiting; a positive equality fails closed.
+requires distinct machine, operator and network digests. Provider 1 is the
+single writer for the aggregate manifest and ready marker; Provider 2 only
+publishes its role-owned offer/publication/attestation and waits for that
+marker. This avoids a multi-writer conflict when two synchronization clients
+observe the shared directory at different times. Atomic replacements use a
+bounded retry for transient reader/antivirus locks and still fail closed after
+the bound. Missing or temporarily inconsistent cloud files keep the run
+waiting; a positive equality fails closed.
 
 ## 4. Lifecycle and final evidence
 

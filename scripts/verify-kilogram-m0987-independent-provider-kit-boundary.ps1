@@ -74,6 +74,8 @@ foreach ($required in @(
     "`$milestone -cnotin @('M0.9.69', 'M0.9.72', 'M0.9.73', 'M0.9.74', 'M0.9.76', 'M0.9.87')",
     "'M0.9.87' { 'M0987' }",
     '$env:LOCALAPPDATA',
+    'function Move-M0969PublishedFile',
+    'MaximumAttempts = 80',
     'function Start-M0987IndependentProvider',
     'function Publish-M0987ProviderPairIfReady',
     'function Get-M0987ClaimBoundary',
@@ -88,6 +90,8 @@ foreach ($required in @(
     '01-$ProviderName-publication.json',
     '01-$ProviderName-attestation.json',
     '01-provider-offers-publication.json',
+    "`$PublisherName -cne 'provider1'",
+    'Move-M0969PublishedFile $temporary $Path',
     'self-attested $field domains are not distinct',
     'STOP-PROVIDERS.marker',
     'providers-stopped.marker',
@@ -104,6 +108,13 @@ $stopIndex = $common.IndexOf('Stop-M0969Process $runtime', $common.IndexOf('func
 $publishIndex = $common.IndexOf('Publish-M0969File $localLog', $stopIndex)
 if ($stopIndex -lt 0 -or $publishIndex -le $stopIndex) {
     throw 'M0.9.87 must close provider runtime logs before publishing them to the synchronized folder.'
+}
+$pairPublisherIndex = $common.IndexOf('function Publish-M0987ProviderPairIfReady')
+$singleWriterGuardIndex = $common.IndexOf("`$PublisherName -cne 'provider1'", $pairPublisherIndex)
+$aggregatePublicationIndex = $common.IndexOf("'01-provider-offers-publication.json'", $pairPublisherIndex)
+if ($pairPublisherIndex -lt 0 -or $singleWriterGuardIndex -le $pairPublisherIndex -or
+    $aggregatePublicationIndex -le $singleWriterGuardIndex) {
+    throw 'M0.9.87 aggregate provider publication must be guarded by provider1 single-writer ownership.'
 }
 
 foreach ($entry in @(@($provider1, "Start-M0987IndependentProvider 'provider1'"), @($provider2, "Start-M0987IndependentProvider 'provider2'"))) {
