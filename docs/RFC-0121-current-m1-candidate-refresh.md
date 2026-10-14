@@ -1,6 +1,7 @@
 # RFC-0121: Current M1 candidate refresh (M0.9.98)
 
-Status: composed locally; committed production verification pending.
+Status: accepted locally after committed production candidate and complete
+readiness verification; hosted confirmation pending.
 
 ## 1. Purpose
 
@@ -74,3 +75,17 @@ not require another field network run.
 Production verification must run from a clean committed tree. Complete M1
 readiness and a fresh green hosted Windows CI run remain required before any
 separate decision about an M1 tag.
+
+## 6. Local acceptance evidence
+
+Candidate-control revision `bc3e8248b2f3b278ed86792260fd20147ced08ac`
+passed the production candidate verifier from a clean committed tree. It
+reported both protected surfaces unchanged, the reduced field result without
+claim escalation, and `m1_candidate_status=verified`.
+
+The complete readiness gate then passed all `33/33` closed boundaries,
+`cargo fmt --check`, and locked/offline strict Clippy with two Cargo jobs. It
+reported `m1_readiness_status=verified`, started no Rust test executable, and
+performed no network action, release build, archive creation, service creation
+or Git tagging. A fresh hosted Windows run remains required; local acceptance
+does not authorize an M1 tag.

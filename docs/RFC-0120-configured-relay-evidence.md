@@ -1,7 +1,7 @@
 # RFC-0120: Configured relay evidence (M0.9.97)
 
-Status: fresh two-host reduced field run verified; candidate refresh and hosted
-confirmation pending.
+Status: fresh two-host reduced field run, candidate refresh and local readiness
+verified; hosted confirmation pending.
 
 ## 1. Problem found by the fresh field run
 
@@ -74,7 +74,7 @@ for both closed stdout/stderr pairs before creating final boundary evidence.
 Self-tests cover configured-only success plus divergent configured/observed
 relay rejection.
 
-Remaining acceptance requires candidate refresh, clean complete M1 readiness
-and a fresh green hosted Windows CI run. No step authorizes an M1 tag or public
-security-release claim. The reduced two-host run does not replace the pending
-three-/four-host independent-provider field test.
+Local candidate composition and complete M1 readiness now pass. Remaining
+acceptance requires a fresh green hosted Windows CI run. No step authorizes an
+M1 tag or public security-release claim. The reduced two-host run does not
+replace the pending three-/four-host independent-provider field test.

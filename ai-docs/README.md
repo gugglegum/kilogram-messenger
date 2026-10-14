@@ -480,8 +480,8 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
    candidate refresh, clean readiness и fresh green hosted Windows CI.
 18. M0.9.98 обновляет `M1-CANDIDATE.json` на fresh run `20261014-141058` и
    runtime surface `b5cb9bc9...`; unchanged independent M0.9.88 surface
-   сохраняет принятую attestation. После commit обязательны production
-   candidate verifier, полный readiness `33/33` и fresh hosted CI.
+   сохраняет принятую attestation. Revision `bc3e824...` прошла production
+   candidate verifier и полный readiness `33/33`; остался fresh hosted CI.
 19. Optional autostart/background mode оставить отдельной явной настройкой;
    Windows Task Scheduler не является обязательной частью мессенджера.
 4. Уже реализованный M0.9.49 выделяет единый

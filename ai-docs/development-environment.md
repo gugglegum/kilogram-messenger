@@ -3116,3 +3116,9 @@ Hosted follow-up:
 - Candidate and boundary self-tests pass while the control surface is dirty;
   production verification intentionally waits for a committed clean control
   surface.
+- Candidate-control commit `bc3e8248b2f3b278ed86792260fd20147ced08ac`
+  passed production verification from a clean tree.
+- Complete readiness passed all `33/33` boundaries, format and locked/offline
+  strict Clippy with `CargoJobs=2`. Mutation markers remained false: no Rust
+  test executable, network action, release build, archive, service or Git tag.
+- Next gate is push plus a fresh green GitHub-hosted Windows CI run.
