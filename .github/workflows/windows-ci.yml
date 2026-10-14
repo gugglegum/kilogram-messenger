@@ -63,5 +63,7 @@ jobs:
             -Profile test `
             -CargoJobs 2 `
             -IsolatedTestsFile .\scripts\windows-ci-isolated-tests.json `
+            -IsolatedTestOrder BeforeAggregate `
+            -NormalProcessPriority `
             -Run `
             -NoFailFast

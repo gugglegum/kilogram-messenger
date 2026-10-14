@@ -49,6 +49,8 @@ foreach ($required in @(
     '-Profile test',
     '-CargoJobs 2',
     '-IsolatedTestsFile .\scripts\windows-ci-isolated-tests.json',
+    '-IsolatedTestOrder BeforeAggregate',
+    '-NormalProcessPriority',
     '-Run',
     '-NoFailFast'
 )) {
@@ -105,6 +107,10 @@ foreach ($entry in @($isolatedManifest.tests)) {
 
 foreach ($required in @(
     '[string]$IsolatedTestsFile',
+    "[ValidateSet('AfterAggregate', 'BeforeAggregate')]",
+    '[string]$IsolatedTestOrder = ''AfterAggregate''',
+    '[switch]$NormalProcessPriority',
+    'cargo_process_priority_override=normal',
     'Filter and IsolatedTestsFile cannot be combined.',
     'Duplicate isolated test entry:',
     "'--list' '--format' 'terse'",
@@ -112,6 +118,9 @@ foreach ($required in @(
     "@('--skip', `$isolatedTest.Name)",
     "@(`$isolatedTest.Name, '--exact')",
     'running_isolated_test=',
+    'isolated_test_order=',
+    "`$IsolatedTestOrder -ceq 'BeforeAggregate'",
+    "`$IsolatedTestOrder -ceq 'AfterAggregate'",
     'isolated_test_count='
 )) {
     if ($runner.IndexOf($required, [StringComparison]::Ordinal) -lt 0) {
@@ -153,6 +162,8 @@ foreach ($required in @(
     'does not create a release build, archive, attestation or tag',
     'stable-path Rust test harnesses',
     'fresh process',
+    'normal process priority',
+    'before the aggregate harnesses',
     'empty Cargo profile directory',
     'test step still runs when readiness fails',
     'failed readiness step continues to fail the job',
@@ -172,6 +183,8 @@ Write-Output 'stable_rust_tests=required'
 Write-Output 'cargo_jobs=2'
 Write-Output 'test_profile=test'
 Write-Output 'isolated_tests=1'
+Write-Output 'isolated_test_order=before-aggregate'
+Write-Output 'test_process_priority=normal'
 Write-Output 'empty_cache_profile_measurement=verified'
 Write-Output 'tests_after_readiness_failure=required-if-fetch-succeeded'
 Write-Output 'test_step_timeout_minutes=38'

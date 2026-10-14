@@ -4850,3 +4850,23 @@ Local acceptance:
 - clean production readiness: `boundary_gates=33/33`, candidate/format/offline
   strict Clippy verified, mutation flags false;
 - fresh hosted green run остаётся единственным pending acceptance condition.
+
+### M0.9.95 — hosted isolated-test scheduling: реализовано локально
+
+- GitHub run `38523647852` на revision `75ad3d8...` прошёл readiness и все
+  276 aggregate Rust tests; isolated revocation/restart test один пересёк
+  внутренний 10-second IPC-ready deadline после `relay_status=skipped`;
+- предыдущий hosted run прошёл exact isolated invocation за 69.84s, а два
+  local normal-priority запуска прошли за 59.82s и 59.85s;
+- timestamped local run показал restart IPC descriptor через 8.66s после
+  завершения первого runtime, поэтому inherited `BelowNormal` после полного
+  aggregate suite оставлял слишком малый scheduler margin;
+- Windows CI теперь явно выбирает `Normal` и `BeforeAggregate`; test остаётся
+  exact, fresh-process, single-attempt и mandatory;
+- локальный exact hosted-mode прогон прошёл: isolated `1/1` за 60.64s, затем
+  aggregate CLI `81/81` за 530.22s, cache report завершён;
+- `apps/`, `crates/`, field runtime surface и independent offline surface не
+  изменены; physical field/reproduction rerun не нужен.
+
+Acceptance gate: Windows CI boundary, commit, clean full M1 readiness, push и
+fresh green GitHub-hosted run. M1 tag остаётся отдельным явным решением.

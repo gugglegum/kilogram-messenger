@@ -462,7 +462,11 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
    missing/empty/non-empty self-test. Field/runtime и independent surfaces не
    менялись. Revision `520793f...` прошла clean readiness `33/33`; нужен fresh
    green CI, но не новый сетевой run.
-15. Optional autostart/background mode оставить отдельной явной настройкой;
+15. M0.9.95 исправляет hosted scheduling без Rust/runtime drift: isolated
+   restart test запускается один раз до aggregate suite и при explicit Normal
+   priority. Local hosted-mode run прошёл isolated `1/1` и aggregate CLI
+   `81/81`; fresh green GitHub run остаётся acceptance condition.
+16. Optional autostart/background mode оставить отдельной явной настройкой;
    Windows Task Scheduler не является обязательной частью мессенджера.
 4. Уже реализованный M0.9.49 выделяет единый
    `kilogram-publication-conflict`: online/offline используют один signed codec,
@@ -897,6 +901,9 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
 - [`../docs/RFC-0117-hosted-test-completion-and-empty-cache-accounting.md`](../docs/RFC-0117-hosted-test-completion-and-empty-cache-accounting.md) —
   M0.9.94 отделяет полный hosted Rust pass от post-test cache-report failure и
   закрывает Windows PowerShell empty-tree regression динамическим self-test.
+- [`../docs/RFC-0118-hosted-isolated-test-scheduling.md`](../docs/RFC-0118-hosted-isolated-test-scheduling.md) —
+  M0.9.95 запускает exact isolated restart test до aggregate harnesses и с
+  normal hosted priority, сохраняя single-attempt fail-closed coverage.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

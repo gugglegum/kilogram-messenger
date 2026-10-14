@@ -3027,3 +3027,20 @@ retirement остальных compatibility shadows ещё не реализов
   прошла normal cache report (`46103` files / `37.48 GiB`), Windows CI boundary
   и clean production readiness `33/33`; candidate, format и offline strict
   Clippy verified. Test EXE/network/release/archive/tag flags остались false.
+
+## M0.9.95 hosted isolated-test scheduling (2026-10-14)
+
+- Run `38523647852` прошёл 33-gate readiness и все 276 aggregate tests; exact
+  isolated revocation/restart test failed only on its 10-second IPC-ready wait
+  after the recovered endpoint had already reached `relay_status=skipped`.
+- Stable runner inherited `BelowNormal` from the interactive Cargo policy even
+  on the disposable hosted runner and ran isolated work after the full suite.
+- CI now passes `-NormalProcessPriority -IsolatedTestOrder BeforeAggregate`.
+  Defaults remain `BelowNormal`/`AfterAggregate` for local interactive use.
+- Windows CI boundary statically closes both explicit order branches, exact
+  workflow flags and observable priority/order markers.
+- Focused local exact tests passed twice at normal priority (59.82s/59.85s).
+  Full runner validation then passed isolated first (60.64s), aggregate CLI
+  81/81 (530.22s), final cache report and `status=passed`.
+- No Rust source, runtime/network action, release/archive/service/tag mutation
+  occurred; accepted field and independent surfaces remain unchanged.

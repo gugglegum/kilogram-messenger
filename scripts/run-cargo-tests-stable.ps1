@@ -5,6 +5,9 @@ param(
     [string]$Profile = 'verification',
     [int]$CargoJobs = 0,
     [string]$IsolatedTestsFile,
+    [ValidateSet('AfterAggregate', 'BeforeAggregate')]
+    [string]$IsolatedTestOrder = 'AfterAggregate',
+    [switch]$NormalProcessPriority,
     [switch]$Run,
     [switch]$NoFailFast,
     [switch]$NoCapture
@@ -15,6 +18,16 @@ $ErrorActionPreference = 'Stop'
 
 . (Join-Path $PSScriptRoot 'cargo-resource-policy.ps1')
 $cargoJobsResolved = Set-KilogramCargoResourcePolicy -RequestedJobs $CargoJobs
+if ($NormalProcessPriority) {
+    try {
+        [System.Diagnostics.Process]::GetCurrentProcess().PriorityClass =
+            [System.Diagnostics.ProcessPriorityClass]::Normal
+        Write-Host 'cargo_process_priority_override=normal'
+    }
+    catch {
+        throw "Could not set the explicitly requested normal process priority: $($_.Exception.Message)"
+    }
+}
 
 $workspaceRoot = Split-Path -Parent $PSScriptRoot
 $manifestPath = Join-Path $workspaceRoot 'Cargo.toml'
@@ -206,6 +219,37 @@ if ($NoCapture) {
 $testArguments += '--test-threads=1'
 
 $failedArtifacts = @()
+$runIsolatedTests = {
+    foreach ($isolatedTest in $isolatedTests) {
+        Write-Host "running_isolated_test_executable=$($isolatedTest.Path)"
+        Write-Host "running_isolated_test=$($isolatedTest.Name)"
+        $isolatedArguments = @($isolatedTest.Name, '--exact')
+        if ($NoCapture) {
+            $isolatedArguments += '--nocapture'
+        }
+        $isolatedArguments += '--test-threads=1'
+        Push-Location $workspaceRoot
+        try {
+            & $isolatedTest.Path @isolatedArguments
+            $testExitCode = $LASTEXITCODE
+        } finally {
+            Pop-Location
+        }
+
+        if ($testExitCode -ne 0) {
+            $failedArtifacts += "$($isolatedTest.Path) :: $($isolatedTest.Name)"
+            if (-not $NoFailFast) {
+                throw "Isolated stable test failed with exit code ${testExitCode}: $($isolatedTest.Name)"
+            }
+        }
+    }
+}
+
+Write-Host "isolated_test_order=$IsolatedTestOrder"
+if ($IsolatedTestOrder -ceq 'BeforeAggregate') {
+    . $runIsolatedTests
+}
+
 foreach ($artifact in $stableArtifacts) {
     Write-Host "running_test_executable=$($artifact.Path)"
     $artifactArguments = @($testArguments)
@@ -228,28 +272,8 @@ foreach ($artifact in $stableArtifacts) {
     }
 }
 
-foreach ($isolatedTest in $isolatedTests) {
-    Write-Host "running_isolated_test_executable=$($isolatedTest.Path)"
-    Write-Host "running_isolated_test=$($isolatedTest.Name)"
-    $isolatedArguments = @($isolatedTest.Name, '--exact')
-    if ($NoCapture) {
-        $isolatedArguments += '--nocapture'
-    }
-    $isolatedArguments += '--test-threads=1'
-    Push-Location $workspaceRoot
-    try {
-        & $isolatedTest.Path @isolatedArguments
-        $testExitCode = $LASTEXITCODE
-    } finally {
-        Pop-Location
-    }
-
-    if ($testExitCode -ne 0) {
-        $failedArtifacts += "$($isolatedTest.Path) :: $($isolatedTest.Name)"
-        if (-not $NoFailFast) {
-            throw "Isolated stable test failed with exit code ${testExitCode}: $($isolatedTest.Name)"
-        }
-    }
+if ($IsolatedTestOrder -ceq 'AfterAggregate') {
+    . $runIsolatedTests
 }
 
 if ($failedArtifacts.Count -ne 0) {

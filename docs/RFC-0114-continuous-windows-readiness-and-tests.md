@@ -1,8 +1,9 @@
 # RFC-0114: Continuous Windows readiness and tests (M0.9.91)
 
 Status: hosted execution operational; complete product tests passed in run
-`38519726403`, with a post-test empty-cache accounting defect pending its
-M0.9.94 confirmation run.
+`38519726403`. M0.9.94 fixed the post-test empty-cache accounting defect; its
+confirmation run `38523647852` exposed a separate hosted scheduling margin in
+the isolated runtime-restart test.
 
 ## 1. Purpose
 
@@ -64,7 +65,10 @@ pairwise locator test failed alone because its append-only runtime journal path
 crossed the legacy Windows path limit. M0.9.92 fixes the storage boundary and
 returns that test to the aggregate harness. The remaining isolated invocation
 is mandatory and still fails the job on any failure; this is process isolation,
-not retry-based success or reduced coverage.
+not retry-based success or reduced coverage. It now runs exactly once before
+the aggregate harnesses and the hosted test process uses normal process priority.
+Local callers retain the interactive-friendly default order and `BelowNormal`
+priority unless they explicitly request the hosted policy.
 
 Run `38519726403` on exact revision
 `3887e06e58c060d19cbd84eb5fefdb86d2f613ad` passed the complete readiness gate,
@@ -75,3 +79,17 @@ empty Cargo profile directory and Windows PowerShell returned no
 zero and exercises that case in a fresh temporary directory from the closed
 Windows CI boundary. An empty Cargo profile directory is valid state, not a
 test failure; malformed or multiple measurement results still fail closed.
+
+Run `38523647852` proved the cache fix was not yet reached: all 276 aggregate
+tests passed, while the isolated restart test crossed its internal ten-second
+IPC-ready deadline after the restarted endpoint had already bound successfully.
+The same exact test passed locally at normal priority in 59.82 and 59.85
+seconds; timestamped output placed restart IPC readiness 8.66 seconds after
+the preceding runtime stopped. That leaves too little scheduling margin when a
+`BelowNormal` child runs after the complete hosted aggregate suite.
+
+The hosted runner therefore restores normal process priority explicitly and
+runs the isolated fresh process before the aggregate harnesses. The test is not
+retried, its internal assertion is unchanged, and every aggregate and isolated
+test remains mandatory. This is a CI scheduling correction outside the exact
+field-tested runtime/protocol and independently reproduced offline surfaces.
