@@ -12,6 +12,7 @@ use kilogram_ratchet::{DecryptedMessage, RatchetCiphertext, RatchetError, Signed
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+pub mod canonical_authority_v1;
 pub mod canonical_v1;
 mod recovery;
 mod rewrap;

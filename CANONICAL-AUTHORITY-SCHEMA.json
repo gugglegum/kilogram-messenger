@@ -47,6 +47,44 @@
       "signer": "authorized-device-ed25519"
     }
   ],
+  "rust_bindings": [
+    {
+      "path": "crates/kilogram-protocol/src/canonical_authority_v1.rs",
+      "symbol": "CANONICAL_DEVICE_CERTIFICATE_SIGNATURE_DOMAIN",
+      "rust_type": "bytes",
+      "value": "kilogram:device-certificate-signature:cbor-v1\\0"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_authority_v1.rs",
+      "symbol": "CANONICAL_DEVICE_REVOCATION_SIGNATURE_DOMAIN",
+      "rust_type": "bytes",
+      "value": "kilogram:device-revocation-signature:cbor-v1\\0"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_authority_v1.rs",
+      "symbol": "CANONICAL_AUTHORITY_SNAPSHOT_SIGNATURE_DOMAIN",
+      "rust_type": "bytes",
+      "value": "kilogram:account-authority-snapshot-signature:cbor-v1\\0"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_authority_v1.rs",
+      "symbol": "CANONICAL_DEVICE_SESSION_AUTHORIZATION_SIGNATURE_DOMAIN",
+      "rust_type": "bytes",
+      "value": "kilogram:device-session-authorization-signature:cbor-v1\\0"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_authority_v1.rs",
+      "symbol": "MAX_CANONICAL_DEVICE_CAPABILITIES",
+      "rust_type": "usize",
+      "value": 2
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_authority_v1.rs",
+      "symbol": "MAX_CANONICAL_AUTHORITY_REVOCATIONS",
+      "rust_type": "usize",
+      "value": 32
+    }
+  ],
   "objects": [
     {
       "id": "account-id-v1",

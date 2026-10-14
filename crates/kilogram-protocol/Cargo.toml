@@ -9,6 +9,7 @@ publish = false
 
 [dependencies]
 blake3.workspace = true
+ed25519-dalek.workspace = true
 kilogram-crypto = { path = "../kilogram-crypto" }
 kilogram-identity = { path = "../kilogram-identity" }
 kilogram-ratchet = { path = "../kilogram-ratchet" }

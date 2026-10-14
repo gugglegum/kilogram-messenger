@@ -204,23 +204,23 @@ fn validate_ordered_ids(
     Ok(())
 }
 
-fn prefixed(domain: &[u8], encoded: &[u8]) -> Vec<u8> {
+pub(crate) fn prefixed(domain: &[u8], encoded: &[u8]) -> Vec<u8> {
     let mut bytes = Vec::with_capacity(domain.len() + encoded.len());
     bytes.extend_from_slice(domain);
     bytes.extend_from_slice(encoded);
     bytes
 }
 
-fn push_unsigned(output: &mut Vec<u8>, value: u64) {
+pub(crate) fn push_unsigned(output: &mut Vec<u8>, value: u64) {
     push_head(output, 0, value);
 }
 
-fn push_bytes(output: &mut Vec<u8>, value: &[u8]) {
+pub(crate) fn push_bytes(output: &mut Vec<u8>, value: &[u8]) {
     push_head(output, 2, value.len() as u64);
     output.extend_from_slice(value);
 }
 
-fn push_array_header(output: &mut Vec<u8>, length: u64) {
+pub(crate) fn push_array_header(output: &mut Vec<u8>, length: u64) {
     push_head(output, 4, length);
 }
 
