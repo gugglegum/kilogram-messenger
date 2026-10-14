@@ -3042,5 +3042,8 @@ retirement остальных compatibility shadows ещё не реализов
 - Focused local exact tests passed twice at normal priority (59.82s/59.85s).
   Full runner validation then passed isolated first (60.64s), aggregate CLI
   81/81 (530.22s), final cache report and `status=passed`.
+- Implementation revision `c6793136ef0839c6c854227929fa9dfe32cc3f74`
+  прошла clean M1 readiness: boundaries `33/33`, candidate, format и
+  locked/offline strict Clippy verified; readiness mutation flags false.
 - No Rust source, runtime/network action, release/archive/service/tag mutation
   occurred; accepted field and independent surfaces remain unchanged.

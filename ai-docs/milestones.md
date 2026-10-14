@@ -4868,5 +4868,13 @@ Local acceptance:
 - `apps/`, `crates/`, field runtime surface и independent offline surface не
   изменены; physical field/reproduction rerun не нужен.
 
+Local acceptance:
+
+- implementation revision `c6793136ef0839c6c854227929fa9dfe32cc3f74`;
+- Windows CI boundary verified explicit priority/order policy;
+- clean full readiness: `boundary_gates=33/33`, candidate/format and
+  locked/offline strict Clippy verified;
+- readiness mutation flags all false; fresh hosted green run still pending.
+
 Acceptance gate: Windows CI boundary, commit, clean full M1 readiness, push и
 fresh green GitHub-hosted run. M1 tag остаётся отдельным явным решением.

@@ -465,7 +465,8 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
 15. M0.9.95 исправляет hosted scheduling без Rust/runtime drift: isolated
    restart test запускается один раз до aggregate suite и при explicit Normal
    priority. Local hosted-mode run прошёл isolated `1/1` и aggregate CLI
-   `81/81`; fresh green GitHub run остаётся acceptance condition.
+   `81/81`; revision `c679313...` прошла clean readiness `33/33`. Fresh green
+   GitHub run остаётся acceptance condition.
 16. Optional autostart/background mode оставить отдельной явной настройкой;
    Windows Task Scheduler не является обязательной частью мессенджера.
 4. Уже реализованный M0.9.49 выделяет единый

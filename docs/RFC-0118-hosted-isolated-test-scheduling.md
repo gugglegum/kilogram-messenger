@@ -59,8 +59,8 @@ harness subsequently passed 81 tests in 530.22 seconds with the isolated test
 reported as the single intentional filter. The runner reached `status=passed`,
 reported `isolated_test_count=1`, and the empty-cache-safe report completed.
 
-The local stable-path runner was then exercised in the exact hosted mode. The
-isolated test ran first and passed once in 60.64 seconds; the aggregate CLI
-harness subsequently passed 81 tests in 530.22 seconds with the isolated test
-reported as the single intentional filter. The runner reached `status=passed`,
-reported `isolated_test_count=1`, and the empty-cache-safe report completed.
+Implementation revision `c6793136ef0839c6c854227929fa9dfe32cc3f74`
+subsequently passed the complete clean-tree M1 readiness gate: all 33 boundary
+gates, candidate continuity, formatting and locked/offline strict Clippy were
+verified. No test executable was started by readiness and every mutation flag
+remained false. Hosted confirmation is still required.
