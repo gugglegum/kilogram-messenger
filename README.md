@@ -7,6 +7,9 @@ sensitive communication.
 
 The project goals and draft architecture are documented in
 [`docs/RFC-0001-core-architecture.md`](docs/RFC-0001-core-architecture.md).
+The accepted scope and limitations of the M1.0.0 Windows technical proof of
+concept are documented in
+[`docs/RFC-0123-m1-technical-poc-acceptance.md`](docs/RFC-0123-m1-technical-poc-acceptance.md).
 The implemented Account Root / device authority slice is specified in
 [`docs/RFC-0002-account-device-authority.md`](docs/RFC-0002-account-device-authority.md).
 The implemented M0 conversation authorization slice is specified in
@@ -252,17 +255,25 @@ The current two-network Windows procedure is in
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.91 continuous Windows readiness and tests — hosted remediation pending
+## Current milestone: M1.0.0 Windows technical proof of concept — accepted
 
-`.github/workflows/windows-ci.yml` runs on every master push/PR and manual
-dispatch with read-only permission. It fetches locked dependencies, switches
-Cargo offline, executes the closed 33-gate M1 readiness verifier, then compiles
-and runs all stable-path Rust test harnesses serially with two jobs. The job
-creates no release artifact, archive, attestation or Git tag. Hosted run
-`38509447420` passed readiness and 79/81 aggregate CLI tests but exposed two
-endpoint-lifecycle deadline failures late in one long-lived process. Those
-exact tests remain mandatory and are now isolated into fresh processes by a
-closed manifest; the confirming hosted run is pending.
+M1.0.0 is the first evidence-backed Windows technical proof of concept. The
+candidate composes a successful physical two-host field lifecycle, an
+independently reproduced byte-identical offline executable and complete hosted
+Windows readiness. Hosted runs `38588961507` and `38595445191` each passed all
+`33/33` readiness gates, the isolated lifecycle test and all 276 aggregate
+tests. The latter executed 277 tests in total with zero failures.
+
+This milestone is not a public security release. Strict independent-provider
+field acceptance remains pending; operator/network independence is unproven;
+Sybil resistance is incomplete; traffic correlation is not hidden; field
+evidence is Windows-only; and no independent security audit has been
+performed. Do not use Kilogram for sensitive communication.
+
+The annotated `M1.0.0` Git tag identifies the accepted source revision. No
+release binary, ZIP archive or GitHub Release is implied. The Cargo workspace
+version remains `0.1.0` because M1.0.0 names the project milestone rather than
+a stable library API.
 
 ## Previous milestone: M0.9.90 complete M1 readiness gate — accepted locally
 

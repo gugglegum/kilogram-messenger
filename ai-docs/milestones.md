@@ -4980,3 +4980,24 @@ Acceptance gate: push и fresh green hosted Windows CI. M1 tag остаётся 
 Hosted gate текущего Windows technical candidate закрыт. Strict
 independent-provider field acceptance и решение об M1 tag остаются отдельными
 явными пунктами; public security release не заявляется.
+
+### M1.0.0 — Windows technical proof of concept: принято
+
+- пользователь явно принял milestone с уже описанными ограничениями;
+- scope остаётся `windows-technical-proof-of-concept`, а не production или
+  public security release;
+- canonical acceptance record — `M1-CANDIDATE.json` вместе с RFC-0121,
+  RFC-0122 и RFC-0123;
+- exact acceptance commit обязан пройти production candidate verifier,
+  readiness `33/33` и fresh hosted Windows workflow до создания тега;
+- canonical tag — annotated `M1.0.0`; перемещать или заменять опубликованный
+  tag запрещено;
+- Cargo workspace version остаётся `0.1.0`: milestone name не является
+  обещанием стабильного Rust API;
+- GitHub Release, binary attachment, ZIP/release build и новая attestation не
+  требуются и не создаются.
+
+Ограничения сохраняются: strict independent-provider field acceptance pending,
+operator/network independence unproven, Sybil resistance incomplete, access
+correlation visible, Windows-only field evidence, independent security audit
+не проводился. M1.0.0 нельзя рекомендовать для sensitive/high-risk traffic.

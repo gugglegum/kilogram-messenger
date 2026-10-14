@@ -486,7 +486,11 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
    `9d7895f...` прошёл hosted readiness `33/33`, isolated lifecycle `1/1` и
    aggregate harnesses `276/276`; job завершился зелёным за 38m41s. Это закрывает
    hosted gate, но не разрешает M1 tag автоматически.
-20. Optional autostart/background mode оставить отдельной явной настройкой;
+20. Пользователь явно принял M1.0.0 как Windows technical proof of concept с
+   неизменёнными residual risks. Exact acceptance commit должен пройти fresh
+   hosted Windows CI до создания annotated tag `M1.0.0`; release binaries,
+   archive и GitHub Release не создаются, Cargo workspace остаётся `0.1.0`.
+21. Optional autostart/background mode оставить отдельной явной настройкой;
    Windows Task Scheduler не является обязательной частью мессенджера.
 4. Уже реализованный M0.9.49 выделяет единый
    `kilogram-publication-conflict`: online/offline используют один signed codec,
@@ -937,6 +941,9 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
 - [`../docs/RFC-0122-hosted-windows-readiness-acceptance.md`](../docs/RFC-0122-hosted-windows-readiness-acceptance.md) —
   M0.9.99 принимает fresh green GitHub Windows CI: readiness `33/33`, isolated
   lifecycle `1/1` и все 276 aggregate tests без release/tag side effects.
+- [`../docs/RFC-0123-m1-technical-poc-acceptance.md`](../docs/RFC-0123-m1-technical-poc-acceptance.md) —
+  фиксирует M1.0.0 как Windows technical PoC, сохраняет шесть residual risks и
+  разрешает annotated tag только на exact green acceptance commit.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

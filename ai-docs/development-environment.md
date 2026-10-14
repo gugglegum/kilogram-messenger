@@ -3136,3 +3136,16 @@ Hosted follow-up:
 - This closes the hosted gate only. Reduced field topology and all candidate
   residual risks remain unchanged; strict independent providers and M1 tag are
   not claimed.
+
+## M1.0.0 acceptance procedure (2026-10-14)
+
+- User explicitly authorized M1.0.0 with the recorded limitations.
+- The milestone is a Windows technical proof of concept, not a public security
+  release or stable Cargo API; workspace package version remains `0.1.0`.
+- Add RFC-0123 and current README/roadmap state without changing runtime,
+  protocol, independent-reproduction or field-evidence surfaces.
+- Commit the acceptance documents, pass the production candidate verifier and
+  complete readiness, push the exact commit, and require a fresh green hosted
+  Windows workflow.
+- Only then create and push one annotated `M1.0.0` tag at that exact commit.
+  Do not create a GitHub Release, executable attachment, ZIP or release build.
