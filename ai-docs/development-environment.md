@@ -2898,4 +2898,8 @@ retirement остальных compatibility shadows ещё не реализов
   version/commit/date/target/libgit2/libcurl, проверяет `os:` как 64-bit
   Windows и исключает только release text из equality. Реальный run после
   исправления прошёл все четыре `gh attestation verify`; fresh run exact
-  committed fix остаётся acceptance gate.
+  committed fix оставался acceptance gate.
+- Exact fix revision `68804c93f43b405008cfecf35dc8660db360a3a3`
+  прошла новый local clean-root pair и GitHub run `38507114425`. Attestation
+  `55683374`, artifact ID `11868441712`; downloaded evidence прошёл production
+  verifier с `attestation_verified=true`. M0.9.88 принят.

@@ -246,7 +246,7 @@ The current two-network Windows procedure is in
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.88 host-neutral Cargo identity verification — implemented locally
+## Current milestone: M0.9.88 host-neutral Cargo identity verification — accepted externally
 
 The independent reproduction verifier now compares the pinned Cargo version,
 commit, target and bundled libgit2/libcurl identities while treating Cargo's
@@ -258,8 +258,12 @@ GitHub diagnostic run `38506048297` reproduced the expected 2,432,000-byte
 offline executable exactly and created attestation `55680587`. That run exposed
 the verifier's former full-string comparison. The corrected production
 verifier accepts the genuine cross-Windows evidence and its self-test rejects a
-changed Cargo commit identity. A fresh run from the committed correction is
-required before M0.9.88 acceptance.
+changed Cargo commit identity.
+
+Exact corrected revision `68804c93...` passed the two-clean-root local build and
+GitHub run `38507114425`; both produced the same artifact hash. GitHub created
+attestation `55683374`, and the production verifier validated all four signed
+subjects. M0.9.88 is accepted without changing messenger runtime or wire data.
 
 ## Previous milestone: M0.9.87 independent-provider field contract — reduced run verified
 
