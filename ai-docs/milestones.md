@@ -4822,7 +4822,7 @@ Acceptance:
   service or Git tag was created by composition/readiness;
 - M0.9.93 is accepted locally; hosted full Rust confirmation remains pending.
 
-### M0.9.94 — hosted completion and empty-cache accounting: реализовано локально
+### M0.9.94 — hosted completion and empty-cache accounting: принято локально
 
 - GitHub run `38519726403` на revision `3887e06...` прошёл полный readiness,
   все aggregate Rust harnesses и isolated revocation/restart test;
@@ -4841,3 +4841,12 @@ Acceptance:
 Acceptance gate: clean production M1 readiness, commit/push и fresh green
 GitHub-hosted Windows CI run. Run `38519726403` остаётся доказательством полного
 test pass, но не считается зелёным baseline задним числом.
+
+Local acceptance:
+
+- implementation revision `520793ff17d35d22323f984765b43f4ad8e1c5d3`;
+- Windows PowerShell 5.1 и PowerShell 7 self-tests passed;
+- normal 37.48-GiB cache report и Windows CI boundary passed;
+- clean production readiness: `boundary_gates=33/33`, candidate/format/offline
+  strict Clippy verified, mutation flags false;
+- fresh hosted green run остаётся единственным pending acceptance condition.

@@ -460,7 +460,8 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
 14. M0.9.94 исправляет только verification tooling: missing и empty Cargo
    profile trees считаются exact zero, а Windows CI boundary выполняет
    missing/empty/non-empty self-test. Field/runtime и independent surfaces не
-   менялись; нужен clean readiness и fresh green CI, но не новый сетевой run.
+   менялись. Revision `520793f...` прошла clean readiness `33/33`; нужен fresh
+   green CI, но не новый сетевой run.
 15. Optional autostart/background mode оставить отдельной явной настройкой;
    Windows Task Scheduler не является обязательной частью мессенджера.
 4. Уже реализованный M0.9.49 выделяет единый

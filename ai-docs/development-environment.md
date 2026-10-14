@@ -3023,3 +3023,7 @@ retirement остальных compatibility shadows ещё не реализов
   PowerShell 7; он использует отдельный GUID temp root и удаляет только его.
 - До commit production readiness запускать нельзя: candidate verifier требует
   clean tree. После commit нужен clean readiness и новый hosted run.
+- Implementation revision `520793ff17d35d22323f984765b43f4ad8e1c5d3`
+  прошла normal cache report (`46103` files / `37.48 GiB`), Windows CI boundary
+  и clean production readiness `33/33`; candidate, format и offline strict
+  Clippy verified. Test EXE/network/release/archive/tag flags остались false.

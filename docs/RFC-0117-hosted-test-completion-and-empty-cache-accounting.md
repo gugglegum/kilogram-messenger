@@ -1,6 +1,6 @@
 # RFC-0117: Hosted test completion and empty-cache accounting (M0.9.94)
 
-Status: implemented locally; hosted confirmation pending.
+Status: accepted locally; hosted confirmation pending.
 
 ## 1. Context
 
@@ -52,3 +52,15 @@ This change touches only verification tooling and documentation. It does not
 change the 83-entry field runtime/protocol surface or the 63-entry independently
 reproduced offline surface, so it requires neither another physical field run
 nor another artifact reproduction.
+
+## 5. Local acceptance
+
+Implementation revision `520793ff17d35d22323f984765b43f4ad8e1c5d3`
+passed the self-test in Windows PowerShell 5.1 and PowerShell 7, the normal
+37.48-GiB cache report, the Windows CI boundary and the complete clean-tree M1
+readiness gate. Readiness reported `boundary_gates=33/33`, candidate, format
+and locked/offline strict Clippy verified, with all mutation flags false.
+
+Local acceptance does not turn run `38519726403` green and does not authorize
+an M1 tag. The remaining acceptance condition is a fresh successful Windows CI
+run of the committed state.
