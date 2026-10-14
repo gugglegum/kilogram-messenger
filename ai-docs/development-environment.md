@@ -2858,3 +2858,22 @@ retirement остальных compatibility shadows ещё не реализов
   администратора узкое временное inbound UDP allow rule для текущего EXE и
   Alice physical IP `192.168.0.140`, затем провести fresh run и после проверки
   удалить правило. Run `20261014-072429` отклонён и не возобновляется.
+
+## M0.9.87 two-host run success (2026-10-14)
+
+- Администраторский firewall rule для exact path
+  `C:\Users\test\KilogramLab\field-kit-current\kilogram-cli.exe`, inbound UDP,
+  all profiles, remote `192.168.0.140/32` устранил Provider 2 handshake failure.
+- Fresh run `20261014-075145` завершил Alice prepare/send, Bob
+  prepare/receive/delete/restart и остановку обоих providers. Основной результат
+  — `verified-reduced-two-host`; это не strict independent-provider acceptance.
+- Windows PowerShell 5.1 `-File` не передаёт `string[]` из controller helper как
+  два надёжных positional arguments: `paul` и `home-lan` стали одной строкой
+  `paul,home-lan`, а Provider 2 ждал `Read-Host`. Для automation использовать
+  remote wrapper с именованными `-OperatorLabel` и `-NetworkLabel`.
+- Codex sandbox не должен владеть shared field directories одновременно с
+  elevated SSH bridge; локальные field roles запускаются outside sandbox, а
+  директории создаются через idempotent `Directory.CreateDirectory`.
+- Firewall rule является временным тестовым исключением. После завершения
+  сетевых прогонов его нужно удалить от администратора вместе с test account и
+  SSH key; обычный пользователь `test` этого сделать не может.

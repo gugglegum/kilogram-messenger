@@ -63,6 +63,13 @@ function Test-M0969ExactLocatorEvidence {
     $expectedRelayUrl = 'https://aps1-1.relay.n0.iroh.link./'
     $expectedRoutePattern = '^route_policy=' + [regex]::Escape($expectedRoutePolicy) + '$'
     $expectedRelayPattern = '^relay_home_url=' + [regex]::Escape($expectedRelayUrl) + '$'
+    # A runtime can complete peer convergence over a direct path even when its
+    # own relay registration times out.  In that case the authenticated peer
+    # ticket still records the pinned relay as target_relay_url.  Accept either
+    # spelling for convergence only; every accepted value remains the exact
+    # canonical field relay from the manifest.
+    $expectedConvergenceRelayPattern = `
+        '^(?:relay_home_url|target_relay_url)=' + [regex]::Escape($expectedRelayUrl) + '$'
     $manifestText = Read-M0969Evidence $Directory 'manifest.json'
     $manifest = $manifestText | ConvertFrom-Json
     if ([int]$manifest.schema -ne 1) { throw 'M0.9.69 manifest schema must be exactly 1' }
@@ -189,9 +196,11 @@ function Test-M0969ExactLocatorEvidence {
     $aliceConvergence = Read-M0969Evidence $Directory '03-alice-capability-convergence.log'
     $bobConvergence = Read-M0969Evidence $Directory '03-bob-capability-convergence.log'
     Assert-M0969Match $aliceConvergence $expectedRoutePattern 'Alice convergence auto route policy'
-    Assert-M0969Match $aliceConvergence $expectedRelayPattern 'Alice convergence pinned field relay'
+    Assert-M0969Match `
+        $aliceConvergence $expectedConvergenceRelayPattern 'Alice convergence pinned field relay'
     Assert-M0969Match $bobConvergence $expectedRoutePattern 'Bob convergence auto route policy'
-    Assert-M0969Match $bobConvergence $expectedRelayPattern 'Bob convergence pinned field relay'
+    Assert-M0969Match `
+        $bobConvergence $expectedConvergenceRelayPattern 'Bob convergence pinned field relay'
     Assert-M0969Match `
         $aliceConvergence "^mailbox_capability_update_id=$([regex]::Escape($updateId))$" `
         'Alice application of the exact capability update'
@@ -483,6 +492,31 @@ if ($SelfTest) {
         $positive = Test-M0969ExactLocatorEvidence $root $LabelPrefix
         if ($positive.result -cne 'verified') { throw 'positive M0.9.69 verifier self-test failed' }
 
+        $aliceConvergencePath = Join-Path $root '03-alice-capability-convergence.log'
+        $aliceConvergenceOriginal = Get-Content -LiteralPath $aliceConvergencePath -Raw
+        $aliceTargetRelay = $aliceConvergenceOriginal.Replace(
+            'relay_home_url=https://aps1-1.relay.n0.iroh.link./',
+            'target_relay_url=https://aps1-1.relay.n0.iroh.link./'
+        )
+        Set-Content -LiteralPath $aliceConvergencePath -Encoding utf8 -Value $aliceTargetRelay
+        $targetRelayPositive = Test-M0969ExactLocatorEvidence $root $LabelPrefix
+        if ($targetRelayPositive.result -cne 'verified') {
+            throw 'verifier rejected a canonical target relay after direct convergence'
+        }
+        Set-Content -LiteralPath $aliceConvergencePath -Encoding utf8 -Value (
+            $aliceTargetRelay.Replace(
+                'target_relay_url=https://aps1-1.relay.n0.iroh.link./',
+                'target_relay_url=https://euc1-1.relay.n0.iroh.link./'
+            )
+        )
+        $targetRelayMismatchRejected = $false
+        try { $null = Test-M0969ExactLocatorEvidence $root $LabelPrefix }
+        catch { $targetRelayMismatchRejected = $true }
+        if (-not $targetRelayMismatchRejected) {
+            throw 'verifier accepted a divergent convergence target relay'
+        }
+        Set-Content -LiteralPath $aliceConvergencePath -Encoding utf8 -Value $aliceConvergenceOriginal
+
         $sendPath = Join-Path $root '04-send-alice.log'
         $sendOriginal = Get-Content -LiteralPath $sendPath -Raw
         Set-Content -LiteralPath $sendPath -Encoding utf8 -Value (
@@ -543,6 +577,8 @@ if ($SelfTest) {
         Write-Output 'provider_substitution_rejected=true'
         Write-Output 'stale_endpoint_ticket_rejected=true'
         Write-Output 'relay_mismatch_rejected=true'
+        Write-Output 'direct_convergence_target_relay_verified=true'
+        Write-Output 'target_relay_mismatch_rejected=true'
         return
     }
     finally {

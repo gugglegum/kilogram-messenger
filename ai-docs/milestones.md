@@ -4605,3 +4605,28 @@ single writer, Provider 2 ждёт его публикацию, а atomic shared
 7. Membership removal и group governance проектировать вместе с ordered
    security events и MLS epoch; compact Merkle/range summary и независимый
    криптографический аудит остаются до публичного выпуска.
+
+### M0.9.87 — reduced two-host service-free run: подтверждён
+
+Fresh run `20261014-075145` на ПК и Windows-ноутбуке завершил весь reduced
+contract после добавления узкого inbound UDP firewall rule для стабильного
+remote `field-kit-current\kilogram-cli.exe` и Alice physical IP:
+
+- Provider 1 и Provider 2 имели разные machine pseudonyms и transport/store
+  identities, опубликовали два exact authenticated offers и закрытые final logs;
+- Alice/Bob capability convergence прошёл по direct LAN path; локальный relay
+  Alice был недоступен, но peer ticket сохранил canonical APS1 target relay;
+- Alice получила два signed volunteer receipts, записала offline boundary и
+  полностью остановила runtime до запуска Bob receive;
+- Bob получил обе volunteer-Iroh replicas, commit-нул одно сообщение, удалил
+  обе replicas и после restart не наблюдал redelivery;
+- patched exact-locator verifier вернул `result=verified`, M0.9.87 verifier —
+  `result=verified-reduced-two-host` и
+  `independent_provider_field_acceptance=false`;
+- старый verifier дал только false negative на отсутствие `relay_home_url` в
+  direct convergence; regression теперь принимает exact `target_relay_url`
+  APS1 и fail closed отвергает divergent target relay.
+
+Это закрывает доступный двухмашинный field proof без central HTTPS mailbox, но
+не закрывает строгий independent-provider acceptance: для него по-прежнему
+нужны минимум три физических host и независимые operator/network claims.
