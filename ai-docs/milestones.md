@@ -5072,3 +5072,29 @@ correlation visible, Windows-only field evidence, independent security audit
 - wire/runtime поведение не изменено; Postcard остаётся provisional, поэтому
   следующий protocol step — normative canonical schema и golden
   byte/signature/ID vectors, а не объявление cross-language stability.
+
+### M1.1.1 — canonical wire schema and golden vectors: принято локально
+
+- выбран узкий `kilogram-deterministic-cbor-v1` профиль RFC 8949: только
+  shortest-form unsigned integers, definite byte strings и positional arrays;
+  maps, text, negative integers, floats, tags, simple и indefinite items
+  fail closed;
+- `CANONICAL-WIRE-SCHEMA.json` фиксирует пять первых inactive schemas для
+  acknowledgement-event и sync-inventory, строгую bytewise ordering и
+  отдельные `cbor-v1` signature/ID domains;
+- `CANONICAL-WIRE-VECTORS.json` фиксирует два reproducible vectors: exact CBOR,
+  signing preimage, deterministic Ed25519 public key/signature и BLAKE3 event
+  ID на явно публичном test seed;
+- Rust encoder/profile validator прошёл 5/5 targeted tests, включая rejection
+  non-minimal, indefinite, unsupported, trailing, duplicate и unsorted forms;
+- PowerShell boundary независимо перекодировал оба logical input в те же
+  content/signed-envelope bytes и preimages; self-test отверг activation без
+  migration, removed object, changed bytes и uppercase hex;
+- closed readiness inventory расширен с 34 до 35 gates; accepted-tag прогон
+  прошёл `35/35`, exact immutable `M1.0.0`, format и locked/offline strict
+  Clippy с `CargoJobs 2`/BelowNormal;
+- active runtime остаётся Postcard, wire/network/field behavior не изменён,
+  network/release/archive/tag не запускались; перед activation обязательны
+  complete schema coverage, new explicit version/identifier, dual-reader
+  downgrade tests, independent non-Rust crypto conformance, decoder fuzzing и
+  fresh evidence.

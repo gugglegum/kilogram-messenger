@@ -3169,3 +3169,15 @@ Hosted follow-up:
   `accepted_m1_tag_status=verified`, `network_executed=false`,
   `test_executables_started=false`, `release_build=false`,
   `archive_created=false`, `git_tag_created=false`.
+## M1.1.1 canonical-wire verification snapshot (2026-10-15)
+
+- Targeted `kilogram-protocol` canonical module: 5/5 tests passed in the normal
+  unoptimized test profile with two Cargo jobs and BelowNormal priority.
+- `verify-kilogram-canonical-wire-boundary.ps1 -SelfTest` and production mode
+  passed under Windows PowerShell; the independent encoder reproduced both
+  checked CBOR contents, signing preimages and signed envelopes.
+- Complete accepted-tag readiness passed `35/35`, immutable `M1.0.0`, format
+  and locked/offline workspace Clippy. It started no network action, release
+  build, archive or Git tag.
+- The test executable was the pure protocol harness and opened no sockets; the
+  readiness pass itself continued to report `test_executables_started=false`.

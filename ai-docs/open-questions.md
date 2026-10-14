@@ -135,12 +135,12 @@ sessions, distribution, removal и key epochs и не решены этим пр
   push/change revision с backpressure, локальные роли нескольких UI clients и
   IPC onboarding/rotation contact без передачи секретного descriptor через
   sync/shared folder.
-- Какой финальный межъязыковой canonical wire encoding обеспечивает одинаковые
-  подписи и event IDs на всех платформах? RFC-0126 и
-  `PROTOCOL-COMPATIBILITY.json` уже fail-closed фиксируют 20 experimental
-  protocol families и 155 version/domain/identifier bindings, но Postcard и
-  Serde layout остаются предварительным codec. Нужны normative schemas и
-  golden byte/signature/ID vectors до заявления cross-language compatibility.
+- RFC-0127 выбрал узкий RFC 8949 deterministic-CBOR profile и зафиксировал
+  первые пять positional schemas плюс acknowledgement/sync golden
+  byte/Ed25519/BLAKE3 vectors. Он пока intentionally inactive: до заявления
+  cross-language compatibility остаются complete schema coverage вложенных
+  authority/ratchet objects, independent non-Rust crypto verification, полный
+  decoder fuzzing и отдельно versioned dual-reader migration с field evidence.
 - Какие security properties требуются от линеаризатора при злонамеренных, а не
   только сбойных indexer-узлах?
 

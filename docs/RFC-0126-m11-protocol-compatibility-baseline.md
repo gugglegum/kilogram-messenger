@@ -163,6 +163,10 @@ stage must select a canonical encoding and add normative schemas plus golden
 byte/signature/ID vectors. Those vectors, not Rust struct source alone, will be
 the cross-language compatibility authority.
 
+RFC-0127 starts that work with an inactive deterministic-CBOR profile and two
+golden vector families. It does not retroactively change this registry or the
+active Postcard wire.
+
 ## 8. Security and evidence boundary
 
 This baseline does not prove the cryptographic design secure, does not add a

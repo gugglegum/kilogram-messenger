@@ -2266,8 +2266,15 @@ M1.1 threat model, current claims and explicit non-guarantees.
 [`RFC-0126`](docs/RFC-0126-m11-protocol-compatibility-baseline.md) inventory the
 experimental cross-process and interoperability versions, ALPN identifiers and
 cryptographic domains. The inventory prevents silent constant drift; it does
-not make the current Postcard structures a final cross-language wire format or
-turn the M1.0.0 technical PoC into a production/security release.
+not make the current Postcard structures a final cross-language wire format.
+[`CANONICAL-WIRE-SCHEMA.json`](CANONICAL-WIRE-SCHEMA.json),
+[`CANONICAL-WIRE-VECTORS.json`](CANONICAL-WIRE-VECTORS.json), and
+[`RFC-0127`](docs/RFC-0127-m111-canonical-wire-and-golden-vectors.md) define the
+first inactive deterministic-CBOR candidate schemas and reproducible byte,
+Ed25519-signature, and BLAKE3-ID vectors. They are conformance material only:
+the runtime still uses Postcard, and activation requires a separately versioned
+migration. None of these baselines turns the M1.0.0 technical PoC into a
+production/security release.
 
 ## Contributing
 

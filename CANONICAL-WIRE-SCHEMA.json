@@ -1,0 +1,220 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.1",
+  "status": "candidate-not-active",
+  "changes_active_wire": false,
+  "encoding": {
+    "standard": "RFC 8949",
+    "standard_url": "https://www.rfc-editor.org/rfc/rfc8949.html",
+    "profile": "kilogram-deterministic-cbor-v1",
+    "allowed_major_types": [
+      0,
+      2,
+      4
+    ],
+    "preferred_serialization_required": true,
+    "definite_lengths_only": true,
+    "maps_allowed": false,
+    "text_strings_allowed": false,
+    "negative_integers_allowed": false,
+    "floating_point_allowed": false,
+    "tags_allowed": false,
+    "simple_values_allowed": false
+  },
+  "activation": {
+    "current_runtime_encoding": "postcard",
+    "current_runtime_changed": false,
+    "required_before_activation": [
+      "new-explicit-protocol-version-or-parallel-identifier",
+      "dual-reader-and-downgrade-tests",
+      "complete-object-schema-coverage",
+      "independent-non-rust-vector-verification"
+    ]
+  },
+  "rust_bindings": [
+    {
+      "path": "crates/kilogram-protocol/src/canonical_v1.rs",
+      "symbol": "ACKNOWLEDGEMENT_PAYLOAD_VARIANT",
+      "rust_type": "u64",
+      "value": 1
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_v1.rs",
+      "symbol": "CANONICAL_EVENT_ID_DOMAIN",
+      "rust_type": "bytes",
+      "value": "kilogram:event-id:cbor-v1\\0"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_v1.rs",
+      "symbol": "CANONICAL_EVENT_SIGNATURE_DOMAIN",
+      "rust_type": "bytes",
+      "value": "kilogram:event-signature:cbor-v1\\0"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_v1.rs",
+      "symbol": "CANONICAL_PROFILE_VERSION",
+      "rust_type": "u64",
+      "value": 1
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_v1.rs",
+      "symbol": "CANONICAL_SYNC_INVENTORY_SIGNATURE_DOMAIN",
+      "rust_type": "bytes",
+      "value": "kilogram:sync-inventory-signature:cbor-v1\\0"
+    }
+  ],
+  "objects": [
+    {
+      "id": "acknowledgement-event-content-v1",
+      "kind": "signed-content",
+      "array_length": 6,
+      "fields": [
+        {
+          "index": 0,
+          "name": "schema_version",
+          "type": "unsigned-integer",
+          "exact": 1
+        },
+        {
+          "index": 1,
+          "name": "conversation_id",
+          "type": "byte-string",
+          "exact_bytes": 32
+        },
+        {
+          "index": 2,
+          "name": "author_device_id",
+          "type": "byte-string",
+          "exact_bytes": 32
+        },
+        {
+          "index": 3,
+          "name": "author_sequence",
+          "type": "unsigned-integer"
+        },
+        {
+          "index": 4,
+          "name": "parents",
+          "type": "array",
+          "item_type": "byte-string-32",
+          "maximum_items": 64,
+          "ordering": "unsigned-bytewise-lexicographic-strict"
+        },
+        {
+          "index": 5,
+          "name": "payload",
+          "type": "object",
+          "object": "acknowledgement-payload-v1"
+        }
+      ]
+    },
+    {
+      "id": "acknowledgement-payload-v1",
+      "kind": "event-payload",
+      "array_length": 2,
+      "fields": [
+        {
+          "index": 0,
+          "name": "variant",
+          "type": "unsigned-integer",
+          "exact": 1
+        },
+        {
+          "index": 1,
+          "name": "acknowledged_event_id",
+          "type": "byte-string",
+          "exact_bytes": 32
+        }
+      ]
+    },
+    {
+      "id": "signed-acknowledgement-event-v1",
+      "kind": "signed-envelope",
+      "array_length": 3,
+      "fields": [
+        {
+          "index": 0,
+          "name": "schema_version",
+          "type": "unsigned-integer",
+          "exact": 1
+        },
+        {
+          "index": 1,
+          "name": "content",
+          "type": "object",
+          "object": "acknowledgement-event-content-v1"
+        },
+        {
+          "index": 2,
+          "name": "signature",
+          "type": "byte-string",
+          "exact_bytes": 64
+        }
+      ]
+    },
+    {
+      "id": "signed-sync-inventory-v1",
+      "kind": "signed-envelope",
+      "array_length": 3,
+      "fields": [
+        {
+          "index": 0,
+          "name": "schema_version",
+          "type": "unsigned-integer",
+          "exact": 1
+        },
+        {
+          "index": 1,
+          "name": "content",
+          "type": "object",
+          "object": "sync-inventory-content-v1"
+        },
+        {
+          "index": 2,
+          "name": "signature",
+          "type": "byte-string",
+          "exact_bytes": 64
+        }
+      ]
+    },
+    {
+      "id": "sync-inventory-content-v1",
+      "kind": "signed-content",
+      "array_length": 5,
+      "fields": [
+        {
+          "index": 0,
+          "name": "schema_version",
+          "type": "unsigned-integer",
+          "exact": 1
+        },
+        {
+          "index": 1,
+          "name": "conversation_id",
+          "type": "byte-string",
+          "exact_bytes": 32
+        },
+        {
+          "index": 2,
+          "name": "requester_device_id",
+          "type": "byte-string",
+          "exact_bytes": 32
+        },
+        {
+          "index": 3,
+          "name": "session_binding",
+          "type": "byte-string",
+          "exact_bytes": 32
+        },
+        {
+          "index": 4,
+          "name": "event_ids",
+          "type": "array",
+          "item_type": "byte-string-32",
+          "maximum_items": 4096,
+          "ordering": "unsigned-bytewise-lexicographic-strict"
+        }
+      ]
+    }
+  ]
+}

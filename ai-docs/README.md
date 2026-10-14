@@ -955,7 +955,11 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
 - [`../docs/RFC-0126-m11-protocol-compatibility-baseline.md`](../docs/RFC-0126-m11-protocol-compatibility-baseline.md) —
   machine-readable experimental compatibility baseline: 20 families, 155
   exact version/ALPN/domain bindings, explicit migration rules и новый
-  fail-closed readiness boundary; canonical schema/golden vectors ещё открыты.
+  fail-closed readiness boundary; active Postcard wire остаётся provisional.
+- [`../docs/RFC-0127-m111-canonical-wire-and-golden-vectors.md`](../docs/RFC-0127-m111-canonical-wire-and-golden-vectors.md) —
+  inactive deterministic-CBOR candidate: пять positional schemas, два golden
+  byte/Ed25519/BLAKE3 vectors, Rust verification и независимая PowerShell
+  перекодировка без скрытого переключения active Postcard wire.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
