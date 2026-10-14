@@ -252,14 +252,17 @@ The current two-network Windows procedure is in
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.91 continuous Windows readiness and tests — implemented locally
+## Current milestone: M0.9.91 continuous Windows readiness and tests — hosted remediation pending
 
 `.github/workflows/windows-ci.yml` runs on every master push/PR and manual
 dispatch with read-only permission. It fetches locked dependencies, switches
 Cargo offline, executes the closed 33-gate M1 readiness verifier, then compiles
 and runs all stable-path Rust test harnesses serially with two jobs. The job
-creates no release artifact, archive, attestation or Git tag. First hosted run
-is pending.
+creates no release artifact, archive, attestation or Git tag. Hosted run
+`38509447420` passed readiness and 79/81 aggregate CLI tests but exposed two
+endpoint-lifecycle deadline failures late in one long-lived process. Those
+exact tests remain mandatory and are now isolated into fresh processes by a
+closed manifest; the confirming hosted run is pending.
 
 ## Previous milestone: M0.9.90 complete M1 readiness gate — accepted locally
 

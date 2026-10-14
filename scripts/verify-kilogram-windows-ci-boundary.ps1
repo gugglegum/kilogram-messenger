@@ -7,7 +7,9 @@ $ErrorActionPreference = 'Stop'
 $workspace = [System.IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $workflowPath = Join-Path $workspace '.github\workflows\windows-ci.yml'
 $rfcPath = Join-Path $workspace 'docs\RFC-0114-continuous-windows-readiness-and-tests.md'
-foreach ($path in @($workflowPath, $rfcPath)) {
+$isolatedTestsPath = Join-Path $workspace 'scripts\windows-ci-isolated-tests.json'
+$runnerPath = Join-Path $workspace 'scripts\run-cargo-tests-stable.ps1'
+foreach ($path in @($workflowPath, $rfcPath, $isolatedTestsPath, $runnerPath)) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
         throw "Windows CI boundary file is missing: $path"
     }
@@ -16,6 +18,7 @@ foreach ($path in @($workflowPath, $rfcPath)) {
 $workflow = Get-Content -LiteralPath $workflowPath -Raw
 $workflowLines = @($workflow -split '\r?\n')
 $rfc = Get-Content -LiteralPath $rfcPath -Raw
+$runner = Get-Content -LiteralPath $runnerPath -Raw
 
 foreach ($requiredLine in @('  push:', '  pull_request:', '  workflow_dispatch:')) {
     if ($workflowLines -cnotcontains $requiredLine) {
@@ -38,12 +41,55 @@ foreach ($required in @(
     'CARGO_NET_OFFLINE: "true"',
     '-File .\scripts\verify-kilogram-m1-readiness.ps1',
     '-File .\scripts\run-cargo-tests-stable.ps1',
+    'timeout-minutes: 38',
+    '-Profile test',
     '-CargoJobs 2',
+    '-IsolatedTestsFile .\scripts\windows-ci-isolated-tests.json',
     '-Run',
     '-NoFailFast'
 )) {
     if ($workflow.IndexOf($required, [StringComparison]::Ordinal) -lt 0) {
         throw "Windows CI workflow is missing '$required'"
+    }
+}
+
+$isolatedManifest = Get-Content -LiteralPath $isolatedTestsPath -Raw | ConvertFrom-Json
+$isolatedProperties = @($isolatedManifest.PSObject.Properties.Name | Sort-Object)
+if (($isolatedProperties -join ',') -cne 'format_version,tests' -or
+    [int]$isolatedManifest.format_version -ne 1) {
+    throw 'Windows CI isolated test manifest must be exact format version 1'
+}
+$isolatedNames = @($isolatedManifest.tests | ForEach-Object { [string]$_.name } | Sort-Object)
+$expectedIsolatedNames = @(
+    'tests::live_runtime_applies_revocation_republishes_ticket_and_retires_ratchet',
+    'tests::runtime_pairwise_store_discovers_ticket_and_pushes_own_device_announcements'
+) | Sort-Object
+if (($isolatedNames -join "`n") -cne ($expectedIsolatedNames -join "`n")) {
+    throw 'Windows CI isolated test manifest does not contain the exact bounded test set'
+}
+foreach ($entry in @($isolatedManifest.tests)) {
+    $entryProperties = @($entry.PSObject.Properties.Name | Sort-Object)
+    if (($entryProperties -join ',') -cne 'kind,name,package,target' -or
+        [string]$entry.package -cne 'kilogram-cli' -or
+        [string]$entry.kind -cne 'bin' -or
+        [string]$entry.target -cne 'kilogram-cli') {
+        throw 'Windows CI isolated test selector is not exact'
+    }
+}
+
+foreach ($required in @(
+    '[string]$IsolatedTestsFile',
+    'Filter and IsolatedTestsFile cannot be combined.',
+    'Duplicate isolated test entry:',
+    "'--list' '--format' 'terse'",
+    'does not resolve to exactly one test:',
+    "@('--skip', `$isolatedTest.Name)",
+    "@(`$isolatedTest.Name, '--exact')",
+    'running_isolated_test=',
+    'isolated_test_count='
+)) {
+    if ($runner.IndexOf($required, [StringComparison]::Ordinal) -lt 0) {
+        throw "Stable test runner is missing isolated-process contract '$required'"
     }
 }
 
@@ -80,6 +126,7 @@ foreach ($required in @(
     'read-only repository permission',
     'does not create a release build, archive, attestation or tag',
     'stable-path Rust test harnesses',
+    'fresh process',
     'GitHub-hosted Windows runner is not physical-device field evidence'
 )) {
     if ($rfc.IndexOf($required, [StringComparison]::OrdinalIgnoreCase) -lt 0) {
@@ -94,6 +141,9 @@ Write-Output 'checkout_history=complete'
 Write-Output 'readiness_gate=required'
 Write-Output 'stable_rust_tests=required'
 Write-Output 'cargo_jobs=2'
+Write-Output 'test_profile=test'
+Write-Output 'isolated_tests=2'
+Write-Output 'test_step_timeout_minutes=38'
 Write-Output 'release_build=false'
 Write-Output 'archive_created=false'
 Write-Output 'attestation_created=false'

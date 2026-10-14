@@ -2949,4 +2949,18 @@ retirement остальных compatibility shadows ещё не реализов
   33-boundary readiness gate and `run-cargo-tests-stable.ps1 -Run -NoFailFast`
   with two jobs.
 - Hosted CI creates no release build, uploaded artifact, attestation or Git tag.
-- First hosted run remains pending until the implementation commit is pushed.
+- First hosted run `38509447420` passed checkout/toolchain/fetch and complete
+  33-gate readiness. Test compilation took 4m32s; all non-CLI harnesses passed.
+  The aggregate CLI process passed 79/81 tests and failed only
+  `live_runtime_applies_revocation_republishes_ticket_and_retires_ratchet`
+  (10-second restart deadline) and
+  `runtime_pairwise_store_discovers_ticket_and_pushes_own_device_announcements`
+  (25-second discovery deadline) late in a 770.71-second process.
+- Remediation does not edit `apps/` or `crates/`: a strict format-v1 JSON
+  manifest resolves each exact test against `--list`, skips it only in the
+  aggregate CLI invocation and executes it once in a fresh process. Zero-match,
+  duplicate/malformed selector or isolated failure fails closed.
+- Hosted runner now uses unoptimized Cargo `test` profile to reuse preceding
+  Clippy artifacts and has a 38-minute test-step bound. Local compile-only
+  validation resolved both selectors; no Rust test executable was run locally.
+- Confirmation hosted run remains pending.

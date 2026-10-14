@@ -4744,6 +4744,15 @@ Acceptance:
 - action references are full-SHA pinned; `pull_request_target`, write
   permissions, release/archive/upload/attestation/tag paths are forbidden;
 - hosted CI is not physical-device or independent-provider field evidence.
+- first hosted run `38509447420` passed the complete readiness gate and every
+  non-CLI harness; aggregate CLI result was 79 passed / 2 deadline failures;
+- exact failures were restart-after-revocation (10 s) and pairwise ticket
+  discovery (25 s), both late in the same 770.71-second CLI process;
+- production Rust code remains unchanged. A closed format-v1 manifest proves
+  both exact selectors exist, excludes them only from aggregate execution and
+  runs each once in a fresh process; unknown/duplicate/failed tests fail closed;
+- ordinary hosted tests use unoptimized Cargo `test` profile and a bounded
+  38-minute step; local compile-only validation resolved both exact selectors.
 
 Acceptance gate: local static boundary/readiness pass, commit and push, then
-first green GitHub-hosted `Windows CI` run.
+first green GitHub-hosted `Windows CI` run. Confirmation remains pending.

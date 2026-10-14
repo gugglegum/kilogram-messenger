@@ -442,6 +442,9 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
 11. M0.9.91 добавляет read-only GitHub-hosted Windows CI на каждый master
    push/PR: readiness inventory расширен до 33 gates, затем выполняются все
    stable-path Rust test harnesses с двумя jobs и Cargo offline после fetch.
+   Первый run `38509447420` прошёл readiness, но выявил два deadline-sensitive
+   CLI runtime-теста (79/81 aggregate passed); они не исключены, а вынесены
+   closed manifest в обязательные fresh-process invocations. Confirmation pending.
 12. Optional autostart/background mode оставить отдельной явной настройкой;
    Windows Task Scheduler не является обязательной частью мессенджера.
 4. Уже реализованный M0.9.49 выделяет единый

@@ -4,6 +4,7 @@ param(
     [string]$Filter,
     [string]$Profile = 'verification',
     [int]$CargoJobs = 0,
+    [string]$IsolatedTestsFile,
     [switch]$Run,
     [switch]$NoFailFast,
     [switch]$NoCapture
@@ -113,6 +114,76 @@ foreach ($artifact in $stableArtifacts) {
     Write-Host "stable_test_executable=$($artifact.Path)"
 }
 
+$isolatedTests = @()
+if (-not [string]::IsNullOrWhiteSpace($IsolatedTestsFile)) {
+    $isolatedTestsPath = [System.IO.Path]::GetFullPath($IsolatedTestsFile)
+    if (-not (Test-Path -LiteralPath $isolatedTestsPath -PathType Leaf)) {
+        throw "Isolated test manifest does not exist: $isolatedTestsPath"
+    }
+    $isolatedManifest = Get-Content -LiteralPath $isolatedTestsPath -Raw | ConvertFrom-Json
+    $manifestProperties = @($isolatedManifest.PSObject.Properties.Name | Sort-Object)
+    if (($manifestProperties -join ',') -cne 'format_version,tests' -or
+        [int]$isolatedManifest.format_version -ne 1) {
+        throw 'Isolated test manifest must be exact format version 1.'
+    }
+    $seenIsolatedTests = @{}
+    foreach ($entry in @($isolatedManifest.tests)) {
+        $entryProperties = @($entry.PSObject.Properties.Name | Sort-Object)
+        if (($entryProperties -join ',') -cne 'kind,name,package,target') {
+            throw 'Each isolated test entry must contain only package, kind, target and name.'
+        }
+        foreach ($property in @('package', 'kind', 'target', 'name')) {
+            if ([string]::IsNullOrWhiteSpace([string]$entry.$property)) {
+                throw "Isolated test property '$property' must not be empty."
+            }
+        }
+        $key = "$($entry.package)|$($entry.kind)|$($entry.target)|$($entry.name)"
+        if ($seenIsolatedTests.ContainsKey($key)) {
+            throw "Duplicate isolated test entry: $key"
+        }
+        $seenIsolatedTests[$key] = $true
+        $matches = @($stableArtifacts | Where-Object {
+            $_.Package -ceq [string]$entry.package -and
+            $_.Kind -ceq [string]$entry.kind -and
+            $_.Target -ceq [string]$entry.target
+        })
+        if ($matches.Count -ne 1) {
+            throw "Isolated test entry must match exactly one stable executable: $key"
+        }
+        $isolatedTests += [PSCustomObject]@{
+            Package = [string]$entry.package
+            Kind = [string]$entry.kind
+            Target = [string]$entry.target
+            Name = [string]$entry.name
+            Path = [string]$matches[0].Path
+        }
+    }
+    if ($isolatedTests.Count -eq 0) {
+        throw 'Isolated test manifest must contain at least one test.'
+    }
+    if (-not [string]::IsNullOrWhiteSpace($Filter)) {
+        throw 'Filter and IsolatedTestsFile cannot be combined.'
+    }
+    foreach ($artifactPath in @($isolatedTests.Path | Sort-Object -Unique)) {
+        Push-Location $workspaceRoot
+        try {
+            $listedTests = @(& $artifactPath '--list' '--format' 'terse')
+            $listExitCode = $LASTEXITCODE
+        } finally {
+            Pop-Location
+        }
+        if ($listExitCode -ne 0) {
+            throw "Failed to list tests from isolated-test executable: $artifactPath"
+        }
+        foreach ($isolatedTest in @($isolatedTests | Where-Object { $_.Path -ceq $artifactPath })) {
+            $expectedListLine = "$($isolatedTest.Name): test"
+            if (@($listedTests | Where-Object { [string]$_ -ceq $expectedListLine }).Count -ne 1) {
+                throw "Isolated test selector does not resolve to exactly one test: $($isolatedTest.Name)"
+            }
+        }
+    }
+}
+
 if (-not $Run) {
     Write-Host "test_profile=$Profile"
     Write-Host 'status=compiled-only'
@@ -137,9 +208,13 @@ $testArguments += '--test-threads=1'
 $failedArtifacts = @()
 foreach ($artifact in $stableArtifacts) {
     Write-Host "running_test_executable=$($artifact.Path)"
+    $artifactArguments = @($testArguments)
+    foreach ($isolatedTest in @($isolatedTests | Where-Object { $_.Path -ceq $artifact.Path })) {
+        $artifactArguments += @('--skip', $isolatedTest.Name)
+    }
     Push-Location $workspaceRoot
     try {
-        & $artifact.Path @testArguments
+        & $artifact.Path @artifactArguments
         $testExitCode = $LASTEXITCODE
     } finally {
         Pop-Location
@@ -153,11 +228,36 @@ foreach ($artifact in $stableArtifacts) {
     }
 }
 
+foreach ($isolatedTest in $isolatedTests) {
+    Write-Host "running_isolated_test_executable=$($isolatedTest.Path)"
+    Write-Host "running_isolated_test=$($isolatedTest.Name)"
+    $isolatedArguments = @($isolatedTest.Name, '--exact')
+    if ($NoCapture) {
+        $isolatedArguments += '--nocapture'
+    }
+    $isolatedArguments += '--test-threads=1'
+    Push-Location $workspaceRoot
+    try {
+        & $isolatedTest.Path @isolatedArguments
+        $testExitCode = $LASTEXITCODE
+    } finally {
+        Pop-Location
+    }
+
+    if ($testExitCode -ne 0) {
+        $failedArtifacts += "$($isolatedTest.Path) :: $($isolatedTest.Name)"
+        if (-not $NoFailFast) {
+            throw "Isolated stable test failed with exit code ${testExitCode}: $($isolatedTest.Name)"
+        }
+    }
+}
+
 if ($failedArtifacts.Count -ne 0) {
     throw "One or more stable test executables failed: $($failedArtifacts -join ', ')"
 }
 
 Write-Host 'status=passed'
+Write-Host "isolated_test_count=$($isolatedTests.Count)"
 & powershell -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'cargo-cache-maintenance.ps1')
 if ($LASTEXITCODE -ne 0) {
     throw 'Cargo cache status check failed.'

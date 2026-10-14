@@ -1,0 +1,17 @@
+{
+  "format_version": 1,
+  "tests": [
+    {
+      "package": "kilogram-cli",
+      "kind": "bin",
+      "target": "kilogram-cli",
+      "name": "tests::live_runtime_applies_revocation_republishes_ticket_and_retires_ratchet"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "bin",
+      "target": "kilogram-cli",
+      "name": "tests::runtime_pairwise_store_discovers_ticket_and_pushes_own_device_announcements"
+    }
+  ]
+}
