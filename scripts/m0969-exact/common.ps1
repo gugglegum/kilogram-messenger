@@ -74,9 +74,10 @@ function Assert-M0972HttpsFixtureAbsent {
 
 function New-M0969Directory {
     param([Parameter(Mandatory)] [string] $Path)
-    if (-not (Test-Path -LiteralPath $Path)) {
-        New-Item -ItemType Directory -Path $Path | Out-Null
-    }
+    # Directory.CreateDirectory is idempotent even when an independent field
+    # role or the SSH evidence bridge creates the same directory concurrently.
+    # The previous Test-Path/New-Item pair had a TOCTOU window on Windows.
+    $null = [IO.Directory]::CreateDirectory([IO.Path]::GetFullPath($Path))
 }
 
 function Write-M0969JsonNew {

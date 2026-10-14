@@ -74,6 +74,7 @@ foreach ($required in @(
     "`$milestone -cnotin @('M0.9.69', 'M0.9.72', 'M0.9.73', 'M0.9.74', 'M0.9.76', 'M0.9.87')",
     "'M0.9.87' { 'M0987' }",
     '$env:LOCALAPPDATA',
+    '[IO.Directory]::CreateDirectory([IO.Path]::GetFullPath($Path))',
     'function Move-M0969PublishedFile',
     'MaximumAttempts = 80',
     'function Start-M0987IndependentProvider',
