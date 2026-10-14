@@ -1,6 +1,6 @@
 # RFC-0112: Current M1 candidate evidence refresh (M0.9.89)
 
-Status: implemented locally; committed production verification pending.
+Status: accepted locally after committed production verification.
 
 ## 1. Purpose
 
@@ -76,3 +76,10 @@ The candidate does not require another field network run while its exact
 runtime/protocol surface remains unchanged. Tagging or publishing M1 remains a
 separate explicit product decision after the committed production verifier
 passes.
+
+## 6. Acceptance evidence
+
+Candidate revision `d9142003eeb33f4e9ff44f100d88edd556c058c1` passed the
+production verifier from a clean working tree. It reported both protected
+surfaces unchanged, `network_retest_required=false`, no network/build/archive
+or tag activity, and `m1_candidate_status=verified`.

@@ -433,8 +433,9 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
    `38507114425` дала byte-identical offline artifact, attestation `55683374`
    проверена production verifier; Windows release исключён только из Cargo
    tool identity equality, остальные поля остаются exact.
-9. M0.9.89 обновляет `M1-CANDIDATE.json` на эти свежие evidence revisions с
-   fail-closed selected-tree continuity и честным residual-risk списком.
+9. M0.9.89 принят локально: candidate revision `d9142003...` прошёл production
+   verifier на clean tree; обе protected surfaces неизменны, network retest и
+   release build не требуются. Это ещё не M1 tag/public security release.
 10. Optional autostart/background mode оставить отдельной явной настройкой;
    Windows Task Scheduler не является обязательной частью мессенджера.
 4. Уже реализованный M0.9.49 выделяет единый

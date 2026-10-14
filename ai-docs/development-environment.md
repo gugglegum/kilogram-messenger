@@ -2916,3 +2916,6 @@ retirement остальных compatibility shadows ещё не реализов
 - Candidate format v2 сохраняет reduced result и false strict-acceptance bit;
   production verification возможна только после commit, потому что control
   surface обязана быть tracked и clean.
+- Candidate revision `d9142003eeb33f4e9ff44f100d88edd556c058c1` прошла
+  production verifier: обе selected-tree surfaces unchanged,
+  `network_retest_required=false`, network/build/archive/tag activity false.

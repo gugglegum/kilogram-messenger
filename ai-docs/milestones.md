@@ -4669,7 +4669,7 @@ Acceptance:
 Следующий этап: обновить M1 candidate record на M0.9.87 run
 `20261014-080905` и принятую M0.9.88 attestation.
 
-### M0.9.89 — current M1 candidate evidence refresh: реализовано локально
+### M0.9.89 — current M1 candidate evidence refresh: принято локально
 
 - `M1-CANDIDATE.json` format v2 pin-ит M0.9.87 clean run
   `20261014-080905`/revision `162836bb...` как
@@ -4694,3 +4694,13 @@ Acceptance:
 Acceptance gate: commit candidate control surface, затем production
 `verify-kilogram-m1-candidate.ps1` на clean HEAD и отдельный docs acceptance
 commit.
+
+Acceptance:
+
+- candidate/control commit: `d9142003eeb33f4e9ff44f100d88edd556c058c1`;
+- production verifier запущен на clean `HEAD` и сообщил
+  `m1_candidate_status=verified`;
+- field runtime/protocol и independent artifact surfaces unchanged;
+- `network_retest_required=false`; network/build/archive/tag не выполнялись;
+- M0.9.89 принят как актуальная evidence composition Windows technical POC,
+  без M1 tag и без повышения reduced field result до strict acceptance.

@@ -248,7 +248,7 @@ The current two-network Windows procedure is in
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.89 current M1 candidate evidence refresh — implemented locally
+## Current milestone: M0.9.89 current M1 candidate evidence refresh — accepted locally
 
 `M1-CANDIDATE.json` now pins clean M0.9.87 run `20261014-080905` and accepted
 M0.9.88 GitHub run `38507114425`/attestation `55683374`. The verifier
@@ -259,9 +259,10 @@ The field result remains explicitly `verified-reduced-two-host` with
 `independent_provider_field_acceptance=false`. The candidate therefore records
 strict independent-provider acceptance, operator/network independence, full
 Sybil resistance, access-correlation privacy, non-Windows field evidence and a
-public security release as unfinished. Production acceptance waits only for a
-committed clean candidate-control surface and verifier run; no new field test
-or release build is needed while protected surfaces remain unchanged.
+public security release as unfinished. Candidate revision `d9142003...` passed
+the production verifier from a clean tree with both protected surfaces
+unchanged; no new field test or release build is needed while those surfaces
+remain unchanged.
 
 ## Previous milestone: M0.9.88 host-neutral Cargo identity verification — accepted externally
 
