@@ -960,6 +960,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   inactive deterministic-CBOR candidate: пять positional schemas, два golden
   byte/Ed25519/BLAKE3 vectors, Rust verification и независимая PowerShell
   перекодировка без скрытого переключения active Postcard wire.
+- [`../docs/RFC-0128-m112-canonical-authority-and-session.md`](../docs/RFC-0128-m112-canonical-authority-and-session.md) —
+  inactive CDDL authority/session chain: Account/Device IDs, Root-signed
+  certificate/revocation/snapshot, session-bound Device signature, строгий Rust
+  decode/verify и независимое JavaScript/Node воспроизведение Ed25519.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

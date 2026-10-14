@@ -5098,3 +5098,25 @@ correlation visible, Windows-only field evidence, independent security audit
   complete schema coverage, new explicit version/identifier, dual-reader
   downgrade tests, independent non-Rust crypto conformance, decoder fuzzing и
   fresh evidence.
+
+### M1.1.2 — canonical authority and session foundation: принято локально
+
+- RFC-0128 и `CANONICAL-AUTHORITY.cddl` формализуют Account/Device IDs,
+  Root-signed certificate/revocation/authority snapshot и Device-signed
+  session authorization по RFC 8610;
+- exact JSON schema фиксирует 11 objects, четыре отдельные inactive `cbor-v1`
+  signature domains, максимум 2 capabilities и 32 revocations;
+- Rust strict encoder/decoder/verifier проверяет shortest-form CBOR, exact
+  positional shape, capability/revocation ordering, nested Account linkage,
+  authority sequence bounds, revoked Device и все четыре Ed25519 signatures;
+- deterministic nested vector фиксирует public test Root/Device seeds, exact
+  contents, domains, signing preimages, signatures и signed envelopes;
+- независимый JavaScript/Node reference без сторонних пакетов заново выводит
+  Ed25519 public keys из seed, кодирует CBOR и воспроизводит все signatures;
+- fail-closed boundary/self-test отклоняет activation без migration, removed
+  object, changed Rust binding, uppercase hex, tampered signature и unknown
+  capability; active Postcard wire и runtime не изменены;
+- closed readiness inventory расширен с 35 до 36 gates. Network, laptop,
+  release, archive, tag и active protocol migration не требуются.
+- full `kilogram-protocol` regression прошёл `25/25`; accepted-tag readiness
+  прошёл `36/36` с format и locked/offline strict Clippy при двух Cargo jobs.

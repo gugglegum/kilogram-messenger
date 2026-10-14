@@ -3181,3 +3181,22 @@ Hosted follow-up:
   build, archive or Git tag.
 - The test executable was the pure protocol harness and opened no sockets; the
   readiness pass itself continued to report `test_executables_started=false`.
+
+## M1.1.2 canonical-authority verification snapshot (2026-10-15)
+
+- `kilogram-protocol` full library regression passed `25/25` in the normal
+  unoptimized test profile with `CargoJobs 2` and BelowNormal priority; the new
+  authority/session module contributes four tests and opens no sockets.
+- `verify-kilogram-canonical-authority-reference.mjs` reconstructed the public
+  Root/Device keys, four deterministic CBOR contents/envelopes and all four
+  Ed25519 signatures with Node's maintained `crypto` implementation; no npm
+  dependency, download or handwritten signature primitive was used.
+- `verify-kilogram-canonical-authority-boundary.ps1 -SelfTest` and production
+  mode passed. Negative cases rejected activation without migration, removed
+  schema object, changed Rust binding, non-canonical hex, signature tamper and
+  unknown capability.
+- Complete accepted-tag readiness passed `36/36`, immutable `M1.0.0`, format
+  and locked/offline workspace Clippy. It started no Rust test executable,
+  network action, release build, archive or Git tag.
+- Runtime remains Postcard. The CDDL/CBOR objects and domains are inactive
+  conformance material and do not require the laptop or a field run.

@@ -2273,7 +2273,15 @@ not make the current Postcard structures a final cross-language wire format.
 first inactive deterministic-CBOR candidate schemas and reproducible byte,
 Ed25519-signature, and BLAKE3-ID vectors. They are conformance material only:
 the runtime still uses Postcard, and activation requires a separately versioned
-migration. None of these baselines turns the M1.0.0 technical PoC into a
+migration. [`CANONICAL-AUTHORITY.cddl`](CANONICAL-AUTHORITY.cddl),
+[`CANONICAL-AUTHORITY-SCHEMA.json`](CANONICAL-AUTHORITY-SCHEMA.json),
+[`CANONICAL-AUTHORITY-VECTORS.json`](CANONICAL-AUTHORITY-VECTORS.json), and
+[`RFC-0128`](docs/RFC-0128-m112-canonical-authority-and-session.md) extend that
+inactive profile through the Root-signed Device certificate, revocation and
+authority snapshot to a session-bound Device authorization. Rust performs
+strict decode/verification, while an independent JavaScript/Node reference
+reconstructs every byte and Ed25519 signature. None of these baselines turns
+the M1.0.0 technical PoC into a
 production/security release.
 
 ## Contributing

@@ -167,6 +167,11 @@ RFC-0127 starts that work with an inactive deterministic-CBOR profile and two
 golden vector families. It does not retroactively change this registry or the
 active Postcard wire.
 
+RFC-0128 extends the same inactive profile through the minimum Account Root,
+Device certificate, revocation, authority-snapshot and session-authorization
+chain. Its CDDL, strict Rust decoder and independent JavaScript/Node Ed25519
+vectors still do not activate or reinterpret any family in this registry.
+
 ## 8. Security and evidence boundary
 
 This baseline does not prove the cryptographic design secure, does not add a

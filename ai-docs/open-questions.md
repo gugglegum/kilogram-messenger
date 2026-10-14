@@ -136,11 +136,12 @@ sessions, distribution, removal и key epochs и не решены этим пр
   IPC onboarding/rotation contact без передачи секретного descriptor через
   sync/shared folder.
 - RFC-0127 выбрал узкий RFC 8949 deterministic-CBOR profile и зафиксировал
-  первые пять positional schemas плюс acknowledgement/sync golden
-  byte/Ed25519/BLAKE3 vectors. Он пока intentionally inactive: до заявления
-  cross-language compatibility остаются complete schema coverage вложенных
-  authority/ratchet objects, independent non-Rust crypto verification, полный
-  decoder fuzzing и отдельно versioned dual-reader migration с field evidence.
+  первые acknowledgement/sync vectors. RFC-0128 добавил CDDL и полный
+  certificate/revocation/authority-snapshot/session-auth chain, строгий Rust
+  decoder и independent JavaScript/Node Ed25519 reproduction. Всё остаётся
+  intentionally inactive: открыты schemas для выбранных ratchet/recovery
+  families, independent non-Rust BLAKE3 verification, decoder fuzzing и
+  отдельно versioned dual-reader migration с field evidence.
 - Какие security properties требуются от линеаризатора при злонамеренных, а не
   только сбойных indexer-узлах?
 

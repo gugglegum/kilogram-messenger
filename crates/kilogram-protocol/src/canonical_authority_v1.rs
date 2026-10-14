@@ -969,7 +969,8 @@ mod tests {
         Ok(vectors)
     }
 
-    fn signed_fixture() -> CanonicalSignedDeviceSessionAuthorizationV1 {
+    fn signed_fixture()
+    -> Result<CanonicalSignedDeviceSessionAuthorizationV1, CanonicalAuthorityError> {
         let root = SigningKey::from_bytes(&sequential(0x20));
         let device = SigningKey::from_bytes(&sequential(0x00));
         let revoked_device = SigningKey::from_bytes(&sequential(0x40));
@@ -987,7 +988,7 @@ mod tests {
         };
         let certificate = CanonicalSignedDeviceCertificateV1 {
             signature: root
-                .sign(&device_certificate_signing_bytes_v1(&certificate_content).unwrap())
+                .sign(&device_certificate_signing_bytes_v1(&certificate_content)?)
                 .to_bytes(),
             content: certificate_content,
         };
@@ -1010,7 +1011,9 @@ mod tests {
         };
         let authority_snapshot = CanonicalSignedAccountAuthoritySnapshotV1 {
             signature: root
-                .sign(&account_authority_snapshot_signing_bytes_v1(&snapshot_content).unwrap())
+                .sign(&account_authority_snapshot_signing_bytes_v1(
+                    &snapshot_content,
+                )?)
                 .to_bytes(),
             content: snapshot_content,
         };
@@ -1019,36 +1022,42 @@ mod tests {
             certificate,
             authority_snapshot,
         };
-        CanonicalSignedDeviceSessionAuthorizationV1 {
+        Ok(CanonicalSignedDeviceSessionAuthorizationV1 {
             signature: device
-                .sign(&device_session_authorization_signing_bytes_v1(&content).unwrap())
+                .sign(&device_session_authorization_signing_bytes_v1(&content)?)
                 .to_bytes(),
             content,
-        }
+        })
     }
 
     #[test]
-    fn authority_session_round_trip_and_signatures_are_strict() {
-        let fixture = signed_fixture();
-        let encoded = encode_signed_device_session_authorization_v1(&fixture).unwrap();
+    fn authority_session_round_trip_and_signatures_are_strict()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let fixture = signed_fixture()?;
+        let encoded = encode_signed_device_session_authorization_v1(&fixture)?;
         assert_eq!(
-            decode_and_verify_signed_device_session_authorization_v1(&encoded).unwrap(),
+            decode_and_verify_signed_device_session_authorization_v1(&encoded)?,
             fixture
         );
 
         let mut tampered = encoded;
-        *tampered.last_mut().unwrap() ^= 1;
+        let last = tampered
+            .last_mut()
+            .ok_or_else(|| invalid_data("signed fixture is unexpectedly empty"))?;
+        *last ^= 1;
         assert!(matches!(
             decode_and_verify_signed_device_session_authorization_v1(&tampered),
             Err(CanonicalAuthorityError::InvalidSignature {
                 object: "signed-device-session-authorization-v1"
             })
         ));
+        Ok(())
     }
 
     #[test]
-    fn decoder_rejects_non_minimal_version_and_trailing_data() {
-        let encoded = encode_signed_device_session_authorization_v1(&signed_fixture()).unwrap();
+    fn decoder_rejects_non_minimal_version_and_trailing_data()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let encoded = encode_signed_device_session_authorization_v1(&signed_fixture()?)?;
         let mut non_minimal = vec![encoded[0], 0x18, 0x01];
         non_minimal.extend_from_slice(&encoded[2..]);
         assert!(matches!(
@@ -1066,25 +1075,27 @@ mod tests {
                 CanonicalWireError::TrailingData
             ))
         ));
+        Ok(())
     }
 
     #[test]
-    fn structural_rules_reject_ambiguous_or_incoherent_authority() {
-        let mut fixture = signed_fixture();
+    fn structural_rules_reject_ambiguous_or_incoherent_authority()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let mut fixture = signed_fixture()?;
         fixture.content.certificate.content.capabilities.reverse();
         assert!(matches!(
             device_session_authorization_signing_bytes_v1(&fixture.content),
             Err(CanonicalAuthorityError::NonCanonicalCapabilities)
         ));
 
-        let mut fixture = signed_fixture();
+        let mut fixture = signed_fixture()?;
         fixture.content.certificate.content.account_id[0] ^= 1;
         assert!(matches!(
             device_session_authorization_signing_bytes_v1(&fixture.content),
             Err(CanonicalAuthorityError::AccountMismatch { .. })
         ));
 
-        let mut fixture = signed_fixture();
+        let mut fixture = signed_fixture()?;
         fixture.content.certificate.content.device_id =
             fixture.content.authority_snapshot.content.revocations[0]
                 .content
@@ -1093,6 +1104,7 @@ mod tests {
             device_session_authorization_signing_bytes_v1(&fixture.content),
             Err(CanonicalAuthorityError::SessionDeviceRevoked)
         ));
+        Ok(())
     }
 
     #[test]
