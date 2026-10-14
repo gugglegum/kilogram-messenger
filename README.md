@@ -241,12 +241,29 @@ volunteer providers is specified in
 Host-neutral comparison of the pinned Cargo identity during independent
 reproduction is specified in
 [`docs/RFC-0111-host-neutral-cargo-identity-verification.md`](docs/RFC-0111-host-neutral-cargo-identity-verification.md).
+The refreshed current M1 candidate evidence composition is specified in
+[`docs/RFC-0112-current-m1-candidate-evidence-refresh.md`](docs/RFC-0112-current-m1-candidate-evidence-refresh.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.88 host-neutral Cargo identity verification — accepted externally
+## Current milestone: M0.9.89 current M1 candidate evidence refresh — implemented locally
+
+`M1-CANDIDATE.json` now pins clean M0.9.87 run `20261014-080905` and accepted
+M0.9.88 GitHub run `38507114425`/attestation `55683374`. The verifier
+recomputes the exact 83-entry runtime/protocol surface and 63-entry independent
+artifact surface from their evidence revisions through current `HEAD`.
+
+The field result remains explicitly `verified-reduced-two-host` with
+`independent_provider_field_acceptance=false`. The candidate therefore records
+strict independent-provider acceptance, operator/network independence, full
+Sybil resistance, access-correlation privacy, non-Windows field evidence and a
+public security release as unfinished. Production acceptance waits only for a
+committed clean candidate-control surface and verifier run; no new field test
+or release build is needed while protected surfaces remain unchanged.
+
+## Previous milestone: M0.9.88 host-neutral Cargo identity verification — accepted externally
 
 The independent reproduction verifier now compares the pinned Cargo version,
 commit, target and bundled libgit2/libcurl identities while treating Cargo's

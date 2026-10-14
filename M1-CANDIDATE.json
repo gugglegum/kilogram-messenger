@@ -1,17 +1,19 @@
 {
-  "format_version": 1,
-  "milestone": "M0.9.81",
+  "format_version": 2,
+  "milestone": "M0.9.89",
   "status": "candidate",
   "scope": "windows-technical-proof-of-concept",
   "field_evidence": {
-    "milestone": "M0.9.76",
-    "run_id": "20260920-001614",
-    "source_revision": "ff38e1b89dc5832abdb2a5d81f7ab3af06e0ceae",
-    "result": "verified",
-    "verifier": "scripts/verify-kilogram-m0976-service-free-v2-evidence.ps1",
+    "milestone": "M0.9.87",
+    "run_id": "20261014-080905",
+    "source_revision": "162836bb7a54180c3a00915749cf17fe238019e2",
+    "result": "verified-reduced-two-host",
+    "topology_profile": "two-host-reduced",
+    "independent_provider_field_acceptance": false,
+    "verifier": "scripts/verify-kilogram-m0987-independent-provider-evidence.ps1",
     "runtime_surface": {
       "mode": "git-ls-tree-sha256-v1",
-      "manifest_sha256": "a67580165a166e22d6c52b52e93d29c562f1bb6289e2497e220fe3ff1e788a3d",
+      "manifest_sha256": "1aacaca665c9a2ab4dbc43107c2556128274d7fb9f8727d2dcc78681026bb320",
       "file_count": 83,
       "paths": [
         "Cargo.toml",
@@ -26,12 +28,12 @@
     }
   },
   "independent_reproduction": {
-    "milestone": "M0.9.80",
-    "source_revision": "4e9054ab2ccc6a4c542fb37d486b70e53027dd08",
+    "milestone": "M0.9.88",
+    "source_revision": "68804c93f43b405008cfecf35dc8660db360a3a3",
     "repository": "gugglegum/kilogram-messenger",
     "workflow": ".github/workflows/independent-offline-reproduction.yml",
-    "workflow_run_id": "35474774356",
-    "attestation_id": "48691093",
+    "workflow_run_id": "38507114425",
+    "attestation_id": "55683374",
     "result": "verified",
     "artifact": {
       "file": "kilogram-offline.exe",
@@ -40,7 +42,7 @@
     },
     "protected_surface": {
       "mode": "git-ls-tree-sha256-v1",
-      "manifest_sha256": "4ada929ce28d5e152923f746d339d168c5620767f8270443e2a63baf4553e294",
+      "manifest_sha256": "2a7db2c5cacd0419a8ece61b0dc8386075a558d4f052b44c0eedd81cd9354d68",
       "file_count": 63,
       "paths": [
         ".gitattributes",
@@ -71,8 +73,9 @@
     "git_tag_created": false
   },
   "residual_risks": [
-    "volunteer-providers-not-operator-independent",
-    "sybil-resistance-not-implemented",
+    "strict-independent-provider-field-acceptance-pending",
+    "operator-and-network-independence-unproven",
+    "sybil-resistance-incomplete",
     "access-correlation-not-hidden",
     "windows-only-field-evidence",
     "not-a-public-security-release"

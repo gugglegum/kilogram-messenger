@@ -4668,3 +4668,29 @@ Acceptance:
 
 Следующий этап: обновить M1 candidate record на M0.9.87 run
 `20261014-080905` и принятую M0.9.88 attestation.
+
+### M0.9.89 — current M1 candidate evidence refresh: реализовано локально
+
+- `M1-CANDIDATE.json` format v2 pin-ит M0.9.87 clean run
+  `20261014-080905`/revision `162836bb...` как
+  `verified-reduced-two-host` и не допускает claim strict provider acceptance;
+- field runtime/protocol surface: 83 entries, SHA-256
+  `1aacaca665c9a2ab4dbc43107c2556128274d7fb9f8727d2dcc78681026bb320`;
+- independent evidence pin-ит M0.9.88 revision `68804c93...`, GitHub run
+  `38507114425`, attestation `55683374`, artifact SHA-256
+  `d9f9f450...cacb4`;
+- independent protected surface: 63 entries, SHA-256
+  `2a7db2c5cacd0419a8ece61b0dc8386075a558d4f052b44c0eedd81cd9354d68`;
+- schema/self-test fail closed отвергают changed revisions/hash/path set,
+  omitted risk и попытку установить
+  `independent_provider_field_acceptance=true`;
+- residual risks обновлены после M0.9.82: strict provider field acceptance и
+  operator/network independence pending, Sybil resistance incomplete, access
+  correlation visible, field evidence Windows-only, public security release
+  не заявлен;
+- composition stage network/build/archive/service/tag-free; upstream field и
+  release evidence не повторяются при unchanged protected surfaces.
+
+Acceptance gate: commit candidate control surface, затем production
+`verify-kilogram-m1-candidate.ps1` на clean HEAD и отдельный docs acceptance
+commit.

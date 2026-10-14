@@ -7,7 +7,7 @@ $ErrorActionPreference = 'Stop'
 $workspace = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $recordPath = Join-Path $workspace 'M1-CANDIDATE.json'
 $verifierPath = Join-Path $PSScriptRoot 'verify-kilogram-m1-candidate.ps1'
-$rfcPath = Join-Path $workspace 'docs\RFC-0104-m1-candidate-evidence-composition.md'
+$rfcPath = Join-Path $workspace 'docs\RFC-0112-current-m1-candidate-evidence-refresh.md'
 foreach ($path in @($recordPath, $verifierPath, $rfcPath)) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
         throw "M1 candidate boundary file is missing: $path"
@@ -20,12 +20,15 @@ $verifier = Get-Content -LiteralPath $verifierPath -Raw
 $rfc = Get-Content -LiteralPath $rfcPath -Raw
 
 foreach ($required in @(
-    '"milestone": "M0.9.81"',
+    '"milestone": "M0.9.89"',
     '"scope": "windows-technical-proof-of-concept"',
-    '"run_id": "20260920-001614"',
-    '"source_revision": "ff38e1b89dc5832abdb2a5d81f7ab3af06e0ceae"',
-    '"workflow_run_id": "35474774356"',
-    '"attestation_id": "48691093"',
+    '"run_id": "20261014-080905"',
+    '"source_revision": "162836bb7a54180c3a00915749cf17fe238019e2"',
+    '"result": "verified-reduced-two-host"',
+    '"topology_profile": "two-host-reduced"',
+    '"independent_provider_field_acceptance": false',
+    '"workflow_run_id": "38507114425"',
+    '"attestation_id": "55683374"',
     '"sha256": "d9f9f450f915cd238137c8498ba965b0dfac92c17982d237c0f18790cb6cacb4"',
     '"network_retest_required": false',
     '"release_build": false',
@@ -50,8 +53,9 @@ foreach ($required in @(
     'tampered_field_revision',
     'tampered_artifact_sha256',
     'narrowed_runtime_surface',
+    'escalated_independent_provider_claim',
     'omitted_residual_risk',
-    'verify-kilogram-m0976-service-free-v2-kit-boundary.ps1',
+    'verify-kilogram-m0987-independent-provider-kit-boundary.ps1',
     'verify-kilogram-independent-builder-boundary.ps1',
     'verify-kilogram-m1-acceptance-kit-boundary.ps1',
     'm1_candidate_status=verified',
@@ -83,7 +87,7 @@ foreach ($forbidden in @(
     }
 }
 
-if ([int]$record.format_version -ne 1 -or
+if ([int]$record.format_version -ne 2 -or
     [string]$record.status -cne 'candidate' -or
     [bool]$record.stage_boundary.network_executed -or
     [bool]$record.stage_boundary.release_build -or
@@ -95,13 +99,13 @@ if ([int]$record.format_version -ne 1 -or
 
 foreach ($required in @(
     'does not claim a public security release',
-    'does not require another network run',
+    'does not require another field network run',
     'exact runtime/protocol Git surface',
-    'physically or operator-independent providers',
-    'Sybil resistance'
+    'strict independent-provider field acceptance remains pending',
+    'Sybil resistance remains incomplete'
 )) {
     if ($rfc.IndexOf($required, [StringComparison]::OrdinalIgnoreCase) -lt 0) {
-        throw "RFC-0104 is missing '$required'"
+        throw "RFC-0112 is missing '$required'"
     }
 }
 
@@ -113,6 +117,8 @@ if ($LASTEXITCODE -ne 0 -or
 
 Write-Output 'm1_candidate_boundary=verified'
 Write-Output 'evidence_composition=field-plus-independent-reproduction'
+Write-Output 'field_evidence=verified-reduced-two-host'
+Write-Output 'strict_independent_provider_field_acceptance=pending'
 Write-Output 'runtime_protocol_drift=fail-closed'
 Write-Output 'network_retest_required=false'
 Write-Output 'network_executed=false'

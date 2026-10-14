@@ -12,11 +12,11 @@ if ([string]::IsNullOrWhiteSpace($RecordPath)) {
     $RecordPath = Join-Path $workspace 'M1-CANDIDATE.json'
 }
 
-$expectedFieldRevision = 'ff38e1b89dc5832abdb2a5d81f7ab3af06e0ceae'
-$expectedIndependentRevision = '4e9054ab2ccc6a4c542fb37d486b70e53027dd08'
+$expectedFieldRevision = '162836bb7a54180c3a00915749cf17fe238019e2'
+$expectedIndependentRevision = '68804c93f43b405008cfecf35dc8660db360a3a3'
 $expectedArtifactSha256 = 'd9f9f450f915cd238137c8498ba965b0dfac92c17982d237c0f18790cb6cacb4'
-$expectedFieldManifestSha256 = 'a67580165a166e22d6c52b52e93d29c562f1bb6289e2497e220fe3ff1e788a3d'
-$expectedIndependentManifestSha256 = '4ada929ce28d5e152923f746d339d168c5620767f8270443e2a63baf4553e294'
+$expectedFieldManifestSha256 = '1aacaca665c9a2ab4dbc43107c2556128274d7fb9f8727d2dcc78681026bb320'
+$expectedIndependentManifestSha256 = '2a7db2c5cacd0419a8ece61b0dc8386075a558d4f052b44c0eedd81cd9354d68'
 $expectedFieldPaths = @(
     'Cargo.toml',
     'Cargo.lock',
@@ -46,8 +46,9 @@ $expectedIndependentPaths = @(
     'scripts/verify-kilogram-offline-reproducibility-record.ps1'
 )
 $expectedResidualRisks = @(
-    'volunteer-providers-not-operator-independent',
-    'sybil-resistance-not-implemented',
+    'strict-independent-provider-field-acceptance-pending',
+    'operator-and-network-independence-unproven',
+    'sybil-resistance-incomplete',
     'access-correlation-not-hidden',
     'windows-only-field-evidence',
     'not-a-public-security-release'
@@ -56,7 +57,9 @@ $candidateControlPaths = @(
     'M1-CANDIDATE.json',
     'scripts/verify-kilogram-m1-candidate.ps1',
     'scripts/verify-kilogram-m1-candidate-boundary.ps1',
-    'docs/RFC-0104-m1-candidate-evidence-composition.md'
+    'docs/RFC-0110-independent-provider-field-contract.md',
+    'docs/RFC-0111-host-neutral-cargo-identity-verification.md',
+    'docs/RFC-0112-current-m1-candidate-evidence-refresh.md'
 )
 
 function Assert-ExactProperties {
@@ -105,8 +108,8 @@ function Assert-CandidateRecord {
         'format_version', 'milestone', 'status', 'scope', 'field_evidence',
         'independent_reproduction', 'stage_boundary', 'residual_risks'
     ) 'candidate record'
-    if ([int]$Record.format_version -ne 1 -or
-        [string]$Record.milestone -cne 'M0.9.81' -or
+    if ([int]$Record.format_version -ne 2 -or
+        [string]$Record.milestone -cne 'M0.9.89' -or
         [string]$Record.status -cne 'candidate' -or
         [string]$Record.scope -cne 'windows-technical-proof-of-concept') {
         throw 'candidate record identity is invalid'
@@ -114,13 +117,16 @@ function Assert-CandidateRecord {
 
     $field = $Record.field_evidence
     Assert-ExactProperties $field @(
-        'milestone', 'run_id', 'source_revision', 'result', 'verifier', 'runtime_surface'
+        'milestone', 'run_id', 'source_revision', 'result', 'topology_profile',
+        'independent_provider_field_acceptance', 'verifier', 'runtime_surface'
     ) 'field evidence'
-    if ([string]$field.milestone -cne 'M0.9.76' -or
-        [string]$field.run_id -cne '20260920-001614' -or
+    if ([string]$field.milestone -cne 'M0.9.87' -or
+        [string]$field.run_id -cne '20261014-080905' -or
         [string]$field.source_revision -cne $expectedFieldRevision -or
-        [string]$field.result -cne 'verified' -or
-        [string]$field.verifier -cne 'scripts/verify-kilogram-m0976-service-free-v2-evidence.ps1') {
+        [string]$field.result -cne 'verified-reduced-two-host' -or
+        [string]$field.topology_profile -cne 'two-host-reduced' -or
+        [bool]$field.independent_provider_field_acceptance -or
+        [string]$field.verifier -cne 'scripts/verify-kilogram-m0987-independent-provider-evidence.ps1') {
         throw 'accepted service-free field evidence identity is invalid'
     }
     $runtimeSurface = $field.runtime_surface
@@ -137,12 +143,12 @@ function Assert-CandidateRecord {
         'milestone', 'source_revision', 'repository', 'workflow', 'workflow_run_id',
         'attestation_id', 'result', 'artifact', 'protected_surface'
     ) 'independent reproduction'
-    if ([string]$independent.milestone -cne 'M0.9.80' -or
+    if ([string]$independent.milestone -cne 'M0.9.88' -or
         [string]$independent.source_revision -cne $expectedIndependentRevision -or
         [string]$independent.repository -cne 'gugglegum/kilogram-messenger' -or
         [string]$independent.workflow -cne '.github/workflows/independent-offline-reproduction.yml' -or
-        [string]$independent.workflow_run_id -cne '35474774356' -or
-        [string]$independent.attestation_id -cne '48691093' -or
+        [string]$independent.workflow_run_id -cne '38507114425' -or
+        [string]$independent.attestation_id -cne '55683374' -or
         [string]$independent.result -cne 'verified') {
         throw 'accepted independent reproduction identity is invalid'
     }
@@ -172,7 +178,7 @@ function Assert-CandidateRecord {
         'archive_created', 'background_service_created', 'git_tag_created'
     )) {
         if ([bool]$boundary.$name) {
-            throw "M0.9.81 stage boundary must keep $name false"
+            throw "M0.9.89 candidate-composition boundary must keep $name false"
         }
     }
     Assert-ExactStringArray @($Record.residual_risks) $expectedResidualRisks 'residual risks'
@@ -319,6 +325,10 @@ if ($SelfTest) {
     $badPath.field_evidence.runtime_surface.paths[7] = 'crates/kilogram-protocol'
     Assert-Rejected { Assert-CandidateRecord $badPath } 'narrowed_runtime_surface'
 
+    $badFieldClaim = $recordJson | ConvertFrom-Json
+    $badFieldClaim.field_evidence.independent_provider_field_acceptance = $true
+    Assert-Rejected { Assert-CandidateRecord $badFieldClaim } 'escalated_independent_provider_claim'
+
     $badRisk = $recordJson | ConvertFrom-Json
     $badRisk.residual_risks = @($badRisk.residual_risks | Select-Object -First 4)
     Assert-Rejected { Assert-CandidateRecord $badRisk } 'omitted_residual_risk'
@@ -351,21 +361,21 @@ Assert-ProtectedSurface `
     -ExpectedSha256 $expectedIndependentManifestSha256 `
     -ExpectedFileCount 63
 
-$fieldRfc = Get-Content -LiteralPath (Join-Path $workspace 'docs\RFC-0099-service-free-v2-field-run.md') -Raw
-foreach ($required in @('20260920-001614', $expectedFieldRevision, 'result=verified')) {
+$fieldRfc = Get-Content -LiteralPath (Join-Path $workspace 'docs\RFC-0110-independent-provider-field-contract.md') -Raw
+foreach ($required in @('20261014-080905', $expectedFieldRevision, 'verified-reduced-two-host', 'independent_provider_field_acceptance=false')) {
     if ($fieldRfc.IndexOf($required, [StringComparison]::Ordinal) -lt 0) {
         throw "accepted field RFC is missing '$required'"
     }
 }
-$reproductionRfc = Get-Content -LiteralPath (Join-Path $workspace 'docs\RFC-0103-canonical-cargo-registry-path-remapping.md') -Raw
-foreach ($required in @('35474774356', '48691093', $expectedArtifactSha256)) {
+$reproductionRfc = Get-Content -LiteralPath (Join-Path $workspace 'docs\RFC-0111-host-neutral-cargo-identity-verification.md') -Raw
+foreach ($required in @('38507114425', '55683374', $expectedArtifactSha256)) {
     if ($reproductionRfc.IndexOf($required, [StringComparison]::Ordinal) -lt 0) {
         throw "accepted reproduction RFC is missing '$required'"
     }
 }
 
 foreach ($gate in @(
-    [pscustomobject]@{ File = 'verify-kilogram-m0976-service-free-v2-kit-boundary.ps1'; Marker = 'm0976_service_free_v2_kit_boundary=verified' },
+    [pscustomobject]@{ File = 'verify-kilogram-m0987-independent-provider-kit-boundary.ps1'; Marker = 'm0987_independent_provider_kit_boundary=verified' },
     [pscustomobject]@{ File = 'verify-kilogram-independent-builder-boundary.ps1'; Marker = 'independent_builder_boundary=verified' },
     [pscustomobject]@{ File = 'verify-kilogram-m1-acceptance-kit-boundary.ps1'; Marker = 'm1_acceptance_kit_boundary=verified' }
 )) {
@@ -378,11 +388,14 @@ foreach ($gate in @(
 Write-Output 'm1_candidate_record=verified'
 Write-Output "candidate_revision=$head"
 Write-Output "field_evidence_revision=$expectedFieldRevision"
-Write-Output 'field_evidence_result=verified'
+Write-Output 'field_evidence_result=verified-reduced-two-host'
+Write-Output 'field_topology_profile=two-host-reduced'
+Write-Output 'independent_provider_field_acceptance=false'
+Write-Output 'strict_independent_provider_field_acceptance=pending'
 Write-Output 'runtime_protocol_surface=unchanged'
 Write-Output "independent_reproduction_revision=$expectedIndependentRevision"
 Write-Output "independent_artifact_sha256=$expectedArtifactSha256"
-Write-Output 'independent_attestation=48691093'
+Write-Output 'independent_attestation=55683374'
 Write-Output 'independent_artifact_surface=unchanged'
 Write-Output 'network_retest_required=false'
 Write-Output 'network_executed=false'

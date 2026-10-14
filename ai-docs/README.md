@@ -425,14 +425,17 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
    non-conflicting или path-unknown candidate. Deferred offers возвращаются
    вторым проходом при нехватке альтернатив, поэтому availability не падает;
    разные tags не считаются доказательством независимых операторов.
-7. M0.9.87 реализует отдельный four-folder field contract: Alice, два
-   provider hosts и Bob. Минимум нужны три физических устройства, Provider 1 и
-   Provider 2 обязаны иметь разные run-scoped machine/operator/network claims;
-   open logs и private state не синхронизируются. Это controlled
-   self-attestation, а не protocol proof. Внешний прогон пока не принят.
-8. Следующий инженерный этап — собрать свежий комплект и провести M0.9.87 на
-   двух действительно разделённых provider hosts.
-9. Optional autostart/background mode оставить отдельной явной настройкой;
+7. M0.9.87 clean two-host run `20261014-080905` подтвердил полный service-free
+   lifecycle и два разных physical provider hosts, но сохранил
+   `independent_provider_field_acceptance=false`: operator/network separation
+   требует будущего strict three-/four-host run.
+8. M0.9.88 принят externally: revision `68804c93...` локально и в GitHub run
+   `38507114425` дала byte-identical offline artifact, attestation `55683374`
+   проверена production verifier; Windows release исключён только из Cargo
+   tool identity equality, остальные поля остаются exact.
+9. M0.9.89 обновляет `M1-CANDIDATE.json` на эти свежие evidence revisions с
+   fail-closed selected-tree continuity и честным residual-risk списком.
+10. Optional autostart/background mode оставить отдельной явной настройкой;
    Windows Task Scheduler не является обязательной частью мессенджера.
 4. Уже реализованный M0.9.49 выделяет единый
    `kilogram-publication-conflict`: online/offline используют один signed codec,
@@ -848,6 +851,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   version/commit/target/libgit2/libcurl остаются byte-equal, а валидная
   Windows 11/Server OS-release строка проверяется как runner metadata; changed
   Cargo identity fail closed.
+- [`../docs/RFC-0112-current-m1-candidate-evidence-refresh.md`](../docs/RFC-0112-current-m1-candidate-evidence-refresh.md) —
+  M0.9.89 refresh M1 candidate: current M0.9.87 reduced field run и принятая
+  M0.9.88 attestation связаны exact selected-tree continuity, а strict provider
+  independence остаётся явным residual risk.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

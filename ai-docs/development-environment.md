@@ -2903,3 +2903,16 @@ retirement остальных compatibility shadows ещё не реализов
   прошла новый local clean-root pair и GitHub run `38507114425`. Attestation
   `55683374`, artifact ID `11868441712`; downloaded evidence прошёл production
   verifier с `attestation_verified=true`. M0.9.88 принят.
+
+## M0.9.89 current M1 candidate refresh (2026-10-14)
+
+- Field baseline: M0.9.87 run `20261014-080905`, revision
+  `162836bb7a54180c3a00915749cf17fe238019e2`, runtime surface 83 entries /
+  `1aacaca665c9a2ab4dbc43107c2556128274d7fb9f8727d2dcc78681026bb320`.
+- Independent baseline: M0.9.88 revision
+  `68804c93f43b405008cfecf35dc8660db360a3a3`, run `38507114425`, attestation
+  `55683374`, protected surface 63 entries /
+  `2a7db2c5cacd0419a8ece61b0dc8386075a558d4f052b44c0eedd81cd9354d68`.
+- Candidate format v2 сохраняет reduced result и false strict-acceptance bit;
+  production verification возможна только после commit, потому что control
+  surface обязана быть tracked и clean.
