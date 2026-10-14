@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-    [switch]$SelfTest
+    [switch]$SelfTest,
+    [string]$AcceptedTag
 )
 
 Set-StrictMode -Version Latest
@@ -9,6 +10,7 @@ $ErrorActionPreference = 'Stop'
 $workspace = [System.IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $scriptsDirectory = [System.IO.Path]::GetFullPath($PSScriptRoot)
 $candidateVerifier = Join-Path $scriptsDirectory 'verify-kilogram-m1-candidate.ps1'
+$acceptedTagVerifier = Join-Path $scriptsDirectory 'verify-kilogram-m1-tag-acceptance.ps1'
 $cargoWrapper = Join-Path $scriptsDirectory 'invoke-cargo-friendly.ps1'
 
 $expectedGates = [ordered]@{
@@ -136,13 +138,30 @@ foreach ($entry in $expectedGates.GetEnumerator()) {
     Write-Output "m1_readiness_gate=$($entry.Key):passed"
 }
 
-$candidateOutput = @(& powershell -NoProfile -ExecutionPolicy Bypass -File $candidateVerifier 2>&1)
-$candidateExitCode = $LASTEXITCODE
-$candidateLines = @($candidateOutput | ForEach-Object { [string]$_ })
-if ($candidateExitCode -ne 0) {
-    throw "M1 candidate production verification failed with exit code $candidateExitCode.`n$($candidateLines -join [Environment]::NewLine)"
+$verificationMode = 'current-candidate'
+if ([string]::IsNullOrWhiteSpace($AcceptedTag)) {
+    $candidateOutput = @(& powershell -NoProfile -ExecutionPolicy Bypass -File $candidateVerifier 2>&1)
+    $candidateExitCode = $LASTEXITCODE
+    $candidateLines = @($candidateOutput | ForEach-Object { [string]$_ })
+    if ($candidateExitCode -ne 0) {
+        throw "M1 candidate production verification failed with exit code $candidateExitCode.`n$($candidateLines -join [Environment]::NewLine)"
+    }
+    Assert-ExactMarker $candidateLines 'm1_candidate_status=verified' 'M1 candidate production verifier'
 }
-Assert-ExactMarker $candidateLines 'm1_candidate_status=verified' 'M1 candidate production verifier'
+else {
+    $tagOutput = @(
+        & powershell -NoProfile -ExecutionPolicy Bypass `
+            -File $acceptedTagVerifier `
+            -Tag $AcceptedTag 2>&1
+    )
+    $tagExitCode = $LASTEXITCODE
+    $tagLines = @($tagOutput | ForEach-Object { [string]$_ })
+    if ($tagExitCode -ne 0) {
+        throw "Accepted M1 tag verification failed with exit code $tagExitCode.`n$($tagLines -join [Environment]::NewLine)"
+    }
+    Assert-ExactMarker $tagLines 'm1_tag_acceptance_status=verified' 'accepted M1 tag verifier'
+    $verificationMode = 'accepted-tag'
+}
 
 Push-Location $workspace
 try {
@@ -169,7 +188,14 @@ finally {
 
 Write-Output 'm1_readiness_status=verified'
 Write-Output "boundary_gates=$passedGates/$($expectedGates.Count)"
-Write-Output 'candidate_status=verified'
+Write-Output "verification_mode=$verificationMode"
+if ($verificationMode -ceq 'current-candidate') {
+    Write-Output 'candidate_status=verified'
+}
+else {
+    Write-Output 'accepted_m1_tag_status=verified'
+    Write-Output "accepted_m1_tag=$AcceptedTag"
+}
 Write-Output 'format_status=verified'
 Write-Output 'offline_strict_clippy=verified'
 Write-Output 'test_executables_started=false'

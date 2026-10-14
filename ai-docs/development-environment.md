@@ -3149,3 +3149,23 @@ Hosted follow-up:
   Windows workflow.
 - Only then create and push one annotated `M1.0.0` tag at that exact commit.
   Do not create a GitHub Release, executable attachment, ZIP or release build.
+
+## Post-M1 accepted-tag readiness (2026-10-15)
+
+- Governance commit `3a8aa7c` was pushed and annotated tag `M1.0.1` was
+  created without moving `M1.0.0`; collaboration baseline commit `bcf4c81`
+  was then pushed.
+- Both ordinary post-M1 pushes exposed the intended old candidate behavior:
+  current Cargo manifests no longer equal the pre-M1 selected tree, so the
+  rolling candidate check failed before tests. The runs were diagnostic and
+  were cancelled/superseded rather than weakening historical evidence.
+- `verify-kilogram-m1-tag-acceptance.ps1` verifies exact local identities for
+  the annotated `M1.0.0` object, commit, tree, candidate record, RFC-0123 and
+  accepted decision log, plus ancestry to current `HEAD`.
+- `verify-kilogram-m1-readiness.ps1 -AcceptedTag M1.0.0` passed all `33/33`
+  boundaries, format and locked/offline strict Clippy with `CargoJobs=2` and
+  BelowNormal priority.
+- Result markers: `verification_mode=accepted-tag`,
+  `accepted_m1_tag_status=verified`, `network_executed=false`,
+  `test_executables_started=false`, `release_build=false`,
+  `archive_created=false`, `git_tag_created=false`.

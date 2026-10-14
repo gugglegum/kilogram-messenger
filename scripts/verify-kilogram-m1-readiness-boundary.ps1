@@ -6,21 +6,27 @@ $ErrorActionPreference = 'Stop'
 
 $workspace = [System.IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $verifierPath = Join-Path $PSScriptRoot 'verify-kilogram-m1-readiness.ps1'
+$tagVerifierPath = Join-Path $PSScriptRoot 'verify-kilogram-m1-tag-acceptance.ps1'
 $rfcPath = Join-Path $workspace 'docs\RFC-0113-complete-m1-readiness-gate.md'
-foreach ($path in @($verifierPath, $rfcPath)) {
+foreach ($path in @($verifierPath, $tagVerifierPath, $rfcPath)) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
         throw "M1 readiness boundary file is missing: $path"
     }
 }
 
 $verifier = Get-Content -LiteralPath $verifierPath -Raw
+$tagVerifier = Get-Content -LiteralPath $tagVerifierPath -Raw
 $rfc = Get-Content -LiteralPath $rfcPath -Raw
 
 foreach ($required in @(
     "'verify-kilogram-m1-readiness-boundary.ps1' = 'm1_readiness_boundary=verified'",
     "Get-ChildItem -LiteralPath `$scriptsDirectory -Filter 'verify-*-boundary.ps1'",
     'M1 readiness boundary inventory must contain exactly 33 gates',
+    '[string]$AcceptedTag',
+    "'verify-kilogram-m1-tag-acceptance.ps1'",
     'm1_candidate_status=verified',
+    'm1_tag_acceptance_status=verified',
+    'accepted_m1_tag_status=verified',
     'cargo fmt --all -- --check',
     "-CargoCommand clippy",
     "-CargoJobs 2",
@@ -40,6 +46,47 @@ foreach ($required in @(
 )) {
     if ($verifier.IndexOf($required, [StringComparison]::Ordinal) -lt 0) {
         throw "M1 readiness verifier is missing '$required'"
+    }
+}
+
+foreach ($required in @(
+    "`$expectedTag = 'M1.0.0'",
+    "`$expectedTagObject = '15e74f7a786070c247d4d1a0f023adde8b250922'",
+    "`$expectedCommit = '60b20b364c8df2324a0a287b4bcb6c056ae12c39'",
+    "`$expectedTree = '6e3183e6a4cf754a4aa3f7788c5e8be4e70cf9f3'",
+    "`$expectedCandidateBlob = 'c24389d673006deb28b09c66e4accfcc00e600f7'",
+    "`$expectedAcceptanceRfcBlob = '38b791db2a96437e6fe10debd2375210fd2c22fe'",
+    "`$expectedDecisionBlob = 'bae5c73ff79bf4477e7d030268cca532f83ccaed'",
+    "@('cat-file', '-t', `$tagRef)",
+    "@('merge-base', '--is-ancestor', `$expectedCommit, 'HEAD')",
+    'm1_tag_acceptance_self_test=passed',
+    'm1_tag_acceptance_status=verified',
+    'historical_candidate_reclassified=false',
+    'working_tree_mutated=false'
+)) {
+    if ($tagVerifier.IndexOf($required, [StringComparison]::Ordinal) -lt 0) {
+        throw "M1 tag acceptance verifier is missing '$required'"
+    }
+}
+
+foreach ($forbidden in @(
+    'Invoke-WebRequest',
+    'Invoke-RestMethod',
+    'Start-Process',
+    'cargo ',
+    'worktree',
+    "@('checkout'",
+    "@('reset'",
+    "@('switch'",
+    "@('clean'",
+    'Remove-Item',
+    "@('push'",
+    "@('fetch'",
+    'git push',
+    'git fetch'
+)) {
+    if ($tagVerifier.IndexOf($forbidden, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
+        throw "M1 tag acceptance verifier contains forbidden mutation/network surface: $forbidden"
     }
 }
 
@@ -78,9 +125,16 @@ if ($LASTEXITCODE -ne 0 -or
     throw "M1 readiness verifier self-test failed.`n$($selfTestOutput -join [Environment]::NewLine)"
 }
 
+$tagSelfTestOutput = @(& powershell -NoProfile -ExecutionPolicy Bypass -File $tagVerifierPath -SelfTest 2>&1)
+if ($LASTEXITCODE -ne 0 -or
+    'm1_tag_acceptance_self_test=passed' -notin @($tagSelfTestOutput | ForEach-Object { [string]$_ })) {
+    throw "M1 tag acceptance verifier self-test failed.`n$($tagSelfTestOutput -join [Environment]::NewLine)"
+}
+
 Write-Output 'm1_readiness_boundary=verified'
 Write-Output 'boundary_inventory=closed-33'
-Write-Output 'candidate_production_verifier=required'
+Write-Output 'candidate_or_accepted_tag_verifier=required'
+Write-Output 'accepted_m1_tag=M1.0.0'
 Write-Output 'format_and_offline_strict_clippy=required'
 Write-Output 'rust_test_executables_started=false'
 Write-Output 'network_executed=false'

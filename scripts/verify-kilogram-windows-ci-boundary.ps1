@@ -7,10 +7,18 @@ $ErrorActionPreference = 'Stop'
 $workspace = [System.IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $workflowPath = Join-Path $workspace '.github\workflows\windows-ci.yml'
 $rfcPath = Join-Path $workspace 'docs\RFC-0114-continuous-windows-readiness-and-tests.md'
+$postM1RfcPath = Join-Path $workspace 'docs\RFC-0124-post-m1-immutable-acceptance-and-continuous-ci.md'
 $isolatedTestsPath = Join-Path $workspace 'scripts\windows-ci-isolated-tests.json'
 $runnerPath = Join-Path $workspace 'scripts\run-cargo-tests-stable.ps1'
 $cacheMaintenancePath = Join-Path $workspace 'scripts\cargo-cache-maintenance.ps1'
-foreach ($path in @($workflowPath, $rfcPath, $isolatedTestsPath, $runnerPath, $cacheMaintenancePath)) {
+foreach ($path in @(
+    $workflowPath,
+    $rfcPath,
+    $postM1RfcPath,
+    $isolatedTestsPath,
+    $runnerPath,
+    $cacheMaintenancePath
+)) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
         throw "Windows CI boundary file is missing: $path"
     }
@@ -19,6 +27,7 @@ foreach ($path in @($workflowPath, $rfcPath, $isolatedTestsPath, $runnerPath, $c
 $workflow = Get-Content -LiteralPath $workflowPath -Raw
 $workflowLines = @($workflow -split '\r?\n')
 $rfc = Get-Content -LiteralPath $rfcPath -Raw
+$postM1Rfc = Get-Content -LiteralPath $postM1RfcPath -Raw
 $runner = Get-Content -LiteralPath $runnerPath -Raw
 $cacheMaintenance = Get-Content -LiteralPath $cacheMaintenancePath -Raw
 
@@ -43,6 +52,7 @@ foreach ($required in @(
     'id: fetch',
     'CARGO_NET_OFFLINE: "true"',
     '-File .\scripts\verify-kilogram-m1-readiness.ps1',
+    '-AcceptedTag M1.0.0',
     '-File .\scripts\run-cargo-tests-stable.ps1',
     "if: `${{ always() && steps.fetch.outcome == 'success' }}",
     'timeout-minutes: 38',
@@ -71,6 +81,20 @@ foreach ($required in @(
 )) {
     if ($cacheMaintenance.IndexOf($required, [StringComparison]::Ordinal) -lt 0) {
         throw "Cargo cache maintenance is missing empty-tree contract '$required'"
+    }
+}
+
+foreach ($required in @(
+    'immutable annotated',
+    '`M1.0.0` tag',
+    'does not refresh, rewrite or reclassify',
+    'current boundaries, formatting',
+    'strict Clippy and Rust tests',
+    '`M1.0.1` is a governance snapshot',
+    'does not create or move a tag'
+)) {
+    if ($postM1Rfc.IndexOf($required, [StringComparison]::OrdinalIgnoreCase) -lt 0) {
+        throw "RFC-0124 is missing '$required'"
     }
 }
 
@@ -179,6 +203,7 @@ Write-Output 'events=push-master,pull-request-master,manual'
 Write-Output 'permissions=contents-read'
 Write-Output 'checkout_history=complete'
 Write-Output 'readiness_gate=required'
+Write-Output 'readiness_reference=accepted-M1.0.0'
 Write-Output 'stable_rust_tests=required'
 Write-Output 'cargo_jobs=2'
 Write-Output 'test_profile=test'

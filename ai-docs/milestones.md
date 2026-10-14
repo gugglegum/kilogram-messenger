@@ -5029,3 +5029,23 @@ correlation visible, Windows-only field evidence, independent security audit
   число PR и не включает auto-merge;
 - изменение governance-only: runtime/protocol source, accepted M1 evidence и
   immutable `M1.0.1` tag не меняются.
+
+### Post-M1 immutable acceptance and continuous CI
+
+- push governance commit вызвал ожидаемый fail-closed результат старого
+  pre-M1 candidate verifier: Cargo manifests уже отличаются от accepted
+  candidate из-за license metadata;
+- historical evidence не переписывается и не расширяется на новый код;
+- новый read-only verifier pin-ит exact annotated tag object, commit, tree и
+  acceptance blobs `M1.0.0`, а также требует его ancestry в текущем `HEAD`;
+- полный readiness получил explicit `-AcceptedTag M1.0.0` mode для обычного
+  post-M1 CI; default mode по-прежнему проверяет текущий candidate без
+  ослабления;
+- Windows CI проверяет immutable M1 acceptance отдельно от current boundaries,
+  format, offline strict Clippy и всех stable-path Rust tests;
+- workflow не создаёт и не перемещает tag, не обновляет evidence, не собирает
+  release и не публикует archive/attestation.
+- local production readiness прошёл: `boundary_gates=33/33`,
+  `verification_mode=accepted-tag`, exact `M1.0.0`, format и locked/offline
+  strict Clippy verified; test executable/network/release/archive/tag не
+  запускались.

@@ -64,8 +64,14 @@ For the complete non-release readiness gate:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass `
-  -File .\scripts\verify-kilogram-m1-readiness.ps1
+  -File .\scripts\verify-kilogram-m1-readiness.ps1 `
+  -AcceptedTag M1.0.0
 ```
+
+This post-M1 mode verifies the immutable accepted tag and then checks the
+current boundaries, formatting, and strict Clippy state. Omitting
+`-AcceptedTag` deliberately selects the stricter candidate-preparation mode,
+which requires `HEAD` itself to match the current candidate evidence.
 
 Current GitHub CI runs on Windows. Host-compatible tests may also be run on
 other operating systems, but they do not replace the recorded Windows

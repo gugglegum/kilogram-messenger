@@ -45,12 +45,13 @@ jobs:
         id: fetch
         run: cargo fetch --locked --target x86_64-pc-windows-msvc
 
-      - name: Verify complete M1 readiness gate
+      - name: Verify current readiness against immutable M1 acceptance
         env:
           CARGO_NET_OFFLINE: "true"
         run: |
           powershell -NoProfile -ExecutionPolicy Bypass `
-            -File .\scripts\verify-kilogram-m1-readiness.ps1
+            -File .\scripts\verify-kilogram-m1-readiness.ps1 `
+            -AcceptedTag M1.0.0
 
       - name: Run stable-path Rust test harnesses
         if: ${{ always() && steps.fetch.outcome == 'success' }}
