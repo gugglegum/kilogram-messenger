@@ -4630,3 +4630,11 @@ remote `field-kit-current\kilogram-cli.exe` и Alice physical IP:
 Это закрывает доступный двухмашинный field proof без central HTTPS mailbox, но
 не закрывает строгий independent-provider acceptance: для него по-прежнему
 нужны минимум три физических host и независимые operator/network claims.
+
+Повторный clean run `20261014-080905` был сгенерирован уже из revision
+`162836bb7a54180c3a00915749cf17fe238019e2` с исправленным verifier. Он без
+ручного вмешательства прошёл prepare, 2/2 replication, Alice-offline receive,
+delete-after-commit, restart-no-redelivery и штатный `03_VERIFY`, который вывел
+`M0.9.87 TWO-HOST REDUCED SERVICE-FREE TEST COMPLETED SUCCESSFULLY`. Это
+подтверждает, что результат первого run не был следствием post-hoc ослабления
+evidence: canonical target relay regression входил в проверяемый kit до старта.

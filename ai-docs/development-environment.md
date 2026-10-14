@@ -2877,3 +2877,8 @@ retirement остальных compatibility shadows ещё не реализов
 - Firewall rule является временным тестовым исключением. После завершения
   сетевых прогонов его нужно удалить от администратора вместе с test account и
   SSH key; обычный пользователь `test` этого сделать не может.
+- Clean rerun `20261014-080905` из commit `162836b` прошёл встроенный
+  `03_VERIFY` со статусом `verified-reduced-two-host`. Он является текущим
+  canonical двухмашинным field result; первый successful run `075145` полезен
+  как regression fixture verifier false negative, но не нужен для повторного
+  запуска.
