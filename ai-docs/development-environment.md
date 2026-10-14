@@ -2835,3 +2835,26 @@ retirement остальных compatibility shadows ещё не реализов
   После завершения field testing удалить пользователя `test`, его профиль и
   локальный private key; до этого не использовать эту учётную запись для
   личных данных.
+
+## M0.9.87 two-host run firewall diagnostic (2026-10-14)
+
+- Fresh reduced run `20261014-072429` из revision
+  `fce270c1ad23d39b00da6affbf1175207e1ef03d` подтвердил Alice/Bob direct LAN
+  path, но получил только Provider 1 receipt. Provider 2 на ноутбуке видел
+  incoming attempt, после чего server side завершал handshake timeout, а Alice
+  получала Iroh TLS error `no server certificate chain resolved`.
+- Повтор exact locator после первого частичного PUT теперь действительно
+  idempotent: `recorded_at_unix_seconds` не участвует в immutable locator replay
+  equality, при этом signed replica-set fields и cryptographic commitments
+  продолжают проверяться exact. Mailbox-client regression: 19/19.
+- Read-only `netsh` audit обнаружил 30 старых allow blocks для
+  `kilogram-cli.exe`, но ни одного для текущего exact path
+  `C:\Users\test\KilogramLab\field-kit-current\kilogram-cli.exe`. Windows
+  Firewall rules path-specific; все profiles enabled. Поэтому firewall остаётся
+  правдоподобной причиной именно Provider 2 failure, несмотря на успешный
+  Alice/Bob hole-punched direct path.
+- Least-privilege user `test` не может добавить правило: `netsh` корректно
+  вернул elevation required. Следующий diagnostic обязан сначала создать от
+  администратора узкое временное inbound UDP allow rule для текущего EXE и
+  Alice physical IP `192.168.0.140`, затем провести fresh run и после проверки
+  удалить правило. Run `20261014-072429` отклонён и не возобновляется.
