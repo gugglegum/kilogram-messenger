@@ -3072,3 +3072,19 @@ Hosted follow-up:
   PE identity/debug metadata prevents a byte-identity claim.
 - Existing fail-closed field surface hashes all `apps/kilogram-cli`, поэтому
   требуется fresh physical field run и candidate refresh exact revision.
+
+## M0.9.97 configured relay evidence (2026-10-14)
+
+- Fresh two-host run `20261014-135100` on revision `78164eca...` completed the
+  full product lifecycle: 2-of-2 storage receipts, Alice offline, Bob received
+  once, both replicas deleted after commit, restart produced no redelivery.
+- The verifier rejected the run because local Provider 1 reported a bounded
+  APS1 registration timeout and therefore had no observed `relay_home_url`.
+- Runtime now prints `relay_config_url` for an explicit configured relay before
+  the online wait. `relay_home_url` still means an observed online relay only.
+- The evidence verifier requires the canonical configured pin and rejects any
+  divergent observed home. It does not reinterpret timeout as online status.
+- M0.9.69/M0.9.87 verifier self-tests pass, including the new divergent-config
+  mutation. The exact isolated lifecycle test passes `1/1` in 60.64 seconds.
+- The rejected run is diagnostic only. Rebuild, exact-revision field rerun,
+  candidate refresh, clean readiness and hosted CI are still required.

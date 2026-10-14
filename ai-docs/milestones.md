@@ -4907,3 +4907,24 @@ Hosted disposition:
 Acceptance gate: technical commit, fresh physical field evidence, candidate
 refresh, clean full M1 readiness и fresh green hosted Windows CI. M1 tag не
 разрешён автоматически.
+
+### M0.9.97 — configured relay evidence: реализовано локально
+
+- clean two-host run `20261014-135100` на revision `78164eca...` завершил
+  exact 2-of-2 volunteer mailbox lifecycle, sender-offline ordering,
+  commit-before-delete и restart без redelivery;
+- run отклонён fail-closed verifier: Provider 1 был настроен на APS1, но
+  `route_policy=auto` продолжил direct после bounded relay registration timeout,
+  поэтому старый diagnostic contract не отличал configured pin от observed
+  relay home;
+- runtime теперь печатает `relay_config_url` для explicit relay configuration,
+  а `relay_home_url` остаётся только фактом успешной online registration;
+- verifier требует canonical configured URL у обоих providers и отвергает
+  любой observed home вне pin; timeout не превращается в online success;
+- verifier self-tests и exact isolated lifecycle test (`1/1`, 60.64s) прошли;
+- routing, timeout, retry, mailbox и crypto behavior не менялись, но production
+  diagnostic surface изменилась и требует нового exact-revision field run.
+
+Acceptance gate: technical commit, fresh reduced physical run, candidate
+refresh, clean full readiness and fresh green hosted Windows CI. Strict
+independent-provider run и решение об M1 tag остаются отдельными условиями.

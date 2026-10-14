@@ -62,6 +62,7 @@ function Test-M0969ExactLocatorEvidence {
     $expectedRoutePolicy = 'auto'
     $expectedRelayUrl = 'https://aps1-1.relay.n0.iroh.link./'
     $expectedRoutePattern = '^route_policy=' + [regex]::Escape($expectedRoutePolicy) + '$'
+    $expectedRelayConfigPattern = '^relay_config_url=' + [regex]::Escape($expectedRelayUrl) + '$'
     $expectedRelayPattern = '^relay_home_url=' + [regex]::Escape($expectedRelayUrl) + '$'
     # A runtime can complete peer convergence over a direct path even when its
     # own relay registration times out.  In that case the authenticated peer
@@ -102,7 +103,11 @@ function Test-M0969ExactLocatorEvidence {
             $log '^runtime_volunteer_storage_iroh_alpn=kilogram/m0/blind-mailbox/1$' `
             "$provider Iroh ALPN"
         Assert-M0969Match $log $expectedRoutePattern "$provider auto route policy"
-        Assert-M0969Match $log $expectedRelayPattern "$provider pinned field relay"
+        Assert-M0969Match $log $expectedRelayConfigPattern "$provider configured field relay pin"
+        $observedRelayHomes = @(Get-M0969Matches $log '^relay_home_url=(\S+)$')
+        if (@($observedRelayHomes | Where-Object { $_ -cne $expectedRelayUrl }).Count -ne 0) {
+            throw "$provider exposed a relay home outside the configured field relay pin"
+        }
         Assert-M0969Match $log '^status=runtime-listening$' "$provider listening state"
         $keys = @(Get-M0969Matches $log '^runtime_volunteer_storage_store_key=([0-9a-f]{64})$')
         $transports = @(Get-M0969Matches $log '^transport_endpoint_id=([0-9a-f]{64})$')
@@ -358,6 +363,7 @@ function New-M0969SelfTestEvidence {
         Set-Content -LiteralPath (Join-Path $Directory "01-$($entry[0]).log") -Encoding utf8 -Value @(
             "transport_endpoint_id=$($entry[2])",
             'route_policy=auto',
+            'relay_config_url=https://aps1-1.relay.n0.iroh.link./',
             'relay_home_url=https://aps1-1.relay.n0.iroh.link./',
             'runtime_volunteer_storage=serving',
             "runtime_volunteer_storage_store_key=$($entry[1])",
@@ -517,6 +523,22 @@ if ($SelfTest) {
         }
         Set-Content -LiteralPath $aliceConvergencePath -Encoding utf8 -Value $aliceConvergenceOriginal
 
+        $provider1Path = Join-Path $root '01-provider1.log'
+        $provider1Original = Get-Content -LiteralPath $provider1Path -Raw
+        Set-Content -LiteralPath $provider1Path -Encoding utf8 -Value (
+            $provider1Original.Replace(
+                'relay_config_url=https://aps1-1.relay.n0.iroh.link./',
+                'relay_config_url=https://euc1-1.relay.n0.iroh.link./'
+            )
+        )
+        $providerRelayConfigMismatchRejected = $false
+        try { $null = Test-M0969ExactLocatorEvidence $root $LabelPrefix }
+        catch { $providerRelayConfigMismatchRejected = $true }
+        if (-not $providerRelayConfigMismatchRejected) {
+            throw 'verifier accepted a divergent provider relay configuration'
+        }
+        Set-Content -LiteralPath $provider1Path -Encoding utf8 -Value $provider1Original
+
         $sendPath = Join-Path $root '04-send-alice.log'
         $sendOriginal = Get-Content -LiteralPath $sendPath -Raw
         Set-Content -LiteralPath $sendPath -Encoding utf8 -Value (
@@ -579,6 +601,7 @@ if ($SelfTest) {
         Write-Output 'relay_mismatch_rejected=true'
         Write-Output 'direct_convergence_target_relay_verified=true'
         Write-Output 'target_relay_mismatch_rejected=true'
+        Write-Output 'provider_relay_config_mismatch_rejected=true'
         return
     }
     finally {

@@ -1,6 +1,7 @@
 # RFC-0119: Task-aware runtime test readiness (M0.9.96)
 
-Status: implemented locally; field/candidate and hosted confirmation pending.
+Status: technical implementation committed; first fresh field run rejected and
+evidence diagnostics continued in RFC-0120.
 
 ## 1. Evidence
 

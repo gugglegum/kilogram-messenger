@@ -17813,6 +17813,7 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
     let volunteer_iroh_enabled = volunteer_storage
         .as_ref()
         .is_some_and(|settings| settings.allows(current_network));
+    let configured_relay_url = relay_url.clone();
     let endpoint_builder = endpoint_builder_with_relay(route_policy, relay_url);
     #[cfg(test)]
     let endpoint_builder = endpoint_builder
@@ -17832,6 +17833,9 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
         .bind()
         .await
         .context("bind long-lived Iroh runtime endpoint")?;
+    if let Some(relay_url) = configured_relay_url.as_ref() {
+        println!("relay_config_url={relay_url}");
+    }
     wait_for_relay(&endpoint, route_policy, relay_wait_seconds).await?;
 
     let publication_channel_epoch = with_locked_state(&state_dir, || {
