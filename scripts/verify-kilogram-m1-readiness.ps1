@@ -150,18 +150,16 @@ try {
         throw "cargo fmt failed with exit code $LASTEXITCODE"
     }
 
-    $clippyOutput = @(
-        & $cargoWrapper `
-            -CargoCommand clippy `
-            -CargoJobs 2 `
-            -CargoArguments @(
-                '--workspace', '--all-targets', '--all-features', '--locked',
-                '--offline', '--', '-D', 'warnings'
-            ) 2>&1
-    )
+    & $cargoWrapper `
+        -CargoCommand clippy `
+        -CargoJobs 2 `
+        -CargoArguments @(
+            '--workspace', '--all-targets', '--all-features', '--locked',
+            '--offline', '--', '-D', 'warnings'
+        )
     $clippyExitCode = $LASTEXITCODE
     if ($clippyExitCode -ne 0) {
-        throw "offline strict Clippy failed with exit code $clippyExitCode.`n$($clippyOutput -join [Environment]::NewLine)"
+        throw "offline strict Clippy failed with exit code $clippyExitCode"
     }
 }
 finally {
