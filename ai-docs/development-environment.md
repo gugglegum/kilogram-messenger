@@ -2792,3 +2792,34 @@ retirement остальных compatibility shadows ещё не реализов
   code did not change. External three-/four-host evidence remains pending.
 - No release build, ZIP, HTTPS mailbox process, new EXE, background service,
   field connection or external publication was created.
+
+## Удалённый Windows test node (2026-10-14)
+
+- Выделенный ноутбук Windows 11 доступен только в текущей LAN как
+  `test@192.168.0.152`; hostname `PAUL_HP_OMEN`, профиль
+  `C:\Users\test`, shell Windows PowerShell 5.1. Адрес DHCP и поэтому перед
+  будущим прогоном его следует считать проверяемым, а не постоянным.
+- `test` — обычный локальный пользователь, состоящий только в группе
+  `BUILTIN\Users`. У него нет доступа к управлению `sshd`, системной CIM
+  информации и server host private keys; это желаемая least-privilege граница.
+- Рабочая беспарольная авторизация использует отдельный Ed25519 key
+  `C:\Users\Paul\.ssh\kilogram-test-laptop-final-ed25519`. На ноутбуке в
+  `C:\Users\test\.ssh\authorized_keys` оставлена только его публичная часть
+  с comment `kilogram-test-laptop-final-2026-10-14`; пароль и private key в
+  проектной памяти не записываются.
+- Проверка выполнялась с `BatchMode=yes`, `IdentitiesOnly=yes`, pinned host key
+  из ignored файла `.tmp\remote-access\known_hosts` и завершилась как
+  `key_auth_ok`. Старый интерактивный парольный session закрыт, два пробных
+  неработающих ключа удалены локально и из `authorized_keys`.
+- Remote workspace `C:\Users\test\KilogramLab` создан. SCP transfer
+  `docs\M0.9.87-TWO-HOST-REDUCED-TEST-RU.md` в `access-test.md` проверен
+  одинаковым SHA-256
+  `3AD88947A1E5E19FBAE62EA0882CD5A2759F0B234FEF023579EE3549D1FC6D94`.
+- На test node не обнаружены `cargo`, `git`, `syncthing` и PowerShell 7; для
+  текущих Windows field kits достаточно SCP-доставки готовых EXE/scripts и
+  удалённого запуска через встроенный Windows PowerShell. Устанавливать
+  toolchain следует только при отдельной необходимости.
+- Учётная запись и ключ предназначены только для временных Kilogram tests.
+  После завершения field testing удалить пользователя `test`, его профиль и
+  локальный private key; до этого не использовать эту учётную запись для
+  личных данных.
