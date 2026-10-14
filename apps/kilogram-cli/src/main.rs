@@ -28465,6 +28465,36 @@ mod tests {
     const UNSUPPORTED_TEST_ALPN: &[u8] = b"kilogram/test/unsupported/1";
     const REPLICATION_LEDGER_UNCLEAN_EXIT_DIRECTORY_ENV: &str =
         "KILOGRAM_TEST_REPLICATION_LEDGER_UNCLEAN_EXIT_DIRECTORY";
+    const RUNTIME_TEST_READINESS_TIMEOUT: Duration = Duration::from_secs(60);
+
+    async fn wait_for_runtime_ipc_or_failure(
+        ipc_file: &Path,
+        runtime_task: &mut JoinHandle<Result<()>>,
+        timeout_context: &'static str,
+    ) -> Result<()> {
+        timeout(RUNTIME_TEST_READINESS_TIMEOUT, async {
+            loop {
+                if ipc_file.is_file() {
+                    return Ok(());
+                }
+                tokio::select! {
+                    outcome = &mut *runtime_task => {
+                        match outcome.context("join runtime while waiting for its IPC descriptor")? {
+                            Ok(()) => bail!("runtime stopped before publishing its IPC descriptor"),
+                            Err(error) => {
+                                return Err(error).context(
+                                    "runtime failed before publishing its IPC descriptor",
+                                );
+                            }
+                        }
+                    }
+                    _ = tokio::time::sleep(Duration::from_millis(20)) => {}
+                }
+            }
+        })
+        .await
+        .context(timeout_context)?
+    }
 
     #[test]
     fn replication_ledger_unclean_exit_helper() -> Result<()> {
@@ -33074,14 +33104,13 @@ mod tests {
                 volunteer_storage: None,
             },
         )?;
-        let task = tokio::spawn(runtime(runtime_options_from_profile(&profile_file)?));
-        timeout(Duration::from_secs(10), async {
-            while !ipc_file.is_file() {
-                tokio::time::sleep(Duration::from_millis(20)).await;
-            }
-        })
-        .await
-        .context("runtime did not publish its IPC descriptor")?;
+        let mut task = tokio::spawn(runtime(runtime_options_from_profile(&profile_file)?));
+        wait_for_runtime_ipc_or_failure(
+            &ipc_file,
+            &mut task,
+            "runtime did not publish its IPC descriptor within 60 seconds",
+        )
+        .await?;
 
         let roster = kilogram_runtime_ipc::call(
             &ipc_file,
@@ -33194,14 +33223,13 @@ mod tests {
             .context("join directory-update runtime")??;
         fs::remove_file(&removed_pool_file)?;
 
-        let restarted = tokio::spawn(runtime(runtime_options_from_profile(&profile_file)?));
-        timeout(Duration::from_secs(10), async {
-            while !ipc_file.is_file() {
-                tokio::time::sleep(Duration::from_millis(20)).await;
-            }
-        })
-        .await
-        .context("runtime did not restart from its authenticated directory receipt")?;
+        let mut restarted = tokio::spawn(runtime(runtime_options_from_profile(&profile_file)?));
+        wait_for_runtime_ipc_or_failure(
+            &ipc_file,
+            &mut restarted,
+            "runtime did not restart from its authenticated directory receipt within 60 seconds",
+        )
+        .await?;
         let status =
             kilogram_runtime_ipc::call(&ipc_file, RuntimeIpcCommand::OwnDeviceDirectoryStatus)
                 .await?;

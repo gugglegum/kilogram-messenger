@@ -465,9 +465,15 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
 15. M0.9.95 исправляет hosted scheduling без Rust/runtime drift: isolated
    restart test запускается один раз до aggregate suite и при explicit Normal
    priority. Local hosted-mode run прошёл isolated `1/1` и aggregate CLI
-   `81/81`; revision `c679313...` прошла clean readiness `33/33`. Fresh green
-   GitHub run остаётся acceptance condition.
-16. Optional autostart/background mode оставить отдельной явной настройкой;
+   `81/81`; revision `c679313...` прошла clean readiness `33/33`. Hosted run
+   `38531172733` подтвердил политику, но снова пересёк test-local 10-second
+   restart deadline, поэтому scheduling-only fix признан недостаточным.
+16. M0.9.96 заменяет этот хрупкий test-local wait на bounded 60-second
+   task-aware readiness: IPC ждётся одновременно с runtime task, поэтому
+   реальная ранняя ошибка видна сразу и не маскируется timeout. Exact local
+   test прошёл за 61.02s; coarse field surface требует fresh physical rerun и
+   candidate refresh перед новым hosted acceptance run.
+17. Optional autostart/background mode оставить отдельной явной настройкой;
    Windows Task Scheduler не является обязательной частью мессенджера.
 4. Уже реализованный M0.9.49 выделяет единый
    `kilogram-publication-conflict`: online/offline используют один signed codec,
@@ -904,7 +910,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   закрывает Windows PowerShell empty-tree regression динамическим self-test.
 - [`../docs/RFC-0118-hosted-isolated-test-scheduling.md`](../docs/RFC-0118-hosted-isolated-test-scheduling.md) —
   M0.9.95 запускает exact isolated restart test до aggregate harnesses и с
-  normal hosted priority, сохраняя single-attempt fail-closed coverage.
+  normal hosted priority; run `38531172733` доказал, что этого недостаточно.
+- [`../docs/RFC-0119-task-aware-runtime-test-readiness.md`](../docs/RFC-0119-task-aware-runtime-test-readiness.md) —
+  M0.9.96 вводит bounded task-aware IPC readiness для lifecycle test без
+  изменения production runtime policy или retry masking.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

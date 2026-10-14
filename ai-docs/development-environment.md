@@ -3047,3 +3047,28 @@ retirement остальных compatibility shadows ещё не реализов
   locked/offline strict Clippy verified; readiness mutation flags false.
 - No Rust source, runtime/network action, release/archive/service/tag mutation
   occurred; accepted field and independent surfaces remain unchanged.
+
+Hosted follow-up:
+
+- run `38531172733` применил `cargo_process_priority_override=normal` и
+  `isolated_test_order=BeforeAggregate`, но isolated test всё равно упал на
+  прежнем 10-second restart IPC-ready deadline за 61.34s;
+- все 276 aggregate tests после него прошли; scheduling-only hypothesis
+  отвергнута, а empty-cache reporter не был достигнут из-за итогового failure.
+
+## M0.9.96 task-aware runtime test readiness (2026-10-14)
+
+- В `#[cfg(test)]` добавлен bounded helper, который до 60 секунд ждёт IPC file
+  и одновременно наблюдает runtime `JoinHandle`.
+- Если runtime завершится раньше, helper немедленно возвращает реальную ошибку
+  или unexpected-clean-exit context; retry и success masking отсутствуют.
+- Helper применён к initial и recovered startup одного isolated lifecycle
+  test; production constants и runtime behavior не менялись.
+- `cargo fmt --check` и exact test прошли; exact duration 61.02s.
+- Rebuilt `target/debug/kilogram-cli.exe`: `57974784` bytes,
+  SHA-256 `e10b162a004031165179eb52a84e2d8a70a4e894f0e1203d40ff0f08243a6979`.
+  Previous field EXE: те же `57974784` bytes, SHA-256
+  `c932e72291a5a55f62b847085e50b570ce6a7f1955926926a4545cb833b7f962`.
+  PE identity/debug metadata prevents a byte-identity claim.
+- Existing fail-closed field surface hashes all `apps/kilogram-cli`, поэтому
+  требуется fresh physical field run и candidate refresh exact revision.

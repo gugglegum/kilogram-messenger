@@ -1,6 +1,7 @@
 # RFC-0118: Hosted isolated-test scheduling (M0.9.95)
 
-Status: implemented locally; hosted confirmation pending.
+Status: implemented, but disproved as a sufficient fix by hosted run
+`38531172733`; superseded by RFC-0119.
 
 ## 1. Evidence
 
@@ -46,12 +47,12 @@ artifact changes. The 83-entry field runtime/protocol surface and the 63-entry
 independently reproduced offline surface remain byte-identical. No physical
 network rerun or independent artifact reproduction is required.
 
-## 4. Acceptance
+## 4. Hosted result and disposition
 
-Local acceptance requires the Windows CI boundary, complete M1 readiness and a
-focused exact isolated-test pass. Final M0.9.95 acceptance requires a fresh
-green hosted Windows CI run that reaches and passes the corrected empty-cache
-report. It does not authorize an M1 tag or public security-release claim.
+Local acceptance required the Windows CI boundary, complete M1 readiness and a
+focused exact isolated-test pass. Final M0.9.95 acceptance required a fresh
+green hosted Windows CI run that reached and passed the corrected empty-cache
+report. It did not authorize an M1 tag or public security-release claim.
 
 The local stable-path runner was then exercised in the exact hosted mode. The
 isolated test ran first and passed once in 60.64 seconds; the aggregate CLI
@@ -63,4 +64,12 @@ Implementation revision `c6793136ef0839c6c854227929fa9dfe32cc3f74`
 subsequently passed the complete clean-tree M1 readiness gate: all 33 boundary
 gates, candidate continuity, formatting and locked/offline strict Clippy were
 verified. No test executable was started by readiness and every mutation flag
-remained false. Hosted confirmation is still required.
+remained false.
+
+Hosted confirmation was attempted in run `38531172733`. The workflow visibly
+used `Normal` priority and ran the isolated test first, so the intended
+scheduling policy was active. Nevertheless, the isolated test crossed the
+same internal ten-second restart deadline and failed in 61.34 seconds. All 276
+aggregate tests then passed. This disproves scheduling as a sufficient fix and
+leaves M0.9.95 unaccepted as the hosted baseline. RFC-0119 replaces the brittle
+test-local deadline with bounded, task-aware readiness.

@@ -4878,3 +4878,32 @@ Local acceptance:
 
 Acceptance gate: Windows CI boundary, commit, clean full M1 readiness, push и
 fresh green GitHub-hosted run. M1 tag остаётся отдельным явным решением.
+
+Hosted disposition:
+
+- run `38531172733` на revision `a45ce0c...` подтвердил, что CI действительно
+  применил `Normal` и `BeforeAggregate`, однако isolated test снова пересёк
+  тот же внутренний 10-second restart IPC deadline;
+- после isolated failure все 276 aggregate tests прошли, поэтому scheduling
+  полезен как явная политика, но недостаточен как исправление;
+- M0.9.95 не становится green hosted baseline и superseded этапом M0.9.96.
+
+### M0.9.96 — task-aware runtime test readiness: реализовано локально
+
+- initial и recovered runtime readiness в isolated lifecycle test используют
+  общий test-only helper;
+- bounded deadline увеличен до 60 секунд, но helper одновременно ждёт
+  `JoinHandle`: реальная runtime error или неожиданный clean exit возвращаются
+  немедленно, без retry и masking;
+- production runtime/network/IPC timeout policy не изменена;
+- exact test прошёл локально `1/1` за 61.02s, `cargo fmt --check` passed;
+- normal debug EXE сохранил размер `57974784`, но Windows PE build/debug
+  identity изменила полный SHA-256, поэтому byte identity не заявляется;
+- coarse fail-closed field surface включает весь `apps/kilogram-cli`, поэтому
+  до candidate refresh обязателен fresh physical field run exact revision;
+- independent `kilogram-offline` surface не менялась, но continuity всё равно
+  должен подтвердить существующий exact verifier.
+
+Acceptance gate: technical commit, fresh physical field evidence, candidate
+refresh, clean full M1 readiness и fresh green hosted Windows CI. M1 tag не
+разрешён автоматически.
