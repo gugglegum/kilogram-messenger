@@ -3007,3 +3007,19 @@ retirement остальных compatibility shadows ещё не реализов
   production verification on a clean tree. Full local readiness then passed
   `33/33`, format and locked/offline strict Clippy with two jobs; no test EXE,
   release/archive/tag or background service was created.
+
+## M0.9.94 hosted completion diagnostic (2026-10-14)
+
+- Windows CI run `38519726403` на exact revision `3887e06...` прошёл
+  33-boundary readiness, aggregate test executables и единственный isolated
+  lifecycle test; isolated result: 1 passed за 69.84s.
+- Runner напечатал `status=passed` и `isolated_test_count=1`, после чего
+  `cargo-cache-maintenance.ps1` упал на `$measure.Sum` для пустой существующей
+  profile directory. Это первая реальная причина красного job.
+- Исправление не удаляет cache и не запускает новую сборку: empty/missing tree
+  становится `0/0`, non-empty tree сохраняет exact counts, multiple summary
+  остаётся ошибкой.
+- Regression `-SelfTest` успешно пройден локально в Windows PowerShell 5.1 и
+  PowerShell 7; он использует отдельный GUID temp root и удаляет только его.
+- До commit production readiness запускать нельзя: candidate verifier требует
+  clean tree. После commit нужен clean readiness и новый hosted run.

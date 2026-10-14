@@ -9,7 +9,8 @@ $workflowPath = Join-Path $workspace '.github\workflows\windows-ci.yml'
 $rfcPath = Join-Path $workspace 'docs\RFC-0114-continuous-windows-readiness-and-tests.md'
 $isolatedTestsPath = Join-Path $workspace 'scripts\windows-ci-isolated-tests.json'
 $runnerPath = Join-Path $workspace 'scripts\run-cargo-tests-stable.ps1'
-foreach ($path in @($workflowPath, $rfcPath, $isolatedTestsPath, $runnerPath)) {
+$cacheMaintenancePath = Join-Path $workspace 'scripts\cargo-cache-maintenance.ps1'
+foreach ($path in @($workflowPath, $rfcPath, $isolatedTestsPath, $runnerPath, $cacheMaintenancePath)) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
         throw "Windows CI boundary file is missing: $path"
     }
@@ -19,6 +20,7 @@ $workflow = Get-Content -LiteralPath $workflowPath -Raw
 $workflowLines = @($workflow -split '\r?\n')
 $rfc = Get-Content -LiteralPath $rfcPath -Raw
 $runner = Get-Content -LiteralPath $runnerPath -Raw
+$cacheMaintenance = Get-Content -LiteralPath $cacheMaintenancePath -Raw
 
 foreach ($requiredLine in @('  push:', '  pull_request:', '  workflow_dispatch:')) {
     if ($workflowLines -cnotcontains $requiredLine) {
@@ -53,6 +55,29 @@ foreach ($required in @(
     if ($workflow.IndexOf($required, [StringComparison]::Ordinal) -lt 0) {
         throw "Windows CI workflow is missing '$required'"
     }
+}
+
+foreach ($required in @(
+    '[switch]$SelfTest',
+    '$measure = @(',
+    'if ($measure.Count -eq 0)',
+    '$summary.PSObject.Properties[''Sum'']',
+    'cargo_cache_measurement_self_test=passed',
+    'missing_tree=zero',
+    'empty_tree=zero',
+    'non_empty_tree=exact'
+)) {
+    if ($cacheMaintenance.IndexOf($required, [StringComparison]::Ordinal) -lt 0) {
+        throw "Cargo cache maintenance is missing empty-tree contract '$required'"
+    }
+}
+
+$cacheSelfTestOutput = @(
+    & powershell -NoProfile -ExecutionPolicy Bypass -File $cacheMaintenancePath -SelfTest 2>&1
+)
+if ($LASTEXITCODE -ne 0 -or
+    'cargo_cache_measurement_self_test=passed' -notin @($cacheSelfTestOutput | ForEach-Object { [string]$_ })) {
+    throw "Cargo cache empty-tree self-test failed.`n$($cacheSelfTestOutput -join [Environment]::NewLine)"
 }
 
 $isolatedManifest = Get-Content -LiteralPath $isolatedTestsPath -Raw | ConvertFrom-Json
@@ -128,6 +153,7 @@ foreach ($required in @(
     'does not create a release build, archive, attestation or tag',
     'stable-path Rust test harnesses',
     'fresh process',
+    'empty Cargo profile directory',
     'test step still runs when readiness fails',
     'failed readiness step continues to fail the job',
     'GitHub-hosted Windows runner is not physical-device field evidence'
@@ -146,6 +172,7 @@ Write-Output 'stable_rust_tests=required'
 Write-Output 'cargo_jobs=2'
 Write-Output 'test_profile=test'
 Write-Output 'isolated_tests=1'
+Write-Output 'empty_cache_profile_measurement=verified'
 Write-Output 'tests_after_readiness_failure=required-if-fetch-succeeded'
 Write-Output 'test_step_timeout_minutes=38'
 Write-Output 'release_build=false'

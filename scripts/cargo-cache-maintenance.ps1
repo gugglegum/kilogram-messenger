@@ -1,5 +1,6 @@
 [CmdletBinding()]
 param(
+    [switch]$SelfTest,
     [switch]$VacuumAndWarm,
     [switch]$PruneVerification,
     [int]$CargoJobs = 0,
@@ -31,10 +32,25 @@ function Get-TreeMeasure([string]$Path) {
     if (-not (Test-Path -LiteralPath $Path)) {
         return [PSCustomObject]@{ Files = 0; Bytes = [int64]0 }
     }
-    $measure = Get-ChildItem -LiteralPath $Path -Recurse -File -Force -ErrorAction SilentlyContinue |
-        Measure-Object -Property Length -Sum
-    $bytes = if ($null -eq $measure.Sum) { [int64]0 } else { [int64]$measure.Sum }
-    [PSCustomObject]@{ Files = [int64]$measure.Count; Bytes = $bytes }
+    $measure = @(
+        Get-ChildItem -LiteralPath $Path -Recurse -File -Force -ErrorAction SilentlyContinue |
+            Measure-Object -Property Length -Sum
+    )
+    if ($measure.Count -eq 0) {
+        return [PSCustomObject]@{ Files = 0; Bytes = [int64]0 }
+    }
+    if ($measure.Count -ne 1) {
+        throw "Unexpected tree measurement result count for '$Path': $($measure.Count)"
+    }
+    $summary = $measure[0]
+    $sumProperty = $summary.PSObject.Properties['Sum']
+    $bytes = if ($null -eq $sumProperty -or $null -eq $sumProperty.Value) {
+        [int64]0
+    }
+    else {
+        [int64]$sumProperty.Value
+    }
+    [PSCustomObject]@{ Files = [int64]$summary.Count; Bytes = $bytes }
 }
 
 function Remove-VerifiedDirectory([string]$Path, [string]$ExpectedName) {
@@ -46,6 +62,45 @@ function Remove-VerifiedDirectory([string]$Path, [string]$ExpectedName) {
     if (Test-Path -LiteralPath $resolved) {
         Remove-Item -LiteralPath $resolved -Recurse -Force
     }
+}
+
+if ($SelfTest) {
+    if ($VacuumAndWarm -or $PruneVerification) {
+        throw 'SelfTest cannot be combined with cache mutation switches.'
+    }
+    $selfTestRoot = Join-Path ([System.IO.Path]::GetTempPath()) (
+        'kilogram-cargo-cache-self-test-' + [Guid]::NewGuid().ToString('N')
+    )
+    $missingPath = Join-Path $selfTestRoot 'missing'
+    $emptyPath = Join-Path $selfTestRoot 'empty'
+    try {
+        $missing = Get-TreeMeasure $missingPath
+        if ($missing.Files -ne 0 -or $missing.Bytes -ne 0) {
+            throw 'Missing-tree measurement was not zero.'
+        }
+
+        [void](New-Item -ItemType Directory -Path $emptyPath -Force)
+        $empty = Get-TreeMeasure $emptyPath
+        if ($empty.Files -ne 0 -or $empty.Bytes -ne 0) {
+            throw 'Empty-tree measurement was not zero.'
+        }
+
+        [System.IO.File]::WriteAllBytes((Join-Path $emptyPath 'three-bytes.bin'), [byte[]](1, 2, 3))
+        $nonEmpty = Get-TreeMeasure $emptyPath
+        if ($nonEmpty.Files -ne 1 -or $nonEmpty.Bytes -ne 3) {
+            throw 'Non-empty tree measurement did not preserve exact file and byte counts.'
+        }
+    }
+    finally {
+        if ([System.IO.Directory]::Exists($selfTestRoot)) {
+            [System.IO.Directory]::Delete($selfTestRoot, $true)
+        }
+    }
+    Write-Output 'cargo_cache_measurement_self_test=passed'
+    Write-Output 'missing_tree=zero'
+    Write-Output 'empty_tree=zero'
+    Write-Output 'non_empty_tree=exact'
+    exit 0
 }
 
 Push-Location $workspace

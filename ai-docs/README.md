@@ -449,14 +449,19 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
    process-sensitive, а у второго обнаружил реальную MAX_PATH ошибку.
 12. M0.9.92 исправляет append-only runtime journal для extended-length Windows
    paths без сокращения content-addressed имён. Локальный >260 regression и
-   fresh physical run `20261014-104506` прошли; hosted full-suite confirmation
-   ещё выполняется.
+   fresh physical run `20261014-104506` прошли. GitHub run `38519726403`
+   подтвердил прохождение полного Rust suite, но job покраснел уже после
+   тестов на empty-cache accounting.
 13. M0.9.93 обновляет candidate на fresh field revision `d33dd095...`, run
    `20261014-104506` и runtime surface SHA-256 `95c1771d...`; independent
    M0.9.88 attestation остаётся применимой, поскольку её protected surface не
    менялась. Candidate commit `d8252c6...` прошёл clean production verifier и
-   полный readiness `33/33`; hosted full Rust confirmation ещё ожидается.
-14. Optional autostart/background mode оставить отдельной явной настройкой;
+   полный readiness `33/33`; fresh green hosted baseline ещё ожидается.
+14. M0.9.94 исправляет только verification tooling: missing и empty Cargo
+   profile trees считаются exact zero, а Windows CI boundary выполняет
+   missing/empty/non-empty self-test. Field/runtime и independent surfaces не
+   менялись; нужен clean readiness и fresh green CI, но не новый сетевой run.
+15. Optional autostart/background mode оставить отдельной явной настройкой;
    Windows Task Scheduler не является обязательной частью мессенджера.
 4. Уже реализованный M0.9.49 выделяет единый
    `kilogram-publication-conflict`: online/offline используют один signed codec,
@@ -888,6 +893,9 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
 - [`../docs/RFC-0116-fresh-field-evidence-and-candidate-refresh.md`](../docs/RFC-0116-fresh-field-evidence-and-candidate-refresh.md) —
   M0.9.93 pin-ит fresh post-fix physical run и новый exact runtime surface,
   сохраняя неизменённую independent offline attestation и все residual risks.
+- [`../docs/RFC-0117-hosted-test-completion-and-empty-cache-accounting.md`](../docs/RFC-0117-hosted-test-completion-and-empty-cache-accounting.md) —
+  M0.9.94 отделяет полный hosted Rust pass от post-test cache-report failure и
+  закрывает Windows PowerShell empty-tree regression динамическим self-test.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

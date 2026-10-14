@@ -4821,3 +4821,23 @@ Acceptance:
 - no test executable, network action, release build, archive, background
   service or Git tag was created by composition/readiness;
 - M0.9.93 is accepted locally; hosted full Rust confirmation remains pending.
+
+### M0.9.94 — hosted completion and empty-cache accounting: реализовано локально
+
+- GitHub run `38519726403` на revision `3887e06...` прошёл полный readiness,
+  все aggregate Rust harnesses и isolated revocation/restart test;
+- единственный job failure произошёл после `status=passed`: read-only cache
+  reporter получил существующий, но пустой Cargo profile directory, а
+  Windows PowerShell StrictMode попытался прочитать отсутствующий `Sum`;
+- `Get-TreeMeasure` теперь явно различает zero и one summary object, принимает
+  missing/empty tree как exact zero и отвергает неожиданный multiple result;
+- `-SelfTest` в уникальной временной папке проверяет missing, empty и exact
+  three-byte trees; Windows CI boundary требует и реально запускает regression
+  через Windows PowerShell;
+- граница остаётся частью существующего 33-го Windows CI gate; `apps/`,
+  `crates/`, field runtime surface и independently reproduced surface не
+  менялись, поэтому сетевой field/reproduction rerun не требуется.
+
+Acceptance gate: clean production M1 readiness, commit/push и fresh green
+GitHub-hosted Windows CI run. Run `38519726403` остаётся доказательством полного
+test pass, но не считается зелёным baseline задним числом.
