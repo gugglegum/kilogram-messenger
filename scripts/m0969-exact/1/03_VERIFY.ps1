@@ -19,6 +19,17 @@ $null = Wait-M0969File `
     (Join-Path $script:SharedDirectory 'providers-stopped.marker') `
     $(if ([string]$build.milestone -ceq 'M0.9.87') { 600 } else { 120 }) `
     'providers stopped marker'
+foreach ($name in @(
+    '01-provider1.log',
+    '01-provider1.log.stderr',
+    '01-provider2.log',
+    '01-provider2.log.stderr'
+)) {
+    $null = Wait-M0969File `
+        (Join-Path $script:EvidenceDirectory $name) `
+        $(if ([string]$build.milestone -ceq 'M0.9.87') { 600 } else { 120 }) `
+        "closed provider evidence $name"
+}
 $boundaryDestination = Join-Path $script:EvidenceDirectory '08-boundaries.log'
 $boundarySource = Join-Path $script:KitRoot 'BOUNDARIES.log'
 if (Test-Path -LiteralPath $boundaryDestination) {

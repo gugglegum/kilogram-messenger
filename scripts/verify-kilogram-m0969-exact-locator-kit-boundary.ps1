@@ -115,6 +115,9 @@ foreach ($value in @(
 }
 foreach ($value in @(
     'verify-kilogram-m0969-exact-locator-evidence.ps1',
+    '01-provider1.log.stderr',
+    '01-provider2.log.stderr',
+    'closed provider evidence $name',
     'M0.9.69 CLEAN EXACT-LOCATOR FIELD TEST COMPLETED SUCCESSFULLY.'
 )) {
     if (-not $aliceVerify.Contains($value)) { throw "M0.9.69 final verification is missing '$value'" }
@@ -192,6 +195,8 @@ foreach ($value in @(
     'provider_substitution_rejected=true',
     'stale_endpoint_ticket_rejected=true',
     'relay_mismatch_rejected=true',
+    'Assert-M0969RelayPin',
+    'configured_relay_without_home_verified=true',
     'https://aps1-1.relay.n0.iroh.link./'
 )) {
     if (-not $verifier.Contains($value)) { throw "M0.9.69 evidence verifier is missing '$value'" }

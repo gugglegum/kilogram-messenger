@@ -134,6 +134,9 @@ if (-not $bobPrepare.Contains("@('M0.9.76', 'M0.9.87')")) {
 foreach ($required in @(
     "'M0.9.87' { 'm0987' }",
     'verify-kilogram-m0987-independent-provider-evidence.ps1',
+    '01-provider1.log.stderr',
+    '01-provider2.log.stderr',
+    'closed provider evidence $name',
     'M0.9.87 INDEPENDENT-PROVIDER SERVICE-FREE FIELD TEST COMPLETED SUCCESSFULLY.',
     'M0.9.87 TWO-HOST REDUCED SERVICE-FREE TEST COMPLETED SUCCESSFULLY.',
     '-TopologyMode ([string]$build.field_topology_mode)'
@@ -142,6 +145,11 @@ foreach ($required in @(
 }
 if (-not $baseVerifier.Contains("'m0976', 'm0987'")) {
     throw 'Base exact-locator verifier does not accept the m0987 evidence label.'
+}
+foreach ($required in @('Assert-M0969RelayPin', 'configured_relay_without_home_verified=true')) {
+    if (-not $baseVerifier.Contains($required)) {
+        throw "Base exact-locator verifier is missing '$required'."
+    }
 }
 foreach ($required in @(
     "-LabelPrefix 'm0987' -SuppressReport",

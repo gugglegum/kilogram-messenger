@@ -4908,7 +4908,7 @@ Acceptance gate: technical commit, fresh physical field evidence, candidate
 refresh, clean full M1 readiness и fresh green hosted Windows CI. M1 tag не
 разрешён автоматически.
 
-### M0.9.97 — configured relay evidence: реализовано локально
+### M0.9.97 — configured relay evidence: fresh reduced field verified
 
 - clean two-host run `20261014-135100` на revision `78164eca...` завершил
   exact 2-of-2 volunteer mailbox lifecycle, sender-offline ordering,
@@ -4923,8 +4923,20 @@ refresh, clean full M1 readiness и fresh green hosted Windows CI. M1 tag не
   любой observed home вне pin; timeout не превращается в online success;
 - verifier self-tests и exact isolated lifecycle test (`1/1`, 60.64s) прошли;
 - routing, timeout, retry, mailbox и crypto behavior не менялись, но production
-  diagnostic surface изменилась и требует нового exact-revision field run.
+  diagnostic surface изменилась и потребовала нового exact-revision field run;
+- debug/two-job kit revision `be80d28...` прошёл physical run
+  `20261014-141058`: receipts 2/2, Alice offline до receive, оба provider
+  replica удалены после commit, Bob history содержит сообщение ровно один раз,
+  restart не дал redelivery;
+- verifier теперь одинаково требует exact `relay_config_url` в provider,
+  convergence, send, receive и restart logs, допускает отсутствие observed home
+  и отвергает любой divergent observed home/target;
+- final wrapper ждёт оба закрытых provider stdout/stderr после stop marker,
+  поэтому асинхронная доставка маркера раньше логов больше не создаёт ложный
+  incomplete evidence;
+- strict result: `verified-reduced-two-host`,
+  `independent_provider_field_acceptance=false`.
 
-Acceptance gate: technical commit, fresh reduced physical run, candidate
-refresh, clean full readiness and fresh green hosted Windows CI. Strict
-independent-provider run и решение об M1 tag остаются отдельными условиями.
+Acceptance gate: candidate refresh, clean full readiness and fresh green hosted
+Windows CI. Strict independent-provider run и решение об M1 tag остаются
+отдельными условиями.

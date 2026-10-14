@@ -473,7 +473,12 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
    реальная ранняя ошибка видна сразу и не маскируется timeout. Exact local
    test прошёл за 61.02s; coarse field surface требует fresh physical rerun и
    candidate refresh перед новым hosted acceptance run.
-17. Optional autostart/background mode оставить отдельной явной настройкой;
+17. M0.9.97 разделяет exact configured relay pin и observed registration.
+   Fresh two-host run `20261014-141058` revision `be80d28...` подтвердил exact
+   2-of-2 volunteer lifecycle и прошёл strict reduced verifier; результат не
+   повышается до independent-provider acceptance. Следующие обязательные шаги:
+   candidate refresh, clean readiness и fresh green hosted Windows CI.
+18. Optional autostart/background mode оставить отдельной явной настройкой;
    Windows Task Scheduler не является обязательной частью мессенджера.
 4. Уже реализованный M0.9.49 выделяет единый
    `kilogram-publication-conflict`: online/offline используют один signed codec,

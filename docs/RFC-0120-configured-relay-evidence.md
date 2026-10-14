@@ -1,6 +1,7 @@
 # RFC-0120: Configured relay evidence (M0.9.97)
 
-Status: implemented locally; fresh field/candidate and hosted confirmation pending.
+Status: fresh two-host reduced field run verified; candidate refresh and hosted
+confirmation pending.
 
 ## 1. Problem found by the fresh field run
 
@@ -35,11 +36,13 @@ changed.
 
 ## 3. Evidence verifier
 
-Each volunteer provider closed log must now prove the exact configured APS1
-relay through `relay_config_url`. Any observed `relay_home_url` must still be
-that same canonical URL; a divergent home fails closed. Actual delivery,
-distinct store/transport identities, exact 2-of-2 receipts, sender-offline
-ordering, commit-before-delete and restart non-redelivery remain mandatory.
+Every endpoint-bearing closed runtime log (providers, capability convergence,
+send, receive and restart) must now prove the exact configured APS1 relay
+through one `relay_config_url`. Any observed `relay_home_url` or
+`target_relay_url` must still be that same canonical URL; a divergent value
+fails closed. Actual delivery, distinct store/transport identities, exact
+2-of-2 receipts, sender-offline ordering, commit-before-delete and restart
+non-redelivery remain mandatory.
 
 This distinction permits an honest two-host reduced run to use a direct path
 for one provider while preserving proof of its configured relay boundary. It
@@ -54,7 +57,24 @@ self-test also passes. The exact isolated runtime lifecycle test still passes
 `1/1` in 60.64 seconds after the diagnostic change.
 
 Because production CLI output and the protected field surface changed, the
-rejected run is not accepted retroactively. Acceptance requires a technical
-commit, a fresh physical run from that exact revision, candidate refresh,
-clean complete M1 readiness and a fresh green hosted Windows CI run. No step
-authorizes an M1 tag or public security-release claim.
+rejected run was not accepted retroactively. A new debug/two-job kit from
+technical revision `be80d28ec12b41987bdbfa800016fb86b54b4723` completed
+physical run `20261014-141058`: two distinct volunteer stores returned exact
+2-of-2 receipts, Alice stopped before receive, Bob committed the message once,
+deleted both replicas and observed no redelivery after restart. The verifier
+reports `result=verified-reduced-two-host` and
+`independent_provider_field_acceptance=false`.
+
+The fresh run exposed two control-plane issues without invalidating the product
+lifecycle. The verifier initially still required observed relay registration
+for send/receive/restart, and the final wrapper could observe the synchronized
+provider-stop marker before both closed provider logs arrived. The verifier now
+applies the configured/observed distinction consistently, and the wrapper waits
+for both closed stdout/stderr pairs before creating final boundary evidence.
+Self-tests cover configured-only success plus divergent configured/observed
+relay rejection.
+
+Remaining acceptance requires candidate refresh, clean complete M1 readiness
+and a fresh green hosted Windows CI run. No step authorizes an M1 tag or public
+security-release claim. The reduced two-host run does not replace the pending
+three-/four-host independent-provider field test.

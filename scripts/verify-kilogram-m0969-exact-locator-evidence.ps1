@@ -42,6 +42,30 @@ function Get-M0969Matches {
     ) | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
 }
 
+function Assert-M0969RelayPin {
+    param(
+        [Parameter(Mandatory)] [string] $Text,
+        [Parameter(Mandatory)] [string] $ExpectedRelayUrl,
+        [Parameter(Mandatory)] [string] $Description
+    )
+    $configured = @([regex]::Matches(
+        $Text,
+        '^relay_config_url=(\S+)$',
+        [Text.RegularExpressions.RegexOptions]::Multiline
+    ) | ForEach-Object { $_.Groups[1].Value })
+    if ($configured.Count -ne 1 -or $configured[0] -cne $ExpectedRelayUrl) {
+        throw "M0.9.69 evidence does not prove $Description configured relay pin"
+    }
+    $observed = @([regex]::Matches(
+        $Text,
+        '^(?:relay_home_url|target_relay_url)=(\S+)$',
+        [Text.RegularExpressions.RegexOptions]::Multiline
+    ) | ForEach-Object { $_.Groups[1].Value })
+    if (@($observed | Where-Object { $_ -cne $ExpectedRelayUrl }).Count -ne 0) {
+        throw "M0.9.69 evidence exposes a relay outside $Description configured relay pin"
+    }
+}
+
 function Assert-M0969SameSet {
     param(
         [Parameter(Mandatory)] [string[]] $Expected,
@@ -62,15 +86,6 @@ function Test-M0969ExactLocatorEvidence {
     $expectedRoutePolicy = 'auto'
     $expectedRelayUrl = 'https://aps1-1.relay.n0.iroh.link./'
     $expectedRoutePattern = '^route_policy=' + [regex]::Escape($expectedRoutePolicy) + '$'
-    $expectedRelayConfigPattern = '^relay_config_url=' + [regex]::Escape($expectedRelayUrl) + '$'
-    $expectedRelayPattern = '^relay_home_url=' + [regex]::Escape($expectedRelayUrl) + '$'
-    # A runtime can complete peer convergence over a direct path even when its
-    # own relay registration times out.  In that case the authenticated peer
-    # ticket still records the pinned relay as target_relay_url.  Accept either
-    # spelling for convergence only; every accepted value remains the exact
-    # canonical field relay from the manifest.
-    $expectedConvergenceRelayPattern = `
-        '^(?:relay_home_url|target_relay_url)=' + [regex]::Escape($expectedRelayUrl) + '$'
     $manifestText = Read-M0969Evidence $Directory 'manifest.json'
     $manifest = $manifestText | ConvertFrom-Json
     if ([int]$manifest.schema -ne 1) { throw 'M0.9.69 manifest schema must be exactly 1' }
@@ -103,11 +118,7 @@ function Test-M0969ExactLocatorEvidence {
             $log '^runtime_volunteer_storage_iroh_alpn=kilogram/m0/blind-mailbox/1$' `
             "$provider Iroh ALPN"
         Assert-M0969Match $log $expectedRoutePattern "$provider auto route policy"
-        Assert-M0969Match $log $expectedRelayConfigPattern "$provider configured field relay pin"
-        $observedRelayHomes = @(Get-M0969Matches $log '^relay_home_url=(\S+)$')
-        if (@($observedRelayHomes | Where-Object { $_ -cne $expectedRelayUrl }).Count -ne 0) {
-            throw "$provider exposed a relay home outside the configured field relay pin"
-        }
+        Assert-M0969RelayPin $log $expectedRelayUrl $provider
         Assert-M0969Match $log '^status=runtime-listening$' "$provider listening state"
         $keys = @(Get-M0969Matches $log '^runtime_volunteer_storage_store_key=([0-9a-f]{64})$')
         $transports = @(Get-M0969Matches $log '^transport_endpoint_id=([0-9a-f]{64})$')
@@ -201,11 +212,9 @@ function Test-M0969ExactLocatorEvidence {
     $aliceConvergence = Read-M0969Evidence $Directory '03-alice-capability-convergence.log'
     $bobConvergence = Read-M0969Evidence $Directory '03-bob-capability-convergence.log'
     Assert-M0969Match $aliceConvergence $expectedRoutePattern 'Alice convergence auto route policy'
-    Assert-M0969Match `
-        $aliceConvergence $expectedConvergenceRelayPattern 'Alice convergence pinned field relay'
+    Assert-M0969RelayPin $aliceConvergence $expectedRelayUrl 'Alice convergence'
     Assert-M0969Match $bobConvergence $expectedRoutePattern 'Bob convergence auto route policy'
-    Assert-M0969Match `
-        $bobConvergence $expectedConvergenceRelayPattern 'Bob convergence pinned field relay'
+    Assert-M0969RelayPin $bobConvergence $expectedRelayUrl 'Bob convergence'
     Assert-M0969Match `
         $aliceConvergence "^mailbox_capability_update_id=$([regex]::Escape($updateId))$" `
         'Alice application of the exact capability update'
@@ -223,7 +232,7 @@ function Test-M0969ExactLocatorEvidence {
     Assert-M0969Match $queue '^status=runtime-message-queued$' 'Alice durable queue insertion'
     $send = Read-M0969Evidence $Directory '04-send-alice.log'
     Assert-M0969Match $send $expectedRoutePattern 'Alice send auto route policy'
-    Assert-M0969Match $send $expectedRelayPattern 'Alice send pinned field relay'
+    Assert-M0969RelayPin $send $expectedRelayUrl 'Alice send'
     Assert-M0969Match $send '^runtime_outbound_status=mailbox-stored$' 'compatibility acceptance'
     Assert-M0969Match `
         $send '^runtime_mailbox_replica_set_discovery=exact-authenticated$' `
@@ -252,7 +261,7 @@ function Test-M0969ExactLocatorEvidence {
 
     $receive = Read-M0969Evidence $Directory '06-receive-bob.log'
     Assert-M0969Match $receive $expectedRoutePattern 'Bob receive auto route policy'
-    Assert-M0969Match $receive $expectedRelayPattern 'Bob receive pinned field relay'
+    Assert-M0969RelayPin $receive $expectedRelayUrl 'Bob receive'
     Assert-M0969Match `
         $receive '^runtime_mailbox_replica_set_discovery=exact-authenticated$' `
         'Bob exact provider discovery'
@@ -276,7 +285,7 @@ function Test-M0969ExactLocatorEvidence {
 
     $restart = Read-M0969Evidence $Directory '07-restart-bob.log'
     Assert-M0969Match $restart $expectedRoutePattern 'Bob restart auto route policy'
-    Assert-M0969Match $restart $expectedRelayPattern 'Bob restart pinned field relay'
+    Assert-M0969RelayPin $restart $expectedRelayUrl 'Bob restart'
     Assert-M0969Match $restart '^status=runtime-listening$' 'Bob restart from retained state'
     if ([regex]::IsMatch($restart, '(?m)^runtime_mailbox_inbound_source=volunteer-iroh$')) {
         throw 'a deleted volunteer replica was delivered again after restart'
@@ -422,6 +431,7 @@ function New-M0969SelfTestEvidence {
     }
     Set-Content -LiteralPath (Join-Path $Directory '03-alice-capability-convergence.log') -Encoding utf8 -Value @(
         'route_policy=auto',
+        'relay_config_url=https://aps1-1.relay.n0.iroh.link./',
         'relay_home_url=https://aps1-1.relay.n0.iroh.link./',
         "mailbox_capability_update_id=$update",
         'mailbox_capability_update_store=Inserted',
@@ -429,6 +439,7 @@ function New-M0969SelfTestEvidence {
     )
     Set-Content -LiteralPath (Join-Path $Directory '03-bob-capability-convergence.log') -Encoding utf8 -Value @(
         'route_policy=auto',
+        'relay_config_url=https://aps1-1.relay.n0.iroh.link./',
         'relay_home_url=https://aps1-1.relay.n0.iroh.link./',
         "mailbox_capability_update_id=$update",
         'runtime_mailbox_capability_update_status=acknowledged'
@@ -437,6 +448,7 @@ function New-M0969SelfTestEvidence {
         -Encoding utf8 -Value 'status=runtime-message-queued'
     Set-Content -LiteralPath (Join-Path $Directory '04-send-alice.log') -Encoding utf8 -Value @(
         'route_policy=auto',
+        'relay_config_url=https://aps1-1.relay.n0.iroh.link./',
         'relay_home_url=https://aps1-1.relay.n0.iroh.link./',
         'runtime_outbound_status=mailbox-stored',
         "runtime_mailbox_replica_set_commitment_id=$commitment",
@@ -457,6 +469,7 @@ function New-M0969SelfTestEvidence {
     )
     Set-Content -LiteralPath (Join-Path $Directory '06-receive-bob.log') -Encoding utf8 -Value @(
         'route_policy=auto',
+        'relay_config_url=https://aps1-1.relay.n0.iroh.link./',
         'relay_home_url=https://aps1-1.relay.n0.iroh.link./',
         "runtime_mailbox_replica_set_commitment_id=$commitment",
         'runtime_mailbox_replica_set_resolved=2/2',
@@ -473,6 +486,7 @@ function New-M0969SelfTestEvidence {
     Set-Content -LiteralPath (Join-Path $Directory '07-restart-bob.log') `
         -Encoding utf8 -Value @(
             'route_policy=auto',
+            'relay_config_url=https://aps1-1.relay.n0.iroh.link./',
             'relay_home_url=https://aps1-1.relay.n0.iroh.link./',
             'status=runtime-listening'
         )
@@ -523,6 +537,20 @@ if ($SelfTest) {
         }
         Set-Content -LiteralPath $aliceConvergencePath -Encoding utf8 -Value $aliceConvergenceOriginal
 
+        $sendPath = Join-Path $root '04-send-alice.log'
+        $sendOriginal = Get-Content -LiteralPath $sendPath -Raw
+        $sendWithoutObservedHome = [regex]::Replace(
+            $sendOriginal,
+            '(?m)^relay_home_url=https://aps1-1\.relay\.n0\.iroh\.link\./\r?\n?',
+            ''
+        )
+        Set-Content -LiteralPath $sendPath -Encoding utf8 -Value $sendWithoutObservedHome
+        $configuredOnlyPositive = Test-M0969ExactLocatorEvidence $root $LabelPrefix
+        if ($configuredOnlyPositive.result -cne 'verified') {
+            throw 'verifier rejected an exact relay pin without observed relay registration'
+        }
+        Set-Content -LiteralPath $sendPath -Encoding utf8 -Value $sendOriginal
+
         $provider1Path = Join-Path $root '01-provider1.log'
         $provider1Original = Get-Content -LiteralPath $provider1Path -Raw
         Set-Content -LiteralPath $provider1Path -Encoding utf8 -Value (
@@ -539,8 +567,6 @@ if ($SelfTest) {
         }
         Set-Content -LiteralPath $provider1Path -Encoding utf8 -Value $provider1Original
 
-        $sendPath = Join-Path $root '04-send-alice.log'
-        $sendOriginal = Get-Content -LiteralPath $sendPath -Raw
         Set-Content -LiteralPath $sendPath -Encoding utf8 -Value (
             $sendOriginal.Replace(
                 'runtime_mailbox_replica_set_discovery=exact-authenticated',
@@ -602,6 +628,7 @@ if ($SelfTest) {
         Write-Output 'direct_convergence_target_relay_verified=true'
         Write-Output 'target_relay_mismatch_rejected=true'
         Write-Output 'provider_relay_config_mismatch_rejected=true'
+        Write-Output 'configured_relay_without_home_verified=true'
         return
     }
     finally {

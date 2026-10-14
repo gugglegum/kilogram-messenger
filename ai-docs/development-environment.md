@@ -3088,3 +3088,17 @@ Hosted follow-up:
   mutation. The exact isolated lifecycle test passes `1/1` in 60.64 seconds.
 - The rejected run is diagnostic only. Rebuild, exact-revision field rerun,
   candidate refresh, clean readiness and hosted CI are still required.
+- A fresh kit built from `be80d28ec12b41987bdbfa800016fb86b54b4723`
+  completed two-host run `20261014-141058` on desktop plus SSH-controlled
+  laptop. The application lifecycle proved two distinct stores, exact 2/2
+  signed receipts, sender shutdown before receive, two delete-after-commit
+  outcomes, one committed history message and no restart redelivery.
+- The first final wrapper attempt exposed a sync ordering race: the stop marker
+  arrived before Provider 2's already-closed log. Final verification now waits
+  for both provider stdout/stderr pairs before writing `08-boundaries.log`.
+- Relay-pin verification now requires one exact `relay_config_url` for every
+  endpoint-bearing runtime log, permits absent observed registration under
+  `auto`, and rejects every divergent `relay_home_url` or `target_relay_url`.
+- Direct strict verification reports `result=verified-reduced-two-host` and
+  `independent_provider_field_acceptance=False`. Provider processes and local
+  field-sync controller are stopped; no background Kilogram process remains.
