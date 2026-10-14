@@ -238,12 +238,30 @@ new replica selection is specified in
 The controlled multi-host evidence contract for two separately operated
 volunteer providers is specified in
 [`docs/RFC-0110-independent-provider-field-contract.md`](docs/RFC-0110-independent-provider-field-contract.md).
+Host-neutral comparison of the pinned Cargo identity during independent
+reproduction is specified in
+[`docs/RFC-0111-host-neutral-cargo-identity-verification.md`](docs/RFC-0111-host-neutral-cargo-identity-verification.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.87 independent-provider field contract — implemented locally
+## Current milestone: M0.9.88 host-neutral Cargo identity verification — implemented locally
+
+The independent reproduction verifier now compares the pinned Cargo version,
+commit, target and bundled libgit2/libcurl identities while treating Cargo's
+Windows release line as runner metadata. The line must still describe 64-bit
+Windows, and the independent record remains restricted to a GitHub-hosted
+Windows runner; only Windows 11 versus Windows Server release text may differ.
+
+GitHub diagnostic run `38506048297` reproduced the expected 2,432,000-byte
+offline executable exactly and created attestation `55680587`. That run exposed
+the verifier's former full-string comparison. The corrected production
+verifier accepts the genuine cross-Windows evidence and its self-test rejects a
+changed Cargo commit identity. A fresh run from the committed correction is
+required before M0.9.88 acceptance.
+
+## Previous milestone: M0.9.87 independent-provider field contract — reduced run verified
 
 The new debug-only field kit separates Alice, Provider 1, Provider 2 and Bob
 into four synchronized role folders. A full run requires at least three
@@ -261,7 +279,9 @@ The evidence verifier inherits the service-free exact `2/2` lifecycle and has
 negative fixtures for same-machine, same-operator, same-network and injected
 raw-field evidence. The generator performs a locked debug build with two jobs
 by default and creates no release build, ZIP, HTTPS mailbox service, new
-executable or network process. External three-/four-host acceptance is pending.
+executable or network process. Clean two-host run `20261014-080905` completed
+the full lifecycle with `verified-reduced-two-host`; external strict
+three-/four-host acceptance is still pending.
 
 ## Previous milestone: M0.9.86 positive provider path co-location avoidance — accepted locally
 

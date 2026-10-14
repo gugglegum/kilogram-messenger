@@ -45,6 +45,39 @@ function Read-BoundedJson([string]$Path, [string]$Description) {
     Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
 }
 
+function Get-CanonicalCargoToolchainIdentity {
+    param(
+        [Parameter(Mandatory = $true)] [string]$Value,
+        [Parameter(Mandatory = $true)] [string]$Description
+    )
+
+    $lines = @($Value -split "`r?`n")
+    $patterns = @(
+        '^cargo [0-9]+\.[0-9]+\.[0-9]+(?:-[^ ]+)? \([0-9a-f]+ [0-9]{4}-[0-9]{2}-[0-9]{2}\)$',
+        '^release: [0-9]+\.[0-9]+\.[0-9]+(?:-[^ ]+)?$',
+        '^commit-hash: [0-9a-f]{40}$',
+        '^commit-date: [0-9]{4}-[0-9]{2}-[0-9]{2}$',
+        '^host: x86_64-pc-windows-msvc$',
+        '^libgit2: .+$',
+        '^libcurl: .+$',
+        '^os: Windows .+ \[64-bit\]$'
+    )
+    if ($lines.Count -ne $patterns.Count) {
+        throw "$Description Cargo identity has an unexpected line count."
+    }
+    for ($index = 0; $index -lt $patterns.Count; $index++) {
+        if ($lines[$index] -cnotmatch $patterns[$index]) {
+            throw "$Description Cargo identity has an invalid line $($index + 1)."
+        }
+    }
+
+    # `cargo -vV` includes the host Windows release. That describes the runner,
+    # not the pinned Cargo executable. Runner OS remains separately constrained
+    # to Windows; every Cargo version, commit, host and bundled-library field is
+    # compared byte-for-byte below.
+    return (@($lines | Select-Object -First 7) -join "`n")
+}
+
 function Assert-IndependentEvidence {
     param(
         [string]$IndependentArtifact,
@@ -134,8 +167,14 @@ function Assert-IndependentEvidence {
         [string]::IsNullOrWhiteSpace([string]$builderRecord.workflow.run_attempt)) {
         throw 'Independent builder runtime identity is incomplete.'
     }
+    $localCargoIdentity = Get-CanonicalCargoToolchainIdentity `
+        -Value ([string]$localRecord.cargo) `
+        -Description 'Local'
+    $builderCargoIdentity = Get-CanonicalCargoToolchainIdentity `
+        -Value ([string]$builderRecord.cargo) `
+        -Description 'Independent builder'
     if ([string]$builderRecord.rustc -cne [string]$localRecord.rustc -or
-        [string]$builderRecord.cargo -cne [string]$localRecord.cargo) {
+        $builderCargoIdentity -cne $localCargoIdentity) {
         throw 'Independent builder did not use the locally recorded pinned Rust/Cargo toolchain.'
     }
     if ([string]$builderRecord.path_remap.mode -cne [string]$localRecord.path_remap.mode -or
@@ -422,6 +461,17 @@ function Invoke-SelfTest {
         if (-not $invalidNativeManifestRejected) {
             throw 'Self-test accepted a malformed native link-input manifest.'
         }
+        $cargoIdentityLines = @(
+            'cargo 1.98.0 (797e8a9bc 2026-08-05)',
+            'release: 1.98.0',
+            'commit-hash: 797e8a9bca276c1c9f9f738d2a20f484fa4eea9d',
+            'commit-date: 2026-08-05',
+            'host: x86_64-pc-windows-msvc',
+            'libgit2: 1.9.4 (sys:0.21.0 vendored)',
+            'libcurl: 8.21.0-DEV (sys:0.4.90+curl-8.21.0 vendored ssl:Schannel)'
+        )
+        $localCargoIdentity = (@($cargoIdentityLines) + 'os: Windows 10.0.26300 (Windows 11 Professional) [64-bit]') -join "`n"
+        $independentCargoIdentity = (@($cargoIdentityLines) + 'os: Windows 10.0.20348 (Windows Server 2022 Datacenter) [64-bit]') -join "`n"
         $localRecord = [ordered]@{
             format_version = 6
             status = 'reproducible'
@@ -436,7 +486,7 @@ function Invoke-SelfTest {
             cargo_lock_sha256 = Get-Sha256 (Join-Path $local 'Cargo.lock')
             rust_toolchain_sha256 = Get-Sha256 (Join-Path $local 'rust-toolchain.toml')
             rustc = 'rustc self-test'
-            cargo = 'cargo self-test'
+            cargo = $localCargoIdentity
             target = 'x86_64-pc-windows-msvc'
             incremental = $false
             path_remap = [ordered]@{
@@ -536,7 +586,7 @@ function Invoke-SelfTest {
             network_surface_compiled = $false
             runtime_surface_compiled = $false
             rustc = 'rustc self-test'
-            cargo = 'cargo self-test'
+            cargo = $independentCargoIdentity
             runner = [ordered]@{ os = 'Windows'; arch = 'X64'; environment = 'github-hosted'; name = 'self-test'; image_os = 'win25'; image_version = 'self-test' }
             workflow = [ordered]@{ event = 'workflow_dispatch'; name = 'Independent offline reproduction'; ref = 'refs/heads/master'; workflow_ref = 'gugglegum/kilogram-messenger/.github/workflows/independent-offline-reproduction.yml@refs/heads/master'; run_id = '1'; run_attempt = '1' }
             artifact = [ordered]@{ file = 'kilogram-offline.exe'; sha256 = $hash; bytes = $length }
@@ -545,6 +595,23 @@ function Invoke-SelfTest {
         [System.IO.File]::WriteAllText($builderRecordPath, ($builderRecord | ConvertTo-Json -Depth 6), [System.Text.UTF8Encoding]::new($false))
 
         Assert-IndependentEvidence -IndependentArtifact $artifact -IndependentRecord $builderRecordPath -SameHostDirectory $local -ExpectedRepository 'gugglegum/kilogram-messenger' -SkipAttestation | Out-Null
+        $builderRecord.cargo = $builderRecord.cargo.Replace(
+            'commit-hash: 797e8a9bca276c1c9f9f738d2a20f484fa4eea9d',
+            'commit-hash: 0000000000000000000000000000000000000000'
+        )
+        [System.IO.File]::WriteAllText($builderRecordPath, ($builderRecord | ConvertTo-Json -Depth 6), [System.Text.UTF8Encoding]::new($false))
+        $cargoIdentityRejected = $false
+        try {
+            Assert-IndependentEvidence -IndependentArtifact $artifact -IndependentRecord $builderRecordPath -SameHostDirectory $local -ExpectedRepository 'gugglegum/kilogram-messenger' -SkipAttestation | Out-Null
+        }
+        catch {
+            $cargoIdentityRejected = $true
+        }
+        if (-not $cargoIdentityRejected) {
+            throw 'Self-test verifier accepted a mismatched Cargo commit identity.'
+        }
+        $builderRecord.cargo = $independentCargoIdentity
+        [System.IO.File]::WriteAllText($builderRecordPath, ($builderRecord | ConvertTo-Json -Depth 6), [System.Text.UTF8Encoding]::new($false))
         $builderRecord.linker.sha256 = '0000000000000000000000000000000000000000000000000000000000000000'
         [System.IO.File]::WriteAllText($builderRecordPath, ($builderRecord | ConvertTo-Json -Depth 6), [System.Text.UTF8Encoding]::new($false))
         $linkerRejected = $false
@@ -621,6 +688,8 @@ function Invoke-SelfTest {
         Write-Output 'checksum_bearing_pe=rejected'
         Write-Output 'authenticode_bearing_pe=rejected'
         Write-Output 'host_cargo_registry_path=rejected'
+        Write-Output 'cargo_host_os_difference=accepted'
+        Write-Output 'mismatched_cargo_identity=rejected'
         Write-Output 'mismatched_linker=rejected'
         Write-Output 'tampered_native_toolchain_lock=rejected'
         Write-Output 'mismatched_native_toolchain_lock=rejected'

@@ -4638,3 +4638,25 @@ delete-after-commit, restart-no-redelivery и штатный `03_VERIFY`, кот
 `M0.9.87 TWO-HOST REDUCED SERVICE-FREE TEST COMPLETED SUCCESSFULLY`. Это
 подтверждает, что результат первого run не был следствием post-hoc ослабления
 evidence: canonical target relay regression входил в проверяемый kit до старта.
+
+### M0.9.88 — host-neutral Cargo identity verification: реализовано локально
+
+- Independent run `38506048297` для revision `bb4b7a0` воспроизвёл exact
+  2,432,000-byte offline artifact с прежним SHA-256 `d9f9f450...cacb4` и создал
+  attestation `55680587`;
+- production verification выявил, что full-string `cargo -vV` ошибочно считает
+  Windows 11 и Windows Server 2022 частью pinned Cargo identity;
+- новый closed parser сохраняет exact equality version, commit, date, target,
+  libgit2 и libcurl, требует 64-bit Windows `os:` line, но сравнивает Windows
+  release отдельно от tool identity;
+- self-test принимает только host OS-release difference и fail closed отвергает
+  changed Cargo commit; independent-builder static boundary закрепляет оба
+  результата;
+- реальный downloaded evidence успешно прошёл исправленный production verifier
+  вместе с четырьмя GitHub attestations;
+- messenger runtime/protocol/wire/IPC не менялись, ZIP/background service/tag
+  не создавались.
+
+Следующий gate: commit M0.9.88, новая two-clean-root local reproduction и fresh
+GitHub-hosted run exact committed revision. После этого обновить M1 candidate
+record на M0.9.87 run `20261014-080905` и свежую attestation.

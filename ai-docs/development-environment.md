@@ -2882,3 +2882,20 @@ retirement остальных compatibility shadows ещё не реализов
   canonical двухмашинным field result; первый successful run `075145` полезен
   как regression fixture verifier false negative, но не нужен для повторного
   запуска.
+
+## M0.9.88 independent-verifier Cargo identity diagnostic (2026-10-14)
+
+- Same-host clean-root pair для revision
+  `bb4b7a08184301c2f6b56eed658fdae483cd8f55` совпал: 2,432,000 bytes,
+  SHA-256 `d9f9f450f915cd238137c8498ba965b0dfac92c17982d237c0f18790cb6cacb4`.
+- GitHub run `38506048297` повторил exact artifact и создал attestation
+  `55680587`; bounded artifact ID `11868131068` скачан распакованным в ignored
+  `.tmp` только для production verification, ZIP локально не сохранялся.
+- Старый production verifier корректно дошёл до toolchain comparison, но ложно
+  отверг evidence: единственная разница `cargo -vV` — local Windows 11
+  `10.0.26300` против hosted Windows Server 2022 `10.0.20348`.
+- M0.9.88 parser требует closed eight-line Cargo identity, сравнивает exact
+  version/commit/date/target/libgit2/libcurl, проверяет `os:` как 64-bit
+  Windows и исключает только release text из equality. Реальный run после
+  исправления прошёл все четыре `gh attestation verify`; fresh run exact
+  committed fix остаётся acceptance gate.

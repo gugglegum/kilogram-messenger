@@ -1,6 +1,6 @@
 # RFC-0110: Independent volunteer-provider field contract (M0.9.87)
 
-Status: implemented locally; external field run pending.
+Status: reduced two-host field run verified; strict independent-provider run pending.
 
 ## 1. Purpose and claim boundary
 
@@ -110,3 +110,18 @@ operator/network claims without requiring them to differ. Its verifier reports
 `verified-reduced-two-host` result. This profile exercises the complete
 service-free delivery lifecycle; it cannot close the independent-provider
 field claim described in sections 1-6.
+
+## 8. Reduced field result
+
+Clean run `20261014-080905`, generated from revision
+`162836bb7a54180c3a00915749cf17fe238019e2`, completed the whole reduced
+two-host lifecycle with the verifier already present in the kit. Alice obtained
+two signed volunteer receipts and stopped before Bob retrieval; Bob committed
+the message, deleted both replicas and observed no redelivery after restart.
+The result is `verified-reduced-two-host` with
+`independent_provider_field_acceptance=false`.
+
+This is the current field-tested runtime baseline. It proves the service-free
+two-replica lifecycle across the available PC and laptop, but it does not
+replace the three-/four-host strict experiment required to claim separately
+operated providers and independent access networks.
