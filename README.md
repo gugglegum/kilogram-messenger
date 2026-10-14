@@ -2258,10 +2258,34 @@ tickets; restart the listener to generate a ticket matching this build. See
 [`RFC-0002`](docs/RFC-0002-account-device-authority.md) for snapshot and
 first-contact freshness boundaries.
 
+## Contributing
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected
+vulnerabilities belong in the private process described by
+[`SECURITY.md`](SECURITY.md), not in a public issue or pull request.
+
 ## Development checks
 
 ```powershell
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets --all-features -- -D warnings
-cargo test --workspace --all-targets
 ```
+
+On Windows, use the stable-path test runner instead of launching hash-named
+Cargo test executables directly:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File .\scripts\run-cargo-tests-stable.ps1 `
+  -Profile test `
+  -CargoJobs 2 `
+  -IsolatedTestsFile .\scripts\windows-ci-isolated-tests.json `
+  -IsolatedTestOrder BeforeAggregate `
+  -Run `
+  -NoFailFast
+```
+
+This bounded runner keeps stable executable paths for Windows Firewall and
+limits Cargo parallelism. On another host, `cargo test --workspace
+--all-targets` remains useful for compatible tests, but it does not replace the
+current Windows acceptance evidence.

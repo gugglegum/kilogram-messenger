@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Private security report
+    url: https://github.com/gugglegum/kilogram-messenger/security/advisories/new
+    about: Report suspected vulnerabilities privately. Do not disclose exploit details in a public issue.
+  - name: Security policy
+    url: https://github.com/gugglegum/kilogram-messenger/security/policy
+    about: Read the supported-version and disclosure boundaries before reporting.

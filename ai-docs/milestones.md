@@ -5016,3 +5016,16 @@ correlation visible, Windows-only field evidence, independent security audit
 Следующий version tag для governance-only изменения не создаётся автоматически;
 если понадобится self-contained tagged snapshot с `LICENSE` и `SECURITY.md`,
 использовать новый тег, а не переписывать `M1.0.0`.
+
+### Post-M1 public collaboration baseline
+
+- `CONTRIBUTING.md` фиксирует scope, evidence discipline, AGPL inbound terms и
+  безопасный bounded Windows test workflow;
+- typed bug/feature forms не принимают public security disclosure, secrets или
+  production-security claims;
+- pull-request template требует явно описать security/privacy/compatibility,
+  проверки и stale evidence;
+- Dependabot проверяет Cargo и pinned GitHub Actions раз в месяц, ограничивает
+  число PR и не включает auto-merge;
+- изменение governance-only: runtime/protocol source, accepted M1 evidence и
+  immutable `M1.0.1` tag не меняются.

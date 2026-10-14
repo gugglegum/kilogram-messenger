@@ -1,0 +1,43 @@
+name: Feature request
+description: Propose a scoped improvement to the experimental Kilogram project
+title: "[Feature] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Significant protocol or security-boundary changes normally require an RFC before implementation.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight
+      options:
+        - label: I searched existing issues and RFCs for this proposal.
+          required: true
+        - label: This proposal does not contain confidential vulnerability details.
+          required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or user need
+      description: Describe the concrete problem without prescribing an implementation first.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the smallest useful outcome and its user-visible behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: Security, privacy, and compatibility effects
+      description: Discuss metadata, key ownership, trust, offline delivery, migration, abuse, and resource limits where applicable.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Explain current workarounds or smaller alternatives.
