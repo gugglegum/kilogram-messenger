@@ -3122,3 +3122,17 @@ Hosted follow-up:
   strict Clippy with `CargoJobs=2`. Mutation markers remained false: no Rust
   test executable, network action, release build, archive, service or Git tag.
 - Next gate is push plus a fresh green GitHub-hosted Windows CI run.
+
+## M0.9.99 hosted Windows acceptance (2026-10-14)
+
+- Pushed range `a45ce0c..9d7895f` to `origin/master`; no tag was created.
+- GitHub run `38588961507`, job `115938408741`, exact SHA
+  `9d7895f28853d43eaecad15897b2ca5d1c279713`, completed success in 38m41s.
+- Hosted readiness reported `m1_readiness_status=verified`, gates `33/33`,
+  candidate verified and all mutation flags false.
+- Isolated lifecycle passed `1/1` in 96.61s. Aggregate harness counts sum to
+  276; every result had zero failures. Final markers: `status=passed`,
+  `isolated_test_count=1`, `cache_above_warning=false`.
+- This closes the hosted gate only. Reduced field topology and all candidate
+  residual risks remain unchanged; strict independent providers and M1 tag are
+  not claimed.

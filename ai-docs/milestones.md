@@ -4962,3 +4962,21 @@ Windows CI. Strict independent-provider run и решение об M1 tag ост
 
 Acceptance gate: push и fresh green hosted Windows CI. M1 tag остаётся отдельным
 явным решением.
+
+### M0.9.99 — hosted Windows readiness acceptance: принято
+
+- GitHub Actions run `38588961507` выполнил exact revision
+  `9d7895f28853d43eaecad15897b2ca5d1c279713` и завершился success за 38m41s;
+- hosted readiness: boundary gates `33/33`, candidate/format/offline strict
+  Clippy verified;
+- task-aware isolated restart lifecycle прошёл первым: `1/1`, 96.61s,
+  `81 filtered out`, без retry;
+- aggregate harnesses затем прошли `276/276`, общий executed count с isolated
+  test равен 277;
+- runner завершил `status=passed`, `isolated_test_count=1`,
+  `cache_above_warning=false`;
+- workflow read-only и не создал release/archive/attestation/tag.
+
+Hosted gate текущего Windows technical candidate закрыт. Strict
+independent-provider field acceptance и решение об M1 tag остаются отдельными
+явными пунктами; public security release не заявляется.

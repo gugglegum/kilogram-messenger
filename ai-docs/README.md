@@ -482,7 +482,11 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
    runtime surface `b5cb9bc9...`; unchanged independent M0.9.88 surface
    сохраняет принятую attestation. Revision `bc3e824...` прошла production
    candidate verifier и полный readiness `33/33`; остался fresh hosted CI.
-19. Optional autostart/background mode оставить отдельной явной настройкой;
+19. M0.9.99 принят: GitHub Windows CI run `38588961507` на revision
+   `9d7895f...` прошёл hosted readiness `33/33`, isolated lifecycle `1/1` и
+   aggregate harnesses `276/276`; job завершился зелёным за 38m41s. Это закрывает
+   hosted gate, но не разрешает M1 tag автоматически.
+20. Optional autostart/background mode оставить отдельной явной настройкой;
    Windows Task Scheduler не является обязательной частью мессенджера.
 4. Уже реализованный M0.9.49 выделяет единый
    `kilogram-publication-conflict`: online/offline используют один signed codec,
@@ -930,6 +934,9 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
 - [`../docs/RFC-0121-current-m1-candidate-refresh.md`](../docs/RFC-0121-current-m1-candidate-refresh.md) —
   M0.9.98 связывает fresh reduced field run с unchanged independent offline
   reproduction, exact selected-tree manifests и неизменным residual-risk list.
+- [`../docs/RFC-0122-hosted-windows-readiness-acceptance.md`](../docs/RFC-0122-hosted-windows-readiness-acceptance.md) —
+  M0.9.99 принимает fresh green GitHub Windows CI: readiness `33/33`, isolated
+  lifecycle `1/1` и все 276 aggregate tests без release/tag side effects.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
