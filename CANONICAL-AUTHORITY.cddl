@@ -1,0 +1,76 @@
+; Kilogram M1.1.2 inactive authority/session candidate.
+; Syntax follows RFC 8610. Encoding additionally follows the stricter
+; kilogram-deterministic-cbor-v1 profile in CANONICAL-WIRE-SCHEMA.json:
+; definite positional arrays, preferred unsigned integers, byte strings only,
+; and no maps, text, negative integers, tags, floats or simple values.
+
+kilogram-authority-v1 =
+    signed-device-certificate-v1 /
+    signed-device-revocation-v1 /
+    signed-account-authority-snapshot-v1 /
+    signed-device-session-authorization-v1
+
+account-id-v1 = bstr .size 32
+device-id-v1 = bstr .size 32
+encryption-public-key-v1 = bstr .size 32
+session-binding-v1 = bstr .size 32
+ed25519-signature-v1 = bstr .size 64
+
+; 1 = sign-events, 2 = sync-history. When both are present they are strictly
+; increasing, so there is one encoding for a logical capability set.
+device-capability-v1 = 1 / 2
+
+device-certificate-content-v1 = [
+    profile-version: 1,
+    account-id: account-id-v1,
+    device-id: device-id-v1,
+    encryption-public-key: encryption-public-key-v1,
+    authority-sequence: uint,
+    capabilities: [1*2 device-capability-v1]
+]
+
+signed-device-certificate-v1 = [
+    profile-version: 1,
+    content: device-certificate-content-v1,
+    signature: ed25519-signature-v1
+]
+
+device-revocation-content-v1 = [
+    profile-version: 1,
+    account-id: account-id-v1,
+    device-id: device-id-v1,
+    authority-sequence: uint
+]
+
+signed-device-revocation-v1 = [
+    profile-version: 1,
+    content: device-revocation-content-v1,
+    signature: ed25519-signature-v1
+]
+
+; Revocations are strictly increasing by unsigned bytewise device-id order.
+account-authority-snapshot-content-v1 = [
+    profile-version: 1,
+    account-id: account-id-v1,
+    revision: uint,
+    revocations: [*32 signed-device-revocation-v1]
+]
+
+signed-account-authority-snapshot-v1 = [
+    profile-version: 1,
+    content: account-authority-snapshot-content-v1,
+    signature: ed25519-signature-v1
+]
+
+device-session-authorization-content-v1 = [
+    profile-version: 1,
+    session-binding: session-binding-v1,
+    certificate: signed-device-certificate-v1,
+    authority-snapshot: signed-account-authority-snapshot-v1
+]
+
+signed-device-session-authorization-v1 = [
+    profile-version: 1,
+    content: device-session-authorization-content-v1,
+    signature: ed25519-signature-v1
+]

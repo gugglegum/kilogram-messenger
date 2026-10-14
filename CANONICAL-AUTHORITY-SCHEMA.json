@@ -1,0 +1,319 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.2",
+  "status": "candidate-not-active",
+  "changes_active_wire": false,
+  "profile": "kilogram-deterministic-cbor-v1",
+  "cddl": {
+    "standard": "RFC 8610",
+    "standard_url": "https://www.rfc-editor.org/rfc/rfc8610.html",
+    "path": "CANONICAL-AUTHORITY.cddl",
+    "root_rule": "kilogram-authority-v1"
+  },
+  "activation": {
+    "current_runtime_encoding": "postcard",
+    "current_runtime_changed": false,
+    "required_before_activation": [
+      "new-explicit-protocol-version-or-parallel-identifier",
+      "dual-reader-and-downgrade-tests",
+      "remaining-object-family-schema-coverage",
+      "decoder-fuzzing-and-malformed-input-corpus",
+      "fresh-field-and-hosted-evidence"
+    ]
+  },
+  "limits": {
+    "maximum_capabilities": 2,
+    "maximum_revocations": 32
+  },
+  "domains": [
+    {
+      "id": "device-certificate-signature-v1",
+      "value": "kilogram:device-certificate-signature:cbor-v1\\0",
+      "signer": "account-root-ed25519"
+    },
+    {
+      "id": "device-revocation-signature-v1",
+      "value": "kilogram:device-revocation-signature:cbor-v1\\0",
+      "signer": "account-root-ed25519"
+    },
+    {
+      "id": "account-authority-snapshot-signature-v1",
+      "value": "kilogram:account-authority-snapshot-signature:cbor-v1\\0",
+      "signer": "account-root-ed25519"
+    },
+    {
+      "id": "device-session-authorization-signature-v1",
+      "value": "kilogram:device-session-authorization-signature:cbor-v1\\0",
+      "signer": "authorized-device-ed25519"
+    }
+  ],
+  "objects": [
+    {
+      "id": "account-id-v1",
+      "kind": "primitive",
+      "type": "byte-string",
+      "exact_bytes": 32,
+      "meaning": "account-root-ed25519-verifying-key"
+    },
+    {
+      "id": "device-id-v1",
+      "kind": "primitive",
+      "type": "byte-string",
+      "exact_bytes": 32,
+      "meaning": "device-ed25519-verifying-key"
+    },
+    {
+      "id": "device-capability-v1",
+      "kind": "enumeration",
+      "type": "unsigned-integer",
+      "values": [
+        {
+          "code": 1,
+          "name": "sign-events"
+        },
+        {
+          "code": 2,
+          "name": "sync-history"
+        }
+      ]
+    },
+    {
+      "id": "device-certificate-content-v1",
+      "kind": "signed-content",
+      "array_length": 6,
+      "fields": [
+        {
+          "index": 0,
+          "name": "schema_version",
+          "type": "unsigned-integer",
+          "exact": 1
+        },
+        {
+          "index": 1,
+          "name": "account_id",
+          "type": "object",
+          "object": "account-id-v1"
+        },
+        {
+          "index": 2,
+          "name": "device_id",
+          "type": "object",
+          "object": "device-id-v1"
+        },
+        {
+          "index": 3,
+          "name": "encryption_public_key",
+          "type": "byte-string",
+          "exact_bytes": 32
+        },
+        {
+          "index": 4,
+          "name": "authority_sequence",
+          "type": "unsigned-integer"
+        },
+        {
+          "index": 5,
+          "name": "capabilities",
+          "type": "array",
+          "item_type": "device-capability-v1",
+          "minimum_items": 1,
+          "maximum_items": 2,
+          "ordering": "unsigned-integer-strict"
+        }
+      ]
+    },
+    {
+      "id": "signed-device-certificate-v1",
+      "kind": "signed-envelope",
+      "array_length": 3,
+      "fields": [
+        {
+          "index": 0,
+          "name": "schema_version",
+          "type": "unsigned-integer",
+          "exact": 1
+        },
+        {
+          "index": 1,
+          "name": "content",
+          "type": "object",
+          "object": "device-certificate-content-v1"
+        },
+        {
+          "index": 2,
+          "name": "signature",
+          "type": "byte-string",
+          "exact_bytes": 64
+        }
+      ]
+    },
+    {
+      "id": "device-revocation-content-v1",
+      "kind": "signed-content",
+      "array_length": 4,
+      "fields": [
+        {
+          "index": 0,
+          "name": "schema_version",
+          "type": "unsigned-integer",
+          "exact": 1
+        },
+        {
+          "index": 1,
+          "name": "account_id",
+          "type": "object",
+          "object": "account-id-v1"
+        },
+        {
+          "index": 2,
+          "name": "device_id",
+          "type": "object",
+          "object": "device-id-v1"
+        },
+        {
+          "index": 3,
+          "name": "authority_sequence",
+          "type": "unsigned-integer"
+        }
+      ]
+    },
+    {
+      "id": "signed-device-revocation-v1",
+      "kind": "signed-envelope",
+      "array_length": 3,
+      "fields": [
+        {
+          "index": 0,
+          "name": "schema_version",
+          "type": "unsigned-integer",
+          "exact": 1
+        },
+        {
+          "index": 1,
+          "name": "content",
+          "type": "object",
+          "object": "device-revocation-content-v1"
+        },
+        {
+          "index": 2,
+          "name": "signature",
+          "type": "byte-string",
+          "exact_bytes": 64
+        }
+      ]
+    },
+    {
+      "id": "account-authority-snapshot-content-v1",
+      "kind": "signed-content",
+      "array_length": 4,
+      "fields": [
+        {
+          "index": 0,
+          "name": "schema_version",
+          "type": "unsigned-integer",
+          "exact": 1
+        },
+        {
+          "index": 1,
+          "name": "account_id",
+          "type": "object",
+          "object": "account-id-v1"
+        },
+        {
+          "index": 2,
+          "name": "revision",
+          "type": "unsigned-integer"
+        },
+        {
+          "index": 3,
+          "name": "revocations",
+          "type": "array",
+          "item_type": "signed-device-revocation-v1",
+          "maximum_items": 32,
+          "ordering": "device-id-unsigned-bytewise-lexicographic-strict"
+        }
+      ]
+    },
+    {
+      "id": "signed-account-authority-snapshot-v1",
+      "kind": "signed-envelope",
+      "array_length": 3,
+      "fields": [
+        {
+          "index": 0,
+          "name": "schema_version",
+          "type": "unsigned-integer",
+          "exact": 1
+        },
+        {
+          "index": 1,
+          "name": "content",
+          "type": "object",
+          "object": "account-authority-snapshot-content-v1"
+        },
+        {
+          "index": 2,
+          "name": "signature",
+          "type": "byte-string",
+          "exact_bytes": 64
+        }
+      ]
+    },
+    {
+      "id": "device-session-authorization-content-v1",
+      "kind": "signed-content",
+      "array_length": 4,
+      "fields": [
+        {
+          "index": 0,
+          "name": "schema_version",
+          "type": "unsigned-integer",
+          "exact": 1
+        },
+        {
+          "index": 1,
+          "name": "session_binding",
+          "type": "byte-string",
+          "exact_bytes": 32
+        },
+        {
+          "index": 2,
+          "name": "certificate",
+          "type": "object",
+          "object": "signed-device-certificate-v1"
+        },
+        {
+          "index": 3,
+          "name": "authority_snapshot",
+          "type": "object",
+          "object": "signed-account-authority-snapshot-v1"
+        }
+      ]
+    },
+    {
+      "id": "signed-device-session-authorization-v1",
+      "kind": "signed-envelope",
+      "array_length": 3,
+      "fields": [
+        {
+          "index": 0,
+          "name": "schema_version",
+          "type": "unsigned-integer",
+          "exact": 1
+        },
+        {
+          "index": 1,
+          "name": "content",
+          "type": "object",
+          "object": "device-session-authorization-content-v1"
+        },
+        {
+          "index": 2,
+          "name": "signature",
+          "type": "byte-string",
+          "exact_bytes": 64
+        }
+      ]
+    }
+  ]
+}
