@@ -1,6 +1,6 @@
 # RFC-0116: Fresh field evidence and candidate refresh (M0.9.93)
 
-Status: candidate control committed; production verification pending.
+Status: accepted locally after committed production candidate and readiness verification.
 
 ## 1. Purpose
 
@@ -50,8 +50,8 @@ Its exact 63-entry protected surface remains
 
 ## 4. Honest residual boundary
 
-Boundary claims: does not claim a public security release; does not require
-another field network run. In exact verifier wording, this candidate does not require another field network run; exact runtime/protocol Git surface; strict
+Boundary claims: does not claim a public security release; does not require another field network run;
+exact runtime/protocol Git surface; strict
 independent-provider field acceptance remains pending; Sybil resistance
 remains incomplete.
 
@@ -69,3 +69,16 @@ executable, archive, background service or Git tag. The fresh field run is
 upstream evidence; candidate composition only verifies its immutable revision
 and selected-tree continuity. Production verification must run from a clean
 committed tree before M0.9.93 can be accepted.
+
+## 6. Acceptance evidence
+
+Candidate-control revision `d8252c660dcde49d93ad32c16104c46e91ac8c84`
+passed the production candidate verifier from a clean working tree. It reported
+the field and independent protected surfaces unchanged and
+`m1_candidate_status=verified`.
+
+The complete readiness gate then passed all `33/33` closed boundaries, format
+and locked/offline strict Clippy with two Cargo jobs. It reported
+`m1_readiness_status=verified`, started no Rust test executable, and performed
+no release build, archive creation, network action or Git tagging. Hosted full
+Rust execution remains a separate required confirmation before an M1 tag.

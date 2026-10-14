@@ -454,7 +454,8 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
 13. M0.9.93 обновляет candidate на fresh field revision `d33dd095...`, run
    `20261014-104506` и runtime surface SHA-256 `95c1771d...`; independent
    M0.9.88 attestation остаётся применимой, поскольку её protected surface не
-   менялась. После commit обязателен clean production candidate/readiness pass.
+   менялась. Candidate commit `d8252c6...` прошёл clean production verifier и
+   полный readiness `33/33`; hosted full Rust confirmation ещё ожидается.
 14. Optional autostart/background mode оставить отдельной явной настройкой;
    Windows Task Scheduler не является обязательной частью мессенджера.
 4. Уже реализованный M0.9.49 выделяет единый

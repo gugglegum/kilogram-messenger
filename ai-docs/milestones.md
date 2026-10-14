@@ -4808,3 +4808,16 @@ Field evidence:
 Acceptance gate: commit the candidate control surface, run production
 `verify-kilogram-m1-candidate.ps1` from a clean tree, then run the complete M1
 readiness gate. Hosted full Rust confirmation remains separately required.
+
+Acceptance:
+
+- candidate/control revision:
+  `d8252c660dcde49d93ad32c16104c46e91ac8c84`;
+- clean production candidate verifier reported
+  `m1_candidate_status=verified`, both exact surfaces unchanged and
+  `network_retest_required=false`;
+- complete readiness reported `boundary_gates=33/33`, verified format and
+  locked/offline strict Clippy with two jobs;
+- no test executable, network action, release build, archive, background
+  service or Git tag was created by composition/readiness;
+- M0.9.93 is accepted locally; hosted full Rust confirmation remains pending.

@@ -3003,3 +3003,7 @@ retirement остальных compatibility shadows ещё не реализов
 - The refreshed 83-file runtime surface is
   `95c1771de3ca71e3912ab028d50fde3facaa8d05cab81873bdefbb95804f2d34`;
   independent offline surface remains unchanged and keeps M0.9.88 evidence.
+- Candidate commit `d8252c660dcde49d93ad32c16104c46e91ac8c84` passed
+  production verification on a clean tree. Full local readiness then passed
+  `33/33`, format and locked/offline strict Clippy with two jobs; no test EXE,
+  release/archive/tag or background service was created.
