@@ -4,6 +4,7 @@ description = "Self-hostable opaque runtime ticket publication service for Kilog
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
 publish = false
 
 [dependencies]

@@ -4,6 +4,7 @@ description = "One-shot Account Root and first-device bootstrap for Kilogram"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
 publish = false
 
 [dependencies]

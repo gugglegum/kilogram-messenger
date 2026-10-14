@@ -5001,3 +5001,18 @@ independent-provider field acceptance и решение об M1 tag остают
 operator/network independence unproven, Sybil resistance incomplete, access
 correlation visible, Windows-only field evidence, independent security audit
 не проводился. M1.0.0 нельзя рекомендовать для sensitive/high-risk traffic.
+
+### Post-M1 governance — лицензия и приём security reports
+
+- выбран `AGPL-3.0-or-later` без отдельных project copyright notices;
+- license grant явно распространяется на source snapshot `M1.0.0`, но
+  опубликованный immutable tag не перемещается;
+- Cargo workspace и каждый package публикуют единый SPDX license expression;
+- `SECURITY.md` фиксирует experimental/no-audit/no-SLA границу и приватный
+  канал vulnerability reporting;
+- отдельный post-M1 commit не меняет protocol/runtime behavior и не становится
+  новым security claim.
+
+Следующий version tag для governance-only изменения не создаётся автоматически;
+если понадобится self-contained tagged snapshot с `LICENSE` и `SECURITY.md`,
+использовать новый тег, а не переписывать `M1.0.0`.

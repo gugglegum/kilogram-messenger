@@ -5,6 +5,21 @@ end-to-end encryption. The protocol is currently at the architecture,
 authorization, and transport proof-of-concept stage. Do not use it for
 sensitive communication.
 
+## Security status
+
+Kilogram M1.0.0 is a Windows technical proof of concept, not a production
+security release. It has not received an independent security audit and must
+not be relied on for sensitive or high-risk communication. Please read
+[`SECURITY.md`](SECURITY.md) before reporting a suspected vulnerability and do
+not publish exploitable details in a public issue.
+
+## License
+
+Unless a file states otherwise, the Kilogram source code in this repository,
+including the source snapshot identified by the `M1.0.0` tag, is licensed
+under the GNU Affero General Public License, version 3 or any later version
+(`AGPL-3.0-or-later`). See [`LICENSE`](LICENSE) for the complete terms.
+
 The project goals and draft architecture are documented in
 [`docs/RFC-0001-core-architecture.md`](docs/RFC-0001-core-architecture.md).
 The accepted scope and limitations of the M1.0.0 Windows technical proof of
