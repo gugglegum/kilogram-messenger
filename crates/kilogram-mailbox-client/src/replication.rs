@@ -765,7 +765,13 @@ impl MailboxReplicationLedger {
         if let Some(current) = read_value(&write, REPLICA_SET_LOCATOR_TABLE, key.as_slice())? {
             let current = ReplicaSetLocatorRecord::decode(&current)?;
             ensure!(
-                current == record,
+                current.version == record.version
+                    && current.mailbox_id == record.mailbox_id
+                    && current.item_id == record.item_id
+                    && current.dispatch_binding == record.dispatch_binding
+                    && current.commitment_id == record.commitment_id
+                    && current.store_keys == record.store_keys
+                    && current.expires_at_unix_seconds == record.expires_at_unix_seconds,
                 "mailbox replica-set locator replay conflicts"
             );
             let public = current.into_public();
@@ -1549,7 +1555,7 @@ mod tests {
         assert_eq!(locator.commitment_id(), &[44_u8; 32]);
         assert_eq!(locator.store_keys(), locator_store_keys);
         assert_eq!(
-            ledger.ensure_replica_set_locator(&plan, [44_u8; 32], &locator_store_keys, 1_000,)?,
+            ledger.ensure_replica_set_locator(&plan, [44_u8; 32], &locator_store_keys, 1_001,)?,
             locator
         );
         assert!(
