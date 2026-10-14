@@ -125,3 +125,22 @@ This is the current field-tested runtime baseline. It proves the service-free
 two-replica lifecycle across the available PC and laptop, but it does not
 replace the three-/four-host strict experiment required to claim separately
 operated providers and independent access networks.
+
+## 9. Refreshed reduced field result after M0.9.92
+
+The runtime-journal change invalidated the section 8 baseline exactly as the
+candidate continuity gate required. A fresh clean run `20261014-104506`, built
+from revision `d33dd0950484665ee397d161e37ce74743ee8f93`, repeated the complete
+two-host lifecycle after the Windows extended-length-path fix.
+
+Both providers registered with the pinned APS1 relay before publication.
+Alice received two authenticated volunteer receipts, stopped before Bob
+retrieval, and used no central mailbox descriptor or HTTPS compatibility
+store. Bob committed the message from both replicas, deleted both only after
+commit, restarted, and observed no redelivery. The unchanged in-kit verifier
+reported `verified-reduced-two-host` and
+`independent_provider_field_acceptance=false`.
+
+This run supersedes section 8 as the current field-tested runtime baseline. It
+still does not claim separate operators or access networks and therefore does
+not close strict independent-provider field acceptance.

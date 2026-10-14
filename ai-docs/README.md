@@ -426,7 +426,9 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
    вторым проходом при нехватке альтернатив, поэтому availability не падает;
    разные tags не считаются доказательством независимых операторов.
 7. M0.9.87 clean two-host run `20261014-080905` подтвердил полный service-free
-   lifecycle и два разных physical provider hosts, но сохранил
+   lifecycle и два разных physical provider hosts, но был superseded после
+   runtime change. Fresh M0.9.93 run `20261014-104506` на revision
+   `d33dd095...` повторил lifecycle после MAX_PATH fix и сохранил
    `independent_provider_field_acceptance=false`: operator/network separation
    требует будущего strict three-/four-host run.
 8. M0.9.88 принят externally: revision `68804c93...` локально и в GitHub run
@@ -446,10 +448,14 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
    (79/81 aggregate passed). Run `38513111049` подтвердил один как
    process-sensitive, а у второго обнаружил реальную MAX_PATH ошибку.
 12. M0.9.92 исправляет append-only runtime journal для extended-length Windows
-   paths без сокращения content-addressed имён. Локальный >260 regression
-   проходит; новый hosted run и fresh physical field evidence обязательны,
-   потому что runtime protected surface изменился.
-13. Optional autostart/background mode оставить отдельной явной настройкой;
+   paths без сокращения content-addressed имён. Локальный >260 regression и
+   fresh physical run `20261014-104506` прошли; hosted full-suite confirmation
+   ещё выполняется.
+13. M0.9.93 обновляет candidate на fresh field revision `d33dd095...`, run
+   `20261014-104506` и runtime surface SHA-256 `95c1771d...`; independent
+   M0.9.88 attestation остаётся применимой, поскольку её protected surface не
+   менялась. После commit обязателен clean production candidate/readiness pass.
+14. Optional autostart/background mode оставить отдельной явной настройкой;
    Windows Task Scheduler не является обязательной частью мессенджера.
 4. Уже реализованный M0.9.49 выделяет единый
    `kilogram-publication-conflict`: online/offline используют один signed codec,
@@ -878,6 +884,9 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
 - [`../docs/RFC-0115-windows-extended-length-runtime-journal.md`](../docs/RFC-0115-windows-extended-length-runtime-journal.md) —
   M0.9.92 исправляет deterministic Windows MAX_PATH failure append-only runtime
   journal и отделяет stale evidence readiness от обязательного CI test feedback.
+- [`../docs/RFC-0116-fresh-field-evidence-and-candidate-refresh.md`](../docs/RFC-0116-fresh-field-evidence-and-candidate-refresh.md) —
+  M0.9.93 pin-ит fresh post-fix physical run и новый exact runtime surface,
+  сохраняя неизменённую independent offline attestation и все residual risks.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

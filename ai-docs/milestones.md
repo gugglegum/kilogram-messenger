@@ -4779,3 +4779,32 @@ not produce a green baseline.
 Acceptance gate: local format/regression/static checks, committed push and
 hosted full Rust confirmation. Then prepare fresh field evidence; no M1 tag is
 allowed from the old M0.9.89 candidate.
+
+Field evidence:
+
+- first clean run `20261014-103458` completed delivery/restart but was rejected
+  because Provider 1 relay registration timed out and its closed log could not
+  prove the pinned relay boundary;
+- clean retry `20261014-104506` from exact revision
+  `d33dd0950484665ee397d161e37ce74743ee8f93` proved both provider relay homes,
+  exact receipts `2/2`, sender offline, two commit-before-delete results and no
+  restart redelivery;
+- unchanged in-kit verifier reported `verified-reduced-two-host` and
+  `independent_provider_field_acceptance=false`.
+
+### M0.9.93 — fresh field evidence and M1 candidate refresh: реализовано локально
+
+- `M1-CANDIDATE.json` now pins run `20261014-104506` and post-fix revision
+  `d33dd095...` instead of the correctly invalidated pre-fix field baseline;
+- exact 83-entry runtime/protocol surface SHA-256 is
+  `95c1771de3ca71e3912ab028d50fde3facaa8d05cab81873bdefbb95804f2d34`;
+- the accepted M0.9.88 independent reproduction remains pinned because its
+  exact 63-entry offline surface has no drift;
+- strict provider independence, operator/network separation, complete Sybil
+  resistance, correlation hiding, non-Windows evidence and public release all
+  remain explicit residual risks;
+- composition performs no network/build/archive/service/tag mutation.
+
+Acceptance gate: commit the candidate control surface, run production
+`verify-kilogram-m1-candidate.ps1` from a clean tree, then run the complete M1
+readiness gate. Hosted full Rust confirmation remains separately required.

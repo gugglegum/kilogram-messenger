@@ -1,19 +1,19 @@
 {
   "format_version": 2,
-  "milestone": "M0.9.89",
+  "milestone": "M0.9.93",
   "status": "candidate",
   "scope": "windows-technical-proof-of-concept",
   "field_evidence": {
     "milestone": "M0.9.87",
-    "run_id": "20261014-080905",
-    "source_revision": "162836bb7a54180c3a00915749cf17fe238019e2",
+    "run_id": "20261014-104506",
+    "source_revision": "d33dd0950484665ee397d161e37ce74743ee8f93",
     "result": "verified-reduced-two-host",
     "topology_profile": "two-host-reduced",
     "independent_provider_field_acceptance": false,
     "verifier": "scripts/verify-kilogram-m0987-independent-provider-evidence.ps1",
     "runtime_surface": {
       "mode": "git-ls-tree-sha256-v1",
-      "manifest_sha256": "1aacaca665c9a2ab4dbc43107c2556128274d7fb9f8727d2dcc78681026bb320",
+      "manifest_sha256": "95c1771de3ca71e3912ab028d50fde3facaa8d05cab81873bdefbb95804f2d34",
       "file_count": 83,
       "paths": [
         "Cargo.toml",

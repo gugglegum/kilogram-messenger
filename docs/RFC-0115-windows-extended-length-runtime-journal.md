@@ -1,6 +1,6 @@
 # RFC-0115: Windows extended-length runtime journal (M0.9.92)
 
-Status: implemented locally; hosted confirmation and fresh field evidence pending.
+Status: implemented; fresh physical field evidence accepted, hosted full-suite confirmation pending.
 
 ## 1. Incident
 
@@ -59,3 +59,13 @@ are still required. The independently reproduced offline-artifact surface is
 unchanged because it does not include `apps/kilogram-cli`.
 
 No release build, archive, attestation or Git tag is created by this stage.
+
+## 5. Fresh physical confirmation
+
+Two-host reduced run `20261014-104506` from exact revision
+`d33dd0950484665ee397d161e37ce74743ee8f93` completed the full service-free
+two-replica lifecycle. Both providers registered with the pinned relay, Alice
+stopped after two receipts, and Bob committed/deleted both replicas without
+restart redelivery. This refreshes the runtime evidence invalidated by the
+storage fix without escalating the result beyond
+`independent_provider_field_acceptance=false`.

@@ -2984,3 +2984,22 @@ retirement остальных compatibility shadows ещё не реализов
   still fails the job.
 - `apps/kilogram-cli` changed. M0.9.87 field surface continuity is therefore
   intentionally invalid until a fresh physical field run is accepted.
+
+## M0.9.93 fresh field evidence and candidate refresh (2026-10-14)
+
+- Fresh kit was generated from clean revision
+  `d33dd0950484665ee397d161e37ce74743ee8f93` with debug profile and two Cargo
+  jobs; no ZIP or release build was created.
+- Desktop ran Alice + Provider 1; the SSH-controlled Windows laptop ran
+  Provider 2 + Bob. Only role-owned public files and closed logs were copied;
+  private roots, Device secrets, runtime state and live logs stayed local.
+- Diagnostic run `20261014-103458` completed message delivery and restart but
+  was rejected because Provider 1 reported `relay_status=timeout after 30s`.
+- Clean retry `20261014-104506` proved APS1 relay registration on both
+  providers, exact volunteer receipts `2/2`, sender shutdown before receive,
+  two delete-after-commit results and no restart redelivery.
+- Final evidence verifier reported `result=verified-reduced-two-host` and
+  `independent_provider_field_acceptance=False`.
+- The refreshed 83-file runtime surface is
+  `95c1771de3ca71e3912ab028d50fde3facaa8d05cab81873bdefbb95804f2d34`;
+  independent offline surface remains unchanged and keeps M0.9.88 evidence.

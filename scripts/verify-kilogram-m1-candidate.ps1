@@ -12,10 +12,10 @@ if ([string]::IsNullOrWhiteSpace($RecordPath)) {
     $RecordPath = Join-Path $workspace 'M1-CANDIDATE.json'
 }
 
-$expectedFieldRevision = '162836bb7a54180c3a00915749cf17fe238019e2'
+$expectedFieldRevision = 'd33dd0950484665ee397d161e37ce74743ee8f93'
 $expectedIndependentRevision = '68804c93f43b405008cfecf35dc8660db360a3a3'
 $expectedArtifactSha256 = 'd9f9f450f915cd238137c8498ba965b0dfac92c17982d237c0f18790cb6cacb4'
-$expectedFieldManifestSha256 = '1aacaca665c9a2ab4dbc43107c2556128274d7fb9f8727d2dcc78681026bb320'
+$expectedFieldManifestSha256 = '95c1771de3ca71e3912ab028d50fde3facaa8d05cab81873bdefbb95804f2d34'
 $expectedIndependentManifestSha256 = '2a7db2c5cacd0419a8ece61b0dc8386075a558d4f052b44c0eedd81cd9354d68'
 $expectedFieldPaths = @(
     'Cargo.toml',
@@ -59,7 +59,7 @@ $candidateControlPaths = @(
     'scripts/verify-kilogram-m1-candidate-boundary.ps1',
     'docs/RFC-0110-independent-provider-field-contract.md',
     'docs/RFC-0111-host-neutral-cargo-identity-verification.md',
-    'docs/RFC-0112-current-m1-candidate-evidence-refresh.md'
+    'docs/RFC-0116-fresh-field-evidence-and-candidate-refresh.md'
 )
 
 function Assert-ExactProperties {
@@ -109,7 +109,7 @@ function Assert-CandidateRecord {
         'independent_reproduction', 'stage_boundary', 'residual_risks'
     ) 'candidate record'
     if ([int]$Record.format_version -ne 2 -or
-        [string]$Record.milestone -cne 'M0.9.89' -or
+        [string]$Record.milestone -cne 'M0.9.93' -or
         [string]$Record.status -cne 'candidate' -or
         [string]$Record.scope -cne 'windows-technical-proof-of-concept') {
         throw 'candidate record identity is invalid'
@@ -121,7 +121,7 @@ function Assert-CandidateRecord {
         'independent_provider_field_acceptance', 'verifier', 'runtime_surface'
     ) 'field evidence'
     if ([string]$field.milestone -cne 'M0.9.87' -or
-        [string]$field.run_id -cne '20261014-080905' -or
+        [string]$field.run_id -cne '20261014-104506' -or
         [string]$field.source_revision -cne $expectedFieldRevision -or
         [string]$field.result -cne 'verified-reduced-two-host' -or
         [string]$field.topology_profile -cne 'two-host-reduced' -or
@@ -362,7 +362,7 @@ Assert-ProtectedSurface `
     -ExpectedFileCount 63
 
 $fieldRfc = Get-Content -LiteralPath (Join-Path $workspace 'docs\RFC-0110-independent-provider-field-contract.md') -Raw
-foreach ($required in @('20261014-080905', $expectedFieldRevision, 'verified-reduced-two-host', 'independent_provider_field_acceptance=false')) {
+foreach ($required in @('20261014-104506', $expectedFieldRevision, 'verified-reduced-two-host', 'independent_provider_field_acceptance=false')) {
     if ($fieldRfc.IndexOf($required, [StringComparison]::Ordinal) -lt 0) {
         throw "accepted field RFC is missing '$required'"
     }
