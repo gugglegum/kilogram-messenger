@@ -442,10 +442,14 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
 11. M0.9.91 добавляет read-only GitHub-hosted Windows CI на каждый master
    push/PR: readiness inventory расширен до 33 gates, затем выполняются все
    stable-path Rust test harnesses с двумя jobs и Cargo offline после fetch.
-   Первый run `38509447420` прошёл readiness, но выявил два deadline-sensitive
-   CLI runtime-теста (79/81 aggregate passed); они не исключены, а вынесены
-   closed manifest в обязательные fresh-process invocations. Confirmation pending.
-12. Optional autostart/background mode оставить отдельной явной настройкой;
+   Первый run `38509447420` прошёл readiness, но выявил два runtime-теста
+   (79/81 aggregate passed). Run `38513111049` подтвердил один как
+   process-sensitive, а у второго обнаружил реальную MAX_PATH ошибку.
+12. M0.9.92 исправляет append-only runtime journal для extended-length Windows
+   paths без сокращения content-addressed имён. Локальный >260 regression
+   проходит; новый hosted run и fresh physical field evidence обязательны,
+   потому что runtime protected surface изменился.
+13. Optional autostart/background mode оставить отдельной явной настройкой;
    Windows Task Scheduler не является обязательной частью мессенджера.
 4. Уже реализованный M0.9.49 выделяет единый
    `kilogram-publication-conflict`: online/offline используют один signed codec,
@@ -871,6 +875,9 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
 - [`../docs/RFC-0114-continuous-windows-readiness-and-tests.md`](../docs/RFC-0114-continuous-windows-readiness-and-tests.md) —
   M0.9.91 read-only hosted Windows CI для readiness gate и полного запуска
   stable-path Rust tests без release/publication.
+- [`../docs/RFC-0115-windows-extended-length-runtime-journal.md`](../docs/RFC-0115-windows-extended-length-runtime-journal.md) —
+  M0.9.92 исправляет deterministic Windows MAX_PATH failure append-only runtime
+  journal и отделяет stale evidence readiness от обязательного CI test feedback.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

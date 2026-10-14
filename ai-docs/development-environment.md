@@ -2963,4 +2963,24 @@ retirement остальных compatibility shadows ещё не реализов
 - Hosted runner now uses unoptimized Cargo `test` profile to reuse preceding
   Clippy artifacts and has a 38-minute test-step bound. Local compile-only
   validation resolved both selectors; no Rust test executable was run locally.
-- Confirmation hosted run remains pending.
+- Hosted run `38513111049` confirmed 79 aggregate CLI tests and the isolated
+  revocation/restart test. The pairwise test failed alone with its first cause
+  `persist runtime record ... os error 3`; repeated HTTP 404 followed because
+  the first locator was never locally journaled/uploaded.
+
+## M0.9.92 Windows extended-length runtime journal (2026-10-14)
+
+- Root cause: runtime ticket-publication file names plus a normal Windows state
+  root can exceed 260 UTF-16 code units. `NamedTempFile::persist_noclobber`
+  received the lexical destination instead of an extended-length path.
+- Fix: create the parent, canonicalize that existing directory, append the
+  not-yet-existing file name, and use the resolved path for all append-only I/O.
+- Local bounded regression passed with two Cargo jobs: a >260 path inserts,
+  repeats as `AlreadyPresent`, and reads exact bytes. No socket/test endpoint
+  was opened locally, avoiding a new Windows Firewall identity.
+- CI manifest now isolates one exact test. Pairwise locator runs in aggregate.
+  Tests are conditioned on successful locked fetch and use `always()` so stale
+  M1 evidence cannot suppress product regression feedback; readiness failure
+  still fails the job.
+- `apps/kilogram-cli` changed. M0.9.87 field surface continuity is therefore
+  intentionally invalid until a fresh physical field run is accepted.

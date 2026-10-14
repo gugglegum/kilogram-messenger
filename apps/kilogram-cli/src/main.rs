@@ -5642,10 +5642,37 @@ fn persist_runtime_record(
         bytes.len() <= MAX_RUNTIME_RECORD_BYTES,
         "runtime state record is too large"
     );
-    let path = state_directory.join(relative_path);
-    let parent = path.parent().context("runtime record path has no parent")?;
-    fs::create_dir_all(parent)
-        .with_context(|| format!("create runtime state directory {}", parent.display()))?;
+    let requested_path = state_directory.join(relative_path);
+    let requested_parent = requested_path
+        .parent()
+        .context("runtime record path has no parent")?;
+    fs::create_dir_all(requested_parent).with_context(|| {
+        format!(
+            "create runtime state directory {}",
+            requested_parent.display()
+        )
+    })?;
+    // `canonicalize` gives Windows an extended-length (\\?\) parent. Keep the
+    // final file name separate because the append-only record does not exist
+    // yet. Without this, a valid runtime journal entry can fail at the final
+    // no-clobber rename once the state root plus the content-addressed file
+    // name crosses the legacy MAX_PATH boundary.
+    let parent = fs::canonicalize(requested_parent).with_context(|| {
+        format!(
+            "resolve runtime state directory {}",
+            requested_parent.display()
+        )
+    })?;
+    let canonical_state = fs::canonicalize(state_directory)
+        .context("resolve protected state root for runtime record")?;
+    ensure!(
+        parent.starts_with(&canonical_state),
+        "runtime record parent escaped the protected state root"
+    );
+    let file_name = requested_path
+        .file_name()
+        .context("runtime record path has no file name")?;
+    let path = parent.join(file_name);
     if path.exists() {
         let existing = fs::read(&path)
             .with_context(|| format!("read existing runtime record {}", path.display()))?;
@@ -5656,7 +5683,7 @@ fn persist_runtime_record(
         );
         return Ok(StoreOutcome::AlreadyPresent);
     }
-    let mut temporary = NamedTempFile::new_in(parent)
+    let mut temporary = NamedTempFile::new_in(&parent)
         .with_context(|| format!("create temporary runtime record in {}", parent.display()))?;
     temporary
         .write_all(bytes)
@@ -29854,6 +29881,53 @@ mod tests {
             PublicationConflictResolutionResponse::decode(&fs::read(&response_file)?)?.encode()?,
             fs::read(&response_file)?
         );
+        Ok(())
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn runtime_record_persistence_supports_paths_beyond_legacy_windows_max_path() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let state_dir = directory
+            .path()
+            .join(format!("long-runtime-state-{}", "a".repeat(80)));
+        fs::create_dir_all(&state_dir)?;
+        let relative_path = PathBuf::from(RUNTIME_STATE_DIRECTORY)
+            .join(RUNTIME_TICKET_PUBLICATIONS_DIRECTORY)
+            .join(format!(
+                "{}-{:020}-{}.ticket-publication",
+                "b".repeat(64),
+                1,
+                "c".repeat(64)
+            ));
+        let requested_path = state_dir.join(&relative_path);
+        assert!(requested_path.to_string_lossy().encode_utf16().count() > 260);
+        let bytes = b"windows-extended-length-runtime-record";
+
+        assert_eq!(
+            run_state_transaction(&state_dir, |transaction| {
+                persist_runtime_record(&state_dir, &relative_path, bytes, transaction)
+            })?,
+            StoreOutcome::Inserted
+        );
+        assert_eq!(
+            run_state_transaction(&state_dir, |transaction| {
+                persist_runtime_record(&state_dir, &relative_path, bytes, transaction)
+            })?,
+            StoreOutcome::AlreadyPresent
+        );
+
+        let resolved_parent = fs::canonicalize(
+            requested_path
+                .parent()
+                .context("long runtime record has no parent")?,
+        )?;
+        let resolved_path = resolved_parent.join(
+            requested_path
+                .file_name()
+                .context("long runtime record has no file name")?,
+        );
+        assert_eq!(fs::read(resolved_path)?, bytes);
         Ok(())
     }
 

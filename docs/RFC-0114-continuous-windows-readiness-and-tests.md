@@ -1,6 +1,6 @@
 # RFC-0114: Continuous Windows readiness and tests (M0.9.91)
 
-Status: implemented locally; hosted isolation remediation run pending.
+Status: hosted execution operational; M0.9.92 product-fix confirmation pending.
 
 ## 1. Purpose
 
@@ -26,6 +26,11 @@ The job uses a GitHub-hosted Windows Server 2022 runner and:
    uses Cargo's unoptimized `test` profile so the preceding all-target Clippy
    build can be reused rather than compiling a second profile.
 
+The test step still runs when readiness fails, provided the locked dependency
+fetch succeeded. The failed readiness step continues to fail the job. This
+separation is necessary when a legitimate product edit intentionally makes old
+candidate evidence stale but still needs hosted regression feedback.
+
 The workflow has read-only repository permission. Its only third-party action
 is `actions/checkout`, pinned to a full commit SHA. It does not use the more
 privileged `pull_request_target` event and retains no uploaded build artifact.
@@ -49,9 +54,12 @@ creating new Windows Firewall identities on the user's PC. Harnesses execute
 one at a time; compilation and Clippy use two jobs and incremental compilation
 is disabled on the ephemeral runner. The test step is bounded to 38 minutes.
 
-The first hosted baseline found two endpoint-lifecycle tests whose internal
-10/25-second deadlines were sensitive to running late in the same long-lived
-81-test CLI process. They remain mandatory, but a closed JSON manifest skips
-them only in that aggregate invocation and immediately runs each exact test in
-a fresh process. A failure in either isolated invocation still fails the job;
-this is process isolation, not retry-based success or reduced coverage.
+The first hosted baseline found two endpoint-lifecycle failures late in the
+same long-lived 81-test CLI process. A closed JSON manifest initially proved
+both exact selectors and ran them in fresh processes. Run `38513111049` then
+separated their causes: revocation/restart passed only in isolation, while the
+pairwise locator test failed alone because its append-only runtime journal path
+crossed the legacy Windows path limit. M0.9.92 fixes the storage boundary and
+returns that test to the aggregate harness. The remaining isolated invocation
+is mandatory and still fails the job on any failure; this is process isolation,
+not retry-based success or reduced coverage.

@@ -38,9 +38,11 @@ foreach ($required in @(
     'persist-credentials: false',
     'fetch-depth: 0',
     'cargo fetch --locked --target x86_64-pc-windows-msvc',
+    'id: fetch',
     'CARGO_NET_OFFLINE: "true"',
     '-File .\scripts\verify-kilogram-m1-readiness.ps1',
     '-File .\scripts\run-cargo-tests-stable.ps1',
+    "if: `${{ always() && steps.fetch.outcome == 'success' }}",
     'timeout-minutes: 38',
     '-Profile test',
     '-CargoJobs 2',
@@ -61,8 +63,7 @@ if (($isolatedProperties -join ',') -cne 'format_version,tests' -or
 }
 $isolatedNames = @($isolatedManifest.tests | ForEach-Object { [string]$_.name } | Sort-Object)
 $expectedIsolatedNames = @(
-    'tests::live_runtime_applies_revocation_republishes_ticket_and_retires_ratchet',
-    'tests::runtime_pairwise_store_discovers_ticket_and_pushes_own_device_announcements'
+    'tests::live_runtime_applies_revocation_republishes_ticket_and_retires_ratchet'
 ) | Sort-Object
 if (($isolatedNames -join "`n") -cne ($expectedIsolatedNames -join "`n")) {
     throw 'Windows CI isolated test manifest does not contain the exact bounded test set'
@@ -127,6 +128,8 @@ foreach ($required in @(
     'does not create a release build, archive, attestation or tag',
     'stable-path Rust test harnesses',
     'fresh process',
+    'test step still runs when readiness fails',
+    'failed readiness step continues to fail the job',
     'GitHub-hosted Windows runner is not physical-device field evidence'
 )) {
     if ($rfc.IndexOf($required, [StringComparison]::OrdinalIgnoreCase) -lt 0) {
@@ -142,7 +145,8 @@ Write-Output 'readiness_gate=required'
 Write-Output 'stable_rust_tests=required'
 Write-Output 'cargo_jobs=2'
 Write-Output 'test_profile=test'
-Write-Output 'isolated_tests=2'
+Write-Output 'isolated_tests=1'
+Write-Output 'tests_after_readiness_failure=required-if-fetch-succeeded'
 Write-Output 'test_step_timeout_minutes=38'
 Write-Output 'release_build=false'
 Write-Output 'archive_created=false'

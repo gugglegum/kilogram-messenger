@@ -4732,7 +4732,7 @@ Acceptance:
 - test EXE/network/release/archive/tag flags remained false;
 - M0.9.90 принят; M1 tag/publication остаётся отдельным explicit decision.
 
-### M0.9.91 — continuous Windows readiness and tests: реализовано локально
+### M0.9.91 — continuous Windows readiness and tests: externally diagnosed
 
 - added read-only `.github/workflows/windows-ci.yml` for every master push/PR
   plus manual dispatch;
@@ -4754,5 +4754,28 @@ Acceptance:
 - ordinary hosted tests use unoptimized Cargo `test` profile and a bounded
   38-minute step; local compile-only validation resolved both exact selectors.
 
-Acceptance gate: local static boundary/readiness pass, commit and push, then
-first green GitHub-hosted `Windows CI` run. Confirmation remains pending.
+Second hosted run `38513111049` passed 79 aggregate CLI tests and the isolated
+revocation/restart test. The isolated pairwise locator test exposed Windows
+`os error 3` while persisting a content-addressed runtime record; its following
+HTTP 404 was downstream. M0.9.91 therefore established the hosted gate but did
+not produce a green baseline.
+
+### M0.9.92 — Windows extended-length runtime journal: реализовано локально
+
+- `persist_runtime_record` creates and canonicalizes the existing parent before
+  joining the final non-existing file name, so Windows uses extended-length
+  filesystem paths for read/temp/no-clobber-persist operations;
+- full append-only names, collision checks and transaction receipts are kept;
+  there is no registry/global-policy dependency or hash truncation;
+- Windows regression proves insert, identical idempotent write and byte readback
+  for a requested path longer than 260 UTF-16 code units;
+- deterministic pairwise locator test returns to aggregate coverage; only the
+  confirmed process-history-sensitive revocation/restart test remains isolated;
+- hosted tests run after an evidence-continuity readiness failure when locked
+  fetch succeeded, while the job remains failed and no bypass is introduced;
+- runtime protected surface changed, so current M1 candidate correctly becomes
+  stale and fresh physical field evidence is mandatory before candidate refresh.
+
+Acceptance gate: local format/regression/static checks, committed push and
+hosted full Rust confirmation. Then prepare fresh field evidence; no M1 tag is
+allowed from the old M0.9.89 candidate.
