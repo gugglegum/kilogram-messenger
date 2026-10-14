@@ -4731,3 +4731,19 @@ Acceptance:
   `boundary_gates=32/32`, candidate/format/offline strict Clippy verified;
 - test EXE/network/release/archive/tag flags remained false;
 - M0.9.90 принят; M1 tag/publication остаётся отдельным explicit decision.
+
+### M0.9.91 — continuous Windows readiness and tests: реализовано локально
+
+- added read-only `.github/workflows/windows-ci.yml` for every master push/PR
+  plus manual dispatch;
+- full-history checkout preserves candidate ancestry/selected-tree proof;
+- locked fetch, then Cargo offline readiness and all stable-path Rust test
+  harnesses with two jobs/serial execution;
+- readiness closed inventory expands from 32 to 33 boundaries and includes the
+  CI contract itself;
+- action references are full-SHA pinned; `pull_request_target`, write
+  permissions, release/archive/upload/attestation/tag paths are forbidden;
+- hosted CI is not physical-device or independent-provider field evidence.
+
+Acceptance gate: local static boundary/readiness pass, commit and push, then
+first green GitHub-hosted `Windows CI` run.

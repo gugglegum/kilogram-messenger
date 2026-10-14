@@ -19,7 +19,7 @@ $rfc = Get-Content -LiteralPath $rfcPath -Raw
 foreach ($required in @(
     "'verify-kilogram-m1-readiness-boundary.ps1' = 'm1_readiness_boundary=verified'",
     "Get-ChildItem -LiteralPath `$scriptsDirectory -Filter 'verify-*-boundary.ps1'",
-    'M1 readiness boundary inventory must contain exactly 32 gates',
+    'M1 readiness boundary inventory must contain exactly 33 gates',
     'm1_candidate_status=verified',
     'cargo fmt --all -- --check',
     "-CargoCommand clippy",
@@ -79,7 +79,7 @@ if ($LASTEXITCODE -ne 0 -or
 }
 
 Write-Output 'm1_readiness_boundary=verified'
-Write-Output 'boundary_inventory=closed-32'
+Write-Output 'boundary_inventory=closed-33'
 Write-Output 'candidate_production_verifier=required'
 Write-Output 'format_and_offline_strict_clippy=required'
 Write-Output 'rust_test_executables_started=false'

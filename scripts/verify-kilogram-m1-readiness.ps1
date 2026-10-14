@@ -43,6 +43,7 @@ $expectedGates = [ordered]@{
     'verify-kilogram-volunteer-replication-boundary.ps1' = 'volunteer_replication_boundary=verified'
     'verify-kilogram-volunteer-retrieval-boundary.ps1' = 'volunteer_retrieval_boundary=verified'
     'verify-kilogram-volunteer-storage-boundary.ps1' = 'volunteer_storage_boundary=verified'
+    'verify-kilogram-windows-ci-boundary.ps1' = 'windows_ci_boundary=verified'
     'verify-publication-conflict-boundary.ps1' = 'publication_conflict_boundary=verified'
 }
 
@@ -93,8 +94,8 @@ function Assert-Rejected {
     throw "$Label was unexpectedly accepted"
 }
 
-if ($expectedGates.Count -ne 32) {
-    throw "M1 readiness boundary inventory must contain exactly 32 gates, got $($expectedGates.Count)"
+if ($expectedGates.Count -ne 33) {
+    throw "M1 readiness boundary inventory must contain exactly 33 gates, got $($expectedGates.Count)"
 }
 
 if ($SelfTest) {

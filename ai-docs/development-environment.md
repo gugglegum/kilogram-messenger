@@ -2939,3 +2939,14 @@ retirement остальных compatibility shadows ещё не реализов
 - Revision `56c93aba38648fa5dbe57b22bbf2640c26590c2f` прошла clean-tree
   production readiness: `boundary_gates=32/32`, candidate/format/offline strict
   Clippy verified, все stage mutation flags false.
+
+## M0.9.91 continuous Windows CI (2026-10-14)
+
+- Added `.github/workflows/windows-ci.yml` for master push, PR and manual runs.
+- Permissions are `contents: read`; checkout action is full-SHA pinned, does not
+  persist credentials and fetches complete history for candidate continuity.
+- One locked dependency fetch is followed by Cargo offline mode, the now
+  33-boundary readiness gate and `run-cargo-tests-stable.ps1 -Run -NoFailFast`
+  with two jobs.
+- Hosted CI creates no release build, uploaded artifact, attestation or Git tag.
+- First hosted run remains pending until the implementation commit is pushed.

@@ -245,12 +245,23 @@ The refreshed current M1 candidate evidence composition is specified in
 [`docs/RFC-0112-current-m1-candidate-evidence-refresh.md`](docs/RFC-0112-current-m1-candidate-evidence-refresh.md).
 The closed all-boundary M1 readiness gate is specified in
 [`docs/RFC-0113-complete-m1-readiness-gate.md`](docs/RFC-0113-complete-m1-readiness-gate.md).
+Continuous hosted Windows readiness and Rust tests are specified in
+[`docs/RFC-0114-continuous-windows-readiness-and-tests.md`](docs/RFC-0114-continuous-windows-readiness-and-tests.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.90 complete M1 readiness gate — accepted locally
+## Current milestone: M0.9.91 continuous Windows readiness and tests — implemented locally
+
+`.github/workflows/windows-ci.yml` runs on every master push/PR and manual
+dispatch with read-only permission. It fetches locked dependencies, switches
+Cargo offline, executes the closed 33-gate M1 readiness verifier, then compiles
+and runs all stable-path Rust test harnesses serially with two jobs. The job
+creates no release artifact, archive, attestation or Git tag. First hosted run
+is pending.
+
+## Previous milestone: M0.9.90 complete M1 readiness gate — accepted locally
 
 `scripts/verify-kilogram-m1-readiness.ps1` closes over all 32 boundary scripts,
 requires each exact success marker, reruns the production candidate continuity

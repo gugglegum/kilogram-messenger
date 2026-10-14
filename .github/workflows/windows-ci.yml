@@ -1,0 +1,62 @@
+name: Windows CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify M1 readiness and Rust tests
+    runs-on: windows-2022
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      CARGO_INCREMENTAL: "0"
+      CARGO_TERM_COLOR: always
+
+    steps:
+      - name: Check out complete continuity history
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Resolve pinned Rust toolchain
+        run: |
+          rustup show active-toolchain
+          rustc -vV
+          cargo -vV
+
+      - name: Fetch locked dependencies
+        run: cargo fetch --locked --target x86_64-pc-windows-msvc
+
+      - name: Verify complete M1 readiness gate
+        env:
+          CARGO_NET_OFFLINE: "true"
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass `
+            -File .\scripts\verify-kilogram-m1-readiness.ps1
+
+      - name: Run stable-path Rust test harnesses
+        env:
+          CARGO_NET_OFFLINE: "true"
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass `
+            -File .\scripts\run-cargo-tests-stable.ps1 `
+            -CargoJobs 2 `
+            -Run `
+            -NoFailFast

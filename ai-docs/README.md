@@ -439,7 +439,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
 10. M0.9.90 принят локально на revision `56c93aba...`: closed inventory всех 32
    boundary gates, exact markers, production candidate continuity, format и
    offline strict Clippy verified. Rust test EXE/release/archive/tag не запускались.
-11. Optional autostart/background mode оставить отдельной явной настройкой;
+11. M0.9.91 добавляет read-only GitHub-hosted Windows CI на каждый master
+   push/PR: readiness inventory расширен до 33 gates, затем выполняются все
+   stable-path Rust test harnesses с двумя jobs и Cargo offline после fetch.
+12. Optional autostart/background mode оставить отдельной явной настройкой;
    Windows Task Scheduler не является обязательной частью мессенджера.
 4. Уже реализованный M0.9.49 выделяет единый
    `kilogram-publication-conflict`: online/offline используют один signed codec,
@@ -862,6 +865,9 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
 - [`../docs/RFC-0113-complete-m1-readiness-gate.md`](../docs/RFC-0113-complete-m1-readiness-gate.md) —
   M0.9.90 closed inventory всех fail-closed boundaries плюс production
   candidate, format и offline strict Clippy перед решением о M1 tag.
+- [`../docs/RFC-0114-continuous-windows-readiness-and-tests.md`](../docs/RFC-0114-continuous-windows-readiness-and-tests.md) —
+  M0.9.91 read-only hosted Windows CI для readiness gate и полного запуска
+  stable-path Rust tests без release/publication.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
