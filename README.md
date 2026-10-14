@@ -250,14 +250,16 @@ The current two-network Windows procedure is in
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.90 complete M1 readiness gate — implemented locally
+## Current milestone: M0.9.90 complete M1 readiness gate — accepted locally
 
 `scripts/verify-kilogram-m1-readiness.ps1` closes over all 32 boundary scripts,
 requires each exact success marker, reruns the production candidate continuity
 proof, checks formatting and runs locked offline strict Clippy with two jobs.
 Its self-test rejects missing markers and inventory drift. It does not run Rust
 test executables, build a release artifact, create an archive or tag, or open a
-field network connection. Committed production verification is pending.
+field network connection. Revision `56c93aba...` passed production with
+`boundary_gates=32/32`, candidate continuity, format and offline strict Clippy
+all verified.
 
 ## Previous milestone: M0.9.89 current M1 candidate evidence refresh — accepted locally
 

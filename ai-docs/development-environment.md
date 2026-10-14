@@ -2934,3 +2934,8 @@ retirement остальных compatibility shadows ещё не реализов
   target уменьшен с 43.87 до 37.35 GiB, debug/release cache сохранён.
 - Новый readiness gate pin-ит closed inventory уже 32 boundaries (включая свой),
   exact markers, production candidate, format и offline strict Clippy.
+- Первый production run выявил PowerShell 5.1 stderr-redirection quirk после
+  successful Clippy; capture удалён, реальный Cargo exit code сохранён.
+- Revision `56c93aba38648fa5dbe57b22bbf2640c26590c2f` прошла clean-tree
+  production readiness: `boundary_gates=32/32`, candidate/format/offline strict
+  Clippy verified, все stage mutation flags false.

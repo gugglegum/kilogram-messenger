@@ -1,6 +1,6 @@
 # RFC-0113: Complete M1 readiness gate (M0.9.90)
 
-Status: implemented locally; committed production verification pending.
+Status: accepted locally after committed production verification.
 
 ## 1. Problem
 
@@ -51,3 +51,10 @@ resistance remains incomplete and access correlation remains visible.
 
 The result is not a public security release. Creating an M1 tag, signing or
 publishing binaries remains a separate explicit user decision.
+
+## 5. Acceptance evidence
+
+Revision `56c93aba38648fa5dbe57b22bbf2640c26590c2f` passed the production
+readiness command from a clean working tree. It reported `boundary_gates=32/32`,
+verified candidate continuity, formatting and offline strict Clippy, with every
+stage-boundary mutation flag false.

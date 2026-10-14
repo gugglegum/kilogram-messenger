@@ -4705,7 +4705,7 @@ Acceptance:
 - M0.9.89 принят как актуальная evidence composition Windows technical POC,
   без M1 tag и без повышения reduced field result до strict acceptance.
 
-### M0.9.90 — complete M1 readiness gate: реализовано локально
+### M0.9.90 — complete M1 readiness gate: принято локально
 
 - полный ручной запуск выявил один скрытый Windows PowerShell 5.1 parser bug в
   старом volunteer field-kit boundary; после explicit UTF-8/ASCII-safe fix все
@@ -4722,3 +4722,12 @@ Acceptance:
 
 Acceptance gate: commit readiness scripts/docs, затем production
 `verify-kilogram-m1-readiness.ps1` на clean HEAD.
+
+Acceptance:
+
+- implementation/fix revision:
+  `56c93aba38648fa5dbe57b22bbf2640c26590c2f`;
+- production output: `m1_readiness_status=verified`,
+  `boundary_gates=32/32`, candidate/format/offline strict Clippy verified;
+- test EXE/network/release/archive/tag flags remained false;
+- M0.9.90 принят; M1 tag/publication остаётся отдельным explicit decision.

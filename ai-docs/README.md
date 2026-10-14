@@ -436,9 +436,9 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
 9. M0.9.89 принят локально: candidate revision `d9142003...` прошёл production
    verifier на clean tree; обе protected surfaces неизменны, network retest и
    release build не требуются. Это ещё не M1 tag/public security release.
-10. M0.9.90 добавляет closed inventory всех 32 boundary gates, exact marker
-   validation, production candidate continuity, format и offline strict Clippy.
-   Он не запускает Rust test EXE и не создаёт release/archive/tag.
+10. M0.9.90 принят локально на revision `56c93aba...`: closed inventory всех 32
+   boundary gates, exact markers, production candidate continuity, format и
+   offline strict Clippy verified. Rust test EXE/release/archive/tag не запускались.
 11. Optional autostart/background mode оставить отдельной явной настройкой;
    Windows Task Scheduler не является обязательной частью мессенджера.
 4. Уже реализованный M0.9.49 выделяет единый
