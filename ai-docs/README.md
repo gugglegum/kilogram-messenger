@@ -436,7 +436,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
 9. M0.9.89 принят локально: candidate revision `d9142003...` прошёл production
    verifier на clean tree; обе protected surfaces неизменны, network retest и
    release build не требуются. Это ещё не M1 tag/public security release.
-10. Optional autostart/background mode оставить отдельной явной настройкой;
+10. M0.9.90 добавляет closed inventory всех 32 boundary gates, exact marker
+   validation, production candidate continuity, format и offline strict Clippy.
+   Он не запускает Rust test EXE и не создаёт release/archive/tag.
+11. Optional autostart/background mode оставить отдельной явной настройкой;
    Windows Task Scheduler не является обязательной частью мессенджера.
 4. Уже реализованный M0.9.49 выделяет единый
    `kilogram-publication-conflict`: online/offline используют один signed codec,
@@ -856,6 +859,9 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M0.9.89 refresh M1 candidate: current M0.9.87 reduced field run и принятая
   M0.9.88 attestation связаны exact selected-tree continuity, а strict provider
   independence остаётся явным residual risk.
+- [`../docs/RFC-0113-complete-m1-readiness-gate.md`](../docs/RFC-0113-complete-m1-readiness-gate.md) —
+  M0.9.90 closed inventory всех fail-closed boundaries плюс production
+  candidate, format и offline strict Clippy перед решением о M1 tag.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

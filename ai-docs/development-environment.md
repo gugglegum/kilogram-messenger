@@ -2919,3 +2919,18 @@ retirement остальных compatibility shadows ещё не реализов
 - Candidate revision `d9142003eeb33f4e9ff44f100d88edd556c058c1` прошла
   production verifier: обе selected-tree surfaces unchanged,
   `network_retest_required=false`, network/build/archive/tag activity false.
+
+## M0.9.90 complete M1 readiness gate (2026-10-14)
+
+- Full manual boundary audit: первый проход 30/31, единственный failure — parser
+  error Windows PowerShell 5.1 в старом volunteer field-kit boundary из-за
+  UTF-8 Cyrillic literals без BOM.
+- Boundary исправлен explicit UTF-8 read и ASCII-safe Base64 literals; повторный
+  проход 31/31 successful.
+- `cargo fmt --check` и workspace/all-target/all-feature strict Clippy прошли с
+  двумя jobs и BelowNormal priority. Все 24 Rust test harnesses compile-only
+  собраны в verification profile; test EXE не запускались.
+- Одноразовый verification cache 6.52 GiB удалён штатным `-PruneVerification`;
+  target уменьшен с 43.87 до 37.35 GiB, debug/release cache сохранён.
+- Новый readiness gate pin-ит closed inventory уже 32 boundaries (включая свой),
+  exact markers, production candidate, format и offline strict Clippy.

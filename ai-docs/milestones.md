@@ -4704,3 +4704,21 @@ Acceptance:
 - `network_retest_required=false`; network/build/archive/tag не выполнялись;
 - M0.9.89 принят как актуальная evidence composition Windows technical POC,
   без M1 tag и без повышения reduced field result до strict acceptance.
+
+### M0.9.90 — complete M1 readiness gate: реализовано локально
+
+- полный ручной запуск выявил один скрытый Windows PowerShell 5.1 parser bug в
+  старом volunteer field-kit boundary; после explicit UTF-8/ASCII-safe fix все
+  31/31 прежних gates прошли;
+- новый `verify-kilogram-m1-readiness.ps1` содержит closed inventory всех 32
+  boundaries, запускает каждый отдельно и требует exact success marker;
+- затем обязательны production M1 candidate verifier, `cargo fmt --check` и
+  locked/offline workspace strict Clippy с двумя jobs;
+- self-test отвергает missing success marker и changed boundary inventory;
+- Rust test executables, network, release build, archive, background process и
+  Git tag не запускаются/не создаются;
+- compile-only pass всех 24 Rust test harnesses прошёл, disposable 6.52-GiB
+  verification cache после этого удалён без затрагивания debug cache.
+
+Acceptance gate: commit readiness scripts/docs, затем production
+`verify-kilogram-m1-readiness.ps1` на clean HEAD.

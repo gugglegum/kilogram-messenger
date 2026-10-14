@@ -243,12 +243,23 @@ reproduction is specified in
 [`docs/RFC-0111-host-neutral-cargo-identity-verification.md`](docs/RFC-0111-host-neutral-cargo-identity-verification.md).
 The refreshed current M1 candidate evidence composition is specified in
 [`docs/RFC-0112-current-m1-candidate-evidence-refresh.md`](docs/RFC-0112-current-m1-candidate-evidence-refresh.md).
+The closed all-boundary M1 readiness gate is specified in
+[`docs/RFC-0113-complete-m1-readiness-gate.md`](docs/RFC-0113-complete-m1-readiness-gate.md).
 The current two-network Windows procedure is in
 [`docs/M0.3-CROSS-NETWORK-TEST-RU.md`](docs/M0.3-CROSS-NETWORK-TEST-RU.md), and
 the pause/reconnect procedure is in
 [`docs/M0.4-RESUMABLE-SYNC-TEST-RU.md`](docs/M0.4-RESUMABLE-SYNC-TEST-RU.md).
 
-## Current milestone: M0.9.89 current M1 candidate evidence refresh — accepted locally
+## Current milestone: M0.9.90 complete M1 readiness gate — implemented locally
+
+`scripts/verify-kilogram-m1-readiness.ps1` closes over all 32 boundary scripts,
+requires each exact success marker, reruns the production candidate continuity
+proof, checks formatting and runs locked offline strict Clippy with two jobs.
+Its self-test rejects missing markers and inventory drift. It does not run Rust
+test executables, build a release artifact, create an archive or tag, or open a
+field network connection. Committed production verification is pending.
+
+## Previous milestone: M0.9.89 current M1 candidate evidence refresh — accepted locally
 
 `M1-CANDIDATE.json` now pins clean M0.9.87 run `20261014-080905` and accepted
 M0.9.88 GitHub run `38507114425`/attestation `55683374`. The verifier
