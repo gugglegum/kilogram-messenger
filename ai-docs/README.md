@@ -1,6 +1,6 @@
 # Память проекта Kilogram
 
-Актуально на: 2026-09-20.
+Актуально на: 2026-10-15.
 
 Эта папка — краткая проектная память и дорожная карта. Подробная техническая
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
@@ -944,6 +944,18 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
 - [`../docs/RFC-0123-m1-technical-poc-acceptance.md`](../docs/RFC-0123-m1-technical-poc-acceptance.md) —
   фиксирует M1.0.0 как Windows technical PoC, сохраняет шесть residual risks и
   разрешает annotated tag только на exact green acceptance commit.
+- [`../docs/RFC-0124-post-m1-immutable-acceptance-and-continuous-ci.md`](../docs/RFC-0124-post-m1-immutable-acceptance-and-continuous-ci.md) —
+  отделяет immutable historical acceptance `M1.0.0` от current regression:
+  post-M1 CI pin-ит exact tag и отдельно проверяет актуальные boundaries,
+  format, strict Clippy и Rust tests без переписывания старой evidence.
+- [`../docs/RFC-0125-m11-threat-model-and-security-claims.md`](../docs/RFC-0125-m11-threat-model-and-security-claims.md) —
+  формальная M1.1 threat model: assets, adversaries, trust boundaries, threat
+  register, current claims и explicit non-guarantees без production/audit
+  переоценки M1.0.0.
+- [`../docs/RFC-0126-m11-protocol-compatibility-baseline.md`](../docs/RFC-0126-m11-protocol-compatibility-baseline.md) —
+  machine-readable experimental compatibility baseline: 20 families, 155
+  exact version/ALPN/domain bindings, explicit migration rules и новый
+  fail-closed readiness boundary; canonical schema/golden vectors ещё открыты.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

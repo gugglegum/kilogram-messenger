@@ -33,6 +33,7 @@ $expectedGates = [ordered]@{
     'verify-kilogram-mailbox-legacy-upgrade-boundary.ps1' = 'mailbox_legacy_upgrade_boundary=verified'
     'verify-kilogram-mailbox-provisioning-boundary.ps1' = 'mailbox_provisioning_boundary=verified'
     'verify-kilogram-offline-boundary.ps1' = 'offline_boundary=verified'
+    'verify-kilogram-protocol-compatibility-boundary.ps1' = 'protocol_compatibility_boundary=verified'
     'verify-kilogram-provider-admission-work-boundary.ps1' = 'provider_admission_work_boundary=verified'
     'verify-kilogram-provider-colocation-avoidance-boundary.ps1' = 'provider_colocation_avoidance_boundary=verified'
     'verify-kilogram-provider-observation-boundary.ps1' = 'provider_observation_boundary=verified'
@@ -96,8 +97,8 @@ function Assert-Rejected {
     throw "$Label was unexpectedly accepted"
 }
 
-if ($expectedGates.Count -ne 33) {
-    throw "M1 readiness boundary inventory must contain exactly 33 gates, got $($expectedGates.Count)"
+if ($expectedGates.Count -ne 34) {
+    throw "M1 readiness boundary inventory must contain exactly 34 gates, got $($expectedGates.Count)"
 }
 
 if ($SelfTest) {

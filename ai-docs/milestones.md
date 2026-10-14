@@ -5049,3 +5049,26 @@ correlation visible, Windows-only field evidence, independent security audit
   `verification_mode=accepted-tag`, exact `M1.0.0`, format и locked/offline
   strict Clippy verified; test executable/network/release/archive/tag не
   запускались.
+
+### M1.1.0 — threat model and protocol compatibility baseline
+
+- RFC-0125 формально разделяет assets, adversaries, trust boundaries, текущие
+  claims и explicit non-guarantees для endpoint, Root, relay, volunteer
+  mailbox, local IPC, availability и supply chain;
+- компрометация device честно считается полной компрометацией доступных этому
+  устройству plaintext/keys/capabilities до наблюдённого revoke; одинаковые
+  recovery factors дают злоумышленнику те же полномочия, что владельцу;
+- `PROTOCOL-COMPATIBILITY.json` создаёт machine-readable closed inventory из
+  20 experimental families и 155 exact source bindings;
+- ALPN/version/signature/ID/KDF/HPKE/derivation literals больше нельзя менять
+  незаметно: verifier требует exact source match, explicit migration policy и
+  stable closed set;
+- negative self-test отклоняет changed value, removed binding, path escape,
+  unknown policy property и undeclared wire-change claim;
+- readiness inventory расширен с 33 до 34 gates, исторический `M1.0.0` tag и
+  `M1-CANDIDATE.json` не переписываются;
+- полный accepted-tag readiness прошёл `34/34`: exact `M1.0.0`, format и
+  locked/offline strict Clippy verified при `CargoJobs 2`/BelowNormal;
+- wire/runtime поведение не изменено; Postcard остаётся provisional, поэтому
+  следующий protocol step — normative canonical schema и golden
+  byte/signature/ID vectors, а не объявление cross-language stability.

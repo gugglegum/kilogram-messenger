@@ -1,0 +1,345 @@
+{
+  "schema_version": 1,
+  "baseline": "M1.1.0",
+  "stability": "experimental",
+  "scope": "declared-cross-process-and-interoperability-surfaces",
+  "changes_wire": false,
+  "default_change_policy": "explicit-version-or-identifier-migration",
+  "surfaces": [
+    {
+      "id": "account-authority",
+      "class": "portable-artifact",
+      "encoding": "postcard",
+      "compatibility": "exact-version",
+      "migration": "new-version-explicit-migration",
+      "bindings": [
+        { "path": "crates/kilogram-identity/src/account.rs", "symbol": "ACCOUNT_DEVICE_LIST_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:account-device-list-signature:v1\\0" },
+        { "path": "crates/kilogram-identity/src/account.rs", "symbol": "ACCOUNT_DEVICE_LIST_VERSION", "rust_type": "u8", "value": 1 },
+        { "path": "crates/kilogram-identity/src/account.rs", "symbol": "AUTHORITY_SNAPSHOT_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:account-authority-snapshot-signature:v1\\0" },
+        { "path": "crates/kilogram-identity/src/account.rs", "symbol": "AUTHORITY_VERSION", "rust_type": "u8", "value": 1 },
+        { "path": "crates/kilogram-identity/src/account.rs", "symbol": "CONVERSATION_MEMBERSHIP_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:conversation-membership-signature:v1\\0" },
+        { "path": "crates/kilogram-identity/src/account.rs", "symbol": "DEVICE_CERTIFICATE_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:device-certificate-signature:v2\\0" },
+        { "path": "crates/kilogram-identity/src/account.rs", "symbol": "DEVICE_CERTIFICATE_VERSION", "rust_type": "u8", "value": 2 },
+        { "path": "crates/kilogram-identity/src/account.rs", "symbol": "DEVICE_LINK_AUTHORIZATION_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:device-link-authorization-signature:v1\\0" },
+        { "path": "crates/kilogram-identity/src/account.rs", "symbol": "DEVICE_REVOCATION_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:device-revocation-signature:v1\\0" }
+      ]
+    },
+    {
+      "id": "account-recovery",
+      "class": "portable-artifact",
+      "encoding": "postcard",
+      "compatibility": "exact-version",
+      "migration": "new-version-explicit-migration",
+      "bindings": [
+        { "path": "crates/kilogram-identity/src/account.rs", "symbol": "ACCOUNT_ROOT_RECOVERY_PACKAGE_ID_DOMAIN", "rust_type": "str", "value": "Kilogram Account Root recovery package ID v1" },
+        { "path": "crates/kilogram-identity/src/account.rs", "symbol": "ACCOUNT_ROOT_RECOVERY_PACKAGE_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:account-root-recovery-package-signature:v1\\0" },
+        { "path": "crates/kilogram-identity/src/account.rs", "symbol": "ACCOUNT_ROOT_RECOVERY_VERSION", "rust_type": "u8", "value": 1 },
+        { "path": "crates/kilogram-identity/src/account.rs", "symbol": "ACCOUNT_ROOT_RECOVERY_WITNESS_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:account-root-recovery-witness-signature:v1\\0" },
+        { "path": "crates/kilogram-identity/src/recovery_policy.rs", "symbol": "APPROVAL_ID_DOMAIN", "rust_type": "str", "value": "Kilogram Account recovery policy transition approval ID v1" },
+        { "path": "crates/kilogram-identity/src/recovery_policy.rs", "symbol": "APPROVAL_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:account-recovery-policy-transition-approval:v1\\0" },
+        { "path": "crates/kilogram-identity/src/recovery_policy.rs", "symbol": "CERTIFICATE_ID_DOMAIN", "rust_type": "str", "value": "Kilogram Account recovery policy transition certificate ID v1" },
+        { "path": "crates/kilogram-identity/src/recovery_policy.rs", "symbol": "REQUEST_ID_DOMAIN", "rust_type": "str", "value": "Kilogram Account recovery policy transition request ID v1" },
+        { "path": "crates/kilogram-identity/src/recovery_policy.rs", "symbol": "VERSION", "rust_type": "u8", "value": 1 },
+        { "path": "crates/kilogram-identity/src/recovery_quorum.rs", "symbol": "APPROVAL_ID_DOMAIN", "rust_type": "str", "value": "Kilogram Account Root recovery approval ID v1" },
+        { "path": "crates/kilogram-identity/src/recovery_quorum.rs", "symbol": "APPROVAL_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:account-root-recovery-approval:v1\\0" },
+        { "path": "crates/kilogram-identity/src/recovery_quorum.rs", "symbol": "REQUEST_ID_DOMAIN", "rust_type": "str", "value": "Kilogram Account Root recovery approval request ID v1" },
+        { "path": "crates/kilogram-identity/src/recovery_quorum.rs", "symbol": "VERSION", "rust_type": "u8", "value": 1 }
+      ]
+    },
+    {
+      "id": "authorized-event",
+      "class": "network-wire",
+      "encoding": "postcard",
+      "compatibility": "exact-version",
+      "migration": "new-version-dual-reader",
+      "bindings": [
+        { "path": "crates/kilogram-protocol/src/lib.rs", "symbol": "EVENT_ID_DOMAIN", "rust_type": "bytes", "value": "kilogram:event-id:v5\\0" },
+        { "path": "crates/kilogram-protocol/src/lib.rs", "symbol": "EVENT_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:event-signature:v5\\0" },
+        { "path": "crates/kilogram-protocol/src/lib.rs", "symbol": "EVENT_VERSION", "rust_type": "u8", "value": 5 }
+      ]
+    },
+    {
+      "id": "blind-mailbox-capability",
+      "class": "portable-artifact",
+      "encoding": "postcard",
+      "compatibility": "exact-version",
+      "migration": "new-version-explicit-migration",
+      "bindings": [
+        { "path": "crates/kilogram-mailbox/src/lib.rs", "symbol": "DELETE_RECEIPT_DOMAIN", "rust_type": "bytes", "value": "kilogram:blind-mailbox-delete-receipt:v1\\0" },
+        { "path": "crates/kilogram-mailbox/src/lib.rs", "symbol": "DELETE_RECEIPT_ID_DOMAIN", "rust_type": "bytes", "value": "kilogram:blind-mailbox-delete-id:v1\\0" },
+        { "path": "crates/kilogram-mailbox/src/lib.rs", "symbol": "ENVELOPE_HPKE_INFO", "rust_type": "bytes", "value": "kilogram:blind-mailbox-envelope:v1\\0" },
+        { "path": "crates/kilogram-mailbox/src/lib.rs", "symbol": "MAILBOX_ID_DOMAIN", "rust_type": "bytes", "value": "kilogram:blind-mailbox-id:v1\\0" },
+        { "path": "crates/kilogram-mailbox/src/lib.rs", "symbol": "READ_AUTHORIZATION_DOMAIN", "rust_type": "bytes", "value": "kilogram:blind-mailbox-read:v1\\0" },
+        { "path": "crates/kilogram-mailbox/src/lib.rs", "symbol": "RECEIPT_ID_DOMAIN", "rust_type": "bytes", "value": "kilogram:blind-mailbox-receipt-id:v1\\0" },
+        { "path": "crates/kilogram-mailbox/src/lib.rs", "symbol": "STORAGE_OFFER_ADMISSION_WORK_DOMAIN", "rust_type": "bytes", "value": "kilogram:blind-mailbox-storage-offer-admission-work:v1\\0" },
+        { "path": "crates/kilogram-mailbox/src/lib.rs", "symbol": "STORAGE_OFFER_DOMAIN", "rust_type": "bytes", "value": "kilogram:blind-mailbox-storage-offer:v1\\0" },
+        { "path": "crates/kilogram-mailbox/src/lib.rs", "symbol": "STORED_RECEIPT_DOMAIN", "rust_type": "bytes", "value": "kilogram:blind-mailbox-stored-receipt:v1\\0" },
+        { "path": "crates/kilogram-mailbox/src/lib.rs", "symbol": "VERSION", "rust_type": "u8", "value": 1 },
+        { "path": "crates/kilogram-mailbox/src/lib.rs", "symbol": "WRITE_AUTHORIZATION_DOMAIN", "rust_type": "bytes", "value": "kilogram:blind-mailbox-write:v1\\0" }
+      ]
+    },
+    {
+      "id": "blind-mailbox-provider-gossip",
+      "class": "network-wire",
+      "encoding": "postcard",
+      "compatibility": "exact-version",
+      "migration": "new-version-dual-reader",
+      "bindings": [
+        { "path": "crates/kilogram-mailbox-client/src/provider.rs", "symbol": "GOSSIP_FRAME_ID_DOMAIN", "rust_type": "bytes", "value": "kilogram:mailbox-provider-gossip-frame-id:v1\\0" },
+        { "path": "crates/kilogram-mailbox-client/src/provider.rs", "symbol": "GOSSIP_FRAME_VERSION", "rust_type": "u8", "value": 1 },
+        { "path": "crates/kilogram-mailbox-client/src/provider.rs", "symbol": "GOSSIP_SELECTION_DOMAIN", "rust_type": "bytes", "value": "kilogram:mailbox-provider-gossip-selection:v1\\0" },
+        { "path": "crates/kilogram-mailbox-client/src/provider.rs", "symbol": "OFFER_ID_DOMAIN", "rust_type": "bytes", "value": "kilogram:mailbox-provider-offer-id:v1\\0" },
+        { "path": "crates/kilogram-mailbox-client/src/provider.rs", "symbol": "SELECTION_DOMAIN", "rust_type": "bytes", "value": "kilogram:mailbox-provider-selection:v1\\0" }
+      ]
+    },
+    {
+      "id": "blind-mailbox-transport",
+      "class": "network-wire",
+      "encoding": "postcard",
+      "compatibility": "exact-version",
+      "migration": "new-version-dual-reader",
+      "bindings": [
+        { "path": "crates/kilogram-mailbox/src/wire.rs", "symbol": "PEER_REQUEST_DIGEST_DOMAIN", "rust_type": "bytes", "value": "kilogram:blind-mailbox-peer-request:v1\\0" },
+        { "path": "crates/kilogram-mailbox/src/wire.rs", "symbol": "WIRE_VERSION", "rust_type": "u8", "value": 1 },
+        { "path": "crates/kilogram-transport-iroh/src/lib.rs", "symbol": "MAILBOX_ALPN", "rust_type": "bytes", "value": "kilogram/m0/blind-mailbox/1" }
+      ]
+    },
+    {
+      "id": "connection-ticket",
+      "class": "portable-artifact",
+      "encoding": "json-base64url",
+      "compatibility": "exact-version",
+      "migration": "new-version-explicit-migration",
+      "bindings": [
+        { "path": "apps/kilogram-cli/src/main.rs", "symbol": "TICKET_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:connection-ticket-signature:v11\\0" },
+        { "path": "apps/kilogram-cli/src/main.rs", "symbol": "TICKET_VERSION", "rust_type": "u8", "value": 11 },
+        { "path": "apps/kilogram-offline/src/lib.rs", "symbol": "TICKET_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:connection-ticket-signature:v11\\0" },
+        { "path": "apps/kilogram-offline/src/lib.rs", "symbol": "TICKET_VERSION", "rust_type": "u8", "value": 11 }
+      ]
+    },
+    {
+      "id": "desktop-bootstrap",
+      "class": "local-control",
+      "encoding": "json",
+      "compatibility": "exact-version",
+      "migration": "new-version-explicit-migration",
+      "bindings": [
+        { "path": "crates/kilogram-bootstrap-contract/src/lib.rs", "symbol": "DESKTOP_BOOTSTRAP_VERSION", "rust_type": "u8", "value": 1 }
+      ]
+    },
+    {
+      "id": "device-session-authorization",
+      "class": "network-wire",
+      "encoding": "postcard",
+      "compatibility": "exact-version",
+      "migration": "new-version-dual-reader",
+      "bindings": [
+        { "path": "crates/kilogram-protocol/src/wire.rs", "symbol": "DEVICE_AUTHORIZATION_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:device-session-authorization-signature:v6\\0" },
+        { "path": "crates/kilogram-protocol/src/wire.rs", "symbol": "DEVICE_AUTHORIZATION_VERSION", "rust_type": "u8", "value": 6 }
+      ]
+    },
+    {
+      "id": "endpoint-announcement",
+      "class": "network-wire",
+      "encoding": "postcard",
+      "compatibility": "exact-version",
+      "migration": "new-version-dual-reader",
+      "bindings": [
+        { "path": "apps/kilogram-cli/src/runtime_endpoint_announcement.rs", "symbol": "ACKNOWLEDGEMENT_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:endpoint-announcement-acknowledgement:v2\\0" },
+        { "path": "apps/kilogram-cli/src/runtime_endpoint_announcement.rs", "symbol": "ACKNOWLEDGEMENT_VERSION", "rust_type": "u8", "value": 2 },
+        { "path": "apps/kilogram-cli/src/runtime_endpoint_announcement.rs", "symbol": "BUNDLE_ID_DOMAIN", "rust_type": "bytes", "value": "kilogram:endpoint-announcement-bundle-id:v4\\0" },
+        { "path": "apps/kilogram-cli/src/runtime_endpoint_announcement.rs", "symbol": "BUNDLE_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:endpoint-announcement-bundle:v4\\0" },
+        { "path": "apps/kilogram-cli/src/runtime_endpoint_announcement.rs", "symbol": "BUNDLE_VERSION", "rust_type": "u8", "value": 4 },
+        { "path": "apps/kilogram-cli/src/runtime_endpoint_announcement.rs", "symbol": "ENVELOPE_HPKE_INFO", "rust_type": "bytes", "value": "kilogram:endpoint-announcement-envelope:v1" },
+        { "path": "apps/kilogram-cli/src/runtime_endpoint_announcement.rs", "symbol": "ENVELOPE_VERSION", "rust_type": "u8", "value": 1 },
+        { "path": "apps/kilogram-cli/src/runtime_endpoint_announcement.rs", "symbol": "EVIDENCE_ID_DOMAIN", "rust_type": "bytes", "value": "kilogram:accepted-endpoint-observation-id:v1\\0" },
+        { "path": "apps/kilogram-cli/src/runtime_endpoint_announcement.rs", "symbol": "EVIDENCE_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:accepted-endpoint-observation:v1\\0" },
+        { "path": "apps/kilogram-cli/src/runtime_endpoint_announcement.rs", "symbol": "EVIDENCE_VERSION", "rust_type": "u8", "value": 1 }
+      ]
+    },
+    {
+      "id": "history-recovery",
+      "class": "portable-artifact",
+      "encoding": "postcard-base64url-uri",
+      "compatibility": "exact-version",
+      "migration": "new-version-explicit-migration",
+      "bindings": [
+        { "path": "apps/kilogram-cli/src/recovery_link.rs", "symbol": "HISTORY_RECOVERY_LINK_ID_DOMAIN", "rust_type": "bytes", "value": "kilogram:history-recovery-link-id:v1\\0" },
+        { "path": "apps/kilogram-cli/src/recovery_link.rs", "symbol": "HISTORY_RECOVERY_LINK_PREFIX", "rust_type": "str", "value": "kilogram://history-recovery/v1/" },
+        { "path": "apps/kilogram-cli/src/recovery_link.rs", "symbol": "HISTORY_RECOVERY_LINK_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:history-recovery-link-signature:v1\\0" },
+        { "path": "apps/kilogram-cli/src/recovery_link.rs", "symbol": "HISTORY_RECOVERY_LINK_VERSION", "rust_type": "u8", "value": 1 },
+        { "path": "apps/kilogram-cli/src/recovery_plan.rs", "symbol": "HISTORY_RECOVERY_PLAN_ID_DOMAIN", "rust_type": "bytes", "value": "kilogram:history-recovery-plan-id:v1\\0" },
+        { "path": "apps/kilogram-cli/src/recovery_plan.rs", "symbol": "HISTORY_RECOVERY_PLAN_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:history-recovery-plan-signature:v1\\0" },
+        { "path": "apps/kilogram-cli/src/recovery_plan.rs", "symbol": "HISTORY_RECOVERY_PLAN_VERSION", "rust_type": "u8", "value": 1 },
+        { "path": "crates/kilogram-protocol/src/recovery.rs", "symbol": "HISTORY_RECOVERY_CHECKPOINT_ID_DOMAIN", "rust_type": "bytes", "value": "kilogram:history-recovery-checkpoint-id:v1\\0" },
+        { "path": "crates/kilogram-protocol/src/recovery.rs", "symbol": "HISTORY_RECOVERY_CHECKPOINT_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:history-recovery-checkpoint-signature:v1\\0" },
+        { "path": "crates/kilogram-protocol/src/recovery.rs", "symbol": "HISTORY_RECOVERY_CHECKPOINT_VERSION", "rust_type": "u8", "value": 1 },
+        { "path": "crates/kilogram-protocol/src/recovery.rs", "symbol": "HISTORY_RECOVERY_ID_DOMAIN", "rust_type": "bytes", "value": "kilogram:history-recovery-id:v1\\0" }
+      ]
+    },
+    {
+      "id": "history-rewrap",
+      "class": "network-wire",
+      "encoding": "postcard",
+      "compatibility": "exact-version",
+      "migration": "new-version-dual-reader",
+      "bindings": [
+        { "path": "crates/kilogram-protocol/src/rewrap.rs", "symbol": "HISTORY_REWRAP_AAD_DOMAIN", "rust_type": "bytes", "value": "kilogram:history-rewrap-aad:v1\\0" },
+        { "path": "crates/kilogram-protocol/src/rewrap.rs", "symbol": "HISTORY_REWRAP_HPKE_INFO", "rust_type": "bytes", "value": "kilogram:history-rewrap-hpke:v1\\0" },
+        { "path": "crates/kilogram-protocol/src/rewrap.rs", "symbol": "HISTORY_REWRAP_ID_DOMAIN", "rust_type": "bytes", "value": "kilogram:history-rewrap-id:v1\\0" },
+        { "path": "crates/kilogram-protocol/src/rewrap.rs", "symbol": "HISTORY_REWRAP_INVENTORY_DOMAIN", "rust_type": "bytes", "value": "kilogram:history-rewrap-inventory:v1\\0" },
+        { "path": "crates/kilogram-protocol/src/rewrap.rs", "symbol": "HISTORY_REWRAP_REQUEST_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:history-rewrap-request-signature:v1\\0" },
+        { "path": "crates/kilogram-protocol/src/rewrap.rs", "symbol": "HISTORY_REWRAP_REQUEST_VERSION", "rust_type": "u8", "value": 1 },
+        { "path": "crates/kilogram-protocol/src/rewrap.rs", "symbol": "HISTORY_REWRAP_SAS_DOMAIN", "rust_type": "bytes", "value": "kilogram:history-rewrap-sas:v1\\0" },
+        { "path": "crates/kilogram-protocol/src/rewrap.rs", "symbol": "HISTORY_REWRAP_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:history-rewrap-signature:v1\\0" },
+        { "path": "crates/kilogram-protocol/src/rewrap.rs", "symbol": "HISTORY_REWRAP_TRANSFER_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:history-rewrap-transfer-signature:v1\\0" },
+        { "path": "crates/kilogram-protocol/src/rewrap.rs", "symbol": "HISTORY_REWRAP_TRANSFER_VERSION", "rust_type": "u8", "value": 1 },
+        { "path": "crates/kilogram-protocol/src/rewrap.rs", "symbol": "HISTORY_REWRAP_VERSION", "rust_type": "u8", "value": 1 },
+        { "path": "crates/kilogram-protocol/src/wire.rs", "symbol": "HISTORY_REWRAP_RESPONSE_VERSION", "rust_type": "u8", "value": 1 }
+      ]
+    },
+    {
+      "id": "mailbox-provisioning",
+      "class": "network-wire",
+      "encoding": "postcard",
+      "compatibility": "explicit-reader-set",
+      "migration": "new-version-explicit-migration",
+      "bindings": [
+        { "path": "crates/kilogram-mailbox-provisioning/src/lib.rs", "symbol": "BINDING_ID_DOMAIN", "rust_type": "bytes", "value": "kilogram:mailbox-binding-id:v1\\0" },
+        { "path": "crates/kilogram-mailbox-provisioning/src/lib.rs", "symbol": "CAPABILITY_ACKNOWLEDGEMENT_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:runtime-mailbox-capability-acknowledgement:v1\\0" },
+        { "path": "crates/kilogram-mailbox-provisioning/src/lib.rs", "symbol": "CAPABILITY_ACKNOWLEDGEMENT_VERSION", "rust_type": "u8", "value": 1 },
+        { "path": "crates/kilogram-mailbox-provisioning/src/lib.rs", "symbol": "CAPABILITY_UPDATE_ID_DOMAIN", "rust_type": "bytes", "value": "kilogram:mailbox-capability-update-id:v1\\0" },
+        { "path": "crates/kilogram-mailbox-provisioning/src/lib.rs", "symbol": "CAPABILITY_UPDATE_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:mailbox-capability-update:v1\\0" },
+        { "path": "crates/kilogram-mailbox-provisioning/src/lib.rs", "symbol": "CAPABILITY_UPDATE_VERSION", "rust_type": "u8", "value": 1 },
+        { "path": "crates/kilogram-mailbox-provisioning/src/lib.rs", "symbol": "EXACT_BINDING_ID_DOMAIN", "rust_type": "bytes", "value": "kilogram:mailbox-binding-id:v2\\0" },
+        { "path": "crates/kilogram-mailbox-provisioning/src/lib.rs", "symbol": "EXACT_CAPABILITY_UPDATE_ID_DOMAIN", "rust_type": "bytes", "value": "kilogram:mailbox-capability-update-id:v2\\0" },
+        { "path": "crates/kilogram-mailbox-provisioning/src/lib.rs", "symbol": "EXACT_CAPABILITY_UPDATE_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:mailbox-capability-update:v2\\0" },
+        { "path": "crates/kilogram-mailbox-provisioning/src/lib.rs", "symbol": "EXACT_LOCAL_HPKE_INFO", "rust_type": "bytes", "value": "kilogram:mailbox-local-binding-hpke:v2\\0" },
+        { "path": "crates/kilogram-mailbox-provisioning/src/lib.rs", "symbol": "EXACT_LOCAL_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:mailbox-local-binding:v2\\0" },
+        { "path": "crates/kilogram-mailbox-provisioning/src/lib.rs", "symbol": "EXACT_OFFER_HPKE_INFO", "rust_type": "bytes", "value": "kilogram:mailbox-device-offer-hpke:v2\\0" },
+        { "path": "crates/kilogram-mailbox-provisioning/src/lib.rs", "symbol": "EXACT_OFFER_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:mailbox-device-offer:v2\\0" },
+        { "path": "crates/kilogram-mailbox-provisioning/src/lib.rs", "symbol": "EXACT_VOLUNTEER_VERSION", "rust_type": "u8", "value": 2 },
+        { "path": "crates/kilogram-mailbox-provisioning/src/lib.rs", "symbol": "LOCAL_HPKE_INFO", "rust_type": "bytes", "value": "kilogram:mailbox-local-binding-hpke:v1\\0" },
+        { "path": "crates/kilogram-mailbox-provisioning/src/lib.rs", "symbol": "LOCAL_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:mailbox-local-binding:v1\\0" },
+        { "path": "crates/kilogram-mailbox-provisioning/src/lib.rs", "symbol": "OFFER_HPKE_INFO", "rust_type": "bytes", "value": "kilogram:mailbox-device-offer-hpke:v1\\0" },
+        { "path": "crates/kilogram-mailbox-provisioning/src/lib.rs", "symbol": "OFFER_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:mailbox-device-offer:v1\\0" },
+        { "path": "crates/kilogram-mailbox-provisioning/src/lib.rs", "symbol": "REPLICA_SET_COMMITMENT_ID_DOMAIN", "rust_type": "bytes", "value": "kilogram:mailbox-replica-set-commitment-id:v1\\0" },
+        { "path": "crates/kilogram-mailbox-provisioning/src/lib.rs", "symbol": "VERSION", "rust_type": "u8", "value": 1 }
+      ]
+    },
+    {
+      "id": "publication-conflict",
+      "class": "portable-artifact",
+      "encoding": "postcard-base64url-uri",
+      "compatibility": "explicit-reader-set",
+      "migration": "new-version-explicit-migration",
+      "bindings": [
+        { "path": "crates/kilogram-identity/src/account.rs", "symbol": "PUBLICATION_CONFLICT_RESOLUTION_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:publication-conflict-resolution-root-signature:v1\\0" },
+        { "path": "crates/kilogram-publication-conflict/src/lib.rs", "symbol": "CLAIM_VERSION", "rust_type": "u8", "value": 1 },
+        { "path": "crates/kilogram-publication-conflict/src/lib.rs", "symbol": "CONFIRMATION_CODE_DOMAIN", "rust_type": "bytes", "value": "kilogram:publication-conflict-confirmation:v1\\0" },
+        { "path": "crates/kilogram-publication-conflict/src/lib.rs", "symbol": "CONFLICT_EVIDENCE_ID_DOMAIN", "rust_type": "bytes", "value": "kilogram:ticket-publication-conflict-evidence-id:v1\\0" },
+        { "path": "crates/kilogram-publication-conflict/src/lib.rs", "symbol": "CONFLICT_PROOF_ID_DOMAIN", "rust_type": "bytes", "value": "kilogram:ticket-publication-conflict-proof-id:v1\\0" },
+        { "path": "crates/kilogram-publication-conflict/src/lib.rs", "symbol": "CONFLICT_PROOF_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:ticket-publication-conflict-proof:v1\\0" },
+        { "path": "crates/kilogram-publication-conflict/src/lib.rs", "symbol": "CONFLICT_PROOF_VERSION", "rust_type": "u8", "value": 1 },
+        { "path": "crates/kilogram-publication-conflict/src/lib.rs", "symbol": "OBSERVATION_ID_DOMAIN", "rust_type": "bytes", "value": "kilogram:ticket-publication-observation-id:v1\\0" },
+        { "path": "crates/kilogram-publication-conflict/src/lib.rs", "symbol": "OBSERVATION_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:ticket-publication-observation:v1\\0" },
+        { "path": "crates/kilogram-publication-conflict/src/lib.rs", "symbol": "OBSERVATION_VERSION", "rust_type": "u8", "value": 1 },
+        { "path": "crates/kilogram-publication-conflict/src/lib.rs", "symbol": "PUBLICATION_CONFLICT_CLAIM_URI_PREFIX", "rust_type": "str", "value": "kilogram://publication-conflict/v1/" },
+        { "path": "crates/kilogram-publication-conflict/src/lib.rs", "symbol": "PUBLICATION_ID_DOMAIN", "rust_type": "bytes", "value": "kilogram:ticket-publication-id:v1\\0" },
+        { "path": "crates/kilogram-publication-conflict/src/lib.rs", "symbol": "PUBLICATION_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:ticket-publication:v1\\0" },
+        { "path": "crates/kilogram-publication-conflict/src/lib.rs", "symbol": "PUBLICATION_VERSION", "rust_type": "u8", "value": 1 },
+        { "path": "crates/kilogram-publication-conflict/src/lib.rs", "symbol": "RESOLUTION_ID_DOMAIN", "rust_type": "bytes", "value": "kilogram:publication-conflict-resolution-id:v2\\0" },
+        { "path": "crates/kilogram-publication-conflict/src/lib.rs", "symbol": "RESOLUTION_REQUEST_ID_DOMAIN", "rust_type": "bytes", "value": "kilogram:publication-conflict-resolution-request-id:v1\\0" },
+        { "path": "crates/kilogram-publication-conflict/src/lib.rs", "symbol": "RESOLUTION_REQUEST_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:publication-conflict-resolution-request:v1\\0" },
+        { "path": "crates/kilogram-publication-conflict/src/lib.rs", "symbol": "RESOLUTION_REQUEST_VERSION", "rust_type": "u8", "value": 1 },
+        { "path": "crates/kilogram-publication-conflict/src/lib.rs", "symbol": "RESOLUTION_RESPONSE_VERSION", "rust_type": "u8", "value": 1 },
+        { "path": "crates/kilogram-publication-conflict/src/lib.rs", "symbol": "RESOLUTION_VERSION", "rust_type": "u8", "value": 2 },
+        { "path": "crates/kilogram-publication-conflict/src/lib.rs", "symbol": "TICKET_DIGEST_DOMAIN", "rust_type": "bytes", "value": "kilogram:ticket-publication-ticket-digest:v1\\0" }
+      ]
+    },
+    {
+      "id": "ratchet-public-artifacts",
+      "class": "portable-artifact",
+      "encoding": "postcard",
+      "compatibility": "exact-version",
+      "migration": "new-version-explicit-migration",
+      "bindings": [
+        { "path": "crates/kilogram-ratchet/src/lib.rs", "symbol": "CIPHERTEXT_VERSION", "rust_type": "u8", "value": 1 },
+        { "path": "crates/kilogram-ratchet/src/lib.rs", "symbol": "PREKEY_BUNDLE_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:prekey-bundle-signature:v1\\0" },
+        { "path": "crates/kilogram-ratchet/src/lib.rs", "symbol": "PREKEY_BUNDLE_VERSION", "rust_type": "u8", "value": 1 },
+        { "path": "crates/kilogram-ratchet/src/lib.rs", "symbol": "PREKEY_DIRECTORY_VERSION", "rust_type": "u8", "value": 2 },
+        { "path": "crates/kilogram-ratchet/src/lib.rs", "symbol": "PREKEY_POOL_ID_DOMAIN", "rust_type": "bytes", "value": "kilogram:prekey-pool-id:v1\\0" },
+        { "path": "crates/kilogram-ratchet/src/lib.rs", "symbol": "PREKEY_POOL_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:prekey-pool-signature:v1\\0" },
+        { "path": "crates/kilogram-ratchet/src/lib.rs", "symbol": "PREKEY_POOL_VERSION", "rust_type": "u8", "value": 1 },
+        { "path": "crates/kilogram-ratchet/src/lib.rs", "symbol": "PREKEY_SELECTION_DOMAIN", "rust_type": "bytes", "value": "kilogram:prekey-selection:v1\\0" },
+        { "path": "crates/kilogram-ratchet/src/lib.rs", "symbol": "RATCHET_IDENTITY_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:ratchet-identity-signature:v1\\0" },
+        { "path": "crates/kilogram-ratchet/src/lib.rs", "symbol": "RATCHET_IDENTITY_VERSION", "rust_type": "u8", "value": 1 }
+      ]
+    },
+    {
+      "id": "runtime-ipc",
+      "class": "local-control",
+      "encoding": "postcard",
+      "compatibility": "exact-version",
+      "migration": "new-version-dual-reader",
+      "bindings": [
+        { "path": "crates/kilogram-runtime-ipc/src/lib.rs", "symbol": "DESCRIPTOR_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:runtime-ipc-descriptor:v7\\0" },
+        { "path": "crates/kilogram-runtime-ipc/src/lib.rs", "symbol": "IPC_VERSION", "rust_type": "u8", "value": 26 },
+        { "path": "crates/kilogram-runtime-ipc/src/lib.rs", "symbol": "RUNTIME_LAUNCH_PROFILE_VERSION", "rust_type": "u8", "value": 1 }
+      ]
+    },
+    {
+      "id": "runtime-mailbox-envelope",
+      "class": "network-wire",
+      "encoding": "postcard",
+      "compatibility": "exact-version",
+      "migration": "new-version-dual-reader",
+      "bindings": [
+        { "path": "apps/kilogram-cli/src/runtime_mailbox.rs", "symbol": "DISPATCH_REPLICATION_BINDING_DOMAIN", "rust_type": "bytes", "value": "kilogram:runtime-mailbox-dispatch-replication-binding:v1\\0" },
+        { "path": "apps/kilogram-cli/src/runtime_mailbox.rs", "symbol": "DISPATCH_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:runtime-mailbox-dispatch:v1\\0" },
+        { "path": "apps/kilogram-cli/src/runtime_mailbox.rs", "symbol": "EVENT_ITEM_ID_DOMAIN", "rust_type": "bytes", "value": "kilogram:runtime-mailbox-event-item-id:v1\\0" },
+        { "path": "apps/kilogram-cli/src/runtime_mailbox.rs", "symbol": "ITEM_ID_DOMAIN", "rust_type": "bytes", "value": "kilogram:runtime-mailbox-item-id:v1\\0" },
+        { "path": "apps/kilogram-cli/src/runtime_mailbox.rs", "symbol": "LOCAL_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:runtime-local-mailbox-binding:v1\\0" },
+        { "path": "apps/kilogram-cli/src/runtime_mailbox.rs", "symbol": "PAYLOAD_VERSION", "rust_type": "u8", "value": 1 },
+        { "path": "apps/kilogram-cli/src/runtime_mailbox.rs", "symbol": "PEER_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:runtime-peer-mailbox-binding:v1\\0" },
+        { "path": "apps/kilogram-cli/src/runtime_mailbox.rs", "symbol": "VERSION", "rust_type": "u8", "value": 1 }
+      ]
+    },
+    {
+      "id": "sync",
+      "class": "network-wire",
+      "encoding": "postcard",
+      "compatibility": "exact-version",
+      "migration": "new-version-dual-reader",
+      "bindings": [
+        { "path": "crates/kilogram-protocol/src/wire.rs", "symbol": "SYNC_DIFF_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:sync-diff-signature:v6\\0" },
+        { "path": "crates/kilogram-protocol/src/wire.rs", "symbol": "SYNC_INVENTORY_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:sync-inventory-signature:v6\\0" },
+        { "path": "crates/kilogram-protocol/src/wire.rs", "symbol": "SYNC_SESSION_DOMAIN", "rust_type": "bytes", "value": "kilogram:sync-session:v1\\0" },
+        { "path": "crates/kilogram-protocol/src/wire.rs", "symbol": "SYNC_VERSION", "rust_type": "u8", "value": 6 }
+      ]
+    },
+    {
+      "id": "ticket-publication-capability",
+      "class": "portable-artifact",
+      "encoding": "postcard",
+      "compatibility": "exact-version",
+      "migration": "new-version-explicit-migration",
+      "bindings": [
+        { "path": "crates/kilogram-ticket-publication/src/lib.rs", "symbol": "CHANNEL_ID_DOMAIN", "rust_type": "bytes", "value": "kilogram:ticket-publication-capability-channel:v1\\0" },
+        { "path": "crates/kilogram-ticket-publication/src/lib.rs", "symbol": "ROTATED_WRITE_CAPABILITY_DERIVATION_CONTEXT", "rust_type": "str", "value": "kilogram ticket publication per-peer rotated write capability v1" },
+        { "path": "crates/kilogram-ticket-publication/src/lib.rs", "symbol": "WRITE_AUTHORIZATION_DOMAIN", "rust_type": "bytes", "value": "kilogram:ticket-publication-write-authorization:v1\\0" },
+        { "path": "crates/kilogram-ticket-publication/src/lib.rs", "symbol": "WRITE_CAPABILITY_DERIVATION_CONTEXT", "rust_type": "str", "value": "kilogram ticket publication per-peer write capability v1" }
+      ]
+    },
+    {
+      "id": "transport-sync",
+      "class": "network-wire",
+      "encoding": "iroh-alpn",
+      "compatibility": "exact-identifier",
+      "migration": "parallel-identifier",
+      "bindings": [
+        { "path": "crates/kilogram-transport-iroh/src/lib.rs", "symbol": "ALPN", "rust_type": "bytes", "value": "kilogram/m0/sync/8" }
+      ]
+    }
+  ]
+}

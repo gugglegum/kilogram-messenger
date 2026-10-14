@@ -2253,10 +2253,21 @@ insufficient: the requester must present a certificate and authority snapshot
 for the allowed account and prove possession of its device key.
 The ticket contains neither the Iroh endpoint secret nor any application secret.
 Ticket JSON, Postcard messages, and development conversation-label derivation
-remain provisional M0 choices. Ticket v10 intentionally does not decode v1-v9
+remain provisional choices. Ticket v11 intentionally does not decode v1-v10
 tickets; restart the listener to generate a ticket matching this build. See
 [`RFC-0002`](docs/RFC-0002-account-device-authority.md) for snapshot and
 first-contact freshness boundaries.
+
+## Security and protocol baseline
+
+[`RFC-0125`](docs/RFC-0125-m11-threat-model-and-security-claims.md) defines the
+M1.1 threat model, current claims and explicit non-guarantees.
+[`PROTOCOL-COMPATIBILITY.json`](PROTOCOL-COMPATIBILITY.json) and
+[`RFC-0126`](docs/RFC-0126-m11-protocol-compatibility-baseline.md) inventory the
+experimental cross-process and interoperability versions, ALPN identifiers and
+cryptographic domains. The inventory prevents silent constant drift; it does
+not make the current Postcard structures a final cross-language wire format or
+turn the M1.0.0 technical PoC into a production/security release.
 
 ## Contributing
 

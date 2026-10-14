@@ -74,8 +74,11 @@ roster, DB-primary anti-equivocation heads и joint-majority transition стар
 Следующие вопросы относятся к production recovery, rotation, asynchronous
 sessions, distribution, removal и key epochs и не решены этим прототипом.
 
-- Какая точная модель угроз: массовое наблюдение, целевой атакующий, злонамеренные
-  relay/storage peers, компрометация bootstrap-инфраструктуры, Sybil и eclipse?
+- RFC-0125 зафиксировал первую точную M1.1 модель угроз для массового
+  наблюдения, целевого атакующего, злонамеренных relay/storage peers,
+  компрометации endpoint/Root/bootstrap, Sybil и eclipse. Открыты её
+  количественные privacy/availability budgets, независимый аудит и
+  platform-specific расширения для mobile/Linux/macOS.
 - Как уменьшить раскрытие account metadata при реализованной local/LAN/relay
   транспортировке recovery approvals и какой future external monotonic witness
   реализует тот же verifier interface, когда device quorum недоступен?
@@ -133,8 +136,11 @@ sessions, distribution, removal и key epochs и не решены этим пр
   IPC onboarding/rotation contact без передачи секретного descriptor через
   sync/shared folder.
 - Какой финальный межъязыковой canonical wire encoding обеспечивает одинаковые
-  подписи и event IDs на всех платформах? Postcard используется только как
-  предварительный M0 codec и не закрывает вопрос публичного протокола.
+  подписи и event IDs на всех платформах? RFC-0126 и
+  `PROTOCOL-COMPATIBILITY.json` уже fail-closed фиксируют 20 experimental
+  protocol families и 155 version/domain/identifier bindings, но Postcard и
+  Serde layout остаются предварительным codec. Нужны normative schemas и
+  golden byte/signature/ID vectors до заявления cross-language compatibility.
 - Какие security properties требуются от линеаризатора при злонамеренных, а не
   только сбойных indexer-узлах?
 
