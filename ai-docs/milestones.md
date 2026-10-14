@@ -4940,3 +4940,22 @@ refresh, clean full M1 readiness и fresh green hosted Windows CI. M1 tag не
 Acceptance gate: candidate refresh, clean full readiness and fresh green hosted
 Windows CI. Strict independent-provider run и решение об M1 tag остаются
 отдельными условиями.
+
+### M0.9.98 — current M1 candidate refresh: composed locally
+
+- `M1-CANDIDATE.json` pin-ит fresh run `20261014-141058`, product revision
+  `be80d28...` и `verified-reduced-two-host` без повышения
+  `independent_provider_field_acceptance=false`;
+- exact runtime/protocol selected tree: 83 entries, SHA-256
+  `b5cb9bc9e06d24c73e63289e662ba019f88b7b052638c6a4b30099470f558095`;
+- exact independent offline selected tree от accepted M0.9.88 остаётся
+  byte-identical: 63 entries, SHA-256 `2a7db2c5...d68`, поэтому run
+  `38507114425` и attestation `55683374` сохраняются;
+- self-test отвергает tampered field revision/artifact hash, narrowed runtime
+  surface, escalated provider-independence claim и omitted residual risk;
+- composition network-free/build-free и не создаёт EXE, archive, service или
+  Git tag.
+
+Acceptance gate: commit control surface, production candidate verifier, clean
+readiness `33/33`, push и fresh green hosted Windows CI. M1 tag остаётся
+отдельным явным решением.

@@ -7,7 +7,7 @@ $ErrorActionPreference = 'Stop'
 $workspace = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $recordPath = Join-Path $workspace 'M1-CANDIDATE.json'
 $verifierPath = Join-Path $PSScriptRoot 'verify-kilogram-m1-candidate.ps1'
-$rfcPath = Join-Path $workspace 'docs\RFC-0116-fresh-field-evidence-and-candidate-refresh.md'
+$rfcPath = Join-Path $workspace 'docs\RFC-0121-current-m1-candidate-refresh.md'
 foreach ($path in @($recordPath, $verifierPath, $rfcPath)) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
         throw "M1 candidate boundary file is missing: $path"
@@ -20,10 +20,10 @@ $verifier = Get-Content -LiteralPath $verifierPath -Raw
 $rfc = Get-Content -LiteralPath $rfcPath -Raw
 
 foreach ($required in @(
-    '"milestone": "M0.9.93"',
+    '"milestone": "M0.9.98"',
     '"scope": "windows-technical-proof-of-concept"',
-    '"run_id": "20261014-104506"',
-    '"source_revision": "d33dd0950484665ee397d161e37ce74743ee8f93"',
+    '"run_id": "20261014-141058"',
+    '"source_revision": "be80d28ec12b41987bdbfa800016fb86b54b4723"',
     '"result": "verified-reduced-two-host"',
     '"topology_profile": "two-host-reduced"',
     '"independent_provider_field_acceptance": false',
@@ -105,7 +105,7 @@ foreach ($required in @(
     'Sybil resistance remains incomplete'
 )) {
     if ($rfc.IndexOf($required, [StringComparison]::OrdinalIgnoreCase) -lt 0) {
-        throw "RFC-0116 is missing '$required'"
+        throw "RFC-0121 is missing '$required'"
     }
 }
 

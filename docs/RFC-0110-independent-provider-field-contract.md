@@ -144,3 +144,24 @@ reported `verified-reduced-two-host` and
 This run supersedes section 8 as the current field-tested runtime baseline. It
 still does not claim separate operators or access networks and therefore does
 not close strict independent-provider field acceptance.
+
+## 10. Refreshed reduced field result after M0.9.96/M0.9.97
+
+The task-aware test change and configured-relay diagnostic changed the coarse
+runtime surface again. Fresh run `20261014-141058`, built from exact product
+revision `be80d28ec12b41987bdbfa800016fb86b54b4723`, therefore replaces the
+section 9 baseline.
+
+Alice and Provider 1 ran on the desktop; Provider 2 and Bob ran on the
+SSH-controlled Windows laptop. Every endpoint-bearing log proves the canonical
+APS1 `relay_config_url`; absence of an observed home under `auto` is not
+misreported as successful relay registration. Alice obtained exact 2-of-2
+authenticated volunteer receipts and stopped before Bob retrieval. Bob
+committed the message once, deleted both replicas after commit, and observed no
+redelivery after restart. The strict verifier reports
+`verified-reduced-two-host` and
+`independent_provider_field_acceptance=false`.
+
+This remains a reduced two-host service-free lifecycle result. It does not
+prove separate provider operators or access networks and does not close the
+strict independent-provider field claim.

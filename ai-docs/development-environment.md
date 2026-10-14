@@ -3102,3 +3102,17 @@ Hosted follow-up:
 - Direct strict verification reports `result=verified-reduced-two-host` and
   `independent_provider_field_acceptance=False`. Provider processes and local
   field-sync controller are stopped; no background Kilogram process remains.
+
+## M0.9.98 current candidate refresh (2026-10-14)
+
+- Candidate field baseline: run `20261014-141058`, revision
+  `be80d28ec12b41987bdbfa800016fb86b54b4723`, reduced result only.
+- Field selected-tree identity was recomputed with the production
+  `git-ls-tree-sha256-v1` algorithm: 83 entries,
+  `b5cb9bc9e06d24c73e63289e662ba019f88b7b052638c6a4b30099470f558095`.
+- Current HEAD matches that field tree exactly. Independent revision
+  `68804c93...` and current HEAD also match on the 63-entry offline protected
+  tree (`2a7db2c5...d68`), so existing artifact/attestation identity is retained.
+- Candidate and boundary self-tests pass while the control surface is dirty;
+  production verification intentionally waits for a committed clean control
+  surface.
