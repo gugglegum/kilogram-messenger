@@ -83,6 +83,14 @@ use kilogram_protocol::canonical_rewrap_v1::{
     decode_and_verify_signed_history_rewrap_transfer_v1, open_history_rewrap_entry_v1,
     verify_history_rewrap_transfer_for_request_v1,
 };
+use kilogram_protocol::canonical_runtime_ipc_v1::{
+    CanonicalRuntimeIpcCoreRequestV1, CanonicalSignedRuntimeIpcCoreResponseV1,
+    CanonicalSignedRuntimeIpcDescriptorV1, decode_and_verify_runtime_ipc_core_request_v1,
+    decode_and_verify_signed_runtime_ipc_core_response_v1,
+    decode_and_verify_signed_runtime_ipc_descriptor_v1,
+    verify_runtime_ipc_core_request_for_descriptor_v1,
+    verify_runtime_ipc_core_response_for_request_v1,
+};
 use kilogram_protocol::canonical_runtime_mailbox_v1::{
     CanonicalSignedRuntimeMailboxDispatchV1, decode_and_verify_runtime_mailbox_payload_v1,
     decode_and_verify_signed_runtime_local_mailbox_binding_v1,
@@ -102,7 +110,7 @@ use kilogram_protocol::canonical_ticket_publication_v1::{
 use serde_json::Value;
 
 const MINIMUM_MUTATIONS: usize = 500;
-const EXPECTED_MUTATIONS: usize = 15_542;
+const EXPECTED_MUTATIONS: usize = 16_311;
 const MAXIMUM_MUTATIONS: usize = 20_000;
 const MAXIMUM_GRID_POSITIONS: usize = 128;
 
@@ -143,6 +151,16 @@ enum Decoder {
         dispatch: Box<CanonicalSignedRuntimeMailboxDispatchV1>,
     },
     RuntimeMailboxDispatch,
+    RuntimeIpcDescriptor,
+    RuntimeIpcRequest {
+        descriptor: Box<CanonicalSignedRuntimeIpcDescriptorV1>,
+        response: Box<CanonicalSignedRuntimeIpcCoreResponseV1>,
+        now_unix_seconds: u64,
+    },
+    RuntimeIpcResponse {
+        request: Box<CanonicalRuntimeIpcCoreRequestV1>,
+        descriptor: Box<CanonicalSignedRuntimeIpcDescriptorV1>,
+    },
     TicketPublicationCapability,
     TicketPublicationWriteAuthorization,
     TicketPublication,
@@ -262,6 +280,31 @@ fn accepts(decoder: &Decoder, bytes: &[u8]) -> bool {
         Decoder::RuntimeMailboxDispatch => {
             decode_and_verify_signed_runtime_mailbox_dispatch_v1(bytes).is_ok()
         }
+        Decoder::RuntimeIpcDescriptor => {
+            decode_and_verify_signed_runtime_ipc_descriptor_v1(bytes).is_ok()
+        }
+        Decoder::RuntimeIpcRequest {
+            descriptor,
+            response,
+            now_unix_seconds,
+        } => decode_and_verify_runtime_ipc_core_request_v1(bytes)
+            .and_then(|request| {
+                verify_runtime_ipc_core_request_for_descriptor_v1(
+                    &request,
+                    descriptor,
+                    *now_unix_seconds,
+                )?;
+                verify_runtime_ipc_core_response_for_request_v1(response, &request, descriptor)
+            })
+            .is_ok(),
+        Decoder::RuntimeIpcResponse {
+            request,
+            descriptor,
+        } => decode_and_verify_signed_runtime_ipc_core_response_v1(bytes)
+            .and_then(|response| {
+                verify_runtime_ipc_core_response_for_request_v1(&response, request, descriptor)
+            })
+            .is_ok(),
         Decoder::TicketPublicationCapability => {
             decode_and_verify_ticket_publication_capability_v1(bytes).is_ok()
         }
@@ -487,6 +530,10 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-RUNTIME-MAILBOX-VECTORS.json"
     )))?;
+    let runtime_ipc: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../CANONICAL-RUNTIME-IPC-VECTORS.json"
+    )))?;
     let ticket_publication: Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-TICKET-PUBLICATION-VECTORS.json"
@@ -524,6 +571,20 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
     )?;
     let runtime_dispatch =
         decode_and_verify_signed_runtime_mailbox_dispatch_v1(&runtime_dispatch_bytes)?;
+    let runtime_ipc_descriptor = decode_and_verify_signed_runtime_ipc_descriptor_v1(&pointer_hex(
+        &runtime_ipc,
+        "/expected/descriptor/signed_cbor_hex",
+    )?)?;
+    let runtime_ipc_request = decode_and_verify_runtime_ipc_core_request_v1(&pointer_hex(
+        &runtime_ipc,
+        "/expected/request/cbor_hex",
+    )?)?;
+    let runtime_ipc_response = decode_and_verify_signed_runtime_ipc_core_response_v1(
+        &pointer_hex(&runtime_ipc, "/expected/response/signed_cbor_hex")?,
+    )?;
+    let runtime_ipc_valid_at = runtime_ipc["expected"]["context"]["valid_at_unix_seconds"]
+        .as_u64()
+        .ok_or("runtime IPC valid time is missing")?;
     let publication_resolution_response_bytes = pointer_hex(
         &publication_conflict,
         "/expected/resolution_response/cbor_hex",
@@ -812,6 +873,28 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
             )?,
         ),
         (
+            "signed-runtime-ipc-descriptor",
+            Decoder::RuntimeIpcDescriptor,
+            pointer_hex(&runtime_ipc, "/expected/descriptor/signed_cbor_hex")?,
+        ),
+        (
+            "runtime-ipc-core-request",
+            Decoder::RuntimeIpcRequest {
+                descriptor: Box::new(runtime_ipc_descriptor.clone()),
+                response: Box::new(runtime_ipc_response.clone()),
+                now_unix_seconds: runtime_ipc_valid_at,
+            },
+            pointer_hex(&runtime_ipc, "/expected/request/cbor_hex")?,
+        ),
+        (
+            "signed-runtime-ipc-core-response",
+            Decoder::RuntimeIpcResponse {
+                request: Box::new(runtime_ipc_request.clone()),
+                descriptor: Box::new(runtime_ipc_descriptor.clone()),
+            },
+            pointer_hex(&runtime_ipc, "/expected/response/signed_cbor_hex")?,
+        ),
+        (
             "ticket-publication-capability",
             Decoder::TicketPublicationCapability,
             pointer_hex(&ticket_publication, "/expected/rotated_capability/cbor_hex")?,
@@ -1090,6 +1173,16 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         Decoder::RuntimeLocalMailboxBinding,
         Decoder::RuntimePeerMailboxBinding,
         Decoder::RuntimeMailboxDispatch,
+        Decoder::RuntimeIpcDescriptor,
+        Decoder::RuntimeIpcRequest {
+            descriptor: Box::new(runtime_ipc_descriptor.clone()),
+            response: Box::new(runtime_ipc_response),
+            now_unix_seconds: runtime_ipc_valid_at,
+        },
+        Decoder::RuntimeIpcResponse {
+            request: Box::new(runtime_ipc_request),
+            descriptor: Box::new(runtime_ipc_descriptor),
+        },
         Decoder::TicketPublicationCapability,
         Decoder::TicketPublicationWriteAuthorization,
         Decoder::TicketPublication,

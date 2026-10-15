@@ -3345,3 +3345,27 @@ Hosted follow-up:
 - Canonical coverage is 16 complete, 0 partial, 2 not-started and 2
   not-targeted. Next target is local `runtime-ipc`; `transport-sync` remains the
   final not-started wire-negotiation surface.
+
+## M1.1.28 canonical runtime IPC core snapshot (2026-10-15)
+
+- New inactive module: `crates/kilogram-protocol/src/canonical_runtime_ipc_v1.rs`.
+- CDDL, schema, golden vectors and independent Node reference cover a
+  Device-signed loopback descriptor, short-lived bearer request and
+  Device-signed response for Ping, WaitForChange, Shutdown and Error.
+- Active `kilogram-runtime-ipc` remains Postcard exact version 26 with JSON
+  descriptor signature domain v7. The candidate module is not imported by the
+  active crate and no listener, firewall or runtime behavior changed.
+- The response signature binds descriptor ID, caller request ID, exact request
+  digest and responder Device. Request freshness is contained by descriptor
+  freshness; command/result substitutions fail closed.
+- A first full mutation run rejected every mutation but exposed an arithmetic
+  inventory mismatch (actual 16311 versus predicted 16325) because the request
+  fixture is shorter than the 128-position grid cap. After correcting the
+  exact bounded inventory, the complete corpus passed 16311/16311 in 737.63
+  seconds with debug/offline Cargo, two jobs and BelowNormal priority.
+- Protocol library regression passed 81/81. Accepted-tag readiness passed
+  61/61 with rustfmt and workspace locked/offline strict Clippy. No network,
+  stable-path test executable, release build, archive, push or tag was created.
+- Canonical coverage is 16 complete, 1 partial, 1 not-started and 2
+  not-targeted. Runtime IPC is partial; transport-sync is the sole not-started
+  source surface.

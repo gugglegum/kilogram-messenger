@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.27",
+  "milestone": "M1.1.28",
   "status": "coverage-audit-not-active",
   "changes_active_wire": false,
   "source_manifest": "PROTOCOL-COMPATIBILITY.json",
@@ -14,8 +14,8 @@
   "summary": {
     "source_surfaces": 20,
     "complete": 16,
-    "partial": 0,
-    "not_started": 2,
+    "partial": 1,
+    "not_started": 1,
     "not_targeted": 2,
     "activation_ready": false
   },
@@ -129,10 +129,10 @@
     },
     {
       "id": "runtime-ipc",
-      "coverage": "not-started",
-      "artifacts": [],
-      "covered": [],
-      "remaining": ["entire-surface"]
+      "coverage": "partial",
+      "artifacts": ["CANONICAL-RUNTIME-IPC.cddl", "CANONICAL-RUNTIME-IPC-SCHEMA.json", "CANONICAL-RUNTIME-IPC-VECTORS.json", "crates/kilogram-protocol/src/canonical_runtime_ipc_v1.rs", "scripts/verify-kilogram-canonical-runtime-ipc-reference.mjs"],
+      "covered": ["device-signed-loopback-descriptor", "short-lived-bearer-authenticated-core-request", "request-correlation-and-exact-digest-binding", "device-signed-core-response", "ping-pong", "wait-for-change", "shutdown", "bounded-error"],
+      "remaining": ["contact-and-device-directory-commands", "message-queue-and-outbox-status-commands", "mailbox-provisioning-and-volunteer-provider-commands", "ticket-publication-and-conflict-commands", "own-device-discovery-and-automation-commands", "recovery-plan-and-device-link-commands", "all-associated-noncore-results"]
     },
     {
       "id": "runtime-mailbox-envelope",

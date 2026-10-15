@@ -5638,3 +5638,30 @@ correlation visible, Windows-only field evidence, independent security audit
 - coverage: 16 complete / 0 partial / 2 not-started / 2 not-targeted. Следующий
   canonical priority — `runtime-ipc`, затем `transport-sync`; active Postcard
   recovery/runtime и immutable `M1.0.0` не менялись.
+
+### M1.1.28 — canonical local runtime IPC core: принято локально
+
+- inactive deterministic-CBOR family начинает `runtime-ipc` с signed loopback
+  descriptor, bounded request и signed exact response, не меняя active reader;
+- descriptor разрешает только `127.0.0.1`/`::1`, nonzero port и 32-byte bearer,
+  связывает Account, Device, server instance и validity до 24 часов и
+  подписывается exact Device;
+- request exact-связывает descriptor ID, bearer, caller request ID, окно до 30
+  секунд и core command; request обязан полностью лежать в validity descriptor;
+- response подписывается descriptor Device и коммитит descriptor ID, request
+  ID и domain-separated digest полного request, закрывая stale-port rebind race;
+- Ping/Pong, WaitForChange/ChangeState, Shutdown/ShutdownAccepted и bounded UTF-8
+  Error имеют fail-closed command/result semantics; unchanged revision обязан
+  быть exact requested revision, а changed revision — строго больше;
+- independent Node reference воспроизводит CBOR, две Ed25519 signatures и все
+  BLAKE3 identifiers; Rust golden/substitution/command-matrix tests прошли 3/3;
+- первый mutation run корректно выявил, что caller-chosen request ID сам по себе
+  может быть другим валидным значением. Fixture теперь проверяет unsigned request
+  одновременно через descriptor/bearer и digest в signed response;
+- финальный mutation corpus прошёл 16311/16311 за 737.63 s, debug/offline,
+  `CargoJobs=2`, BelowNormal; protocol library regression прошёл 81/81;
+- accepted-tag readiness прошёл 61/61, rustfmt и workspace locked/offline strict
+  Clippy; network/test stable EXE/release/archive/push/tag не запускались;
+- coverage: 16 complete / 1 partial / 1 not-started / 2 not-targeted. Следующий
+  шаг — последовательно покрыть оставшиеся runtime IPC command/result families,
+  после чего перейти к parallel CBOR ALPN/negotiation `transport-sync`.

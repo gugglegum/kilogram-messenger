@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.28",
+  "status": "candidate-not-active",
+  "changes_active_wire": false,
+  "profile": "kilogram-deterministic-cbor-v1",
+  "cddl": {
+    "standard": "RFC 8610",
+    "path": "CANONICAL-RUNTIME-IPC.cddl",
+    "root_rule": "kilogram-runtime-ipc-v1"
+  },
+  "activation": {
+    "current_runtime_encoding": "postcard-v26-with-json-descriptor-v7",
+    "current_runtime_changed": false,
+    "candidate_protocol_identifier": "unassigned",
+    "required_before_activation": [
+      "complete-all-runtime-ipc-commands-and-results",
+      "explicit-ipc-version-migration",
+      "dual-reader-and-downgrade-tests",
+      "sustained-coverage-guided-fuzzing",
+      "fresh-desktop-and-cli-field-evidence"
+    ]
+  },
+  "limits": {
+    "maximum_descriptor_bytes": 2048,
+    "maximum_request_bytes": 65536,
+    "maximum_response_bytes": 65536,
+    "maximum_error_bytes": 4096,
+    "maximum_descriptor_validity_seconds": 86400,
+    "maximum_request_validity_seconds": 30,
+    "maximum_wait_milliseconds": 120000,
+    "clock_skew_seconds": 30
+  },
+  "domains": [
+    {
+      "id": "descriptor-signature-v1",
+      "value": "kilogram:runtime-ipc-descriptor-signature:cbor-v1\\0",
+      "operation": "ed25519-signature",
+      "signer": "local-device-ed25519"
+    },
+    {
+      "id": "descriptor-id-v1",
+      "value": "kilogram:runtime-ipc-descriptor-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "request-digest-v1",
+      "value": "kilogram:runtime-ipc-request-digest:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "response-signature-v1",
+      "value": "kilogram:runtime-ipc-response-signature:cbor-v1\\0",
+      "operation": "ed25519-signature",
+      "signer": "descriptor-device-ed25519"
+    },
+    {
+      "id": "response-id-v1",
+      "value": "kilogram:runtime-ipc-response-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    }
+  ],
+  "objects": [
+    {
+      "id": "signed-runtime-ipc-descriptor-v1",
+      "kind": "device-signed-loopback-capability",
+      "maximum_bytes": 2048
+    },
+    {
+      "id": "runtime-ipc-core-request-v1",
+      "kind": "short-lived-bearer-authenticated-request",
+      "maximum_bytes": 65536
+    },
+    {
+      "id": "signed-runtime-ipc-core-response-v1",
+      "kind": "device-signed-exact-request-response",
+      "maximum_bytes": 65536
+    }
+  ],
+  "covered_commands": [
+    "ping",
+    "wait-for-change",
+    "shutdown"
+  ],
+  "covered_results": [
+    "pong",
+    "change-state",
+    "shutdown-accepted",
+    "error"
+  ],
+  "semantic_rules": [
+    "descriptor address is exactly IPv4 127.0.0.1 or IPv6 ::1 and port is nonzero",
+    "descriptor is signed by the Device named inside it and has a positive lifetime of at most 86400 seconds",
+    "request names the exact signed descriptor and repeats its nonzero 32-byte bearer token",
+    "request has a nonzero caller-generated correlation ID and a positive lifetime of at most 30 seconds",
+    "request validity is contained by descriptor validity and both are current within the bounded clock-skew policy",
+    "wait-for-change timeout is between 1 and 120000 milliseconds",
+    "response is signed by the exact Device named by the descriptor",
+    "response binds the descriptor ID, request ID and digest of the complete canonical request",
+    "pong repeats the descriptor Account and Device identities",
+    "change-state is valid only for wait-for-change; changed true requires a greater revision and changed false requires the exact requested revision",
+    "shutdown-accepted is valid only for shutdown while a bounded nonempty UTF-8 error is valid for every command",
+    "unknown variants, noncanonical CBOR, trailing data, expired objects and contextual substitutions fail closed"
+  ],
+  "remaining_runtime_ipc_surface": [
+    "contact-and-device-directory-commands",
+    "message-queue-and-outbox-status-commands",
+    "mailbox-provisioning-and-volunteer-provider-commands",
+    "ticket-publication-and-conflict-commands",
+    "own-device-discovery-and-automation-commands",
+    "recovery-plan-and-device-link-commands",
+    "all-associated-noncore-results"
+  ]
+}
