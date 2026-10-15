@@ -10,6 +10,7 @@ use kilogram_protocol::canonical_device_link_v1::decode_and_verify_signed_device
 use kilogram_protocol::canonical_event_v1::{
     decode_and_verify_authorized_event_v1, decode_and_verify_signed_event_v1,
 };
+use kilogram_protocol::canonical_mailbox_transport_v1::decode_and_verify_mailbox_peer_request_v1;
 use kilogram_protocol::canonical_mailbox_v1::{
     decode_and_verify_signed_mailbox_delete_receipt_v1,
     decode_and_verify_signed_mailbox_read_authorization_v1,
@@ -35,8 +36,8 @@ use kilogram_protocol::canonical_sync_v1::{
 use serde_json::Value;
 
 const MINIMUM_MUTATIONS: usize = 500;
-const EXPECTED_MUTATIONS: usize = 6_264;
-const MAXIMUM_MUTATIONS: usize = 7_000;
+const EXPECTED_MUTATIONS: usize = 7_045;
+const MAXIMUM_MUTATIONS: usize = 8_000;
 const MAXIMUM_GRID_POSITIONS: usize = 128;
 
 #[derive(Clone, Copy)]
@@ -65,6 +66,7 @@ enum Decoder {
     MailboxStorageOffer,
     MailboxStoredReceipt,
     MailboxDeleteReceipt,
+    MailboxPeerRequest,
 }
 
 fn accepts(decoder: Decoder, bytes: &[u8]) -> bool {
@@ -106,6 +108,7 @@ fn accepts(decoder: Decoder, bytes: &[u8]) -> bool {
         Decoder::MailboxDeleteReceipt => {
             decode_and_verify_signed_mailbox_delete_receipt_v1(bytes).is_ok()
         }
+        Decoder::MailboxPeerRequest => decode_and_verify_mailbox_peer_request_v1(bytes).is_ok(),
     }
 }
 
@@ -182,6 +185,10 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
     let mailbox: Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-MAILBOX-VECTORS.json"
+    )))?;
+    let mailbox_transport: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../CANONICAL-MAILBOX-TRANSPORT-VECTORS.json"
     )))?;
     let fixtures = [
         (
@@ -319,6 +326,24 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
             Decoder::MailboxDeleteReceipt,
             pointer_hex(&mailbox, "/expected/delete_receipt/signed_cbor_hex")?,
         ),
+        (
+            "mailbox-peer-put-request",
+            Decoder::MailboxPeerRequest,
+            pointer_hex(&mailbox_transport, "/expected/peer_requests/put/cbor_hex")?,
+        ),
+        (
+            "mailbox-peer-list-request",
+            Decoder::MailboxPeerRequest,
+            pointer_hex(&mailbox_transport, "/expected/peer_requests/list/cbor_hex")?,
+        ),
+        (
+            "mailbox-peer-delete-request",
+            Decoder::MailboxPeerRequest,
+            pointer_hex(
+                &mailbox_transport,
+                "/expected/peer_requests/delete/cbor_hex",
+            )?,
+        ),
     ];
     let mut mutations = 0usize;
     for (name, decoder, valid) in fixtures {
@@ -411,6 +436,7 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         Decoder::MailboxStorageOffer,
         Decoder::MailboxStoredReceipt,
         Decoder::MailboxDeleteReceipt,
+        Decoder::MailboxPeerRequest,
     ] {
         assert!(!accepts(decoder, &oversized));
         mutations += 1;

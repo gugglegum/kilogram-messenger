@@ -179,7 +179,10 @@ $separateCoverage = @($coverage.surfaces | Where-Object {
 })
 if ($mailboxCoverage.Count -ne 1 -or [string]$mailboxCoverage[0].coverage -cne 'complete' -or
     @($mailboxCoverage[0].remaining).Count -ne 0 -or $separateCoverage.Count -ne 4 -or
-    @($separateCoverage | Where-Object { $_.coverage -cne 'not-started' }).Count -ne 0) {
+    @($separateCoverage | Where-Object {
+        ($_.id -ceq 'blind-mailbox-transport' -and $_.coverage -cne 'complete') -or
+        ($_.id -cne 'blind-mailbox-transport' -and $_.coverage -cne 'not-started')
+    }).Count -ne 0) {
     throw 'mailbox capability and separate-surface coverage changed'
 }
 foreach ($required in @('complete `blind-mailbox-capability`', 'HPKE cross-language',
@@ -214,6 +217,6 @@ Write-Output 'canonical_mailbox_boundary=verified'
 Write-Output 'address_envelope_authorizations_offers_receipts=verified'
 Write-Output 'bounded_decoder_mutations=6264'
 Write-Output 'blind_mailbox_capability_coverage=complete'
-Write-Output 'separate_mailbox_surfaces=not-started'
+Write-Output 'separate_mailbox_surfaces=independently-tracked'
 Write-Output 'active_runtime_changed=false'
 Write-Output 'network_executed=false'

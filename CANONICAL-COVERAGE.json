@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.7",
+  "milestone": "M1.1.16",
   "status": "coverage-audit-not-active",
   "changes_active_wire": false,
   "source_manifest": "PROTOCOL-COMPATIBILITY.json",
@@ -13,9 +13,9 @@
   },
   "summary": {
     "source_surfaces": 20,
-    "complete": 7,
+    "complete": 8,
     "partial": 0,
-    "not_started": 11,
+    "not_started": 10,
     "not_targeted": 2,
     "activation_ready": false
   },
@@ -57,10 +57,10 @@
     },
     {
       "id": "blind-mailbox-transport",
-      "coverage": "not-started",
-      "artifacts": [],
-      "covered": [],
-      "remaining": ["entire-surface"]
+      "coverage": "complete",
+      "artifacts": ["CANONICAL-MAILBOX-TRANSPORT.cddl", "CANONICAL-MAILBOX-TRANSPORT-SCHEMA.json", "CANONICAL-MAILBOX-TRANSPORT-VECTORS.json", "crates/kilogram-protocol/src/canonical_mailbox_transport_v1.rs", "scripts/verify-kilogram-canonical-mailbox-transport-reference.mjs"],
+      "covered": ["put-list-delete-requests", "all-operation-response-variants", "bounded-list-pages", "peer-request-digest", "peer-success-and-rejection-outcomes", "nested-capability-and-receipt-verification"],
+      "remaining": []
     },
     {
       "id": "connection-ticket",
@@ -164,8 +164,8 @@
     }
   ],
   "next_priority": [
-    "blind-mailbox-transport",
     "blind-mailbox-provider-gossip",
-    "mailbox-provisioning"
+    "mailbox-provisioning",
+    "runtime-mailbox-envelope"
   ]
 }

@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.16",
+  "status": "candidate-not-active",
+  "changes_active_wire": false,
+  "profile": "kilogram-deterministic-cbor-v1",
+  "depends_on": [
+    "CANONICAL-MAILBOX-SCHEMA.json",
+    "CANONICAL-MAILBOX-VECTORS.json"
+  ],
+  "cddl": {
+    "standard": "RFC 8610",
+    "path": "CANONICAL-MAILBOX-TRANSPORT.cddl",
+    "root_rule": "kilogram-mailbox-transport-v1"
+  },
+  "activation": {
+    "current_runtime_encoding": "postcard",
+    "current_runtime_alpn": "kilogram/m0/blind-mailbox/1",
+    "current_runtime_changed": false,
+    "candidate_protocol_identifier": "unassigned",
+    "required_before_activation": [
+      "new-explicit-protocol-version-or-parallel-alpn",
+      "dual-reader-and-downgrade-tests",
+      "coverage-guided-fuzzing",
+      "fresh-field-and-hosted-evidence"
+    ]
+  },
+  "limits": {
+    "transport_overhead_bytes": 4096,
+    "maximum_request_bytes": 1052672,
+    "maximum_response_bytes": 8425472,
+    "maximum_peer_request_bytes": 1056768,
+    "maximum_peer_response_bytes": 8429568,
+    "maximum_page_items": 8
+  },
+  "domains": [
+    {
+      "id": "peer-request-digest-v1",
+      "value": "kilogram:blind-mailbox-peer-request:cbor-v1\u0000",
+      "operation": "blake3-domain-prefixed-peer-request"
+    }
+  ],
+  "registries": {
+    "peer_operation": {
+      "1": "put",
+      "2": "list",
+      "3": "delete"
+    },
+    "put_response": {
+      "1": "stored",
+      "2": "conflict",
+      "3": "tombstoned",
+      "4": "capacity-exceeded"
+    },
+    "delete_response": {
+      "1": "deleted",
+      "2": "absent",
+      "3": "receipt-mismatch",
+      "4": "tombstone-capacity-exceeded"
+    },
+    "peer_outcome": {
+      "1": "success",
+      "2": "rejected"
+    },
+    "peer_rejection": {
+      "1": "rate-limited",
+      "2": "transfer-budget-exhausted",
+      "3": "invalid-capability",
+      "4": "store-unavailable"
+    }
+  },
+  "objects": [
+    { "id": "mailbox-put-request-v1", "array_length": 4 },
+    { "id": "mailbox-list-request-v1", "array_length": 3 },
+    { "id": "mailbox-delete-request-v1", "array_length": 3 },
+    { "id": "mailbox-peer-request-v1", "array_length": 3 },
+    { "id": "mailbox-put-response-v1", "array_lengths": [2, 4] },
+    { "id": "stored-mailbox-item-v1", "array_length": 5 },
+    { "id": "mailbox-list-response-v1", "array_length": 4 },
+    { "id": "mailbox-delete-response-v1", "array_lengths": [2, 4] },
+    { "id": "mailbox-peer-outcome-v1", "array_length": 3 },
+    { "id": "mailbox-peer-response-v1", "array_length": 4 }
+  ],
+  "semantic_rules": [
+    "each request revalidates its exact nested canonical address authorization and envelope",
+    "peer operation and operation-specific request or response must agree",
+    "peer response binds the exact canonical peer request with a domain-separated BLAKE3 digest",
+    "stored and deleted responses bind the expected store and exact request capability",
+    "list items are strictly ordered bounded and individually bind envelope receipt item and expiry",
+    "pagination cursor and more-available state are mutually consistent",
+    "all operation response outcome and rejection registries are closed"
+  ],
+  "separate_surfaces": [
+    "mailbox-provisioning",
+    "blind-mailbox-provider-gossip",
+    "runtime-mailbox-envelope"
+  ]
+}

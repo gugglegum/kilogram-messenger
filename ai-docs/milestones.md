@@ -5342,3 +5342,22 @@ correlation visible, Windows-only field evidence, independent security audit
   envelope остаются отдельными `not-started` surfaces;
 - active Postcard v1 domains, HPKE AAD, ALPN, runtime/network/release/archive/tag
   не менялись.
+
+### M1.1.16 — canonical blind-mailbox transport: принято локально
+
+- deterministic-CBOR schema композиционно покрывает put/list/delete requests,
+  все operation responses, peer forwarding envelope и closed rejection codes;
+- peer response exact-связан с canonical peer request через отдельный BLAKE3
+  domain; operation/request/response mismatch и digest substitution fail closed;
+- nested address, authorization, envelope и receipts повторно проходят strict
+  decoding/signature verification, store key и receipt ID сверяются с request;
+- list page bounded до 8 strictly ordered items; item/envelope/receipt ID и
+  expiry, cursor и `more_available` проверяются как единое состояние;
+- independent Node Ed25519/BLAKE3 reference воспроизводит три requests, success
+  responses, terminal status variants и representative rejected responses;
+- три strict peer-request fixtures расширяют mutation corpus до 7045/8000;
+  `blind-mailbox-transport` становится complete (8 complete / 0 partial),
+  readiness расширен с 49 до 50 gates;
+- active Postcard wire и `kilogram/m0/blind-mailbox/1` ALPN не менялись;
+  provisioning, provider gossip и runtime mailbox envelope остаются отдельными
+  `not-started` surfaces.

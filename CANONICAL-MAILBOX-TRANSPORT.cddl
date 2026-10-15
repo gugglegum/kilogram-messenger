@@ -1,0 +1,83 @@
+; Kilogram M1.1.16 inactive deterministic-CBOR blind-mailbox transport.
+; Active Postcard and kilogram/m0/blind-mailbox/1 bytes remain unchanged.
+
+kilogram-mailbox-transport-v1 =
+  mailbox-put-request-v1 /
+  mailbox-list-request-v1 /
+  mailbox-delete-request-v1 /
+  mailbox-peer-request-v1 /
+  mailbox-put-response-v1 /
+  mailbox-list-response-v1 /
+  mailbox-delete-response-v1 /
+  mailbox-peer-response-v1
+
+id-32 = bytes .size 32
+canonical-mailbox-address = bytes .size (1..256)
+canonical-mailbox-authorization = bytes .size (1..1024)
+canonical-mailbox-envelope = bytes .size (1..1048576)
+canonical-mailbox-receipt = bytes .size (1..1024)
+
+mailbox-put-request-v1 = [
+  schema-version: 1,
+  address: canonical-mailbox-address,
+  authorization: canonical-mailbox-authorization,
+  envelope: canonical-mailbox-envelope
+]
+
+mailbox-list-request-v1 = [
+  schema-version: 1,
+  address: canonical-mailbox-address,
+  authorization: canonical-mailbox-authorization
+]
+
+mailbox-delete-request-v1 = mailbox-list-request-v1
+
+mailbox-peer-operation-v1 = 1 / 2 / 3
+mailbox-peer-request-v1 = [
+  schema-version: 1,
+  operation: mailbox-peer-operation-v1,
+  operation-specific-request: bytes .size (1..1052672)
+]
+
+mailbox-put-response-v1 =
+  [schema-version: 1, variant: 1, created: 0 / 1, receipt: canonical-mailbox-receipt] /
+  [schema-version: 1, variant: 2] /
+  [schema-version: 1, variant: 3] /
+  [schema-version: 1, variant: 4]
+
+stored-mailbox-item-v1 = [
+  schema-version: 1,
+  item-id: id-32,
+  expires-at-unix-seconds: uint,
+  envelope: canonical-mailbox-envelope,
+  receipt: canonical-mailbox-receipt
+]
+
+mailbox-item-option-v1 = [] / [item-id: id-32]
+mailbox-list-response-v1 = [
+  schema-version: 1,
+  items: [* 0..8 stored-mailbox-item-v1],
+  next-after-item-id: mailbox-item-option-v1,
+  more-available: 0 / 1
+]
+
+mailbox-delete-response-v1 =
+  [schema-version: 1, variant: 1, newly-deleted: 0 / 1, receipt: canonical-mailbox-receipt] /
+  [schema-version: 1, variant: 2] /
+  [schema-version: 1, variant: 3] /
+  [schema-version: 1, variant: 4]
+
+mailbox-operation-response-v1 =
+  mailbox-put-response-v1 / mailbox-list-response-v1 / mailbox-delete-response-v1
+
+mailbox-peer-rejection-v1 = 1 / 2 / 3 / 4
+mailbox-peer-outcome-v1 =
+  [schema-version: 1, variant: 1, response: mailbox-operation-response-v1] /
+  [schema-version: 1, variant: 2, rejection: mailbox-peer-rejection-v1]
+
+mailbox-peer-response-v1 = [
+  schema-version: 1,
+  operation: mailbox-peer-operation-v1,
+  request-digest: id-32,
+  outcome: mailbox-peer-outcome-v1
+]
