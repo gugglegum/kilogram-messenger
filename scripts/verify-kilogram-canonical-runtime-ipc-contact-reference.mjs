@@ -235,7 +235,7 @@ if (options.emit) {
 
 const schema = JSON.parse(readFileSync(options.schema, "utf8"));
 const vectors = JSON.parse(readFileSync(options.vectors, "utf8"));
-assert(schema.milestone === "M1.1.41" && schema.status === "candidate-not-active" &&
+assert(schema.milestone === "M1.1.42" && schema.status === "candidate-not-active" &&
   schema.changes_active_wire === false, "runtime IPC schema header changed");
 assert(schema.limits.maximum_contact_response_bytes === 131072 &&
   schema.limits.maximum_account_devices === 32 &&

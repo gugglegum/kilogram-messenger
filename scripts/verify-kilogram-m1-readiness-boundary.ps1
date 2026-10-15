@@ -42,6 +42,7 @@ foreach ($required in @(
     "'verify-kilogram-canonical-runtime-ipc-publication-conflict-boundary.ps1' = 'canonical_runtime_ipc_publication_conflict_boundary=verified'",
     "'verify-kilogram-canonical-runtime-ipc-own-device-announcement-boundary.ps1' = 'canonical_runtime_ipc_own_device_announcement_boundary=verified'",
     "'verify-kilogram-canonical-runtime-ipc-own-device-discovery-boundary.ps1' = 'canonical_runtime_ipc_own_device_discovery_boundary=verified'",
+    "'verify-kilogram-canonical-runtime-ipc-own-device-roster-boundary.ps1' = 'canonical_runtime_ipc_own_device_roster_boundary=verified'",
     "'verify-kilogram-canonical-mailbox-transport-boundary.ps1' = 'canonical_mailbox_transport_boundary=verified'",
     "'verify-kilogram-canonical-device-link-boundary.ps1' = 'canonical_device_link_boundary=verified'",
     "'verify-kilogram-canonical-endpoint-announcement-boundary.ps1' = 'canonical_endpoint_announcement_boundary=verified'",
@@ -62,7 +63,11 @@ foreach ($required in @(
     "'verify-kilogram-canonical-wire-boundary.ps1' = 'canonical_wire_boundary=verified'",
     "'verify-kilogram-protocol-compatibility-boundary.ps1' = 'protocol_compatibility_boundary=verified'",
     "Get-ChildItem -LiteralPath `$scriptsDirectory -Filter 'verify-*-boundary.ps1'",
-    'M1 readiness boundary inventory must contain exactly 74 gates',
+    'M1 readiness boundary inventory must contain exactly 75 gates',
+    'function Invoke-CapturedPowerShell',
+    "`$ErrorActionPreference = 'Continue'",
+    "`$gateCapture.ExitCode -ne 0",
+    "Assert-ExactMarker `$gateCapture.Lines",
     '[string]$AcceptedTag',
     "'verify-kilogram-m1-tag-acceptance.ps1'",
     'm1_candidate_status=verified',
@@ -173,7 +178,7 @@ if ($LASTEXITCODE -ne 0 -or
 }
 
 Write-Output 'm1_readiness_boundary=verified'
-Write-Output 'boundary_inventory=closed-74'
+Write-Output 'boundary_inventory=closed-75'
 Write-Output 'candidate_or_accepted_tag_verifier=required'
 Write-Output 'accepted_m1_tag=M1.0.0'
 Write-Output 'format_and_offline_strict_clippy=required'

@@ -5,7 +5,7 @@
   "active_runtime_changed": false,
   "seed": 1262836037,
   "minimum_mutations": 500,
-  "expected_mutations": 27711,
+  "expected_mutations": 28755,
   "maximum_mutations": 30000,
   "fixtures": [
     {
@@ -704,6 +704,34 @@
       "json_pointer": "/expected/status/response/signed_cbor_hex",
       "decoder": "decode_and_verify_signed_runtime_ipc_own_device_discovery_response_v1",
       "context_verifier": "verify_runtime_ipc_own_device_discovery_response_for_request_v1"
+    },
+    {
+      "id": "runtime-ipc-own-device-roster-configure-request-v1",
+      "vector_file": "CANONICAL-RUNTIME-IPC-OWN-DEVICE-ROSTER-VECTORS.json",
+      "json_pointer": "/expected/configure/request/cbor_hex",
+      "decoder": "decode_and_verify_runtime_ipc_own_device_roster_request_v1",
+      "context_verifier": "verify_runtime_ipc_own_device_roster_request_for_descriptor_v1+verify_runtime_ipc_own_device_roster_response_for_request_v1"
+    },
+    {
+      "id": "signed-runtime-ipc-own-device-roster-configure-response-v1",
+      "vector_file": "CANONICAL-RUNTIME-IPC-OWN-DEVICE-ROSTER-VECTORS.json",
+      "json_pointer": "/expected/configure/response/signed_cbor_hex",
+      "decoder": "decode_and_verify_signed_runtime_ipc_own_device_roster_response_v1",
+      "context_verifier": "verify_runtime_ipc_own_device_roster_response_for_request_v1"
+    },
+    {
+      "id": "runtime-ipc-own-device-roster-status-request-v1",
+      "vector_file": "CANONICAL-RUNTIME-IPC-OWN-DEVICE-ROSTER-VECTORS.json",
+      "json_pointer": "/expected/status/request/cbor_hex",
+      "decoder": "decode_and_verify_runtime_ipc_own_device_roster_request_v1",
+      "context_verifier": "verify_runtime_ipc_own_device_roster_request_for_descriptor_v1+verify_runtime_ipc_own_device_roster_response_for_request_v1"
+    },
+    {
+      "id": "signed-runtime-ipc-own-device-roster-status-response-v1",
+      "vector_file": "CANONICAL-RUNTIME-IPC-OWN-DEVICE-ROSTER-VECTORS.json",
+      "json_pointer": "/expected/status/response/signed_cbor_hex",
+      "decoder": "decode_and_verify_signed_runtime_ipc_own_device_roster_response_v1",
+      "context_verifier": "verify_runtime_ipc_own_device_roster_response_for_request_v1"
     }
   ],
   "mutation_classes": [

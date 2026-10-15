@@ -270,11 +270,11 @@ for (const required of ["--schema", "--vectors"]) {
 }
 const schema = JSON.parse(readFileSync(args.get("--schema"), "utf8"));
 const vectors = JSON.parse(readFileSync(args.get("--vectors"), "utf8"));
-assert(schema.milestone === "M1.1.41" && schema.status === "candidate-not-active",
-  "runtime IPC schema is not the expected inactive M1.1.41 candidate");
-assert(schema.domains.length === 57 && schema.objects.length === 29 &&
-  schema.covered_commands.length === 25 && schema.covered_results.length === 24 &&
-  schema.semantic_rules.length === 110,
+assert(schema.milestone === "M1.1.42" && schema.status === "candidate-not-active",
+  "runtime IPC schema is not the expected inactive M1.1.42 candidate");
+assert(schema.domains.length === 62 && schema.objects.length === 31 &&
+  schema.covered_commands.length === 27 && schema.covered_results.length === 26 &&
+  schema.semantic_rules.length === 122,
   "runtime IPC schema registry counts changed");
 assert(vectors.schema_version === 1 && vectors.milestone === "M1.1.41" &&
   vectors.status === "candidate-not-active", "own-device discovery vector header changed");

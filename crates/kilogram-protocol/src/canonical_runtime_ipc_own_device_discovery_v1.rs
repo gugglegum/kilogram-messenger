@@ -584,7 +584,7 @@ fn validate_request(
     Ok(())
 }
 
-fn validate_configuration(
+pub(crate) fn validate_configuration(
     configuration: &CanonicalRuntimeIpcOwnDeviceDiscoveryConfigurationV1,
     error: CanonicalRuntimeIpcError,
 ) -> Result<(), CanonicalRuntimeIpcError> {
@@ -642,7 +642,7 @@ fn validate_policy_status(
     Ok(())
 }
 
-fn validate_policy_status_shape(
+pub(crate) fn validate_policy_status_shape(
     status: &CanonicalRuntimeIpcOwnDeviceDiscoveryPolicyStatusV1,
     current_network: CanonicalRuntimeIpcOwnDeviceDiscoveryNetworkV1,
 ) -> Result<(), CanonicalRuntimeIpcError> {
@@ -1131,7 +1131,7 @@ fn decode_optional_previous(
     }
 }
 
-fn encode_policy_status(
+pub(crate) fn encode_policy_status(
     output: &mut Vec<u8>,
     status: &CanonicalRuntimeIpcOwnDeviceDiscoveryPolicyStatusV1,
 ) {
@@ -1156,7 +1156,7 @@ fn encode_policy_status(
     encode_optional_transport(output, status.last_transport);
 }
 
-fn decode_policy_status(
+pub(crate) fn decode_policy_status(
     decoder: &mut AccountDecoder<'_>,
 ) -> Result<CanonicalRuntimeIpcOwnDeviceDiscoveryPolicyStatusV1, CanonicalRuntimeIpcError> {
     decoder.expect_array("runtime-ipc-own-device-discovery-policy-status-v1", 18)?;
@@ -1482,7 +1482,10 @@ fn decode_optional_transport(
     }
 }
 
-fn encode_network(output: &mut Vec<u8>, value: CanonicalRuntimeIpcOwnDeviceDiscoveryNetworkV1) {
+pub(crate) fn encode_network(
+    output: &mut Vec<u8>,
+    value: CanonicalRuntimeIpcOwnDeviceDiscoveryNetworkV1,
+) {
     push_unsigned(
         output,
         match value {
@@ -1494,7 +1497,7 @@ fn encode_network(output: &mut Vec<u8>, value: CanonicalRuntimeIpcOwnDeviceDisco
     );
 }
 
-fn decode_network(
+pub(crate) fn decode_network(
     decoder: &mut AccountDecoder<'_>,
 ) -> Result<CanonicalRuntimeIpcOwnDeviceDiscoveryNetworkV1, CanonicalRuntimeIpcError> {
     match decoder.unsigned("runtime-ipc-own-device-discovery-network-v1")? {

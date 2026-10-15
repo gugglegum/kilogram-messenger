@@ -238,7 +238,7 @@ if ($surface.Count -ne 1 -or [string]$surface[0].coverage -cne 'complete' -or
     (@($surface[0].remaining) -join ',') -cne (@($schema.coverage.remaining) -join ',')) {
     throw 'publication-conflict complete coverage boundary changed'
 }
-if ([int]$mutations.expected_mutations -ne 27711 -or [int]$mutations.maximum_mutations -ne 30000) {
+if ([int]$mutations.expected_mutations -ne 28755 -or [int]$mutations.maximum_mutations -ne 30000) {
     throw 'publication-conflict decoder mutation bound changed'
 }
 $expectedMutationIds = @('signed-ticket-publication-v1',
@@ -285,6 +285,6 @@ Write-Output 'publication_conflict_resolution=verified'
 Write-Output 'portable_confirmation_claim=verified'
 Write-Output 'independent_blake3=verified'
 Write-Output 'independent_ed25519=verified'
-Write-Output 'bounded_decoder_mutations=27711'
+Write-Output 'bounded_decoder_mutations=28755'
 Write-Output 'active_postcard_base64url_changed=false'
 Write-Output 'network_executed=false'

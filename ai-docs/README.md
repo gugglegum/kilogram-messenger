@@ -972,6 +972,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.1.41 канонизирует pairwise own-device ticket discovery, directional
   channels и atomic locator-plus-announcement install без передачи derived
   private capabilities через IPC.
+- [`../docs/RFC-0168-m1142-canonical-runtime-ipc-own-device-roster-automation.md`](../docs/RFC-0168-m1142-canonical-runtime-ipc-own-device-roster-automation.md) —
+  M1.1.42 канонизирует roster-wide foreground orchestration: exact active
+  sibling projection, retained revoked tombstones и serialized child workflow
+  без ticket plaintext, local paths или ослабления decoder depth limit.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

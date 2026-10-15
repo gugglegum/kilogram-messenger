@@ -6000,3 +6000,20 @@ correlation visible, Windows-only field evidence, independent security audit
   regression — 127/127, readiness — 74/74;
 - active Postcard IPC v26/JSON descriptor v7, network, release/archive/push/tag
   не менялись. Следующий bounded slice — roster-wide orchestration.
+
+### M1.1.42 — canonical roster-wide own-device automation: принято локально
+
+- inactive deterministic-CBOR IPC получил foreground-only configure/status
+  parent policy для всего current Root-signed sibling roster;
+- exact active children и retained permanently revoked tombstones выводятся в
+  строгом Device-ID порядке; retired child принудительно disabled, workflow
+  выполняются с max parallelism 1;
+- полный pairwise discovery child переносится отдельно проверенным canonical
+  CBOR `bstr`, сохраняя глобальный decoder depth limit 8;
+- ticket plaintext, derived private capabilities, reusable secrets и local
+  paths через IPC не проходят; OS background service и restart не требуются;
+- independent Node reference, CDDL/schema/vectors и fail-closed boundary
+  согласованы. Mutation corpus прошёл 28755/28755 за 1023.72 s, protocol
+  regression — 130/130, readiness — 75/75;
+- active Postcard IPC v26/JSON descriptor v7, network, release/archive/push/tag
+  не менялись. Следующий bounded slice — recovery-plan/device-link commands.

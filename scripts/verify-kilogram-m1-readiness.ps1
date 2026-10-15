@@ -37,6 +37,7 @@ $expectedGates = [ordered]@{
     'verify-kilogram-canonical-runtime-ipc-publication-conflict-boundary.ps1' = 'canonical_runtime_ipc_publication_conflict_boundary=verified'
     'verify-kilogram-canonical-runtime-ipc-own-device-announcement-boundary.ps1' = 'canonical_runtime_ipc_own_device_announcement_boundary=verified'
     'verify-kilogram-canonical-runtime-ipc-own-device-discovery-boundary.ps1' = 'canonical_runtime_ipc_own_device_discovery_boundary=verified'
+    'verify-kilogram-canonical-runtime-ipc-own-device-roster-boundary.ps1' = 'canonical_runtime_ipc_own_device_roster_boundary=verified'
     'verify-kilogram-canonical-mailbox-transport-boundary.ps1' = 'canonical_mailbox_transport_boundary=verified'
     'verify-kilogram-canonical-device-link-boundary.ps1' = 'canonical_device_link_boundary=verified'
     'verify-kilogram-canonical-endpoint-announcement-boundary.ps1' = 'canonical_endpoint_announcement_boundary=verified'
@@ -137,8 +138,38 @@ function Assert-Rejected {
     throw "$Label was unexpectedly accepted"
 }
 
-if ($expectedGates.Count -ne 74) {
-    throw "M1 readiness boundary inventory must contain exactly 74 gates, got $($expectedGates.Count)"
+function Invoke-CapturedPowerShell {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$FilePath,
+        [string[]]$Arguments = @()
+    )
+
+    # Windows PowerShell 5.1 turns a native stderr record into a terminating
+    # NativeCommandError when the caller uses ErrorActionPreference=Stop, even
+    # when the child exits successfully. Preserve stderr as evidence and keep
+    # the actual process exit code plus exact success marker as the authority.
+    $previousErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $output = @(
+            & powershell -NoProfile -ExecutionPolicy Bypass `
+                -File $FilePath @Arguments 2>&1
+        )
+        $exitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
+
+    [PSCustomObject]@{
+        ExitCode = $exitCode
+        Lines = @($output | ForEach-Object { [string]$_ })
+    }
+}
+
+if ($expectedGates.Count -ne 75) {
+    throw "M1 readiness boundary inventory must contain exactly 75 gates, got $($expectedGates.Count)"
 }
 
 if ($SelfTest) {
@@ -168,39 +199,31 @@ Assert-ExactStringSet $actualGateNames @($expectedGates.Keys) 'M1 readiness boun
 $passedGates = 0
 foreach ($entry in $expectedGates.GetEnumerator()) {
     $gatePath = Join-Path $scriptsDirectory $entry.Key
-    $gateOutput = @(& powershell -NoProfile -ExecutionPolicy Bypass -File $gatePath 2>&1)
-    $gateExitCode = $LASTEXITCODE
-    $gateLines = @($gateOutput | ForEach-Object { [string]$_ })
-    if ($gateExitCode -ne 0) {
-        throw "M1 readiness gate '$($entry.Key)' failed with exit code $gateExitCode.`n$($gateLines -join [Environment]::NewLine)"
+    $gateCapture = Invoke-CapturedPowerShell -FilePath $gatePath
+    if ($gateCapture.ExitCode -ne 0) {
+        throw "M1 readiness gate '$($entry.Key)' failed with exit code $($gateCapture.ExitCode).`n$($gateCapture.Lines -join [Environment]::NewLine)"
     }
-    Assert-ExactMarker $gateLines $entry.Value $entry.Key
+    Assert-ExactMarker $gateCapture.Lines $entry.Value $entry.Key
     $passedGates++
     Write-Output "m1_readiness_gate=$($entry.Key):passed"
 }
 
 $verificationMode = 'current-candidate'
 if ([string]::IsNullOrWhiteSpace($AcceptedTag)) {
-    $candidateOutput = @(& powershell -NoProfile -ExecutionPolicy Bypass -File $candidateVerifier 2>&1)
-    $candidateExitCode = $LASTEXITCODE
-    $candidateLines = @($candidateOutput | ForEach-Object { [string]$_ })
-    if ($candidateExitCode -ne 0) {
-        throw "M1 candidate production verification failed with exit code $candidateExitCode.`n$($candidateLines -join [Environment]::NewLine)"
+    $candidateCapture = Invoke-CapturedPowerShell -FilePath $candidateVerifier
+    if ($candidateCapture.ExitCode -ne 0) {
+        throw "M1 candidate production verification failed with exit code $($candidateCapture.ExitCode).`n$($candidateCapture.Lines -join [Environment]::NewLine)"
     }
-    Assert-ExactMarker $candidateLines 'm1_candidate_status=verified' 'M1 candidate production verifier'
+    Assert-ExactMarker $candidateCapture.Lines 'm1_candidate_status=verified' 'M1 candidate production verifier'
 }
 else {
-    $tagOutput = @(
-        & powershell -NoProfile -ExecutionPolicy Bypass `
-            -File $acceptedTagVerifier `
-            -Tag $AcceptedTag 2>&1
-    )
-    $tagExitCode = $LASTEXITCODE
-    $tagLines = @($tagOutput | ForEach-Object { [string]$_ })
-    if ($tagExitCode -ne 0) {
-        throw "Accepted M1 tag verification failed with exit code $tagExitCode.`n$($tagLines -join [Environment]::NewLine)"
+    $tagCapture = Invoke-CapturedPowerShell `
+        -FilePath $acceptedTagVerifier `
+        -Arguments @('-Tag', $AcceptedTag)
+    if ($tagCapture.ExitCode -ne 0) {
+        throw "Accepted M1 tag verification failed with exit code $($tagCapture.ExitCode).`n$($tagCapture.Lines -join [Environment]::NewLine)"
     }
-    Assert-ExactMarker $tagLines 'm1_tag_acceptance_status=verified' 'accepted M1 tag verifier'
+    Assert-ExactMarker $tagCapture.Lines 'm1_tag_acceptance_status=verified' 'accepted M1 tag verifier'
     $verificationMode = 'accepted-tag'
 }
 

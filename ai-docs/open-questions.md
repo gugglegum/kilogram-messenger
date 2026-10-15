@@ -378,7 +378,7 @@ sessions, distribution, removal и key epochs и не решены этим пр
 - Независимый second-builder, подписанный release provenance, обновления клиента
   и дальнейшая защита supply chain поверх M0.9.50 same-host gate.
 - Миграция криптоалгоритмов и wire protocol без разделения сети.
-- После M1.1.41 canonical coverage содержит 16 complete, 1 partial
+- После M1.1.42 canonical coverage содержит 16 complete, 1 partial
   (`runtime-ipc`), один not-started (`transport-sync`) и два not-targeted
   surface. В runtime IPC уже закрыты signed loopback descriptor, bearer/fresh
   request, exact signed response, core Ping/WaitForChange/Shutdown/Error,
@@ -406,11 +406,14 @@ sessions, distribution, removal и key epochs и не решены этим пр
   Pairwise own-device ticket discovery теперь добавляет distinct directional
   public channels, canonical HTTPS origin, TTL/refresh и atomic install
   verified locator вместе с child announcement policy; derived private
-  capabilities остаются внутри runtime. Открыты roster-wide orchestration,
-  recovery/device-link команды и их noncore results. Следующий приоритет —
-  roster-wide orchestration, затем остальные
-  families на bounded этапы до complete `runtime-ipc`, затем parallel CBOR
-  ALPN/negotiation для
+  capabilities остаются внутри runtime. Roster-wide orchestration теперь
+  exact-проецирует active siblings и retained revoked tombstones в строгом
+  Device-ID порядке, выполняет не более одного child workflow и сохраняет
+  global depth limit через отдельно проверяемые embedded canonical CBOR child
+  statuses. Открыты recovery-plan/device-link команды, migration активного
+  unpaged conversation list и оставшиеся mutation results. Следующий приоритет
+  — recovery-plan/device-link family, затем остальные bounded этапы до complete
+  `runtime-ipc`, затем parallel CBOR ALPN/negotiation для
   `transport-sync`. Общая activation требует explicit identifiers, downgrade
   tests, sustained fuzzing, independent HPKE conformance и fresh multi-device
   field evidence.

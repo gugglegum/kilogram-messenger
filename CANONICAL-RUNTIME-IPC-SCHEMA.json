@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.41",
+  "milestone": "M1.1.42",
   "status": "candidate-not-active",
   "changes_active_wire": false,
   "profile": "kilogram-deterministic-cbor-v1",
@@ -78,6 +78,10 @@
     "maximum_own_device_discovery_announcement_interval_seconds": 86400,
     "maximum_own_device_discovery_announcement_validity_seconds": 2592000,
     "maximum_own_device_discovery_retry_seconds": 3600,
+    "maximum_own_device_roster_request_bytes": 786432,
+    "maximum_own_device_roster_response_bytes": 786432,
+    "maximum_own_device_roster_children": 64,
+    "maximum_own_device_roster_parallel_workflows": 1,
     "maximum_error_bytes": 4096,
     "maximum_descriptor_validity_seconds": 86400,
     "maximum_request_validity_seconds": 30,
@@ -392,6 +396,32 @@
       "id": "own-device-discovery-response-id-v1",
       "value": "kilogram:runtime-ipc-own-device-discovery-response-id:cbor-v1\\0",
       "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "own-device-roster-policy-id-v1",
+      "value": "kilogram:runtime-ipc-own-device-roster-policy-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "own-device-roster-snapshot-id-v1",
+      "value": "kilogram:runtime-ipc-own-device-roster-snapshot-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "own-device-roster-request-digest-v1",
+      "value": "kilogram:runtime-ipc-own-device-roster-request-digest:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "own-device-roster-response-signature-v1",
+      "value": "kilogram:runtime-ipc-own-device-roster-response-signature:cbor-v1\\0",
+      "operation": "ed25519-signature",
+      "signer": "descriptor-device-ed25519"
+    },
+    {
+      "id": "own-device-roster-response-id-v1",
+      "value": "kilogram:runtime-ipc-own-device-roster-response-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
     }
   ],
   "objects": [
@@ -539,6 +569,16 @@
       "id": "signed-runtime-ipc-own-device-discovery-response-v1",
       "kind": "device-signed-secret-free-foreground-own-device-discovery-policy-snapshot",
       "maximum_bytes": 524288
+    },
+    {
+      "id": "runtime-ipc-own-device-roster-request-v1",
+      "kind": "short-lived-exact-roster-wide-own-device-automation-request",
+      "maximum_bytes": 786432
+    },
+    {
+      "id": "signed-runtime-ipc-own-device-roster-response-v1",
+      "kind": "device-signed-atomic-parent-and-pairwise-child-policy-snapshot",
+      "maximum_bytes": 786432
     }
   ],
   "covered_commands": [
@@ -566,7 +606,9 @@
     "configure-own-device-announcement-automation",
     "own-device-announcement-automation-status",
     "configure-own-device-ticket-discovery",
-    "own-device-ticket-discovery-status"
+    "own-device-ticket-discovery-status",
+    "configure-own-device-roster-automation",
+    "own-device-roster-automation-status"
   ],
   "covered_results": [
     "pong",
@@ -592,7 +634,9 @@
     "own-device-announcement-automation-configured",
     "own-device-announcement-automation-status",
     "own-device-ticket-discovery-configured",
-    "own-device-ticket-discovery-status"
+    "own-device-ticket-discovery-status",
+    "own-device-roster-automation-configured",
+    "own-device-roster-automation-status"
   ],
   "semantic_rules": [
     "descriptor address is exactly IPv4 127.0.0.1 or IPv6 ::1 and port is nonzero",
@@ -704,10 +748,21 @@
     "discovery status contains at most 32 unique policies in strict recipient Device order and its snapshot ID commits the complete authority-bound current-network projection",
     "discovery configuration and status require no restart, run only in the foreground runtime and explicitly deny an OS background service",
     "ticket plaintext, HPKE envelope bytes, Device encryption secrets, derived capabilities, local paths and Account Root secrets are forbidden; request ID is the durable idempotency key and stale predecessor or divergent reuse fails before mutation",
+    "own-device roster automation embeds the exact current Root-signed Account Device list and binds the parent and every child to its authority revision and domain-separated signed-list digest",
+    "the roster parent configuration uses one canonical root-only HTTPS origin and bounds publication TTL, refresh lead, announcement timing, retry and the Ethernet, Wi-Fi, mobile and unknown network mask",
+    "the parent policy starts at generation one without a predecessor, advances only from the exact expected predecessor and uses request ID as its durable idempotency key",
+    "the child projection contains exactly every active sibling Device and every retained nonlocal permanent revocation from the supplied Root-signed roster",
+    "roster children are unique, limited to 64 and ordered strictly by recipient Device ID; omission, duplication, reordering or an unknown child fails closed",
+    "each active child deterministically inherits the parent configuration while each retired tombstone is forced disabled and both inherit the parent's configured timestamp",
+    "every child policy ID is recomputed from the exact authority state, derived configuration, generation, predecessor and directional public channel identifiers",
+    "the roster snapshot ID atomically commits the Account, local Device, authority state, current network, parent policy and complete ordered child projection",
+    "declared active and retired counts exactly match the child projection and the runtime serializes reconciliation with exactly one maximum parallel workflow",
+    "roster configuration and status require no restart, execute only while the foreground runtime is running and explicitly deny an OS background service",
+    "Account Root secrets, Device signing or encryption secrets, derived read or write capabilities, ticket plaintext, HPKE ciphertext and local filesystem paths are forbidden from roster IPC",
+    "an exact retry may return already-committed only for the unchanged parent head and projection; stale predecessor, divergent reuse or a mismatched roster fails before mutation",
     "unknown variants, noncanonical CBOR, trailing data, expired objects and contextual substitutions fail closed"
   ],
   "remaining_runtime_ipc_surface": [
-    "own-device-roster-automation-commands",
     "recovery-plan-and-device-link-commands",
     "active-unpaged-conversation-list-migration",
     "all-associated-mutation-results-not-listed-above"

@@ -1,4 +1,4 @@
-; Kilogram deterministic-CBOR local runtime IPC model, M1.1.37.
+; Kilogram deterministic-CBOR local runtime IPC model, M1.1.42.
 ; Only unsigned integers, definite byte strings and definite arrays are used.
 
 profile-version = 1
@@ -1152,6 +1152,106 @@ signed-runtime-ipc-own-device-discovery-response-v1 = [
   signature
 ]
 
+; One parent policy reconciles the exact Root-signed roster into the pairwise
+; discovery policies above. Child discovery status is embedded as a canonical
+; CBOR byte string so the global nesting limit stays bounded; decoders must
+; independently apply the discovery-status grammar to those bytes.
+runtime-ipc-own-device-roster-previous-policy-v1 =
+  [none: 0] /
+  [some: 1, generation: 1..18446744073709551615, policy-id: digest]
+
+runtime-ipc-own-device-roster-configuration-v1 = [
+  profile-version,
+  enabled: 0..1,
+  service-origin-utf8: bytes .size (1..512),
+  publication-ttl-seconds: 30..3600,
+  refresh-before-seconds: 10..1800,
+  announcement-interval-seconds: 30..86400,
+  announcement-validity-seconds: 1..2592000,
+  retry-base-seconds: 1..3600,
+  retry-max-seconds: 1..3600,
+  allowed-network-mask: 0..15
+]
+
+runtime-ipc-own-device-roster-policy-status-v1 = [
+  profile-version,
+  runtime-ipc-own-device-roster-configuration-v1,
+  generation: 1..18446744073709551615,
+  previous-policy-id: runtime-ipc-own-device-discovery-optional-id-v1,
+  policy-id: digest,
+  configured-at-unix-seconds: uint
+]
+
+runtime-ipc-own-device-roster-child-lifecycle-v1 = 0..1
+
+runtime-ipc-own-device-roster-child-status-v1 = [
+  profile-version,
+  runtime-ipc-own-device-roster-child-lifecycle-v1,
+  discovery-policy-status-cbor: bytes .size (1..524288)
+]
+
+runtime-ipc-own-device-roster-command-v1 =
+  [configure-own-device-roster-automation: 0,
+   current-device-list-cbor: bytes .size (1..524288),
+   runtime-ipc-own-device-roster-previous-policy-v1,
+   runtime-ipc-own-device-roster-configuration-v1] /
+  [own-device-roster-automation-status: 1,
+   current-device-list-cbor: bytes .size (1..524288)]
+
+runtime-ipc-own-device-roster-request-v1 = [
+  profile-version,
+  descriptor-id: digest,
+  request-id,
+  bearer-token: token,
+  issued-at-unix-seconds: uint,
+  expires-at-unix-seconds: uint,
+  runtime-ipc-own-device-roster-command-v1
+]
+
+runtime-ipc-own-device-roster-result-v1 =
+  [own-device-roster-automation-configured: 0,
+   outcome: 0..1,
+   authority-revision: uint,
+   device-list-digest: digest,
+   current-network: runtime-ipc-own-device-discovery-network-v1,
+   runtime-ipc-own-device-roster-policy-status-v1,
+   snapshot-id: digest,
+   children: [* runtime-ipc-own-device-roster-child-status-v1],
+   active-children: 0..64,
+   retired-children: 0..64,
+   maximum-parallel-workflows: 1,
+   restart-not-required: 0,
+   foreground-runtime-only: 0,
+   os-background-service-enabled: 0] /
+  [own-device-roster-automation-status: 1,
+   authority-revision: uint,
+   device-list-digest: digest,
+   current-network: runtime-ipc-own-device-discovery-network-v1,
+   runtime-ipc-own-device-roster-policy-status-v1,
+   snapshot-id: digest,
+   children: [* runtime-ipc-own-device-roster-child-status-v1],
+   active-children: 0..64,
+   retired-children: 0..64,
+   maximum-parallel-workflows: 1,
+   foreground-runtime-only: 0,
+   os-background-service-enabled: 0] /
+  [error: 2, error-code: 1..65535, message-utf8: bytes .size (1..4096)]
+
+runtime-ipc-own-device-roster-response-content-v1 = [
+  profile-version,
+  descriptor-id: digest,
+  request-id,
+  request-digest: digest,
+  responder-device-id: device-id,
+  runtime-ipc-own-device-roster-result-v1
+]
+
+signed-runtime-ipc-own-device-roster-response-v1 = [
+  profile-version,
+  runtime-ipc-own-device-roster-response-content-v1,
+  signature
+]
+
 kilogram-runtime-ipc-v1 =
   signed-runtime-ipc-descriptor-v1 /
   runtime-ipc-core-request-v1 /
@@ -1181,4 +1281,6 @@ kilogram-runtime-ipc-v1 =
   runtime-ipc-own-device-announcement-request-v1 /
   signed-runtime-ipc-own-device-announcement-response-v1 /
   runtime-ipc-own-device-discovery-request-v1 /
-  signed-runtime-ipc-own-device-discovery-response-v1
+  signed-runtime-ipc-own-device-discovery-response-v1 /
+  runtime-ipc-own-device-roster-request-v1 /
+  signed-runtime-ipc-own-device-roster-response-v1

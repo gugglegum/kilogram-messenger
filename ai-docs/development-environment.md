@@ -3696,3 +3696,35 @@ Hosted follow-up:
   not-targeted. The next bounded runtime IPC slice is roster-wide own-device
   availability orchestration; recovery/device-link IPC and transport-sync
   remain later work.
+
+## M1.1.42 canonical runtime IPC own-device roster automation (2026-10-16)
+
+- Added inactive
+  `crates/kilogram-protocol/src/canonical_runtime_ipc_own_device_roster_v1.rs`
+  with exact configure/status commands, Device-signed responses and one
+  foreground parent policy that projects the complete current sibling roster.
+  Active Postcard v26/JSON descriptor v7 remains unchanged.
+- The projection contains every active sibling from the exact Root-signed list
+  plus retained permanently revoked tombstones, strictly ordered by Device ID.
+  Active children inherit the parent policy; retired children are forced
+  disabled. At most one child workflow may execute concurrently.
+- Each complete pairwise discovery child is embedded as independently
+  validated canonical CBOR inside a bounded `bstr`. This preserves the global
+  canonical depth limit of eight instead of weakening it for composition.
+- Ticket plaintext, derived private capabilities, reusable secrets and local
+  filesystem paths do not cross IPC. Results explicitly retain
+  foreground-runtime-only execution, no restart and no OS background service.
+- CDDL, schema, deterministic vectors, RFC-0168 and the independent Node
+  Ed25519/BLAKE3 reference agree. Dedicated actual/self-test boundaries,
+  canonical conformance and coverage checks pass.
+- Final decoder mutation regression passed 28755/28755 in 1023.72 seconds with
+  debug/offline Cargo, two jobs and BelowNormal priority. Protocol library
+  regression passed 130/130 with twelve explicit vector generators ignored.
+- Accepted-tag readiness passed 75/75; rustfmt and workspace locked/offline
+  strict Clippy passed. The readiness runner now preserves successful child
+  stderr as evidence while still requiring zero exit code and an exact success
+  marker, avoiding false Windows PowerShell `NativeCommandError` failures.
+- The immutable accepted `M1.0.0` tag remained verified. No network, test EXE,
+  release build, archive, push or tag was created. Canonical coverage remains
+  16 complete, 1 partial, 1 not-started and 2 not-targeted; the next bounded
+  runtime IPC slice is recovery-plan/device-link commands.
