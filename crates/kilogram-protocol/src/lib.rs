@@ -31,6 +31,7 @@ pub mod canonical_ratchet_v1;
 pub mod canonical_recovery_exchange_v1;
 pub mod canonical_recovery_v1;
 pub mod canonical_rewrap_v1;
+pub mod canonical_runtime_ipc_read_v1;
 pub mod canonical_runtime_ipc_v1;
 pub mod canonical_runtime_mailbox_v1;
 pub mod canonical_sync_session_v1;

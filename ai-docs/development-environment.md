@@ -3369,3 +3369,23 @@ Hosted follow-up:
 - Canonical coverage is 16 complete, 1 partial, 1 not-started and 2
   not-targeted. Runtime IPC is partial; transport-sync is the sole not-started
   source surface.
+
+## M1.1.29 canonical runtime IPC read-only snapshot (2026-10-15)
+
+- New inactive module:
+  `crates/kilogram-protocol/src/canonical_runtime_ipc_read_v1.rs`.
+- `CANONICAL-RUNTIME-IPC.cddl` and the exact JSON registry now include bounded
+  conversation-list and snapshot-bound history-page request/results. Generated
+  vectors and a dependency-free Node reference cover CBOR, Ed25519 and BLAKE3.
+- Active `kilogram-runtime-ipc` remains Postcard version 26 with JSON descriptor
+  version 7; no listener, stable-path executable, firewall or network behavior
+  changed.
+- Final decoder mutation regression passed 17337/17337 in 774.07 seconds with
+  debug/offline Cargo, two jobs and BelowNormal priority. The first run rejected
+  every mutation and differed only at the deliberately closed old inventory.
+- Protocol library tests passed 85/85 outside the restricted Windows temp
+  sandbox. Accepted-tag readiness passed 62/62 with rustfmt and workspace-wide
+  locked/offline strict Clippy.
+- Canonical coverage remains 16 complete, 1 partial, 1 not-started and 2
+  not-targeted. Runtime IPC still lacks mutation/contact/mailbox/publication/
+  automation/recovery command families; transport-sync remains not-started.

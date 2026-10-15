@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.28",
+  "milestone": "M1.1.29",
   "status": "candidate-not-active",
   "changes_active_wire": false,
   "profile": "kilogram-deterministic-cbor-v1",
@@ -25,10 +25,18 @@
     "maximum_descriptor_bytes": 2048,
     "maximum_request_bytes": 65536,
     "maximum_response_bytes": 65536,
+    "maximum_read_response_bytes": 262144,
     "maximum_error_bytes": 4096,
     "maximum_descriptor_validity_seconds": 86400,
     "maximum_request_validity_seconds": 30,
     "maximum_wait_milliseconds": 120000,
+    "maximum_conversation_page_size": 64,
+    "maximum_endpoint_candidates_per_conversation": 4,
+    "maximum_history_page_size": 100,
+    "maximum_history_page_body_bytes": 196608,
+    "maximum_preview_bytes": 96,
+    "maximum_text_bytes": 4096,
+    "maximum_path_bytes": 4096,
     "clock_skew_seconds": 30
   },
   "domains": [
@@ -58,6 +66,22 @@
       "id": "response-id-v1",
       "value": "kilogram:runtime-ipc-response-id:cbor-v1\\0",
       "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "read-request-digest-v1",
+      "value": "kilogram:runtime-ipc-read-request-digest:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "read-response-signature-v1",
+      "value": "kilogram:runtime-ipc-read-response-signature:cbor-v1\\0",
+      "operation": "ed25519-signature",
+      "signer": "descriptor-device-ed25519"
+    },
+    {
+      "id": "read-response-id-v1",
+      "value": "kilogram:runtime-ipc-read-response-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
     }
   ],
   "objects": [
@@ -75,18 +99,32 @@
       "id": "signed-runtime-ipc-core-response-v1",
       "kind": "device-signed-exact-request-response",
       "maximum_bytes": 65536
+    },
+    {
+      "id": "runtime-ipc-read-request-v1",
+      "kind": "short-lived-bearer-authenticated-paginated-read-request",
+      "maximum_bytes": 65536
+    },
+    {
+      "id": "signed-runtime-ipc-read-response-v1",
+      "kind": "device-signed-bounded-read-projection",
+      "maximum_bytes": 262144
     }
   ],
   "covered_commands": [
     "ping",
     "wait-for-change",
-    "shutdown"
+    "shutdown",
+    "conversation-list-page",
+    "history-page"
   ],
   "covered_results": [
     "pong",
     "change-state",
     "shutdown-accepted",
-    "error"
+    "error",
+    "conversation-list-page",
+    "history-page"
   ],
   "semantic_rules": [
     "descriptor address is exactly IPv4 127.0.0.1 or IPv6 ::1 and port is nonzero",
@@ -100,6 +138,11 @@
     "pong repeats the descriptor Account and Device identities",
     "change-state is valid only for wait-for-change; changed true requires a greater revision and changed false requires the exact requested revision",
     "shutdown-accepted is valid only for shutdown while a bounded nonempty UTF-8 error is valid for every command",
+    "conversation-list reads are explicitly paginated by the deterministic label and peer Account tuple with at most 64 summaries per response",
+    "conversation summaries are strictly ordered and bind their label-derived Conversation ID, exact endpoint counts, one primary endpoint, endpoint health and latest-message preview",
+    "history reads bind the label-derived Conversation ID, a nonzero immutable snapshot ID, at most 100 messages and at most 196608 aggregate plaintext body bytes",
+    "history continuation arithmetic is exact: the next before-index plus returned message count equals the requested page end",
+    "every read response is signed by the descriptor Device and commits to the digest of the complete read request",
     "unknown variants, noncanonical CBOR, trailing data, expired objects and contextual substitutions fail closed"
   ],
   "remaining_runtime_ipc_surface": [
@@ -109,6 +152,7 @@
     "ticket-publication-and-conflict-commands",
     "own-device-discovery-and-automation-commands",
     "recovery-plan-and-device-link-commands",
-    "all-associated-noncore-results"
+    "active-unpaged-conversation-list-migration",
+    "all-associated-mutation-results-not-listed-above"
   ]
 }

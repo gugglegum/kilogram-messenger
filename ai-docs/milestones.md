@@ -5665,3 +5665,30 @@ correlation visible, Windows-only field evidence, independent security audit
 - coverage: 16 complete / 1 partial / 1 not-started / 2 not-targeted. Следующий
   шаг — последовательно покрыть оставшиеся runtime IPC command/result families,
   после чего перейти к parallel CBOR ALPN/negotiation `transport-sync`.
+
+### M1.1.29 — canonical runtime IPC read-only model: принято локально
+
+- inactive deterministic-CBOR IPC получил две read-only команды без подключения
+  к active reader: paginated conversation list и snapshot-bound history page;
+- conversation cursor состоит из exact UTF-8 label и peer Account ID, page limit
+  ограничен 64; ordering и next cursor проверяются fail closed;
+- conversation summary коммитит peer Account/Device, exact endpoint counters,
+  максимум четыре deterministic candidates, ровно один primary, route/health,
+  message count и bounded latest-message preview;
+- history page всегда возвращает snapshot ID, total count и reverse page до 100
+  сообщений; cursor arithmetic и aggregate body bound 192 KiB запрещают drift,
+  overlap, gap и unbounded local response;
+- общий signed response bound равен 256 KiB, подпись Device exact-связывает
+  descriptor ID, caller request ID и domain-separated digest полного request;
+- independent Node reference воспроизводит deterministic CBOR, Ed25519 и BLAKE3
+  для list/history vectors и отвергает substitutions/signature tampering;
+- первый полный mutation run отверг все cases и остановился только на старом
+  inventory 16311; после фиксации exact count corpus прошёл 17337/17337 за
+  774.07 s, debug/offline, `CargoJobs=2`, BelowNormal;
+- protocol library regression прошёл 85/85; accepted-tag readiness прошёл 62/62,
+  rustfmt и workspace locked/offline strict Clippy;
+- network, stable-path test EXE, release build, archive, push и tag не создавались;
+  active Postcard IPC v26/JSON descriptor v7 и immutable `M1.0.0` не менялись;
+- coverage остаётся 16 complete / 1 partial / 1 not-started / 2 not-targeted.
+  Следующий bounded IPC slice — contact/device directory либо durable
+  message/outbox; затем mailbox/publication/automation/recovery families.
