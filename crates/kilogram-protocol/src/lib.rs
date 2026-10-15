@@ -22,6 +22,7 @@ pub mod canonical_mailbox_transport_v1;
 pub mod canonical_mailbox_v1;
 pub mod canonical_prekey_selection_v1;
 pub mod canonical_publication_conflict_v1;
+pub mod canonical_publication_resolution_v1;
 pub mod canonical_ratchet_v1;
 pub mod canonical_recovery_exchange_v1;
 pub mod canonical_recovery_v1;

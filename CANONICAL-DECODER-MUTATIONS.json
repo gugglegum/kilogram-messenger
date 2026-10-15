@@ -5,7 +5,7 @@
   "active_runtime_changed": false,
   "seed": 1262836037,
   "minimum_mutations": 500,
-  "expected_mutations": 10583,
+  "expected_mutations": 11627,
   "maximum_mutations": 12000,
   "fixtures": [
     {
@@ -254,6 +254,31 @@
       "vector_file": "CANONICAL-PUBLICATION-CONFLICT-VECTORS.json",
       "json_pointer": "/expected/conflict_proof/signed_cbor_hex",
       "decoder": "decode_and_verify_signed_publication_conflict_proof_v1"
+    },
+    {
+      "id": "signed-publication-conflict-resolution-request-v1",
+      "vector_file": "CANONICAL-PUBLICATION-CONFLICT-VECTORS.json",
+      "json_pointer": "/expected/resolution_request/signed_cbor_hex",
+      "decoder": "decode_and_verify_signed_publication_conflict_resolution_request_v1"
+    },
+    {
+      "id": "root-signed-publication-conflict-resolution-v1",
+      "vector_file": "CANONICAL-PUBLICATION-CONFLICT-VECTORS.json",
+      "json_pointer": "/expected/resolution/signed_cbor_hex",
+      "decoder": "decode_and_verify_root_signed_publication_conflict_resolution_v1"
+    },
+    {
+      "id": "publication-conflict-resolution-response-v1",
+      "vector_file": "CANONICAL-PUBLICATION-CONFLICT-VECTORS.json",
+      "json_pointer": "/expected/resolution_response/cbor_hex",
+      "decoder": "decode_and_verify_publication_conflict_resolution_response_v1"
+    },
+    {
+      "id": "publication-conflict-response-claim-v1",
+      "vector_file": "CANONICAL-PUBLICATION-CONFLICT-VECTORS.json",
+      "json_pointer": "/expected/response_claim/cbor_hex",
+      "decoder": "decode_and_verify_publication_conflict_claim_v1",
+      "context_verifier": "verify_publication_conflict_claim_for_response_v1"
     }
   ],
   "mutation_classes": [

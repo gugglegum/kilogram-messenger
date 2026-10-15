@@ -3214,3 +3214,27 @@ Hosted follow-up:
   and workspace-wide locked/offline strict Clippy.
 - Active Postcard/base64url publication-conflict runtime remains unchanged;
   coverage is intentionally partial until M1.1.22 resolution objects land.
+
+## M1.1.22 canonical publication-conflict resolution snapshot (2026-10-15)
+
+- New Rust module:
+  `crates/kilogram-protocol/src/canonical_publication_resolution_v1.rs`.
+- It defines strict deterministic-CBOR request, Root resolution, response and
+  portable claim codecs. Authority verification consumes a separately verified
+  `CanonicalSignedAccountDeviceListV1`; request bytes never authorize
+  themselves.
+- The reference generator supports deterministic vector regeneration with
+  `--emit --output <path>` and independently derives Ed25519/BLAKE3/CBOR/URI.
+- Targeted protocol regression passed 68/68 with `CargoJobs=2` and BelowNormal
+  priority. Decoder mutation regression passed 11627/11627 in about 219
+  seconds in the unoptimized profile.
+- Complete accepted-tag readiness passed `55/55`, immutable `M1.0.0`, rustfmt
+  and workspace-wide locked/offline strict Clippy. It started no network
+  action, release build, archive or Git tag.
+- Claim mutation is contextual: standalone claim integrity is not claimed;
+  `verify_publication_conflict_claim_for_response_v1` binds every mutation to
+  the exact signed response while the shared KPC1 user-comparison code remains
+  identical for request and response.
+- Canonical coverage is 13 complete, 0 partial, 5 not-started and 2
+  not-targeted. The candidate remains inactive and the accepted M1.0.0 tag is
+  unchanged.

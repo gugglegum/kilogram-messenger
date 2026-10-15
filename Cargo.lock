@@ -3284,6 +3284,7 @@ dependencies = [
 name = "kilogram-protocol"
 version = "0.1.0"
 dependencies = [
+ "base64",
  "blake3",
  "ed25519-dalek 3.0.0",
  "kilogram-crypto",

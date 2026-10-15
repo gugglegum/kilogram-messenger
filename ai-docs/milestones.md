@@ -5486,3 +5486,29 @@ correlation visible, Windows-only field evidence, independent security audit
 - Device resolution request, Root resolution, response и portable claim
   намеренно остаются remaining для M1.1.22; active Postcard/base64url URI,
   runtime/network/release/archive/tag не менялись.
+
+### M1.1.22 — canonical publication-conflict resolution: принято локально
+
+- detector Device подписывает bounded request, который exact-связывает conflict
+  proof, Account authority revision, peer identity, old/new write keys,
+  increasing channel epoch, route policy, replacement ticket и request time;
+- request authority намеренно не самодостаточна: verifier требует внешний
+  current Root-signed device list exact revision и membership requester/detector;
+- Root-signed resolution связывает request/evidence IDs и все rotation fields,
+  response добавляет exact replacement ticket и проверяет Root-signed digest;
+- request/response portable claims кодируются deterministic CBOR и unpadded
+  base64url URI; artifact IDs различаются, общий 12-byte code отображается как
+  `KPC1-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX`;
+- claim не является authority; mutation corpus проверяет её только вместе с
+  exact Root-signed response, что было отдельно обнаружено первым полным run;
+- independent Node reference воспроизводит CBOR, Ed25519, BLAKE3, URI и display
+  code; Rust golden/negative tests проверяют authority/root/ticket/cross-kind
+  substitutions;
+- четыре contextual strict fixtures расширяют deterministic mutation corpus до
+  11627/12000; `publication-conflict` становится complete (13 complete /
+  0 partial / 5 not-started / 2 not-targeted);
+- verification: protocol unit tests 68/68, mutation corpus 11627/11627,
+  independent reference/boundary/coverage/conformance self-tests, rustfmt,
+  workspace-wide offline strict Clippy и accepted-tag readiness 55/55 green;
+- active Postcard/base64url runtime, identifiers, network, release, archive и
+  tags не менялись; next canonical priority — `endpoint-announcement`.

@@ -37,7 +37,7 @@ function Assert-Manifest {
         throw 'decoder mutation manifest header changed'
     }
     if ([int]$Manifest.seed -ne 1262836037 -or [int]$Manifest.minimum_mutations -ne 500 -or
-        [int]$Manifest.expected_mutations -ne 10583 -or
+        [int]$Manifest.expected_mutations -ne 11627 -or
         [int]$Manifest.maximum_mutations -ne 12000) { throw 'decoder mutation bounds changed' }
     $expectedFixtures = @(
         'signed-device-certificate-v1|CANONICAL-AUTHORITY-VECTORS.json|/expected/certificate/signed_cbor_hex|decode_and_verify_signed_device_certificate_v1',
@@ -81,6 +81,10 @@ function Assert-Manifest {
         'signed-ticket-publication-v1|CANONICAL-PUBLICATION-CONFLICT-VECTORS.json|/expected/first_publication/signed_cbor_hex|decode_and_verify_signed_ticket_publication_v1'
         'signed-ticket-publication-observation-v1|CANONICAL-PUBLICATION-CONFLICT-VECTORS.json|/expected/first_observation/signed_cbor_hex|decode_and_verify_signed_ticket_publication_observation_v1'
         'signed-publication-conflict-proof-v1|CANONICAL-PUBLICATION-CONFLICT-VECTORS.json|/expected/conflict_proof/signed_cbor_hex|decode_and_verify_signed_publication_conflict_proof_v1'
+        'signed-publication-conflict-resolution-request-v1|CANONICAL-PUBLICATION-CONFLICT-VECTORS.json|/expected/resolution_request/signed_cbor_hex|decode_and_verify_signed_publication_conflict_resolution_request_v1'
+        'root-signed-publication-conflict-resolution-v1|CANONICAL-PUBLICATION-CONFLICT-VECTORS.json|/expected/resolution/signed_cbor_hex|decode_and_verify_root_signed_publication_conflict_resolution_v1'
+        'publication-conflict-resolution-response-v1|CANONICAL-PUBLICATION-CONFLICT-VECTORS.json|/expected/resolution_response/cbor_hex|decode_and_verify_publication_conflict_resolution_response_v1'
+        'publication-conflict-response-claim-v1|CANONICAL-PUBLICATION-CONFLICT-VECTORS.json|/expected/response_claim/cbor_hex|decode_and_verify_publication_conflict_claim_v1'
     )
     $actualFixtures = @($Manifest.fixtures | ForEach-Object { "$($_.id)|$($_.vector_file)|$($_.json_pointer)|$($_.decoder)" })
     if (($actualFixtures -join "`n") -cne ($expectedFixtures -join "`n")) { throw 'decoder fixture inventory changed' }
@@ -88,6 +92,11 @@ function Assert-Manifest {
     if ($runtimePayloadFixture.Count -ne 1 -or
         [string]$runtimePayloadFixture[0].context_verifier -cne 'verify_runtime_mailbox_payload_for_dispatch_v1') {
         throw 'runtime mailbox payload mutation context changed'
+    }
+    $publicationClaimFixture = @($Manifest.fixtures | Where-Object { $_.id -ceq 'publication-conflict-response-claim-v1' })
+    if ($publicationClaimFixture.Count -ne 1 -or
+        [string]$publicationClaimFixture[0].context_verifier -cne 'verify_publication_conflict_claim_for_response_v1') {
+        throw 'publication-conflict claim mutation context changed'
     }
     $expectedClasses = @(
         'bounded-strict-prefix-truncation-grid', 'bounded-low-bit-flip-grid', 'trailing-byte',
@@ -157,8 +166,9 @@ foreach ($fixture in $manifest.fixtures) {
     }
 }
 foreach ($required in @('MAXIMUM_GRID_POSITIONS: usize = 128', 'MINIMUM_MUTATIONS: usize = 500',
-    'EXPECTED_MUTATIONS: usize = 10_583', 'MAXIMUM_MUTATIONS: usize = 12_000',
+    'EXPECTED_MUTATIONS: usize = 11_627', 'MAXIMUM_MUTATIONS: usize = 12_000',
     'bounded_positions(', 'verify_runtime_mailbox_payload_for_dispatch_v1',
+    'verify_publication_conflict_claim_for_response_v1',
     'canonical_decoder_mutations=')) {
     if ($test.IndexOf($required, [StringComparison]::Ordinal) -lt 0) { throw "mutation test is missing '$required'" }
 }
@@ -188,7 +198,7 @@ if ($SelfTest) {
 Write-Output 'canonical_conformance_boundary=verified'
 Write-Output 'independent_blake3=verified'
 Write-Output 'official_blake3_vectors=6/6'
-Write-Output 'bounded_decoder_mutations=10583'
+Write-Output 'bounded_decoder_mutations=11627'
 Write-Output 'coverage_guided_fuzzing=pending-before-activation'
 Write-Output 'active_runtime_changed=false'
 Write-Output 'network_executed=false'

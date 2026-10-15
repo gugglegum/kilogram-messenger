@@ -1,10 +1,13 @@
-; Kilogram deterministic-CBOR publication evidence candidate, M1.1.21.
+; Kilogram deterministic-CBOR publication conflict ceremony candidate, M1.1.22.
 
 profile-version = 1
 id-32 = bytes .size 32
 signature = bytes .size 64
 canonical-object = bytes
 optional-id-32 = [] / [id-32]
+confirmation-code = bytes .size 12
+route-policy-v1 = 0 / 1 / 2
+claim-kind-v1 = 0 / 1
 
 ticket-publication-content-v1 = [
   profile-version,
@@ -64,7 +67,83 @@ signed-publication-conflict-proof-v1 = [
   signature: signature
 ]
 
-kilogram-publication-conflict-evidence-v1 =
+publication-conflict-resolution-request-content-v1 = [
+  profile-version,
+  local-account-id: id-32,
+  requester-device-id: id-32,
+  authority-revision: uint,
+  conflict-proof-cbor: canonical-object,
+  peer-account-id: id-32,
+  peer-device-id: id-32,
+  old-write-key: id-32,
+  new-write-key: id-32,
+  old-channel-epoch: uint,
+  new-channel-epoch: uint,
+  route-policy: route-policy-v1,
+  replacement-ticket: bytes,
+  requested-at-unix-seconds: uint
+]
+
+signed-publication-conflict-resolution-request-v1 = [
+  profile-version,
+  content-cbor: canonical-object,
+  signature: signature
+]
+
+publication-conflict-resolution-content-v1 = [
+  profile-version,
+  request-id: id-32,
+  local-account-id: id-32,
+  authority-revision: uint,
+  conflict-evidence-id: id-32,
+  peer-account-id: id-32,
+  peer-device-id: id-32,
+  old-write-key: id-32,
+  new-write-key: id-32,
+  old-channel-epoch: uint,
+  new-channel-epoch: uint,
+  route-policy: route-policy-v1,
+  replacement-ticket-digest: id-32,
+  authorized-at-unix-seconds: uint
+]
+
+root-signed-publication-conflict-resolution-v1 = [
+  profile-version,
+  content-cbor: canonical-object,
+  signature: signature
+]
+
+publication-conflict-resolution-response-v1 = [
+  profile-version,
+  request-id: id-32,
+  resolution-cbor: canonical-object,
+  replacement-ticket: bytes
+]
+
+publication-conflict-claim-v1 = [
+  profile-version,
+  kind: claim-kind-v1,
+  artifact-id: id-32,
+  request-id: id-32,
+  local-account-id: id-32,
+  authority-revision: uint,
+  conflict-evidence-id: id-32,
+  peer-account-id: id-32,
+  peer-device-id: id-32,
+  old-publication-channel-id: id-32,
+  new-publication-channel-id: id-32,
+  old-channel-epoch: uint,
+  new-channel-epoch: uint,
+  route-policy: route-policy-v1,
+  replacement-ticket-digest: id-32,
+  confirmation-code: confirmation-code
+]
+
+kilogram-publication-conflict-v1 =
   signed-ticket-publication-v1 /
   signed-ticket-publication-observation-v1 /
-  signed-publication-conflict-proof-v1
+  signed-publication-conflict-proof-v1 /
+  signed-publication-conflict-resolution-request-v1 /
+  root-signed-publication-conflict-resolution-v1 /
+  publication-conflict-resolution-response-v1 /
+  publication-conflict-claim-v1

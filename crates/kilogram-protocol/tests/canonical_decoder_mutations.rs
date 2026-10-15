@@ -31,6 +31,14 @@ use kilogram_protocol::canonical_publication_conflict_v1::{
     decode_and_verify_signed_ticket_publication_observation_v1,
     decode_and_verify_signed_ticket_publication_v1,
 };
+use kilogram_protocol::canonical_publication_resolution_v1::{
+    CanonicalPublicationConflictResolutionResponseV1,
+    decode_and_verify_publication_conflict_claim_v1,
+    decode_and_verify_publication_conflict_resolution_response_v1,
+    decode_and_verify_root_signed_publication_conflict_resolution_v1,
+    decode_and_verify_signed_publication_conflict_resolution_request_v1,
+    verify_publication_conflict_claim_for_response_v1,
+};
 use kilogram_protocol::canonical_ratchet_v1::{
     decode_and_verify_account_prekey_directory_v1, decode_and_verify_signed_prekey_pool_v1,
 };
@@ -59,7 +67,7 @@ use kilogram_protocol::canonical_ticket_publication_v1::{
 use serde_json::Value;
 
 const MINIMUM_MUTATIONS: usize = 500;
-const EXPECTED_MUTATIONS: usize = 10_583;
+const EXPECTED_MUTATIONS: usize = 11_627;
 const MAXIMUM_MUTATIONS: usize = 12_000;
 const MAXIMUM_GRID_POSITIONS: usize = 128;
 
@@ -105,6 +113,12 @@ enum Decoder {
     TicketPublication,
     TicketPublicationObservation,
     PublicationConflictProof,
+    PublicationConflictResolutionRequest,
+    PublicationConflictResolution,
+    PublicationConflictResolutionResponse,
+    PublicationConflictClaim {
+        response: Box<CanonicalPublicationConflictResolutionResponseV1>,
+    },
     MailboxGossipFrame {
         expected_id: [u8; 32],
         now_unix_seconds: u64,
@@ -189,6 +203,22 @@ fn accepts(decoder: &Decoder, bytes: &[u8]) -> bool {
         }
         Decoder::PublicationConflictProof => {
             decode_and_verify_signed_publication_conflict_proof_v1(bytes).is_ok()
+        }
+        Decoder::PublicationConflictResolutionRequest => {
+            decode_and_verify_signed_publication_conflict_resolution_request_v1(bytes).is_ok()
+        }
+        Decoder::PublicationConflictResolution => {
+            decode_and_verify_root_signed_publication_conflict_resolution_v1(bytes).is_ok()
+        }
+        Decoder::PublicationConflictResolutionResponse => {
+            decode_and_verify_publication_conflict_resolution_response_v1(bytes).is_ok()
+        }
+        Decoder::PublicationConflictClaim { response } => {
+            decode_and_verify_publication_conflict_claim_v1(bytes)
+                .and_then(|claim| {
+                    verify_publication_conflict_claim_for_response_v1(&claim, response)
+                })
+                .is_ok()
         }
         Decoder::MailboxGossipFrame {
             expected_id,
@@ -309,6 +339,14 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
     )?;
     let runtime_dispatch =
         decode_and_verify_signed_runtime_mailbox_dispatch_v1(&runtime_dispatch_bytes)?;
+    let publication_resolution_response_bytes = pointer_hex(
+        &publication_conflict,
+        "/expected/resolution_response/cbor_hex",
+    )?;
+    let publication_resolution_response =
+        decode_and_verify_publication_conflict_resolution_response_v1(
+            &publication_resolution_response_bytes,
+        )?;
     let fixtures = [
         (
             "certificate",
@@ -573,6 +611,37 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
                 "/expected/conflict_proof/signed_cbor_hex",
             )?,
         ),
+        (
+            "signed-publication-conflict-resolution-request",
+            Decoder::PublicationConflictResolutionRequest,
+            pointer_hex(
+                &publication_conflict,
+                "/expected/resolution_request/signed_cbor_hex",
+            )?,
+        ),
+        (
+            "root-signed-publication-conflict-resolution",
+            Decoder::PublicationConflictResolution,
+            pointer_hex(
+                &publication_conflict,
+                "/expected/resolution/signed_cbor_hex",
+            )?,
+        ),
+        (
+            "publication-conflict-resolution-response",
+            Decoder::PublicationConflictResolutionResponse,
+            pointer_hex(
+                &publication_conflict,
+                "/expected/resolution_response/cbor_hex",
+            )?,
+        ),
+        (
+            "publication-conflict-response-claim",
+            Decoder::PublicationConflictClaim {
+                response: Box::new(publication_resolution_response.clone()),
+            },
+            pointer_hex(&publication_conflict, "/expected/response_claim/cbor_hex")?,
+        ),
     ];
     let mut mutations = 0usize;
     for (name, decoder, valid) in fixtures {
@@ -678,6 +747,12 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         Decoder::TicketPublication,
         Decoder::TicketPublicationObservation,
         Decoder::PublicationConflictProof,
+        Decoder::PublicationConflictResolutionRequest,
+        Decoder::PublicationConflictResolution,
+        Decoder::PublicationConflictResolutionResponse,
+        Decoder::PublicationConflictClaim {
+            response: Box::new(publication_resolution_response),
+        },
         Decoder::MailboxGossipFrame {
             expected_id: [0; 32],
             now_unix_seconds: 1_800_000_030,

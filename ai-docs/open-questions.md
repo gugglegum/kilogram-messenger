@@ -143,10 +143,11 @@ sessions, distribution, removal и key epochs и не решены этим пр
   M1.1.3–M1.1.18 далее закрыли independent non-Rust BLAKE3, bounded mutation
   corpus, account/device-link/event/ratchet selection/sync/recovery/mailbox
   capability/transport/gossip/provisioning schemas. Всё остаётся intentionally
-  inactive: complete coverage сейчас 12/20 surfaces, ещё 1/20 partial;
-  publication-conflict evidence уже canonical, но request/resolution/response/
-  claim ещё остаются. Далее открыты endpoint-announcement, history-rewrap,
-  account-recovery, runtime IPC и explicit versioned
+  inactive: complete coverage сейчас 13/20 surfaces, partial surfaces больше
+  нет. Publication-conflict request/resolution/response/portable claim закрыты
+  M1.1.22; portable claim остаётся только auxiliary representation и требует
+  exact signed artifact/current authority context. Далее открыты
+  endpoint-announcement, history-rewrap, account-recovery, runtime IPC и explicit versioned
   dual-reader migration с HPKE conformance/field evidence.
 - Какие security properties требуются от линеаризатора при злонамеренных, а не
   только сбойных indexer-узлах?
