@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.4",
+  "status": "candidate-not-active",
+  "changes_active_wire": false,
+  "profile": "kilogram-deterministic-cbor-v1",
+  "cddl": {
+    "standard": "RFC 8610",
+    "path": "CANONICAL-RECOVERY.cddl",
+    "root_rule": "kilogram-recovery-v1"
+  },
+  "activation": {
+    "current_runtime_encoding": "postcard",
+    "current_runtime_changed": false,
+    "required_before_activation": [
+      "new-explicit-protocol-version-or-parallel-identifier",
+      "dual-reader-and-downgrade-tests",
+      "decoder-fuzzing-and-malformed-input-corpus",
+      "fresh-field-and-hosted-evidence"
+    ]
+  },
+  "limits": {
+    "maximum_page_size": 256
+  },
+  "domains": [
+    {
+      "id": "history-recovery-checkpoint-signature-v1",
+      "value": "kilogram:history-recovery-checkpoint-signature:cbor-v1\\0",
+      "operation": "ed25519-signature",
+      "signer": "recipient-device-ed25519"
+    },
+    {
+      "id": "history-recovery-checkpoint-id-v1",
+      "value": "kilogram:history-recovery-checkpoint-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "history-recovery-id-v1",
+      "value": "kilogram:history-recovery-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    }
+  ],
+  "rust_bindings": [
+    {
+      "path": "crates/kilogram-protocol/src/canonical_recovery_v1.rs",
+      "symbol": "CANONICAL_HISTORY_RECOVERY_CHECKPOINT_SIGNATURE_DOMAIN",
+      "rust_type": "bytes",
+      "value": "kilogram:history-recovery-checkpoint-signature:cbor-v1\\0"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_recovery_v1.rs",
+      "symbol": "CANONICAL_HISTORY_RECOVERY_CHECKPOINT_ID_DOMAIN",
+      "rust_type": "bytes",
+      "value": "kilogram:history-recovery-checkpoint-id:cbor-v1\\0"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_recovery_v1.rs",
+      "symbol": "CANONICAL_HISTORY_RECOVERY_ID_DOMAIN",
+      "rust_type": "bytes",
+      "value": "kilogram:history-recovery-id:cbor-v1\\0"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_recovery_v1.rs",
+      "symbol": "MAX_CANONICAL_RECOVERY_PAGE_SIZE",
+      "rust_type": "u64",
+      "value": 256
+    }
+  ],
+  "objects": [
+    {
+      "id": "inventory-claim-option-v1",
+      "kind": "closed-option-array",
+      "allowed_array_lengths": [0, 2],
+      "present_fields": ["event_count:uint", "digest:bstr32"]
+    },
+    {
+      "id": "previous-checkpoint-option-v1",
+      "kind": "closed-option-array",
+      "allowed_array_lengths": [0, 1],
+      "present_fields": ["checkpoint_id:bstr32"]
+    },
+    {
+      "id": "history-recovery-checkpoint-content-v1",
+      "kind": "signed-content",
+      "array_length": 12,
+      "fields": [
+        "schema_version:1", "account_id:bstr32", "conversation_id:bstr32",
+        "source_device_id:bstr32", "recipient_device_id:bstr32", "sas:bstr32",
+        "approved_range_start:uint", "approved_range_end:uint", "page_size:uint",
+        "inventory_claim:inventory-claim-option-v1", "next_range_start:uint",
+        "previous_checkpoint:previous-checkpoint-option-v1"
+      ]
+    },
+    {
+      "id": "signed-history-recovery-checkpoint-v1",
+      "kind": "signed-envelope",
+      "array_length": 3,
+      "signature_domain": "history-recovery-checkpoint-signature-v1"
+    },
+    {
+      "id": "history-recovery-identity-content-v1",
+      "kind": "digest-content",
+      "array_length": 9,
+      "digest_domain": "history-recovery-id-v1"
+    },
+    {
+      "id": "history-recovery-checkpoint-id-v1",
+      "kind": "derived-id",
+      "digest_domain": "history-recovery-checkpoint-id-v1",
+      "input": "complete signed-history-recovery-checkpoint-v1 CBOR"
+    },
+    {
+      "id": "history-recovery-successor-v1",
+      "kind": "semantic-relation",
+      "rules": [
+        "stable identity fields are byte-for-byte equal",
+        "previous checkpoint ID equals the predecessor derived ID",
+        "next range start strictly increases",
+        "inventory claim is introduced once and is immutable"
+      ]
+    }
+  ]
+}

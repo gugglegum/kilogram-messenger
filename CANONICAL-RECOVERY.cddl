@@ -1,0 +1,53 @@
+; Kilogram M1.1.4 inactive deterministic-CBOR history recovery candidate.
+; This grammar is not used by the active Postcard runtime.
+
+kilogram-recovery-v1 =
+    signed-history-recovery-checkpoint-v1 /
+    history-recovery-identity-content-v1
+
+account-id-v1 = bstr .size 32
+conversation-id-v1 = bstr .size 32
+device-id-v1 = bstr .size 32
+digest-v1 = bstr .size 32
+signature-v1 = bstr .size 64
+
+inventory-claim-option-v1 = [] / [
+    event-count: uint,
+    inventory-digest: digest-v1
+]
+
+previous-checkpoint-option-v1 = [] / [checkpoint-id: digest-v1]
+
+history-recovery-checkpoint-content-v1 = [
+    schema-version: 1,
+    account-id: account-id-v1,
+    conversation-id: conversation-id-v1,
+    source-device-id: device-id-v1,
+    recipient-device-id: device-id-v1,
+    sas: bstr .size 32,
+    approved-range-start: uint,
+    approved-range-end: uint,
+    page-size: 1..256,
+    inventory-claim: inventory-claim-option-v1,
+    next-range-start: uint,
+    previous-checkpoint: previous-checkpoint-option-v1
+]
+
+signed-history-recovery-checkpoint-v1 = [
+    schema-version: 1,
+    content: history-recovery-checkpoint-content-v1,
+    recipient-signature: signature-v1
+]
+
+; Stable identity deliberately excludes progress, inventory and predecessor.
+history-recovery-identity-content-v1 = [
+    schema-version: 1,
+    account-id: account-id-v1,
+    conversation-id: conversation-id-v1,
+    source-device-id: device-id-v1,
+    recipient-device-id: device-id-v1,
+    sas: bstr .size 32,
+    approved-range-start: uint,
+    approved-range-end: uint,
+    page-size: 1..256
+]

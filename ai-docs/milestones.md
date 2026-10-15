@@ -5140,3 +5140,18 @@ correlation visible, Windows-only field evidence, independent security audit
   криптографией; его закрывает следующий recovery/digest conformance этап;
 - readiness inventory расширен с 36 до 37 gates. Network/laptop/release/archive,
   tag и active protocol migration не требуются.
+
+### M1.1.4 — canonical history recovery checkpoints: принято локально
+
+- RFC-0130, CDDL и exact JSON schema задают inactive deterministic-CBOR
+  checkpoint chain для bounded history recovery, не меняя active Postcard;
+- recipient Device подписывает exact consent scope, inventory и progress;
+  стабильный recovery ID отделён от ID полного signed checkpoint;
+- closed-array optionals исключают неоднозначные null/map encodings, page size
+  ограничен 256 events, successor обязан ссылаться на exact predecessor,
+  строго продвигаться и сохранять identity/inventory;
+- golden vector фиксирует initial и successor CBOR, Ed25519 signatures,
+  checkpoint IDs и общий recovery ID; Rust regression и независимый Node
+  encoder/signature verifier проверяют exact bytes;
+- независимая BLAKE3 проверка остаётся явным следующим gate M1.1.5; readiness
+  inventory расширен с 37 до 38 gates. Runtime/network/tag не менялись.
