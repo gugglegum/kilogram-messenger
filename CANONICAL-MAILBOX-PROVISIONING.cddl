@@ -1,0 +1,136 @@
+; Kilogram candidate deterministic-CBOR mailbox provisioning artifacts.
+; This schema is not active on the wire. Every nested portable object is
+; carried as an exact canonical-CBOR byte string so a verifier can reject a
+; different re-encoding before checking signatures or transcript hashes.
+
+kilogram-mailbox-provisioning-v1 =
+    signed-local-mailbox-binding-v1 /
+    sealed-mailbox-provisioning-envelope-v1 /
+    signed-mailbox-peer-offer-v1 /
+    mailbox-replica-set-v1 /
+    signed-mailbox-capability-update-v1 /
+    signed-mailbox-capability-acknowledgement-v1
+
+id-32 = bstr .size 32
+signature-64 = bstr .size 64
+secret-32 = bstr .size 32
+canonical-cbor = bstr
+
+mailbox-provisioning-mode-v1 = 1 / 2
+; 1 = legacy HTTPS store, 2 = exact volunteer replica set.
+
+mailbox-service-option-v1 = [] / [mailbox-service-v1]
+mailbox-service-v1 = [
+    schema-version: 1,
+    normalized-https-url-utf8: bstr .size (1..2048),
+    expected-store-key: id-32
+]
+
+mailbox-provisioning-core-v1 = [
+    schema-version: 1,
+    mode: mailbox-provisioning-mode-v1,
+    owner-account-id: id-32,
+    owner-device-id: id-32,
+    peer-account-id: id-32,
+    peer-device-id: id-32,
+    scope: id-32,
+    canonical-mailbox-address: canonical-cbor,
+    service: mailbox-service-option-v1,
+    created-at-unix-seconds: uint
+]
+
+local-mailbox-binding-content-v1 = [
+    schema-version: 1,
+    core: canonical-cbor,
+    read-secret: secret-32,
+    write-secret: secret-32
+]
+
+signed-local-mailbox-binding-v1 = [
+    schema-version: 1,
+    content: canonical-cbor,
+    signature: signature-64
+]
+
+mailbox-peer-offer-content-v1 = [
+    schema-version: 1,
+    core: canonical-cbor,
+    owner-encryption-public-key: id-32,
+    write-secret: secret-32,
+    expires-at-unix-seconds: uint
+]
+
+signed-mailbox-peer-offer-v1 = [
+    schema-version: 1,
+    content: canonical-cbor,
+    signature: signature-64
+]
+
+mailbox-provisioning-envelope-header-v1 = [
+    schema-version: 1,
+    purpose: 1 / 2,
+    binding-id: id-32
+]
+; purpose 1 = owner-local binding, purpose 2 = exact-recipient peer offer.
+
+sealed-mailbox-provisioning-envelope-v1 = [
+    schema-version: 1,
+    header: canonical-cbor,
+    encapsulated-key: id-32,
+    ciphertext: bstr .size (1..16384)
+]
+
+mailbox-replica-set-v1 = [
+    schema-version: 1,
+    store-keys: [2*8 id-32]
+]
+; store-keys are distinct and strictly bytewise ordered.
+
+mailbox-replica-set-commitment-transcript-v1 = [
+    schema-version: 1,
+    binding-id: id-32,
+    replica-set: canonical-cbor
+]
+
+mailbox-capability-action-v1 =
+    [schema-version: 1, activate: 1, mode: mailbox-provisioning-mode-v1, binding-id: id-32,
+        sealed-peer-offer: canonical-cbor, replica-set: ([] / [canonical-cbor])] /
+    [schema-version: 1, revoke: 2, binding-id: id-32]
+
+mailbox-capability-update-content-v1 = [
+    schema-version: 1,
+    owner-account-id: id-32,
+    owner-device-id: id-32,
+    recipient-account-id: id-32,
+    recipient-device-id: id-32,
+    scope: id-32,
+    generation: uint,
+    previous-update-id: ([] / [id-32]),
+    created-at-unix-seconds: uint,
+    action: canonical-cbor
+]
+
+signed-mailbox-capability-update-v1 = [
+    schema-version: 1,
+    content: canonical-cbor,
+    signature: signature-64
+]
+
+mailbox-capability-acknowledgement-content-v1 = [
+    schema-version: 1,
+    session-binding: id-32,
+    update-id: id-32,
+    owner-account-id: id-32,
+    owner-device-id: id-32,
+    recipient-account-id: id-32,
+    recipient-device-id: id-32,
+    generation: uint,
+    binding-id: id-32,
+    revoked: 0 / 1
+]
+
+signed-mailbox-capability-acknowledgement-v1 = [
+    schema-version: 1,
+    content: canonical-cbor,
+    signature: signature-64
+]

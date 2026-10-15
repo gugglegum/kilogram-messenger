@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.18",
+  "status": "candidate-not-active",
+  "changes_active_wire": false,
+  "profile": "kilogram-deterministic-cbor-v1",
+  "cddl": {
+    "path": "CANONICAL-MAILBOX-PROVISIONING.cddl",
+    "root_rule": "kilogram-mailbox-provisioning-v1"
+  },
+  "modes": {
+    "legacy_https": 1,
+    "exact_volunteer": 2
+  },
+  "envelope_purposes": {
+    "owner_local_binding": 1,
+    "recipient_peer_offer": 2
+  },
+  "limits": {
+    "maximum_service_url_bytes": 2048,
+    "maximum_sealed_ciphertext_bytes": 16384,
+    "maximum_capability_update_bytes": 32768,
+    "maximum_acknowledgement_bytes": 4096,
+    "minimum_replica_stores": 2,
+    "maximum_replica_stores": 8,
+    "minimum_offer_validity_seconds": 60,
+    "maximum_offer_validity_seconds": 2592000
+  },
+  "domains": [
+    "kilogram:mailbox-binding-id:cbor-v1\\0",
+    "kilogram:mailbox-local-binding:cbor-v1\\0",
+    "kilogram:mailbox-local-binding-hpke:cbor-v1\\0",
+    "kilogram:mailbox-peer-offer:cbor-v1\\0",
+    "kilogram:mailbox-peer-offer-hpke:cbor-v1\\0",
+    "kilogram:mailbox-replica-set-commitment-id:cbor-v1\\0",
+    "kilogram:mailbox-capability-update:cbor-v1\\0",
+    "kilogram:mailbox-capability-update-id:cbor-v1\\0",
+    "kilogram:mailbox-capability-acknowledgement:cbor-v1\\0"
+  ],
+  "semantic_rules": [
+    "owner and peer identities are exact distinct Accounts and Devices",
+    "legacy HTTPS mode requires one normalized HTTPS service descriptor",
+    "exact volunteer mode forbids a service descriptor and requires a replica set on activation",
+    "mailbox address public keys must be derived from the carried read and write Ed25519 seeds",
+    "binding ID commits to the complete canonical core including mode, address and optional legacy service",
+    "HPKE AAD is the exact canonical envelope header and HPKE info is purpose-specific",
+    "peer offer is signed by owner Device then HPKE sealed to the exact recipient Device",
+    "replica store keys are distinct and strictly unsigned-bytewise ordered",
+    "generation one has no predecessor and later generations require the exact previous update ID",
+    "rotation changes binding ID, revocation targets the active predecessor and time never regresses",
+    "recipient acknowledgement commits to the authenticated session and every identity and generation field of the update"
+  ],
+  "source_compatibility": {
+    "surface": "mailbox-provisioning",
+    "current_runtime_encoding": "postcard",
+    "legacy_versions": [1, 2],
+    "normalization": "both source versions translate to one explicit mode-tagged canonical family",
+    "current_runtime_changed": false
+  },
+  "activation": {
+    "candidate_protocol_identifier": "unassigned",
+    "requires": [
+      "explicit protocol negotiation",
+      "Postcard v1 and v2 translation tests",
+      "cross-language HPKE seal/open conformance",
+      "rollback and downgrade migration tests",
+      "sustained fuzzing and security review"
+    ]
+  }
+}

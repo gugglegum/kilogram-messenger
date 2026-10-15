@@ -17,6 +17,7 @@ pub mod canonical_authority_v1;
 pub mod canonical_device_link_v1;
 pub mod canonical_event_v1;
 pub mod canonical_mailbox_gossip_v1;
+pub mod canonical_mailbox_provisioning_v1;
 pub mod canonical_mailbox_transport_v1;
 pub mod canonical_mailbox_v1;
 pub mod canonical_prekey_selection_v1;

@@ -11,6 +11,12 @@ use kilogram_protocol::canonical_event_v1::{
     decode_and_verify_authorized_event_v1, decode_and_verify_signed_event_v1,
 };
 use kilogram_protocol::canonical_mailbox_gossip_v1::decode_and_verify_mailbox_provider_gossip_frame_for_id_v1;
+use kilogram_protocol::canonical_mailbox_provisioning_v1::{
+    decode_and_verify_signed_local_mailbox_binding_v1,
+    decode_and_verify_signed_mailbox_capability_acknowledgement_v1,
+    decode_and_verify_signed_mailbox_capability_update_v1,
+    decode_and_verify_signed_mailbox_peer_offer_v1,
+};
 use kilogram_protocol::canonical_mailbox_transport_v1::decode_and_verify_mailbox_peer_request_v1;
 use kilogram_protocol::canonical_mailbox_v1::{
     decode_and_verify_signed_mailbox_delete_receipt_v1,
@@ -37,8 +43,8 @@ use kilogram_protocol::canonical_sync_v1::{
 use serde_json::Value;
 
 const MINIMUM_MUTATIONS: usize = 500;
-const EXPECTED_MUTATIONS: usize = 7_306;
-const MAXIMUM_MUTATIONS: usize = 8_000;
+const EXPECTED_MUTATIONS: usize = 8_350;
+const MAXIMUM_MUTATIONS: usize = 9_000;
 const MAXIMUM_GRID_POSITIONS: usize = 128;
 
 #[derive(Clone, Copy)]
@@ -68,6 +74,10 @@ enum Decoder {
     MailboxStoredReceipt,
     MailboxDeleteReceipt,
     MailboxPeerRequest,
+    LocalMailboxBinding,
+    MailboxPeerOffer,
+    MailboxCapabilityUpdate,
+    MailboxCapabilityAcknowledgement,
     MailboxGossipFrame {
         expected_id: [u8; 32],
         now_unix_seconds: u64,
@@ -114,6 +124,16 @@ fn accepts(decoder: Decoder, bytes: &[u8]) -> bool {
             decode_and_verify_signed_mailbox_delete_receipt_v1(bytes).is_ok()
         }
         Decoder::MailboxPeerRequest => decode_and_verify_mailbox_peer_request_v1(bytes).is_ok(),
+        Decoder::LocalMailboxBinding => {
+            decode_and_verify_signed_local_mailbox_binding_v1(bytes).is_ok()
+        }
+        Decoder::MailboxPeerOffer => decode_and_verify_signed_mailbox_peer_offer_v1(bytes).is_ok(),
+        Decoder::MailboxCapabilityUpdate => {
+            decode_and_verify_signed_mailbox_capability_update_v1(bytes).is_ok()
+        }
+        Decoder::MailboxCapabilityAcknowledgement => {
+            decode_and_verify_signed_mailbox_capability_acknowledgement_v1(bytes).is_ok()
+        }
         Decoder::MailboxGossipFrame {
             expected_id,
             now_unix_seconds,
@@ -207,6 +227,10 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
     let mailbox_gossip: Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-MAILBOX-GOSSIP-VECTORS.json"
+    )))?;
+    let mailbox_provisioning: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../CANONICAL-MAILBOX-PROVISIONING-VECTORS.json"
     )))?;
     let gossip_frame_id: [u8; 32] = pointer_hex(&mailbox_gossip, "/expected/request/frame_id_hex")?
         .try_into()
@@ -375,6 +399,38 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
             },
             pointer_hex(&mailbox_gossip, "/expected/request/frame_cbor_hex")?,
         ),
+        (
+            "signed-local-mailbox-binding",
+            Decoder::LocalMailboxBinding,
+            pointer_hex(
+                &mailbox_provisioning,
+                "/expected/signed_local_binding/signed_cbor_hex",
+            )?,
+        ),
+        (
+            "signed-mailbox-peer-offer",
+            Decoder::MailboxPeerOffer,
+            pointer_hex(
+                &mailbox_provisioning,
+                "/expected/signed_exact_peer_offer/signed_cbor_hex",
+            )?,
+        ),
+        (
+            "signed-mailbox-capability-update",
+            Decoder::MailboxCapabilityUpdate,
+            pointer_hex(
+                &mailbox_provisioning,
+                "/expected/activation_update/signed_cbor_hex",
+            )?,
+        ),
+        (
+            "signed-mailbox-capability-acknowledgement",
+            Decoder::MailboxCapabilityAcknowledgement,
+            pointer_hex(
+                &mailbox_provisioning,
+                "/expected/activation_acknowledgement/signed_cbor_hex",
+            )?,
+        ),
     ];
     let mut mutations = 0usize;
     for (name, decoder, valid) in fixtures {
@@ -468,6 +524,10 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         Decoder::MailboxStoredReceipt,
         Decoder::MailboxDeleteReceipt,
         Decoder::MailboxPeerRequest,
+        Decoder::LocalMailboxBinding,
+        Decoder::MailboxPeerOffer,
+        Decoder::MailboxCapabilityUpdate,
+        Decoder::MailboxCapabilityAcknowledgement,
         Decoder::MailboxGossipFrame {
             expected_id: [0; 32],
             now_unix_seconds: 1_800_000_030,

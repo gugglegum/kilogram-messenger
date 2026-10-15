@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.17",
+  "milestone": "M1.1.18",
   "status": "coverage-audit-not-active",
   "changes_active_wire": false,
   "source_manifest": "PROTOCOL-COMPATIBILITY.json",
@@ -13,9 +13,9 @@
   },
   "summary": {
     "source_surfaces": 20,
-    "complete": 9,
+    "complete": 10,
     "partial": 0,
-    "not_started": 9,
+    "not_started": 8,
     "not_targeted": 2,
     "activation_ready": false
   },
@@ -108,10 +108,10 @@
     },
     {
       "id": "mailbox-provisioning",
-      "coverage": "not-started",
-      "artifacts": [],
-      "covered": [],
-      "remaining": ["entire-surface"]
+      "coverage": "complete",
+      "artifacts": ["CANONICAL-MAILBOX-PROVISIONING.cddl", "CANONICAL-MAILBOX-PROVISIONING-SCHEMA.json", "CANONICAL-MAILBOX-PROVISIONING-VECTORS.json", "crates/kilogram-protocol/src/canonical_mailbox_provisioning_v1.rs", "scripts/verify-kilogram-canonical-mailbox-provisioning-reference.mjs"],
+      "covered": ["legacy-https-and-exact-volunteer-mode-normalization", "binding-id", "signed-owner-local-binding", "purpose-bound-hpke-envelope", "signed-recipient-peer-offer", "ordered-replica-set-commitment", "activate-rotate-revoke-update-chain", "session-bound-recipient-acknowledgement"],
+      "remaining": []
     },
     {
       "id": "publication-conflict",
@@ -164,8 +164,8 @@
     }
   ],
   "next_priority": [
-    "mailbox-provisioning",
     "runtime-mailbox-envelope",
-    "endpoint-announcement"
+    "endpoint-announcement",
+    "history-rewrap"
   ]
 }

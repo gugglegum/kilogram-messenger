@@ -140,9 +140,13 @@ sessions, distribution, removal и key epochs и не решены этим пр
   certificate/revocation/authority-snapshot/session-auth chain. RFC-0129
   канонизировал public ratchet identity/prekey pool/directory без secret
   Double Ratchet state и с independent JavaScript/Node Ed25519 reproduction.
-  Всё остаётся intentionally inactive: открыты recovery schema, independent
-  non-Rust BLAKE3 verification, decoder fuzzing и отдельно versioned
-  dual-reader migration с field evidence.
+  M1.1.3–M1.1.18 далее закрыли independent non-Rust BLAKE3, bounded mutation
+  corpus, account/device-link/event/ratchet selection/sync/recovery/mailbox
+  capability/transport/gossip/provisioning schemas. Всё остаётся intentionally
+  inactive: complete coverage сейчас 10/20 surfaces; открыты прежде всего
+  runtime-mailbox-envelope, endpoint-announcement, history-rewrap,
+  account-recovery, publication-conflict, runtime IPC и explicit versioned
+  dual-reader migration с HPKE conformance/field evidence.
 - Какие security properties требуются от линеаризатора при злонамеренных, а не
   только сбойных indexer-узлах?
 

@@ -5384,3 +5384,32 @@ correlation visible, Windows-only field evidence, independent security audit
   selection и frame IDs; ID-aware strict decoder расширяет corpus до 7306/8000;
 - `blind-mailbox-provider-gossip` становится complete (9 complete / 0 partial),
   readiness расширен с 50 до 51 gates; active Postcard runtime не менялся.
+
+### M1.1.18 — canonical mailbox provisioning: принято локально
+
+- deterministic-CBOR family покрывает explicit legacy-HTTPS/exact-volunteer
+  mode, canonical core и binding ID, signed owner-local binding, signed exact
+  recipient peer offer и purpose-specific HPKE header/AAD/info;
+- legacy mode требует normalized HTTPS descriptor, exact-volunteer mode его
+  запрещает и требует bounded replica set при activation; это migration target,
+  а не возврат central mailbox server в целевую архитектуру;
+- read/write seeds проверяются против public address; peer получает только
+  write seed, local receive capability остаётся sealed owner-local state;
+- replica set содержит 2..8 distinct strictly ordered Ed25519 store keys и
+  имеет binding-specific commitment ID;
+- Device-signed generation chain закрывает activate/rotate/revoke: generation
+  one без predecessor, successor exact-ссылается на previous update ID,
+  rotation меняет binding, revocation сохраняет active predecessor binding;
+- recipient-signed ACK exact-связан с authenticated session, update ID, обеими
+  Account/Device парами, generation, binding и revoked state;
+- independent Node Ed25519/BLAKE3 reference и Rust golden/negative tests
+  воспроизводят legacy/exact cores, local/offer envelopes, replica commitment,
+  activation/revocation IDs и ACK;
+- четыре signed fixtures расширяют deterministic mutation corpus до 8350/9000;
+  `mailbox-provisioning` становится complete (10 complete / 0 partial),
+  readiness расширен с 51 до 52 gates;
+- verification: protocol unit tests 60/60, mutation corpus 8350/8350,
+  rustfmt, workspace-wide offline strict Clippy и accepted-tag readiness 52/52
+  green; active Postcard v1/v2 domains, HPKE runtime, ALPN,
+  network/release/archive/tag не менялись; next priority —
+  `runtime-mailbox-envelope`.
