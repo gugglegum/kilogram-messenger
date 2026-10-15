@@ -128,9 +128,10 @@ if ($wire.IndexOf('canonical_account_v1', [StringComparison]::Ordinal) -ge 0 -or
     throw 'inactive canonical account codec leaked into active wire'
 }
 $accountCoverage = @($coverage.surfaces | Where-Object { $_.id -ceq 'account-authority' })
-if ($accountCoverage.Count -ne 1 -or [string]$accountCoverage[0].coverage -cne 'partial' -or
-    (@($accountCoverage[0].remaining) -join ',') -cne 'device-link-authorization') {
-    throw 'canonical account coverage does not record the remaining device-link gap'
+if ($accountCoverage.Count -ne 1 -or [string]$accountCoverage[0].coverage -cne 'complete' -or
+    @($accountCoverage[0].remaining).Count -ne 0 -or
+    'device-link-authorization' -notin @($accountCoverage[0].covered)) {
+    throw 'canonical account coverage does not include the completed device-link extension'
 }
 foreach ($required in @('bounded to 32 devices', 'bounded to 4096 Account IDs',
     'from 1305 to 1827 malformed cases', 'active wire bytes, runtime behavior')) {
@@ -161,7 +162,7 @@ Write-Output 'canonical_account_boundary=verified'
 Write-Output 'canonical_account_objects=4'
 Write-Output 'strict_account_decoders=2'
 Write-Output 'independent_ed25519=verified'
-Write-Output 'bounded_decoder_mutations=1827'
-Write-Output 'account_authority_remaining=device-link-authorization'
+Write-Output 'bounded_decoder_mutations=2088'
+Write-Output 'account_authority_extension=device-link-complete'
 Write-Output 'active_wire_changed=false'
 Write-Output 'network_executed=false'

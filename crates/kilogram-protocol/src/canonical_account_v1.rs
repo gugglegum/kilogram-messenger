@@ -273,7 +273,7 @@ pub fn verify_signed_conversation_membership_v1(
     )
 }
 
-fn signed_envelope(content: &[u8], signature: &[u8; 64]) -> Vec<u8> {
+pub(crate) fn signed_envelope(content: &[u8], signature: &[u8; 64]) -> Vec<u8> {
     let mut output = Vec::new();
     push_array_header(&mut output, 3);
     push_unsigned(&mut output, CANONICAL_PROFILE_VERSION);
@@ -447,17 +447,17 @@ fn decode_conversation_membership_content_from(
     Ok(content)
 }
 
-struct AccountDecoder<'a> {
+pub(crate) struct AccountDecoder<'a> {
     bytes: &'a [u8],
     cursor: usize,
 }
 
 impl<'a> AccountDecoder<'a> {
-    fn new(bytes: &'a [u8]) -> Self {
+    pub(crate) fn new(bytes: &'a [u8]) -> Self {
         Self { bytes, cursor: 0 }
     }
 
-    fn finish(self) -> Result<(), CanonicalAccountError> {
+    pub(crate) fn finish(self) -> Result<(), CanonicalAccountError> {
         if self.cursor == self.bytes.len() {
             Ok(())
         } else {
@@ -465,7 +465,7 @@ impl<'a> AccountDecoder<'a> {
         }
     }
 
-    fn expect_array(
+    pub(crate) fn expect_array(
         &mut self,
         object: &'static str,
         expected: usize,
@@ -482,7 +482,10 @@ impl<'a> AccountDecoder<'a> {
         }
     }
 
-    fn expect_version(&mut self, field: &'static str) -> Result<(), CanonicalAccountError> {
+    pub(crate) fn expect_version(
+        &mut self,
+        field: &'static str,
+    ) -> Result<(), CanonicalAccountError> {
         let actual = self.unsigned(field)?;
         if actual == CANONICAL_PROFILE_VERSION {
             Ok(())
@@ -503,7 +506,7 @@ impl<'a> AccountDecoder<'a> {
         self.head(0, field)
     }
 
-    fn fixed_bytes<const N: usize>(
+    pub(crate) fn fixed_bytes<const N: usize>(
         &mut self,
         field: &'static str,
     ) -> Result<[u8; N], CanonicalAccountError> {
@@ -520,7 +523,7 @@ impl<'a> AccountDecoder<'a> {
             .map_err(|_| CanonicalWireError::UnexpectedEnd.into())
     }
 
-    fn bytes(&mut self, field: &'static str) -> Result<&'a [u8], CanonicalAccountError> {
+    pub(crate) fn bytes(&mut self, field: &'static str) -> Result<&'a [u8], CanonicalAccountError> {
         let length = usize::try_from(self.head(2, field)?)
             .map_err(|_| CanonicalWireError::LengthOverflow)?;
         let end = self

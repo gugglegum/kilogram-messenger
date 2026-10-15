@@ -13,8 +13,8 @@
   },
   "summary": {
     "source_surfaces": 20,
-    "complete": 1,
-    "partial": 5,
+    "complete": 2,
+    "partial": 4,
     "not_started": 12,
     "not_targeted": 2,
     "activation_ready": false
@@ -22,10 +22,10 @@
   "surfaces": [
     {
       "id": "account-authority",
-      "coverage": "partial",
-      "artifacts": ["CANONICAL-AUTHORITY.cddl", "CANONICAL-AUTHORITY-SCHEMA.json", "CANONICAL-AUTHORITY-VECTORS.json", "CANONICAL-ACCOUNT.cddl", "CANONICAL-ACCOUNT-SCHEMA.json", "CANONICAL-ACCOUNT-VECTORS.json"],
-      "covered": ["device-certificate", "device-revocation", "authority-snapshot", "account-device-list", "conversation-membership"],
-      "remaining": ["device-link-authorization"]
+      "coverage": "complete",
+      "artifacts": ["CANONICAL-AUTHORITY.cddl", "CANONICAL-AUTHORITY-SCHEMA.json", "CANONICAL-AUTHORITY-VECTORS.json", "CANONICAL-ACCOUNT.cddl", "CANONICAL-ACCOUNT-SCHEMA.json", "CANONICAL-ACCOUNT-VECTORS.json", "CANONICAL-DEVICE-LINK.cddl", "CANONICAL-DEVICE-LINK-SCHEMA.json", "CANONICAL-DEVICE-LINK-VECTORS.json", "crates/kilogram-protocol/src/canonical_device_link_v1.rs", "scripts/verify-kilogram-canonical-device-link-reference.mjs"],
+      "covered": ["device-certificate", "device-revocation", "authority-snapshot", "account-device-list", "conversation-membership", "device-link-authorization"],
+      "remaining": []
     },
     {
       "id": "account-recovery",
@@ -167,7 +167,6 @@
     "authorized-event",
     "sync",
     "ratchet-public-artifacts",
-    "account-authority",
     "history-recovery",
     "blind-mailbox-capability",
     "blind-mailbox-transport"

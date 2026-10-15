@@ -6,6 +6,7 @@ use kilogram_protocol::canonical_authority_v1::{
     decode_and_verify_signed_device_certificate_v1,
     decode_and_verify_signed_device_session_authorization_v1,
 };
+use kilogram_protocol::canonical_device_link_v1::decode_and_verify_signed_device_link_authorization_v1;
 use kilogram_protocol::canonical_ratchet_v1::{
     decode_and_verify_account_prekey_directory_v1, decode_and_verify_signed_prekey_pool_v1,
 };
@@ -13,7 +14,7 @@ use kilogram_protocol::canonical_recovery_v1::decode_and_verify_signed_history_r
 use serde_json::Value;
 
 const MINIMUM_MUTATIONS: usize = 500;
-const MAXIMUM_MUTATIONS: usize = 2_000;
+const MAXIMUM_MUTATIONS: usize = 2_500;
 const MAXIMUM_GRID_POSITIONS: usize = 128;
 
 #[derive(Clone, Copy)]
@@ -25,6 +26,7 @@ enum Decoder {
     Recovery,
     DeviceList,
     Membership,
+    DeviceLink,
 }
 
 fn accepts(decoder: Decoder, bytes: &[u8]) -> bool {
@@ -36,6 +38,7 @@ fn accepts(decoder: Decoder, bytes: &[u8]) -> bool {
         Decoder::Recovery => decode_and_verify_signed_history_recovery_checkpoint_v1(bytes).is_ok(),
         Decoder::DeviceList => decode_and_verify_signed_account_device_list_v1(bytes).is_ok(),
         Decoder::Membership => decode_and_verify_signed_conversation_membership_v1(bytes).is_ok(),
+        Decoder::DeviceLink => decode_and_verify_signed_device_link_authorization_v1(bytes).is_ok(),
     }
 }
 
@@ -85,6 +88,10 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-ACCOUNT-VECTORS.json"
     )))?;
+    let device_link: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../CANONICAL-DEVICE-LINK-VECTORS.json"
+    )))?;
     let fixtures = [
         (
             "certificate",
@@ -126,6 +133,11 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
                 &account,
                 "/expected/conversation_membership/signed_cbor_hex",
             )?,
+        ),
+        (
+            "device-link",
+            Decoder::DeviceLink,
+            pointer_hex(&device_link, "/expected/authorization/signed_cbor_hex")?,
         ),
     ];
     let mut mutations = 0usize;
@@ -202,6 +214,7 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         Decoder::Recovery,
         Decoder::DeviceList,
         Decoder::Membership,
+        Decoder::DeviceLink,
     ] {
         assert!(!accepts(decoder, &oversized));
         mutations += 1;

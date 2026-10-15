@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.9",
+  "status": "candidate-not-active",
+  "changes_active_wire": false,
+  "profile": "kilogram-deterministic-cbor-v1",
+  "cddl": {
+    "standard": "RFC 8610",
+    "path": "CANONICAL-DEVICE-LINK.cddl",
+    "root_rule": "kilogram-device-link-v1"
+  },
+  "activation": {
+    "current_runtime_encoding": "postcard",
+    "current_runtime_changed": false,
+    "required_before_activation": [
+      "complete-targeted-surface-coverage",
+      "new-explicit-protocol-version-or-parallel-identifier",
+      "dual-reader-and-downgrade-tests",
+      "sustained-coverage-guided-fuzzing",
+      "fresh-field-and-hosted-evidence"
+    ]
+  },
+  "limits": {
+    "maximum_nested_cbor_bytes": 524288
+  },
+  "external_objects": [
+    {
+      "id": "signed-device-certificate-v1",
+      "schema": "CANONICAL-AUTHORITY-SCHEMA.json"
+    },
+    {
+      "id": "signed-account-device-list-v1",
+      "schema": "CANONICAL-ACCOUNT-SCHEMA.json"
+    }
+  ],
+  "domains": [
+    {
+      "id": "device-link-authorization-signature-v1",
+      "value": "kilogram:device-link-authorization-signature:cbor-v1\\0",
+      "signer": "account-root-ed25519"
+    }
+  ],
+  "rust_bindings": [
+    {
+      "path": "crates/kilogram-protocol/src/canonical_device_link_v1.rs",
+      "symbol": "CANONICAL_DEVICE_LINK_AUTHORIZATION_SIGNATURE_DOMAIN",
+      "rust_type": "bytes",
+      "value": "kilogram:device-link-authorization-signature:cbor-v1\\0"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_device_link_v1.rs",
+      "symbol": "MAX_CANONICAL_DEVICE_LINK_NESTED_BYTES",
+      "rust_type": "usize",
+      "value": 524288
+    }
+  ],
+  "objects": [
+    {
+      "id": "device-link-authorization-content-v1",
+      "kind": "signed-content",
+      "array_length": 5,
+      "fields": [
+        "schema_version:1",
+        "account_id:bstr32",
+        "request_id:bstr32",
+        "device_certificate:canonical-cbor-byte-string",
+        "device_list:canonical-cbor-byte-string"
+      ]
+    },
+    {
+      "id": "signed-device-link-authorization-v1",
+      "kind": "signed-envelope",
+      "array_length": 3,
+      "signature_domain": "device-link-authorization-signature-v1"
+    }
+  ],
+  "semantic_rules": [
+    "authorization is Root-signed and bound to the exact 32-byte request ID",
+    "certificate and device list name the same Account as the authorization",
+    "certificate and device-list signatures are independently verified",
+    "device list contains the exact requested certificate, not merely the same Device ID",
+    "nested objects are bounded exact canonical byte strings and are never format-sniffed"
+  ]
+}

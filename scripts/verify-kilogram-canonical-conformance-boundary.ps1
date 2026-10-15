@@ -25,7 +25,7 @@ function Assert-Manifest {
         throw 'decoder mutation manifest header changed'
     }
     if ([int]$Manifest.seed -ne 1262836037 -or [int]$Manifest.minimum_mutations -ne 500 -or
-        [int]$Manifest.maximum_mutations -ne 2000) { throw 'decoder mutation bounds changed' }
+        [int]$Manifest.maximum_mutations -ne 2500) { throw 'decoder mutation bounds changed' }
     $expectedFixtures = @(
         'signed-device-certificate-v1|CANONICAL-AUTHORITY-VECTORS.json|/expected/certificate/signed_cbor_hex|decode_and_verify_signed_device_certificate_v1',
         'signed-device-session-authorization-v1|CANONICAL-AUTHORITY-VECTORS.json|/expected/session_authorization/signed_cbor_hex|decode_and_verify_signed_device_session_authorization_v1',
@@ -34,6 +34,7 @@ function Assert-Manifest {
         'signed-history-recovery-checkpoint-v1|CANONICAL-RECOVERY-VECTORS.json|/expected/successor_checkpoint/signed_cbor_hex|decode_and_verify_signed_history_recovery_checkpoint_v1'
         'signed-account-device-list-v1|CANONICAL-ACCOUNT-VECTORS.json|/expected/account_device_list/signed_cbor_hex|decode_and_verify_signed_account_device_list_v1'
         'signed-conversation-membership-v1|CANONICAL-ACCOUNT-VECTORS.json|/expected/conversation_membership/signed_cbor_hex|decode_and_verify_signed_conversation_membership_v1'
+        'signed-device-link-authorization-v1|CANONICAL-DEVICE-LINK-VECTORS.json|/expected/authorization/signed_cbor_hex|decode_and_verify_signed_device_link_authorization_v1'
     )
     $actualFixtures = @($Manifest.fixtures | ForEach-Object { "$($_.id)|$($_.vector_file)|$($_.json_pointer)|$($_.decoder)" })
     if (($actualFixtures -join "`n") -cne ($expectedFixtures -join "`n")) { throw 'decoder fixture inventory changed' }
@@ -47,7 +48,7 @@ function Assert-Manifest {
     }
     if ([int]$Manifest.resource_bounds.maximum_fixture_bytes -ne 524288 -or
         [int]$Manifest.resource_bounds.maximum_positions_per_grid_per_fixture -ne 128 -or
-        [int]$Manifest.resource_bounds.maximum_total_mutations -ne 2000 -or
+        [int]$Manifest.resource_bounds.maximum_total_mutations -ne 2500 -or
         [bool]$Manifest.resource_bounds.network_allowed -or
         [bool]$Manifest.resource_bounds.randomness_allowed) { throw 'decoder resource bounds changed' }
 }
@@ -94,7 +95,7 @@ foreach ($fixture in $manifest.fixtures) {
     }
 }
 foreach ($required in @('MAXIMUM_GRID_POSITIONS: usize = 128', 'MINIMUM_MUTATIONS: usize = 500',
-    'MAXIMUM_MUTATIONS: usize = 2_000', 'bounded_positions(', 'canonical_decoder_mutations=')) {
+    'MAXIMUM_MUTATIONS: usize = 2_500', 'bounded_positions(', 'canonical_decoder_mutations=')) {
     if ($test.IndexOf($required, [StringComparison]::Ordinal) -lt 0) { throw "mutation test is missing '$required'" }
 }
 foreach ($referenceSource in @($ratchetReference, $recoveryReference)) {
@@ -113,7 +114,7 @@ if ($LASTEXITCODE -ne 0 -or 'blake3_reference_conformance=verified' -notin @($ou
 }
 if ($SelfTest) {
     $changed = $manifest | ConvertTo-Json -Depth 20 | ConvertFrom-Json
-    $changed.maximum_mutations = 2001
+    $changed.maximum_mutations = 2501
     Assert-Rejected { Assert-Manifest $changed } 'changed_mutation_bound'
     $removed = $manifest | ConvertTo-Json -Depth 20 | ConvertFrom-Json
     $removed.fixtures = @($removed.fixtures | Select-Object -Skip 1)
@@ -123,7 +124,7 @@ if ($SelfTest) {
 Write-Output 'canonical_conformance_boundary=verified'
 Write-Output 'independent_blake3=verified'
 Write-Output 'official_blake3_vectors=6/6'
-Write-Output 'bounded_decoder_mutations=1827'
+Write-Output 'bounded_decoder_mutations=2088'
 Write-Output 'coverage_guided_fuzzing=pending-before-activation'
 Write-Output 'active_runtime_changed=false'
 Write-Output 'network_executed=false'

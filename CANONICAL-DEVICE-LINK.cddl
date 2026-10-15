@@ -1,0 +1,28 @@
+; Kilogram deterministic-CBOR device-link authorization candidate, M1.1.9.
+; Nested objects are exact canonical byte strings, never format-sniffed values.
+
+profile-version = 1
+account-id = bytes .size 32
+request-id = bytes .size 32
+signature = bytes .size 64
+
+; These byte strings contain exact encodings from CANONICAL-AUTHORITY.cddl
+; and CANONICAL-ACCOUNT.cddl. Each is bounded to 524288 bytes.
+signed-device-certificate-cbor = bytes
+signed-account-device-list-cbor = bytes
+
+device-link-authorization-content-v1 = [
+  profile-version,
+  account-id,
+  request-id,
+  signed-device-certificate-cbor,
+  signed-account-device-list-cbor
+]
+
+signed-device-link-authorization-v1 = [
+  profile-version,
+  device-link-authorization-content-v1,
+  signature
+]
+
+kilogram-device-link-v1 = signed-device-link-authorization-v1

@@ -5216,3 +5216,16 @@ correlation visible, Windows-only field evidence, independent security audit
 - `account-authority` остаётся partial только из-за device-link authorization;
   active Postcard/runtime не менялись;
 - readiness inventory расширен с 41 до 42 gates; network/release/tag не нужны.
+
+### M1.1.9 — canonical device-link authorization: принято локально
+
+- Root signature связывает Account ID, exact 32-byte request ID, exact canonical
+  device certificate и exact canonical resulting device list;
+- nested certificate/list остаются отдельно проверяемыми byte strings с
+  ограничением 512 KiB, Account linkage обязателен;
+- list должен содержать exact certificate, а не только совпадающий Device ID;
+- independent Node/Ed25519 reproduces exact bytes/signature, strict decoder
+  добавлен в bounded corpus: 2088 cases при ceiling 2500;
+- `account-authority` теперь complete (2 complete / 4 partial overall), но
+  aggregate activation остаётся false;
+- readiness inventory расширен с 42 до 43 gates; active Postcard не менялся.
