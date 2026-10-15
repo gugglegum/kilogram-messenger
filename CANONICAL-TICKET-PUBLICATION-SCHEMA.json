@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.20",
+  "status": "candidate-not-active",
+  "changes_active_wire": false,
+  "profile": "kilogram-deterministic-cbor-v1",
+  "cddl": {
+    "standard": "RFC 8610",
+    "path": "CANONICAL-TICKET-PUBLICATION.cddl",
+    "root_rule": "kilogram-ticket-publication-v1"
+  },
+  "activation": {
+    "current_runtime_encoding": "postcard-and-lowercase-hex-http-headers",
+    "current_runtime_changed": false,
+    "candidate_protocol_identifier": "unassigned",
+    "required_before_activation": [
+      "complete-targeted-surface-coverage",
+      "new-explicit-authorization-version",
+      "dual-reader-store-deployment",
+      "cross-version-downgrade-and-replay-tests",
+      "sustained-coverage-guided-fuzzing",
+      "fresh-field-evidence"
+    ]
+  },
+  "limits": {
+    "maximum_capability_bytes": 128,
+    "maximum_authorization_bytes": 1024,
+    "maximum_body_bytes": 16777216,
+    "maximum_peer_scope_bytes": 4096
+  },
+  "domains": [
+    {
+      "id": "ticket-publication-channel-id-v1",
+      "value": "kilogram:ticket-publication-capability-channel:v1\\0",
+      "operation": "blake3-domain-prefixed-digest",
+      "migration": "preserved-active-channel"
+    },
+    {
+      "id": "ticket-publication-write-authorization-signature-v1",
+      "value": "kilogram:ticket-publication-write-authorization:cbor-v1\\0",
+      "operation": "ed25519-signature"
+    },
+    {
+      "id": "ticket-publication-write-capability-derivation-v1",
+      "value": "kilogram ticket publication per-peer write capability v1",
+      "operation": "blake3-derive-key",
+      "epoch": 0
+    },
+    {
+      "id": "ticket-publication-rotated-write-capability-derivation-v1",
+      "value": "kilogram ticket publication per-peer rotated write capability v1",
+      "operation": "blake3-derive-key",
+      "epoch": "positive"
+    }
+  ],
+  "objects": [
+    {
+      "id": "ticket-publication-capability-v1",
+      "kind": "self-authenticating-public-capability",
+      "array_length": 3
+    },
+    {
+      "id": "ticket-publication-write-authorization-content-v1",
+      "kind": "signed-content",
+      "array_length": 5
+    },
+    {
+      "id": "signed-ticket-publication-write-authorization-v1",
+      "kind": "signed-envelope",
+      "array_length": 3,
+      "signature_domain": "ticket-publication-write-authorization-signature-v1"
+    }
+  ],
+  "semantic_rules": [
+    "write key is a valid Ed25519 verification key",
+    "channel ID is BLAKE3 over the preserved active channel domain and exact write key",
+    "epoch zero uses the legacy derivation context and positive epochs append zero plus big-endian u64 before using the rotated context",
+    "private device secret and peer scope are derivation inputs and are never serialized",
+    "generation and body length are positive and body length does not exceed 16 MiB",
+    "authorization signature binds exact canonical capability, generation, body length and raw BLAKE3 body digest",
+    "body verification recomputes both exact length and digest"
+  ]
+}

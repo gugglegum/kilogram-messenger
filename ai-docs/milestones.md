@@ -5437,3 +5437,26 @@ correlation visible, Windows-only field evidence, independent security audit
   Clippy и accepted-tag readiness 53/53 green;
 - active Postcard v1 domains, runtime queue, network/release/archive/tag не
   менялись; next priority — `endpoint-announcement`.
+
+### M1.1.20 — canonical ticket-publication capability: принято локально
+
+- deterministic-CBOR family закрывает self-authenticating public write
+  capability и signed generation/length/body-digest authorization;
+- epoch zero сохраняет legacy BLAKE3 derive-key context и pseudonymous channel,
+  positive epoch сохраняет rotated context с `0 || epoch.be64` suffix;
+- новый CBOR signature domain не позволяет reinterpret legacy HTTP-header
+  authorization как canonical envelope;
+- private Device secret и opaque peer scope остаются только KDF inputs и не
+  сериализуются; scope, capability, authorization и body имеют явные bounds;
+- independent dependency-free JavaScript BLAKE3 reference теперь проверяет
+  hash и derive-key mode, Node crypto независимо воспроизводит Ed25519 public
+  keys/signature, CBOR и точные golden vectors;
+- два strict fixtures расширяют deterministic mutation corpus до 9800/10000;
+  `ticket-publication-capability` становится complete (12 complete / 0 partial),
+  readiness расширен с 53 до 54 gates;
+- verification: protocol unit tests 64/64, mutation corpus 9800/9800,
+  independent Node reference/self-tests, rustfmt, workspace-wide offline strict
+  Clippy и accepted-tag readiness 54/54 green;
+- active Postcard artifact, lowercase-hex HTTP headers, legacy authorization
+  domain, network/release/archive/tag не менялись; next dependency —
+  `publication-conflict`, после него `endpoint-announcement`.

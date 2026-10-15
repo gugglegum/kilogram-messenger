@@ -47,10 +47,14 @@ use kilogram_protocol::canonical_sync_v1::{
     decode_and_verify_signed_sync_diff_v1, decode_and_verify_sync_client_frame_v1,
     decode_and_verify_sync_server_frame_v1,
 };
+use kilogram_protocol::canonical_ticket_publication_v1::{
+    decode_and_verify_signed_ticket_publication_write_authorization_v1,
+    decode_and_verify_ticket_publication_capability_v1,
+};
 use serde_json::Value;
 
 const MINIMUM_MUTATIONS: usize = 500;
-const EXPECTED_MUTATIONS: usize = 9_394;
+const EXPECTED_MUTATIONS: usize = 9_800;
 const MAXIMUM_MUTATIONS: usize = 10_000;
 const MAXIMUM_GRID_POSITIONS: usize = 128;
 
@@ -91,6 +95,8 @@ enum Decoder {
         dispatch: Box<CanonicalSignedRuntimeMailboxDispatchV1>,
     },
     RuntimeMailboxDispatch,
+    TicketPublicationCapability,
+    TicketPublicationWriteAuthorization,
     MailboxGossipFrame {
         expected_id: [u8; 32],
         now_unix_seconds: u64,
@@ -162,6 +168,12 @@ fn accepts(decoder: &Decoder, bytes: &[u8]) -> bool {
         }
         Decoder::RuntimeMailboxDispatch => {
             decode_and_verify_signed_runtime_mailbox_dispatch_v1(bytes).is_ok()
+        }
+        Decoder::TicketPublicationCapability => {
+            decode_and_verify_ticket_publication_capability_v1(bytes).is_ok()
+        }
+        Decoder::TicketPublicationWriteAuthorization => {
+            decode_and_verify_signed_ticket_publication_write_authorization_v1(bytes).is_ok()
         }
         Decoder::MailboxGossipFrame {
             expected_id,
@@ -264,6 +276,10 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
     let runtime_mailbox: Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-RUNTIME-MAILBOX-VECTORS.json"
+    )))?;
+    let ticket_publication: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../CANONICAL-TICKET-PUBLICATION-VECTORS.json"
     )))?;
     let gossip_frame_id: [u8; 32] = pointer_hex(&mailbox_gossip, "/expected/request/frame_id_hex")?
         .try_into()
@@ -501,6 +517,19 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
                 "/expected/signed_dispatch/signed_cbor_hex",
             )?,
         ),
+        (
+            "ticket-publication-capability",
+            Decoder::TicketPublicationCapability,
+            pointer_hex(&ticket_publication, "/expected/rotated_capability/cbor_hex")?,
+        ),
+        (
+            "signed-ticket-publication-write-authorization",
+            Decoder::TicketPublicationWriteAuthorization,
+            pointer_hex(
+                &ticket_publication,
+                "/expected/authorization/signed_cbor_hex",
+            )?,
+        ),
     ];
     let mut mutations = 0usize;
     for (name, decoder, valid) in fixtures {
@@ -601,6 +630,8 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         Decoder::RuntimeLocalMailboxBinding,
         Decoder::RuntimePeerMailboxBinding,
         Decoder::RuntimeMailboxDispatch,
+        Decoder::TicketPublicationCapability,
+        Decoder::TicketPublicationWriteAuthorization,
         Decoder::MailboxGossipFrame {
             expected_id: [0; 32],
             now_unix_seconds: 1_800_000_030,

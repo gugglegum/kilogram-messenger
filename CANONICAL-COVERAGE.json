@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.19",
+  "milestone": "M1.1.20",
   "status": "coverage-audit-not-active",
   "changes_active_wire": false,
   "source_manifest": "PROTOCOL-COMPATIBILITY.json",
@@ -13,9 +13,9 @@
   },
   "summary": {
     "source_surfaces": 20,
-    "complete": 11,
+    "complete": 12,
     "partial": 0,
-    "not_started": 7,
+    "not_started": 6,
     "not_targeted": 2,
     "activation_ready": false
   },
@@ -150,10 +150,10 @@
     },
     {
       "id": "ticket-publication-capability",
-      "coverage": "not-started",
-      "artifacts": [],
-      "covered": [],
-      "remaining": ["entire-surface"]
+      "coverage": "complete",
+      "artifacts": ["CANONICAL-TICKET-PUBLICATION.cddl", "CANONICAL-TICKET-PUBLICATION-SCHEMA.json", "CANONICAL-TICKET-PUBLICATION-VECTORS.json", "crates/kilogram-protocol/src/canonical_ticket_publication_v1.rs", "scripts/verify-kilogram-canonical-ticket-publication-reference.mjs"],
+      "covered": ["legacy-and-rotated-per-peer-write-capability-derivation", "self-authenticating-channel-id", "canonical-public-capability", "signed-generation-length-and-body-digest-authorization", "exact-body-verification"],
+      "remaining": []
     },
     {
       "id": "transport-sync",
@@ -164,8 +164,8 @@
     }
   ],
   "next_priority": [
+    "publication-conflict",
     "endpoint-announcement",
-    "history-rewrap",
-    "account-recovery"
+    "history-rewrap"
   ]
 }

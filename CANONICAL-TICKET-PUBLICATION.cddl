@@ -1,0 +1,31 @@
+; Kilogram deterministic-CBOR ticket-publication capability candidate, M1.1.20.
+; Private derivation material is never serialized.
+
+profile-version = 1
+id-32 = bytes .size 32
+signature = bytes .size 64
+canonical-object = bytes
+
+ticket-publication-capability-v1 = [
+  profile-version,
+  write-key: id-32,
+  channel-id: id-32
+]
+
+ticket-publication-write-authorization-content-v1 = [
+  profile-version,
+  capability-cbor: canonical-object,
+  generation: uint,
+  body-length: uint,
+  body-digest: id-32
+]
+
+signed-ticket-publication-write-authorization-v1 = [
+  profile-version,
+  content-cbor: canonical-object,
+  signature: signature
+]
+
+kilogram-ticket-publication-v1 =
+  ticket-publication-capability-v1 /
+  signed-ticket-publication-write-authorization-v1

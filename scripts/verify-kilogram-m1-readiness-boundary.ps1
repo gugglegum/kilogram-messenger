@@ -38,10 +38,11 @@ foreach ($required in @(
     "'verify-kilogram-canonical-recovery-exchange-boundary.ps1' = 'canonical_recovery_exchange_boundary=verified'",
     "'verify-kilogram-canonical-sync-boundary.ps1' = 'canonical_sync_boundary=verified'",
     "'verify-kilogram-canonical-sync-session-boundary.ps1' = 'canonical_sync_session_boundary=verified'",
+    "'verify-kilogram-canonical-ticket-publication-boundary.ps1' = 'canonical_ticket_publication_boundary=verified'",
     "'verify-kilogram-canonical-wire-boundary.ps1' = 'canonical_wire_boundary=verified'",
     "'verify-kilogram-protocol-compatibility-boundary.ps1' = 'protocol_compatibility_boundary=verified'",
     "Get-ChildItem -LiteralPath `$scriptsDirectory -Filter 'verify-*-boundary.ps1'",
-    'M1 readiness boundary inventory must contain exactly 53 gates',
+    'M1 readiness boundary inventory must contain exactly 54 gates',
     '[string]$AcceptedTag',
     "'verify-kilogram-m1-tag-acceptance.ps1'",
     'm1_candidate_status=verified',
@@ -152,7 +153,7 @@ if ($LASTEXITCODE -ne 0 -or
 }
 
 Write-Output 'm1_readiness_boundary=verified'
-Write-Output 'boundary_inventory=closed-53'
+Write-Output 'boundary_inventory=closed-54'
 Write-Output 'candidate_or_accepted_tag_verifier=required'
 Write-Output 'accepted_m1_tag=M1.0.0'
 Write-Output 'format_and_offline_strict_clippy=required'

@@ -5,7 +5,7 @@
   "active_runtime_changed": false,
   "seed": 1262836037,
   "minimum_mutations": 500,
-  "expected_mutations": 9394,
+  "expected_mutations": 9800,
   "maximum_mutations": 10000,
   "fixtures": [
     {
@@ -224,6 +224,18 @@
       "vector_file": "CANONICAL-RUNTIME-MAILBOX-VECTORS.json",
       "json_pointer": "/expected/signed_dispatch/signed_cbor_hex",
       "decoder": "decode_and_verify_signed_runtime_mailbox_dispatch_v1"
+    },
+    {
+      "id": "ticket-publication-capability-v1",
+      "vector_file": "CANONICAL-TICKET-PUBLICATION-VECTORS.json",
+      "json_pointer": "/expected/rotated_capability/cbor_hex",
+      "decoder": "decode_and_verify_ticket_publication_capability_v1"
+    },
+    {
+      "id": "signed-ticket-publication-write-authorization-v1",
+      "vector_file": "CANONICAL-TICKET-PUBLICATION-VECTORS.json",
+      "json_pointer": "/expected/authorization/signed_cbor_hex",
+      "decoder": "decode_and_verify_signed_ticket_publication_write_authorization_v1"
     }
   ],
   "mutation_classes": [

@@ -1,6 +1,8 @@
-// Deliberately small, unoptimized BLAKE3 hash-mode reference for conformance
-// checks only. Ported from the official BLAKE3 reference algorithm and
-// validated by verify-kilogram-blake3-conformance.mjs against official vectors.
+// Deliberately small, unoptimized BLAKE3 hash/derive-key reference for
+// conformance checks only. Ported from the official BLAKE3 reference algorithm;
+// hash mode is validated by verify-kilogram-blake3-conformance.mjs against
+// official vectors, while derive-key mode is cross-checked by canonical KDF
+// vectors against the independent Rust implementation.
 
 const IV = Uint32Array.from([
   0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
@@ -13,6 +15,8 @@ const CHUNK_START = 1;
 const CHUNK_END = 2;
 const PARENT = 4;
 const ROOT = 8;
+const DERIVE_KEY_CONTEXT = 32;
+const DERIVE_KEY_MATERIAL = 64;
 
 function rotr(value, count) {
   return ((value >>> count) | (value << (32 - count))) >>> 0;
@@ -99,49 +103,73 @@ function output(inputCv, words, counter, blockLength, flags) {
   };
 }
 
-function chunkOutput(input, chunkCounter) {
+function chunkOutput(input, chunkCounter, keyWords = IV, baseFlags = 0) {
   const bytes = Buffer.from(input);
-  let cv = Uint32Array.from(IV);
+  let cv = Uint32Array.from(keyWords);
   let offset = 0;
   let blocksCompressed = 0;
   while (bytes.length - offset > BLOCK_LEN) {
-    const flags = blocksCompressed === 0 ? CHUNK_START : 0;
+    const flags = baseFlags | (blocksCompressed === 0 ? CHUNK_START : 0);
     cv = compress(cv, blockWords(bytes.subarray(offset, offset + BLOCK_LEN)),
       BigInt(chunkCounter), BLOCK_LEN, flags).slice(0, 8);
     offset += BLOCK_LEN;
     blocksCompressed += 1;
   }
   const finalBlock = bytes.subarray(offset);
-  const flags = CHUNK_END | (blocksCompressed === 0 ? CHUNK_START : 0);
+  const flags = baseFlags | CHUNK_END | (blocksCompressed === 0 ? CHUNK_START : 0);
   return output(cv, blockWords(finalBlock), BigInt(chunkCounter), finalBlock.length, flags);
 }
 
-function parentOutput(left, right) {
+function parentOutput(left, right, keyWords = IV, baseFlags = 0) {
   const words = new Uint32Array(16);
   words.set(left, 0);
   words.set(right, 8);
-  return output(IV, words, 0n, BLOCK_LEN, PARENT);
+  return output(keyWords, words, 0n, BLOCK_LEN, baseFlags | PARENT);
 }
 
-export function blake3Hash(input, length = 32) {
+function blake3Internal(input, length, keyWords, baseFlags) {
   if (!Number.isSafeInteger(length) || length < 0) throw new Error("invalid BLAKE3 output length");
   const bytes = Buffer.from(input);
   const chunkCount = Math.max(1, Math.ceil(bytes.length / CHUNK_LEN));
   const stack = [];
   for (let chunkIndex = 0; chunkIndex + 1 < chunkCount; chunkIndex += 1) {
     const start = chunkIndex * CHUNK_LEN;
-    let cv = chunkOutput(bytes.subarray(start, start + CHUNK_LEN), BigInt(chunkIndex)).chainingValue();
+    let cv = chunkOutput(bytes.subarray(start, start + CHUNK_LEN), BigInt(chunkIndex),
+      keyWords, baseFlags).chainingValue();
     let totalChunks = chunkIndex + 1;
     while (totalChunks % 2 === 0) {
       const left = stack.pop();
       if (left === undefined) throw new Error("invalid BLAKE3 tree stack");
-      cv = parentOutput(left, cv).chainingValue();
+      cv = parentOutput(left, cv, keyWords, baseFlags).chainingValue();
       totalChunks /= 2;
     }
     stack.push(cv);
   }
   const lastIndex = chunkCount - 1;
-  let root = chunkOutput(bytes.subarray(lastIndex * CHUNK_LEN), BigInt(lastIndex));
-  while (stack.length > 0) root = parentOutput(stack.pop(), root.chainingValue());
+  let root = chunkOutput(bytes.subarray(lastIndex * CHUNK_LEN), BigInt(lastIndex),
+    keyWords, baseFlags);
+  while (stack.length > 0) {
+    root = parentOutput(stack.pop(), root.chainingValue(), keyWords, baseFlags);
+  }
   return root.rootBytes(length);
+}
+
+function keyWords(bytes) {
+  const input = Buffer.from(bytes);
+  if (input.length !== 32) throw new Error("BLAKE3 key must contain 32 bytes");
+  const words = new Uint32Array(8);
+  for (let index = 0; index < words.length; index += 1) {
+    words[index] = input.readUInt32LE(index * 4);
+  }
+  return words;
+}
+
+export function blake3Hash(input, length = 32) {
+  return blake3Internal(input, length, IV, 0);
+}
+
+export function blake3DeriveKey(context, material, length = 32) {
+  if (typeof context !== "string") throw new Error("BLAKE3 derive-key context must be text");
+  const contextKey = blake3Internal(Buffer.from(context, "utf8"), 32, IV, DERIVE_KEY_CONTEXT);
+  return blake3Internal(material, length, keyWords(contextKey), DERIVE_KEY_MATERIAL);
 }

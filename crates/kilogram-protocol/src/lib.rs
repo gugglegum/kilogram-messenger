@@ -27,6 +27,7 @@ pub mod canonical_recovery_v1;
 pub mod canonical_runtime_mailbox_v1;
 pub mod canonical_sync_session_v1;
 pub mod canonical_sync_v1;
+pub mod canonical_ticket_publication_v1;
 pub mod canonical_v1;
 mod recovery;
 mod rewrap;
