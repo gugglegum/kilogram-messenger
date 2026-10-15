@@ -1,4 +1,4 @@
-; Kilogram deterministic-CBOR local runtime IPC model, M1.1.36.
+; Kilogram deterministic-CBOR local runtime IPC model, M1.1.37.
 ; Only unsigned integers, definite byte strings and definite arrays are used.
 
 profile-version = 1
@@ -620,6 +620,78 @@ signed-runtime-ipc-mailbox-mutation-response-v1 = [
   signature
 ]
 
+; Publication-channel rotation exact-compares the public current state. The
+; caller never supplies the successor: the runtime derives it from its local
+; Device secret and returns only the public capability.
+runtime-ipc-publication-channel-state-v1 = [
+  profile-version,
+  contact-id: digest,
+  peer-account-id: account-id,
+  peer-scope-digest: digest,
+  channel-epoch: uint,
+  ticket-publication-capability-cbor: bytes .size (1..128),
+  latest-publication-id: runtime-ipc-option-digest-v1,
+  latest-publication-generation: uint
+]
+
+runtime-ipc-publication-command-v1 =
+  [rotate-publication-channel: 0,
+   expected-current: runtime-ipc-publication-channel-state-v1,
+   next-channel-epoch: uint]
+
+runtime-ipc-publication-request-v1 = [
+  profile-version,
+  descriptor-id: digest,
+  request-id,
+  bearer-token: token,
+  issued-at-unix-seconds: uint,
+  expires-at-unix-seconds: uint,
+  runtime-ipc-publication-command-v1
+]
+
+runtime-ipc-publication-rotation-outcome-v1 = 0..1
+runtime-ipc-publication-state-v1 = 0
+runtime-ipc-publication-delivery-state-v1 = 0
+runtime-ipc-publication-restart-state-v1 = 0
+
+runtime-ipc-publication-channel-rotation-v1 = [
+  profile-version,
+  runtime-ipc-publication-rotation-outcome-v1,
+  contact-id: digest,
+  peer-account-id: account-id,
+  peer-scope-digest: digest,
+  previous-capability-cbor: bytes .size (1..128),
+  previous-channel-epoch: uint,
+  capability-cbor: bytes .size (1..128),
+  channel-epoch: uint,
+  rotation-id: digest,
+  previous-latest-publication-id: runtime-ipc-option-digest-v1,
+  previous-latest-publication-generation: uint,
+  runtime-ipc-publication-state-v1,
+  runtime-ipc-publication-delivery-state-v1,
+  runtime-ipc-publication-restart-state-v1
+]
+
+runtime-ipc-publication-result-v1 =
+  [publication-channel-rotated: 0,
+   rotation-cbor: bytes .size (1..65536)] /
+  [error: 1, error-code: 1..65535, message-utf8: bytes .size (1..4096)]
+
+runtime-ipc-publication-response-content-v1 = [
+  profile-version,
+  descriptor-id: digest,
+  request-id,
+  request-digest: digest,
+  responder-device-id: device-id,
+  runtime-ipc-publication-result-v1
+]
+
+signed-runtime-ipc-publication-response-v1 = [
+  profile-version,
+  runtime-ipc-publication-response-content-v1,
+  signature
+]
+
 kilogram-runtime-ipc-v1 =
   signed-runtime-ipc-descriptor-v1 /
   runtime-ipc-core-request-v1 /
@@ -639,4 +711,6 @@ kilogram-runtime-ipc-v1 =
   runtime-ipc-mailbox-status-request-v1 /
   signed-runtime-ipc-mailbox-status-response-v1 /
   runtime-ipc-mailbox-mutation-request-v1 /
-  signed-runtime-ipc-mailbox-mutation-response-v1
+  signed-runtime-ipc-mailbox-mutation-response-v1 /
+  runtime-ipc-publication-request-v1 /
+  signed-runtime-ipc-publication-response-v1

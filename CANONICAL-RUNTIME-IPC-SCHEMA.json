@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.36",
+  "milestone": "M1.1.37",
   "status": "candidate-not-active",
   "changes_active_wire": false,
   "profile": "kilogram-deterministic-cbor-v1",
@@ -47,6 +47,8 @@
     "maximum_mailbox_status_page_size": 16,
     "maximum_mailbox_mutation_request_bytes": 524288,
     "maximum_mailbox_mutation_response_bytes": 131072,
+    "maximum_publication_request_bytes": 65536,
+    "maximum_publication_response_bytes": 65536,
     "maximum_error_bytes": 4096,
     "maximum_descriptor_validity_seconds": 86400,
     "maximum_request_validity_seconds": 30,
@@ -236,6 +238,32 @@
       "id": "mailbox-mutation-response-id-v1",
       "value": "kilogram:runtime-ipc-mailbox-mutation-response-id:cbor-v1\\0",
       "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "publication-peer-scope-digest-v1",
+      "value": "kilogram:runtime-ipc-publication-peer-scope-digest:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "publication-request-digest-v1",
+      "value": "kilogram:runtime-ipc-publication-request-digest:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "publication-rotation-id-v1",
+      "value": "kilogram:runtime-ipc-publication-rotation-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "publication-response-signature-v1",
+      "value": "kilogram:runtime-ipc-publication-response-signature:cbor-v1\\0",
+      "operation": "ed25519-signature",
+      "signer": "descriptor-device-ed25519"
+    },
+    {
+      "id": "publication-response-id-v1",
+      "value": "kilogram:runtime-ipc-publication-response-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
     }
   ],
   "objects": [
@@ -333,6 +361,16 @@
       "id": "signed-runtime-ipc-mailbox-mutation-response-v1",
       "kind": "device-signed-secret-free-mailbox-capability-transition",
       "maximum_bytes": 131072
+    },
+    {
+      "id": "runtime-ipc-publication-request-v1",
+      "kind": "short-lived-exact-current-publication-channel-rotation",
+      "maximum_bytes": 65536
+    },
+    {
+      "id": "signed-runtime-ipc-publication-response-v1",
+      "kind": "device-signed-public-successor-publication-channel-transition",
+      "maximum_bytes": 65536
     }
   ],
   "covered_commands": [
@@ -351,7 +389,8 @@
     "mailbox-capability-status-page",
     "create-mailbox-capability",
     "rotate-mailbox-capability",
-    "revoke-mailbox-capability"
+    "revoke-mailbox-capability",
+    "rotate-publication-channel"
   ],
   "covered_results": [
     "pong",
@@ -368,7 +407,8 @@
     "volunteer-storage-offer-imported",
     "volunteer-storage-providers-selected",
     "mailbox-capability-status-page",
-    "mailbox-capability-transition"
+    "mailbox-capability-transition",
+    "publication-channel-rotated"
   ],
   "semantic_rules": [
     "descriptor address is exactly IPv4 127.0.0.1 or IPv6 ::1 and port is nonzero",
@@ -430,10 +470,17 @@
     "the mutation request ID is the durable idempotency key: exact retry may return already-committed while reuse for different bytes must fail before state mutation",
     "mailbox mutation responses contain no local binding, read secret, write secret or decrypted peer offer and bind the complete request digest under the descriptor Device signature",
     "the active adapter must exact-compare the recipient authority digest, current provider registry selection and predecessor head under one state lock before creating local secrets or committing an update",
+    "publication-channel rotation embeds the exact expected current public capability, channel epoch, peer scope digest and latest accepted publication head",
+    "the next publication channel epoch advances exactly once and the successor capability must differ from the exact current capability",
+    "the successor publication capability is never caller supplied: the active runtime re-derives the exact current capability and derives its successor internally from its local Device secret, exact durable peer scope and respective epochs",
+    "the publication rotation response exposes only public capability material and contains neither the local Device secret nor the plaintext durable peer scope",
+    "the rotation ID commits the complete request digest, successor public capability and next channel epoch",
+    "a successful local rotation remains awaiting first network publication and pending peer delivery, requires no runtime restart and performs no network operation",
+    "the publication rotation request ID is the durable idempotency key: one state lock exact-compares and commits the transition while an exact retry may return already-committed",
     "unknown variants, noncanonical CBOR, trailing data, expired objects and contextual substitutions fail closed"
   ],
   "remaining_runtime_ipc_surface": [
-    "ticket-publication-and-conflict-commands",
+    "ticket-publication-network-and-conflict-commands",
     "own-device-discovery-and-automation-commands",
     "recovery-plan-and-device-link-commands",
     "active-unpaged-conversation-list-migration",

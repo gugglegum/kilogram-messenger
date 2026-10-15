@@ -36,7 +36,7 @@ function Assert-LowerHex {
 
 function Assert-Schema {
     param([object]$Schema, [string]$Rust)
-    if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.36' -or
+    if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.37' -or
         [string]$Schema.status -cne 'candidate-not-active' -or [bool]$Schema.changes_active_wire -or
         [string]$Schema.profile -cne 'kilogram-deterministic-cbor-v1' -or
         [string]$Schema.cddl.path -cne 'CANONICAL-RUNTIME-IPC.cddl' -or
@@ -54,9 +54,9 @@ function Assert-Schema {
     if ($limits -cne '65536,131072,32,4096') {
         throw 'canonical runtime IPC directory limits changed'
     }
-    if (@($Schema.domains).Count -ne 33 -or @($Schema.objects).Count -ne 19 -or
-        @($Schema.covered_commands).Count -ne 16 -or @($Schema.covered_results).Count -ne 15 -or
-        @($Schema.semantic_rules).Count -ne 60 -or
+    if (@($Schema.domains).Count -ne 38 -or @($Schema.objects).Count -ne 21 -or
+        @($Schema.covered_commands).Count -ne 17 -or @($Schema.covered_results).Count -ne 16 -or
+        @($Schema.semantic_rules).Count -ne 67 -or
         @($Schema.remaining_runtime_ipc_surface).Count -ne 5) {
         throw 'canonical runtime IPC directory inventory changed'
     }
@@ -190,7 +190,8 @@ $expectedCovered = @('device-signed-loopback-descriptor',
     'idempotent-durable-message-queue-insertion', 'snapshot-bound-paginated-outbox-status',
     'signed-volunteer-provider-offer-import', 'capability-free-volunteer-provider-selection',
     'snapshot-bound-paginated-mailbox-capability-status',
-    'exact-provider-and-predecessor-bound-mailbox-capability-mutation')
+    'exact-provider-and-predecessor-bound-mailbox-capability-mutation',
+    'exact-current-state-publication-channel-rotation')
 $expectedRemaining = @($schema.remaining_runtime_ipc_surface | ForEach-Object { [string]$_ })
 if ($surface.Count -ne 1 -or [string]$surface[0].coverage -cne 'partial' -or
     (@($surface[0].covered) -join ',') -cne ($expectedCovered -join ',') -or

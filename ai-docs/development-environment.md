@@ -3549,3 +3549,27 @@ Hosted follow-up:
   not-targeted. The next bounded runtime IPC slice is publication-channel
   rotation and conflict handling; independent HPKE conformance and adapter
   transaction evidence remain activation prerequisites.
+
+## M1.1.37 canonical runtime IPC publication-channel rotation (2026-10-15)
+
+- New inactive module:
+  `crates/kilogram-protocol/src/canonical_runtime_ipc_publication_v1.rs`.
+- CDDL, schema, generated vectors and an independent Node reference cover one
+  exact-current-state publication-channel rotation. Active Postcard v26/JSON
+  descriptor v7 is untouched.
+- The runtime helper validates descriptor/bearer/request lifetime, exact Device
+  secret and peer-scope digest, re-derives the current public capability, then
+  derives the successor internally. No Device secret or plaintext peer scope
+  crosses the IPC boundary.
+- A successful local transition is explicitly awaiting its first network
+  publication and peer delivery. Network work and Root-authorized conflict
+  resolution are not claimed by this stage.
+- Final decoder mutation regression passed 23535/23535 in 932.48 seconds with
+  debug/offline Cargo, two jobs and BelowNormal priority. Protocol library
+  regression passed 115/115 with seven explicit generators ignored.
+- Accepted-tag readiness passed 70/70; rustfmt and workspace locked/offline
+  strict Clippy passed. No network, stable-path executable, release build,
+  archive, push or tag was created.
+- Canonical coverage remains 16 complete, 1 partial, 1 not-started and 2
+  not-targeted. The next bounded runtime IPC slice is exact network publication
+  plus peer-delivery evidence, separate from Root conflict authorization.

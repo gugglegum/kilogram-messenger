@@ -5,7 +5,7 @@
   "active_runtime_changed": false,
   "seed": 1262836037,
   "minimum_mutations": 500,
-  "expected_mutations": 23013,
+  "expected_mutations": 23535,
   "maximum_mutations": 25000,
   "fixtures": [
     {
@@ -578,6 +578,20 @@
       "json_pointer": "/expected/revoke/response/signed_cbor_hex",
       "decoder": "decode_and_verify_signed_runtime_ipc_mailbox_mutation_response_v1",
       "context_verifier": "verify_runtime_ipc_mailbox_mutation_response_for_request_v1"
+    },
+    {
+      "id": "runtime-ipc-publication-rotate-request-v1",
+      "vector_file": "CANONICAL-RUNTIME-IPC-PUBLICATION-VECTORS.json",
+      "json_pointer": "/expected/request/cbor_hex",
+      "decoder": "decode_and_verify_runtime_ipc_publication_request_v1",
+      "context_verifier": "verify_runtime_ipc_publication_request_for_descriptor_v1+verify_runtime_ipc_publication_response_for_request_v1"
+    },
+    {
+      "id": "signed-runtime-ipc-publication-rotate-response-v1",
+      "vector_file": "CANONICAL-RUNTIME-IPC-PUBLICATION-VECTORS.json",
+      "json_pointer": "/expected/response/signed_cbor_hex",
+      "decoder": "decode_and_verify_signed_runtime_ipc_publication_response_v1",
+      "context_verifier": "verify_runtime_ipc_publication_response_for_request_v1"
     }
   ],
   "mutation_classes": [

@@ -5881,3 +5881,29 @@ correlation visible, Windows-only field evidence, independent security audit
   Следующий bounded IPC slice — publication-channel rotation и conflict
   ceremony; independent HPKE и реальная adapter transaction остаются
   activation gates.
+
+### M1.1.37 — canonical runtime IPC publication-channel rotation: принято локально
+
+- inactive deterministic-CBOR IPC получил exact-current-state
+  `RotatePublicationChannel`, не подключённый к active Postcard runtime;
+- request связывает contact, peer Account, digest durable peer scope, current
+  epoch/public capability и последний publication head; следующий epoch обязан
+  быть ровно `current + 1`;
+- trusted helper проверяет signed descriptor, bearer и срок request, exact
+  Device secret, scope digest, а также заново выводит и сравнивает текущий
+  capability до вывода successor; caller не поставляет successor key;
+- Device-signed transition возвращает только public capabilities и честные
+  состояния `awaiting-first-publication`/`pending-peer-delivery`. Device secret,
+  plaintext peer scope и reusable private material в payload отсутствуют;
+- independent Node reference воспроизводит deterministic CBOR, Ed25519 и
+  BLAKE3 hash/derive-key; Rust golden/round-trip/substitution tests прошли 3/3,
+  один explicit vector generator ignored;
+- финальный mutation corpus прошёл 23535/23535 за 932.48 s, debug/offline,
+  `CargoJobs=2`, BelowNormal; protocol library regression прошёл 115/115 с
+  семью explicit vector generators ignored;
+- accepted-tag readiness прошёл 70/70, rustfmt и workspace locked/offline
+  strict Clippy; active Postcard IPC v26/JSON descriptor v7, network, stable
+  test EXE, release/archive/push/tag не менялись и не создавались;
+- coverage остаётся 16 complete / 1 partial / 1 not-started / 2 not-targeted.
+  Следующий bounded IPC slice — exact network publication и peer-delivery
+  evidence; Root-authorized conflict ceremony остаётся отдельной границей.
