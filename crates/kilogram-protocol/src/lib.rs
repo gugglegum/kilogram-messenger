@@ -33,6 +33,7 @@ pub mod canonical_recovery_v1;
 pub mod canonical_rewrap_v1;
 pub mod canonical_runtime_ipc_contact_v1;
 pub mod canonical_runtime_ipc_directory_v1;
+pub mod canonical_runtime_ipc_mailbox_mutation_v1;
 pub mod canonical_runtime_ipc_mailbox_status_v1;
 pub mod canonical_runtime_ipc_outbox_v1;
 pub mod canonical_runtime_ipc_provider_v1;

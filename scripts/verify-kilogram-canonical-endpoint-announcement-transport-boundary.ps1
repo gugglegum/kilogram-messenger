@@ -161,7 +161,7 @@ foreach ($covered in @('recipient-only-hpke-envelope', 'exact-header-associated-
     'session-bound-recipient-acknowledgement', 'derived-total-and-applied-count-binding')) {
     if ($covered -cnotin @($surface[0].covered)) { throw "coverage is missing '$covered'" }
 }
-if ([int]$mutations.expected_mutations -ne 21451 -or [int]$mutations.maximum_mutations -ne 25000) {
+if ([int]$mutations.expected_mutations -ne 23013 -or [int]$mutations.maximum_mutations -ne 25000) {
     throw 'canonical endpoint-announcement transport decoder mutation bound changed'
 }
 $envelopeFixture = @($mutations.fixtures | Where-Object { $_.id -ceq 'encrypted-endpoint-announcement-bundle-v1' })
@@ -207,6 +207,6 @@ Write-Output 'endpoint_announcement_coverage=complete'
 Write-Output 'recipient_only_hpke_envelope=verified'
 Write-Output 'session_bound_recipient_acknowledgement=verified'
 Write-Output 'independent_ed25519_and_blake3=verified'
-Write-Output 'bounded_decoder_mutations=21451'
+Write-Output 'bounded_decoder_mutations=23013'
 Write-Output 'active_postcard_hpke_changed=false'
 Write-Output 'network_executed=false'

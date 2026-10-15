@@ -97,6 +97,14 @@ use kilogram_protocol::canonical_runtime_ipc_directory_v1::{
     verify_runtime_ipc_directory_request_for_descriptor_v1,
     verify_runtime_ipc_directory_response_for_request_v1,
 };
+use kilogram_protocol::canonical_runtime_ipc_mailbox_mutation_v1::{
+    CanonicalRuntimeIpcMailboxMutationRequestV1,
+    CanonicalSignedRuntimeIpcMailboxMutationResponseV1,
+    decode_and_verify_runtime_ipc_mailbox_mutation_request_v1,
+    decode_and_verify_signed_runtime_ipc_mailbox_mutation_response_v1,
+    verify_runtime_ipc_mailbox_mutation_request_for_descriptor_v1,
+    verify_runtime_ipc_mailbox_mutation_response_for_request_v1,
+};
 use kilogram_protocol::canonical_runtime_ipc_mailbox_status_v1::{
     CanonicalRuntimeIpcMailboxStatusRequestV1, CanonicalSignedRuntimeIpcMailboxStatusResponseV1,
     decode_and_verify_runtime_ipc_mailbox_status_request_v1,
@@ -159,7 +167,7 @@ use kilogram_protocol::canonical_ticket_publication_v1::{
 use serde_json::Value;
 
 const MINIMUM_MUTATIONS: usize = 500;
-const EXPECTED_MUTATIONS: usize = 21_451;
+const EXPECTED_MUTATIONS: usize = 23_013;
 const MAXIMUM_MUTATIONS: usize = 25_000;
 const MAXIMUM_GRID_POSITIONS: usize = 128;
 
@@ -274,6 +282,15 @@ enum Decoder {
     },
     RuntimeIpcMailboxStatusResponse {
         request: Box<CanonicalRuntimeIpcMailboxStatusRequestV1>,
+        descriptor: Box<CanonicalSignedRuntimeIpcDescriptorV1>,
+    },
+    RuntimeIpcMailboxMutationRequest {
+        descriptor: Box<CanonicalSignedRuntimeIpcDescriptorV1>,
+        response: Box<CanonicalSignedRuntimeIpcMailboxMutationResponseV1>,
+        now_unix_seconds: u64,
+    },
+    RuntimeIpcMailboxMutationResponse {
+        request: Box<CanonicalRuntimeIpcMailboxMutationRequestV1>,
         descriptor: Box<CanonicalSignedRuntimeIpcDescriptorV1>,
     },
     TicketPublicationCapability,
@@ -602,6 +619,32 @@ fn accepts(decoder: &Decoder, bytes: &[u8]) -> bool {
                 )
             })
             .is_ok(),
+        Decoder::RuntimeIpcMailboxMutationRequest {
+            descriptor,
+            response,
+            now_unix_seconds,
+        } => decode_and_verify_runtime_ipc_mailbox_mutation_request_v1(bytes)
+            .and_then(|request| {
+                verify_runtime_ipc_mailbox_mutation_request_for_descriptor_v1(
+                    &request,
+                    descriptor,
+                    *now_unix_seconds,
+                )?;
+                verify_runtime_ipc_mailbox_mutation_response_for_request_v1(
+                    response, &request, descriptor,
+                )
+            })
+            .is_ok(),
+        Decoder::RuntimeIpcMailboxMutationResponse {
+            request,
+            descriptor,
+        } => decode_and_verify_signed_runtime_ipc_mailbox_mutation_response_v1(bytes)
+            .and_then(|response| {
+                verify_runtime_ipc_mailbox_mutation_response_for_request_v1(
+                    &response, request, descriptor,
+                )
+            })
+            .is_ok(),
         Decoder::TicketPublicationCapability => {
             decode_and_verify_ticket_publication_capability_v1(bytes).is_ok()
         }
@@ -859,6 +902,10 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-RUNTIME-IPC-MAILBOX-STATUS-VECTORS.json"
     )))?;
+    let runtime_ipc_mailbox_mutation: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../CANONICAL-RUNTIME-IPC-MAILBOX-MUTATION-VECTORS.json"
+    )))?;
     let ticket_publication: Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-TICKET-PUBLICATION-VECTORS.json"
@@ -1033,6 +1080,41 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         runtime_ipc_mailbox_status["expected"]["context"]["valid_at_unix_seconds"]
             .as_u64()
             .ok_or("runtime IPC mailbox status valid time is missing")?;
+    let runtime_ipc_mailbox_mutation_descriptor =
+        decode_and_verify_signed_runtime_ipc_descriptor_v1(&pointer_hex(
+            &runtime_ipc_mailbox_mutation,
+            "/expected/descriptor/signed_cbor_hex",
+        )?)?;
+    let runtime_ipc_mailbox_create_request =
+        decode_and_verify_runtime_ipc_mailbox_mutation_request_v1(&pointer_hex(
+            &runtime_ipc_mailbox_mutation,
+            "/expected/create/request/cbor_hex",
+        )?)?;
+    let runtime_ipc_mailbox_create_response =
+        decode_and_verify_signed_runtime_ipc_mailbox_mutation_response_v1(&pointer_hex(
+            &runtime_ipc_mailbox_mutation,
+            "/expected/create/response/signed_cbor_hex",
+        )?)?;
+    let runtime_ipc_mailbox_rotate_request =
+        decode_and_verify_runtime_ipc_mailbox_mutation_request_v1(&pointer_hex(
+            &runtime_ipc_mailbox_mutation,
+            "/expected/rotate/request/cbor_hex",
+        )?)?;
+    let runtime_ipc_mailbox_rotate_response =
+        decode_and_verify_signed_runtime_ipc_mailbox_mutation_response_v1(&pointer_hex(
+            &runtime_ipc_mailbox_mutation,
+            "/expected/rotate/response/signed_cbor_hex",
+        )?)?;
+    let runtime_ipc_mailbox_revoke_request =
+        decode_and_verify_runtime_ipc_mailbox_mutation_request_v1(&pointer_hex(
+            &runtime_ipc_mailbox_mutation,
+            "/expected/revoke/request/cbor_hex",
+        )?)?;
+    let runtime_ipc_mailbox_revoke_response =
+        decode_and_verify_signed_runtime_ipc_mailbox_mutation_response_v1(&pointer_hex(
+            &runtime_ipc_mailbox_mutation,
+            "/expected/revoke/response/signed_cbor_hex",
+        )?)?;
     let publication_resolution_response_bytes = pointer_hex(
         &publication_conflict,
         "/expected/resolution_response/cbor_hex",
@@ -1547,6 +1629,75 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
             )?,
         ),
         (
+            "runtime-ipc-mailbox-capability-create-request",
+            Decoder::RuntimeIpcMailboxMutationRequest {
+                descriptor: Box::new(runtime_ipc_mailbox_mutation_descriptor.clone()),
+                response: Box::new(runtime_ipc_mailbox_create_response.clone()),
+                now_unix_seconds: 1_800_001_000,
+            },
+            pointer_hex(
+                &runtime_ipc_mailbox_mutation,
+                "/expected/create/request/cbor_hex",
+            )?,
+        ),
+        (
+            "signed-runtime-ipc-mailbox-capability-create-response",
+            Decoder::RuntimeIpcMailboxMutationResponse {
+                request: Box::new(runtime_ipc_mailbox_create_request.clone()),
+                descriptor: Box::new(runtime_ipc_mailbox_mutation_descriptor.clone()),
+            },
+            pointer_hex(
+                &runtime_ipc_mailbox_mutation,
+                "/expected/create/response/signed_cbor_hex",
+            )?,
+        ),
+        (
+            "runtime-ipc-mailbox-capability-rotate-request",
+            Decoder::RuntimeIpcMailboxMutationRequest {
+                descriptor: Box::new(runtime_ipc_mailbox_mutation_descriptor.clone()),
+                response: Box::new(runtime_ipc_mailbox_rotate_response.clone()),
+                now_unix_seconds: 1_800_001_010,
+            },
+            pointer_hex(
+                &runtime_ipc_mailbox_mutation,
+                "/expected/rotate/request/cbor_hex",
+            )?,
+        ),
+        (
+            "signed-runtime-ipc-mailbox-capability-rotate-response",
+            Decoder::RuntimeIpcMailboxMutationResponse {
+                request: Box::new(runtime_ipc_mailbox_rotate_request.clone()),
+                descriptor: Box::new(runtime_ipc_mailbox_mutation_descriptor.clone()),
+            },
+            pointer_hex(
+                &runtime_ipc_mailbox_mutation,
+                "/expected/rotate/response/signed_cbor_hex",
+            )?,
+        ),
+        (
+            "runtime-ipc-mailbox-capability-revoke-request",
+            Decoder::RuntimeIpcMailboxMutationRequest {
+                descriptor: Box::new(runtime_ipc_mailbox_mutation_descriptor.clone()),
+                response: Box::new(runtime_ipc_mailbox_revoke_response.clone()),
+                now_unix_seconds: 1_800_002_000,
+            },
+            pointer_hex(
+                &runtime_ipc_mailbox_mutation,
+                "/expected/revoke/request/cbor_hex",
+            )?,
+        ),
+        (
+            "signed-runtime-ipc-mailbox-capability-revoke-response",
+            Decoder::RuntimeIpcMailboxMutationResponse {
+                request: Box::new(runtime_ipc_mailbox_revoke_request.clone()),
+                descriptor: Box::new(runtime_ipc_mailbox_mutation_descriptor.clone()),
+            },
+            pointer_hex(
+                &runtime_ipc_mailbox_mutation,
+                "/expected/revoke/response/signed_cbor_hex",
+            )?,
+        ),
+        (
             "ticket-publication-capability",
             Decoder::TicketPublicationCapability,
             pointer_hex(&ticket_publication, "/expected/rotated_capability/cbor_hex")?,
@@ -1913,6 +2064,15 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         Decoder::RuntimeIpcMailboxStatusResponse {
             request: Box::new(runtime_ipc_mailbox_status_request),
             descriptor: Box::new(runtime_ipc_mailbox_status_descriptor),
+        },
+        Decoder::RuntimeIpcMailboxMutationRequest {
+            descriptor: Box::new(runtime_ipc_mailbox_mutation_descriptor.clone()),
+            response: Box::new(runtime_ipc_mailbox_create_response),
+            now_unix_seconds: 1_800_001_000,
+        },
+        Decoder::RuntimeIpcMailboxMutationResponse {
+            request: Box::new(runtime_ipc_mailbox_create_request),
+            descriptor: Box::new(runtime_ipc_mailbox_mutation_descriptor),
         },
         Decoder::RuntimeIpcDirectoryResponse {
             request: Box::new(runtime_ipc_directory_request),

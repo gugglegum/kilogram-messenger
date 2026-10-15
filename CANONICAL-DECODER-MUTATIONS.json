@@ -5,7 +5,7 @@
   "active_runtime_changed": false,
   "seed": 1262836037,
   "minimum_mutations": 500,
-  "expected_mutations": 21451,
+  "expected_mutations": 23013,
   "maximum_mutations": 25000,
   "fixtures": [
     {
@@ -536,6 +536,48 @@
       "json_pointer": "/expected/response/signed_cbor_hex",
       "decoder": "decode_and_verify_signed_runtime_ipc_mailbox_status_response_v1",
       "context_verifier": "verify_runtime_ipc_mailbox_status_response_for_request_v1"
+    },
+    {
+      "id": "runtime-ipc-mailbox-capability-create-request-v1",
+      "vector_file": "CANONICAL-RUNTIME-IPC-MAILBOX-MUTATION-VECTORS.json",
+      "json_pointer": "/expected/create/request/cbor_hex",
+      "decoder": "decode_and_verify_runtime_ipc_mailbox_mutation_request_v1",
+      "context_verifier": "verify_runtime_ipc_mailbox_mutation_request_for_descriptor_v1+verify_runtime_ipc_mailbox_mutation_response_for_request_v1"
+    },
+    {
+      "id": "signed-runtime-ipc-mailbox-capability-create-response-v1",
+      "vector_file": "CANONICAL-RUNTIME-IPC-MAILBOX-MUTATION-VECTORS.json",
+      "json_pointer": "/expected/create/response/signed_cbor_hex",
+      "decoder": "decode_and_verify_signed_runtime_ipc_mailbox_mutation_response_v1",
+      "context_verifier": "verify_runtime_ipc_mailbox_mutation_response_for_request_v1"
+    },
+    {
+      "id": "runtime-ipc-mailbox-capability-rotate-request-v1",
+      "vector_file": "CANONICAL-RUNTIME-IPC-MAILBOX-MUTATION-VECTORS.json",
+      "json_pointer": "/expected/rotate/request/cbor_hex",
+      "decoder": "decode_and_verify_runtime_ipc_mailbox_mutation_request_v1",
+      "context_verifier": "verify_runtime_ipc_mailbox_mutation_request_for_descriptor_v1+verify_runtime_ipc_mailbox_mutation_response_for_request_v1"
+    },
+    {
+      "id": "signed-runtime-ipc-mailbox-capability-rotate-response-v1",
+      "vector_file": "CANONICAL-RUNTIME-IPC-MAILBOX-MUTATION-VECTORS.json",
+      "json_pointer": "/expected/rotate/response/signed_cbor_hex",
+      "decoder": "decode_and_verify_signed_runtime_ipc_mailbox_mutation_response_v1",
+      "context_verifier": "verify_runtime_ipc_mailbox_mutation_response_for_request_v1"
+    },
+    {
+      "id": "runtime-ipc-mailbox-capability-revoke-request-v1",
+      "vector_file": "CANONICAL-RUNTIME-IPC-MAILBOX-MUTATION-VECTORS.json",
+      "json_pointer": "/expected/revoke/request/cbor_hex",
+      "decoder": "decode_and_verify_runtime_ipc_mailbox_mutation_request_v1",
+      "context_verifier": "verify_runtime_ipc_mailbox_mutation_request_for_descriptor_v1+verify_runtime_ipc_mailbox_mutation_response_for_request_v1"
+    },
+    {
+      "id": "signed-runtime-ipc-mailbox-capability-revoke-response-v1",
+      "vector_file": "CANONICAL-RUNTIME-IPC-MAILBOX-MUTATION-VECTORS.json",
+      "json_pointer": "/expected/revoke/response/signed_cbor_hex",
+      "decoder": "decode_and_verify_signed_runtime_ipc_mailbox_mutation_response_v1",
+      "context_verifier": "verify_runtime_ipc_mailbox_mutation_response_for_request_v1"
     }
   ],
   "mutation_classes": [

@@ -3525,3 +3525,27 @@ Hosted follow-up:
 - Canonical coverage remains 16 complete, 1 partial, 1 not-started and 2
   not-targeted. The next runtime IPC boundary is create/rotate/revoke mailbox
   capability mutation, separate from this secret-free status projection.
+
+## M1.1.36 canonical runtime IPC mailbox capability mutations (2026-10-15)
+
+- New inactive module:
+  `crates/kilogram-protocol/src/canonical_runtime_ipc_mailbox_mutation_v1.rs`.
+- CDDL, schema, generated vectors and an independent Node reference cover
+  create, rotate and revoke requests plus Device-signed transition results.
+  Active Postcard v26/JSON descriptor v7 is untouched.
+- Activation exact-binds the target roster digest, Device-signed provider
+  selection, provider-bounded expiry and exact-volunteer replica set. Rotation
+  and revocation require the exact active recipient-acknowledged predecessor.
+- Local mailbox binding/read/write secrets never cross this IPC boundary. An
+  eventual adapter must compare and commit durable state atomically and replay
+  the exact idempotency request without duplicating a transition.
+- Final decoder mutation regression passed 23013/23013 in 932.66 seconds with
+  debug/offline Cargo, two jobs and BelowNormal priority. Protocol library
+  regression passed 112/112 with six explicit generators ignored.
+- Accepted-tag readiness passed 69/69; rustfmt and workspace locked/offline
+  strict Clippy passed. No network, stable-path executable, release build,
+  archive, push or tag was created.
+- Canonical coverage remains 16 complete, 1 partial, 1 not-started and 2
+  not-targeted. The next bounded runtime IPC slice is publication-channel
+  rotation and conflict handling; independent HPKE conformance and adapter
+  transaction evidence remain activation prerequisites.

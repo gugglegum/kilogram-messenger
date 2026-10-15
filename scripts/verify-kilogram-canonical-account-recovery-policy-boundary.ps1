@@ -165,7 +165,7 @@ if ($surface.Count -ne 1 -or [string]$surface[0].coverage -cne 'complete' -or
     @($surface[0].remaining).Count -ne 0) {
     throw 'canonical Account recovery policy aggregate coverage boundary changed'
 }
-if ([int]$mutations.expected_mutations -ne 21451 -or
+if ([int]$mutations.expected_mutations -ne 23013 -or
     [int]$mutations.maximum_mutations -ne 25000) {
     throw 'canonical Account recovery policy decoder mutation bound changed'
 }
@@ -219,6 +219,6 @@ Write-Output 'account_recovery_coverage=complete'
 Write-Output 'joint_old_new_roster_majority=verified'
 Write-Output 'monotonic_successor=verified'
 Write-Output 'portable_anchor_check=required'
-Write-Output 'bounded_decoder_mutations=21451'
+Write-Output 'bounded_decoder_mutations=23013'
 Write-Output 'active_postcard_v1_changed=false'
 Write-Output 'network_executed=false'

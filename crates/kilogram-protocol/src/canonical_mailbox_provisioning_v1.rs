@@ -4,7 +4,7 @@
 //! one mode-tagged migration target for legacy HTTPS and exact-volunteer
 //! bindings, offers, replica commitments, ordered updates and recipient ACKs.
 
-use ed25519_dalek::{Signature, SigningKey, VerifyingKey};
+use ed25519_dalek::{Signature, Signer, SigningKey, VerifyingKey};
 use thiserror::Error;
 use url::Url;
 
@@ -529,6 +529,30 @@ pub fn encode_signed_mailbox_capability_update_v1(
     Ok(encoded)
 }
 
+pub fn mailbox_capability_update_signing_bytes_v1(
+    content: &CanonicalMailboxCapabilityUpdateContentV1,
+) -> Result<Vec<u8>, CanonicalMailboxProvisioningError> {
+    Ok(crate::canonical_v1::prefixed(
+        CANONICAL_MAILBOX_CAPABILITY_UPDATE_SIGNATURE_DOMAIN,
+        &encode_capability_update_content(content)?,
+    ))
+}
+
+pub fn sign_mailbox_capability_update_v1(
+    owner_signing_key: &SigningKey,
+    content: CanonicalMailboxCapabilityUpdateContentV1,
+) -> Result<CanonicalSignedMailboxCapabilityUpdateV1, CanonicalMailboxProvisioningError> {
+    if owner_signing_key.verifying_key().to_bytes() != content.owner_device_id {
+        return Err(CanonicalMailboxProvisioningError::InvalidUpdate);
+    }
+    let signature = owner_signing_key
+        .sign(&mailbox_capability_update_signing_bytes_v1(&content)?)
+        .to_bytes();
+    let update = CanonicalSignedMailboxCapabilityUpdateV1 { content, signature };
+    verify_signed_mailbox_capability_update_v1(&update)?;
+    Ok(update)
+}
+
 pub fn decode_and_verify_signed_mailbox_capability_update_v1(
     bytes: &[u8],
 ) -> Result<CanonicalSignedMailboxCapabilityUpdateV1, CanonicalMailboxProvisioningError> {
@@ -555,10 +579,7 @@ pub fn verify_signed_mailbox_capability_update_v1(
     validate_update_content(&update.content)?;
     verify_ed25519(
         &update.content.owner_device_id,
-        &prefixed(
-            CANONICAL_MAILBOX_CAPABILITY_UPDATE_SIGNATURE_DOMAIN,
-            &encode_capability_update_content(&update.content)?,
-        ),
+        &mailbox_capability_update_signing_bytes_v1(&update.content)?,
         &update.signature,
     )
 }

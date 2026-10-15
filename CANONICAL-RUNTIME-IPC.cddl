@@ -1,4 +1,4 @@
-; Kilogram deterministic-CBOR local runtime IPC core, read, contact, directory, queue, outbox and volunteer-provider model, M1.1.34.
+; Kilogram deterministic-CBOR local runtime IPC model, M1.1.36.
 ; Only unsigned integers, definite byte strings and definite arrays are used.
 
 profile-version = 1
@@ -553,6 +553,73 @@ signed-runtime-ipc-mailbox-status-response-v1 = [
   signature
 ]
 
+runtime-ipc-mailbox-mutation-target-v1 = [
+  profile-version,
+  contact-id: digest,
+  recipient-account-id: account-id,
+  recipient-device-id: device-id,
+  recipient-device-list-digest: digest,
+  scope: digest
+]
+
+; The provider selection and predecessor head are exact signed canonical
+; objects. No local binding or plaintext mailbox secret crosses this boundary.
+runtime-ipc-mailbox-mutation-command-v1 =
+  [create-mailbox-capability: 0,
+   runtime-ipc-mailbox-mutation-target-v1,
+   signed-provider-selection-cbor: bytes .size (1..262144),
+   offer-valid-for-seconds: 60..2592000] /
+  [rotate-mailbox-capability: 1,
+   runtime-ipc-mailbox-mutation-target-v1,
+   runtime-ipc-mailbox-capability-head-v1,
+   signed-provider-selection-cbor: bytes .size (1..262144),
+   offer-valid-for-seconds: 60..2592000] /
+  [revoke-mailbox-capability: 2,
+   runtime-ipc-mailbox-mutation-target-v1,
+   runtime-ipc-mailbox-capability-head-v1]
+
+runtime-ipc-mailbox-mutation-request-v1 = [
+  profile-version,
+  descriptor-id: digest,
+  request-id,
+  bearer-token: token,
+  issued-at-unix-seconds: uint,
+  expires-at-unix-seconds: uint,
+  runtime-ipc-mailbox-mutation-command-v1
+]
+
+runtime-ipc-mailbox-mutation-outcome-v1 = 0..1
+runtime-ipc-mailbox-mutation-delivery-state-v1 = 0
+
+runtime-ipc-mailbox-capability-transition-v1 = [
+  profile-version,
+  runtime-ipc-mailbox-mutation-outcome-v1,
+  runtime-ipc-mailbox-mutation-target-v1,
+  signed-mailbox-capability-update-cbor: bytes .size (1..32768),
+  provider-selection-id: runtime-ipc-option-digest-v1,
+  offer-expires-at-unix-seconds: runtime-ipc-option-uint-v1,
+  runtime-ipc-mailbox-mutation-delivery-state-v1
+]
+
+runtime-ipc-mailbox-mutation-result-v1 =
+  [mailbox-capability-transition: 0, runtime-ipc-mailbox-capability-transition-v1] /
+  [error: 1, error-code: 1..65535, message-utf8: bytes .size (1..4096)]
+
+runtime-ipc-mailbox-mutation-response-content-v1 = [
+  profile-version,
+  descriptor-id: digest,
+  request-id,
+  request-digest: digest,
+  responder-device-id: device-id,
+  runtime-ipc-mailbox-mutation-result-v1
+]
+
+signed-runtime-ipc-mailbox-mutation-response-v1 = [
+  profile-version,
+  runtime-ipc-mailbox-mutation-response-content-v1,
+  signature
+]
+
 kilogram-runtime-ipc-v1 =
   signed-runtime-ipc-descriptor-v1 /
   runtime-ipc-core-request-v1 /
@@ -570,4 +637,6 @@ kilogram-runtime-ipc-v1 =
   runtime-ipc-provider-request-v1 /
   signed-runtime-ipc-provider-response-v1 /
   runtime-ipc-mailbox-status-request-v1 /
-  signed-runtime-ipc-mailbox-status-response-v1
+  signed-runtime-ipc-mailbox-status-response-v1 /
+  runtime-ipc-mailbox-mutation-request-v1 /
+  signed-runtime-ipc-mailbox-mutation-response-v1

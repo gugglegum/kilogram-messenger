@@ -378,7 +378,7 @@ sessions, distribution, removal и key epochs и не решены этим пр
 - Независимый second-builder, подписанный release provenance, обновления клиента
   и дальнейшая защита supply chain поверх M0.9.50 same-host gate.
 - Миграция криптоалгоритмов и wire protocol без разделения сети.
-- После M1.1.35 canonical coverage содержит 16 complete, 1 partial
+- После M1.1.36 canonical coverage содержит 16 complete, 1 partial
   (`runtime-ipc`), один not-started (`transport-sync`) и два not-targeted
   surface. В runtime IPC уже закрыты signed loopback descriptor, bearer/fresh
   request, exact signed response, core Ping/WaitForChange/Shutdown/Error,
@@ -389,10 +389,11 @@ sessions, distribution, removal и key epochs и не решены этим пр
   paginated outbox projection, signed volunteer-provider offer import и
   capability-free provider selection, а также snapshot-bound paginated
   read-only mailbox capability status из exact signed update/ACK heads без
-  local read/write secrets. Открыты create/rotate/revoke mailbox capability
-  mutations, publication/conflict, own-device automation,
+  local read/write secrets и create/rotate/revoke mailbox capability mutations
+  с exact Device-signed provider selection и acknowledged predecessor. Открыты
+  publication/conflict, own-device automation,
   recovery/device-link команды и их noncore results. Следующий приоритет —
-  create/rotate/revoke mailbox capability boundary, затем дробить остальные
+  publication-channel rotation/conflict boundary, затем дробить остальные
   families на bounded этапы до complete `runtime-ipc`, затем parallel CBOR ALPN/negotiation для
   `transport-sync`. Общая activation требует explicit identifiers, downgrade
   tests, sustained fuzzing, independent HPKE conformance и fresh multi-device

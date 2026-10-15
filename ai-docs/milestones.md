@@ -5853,3 +5853,31 @@ correlation visible, Windows-only field evidence, independent security audit
 - coverage остаётся 16 complete / 1 partial / 1 not-started / 2 not-targeted.
   Следующий bounded IPC slice — create/rotate/revoke mailbox capability
   mutations с отдельной authority/secret boundary.
+
+### M1.1.36 — canonical runtime IPC mailbox capability mutations: принято локально
+
+- inactive deterministic-CBOR IPC получил create/rotate/revoke lifecycle,
+  отдельный от read-only status projection и active Postcard runtime;
+- create/rotate exact-связывают Device-signed provider selection, target roster
+  digest и bounded validity; rotate/revoke дополнительно требуют exact active,
+  recipient-acknowledged predecessor head;
+- signed result содержит exact capability update, provider selection ID и
+  provider-bounded expiry только для activation, а также честное состояние
+  `pending-recipient-acknowledgement`;
+- local mailbox binding, read secret и write secret через IPC не передаются.
+  Eventual adapter обязан atomic compare-and-commit durable state и replay-ить
+  exact idempotency request без повторной ротации;
+- independent Node reference проверяет deterministic CBOR, Ed25519, BLAKE3,
+  admission work, provider order/transport uniqueness, chain links и replica
+  equality; Rust golden/substitution/round-trip tests прошли 3/3, один explicit
+  vector generator ignored;
+- финальный mutation corpus прошёл 23013/23013 за 932.66 s, debug/offline,
+  `CargoJobs=2`, BelowNormal; protocol library regression прошёл 112/112 с
+  шестью explicit vector generators ignored;
+- rustfmt, workspace locked/offline strict Clippy и accepted-tag readiness
+  прошли 69/69. Active Postcard IPC v26/JSON descriptor v7, network, stable
+  test EXE, release/archive/push/tag не менялись и не создавались;
+- coverage остаётся 16 complete / 1 partial / 1 not-started / 2 not-targeted.
+  Следующий bounded IPC slice — publication-channel rotation и conflict
+  ceremony; independent HPKE и реальная adapter transaction остаются
+  activation gates.

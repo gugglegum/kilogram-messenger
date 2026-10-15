@@ -33,7 +33,7 @@ function Assert-LowerHex {
 
 function Assert-Schema {
     param([object]$Schema, [string]$Rust)
-    if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.35' -or
+    if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.36' -or
         [string]$Schema.status -cne 'candidate-not-active' -or [bool]$Schema.changes_active_wire -or
         [string]$Schema.profile -cne 'kilogram-deterministic-cbor-v1' -or
         [string]$Schema.activation.current_runtime_encoding -cne 'postcard-v26-with-json-descriptor-v7' -or
@@ -49,10 +49,10 @@ function Assert-Schema {
     if ($limits -cne '65536,655360,1024,16') {
         throw 'canonical runtime IPC mailbox status limits changed'
     }
-    if (@($Schema.domains).Count -ne 30 -or @($Schema.objects).Count -ne 17 -or
-        @($Schema.covered_commands).Count -ne 13 -or @($Schema.covered_results).Count -ne 14 -or
-        @($Schema.semantic_rules).Count -ne 52 -or
-        @($Schema.remaining_runtime_ipc_surface).Count -ne 6) {
+    if (@($Schema.domains).Count -ne 33 -or @($Schema.objects).Count -ne 19 -or
+        @($Schema.covered_commands).Count -ne 16 -or @($Schema.covered_results).Count -ne 15 -or
+        @($Schema.semantic_rules).Count -ne 60 -or
+        @($Schema.remaining_runtime_ipc_surface).Count -ne 5) {
         throw 'canonical runtime IPC mailbox status inventory changed'
     }
     foreach ($domain in @(
@@ -170,7 +170,8 @@ $expectedCovered = @('device-signed-loopback-descriptor',
     'read-only-own-device-directory-status', 'root-revoked-own-device-directory-transition',
     'idempotent-durable-message-queue-insertion', 'snapshot-bound-paginated-outbox-status',
     'signed-volunteer-provider-offer-import', 'capability-free-volunteer-provider-selection',
-    'snapshot-bound-paginated-mailbox-capability-status')
+    'snapshot-bound-paginated-mailbox-capability-status',
+    'exact-provider-and-predecessor-bound-mailbox-capability-mutation')
 $expectedRemaining = @($schema.remaining_runtime_ipc_surface | ForEach-Object { [string]$_ })
 if ($surface.Count -ne 1 -or [string]$surface[0].coverage -cne 'partial' -or
     (@($surface[0].covered) -join ',') -cne ($expectedCovered -join ',') -or
@@ -183,7 +184,7 @@ $actualMutationIds = @($mutations.fixtures |
     Where-Object { $_.vector_file -ceq 'CANONICAL-RUNTIME-IPC-MAILBOX-STATUS-VECTORS.json' } |
     ForEach-Object { $_.id })
 if (($actualMutationIds -join ',') -cne ($expectedMutationIds -join ',') -or
-    [int]$mutations.expected_mutations -ne 21451 -or
+    [int]$mutations.expected_mutations -ne 23013 -or
     [int]$mutations.maximum_mutations -ne 25000 -or
     [int]$mutations.resource_bounds.maximum_total_mutations -ne 25000) {
     throw 'canonical runtime IPC mailbox status mutation fixtures or capacity changed'
@@ -227,6 +228,6 @@ Write-Output 'canonical_runtime_ipc_mailbox_status_boundary=verified'
 Write-Output 'runtime_ipc_coverage=partial'
 Write-Output 'status_pagination=snapshot-bound'
 Write-Output 'local_binding_secrets_in_payload=false'
-Write-Output 'bounded_decoder_mutations=21451'
+Write-Output 'bounded_decoder_mutations=23013'
 Write-Output 'active_postcard_v26_changed=false'
 Write-Output 'network_executed=false'
