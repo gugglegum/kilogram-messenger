@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.26",
+  "milestone": "M1.1.27",
   "status": "coverage-audit-not-active",
   "changes_active_wire": false,
   "source_manifest": "PROTOCOL-COMPATIBILITY.json",
@@ -13,8 +13,8 @@
   },
   "summary": {
     "source_surfaces": 20,
-    "complete": 15,
-    "partial": 1,
+    "complete": 16,
+    "partial": 0,
     "not_started": 2,
     "not_targeted": 2,
     "activation_ready": false
@@ -29,10 +29,10 @@
     },
     {
       "id": "account-recovery",
-      "coverage": "partial",
-      "artifacts": ["CANONICAL-ACCOUNT-RECOVERY.cddl", "CANONICAL-ACCOUNT-RECOVERY-SCHEMA.json", "CANONICAL-ACCOUNT-RECOVERY-VECTORS.json", "crates/kilogram-protocol/src/canonical_account_recovery_v1.rs", "scripts/verify-kilogram-canonical-account-recovery-reference.mjs"],
-      "covered": ["root-signed-authority-package", "independent-root-signed-witness", "fresh-challenge-request", "current-device-approval", "strict-current-roster-majority"],
-      "remaining": ["policy-transition-request", "joint-old-new-roster-approvals", "policy-transition-certificate"]
+      "coverage": "complete",
+      "artifacts": ["CANONICAL-ACCOUNT-RECOVERY.cddl", "CANONICAL-ACCOUNT-RECOVERY-SCHEMA.json", "CANONICAL-ACCOUNT-RECOVERY-VECTORS.json", "CANONICAL-ACCOUNT-RECOVERY-POLICY.cddl", "CANONICAL-ACCOUNT-RECOVERY-POLICY-SCHEMA.json", "CANONICAL-ACCOUNT-RECOVERY-POLICY-VECTORS.json", "crates/kilogram-protocol/src/canonical_account_recovery_v1.rs", "crates/kilogram-protocol/src/canonical_account_recovery_policy_v1.rs", "scripts/verify-kilogram-canonical-account-recovery-reference.mjs", "scripts/verify-kilogram-canonical-account-recovery-policy-reference.mjs"],
+      "covered": ["root-signed-authority-package", "independent-root-signed-witness", "fresh-challenge-request", "current-device-approval", "strict-current-roster-majority", "monotonic-policy-transition-request", "joint-old-new-roster-approvals", "policy-transition-certificate", "local-monotonic-anchor-binding"],
+      "remaining": []
     },
     {
       "id": "authorized-event",
@@ -164,7 +164,6 @@
     }
   ],
   "next_priority": [
-    "account-recovery",
     "runtime-ipc",
     "transport-sync"
   ]

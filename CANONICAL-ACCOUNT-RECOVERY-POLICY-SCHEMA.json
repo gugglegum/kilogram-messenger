@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.27",
+  "status": "candidate-not-active",
+  "changes_active_wire": false,
+  "profile": "kilogram-deterministic-cbor-v1",
+  "cddl": {
+    "standard": "RFC 8610",
+    "path": "CANONICAL-ACCOUNT-RECOVERY-POLICY.cddl",
+    "root_rule": "kilogram-account-recovery-policy-v1"
+  },
+  "activation": {
+    "current_runtime_encoding": "postcard-v1",
+    "current_runtime_changed": false,
+    "required_before_activation": [
+      "complete-targeted-surface-coverage",
+      "explicit-version-migration",
+      "dual-reader-and-downgrade-tests",
+      "sustained-coverage-guided-fuzzing",
+      "fresh-multi-device-field-and-hosted-evidence"
+    ]
+  },
+  "limits": {
+    "maximum_request_bytes": 67182592,
+    "maximum_approval_bytes": 16384,
+    "maximum_approvals": 64,
+    "maximum_certificate_bytes": 68296704,
+    "maximum_validity_seconds": 1800,
+    "clock_skew_seconds": 120
+  },
+  "external_objects": [
+    {
+      "id": "signed-account-recovery-package-v1",
+      "schema": "CANONICAL-ACCOUNT-RECOVERY-SCHEMA.json"
+    },
+    {
+      "id": "signed-account-recovery-witness-v1",
+      "schema": "CANONICAL-ACCOUNT-RECOVERY-SCHEMA.json"
+    }
+  ],
+  "domains": [
+    {
+      "id": "transition-request-id-v1",
+      "value": "kilogram:account-recovery-policy-transition-request-id:cbor-v1\\0",
+      "primitive": "blake3"
+    },
+    {
+      "id": "transition-approval-signature-v1",
+      "value": "kilogram:account-recovery-policy-transition-approval-signature:cbor-v1\\0",
+      "signer": "old-or-new-roster-device-ed25519"
+    },
+    {
+      "id": "transition-approval-id-v1",
+      "value": "kilogram:account-recovery-policy-transition-approval-id:cbor-v1\\0",
+      "primitive": "blake3"
+    },
+    {
+      "id": "transition-certificate-id-v1",
+      "value": "kilogram:account-recovery-policy-transition-certificate-id:cbor-v1\\0",
+      "primitive": "blake3"
+    }
+  ],
+  "objects": [
+    {
+      "id": "account-recovery-policy-transition-request-v1",
+      "kind": "fresh-two-state-request",
+      "maximum_bytes": 67182592
+    },
+    {
+      "id": "signed-account-recovery-policy-transition-approval-v1",
+      "kind": "device-signed-envelope",
+      "maximum_bytes": 16384
+    },
+    {
+      "id": "account-recovery-policy-transition-certificate-v1",
+      "kind": "joint-quorum-proof",
+      "maximum_bytes": 68296704
+    }
+  ],
+  "semantic_rules": [
+    "old and new package-witness pairs independently verify and name the same Account",
+    "new authority revision is strictly greater than old authority revision",
+    "every old revocation remains present verbatim in the new authority snapshot",
+    "every old conversation membership remains at the same or a greater revision and never loses an old member",
+    "every old Device certificate remains byte-identical or its Device is explicitly revoked in the new authority snapshot",
+    "old and new recovery roster digests differ",
+    "epoch zero requires a zero previous transition ID; later epochs require a nonzero previous transition ID",
+    "request lifetime is positive and at most 1800 seconds",
+    "each approval binds the exact request, epochs, previous transition, both rosters, challenge and expiry",
+    "each approver is an active Device in the old roster, the new roster or both",
+    "certificate approvals are strictly ordered and distinct by Device ID",
+    "joint quorum requires floor(old-count/2)+1 old approvals and floor(new-count/2)+1 new approvals",
+    "one Device present in both rosters counts once toward each roster",
+    "caller checks account, old epoch, old roster digest and previous transition ID against a local DB-authenticated monotonic anchor"
+  ]
+}

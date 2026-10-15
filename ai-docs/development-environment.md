@@ -3324,3 +3324,24 @@ Hosted follow-up:
 - Accepted-tag readiness passed 59/59, rustfmt and locked/offline strict Clippy.
   No network action, stable-path test EXE, release build, archive or tag was
   created. Coverage is 15 complete, 1 partial, 2 not-started and 2 not-targeted.
+
+## M1.1.27 canonical Account recovery policy snapshot (2026-10-15)
+
+- New inactive Rust module:
+  `crates/kilogram-protocol/src/canonical_account_recovery_policy_v1.rs`.
+- CDDL, schema, generated vectors and dependency-free Node reference cover a
+  monotonic old/new package transition, per-Device approvals and joint-quorum
+  certificate. Active Postcard code is deliberately untouched.
+- The portable verifier validates both Root package+witness pairs, monotonic
+  authority/membership/revocation/certificate state, strict approval ordering
+  and both roster majorities. Installation still requires a separately stored
+  local monotonic anchor.
+- Protocol library regression passed 78/78 outside the restricted filesystem
+  sandbox. Decoder mutation regression passed 15542/15542 in 748.84 seconds
+  with debug/offline Cargo, two jobs and BelowNormal priority.
+- Accepted-tag readiness passed 60/60; rustfmt and locked/offline strict Clippy
+  passed. No network, stable-path test executable, release build, archive, push
+  or tag was created.
+- Canonical coverage is 16 complete, 0 partial, 2 not-started and 2
+  not-targeted. Next target is local `runtime-ipc`; `transport-sync` remains the
+  final not-started wire-negotiation surface.

@@ -1,4 +1,12 @@
 use kilogram_crypto::DeviceEncryptionIdentity;
+use kilogram_protocol::canonical_account_recovery_policy_v1::{
+    CanonicalAccountRecoveryPolicyTransitionRequestV1,
+    account_recovery_policy_transition_request_id_v1,
+    decode_and_verify_account_recovery_policy_transition_certificate_v1,
+    decode_and_verify_account_recovery_policy_transition_request_v1,
+    decode_and_verify_signed_account_recovery_policy_transition_approval_v1,
+    verify_account_recovery_policy_transition_approval_for_request_v1,
+};
 use kilogram_protocol::canonical_account_recovery_v1::{
     CanonicalAccountRecoveryApprovalRequestV1, account_recovery_request_id_v1,
     decode_and_verify_account_recovery_approval_request_v1,
@@ -94,7 +102,7 @@ use kilogram_protocol::canonical_ticket_publication_v1::{
 use serde_json::Value;
 
 const MINIMUM_MUTATIONS: usize = 500;
-const EXPECTED_MUTATIONS: usize = 14_759;
+const EXPECTED_MUTATIONS: usize = 15_542;
 const MAXIMUM_MUTATIONS: usize = 20_000;
 const MAXIMUM_GRID_POSITIONS: usize = 128;
 
@@ -175,6 +183,13 @@ enum Decoder {
         request: Box<CanonicalAccountRecoveryApprovalRequestV1>,
         now_unix_seconds: u64,
     },
+    AccountRecoveryPolicyRequest {
+        expected_id: [u8; 32],
+    },
+    AccountRecoveryPolicyApproval {
+        request: Box<CanonicalAccountRecoveryPolicyTransitionRequestV1>,
+    },
+    AccountRecoveryPolicyCertificate,
     MailboxGossipFrame {
         expected_id: [u8; 32],
         now_unix_seconds: u64,
@@ -353,6 +368,23 @@ fn accepts(decoder: &Decoder, bytes: &[u8]) -> bool {
                 )
             })
             .is_ok(),
+        Decoder::AccountRecoveryPolicyRequest { expected_id } => {
+            decode_and_verify_account_recovery_policy_transition_request_v1(bytes)
+                .and_then(|request| account_recovery_policy_transition_request_id_v1(&request))
+                .is_ok_and(|request_id| request_id == *expected_id)
+        }
+        Decoder::AccountRecoveryPolicyApproval { request } => {
+            decode_and_verify_signed_account_recovery_policy_transition_approval_v1(bytes)
+                .and_then(|approval| {
+                    verify_account_recovery_policy_transition_approval_for_request_v1(
+                        &approval, request,
+                    )
+                })
+                .is_ok()
+        }
+        Decoder::AccountRecoveryPolicyCertificate => {
+            decode_and_verify_account_recovery_policy_transition_certificate_v1(bytes).is_ok()
+        }
         Decoder::MailboxGossipFrame {
             expected_id,
             now_unix_seconds,
@@ -479,6 +511,10 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-ACCOUNT-RECOVERY-VECTORS.json"
     )))?;
+    let account_recovery_policy: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../CANONICAL-ACCOUNT-RECOVERY-POLICY-VECTORS.json"
+    )))?;
     let gossip_frame_id: [u8; 32] = pointer_hex(&mailbox_gossip, "/expected/request/frame_id_hex")?
         .try_into()
         .map_err(|_| "gossip frame ID length changed")?;
@@ -541,6 +577,13 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
     let account_recovery_valid_at = account_recovery["input"]["approved_at_unix_seconds"]
         .as_u64()
         .ok_or("Account recovery approval time is missing")?;
+    let account_recovery_policy_request =
+        decode_and_verify_account_recovery_policy_transition_request_v1(&pointer_hex(
+            &account_recovery_policy,
+            "/expected/request/cbor_hex",
+        )?)?;
+    let account_recovery_policy_request_id =
+        account_recovery_policy_transition_request_id_v1(&account_recovery_policy_request)?;
     let fixtures = [
         (
             "certificate",
@@ -925,6 +968,28 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
             },
             pointer_hex(&account_recovery, "/expected/approval/signed_cbor_hex")?,
         ),
+        (
+            "account-recovery-policy-transition-request",
+            Decoder::AccountRecoveryPolicyRequest {
+                expected_id: account_recovery_policy_request_id,
+            },
+            pointer_hex(&account_recovery_policy, "/expected/request/cbor_hex")?,
+        ),
+        (
+            "signed-account-recovery-policy-transition-approval",
+            Decoder::AccountRecoveryPolicyApproval {
+                request: Box::new(account_recovery_policy_request.clone()),
+            },
+            pointer_hex(
+                &account_recovery_policy,
+                "/expected/approvals/0/signed_cbor_hex",
+            )?,
+        ),
+        (
+            "account-recovery-policy-transition-certificate",
+            Decoder::AccountRecoveryPolicyCertificate,
+            pointer_hex(&account_recovery_policy, "/expected/certificate/cbor_hex")?,
+        ),
     ];
     let mut mutations = 0usize;
     for (name, decoder, valid) in fixtures {
@@ -1065,6 +1130,13 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
             request: Box::new(account_recovery_request),
             now_unix_seconds: account_recovery_valid_at,
         },
+        Decoder::AccountRecoveryPolicyRequest {
+            expected_id: [0; 32],
+        },
+        Decoder::AccountRecoveryPolicyApproval {
+            request: Box::new(account_recovery_policy_request),
+        },
+        Decoder::AccountRecoveryPolicyCertificate,
         Decoder::MailboxGossipFrame {
             expected_id: [0; 32],
             now_unix_seconds: 1_800_000_030,

@@ -163,15 +163,15 @@ if ($source.Count -ne 1 -or [string]$source[0].encoding -cne 'postcard') {
 }
 $surface = @($coverage.surfaces | Where-Object { $_.id -ceq 'account-recovery' })
 $expectedCovered = @('root-signed-authority-package', 'independent-root-signed-witness',
-    'fresh-challenge-request', 'current-device-approval', 'strict-current-roster-majority')
-$expectedRemaining = @('policy-transition-request', 'joint-old-new-roster-approvals',
-    'policy-transition-certificate')
-if ($surface.Count -ne 1 -or [string]$surface[0].coverage -cne 'partial' -or
+    'fresh-challenge-request', 'current-device-approval', 'strict-current-roster-majority',
+    'monotonic-policy-transition-request', 'joint-old-new-roster-approvals',
+    'policy-transition-certificate', 'local-monotonic-anchor-binding')
+if ($surface.Count -ne 1 -or [string]$surface[0].coverage -cne 'complete' -or
     (@($surface[0].covered) -join ',') -cne ($expectedCovered -join ',') -or
-    (@($surface[0].remaining) -join ',') -cne ($expectedRemaining -join ',')) {
+    @($surface[0].remaining).Count -ne 0) {
     throw 'canonical Account recovery aggregate coverage boundary changed'
 }
-if ([int]$mutations.expected_mutations -ne 14759 -or
+if ([int]$mutations.expected_mutations -ne 15542 -or
     [int]$mutations.maximum_mutations -ne 20000) {
     throw 'canonical Account recovery decoder mutation bound changed'
 }
@@ -214,10 +214,10 @@ if ($SelfTest) {
 }
 
 Write-Output 'canonical_account_recovery_boundary=verified'
-Write-Output 'account_recovery_coverage=partial-policy-transition-pending'
+Write-Output 'account_recovery_coverage=complete'
 Write-Output 'independent_ed25519_and_blake3=verified'
 Write-Output 'strict_current_roster_majority=verified'
-Write-Output 'cross_roster_fork_safety=false-until-policy-transition'
-Write-Output 'bounded_decoder_mutations=14759'
+Write-Output 'cross_roster_fork_safety=joint-transition-required'
+Write-Output 'bounded_decoder_mutations=15542'
 Write-Output 'active_postcard_v1_changed=false'
 Write-Output 'network_executed=false'

@@ -5613,3 +5613,28 @@ correlation visible, Windows-only field evidence, independent security audit
   Clippy; network/test EXE/release/archive/tag не запускались и не создавались;
 - coverage: 15 complete / 1 partial / 2 not-started / 2 not-targeted. Active
   Postcard Account recovery/runtime и immutable `M1.0.0` не менялись.
+
+### M1.1.27 — canonical Account recovery policy transition: принято локально
+
+- deterministic-CBOR transition request exact-встраивает independently verified
+  old/new Root recovery package+witness pairs, fresh challenge, epoch и previous
+  transition ID;
+- successor обязан сохранить старые revocations, не откатывать memberships и
+  не удалять старый Device certificate без explicit new revocation; authority
+  revision строго растёт, recovery roster действительно меняется;
+- Device-signed approvals exact-связывают request, оба roster digests, epochs,
+  challenge, expiry и per-Device previous approval head;
+- certificate принимает strictly ordered unique approvals и требует одновременно
+  strict majority старого и нового roster; overlap Device считается один раз в
+  каждом roster, duplicate не даёт дополнительного голоса;
+- portable certificate отдельно требует local DB-authenticated anchor check по
+  Account, old epoch, old roster digest и previous transition ID;
+- независимый Node reference заново строит old/new packages, Root/Device
+  Ed25519 signatures, deterministic CBOR и все BLAKE3 IDs;
+- protocol library regression прошёл 78/78; mutation corpus 15542/15542 за
+  748.84 s, debug/offline, `CargoJobs=2`, BelowNormal;
+- accepted-tag readiness прошёл 60/60, rustfmt и workspace locked/offline strict
+  Clippy; network/test EXE/release/archive/tag не запускались и не создавались;
+- coverage: 16 complete / 0 partial / 2 not-started / 2 not-targeted. Следующий
+  canonical priority — `runtime-ipc`, затем `transport-sync`; active Postcard
+  recovery/runtime и immutable `M1.0.0` не менялись.

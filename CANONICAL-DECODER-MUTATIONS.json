@@ -5,7 +5,7 @@
   "active_runtime_changed": false,
   "seed": 1262836037,
   "minimum_mutations": 500,
-  "expected_mutations": 14759,
+  "expected_mutations": 15542,
   "maximum_mutations": 20000,
   "fixtures": [
     {
@@ -356,6 +356,26 @@
       "json_pointer": "/expected/approval/signed_cbor_hex",
       "decoder": "decode_and_verify_signed_account_recovery_approval_v1",
       "context_verifier": "verify_account_recovery_approval_for_request_v1"
+    },
+    {
+      "id": "account-recovery-policy-transition-request-v1",
+      "vector_file": "CANONICAL-ACCOUNT-RECOVERY-POLICY-VECTORS.json",
+      "json_pointer": "/expected/request/cbor_hex",
+      "decoder": "decode_and_verify_account_recovery_policy_transition_request_v1",
+      "context_verifier": "account_recovery_policy_transition_request_id_v1"
+    },
+    {
+      "id": "signed-account-recovery-policy-transition-approval-v1",
+      "vector_file": "CANONICAL-ACCOUNT-RECOVERY-POLICY-VECTORS.json",
+      "json_pointer": "/expected/approvals/0/signed_cbor_hex",
+      "decoder": "decode_and_verify_signed_account_recovery_policy_transition_approval_v1",
+      "context_verifier": "verify_account_recovery_policy_transition_approval_for_request_v1"
+    },
+    {
+      "id": "account-recovery-policy-transition-certificate-v1",
+      "vector_file": "CANONICAL-ACCOUNT-RECOVERY-POLICY-VECTORS.json",
+      "json_pointer": "/expected/certificate/cbor_hex",
+      "decoder": "decode_and_verify_account_recovery_policy_transition_certificate_v1"
     }
   ],
   "mutation_classes": [

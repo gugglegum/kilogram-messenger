@@ -1,0 +1,60 @@
+; Kilogram deterministic-CBOR Account recovery policy transition, M1.1.27.
+; Only unsigned integers, definite byte strings and definite arrays are used.
+
+profile-version = 1
+account-id = bytes .size 32
+device-id = bytes .size 32
+digest = bytes .size 32
+challenge = bytes .size 32
+signature = bytes .size 64
+
+signed-account-recovery-package-cbor = bytes
+signed-account-recovery-witness-cbor = bytes
+account-recovery-policy-transition-request-cbor = bytes
+signed-account-recovery-policy-transition-approval-cbor = bytes
+
+account-recovery-policy-transition-request-v1 = [
+  profile-version,
+  old-epoch: uint,
+  previous-transition-id: digest,
+  old-package: signed-account-recovery-package-cbor,
+  old-witness: signed-account-recovery-witness-cbor,
+  new-package: signed-account-recovery-package-cbor,
+  new-witness: signed-account-recovery-witness-cbor,
+  challenge,
+  issued-at-unix-seconds: uint,
+  expires-at-unix-seconds: uint
+]
+
+account-recovery-policy-transition-approval-content-v1 = [
+  profile-version,
+  account-id,
+  request-id: digest,
+  old-epoch: uint,
+  new-epoch: uint,
+  previous-transition-id: digest,
+  old-recovery-roster-digest: digest,
+  new-recovery-roster-digest: digest,
+  challenge,
+  request-expires-at-unix-seconds: uint,
+  approver-device-id: device-id,
+  previous-transition-approval-id: digest,
+  approved-at-unix-seconds: uint
+]
+
+signed-account-recovery-policy-transition-approval-v1 = [
+  profile-version,
+  account-recovery-policy-transition-approval-content-v1,
+  signature
+]
+
+account-recovery-policy-transition-certificate-v1 = [
+  profile-version,
+  account-recovery-policy-transition-request-cbor,
+  [1*64 signed-account-recovery-policy-transition-approval-cbor]
+]
+
+kilogram-account-recovery-policy-v1 =
+  account-recovery-policy-transition-request-v1 /
+  signed-account-recovery-policy-transition-approval-v1 /
+  account-recovery-policy-transition-certificate-v1

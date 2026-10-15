@@ -378,14 +378,15 @@ sessions, distribution, removal и key epochs и не решены этим пр
 - Независимый second-builder, подписанный release provenance, обновления клиента
   и дальнейшая защита supply chain поверх M0.9.50 same-host gate.
 - Миграция криптоалгоритмов и wire protocol без разделения сети.
-- После M1.1.26 canonical coverage содержит один partial surface
-  `account-recovery`, два not-started — `runtime-ipc` и `transport-sync` — и
-  два not-targeted. Package, witness и current-roster quorum уже portable;
-  следующий приоритет — policy transition с exact old/new package pairs,
-  monotonic authority change и joint majority обоих rosters. До него current
-  quorum нельзя использовать для самовольной смены recovery roster. Общая
-  activation всё ещё требует explicit identifiers, downgrade tests, sustained
-  fuzzing, independent HPKE conformance и fresh multi-device field evidence.
+- После M1.1.27 canonical coverage содержит 16 complete, 0 partial, два
+  not-started — `runtime-ipc` и `transport-sync` — и два not-targeted surface.
+  Account recovery теперь включает exact old/new package pairs, monotonic
+  successor и joint majority обоих rosters, но portable certificate всё равно
+  нельзя устанавливать без local DB-authenticated monotonic anchor. Следующий
+  приоритет — bounded local `runtime-ipc`, затем parallel CBOR ALPN/negotiation
+  для `transport-sync`. Общая activation требует explicit identifiers,
+  downgrade tests, sustained fuzzing, independent HPKE conformance и fresh
+  multi-device field evidence.
 
 ## Инварианты при выборе ответов
 
