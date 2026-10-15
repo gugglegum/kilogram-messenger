@@ -6,6 +6,7 @@ import {
 } from "node:crypto";
 import { readFileSync } from "node:fs";
 import process from "node:process";
+import { blake3Hash } from "./lib/blake3-reference.mjs";
 
 const PROFILE_VERSION = 1;
 const PKCS8_ED25519_SEED_PREFIX = Buffer.from("302e020100300506032b657004220420", "hex");
@@ -115,7 +116,7 @@ const initialContent = checkpointContent(
   input.approved_range_start,
   undefined,
 );
-verifyCheckpoint("initial checkpoint", expected.initial_checkpoint, initialContent,
+const initialEnvelope = verifyCheckpoint("initial checkpoint", expected.initial_checkpoint, initialContent,
   recipientKey, createPublicKey(recipientKey));
 const predecessor = hex(expected.initial_checkpoint.checkpoint_id_hex, 32, "predecessor ID");
 const successorContent = checkpointContent(
@@ -125,7 +126,7 @@ const successorContent = checkpointContent(
   input.successor_next_range_start,
   predecessor,
 );
-verifyCheckpoint("successor checkpoint", expected.successor_checkpoint, successorContent,
+const successorEnvelope = verifyCheckpoint("successor checkpoint", expected.successor_checkpoint, successorContent,
   recipientKey, createPublicKey(recipientKey));
 const identity = array([
   uint(PROFILE_VERSION),
@@ -140,9 +141,23 @@ const identity = array([
 ]);
 assert(identity.equals(hex(expected.recovery_identity_cbor_hex, undefined, "recovery identity")),
   "recovery identity diverged");
+assert(blake3Hash(Buffer.concat([
+  hex(expected.recovery_id_domain_hex, undefined, "recovery ID domain"), identity,
+])).equals(hex(expected.recovery_id_hex, 32, "recovery ID")), "recovery ID diverged");
+for (const [name, envelope] of [
+  ["initial checkpoint", initialEnvelope],
+  ["successor checkpoint", successorEnvelope],
+]) {
+  const checkpoint = name.startsWith("initial")
+    ? expected.initial_checkpoint
+    : expected.successor_checkpoint;
+  assert(blake3Hash(Buffer.concat([
+    hex(checkpoint.checkpoint_id_domain_hex, undefined, `${name} ID domain`), envelope,
+  ])).equals(hex(checkpoint.checkpoint_id_hex, 32, `${name} ID`)), `${name} ID diverged`);
+}
 
 console.log("canonical_recovery_reference=verified");
 console.log("independent_language=node-javascript");
 console.log("independent_ed25519=node-crypto");
-console.log("independent_blake3=pending-m1.1.5");
+console.log("independent_blake3=verified");
 console.log("active_runtime_changed=false");

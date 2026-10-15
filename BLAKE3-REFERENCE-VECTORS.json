@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "source": "https://github.com/BLAKE3-team/BLAKE3/blob/master/test_vectors/test_vectors.json",
+  "source_license": "CC0-1.0 OR Apache-2.0 OR Apache-2.0 WITH LLVM-exception",
+  "input_pattern": "byte_at_index_modulo_251",
+  "output_bytes_checked": 32,
+  "cases": [
+    { "input_len": 0, "hash_hex": "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262" },
+    { "input_len": 1, "hash_hex": "2d3adedff11b61f14c886e35afa036736dcd87a74d27b5c1510225d0f592e213" },
+    { "input_len": 1023, "hash_hex": "10108970eeda3eb932baac1428c7a2163b0e924c9a9e25b35bba72b28f70bd11" },
+    { "input_len": 1024, "hash_hex": "42214739f095a406f3fc83deb889744ac00df831c10daa55189b5d121c855af7" },
+    { "input_len": 1025, "hash_hex": "d00278ae47eb27b34faecf67b4fe263f82d5412916c1ffd97c8cb7fb814b8444" },
+    { "input_len": 2048, "hash_hex": "e776b6028c7cd22a4d0ba182a8bf62205d2ef576467e838ed6f2529b85fba24a" }
+  ]
+}

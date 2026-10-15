@@ -5155,3 +5155,18 @@ correlation visible, Windows-only field evidence, independent security audit
   encoder/signature verifier проверяют exact bytes;
 - независимая BLAKE3 проверка остаётся явным следующим gate M1.1.5; readiness
   inventory расширен с 37 до 38 gates. Runtime/network/tag не менялись.
+
+### M1.1.5 — independent digests and bounded decoder mutations: принято локально
+
+- dependency-free JavaScript BLAKE3 reference сначала воспроизводит шесть
+  official upstream vectors на границах block/chunk/tree, затем независимо
+  проверяет 5 Kilogram event/pool/recovery/checkpoint IDs;
+- ratchet и recovery Node references теперь проверяют не только CBOR/Ed25519,
+  но и exact BLAKE3 IDs; runtime Rust crypto остаётся неизменным;
+- closed mutation manifest связывает 5 golden fixtures с exact strict decoder,
+  7 классами повреждений и offline bounds 500..2000 iterations;
+- integration regression детерминированно отклоняет 1305 truncation/bit-flip/
+  non-minimal/indefinite/reserved/oversized mutations примерно за 20 секунд;
+- это bounded malformed corpus, а не continuous coverage-guided fuzzing или
+  audit; sustained fuzzing остаётся условием activation;
+- readiness inventory расширен с 38 до 39 gates; network/release/tag не нужны.

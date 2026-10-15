@@ -147,6 +147,6 @@ if ($SelfTest) {
 Write-Output 'canonical_recovery_boundary=verified'
 Write-Output 'canonical_recovery_status=candidate-not-active'
 Write-Output 'independent_ed25519_reference=verified'
-Write-Output 'independent_blake3_reference=pending-m1.1.5'
+Write-Output 'independent_blake3_reference=verified'
 Write-Output 'active_runtime_changed=false'
 Write-Output 'network_executed=false'

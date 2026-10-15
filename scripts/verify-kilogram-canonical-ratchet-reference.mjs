@@ -6,6 +6,7 @@ import {
 } from "node:crypto";
 import { readFileSync } from "node:fs";
 import process from "node:process";
+import { blake3Hash } from "./lib/blake3-reference.mjs";
 
 const PROFILE_VERSION = 1;
 const PKCS8_ED25519_SEED_PREFIX = Buffer.from("302e020100300506032b657004220420", "hex");
@@ -253,7 +254,9 @@ function verifyContract(schema, vectors) {
     ),
     "prekey pool ID domain diverged",
   );
-  canonicalHex(expected.prekey_pool_id_hex, 32, "prekey pool ID");
+  const poolId = canonicalHex(expected.prekey_pool_id_hex, 32, "prekey pool ID");
+  assert(blake3Hash(Buffer.concat([DOMAINS.poolId, pool])).equals(poolId),
+    "prekey pool ID diverged");
   const directory = cborArray([
     cborUnsigned(PROFILE_VERSION),
     cborBytes(snapshot),
@@ -324,6 +327,6 @@ if (options.selfTest) {
   process.stdout.write("canonical_ratchet_reference=verified\n");
   process.stdout.write("independent_language=javascript\n");
   process.stdout.write("independent_crypto=node-crypto-ed25519\n");
-  process.stdout.write("independent_blake3=pending\n");
+  process.stdout.write("independent_blake3=verified\n");
   process.stdout.write("active_wire_changed=false\n");
 }

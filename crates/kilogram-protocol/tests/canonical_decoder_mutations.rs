@@ -1,0 +1,192 @@
+use kilogram_protocol::canonical_authority_v1::{
+    decode_and_verify_signed_device_certificate_v1,
+    decode_and_verify_signed_device_session_authorization_v1,
+};
+use kilogram_protocol::canonical_ratchet_v1::{
+    decode_and_verify_account_prekey_directory_v1, decode_and_verify_signed_prekey_pool_v1,
+};
+use kilogram_protocol::canonical_recovery_v1::decode_and_verify_signed_history_recovery_checkpoint_v1;
+use serde_json::Value;
+
+const MINIMUM_MUTATIONS: usize = 500;
+const MAXIMUM_MUTATIONS: usize = 2_000;
+const MAXIMUM_GRID_POSITIONS: usize = 128;
+
+#[derive(Clone, Copy)]
+enum Decoder {
+    Certificate,
+    Session,
+    Pool,
+    Directory,
+    Recovery,
+}
+
+fn accepts(decoder: Decoder, bytes: &[u8]) -> bool {
+    match decoder {
+        Decoder::Certificate => decode_and_verify_signed_device_certificate_v1(bytes).is_ok(),
+        Decoder::Session => decode_and_verify_signed_device_session_authorization_v1(bytes).is_ok(),
+        Decoder::Pool => decode_and_verify_signed_prekey_pool_v1(bytes).is_ok(),
+        Decoder::Directory => decode_and_verify_account_prekey_directory_v1(bytes).is_ok(),
+        Decoder::Recovery => decode_and_verify_signed_history_recovery_checkpoint_v1(bytes).is_ok(),
+    }
+}
+
+fn decode_hex(value: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    if !value.len().is_multiple_of(2) {
+        return Err("hex value has odd length".into());
+    }
+    (0..value.len())
+        .step_by(2)
+        .map(|index| Ok(u8::from_str_radix(&value[index..index + 2], 16)?))
+        .collect()
+}
+
+fn pointer_hex(document: &Value, pointer: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    decode_hex(
+        document
+            .pointer(pointer)
+            .and_then(Value::as_str)
+            .ok_or("vector JSON pointer is missing")?,
+    )
+}
+
+fn bounded_positions(length: usize) -> Vec<usize> {
+    if length <= MAXIMUM_GRID_POSITIONS {
+        return (0..length).collect();
+    }
+    (0..MAXIMUM_GRID_POSITIONS)
+        .map(|index| index * length / MAXIMUM_GRID_POSITIONS)
+        .collect()
+}
+
+#[test]
+fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn std::error::Error>> {
+    let authority: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../CANONICAL-AUTHORITY-VECTORS.json"
+    )))?;
+    let ratchet: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../CANONICAL-RATCHET-VECTORS.json"
+    )))?;
+    let recovery: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../CANONICAL-RECOVERY-VECTORS.json"
+    )))?;
+    let fixtures = [
+        (
+            "certificate",
+            Decoder::Certificate,
+            pointer_hex(&authority, "/expected/certificate/signed_cbor_hex")?,
+        ),
+        (
+            "session",
+            Decoder::Session,
+            pointer_hex(
+                &authority,
+                "/expected/session_authorization/signed_cbor_hex",
+            )?,
+        ),
+        (
+            "pool",
+            Decoder::Pool,
+            pointer_hex(&ratchet, "/expected/prekey_pool/signed_cbor_hex")?,
+        ),
+        (
+            "directory",
+            Decoder::Directory,
+            pointer_hex(&ratchet, "/expected/account_prekey_directory_cbor_hex")?,
+        ),
+        (
+            "recovery",
+            Decoder::Recovery,
+            pointer_hex(&recovery, "/expected/successor_checkpoint/signed_cbor_hex")?,
+        ),
+    ];
+    let mut mutations = 0usize;
+    for (name, decoder, valid) in fixtures {
+        assert!(
+            accepts(decoder, &valid),
+            "golden {name} fixture was rejected"
+        );
+        assert!(
+            valid.len() <= 512 * 1024,
+            "golden {name} fixture is unbounded"
+        );
+
+        for length in bounded_positions(valid.len()) {
+            assert!(
+                !accepts(decoder, &valid[..length]),
+                "{name} accepted truncation at {length}"
+            );
+            mutations += 1;
+        }
+        for index in bounded_positions(valid.len()) {
+            let mut changed = valid.clone();
+            changed[index] ^= 1;
+            assert!(
+                !accepts(decoder, &changed),
+                "{name} accepted bit flip at {index}"
+            );
+            mutations += 1;
+        }
+        let mut trailing = valid.clone();
+        trailing.push(0);
+        assert!(
+            !accepts(decoder, &trailing),
+            "{name} accepted trailing data"
+        );
+        mutations += 1;
+
+        let mut non_minimal = Vec::with_capacity(valid.len() + 1);
+        non_minimal.push(valid[0]);
+        non_minimal.extend_from_slice(&[0x18, 0x01]);
+        non_minimal.extend_from_slice(&valid[2..]);
+        assert!(
+            !accepts(decoder, &non_minimal),
+            "{name} accepted non-minimal version"
+        );
+        mutations += 1;
+
+        let mut indefinite = valid.clone();
+        indefinite[0] = 0x9f;
+        indefinite.push(0xff);
+        assert!(
+            !accepts(decoder, &indefinite),
+            "{name} accepted indefinite array"
+        );
+        mutations += 1;
+
+        let mut reserved = valid.clone();
+        reserved[0] = 0x9c;
+        assert!(
+            !accepts(decoder, &reserved),
+            "{name} accepted reserved CBOR head"
+        );
+        mutations += 1;
+    }
+
+    let oversized = [
+        0x83, 0x01, 0x5b, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    ];
+    for decoder in [
+        Decoder::Certificate,
+        Decoder::Session,
+        Decoder::Pool,
+        Decoder::Directory,
+        Decoder::Recovery,
+    ] {
+        assert!(!accepts(decoder, &oversized));
+        mutations += 1;
+    }
+    assert!(
+        mutations >= MINIMUM_MUTATIONS,
+        "mutation corpus became too small: {mutations}"
+    );
+    assert!(
+        mutations <= MAXIMUM_MUTATIONS,
+        "mutation corpus became unbounded: {mutations}"
+    );
+    eprintln!("canonical_decoder_mutations={mutations}");
+    Ok(())
+}
