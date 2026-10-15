@@ -1,0 +1,165 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.6",
+  "status": "design-only-not-active",
+  "changes_active_wire": false,
+  "current_encoding": "postcard",
+  "candidate_encoding": "kilogram-deterministic-cbor-v1",
+  "candidate_protocol_identifier": "unassigned",
+  "selection": {
+    "mechanism": "authenticated-capability-bound-explicit-identifier",
+    "capability": "kilogram-deterministic-cbor-v1",
+    "capability_freshness": "bound-to-current-authority-and-session",
+    "format_sniffing": false,
+    "parse_error_fallback": false,
+    "reuse_existing_identifier": false
+  },
+  "states": [
+    {
+      "id": "legacy-only",
+      "readers": ["postcard"],
+      "writer": "postcard"
+    },
+    {
+      "id": "advertise-cbor-v1",
+      "readers": ["postcard"],
+      "writer": "postcard"
+    },
+    {
+      "id": "dual-reader-prefer-legacy",
+      "readers": ["postcard", "kilogram-deterministic-cbor-v1"],
+      "writer": "postcard-unless-mutually-authenticated-cbor-v1"
+    },
+    {
+      "id": "dual-reader-prefer-cbor",
+      "readers": ["postcard", "kilogram-deterministic-cbor-v1"],
+      "writer": "kilogram-deterministic-cbor-v1-when-mutually-authenticated"
+    },
+    {
+      "id": "cbor-required",
+      "readers": ["kilogram-deterministic-cbor-v1"],
+      "writer": "kilogram-deterministic-cbor-v1"
+    }
+  ],
+  "forward_transitions": [
+    {
+      "from": "legacy-only",
+      "to": "advertise-cbor-v1",
+      "requirements": [
+        "complete-canonical-coverage",
+        "new-parallel-protocol-identifier",
+        "dual-reader-implementation",
+        "bounded-and-sustained-decoder-testing"
+      ]
+    },
+    {
+      "from": "advertise-cbor-v1",
+      "to": "dual-reader-prefer-legacy",
+      "requirements": [
+        "authenticated-capability-binding",
+        "mixed-version-interop-tests",
+        "downgrade-and-unknown-version-tests",
+        "rollback-drill"
+      ]
+    },
+    {
+      "from": "dual-reader-prefer-legacy",
+      "to": "dual-reader-prefer-cbor",
+      "requirements": [
+        "fresh-hosted-regression-evidence",
+        "fresh-multi-host-field-evidence",
+        "telemetry-free-local-compatibility-evidence"
+      ]
+    },
+    {
+      "from": "dual-reader-prefer-cbor",
+      "to": "cbor-required",
+      "requirements": [
+        "explicit-legacy-retirement-decision",
+        "documented-adoption-threshold-met",
+        "documented-rollback-window-elapsed"
+      ]
+    }
+  ],
+  "rollback": {
+    "allowed": true,
+    "trigger": "explicit-local-or-release-policy-only",
+    "requires": [
+      "recorded-incident-or-test-reason",
+      "monotonic-migration-epoch",
+      "no-parse-or-network-error-trigger"
+    ]
+  },
+  "compatibility_matrix": [
+    {
+      "initiator": "legacy-only",
+      "responder": "legacy-only",
+      "result": "postcard"
+    },
+    {
+      "initiator": "dual-reader",
+      "responder": "legacy-only",
+      "result": "postcard"
+    },
+    {
+      "initiator": "legacy-only",
+      "responder": "dual-reader",
+      "result": "postcard"
+    },
+    {
+      "initiator": "dual-reader",
+      "responder": "dual-reader-without-mutual-authenticated-capability",
+      "result": "postcard"
+    },
+    {
+      "initiator": "dual-reader-with-authenticated-capability",
+      "responder": "dual-reader-with-authenticated-capability",
+      "result": "kilogram-deterministic-cbor-v1-over-new-identifier"
+    }
+  ],
+  "fail_closed_conditions": [
+    "unknown-encoding-or-version",
+    "selected-cbor-decode-failure",
+    "capability-authority-or-session-binding-mismatch",
+    "selected-identifier-and-payload-format-mismatch",
+    "detected-downgrade-or-migration-epoch-regression"
+  ],
+  "activation_requirements": [
+    {
+      "id": "canonical-schema-coverage",
+      "status": "pending"
+    },
+    {
+      "id": "parallel-protocol-identifier-allocation",
+      "status": "pending"
+    },
+    {
+      "id": "dual-reader-runtime-implementation",
+      "status": "pending"
+    },
+    {
+      "id": "independent-crypto-conformance",
+      "status": "verified"
+    },
+    {
+      "id": "bounded-decoder-mutation-regression",
+      "status": "verified"
+    },
+    {
+      "id": "sustained-coverage-guided-fuzzing",
+      "status": "pending"
+    },
+    {
+      "id": "mixed-version-and-downgrade-tests",
+      "status": "pending"
+    },
+    {
+      "id": "fresh-hosted-and-field-evidence",
+      "status": "pending"
+    },
+    {
+      "id": "rollback-drill",
+      "status": "pending"
+    }
+  ]
+}

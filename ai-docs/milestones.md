@@ -5170,3 +5170,19 @@ correlation visible, Windows-only field evidence, independent security audit
 - это bounded malformed corpus, а не continuous coverage-guided fuzzing или
   audit; sustained fuzzing остаётся условием activation;
 - readiness inventory расширен с 38 до 39 gates; network/release/tag не нужны.
+
+### M1.1.6 — canonical dual-reader migration contract: принято локально
+
+- machine-readable state machine проводит будущую миграцию через `legacy-only`,
+  advertise, два dual-reader этапа и только затем `cbor-required`;
+- выбор CBOR требует mutual authenticated capability, связанной с current
+  authority/session, и нового explicit identifier; существующие Postcard
+  version/ALPN переиспользовать нельзя;
+- format sniffing и fallback на Postcard после CBOR parse error запрещены;
+  unknown version, binding mismatch и downgrade fail closed;
+- rollback возможен только explicit local/release policy с monotonic epoch и
+  recorded reason, но никогда вследствие network/parse error;
+- identifier намеренно `unassigned`, runtime не менялся: complete schema
+  coverage, dual reader, sustained fuzzing, downgrade tests, rollback drill и
+  fresh hosted/field evidence остаются pending activation requirements;
+- readiness inventory расширен с 39 до 40 gates; network/release/tag не нужны.
