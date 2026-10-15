@@ -1,3 +1,4 @@
+use kilogram_crypto::DeviceEncryptionIdentity;
 use kilogram_protocol::canonical_account_v1::{
     decode_and_verify_signed_account_device_list_v1,
     decode_and_verify_signed_conversation_membership_v1,
@@ -7,7 +8,13 @@ use kilogram_protocol::canonical_authority_v1::{
     decode_and_verify_signed_device_session_authorization_v1,
 };
 use kilogram_protocol::canonical_device_link_v1::decode_and_verify_signed_device_link_authorization_v1;
+use kilogram_protocol::canonical_endpoint_announcement_transport_v1::{
+    decode_and_verify_encrypted_endpoint_announcement_bundle_v1,
+    decode_and_verify_signed_endpoint_announcement_acknowledgement_v1,
+    open_endpoint_announcement_bundle_v1, verify_endpoint_announcement_acknowledgement_for_v1,
+};
 use kilogram_protocol::canonical_endpoint_announcement_v1::{
+    CanonicalSignedEndpointAnnouncementBundleV1,
     decode_and_verify_signed_accepted_endpoint_observation_v1,
     decode_and_verify_signed_endpoint_announcement_bundle_v1,
 };
@@ -71,8 +78,8 @@ use kilogram_protocol::canonical_ticket_publication_v1::{
 use serde_json::Value;
 
 const MINIMUM_MUTATIONS: usize = 500;
-const EXPECTED_MUTATIONS: usize = 12_149;
-const MAXIMUM_MUTATIONS: usize = 13_000;
+const EXPECTED_MUTATIONS: usize = 12_671;
+const MAXIMUM_MUTATIONS: usize = 14_000;
 const MAXIMUM_GRID_POSITIONS: usize = 128;
 
 #[derive(Clone)]
@@ -125,6 +132,14 @@ enum Decoder {
     },
     AcceptedEndpointObservation,
     EndpointAnnouncementBundle,
+    EndpointAnnouncementEnvelope {
+        recipient_secret: [u8; 32],
+        now_unix_seconds: u64,
+    },
+    EndpointAnnouncementAcknowledgement {
+        session_binding: [u8; 32],
+        bundle: Box<CanonicalSignedEndpointAnnouncementBundleV1>,
+    },
     MailboxGossipFrame {
         expected_id: [u8; 32],
         now_unix_seconds: u64,
@@ -232,6 +247,30 @@ fn accepts(decoder: &Decoder, bytes: &[u8]) -> bool {
         Decoder::EndpointAnnouncementBundle => {
             decode_and_verify_signed_endpoint_announcement_bundle_v1(bytes).is_ok()
         }
+        Decoder::EndpointAnnouncementEnvelope {
+            recipient_secret,
+            now_unix_seconds,
+        } => decode_and_verify_encrypted_endpoint_announcement_bundle_v1(bytes)
+            .and_then(|envelope| {
+                open_endpoint_announcement_bundle_v1(
+                    &envelope,
+                    &DeviceEncryptionIdentity::from_secret_bytes(*recipient_secret),
+                    *now_unix_seconds,
+                )
+            })
+            .is_ok(),
+        Decoder::EndpointAnnouncementAcknowledgement {
+            session_binding,
+            bundle,
+        } => decode_and_verify_signed_endpoint_announcement_acknowledgement_v1(bytes)
+            .and_then(|acknowledgement| {
+                verify_endpoint_announcement_acknowledgement_for_v1(
+                    &acknowledgement,
+                    *session_binding,
+                    bundle,
+                )
+            })
+            .is_ok(),
         Decoder::MailboxGossipFrame {
             expected_id,
             now_unix_seconds,
@@ -346,6 +385,10 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-ENDPOINT-ANNOUNCEMENT-VECTORS.json"
     )))?;
+    let endpoint_announcement_transport: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../CANONICAL-ENDPOINT-ANNOUNCEMENT-TRANSPORT-VECTORS.json"
+    )))?;
     let gossip_frame_id: [u8; 32] = pointer_hex(&mailbox_gossip, "/expected/request/frame_id_hex")?
         .try_into()
         .map_err(|_| "gossip frame ID length changed")?;
@@ -363,6 +406,26 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         decode_and_verify_publication_conflict_resolution_response_v1(
             &publication_resolution_response_bytes,
         )?;
+    let endpoint_bundle = decode_and_verify_signed_endpoint_announcement_bundle_v1(&pointer_hex(
+        &endpoint_announcement,
+        "/expected/signed_bundle/signed_cbor_hex",
+    )?)?;
+    let endpoint_recipient_secret: [u8; 32] = pointer_hex(
+        &endpoint_announcement,
+        "/input/recipient_encryption_secret_seed_hex",
+    )?
+    .try_into()
+    .map_err(|_| "endpoint recipient encryption secret length changed")?;
+    let endpoint_session_binding: [u8; 32] = pointer_hex(
+        &endpoint_announcement_transport,
+        "/input/session_binding_hex",
+    )?
+    .try_into()
+    .map_err(|_| "endpoint session binding length changed")?;
+    let endpoint_valid_at =
+        endpoint_announcement["expected"]["signed_bundle"]["valid_at_unix_seconds"]
+            .as_u64()
+            .ok_or("endpoint bundle valid time is missing")?;
     let fixtures = [
         (
             "certificate",
@@ -674,6 +737,28 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
                 "/expected/signed_bundle/signed_cbor_hex",
             )?,
         ),
+        (
+            "encrypted-endpoint-announcement-bundle",
+            Decoder::EndpointAnnouncementEnvelope {
+                recipient_secret: endpoint_recipient_secret,
+                now_unix_seconds: endpoint_valid_at,
+            },
+            pointer_hex(
+                &endpoint_announcement_transport,
+                "/expected/encrypted_bundle/cbor_hex",
+            )?,
+        ),
+        (
+            "signed-endpoint-announcement-acknowledgement",
+            Decoder::EndpointAnnouncementAcknowledgement {
+                session_binding: endpoint_session_binding,
+                bundle: Box::new(endpoint_bundle.clone()),
+            },
+            pointer_hex(
+                &endpoint_announcement_transport,
+                "/expected/acknowledgement/signed_cbor_hex",
+            )?,
+        ),
     ];
     let mut mutations = 0usize;
     for (name, decoder, valid) in fixtures {
@@ -787,6 +872,14 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         },
         Decoder::AcceptedEndpointObservation,
         Decoder::EndpointAnnouncementBundle,
+        Decoder::EndpointAnnouncementEnvelope {
+            recipient_secret: endpoint_recipient_secret,
+            now_unix_seconds: endpoint_valid_at,
+        },
+        Decoder::EndpointAnnouncementAcknowledgement {
+            session_binding: endpoint_session_binding,
+            bundle: Box::new(endpoint_bundle),
+        },
         Decoder::MailboxGossipFrame {
             expected_id: [0; 32],
             now_unix_seconds: 1_800_000_030,

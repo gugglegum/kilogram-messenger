@@ -5536,3 +5536,27 @@ correlation visible, Windows-only field evidence, independent security audit
 - recipient-only HPKE envelope и session-bound recipient ACK остаются M1.1.24;
   active Postcard v4/HPKE v1/ACK v2 runtime, network, release, archive и tags не
   менялись.
+
+### M1.1.24 — canonical endpoint-announcement transport: принято локально
+
+- deterministic-CBOR envelope несёт exact canonical header и HPKE ciphertext;
+  header целиком используется как associated data и связывает Account,
+  source/recipient Device IDs и bundle ID; bundle ID, в свою очередь,
+  коммитит authority revision, validity window и весь plaintext bundle;
+- HPKE recipient public key берётся только из exact current Root-signed device
+  list и обязан совпасть с header recipient Device ID; recipient-only open
+  повторно проверяет весь plaintext bundle и его Root/Device authority context;
+- recipient-signed acknowledgement exact-связывает session ID, bundle ID,
+  envelope ID, applied count, derived contact/endpoint/observation/conflict/
+  resolution totals и acknowledgement time;
+- независимый Node reference проверяет deterministic CBOR, plaintext Ed25519 и
+  BLAKE3 bundle ID, заново строит recipient ACK и отвергает session/bundle/
+  count substitutions; Rust golden/negative tests дополнительно выполняют
+  реальный HPKE seal/open и tamper/replay rejection;
+- два contextual strict fixtures расширяют deterministic mutation corpus до
+  12671/14000; endpoint-announcement становится complete (14 complete /
+  0 partial / 4 not-started / 2 not-targeted), readiness — 57 gates;
+- active Postcard v4 bundle, HPKE v1 envelope и ACK v2 не менялись. Candidate
+  остаётся inactive: identifier не назначен, а downgrade tests, sustained
+  fuzzing, independent cross-language HPKE и fresh field evidence обязательны
+  до activation; следующая canonical priority — `history-rewrap`.

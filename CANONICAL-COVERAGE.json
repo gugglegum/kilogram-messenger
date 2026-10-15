@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.23",
+  "milestone": "M1.1.24",
   "status": "coverage-audit-not-active",
   "changes_active_wire": false,
   "source_manifest": "PROTOCOL-COMPATIBILITY.json",
@@ -13,8 +13,8 @@
   },
   "summary": {
     "source_surfaces": 20,
-    "complete": 13,
-    "partial": 1,
+    "complete": 14,
+    "partial": 0,
     "not_started": 4,
     "not_targeted": 2,
     "activation_ready": false
@@ -87,10 +87,10 @@
     },
     {
       "id": "endpoint-announcement",
-      "coverage": "partial",
-      "artifacts": ["CANONICAL-ENDPOINT-ANNOUNCEMENT.cddl", "CANONICAL-ENDPOINT-ANNOUNCEMENT-SCHEMA.json", "CANONICAL-ENDPOINT-ANNOUNCEMENT-VECTORS.json", "crates/kilogram-protocol/src/canonical_endpoint_announcement_v1.rs", "scripts/verify-kilogram-canonical-endpoint-announcement-reference.mjs"],
-      "covered": ["signed-plaintext-bundle", "exact-current-account-device-list", "direct-and-accepted-publication-observations", "publication-conflict-and-root-resolution-states", "bundle-and-accepted-observation-identifiers", "bounded-validity-and-canonical-contact-order"],
-      "remaining": ["recipient-only-hpke-envelope", "session-bound-recipient-acknowledgement"]
+      "coverage": "complete",
+      "artifacts": ["CANONICAL-ENDPOINT-ANNOUNCEMENT.cddl", "CANONICAL-ENDPOINT-ANNOUNCEMENT-SCHEMA.json", "CANONICAL-ENDPOINT-ANNOUNCEMENT-VECTORS.json", "CANONICAL-ENDPOINT-ANNOUNCEMENT-TRANSPORT.cddl", "CANONICAL-ENDPOINT-ANNOUNCEMENT-TRANSPORT-SCHEMA.json", "CANONICAL-ENDPOINT-ANNOUNCEMENT-TRANSPORT-VECTORS.json", "crates/kilogram-protocol/src/canonical_endpoint_announcement_v1.rs", "crates/kilogram-protocol/src/canonical_endpoint_announcement_transport_v1.rs", "scripts/verify-kilogram-canonical-endpoint-announcement-reference.mjs", "scripts/verify-kilogram-canonical-endpoint-announcement-transport-reference.mjs"],
+      "covered": ["signed-plaintext-bundle", "exact-current-account-device-list", "direct-and-accepted-publication-observations", "publication-conflict-and-root-resolution-states", "bundle-and-accepted-observation-identifiers", "bounded-validity-and-canonical-contact-order", "recipient-only-hpke-envelope", "exact-header-associated-data", "session-bound-recipient-acknowledgement", "derived-total-and-applied-count-binding"],
+      "remaining": []
     },
     {
       "id": "history-recovery",
@@ -164,8 +164,8 @@
     }
   ],
   "next_priority": [
-    "endpoint-announcement",
     "history-rewrap",
-    "account-recovery"
+    "account-recovery",
+    "runtime-ipc"
   ]
 }

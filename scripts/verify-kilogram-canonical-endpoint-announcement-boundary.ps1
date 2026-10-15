@@ -151,13 +151,15 @@ if ($source.Count -ne 1 -or [string]$source[0].encoding -cne 'postcard') {
 $surface = @($coverage.surfaces | Where-Object { $_.id -ceq 'endpoint-announcement' })
 $expectedCovered = @('signed-plaintext-bundle', 'exact-current-account-device-list',
     'direct-and-accepted-publication-observations', 'publication-conflict-and-root-resolution-states',
-    'bundle-and-accepted-observation-identifiers', 'bounded-validity-and-canonical-contact-order')
-if ($surface.Count -ne 1 -or [string]$surface[0].coverage -cne 'partial' -or
+    'bundle-and-accepted-observation-identifiers', 'bounded-validity-and-canonical-contact-order',
+    'recipient-only-hpke-envelope', 'exact-header-associated-data',
+    'session-bound-recipient-acknowledgement', 'derived-total-and-applied-count-binding')
+if ($surface.Count -ne 1 -or [string]$surface[0].coverage -cne 'complete' -or
     (@($surface[0].covered) -join ',') -cne ($expectedCovered -join ',') -or
-    (@($surface[0].remaining) -join ',') -cne (@($schema.remaining) -join ',')) {
-    throw 'canonical endpoint-announcement partial coverage boundary changed'
+    @($surface[0].remaining).Count -ne 0) {
+    throw 'canonical endpoint-announcement aggregate coverage boundary changed'
 }
-if ([int]$mutations.expected_mutations -ne 12149 -or [int]$mutations.maximum_mutations -ne 13000) {
+if ([int]$mutations.expected_mutations -ne 12671 -or [int]$mutations.maximum_mutations -ne 14000) {
     throw 'canonical endpoint-announcement decoder mutation bound changed'
 }
 $expectedMutationIds = @('signed-accepted-endpoint-observation-v1',
@@ -197,11 +199,12 @@ if ($SelfTest) {
 }
 
 Write-Output 'canonical_endpoint_announcement_boundary=verified'
-Write-Output 'endpoint_announcement_coverage=partial'
+Write-Output 'endpoint_announcement_plaintext_coverage=partial'
+Write-Output 'endpoint_announcement_aggregate_coverage=complete'
 Write-Output 'plaintext_bundle_and_evidence=verified'
 Write-Output 'hpke_envelope_covered=false'
 Write-Output 'session_acknowledgement_covered=false'
 Write-Output 'independent_ed25519_and_blake3=verified'
-Write-Output 'bounded_decoder_mutations=12149'
+Write-Output 'bounded_decoder_mutations=12671'
 Write-Output 'active_postcard_hpke_changed=false'
 Write-Output 'network_executed=false'

@@ -1,0 +1,50 @@
+; Kilogram M1.1.24 inactive deterministic-CBOR endpoint-announcement transport.
+; Active Postcard v4 / HPKE v1 / acknowledgement v2 bytes remain unchanged.
+
+kilogram-endpoint-announcement-transport-v1 =
+  encrypted-endpoint-announcement-bundle-v1 /
+  signed-endpoint-announcement-acknowledgement-v1
+
+id-32 = bytes .size 32
+signature-64 = bytes .size 64
+
+endpoint-announcement-envelope-header-v1 = [
+  schema-version: 1,
+  account-id: id-32,
+  source-device-id: id-32,
+  recipient-device-id: id-32,
+  bundle-id: id-32
+]
+
+encrypted-endpoint-announcement-bundle-v1 = [
+  schema-version: 1,
+  header-cbor: bytes .size 138,
+  hpke-encapsulated-key: id-32,
+  hpke-ciphertext: bytes .size (1..16777232)
+]
+
+endpoint-announcement-acknowledgement-content-v1 = [
+  schema-version: 1,
+  session-binding: id-32,
+  bundle-id: id-32,
+  source-device-id: id-32,
+  recipient-device-id: id-32,
+  authority-revision: uint,
+  contact-count: uint,
+  contact-added-count: uint,
+  endpoint-count: uint,
+  endpoint-added-count: uint,
+  publication-binding-added-count: uint,
+  observation-evidence-count: uint,
+  observation-evidence-added-count: uint,
+  publication-conflict-count: uint,
+  publication-conflict-added-count: uint,
+  publication-resolution-count: uint,
+  publication-resolution-added-count: uint
+]
+
+signed-endpoint-announcement-acknowledgement-v1 = [
+  schema-version: 1,
+  content-cbor: bytes .size (1..4096),
+  signature: signature-64
+]

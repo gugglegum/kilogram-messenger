@@ -29,6 +29,7 @@ foreach ($required in @(
     "'verify-kilogram-canonical-mailbox-transport-boundary.ps1' = 'canonical_mailbox_transport_boundary=verified'",
     "'verify-kilogram-canonical-device-link-boundary.ps1' = 'canonical_device_link_boundary=verified'",
     "'verify-kilogram-canonical-endpoint-announcement-boundary.ps1' = 'canonical_endpoint_announcement_boundary=verified'",
+    "'verify-kilogram-canonical-endpoint-announcement-transport-boundary.ps1' = 'canonical_endpoint_announcement_transport_boundary=verified'",
     "'verify-kilogram-canonical-event-boundary.ps1' = 'canonical_event_boundary=verified'",
     "'verify-kilogram-canonical-prekey-selection-boundary.ps1' = 'canonical_prekey_selection_boundary=verified'",
     "'verify-kilogram-canonical-publication-conflict-boundary.ps1' = 'canonical_publication_conflict_boundary=verified'",
@@ -44,7 +45,7 @@ foreach ($required in @(
     "'verify-kilogram-canonical-wire-boundary.ps1' = 'canonical_wire_boundary=verified'",
     "'verify-kilogram-protocol-compatibility-boundary.ps1' = 'protocol_compatibility_boundary=verified'",
     "Get-ChildItem -LiteralPath `$scriptsDirectory -Filter 'verify-*-boundary.ps1'",
-    'M1 readiness boundary inventory must contain exactly 56 gates',
+    'M1 readiness boundary inventory must contain exactly 57 gates',
     '[string]$AcceptedTag',
     "'verify-kilogram-m1-tag-acceptance.ps1'",
     'm1_candidate_status=verified',
@@ -155,7 +156,7 @@ if ($LASTEXITCODE -ne 0 -or
 }
 
 Write-Output 'm1_readiness_boundary=verified'
-Write-Output 'boundary_inventory=closed-56'
+Write-Output 'boundary_inventory=closed-57'
 Write-Output 'candidate_or_accepted_tag_verifier=required'
 Write-Output 'accepted_m1_tag=M1.0.0'
 Write-Output 'format_and_offline_strict_clippy=required'

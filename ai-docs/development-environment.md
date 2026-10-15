@@ -3260,3 +3260,23 @@ Hosted follow-up:
   recipient-only HPKE envelope and session-bound acknowledgement.
 - Active Postcard v4 bundle, HPKE v1 envelope and ACK v2 remain unchanged; the
   accepted M1.0.0 tag remains immutable.
+
+## M1.1.24 canonical endpoint-announcement transport snapshot (2026-10-15)
+
+- New Rust module:
+  `crates/kilogram-protocol/src/canonical_endpoint_announcement_transport_v1.rs`.
+- The deterministic-CBOR transport uses the exact encoded header as HPKE AAD,
+  resolves the recipient key through the current Root-signed device list and
+  verifies the decrypted canonical bundle in the same authority context.
+- A separate recipient-signed acknowledgement binds the 32-byte session ID,
+  bundle/envelope IDs, applied count and all derived bundle totals.
+- Independent Node reference covers CBOR, plaintext Ed25519/BLAKE3 and ACK
+  Ed25519/session/count binding. Real HPKE seal/open and tamper/replay rejection
+  are exercised by Rust because Node has no handwritten HPKE implementation.
+- Decoder mutation inventory is 12671/14000. No network, release build, archive
+  or Git tag is required.
+- Accepted-tag readiness contains 57 gates. Canonical coverage is 14 complete,
+  0 partial, 4 not-started and 2 not-targeted; next priority is history-rewrap.
+- Active Postcard v4/HPKE v1/ACK v2 remains unchanged. Canonical activation
+  still requires an explicit identifier, downgrade tests, sustained fuzzing,
+  independent cross-language HPKE conformance and fresh field evidence.

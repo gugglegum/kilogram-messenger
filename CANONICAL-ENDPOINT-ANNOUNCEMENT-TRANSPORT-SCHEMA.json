@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.24",
+  "status": "candidate-not-active",
+  "changes_active_wire": false,
+  "profile": "kilogram-deterministic-cbor-v1",
+  "completes_surface": "endpoint-announcement",
+  "depends_on": [
+    "CANONICAL-ENDPOINT-ANNOUNCEMENT-SCHEMA.json",
+    "CANONICAL-ENDPOINT-ANNOUNCEMENT-VECTORS.json"
+  ],
+  "cddl": {
+    "standard": "RFC 8610",
+    "path": "CANONICAL-ENDPOINT-ANNOUNCEMENT-TRANSPORT.cddl",
+    "root_rule": "kilogram-endpoint-announcement-transport-v1"
+  },
+  "activation": {
+    "current_runtime_encoding": "postcard-v4-bundle-hpke-v1-envelope-ack-v2",
+    "current_runtime_changed": false,
+    "candidate_protocol_identifier": "unassigned",
+    "required_before_activation": [
+      "new-explicit-protocol-version-or-parallel-alpn",
+      "dual-reader-and-downgrade-tests",
+      "coverage-guided-fuzzing",
+      "cross-language-hpke-seal-open-conformance",
+      "fresh-field-evidence"
+    ]
+  },
+  "limits": {
+    "maximum_plaintext_bundle_bytes": 16777216,
+    "maximum_ciphertext_bytes": 16777232,
+    "maximum_envelope_bytes": 16777744,
+    "maximum_acknowledgement_bytes": 4096,
+    "hpke_encapsulated_key_bytes": 32,
+    "signature_bytes": 64
+  },
+  "cryptography": {
+    "hpke_suite": "DHKEM(X25519, HKDF-SHA256), HKDF-SHA256, ChaCha20Poly1305",
+    "hpke_mode": "base",
+    "hpke_info": "kilogram:endpoint-announcement-envelope:cbor-v1\u0000",
+    "hpke_aad": "exact canonical endpoint-announcement-envelope-header-v1 bytes",
+    "acknowledgement_signature": "Ed25519",
+    "acknowledgement_signature_domain": "kilogram:endpoint-announcement-acknowledgement:cbor-v1\u0000"
+  },
+  "objects": [
+    { "id": "endpoint-announcement-envelope-header-v1", "array_length": 5 },
+    { "id": "encrypted-endpoint-announcement-bundle-v1", "array_length": 4 },
+    { "id": "endpoint-announcement-acknowledgement-content-v1", "array_length": 17 },
+    { "id": "signed-endpoint-announcement-acknowledgement-v1", "array_length": 3 }
+  ],
+  "semantic_rules": [
+    "the exact canonical header bytes are HPKE associated data and bind account source recipient and plaintext bundle ID",
+    "only the recipient encryption key certified by the embedded exact Account roster can open the envelope",
+    "opened plaintext must be the exact signed canonical endpoint-announcement bundle bound by the header",
+    "the recipient Device signs the acknowledgement and the signature covers an explicit session binding",
+    "the acknowledgement exactly binds bundle source recipient authority revision and all derived total counts",
+    "added counts are bounded by their corresponding totals and report recipient application rather than sender intent"
+  ],
+  "active_runtime_unchanged": [
+    "apps/kilogram-cli/src/runtime_endpoint_announcement.rs",
+    "postcard-v4-bundle-hpke-v1-envelope-ack-v2"
+  ]
+}
