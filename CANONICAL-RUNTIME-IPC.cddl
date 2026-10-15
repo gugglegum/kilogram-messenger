@@ -1,4 +1,4 @@
-; Kilogram deterministic-CBOR local runtime IPC core, read, contact, directory, queue and outbox model, M1.1.33.
+; Kilogram deterministic-CBOR local runtime IPC core, read, contact, directory, queue, outbox and volunteer-provider model, M1.1.34.
 ; Only unsigned integers, definite byte strings and definite arrays are used.
 
 profile-version = 1
@@ -426,6 +426,57 @@ signed-runtime-ipc-outbox-response-v1 = [
   signature
 ]
 
+; The nested signed storage offer uses signed-mailbox-storage-offer-v1 from
+; CANONICAL-MAILBOX.cddl and is transported as its exact canonical CBOR bytes.
+runtime-ipc-provider-command-v1 =
+  [import-volunteer-storage-offer: 0, signed-storage-offer-cbor: bytes .size (1..24576)] /
+  [select-volunteer-storage-providers: 1, selection-salt: digest, requested: 1..8]
+
+runtime-ipc-provider-request-v1 = [
+  profile-version,
+  descriptor-id: digest,
+  request-id,
+  bearer-token: token,
+  issued-at-unix-seconds: uint,
+  expires-at-unix-seconds: uint,
+  runtime-ipc-provider-command-v1
+]
+
+runtime-ipc-provider-import-outcome-v1 = 0..2
+
+runtime-ipc-volunteer-provider-v1 = [
+  signed-storage-offer-cbor: bytes .size (1..24576),
+  transport-identity: digest,
+  observed-at-unix-seconds: uint
+]
+
+runtime-ipc-provider-result-v1 =
+  [volunteer-storage-offer-imported: 0,
+    runtime-ipc-provider-import-outcome-v1,
+    active-provider-count: 1..4096,
+    runtime-ipc-volunteer-provider-v1] /
+  [volunteer-storage-providers-selected: 1,
+    selection-salt: digest,
+    requested: 1..8,
+    active-provider-count: 0..4096,
+    providers: [*8 runtime-ipc-volunteer-provider-v1]] /
+  [error: 2, error-code: 1..65535, message-utf8: bytes .size (1..4096)]
+
+runtime-ipc-provider-response-content-v1 = [
+  profile-version,
+  descriptor-id: digest,
+  request-id,
+  request-digest: digest,
+  responder-device-id: device-id,
+  runtime-ipc-provider-result-v1
+]
+
+signed-runtime-ipc-provider-response-v1 = [
+  profile-version,
+  runtime-ipc-provider-response-content-v1,
+  signature
+]
+
 kilogram-runtime-ipc-v1 =
   signed-runtime-ipc-descriptor-v1 /
   runtime-ipc-core-request-v1 /
@@ -439,4 +490,6 @@ kilogram-runtime-ipc-v1 =
   runtime-ipc-queue-request-v1 /
   signed-runtime-ipc-queue-response-v1 /
   runtime-ipc-outbox-request-v1 /
-  signed-runtime-ipc-outbox-response-v1
+  signed-runtime-ipc-outbox-response-v1 /
+  runtime-ipc-provider-request-v1 /
+  signed-runtime-ipc-provider-response-v1

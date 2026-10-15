@@ -3480,3 +3480,25 @@ Hosted follow-up:
   next command family, increase the explicit bounded maximum consistently in
   the manifest, Rust corpus and all guarding scripts; do not silently drop
   existing fixtures.
+
+## M1.1.34 canonical runtime IPC provider snapshot (2026-10-15)
+
+- New inactive module:
+  `crates/kilogram-protocol/src/canonical_runtime_ipc_provider_v1.rs`.
+- CDDL, schema, generated import/selection vectors and an independent Node
+  reference cover signed offer import and capability-free provider selection.
+  The original signed offer is retained; transport identity and observation
+  time are the only local projection fields.
+- Import requires a current offer and the existing eight-bit canonical
+  admission-work floor. Selection is bounded to eight, rejects duplicate store
+  keys/offer IDs and must run against one immutable active-registry snapshot.
+- Final decoder mutation regression passed 20947/20947 in 826.67 seconds with
+  debug/offline Cargo, two jobs and BelowNormal priority. The prior run rejected
+  every mutation and exposed only an exact inventory estimate two cases high;
+  manifest, harness and all guarding boundaries now agree on 20947/25000.
+- Protocol library regression passed 106/106 outside the restricted Windows
+  temp sandbox, with four explicit vector generators ignored. The matching
+  sandbox attempt had only known Windows temp-directory error-5 failures.
+- Accepted-tag readiness passed 67/67; rustfmt and workspace locked/offline
+  strict Clippy passed. Active Postcard v26/JSON descriptor v7 is unchanged;
+  no network action, release build, archive, push or tag was created.

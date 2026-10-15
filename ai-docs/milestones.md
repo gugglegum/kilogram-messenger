@@ -5801,3 +5801,26 @@ correlation visible, Windows-only field evidence, independent security audit
   Следующий bounded IPC family — mailbox provisioning и volunteer-provider
   control commands; mutation maximum перед ним нужно безопасно расширить выше
   текущего почти заполненного 20000.
+
+### M1.1.34 — canonical runtime IPC volunteer-provider control: принято локально
+
+- inactive deterministic-CBOR IPC получил exact импорт одного подписанного
+  volunteer storage offer и capability-free выбор до восьми providers;
+- импорт независимо проверяет подпись, current validity и минимум восемь bits
+  admission work до любой будущей registry mutation;
+- projection сохраняет исходный signed offer, nonzero transport identity и
+  явно local-only observation time. Mailbox read/write capabilities и social
+  identifiers в ответ не входят;
+- selection exact-связывает salt/requested count, запрещает duplicate store
+  keys/offer IDs и возвращает не больше requested и active counts;
+- import и selection имеют отдельные Rust/Node golden request/response vectors
+  и отдельные mutation fixtures;
+- финальный mutation corpus прошёл 20947/20947 за 826.67 s, debug/offline,
+  `CargoJobs=2`, BelowNormal; protocol library regression прошёл 106/106 с
+  четырьмя explicit vector generators ignored;
+- accepted-tag readiness прошёл 67/67, rustfmt и workspace locked/offline
+  strict Clippy; active Postcard IPC v26/JSON descriptor v7, network, stable
+  test EXE, release/archive/push/tag не менялись и не создавались;
+- coverage остаётся 16 complete / 1 partial / 1 not-started / 2 not-targeted.
+  Следующий bounded IPC slice — paginated read-only mailbox capability status,
+  отдельно от create/rotate/revoke mutation boundary.

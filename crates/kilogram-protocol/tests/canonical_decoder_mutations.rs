@@ -104,6 +104,13 @@ use kilogram_protocol::canonical_runtime_ipc_outbox_v1::{
     verify_runtime_ipc_outbox_request_for_descriptor_v1,
     verify_runtime_ipc_outbox_response_for_request_v1,
 };
+use kilogram_protocol::canonical_runtime_ipc_provider_v1::{
+    CanonicalRuntimeIpcProviderRequestV1, CanonicalSignedRuntimeIpcProviderResponseV1,
+    decode_and_verify_runtime_ipc_provider_request_v1,
+    decode_and_verify_signed_runtime_ipc_provider_response_v1,
+    verify_runtime_ipc_provider_request_for_descriptor_v1,
+    verify_runtime_ipc_provider_response_for_request_v1,
+};
 use kilogram_protocol::canonical_runtime_ipc_queue_v1::{
     CanonicalRuntimeIpcQueueRequestV1, CanonicalSignedRuntimeIpcQueueResponseV1,
     decode_and_verify_runtime_ipc_queue_request_v1,
@@ -145,8 +152,8 @@ use kilogram_protocol::canonical_ticket_publication_v1::{
 use serde_json::Value;
 
 const MINIMUM_MUTATIONS: usize = 500;
-const EXPECTED_MUTATIONS: usize = 19_905;
-const MAXIMUM_MUTATIONS: usize = 20_000;
+const EXPECTED_MUTATIONS: usize = 20_947;
+const MAXIMUM_MUTATIONS: usize = 25_000;
 const MAXIMUM_GRID_POSITIONS: usize = 128;
 
 #[derive(Clone)]
@@ -242,6 +249,16 @@ enum Decoder {
     RuntimeIpcOutboxResponse {
         request: Box<CanonicalRuntimeIpcOutboxRequestV1>,
         descriptor: Box<CanonicalSignedRuntimeIpcDescriptorV1>,
+    },
+    RuntimeIpcProviderRequest {
+        descriptor: Box<CanonicalSignedRuntimeIpcDescriptorV1>,
+        response: Box<CanonicalSignedRuntimeIpcProviderResponseV1>,
+        now_unix_seconds: u64,
+    },
+    RuntimeIpcProviderResponse {
+        request: Box<CanonicalRuntimeIpcProviderRequestV1>,
+        descriptor: Box<CanonicalSignedRuntimeIpcDescriptorV1>,
+        now_unix_seconds: u64,
     },
     TicketPublicationCapability,
     TicketPublicationWriteAuthorization,
@@ -510,6 +527,39 @@ fn accepts(decoder: &Decoder, bytes: &[u8]) -> bool {
                 verify_runtime_ipc_outbox_response_for_request_v1(&response, request, descriptor)
             })
             .is_ok(),
+        Decoder::RuntimeIpcProviderRequest {
+            descriptor,
+            response,
+            now_unix_seconds,
+        } => decode_and_verify_runtime_ipc_provider_request_v1(bytes)
+            .and_then(|request| {
+                verify_runtime_ipc_provider_request_for_descriptor_v1(
+                    &request,
+                    descriptor,
+                    *now_unix_seconds,
+                )?;
+                verify_runtime_ipc_provider_response_for_request_v1(
+                    response,
+                    &request,
+                    descriptor,
+                    *now_unix_seconds,
+                )
+            })
+            .is_ok(),
+        Decoder::RuntimeIpcProviderResponse {
+            request,
+            descriptor,
+            now_unix_seconds,
+        } => decode_and_verify_signed_runtime_ipc_provider_response_v1(bytes)
+            .and_then(|response| {
+                verify_runtime_ipc_provider_response_for_request_v1(
+                    &response,
+                    request,
+                    descriptor,
+                    *now_unix_seconds,
+                )
+            })
+            .is_ok(),
         Decoder::TicketPublicationCapability => {
             decode_and_verify_ticket_publication_capability_v1(bytes).is_ok()
         }
@@ -759,6 +809,10 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-RUNTIME-IPC-OUTBOX-VECTORS.json"
     )))?;
+    let runtime_ipc_provider: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../CANONICAL-RUNTIME-IPC-PROVIDER-VECTORS.json"
+    )))?;
     let ticket_publication: Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-TICKET-PUBLICATION-VECTORS.json"
@@ -894,6 +948,26 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         runtime_ipc_outbox["expected"]["context"]["valid_at_unix_seconds"]
             .as_u64()
             .ok_or("runtime IPC outbox valid time is missing")?;
+    let runtime_ipc_provider_request = decode_and_verify_runtime_ipc_provider_request_v1(
+        &pointer_hex(&runtime_ipc_provider, "/expected/request/cbor_hex")?,
+    )?;
+    let runtime_ipc_provider_response = decode_and_verify_signed_runtime_ipc_provider_response_v1(
+        &pointer_hex(&runtime_ipc_provider, "/expected/response/signed_cbor_hex")?,
+    )?;
+    let runtime_ipc_provider_selection_request =
+        decode_and_verify_runtime_ipc_provider_request_v1(&pointer_hex(
+            &runtime_ipc_provider,
+            "/expected/selection_request/cbor_hex",
+        )?)?;
+    let runtime_ipc_provider_selection_response =
+        decode_and_verify_signed_runtime_ipc_provider_response_v1(&pointer_hex(
+            &runtime_ipc_provider,
+            "/expected/selection_response/signed_cbor_hex",
+        )?)?;
+    let runtime_ipc_provider_valid_at =
+        runtime_ipc_provider["expected"]["context"]["valid_at_unix_seconds"]
+            .as_u64()
+            .ok_or("runtime IPC provider valid time is missing")?;
     let publication_resolution_response_bytes = pointer_hex(
         &publication_conflict,
         "/expected/resolution_response/cbor_hex",
@@ -1346,6 +1420,48 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
             pointer_hex(&runtime_ipc_outbox, "/expected/response/signed_cbor_hex")?,
         ),
         (
+            "runtime-ipc-provider-import-request",
+            Decoder::RuntimeIpcProviderRequest {
+                descriptor: Box::new(runtime_ipc_descriptor.clone()),
+                response: Box::new(runtime_ipc_provider_response.clone()),
+                now_unix_seconds: runtime_ipc_provider_valid_at,
+            },
+            pointer_hex(&runtime_ipc_provider, "/expected/request/cbor_hex")?,
+        ),
+        (
+            "signed-runtime-ipc-provider-import-response",
+            Decoder::RuntimeIpcProviderResponse {
+                request: Box::new(runtime_ipc_provider_request.clone()),
+                descriptor: Box::new(runtime_ipc_descriptor.clone()),
+                now_unix_seconds: runtime_ipc_provider_valid_at,
+            },
+            pointer_hex(&runtime_ipc_provider, "/expected/response/signed_cbor_hex")?,
+        ),
+        (
+            "runtime-ipc-provider-selection-request",
+            Decoder::RuntimeIpcProviderRequest {
+                descriptor: Box::new(runtime_ipc_descriptor.clone()),
+                response: Box::new(runtime_ipc_provider_selection_response.clone()),
+                now_unix_seconds: runtime_ipc_provider_valid_at,
+            },
+            pointer_hex(
+                &runtime_ipc_provider,
+                "/expected/selection_request/cbor_hex",
+            )?,
+        ),
+        (
+            "signed-runtime-ipc-provider-selection-response",
+            Decoder::RuntimeIpcProviderResponse {
+                request: Box::new(runtime_ipc_provider_selection_request.clone()),
+                descriptor: Box::new(runtime_ipc_descriptor.clone()),
+                now_unix_seconds: runtime_ipc_provider_valid_at,
+            },
+            pointer_hex(
+                &runtime_ipc_provider,
+                "/expected/selection_response/signed_cbor_hex",
+            )?,
+        ),
+        (
             "ticket-publication-capability",
             Decoder::TicketPublicationCapability,
             pointer_hex(&ticket_publication, "/expected/rotated_capability/cbor_hex")?,
@@ -1693,6 +1809,16 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         Decoder::RuntimeIpcOutboxResponse {
             request: Box::new(runtime_ipc_outbox_request),
             descriptor: Box::new(runtime_ipc_descriptor.clone()),
+        },
+        Decoder::RuntimeIpcProviderRequest {
+            descriptor: Box::new(runtime_ipc_descriptor.clone()),
+            response: Box::new(runtime_ipc_provider_response),
+            now_unix_seconds: runtime_ipc_provider_valid_at,
+        },
+        Decoder::RuntimeIpcProviderResponse {
+            request: Box::new(runtime_ipc_provider_request),
+            descriptor: Box::new(runtime_ipc_descriptor.clone()),
+            now_unix_seconds: runtime_ipc_provider_valid_at,
         },
         Decoder::RuntimeIpcDirectoryResponse {
             request: Box::new(runtime_ipc_directory_request),

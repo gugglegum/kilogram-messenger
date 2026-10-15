@@ -34,6 +34,7 @@ pub mod canonical_rewrap_v1;
 pub mod canonical_runtime_ipc_contact_v1;
 pub mod canonical_runtime_ipc_directory_v1;
 pub mod canonical_runtime_ipc_outbox_v1;
+pub mod canonical_runtime_ipc_provider_v1;
 pub mod canonical_runtime_ipc_queue_v1;
 pub mod canonical_runtime_ipc_read_v1;
 pub mod canonical_runtime_ipc_v1;

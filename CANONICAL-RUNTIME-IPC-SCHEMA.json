@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.33",
+  "milestone": "M1.1.34",
   "status": "candidate-not-active",
   "changes_active_wire": false,
   "profile": "kilogram-deterministic-cbor-v1",
@@ -37,6 +37,10 @@
     "maximum_outbox_snapshot_items": 4096,
     "maximum_outbox_contacts": 256,
     "maximum_outbox_retry_records": 4096,
+    "maximum_provider_request_bytes": 65536,
+    "maximum_provider_response_bytes": 262144,
+    "maximum_active_providers": 4096,
+    "maximum_selected_providers": 8,
     "maximum_error_bytes": 4096,
     "maximum_descriptor_validity_seconds": 86400,
     "maximum_request_validity_seconds": 30,
@@ -173,6 +177,22 @@
       "id": "outbox-snapshot-id-v1",
       "value": "kilogram:runtime-ipc-outbox-snapshot-id:cbor-v1\\0",
       "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "provider-request-digest-v1",
+      "value": "kilogram:runtime-ipc-provider-request-digest:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "provider-response-signature-v1",
+      "value": "kilogram:runtime-ipc-provider-response-signature:cbor-v1\\0",
+      "operation": "ed25519-signature",
+      "signer": "descriptor-device-ed25519"
+    },
+    {
+      "id": "provider-response-id-v1",
+      "value": "kilogram:runtime-ipc-provider-response-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
     }
   ],
   "objects": [
@@ -240,6 +260,16 @@
       "id": "signed-runtime-ipc-outbox-response-v1",
       "kind": "device-signed-snapshot-bound-outbox-projection",
       "maximum_bytes": 131072
+    },
+    {
+      "id": "runtime-ipc-provider-request-v1",
+      "kind": "short-lived-signed-offer-import-or-provider-selection-request",
+      "maximum_bytes": 65536
+    },
+    {
+      "id": "signed-runtime-ipc-provider-response-v1",
+      "kind": "device-signed-capability-free-provider-result",
+      "maximum_bytes": 262144
     }
   ],
   "covered_commands": [
@@ -252,7 +282,9 @@
     "own-device-directory-status",
     "apply-own-device-directory",
     "queue-message",
-    "outbox-status-page"
+    "outbox-status-page",
+    "import-volunteer-storage-offer",
+    "select-volunteer-storage-providers"
   ],
   "covered_results": [
     "pong",
@@ -265,7 +297,9 @@
     "own-device-directory-status",
     "own-device-directory-applied",
     "message-queued",
-    "outbox-status-page"
+    "outbox-status-page",
+    "volunteer-storage-offer-imported",
+    "volunteer-storage-providers-selected"
   ],
   "semantic_rules": [
     "descriptor address is exactly IPv4 127.0.0.1 or IPv6 ::1 and port is nonzero",
@@ -307,10 +341,16 @@
     "each signed outbox page repeats the immutable snapshot ID and global counters, contains at most the requested bounded limit and preserves strict Queue ID order",
     "outbox continuation arithmetic is exact: the next start index equals the requested start plus returned items and retains the same snapshot ID until the queue count is reached",
     "the active adapter must retain the exact snapshot for continuation or fail explicitly as stale after state drift or restart; it must never rebuild changed contents under an existing cursor",
+    "provider import embeds one canonical signed storage offer and independently enforces its signature, current validity and bounded admission work before registry mutation",
+    "provider results carry the original signed offer plus only a nonzero transport identity and bounded observation time; duplicated unauthenticated endpoint, store, policy or capacity strings are forbidden",
+    "provider import results repeat the exact requested offer, report inserted, replaced or already-present and bound the active registry count to at most 4096",
+    "provider selection uses a nonzero opaque salt, requests between one and eight entries and repeats the exact salt and requested count in the signed result",
+    "a selected provider set contains at most the requested and active counts, has unique store keys and offer IDs and exposes no mailbox read or write capability",
+    "the active adapter must execute selection against one current read-only registry snapshot under the existing bootstrap-safe corroboration and path-diversity policy",
     "unknown variants, noncanonical CBOR, trailing data, expired objects and contextual substitutions fail closed"
   ],
   "remaining_runtime_ipc_surface": [
-    "mailbox-provisioning-and-volunteer-provider-commands",
+    "mailbox-capability-lifecycle-commands",
     "ticket-publication-and-conflict-commands",
     "own-device-discovery-and-automation-commands",
     "recovery-plan-and-device-link-commands",

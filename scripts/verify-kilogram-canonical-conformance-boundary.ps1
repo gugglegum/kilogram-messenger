@@ -27,6 +27,7 @@ $runtimeIpcContactReferencePath = Join-Path $PSScriptRoot 'verify-kilogram-canon
 $runtimeIpcDirectoryReferencePath = Join-Path $PSScriptRoot 'verify-kilogram-canonical-runtime-ipc-directory-reference.mjs'
 $runtimeIpcQueueReferencePath = Join-Path $PSScriptRoot 'verify-kilogram-canonical-runtime-ipc-queue-reference.mjs'
 $runtimeIpcOutboxReferencePath = Join-Path $PSScriptRoot 'verify-kilogram-canonical-runtime-ipc-outbox-reference.mjs'
+$runtimeIpcProviderReferencePath = Join-Path $PSScriptRoot 'verify-kilogram-canonical-runtime-ipc-provider-reference.mjs'
 $ticketPublicationReferencePath = Join-Path $PSScriptRoot 'verify-kilogram-canonical-ticket-publication-reference.mjs'
 $publicationConflictReferencePath = Join-Path $PSScriptRoot 'verify-kilogram-canonical-publication-conflict-reference.mjs'
 $endpointAnnouncementReferencePath = Join-Path $PSScriptRoot 'verify-kilogram-canonical-endpoint-announcement-reference.mjs'
@@ -48,8 +49,8 @@ function Assert-Manifest {
         throw 'decoder mutation manifest header changed'
     }
     if ([int]$Manifest.seed -ne 1262836037 -or [int]$Manifest.minimum_mutations -ne 500 -or
-        [int]$Manifest.expected_mutations -ne 19905 -or
-        [int]$Manifest.maximum_mutations -ne 20000) { throw 'decoder mutation bounds changed' }
+        [int]$Manifest.expected_mutations -ne 20947 -or
+        [int]$Manifest.maximum_mutations -ne 25000) { throw 'decoder mutation bounds changed' }
     $expectedFixtures = @(
         'signed-device-certificate-v1|CANONICAL-AUTHORITY-VECTORS.json|/expected/certificate/signed_cbor_hex|decode_and_verify_signed_device_certificate_v1',
         'signed-device-session-authorization-v1|CANONICAL-AUTHORITY-VECTORS.json|/expected/session_authorization/signed_cbor_hex|decode_and_verify_signed_device_session_authorization_v1',
@@ -128,6 +129,10 @@ function Assert-Manifest {
         'signed-runtime-ipc-message-queued-response-v1|CANONICAL-RUNTIME-IPC-QUEUE-VECTORS.json|/expected/response/signed_cbor_hex|decode_and_verify_signed_runtime_ipc_queue_response_v1'
         'runtime-ipc-outbox-status-page-request-v1|CANONICAL-RUNTIME-IPC-OUTBOX-VECTORS.json|/expected/request/cbor_hex|decode_and_verify_runtime_ipc_outbox_request_v1'
         'signed-runtime-ipc-outbox-status-page-response-v1|CANONICAL-RUNTIME-IPC-OUTBOX-VECTORS.json|/expected/response/signed_cbor_hex|decode_and_verify_signed_runtime_ipc_outbox_response_v1'
+        'runtime-ipc-provider-import-request-v1|CANONICAL-RUNTIME-IPC-PROVIDER-VECTORS.json|/expected/request/cbor_hex|decode_and_verify_runtime_ipc_provider_request_v1'
+        'signed-runtime-ipc-provider-import-response-v1|CANONICAL-RUNTIME-IPC-PROVIDER-VECTORS.json|/expected/response/signed_cbor_hex|decode_and_verify_signed_runtime_ipc_provider_response_v1'
+        'runtime-ipc-provider-selection-request-v1|CANONICAL-RUNTIME-IPC-PROVIDER-VECTORS.json|/expected/selection_request/cbor_hex|decode_and_verify_runtime_ipc_provider_request_v1'
+        'signed-runtime-ipc-provider-selection-response-v1|CANONICAL-RUNTIME-IPC-PROVIDER-VECTORS.json|/expected/selection_response/signed_cbor_hex|decode_and_verify_signed_runtime_ipc_provider_response_v1'
     )
     $actualFixtures = @($Manifest.fixtures | ForEach-Object { "$($_.id)|$($_.vector_file)|$($_.json_pointer)|$($_.decoder)" })
     if (($actualFixtures -join "`n") -cne ($expectedFixtures -join "`n")) { throw 'decoder fixture inventory changed' }
@@ -242,6 +247,26 @@ function Assert-Manifest {
             'verify_runtime_ipc_outbox_response_for_request_v1') {
         throw 'runtime IPC outbox response mutation context changed'
     }
+    foreach ($id in @('runtime-ipc-provider-import-request-v1',
+        'runtime-ipc-provider-selection-request-v1')) {
+        $providerRequestFixture = @($Manifest.fixtures |
+            Where-Object { $_.id -ceq $id })
+        if ($providerRequestFixture.Count -ne 1 -or
+            [string]$providerRequestFixture[0].context_verifier -cne
+                'verify_runtime_ipc_provider_request_for_descriptor_v1+verify_runtime_ipc_provider_response_for_request_v1') {
+            throw "runtime IPC provider request mutation context changed: $id"
+        }
+    }
+    foreach ($id in @('signed-runtime-ipc-provider-import-response-v1',
+        'signed-runtime-ipc-provider-selection-response-v1')) {
+        $providerResponseFixture = @($Manifest.fixtures |
+            Where-Object { $_.id -ceq $id })
+        if ($providerResponseFixture.Count -ne 1 -or
+            [string]$providerResponseFixture[0].context_verifier -cne
+                'verify_runtime_ipc_provider_response_for_request_v1') {
+            throw "runtime IPC provider response mutation context changed: $id"
+        }
+    }
     $expectedClasses = @(
         'bounded-strict-prefix-truncation-grid', 'bounded-low-bit-flip-grid', 'trailing-byte',
         'non-minimal-top-level-version', 'indefinite-top-level-array',
@@ -252,12 +277,12 @@ function Assert-Manifest {
     }
     if ([int]$Manifest.resource_bounds.maximum_fixture_bytes -ne 524288 -or
         [int]$Manifest.resource_bounds.maximum_positions_per_grid_per_fixture -ne 128 -or
-        [int]$Manifest.resource_bounds.maximum_total_mutations -ne 20000 -or
+        [int]$Manifest.resource_bounds.maximum_total_mutations -ne 25000 -or
         [bool]$Manifest.resource_bounds.network_allowed -or
         [bool]$Manifest.resource_bounds.randomness_allowed) { throw 'decoder resource bounds changed' }
 }
 
-foreach ($path in @($manifestPath, $officialPath, $referencePath, $verifierPath, $testPath, $ratchetReferencePath, $recoveryReferencePath, $eventReferencePath, $prekeySelectionReferencePath, $syncReferencePath, $syncSessionReferencePath, $recoveryExchangeReferencePath, $mailboxReferencePath, $mailboxTransportReferencePath, $mailboxGossipReferencePath, $mailboxProvisioningReferencePath, $runtimeMailboxReferencePath, $runtimeIpcReferencePath, $runtimeIpcReadReferencePath, $runtimeIpcContactReferencePath, $runtimeIpcDirectoryReferencePath, $runtimeIpcQueueReferencePath, $runtimeIpcOutboxReferencePath, $ticketPublicationReferencePath, $publicationConflictReferencePath, $endpointAnnouncementReferencePath, $endpointAnnouncementTransportReferencePath, $historyRewrapReferencePath, $accountRecoveryReferencePath, $accountRecoveryPolicyReferencePath, $rfcPath)) {
+foreach ($path in @($manifestPath, $officialPath, $referencePath, $verifierPath, $testPath, $ratchetReferencePath, $recoveryReferencePath, $eventReferencePath, $prekeySelectionReferencePath, $syncReferencePath, $syncSessionReferencePath, $recoveryExchangeReferencePath, $mailboxReferencePath, $mailboxTransportReferencePath, $mailboxGossipReferencePath, $mailboxProvisioningReferencePath, $runtimeMailboxReferencePath, $runtimeIpcReferencePath, $runtimeIpcReadReferencePath, $runtimeIpcContactReferencePath, $runtimeIpcDirectoryReferencePath, $runtimeIpcQueueReferencePath, $runtimeIpcOutboxReferencePath, $runtimeIpcProviderReferencePath, $ticketPublicationReferencePath, $publicationConflictReferencePath, $endpointAnnouncementReferencePath, $endpointAnnouncementTransportReferencePath, $historyRewrapReferencePath, $accountRecoveryReferencePath, $accountRecoveryPolicyReferencePath, $rfcPath)) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "canonical conformance file is missing: $path" }
 }
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
@@ -282,6 +307,7 @@ $runtimeIpcContactReference = Get-Content -LiteralPath $runtimeIpcContactReferen
 $runtimeIpcDirectoryReference = Get-Content -LiteralPath $runtimeIpcDirectoryReferencePath -Raw
 $runtimeIpcQueueReference = Get-Content -LiteralPath $runtimeIpcQueueReferencePath -Raw
 $runtimeIpcOutboxReference = Get-Content -LiteralPath $runtimeIpcOutboxReferencePath -Raw
+$runtimeIpcProviderReference = Get-Content -LiteralPath $runtimeIpcProviderReferencePath -Raw
 $ticketPublicationReference = Get-Content -LiteralPath $ticketPublicationReferencePath -Raw
 $publicationConflictReference = Get-Content -LiteralPath $publicationConflictReferencePath -Raw
 $endpointAnnouncementReference = Get-Content -LiteralPath $endpointAnnouncementReferencePath -Raw
@@ -321,7 +347,7 @@ foreach ($fixture in $manifest.fixtures) {
     }
 }
 foreach ($required in @('MAXIMUM_GRID_POSITIONS: usize = 128', 'MINIMUM_MUTATIONS: usize = 500',
-    'EXPECTED_MUTATIONS: usize = 19_905', 'MAXIMUM_MUTATIONS: usize = 20_000',
+    'EXPECTED_MUTATIONS: usize = 20_947', 'MAXIMUM_MUTATIONS: usize = 25_000',
     'bounded_positions(', 'verify_runtime_mailbox_payload_for_dispatch_v1',
     'verify_publication_conflict_claim_for_response_v1',
     'open_endpoint_announcement_bundle_v1',
@@ -347,10 +373,13 @@ foreach ($required in @('MAXIMUM_GRID_POSITIONS: usize = 128', 'MINIMUM_MUTATION
     'verify_runtime_ipc_outbox_request_for_descriptor_v1',
     'verify_runtime_ipc_outbox_response_for_request_v1',
     'decode_and_verify_signed_runtime_ipc_outbox_response_v1',
+    'verify_runtime_ipc_provider_request_for_descriptor_v1',
+    'verify_runtime_ipc_provider_response_for_request_v1',
+    'decode_and_verify_signed_runtime_ipc_provider_response_v1',
     'canonical_decoder_mutations=')) {
     if ($test.IndexOf($required, [StringComparison]::Ordinal) -lt 0) { throw "mutation test is missing '$required'" }
 }
-foreach ($referenceSource in @($ratchetReference, $recoveryReference, $eventReference, $prekeySelectionReference, $syncSessionReference, $recoveryExchangeReference, $mailboxReference, $mailboxTransportReference, $mailboxGossipReference, $mailboxProvisioningReference, $runtimeMailboxReference, $runtimeIpcReference, $runtimeIpcReadReference, $runtimeIpcContactReference, $runtimeIpcDirectoryReference, $runtimeIpcQueueReference, $runtimeIpcOutboxReference, $ticketPublicationReference, $publicationConflictReference, $endpointAnnouncementReference, $endpointAnnouncementTransportReference, $historyRewrapReference, $accountRecoveryReference, $accountRecoveryPolicyReference)) {
+foreach ($referenceSource in @($ratchetReference, $recoveryReference, $eventReference, $prekeySelectionReference, $syncSessionReference, $recoveryExchangeReference, $mailboxReference, $mailboxTransportReference, $mailboxGossipReference, $mailboxProvisioningReference, $runtimeMailboxReference, $runtimeIpcReference, $runtimeIpcReadReference, $runtimeIpcContactReference, $runtimeIpcDirectoryReference, $runtimeIpcQueueReference, $runtimeIpcOutboxReference, $runtimeIpcProviderReference, $ticketPublicationReference, $publicationConflictReference, $endpointAnnouncementReference, $endpointAnnouncementTransportReference, $historyRewrapReference, $accountRecoveryReference, $accountRecoveryPolicyReference)) {
     if ($referenceSource.IndexOf('independent_blake3=verified', [StringComparison]::Ordinal) -lt 0 -or
         $referenceSource.IndexOf('blake3Hash(', [StringComparison]::Ordinal) -lt 0) {
         throw 'canonical reference does not independently verify BLAKE3'
@@ -376,7 +405,7 @@ if ($SelfTest) {
 Write-Output 'canonical_conformance_boundary=verified'
 Write-Output 'independent_blake3=verified'
 Write-Output 'official_blake3_vectors=6/6'
-Write-Output 'bounded_decoder_mutations=19905'
+Write-Output 'bounded_decoder_mutations=20947'
 Write-Output 'coverage_guided_fuzzing=pending-before-activation'
 Write-Output 'active_runtime_changed=false'
 Write-Output 'network_executed=false'
