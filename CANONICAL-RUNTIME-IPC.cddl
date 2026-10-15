@@ -477,6 +477,82 @@ signed-runtime-ipc-provider-response-v1 = [
   signature
 ]
 
+runtime-ipc-mailbox-status-cursor-v1 = [
+  profile-version,
+  snapshot-id: digest,
+  start-index: uint
+]
+
+runtime-ipc-mailbox-status-cursor-option-v1 =
+  [none: 0] /
+  [some: 1, runtime-ipc-mailbox-status-cursor-v1]
+
+runtime-ipc-mailbox-status-command-v1 =
+  [mailbox-capability-status-page: 0,
+   runtime-ipc-mailbox-status-cursor-option-v1,
+   limit: 1..16]
+
+runtime-ipc-mailbox-status-request-v1 = [
+  profile-version,
+  descriptor-id: digest,
+  request-id,
+  bearer-token: token,
+  issued-at-unix-seconds: uint,
+  expires-at-unix-seconds: uint,
+  runtime-ipc-mailbox-status-command-v1
+]
+
+; Nested update and acknowledgement values are the exact canonical CBOR bytes
+; defined by CANONICAL-MAILBOX-PROVISIONING.cddl. They contain only signed
+; update state and a sealed peer offer, never the local read/write secrets.
+runtime-ipc-mailbox-capability-head-v1 = [
+  profile-version,
+  signed-mailbox-capability-update-cbor: bytes .size (1..32768),
+  acknowledgement: runtime-ipc-mailbox-acknowledgement-option-v1
+]
+
+runtime-ipc-mailbox-acknowledgement-option-v1 =
+  [none: 0] /
+  [some: 1, signed-mailbox-capability-acknowledgement-cbor: bytes .size (1..4096)]
+
+runtime-ipc-mailbox-status-counts-v1 = [
+  profile-version,
+  head-count: 0..1024,
+  active-head-count: 0..1024,
+  revoked-head-count: 0..1024,
+  acknowledged-head-count: 0..1024,
+  unacknowledged-head-count: 0..1024,
+  local-owner-head-count: 0..1024,
+  local-recipient-head-count: 0..1024
+]
+
+runtime-ipc-mailbox-status-page-v1 = [
+  profile-version,
+  snapshot-id: digest,
+  runtime-ipc-mailbox-status-counts-v1,
+  heads: [*16 runtime-ipc-mailbox-capability-head-v1],
+  runtime-ipc-mailbox-status-cursor-option-v1
+]
+
+runtime-ipc-mailbox-status-result-v1 =
+  [mailbox-capability-status-page: 0, runtime-ipc-mailbox-status-page-v1] /
+  [error: 1, error-code: 1..65535, message-utf8: bytes .size (1..4096)]
+
+runtime-ipc-mailbox-status-response-content-v1 = [
+  profile-version,
+  descriptor-id: digest,
+  request-id,
+  request-digest: digest,
+  responder-device-id: device-id,
+  runtime-ipc-mailbox-status-result-v1
+]
+
+signed-runtime-ipc-mailbox-status-response-v1 = [
+  profile-version,
+  runtime-ipc-mailbox-status-response-content-v1,
+  signature
+]
+
 kilogram-runtime-ipc-v1 =
   signed-runtime-ipc-descriptor-v1 /
   runtime-ipc-core-request-v1 /
@@ -492,4 +568,6 @@ kilogram-runtime-ipc-v1 =
   runtime-ipc-outbox-request-v1 /
   signed-runtime-ipc-outbox-response-v1 /
   runtime-ipc-provider-request-v1 /
-  signed-runtime-ipc-provider-response-v1
+  signed-runtime-ipc-provider-response-v1 /
+  runtime-ipc-mailbox-status-request-v1 /
+  signed-runtime-ipc-mailbox-status-response-v1

@@ -5824,3 +5824,32 @@ correlation visible, Windows-only field evidence, independent security audit
 - coverage остаётся 16 complete / 1 partial / 1 not-started / 2 not-targeted.
   Следующий bounded IPC slice — paginated read-only mailbox capability status,
   отдельно от create/rotate/revoke mutation boundary.
+
+### M1.1.35 — canonical runtime IPC mailbox capability status: принято локально
+
+- inactive deterministic-CBOR IPC получил bounded paginated read-only
+  `MailboxCapabilityStatusPage`, не подключённый к active Postcard reader;
+- content-derived snapshot ID коммитит полный строго отсортированный набор
+  capability heads и global counts; cursor сохраняет exact snapshot ID и next
+  start index, а Device-signed response связывает полный request digest;
+- каждый head содержит exact signed capability update и optional exact signed
+  recipient ACK. Local binding, mailbox plaintext и read/write secrets в
+  projection отсутствуют; recipient-sealed ciphertext внутри подписанного
+  update сохраняется как opaque protocol evidence;
+- descriptor Account+Device обязан быть exact owner либо recipient каждого
+  head. Full-page counts и snapshot пересчитываются, а partial-page buckets не
+  могут превышать signed global counts;
+- request/response bounded до 64 KiB / 640 KiB, полный snapshot — 1024 heads,
+  одна page — 16 heads;
+- independent Node reference воспроизводит deterministic CBOR, Ed25519 и
+  BLAKE3; Rust golden, substitution и snapshot tests прошли 3/3, один explicit
+  vector generator ignored;
+- финальный mutation corpus прошёл 21451/21451 за 849.44 s, debug/offline,
+  `CargoJobs=2`, BelowNormal; protocol library regression прошёл 109/109 с
+  пятью explicit vector generators ignored;
+- accepted-tag readiness прошёл 68/68, rustfmt и workspace locked/offline
+  strict Clippy; active Postcard IPC v26/JSON descriptor v7, network, stable
+  test EXE, release/archive/push/tag не менялись и не создавались;
+- coverage остаётся 16 complete / 1 partial / 1 not-started / 2 not-targeted.
+  Следующий bounded IPC slice — create/rotate/revoke mailbox capability
+  mutations с отдельной authority/secret boundary.

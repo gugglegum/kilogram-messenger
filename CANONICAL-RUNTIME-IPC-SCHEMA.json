@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.34",
+  "milestone": "M1.1.35",
   "status": "candidate-not-active",
   "changes_active_wire": false,
   "profile": "kilogram-deterministic-cbor-v1",
@@ -41,6 +41,10 @@
     "maximum_provider_response_bytes": 262144,
     "maximum_active_providers": 4096,
     "maximum_selected_providers": 8,
+    "maximum_mailbox_status_request_bytes": 65536,
+    "maximum_mailbox_status_response_bytes": 655360,
+    "maximum_mailbox_status_heads": 1024,
+    "maximum_mailbox_status_page_size": 16,
     "maximum_error_bytes": 4096,
     "maximum_descriptor_validity_seconds": 86400,
     "maximum_request_validity_seconds": 30,
@@ -193,6 +197,27 @@
       "id": "provider-response-id-v1",
       "value": "kilogram:runtime-ipc-provider-response-id:cbor-v1\\0",
       "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "mailbox-status-request-digest-v1",
+      "value": "kilogram:runtime-ipc-mailbox-status-request-digest:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "mailbox-status-response-signature-v1",
+      "value": "kilogram:runtime-ipc-mailbox-status-response-signature:cbor-v1\\0",
+      "operation": "ed25519-signature",
+      "signer": "descriptor-device-ed25519"
+    },
+    {
+      "id": "mailbox-status-response-id-v1",
+      "value": "kilogram:runtime-ipc-mailbox-status-response-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "mailbox-status-snapshot-id-v1",
+      "value": "kilogram:runtime-ipc-mailbox-status-snapshot-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
     }
   ],
   "objects": [
@@ -270,6 +295,16 @@
       "id": "signed-runtime-ipc-provider-response-v1",
       "kind": "device-signed-capability-free-provider-result",
       "maximum_bytes": 262144
+    },
+    {
+      "id": "runtime-ipc-mailbox-status-request-v1",
+      "kind": "short-lived-snapshot-bound-paginated-mailbox-capability-status-request",
+      "maximum_bytes": 65536
+    },
+    {
+      "id": "signed-runtime-ipc-mailbox-status-response-v1",
+      "kind": "device-signed-secret-free-mailbox-capability-head-page",
+      "maximum_bytes": 655360
     }
   ],
   "covered_commands": [
@@ -284,7 +319,8 @@
     "queue-message",
     "outbox-status-page",
     "import-volunteer-storage-offer",
-    "select-volunteer-storage-providers"
+    "select-volunteer-storage-providers",
+    "mailbox-capability-status-page"
   ],
   "covered_results": [
     "pong",
@@ -299,7 +335,8 @@
     "message-queued",
     "outbox-status-page",
     "volunteer-storage-offer-imported",
-    "volunteer-storage-providers-selected"
+    "volunteer-storage-providers-selected",
+    "mailbox-capability-status-page"
   ],
   "semantic_rules": [
     "descriptor address is exactly IPv4 127.0.0.1 or IPv6 ::1 and port is nonzero",
@@ -347,10 +384,16 @@
     "provider selection uses a nonzero opaque salt, requests between one and eight entries and repeats the exact salt and requested count in the signed result",
     "a selected provider set contains at most the requested and active counts, has unique store keys and offer IDs and exposes no mailbox read or write capability",
     "the active adapter must execute selection against one current read-only registry snapshot under the existing bootstrap-safe corroboration and path-diversity policy",
+    "mailbox-capability-status-page has a limit from 1 through 16 and either starts a new projection or supplies a nonzero content-derived snapshot ID with an exact start index",
+    "each mailbox capability head embeds one independently verified Device-signed canonical update and at most one matching recipient-signed acknowledgement",
+    "a capability status snapshot contains at most 1024 strictly ordered unique chain heads and commits the descriptor Account and Device, exact aggregate counts and all heads",
+    "every projected head names the descriptor Account and Device as exact owner or exact recipient; unrelated capability chains fail closed",
+    "page heads cannot exceed any signed aggregate bucket, while a complete one-page response must exactly reproduce all counters and the content-derived snapshot ID",
+    "mailbox capability status contains no local binding, read secret, write secret or decrypted peer offer; the signed update may retain only its recipient-sealed peer offer",
     "unknown variants, noncanonical CBOR, trailing data, expired objects and contextual substitutions fail closed"
   ],
   "remaining_runtime_ipc_surface": [
-    "mailbox-capability-lifecycle-commands",
+    "mailbox-capability-mutation-commands",
     "ticket-publication-and-conflict-commands",
     "own-device-discovery-and-automation-commands",
     "recovery-plan-and-device-link-commands",

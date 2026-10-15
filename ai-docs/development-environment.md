@@ -3502,3 +3502,26 @@ Hosted follow-up:
 - Accepted-tag readiness passed 67/67; rustfmt and workspace locked/offline
   strict Clippy passed. Active Postcard v26/JSON descriptor v7 is unchanged;
   no network action, release build, archive, push or tag was created.
+
+## M1.1.35 canonical runtime IPC mailbox capability status (2026-10-15)
+
+- New inactive module:
+  `crates/kilogram-protocol/src/canonical_runtime_ipc_mailbox_status_v1.rs`.
+- CDDL, schema, generated vectors and a dependency-free Node reference cover a
+  content-derived complete capability-head snapshot and Device-signed bounded
+  pages. Active Postcard v26/JSON descriptor v7 is untouched.
+- Complete snapshots are strictly ordered by owner Account/Device, recipient
+  Account/Device and scope, limited to 1024 heads, with pages limited to 16.
+  Only exact signed updates and optional exact signed acknowledgements cross
+  this read-only boundary; local binding and read/write secrets do not.
+- Final decoder mutation regression passed 21451/21451 in 849.44 seconds with
+  debug/offline Cargo, two jobs and BelowNormal priority. Protocol library
+  regression passed 109/109 with five explicit generators ignored.
+- Targeted post-Clippy-fix regression passed 3/3 with one explicit generator
+  ignored. Workspace strict locked/offline Clippy then passed with two jobs.
+- Accepted-tag readiness passed 68/68; rustfmt and workspace locked/offline
+  strict Clippy passed. No network, stable-path executable, release build,
+  archive, push or tag was created.
+- Canonical coverage remains 16 complete, 1 partial, 1 not-started and 2
+  not-targeted. The next runtime IPC boundary is create/rotate/revoke mailbox
+  capability mutation, separate from this secret-free status projection.
