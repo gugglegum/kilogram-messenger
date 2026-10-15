@@ -5186,3 +5186,19 @@ correlation visible, Windows-only field evidence, independent security audit
   coverage, dual reader, sustained fuzzing, downgrade tests, rollback drill и
   fresh hosted/field evidence остаются pending activation requirements;
 - readiness inventory расширен с 39 до 40 gates; network/release/tag не нужны.
+
+### M1.1.7 — canonical schema coverage audit: принято локально
+
+- `CANONICAL-COVERAGE.json` exact-join-ит все 20 compatibility surfaces с
+  созданными canonical artifacts и не позволяет выдать subset vectors за
+  полный протокол;
+- complete означает schema + strict decoder + golden vector + independent
+  reference для всех objects/preimages/semantic relations одной поверхности;
+- результат: 1 complete (`device-session-authorization`), 5 partial, 12
+  not-started и 2 explicit non-Postcard codecs вне этой миграции;
+- connection ticket и desktop bootstrap сохраняют JSON и не считаются
+  пробелами Postcard-to-CBOR migration; любое их будущее изменение всё равно
+  требует explicit versioned migration;
+- activation остаётся false, пока все targeted surfaces не complete и не
+  выполнены отдельные требования migration contract;
+- readiness inventory расширен с 40 до 41 gates; runtime/network не менялись.

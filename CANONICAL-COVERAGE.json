@@ -1,0 +1,175 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.7",
+  "status": "coverage-audit-not-active",
+  "changes_active_wire": false,
+  "source_manifest": "PROTOCOL-COMPATIBILITY.json",
+  "target_profile": "kilogram-deterministic-cbor-v1",
+  "coverage_definition": {
+    "complete": "every object, envelope, cryptographic preimage and semantic relation in the source surface has a canonical schema, strict decoder, golden vector and independent reference",
+    "partial": "at least one source object is covered, but activation remains blocked by listed gaps",
+    "not-started": "no canonical target artifact exists for this source surface",
+    "not-targeted": "the source surface retains an explicit non-Postcard codec and is outside this CBOR migration"
+  },
+  "summary": {
+    "source_surfaces": 20,
+    "complete": 1,
+    "partial": 5,
+    "not_started": 12,
+    "not_targeted": 2,
+    "activation_ready": false
+  },
+  "surfaces": [
+    {
+      "id": "account-authority",
+      "coverage": "partial",
+      "artifacts": ["CANONICAL-AUTHORITY.cddl", "CANONICAL-AUTHORITY-SCHEMA.json", "CANONICAL-AUTHORITY-VECTORS.json"],
+      "covered": ["device-certificate", "device-revocation", "authority-snapshot"],
+      "remaining": ["account-device-list", "conversation-membership", "device-link-authorization"]
+    },
+    {
+      "id": "account-recovery",
+      "coverage": "not-started",
+      "artifacts": [],
+      "covered": [],
+      "remaining": ["entire-surface"]
+    },
+    {
+      "id": "authorized-event",
+      "coverage": "partial",
+      "artifacts": ["CANONICAL-WIRE-SCHEMA.json", "CANONICAL-WIRE-VECTORS.json"],
+      "covered": ["acknowledgement-event"],
+      "remaining": ["text-event", "all-other-event-payload-variants", "event-envelope-integration"]
+    },
+    {
+      "id": "blind-mailbox-capability",
+      "coverage": "not-started",
+      "artifacts": [],
+      "covered": [],
+      "remaining": ["entire-surface"]
+    },
+    {
+      "id": "blind-mailbox-provider-gossip",
+      "coverage": "not-started",
+      "artifacts": [],
+      "covered": [],
+      "remaining": ["entire-surface"]
+    },
+    {
+      "id": "blind-mailbox-transport",
+      "coverage": "not-started",
+      "artifacts": [],
+      "covered": [],
+      "remaining": ["entire-surface"]
+    },
+    {
+      "id": "connection-ticket",
+      "coverage": "not-targeted",
+      "artifacts": [],
+      "covered": ["json-base64url-existing-codec"],
+      "remaining": [],
+      "reason": "explicit-json-portable-artifact-outside-postcard-to-cbor-migration"
+    },
+    {
+      "id": "desktop-bootstrap",
+      "coverage": "not-targeted",
+      "artifacts": [],
+      "covered": ["json-existing-codec"],
+      "remaining": [],
+      "reason": "local-json-control-contract-outside-postcard-to-cbor-migration"
+    },
+    {
+      "id": "device-session-authorization",
+      "coverage": "complete",
+      "artifacts": ["CANONICAL-AUTHORITY.cddl", "CANONICAL-AUTHORITY-SCHEMA.json", "CANONICAL-AUTHORITY-VECTORS.json", "crates/kilogram-protocol/src/canonical_authority_v1.rs", "scripts/verify-kilogram-canonical-authority-reference.mjs"],
+      "covered": ["device-session-authorization", "nested-device-certificate", "nested-authority-snapshot", "revoked-device-rejection"],
+      "remaining": []
+    },
+    {
+      "id": "endpoint-announcement",
+      "coverage": "not-started",
+      "artifacts": [],
+      "covered": [],
+      "remaining": ["entire-surface"]
+    },
+    {
+      "id": "history-recovery",
+      "coverage": "partial",
+      "artifacts": ["CANONICAL-RECOVERY.cddl", "CANONICAL-RECOVERY-SCHEMA.json", "CANONICAL-RECOVERY-VECTORS.json"],
+      "covered": ["recipient-signed-checkpoint-chain", "recovery-id", "checkpoint-id"],
+      "remaining": ["history-recovery-link", "history-recovery-plan", "wire-request-and-page-envelopes"]
+    },
+    {
+      "id": "history-rewrap",
+      "coverage": "not-started",
+      "artifacts": [],
+      "covered": [],
+      "remaining": ["entire-surface"]
+    },
+    {
+      "id": "mailbox-provisioning",
+      "coverage": "not-started",
+      "artifacts": [],
+      "covered": [],
+      "remaining": ["entire-surface"]
+    },
+    {
+      "id": "publication-conflict",
+      "coverage": "not-started",
+      "artifacts": [],
+      "covered": [],
+      "remaining": ["entire-surface"]
+    },
+    {
+      "id": "ratchet-public-artifacts",
+      "coverage": "partial",
+      "artifacts": ["CANONICAL-RATCHET.cddl", "CANONICAL-RATCHET-SCHEMA.json", "CANONICAL-RATCHET-VECTORS.json"],
+      "covered": ["ratchet-identity", "prekey-bundle", "prekey-pool", "account-prekey-directory"],
+      "remaining": ["ciphertext-envelope", "prekey-selection-transcript"]
+    },
+    {
+      "id": "runtime-ipc",
+      "coverage": "not-started",
+      "artifacts": [],
+      "covered": [],
+      "remaining": ["entire-surface"]
+    },
+    {
+      "id": "runtime-mailbox-envelope",
+      "coverage": "not-started",
+      "artifacts": [],
+      "covered": [],
+      "remaining": ["entire-surface"]
+    },
+    {
+      "id": "sync",
+      "coverage": "partial",
+      "artifacts": ["CANONICAL-WIRE-SCHEMA.json", "CANONICAL-WIRE-VECTORS.json"],
+      "covered": ["sync-inventory"],
+      "remaining": ["sync-diff", "sync-request-response-frames", "multi-round-session-state"]
+    },
+    {
+      "id": "ticket-publication-capability",
+      "coverage": "not-started",
+      "artifacts": [],
+      "covered": [],
+      "remaining": ["entire-surface"]
+    },
+    {
+      "id": "transport-sync",
+      "coverage": "not-started",
+      "artifacts": [],
+      "covered": [],
+      "remaining": ["parallel-cbor-alpn-and-negotiation"]
+    }
+  ],
+  "next_priority": [
+    "authorized-event",
+    "sync",
+    "ratchet-public-artifacts",
+    "account-authority",
+    "history-recovery",
+    "blind-mailbox-capability",
+    "blind-mailbox-transport"
+  ]
+}
