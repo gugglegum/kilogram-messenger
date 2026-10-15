@@ -5773,3 +5773,31 @@ correlation visible, Windows-only field evidence, independent security audit
   запускались и не создавались;
 - coverage остаётся 16 complete / 1 partial / 1 not-started / 2 not-targeted.
   Следующий bounded IPC slice — snapshot-bound paginated outbox projection.
+
+### M1.1.33 — canonical runtime IPC snapshot-bound outbox: принято локально
+
+- inactive deterministic-CBOR IPC получил bounded read-only
+  `OutboxStatusPage`, не подключённый к active Postcard reader;
+- content-derived snapshot ID коммитит profile, exact global counters и полный
+  строго отсортированный по Queue ID набор items, а не только текущую страницу;
+- state projection связывает queue/contact/peer/conversation IDs, delivery
+  state, optional ACK и retry count; ACK допустим только для delivered, а все
+  global counters exact-пересчитываются из полного snapshot;
+- cursor удерживает snapshot ID и exact next start index; page size ограничен
+  128, полный snapshot — 4096 queue items / retry records и 256 contacts;
+- eventual active adapter обязан удерживать exact immutable view либо явно
+  вернуть stale snapshot после mutation/eviction/restart; silent rebuild под
+  прежним cursor запрещён;
+- independent Node reference воспроизводит deterministic CBOR, content-derived
+  BLAKE3 snapshot ID, request/response IDs и Ed25519 signature; item/count/cursor
+  substitutions отклоняются;
+- финальный mutation corpus прошёл 19905/19905 за 823.63 s, debug/offline,
+  `CargoJobs=2`, BelowNormal; protocol library regression прошёл 103/103 с
+  тремя explicit vector generators ignored;
+- accepted-tag readiness прошёл 66/66, rustfmt и workspace locked/offline
+  strict Clippy; network, stable-path test EXE, release, archive, push и tag не
+  запускались и не создавались;
+- coverage остаётся 16 complete / 1 partial / 1 not-started / 2 not-targeted.
+  Следующий bounded IPC family — mailbox provisioning и volunteer-provider
+  control commands; mutation maximum перед ним нужно безопасно расширить выше
+  текущего почти заполненного 20000.

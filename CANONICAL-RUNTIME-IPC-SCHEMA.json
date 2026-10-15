@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.32",
+  "milestone": "M1.1.33",
   "status": "candidate-not-active",
   "changes_active_wire": false,
   "profile": "kilogram-deterministic-cbor-v1",
@@ -31,6 +31,12 @@
     "maximum_queue_request_bytes": 131072,
     "maximum_queue_response_bytes": 65536,
     "maximum_queue_message_bytes": 65536,
+    "maximum_outbox_request_bytes": 65536,
+    "maximum_outbox_response_bytes": 131072,
+    "maximum_outbox_page_size": 128,
+    "maximum_outbox_snapshot_items": 4096,
+    "maximum_outbox_contacts": 256,
+    "maximum_outbox_retry_records": 4096,
     "maximum_error_bytes": 4096,
     "maximum_descriptor_validity_seconds": 86400,
     "maximum_request_validity_seconds": 30,
@@ -146,6 +152,27 @@
       "id": "queue-response-id-v1",
       "value": "kilogram:runtime-ipc-queue-response-id:cbor-v1\\0",
       "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "outbox-request-digest-v1",
+      "value": "kilogram:runtime-ipc-outbox-request-digest:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "outbox-response-signature-v1",
+      "value": "kilogram:runtime-ipc-outbox-response-signature:cbor-v1\\0",
+      "operation": "ed25519-signature",
+      "signer": "descriptor-device-ed25519"
+    },
+    {
+      "id": "outbox-response-id-v1",
+      "value": "kilogram:runtime-ipc-outbox-response-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "outbox-snapshot-id-v1",
+      "value": "kilogram:runtime-ipc-outbox-snapshot-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
     }
   ],
   "objects": [
@@ -203,6 +230,16 @@
       "id": "signed-runtime-ipc-queue-response-v1",
       "kind": "device-signed-exact-queue-insertion-result",
       "maximum_bytes": 65536
+    },
+    {
+      "id": "runtime-ipc-outbox-request-v1",
+      "kind": "short-lived-snapshot-bound-paginated-outbox-request",
+      "maximum_bytes": 65536
+    },
+    {
+      "id": "signed-runtime-ipc-outbox-response-v1",
+      "kind": "device-signed-snapshot-bound-outbox-projection",
+      "maximum_bytes": 131072
     }
   ],
   "covered_commands": [
@@ -214,7 +251,8 @@
     "add-contact",
     "own-device-directory-status",
     "apply-own-device-directory",
-    "queue-message"
+    "queue-message",
+    "outbox-status-page"
   ],
   "covered_results": [
     "pong",
@@ -226,7 +264,8 @@
     "contact-added",
     "own-device-directory-status",
     "own-device-directory-applied",
-    "message-queued"
+    "message-queued",
+    "outbox-status-page"
   ],
   "semantic_rules": [
     "descriptor address is exactly IPv4 127.0.0.1 or IPv6 ::1 and port is nonzero",
@@ -261,10 +300,16 @@
     "a successful queue result repeats the exact peer Account and derives Conversation and canonical contact IDs from the requested label and Accounts",
     "the inserted flag reports only whether the exact durable queue record was newly created; false is valid only for an already-present byte-equivalent record",
     "the active adapter must verify enrolled contact and current conversation membership under the same state lock as durable queue insertion",
+    "outbox-status-page has a limit from 1 through 128 and either starts a new projection or supplies a nonzero content-derived snapshot ID with an exact start index",
+    "an outbox snapshot ID is the domain-separated digest of the complete globally counted projection sorted by strictly increasing Queue ID",
+    "outbox global counters exactly equal the complete snapshot item states and bound contacts, queue items and retry records",
+    "every non-delivered item is pending, every non-queued item is materialized and only delivered items carry one nonzero acknowledgement Event ID",
+    "each signed outbox page repeats the immutable snapshot ID and global counters, contains at most the requested bounded limit and preserves strict Queue ID order",
+    "outbox continuation arithmetic is exact: the next start index equals the requested start plus returned items and retains the same snapshot ID until the queue count is reached",
+    "the active adapter must retain the exact snapshot for continuation or fail explicitly as stale after state drift or restart; it must never rebuild changed contents under an existing cursor",
     "unknown variants, noncanonical CBOR, trailing data, expired objects and contextual substitutions fail closed"
   ],
   "remaining_runtime_ipc_surface": [
-    "snapshot-bound-paginated-outbox-status-command",
     "mailbox-provisioning-and-volunteer-provider-commands",
     "ticket-publication-and-conflict-commands",
     "own-device-discovery-and-automation-commands",

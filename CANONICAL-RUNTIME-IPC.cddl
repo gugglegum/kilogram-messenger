@@ -1,4 +1,4 @@
-; Kilogram deterministic-CBOR local runtime IPC core, read, contact, directory and queue model, M1.1.32.
+; Kilogram deterministic-CBOR local runtime IPC core, read, contact, directory, queue and outbox model, M1.1.33.
 ; Only unsigned integers, definite byte strings and definite arrays are used.
 
 profile-version = 1
@@ -353,6 +353,79 @@ signed-runtime-ipc-queue-response-v1 = [
   signature
 ]
 
+runtime-ipc-outbox-cursor-v1 = [
+  snapshot-id: digest,
+  start-index: uint
+]
+
+runtime-ipc-outbox-cursor-option-v1 =
+  [none: 0] /
+  [some: 1, runtime-ipc-outbox-cursor-v1]
+
+runtime-ipc-outbox-command-v1 =
+  [outbox-status-page: 0, runtime-ipc-outbox-cursor-option-v1, limit: 1..128]
+
+runtime-ipc-outbox-request-v1 = [
+  profile-version,
+  descriptor-id: digest,
+  request-id,
+  bearer-token: token,
+  issued-at-unix-seconds: uint,
+  expires-at-unix-seconds: uint,
+  runtime-ipc-outbox-command-v1
+]
+
+runtime-ipc-outbox-state-v1 = 0..6
+
+runtime-ipc-outbox-counts-v1 = [
+  contact-count: 0..256,
+  queue-count: 0..4096,
+  pending-count: 0..4096,
+  materialized-count: 0..4096,
+  delivered-count: 0..4096,
+  mailbox-pending-count: 0..4096,
+  mailbox-stored-count: 0..4096,
+  mailbox-expired-count: 0..4096,
+  mailbox-failed-count: 0..4096,
+  retry-record-count: 0..4096
+]
+
+runtime-ipc-outbox-item-v1 = [
+  queue-id: digest,
+  contact-id: digest,
+  peer-account-id: account-id,
+  conversation-id: digest,
+  runtime-ipc-outbox-state-v1,
+  acknowledgement-event-id: runtime-ipc-option-digest-v1,
+  retry-record-count: 0..4096
+]
+
+runtime-ipc-outbox-page-v1 = [
+  snapshot-id: digest,
+  runtime-ipc-outbox-counts-v1,
+  items: [*128 runtime-ipc-outbox-item-v1],
+  runtime-ipc-outbox-cursor-option-v1
+]
+
+runtime-ipc-outbox-result-v1 =
+  [outbox-status-page: 0, runtime-ipc-outbox-page-v1] /
+  [error: 1, error-code: 1..65535, message-utf8: bytes .size (1..4096)]
+
+runtime-ipc-outbox-response-content-v1 = [
+  profile-version,
+  descriptor-id: digest,
+  request-id,
+  request-digest: digest,
+  responder-device-id: device-id,
+  runtime-ipc-outbox-result-v1
+]
+
+signed-runtime-ipc-outbox-response-v1 = [
+  profile-version,
+  runtime-ipc-outbox-response-content-v1,
+  signature
+]
+
 kilogram-runtime-ipc-v1 =
   signed-runtime-ipc-descriptor-v1 /
   runtime-ipc-core-request-v1 /
@@ -364,4 +437,6 @@ kilogram-runtime-ipc-v1 =
   runtime-ipc-directory-request-v1 /
   signed-runtime-ipc-directory-response-v1 /
   runtime-ipc-queue-request-v1 /
-  signed-runtime-ipc-queue-response-v1
+  signed-runtime-ipc-queue-response-v1 /
+  runtime-ipc-outbox-request-v1 /
+  signed-runtime-ipc-outbox-response-v1

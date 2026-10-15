@@ -3457,3 +3457,26 @@ Hosted follow-up:
 - Canonical coverage remains 16 complete, 1 partial, 1 not-started and 2
   not-targeted. The next runtime IPC boundary is snapshot-bound paginated
   outbox projection.
+
+## M1.1.33 canonical runtime IPC outbox snapshot (2026-10-15)
+
+- New inactive module:
+  `crates/kilogram-protocol/src/canonical_runtime_ipc_outbox_v1.rs`.
+- CDDL, schema, generated vectors and a dependency-free Node reference cover a
+  content-derived complete outbox snapshot and Device-signed bounded pages.
+  Active Postcard v26/JSON descriptor v7 is untouched.
+- Complete snapshots are strictly Queue-ID ordered and limited to 4096 items,
+  4096 retry records and 256 contacts. Pages are limited to 128 items and
+  continue with the exact snapshot ID and next index.
+- An eventual adapter must retain the exact immutable view for continuation or
+  explicitly reject a stale cursor after state drift, eviction or restart.
+- Final decoder mutation regression passed 19905/19905 in 823.63 seconds with
+  debug/offline Cargo, two jobs and BelowNormal priority. Protocol library
+  regression passed 103/103 with three explicit generators ignored.
+- Accepted-tag readiness passed 66/66; rustfmt and workspace locked/offline
+  strict Clippy passed. No network, stable-path executable, release build,
+  archive, push or tag was created.
+- Mutation capacity now has only 95 slots below the 20000 ceiling. Before the
+  next command family, increase the explicit bounded maximum consistently in
+  the manifest, Rust corpus and all guarding scripts; do not silently drop
+  existing fixtures.

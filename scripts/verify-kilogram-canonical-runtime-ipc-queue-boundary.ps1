@@ -34,7 +34,7 @@ function Assert-LowerHex {
 
 function Assert-Schema {
     param([object]$Schema, [string]$Rust)
-    if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.32' -or
+    if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.33' -or
         [string]$Schema.status -cne 'candidate-not-active' -or [bool]$Schema.changes_active_wire -or
         [string]$Schema.profile -cne 'kilogram-deterministic-cbor-v1' -or
         [string]$Schema.cddl.path -cne 'CANONICAL-RUNTIME-IPC.cddl' -or
@@ -52,10 +52,10 @@ function Assert-Schema {
     if ($limits -cne '131072,65536,65536,4096') {
         throw 'canonical runtime IPC queue limits changed'
     }
-    if (@($Schema.domains).Count -ne 19 -or @($Schema.objects).Count -ne 11 -or
-        @($Schema.covered_commands).Count -ne 9 -or @($Schema.covered_results).Count -ne 10 -or
-        @($Schema.semantic_rules).Count -ne 33 -or
-        @($Schema.remaining_runtime_ipc_surface).Count -ne 7) {
+    if (@($Schema.domains).Count -ne 23 -or @($Schema.objects).Count -ne 13 -or
+        @($Schema.covered_commands).Count -ne 10 -or @($Schema.covered_results).Count -ne 11 -or
+        @($Schema.semantic_rules).Count -ne 40 -or
+        @($Schema.remaining_runtime_ipc_surface).Count -ne 6) {
         throw 'canonical runtime IPC queue inventory changed'
     }
     foreach ($domain in @(
@@ -173,7 +173,7 @@ $expectedCovered = @('device-signed-loopback-descriptor',
     'bounded-paginated-conversation-list-read', 'snapshot-bound-history-page-read',
     'device-signed-exact-read-response', 'exact-peer-contact-enrollment',
     'read-only-own-device-directory-status', 'root-revoked-own-device-directory-transition',
-    'idempotent-durable-message-queue-insertion')
+    'idempotent-durable-message-queue-insertion', 'snapshot-bound-paginated-outbox-status')
 $expectedRemaining = @($schema.remaining_runtime_ipc_surface | ForEach-Object { [string]$_ })
 if ($surface.Count -ne 1 -or [string]$surface[0].coverage -cne 'partial' -or
     (@($surface[0].covered) -join ',') -cne ($expectedCovered -join ',') -or
@@ -227,6 +227,6 @@ Write-Output 'canonical_runtime_ipc_queue_boundary=verified'
 Write-Output 'runtime_ipc_coverage=partial'
 Write-Output 'queue_id_equals_request_id=verified'
 Write-Output 'exact_retry_idempotence=required'
-Write-Output 'outbox_projection=next-stage'
+Write-Output 'outbox_projection=snapshot-bound-covered'
 Write-Output 'active_postcard_v26_changed=false'
 Write-Output 'network_executed=false'
