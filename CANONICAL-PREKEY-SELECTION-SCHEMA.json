@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.11",
+  "status": "candidate-not-active",
+  "changes_active_wire": false,
+  "profile": "kilogram-deterministic-cbor-v1",
+  "cddl": {
+    "standard": "RFC 8610",
+    "path": "CANONICAL-PREKEY-SELECTION.cddl",
+    "root_rule": "kilogram-prekey-selection-v1"
+  },
+  "activation": {
+    "current_runtime_algorithm": "blake3-domain-plus-device-ids-plus-generation-le-v1",
+    "current_runtime_changed": false,
+    "candidate_protocol_identifier": "unassigned",
+    "required_before_activation": [
+      "new-explicit-protocol-version-or-parallel-identifier",
+      "dual-reader-and-downgrade-tests",
+      "sustained-coverage-guided-fuzzing",
+      "fresh-field-and-hosted-evidence"
+    ]
+  },
+  "limits": {
+    "maximum_nested_prekey_pool_bytes": 524288,
+    "maximum_prekeys_per_pool": 64
+  },
+  "domain": {
+    "id": "prekey-selection-v1",
+    "value": "kilogram:prekey-selection:cbor-v1\\0",
+    "operation": "blake3-domain-prefixed-digest"
+  },
+  "external_objects": [
+    {
+      "id": "signed-prekey-pool-v1",
+      "schema": "CANONICAL-RATCHET-SCHEMA.json"
+    }
+  ],
+  "rust_bindings": [
+    {
+      "path": "crates/kilogram-protocol/src/canonical_prekey_selection_v1.rs",
+      "symbol": "CANONICAL_PREKEY_SELECTION_DOMAIN",
+      "rust_type": "bytes",
+      "value": "kilogram:prekey-selection:cbor-v1\\0"
+    }
+  ],
+  "objects": [
+    {
+      "id": "prekey-selection-input-v1",
+      "kind": "digest-input",
+      "array_length": 3
+    },
+    {
+      "id": "prekey-selection-transcript-v1",
+      "kind": "derived-transcript",
+      "array_length": 6
+    }
+  ],
+  "derivation": {
+    "pool_id": "blake3(prekey-pool-id-domain || signed-prekey-pool-v1-cbor)",
+    "selection_input": "cbor([1, initiator-device-id, pool-id])",
+    "selection_digest": "blake3(prekey-selection-domain || selection-input-cbor)",
+    "digest_prefix": "first 8 digest bytes interpreted as unsigned big-endian u64",
+    "selected_index": "digest-prefix modulo verified pool bundle count",
+    "selected_sequence": "sequence of the bundle at selected-index"
+  },
+  "semantic_rules": [
+    "the nested signed prekey pool is verified before selection",
+    "the exact pool bytes determine the pool ID and therefore the selection",
+    "all redundant digest, index and sequence fields must match recomputation",
+    "the transcript is not proof that the initiator controls its Device key",
+    "pool freshness is enforced by the caller and not ambient decoder time"
+  ]
+}

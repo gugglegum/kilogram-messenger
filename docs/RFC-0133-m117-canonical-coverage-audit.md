@@ -16,13 +16,15 @@ is reserved for explicit non-Postcard codecs outside this migration.
 
 ## 2. Result
 
-Of 20 registered surfaces, three are complete, three are partial, twelve are not
+Of 20 registered surfaces, four are complete, two are partial, twelve are not
 started and two are deliberately not targeted. Device-session authorization is
 complete with its nested certificate, authority snapshot and revoked-device
 check. M1.1.9 also completes account authority with the Root-signed device list,
 conversation membership and request-bound device-link authorization. M1.1.10
 completes authorized events with acknowledgement and ratchet-text payloads,
 author authorization and external membership verification.
+M1.1.11 completes the public ratchet artifacts with an exact-pool-bound,
+endianness-explicit prekey selection transcript.
 
 Existing JSON connection tickets and the JSON local desktop bootstrap contract
 are outside the Postcard-to-CBOR migration. This is not a claim that JSON is
@@ -32,7 +34,7 @@ versioned migration under `PROTOCOL-COMPATIBILITY.json`.
 ## 3. Priority
 
 The next work first completes the sync surface, followed by the remaining
-public ratchet and recovery objects. Mailbox
+recovery objects. Mailbox
 capabilities and transport follow because offline delivery depends on them.
 Runtime IPC can migrate independently because it is a local-control surface.
 

@@ -5,7 +5,7 @@
   "active_runtime_changed": false,
   "seed": 1262836037,
   "minimum_mutations": 500,
-  "expected_mutations": 2610,
+  "expected_mutations": 2871,
   "maximum_mutations": 3000,
   "fixtures": [
     {
@@ -67,6 +67,12 @@
       "vector_file": "CANONICAL-EVENT-VECTORS.json",
       "json_pointer": "/expected/authorized_text_event_cbor_hex",
       "decoder": "decode_and_verify_authorized_event_v1"
+    },
+    {
+      "id": "prekey-selection-transcript-v1",
+      "vector_file": "CANONICAL-PREKEY-SELECTION-VECTORS.json",
+      "json_pointer": "/expected/transcript_cbor_hex",
+      "decoder": "decode_and_verify_prekey_selection_transcript_v1"
     }
   ],
   "mutation_classes": [

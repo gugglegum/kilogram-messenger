@@ -13,8 +13,8 @@
   },
   "summary": {
     "source_surfaces": 20,
-    "complete": 3,
-    "partial": 3,
+    "complete": 4,
+    "partial": 2,
     "not_started": 12,
     "not_targeted": 2,
     "activation_ready": false
@@ -122,10 +122,10 @@
     },
     {
       "id": "ratchet-public-artifacts",
-      "coverage": "partial",
-      "artifacts": ["CANONICAL-RATCHET.cddl", "CANONICAL-RATCHET-SCHEMA.json", "CANONICAL-RATCHET-VECTORS.json", "CANONICAL-EVENT.cddl", "CANONICAL-EVENT-SCHEMA.json", "CANONICAL-EVENT-VECTORS.json"],
-      "covered": ["ratchet-identity", "prekey-bundle", "prekey-pool", "account-prekey-directory", "ciphertext-envelope"],
-      "remaining": ["prekey-selection-transcript"]
+      "coverage": "complete",
+      "artifacts": ["CANONICAL-RATCHET.cddl", "CANONICAL-RATCHET-SCHEMA.json", "CANONICAL-RATCHET-VECTORS.json", "CANONICAL-EVENT.cddl", "CANONICAL-EVENT-SCHEMA.json", "CANONICAL-EVENT-VECTORS.json", "CANONICAL-PREKEY-SELECTION.cddl", "CANONICAL-PREKEY-SELECTION-SCHEMA.json", "CANONICAL-PREKEY-SELECTION-VECTORS.json", "crates/kilogram-protocol/src/canonical_prekey_selection_v1.rs", "scripts/verify-kilogram-canonical-prekey-selection-reference.mjs"],
+      "covered": ["ratchet-identity", "prekey-bundle", "prekey-pool", "account-prekey-directory", "ciphertext-envelope", "prekey-selection-transcript"],
+      "remaining": []
     },
     {
       "id": "runtime-ipc",
@@ -165,7 +165,6 @@
   ],
   "next_priority": [
     "sync",
-    "ratchet-public-artifacts",
     "history-recovery",
     "blind-mailbox-capability",
     "blind-mailbox-transport"

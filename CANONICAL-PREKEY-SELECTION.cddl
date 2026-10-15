@@ -1,0 +1,23 @@
+; Kilogram deterministic-CBOR prekey selection transcript, M1.1.11.
+; The transcript is derived evidence, not proof of initiator key possession.
+
+profile-version = 1
+id-32 = bytes .size 32
+canonical-signed-prekey-pool = bytes
+
+prekey-selection-input-v1 = [
+  profile-version,
+  initiator-device-id: id-32,
+  prekey-pool-id: id-32
+]
+
+prekey-selection-transcript-v1 = [
+  profile-version,
+  initiator-device-id: id-32,
+  signed-prekey-pool-cbor: canonical-signed-prekey-pool,
+  selection-digest: id-32,
+  selected-index: uint,
+  selected-sequence: uint
+]
+
+kilogram-prekey-selection-v1 = prekey-selection-transcript-v1

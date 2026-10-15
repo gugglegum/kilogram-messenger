@@ -5247,3 +5247,19 @@ correlation visible, Windows-only field evidence, independent security audit
   ratchet surface теперь ждёт только prekey-selection transcript;
 - readiness inventory расширен с 43 до 44 gates; active Postcard v5,
   network/release/archive/tag не менялись.
+
+### M1.1.11 — canonical prekey selection transcript: принято локально
+
+- exact signed prekey pool входит в bounded transcript; его pool ID становится
+  частью canonical selection input вместе с initiator Device ID;
+- independent BLAKE3 digest использует explicit domain и CBOR input, первые
+  восемь bytes трактуются как unsigned big-endian u64 без host/Rust ambiguity;
+- selected index и sequence пересчитываются и fail closed, nested pool сначала
+  проходит signature/structure verification;
+- transcript не является доказательством possession initiator key, freshness
+  также остаётся обязанностью authenticated session/caller;
+- active selector с generation little-endian остаётся неизменным и требует
+  нового identifier при будущей activation;
+- strict decoder доводит corpus до 2871/3000; `ratchet-public-artifacts`
+  становится complete (4 complete / 2 partial overall);
+- readiness inventory расширен с 44 до 45 gates; network/release/tag не нужны.

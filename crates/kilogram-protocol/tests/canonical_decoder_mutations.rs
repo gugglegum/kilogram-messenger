@@ -10,6 +10,7 @@ use kilogram_protocol::canonical_device_link_v1::decode_and_verify_signed_device
 use kilogram_protocol::canonical_event_v1::{
     decode_and_verify_authorized_event_v1, decode_and_verify_signed_event_v1,
 };
+use kilogram_protocol::canonical_prekey_selection_v1::decode_and_verify_prekey_selection_transcript_v1;
 use kilogram_protocol::canonical_ratchet_v1::{
     decode_and_verify_account_prekey_directory_v1, decode_and_verify_signed_prekey_pool_v1,
 };
@@ -17,7 +18,7 @@ use kilogram_protocol::canonical_recovery_v1::decode_and_verify_signed_history_r
 use serde_json::Value;
 
 const MINIMUM_MUTATIONS: usize = 500;
-const EXPECTED_MUTATIONS: usize = 2_610;
+const EXPECTED_MUTATIONS: usize = 2_871;
 const MAXIMUM_MUTATIONS: usize = 3_000;
 const MAXIMUM_GRID_POSITIONS: usize = 128;
 
@@ -33,6 +34,7 @@ enum Decoder {
     DeviceLink,
     SignedEvent,
     AuthorizedEvent,
+    PrekeySelection,
 }
 
 fn accepts(decoder: Decoder, bytes: &[u8]) -> bool {
@@ -47,6 +49,7 @@ fn accepts(decoder: Decoder, bytes: &[u8]) -> bool {
         Decoder::DeviceLink => decode_and_verify_signed_device_link_authorization_v1(bytes).is_ok(),
         Decoder::SignedEvent => decode_and_verify_signed_event_v1(bytes).is_ok(),
         Decoder::AuthorizedEvent => decode_and_verify_authorized_event_v1(bytes).is_ok(),
+        Decoder::PrekeySelection => decode_and_verify_prekey_selection_transcript_v1(bytes).is_ok(),
     }
 }
 
@@ -104,6 +107,10 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-EVENT-VECTORS.json"
     )))?;
+    let prekey_selection: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../CANONICAL-PREKEY-SELECTION-VECTORS.json"
+    )))?;
     let fixtures = [
         (
             "certificate",
@@ -160,6 +167,11 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
             "authorized-text-event",
             Decoder::AuthorizedEvent,
             pointer_hex(&event, "/expected/authorized_text_event_cbor_hex")?,
+        ),
+        (
+            "prekey-selection-transcript",
+            Decoder::PrekeySelection,
+            pointer_hex(&prekey_selection, "/expected/transcript_cbor_hex")?,
         ),
     ];
     let mut mutations = 0usize;
@@ -239,6 +251,7 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         Decoder::DeviceLink,
         Decoder::SignedEvent,
         Decoder::AuthorizedEvent,
+        Decoder::PrekeySelection,
     ] {
         assert!(!accepts(decoder, &oversized));
         mutations += 1;

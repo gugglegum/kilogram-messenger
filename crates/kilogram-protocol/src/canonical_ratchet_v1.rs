@@ -663,17 +663,17 @@ fn decode_prekey_pool_content_from(
     Ok(content)
 }
 
-struct RatchetDecoder<'a> {
+pub(crate) struct RatchetDecoder<'a> {
     bytes: &'a [u8],
     cursor: usize,
 }
 
 impl<'a> RatchetDecoder<'a> {
-    fn new(bytes: &'a [u8]) -> Self {
+    pub(crate) fn new(bytes: &'a [u8]) -> Self {
         Self { bytes, cursor: 0 }
     }
 
-    fn finish(self) -> Result<(), CanonicalRatchetError> {
+    pub(crate) fn finish(self) -> Result<(), CanonicalRatchetError> {
         if self.cursor == self.bytes.len() {
             Ok(())
         } else {
@@ -681,7 +681,7 @@ impl<'a> RatchetDecoder<'a> {
         }
     }
 
-    fn expect_array(
+    pub(crate) fn expect_array(
         &mut self,
         object: &'static str,
         expected: usize,
@@ -697,7 +697,10 @@ impl<'a> RatchetDecoder<'a> {
         Ok(())
     }
 
-    fn expect_version(&mut self, field: &'static str) -> Result<(), CanonicalRatchetError> {
+    pub(crate) fn expect_version(
+        &mut self,
+        field: &'static str,
+    ) -> Result<(), CanonicalRatchetError> {
         let actual = self.unsigned(field)?;
         if actual != CANONICAL_PROFILE_VERSION {
             return Err(CanonicalRatchetError::WrongUnsignedValue {
@@ -714,11 +717,11 @@ impl<'a> RatchetDecoder<'a> {
         usize::try_from(length).map_err(|_| CanonicalWireError::LengthOverflow.into())
     }
 
-    fn unsigned(&mut self, field: &'static str) -> Result<u64, CanonicalRatchetError> {
+    pub(crate) fn unsigned(&mut self, field: &'static str) -> Result<u64, CanonicalRatchetError> {
         self.head(0, field)
     }
 
-    fn fixed_bytes<const N: usize>(
+    pub(crate) fn fixed_bytes<const N: usize>(
         &mut self,
         field: &'static str,
     ) -> Result<[u8; N], CanonicalRatchetError> {
@@ -735,7 +738,7 @@ impl<'a> RatchetDecoder<'a> {
             .map_err(|_| CanonicalWireError::UnexpectedEnd.into())
     }
 
-    fn bytes(
+    pub(crate) fn bytes(
         &mut self,
         field: &'static str,
         maximum: usize,

@@ -34,7 +34,7 @@ indefinite arrays, reserved CBOR additional information and oversized declared
 byte strings.
 
 The run is deterministic, offline and bounded to 3,000 mutations; after the
-M1.1.10 authorized-event addition the current corpus contains 2,610. Every mutation must
+M1.1.11 prekey-selection addition the current corpus contains 2,871. Every mutation must
 fail closed and the valid source
 fixture must still verify cryptographically. The limit keeps ordinary Windows
 CI responsive and makes the test repeatable.
