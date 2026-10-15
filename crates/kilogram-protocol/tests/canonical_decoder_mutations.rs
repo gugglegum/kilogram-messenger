@@ -1,4 +1,12 @@
 use kilogram_crypto::DeviceEncryptionIdentity;
+use kilogram_protocol::canonical_account_recovery_v1::{
+    CanonicalAccountRecoveryApprovalRequestV1, account_recovery_request_id_v1,
+    decode_and_verify_account_recovery_approval_request_v1,
+    decode_and_verify_signed_account_recovery_approval_v1,
+    decode_and_verify_signed_account_recovery_package_v1,
+    decode_and_verify_signed_account_recovery_witness_v1,
+    verify_account_recovery_approval_for_request_v1,
+};
 use kilogram_protocol::canonical_account_v1::{
     decode_and_verify_signed_account_device_list_v1,
     decode_and_verify_signed_conversation_membership_v1,
@@ -86,8 +94,8 @@ use kilogram_protocol::canonical_ticket_publication_v1::{
 use serde_json::Value;
 
 const MINIMUM_MUTATIONS: usize = 500;
-const EXPECTED_MUTATIONS: usize = 13_715;
-const MAXIMUM_MUTATIONS: usize = 15_000;
+const EXPECTED_MUTATIONS: usize = 14_759;
+const MAXIMUM_MUTATIONS: usize = 20_000;
 const MAXIMUM_GRID_POSITIONS: usize = 128;
 
 #[derive(Clone)]
@@ -157,6 +165,15 @@ enum Decoder {
     HistoryRewrapTransfer {
         request: Box<CanonicalSignedHistoryRewrapRequestV1>,
         session_binding: [u8; 32],
+    },
+    AccountRecoveryPackage,
+    AccountRecoveryWitness,
+    AccountRecoveryRequest {
+        expected_id: [u8; 32],
+    },
+    AccountRecoveryApproval {
+        request: Box<CanonicalAccountRecoveryApprovalRequestV1>,
+        now_unix_seconds: u64,
     },
     MailboxGossipFrame {
         expected_id: [u8; 32],
@@ -313,6 +330,29 @@ fn accepts(decoder: &Decoder, bytes: &[u8]) -> bool {
                 verify_history_rewrap_transfer_for_request_v1(&transfer, request, *session_binding)
             })
             .is_ok(),
+        Decoder::AccountRecoveryPackage => {
+            decode_and_verify_signed_account_recovery_package_v1(bytes).is_ok()
+        }
+        Decoder::AccountRecoveryWitness => {
+            decode_and_verify_signed_account_recovery_witness_v1(bytes).is_ok()
+        }
+        Decoder::AccountRecoveryRequest { expected_id } => {
+            decode_and_verify_account_recovery_approval_request_v1(bytes)
+                .and_then(|request| account_recovery_request_id_v1(&request))
+                .is_ok_and(|request_id| request_id == *expected_id)
+        }
+        Decoder::AccountRecoveryApproval {
+            request,
+            now_unix_seconds,
+        } => decode_and_verify_signed_account_recovery_approval_v1(bytes)
+            .and_then(|approval| {
+                verify_account_recovery_approval_for_request_v1(
+                    &approval,
+                    request,
+                    *now_unix_seconds,
+                )
+            })
+            .is_ok(),
         Decoder::MailboxGossipFrame {
             expected_id,
             now_unix_seconds,
@@ -435,6 +475,10 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-HISTORY-REWRAP-VECTORS.json"
     )))?;
+    let account_recovery: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../CANONICAL-ACCOUNT-RECOVERY-VECTORS.json"
+    )))?;
     let gossip_frame_id: [u8; 32] = pointer_hex(&mailbox_gossip, "/expected/request/frame_id_hex")?
         .try_into()
         .map_err(|_| "gossip frame ID length changed")?;
@@ -490,6 +534,13 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         pointer_hex(&history_rewrap, "/input/session_binding_hex")?
             .try_into()
             .map_err(|_| "history-rewrap session binding length changed")?;
+    let account_recovery_request = decode_and_verify_account_recovery_approval_request_v1(
+        &pointer_hex(&account_recovery, "/expected/request/cbor_hex")?,
+    )?;
+    let account_recovery_request_id = account_recovery_request_id_v1(&account_recovery_request)?;
+    let account_recovery_valid_at = account_recovery["input"]["approved_at_unix_seconds"]
+        .as_u64()
+        .ok_or("Account recovery approval time is missing")?;
     let fixtures = [
         (
             "certificate",
@@ -849,6 +900,31 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
             },
             pointer_hex(&history_rewrap, "/expected/transfer/signed_cbor_hex")?,
         ),
+        (
+            "signed-account-recovery-package",
+            Decoder::AccountRecoveryPackage,
+            pointer_hex(&account_recovery, "/expected/package/signed_cbor_hex")?,
+        ),
+        (
+            "signed-account-recovery-witness",
+            Decoder::AccountRecoveryWitness,
+            pointer_hex(&account_recovery, "/expected/witness/signed_cbor_hex")?,
+        ),
+        (
+            "account-recovery-approval-request",
+            Decoder::AccountRecoveryRequest {
+                expected_id: account_recovery_request_id,
+            },
+            pointer_hex(&account_recovery, "/expected/request/cbor_hex")?,
+        ),
+        (
+            "signed-account-recovery-approval",
+            Decoder::AccountRecoveryApproval {
+                request: Box::new(account_recovery_request.clone()),
+                now_unix_seconds: account_recovery_valid_at,
+            },
+            pointer_hex(&account_recovery, "/expected/approval/signed_cbor_hex")?,
+        ),
     ];
     let mut mutations = 0usize;
     for (name, decoder, valid) in fixtures {
@@ -979,6 +1055,15 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         Decoder::HistoryRewrapTransfer {
             request: Box::new(history_rewrap_request),
             session_binding: history_rewrap_session_binding,
+        },
+        Decoder::AccountRecoveryPackage,
+        Decoder::AccountRecoveryWitness,
+        Decoder::AccountRecoveryRequest {
+            expected_id: [0; 32],
+        },
+        Decoder::AccountRecoveryApproval {
+            request: Box::new(account_recovery_request),
+            now_unix_seconds: account_recovery_valid_at,
         },
         Decoder::MailboxGossipFrame {
             expected_id: [0; 32],

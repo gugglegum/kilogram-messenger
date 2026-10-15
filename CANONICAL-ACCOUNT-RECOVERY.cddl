@@ -1,0 +1,78 @@
+; Kilogram deterministic-CBOR Account Root recovery candidate, M1.1.26.
+; Only unsigned integers, definite byte strings and definite arrays are used.
+
+profile-version = 1
+account-id = bytes .size 32
+device-id = bytes .size 32
+digest = bytes .size 32
+challenge = bytes .size 32
+signature = bytes .size 64
+
+signed-authority-snapshot-cbor = bytes
+signed-account-device-list-cbor = bytes
+signed-conversation-membership-cbor = bytes
+signed-account-recovery-package-cbor = bytes
+signed-account-recovery-witness-cbor = bytes
+
+account-recovery-package-content-v1 = [
+  profile-version,
+  account-id,
+  signed-authority-snapshot-cbor,
+  signed-account-device-list-cbor,
+  [*16384 signed-conversation-membership-cbor]
+]
+
+signed-account-recovery-package-v1 = [
+  profile-version,
+  account-recovery-package-content-v1,
+  signature
+]
+
+account-recovery-witness-content-v1 = [
+  profile-version,
+  account-id,
+  authority-revision: uint,
+  package-id: digest
+]
+
+signed-account-recovery-witness-v1 = [
+  profile-version,
+  account-recovery-witness-content-v1,
+  signature
+]
+
+account-recovery-approval-request-v1 = [
+  profile-version,
+  signed-account-recovery-package-cbor,
+  signed-account-recovery-witness-cbor,
+  challenge,
+  issued-at-unix-seconds: uint,
+  expires-at-unix-seconds: uint
+]
+
+account-recovery-approval-content-v1 = [
+  profile-version,
+  account-id,
+  request-id: digest,
+  package-id: digest,
+  authority-revision: uint,
+  state-vector-digest: digest,
+  recovery-roster-digest: digest,
+  challenge,
+  request-expires-at-unix-seconds: uint,
+  approver-device-id: device-id,
+  previous-approval-head-digest: digest,
+  approved-at-unix-seconds: uint
+]
+
+signed-account-recovery-approval-v1 = [
+  profile-version,
+  account-recovery-approval-content-v1,
+  signature
+]
+
+kilogram-account-recovery-v1 =
+  signed-account-recovery-package-v1 /
+  signed-account-recovery-witness-v1 /
+  account-recovery-approval-request-v1 /
+  signed-account-recovery-approval-v1

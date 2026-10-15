@@ -378,12 +378,14 @@ sessions, distribution, removal и key epochs и не решены этим пр
 - Независимый second-builder, подписанный release provenance, обновления клиента
   и дальнейшая защита supply chain поверх M0.9.50 same-host gate.
 - Миграция криптоалгоритмов и wire protocol без разделения сети.
-- После M1.1.25 canonical coverage остаются три not-started surfaces:
-  `account-recovery`, `runtime-ipc` и `transport-sync`. Следующий приоритет —
-  portable account-recovery artifacts; history-rewrap уже complete, но его
-  activation всё ещё требует explicit identifier/ALPN, downgrade tests,
-  sustained fuzzing, independent HPKE conformance и fresh multi-device field
-  evidence.
+- После M1.1.26 canonical coverage содержит один partial surface
+  `account-recovery`, два not-started — `runtime-ipc` и `transport-sync` — и
+  два not-targeted. Package, witness и current-roster quorum уже portable;
+  следующий приоритет — policy transition с exact old/new package pairs,
+  monotonic authority change и joint majority обоих rosters. До него current
+  quorum нельзя использовать для самовольной смены recovery roster. Общая
+  activation всё ещё требует explicit identifiers, downgrade tests, sustained
+  fuzzing, independent HPKE conformance и fresh multi-device field evidence.
 
 ## Инварианты при выборе ответов
 

@@ -3301,3 +3301,26 @@ Hosted follow-up:
 - Canonical coverage is 15 complete, 0 partial, 3 not-started and 2
   not-targeted. Readiness inventory contains 58 gates. Active Postcard v1 and
   the accepted M1.0.0 tag remain unchanged.
+
+## M1.1.26 canonical Account recovery quorum snapshot (2026-10-15)
+
+- New inactive Rust module:
+  `crates/kilogram-protocol/src/canonical_account_recovery_v1.rs`.
+- CDDL, JSON schema, generated vectors and a dependency-free Node reference
+  cover Root-signed package, independent witness, bounded unsigned request and
+  Device-signed current-roster approval/quorum.
+- Exact authority/device-list equivalence, ordered membership heads, freshness,
+  state-vector and roster digests, certified approvers and strict majority are
+  validated fail closed. Cross-roster policy transition is deliberately not
+  claimed by this stage.
+- The first mutation run correctly exposed that an unsigned request can be
+  changed into another valid request. The harness now binds this fixture to its
+  expected domain-separated request ID; the rerun passed 14759/14759 in 598.78
+  seconds with `CargoJobs=2` and BelowNormal priority.
+- Protocol library regression passed 76/76 outside the restricted filesystem
+  sandbox. An earlier identical sandbox run produced 11 Windows error-5 temp
+  directory failures; those were environmental and all passed unchanged with
+  normal filesystem access.
+- Accepted-tag readiness passed 59/59, rustfmt and locked/offline strict Clippy.
+  No network action, stable-path test EXE, release build, archive or tag was
+  created. Coverage is 15 complete, 1 partial, 2 not-started and 2 not-targeted.

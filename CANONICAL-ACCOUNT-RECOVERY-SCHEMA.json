@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.26",
+  "status": "candidate-not-active",
+  "changes_active_wire": false,
+  "profile": "kilogram-deterministic-cbor-v1",
+  "cddl": {
+    "standard": "RFC 8610",
+    "path": "CANONICAL-ACCOUNT-RECOVERY.cddl",
+    "root_rule": "kilogram-account-recovery-v1"
+  },
+  "activation": {
+    "current_runtime_encoding": "postcard-v1",
+    "current_runtime_changed": false,
+    "required_before_activation": [
+      "canonical-recovery-policy-transition",
+      "complete-targeted-surface-coverage",
+      "explicit-version-migration",
+      "dual-reader-and-downgrade-tests",
+      "sustained-coverage-guided-fuzzing",
+      "fresh-field-and-hosted-evidence"
+    ]
+  },
+  "limits": {
+    "maximum_memberships": 16384,
+    "maximum_nested_cbor_bytes": 524288,
+    "maximum_package_bytes": 33554432,
+    "maximum_witness_bytes": 4096,
+    "maximum_request_bytes": 33624064,
+    "maximum_approval_bytes": 16384,
+    "maximum_approvals": 32,
+    "maximum_validity_seconds": 1800,
+    "clock_skew_seconds": 120
+  },
+  "external_objects": [
+    { "id": "signed-account-authority-snapshot-v1", "schema": "CANONICAL-AUTHORITY-SCHEMA.json" },
+    { "id": "signed-account-device-list-v1", "schema": "CANONICAL-ACCOUNT-SCHEMA.json" },
+    { "id": "signed-conversation-membership-v1", "schema": "CANONICAL-ACCOUNT-SCHEMA.json" }
+  ],
+  "domains": [
+    { "id": "package-signature-v1", "value": "kilogram:account-root-recovery-package-signature:cbor-v1\\0", "signer": "account-root-ed25519" },
+    { "id": "package-id-v1", "value": "kilogram:account-root-recovery-package-id:cbor-v1\\0", "primitive": "blake3" },
+    { "id": "state-vector-v1", "value": "kilogram:account-root-recovery-state-vector:cbor-v1\\0", "primitive": "blake3" },
+    { "id": "recovery-roster-v1", "value": "kilogram:account-root-recovery-voter-roster:cbor-v1\\0", "primitive": "blake3" },
+    { "id": "witness-signature-v1", "value": "kilogram:account-root-recovery-witness-signature:cbor-v1\\0", "signer": "account-root-ed25519" },
+    { "id": "request-id-v1", "value": "kilogram:account-root-recovery-approval-request-id:cbor-v1\\0", "primitive": "blake3" },
+    { "id": "approval-signature-v1", "value": "kilogram:account-root-recovery-approval-signature:cbor-v1\\0", "signer": "current-device-ed25519" },
+    { "id": "approval-id-v1", "value": "kilogram:account-root-recovery-approval-id:cbor-v1\\0", "primitive": "blake3" }
+  ],
+  "objects": [
+    { "id": "signed-account-recovery-package-v1", "kind": "root-signed-envelope", "maximum_bytes": 33554432 },
+    { "id": "signed-account-recovery-witness-v1", "kind": "root-signed-envelope", "maximum_bytes": 4096 },
+    { "id": "account-recovery-approval-request-v1", "kind": "fresh-challenge-request", "maximum_bytes": 33624064 },
+    { "id": "signed-account-recovery-approval-v1", "kind": "device-signed-envelope", "maximum_bytes": 16384 }
+  ],
+  "semantic_rules": [
+    "package Account ID, authority snapshot, exact device-list authority snapshot and every membership owner agree",
+    "package memberships are strictly ordered by Conversation ID",
+    "witness pins exact package ID and authority revision",
+    "request lifetime is positive and at most 1800 seconds",
+    "approval binds exact request, package, state vector, recovery roster, challenge and expiry",
+    "approver is an active device in the exact package roster",
+    "approvals are strictly ordered and distinct by Device ID",
+    "strict majority is floor(roster-count/2)+1",
+    "zero approvals prove artifact integrity only; one sub-majority approval proves one current device; a strict majority proves current-device majority freshness",
+    "rollback of both package and independently retained witness remains undetectable without a current-device majority or external monotonic witness"
+  ]
+}

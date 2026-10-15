@@ -5586,3 +5586,30 @@ correlation visible, Windows-only field evidence, independent security audit
   3 not-started / 2 not-targeted, readiness 58 gates;
 - active Postcard v1 request/bundle/transfer, runtime, network, release,
   archives и tags не менялись; next canonical priority — `account-recovery`.
+
+### M1.1.26 — canonical Account recovery package/witness/quorum: принято локально
+
+- Root-signed deterministic-CBOR recovery package связывает exact Account ID,
+  authority snapshot, device list с byte-equivalent embedded authority и
+  strictly ordered Root-signed conversation membership heads;
+- independent Root-signed witness коммитит exact package ID и authority
+  revision, поэтому пакет нельзя подменить при сохранении self-consistency;
+- bounded unsigned approval request exact-встраивает verified package/witness,
+  fresh nonzero challenge и окно не более 1800 секунд; его portable identity —
+  domain-separated BLAKE3 полного canonical request;
+- Device-signed approval связывает request/package/state-vector/current roster,
+  challenge, expiry, approver и previous approval head. Contextual verifier
+  требует exact current certified Device, request и time window;
+- quorum report принимает только strictly ordered unique approvals и требует
+  strict majority current roster; смена roster и joint old/new majority
+  намеренно остаются отдельным M1.1.27 policy-transition boundary;
+- independent Node reference заново строит authority/device-list/membership,
+  deterministic CBOR, Ed25519 и BLAKE3 package/witness/request/approval IDs;
+- protocol regression прошёл 76/76; mutation corpus 14759/14759 за 598.78 s,
+  debug/offline, `CargoJobs=2`, BelowNormal. Unsigned request mutation fixture
+  exact-связана с expected request ID вместо некорректного требования, чтобы
+  никакой другой валидный request вообще не декодировался;
+- accepted-tag readiness прошёл 59/59, format и workspace locked/offline strict
+  Clippy; network/test EXE/release/archive/tag не запускались и не создавались;
+- coverage: 15 complete / 1 partial / 2 not-started / 2 not-targeted. Active
+  Postcard Account recovery/runtime и immutable `M1.0.0` не менялись.
