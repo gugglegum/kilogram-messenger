@@ -32,6 +32,8 @@ function Assert-Manifest {
         'signed-prekey-pool-v1|CANONICAL-RATCHET-VECTORS.json|/expected/prekey_pool/signed_cbor_hex|decode_and_verify_signed_prekey_pool_v1',
         'account-prekey-directory-v1|CANONICAL-RATCHET-VECTORS.json|/expected/account_prekey_directory_cbor_hex|decode_and_verify_account_prekey_directory_v1',
         'signed-history-recovery-checkpoint-v1|CANONICAL-RECOVERY-VECTORS.json|/expected/successor_checkpoint/signed_cbor_hex|decode_and_verify_signed_history_recovery_checkpoint_v1'
+        'signed-account-device-list-v1|CANONICAL-ACCOUNT-VECTORS.json|/expected/account_device_list/signed_cbor_hex|decode_and_verify_signed_account_device_list_v1'
+        'signed-conversation-membership-v1|CANONICAL-ACCOUNT-VECTORS.json|/expected/conversation_membership/signed_cbor_hex|decode_and_verify_signed_conversation_membership_v1'
     )
     $actualFixtures = @($Manifest.fixtures | ForEach-Object { "$($_.id)|$($_.vector_file)|$($_.json_pointer)|$($_.decoder)" })
     if (($actualFixtures -join "`n") -cne ($expectedFixtures -join "`n")) { throw 'decoder fixture inventory changed' }
@@ -121,7 +123,7 @@ if ($SelfTest) {
 Write-Output 'canonical_conformance_boundary=verified'
 Write-Output 'independent_blake3=verified'
 Write-Output 'official_blake3_vectors=6/6'
-Write-Output 'bounded_decoder_mutations=1305'
+Write-Output 'bounded_decoder_mutations=1827'
 Write-Output 'coverage_guided_fuzzing=pending-before-activation'
 Write-Output 'active_runtime_changed=false'
 Write-Output 'network_executed=false'

@@ -1,0 +1,43 @@
+; Kilogram deterministic-CBOR account collaboration candidate, M1.1.8.
+; Only unsigned integers, definite byte strings and definite arrays are used.
+
+profile-version = 1
+account-id = bytes .size 32
+device-id = bytes .size 32
+conversation-id = bytes .size 32
+signature = bytes .size 64
+
+; Nested byte strings must contain exact canonical encodings from
+; CANONICAL-AUTHORITY.cddl. They are bounded to 524288 bytes.
+signed-authority-snapshot-cbor = bytes
+signed-device-certificate-cbor = bytes
+
+account-device-list-content-v1 = [
+  profile-version,
+  signed-authority-snapshot-cbor,
+  [1*32 signed-device-certificate-cbor]
+]
+
+signed-account-device-list-v1 = [
+  profile-version,
+  account-device-list-content-v1,
+  signature
+]
+
+conversation-membership-content-v1 = [
+  profile-version,
+  conversation-id,
+  revision: uint,
+  owner-account-id: account-id,
+  [1*4096 account-id]
+]
+
+signed-conversation-membership-v1 = [
+  profile-version,
+  conversation-membership-content-v1,
+  signature
+]
+
+kilogram-account-collaboration-v1 =
+  signed-account-device-list-v1 /
+  signed-conversation-membership-v1

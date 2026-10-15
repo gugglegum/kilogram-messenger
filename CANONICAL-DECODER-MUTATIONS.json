@@ -36,6 +36,18 @@
       "vector_file": "CANONICAL-RECOVERY-VECTORS.json",
       "json_pointer": "/expected/successor_checkpoint/signed_cbor_hex",
       "decoder": "decode_and_verify_signed_history_recovery_checkpoint_v1"
+    },
+    {
+      "id": "signed-account-device-list-v1",
+      "vector_file": "CANONICAL-ACCOUNT-VECTORS.json",
+      "json_pointer": "/expected/account_device_list/signed_cbor_hex",
+      "decoder": "decode_and_verify_signed_account_device_list_v1"
+    },
+    {
+      "id": "signed-conversation-membership-v1",
+      "vector_file": "CANONICAL-ACCOUNT-VECTORS.json",
+      "json_pointer": "/expected/conversation_membership/signed_cbor_hex",
+      "decoder": "decode_and_verify_signed_conversation_membership_v1"
     }
   ],
   "mutation_classes": [

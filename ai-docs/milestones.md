@@ -5202,3 +5202,17 @@ correlation visible, Windows-only field evidence, independent security audit
 - activation остаётся false, пока все targeted surfaces не complete и не
   выполнены отдельные требования migration contract;
 - readiness inventory расширен с 40 до 41 gates; runtime/network не менялись.
+
+### M1.1.8 — canonical account collaboration artifacts: принято локально
+
+- canonical device list Root-подписывает exact authority snapshot и 1..32
+  strictly ordered certificates, вложенные как bounded canonical-CBOR bytes;
+- каждый certificate обязан принадлежать Account, предшествовать snapshot,
+  иметь обе messaging capabilities и не быть revoked;
+- canonical membership Root-подписывает conversation/revision/owner и полный
+  ordered unique список до 4096 Account IDs, обязательно включая owner;
+- Rust strict codecs и independent Node/Ed25519 reference воспроизводят exact
+  bytes/signatures; два новых decoder расширили corpus с 1305 до 1827 cases;
+- `account-authority` остаётся partial только из-за device-link authorization;
+  active Postcard/runtime не менялись;
+- readiness inventory расширен с 41 до 42 gates; network/release/tag не нужны.

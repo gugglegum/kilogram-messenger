@@ -1,3 +1,7 @@
+use kilogram_protocol::canonical_account_v1::{
+    decode_and_verify_signed_account_device_list_v1,
+    decode_and_verify_signed_conversation_membership_v1,
+};
 use kilogram_protocol::canonical_authority_v1::{
     decode_and_verify_signed_device_certificate_v1,
     decode_and_verify_signed_device_session_authorization_v1,
@@ -19,6 +23,8 @@ enum Decoder {
     Pool,
     Directory,
     Recovery,
+    DeviceList,
+    Membership,
 }
 
 fn accepts(decoder: Decoder, bytes: &[u8]) -> bool {
@@ -28,6 +34,8 @@ fn accepts(decoder: Decoder, bytes: &[u8]) -> bool {
         Decoder::Pool => decode_and_verify_signed_prekey_pool_v1(bytes).is_ok(),
         Decoder::Directory => decode_and_verify_account_prekey_directory_v1(bytes).is_ok(),
         Decoder::Recovery => decode_and_verify_signed_history_recovery_checkpoint_v1(bytes).is_ok(),
+        Decoder::DeviceList => decode_and_verify_signed_account_device_list_v1(bytes).is_ok(),
+        Decoder::Membership => decode_and_verify_signed_conversation_membership_v1(bytes).is_ok(),
     }
 }
 
@@ -73,6 +81,10 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-RECOVERY-VECTORS.json"
     )))?;
+    let account: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../CANONICAL-ACCOUNT-VECTORS.json"
+    )))?;
     let fixtures = [
         (
             "certificate",
@@ -101,6 +113,19 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
             "recovery",
             Decoder::Recovery,
             pointer_hex(&recovery, "/expected/successor_checkpoint/signed_cbor_hex")?,
+        ),
+        (
+            "device-list",
+            Decoder::DeviceList,
+            pointer_hex(&account, "/expected/account_device_list/signed_cbor_hex")?,
+        ),
+        (
+            "membership",
+            Decoder::Membership,
+            pointer_hex(
+                &account,
+                "/expected/conversation_membership/signed_cbor_hex",
+            )?,
         ),
     ];
     let mut mutations = 0usize;
@@ -175,6 +200,8 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         Decoder::Pool,
         Decoder::Directory,
         Decoder::Recovery,
+        Decoder::DeviceList,
+        Decoder::Membership,
     ] {
         assert!(!accepts(decoder, &oversized));
         mutations += 1;

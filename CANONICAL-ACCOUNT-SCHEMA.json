@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.8",
+  "status": "candidate-not-active",
+  "changes_active_wire": false,
+  "profile": "kilogram-deterministic-cbor-v1",
+  "cddl": {
+    "standard": "RFC 8610",
+    "path": "CANONICAL-ACCOUNT.cddl",
+    "root_rule": "kilogram-account-collaboration-v1"
+  },
+  "activation": {
+    "current_runtime_encoding": "postcard",
+    "current_runtime_changed": false,
+    "required_before_activation": [
+      "complete-targeted-surface-coverage",
+      "new-explicit-protocol-version-or-parallel-identifier",
+      "dual-reader-and-downgrade-tests",
+      "sustained-coverage-guided-fuzzing",
+      "fresh-field-and-hosted-evidence"
+    ]
+  },
+  "limits": {
+    "maximum_devices": 32,
+    "maximum_members": 4096,
+    "maximum_nested_cbor_bytes": 524288
+  },
+  "external_objects": [
+    {
+      "id": "signed-account-authority-snapshot-v1",
+      "schema": "CANONICAL-AUTHORITY-SCHEMA.json"
+    },
+    {
+      "id": "signed-device-certificate-v1",
+      "schema": "CANONICAL-AUTHORITY-SCHEMA.json"
+    }
+  ],
+  "domains": [
+    {
+      "id": "account-device-list-signature-v1",
+      "value": "kilogram:account-device-list-signature:cbor-v1\\0",
+      "signer": "account-root-ed25519"
+    },
+    {
+      "id": "conversation-membership-signature-v1",
+      "value": "kilogram:conversation-membership-signature:cbor-v1\\0",
+      "signer": "owner-account-root-ed25519"
+    }
+  ],
+  "rust_bindings": [
+    {
+      "path": "crates/kilogram-protocol/src/canonical_account_v1.rs",
+      "symbol": "CANONICAL_ACCOUNT_DEVICE_LIST_SIGNATURE_DOMAIN",
+      "rust_type": "bytes",
+      "value": "kilogram:account-device-list-signature:cbor-v1\\0"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_account_v1.rs",
+      "symbol": "CANONICAL_CONVERSATION_MEMBERSHIP_SIGNATURE_DOMAIN",
+      "rust_type": "bytes",
+      "value": "kilogram:conversation-membership-signature:cbor-v1\\0"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_account_v1.rs",
+      "symbol": "MAX_CANONICAL_ACCOUNT_DEVICES",
+      "rust_type": "usize",
+      "value": 32
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_account_v1.rs",
+      "symbol": "MAX_CANONICAL_CONVERSATION_MEMBERS",
+      "rust_type": "usize",
+      "value": 4096
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_account_v1.rs",
+      "symbol": "MAX_CANONICAL_NESTED_ACCOUNT_BYTES",
+      "rust_type": "usize",
+      "value": 524288
+    }
+  ],
+  "objects": [
+    {
+      "id": "account-device-list-content-v1",
+      "kind": "signed-content",
+      "array_length": 3,
+      "fields": [
+        "schema_version:1",
+        "authority_snapshot:canonical-cbor-byte-string",
+        "devices:ordered-array-of-canonical-cbor-byte-strings"
+      ]
+    },
+    {
+      "id": "signed-account-device-list-v1",
+      "kind": "signed-envelope",
+      "array_length": 3,
+      "signature_domain": "account-device-list-signature-v1"
+    },
+    {
+      "id": "conversation-membership-content-v1",
+      "kind": "signed-content",
+      "array_length": 5,
+      "fields": [
+        "schema_version:1",
+        "conversation_id:bstr32",
+        "revision:uint-positive",
+        "owner_account_id:bstr32",
+        "members:ordered-array-of-bstr32"
+      ]
+    },
+    {
+      "id": "signed-conversation-membership-v1",
+      "kind": "signed-envelope",
+      "array_length": 3,
+      "signature_domain": "conversation-membership-signature-v1"
+    }
+  ],
+  "semantic_rules": [
+    "device list is non-empty and strictly ordered by Device ID",
+    "every device certificate is Root-valid for the exact authority snapshot account and revision",
+    "revoked devices are rejected",
+    "every listed device has the complete messaging capability set",
+    "membership revision is positive and members are strictly ordered by Account ID",
+    "conversation owner is included in members"
+  ]
+}

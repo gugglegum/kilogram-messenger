@@ -23,9 +23,9 @@
     {
       "id": "account-authority",
       "coverage": "partial",
-      "artifacts": ["CANONICAL-AUTHORITY.cddl", "CANONICAL-AUTHORITY-SCHEMA.json", "CANONICAL-AUTHORITY-VECTORS.json"],
-      "covered": ["device-certificate", "device-revocation", "authority-snapshot"],
-      "remaining": ["account-device-list", "conversation-membership", "device-link-authorization"]
+      "artifacts": ["CANONICAL-AUTHORITY.cddl", "CANONICAL-AUTHORITY-SCHEMA.json", "CANONICAL-AUTHORITY-VECTORS.json", "CANONICAL-ACCOUNT.cddl", "CANONICAL-ACCOUNT-SCHEMA.json", "CANONICAL-ACCOUNT-VECTORS.json"],
+      "covered": ["device-certificate", "device-revocation", "authority-snapshot", "account-device-list", "conversation-membership"],
+      "remaining": ["device-link-authorization"]
     },
     {
       "id": "account-recovery",
