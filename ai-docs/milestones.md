@@ -5460,3 +5460,29 @@ correlation visible, Windows-only field evidence, independent security audit
 - active Postcard artifact, lowercase-hex HTTP headers, legacy authorization
   domain, network/release/archive/tag не менялись; next dependency —
   `publication-conflict`, после него `endpoint-announcement`.
+
+### M1.1.21 — canonical publication-conflict evidence: принято локально
+
+- deterministic-CBOR family покрывает publisher-Device signed publication,
+  local-Device signed observation и detector-Device signed conflict proof;
+- publication и observation имеют независимые exact hash chains: generation
+  one без predecessor, successor сохраняет identities, exact predecessor ID и
+  monotonic time/high-water semantics;
+- conflict proof принимает только две валидные observations одной Account,
+  channel, publisher identity и generation с различающимися publication ID
+  или ticket digest;
+- observations в proof строго упорядочены по canonical ID, поэтому proof и
+  length-delimited evidence IDs не зависят от порядка доставки;
+- exact UTF-8 ticket bytes bounded 8 MiB и связаны сохранённым active
+  ticket-digest domain; outer publication bounded 16 MiB;
+- independent Node Ed25519/BLAKE3 reference и Rust golden/negative tests
+  воспроизводят две conflicting publications, две observations и proof;
+- три strict fixtures расширяют deterministic mutation corpus до 10583/12000;
+  `publication-conflict` становится partial (12 complete / 1 partial /
+  5 not-started), readiness расширен с 54 до 55 gates;
+- verification: protocol unit tests 66/66, mutation corpus 10583/10583,
+  independent Node reference/self-tests, rustfmt, workspace-wide offline strict
+  Clippy и accepted-tag readiness 55/55 green;
+- Device resolution request, Root resolution, response и portable claim
+  намеренно остаются remaining для M1.1.22; active Postcard/base64url URI,
+  runtime/network/release/archive/tag не менялись.

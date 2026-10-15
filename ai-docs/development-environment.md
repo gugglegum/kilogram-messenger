@@ -3200,3 +3200,17 @@ Hosted follow-up:
   network action, release build, archive or Git tag.
 - Runtime remains Postcard. The CDDL/CBOR objects and domains are inactive
   conformance material and do not require the laptop or a field run.
+
+## M1.1.21 canonical publication-conflict evidence snapshot (2026-10-15)
+
+- `kilogram-protocol` library regression passed `66/66`; publication,
+  observation and conflict-proof golden/negative tests opened no sockets.
+- Independent Node reference reproduced exact deterministic CBOR, Ed25519
+  public keys/signatures and BLAKE3 publication/observation/proof/evidence IDs;
+  its mutation self-test rejected ticket and detector substitutions.
+- Strict decoder mutation regression passed `10583/10583` in the unoptimized
+  profile with `CargoJobs=2` and BelowNormal priority.
+- Complete accepted-tag readiness passed `55/55`, immutable `M1.0.0`, rustfmt
+  and workspace-wide locked/offline strict Clippy.
+- Active Postcard/base64url publication-conflict runtime remains unchanged;
+  coverage is intentionally partial until M1.1.22 resolution objects land.

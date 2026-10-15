@@ -17,7 +17,7 @@ function Assert-Rejected {
 
 function Assert-Manifest {
     param([object]$Coverage, [object]$Source)
-    if ([UInt64]$Coverage.schema_version -ne 1 -or [string]$Coverage.milestone -cne 'M1.1.20' -or
+    if ([UInt64]$Coverage.schema_version -ne 1 -or [string]$Coverage.milestone -cne 'M1.1.21' -or
         [string]$Coverage.status -cne 'coverage-audit-not-active' -or [bool]$Coverage.changes_active_wire -or
         [string]$Coverage.source_manifest -cne 'PROTOCOL-COMPATIBILITY.json' -or
         [string]$Coverage.target_profile -cne 'kilogram-deterministic-cbor-v1') {
@@ -29,8 +29,8 @@ function Assert-Manifest {
         throw 'canonical coverage does not exactly cover source registry'
     }
     if ($sourceIds.Count -ne 20 -or [int]$Coverage.summary.source_surfaces -ne 20 -or
-        [int]$Coverage.summary.complete -ne 12 -or [int]$Coverage.summary.partial -ne 0 -or
-        [int]$Coverage.summary.not_started -ne 6 -or [int]$Coverage.summary.not_targeted -ne 2 -or
+        [int]$Coverage.summary.complete -ne 12 -or [int]$Coverage.summary.partial -ne 1 -or
+        [int]$Coverage.summary.not_started -ne 5 -or [int]$Coverage.summary.not_targeted -ne 2 -or
         [bool]$Coverage.summary.activation_ready) { throw 'canonical coverage summary changed' }
 
     $counts = @{}
@@ -64,13 +64,17 @@ function Assert-Manifest {
             }
         }
     }
-    if ($counts['complete'] -ne 12 -or $counts['partial'] -ne 0 -or
-        $counts['not-started'] -ne 6 -or $counts['not-targeted'] -ne 2) {
+    if ($counts['complete'] -ne 12 -or $counts['partial'] -ne 1 -or
+        $counts['not-started'] -ne 5 -or $counts['not-targeted'] -ne 2) {
         throw 'computed canonical coverage counts changed'
     }
     $completeIds = @($Coverage.surfaces | Where-Object { $_.coverage -ceq 'complete' } | ForEach-Object { $_.id })
     if (($completeIds -join ',') -cne 'account-authority,authorized-event,blind-mailbox-capability,blind-mailbox-provider-gossip,blind-mailbox-transport,device-session-authorization,history-recovery,mailbox-provisioning,ratchet-public-artifacts,runtime-mailbox-envelope,sync,ticket-publication-capability') {
         throw 'unexpected complete canonical surface'
+    }
+    $partialIds = @($Coverage.surfaces | Where-Object { $_.coverage -ceq 'partial' } | ForEach-Object { $_.id })
+    if (($partialIds -join ',') -cne 'publication-conflict') {
+        throw 'unexpected partial canonical surface'
     }
 }
 
@@ -110,8 +114,8 @@ if ($SelfTest) {
 Write-Output 'canonical_coverage_boundary=verified'
 Write-Output 'source_surfaces=20'
 Write-Output 'complete_surfaces=12'
-Write-Output 'partial_surfaces=0'
-Write-Output 'not_started_surfaces=6'
+Write-Output 'partial_surfaces=1'
+Write-Output 'not_started_surfaces=5'
 Write-Output 'not_targeted_surfaces=2'
 Write-Output 'activation_ready=false'
 Write-Output 'active_wire_changed=false'

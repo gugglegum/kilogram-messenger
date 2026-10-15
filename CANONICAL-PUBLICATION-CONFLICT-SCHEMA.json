@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.21",
+  "status": "candidate-not-active",
+  "changes_active_wire": false,
+  "profile": "kilogram-deterministic-cbor-v1",
+  "cddl": {
+    "standard": "RFC 8610",
+    "path": "CANONICAL-PUBLICATION-CONFLICT.cddl",
+    "root_rule": "kilogram-publication-conflict-evidence-v1"
+  },
+  "source_compatibility": {
+    "current_runtime_encoding": "postcard-base64url-uri",
+    "current_runtime_changed": false,
+    "candidate_protocol_identifier": "unassigned"
+  },
+  "coverage": {
+    "surface": "publication-conflict",
+    "status": "partial",
+    "covered": [
+      "signed-ticket-publication-chain",
+      "signed-device-observation-chain",
+      "signed-canonical-conflict-proof",
+      "publication-observation-proof-and-evidence-identifiers"
+    ],
+    "remaining": [
+      "device-signed-resolution-request",
+      "root-signed-resolution",
+      "resolution-response",
+      "portable-verification-claim"
+    ]
+  },
+  "limits": {
+    "minimum_publication_ttl_seconds": 30,
+    "maximum_publication_ttl_seconds": 3600,
+    "maximum_ticket_bytes": 8388608,
+    "maximum_publication_bytes": 16777216,
+    "maximum_observation_bytes": 4096,
+    "maximum_conflict_proof_bytes": 131072,
+    "maximum_clock_skew_seconds": 300
+  },
+  "domains": [
+    { "id": "publication-signature", "value": "kilogram:ticket-publication:cbor-v1\\0", "operation": "ed25519-signature" },
+    { "id": "publication-id", "value": "kilogram:ticket-publication-id:cbor-v1\\0", "operation": "blake3-domain-prefixed-digest" },
+    { "id": "ticket-digest", "value": "kilogram:ticket-publication-ticket-digest:v1\\0", "operation": "blake3-domain-prefixed-digest", "migration": "preserved-active-digest" },
+    { "id": "observation-signature", "value": "kilogram:ticket-publication-observation:cbor-v1\\0", "operation": "ed25519-signature" },
+    { "id": "observation-id", "value": "kilogram:ticket-publication-observation-id:cbor-v1\\0", "operation": "blake3-domain-prefixed-digest" },
+    { "id": "proof-signature", "value": "kilogram:ticket-publication-conflict-proof:cbor-v1\\0", "operation": "ed25519-signature" },
+    { "id": "proof-id", "value": "kilogram:ticket-publication-conflict-proof-id:cbor-v1\\0", "operation": "blake3-domain-prefixed-digest" },
+    { "id": "evidence-id", "value": "kilogram:ticket-publication-conflict-evidence-id:cbor-v1\\0", "operation": "blake3-domain-prefixed-length-delimited-digest" }
+  ],
+  "semantic_rules": [
+    "publication generation one has no predecessor and successors name the exact previous signed publication ID",
+    "publication identity and time never move backwards along a verified chain",
+    "ticket is non-empty valid UTF-8 and its preserved-domain digest matches exact bytes",
+    "observation generation one has no predecessor and successors advance both chain and publication high-water marks",
+    "conflict observations name one local account, channel, publisher and publication generation but disagree on publication ID or ticket digest",
+    "proof observations are strictly ordered by canonical observation ID and the proof summary matches them"
+  ]
+}

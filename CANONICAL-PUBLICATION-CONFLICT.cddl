@@ -1,0 +1,70 @@
+; Kilogram deterministic-CBOR publication evidence candidate, M1.1.21.
+
+profile-version = 1
+id-32 = bytes .size 32
+signature = bytes .size 64
+canonical-object = bytes
+optional-id-32 = [] / [id-32]
+
+ticket-publication-content-v1 = [
+  profile-version,
+  channel-id: id-32,
+  publisher-account-id: id-32,
+  publisher-device-id: id-32,
+  recipient-account-id: id-32,
+  generation: uint,
+  previous-publication-id: optional-id-32,
+  published-at-unix-seconds: uint,
+  expires-at-unix-seconds: uint,
+  ticket-digest: id-32,
+  ticket-utf8-bytes: bytes
+]
+
+signed-ticket-publication-v1 = [
+  profile-version,
+  content-cbor: canonical-object,
+  signature: signature
+]
+
+ticket-publication-observation-content-v1 = [
+  profile-version,
+  local-account-id: id-32,
+  local-device-id: id-32,
+  channel-id: id-32,
+  publisher-account-id: id-32,
+  publisher-device-id: id-32,
+  observation-generation: uint,
+  previous-observation-id: optional-id-32,
+  publication-generation: uint,
+  publication-id: id-32,
+  ticket-digest: id-32,
+  observed-at-unix-seconds: uint
+]
+
+signed-ticket-publication-observation-v1 = [
+  profile-version,
+  content-cbor: canonical-object,
+  signature: signature
+]
+
+publication-conflict-proof-content-v1 = [
+  profile-version,
+  local-account-id: id-32,
+  detector-device-id: id-32,
+  detected-at-unix-seconds: uint,
+  channel-id: id-32,
+  publication-generation: uint,
+  first-observation-cbor: canonical-object,
+  conflicting-observation-cbor: canonical-object
+]
+
+signed-publication-conflict-proof-v1 = [
+  profile-version,
+  content-cbor: canonical-object,
+  signature: signature
+]
+
+kilogram-publication-conflict-evidence-v1 =
+  signed-ticket-publication-v1 /
+  signed-ticket-publication-observation-v1 /
+  signed-publication-conflict-proof-v1

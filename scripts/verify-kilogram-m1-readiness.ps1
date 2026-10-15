@@ -25,6 +25,7 @@ $expectedGates = [ordered]@{
     'verify-kilogram-canonical-device-link-boundary.ps1' = 'canonical_device_link_boundary=verified'
     'verify-kilogram-canonical-event-boundary.ps1' = 'canonical_event_boundary=verified'
     'verify-kilogram-canonical-prekey-selection-boundary.ps1' = 'canonical_prekey_selection_boundary=verified'
+    'verify-kilogram-canonical-publication-conflict-boundary.ps1' = 'canonical_publication_conflict_boundary=verified'
     'verify-kilogram-canonical-conformance-boundary.ps1' = 'canonical_conformance_boundary=verified'
     'verify-kilogram-canonical-coverage-boundary.ps1' = 'canonical_coverage_boundary=verified'
     'verify-kilogram-canonical-migration-boundary.ps1' = 'canonical_migration_boundary=verified'
@@ -117,8 +118,8 @@ function Assert-Rejected {
     throw "$Label was unexpectedly accepted"
 }
 
-if ($expectedGates.Count -ne 54) {
-    throw "M1 readiness boundary inventory must contain exactly 54 gates, got $($expectedGates.Count)"
+if ($expectedGates.Count -ne 55) {
+    throw "M1 readiness boundary inventory must contain exactly 55 gates, got $($expectedGates.Count)"
 }
 
 if ($SelfTest) {

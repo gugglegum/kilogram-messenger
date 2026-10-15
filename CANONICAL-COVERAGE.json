@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.20",
+  "milestone": "M1.1.21",
   "status": "coverage-audit-not-active",
   "changes_active_wire": false,
   "source_manifest": "PROTOCOL-COMPATIBILITY.json",
@@ -14,8 +14,8 @@
   "summary": {
     "source_surfaces": 20,
     "complete": 12,
-    "partial": 0,
-    "not_started": 6,
+    "partial": 1,
+    "not_started": 5,
     "not_targeted": 2,
     "activation_ready": false
   },
@@ -115,10 +115,10 @@
     },
     {
       "id": "publication-conflict",
-      "coverage": "not-started",
-      "artifacts": [],
-      "covered": [],
-      "remaining": ["entire-surface"]
+      "coverage": "partial",
+      "artifacts": ["CANONICAL-PUBLICATION-CONFLICT.cddl", "CANONICAL-PUBLICATION-CONFLICT-SCHEMA.json", "CANONICAL-PUBLICATION-CONFLICT-VECTORS.json", "crates/kilogram-protocol/src/canonical_publication_conflict_v1.rs", "scripts/verify-kilogram-canonical-publication-conflict-reference.mjs"],
+      "covered": ["signed-ticket-publication-chain", "signed-device-observation-chain", "signed-canonical-conflict-proof", "publication-observation-proof-and-evidence-identifiers"],
+      "remaining": ["device-signed-resolution-request", "root-signed-resolution", "resolution-response", "portable-verification-claim"]
     },
     {
       "id": "ratchet-public-artifacts",
