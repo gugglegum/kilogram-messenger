@@ -181,10 +181,10 @@ if ($mailboxCoverage.Count -ne 1 -or [string]$mailboxCoverage[0].coverage -cne '
     @($mailboxCoverage[0].remaining).Count -ne 0 -or $separateCoverage.Count -ne 4 -or
     @($separateCoverage | Where-Object {
         ($_.id -in @('mailbox-provisioning', 'blind-mailbox-provider-gossip',
-                'blind-mailbox-transport') -and
+                'blind-mailbox-transport', 'runtime-mailbox-envelope') -and
             $_.coverage -cne 'complete') -or
         ($_.id -notin @('mailbox-provisioning', 'blind-mailbox-provider-gossip',
-                'blind-mailbox-transport') -and
+                'blind-mailbox-transport', 'runtime-mailbox-envelope') -and
             $_.coverage -cne 'not-started')
     }).Count -ne 0) {
     throw 'mailbox capability and separate-surface coverage changed'

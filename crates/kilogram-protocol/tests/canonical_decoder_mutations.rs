@@ -35,6 +35,13 @@ use kilogram_protocol::canonical_recovery_exchange_v1::{
     decode_and_verify_signed_history_recovery_response_v1,
 };
 use kilogram_protocol::canonical_recovery_v1::decode_and_verify_signed_history_recovery_checkpoint_v1;
+use kilogram_protocol::canonical_runtime_mailbox_v1::{
+    CanonicalSignedRuntimeMailboxDispatchV1, decode_and_verify_runtime_mailbox_payload_v1,
+    decode_and_verify_signed_runtime_local_mailbox_binding_v1,
+    decode_and_verify_signed_runtime_mailbox_dispatch_v1,
+    decode_and_verify_signed_runtime_peer_mailbox_binding_v1,
+    verify_runtime_mailbox_payload_for_dispatch_v1,
+};
 use kilogram_protocol::canonical_sync_session_v1::decode_and_verify_signed_sync_session_checkpoint_v1;
 use kilogram_protocol::canonical_sync_v1::{
     decode_and_verify_signed_sync_diff_v1, decode_and_verify_sync_client_frame_v1,
@@ -43,11 +50,11 @@ use kilogram_protocol::canonical_sync_v1::{
 use serde_json::Value;
 
 const MINIMUM_MUTATIONS: usize = 500;
-const EXPECTED_MUTATIONS: usize = 8_350;
-const MAXIMUM_MUTATIONS: usize = 9_000;
+const EXPECTED_MUTATIONS: usize = 9_394;
+const MAXIMUM_MUTATIONS: usize = 10_000;
 const MAXIMUM_GRID_POSITIONS: usize = 128;
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 enum Decoder {
     Certificate,
     Session,
@@ -78,13 +85,19 @@ enum Decoder {
     MailboxPeerOffer,
     MailboxCapabilityUpdate,
     MailboxCapabilityAcknowledgement,
+    RuntimeLocalMailboxBinding,
+    RuntimePeerMailboxBinding,
+    RuntimeMailboxPayload {
+        dispatch: Box<CanonicalSignedRuntimeMailboxDispatchV1>,
+    },
+    RuntimeMailboxDispatch,
     MailboxGossipFrame {
         expected_id: [u8; 32],
         now_unix_seconds: u64,
     },
 }
 
-fn accepts(decoder: Decoder, bytes: &[u8]) -> bool {
+fn accepts(decoder: &Decoder, bytes: &[u8]) -> bool {
     match decoder {
         Decoder::Certificate => decode_and_verify_signed_device_certificate_v1(bytes).is_ok(),
         Decoder::Session => decode_and_verify_signed_device_session_authorization_v1(bytes).is_ok(),
@@ -134,13 +147,29 @@ fn accepts(decoder: Decoder, bytes: &[u8]) -> bool {
         Decoder::MailboxCapabilityAcknowledgement => {
             decode_and_verify_signed_mailbox_capability_acknowledgement_v1(bytes).is_ok()
         }
+        Decoder::RuntimeLocalMailboxBinding => {
+            decode_and_verify_signed_runtime_local_mailbox_binding_v1(bytes).is_ok()
+        }
+        Decoder::RuntimePeerMailboxBinding => {
+            decode_and_verify_signed_runtime_peer_mailbox_binding_v1(bytes).is_ok()
+        }
+        Decoder::RuntimeMailboxPayload { dispatch } => {
+            decode_and_verify_runtime_mailbox_payload_v1(bytes)
+                .and_then(|payload| {
+                    verify_runtime_mailbox_payload_for_dispatch_v1(&payload, dispatch)
+                })
+                .is_ok()
+        }
+        Decoder::RuntimeMailboxDispatch => {
+            decode_and_verify_signed_runtime_mailbox_dispatch_v1(bytes).is_ok()
+        }
         Decoder::MailboxGossipFrame {
             expected_id,
             now_unix_seconds,
         } => decode_and_verify_mailbox_provider_gossip_frame_for_id_v1(
             bytes,
-            now_unix_seconds,
-            expected_id,
+            *now_unix_seconds,
+            *expected_id,
         )
         .is_ok(),
     }
@@ -232,9 +261,19 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-MAILBOX-PROVISIONING-VECTORS.json"
     )))?;
+    let runtime_mailbox: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../CANONICAL-RUNTIME-MAILBOX-VECTORS.json"
+    )))?;
     let gossip_frame_id: [u8; 32] = pointer_hex(&mailbox_gossip, "/expected/request/frame_id_hex")?
         .try_into()
         .map_err(|_| "gossip frame ID length changed")?;
+    let runtime_dispatch_bytes = pointer_hex(
+        &runtime_mailbox,
+        "/expected/signed_dispatch/signed_cbor_hex",
+    )?;
+    let runtime_dispatch =
+        decode_and_verify_signed_runtime_mailbox_dispatch_v1(&runtime_dispatch_bytes)?;
     let fixtures = [
         (
             "certificate",
@@ -431,11 +470,42 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
                 "/expected/activation_acknowledgement/signed_cbor_hex",
             )?,
         ),
+        (
+            "signed-runtime-local-mailbox-binding",
+            Decoder::RuntimeLocalMailboxBinding,
+            pointer_hex(
+                &runtime_mailbox,
+                "/expected/signed_local_binding/signed_cbor_hex",
+            )?,
+        ),
+        (
+            "signed-runtime-peer-mailbox-binding",
+            Decoder::RuntimePeerMailboxBinding,
+            pointer_hex(
+                &runtime_mailbox,
+                "/expected/signed_peer_binding/signed_cbor_hex",
+            )?,
+        ),
+        (
+            "runtime-mailbox-payload",
+            Decoder::RuntimeMailboxPayload {
+                dispatch: Box::new(runtime_dispatch.clone()),
+            },
+            pointer_hex(&runtime_mailbox, "/expected/payload/cbor_hex")?,
+        ),
+        (
+            "signed-runtime-mailbox-dispatch",
+            Decoder::RuntimeMailboxDispatch,
+            pointer_hex(
+                &runtime_mailbox,
+                "/expected/signed_dispatch/signed_cbor_hex",
+            )?,
+        ),
     ];
     let mut mutations = 0usize;
     for (name, decoder, valid) in fixtures {
         assert!(
-            accepts(decoder, &valid),
+            accepts(&decoder, &valid),
             "golden {name} fixture was rejected"
         );
         assert!(
@@ -445,7 +515,7 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
 
         for length in bounded_positions(valid.len()) {
             assert!(
-                !accepts(decoder, &valid[..length]),
+                !accepts(&decoder, &valid[..length]),
                 "{name} accepted truncation at {length}"
             );
             mutations += 1;
@@ -454,7 +524,7 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
             let mut changed = valid.clone();
             changed[index] ^= 1;
             assert!(
-                !accepts(decoder, &changed),
+                !accepts(&decoder, &changed),
                 "{name} accepted bit flip at {index}"
             );
             mutations += 1;
@@ -462,7 +532,7 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         let mut trailing = valid.clone();
         trailing.push(0);
         assert!(
-            !accepts(decoder, &trailing),
+            !accepts(&decoder, &trailing),
             "{name} accepted trailing data"
         );
         mutations += 1;
@@ -472,7 +542,7 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         non_minimal.extend_from_slice(&[0x18, 0x01]);
         non_minimal.extend_from_slice(&valid[2..]);
         assert!(
-            !accepts(decoder, &non_minimal),
+            !accepts(&decoder, &non_minimal),
             "{name} accepted non-minimal version"
         );
         mutations += 1;
@@ -481,7 +551,7 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         indefinite[0] = 0x9f;
         indefinite.push(0xff);
         assert!(
-            !accepts(decoder, &indefinite),
+            !accepts(&decoder, &indefinite),
             "{name} accepted indefinite array"
         );
         mutations += 1;
@@ -489,7 +559,7 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         let mut reserved = valid.clone();
         reserved[0] = 0x9c;
         assert!(
-            !accepts(decoder, &reserved),
+            !accepts(&decoder, &reserved),
             "{name} accepted reserved CBOR head"
         );
         mutations += 1;
@@ -528,14 +598,22 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         Decoder::MailboxPeerOffer,
         Decoder::MailboxCapabilityUpdate,
         Decoder::MailboxCapabilityAcknowledgement,
+        Decoder::RuntimeLocalMailboxBinding,
+        Decoder::RuntimePeerMailboxBinding,
+        Decoder::RuntimeMailboxDispatch,
         Decoder::MailboxGossipFrame {
             expected_id: [0; 32],
             now_unix_seconds: 1_800_000_030,
         },
     ] {
-        assert!(!accepts(decoder, &oversized));
+        assert!(!accepts(&decoder, &oversized));
         mutations += 1;
     }
+    let runtime_payload_decoder = Decoder::RuntimeMailboxPayload {
+        dispatch: Box::new(runtime_dispatch),
+    };
+    assert!(!accepts(&runtime_payload_decoder, &oversized));
+    mutations += 1;
     assert!(
         mutations >= MINIMUM_MUTATIONS,
         "mutation corpus became too small: {mutations}"

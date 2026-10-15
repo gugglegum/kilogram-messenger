@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.18",
+  "milestone": "M1.1.19",
   "status": "coverage-audit-not-active",
   "changes_active_wire": false,
   "source_manifest": "PROTOCOL-COMPATIBILITY.json",
@@ -13,9 +13,9 @@
   },
   "summary": {
     "source_surfaces": 20,
-    "complete": 10,
+    "complete": 11,
     "partial": 0,
-    "not_started": 8,
+    "not_started": 7,
     "not_targeted": 2,
     "activation_ready": false
   },
@@ -136,10 +136,10 @@
     },
     {
       "id": "runtime-mailbox-envelope",
-      "coverage": "not-started",
-      "artifacts": [],
-      "covered": [],
-      "remaining": ["entire-surface"]
+      "coverage": "complete",
+      "artifacts": ["CANONICAL-RUNTIME-MAILBOX.cddl", "CANONICAL-RUNTIME-MAILBOX-SCHEMA.json", "CANONICAL-RUNTIME-MAILBOX-VECTORS.json", "crates/kilogram-protocol/src/canonical_runtime_mailbox_v1.rs", "scripts/verify-kilogram-canonical-runtime-mailbox-reference.mjs"],
+      "covered": ["signed-owner-local-runtime-binding", "signed-imported-peer-runtime-binding", "authorized-event-mailbox-payload", "signed-durable-dispatch", "deterministic-item-and-event-item-ids", "replication-binding", "payload-to-dispatch-verification"],
+      "remaining": []
     },
     {
       "id": "sync",
@@ -164,8 +164,8 @@
     }
   ],
   "next_priority": [
-    "runtime-mailbox-envelope",
     "endpoint-announcement",
-    "history-rewrap"
+    "history-rewrap",
+    "account-recovery"
   ]
 }

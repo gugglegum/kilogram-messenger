@@ -24,6 +24,7 @@ pub mod canonical_prekey_selection_v1;
 pub mod canonical_ratchet_v1;
 pub mod canonical_recovery_exchange_v1;
 pub mod canonical_recovery_v1;
+pub mod canonical_runtime_mailbox_v1;
 pub mod canonical_sync_session_v1;
 pub mod canonical_sync_v1;
 pub mod canonical_v1;

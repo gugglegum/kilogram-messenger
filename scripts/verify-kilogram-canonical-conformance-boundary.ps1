@@ -20,6 +20,7 @@ $mailboxReferencePath = Join-Path $PSScriptRoot 'verify-kilogram-canonical-mailb
 $mailboxTransportReferencePath = Join-Path $PSScriptRoot 'verify-kilogram-canonical-mailbox-transport-reference.mjs'
 $mailboxGossipReferencePath = Join-Path $PSScriptRoot 'verify-kilogram-canonical-mailbox-gossip-reference.mjs'
 $mailboxProvisioningReferencePath = Join-Path $PSScriptRoot 'verify-kilogram-canonical-mailbox-provisioning-reference.mjs'
+$runtimeMailboxReferencePath = Join-Path $PSScriptRoot 'verify-kilogram-canonical-runtime-mailbox-reference.mjs'
 $rfcPath = Join-Path $workspace 'docs\RFC-0131-m115-independent-digests-and-decoder-mutations.md'
 
 function Assert-Rejected {
@@ -34,8 +35,8 @@ function Assert-Manifest {
         throw 'decoder mutation manifest header changed'
     }
     if ([int]$Manifest.seed -ne 1262836037 -or [int]$Manifest.minimum_mutations -ne 500 -or
-        [int]$Manifest.expected_mutations -ne 8350 -or
-        [int]$Manifest.maximum_mutations -ne 9000) { throw 'decoder mutation bounds changed' }
+        [int]$Manifest.expected_mutations -ne 9394 -or
+        [int]$Manifest.maximum_mutations -ne 10000) { throw 'decoder mutation bounds changed' }
     $expectedFixtures = @(
         'signed-device-certificate-v1|CANONICAL-AUTHORITY-VECTORS.json|/expected/certificate/signed_cbor_hex|decode_and_verify_signed_device_certificate_v1',
         'signed-device-session-authorization-v1|CANONICAL-AUTHORITY-VECTORS.json|/expected/session_authorization/signed_cbor_hex|decode_and_verify_signed_device_session_authorization_v1',
@@ -69,9 +70,18 @@ function Assert-Manifest {
         'signed-mailbox-peer-offer-v1|CANONICAL-MAILBOX-PROVISIONING-VECTORS.json|/expected/signed_exact_peer_offer/signed_cbor_hex|decode_and_verify_signed_mailbox_peer_offer_v1'
         'signed-mailbox-capability-update-v1|CANONICAL-MAILBOX-PROVISIONING-VECTORS.json|/expected/activation_update/signed_cbor_hex|decode_and_verify_signed_mailbox_capability_update_v1'
         'signed-mailbox-capability-acknowledgement-v1|CANONICAL-MAILBOX-PROVISIONING-VECTORS.json|/expected/activation_acknowledgement/signed_cbor_hex|decode_and_verify_signed_mailbox_capability_acknowledgement_v1'
+        'signed-runtime-local-mailbox-binding-v1|CANONICAL-RUNTIME-MAILBOX-VECTORS.json|/expected/signed_local_binding/signed_cbor_hex|decode_and_verify_signed_runtime_local_mailbox_binding_v1'
+        'signed-runtime-peer-mailbox-binding-v1|CANONICAL-RUNTIME-MAILBOX-VECTORS.json|/expected/signed_peer_binding/signed_cbor_hex|decode_and_verify_signed_runtime_peer_mailbox_binding_v1'
+        'runtime-mailbox-payload-v1|CANONICAL-RUNTIME-MAILBOX-VECTORS.json|/expected/payload/cbor_hex|decode_and_verify_runtime_mailbox_payload_v1'
+        'signed-runtime-mailbox-dispatch-v1|CANONICAL-RUNTIME-MAILBOX-VECTORS.json|/expected/signed_dispatch/signed_cbor_hex|decode_and_verify_signed_runtime_mailbox_dispatch_v1'
     )
     $actualFixtures = @($Manifest.fixtures | ForEach-Object { "$($_.id)|$($_.vector_file)|$($_.json_pointer)|$($_.decoder)" })
     if (($actualFixtures -join "`n") -cne ($expectedFixtures -join "`n")) { throw 'decoder fixture inventory changed' }
+    $runtimePayloadFixture = @($Manifest.fixtures | Where-Object { $_.id -ceq 'runtime-mailbox-payload-v1' })
+    if ($runtimePayloadFixture.Count -ne 1 -or
+        [string]$runtimePayloadFixture[0].context_verifier -cne 'verify_runtime_mailbox_payload_for_dispatch_v1') {
+        throw 'runtime mailbox payload mutation context changed'
+    }
     $expectedClasses = @(
         'bounded-strict-prefix-truncation-grid', 'bounded-low-bit-flip-grid', 'trailing-byte',
         'non-minimal-top-level-version', 'indefinite-top-level-array',
@@ -82,12 +92,12 @@ function Assert-Manifest {
     }
     if ([int]$Manifest.resource_bounds.maximum_fixture_bytes -ne 524288 -or
         [int]$Manifest.resource_bounds.maximum_positions_per_grid_per_fixture -ne 128 -or
-        [int]$Manifest.resource_bounds.maximum_total_mutations -ne 9000 -or
+        [int]$Manifest.resource_bounds.maximum_total_mutations -ne 10000 -or
         [bool]$Manifest.resource_bounds.network_allowed -or
         [bool]$Manifest.resource_bounds.randomness_allowed) { throw 'decoder resource bounds changed' }
 }
 
-foreach ($path in @($manifestPath, $officialPath, $referencePath, $verifierPath, $testPath, $ratchetReferencePath, $recoveryReferencePath, $eventReferencePath, $prekeySelectionReferencePath, $syncReferencePath, $syncSessionReferencePath, $recoveryExchangeReferencePath, $mailboxReferencePath, $mailboxTransportReferencePath, $mailboxGossipReferencePath, $mailboxProvisioningReferencePath, $rfcPath)) {
+foreach ($path in @($manifestPath, $officialPath, $referencePath, $verifierPath, $testPath, $ratchetReferencePath, $recoveryReferencePath, $eventReferencePath, $prekeySelectionReferencePath, $syncReferencePath, $syncSessionReferencePath, $recoveryExchangeReferencePath, $mailboxReferencePath, $mailboxTransportReferencePath, $mailboxGossipReferencePath, $mailboxProvisioningReferencePath, $runtimeMailboxReferencePath, $rfcPath)) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "canonical conformance file is missing: $path" }
 }
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
@@ -105,6 +115,7 @@ $mailboxReference = Get-Content -LiteralPath $mailboxReferencePath -Raw
 $mailboxTransportReference = Get-Content -LiteralPath $mailboxTransportReferencePath -Raw
 $mailboxGossipReference = Get-Content -LiteralPath $mailboxGossipReferencePath -Raw
 $mailboxProvisioningReference = Get-Content -LiteralPath $mailboxProvisioningReferencePath -Raw
+$runtimeMailboxReference = Get-Content -LiteralPath $runtimeMailboxReferencePath -Raw
 $rfc = Get-Content -LiteralPath $rfcPath -Raw
 Assert-Manifest $manifest
 
@@ -137,11 +148,12 @@ foreach ($fixture in $manifest.fixtures) {
     }
 }
 foreach ($required in @('MAXIMUM_GRID_POSITIONS: usize = 128', 'MINIMUM_MUTATIONS: usize = 500',
-    'EXPECTED_MUTATIONS: usize = 8_350', 'MAXIMUM_MUTATIONS: usize = 9_000',
-    'bounded_positions(', 'canonical_decoder_mutations=')) {
+    'EXPECTED_MUTATIONS: usize = 9_394', 'MAXIMUM_MUTATIONS: usize = 10_000',
+    'bounded_positions(', 'verify_runtime_mailbox_payload_for_dispatch_v1',
+    'canonical_decoder_mutations=')) {
     if ($test.IndexOf($required, [StringComparison]::Ordinal) -lt 0) { throw "mutation test is missing '$required'" }
 }
-foreach ($referenceSource in @($ratchetReference, $recoveryReference, $eventReference, $prekeySelectionReference, $syncSessionReference, $recoveryExchangeReference, $mailboxReference, $mailboxTransportReference, $mailboxGossipReference, $mailboxProvisioningReference)) {
+foreach ($referenceSource in @($ratchetReference, $recoveryReference, $eventReference, $prekeySelectionReference, $syncSessionReference, $recoveryExchangeReference, $mailboxReference, $mailboxTransportReference, $mailboxGossipReference, $mailboxProvisioningReference, $runtimeMailboxReference)) {
     if ($referenceSource.IndexOf('independent_blake3=verified', [StringComparison]::Ordinal) -lt 0 -or
         $referenceSource.IndexOf('blake3Hash(', [StringComparison]::Ordinal) -lt 0) {
         throw 'canonical reference does not independently verify BLAKE3'
@@ -167,7 +179,7 @@ if ($SelfTest) {
 Write-Output 'canonical_conformance_boundary=verified'
 Write-Output 'independent_blake3=verified'
 Write-Output 'official_blake3_vectors=6/6'
-Write-Output 'bounded_decoder_mutations=8350'
+Write-Output 'bounded_decoder_mutations=9394'
 Write-Output 'coverage_guided_fuzzing=pending-before-activation'
 Write-Output 'active_runtime_changed=false'
 Write-Output 'network_executed=false'

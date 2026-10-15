@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.19",
+  "status": "candidate-not-active",
+  "changes_active_wire": false,
+  "profile": "kilogram-deterministic-cbor-v1",
+  "cddl": {
+    "standard": "RFC 8610",
+    "path": "CANONICAL-RUNTIME-MAILBOX.cddl",
+    "root_rule": "kilogram-runtime-mailbox-v1"
+  },
+  "activation": {
+    "current_runtime_encoding": "postcard-v1",
+    "current_runtime_changed": false,
+    "candidate_protocol_identifier": "unassigned",
+    "required_before_activation": [
+      "complete-targeted-surface-coverage",
+      "new-explicit-protocol-version-or-parallel-identifier",
+      "dual-reader-and-downgrade-tests",
+      "sustained-coverage-guided-fuzzing",
+      "fresh-field-and-hosted-evidence"
+    ]
+  },
+  "limits": {
+    "maximum_binding_record_bytes": 65536,
+    "maximum_payload_bytes": 1048576,
+    "maximum_dispatch_bytes": 8192,
+    "minimum_dispatch_ttl_seconds": 60,
+    "maximum_dispatch_ttl_seconds": 604800
+  },
+  "domains": [
+    {
+      "id": "runtime-local-mailbox-binding-signature-v1",
+      "value": "kilogram:runtime-local-mailbox-binding:cbor-v1\\0",
+      "operation": "ed25519-signature",
+      "signer": "local-device-ed25519"
+    },
+    {
+      "id": "runtime-peer-mailbox-binding-signature-v1",
+      "value": "kilogram:runtime-peer-mailbox-binding:cbor-v1\\0",
+      "operation": "ed25519-signature",
+      "signer": "local-device-ed25519"
+    },
+    {
+      "id": "runtime-mailbox-dispatch-signature-v1",
+      "value": "kilogram:runtime-mailbox-dispatch:cbor-v1\\0",
+      "operation": "ed25519-signature",
+      "signer": "source-device-ed25519"
+    },
+    {
+      "id": "runtime-mailbox-item-id-v1",
+      "value": "kilogram:runtime-mailbox-item-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "runtime-mailbox-event-item-id-v1",
+      "value": "kilogram:runtime-mailbox-event-item-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "runtime-mailbox-dispatch-replication-binding-v1",
+      "value": "kilogram:runtime-mailbox-dispatch-replication-binding:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    }
+  ],
+  "external_objects": [
+    { "id": "signed-local-mailbox-binding-v1", "schema": "CANONICAL-MAILBOX-PROVISIONING-SCHEMA.json" },
+    { "id": "signed-mailbox-peer-offer-v1", "schema": "CANONICAL-MAILBOX-PROVISIONING-SCHEMA.json" },
+    { "id": "authorized-event-v1", "schema": "CANONICAL-EVENT-SCHEMA.json" }
+  ],
+  "objects": [
+    { "id": "runtime-local-mailbox-binding-content-v1", "kind": "signed-content", "array_length": 10 },
+    { "id": "signed-runtime-local-mailbox-binding-v1", "kind": "signed-envelope", "array_length": 3, "signature_domain": "runtime-local-mailbox-binding-signature-v1" },
+    { "id": "runtime-peer-mailbox-binding-content-v1", "kind": "signed-content", "array_length": 10 },
+    { "id": "signed-runtime-peer-mailbox-binding-v1", "kind": "signed-envelope", "array_length": 3, "signature_domain": "runtime-peer-mailbox-binding-signature-v1" },
+    { "id": "runtime-mailbox-payload-v1", "kind": "event-envelope", "array_length": 8 },
+    { "id": "runtime-mailbox-dispatch-content-v1", "kind": "signed-content", "array_length": 14 },
+    { "id": "signed-runtime-mailbox-dispatch-v1", "kind": "signed-envelope", "array_length": 3, "signature_domain": "runtime-mailbox-dispatch-signature-v1" },
+    { "id": "runtime-mailbox-item-id-v1", "kind": "derived-id", "exact_bytes": 32, "derivation": "blake3(item-id-domain || queue-id || event-id || binding-id)" },
+    { "id": "runtime-mailbox-event-item-id-v1", "kind": "derived-id", "exact_bytes": 32, "derivation": "blake3(event-item-id-domain || event-id || binding-id)" },
+    { "id": "runtime-mailbox-dispatch-replication-binding-v1", "kind": "derived-id", "exact_bytes": 32, "derivation": "blake3(replication-binding-domain || signed-runtime-mailbox-dispatch-v1-cbor)" }
+  ],
+  "semantic_rules": [
+    "local binding metadata exactly matches the nested owner-local provisioning binding",
+    "peer binding metadata reverses owner and peer roles from the nested owner-signed offer and is re-signed by the importing local Device",
+    "payload source Account, Device and conversation exactly match the nested authorized event",
+    "dispatch item ID is deterministic over queue ID, event ID and binding ID",
+    "dispatch validity is bounded and expires strictly after creation",
+    "payload-to-dispatch verification binds both Accounts, both Devices, conversation, event ID and binding ID",
+    "replication binding commits to the complete signed dispatch and not to provider selection or network location"
+  ]
+}

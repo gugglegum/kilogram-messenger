@@ -1,0 +1,85 @@
+; Kilogram deterministic-CBOR runtime mailbox candidate, M1.1.19.
+; Nested provisioning and event objects are exact canonical CBOR byte strings.
+
+profile-version = 1
+id-32 = bytes .size 32
+signature = bytes .size 64
+canonical-object = bytes
+
+runtime-local-mailbox-binding-content-v1 = [
+  profile-version,
+  local-account-id: id-32,
+  local-device-id: id-32,
+  contact-id: id-32,
+  peer-account-id: id-32,
+  peer-device-id: id-32,
+  conversation-id: id-32,
+  binding-id: id-32,
+  created-at-unix-seconds: uint,
+  signed-local-binding-cbor: canonical-object
+]
+
+signed-runtime-local-mailbox-binding-v1 = [
+  profile-version,
+  content-cbor: canonical-object,
+  signature: signature
+]
+
+runtime-peer-mailbox-binding-content-v1 = [
+  profile-version,
+  local-account-id: id-32,
+  local-device-id: id-32,
+  contact-id: id-32,
+  peer-account-id: id-32,
+  peer-device-id: id-32,
+  conversation-id: id-32,
+  binding-id: id-32,
+  imported-at-unix-seconds: uint,
+  signed-peer-offer-cbor: canonical-object
+]
+
+signed-runtime-peer-mailbox-binding-v1 = [
+  profile-version,
+  content-cbor: canonical-object,
+  signature: signature
+]
+
+runtime-mailbox-payload-v1 = [
+  profile-version,
+  binding-id: id-32,
+  source-account-id: id-32,
+  source-device-id: id-32,
+  recipient-account-id: id-32,
+  recipient-device-id: id-32,
+  conversation-id: id-32,
+  authorized-event-cbor: canonical-object
+]
+
+runtime-mailbox-dispatch-content-v1 = [
+  profile-version,
+  local-account-id: id-32,
+  local-device-id: id-32,
+  queue-id: id-32,
+  contact-id: id-32,
+  peer-account-id: id-32,
+  peer-device-id: id-32,
+  conversation-id: id-32,
+  binding-id: id-32,
+  mailbox-id: id-32,
+  item-id: id-32,
+  event-id: id-32,
+  created-at-unix-seconds: uint,
+  expires-at-unix-seconds: uint
+]
+
+signed-runtime-mailbox-dispatch-v1 = [
+  profile-version,
+  content-cbor: canonical-object,
+  signature: signature
+]
+
+kilogram-runtime-mailbox-v1 =
+  signed-runtime-local-mailbox-binding-v1 /
+  signed-runtime-peer-mailbox-binding-v1 /
+  runtime-mailbox-payload-v1 /
+  signed-runtime-mailbox-dispatch-v1

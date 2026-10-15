@@ -5413,3 +5413,27 @@ correlation visible, Windows-only field evidence, independent security audit
   green; active Postcard v1/v2 domains, HPKE runtime, ALPN,
   network/release/archive/tag не менялись; next priority —
   `runtime-mailbox-envelope`.
+
+### M1.1.19 — canonical runtime mailbox envelope: принято локально
+
+- deterministic-CBOR family закрывает signed owner-local binding, signed
+  imported peer binding, authorized-event payload и signed durable dispatch;
+- nested provisioning/event objects проходят strict decode и signature/link
+  verification, а не принимаются как opaque trusted bytes;
+- payload-to-dispatch binding связывает обе Account/Device пары,
+  conversation, Event ID и mailbox binding ID;
+- item ID зависит от queue/event/binding, event item ID — от event/binding,
+  replication binding коммитит полный signed dispatch;
+- dispatch TTL bounded 60..604800 seconds; outer records bounded 64 KiB,
+  1 MiB и 8 KiB соответственно;
+- independent Node Ed25519/BLAKE3 reference совпадает с Rust golden vectors;
+- четыре fixtures расширяют deterministic mutation corpus до 9394/10000;
+  `runtime-mailbox-envelope` становится complete (11 complete / 0 partial);
+- mutation harness проверяет unsigned AEAD payload только вместе с verified
+  signed dispatch: отдельная битовая мутация binding metadata была обнаружена
+  corpus и теперь fail-closed на обязательной cross-object границе;
+- verification: protocol unit tests 62/62, mutation corpus 9394/9394,
+  independent Node reference/self-tests, rustfmt, workspace-wide offline strict
+  Clippy и accepted-tag readiness 53/53 green;
+- active Postcard v1 domains, runtime queue, network/release/archive/tag не
+  менялись; next priority — `endpoint-announcement`.

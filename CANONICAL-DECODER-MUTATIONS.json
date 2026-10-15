@@ -5,8 +5,8 @@
   "active_runtime_changed": false,
   "seed": 1262836037,
   "minimum_mutations": 500,
-  "expected_mutations": 8350,
-  "maximum_mutations": 9000,
+  "expected_mutations": 9394,
+  "maximum_mutations": 10000,
   "fixtures": [
     {
       "id": "signed-device-certificate-v1",
@@ -199,6 +199,31 @@
       "vector_file": "CANONICAL-MAILBOX-PROVISIONING-VECTORS.json",
       "json_pointer": "/expected/activation_acknowledgement/signed_cbor_hex",
       "decoder": "decode_and_verify_signed_mailbox_capability_acknowledgement_v1"
+    },
+    {
+      "id": "signed-runtime-local-mailbox-binding-v1",
+      "vector_file": "CANONICAL-RUNTIME-MAILBOX-VECTORS.json",
+      "json_pointer": "/expected/signed_local_binding/signed_cbor_hex",
+      "decoder": "decode_and_verify_signed_runtime_local_mailbox_binding_v1"
+    },
+    {
+      "id": "signed-runtime-peer-mailbox-binding-v1",
+      "vector_file": "CANONICAL-RUNTIME-MAILBOX-VECTORS.json",
+      "json_pointer": "/expected/signed_peer_binding/signed_cbor_hex",
+      "decoder": "decode_and_verify_signed_runtime_peer_mailbox_binding_v1"
+    },
+    {
+      "id": "runtime-mailbox-payload-v1",
+      "vector_file": "CANONICAL-RUNTIME-MAILBOX-VECTORS.json",
+      "json_pointer": "/expected/payload/cbor_hex",
+      "decoder": "decode_and_verify_runtime_mailbox_payload_v1",
+      "context_verifier": "verify_runtime_mailbox_payload_for_dispatch_v1"
+    },
+    {
+      "id": "signed-runtime-mailbox-dispatch-v1",
+      "vector_file": "CANONICAL-RUNTIME-MAILBOX-VECTORS.json",
+      "json_pointer": "/expected/signed_dispatch/signed_cbor_hex",
+      "decoder": "decode_and_verify_signed_runtime_mailbox_dispatch_v1"
     }
   ],
   "mutation_classes": [
@@ -213,7 +238,7 @@
   "resource_bounds": {
     "maximum_fixture_bytes": 524288,
     "maximum_positions_per_grid_per_fixture": 128,
-    "maximum_total_mutations": 9000,
+    "maximum_total_mutations": 10000,
     "network_allowed": false,
     "randomness_allowed": false
   }
