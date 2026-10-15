@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.30",
+  "milestone": "M1.1.31",
   "status": "candidate-not-active",
   "changes_active_wire": false,
   "profile": "kilogram-deterministic-cbor-v1",
@@ -27,6 +27,7 @@
     "maximum_response_bytes": 65536,
     "maximum_read_response_bytes": 262144,
     "maximum_contact_response_bytes": 131072,
+    "maximum_directory_response_bytes": 131072,
     "maximum_error_bytes": 4096,
     "maximum_descriptor_validity_seconds": 86400,
     "maximum_request_validity_seconds": 30,
@@ -105,6 +106,27 @@
       "id": "contact-id-v1",
       "value": "kilogram:runtime-ipc-contact-id:cbor-v1\\0",
       "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "directory-request-digest-v1",
+      "value": "kilogram:runtime-ipc-directory-request-digest:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "directory-response-signature-v1",
+      "value": "kilogram:runtime-ipc-directory-response-signature:cbor-v1\\0",
+      "operation": "ed25519-signature",
+      "signer": "descriptor-device-ed25519"
+    },
+    {
+      "id": "directory-response-id-v1",
+      "value": "kilogram:runtime-ipc-directory-response-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "runtime-device-list-digest-v1",
+      "value": "kilogram:runtime-ipc-device-list-digest:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
     }
   ],
   "objects": [
@@ -142,6 +164,16 @@
       "id": "signed-runtime-ipc-contact-response-v1",
       "kind": "device-signed-contact-or-directory-result",
       "maximum_bytes": 131072
+    },
+    {
+      "id": "runtime-ipc-directory-request-v1",
+      "kind": "short-lived-exact-current-authority-transition-request",
+      "maximum_bytes": 65536
+    },
+    {
+      "id": "signed-runtime-ipc-directory-response-v1",
+      "kind": "device-signed-authority-transition-result",
+      "maximum_bytes": 131072
     }
   ],
   "covered_commands": [
@@ -151,7 +183,8 @@
     "conversation-list-page",
     "history-page",
     "add-contact",
-    "own-device-directory-status"
+    "own-device-directory-status",
+    "apply-own-device-directory"
   ],
   "covered_results": [
     "pong",
@@ -161,7 +194,8 @@
     "conversation-list-page",
     "history-page",
     "contact-added",
-    "own-device-directory-status"
+    "own-device-directory-status",
+    "own-device-directory-applied"
   ],
   "semantic_rules": [
     "descriptor address is exactly IPv4 127.0.0.1 or IPv6 ::1 and port is nonzero",
@@ -184,10 +218,16 @@
     "a successful contact result repeats the exact peer Account and derives its contact ID from the local Account, peer Account and label-derived Conversation ID",
     "own-device-directory status repeats the exact descriptor Account and Device and bounds the active roster to at most 32 Devices",
     "device-directory receipt identity and generation are coupled while convergence and restart-recovery states are consistent with the applied and launch profile paths",
+    "apply-own-device-directory embeds the exact Root-signed candidate list and anchors the expected current authority revision and domain-separated signed-list digest",
+    "the current and candidate lists name the descriptor Account while the running descriptor Device remains present with a byte-identical certificate",
+    "a candidate is either an exact idempotent replay or a newer Root-signed authority state retaining every previously observed revocation",
+    "live application cannot add or replace a Device certificate; every removed Device must have a permanent Root revocation in the candidate authority snapshot",
+    "the signed mutation result binds the exact previous and resulting revisions and digests, exact removed Device set and resulting directory status",
+    "an idempotent equal-revision result reports no newly retired ratchet or prekey records and no newly published ticket",
+    "future recipient exclusion does not claim remote rewriting or erasure: preexisting ciphertext is immutable and existing history copies remain readable",
     "unknown variants, noncanonical CBOR, trailing data, expired objects and contextual substitutions fail closed"
   ],
   "remaining_runtime_ipc_surface": [
-    "apply-own-device-directory-and-associated-authority-transition",
     "message-queue-and-outbox-status-commands",
     "mailbox-provisioning-and-volunteer-provider-commands",
     "ticket-publication-and-conflict-commands",

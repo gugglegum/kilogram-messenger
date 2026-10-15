@@ -16,7 +16,7 @@ use kilogram_protocol::canonical_account_recovery_v1::{
     verify_account_recovery_approval_for_request_v1,
 };
 use kilogram_protocol::canonical_account_v1::{
-    decode_and_verify_signed_account_device_list_v1,
+    CanonicalSignedAccountDeviceListV1, decode_and_verify_signed_account_device_list_v1,
     decode_and_verify_signed_conversation_membership_v1,
 };
 use kilogram_protocol::canonical_authority_v1::{
@@ -90,6 +90,13 @@ use kilogram_protocol::canonical_runtime_ipc_contact_v1::{
     verify_runtime_ipc_contact_request_for_descriptor_v1,
     verify_runtime_ipc_contact_response_for_request_v1,
 };
+use kilogram_protocol::canonical_runtime_ipc_directory_v1::{
+    CanonicalRuntimeIpcDirectoryRequestV1, CanonicalSignedRuntimeIpcDirectoryResponseV1,
+    decode_and_verify_runtime_ipc_directory_request_v1,
+    decode_and_verify_signed_runtime_ipc_directory_response_v1,
+    verify_runtime_ipc_directory_request_for_descriptor_v1,
+    verify_runtime_ipc_directory_response_for_request_v1,
+};
 use kilogram_protocol::canonical_runtime_ipc_read_v1::{
     CanonicalRuntimeIpcReadRequestV1, CanonicalSignedRuntimeIpcReadResponseV1,
     decode_and_verify_runtime_ipc_read_request_v1,
@@ -124,7 +131,7 @@ use kilogram_protocol::canonical_ticket_publication_v1::{
 use serde_json::Value;
 
 const MINIMUM_MUTATIONS: usize = 500;
-const EXPECTED_MUTATIONS: usize = 18_357;
+const EXPECTED_MUTATIONS: usize = 18_879;
 const MAXIMUM_MUTATIONS: usize = 20_000;
 const MAXIMUM_GRID_POSITIONS: usize = 128;
 
@@ -192,6 +199,17 @@ enum Decoder {
     RuntimeIpcContactResponse {
         request: Box<CanonicalRuntimeIpcContactRequestV1>,
         descriptor: Box<CanonicalSignedRuntimeIpcDescriptorV1>,
+    },
+    RuntimeIpcDirectoryRequest {
+        descriptor: Box<CanonicalSignedRuntimeIpcDescriptorV1>,
+        current_device_list: Box<CanonicalSignedAccountDeviceListV1>,
+        response: Box<CanonicalSignedRuntimeIpcDirectoryResponseV1>,
+        now_unix_seconds: u64,
+    },
+    RuntimeIpcDirectoryResponse {
+        request: Box<CanonicalRuntimeIpcDirectoryRequestV1>,
+        descriptor: Box<CanonicalSignedRuntimeIpcDescriptorV1>,
+        current_device_list: Box<CanonicalSignedAccountDeviceListV1>,
     },
     TicketPublicationCapability,
     TicketPublicationWriteAuthorization,
@@ -379,6 +397,41 @@ fn accepts(decoder: &Decoder, bytes: &[u8]) -> bool {
         } => decode_and_verify_signed_runtime_ipc_contact_response_v1(bytes)
             .and_then(|response| {
                 verify_runtime_ipc_contact_response_for_request_v1(&response, request, descriptor)
+            })
+            .is_ok(),
+        Decoder::RuntimeIpcDirectoryRequest {
+            descriptor,
+            current_device_list,
+            response,
+            now_unix_seconds,
+        } => decode_and_verify_runtime_ipc_directory_request_v1(bytes)
+            .and_then(|request| {
+                verify_runtime_ipc_directory_request_for_descriptor_v1(
+                    &request,
+                    descriptor,
+                    current_device_list,
+                    *now_unix_seconds,
+                )?;
+                verify_runtime_ipc_directory_response_for_request_v1(
+                    response,
+                    &request,
+                    descriptor,
+                    current_device_list,
+                )
+            })
+            .is_ok(),
+        Decoder::RuntimeIpcDirectoryResponse {
+            request,
+            descriptor,
+            current_device_list,
+        } => decode_and_verify_signed_runtime_ipc_directory_response_v1(bytes)
+            .and_then(|response| {
+                verify_runtime_ipc_directory_response_for_request_v1(
+                    &response,
+                    request,
+                    descriptor,
+                    current_device_list,
+                )
             })
             .is_ok(),
         Decoder::TicketPublicationCapability => {
@@ -618,6 +671,10 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-RUNTIME-IPC-CONTACT-VECTORS.json"
     )))?;
+    let runtime_ipc_directory: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../CANONICAL-RUNTIME-IPC-DIRECTORY-VECTORS.json"
+    )))?;
     let ticket_publication: Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-TICKET-PUBLICATION-VECTORS.json"
@@ -715,6 +772,23 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         runtime_ipc_contact["expected"]["context"]["valid_at_unix_seconds"]
             .as_u64()
             .ok_or("runtime IPC contact valid time is missing")?;
+    let runtime_ipc_directory_current_device_list =
+        decode_and_verify_signed_account_device_list_v1(&pointer_hex(
+            &runtime_ipc_directory,
+            "/expected/current_device_list/signed_cbor_hex",
+        )?)?;
+    let runtime_ipc_directory_request = decode_and_verify_runtime_ipc_directory_request_v1(
+        &pointer_hex(&runtime_ipc_directory, "/expected/request/cbor_hex")?,
+    )?;
+    let runtime_ipc_directory_response =
+        decode_and_verify_signed_runtime_ipc_directory_response_v1(&pointer_hex(
+            &runtime_ipc_directory,
+            "/expected/response/signed_cbor_hex",
+        )?)?;
+    let runtime_ipc_directory_valid_at =
+        runtime_ipc_directory["expected"]["context"]["valid_at_unix_seconds"]
+            .as_u64()
+            .ok_or("runtime IPC directory valid time is missing")?;
     let publication_resolution_response_bytes = pointer_hex(
         &publication_conflict,
         "/expected/resolution_response/cbor_hex",
@@ -1114,6 +1188,25 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
             )?,
         ),
         (
+            "runtime-ipc-device-directory-apply-request",
+            Decoder::RuntimeIpcDirectoryRequest {
+                descriptor: Box::new(runtime_ipc_descriptor.clone()),
+                current_device_list: Box::new(runtime_ipc_directory_current_device_list.clone()),
+                response: Box::new(runtime_ipc_directory_response.clone()),
+                now_unix_seconds: runtime_ipc_directory_valid_at,
+            },
+            pointer_hex(&runtime_ipc_directory, "/expected/request/cbor_hex")?,
+        ),
+        (
+            "signed-runtime-ipc-device-directory-apply-response",
+            Decoder::RuntimeIpcDirectoryResponse {
+                request: Box::new(runtime_ipc_directory_request.clone()),
+                descriptor: Box::new(runtime_ipc_descriptor.clone()),
+                current_device_list: Box::new(runtime_ipc_directory_current_device_list.clone()),
+            },
+            pointer_hex(&runtime_ipc_directory, "/expected/response/signed_cbor_hex")?,
+        ),
+        (
             "ticket-publication-capability",
             Decoder::TicketPublicationCapability,
             pointer_hex(&ticket_publication, "/expected/rotated_capability/cbor_hex")?,
@@ -1436,7 +1529,18 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         },
         Decoder::RuntimeIpcContactResponse {
             request: Box::new(runtime_ipc_directory_status_request),
+            descriptor: Box::new(runtime_ipc_descriptor.clone()),
+        },
+        Decoder::RuntimeIpcDirectoryRequest {
+            descriptor: Box::new(runtime_ipc_descriptor.clone()),
+            current_device_list: Box::new(runtime_ipc_directory_current_device_list.clone()),
+            response: Box::new(runtime_ipc_directory_response),
+            now_unix_seconds: runtime_ipc_directory_valid_at,
+        },
+        Decoder::RuntimeIpcDirectoryResponse {
+            request: Box::new(runtime_ipc_directory_request),
             descriptor: Box::new(runtime_ipc_descriptor),
+            current_device_list: Box::new(runtime_ipc_directory_current_device_list),
         },
         Decoder::TicketPublicationCapability,
         Decoder::TicketPublicationWriteAuthorization,

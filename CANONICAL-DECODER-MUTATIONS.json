@@ -5,7 +5,7 @@
   "active_runtime_changed": false,
   "seed": 1262836037,
   "minimum_mutations": 500,
-  "expected_mutations": 18357,
+  "expected_mutations": 18879,
   "maximum_mutations": 20000,
   "fixtures": [
     {
@@ -452,6 +452,20 @@
       "json_pointer": "/expected/directory_status/response/signed_cbor_hex",
       "decoder": "decode_and_verify_signed_runtime_ipc_contact_response_v1",
       "context_verifier": "verify_runtime_ipc_contact_response_for_request_v1"
+    },
+    {
+      "id": "runtime-ipc-device-directory-apply-request-v1",
+      "vector_file": "CANONICAL-RUNTIME-IPC-DIRECTORY-VECTORS.json",
+      "json_pointer": "/expected/request/cbor_hex",
+      "decoder": "decode_and_verify_runtime_ipc_directory_request_v1",
+      "context_verifier": "verify_runtime_ipc_directory_request_for_descriptor_v1+verify_runtime_ipc_directory_response_for_request_v1"
+    },
+    {
+      "id": "signed-runtime-ipc-device-directory-apply-response-v1",
+      "vector_file": "CANONICAL-RUNTIME-IPC-DIRECTORY-VECTORS.json",
+      "json_pointer": "/expected/response/signed_cbor_hex",
+      "decoder": "decode_and_verify_signed_runtime_ipc_directory_response_v1",
+      "context_verifier": "verify_runtime_ipc_directory_response_for_request_v1"
     }
   ],
   "mutation_classes": [

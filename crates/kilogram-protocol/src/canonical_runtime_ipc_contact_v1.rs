@@ -522,7 +522,7 @@ fn validate_contact_response_content(
     }
 }
 
-fn validate_device_directory_status(
+pub(crate) fn validate_device_directory_status(
     status: &CanonicalRuntimeIpcDeviceDirectoryStatusV1,
 ) -> Result<(), CanonicalRuntimeIpcError> {
     for path in [
@@ -688,7 +688,7 @@ fn decode_contact_result(
     }
 }
 
-fn encode_device_directory_status(
+pub(crate) fn encode_device_directory_status(
     output: &mut Vec<u8>,
     status: &CanonicalRuntimeIpcDeviceDirectoryStatusV1,
 ) {
@@ -708,7 +708,7 @@ fn encode_device_directory_status(
     encode_restart_recovery(output, status.restart_recovery);
 }
 
-fn decode_device_directory_status(
+pub(crate) fn decode_device_directory_status(
     decoder: &mut AccountDecoder<'_>,
 ) -> Result<CanonicalRuntimeIpcDeviceDirectoryStatusV1, CanonicalRuntimeIpcError> {
     decoder.expect_array("runtime-ipc-device-directory-status-v1", 13)?;

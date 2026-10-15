@@ -3411,3 +3411,26 @@ Hosted follow-up:
 - Canonical coverage remains 16 complete, 1 partial, 1 not-started and 2
   not-targeted. The next runtime IPC boundary is authority-changing own-device
   directory application.
+
+## M1.1.31 canonical runtime IPC directory apply snapshot (2026-10-15)
+
+- New inactive module:
+  `crates/kilogram-protocol/src/canonical_runtime_ipc_directory_v1.rs`.
+- CDDL, schema, generated vectors and a dependency-free Node reference cover a
+  current-state-anchored, Root-signed, removal-only own-Device transition and
+  its Device-signed exact result. Active Postcard v26/JSON descriptor v7 is
+  untouched.
+- The embedded successor closes pathname TOCTOU; an eventual adapter must keep
+  an immutable exact file snapshot through its recoverable transaction. Device
+  enrollment/replacement remains outside this bearer-authenticated command.
+- The contract explicitly limits revocation to future recipient selection and
+  does not claim retroactive ciphertext rewriting or remote erasure.
+- Final decoder mutation regression passed 18879/18879 in 794.93 seconds with
+  debug/offline Cargo, two jobs and BelowNormal priority. Protocol library
+  regression passed 95/95 outside the restricted Windows temp sandbox.
+- Accepted-tag readiness passed 64/64; rustfmt and workspace locked/offline
+  strict Clippy passed. No network, stable-path test executable, release build,
+  archive, push or tag was created.
+- Canonical coverage remains 16 complete, 1 partial, 1 not-started and 2
+  not-targeted. The next runtime IPC slices are durable queue insertion and a
+  snapshot-bound paginated outbox projection.

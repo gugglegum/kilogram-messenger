@@ -72,7 +72,7 @@ Both commands reuse the signed loopback descriptor and short-lived bearer model
 from RFC-0154. Responses use contact-specific request-digest, response-signature
 and response-ID domains. The contact response is limited to 128 KiB, text and
 paths to 4096 bytes, endpoint candidates to four, and the own-device roster to
-256 Devices. Noncanonical CBOR, unknown variants, trailing bytes, expired
+32 Devices. Noncanonical CBOR, unknown variants, trailing bytes, expired
 requests, descriptor substitution, response substitution and inconsistent
 directory state fail closed.
 

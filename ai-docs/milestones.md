@@ -5721,3 +5721,30 @@ correlation visible, Windows-only field evidence, independent security audit
 - coverage остаётся 16 complete / 1 partial / 1 not-started / 2 not-targeted.
   Следующий bounded IPC slice — отдельный apply-own-device-directory authority
   transition, затем durable message/outbox и остальные runtime families.
+
+### M1.1.31 — canonical runtime IPC own-device directory apply: принято локально
+
+- inactive deterministic-CBOR IPC получил отдельный authority-changing
+  `ApplyOwnDeviceDirectory`, не подключённый к active Postcard reader;
+- request embeds exact Root-signed successor list и одновременно anchors exact
+  current authority revision и digest полного signed current list, поэтому
+  pathname не может стать TOCTOU authority substitution;
+- live transition допускает только exact idempotent replay либо monotonic
+  removal: running Device остаётся byte-identical, новый/replaced certificate
+  запрещён, old revocations retained, каждый removed Device Root-revoked;
+- Device-signed result коммитит previous/new revisions и digests, exact sorted
+  removed set, retirement/pending counters, ticket/profile decisions и полный
+  resulting directory status;
+- closed result semantics явно различают future recipient exclusion и
+  невозможность remotely rewrite/erase preexisting ciphertext; existing local
+  copies остаются readable;
+- independent Node reference воспроизводит CBOR, Root/Device Ed25519 и BLAKE3;
+  Rust golden, transition, expiry, substitution и invariant tests прошли;
+- финальный mutation corpus прошёл 18879/18879 за 794.93 s, debug/offline,
+  `CargoJobs=2`, BelowNormal; protocol library regression прошёл 95/95;
+- accepted-tag readiness прошёл 64/64, rustfmt и workspace locked/offline strict
+  Clippy; network, stable-path test EXE, release, archive, push и tag не
+  запускались и не создавались;
+- coverage остаётся 16 complete / 1 partial / 1 not-started / 2 not-targeted.
+  Следующий bounded IPC slice — idempotent durable message queue, затем
+  snapshot-bound paginated outbox projection.
