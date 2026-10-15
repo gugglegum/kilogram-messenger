@@ -132,10 +132,10 @@ if ($active.IndexOf('canonical_sync_v1', [StringComparison]::Ordinal) -ge 0) {
     throw 'inactive canonical sync codec leaked into active runtime'
 }
 $syncCoverage = @($coverage.surfaces | Where-Object { $_.id -ceq 'sync' })
-if ($syncCoverage.Count -ne 1 -or [string]$syncCoverage[0].coverage -cne 'partial' -or
-    (@($syncCoverage[0].covered) -join ',') -cne 'sync-inventory,sync-diff,sync-request-response-frames' -or
-    (@($syncCoverage[0].remaining) -join ',') -cne 'multi-round-session-state') {
-    throw 'canonical sync coverage no longer records the exact remaining gap'
+if ($syncCoverage.Count -ne 1 -or [string]$syncCoverage[0].coverage -cne 'complete' -or
+    (@($syncCoverage[0].covered) -join ',') -cne 'sync-inventory,sync-diff,sync-request-response-frames,multi-round-session-state' -or
+    @($syncCoverage[0].remaining).Count -ne 0) {
+    throw 'canonical sync coverage no longer includes frames and durable session state'
 }
 foreach ($required in @('strictly ordered and duplicate-free', 'signed by the responder Device',
     'zero and one', 'from 2,871 to 3,654', 'multi-round session state',
@@ -171,7 +171,7 @@ Write-Output 'sync_inventory_signature=verified'
 Write-Output 'sync_diff_signature=verified'
 Write-Output 'closed_client_variants=3'
 Write-Output 'closed_server_variants=4'
-Write-Output 'bounded_decoder_mutations=3654'
-Write-Output 'sync_coverage=partial-multi-round-pending'
+Write-Output 'bounded_decoder_mutations=3915'
+Write-Output 'sync_coverage=complete-via-m1113'
 Write-Output 'active_runtime_changed=false'
 Write-Output 'network_executed=false'

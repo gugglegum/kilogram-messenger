@@ -13,8 +13,8 @@
   },
   "summary": {
     "source_surfaces": 20,
-    "complete": 4,
-    "partial": 2,
+    "complete": 5,
+    "partial": 1,
     "not_started": 12,
     "not_targeted": 2,
     "activation_ready": false
@@ -143,10 +143,10 @@
     },
     {
       "id": "sync",
-      "coverage": "partial",
-      "artifacts": ["CANONICAL-WIRE-SCHEMA.json", "CANONICAL-WIRE-VECTORS.json", "CANONICAL-SYNC.cddl", "CANONICAL-SYNC-SCHEMA.json", "CANONICAL-SYNC-VECTORS.json", "crates/kilogram-protocol/src/canonical_sync_v1.rs", "scripts/verify-kilogram-canonical-sync-reference.mjs"],
-      "covered": ["sync-inventory", "sync-diff", "sync-request-response-frames"],
-      "remaining": ["multi-round-session-state"]
+      "coverage": "complete",
+      "artifacts": ["CANONICAL-WIRE-SCHEMA.json", "CANONICAL-WIRE-VECTORS.json", "CANONICAL-SYNC.cddl", "CANONICAL-SYNC-SCHEMA.json", "CANONICAL-SYNC-VECTORS.json", "crates/kilogram-protocol/src/canonical_sync_v1.rs", "scripts/verify-kilogram-canonical-sync-reference.mjs", "CANONICAL-SYNC-SESSION.cddl", "CANONICAL-SYNC-SESSION-SCHEMA.json", "CANONICAL-SYNC-SESSION-VECTORS.json", "crates/kilogram-protocol/src/canonical_sync_session_v1.rs", "scripts/verify-kilogram-canonical-sync-session-reference.mjs"],
+      "covered": ["sync-inventory", "sync-diff", "sync-request-response-frames", "multi-round-session-state"],
+      "remaining": []
     },
     {
       "id": "ticket-publication-capability",
@@ -164,7 +164,6 @@
     }
   ],
   "next_priority": [
-    "sync",
     "history-recovery",
     "blind-mailbox-capability",
     "blind-mailbox-transport"

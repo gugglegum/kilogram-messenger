@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.13",
+  "status": "candidate-not-active",
+  "changes_active_wire": false,
+  "profile": "kilogram-deterministic-cbor-v1",
+  "cddl": {
+    "standard": "RFC 8610",
+    "path": "CANONICAL-SYNC-SESSION.cddl",
+    "root_rule": "kilogram-sync-session-v1"
+  },
+  "activation": {
+    "current_runtime_codec": "postcard-v6",
+    "current_runtime_changed": false,
+    "candidate_protocol_identifier": "unassigned",
+    "required_before_activation": [
+      "new-explicit-protocol-version-or-parallel-alpn",
+      "dual-reader-and-downgrade-tests",
+      "coverage-guided-fuzzing",
+      "fresh-field-and-hosted-evidence"
+    ]
+  },
+  "limits": {
+    "maximum_received_event_ids": 4096,
+    "maximum_sent_event_ids": 4096,
+    "maximum_encoded_checkpoint_bytes": 524288
+  },
+  "domains": [
+    {
+      "id": "sync-session-checkpoint-signature-v1",
+      "value": "kilogram:sync-session-checkpoint-signature:cbor-v1\u0000",
+      "operation": "ed25519-sign-domain-prefixed-content"
+    },
+    {
+      "id": "sync-session-checkpoint-id-v1",
+      "value": "kilogram:sync-session-checkpoint-id:cbor-v1\u0000",
+      "operation": "blake3-domain-prefixed-signed-checkpoint"
+    }
+  ],
+  "objects": [
+    {
+      "id": "sync-session-checkpoint-content-v1",
+      "kind": "signed-content",
+      "array_length": 14
+    },
+    {
+      "id": "signed-sync-session-checkpoint-v1",
+      "kind": "signed-envelope",
+      "array_length": 3
+    }
+  ],
+  "next_action_registry": {
+    "1": "send-inventory",
+    "2": "receive-diff",
+    "3": "send-event-batch",
+    "4": "receive-complete",
+    "5": "complete",
+    "6": "rejected"
+  },
+  "semantic_rules": [
+    "local and peer Device IDs differ and the local Device signs the checkpoint",
+    "checkpoint sequence starts at one and increments exactly by one",
+    "sync round is positive and can stay unchanged or increment exactly by one",
+    "sequence one has no predecessor and every successor commits to the exact previous checkpoint ID",
+    "conversation Devices and session binding are immutable across the chain",
+    "received and sent Event ID evidence is strictly ordered duplicate-free and monotonic",
+    "a round increment is allowed only from receive-complete with more work to send-inventory",
+    "pause and resume preserve round next action event evidence and availability flags",
+    "complete and rejected are terminal unpaused states with both availability flags clear",
+    "unknown next actions invalid booleans rollback skipped generations and invalid transitions fail closed"
+  ],
+  "rust_bindings": [
+    {
+      "path": "crates/kilogram-protocol/src/canonical_sync_session_v1.rs",
+      "symbol": "CANONICAL_SYNC_SESSION_CHECKPOINT_SIGNATURE_DOMAIN",
+      "rust_type": "bytes",
+      "value": "kilogram:sync-session-checkpoint-signature:cbor-v1\u0000"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_sync_session_v1.rs",
+      "symbol": "CANONICAL_SYNC_SESSION_CHECKPOINT_ID_DOMAIN",
+      "rust_type": "bytes",
+      "value": "kilogram:sync-session-checkpoint-id:cbor-v1\u0000"
+    }
+  ]
+}

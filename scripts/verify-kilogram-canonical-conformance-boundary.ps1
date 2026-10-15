@@ -14,6 +14,7 @@ $recoveryReferencePath = Join-Path $PSScriptRoot 'verify-kilogram-canonical-reco
 $eventReferencePath = Join-Path $PSScriptRoot 'verify-kilogram-canonical-event-reference.mjs'
 $prekeySelectionReferencePath = Join-Path $PSScriptRoot 'verify-kilogram-canonical-prekey-selection-reference.mjs'
 $syncReferencePath = Join-Path $PSScriptRoot 'verify-kilogram-canonical-sync-reference.mjs'
+$syncSessionReferencePath = Join-Path $PSScriptRoot 'verify-kilogram-canonical-sync-session-reference.mjs'
 $rfcPath = Join-Path $workspace 'docs\RFC-0131-m115-independent-digests-and-decoder-mutations.md'
 
 function Assert-Rejected {
@@ -28,7 +29,7 @@ function Assert-Manifest {
         throw 'decoder mutation manifest header changed'
     }
     if ([int]$Manifest.seed -ne 1262836037 -or [int]$Manifest.minimum_mutations -ne 500 -or
-        [int]$Manifest.expected_mutations -ne 3654 -or
+        [int]$Manifest.expected_mutations -ne 3915 -or
         [int]$Manifest.maximum_mutations -ne 4000) { throw 'decoder mutation bounds changed' }
     $expectedFixtures = @(
         'signed-device-certificate-v1|CANONICAL-AUTHORITY-VECTORS.json|/expected/certificate/signed_cbor_hex|decode_and_verify_signed_device_certificate_v1',
@@ -45,6 +46,7 @@ function Assert-Manifest {
         'signed-sync-diff-v1|CANONICAL-SYNC-VECTORS.json|/expected/diff/signed_cbor_hex|decode_and_verify_signed_sync_diff_v1'
         'sync-client-frame-v1|CANONICAL-SYNC-VECTORS.json|/expected/client_frames/inventory_cbor_hex|decode_and_verify_sync_client_frame_v1'
         'sync-server-frame-v1|CANONICAL-SYNC-VECTORS.json|/expected/server_frames/diff_cbor_hex|decode_and_verify_sync_server_frame_v1'
+        'signed-sync-session-checkpoint-v1|CANONICAL-SYNC-SESSION-VECTORS.json|/expected/checkpoints/3/signed_cbor_hex|decode_and_verify_signed_sync_session_checkpoint_v1'
     )
     $actualFixtures = @($Manifest.fixtures | ForEach-Object { "$($_.id)|$($_.vector_file)|$($_.json_pointer)|$($_.decoder)" })
     if (($actualFixtures -join "`n") -cne ($expectedFixtures -join "`n")) { throw 'decoder fixture inventory changed' }
@@ -63,7 +65,7 @@ function Assert-Manifest {
         [bool]$Manifest.resource_bounds.randomness_allowed) { throw 'decoder resource bounds changed' }
 }
 
-foreach ($path in @($manifestPath, $officialPath, $referencePath, $verifierPath, $testPath, $ratchetReferencePath, $recoveryReferencePath, $eventReferencePath, $prekeySelectionReferencePath, $syncReferencePath, $rfcPath)) {
+foreach ($path in @($manifestPath, $officialPath, $referencePath, $verifierPath, $testPath, $ratchetReferencePath, $recoveryReferencePath, $eventReferencePath, $prekeySelectionReferencePath, $syncReferencePath, $syncSessionReferencePath, $rfcPath)) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "canonical conformance file is missing: $path" }
 }
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
@@ -75,6 +77,7 @@ $ratchetReference = Get-Content -LiteralPath $ratchetReferencePath -Raw
 $recoveryReference = Get-Content -LiteralPath $recoveryReferencePath -Raw
 $eventReference = Get-Content -LiteralPath $eventReferencePath -Raw
 $prekeySelectionReference = Get-Content -LiteralPath $prekeySelectionReferencePath -Raw
+$syncSessionReference = Get-Content -LiteralPath $syncSessionReferencePath -Raw
 $rfc = Get-Content -LiteralPath $rfcPath -Raw
 Assert-Manifest $manifest
 
@@ -107,11 +110,11 @@ foreach ($fixture in $manifest.fixtures) {
     }
 }
 foreach ($required in @('MAXIMUM_GRID_POSITIONS: usize = 128', 'MINIMUM_MUTATIONS: usize = 500',
-    'EXPECTED_MUTATIONS: usize = 3_654', 'MAXIMUM_MUTATIONS: usize = 4_000',
+    'EXPECTED_MUTATIONS: usize = 3_915', 'MAXIMUM_MUTATIONS: usize = 4_000',
     'bounded_positions(', 'canonical_decoder_mutations=')) {
     if ($test.IndexOf($required, [StringComparison]::Ordinal) -lt 0) { throw "mutation test is missing '$required'" }
 }
-foreach ($referenceSource in @($ratchetReference, $recoveryReference, $eventReference, $prekeySelectionReference)) {
+foreach ($referenceSource in @($ratchetReference, $recoveryReference, $eventReference, $prekeySelectionReference, $syncSessionReference)) {
     if ($referenceSource.IndexOf('independent_blake3=verified', [StringComparison]::Ordinal) -lt 0 -or
         $referenceSource.IndexOf('blake3Hash(', [StringComparison]::Ordinal) -lt 0) {
         throw 'canonical reference does not independently verify BLAKE3'
@@ -137,7 +140,7 @@ if ($SelfTest) {
 Write-Output 'canonical_conformance_boundary=verified'
 Write-Output 'independent_blake3=verified'
 Write-Output 'official_blake3_vectors=6/6'
-Write-Output 'bounded_decoder_mutations=3654'
+Write-Output 'bounded_decoder_mutations=3915'
 Write-Output 'coverage_guided_fuzzing=pending-before-activation'
 Write-Output 'active_runtime_changed=false'
 Write-Output 'network_executed=false'

@@ -5278,3 +5278,20 @@ correlation visible, Windows-only field evidence, independent security audit
   strict decoder fixture расширяют corpus до 3654/4000;
 - `sync` остаётся partial только из-за multi-round session state; active Postcard
   v6 не менялся, readiness inventory расширен с 45 до 46 gates.
+
+### M1.1.13 — canonical durable sync checkpoints: принято локально
+
+- Device-signed checkpoint связывает conversation, обоих Devices, exact session
+  binding, round, cumulative received/sent Event IDs, availability, next action
+  и paused/terminal state;
+- sequence начинается с 1, каждый successor ссылается на BLAKE3 ID exact
+  предыдущего signed checkpoint и не может откатывать cumulative evidence;
+- round increment разрешён только `receive-complete` -> `send-inventory` при
+  наличии ещё работы; pause/resume сохраняют всю semantic state;
+- complete/rejected terminal, unpaused, без availability и successor;
+  signatures, identities, chain continuity и transitions fail closed;
+- independent Node Ed25519/BLAKE3 reference воспроизводит 4 exact checkpoint,
+  Rust golden/negative tests проверяют chain и state machine;
+- strict decoder доводит corpus до 3915/4000; `sync` становится complete
+  (5 complete / 1 partial overall), readiness расширен с 46 до 47 gates;
+- active Postcard v6, ALPN, runtime/network/release/archive/tag не менялись.

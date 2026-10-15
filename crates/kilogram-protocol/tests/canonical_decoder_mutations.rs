@@ -15,6 +15,7 @@ use kilogram_protocol::canonical_ratchet_v1::{
     decode_and_verify_account_prekey_directory_v1, decode_and_verify_signed_prekey_pool_v1,
 };
 use kilogram_protocol::canonical_recovery_v1::decode_and_verify_signed_history_recovery_checkpoint_v1;
+use kilogram_protocol::canonical_sync_session_v1::decode_and_verify_signed_sync_session_checkpoint_v1;
 use kilogram_protocol::canonical_sync_v1::{
     decode_and_verify_signed_sync_diff_v1, decode_and_verify_sync_client_frame_v1,
     decode_and_verify_sync_server_frame_v1,
@@ -22,7 +23,7 @@ use kilogram_protocol::canonical_sync_v1::{
 use serde_json::Value;
 
 const MINIMUM_MUTATIONS: usize = 500;
-const EXPECTED_MUTATIONS: usize = 3_654;
+const EXPECTED_MUTATIONS: usize = 3_915;
 const MAXIMUM_MUTATIONS: usize = 4_000;
 const MAXIMUM_GRID_POSITIONS: usize = 128;
 
@@ -42,6 +43,7 @@ enum Decoder {
     SignedSyncDiff,
     SyncClientFrame,
     SyncServerFrame,
+    SyncSessionCheckpoint,
 }
 
 fn accepts(decoder: Decoder, bytes: &[u8]) -> bool {
@@ -60,6 +62,9 @@ fn accepts(decoder: Decoder, bytes: &[u8]) -> bool {
         Decoder::SignedSyncDiff => decode_and_verify_signed_sync_diff_v1(bytes).is_ok(),
         Decoder::SyncClientFrame => decode_and_verify_sync_client_frame_v1(bytes).is_ok(),
         Decoder::SyncServerFrame => decode_and_verify_sync_server_frame_v1(bytes).is_ok(),
+        Decoder::SyncSessionCheckpoint => {
+            decode_and_verify_signed_sync_session_checkpoint_v1(bytes).is_ok()
+        }
     }
 }
 
@@ -124,6 +129,10 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
     let sync: Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-SYNC-VECTORS.json"
+    )))?;
+    let sync_session: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../CANONICAL-SYNC-SESSION-VECTORS.json"
     )))?;
     let fixtures = [
         (
@@ -201,6 +210,11 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
             "sync-server-frame",
             Decoder::SyncServerFrame,
             pointer_hex(&sync, "/expected/server_frames/diff_cbor_hex")?,
+        ),
+        (
+            "sync-session-checkpoint",
+            Decoder::SyncSessionCheckpoint,
+            pointer_hex(&sync_session, "/expected/checkpoints/3/signed_cbor_hex")?,
         ),
     ];
     let mut mutations = 0usize;
@@ -284,6 +298,7 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         Decoder::SignedSyncDiff,
         Decoder::SyncClientFrame,
         Decoder::SyncServerFrame,
+        Decoder::SyncSessionCheckpoint,
     ] {
         assert!(!accepts(decoder, &oversized));
         mutations += 1;

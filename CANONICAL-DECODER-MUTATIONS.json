@@ -5,7 +5,7 @@
   "active_runtime_changed": false,
   "seed": 1262836037,
   "minimum_mutations": 500,
-  "expected_mutations": 3654,
+  "expected_mutations": 3915,
   "maximum_mutations": 4000,
   "fixtures": [
     {
@@ -91,6 +91,12 @@
       "vector_file": "CANONICAL-SYNC-VECTORS.json",
       "json_pointer": "/expected/server_frames/diff_cbor_hex",
       "decoder": "decode_and_verify_sync_server_frame_v1"
+    },
+    {
+      "id": "signed-sync-session-checkpoint-v1",
+      "vector_file": "CANONICAL-SYNC-SESSION-VECTORS.json",
+      "json_pointer": "/expected/checkpoints/3/signed_cbor_hex",
+      "decoder": "decode_and_verify_signed_sync_session_checkpoint_v1"
     }
   ],
   "mutation_classes": [
