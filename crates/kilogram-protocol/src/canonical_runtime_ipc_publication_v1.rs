@@ -495,6 +495,9 @@ fn validate_channel_state(
         || state.peer_account_id == [0; 32]
         || state.peer_scope_digest == [0; 32]
         || state.channel_epoch == 0
+        || state
+            .latest_publication_id
+            .is_some_and(|value| value == [0; 32])
         || (state.latest_publication_id.is_none() && state.latest_publication_generation != 0)
         || (state.latest_publication_id.is_some() && state.latest_publication_generation == 0)
     {
@@ -638,6 +641,15 @@ fn encode_channel_state(
     Ok(())
 }
 
+pub fn encode_runtime_ipc_publication_channel_state_v1(
+    state: &CanonicalRuntimeIpcPublicationChannelStateV1,
+) -> Result<Vec<u8>, CanonicalRuntimeIpcError> {
+    validate_channel_state(state)?;
+    let mut output = Vec::new();
+    encode_channel_state(&mut output, state)?;
+    Ok(output)
+}
+
 fn decode_channel_state(
     decoder: &mut AccountDecoder<'_>,
 ) -> Result<CanonicalRuntimeIpcPublicationChannelStateV1, CanonicalRuntimeIpcError> {
@@ -664,6 +676,19 @@ fn decode_channel_state(
             .unsigned("runtime-ipc-publication-channel-state-v1.latest-publication-generation")?,
     };
     validate_channel_state(&state)?;
+    Ok(state)
+}
+
+pub fn decode_and_verify_runtime_ipc_publication_channel_state_v1(
+    bytes: &[u8],
+) -> Result<CanonicalRuntimeIpcPublicationChannelStateV1, CanonicalRuntimeIpcError> {
+    validate_canonical_profile_v1(bytes)?;
+    let mut decoder = AccountDecoder::new(bytes);
+    let state = decode_channel_state(&mut decoder)?;
+    decoder.finish()?;
+    if encode_runtime_ipc_publication_channel_state_v1(&state)? != bytes {
+        return Err(CanonicalRuntimeIpcError::InvalidRequest);
+    }
     Ok(state)
 }
 

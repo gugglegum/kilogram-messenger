@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.37",
+  "milestone": "M1.1.38",
   "status": "candidate-not-active",
   "changes_active_wire": false,
   "profile": "kilogram-deterministic-cbor-v1",
@@ -49,6 +49,10 @@
     "maximum_mailbox_mutation_response_bytes": 131072,
     "maximum_publication_request_bytes": 65536,
     "maximum_publication_response_bytes": 65536,
+    "maximum_publication_network_request_bytes": 131072,
+    "maximum_publication_network_response_bytes": 131072,
+    "maximum_publication_service_origin_bytes": 512,
+    "maximum_publication_recipient_devices": 32,
     "maximum_error_bytes": 4096,
     "maximum_descriptor_validity_seconds": 86400,
     "maximum_request_validity_seconds": 30,
@@ -264,6 +268,27 @@
       "id": "publication-response-id-v1",
       "value": "kilogram:runtime-ipc-publication-response-id:cbor-v1\\0",
       "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "publication-network-service-origin-digest-v1",
+      "value": "kilogram:runtime-ipc-publication-network-service-origin-digest:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "publication-network-request-digest-v1",
+      "value": "kilogram:runtime-ipc-publication-network-request-digest:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "publication-network-response-signature-v1",
+      "value": "kilogram:runtime-ipc-publication-network-response-signature:cbor-v1\\0",
+      "operation": "ed25519-signature",
+      "signer": "descriptor-device-ed25519"
+    },
+    {
+      "id": "publication-network-response-id-v1",
+      "value": "kilogram:runtime-ipc-publication-network-response-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
     }
   ],
   "objects": [
@@ -371,6 +396,16 @@
       "id": "signed-runtime-ipc-publication-response-v1",
       "kind": "device-signed-public-successor-publication-channel-transition",
       "maximum_bytes": 65536
+    },
+    {
+      "id": "runtime-ipc-publication-network-request-v1",
+      "kind": "short-lived-exact-current-ticket-publication-or-refresh-request",
+      "maximum_bytes": 131072
+    },
+    {
+      "id": "signed-runtime-ipc-publication-network-response-v1",
+      "kind": "device-signed-secret-free-network-publication-or-observation-result",
+      "maximum_bytes": 131072
     }
   ],
   "covered_commands": [
@@ -390,7 +425,9 @@
     "create-mailbox-capability",
     "rotate-mailbox-capability",
     "revoke-mailbox-capability",
-    "rotate-publication-channel"
+    "rotate-publication-channel",
+    "publish-own-ticket",
+    "refresh-contact-ticket"
   ],
   "covered_results": [
     "pong",
@@ -408,7 +445,9 @@
     "volunteer-storage-providers-selected",
     "mailbox-capability-status-page",
     "mailbox-capability-transition",
-    "publication-channel-rotated"
+    "publication-channel-rotated",
+    "own-ticket-published",
+    "contact-ticket-refreshed"
   ],
   "semantic_rules": [
     "descriptor address is exactly IPv4 127.0.0.1 or IPv6 ::1 and port is nonzero",
@@ -477,10 +516,20 @@
     "the rotation ID commits the complete request digest, successor public capability and next channel epoch",
     "a successful local rotation remains awaiting first network publication and pending peer delivery, requires no runtime restart and performs no network operation",
     "the publication rotation request ID is the durable idempotency key: one state lock exact-compares and commits the transition while an exact retry may return already-committed",
+    "publish-own-ticket commits the exact current public channel head plus a nonzero recipient Device-list digest and a recipient count from one through 32",
+    "the runtime creates the signed ticket and HPKE envelope internally; ticket plaintext, HPKE ciphertext, write secrets and local paths never cross the canonical IPC boundary",
+    "a publish result advances the accepted publication generation exactly once without changing contact, peer, scope, channel epoch or public capability",
+    "the returned canonical write authorization exactly binds the updated public capability, new generation, opaque envelope byte length and raw BLAKE3 envelope digest",
+    "publish success requires a canonical root-only HTTPS service origin and reports confirmed HTTP success but remains pending a separate peer Device observation",
+    "refresh-contact-ticket commits the exact contact, peer publisher Device, channel and local observation and publication high-water heads",
+    "the runtime fetches, authenticates and decrypts the opaque envelope internally and atomically installs the ticket before returning success",
+    "a refresh result carries an independently verifiable local Device-signed observation that advances the observation generation exactly once and strictly advances publication generation",
+    "HTTPS success is only a Device-signed report of the completed exchange and is not independent proof of remote durability or later peer delivery",
+    "the publication-network request ID is the durable idempotency key: one state lock exact-compares network and local effects while an exact retry may return the byte-identical already-committed result",
     "unknown variants, noncanonical CBOR, trailing data, expired objects and contextual substitutions fail closed"
   ],
   "remaining_runtime_ipc_surface": [
-    "ticket-publication-network-and-conflict-commands",
+    "ticket-publication-conflict-commands",
     "own-device-discovery-and-automation-commands",
     "recovery-plan-and-device-link-commands",
     "active-unpaged-conversation-list-migration",

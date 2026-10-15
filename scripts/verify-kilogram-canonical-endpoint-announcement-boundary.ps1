@@ -159,7 +159,7 @@ if ($surface.Count -ne 1 -or [string]$surface[0].coverage -cne 'complete' -or
     @($surface[0].remaining).Count -ne 0) {
     throw 'canonical endpoint-announcement aggregate coverage boundary changed'
 }
-if ([int]$mutations.expected_mutations -ne 23535 -or [int]$mutations.maximum_mutations -ne 25000) {
+if ([int]$mutations.expected_mutations -ne 24579 -or [int]$mutations.maximum_mutations -ne 30000) {
     throw 'canonical endpoint-announcement decoder mutation bound changed'
 }
 $expectedMutationIds = @('signed-accepted-endpoint-observation-v1',
@@ -205,6 +205,6 @@ Write-Output 'plaintext_bundle_and_evidence=verified'
 Write-Output 'hpke_envelope_covered=false'
 Write-Output 'session_acknowledgement_covered=false'
 Write-Output 'independent_ed25519_and_blake3=verified'
-Write-Output 'bounded_decoder_mutations=23535'
+Write-Output 'bounded_decoder_mutations=24579'
 Write-Output 'active_postcard_hpke_changed=false'
 Write-Output 'network_executed=false'

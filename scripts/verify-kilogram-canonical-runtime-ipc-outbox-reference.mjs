@@ -265,7 +265,7 @@ const schema = JSON.parse(readFileSync(options.schema, "utf8"));
 const vectors = JSON.parse(readFileSync(options.vectors, "utf8"));
 const core = JSON.parse(readFileSync(options["core-vectors"], "utf8"));
 const queue = JSON.parse(readFileSync(options["queue-vectors"], "utf8"));
-assert(schema.milestone === "M1.1.37" && schema.status === "candidate-not-active" &&
+assert(schema.milestone === "M1.1.38" && schema.status === "candidate-not-active" &&
   schema.changes_active_wire === false, "runtime IPC outbox schema header changed");
 assert(schema.limits.maximum_outbox_request_bytes === 65536 &&
   schema.limits.maximum_outbox_response_bytes === 131072 &&

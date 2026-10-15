@@ -3573,3 +3573,28 @@ Hosted follow-up:
 - Canonical coverage remains 16 complete, 1 partial, 1 not-started and 2
   not-targeted. The next bounded runtime IPC slice is exact network publication
   plus peer-delivery evidence, separate from Root conflict authorization.
+
+## M1.1.38 canonical runtime IPC publication network (2026-10-15)
+
+- Added inactive
+  `crates/kilogram-protocol/src/canonical_runtime_ipc_publication_network_v1.rs`
+  with exact-state publish and refresh commands, Device-signed responses and
+  strict canonical root-only HTTPS origin validation.
+- The trusted runtime owns ticket construction, recipient HPKE slot creation
+  and opaque-envelope transport. IPC exposes only bounded public identifiers,
+  digests, lengths, authorization and Device observation; no ticket plaintext,
+  HPKE ciphertext, reusable secret or local path crosses the boundary.
+- CDDL, schema, generated vectors, RFC-0164 and an independent Node reference
+  agree on the candidate. The active Postcard v26/JSON descriptor v7 runtime
+  remains unchanged and no network was executed.
+- Final decoder mutation regression passed 24579/24579 in 961.89 seconds with
+  debug/offline Cargo, two jobs and BelowNormal priority.
+- Protocol library regression initially exposed sandbox-denied system TEMP;
+  with a workspace-local TEMP it passed 118/118 with eight explicit vector
+  generators ignored. This was an execution-environment permission issue, not
+  a protocol failure.
+- Accepted-tag readiness passed 71/71; rustfmt and workspace locked/offline
+  strict Clippy passed. No release build, archive, push or tag was created.
+- Canonical coverage remains 16 complete, 1 partial, 1 not-started and 2
+  not-targeted. Root-authorized publication-conflict commands are the next
+  bounded runtime IPC slice.

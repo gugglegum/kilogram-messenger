@@ -378,7 +378,7 @@ sessions, distribution, removal и key epochs и не решены этим пр
 - Независимый second-builder, подписанный release provenance, обновления клиента
   и дальнейшая защита supply chain поверх M0.9.50 same-host gate.
 - Миграция криптоалгоритмов и wire protocol без разделения сети.
-- После M1.1.37 canonical coverage содержит 16 complete, 1 partial
+- После M1.1.38 canonical coverage содержит 16 complete, 1 partial
   (`runtime-ipc`), один not-started (`transport-sync`) и два not-targeted
   surface. В runtime IPC уже закрыты signed loopback descriptor, bearer/fresh
   request, exact signed response, core Ping/WaitForChange/Shutdown/Error,
@@ -392,11 +392,13 @@ sessions, distribution, removal и key epochs и не решены этим пр
   local read/write secrets, create/rotate/revoke mailbox capability mutations
   с exact Device-signed provider selection и acknowledged predecessor, а также
   локальная publication-channel rotation с runtime-internal повторным выводом
-  current/successor capabilities без передачи Device secret. Открыты network
-  publication/peer delivery и Root-authorized conflict commands, own-device
-  automation, recovery/device-link команды и их noncore results. Следующий
-  приоритет — exact network publication и peer-delivery evidence, затем
-  отдельная Root-authorized conflict boundary и остальные families на bounded
+  current/successor capabilities без передачи Device secret, а также exact
+  network publication/refresh candidate: ticket/HPKE envelope создаются внутри
+  runtime, HTTPS success остаётся pending peer observation, а refresh требует
+  atomic ticket+Device-observation install. Открыты Root-authorized conflict
+  commands, own-device automation, recovery/device-link команды и их noncore
+  results. Следующий приоритет — отдельная Root-authorized conflict boundary,
+  затем остальные families на bounded
   этапы до complete `runtime-ipc`, затем parallel CBOR ALPN/negotiation для
   `transport-sync`. Общая activation требует explicit identifiers, downgrade
   tests, sustained fuzzing, independent HPKE conformance и fresh multi-device

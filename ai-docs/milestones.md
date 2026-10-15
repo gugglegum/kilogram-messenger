@@ -5907,3 +5907,34 @@ correlation visible, Windows-only field evidence, independent security audit
 - coverage остаётся 16 complete / 1 partial / 1 not-started / 2 not-targeted.
   Следующий bounded IPC slice — exact network publication и peer-delivery
   evidence; Root-authorized conflict ceremony остаётся отдельной границей.
+
+### M1.1.38 — canonical runtime IPC publication network: принято локально
+
+- inactive deterministic-CBOR IPC получил exact-state `PublishOwnTicket` и
+  `RefreshContactTicket`, не подключённые к active Postcard runtime;
+- publish request связывает current publication channel, recipient roster
+  digest/count, canonical root-only HTTPS origin и TTL. Signed ticket,
+  recipient HPKE slots и opaque envelope формируются только внутри trusted
+  runtime, а caller не поставляет successor publication head;
+- publish result возвращает только publication/ticket/envelope digests,
+  envelope length и exact write authorization. `confirmed-https-success`
+  остаётся `pending-peer-observation` и не объявляется доказательством remote
+  durability или eventual peer delivery;
+- refresh exact-связывает contact, peer publisher Device, channel, observation
+  и publication high-water marks; success требует независимо проверяемое
+  Device-signed observation и atomic install ticket+observation до ответа;
+- ticket plaintext, HPKE ciphertext/slots, publication write secret, Device
+  secret, plaintext peer scope и filesystem paths через IPC не передаются;
+- independent Node reference воспроизводит deterministic CBOR, Ed25519,
+  BLAKE3/KDF, publication authorization и observation. Rust golden,
+  round-trip и substitution tests прошли 3/3, один explicit generator ignored;
+- decoder mutation corpus прошёл 24579/24579 за 961.89 s, debug/offline,
+  `CargoJobs=2`, BelowNormal. Protocol library regression прошёл 118/118,
+  восемь explicit vector generators ignored;
+- accepted-tag readiness прошёл 71/71, rustfmt и workspace locked/offline
+  strict Clippy прошли. Active Postcard IPC v26/JSON descriptor v7, network,
+  stable test EXE, release/archive/push/tag не менялись и не создавались;
+- coverage остаётся 16 complete / 1 partial / 1 not-started / 2 not-targeted.
+  Следующий bounded IPC slice — Root-authorized publication-conflict commands;
+  independent HPKE и real adapter transaction evidence остаются activation
+  prerequisites.

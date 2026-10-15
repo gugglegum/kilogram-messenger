@@ -692,6 +692,114 @@ signed-runtime-ipc-publication-response-v1 = [
   signature
 ]
 
+; Exact network publication and refresh are separate from channel rotation.
+; Ticket plaintext, HPKE ciphertext, write secrets, and local paths are never
+; encoded here. HTTPS success is a Device-signed observation, not independent
+; proof that a remote store will retain the opaque body.
+runtime-ipc-publication-network-publish-state-v1 = [
+  profile-version,
+  publication-channel-state-cbor: bytes .size (1..65536),
+  recipient-device-list-digest: digest,
+  recipient-device-count: 1..32
+]
+
+runtime-ipc-publication-network-refresh-state-v1 = [
+  profile-version,
+  contact-id: digest,
+  peer-account-id: account-id,
+  publisher-device-id: device-id,
+  channel-id: digest,
+  latest-observation-id: runtime-ipc-option-digest-v1,
+  latest-observation-generation: uint,
+  latest-publication-id: runtime-ipc-option-digest-v1,
+  latest-publication-generation: uint
+]
+
+runtime-ipc-publication-network-command-v1 =
+  [publish-own-ticket: 0,
+   expected-publish-state-cbor: bytes .size (1..65536),
+   service-origin-utf8: bytes .size (1..512),
+   ttl-seconds: 30..3600] /
+  [refresh-contact-ticket: 1,
+   expected-refresh-state-cbor: bytes .size (1..65536),
+   service-origin-utf8: bytes .size (1..512)]
+
+runtime-ipc-publication-network-request-v1 = [
+  profile-version,
+  descriptor-id: digest,
+  request-id,
+  bearer-token: token,
+  issued-at-unix-seconds: uint,
+  expires-at-unix-seconds: uint,
+  runtime-ipc-publication-network-command-v1
+]
+
+runtime-ipc-publication-network-outcome-v1 = 0..1
+runtime-ipc-publication-network-local-state-v1 = 0
+runtime-ipc-publication-network-upload-state-v1 = 0
+runtime-ipc-publication-network-publish-delivery-state-v1 = 0
+runtime-ipc-publication-network-install-state-v1 = 0
+runtime-ipc-publication-network-fetch-state-v1 = 0
+runtime-ipc-publication-network-refresh-delivery-state-v1 = 0
+runtime-ipc-publication-network-restart-state-v1 = 0
+
+runtime-ipc-own-ticket-publication-v1 = [
+  profile-version,
+  runtime-ipc-publication-network-outcome-v1,
+  updated-publication-channel-state-cbor: bytes .size (1..65536),
+  published-at-unix-seconds: uint,
+  expires-at-unix-seconds: uint,
+  ticket-digest: digest,
+  recipient-device-list-digest: digest,
+  recipient-device-count: 1..32,
+  opaque-envelope-length: 1..16777216,
+  opaque-envelope-digest: digest,
+  signed-write-authorization-cbor: bytes .size (1..1024),
+  service-origin-utf8: bytes .size (1..512),
+  runtime-ipc-publication-network-local-state-v1,
+  runtime-ipc-publication-network-upload-state-v1,
+  runtime-ipc-publication-network-publish-delivery-state-v1,
+  runtime-ipc-publication-network-restart-state-v1
+]
+
+runtime-ipc-contact-ticket-refresh-v1 = [
+  profile-version,
+  runtime-ipc-publication-network-outcome-v1,
+  contact-id: digest,
+  peer-account-id: account-id,
+  publisher-device-id: device-id,
+  channel-id: digest,
+  signed-publication-observation-cbor: bytes .size (1..4096),
+  publication-expires-at-unix-seconds: uint,
+  service-origin-utf8: bytes .size (1..512),
+  runtime-ipc-publication-network-install-state-v1,
+  runtime-ipc-publication-network-fetch-state-v1,
+  runtime-ipc-publication-network-refresh-delivery-state-v1,
+  runtime-ipc-publication-network-restart-state-v1
+]
+
+runtime-ipc-publication-network-result-v1 =
+  [own-ticket-published: 0,
+   publication-cbor: bytes .size (1..131072)] /
+  [contact-ticket-refreshed: 1,
+   refresh-cbor: bytes .size (1..131072)] /
+  [error: 2, error-code: 1..65535, message-utf8: bytes .size (1..4096)]
+
+runtime-ipc-publication-network-response-content-v1 = [
+  profile-version,
+  descriptor-id: digest,
+  request-id,
+  request-digest: digest,
+  responder-device-id: device-id,
+  runtime-ipc-publication-network-result-v1
+]
+
+signed-runtime-ipc-publication-network-response-v1 = [
+  profile-version,
+  runtime-ipc-publication-network-response-content-v1,
+  signature
+]
+
 kilogram-runtime-ipc-v1 =
   signed-runtime-ipc-descriptor-v1 /
   runtime-ipc-core-request-v1 /
@@ -713,4 +821,6 @@ kilogram-runtime-ipc-v1 =
   runtime-ipc-mailbox-mutation-request-v1 /
   signed-runtime-ipc-mailbox-mutation-response-v1 /
   runtime-ipc-publication-request-v1 /
-  signed-runtime-ipc-publication-response-v1
+  signed-runtime-ipc-publication-response-v1 /
+  runtime-ipc-publication-network-request-v1 /
+  signed-runtime-ipc-publication-network-response-v1
