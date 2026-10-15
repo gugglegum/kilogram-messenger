@@ -26,15 +26,16 @@ native `crypto` implementation.
 
 ## 3. Bounded malformed-input corpus
 
-`CANONICAL-DECODER-MUTATIONS.json` is the closed corpus manifest. Five golden
-objects cover authority, session, ratchet pool/directory and recovery. For each
+`CANONICAL-DECODER-MUTATIONS.json` is the closed corpus manifest. Eighteen golden
+objects now cover authority, session, ratchet, events, recovery, synchronization
+and their durable control artifacts. For each
 fixture the test uses deterministic grids of at most 128 truncation and 128
 bit-flip positions, then exercises trailing data, non-minimal version encoding,
 indefinite arrays, reserved CBOR additional information and oversized declared
 byte strings.
 
-The run is deterministic, offline and bounded to 4,000 mutations; after the
-M1.1.13 synchronization-session addition the current corpus contains 3,915.
+The run is deterministic, offline and bounded to 5,000 mutations; after the
+M1.1.14 recovery-exchange addition the current corpus contains 4,698.
 Every mutation must fail closed and the valid source
 fixture must still verify cryptographically. The limit keeps ordinary Windows
 CI responsive and makes the test repeatable.

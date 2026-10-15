@@ -1,0 +1,112 @@
+; Kilogram deterministic-CBOR recovery link, plan and page exchange, M1.1.14.
+
+profile-version = 1
+id-32 = bytes .size 32
+signature-64 = bytes .size 64
+canonical-bool = 0 / 1
+
+recovery-coordinate-kind-v1 = 1 / 2 ; relay URL / direct socket address
+recovery-coordinate-v1 = [recovery-coordinate-kind-v1, value: bytes]
+recovery-route-policy-v1 = 1 / 2 / 3 ; auto / direct-only / relay-only
+
+history-recovery-link-content-v1 = [
+  profile-version,
+  endpoint-id: id-32,
+  coordinates: [1*16 recovery-coordinate-v1],
+  source-certificate: bytes,
+  account-device-list: bytes,
+  recipient-device-id: id-32,
+  conversation-id: id-32,
+  approved-range-start: uint,
+  approved-range-end: uint,
+  page-size: 1..256,
+  route-policy: recovery-route-policy-v1,
+  issued-at-unix-seconds: uint,
+  expires-at-unix-seconds: uint
+]
+
+signed-history-recovery-link-v1 = [
+  profile-version,
+  history-recovery-link-content-v1,
+  source-signature: signature-64
+]
+
+recovery-execution-policy-v1 = [
+  profile-version,
+  allow-ethernet: canonical-bool,
+  allow-wifi: canonical-bool,
+  allow-mobile: canonical-bool,
+  allow-unknown-network: canonical-bool,
+  require-external-power: canonical-bool
+]
+
+history-recovery-plan-content-v1 = [
+  profile-version,
+  signed-link: bytes,
+  sas: id-32,
+  execution-policy: recovery-execution-policy-v1,
+  approved-at-unix-seconds: uint,
+  expires-at-unix-seconds: uint
+]
+
+signed-history-recovery-plan-v1 = [
+  profile-version,
+  history-recovery-plan-content-v1,
+  recipient-signature: signature-64
+]
+
+previous-recovery-checkpoint-option-v1 = [] / [checkpoint-id: id-32]
+
+history-recovery-page-request-content-v1 = [
+  profile-version,
+  plan-id: id-32,
+  recovery-id: id-32,
+  conversation-id: id-32,
+  source-device-id: id-32,
+  recipient-device-id: id-32,
+  session-binding: id-32,
+  range-start: uint,
+  maximum-event-count: 1..256,
+  sas: id-32,
+  previous-checkpoint: previous-recovery-checkpoint-option-v1
+]
+
+signed-history-recovery-page-request-v1 = [
+  profile-version,
+  history-recovery-page-request-content-v1,
+  recipient-signature: signature-64
+]
+
+history-recovery-page-v1 = [
+  profile-version,
+  signed-request: bytes,
+  inventory-event-count: uint,
+  inventory-digest: id-32,
+  range-start: uint,
+  range-end: uint,
+  opaque-rewrapped-payload: bytes
+]
+
+history-recovery-rejected-v1 = [
+  profile-version,
+  signed-request: bytes,
+  reason: 1 / 2 / 3
+]
+
+history-recovery-response-content-v1 = [
+  profile-version,
+  variant: 1 / 2,
+  payload: bytes
+]
+
+signed-history-recovery-response-v1 = [
+  profile-version,
+  history-recovery-response-content-v1,
+  source-signature: signature-64
+]
+
+kilogram-recovery-exchange-v1 =
+    signed-history-recovery-link-v1 /
+    signed-history-recovery-plan-v1 /
+    signed-history-recovery-page-request-v1 /
+    signed-history-recovery-response-v1

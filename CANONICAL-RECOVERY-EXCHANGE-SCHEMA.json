@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.14",
+  "status": "candidate-not-active",
+  "changes_active_wire": false,
+  "profile": "kilogram-deterministic-cbor-v1",
+  "cddl": {
+    "standard": "RFC 8610",
+    "path": "CANONICAL-RECOVERY-EXCHANGE.cddl",
+    "root_rule": "kilogram-recovery-exchange-v1"
+  },
+  "activation": {
+    "current_runtime_artifact_encoding": "postcard-base64url-uri",
+    "current_runtime_wire_encoding": "postcard",
+    "current_runtime_changed": false,
+    "candidate_protocol_identifier": "unassigned",
+    "required_before_activation": [
+      "new-explicit-protocol-version-or-parallel-alpn",
+      "dual-reader-and-downgrade-tests",
+      "coverage-guided-fuzzing",
+      "fresh-field-and-hosted-evidence"
+    ]
+  },
+  "limits": {
+    "maximum_coordinates": 16,
+    "maximum_relay_coordinate_bytes": 2048,
+    "maximum_direct_coordinate_bytes": 128,
+    "maximum_link_validity_seconds": 3600,
+    "maximum_plan_validity_seconds": 604800,
+    "maximum_inventory_event_count": 4096,
+    "maximum_page_size": 256,
+    "maximum_nested_artifact_bytes": 1048576,
+    "maximum_opaque_rewrapped_payload_bytes": 8388608,
+    "maximum_response_bytes": 9437184
+  },
+  "domains": [
+    { "id": "history-recovery-sas-v1", "value": "kilogram:history-recovery-sas:cbor-v1\u0000", "operation": "blake3-domain-prefixed-sas-input" },
+    { "id": "history-recovery-link-signature-v1", "value": "kilogram:history-recovery-link-signature:cbor-v1\u0000", "operation": "source-device-ed25519" },
+    { "id": "history-recovery-link-id-v1", "value": "kilogram:history-recovery-link-id:cbor-v1\u0000", "operation": "blake3-domain-prefixed-signed-link" },
+    { "id": "history-recovery-plan-signature-v1", "value": "kilogram:history-recovery-plan-signature:cbor-v1\u0000", "operation": "recipient-device-ed25519" },
+    { "id": "history-recovery-plan-id-v1", "value": "kilogram:history-recovery-plan-id:cbor-v1\u0000", "operation": "blake3-domain-prefixed-signed-plan" },
+    { "id": "history-recovery-page-request-signature-v1", "value": "kilogram:history-recovery-page-request-signature:cbor-v1\u0000", "operation": "recipient-device-ed25519" },
+    { "id": "history-recovery-response-signature-v1", "value": "kilogram:history-recovery-response-signature:cbor-v1\u0000", "operation": "source-device-ed25519" }
+  ],
+  "registries": {
+    "coordinate_kind": { "1": "relay-url", "2": "direct-socket-address" },
+    "route_policy": { "1": "auto", "2": "direct-only", "3": "relay-only" },
+    "response_variant": { "1": "page", "2": "rejected" },
+    "rejection_reason": { "1": "not-approved", "2": "approval-mismatch", "3": "page-too-large" }
+  },
+  "objects": [
+    { "id": "recovery-coordinate-v1", "array_length": 2 },
+    { "id": "history-recovery-link-content-v1", "array_length": 13 },
+    { "id": "signed-history-recovery-link-v1", "array_length": 3 },
+    { "id": "recovery-execution-policy-v1", "array_length": 6 },
+    { "id": "history-recovery-plan-content-v1", "array_length": 6 },
+    { "id": "signed-history-recovery-plan-v1", "array_length": 3 },
+    { "id": "history-recovery-page-request-content-v1", "array_length": 11 },
+    { "id": "signed-history-recovery-page-request-v1", "array_length": 3 },
+    { "id": "history-recovery-page-v1", "array_length": 7 },
+    { "id": "history-recovery-rejected-v1", "array_length": 3 },
+    { "id": "history-recovery-response-content-v1", "array_length": 3 },
+    { "id": "signed-history-recovery-response-v1", "array_length": 3 }
+  ],
+  "semantic_rules": [
+    "link source certificate and recipient are exact authorized members of the same signed Account device list",
+    "coordinates are printable ASCII strictly ordered duplicate-free and constrained by route policy",
+    "source signs the link and recipient signs the exact approved link and execution policy",
+    "SAS is independently derived from the exact canonical device list and ordered source and recipient roles",
+    "plan approval occurs during link validity while plan validity is positive and bounded",
+    "page request is recipient signed session bound and exact-plan bound with a bounded approved range",
+    "source signed response contains a closed page or rejection variant bound to the exact signed request",
+    "page inventory claim covers the returned range and opaque rewrapped payload remains a separate bounded history-rewrap surface",
+    "unknown variants invalid booleans malformed coordinates role swaps and nested-object substitutions fail closed"
+  ]
+}

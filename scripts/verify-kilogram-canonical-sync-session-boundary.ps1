@@ -172,7 +172,7 @@ if ($SelfTest) {
 Write-Output 'canonical_sync_session_boundary=verified'
 Write-Output 'checkpoint_chain=verified'
 Write-Output 'pause_resume_state=verified'
-Write-Output 'bounded_decoder_mutations=3915'
+Write-Output 'bounded_decoder_mutations=4698'
 Write-Output 'sync_coverage=complete'
 Write-Output 'active_runtime_changed=false'
 Write-Output 'network_executed=false'

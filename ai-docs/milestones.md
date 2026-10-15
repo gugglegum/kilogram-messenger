@@ -5295,3 +5295,27 @@ correlation visible, Windows-only field evidence, independent security audit
 - strict decoder доводит corpus до 3915/4000; `sync` становится complete
   (5 complete / 1 partial overall), readiness расширен с 46 до 47 gates;
 - active Postcard v6, ALPN, runtime/network/release/archive/tag не менялись.
+
+### M1.1.14 — canonical history recovery exchange: принято локально
+
+- source-signed link canonical-связывает endpoint coordinates, exact source
+  certificate, exact Root-signed Account device list, recipient, conversation,
+  approved range, page size, route policy и bounded validity;
+- recipient-signed plan подписывает exact link, independently derived SAS,
+  explicit Ethernet/Wi-Fi/mobile/unknown/power policy и bounded validity;
+- page request recipient-signed, exact plan/recovery identity и live-session
+  bound; source-signed response имеет только closed page/rejected variants и
+  включает exact signed request;
+- page переносит rewrapped content как opaque bounded bytes: отдельная
+  `history-rewrap` HPKE/event schema намеренно остаётся `not-started`;
+- coordinate roles/order, exact certificate membership, SAS, plan/session/range,
+  inventory coverage, booleans, variants, signatures и substitutions fail closed;
+- independent Node Ed25519/BLAKE3 reference и Rust golden/negative tests
+  воспроизводят exact link/plan/request/page/rejection bytes, signatures и IDs;
+- три strict decoder fixtures доводят corpus до 4698/5000;
+  `history-recovery` становится complete (6 complete / 0 partial overall),
+  readiness расширен с 47 до 48 gates;
+- verification: protocol unit tests 50/50, mutation corpus 4698/4698,
+  accepted-tag readiness 48/48, rustfmt и locked/offline strict Clippy green;
+- active Postcard/base64url recovery, history-rewrap wire, ALPN, runtime/network,
+  release/archive/tag не менялись.

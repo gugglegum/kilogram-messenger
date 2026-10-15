@@ -14,6 +14,11 @@ use kilogram_protocol::canonical_prekey_selection_v1::decode_and_verify_prekey_s
 use kilogram_protocol::canonical_ratchet_v1::{
     decode_and_verify_account_prekey_directory_v1, decode_and_verify_signed_prekey_pool_v1,
 };
+use kilogram_protocol::canonical_recovery_exchange_v1::{
+    decode_and_verify_signed_history_recovery_link_v1,
+    decode_and_verify_signed_history_recovery_plan_v1,
+    decode_and_verify_signed_history_recovery_response_v1,
+};
 use kilogram_protocol::canonical_recovery_v1::decode_and_verify_signed_history_recovery_checkpoint_v1;
 use kilogram_protocol::canonical_sync_session_v1::decode_and_verify_signed_sync_session_checkpoint_v1;
 use kilogram_protocol::canonical_sync_v1::{
@@ -23,8 +28,8 @@ use kilogram_protocol::canonical_sync_v1::{
 use serde_json::Value;
 
 const MINIMUM_MUTATIONS: usize = 500;
-const EXPECTED_MUTATIONS: usize = 3_915;
-const MAXIMUM_MUTATIONS: usize = 4_000;
+const EXPECTED_MUTATIONS: usize = 4_698;
+const MAXIMUM_MUTATIONS: usize = 5_000;
 const MAXIMUM_GRID_POSITIONS: usize = 128;
 
 #[derive(Clone, Copy)]
@@ -34,6 +39,9 @@ enum Decoder {
     Pool,
     Directory,
     Recovery,
+    RecoveryLink,
+    RecoveryPlan,
+    RecoveryResponse,
     DeviceList,
     Membership,
     DeviceLink,
@@ -53,6 +61,11 @@ fn accepts(decoder: Decoder, bytes: &[u8]) -> bool {
         Decoder::Pool => decode_and_verify_signed_prekey_pool_v1(bytes).is_ok(),
         Decoder::Directory => decode_and_verify_account_prekey_directory_v1(bytes).is_ok(),
         Decoder::Recovery => decode_and_verify_signed_history_recovery_checkpoint_v1(bytes).is_ok(),
+        Decoder::RecoveryLink => decode_and_verify_signed_history_recovery_link_v1(bytes).is_ok(),
+        Decoder::RecoveryPlan => decode_and_verify_signed_history_recovery_plan_v1(bytes).is_ok(),
+        Decoder::RecoveryResponse => {
+            decode_and_verify_signed_history_recovery_response_v1(bytes).is_ok()
+        }
         Decoder::DeviceList => decode_and_verify_signed_account_device_list_v1(bytes).is_ok(),
         Decoder::Membership => decode_and_verify_signed_conversation_membership_v1(bytes).is_ok(),
         Decoder::DeviceLink => decode_and_verify_signed_device_link_authorization_v1(bytes).is_ok(),
@@ -110,6 +123,10 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-RECOVERY-VECTORS.json"
     )))?;
+    let recovery_exchange: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../CANONICAL-RECOVERY-EXCHANGE-VECTORS.json"
+    )))?;
     let account: Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-ACCOUNT-VECTORS.json"
@@ -162,6 +179,24 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
             "recovery",
             Decoder::Recovery,
             pointer_hex(&recovery, "/expected/successor_checkpoint/signed_cbor_hex")?,
+        ),
+        (
+            "recovery-link",
+            Decoder::RecoveryLink,
+            pointer_hex(&recovery_exchange, "/expected/link/signed_cbor_hex")?,
+        ),
+        (
+            "recovery-plan",
+            Decoder::RecoveryPlan,
+            pointer_hex(&recovery_exchange, "/expected/plan/signed_cbor_hex")?,
+        ),
+        (
+            "recovery-response",
+            Decoder::RecoveryResponse,
+            pointer_hex(
+                &recovery_exchange,
+                "/expected/page_response/signed_cbor_hex",
+            )?,
         ),
         (
             "device-list",
@@ -289,6 +324,9 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         Decoder::Pool,
         Decoder::Directory,
         Decoder::Recovery,
+        Decoder::RecoveryLink,
+        Decoder::RecoveryPlan,
+        Decoder::RecoveryResponse,
         Decoder::DeviceList,
         Decoder::Membership,
         Decoder::DeviceLink,

@@ -29,7 +29,7 @@ function Assert-Manifest {
         throw 'canonical coverage does not exactly cover source registry'
     }
     if ($sourceIds.Count -ne 20 -or [int]$Coverage.summary.source_surfaces -ne 20 -or
-        [int]$Coverage.summary.complete -ne 5 -or [int]$Coverage.summary.partial -ne 1 -or
+        [int]$Coverage.summary.complete -ne 6 -or [int]$Coverage.summary.partial -ne 0 -or
         [int]$Coverage.summary.not_started -ne 12 -or [int]$Coverage.summary.not_targeted -ne 2 -or
         [bool]$Coverage.summary.activation_ready) { throw 'canonical coverage summary changed' }
 
@@ -64,12 +64,12 @@ function Assert-Manifest {
             }
         }
     }
-    if ($counts['complete'] -ne 5 -or $counts['partial'] -ne 1 -or
+    if ($counts['complete'] -ne 6 -or $counts['partial'] -ne 0 -or
         $counts['not-started'] -ne 12 -or $counts['not-targeted'] -ne 2) {
         throw 'computed canonical coverage counts changed'
     }
     $completeIds = @($Coverage.surfaces | Where-Object { $_.coverage -ceq 'complete' } | ForEach-Object { $_.id })
-    if (($completeIds -join ',') -cne 'account-authority,authorized-event,device-session-authorization,ratchet-public-artifacts,sync') {
+    if (($completeIds -join ',') -cne 'account-authority,authorized-event,device-session-authorization,history-recovery,ratchet-public-artifacts,sync') {
         throw 'unexpected complete canonical surface'
     }
 }
@@ -99,7 +99,7 @@ if ($SelfTest) {
     $removed.surfaces = @($removed.surfaces | Select-Object -Skip 1)
     Assert-Rejected { Assert-Manifest $removed $source } 'removed_source_surface'
     $promoted = $coverage | ConvertTo-Json -Depth 20 | ConvertFrom-Json
-    $promoted.surfaces[10].coverage = 'complete'
+    $promoted.surfaces[1].coverage = 'complete'
     Assert-Rejected { Assert-Manifest $promoted $source } 'incomplete_surface_promoted'
     $ready = $coverage | ConvertTo-Json -Depth 20 | ConvertFrom-Json
     $ready.summary.activation_ready = $true
@@ -109,8 +109,8 @@ if ($SelfTest) {
 
 Write-Output 'canonical_coverage_boundary=verified'
 Write-Output 'source_surfaces=20'
-Write-Output 'complete_surfaces=5'
-Write-Output 'partial_surfaces=1'
+Write-Output 'complete_surfaces=6'
+Write-Output 'partial_surfaces=0'
 Write-Output 'not_started_surfaces=12'
 Write-Output 'not_targeted_surfaces=2'
 Write-Output 'activation_ready=false'

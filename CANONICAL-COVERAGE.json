@@ -13,8 +13,8 @@
   },
   "summary": {
     "source_surfaces": 20,
-    "complete": 5,
-    "partial": 1,
+    "complete": 6,
+    "partial": 0,
     "not_started": 12,
     "not_targeted": 2,
     "activation_ready": false
@@ -94,10 +94,10 @@
     },
     {
       "id": "history-recovery",
-      "coverage": "partial",
-      "artifacts": ["CANONICAL-RECOVERY.cddl", "CANONICAL-RECOVERY-SCHEMA.json", "CANONICAL-RECOVERY-VECTORS.json"],
-      "covered": ["recipient-signed-checkpoint-chain", "recovery-id", "checkpoint-id"],
-      "remaining": ["history-recovery-link", "history-recovery-plan", "wire-request-and-page-envelopes"]
+      "coverage": "complete",
+      "artifacts": ["CANONICAL-RECOVERY.cddl", "CANONICAL-RECOVERY-SCHEMA.json", "CANONICAL-RECOVERY-VECTORS.json", "CANONICAL-RECOVERY-EXCHANGE.cddl", "CANONICAL-RECOVERY-EXCHANGE-SCHEMA.json", "CANONICAL-RECOVERY-EXCHANGE-VECTORS.json", "crates/kilogram-protocol/src/canonical_recovery_exchange_v1.rs", "scripts/verify-kilogram-canonical-recovery-exchange-reference.mjs"],
+      "covered": ["recipient-signed-checkpoint-chain", "recovery-id", "checkpoint-id", "source-signed-recovery-link", "recipient-approved-recovery-plan", "session-bound-page-request", "source-signed-page-response"],
+      "remaining": []
     },
     {
       "id": "history-rewrap",
@@ -164,8 +164,8 @@
     }
   ],
   "next_priority": [
-    "history-recovery",
     "blind-mailbox-capability",
-    "blind-mailbox-transport"
+    "blind-mailbox-transport",
+    "blind-mailbox-provider-gossip"
   ]
 }
