@@ -1,0 +1,52 @@
+; Kilogram deterministic-CBOR authorized-event candidate, M1.1.10.
+; Nested objects are exact, bounded canonical CBOR byte strings.
+
+profile-version = 1
+id-32 = bytes .size 32
+signature = bytes .size 64
+canonical-object = bytes
+
+acknowledgement-payload-v1 = [
+  variant: 1,
+  acknowledged-event-id: id-32
+]
+
+ratchet-recipient-v1 = [
+  profile-version,
+  recipient-device-id: id-32,
+  message-kind: 0 / 1,
+  ciphertext: bytes
+]
+
+ratchet-text-payload-v1 = [
+  variant: 2,
+  signed-account-device-list-cbor: canonical-object,
+  signed-sender-ratchet-identity-cbor: canonical-object,
+  recipients: [1*32 ratchet-recipient-v1]
+]
+
+event-payload-v1 = acknowledgement-payload-v1 / ratchet-text-payload-v1
+
+event-content-v1 = [
+  profile-version,
+  conversation-id: id-32,
+  author-device-id: id-32,
+  author-sequence: uint,
+  parents: [*64 id-32],
+  payload: event-payload-v1
+]
+
+signed-event-v1 = [
+  profile-version,
+  content: event-content-v1,
+  signature: signature
+]
+
+authorized-event-v1 = [
+  profile-version,
+  signed-event-cbor: canonical-object,
+  author-device-certificate-cbor: canonical-object,
+  author-authority-snapshot-cbor: canonical-object
+]
+
+kilogram-event-v1 = signed-event-v1 / authorized-event-v1

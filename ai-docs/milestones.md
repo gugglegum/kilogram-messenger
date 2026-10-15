@@ -5229,3 +5229,21 @@ correlation visible, Windows-only field evidence, independent security audit
 - `account-authority` теперь complete (2 complete / 4 partial overall), но
   aggregate activation остаётся false;
 - readiness inventory расширен с 42 до 43 gates; active Postcard не менялся.
+
+### M1.1.10 — canonical authorized events: принято локально
+
+- deterministic-CBOR schema покрывает acknowledgement и ratchet-text payload,
+  signed event envelope, BLAKE3 Event ID и author authorization evidence;
+- parents и recipients имеют strict unique ordering, ciphertext bounded до
+  128 KiB, nested canonical objects — до 512 KiB;
+- recipient set обязан exact совпадать с Root-signed device list, sender
+  ratchet identity — с author Device; certificate/snapshot проверяют Account,
+  sequence, `SignEvents` и revocation;
+- membership остаётся внешним Root-signed object и проверяет conversation плюс
+  наличие author Account, не раздувая каждый event;
+- exact vectors и independent JavaScript/Node verifier заново строят CBOR,
+  Ed25519 signatures и BLAKE3 IDs; два decoders доводят corpus до 2610 cases;
+- `authorized-event` становится complete (3 complete / 3 partial overall), а
+  ratchet surface теперь ждёт только prekey-selection transcript;
+- readiness inventory расширен с 43 до 44 gates; active Postcard v5,
+  network/release/archive/tag не менялись.

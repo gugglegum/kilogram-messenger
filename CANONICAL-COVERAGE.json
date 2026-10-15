@@ -13,8 +13,8 @@
   },
   "summary": {
     "source_surfaces": 20,
-    "complete": 2,
-    "partial": 4,
+    "complete": 3,
+    "partial": 3,
     "not_started": 12,
     "not_targeted": 2,
     "activation_ready": false
@@ -36,10 +36,10 @@
     },
     {
       "id": "authorized-event",
-      "coverage": "partial",
-      "artifacts": ["CANONICAL-WIRE-SCHEMA.json", "CANONICAL-WIRE-VECTORS.json"],
-      "covered": ["acknowledgement-event"],
-      "remaining": ["text-event", "all-other-event-payload-variants", "event-envelope-integration"]
+      "coverage": "complete",
+      "artifacts": ["CANONICAL-WIRE-SCHEMA.json", "CANONICAL-WIRE-VECTORS.json", "CANONICAL-EVENT.cddl", "CANONICAL-EVENT-SCHEMA.json", "CANONICAL-EVENT-VECTORS.json", "crates/kilogram-protocol/src/canonical_event_v1.rs", "scripts/verify-kilogram-canonical-event-reference.mjs"],
+      "covered": ["acknowledgement-event", "ratchet-text-event", "event-envelope-integration", "author-authorization", "external-membership-verification"],
+      "remaining": []
     },
     {
       "id": "blind-mailbox-capability",
@@ -123,9 +123,9 @@
     {
       "id": "ratchet-public-artifacts",
       "coverage": "partial",
-      "artifacts": ["CANONICAL-RATCHET.cddl", "CANONICAL-RATCHET-SCHEMA.json", "CANONICAL-RATCHET-VECTORS.json"],
-      "covered": ["ratchet-identity", "prekey-bundle", "prekey-pool", "account-prekey-directory"],
-      "remaining": ["ciphertext-envelope", "prekey-selection-transcript"]
+      "artifacts": ["CANONICAL-RATCHET.cddl", "CANONICAL-RATCHET-SCHEMA.json", "CANONICAL-RATCHET-VECTORS.json", "CANONICAL-EVENT.cddl", "CANONICAL-EVENT-SCHEMA.json", "CANONICAL-EVENT-VECTORS.json"],
+      "covered": ["ratchet-identity", "prekey-bundle", "prekey-pool", "account-prekey-directory", "ciphertext-envelope"],
+      "remaining": ["prekey-selection-transcript"]
     },
     {
       "id": "runtime-ipc",
@@ -164,7 +164,6 @@
     }
   ],
   "next_priority": [
-    "authorized-event",
     "sync",
     "ratchet-public-artifacts",
     "history-recovery",

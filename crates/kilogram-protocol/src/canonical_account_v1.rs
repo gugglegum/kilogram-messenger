@@ -498,11 +498,11 @@ impl<'a> AccountDecoder<'a> {
         }
     }
 
-    fn array(&mut self, field: &'static str) -> Result<usize, CanonicalAccountError> {
+    pub(crate) fn array(&mut self, field: &'static str) -> Result<usize, CanonicalAccountError> {
         usize::try_from(self.head(4, field)?).map_err(|_| CanonicalWireError::LengthOverflow.into())
     }
 
-    fn unsigned(&mut self, field: &'static str) -> Result<u64, CanonicalAccountError> {
+    pub(crate) fn unsigned(&mut self, field: &'static str) -> Result<u64, CanonicalAccountError> {
         self.head(0, field)
     }
 

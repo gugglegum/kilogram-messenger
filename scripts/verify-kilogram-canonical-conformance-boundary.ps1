@@ -11,6 +11,7 @@ $verifierPath = Join-Path $PSScriptRoot 'verify-kilogram-blake3-conformance.mjs'
 $testPath = Join-Path $workspace 'crates\kilogram-protocol\tests\canonical_decoder_mutations.rs'
 $ratchetReferencePath = Join-Path $PSScriptRoot 'verify-kilogram-canonical-ratchet-reference.mjs'
 $recoveryReferencePath = Join-Path $PSScriptRoot 'verify-kilogram-canonical-recovery-reference.mjs'
+$eventReferencePath = Join-Path $PSScriptRoot 'verify-kilogram-canonical-event-reference.mjs'
 $rfcPath = Join-Path $workspace 'docs\RFC-0131-m115-independent-digests-and-decoder-mutations.md'
 
 function Assert-Rejected {
@@ -25,7 +26,8 @@ function Assert-Manifest {
         throw 'decoder mutation manifest header changed'
     }
     if ([int]$Manifest.seed -ne 1262836037 -or [int]$Manifest.minimum_mutations -ne 500 -or
-        [int]$Manifest.maximum_mutations -ne 2500) { throw 'decoder mutation bounds changed' }
+        [int]$Manifest.expected_mutations -ne 2610 -or
+        [int]$Manifest.maximum_mutations -ne 3000) { throw 'decoder mutation bounds changed' }
     $expectedFixtures = @(
         'signed-device-certificate-v1|CANONICAL-AUTHORITY-VECTORS.json|/expected/certificate/signed_cbor_hex|decode_and_verify_signed_device_certificate_v1',
         'signed-device-session-authorization-v1|CANONICAL-AUTHORITY-VECTORS.json|/expected/session_authorization/signed_cbor_hex|decode_and_verify_signed_device_session_authorization_v1',
@@ -35,6 +37,8 @@ function Assert-Manifest {
         'signed-account-device-list-v1|CANONICAL-ACCOUNT-VECTORS.json|/expected/account_device_list/signed_cbor_hex|decode_and_verify_signed_account_device_list_v1'
         'signed-conversation-membership-v1|CANONICAL-ACCOUNT-VECTORS.json|/expected/conversation_membership/signed_cbor_hex|decode_and_verify_signed_conversation_membership_v1'
         'signed-device-link-authorization-v1|CANONICAL-DEVICE-LINK-VECTORS.json|/expected/authorization/signed_cbor_hex|decode_and_verify_signed_device_link_authorization_v1'
+        'signed-acknowledgement-event-v1|CANONICAL-EVENT-VECTORS.json|/expected/acknowledgement_event/signed_cbor_hex|decode_and_verify_signed_event_v1'
+        'authorized-text-event-v1|CANONICAL-EVENT-VECTORS.json|/expected/authorized_text_event_cbor_hex|decode_and_verify_authorized_event_v1'
     )
     $actualFixtures = @($Manifest.fixtures | ForEach-Object { "$($_.id)|$($_.vector_file)|$($_.json_pointer)|$($_.decoder)" })
     if (($actualFixtures -join "`n") -cne ($expectedFixtures -join "`n")) { throw 'decoder fixture inventory changed' }
@@ -48,12 +52,12 @@ function Assert-Manifest {
     }
     if ([int]$Manifest.resource_bounds.maximum_fixture_bytes -ne 524288 -or
         [int]$Manifest.resource_bounds.maximum_positions_per_grid_per_fixture -ne 128 -or
-        [int]$Manifest.resource_bounds.maximum_total_mutations -ne 2500 -or
+        [int]$Manifest.resource_bounds.maximum_total_mutations -ne 3000 -or
         [bool]$Manifest.resource_bounds.network_allowed -or
         [bool]$Manifest.resource_bounds.randomness_allowed) { throw 'decoder resource bounds changed' }
 }
 
-foreach ($path in @($manifestPath, $officialPath, $referencePath, $verifierPath, $testPath, $ratchetReferencePath, $recoveryReferencePath, $rfcPath)) {
+foreach ($path in @($manifestPath, $officialPath, $referencePath, $verifierPath, $testPath, $ratchetReferencePath, $recoveryReferencePath, $eventReferencePath, $rfcPath)) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "canonical conformance file is missing: $path" }
 }
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
@@ -63,6 +67,7 @@ $verifier = Get-Content -LiteralPath $verifierPath -Raw
 $test = Get-Content -LiteralPath $testPath -Raw
 $ratchetReference = Get-Content -LiteralPath $ratchetReferencePath -Raw
 $recoveryReference = Get-Content -LiteralPath $recoveryReferencePath -Raw
+$eventReference = Get-Content -LiteralPath $eventReferencePath -Raw
 $rfc = Get-Content -LiteralPath $rfcPath -Raw
 Assert-Manifest $manifest
 
@@ -95,10 +100,11 @@ foreach ($fixture in $manifest.fixtures) {
     }
 }
 foreach ($required in @('MAXIMUM_GRID_POSITIONS: usize = 128', 'MINIMUM_MUTATIONS: usize = 500',
-    'MAXIMUM_MUTATIONS: usize = 2_500', 'bounded_positions(', 'canonical_decoder_mutations=')) {
+    'EXPECTED_MUTATIONS: usize = 2_610', 'MAXIMUM_MUTATIONS: usize = 3_000',
+    'bounded_positions(', 'canonical_decoder_mutations=')) {
     if ($test.IndexOf($required, [StringComparison]::Ordinal) -lt 0) { throw "mutation test is missing '$required'" }
 }
-foreach ($referenceSource in @($ratchetReference, $recoveryReference)) {
+foreach ($referenceSource in @($ratchetReference, $recoveryReference, $eventReference)) {
     if ($referenceSource.IndexOf('independent_blake3=verified', [StringComparison]::Ordinal) -lt 0 -or
         $referenceSource.IndexOf('blake3Hash(', [StringComparison]::Ordinal) -lt 0) {
         throw 'canonical reference does not independently verify BLAKE3'
@@ -114,7 +120,7 @@ if ($LASTEXITCODE -ne 0 -or 'blake3_reference_conformance=verified' -notin @($ou
 }
 if ($SelfTest) {
     $changed = $manifest | ConvertTo-Json -Depth 20 | ConvertFrom-Json
-    $changed.maximum_mutations = 2501
+    $changed.maximum_mutations = 3001
     Assert-Rejected { Assert-Manifest $changed } 'changed_mutation_bound'
     $removed = $manifest | ConvertTo-Json -Depth 20 | ConvertFrom-Json
     $removed.fixtures = @($removed.fixtures | Select-Object -Skip 1)
@@ -124,7 +130,7 @@ if ($SelfTest) {
 Write-Output 'canonical_conformance_boundary=verified'
 Write-Output 'independent_blake3=verified'
 Write-Output 'official_blake3_vectors=6/6'
-Write-Output 'bounded_decoder_mutations=2088'
+Write-Output 'bounded_decoder_mutations=2610'
 Write-Output 'coverage_guided_fuzzing=pending-before-activation'
 Write-Output 'active_runtime_changed=false'
 Write-Output 'network_executed=false'

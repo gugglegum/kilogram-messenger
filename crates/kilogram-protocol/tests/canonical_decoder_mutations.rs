@@ -7,6 +7,9 @@ use kilogram_protocol::canonical_authority_v1::{
     decode_and_verify_signed_device_session_authorization_v1,
 };
 use kilogram_protocol::canonical_device_link_v1::decode_and_verify_signed_device_link_authorization_v1;
+use kilogram_protocol::canonical_event_v1::{
+    decode_and_verify_authorized_event_v1, decode_and_verify_signed_event_v1,
+};
 use kilogram_protocol::canonical_ratchet_v1::{
     decode_and_verify_account_prekey_directory_v1, decode_and_verify_signed_prekey_pool_v1,
 };
@@ -14,7 +17,8 @@ use kilogram_protocol::canonical_recovery_v1::decode_and_verify_signed_history_r
 use serde_json::Value;
 
 const MINIMUM_MUTATIONS: usize = 500;
-const MAXIMUM_MUTATIONS: usize = 2_500;
+const EXPECTED_MUTATIONS: usize = 2_610;
+const MAXIMUM_MUTATIONS: usize = 3_000;
 const MAXIMUM_GRID_POSITIONS: usize = 128;
 
 #[derive(Clone, Copy)]
@@ -27,6 +31,8 @@ enum Decoder {
     DeviceList,
     Membership,
     DeviceLink,
+    SignedEvent,
+    AuthorizedEvent,
 }
 
 fn accepts(decoder: Decoder, bytes: &[u8]) -> bool {
@@ -39,6 +45,8 @@ fn accepts(decoder: Decoder, bytes: &[u8]) -> bool {
         Decoder::DeviceList => decode_and_verify_signed_account_device_list_v1(bytes).is_ok(),
         Decoder::Membership => decode_and_verify_signed_conversation_membership_v1(bytes).is_ok(),
         Decoder::DeviceLink => decode_and_verify_signed_device_link_authorization_v1(bytes).is_ok(),
+        Decoder::SignedEvent => decode_and_verify_signed_event_v1(bytes).is_ok(),
+        Decoder::AuthorizedEvent => decode_and_verify_authorized_event_v1(bytes).is_ok(),
     }
 }
 
@@ -92,6 +100,10 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-DEVICE-LINK-VECTORS.json"
     )))?;
+    let event: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../CANONICAL-EVENT-VECTORS.json"
+    )))?;
     let fixtures = [
         (
             "certificate",
@@ -138,6 +150,16 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
             "device-link",
             Decoder::DeviceLink,
             pointer_hex(&device_link, "/expected/authorization/signed_cbor_hex")?,
+        ),
+        (
+            "signed-acknowledgement-event",
+            Decoder::SignedEvent,
+            pointer_hex(&event, "/expected/acknowledgement_event/signed_cbor_hex")?,
+        ),
+        (
+            "authorized-text-event",
+            Decoder::AuthorizedEvent,
+            pointer_hex(&event, "/expected/authorized_text_event_cbor_hex")?,
         ),
     ];
     let mut mutations = 0usize;
@@ -215,6 +237,8 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         Decoder::DeviceList,
         Decoder::Membership,
         Decoder::DeviceLink,
+        Decoder::SignedEvent,
+        Decoder::AuthorizedEvent,
     ] {
         assert!(!accepts(decoder, &oversized));
         mutations += 1;
@@ -226,6 +250,10 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
     assert!(
         mutations <= MAXIMUM_MUTATIONS,
         "mutation corpus became unbounded: {mutations}"
+    );
+    assert_eq!(
+        mutations, EXPECTED_MUTATIONS,
+        "mutation corpus inventory changed"
     );
     eprintln!("canonical_decoder_mutations={mutations}");
     Ok(())

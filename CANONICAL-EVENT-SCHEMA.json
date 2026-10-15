@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.10",
+  "status": "candidate-not-active",
+  "changes_active_wire": false,
+  "profile": "kilogram-deterministic-cbor-v1",
+  "cddl": {
+    "standard": "RFC 8610",
+    "path": "CANONICAL-EVENT.cddl",
+    "root_rule": "kilogram-event-v1"
+  },
+  "activation": {
+    "current_runtime_encoding": "postcard-v5",
+    "current_runtime_changed": false,
+    "candidate_protocol_identifier": "unassigned",
+    "required_before_activation": [
+      "complete-targeted-surface-coverage",
+      "new-explicit-protocol-version-or-parallel-identifier",
+      "dual-reader-and-downgrade-tests",
+      "sustained-coverage-guided-fuzzing",
+      "fresh-field-and-hosted-evidence"
+    ]
+  },
+  "limits": {
+    "maximum_parents": 64,
+    "maximum_recipients": 32,
+    "maximum_ratchet_ciphertext_bytes": 131072,
+    "maximum_nested_cbor_bytes": 524288
+  },
+  "variants": {
+    "acknowledgement": 1,
+    "ratchet_text": 2,
+    "ratchet_message_prekey": 0,
+    "ratchet_message_normal": 1
+  },
+  "domains": [
+    {
+      "id": "event-signature-v1",
+      "value": "kilogram:event-signature:cbor-v1\\0",
+      "operation": "ed25519-signature",
+      "signer": "author-device-ed25519"
+    },
+    {
+      "id": "event-id-v1",
+      "value": "kilogram:event-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    }
+  ],
+  "external_objects": [
+    { "id": "signed-account-device-list-v1", "schema": "CANONICAL-ACCOUNT-SCHEMA.json" },
+    { "id": "signed-conversation-membership-v1", "schema": "CANONICAL-ACCOUNT-SCHEMA.json" },
+    { "id": "signed-device-certificate-v1", "schema": "CANONICAL-AUTHORITY-SCHEMA.json" },
+    { "id": "signed-account-authority-snapshot-v1", "schema": "CANONICAL-AUTHORITY-SCHEMA.json" },
+    { "id": "signed-ratchet-identity-v1", "schema": "CANONICAL-RATCHET-SCHEMA.json" }
+  ],
+  "rust_bindings": [
+    { "path": "crates/kilogram-protocol/src/canonical_v1.rs", "symbol": "CANONICAL_EVENT_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:event-signature:cbor-v1\\0" },
+    { "path": "crates/kilogram-protocol/src/canonical_v1.rs", "symbol": "CANONICAL_EVENT_ID_DOMAIN", "rust_type": "bytes", "value": "kilogram:event-id:cbor-v1\\0" },
+    { "path": "crates/kilogram-protocol/src/canonical_v1.rs", "symbol": "ACKNOWLEDGEMENT_PAYLOAD_VARIANT", "rust_type": "u64", "value": 1 },
+    { "path": "crates/kilogram-protocol/src/canonical_event_v1.rs", "symbol": "RATCHET_TEXT_PAYLOAD_VARIANT", "rust_type": "u64", "value": 2 },
+    { "path": "crates/kilogram-protocol/src/canonical_event_v1.rs", "symbol": "MAX_CANONICAL_EVENT_PARENTS", "rust_type": "usize", "value": 64 },
+    { "path": "crates/kilogram-protocol/src/canonical_event_v1.rs", "symbol": "MAX_CANONICAL_EVENT_RECIPIENTS", "rust_type": "usize", "value": 32 },
+    { "path": "crates/kilogram-protocol/src/canonical_event_v1.rs", "symbol": "MAX_CANONICAL_RATCHET_CIPHERTEXT_BYTES", "rust_type": "usize", "value": 131072 },
+    { "path": "crates/kilogram-protocol/src/canonical_event_v1.rs", "symbol": "MAX_CANONICAL_EVENT_NESTED_BYTES", "rust_type": "usize", "value": 524288 }
+  ],
+  "objects": [
+    { "id": "acknowledgement-payload-v1", "kind": "payload-variant", "array_length": 2, "variant": 1 },
+    { "id": "ratchet-recipient-v1", "kind": "ciphertext-recipient", "array_length": 4 },
+    { "id": "ratchet-text-payload-v1", "kind": "payload-variant", "array_length": 4, "variant": 2 },
+    { "id": "event-content-v1", "kind": "signed-content", "array_length": 6 },
+    { "id": "signed-event-v1", "kind": "signed-envelope", "array_length": 3, "signature_domain": "event-signature-v1" },
+    { "id": "event-id-v1", "kind": "derived-id", "exact_bytes": 32, "derivation": "blake3(event-id-domain || signed-event-v1-cbor)" },
+    { "id": "authorized-event-v1", "kind": "authorization-envelope", "array_length": 4 }
+  ],
+  "semantic_rules": [
+    "parents are strictly ordered unique Event IDs",
+    "ratchet recipients are non-empty and strictly ordered unique Device IDs",
+    "recipient Device IDs exactly cover the embedded Root-signed device list",
+    "sender ratchet identity names the event author Device",
+    "author certificate names the event author, predates the authority snapshot, has SignEvents and is not revoked",
+    "membership verification is external to the authorized-event bytes and requires matching conversation plus author Account membership"
+  ]
+}
