@@ -1,0 +1,137 @@
+; Kilogram M1.1.15 inactive deterministic-CBOR blind-mailbox capability target.
+; RFC 8610 notation. Only shortest-form unsigned integers, definite byte
+; strings, and definite positional arrays from kilogram-deterministic-cbor-v1
+; are valid. Active Postcard mailbox bytes remain unchanged.
+
+kilogram-mailbox-v1 =
+  mailbox-address-v1 /
+  mailbox-envelope-v1 /
+  signed-mailbox-write-authorization-v1 /
+  signed-mailbox-read-authorization-v1 /
+  signed-mailbox-storage-offer-v1 /
+  signed-mailbox-stored-receipt-v1 /
+  signed-mailbox-delete-receipt-v1
+
+id-32 = bytes .size 32
+ed25519-public-key = bytes .size 32
+ed25519-signature = bytes .size 64
+
+mailbox-address-v1 = [
+  schema-version: 1,
+  read-key: ed25519-public-key,
+  write-key: ed25519-public-key
+]
+
+mailbox-envelope-context-v1 = [
+  schema-version: 1,
+  mailbox-id: id-32,
+  item-id: id-32,
+  created-at-unix-seconds: uint,
+  expires-at-unix-seconds: uint
+]
+
+mailbox-envelope-v1 = [
+  schema-version: 1,
+  context: mailbox-envelope-context-v1,
+  encapsulated-key: bytes .size 32,
+  ciphertext: bytes .size (1..1048400)
+]
+
+mailbox-write-authorization-content-v1 = [
+  schema-version: 1,
+  mailbox-id: id-32,
+  item-id: id-32,
+  write-key: ed25519-public-key,
+  requested-ttl-seconds: 60..604800,
+  envelope-bytes: 1..1048576,
+  envelope-digest: id-32
+]
+
+signed-mailbox-write-authorization-v1 = [
+  schema-version: 1,
+  content: mailbox-write-authorization-content-v1,
+  signature: ed25519-signature
+]
+
+mailbox-item-option-v1 = [] / [item-id: id-32]
+
+mailbox-read-list-v1 = [
+  schema-version: 1,
+  variant: 1,
+  nonce: id-32,
+  after-item-id: mailbox-item-option-v1,
+  limit: 1..8
+]
+
+mailbox-read-delete-v1 = [
+  schema-version: 1,
+  variant: 2,
+  item-id: id-32,
+  receipt-id: id-32
+]
+
+mailbox-read-operation-v1 = mailbox-read-list-v1 / mailbox-read-delete-v1
+
+mailbox-read-authorization-content-v1 = [
+  schema-version: 1,
+  mailbox-id: id-32,
+  read-key: ed25519-public-key,
+  operation: mailbox-read-operation-v1
+]
+
+signed-mailbox-read-authorization-v1 = [
+  schema-version: 1,
+  content: mailbox-read-authorization-content-v1,
+  signature: ed25519-signature
+]
+
+mailbox-storage-offer-content-v1 = [
+  schema-version: 1,
+  provider-endpoint: bytes .size (1..16384),
+  store-key: ed25519-public-key,
+  policy-class: 1,
+  capacity-hint-bytes: uint,
+  max-record-bytes: uint,
+  issued-at-unix-seconds: uint,
+  expires-at-unix-seconds: uint,
+  nonce: id-32
+]
+
+signed-mailbox-storage-offer-v1 = [
+  schema-version: 1,
+  content: mailbox-storage-offer-content-v1,
+  signature: ed25519-signature
+]
+
+mailbox-stored-receipt-content-v1 = [
+  schema-version: 1,
+  store-key: ed25519-public-key,
+  mailbox-id: id-32,
+  item-id: id-32,
+  envelope-bytes: 1..1048576,
+  envelope-digest: id-32,
+  stored-at-unix-seconds: uint,
+  expires-at-unix-seconds: uint
+]
+
+signed-mailbox-stored-receipt-v1 = [
+  schema-version: 1,
+  content: mailbox-stored-receipt-content-v1,
+  signature: ed25519-signature
+]
+
+mailbox-delete-receipt-content-v1 = [
+  schema-version: 1,
+  store-key: ed25519-public-key,
+  mailbox-id: id-32,
+  item-id: id-32,
+  stored-receipt-id: id-32,
+  deleted-at-unix-seconds: uint,
+  expires-at-unix-seconds: uint
+]
+
+signed-mailbox-delete-receipt-v1 = [
+  schema-version: 1,
+  content: mailbox-delete-receipt-content-v1,
+  signature: ed25519-signature
+]

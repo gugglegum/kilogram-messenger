@@ -213,7 +213,7 @@ if ($SelfTest) {
 Write-Output 'canonical_recovery_exchange_boundary=verified'
 Write-Output 'link_plan_request_response=verified'
 Write-Output 'session_and_plan_binding=verified'
-Write-Output 'bounded_decoder_mutations=4698'
+Write-Output 'bounded_decoder_mutations=6264'
 Write-Output 'history_recovery_coverage=complete'
 Write-Output 'history_rewrap_coverage=not-started'
 Write-Output 'active_runtime_changed=false'

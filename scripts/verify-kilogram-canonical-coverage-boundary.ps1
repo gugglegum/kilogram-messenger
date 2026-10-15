@@ -29,8 +29,8 @@ function Assert-Manifest {
         throw 'canonical coverage does not exactly cover source registry'
     }
     if ($sourceIds.Count -ne 20 -or [int]$Coverage.summary.source_surfaces -ne 20 -or
-        [int]$Coverage.summary.complete -ne 6 -or [int]$Coverage.summary.partial -ne 0 -or
-        [int]$Coverage.summary.not_started -ne 12 -or [int]$Coverage.summary.not_targeted -ne 2 -or
+        [int]$Coverage.summary.complete -ne 7 -or [int]$Coverage.summary.partial -ne 0 -or
+        [int]$Coverage.summary.not_started -ne 11 -or [int]$Coverage.summary.not_targeted -ne 2 -or
         [bool]$Coverage.summary.activation_ready) { throw 'canonical coverage summary changed' }
 
     $counts = @{}
@@ -64,12 +64,12 @@ function Assert-Manifest {
             }
         }
     }
-    if ($counts['complete'] -ne 6 -or $counts['partial'] -ne 0 -or
-        $counts['not-started'] -ne 12 -or $counts['not-targeted'] -ne 2) {
+    if ($counts['complete'] -ne 7 -or $counts['partial'] -ne 0 -or
+        $counts['not-started'] -ne 11 -or $counts['not-targeted'] -ne 2) {
         throw 'computed canonical coverage counts changed'
     }
     $completeIds = @($Coverage.surfaces | Where-Object { $_.coverage -ceq 'complete' } | ForEach-Object { $_.id })
-    if (($completeIds -join ',') -cne 'account-authority,authorized-event,device-session-authorization,history-recovery,ratchet-public-artifacts,sync') {
+    if (($completeIds -join ',') -cne 'account-authority,authorized-event,blind-mailbox-capability,device-session-authorization,history-recovery,ratchet-public-artifacts,sync') {
         throw 'unexpected complete canonical surface'
     }
 }
@@ -109,9 +109,9 @@ if ($SelfTest) {
 
 Write-Output 'canonical_coverage_boundary=verified'
 Write-Output 'source_surfaces=20'
-Write-Output 'complete_surfaces=6'
+Write-Output 'complete_surfaces=7'
 Write-Output 'partial_surfaces=0'
-Write-Output 'not_started_surfaces=12'
+Write-Output 'not_started_surfaces=11'
 Write-Output 'not_targeted_surfaces=2'
 Write-Output 'activation_ready=false'
 Write-Output 'active_wire_changed=false'

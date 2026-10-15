@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.15",
+  "status": "candidate-not-active",
+  "changes_active_wire": false,
+  "profile": "kilogram-deterministic-cbor-v1",
+  "cddl": {
+    "standard": "RFC 8610",
+    "path": "CANONICAL-MAILBOX.cddl",
+    "root_rule": "kilogram-mailbox-v1"
+  },
+  "activation": {
+    "current_runtime_artifact_encoding": "postcard",
+    "current_runtime_wire_encoding": "postcard",
+    "current_runtime_changed": false,
+    "candidate_protocol_identifier": "unassigned",
+    "required_before_activation": [
+      "new-explicit-protocol-version-or-parallel-alpn",
+      "dual-reader-and-downgrade-tests",
+      "hpke-cross-language-conformance",
+      "coverage-guided-fuzzing",
+      "fresh-field-and-hosted-evidence"
+    ]
+  },
+  "limits": {
+    "minimum_ttl_seconds": 60,
+    "maximum_ttl_seconds": 604800,
+    "maximum_page_items": 8,
+    "maximum_address_bytes": 256,
+    "maximum_authorization_bytes": 1024,
+    "maximum_receipt_bytes": 1024,
+    "maximum_envelope_bytes": 1048576,
+    "maximum_storage_endpoint_bytes": 16384,
+    "maximum_storage_offer_bytes": 24576,
+    "minimum_storage_offer_validity_seconds": 30,
+    "maximum_storage_offer_validity_seconds": 3600,
+    "maximum_admission_work_bits": 20
+  },
+  "domains": [
+    { "id": "mailbox-id-v1", "value": "kilogram:blind-mailbox-id:cbor-v1\u0000", "operation": "blake3-domain-prefixed-address" },
+    { "id": "envelope-hpke-info-v1", "value": "kilogram:blind-mailbox-envelope:cbor-v1\u0000", "operation": "hpke-info" },
+    { "id": "envelope-digest-v1", "value": "kilogram:blind-mailbox-envelope-digest:cbor-v1\u0000", "operation": "blake3-domain-prefixed-envelope" },
+    { "id": "write-authorization-v1", "value": "kilogram:blind-mailbox-write:cbor-v1\u0000", "operation": "write-capability-ed25519" },
+    { "id": "read-authorization-v1", "value": "kilogram:blind-mailbox-read:cbor-v1\u0000", "operation": "read-capability-ed25519" },
+    { "id": "storage-offer-v1", "value": "kilogram:blind-mailbox-storage-offer:cbor-v1\u0000", "operation": "store-ed25519" },
+    { "id": "storage-offer-admission-work-v1", "value": "kilogram:blind-mailbox-storage-offer-admission-work:cbor-v1\u0000", "operation": "blake3-domain-prefixed-offer-content-leading-zero-bits" },
+    { "id": "stored-receipt-v1", "value": "kilogram:blind-mailbox-stored-receipt:cbor-v1\u0000", "operation": "store-ed25519" },
+    { "id": "stored-receipt-id-v1", "value": "kilogram:blind-mailbox-receipt-id:cbor-v1\u0000", "operation": "blake3-domain-prefixed-signed-receipt" },
+    { "id": "delete-receipt-v1", "value": "kilogram:blind-mailbox-delete-receipt:cbor-v1\u0000", "operation": "store-ed25519" },
+    { "id": "delete-receipt-id-v1", "value": "kilogram:blind-mailbox-delete-id:cbor-v1\u0000", "operation": "blake3-domain-prefixed-signed-receipt" }
+  ],
+  "registries": {
+    "read_operation": { "1": "list", "2": "delete" },
+    "storage_policy_class": { "1": "bounded-volunteer" }
+  },
+  "objects": [
+    { "id": "mailbox-address-v1", "array_length": 3 },
+    { "id": "mailbox-envelope-context-v1", "array_length": 5 },
+    { "id": "mailbox-envelope-v1", "array_length": 4 },
+    { "id": "mailbox-write-authorization-content-v1", "array_length": 7 },
+    { "id": "signed-mailbox-write-authorization-v1", "array_length": 3 },
+    { "id": "mailbox-read-authorization-content-v1", "array_length": 4 },
+    { "id": "mailbox-read-list-v1", "array_length": 5 },
+    { "id": "mailbox-read-delete-v1", "array_length": 4 },
+    { "id": "signed-mailbox-read-authorization-v1", "array_length": 3 },
+    { "id": "mailbox-storage-offer-content-v1", "array_length": 9 },
+    { "id": "signed-mailbox-storage-offer-v1", "array_length": 3 },
+    { "id": "mailbox-stored-receipt-content-v1", "array_length": 8 },
+    { "id": "signed-mailbox-stored-receipt-v1", "array_length": 3 },
+    { "id": "mailbox-delete-receipt-content-v1", "array_length": 7 },
+    { "id": "signed-mailbox-delete-receipt-v1", "array_length": 3 }
+  ],
+  "semantic_rules": [
+    "mailbox identifier binds the exact canonical read and write public capability keys",
+    "HPKE info is domain separated and AAD is the exact canonical envelope context",
+    "write authorization binds mailbox item TTL envelope length and domain-separated envelope digest",
+    "list and delete are closed read-operation variants signed by the matching read capability",
+    "storage offer binds endpoint policy capacity lifetime nonce and bounded admission work",
+    "stored receipt binds the exact envelope and delete receipt binds the exact stored-receipt identifier",
+    "all signed objects reject invalid keys signatures versions variants lengths TTLs and substitutions"
+  ],
+  "separate_surfaces": [
+    "mailbox-provisioning",
+    "blind-mailbox-provider-gossip",
+    "blind-mailbox-transport",
+    "runtime-mailbox-envelope"
+  ]
+}

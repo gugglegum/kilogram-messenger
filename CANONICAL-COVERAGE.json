@@ -13,9 +13,9 @@
   },
   "summary": {
     "source_surfaces": 20,
-    "complete": 6,
+    "complete": 7,
     "partial": 0,
-    "not_started": 12,
+    "not_started": 11,
     "not_targeted": 2,
     "activation_ready": false
   },
@@ -43,10 +43,10 @@
     },
     {
       "id": "blind-mailbox-capability",
-      "coverage": "not-started",
-      "artifacts": [],
-      "covered": [],
-      "remaining": ["entire-surface"]
+      "coverage": "complete",
+      "artifacts": ["CANONICAL-MAILBOX.cddl", "CANONICAL-MAILBOX-SCHEMA.json", "CANONICAL-MAILBOX-VECTORS.json", "crates/kilogram-protocol/src/canonical_mailbox_v1.rs", "scripts/verify-kilogram-canonical-mailbox-reference.mjs"],
+      "covered": ["capability-address-and-mailbox-id", "hpke-context-and-opaque-envelope", "write-authorization", "list-and-delete-read-authorizations", "bounded-volunteer-storage-offer-and-admission-work", "stored-and-delete-receipts"],
+      "remaining": []
     },
     {
       "id": "blind-mailbox-provider-gossip",
@@ -164,8 +164,8 @@
     }
   ],
   "next_priority": [
-    "blind-mailbox-capability",
     "blind-mailbox-transport",
-    "blind-mailbox-provider-gossip"
+    "blind-mailbox-provider-gossip",
+    "mailbox-provisioning"
   ]
 }

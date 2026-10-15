@@ -5319,3 +5319,26 @@ correlation visible, Windows-only field evidence, independent security audit
   accepted-tag readiness 48/48, rustfmt и locked/offline strict Clippy green;
 - active Postcard/base64url recovery, history-rewrap wire, ALPN, runtime/network,
   release/archive/tag не менялись.
+
+### M1.1.15 — canonical blind-mailbox capability artifacts: принято локально
+
+- deterministic-CBOR schema покрывает public capability address/mailbox ID,
+  HPKE context/AAD и opaque envelope, write/read authorizations, volunteer
+  storage offer/admission work, stored/delete receipts и receipt IDs;
+- mailbox store по-прежнему не видит Account, Device, conversation или Event
+  IDs; ciphertext остаётся opaque, а HPKE cross-language crypto conformance
+  явно остаётся activation requirement;
+- address/envelope/authorization/receipt semantic links, TTL, pagination,
+  capacity/lifetime, closed variants, Ed25519 signatures, BLAKE3 digests/IDs и
+  substitutions проверяются fail closed;
+- independent Node reference воспроизводит exact CBOR, public keys, signatures,
+  digests, IDs и bounded admission-work vector без вызова Rust/CBOR package;
+- шесть signed fixtures расширяют mutation corpus до 6264/7000;
+  `blind-mailbox-capability` становится complete (7 complete / 0 partial),
+  readiness расширен с 48 до 49 gates;
+- verification: protocol unit tests 52/52, mutation corpus 6264/6264,
+  accepted-tag readiness 49/49, rustfmt и locked/offline strict Clippy green;
+- `mailbox-provisioning`, provider gossip, mailbox transport и runtime mailbox
+  envelope остаются отдельными `not-started` surfaces;
+- active Postcard v1 domains, HPKE AAD, ALPN, runtime/network/release/archive/tag
+  не менялись.

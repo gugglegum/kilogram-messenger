@@ -10,6 +10,13 @@ use kilogram_protocol::canonical_device_link_v1::decode_and_verify_signed_device
 use kilogram_protocol::canonical_event_v1::{
     decode_and_verify_authorized_event_v1, decode_and_verify_signed_event_v1,
 };
+use kilogram_protocol::canonical_mailbox_v1::{
+    decode_and_verify_signed_mailbox_delete_receipt_v1,
+    decode_and_verify_signed_mailbox_read_authorization_v1,
+    decode_and_verify_signed_mailbox_storage_offer_v1,
+    decode_and_verify_signed_mailbox_stored_receipt_v1,
+    decode_and_verify_signed_mailbox_write_authorization_v1,
+};
 use kilogram_protocol::canonical_prekey_selection_v1::decode_and_verify_prekey_selection_transcript_v1;
 use kilogram_protocol::canonical_ratchet_v1::{
     decode_and_verify_account_prekey_directory_v1, decode_and_verify_signed_prekey_pool_v1,
@@ -28,8 +35,8 @@ use kilogram_protocol::canonical_sync_v1::{
 use serde_json::Value;
 
 const MINIMUM_MUTATIONS: usize = 500;
-const EXPECTED_MUTATIONS: usize = 4_698;
-const MAXIMUM_MUTATIONS: usize = 5_000;
+const EXPECTED_MUTATIONS: usize = 6_264;
+const MAXIMUM_MUTATIONS: usize = 7_000;
 const MAXIMUM_GRID_POSITIONS: usize = 128;
 
 #[derive(Clone, Copy)]
@@ -52,6 +59,12 @@ enum Decoder {
     SyncClientFrame,
     SyncServerFrame,
     SyncSessionCheckpoint,
+    MailboxWriteAuthorization,
+    MailboxReadListAuthorization,
+    MailboxReadDeleteAuthorization,
+    MailboxStorageOffer,
+    MailboxStoredReceipt,
+    MailboxDeleteReceipt,
 }
 
 fn accepts(decoder: Decoder, bytes: &[u8]) -> bool {
@@ -77,6 +90,21 @@ fn accepts(decoder: Decoder, bytes: &[u8]) -> bool {
         Decoder::SyncServerFrame => decode_and_verify_sync_server_frame_v1(bytes).is_ok(),
         Decoder::SyncSessionCheckpoint => {
             decode_and_verify_signed_sync_session_checkpoint_v1(bytes).is_ok()
+        }
+        Decoder::MailboxWriteAuthorization => {
+            decode_and_verify_signed_mailbox_write_authorization_v1(bytes).is_ok()
+        }
+        Decoder::MailboxReadListAuthorization | Decoder::MailboxReadDeleteAuthorization => {
+            decode_and_verify_signed_mailbox_read_authorization_v1(bytes).is_ok()
+        }
+        Decoder::MailboxStorageOffer => {
+            decode_and_verify_signed_mailbox_storage_offer_v1(bytes).is_ok()
+        }
+        Decoder::MailboxStoredReceipt => {
+            decode_and_verify_signed_mailbox_stored_receipt_v1(bytes).is_ok()
+        }
+        Decoder::MailboxDeleteReceipt => {
+            decode_and_verify_signed_mailbox_delete_receipt_v1(bytes).is_ok()
         }
     }
 }
@@ -150,6 +178,10 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
     let sync_session: Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-SYNC-SESSION-VECTORS.json"
+    )))?;
+    let mailbox: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../CANONICAL-MAILBOX-VECTORS.json"
     )))?;
     let fixtures = [
         (
@@ -251,6 +283,42 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
             Decoder::SyncSessionCheckpoint,
             pointer_hex(&sync_session, "/expected/checkpoints/3/signed_cbor_hex")?,
         ),
+        (
+            "mailbox-write-authorization",
+            Decoder::MailboxWriteAuthorization,
+            pointer_hex(&mailbox, "/expected/write_authorization/signed_cbor_hex")?,
+        ),
+        (
+            "mailbox-read-list-authorization",
+            Decoder::MailboxReadListAuthorization,
+            pointer_hex(
+                &mailbox,
+                "/expected/read_list_authorization/signed_cbor_hex",
+            )?,
+        ),
+        (
+            "mailbox-read-delete-authorization",
+            Decoder::MailboxReadDeleteAuthorization,
+            pointer_hex(
+                &mailbox,
+                "/expected/read_delete_authorization/signed_cbor_hex",
+            )?,
+        ),
+        (
+            "mailbox-storage-offer",
+            Decoder::MailboxStorageOffer,
+            pointer_hex(&mailbox, "/expected/storage_offer/signed_cbor_hex")?,
+        ),
+        (
+            "mailbox-stored-receipt",
+            Decoder::MailboxStoredReceipt,
+            pointer_hex(&mailbox, "/expected/stored_receipt/signed_cbor_hex")?,
+        ),
+        (
+            "mailbox-delete-receipt",
+            Decoder::MailboxDeleteReceipt,
+            pointer_hex(&mailbox, "/expected/delete_receipt/signed_cbor_hex")?,
+        ),
     ];
     let mut mutations = 0usize;
     for (name, decoder, valid) in fixtures {
@@ -337,6 +405,12 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         Decoder::SyncClientFrame,
         Decoder::SyncServerFrame,
         Decoder::SyncSessionCheckpoint,
+        Decoder::MailboxWriteAuthorization,
+        Decoder::MailboxReadListAuthorization,
+        Decoder::MailboxReadDeleteAuthorization,
+        Decoder::MailboxStorageOffer,
+        Decoder::MailboxStoredReceipt,
+        Decoder::MailboxDeleteReceipt,
     ] {
         assert!(!accepts(decoder, &oversized));
         mutations += 1;
