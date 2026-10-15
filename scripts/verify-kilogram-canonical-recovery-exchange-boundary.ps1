@@ -180,7 +180,9 @@ $historyCoverage = @($coverage.surfaces | Where-Object { $_.id -ceq 'history-rec
 $rewrapCoverage = @($coverage.surfaces | Where-Object { $_.id -ceq 'history-rewrap' })
 if ($historyCoverage.Count -ne 1 -or [string]$historyCoverage[0].coverage -cne 'complete' -or
     @($historyCoverage[0].remaining).Count -ne 0 -or
-    $rewrapCoverage.Count -ne 1 -or [string]$rewrapCoverage[0].coverage -cne 'not-started') {
+    $rewrapCoverage.Count -ne 1 -or [string]$rewrapCoverage[0].coverage -cne 'complete' -or
+    @($rewrapCoverage[0].remaining).Count -ne 0 -or
+    'CANONICAL-HISTORY-REWRAP.cddl' -notin @($rewrapCoverage[0].artifacts)) {
     throw 'history recovery and history rewrap coverage separation changed'
 }
 foreach ($required in @('separate `history-rewrap`', 'exact signed device list',
@@ -215,6 +217,6 @@ Write-Output 'link_plan_request_response=verified'
 Write-Output 'session_and_plan_binding=verified'
 Write-Output 'bounded_decoder_mutations=6264'
 Write-Output 'history_recovery_coverage=complete'
-Write-Output 'history_rewrap_coverage=not-started'
+Write-Output 'history_rewrap_coverage=complete-separate-surface'
 Write-Output 'active_runtime_changed=false'
 Write-Output 'network_executed=false'

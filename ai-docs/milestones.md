@@ -5547,7 +5547,7 @@ correlation visible, Windows-only field evidence, independent security audit
   list и обязан совпасть с header recipient Device ID; recipient-only open
   повторно проверяет весь plaintext bundle и его Root/Device authority context;
 - recipient-signed acknowledgement exact-связывает session ID, bundle ID,
-  envelope ID, applied count, derived contact/endpoint/observation/conflict/
+  applied count, derived contact/endpoint/observation/conflict/
   resolution totals и acknowledgement time;
 - независимый Node reference проверяет deterministic CBOR, plaintext Ed25519 и
   BLAKE3 bundle ID, заново строит recipient ACK и отвергает session/bundle/
@@ -5560,3 +5560,29 @@ correlation visible, Windows-only field evidence, independent security audit
   остаётся inactive: identifier не назначен, а downgrade tests, sustained
   fuzzing, independent cross-language HPKE и fresh field evidence обязательны
   до activation; следующая canonical priority — `history-rewrap`.
+
+### M1.1.25 — canonical history-rewrap: принято локально
+
+- deterministic-CBOR family отделяет encrypted history payload от M1.1.14
+  consent/pagination/checkpoint ceremony и не выдаёт одно за другое;
+- exact current Root-signed Account device list авторизует distinct source и
+  recipient Devices и поставляет recipient HPKE key; Root-signed conversation
+  membership доказывает участие Account в беседе;
+- recipient-signed request связывает conversation, roles, external 32-byte
+  session binding, bounded contiguous range и SAS от exact roster/roles;
+- manifest коммитит полный strictly ordered Event ID inventory до 4096 событий
+  и страницу до 256 entries; полный range повторно проверяет inventory digest;
+- каждая source-signed entry несёт fully verified authorized RatchetText event,
+  manifest/index, real HPKE encapsulated key/ciphertext; AAD exact-связывает
+  manifest ID, inventory index и Event ID;
+- source-signed transfer встраивает exact request и bundle, а contextual
+  verifier требует внешний expected request и session, не доверяя одной
+  self-consistency transport artifact;
+- Node reference независимо воспроизводит deterministic CBOR, Ed25519,
+  BLAKE3, roster/membership/event bindings; real HPKE fixture создаётся и
+  открывается Rust, cross-language HPKE честно остаётся pending;
+- verification: protocol unit tests 74/74 и mutation corpus 13715/13715 green;
+  четыре strict/contextual fixtures, coverage 15 complete / 0 partial /
+  3 not-started / 2 not-targeted, readiness 58 gates;
+- active Postcard v1 request/bundle/transfer, runtime, network, release,
+  archives и tags не менялись; next canonical priority — `account-recovery`.

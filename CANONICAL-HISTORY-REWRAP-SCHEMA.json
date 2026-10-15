@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.25",
+  "status": "candidate-not-active",
+  "changes_active_wire": false,
+  "profile": "kilogram-deterministic-cbor-v1",
+  "completes_surface": "history-rewrap",
+  "depends_on": [
+    "CANONICAL-ENDPOINT-ANNOUNCEMENT-SCHEMA.json",
+    "CANONICAL-EVENT-SCHEMA.json"
+  ],
+  "cddl": {
+    "standard": "RFC 8610",
+    "path": "CANONICAL-HISTORY-REWRAP.cddl",
+    "root_rule": "kilogram-history-rewrap-v1"
+  },
+  "activation": {
+    "current_runtime_encoding": "postcard-v1-request-bundle-transfer",
+    "current_runtime_changed": false,
+    "candidate_protocol_identifier": "unassigned",
+    "required_before_activation": [
+      "new-explicit-protocol-version-or-parallel-alpn",
+      "dual-reader-and-downgrade-tests",
+      "coverage-guided-fuzzing",
+      "cross-language-hpke-seal-open-conformance",
+      "fresh-multi-device-field-evidence"
+    ]
+  },
+  "limits": {
+    "maximum_entries_per_bundle": 256,
+    "maximum_inventory_events": 4096,
+    "maximum_plaintext_bytes_per_entry": 65536,
+    "maximum_ciphertext_bytes_per_entry": 65552,
+    "maximum_nested_cbor_bytes": 1048576,
+    "maximum_bundle_bytes": 8388608,
+    "maximum_transfer_bytes": 9437184,
+    "hpke_encapsulated_key_bytes": 32,
+    "signature_bytes": 64
+  },
+  "cryptography": {
+    "hpke_suite": "DHKEM(X25519, HKDF-SHA256), HKDF-SHA256, ChaCha20Poly1305",
+    "hpke_mode": "base",
+    "hpke_info": "kilogram:history-rewrap-entry-hpke:cbor-v1\u0000",
+    "hpke_aad": "domain plus exact canonical array of manifest ID, inventory index and Event ID",
+    "signatures": "Ed25519",
+    "digests": "BLAKE3 over domain-prefixed deterministic CBOR"
+  },
+  "domains": [
+    { "id": "sas", "value": "kilogram:history-rewrap-sas:cbor-v1\u0000" },
+    { "id": "inventory", "value": "kilogram:history-rewrap-inventory:cbor-v1\u0000" },
+    { "id": "request-signature", "value": "kilogram:history-rewrap-request-signature:cbor-v1\u0000" },
+    { "id": "manifest-id", "value": "kilogram:history-rewrap-manifest-id:cbor-v1\u0000" },
+    { "id": "entry-hpke-info", "value": "kilogram:history-rewrap-entry-hpke:cbor-v1\u0000" },
+    { "id": "entry-aad", "value": "kilogram:history-rewrap-entry-aad:cbor-v1\u0000" },
+    { "id": "entry-signature", "value": "kilogram:history-rewrap-entry-signature:cbor-v1\u0000" },
+    { "id": "bundle-id", "value": "kilogram:history-rewrap-bundle-id:cbor-v1\u0000" },
+    { "id": "transfer-signature", "value": "kilogram:history-rewrap-transfer-signature:cbor-v1\u0000" }
+  ],
+  "objects": [
+    { "id": "history-rewrap-request-content-v1", "array_length": 8 },
+    { "id": "signed-history-rewrap-request-v1", "array_length": 3 },
+    { "id": "history-rewrap-manifest-v1", "array_length": 10 },
+    { "id": "history-rewrap-entry-content-v1", "array_length": 7 },
+    { "id": "signed-history-rewrap-entry-v1", "array_length": 3 },
+    { "id": "history-rewrap-bundle-v1", "array_length": 3 },
+    { "id": "history-rewrap-transfer-content-v1", "array_length": 3 },
+    { "id": "signed-history-rewrap-transfer-v1", "array_length": 3 }
+  ],
+  "semantic_rules": [
+    "source and recipient must be distinct current Devices in one exact Root-signed Account roster",
+    "the Account owning that roster must be a member of the exact Root-signed conversation membership",
+    "the recipient signs the bounded range request and an explicit session binding",
+    "the manifest commits the complete ordered Event ID inventory while each bundle carries one contiguous range",
+    "every entry carries one fully verified authorized RatchetText event and is signed by the source Device",
+    "each HPKE AAD binds manifest ID, exact inventory index and Event ID",
+    "the recipient encryption key must equal the key certified for that Device in the embedded exact roster",
+    "the source-signed transfer embeds and binds the exact recipient request and verified bundle"
+  ],
+  "active_runtime_unchanged": [
+    "crates/kilogram-protocol/src/rewrap.rs",
+    "postcard-v1-request-bundle-transfer"
+  ]
+}

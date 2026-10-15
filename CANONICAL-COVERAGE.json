@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.24",
+  "milestone": "M1.1.25",
   "status": "coverage-audit-not-active",
   "changes_active_wire": false,
   "source_manifest": "PROTOCOL-COMPATIBILITY.json",
@@ -13,9 +13,9 @@
   },
   "summary": {
     "source_surfaces": 20,
-    "complete": 14,
+    "complete": 15,
     "partial": 0,
-    "not_started": 4,
+    "not_started": 3,
     "not_targeted": 2,
     "activation_ready": false
   },
@@ -101,10 +101,10 @@
     },
     {
       "id": "history-rewrap",
-      "coverage": "not-started",
-      "artifacts": [],
-      "covered": [],
-      "remaining": ["entire-surface"]
+      "coverage": "complete",
+      "artifacts": ["CANONICAL-HISTORY-REWRAP.cddl", "CANONICAL-HISTORY-REWRAP-SCHEMA.json", "CANONICAL-HISTORY-REWRAP-VECTORS.json", "crates/kilogram-protocol/src/canonical_rewrap_v1.rs", "scripts/verify-kilogram-canonical-rewrap-reference.mjs"],
+      "covered": ["exact-current-account-device-list", "conversation-membership", "recipient-signed-session-bound-range-request", "sas-and-complete-inventory-digest", "source-signed-entry-and-transfer", "recipient-only-hpke-entry", "manifest-index-and-event-associated-data", "contextual-request-and-session-verification"],
+      "remaining": []
     },
     {
       "id": "mailbox-provisioning",
@@ -164,8 +164,8 @@
     }
   ],
   "next_priority": [
-    "history-rewrap",
     "account-recovery",
-    "runtime-ipc"
+    "runtime-ipc",
+    "transport-sync"
   ]
 }

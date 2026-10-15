@@ -59,6 +59,14 @@ use kilogram_protocol::canonical_recovery_exchange_v1::{
     decode_and_verify_signed_history_recovery_response_v1,
 };
 use kilogram_protocol::canonical_recovery_v1::decode_and_verify_signed_history_recovery_checkpoint_v1;
+use kilogram_protocol::canonical_rewrap_v1::{
+    CanonicalHistoryRewrapManifestV1, CanonicalSignedHistoryRewrapRequestV1,
+    decode_and_verify_history_rewrap_bundle_v1, decode_and_verify_history_rewrap_manifest_v1,
+    decode_and_verify_signed_history_rewrap_entry_v1,
+    decode_and_verify_signed_history_rewrap_request_v1,
+    decode_and_verify_signed_history_rewrap_transfer_v1, open_history_rewrap_entry_v1,
+    verify_history_rewrap_transfer_for_request_v1,
+};
 use kilogram_protocol::canonical_runtime_mailbox_v1::{
     CanonicalSignedRuntimeMailboxDispatchV1, decode_and_verify_runtime_mailbox_payload_v1,
     decode_and_verify_signed_runtime_local_mailbox_binding_v1,
@@ -78,8 +86,8 @@ use kilogram_protocol::canonical_ticket_publication_v1::{
 use serde_json::Value;
 
 const MINIMUM_MUTATIONS: usize = 500;
-const EXPECTED_MUTATIONS: usize = 12_671;
-const MAXIMUM_MUTATIONS: usize = 14_000;
+const EXPECTED_MUTATIONS: usize = 13_715;
+const MAXIMUM_MUTATIONS: usize = 15_000;
 const MAXIMUM_GRID_POSITIONS: usize = 128;
 
 #[derive(Clone)]
@@ -139,6 +147,16 @@ enum Decoder {
     EndpointAnnouncementAcknowledgement {
         session_binding: [u8; 32],
         bundle: Box<CanonicalSignedEndpointAnnouncementBundleV1>,
+    },
+    HistoryRewrapRequest,
+    HistoryRewrapEntry {
+        manifest: Box<CanonicalHistoryRewrapManifestV1>,
+        recipient_secret: [u8; 32],
+    },
+    HistoryRewrapBundle,
+    HistoryRewrapTransfer {
+        request: Box<CanonicalSignedHistoryRewrapRequestV1>,
+        session_binding: [u8; 32],
     },
     MailboxGossipFrame {
         expected_id: [u8; 32],
@@ -271,6 +289,30 @@ fn accepts(decoder: &Decoder, bytes: &[u8]) -> bool {
                 )
             })
             .is_ok(),
+        Decoder::HistoryRewrapRequest => {
+            decode_and_verify_signed_history_rewrap_request_v1(bytes).is_ok()
+        }
+        Decoder::HistoryRewrapEntry {
+            manifest,
+            recipient_secret,
+        } => decode_and_verify_signed_history_rewrap_entry_v1(bytes)
+            .and_then(|entry| {
+                open_history_rewrap_entry_v1(
+                    &entry,
+                    manifest,
+                    &DeviceEncryptionIdentity::from_secret_bytes(*recipient_secret),
+                )
+            })
+            .is_ok(),
+        Decoder::HistoryRewrapBundle => decode_and_verify_history_rewrap_bundle_v1(bytes).is_ok(),
+        Decoder::HistoryRewrapTransfer {
+            request,
+            session_binding,
+        } => decode_and_verify_signed_history_rewrap_transfer_v1(bytes)
+            .and_then(|transfer| {
+                verify_history_rewrap_transfer_for_request_v1(&transfer, request, *session_binding)
+            })
+            .is_ok(),
         Decoder::MailboxGossipFrame {
             expected_id,
             now_unix_seconds,
@@ -389,6 +431,10 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-ENDPOINT-ANNOUNCEMENT-TRANSPORT-VECTORS.json"
     )))?;
+    let history_rewrap: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../CANONICAL-HISTORY-REWRAP-VECTORS.json"
+    )))?;
     let gossip_frame_id: [u8; 32] = pointer_hex(&mailbox_gossip, "/expected/request/frame_id_hex")?
         .try_into()
         .map_err(|_| "gossip frame ID length changed")?;
@@ -426,6 +472,24 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         endpoint_announcement["expected"]["signed_bundle"]["valid_at_unix_seconds"]
             .as_u64()
             .ok_or("endpoint bundle valid time is missing")?;
+    let history_rewrap_request = decode_and_verify_signed_history_rewrap_request_v1(&pointer_hex(
+        &history_rewrap,
+        "/expected/request/signed_cbor_hex",
+    )?)?;
+    let history_rewrap_manifest = decode_and_verify_history_rewrap_manifest_v1(&pointer_hex(
+        &history_rewrap,
+        "/expected/manifest/cbor_hex",
+    )?)?;
+    let history_rewrap_recipient_secret: [u8; 32] = pointer_hex(
+        &endpoint_announcement,
+        "/input/recipient_encryption_secret_seed_hex",
+    )?
+    .try_into()
+    .map_err(|_| "history-rewrap recipient encryption secret length changed")?;
+    let history_rewrap_session_binding: [u8; 32] =
+        pointer_hex(&history_rewrap, "/input/session_binding_hex")?
+            .try_into()
+            .map_err(|_| "history-rewrap session binding length changed")?;
     let fixtures = [
         (
             "certificate",
@@ -759,6 +823,32 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
                 "/expected/acknowledgement/signed_cbor_hex",
             )?,
         ),
+        (
+            "signed-history-rewrap-request",
+            Decoder::HistoryRewrapRequest,
+            pointer_hex(&history_rewrap, "/expected/request/signed_cbor_hex")?,
+        ),
+        (
+            "signed-history-rewrap-entry",
+            Decoder::HistoryRewrapEntry {
+                manifest: Box::new(history_rewrap_manifest.clone()),
+                recipient_secret: history_rewrap_recipient_secret,
+            },
+            pointer_hex(&history_rewrap, "/expected/entry/signed_cbor_hex")?,
+        ),
+        (
+            "history-rewrap-bundle",
+            Decoder::HistoryRewrapBundle,
+            pointer_hex(&history_rewrap, "/expected/bundle/cbor_hex")?,
+        ),
+        (
+            "signed-history-rewrap-transfer",
+            Decoder::HistoryRewrapTransfer {
+                request: Box::new(history_rewrap_request.clone()),
+                session_binding: history_rewrap_session_binding,
+            },
+            pointer_hex(&history_rewrap, "/expected/transfer/signed_cbor_hex")?,
+        ),
     ];
     let mut mutations = 0usize;
     for (name, decoder, valid) in fixtures {
@@ -879,6 +969,16 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         Decoder::EndpointAnnouncementAcknowledgement {
             session_binding: endpoint_session_binding,
             bundle: Box::new(endpoint_bundle),
+        },
+        Decoder::HistoryRewrapRequest,
+        Decoder::HistoryRewrapEntry {
+            manifest: Box::new(history_rewrap_manifest),
+            recipient_secret: history_rewrap_recipient_secret,
+        },
+        Decoder::HistoryRewrapBundle,
+        Decoder::HistoryRewrapTransfer {
+            request: Box::new(history_rewrap_request),
+            session_binding: history_rewrap_session_binding,
         },
         Decoder::MailboxGossipFrame {
             expected_id: [0; 32],

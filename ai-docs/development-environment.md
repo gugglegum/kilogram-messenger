@@ -3280,3 +3280,24 @@ Hosted follow-up:
 - Active Postcard v4/HPKE v1/ACK v2 remains unchanged. Canonical activation
   still requires an explicit identifier, downgrade tests, sustained fuzzing,
   independent cross-language HPKE conformance and fresh field evidence.
+
+## M1.1.25 canonical history-rewrap snapshot (2026-10-15)
+
+- New inactive Rust module:
+  `crates/kilogram-protocol/src/canonical_rewrap_v1.rs`.
+- Deterministic-CBOR request, manifest, entries, bundle and transfer bind one
+  exact Account roster, conversation membership, roles, session, full ordered
+  inventory and bounded range. Entries accept only verified RatchetText events.
+- HPKE uses the certified recipient key and exact manifest/index/Event ID AAD.
+  The checked-in fixture opens to `canonical history body`; wrong private key,
+  session, request, signature and ciphertext substitutions fail closed.
+- Independent Node reference rebuilds the roster and membership from seeds,
+  verifies the existing authorized event signature/ID, and reproduces all new
+  CBOR, Ed25519 and BLAKE3 bytes. It deliberately does not claim independent
+  HPKE seal/open support.
+- Protocol library regression passed 74/74. Bounded decoder mutation regression
+  passed 13715/13715 in 555.52 seconds, debug/offline, `CargoJobs=2` and
+  BelowNormal priority.
+- Canonical coverage is 15 complete, 0 partial, 3 not-started and 2
+  not-targeted. Readiness inventory contains 58 gates. Active Postcard v1 and
+  the accepted M1.0.0 tag remain unchanged.

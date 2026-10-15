@@ -378,6 +378,12 @@ sessions, distribution, removal и key epochs и не решены этим пр
 - Независимый second-builder, подписанный release provenance, обновления клиента
   и дальнейшая защита supply chain поверх M0.9.50 same-host gate.
 - Миграция криптоалгоритмов и wire protocol без разделения сети.
+- После M1.1.25 canonical coverage остаются три not-started surfaces:
+  `account-recovery`, `runtime-ipc` и `transport-sync`. Следующий приоритет —
+  portable account-recovery artifacts; history-rewrap уже complete, но его
+  activation всё ещё требует explicit identifier/ALPN, downgrade tests,
+  sustained fuzzing, independent HPKE conformance и fresh multi-device field
+  evidence.
 
 ## Инварианты при выборе ответов
 

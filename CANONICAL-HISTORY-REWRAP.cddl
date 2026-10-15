@@ -1,0 +1,76 @@
+; Kilogram M1.1.25 inactive deterministic-CBOR history-rewrap candidate.
+; Active Postcard v1 request, bundle and transfer bytes remain unchanged.
+
+kilogram-history-rewrap-v1 =
+  signed-history-rewrap-request-v1 /
+  history-rewrap-manifest-v1 /
+  signed-history-rewrap-entry-v1 /
+  history-rewrap-bundle-v1 /
+  signed-history-rewrap-transfer-v1
+
+id-32 = bytes .size 32
+signature-64 = bytes .size 64
+
+history-rewrap-request-content-v1 = [
+  schema-version: 1,
+  conversation-id: id-32,
+  source-device-id: id-32,
+  recipient-device-id: id-32,
+  session-binding: id-32,
+  range-start: uint,
+  maximum-event-count: 1..256,
+  sas: id-32
+]
+
+signed-history-rewrap-request-v1 = [
+  schema-version: 1,
+  content: history-rewrap-request-content-v1,
+  recipient-signature: signature-64
+]
+
+history-rewrap-manifest-v1 = [
+  schema-version: 1,
+  conversation-id: id-32,
+  exact-account-device-list-cbor: bytes .size (1..1048576),
+  conversation-membership-cbor: bytes .size (1..1048576),
+  source-device-id: id-32,
+  recipient-device-id: id-32,
+  inventory-event-count: 1..4096,
+  inventory-digest: id-32,
+  range-start: uint,
+  range-end: uint
+]
+
+history-rewrap-entry-content-v1 = [
+  schema-version: 1,
+  manifest-id: id-32,
+  source-device-id: id-32,
+  inventory-index: uint,
+  authorized-event-cbor: bytes .size (1..1048576),
+  hpke-encapsulated-key: id-32,
+  hpke-ciphertext: bytes .size (1..65552)
+]
+
+signed-history-rewrap-entry-v1 = [
+  schema-version: 1,
+  content: history-rewrap-entry-content-v1,
+  source-signature: signature-64
+]
+
+history-rewrap-bundle-v1 = [
+  schema-version: 1,
+  manifest-cbor: bytes .size (1..1048576),
+  entries: [1*256 bytes .size (1..1048576)]
+]
+
+history-rewrap-transfer-content-v1 = [
+  schema-version: 1,
+  signed-request-cbor: bytes .size (1..1048576),
+  bundle-cbor: bytes .size (1..8388608)
+]
+
+signed-history-rewrap-transfer-v1 = [
+  schema-version: 1,
+  content: history-rewrap-transfer-content-v1,
+  source-signature: signature-64
+]
