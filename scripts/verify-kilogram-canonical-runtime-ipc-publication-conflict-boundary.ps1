@@ -33,7 +33,7 @@ function Assert-LowerHex {
 
 function Assert-Schema {
     param([object]$Schema, [string]$Rust)
-    if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.39' -or
+    if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.40' -or
         [string]$Schema.status -cne 'candidate-not-active' -or [bool]$Schema.changes_active_wire -or
         [string]$Schema.profile -cne 'kilogram-deterministic-cbor-v1' -or
         [string]$Schema.activation.current_runtime_encoding -cne 'postcard-v26-with-json-descriptor-v7' -or
@@ -50,9 +50,9 @@ function Assert-Schema {
     if ($limits -cne '131072,131072,9437184,9437184,8388608') {
         throw 'canonical runtime IPC publication-conflict limits changed'
     }
-    if (@($Schema.domains).Count -ne 46 -or @($Schema.objects).Count -ne 25 -or
-        @($Schema.covered_commands).Count -ne 21 -or @($Schema.covered_results).Count -ne 20 -or
-        @($Schema.semantic_rules).Count -ne 88 -or
+    if (@($Schema.domains).Count -ne 52 -or @($Schema.objects).Count -ne 27 -or
+        @($Schema.covered_commands).Count -ne 23 -or @($Schema.covered_results).Count -ne 22 -or
+        @($Schema.semantic_rules).Count -ne 99 -or
         @($Schema.remaining_runtime_ipc_surface).Count -ne 4) {
         throw 'canonical runtime IPC publication-conflict inventory changed'
     }
@@ -198,9 +198,10 @@ if ($source.Count -ne 1 -or [string]$source[0].encoding -cne 'postcard' -or
     throw 'active compatibility registry no longer records Postcard runtime IPC v26'
 }
 $surface = @($coverage.surfaces | Where-Object { $_.id -ceq 'runtime-ipc' })
-if ([string]$coverage.milestone -cne 'M1.1.39' -or $surface.Count -ne 1 -or
+if ([string]$coverage.milestone -cne 'M1.1.40' -or $surface.Count -ne 1 -or
     [string]$surface[0].coverage -cne 'partial' -or
     'content-addressed-root-authorized-publication-conflict-ceremony' -cnotin @($surface[0].covered) -or
+    'content-addressed-own-device-announcement-automation' -cnotin @($surface[0].covered) -or
     (@($surface[0].remaining) -join ',') -cne
     (@($schema.remaining_runtime_ipc_surface) -join ',')) {
     throw 'canonical runtime IPC publication-conflict aggregate coverage boundary changed'
@@ -213,7 +214,7 @@ $actualMutationIds = @($mutations.fixtures |
     Where-Object { $_.vector_file -ceq 'CANONICAL-RUNTIME-IPC-PUBLICATION-CONFLICT-VECTORS.json' } |
     ForEach-Object { $_.id })
 if (($actualMutationIds -join ',') -cne ($expectedMutationIds -join ',') -or
-    [int]$mutations.expected_mutations -ne 25623 -or
+    [int]$mutations.expected_mutations -ne 26667 -or
     [int]$mutations.maximum_mutations -ne 30000 -or
     [int]$mutations.resource_bounds.maximum_total_mutations -ne 30000) {
     throw 'canonical runtime IPC publication-conflict fixtures or capacity changed'
@@ -269,6 +270,6 @@ Write-Output 'replacement_ticket_plaintext_in_ipc=false'
 Write-Output 'root_resolution_plaintext_in_ipc=false'
 Write-Output 'artifact_broker_activated=false'
 Write-Output 'sibling_propagation_pending=true'
-Write-Output 'bounded_decoder_mutations=25623'
+Write-Output 'bounded_decoder_mutations=26667'
 Write-Output 'active_postcard_v26_changed=false'
 Write-Output 'network_executed=false'

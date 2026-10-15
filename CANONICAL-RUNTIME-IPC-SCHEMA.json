@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.39",
+  "milestone": "M1.1.40",
   "status": "candidate-not-active",
   "changes_active_wire": false,
   "profile": "kilogram-deterministic-cbor-v1",
@@ -58,6 +58,14 @@
     "maximum_publication_conflict_request_artifact_bytes": 9437184,
     "maximum_publication_conflict_response_artifact_bytes": 9437184,
     "maximum_publication_conflict_replacement_ticket_artifact_bytes": 8388608,
+    "maximum_own_device_announcement_request_bytes": 786432,
+    "maximum_own_device_announcement_response_bytes": 524288,
+    "maximum_own_device_announcement_ticket_artifact_bytes": 8388608,
+    "maximum_own_device_announcement_policies": 32,
+    "minimum_own_device_announcement_interval_seconds": 30,
+    "maximum_own_device_announcement_interval_seconds": 86400,
+    "maximum_own_device_announcement_validity_seconds": 2592000,
+    "maximum_own_device_announcement_retry_seconds": 3600,
     "maximum_error_bytes": 4096,
     "maximum_descriptor_validity_seconds": 86400,
     "maximum_request_validity_seconds": 30,
@@ -315,6 +323,37 @@
       "id": "publication-conflict-response-id-v1",
       "value": "kilogram:runtime-ipc-publication-conflict-response-id:cbor-v1\\0",
       "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "own-device-announcement-artifact-digest-v1",
+      "value": "kilogram:runtime-ipc-own-device-announcement-artifact-digest:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "own-device-announcement-policy-id-v1",
+      "value": "kilogram:runtime-ipc-own-device-announcement-policy-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "own-device-announcement-snapshot-id-v1",
+      "value": "kilogram:runtime-ipc-own-device-announcement-snapshot-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "own-device-announcement-request-digest-v1",
+      "value": "kilogram:runtime-ipc-own-device-announcement-request-digest:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "own-device-announcement-response-signature-v1",
+      "value": "kilogram:runtime-ipc-own-device-announcement-response-signature:cbor-v1\\0",
+      "operation": "ed25519-signature",
+      "signer": "descriptor-device-ed25519"
+    },
+    {
+      "id": "own-device-announcement-response-id-v1",
+      "value": "kilogram:runtime-ipc-own-device-announcement-response-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
     }
   ],
   "objects": [
@@ -442,6 +481,16 @@
       "id": "signed-runtime-ipc-publication-conflict-response-v1",
       "kind": "device-signed-public-claim-over-staged-root-authorized-conflict-artifacts",
       "maximum_bytes": 131072
+    },
+    {
+      "id": "runtime-ipc-own-device-announcement-request-v1",
+      "kind": "short-lived-exact-roster-content-addressed-own-device-announcement-automation-request",
+      "maximum_bytes": 786432
+    },
+    {
+      "id": "signed-runtime-ipc-own-device-announcement-response-v1",
+      "kind": "device-signed-foreground-only-own-device-announcement-policy-snapshot",
+      "maximum_bytes": 524288
     }
   ],
   "covered_commands": [
@@ -465,7 +514,9 @@
     "publish-own-ticket",
     "refresh-contact-ticket",
     "create-publication-conflict-request",
-    "apply-publication-conflict-response"
+    "apply-publication-conflict-response",
+    "configure-own-device-announcement-automation",
+    "own-device-announcement-automation-status"
   ],
   "covered_results": [
     "pong",
@@ -487,7 +538,9 @@
     "own-ticket-published",
     "contact-ticket-refreshed",
     "publication-conflict-request-created",
-    "publication-conflict-response-applied"
+    "publication-conflict-response-applied",
+    "own-device-announcement-automation-configured",
+    "own-device-announcement-automation-status"
   ],
   "semantic_rules": [
     "descriptor address is exactly IPv4 127.0.0.1 or IPv6 ::1 and port is nonzero",
@@ -577,10 +630,21 @@
     "a locally applied Root resolution remains pending propagation to exact-current sibling Devices and does not claim remote convergence",
     "publication-conflict artifact references use a dedicated domain-separated digest; filesystem paths, Root secrets, write capabilities and artifact plaintext are forbidden",
     "the publication-conflict IPC request ID is the durable idempotency key: an exact retry may return the byte-identical already-committed result while divergent reuse fails before staging or mutation",
+    "own-device announcement commands embed the exact current Root-signed Account Device list and bind every response to its authority revision and domain-separated signed-list digest",
+    "configuration names one active sibling Device distinct from the descriptor Device and references its current connection ticket only by a bounded byte length and domain-separated content digest",
+    "a policy starts at generation one without a predecessor and every replacement advances exactly one generation from the exact expected policy ID",
+    "the policy ID commits the Account, local Device, authority state, policy generation, predecessor, configuration time and complete bounded configuration",
+    "announcement intervals, ticket validity, retry bounds and the four-bit Ethernet, Wi-Fi, mobile and unknown network mask are explicit and fail closed outside their limits",
+    "scheduler state is derived from enabled state, current network permission and failure count rather than accepted as an independent runtime claim",
+    "attempt, success, next-attempt, bundle and transport option tuples are internally consistent, nonzero when present and temporally ordered",
+    "status contains at most 32 unique policies in strict recipient Device order and its snapshot ID commits the complete authority-bound current-network projection",
+    "configuration and status results require no restart, execute only while the foreground runtime is running and explicitly deny an OS background service",
+    "filesystem paths, recipient ticket plaintext, Account Root secrets and publication write capabilities are forbidden from this own-device announcement IPC surface",
+    "the configure request ID is the durable idempotency key: an exact retry may return already-committed while stale predecessor or divergent reuse fails before policy mutation",
     "unknown variants, noncanonical CBOR, trailing data, expired objects and contextual substitutions fail closed"
   ],
   "remaining_runtime_ipc_surface": [
-    "own-device-discovery-and-automation-commands",
+    "own-device-ticket-discovery-and-roster-automation-commands",
     "recovery-plan-and-device-link-commands",
     "active-unpaged-conversation-list-migration",
     "all-associated-mutation-results-not-listed-above"

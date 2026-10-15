@@ -33,7 +33,7 @@ function Assert-LowerHex {
 
 function Assert-Schema {
     param([object]$Schema, [string]$Rust)
-    if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.39' -or
+    if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.40' -or
         [string]$Schema.status -cne 'candidate-not-active' -or [bool]$Schema.changes_active_wire -or
         [string]$Schema.profile -cne 'kilogram-deterministic-cbor-v1' -or
         [string]$Schema.activation.current_runtime_encoding -cne 'postcard-v26-with-json-descriptor-v7' -or
@@ -48,9 +48,9 @@ function Assert-Schema {
     if ($limits -cne '524288,131072,8') {
         throw 'canonical runtime IPC mailbox mutation limits changed'
     }
-    if (@($Schema.domains).Count -ne 46 -or @($Schema.objects).Count -ne 25 -or
-        @($Schema.covered_commands).Count -ne 21 -or @($Schema.covered_results).Count -ne 20 -or
-        @($Schema.semantic_rules).Count -ne 88 -or
+    if (@($Schema.domains).Count -ne 52 -or @($Schema.objects).Count -ne 27 -or
+        @($Schema.covered_commands).Count -ne 23 -or @($Schema.covered_results).Count -ne 22 -or
+        @($Schema.semantic_rules).Count -ne 99 -or
         @($Schema.remaining_runtime_ipc_surface).Count -ne 4) {
         throw 'canonical runtime IPC mailbox mutation inventory changed'
     }
@@ -187,7 +187,8 @@ $expectedCovered = @('device-signed-loopback-descriptor',
     'exact-provider-and-predecessor-bound-mailbox-capability-mutation',
     'exact-current-state-publication-channel-rotation',
     'exact-network-ticket-publication-and-device-observation',
-    'content-addressed-root-authorized-publication-conflict-ceremony')
+    'content-addressed-root-authorized-publication-conflict-ceremony',
+    'content-addressed-own-device-announcement-automation')
 $expectedRemaining = @($schema.remaining_runtime_ipc_surface | ForEach-Object { [string]$_ })
 if ($surface.Count -ne 1 -or [string]$surface[0].coverage -cne 'partial' -or
     (@($surface[0].covered) -join ',') -cne ($expectedCovered -join ',') -or
@@ -205,7 +206,7 @@ $actualMutationIds = @($mutations.fixtures |
     Where-Object { $_.vector_file -ceq 'CANONICAL-RUNTIME-IPC-MAILBOX-MUTATION-VECTORS.json' } |
     ForEach-Object { $_.id })
 if (($actualMutationIds -join ',') -cne ($expectedMutationIds -join ',') -or
-    [int]$mutations.expected_mutations -ne 25623 -or
+    [int]$mutations.expected_mutations -ne 26667 -or
     [int]$mutations.maximum_mutations -ne 30000 -or
     [int]$mutations.resource_bounds.maximum_total_mutations -ne 30000) {
     throw 'canonical runtime IPC mailbox mutation fixtures or capacity changed'
@@ -252,6 +253,6 @@ Write-Output 'runtime_ipc_coverage=partial'
 Write-Output 'mailbox_mutation_provider_selection=exact-device-signed'
 Write-Output 'mailbox_mutation_predecessor=exact-acknowledged-head'
 Write-Output 'local_binding_secrets_in_payload=false'
-Write-Output 'bounded_decoder_mutations=25623'
+Write-Output 'bounded_decoder_mutations=26667'
 Write-Output 'active_postcard_v26_changed=false'
 Write-Output 'network_executed=false'

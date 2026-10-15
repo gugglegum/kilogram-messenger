@@ -5,7 +5,7 @@
   "active_runtime_changed": false,
   "seed": 1262836037,
   "minimum_mutations": 500,
-  "expected_mutations": 25623,
+  "expected_mutations": 26667,
   "maximum_mutations": 30000,
   "fixtures": [
     {
@@ -648,6 +648,34 @@
       "json_pointer": "/expected/apply/response/signed_cbor_hex",
       "decoder": "decode_and_verify_signed_runtime_ipc_publication_conflict_response_v1",
       "context_verifier": "verify_runtime_ipc_publication_conflict_response_for_request_v1"
+    },
+    {
+      "id": "runtime-ipc-own-device-announcement-configure-request-v1",
+      "vector_file": "CANONICAL-RUNTIME-IPC-OWN-DEVICE-ANNOUNCEMENT-VECTORS.json",
+      "json_pointer": "/expected/configure/request/cbor_hex",
+      "decoder": "decode_and_verify_runtime_ipc_own_device_announcement_request_v1",
+      "context_verifier": "verify_runtime_ipc_own_device_announcement_request_for_descriptor_v1+verify_runtime_ipc_own_device_announcement_response_for_request_v1"
+    },
+    {
+      "id": "signed-runtime-ipc-own-device-announcement-configure-response-v1",
+      "vector_file": "CANONICAL-RUNTIME-IPC-OWN-DEVICE-ANNOUNCEMENT-VECTORS.json",
+      "json_pointer": "/expected/configure/response/signed_cbor_hex",
+      "decoder": "decode_and_verify_signed_runtime_ipc_own_device_announcement_response_v1",
+      "context_verifier": "verify_runtime_ipc_own_device_announcement_response_for_request_v1"
+    },
+    {
+      "id": "runtime-ipc-own-device-announcement-status-request-v1",
+      "vector_file": "CANONICAL-RUNTIME-IPC-OWN-DEVICE-ANNOUNCEMENT-VECTORS.json",
+      "json_pointer": "/expected/status/request/cbor_hex",
+      "decoder": "decode_and_verify_runtime_ipc_own_device_announcement_request_v1",
+      "context_verifier": "verify_runtime_ipc_own_device_announcement_request_for_descriptor_v1+verify_runtime_ipc_own_device_announcement_response_for_request_v1"
+    },
+    {
+      "id": "signed-runtime-ipc-own-device-announcement-status-response-v1",
+      "vector_file": "CANONICAL-RUNTIME-IPC-OWN-DEVICE-ANNOUNCEMENT-VECTORS.json",
+      "json_pointer": "/expected/status/response/signed_cbor_hex",
+      "decoder": "decode_and_verify_signed_runtime_ipc_own_device_announcement_response_v1",
+      "context_verifier": "verify_runtime_ipc_own_device_announcement_response_for_request_v1"
     }
   ],
   "mutation_classes": [

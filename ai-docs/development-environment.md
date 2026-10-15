@@ -3626,3 +3626,36 @@ Hosted follow-up:
 - Canonical coverage remains 16 complete, 1 partial, 1 not-started and 2
   not-targeted. The next bounded runtime IPC slice is own-device discovery and
   automation, followed by recovery/device-link commands.
+
+## M1.1.40 canonical runtime IPC own-device announcement automation (2026-10-16)
+
+- Added inactive
+  `crates/kilogram-protocol/src/canonical_runtime_ipc_own_device_announcement_v1.rs`
+  with exact configure/status commands, Device-signed responses and a bounded
+  foreground scheduler projection. Active Postcard v26/JSON descriptor v7 is
+  unchanged.
+- Configuration binds the exact Root-signed Account Device list, another active
+  Device, a content-addressed recipient-ticket artifact, interval/validity,
+  bounded retry values and an explicit Ethernet/Wi-Fi/mobile/unknown network
+  mask. Ticket plaintext and local filesystem paths never cross canonical IPC.
+- Policy IDs commit generation and predecessor; status snapshot IDs commit the
+  complete Device-ID-ordered projection. Scheduler state is derived from
+  enabled/network/failure state, and attempt/success/next/bundle/transport
+  tuples fail closed when incomplete or temporally inconsistent.
+- Results explicitly state foreground-runtime-only execution, no restart and
+  `os_background_service_enabled=false`; no Task Scheduler entry, service,
+  autostart, network call, stable-path executable, release build or archive was
+  created.
+- CDDL, schema, deterministic vectors, RFC-0166 and an independent Node
+  Ed25519/BLAKE3 implementation agree. The dedicated fail-closed boundary and
+  canonical conformance self-tests pass.
+- Final decoder mutation regression passed 26667/26667 in 985.34 seconds with
+  debug/offline Cargo, two jobs and BelowNormal priority. Protocol library
+  regression passed 124/124 with ten explicit vector generators ignored.
+- Accepted-tag readiness passed 73/73; rustfmt and workspace locked/offline
+  strict Clippy passed. The immutable accepted `M1.0.0` tag remained verified;
+  no network, push or tag was performed.
+- Canonical coverage remains 16 complete, 1 partial, 1 not-started and 2
+  not-targeted. The next bounded slices are pairwise own-device ticket
+  discovery and then roster-wide orchestration; recovery/device-link IPC and
+  transport-sync remain later work.
