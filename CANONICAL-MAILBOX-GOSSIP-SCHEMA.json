@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.17",
+  "status": "candidate-not-active",
+  "changes_active_wire": false,
+  "profile": "kilogram-deterministic-cbor-v1",
+  "depends_on": [
+    "CANONICAL-MAILBOX-SCHEMA.json",
+    "CANONICAL-MAILBOX-VECTORS.json"
+  ],
+  "cddl": {
+    "standard": "RFC 8610",
+    "path": "CANONICAL-MAILBOX-GOSSIP.cddl",
+    "root_rule": "kilogram-mailbox-provider-gossip-v1"
+  },
+  "activation": {
+    "current_runtime_encoding": "postcard",
+    "current_runtime_changed": false,
+    "candidate_protocol_identifier": "unassigned",
+    "required_before_activation": [
+      "new-explicit-provider-gossip-version",
+      "dual-reader-and-downgrade-tests",
+      "coverage-guided-fuzzing",
+      "fresh-field-evidence"
+    ]
+  },
+  "limits": {
+    "maximum_selection": 8,
+    "maximum_gossip_offers": 8,
+    "maximum_gossip_hops": 2,
+    "maximum_gossip_age_seconds": 900,
+    "maximum_gossip_offer_bytes": 2048,
+    "maximum_frame_validity_seconds": 60,
+    "maximum_frame_bytes": 20480,
+    "default_admission_work_bits": 8
+  },
+  "domains": [
+    {
+      "id": "provider-offer-id-v1",
+      "value": "kilogram:mailbox-provider-offer-id:cbor-v1\u0000",
+      "operation": "blake3-domain-prefixed-canonical-offer"
+    },
+    {
+      "id": "provider-selection-v1",
+      "value": "kilogram:mailbox-provider-selection:cbor-v1\u0000",
+      "operation": "blake3-domain-prefixed-selection-transcript"
+    },
+    {
+      "id": "provider-gossip-selection-v1",
+      "value": "kilogram:mailbox-provider-gossip-selection:cbor-v1\u0000",
+      "operation": "blake3-domain-prefixed-selection-transcript"
+    },
+    {
+      "id": "provider-gossip-frame-id-v1",
+      "value": "kilogram:mailbox-provider-gossip-frame-id:cbor-v1\u0000",
+      "operation": "blake3-domain-prefixed-gossip-frame"
+    }
+  ],
+  "objects": [
+    { "id": "mailbox-provider-selection-transcript-v1", "array_length": 5 },
+    { "id": "mailbox-provider-gossip-entry-v1", "array_length": 3 },
+    { "id": "mailbox-provider-gossip-frame-v1", "array_length": 6 }
+  ],
+  "semantic_rules": [
+    "offer IDs bind exact canonical signed storage-offer bytes",
+    "selection ranks bind salt store key transport identity and offer ID",
+    "selection is deterministic and deduplicates authenticated transport identities",
+    "gossip selection admits only bounded fresh admission-qualified offers below the hop limit",
+    "frames are valid for at most sixty seconds and contain at most eight unique store keys",
+    "each nested offer is canonical signature-valid currently valid and no older than fifteen minutes",
+    "reply frames bind the exact request frame ID",
+    "observer tags path-domain evidence and raw network addresses remain installation-local"
+  ],
+  "separate_surfaces": [
+    "mailbox-provisioning",
+    "runtime-mailbox-envelope",
+    "runtime-ipc"
+  ]
+}

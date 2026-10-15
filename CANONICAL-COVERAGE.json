@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.16",
+  "milestone": "M1.1.17",
   "status": "coverage-audit-not-active",
   "changes_active_wire": false,
   "source_manifest": "PROTOCOL-COMPATIBILITY.json",
@@ -13,9 +13,9 @@
   },
   "summary": {
     "source_surfaces": 20,
-    "complete": 8,
+    "complete": 9,
     "partial": 0,
-    "not_started": 10,
+    "not_started": 9,
     "not_targeted": 2,
     "activation_ready": false
   },
@@ -50,10 +50,10 @@
     },
     {
       "id": "blind-mailbox-provider-gossip",
-      "coverage": "not-started",
-      "artifacts": [],
-      "covered": [],
-      "remaining": ["entire-surface"]
+      "coverage": "complete",
+      "artifacts": ["CANONICAL-MAILBOX-GOSSIP.cddl", "CANONICAL-MAILBOX-GOSSIP-SCHEMA.json", "CANONICAL-MAILBOX-GOSSIP-VECTORS.json", "crates/kilogram-protocol/src/canonical_mailbox_gossip_v1.rs", "scripts/verify-kilogram-canonical-mailbox-gossip-reference.mjs"],
+      "covered": ["provider-offer-id", "deterministic-provider-selection", "bounded-gossip-selection", "gossip-entry-and-frame", "gossip-frame-id", "request-reply-binding", "hop-age-size-validity-and-uniqueness-bounds"],
+      "remaining": []
     },
     {
       "id": "blind-mailbox-transport",
@@ -164,8 +164,8 @@
     }
   ],
   "next_priority": [
-    "blind-mailbox-provider-gossip",
     "mailbox-provisioning",
-    "runtime-mailbox-envelope"
+    "runtime-mailbox-envelope",
+    "endpoint-announcement"
   ]
 }

@@ -1,0 +1,34 @@
+; Kilogram M1.1.17 inactive deterministic-CBOR provider-gossip artifacts.
+; Active Postcard provider gossip bytes remain unchanged.
+
+kilogram-mailbox-provider-gossip-v1 =
+  mailbox-provider-selection-transcript-v1 /
+  mailbox-provider-gossip-entry-v1 /
+  mailbox-provider-gossip-frame-v1
+
+id-32 = bytes .size 32
+canonical-mailbox-storage-offer = bytes .size (1..2048)
+
+mailbox-provider-selection-transcript-v1 = [
+  schema-version: 1,
+  selection-salt: id-32,
+  store-key: id-32,
+  transport-identity: id-32,
+  offer-id: id-32
+]
+
+mailbox-provider-gossip-entry-v1 = [
+  schema-version: 1,
+  transmitted-hops: 1 / 2,
+  offer: canonical-mailbox-storage-offer
+]
+
+mailbox-provider-frame-option-v1 = [] / [frame-id: id-32]
+mailbox-provider-gossip-frame-v1 = [
+  schema-version: 1,
+  created-at-unix-seconds: uint,
+  expires-at-unix-seconds: uint,
+  entropy: id-32,
+  reply-to: mailbox-provider-frame-option-v1,
+  entries: [* 0..8 mailbox-provider-gossip-entry-v1]
+]

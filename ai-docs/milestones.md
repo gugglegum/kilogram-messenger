@@ -5361,3 +5361,26 @@ correlation visible, Windows-only field evidence, independent security audit
 - active Postcard wire и `kilogram/m0/blind-mailbox/1` ALPN не менялись;
   provisioning, provider gossip и runtime mailbox envelope остаются отдельными
   `not-started` surfaces.
+
+### M1.1.17 — canonical blind-mailbox provider gossip: принято локально
+
+- deterministic-CBOR schema покрывает exact provider offer ID, общий selection
+  transcript, отдельные normal/gossip ranks, bounded gossip entry/frame и
+  request/reply frame-ID binding;
+- selection transcript связывает fresh salt, store key, transport-derived
+  identity и exact canonical signed offer ID; transport identities
+  дедуплицируются до выбранного размера;
+- gossip amplification ограничена 8 offers, 2 hops, 900 seconds age, 2048-byte
+  offer, 60-second frame и 20480-byte total frame; store keys уникальны;
+- nested signed storage offer повторно проходит canonical signature/validity
+  verification, а gossip selection отбрасывает low-work, stale, oversized и
+  hop-exhausted candidates;
+- frame намеренно не получает новую application signature: active дизайн
+  опирается на authenticated peer session, а persisted/correlated frame
+  проверяется через exact expected frame ID;
+- observer tags, positive path-domain evidence, IP и relay origin остаются
+  installation-local и не становятся глобально linkable wire metadata;
+- independent Node Ed25519/BLAKE3 reference воспроизводит exact offer,
+  selection и frame IDs; ID-aware strict decoder расширяет corpus до 7306/8000;
+- `blind-mailbox-provider-gossip` становится complete (9 complete / 0 partial),
+  readiness расширен с 50 до 51 gates; active Postcard runtime не менялся.

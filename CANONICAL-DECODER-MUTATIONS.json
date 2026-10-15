@@ -5,7 +5,7 @@
   "active_runtime_changed": false,
   "seed": 1262836037,
   "minimum_mutations": 500,
-  "expected_mutations": 7045,
+  "expected_mutations": 7306,
   "maximum_mutations": 8000,
   "fixtures": [
     {
@@ -169,6 +169,12 @@
       "vector_file": "CANONICAL-MAILBOX-TRANSPORT-VECTORS.json",
       "json_pointer": "/expected/peer_requests/delete/cbor_hex",
       "decoder": "decode_and_verify_mailbox_peer_request_v1"
+    },
+    {
+      "id": "mailbox-provider-gossip-frame-v1",
+      "vector_file": "CANONICAL-MAILBOX-GOSSIP-VECTORS.json",
+      "json_pointer": "/expected/request/frame_cbor_hex",
+      "decoder": "decode_and_verify_mailbox_provider_gossip_frame_for_id_v1"
     }
   ],
   "mutation_classes": [

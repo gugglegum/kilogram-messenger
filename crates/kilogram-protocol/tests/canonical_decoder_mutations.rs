@@ -10,6 +10,7 @@ use kilogram_protocol::canonical_device_link_v1::decode_and_verify_signed_device
 use kilogram_protocol::canonical_event_v1::{
     decode_and_verify_authorized_event_v1, decode_and_verify_signed_event_v1,
 };
+use kilogram_protocol::canonical_mailbox_gossip_v1::decode_and_verify_mailbox_provider_gossip_frame_for_id_v1;
 use kilogram_protocol::canonical_mailbox_transport_v1::decode_and_verify_mailbox_peer_request_v1;
 use kilogram_protocol::canonical_mailbox_v1::{
     decode_and_verify_signed_mailbox_delete_receipt_v1,
@@ -36,7 +37,7 @@ use kilogram_protocol::canonical_sync_v1::{
 use serde_json::Value;
 
 const MINIMUM_MUTATIONS: usize = 500;
-const EXPECTED_MUTATIONS: usize = 7_045;
+const EXPECTED_MUTATIONS: usize = 7_306;
 const MAXIMUM_MUTATIONS: usize = 8_000;
 const MAXIMUM_GRID_POSITIONS: usize = 128;
 
@@ -67,6 +68,10 @@ enum Decoder {
     MailboxStoredReceipt,
     MailboxDeleteReceipt,
     MailboxPeerRequest,
+    MailboxGossipFrame {
+        expected_id: [u8; 32],
+        now_unix_seconds: u64,
+    },
 }
 
 fn accepts(decoder: Decoder, bytes: &[u8]) -> bool {
@@ -109,6 +114,15 @@ fn accepts(decoder: Decoder, bytes: &[u8]) -> bool {
             decode_and_verify_signed_mailbox_delete_receipt_v1(bytes).is_ok()
         }
         Decoder::MailboxPeerRequest => decode_and_verify_mailbox_peer_request_v1(bytes).is_ok(),
+        Decoder::MailboxGossipFrame {
+            expected_id,
+            now_unix_seconds,
+        } => decode_and_verify_mailbox_provider_gossip_frame_for_id_v1(
+            bytes,
+            now_unix_seconds,
+            expected_id,
+        )
+        .is_ok(),
     }
 }
 
@@ -190,6 +204,13 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-MAILBOX-TRANSPORT-VECTORS.json"
     )))?;
+    let mailbox_gossip: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../CANONICAL-MAILBOX-GOSSIP-VECTORS.json"
+    )))?;
+    let gossip_frame_id: [u8; 32] = pointer_hex(&mailbox_gossip, "/expected/request/frame_id_hex")?
+        .try_into()
+        .map_err(|_| "gossip frame ID length changed")?;
     let fixtures = [
         (
             "certificate",
@@ -344,6 +365,16 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
                 "/expected/peer_requests/delete/cbor_hex",
             )?,
         ),
+        (
+            "mailbox-provider-gossip-request",
+            Decoder::MailboxGossipFrame {
+                expected_id: gossip_frame_id,
+                now_unix_seconds: mailbox_gossip["input"]["request_created_at"]
+                    .as_u64()
+                    .ok_or("gossip request time is missing")?,
+            },
+            pointer_hex(&mailbox_gossip, "/expected/request/frame_cbor_hex")?,
+        ),
     ];
     let mut mutations = 0usize;
     for (name, decoder, valid) in fixtures {
@@ -437,6 +468,10 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         Decoder::MailboxStoredReceipt,
         Decoder::MailboxDeleteReceipt,
         Decoder::MailboxPeerRequest,
+        Decoder::MailboxGossipFrame {
+            expected_id: [0; 32],
+            now_unix_seconds: 1_800_000_030,
+        },
     ] {
         assert!(!accepts(decoder, &oversized));
         mutations += 1;
