@@ -5512,3 +5512,27 @@ correlation visible, Windows-only field evidence, independent security audit
   workspace-wide offline strict Clippy и accepted-tag readiness 55/55 green;
 - active Postcard/base64url runtime, identifiers, network, release, archive и
   tags не менялись; next canonical priority — `endpoint-announcement`.
+
+### M1.1.23 — canonical endpoint-announcement plaintext: принято локально
+
+- deterministic-CBOR family покрывает signed plaintext bundle, accepted
+  observation evidence и closed publication state для endpoint candidates;
+- embedded exact current Root-signed device list авторизует source/recipient,
+  но bundle не может авторизовать собственный signing Device;
+- accepted evidence сохраняет исходную Device signature и добавляет подпись
+  importing Device с exact source bundle/time binding;
+- contacts строго упорядочены по peer Account/conversation ID, endpoints — по
+  Device ID, и ровно один endpoint на contact является primary;
+- direct/accepted observations, conflict proof и Root resolution проверяются
+  через соответствующие canonical schemas и exact channel/peer/authority/
+  write-key/route/ticket-digest bindings;
+- bounds: 16 MiB bundle, 64 KiB accepted evidence, 256 contacts, четыре
+  endpoints/contact, 4 KiB label, 8 MiB ticket, один час validity и пять минут
+  future skew;
+- independent Node Ed25519/BLAKE3/CBOR reference совпадает с Rust vectors;
+  два strict fixtures расширяют deterministic mutation corpus до 12149/13000;
+- coverage честно становится 13 complete / 1 partial / 4 not-started /
+  2 not-targeted, readiness — 56 gates;
+- recipient-only HPKE envelope и session-bound recipient ACK остаются M1.1.24;
+  active Postcard v4/HPKE v1/ACK v2 runtime, network, release, archive и tags не
+  менялись.

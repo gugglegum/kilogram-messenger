@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.22",
+  "milestone": "M1.1.23",
   "status": "coverage-audit-not-active",
   "changes_active_wire": false,
   "source_manifest": "PROTOCOL-COMPATIBILITY.json",
@@ -14,8 +14,8 @@
   "summary": {
     "source_surfaces": 20,
     "complete": 13,
-    "partial": 0,
-    "not_started": 5,
+    "partial": 1,
+    "not_started": 4,
     "not_targeted": 2,
     "activation_ready": false
   },
@@ -87,10 +87,10 @@
     },
     {
       "id": "endpoint-announcement",
-      "coverage": "not-started",
-      "artifacts": [],
-      "covered": [],
-      "remaining": ["entire-surface"]
+      "coverage": "partial",
+      "artifacts": ["CANONICAL-ENDPOINT-ANNOUNCEMENT.cddl", "CANONICAL-ENDPOINT-ANNOUNCEMENT-SCHEMA.json", "CANONICAL-ENDPOINT-ANNOUNCEMENT-VECTORS.json", "crates/kilogram-protocol/src/canonical_endpoint_announcement_v1.rs", "scripts/verify-kilogram-canonical-endpoint-announcement-reference.mjs"],
+      "covered": ["signed-plaintext-bundle", "exact-current-account-device-list", "direct-and-accepted-publication-observations", "publication-conflict-and-root-resolution-states", "bundle-and-accepted-observation-identifiers", "bounded-validity-and-canonical-contact-order"],
+      "remaining": ["recipient-only-hpke-envelope", "session-bound-recipient-acknowledgement"]
     },
     {
       "id": "history-recovery",
@@ -164,8 +164,8 @@
     }
   ],
   "next_priority": [
-    "publication-conflict",
     "endpoint-announcement",
-    "history-rewrap"
+    "history-rewrap",
+    "account-recovery"
   ]
 }

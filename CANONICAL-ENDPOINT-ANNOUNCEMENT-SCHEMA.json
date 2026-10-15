@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.23",
+  "status": "candidate-not-active",
+  "changes_active_wire": false,
+  "profile": "kilogram-deterministic-cbor-v1",
+  "coverage": "partial",
+  "cddl": {
+    "standard": "RFC 8610",
+    "path": "CANONICAL-ENDPOINT-ANNOUNCEMENT.cddl",
+    "root_rule": "kilogram-endpoint-announcement-plaintext-v1"
+  },
+  "activation": {
+    "current_runtime_encoding": "postcard-v4-bundle-hpke-v1-envelope-ack-v2",
+    "current_runtime_changed": false,
+    "candidate_protocol_identifier": "unassigned",
+    "required_before_activation": [
+      "complete-hpke-envelope-and-session-acknowledgement",
+      "new-explicit-protocol-version-or-parallel-identifier",
+      "dual-reader-and-downgrade-tests",
+      "sustained-coverage-guided-fuzzing",
+      "fresh-field-and-hosted-evidence"
+    ]
+  },
+  "limits": {
+    "maximum_bundle_bytes": 16777216,
+    "maximum_accepted_observation_bytes": 65536,
+    "maximum_contacts": 256,
+    "maximum_endpoints_per_contact": 4,
+    "maximum_conversation_label_bytes": 4096,
+    "maximum_ticket_bytes": 8388608,
+    "maximum_validity_seconds": 3600,
+    "maximum_clock_skew_seconds": 300
+  },
+  "domains": [
+    {
+      "id": "endpoint-announcement-bundle-signature-v1",
+      "value": "kilogram:endpoint-announcement-bundle:cbor-v1\\0",
+      "operation": "ed25519-signature",
+      "signer": "source-device-ed25519"
+    },
+    {
+      "id": "endpoint-announcement-bundle-id-v1",
+      "value": "kilogram:endpoint-announcement-bundle-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "accepted-endpoint-observation-signature-v1",
+      "value": "kilogram:accepted-endpoint-observation:cbor-v1\\0",
+      "operation": "ed25519-signature",
+      "signer": "accepting-device-ed25519"
+    },
+    {
+      "id": "accepted-endpoint-observation-id-v1",
+      "value": "kilogram:accepted-endpoint-observation-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "conversation-label-id-v1",
+      "value": "kilogram:conversation-label:v1\\0",
+      "operation": "blake3-domain-prefixed-digest",
+      "compatibility": "reuses-active-conversation-identity-domain"
+    }
+  ],
+  "external_objects": [
+    {
+      "id": "signed-account-device-list-v1",
+      "schema": "CANONICAL-ACCOUNT-SCHEMA.json"
+    },
+    {
+      "id": "signed-ticket-publication-observation-v1",
+      "schema": "CANONICAL-PUBLICATION-CONFLICT-SCHEMA.json"
+    },
+    {
+      "id": "signed-publication-conflict-proof-v1",
+      "schema": "CANONICAL-PUBLICATION-CONFLICT-SCHEMA.json"
+    },
+    {
+      "id": "root-signed-publication-conflict-resolution-v1",
+      "schema": "CANONICAL-PUBLICATION-CONFLICT-SCHEMA.json"
+    }
+  ],
+  "objects": [
+    {
+      "id": "accepted-endpoint-observation-content-v1",
+      "kind": "signed-content",
+      "array_length": 7
+    },
+    {
+      "id": "signed-accepted-endpoint-observation-v1",
+      "kind": "signed-envelope",
+      "array_length": 3,
+      "signature_domain": "accepted-endpoint-observation-signature-v1"
+    },
+    {
+      "id": "endpoint-announcement-state-v1",
+      "kind": "closed-variant",
+      "variants": [0, 1, 2, 3, 4]
+    },
+    {
+      "id": "endpoint-candidate-announcement-v1",
+      "kind": "endpoint",
+      "array_length": 7
+    },
+    {
+      "id": "contact-endpoint-announcement-v1",
+      "kind": "contact",
+      "array_length": 5
+    },
+    {
+      "id": "endpoint-announcement-bundle-content-v1",
+      "kind": "signed-content",
+      "array_length": 7
+    },
+    {
+      "id": "signed-endpoint-announcement-bundle-v1",
+      "kind": "signed-envelope",
+      "array_length": 3,
+      "signature_domain": "endpoint-announcement-bundle-signature-v1"
+    }
+  ],
+  "semantic_rules": [
+    "the embedded Root-signed roster is verified and contains distinct source and recipient Devices",
+    "contacts are strictly ordered by peer Account ID then derived conversation ID",
+    "each contact has one to four Device-ID-ordered endpoints and exactly one primary endpoint",
+    "conversation ID is the existing domain-separated hash of the exact non-empty UTF-8 label bytes",
+    "direct and accepted observations match the candidate publication channel and peer identity",
+    "accepted observation preserves the original observer signature and is re-signed by its importing Device",
+    "conflict detector belongs to the exact embedded current roster",
+    "Root resolution matches exact authority revision, peer, new write key, route policy and replacement ticket digest",
+    "bundle source is the direct or accepting observation witness and signs the complete bounded plaintext",
+    "bundle time window is positive, bounded and checked with a five-minute future skew allowance"
+  ],
+  "remaining": [
+    "recipient-only-hpke-envelope",
+    "session-bound-recipient-acknowledgement"
+  ]
+}

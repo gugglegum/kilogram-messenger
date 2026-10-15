@@ -1,0 +1,73 @@
+; Kilogram deterministic-CBOR endpoint-announcement plaintext candidate, M1.1.23.
+; Nested authority, publication, conflict and resolution objects are exact
+; canonical CBOR byte strings from their respective schemas.
+
+profile-version = 1
+id-32 = bytes .size 32
+signature = bytes .size 64
+canonical-object = bytes
+boolean-uint = 0 / 1
+route-policy = 0 / 1 / 2
+
+accepted-endpoint-observation-content-v1 = [
+  profile-version,
+  local-account-id: id-32,
+  local-device-id: id-32,
+  source-device-id: id-32,
+  source-bundle-id: id-32,
+  imported-at-unix-seconds: uint,
+  signed-source-observation-cbor: canonical-object
+]
+
+signed-accepted-endpoint-observation-v1 = [
+  profile-version,
+  content-cbor: canonical-object,
+  signature: signature
+]
+
+endpoint-announcement-state-v1 =
+  [profile-version, kind-none: 0] /
+  [profile-version, kind-direct-observation: 1, signed-observation-cbor: canonical-object] /
+  [profile-version, kind-accepted-observation: 2, signed-accepted-observation-cbor: canonical-object] /
+  [profile-version, kind-publication-conflict: 3, signed-conflict-proof-cbor: canonical-object] /
+  [profile-version, kind-publication-resolution: 4, root-signed-resolution-cbor: canonical-object]
+
+endpoint-candidate-announcement-v1 = [
+  profile-version,
+  peer-device-id: id-32,
+  primary: boolean-uint,
+  route-policy: route-policy,
+  ticket-publication-write-key: id-32,
+  ticket-utf8-bytes: bytes,
+  state-cbor: canonical-object
+]
+
+contact-endpoint-announcement-v1 = [
+  profile-version,
+  conversation-label-utf8-bytes: bytes,
+  conversation-id: id-32,
+  peer-account-id: id-32,
+  endpoints: [1*4 endpoint-candidate-cbor: canonical-object]
+]
+
+endpoint-announcement-bundle-content-v1 = [
+  profile-version,
+  signed-account-device-list-cbor: canonical-object,
+  source-device-id: id-32,
+  recipient-device-id: id-32,
+  created-at-unix-seconds: uint,
+  expires-at-unix-seconds: uint,
+  contacts: [*256 contact-announcement-cbor: canonical-object]
+]
+
+signed-endpoint-announcement-bundle-v1 = [
+  profile-version,
+  content-cbor: canonical-object,
+  signature: signature
+]
+
+kilogram-endpoint-announcement-plaintext-v1 =
+  signed-accepted-endpoint-observation-v1 /
+  endpoint-candidate-announcement-v1 /
+  contact-endpoint-announcement-v1 /
+  signed-endpoint-announcement-bundle-v1

@@ -3238,3 +3238,25 @@ Hosted follow-up:
 - Canonical coverage is 13 complete, 0 partial, 5 not-started and 2
   not-targeted. The candidate remains inactive and the accepted M1.0.0 tag is
   unchanged.
+
+## M1.1.23 canonical endpoint-announcement plaintext snapshot (2026-10-15)
+
+- New Rust module:
+  `crates/kilogram-protocol/src/canonical_endpoint_announcement_v1.rs`.
+- Deterministic vectors cover the signed plaintext bundle, accepted observation
+  evidence and all current publication-state variants; Node independently
+  reproduces CBOR, Ed25519 and BLAKE3.
+- Full protocol library regression passes 70/70 with `CargoJobs=2` and
+  BelowNormal priority. Eleven filesystem-backed legacy tests need the normal
+  Windows temp-directory boundary outside the restricted tool sandbox; their
+  first sandbox failure was environmental, and the identical elevated offline
+  command passed.
+- Decoder mutation inventory is 12149/13000. No network, release build, archive
+  or Git tag is required.
+- Complete accepted-tag readiness passed `56/56`, immutable `M1.0.0`, rustfmt
+  and workspace-wide locked/offline strict Clippy.
+- Canonical coverage is 13 complete, 1 partial, 4 not-started and 2
+  not-targeted. Endpoint announcement remains partial until M1.1.24 adds its
+  recipient-only HPKE envelope and session-bound acknowledgement.
+- Active Postcard v4 bundle, HPKE v1 envelope and ACK v2 remain unchanged; the
+  accepted M1.0.0 tag remains immutable.

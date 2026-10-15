@@ -15,6 +15,7 @@ use thiserror::Error;
 pub mod canonical_account_v1;
 pub mod canonical_authority_v1;
 pub mod canonical_device_link_v1;
+pub mod canonical_endpoint_announcement_v1;
 pub mod canonical_event_v1;
 pub mod canonical_mailbox_gossip_v1;
 pub mod canonical_mailbox_provisioning_v1;

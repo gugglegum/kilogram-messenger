@@ -7,6 +7,10 @@ use kilogram_protocol::canonical_authority_v1::{
     decode_and_verify_signed_device_session_authorization_v1,
 };
 use kilogram_protocol::canonical_device_link_v1::decode_and_verify_signed_device_link_authorization_v1;
+use kilogram_protocol::canonical_endpoint_announcement_v1::{
+    decode_and_verify_signed_accepted_endpoint_observation_v1,
+    decode_and_verify_signed_endpoint_announcement_bundle_v1,
+};
 use kilogram_protocol::canonical_event_v1::{
     decode_and_verify_authorized_event_v1, decode_and_verify_signed_event_v1,
 };
@@ -67,8 +71,8 @@ use kilogram_protocol::canonical_ticket_publication_v1::{
 use serde_json::Value;
 
 const MINIMUM_MUTATIONS: usize = 500;
-const EXPECTED_MUTATIONS: usize = 11_627;
-const MAXIMUM_MUTATIONS: usize = 12_000;
+const EXPECTED_MUTATIONS: usize = 12_149;
+const MAXIMUM_MUTATIONS: usize = 13_000;
 const MAXIMUM_GRID_POSITIONS: usize = 128;
 
 #[derive(Clone)]
@@ -119,6 +123,8 @@ enum Decoder {
     PublicationConflictClaim {
         response: Box<CanonicalPublicationConflictResolutionResponseV1>,
     },
+    AcceptedEndpointObservation,
+    EndpointAnnouncementBundle,
     MailboxGossipFrame {
         expected_id: [u8; 32],
         now_unix_seconds: u64,
@@ -219,6 +225,12 @@ fn accepts(decoder: &Decoder, bytes: &[u8]) -> bool {
                     verify_publication_conflict_claim_for_response_v1(&claim, response)
                 })
                 .is_ok()
+        }
+        Decoder::AcceptedEndpointObservation => {
+            decode_and_verify_signed_accepted_endpoint_observation_v1(bytes).is_ok()
+        }
+        Decoder::EndpointAnnouncementBundle => {
+            decode_and_verify_signed_endpoint_announcement_bundle_v1(bytes).is_ok()
         }
         Decoder::MailboxGossipFrame {
             expected_id,
@@ -329,6 +341,10 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
     let publication_conflict: Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-PUBLICATION-CONFLICT-VECTORS.json"
+    )))?;
+    let endpoint_announcement: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../CANONICAL-ENDPOINT-ANNOUNCEMENT-VECTORS.json"
     )))?;
     let gossip_frame_id: [u8; 32] = pointer_hex(&mailbox_gossip, "/expected/request/frame_id_hex")?
         .try_into()
@@ -642,6 +658,22 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
             },
             pointer_hex(&publication_conflict, "/expected/response_claim/cbor_hex")?,
         ),
+        (
+            "signed-accepted-endpoint-observation",
+            Decoder::AcceptedEndpointObservation,
+            pointer_hex(
+                &endpoint_announcement,
+                "/expected/accepted_observation/signed_cbor_hex",
+            )?,
+        ),
+        (
+            "signed-endpoint-announcement-bundle",
+            Decoder::EndpointAnnouncementBundle,
+            pointer_hex(
+                &endpoint_announcement,
+                "/expected/signed_bundle/signed_cbor_hex",
+            )?,
+        ),
     ];
     let mut mutations = 0usize;
     for (name, decoder, valid) in fixtures {
@@ -753,6 +785,8 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         Decoder::PublicationConflictClaim {
             response: Box::new(publication_resolution_response),
         },
+        Decoder::AcceptedEndpointObservation,
+        Decoder::EndpointAnnouncementBundle,
         Decoder::MailboxGossipFrame {
             expected_id: [0; 32],
             now_unix_seconds: 1_800_000_030,
