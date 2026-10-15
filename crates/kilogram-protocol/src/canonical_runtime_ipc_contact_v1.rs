@@ -27,7 +27,7 @@ pub const MAX_CANONICAL_RUNTIME_IPC_CONTACT_RESPONSE_BYTES: usize = 128 * 1024;
 pub const MAX_CANONICAL_RUNTIME_IPC_CONTACT_TEXT_BYTES: usize = 4 * 1024;
 pub const MAX_CANONICAL_RUNTIME_IPC_CONTACT_PATH_BYTES: usize = 4 * 1024;
 pub const MAX_CANONICAL_RUNTIME_IPC_CONTACT_ENDPOINTS: u8 = 4;
-pub const MAX_CANONICAL_RUNTIME_IPC_ACCOUNT_DEVICES: u16 = 256;
+pub const MAX_CANONICAL_RUNTIME_IPC_ACCOUNT_DEVICES: u16 = 32;
 
 pub const CANONICAL_RUNTIME_IPC_CONTACT_REQUEST_DIGEST_DOMAIN: &[u8] =
     b"kilogram:runtime-ipc-contact-request-digest:cbor-v1\0";
@@ -1089,6 +1089,24 @@ mod tests {
         let mut result = response.content.result;
         if let CanonicalRuntimeIpcContactResultV1::OwnDeviceDirectoryStatus(status) = &mut result {
             status.profile_convergence = CanonicalRuntimeIpcProfileConvergenceV1::Current;
+        }
+        assert!(
+            sign_runtime_ipc_contact_response_v1(
+                &signing_key,
+                &request,
+                &descriptor,
+                request.issued_at_unix_seconds,
+                result,
+            )
+            .is_err()
+        );
+        let response = decode_and_verify_signed_runtime_ipc_contact_response_v1(&hex_at(
+            &vectors,
+            "/expected/directory_status/response/signed_cbor_hex",
+        )?)?;
+        let mut result = response.content.result;
+        if let CanonicalRuntimeIpcContactResultV1::OwnDeviceDirectoryStatus(status) = &mut result {
+            status.active_device_count = MAX_CANONICAL_RUNTIME_IPC_ACCOUNT_DEVICES + 1;
         }
         assert!(
             sign_runtime_ipc_contact_response_v1(

@@ -50,7 +50,7 @@ function Assert-Schema {
         [int]$Schema.limits.maximum_text_bytes,
         [int]$Schema.limits.maximum_path_bytes
     ) -join ','
-    if ($limits -cne '65536,131072,4,256,4096,4096') {
+    if ($limits -cne '65536,131072,4,32,4096,4096') {
         throw 'canonical runtime IPC contact limits changed'
     }
     if (@($Schema.domains).Count -ne 12 -or @($Schema.objects).Count -ne 7 -or
@@ -70,7 +70,7 @@ function Assert-Schema {
     }
     foreach ($required in @(
         'MAX_CANONICAL_RUNTIME_IPC_CONTACT_RESPONSE_BYTES: usize = 128 * 1024',
-        'MAX_CANONICAL_RUNTIME_IPC_ACCOUNT_DEVICES: u16 = 256',
+        'MAX_CANONICAL_RUNTIME_IPC_ACCOUNT_DEVICES: u16 = 32',
         'kilogram:runtime-ipc-contact-request-digest:cbor-v1\0',
         'kilogram:runtime-ipc-contact-response-signature:cbor-v1\0',
         'kilogram:runtime-ipc-contact-id:cbor-v1\0',
@@ -228,7 +228,7 @@ if ($SelfTest) {
     $activeSchema.status = 'active'
     Assert-Rejected { Assert-Schema $activeSchema $rust } 'active_contact_without_migration'
     $changedLimit = $schema | ConvertTo-Json -Depth 20 | ConvertFrom-Json
-    $changedLimit.limits.maximum_account_devices = 257
+    $changedLimit.limits.maximum_account_devices = 33
     Assert-Rejected { Assert-Schema $changedLimit $rust } 'changed_device_count_limit'
     $changedVector = $vectors | ConvertTo-Json -Depth 30 | ConvertFrom-Json
     $changedVector.input.receipt_generation = 0

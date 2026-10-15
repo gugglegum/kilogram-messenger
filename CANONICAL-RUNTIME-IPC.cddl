@@ -216,7 +216,7 @@ runtime-ipc-own-device-directory-status-v1 = [
   device-id,
   state-directory-path-utf8: bytes .size (1..4096),
   authority-revision: 1..18446744073709551615,
-  active-device-count: 1..256,
+  active-device-count: 1..32,
   applied-receipt-id: runtime-ipc-option-digest-v1,
   applied-receipt-generation: runtime-ipc-option-uint-v1,
   device-list-digest: digest,

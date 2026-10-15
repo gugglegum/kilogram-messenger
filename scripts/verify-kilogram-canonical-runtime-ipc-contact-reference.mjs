@@ -238,7 +238,7 @@ const vectors = JSON.parse(readFileSync(options.vectors, "utf8"));
 assert(schema.milestone === "M1.1.30" && schema.status === "candidate-not-active" &&
   schema.changes_active_wire === false, "runtime IPC schema header changed");
 assert(schema.limits.maximum_contact_response_bytes === 131072 &&
-  schema.limits.maximum_account_devices === 256 &&
+  schema.limits.maximum_account_devices === 32 &&
   schema.limits.maximum_endpoint_candidates_per_conversation === 4,
 "runtime IPC contact bounds changed");
 assert(schema.activation.current_runtime_encoding === "postcard-v26-with-json-descriptor-v7" &&

@@ -33,7 +33,7 @@
     "maximum_wait_milliseconds": 120000,
     "maximum_conversation_page_size": 64,
     "maximum_endpoint_candidates_per_conversation": 4,
-    "maximum_account_devices": 256,
+    "maximum_account_devices": 32,
     "maximum_history_page_size": 100,
     "maximum_history_page_body_bytes": 196608,
     "maximum_preview_bytes": 96,
@@ -182,7 +182,7 @@
     "every read response is signed by the descriptor Device and commits to the digest of the complete read request",
     "contact enrollment binds the exact peer Account, descriptor path and label-derived conversation identity to a domain-separated canonical contact ID",
     "a successful contact result repeats the exact peer Account and derives its contact ID from the local Account, peer Account and label-derived Conversation ID",
-    "own-device-directory status repeats the exact descriptor Account and Device and bounds the active roster to at most 256 Devices",
+    "own-device-directory status repeats the exact descriptor Account and Device and bounds the active roster to at most 32 Devices",
     "device-directory receipt identity and generation are coupled while convergence and restart-recovery states are consistent with the applied and launch profile paths",
     "unknown variants, noncanonical CBOR, trailing data, expired objects and contextual substitutions fail closed"
   ],

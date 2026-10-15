@@ -5707,7 +5707,7 @@ correlation visible, Windows-only field evidence, independent security audit
 - Device-signed response exact-коммитит digest полного request, peer identity,
   bounded endpoint count и inserted/endpoint-added semantics;
 - own-device status exact-связывает descriptor Account/Device, positive
-  authority revision, roster 1..256, coupled receipt ID/generation, nonzero
+  authority revision, roster 1..32, coupled receipt ID/generation, nonzero
   device-list digest, applied/launch paths и согласованные convergence/restart
   states;
 - independent Node reference воспроизводит deterministic CBOR, Ed25519, BLAKE3,

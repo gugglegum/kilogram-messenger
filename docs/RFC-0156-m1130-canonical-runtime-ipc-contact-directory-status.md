@@ -51,7 +51,8 @@ The status response binds the descriptor Account and local Device and exposes:
 
 - a bounded state-directory path;
 - a positive authority revision;
-- one to 256 active Devices;
+- one to 32 active Devices, matching the Account identity and canonical
+  device-list limits;
 - an optional authenticated receipt ID and generation, which must appear as a
   pair and be nonzero;
 - a nonzero digest of the applied device list;
