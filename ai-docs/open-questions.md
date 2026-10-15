@@ -137,11 +137,12 @@ sessions, distribution, removal и key epochs и не решены этим пр
   sync/shared folder.
 - RFC-0127 выбрал узкий RFC 8949 deterministic-CBOR profile и зафиксировал
   первые acknowledgement/sync vectors. RFC-0128 добавил CDDL и полный
-  certificate/revocation/authority-snapshot/session-auth chain, строгий Rust
-  decoder и independent JavaScript/Node Ed25519 reproduction. Всё остаётся
-  intentionally inactive: открыты schemas для выбранных ratchet/recovery
-  families, independent non-Rust BLAKE3 verification, decoder fuzzing и
-  отдельно versioned dual-reader migration с field evidence.
+  certificate/revocation/authority-snapshot/session-auth chain. RFC-0129
+  канонизировал public ratchet identity/prekey pool/directory без secret
+  Double Ratchet state и с independent JavaScript/Node Ed25519 reproduction.
+  Всё остаётся intentionally inactive: открыты recovery schema, independent
+  non-Rust BLAKE3 verification, decoder fuzzing и отдельно versioned
+  dual-reader migration с field evidence.
 - Какие security properties требуются от линеаризатора при злонамеренных, а не
   только сбойных indexer-узлах?
 

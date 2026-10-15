@@ -1,0 +1,68 @@
+; Kilogram M1.1.3 inactive deterministic-CBOR ratchet bootstrap candidate.
+; This grammar is not used by the active Postcard runtime.
+
+kilogram-ratchet-v1 =
+    signed-ratchet-identity-v1 /
+    signed-prekey-bundle-v1 /
+    signed-prekey-pool-v1 /
+    account-prekey-directory-v1
+
+device-id-v1 = bstr .size 32
+account-id-v1 = bstr .size 32
+signature-v1 = bstr .size 64
+key-32-v1 = bstr .size 32
+
+; Nested signed objects are carried as byte strings containing their exact
+; canonical CBOR. This makes the bytes authenticated by an outer signature
+; explicit and forbids alternate nested representations.
+canonical-signed-object-v1 = bstr
+
+ratchet-identity-content-v1 = [
+    schema-version: 1,
+    device-id: device-id-v1,
+    curve25519-key: key-32-v1,
+    ed25519-key: key-32-v1
+]
+
+signed-ratchet-identity-v1 = [
+    schema-version: 1,
+    content: ratchet-identity-content-v1,
+    signature: signature-v1
+]
+
+prekey-bundle-content-v1 = [
+    schema-version: 1,
+    ratchet-identity-cbor: canonical-signed-object-v1,
+    sequence: uint,
+    one-time-key: key-32-v1
+]
+
+signed-prekey-bundle-v1 = [
+    schema-version: 1,
+    content: prekey-bundle-content-v1,
+    signature: signature-v1
+]
+
+prekey-pool-content-v1 = [
+    schema-version: 1,
+    ratchet-identity-cbor: canonical-signed-object-v1,
+    generation: uint,
+    published-at-unix-seconds: uint,
+    expires-at-unix-seconds: uint,
+    bundles: [1*64 canonical-signed-object-v1]
+]
+
+signed-prekey-pool-v1 = [
+    schema-version: 1,
+    content: prekey-pool-content-v1,
+    signature: signature-v1
+]
+
+; The authority snapshot and certificates are exact canonical objects from
+; CANONICAL-AUTHORITY.cddl, carried as canonical CBOR byte strings.
+account-prekey-directory-v1 = [
+    schema-version: 1,
+    authority-snapshot-cbor: canonical-signed-object-v1,
+    certificates: [1*32 canonical-signed-object-v1],
+    pools: [1*32 canonical-signed-object-v1]
+]

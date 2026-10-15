@@ -5120,3 +5120,23 @@ correlation visible, Windows-only field evidence, independent security audit
   release, archive, tag и active protocol migration не требуются.
 - full `kilogram-protocol` regression прошёл `25/25`; accepted-tag readiness
   прошёл `36/36` с format и locked/offline strict Clippy при двух Cargo jobs.
+
+### M1.1.3 — canonical ratchet bootstrap artifacts: принято локально
+
+- RFC-0129, `CANONICAL-RATCHET.cddl` и exact JSON schema формализуют только
+  публичные asynchronous bootstrap artifacts: Device-signed ratchet identity,
+  prekey bundle, bounded signed pool и authority-complete account directory;
+- secret Double Ratchet state, message/skipped keys и `vodozemac` serialization
+  намеренно не канонизируются и active Postcard runtime не меняется;
+- вложенные signed objects переносятся как byte strings с exact canonical CBOR,
+  поэтому внешняя подпись связывает ровно одно внутреннее представление;
+- Rust codec проверяет Ed25519, contiguous sequences, unique one-time keys,
+  30-day validity, bounds 64/32, Root snapshot/certificate linkage, exact
+  certificate/pool coverage, ordering и revocation;
+- golden vector фиксирует Root-authorized Device, два prekeys, signed pool,
+  BLAKE3 pool ID и полный directory; independent JavaScript/Node заново строит
+  CBOR и воспроизводит все Ed25519 signatures без сторонних пакетов;
+- independent non-Rust BLAKE3 остаётся явно pending, не подменяется самодельной
+  криптографией; его закрывает следующий recovery/digest conformance этап;
+- readiness inventory расширен с 36 до 37 gates. Network/laptop/release/archive,
+  tag и active protocol migration не требуются.

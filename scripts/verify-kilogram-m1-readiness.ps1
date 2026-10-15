@@ -16,6 +16,7 @@ $cargoWrapper = Join-Path $scriptsDirectory 'invoke-cargo-friendly.ps1'
 $expectedGates = [ordered]@{
     'verify-kilogram-bootstrap-safe-provider-selection-boundary.ps1' = 'bootstrap_safe_provider_selection_boundary=verified'
     'verify-kilogram-canonical-authority-boundary.ps1' = 'canonical_authority_boundary=verified'
+    'verify-kilogram-canonical-ratchet-boundary.ps1' = 'canonical_ratchet_boundary=verified'
     'verify-kilogram-canonical-wire-boundary.ps1' = 'canonical_wire_boundary=verified'
     'verify-kilogram-independent-builder-boundary.ps1' = 'independent_builder_boundary=verified'
     'verify-kilogram-m0967-simple-kit-boundary.ps1' = 'm0967_simple_kit_boundary=verified'
@@ -99,8 +100,8 @@ function Assert-Rejected {
     throw "$Label was unexpectedly accepted"
 }
 
-if ($expectedGates.Count -ne 36) {
-    throw "M1 readiness boundary inventory must contain exactly 36 gates, got $($expectedGates.Count)"
+if ($expectedGates.Count -ne 37) {
+    throw "M1 readiness boundary inventory must contain exactly 37 gates, got $($expectedGates.Count)"
 }
 
 if ($SelfTest) {
