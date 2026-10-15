@@ -3598,3 +3598,31 @@ Hosted follow-up:
 - Canonical coverage remains 16 complete, 1 partial, 1 not-started and 2
   not-targeted. Root-authorized publication-conflict commands are the next
   bounded runtime IPC slice.
+
+## M1.1.39 canonical runtime IPC publication conflict (2026-10-15)
+
+- Added inactive
+  `crates/kilogram-protocol/src/canonical_runtime_ipc_publication_conflict_v1.rs`
+  with exact-state create/apply commands, content-addressed staged artifacts
+  and Device-signed responses. Active Postcard v26/JSON descriptor v7 is
+  unchanged.
+- Creation stages the portable Device request durably before success. Apply
+  independently verifies the exact-current Root response and atomically commits
+  replacement endpoint, resolution, quarantine release and retained proof.
+- Root secret, publication write key, replacement-ticket plaintext, portable
+  request/response plaintext and local paths do not cross the IPC boundary.
+  Sibling propagation remains explicitly pending.
+- CDDL, schema, generated vectors, RFC-0165 and an independent Node reference
+  agree on deterministic CBOR, Ed25519 and BLAKE3 identifiers. The reference
+  self-test and fail-closed boundary passed.
+- Final decoder mutation regression passed 25623/25623 in 958.12 seconds with
+  debug/offline Cargo, two jobs and BelowNormal priority.
+- Protocol library regression initially exposed only the known restricted
+  Windows system-TEMP permission failures; with workspace-local TEMP it passed
+  121/121 with nine explicit vector generators ignored.
+- Accepted-tag readiness passed 72/72; rustfmt and workspace locked/offline
+  strict Clippy passed. No network, stable-path executable, release build,
+  archive, push or tag was created.
+- Canonical coverage remains 16 complete, 1 partial, 1 not-started and 2
+  not-targeted. The next bounded runtime IPC slice is own-device discovery and
+  automation, followed by recovery/device-link commands.

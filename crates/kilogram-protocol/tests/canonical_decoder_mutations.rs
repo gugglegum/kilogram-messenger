@@ -126,6 +126,14 @@ use kilogram_protocol::canonical_runtime_ipc_provider_v1::{
     verify_runtime_ipc_provider_request_for_descriptor_v1,
     verify_runtime_ipc_provider_response_for_request_v1,
 };
+use kilogram_protocol::canonical_runtime_ipc_publication_conflict_v1::{
+    CanonicalRuntimeIpcPublicationConflictRequestV1,
+    CanonicalSignedRuntimeIpcPublicationConflictResponseV1,
+    decode_and_verify_runtime_ipc_publication_conflict_request_v1,
+    decode_and_verify_signed_runtime_ipc_publication_conflict_response_v1,
+    verify_runtime_ipc_publication_conflict_request_for_descriptor_v1,
+    verify_runtime_ipc_publication_conflict_response_for_request_v1,
+};
 use kilogram_protocol::canonical_runtime_ipc_publication_network_v1::{
     CanonicalRuntimeIpcPublicationNetworkRequestV1,
     CanonicalSignedRuntimeIpcPublicationNetworkResponseV1,
@@ -182,7 +190,7 @@ use kilogram_protocol::canonical_ticket_publication_v1::{
 use serde_json::Value;
 
 const MINIMUM_MUTATIONS: usize = 500;
-const EXPECTED_MUTATIONS: usize = 24_579;
+const EXPECTED_MUTATIONS: usize = 25_623;
 const MAXIMUM_MUTATIONS: usize = 30_000;
 const MAXIMUM_GRID_POSITIONS: usize = 128;
 
@@ -324,6 +332,15 @@ enum Decoder {
     },
     RuntimeIpcPublicationNetworkResponse {
         request: Box<CanonicalRuntimeIpcPublicationNetworkRequestV1>,
+        descriptor: Box<CanonicalSignedRuntimeIpcDescriptorV1>,
+    },
+    RuntimeIpcPublicationConflictRequest {
+        descriptor: Box<CanonicalSignedRuntimeIpcDescriptorV1>,
+        response: Box<CanonicalSignedRuntimeIpcPublicationConflictResponseV1>,
+        now_unix_seconds: u64,
+    },
+    RuntimeIpcPublicationConflictResponse {
+        request: Box<CanonicalRuntimeIpcPublicationConflictRequestV1>,
         descriptor: Box<CanonicalSignedRuntimeIpcDescriptorV1>,
     },
     TicketPublicationCapability,
@@ -730,6 +747,32 @@ fn accepts(decoder: &Decoder, bytes: &[u8]) -> bool {
                 )
             })
             .is_ok(),
+        Decoder::RuntimeIpcPublicationConflictRequest {
+            descriptor,
+            response,
+            now_unix_seconds,
+        } => decode_and_verify_runtime_ipc_publication_conflict_request_v1(bytes)
+            .and_then(|request| {
+                verify_runtime_ipc_publication_conflict_request_for_descriptor_v1(
+                    &request,
+                    descriptor,
+                    *now_unix_seconds,
+                )?;
+                verify_runtime_ipc_publication_conflict_response_for_request_v1(
+                    response, &request, descriptor,
+                )
+            })
+            .is_ok(),
+        Decoder::RuntimeIpcPublicationConflictResponse {
+            request,
+            descriptor,
+        } => decode_and_verify_signed_runtime_ipc_publication_conflict_response_v1(bytes)
+            .and_then(|response| {
+                verify_runtime_ipc_publication_conflict_response_for_request_v1(
+                    &response, request, descriptor,
+                )
+            })
+            .is_ok(),
         Decoder::TicketPublicationCapability => {
             decode_and_verify_ticket_publication_capability_v1(bytes).is_ok()
         }
@@ -999,6 +1042,10 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-RUNTIME-IPC-PUBLICATION-NETWORK-VECTORS.json"
     )))?;
+    let runtime_ipc_publication_conflict: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../CANONICAL-RUNTIME-IPC-PUBLICATION-CONFLICT-VECTORS.json"
+    )))?;
     let ticket_publication: Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-TICKET-PUBLICATION-VECTORS.json"
@@ -1240,6 +1287,39 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
             &runtime_ipc_publication_network,
             "/expected/refresh/response/signed_cbor_hex",
         )?)?;
+    let runtime_ipc_publication_conflict_descriptor =
+        decode_and_verify_signed_runtime_ipc_descriptor_v1(&pointer_hex(
+            &runtime_ipc_publication_conflict,
+            "/expected/descriptor_signed_cbor_hex",
+        )?)?;
+    let runtime_ipc_publication_conflict_create_request =
+        decode_and_verify_runtime_ipc_publication_conflict_request_v1(&pointer_hex(
+            &runtime_ipc_publication_conflict,
+            "/expected/create/request/cbor_hex",
+        )?)?;
+    let runtime_ipc_publication_conflict_create_response =
+        decode_and_verify_signed_runtime_ipc_publication_conflict_response_v1(&pointer_hex(
+            &runtime_ipc_publication_conflict,
+            "/expected/create/response/signed_cbor_hex",
+        )?)?;
+    let runtime_ipc_publication_conflict_apply_request =
+        decode_and_verify_runtime_ipc_publication_conflict_request_v1(&pointer_hex(
+            &runtime_ipc_publication_conflict,
+            "/expected/apply/request/cbor_hex",
+        )?)?;
+    let runtime_ipc_publication_conflict_apply_response =
+        decode_and_verify_signed_runtime_ipc_publication_conflict_response_v1(&pointer_hex(
+            &runtime_ipc_publication_conflict,
+            "/expected/apply/response/signed_cbor_hex",
+        )?)?;
+    let runtime_ipc_publication_conflict_create_valid_at =
+        runtime_ipc_publication_conflict["input"]["create_issued_at_unix_seconds"]
+            .as_u64()
+            .ok_or("runtime IPC publication-conflict create valid time is missing")?;
+    let runtime_ipc_publication_conflict_apply_valid_at = runtime_ipc_publication_conflict["input"]
+        ["apply_issued_at_unix_seconds"]
+        .as_u64()
+        .ok_or("runtime IPC publication-conflict apply valid time is missing")?;
     let publication_resolution_response_bytes = pointer_hex(
         &publication_conflict,
         "/expected/resolution_response/cbor_hex",
@@ -1889,6 +1969,52 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
             )?,
         ),
         (
+            "runtime-ipc-publication-conflict-create-request",
+            Decoder::RuntimeIpcPublicationConflictRequest {
+                descriptor: Box::new(runtime_ipc_publication_conflict_descriptor.clone()),
+                response: Box::new(runtime_ipc_publication_conflict_create_response.clone()),
+                now_unix_seconds: runtime_ipc_publication_conflict_create_valid_at,
+            },
+            pointer_hex(
+                &runtime_ipc_publication_conflict,
+                "/expected/create/request/cbor_hex",
+            )?,
+        ),
+        (
+            "signed-runtime-ipc-publication-conflict-create-response",
+            Decoder::RuntimeIpcPublicationConflictResponse {
+                request: Box::new(runtime_ipc_publication_conflict_create_request.clone()),
+                descriptor: Box::new(runtime_ipc_publication_conflict_descriptor.clone()),
+            },
+            pointer_hex(
+                &runtime_ipc_publication_conflict,
+                "/expected/create/response/signed_cbor_hex",
+            )?,
+        ),
+        (
+            "runtime-ipc-publication-conflict-apply-request",
+            Decoder::RuntimeIpcPublicationConflictRequest {
+                descriptor: Box::new(runtime_ipc_publication_conflict_descriptor.clone()),
+                response: Box::new(runtime_ipc_publication_conflict_apply_response.clone()),
+                now_unix_seconds: runtime_ipc_publication_conflict_apply_valid_at,
+            },
+            pointer_hex(
+                &runtime_ipc_publication_conflict,
+                "/expected/apply/request/cbor_hex",
+            )?,
+        ),
+        (
+            "signed-runtime-ipc-publication-conflict-apply-response",
+            Decoder::RuntimeIpcPublicationConflictResponse {
+                request: Box::new(runtime_ipc_publication_conflict_apply_request.clone()),
+                descriptor: Box::new(runtime_ipc_publication_conflict_descriptor.clone()),
+            },
+            pointer_hex(
+                &runtime_ipc_publication_conflict,
+                "/expected/apply/response/signed_cbor_hex",
+            )?,
+        ),
+        (
             "ticket-publication-capability",
             Decoder::TicketPublicationCapability,
             pointer_hex(&ticket_publication, "/expected/rotated_capability/cbor_hex")?,
@@ -2291,6 +2417,24 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         Decoder::RuntimeIpcPublicationNetworkResponse {
             request: Box::new(runtime_ipc_publication_network_refresh_request),
             descriptor: Box::new(runtime_ipc_descriptor.clone()),
+        },
+        Decoder::RuntimeIpcPublicationConflictRequest {
+            descriptor: Box::new(runtime_ipc_publication_conflict_descriptor.clone()),
+            response: Box::new(runtime_ipc_publication_conflict_create_response),
+            now_unix_seconds: runtime_ipc_publication_conflict_create_valid_at,
+        },
+        Decoder::RuntimeIpcPublicationConflictResponse {
+            request: Box::new(runtime_ipc_publication_conflict_create_request),
+            descriptor: Box::new(runtime_ipc_publication_conflict_descriptor.clone()),
+        },
+        Decoder::RuntimeIpcPublicationConflictRequest {
+            descriptor: Box::new(runtime_ipc_publication_conflict_descriptor.clone()),
+            response: Box::new(runtime_ipc_publication_conflict_apply_response),
+            now_unix_seconds: runtime_ipc_publication_conflict_apply_valid_at,
+        },
+        Decoder::RuntimeIpcPublicationConflictResponse {
+            request: Box::new(runtime_ipc_publication_conflict_apply_request),
+            descriptor: Box::new(runtime_ipc_publication_conflict_descriptor),
         },
         Decoder::RuntimeIpcDirectoryResponse {
             request: Box::new(runtime_ipc_directory_request),

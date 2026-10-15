@@ -5938,3 +5938,32 @@ correlation visible, Windows-only field evidence, independent security audit
   Следующий bounded IPC slice — Root-authorized publication-conflict commands;
   independent HPKE и real adapter transaction evidence остаются activation
   prerequisites.
+
+### M1.1.39 — canonical runtime IPC publication conflict: принято локально
+
+- inactive deterministic-CBOR IPC получил exact-state
+  `CreatePublicationConflictRequest` и `ApplyPublicationConflictResponse`, не
+  подключённые к active Postcard runtime;
+- обе команды связывают current Root authority revision/device-list digest,
+  retained proof/evidence, peer Account/Device, old publication channel/epoch
+  и content-addressed current ticket. Apply дополнительно exact-связывает
+  pending request claim и staged Root response;
+- create возвращает success только после durable staging portable Device
+  request. Apply независимо проверяет current Root signature и возвращает
+  success только после atomic replacement endpoint/resolution/quarantine/proof
+  commit; sibling propagation остаётся явно pending;
+- portable request/response и replacement ticket остаются в trusted bounded
+  artifact staging. Root secret, publication write key, artifact plaintext и
+  local filesystem paths через IPC не проходят;
+- independent Node reference воспроизводит deterministic CBOR, Ed25519,
+  BLAKE3 request/response/artifact IDs; Rust golden, round-trip и substitution
+  tests прошли 3/3, один explicit generator ignored;
+- decoder mutation corpus прошёл 25623/25623 за 958.12 s, debug/offline,
+  `CargoJobs=2`, BelowNormal. Protocol library regression прошёл 121/121,
+  девять explicit vector generators ignored;
+- accepted-tag readiness прошёл 72/72, rustfmt и workspace locked/offline
+  strict Clippy прошли. Active Postcard IPC v26/JSON descriptor v7, network,
+  stable test EXE, release/archive/push/tag не менялись и не создавались;
+- coverage остаётся 16 complete / 1 partial / 1 not-started / 2 not-targeted.
+  Следующий bounded IPC slice — own-device discovery/automation, затем
+  recovery/device-link commands и остальные noncore results.

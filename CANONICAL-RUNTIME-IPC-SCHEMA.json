@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.38",
+  "milestone": "M1.1.39",
   "status": "candidate-not-active",
   "changes_active_wire": false,
   "profile": "kilogram-deterministic-cbor-v1",
@@ -53,6 +53,11 @@
     "maximum_publication_network_response_bytes": 131072,
     "maximum_publication_service_origin_bytes": 512,
     "maximum_publication_recipient_devices": 32,
+    "maximum_publication_conflict_request_bytes": 131072,
+    "maximum_publication_conflict_response_bytes": 131072,
+    "maximum_publication_conflict_request_artifact_bytes": 9437184,
+    "maximum_publication_conflict_response_artifact_bytes": 9437184,
+    "maximum_publication_conflict_replacement_ticket_artifact_bytes": 8388608,
     "maximum_error_bytes": 4096,
     "maximum_descriptor_validity_seconds": 86400,
     "maximum_request_validity_seconds": 30,
@@ -289,6 +294,27 @@
       "id": "publication-network-response-id-v1",
       "value": "kilogram:runtime-ipc-publication-network-response-id:cbor-v1\\0",
       "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "publication-conflict-artifact-digest-v1",
+      "value": "kilogram:runtime-ipc-publication-conflict-artifact-digest:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "publication-conflict-request-digest-v1",
+      "value": "kilogram:runtime-ipc-publication-conflict-request-digest:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "publication-conflict-response-signature-v1",
+      "value": "kilogram:runtime-ipc-publication-conflict-response-signature:cbor-v1\\0",
+      "operation": "ed25519-signature",
+      "signer": "descriptor-device-ed25519"
+    },
+    {
+      "id": "publication-conflict-response-id-v1",
+      "value": "kilogram:runtime-ipc-publication-conflict-response-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
     }
   ],
   "objects": [
@@ -406,6 +432,16 @@
       "id": "signed-runtime-ipc-publication-network-response-v1",
       "kind": "device-signed-secret-free-network-publication-or-observation-result",
       "maximum_bytes": 131072
+    },
+    {
+      "id": "runtime-ipc-publication-conflict-request-v1",
+      "kind": "short-lived-exact-current-content-addressed-publication-conflict-ceremony-request",
+      "maximum_bytes": 131072
+    },
+    {
+      "id": "signed-runtime-ipc-publication-conflict-response-v1",
+      "kind": "device-signed-public-claim-over-staged-root-authorized-conflict-artifacts",
+      "maximum_bytes": 131072
     }
   ],
   "covered_commands": [
@@ -427,7 +463,9 @@
     "revoke-mailbox-capability",
     "rotate-publication-channel",
     "publish-own-ticket",
-    "refresh-contact-ticket"
+    "refresh-contact-ticket",
+    "create-publication-conflict-request",
+    "apply-publication-conflict-response"
   ],
   "covered_results": [
     "pong",
@@ -447,7 +485,9 @@
     "mailbox-capability-transition",
     "publication-channel-rotated",
     "own-ticket-published",
-    "contact-ticket-refreshed"
+    "contact-ticket-refreshed",
+    "publication-conflict-request-created",
+    "publication-conflict-response-applied"
   ],
   "semantic_rules": [
     "descriptor address is exactly IPv4 127.0.0.1 or IPv6 ::1 and port is nonzero",
@@ -526,10 +566,20 @@
     "a refresh result carries an independently verifiable local Device-signed observation that advances the observation generation exactly once and strictly advances publication generation",
     "HTTPS success is only a Device-signed report of the completed exchange and is not independent proof of remote durability or later peer delivery",
     "the publication-network request ID is the durable idempotency key: one state lock exact-compares network and local effects while an exact retry may return the byte-identical already-committed result",
+    "publication-conflict commands exact-compare the current authority revision and Device-list digest, retained proof and evidence identifiers, peer endpoint identity, quarantined channel epoch and content-addressed current ticket",
+    "the sensitive portable Device request, Root response, publication write keys and replacement-ticket plaintext remain inside a trusted content-addressed staging area and never cross this local IPC boundary",
+    "create-publication-conflict-request requires no pending ceremony and names only the bounded digest and length of a separately staged replacement ticket",
+    "the runtime verifies the staged replacement ticket and retained proof, creates the Device-signed portable request internally and stages it durably before reporting success",
+    "the request-created result exposes only a compact public request claim, proof identity, requester Device, bounded artifact references and an awaiting-offline-Root state",
+    "apply-publication-conflict-response requires the exact pending public request claim and names only the bounded digest and length of a separately staged Root response",
+    "the runtime independently verifies the staged Root signature against the exact current Account authority and requires the response claim to match every public field of the pending request ceremony",
+    "apply success requires one atomic commit that replaces the peer endpoint ticket, retains the Root resolution, releases the matching quarantine and preserves the original conflict proof",
+    "a locally applied Root resolution remains pending propagation to exact-current sibling Devices and does not claim remote convergence",
+    "publication-conflict artifact references use a dedicated domain-separated digest; filesystem paths, Root secrets, write capabilities and artifact plaintext are forbidden",
+    "the publication-conflict IPC request ID is the durable idempotency key: an exact retry may return the byte-identical already-committed result while divergent reuse fails before staging or mutation",
     "unknown variants, noncanonical CBOR, trailing data, expired objects and contextual substitutions fail closed"
   ],
   "remaining_runtime_ipc_surface": [
-    "ticket-publication-conflict-commands",
     "own-device-discovery-and-automation-commands",
     "recovery-plan-and-device-link-commands",
     "active-unpaged-conversation-list-migration",

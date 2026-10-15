@@ -5,7 +5,7 @@
   "active_runtime_changed": false,
   "seed": 1262836037,
   "minimum_mutations": 500,
-  "expected_mutations": 24579,
+  "expected_mutations": 25623,
   "maximum_mutations": 30000,
   "fixtures": [
     {
@@ -620,6 +620,34 @@
       "json_pointer": "/expected/refresh/response/signed_cbor_hex",
       "decoder": "decode_and_verify_signed_runtime_ipc_publication_network_response_v1",
       "context_verifier": "verify_runtime_ipc_publication_network_response_for_request_v1"
+    },
+    {
+      "id": "runtime-ipc-publication-conflict-create-request-v1",
+      "vector_file": "CANONICAL-RUNTIME-IPC-PUBLICATION-CONFLICT-VECTORS.json",
+      "json_pointer": "/expected/create/request/cbor_hex",
+      "decoder": "decode_and_verify_runtime_ipc_publication_conflict_request_v1",
+      "context_verifier": "verify_runtime_ipc_publication_conflict_request_for_descriptor_v1+verify_runtime_ipc_publication_conflict_response_for_request_v1"
+    },
+    {
+      "id": "signed-runtime-ipc-publication-conflict-create-response-v1",
+      "vector_file": "CANONICAL-RUNTIME-IPC-PUBLICATION-CONFLICT-VECTORS.json",
+      "json_pointer": "/expected/create/response/signed_cbor_hex",
+      "decoder": "decode_and_verify_signed_runtime_ipc_publication_conflict_response_v1",
+      "context_verifier": "verify_runtime_ipc_publication_conflict_response_for_request_v1"
+    },
+    {
+      "id": "runtime-ipc-publication-conflict-apply-request-v1",
+      "vector_file": "CANONICAL-RUNTIME-IPC-PUBLICATION-CONFLICT-VECTORS.json",
+      "json_pointer": "/expected/apply/request/cbor_hex",
+      "decoder": "decode_and_verify_runtime_ipc_publication_conflict_request_v1",
+      "context_verifier": "verify_runtime_ipc_publication_conflict_request_for_descriptor_v1+verify_runtime_ipc_publication_conflict_response_for_request_v1"
+    },
+    {
+      "id": "signed-runtime-ipc-publication-conflict-apply-response-v1",
+      "vector_file": "CANONICAL-RUNTIME-IPC-PUBLICATION-CONFLICT-VECTORS.json",
+      "json_pointer": "/expected/apply/response/signed_cbor_hex",
+      "decoder": "decode_and_verify_signed_runtime_ipc_publication_conflict_response_v1",
+      "context_verifier": "verify_runtime_ipc_publication_conflict_response_for_request_v1"
     }
   ],
   "mutation_classes": [
