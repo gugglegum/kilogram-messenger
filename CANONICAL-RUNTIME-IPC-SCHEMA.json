@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.31",
+  "milestone": "M1.1.32",
   "status": "candidate-not-active",
   "changes_active_wire": false,
   "profile": "kilogram-deterministic-cbor-v1",
@@ -28,6 +28,9 @@
     "maximum_read_response_bytes": 262144,
     "maximum_contact_response_bytes": 131072,
     "maximum_directory_response_bytes": 131072,
+    "maximum_queue_request_bytes": 131072,
+    "maximum_queue_response_bytes": 65536,
+    "maximum_queue_message_bytes": 65536,
     "maximum_error_bytes": 4096,
     "maximum_descriptor_validity_seconds": 86400,
     "maximum_request_validity_seconds": 30,
@@ -127,6 +130,22 @@
       "id": "runtime-device-list-digest-v1",
       "value": "kilogram:runtime-ipc-device-list-digest:cbor-v1\\0",
       "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "queue-request-digest-v1",
+      "value": "kilogram:runtime-ipc-queue-request-digest:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "queue-response-signature-v1",
+      "value": "kilogram:runtime-ipc-queue-response-signature:cbor-v1\\0",
+      "operation": "ed25519-signature",
+      "signer": "descriptor-device-ed25519"
+    },
+    {
+      "id": "queue-response-id-v1",
+      "value": "kilogram:runtime-ipc-queue-response-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
     }
   ],
   "objects": [
@@ -174,6 +193,16 @@
       "id": "signed-runtime-ipc-directory-response-v1",
       "kind": "device-signed-authority-transition-result",
       "maximum_bytes": 131072
+    },
+    {
+      "id": "runtime-ipc-queue-request-v1",
+      "kind": "short-lived-idempotent-durable-message-insertion",
+      "maximum_bytes": 131072
+    },
+    {
+      "id": "signed-runtime-ipc-queue-response-v1",
+      "kind": "device-signed-exact-queue-insertion-result",
+      "maximum_bytes": 65536
     }
   ],
   "covered_commands": [
@@ -184,7 +213,8 @@
     "history-page",
     "add-contact",
     "own-device-directory-status",
-    "apply-own-device-directory"
+    "apply-own-device-directory",
+    "queue-message"
   ],
   "covered_results": [
     "pong",
@@ -195,7 +225,8 @@
     "history-page",
     "contact-added",
     "own-device-directory-status",
-    "own-device-directory-applied"
+    "own-device-directory-applied",
+    "message-queued"
   ],
   "semantic_rules": [
     "descriptor address is exactly IPv4 127.0.0.1 or IPv6 ::1 and port is nonzero",
@@ -225,10 +256,15 @@
     "the signed mutation result binds the exact previous and resulting revisions and digests, exact removed Device set and resulting directory status",
     "an idempotent equal-revision result reports no newly retired ratchet or prekey records and no newly published ticket",
     "future recipient exclusion does not claim remote rewriting or erasure: preexisting ciphertext is immutable and existing history copies remain readable",
+    "queue-message carries one nonempty UTF-8 body of at most 65536 bytes and names a peer Account distinct from the descriptor Account",
+    "the caller-generated nonzero request ID is also the durable queue ID; retrying the exact request is idempotent while reuse for different content must fail closed",
+    "a successful queue result repeats the exact peer Account and derives Conversation and canonical contact IDs from the requested label and Accounts",
+    "the inserted flag reports only whether the exact durable queue record was newly created; false is valid only for an already-present byte-equivalent record",
+    "the active adapter must verify enrolled contact and current conversation membership under the same state lock as durable queue insertion",
     "unknown variants, noncanonical CBOR, trailing data, expired objects and contextual substitutions fail closed"
   ],
   "remaining_runtime_ipc_surface": [
-    "message-queue-and-outbox-status-commands",
+    "snapshot-bound-paginated-outbox-status-command",
     "mailbox-provisioning-and-volunteer-provider-commands",
     "ticket-publication-and-conflict-commands",
     "own-device-discovery-and-automation-commands",

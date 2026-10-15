@@ -1,4 +1,4 @@
-; Kilogram deterministic-CBOR local runtime IPC core, read, contact and directory model, M1.1.31.
+; Kilogram deterministic-CBOR local runtime IPC core, read, contact, directory and queue model, M1.1.32.
 ; Only unsigned integers, definite byte strings and definite arrays are used.
 
 profile-version = 1
@@ -313,6 +313,46 @@ signed-runtime-ipc-directory-response-v1 = [
   signature
 ]
 
+runtime-ipc-queue-command-v1 =
+  [queue-message: 0,
+   conversation-label-utf8: bytes .size (1..4096),
+   peer-account-id: account-id,
+   message-utf8: bytes .size (1..65536)]
+
+runtime-ipc-queue-request-v1 = [
+  profile-version,
+  descriptor-id: digest,
+  request-id,
+  bearer-token: token,
+  issued-at-unix-seconds: uint,
+  expires-at-unix-seconds: uint,
+  runtime-ipc-queue-command-v1
+]
+
+runtime-ipc-queue-result-v1 =
+  [message-queued: 0,
+   queue-id: digest,
+   contact-id: digest,
+   conversation-id: digest,
+   peer-account-id: account-id,
+   inserted: 0..1] /
+  [error: 1, error-code: 1..65535, message-utf8: bytes .size (1..4096)]
+
+runtime-ipc-queue-response-content-v1 = [
+  profile-version,
+  descriptor-id: digest,
+  request-id,
+  request-digest: digest,
+  responder-device-id: device-id,
+  runtime-ipc-queue-result-v1
+]
+
+signed-runtime-ipc-queue-response-v1 = [
+  profile-version,
+  runtime-ipc-queue-response-content-v1,
+  signature
+]
+
 kilogram-runtime-ipc-v1 =
   signed-runtime-ipc-descriptor-v1 /
   runtime-ipc-core-request-v1 /
@@ -322,4 +362,6 @@ kilogram-runtime-ipc-v1 =
   runtime-ipc-contact-request-v1 /
   signed-runtime-ipc-contact-response-v1 /
   runtime-ipc-directory-request-v1 /
-  signed-runtime-ipc-directory-response-v1
+  signed-runtime-ipc-directory-response-v1 /
+  runtime-ipc-queue-request-v1 /
+  signed-runtime-ipc-queue-response-v1

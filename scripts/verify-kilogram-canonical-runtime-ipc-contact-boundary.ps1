@@ -33,7 +33,7 @@ function Assert-LowerHex {
 
 function Assert-Schema {
     param([object]$Schema, [string]$Rust)
-    if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.31' -or
+    if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.32' -or
         [string]$Schema.status -cne 'candidate-not-active' -or [bool]$Schema.changes_active_wire -or
         [string]$Schema.profile -cne 'kilogram-deterministic-cbor-v1' -or
         [string]$Schema.cddl.path -cne 'CANONICAL-RUNTIME-IPC.cddl' -or
@@ -53,9 +53,9 @@ function Assert-Schema {
     if ($limits -cne '65536,131072,4,32,4096,4096') {
         throw 'canonical runtime IPC contact limits changed'
     }
-    if (@($Schema.domains).Count -ne 16 -or @($Schema.objects).Count -ne 9 -or
-        @($Schema.covered_commands).Count -ne 8 -or @($Schema.covered_results).Count -ne 9 -or
-        @($Schema.semantic_rules).Count -ne 28 -or
+    if (@($Schema.domains).Count -ne 19 -or @($Schema.objects).Count -ne 11 -or
+        @($Schema.covered_commands).Count -ne 9 -or @($Schema.covered_results).Count -ne 10 -or
+        @($Schema.semantic_rules).Count -ne 33 -or
         @($Schema.remaining_runtime_ipc_surface).Count -ne 7) {
         throw 'canonical runtime IPC contact inventory changed'
     }
@@ -184,7 +184,8 @@ $expectedCovered = @('device-signed-loopback-descriptor',
     'device-signed-core-response', 'ping-pong', 'wait-for-change', 'shutdown', 'bounded-error',
     'bounded-paginated-conversation-list-read', 'snapshot-bound-history-page-read',
     'device-signed-exact-read-response', 'exact-peer-contact-enrollment',
-    'read-only-own-device-directory-status', 'root-revoked-own-device-directory-transition')
+    'read-only-own-device-directory-status', 'root-revoked-own-device-directory-transition',
+    'idempotent-durable-message-queue-insertion')
 $expectedRemaining = @($schema.remaining_runtime_ipc_surface | ForEach-Object { [string]$_ })
 if ($surface.Count -ne 1 -or [string]$surface[0].coverage -cne 'partial' -or
     (@($surface[0].covered) -join ',') -cne ($expectedCovered -join ',') -or

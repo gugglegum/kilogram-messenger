@@ -5748,3 +5748,28 @@ correlation visible, Windows-only field evidence, independent security audit
 - coverage остаётся 16 complete / 1 partial / 1 not-started / 2 not-targeted.
   Следующий bounded IPC slice — idempotent durable message queue, затем
   snapshot-bound paginated outbox projection.
+
+### M1.1.32 — canonical runtime IPC durable message queue: принято локально
+
+- inactive deterministic-CBOR IPC получил bounded `QueueMessage`, не
+  подключённый к active Postcard reader;
+- caller request ID является exact durable queue ID: одинаковый request
+  идемпотентен, а повтор ID с отличающимся label, peer или plaintext должен
+  завершаться conflict до создания второй записи;
+- success Device-подписан и exact-коммитит descriptor, полный request digest,
+  queue ID, canonical contact ID, label-derived Conversation ID, peer Account и
+  `inserted`; последний не является delivery receipt;
+- eventual adapter обязан в одной state lock/transaction проверить enrolled
+  contact и current conversation membership, seal/sign durable record и только
+  затем вернуть success; portable CBOR не подменяет local authority state;
+- plaintext допускается только в signed-loopback bounded request, ограничен
+  65536 bytes и не должен сохраняться в evidence/log;
+- independent Node reference воспроизводит deterministic CBOR, Ed25519 и
+  BLAKE3, а request/response включены в закрытый mutation corpus;
+- финальный mutation corpus прошёл 19401/19401 за 793.87 s, debug/offline,
+  `CargoJobs=2`, BelowNormal; protocol library regression прошёл 99/99;
+- accepted-tag readiness прошёл 65/65, rustfmt и workspace locked/offline strict
+  Clippy; network, stable-path test EXE, release, archive, push и tag не
+  запускались и не создавались;
+- coverage остаётся 16 complete / 1 partial / 1 not-started / 2 not-targeted.
+  Следующий bounded IPC slice — snapshot-bound paginated outbox projection.

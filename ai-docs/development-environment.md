@@ -3434,3 +3434,26 @@ Hosted follow-up:
 - Canonical coverage remains 16 complete, 1 partial, 1 not-started and 2
   not-targeted. The next runtime IPC slices are durable queue insertion and a
   snapshot-bound paginated outbox projection.
+
+## M1.1.32 canonical runtime IPC durable queue snapshot (2026-10-15)
+
+- New inactive module:
+  `crates/kilogram-protocol/src/canonical_runtime_ipc_queue_v1.rs`.
+- CDDL, schema, generated vectors and a dependency-free Node reference cover
+  idempotent durable `QueueMessage` insertion. The caller request ID is the
+  exact queue ID and the Device-signed result binds the complete request digest.
+- An eventual adapter must verify enrolled contact/current membership and seal
+  the durable record under one state lock/transaction. `inserted=false` is an
+  exact-retry result, not delivery evidence; plaintext must not enter logs.
+- Active `kilogram-runtime-ipc` remains Postcard version 26 with JSON descriptor
+  version 7. No listener, stable-path executable, firewall or network behavior
+  changed.
+- Final decoder mutation regression passed 19401/19401 in 793.87 seconds with
+  debug/offline Cargo, two jobs and BelowNormal priority. Protocol library
+  regression passed 99/99 with two explicit vector generators ignored.
+- Accepted-tag readiness passed 65/65; rustfmt and workspace locked/offline
+  strict Clippy passed. No network, release build, archive, push or tag was
+  created.
+- Canonical coverage remains 16 complete, 1 partial, 1 not-started and 2
+  not-targeted. The next runtime IPC boundary is snapshot-bound paginated
+  outbox projection.

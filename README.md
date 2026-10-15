@@ -305,7 +305,7 @@ all verified.
 
 `M1-CANDIDATE.json` now pins clean M0.9.87 run `20261014-080905` and accepted
 M0.9.88 GitHub run `38507114425`/attestation `55683374`. The verifier
-recomputes the exact 83-entry runtime/protocol surface and 64-entry independent
+recomputes the exact 83-entry runtime/protocol surface and 65-entry independent
 artifact surface from their evidence revisions through current `HEAD`.
 
 The field result remains explicitly `verified-reduced-two-host` with
