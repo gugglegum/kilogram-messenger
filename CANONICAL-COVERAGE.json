@@ -144,9 +144,9 @@
     {
       "id": "sync",
       "coverage": "partial",
-      "artifacts": ["CANONICAL-WIRE-SCHEMA.json", "CANONICAL-WIRE-VECTORS.json"],
-      "covered": ["sync-inventory"],
-      "remaining": ["sync-diff", "sync-request-response-frames", "multi-round-session-state"]
+      "artifacts": ["CANONICAL-WIRE-SCHEMA.json", "CANONICAL-WIRE-VECTORS.json", "CANONICAL-SYNC.cddl", "CANONICAL-SYNC-SCHEMA.json", "CANONICAL-SYNC-VECTORS.json", "crates/kilogram-protocol/src/canonical_sync_v1.rs", "scripts/verify-kilogram-canonical-sync-reference.mjs"],
+      "covered": ["sync-inventory", "sync-diff", "sync-request-response-frames"],
+      "remaining": ["multi-round-session-state"]
     },
     {
       "id": "ticket-publication-capability",

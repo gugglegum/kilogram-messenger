@@ -1,0 +1,62 @@
+; Kilogram deterministic-CBOR synchronization frames, M1.1.12.
+; Boolean values use the profile's closed unsigned-integer form 0 / 1.
+
+profile-version = 1
+id-32 = bytes .size 32
+signature-64 = bytes .size 64
+canonical-bool = 0 / 1
+authorized-event-v1 = bytes
+
+sync-inventory-content-v1 = [
+  profile-version,
+  conversation-id: id-32,
+  requester-device-id: id-32,
+  session-binding: id-32,
+  event-ids: [* id-32]
+]
+
+signed-sync-inventory-v1 = [profile-version, sync-inventory-content-v1, signature-64]
+
+sync-event-batch-v1 = [
+  profile-version,
+  conversation-id: id-32,
+  events: [* authorized-event-v1]
+]
+
+sync-diff-content-v1 = [
+  profile-version,
+  conversation-id: id-32,
+  responder-device-id: id-32,
+  session-binding: id-32,
+  requested-event-ids: [* id-32],
+  events: [* authorized-event-v1],
+  more-available: canonical-bool
+]
+
+signed-sync-diff-v1 = [profile-version, sync-diff-content-v1, signature-64]
+
+sync-complete-v1 = [
+  profile-version,
+  conversation-id: id-32,
+  stored-event-ids: [* id-32],
+  more-available: canonical-bool
+]
+
+sync-pause-v1 = [profile-version, conversation-id: id-32]
+sync-paused-v1 = [profile-version, conversation-id: id-32]
+sync-rejection-reason-v1 = 1 ; requester-not-allowed
+sync-rejected-v1 = [profile-version, conversation-id: id-32, sync-rejection-reason-v1]
+
+sync-client-frame-v1 = [
+  profile-version,
+  variant: 1 / 2 / 3,
+  payload: bytes
+]
+
+sync-server-frame-v1 = [
+  profile-version,
+  variant: 1 / 2 / 3 / 4,
+  payload: bytes
+]
+
+kilogram-sync-v1 = sync-client-frame-v1 / sync-server-frame-v1

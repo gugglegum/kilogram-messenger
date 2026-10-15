@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.12",
+  "status": "candidate-not-active",
+  "changes_active_wire": false,
+  "profile": "kilogram-deterministic-cbor-v1",
+  "cddl": {
+    "standard": "RFC 8610",
+    "path": "CANONICAL-SYNC.cddl",
+    "root_rule": "kilogram-sync-v1"
+  },
+  "activation": {
+    "current_runtime_codec": "postcard-v6",
+    "current_runtime_changed": false,
+    "candidate_protocol_identifier": "unassigned",
+    "required_before_activation": [
+      "canonical-multi-round-session-checkpoint",
+      "new-explicit-protocol-version-or-parallel-alpn",
+      "dual-reader-and-downgrade-tests",
+      "coverage-guided-fuzzing",
+      "fresh-field-and-hosted-evidence"
+    ]
+  },
+  "limits": {
+    "maximum_inventory_event_ids": 4096,
+    "maximum_events_per_batch": 64,
+    "maximum_encoded_object_bytes": 8388608
+  },
+  "domains": [
+    {
+      "id": "sync-inventory-signature-v1",
+      "value": "kilogram:sync-inventory-signature:cbor-v1\u0000",
+      "operation": "ed25519-sign-domain-prefixed-content"
+    },
+    {
+      "id": "sync-diff-signature-v1",
+      "value": "kilogram:sync-diff-signature:cbor-v1\u0000",
+      "operation": "ed25519-sign-domain-prefixed-content"
+    }
+  ],
+  "external_objects": [
+    {
+      "id": "authorized-event-v1",
+      "schema": "CANONICAL-EVENT-SCHEMA.json"
+    }
+  ],
+  "objects": [
+    { "id": "signed-sync-inventory-v1", "kind": "signed-envelope", "array_length": 3 },
+    { "id": "sync-event-batch-v1", "kind": "client-payload", "array_length": 3 },
+    { "id": "signed-sync-diff-v1", "kind": "signed-envelope", "array_length": 3 },
+    { "id": "sync-complete-v1", "kind": "server-payload", "array_length": 4 },
+    { "id": "sync-pause-v1", "kind": "client-payload", "array_length": 2 },
+    { "id": "sync-paused-v1", "kind": "server-payload", "array_length": 2 },
+    { "id": "sync-rejected-v1", "kind": "server-payload", "array_length": 3 },
+    { "id": "sync-client-frame-v1", "kind": "closed-variant-frame", "array_length": 3 },
+    { "id": "sync-server-frame-v1", "kind": "closed-variant-frame", "array_length": 3 }
+  ],
+  "variant_registry": {
+    "client": {
+      "1": "signed-sync-inventory-v1",
+      "2": "sync-event-batch-v1",
+      "3": "sync-pause-v1"
+    },
+    "server": {
+      "1": "signed-sync-diff-v1",
+      "2": "sync-complete-v1",
+      "3": "sync-rejected-v1",
+      "4": "sync-paused-v1"
+    },
+    "rejection_reason": {
+      "1": "requester-not-allowed"
+    }
+  },
+  "semantic_rules": [
+    "all Event ID arrays are strictly bytewise ordered and duplicate-free",
+    "authorized events are verified and strictly ordered by their derived Event IDs",
+    "every nested event names the frame conversation",
+    "inventory and diff signatures bind the authenticated Device identity and session binding",
+    "boolean values are encoded only as unsigned integer zero or one",
+    "closed variant registries reject unknown request response and rejection codes",
+    "every standalone object and nested frame payload is bounded to eight MiB"
+  ],
+  "rust_bindings": [
+    {
+      "path": "crates/kilogram-protocol/src/canonical_sync_v1.rs",
+      "symbol": "CANONICAL_SYNC_DIFF_SIGNATURE_DOMAIN",
+      "rust_type": "bytes",
+      "value": "kilogram:sync-diff-signature:cbor-v1\u0000"
+    }
+  ]
+}

@@ -5263,3 +5263,18 @@ correlation visible, Windows-only field evidence, independent security audit
 - strict decoder доводит corpus до 2871/3000; `ratchet-public-artifacts`
   становится complete (4 complete / 2 partial overall);
 - readiness inventory расширен с 44 до 45 gates; network/release/tag не нужны.
+
+### M1.1.12 — canonical synchronization frames: принято локально
+
+- deterministic-CBOR schema теперь покрывает signed inventory/diff, event batch,
+  complete, pause/paused/rejected и closed client/server variant frames;
+- inventory подписывает requester Device, diff — responder Device; обе подписи
+  связывают exact transport-derived session binding;
+- Event ID lists strictly ordered/unique, nested authorized events проверяются и
+  обязаны принадлежать conversation, boolean values имеют closed encoding 0/1;
+- object/frame payload bounded до 8 MiB, inventory до 4096 IDs, round batch до
+  64 events; unknown variants и rejection codes fail closed;
+- independent Node Ed25519 reference воспроизводит exact bytes/signatures, три
+  strict decoder fixture расширяют corpus до 3654/4000;
+- `sync` остаётся partial только из-за multi-round session state; active Postcard
+  v6 не менялся, readiness inventory расширен с 45 до 46 gates.

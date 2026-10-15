@@ -15,11 +15,15 @@ use kilogram_protocol::canonical_ratchet_v1::{
     decode_and_verify_account_prekey_directory_v1, decode_and_verify_signed_prekey_pool_v1,
 };
 use kilogram_protocol::canonical_recovery_v1::decode_and_verify_signed_history_recovery_checkpoint_v1;
+use kilogram_protocol::canonical_sync_v1::{
+    decode_and_verify_signed_sync_diff_v1, decode_and_verify_sync_client_frame_v1,
+    decode_and_verify_sync_server_frame_v1,
+};
 use serde_json::Value;
 
 const MINIMUM_MUTATIONS: usize = 500;
-const EXPECTED_MUTATIONS: usize = 2_871;
-const MAXIMUM_MUTATIONS: usize = 3_000;
+const EXPECTED_MUTATIONS: usize = 3_654;
+const MAXIMUM_MUTATIONS: usize = 4_000;
 const MAXIMUM_GRID_POSITIONS: usize = 128;
 
 #[derive(Clone, Copy)]
@@ -35,6 +39,9 @@ enum Decoder {
     SignedEvent,
     AuthorizedEvent,
     PrekeySelection,
+    SignedSyncDiff,
+    SyncClientFrame,
+    SyncServerFrame,
 }
 
 fn accepts(decoder: Decoder, bytes: &[u8]) -> bool {
@@ -50,6 +57,9 @@ fn accepts(decoder: Decoder, bytes: &[u8]) -> bool {
         Decoder::SignedEvent => decode_and_verify_signed_event_v1(bytes).is_ok(),
         Decoder::AuthorizedEvent => decode_and_verify_authorized_event_v1(bytes).is_ok(),
         Decoder::PrekeySelection => decode_and_verify_prekey_selection_transcript_v1(bytes).is_ok(),
+        Decoder::SignedSyncDiff => decode_and_verify_signed_sync_diff_v1(bytes).is_ok(),
+        Decoder::SyncClientFrame => decode_and_verify_sync_client_frame_v1(bytes).is_ok(),
+        Decoder::SyncServerFrame => decode_and_verify_sync_server_frame_v1(bytes).is_ok(),
     }
 }
 
@@ -110,6 +120,10 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
     let prekey_selection: Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-PREKEY-SELECTION-VECTORS.json"
+    )))?;
+    let sync: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../CANONICAL-SYNC-VECTORS.json"
     )))?;
     let fixtures = [
         (
@@ -172,6 +186,21 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
             "prekey-selection-transcript",
             Decoder::PrekeySelection,
             pointer_hex(&prekey_selection, "/expected/transcript_cbor_hex")?,
+        ),
+        (
+            "signed-sync-diff",
+            Decoder::SignedSyncDiff,
+            pointer_hex(&sync, "/expected/diff/signed_cbor_hex")?,
+        ),
+        (
+            "sync-client-frame",
+            Decoder::SyncClientFrame,
+            pointer_hex(&sync, "/expected/client_frames/inventory_cbor_hex")?,
+        ),
+        (
+            "sync-server-frame",
+            Decoder::SyncServerFrame,
+            pointer_hex(&sync, "/expected/server_frames/diff_cbor_hex")?,
         ),
     ];
     let mut mutations = 0usize;
@@ -252,6 +281,9 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         Decoder::SignedEvent,
         Decoder::AuthorizedEvent,
         Decoder::PrekeySelection,
+        Decoder::SignedSyncDiff,
+        Decoder::SyncClientFrame,
+        Decoder::SyncServerFrame,
     ] {
         assert!(!accepts(decoder, &oversized));
         mutations += 1;

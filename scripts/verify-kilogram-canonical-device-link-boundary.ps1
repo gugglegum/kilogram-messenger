@@ -161,7 +161,7 @@ if ($SelfTest) {
 Write-Output 'canonical_device_link_boundary=verified'
 Write-Output 'strict_device_link_decoders=1'
 Write-Output 'independent_ed25519=verified'
-Write-Output 'bounded_decoder_mutations=2871'
+Write-Output 'bounded_decoder_mutations=3654'
 Write-Output 'account_authority_coverage=complete'
 Write-Output 'active_wire_changed=false'
 Write-Output 'network_executed=false'
