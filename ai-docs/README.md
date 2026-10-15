@@ -964,6 +964,14 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   inactive CDDL authority/session chain: Account/Device IDs, Root-signed
   certificate/revocation/snapshot, session-bound Device signature, строгий Rust
   decode/verify и независимое JavaScript/Node воспроизведение Ed25519.
+- [`../docs/RFC-0166-m1140-canonical-runtime-ipc-own-device-announcement-automation.md`](../docs/RFC-0166-m1140-canonical-runtime-ipc-own-device-announcement-automation.md) —
+  M1.1.40 канонизирует inactive foreground-only endpoint announcement policy
+  одному sibling Device без ticket plaintext, local paths или ложного OS
+  background service.
+- [`../docs/RFC-0167-m1141-canonical-runtime-ipc-own-device-ticket-discovery.md`](../docs/RFC-0167-m1141-canonical-runtime-ipc-own-device-ticket-discovery.md) —
+  M1.1.41 канонизирует pairwise own-device ticket discovery, directional
+  channels и atomic locator-plus-announcement install без передачи derived
+  private capabilities через IPC.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

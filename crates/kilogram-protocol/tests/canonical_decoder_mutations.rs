@@ -127,6 +127,14 @@ use kilogram_protocol::canonical_runtime_ipc_own_device_announcement_v1::{
     verify_runtime_ipc_own_device_announcement_request_for_descriptor_v1,
     verify_runtime_ipc_own_device_announcement_response_for_request_v1,
 };
+use kilogram_protocol::canonical_runtime_ipc_own_device_discovery_v1::{
+    CanonicalRuntimeIpcOwnDeviceDiscoveryRequestV1,
+    CanonicalSignedRuntimeIpcOwnDeviceDiscoveryResponseV1,
+    decode_and_verify_runtime_ipc_own_device_discovery_request_v1,
+    decode_and_verify_signed_runtime_ipc_own_device_discovery_response_v1,
+    verify_runtime_ipc_own_device_discovery_request_for_descriptor_v1,
+    verify_runtime_ipc_own_device_discovery_response_for_request_v1,
+};
 use kilogram_protocol::canonical_runtime_ipc_provider_v1::{
     CanonicalRuntimeIpcProviderRequestV1, CanonicalSignedRuntimeIpcProviderResponseV1,
     decode_and_verify_runtime_ipc_provider_request_v1,
@@ -198,7 +206,7 @@ use kilogram_protocol::canonical_ticket_publication_v1::{
 use serde_json::Value;
 
 const MINIMUM_MUTATIONS: usize = 500;
-const EXPECTED_MUTATIONS: usize = 26_667;
+const EXPECTED_MUTATIONS: usize = 27_711;
 const MAXIMUM_MUTATIONS: usize = 30_000;
 const MAXIMUM_GRID_POSITIONS: usize = 128;
 
@@ -358,6 +366,15 @@ enum Decoder {
     },
     RuntimeIpcOwnDeviceAnnouncementResponse {
         request: Box<CanonicalRuntimeIpcOwnDeviceAnnouncementRequestV1>,
+        descriptor: Box<CanonicalSignedRuntimeIpcDescriptorV1>,
+    },
+    RuntimeIpcOwnDeviceDiscoveryRequest {
+        descriptor: Box<CanonicalSignedRuntimeIpcDescriptorV1>,
+        response: Box<CanonicalSignedRuntimeIpcOwnDeviceDiscoveryResponseV1>,
+        now_unix_seconds: u64,
+    },
+    RuntimeIpcOwnDeviceDiscoveryResponse {
+        request: Box<CanonicalRuntimeIpcOwnDeviceDiscoveryRequestV1>,
         descriptor: Box<CanonicalSignedRuntimeIpcDescriptorV1>,
     },
     TicketPublicationCapability,
@@ -822,6 +839,38 @@ fn accepts(decoder: &Decoder, bytes: &[u8]) -> bool {
                 )
             })
             .is_ok(),
+        Decoder::RuntimeIpcOwnDeviceDiscoveryRequest {
+            descriptor,
+            response,
+            now_unix_seconds,
+        } => decode_and_verify_runtime_ipc_own_device_discovery_request_v1(bytes)
+            .and_then(|request| {
+                verify_runtime_ipc_own_device_discovery_request_for_descriptor_v1(
+                    &request,
+                    descriptor,
+                    *now_unix_seconds,
+                )?;
+                verify_runtime_ipc_own_device_discovery_response_for_request_v1(
+                    response,
+                    &request,
+                    descriptor,
+                    *now_unix_seconds,
+                )
+            })
+            .is_ok(),
+        Decoder::RuntimeIpcOwnDeviceDiscoveryResponse {
+            request,
+            descriptor,
+        } => decode_and_verify_signed_runtime_ipc_own_device_discovery_response_v1(bytes)
+            .and_then(|response| {
+                verify_runtime_ipc_own_device_discovery_response_for_request_v1(
+                    &response,
+                    request,
+                    descriptor,
+                    request.issued_at_unix_seconds,
+                )
+            })
+            .is_ok(),
         Decoder::TicketPublicationCapability => {
             decode_and_verify_ticket_publication_capability_v1(bytes).is_ok()
         }
@@ -1098,6 +1147,10 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
     let runtime_ipc_own_device_announcement: Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-RUNTIME-IPC-OWN-DEVICE-ANNOUNCEMENT-VECTORS.json"
+    )))?;
+    let runtime_ipc_own_device_discovery: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../CANONICAL-RUNTIME-IPC-OWN-DEVICE-DISCOVERY-VECTORS.json"
     )))?;
     let ticket_publication: Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
@@ -1401,6 +1454,34 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         runtime_ipc_own_device_announcement["input"]["status_issued_at_unix_seconds"]
             .as_u64()
             .ok_or("runtime IPC own-device announcement status valid time is missing")?;
+    let runtime_ipc_own_device_discovery_configure_request =
+        decode_and_verify_runtime_ipc_own_device_discovery_request_v1(&pointer_hex(
+            &runtime_ipc_own_device_discovery,
+            "/expected/configure/request/cbor_hex",
+        )?)?;
+    let runtime_ipc_own_device_discovery_configure_response =
+        decode_and_verify_signed_runtime_ipc_own_device_discovery_response_v1(&pointer_hex(
+            &runtime_ipc_own_device_discovery,
+            "/expected/configure/response/signed_cbor_hex",
+        )?)?;
+    let runtime_ipc_own_device_discovery_status_request =
+        decode_and_verify_runtime_ipc_own_device_discovery_request_v1(&pointer_hex(
+            &runtime_ipc_own_device_discovery,
+            "/expected/status/request/cbor_hex",
+        )?)?;
+    let runtime_ipc_own_device_discovery_status_response =
+        decode_and_verify_signed_runtime_ipc_own_device_discovery_response_v1(&pointer_hex(
+            &runtime_ipc_own_device_discovery,
+            "/expected/status/response/signed_cbor_hex",
+        )?)?;
+    let runtime_ipc_own_device_discovery_configure_valid_at =
+        runtime_ipc_own_device_discovery["input"]["configure_issued_at_unix_seconds"]
+            .as_u64()
+            .ok_or("runtime IPC own-device discovery configure valid time is missing")?;
+    let runtime_ipc_own_device_discovery_status_valid_at =
+        runtime_ipc_own_device_discovery["input"]["status_issued_at_unix_seconds"]
+            .as_u64()
+            .ok_or("runtime IPC own-device discovery status valid time is missing")?;
     let publication_resolution_response_bytes = pointer_hex(
         &publication_conflict,
         "/expected/resolution_response/cbor_hex",
@@ -2142,6 +2223,52 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
             )?,
         ),
         (
+            "runtime-ipc-own-device-discovery-configure-request",
+            Decoder::RuntimeIpcOwnDeviceDiscoveryRequest {
+                descriptor: Box::new(runtime_ipc_descriptor.clone()),
+                response: Box::new(runtime_ipc_own_device_discovery_configure_response.clone()),
+                now_unix_seconds: runtime_ipc_own_device_discovery_configure_valid_at,
+            },
+            pointer_hex(
+                &runtime_ipc_own_device_discovery,
+                "/expected/configure/request/cbor_hex",
+            )?,
+        ),
+        (
+            "signed-runtime-ipc-own-device-discovery-configure-response",
+            Decoder::RuntimeIpcOwnDeviceDiscoveryResponse {
+                request: Box::new(runtime_ipc_own_device_discovery_configure_request.clone()),
+                descriptor: Box::new(runtime_ipc_descriptor.clone()),
+            },
+            pointer_hex(
+                &runtime_ipc_own_device_discovery,
+                "/expected/configure/response/signed_cbor_hex",
+            )?,
+        ),
+        (
+            "runtime-ipc-own-device-discovery-status-request",
+            Decoder::RuntimeIpcOwnDeviceDiscoveryRequest {
+                descriptor: Box::new(runtime_ipc_descriptor.clone()),
+                response: Box::new(runtime_ipc_own_device_discovery_status_response.clone()),
+                now_unix_seconds: runtime_ipc_own_device_discovery_status_valid_at,
+            },
+            pointer_hex(
+                &runtime_ipc_own_device_discovery,
+                "/expected/status/request/cbor_hex",
+            )?,
+        ),
+        (
+            "signed-runtime-ipc-own-device-discovery-status-response",
+            Decoder::RuntimeIpcOwnDeviceDiscoveryResponse {
+                request: Box::new(runtime_ipc_own_device_discovery_status_request.clone()),
+                descriptor: Box::new(runtime_ipc_descriptor.clone()),
+            },
+            pointer_hex(
+                &runtime_ipc_own_device_discovery,
+                "/expected/status/response/signed_cbor_hex",
+            )?,
+        ),
+        (
             "ticket-publication-capability",
             Decoder::TicketPublicationCapability,
             pointer_hex(&ticket_publication, "/expected/rotated_capability/cbor_hex")?,
@@ -2579,6 +2706,24 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         },
         Decoder::RuntimeIpcOwnDeviceAnnouncementResponse {
             request: Box::new(runtime_ipc_own_device_announcement_status_request),
+            descriptor: Box::new(runtime_ipc_descriptor.clone()),
+        },
+        Decoder::RuntimeIpcOwnDeviceDiscoveryRequest {
+            descriptor: Box::new(runtime_ipc_descriptor.clone()),
+            response: Box::new(runtime_ipc_own_device_discovery_configure_response),
+            now_unix_seconds: runtime_ipc_own_device_discovery_configure_valid_at,
+        },
+        Decoder::RuntimeIpcOwnDeviceDiscoveryResponse {
+            request: Box::new(runtime_ipc_own_device_discovery_configure_request),
+            descriptor: Box::new(runtime_ipc_descriptor.clone()),
+        },
+        Decoder::RuntimeIpcOwnDeviceDiscoveryRequest {
+            descriptor: Box::new(runtime_ipc_descriptor.clone()),
+            response: Box::new(runtime_ipc_own_device_discovery_status_response),
+            now_unix_seconds: runtime_ipc_own_device_discovery_status_valid_at,
+        },
+        Decoder::RuntimeIpcOwnDeviceDiscoveryResponse {
+            request: Box::new(runtime_ipc_own_device_discovery_status_request),
             descriptor: Box::new(runtime_ipc_descriptor.clone()),
         },
         Decoder::RuntimeIpcDirectoryResponse {

@@ -378,7 +378,7 @@ sessions, distribution, removal и key epochs и не решены этим пр
 - Независимый second-builder, подписанный release provenance, обновления клиента
   и дальнейшая защита supply chain поверх M0.9.50 same-host gate.
 - Миграция криптоалгоритмов и wire protocol без разделения сети.
-- После M1.1.40 canonical coverage содержит 16 complete, 1 partial
+- После M1.1.41 canonical coverage содержит 16 complete, 1 partial
   (`runtime-ipc`), один not-started (`transport-sync`) и два not-targeted
   surface. В runtime IPC уже закрыты signed loopback descriptor, bearer/fresh
   request, exact signed response, core Ping/WaitForChange/Shutdown/Error,
@@ -400,12 +400,15 @@ sessions, distribution, removal и key epochs и не решены этим пр
   content-addressed staged Device request и Root response, а apply atomic
   устанавливает replacement endpoint/resolution/quarantine/proof state без
   передачи artifact plaintext или write keys через IPC. Foreground-only
-  own-device announcement automation теперь exact-связывает Root-signed roster,
+  own-device announcement automation exact-связывает Root-signed roster,
   content-addressed recipient ticket, network mask, bounded scheduler/backoff и
   Device-signed status без ticket plaintext/local path или ложного OS service.
-  Открыты pairwise own-device ticket discovery, roster-wide orchestration,
+  Pairwise own-device ticket discovery теперь добавляет distinct directional
+  public channels, canonical HTTPS origin, TTL/refresh и atomic install
+  verified locator вместе с child announcement policy; derived private
+  capabilities остаются внутри runtime. Открыты roster-wide orchestration,
   recovery/device-link команды и их noncore results. Следующий приоритет —
-  own-device ticket discovery и roster orchestration, затем остальные
+  roster-wide orchestration, затем остальные
   families на bounded этапы до complete `runtime-ipc`, затем parallel CBOR
   ALPN/negotiation для
   `transport-sync`. Общая activation требует explicit identifiers, downgrade

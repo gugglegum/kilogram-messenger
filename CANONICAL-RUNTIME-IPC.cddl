@@ -1027,6 +1027,131 @@ signed-runtime-ipc-own-device-announcement-response-v1 = [
   signature
 ]
 
+; Pairwise discovery of a sibling Device's fresh ticket through a canonical
+; HTTPS opaque-ticket store. Directional capabilities are derived inside the
+; runtime. IPC exposes only public channel IDs and a verified
+; content-addressed ticket reference, never secrets, plaintext or paths.
+runtime-ipc-own-device-discovery-previous-policy-v1 =
+  [none: 0] /
+  [some: 1, generation: 1..18446744073709551615, policy-id: digest]
+
+runtime-ipc-own-device-discovery-configuration-v1 = [
+  profile-version,
+  recipient-device-id: device-id,
+  enabled: 0..1,
+  service-origin-utf8: bytes .size (1..512),
+  publication-ttl-seconds: 30..3600,
+  refresh-before-seconds: 10..1800,
+  announcement-interval-seconds: 30..86400,
+  announcement-validity-seconds: 1..2592000,
+  retry-base-seconds: 1..3600,
+  retry-max-seconds: 1..3600,
+  allowed-network-mask: 0..15
+]
+
+runtime-ipc-own-device-discovery-command-v1 =
+  [configure-own-device-ticket-discovery: 0,
+   current-device-list-cbor: bytes .size (1..524288),
+   runtime-ipc-own-device-discovery-previous-policy-v1,
+   runtime-ipc-own-device-discovery-configuration-v1] /
+  [own-device-ticket-discovery-status: 1,
+   current-device-list-cbor: bytes .size (1..524288)]
+
+runtime-ipc-own-device-discovery-request-v1 = [
+  profile-version,
+  descriptor-id: digest,
+  request-id,
+  bearer-token: token,
+  issued-at-unix-seconds: uint,
+  expires-at-unix-seconds: uint,
+  runtime-ipc-own-device-discovery-command-v1
+]
+
+runtime-ipc-own-device-discovery-optional-id-v1 =
+  [none: 0] /
+  [some: 1, value: digest]
+
+runtime-ipc-own-device-discovery-optional-uint-v1 =
+  [none: 0] /
+  [some: 1, value: uint]
+
+runtime-ipc-own-device-discovery-installed-locator-v1 = [
+  profile-version,
+  generation: 1..18446744073709551615,
+  published-at-unix-seconds: uint,
+  expires-at-unix-seconds: uint,
+  runtime-ipc-own-device-announcement-artifact-v1,
+  observation-id: digest
+]
+
+runtime-ipc-own-device-discovery-optional-locator-v1 =
+  [none: 0] /
+  [some: 1, runtime-ipc-own-device-discovery-installed-locator-v1]
+
+runtime-ipc-own-device-discovery-network-v1 = 0..3
+runtime-ipc-own-device-discovery-workflow-state-v1 = 0..6
+runtime-ipc-own-device-discovery-transport-v1 = 0..1
+runtime-ipc-own-device-discovery-optional-transport-v1 =
+  [none: 0] /
+  [some: 1, runtime-ipc-own-device-discovery-transport-v1]
+
+runtime-ipc-own-device-discovery-policy-status-v1 = [
+  profile-version,
+  runtime-ipc-own-device-discovery-configuration-v1,
+  generation: 1..18446744073709551615,
+  previous-policy-id: runtime-ipc-own-device-discovery-optional-id-v1,
+  policy-id: digest,
+  configured-at-unix-seconds: uint,
+  outbound-channel-id: digest,
+  inbound-channel-id: digest,
+  outbound-publication-generation: runtime-ipc-own-device-discovery-optional-uint-v1,
+  inbound-locator: runtime-ipc-own-device-discovery-optional-locator-v1,
+  announcement-policy-id: runtime-ipc-own-device-discovery-optional-id-v1,
+  runtime-ipc-own-device-discovery-workflow-state-v1,
+  last-attempt-unix-seconds: runtime-ipc-own-device-discovery-optional-uint-v1,
+  last-success-unix-seconds: runtime-ipc-own-device-discovery-optional-uint-v1,
+  next-attempt-unix-seconds: runtime-ipc-own-device-discovery-optional-uint-v1,
+  consecutive-failures: 0..4294967295,
+  last-bundle-id: runtime-ipc-own-device-discovery-optional-id-v1,
+  last-transport: runtime-ipc-own-device-discovery-optional-transport-v1
+]
+
+runtime-ipc-own-device-discovery-result-v1 =
+  [own-device-ticket-discovery-configured: 0,
+   outcome: 0..1,
+   authority-revision: uint,
+   device-list-digest: digest,
+   current-network: runtime-ipc-own-device-discovery-network-v1,
+   runtime-ipc-own-device-discovery-policy-status-v1,
+   restart-not-required: 0,
+   foreground-runtime-only: 0,
+   os-background-service-enabled: 0] /
+  [own-device-ticket-discovery-status: 1,
+   authority-revision: uint,
+   device-list-digest: digest,
+   current-network: runtime-ipc-own-device-discovery-network-v1,
+   snapshot-id: digest,
+   policies: [* runtime-ipc-own-device-discovery-policy-status-v1],
+   foreground-runtime-only: 0,
+   os-background-service-enabled: 0,
+   policy-count: 0..32] /
+  [error: 2, error-code: 1..65535, message-utf8: bytes .size (1..4096)]
+
+runtime-ipc-own-device-discovery-response-content-v1 = [
+  profile-version,
+  descriptor-id: digest,
+  request-id,
+  request-digest: digest,
+  responder-device-id: device-id,
+  runtime-ipc-own-device-discovery-result-v1
+]
+
+signed-runtime-ipc-own-device-discovery-response-v1 = [
+  profile-version,
+  runtime-ipc-own-device-discovery-response-content-v1,
+  signature
+]
+
 kilogram-runtime-ipc-v1 =
   signed-runtime-ipc-descriptor-v1 /
   runtime-ipc-core-request-v1 /
@@ -1054,4 +1179,6 @@ kilogram-runtime-ipc-v1 =
   runtime-ipc-publication-conflict-request-v1 /
   signed-runtime-ipc-publication-conflict-response-v1 /
   runtime-ipc-own-device-announcement-request-v1 /
-  signed-runtime-ipc-own-device-announcement-response-v1
+  signed-runtime-ipc-own-device-announcement-response-v1 /
+  runtime-ipc-own-device-discovery-request-v1 /
+  signed-runtime-ipc-own-device-discovery-response-v1

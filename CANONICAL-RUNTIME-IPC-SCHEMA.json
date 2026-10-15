@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.40",
+  "milestone": "M1.1.41",
   "status": "candidate-not-active",
   "changes_active_wire": false,
   "profile": "kilogram-deterministic-cbor-v1",
@@ -66,6 +66,18 @@
     "maximum_own_device_announcement_interval_seconds": 86400,
     "maximum_own_device_announcement_validity_seconds": 2592000,
     "maximum_own_device_announcement_retry_seconds": 3600,
+    "maximum_own_device_discovery_request_bytes": 786432,
+    "maximum_own_device_discovery_response_bytes": 524288,
+    "maximum_own_device_discovery_policies": 32,
+    "maximum_own_device_discovery_service_origin_bytes": 512,
+    "minimum_own_device_discovery_publication_ttl_seconds": 30,
+    "maximum_own_device_discovery_publication_ttl_seconds": 3600,
+    "minimum_own_device_discovery_refresh_before_seconds": 10,
+    "maximum_own_device_discovery_refresh_before_seconds": 1800,
+    "minimum_own_device_discovery_announcement_interval_seconds": 30,
+    "maximum_own_device_discovery_announcement_interval_seconds": 86400,
+    "maximum_own_device_discovery_announcement_validity_seconds": 2592000,
+    "maximum_own_device_discovery_retry_seconds": 3600,
     "maximum_error_bytes": 4096,
     "maximum_descriptor_validity_seconds": 86400,
     "maximum_request_validity_seconds": 30,
@@ -354,6 +366,32 @@
       "id": "own-device-announcement-response-id-v1",
       "value": "kilogram:runtime-ipc-own-device-announcement-response-id:cbor-v1\\0",
       "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "own-device-discovery-policy-id-v1",
+      "value": "kilogram:runtime-ipc-own-device-discovery-policy-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "own-device-discovery-snapshot-id-v1",
+      "value": "kilogram:runtime-ipc-own-device-discovery-snapshot-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "own-device-discovery-request-digest-v1",
+      "value": "kilogram:runtime-ipc-own-device-discovery-request-digest:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "own-device-discovery-response-signature-v1",
+      "value": "kilogram:runtime-ipc-own-device-discovery-response-signature:cbor-v1\\0",
+      "operation": "ed25519-signature",
+      "signer": "descriptor-device-ed25519"
+    },
+    {
+      "id": "own-device-discovery-response-id-v1",
+      "value": "kilogram:runtime-ipc-own-device-discovery-response-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
     }
   ],
   "objects": [
@@ -491,6 +529,16 @@
       "id": "signed-runtime-ipc-own-device-announcement-response-v1",
       "kind": "device-signed-foreground-only-own-device-announcement-policy-snapshot",
       "maximum_bytes": 524288
+    },
+    {
+      "id": "runtime-ipc-own-device-discovery-request-v1",
+      "kind": "short-lived-exact-roster-pairwise-own-device-ticket-discovery-request",
+      "maximum_bytes": 786432
+    },
+    {
+      "id": "signed-runtime-ipc-own-device-discovery-response-v1",
+      "kind": "device-signed-secret-free-foreground-own-device-discovery-policy-snapshot",
+      "maximum_bytes": 524288
     }
   ],
   "covered_commands": [
@@ -516,7 +564,9 @@
     "create-publication-conflict-request",
     "apply-publication-conflict-response",
     "configure-own-device-announcement-automation",
-    "own-device-announcement-automation-status"
+    "own-device-announcement-automation-status",
+    "configure-own-device-ticket-discovery",
+    "own-device-ticket-discovery-status"
   ],
   "covered_results": [
     "pong",
@@ -540,7 +590,9 @@
     "publication-conflict-request-created",
     "publication-conflict-response-applied",
     "own-device-announcement-automation-configured",
-    "own-device-announcement-automation-status"
+    "own-device-announcement-automation-status",
+    "own-device-ticket-discovery-configured",
+    "own-device-ticket-discovery-status"
   ],
   "semantic_rules": [
     "descriptor address is exactly IPv4 127.0.0.1 or IPv6 ::1 and port is nonzero",
@@ -641,10 +693,21 @@
     "configuration and status results require no restart, execute only while the foreground runtime is running and explicitly deny an OS background service",
     "filesystem paths, recipient ticket plaintext, Account Root secrets and publication write capabilities are forbidden from this own-device announcement IPC surface",
     "the configure request ID is the durable idempotency key: an exact retry may return already-committed while stale predecessor or divergent reuse fails before policy mutation",
+    "own-device ticket discovery commands embed the exact current Root-signed Account Device list and bind every response to its authority revision and domain-separated signed-list digest",
+    "discovery configuration names one active sibling distinct from the descriptor Device, uses a canonical root-only HTTPS origin and bounds publication TTL, refresh lead, announcement timing, retry and network mask",
+    "the runtime derives both directional pairwise capabilities internally; IPC exposes only distinct nonzero channel identifiers and never exposes a reusable read or write capability",
+    "a discovery policy starts at generation one without a predecessor, advances from the exact expected policy and commits both channel identifiers with the complete authority-bound configuration",
+    "an installed locator binds a nonzero publication generation, ordered publication and expiry times, one bounded content-addressed ticket artifact and one nonzero authenticated observation identifier",
+    "the installed locator and child announcement policy identifier are atomically absent or present so a fetched ticket cannot be reported without its announcement handoff",
+    "workflow state is derived from enabled state, network permission, failures, outbound publication, inbound locator and announcement success as disabled, blocked, awaiting publish, awaiting fetch, awaiting announcement, backoff or synchronized",
+    "attempt, success, next-attempt, bundle and transport option tuples are internally consistent, nonzero when present and temporally ordered; success also requires an installed locator",
+    "discovery status contains at most 32 unique policies in strict recipient Device order and its snapshot ID commits the complete authority-bound current-network projection",
+    "discovery configuration and status require no restart, run only in the foreground runtime and explicitly deny an OS background service",
+    "ticket plaintext, HPKE envelope bytes, Device encryption secrets, derived capabilities, local paths and Account Root secrets are forbidden; request ID is the durable idempotency key and stale predecessor or divergent reuse fails before mutation",
     "unknown variants, noncanonical CBOR, trailing data, expired objects and contextual substitutions fail closed"
   ],
   "remaining_runtime_ipc_surface": [
-    "own-device-ticket-discovery-and-roster-automation-commands",
+    "own-device-roster-automation-commands",
     "recovery-plan-and-device-link-commands",
     "active-unpaged-conversation-list-migration",
     "all-associated-mutation-results-not-listed-above"

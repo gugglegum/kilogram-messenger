@@ -5967,3 +5967,36 @@ correlation visible, Windows-only field evidence, independent security audit
 - coverage остаётся 16 complete / 1 partial / 1 not-started / 2 not-targeted.
   Следующий bounded IPC slice — own-device discovery/automation, затем
   recovery/device-link commands и остальные noncore results.
+
+### M1.1.40 — canonical own-device announcement automation: принято локально
+
+- inactive deterministic-CBOR IPC получил foreground-only configure/status
+  policy для отправки endpoint announcement одному sibling Device;
+- policy exact-связывает Root-signed roster, content-addressed recipient ticket,
+  interval/validity, network mask и bounded retry/backoff, не передавая ticket
+  plaintext или local path через IPC;
+- Device-signed status честно фиксирует `restart-not-required`,
+  `foreground-runtime-only` и отсутствие OS background service;
+- decoder mutation corpus прошёл 26667/26667 за 985.34 s, protocol library
+  regression — 124/124, accepted-tag readiness — 73/73;
+- active Postcard IPC v26/JSON descriptor v7, network, release/archive/push/tag
+  не менялись. Следующий bounded slice — pairwise ticket discovery.
+
+### M1.1.41 — canonical pairwise own-device ticket discovery: принято локально
+
+- inactive deterministic-CBOR IPC получил foreground-only configure/status
+  policy для двунаправленного discovery между двумя active sibling Devices;
+- exact Root-signed roster, distinct public channel IDs, canonical HTTPS
+  origin, TTL/refresh, announcement timing, network mask и retry связаны с
+  append-only Device policy generation и predecessor;
+- private publication capabilities выводятся только внутри trusted runtime;
+  verified content-addressed locator и child announcement policy появляются
+  атомарно, а ticket plaintext, secrets и filesystem paths через IPC не идут;
+- Device-signed status детерминированно различает disabled/network-blocked,
+  publish/fetch/announcement, backoff и synchronized; OS background service и
+  restart не требуются;
+- independent Node reference, CDDL/schema/vectors и fail-closed boundary
+  согласованы. Mutation corpus прошёл 27711/27711 за 1026.61 s, protocol
+  regression — 127/127, readiness — 74/74;
+- active Postcard IPC v26/JSON descriptor v7, network, release/archive/push/tag
+  не менялись. Следующий bounded slice — roster-wide orchestration.

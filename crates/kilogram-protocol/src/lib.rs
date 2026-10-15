@@ -37,6 +37,7 @@ pub mod canonical_runtime_ipc_mailbox_mutation_v1;
 pub mod canonical_runtime_ipc_mailbox_status_v1;
 pub mod canonical_runtime_ipc_outbox_v1;
 pub mod canonical_runtime_ipc_own_device_announcement_v1;
+pub mod canonical_runtime_ipc_own_device_discovery_v1;
 pub mod canonical_runtime_ipc_provider_v1;
 pub mod canonical_runtime_ipc_publication_conflict_v1;
 pub mod canonical_runtime_ipc_publication_network_v1;

@@ -3659,3 +3659,40 @@ Hosted follow-up:
   not-targeted. The next bounded slices are pairwise own-device ticket
   discovery and then roster-wide orchestration; recovery/device-link IPC and
   transport-sync remain later work.
+
+## M1.1.41 canonical runtime IPC own-device ticket discovery (2026-10-16)
+
+- Added inactive
+  `crates/kilogram-protocol/src/canonical_runtime_ipc_own_device_discovery_v1.rs`
+  with exact configure/status commands, Device-signed responses and a bounded
+  foreground pairwise discovery projection. Active Postcard v26/JSON
+  descriptor v7 is unchanged.
+- Configuration binds the exact Root-signed Account Device list, another
+  active Device, two distinct directional public channel IDs, a canonical
+  root-only HTTPS origin, publication TTL/refresh, announcement timing,
+  bounded retry and an explicit Ethernet/Wi-Fi/mobile/unknown network mask.
+- The trusted runtime derives private publication capabilities internally.
+  Verified content-addressed ticket locator and child announcement policy are
+  installed atomically; private capabilities, ticket plaintext, reusable
+  secrets and filesystem paths never cross the canonical IPC boundary.
+- Policy and snapshot identifiers bind generation/predecessor and the complete
+  Device-ID-ordered projection. Derived status distinguishes disabled,
+  network-blocked, awaiting-publish/fetch/announcement, backoff and
+  synchronized states, and rejects incomplete time/bundle/transport tuples.
+- Results explicitly state foreground-runtime-only execution, no restart and
+  `os_background_service_enabled=false`; no Task Scheduler entry, service,
+  autostart, network call, stable-path executable, release build or archive was
+  created.
+- CDDL, schema, deterministic vectors, RFC-0167 and an independent Node
+  Ed25519/BLAKE3 implementation agree. The dedicated fail-closed boundary,
+  canonical conformance and coverage checks pass.
+- Final decoder mutation regression passed 27711/27711 in 1026.61 seconds with
+  debug/offline Cargo, two jobs and BelowNormal priority. Protocol library
+  regression passed 127/127 with eleven explicit vector generators ignored.
+- Accepted-tag readiness passed 74/74; rustfmt and workspace locked/offline
+  strict Clippy passed. The immutable accepted `M1.0.0` tag remained verified;
+  no network, push or tag was performed.
+- Canonical coverage remains 16 complete, 1 partial, 1 not-started and 2
+  not-targeted. The next bounded runtime IPC slice is roster-wide own-device
+  availability orchestration; recovery/device-link IPC and transport-sync
+  remain later work.
