@@ -378,12 +378,13 @@ sessions, distribution, removal и key epochs и не решены этим пр
 - Независимый second-builder, подписанный release provenance, обновления клиента
   и дальнейшая защита supply chain поверх M0.9.50 same-host gate.
 - Миграция криптоалгоритмов и wire protocol без разделения сети.
-- После M1.1.29 canonical coverage содержит 16 complete, 1 partial
+- После M1.1.30 canonical coverage содержит 16 complete, 1 partial
   (`runtime-ipc`), один not-started (`transport-sync`) и два not-targeted
   surface. В runtime IPC уже закрыты signed loopback descriptor, bearer/fresh
   request, exact signed response, core Ping/WaitForChange/Shutdown/Error,
-  paginated conversation list и snapshot-bound history pages. Открыты
-  contact/device-directory mutation, message/outbox, mailbox/provider,
+  paginated conversation list, snapshot-bound history pages, exact peer contact
+  enrollment и read-only own-device-directory status. Открыты
+  apply-own-device-directory authority transition, message/outbox, mailbox/provider,
   publication/conflict, own-device automation, recovery/device-link команды и
   их noncore results. Следующий приоритет — дробить эти families на bounded
   этапы до complete `runtime-ipc`, затем parallel CBOR ALPN/negotiation для

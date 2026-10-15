@@ -164,7 +164,7 @@ if ($surface.Count -ne 1 -or [string]$surface[0].coverage -cne 'complete' -or
     @($surface[0].remaining).Count -ne 0) {
     throw 'canonical history-rewrap aggregate coverage boundary changed'
 }
-if ([int]$mutations.expected_mutations -ne 17337 -or [int]$mutations.maximum_mutations -ne 20000) {
+if ([int]$mutations.expected_mutations -ne 18357 -or [int]$mutations.maximum_mutations -ne 20000) {
     throw 'canonical history-rewrap decoder mutation bound changed'
 }
 $expectedMutationIds = @('signed-history-rewrap-request-v1', 'signed-history-rewrap-entry-v1',
@@ -209,6 +209,6 @@ Write-Output 'history_rewrap_coverage=complete'
 Write-Output 'recipient_only_hpke_entry=verified-by-rust'
 Write-Output 'independent_ed25519_and_blake3=verified'
 Write-Output 'independent_hpke_conformance=pending-before-activation'
-Write-Output 'bounded_decoder_mutations=17337'
+Write-Output 'bounded_decoder_mutations=18357'
 Write-Output 'active_postcard_v1_changed=false'
 Write-Output 'network_executed=false'

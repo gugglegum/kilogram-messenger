@@ -3389,3 +3389,25 @@ Hosted follow-up:
 - Canonical coverage remains 16 complete, 1 partial, 1 not-started and 2
   not-targeted. Runtime IPC still lacks mutation/contact/mailbox/publication/
   automation/recovery command families; transport-sync remains not-started.
+
+## M1.1.30 canonical runtime IPC contact snapshot (2026-10-15)
+
+- New inactive module:
+  `crates/kilogram-protocol/src/canonical_runtime_ipc_contact_v1.rs`.
+- Shared CDDL/schema, generated vectors and independent Node reference cover
+  exact peer contact enrollment plus read-only own-device-directory status.
+- Active `kilogram-runtime-ipc` remains Postcard version 26 with JSON descriptor
+  version 7. The canonical module is not imported by the active crate and no
+  listener, stable-path executable, firewall or network behavior changed.
+- `ApplyOwnDeviceDirectory` is explicitly not part of this slice. Descriptor
+  path portability is canonical; absolute/application-owned/non-symlink checks
+  remain the platform adapter's responsibility.
+- Decoder mutation regression passed 18357/18357 in 779.37 seconds with
+  debug/offline Cargo, two jobs and BelowNormal priority. Protocol library
+  regression passed 89/89.
+- Accepted-tag readiness passed 63/63; rustfmt and workspace locked/offline
+  strict Clippy passed. No network action, release build, archive, push or tag
+  was created.
+- Canonical coverage remains 16 complete, 1 partial, 1 not-started and 2
+  not-targeted. The next runtime IPC boundary is authority-changing own-device
+  directory application.

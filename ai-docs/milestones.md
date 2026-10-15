@@ -5692,3 +5692,32 @@ correlation visible, Windows-only field evidence, independent security audit
 - coverage остаётся 16 complete / 1 partial / 1 not-started / 2 not-targeted.
   Следующий bounded IPC slice — contact/device directory либо durable
   message/outbox; затем mailbox/publication/automation/recovery families.
+
+### M1.1.30 — canonical runtime IPC contact and directory status: принято локально
+
+- inactive deterministic-CBOR IPC получил exact `AddContact` и read-only
+  `OwnDeviceDirectoryStatus`; authority-changing `ApplyOwnDeviceDirectory`
+  намеренно оставлен отдельному trust boundary;
+- contact request связывает signed descriptor, bearer, fresh caller request ID,
+  bounded label, expected peer Account и bounded descriptor path; peer Account
+  обязан отличаться от local Account;
+- canonical contact ID коммитит local Account, peer Account и label-derived
+  Conversation ID. Он намеренно отличается от active legacy ID и требует
+  explicit mapping/migration при будущей активации;
+- Device-signed response exact-коммитит digest полного request, peer identity,
+  bounded endpoint count и inserted/endpoint-added semantics;
+- own-device status exact-связывает descriptor Account/Device, positive
+  authority revision, roster 1..256, coupled receipt ID/generation, nonzero
+  device-list digest, applied/launch paths и согласованные convergence/restart
+  states;
+- independent Node reference воспроизводит deterministic CBOR, Ed25519, BLAKE3,
+  contact identity и request/response IDs; Rust golden/substitution/invariant
+  tests прошли;
+- полный mutation corpus прошёл 18357/18357 за 779.37 s, debug/offline,
+  `CargoJobs=2`, BelowNormal; protocol library regression прошёл 89/89;
+- accepted-tag readiness прошёл 63/63, rustfmt и workspace locked/offline strict
+  Clippy; network, stable-path test EXE, release build, archive, push и tag не
+  запускались и не создавались;
+- coverage остаётся 16 complete / 1 partial / 1 not-started / 2 not-targeted.
+  Следующий bounded IPC slice — отдельный apply-own-device-directory authority
+  transition, затем durable message/outbox и остальные runtime families.
