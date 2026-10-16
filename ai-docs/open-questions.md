@@ -460,11 +460,12 @@ sessions, distribution, removal и key epochs и не решены этим пр
   candidate ceremony, проверку обеих canonical authority/session chains и
   exact binding обоих durable adapters, но намеренно не выдал transport
   activation permit. M1.1.69 добавил dormant mixed-version/downgrade matrix,
-  которая запрещает selected-canonical fallback и epoch rollback, но не
-  подключена к transport. Следующий приоритет — dormant dual-reader runtime
-  coordinator, затем отдельное activation решение. Общая activation требует
-  explicit identifiers, rollback drill, sustained fuzzing, independent HPKE
-  conformance и fresh multi-device field evidence.
+  которая запрещает selected-canonical fallback и epoch rollback. M1.1.70
+  добавил dormant coordinator, связывающий verified plan с exact durable
+  client/responder restart actions, но намеренно не подключил его к transport.
+  Следующий приоритет — deterministic rollback drill. Общая activation требует
+  explicit identifiers, sustained fuzzing, independent HPKE conformance и
+  fresh multi-device field evidence.
 
 - M1.1.52 выявил дополнительный обязательный migration boundary: native
   canonical event нельзя вывести из исторического Postcard event без исходного
@@ -488,11 +489,12 @@ sessions, distribution, removal и key epochs и не решены этим пр
   adapters и доказали exact restart/retry с раздельными signed journals.
   M1.1.68 закрыл mutual authenticated candidate selection, а M1.1.69 —
   исполняемую mixed-version/downgrade matrix с запретом epoch regression и
-  fallback после выбранного canonical transport. Transport всё ещё не
-  активирован. Открыты dormant dual-reader runtime integration, rollback drill,
-  sustained fuzzing и fresh field evidence. При реализации runtime signed
-  ceremony должна находиться внутри authenticated transport context: одна
-  локальная no-selection row не является защитой от pre-offer stripping.
+  fallback после выбранного canonical transport. M1.1.70 связал результат этой
+  matrix с exact durable client/responder action, но не выдал transport permit.
+  Transport всё ещё не активирован. Открыты rollback drill, sustained fuzzing
+  и fresh field evidence. При будущей active integration signed ceremony должна
+  находиться внутри authenticated transport context: одна локальная
+  no-selection row не является защитой от pre-offer stripping.
 
 ## Инварианты при выборе ответов
 

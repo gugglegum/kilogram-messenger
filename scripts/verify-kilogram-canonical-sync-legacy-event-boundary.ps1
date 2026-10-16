@@ -109,9 +109,9 @@ function Assert-BridgeContract {
     Assert-LowerHex ([string]$Vectors.expected.bridge_cbor_hex) -1 'bridge CBOR'
 
     if ([UInt64]$Compatibility.schema_version -ne 1 -or
-        [string]$Compatibility.milestone -cne 'M1.1.69' -or
+        [string]$Compatibility.milestone -cne 'M1.1.70' -or
         [string]$Compatibility.status -cne
-            'dormant-mixed-version-and-downgrade-matrix-verified-not-active' -or
+            'dormant-dual-reader-runtime-coordinator-verified-not-active' -or
         [bool]$Compatibility.changes_active_wire -or
         [string]$Compatibility.active.alpn -cne $legacyAlpn -or
         -not [bool]$Compatibility.active.history_compatible -or
@@ -151,7 +151,7 @@ function Assert-BridgeContract {
         -not [bool]$Compatibility.required_successor.must_integrate_bridge_into_closed_frames -or
         -not [bool]$Compatibility.required_successor.must_authenticate_exact_identifier_in_connection_ticket -or
         [string]$Compatibility.required_successor.status -cne
-            'dormant-mixed-version-and-downgrade-matrix-verified-not-active') {
+            'dormant-dual-reader-runtime-coordinator-verified-not-active') {
         throw 'canonical sync legacy-event bridge or successor contract changed'
     }
 
@@ -175,7 +175,7 @@ function Assert-BridgeContract {
             @($TransportManifest.remaining) -or
         'dormant-server-runtime-transition-integration' -cin
             @($TransportManifest.remaining) -or
-        'dual-reader-runtime-implementation' -cnotin
+        'dual-reader-runtime-implementation' -cin
             @($TransportManifest.remaining) -or
         [string]$TransportManifest.active.alpn -cne $legacyAlpn -or
         [bool]$TransportManifest.candidate.registered -or

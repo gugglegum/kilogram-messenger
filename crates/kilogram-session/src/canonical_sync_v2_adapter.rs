@@ -509,38 +509,7 @@ impl<'a, P: CanonicalSyncV2EventPolicy + ?Sized>
         runtime: &CanonicalSyncV2StoredSessionRuntime,
     ) -> Result<CanonicalSyncV2DurableClientAction, CanonicalSyncV2SessionError> {
         self.verify_durable_runtime_identity(runtime)?;
-        let content = &runtime.checkpoint().checkpoint().content;
-        let action = match (content.next_action, runtime.pending_client_frame()) {
-            (CanonicalSyncNextActionV2::SendInventory, None) => {
-                CanonicalSyncV2DurableClientAction::PrepareInventory
-            }
-            (
-                CanonicalSyncNextActionV2::ReceiveDiff,
-                Some(CanonicalSyncClientFrameV2::Inventory(inventory)),
-            ) => CanonicalSyncV2DurableClientAction::TransmitInventory(inventory.clone()),
-            (
-                CanonicalSyncNextActionV2::SendEventBatch,
-                Some(CanonicalSyncClientFrameV2::Events(batch)),
-            ) => CanonicalSyncV2DurableClientAction::TransmitEventBatch(batch.clone()),
-            (
-                CanonicalSyncNextActionV2::ReceiveComplete,
-                Some(CanonicalSyncClientFrameV2::Events(batch)),
-            ) => CanonicalSyncV2DurableClientAction::RetransmitEventBatch(batch.clone()),
-            (CanonicalSyncNextActionV2::Complete, None) => {
-                CanonicalSyncV2DurableClientAction::Complete
-            }
-            (CanonicalSyncNextActionV2::Rejected, None) => {
-                CanonicalSyncV2DurableClientAction::Rejected
-            }
-            (action, _) => {
-                return Err(CanonicalSyncV2SessionError::DurableRuntimeFrameMismatch { action });
-            }
-        };
-        if content.paused {
-            Ok(CanonicalSyncV2DurableClientAction::Paused)
-        } else {
-            Ok(action)
-        }
+        durable_client_action_from_runtime(runtime)
     }
 
     /// Builds and durably binds the exact signed Inventory before it may be
@@ -878,6 +847,39 @@ impl CanonicalSyncV2DurableClientAction {
     }
 }
 
+fn durable_client_action_from_runtime(
+    runtime: &CanonicalSyncV2StoredSessionRuntime,
+) -> Result<CanonicalSyncV2DurableClientAction, CanonicalSyncV2SessionError> {
+    let content = &runtime.checkpoint().checkpoint().content;
+    let action = match (content.next_action, runtime.pending_client_frame()) {
+        (CanonicalSyncNextActionV2::SendInventory, None) => {
+            CanonicalSyncV2DurableClientAction::PrepareInventory
+        }
+        (
+            CanonicalSyncNextActionV2::ReceiveDiff,
+            Some(CanonicalSyncClientFrameV2::Inventory(inventory)),
+        ) => CanonicalSyncV2DurableClientAction::TransmitInventory(inventory.clone()),
+        (
+            CanonicalSyncNextActionV2::SendEventBatch,
+            Some(CanonicalSyncClientFrameV2::Events(batch)),
+        ) => CanonicalSyncV2DurableClientAction::TransmitEventBatch(batch.clone()),
+        (
+            CanonicalSyncNextActionV2::ReceiveComplete,
+            Some(CanonicalSyncClientFrameV2::Events(batch)),
+        ) => CanonicalSyncV2DurableClientAction::RetransmitEventBatch(batch.clone()),
+        (CanonicalSyncNextActionV2::Complete, None) => CanonicalSyncV2DurableClientAction::Complete,
+        (CanonicalSyncNextActionV2::Rejected, None) => CanonicalSyncV2DurableClientAction::Rejected,
+        (action, _) => {
+            return Err(CanonicalSyncV2SessionError::DurableRuntimeFrameMismatch { action });
+        }
+    };
+    if content.paused {
+        Ok(CanonicalSyncV2DurableClientAction::Paused)
+    } else {
+        Ok(action)
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum CanonicalSyncV2DurableClientActionKind {
     PrepareInventory,
@@ -1133,41 +1135,7 @@ impl<'a, P: CanonicalSyncV2EventPolicy + ?Sized>
         runtime: &CanonicalSyncV2StoredResponderRuntime,
     ) -> Result<CanonicalSyncV2DurableResponderAction, CanonicalSyncV2SessionError> {
         self.verify_durable_responder_identity(runtime)?;
-        let content = &runtime.checkpoint().checkpoint().content;
-        let action = match (content.next_action, runtime.pending_server_frame()) {
-            (CanonicalSyncResponderNextActionV2::ReceiveInventory, None) => {
-                CanonicalSyncV2DurableResponderAction::AwaitInventory
-            }
-            (
-                CanonicalSyncResponderNextActionV2::SendDiff,
-                Some(CanonicalSyncServerFrameV2::Diff(diff)),
-            ) => CanonicalSyncV2DurableResponderAction::TransmitDiff(diff.clone()),
-            (
-                CanonicalSyncResponderNextActionV2::ReceiveEventBatch,
-                Some(CanonicalSyncServerFrameV2::Diff(diff)),
-            ) => CanonicalSyncV2DurableResponderAction::RetransmitDiff(diff.clone()),
-            (
-                CanonicalSyncResponderNextActionV2::SendComplete,
-                Some(CanonicalSyncServerFrameV2::Complete(complete)),
-            ) => CanonicalSyncV2DurableResponderAction::TransmitComplete(complete.clone()),
-            (CanonicalSyncResponderNextActionV2::Complete, None) => {
-                CanonicalSyncV2DurableResponderAction::Complete
-            }
-            (
-                CanonicalSyncResponderNextActionV2::Rejected,
-                Some(CanonicalSyncServerFrameV2::Rejected(rejected)),
-            ) => CanonicalSyncV2DurableResponderAction::TransmitRejection(rejected.clone()),
-            (action, _) => {
-                return Err(
-                    CanonicalSyncV2SessionError::DurableResponderRuntimeFrameMismatch { action },
-                );
-            }
-        };
-        if content.paused {
-            Ok(CanonicalSyncV2DurableResponderAction::Paused)
-        } else {
-            Ok(action)
-        }
+        durable_responder_action_from_runtime(runtime)
     }
 
     /// Verifies an Inventory and atomically journals the exact Diff (or exact
@@ -1477,6 +1445,46 @@ impl CanonicalSyncV2DurableResponderAction {
     }
 }
 
+fn durable_responder_action_from_runtime(
+    runtime: &CanonicalSyncV2StoredResponderRuntime,
+) -> Result<CanonicalSyncV2DurableResponderAction, CanonicalSyncV2SessionError> {
+    let content = &runtime.checkpoint().checkpoint().content;
+    let action = match (content.next_action, runtime.pending_server_frame()) {
+        (CanonicalSyncResponderNextActionV2::ReceiveInventory, None) => {
+            CanonicalSyncV2DurableResponderAction::AwaitInventory
+        }
+        (
+            CanonicalSyncResponderNextActionV2::SendDiff,
+            Some(CanonicalSyncServerFrameV2::Diff(diff)),
+        ) => CanonicalSyncV2DurableResponderAction::TransmitDiff(diff.clone()),
+        (
+            CanonicalSyncResponderNextActionV2::ReceiveEventBatch,
+            Some(CanonicalSyncServerFrameV2::Diff(diff)),
+        ) => CanonicalSyncV2DurableResponderAction::RetransmitDiff(diff.clone()),
+        (
+            CanonicalSyncResponderNextActionV2::SendComplete,
+            Some(CanonicalSyncServerFrameV2::Complete(complete)),
+        ) => CanonicalSyncV2DurableResponderAction::TransmitComplete(complete.clone()),
+        (CanonicalSyncResponderNextActionV2::Complete, None) => {
+            CanonicalSyncV2DurableResponderAction::Complete
+        }
+        (
+            CanonicalSyncResponderNextActionV2::Rejected,
+            Some(CanonicalSyncServerFrameV2::Rejected(rejected)),
+        ) => CanonicalSyncV2DurableResponderAction::TransmitRejection(rejected.clone()),
+        (action, _) => {
+            return Err(
+                CanonicalSyncV2SessionError::DurableResponderRuntimeFrameMismatch { action },
+            );
+        }
+    };
+    if content.paused {
+        Ok(CanonicalSyncV2DurableResponderAction::Paused)
+    } else {
+        Ok(action)
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum CanonicalSyncV2DurableResponderActionKind {
     AwaitInventory,
@@ -1653,6 +1661,118 @@ pub fn evaluate_dormant_canonical_sync_v2_transport_policy(
         planned_protocol: proposed_protocol,
         mutual_candidate_selection: mutual_candidate_selection.copied(),
     })
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum CanonicalSyncV2DormantClientDispatch {
+    LegacyPostcardV6,
+    CanonicalCborV2(CanonicalSyncV2DurableClientAction),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum CanonicalSyncV2DormantResponderDispatch {
+    LegacyPostcardV6,
+    CanonicalCborV2(Box<CanonicalSyncV2DurableResponderAction>),
+}
+
+/// Transport-independent coordinator for a future dual-reader integration.
+///
+/// It consumes an already verified policy plan and, for canonical sessions,
+/// the exact durable runtime. It never registers an ALPN, opens a connection,
+/// writes a frame or authorizes transport activation.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct CanonicalSyncV2DormantDualReaderCoordinator {
+    transport_plan: CanonicalSyncV2DormantTransportPlan,
+}
+
+impl CanonicalSyncV2DormantDualReaderCoordinator {
+    pub fn new(transport_plan: CanonicalSyncV2DormantTransportPlan) -> Self {
+        Self { transport_plan }
+    }
+
+    pub fn transport_plan(&self) -> CanonicalSyncV2DormantTransportPlan {
+        self.transport_plan
+    }
+
+    pub fn plan_client_dispatch(
+        &self,
+        canonical_runtime: Option<&CanonicalSyncV2StoredSessionRuntime>,
+    ) -> Result<CanonicalSyncV2DormantClientDispatch, CanonicalSyncV2SessionError> {
+        match self.transport_plan.planned_protocol {
+            SyncTransportProtocol::LegacyPostcardV6 => {
+                Ok(CanonicalSyncV2DormantClientDispatch::LegacyPostcardV6)
+            }
+            SyncTransportProtocol::CanonicalCborV2 => {
+                let selection = self
+                    .transport_plan
+                    .mutual_candidate_selection
+                    .as_ref()
+                    .ok_or(CanonicalSyncV2SessionError::CanonicalSelectionRequired)?;
+                let runtime = canonical_runtime.ok_or(
+                    CanonicalSyncV2SessionError::CanonicalDurableRuntimeMissing { role: "client" },
+                )?;
+                let content = &runtime.checkpoint().checkpoint().content;
+                if content.protocol_identifier != *CANONICAL_SYNC_SESSION_PROTOCOL_IDENTIFIER_V2
+                    || content.conversation_id != selection.conversation_id()
+                    || content.local_device_id != *selection.requester_device_id().as_bytes()
+                    || content.peer_device_id != *selection.listener_device_id().as_bytes()
+                    || content.session_binding != selection.session_binding()
+                {
+                    return Err(
+                        CanonicalSyncV2SessionError::CanonicalDurableRuntimeIdentityMismatch {
+                            role: "client",
+                        },
+                    );
+                }
+                Ok(CanonicalSyncV2DormantClientDispatch::CanonicalCborV2(
+                    durable_client_action_from_runtime(runtime)?,
+                ))
+            }
+        }
+    }
+
+    pub fn plan_responder_dispatch(
+        &self,
+        canonical_runtime: Option<&CanonicalSyncV2StoredResponderRuntime>,
+    ) -> Result<CanonicalSyncV2DormantResponderDispatch, CanonicalSyncV2SessionError> {
+        match self.transport_plan.planned_protocol {
+            SyncTransportProtocol::LegacyPostcardV6 => {
+                Ok(CanonicalSyncV2DormantResponderDispatch::LegacyPostcardV6)
+            }
+            SyncTransportProtocol::CanonicalCborV2 => {
+                let selection = self
+                    .transport_plan
+                    .mutual_candidate_selection
+                    .as_ref()
+                    .ok_or(CanonicalSyncV2SessionError::CanonicalSelectionRequired)?;
+                let runtime = canonical_runtime.ok_or(
+                    CanonicalSyncV2SessionError::CanonicalDurableRuntimeMissing {
+                        role: "responder",
+                    },
+                )?;
+                let content = &runtime.checkpoint().checkpoint().content;
+                if content.protocol_identifier != *CANONICAL_SYNC_SESSION_PROTOCOL_IDENTIFIER_V2
+                    || content.conversation_id != selection.conversation_id()
+                    || content.responder_device_id != *selection.listener_device_id().as_bytes()
+                    || content.requester_device_id != *selection.requester_device_id().as_bytes()
+                    || content.session_binding != selection.session_binding()
+                {
+                    return Err(
+                        CanonicalSyncV2SessionError::CanonicalDurableRuntimeIdentityMismatch {
+                            role: "responder",
+                        },
+                    );
+                }
+                Ok(CanonicalSyncV2DormantResponderDispatch::CanonicalCborV2(
+                    Box::new(durable_responder_action_from_runtime(runtime)?),
+                ))
+            }
+        }
+    }
+
+    pub const fn active_transport_authorized(&self) -> bool {
+        false
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1911,6 +2031,12 @@ pub enum CanonicalSyncV2SessionError {
 
     #[error("canonical migration epoch rolled back from minimum {minimum} to {selected}")]
     MigrationEpochRollback { selected: u64, minimum: u64 },
+
+    #[error("canonical durable {role} runtime is required by the selected transport plan")]
+    CanonicalDurableRuntimeMissing { role: &'static str },
+
+    #[error("canonical durable {role} runtime does not match the selected transport identity")]
+    CanonicalDurableRuntimeIdentityMismatch { role: &'static str },
 }
 
 struct CanonicalSyncV2Plan {
@@ -2992,6 +3118,58 @@ mod tests {
         );
         assert!(!selected.active_transport_authorized());
 
+        let canonical_plan = evaluate_dormant_canonical_sync_v2_transport_policy(
+            CanonicalSyncV2MigrationState::DualReaderPreferCanonical,
+            Some(&selected),
+            SyncTransportProtocol::CanonicalCborV2,
+            1,
+            false,
+        )?;
+        let coordinator = CanonicalSyncV2DormantDualReaderCoordinator::new(canonical_plan);
+        assert_eq!(
+            coordinator.plan_client_dispatch(Some(&client_runtime))?,
+            CanonicalSyncV2DormantClientDispatch::CanonicalCborV2(
+                CanonicalSyncV2DurableClientAction::PrepareInventory
+            )
+        );
+        assert_eq!(
+            coordinator.plan_responder_dispatch(Some(&responder_runtime))?,
+            CanonicalSyncV2DormantResponderDispatch::CanonicalCborV2(Box::new(
+                CanonicalSyncV2DurableResponderAction::AwaitInventory
+            ))
+        );
+        assert!(!coordinator.active_transport_authorized());
+
+        let wrong_session_selection = CanonicalSyncV2MutualCandidateSelection {
+            session_binding: [0x99; 32],
+            ..selected
+        };
+        let wrong_session_plan = evaluate_dormant_canonical_sync_v2_transport_policy(
+            CanonicalSyncV2MigrationState::DualReaderPreferCanonical,
+            Some(&wrong_session_selection),
+            SyncTransportProtocol::CanonicalCborV2,
+            1,
+            false,
+        )?;
+        let wrong_session_coordinator =
+            CanonicalSyncV2DormantDualReaderCoordinator::new(wrong_session_plan);
+        assert!(matches!(
+            wrong_session_coordinator.plan_client_dispatch(Some(&client_runtime)),
+            Err(
+                CanonicalSyncV2SessionError::CanonicalDurableRuntimeIdentityMismatch {
+                    role: "client"
+                }
+            )
+        ));
+        assert!(matches!(
+            wrong_session_coordinator.plan_responder_dispatch(Some(&responder_runtime)),
+            Err(
+                CanonicalSyncV2SessionError::CanonicalDurableRuntimeIdentityMismatch {
+                    role: "responder"
+                }
+            )
+        ));
+
         let wrong_revision_offer = SignedSyncTransportCandidateOffer::issue(
             &requester,
             SyncTransportCandidateOfferBinding {
@@ -3190,6 +3368,59 @@ mod tests {
             ),
             Err(CanonicalSyncV2SessionError::CanonicalFallbackForbidden)
         ));
+        Ok(())
+    }
+
+    #[test]
+    fn dormant_dual_reader_coordinator_requires_canonical_runtime_only_for_canonical_plan()
+    -> Result<(), Box<dyn Error>> {
+        let listener = DeviceIdentity::from_secret_bytes([0x29; 32]);
+        let requester = DeviceIdentity::from_secret_bytes([0x49; 32]);
+        let selection = CanonicalSyncV2MutualCandidateSelection {
+            conversation_id: [0x39; 32],
+            listener_account_id: AccountId::from_bytes([0x59; 32]),
+            listener_device_id: listener.device_id(),
+            requester_account_id: AccountId::from_bytes([0x69; 32]),
+            requester_device_id: requester.device_id(),
+            session_binding: [0x79; 32],
+            migration_epoch: 8,
+            selected_protocol: SyncTransportProtocol::CanonicalCborV2,
+        };
+        let legacy_plan = evaluate_dormant_canonical_sync_v2_transport_policy(
+            CanonicalSyncV2MigrationState::DualReaderPreferLegacy,
+            None,
+            SyncTransportProtocol::LegacyPostcardV6,
+            8,
+            false,
+        )?;
+        let legacy = CanonicalSyncV2DormantDualReaderCoordinator::new(legacy_plan);
+        assert_eq!(
+            legacy.plan_client_dispatch(None)?,
+            CanonicalSyncV2DormantClientDispatch::LegacyPostcardV6
+        );
+        assert_eq!(
+            legacy.plan_responder_dispatch(None)?,
+            CanonicalSyncV2DormantResponderDispatch::LegacyPostcardV6
+        );
+        assert!(!legacy.active_transport_authorized());
+
+        let canonical_plan = evaluate_dormant_canonical_sync_v2_transport_policy(
+            CanonicalSyncV2MigrationState::DualReaderPreferCanonical,
+            Some(&selection),
+            SyncTransportProtocol::CanonicalCborV2,
+            8,
+            false,
+        )?;
+        let canonical = CanonicalSyncV2DormantDualReaderCoordinator::new(canonical_plan);
+        assert!(matches!(
+            canonical.plan_client_dispatch(None),
+            Err(CanonicalSyncV2SessionError::CanonicalDurableRuntimeMissing { role: "client" })
+        ));
+        assert!(matches!(
+            canonical.plan_responder_dispatch(None),
+            Err(CanonicalSyncV2SessionError::CanonicalDurableRuntimeMissing { role: "responder" })
+        ));
+        assert!(!canonical.active_transport_authorized());
         Ok(())
     }
 

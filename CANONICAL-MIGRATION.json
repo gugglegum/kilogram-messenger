@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.69",
-  "status": "dormant-mixed-version-and-downgrade-matrix-verified-not-active",
+  "milestone": "M1.1.70",
+  "status": "dormant-dual-reader-runtime-coordinator-verified-not-active",
   "changes_active_wire": false,
   "current_encoding": "postcard",
   "candidate_encoding": "kilogram-deterministic-cbor-v2-typed-history",
@@ -28,6 +28,7 @@
     "dormant_durable_responder_transition_adapter": "verified",
     "dormant_mutual_authenticated_candidate_selection": "verified",
     "dormant_mixed_version_and_downgrade_matrix": "verified",
+    "dormant_dual_reader_runtime_coordinator": "verified",
     "registered": false,
     "dialed": false
   },
@@ -41,6 +42,7 @@
     "reuse_existing_identifier": false,
     "mutual_authenticated_candidate_selection": "verified",
     "mixed_version_and_downgrade_matrix": "verified",
+    "dual_reader_runtime_coordinator": "verified",
     "selection_authorizes_registration_or_dial": false
   },
   "states": [
@@ -238,7 +240,7 @@
     },
     {
       "id": "dual-reader-runtime-implementation",
-      "status": "pending"
+      "status": "verified"
     },
     {
       "id": "independent-crypto-conformance",

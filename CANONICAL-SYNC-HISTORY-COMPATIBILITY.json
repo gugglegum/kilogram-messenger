@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.69",
-  "status": "dormant-mixed-version-and-downgrade-matrix-verified-not-active",
+  "milestone": "M1.1.70",
+  "status": "dormant-dual-reader-runtime-coordinator-verified-not-active",
   "changes_active_wire": false,
   "active": {
     "encoding": "postcard-v6",
@@ -55,10 +55,11 @@
     "dormant_durable_responder_transition_adapter_integrated": true,
     "dormant_mutual_authenticated_candidate_selection_integrated": true,
     "dormant_mixed_version_and_downgrade_matrix_integrated": true,
+    "dormant_dual_reader_runtime_coordinator_integrated": true,
     "must_integrate_bridge_into_closed_frames": true,
     "must_authenticate_exact_identifier_in_connection_ticket": true,
     "must_preserve_no-sniffing-and-no-parse-fallback": true,
-    "status": "dormant-mixed-version-and-downgrade-matrix-verified-not-active"
+    "status": "dormant-dual-reader-runtime-coordinator-verified-not-active"
   },
   "forbidden": [
     "resign-historical-event-with-migration-key",

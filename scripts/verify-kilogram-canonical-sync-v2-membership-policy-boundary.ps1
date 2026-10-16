@@ -121,9 +121,9 @@ function Assert-Contract {
         throw 'canonical sync v2 membership policy remaining-work boundary changed'
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.69' -or
+    if ([string]$Migration.milestone -cne 'M1.1.70' -or
         [string]$Migration.status -cne
-            'dormant-mixed-version-and-downgrade-matrix-verified-not-active' -or
+            'dormant-dual-reader-runtime-coordinator-verified-not-active' -or
         [string]$Migration.current_state -cne 'legacy-only' -or
         [bool]$Migration.candidate_identifier_registered -or
         [string]$Migration.history_compatible_successor.dormant_cross_format_membership_policy -cne
@@ -143,13 +143,13 @@ function Assert-Contract {
     if ($policyRequirement.Count -ne 1 -or
         [string]$policyRequirement[0].status -cne 'verified' -or
         $runtimeRequirement.Count -ne 1 -or
-        [string]$runtimeRequirement[0].status -cne 'pending') {
+        [string]$runtimeRequirement[0].status -cne 'verified') {
         throw 'canonical migration confused dormant policy with active runtime support'
     }
 
-    if ([string]$TransportManifest.milestone -cne 'M1.1.69' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.70' -or
         [string]$TransportManifest.status -cne
-            'dormant-mixed-version-and-downgrade-matrix-verified-not-active' -or
+            'dormant-dual-reader-runtime-coordinator-verified-not-active' -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_cross_format_membership_policy -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_bounded_resumable_legacy_import -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_atomic_legacy_import_checkpoint -or
@@ -158,30 +158,29 @@ function Assert-Contract {
         [bool]$TransportManifest.history_compatible_successor.dialed -or
         [bool]$TransportManifest.authenticated_capability.canonical_dial_enabled -or
         [string]$TransportManifest.selection.current_state -cne 'legacy-only' -or
-        (@($TransportManifest.remaining)[0]) -cne
-            'dual-reader-runtime-implementation' -or
-        'dual-reader-runtime-implementation' -cnotin
+        (@($TransportManifest.remaining)[0]) -cne 'rollback-drill' -or
+        'dual-reader-runtime-implementation' -cin
             @($TransportManifest.remaining)) {
         throw 'canonical transport manifest does not preserve dormant-only policy'
     }
 
-    if ([string]$Compatibility.milestone -cne 'M1.1.69' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.70' -or
         [string]$Compatibility.status -cne
-            'dormant-mixed-version-and-downgrade-matrix-verified-not-active' -or
+            'dormant-dual-reader-runtime-coordinator-verified-not-active' -or
         -not [bool]$Compatibility.required_successor.dormant_cross_format_membership_policy_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_bounded_resumable_legacy_import_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_atomic_legacy_import_checkpoint_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_signed_session_bootstrap_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_signed_session_successor_store_integrated -or
         [string]$Compatibility.required_successor.status -cne
-            'dormant-mixed-version-and-downgrade-matrix-verified-not-active' -or
+            'dormant-dual-reader-runtime-coordinator-verified-not-active' -or
         -not [bool]$Compatibility.active.registered -or
         -not [bool]$Compatibility.active.dialed) {
         throw 'history compatibility manifest omitted dormant cross-format policy'
     }
 
     $surface = @($Coverage.surfaces | Where-Object { [string]$_.id -ceq 'transport-sync' })
-    if ([string]$Coverage.milestone -cne 'M1.1.69' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.70' -or
         $surface.Count -ne 1 -or [string]$surface[0].coverage -cne 'partial' -or
         'dormant-cross-format-membership-policy' -cnotin @($surface[0].covered) -or
         'dormant-bounded-resumable-legacy-import' -cnotin @($surface[0].covered) -or
@@ -189,7 +188,7 @@ function Assert-Contract {
         'dormant-signed-session-bootstrap' -cnotin @($surface[0].covered) -or
         'dormant-server-runtime-transition-integration' -cin
             @($surface[0].remaining) -or
-        'dual-reader-runtime-implementation' -cnotin
+        'dual-reader-runtime-implementation' -cin
             @($surface[0].remaining)) {
         throw 'canonical coverage omitted dormant cross-format policy'
     }

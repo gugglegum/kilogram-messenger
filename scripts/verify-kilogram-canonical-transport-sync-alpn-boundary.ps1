@@ -43,8 +43,8 @@ function Assert-Boundary {
     $canonicalAlpn = 'kilogram/m1/sync/cbor/1'
     $historyCompatibleAlpn = 'kilogram/m1/sync/cbor/2'
     if ([UInt64]$Manifest.schema_version -ne 1 -or
-        [string]$Manifest.milestone -cne 'M1.1.69' -or
-        [string]$Manifest.status -cne 'dormant-mixed-version-and-downgrade-matrix-verified-not-active' -or
+        [string]$Manifest.milestone -cne 'M1.1.70' -or
+        [string]$Manifest.status -cne 'dormant-dual-reader-runtime-coordinator-verified-not-active' -or
         [string]$Manifest.surface -cne 'transport-sync' -or
         [bool]$Manifest.changes_active_wire) {
         throw 'canonical transport sync manifest header changed'
@@ -87,6 +87,7 @@ function Assert-Boundary {
         -not [bool]$Manifest.history_compatible_successor.dormant_durable_responder_transition_adapter -or
         -not [bool]$Manifest.history_compatible_successor.dormant_mutual_authenticated_candidate_selection -or
         -not [bool]$Manifest.history_compatible_successor.dormant_mixed_version_and_downgrade_matrix -or
+        -not [bool]$Manifest.history_compatible_successor.dormant_dual_reader_runtime_coordinator -or
         [bool]$Manifest.history_compatible_successor.registered -or
         [bool]$Manifest.history_compatible_successor.dialed -or
         [bool]$Manifest.history_compatible_successor.format_sniffing -or
@@ -101,12 +102,12 @@ function Assert-Boundary {
             'canonical-device-session-authorization-before-sync-frames' -or
         -not [bool]$Manifest.selection.mutual_authenticated_candidate_selection -or
         -not [bool]$Manifest.selection.mixed_version_and_downgrade_matrix_verified -or
+        -not [bool]$Manifest.selection.dual_reader_runtime_coordinator_verified -or
         [bool]$Manifest.selection.selection_authorizes_registration_or_dial -or
         [bool]$Manifest.selection.fallback_after_selected_canonical_failure) {
         throw 'canonical synchronization selection policy changed'
     }
     $expectedRemaining = @(
-        'dual-reader-runtime-implementation',
         'rollback-drill',
         'sustained-fuzzing',
         'fresh-hosted-and-field-evidence'
@@ -127,8 +128,8 @@ function Assert-Boundary {
         throw 'canonical synchronization remaining-work boundary changed'
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.69' -or
-        [string]$Migration.status -cne 'dormant-mixed-version-and-downgrade-matrix-verified-not-active' -or
+    if ([string]$Migration.milestone -cne 'M1.1.70' -or
+        [string]$Migration.status -cne 'dormant-dual-reader-runtime-coordinator-verified-not-active' -or
         [string]$Migration.candidate_protocol_identifier -cne $historyCompatibleAlpn -or
         [string]$Migration.history_compatible_successor.protocol_identifier -cne
             $historyCompatibleAlpn -or
@@ -159,13 +160,13 @@ function Assert-Boundary {
     }
 
     $surface = @($Coverage.surfaces | Where-Object { [string]$_.id -ceq 'transport-sync' })
-    if ([string]$Coverage.milestone -cne 'M1.1.69' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.70' -or
         $surface.Count -ne 1 -or
         [string]$surface[0].coverage -cne 'partial' -or
         (@($surface[0].covered) -join ',') -cne
-            'parallel-cbor-alpn-identifier-allocation,history-compatible-cbor-v2-alpn-identifier-allocation,typed-durable-canonical-sync-session-checkpoint,authenticated-ticket-v13-history-compatible-cbor-v2-capability,dormant-history-compatible-sync-v2-runtime-state-machine,dormant-atomic-typed-carrier-store,dormant-cross-format-membership-policy,dormant-bounded-resumable-legacy-import,dormant-atomic-legacy-import-checkpoint,dormant-signed-session-bootstrap,dormant-signed-session-successor-store,dormant-checkpoint-bound-runtime-frame-journal,dormant-atomic-runtime-transition-transaction,dormant-durable-client-transition-adapter,dormant-durable-responder-transition-adapter,dormant-mutual-authenticated-candidate-selection,dormant-mixed-version-and-downgrade-matrix' -or
+            'parallel-cbor-alpn-identifier-allocation,history-compatible-cbor-v2-alpn-identifier-allocation,typed-durable-canonical-sync-session-checkpoint,authenticated-ticket-v13-history-compatible-cbor-v2-capability,dormant-history-compatible-sync-v2-runtime-state-machine,dormant-atomic-typed-carrier-store,dormant-cross-format-membership-policy,dormant-bounded-resumable-legacy-import,dormant-atomic-legacy-import-checkpoint,dormant-signed-session-bootstrap,dormant-signed-session-successor-store,dormant-checkpoint-bound-runtime-frame-journal,dormant-atomic-runtime-transition-transaction,dormant-durable-client-transition-adapter,dormant-durable-responder-transition-adapter,dormant-mutual-authenticated-candidate-selection,dormant-mixed-version-and-downgrade-matrix,dormant-dual-reader-runtime-coordinator' -or
         (@($surface[0].remaining) -join ',') -cne
-            'dual-reader-runtime-implementation,rollback-drill,sustained-fuzzing,fresh-hosted-and-field-evidence' -or
+            'rollback-drill,sustained-fuzzing,fresh-hosted-and-field-evidence' -or
         [int]$Coverage.summary.complete -ne 17 -or
         [int]$Coverage.summary.partial -ne 1 -or
         [int]$Coverage.summary.not_started -ne 0 -or

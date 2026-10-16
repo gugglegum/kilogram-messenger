@@ -1115,6 +1115,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.1.69 формализует все dormant mixed-version outcomes: canonical требует
   mutual selection, legacy после неё считается downgrade, epoch rollback и
   error-driven fallback запрещены; transport activation всё ещё не выдаётся.
+- [`../docs/RFC-0197-m1170-dormant-dual-reader-runtime-coordinator.md`](../docs/RFC-0197-m1170-dormant-dual-reader-runtime-coordinator.md) —
+  M1.1.70 связывает verified mixed-version plan с exact durable client и
+  responder restart actions, сохраняя legacy dispatch символическим и не
+  выдавая разрешения на transport activation.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

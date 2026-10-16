@@ -114,9 +114,9 @@ function Assert-Contract {
         throw 'canonical sync v2 durable client adapter activation boundary changed'
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.69' -or
+    if ([string]$Migration.milestone -cne 'M1.1.70' -or
         [string]$Migration.status -cne
-            'dormant-mixed-version-and-downgrade-matrix-verified-not-active' -or
+            'dormant-dual-reader-runtime-coordinator-verified-not-active' -or
         [string]$Migration.history_compatible_successor.dormant_durable_client_transition_adapter -cne
             'verified' -or
         [bool]$Migration.history_compatible_successor.registered -or
@@ -130,9 +130,9 @@ function Assert-Contract {
     if ($requirement.Count -ne 1 -or [string]$requirement[0].status -cne 'verified') {
         throw 'canonical migration durable client adapter requirement is not verified'
     }
-    if ([string]$TransportManifest.milestone -cne 'M1.1.69' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.70' -or
         [string]$TransportManifest.status -cne
-            'dormant-mixed-version-and-downgrade-matrix-verified-not-active' -or
+            'dormant-dual-reader-runtime-coordinator-verified-not-active' -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_durable_client_transition_adapter -or
         'dormant-server-runtime-transition-integration' -cin
             @($TransportManifest.remaining) -or
@@ -140,18 +140,18 @@ function Assert-Contract {
         [bool]$TransportManifest.history_compatible_successor.dialed) {
         throw 'transport sync manifest lost durable client adapter state'
     }
-    if ([string]$Compatibility.milestone -cne 'M1.1.69' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.70' -or
         [string]$Compatibility.status -cne
-            'dormant-mixed-version-and-downgrade-matrix-verified-not-active' -or
+            'dormant-dual-reader-runtime-coordinator-verified-not-active' -or
         -not [bool]$Compatibility.required_successor.dormant_durable_client_transition_adapter_integrated -or
         [string]$Compatibility.required_successor.status -cne
-            'dormant-mixed-version-and-downgrade-matrix-verified-not-active') {
+            'dormant-dual-reader-runtime-coordinator-verified-not-active') {
         throw 'history compatibility manifest lost durable client adapter state'
     }
     $transportCoverage = @(
         @($Coverage.surfaces) | Where-Object { [string]$_.id -ceq 'transport-sync' }
     )
-    if ([string]$Coverage.milestone -cne 'M1.1.69' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.70' -or
         $transportCoverage.Count -ne 1 -or
         'CANONICAL-SYNC-V2-DURABLE-CLIENT-ADAPTER.json' -cnotin
             @($transportCoverage[0].artifacts) -or

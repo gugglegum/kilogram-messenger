@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.70",
+  "status": "dormant-dual-reader-runtime-coordinator-verified-not-active",
+  "changes_active_wire": false,
+  "protocol_identifier": "kilogram/m1/sync/cbor/2",
+  "implementation": {
+    "coordinator": "CanonicalSyncV2DormantDualReaderCoordinator",
+    "policy_plan": "CanonicalSyncV2DormantTransportPlan",
+    "client_dispatch": "CanonicalSyncV2DormantClientDispatch",
+    "responder_dispatch": "CanonicalSyncV2DormantResponderDispatch",
+    "client_runtime": "CanonicalSyncV2StoredSessionRuntime",
+    "responder_runtime": "CanonicalSyncV2StoredResponderRuntime"
+  },
+  "dispatch_contract": {
+    "legacy": {
+      "result": "LegacyPostcardV6",
+      "canonical_runtime_required": false,
+      "canonical_runtime_action_exposed": false,
+      "active_legacy_runtime_reimplemented": false
+    },
+    "canonical": {
+      "result": "CanonicalCborV2",
+      "mutual_authenticated_selection_required": true,
+      "durable_client_runtime_required": true,
+      "durable_responder_runtime_required": true,
+      "conversation_devices_session_and_protocol_exact_bound": true,
+      "exact_persisted_restart_action_returned": true,
+      "frame_rebuilt_from_current_state": false
+    }
+  },
+  "fail_closed": {
+    "canonical_runtime_missing": true,
+    "canonical_runtime_identity_mismatch": true,
+    "checkpoint_frame_action_mismatch": true,
+    "canonical_without_mutual_selection": true,
+    "legacy_after_authenticated_canonical_selection": true,
+    "migration_epoch_rollback": true,
+    "fallback_after_selected_canonical_failure": true
+  },
+  "activation": {
+    "coordinator_integrated": true,
+    "active_transport_authorized": false,
+    "endpoint_registered": false,
+    "canonical_dial_enabled": false,
+    "transport_read_or_write_performed": false,
+    "active_postcard_path_changed": false
+  },
+  "remaining": [
+    "rollback-drill",
+    "sustained-fuzzing",
+    "fresh-hosted-and-field-evidence"
+  ],
+  "scope": {
+    "network_executed": false,
+    "release_build": false,
+    "archive_created": false,
+    "stable_executable_replaced": false
+  }
+}

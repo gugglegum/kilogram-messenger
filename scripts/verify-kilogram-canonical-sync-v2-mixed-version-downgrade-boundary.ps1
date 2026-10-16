@@ -52,6 +52,7 @@ function Assert-Contract {
     )
 
     $status = 'dormant-mixed-version-and-downgrade-matrix-verified-not-active'
+    $aggregateStatus = 'dormant-dual-reader-runtime-coordinator-verified-not-active'
     if ([UInt64]$Manifest.schema_version -ne 1 -or
         [string]$Manifest.milestone -cne 'M1.1.69' -or
         [string]$Manifest.status -cne $status -or
@@ -132,8 +133,8 @@ function Assert-Contract {
         [bool]$Selection.activation.selection_authorizes_transport_activation) {
         throw 'authenticated selection prerequisite changed'
     }
-    if ([string]$Migration.milestone -cne 'M1.1.69' -or
-        [string]$Migration.status -cne $status -or
+    if ([string]$Migration.milestone -cne 'M1.1.70' -or
+        [string]$Migration.status -cne $aggregateStatus -or
         [string]$Migration.current_state -cne 'legacy-only' -or
         [string]$Migration.history_compatible_successor.dormant_mixed_version_and_downgrade_matrix -cne
             'verified' -or
@@ -149,8 +150,8 @@ function Assert-Contract {
     if ($requirement.Count -ne 1 -or [string]$requirement[0].status -cne 'verified') {
         throw 'mixed-version activation requirement is not verified'
     }
-    if ([string]$TransportManifest.milestone -cne 'M1.1.69' -or
-        [string]$TransportManifest.status -cne $status -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.70' -or
+        [string]$TransportManifest.status -cne $aggregateStatus -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_mixed_version_and_downgrade_matrix -or
         -not [bool]$TransportManifest.selection.mixed_version_and_downgrade_matrix_verified -or
         [bool]$TransportManifest.selection.selection_authorizes_registration_or_dial -or
@@ -159,14 +160,14 @@ function Assert-Contract {
         [bool]$TransportManifest.history_compatible_successor.dialed) {
         throw 'transport matrix state changed'
     }
-    if ([string]$Compatibility.milestone -cne 'M1.1.69' -or
-        [string]$Compatibility.status -cne $status -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.70' -or
+        [string]$Compatibility.status -cne $aggregateStatus -or
         -not [bool]$Compatibility.required_successor.dormant_mixed_version_and_downgrade_matrix_integrated -or
-        [string]$Compatibility.required_successor.status -cne $status) {
+        [string]$Compatibility.required_successor.status -cne $aggregateStatus) {
         throw 'history compatibility matrix state changed'
     }
     $surface = @($Coverage.surfaces | Where-Object { [string]$_.id -ceq 'transport-sync' })
-    if ([string]$Coverage.milestone -cne 'M1.1.69' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.70' -or
         $surface.Count -ne 1 -or
         'CANONICAL-SYNC-V2-MIXED-VERSION-DOWNGRADE-MATRIX.json' -cnotin @($surface[0].artifacts) -or
         'scripts/verify-kilogram-canonical-sync-v2-mixed-version-downgrade-boundary.ps1' -cnotin

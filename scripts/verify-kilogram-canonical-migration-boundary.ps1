@@ -23,8 +23,8 @@ function Assert-ExactStrings {
 
 function Assert-Manifest {
     param([object]$Manifest)
-    if ([UInt64]$Manifest.schema_version -ne 1 -or [string]$Manifest.milestone -cne 'M1.1.69' -or
-        [string]$Manifest.status -cne 'dormant-mixed-version-and-downgrade-matrix-verified-not-active' -or
+    if ([UInt64]$Manifest.schema_version -ne 1 -or [string]$Manifest.milestone -cne 'M1.1.70' -or
+        [string]$Manifest.status -cne 'dormant-dual-reader-runtime-coordinator-verified-not-active' -or
         [string]$Manifest.current_state -cne 'legacy-only' -or [bool]$Manifest.changes_active_wire) {
         throw 'canonical migration header changed'
     }
@@ -69,6 +69,8 @@ function Assert-Manifest {
             'verified' -or
         [string]$Manifest.history_compatible_successor.dormant_mixed_version_and_downgrade_matrix -cne
             'verified' -or
+        [string]$Manifest.history_compatible_successor.dormant_dual_reader_runtime_coordinator -cne
+            'verified' -or
         [bool]$Manifest.history_compatible_successor.registered -or
         [bool]$Manifest.history_compatible_successor.dialed) {
         throw 'history-compatible successor boundary changed'
@@ -81,6 +83,7 @@ function Assert-Manifest {
         [bool]$Manifest.selection.reuse_existing_identifier -or
         [string]$Manifest.selection.mutual_authenticated_candidate_selection -cne 'verified' -or
         [string]$Manifest.selection.mixed_version_and_downgrade_matrix -cne 'verified' -or
+        [string]$Manifest.selection.dual_reader_runtime_coordinator -cne 'verified' -or
         [bool]$Manifest.selection.selection_authorizes_registration_or_dial) {
         throw 'unsafe canonical selection policy'
     }
@@ -137,7 +140,7 @@ function Assert-Manifest {
         'dormant-durable-client-transition-adapter|verified',
         'dormant-durable-responder-transition-adapter|verified',
         'mutual-authenticated-capability-selection|verified',
-        'dual-reader-runtime-implementation|pending',
+        'dual-reader-runtime-implementation|verified',
         'independent-crypto-conformance|verified',
         'bounded-decoder-mutation-regression|verified',
         'sustained-coverage-guided-fuzzing|pending',
@@ -200,7 +203,7 @@ if ($SelfTest) {
 }
 
 Write-Output 'canonical_migration_boundary=verified'
-Write-Output 'migration_status=dormant-mixed-version-and-downgrade-matrix-verified-not-active'
+Write-Output 'migration_status=dormant-dual-reader-runtime-coordinator-verified-not-active'
 Write-Output 'candidate_protocol_identifier=kilogram/m1/sync/cbor/2'
 Write-Output 'history_compatible_successor_identifier=kilogram/m1/sync/cbor/2'
 Write-Output 'candidate_identifier_registered=false'

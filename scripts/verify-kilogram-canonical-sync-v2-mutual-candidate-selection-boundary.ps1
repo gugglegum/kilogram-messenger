@@ -60,7 +60,7 @@ function Assert-Contract {
     )
 
     $status = 'dormant-mutual-authenticated-candidate-selection-verified-not-active'
-    $aggregateStatus = 'dormant-mixed-version-and-downgrade-matrix-verified-not-active'
+    $aggregateStatus = 'dormant-dual-reader-runtime-coordinator-verified-not-active'
     if ([UInt64]$Manifest.schema_version -ne 1 -or
         [string]$Manifest.milestone -cne 'M1.1.68' -or
         [string]$Manifest.status -cne $status -or
@@ -165,7 +165,7 @@ function Assert-Contract {
         'fresh-hosted-and-field-evidence'
     ) 'mutual candidate remaining work'
 
-    if ([string]$Migration.milestone -cne 'M1.1.69' -or
+    if ([string]$Migration.milestone -cne 'M1.1.70' -or
         [string]$Migration.status -cne $aggregateStatus -or
         [string]$Migration.current_state -cne 'legacy-only' -or
         [string]$Migration.history_compatible_successor.dormant_mutual_authenticated_candidate_selection -cne
@@ -184,32 +184,32 @@ function Assert-Contract {
     if ($requirement.Count -ne 1 -or [string]$requirement[0].status -cne 'verified') {
         throw 'mutual capability selection requirement is not verified'
     }
-    if ([string]$TransportManifest.milestone -cne 'M1.1.69' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.70' -or
         [string]$TransportManifest.status -cne $aggregateStatus -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_mutual_authenticated_candidate_selection -or
         -not [bool]$TransportManifest.selection.mutual_authenticated_candidate_selection -or
         -not [bool]$TransportManifest.selection.both_durable_adapter_identities_required -or
         [bool]$TransportManifest.selection.selection_authorizes_registration_or_dial -or
         'mutual-authenticated-capability-selection' -cin @($TransportManifest.remaining) -or
-        'dual-reader-runtime-implementation' -cnotin @($TransportManifest.remaining) -or
+        'dual-reader-runtime-implementation' -cin @($TransportManifest.remaining) -or
         [bool]$TransportManifest.history_compatible_successor.registered -or
         [bool]$TransportManifest.history_compatible_successor.dialed) {
         throw 'transport manifest mutual selection state changed'
     }
-    if ([string]$Compatibility.milestone -cne 'M1.1.69' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.70' -or
         [string]$Compatibility.status -cne $aggregateStatus -or
         -not [bool]$Compatibility.required_successor.dormant_mutual_authenticated_candidate_selection_integrated) {
         throw 'history compatibility lost mutual selection state'
     }
     $surface = @($Coverage.surfaces | Where-Object { [string]$_.id -ceq 'transport-sync' })
-    if ([string]$Coverage.milestone -cne 'M1.1.69' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.70' -or
         $surface.Count -ne 1 -or
         'CANONICAL-SYNC-V2-MUTUAL-CANDIDATE-SELECTION.json' -cnotin @($surface[0].artifacts) -or
         'scripts/verify-kilogram-canonical-sync-v2-mutual-candidate-selection-boundary.ps1' -cnotin
             @($surface[0].artifacts) -or
         'dormant-mutual-authenticated-candidate-selection' -cnotin @($surface[0].covered) -or
         'mutual-authenticated-capability-selection' -cin @($surface[0].remaining) -or
-        'dual-reader-runtime-implementation' -cnotin @($surface[0].remaining)) {
+        'dual-reader-runtime-implementation' -cin @($surface[0].remaining)) {
         throw 'coverage manifest mutual selection state changed'
     }
 

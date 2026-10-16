@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.69",
-  "status": "dormant-mixed-version-and-downgrade-matrix-verified-not-active",
+  "milestone": "M1.1.70",
+  "status": "dormant-dual-reader-runtime-coordinator-verified-not-active",
   "surface": "transport-sync",
   "changes_active_wire": false,
   "active": {
@@ -41,6 +41,7 @@
     "dormant_durable_responder_transition_adapter": true,
     "dormant_mutual_authenticated_candidate_selection": true,
     "dormant_mixed_version_and_downgrade_matrix": true,
+    "dormant_dual_reader_runtime_coordinator": true,
     "registered": false,
     "dialed": false,
     "format_sniffing": false,
@@ -56,6 +57,7 @@
     "listener_acceptance_authentication": "device-signed-exact-requester-offer-id",
     "both_durable_adapter_identities_required": true,
     "mixed_version_and_downgrade_matrix_verified": true,
+    "dual_reader_runtime_coordinator_verified": true,
     "selection_authorizes_registration_or_dial": false,
     "fallback_after_selected_canonical_failure": false
   },
@@ -78,7 +80,6 @@
     ]
   },
   "remaining": [
-    "dual-reader-runtime-implementation",
     "rollback-drill",
     "sustained-fuzzing",
     "fresh-hosted-and-field-evidence"

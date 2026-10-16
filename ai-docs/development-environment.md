@@ -4419,3 +4419,26 @@ Hosted follow-up:
   against immutable `M1.0.0` all pass.
 - Active Postcard v6 remains unchanged; canonical `/cbor/2` remains allocated,
   unregistered and undialed. No network, stable EXE, push or tag was produced.
+
+## M1.1.70 dormant dual-reader runtime coordinator (2026-10-17)
+
+- Implemented in
+  `crates/kilogram-session/src/canonical_sync_v2_adapter.rs`; the coordinator
+  consumes a verified dormant transport plan and never calls active transport.
+- Legacy dispatch is symbolic only. Canonical client/responder dispatch is
+  derived from exact restored durable runtime after identity verification;
+  missing or mismatched state fails closed.
+- `CanonicalSyncV2DormantResponderDispatch` boxes the larger responder action;
+  this satisfies workspace strict Clippy without suppressing
+  `large_enum_variant` and does not alter persisted or wire bytes.
+- Full `kilogram-session` offline debug regression passed 17/17 outside the
+  Windows sandbox. Resource policy remained `CargoJobs 2`, below-normal
+  priority, debug/offline only.
+- The new and 20 affected historical boundary scripts passed both normal and
+  `-SelfTest` modes (21/21 pairs). All 100 root JSON documents parse.
+- `cargo fmt --all -- --check`, workspace locked/offline strict Clippy with
+  `-D warnings`, and accepted-tag readiness 102/102 against immutable
+  `M1.0.0` passed.
+- Active Postcard v6 and executable/network surfaces are unchanged;
+  `/cbor/2` remains unregistered and undialed. No release build, archive,
+  stable EXE, network operation, push or tag was produced.

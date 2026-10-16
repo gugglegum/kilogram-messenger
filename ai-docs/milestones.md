@@ -6688,3 +6688,28 @@ correlation visible, Windows-only field evidence, independent security audit
 - active Postcard v6 не менялся, `/cbor/2` остаётся unregistered/undialed;
   network/release/archive/stable EXE/push/tag не выполнялись. Следующий bounded
   slice — dormant dual-reader runtime coordinator без transport activation.
+
+### M1.1.70 — dormant dual-reader runtime coordinator: принято локально
+
+- добавлен `CanonicalSyncV2DormantDualReaderCoordinator`, который принимает
+  только уже verified `CanonicalSyncV2DormantTransportPlan`;
+- legacy branch возвращает символический `LegacyPostcardV6` и не дублирует
+  установленную реализацию. Canonical branch требует durable client либо
+  responder runtime и exact-сверяет protocol, conversation, роли Device и
+  session с mutual authenticated selection;
+- canonical dispatch вычисляется только из сохранённого checkpoint и exact
+  pending frame. Missing runtime, cross-session identity и action/frame
+  mismatch fail closed; крупный responder action хранится косвенно, чтобы не
+  раздувать каждый enum dispatch;
+- coordinator не выполняет network I/O и всегда сообщает
+  `active_transport_authorized=false`; active wire, Iroh и CLI не получили
+  call sites, `/cbor/2` остаётся unregistered/undialed;
+- новый manifest, RFC-0197 и dedicated boundary добавлены. Новая и 20
+  затронутых исторических boundaries прошли normal и negative self-test режимы
+  (21/21 пар);
+- полный `kilogram-session` regression прошёл 17/17; все 100 root JSON parsed,
+  rustfmt и workspace locked/offline strict Clippy с `-D warnings` прошли;
+  accepted-tag readiness — 102/102 против immutable `M1.0.0`;
+- network/release/archive/stable EXE/push/tag не выполнялись. Следующий bounded
+  slice — deterministic rollback drill, затем sustained fuzzing и fresh field
+  evidence до отдельного activation решения.

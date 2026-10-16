@@ -152,9 +152,9 @@ function Assert-Contract {
         }
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.69' -or
+    if ([string]$Migration.milestone -cne 'M1.1.70' -or
         [string]$Migration.status -cne
-            'dormant-mixed-version-and-downgrade-matrix-verified-not-active' -or
+            'dormant-dual-reader-runtime-coordinator-verified-not-active' -or
         [string]$Migration.history_compatible_successor.dormant_signed_session_bootstrap -cne
             'verified' -or
         [string]$Migration.history_compatible_successor.dormant_signed_session_successor_store -cne
@@ -170,32 +170,32 @@ function Assert-Contract {
         [string]$bootstrapRequirement[0].status -cne 'verified') {
         throw 'canonical migration lost the verified signed session bootstrap requirement'
     }
-    if ([string]$TransportManifest.milestone -cne 'M1.1.69' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.70' -or
         [string]$TransportManifest.status -cne
-            'dormant-mixed-version-and-downgrade-matrix-verified-not-active' -or
+            'dormant-dual-reader-runtime-coordinator-verified-not-active' -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_signed_session_bootstrap -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_signed_session_successor_store -or
         [bool]$TransportManifest.history_compatible_successor.registered -or
         [bool]$TransportManifest.history_compatible_successor.dialed -or
         'dormant-server-runtime-transition-integration' -cin
             @($TransportManifest.remaining) -or
-        'dual-reader-runtime-implementation' -cnotin
+        'dual-reader-runtime-implementation' -cin
             @($TransportManifest.remaining)) {
         throw 'transport sync manifest lost the dormant signed session bootstrap boundary'
     }
-    if ([string]$Compatibility.milestone -cne 'M1.1.69' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.70' -or
         [string]$Compatibility.status -cne
-            'dormant-mixed-version-and-downgrade-matrix-verified-not-active' -or
+            'dormant-dual-reader-runtime-coordinator-verified-not-active' -or
         -not [bool]$Compatibility.required_successor.dormant_signed_session_bootstrap_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_signed_session_successor_store_integrated -or
         [string]$Compatibility.required_successor.status -cne
-            'dormant-mixed-version-and-downgrade-matrix-verified-not-active') {
+            'dormant-dual-reader-runtime-coordinator-verified-not-active') {
         throw 'history compatibility manifest lost the signed session bootstrap contract'
     }
     $transportCoverage = @(
         @($Coverage.surfaces) | Where-Object { [string]$_.id -ceq 'transport-sync' }
     )
-    if ([string]$Coverage.milestone -cne 'M1.1.69' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.70' -or
         $transportCoverage.Count -ne 1 -or
         'CANONICAL-SYNC-V2-SESSION-BOOTSTRAP.json' -cnotin
             @($transportCoverage[0].artifacts) -or
@@ -207,7 +207,7 @@ function Assert-Contract {
             @($transportCoverage[0].covered) -or
         'dormant-server-runtime-transition-integration' -cin
             @($transportCoverage[0].remaining) -or
-        'dual-reader-runtime-implementation' -cnotin
+        'dual-reader-runtime-implementation' -cin
             @($transportCoverage[0].remaining)) {
         throw 'canonical coverage does not include signed session bootstrap artifacts'
     }
