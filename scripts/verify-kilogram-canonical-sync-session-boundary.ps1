@@ -138,7 +138,7 @@ if ($active.IndexOf('canonical_sync_session_v1', [StringComparison]::Ordinal) -g
 }
 $syncCoverage = @($coverage.surfaces | Where-Object { $_.id -ceq 'sync' })
 if ($syncCoverage.Count -ne 1 -or [string]$syncCoverage[0].coverage -cne 'complete' -or
-    (@($syncCoverage[0].covered) -join ',') -cne 'sync-inventory,sync-diff,sync-request-response-frames,multi-round-session-state,typed-cross-generation-event-identity,closed-verified-legacy-and-canonical-event-carrier' -or
+    (@($syncCoverage[0].covered) -join ',') -cne 'sync-inventory,sync-diff,sync-request-response-frames,multi-round-session-state,typed-cross-generation-event-identity,closed-verified-legacy-and-canonical-event-carrier,history-compatible-typed-sync-v2-frames' -or
     @($syncCoverage[0].remaining).Count -ne 0) {
     throw 'canonical sync coverage is not complete'
 }

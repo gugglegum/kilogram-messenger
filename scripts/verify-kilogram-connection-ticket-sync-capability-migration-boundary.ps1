@@ -192,8 +192,8 @@ function Assert-Boundary {
         'crates/kilogram-sync-capability/src/lib.rs|SYNC_TRANSPORT_CAPABILITY_VERSION|u8|1'
     ) 'connection-ticket compatibility bindings'
 
-    if ([string]$TransportManifest.milestone -cne 'M1.1.53' -or
-        [string]$TransportManifest.status -cne 'history-compatible-successor-allocated-not-active' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.54' -or
+        [string]$TransportManifest.status -cne 'history-compatible-successor-frames-verified-not-active' -or
         [string]$TransportManifest.active.alpn -cne $legacyAlpn -or
         -not [bool]$TransportManifest.active.registered -or
         -not [bool]$TransportManifest.active.dialed -or
@@ -215,8 +215,8 @@ function Assert-Boundary {
     $capabilityRequirement = @($CanonicalMigration.activation_requirements | Where-Object {
         [string]$_.id -ceq 'authenticated-capability-envelope'
     })
-    if ([string]$CanonicalMigration.milestone -cne 'M1.1.53' -or
-        [string]$CanonicalMigration.status -cne 'history-compatible-successor-allocated-not-active' -or
+    if ([string]$CanonicalMigration.milestone -cne 'M1.1.54' -or
+        [string]$CanonicalMigration.status -cne 'history-compatible-successor-frames-verified-not-active' -or
         [string]$CanonicalMigration.current_state -cne 'legacy-only' -or
         [bool]$CanonicalMigration.candidate_identifier_registered -or
         $capabilityRequirement.Count -ne 1 -or
@@ -227,13 +227,13 @@ function Assert-Boundary {
     $coverageSurface = @($Coverage.surfaces | Where-Object {
         [string]$_.id -ceq 'transport-sync'
     })
-    if ([string]$Coverage.milestone -cne 'M1.1.53' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.54' -or
         $coverageSurface.Count -ne 1 -or
         [string]$coverageSurface[0].coverage -cne 'partial' -or
         (@($coverageSurface[0].covered) -join ',') -cne
             'parallel-cbor-alpn-identifier-allocation,authenticated-ticket-v12-transport-capability-envelope,history-compatible-cbor-v2-alpn-identifier-allocation' -or
         (@($coverageSurface[0].remaining) -join ',') -cne
-            'closed-history-compatible-sync-frames-and-authenticated-cbor-v2-capability,active-dual-reader-and-canonical-capability-activation') {
+            'typed-durable-canonical-sync-session-checkpoint,authenticated-cbor-v2-capability,active-dual-reader-and-canonical-capability-activation') {
         throw 'canonical coverage did not record the authenticated capability envelope'
     }
 

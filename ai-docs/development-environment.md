@@ -4018,3 +4018,20 @@ Hosted follow-up:
   Clippy with two Cargo jobs.
 - No network operation, release build, archive, stable executable replacement,
   push or tag is part of this stage.
+
+## M1.1.54 history-compatible canonical sync v2 frames (2026-10-16)
+
+- Added `canonical_sync_v2` as an inactive deterministic-CBOR codec for the
+  complete `/cbor/2` inventory, diff, event-batch, complete, pause and rejection
+  frame set. The active runtime still compiles and uses Postcard v6 only.
+- Independent Node vectors bind the new v2 Ed25519 domains and exact nested
+  typed-key/carrier framing. The large historical carrier remains single-source
+  in the history vector and the sync vector records its exact CBOR prefix and
+  encoded length rather than duplicating opaque fixture bytes.
+- Focused debug/offline Rust regression passed 3/3 with two Cargo jobs and
+  BelowNormal priority. Boundary normal/self-test runs reject premature ALPN
+  activation and closed-variant drift.
+- Accepted-tag readiness passed 87/87 against immutable `M1.0.0`, including
+  rustfmt and workspace locked/offline strict Clippy with two Cargo jobs.
+- No network operation, release build, ZIP/archive, stable executable
+  replacement, push or tag belongs to this stage.

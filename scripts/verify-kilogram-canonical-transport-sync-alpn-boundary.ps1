@@ -43,8 +43,8 @@ function Assert-Boundary {
     $canonicalAlpn = 'kilogram/m1/sync/cbor/1'
     $historyCompatibleAlpn = 'kilogram/m1/sync/cbor/2'
     if ([UInt64]$Manifest.schema_version -ne 1 -or
-        [string]$Manifest.milestone -cne 'M1.1.53' -or
-        [string]$Manifest.status -cne 'history-compatible-successor-allocated-not-active' -or
+        [string]$Manifest.milestone -cne 'M1.1.54' -or
+        [string]$Manifest.status -cne 'history-compatible-successor-frames-verified-not-active' -or
         [string]$Manifest.surface -cne 'transport-sync' -or
         [bool]$Manifest.changes_active_wire) {
         throw 'canonical transport sync manifest header changed'
@@ -71,7 +71,8 @@ function Assert-Boundary {
         -not [bool]$Manifest.history_compatible_successor.allocated -or
         -not [bool]$Manifest.history_compatible_successor.typed_event_identity -or
         -not [bool]$Manifest.history_compatible_successor.closed_event_carrier -or
-        [bool]$Manifest.history_compatible_successor.closed_sync_frames -or
+        -not [bool]$Manifest.history_compatible_successor.closed_sync_frames -or
+        [bool]$Manifest.history_compatible_successor.typed_session_checkpoint -or
         [bool]$Manifest.history_compatible_successor.authenticated_ticket_capability -or
         [bool]$Manifest.history_compatible_successor.registered -or
         [bool]$Manifest.history_compatible_successor.dialed -or
@@ -89,7 +90,7 @@ function Assert-Boundary {
         throw 'canonical synchronization selection policy changed'
     }
     $expectedRemaining = @(
-        'closed-history-compatible-canonical-sync-frames',
+        'typed-durable-canonical-sync-session-checkpoint',
         'authenticated-cbor-v2-ticket-capability',
         'active-dual-reader-and-canonical-capability-activation',
         'mixed-version-and-downgrade-tests',
@@ -113,8 +114,8 @@ function Assert-Boundary {
         throw 'canonical synchronization remaining-work boundary changed'
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.53' -or
-        [string]$Migration.status -cne 'history-compatible-successor-allocated-not-active' -or
+    if ([string]$Migration.milestone -cne 'M1.1.54' -or
+        [string]$Migration.status -cne 'history-compatible-successor-frames-verified-not-active' -or
         [string]$Migration.candidate_protocol_identifier -cne $canonicalAlpn -or
         [string]$Migration.history_compatible_successor.protocol_identifier -cne
             $historyCompatibleAlpn -or
@@ -145,13 +146,13 @@ function Assert-Boundary {
     }
 
     $surface = @($Coverage.surfaces | Where-Object { [string]$_.id -ceq 'transport-sync' })
-    if ([string]$Coverage.milestone -cne 'M1.1.53' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.54' -or
         $surface.Count -ne 1 -or
         [string]$surface[0].coverage -cne 'partial' -or
         (@($surface[0].covered) -join ',') -cne
             'parallel-cbor-alpn-identifier-allocation,authenticated-ticket-v12-transport-capability-envelope,history-compatible-cbor-v2-alpn-identifier-allocation' -or
         (@($surface[0].remaining) -join ',') -cne
-            'closed-history-compatible-sync-frames-and-authenticated-cbor-v2-capability,active-dual-reader-and-canonical-capability-activation' -or
+            'typed-durable-canonical-sync-session-checkpoint,authenticated-cbor-v2-capability,active-dual-reader-and-canonical-capability-activation' -or
         [int]$Coverage.summary.complete -ne 17 -or
         [int]$Coverage.summary.partial -ne 1 -or
         [int]$Coverage.summary.not_started -ne 0 -or

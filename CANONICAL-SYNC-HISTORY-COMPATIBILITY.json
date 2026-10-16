@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.53",
-  "status": "typed-history-carrier-verified-frames-pending",
+  "milestone": "M1.1.54",
+  "status": "history-compatible-frames-verified-session-and-capability-pending",
   "changes_active_wire": false,
   "active": {
     "encoding": "postcard-v6",
@@ -39,12 +39,13 @@
     "identifier_allocated": true,
     "typed_event_key_integrated": true,
     "closed_event_carrier_integrated": true,
-    "closed_sync_frames_integrated": false,
+    "closed_sync_frames_integrated": true,
+    "typed_session_checkpoint_integrated": false,
     "ticket_capability_authenticated": false,
     "must_integrate_bridge_into_closed_frames": true,
     "must_authenticate_exact_identifier_in_connection_ticket": true,
     "must_preserve_no-sniffing-and-no-parse-fallback": true,
-    "status": "typed-carrier-verified-frames-and-capability-pending"
+    "status": "closed-frames-verified-session-and-capability-pending"
   },
   "forbidden": [
     "resign-historical-event-with-migration-key",

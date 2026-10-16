@@ -6285,3 +6285,21 @@ correlation visible, Windows-only field evidence, independent security audit
 - full v2 inventory/diff/batch/complete frames, typed session checkpoints и
   Device-signed ticket capability для exact `/cbor/2` остаются pending. Active
   wire, ticket bytes, network, release/archive/stable EXE/push/tag не менялись.
+
+### M1.1.54 — history-compatible canonical sync v2 frames: принято локально
+
+- добавлен полный inactive `/cbor/2` codec: signed inventory/diff, event batch,
+  complete, pause/paused/rejected и closed client/server frames;
+- inventory/diff/complete переносят только typed `(namespace, Event ID)` keys,
+  event arrays — только closed verified legacy/native carriers; порядок,
+  duplicate, conversation, signature, boolean, variant и size invariants
+  проверяются fail closed;
+- независимый Node oracle воспроизводит exact v2 signature preimages и outer
+  frame bytes. Focused Rust regression 3/3 проверяет оба carrier variants и
+  негативные случаи;
+- migration/transport/coverage ledgers фиксируют frames как verified, но typed
+  durable checkpoint и authenticated `/cbor/2` ticket capability остаются
+  pending. ALPN не registered/dialed, active Postcard wire не менялся;
+- accepted-tag readiness прошёл 87/87 вместе с rustfmt и workspace
+  locked/offline strict Clippy в два Cargo job. Network, release/archive,
+  stable EXE, push и tag не выполнялись.

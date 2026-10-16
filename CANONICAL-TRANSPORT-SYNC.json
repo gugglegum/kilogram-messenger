@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.53",
-  "status": "history-compatible-successor-allocated-not-active",
+  "milestone": "M1.1.54",
+  "status": "history-compatible-successor-frames-verified-not-active",
   "surface": "transport-sync",
   "changes_active_wire": false,
   "active": {
@@ -25,7 +25,8 @@
     "allocated": true,
     "typed_event_identity": true,
     "closed_event_carrier": true,
-    "closed_sync_frames": false,
+    "closed_sync_frames": true,
+    "typed_session_checkpoint": false,
     "authenticated_ticket_capability": false,
     "registered": false,
     "dialed": false,
@@ -57,7 +58,7 @@
     ]
   },
   "remaining": [
-    "closed-history-compatible-canonical-sync-frames",
+    "typed-durable-canonical-sync-session-checkpoint",
     "authenticated-cbor-v2-ticket-capability",
     "active-dual-reader-and-canonical-capability-activation",
     "mixed-version-and-downgrade-tests",

@@ -1,0 +1,55 @@
+; Kilogram inactive history-compatible deterministic-CBOR synchronization frames, M1.1.54.
+; Typed Event keys and closed Event carriers are encoded as bounded nested CBOR byte strings.
+; Boolean values use the profile's closed unsigned-integer form 0 / 1.
+
+profile-version = 1
+id-32 = bytes .size 32
+signature-64 = bytes .size 64
+canonical-bool = 0 / 1
+sync-event-key-v2 = bytes
+sync-event-carrier-v2 = bytes
+
+sync-inventory-content-v2 = [
+  profile-version,
+  conversation-id: id-32,
+  requester-device-id: id-32,
+  session-binding: id-32,
+  event-keys: [* sync-event-key-v2]
+]
+
+signed-sync-inventory-v2 = [profile-version, sync-inventory-content-v2, signature-64]
+
+sync-event-batch-v2 = [
+  profile-version,
+  conversation-id: id-32,
+  events: [* sync-event-carrier-v2]
+]
+
+sync-diff-content-v2 = [
+  profile-version,
+  conversation-id: id-32,
+  responder-device-id: id-32,
+  session-binding: id-32,
+  requested-event-keys: [* sync-event-key-v2],
+  events: [* sync-event-carrier-v2],
+  more-available: canonical-bool
+]
+
+signed-sync-diff-v2 = [profile-version, sync-diff-content-v2, signature-64]
+
+sync-complete-v2 = [
+  profile-version,
+  conversation-id: id-32,
+  stored-event-keys: [* sync-event-key-v2],
+  more-available: canonical-bool
+]
+
+sync-pause-v2 = [profile-version, conversation-id: id-32]
+sync-paused-v2 = [profile-version, conversation-id: id-32]
+sync-rejection-reason-v2 = 1 ; requester-not-allowed
+sync-rejected-v2 = [profile-version, conversation-id: id-32, sync-rejection-reason-v2]
+
+sync-client-frame-v2 = [profile-version, variant: 1 / 2 / 3, payload: bytes]
+sync-server-frame-v2 = [profile-version, variant: 1 / 2 / 3 / 4, payload: bytes]
+
+kilogram-sync-v2 = sync-client-frame-v2 / sync-server-frame-v2

@@ -1020,6 +1020,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.1.53 выделяет inactive `/cbor/2`, вводит namespace-aware Event key и
   closed verified carrier для legacy bridge/native canonical event, оставляя
   frames, ticket capability и runtime activation pending.
+- [`../docs/RFC-0180-m1154-history-compatible-canonical-sync-v2-frames.md`](../docs/RFC-0180-m1154-history-compatible-canonical-sync-v2-frames.md) —
+  M1.1.54 закрывает полный inactive `/cbor/2` inventory/diff/batch/complete и
+  pause/reject frame set поверх typed history, оставляя typed durable checkpoint,
+  ticket capability и runtime activation pending.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

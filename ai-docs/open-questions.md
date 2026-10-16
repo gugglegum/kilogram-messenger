@@ -437,8 +437,8 @@ sessions, distribution, removal и key epochs и не решены этим пр
   v12 с отдельным Device-signed capability, exact-связанным с authority,
   requester, endpoint, publication epoch и prekey validity. Capability всё ещё
   объявляет только legacy active и canonical candidate с disabled dial.
-  После M1.1.53 следующий приоритет — closed history-compatible `/cbor/2`
-  frames и typed checkpoint; только затем отдельная signed capability и active
+  После M1.1.54 closed history-compatible `/cbor/2` frames уже verified.
+  Следующий приоритет — typed durable checkpoint; только затем отдельная signed capability и active
   dual reader без fallback после canonical failure. Общая activation требует
   explicit identifiers, downgrade
   tests, sustained fuzzing, independent HPKE conformance и fresh multi-device
@@ -451,12 +451,12 @@ sessions, distribution, removal и key epochs и не решены этим пр
   verified, но не встроен в closed `kilogram/m1/sync/cbor/1`. M1.1.53 решил
   этот вопрос отдельным `/cbor/2` и typed identity; переиспользовать или молча
   расширять `/cbor/1` по-прежнему нельзя.
-- M1.1.53 закрыл выбор identity/carrier и выделил exact successor
-  `kilogram/m1/sync/cbor/2`: Event key включает namespace, carrier закрыт на
-  verified legacy bridge и native canonical event. Остаётся определить и
-  проверить полные v2 inventory/diff/batch/complete frames, typed durable
-  checkpoint и способ добавить exact `/cbor/2` в Device-signed ticket
-  capability без преждевременного dial.
+- M1.1.54 закрыл полные v2 inventory/diff/batch/complete/pause/reject frames:
+  typed keys используются во всех inventories и completion evidence, а оба
+  carrier variants проходят один closed decoder без sniffing/fallback.
+  Остаётся typed durable checkpoint, который не теряет namespace при resume,
+  и способ добавить exact `/cbor/2` в Device-signed ticket capability без
+  преждевременного dial.
 
 ## Инварианты при выборе ответов
 

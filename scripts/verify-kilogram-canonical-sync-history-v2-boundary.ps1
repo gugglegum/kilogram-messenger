@@ -112,10 +112,11 @@ function Assert-Contract {
         -not [bool]$Compatibility.required_successor.identifier_allocated -or
         -not [bool]$Compatibility.required_successor.typed_event_key_integrated -or
         -not [bool]$Compatibility.required_successor.closed_event_carrier_integrated -or
-        [bool]$Compatibility.required_successor.closed_sync_frames_integrated -or
+        -not [bool]$Compatibility.required_successor.closed_sync_frames_integrated -or
+        [bool]$Compatibility.required_successor.typed_session_checkpoint_integrated -or
         [bool]$Compatibility.required_successor.ticket_capability_authenticated -or
         [string]$Compatibility.required_successor.status -cne
-            'typed-carrier-verified-frames-and-capability-pending') {
+            'closed-frames-verified-session-and-capability-pending') {
         throw 'canonical sync history compatibility ledger changed'
     }
     if ([string]$Migration.history_compatible_successor.protocol_identifier -cne
@@ -123,7 +124,8 @@ function Assert-Contract {
         -not [bool]$Migration.history_compatible_successor.identifier_allocated -or
         [string]$Migration.history_compatible_successor.typed_event_identity -cne 'verified' -or
         [string]$Migration.history_compatible_successor.closed_event_carrier -cne 'verified' -or
-        [string]$Migration.history_compatible_successor.closed_sync_frames -cne 'pending' -or
+        [string]$Migration.history_compatible_successor.closed_sync_frames -cne 'verified' -or
+        [string]$Migration.history_compatible_successor.typed_session_checkpoint -cne 'pending' -or
         [string]$Migration.history_compatible_successor.authenticated_ticket_capability -cne
             'pending' -or
         [bool]$Migration.history_compatible_successor.registered -or
@@ -140,7 +142,8 @@ function Assert-Contract {
     }
     if ([string]$TransportManifest.history_compatible_successor.alpn -cne $successorAlpn -or
         -not [bool]$TransportManifest.history_compatible_successor.allocated -or
-        [bool]$TransportManifest.history_compatible_successor.closed_sync_frames -or
+        -not [bool]$TransportManifest.history_compatible_successor.closed_sync_frames -or
+        [bool]$TransportManifest.history_compatible_successor.typed_session_checkpoint -or
         [bool]$TransportManifest.history_compatible_successor.authenticated_ticket_capability -or
         [bool]$TransportManifest.history_compatible_successor.registered -or
         [bool]$TransportManifest.history_compatible_successor.dialed -or
@@ -294,7 +297,7 @@ Write-Output 'canonical_sync_history_v2_boundary=verified'
 Write-Output 'history_compatible_sync_alpn=kilogram/m1/sync/cbor/2'
 Write-Output 'typed_event_namespaces=2'
 Write-Output 'closed_event_carriers=2'
-Write-Output 'closed_sync_frames=pending'
+Write-Output 'closed_sync_frames=verified'
 Write-Output 'authenticated_ticket_capability=pending'
 Write-Output 'candidate_identifier_registered=false'
 Write-Output 'candidate_identifier_dialed=false'

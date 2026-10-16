@@ -2298,8 +2298,14 @@ generation integrates that bridge.
 allocates that successor as `kilogram/m1/sync/cbor/2` and gives every event a
 typed `(namespace, Event ID)` identity. Its closed carrier verifies either the
 exact historical Postcard bridge or a native canonical event without sniffing
-or fallback. This remains conformance-only: v2 frames and ticket capability
-are incomplete, and no endpoint registers or dials the new ALPN.
+or fallback.
+
+[`RFC-0180`](docs/RFC-0180-m1154-history-compatible-canonical-sync-v2-frames.md)
+defines the complete closed inventory, diff, event-batch, complete,
+pause/paused and rejection frame set over those typed keys and carriers. This
+remains conformance-only: the durable checkpoint is not yet typed, the signed
+ticket does not advertise `/cbor/2`, and no endpoint registers or dials the new
+ALPN.
 
 ## Contributing
 
