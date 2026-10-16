@@ -4079,3 +4079,28 @@ Hosted follow-up:
 - No endpoint registration, canonical dial, network operation, release build,
   archive, stable-path executable replacement, push or tag belongs to this
   stage.
+
+## M1.1.57 dormant history-compatible sync runtime adapter (2026-10-16)
+
+- Added `crates/kilogram-session/src/canonical_sync_v2_adapter.rs` as a dormant,
+  transport-independent `/cbor/2` client/server state machine. It signs typed
+  inventory/diff frames and validates every closed frame after encoding and
+  strict decoding in regression.
+- `CanonicalSyncV2Store` preserves the complete namespace-aware Event key and
+  defines atomic/idempotent batch semantics. `CanonicalSyncV2EventPolicy` is a
+  mandatory pre-storage authorization boundary; the active store and concrete
+  legacy/canonical membership policy remain deliberately unimplemented.
+- Focused debug/offline regression passed 3/3 with two Cargo jobs and
+  BelowNormal priority. It covers both carrier encodings and both transfer
+  directions, plus policy rejection, duplicate inventory and incomplete store
+  reads.
+- `CANONICAL-SYNC-V2-RUNTIME-ADAPTER.json`, RFC-0183 and a dedicated negative
+  boundary record that the module is absent from active CLI/Iroh transport.
+  Aggregate migration, transport, history and coverage boundaries were updated
+  without changing endpoint registration or dial behavior.
+- Full `kilogram-session` regression passed 8/8. Final rustfmt, workspace
+  locked/offline strict Clippy and accepted-tag readiness passed 89/89 against
+  immutable `M1.0.0`; readiness started no Rust test executable and executed no
+  network operation.
+- No release build, archive, stable executable replacement, push or tag belongs
+  to this stage.

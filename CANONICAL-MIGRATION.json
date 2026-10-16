@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.56",
-  "status": "history-compatible-successor-capability-verified-not-active",
+  "milestone": "M1.1.57",
+  "status": "dormant-history-compatible-runtime-state-machine-verified-not-active",
   "changes_active_wire": false,
   "current_encoding": "postcard",
   "candidate_encoding": "kilogram-deterministic-cbor-v2-typed-history",
@@ -15,6 +15,7 @@
     "closed_sync_frames": "verified",
     "typed_session_checkpoint": "verified",
     "authenticated_ticket_capability": "verified",
+    "dormant_runtime_state_machine": "verified",
     "registered": false,
     "dialed": false
   },
@@ -170,6 +171,10 @@
     },
     {
       "id": "history-compatible-canonical-sync-generation",
+      "status": "verified"
+    },
+    {
+      "id": "dormant-history-compatible-runtime-state-machine",
       "status": "verified"
     },
     {

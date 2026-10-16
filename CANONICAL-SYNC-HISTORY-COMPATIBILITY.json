@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.56",
-  "status": "history-compatible-generation-capability-verified-not-active",
+  "milestone": "M1.1.57",
+  "status": "dormant-history-compatible-runtime-state-machine-verified-not-active",
   "changes_active_wire": false,
   "active": {
     "encoding": "postcard-v6",
@@ -42,10 +42,11 @@
     "closed_sync_frames_integrated": true,
     "typed_session_checkpoint_integrated": true,
     "ticket_capability_authenticated": true,
+    "dormant_runtime_state_machine_integrated": true,
     "must_integrate_bridge_into_closed_frames": true,
     "must_authenticate_exact_identifier_in_connection_ticket": true,
     "must_preserve_no-sniffing-and-no-parse-fallback": true,
-    "status": "closed-generation-and-capability-verified-not-active"
+    "status": "dormant-state-machine-verified-not-active"
   },
   "forbidden": [
     "resign-historical-event-with-migration-key",

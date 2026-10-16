@@ -6347,3 +6347,27 @@ correlation visible, Windows-only field evidence, independent security audit
   или network process readiness-прогоном не запускался;
 - `/cbor/2` остаётся unregistered/undialed, active Postcard wire не менялся.
   Network, release/archive/stable EXE/push/tag не выполнялись.
+
+### M1.1.57 — dormant history-compatible sync runtime adapter: принято локально
+
+- в `kilogram-session` добавлен transport-independent client/server
+  state machine для exact `kilogram/m1/sync/cbor/2`; каждый переход проходит
+  через closed canonical frame encoder и strict decoder;
+- signed inventory/diff связывают conversation, session, requester и responder,
+  а reconciliation сохраняет полный `(namespace, Event ID)` и требует exact
+  requested/completion sets;
+- generic `CanonicalSyncV2Store` задаёт atomic/idempotent typed storage
+  boundary; обязательный `CanonicalSyncV2EventPolicy` выполняется до любой
+  записи принятого carrier;
+- focused regression прошёл 3/3: legacy Postcard и native canonical carriers
+  сходятся в обоих направлениях, policy rejection, duplicate inventory и
+  incomplete store read fail closed; dedicated и связанные aggregate boundary
+  normal/self-tests прошли;
+- active EventStore, concrete membership policy, durable checkpoint transaction
+  и mutual capability selection остаются pending. `/cbor/2` не зарегистрирован
+  и не dial-ится, active Postcard v6 не менялся;
+- полный `kilogram-session` regression прошёл 8/8; rustfmt, workspace-wide
+  locked/offline strict Clippy и accepted-tag readiness прошли 89/89 против
+  immutable `M1.0.0`. Readiness не запускал test executable и не выполнял
+  network operation;
+- release/archive/stable EXE, push и tag на этом этапе не выполнялись.

@@ -3354,6 +3354,7 @@ dependencies = [
  "kilogram-protocol",
  "kilogram-ratchet",
  "kilogram-store",
+ "serde_json",
  "tempfile",
  "thiserror 2.0.20",
 ]

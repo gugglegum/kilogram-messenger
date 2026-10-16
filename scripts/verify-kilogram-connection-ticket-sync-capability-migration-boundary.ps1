@@ -194,8 +194,8 @@ function Assert-Boundary {
         'crates/kilogram-sync-capability/src/lib.rs|SYNC_TRANSPORT_CAPABILITY_VERSION|u8|2'
     ) 'connection-ticket compatibility bindings'
 
-    if ([string]$TransportManifest.milestone -cne 'M1.1.56' -or
-        [string]$TransportManifest.status -cne 'history-compatible-successor-capability-verified-not-active' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.57' -or
+        [string]$TransportManifest.status -cne 'dormant-history-compatible-runtime-state-machine-verified-not-active' -or
         [string]$TransportManifest.active.alpn -cne $legacyAlpn -or
         -not [bool]$TransportManifest.active.registered -or
         -not [bool]$TransportManifest.active.dialed -or
@@ -206,6 +206,7 @@ function Assert-Boundary {
         [string]$TransportManifest.history_compatible_successor.alpn -cne
             $canonicalAlpn -or
         -not [bool]$TransportManifest.history_compatible_successor.authenticated_ticket_capability -or
+        -not [bool]$TransportManifest.history_compatible_successor.dormant_runtime_state_machine -or
         [bool]$TransportManifest.history_compatible_successor.registered -or
         [bool]$TransportManifest.history_compatible_successor.dialed -or
         [string]$TransportManifest.authenticated_capability.portable_artifact -cne
@@ -226,8 +227,8 @@ function Assert-Boundary {
     $capabilityRequirement = @($CanonicalMigration.activation_requirements | Where-Object {
         [string]$_.id -ceq 'authenticated-capability-envelope'
     })
-    if ([string]$CanonicalMigration.milestone -cne 'M1.1.56' -or
-        [string]$CanonicalMigration.status -cne 'history-compatible-successor-capability-verified-not-active' -or
+    if ([string]$CanonicalMigration.milestone -cne 'M1.1.57' -or
+        [string]$CanonicalMigration.status -cne 'dormant-history-compatible-runtime-state-machine-verified-not-active' -or
         [string]$CanonicalMigration.current_state -cne 'legacy-only' -or
         [string]$CanonicalMigration.candidate_protocol_identifier -cne $canonicalAlpn -or
         [string]$CanonicalMigration.history_compatible_successor.authenticated_ticket_capability -cne
@@ -241,13 +242,13 @@ function Assert-Boundary {
     $coverageSurface = @($Coverage.surfaces | Where-Object {
         [string]$_.id -ceq 'transport-sync'
     })
-    if ([string]$Coverage.milestone -cne 'M1.1.56' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.57' -or
         $coverageSurface.Count -ne 1 -or
         [string]$coverageSurface[0].coverage -cne 'partial' -or
         (@($coverageSurface[0].covered) -join ',') -cne
-            'parallel-cbor-alpn-identifier-allocation,history-compatible-cbor-v2-alpn-identifier-allocation,typed-durable-canonical-sync-session-checkpoint,authenticated-ticket-v13-history-compatible-cbor-v2-capability' -or
+            'parallel-cbor-alpn-identifier-allocation,history-compatible-cbor-v2-alpn-identifier-allocation,typed-durable-canonical-sync-session-checkpoint,authenticated-ticket-v13-history-compatible-cbor-v2-capability,dormant-history-compatible-sync-v2-runtime-state-machine' -or
         (@($coverageSurface[0].remaining) -join ',') -cne
-            'active-dual-reader-and-canonical-capability-activation') {
+            'active-typed-store-membership-policy-checkpoint-and-capability-integration') {
         throw 'canonical coverage did not record the authenticated capability envelope'
     }
 

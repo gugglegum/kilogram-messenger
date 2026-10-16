@@ -1,3 +1,5 @@
+pub mod canonical_sync_v2_adapter;
+
 use std::collections::HashSet;
 
 use kilogram_identity::{

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.56",
-  "status": "history-compatible-successor-capability-verified-not-active",
+  "milestone": "M1.1.57",
+  "status": "dormant-history-compatible-runtime-state-machine-verified-not-active",
   "surface": "transport-sync",
   "changes_active_wire": false,
   "active": {
@@ -28,6 +28,7 @@
     "closed_sync_frames": true,
     "typed_session_checkpoint": true,
     "authenticated_ticket_capability": true,
+    "dormant_runtime_state_machine": true,
     "registered": false,
     "dialed": false,
     "format_sniffing": false,
@@ -58,7 +59,7 @@
     ]
   },
   "remaining": [
-    "active-dual-reader-and-canonical-capability-activation",
+    "active-typed-store-membership-policy-checkpoint-and-capability-integration",
     "mixed-version-and-downgrade-tests",
     "rollback-drill",
     "sustained-fuzzing",

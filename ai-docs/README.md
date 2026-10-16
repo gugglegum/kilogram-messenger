@@ -1033,6 +1033,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.1.56 переводит portable ticket v12→v13 и signed sync capability v1→v2,
   аутентифицирует exact `/cbor/2` candidate и fail closed отвергает `/cbor/1`,
   не регистрируя и не dial-я canonical ALPN.
+- [`../docs/RFC-0183-m1157-dormant-history-compatible-sync-runtime-adapter.md`](../docs/RFC-0183-m1157-dormant-history-compatible-sync-runtime-adapter.md) —
+  M1.1.57 добавляет dormant transport-independent `/cbor/2` client/server
+  state machine с full typed-key reconciliation и mandatory pre-storage policy,
+  но не подключает active store/checkpoint и не регистрирует/dial-ит ALPN.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

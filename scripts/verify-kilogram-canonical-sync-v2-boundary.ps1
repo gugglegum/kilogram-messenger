@@ -127,17 +127,17 @@ function Assert-Contract {
         throw 'canonical sync v2 nested carrier vector boundary changed'
     }
 
-    if ([string]$Compatibility.milestone -cne 'M1.1.56' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.57' -or
         [string]$Compatibility.status -cne
-            'history-compatible-generation-capability-verified-not-active' -or
+            'dormant-history-compatible-runtime-state-machine-verified-not-active' -or
         -not [bool]$Compatibility.required_successor.closed_sync_frames_integrated -or
         -not [bool]$Compatibility.required_successor.typed_session_checkpoint_integrated -or
         -not [bool]$Compatibility.required_successor.ticket_capability_authenticated) {
         throw 'canonical sync compatibility frame ledger changed'
     }
-    if ([string]$Migration.milestone -cne 'M1.1.56' -or
+    if ([string]$Migration.milestone -cne 'M1.1.57' -or
         [string]$Migration.status -cne
-            'history-compatible-successor-capability-verified-not-active' -or
+            'dormant-history-compatible-runtime-state-machine-verified-not-active' -or
         [string]$Migration.history_compatible_successor.closed_sync_frames -cne 'verified' -or
         [string]$Migration.history_compatible_successor.typed_session_checkpoint -cne 'verified' -or
         [bool]$Migration.history_compatible_successor.registered -or
@@ -151,7 +151,7 @@ function Assert-Contract {
         [string]$frameRequirement[0].status -cne 'verified') {
         throw 'canonical migration omitted verified history-compatible frames'
     }
-    if ([string]$TransportManifest.milestone -cne 'M1.1.56' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.57' -or
         [string]$TransportManifest.history_compatible_successor.alpn -cne $successorAlpn -or
         -not [bool]$TransportManifest.history_compatible_successor.closed_sync_frames -or
         -not [bool]$TransportManifest.history_compatible_successor.typed_session_checkpoint -or

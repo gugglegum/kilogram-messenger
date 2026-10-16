@@ -115,8 +115,9 @@ function Assert-Contract {
         -not [bool]$Compatibility.required_successor.closed_sync_frames_integrated -or
         -not [bool]$Compatibility.required_successor.typed_session_checkpoint_integrated -or
         -not [bool]$Compatibility.required_successor.ticket_capability_authenticated -or
+        -not [bool]$Compatibility.required_successor.dormant_runtime_state_machine_integrated -or
         [string]$Compatibility.required_successor.status -cne
-            'closed-generation-and-capability-verified-not-active') {
+            'dormant-state-machine-verified-not-active') {
         throw 'canonical sync history compatibility ledger changed'
     }
     if ([string]$Migration.history_compatible_successor.protocol_identifier -cne
@@ -127,6 +128,8 @@ function Assert-Contract {
         [string]$Migration.history_compatible_successor.closed_sync_frames -cne 'verified' -or
         [string]$Migration.history_compatible_successor.typed_session_checkpoint -cne 'verified' -or
         [string]$Migration.history_compatible_successor.authenticated_ticket_capability -cne
+            'verified' -or
+        [string]$Migration.history_compatible_successor.dormant_runtime_state_machine -cne
             'verified' -or
         [bool]$Migration.history_compatible_successor.registered -or
         [bool]$Migration.history_compatible_successor.dialed -or
@@ -145,6 +148,7 @@ function Assert-Contract {
         -not [bool]$TransportManifest.history_compatible_successor.closed_sync_frames -or
         -not [bool]$TransportManifest.history_compatible_successor.typed_session_checkpoint -or
         -not [bool]$TransportManifest.history_compatible_successor.authenticated_ticket_capability -or
+        -not [bool]$TransportManifest.history_compatible_successor.dormant_runtime_state_machine -or
         [bool]$TransportManifest.history_compatible_successor.registered -or
         [bool]$TransportManifest.history_compatible_successor.dialed -or
         [bool]$TransportManifest.authenticated_capability.canonical_dial_enabled) {

@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.57",
+  "status": "dormant-history-compatible-sync-v2-runtime-state-machine-verified-not-active",
+  "changes_active_wire": false,
+  "protocol_identifier": "kilogram/m1/sync/cbor/2",
+  "module": {
+    "crate": "kilogram-session",
+    "path": "crates/kilogram-session/src/canonical_sync_v2_adapter.rs",
+    "export": "canonical_sync_v2_adapter",
+    "referenced_by_active_cli": false,
+    "referenced_by_iroh_transport": false
+  },
+  "contracts": {
+    "typed_store_trait": "CanonicalSyncV2Store",
+    "authorization_policy_trait": "CanonicalSyncV2EventPolicy",
+    "client_state_machine": "CanonicalSyncV2Client",
+    "server_state_machine": "CanonicalSyncV2Server",
+    "full_typed_key_preserved": true,
+    "exact_requested_key_set_required": true,
+    "exact_completion_key_set_required": true,
+    "conversation_and_session_bound": true,
+    "requester_and_responder_bound": true,
+    "policy_checked_before_store": true,
+    "parse_error_fallback": false,
+    "format_sniffing": false
+  },
+  "regression": {
+    "closed_frames_encoded_and_decoded_between_state_transitions": true,
+    "legacy_postcard_carrier_bidirectional": true,
+    "canonical_cbor_carrier_bidirectional": true,
+    "policy_rejection_prevents_storage": true,
+    "duplicate_inventory_fails_closed": true,
+    "incomplete_store_read_fails_closed": true
+  },
+  "activation": {
+    "endpoint_registered": false,
+    "canonical_dial_enabled": false,
+    "active_event_store_implemented": false,
+    "active_membership_policy_implemented": false,
+    "durable_checkpoint_runtime_integrated": false,
+    "mutual_capability_selection_integrated": false
+  },
+  "remaining": [
+    "active-typed-store-implementation",
+    "legacy-and-canonical-membership-policy-implementation",
+    "durable-checkpoint-runtime-integration",
+    "mutual-authenticated-capability-selection",
+    "mixed-version-and-downgrade-tests",
+    "rollback-drill",
+    "sustained-fuzzing",
+    "fresh-hosted-and-field-evidence"
+  ],
+  "scope": {
+    "network_executed": false,
+    "release_build": false,
+    "archive_created": false,
+    "stable_executable_replaced": false
+  }
+}

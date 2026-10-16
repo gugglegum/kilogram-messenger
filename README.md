@@ -2255,7 +2255,7 @@ insufficient: the requester must present a certificate and authority snapshot
 for the allowed account and prove possession of its device key.
 The ticket contains neither the Iroh endpoint secret nor any application secret.
 Ticket JSON, Postcard messages, and development conversation-label derivation
-remain provisional choices. Ticket v12 intentionally does not decode v1-v11
+remain provisional choices. Ticket v13 intentionally does not decode v1-v12
 tickets; restart the listener to generate a ticket matching this build. See
 [`RFC-0002`](docs/RFC-0002-account-device-authority.md) for snapshot and
 first-contact freshness boundaries.
@@ -2318,6 +2318,15 @@ Device-signed sync capability from v1 to v2. The inactive candidate is now
 exactly `/cbor/2`; `/cbor/1` and old ticket/capability generations fail closed.
 The active set still contains only Postcard v6, `canonical_dial_enabled` is
 false, and `/cbor/2` remains absent from endpoint registration and dial paths.
+
+[`RFC-0183`](docs/RFC-0183-m1157-dormant-history-compatible-sync-runtime-adapter.md)
+adds a transport-independent dormant client/server state machine for exact
+`/cbor/2` frames. Its generic store contract preserves the full typed Event
+key, and a mandatory policy hook authorizes each received carrier before it can
+reach storage. Regression covers both legacy Postcard and native canonical
+carriers in both transfer directions. There is still no active store, runtime
+membership policy, checkpoint transaction, endpoint registration or dial path;
+Postcard v6 remains the only active synchronization wire.
 
 ## Contributing
 
