@@ -4133,6 +4133,34 @@ Hosted follow-up:
 - No network operation, release build, archive, stable executable replacement,
   push or tag belongs to this stage.
 
+## M1.1.64 checkpoint-bound runtime frame journal (2026-10-16)
+
+- Added `canonical-sync-v2-session-runtime-v1` to the dormant redb database.
+  Its key reuses exact session identity and its value contains a version,
+  current checkpoint ID, strict presence marker and optional closed canonical
+  client-frame bytes.
+- Bootstrap creates an empty record. Signed successor append reads, verifies
+  and rebinds the record in the same immediate-durability transaction as the
+  immutable successor and head. An exact legacy-bootstrap replay backfills only
+  an absent empty record.
+- `session_runtime_state` verifies the complete signed chain before exposing a
+  decoded frame. `set_session_pending_client_frame` is current-head-bound and
+  write-once; exact replay succeeds while stale or different frames fail
+  closed. Inventory restore also checks local Device and session binding.
+- Regression covers reopen, preserved successor rebind, idempotent retry,
+  conflicting/stale/cross-session frames, corrupt checkpoint binding, invalid
+  presence and missing runtime records. Full workspace debug/offline tests
+  completed without failures; `kilogram-store` passed 26/26 and
+  `kilogram-session` passed 12/12.
+- Fifteen related boundary scripts passed both normal and negative self-test
+  modes (30/30). All 94 root JSON documents parsed. Rustfmt, workspace
+  locked/offline strict Clippy and accepted-tag readiness passed 96/96 against
+  immutable `M1.0.0`.
+- Cargo used two jobs and BelowNormal process priority. No active network path,
+  release build, archive, stable executable replacement, push or tag was
+  created. The next slice must atomically couple adapter transitions, received
+  carrier writes and signed successors, then resume the exact restored action.
+
 ## M1.1.63 dormant signed session successor store (2026-10-16)
 
 - `CanonicalSyncV2CarrierStore` now appends a verified Device-signed successor

@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.64",
+  "status": "dormant-checkpoint-bound-runtime-frame-journal-verified-not-active",
+  "changes_active_wire": false,
+  "protocol_identifier": "kilogram/m1/sync/cbor/2",
+  "implementation": {
+    "crate": "kilogram-store",
+    "store": "CanonicalSyncV2CarrierStore",
+    "runtime_type": "CanonicalSyncV2StoredSessionRuntime",
+    "runtime_table": "canonical-sync-v2-session-runtime-v1",
+    "restore_api": "session_runtime_state",
+    "install_frame_api": "set_session_pending_client_frame",
+    "maximum_pending_frame_bytes": 8388608
+  },
+  "contracts": {
+    "runtime_record_bound_to_exact_checkpoint_id": true,
+    "pending_frame_uses_closed_canonical_client_frame_codec": true,
+    "pending_frame_reverified_on_restore": true,
+    "pending_frame_conversation_binding_verified": true,
+    "inventory_local_device_binding_verified": true,
+    "inventory_session_binding_verified": true,
+    "runtime_record_created_with_session_bootstrap": true,
+    "runtime_record_rebound_with_successor_and_head_transaction": true,
+    "runtime_frame_write_once_per_checkpoint": true,
+    "exact_frame_retry_idempotent": true,
+    "different_frame_same_checkpoint_rejected": true,
+    "stale_checkpoint_update_rejected": true,
+    "missing_or_orphan_runtime_record_rejected": true,
+    "malformed_runtime_record_rejected": true,
+    "legacy_bootstrap_exact_replay_backfills_empty_runtime_record": true,
+    "format_sniffing": false,
+    "parse_error_fallback": false
+  },
+  "regression": {
+    "empty_bootstrap_runtime_restored": true,
+    "pending_inventory_survives_reopen": true,
+    "successor_rebind_preserves_exact_frame": true,
+    "exact_frame_replay_idempotent": true,
+    "different_frame_conflict_rejected": true,
+    "stale_checkpoint_update_rejected": true,
+    "cross_session_frame_rejected": true,
+    "corrupt_checkpoint_binding_rejected": true,
+    "invalid_presence_marker_rejected": true,
+    "missing_runtime_record_rejected": true
+  },
+  "activation": {
+    "checkpoint_bound_runtime_frame_journal_integrated": true,
+    "runtime_transition_checkpointing_integrated": false,
+    "runtime_resume_from_checkpoint_integrated": false,
+    "mutual_capability_selection_integrated": false,
+    "endpoint_registered": false,
+    "canonical_dial_enabled": false
+  },
+  "remaining": [
+    "signed-checkpoint-runtime-transition-integration",
+    "atomic-received-carrier-and-checkpoint-transition",
+    "mutual-authenticated-capability-selection",
+    "mixed-version-and-downgrade-tests",
+    "rollback-drill",
+    "sustained-fuzzing",
+    "fresh-hosted-and-field-evidence"
+  ],
+  "scope": {
+    "network_executed": false,
+    "release_build": false,
+    "archive_created": false,
+    "stable_executable_replaced": false
+  }
+}

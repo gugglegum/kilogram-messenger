@@ -113,9 +113,9 @@ function Assert-Contract {
         throw 'canonical sync v2 dormant adapter remaining-work boundary changed'
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.63' -or
+    if ([string]$Migration.milestone -cne 'M1.1.64' -or
         [string]$Migration.status -cne
-            'dormant-signed-session-successor-store-verified-not-active' -or
+            'dormant-checkpoint-bound-runtime-frame-journal-verified-not-active' -or
         [string]$Migration.current_state -cne 'legacy-only' -or
         [bool]$Migration.candidate_identifier_registered -or
         [string]$Migration.history_compatible_successor.dormant_runtime_state_machine -cne
@@ -145,9 +145,9 @@ function Assert-Contract {
         throw 'canonical migration confused dormant verification with active runtime support'
     }
 
-    if ([string]$TransportManifest.milestone -cne 'M1.1.63' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.64' -or
         [string]$TransportManifest.status -cne
-            'dormant-signed-session-successor-store-verified-not-active' -or
+            'dormant-checkpoint-bound-runtime-frame-journal-verified-not-active' -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_runtime_state_machine -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_atomic_typed_store -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_cross_format_membership_policy -or
@@ -166,7 +166,7 @@ function Assert-Contract {
     }
 
     $surface = @($Coverage.surfaces | Where-Object { [string]$_.id -ceq 'transport-sync' })
-    if ([string]$Coverage.milestone -cne 'M1.1.63' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.64' -or
         $surface.Count -ne 1 -or [string]$surface[0].coverage -cne 'partial' -or
         'dormant-history-compatible-sync-v2-runtime-state-machine' -cnotin
             @($surface[0].covered) -or

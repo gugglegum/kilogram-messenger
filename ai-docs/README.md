@@ -1066,6 +1066,11 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   immutable journal и после reopen проверяет всю bounded chain от exact
   sequence-1 bootstrap до head. Gap/fork/missing/corrupt ancestry fail closed;
   runtime transitions и mutual capability selection ещё не подключены.
+- [`../docs/RFC-0190-m1164-checkpoint-bound-runtime-frame-journal.md`](../docs/RFC-0190-m1164-checkpoint-bound-runtime-frame-journal.md) —
+  M1.1.64 exact-связывает pending canonical client frame с текущим verified
+  signed checkpoint в отдельной versioned redb table. Bootstrap/successor
+  атомарно создают или rebind-ят runtime record, frame write-once и strict
+  reverified после reopen; runtime transition/resume ещё не подключены.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

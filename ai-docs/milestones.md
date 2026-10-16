@@ -6509,6 +6509,34 @@ correlation visible, Windows-only field evidence, independent security audit
   runtime transitions, затем mutual authenticated capability selection;
   release/archive/stable EXE, push и tag не выполнялись.
 
+### M1.1.64 — checkpoint-bound runtime frame journal: принято локально
+
+- `CanonicalSyncV2CarrierStore` получил отдельную versioned redb table для
+  local runtime record: exact content-derived ID текущего verified signed
+  checkpoint плюс optional strict canonical client frame;
+- bootstrap создаёт empty runtime record, а generic signed-successor append
+  rebind-ит сохранённый frame к новому checkpoint ID в той же
+  immediate-durability transaction, что immutable record и replacement head;
+- `set_session_pending_client_frame` принимает только current durable head.
+  Первичная запись write-once, exact lost-response retry идемпотентен, другой
+  frame на том же head и stale checkpoint fail closed;
+- restore сначала проверяет всю signed checkpoint chain, затем exact runtime
+  binding и closed client-frame codec. Inventory дополнительно связан с local
+  Device и session binding; malformed presence, wrong conversation, missing,
+  orphan или checkpoint-mismatched record отвергаются;
+- exact replay старого M1.1.62/M1.1.63 bootstrap может backfill-ить только
+  missing empty runtime record, не угадывая pending frame;
+- full workspace debug/offline unit regression завершился без failures;
+  `kilogram-store` прошёл 26/26, `kilogram-session` — 12/12. Пятнадцать
+  связанных boundaries прошли normal и negative self-test (30/30);
+- все 94 root JSON documents parsed, rustfmt, workspace locked/offline strict
+  Clippy и accepted-tag readiness прошли 96/96 против immutable `M1.0.0`;
+- это exact-frame prerequisite, но ещё не transition engine: state machine не
+  создаёт successor на каждом принятом frame, received carrier не коммитится
+  атомарно с checkpoint, restored action не dispatch-ится. `/cbor/2` остаётся
+  unregistered/undialed; network/release/archive/stable EXE/push/tag не
+  выполнялись.
+
 ### M1.1.63 — dormant signed session successor store: принято локально
 
 - `CanonicalSyncV2CarrierStore::append_session_checkpoint_successor` требует

@@ -109,9 +109,9 @@ function Assert-BridgeContract {
     Assert-LowerHex ([string]$Vectors.expected.bridge_cbor_hex) -1 'bridge CBOR'
 
     if ([UInt64]$Compatibility.schema_version -ne 1 -or
-        [string]$Compatibility.milestone -cne 'M1.1.63' -or
+        [string]$Compatibility.milestone -cne 'M1.1.64' -or
         [string]$Compatibility.status -cne
-            'dormant-signed-session-successor-store-verified-not-active' -or
+            'dormant-checkpoint-bound-runtime-frame-journal-verified-not-active' -or
         [bool]$Compatibility.changes_active_wire -or
         [string]$Compatibility.active.alpn -cne $legacyAlpn -or
         -not [bool]$Compatibility.active.history_compatible -or
@@ -151,7 +151,7 @@ function Assert-BridgeContract {
         -not [bool]$Compatibility.required_successor.must_integrate_bridge_into_closed_frames -or
         -not [bool]$Compatibility.required_successor.must_authenticate_exact_identifier_in_connection_ticket -or
         [string]$Compatibility.required_successor.status -cne
-            'dormant-store-policy-import-checkpoint-session-bootstrap-and-successor-store-verified-not-active') {
+            'dormant-store-policy-import-checkpoint-session-bootstrap-successor-store-and-runtime-frame-journal-verified-not-active') {
         throw 'canonical sync legacy-event bridge or successor contract changed'
     }
 

@@ -123,7 +123,7 @@ function Assert-Contract {
         -not [bool]$Compatibility.required_successor.dormant_signed_session_bootstrap_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_signed_session_successor_store_integrated -or
         [string]$Compatibility.required_successor.status -cne
-            'dormant-store-policy-import-checkpoint-session-bootstrap-and-successor-store-verified-not-active') {
+            'dormant-store-policy-import-checkpoint-session-bootstrap-successor-store-and-runtime-frame-journal-verified-not-active') {
         throw 'canonical sync history compatibility ledger changed'
     }
     if ([string]$Migration.history_compatible_successor.protocol_identifier -cne

@@ -2386,6 +2386,16 @@ corruption and missing ancestry fail closed. Runtime frame transitions do not
 yet emit or resume from these checkpoints, so `/cbor/2` remains unregistered
 and undialed pending runtime integration and mutual capability selection.
 
+[`RFC-0190`](docs/RFC-0190-m1164-checkpoint-bound-runtime-frame-journal.md)
+adds the missing local exact-frame prerequisite for restart. A versioned redb
+runtime record binds either no pending client frame or the strict canonical
+Inventory/EventBatch bytes to the current verified signed checkpoint. Bootstrap
+and successor writes create or rebind that record atomically; frame install is
+write-once, exact retry is idempotent, and stale, conflicting, malformed or
+orphan state fails closed. The state machine still does not advance or resume
+from this journal, so active Postcard v6 is unchanged and `/cbor/2` remains
+unregistered and undialed.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected
