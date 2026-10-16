@@ -1041,6 +1041,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.1.58 добавляет отдельную atomic redb БД с full typed storage key, strict
   carrier validation и fail-closed batch conflict, не импортируя active legacy
   history и не подключая `/cbor/2` к runtime.
+- [`../docs/RFC-0185-m1159-dormant-cross-format-membership-policy.md`](../docs/RFC-0185-m1159-dormant-cross-format-membership-policy.md) —
+  M1.1.59 добавляет dormant concrete membership policy: legacy Postcard и
+  canonical-CBOR membership snapshots независимо авторизуют оба closed carrier
+  формата без sniffing, fallback и подключения `/cbor/2` к active runtime.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

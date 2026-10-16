@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.58",
-  "status": "dormant-atomic-typed-store-verified-not-active",
+  "milestone": "M1.1.59",
+  "status": "dormant-cross-format-membership-policy-verified-not-active",
   "changes_active_wire": false,
   "active": {
     "encoding": "postcard-v6",
@@ -44,10 +44,11 @@
     "ticket_capability_authenticated": true,
     "dormant_runtime_state_machine_integrated": true,
     "dormant_atomic_typed_store_integrated": true,
+    "dormant_cross_format_membership_policy_integrated": true,
     "must_integrate_bridge_into_closed_frames": true,
     "must_authenticate_exact_identifier_in_connection_ticket": true,
     "must_preserve_no-sniffing-and-no-parse-fallback": true,
-    "status": "dormant-typed-store-verified-not-active"
+    "status": "dormant-store-and-membership-policy-verified-not-active"
   },
   "forbidden": [
     "resign-historical-event-with-migration-key",

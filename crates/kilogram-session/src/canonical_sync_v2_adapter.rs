@@ -9,9 +9,13 @@
 
 use std::collections::{BTreeSet, HashSet};
 
-use kilogram_identity::{DeviceId, DeviceIdentity};
+use kilogram_identity::{AccountId, ConversationMembershipSnapshot, DeviceId, DeviceIdentity};
 use kilogram_protocol::{
     SyncSessionBinding,
+    canonical_account_v1::{
+        CanonicalSignedConversationMembershipV1, verify_signed_conversation_membership_v1,
+    },
+    canonical_event_v1::{verify_authorized_event_for_membership_v1, verify_authorized_event_v1},
     canonical_sync_history_v2::{CanonicalSyncEventCarrierV2, CanonicalSyncEventKeyV2},
     canonical_sync_v2::{
         CanonicalSignedSyncDiffV2, CanonicalSignedSyncInventoryV2, CanonicalSyncClientFrameV2,
@@ -87,6 +91,157 @@ pub trait CanonicalSyncV2EventPolicy {
         conversation_id: [u8; 32],
         event: &CanonicalSyncEventCarrierV2,
     ) -> Result<(), CanonicalSyncV2PolicyError>;
+}
+
+#[derive(Clone, Debug)]
+enum CanonicalSyncV2MembershipSnapshot {
+    Legacy(ConversationMembershipSnapshot),
+    Canonical(CanonicalSignedConversationMembershipV1),
+}
+
+/// Verified conversation-membership policy for either installed snapshot format.
+///
+/// One exact owner-signed snapshot authorizes both closed carrier variants. This
+/// avoids requiring historical conversation owners to re-sign installed
+/// Postcard membership state merely so a canonical event can be checked, while
+/// still supporting a future canonical membership snapshot without accepting
+/// format sniffing or a parse-error fallback.
+#[derive(Clone, Debug)]
+pub struct CanonicalSyncV2MembershipPolicy {
+    snapshot: CanonicalSyncV2MembershipSnapshot,
+}
+
+impl CanonicalSyncV2MembershipPolicy {
+    pub fn from_legacy(
+        membership: ConversationMembershipSnapshot,
+    ) -> Result<Self, CanonicalSyncV2PolicyError> {
+        membership.verify().map_err(|error| {
+            CanonicalSyncV2PolicyError::rejected(format!(
+                "legacy conversation membership snapshot verification failed: {error}"
+            ))
+        })?;
+        Ok(Self {
+            snapshot: CanonicalSyncV2MembershipSnapshot::Legacy(membership),
+        })
+    }
+
+    pub fn from_canonical(
+        membership: CanonicalSignedConversationMembershipV1,
+    ) -> Result<Self, CanonicalSyncV2PolicyError> {
+        verify_signed_conversation_membership_v1(&membership).map_err(|error| {
+            CanonicalSyncV2PolicyError::rejected(format!(
+                "canonical conversation membership snapshot verification failed: {error}"
+            ))
+        })?;
+        Ok(Self {
+            snapshot: CanonicalSyncV2MembershipSnapshot::Canonical(membership),
+        })
+    }
+
+    pub fn conversation_id(&self) -> [u8; 32] {
+        match &self.snapshot {
+            CanonicalSyncV2MembershipSnapshot::Legacy(membership) => {
+                *membership.conversation_id().as_bytes()
+            }
+            CanonicalSyncV2MembershipSnapshot::Canonical(membership) => {
+                membership.content.conversation_id
+            }
+        }
+    }
+
+    pub fn revision(&self) -> u64 {
+        match &self.snapshot {
+            CanonicalSyncV2MembershipSnapshot::Legacy(membership) => membership.revision(),
+            CanonicalSyncV2MembershipSnapshot::Canonical(membership) => membership.content.revision,
+        }
+    }
+}
+
+impl CanonicalSyncV2EventPolicy for CanonicalSyncV2MembershipPolicy {
+    fn verify_event(
+        &self,
+        conversation_id: [u8; 32],
+        event: &CanonicalSyncEventCarrierV2,
+    ) -> Result<(), CanonicalSyncV2PolicyError> {
+        if self.conversation_id() != conversation_id || event.conversation_id() != &conversation_id
+        {
+            return Err(CanonicalSyncV2PolicyError::rejected(
+                "carrier and membership conversation binding mismatch",
+            ));
+        }
+
+        match (&self.snapshot, event) {
+            (
+                CanonicalSyncV2MembershipSnapshot::Legacy(membership),
+                CanonicalSyncEventCarrierV2::LegacyPostcardV6(legacy),
+            ) => legacy
+                .active_authorized_event()
+                .verify_for_membership(membership)
+                .map_err(|error| {
+                    CanonicalSyncV2PolicyError::rejected(format!(
+                        "legacy carrier membership verification failed: {error}"
+                    ))
+                }),
+            (
+                CanonicalSyncV2MembershipSnapshot::Legacy(membership),
+                CanonicalSyncEventCarrierV2::CanonicalCborV1(canonical),
+            ) => {
+                verify_authorized_event_v1(canonical).map_err(|error| {
+                    CanonicalSyncV2PolicyError::rejected(format!(
+                        "canonical carrier authorization verification failed: {error}"
+                    ))
+                })?;
+                membership
+                    .require_member(AccountId::from_bytes(
+                        canonical.author_certificate.content.account_id,
+                    ))
+                    .map_err(|error| {
+                        CanonicalSyncV2PolicyError::rejected(format!(
+                            "canonical carrier legacy-membership verification failed: {error}"
+                        ))
+                    })
+            }
+            (
+                CanonicalSyncV2MembershipSnapshot::Canonical(membership),
+                CanonicalSyncEventCarrierV2::CanonicalCborV1(canonical),
+            ) => {
+                verify_authorized_event_for_membership_v1(canonical, membership).map_err(|error| {
+                    CanonicalSyncV2PolicyError::rejected(format!(
+                        "canonical carrier membership verification failed: {error}"
+                    ))
+                })
+            }
+            (
+                CanonicalSyncV2MembershipSnapshot::Canonical(membership),
+                CanonicalSyncEventCarrierV2::LegacyPostcardV6(legacy),
+            ) => {
+                verify_signed_conversation_membership_v1(membership).map_err(|error| {
+                    CanonicalSyncV2PolicyError::rejected(format!(
+                        "canonical membership snapshot verification failed: {error}"
+                    ))
+                })?;
+                legacy
+                    .active_authorized_event()
+                    .verify_author()
+                    .map_err(|error| {
+                        CanonicalSyncV2PolicyError::rejected(format!(
+                            "legacy carrier authorization verification failed: {error}"
+                        ))
+                    })?;
+                if membership
+                    .content
+                    .members
+                    .binary_search(legacy.author_account_id())
+                    .is_err()
+                {
+                    return Err(CanonicalSyncV2PolicyError::rejected(
+                        "legacy carrier author is not a canonical membership member",
+                    ));
+                }
+                Ok(())
+            }
+        }
+    }
 }
 
 #[derive(Debug, Error)]
@@ -612,6 +767,11 @@ fn event_keys(
 mod tests {
     use std::{cell::RefCell, collections::BTreeMap, error::Error, io};
 
+    use kilogram_identity::{AccountRootState, ConversationScopeId};
+    use kilogram_protocol::canonical_account_v1::{
+        CanonicalConversationMembershipContentV1, CanonicalSignedConversationMembershipV1,
+        conversation_membership_signing_bytes_v1,
+    };
     use kilogram_protocol::canonical_sync_history_v2::CanonicalSyncHistoryV2Error;
     use kilogram_protocol::canonical_sync_v2::{
         decode_and_verify_sync_client_frame_v2, decode_and_verify_sync_server_frame_v2,
@@ -767,6 +927,52 @@ mod tests {
             .map(|index| u8::from_str_radix(&hex[index..index + 2], 16))
             .collect::<Result<Vec<_>, _>>()?;
         Ok(CanonicalSyncEventCarrierV2::decode_and_verify(&bytes)?)
+    }
+
+    fn carrier_author_account_id(carrier: &CanonicalSyncEventCarrierV2) -> [u8; 32] {
+        match carrier {
+            CanonicalSyncEventCarrierV2::LegacyPostcardV6(legacy) => *legacy.author_account_id(),
+            CanonicalSyncEventCarrierV2::CanonicalCborV1(canonical) => {
+                canonical.author_certificate.content.account_id
+            }
+        }
+    }
+
+    fn legacy_membership(
+        conversation_id: [u8; 32],
+        members: &[[u8; 32]],
+    ) -> Result<ConversationMembershipSnapshot, Box<dyn Error>> {
+        let directory = tempdir()?;
+        let root = AccountRootState::create(directory.path())?;
+        let members = members
+            .iter()
+            .copied()
+            .map(AccountId::from_bytes)
+            .collect::<Vec<_>>();
+        Ok(root.create_conversation_membership(
+            ConversationScopeId::from_bytes(conversation_id),
+            &members,
+        )?)
+    }
+
+    fn canonical_membership(
+        conversation_id: [u8; 32],
+        members: &[[u8; 32]],
+    ) -> Result<CanonicalSignedConversationMembershipV1, Box<dyn Error>> {
+        let owner = DeviceIdentity::from_secret_bytes([0x93; 32]);
+        let owner_account_id = *owner.device_id().as_bytes();
+        let mut members = members.to_vec();
+        members.push(owner_account_id);
+        members.sort_unstable();
+        members.dedup();
+        let content = CanonicalConversationMembershipContentV1 {
+            conversation_id,
+            revision: 1,
+            owner_account_id,
+            members,
+        };
+        let signature = owner.sign(&conversation_membership_signing_bytes_v1(&content)?);
+        Ok(CanonicalSignedConversationMembershipV1 { content, signature })
     }
 
     fn decode_client_frame(
@@ -927,6 +1133,70 @@ mod tests {
             )?,
             vec![legacy]
         );
+        Ok(())
+    }
+
+    #[test]
+    fn concrete_membership_policy_accepts_both_carriers_with_both_snapshot_formats()
+    -> Result<(), Box<dyn Error>> {
+        for carrier in [
+            carrier("/expected/legacy_carrier_cbor_hex")?,
+            carrier("/expected/canonical_carrier_cbor_hex")?,
+        ] {
+            let conversation_id = *carrier.conversation_id();
+            let author_account_id = carrier_author_account_id(&carrier);
+
+            let legacy = CanonicalSyncV2MembershipPolicy::from_legacy(legacy_membership(
+                conversation_id,
+                &[author_account_id],
+            )?)?;
+            assert_eq!(legacy.conversation_id(), conversation_id);
+            assert_eq!(legacy.revision(), 1);
+            legacy.verify_event(conversation_id, &carrier)?;
+
+            let canonical = CanonicalSyncV2MembershipPolicy::from_canonical(canonical_membership(
+                conversation_id,
+                &[author_account_id],
+            )?)?;
+            assert_eq!(canonical.conversation_id(), conversation_id);
+            assert_eq!(canonical.revision(), 1);
+            canonical.verify_event(conversation_id, &carrier)?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn concrete_membership_policy_rejects_nonmembers_mismatch_and_invalid_snapshot()
+    -> Result<(), Box<dyn Error>> {
+        let carrier = carrier("/expected/canonical_carrier_cbor_hex")?;
+        let conversation_id = *carrier.conversation_id();
+
+        let legacy =
+            CanonicalSyncV2MembershipPolicy::from_legacy(legacy_membership(conversation_id, &[])?)?;
+        assert!(legacy.verify_event(conversation_id, &carrier).is_err());
+        assert!(legacy.verify_event([0x44; 32], &carrier).is_err());
+
+        let mut invalid_legacy_bytes = legacy_membership(conversation_id, &[])?.encode()?;
+        let Some(last_byte) = invalid_legacy_bytes.last_mut() else {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "a signed legacy membership encoded as empty bytes",
+            )
+            .into());
+        };
+        *last_byte ^= 1;
+        assert!(ConversationMembershipSnapshot::decode_and_verify(&invalid_legacy_bytes).is_err());
+
+        let canonical = CanonicalSyncV2MembershipPolicy::from_canonical(canonical_membership(
+            conversation_id,
+            &[],
+        )?)?;
+        assert!(canonical.verify_event(conversation_id, &carrier).is_err());
+
+        let mut invalid =
+            canonical_membership(conversation_id, &[carrier_author_account_id(&carrier)])?;
+        invalid.signature[0] ^= 1;
+        assert!(CanonicalSyncV2MembershipPolicy::from_canonical(invalid).is_err());
         Ok(())
     }
 

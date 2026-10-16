@@ -4132,3 +4132,29 @@ Hosted follow-up:
   started no Rust test executable and executed no network operation.
 - No network operation, release build, archive, stable executable replacement,
   push or tag belongs to this stage.
+
+## M1.1.59 dormant cross-format membership policy (2026-10-16)
+
+- Added `CanonicalSyncV2MembershipPolicy` to the dormant session adapter. It is
+  constructed from one explicit legacy Postcard or canonical-CBOR membership
+  snapshot and preserves its conversation ID and revision.
+- The complete 2-by-2 matrix authorizes both closed carrier variants from both
+  snapshot formats. Each path rechecks the snapshot signature, exact
+  conversation binding, carrier author authorization and Account membership
+  before the atomic typed store can be called; format sniffing and parse-error
+  fallback remain forbidden.
+- This cross-format rule lets an installed Root-signed conversation membership
+  authorize native canonical events without requiring the owner to re-sign
+  historical membership state solely for migration.
+- Focused regression passed 2/2 and full `kilogram-session` regression passed
+  11/11. The dedicated boundary plus nine related aggregate boundaries passed
+  normal and negative self-test modes.
+- `CANONICAL-SYNC-V2-MEMBERSHIP-POLICY.json`, RFC-0185 and the fail-closed
+  boundary keep the policy absent from active CLI, Iroh transport and wire
+  code. `/cbor/2` remains unregistered and undialed.
+- Final rustfmt, workspace locked/offline strict Clippy and accepted-tag
+  readiness passed 91/91 against immutable `M1.0.0`; readiness started no test
+  executable and executed no network operation.
+- Legacy import, checkpoint/store transaction and authenticated capability
+  selection remain pending. No release build, archive, stable executable
+  replacement, push or tag belongs to this stage.

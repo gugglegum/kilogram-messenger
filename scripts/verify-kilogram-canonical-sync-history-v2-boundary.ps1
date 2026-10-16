@@ -117,8 +117,9 @@ function Assert-Contract {
         -not [bool]$Compatibility.required_successor.ticket_capability_authenticated -or
         -not [bool]$Compatibility.required_successor.dormant_runtime_state_machine_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_atomic_typed_store_integrated -or
+        -not [bool]$Compatibility.required_successor.dormant_cross_format_membership_policy_integrated -or
         [string]$Compatibility.required_successor.status -cne
-            'dormant-typed-store-verified-not-active') {
+            'dormant-store-and-membership-policy-verified-not-active') {
         throw 'canonical sync history compatibility ledger changed'
     }
     if ([string]$Migration.history_compatible_successor.protocol_identifier -cne
@@ -133,6 +134,8 @@ function Assert-Contract {
         [string]$Migration.history_compatible_successor.dormant_runtime_state_machine -cne
             'verified' -or
         [string]$Migration.history_compatible_successor.dormant_atomic_typed_store -cne
+            'verified' -or
+        [string]$Migration.history_compatible_successor.dormant_cross_format_membership_policy -cne
             'verified' -or
         [bool]$Migration.history_compatible_successor.registered -or
         [bool]$Migration.history_compatible_successor.dialed -or
@@ -153,6 +156,7 @@ function Assert-Contract {
         -not [bool]$TransportManifest.history_compatible_successor.authenticated_ticket_capability -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_runtime_state_machine -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_atomic_typed_store -or
+        -not [bool]$TransportManifest.history_compatible_successor.dormant_cross_format_membership_policy -or
         [bool]$TransportManifest.history_compatible_successor.registered -or
         [bool]$TransportManifest.history_compatible_successor.dialed -or
         [bool]$TransportManifest.authenticated_capability.canonical_dial_enabled) {

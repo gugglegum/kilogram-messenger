@@ -6398,3 +6398,27 @@ correlation visible, Windows-only field evidence, independent security audit
   `kilogram-store` и 9/9 для `kilogram-session`; rustfmt, workspace-wide strict
   Clippy и accepted-tag readiness прошли 90/90 против immutable `M1.0.0`;
 - network, release/archive/stable EXE, push и tag на этом этапе не выполнялись.
+
+### M1.1.59 — dormant cross-format membership policy: принято локально
+
+- `kilogram-session` получил concrete `CanonicalSyncV2MembershipPolicy` для
+  exact `/cbor/2` pre-storage authorization. Policy принимает только явно
+  выбранный legacy Postcard либо canonical-CBOR membership snapshot;
+- полная матрица 2×2 позволяет каждому snapshot формату авторизовать legacy
+  exact-byte carrier и native canonical carrier. Snapshot signature,
+  conversation binding, carrier author authorization и membership проверяются
+  fail closed без sniffing или parse-error fallback;
+- cross-format bridge сохраняет установленную Root-signed membership authority:
+  owner не обязан переподписывать старую conversation state только ради
+  перехода на новый transport codec;
+- focused regression прошёл 2/2, полный `kilogram-session` regression — 11/11.
+  Dedicated и девять связанных aggregate boundary прошли normal/self-test;
+- отдельный manifest/RFC/boundary и aggregate migration/transport/history/
+  coverage contracts фиксируют отсутствие policy в active CLI, Iroh transport
+  и wire path. `/cbor/2` остаётся unregistered/undialed;
+- rustfmt, workspace-wide locked/offline strict Clippy и accepted-tag readiness
+  прошли 91/91 против immutable `M1.0.0`; readiness не запускал test executable
+  и не выполнял network operation;
+- legacy import, checkpoint/store transaction и authenticated capability
+  selection остаются следующими activation prerequisites. Release/archive,
+  stable EXE, push и tag на этом этапе не выполнялись.

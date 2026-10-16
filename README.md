@@ -2338,6 +2338,17 @@ Postcard history is not imported and this database is not used by the active
 runtime. Membership policy, checkpoint coupling and capability-driven
 activation remain separate fail-closed work.
 
+[`RFC-0185`](docs/RFC-0185-m1159-dormant-cross-format-membership-policy.md)
+adds the concrete dormant membership policy required before a received
+`/cbor/2` carrier may reach that store. Either the installed Postcard
+membership snapshot or its future canonical-CBOR successor can authorize both
+the exact legacy carrier and a native canonical event, while snapshot
+signature, conversation binding, event authorization and membership are all
+reverified fail closed. This deliberately avoids forcing owners to re-sign
+existing conversation membership solely for migration. Legacy import,
+checkpoint/store coupling and authenticated capability selection remain
+inactive follow-up work.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

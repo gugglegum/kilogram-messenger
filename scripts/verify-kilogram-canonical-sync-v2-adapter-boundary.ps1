@@ -113,14 +113,16 @@ function Assert-Contract {
         throw 'canonical sync v2 dormant adapter remaining-work boundary changed'
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.58' -or
+    if ([string]$Migration.milestone -cne 'M1.1.59' -or
         [string]$Migration.status -cne
-            'dormant-atomic-typed-store-verified-not-active' -or
+            'dormant-cross-format-membership-policy-verified-not-active' -or
         [string]$Migration.current_state -cne 'legacy-only' -or
         [bool]$Migration.candidate_identifier_registered -or
         [string]$Migration.history_compatible_successor.dormant_runtime_state_machine -cne
             'verified' -or
         [string]$Migration.history_compatible_successor.dormant_atomic_typed_store -cne
+            'verified' -or
+        [string]$Migration.history_compatible_successor.dormant_cross_format_membership_policy -cne
             'verified') {
         throw 'canonical migration omitted the dormant runtime state machine'
     }
@@ -137,27 +139,29 @@ function Assert-Contract {
         throw 'canonical migration confused dormant verification with active runtime support'
     }
 
-    if ([string]$TransportManifest.milestone -cne 'M1.1.58' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.59' -or
         [string]$TransportManifest.status -cne
-            'dormant-atomic-typed-store-verified-not-active' -or
+            'dormant-cross-format-membership-policy-verified-not-active' -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_runtime_state_machine -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_atomic_typed_store -or
+        -not [bool]$TransportManifest.history_compatible_successor.dormant_cross_format_membership_policy -or
         [bool]$TransportManifest.history_compatible_successor.registered -or
         [bool]$TransportManifest.history_compatible_successor.dialed -or
         [bool]$TransportManifest.authenticated_capability.canonical_dial_enabled -or
         [string]$TransportManifest.selection.current_state -cne 'legacy-only' -or
         (@($TransportManifest.remaining)[0]) -cne
-            'legacy-import-membership-policy-checkpoint-and-capability-integration') {
+            'legacy-import-checkpoint-and-capability-integration') {
         throw 'canonical transport manifest does not preserve dormant-only state'
     }
 
     $surface = @($Coverage.surfaces | Where-Object { [string]$_.id -ceq 'transport-sync' })
-    if ([string]$Coverage.milestone -cne 'M1.1.58' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.59' -or
         $surface.Count -ne 1 -or [string]$surface[0].coverage -cne 'partial' -or
         'dormant-history-compatible-sync-v2-runtime-state-machine' -cnotin
             @($surface[0].covered) -or
         'dormant-atomic-typed-carrier-store' -cnotin @($surface[0].covered) -or
-        'legacy-import-membership-policy-checkpoint-and-capability-integration' -cnotin
+        'dormant-cross-format-membership-policy' -cnotin @($surface[0].covered) -or
+        'legacy-import-checkpoint-and-capability-integration' -cnotin
             @($surface[0].remaining)) {
         throw 'canonical coverage omitted the dormant runtime state machine boundary'
     }

@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.59",
+  "status": "dormant-cross-format-membership-policy-verified-not-active",
+  "changes_active_wire": false,
+  "protocol_identifier": "kilogram/m1/sync/cbor/2",
+  "implementation": {
+    "crate": "kilogram-session",
+    "rust_type": "CanonicalSyncV2MembershipPolicy",
+    "policy_trait": "CanonicalSyncV2EventPolicy",
+    "legacy_snapshot_type": "ConversationMembershipSnapshot",
+    "canonical_snapshot_type": "CanonicalSignedConversationMembershipV1"
+  },
+  "contracts": {
+    "snapshot_signature_verified_at_construction": true,
+    "snapshot_signature_reverified_during_event_check": true,
+    "exact_conversation_binding_required": true,
+    "snapshot_revision_preserved": true,
+    "legacy_snapshot_authorizes_legacy_carrier": true,
+    "legacy_snapshot_authorizes_canonical_carrier": true,
+    "canonical_snapshot_authorizes_legacy_carrier": true,
+    "canonical_snapshot_authorizes_canonical_carrier": true,
+    "carrier_authorization_reverified": true,
+    "membership_checked_before_store": true,
+    "format_sniffing": false,
+    "parse_error_fallback": false
+  },
+  "regression": {
+    "two_snapshot_by_two_carrier_matrix": true,
+    "nonmember_rejected": true,
+    "conversation_mismatch_rejected": true,
+    "invalid_snapshot_signature_rejected": true,
+    "policy_rejection_prevents_storage": true
+  },
+  "activation": {
+    "active_runtime_policy": false,
+    "legacy_event_store_import_integrated": false,
+    "durable_checkpoint_runtime_integrated": false,
+    "endpoint_registered": false,
+    "canonical_dial_enabled": false
+  },
+  "remaining": [
+    "legacy-event-store-import",
+    "durable-checkpoint-runtime-integration",
+    "mutual-authenticated-capability-selection",
+    "mixed-version-and-downgrade-tests",
+    "rollback-drill",
+    "sustained-fuzzing",
+    "fresh-hosted-and-field-evidence"
+  ],
+  "scope": {
+    "network_executed": false,
+    "release_build": false,
+    "archive_created": false,
+    "stable_executable_replaced": false
+  }
+}

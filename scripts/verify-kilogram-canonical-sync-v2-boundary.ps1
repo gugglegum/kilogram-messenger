@@ -127,18 +127,19 @@ function Assert-Contract {
         throw 'canonical sync v2 nested carrier vector boundary changed'
     }
 
-    if ([string]$Compatibility.milestone -cne 'M1.1.58' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.59' -or
         [string]$Compatibility.status -cne
-            'dormant-atomic-typed-store-verified-not-active' -or
+            'dormant-cross-format-membership-policy-verified-not-active' -or
         -not [bool]$Compatibility.required_successor.closed_sync_frames_integrated -or
         -not [bool]$Compatibility.required_successor.typed_session_checkpoint_integrated -or
         -not [bool]$Compatibility.required_successor.ticket_capability_authenticated -or
-        -not [bool]$Compatibility.required_successor.dormant_atomic_typed_store_integrated) {
+        -not [bool]$Compatibility.required_successor.dormant_atomic_typed_store_integrated -or
+        -not [bool]$Compatibility.required_successor.dormant_cross_format_membership_policy_integrated) {
         throw 'canonical sync compatibility frame ledger changed'
     }
-    if ([string]$Migration.milestone -cne 'M1.1.58' -or
+    if ([string]$Migration.milestone -cne 'M1.1.59' -or
         [string]$Migration.status -cne
-            'dormant-atomic-typed-store-verified-not-active' -or
+            'dormant-cross-format-membership-policy-verified-not-active' -or
         [string]$Migration.history_compatible_successor.closed_sync_frames -cne 'verified' -or
         [string]$Migration.history_compatible_successor.typed_session_checkpoint -cne 'verified' -or
         [bool]$Migration.history_compatible_successor.registered -or
@@ -152,12 +153,13 @@ function Assert-Contract {
         [string]$frameRequirement[0].status -cne 'verified') {
         throw 'canonical migration omitted verified history-compatible frames'
     }
-    if ([string]$TransportManifest.milestone -cne 'M1.1.58' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.59' -or
         [string]$TransportManifest.history_compatible_successor.alpn -cne $successorAlpn -or
         -not [bool]$TransportManifest.history_compatible_successor.closed_sync_frames -or
         -not [bool]$TransportManifest.history_compatible_successor.typed_session_checkpoint -or
         -not [bool]$TransportManifest.history_compatible_successor.authenticated_ticket_capability -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_atomic_typed_store -or
+        -not [bool]$TransportManifest.history_compatible_successor.dormant_cross_format_membership_policy -or
         [bool]$TransportManifest.history_compatible_successor.registered -or
         [bool]$TransportManifest.history_compatible_successor.dialed -or
         [bool]$TransportManifest.authenticated_capability.canonical_dial_enabled) {
