@@ -50,6 +50,8 @@
       "requirements": [
         "complete-canonical-coverage",
         "new-parallel-protocol-identifier",
+        "authenticated-legacy-history-bridge",
+        "history-compatible-canonical-sync-generation",
         "dual-reader-implementation",
         "bounded-and-sustained-decoder-testing"
       ]
@@ -138,6 +140,14 @@
     {
       "id": "authenticated-capability-envelope",
       "status": "verified"
+    },
+    {
+      "id": "authenticated-legacy-history-bridge",
+      "status": "verified"
+    },
+    {
+      "id": "history-compatible-canonical-sync-generation",
+      "status": "pending"
     },
     {
       "id": "dual-reader-runtime-implementation",

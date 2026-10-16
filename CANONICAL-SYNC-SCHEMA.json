@@ -14,11 +14,19 @@
     "current_runtime_changed": false,
     "candidate_protocol_identifier": "kilogram/m1/sync/cbor/1",
     "required_before_activation": [
+      "authenticated-legacy-history-bridge",
+      "history-compatible-canonical-sync-generation",
       "canonical-multi-round-session-checkpoint",
       "dual-reader-and-downgrade-tests",
       "coverage-guided-fuzzing",
       "fresh-field-and-hosted-evidence"
     ]
+  },
+  "historical_active_event_compatibility": {
+    "native_event_conversion_possible_without_original_author_keys": false,
+    "legacy_bridge_schema": "CANONICAL-SYNC-LEGACY-EVENT-SCHEMA.json",
+    "bridge_integrated_into_this_closed_generation": false,
+    "activation_disposition": "blocked-pending-explicit-history-compatible-generation"
   },
   "limits": {
     "maximum_inventory_event_ids": 4096,

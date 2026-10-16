@@ -1012,6 +1012,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.1.51 переносит Device-signed legacy-active/canonical-candidate capability
   в connection ticket v12, exact-связывая authority, endpoint, requester,
   publication epoch и prekey validity без регистрации canonical ALPN.
+- [`../docs/RFC-0178-m1152-canonical-sync-historical-signature-bridge.md`](../docs/RFC-0178-m1152-canonical-sync-historical-signature-bridge.md) —
+  M1.1.52 сохраняет и повторно проверяет exact Postcard bytes исторического
+  `AuthorizedEvent`, не требуя ключей старых авторов, и блокирует activation
+  closed canonical sync v1 до нового history-compatible generation.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

@@ -144,7 +144,7 @@
     {
       "id": "sync",
       "coverage": "complete",
-      "artifacts": ["CANONICAL-WIRE-SCHEMA.json", "CANONICAL-WIRE-VECTORS.json", "CANONICAL-SYNC.cddl", "CANONICAL-SYNC-SCHEMA.json", "CANONICAL-SYNC-VECTORS.json", "crates/kilogram-protocol/src/canonical_sync_v1.rs", "scripts/verify-kilogram-canonical-sync-reference.mjs", "CANONICAL-SYNC-SESSION.cddl", "CANONICAL-SYNC-SESSION-SCHEMA.json", "CANONICAL-SYNC-SESSION-VECTORS.json", "crates/kilogram-protocol/src/canonical_sync_session_v1.rs", "scripts/verify-kilogram-canonical-sync-session-reference.mjs"],
+      "artifacts": ["CANONICAL-WIRE-SCHEMA.json", "CANONICAL-WIRE-VECTORS.json", "CANONICAL-SYNC.cddl", "CANONICAL-SYNC-SCHEMA.json", "CANONICAL-SYNC-VECTORS.json", "CANONICAL-SYNC-LEGACY-EVENT.cddl", "CANONICAL-SYNC-LEGACY-EVENT-SCHEMA.json", "CANONICAL-SYNC-LEGACY-EVENT-VECTORS.json", "CANONICAL-SYNC-HISTORY-COMPATIBILITY.json", "crates/kilogram-protocol/src/canonical_sync_v1.rs", "crates/kilogram-protocol/src/canonical_sync_legacy_event_v1.rs", "scripts/verify-kilogram-canonical-sync-reference.mjs", "scripts/verify-kilogram-canonical-sync-legacy-event-reference.mjs", "scripts/verify-kilogram-canonical-sync-legacy-event-boundary.ps1", "CANONICAL-SYNC-SESSION.cddl", "CANONICAL-SYNC-SESSION-SCHEMA.json", "CANONICAL-SYNC-SESSION-VECTORS.json", "crates/kilogram-protocol/src/canonical_sync_session_v1.rs", "scripts/verify-kilogram-canonical-sync-session-reference.mjs"],
       "covered": ["sync-inventory", "sync-diff", "sync-request-response-frames", "multi-round-session-state"],
       "remaining": []
     },

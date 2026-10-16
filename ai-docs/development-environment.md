@@ -3975,3 +3975,26 @@ Hosted follow-up:
 - Canonical coverage remains 17 complete / 1 partial / 0 not-started / 2
   not-targeted. The next bounded work is an active dual reader plus an explicit
   signed capability activation, with no failure-triggered legacy fallback.
+
+## M1.1.52 canonical sync historical-signature bridge (2026-10-16)
+
+- Added `canonical_sync_legacy_event_v1` to `kilogram-protocol` plus CDDL,
+  schema, committed vector, compatibility ledger, RFC and an independent Node
+  reference. The bridge retains exact active Postcard `AuthorizedEvent` bytes
+  and verifies the original event/certificate/authority signatures before use.
+- Focused debug/offline protocol tests passed 2/2 with two Cargo jobs and
+  BelowNormal priority. The one-time fixture generator required an
+  outside-sandbox run because Windows DPAPI intentionally protects the test
+  Account Root under the current user; the committed vector test itself needs
+  no Root secret or DPAPI write.
+- Dedicated boundary self-tests reject premature canonical registration,
+  historical resigning, invalid vector shape and leakage into active wire,
+  transport or CLI sources. The independent JavaScript reference reproduces
+  the exact outer CBOR bytes and size bounds.
+- `kilogram/m1/sync/cbor/1` remains allocated but unregistered and undialed. It
+  is now explicitly marked incompatible with installed active history; a new
+  explicit history-compatible generation is required before dual-reader work.
+- Accepted-tag readiness passed 85/85 against immutable `M1.0.0`, including
+  rustfmt and workspace locked/offline strict Clippy with two Cargo jobs. No
+  network execution, release build, archive, stable-path executable, push or
+  tag belongs to this stage.

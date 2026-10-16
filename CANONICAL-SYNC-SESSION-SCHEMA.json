@@ -14,10 +14,17 @@
     "current_runtime_changed": false,
     "candidate_protocol_identifier": "kilogram/m1/sync/cbor/1",
     "required_before_activation": [
+      "authenticated-legacy-history-bridge",
+      "history-compatible-canonical-sync-generation",
       "dual-reader-and-downgrade-tests",
       "coverage-guided-fuzzing",
       "fresh-field-and-hosted-evidence"
     ]
+  },
+  "historical_active_event_compatibility": {
+    "legacy_bridge_schema": "CANONICAL-SYNC-LEGACY-EVENT-SCHEMA.json",
+    "bridge_integrated_into_sync_frames": false,
+    "activation_disposition": "blocked-pending-explicit-history-compatible-generation"
   },
   "limits": {
     "maximum_received_event_ids": 4096,

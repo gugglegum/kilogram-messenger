@@ -50,6 +50,7 @@ pub mod canonical_runtime_ipc_recovery_plan_v1;
 pub mod canonical_runtime_ipc_ticket_automation_v1;
 pub mod canonical_runtime_ipc_v1;
 pub mod canonical_runtime_mailbox_v1;
+pub mod canonical_sync_legacy_event_v1;
 pub mod canonical_sync_session_v1;
 pub mod canonical_sync_v1;
 pub mod canonical_ticket_publication_v1;

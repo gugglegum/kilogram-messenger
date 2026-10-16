@@ -443,6 +443,14 @@ sessions, distribution, removal и key epochs и не решены этим пр
   tests, sustained fuzzing, independent HPKE conformance и fresh multi-device
   field evidence.
 
+- M1.1.52 выявил дополнительный обязательный migration boundary: native
+  canonical event нельзя вывести из исторического Postcard event без исходного
+  author Device key, а embedded certificate/authority/ratchet artifacts также
+  имеют старые signature preimages. Exact-byte authenticated bridge уже
+  verified, но не встроен в closed `kilogram/m1/sync/cbor/1`. Следующий
+  инженерный вопрос — форма нового history-compatible sync generation и его
+  exact ALPN/version; переиспользовать или молча расширять `/cbor/1` нельзя.
+
 ## Инварианты при выборе ответов
 
 - Не создавать собственные криптографические примитивы.

@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.52",
+  "status": "legacy-history-bridge-verified-activation-blocked",
+  "changes_active_wire": false,
+  "active": {
+    "encoding": "postcard-v6",
+    "alpn": "kilogram/m0/sync/8",
+    "history_compatible": true,
+    "registered": true,
+    "dialed": true
+  },
+  "existing_canonical_candidate": {
+    "encoding": "kilogram-deterministic-cbor-v1",
+    "alpn": "kilogram/m1/sync/cbor/1",
+    "closed_event_type": "native-canonical-authorized-event-v1",
+    "installed_active_history_compatible": false,
+    "registered": false,
+    "dialed": false,
+    "activation_disposition": "blocked-before-activation"
+  },
+  "bridge": {
+    "schema": "CANONICAL-SYNC-LEGACY-EVENT-SCHEMA.json",
+    "rust_type": "CanonicalSyncLegacyEventBridgeV1",
+    "encoding": "deterministic-cbor-with-exact-active-postcard-authorized-event",
+    "nested_active_signature_verification": true,
+    "exact_nested_reencoding_required": true,
+    "metadata_bindings": [
+      "conversation-id",
+      "active-event-id",
+      "author-account-id",
+      "author-device-id"
+    ],
+    "original_author_private_keys_required": false,
+    "status": "verified-standalone-prerequisite-not-active"
+  },
+  "required_successor": {
+    "explicit_protocol_identifier": "unallocated",
+    "must_integrate_bridge_into_closed_frames": true,
+    "must_authenticate_exact_identifier_in_connection_ticket": true,
+    "must_preserve_no-sniffing-and-no-parse-fallback": true,
+    "status": "pending"
+  },
+  "forbidden": [
+    "resign-historical-event-with-migration-key",
+    "translate-active-signature-preimage-without-original-author-key",
+    "silently-change-kilogram-m1-sync-cbor-1-closed-schema",
+    "register-or-dial-canonical-sync-before-history-compatible-generation",
+    "format-sniffing",
+    "parse-error-fallback-to-legacy"
+  ],
+  "scope": {
+    "network_executed": false,
+    "release_build": false,
+    "archive_created": false,
+    "stable_executable_replaced": false
+  }
+}

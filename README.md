@@ -2286,6 +2286,14 @@ reconstructs every byte and Ed25519 signature. None of these baselines turns
 the M1.0.0 technical PoC into a
 production/security release.
 
+[`RFC-0178`](docs/RFC-0178-m1152-canonical-sync-historical-signature-bridge.md)
+records a pre-activation compatibility constraint: historical Postcard event
+signatures cannot be translated into native canonical signatures without the
+original authors' keys. The inactive bridge preserves and re-verifies the exact
+authorized-event bytes. The allocated canonical sync v1 ALPN therefore remains
+unregistered and undialed until a separately identified history-compatible
+generation integrates that bridge.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

@@ -75,6 +75,8 @@ function Assert-Manifest {
         'canonical-schema-coverage|pending',
         'parallel-protocol-identifier-allocation|verified',
         'authenticated-capability-envelope|verified',
+        'authenticated-legacy-history-bridge|verified',
+        'history-compatible-canonical-sync-generation|pending',
         'dual-reader-runtime-implementation|pending',
         'independent-crypto-conformance|verified',
         'bounded-decoder-mutation-regression|verified',

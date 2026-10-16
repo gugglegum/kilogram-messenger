@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.52",
+  "status": "candidate-prerequisite-not-active",
+  "changes_active_wire": false,
+  "profile": "kilogram-deterministic-cbor-v1",
+  "purpose": "preserve-and-reverify-exact-active-postcard-authorized-events-without-resigning",
+  "cddl": {
+    "standard": "RFC 8610",
+    "path": "CANONICAL-SYNC-LEGACY-EVENT.cddl",
+    "root_rule": "kilogram-sync-legacy-event-v1"
+  },
+  "source": {
+    "encoding": "postcard-v5-authorized-event",
+    "signature_preimages_preserved": true,
+    "original_author_private_keys_required": false,
+    "native_canonical_event_conversion": "forbidden-without-original-author-signatures"
+  },
+  "integration": {
+    "current_sync_codec": "postcard-v6",
+    "current_sync_changed": false,
+    "canonical_sync_v1_identifier": "kilogram/m1/sync/cbor/1",
+    "canonical_sync_v1_can_carry_bridge": false,
+    "required_next": "allocate-history-compatible-canonical-sync-generation-before-activation",
+    "registered": false,
+    "dialed": false
+  },
+  "limits": {
+    "maximum_bridge_bytes": 8388608,
+    "maximum_active_authorized_event_postcard_bytes": 8388352
+  },
+  "objects": [
+    {
+      "id": "sync-legacy-event-bridge-v1",
+      "kind": "verified-legacy-byte-preserving-envelope",
+      "array_length": 6
+    }
+  ],
+  "semantic_rules": [
+    "the nested active AuthorizedEvent must pass the active Postcard decoder and original signature verification",
+    "re-encoding the verified active AuthorizedEvent must reproduce the exact nested bytes",
+    "conversation Event author Account and author Device identifiers must equal values derived from the verified active object",
+    "membership authorization remains the responsibility of the receiving conversation store exactly as on active sync",
+    "unknown versions non-minimal CBOR trailing bytes oversized input and any metadata or nested-byte mismatch fail closed",
+    "the bridge is a migration prerequisite and is not a new signature or an active transport"
+  ],
+  "rust_bindings": [
+    {
+      "path": "crates/kilogram-protocol/src/canonical_sync_legacy_event_v1.rs",
+      "symbol": "MAX_CANONICAL_SYNC_LEGACY_EVENT_BRIDGE_BYTES",
+      "rust_type": "usize",
+      "value": 8388608
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_sync_legacy_event_v1.rs",
+      "symbol": "MAX_ACTIVE_AUTHORIZED_EVENT_POSTCARD_BYTES",
+      "rust_type": "usize",
+      "value": 8388352
+    }
+  ]
+}

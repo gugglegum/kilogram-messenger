@@ -1,0 +1,21 @@
+; Kilogram authenticated legacy event bridge, M1.1.52.
+;
+; The final byte string is the exact active Postcard AuthorizedEvent. Its
+; original event, Device-certificate and Account-authority signatures are
+; verified by the active decoder; the redundant identifiers must match the
+; verified object exactly.
+
+profile-version = 1
+id-32 = bytes .size 32
+active-authorized-event-postcard = bytes .size (1..8388352)
+
+sync-legacy-event-bridge-v1 = [
+  profile-version,
+  conversation-id: id-32,
+  active-event-id: id-32,
+  author-account-id: id-32,
+  author-device-id: id-32,
+  active-authorized-event-postcard
+]
+
+kilogram-sync-legacy-event-v1 = sync-legacy-event-bridge-v1

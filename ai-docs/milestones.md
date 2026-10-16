@@ -6240,3 +6240,27 @@ correlation visible, Windows-only field evidence, independent security audit
   выполнялись;
 - следующий slice — active parallel canonical reader и явное включение signed
   capability с mixed-version, downgrade и no-fallback regression.
+
+### M1.1.52 — canonical sync historical-signature bridge: принято локально
+
+- до activation обнаружен и зафиксирован loss-of-history blocker: active
+  `AuthorizedEvent`, Device certificate, authority snapshot и ratchet artifacts
+  подписаны над Postcard-specific preimages, поэтому native canonical event
+  нельзя получить без приватных ключей каждого исторического автора;
+- добавлен bounded deterministic-CBOR `CanonicalSyncLegacyEventBridgeV1`:
+  он сохраняет exact active Postcard bytes, прогоняет active decode/signature
+  verification, требует exact re-encoding и сверяет conversation ID, active
+  Event ID, author Account ID и author Device ID;
+- committed vector воспроизводит реальный валидный active acknowledgement
+  event. Rust regression 2/2 отвергает metadata/payload tamper, trailing data и
+  non-minimal CBOR; независимый Node reference воспроизводит outer CBOR bytes;
+- `kilogram/m1/sync/cbor/1` не меняется молча: его closed native-event schema
+  отмечен как installed-history-incompatible и blocked-before-activation.
+  Следующий generation должен получить новый explicit identifier, встроить
+  bridge в closed frames и попасть в signed ticket capability;
+- migration/transport manifests получили verified bridge prerequisite и новый
+  pending `history-compatible-canonical-sync-generation`; canonical dial всё ещё
+  disabled, единственный active ALPN — `kilogram/m0/sync/8`;
+- accepted-tag readiness прошёл 85/85 вместе с rustfmt и workspace
+  locked/offline strict Clippy в два Cargo job; network, release build, archive,
+  stable-path EXE, push и tag не выполнялись.

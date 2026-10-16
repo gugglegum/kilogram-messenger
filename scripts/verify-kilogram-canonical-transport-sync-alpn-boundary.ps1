@@ -74,6 +74,7 @@ function Assert-Boundary {
         throw 'canonical synchronization selection policy changed'
     }
     $expectedRemaining = @(
+        'history-compatible-canonical-sync-generation',
         'active-dual-reader-and-canonical-capability-activation',
         'mixed-version-and-downgrade-tests',
         'rollback-drill',
