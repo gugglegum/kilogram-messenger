@@ -6095,3 +6095,23 @@ correlation visible, Windows-only field evidence, independent security audit
 - canonical coverage остаётся 16 complete, 1 partial, 1 not-started и 2
   not-targeted. В partial `runtime-ipc` остались только associated
   mutation-result contracts.
+
+### M1.1.46 — exhaustive runtime IPC completion inventory: принято локально
+
+- добавлен нормативный `CANONICAL-RUNTIME-IPC-COMPLETION.json`, который
+  перечисляет 32 canonical commands, 31 results и 32 exact command/result
+  mappings с owning module/kind;
+- тот же manifest исчерпывающе disposition-ит все 34 command и 31 response
+  variants активного Postcard v27 adapter непосредственно против Rust enums;
+- vague `all-associated-mutation-results-not-listed-above` удалён. Остались три
+  точных класса: ticket automation policy/status, endpoint-announcement
+  bootstrap helper disposition и legacy central-HTTPS mailbox command removal;
+- семь Postcard-only activation blockers перечислены явно. Dedicated boundary
+  отвергает пропущенный active variant, unpaired result, missing blocker и
+  premature completion claim;
+- все 19 runtime-IPC boundaries, aggregate coverage/compatibility и accepted-tag
+  readiness прошли 79/79; rustfmt и workspace locked/offline strict Clippy
+  также прошли;
+- canonical coverage остаётся 16 complete / 1 partial / 1 not-started / 2
+  not-targeted. Canonical CBOR не активирован; active local control, peer wire,
+  network, release/archive/push/tag не менялись.

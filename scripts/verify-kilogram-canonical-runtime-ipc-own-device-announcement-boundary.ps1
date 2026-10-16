@@ -32,7 +32,7 @@ function Assert-LowerHex {
 
 function Assert-Schema {
     param([object]$Schema, [string]$Rust)
-    if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.45' -or
+    if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.46' -or
         [string]$Schema.status -cne 'candidate-not-active' -or [bool]$Schema.changes_active_wire -or
         [string]$Schema.profile -cne 'kilogram-deterministic-cbor-v1' -or
         [string]$Schema.activation.current_runtime_encoding -cne 'postcard-v27-with-json-descriptor-v8' -or
@@ -54,8 +54,8 @@ function Assert-Schema {
     }
     if (@($Schema.domains).Count -ne 73 -or @($Schema.objects).Count -ne 36 -or
         @($Schema.covered_commands).Count -ne 32 -or @($Schema.covered_results).Count -ne 31 -or
-        @($Schema.semantic_rules).Count -ne 158 -or
-        @($Schema.remaining_runtime_ipc_surface).Count -ne 1) {
+        @($Schema.semantic_rules).Count -ne 162 -or
+        @($Schema.remaining_runtime_ipc_surface).Count -ne 3) {
         throw 'canonical own-device announcement inventory changed'
     }
     foreach ($domain in @(
@@ -207,7 +207,7 @@ if ($source.Count -ne 1 -or [string]$source[0].encoding -cne 'postcard' -or
     throw 'active compatibility registry no longer records Postcard runtime IPC v27'
 }
 $surface = @($coverage.surfaces | Where-Object { $_.id -ceq 'runtime-ipc' })
-if ([string]$coverage.milestone -cne 'M1.1.45' -or $surface.Count -ne 1 -or
+if ([string]$coverage.milestone -cne 'M1.1.46' -or $surface.Count -ne 1 -or
     [string]$surface[0].coverage -cne 'partial' -or
     'content-addressed-own-device-announcement-automation' -cnotin @($surface[0].covered) -or
     'pairwise-own-device-ticket-discovery' -cnotin @($surface[0].covered) -or

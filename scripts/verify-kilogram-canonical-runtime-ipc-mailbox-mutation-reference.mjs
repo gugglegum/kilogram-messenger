@@ -323,7 +323,7 @@ const options = parseOptions(process.argv.slice(2));
 const schema = JSON.parse(readFileSync(options.schema, "utf8"));
 const vectors = JSON.parse(readFileSync(options.vectors, "utf8"));
 const provisioning = JSON.parse(readFileSync(options["provisioning-vectors"], "utf8"));
-assert(schema.milestone === "M1.1.45" && schema.status === "candidate-not-active",
+assert(schema.milestone === "M1.1.46" && schema.status === "candidate-not-active",
   "mailbox mutation schema milestone or activation state changed");
 assert(vectors.schema_version === 1 && vectors.profile === "kilogram-deterministic-cbor-v1" &&
   vectors.activation_status === "not-active", "mailbox mutation vector header changed");

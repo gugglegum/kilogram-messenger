@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.45",
+  "milestone": "M1.1.46",
   "status": "candidate-not-active",
   "changes_active_wire": false,
   "profile": "kilogram-deterministic-cbor-v1",
@@ -902,9 +902,15 @@
     "the active Postcard adapter uses explicit IPC version 27 with descriptor signature domain v8 and rejects version 26 descriptors and requests before actor dispatch",
     "the active conversation-list adapter accepts only limits from 1 through 64 and returns strict UTF-8-label then peer-Account ordering after the exact request cursor",
     "an active conversation-list continuation exists only on a full page and equals the exact label and peer Account tuple of the final returned summary",
-    "the desktop independently validates every active conversation page and bounds one automatic refresh to 1024 pages rather than accepting truncation as success"
+    "the desktop independently validates every active conversation page and bounds one automatic refresh to 1024 pages rather than accepting truncation as success",
+    "the completion inventory contains every canonical command/result pair and its owning module, and its command and result sequences exactly match this schema",
+    "every active Postcard command and response variant has one explicit canonical, bounded-replacement, legacy-removal, bootstrap-helper or scheduler-helper disposition",
+    "canonical activation fails closed while any of the seven enumerated Postcard-only activation blockers remains active",
+    "the canonical target remains incomplete while ticket automation policy and status, endpoint-announcement bootstrap helper disposition or legacy central HTTPS mailbox command removal remains unresolved"
   ],
   "remaining_runtime_ipc_surface": [
-    "all-associated-mutation-results-not-listed-above"
+    "ticket-automation-policy-and-status",
+    "endpoint-announcement-bootstrap-helper-disposition",
+    "legacy-central-https-mailbox-command-removal"
   ]
 }

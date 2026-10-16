@@ -989,6 +989,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.1.45 мигрирует active loopback IPC на Postcard v27/descriptor v8 и
   bounded exact-cursor pagination до дорогой conversation projection, сохраняя
   peer-network wire и inactive canonical CBOR неизменными.
+- [`../docs/RFC-0172-m1146-runtime-ipc-completion-inventory.md`](../docs/RFC-0172-m1146-runtime-ipc-completion-inventory.md) —
+  M1.1.46 вводит exhaustive command/result и active-adapter inventory, заменяет
+  catch-all тремя точными remaining items и fail closed фиксирует семь
+  Postcard-only blockers без активации canonical CBOR.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

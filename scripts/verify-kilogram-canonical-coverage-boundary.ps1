@@ -17,7 +17,7 @@ function Assert-Rejected {
 
 function Assert-Manifest {
     param([object]$Coverage, [object]$Source)
-    if ([UInt64]$Coverage.schema_version -ne 1 -or [string]$Coverage.milestone -cne 'M1.1.45' -or
+    if ([UInt64]$Coverage.schema_version -ne 1 -or [string]$Coverage.milestone -cne 'M1.1.46' -or
         [string]$Coverage.status -cne 'coverage-audit-not-active' -or [bool]$Coverage.changes_active_wire -or
         [string]$Coverage.source_manifest -cne 'PROTOCOL-COMPATIBILITY.json' -or
         [string]$Coverage.target_profile -cne 'kilogram-deterministic-cbor-v1') {

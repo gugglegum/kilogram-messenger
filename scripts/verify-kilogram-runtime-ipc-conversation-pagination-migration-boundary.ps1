@@ -121,21 +121,21 @@ function Assert-Boundary {
         'Runtime conversation list exceeded the desktop safety limit'
     ) 'desktop pagination adapter'
 
-    if ([string]$Schema.milestone -cne 'M1.1.45' -or
+    if ([string]$Schema.milestone -cne 'M1.1.46' -or
         [string]$Schema.activation.current_runtime_encoding -cne
             'postcard-v27-with-json-descriptor-v8' -or
         [bool]$Schema.activation.current_runtime_changed -or
-        @($Schema.semantic_rules).Count -ne 158 -or
+        @($Schema.semantic_rules).Count -ne 162 -or
         (@($Schema.remaining_runtime_ipc_surface) -join ',') -cne
-            'all-associated-mutation-results-not-listed-above') {
+            'ticket-automation-policy-and-status,endpoint-announcement-bootstrap-helper-disposition,legacy-central-https-mailbox-command-removal') {
         throw 'canonical runtime IPC aggregate did not record the active adapter migration'
     }
     $runtimeSurface = @($Coverage.surfaces | Where-Object { $_.id -ceq 'runtime-ipc' })
-    if ([string]$Coverage.milestone -cne 'M1.1.45' -or $runtimeSurface.Count -ne 1 -or
+    if ([string]$Coverage.milestone -cne 'M1.1.46' -or $runtimeSurface.Count -ne 1 -or
         'active-postcard-conversation-list-pagination-migration' -cnotin
             @($runtimeSurface[0].covered) -or
         (@($runtimeSurface[0].remaining) -join ',') -cne
-            'all-associated-mutation-results-not-listed-above') {
+            'ticket-automation-policy-and-status,endpoint-announcement-bootstrap-helper-disposition,legacy-central-https-mailbox-command-removal') {
         throw 'canonical coverage did not close the active unpaged-list migration'
     }
     $source = @($Compatibility.surfaces | Where-Object { $_.id -ceq 'runtime-ipc' })

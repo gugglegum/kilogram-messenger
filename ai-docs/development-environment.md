@@ -3831,3 +3831,21 @@ Hosted follow-up:
   old physical field evidence after protected runtime/protocol drift. No new
   field claim, network test, executable, release build, archive, push or tag was
   created. The final partial runtime-IPC item is associated mutation results.
+
+## M1.1.46 exhaustive runtime IPC completion inventory (2026-10-16)
+
+- `CANONICAL-RUNTIME-IPC-COMPLETION.json` is now the exact completion ledger
+  for 32 canonical commands, 31 canonical results, 32 command/result pairs and
+  every 34/31 command/response variant in the active Postcard v27 Rust enums.
+- `scripts/verify-kilogram-runtime-ipc-completion-inventory-boundary.ps1`
+  derives the active enum inventory from source and self-tests missing variants,
+  untracked results, omitted blockers and false completion claims.
+- The old catch-all remaining item was replaced with exactly three actionable
+  gaps: ticket automation policy/status, endpoint-announcement bootstrap helper
+  disposition and removal of legacy central-HTTPS mailbox commands.
+- All 19 runtime-IPC boundaries passed together. Canonical coverage, protocol
+  compatibility and accepted-tag readiness passed 79/79; rustfmt and workspace
+  locked/offline strict Clippy passed with two Cargo jobs and BelowNormal
+  priority. No test executable or network code ran.
+- No active encoding or peer wire changed. Canonical CBOR remains inactive and
+  fresh multi-device field evidence is still required before activation.

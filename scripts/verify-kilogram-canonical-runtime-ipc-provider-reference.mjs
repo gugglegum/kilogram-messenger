@@ -201,7 +201,7 @@ const options = parse(process.argv.slice(2));
 const schema = JSON.parse(readFileSync(options.schema, "utf8"));
 const vectors = JSON.parse(readFileSync(options.vectors, "utf8"));
 const core = JSON.parse(readFileSync(options["core-vectors"], "utf8"));
-assert(schema.milestone === "M1.1.45" && schema.status === "candidate-not-active",
+assert(schema.milestone === "M1.1.46" && schema.status === "candidate-not-active",
   "provider schema milestone or activation state changed");
 const expected = generate(core, vectors.input);
 equalJson(expected, vectors.expected, "canonical runtime IPC provider vectors");
