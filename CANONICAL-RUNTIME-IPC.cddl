@@ -1,4 +1,4 @@
-; Kilogram deterministic-CBOR local runtime IPC model, M1.1.42.
+; Kilogram deterministic-CBOR local runtime IPC model, M1.1.43.
 ; Only unsigned integers, definite byte strings and definite arrays are used.
 
 profile-version = 1
@@ -1252,6 +1252,98 @@ signed-runtime-ipc-own-device-roster-response-v1 = [
   signature
 ]
 
+; Custody is deliberately separate from history recovery execution. The
+; embedded link and plan are independently verified canonical CBOR artifacts;
+; neither private capabilities nor history payload cross this IPC surface.
+runtime-ipc-recovery-execution-policy-v1 = [
+  profile-version,
+  allow-ethernet: 0..1,
+  allow-wifi: 0..1,
+  allow-mobile: 0..1,
+  allow-unknown-network: 0..1,
+  require-external-power: 0..1
+]
+
+runtime-ipc-recovery-plan-command-v1 =
+  [approve-history-recovery-plan: 0,
+   signed-recovery-link-cbor: bytes .size (1..1048576),
+   confirmed-sas: digest,
+   runtime-ipc-recovery-execution-policy-v1,
+   valid-for-seconds: 3600..604800] /
+  [history-recovery-plan-status: 1, plan-id: digest] /
+  [cancel-history-recovery-plan: 2, plan-id: digest, expected-record-id: digest]
+
+runtime-ipc-recovery-plan-request-v1 = [
+  profile-version,
+  descriptor-id: digest,
+  request-id,
+  bearer-token: token,
+  issued-at-unix-seconds: uint,
+  expires-at-unix-seconds: uint,
+  runtime-ipc-recovery-plan-command-v1
+]
+
+runtime-ipc-recovery-plan-cancellation-content-v1 = [
+  profile-version,
+  plan-id: digest,
+  account-id,
+  recipient-device-id: device-id,
+  cancelled-at-unix-seconds: uint,
+  user-requested: 0
+]
+
+signed-runtime-ipc-recovery-plan-cancellation-v1 = [
+  profile-version,
+  runtime-ipc-recovery-plan-cancellation-content-v1,
+  signature
+]
+
+runtime-ipc-recovery-plan-cancellation-option-v1 =
+  [none: 0] /
+  [some: 1, cancellation-cbor: bytes .size (1..1024)]
+
+runtime-ipc-recovery-plan-state-v1 = [
+  profile-version,
+  record-id: digest,
+  lifecycle: 0..1,
+  signed-recovery-plan-cbor: bytes .size (1..1048576),
+  runtime-ipc-recovery-plan-cancellation-option-v1
+]
+
+runtime-ipc-recovery-plan-custody-v1 = [
+  profile-version,
+  runtime-ipc-recovery-plan-state-v1,
+  restart-not-required: 0,
+  foreground-runtime-only: 0,
+  os-background-service-enabled: 0
+]
+
+runtime-ipc-recovery-plan-result-v1 =
+  [history-recovery-plan-approved: 0,
+   outcome: 0..1,
+   runtime-ipc-recovery-plan-custody-v1] /
+  [history-recovery-plan-status: 1,
+   runtime-ipc-recovery-plan-custody-v1] /
+  [history-recovery-plan-cancelled: 2,
+   outcome: 0..1,
+   runtime-ipc-recovery-plan-custody-v1] /
+  [error: 3, error-code: 1..65535, message-utf8: bytes .size (1..4096)]
+
+runtime-ipc-recovery-plan-response-content-v1 = [
+  profile-version,
+  descriptor-id: digest,
+  request-id,
+  request-digest: digest,
+  responder-device-id: device-id,
+  runtime-ipc-recovery-plan-result-v1
+]
+
+signed-runtime-ipc-recovery-plan-response-v1 = [
+  profile-version,
+  runtime-ipc-recovery-plan-response-content-v1,
+  signature
+]
+
 kilogram-runtime-ipc-v1 =
   signed-runtime-ipc-descriptor-v1 /
   runtime-ipc-core-request-v1 /
@@ -1283,4 +1375,6 @@ kilogram-runtime-ipc-v1 =
   runtime-ipc-own-device-discovery-request-v1 /
   signed-runtime-ipc-own-device-discovery-response-v1 /
   runtime-ipc-own-device-roster-request-v1 /
-  signed-runtime-ipc-own-device-roster-response-v1
+  signed-runtime-ipc-own-device-roster-response-v1 /
+  runtime-ipc-recovery-plan-request-v1 /
+  signed-runtime-ipc-recovery-plan-response-v1

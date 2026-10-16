@@ -6017,3 +6017,26 @@ correlation visible, Windows-only field evidence, independent security audit
   regression — 130/130, readiness — 75/75;
 - active Postcard IPC v26/JSON descriptor v7, network, release/archive/push/tag
   не менялись. Следующий bounded slice — recovery-plan/device-link commands.
+
+### M1.1.43 — canonical history-recovery plan custody: принято локально
+
+- inactive deterministic-CBOR IPC получил approval/status/cancel commands для
+  одного history-recovery plan без подключения к active Postcard runtime;
+- approval принимает exact source-signed recovery link, independently
+  пересчитывает полный SAS digest, связывает explicit network/power policy и
+  создаёт recipient-Device-signed bounded plan;
+- local custody сохраняет content-addressed record. Cancellation требует exact
+  current record ID, сохраняет plan byte-identical и добавляет immutable
+  recipient-Device-signed `user-requested` tombstone;
+- status/transition results exact-связаны с request digest, Account и recipient
+  Device и явно утверждают `foreground-runtime-only`, `restart-not-required`,
+  `os-background-service-enabled=false`;
+- Root/pre-enrollment authority, Device-link bootstrap, recovery payloads,
+  private capabilities, decrypted history и filesystem paths через routine IPC
+  не проходят;
+- CDDL/schema/vectors, independent Node reference, RFC-0169 и dedicated
+  fail-closed boundary согласованы. Mutation corpus прошёл 29799/29799 за
+  3716.29 s, protocol regression — 133/133, readiness — 76/76;
+- active Postcard IPC v26/JSON descriptor v7, network, test EXE,
+  release/archive/push/tag не менялись. Следующий bounded slice — recovery-plan
+  execution и scheduler results.

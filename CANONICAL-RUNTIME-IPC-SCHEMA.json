@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.42",
+  "milestone": "M1.1.43",
   "status": "candidate-not-active",
   "changes_active_wire": false,
   "profile": "kilogram-deterministic-cbor-v1",
@@ -82,6 +82,10 @@
     "maximum_own_device_roster_response_bytes": 786432,
     "maximum_own_device_roster_children": 64,
     "maximum_own_device_roster_parallel_workflows": 1,
+    "maximum_recovery_plan_request_bytes": 2097152,
+    "maximum_recovery_plan_response_bytes": 2097152,
+    "maximum_recovery_plan_cancellation_bytes": 1024,
+    "minimum_recovery_plan_validity_seconds": 3600,
     "maximum_error_bytes": 4096,
     "maximum_descriptor_validity_seconds": 86400,
     "maximum_request_validity_seconds": 30,
@@ -422,6 +426,33 @@
       "id": "own-device-roster-response-id-v1",
       "value": "kilogram:runtime-ipc-own-device-roster-response-id:cbor-v1\\0",
       "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "recovery-plan-cancellation-signature-v1",
+      "value": "kilogram:runtime-ipc-recovery-plan-cancellation-signature:cbor-v1\\0",
+      "operation": "ed25519-signature",
+      "signer": "descriptor-device-ed25519"
+    },
+    {
+      "id": "recovery-plan-record-id-v1",
+      "value": "kilogram:runtime-ipc-recovery-plan-record-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "recovery-plan-request-digest-v1",
+      "value": "kilogram:runtime-ipc-recovery-plan-request-digest:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "recovery-plan-response-signature-v1",
+      "value": "kilogram:runtime-ipc-recovery-plan-response-signature:cbor-v1\\0",
+      "operation": "ed25519-signature",
+      "signer": "descriptor-device-ed25519"
+    },
+    {
+      "id": "recovery-plan-response-id-v1",
+      "value": "kilogram:runtime-ipc-recovery-plan-response-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
     }
   ],
   "objects": [
@@ -579,6 +610,16 @@
       "id": "signed-runtime-ipc-own-device-roster-response-v1",
       "kind": "device-signed-atomic-parent-and-pairwise-child-policy-snapshot",
       "maximum_bytes": 786432
+    },
+    {
+      "id": "runtime-ipc-recovery-plan-request-v1",
+      "kind": "short-lived-exact-link-and-user-confirmation-bound-recovery-plan-custody-request",
+      "maximum_bytes": 2097152
+    },
+    {
+      "id": "signed-runtime-ipc-recovery-plan-response-v1",
+      "kind": "device-signed-foreground-only-recovery-plan-custody-state",
+      "maximum_bytes": 2097152
     }
   ],
   "covered_commands": [
@@ -608,7 +649,10 @@
     "configure-own-device-ticket-discovery",
     "own-device-ticket-discovery-status",
     "configure-own-device-roster-automation",
-    "own-device-roster-automation-status"
+    "own-device-roster-automation-status",
+    "approve-history-recovery-plan",
+    "history-recovery-plan-status",
+    "cancel-history-recovery-plan"
   ],
   "covered_results": [
     "pong",
@@ -636,7 +680,10 @@
     "own-device-ticket-discovery-configured",
     "own-device-ticket-discovery-status",
     "own-device-roster-automation-configured",
-    "own-device-roster-automation-status"
+    "own-device-roster-automation-status",
+    "history-recovery-plan-approved",
+    "history-recovery-plan-status",
+    "history-recovery-plan-cancelled"
   ],
   "semantic_rules": [
     "descriptor address is exactly IPv4 127.0.0.1 or IPv6 ::1 and port is nonzero",
@@ -760,10 +807,24 @@
     "roster configuration and status require no restart, execute only while the foreground runtime is running and explicitly deny an OS background service",
     "Account Root secrets, Device signing or encryption secrets, derived read or write capabilities, ticket plaintext, HPKE ciphertext and local filesystem paths are forbidden from roster IPC",
     "an exact retry may return already-committed only for the unchanged parent head and projection; stale predecessor, divergent reuse or a mismatched roster fails before mutation",
+    "recovery-plan approval embeds one independently verified source-Device-signed recovery link and the exact full SAS digest explicitly confirmed by the local user",
+    "the approved recovery link names the descriptor Account and exact descriptor Device as recipient; cross-Account, cross-Device and self-substituted context fails closed",
+    "plan approval occurs inside the signed link validity interval and chooses a validity from 3600 through 604800 seconds without arithmetic overflow",
+    "the descriptor Device signs the exact link, SAS, explicit Ethernet, Wi-Fi, mobile, unknown-network and external-power policy, approval time and expiry as one canonical recovery plan",
+    "the recovery-plan record ID commits the complete signed plan and the optional immutable cancellation tombstone",
+    "status addresses one nonzero plan ID and returns only custody state bound to the exact descriptor Account and recipient Device",
+    "cancellation exact-compares both the plan ID and current content-addressed record ID so stale or concurrent state cannot be silently overwritten",
+    "cancellation creates one descriptor-Device-signed user-requested tombstone whose time is not earlier than plan approval and preserves the original signed plan",
+    "approved lifecycle requires no cancellation while cancelled lifecycle requires one matching valid tombstone; every inconsistent combination fails closed",
+    "approval, status and cancellation report restart-not-required, foreground-runtime-only execution and an explicitly disabled OS background service",
+    "the execution policy permits at least one network class and remains custody metadata only until a separately specified recovery executor consumes it",
+    "recovery-plan custody performs no history transfer, network connection, remote deletion or convergence claim and carries no recovery page payload",
+    "Account Root secrets, Device private keys, private recovery capabilities, decrypted history and local filesystem paths are forbidden from this recovery-plan IPC surface",
+    "the request ID is the durable idempotency key: exact replay may return already-committed while stale record IDs or divergent reuse fail before plan or tombstone mutation",
     "unknown variants, noncanonical CBOR, trailing data, expired objects and contextual substitutions fail closed"
   ],
   "remaining_runtime_ipc_surface": [
-    "recovery-plan-and-device-link-commands",
+    "recovery-plan-execution-and-scheduler-results",
     "active-unpaged-conversation-list-migration",
     "all-associated-mutation-results-not-listed-above"
   ]

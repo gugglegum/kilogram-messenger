@@ -234,7 +234,7 @@ const vectors = JSON.parse(readFileSync(options.vectors, "utf8"));
 const core = JSON.parse(readFileSync(options["core-vectors"], "utf8"));
 const contact = JSON.parse(readFileSync(options["contact-vectors"], "utf8"));
 const ticket = JSON.parse(readFileSync(options["ticket-vectors"], "utf8"));
-assert(schema.milestone === "M1.1.42" && schema.status === "candidate-not-active" &&
+assert(schema.milestone === "M1.1.43" && schema.status === "candidate-not-active" &&
   schema.changes_active_wire === false, "runtime IPC publication schema header changed");
 assert(schema.limits.maximum_publication_request_bytes === 65536 &&
   schema.limits.maximum_publication_response_bytes === 65536,

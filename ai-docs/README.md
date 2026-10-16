@@ -976,6 +976,11 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.1.42 канонизирует roster-wide foreground orchestration: exact active
   sibling projection, retained revoked tombstones и serialized child workflow
   без ticket plaintext, local paths или ослабления decoder depth limit.
+- [`../docs/RFC-0169-m1143-canonical-runtime-ipc-recovery-plan-custody.md`](../docs/RFC-0169-m1143-canonical-runtime-ipc-recovery-plan-custody.md) —
+  M1.1.43 канонизирует approval/status/cancellation локального recovery plan:
+  full SAS confirmation, Device-signed plan, content-addressed custody и
+  immutable cancellation tombstone без private capabilities или background
+  service.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

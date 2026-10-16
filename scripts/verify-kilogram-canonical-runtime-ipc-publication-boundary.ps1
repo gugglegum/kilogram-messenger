@@ -35,7 +35,7 @@ function Assert-LowerHex {
 
 function Assert-Schema {
     param([object]$Schema, [string]$Rust)
-    if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.42' -or
+    if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.43' -or
         [string]$Schema.status -cne 'candidate-not-active' -or [bool]$Schema.changes_active_wire -or
         [string]$Schema.profile -cne 'kilogram-deterministic-cbor-v1' -or
         [string]$Schema.activation.current_runtime_encoding -cne 'postcard-v26-with-json-descriptor-v7' -or
@@ -45,9 +45,9 @@ function Assert-Schema {
     $limits = @([int]$Schema.limits.maximum_publication_request_bytes,
         [int]$Schema.limits.maximum_publication_response_bytes) -join ','
     if ($limits -cne '65536,65536') { throw 'canonical runtime IPC publication limits changed' }
-    if (@($Schema.domains).Count -ne 62 -or @($Schema.objects).Count -ne 31 -or
-        @($Schema.covered_commands).Count -ne 27 -or @($Schema.covered_results).Count -ne 26 -or
-        @($Schema.semantic_rules).Count -ne 122 -or
+    if (@($Schema.domains).Count -ne 67 -or @($Schema.objects).Count -ne 33 -or
+        @($Schema.covered_commands).Count -ne 30 -or @($Schema.covered_results).Count -ne 29 -or
+        @($Schema.semantic_rules).Count -ne 136 -or
         @($Schema.remaining_runtime_ipc_surface).Count -ne 3) {
         throw 'canonical runtime IPC publication inventory changed'
     }
@@ -184,7 +184,10 @@ $expectedCovered = @('device-signed-loopback-descriptor',
     'content-addressed-root-authorized-publication-conflict-ceremony',
     'content-addressed-own-device-announcement-automation',
     'pairwise-own-device-ticket-discovery',
-    'roster-wide-own-device-automation')
+    'roster-wide-own-device-automation',
+    'sas-confirmed-device-signed-recovery-plan-custody',
+    'content-addressed-recovery-plan-status',
+    'device-signed-recovery-plan-cancellation-tombstone')
 $expectedRemaining = @($schema.remaining_runtime_ipc_surface | ForEach-Object { [string]$_ })
 if ($surface.Count -ne 1 -or [string]$surface[0].coverage -cne 'partial' -or
     (@($surface[0].covered) -join ',') -cne ($expectedCovered -join ',') -or
@@ -197,7 +200,7 @@ $actualMutationIds = @($mutations.fixtures |
     Where-Object { $_.vector_file -ceq 'CANONICAL-RUNTIME-IPC-PUBLICATION-VECTORS.json' } |
     ForEach-Object { $_.id })
 if (($actualMutationIds -join ',') -cne ($expectedMutationIds -join ',') -or
-    [int]$mutations.expected_mutations -ne 28755 -or
+    [int]$mutations.expected_mutations -ne 29799 -or
     [int]$mutations.maximum_mutations -ne 30000 -or
     [int]$mutations.resource_bounds.maximum_total_mutations -ne 30000) {
     throw 'canonical runtime IPC publication fixtures or capacity changed'
@@ -251,6 +254,6 @@ Write-Output 'successor_derivation=runtime-internal'
 Write-Output 'device_secret_in_payload=false'
 Write-Output 'network_publication_executed=false'
 Write-Output 'peer_delivery_executed=false'
-Write-Output 'bounded_decoder_mutations=28755'
+Write-Output 'bounded_decoder_mutations=29799'
 Write-Output 'active_postcard_v26_changed=false'
 Write-Output 'network_executed=false'

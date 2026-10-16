@@ -33,7 +33,7 @@ function Assert-LowerHex {
 
 function Assert-Schema {
     param([object]$Schema, [string]$Rust)
-    if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.42' -or
+    if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.43' -or
         [string]$Schema.status -cne 'candidate-not-active' -or [bool]$Schema.changes_active_wire -or
         [string]$Schema.profile -cne 'kilogram-deterministic-cbor-v1' -or
         [string]$Schema.cddl.path -cne 'CANONICAL-RUNTIME-IPC.cddl' -or
@@ -191,7 +191,10 @@ $expectedCovered = @('device-signed-loopback-descriptor',
     'content-addressed-root-authorized-publication-conflict-ceremony',
     'content-addressed-own-device-announcement-automation',
     'pairwise-own-device-ticket-discovery',
-    'roster-wide-own-device-automation')
+    'roster-wide-own-device-automation',
+    'sas-confirmed-device-signed-recovery-plan-custody',
+    'content-addressed-recovery-plan-status',
+    'device-signed-recovery-plan-cancellation-tombstone')
 $expectedRemaining = @($schema.remaining_runtime_ipc_surface | ForEach-Object { [string]$_ })
 if ($surface.Count -ne 1 -or [string]$surface[0].coverage -cne 'partial' -or
     (@($surface[0].covered) -join ',') -cne ($expectedCovered -join ',') -or

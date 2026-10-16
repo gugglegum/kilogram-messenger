@@ -300,8 +300,8 @@ for (const required of ["--schema", "--vectors", "--conflict-vectors"]) {
 const schema = JSON.parse(readFileSync(args.get("--schema"), "utf8"));
 const vectors = JSON.parse(readFileSync(args.get("--vectors"), "utf8"));
 const conflict = JSON.parse(readFileSync(args.get("--conflict-vectors"), "utf8"));
-assert(schema.milestone === "M1.1.42" && schema.status === "candidate-not-active",
-  "runtime IPC schema is not the expected inactive M1.1.42 candidate");
+assert(schema.milestone === "M1.1.43" && schema.status === "candidate-not-active",
+  "runtime IPC schema is not the expected inactive M1.1.43 candidate");
 assert(vectors.schema_version === 1 && vectors.profile === "kilogram-deterministic-cbor-v1" &&
   vectors.activation_status === "not-active", "vector header changed");
 const actual = generate(vectors.input, conflict);

@@ -45,6 +45,7 @@ pub mod canonical_runtime_ipc_publication_network_v1;
 pub mod canonical_runtime_ipc_publication_v1;
 pub mod canonical_runtime_ipc_queue_v1;
 pub mod canonical_runtime_ipc_read_v1;
+pub mod canonical_runtime_ipc_recovery_plan_v1;
 pub mod canonical_runtime_ipc_v1;
 pub mod canonical_runtime_mailbox_v1;
 pub mod canonical_sync_session_v1;

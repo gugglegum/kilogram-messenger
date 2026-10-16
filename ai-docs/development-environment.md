@@ -3728,3 +3728,40 @@ Hosted follow-up:
   release build, archive, push or tag was created. Canonical coverage remains
   16 complete, 1 partial, 1 not-started and 2 not-targeted; the next bounded
   runtime IPC slice is recovery-plan/device-link commands.
+
+## M1.1.43 canonical runtime IPC history-recovery plan custody (2026-10-16)
+
+- Added inactive
+  `crates/kilogram-protocol/src/canonical_runtime_ipc_recovery_plan_v1.rs`
+  with approve/status/cancel commands, Device-signed responses, exact request
+  binding and content-addressed local custody. Active Postcard IPC v26/JSON
+  descriptor v7 remains unchanged.
+- Approval verifies the exact source-signed recovery link at current time,
+  recomputes the complete SAS digest, binds the execution policy and signs the
+  resulting bounded plan with the recipient Device. A short display code is not
+  accepted in place of the full digest.
+- Cancellation exact-compares plan and current record IDs, retains the original
+  signed plan byte-for-byte and adds an immutable Device-signed tombstone.
+  Successful results explicitly remain foreground-only, require no restart and
+  assert that no OS background service is enabled.
+- Root/pre-enrollment secrets and the one-shot Device-link bootstrap remain
+  outside routine IPC. Recovery payloads, private capabilities, decrypted
+  history and local filesystem paths do not cross this boundary.
+- CDDL, schema, deterministic vectors, RFC-0169 and an independent Node
+  Ed25519/BLAKE3 implementation agree. Dedicated actual/self-test boundaries,
+  canonical conformance and coverage checks pass.
+- The full bounded mutation regression passed 29799/29799 in 3716.29 seconds
+  with debug/offline Cargo, two jobs and BelowNormal priority. Focused tests
+  passed 3/3 with one explicit generator ignored.
+- The first protocol regression invocation exposed only the known restricted
+  Windows system-TEMP permission failures. With workspace-local TEMP it passed
+  133/133 with thirteen explicit vector generators ignored in 280.19 seconds.
+- Strict Clippy found and removed one `expect` from the ignored vector helper.
+  Accepted-tag readiness then passed 76/76, immutable `M1.0.0`, rustfmt and
+  workspace locked/offline strict Clippy. The default current-candidate mode
+  correctly rejected post-M1 protected-surface drift and was not treated as
+  fresh field evidence.
+- No network operation, test executable, stable-path binary, release build,
+  archive, push or tag was created. Canonical coverage remains 16 complete,
+  1 partial, 1 not-started and 2 not-targeted. The next bounded runtime IPC
+  slice is recovery-plan execution and scheduler results.

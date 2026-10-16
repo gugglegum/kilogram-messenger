@@ -1,3 +1,4 @@
+use ed25519_dalek::SigningKey;
 use kilogram_crypto::DeviceEncryptionIdentity;
 use kilogram_protocol::canonical_account_recovery_policy_v1::{
     CanonicalAccountRecoveryPolicyTransitionRequestV1,
@@ -187,11 +188,19 @@ use kilogram_protocol::canonical_runtime_ipc_read_v1::{
     verify_runtime_ipc_read_request_for_descriptor_v1,
     verify_runtime_ipc_read_response_for_request_v1,
 };
+use kilogram_protocol::canonical_runtime_ipc_recovery_plan_v1::{
+    CanonicalRuntimeIpcRecoveryPlanRequestV1, CanonicalSignedRuntimeIpcRecoveryPlanResponseV1,
+    decode_and_verify_runtime_ipc_recovery_plan_request_v1,
+    decode_and_verify_signed_runtime_ipc_recovery_plan_response_v1,
+    verify_runtime_ipc_recovery_plan_request_for_descriptor_v1,
+    verify_runtime_ipc_recovery_plan_response_for_request_v1,
+};
 use kilogram_protocol::canonical_runtime_ipc_v1::{
-    CanonicalRuntimeIpcCoreRequestV1, CanonicalSignedRuntimeIpcCoreResponseV1,
+    CanonicalRuntimeIpcCoreRequestV1, CanonicalRuntimeIpcDescriptorContentV1,
+    CanonicalRuntimeIpcLoopbackAddressV1, CanonicalSignedRuntimeIpcCoreResponseV1,
     CanonicalSignedRuntimeIpcDescriptorV1, decode_and_verify_runtime_ipc_core_request_v1,
     decode_and_verify_signed_runtime_ipc_core_response_v1,
-    decode_and_verify_signed_runtime_ipc_descriptor_v1,
+    decode_and_verify_signed_runtime_ipc_descriptor_v1, sign_runtime_ipc_descriptor_v1,
     verify_runtime_ipc_core_request_for_descriptor_v1,
     verify_runtime_ipc_core_response_for_request_v1,
 };
@@ -214,7 +223,7 @@ use kilogram_protocol::canonical_ticket_publication_v1::{
 use serde_json::Value;
 
 const MINIMUM_MUTATIONS: usize = 500;
-const EXPECTED_MUTATIONS: usize = 28_755;
+const EXPECTED_MUTATIONS: usize = 29_799;
 const MAXIMUM_MUTATIONS: usize = 30_000;
 const MAXIMUM_GRID_POSITIONS: usize = 128;
 
@@ -392,6 +401,15 @@ enum Decoder {
     },
     RuntimeIpcOwnDeviceRosterResponse {
         request: Box<CanonicalRuntimeIpcOwnDeviceRosterRequestV1>,
+        descriptor: Box<CanonicalSignedRuntimeIpcDescriptorV1>,
+    },
+    RuntimeIpcRecoveryPlanRequest {
+        descriptor: Box<CanonicalSignedRuntimeIpcDescriptorV1>,
+        response: Box<CanonicalSignedRuntimeIpcRecoveryPlanResponseV1>,
+        now_unix_seconds: u64,
+    },
+    RuntimeIpcRecoveryPlanResponse {
+        request: Box<CanonicalRuntimeIpcRecoveryPlanRequestV1>,
         descriptor: Box<CanonicalSignedRuntimeIpcDescriptorV1>,
     },
     TicketPublicationCapability,
@@ -920,6 +938,32 @@ fn accepts(decoder: &Decoder, bytes: &[u8]) -> bool {
                 )
             })
             .is_ok(),
+        Decoder::RuntimeIpcRecoveryPlanRequest {
+            descriptor,
+            response,
+            now_unix_seconds,
+        } => decode_and_verify_runtime_ipc_recovery_plan_request_v1(bytes)
+            .and_then(|request| {
+                verify_runtime_ipc_recovery_plan_request_for_descriptor_v1(
+                    &request,
+                    descriptor,
+                    *now_unix_seconds,
+                )?;
+                verify_runtime_ipc_recovery_plan_response_for_request_v1(
+                    response, &request, descriptor,
+                )
+            })
+            .is_ok(),
+        Decoder::RuntimeIpcRecoveryPlanResponse {
+            request,
+            descriptor,
+        } => decode_and_verify_signed_runtime_ipc_recovery_plan_response_v1(bytes)
+            .and_then(|response| {
+                verify_runtime_ipc_recovery_plan_response_for_request_v1(
+                    &response, request, descriptor,
+                )
+            })
+            .is_ok(),
         Decoder::TicketPublicationCapability => {
             decode_and_verify_ticket_publication_capability_v1(bytes).is_ok()
         }
@@ -1074,6 +1118,17 @@ fn pointer_hex(document: &Value, pointer: &str) -> Result<Vec<u8>, Box<dyn std::
     )
 }
 
+fn pointer_fixed<const N: usize>(
+    document: &Value,
+    pointer: &str,
+) -> Result<[u8; N], Box<dyn std::error::Error>> {
+    pointer_hex(document, pointer)?
+        .try_into()
+        .map_err(|bytes: Vec<u8>| {
+            format!("{pointer} has {} bytes instead of {N}", bytes.len()).into()
+        })
+}
+
 fn bounded_positions(length: usize) -> Vec<usize> {
     if length <= MAXIMUM_GRID_POSITIONS {
         return (0..length).collect();
@@ -1204,6 +1259,10 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
     let runtime_ipc_own_device_roster: Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-RUNTIME-IPC-OWN-DEVICE-ROSTER-VECTORS.json"
+    )))?;
+    let runtime_ipc_recovery_plan: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../CANONICAL-RUNTIME-IPC-RECOVERY-PLAN-VECTORS.json"
     )))?;
     let ticket_publication: Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
@@ -1563,6 +1622,51 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         runtime_ipc_own_device_roster["input"]["status_issued_at_unix_seconds"]
             .as_u64()
             .ok_or("runtime IPC own-device roster status valid time is missing")?;
+    let runtime_ipc_recovery_plan_approve_request =
+        decode_and_verify_runtime_ipc_recovery_plan_request_v1(&pointer_hex(
+            &runtime_ipc_recovery_plan,
+            "/expected/approve/request/cbor_hex",
+        )?)?;
+    let runtime_ipc_recovery_plan_approve_response =
+        decode_and_verify_signed_runtime_ipc_recovery_plan_response_v1(&pointer_hex(
+            &runtime_ipc_recovery_plan,
+            "/expected/approve/response/signed_cbor_hex",
+        )?)?;
+    let runtime_ipc_recovery_plan_cancel_request =
+        decode_and_verify_runtime_ipc_recovery_plan_request_v1(&pointer_hex(
+            &runtime_ipc_recovery_plan,
+            "/expected/cancel/request/cbor_hex",
+        )?)?;
+    let runtime_ipc_recovery_plan_cancel_response =
+        decode_and_verify_signed_runtime_ipc_recovery_plan_response_v1(&pointer_hex(
+            &runtime_ipc_recovery_plan,
+            "/expected/cancel/response/signed_cbor_hex",
+        )?)?;
+    let runtime_ipc_recovery_plan_approve_valid_at =
+        runtime_ipc_recovery_plan["input"]["approve_issued_at_unix_seconds"]
+            .as_u64()
+            .ok_or("runtime IPC recovery-plan approve valid time is missing")?;
+    let runtime_ipc_recovery_plan_cancel_valid_at =
+        runtime_ipc_recovery_plan["input"]["cancel_issued_at_unix_seconds"]
+            .as_u64()
+            .ok_or("runtime IPC recovery-plan cancel valid time is missing")?;
+    let runtime_ipc_recovery_plan_device_key = SigningKey::from_bytes(&pointer_fixed(
+        &runtime_ipc_recovery_plan,
+        "/input/device_secret_key_hex",
+    )?);
+    let runtime_ipc_recovery_plan_descriptor = sign_runtime_ipc_descriptor_v1(
+        &runtime_ipc_recovery_plan_device_key,
+        CanonicalRuntimeIpcDescriptorContentV1 {
+            address: CanonicalRuntimeIpcLoopbackAddressV1::Ipv4([127, 0, 0, 1]),
+            port: 43_125,
+            bearer_token: pointer_fixed(&runtime_ipc_recovery_plan, "/input/bearer_token_hex")?,
+            account_id: pointer_fixed(&runtime_ipc_recovery_plan, "/input/account_id_hex")?,
+            device_id: pointer_fixed(&runtime_ipc_recovery_plan, "/input/recipient_device_id_hex")?,
+            server_instance_id: [0xc0; 32],
+            issued_at_unix_seconds: 1_800_000_000,
+            expires_at_unix_seconds: 1_800_086_400,
+        },
+    )?;
     let publication_resolution_response_bytes = pointer_hex(
         &publication_conflict,
         "/expected/resolution_response/cbor_hex",
@@ -2396,6 +2500,52 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
             )?,
         ),
         (
+            "runtime-ipc-recovery-plan-approve-request",
+            Decoder::RuntimeIpcRecoveryPlanRequest {
+                descriptor: Box::new(runtime_ipc_recovery_plan_descriptor.clone()),
+                response: Box::new(runtime_ipc_recovery_plan_approve_response.clone()),
+                now_unix_seconds: runtime_ipc_recovery_plan_approve_valid_at,
+            },
+            pointer_hex(
+                &runtime_ipc_recovery_plan,
+                "/expected/approve/request/cbor_hex",
+            )?,
+        ),
+        (
+            "signed-runtime-ipc-recovery-plan-approve-response",
+            Decoder::RuntimeIpcRecoveryPlanResponse {
+                request: Box::new(runtime_ipc_recovery_plan_approve_request.clone()),
+                descriptor: Box::new(runtime_ipc_recovery_plan_descriptor.clone()),
+            },
+            pointer_hex(
+                &runtime_ipc_recovery_plan,
+                "/expected/approve/response/signed_cbor_hex",
+            )?,
+        ),
+        (
+            "runtime-ipc-recovery-plan-cancel-request",
+            Decoder::RuntimeIpcRecoveryPlanRequest {
+                descriptor: Box::new(runtime_ipc_recovery_plan_descriptor.clone()),
+                response: Box::new(runtime_ipc_recovery_plan_cancel_response.clone()),
+                now_unix_seconds: runtime_ipc_recovery_plan_cancel_valid_at,
+            },
+            pointer_hex(
+                &runtime_ipc_recovery_plan,
+                "/expected/cancel/request/cbor_hex",
+            )?,
+        ),
+        (
+            "signed-runtime-ipc-recovery-plan-cancel-response",
+            Decoder::RuntimeIpcRecoveryPlanResponse {
+                request: Box::new(runtime_ipc_recovery_plan_cancel_request.clone()),
+                descriptor: Box::new(runtime_ipc_recovery_plan_descriptor.clone()),
+            },
+            pointer_hex(
+                &runtime_ipc_recovery_plan,
+                "/expected/cancel/response/signed_cbor_hex",
+            )?,
+        ),
+        (
             "ticket-publication-capability",
             Decoder::TicketPublicationCapability,
             pointer_hex(&ticket_publication, "/expected/rotated_capability/cbor_hex")?,
@@ -2575,17 +2725,27 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
             pointer_hex(&account_recovery_policy, "/expected/certificate/cbor_hex")?,
         ),
     ];
-    let mut mutations = 0usize;
-    for (name, decoder, valid) in fixtures {
+    for (name, decoder, valid) in &fixtures {
         assert!(
-            accepts(&decoder, &valid),
+            accepts(decoder, valid),
             "golden {name} fixture was rejected"
         );
         assert!(
             valid.len() <= 512 * 1024,
             "golden {name} fixture is unbounded"
         );
+    }
 
+    let fixture_count = fixtures.len();
+    let mut mutations = 0usize;
+    for (fixture_index, (name, decoder, valid)) in fixtures.into_iter().enumerate() {
+        if fixture_index.is_multiple_of(10) || name.contains("recovery-plan") {
+            eprintln!(
+                "canonical_decoder_mutation_progress={}/{} fixture={name}",
+                fixture_index + 1,
+                fixture_count
+            );
+        }
         for length in bounded_positions(valid.len()) {
             assert!(
                 !accepts(&decoder, &valid[..length]),
@@ -2870,6 +3030,24 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         Decoder::RuntimeIpcOwnDeviceRosterResponse {
             request: Box::new(runtime_ipc_own_device_roster_status_request),
             descriptor: Box::new(runtime_ipc_descriptor.clone()),
+        },
+        Decoder::RuntimeIpcRecoveryPlanRequest {
+            descriptor: Box::new(runtime_ipc_recovery_plan_descriptor.clone()),
+            response: Box::new(runtime_ipc_recovery_plan_approve_response),
+            now_unix_seconds: runtime_ipc_recovery_plan_approve_valid_at,
+        },
+        Decoder::RuntimeIpcRecoveryPlanResponse {
+            request: Box::new(runtime_ipc_recovery_plan_approve_request),
+            descriptor: Box::new(runtime_ipc_recovery_plan_descriptor.clone()),
+        },
+        Decoder::RuntimeIpcRecoveryPlanRequest {
+            descriptor: Box::new(runtime_ipc_recovery_plan_descriptor.clone()),
+            response: Box::new(runtime_ipc_recovery_plan_cancel_response),
+            now_unix_seconds: runtime_ipc_recovery_plan_cancel_valid_at,
+        },
+        Decoder::RuntimeIpcRecoveryPlanResponse {
+            request: Box::new(runtime_ipc_recovery_plan_cancel_request),
+            descriptor: Box::new(runtime_ipc_recovery_plan_descriptor),
         },
         Decoder::RuntimeIpcDirectoryResponse {
             request: Box::new(runtime_ipc_directory_request),

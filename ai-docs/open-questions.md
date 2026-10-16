@@ -378,7 +378,7 @@ sessions, distribution, removal и key epochs и не решены этим пр
 - Независимый second-builder, подписанный release provenance, обновления клиента
   и дальнейшая защита supply chain поверх M0.9.50 same-host gate.
 - Миграция криптоалгоритмов и wire protocol без разделения сети.
-- После M1.1.42 canonical coverage содержит 16 complete, 1 partial
+- После M1.1.43 canonical coverage содержит 16 complete, 1 partial
   (`runtime-ipc`), один not-started (`transport-sync`) и два not-targeted
   surface. В runtime IPC уже закрыты signed loopback descriptor, bearer/fresh
   request, exact signed response, core Ping/WaitForChange/Shutdown/Error,
@@ -410,9 +410,13 @@ sessions, distribution, removal и key epochs и не решены этим пр
   exact-проецирует active siblings и retained revoked tombstones в строгом
   Device-ID порядке, выполняет не более одного child workflow и сохраняет
   global depth limit через отдельно проверяемые embedded canonical CBOR child
-  statuses. Открыты recovery-plan/device-link команды, migration активного
-  unpaged conversation list и оставшиеся mutation results. Следующий приоритет
-  — recovery-plan/device-link family, затем остальные bounded этапы до complete
+  statuses. Recovery-plan custody теперь требует полный SAS digest, создаёт
+  exact Device-signed plan, content-addressed local state и immutable
+  Device-signed cancellation tombstone; Device-link остаётся отдельным
+  Root-authorized bootstrap helper вне routine IPC. Открыты recovery-plan
+  execution/scheduler results, migration активного unpaged conversation list и
+  оставшиеся mutation results. Следующий приоритет — recovery execution и
+  scheduler family, затем остальные bounded этапы до complete
   `runtime-ipc`, затем parallel CBOR ALPN/negotiation для
   `transport-sync`. Общая activation требует explicit identifiers, downgrade
   tests, sustained fuzzing, independent HPKE conformance и fresh multi-device
