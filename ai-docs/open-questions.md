@@ -277,7 +277,11 @@ sessions, distribution, removal и key epochs и не решены этим пр
   полезным release-кандидатным тестом, но не блокирует M0.9.68 locator work.
   Для новых v2 exact capabilities HTTPS descriptor/copy отсутствует; bounded v1
   read/migration сохраняется для существующего state.
-- Как ограничивать spam/Sybil без глобального аккаунта и утечки социального
+- Как реализовать contextual identity поверх существующего Account Root:
+  pairwise/contact, room/channel и service/bot pseudonyms без раскрывающей
+  общий root подписи; как ротировать persona и переносить её между своими
+  устройствами; какой anonymous-credential/nullifier primitive нужен позже?
+- Как ограничивать spam/Sybil без глобального публичного аккаунта и утечки социального
   графа? M0.9.33 защищает существующий channel от постороннего высокого
   generation через self-authenticating per-peer Ed25519 write capability без
   открытого Account/Device ID. Но capability не мешает распределённому attacker
@@ -289,10 +293,11 @@ sessions, distribution, removal и key epochs и не решены этим пр
   `incomplete`/`single-source`/`agreed`/`divergent`. Как desktop безопасно
   автоматизирует wide-area поиск sources и persistent supervision, не сливая
   разные consent scopes и не создавая скрытый background service?
-- Как обрабатывать редактирование, удаление, reactions, receipts и исчезающие
-  сообщения в append-only модели?
-- Что означает удаление: локальное сокрытие, подписанный tombstone или best-effort
-  физическое удаление реплик?
+- Как представить append-only edit/retract UX максимально привычно: normal view
+  показывает latest/collapsed state, но local owner может открыть original и
+  version history?
+- Как оформить mutual purge и consensual disappearing messages, не обещая
+  физическое удаление у peer и сохраняя минимальную causal/audit integrity?
 
 ## P1 — группы и каналы
 
