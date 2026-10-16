@@ -4442,3 +4442,22 @@ Hosted follow-up:
 - Active Postcard v6 and executable/network surfaces are unchanged;
   `/cbor/2` remains unregistered and undialed. No release build, archive,
   stable EXE, network operation, push or tag was produced.
+
+## M1.1.71 deterministic dormant rollback drill (2026-10-17)
+
+- Implemented in
+  `crates/kilogram-session/src/canonical_sync_v2_adapter.rs`; production code
+  adds strict rollback snapshot/record codecs and BLAKE3-derived evidence IDs.
+- The restart drill writes only to a test `tempdir`; no active runtime store or
+  transport call site was added. Windows tempdir tests ran outside the sandbox
+  with the existing resource-friendly wrapper.
+- Full `kilogram-session` offline debug regression passed 18/18 using
+  `CargoJobs 2` and below-normal priority. The two established long-running
+  synchronization tests completed in about 83 seconds total.
+- The new and 21 affected boundary scripts passed normal and `-SelfTest` modes
+  (22/22 pairs). All 101 root JSON documents parse.
+- `cargo fmt --all -- --check`, workspace `--all-targets --all-features`
+  locked/offline Clippy with `-D warnings`, and accepted-tag readiness 103/103
+  against immutable `M1.0.0` passed.
+- No network operation, release build, archive, stable executable, push or tag
+  was produced. Canonical `/cbor/2` remains unregistered and undialed.

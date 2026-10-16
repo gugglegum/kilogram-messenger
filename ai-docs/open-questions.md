@@ -463,9 +463,10 @@ sessions, distribution, removal и key epochs и не решены этим пр
   которая запрещает selected-canonical fallback и epoch rollback. M1.1.70
   добавил dormant coordinator, связывающий verified plan с exact durable
   client/responder restart actions, но намеренно не подключил его к transport.
-  Следующий приоритет — deterministic rollback drill. Общая activation требует
-  explicit identifiers, sustained fuzzing, independent HPKE conformance и
-  fresh multi-device field evidence.
+  M1.1.71 закрыл deterministic persisted rollback drill: разрешён только
+  explicit one-step rollback с новым epoch до canonical selection/progress;
+  automatic error fallback запрещён. Общая activation теперь требует
+  sustained fuzzing и fresh multi-device field evidence.
 
 - M1.1.52 выявил дополнительный обязательный migration boundary: native
   canonical event нельзя вывести из исторического Postcard event без исходного
@@ -491,8 +492,10 @@ sessions, distribution, removal и key epochs и не решены этим пр
   исполняемую mixed-version/downgrade matrix с запретом epoch regression и
   fallback после выбранного canonical transport. M1.1.70 связал результат этой
   matrix с exact durable client/responder action, но не выдал transport permit.
-  Transport всё ещё не активирован. Открыты rollback drill, sustained fuzzing
-  и fresh field evidence. При будущей active integration signed ceremony должна
+  M1.1.71 добавил restart-stable rollback record и fail closed запрет rollback
+  после selected/progressed canonical session. Transport всё ещё не активирован.
+  Открыты sustained fuzzing и fresh field evidence. При будущей active
+  integration signed ceremony должна
   находиться внутри authenticated transport context: одна локальная
   no-selection row не является защитой от pre-offer stripping.
 

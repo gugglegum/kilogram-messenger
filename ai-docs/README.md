@@ -1119,6 +1119,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.1.70 связывает verified mixed-version plan с exact durable client и
   responder restart actions, сохраняя legacy dispatch символическим и не
   выдавая разрешения на transport activation.
+- [`../docs/RFC-0198-m1171-deterministic-rollback-drill.md`](../docs/RFC-0198-m1171-deterministic-rollback-drill.md) —
+  M1.1.71 добавляет строгую persisted snapshot/record модель и доказывает
+  детерминированный one-step rollback после restart, запрещая automatic
+  error fallback и rollback после selected либо progressed canonical session.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

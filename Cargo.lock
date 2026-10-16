@@ -3350,6 +3350,7 @@ dependencies = [
 name = "kilogram-session"
 version = "0.1.0"
 dependencies = [
+ "blake3",
  "ed25519-dalek 3.0.0",
  "kilogram-identity",
  "kilogram-protocol",

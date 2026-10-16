@@ -1775,6 +1775,530 @@ impl CanonicalSyncV2DormantDualReaderCoordinator {
     }
 }
 
+const CANONICAL_SYNC_V2_ROLLBACK_SNAPSHOT_VERSION: u8 = 1;
+pub const CANONICAL_SYNC_V2_ROLLBACK_SNAPSHOT_BYTES: usize = 107;
+pub const MAX_CANONICAL_SYNC_V2_ROLLBACK_REASON_BYTES: usize = 256;
+const CANONICAL_SYNC_V2_ROLLBACK_RECORD_FIXED_BYTES: usize = 175;
+const CANONICAL_SYNC_V2_ROLLBACK_SNAPSHOT_ID_CONTEXT: &str =
+    "kilogram canonical sync v2 rollback snapshot id v1";
+const CANONICAL_SYNC_V2_ROLLBACK_RECORD_ID_CONTEXT: &str =
+    "kilogram canonical sync v2 rollback record id v1";
+const CANONICAL_SYNC_V2_SELECTION_EVIDENCE_ID_CONTEXT: &str =
+    "kilogram canonical sync v2 selection evidence id v1";
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CanonicalSyncV2RollbackTrigger {
+    ExplicitLocal,
+    ReleasePolicy,
+    ParseError,
+    NetworkError,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct CanonicalSyncV2RollbackSnapshot {
+    migration_state: CanonicalSyncV2MigrationState,
+    migration_epoch: u64,
+    selected_session_id: Option<[u8; 32]>,
+    client_progress_checkpoint_id: Option<[u8; 32]>,
+    responder_progress_checkpoint_id: Option<[u8; 32]>,
+}
+
+impl CanonicalSyncV2RollbackSnapshot {
+    pub fn migration_state(self) -> CanonicalSyncV2MigrationState {
+        self.migration_state
+    }
+
+    pub fn migration_epoch(self) -> u64 {
+        self.migration_epoch
+    }
+
+    pub fn selected_session_id(self) -> Option<[u8; 32]> {
+        self.selected_session_id
+    }
+
+    pub fn client_progress_checkpoint_id(self) -> Option<[u8; 32]> {
+        self.client_progress_checkpoint_id
+    }
+
+    pub fn responder_progress_checkpoint_id(self) -> Option<[u8; 32]> {
+        self.responder_progress_checkpoint_id
+    }
+
+    pub fn has_canonical_evidence(self) -> bool {
+        self.selected_session_id.is_some()
+            || self.client_progress_checkpoint_id.is_some()
+            || self.responder_progress_checkpoint_id.is_some()
+    }
+
+    pub fn encode(self) -> [u8; CANONICAL_SYNC_V2_ROLLBACK_SNAPSHOT_BYTES] {
+        let mut encoded = [0_u8; CANONICAL_SYNC_V2_ROLLBACK_SNAPSHOT_BYTES];
+        encoded[0] = CANONICAL_SYNC_V2_ROLLBACK_SNAPSHOT_VERSION;
+        encoded[1] = migration_state_code(self.migration_state);
+        encoded[2..10].copy_from_slice(&self.migration_epoch.to_be_bytes());
+        let mut flags = 0_u8;
+        if let Some(id) = self.selected_session_id {
+            flags |= 1;
+            encoded[11..43].copy_from_slice(&id);
+        }
+        if let Some(id) = self.client_progress_checkpoint_id {
+            flags |= 2;
+            encoded[43..75].copy_from_slice(&id);
+        }
+        if let Some(id) = self.responder_progress_checkpoint_id {
+            flags |= 4;
+            encoded[75..107].copy_from_slice(&id);
+        }
+        encoded[10] = flags;
+        encoded
+    }
+
+    pub fn decode(encoded: &[u8]) -> Result<Self, CanonicalSyncV2SessionError> {
+        if encoded.len() != CANONICAL_SYNC_V2_ROLLBACK_SNAPSHOT_BYTES {
+            return Err(CanonicalSyncV2SessionError::RollbackSnapshotInvalid(
+                "wrong byte length",
+            ));
+        }
+        if encoded[0] != CANONICAL_SYNC_V2_ROLLBACK_SNAPSHOT_VERSION {
+            return Err(CanonicalSyncV2SessionError::RollbackSnapshotInvalid(
+                "unsupported version",
+            ));
+        }
+        let migration_state = migration_state_from_code(encoded[1])?;
+        let migration_epoch = u64::from_be_bytes(
+            encoded[2..10]
+                .try_into()
+                .map_err(|_| CanonicalSyncV2SessionError::RollbackSnapshotInvalid("epoch"))?,
+        );
+        let flags = encoded[10];
+        if flags & !7 != 0 {
+            return Err(CanonicalSyncV2SessionError::RollbackSnapshotInvalid(
+                "unknown evidence flags",
+            ));
+        }
+        let selected_session_id = decode_optional_rollback_id(flags & 1 != 0, &encoded[11..43])?;
+        let client_progress_checkpoint_id =
+            decode_optional_rollback_id(flags & 2 != 0, &encoded[43..75])?;
+        let responder_progress_checkpoint_id =
+            decode_optional_rollback_id(flags & 4 != 0, &encoded[75..107])?;
+        Ok(Self {
+            migration_state,
+            migration_epoch,
+            selected_session_id,
+            client_progress_checkpoint_id,
+            responder_progress_checkpoint_id,
+        })
+    }
+
+    pub fn snapshot_id(self) -> [u8; 32] {
+        let mut hasher =
+            blake3::Hasher::new_derive_key(CANONICAL_SYNC_V2_ROLLBACK_SNAPSHOT_ID_CONTEXT);
+        hasher.update(&self.encode());
+        *hasher.finalize().as_bytes()
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CanonicalSyncV2RollbackDrillRecord {
+    previous_snapshot_id: [u8; 32],
+    replacement_snapshot: CanonicalSyncV2RollbackSnapshot,
+    trigger: CanonicalSyncV2RollbackTrigger,
+    reason: String,
+    record_id: [u8; 32],
+}
+
+impl CanonicalSyncV2RollbackDrillRecord {
+    pub fn previous_snapshot_id(&self) -> [u8; 32] {
+        self.previous_snapshot_id
+    }
+
+    pub fn replacement_snapshot(&self) -> CanonicalSyncV2RollbackSnapshot {
+        self.replacement_snapshot
+    }
+
+    pub fn trigger(&self) -> CanonicalSyncV2RollbackTrigger {
+        self.trigger
+    }
+
+    pub fn reason(&self) -> &str {
+        &self.reason
+    }
+
+    pub fn record_id(&self) -> [u8; 32] {
+        self.record_id
+    }
+
+    pub fn encode(&self) -> Result<Vec<u8>, CanonicalSyncV2SessionError> {
+        let mut encoded = rollback_record_payload(
+            self.previous_snapshot_id,
+            self.replacement_snapshot,
+            self.trigger,
+            &self.reason,
+        )?;
+        encoded.extend_from_slice(&self.record_id);
+        Ok(encoded)
+    }
+
+    pub fn decode(encoded: &[u8]) -> Result<Self, CanonicalSyncV2SessionError> {
+        if encoded.len() < CANONICAL_SYNC_V2_ROLLBACK_RECORD_FIXED_BYTES {
+            return Err(CanonicalSyncV2SessionError::RollbackRecordInvalid(
+                "truncated record",
+            ));
+        }
+        if encoded[0] != CANONICAL_SYNC_V2_ROLLBACK_SNAPSHOT_VERSION {
+            return Err(CanonicalSyncV2SessionError::RollbackRecordInvalid(
+                "unsupported version",
+            ));
+        }
+        let previous_snapshot_id = encoded[1..33]
+            .try_into()
+            .map_err(|_| CanonicalSyncV2SessionError::RollbackRecordInvalid("snapshot id"))?;
+        let replacement_snapshot = CanonicalSyncV2RollbackSnapshot::decode(&encoded[33..140])?;
+        let trigger = rollback_trigger_from_code(encoded[140])?;
+        let reason_len = u16::from_be_bytes(
+            encoded[141..143]
+                .try_into()
+                .map_err(|_| CanonicalSyncV2SessionError::RollbackRecordInvalid("reason length"))?,
+        ) as usize;
+        let reason_end = 143_usize.checked_add(reason_len).ok_or(
+            CanonicalSyncV2SessionError::RollbackRecordInvalid("reason length overflow"),
+        )?;
+        if reason_end + 32 != encoded.len() {
+            return Err(CanonicalSyncV2SessionError::RollbackRecordInvalid(
+                "non-canonical record length",
+            ));
+        }
+        let reason = std::str::from_utf8(&encoded[143..reason_end])
+            .map_err(|_| CanonicalSyncV2SessionError::RollbackReasonInvalid)?
+            .to_owned();
+        validate_rollback_reason(&reason)?;
+        let record_id: [u8; 32] = encoded[reason_end..]
+            .try_into()
+            .map_err(|_| CanonicalSyncV2SessionError::RollbackRecordInvalid("record id"))?;
+        let expected_id = rollback_record_id(&encoded[..reason_end]);
+        if record_id != expected_id {
+            return Err(CanonicalSyncV2SessionError::RollbackRecordIdMismatch);
+        }
+        Ok(Self {
+            previous_snapshot_id,
+            replacement_snapshot,
+            trigger,
+            reason,
+            record_id,
+        })
+    }
+
+    pub fn apply(
+        &self,
+        current: CanonicalSyncV2RollbackSnapshot,
+    ) -> Result<CanonicalSyncV2RollbackSnapshot, CanonicalSyncV2SessionError> {
+        let expected = plan_dormant_canonical_sync_v2_rollback(
+            current,
+            self.replacement_snapshot.migration_state,
+            self.replacement_snapshot.migration_epoch,
+            self.trigger,
+            &self.reason,
+        )?;
+        if expected != *self {
+            return Err(CanonicalSyncV2SessionError::RollbackSnapshotMismatch);
+        }
+        Ok(self.replacement_snapshot)
+    }
+
+    pub fn dormant_legacy_transport_plan(
+        &self,
+    ) -> Result<CanonicalSyncV2DormantTransportPlan, CanonicalSyncV2SessionError> {
+        evaluate_dormant_canonical_sync_v2_transport_policy(
+            self.replacement_snapshot.migration_state,
+            None,
+            SyncTransportProtocol::LegacyPostcardV6,
+            self.replacement_snapshot.migration_epoch,
+            false,
+        )
+    }
+
+    pub const fn active_transport_authorized(&self) -> bool {
+        false
+    }
+}
+
+pub fn capture_dormant_canonical_sync_v2_rollback_snapshot(
+    migration_state: CanonicalSyncV2MigrationState,
+    migration_epoch: u64,
+    mutual_candidate_selection: Option<&CanonicalSyncV2MutualCandidateSelection>,
+    client_runtime: Option<&CanonicalSyncV2StoredSessionRuntime>,
+    responder_runtime: Option<&CanonicalSyncV2StoredResponderRuntime>,
+) -> Result<CanonicalSyncV2RollbackSnapshot, CanonicalSyncV2SessionError> {
+    if mutual_candidate_selection
+        .is_some_and(|selection| selection.migration_epoch() > migration_epoch)
+    {
+        return Err(CanonicalSyncV2SessionError::RollbackEvidenceEpochMismatch);
+    }
+    if let Some(runtime) = client_runtime {
+        durable_client_action_from_runtime(runtime)?;
+    }
+    if let Some(runtime) = responder_runtime {
+        durable_responder_action_from_runtime(runtime)?;
+    }
+    if let Some(selection) = mutual_candidate_selection {
+        let plan = evaluate_dormant_canonical_sync_v2_transport_policy(
+            migration_state,
+            Some(selection),
+            SyncTransportProtocol::CanonicalCborV2,
+            0,
+            false,
+        )?;
+        let coordinator = CanonicalSyncV2DormantDualReaderCoordinator::new(plan);
+        if let Some(runtime) = client_runtime {
+            coordinator.plan_client_dispatch(Some(runtime))?;
+        }
+        if let Some(runtime) = responder_runtime {
+            coordinator.plan_responder_dispatch(Some(runtime))?;
+        }
+    }
+    Ok(CanonicalSyncV2RollbackSnapshot {
+        migration_state,
+        migration_epoch,
+        selected_session_id: mutual_candidate_selection.map(selection_evidence_id),
+        client_progress_checkpoint_id: client_runtime
+            .filter(|runtime| client_runtime_has_canonical_progress(runtime))
+            .map(|runtime| runtime.checkpoint().checkpoint_id()),
+        responder_progress_checkpoint_id: responder_runtime
+            .filter(|runtime| responder_runtime_has_canonical_progress(runtime))
+            .map(|runtime| runtime.checkpoint().checkpoint_id()),
+    })
+}
+
+pub fn plan_dormant_canonical_sync_v2_rollback(
+    current: CanonicalSyncV2RollbackSnapshot,
+    target_state: CanonicalSyncV2MigrationState,
+    next_migration_epoch: u64,
+    trigger: CanonicalSyncV2RollbackTrigger,
+    reason: &str,
+) -> Result<CanonicalSyncV2RollbackDrillRecord, CanonicalSyncV2SessionError> {
+    if matches!(
+        trigger,
+        CanonicalSyncV2RollbackTrigger::ParseError | CanonicalSyncV2RollbackTrigger::NetworkError
+    ) {
+        return Err(CanonicalSyncV2SessionError::RollbackAutomaticTriggerForbidden);
+    }
+    validate_rollback_reason(reason)?;
+    let expected_epoch = current
+        .migration_epoch
+        .checked_add(1)
+        .ok_or(CanonicalSyncV2SessionError::RollbackEpochOverflow)?;
+    if next_migration_epoch != expected_epoch {
+        return Err(CanonicalSyncV2SessionError::RollbackEpochNotNext {
+            current: current.migration_epoch,
+            proposed: next_migration_epoch,
+        });
+    }
+    let expected_target = previous_migration_state(current.migration_state).ok_or(
+        CanonicalSyncV2SessionError::RollbackTransitionForbidden {
+            from: current.migration_state,
+            to: target_state,
+        },
+    )?;
+    if target_state != expected_target {
+        return Err(CanonicalSyncV2SessionError::RollbackTransitionForbidden {
+            from: current.migration_state,
+            to: target_state,
+        });
+    }
+    if current.has_canonical_evidence() {
+        return Err(
+            CanonicalSyncV2SessionError::RollbackCanonicalEvidencePresent {
+                selected_session: current.selected_session_id.is_some(),
+                client_progress: current.client_progress_checkpoint_id.is_some(),
+                responder_progress: current.responder_progress_checkpoint_id.is_some(),
+            },
+        );
+    }
+    let replacement_snapshot = CanonicalSyncV2RollbackSnapshot {
+        migration_state: target_state,
+        migration_epoch: next_migration_epoch,
+        selected_session_id: None,
+        client_progress_checkpoint_id: None,
+        responder_progress_checkpoint_id: None,
+    };
+    let previous_snapshot_id = current.snapshot_id();
+    let reason = reason.to_owned();
+    let payload =
+        rollback_record_payload(previous_snapshot_id, replacement_snapshot, trigger, &reason)?;
+    Ok(CanonicalSyncV2RollbackDrillRecord {
+        previous_snapshot_id,
+        replacement_snapshot,
+        trigger,
+        reason,
+        record_id: rollback_record_id(&payload),
+    })
+}
+
+fn migration_state_code(state: CanonicalSyncV2MigrationState) -> u8 {
+    match state {
+        CanonicalSyncV2MigrationState::LegacyOnly => 1,
+        CanonicalSyncV2MigrationState::AdvertiseCanonicalV2 => 2,
+        CanonicalSyncV2MigrationState::DualReaderPreferLegacy => 3,
+        CanonicalSyncV2MigrationState::DualReaderPreferCanonical => 4,
+        CanonicalSyncV2MigrationState::CanonicalRequired => 5,
+    }
+}
+
+fn migration_state_from_code(
+    code: u8,
+) -> Result<CanonicalSyncV2MigrationState, CanonicalSyncV2SessionError> {
+    match code {
+        1 => Ok(CanonicalSyncV2MigrationState::LegacyOnly),
+        2 => Ok(CanonicalSyncV2MigrationState::AdvertiseCanonicalV2),
+        3 => Ok(CanonicalSyncV2MigrationState::DualReaderPreferLegacy),
+        4 => Ok(CanonicalSyncV2MigrationState::DualReaderPreferCanonical),
+        5 => Ok(CanonicalSyncV2MigrationState::CanonicalRequired),
+        _ => Err(CanonicalSyncV2SessionError::RollbackSnapshotInvalid(
+            "unknown migration state",
+        )),
+    }
+}
+
+fn previous_migration_state(
+    state: CanonicalSyncV2MigrationState,
+) -> Option<CanonicalSyncV2MigrationState> {
+    match state {
+        CanonicalSyncV2MigrationState::LegacyOnly => None,
+        CanonicalSyncV2MigrationState::AdvertiseCanonicalV2 => {
+            Some(CanonicalSyncV2MigrationState::LegacyOnly)
+        }
+        CanonicalSyncV2MigrationState::DualReaderPreferLegacy => {
+            Some(CanonicalSyncV2MigrationState::AdvertiseCanonicalV2)
+        }
+        CanonicalSyncV2MigrationState::DualReaderPreferCanonical => {
+            Some(CanonicalSyncV2MigrationState::DualReaderPreferLegacy)
+        }
+        CanonicalSyncV2MigrationState::CanonicalRequired => {
+            Some(CanonicalSyncV2MigrationState::DualReaderPreferCanonical)
+        }
+    }
+}
+
+fn rollback_trigger_code(
+    trigger: CanonicalSyncV2RollbackTrigger,
+) -> Result<u8, CanonicalSyncV2SessionError> {
+    match trigger {
+        CanonicalSyncV2RollbackTrigger::ExplicitLocal => Ok(1),
+        CanonicalSyncV2RollbackTrigger::ReleasePolicy => Ok(2),
+        CanonicalSyncV2RollbackTrigger::ParseError
+        | CanonicalSyncV2RollbackTrigger::NetworkError => {
+            Err(CanonicalSyncV2SessionError::RollbackAutomaticTriggerForbidden)
+        }
+    }
+}
+
+fn rollback_trigger_from_code(
+    code: u8,
+) -> Result<CanonicalSyncV2RollbackTrigger, CanonicalSyncV2SessionError> {
+    match code {
+        1 => Ok(CanonicalSyncV2RollbackTrigger::ExplicitLocal),
+        2 => Ok(CanonicalSyncV2RollbackTrigger::ReleasePolicy),
+        _ => Err(CanonicalSyncV2SessionError::RollbackRecordInvalid(
+            "unknown or automatic trigger",
+        )),
+    }
+}
+
+fn decode_optional_rollback_id(
+    present: bool,
+    encoded: &[u8],
+) -> Result<Option<[u8; 32]>, CanonicalSyncV2SessionError> {
+    let id: [u8; 32] = encoded
+        .try_into()
+        .map_err(|_| CanonicalSyncV2SessionError::RollbackSnapshotInvalid("evidence id"))?;
+    if present {
+        if id == [0; 32] {
+            return Err(CanonicalSyncV2SessionError::RollbackSnapshotInvalid(
+                "zero evidence id",
+            ));
+        }
+        Ok(Some(id))
+    } else if id == [0; 32] {
+        Ok(None)
+    } else {
+        Err(CanonicalSyncV2SessionError::RollbackSnapshotInvalid(
+            "unflagged evidence id",
+        ))
+    }
+}
+
+fn validate_rollback_reason(reason: &str) -> Result<(), CanonicalSyncV2SessionError> {
+    if reason.is_empty()
+        || reason.trim() != reason
+        || reason.len() > MAX_CANONICAL_SYNC_V2_ROLLBACK_REASON_BYTES
+        || reason.chars().any(char::is_control)
+    {
+        return Err(CanonicalSyncV2SessionError::RollbackReasonInvalid);
+    }
+    Ok(())
+}
+
+fn rollback_record_payload(
+    previous_snapshot_id: [u8; 32],
+    replacement_snapshot: CanonicalSyncV2RollbackSnapshot,
+    trigger: CanonicalSyncV2RollbackTrigger,
+    reason: &str,
+) -> Result<Vec<u8>, CanonicalSyncV2SessionError> {
+    let mut encoded =
+        Vec::with_capacity(CANONICAL_SYNC_V2_ROLLBACK_RECORD_FIXED_BYTES + reason.len());
+    encoded.push(CANONICAL_SYNC_V2_ROLLBACK_SNAPSHOT_VERSION);
+    encoded.extend_from_slice(&previous_snapshot_id);
+    encoded.extend_from_slice(&replacement_snapshot.encode());
+    encoded.push(rollback_trigger_code(trigger)?);
+    encoded.extend_from_slice(&(reason.len() as u16).to_be_bytes());
+    encoded.extend_from_slice(reason.as_bytes());
+    Ok(encoded)
+}
+
+fn rollback_record_id(payload: &[u8]) -> [u8; 32] {
+    let mut hasher = blake3::Hasher::new_derive_key(CANONICAL_SYNC_V2_ROLLBACK_RECORD_ID_CONTEXT);
+    hasher.update(payload);
+    *hasher.finalize().as_bytes()
+}
+
+fn selection_evidence_id(selection: &CanonicalSyncV2MutualCandidateSelection) -> [u8; 32] {
+    let mut hasher =
+        blake3::Hasher::new_derive_key(CANONICAL_SYNC_V2_SELECTION_EVIDENCE_ID_CONTEXT);
+    hasher.update(&selection.conversation_id());
+    hasher.update(selection.listener_account_id().as_bytes());
+    hasher.update(selection.listener_device_id().as_bytes());
+    hasher.update(selection.requester_account_id().as_bytes());
+    hasher.update(selection.requester_device_id().as_bytes());
+    hasher.update(&selection.session_binding());
+    hasher.update(&selection.migration_epoch().to_be_bytes());
+    hasher.update(&[match selection.selected_protocol() {
+        SyncTransportProtocol::LegacyPostcardV6 => 1,
+        SyncTransportProtocol::CanonicalCborV2 => 2,
+    }]);
+    *hasher.finalize().as_bytes()
+}
+
+fn client_runtime_has_canonical_progress(runtime: &CanonicalSyncV2StoredSessionRuntime) -> bool {
+    runtime
+        .checkpoint()
+        .checkpoint()
+        .content
+        .checkpoint_sequence
+        > 1
+        || runtime.pending_client_frame().is_some()
+}
+
+fn responder_runtime_has_canonical_progress(
+    runtime: &CanonicalSyncV2StoredResponderRuntime,
+) -> bool {
+    runtime
+        .checkpoint()
+        .checkpoint()
+        .content
+        .checkpoint_sequence
+        > 1
+        || runtime.pending_server_frame().is_some()
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn verify_durable_mutual_canonical_candidate_selection(
     listener_capability: &SignedSyncTransportCapability,
@@ -2037,6 +2561,48 @@ pub enum CanonicalSyncV2SessionError {
 
     #[error("canonical durable {role} runtime does not match the selected transport identity")]
     CanonicalDurableRuntimeIdentityMismatch { role: &'static str },
+
+    #[error("canonical rollback snapshot is invalid: {0}")]
+    RollbackSnapshotInvalid(&'static str),
+
+    #[error("canonical rollback record is invalid: {0}")]
+    RollbackRecordInvalid(&'static str),
+
+    #[error("canonical rollback evidence belongs to a future migration epoch")]
+    RollbackEvidenceEpochMismatch,
+
+    #[error("canonical rollback may not be triggered by a parse or network error")]
+    RollbackAutomaticTriggerForbidden,
+
+    #[error("canonical rollback requires a bounded explicit incident or test reason")]
+    RollbackReasonInvalid,
+
+    #[error("canonical rollback migration epoch overflowed")]
+    RollbackEpochOverflow,
+
+    #[error("canonical rollback epoch must advance exactly once from {current}, found {proposed}")]
+    RollbackEpochNotNext { current: u64, proposed: u64 },
+
+    #[error("canonical rollback transition from {from:?} to {to:?} is not the previous state")]
+    RollbackTransitionForbidden {
+        from: CanonicalSyncV2MigrationState,
+        to: CanonicalSyncV2MigrationState,
+    },
+
+    #[error(
+        "canonical rollback is blocked by persisted evidence: selected={selected_session}, client={client_progress}, responder={responder_progress}"
+    )]
+    RollbackCanonicalEvidencePresent {
+        selected_session: bool,
+        client_progress: bool,
+        responder_progress: bool,
+    },
+
+    #[error("canonical rollback record does not apply to the current persisted snapshot")]
+    RollbackSnapshotMismatch,
+
+    #[error("canonical rollback record identifier does not match its exact bytes")]
+    RollbackRecordIdMismatch,
 }
 
 struct CanonicalSyncV2Plan {
@@ -2154,7 +2720,7 @@ fn event_keys(
 
 #[cfg(test)]
 mod tests {
-    use std::{cell::RefCell, collections::BTreeMap, error::Error, io};
+    use std::{cell::RefCell, collections::BTreeMap, error::Error, fs, io};
 
     use ed25519_dalek::{Signer, SigningKey};
     use kilogram_identity::{AccountRootState, ConversationScopeId};
@@ -3421,6 +3987,200 @@ mod tests {
             Err(CanonicalSyncV2SessionError::CanonicalDurableRuntimeMissing { role: "responder" })
         ));
         assert!(!canonical.active_transport_authorized());
+        Ok(())
+    }
+
+    #[test]
+    fn dormant_rollback_drill_is_restart_stable_and_fails_closed_on_evidence()
+    -> Result<(), Box<dyn Error>> {
+        let snapshot = capture_dormant_canonical_sync_v2_rollback_snapshot(
+            CanonicalSyncV2MigrationState::DualReaderPreferCanonical,
+            12,
+            None,
+            None,
+            None,
+        )?;
+        let snapshot_bytes = snapshot.encode();
+        assert_eq!(
+            CanonicalSyncV2RollbackSnapshot::decode(&snapshot_bytes)?,
+            snapshot
+        );
+
+        let record = plan_dormant_canonical_sync_v2_rollback(
+            snapshot,
+            CanonicalSyncV2MigrationState::DualReaderPreferLegacy,
+            13,
+            CanonicalSyncV2RollbackTrigger::ExplicitLocal,
+            "M1.1.71 deterministic rollback drill",
+        )?;
+        assert_eq!(
+            record,
+            plan_dormant_canonical_sync_v2_rollback(
+                snapshot,
+                CanonicalSyncV2MigrationState::DualReaderPreferLegacy,
+                13,
+                CanonicalSyncV2RollbackTrigger::ExplicitLocal,
+                "M1.1.71 deterministic rollback drill",
+            )?
+        );
+        assert!(!record.active_transport_authorized());
+
+        let directory = tempdir()?;
+        let record_path = directory.path().join("rollback-drill-v1.bin");
+        fs::write(&record_path, record.encode()?)?;
+        let restored = CanonicalSyncV2RollbackDrillRecord::decode(&fs::read(&record_path)?)?;
+        assert_eq!(restored, record);
+        let replacement = restored.apply(snapshot)?;
+        assert_eq!(
+            replacement.migration_state(),
+            CanonicalSyncV2MigrationState::DualReaderPreferLegacy
+        );
+        assert_eq!(replacement.migration_epoch(), 13);
+        assert!(!replacement.has_canonical_evidence());
+        let coordinator = CanonicalSyncV2DormantDualReaderCoordinator::new(
+            restored.dormant_legacy_transport_plan()?,
+        );
+        assert_eq!(
+            coordinator.plan_client_dispatch(None)?,
+            CanonicalSyncV2DormantClientDispatch::LegacyPostcardV6
+        );
+        assert_eq!(
+            coordinator.plan_responder_dispatch(None)?,
+            CanonicalSyncV2DormantResponderDispatch::LegacyPostcardV6
+        );
+        assert!(!coordinator.active_transport_authorized());
+
+        assert!(matches!(
+            plan_dormant_canonical_sync_v2_rollback(
+                snapshot,
+                CanonicalSyncV2MigrationState::DualReaderPreferLegacy,
+                12,
+                CanonicalSyncV2RollbackTrigger::ExplicitLocal,
+                "stale epoch",
+            ),
+            Err(CanonicalSyncV2SessionError::RollbackEpochNotNext { .. })
+        ));
+        assert!(matches!(
+            plan_dormant_canonical_sync_v2_rollback(
+                snapshot,
+                CanonicalSyncV2MigrationState::AdvertiseCanonicalV2,
+                13,
+                CanonicalSyncV2RollbackTrigger::ExplicitLocal,
+                "skipped state",
+            ),
+            Err(CanonicalSyncV2SessionError::RollbackTransitionForbidden { .. })
+        ));
+        for trigger in [
+            CanonicalSyncV2RollbackTrigger::ParseError,
+            CanonicalSyncV2RollbackTrigger::NetworkError,
+        ] {
+            assert!(matches!(
+                plan_dormant_canonical_sync_v2_rollback(
+                    snapshot,
+                    CanonicalSyncV2MigrationState::DualReaderPreferLegacy,
+                    13,
+                    trigger,
+                    "automatic fallback",
+                ),
+                Err(CanonicalSyncV2SessionError::RollbackAutomaticTriggerForbidden)
+            ));
+        }
+        assert!(matches!(
+            plan_dormant_canonical_sync_v2_rollback(
+                snapshot,
+                CanonicalSyncV2MigrationState::DualReaderPreferLegacy,
+                13,
+                CanonicalSyncV2RollbackTrigger::ExplicitLocal,
+                "",
+            ),
+            Err(CanonicalSyncV2SessionError::RollbackReasonInvalid)
+        ));
+
+        let listener = DeviceIdentity::from_secret_bytes([0x2a; 32]);
+        let requester = DeviceIdentity::from_secret_bytes([0x4a; 32]);
+        let selection = CanonicalSyncV2MutualCandidateSelection {
+            conversation_id: [0x3a; 32],
+            listener_account_id: AccountId::from_bytes([0x5a; 32]),
+            listener_device_id: listener.device_id(),
+            requester_account_id: AccountId::from_bytes([0x6a; 32]),
+            requester_device_id: requester.device_id(),
+            session_binding: [0x7a; 32],
+            migration_epoch: 12,
+            selected_protocol: SyncTransportProtocol::CanonicalCborV2,
+        };
+        let selected_snapshot = capture_dormant_canonical_sync_v2_rollback_snapshot(
+            CanonicalSyncV2MigrationState::DualReaderPreferCanonical,
+            12,
+            Some(&selection),
+            None,
+            None,
+        )?;
+        assert!(selected_snapshot.selected_session_id().is_some());
+        assert!(matches!(
+            plan_dormant_canonical_sync_v2_rollback(
+                selected_snapshot,
+                CanonicalSyncV2MigrationState::DualReaderPreferLegacy,
+                13,
+                CanonicalSyncV2RollbackTrigger::ReleasePolicy,
+                "selected session exists",
+            ),
+            Err(
+                CanonicalSyncV2SessionError::RollbackCanonicalEvidencePresent {
+                    selected_session: true,
+                    ..
+                }
+            )
+        ));
+        assert!(matches!(
+            capture_dormant_canonical_sync_v2_rollback_snapshot(
+                CanonicalSyncV2MigrationState::DualReaderPreferCanonical,
+                11,
+                Some(&selection),
+                None,
+                None,
+            ),
+            Err(CanonicalSyncV2SessionError::RollbackEvidenceEpochMismatch)
+        ));
+
+        let progress_snapshot = CanonicalSyncV2RollbackSnapshot {
+            migration_state: CanonicalSyncV2MigrationState::DualReaderPreferCanonical,
+            migration_epoch: 12,
+            selected_session_id: None,
+            client_progress_checkpoint_id: Some([0x81; 32]),
+            responder_progress_checkpoint_id: Some([0x82; 32]),
+        };
+        assert!(matches!(
+            plan_dormant_canonical_sync_v2_rollback(
+                progress_snapshot,
+                CanonicalSyncV2MigrationState::DualReaderPreferLegacy,
+                13,
+                CanonicalSyncV2RollbackTrigger::ReleasePolicy,
+                "durable canonical progress exists",
+            ),
+            Err(
+                CanonicalSyncV2SessionError::RollbackCanonicalEvidencePresent {
+                    client_progress: true,
+                    responder_progress: true,
+                    ..
+                }
+            )
+        ));
+
+        let mut corrupted_record = record.encode()?;
+        let last = corrupted_record.len() - 1;
+        corrupted_record[last] ^= 1;
+        assert!(matches!(
+            CanonicalSyncV2RollbackDrillRecord::decode(&corrupted_record),
+            Err(CanonicalSyncV2SessionError::RollbackRecordIdMismatch)
+        ));
+        assert!(matches!(
+            record.apply(CanonicalSyncV2RollbackSnapshot {
+                migration_epoch: 11,
+                ..snapshot
+            }),
+            Err(CanonicalSyncV2SessionError::RollbackSnapshotMismatch)
+                | Err(CanonicalSyncV2SessionError::RollbackEpochNotNext { .. })
+        ));
         Ok(())
     }
 

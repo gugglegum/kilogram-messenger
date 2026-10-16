@@ -133,9 +133,9 @@ function Assert-Contract {
         }
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.70' -or
+    if ([string]$Migration.milestone -cne 'M1.1.71' -or
         [string]$Migration.status -cne
-            'dormant-dual-reader-runtime-coordinator-verified-not-active' -or
+            'dormant-deterministic-rollback-drill-verified-not-active' -or
         [string]$Migration.history_compatible_successor.dormant_atomic_legacy_import_checkpoint -cne
             'verified' -or
         [bool]$Migration.candidate_identifier_registered) {
@@ -149,9 +149,9 @@ function Assert-Contract {
         [string]$checkpointRequirement[0].status -cne 'verified') {
         throw 'canonical migration lost the verified atomic import checkpoint requirement'
     }
-    if ([string]$TransportManifest.milestone -cne 'M1.1.70' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.71' -or
         [string]$TransportManifest.status -cne
-            'dormant-dual-reader-runtime-coordinator-verified-not-active' -or
+            'dormant-deterministic-rollback-drill-verified-not-active' -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_atomic_legacy_import_checkpoint -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_signed_session_bootstrap -or
         [bool]$TransportManifest.history_compatible_successor.registered -or
@@ -162,20 +162,20 @@ function Assert-Contract {
             @($TransportManifest.remaining)) {
         throw 'transport sync manifest lost the dormant atomic import checkpoint boundary'
     }
-    if ([string]$Compatibility.milestone -cne 'M1.1.70' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.71' -or
         [string]$Compatibility.status -cne
-            'dormant-dual-reader-runtime-coordinator-verified-not-active' -or
+            'dormant-deterministic-rollback-drill-verified-not-active' -or
         -not [bool]$Compatibility.required_successor.dormant_atomic_legacy_import_checkpoint_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_signed_session_bootstrap_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_signed_session_successor_store_integrated -or
         [string]$Compatibility.required_successor.status -cne
-            'dormant-dual-reader-runtime-coordinator-verified-not-active') {
+            'dormant-deterministic-rollback-drill-verified-not-active') {
         throw 'history compatibility manifest lost the atomic import checkpoint contract'
     }
     $transportCoverage = @(
         @($Coverage.surfaces) | Where-Object { [string]$_.id -ceq 'transport-sync' }
     )
-    if ([string]$Coverage.milestone -cne 'M1.1.70' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.71' -or
         $transportCoverage.Count -ne 1 -or
         'CANONICAL-SYNC-V2-IMPORT-CHECKPOINT.json' -cnotin
             @($transportCoverage[0].artifacts) -or

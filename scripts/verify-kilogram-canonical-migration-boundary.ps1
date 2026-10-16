@@ -23,8 +23,8 @@ function Assert-ExactStrings {
 
 function Assert-Manifest {
     param([object]$Manifest)
-    if ([UInt64]$Manifest.schema_version -ne 1 -or [string]$Manifest.milestone -cne 'M1.1.70' -or
-        [string]$Manifest.status -cne 'dormant-dual-reader-runtime-coordinator-verified-not-active' -or
+    if ([UInt64]$Manifest.schema_version -ne 1 -or [string]$Manifest.milestone -cne 'M1.1.71' -or
+        [string]$Manifest.status -cne 'dormant-deterministic-rollback-drill-verified-not-active' -or
         [string]$Manifest.current_state -cne 'legacy-only' -or [bool]$Manifest.changes_active_wire) {
         throw 'canonical migration header changed'
     }
@@ -71,6 +71,8 @@ function Assert-Manifest {
             'verified' -or
         [string]$Manifest.history_compatible_successor.dormant_dual_reader_runtime_coordinator -cne
             'verified' -or
+        [string]$Manifest.history_compatible_successor.dormant_deterministic_rollback_drill -cne
+            'verified' -or
         [bool]$Manifest.history_compatible_successor.registered -or
         [bool]$Manifest.history_compatible_successor.dialed) {
         throw 'history-compatible successor boundary changed'
@@ -84,6 +86,7 @@ function Assert-Manifest {
         [string]$Manifest.selection.mutual_authenticated_candidate_selection -cne 'verified' -or
         [string]$Manifest.selection.mixed_version_and_downgrade_matrix -cne 'verified' -or
         [string]$Manifest.selection.dual_reader_runtime_coordinator -cne 'verified' -or
+        [string]$Manifest.selection.rollback_drill -cne 'verified' -or
         [bool]$Manifest.selection.selection_authorizes_registration_or_dial) {
         throw 'unsafe canonical selection policy'
     }
@@ -98,7 +101,11 @@ function Assert-Manifest {
         'dual-reader-prefer-legacy->dual-reader-prefer-cbor',
         'dual-reader-prefer-cbor->cbor-required'
     ) 'forward transitions'
-    if ([string]$Manifest.rollback.trigger -cne 'explicit-local-or-release-policy-only') {
+    if ([string]$Manifest.rollback.trigger -cne 'explicit-local-or-release-policy-only' -or
+        [string]$Manifest.rollback.deterministic_drill -cne 'verified' -or
+        [UInt64]$Manifest.rollback.snapshot_bytes -ne 107 -or
+        -not [bool]$Manifest.rollback.explicit_one_step_only -or
+        -not [bool]$Manifest.rollback.selected_or_durable_canonical_evidence_blocks) {
         throw 'rollback trigger changed'
     }
     Assert-ExactStrings @($Manifest.rollback.requires) @(
@@ -146,7 +153,7 @@ function Assert-Manifest {
         'sustained-coverage-guided-fuzzing|pending',
         'mixed-version-and-downgrade-tests|verified',
         'fresh-hosted-and-field-evidence|pending',
-        'rollback-drill|pending'
+        'rollback-drill|verified'
     ) 'activation requirements'
 }
 
@@ -203,7 +210,7 @@ if ($SelfTest) {
 }
 
 Write-Output 'canonical_migration_boundary=verified'
-Write-Output 'migration_status=dormant-dual-reader-runtime-coordinator-verified-not-active'
+Write-Output 'migration_status=dormant-deterministic-rollback-drill-verified-not-active'
 Write-Output 'candidate_protocol_identifier=kilogram/m1/sync/cbor/2'
 Write-Output 'history_compatible_successor_identifier=kilogram/m1/sync/cbor/2'
 Write-Output 'candidate_identifier_registered=false'

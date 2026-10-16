@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.70",
-  "status": "dormant-dual-reader-runtime-coordinator-verified-not-active",
+  "milestone": "M1.1.71",
+  "status": "dormant-deterministic-rollback-drill-verified-not-active",
   "surface": "transport-sync",
   "changes_active_wire": false,
   "active": {
@@ -42,6 +42,7 @@
     "dormant_mutual_authenticated_candidate_selection": true,
     "dormant_mixed_version_and_downgrade_matrix": true,
     "dormant_dual_reader_runtime_coordinator": true,
+    "dormant_deterministic_rollback_drill": true,
     "registered": false,
     "dialed": false,
     "format_sniffing": false,
@@ -58,6 +59,7 @@
     "both_durable_adapter_identities_required": true,
     "mixed_version_and_downgrade_matrix_verified": true,
     "dual_reader_runtime_coordinator_verified": true,
+    "rollback_drill_verified": true,
     "selection_authorizes_registration_or_dial": false,
     "fallback_after_selected_canonical_failure": false
   },
@@ -80,7 +82,6 @@
     ]
   },
   "remaining": [
-    "rollback-drill",
     "sustained-fuzzing",
     "fresh-hosted-and-field-evidence"
   ],

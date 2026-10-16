@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.70",
-  "status": "dormant-dual-reader-runtime-coordinator-verified-not-active",
+  "milestone": "M1.1.71",
+  "status": "dormant-deterministic-rollback-drill-verified-not-active",
   "changes_active_wire": false,
   "current_encoding": "postcard",
   "candidate_encoding": "kilogram-deterministic-cbor-v2-typed-history",
@@ -29,6 +29,7 @@
     "dormant_mutual_authenticated_candidate_selection": "verified",
     "dormant_mixed_version_and_downgrade_matrix": "verified",
     "dormant_dual_reader_runtime_coordinator": "verified",
+    "dormant_deterministic_rollback_drill": "verified",
     "registered": false,
     "dialed": false
   },
@@ -43,6 +44,7 @@
     "mutual_authenticated_candidate_selection": "verified",
     "mixed_version_and_downgrade_matrix": "verified",
     "dual_reader_runtime_coordinator": "verified",
+    "rollback_drill": "verified",
     "selection_authorizes_registration_or_dial": false
   },
   "states": [
@@ -117,6 +119,10 @@
   "rollback": {
     "allowed": true,
     "trigger": "explicit-local-or-release-policy-only",
+    "deterministic_drill": "verified",
+    "snapshot_bytes": 107,
+    "explicit_one_step_only": true,
+    "selected_or_durable_canonical_evidence_blocks": true,
     "requires": [
       "recorded-incident-or-test-reason",
       "monotonic-migration-epoch",
@@ -264,7 +270,7 @@
     },
     {
       "id": "rollback-drill",
-      "status": "pending"
+      "status": "verified"
     }
   ]
 }

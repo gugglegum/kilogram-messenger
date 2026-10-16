@@ -123,7 +123,7 @@ function Assert-Contract {
         -not [bool]$Compatibility.required_successor.dormant_signed_session_bootstrap_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_signed_session_successor_store_integrated -or
         [string]$Compatibility.required_successor.status -cne
-            'dormant-dual-reader-runtime-coordinator-verified-not-active') {
+            'dormant-deterministic-rollback-drill-verified-not-active') {
         throw 'canonical sync history compatibility ledger changed'
     }
     if ([string]$Migration.history_compatible_successor.protocol_identifier -cne

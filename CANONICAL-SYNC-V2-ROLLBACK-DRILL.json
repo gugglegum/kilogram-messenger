@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.71",
+  "status": "dormant-deterministic-rollback-drill-verified-not-active",
+  "changes_active_wire": false,
+  "protocol_identifier": "kilogram/m1/sync/cbor/2",
+  "implementation": {
+    "snapshot": "CanonicalSyncV2RollbackSnapshot",
+    "record": "CanonicalSyncV2RollbackDrillRecord",
+    "capture": "capture_dormant_canonical_sync_v2_rollback_snapshot",
+    "planner": "plan_dormant_canonical_sync_v2_rollback",
+    "snapshot_version": 1,
+    "snapshot_bytes": 107,
+    "max_reason_bytes": 256
+  },
+  "persistence_contract": {
+    "snapshot_fixed_width": true,
+    "snapshot_strict_decode": true,
+    "record_strict_decode": true,
+    "snapshot_id": "blake3-derived-key-over-exact-snapshot-bytes",
+    "record_id": "blake3-derived-key-over-exact-record-payload",
+    "restart_from_persisted_record_verified": true,
+    "active_runtime_store_integrated": false
+  },
+  "rollback_policy": {
+    "allowed_triggers": ["explicit-local", "release-policy"],
+    "automatic_parse_or_network_trigger_forbidden": true,
+    "reason_required": true,
+    "reason_trimmed_and_control_free": true,
+    "migration_epoch_advances_exactly_one": true,
+    "one_previous_state_only": true,
+    "same_input_same_record": true,
+    "selected_session_blocks_rollback": true,
+    "durable_client_progress_blocks_rollback": true,
+    "durable_responder_progress_blocks_rollback": true,
+    "legacy_dispatch_symbolic_only": true
+  },
+  "rollback_transitions": [
+    {
+      "from": "canonical-required",
+      "to": "dual-reader-prefer-canonical"
+    },
+    {
+      "from": "dual-reader-prefer-canonical",
+      "to": "dual-reader-prefer-legacy"
+    },
+    {
+      "from": "dual-reader-prefer-legacy",
+      "to": "advertise-cbor-v2"
+    },
+    {
+      "from": "advertise-cbor-v2",
+      "to": "legacy-only"
+    }
+  ],
+  "fail_closed": {
+    "unknown_snapshot_version_or_flags": true,
+    "non_canonical_record_length": true,
+    "record_id_mismatch": true,
+    "snapshot_mismatch": true,
+    "future_selection_epoch": true,
+    "stale_or_skipped_epoch": true,
+    "skipped_migration_state": true,
+    "automatic_error_fallback": true,
+    "selected_or_progressed_canonical_session": true
+  },
+  "activation": {
+    "drill_verified": true,
+    "active_transport_authorized": false,
+    "endpoint_registered": false,
+    "canonical_dial_enabled": false,
+    "transport_read_or_write_performed": false,
+    "active_postcard_path_changed": false
+  },
+  "remaining": [
+    "sustained-fuzzing",
+    "fresh-hosted-and-field-evidence"
+  ],
+  "scope": {
+    "network_executed": false,
+    "release_build": false,
+    "archive_created": false,
+    "stable_executable_replaced": false
+  }
+}

@@ -6713,3 +6713,28 @@ correlation visible, Windows-only field evidence, independent security audit
 - network/release/archive/stable EXE/push/tag не выполнялись. Следующий bounded
   slice — deterministic rollback drill, затем sustained fuzzing и fresh field
   evidence до отдельного activation решения.
+
+### M1.1.71 — deterministic dormant rollback drill: принято локально
+
+- добавлены strict fixed-width `CanonicalSyncV2RollbackSnapshot` и
+  content-addressed `CanonicalSyncV2RollbackDrillRecord`; snapshot хранит
+  migration state/epoch и optional IDs selected session, client progress и
+  responder progress;
+- разрешены только explicit local и release-policy triggers с непустой
+  trimmed/control-free причиной не длиннее 256 bytes. Parse/network error,
+  stale/skipped epoch, skipped state и rollback из `legacy-only` fail closed;
+- rollback движется ровно на одно состояние к legacy, одновременно увеличивая
+  migration epoch на единицу. Идентичный запрос порождает byte-identical record;
+- regression сохраняет record во временный файл, восстанавливает после
+  simulated restart и применяет только к exact previous snapshot. Любая mutual
+  canonical selection или durable progress запрещает rollback;
+- replacement может вернуть только symbolic legacy dispatch; active store,
+  wire, Iroh и CLI не подключены, transport permit всегда false;
+- новый manifest, RFC-0198 и dedicated boundary добавлены. Новая и 21
+  затронутая boundary прошли normal и negative self-test режимы (22/22 пары);
+- полный `kilogram-session` offline debug regression прошёл 18/18; 101 root
+  JSON parsed; rustfmt и workspace locked/offline strict Clippy прошли;
+  accepted-tag readiness — 103/103 против immutable `M1.0.0`;
+- network/release/archive/stable EXE/push/tag не выполнялись. До отдельного
+  activation решения остаются sustained coverage-guided fuzzing и fresh
+  hosted/physical-device evidence.
