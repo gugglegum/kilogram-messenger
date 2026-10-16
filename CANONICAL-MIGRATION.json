@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.57",
-  "status": "dormant-history-compatible-runtime-state-machine-verified-not-active",
+  "milestone": "M1.1.58",
+  "status": "dormant-atomic-typed-store-verified-not-active",
   "changes_active_wire": false,
   "current_encoding": "postcard",
   "candidate_encoding": "kilogram-deterministic-cbor-v2-typed-history",
@@ -16,6 +16,7 @@
     "typed_session_checkpoint": "verified",
     "authenticated_ticket_capability": "verified",
     "dormant_runtime_state_machine": "verified",
+    "dormant_atomic_typed_store": "verified",
     "registered": false,
     "dialed": false
   },
@@ -175,6 +176,10 @@
     },
     {
       "id": "dormant-history-compatible-runtime-state-machine",
+      "status": "verified"
+    },
+    {
+      "id": "dormant-atomic-typed-carrier-store",
       "status": "verified"
     },
     {

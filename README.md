@@ -2328,6 +2328,16 @@ carriers in both transfer directions. There is still no active store, runtime
 membership policy, checkpoint transaction, endpoint registration or dial path;
 Postcard v6 remains the only active synchronization wire.
 
+[`RFC-0184`](docs/RFC-0184-m1158-dormant-atomic-typed-sync-store.md)
+implements the dormant `/cbor/2` store contract as a separately versioned redb
+database. Its immutable key combines conversation ID, Event namespace and
+Event ID; reads strictly revalidate the closed carrier, while a write batch is
+preflighted and committed atomically with immediate durability. Reopen,
+idempotence, corruption and conflict regression is covered, but installed
+Postcard history is not imported and this database is not used by the active
+runtime. Membership policy, checkpoint coupling and capability-driven
+activation remain separate fail-closed work.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

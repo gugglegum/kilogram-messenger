@@ -4104,3 +4104,31 @@ Hosted follow-up:
   network operation.
 - No release build, archive, stable executable replacement, push or tag belongs
   to this stage.
+
+## M1.1.58 dormant atomic typed carrier store (2026-10-16)
+
+- Added `CanonicalSyncV2CarrierStore` to `kilogram-store` as a separate redb
+  database with an exact schema marker. Its 72-byte key is conversation ID +
+  big-endian Event namespace + Event ID; stored values are exact closed carrier
+  bytes.
+- Store reads strictly decode and verify every carrier, then match its embedded
+  conversation and derived typed key against the database key. Missing,
+  malformed, cross-conversation and immutable-conflict cases fail closed.
+- `put_batch` validates/canonicalizes first, preflights all existing records in
+  one redb write transaction and only then inserts missing records before an
+  immediate-durability commit. Regression proves a later conflict leaves no
+  earlier batch element visible.
+- `kilogram-session` now implements its dormant `CanonicalSyncV2Store` trait
+  for the concrete database. Focused locked/offline debug tests passed 3/3 for
+  `kilogram-store` and 4/4 for the adapter, with two Cargo jobs and BelowNormal
+  priority.
+- `CANONICAL-SYNC-V2-TYPED-STORE.json`, RFC-0184 and a dedicated negative
+  boundary keep the store absent from active CLI, Iroh transport and wire code.
+  Legacy import, membership policy, checkpoint transaction and capability
+  activation remain pending.
+- Final locked/offline debug regressions passed 14/14 for `kilogram-store` and
+  9/9 for `kilogram-session`. Rustfmt, workspace-wide strict Clippy and
+  accepted-tag readiness passed 90/90 against immutable `M1.0.0`; readiness
+  started no Rust test executable and executed no network operation.
+- No network operation, release build, archive, stable executable replacement,
+  push or tag belongs to this stage.

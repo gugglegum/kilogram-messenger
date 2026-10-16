@@ -3384,6 +3384,8 @@ dependencies = [
  "kilogram-identity",
  "kilogram-protocol",
  "kilogram-ratchet",
+ "redb",
+ "serde_json",
  "tempfile",
  "thiserror 2.0.20",
 ]

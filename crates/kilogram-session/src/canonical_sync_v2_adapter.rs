@@ -23,7 +23,7 @@ use kilogram_protocol::{
         verify_signed_sync_diff_v2, verify_signed_sync_inventory_v2, verify_sync_frame_session_v2,
     },
 };
-use kilogram_store::StoreError;
+use kilogram_store::{CanonicalSyncV2CarrierStore, StoreError};
 use thiserror::Error;
 
 /// Storage contract required before canonical sync v2 can be activated.
@@ -48,6 +48,31 @@ pub trait CanonicalSyncV2Store {
         conversation_id: [u8; 32],
         events: &[CanonicalSyncEventCarrierV2],
     ) -> Result<(), StoreError>;
+}
+
+impl CanonicalSyncV2Store for CanonicalSyncV2CarrierStore {
+    fn inventory_v2(
+        &self,
+        conversation_id: [u8; 32],
+    ) -> Result<Vec<CanonicalSyncEventKeyV2>, StoreError> {
+        self.inventory(conversation_id)
+    }
+
+    fn events_by_key_v2(
+        &self,
+        conversation_id: [u8; 32],
+        event_keys: &[CanonicalSyncEventKeyV2],
+    ) -> Result<Vec<CanonicalSyncEventCarrierV2>, StoreError> {
+        self.events_by_key(conversation_id, event_keys)
+    }
+
+    fn put_events_v2(
+        &self,
+        conversation_id: [u8; 32],
+        events: &[CanonicalSyncEventCarrierV2],
+    ) -> Result<(), StoreError> {
+        self.put_batch(conversation_id, events)
+    }
 }
 
 /// Conversation-specific authorization boundary for the closed event carrier.
@@ -593,6 +618,7 @@ mod tests {
         encode_sync_client_frame_v2, encode_sync_server_frame_v2,
     };
     use serde_json::Value;
+    use tempfile::tempdir;
 
     use super::*;
 
@@ -855,6 +881,52 @@ mod tests {
             converge_one_carrier(event.clone(), true)?;
             converge_one_carrier(event, false)?;
         }
+        Ok(())
+    }
+
+    #[test]
+    fn durable_typed_store_trait_survives_reopen() -> Result<(), Box<dyn Error>> {
+        let directory = tempdir()?;
+        let legacy = carrier("/expected/legacy_carrier_cbor_hex")?;
+        let canonical = carrier("/expected/canonical_carrier_cbor_hex")?;
+        let legacy_conversation_id = *legacy.conversation_id();
+        let canonical_conversation_id = *canonical.conversation_id();
+        let legacy_key = legacy.key()?;
+        let canonical_key = canonical.key()?;
+        let store = CanonicalSyncV2CarrierStore::open(directory.path())?;
+        CanonicalSyncV2Store::put_events_v2(
+            &store,
+            legacy_conversation_id,
+            std::slice::from_ref(&legacy),
+        )?;
+        CanonicalSyncV2Store::put_events_v2(
+            &store,
+            canonical_conversation_id,
+            std::slice::from_ref(&canonical),
+        )?;
+        drop(store);
+
+        let reopened = CanonicalSyncV2CarrierStore::open(directory.path())?;
+        assert_eq!(
+            CanonicalSyncV2Store::inventory_v2(&reopened, legacy_conversation_id)?,
+            vec![legacy_key]
+        );
+        assert_eq!(
+            CanonicalSyncV2Store::events_by_key_v2(
+                &reopened,
+                canonical_conversation_id,
+                &[canonical_key]
+            )?,
+            vec![canonical]
+        );
+        assert_eq!(
+            CanonicalSyncV2Store::events_by_key_v2(
+                &reopened,
+                legacy_conversation_id,
+                &[legacy_key]
+            )?,
+            vec![legacy]
+        );
         Ok(())
     }
 

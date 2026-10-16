@@ -10,11 +10,13 @@ publish = false
 [dependencies]
 kilogram-identity = { path = "../kilogram-identity" }
 kilogram-protocol = { path = "../kilogram-protocol" }
+redb.workspace = true
 tempfile.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
 kilogram-ratchet = { path = "../kilogram-ratchet" }
+serde_json.workspace = true
 
 [lints]
 workspace = true

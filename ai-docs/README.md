@@ -1037,6 +1037,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.1.57 добавляет dormant transport-independent `/cbor/2` client/server
   state machine с full typed-key reconciliation и mandatory pre-storage policy,
   но не подключает active store/checkpoint и не регистрирует/dial-ит ALPN.
+- [`../docs/RFC-0184-m1158-dormant-atomic-typed-sync-store.md`](../docs/RFC-0184-m1158-dormant-atomic-typed-sync-store.md) —
+  M1.1.58 добавляет отдельную atomic redb БД с full typed storage key, strict
+  carrier validation и fail-closed batch conflict, не импортируя active legacy
+  history и не подключая `/cbor/2` к runtime.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

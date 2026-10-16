@@ -23,8 +23,8 @@ function Assert-ExactStrings {
 
 function Assert-Manifest {
     param([object]$Manifest)
-    if ([UInt64]$Manifest.schema_version -ne 1 -or [string]$Manifest.milestone -cne 'M1.1.57' -or
-        [string]$Manifest.status -cne 'dormant-history-compatible-runtime-state-machine-verified-not-active' -or
+    if ([UInt64]$Manifest.schema_version -ne 1 -or [string]$Manifest.milestone -cne 'M1.1.58' -or
+        [string]$Manifest.status -cne 'dormant-atomic-typed-store-verified-not-active' -or
         [string]$Manifest.current_state -cne 'legacy-only' -or [bool]$Manifest.changes_active_wire) {
         throw 'canonical migration header changed'
     }
@@ -44,6 +44,8 @@ function Assert-Manifest {
         [string]$Manifest.history_compatible_successor.authenticated_ticket_capability -cne
             'verified' -or
         [string]$Manifest.history_compatible_successor.dormant_runtime_state_machine -cne
+            'verified' -or
+        [string]$Manifest.history_compatible_successor.dormant_atomic_typed_store -cne
             'verified' -or
         [bool]$Manifest.history_compatible_successor.registered -or
         [bool]$Manifest.history_compatible_successor.dialed) {
@@ -96,6 +98,7 @@ function Assert-Manifest {
         'history-compatible-typed-session-checkpoint|verified',
         'history-compatible-canonical-sync-generation|verified',
         'dormant-history-compatible-runtime-state-machine|verified',
+        'dormant-atomic-typed-carrier-store|verified',
         'dual-reader-runtime-implementation|pending',
         'independent-crypto-conformance|verified',
         'bounded-decoder-mutation-regression|verified',
@@ -159,7 +162,7 @@ if ($SelfTest) {
 }
 
 Write-Output 'canonical_migration_boundary=verified'
-Write-Output 'migration_status=dormant-history-compatible-runtime-state-machine-verified-not-active'
+Write-Output 'migration_status=dormant-atomic-typed-store-verified-not-active'
 Write-Output 'candidate_protocol_identifier=kilogram/m1/sync/cbor/2'
 Write-Output 'history_compatible_successor_identifier=kilogram/m1/sync/cbor/2'
 Write-Output 'candidate_identifier_registered=false'

@@ -109,9 +109,9 @@ function Assert-BridgeContract {
     Assert-LowerHex ([string]$Vectors.expected.bridge_cbor_hex) -1 'bridge CBOR'
 
     if ([UInt64]$Compatibility.schema_version -ne 1 -or
-        [string]$Compatibility.milestone -cne 'M1.1.57' -or
+        [string]$Compatibility.milestone -cne 'M1.1.58' -or
         [string]$Compatibility.status -cne
-            'dormant-history-compatible-runtime-state-machine-verified-not-active' -or
+            'dormant-atomic-typed-store-verified-not-active' -or
         [bool]$Compatibility.changes_active_wire -or
         [string]$Compatibility.active.alpn -cne $legacyAlpn -or
         -not [bool]$Compatibility.active.history_compatible -or
@@ -142,10 +142,11 @@ function Assert-BridgeContract {
         -not [bool]$Compatibility.required_successor.typed_session_checkpoint_integrated -or
         -not [bool]$Compatibility.required_successor.ticket_capability_authenticated -or
         -not [bool]$Compatibility.required_successor.dormant_runtime_state_machine_integrated -or
+        -not [bool]$Compatibility.required_successor.dormant_atomic_typed_store_integrated -or
         -not [bool]$Compatibility.required_successor.must_integrate_bridge_into_closed_frames -or
         -not [bool]$Compatibility.required_successor.must_authenticate_exact_identifier_in_connection_ticket -or
         [string]$Compatibility.required_successor.status -cne
-            'dormant-state-machine-verified-not-active') {
+            'dormant-typed-store-verified-not-active') {
         throw 'canonical sync legacy-event bridge or successor contract changed'
     }
 
@@ -167,7 +168,7 @@ function Assert-BridgeContract {
             @($TransportManifest.remaining) -or
         'authenticated-cbor-v2-ticket-capability' -cin
             @($TransportManifest.remaining) -or
-        'active-typed-store-membership-policy-checkpoint-and-capability-integration' -cnotin
+        'legacy-import-membership-policy-checkpoint-and-capability-integration' -cnotin
             @($TransportManifest.remaining) -or
         [string]$TransportManifest.active.alpn -cne $legacyAlpn -or
         [bool]$TransportManifest.candidate.registered -or

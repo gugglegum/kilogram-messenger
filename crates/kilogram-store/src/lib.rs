@@ -12,13 +12,31 @@ use std::fs::File;
 use kilogram_identity::{ConversationMembershipSnapshot, ConversationScopeId, DeviceId};
 use kilogram_protocol::{
     AuthorizedEvent, ConversationId, EventId, LocalTextProjection, ProtocolError, SignedEvent,
+    canonical_sync_history_v2::{
+        CANONICAL_CBOR_V1_EVENT_NAMESPACE, CanonicalSyncEventCarrierV2, CanonicalSyncEventKeyV2,
+        CanonicalSyncEventNamespaceV2, LEGACY_POSTCARD_V6_EVENT_NAMESPACE,
+    },
+    canonical_sync_v2::{
+        CanonicalSyncEventBatchV2, CanonicalSyncV2Error,
+        MAX_CANONICAL_SYNC_V2_INVENTORY_EVENT_KEYS, encode_sync_event_batch_v2,
+    },
 };
+use redb::{Database, Durability, ReadableDatabase, ReadableTable, TableDefinition};
 use tempfile::NamedTempFile;
 use thiserror::Error;
 
 const EVENT_FILE_EXTENSION: &str = "event";
 const AUTHORIZATION_FILE_EXTENSION: &str = "authorization";
 const LOCAL_TEXT_PROJECTION_FILE_EXTENSION: &str = "local-text";
+pub const CANONICAL_SYNC_V2_STORE_FILE: &str = "canonical-sync-v2.redb";
+const CANONICAL_SYNC_V2_STORE_SCHEMA_KEY: &str = "schema";
+const CANONICAL_SYNC_V2_STORE_SCHEMA: &[u8] =
+    b"kilogram:canonical-sync-v2-carrier-store:v1\0kilogram/m1/sync/cbor/2";
+const CANONICAL_SYNC_V2_STORAGE_KEY_BYTES: usize = 72;
+const CANONICAL_SYNC_V2_META_TABLE: TableDefinition<&str, &[u8]> =
+    TableDefinition::new("canonical-sync-v2-meta-v1");
+const CANONICAL_SYNC_V2_CARRIER_TABLE: TableDefinition<&[u8], &[u8]> =
+    TableDefinition::new("canonical-sync-v2-carriers-v1");
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum StoreOutcome {
@@ -70,6 +88,17 @@ pub struct SyncPlan {
 
 pub struct EventStore {
     root: PathBuf,
+}
+
+/// Dormant transactional carrier store for `kilogram/m1/sync/cbor/2`.
+///
+/// This database is deliberately separate from the active Postcard event
+/// store. Each key includes the conversation and the complete typed Event key;
+/// one redb write transaction preflights and commits an entire carrier batch.
+/// Runtime migration/import and membership authorization remain external
+/// activation requirements.
+pub struct CanonicalSyncV2CarrierStore {
+    database: Database,
 }
 
 /// Immutable local-only storage for plaintext projections encrypted to one device.
@@ -450,6 +479,276 @@ impl LocalMessageStore {
         }
         Ok(projection)
     }
+}
+
+impl CanonicalSyncV2CarrierStore {
+    pub fn open(root: impl AsRef<Path>) -> Result<Self, StoreError> {
+        let requested = root.as_ref();
+        fs::create_dir_all(requested)?;
+        let root = fs::canonicalize(requested)?;
+        let database = Database::create(root.join(CANONICAL_SYNC_V2_STORE_FILE))
+            .map_err(canonical_sync_v2_database_error)?;
+        let mut write = database
+            .begin_write()
+            .map_err(canonical_sync_v2_database_error)?;
+        write
+            .set_durability(Durability::Immediate)
+            .map_err(canonical_sync_v2_database_error)?;
+        {
+            let mut metadata = write
+                .open_table(CANONICAL_SYNC_V2_META_TABLE)
+                .map_err(canonical_sync_v2_database_error)?;
+            let existing = metadata
+                .get(CANONICAL_SYNC_V2_STORE_SCHEMA_KEY)
+                .map_err(canonical_sync_v2_database_error)?
+                .map(|value| value.value().to_vec());
+            match existing {
+                Some(value) if value != CANONICAL_SYNC_V2_STORE_SCHEMA => {
+                    return Err(StoreError::CanonicalSyncV2StoreSchemaMismatch);
+                }
+                Some(_) => {}
+                None => {
+                    metadata
+                        .insert(
+                            CANONICAL_SYNC_V2_STORE_SCHEMA_KEY,
+                            CANONICAL_SYNC_V2_STORE_SCHEMA,
+                        )
+                        .map_err(canonical_sync_v2_database_error)?;
+                }
+            }
+        }
+        {
+            let _carriers = write
+                .open_table(CANONICAL_SYNC_V2_CARRIER_TABLE)
+                .map_err(canonical_sync_v2_database_error)?;
+        }
+        write.commit().map_err(canonical_sync_v2_database_error)?;
+        Ok(Self { database })
+    }
+
+    pub fn inventory(
+        &self,
+        conversation_id: [u8; 32],
+    ) -> Result<Vec<CanonicalSyncEventKeyV2>, StoreError> {
+        let read = self
+            .database
+            .begin_read()
+            .map_err(canonical_sync_v2_database_error)?;
+        let table = read
+            .open_table(CANONICAL_SYNC_V2_CARRIER_TABLE)
+            .map_err(canonical_sync_v2_database_error)?;
+        let mut event_keys = Vec::new();
+        for entry in table.iter().map_err(canonical_sync_v2_database_error)? {
+            let (stored_key, stored_value) = entry.map_err(canonical_sync_v2_database_error)?;
+            let (stored_conversation_id, event_key) =
+                decode_canonical_sync_v2_storage_key(stored_key.value())?;
+            if stored_conversation_id != conversation_id {
+                continue;
+            }
+            validate_canonical_sync_v2_stored_carrier(
+                conversation_id,
+                event_key,
+                stored_value.value(),
+            )?;
+            event_keys.push(event_key);
+            if event_keys.len() > MAX_CANONICAL_SYNC_V2_INVENTORY_EVENT_KEYS {
+                return Err(StoreError::CanonicalSyncV2InventoryTooLarge {
+                    actual: event_keys.len(),
+                    maximum: MAX_CANONICAL_SYNC_V2_INVENTORY_EVENT_KEYS,
+                });
+            }
+        }
+        event_keys.sort_unstable();
+        Ok(event_keys)
+    }
+
+    pub fn events_by_key(
+        &self,
+        conversation_id: [u8; 32],
+        requested_event_keys: &[CanonicalSyncEventKeyV2],
+    ) -> Result<Vec<CanonicalSyncEventCarrierV2>, StoreError> {
+        let read = self
+            .database
+            .begin_read()
+            .map_err(canonical_sync_v2_database_error)?;
+        let table = read
+            .open_table(CANONICAL_SYNC_V2_CARRIER_TABLE)
+            .map_err(canonical_sync_v2_database_error)?;
+        requested_event_keys
+            .iter()
+            .map(|event_key| {
+                let storage_key = canonical_sync_v2_storage_key(conversation_id, *event_key);
+                let encoded = table
+                    .get(storage_key.as_slice())
+                    .map_err(canonical_sync_v2_database_error)?
+                    .map(|value| value.value().to_vec())
+                    .ok_or(StoreError::CanonicalSyncV2CarrierMissing {
+                        conversation_id,
+                        event_key: *event_key,
+                    })?;
+                validate_canonical_sync_v2_stored_carrier(conversation_id, *event_key, &encoded)
+            })
+            .collect()
+    }
+
+    pub fn put_batch(
+        &self,
+        conversation_id: [u8; 32],
+        events: &[CanonicalSyncEventCarrierV2],
+    ) -> Result<(), StoreError> {
+        if events.is_empty() {
+            return Ok(());
+        }
+
+        let mut keyed_events = events
+            .iter()
+            .map(|event| {
+                event
+                    .key()
+                    .map(|key| (key, event))
+                    .map_err(CanonicalSyncV2Error::from)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        keyed_events.sort_unstable_by_key(|(key, _)| *key);
+        let canonical_events: Vec<_> = keyed_events
+            .iter()
+            .map(|(_, event)| (*event).clone())
+            .collect();
+        encode_sync_event_batch_v2(&CanonicalSyncEventBatchV2 {
+            conversation_id,
+            events: canonical_events,
+        })?;
+        let prepared = keyed_events
+            .into_iter()
+            .map(|(key, event)| {
+                event
+                    .encode()
+                    .map(|encoded| (key, encoded))
+                    .map_err(CanonicalSyncV2Error::from)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let mut write = self
+            .database
+            .begin_write()
+            .map_err(canonical_sync_v2_database_error)?;
+        write
+            .set_durability(Durability::Immediate)
+            .map_err(canonical_sync_v2_database_error)?;
+        {
+            let mut table = write
+                .open_table(CANONICAL_SYNC_V2_CARRIER_TABLE)
+                .map_err(canonical_sync_v2_database_error)?;
+            let mut missing = Vec::new();
+            for (index, (event_key, encoded)) in prepared.iter().enumerate() {
+                let storage_key = canonical_sync_v2_storage_key(conversation_id, *event_key);
+                let existing = table
+                    .get(storage_key.as_slice())
+                    .map_err(canonical_sync_v2_database_error)?
+                    .map(|value| value.value().to_vec());
+                match existing {
+                    Some(value) => {
+                        validate_canonical_sync_v2_stored_carrier(
+                            conversation_id,
+                            *event_key,
+                            &value,
+                        )?;
+                        if value != *encoded {
+                            return Err(StoreError::CanonicalSyncV2CarrierConflict {
+                                conversation_id,
+                                event_key: *event_key,
+                            });
+                        }
+                    }
+                    None => missing.push(index),
+                }
+            }
+            for index in missing {
+                let (event_key, encoded) = &prepared[index];
+                let storage_key = canonical_sync_v2_storage_key(conversation_id, *event_key);
+                table
+                    .insert(storage_key.as_slice(), encoded.as_slice())
+                    .map_err(canonical_sync_v2_database_error)?;
+            }
+        }
+        write.commit().map_err(canonical_sync_v2_database_error)
+    }
+}
+
+fn canonical_sync_v2_storage_key(
+    conversation_id: [u8; 32],
+    event_key: CanonicalSyncEventKeyV2,
+) -> [u8; CANONICAL_SYNC_V2_STORAGE_KEY_BYTES] {
+    let mut output = [0_u8; CANONICAL_SYNC_V2_STORAGE_KEY_BYTES];
+    output[..32].copy_from_slice(&conversation_id);
+    output[32..40].copy_from_slice(&event_key.namespace.code().to_be_bytes());
+    output[40..].copy_from_slice(&event_key.event_id);
+    output
+}
+
+fn decode_canonical_sync_v2_storage_key(
+    encoded: &[u8],
+) -> Result<([u8; 32], CanonicalSyncEventKeyV2), StoreError> {
+    if encoded.len() != CANONICAL_SYNC_V2_STORAGE_KEY_BYTES {
+        return Err(StoreError::CanonicalSyncV2InvalidStorageKeyLength {
+            actual: encoded.len(),
+            expected: CANONICAL_SYNC_V2_STORAGE_KEY_BYTES,
+        });
+    }
+    let conversation_id = encoded[..32].try_into().map_err(|_| {
+        StoreError::CanonicalSyncV2InvalidStorageKeyLength {
+            actual: encoded.len(),
+            expected: CANONICAL_SYNC_V2_STORAGE_KEY_BYTES,
+        }
+    })?;
+    let namespace_code = u64::from_be_bytes(encoded[32..40].try_into().map_err(|_| {
+        StoreError::CanonicalSyncV2InvalidStorageKeyLength {
+            actual: encoded.len(),
+            expected: CANONICAL_SYNC_V2_STORAGE_KEY_BYTES,
+        }
+    })?);
+    let namespace = match namespace_code {
+        LEGACY_POSTCARD_V6_EVENT_NAMESPACE => CanonicalSyncEventNamespaceV2::LegacyPostcardV6,
+        CANONICAL_CBOR_V1_EVENT_NAMESPACE => CanonicalSyncEventNamespaceV2::CanonicalCborV1,
+        other => return Err(StoreError::CanonicalSyncV2UnknownStorageNamespace(other)),
+    };
+    let event_id = encoded[40..].try_into().map_err(|_| {
+        StoreError::CanonicalSyncV2InvalidStorageKeyLength {
+            actual: encoded.len(),
+            expected: CANONICAL_SYNC_V2_STORAGE_KEY_BYTES,
+        }
+    })?;
+    Ok((
+        conversation_id,
+        CanonicalSyncEventKeyV2::new(namespace, event_id),
+    ))
+}
+
+fn validate_canonical_sync_v2_stored_carrier(
+    conversation_id: [u8; 32],
+    expected_key: CanonicalSyncEventKeyV2,
+    encoded: &[u8],
+) -> Result<CanonicalSyncEventCarrierV2, StoreError> {
+    let carrier = CanonicalSyncEventCarrierV2::decode_and_verify(encoded)
+        .map_err(CanonicalSyncV2Error::from)?;
+    if carrier.conversation_id() != &conversation_id {
+        return Err(StoreError::CanonicalSyncV2StoredConversationMismatch {
+            expected: conversation_id,
+            actual: *carrier.conversation_id(),
+        });
+    }
+    let actual_key = carrier.key().map_err(CanonicalSyncV2Error::from)?;
+    if actual_key != expected_key {
+        return Err(StoreError::CanonicalSyncV2StoredCarrierKeyMismatch {
+            expected: expected_key,
+            actual: actual_key,
+        });
+    }
+    Ok(carrier)
+}
+
+fn canonical_sync_v2_database_error(error: impl std::fmt::Display) -> StoreError {
+    StoreError::CanonicalSyncV2Database(error.to_string())
 }
 
 impl EventStore {
@@ -1269,6 +1568,56 @@ pub enum StoreError {
     #[error("event validation failed")]
     Protocol(#[from] ProtocolError),
 
+    #[error("canonical sync v2 carrier validation failed")]
+    CanonicalSyncV2(#[from] CanonicalSyncV2Error),
+
+    #[error("canonical sync v2 carrier database operation failed: {0}")]
+    CanonicalSyncV2Database(String),
+
+    #[error("canonical sync v2 carrier database has an incompatible schema marker")]
+    CanonicalSyncV2StoreSchemaMismatch,
+
+    #[error("canonical sync v2 storage key has {actual} bytes; expected {expected}")]
+    CanonicalSyncV2InvalidStorageKeyLength { actual: usize, expected: usize },
+
+    #[error("canonical sync v2 storage key has unknown Event namespace {0}")]
+    CanonicalSyncV2UnknownStorageNamespace(u64),
+
+    #[error(
+        "canonical sync v2 conversation contains {actual} typed Event keys; maximum is {maximum}"
+    )]
+    CanonicalSyncV2InventoryTooLarge { actual: usize, maximum: usize },
+
+    #[error("canonical sync v2 carrier {event_key:?} is missing from {conversation_id:?}")]
+    CanonicalSyncV2CarrierMissing {
+        conversation_id: [u8; 32],
+        event_key: CanonicalSyncEventKeyV2,
+    },
+
+    #[error(
+        "canonical sync v2 carrier {event_key:?} conflicts with immutable data in {conversation_id:?}"
+    )]
+    CanonicalSyncV2CarrierConflict {
+        conversation_id: [u8; 32],
+        event_key: CanonicalSyncEventKeyV2,
+    },
+
+    #[error(
+        "canonical sync v2 stored carrier belongs to conversation {actual:?}, expected {expected:?}"
+    )]
+    CanonicalSyncV2StoredConversationMismatch {
+        expected: [u8; 32],
+        actual: [u8; 32],
+    },
+
+    #[error(
+        "canonical sync v2 stored carrier key {actual:?} does not match database key {expected:?}"
+    )]
+    CanonicalSyncV2StoredCarrierKeyMismatch {
+        expected: CanonicalSyncEventKeyV2,
+        actual: CanonicalSyncEventKeyV2,
+    },
+
     #[error("immutable read snapshot contains an unsafe or unsupported path: {0}")]
     InvalidImmutableSnapshotPath(String),
 
@@ -1378,6 +1727,7 @@ pub enum StoreError {
 #[cfg(test)]
 mod tests {
     use kilogram_protocol::RatchetRecipient;
+    use serde_json::Value;
     use std::error::Error;
 
     use kilogram_identity::{
@@ -1388,6 +1738,184 @@ mod tests {
     use tempfile::tempdir;
 
     use super::*;
+
+    fn canonical_sync_v2_carrier(
+        pointer: &str,
+    ) -> Result<CanonicalSyncEventCarrierV2, Box<dyn Error>> {
+        let document: Value = serde_json::from_str(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../CANONICAL-SYNC-HISTORY-V2-VECTORS.json"
+        )))?;
+        let hex = document
+            .pointer(pointer)
+            .and_then(Value::as_str)
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "missing carrier vector"))?;
+        let bytes = (0..hex.len())
+            .step_by(2)
+            .map(|index| u8::from_str_radix(&hex[index..index + 2], 16))
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(CanonicalSyncEventCarrierV2::decode_and_verify(&bytes)?)
+    }
+
+    fn canonical_sync_v2_legacy_pair()
+    -> Result<(CanonicalSyncEventCarrierV2, CanonicalSyncEventCarrierV2), Box<dyn Error>> {
+        let root_directory = tempdir()?;
+        let root = AccountRootState::create(root_directory.path())?;
+        let identity = DeviceIdentity::generate()?;
+        let encryption = DeviceEncryptionIdentity::generate()?;
+        let certificate = root.issue_device_certificate(
+            identity.device_id(),
+            encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let authority_snapshot = root.authority_snapshot()?;
+        let conversation_id = ConversationId::from_label("canonical-sync-v2-atomic-batch");
+        let first = AuthorizedEvent::new(
+            sign_test_text(&identity, conversation_id, 0, Vec::new(), "first")?,
+            certificate.clone(),
+            authority_snapshot.clone(),
+        )?;
+        let first_id = first.event().event_id()?;
+        let second = AuthorizedEvent::new(
+            sign_test_text(&identity, conversation_id, 1, vec![first_id], "second")?,
+            certificate,
+            authority_snapshot,
+        )?;
+        Ok((
+            CanonicalSyncEventCarrierV2::LegacyPostcardV6(
+                kilogram_protocol::canonical_sync_legacy_event_v1::CanonicalSyncLegacyEventBridgeV1::from_active_event(&first)?,
+            ),
+            CanonicalSyncEventCarrierV2::LegacyPostcardV6(
+                kilogram_protocol::canonical_sync_legacy_event_v1::CanonicalSyncLegacyEventBridgeV1::from_active_event(&second)?,
+            ),
+        ))
+    }
+
+    fn overwrite_canonical_sync_v2_raw(
+        store: &CanonicalSyncV2CarrierStore,
+        conversation_id: [u8; 32],
+        event_key: CanonicalSyncEventKeyV2,
+        encoded: &[u8],
+    ) -> Result<(), StoreError> {
+        let mut write = store
+            .database
+            .begin_write()
+            .map_err(canonical_sync_v2_database_error)?;
+        write
+            .set_durability(Durability::Immediate)
+            .map_err(canonical_sync_v2_database_error)?;
+        {
+            let mut table = write
+                .open_table(CANONICAL_SYNC_V2_CARRIER_TABLE)
+                .map_err(canonical_sync_v2_database_error)?;
+            let storage_key = canonical_sync_v2_storage_key(conversation_id, event_key);
+            table
+                .insert(storage_key.as_slice(), encoded)
+                .map_err(canonical_sync_v2_database_error)?;
+        }
+        write.commit().map_err(canonical_sync_v2_database_error)
+    }
+
+    fn canonical_sync_v2_raw_exists(
+        store: &CanonicalSyncV2CarrierStore,
+        conversation_id: [u8; 32],
+        event_key: CanonicalSyncEventKeyV2,
+    ) -> Result<bool, StoreError> {
+        let read = store
+            .database
+            .begin_read()
+            .map_err(canonical_sync_v2_database_error)?;
+        let table = read
+            .open_table(CANONICAL_SYNC_V2_CARRIER_TABLE)
+            .map_err(canonical_sync_v2_database_error)?;
+        let storage_key = canonical_sync_v2_storage_key(conversation_id, event_key);
+        table
+            .get(storage_key.as_slice())
+            .map(|value| value.is_some())
+            .map_err(canonical_sync_v2_database_error)
+    }
+
+    #[test]
+    fn canonical_sync_v2_store_persists_both_namespaces_across_reopen() -> Result<(), Box<dyn Error>>
+    {
+        let directory = tempdir()?;
+        let legacy = canonical_sync_v2_carrier("/expected/legacy_carrier_cbor_hex")?;
+        let canonical = canonical_sync_v2_carrier("/expected/canonical_carrier_cbor_hex")?;
+        let legacy_conversation_id = *legacy.conversation_id();
+        let canonical_conversation_id = *canonical.conversation_id();
+        let legacy_key = legacy.key()?;
+        let canonical_key = canonical.key()?;
+        let store = CanonicalSyncV2CarrierStore::open(directory.path())?;
+
+        store.put_batch(legacy_conversation_id, std::slice::from_ref(&legacy))?;
+        store.put_batch(canonical_conversation_id, std::slice::from_ref(&canonical))?;
+        store.put_batch(legacy_conversation_id, std::slice::from_ref(&legacy))?;
+        assert_eq!(store.inventory(legacy_conversation_id)?, vec![legacy_key]);
+        assert_eq!(
+            store.inventory(canonical_conversation_id)?,
+            vec![canonical_key]
+        );
+
+        drop(store);
+        let reopened = CanonicalSyncV2CarrierStore::open(directory.path())?;
+        assert_eq!(
+            reopened.events_by_key(legacy_conversation_id, &[legacy_key])?,
+            vec![legacy]
+        );
+        assert_eq!(
+            reopened.events_by_key(canonical_conversation_id, &[canonical_key])?,
+            vec![canonical]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn canonical_sync_v2_store_conflict_aborts_the_whole_batch() -> Result<(), Box<dyn Error>> {
+        let directory = tempdir()?;
+        let (first, second) = canonical_sync_v2_legacy_pair()?;
+        let conversation_id = *first.conversation_id();
+        let first_key = first.key()?;
+        let second_key = second.key()?;
+        let store = CanonicalSyncV2CarrierStore::open(directory.path())?;
+        overwrite_canonical_sync_v2_raw(&store, conversation_id, first_key, &second.encode()?)?;
+
+        assert!(matches!(
+            store.put_batch(conversation_id, &[first, second]),
+            Err(StoreError::CanonicalSyncV2StoredCarrierKeyMismatch { .. })
+        ));
+        assert!(!canonical_sync_v2_raw_exists(
+            &store,
+            conversation_id,
+            second_key
+        )?);
+        Ok(())
+    }
+
+    #[test]
+    fn canonical_sync_v2_store_rejects_corruption_and_cross_conversation_writes()
+    -> Result<(), Box<dyn Error>> {
+        let directory = tempdir()?;
+        let legacy = canonical_sync_v2_carrier("/expected/legacy_carrier_cbor_hex")?;
+        let conversation_id = *legacy.conversation_id();
+        let legacy_key = legacy.key()?;
+        let store = CanonicalSyncV2CarrierStore::open(directory.path())?;
+
+        assert!(matches!(
+            store.put_batch([0x99; 32], std::slice::from_ref(&legacy)),
+            Err(StoreError::CanonicalSyncV2(
+                CanonicalSyncV2Error::EventConversationMismatch
+            ))
+        ));
+        assert!(store.inventory([0x99; 32])?.is_empty());
+
+        store.put_batch(conversation_id, &[legacy])?;
+        overwrite_canonical_sync_v2_raw(&store, conversation_id, legacy_key, &[0x80])?;
+        assert!(matches!(
+            store.inventory(conversation_id),
+            Err(StoreError::CanonicalSyncV2(_))
+        ));
+        Ok(())
+    }
 
     #[test]
     fn event_persists_and_loads() -> Result<(), Box<dyn Error>> {

@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.58",
+  "status": "dormant-atomic-typed-carrier-store-verified-not-active",
+  "changes_active_wire": false,
+  "protocol_identifier": "kilogram/m1/sync/cbor/2",
+  "implementation": {
+    "crate": "kilogram-store",
+    "rust_type": "CanonicalSyncV2CarrierStore",
+    "database_engine": "redb",
+    "database_file": "canonical-sync-v2.redb",
+    "schema_marker": "kilogram:canonical-sync-v2-carrier-store:v1\\0kilogram/m1/sync/cbor/2",
+    "session_trait_implementation": "CanonicalSyncV2Store for CanonicalSyncV2CarrierStore"
+  },
+  "storage_key": [
+    "conversation-id-32-bytes",
+    "event-namespace-u64-big-endian",
+    "event-id-32-bytes"
+  ],
+  "contracts": {
+    "full_typed_key_preserved": true,
+    "legacy_postcard_namespace_supported": true,
+    "canonical_cbor_namespace_supported": true,
+    "strict_carrier_decode_on_read": true,
+    "database_key_carrier_key_match_required": true,
+    "database_conversation_carrier_conversation_match_required": true,
+    "byte_identical_replay_idempotent": true,
+    "immutable_key_conflict_fails_closed": true,
+    "whole_batch_preflight_before_insert": true,
+    "whole_batch_single_transaction": true,
+    "immediate_durability": true,
+    "bounded_inventory": true
+  },
+  "regression": {
+    "both_namespaces_persist_across_reopen": true,
+    "trait_round_trip_persists_across_reopen": true,
+    "whole_batch_aborts_on_conflict": true,
+    "corrupt_value_fails_closed": true,
+    "cross_conversation_write_fails_closed": true
+  },
+  "activation": {
+    "active_runtime_store": false,
+    "legacy_event_store_import_integrated": false,
+    "active_membership_policy_implemented": false,
+    "durable_checkpoint_runtime_integrated": false,
+    "endpoint_registered": false,
+    "canonical_dial_enabled": false
+  },
+  "remaining": [
+    "legacy-event-store-import",
+    "legacy-and-canonical-membership-policy-implementation",
+    "durable-checkpoint-runtime-integration",
+    "mutual-authenticated-capability-selection",
+    "mixed-version-and-downgrade-tests",
+    "rollback-drill",
+    "sustained-fuzzing",
+    "fresh-hosted-and-field-evidence"
+  ],
+  "scope": {
+    "network_executed": false,
+    "release_build": false,
+    "archive_created": false,
+    "stable_executable_replaced": false
+  }
+}

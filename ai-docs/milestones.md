@@ -6371,3 +6371,30 @@ correlation visible, Windows-only field evidence, independent security audit
   immutable `M1.0.0`. Readiness не запускал test executable и не выполнял
   network operation;
 - release/archive/stable EXE, push и tag на этом этапе не выполнялись.
+
+### M1.1.58 — dormant atomic typed carrier store: принято локально
+
+- `kilogram-store` получил отдельный `CanonicalSyncV2CarrierStore` на redb для
+  exact `/cbor/2` carrier bytes; schema marker и имя БД versioned независимо от
+  active filesystem `EventStore`;
+- storage key содержит conversation ID, namespace и Event ID. Каждый read
+  повторно strict-decode/verify carrier и сверяет embedded conversation/key с
+  ключом БД;
+- `put_batch` canonicalize/validate-ит весь набор, preflight-ит все immutable
+  ключи и только затем записывает отсутствующие values одной transaction с
+  immediate durability. Byte-identical replay идемпотентен, конфликт и
+  corruption fail closed без partial commit;
+- concrete store реализует dormant `CanonicalSyncV2Store`; focused
+  debug/offline regression прошёл 3/3 в `kilogram-store` и 4/4 в
+  `kilogram-session`, включая reopen, обе namespaces, rollback на конфликте и
+  trait round trip;
+- отдельный manifest/RFC/fail-closed boundary и aggregate migration,
+  compatibility, transport и coverage contracts фиксируют, что active runtime
+  не использует новую БД;
+- import установленной legacy history, concrete membership policy,
+  transactional checkpoint coupling и mutual capability selection остаются
+  pending. `/cbor/2` по-прежнему не зарегистрирован и не dial-ится;
+- финальные полные locked/offline debug regression прошли 14/14 для
+  `kilogram-store` и 9/9 для `kilogram-session`; rustfmt, workspace-wide strict
+  Clippy и accepted-tag readiness прошли 90/90 против immutable `M1.0.0`;
+- network, release/archive/stable EXE, push и tag на этом этапе не выполнялись.
