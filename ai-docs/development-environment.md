@@ -4185,3 +4185,32 @@ Hosted follow-up:
   cursor, followed by signed `/cbor/2` checkpoint/runtime capability
   integration. No active CLI/Iroh/wire path, release build, archive, stable
   executable, push or tag changed here.
+
+## M1.1.61 dormant atomic legacy-import checkpoint (2026-10-16)
+
+- Added a separate versioned redb table for the 129-byte
+  `CanonicalSyncV2LegacyImportCheckpoint`. Its key is conversation ID plus
+  immutable plan ID; the value repeats both and binds membership revision and
+  digest, total event count, last committed page start and next source index.
+- The importer now reads the durable cursor, preflights/inserts the complete
+  carrier page and advances the checkpoint in one immediate-durability write
+  transaction. Any carrier conflict or checkpoint failure rolls back both.
+- A missing checkpoint accepts only index zero. Exact lost-response replay
+  requires both stored page start and end, then revalidates every expected
+  carrier without writing again; alternate same-end pages, stale/skipped bounds
+  and malformed, corrupt or cross-plan records fail closed.
+- Focused debug/offline regression covers reopen, retry, missing-checkpoint
+  prefix rejection, stale page shape, corruption and later-page rollback.
+- `CANONICAL-SYNC-V2-IMPORT-CHECKPOINT.json`, RFC-0187 and the dedicated
+  negative boundary keep this state out of active CLI/Iroh/wire paths.
+- Focused regression passed 5/5 and full `kilogram-store` regression passed
+  19/19. The dedicated boundary plus eleven related aggregate boundaries passed
+  normal and negative self-test modes under Windows PowerShell 5.1.
+- Root canonical JSON parsing, rustfmt, workspace locked/offline strict Clippy
+  and accepted-tag readiness passed 93/93 against immutable `M1.0.0`;
+  readiness started no Rust test executable and executed no network operation.
+- This local checkpoint is deliberately distinct from the Device-signed
+  `CanonicalSyncSessionCheckpointV2`. Signed session-checkpoint/runtime and
+  authenticated capability selection remain the next activation work.
+- No network operation, release build, archive, stable executable replacement,
+  push or tag belongs to this stage.

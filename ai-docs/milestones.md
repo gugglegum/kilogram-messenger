@@ -6450,3 +6450,32 @@ correlation visible, Windows-only field evidence, independent security audit
   plan ID/cursor в одной redb transaction с carrier page и затем связать это с
   signed `/cbor/2` checkpoint. Active CLI/Iroh/wire не изменены, `/cbor/2`
   unregistered/undialed; release/archive/stable EXE, push и tag не выполнялись.
+
+### M1.1.61 — dormant atomic legacy-import checkpoint: принято локально
+
+- отдельная redb table хранит fixed-format 129-byte local checkpoint по exact
+  `(conversation ID, immutable import plan ID)` и повторяет plan binding,
+  membership revision/digest, total event count, начало последней page и
+  следующий source index;
+- carrier page и checkpoint advance выполняются одной immediate-durability
+  transaction. Conflict или malformed durable state не оставляет partial page
+  и не продвигает cursor;
+- missing checkpoint принимает только index 0. Stale/skipped cursor и page
+  shape, включая другую page с тем же end, fail closed; exact retry после
+  потерянного ответа повторно проверяет carrier page и идемпотентно возвращает
+  прежний progress;
+- regression покрывает reopen, same-cursor replay, prefix без checkpoint,
+  stale page, corrupted/cross-plan record и later-page conflict rollback;
+- dedicated manifest/RFC/boundary и aggregate migration/transport/history/
+  coverage contracts фиксируют, что checkpoint остаётся dormant;
+- focused import regression прошёл 5/5, полный `kilogram-store` regression —
+  19/19. Dedicated boundary и одиннадцать связанных aggregate boundaries
+  прошли normal и negative self-test modes;
+- root canonical JSON parsing, rustfmt, workspace-wide locked/offline strict
+  Clippy и accepted-tag readiness прошли 93/93 против immutable `M1.0.0`;
+  readiness не запускал Rust test executable и не выполнял network operation;
+- это не `CanonicalSyncSessionCheckpointV2`: importer не создаёт peer-visible
+  Device signature, session/peer/inventory evidence или network state. Следующий
+  этап — signed checkpoint/runtime/capability integration;
+- active CLI/Iroh/wire не изменены, `/cbor/2` unregistered/undialed;
+  release/archive/stable EXE, push и tag не выполнялись.

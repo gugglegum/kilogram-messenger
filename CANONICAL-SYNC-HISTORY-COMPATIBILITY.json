@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.60",
-  "status": "dormant-bounded-resumable-legacy-import-verified-not-active",
+  "milestone": "M1.1.61",
+  "status": "dormant-atomic-legacy-import-checkpoint-verified-not-active",
   "changes_active_wire": false,
   "active": {
     "encoding": "postcard-v6",
@@ -46,10 +46,11 @@
     "dormant_atomic_typed_store_integrated": true,
     "dormant_cross_format_membership_policy_integrated": true,
     "dormant_bounded_resumable_legacy_import_integrated": true,
+    "dormant_atomic_legacy_import_checkpoint_integrated": true,
     "must_integrate_bridge_into_closed_frames": true,
     "must_authenticate_exact_identifier_in_connection_ticket": true,
     "must_preserve_no-sniffing-and-no-parse-fallback": true,
-    "status": "dormant-store-policy-and-legacy-import-verified-not-active"
+    "status": "dormant-store-policy-import-and-checkpoint-verified-not-active"
   },
   "forbidden": [
     "resign-historical-event-with-migration-key",

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.60",
-  "status": "dormant-bounded-resumable-legacy-import-verified-not-active",
+  "milestone": "M1.1.61",
+  "status": "dormant-atomic-legacy-import-checkpoint-verified-not-active",
   "surface": "transport-sync",
   "changes_active_wire": false,
   "active": {
@@ -32,6 +32,7 @@
     "dormant_atomic_typed_store": true,
     "dormant_cross_format_membership_policy": true,
     "dormant_bounded_resumable_legacy_import": true,
+    "dormant_atomic_legacy_import_checkpoint": true,
     "registered": false,
     "dialed": false,
     "format_sniffing": false,
@@ -62,7 +63,7 @@
     ]
   },
   "remaining": [
-    "durable-import-checkpoint-and-capability-integration",
+    "signed-sync-checkpoint-and-capability-integration",
     "mixed-version-and-downgrade-tests",
     "rollback-drill",
     "sustained-fuzzing",

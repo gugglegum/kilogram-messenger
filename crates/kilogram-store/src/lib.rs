@@ -39,6 +39,11 @@ const CANONICAL_SYNC_V2_META_TABLE: TableDefinition<&str, &[u8]> =
     TableDefinition::new("canonical-sync-v2-meta-v1");
 const CANONICAL_SYNC_V2_CARRIER_TABLE: TableDefinition<&[u8], &[u8]> =
     TableDefinition::new("canonical-sync-v2-carriers-v1");
+const CANONICAL_SYNC_V2_LEGACY_IMPORT_CHECKPOINT_TABLE: TableDefinition<&[u8], &[u8]> =
+    TableDefinition::new("canonical-sync-v2-legacy-import-checkpoints-v1");
+const CANONICAL_SYNC_V2_LEGACY_IMPORT_CHECKPOINT_VERSION: u8 = 1;
+const CANONICAL_SYNC_V2_LEGACY_IMPORT_CHECKPOINT_KEY_BYTES: usize = 64;
+const CANONICAL_SYNC_V2_LEGACY_IMPORT_CHECKPOINT_BYTES: usize = 129;
 const CANONICAL_SYNC_V2_LEGACY_IMPORT_MEMBERSHIP_DIGEST_CONTEXT: &str =
     "kilogram:canonical-sync-v2-legacy-import-membership:v1";
 const CANONICAL_SYNC_V2_LEGACY_IMPORT_EVENT_DIGEST_CONTEXT: &str =
@@ -143,6 +148,22 @@ pub struct CanonicalSyncV2LegacyImportProgress {
     complete: bool,
 }
 
+/// Durable local progress for one exact legacy-import plan.
+///
+/// This record is written in the same redb transaction as the carrier page it
+/// acknowledges. It is local migration state, not a signed sync checkpoint and
+/// never crosses the wire.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct CanonicalSyncV2LegacyImportCheckpoint {
+    conversation_id: [u8; 32],
+    plan_id: [u8; 32],
+    membership_revision: u64,
+    membership_digest: [u8; 32],
+    total_event_count: u64,
+    last_page_start: u64,
+    next_index: u64,
+}
+
 impl CanonicalSyncV2LegacyImportPlan {
     pub fn plan_id(&self) -> [u8; 32] {
         self.plan_id
@@ -239,6 +260,80 @@ impl CanonicalSyncV2LegacyImportProgress {
 
     pub fn is_complete(&self) -> bool {
         self.complete
+    }
+}
+
+impl CanonicalSyncV2LegacyImportCheckpoint {
+    pub fn conversation_id(self) -> [u8; 32] {
+        self.conversation_id
+    }
+
+    pub fn plan_id(self) -> [u8; 32] {
+        self.plan_id
+    }
+
+    pub fn membership_revision(self) -> u64 {
+        self.membership_revision
+    }
+
+    pub fn total_event_count(self) -> u64 {
+        self.total_event_count
+    }
+
+    pub fn last_page_start(self) -> u64 {
+        self.last_page_start
+    }
+
+    pub fn next_index(self) -> u64 {
+        self.next_index
+    }
+
+    pub fn is_complete(self) -> bool {
+        self.next_index == self.total_event_count
+    }
+
+    pub fn cursor(self) -> CanonicalSyncV2LegacyImportCursor {
+        CanonicalSyncV2LegacyImportCursor {
+            plan_id: self.plan_id,
+            next_index: self.next_index,
+        }
+    }
+
+    fn for_plan(
+        plan: &CanonicalSyncV2LegacyImportPlan,
+        last_page_start: u64,
+        next_index: u64,
+    ) -> Self {
+        Self {
+            conversation_id: *plan.conversation_id.as_bytes(),
+            plan_id: plan.plan_id,
+            membership_revision: plan.membership_revision,
+            membership_digest: plan.membership_digest,
+            total_event_count: plan.event_count(),
+            last_page_start,
+            next_index,
+        }
+    }
+
+    fn verify_for_plan(self, plan: &CanonicalSyncV2LegacyImportPlan) -> Result<(), StoreError> {
+        if self.conversation_id != *plan.conversation_id.as_bytes()
+            || self.plan_id != plan.plan_id
+            || self.membership_revision != plan.membership_revision
+            || self.membership_digest != plan.membership_digest
+            || self.total_event_count != plan.event_count()
+        {
+            return Err(StoreError::CanonicalSyncV2LegacyImportCheckpointPlanMismatch);
+        }
+        if self.last_page_start > self.next_index || self.next_index > self.total_event_count {
+            return Err(
+                StoreError::CanonicalSyncV2LegacyImportCheckpointIndexOutOfRange {
+                    last_page_start: self.last_page_start,
+                    next_index: self.next_index,
+                    event_count: self.total_event_count,
+                },
+            );
+        }
+        Ok(())
     }
 }
 
@@ -663,6 +758,11 @@ impl CanonicalSyncV2CarrierStore {
                 .open_table(CANONICAL_SYNC_V2_CARRIER_TABLE)
                 .map_err(canonical_sync_v2_database_error)?;
         }
+        {
+            let _legacy_import_checkpoints = write
+                .open_table(CANONICAL_SYNC_V2_LEGACY_IMPORT_CHECKPOINT_TABLE)
+                .map_err(canonical_sync_v2_database_error)?;
+        }
         write.commit().map_err(canonical_sync_v2_database_error)?;
         Ok(Self { database })
     }
@@ -815,6 +915,195 @@ impl CanonicalSyncV2CarrierStore {
         write.commit().map_err(canonical_sync_v2_database_error)
     }
 
+    pub fn legacy_import_checkpoint(
+        &self,
+        plan: &CanonicalSyncV2LegacyImportPlan,
+    ) -> Result<Option<CanonicalSyncV2LegacyImportCheckpoint>, StoreError> {
+        plan.verify()?;
+        let read = self
+            .database
+            .begin_read()
+            .map_err(canonical_sync_v2_database_error)?;
+        let table = read
+            .open_table(CANONICAL_SYNC_V2_LEGACY_IMPORT_CHECKPOINT_TABLE)
+            .map_err(canonical_sync_v2_database_error)?;
+        let key = canonical_sync_v2_legacy_import_checkpoint_key(plan);
+        let checkpoint = table
+            .get(key.as_slice())
+            .map_err(canonical_sync_v2_database_error)?
+            .map(|value| decode_canonical_sync_v2_legacy_import_checkpoint(value.value()))
+            .transpose()?;
+        if let Some(checkpoint) = checkpoint {
+            checkpoint.verify_for_plan(plan)?;
+        }
+        Ok(checkpoint)
+    }
+
+    fn commit_legacy_import_page(
+        &self,
+        plan: &CanonicalSyncV2LegacyImportPlan,
+        cursor: CanonicalSyncV2LegacyImportCursor,
+        next_index: u64,
+        carriers: &[CanonicalSyncEventCarrierV2],
+    ) -> Result<(), StoreError> {
+        let conversation_id = *plan.conversation_id.as_bytes();
+        let mut keyed_events = carriers
+            .iter()
+            .map(|event| {
+                event
+                    .key()
+                    .map(|key| (key, event))
+                    .map_err(CanonicalSyncV2Error::from)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        keyed_events.sort_unstable_by_key(|(key, _)| *key);
+        let canonical_events = keyed_events
+            .iter()
+            .map(|(_, event)| (*event).clone())
+            .collect::<Vec<_>>();
+        encode_sync_event_batch_v2(&CanonicalSyncEventBatchV2 {
+            conversation_id,
+            events: canonical_events,
+        })?;
+        let prepared = keyed_events
+            .into_iter()
+            .map(|(key, event)| {
+                event
+                    .encode()
+                    .map(|encoded| (key, encoded))
+                    .map_err(CanonicalSyncV2Error::from)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let checkpoint_key = canonical_sync_v2_legacy_import_checkpoint_key(plan);
+        let next_checkpoint =
+            CanonicalSyncV2LegacyImportCheckpoint::for_plan(plan, cursor.next_index, next_index);
+        next_checkpoint.verify_for_plan(plan)?;
+        let encoded_checkpoint = encode_canonical_sync_v2_legacy_import_checkpoint(next_checkpoint);
+
+        let mut write = self
+            .database
+            .begin_write()
+            .map_err(canonical_sync_v2_database_error)?;
+        write
+            .set_durability(Durability::Immediate)
+            .map_err(canonical_sync_v2_database_error)?;
+
+        let durable_checkpoint = {
+            let table = write
+                .open_table(CANONICAL_SYNC_V2_LEGACY_IMPORT_CHECKPOINT_TABLE)
+                .map_err(canonical_sync_v2_database_error)?;
+            table
+                .get(checkpoint_key.as_slice())
+                .map_err(canonical_sync_v2_database_error)?
+                .map(|value| decode_canonical_sync_v2_legacy_import_checkpoint(value.value()))
+                .transpose()?
+        };
+        if let Some(durable_checkpoint) = durable_checkpoint {
+            durable_checkpoint.verify_for_plan(plan)?;
+            if durable_checkpoint.next_index == next_index {
+                let completed_noop =
+                    cursor.next_index == durable_checkpoint.next_index && carriers.is_empty();
+                if !completed_noop && cursor.next_index != durable_checkpoint.last_page_start {
+                    return Err(
+                        StoreError::CanonicalSyncV2LegacyImportDurableCursorMismatch {
+                            requested_next_index: cursor.next_index,
+                            requested_page_end: next_index,
+                            durable_last_page_start: durable_checkpoint.last_page_start,
+                            durable_next_index: durable_checkpoint.next_index,
+                        },
+                    );
+                }
+                let table = write
+                    .open_table(CANONICAL_SYNC_V2_CARRIER_TABLE)
+                    .map_err(canonical_sync_v2_database_error)?;
+                for (event_key, encoded) in &prepared {
+                    let storage_key = canonical_sync_v2_storage_key(conversation_id, *event_key);
+                    let existing = table
+                        .get(storage_key.as_slice())
+                        .map_err(canonical_sync_v2_database_error)?
+                        .map(|value| value.value().to_vec())
+                        .ok_or(StoreError::CanonicalSyncV2CarrierMissing {
+                            conversation_id,
+                            event_key: *event_key,
+                        })?;
+                    validate_canonical_sync_v2_stored_carrier(
+                        conversation_id,
+                        *event_key,
+                        &existing,
+                    )?;
+                    if existing != *encoded {
+                        return Err(StoreError::CanonicalSyncV2CarrierConflict {
+                            conversation_id,
+                            event_key: *event_key,
+                        });
+                    }
+                }
+                return Ok(());
+            }
+            if durable_checkpoint.next_index != cursor.next_index {
+                return Err(
+                    StoreError::CanonicalSyncV2LegacyImportDurableCursorMismatch {
+                        requested_next_index: cursor.next_index,
+                        requested_page_end: next_index,
+                        durable_last_page_start: durable_checkpoint.last_page_start,
+                        durable_next_index: durable_checkpoint.next_index,
+                    },
+                );
+            }
+        } else if cursor.next_index != 0 {
+            return Err(StoreError::CanonicalSyncV2LegacyImportCheckpointMissing {
+                requested_next_index: cursor.next_index,
+            });
+        }
+
+        {
+            let mut table = write
+                .open_table(CANONICAL_SYNC_V2_CARRIER_TABLE)
+                .map_err(canonical_sync_v2_database_error)?;
+            let mut missing = Vec::new();
+            for (index, (event_key, encoded)) in prepared.iter().enumerate() {
+                let storage_key = canonical_sync_v2_storage_key(conversation_id, *event_key);
+                let existing = table
+                    .get(storage_key.as_slice())
+                    .map_err(canonical_sync_v2_database_error)?
+                    .map(|value| value.value().to_vec());
+                match existing {
+                    Some(value) => {
+                        validate_canonical_sync_v2_stored_carrier(
+                            conversation_id,
+                            *event_key,
+                            &value,
+                        )?;
+                        if value != *encoded {
+                            return Err(StoreError::CanonicalSyncV2CarrierConflict {
+                                conversation_id,
+                                event_key: *event_key,
+                            });
+                        }
+                    }
+                    None => missing.push(index),
+                }
+            }
+            for index in missing {
+                let (event_key, encoded) = &prepared[index];
+                let storage_key = canonical_sync_v2_storage_key(conversation_id, *event_key);
+                table
+                    .insert(storage_key.as_slice(), encoded.as_slice())
+                    .map_err(canonical_sync_v2_database_error)?;
+            }
+        }
+        {
+            let mut table = write
+                .open_table(CANONICAL_SYNC_V2_LEGACY_IMPORT_CHECKPOINT_TABLE)
+                .map_err(canonical_sync_v2_database_error)?;
+            table
+                .insert(checkpoint_key.as_slice(), encoded_checkpoint.as_slice())
+                .map_err(canonical_sync_v2_database_error)?;
+        }
+        write.commit().map_err(canonical_sync_v2_database_error)
+    }
+
     /// Imports at most one canonical-sync batch from an exact legacy source plan.
     ///
     /// A caller may retry the same cursor after interruption. Exact carrier
@@ -894,13 +1183,13 @@ impl CanonicalSyncV2CarrierStore {
             carriers.push(CanonicalSyncEventCarrierV2::LegacyPostcardV6(bridge));
         }
 
-        self.put_batch(*plan.conversation_id.as_bytes(), &carriers)?;
         let imported_event_keys = carriers
             .iter()
             .map(CanonicalSyncEventCarrierV2::key)
             .collect::<Result<Vec<_>, _>>()
             .map_err(CanonicalSyncV2Error::from)?;
         let next_index = end as u64;
+        self.commit_legacy_import_page(plan, cursor, next_index, &carriers)?;
         Ok(CanonicalSyncV2LegacyImportProgress {
             cursor: CanonicalSyncV2LegacyImportCursor {
                 plan_id: plan.plan_id,
@@ -1029,6 +1318,99 @@ fn validate_canonical_sync_v2_stored_carrier(
 
 fn canonical_sync_v2_database_error(error: impl std::fmt::Display) -> StoreError {
     StoreError::CanonicalSyncV2Database(error.to_string())
+}
+
+fn canonical_sync_v2_legacy_import_checkpoint_key(
+    plan: &CanonicalSyncV2LegacyImportPlan,
+) -> [u8; CANONICAL_SYNC_V2_LEGACY_IMPORT_CHECKPOINT_KEY_BYTES] {
+    let mut output = [0_u8; CANONICAL_SYNC_V2_LEGACY_IMPORT_CHECKPOINT_KEY_BYTES];
+    output[..32].copy_from_slice(plan.conversation_id.as_bytes());
+    output[32..].copy_from_slice(&plan.plan_id);
+    output
+}
+
+fn encode_canonical_sync_v2_legacy_import_checkpoint(
+    checkpoint: CanonicalSyncV2LegacyImportCheckpoint,
+) -> [u8; CANONICAL_SYNC_V2_LEGACY_IMPORT_CHECKPOINT_BYTES] {
+    let mut output = [0_u8; CANONICAL_SYNC_V2_LEGACY_IMPORT_CHECKPOINT_BYTES];
+    output[0] = CANONICAL_SYNC_V2_LEGACY_IMPORT_CHECKPOINT_VERSION;
+    output[1..33].copy_from_slice(&checkpoint.conversation_id);
+    output[33..65].copy_from_slice(&checkpoint.plan_id);
+    output[65..73].copy_from_slice(&checkpoint.membership_revision.to_be_bytes());
+    output[73..105].copy_from_slice(&checkpoint.membership_digest);
+    output[105..113].copy_from_slice(&checkpoint.total_event_count.to_be_bytes());
+    output[113..121].copy_from_slice(&checkpoint.last_page_start.to_be_bytes());
+    output[121..129].copy_from_slice(&checkpoint.next_index.to_be_bytes());
+    output
+}
+
+fn decode_canonical_sync_v2_legacy_import_checkpoint(
+    encoded: &[u8],
+) -> Result<CanonicalSyncV2LegacyImportCheckpoint, StoreError> {
+    if encoded.len() != CANONICAL_SYNC_V2_LEGACY_IMPORT_CHECKPOINT_BYTES {
+        return Err(
+            StoreError::CanonicalSyncV2LegacyImportCheckpointInvalidLength {
+                actual: encoded.len(),
+                expected: CANONICAL_SYNC_V2_LEGACY_IMPORT_CHECKPOINT_BYTES,
+            },
+        );
+    }
+    if encoded[0] != CANONICAL_SYNC_V2_LEGACY_IMPORT_CHECKPOINT_VERSION {
+        return Err(
+            StoreError::CanonicalSyncV2LegacyImportCheckpointUnsupportedVersion(encoded[0]),
+        );
+    }
+    let conversation_id = encoded[1..33].try_into().map_err(|_| {
+        StoreError::CanonicalSyncV2LegacyImportCheckpointInvalidLength {
+            actual: encoded.len(),
+            expected: CANONICAL_SYNC_V2_LEGACY_IMPORT_CHECKPOINT_BYTES,
+        }
+    })?;
+    let plan_id = encoded[33..65].try_into().map_err(|_| {
+        StoreError::CanonicalSyncV2LegacyImportCheckpointInvalidLength {
+            actual: encoded.len(),
+            expected: CANONICAL_SYNC_V2_LEGACY_IMPORT_CHECKPOINT_BYTES,
+        }
+    })?;
+    let membership_revision = u64::from_be_bytes(encoded[65..73].try_into().map_err(|_| {
+        StoreError::CanonicalSyncV2LegacyImportCheckpointInvalidLength {
+            actual: encoded.len(),
+            expected: CANONICAL_SYNC_V2_LEGACY_IMPORT_CHECKPOINT_BYTES,
+        }
+    })?);
+    let membership_digest = encoded[73..105].try_into().map_err(|_| {
+        StoreError::CanonicalSyncV2LegacyImportCheckpointInvalidLength {
+            actual: encoded.len(),
+            expected: CANONICAL_SYNC_V2_LEGACY_IMPORT_CHECKPOINT_BYTES,
+        }
+    })?;
+    let total_event_count = u64::from_be_bytes(encoded[105..113].try_into().map_err(|_| {
+        StoreError::CanonicalSyncV2LegacyImportCheckpointInvalidLength {
+            actual: encoded.len(),
+            expected: CANONICAL_SYNC_V2_LEGACY_IMPORT_CHECKPOINT_BYTES,
+        }
+    })?);
+    let last_page_start = u64::from_be_bytes(encoded[113..121].try_into().map_err(|_| {
+        StoreError::CanonicalSyncV2LegacyImportCheckpointInvalidLength {
+            actual: encoded.len(),
+            expected: CANONICAL_SYNC_V2_LEGACY_IMPORT_CHECKPOINT_BYTES,
+        }
+    })?);
+    let next_index = u64::from_be_bytes(encoded[121..129].try_into().map_err(|_| {
+        StoreError::CanonicalSyncV2LegacyImportCheckpointInvalidLength {
+            actual: encoded.len(),
+            expected: CANONICAL_SYNC_V2_LEGACY_IMPORT_CHECKPOINT_BYTES,
+        }
+    })?);
+    Ok(CanonicalSyncV2LegacyImportCheckpoint {
+        conversation_id,
+        plan_id,
+        membership_revision,
+        membership_digest,
+        total_event_count,
+        last_page_start,
+        next_index,
+    })
 }
 
 fn canonical_sync_v2_legacy_import_membership_digest(encoded: &[u8]) -> [u8; 32] {
@@ -2013,6 +2395,39 @@ pub enum StoreError {
     #[error("legacy import resume prefix does not match event {event_id}")]
     CanonicalSyncV2LegacyImportPrefixMismatch { event_id: EventId },
 
+    #[error("legacy import checkpoint has {actual} bytes; expected {expected}")]
+    CanonicalSyncV2LegacyImportCheckpointInvalidLength { actual: usize, expected: usize },
+
+    #[error("legacy import checkpoint uses unsupported version {0}")]
+    CanonicalSyncV2LegacyImportCheckpointUnsupportedVersion(u8),
+
+    #[error("legacy import checkpoint does not match the exact source plan")]
+    CanonicalSyncV2LegacyImportCheckpointPlanMismatch,
+
+    #[error(
+        "legacy import checkpoint page start {last_page_start}, next index {next_index}, event count {event_count} are inconsistent"
+    )]
+    CanonicalSyncV2LegacyImportCheckpointIndexOutOfRange {
+        last_page_start: u64,
+        next_index: u64,
+        event_count: u64,
+    },
+
+    #[error(
+        "legacy import has no durable checkpoint for requested cursor index {requested_next_index}"
+    )]
+    CanonicalSyncV2LegacyImportCheckpointMissing { requested_next_index: u64 },
+
+    #[error(
+        "legacy import durable page is {durable_last_page_start}..{durable_next_index}; requested {requested_next_index}..{requested_page_end}"
+    )]
+    CanonicalSyncV2LegacyImportDurableCursorMismatch {
+        requested_next_index: u64,
+        requested_page_end: u64,
+        durable_last_page_start: u64,
+        durable_next_index: u64,
+    },
+
     #[error("immutable read snapshot contains an unsafe or unsupported path: {0}")]
     InvalidImmutableSnapshotPath(String),
 
@@ -2188,7 +2603,7 @@ mod tests {
 
     struct LegacyImportFixture {
         _source_directory: TempDir,
-        _target_directory: TempDir,
+        target_directory: TempDir,
         _root_directory: TempDir,
         source: EventStore,
         target: CanonicalSyncV2CarrierStore,
@@ -2240,7 +2655,7 @@ mod tests {
         source.put_authorized_batch(&events, &membership)?;
         Ok(LegacyImportFixture {
             _source_directory: source_directory,
-            _target_directory: target_directory,
+            target_directory,
             _root_directory: root_directory,
             source,
             target,
@@ -2292,6 +2707,30 @@ mod tests {
             .get(storage_key.as_slice())
             .map(|value| value.is_some())
             .map_err(canonical_sync_v2_database_error)
+    }
+
+    fn overwrite_canonical_sync_v2_legacy_import_checkpoint_raw(
+        store: &CanonicalSyncV2CarrierStore,
+        plan: &CanonicalSyncV2LegacyImportPlan,
+        encoded: &[u8],
+    ) -> Result<(), StoreError> {
+        let mut write = store
+            .database
+            .begin_write()
+            .map_err(canonical_sync_v2_database_error)?;
+        write
+            .set_durability(Durability::Immediate)
+            .map_err(canonical_sync_v2_database_error)?;
+        {
+            let mut table = write
+                .open_table(CANONICAL_SYNC_V2_LEGACY_IMPORT_CHECKPOINT_TABLE)
+                .map_err(canonical_sync_v2_database_error)?;
+            let key = canonical_sync_v2_legacy_import_checkpoint_key(plan);
+            table
+                .insert(key.as_slice(), encoded)
+                .map_err(canonical_sync_v2_database_error)?;
+        }
+        write.commit().map_err(canonical_sync_v2_database_error)
     }
 
     #[test]
@@ -2403,6 +2842,24 @@ mod tests {
             fixture.target.inventory(*conversation_id.as_bytes())?.len(),
             2
         );
+        let first_checkpoint = fixture
+            .target
+            .legacy_import_checkpoint(&plan)?
+            .ok_or("legacy import checkpoint missing after first page")?;
+        assert_eq!(
+            first_checkpoint.conversation_id(),
+            *conversation_id.as_bytes()
+        );
+        assert_eq!(first_checkpoint.plan_id(), plan.plan_id());
+        assert_eq!(
+            first_checkpoint.membership_revision(),
+            fixture.membership.revision()
+        );
+        assert_eq!(first_checkpoint.total_event_count(), 3);
+        assert_eq!(first_checkpoint.last_page_start(), 0);
+        assert_eq!(first_checkpoint.next_index(), 2);
+        assert_eq!(first_checkpoint.cursor(), first.cursor());
+        assert!(!first_checkpoint.is_complete());
 
         let retry = fixture.target.import_legacy_page(
             &fixture.source,
@@ -2431,6 +2888,13 @@ mod tests {
             fixture.target.inventory(*conversation_id.as_bytes())?.len(),
             3
         );
+        let completed_checkpoint = fixture
+            .target
+            .legacy_import_checkpoint(&plan)?
+            .ok_or("legacy import checkpoint missing after completion")?;
+        assert_eq!(completed_checkpoint.next_index(), 3);
+        assert_eq!(completed_checkpoint.last_page_start(), 2);
+        assert!(completed_checkpoint.is_complete());
 
         let complete_retry = fixture.target.import_legacy_page(
             &fixture.source,
@@ -2463,6 +2927,29 @@ mod tests {
                 1,
             ),
             Err(StoreError::CanonicalSyncV2CarrierMissing { .. })
+        ));
+        let first_authorized = fixture.source.authorized_events_by_id(
+            conversation_id,
+            &[plan.items[0].event_id],
+            &fixture.membership,
+        )?;
+        let first_carrier = CanonicalSyncEventCarrierV2::LegacyPostcardV6(
+            CanonicalSyncLegacyEventBridgeV1::from_active_event(&first_authorized[0])?,
+        );
+        fixture
+            .target
+            .put_batch(*conversation_id.as_bytes(), &[first_carrier])?;
+        assert!(matches!(
+            fixture.target.import_legacy_page(
+                &fixture.source,
+                &fixture.membership,
+                &plan,
+                skipped,
+                1,
+            ),
+            Err(StoreError::CanonicalSyncV2LegacyImportCheckpointMissing {
+                requested_next_index: 1
+            })
         ));
         assert!(matches!(
             plan.resume_cursor(3),
@@ -2533,28 +3020,35 @@ mod tests {
     #[test]
     fn canonical_sync_v2_legacy_import_conflict_does_not_commit_later_page_items()
     -> Result<(), Box<dyn Error>> {
-        let fixture = legacy_import_fixture("canonical-sync-v2-legacy-import-atomic", 2)?;
+        let fixture = legacy_import_fixture("canonical-sync-v2-legacy-import-atomic", 3)?;
         let conversation_id = fixture.events[0].event().conversation_id();
         let plan = fixture
             .source
             .canonical_sync_v2_legacy_import_plan(conversation_id, &fixture.membership)?;
-        let first_key = CanonicalSyncEventKeyV2::new(
-            CanonicalSyncEventNamespaceV2::LegacyPostcardV6,
-            *plan.items[0].event_id.as_bytes(),
-        );
+        let first = fixture.target.import_legacy_page(
+            &fixture.source,
+            &fixture.membership,
+            &plan,
+            plan.start_cursor(),
+            1,
+        )?;
         let second_key = CanonicalSyncEventKeyV2::new(
             CanonicalSyncEventNamespaceV2::LegacyPostcardV6,
             *plan.items[1].event_id.as_bytes(),
         );
+        let third_key = CanonicalSyncEventKeyV2::new(
+            CanonicalSyncEventNamespaceV2::LegacyPostcardV6,
+            *plan.items[2].event_id.as_bytes(),
+        );
         let mut conflicting_events = fixture.source.authorized_events_by_id(
             conversation_id,
-            &[plan.items[1].event_id],
+            &[plan.items[2].event_id],
             &fixture.membership,
         )?;
         let Some(conflicting_event) = conflicting_events.pop() else {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
-                "legacy import conflict fixture is missing its second event",
+                "legacy import conflict fixture is missing its third event",
             )
             .into());
         };
@@ -2564,7 +3058,7 @@ mod tests {
         overwrite_canonical_sync_v2_raw(
             &fixture.target,
             *conversation_id.as_bytes(),
-            first_key,
+            second_key,
             &conflicting_carrier.encode()?,
         )?;
 
@@ -2573,7 +3067,7 @@ mod tests {
                 &fixture.source,
                 &fixture.membership,
                 &plan,
-                plan.start_cursor(),
+                first.cursor(),
                 2,
             ),
             Err(StoreError::CanonicalSyncV2StoredCarrierKeyMismatch { .. })
@@ -2581,8 +3075,128 @@ mod tests {
         assert!(!canonical_sync_v2_raw_exists(
             &fixture.target,
             *conversation_id.as_bytes(),
-            second_key,
+            third_key,
         )?);
+        let checkpoint = fixture
+            .target
+            .legacy_import_checkpoint(&plan)?
+            .ok_or("legacy import checkpoint disappeared after page conflict")?;
+        assert_eq!(checkpoint.next_index(), 1);
+        Ok(())
+    }
+
+    #[test]
+    fn canonical_sync_v2_legacy_import_checkpoint_survives_reopen_and_rejects_stale_pages()
+    -> Result<(), Box<dyn Error>> {
+        let fixture = legacy_import_fixture("canonical-sync-v2-import-checkpoint-reopen", 3)?;
+        let conversation_id = fixture.events[0].event().conversation_id();
+        let plan = fixture
+            .source
+            .canonical_sync_v2_legacy_import_plan(conversation_id, &fixture.membership)?;
+        let first = fixture.target.import_legacy_page(
+            &fixture.source,
+            &fixture.membership,
+            &plan,
+            plan.start_cursor(),
+            2,
+        )?;
+
+        let LegacyImportFixture {
+            _source_directory,
+            target_directory,
+            _root_directory,
+            source,
+            target,
+            root: _,
+            membership,
+            events: _,
+        } = fixture;
+        drop(target);
+        let reopened = CanonicalSyncV2CarrierStore::open(target_directory.path())?;
+        let checkpoint = reopened
+            .legacy_import_checkpoint(&plan)?
+            .ok_or("legacy import checkpoint missing after reopen")?;
+        assert_eq!(checkpoint.cursor(), first.cursor());
+        assert_eq!(checkpoint.last_page_start(), 0);
+
+        assert!(matches!(
+            reopened.import_legacy_page(&source, &membership, &plan, plan.start_cursor(), 1,),
+            Err(
+                StoreError::CanonicalSyncV2LegacyImportDurableCursorMismatch {
+                    requested_next_index: 0,
+                    requested_page_end: 1,
+                    durable_last_page_start: 0,
+                    durable_next_index: 2
+                }
+            )
+        ));
+        let alternate_page_shape = plan.resume_cursor(1)?;
+        assert!(matches!(
+            reopened.import_legacy_page(&source, &membership, &plan, alternate_page_shape, 1,),
+            Err(
+                StoreError::CanonicalSyncV2LegacyImportDurableCursorMismatch {
+                    requested_next_index: 1,
+                    requested_page_end: 2,
+                    durable_last_page_start: 0,
+                    durable_next_index: 2
+                }
+            )
+        ));
+
+        let completed =
+            reopened.import_legacy_page(&source, &membership, &plan, checkpoint.cursor(), 2)?;
+        assert!(completed.is_complete());
+        assert_eq!(completed.cursor().next_index(), 3);
+        Ok(())
+    }
+
+    #[test]
+    fn canonical_sync_v2_legacy_import_checkpoint_corruption_fails_closed()
+    -> Result<(), Box<dyn Error>> {
+        let fixture = legacy_import_fixture("canonical-sync-v2-import-checkpoint-corrupt", 1)?;
+        let conversation_id = fixture.events[0].event().conversation_id();
+        let plan = fixture
+            .source
+            .canonical_sync_v2_legacy_import_plan(conversation_id, &fixture.membership)?;
+
+        overwrite_canonical_sync_v2_legacy_import_checkpoint_raw(
+            &fixture.target,
+            &plan,
+            &[CANONICAL_SYNC_V2_LEGACY_IMPORT_CHECKPOINT_VERSION],
+        )?;
+        assert!(matches!(
+            fixture.target.legacy_import_checkpoint(&plan),
+            Err(StoreError::CanonicalSyncV2LegacyImportCheckpointInvalidLength { .. })
+        ));
+
+        let mut wrong_plan = CanonicalSyncV2LegacyImportCheckpoint::for_plan(&plan, 0, 0);
+        wrong_plan.plan_id[0] ^= 1;
+        overwrite_canonical_sync_v2_legacy_import_checkpoint_raw(
+            &fixture.target,
+            &plan,
+            &encode_canonical_sync_v2_legacy_import_checkpoint(wrong_plan),
+        )?;
+        assert!(matches!(
+            fixture.target.legacy_import_checkpoint(&plan),
+            Err(StoreError::CanonicalSyncV2LegacyImportCheckpointPlanMismatch)
+        ));
+
+        let invalid_page_bounds = CanonicalSyncV2LegacyImportCheckpoint::for_plan(&plan, 1, 0);
+        overwrite_canonical_sync_v2_legacy_import_checkpoint_raw(
+            &fixture.target,
+            &plan,
+            &encode_canonical_sync_v2_legacy_import_checkpoint(invalid_page_bounds),
+        )?;
+        assert!(matches!(
+            fixture.target.legacy_import_checkpoint(&plan),
+            Err(
+                StoreError::CanonicalSyncV2LegacyImportCheckpointIndexOutOfRange {
+                    last_page_start: 1,
+                    next_index: 0,
+                    event_count: 1
+                }
+            )
+        ));
         Ok(())
     }
 

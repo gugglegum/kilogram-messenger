@@ -109,9 +109,9 @@ function Assert-BridgeContract {
     Assert-LowerHex ([string]$Vectors.expected.bridge_cbor_hex) -1 'bridge CBOR'
 
     if ([UInt64]$Compatibility.schema_version -ne 1 -or
-        [string]$Compatibility.milestone -cne 'M1.1.60' -or
+        [string]$Compatibility.milestone -cne 'M1.1.61' -or
         [string]$Compatibility.status -cne
-            'dormant-bounded-resumable-legacy-import-verified-not-active' -or
+            'dormant-atomic-legacy-import-checkpoint-verified-not-active' -or
         [bool]$Compatibility.changes_active_wire -or
         [string]$Compatibility.active.alpn -cne $legacyAlpn -or
         -not [bool]$Compatibility.active.history_compatible -or
@@ -145,10 +145,11 @@ function Assert-BridgeContract {
         -not [bool]$Compatibility.required_successor.dormant_atomic_typed_store_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_cross_format_membership_policy_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_bounded_resumable_legacy_import_integrated -or
+        -not [bool]$Compatibility.required_successor.dormant_atomic_legacy_import_checkpoint_integrated -or
         -not [bool]$Compatibility.required_successor.must_integrate_bridge_into_closed_frames -or
         -not [bool]$Compatibility.required_successor.must_authenticate_exact_identifier_in_connection_ticket -or
         [string]$Compatibility.required_successor.status -cne
-            'dormant-store-policy-and-legacy-import-verified-not-active') {
+            'dormant-store-policy-import-and-checkpoint-verified-not-active') {
         throw 'canonical sync legacy-event bridge or successor contract changed'
     }
 
@@ -170,7 +171,7 @@ function Assert-BridgeContract {
             @($TransportManifest.remaining) -or
         'authenticated-cbor-v2-ticket-capability' -cin
             @($TransportManifest.remaining) -or
-        'durable-import-checkpoint-and-capability-integration' -cnotin
+        'signed-sync-checkpoint-and-capability-integration' -cnotin
             @($TransportManifest.remaining) -or
         [string]$TransportManifest.active.alpn -cne $legacyAlpn -or
         [bool]$TransportManifest.candidate.registered -or

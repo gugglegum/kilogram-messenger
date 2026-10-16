@@ -136,10 +136,12 @@ function Assert-Contract {
         }
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.60' -or
+    if ([string]$Migration.milestone -cne 'M1.1.61' -or
         [string]$Migration.status -cne
-            'dormant-bounded-resumable-legacy-import-verified-not-active' -or
+            'dormant-atomic-legacy-import-checkpoint-verified-not-active' -or
         [string]$Migration.history_compatible_successor.dormant_bounded_resumable_legacy_import -cne
+            'verified' -or
+        [string]$Migration.history_compatible_successor.dormant_atomic_legacy_import_checkpoint -cne
             'verified' -or
         [bool]$Migration.candidate_identifier_registered) {
         throw 'canonical migration does not preserve the dormant legacy import state'
@@ -152,35 +154,38 @@ function Assert-Contract {
         [string]$importRequirement[0].status -cne 'verified') {
         throw 'canonical migration lost the verified legacy import requirement'
     }
-    if ([string]$TransportManifest.milestone -cne 'M1.1.60' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.61' -or
         [string]$TransportManifest.status -cne
-            'dormant-bounded-resumable-legacy-import-verified-not-active' -or
+            'dormant-atomic-legacy-import-checkpoint-verified-not-active' -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_bounded_resumable_legacy_import -or
+        -not [bool]$TransportManifest.history_compatible_successor.dormant_atomic_legacy_import_checkpoint -or
         [bool]$TransportManifest.history_compatible_successor.registered -or
         [bool]$TransportManifest.history_compatible_successor.dialed -or
-        'durable-import-checkpoint-and-capability-integration' -cnotin
+        'signed-sync-checkpoint-and-capability-integration' -cnotin
             @($TransportManifest.remaining)) {
         throw 'transport sync manifest does not preserve the dormant legacy import boundary'
     }
-    if ([string]$Compatibility.milestone -cne 'M1.1.60' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.61' -or
         [string]$Compatibility.status -cne
-            'dormant-bounded-resumable-legacy-import-verified-not-active' -or
+            'dormant-atomic-legacy-import-checkpoint-verified-not-active' -or
         -not [bool]$Compatibility.required_successor.dormant_bounded_resumable_legacy_import_integrated -or
+        -not [bool]$Compatibility.required_successor.dormant_atomic_legacy_import_checkpoint_integrated -or
         [string]$Compatibility.required_successor.status -cne
-            'dormant-store-policy-and-legacy-import-verified-not-active') {
+            'dormant-store-policy-import-and-checkpoint-verified-not-active') {
         throw 'history compatibility manifest lost the dormant legacy import contract'
     }
     $transportCoverage = @(
         @($Coverage.surfaces) |
             Where-Object { [string]$_.id -ceq 'transport-sync' }
     )
-    if ([string]$Coverage.milestone -cne 'M1.1.60' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.61' -or
         $transportCoverage.Count -ne 1 -or
         'CANONICAL-SYNC-V2-LEGACY-IMPORT.json' -cnotin @($transportCoverage[0].artifacts) -or
         'scripts/verify-kilogram-canonical-sync-v2-legacy-import-boundary.ps1' -cnotin
             @($transportCoverage[0].artifacts) -or
         'dormant-bounded-resumable-legacy-import' -cnotin @($transportCoverage[0].covered) -or
-        'durable-import-checkpoint-and-capability-integration' -cnotin
+        'dormant-atomic-legacy-import-checkpoint' -cnotin @($transportCoverage[0].covered) -or
+        'signed-sync-checkpoint-and-capability-integration' -cnotin
             @($transportCoverage[0].remaining)) {
         throw 'canonical coverage does not include the dormant legacy import artifacts'
     }
@@ -201,7 +206,7 @@ function Assert-Contract {
         'CanonicalSyncV2LegacyImportSourceEventChanged',
         'CanonicalSyncV2LegacyImportPrefixMismatch',
         'CanonicalSyncLegacyEventBridgeV1::from_active_event(&event)',
-        'self.put_batch(*plan.conversation_id.as_bytes(), &carriers)?',
+        'self.commit_legacy_import_page(plan, cursor, next_index, &carriers)?',
         'canonical_sync_v2_legacy_import_is_bounded_resumable_and_idempotent',
         'canonical_sync_v2_legacy_import_rejects_skips_and_changed_claims',
         'canonical_sync_v2_legacy_import_conflict_does_not_commit_later_page_items'

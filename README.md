@@ -2361,6 +2361,15 @@ transaction. The cursor itself is deliberately not durable yet, so atomic
 cursor/store/checkpoint coupling and authenticated runtime selection remain
 inactive follow-up work.
 
+[`RFC-0187`](docs/RFC-0187-m1161-dormant-atomic-legacy-import-checkpoint.md)
+makes that local import cursor durable without overstating network readiness.
+The plan-scoped fixed-format checkpoint and its carrier page are committed in
+one immediate-durability redb transaction; stale/skipped cursors, corruption,
+conflicts and mismatched plans fail closed, while an exact lost-response retry
+is idempotent. This is local migration progress, not the Device-signed peer
+session checkpoint: `/cbor/2` remains unregistered and undialed until explicit
+runtime/checkpoint and authenticated capability-selection work is complete.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

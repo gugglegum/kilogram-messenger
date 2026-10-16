@@ -1050,6 +1050,11 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   `EventStore` в отдельный typed carrier store: exact legacy bytes сохраняются
   в bridge, plan/cursor exact-связаны, prefix skip и changed claims fail closed,
   но durable cursor/checkpoint/runtime activation остаются отдельным этапом.
+- [`../docs/RFC-0187-m1161-dormant-atomic-legacy-import-checkpoint.md`](../docs/RFC-0187-m1161-dormant-atomic-legacy-import-checkpoint.md) —
+  M1.1.61 сохраняет plan-scoped import checkpoint в той же redb transaction,
+  что и carrier page: crash/retry не может показать advanced cursor без полной
+  page, stale/skipped/corrupt state fail closed. Это локальный migration cursor,
+  а не signed peer-session checkpoint; `/cbor/2` всё ещё inactive.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

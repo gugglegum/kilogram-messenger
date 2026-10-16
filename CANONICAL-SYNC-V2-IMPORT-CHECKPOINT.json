@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.61",
+  "status": "dormant-atomic-legacy-import-checkpoint-verified-not-active",
+  "changes_active_wire": false,
+  "protocol_identifier": "kilogram/m1/sync/cbor/2",
+  "implementation": {
+    "crate": "kilogram-store",
+    "store": "CanonicalSyncV2CarrierStore",
+    "record_type": "CanonicalSyncV2LegacyImportCheckpoint",
+    "database_engine": "redb",
+    "table": "canonical-sync-v2-legacy-import-checkpoints-v1",
+    "record_version": 1,
+    "record_bytes": 129
+  },
+  "key": [
+    "conversation-id-32-bytes",
+    "legacy-import-plan-id-32-bytes"
+  ],
+  "record": [
+    "version-u8",
+    "conversation-id-32-bytes",
+    "legacy-import-plan-id-32-bytes",
+    "membership-revision-u64-big-endian",
+    "membership-digest-32-bytes",
+    "total-event-count-u64-big-endian",
+    "last-page-start-u64-big-endian",
+    "next-index-u64-big-endian"
+  ],
+  "contracts": {
+    "exact_plan_scoped": true,
+    "strict_fixed_length_decode": true,
+    "key_and_value_plan_binding_verified": true,
+    "next_index_bounded_by_plan": true,
+    "carrier_page_and_checkpoint_same_redb_transaction": true,
+    "immediate_durability": true,
+    "durable_cursor_compared_before_advance": true,
+    "last_committed_page_start_bound": true,
+    "stale_or_skipped_cursor_rejected": true,
+    "same_cursor_lost_response_retry_idempotent": true,
+    "page_conflict_does_not_advance_checkpoint": true,
+    "parallel_immutable_plans_have_distinct_keys": true,
+    "signed_sync_checkpoint_synthesized": false,
+    "format_sniffing": false,
+    "parse_error_fallback": false
+  },
+  "regression": {
+    "checkpoint_survives_reopen": true,
+    "resume_uses_durable_cursor": true,
+    "stale_page_shape_rejected": true,
+    "alternate_same_end_page_shape_rejected": true,
+    "missing_checkpoint_cannot_skip_prefix": true,
+    "checkpoint_corruption_rejected": true,
+    "page_conflict_retains_previous_checkpoint": true,
+    "later_page_items_absent_after_conflict": true,
+    "same_cursor_retry_returns_same_progress": true
+  },
+  "activation": {
+    "durable_local_import_checkpoint_integrated": true,
+    "signed_sync_checkpoint_runtime_integrated": false,
+    "active_runtime_import": false,
+    "endpoint_registered": false,
+    "canonical_dial_enabled": false
+  },
+  "remaining": [
+    "signed-sync-checkpoint-runtime-integration",
+    "mutual-authenticated-capability-selection",
+    "mixed-version-and-downgrade-tests",
+    "rollback-drill",
+    "sustained-fuzzing",
+    "fresh-hosted-and-field-evidence"
+  ],
+  "scope": {
+    "network_executed": false,
+    "release_build": false,
+    "archive_created": false,
+    "stable_executable_replaced": false
+  }
+}
