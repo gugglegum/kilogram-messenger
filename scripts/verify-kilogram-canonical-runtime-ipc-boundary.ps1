@@ -33,7 +33,7 @@ function Assert-LowerHex {
 
 function Assert-Schema {
     param([object]$Schema, [string]$Rust)
-    if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.43' -or
+    if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.44' -or
         [string]$Schema.status -cne 'candidate-not-active' -or [bool]$Schema.changes_active_wire -or
         [string]$Schema.profile -cne 'kilogram-deterministic-cbor-v1' -or
         [string]$Schema.cddl.path -cne 'CANONICAL-RUNTIME-IPC.cddl' -or
@@ -55,10 +55,10 @@ function Assert-Schema {
     if ($limits -cne '2048,65536,65536,4096,86400,30,120000,30') {
         throw 'canonical runtime IPC limits changed'
     }
-    if (@($Schema.domains).Count -ne 67 -or @($Schema.objects).Count -ne 33 -or
-        @($Schema.covered_commands).Count -ne 30 -or @($Schema.covered_results).Count -ne 29 -or
-        @($Schema.semantic_rules).Count -ne 136 -or
-        @($Schema.remaining_runtime_ipc_surface).Count -ne 3) {
+    if (@($Schema.domains).Count -ne 73 -or @($Schema.objects).Count -ne 36 -or
+        @($Schema.covered_commands).Count -ne 32 -or @($Schema.covered_results).Count -ne 31 -or
+        @($Schema.semantic_rules).Count -ne 154 -or
+        @($Schema.remaining_runtime_ipc_surface).Count -ne 2) {
         throw 'canonical runtime IPC inventory changed'
     }
     foreach ($required in @(
@@ -174,15 +174,20 @@ $expectedCovered = @('device-signed-loopback-descriptor',
     'roster-wide-own-device-automation',
     'sas-confirmed-device-signed-recovery-plan-custody',
     'content-addressed-recovery-plan-status',
-    'device-signed-recovery-plan-cancellation-tombstone')
+    'device-signed-recovery-plan-cancellation-tombstone',
+    'recipient-device-signed-recovery-scheduler-chain',
+    'deterministic-retry-and-attempt-lease',
+    'policy-derived-foreground-recovery-readiness',
+    'checkpoint-bound-recovery-progress-and-completion',
+    'recovery-execution-start-and-status')
 $expectedRemaining = @($schema.remaining_runtime_ipc_surface | ForEach-Object { [string]$_ })
 if ($surface.Count -ne 1 -or [string]$surface[0].coverage -cne 'partial' -or
     (@($surface[0].covered) -join ',') -cne ($expectedCovered -join ',') -or
     (@($surface[0].remaining) -join ',') -cne ($expectedRemaining -join ',')) {
     throw 'canonical runtime IPC aggregate coverage boundary changed'
 }
-if ([int]$mutations.expected_mutations -ne 29799 -or
-    [int]$mutations.maximum_mutations -ne 30000) {
+if ([int]$mutations.expected_mutations -ne 30843 -or
+    [int]$mutations.maximum_mutations -ne 35000) {
     throw 'canonical runtime IPC decoder mutation bound changed'
 }
 $expectedMutationIds = @('signed-runtime-ipc-descriptor-v1', 'runtime-ipc-core-request-v1',
@@ -232,6 +237,6 @@ Write-Output 'runtime_ipc_coverage=partial'
 Write-Output 'signed_loopback_descriptor=verified'
 Write-Output 'bearer_authenticated_request=verified'
 Write-Output 'device_signed_exact_response=verified'
-Write-Output 'bounded_decoder_mutations=29799'
+Write-Output 'bounded_decoder_mutations=30843'
 Write-Output 'active_postcard_v26_changed=false'
 Write-Output 'network_executed=false'

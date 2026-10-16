@@ -33,7 +33,7 @@ function Assert-LowerHex {
 
 function Assert-Schema {
     param([object]$Schema, [string]$Rust)
-    if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.43' -or
+    if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.44' -or
         [string]$Schema.status -cne 'candidate-not-active' -or [bool]$Schema.changes_active_wire -or
         [string]$Schema.profile -cne 'kilogram-deterministic-cbor-v1' -or
         [string]$Schema.activation.current_runtime_encoding -cne 'postcard-v26-with-json-descriptor-v7' -or
@@ -49,10 +49,10 @@ function Assert-Schema {
     if ($limits -cne '65536,262144,4096,8') {
         throw 'canonical runtime IPC provider limits changed'
     }
-    if (@($Schema.domains).Count -ne 67 -or @($Schema.objects).Count -ne 33 -or
-        @($Schema.covered_commands).Count -ne 30 -or @($Schema.covered_results).Count -ne 29 -or
-        @($Schema.semantic_rules).Count -ne 136 -or
-        @($Schema.remaining_runtime_ipc_surface).Count -ne 3) {
+    if (@($Schema.domains).Count -ne 73 -or @($Schema.objects).Count -ne 36 -or
+        @($Schema.covered_commands).Count -ne 32 -or @($Schema.covered_results).Count -ne 31 -or
+        @($Schema.semantic_rules).Count -ne 154 -or
+        @($Schema.remaining_runtime_ipc_surface).Count -ne 2) {
         throw 'canonical runtime IPC provider inventory changed'
     }
     foreach ($domain in @(
@@ -176,7 +176,12 @@ $expectedCovered = @('device-signed-loopback-descriptor',
     'roster-wide-own-device-automation',
     'sas-confirmed-device-signed-recovery-plan-custody',
     'content-addressed-recovery-plan-status',
-    'device-signed-recovery-plan-cancellation-tombstone')
+    'device-signed-recovery-plan-cancellation-tombstone',
+    'recipient-device-signed-recovery-scheduler-chain',
+    'deterministic-retry-and-attempt-lease',
+    'policy-derived-foreground-recovery-readiness',
+    'checkpoint-bound-recovery-progress-and-completion',
+    'recovery-execution-start-and-status')
 $expectedRemaining = @($schema.remaining_runtime_ipc_surface | ForEach-Object { [string]$_ })
 if ($surface.Count -ne 1 -or [string]$surface[0].coverage -cne 'partial' -or
     (@($surface[0].covered) -join ',') -cne ($expectedCovered -join ',') -or
@@ -191,9 +196,9 @@ $actualMutationIds = @($mutations.fixtures |
     Where-Object { $_.vector_file -ceq 'CANONICAL-RUNTIME-IPC-PROVIDER-VECTORS.json' } |
     ForEach-Object { $_.id })
 if (($actualMutationIds -join ',') -cne ($expectedMutationIds -join ',') -or
-    [int]$mutations.expected_mutations -ne 29799 -or
-    [int]$mutations.maximum_mutations -ne 30000 -or
-    [int]$mutations.resource_bounds.maximum_total_mutations -ne 30000) {
+    [int]$mutations.expected_mutations -ne 30843 -or
+    [int]$mutations.maximum_mutations -ne 35000 -or
+    [int]$mutations.resource_bounds.maximum_total_mutations -ne 35000) {
     throw 'canonical runtime IPC provider mutation fixtures or capacity changed'
 }
 foreach ($required in @('node:crypto', 'blake3Hash(',
@@ -235,6 +240,6 @@ Write-Output 'canonical_runtime_ipc_provider_boundary=verified'
 Write-Output 'runtime_ipc_coverage=partial'
 Write-Output 'provider_offer_original_signature_retained=true'
 Write-Output 'mailbox_capabilities_in_payload=false'
-Write-Output 'bounded_decoder_mutations=29799'
+Write-Output 'bounded_decoder_mutations=30843'
 Write-Output 'active_postcard_v26_changed=false'
 Write-Output 'network_executed=false'

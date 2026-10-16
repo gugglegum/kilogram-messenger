@@ -1,4 +1,4 @@
-; Kilogram deterministic-CBOR local runtime IPC model, M1.1.43.
+; Kilogram deterministic-CBOR local runtime IPC model, M1.1.44.
 ; Only unsigned integers, definite byte strings and definite arrays are used.
 
 profile-version = 1
@@ -1344,6 +1344,116 @@ signed-runtime-ipc-recovery-plan-response-v1 = [
   signature
 ]
 
+; Execution consumes an already approved recovery-plan record. The routine
+; caller may start or inspect it, but only the recipient Device can append the
+; signed scheduler chain and canonical recovery checkpoints.
+runtime-ipc-recovery-execution-command-v1 =
+  [start-history-recovery-execution: 0,
+   plan-id: digest,
+   expected-plan-record-id: digest,
+   retry-base-seconds: 1..300,
+   retry-max-seconds: 1..3600,
+   attempt-lease-seconds: 30..7200] /
+  [history-recovery-execution-status: 1, plan-id: digest]
+
+runtime-ipc-recovery-execution-request-v1 = [
+  profile-version,
+  descriptor-id: digest,
+  request-id,
+  bearer-token: token,
+  issued-at-unix-seconds: uint,
+  expires-at-unix-seconds: uint,
+  runtime-ipc-recovery-execution-command-v1
+]
+
+runtime-ipc-recovery-scheduler-optional-id-v1 =
+  [none: 0] /
+  [some: 1, value: digest]
+
+runtime-ipc-recovery-scheduler-optional-failure-v1 =
+  [none: 0] /
+  [some: 1, failure-code: 1..65535]
+
+runtime-ipc-recovery-scheduler-transition-v1 = 0..5
+runtime-ipc-recovery-scheduler-lifecycle-v1 = 0..3
+
+runtime-ipc-recovery-scheduler-state-content-v1 = [
+  profile-version,
+  plan-id: digest,
+  recipient-device-id: device-id,
+  generation: uint,
+  previous-state-id: runtime-ipc-recovery-scheduler-optional-id-v1,
+  runtime-ipc-recovery-scheduler-transition-v1,
+  runtime-ipc-recovery-scheduler-lifecycle-v1,
+  total-attempts: uint,
+  consecutive-failures: 0..4294967295,
+  last-observed-unix-seconds: uint,
+  next-attempt-at-unix-seconds: uint,
+  scheduled-delay-seconds: 0..7200,
+  retry-base-seconds: 1..300,
+  retry-max-seconds: 1..3600,
+  attempt-lease-seconds: 30..7200,
+  latest-checkpoint-cbor: bytes .size (1..524288),
+  runtime-ipc-recovery-scheduler-optional-failure-v1
+]
+
+signed-runtime-ipc-recovery-scheduler-state-v1 = [
+  profile-version,
+  runtime-ipc-recovery-scheduler-state-content-v1,
+  signature
+]
+
+runtime-ipc-recovery-network-v1 = 0..3
+runtime-ipc-recovery-power-v1 = 0..2
+
+runtime-ipc-recovery-readiness-v1 =
+  [ready: 0] /
+  [deferred: 1, not-before-unix-seconds: uint] /
+  [blocked-network: 2] /
+  [blocked-power: 3] /
+  [attempting: 4, lease-expires-at-unix-seconds: uint] /
+  [attempt-lease-expired: 5] /
+  [clock-rollback: 6, last-observed-unix-seconds: uint] /
+  [plan-expired: 7] /
+  [cancelled: 8] /
+  [completed: 9]
+
+runtime-ipc-recovery-execution-snapshot-v1 = [
+  profile-version,
+  recovery-plan-state-cbor: bytes .size (1..2097152),
+  recovery-scheduler-state-cbor: bytes .size (1..524288),
+  observed-at-unix-seconds: uint,
+  runtime-ipc-recovery-network-v1,
+  runtime-ipc-recovery-power-v1,
+  runtime-ipc-recovery-readiness-v1,
+  restart-not-required: 0,
+  foreground-runtime-only: 0,
+  os-background-service-enabled: 0
+]
+
+runtime-ipc-recovery-execution-result-v1 =
+  [history-recovery-execution-started: 0,
+   outcome: 0..1,
+   runtime-ipc-recovery-execution-snapshot-v1] /
+  [history-recovery-execution-status: 1,
+   runtime-ipc-recovery-execution-snapshot-v1] /
+  [error: 2, error-code: 1..65535, message-utf8: bytes .size (1..4096)]
+
+runtime-ipc-recovery-execution-response-content-v1 = [
+  profile-version,
+  descriptor-id: digest,
+  request-id,
+  request-digest: digest,
+  responder-device-id: device-id,
+  runtime-ipc-recovery-execution-result-v1
+]
+
+signed-runtime-ipc-recovery-execution-response-v1 = [
+  profile-version,
+  runtime-ipc-recovery-execution-response-content-v1,
+  signature
+]
+
 kilogram-runtime-ipc-v1 =
   signed-runtime-ipc-descriptor-v1 /
   runtime-ipc-core-request-v1 /
@@ -1377,4 +1487,6 @@ kilogram-runtime-ipc-v1 =
   runtime-ipc-own-device-roster-request-v1 /
   signed-runtime-ipc-own-device-roster-response-v1 /
   runtime-ipc-recovery-plan-request-v1 /
-  signed-runtime-ipc-recovery-plan-response-v1
+  signed-runtime-ipc-recovery-plan-response-v1 /
+  runtime-ipc-recovery-execution-request-v1 /
+  signed-runtime-ipc-recovery-execution-response-v1

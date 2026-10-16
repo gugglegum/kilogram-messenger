@@ -6040,3 +6040,29 @@ correlation visible, Windows-only field evidence, independent security audit
 - active Postcard IPC v26/JSON descriptor v7, network, test EXE,
   release/archive/push/tag не менялись. Следующий bounded slice — recovery-plan
   execution и scheduler results.
+
+### M1.1.44 — canonical history-recovery execution: принято локально
+
+- inactive deterministic-CBOR IPC получил start/status commands для уже
+  одобренного exact recovery plan; request ID служит durable idempotency key;
+- recipient Device подписывает append-only scheduler chain: initialized,
+  attempt-started, attempt-failed, attempt-progressed, cancelled и completed;
+  generation, total/consecutive attempts, bounded lease, retry policy и exact
+  recovery checkpoints проверяются на каждом переходе;
+- retry delay обязан совпадать с детерминированным equal-jitter exponential
+  backoff. Counter overflow, нулевой failure code и произвольный bounded delay
+  отвергаются fail closed даже для корректно подписанного состояния;
+- caller не передаёт network/power class, attempt outcome или checkpoint.
+  Readiness детерминированно выводится из plan policy, lifecycle, времени и
+  runtime observation; новый attempt возможен только в foreground runtime;
+- Root/Device secrets, recovery capabilities, decrypted history, payload pages,
+  remote delete commands и filesystem paths через IPC не проходят. Успешный
+  status сохраняет `restart-not-required` и отсутствие OS background service;
+- CDDL/schema/vectors, independent Node Ed25519/BLAKE3 reference, RFC-0170 и
+  dedicated fail-closed boundary согласованы. Mutation corpus прошёл
+  30843/30843 за 2674.96 s; protocol unit regression — 137/137, четырнадцать
+  explicit generators ignored; accepted-tag readiness — 77/77;
+- rustfmt и workspace offline strict Clippy прошли. Active Postcard IPC
+  v26/JSON descriptor v7, network, test EXE, release/archive/push/tag не
+  менялись. Следующий приоритет — explicit migration активного unpaged
+  conversation list, затем оставшиеся mutation-result contracts.

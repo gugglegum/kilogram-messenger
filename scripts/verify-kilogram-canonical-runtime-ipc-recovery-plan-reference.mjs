@@ -243,10 +243,10 @@ const args = argumentsMap(process.argv);
 for (const required of ["--schema", "--vectors"]) assert(args.has(required), `missing ${required}`);
 const schema = JSON.parse(readFileSync(args.get("--schema"), "utf8"));
 const vectors = JSON.parse(readFileSync(args.get("--vectors"), "utf8"));
-assert(schema.milestone === "M1.1.43" && schema.status === "candidate-not-active",
-  "runtime IPC schema is not the expected inactive M1.1.43 candidate");
-assert(schema.domains.length === 67 && schema.objects.length === 33 &&
-  schema.covered_commands.length === 30 && schema.covered_results.length === 29,
+assert(schema.milestone === "M1.1.44" && schema.status === "candidate-not-active",
+  "runtime IPC schema is not the expected inactive M1.1.44 candidate");
+assert(schema.domains.length === 73 && schema.objects.length === 36 &&
+  schema.covered_commands.length === 32 && schema.covered_results.length === 31,
   "runtime IPC schema registry counts changed");
 assert(vectors.schema_version === 1 && vectors.milestone === "M1.1.43" &&
   vectors.status === "candidate-not-active" && vectors.changes_active_runtime_ipc === false,

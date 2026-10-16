@@ -171,8 +171,8 @@ if ($surface.Count -ne 1 -or [string]$surface[0].coverage -cne 'complete' -or
     @($surface[0].remaining).Count -ne 0) {
     throw 'canonical Account recovery aggregate coverage boundary changed'
 }
-if ([int]$mutations.expected_mutations -ne 29799 -or
-    [int]$mutations.maximum_mutations -ne 30000) {
+if ([int]$mutations.expected_mutations -ne 30843 -or
+    [int]$mutations.maximum_mutations -ne 35000) {
     throw 'canonical Account recovery decoder mutation bound changed'
 }
 $expectedMutationIds = @('signed-account-recovery-package-v1',
@@ -218,6 +218,6 @@ Write-Output 'account_recovery_coverage=complete'
 Write-Output 'independent_ed25519_and_blake3=verified'
 Write-Output 'strict_current_roster_majority=verified'
 Write-Output 'cross_roster_fork_safety=joint-transition-required'
-Write-Output 'bounded_decoder_mutations=29799'
+Write-Output 'bounded_decoder_mutations=30843'
 Write-Output 'active_postcard_v1_changed=false'
 Write-Output 'network_executed=false'

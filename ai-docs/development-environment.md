@@ -3765,3 +3765,38 @@ Hosted follow-up:
   archive, push or tag was created. Canonical coverage remains 16 complete,
   1 partial, 1 not-started and 2 not-targeted. The next bounded runtime IPC
   slice is recovery-plan execution and scheduler results.
+
+## M1.1.44 canonical runtime IPC history-recovery execution (2026-10-16)
+
+- Added inactive
+  `crates/kilogram-protocol/src/canonical_runtime_ipc_recovery_execution_v1.rs`
+  with idempotent start/status requests, Device-signed responses, exact approved
+  plan-record binding and a recipient-Device-signed append-only scheduler chain.
+  Active Postcard IPC v26/JSON descriptor v7 remains unchanged.
+- The scheduler verifies initialized, attempt-started, attempt-failed,
+  attempt-progressed, cancelled and completed states. Every successor binds the
+  exact predecessor, increments generation with checked arithmetic and carries
+  the exact signed retry configuration and bounded attempt lease.
+- Attempt failure accepts only a nonzero bounded code and the exact derived
+  equal-jitter exponential delay. A focused regression added during final audit
+  proves that counter overflow, zero failure code and a substituted delay fail
+  closed even when the candidate successor is correctly signed.
+- Routine callers cannot supply observed network/power, attempt outcomes or
+  checkpoints. Runtime readiness is derived from plan policy, lifecycle, time,
+  attempt lease and the signed observation; execution remains foreground-only
+  and does not register an OS service.
+- CDDL, schema, deterministic vectors, RFC-0170 and the independent Node
+  Ed25519/BLAKE3 implementation agree. The reference self-test, dedicated
+  actual/self-test boundary, aggregate conformance and coverage checks pass.
+- The complete decoder mutation corpus passed 30843/30843 in 2674.96 seconds
+  with debug/offline Cargo, two jobs and BelowNormal priority. Protocol unit
+  regression passed 137/137 with fourteen explicit generators ignored in
+  199.58 seconds; the only integration target is the already completed mutation
+  corpus, and there are no doctests.
+- Final rustfmt and strict offline Clippy passed. Accepted-tag readiness passed
+  77/77 and kept immutable `M1.0.0` verified. The readiness audit also updated
+  all exact aggregate IPC coverage expectations from 136 to 154 semantic rules.
+- No network operation, stable-path executable, release build, archive, push or
+  tag was created. Canonical coverage remains 16 complete, 1 partial,
+  1 not-started and 2 not-targeted. The next priority is explicit migration of
+  the active unpaged conversation list, followed by remaining mutation results.

@@ -188,6 +188,14 @@ use kilogram_protocol::canonical_runtime_ipc_read_v1::{
     verify_runtime_ipc_read_request_for_descriptor_v1,
     verify_runtime_ipc_read_response_for_request_v1,
 };
+use kilogram_protocol::canonical_runtime_ipc_recovery_execution_v1::{
+    CanonicalRuntimeIpcRecoveryExecutionRequestV1,
+    CanonicalSignedRuntimeIpcRecoveryExecutionResponseV1,
+    decode_and_verify_runtime_ipc_recovery_execution_request_v1,
+    decode_and_verify_signed_runtime_ipc_recovery_execution_response_v1,
+    verify_runtime_ipc_recovery_execution_request_for_descriptor_v1,
+    verify_runtime_ipc_recovery_execution_response_for_request_v1,
+};
 use kilogram_protocol::canonical_runtime_ipc_recovery_plan_v1::{
     CanonicalRuntimeIpcRecoveryPlanRequestV1, CanonicalSignedRuntimeIpcRecoveryPlanResponseV1,
     decode_and_verify_runtime_ipc_recovery_plan_request_v1,
@@ -223,8 +231,8 @@ use kilogram_protocol::canonical_ticket_publication_v1::{
 use serde_json::Value;
 
 const MINIMUM_MUTATIONS: usize = 500;
-const EXPECTED_MUTATIONS: usize = 29_799;
-const MAXIMUM_MUTATIONS: usize = 30_000;
+const EXPECTED_MUTATIONS: usize = 30_843;
+const MAXIMUM_MUTATIONS: usize = 35_000;
 const MAXIMUM_GRID_POSITIONS: usize = 128;
 
 #[derive(Clone)]
@@ -410,6 +418,15 @@ enum Decoder {
     },
     RuntimeIpcRecoveryPlanResponse {
         request: Box<CanonicalRuntimeIpcRecoveryPlanRequestV1>,
+        descriptor: Box<CanonicalSignedRuntimeIpcDescriptorV1>,
+    },
+    RuntimeIpcRecoveryExecutionRequest {
+        descriptor: Box<CanonicalSignedRuntimeIpcDescriptorV1>,
+        response: Box<CanonicalSignedRuntimeIpcRecoveryExecutionResponseV1>,
+        now_unix_seconds: u64,
+    },
+    RuntimeIpcRecoveryExecutionResponse {
+        request: Box<CanonicalRuntimeIpcRecoveryExecutionRequestV1>,
         descriptor: Box<CanonicalSignedRuntimeIpcDescriptorV1>,
     },
     TicketPublicationCapability,
@@ -964,6 +981,32 @@ fn accepts(decoder: &Decoder, bytes: &[u8]) -> bool {
                 )
             })
             .is_ok(),
+        Decoder::RuntimeIpcRecoveryExecutionRequest {
+            descriptor,
+            response,
+            now_unix_seconds,
+        } => decode_and_verify_runtime_ipc_recovery_execution_request_v1(bytes)
+            .and_then(|request| {
+                verify_runtime_ipc_recovery_execution_request_for_descriptor_v1(
+                    &request,
+                    descriptor,
+                    *now_unix_seconds,
+                )?;
+                verify_runtime_ipc_recovery_execution_response_for_request_v1(
+                    response, &request, descriptor,
+                )
+            })
+            .is_ok(),
+        Decoder::RuntimeIpcRecoveryExecutionResponse {
+            request,
+            descriptor,
+        } => decode_and_verify_signed_runtime_ipc_recovery_execution_response_v1(bytes)
+            .and_then(|response| {
+                verify_runtime_ipc_recovery_execution_response_for_request_v1(
+                    &response, request, descriptor,
+                )
+            })
+            .is_ok(),
         Decoder::TicketPublicationCapability => {
             decode_and_verify_ticket_publication_capability_v1(bytes).is_ok()
         }
@@ -1263,6 +1306,10 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
     let runtime_ipc_recovery_plan: Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-RUNTIME-IPC-RECOVERY-PLAN-VECTORS.json"
+    )))?;
+    let runtime_ipc_recovery_execution: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../CANONICAL-RUNTIME-IPC-RECOVERY-EXECUTION-VECTORS.json"
     )))?;
     let ticket_publication: Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
@@ -1667,6 +1714,39 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
             expires_at_unix_seconds: 1_800_086_400,
         },
     )?;
+    let runtime_ipc_recovery_execution_descriptor =
+        decode_and_verify_signed_runtime_ipc_descriptor_v1(&pointer_hex(
+            &runtime_ipc_recovery_execution,
+            "/input/descriptor_cbor_hex",
+        )?)?;
+    let runtime_ipc_recovery_execution_start_request =
+        decode_and_verify_runtime_ipc_recovery_execution_request_v1(&pointer_hex(
+            &runtime_ipc_recovery_execution,
+            "/expected/start/request/cbor_hex",
+        )?)?;
+    let runtime_ipc_recovery_execution_start_response =
+        decode_and_verify_signed_runtime_ipc_recovery_execution_response_v1(&pointer_hex(
+            &runtime_ipc_recovery_execution,
+            "/expected/start/response/signed_cbor_hex",
+        )?)?;
+    let runtime_ipc_recovery_execution_status_request =
+        decode_and_verify_runtime_ipc_recovery_execution_request_v1(&pointer_hex(
+            &runtime_ipc_recovery_execution,
+            "/expected/status/request/cbor_hex",
+        )?)?;
+    let runtime_ipc_recovery_execution_status_response =
+        decode_and_verify_signed_runtime_ipc_recovery_execution_response_v1(&pointer_hex(
+            &runtime_ipc_recovery_execution,
+            "/expected/status/response/signed_cbor_hex",
+        )?)?;
+    let runtime_ipc_recovery_execution_start_valid_at =
+        runtime_ipc_recovery_execution["input"]["start_issued_at_unix_seconds"]
+            .as_u64()
+            .ok_or("runtime IPC recovery-execution start valid time is missing")?;
+    let runtime_ipc_recovery_execution_status_valid_at =
+        runtime_ipc_recovery_execution["input"]["status_issued_at_unix_seconds"]
+            .as_u64()
+            .ok_or("runtime IPC recovery-execution status valid time is missing")?;
     let publication_resolution_response_bytes = pointer_hex(
         &publication_conflict,
         "/expected/resolution_response/cbor_hex",
@@ -2546,6 +2626,52 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
             )?,
         ),
         (
+            "runtime-ipc-recovery-execution-start-request",
+            Decoder::RuntimeIpcRecoveryExecutionRequest {
+                descriptor: Box::new(runtime_ipc_recovery_execution_descriptor.clone()),
+                response: Box::new(runtime_ipc_recovery_execution_start_response.clone()),
+                now_unix_seconds: runtime_ipc_recovery_execution_start_valid_at,
+            },
+            pointer_hex(
+                &runtime_ipc_recovery_execution,
+                "/expected/start/request/cbor_hex",
+            )?,
+        ),
+        (
+            "signed-runtime-ipc-recovery-execution-start-response",
+            Decoder::RuntimeIpcRecoveryExecutionResponse {
+                request: Box::new(runtime_ipc_recovery_execution_start_request.clone()),
+                descriptor: Box::new(runtime_ipc_recovery_execution_descriptor.clone()),
+            },
+            pointer_hex(
+                &runtime_ipc_recovery_execution,
+                "/expected/start/response/signed_cbor_hex",
+            )?,
+        ),
+        (
+            "runtime-ipc-recovery-execution-status-request",
+            Decoder::RuntimeIpcRecoveryExecutionRequest {
+                descriptor: Box::new(runtime_ipc_recovery_execution_descriptor.clone()),
+                response: Box::new(runtime_ipc_recovery_execution_status_response.clone()),
+                now_unix_seconds: runtime_ipc_recovery_execution_status_valid_at,
+            },
+            pointer_hex(
+                &runtime_ipc_recovery_execution,
+                "/expected/status/request/cbor_hex",
+            )?,
+        ),
+        (
+            "signed-runtime-ipc-recovery-execution-status-response",
+            Decoder::RuntimeIpcRecoveryExecutionResponse {
+                request: Box::new(runtime_ipc_recovery_execution_status_request.clone()),
+                descriptor: Box::new(runtime_ipc_recovery_execution_descriptor.clone()),
+            },
+            pointer_hex(
+                &runtime_ipc_recovery_execution,
+                "/expected/status/response/signed_cbor_hex",
+            )?,
+        ),
+        (
             "ticket-publication-capability",
             Decoder::TicketPublicationCapability,
             pointer_hex(&ticket_publication, "/expected/rotated_capability/cbor_hex")?,
@@ -2739,7 +2865,10 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
     let fixture_count = fixtures.len();
     let mut mutations = 0usize;
     for (fixture_index, (name, decoder, valid)) in fixtures.into_iter().enumerate() {
-        if fixture_index.is_multiple_of(10) || name.contains("recovery-plan") {
+        if fixture_index.is_multiple_of(10)
+            || name.contains("recovery-plan")
+            || name.contains("recovery-execution")
+        {
             eprintln!(
                 "canonical_decoder_mutation_progress={}/{} fixture={name}",
                 fixture_index + 1,
@@ -3048,6 +3177,24 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         Decoder::RuntimeIpcRecoveryPlanResponse {
             request: Box::new(runtime_ipc_recovery_plan_cancel_request),
             descriptor: Box::new(runtime_ipc_recovery_plan_descriptor),
+        },
+        Decoder::RuntimeIpcRecoveryExecutionRequest {
+            descriptor: Box::new(runtime_ipc_recovery_execution_descriptor.clone()),
+            response: Box::new(runtime_ipc_recovery_execution_start_response),
+            now_unix_seconds: runtime_ipc_recovery_execution_start_valid_at,
+        },
+        Decoder::RuntimeIpcRecoveryExecutionResponse {
+            request: Box::new(runtime_ipc_recovery_execution_start_request),
+            descriptor: Box::new(runtime_ipc_recovery_execution_descriptor.clone()),
+        },
+        Decoder::RuntimeIpcRecoveryExecutionRequest {
+            descriptor: Box::new(runtime_ipc_recovery_execution_descriptor.clone()),
+            response: Box::new(runtime_ipc_recovery_execution_status_response),
+            now_unix_seconds: runtime_ipc_recovery_execution_status_valid_at,
+        },
+        Decoder::RuntimeIpcRecoveryExecutionResponse {
+            request: Box::new(runtime_ipc_recovery_execution_status_request),
+            descriptor: Box::new(runtime_ipc_recovery_execution_descriptor),
         },
         Decoder::RuntimeIpcDirectoryResponse {
             request: Box::new(runtime_ipc_directory_request),

@@ -487,12 +487,49 @@ pub fn runtime_ipc_recovery_plan_record_id_v1(
     ))
 }
 
+pub fn encode_runtime_ipc_recovery_plan_state_v1(
+    state: &CanonicalRuntimeIpcRecoveryPlanStateV1,
+) -> Result<Vec<u8>, CanonicalRuntimeIpcError> {
+    validate_state(state)?;
+    let mut output = Vec::new();
+    encode_state(&mut output, state)?;
+    ensure_bound(
+        &output,
+        "recovery plan state",
+        MAX_CANONICAL_RUNTIME_IPC_RECOVERY_PLAN_RESPONSE_BYTES,
+    )?;
+    Ok(output)
+}
+
+pub fn decode_and_verify_runtime_ipc_recovery_plan_state_v1(
+    bytes: &[u8],
+) -> Result<CanonicalRuntimeIpcRecoveryPlanStateV1, CanonicalRuntimeIpcError> {
+    ensure_bound(
+        bytes,
+        "recovery plan state",
+        MAX_CANONICAL_RUNTIME_IPC_RECOVERY_PLAN_RESPONSE_BYTES,
+    )?;
+    validate_canonical_profile_v1(bytes)?;
+    let mut decoder = AccountDecoder::new(bytes);
+    let state = decode_state(&mut decoder)?;
+    decoder.finish()?;
+    validate_state(&state)?;
+    Ok(state)
+}
+
+pub fn verify_runtime_ipc_recovery_plan_state_v1(
+    state: &CanonicalRuntimeIpcRecoveryPlanStateV1,
+) -> Result<(), CanonicalRuntimeIpcError> {
+    validate_state(state)
+}
+
 pub fn runtime_ipc_recovery_plan_response_signing_bytes_v1(
     content: &CanonicalRuntimeIpcRecoveryPlanResponseContentV1,
 ) -> Result<Vec<u8>, CanonicalRuntimeIpcError> {
+    validate_response_content(content)?;
     Ok(prefixed(
         CANONICAL_RUNTIME_IPC_RECOVERY_PLAN_RESPONSE_SIGNATURE_DOMAIN,
-        &encode_response_content(content)?,
+        &encode_response_content_unchecked(content)?,
     ))
 }
 
@@ -532,7 +569,7 @@ pub fn encode_signed_runtime_ipc_recovery_plan_response_v1(
 ) -> Result<Vec<u8>, CanonicalRuntimeIpcError> {
     verify_signed_runtime_ipc_recovery_plan_response_v1(response)?;
     let output = signed_envelope(
-        &encode_response_content(&response.content)?,
+        &encode_response_content_unchecked(&response.content)?,
         &response.signature,
     );
     ensure_bound(
@@ -570,7 +607,10 @@ pub fn verify_signed_runtime_ipc_recovery_plan_response_v1(
     validate_response_content(&response.content)?;
     verify_ed25519(
         &response.content.responder_device_id,
-        &runtime_ipc_recovery_plan_response_signing_bytes_v1(&response.content)?,
+        &prefixed(
+            CANONICAL_RUNTIME_IPC_RECOVERY_PLAN_RESPONSE_SIGNATURE_DOMAIN,
+            &encode_response_content_unchecked(&response.content)?,
+        ),
         &response.signature,
     )
 }
@@ -580,17 +620,19 @@ pub fn verify_runtime_ipc_recovery_plan_response_for_request_v1(
     request: &CanonicalRuntimeIpcRecoveryPlanRequestV1,
     descriptor: &CanonicalSignedRuntimeIpcDescriptorV1,
 ) -> Result<(), CanonicalRuntimeIpcError> {
-    verify_signed_runtime_ipc_recovery_plan_response_v1(response)?;
     validate_request(request)?;
-    verify_signed_runtime_ipc_descriptor_v1(descriptor)?;
-    if response.content.descriptor_id != runtime_ipc_descriptor_id_v1(descriptor)?
-        || response.content.descriptor_id != request.descriptor_id
+    if response.content.descriptor_id != request.descriptor_id
         || response.content.request_id != request.request_id
         || response.content.request_digest != runtime_ipc_recovery_plan_request_digest_v1(request)?
         || response.content.responder_device_id != descriptor.content.device_id
     {
         return Err(CanonicalRuntimeIpcError::ContextMismatch);
     }
+    verify_signed_runtime_ipc_descriptor_v1(descriptor)?;
+    if response.content.descriptor_id != runtime_ipc_descriptor_id_v1(descriptor)? {
+        return Err(CanonicalRuntimeIpcError::ContextMismatch);
+    }
+    verify_signed_runtime_ipc_recovery_plan_response_v1(response)?;
     verify_result_for_request(&response.content.result, request, descriptor)
 }
 
@@ -1150,10 +1192,9 @@ fn decode_custody(
     Ok(custody)
 }
 
-fn encode_response_content(
+fn encode_response_content_unchecked(
     content: &CanonicalRuntimeIpcRecoveryPlanResponseContentV1,
 ) -> Result<Vec<u8>, CanonicalRuntimeIpcError> {
-    validate_response_content(content)?;
     let mut output = Vec::new();
     push_array_header(&mut output, 6);
     push_unsigned(&mut output, CANONICAL_PROFILE_VERSION);
@@ -1170,7 +1211,7 @@ fn decode_response_content(
 ) -> Result<CanonicalRuntimeIpcRecoveryPlanResponseContentV1, CanonicalRuntimeIpcError> {
     decoder.expect_array("runtime-ipc-recovery-plan-response-content-v1", 6)?;
     decoder.expect_version("runtime-ipc-recovery-plan-response-content-v1.schema-version")?;
-    let content = CanonicalRuntimeIpcRecoveryPlanResponseContentV1 {
+    Ok(CanonicalRuntimeIpcRecoveryPlanResponseContentV1 {
         descriptor_id: decoder
             .fixed_bytes("runtime-ipc-recovery-plan-response-content-v1.descriptor-id")?,
         request_id: decoder
@@ -1180,9 +1221,7 @@ fn decode_response_content(
         responder_device_id: decoder
             .fixed_bytes("runtime-ipc-recovery-plan-response-content-v1.responder-device-id")?,
         result: decode_result(decoder)?,
-    };
-    validate_response_content(&content)?;
-    Ok(content)
+    })
 }
 
 fn encode_result(
@@ -1762,7 +1801,7 @@ mod tests {
         request: &CanonicalRuntimeIpcRecoveryPlanRequestV1,
         response: &CanonicalSignedRuntimeIpcRecoveryPlanResponseV1,
     ) -> TestResult<Value> {
-        let response_content = encode_response_content(&response.content)?;
+        let response_content = encode_response_content_unchecked(&response.content)?;
         let response_signing_preimage = prefixed(
             CANONICAL_RUNTIME_IPC_RECOVERY_PLAN_RESPONSE_SIGNATURE_DOMAIN,
             &response_content,

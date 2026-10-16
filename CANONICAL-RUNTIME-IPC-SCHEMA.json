@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.43",
+  "milestone": "M1.1.44",
   "status": "candidate-not-active",
   "changes_active_wire": false,
   "profile": "kilogram-deterministic-cbor-v1",
@@ -86,6 +86,14 @@
     "maximum_recovery_plan_response_bytes": 2097152,
     "maximum_recovery_plan_cancellation_bytes": 1024,
     "minimum_recovery_plan_validity_seconds": 3600,
+    "maximum_recovery_execution_request_bytes": 65536,
+    "maximum_recovery_execution_response_bytes": 2097152,
+    "maximum_recovery_scheduler_state_bytes": 524288,
+    "minimum_recovery_retry_base_seconds": 1,
+    "maximum_recovery_retry_base_seconds": 300,
+    "maximum_recovery_retry_seconds": 3600,
+    "minimum_recovery_attempt_lease_seconds": 30,
+    "maximum_recovery_attempt_lease_seconds": 7200,
     "maximum_error_bytes": 4096,
     "maximum_descriptor_validity_seconds": 86400,
     "maximum_request_validity_seconds": 30,
@@ -453,6 +461,38 @@
       "id": "recovery-plan-response-id-v1",
       "value": "kilogram:runtime-ipc-recovery-plan-response-id:cbor-v1\\0",
       "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "recovery-scheduler-signature-v1",
+      "value": "kilogram:runtime-ipc-recovery-scheduler-signature:cbor-v1\\0",
+      "operation": "ed25519-signature",
+      "signer": "recipient-device-ed25519"
+    },
+    {
+      "id": "recovery-scheduler-state-id-v1",
+      "value": "kilogram:runtime-ipc-recovery-scheduler-state-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "recovery-scheduler-jitter-v1",
+      "value": "kilogram:runtime-ipc-recovery-scheduler-jitter:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-deterministic-jitter"
+    },
+    {
+      "id": "recovery-execution-request-digest-v1",
+      "value": "kilogram:runtime-ipc-recovery-execution-request-digest:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "recovery-execution-response-signature-v1",
+      "value": "kilogram:runtime-ipc-recovery-execution-response-signature:cbor-v1\\0",
+      "operation": "ed25519-signature",
+      "signer": "descriptor-device-ed25519"
+    },
+    {
+      "id": "recovery-execution-response-id-v1",
+      "value": "kilogram:runtime-ipc-recovery-execution-response-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
     }
   ],
   "objects": [
@@ -620,6 +660,21 @@
       "id": "signed-runtime-ipc-recovery-plan-response-v1",
       "kind": "device-signed-foreground-only-recovery-plan-custody-state",
       "maximum_bytes": 2097152
+    },
+    {
+      "id": "runtime-ipc-recovery-execution-request-v1",
+      "kind": "short-lived-approved-plan-bound-recovery-execution-control-request",
+      "maximum_bytes": 65536
+    },
+    {
+      "id": "signed-runtime-ipc-recovery-scheduler-state-v1",
+      "kind": "recipient-device-signed-append-only-recovery-attempt-and-checkpoint-state",
+      "maximum_bytes": 524288
+    },
+    {
+      "id": "signed-runtime-ipc-recovery-execution-response-v1",
+      "kind": "device-signed-policy-derived-foreground-recovery-execution-snapshot",
+      "maximum_bytes": 2097152
     }
   ],
   "covered_commands": [
@@ -652,7 +707,9 @@
     "own-device-roster-automation-status",
     "approve-history-recovery-plan",
     "history-recovery-plan-status",
-    "cancel-history-recovery-plan"
+    "cancel-history-recovery-plan",
+    "start-history-recovery-execution",
+    "history-recovery-execution-status"
   ],
   "covered_results": [
     "pong",
@@ -683,7 +740,9 @@
     "own-device-roster-automation-status",
     "history-recovery-plan-approved",
     "history-recovery-plan-status",
-    "history-recovery-plan-cancelled"
+    "history-recovery-plan-cancelled",
+    "history-recovery-execution-started",
+    "history-recovery-execution-status"
   ],
   "semantic_rules": [
     "descriptor address is exactly IPv4 127.0.0.1 or IPv6 ::1 and port is nonzero",
@@ -821,10 +880,27 @@
     "recovery-plan custody performs no history transfer, network connection, remote deletion or convergence claim and carries no recovery page payload",
     "Account Root secrets, Device private keys, private recovery capabilities, decrypted history and local filesystem paths are forbidden from this recovery-plan IPC surface",
     "the request ID is the durable idempotency key: exact replay may return already-committed while stale record IDs or divergent reuse fail before plan or tombstone mutation",
-    "unknown variants, noncanonical CBOR, trailing data, expired objects and contextual substitutions fail closed"
+    "unknown variants, noncanonical CBOR, trailing data, expired objects and contextual substitutions fail closed",
+    "recovery execution starts only from an approved current plan and exact content-addressed plan record named by the request",
+    "the approved plan Account and recipient Device exactly match the current signed descriptor before scheduler state is created",
+    "routine IPC may start or inspect recovery but cannot supply network observations, power observations, attempt outcomes, checkpoints or scheduler transitions",
+    "the recipient Device signs every scheduler state and each noninitial state commits the exact predecessor state identifier and increments generation once",
+    "scheduler initialization creates a recipient-signed canonical checkpoint at the approved range start and binds the complete plan identity",
+    "attempt-start transitions advance the total attempt count exactly once and create a bounded signed lease without changing checkpoint progress",
+    "attempt-failed transitions preserve the checkpoint, increment consecutive failure count and bind one nonzero failure code",
+    "retry delay uses deterministic equal jitter bound to plan ID, failure exponent and attempt ordinal and is capped by the signed retry policy",
+    "attempt-progressed and completed transitions require a valid signed successor checkpoint for the exact plan and reset consecutive failures",
+    "completion requires the checkpoint cursor to equal the approved range end while partial progress must remain strictly before it",
+    "plan cancellation produces only a terminal cancellation transition and cannot revive or overwrite a completed scheduler chain",
+    "scheduler time never moves backward; a backward observation is reported explicitly and an expired attempt lease cannot be presented as active",
+    "readiness is derived from signed lifecycle, plan expiry, retry deadline, exact network class and external-power policy rather than caller assertion",
+    "execution snapshots embed the exact verified plan state and signed scheduler head and bind their derived readiness to the observation context",
+    "execution status and start responses require no restart, execute only in the foreground runtime and explicitly deny an OS background service",
+    "Account Root secrets, Device private keys, private recovery capabilities, decrypted history, page payloads and local filesystem paths are forbidden from recovery execution IPC",
+    "the request ID is the durable execution idempotency key: exact replay may return already committed while divergent reuse or a stale plan record fails before scheduling",
+    "the execution contract makes no claim that a source is online, that a page was transferred, that history converged or that any remote copy was erased"
   ],
   "remaining_runtime_ipc_surface": [
-    "recovery-plan-execution-and-scheduler-results",
     "active-unpaged-conversation-list-migration",
     "all-associated-mutation-results-not-listed-above"
   ]
