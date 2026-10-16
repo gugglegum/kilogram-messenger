@@ -1554,6 +1554,107 @@ impl CanonicalSyncV2MutualCandidateSelection {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CanonicalSyncV2MigrationState {
+    LegacyOnly,
+    AdvertiseCanonicalV2,
+    DualReaderPreferLegacy,
+    DualReaderPreferCanonical,
+    CanonicalRequired,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct CanonicalSyncV2DormantTransportPlan {
+    migration_state: CanonicalSyncV2MigrationState,
+    planned_protocol: SyncTransportProtocol,
+    mutual_candidate_selection: Option<CanonicalSyncV2MutualCandidateSelection>,
+}
+
+impl CanonicalSyncV2DormantTransportPlan {
+    pub fn migration_state(&self) -> CanonicalSyncV2MigrationState {
+        self.migration_state
+    }
+
+    pub fn planned_protocol(&self) -> SyncTransportProtocol {
+        self.planned_protocol
+    }
+
+    pub fn mutual_candidate_selected(&self) -> bool {
+        self.mutual_candidate_selection.is_some()
+    }
+
+    pub fn migration_epoch(&self) -> Option<u64> {
+        self.mutual_candidate_selection
+            .as_ref()
+            .map(CanonicalSyncV2MutualCandidateSelection::migration_epoch)
+    }
+
+    /// A verified policy plan remains dormant until a separate activation
+    /// decision connects the dual-reader implementation to the transport.
+    pub const fn active_transport_authorized(&self) -> bool {
+        false
+    }
+}
+
+pub fn evaluate_dormant_canonical_sync_v2_transport_policy(
+    migration_state: CanonicalSyncV2MigrationState,
+    mutual_candidate_selection: Option<&CanonicalSyncV2MutualCandidateSelection>,
+    proposed_protocol: SyncTransportProtocol,
+    minimum_migration_epoch: u64,
+    fallback_after_selected_canonical_failure: bool,
+) -> Result<CanonicalSyncV2DormantTransportPlan, CanonicalSyncV2SessionError> {
+    if fallback_after_selected_canonical_failure {
+        return Err(CanonicalSyncV2SessionError::CanonicalFallbackForbidden);
+    }
+    if let Some(selection) = mutual_candidate_selection {
+        if selection.selected_protocol() != SyncTransportProtocol::CanonicalCborV2 {
+            return Err(CanonicalSyncV2SessionError::CanonicalSelectionRequired);
+        }
+        if selection.migration_epoch() < minimum_migration_epoch {
+            return Err(CanonicalSyncV2SessionError::MigrationEpochRollback {
+                selected: selection.migration_epoch(),
+                minimum: minimum_migration_epoch,
+            });
+        }
+    }
+
+    match migration_state {
+        CanonicalSyncV2MigrationState::LegacyOnly
+        | CanonicalSyncV2MigrationState::AdvertiseCanonicalV2 => {
+            if proposed_protocol != SyncTransportProtocol::LegacyPostcardV6 {
+                return Err(CanonicalSyncV2SessionError::PrematureCanonicalTransport);
+            }
+        }
+        CanonicalSyncV2MigrationState::DualReaderPreferLegacy
+        | CanonicalSyncV2MigrationState::DualReaderPreferCanonical => match proposed_protocol {
+            SyncTransportProtocol::LegacyPostcardV6 => {
+                if mutual_candidate_selection.is_some() {
+                    return Err(CanonicalSyncV2SessionError::AuthenticatedDowngradeDetected);
+                }
+            }
+            SyncTransportProtocol::CanonicalCborV2 => {
+                if mutual_candidate_selection.is_none() {
+                    return Err(CanonicalSyncV2SessionError::CanonicalSelectionRequired);
+                }
+            }
+        },
+        CanonicalSyncV2MigrationState::CanonicalRequired => {
+            if proposed_protocol != SyncTransportProtocol::CanonicalCborV2 {
+                return Err(CanonicalSyncV2SessionError::CanonicalTransportRequired);
+            }
+            if mutual_candidate_selection.is_none() {
+                return Err(CanonicalSyncV2SessionError::CanonicalSelectionRequired);
+            }
+        }
+    }
+
+    Ok(CanonicalSyncV2DormantTransportPlan {
+        migration_state,
+        planned_protocol: proposed_protocol,
+        mutual_candidate_selection: mutual_candidate_selection.copied(),
+    })
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn verify_durable_mutual_canonical_candidate_selection(
     listener_capability: &SignedSyncTransportCapability,
@@ -1792,6 +1893,24 @@ pub enum CanonicalSyncV2SessionError {
 
     #[error("mutual canonical candidate selection does not match both durable adapter identities")]
     MutualCandidateDurableIdentityMismatch,
+
+    #[error("canonical sync v2 transport was proposed before the dual-reader migration state")]
+    PrematureCanonicalTransport,
+
+    #[error("canonical sync v2 transport requires an exact mutual authenticated selection")]
+    CanonicalSelectionRequired,
+
+    #[error("legacy transport was proposed after an authenticated canonical selection")]
+    AuthenticatedDowngradeDetected,
+
+    #[error("the current migration state requires canonical sync v2 transport")]
+    CanonicalTransportRequired,
+
+    #[error("fallback after a selected canonical transport failure is forbidden")]
+    CanonicalFallbackForbidden,
+
+    #[error("canonical migration epoch rolled back from minimum {minimum} to {selected}")]
+    MigrationEpochRollback { selected: u64, minimum: u64 },
 }
 
 struct CanonicalSyncV2Plan {
@@ -2911,6 +3030,165 @@ mod tests {
             Err(CanonicalSyncV2SessionError::Capability(
                 SyncTransportCapabilityError::Expired { .. }
             ))
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn mixed_version_and_downgrade_matrix_fails_closed() -> Result<(), Box<dyn Error>> {
+        let listener = DeviceIdentity::from_secret_bytes([0x28; 32]);
+        let requester = DeviceIdentity::from_secret_bytes([0x48; 32]);
+        let selection = CanonicalSyncV2MutualCandidateSelection {
+            conversation_id: [0x38; 32],
+            listener_account_id: AccountId::from_bytes([0x58; 32]),
+            listener_device_id: listener.device_id(),
+            requester_account_id: AccountId::from_bytes([0x68; 32]),
+            requester_device_id: requester.device_id(),
+            session_binding: [0x78; 32],
+            migration_epoch: 7,
+            selected_protocol: SyncTransportProtocol::CanonicalCborV2,
+        };
+
+        for state in [
+            CanonicalSyncV2MigrationState::LegacyOnly,
+            CanonicalSyncV2MigrationState::AdvertiseCanonicalV2,
+        ] {
+            let legacy = evaluate_dormant_canonical_sync_v2_transport_policy(
+                state,
+                None,
+                SyncTransportProtocol::LegacyPostcardV6,
+                0,
+                false,
+            )?;
+            assert_eq!(
+                legacy.planned_protocol(),
+                SyncTransportProtocol::LegacyPostcardV6
+            );
+            assert!(!legacy.mutual_candidate_selected());
+            assert!(!legacy.active_transport_authorized());
+
+            let dormant = evaluate_dormant_canonical_sync_v2_transport_policy(
+                state,
+                Some(&selection),
+                SyncTransportProtocol::LegacyPostcardV6,
+                7,
+                false,
+            )?;
+            assert!(dormant.mutual_candidate_selected());
+            assert_eq!(dormant.migration_epoch(), Some(7));
+            assert!(!dormant.active_transport_authorized());
+            assert!(matches!(
+                evaluate_dormant_canonical_sync_v2_transport_policy(
+                    state,
+                    Some(&selection),
+                    SyncTransportProtocol::CanonicalCborV2,
+                    7,
+                    false,
+                ),
+                Err(CanonicalSyncV2SessionError::PrematureCanonicalTransport)
+            ));
+        }
+
+        for state in [
+            CanonicalSyncV2MigrationState::DualReaderPreferLegacy,
+            CanonicalSyncV2MigrationState::DualReaderPreferCanonical,
+        ] {
+            let mixed_version = evaluate_dormant_canonical_sync_v2_transport_policy(
+                state,
+                None,
+                SyncTransportProtocol::LegacyPostcardV6,
+                0,
+                false,
+            )?;
+            assert_eq!(mixed_version.migration_state(), state);
+            assert!(!mixed_version.mutual_candidate_selected());
+
+            let canonical = evaluate_dormant_canonical_sync_v2_transport_policy(
+                state,
+                Some(&selection),
+                SyncTransportProtocol::CanonicalCborV2,
+                7,
+                false,
+            )?;
+            assert_eq!(
+                canonical.planned_protocol(),
+                SyncTransportProtocol::CanonicalCborV2
+            );
+            assert!(canonical.mutual_candidate_selected());
+            assert!(!canonical.active_transport_authorized());
+            assert!(matches!(
+                evaluate_dormant_canonical_sync_v2_transport_policy(
+                    state,
+                    Some(&selection),
+                    SyncTransportProtocol::LegacyPostcardV6,
+                    7,
+                    false,
+                ),
+                Err(CanonicalSyncV2SessionError::AuthenticatedDowngradeDetected)
+            ));
+            assert!(matches!(
+                evaluate_dormant_canonical_sync_v2_transport_policy(
+                    state,
+                    None,
+                    SyncTransportProtocol::CanonicalCborV2,
+                    0,
+                    false,
+                ),
+                Err(CanonicalSyncV2SessionError::CanonicalSelectionRequired)
+            ));
+        }
+
+        let required = evaluate_dormant_canonical_sync_v2_transport_policy(
+            CanonicalSyncV2MigrationState::CanonicalRequired,
+            Some(&selection),
+            SyncTransportProtocol::CanonicalCborV2,
+            7,
+            false,
+        )?;
+        assert_eq!(required.migration_epoch(), Some(7));
+        assert!(!required.active_transport_authorized());
+        assert!(matches!(
+            evaluate_dormant_canonical_sync_v2_transport_policy(
+                CanonicalSyncV2MigrationState::CanonicalRequired,
+                None,
+                SyncTransportProtocol::LegacyPostcardV6,
+                0,
+                false,
+            ),
+            Err(CanonicalSyncV2SessionError::CanonicalTransportRequired)
+        ));
+        assert!(matches!(
+            evaluate_dormant_canonical_sync_v2_transport_policy(
+                CanonicalSyncV2MigrationState::CanonicalRequired,
+                None,
+                SyncTransportProtocol::CanonicalCborV2,
+                0,
+                false,
+            ),
+            Err(CanonicalSyncV2SessionError::CanonicalSelectionRequired)
+        ));
+        assert!(matches!(
+            evaluate_dormant_canonical_sync_v2_transport_policy(
+                CanonicalSyncV2MigrationState::DualReaderPreferCanonical,
+                Some(&selection),
+                SyncTransportProtocol::CanonicalCborV2,
+                8,
+                false,
+            ),
+            Err(CanonicalSyncV2SessionError::MigrationEpochRollback {
+                selected: 7,
+                minimum: 8
+            })
+        ));
+        assert!(matches!(
+            evaluate_dormant_canonical_sync_v2_transport_policy(
+                CanonicalSyncV2MigrationState::DualReaderPreferCanonical,
+                Some(&selection),
+                SyncTransportProtocol::LegacyPostcardV6,
+                7,
+                true,
+            ),
+            Err(CanonicalSyncV2SessionError::CanonicalFallbackForbidden)
         ));
         Ok(())
     }

@@ -6666,3 +6666,25 @@ correlation visible, Windows-only field evidence, independent security audit
   negative mode. Все 98 root JSON parsed, rustfmt и workspace locked/offline
   strict Clippy verified; accepted-tag readiness прошёл 100/100 против
   immutable `M1.0.0` без запуска Rust test executables внутри readiness.
+
+### M1.1.69 — dormant mixed-version and downgrade matrix: принято локально
+
+- добавлены `CanonicalSyncV2MigrationState`, dormant transport plan и pure
+  policy evaluator для пяти состояний migration без подключения к active Iroh;
+- legacy без selection разрешён в dual-reader состояниях только как outcome со
+  старым peer; canonical без exact mutual selection отклоняется;
+- после authenticated canonical selection legacy считается downgrade. Epoch
+  rollback и любой fallback после canonical failure fail closed до выбора
+  состояния; sniffing/parse fallback по-прежнему запрещены;
+- successful plan всегда сообщает `active_transport_authorized=false`.
+  Отдельно зафиксировано, что будущий runtime должен переносить signed ceremony
+  внутри authenticated transport context, поскольку local matrix не решает
+  pre-offer stripping сама по себе;
+- добавлены manifest, RFC-0196 и dedicated boundary с пятью negative self-tests.
+  Новая и 19 затронутых старых boundaries прошли normal и self-test режимы;
+- полный `kilogram-session` regression прошёл 16/16 вне Windows sandbox; все
+  99 root JSON parsed, rustfmt и workspace locked/offline strict Clippy прошли;
+  accepted-tag readiness — 101/101 против immutable `M1.0.0`;
+- active Postcard v6 не менялся, `/cbor/2` остаётся unregistered/undialed;
+  network/release/archive/stable EXE/push/tag не выполнялись. Следующий bounded
+  slice — dormant dual-reader runtime coordinator без transport activation.

@@ -459,12 +459,12 @@ sessions, distribution, removal и key epochs и не решены этим пр
   Diff/Complete restart dispatch. M1.1.68 добавил взаимную Device-signed
   candidate ceremony, проверку обеих canonical authority/session chains и
   exact binding обоих durable adapters, но намеренно не выдал transport
-  activation permit. Следующий приоритет — mixed-version/downgrade matrix,
-  затем отдельный active dual-reader slice без fallback после canonical
-  failure. Общая activation требует
-  explicit identifiers, downgrade
-  tests, sustained fuzzing, independent HPKE conformance и fresh multi-device
-  field evidence.
+  activation permit. M1.1.69 добавил dormant mixed-version/downgrade matrix,
+  которая запрещает selected-canonical fallback и epoch rollback, но не
+  подключена к transport. Следующий приоритет — dormant dual-reader runtime
+  coordinator, затем отдельное activation решение. Общая activation требует
+  explicit identifiers, rollback drill, sustained fuzzing, independent HPKE
+  conformance и fresh multi-device field evidence.
 
 - M1.1.52 выявил дополнительный обязательный migration boundary: native
   canonical event нельзя вывести из исторического Postcard event без исходного
@@ -486,9 +486,13 @@ sessions, distribution, removal и key epochs и не решены этим пр
   journal и atomic carrier/checkpoint/runtime transition transaction.
   M1.1.66–M1.1.67 интегрировали эту transaction в durable client и responder
   adapters и доказали exact restart/retry с раздельными signed journals.
-  M1.1.68 закрыл mutual authenticated candidate selection, но не активировал
-  transport. Открыты mixed-version/downgrade regression, explicit dual-reader
-  activation, rollback drill, sustained fuzzing и fresh field evidence.
+  M1.1.68 закрыл mutual authenticated candidate selection, а M1.1.69 —
+  исполняемую mixed-version/downgrade matrix с запретом epoch regression и
+  fallback после выбранного canonical transport. Transport всё ещё не
+  активирован. Открыты dormant dual-reader runtime integration, rollback drill,
+  sustained fuzzing и fresh field evidence. При реализации runtime signed
+  ceremony должна находиться внутри authenticated transport context: одна
+  локальная no-selection row не является защитой от pre-offer stripping.
 
 ## Инварианты при выборе ответов
 

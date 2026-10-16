@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.69",
+  "status": "dormant-mixed-version-and-downgrade-matrix-verified-not-active",
+  "changes_active_wire": false,
+  "protocol_identifier": "kilogram/m1/sync/cbor/2",
+  "implementation": {
+    "migration_state": "CanonicalSyncV2MigrationState",
+    "policy_evaluator": "evaluate_dormant_canonical_sync_v2_transport_policy",
+    "dormant_plan": "CanonicalSyncV2DormantTransportPlan",
+    "authenticated_selection": "CanonicalSyncV2MutualCandidateSelection"
+  },
+  "matrix": [
+    {
+      "state": "legacy-only",
+      "selection": "absent",
+      "proposed_protocol": "legacy-postcard-v6",
+      "result": "planned-dormant"
+    },
+    {
+      "state": "legacy-only",
+      "selection": "present",
+      "proposed_protocol": "legacy-postcard-v6",
+      "result": "planned-dormant-selection-not-active"
+    },
+    {
+      "state": "legacy-only",
+      "selection": "any",
+      "proposed_protocol": "canonical-cbor-v2",
+      "result": "rejected-premature-canonical"
+    },
+    {
+      "state": "advertise-cbor-v2",
+      "selection": "absent",
+      "proposed_protocol": "legacy-postcard-v6",
+      "result": "planned-dormant"
+    },
+    {
+      "state": "advertise-cbor-v2",
+      "selection": "present",
+      "proposed_protocol": "legacy-postcard-v6",
+      "result": "planned-dormant-selection-not-active"
+    },
+    {
+      "state": "advertise-cbor-v2",
+      "selection": "any",
+      "proposed_protocol": "canonical-cbor-v2",
+      "result": "rejected-premature-canonical"
+    },
+    {
+      "state": "dual-reader-prefer-legacy",
+      "selection": "absent",
+      "proposed_protocol": "legacy-postcard-v6",
+      "result": "planned-mixed-version-legacy-peer"
+    },
+    {
+      "state": "dual-reader-prefer-legacy",
+      "selection": "present",
+      "proposed_protocol": "canonical-cbor-v2",
+      "result": "planned-authenticated-canonical"
+    },
+    {
+      "state": "dual-reader-prefer-legacy",
+      "selection": "present",
+      "proposed_protocol": "legacy-postcard-v6",
+      "result": "rejected-authenticated-downgrade"
+    },
+    {
+      "state": "dual-reader-prefer-legacy",
+      "selection": "absent",
+      "proposed_protocol": "canonical-cbor-v2",
+      "result": "rejected-selection-required"
+    },
+    {
+      "state": "dual-reader-prefer-cbor",
+      "selection": "absent",
+      "proposed_protocol": "legacy-postcard-v6",
+      "result": "planned-mixed-version-legacy-peer"
+    },
+    {
+      "state": "dual-reader-prefer-cbor",
+      "selection": "present",
+      "proposed_protocol": "canonical-cbor-v2",
+      "result": "planned-authenticated-canonical"
+    },
+    {
+      "state": "dual-reader-prefer-cbor",
+      "selection": "present",
+      "proposed_protocol": "legacy-postcard-v6",
+      "result": "rejected-authenticated-downgrade"
+    },
+    {
+      "state": "dual-reader-prefer-cbor",
+      "selection": "absent",
+      "proposed_protocol": "canonical-cbor-v2",
+      "result": "rejected-selection-required"
+    },
+    {
+      "state": "cbor-required",
+      "selection": "present",
+      "proposed_protocol": "canonical-cbor-v2",
+      "result": "planned-authenticated-canonical"
+    },
+    {
+      "state": "cbor-required",
+      "selection": "absent",
+      "proposed_protocol": "canonical-cbor-v2",
+      "result": "rejected-selection-required"
+    },
+    {
+      "state": "cbor-required",
+      "selection": "any",
+      "proposed_protocol": "legacy-postcard-v6",
+      "result": "rejected-canonical-required"
+    }
+  ],
+  "fail_closed": {
+    "canonical_without_mutual_selection": true,
+    "legacy_after_authenticated_canonical_selection": true,
+    "migration_epoch_rollback": true,
+    "fallback_after_selected_canonical_failure": true,
+    "format_sniffing": true,
+    "parse_error_fallback": true
+  },
+  "security_boundary": {
+    "dual_reader_selection_absent_legacy_is_only_mixed_version_outcome": true,
+    "signed_selection_must_be_carried_inside_authenticated_transport_context": true,
+    "pre_offer_stripping_not_claimed_solved_by_local_matrix_alone": true,
+    "active_transport_authorized": false,
+    "endpoint_registered": false,
+    "canonical_dial_enabled": false,
+    "active_postcard_path_changed": false
+  },
+  "remaining": [
+    "dual-reader-runtime-implementation",
+    "rollback-drill",
+    "sustained-fuzzing",
+    "fresh-hosted-and-field-evidence"
+  ],
+  "scope": {
+    "network_executed": false,
+    "release_build": false,
+    "archive_created": false,
+    "stable_executable_replaced": false
+  }
+}

@@ -4400,3 +4400,22 @@ Hosted follow-up:
   self-test runs passed; 98 root JSON files parsed; rustfmt and workspace
   locked/offline strict Clippy passed; accepted-tag readiness passed 100/100
   against immutable `M1.0.0`.
+
+## M1.1.69 dormant mixed-version and downgrade matrix (2026-10-17)
+
+- Implemented in
+  `crates/kilogram-session/src/canonical_sync_v2_adapter.rs`; no active wire,
+  Iroh or CLI call site was added.
+- Targeted matrix regression and the full `kilogram-session` debug/offline suite
+  pass 16/16. Redb/tempdir tests must run outside the Windows sandbox; the
+  sandboxed attempt predictably returned `os error 5` while pure tests passed.
+- Resource policy remained `scripts/invoke-cargo-friendly.ps1 -CargoJobs 2`,
+  below-normal priority, debug/offline only. No release build or archive.
+- Dedicated and 19 affected historical boundaries pass in normal and negative
+  self-test modes (20/20 total including the new boundary). All 99 root JSON
+  documents parse.
+- `cargo fmt --all -- --check`, workspace `--all-targets --all-features`
+  locked/offline Clippy with `-D warnings`, and accepted-tag readiness 101/101
+  against immutable `M1.0.0` all pass.
+- Active Postcard v6 remains unchanged; canonical `/cbor/2` remains allocated,
+  unregistered and undialed. No network, stable EXE, push or tag was produced.

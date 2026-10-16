@@ -1111,6 +1111,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   listener-signed acceptance, обе authority/session chains и durable
   client/responder identities, но намеренно не разрешает ALPN registration или
   dial.
+- [`../docs/RFC-0196-m1169-mixed-version-downgrade-matrix.md`](../docs/RFC-0196-m1169-mixed-version-downgrade-matrix.md) —
+  M1.1.69 формализует все dormant mixed-version outcomes: canonical требует
+  mutual selection, legacy после неё считается downgrade, epoch rollback и
+  error-driven fallback запрещены; transport activation всё ещё не выдаётся.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

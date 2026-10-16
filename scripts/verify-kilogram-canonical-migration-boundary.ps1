@@ -23,8 +23,8 @@ function Assert-ExactStrings {
 
 function Assert-Manifest {
     param([object]$Manifest)
-    if ([UInt64]$Manifest.schema_version -ne 1 -or [string]$Manifest.milestone -cne 'M1.1.68' -or
-        [string]$Manifest.status -cne 'dormant-mutual-authenticated-candidate-selection-verified-not-active' -or
+    if ([UInt64]$Manifest.schema_version -ne 1 -or [string]$Manifest.milestone -cne 'M1.1.69' -or
+        [string]$Manifest.status -cne 'dormant-mixed-version-and-downgrade-matrix-verified-not-active' -or
         [string]$Manifest.current_state -cne 'legacy-only' -or [bool]$Manifest.changes_active_wire) {
         throw 'canonical migration header changed'
     }
@@ -67,6 +67,8 @@ function Assert-Manifest {
             'verified' -or
         [string]$Manifest.history_compatible_successor.dormant_mutual_authenticated_candidate_selection -cne
             'verified' -or
+        [string]$Manifest.history_compatible_successor.dormant_mixed_version_and_downgrade_matrix -cne
+            'verified' -or
         [bool]$Manifest.history_compatible_successor.registered -or
         [bool]$Manifest.history_compatible_successor.dialed) {
         throw 'history-compatible successor boundary changed'
@@ -78,6 +80,7 @@ function Assert-Manifest {
         [bool]$Manifest.selection.format_sniffing -or [bool]$Manifest.selection.parse_error_fallback -or
         [bool]$Manifest.selection.reuse_existing_identifier -or
         [string]$Manifest.selection.mutual_authenticated_candidate_selection -cne 'verified' -or
+        [string]$Manifest.selection.mixed_version_and_downgrade_matrix -cne 'verified' -or
         [bool]$Manifest.selection.selection_authorizes_registration_or_dial) {
         throw 'unsafe canonical selection policy'
     }
@@ -138,7 +141,7 @@ function Assert-Manifest {
         'independent-crypto-conformance|verified',
         'bounded-decoder-mutation-regression|verified',
         'sustained-coverage-guided-fuzzing|pending',
-        'mixed-version-and-downgrade-tests|pending',
+        'mixed-version-and-downgrade-tests|verified',
         'fresh-hosted-and-field-evidence|pending',
         'rollback-drill|pending'
     ) 'activation requirements'
@@ -197,7 +200,7 @@ if ($SelfTest) {
 }
 
 Write-Output 'canonical_migration_boundary=verified'
-Write-Output 'migration_status=dormant-mutual-authenticated-candidate-selection-verified-not-active'
+Write-Output 'migration_status=dormant-mixed-version-and-downgrade-matrix-verified-not-active'
 Write-Output 'candidate_protocol_identifier=kilogram/m1/sync/cbor/2'
 Write-Output 'history_compatible_successor_identifier=kilogram/m1/sync/cbor/2'
 Write-Output 'candidate_identifier_registered=false'
