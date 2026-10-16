@@ -6303,3 +6303,27 @@ correlation visible, Windows-only field evidence, independent security audit
 - accepted-tag readiness прошёл 87/87 вместе с rustfmt и workspace
   locked/offline strict Clippy в два Cargo job. Network, release/archive,
   stable EXE, push и tag не выполнялись.
+
+### M1.1.55 — typed durable canonical sync v2 checkpoint: принято локально
+
+- добавлен отдельный inactive checkpoint codec для exact
+  `kilogram/m1/sync/cbor/2`; signed content включает 23-byte protocol identifier,
+  поэтому v1 checkpoint/signature нельзя переиспользовать для v2;
+- received/sent cumulative evidence использует только
+  `CanonicalSyncEventKeyV2 = (namespace, Event ID)`, вложенный как canonical
+  CBOR bytes. Bare 32-byte IDs запрещены, порядок и duplicate проверяются по
+  полному typed key;
+- hash-linked Device-signed chain сохраняет exact predecessor, immutable
+  conversation/Devices/session/protocol, monotonic evidence, bounded round,
+  pause/resume и terminal transitions. Rollback namespace-only key fail closed;
+- CDDL/schema/golden vectors и independent Node oracle воспроизводят четыре
+  checkpoints, Ed25519 preimages/signatures и BLAKE3 IDs. Focused Rust
+  regression прошёл 4/4, dedicated boundary и связанные migration/transport
+  contracts прошли normal/self-test;
+- `/cbor/2` остаётся unregistered/undialed и не advertised connection ticket
+  v12. Следующий slice — exact Device-signed `/cbor/2` ticket capability;
+  active Postcard v6, network, release/archive/stable EXE/push/tag не менялись.
+- rustfmt, workspace-wide locked/offline strict Clippy и полный accepted-tag
+  readiness прошли 88/88 против immutable `M1.0.0`; два исторических
+  sync/session boundary также синхронизированы с новым closed coverage item и
+  их negative self-tests остались зелёными.

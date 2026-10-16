@@ -1024,6 +1024,11 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.1.54 закрывает полный inactive `/cbor/2` inventory/diff/batch/complete и
   pause/reject frame set поверх typed history, оставляя typed durable checkpoint,
   ticket capability и runtime activation pending.
+- [`../docs/RFC-0181-m1155-typed-canonical-sync-v2-session-checkpoint.md`](../docs/RFC-0181-m1155-typed-canonical-sync-v2-session-checkpoint.md) —
+  M1.1.55 добавляет namespace-safe durable checkpoint для exact `/cbor/2`:
+  protocol identifier подписан, evidence хранит typed Event keys, chain
+  fail closed проверяет predecessor/round/pause/terminal transitions; ticket
+  capability и runtime activation остаются pending.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.54",
-  "status": "history-compatible-successor-frames-verified-not-active",
+  "milestone": "M1.1.55",
+  "status": "history-compatible-successor-session-verified-not-active",
   "changes_active_wire": false,
   "current_encoding": "postcard",
   "candidate_encoding": "kilogram-deterministic-cbor-v1",
@@ -13,7 +13,7 @@
     "typed_event_identity": "verified",
     "closed_event_carrier": "verified",
     "closed_sync_frames": "verified",
-    "typed_session_checkpoint": "pending",
+    "typed_session_checkpoint": "verified",
     "authenticated_ticket_capability": "pending",
     "registered": false,
     "dialed": false
@@ -162,6 +162,10 @@
     },
     {
       "id": "history-compatible-canonical-sync-frames",
+      "status": "verified"
+    },
+    {
+      "id": "history-compatible-typed-session-checkpoint",
       "status": "verified"
     },
     {

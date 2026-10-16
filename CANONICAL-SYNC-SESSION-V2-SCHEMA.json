@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.55",
+  "status": "typed-durable-checkpoint-verified-capability-pending",
+  "changes_active_wire": false,
+  "profile": "kilogram-deterministic-cbor-v1",
+  "cddl": {
+    "standard": "RFC 8610",
+    "path": "CANONICAL-SYNC-SESSION-V2.cddl",
+    "root_rule": "kilogram-sync-session-v2"
+  },
+  "activation": {
+    "current_runtime_codec": "postcard-v6",
+    "current_runtime_changed": false,
+    "allocated_protocol_identifier": "kilogram/m1/sync/cbor/2",
+    "registered_or_dialed": false,
+    "advertised_by_authenticated_ticket": false,
+    "required_before_activation": [
+      "authenticated-sync-v2-ticket-capability",
+      "dual-reader-and-downgrade-tests",
+      "coverage-guided-fuzzing",
+      "fresh-field-and-hosted-evidence"
+    ]
+  },
+  "history_compatibility": {
+    "event_key_schema": "CANONICAL-SYNC-HISTORY-V2-SCHEMA.json",
+    "event_identity": "namespace-and-event-id",
+    "bare_event_ids_allowed": false,
+    "format_sniffing_or_fallback": false
+  },
+  "limits": {
+    "maximum_received_event_keys": 4096,
+    "maximum_sent_event_keys": 4096,
+    "maximum_encoded_checkpoint_bytes": 524288
+  },
+  "domains": [
+    {
+      "id": "sync-session-checkpoint-signature-v2",
+      "value": "kilogram:sync-session-checkpoint-signature:cbor-v2\u0000",
+      "operation": "ed25519-sign-domain-prefixed-content"
+    },
+    {
+      "id": "sync-session-checkpoint-id-v2",
+      "value": "kilogram:sync-session-checkpoint-id:cbor-v2\u0000",
+      "operation": "blake3-domain-prefixed-signed-checkpoint"
+    }
+  ],
+  "external_objects": [
+    {
+      "id": "sync-event-key-v2",
+      "schema": "CANONICAL-SYNC-HISTORY-V2-SCHEMA.json",
+      "embedding": "deterministic-cbor-byte-string"
+    }
+  ],
+  "objects": [
+    {
+      "id": "sync-session-checkpoint-content-v2",
+      "kind": "signed-content",
+      "array_length": 15
+    },
+    {
+      "id": "signed-sync-session-checkpoint-v2",
+      "kind": "signed-envelope",
+      "array_length": 3
+    }
+  ],
+  "next_action_registry": {
+    "1": "send-inventory",
+    "2": "receive-diff",
+    "3": "send-event-batch",
+    "4": "receive-complete",
+    "5": "complete",
+    "6": "rejected"
+  },
+  "semantic_rules": [
+    "the signed content binds the exact byte string kilogram/m1/sync/cbor/2",
+    "the protocol identifier conversation Devices and session binding are immutable across the chain",
+    "local and peer Device IDs differ and the local Device signs the checkpoint",
+    "checkpoint sequence starts at one and increments exactly by one",
+    "sync round is positive and can stay unchanged or increment exactly by one",
+    "sequence one has no predecessor and every successor commits to the exact previous checkpoint ID",
+    "received and sent typed Event-key evidence is strictly ordered duplicate-free and monotonic",
+    "raw Event IDs without an explicit namespace are forbidden",
+    "a round increment is allowed only from receive-complete with more work to send-inventory",
+    "pause and resume preserve round next action typed evidence and availability flags",
+    "complete and rejected are terminal unpaused states with both availability flags clear",
+    "unknown namespaces next actions invalid booleans rollback skipped generations and invalid transitions fail closed"
+  ],
+  "rust_bindings": [
+    {
+      "path": "crates/kilogram-protocol/src/canonical_sync_session_v2.rs",
+      "symbol": "CANONICAL_SYNC_SESSION_PROTOCOL_IDENTIFIER_V2",
+      "rust_type": "bytes",
+      "value": "kilogram/m1/sync/cbor/2"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_sync_session_v2.rs",
+      "symbol": "CANONICAL_SYNC_SESSION_CHECKPOINT_SIGNATURE_DOMAIN_V2",
+      "rust_type": "bytes",
+      "value": "kilogram:sync-session-checkpoint-signature:cbor-v2\u0000"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_sync_session_v2.rs",
+      "symbol": "CANONICAL_SYNC_SESSION_CHECKPOINT_ID_DOMAIN_V2",
+      "rust_type": "bytes",
+      "value": "kilogram:sync-session-checkpoint-id:cbor-v2\u0000"
+    }
+  ]
+}

@@ -4035,3 +4035,27 @@ Hosted follow-up:
   rustfmt and workspace locked/offline strict Clippy with two Cargo jobs.
 - No network operation, release build, ZIP/archive, stable executable
   replacement, push or tag belongs to this stage.
+
+## M1.1.55 typed canonical sync v2 session checkpoint (2026-10-16)
+
+- Added inactive `canonical_sync_session_v2` beside the unchanged v1 session
+  module. Its content has 15 fields and signs the exact 23-byte
+  `kilogram/m1/sync/cbor/2` identifier under new v2 signature and BLAKE3-ID
+  domains.
+- Replaced bare received/sent Event IDs with nested
+  `CanonicalSyncEventKeyV2` values. The decoder rejects unknown namespaces,
+  non-canonical order, duplicates and evidence rollback; equal raw IDs in the
+  two namespaces remain distinct.
+- Independent Node generation exactly matched four committed checkpoints and
+  their Ed25519 signatures/BLAKE3 IDs. Focused debug/offline Rust regression
+  passed 4/4 with two jobs and BelowNormal priority.
+- Dedicated boundary normal/self-tests and the related history, frame,
+  migration, transport, capability and coverage boundaries passed. The closed
+  readiness inventory is now 88 gates.
+- Final rustfmt, workspace-wide `--all-targets --all-features --locked
+  --offline -D warnings` Clippy and accepted-tag readiness passed 88/88 against
+  immutable `M1.0.0`. The run started no test executable and performed no
+  network operation.
+- `/cbor/2` is still unregistered, undialed and absent from connection-ticket
+  capability. Active Postcard v6, network, release build, archive, stable-path
+  executable, push and tag remain unchanged for this stage.

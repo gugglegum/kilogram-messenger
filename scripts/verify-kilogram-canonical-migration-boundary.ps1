@@ -23,8 +23,8 @@ function Assert-ExactStrings {
 
 function Assert-Manifest {
     param([object]$Manifest)
-    if ([UInt64]$Manifest.schema_version -ne 1 -or [string]$Manifest.milestone -cne 'M1.1.54' -or
-        [string]$Manifest.status -cne 'history-compatible-successor-frames-verified-not-active' -or
+    if ([UInt64]$Manifest.schema_version -ne 1 -or [string]$Manifest.milestone -cne 'M1.1.55' -or
+        [string]$Manifest.status -cne 'history-compatible-successor-session-verified-not-active' -or
         [string]$Manifest.current_state -cne 'legacy-only' -or [bool]$Manifest.changes_active_wire) {
         throw 'canonical migration header changed'
     }
@@ -40,7 +40,7 @@ function Assert-Manifest {
         [string]$Manifest.history_compatible_successor.typed_event_identity -cne 'verified' -or
         [string]$Manifest.history_compatible_successor.closed_event_carrier -cne 'verified' -or
         [string]$Manifest.history_compatible_successor.closed_sync_frames -cne 'verified' -or
-        [string]$Manifest.history_compatible_successor.typed_session_checkpoint -cne 'pending' -or
+        [string]$Manifest.history_compatible_successor.typed_session_checkpoint -cne 'verified' -or
         [string]$Manifest.history_compatible_successor.authenticated_ticket_capability -cne
             'pending' -or
         [bool]$Manifest.history_compatible_successor.registered -or
@@ -91,6 +91,7 @@ function Assert-Manifest {
         'authenticated-legacy-history-bridge|verified',
         'history-compatible-typed-event-carrier|verified',
         'history-compatible-canonical-sync-frames|verified',
+        'history-compatible-typed-session-checkpoint|verified',
         'history-compatible-canonical-sync-generation|pending',
         'dual-reader-runtime-implementation|pending',
         'independent-crypto-conformance|verified',
@@ -151,7 +152,7 @@ if ($SelfTest) {
 }
 
 Write-Output 'canonical_migration_boundary=verified'
-Write-Output 'migration_status=history-compatible-successor-frames-verified-not-active'
+Write-Output 'migration_status=history-compatible-successor-session-verified-not-active'
 Write-Output 'candidate_protocol_identifier=kilogram/m1/sync/cbor/1'
 Write-Output 'history_compatible_successor_identifier=kilogram/m1/sync/cbor/2'
 Write-Output 'candidate_identifier_registered=false'

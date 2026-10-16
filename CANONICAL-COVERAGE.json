@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.54",
+  "milestone": "M1.1.55",
   "status": "coverage-audit-not-active",
   "changes_active_wire": false,
   "source_manifest": "PROTOCOL-COMPATIBILITY.json",
@@ -144,8 +144,8 @@
     {
       "id": "sync",
       "coverage": "complete",
-      "artifacts": ["CANONICAL-WIRE-SCHEMA.json", "CANONICAL-WIRE-VECTORS.json", "CANONICAL-SYNC.cddl", "CANONICAL-SYNC-SCHEMA.json", "CANONICAL-SYNC-VECTORS.json", "CANONICAL-SYNC-LEGACY-EVENT.cddl", "CANONICAL-SYNC-LEGACY-EVENT-SCHEMA.json", "CANONICAL-SYNC-LEGACY-EVENT-VECTORS.json", "CANONICAL-SYNC-HISTORY-COMPATIBILITY.json", "CANONICAL-SYNC-HISTORY-V2.cddl", "CANONICAL-SYNC-HISTORY-V2-SCHEMA.json", "CANONICAL-SYNC-HISTORY-V2-VECTORS.json", "CANONICAL-SYNC-V2.cddl", "CANONICAL-SYNC-V2-SCHEMA.json", "CANONICAL-SYNC-V2-VECTORS.json", "crates/kilogram-protocol/src/canonical_sync_v1.rs", "crates/kilogram-protocol/src/canonical_sync_legacy_event_v1.rs", "crates/kilogram-protocol/src/canonical_sync_history_v2.rs", "crates/kilogram-protocol/src/canonical_sync_v2.rs", "scripts/verify-kilogram-canonical-sync-reference.mjs", "scripts/verify-kilogram-canonical-sync-legacy-event-reference.mjs", "scripts/verify-kilogram-canonical-sync-legacy-event-boundary.ps1", "scripts/verify-kilogram-canonical-sync-history-v2-reference.mjs", "scripts/verify-kilogram-canonical-sync-history-v2-boundary.ps1", "scripts/verify-kilogram-canonical-sync-v2-reference.mjs", "scripts/verify-kilogram-canonical-sync-v2-boundary.ps1", "CANONICAL-SYNC-SESSION.cddl", "CANONICAL-SYNC-SESSION-SCHEMA.json", "CANONICAL-SYNC-SESSION-VECTORS.json", "crates/kilogram-protocol/src/canonical_sync_session_v1.rs", "scripts/verify-kilogram-canonical-sync-session-reference.mjs"],
-      "covered": ["sync-inventory", "sync-diff", "sync-request-response-frames", "multi-round-session-state", "typed-cross-generation-event-identity", "closed-verified-legacy-and-canonical-event-carrier", "history-compatible-typed-sync-v2-frames"],
+      "artifacts": ["CANONICAL-WIRE-SCHEMA.json", "CANONICAL-WIRE-VECTORS.json", "CANONICAL-SYNC.cddl", "CANONICAL-SYNC-SCHEMA.json", "CANONICAL-SYNC-VECTORS.json", "CANONICAL-SYNC-LEGACY-EVENT.cddl", "CANONICAL-SYNC-LEGACY-EVENT-SCHEMA.json", "CANONICAL-SYNC-LEGACY-EVENT-VECTORS.json", "CANONICAL-SYNC-HISTORY-COMPATIBILITY.json", "CANONICAL-SYNC-HISTORY-V2.cddl", "CANONICAL-SYNC-HISTORY-V2-SCHEMA.json", "CANONICAL-SYNC-HISTORY-V2-VECTORS.json", "CANONICAL-SYNC-V2.cddl", "CANONICAL-SYNC-V2-SCHEMA.json", "CANONICAL-SYNC-V2-VECTORS.json", "CANONICAL-SYNC-SESSION-V2.cddl", "CANONICAL-SYNC-SESSION-V2-SCHEMA.json", "CANONICAL-SYNC-SESSION-V2-VECTORS.json", "crates/kilogram-protocol/src/canonical_sync_v1.rs", "crates/kilogram-protocol/src/canonical_sync_legacy_event_v1.rs", "crates/kilogram-protocol/src/canonical_sync_history_v2.rs", "crates/kilogram-protocol/src/canonical_sync_v2.rs", "crates/kilogram-protocol/src/canonical_sync_session_v2.rs", "scripts/verify-kilogram-canonical-sync-reference.mjs", "scripts/verify-kilogram-canonical-sync-legacy-event-reference.mjs", "scripts/verify-kilogram-canonical-sync-legacy-event-boundary.ps1", "scripts/verify-kilogram-canonical-sync-history-v2-reference.mjs", "scripts/verify-kilogram-canonical-sync-history-v2-boundary.ps1", "scripts/verify-kilogram-canonical-sync-v2-reference.mjs", "scripts/verify-kilogram-canonical-sync-v2-boundary.ps1", "scripts/verify-kilogram-canonical-sync-session-v2-reference.mjs", "scripts/verify-kilogram-canonical-sync-session-v2-boundary.ps1", "CANONICAL-SYNC-SESSION.cddl", "CANONICAL-SYNC-SESSION-SCHEMA.json", "CANONICAL-SYNC-SESSION-VECTORS.json", "crates/kilogram-protocol/src/canonical_sync_session_v1.rs", "scripts/verify-kilogram-canonical-sync-session-reference.mjs"],
+      "covered": ["sync-inventory", "sync-diff", "sync-request-response-frames", "multi-round-session-state", "typed-cross-generation-event-identity", "closed-verified-legacy-and-canonical-event-carrier", "history-compatible-typed-sync-v2-frames", "typed-durable-sync-v2-checkpoint"],
       "remaining": []
     },
     {
@@ -159,8 +159,8 @@
       "id": "transport-sync",
       "coverage": "partial",
       "artifacts": ["CANONICAL-TRANSPORT-SYNC.json", "ACTIVE-CONNECTION-TICKET-SYNC-CAPABILITY.json", "crates/kilogram-transport-iroh/src/lib.rs", "crates/kilogram-sync-capability/src/lib.rs", "scripts/verify-kilogram-canonical-transport-sync-alpn-boundary.ps1", "scripts/verify-kilogram-connection-ticket-sync-capability-migration-boundary.ps1", "docs/RFC-0176-m1150-canonical-sync-alpn-allocation.md", "docs/RFC-0177-m1151-authenticated-sync-transport-capability.md"],
-      "covered": ["parallel-cbor-alpn-identifier-allocation", "authenticated-ticket-v12-transport-capability-envelope", "history-compatible-cbor-v2-alpn-identifier-allocation"],
-      "remaining": ["typed-durable-canonical-sync-session-checkpoint", "authenticated-cbor-v2-capability", "active-dual-reader-and-canonical-capability-activation"]
+      "covered": ["parallel-cbor-alpn-identifier-allocation", "authenticated-ticket-v12-transport-capability-envelope", "history-compatible-cbor-v2-alpn-identifier-allocation", "typed-durable-canonical-sync-session-checkpoint"],
+      "remaining": ["authenticated-cbor-v2-capability", "active-dual-reader-and-canonical-capability-activation"]
     }
   ],
   "next_priority": ["transport-sync"]

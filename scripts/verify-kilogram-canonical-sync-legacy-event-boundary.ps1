@@ -109,9 +109,9 @@ function Assert-BridgeContract {
     Assert-LowerHex ([string]$Vectors.expected.bridge_cbor_hex) -1 'bridge CBOR'
 
     if ([UInt64]$Compatibility.schema_version -ne 1 -or
-        [string]$Compatibility.milestone -cne 'M1.1.54' -or
+        [string]$Compatibility.milestone -cne 'M1.1.55' -or
         [string]$Compatibility.status -cne
-            'history-compatible-frames-verified-session-and-capability-pending' -or
+            'history-compatible-frames-and-session-verified-capability-pending' -or
         [bool]$Compatibility.changes_active_wire -or
         [string]$Compatibility.active.alpn -cne $legacyAlpn -or
         -not [bool]$Compatibility.active.history_compatible -or
@@ -139,12 +139,12 @@ function Assert-BridgeContract {
         -not [bool]$Compatibility.required_successor.typed_event_key_integrated -or
         -not [bool]$Compatibility.required_successor.closed_event_carrier_integrated -or
         -not [bool]$Compatibility.required_successor.closed_sync_frames_integrated -or
-        [bool]$Compatibility.required_successor.typed_session_checkpoint_integrated -or
+        -not [bool]$Compatibility.required_successor.typed_session_checkpoint_integrated -or
         [bool]$Compatibility.required_successor.ticket_capability_authenticated -or
         -not [bool]$Compatibility.required_successor.must_integrate_bridge_into_closed_frames -or
         -not [bool]$Compatibility.required_successor.must_authenticate_exact_identifier_in_connection_ticket -or
         [string]$Compatibility.required_successor.status -cne
-            'closed-frames-verified-session-and-capability-pending') {
+            'closed-frames-and-session-verified-capability-pending') {
         throw 'canonical sync legacy-event bridge or successor contract changed'
     }
 
@@ -162,7 +162,7 @@ function Assert-BridgeContract {
         [bool]$Migration.candidate_identifier_registered) {
         throw 'canonical migration does not block on a history-compatible generation'
     }
-    if ('typed-durable-canonical-sync-session-checkpoint' -cnotin
+    if ('typed-durable-canonical-sync-session-checkpoint' -cin
             @($TransportManifest.remaining) -or
         'authenticated-cbor-v2-ticket-capability' -cnotin
             @($TransportManifest.remaining) -or

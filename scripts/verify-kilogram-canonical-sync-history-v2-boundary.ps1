@@ -113,10 +113,10 @@ function Assert-Contract {
         -not [bool]$Compatibility.required_successor.typed_event_key_integrated -or
         -not [bool]$Compatibility.required_successor.closed_event_carrier_integrated -or
         -not [bool]$Compatibility.required_successor.closed_sync_frames_integrated -or
-        [bool]$Compatibility.required_successor.typed_session_checkpoint_integrated -or
+        -not [bool]$Compatibility.required_successor.typed_session_checkpoint_integrated -or
         [bool]$Compatibility.required_successor.ticket_capability_authenticated -or
         [string]$Compatibility.required_successor.status -cne
-            'closed-frames-verified-session-and-capability-pending') {
+            'closed-frames-and-session-verified-capability-pending') {
         throw 'canonical sync history compatibility ledger changed'
     }
     if ([string]$Migration.history_compatible_successor.protocol_identifier -cne
@@ -125,7 +125,7 @@ function Assert-Contract {
         [string]$Migration.history_compatible_successor.typed_event_identity -cne 'verified' -or
         [string]$Migration.history_compatible_successor.closed_event_carrier -cne 'verified' -or
         [string]$Migration.history_compatible_successor.closed_sync_frames -cne 'verified' -or
-        [string]$Migration.history_compatible_successor.typed_session_checkpoint -cne 'pending' -or
+        [string]$Migration.history_compatible_successor.typed_session_checkpoint -cne 'verified' -or
         [string]$Migration.history_compatible_successor.authenticated_ticket_capability -cne
             'pending' -or
         [bool]$Migration.history_compatible_successor.registered -or
@@ -143,7 +143,7 @@ function Assert-Contract {
     if ([string]$TransportManifest.history_compatible_successor.alpn -cne $successorAlpn -or
         -not [bool]$TransportManifest.history_compatible_successor.allocated -or
         -not [bool]$TransportManifest.history_compatible_successor.closed_sync_frames -or
-        [bool]$TransportManifest.history_compatible_successor.typed_session_checkpoint -or
+        -not [bool]$TransportManifest.history_compatible_successor.typed_session_checkpoint -or
         [bool]$TransportManifest.history_compatible_successor.authenticated_ticket_capability -or
         [bool]$TransportManifest.history_compatible_successor.registered -or
         [bool]$TransportManifest.history_compatible_successor.dialed -or

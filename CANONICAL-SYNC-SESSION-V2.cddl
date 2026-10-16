@@ -1,0 +1,36 @@
+; Kilogram deterministic-CBOR typed durable sync checkpoint, M1.1.55.
+
+profile-version = 1
+id-32 = bytes .size 32
+signature-64 = bytes .size 64
+canonical-bool = 0 / 1
+protocol-identifier-v2 = bytes .size 23
+optional-checkpoint-id = [] / [id-32]
+sync-event-key-v2 = bytes
+sync-next-action-v2 = 1 / 2 / 3 / 4 / 5 / 6
+
+sync-session-checkpoint-content-v2 = [
+  profile-version,
+  protocol-identifier: protocol-identifier-v2,
+  conversation-id: id-32,
+  local-device-id: id-32,
+  peer-device-id: id-32,
+  session-binding: id-32,
+  checkpoint-sequence: uint,
+  sync-round: uint,
+  predecessor-checkpoint-id: optional-checkpoint-id,
+  received-event-keys: [* sync-event-key-v2],
+  sent-event-keys: [* sync-event-key-v2],
+  local-more-available: canonical-bool,
+  peer-more-available: canonical-bool,
+  next-action: sync-next-action-v2,
+  paused: canonical-bool
+]
+
+signed-sync-session-checkpoint-v2 = [
+  profile-version,
+  sync-session-checkpoint-content-v2,
+  signature-64
+]
+
+kilogram-sync-session-v2 = signed-sync-session-checkpoint-v2

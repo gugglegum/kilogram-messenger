@@ -53,6 +53,7 @@ pub mod canonical_runtime_mailbox_v1;
 pub mod canonical_sync_history_v2;
 pub mod canonical_sync_legacy_event_v1;
 pub mod canonical_sync_session_v1;
+pub mod canonical_sync_session_v2;
 pub mod canonical_sync_v1;
 pub mod canonical_sync_v2;
 pub mod canonical_ticket_publication_v1;

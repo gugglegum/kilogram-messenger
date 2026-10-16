@@ -2303,9 +2303,14 @@ or fallback.
 [`RFC-0180`](docs/RFC-0180-m1154-history-compatible-canonical-sync-v2-frames.md)
 defines the complete closed inventory, diff, event-batch, complete,
 pause/paused and rejection frame set over those typed keys and carriers. This
-remains conformance-only: the durable checkpoint is not yet typed, the signed
-ticket does not advertise `/cbor/2`, and no endpoint registers or dials the new
-ALPN.
+remains conformance-only.
+
+[`RFC-0181`](docs/RFC-0181-m1155-typed-canonical-sync-v2-session-checkpoint.md)
+adds a separate Device-signed, hash-linked durable checkpoint for `/cbor/2`.
+The checkpoint signs the exact protocol identifier and keeps cumulative
+evidence as namespace-aware Event keys, so restart cannot collapse legacy and
+native-canonical identities. The signed ticket still does not advertise
+`/cbor/2`, and no endpoint registers or dials the new ALPN.
 
 ## Contributing
 
