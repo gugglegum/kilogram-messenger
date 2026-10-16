@@ -161,8 +161,8 @@ foreach ($block in @($gossipEntry, $gossipFrame, $protocolRequest, $ipcProvider)
         }
     }
 }
-if (-not $ipc.Contains('const IPC_VERSION: u8 = 28;')) {
-    throw 'local provider path provenance unexpectedly changed authenticated IPC v28'
+if (-not $ipc.Contains('const IPC_VERSION: u8 = 29;')) {
+    throw 'local provider path provenance unexpectedly changed authenticated IPC v29'
 }
 
 foreach ($required in @(
@@ -203,7 +203,7 @@ Write-Output 'path_tags_in_ipc=false'
 Write-Output 'm0985_selection_policy_changed=false'
 Write-Output 'current_selection_consumes_positive_colocation=true'
 Write-Output 'operator_independence_proven=false'
-Write-Output 'ipc_version=28'
+Write-Output 'ipc_version=29'
 Write-Output 'network_executed=false'
 Write-Output 'release_build=false'
 Write-Output 'archive_created=false'

@@ -22,7 +22,7 @@ use tokio::{
     time::timeout,
 };
 
-const IPC_VERSION: u8 = 28;
+const IPC_VERSION: u8 = 29;
 const MAX_DESCRIPTOR_BYTES: u64 = 16 * 1024;
 const MAX_LAUNCH_PROFILE_BYTES: u64 = 64 * 1024;
 const MAX_LAUNCH_PROFILE_PATHS: usize = 64;
@@ -45,7 +45,7 @@ const MAX_FRAME_BYTES: usize = 256 * 1024;
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(3);
 const IO_TIMEOUT: Duration = Duration::from_secs(30);
 const REQUEST_CHANNEL_CAPACITY: usize = 64;
-const DESCRIPTOR_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-ipc-descriptor:v9\0";
+const DESCRIPTOR_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-ipc-descriptor:v10\0";
 pub const RUNTIME_LAUNCH_PROFILE_VERSION: u8 = 1;
 pub const MAX_RUNTIME_IPC_CONVERSATION_PAGE_SIZE: u16 = 64;
 pub const DEFAULT_VOLUNTEER_STORAGE_LISTEN_PORT: u16 = 0;
@@ -557,22 +557,6 @@ pub enum RuntimeIpcCommand {
     SelectVolunteerStorageProviders {
         selection_salt: [u8; 32],
         requested: u8,
-    },
-    CreateMailboxCapability {
-        conversation: String,
-        peer_account_id: AccountId,
-        peer_device_id: DeviceId,
-        service_base_url: String,
-        store_key: String,
-        valid_for_seconds: u64,
-    },
-    RotateMailboxCapability {
-        conversation: String,
-        peer_account_id: AccountId,
-        peer_device_id: DeviceId,
-        service_base_url: String,
-        store_key: String,
-        valid_for_seconds: u64,
     },
     RevokeMailboxCapability {
         conversation: String,
@@ -2067,7 +2051,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn version_27_request_is_rejected_before_actor_dispatch() -> Result<(), Box<dyn Error>> {
+    async fn version_28_request_is_rejected_before_actor_dispatch() -> Result<(), Box<dyn Error>> {
         let directory = tempfile::tempdir()?;
         let descriptor_path = directory.path().join("runtime.ipc.json");
         let root = AccountRootState::create(directory.path().join("root"))?;
@@ -2080,7 +2064,7 @@ mod tests {
         write_frame(
             &mut stream,
             &RuntimeIpcRequest {
-                version: 27,
+                version: 28,
                 token,
                 command: RuntimeIpcCommand::Ping,
             },
@@ -2184,8 +2168,8 @@ mod tests {
         )?;
         assert!(descriptor.verify().is_ok());
         let mut old_version = descriptor.clone();
-        old_version.content.version = 27;
-        let mut old_signing_bytes = b"kilogram:runtime-ipc-descriptor:v8\0".to_vec();
+        old_version.content.version = 28;
+        let mut old_signing_bytes = b"kilogram:runtime-ipc-descriptor:v9\0".to_vec();
         old_signing_bytes.extend_from_slice(&postcard::to_allocvec(&old_version.content)?);
         old_version.signature = identity.sign(&old_signing_bytes).to_vec();
         assert!(old_version.verify().is_err());
@@ -2305,22 +2289,6 @@ mod tests {
         let peer_account_id = AccountId::from_bytes([8_u8; 32]);
         let peer_device_id = kilogram_identity::DeviceIdentity::generate()?.device_id();
         for command in [
-            RuntimeIpcCommand::CreateMailboxCapability {
-                conversation: "ipc-mailbox".to_owned(),
-                peer_account_id,
-                peer_device_id,
-                service_base_url: "https://mailbox.example".to_owned(),
-                store_key: "public-store-key".to_owned(),
-                valid_for_seconds: 86_400,
-            },
-            RuntimeIpcCommand::RotateMailboxCapability {
-                conversation: "ipc-mailbox".to_owned(),
-                peer_account_id,
-                peer_device_id,
-                service_base_url: "https://mailbox.example".to_owned(),
-                store_key: "public-store-key".to_owned(),
-                valid_for_seconds: 86_400,
-            },
             RuntimeIpcCommand::RevokeMailboxCapability {
                 conversation: "ipc-mailbox".to_owned(),
                 peer_account_id,

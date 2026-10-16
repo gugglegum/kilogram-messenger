@@ -378,8 +378,8 @@ sessions, distribution, removal и key epochs и не решены этим пр
 - Независимый second-builder, подписанный release provenance, обновления клиента
   и дальнейшая защита supply chain поверх M0.9.50 same-host gate.
 - Миграция криптоалгоритмов и wire protocol без разделения сети.
-- После M1.1.48 canonical coverage содержит 16 complete, 1 partial
-  (`runtime-ipc`), один not-started (`transport-sync`) и два not-targeted
+- После M1.1.49 canonical coverage содержит 17 complete, 0 partial,
+  один not-started (`transport-sync`) и два not-targeted
   surface. В runtime IPC уже закрыты signed loopback descriptor, bearer/fresh
   request, exact signed response, core Ping/WaitForChange/Shutdown/Error,
   paginated conversation list, snapshot-bound history pages, exact peer contact
@@ -421,19 +421,20 @@ sessions, distribution, removal и key epochs и не решены этим пр
   conversation list уже мигрирован на exact cursor pagination в Postcard v27 /
   JSON descriptor v8 с page limit 64, desktop cap 1024 страниц и fail-closed
   legacy v26 rejection. Exhaustive inventory теперь доказывает exact coverage
-  всех 34 canonical command / 33 result и всех 34/31 variants active Postcard
+  всех 34 canonical command / 33 result и всех 29/28 variants active Postcard
   adapter. Foreground ticket automation policy/status закрыт M1.1.47: contact
   ID пересчитывается, policy/snapshot chain exact-связан с Account/Device,
   success refresh deadline и failure backoff детерминированы, а opaque HTTPS
-  origin не является mailbox или OS background service. Открыты ровно два
-  класса: окончательный disposition endpoint-announcement bootstrap helpers и
-  endpoint-announcement bootstrap helpers удалены из public CLI/loopback IPC в
+  origin не является mailbox или OS background service. Endpoint-announcement
+  bootstrap helpers удалены из public CLI/loopback IPC в
   M1.1.48 с exact hard cut Postcard v28 / signed descriptor v9; internal peer
-  push и foreground automations сохранены. Открыт один класс: удаление legacy
-  central-HTTPS mailbox create/rotate commands. Следующий приоритет — этот
-  bounded этап до complete `runtime-ipc`, затем
-  parallel CBOR ALPN/negotiation для
-  `transport-sync`. Общая activation требует explicit identifiers, downgrade
+  push и foreground automations сохранены. M1.1.49 удалил последние legacy
+  central-HTTPS mailbox create/rotate variants с hard cut Postcard v29 /
+  signed descriptor v10; exact volunteer-provider create/rotate и bounded
+  one-way disk upgrade сохранены. `runtime-ipc` target и active adapter теперь
+  complete, но canonical CBOR остаётся inactive. Следующий приоритет — parallel
+  CBOR ALPN/negotiation для `transport-sync`. Общая activation требует explicit
+  identifiers, downgrade
   tests, sustained fuzzing, independent HPKE conformance и fresh multi-device
   field evidence.
 

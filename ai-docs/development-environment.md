@@ -3894,3 +3894,33 @@ Hosted follow-up:
   current-candidate mode correctly rejected reuse of pre-change physical field
   evidence. No network test, release build, archive, executable, push or tag
   was created.
+
+## M1.1.49 active runtime IPC legacy mailbox retirement (2026-10-16)
+
+- Removed the two legacy central-HTTPS mailbox create/rotate variants from the
+  public active loopback enum and runtime actor. Exact volunteer-provider
+  create/rotate, revoke, and bounded one-way legacy disk upgrade remain.
+- Active local control made an exact hard cut from Postcard v28 / signed JSON
+  descriptor domain v9 to v29/v10. Correctly signed legacy descriptors and
+  requests are rejected before dispatch; there is no dual reader.
+- `CANONICAL-RUNTIME-IPC-COMPLETION.json` now reports both the canonical target
+  and the active Postcard adapter complete: 34 commands, 33 results, 34 pairs,
+  29 active command variants and 28 response variants, with no blocker or
+  remaining-work entry.
+- Canonical coverage is 17 complete, 0 partial, 1 not-started and 2
+  not-targeted. The deterministic-CBOR local-control candidate is still
+  inactive; no protocol identifier, negotiation or network transport was
+  enabled by this stage.
+- The dedicated legacy-mailbox retirement boundary, inventory/coverage gates
+  and all 18 canonical runtime-IPC boundaries pass. `kilogram-runtime-ipc`
+  passed 17/17 unit tests outside the restricted TEMP/loopback sandbox;
+  `kilogram-cli` passed locked/offline compile check without starting its
+  network-capable test binary.
+- Accepted-tag readiness passed 82/82 against immutable `M1.0.0`; rustfmt and
+  workspace locked/offline strict Clippy passed with two Cargo jobs and
+  BelowNormal priority. The first sandboxed readiness attempt reached all 82
+  boundaries but its embedded rustfmt was denied path canonicalization; the
+  identical outside-sandbox rerun completed successfully.
+- No network run, release build, archive, stable-path EXE, push or tag is part
+  of this stage. The next bounded engineering surface is `transport-sync`
+  parallel CBOR negotiation.

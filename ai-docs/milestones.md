@@ -6163,3 +6163,30 @@ correlation visible, Windows-only field evidence, independent security audit
 - default current-candidate readiness ожидаемо не переиспользует старое physical
   field evidence после protected runtime drift. Peer/relay/mailbox/sync wire,
   network, release/archive/executable/push/tag не менялись.
+
+### M1.1.49 — active runtime IPC legacy mailbox retirement: принято локально
+
+- из активного loopback Postcard IPC удалены legacy central-HTTPS
+  `CreateMailboxCapability` и `RotateMailboxCapability`; canonical create/rotate
+  обслуживаются только exact volunteer-provider variants. Revoke сохранён;
+- историческое encrypted state по-прежнему может быть прочитано и односторонне
+  upgraded, а foreground CLI recovery adapters остаются вне routine desktop IPC.
+  Возврата к central-HTTPS mailbox path не добавлено;
+- из-за сдвига Postcard enum discriminants выполнен exact-version hard cut:
+  IPC v29 и signed descriptor domain v10 отвергают legacy v28/v9 до actor
+  dispatch; downgrade/dual reader отсутствуют;
+- completion inventory теперь исчерпывает 34 canonical commands, 33 results и
+  34 pairs против всех 29/28 active Postcard variants. Blockers и remaining work
+  пусты; `runtime-ipc` повышен из partial в complete;
+- `kilogram-runtime-ipc` regression прошёл 17/17, `kilogram-cli` — offline
+  compile check; accepted-tag readiness прошёл 82/82 вместе с rustfmt и
+  workspace locked/offline strict Clippy в два Cargo job;
+- canonical coverage теперь 17 complete / 0 partial / 1 not-started / 2
+  not-targeted. Canonical target и текущий adapter complete, но canonical CBOR
+  остаётся inactive и ещё не имеет protocol identifier/negotiation;
+- dedicated retirement, completion, aggregate canonical IPC, compatibility и
+  readiness boundaries проходят. Peer/relay/mailbox/sync wire, network,
+  release/archive/executable/push/tag не менялись;
+- следующий приоритет — `transport-sync`: parallel CBOR ALPN/negotiation с
+  explicit identifiers, downgrade resistance и сохранением Postcard fallback до
+  отдельного доказанного activation решения.

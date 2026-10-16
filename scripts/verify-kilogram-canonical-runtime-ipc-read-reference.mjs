@@ -307,14 +307,14 @@ if (options.emit) {
 
 const schema = JSON.parse(readFileSync(options.schema, "utf8"));
 const vectors = JSON.parse(readFileSync(options.vectors, "utf8"));
-assert(schema.milestone === "M1.1.48" && schema.status === "candidate-not-active" &&
+assert(schema.milestone === "M1.1.49" && schema.status === "candidate-not-active" &&
   schema.changes_active_wire === false, "runtime IPC schema header changed");
 assert(schema.limits.maximum_read_response_bytes === 262144 &&
   schema.limits.maximum_conversation_page_size === 64 &&
   schema.limits.maximum_history_page_size === 100 &&
   schema.limits.maximum_history_page_body_bytes === 196608,
 "runtime IPC read bounds changed");
-assert(schema.activation.current_runtime_encoding === "postcard-v28-with-json-descriptor-v9" &&
+assert(schema.activation.current_runtime_encoding === "postcard-v29-with-json-descriptor-v10" &&
   schema.activation.current_runtime_changed === true, "active runtime IPC changed");
 assert(vectors.schema_version === 1 && vectors.profile === schema.profile &&
   vectors.activation_status === "not-active" &&

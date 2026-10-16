@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.48",
+  "milestone": "M1.1.49",
   "status": "candidate-not-active",
   "changes_active_wire": false,
   "profile": "kilogram-deterministic-cbor-v1",
@@ -10,11 +10,10 @@
     "root_rule": "kilogram-runtime-ipc-v1"
   },
   "activation": {
-    "current_runtime_encoding": "postcard-v28-with-json-descriptor-v9",
+    "current_runtime_encoding": "postcard-v29-with-json-descriptor-v10",
     "current_runtime_changed": true,
     "candidate_protocol_identifier": "unassigned",
     "required_before_activation": [
-      "complete-all-runtime-ipc-commands-and-results",
       "explicit-ipc-version-migration",
       "dual-reader-and-downgrade-tests",
       "sustained-coverage-guided-fuzzing",
@@ -949,13 +948,13 @@
     "Account Root secrets, Device private keys, private recovery capabilities, decrypted history, page payloads and local filesystem paths are forbidden from recovery execution IPC",
     "the request ID is the durable execution idempotency key: exact replay may return already committed while divergent reuse or a stale plan record fails before scheduling",
     "the execution contract makes no claim that a source is online, that a page was transferred, that history converged or that any remote copy was erased",
-    "the active Postcard adapter uses explicit IPC version 28 with descriptor signature domain v9 and rejects version 27 descriptors and requests before actor dispatch",
+    "the active Postcard adapter uses explicit IPC version 29 with descriptor signature domain v10 and rejects version 28 descriptors and requests before actor dispatch",
     "the active conversation-list adapter accepts only limits from 1 through 64 and returns strict UTF-8-label then peer-Account ordering after the exact request cursor",
     "an active conversation-list continuation exists only on a full page and equals the exact label and peer Account tuple of the final returned summary",
     "the desktop independently validates every active conversation page and bounds one automatic refresh to 1024 pages rather than accepting truncation as success",
     "the completion inventory contains every canonical command/result pair and its owning module, and its command and result sequences exactly match this schema",
     "every active Postcard command and response variant has one explicit canonical, bounded-replacement, legacy-removal, bootstrap-helper or active-alias disposition",
-    "canonical activation fails closed while either of the two enumerated Postcard-only activation blockers remains active",
+    "the active Postcard adapter contains no Postcard-only activation blocker and every command and response has a canonical target or bounded canonical replacement",
     "ticket automation configuration binds one enrolled contact, peer Account and conversation label to a canonical root-only HTTPS publication service origin and the contact ID is rederived from the exact descriptor Account, peer Account and label",
     "ticket automation TTL, refresh lead, retry bounds and four-bit Ethernet, Wi-Fi, mobile and unknown network mask are explicit and fail closed outside their limits",
     "a ticket automation policy starts at generation one without a predecessor and every replacement advances exactly one generation from the exact expected policy ID",
@@ -971,9 +970,9 @@
     "ticket plaintext, HPKE envelope bytes, publication capabilities, Account Root secrets, Device private keys and local filesystem paths are forbidden; request ID is the durable idempotency key",
     "manual endpoint-announcement export, import and push commands and their result variants are absent from the active Postcard adapter while authenticated foreground own-device announcement and discovery automation remains available",
     "manual endpoint-announcement bundle and recipient ticket paths no longer cross active loopback IPC and the associated CLI subcommands are unavailable",
-    "the canonical target remains incomplete while legacy central HTTPS mailbox command removal remains unresolved"
+    "legacy central HTTPS mailbox create and rotate commands are absent from active loopback IPC while legacy on-disk capability state remains readable only for explicit upgrade or retirement",
+    "active mailbox create and rotate accept only the exact volunteer-provider path and expose neither a central service URL nor a central store key through loopback IPC",
+    "the canonical runtime IPC target and active Postcard adapter inventory are complete, but deterministic CBOR remains inactive pending explicit negotiation, downgrade tests, sustained fuzzing and fresh multi-device field evidence"
   ],
-  "remaining_runtime_ipc_surface": [
-    "legacy-central-https-mailbox-command-removal"
-  ]
+  "remaining_runtime_ipc_surface": []
 }

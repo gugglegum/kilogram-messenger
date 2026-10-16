@@ -32,10 +32,10 @@ function Assert-LowerHex {
 
 function Assert-Schema {
     param([object]$Schema, [string]$Rust)
-    if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.48' -or
+    if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.49' -or
         [string]$Schema.status -cne 'candidate-not-active' -or [bool]$Schema.changes_active_wire -or
         [string]$Schema.profile -cne 'kilogram-deterministic-cbor-v1' -or
-        [string]$Schema.activation.current_runtime_encoding -cne 'postcard-v28-with-json-descriptor-v9' -or
+        [string]$Schema.activation.current_runtime_encoding -cne 'postcard-v29-with-json-descriptor-v10' -or
         -not [bool]$Schema.activation.current_runtime_changed) {
         throw 'canonical recovery-plan schema header changed'
     }
@@ -50,8 +50,8 @@ function Assert-Schema {
     }
     if (@($Schema.domains).Count -ne 78 -or @($Schema.objects).Count -ne 38 -or
         @($Schema.covered_commands).Count -ne 34 -or @($Schema.covered_results).Count -ne 33 -or
-        @($Schema.semantic_rules).Count -ne 177 -or
-        @($Schema.remaining_runtime_ipc_surface).Count -ne 1) {
+        @($Schema.semantic_rules).Count -ne 179 -or
+        @($Schema.remaining_runtime_ipc_surface).Count -ne 0) {
         throw 'canonical recovery-plan inventory changed'
     }
     foreach ($domain in @(
@@ -187,8 +187,8 @@ if ($lib.IndexOf('pub mod canonical_runtime_ipc_recovery_plan_v1;',
         [StringComparison]::Ordinal) -lt 0) {
     throw 'canonical recovery-plan module is not exported'
 }
-foreach ($required in @('const IPC_VERSION: u8 = 28;',
-    'kilogram:runtime-ipc-descriptor:v9\0', 'postcard::to_allocvec', 'postcard::from_bytes')) {
+foreach ($required in @('const IPC_VERSION: u8 = 29;',
+    'kilogram:runtime-ipc-descriptor:v10\0', 'postcard::to_allocvec', 'postcard::from_bytes')) {
     if ($activeIpc.IndexOf($required, [StringComparison]::Ordinal) -lt 0) {
         throw "active runtime IPC boundary is missing '$required'"
     }
@@ -200,12 +200,12 @@ if ($activeIpc.IndexOf('canonical_runtime_ipc_recovery_plan_v1',
 $surface = @($compatibility.surfaces | Where-Object { $_.id -ceq 'runtime-ipc' })
 if ($surface.Count -ne 1 -or [string]$surface[0].encoding -cne 'postcard' -or
     [string]$surface[0].compatibility -cne 'exact-version' -or
-    [int](@($surface[0].bindings | Where-Object { $_.symbol -ceq 'IPC_VERSION' })[0].value) -ne 28) {
-    throw 'active compatibility registry no longer records Postcard runtime IPC v28'
+    [int](@($surface[0].bindings | Where-Object { $_.symbol -ceq 'IPC_VERSION' })[0].value) -ne 29) {
+    throw 'active compatibility registry no longer records Postcard runtime IPC v29'
 }
 $coverageSurface = @($coverage.surfaces | Where-Object { $_.id -ceq 'runtime-ipc' })
-if ([string]$coverage.milestone -cne 'M1.1.48' -or $coverageSurface.Count -ne 1 -or
-    [string]$coverageSurface[0].coverage -cne 'partial' -or
+if ([string]$coverage.milestone -cne 'M1.1.49' -or $coverageSurface.Count -ne 1 -or
+    [string]$coverageSurface[0].coverage -cne 'complete' -or
     'sas-confirmed-device-signed-recovery-plan-custody' -cnotin @($coverageSurface[0].covered) -or
     'device-signed-recovery-plan-cancellation-tombstone' -cnotin @($coverageSurface[0].covered) -or
     (@($coverageSurface[0].remaining) -join ',') -cne
@@ -267,7 +267,7 @@ if ($SelfTest) {
 }
 
 Write-Output 'canonical_runtime_ipc_recovery_plan_boundary=verified'
-Write-Output 'runtime_ipc_coverage=partial'
+Write-Output 'runtime_ipc_coverage=complete'
 Write-Output 'approve_history_recovery_plan=canonical-candidate'
 Write-Output 'history_recovery_plan_status=canonical-candidate'
 Write-Output 'cancel_history_recovery_plan=canonical-candidate'
@@ -279,5 +279,5 @@ Write-Output 'local_path_in_ipc=false'
 Write-Output 'os_background_service_enabled=false'
 Write-Output 'foreground_runtime_only=true'
 Write-Output 'bounded_decoder_mutations=31851'
-Write-Output 'active_postcard_v28_changed_by_canonical_candidate=false'
+Write-Output 'active_postcard_v29_changed_by_canonical_candidate=false'
 Write-Output 'network_executed=false'

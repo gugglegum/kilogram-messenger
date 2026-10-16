@@ -258,12 +258,12 @@ const recovery = JSON.parse(readFileSync(options["recovery-vectors"], "utf8"));
 const account = JSON.parse(readFileSync(options["account-vectors"], "utf8"));
 const authority = JSON.parse(readFileSync(options["authority-vectors"], "utf8"));
 
-assert(schema.milestone === "M1.1.48" && schema.status === "candidate-not-active" &&
+assert(schema.milestone === "M1.1.49" && schema.status === "candidate-not-active" &&
   schema.changes_active_wire === false, "runtime IPC schema header changed");
 assert(schema.limits.maximum_directory_response_bytes === 131072 &&
   schema.limits.maximum_account_devices === 32 && schema.limits.maximum_path_bytes === 4096,
 "runtime IPC directory bounds changed");
-assert(schema.activation.current_runtime_encoding === "postcard-v28-with-json-descriptor-v9" &&
+assert(schema.activation.current_runtime_encoding === "postcard-v29-with-json-descriptor-v10" &&
   schema.activation.current_runtime_changed === true, "active runtime IPC changed");
 assert(vectors.schema_version === 1 && vectors.profile === schema.profile &&
   vectors.activation_status === "not-active", "runtime IPC directory vector header changed");

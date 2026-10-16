@@ -1001,6 +1001,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.1.48 удаляет ручные file-path export/import/push endpoint-announcement
   команды из active loopback IPC, переводит Postcard на v28/descriptor v9 и
   сохраняет authenticated peer wire и foreground own-device automation.
+- [`../docs/RFC-0175-m1149-active-runtime-ipc-legacy-mailbox-retirement.md`](../docs/RFC-0175-m1149-active-runtime-ipc-legacy-mailbox-retirement.md) —
+  M1.1.49 удаляет central-HTTPS mailbox create/rotate из active loopback IPC,
+  сохраняет exact volunteer create/rotate и legacy read/upgrade и завершает
+  canonical runtime-IPC target через hard cut Postcard v29/descriptor v10.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

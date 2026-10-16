@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.48",
-  "status": "completion-inventory-complete-canonical-target-partial",
+  "milestone": "M1.1.49",
+  "status": "completion-inventory-complete-canonical-target-complete",
   "surface": "runtime-ipc",
   "scope": {
-    "canonical_target_complete": false,
-    "active_postcard_adapter_complete": false,
+    "canonical_target_complete": true,
+    "active_postcard_adapter_complete": true,
     "canonical_cbor_active": false,
     "changes_active_local_control": true,
     "changes_peer_network_wire": false
@@ -123,8 +123,8 @@
     ]
   },
   "active_postcard": {
-    "version": 28,
-    "descriptor_signature_domain": "kilogram:runtime-ipc-descriptor:v9\\0",
+    "version": 29,
+    "descriptor_signature_domain": "kilogram:runtime-ipc-descriptor:v10\\0",
     "commands": [
       { "variant": "Ping", "disposition": "canonical-target", "canonical_commands": ["ping"] },
       { "variant": "AddContact", "disposition": "canonical-target", "canonical_commands": ["add-contact"] },
@@ -133,8 +133,6 @@
       { "variant": "MailboxStatus", "disposition": "canonical-bounded-replacement", "canonical_commands": ["mailbox-capability-status-page"] },
       { "variant": "ImportVolunteerStorageOffer", "disposition": "canonical-target", "canonical_commands": ["import-volunteer-storage-offer"] },
       { "variant": "SelectVolunteerStorageProviders", "disposition": "canonical-target", "canonical_commands": ["select-volunteer-storage-providers"] },
-      { "variant": "CreateMailboxCapability", "disposition": "legacy-central-https-remove-before-cbor-activation", "canonical_commands": ["create-mailbox-capability"] },
-      { "variant": "RotateMailboxCapability", "disposition": "legacy-central-https-remove-before-cbor-activation", "canonical_commands": ["rotate-mailbox-capability"] },
       { "variant": "RevokeMailboxCapability", "disposition": "canonical-target", "canonical_commands": ["revoke-mailbox-capability"] },
       { "variant": "ApplyOwnDeviceDirectory", "disposition": "canonical-target", "canonical_commands": ["apply-own-device-directory"] },
       { "variant": "OwnDeviceDirectoryStatus", "disposition": "canonical-target", "canonical_commands": ["own-device-directory-status"] },
@@ -155,8 +153,8 @@
       { "variant": "HistoryPage", "disposition": "canonical-target", "canonical_commands": ["history-page"] },
       { "variant": "WaitForChange", "disposition": "canonical-target", "canonical_commands": ["wait-for-change"] },
       { "variant": "Shutdown", "disposition": "canonical-target", "canonical_commands": ["shutdown"] },
-      { "variant": "CreateExactMailboxCapability", "disposition": "active-alias-of-canonical-target", "canonical_commands": ["create-mailbox-capability"] },
-      { "variant": "RotateExactMailboxCapability", "disposition": "active-alias-of-canonical-target", "canonical_commands": ["rotate-mailbox-capability"] }
+      { "variant": "CreateExactMailboxCapability", "disposition": "canonical-target", "canonical_commands": ["create-mailbox-capability"] },
+      { "variant": "RotateExactMailboxCapability", "disposition": "canonical-target", "canonical_commands": ["rotate-mailbox-capability"] }
     ],
     "responses": [
       { "variant": "Pong", "disposition": "canonical-target", "canonical_results": ["pong"] },
@@ -189,17 +187,11 @@
       { "variant": "Error", "disposition": "canonical-target", "canonical_results": ["error"] }
     ]
   },
-  "postcard_only_activation_blockers": [
-    "CreateMailboxCapability",
-    "RotateMailboxCapability"
-  ],
-  "remaining_canonical_work": [
-    "legacy-central-https-mailbox-command-removal"
-  ],
+  "postcard_only_activation_blockers": [],
+  "remaining_canonical_work": [],
   "activation_requirements": [
     "assign-explicit-canonical-local-control-protocol-identifier-and-version",
     "implement-parallel-cbor-reader-and-writer-with-downgrade-tests",
-    "remove-or-canonicalize-every-postcard-only-activation-blocker",
     "implement-atomic-durable-adapters-and-idempotency-records",
     "run-sustained-coverage-guided-fuzzing",
     "complete-independent-hpke-conformance",

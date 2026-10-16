@@ -49,6 +49,7 @@ foreach ($required in @(
     "'verify-kilogram-runtime-ipc-conversation-pagination-migration-boundary.ps1' = 'runtime_ipc_conversation_pagination_migration_boundary=verified'",
     "'verify-kilogram-runtime-ipc-completion-inventory-boundary.ps1' = 'runtime_ipc_completion_inventory_boundary=verified'",
     "'verify-kilogram-runtime-ipc-endpoint-bootstrap-retirement-boundary.ps1' = 'runtime_ipc_endpoint_bootstrap_retirement_boundary=verified'",
+    "'verify-kilogram-runtime-ipc-legacy-mailbox-retirement-boundary.ps1' = 'runtime_ipc_legacy_mailbox_retirement_boundary=verified'",
     "'verify-kilogram-canonical-mailbox-transport-boundary.ps1' = 'canonical_mailbox_transport_boundary=verified'",
     "'verify-kilogram-canonical-device-link-boundary.ps1' = 'canonical_device_link_boundary=verified'",
     "'verify-kilogram-canonical-endpoint-announcement-boundary.ps1' = 'canonical_endpoint_announcement_boundary=verified'",
@@ -69,7 +70,7 @@ foreach ($required in @(
     "'verify-kilogram-canonical-wire-boundary.ps1' = 'canonical_wire_boundary=verified'",
     "'verify-kilogram-protocol-compatibility-boundary.ps1' = 'protocol_compatibility_boundary=verified'",
     "Get-ChildItem -LiteralPath `$scriptsDirectory -Filter 'verify-*-boundary.ps1'",
-    'M1 readiness boundary inventory must contain exactly 81 gates',
+    'M1 readiness boundary inventory must contain exactly 82 gates',
     'function Invoke-CapturedPowerShell',
     "`$ErrorActionPreference = 'Continue'",
     "`$gateCapture.ExitCode -ne 0",
@@ -184,7 +185,7 @@ if ($LASTEXITCODE -ne 0 -or
 }
 
 Write-Output 'm1_readiness_boundary=verified'
-Write-Output 'boundary_inventory=closed-81'
+Write-Output 'boundary_inventory=closed-82'
 Write-Output 'candidate_or_accepted_tag_verifier=required'
 Write-Output 'accepted_m1_tag=M1.0.0'
 Write-Output 'format_and_offline_strict_clippy=required'

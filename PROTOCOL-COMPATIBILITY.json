@@ -283,8 +283,8 @@
       "compatibility": "exact-version",
       "migration": "new-version-explicit-migration",
       "bindings": [
-        { "path": "crates/kilogram-runtime-ipc/src/lib.rs", "symbol": "DESCRIPTOR_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:runtime-ipc-descriptor:v9\\0" },
-        { "path": "crates/kilogram-runtime-ipc/src/lib.rs", "symbol": "IPC_VERSION", "rust_type": "u8", "value": 28 },
+        { "path": "crates/kilogram-runtime-ipc/src/lib.rs", "symbol": "DESCRIPTOR_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:runtime-ipc-descriptor:v10\\0" },
+        { "path": "crates/kilogram-runtime-ipc/src/lib.rs", "symbol": "IPC_VERSION", "rust_type": "u8", "value": 29 },
         { "path": "crates/kilogram-runtime-ipc/src/lib.rs", "symbol": "RUNTIME_LAUNCH_PROFILE_VERSION", "rust_type": "u8", "value": 1 }
       ]
     },
