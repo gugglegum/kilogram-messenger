@@ -32,7 +32,7 @@ function Assert-LowerHex {
 
 function Assert-Schema {
     param([object]$Schema, [string]$Rust)
-    if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.46' -or
+    if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.47' -or
         [string]$Schema.status -cne 'candidate-not-active' -or [bool]$Schema.changes_active_wire -or
         [string]$Schema.profile -cne 'kilogram-deterministic-cbor-v1' -or
         [string]$Schema.activation.current_runtime_encoding -cne 'postcard-v27-with-json-descriptor-v8' -or
@@ -56,10 +56,10 @@ function Assert-Schema {
     if ($limits -cne '786432,524288,32,512,30,3600,10,1800,30,86400,2592000,3600') {
         throw 'canonical own-device discovery limits changed'
     }
-    if (@($Schema.domains).Count -ne 73 -or @($Schema.objects).Count -ne 36 -or
-        @($Schema.covered_commands).Count -ne 32 -or @($Schema.covered_results).Count -ne 31 -or
-        @($Schema.semantic_rules).Count -ne 162 -or
-        @($Schema.remaining_runtime_ipc_surface).Count -ne 3) {
+    if (@($Schema.domains).Count -ne 78 -or @($Schema.objects).Count -ne 38 -or
+        @($Schema.covered_commands).Count -ne 34 -or @($Schema.covered_results).Count -ne 33 -or
+        @($Schema.semantic_rules).Count -ne 175 -or
+        @($Schema.remaining_runtime_ipc_surface).Count -ne 2) {
         throw 'canonical own-device discovery inventory changed'
     }
     foreach ($domain in @(
@@ -219,7 +219,7 @@ if ($source.Count -ne 1 -or [string]$source[0].encoding -cne 'postcard' -or
     throw 'active compatibility registry no longer records Postcard runtime IPC v27'
 }
 $surface = @($coverage.surfaces | Where-Object { $_.id -ceq 'runtime-ipc' })
-if ([string]$coverage.milestone -cne 'M1.1.46' -or $surface.Count -ne 1 -or
+if ([string]$coverage.milestone -cne 'M1.1.47' -or $surface.Count -ne 1 -or
     [string]$surface[0].coverage -cne 'partial' -or
     'pairwise-own-device-ticket-discovery' -cnotin @($surface[0].covered) -or
     'roster-wide-own-device-automation' -cnotin @($surface[0].covered) -or
@@ -235,7 +235,7 @@ $actualMutationIds = @($mutations.fixtures |
     Where-Object { $_.vector_file -ceq 'CANONICAL-RUNTIME-IPC-OWN-DEVICE-DISCOVERY-VECTORS.json' } |
     ForEach-Object { $_.id })
 if (($actualMutationIds -join ',') -cne ($expectedMutationIds -join ',') -or
-    [int]$mutations.expected_mutations -ne 30843 -or
+    [int]$mutations.expected_mutations -ne 31851 -or
     [int]$mutations.maximum_mutations -ne 35000 -or
     [int]$mutations.resource_bounds.maximum_total_mutations -ne 35000) {
     throw 'canonical own-device discovery fixtures or capacity changed'
@@ -295,7 +295,7 @@ Write-Output 'recipient_ticket_plaintext_in_ipc=false'
 Write-Output 'local_path_in_ipc=false'
 Write-Output 'os_background_service_enabled=false'
 Write-Output 'foreground_runtime_only=true'
-Write-Output 'bounded_decoder_mutations=30843'
+Write-Output 'bounded_decoder_mutations=31851'
 Write-Output 'active_postcard_v27_changed_by_canonical_candidate=false'
 Write-Output 'network_executed=false'
 

@@ -993,6 +993,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.1.46 вводит exhaustive command/result и active-adapter inventory, заменяет
   catch-all тремя точными remaining items и fail closed фиксирует семь
   Postcard-only blockers без активации canonical CBOR.
+- [`../docs/RFC-0173-m1147-canonical-runtime-ipc-ticket-automation.md`](../docs/RFC-0173-m1147-canonical-runtime-ipc-ticket-automation.md) —
+  M1.1.47 канонизирует foreground-only ticket automation policy/status, exact
+  predecessor и детерминированные scheduler deadlines без ticket plaintext,
+  mailbox semantics или OS background service.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

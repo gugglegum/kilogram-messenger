@@ -3849,3 +3849,26 @@ Hosted follow-up:
   priority. No test executable or network code ran.
 - No active encoding or peer wire changed. Canonical CBOR remains inactive and
   fresh multi-device field evidence is still required before activation.
+
+## M1.1.47 canonical runtime IPC ticket automation (2026-10-16)
+
+- Added inactive deterministic-CBOR ticket-automation request/response module,
+  CDDL, schema/coverage/completion entries, golden vectors, an independent Node
+  reference, a dedicated fail-closed boundary and four new mutation fixtures.
+- Public policy/snapshot ID helpers reject a contact ID that cannot be rederived
+  from the descriptor Account, peer Account and conversation label. The status
+  verifier also derives exact success recheck and capped exponential failure
+  deadlines from the signed policy and rejects noncanonical default HTTPS ports.
+- Focused Rust tests passed 4/4 with one explicit generator ignored. Independent
+  Node reference and dedicated/conformance/completion boundaries passed.
+- Full decoder mutation corpus passed 31,851/31,851 over 123 fixtures in
+  2647.50 seconds. Full `kilogram-protocol --lib` regression passed 141 tests,
+  failed 0 and ignored 15 explicit golden-vector generators in 977.21 seconds.
+- Accepted-tag readiness passed 80/80 against immutable `M1.0.0`; rustfmt and
+  workspace locked/offline strict Clippy passed with two Cargo jobs and
+  BelowNormal priority. No test network, release build, archive, executable,
+  push or tag was created.
+- Completion ledger now records 34 canonical commands, 33 results and 34 exact
+  pairs. Canonical CBOR remains inactive; active Postcard v27/JSON descriptor v8
+  is unchanged. Two runtime-IPC gaps remain: endpoint-announcement bootstrap
+  helper disposition and legacy central-HTTPS mailbox command removal.

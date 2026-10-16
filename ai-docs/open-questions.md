@@ -378,7 +378,7 @@ sessions, distribution, removal и key epochs и не решены этим пр
 - Независимый second-builder, подписанный release provenance, обновления клиента
   и дальнейшая защита supply chain поверх M0.9.50 same-host gate.
 - Миграция криптоалгоритмов и wire protocol без разделения сети.
-- После M1.1.46 canonical coverage содержит 16 complete, 1 partial
+- После M1.1.47 canonical coverage содержит 16 complete, 1 partial
   (`runtime-ipc`), один not-started (`transport-sync`) и два not-targeted
   surface. В runtime IPC уже закрыты signed loopback descriptor, bearer/fresh
   request, exact signed response, core Ping/WaitForChange/Shutdown/Error,
@@ -420,12 +420,15 @@ sessions, distribution, removal и key epochs и не решены этим пр
   readiness выводится из plan policy и runtime observation. Активный unpaged
   conversation list уже мигрирован на exact cursor pagination в Postcard v27 /
   JSON descriptor v8 с page limit 64, desktop cap 1024 страниц и fail-closed
-  legacy v26 rejection. Exhaustive M1.1.46 inventory теперь доказывает exact
-  coverage всех 32 canonical command / 31 result и всех 34/31 variants active
-  Postcard adapter. Открыты ровно три класса: canonical ticket-automation
-  policy/status, окончательный disposition endpoint-announcement bootstrap
-  helpers и удаление legacy central-HTTPS mailbox create/rotate commands.
-  Следующий приоритет — эти три bounded этапа до complete `runtime-ipc`, затем
+  legacy v26 rejection. Exhaustive inventory теперь доказывает exact coverage
+  всех 34 canonical command / 33 result и всех 34/31 variants active Postcard
+  adapter. Foreground ticket automation policy/status закрыт M1.1.47: contact
+  ID пересчитывается, policy/snapshot chain exact-связан с Account/Device,
+  success refresh deadline и failure backoff детерминированы, а opaque HTTPS
+  origin не является mailbox или OS background service. Открыты ровно два
+  класса: окончательный disposition endpoint-announcement bootstrap helpers и
+  удаление legacy central-HTTPS mailbox create/rotate commands. Следующий
+  приоритет — эти два bounded этапа до complete `runtime-ipc`, затем
   parallel CBOR ALPN/negotiation для
   `transport-sync`. Общая activation требует explicit identifiers, downgrade
   tests, sustained fuzzing, independent HPKE conformance и fresh multi-device

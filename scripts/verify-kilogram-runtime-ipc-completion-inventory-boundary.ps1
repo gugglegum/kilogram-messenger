@@ -89,7 +89,7 @@ function Assert-CompletionInventory {
     )
 
     if ([UInt64]$Manifest.schema_version -ne 1 -or
-        [string]$Manifest.milestone -cne 'M1.1.46' -or
+        [string]$Manifest.milestone -cne 'M1.1.47' -or
         [string]$Manifest.status -cne 'completion-inventory-complete-canonical-target-partial' -or
         [string]$Manifest.surface -cne 'runtime-ipc' -or
         [bool]$Manifest.scope.canonical_target_complete -or
@@ -104,7 +104,7 @@ function Assert-CompletionInventory {
     $results = @($Manifest.canonical.results | ForEach-Object { [string]$_ })
     $universalResults = @($Manifest.canonical.universal_results | ForEach-Object { [string]$_ })
     $pairs = @($Manifest.canonical.command_result_pairs)
-    if ($commands.Count -ne 32 -or $results.Count -ne 31 -or $pairs.Count -ne 32) {
+    if ($commands.Count -ne 34 -or $results.Count -ne 33 -or $pairs.Count -ne 34) {
         throw 'canonical runtime IPC inventory cardinality changed'
     }
     Assert-Unique $commands 'canonical command inventory'
@@ -120,7 +120,7 @@ function Assert-CompletionInventory {
         'core', 'read', 'contact', 'directory', 'queue', 'outbox', 'provider',
         'mailbox-status', 'mailbox-mutation', 'publication', 'publication-network',
         'publication-conflict', 'own-device-announcement', 'own-device-discovery',
-        'own-device-roster', 'recovery-plan', 'recovery-execution'
+        'own-device-roster', 'recovery-plan', 'recovery-execution', 'ticket-automation'
     )
     $allowedKinds = @('core-control', 'read', 'mutation', 'network-mutation')
     foreach ($pair in $pairs) {
@@ -164,7 +164,6 @@ function Assert-CompletionInventory {
         'canonical-target',
         'canonical-bounded-replacement',
         'legacy-central-https-remove-before-cbor-activation',
-        'postcard-only-scheduler-helper-requires-retention-decision',
         'postcard-only-bootstrap-helper-covered-by-endpoint-announcement-surface',
         'postcard-only-bootstrap-helper-covered-by-own-device-announcement',
         'active-alias-of-canonical-target'
@@ -193,8 +192,6 @@ function Assert-CompletionInventory {
     $expectedBlockers = @(
         'CreateMailboxCapability',
         'RotateMailboxCapability',
-        'ConfigureTicketAutomation',
-        'TicketAutomationStatus',
         'ExportEndpointAnnouncements',
         'ImportEndpointAnnouncements',
         'PushEndpointAnnouncements'
@@ -208,7 +205,6 @@ function Assert-CompletionInventory {
         }
     }
     $remaining = @(
-        'ticket-automation-policy-and-status',
         'endpoint-announcement-bootstrap-helper-disposition',
         'legacy-central-https-mailbox-command-removal'
     )
@@ -217,18 +213,20 @@ function Assert-CompletionInventory {
     Assert-ExactSequence @($Schema.remaining_runtime_ipc_surface) $remaining `
         'canonical schema remaining work'
 
-    if ([string]$Schema.milestone -cne 'M1.1.46' -or
+    if ([string]$Schema.milestone -cne 'M1.1.47' -or
         [string]$Schema.status -cne 'candidate-not-active' -or
         [string]$Schema.activation.current_runtime_encoding -cne
             'postcard-v27-with-json-descriptor-v8' -or
         [bool]$Schema.activation.current_runtime_changed -or
-        @($Schema.semantic_rules).Count -ne 162) {
+        @($Schema.semantic_rules).Count -ne 175) {
         throw 'canonical runtime IPC schema did not record the exhaustive inventory'
     }
     $runtimeSurface = @($Coverage.surfaces | Where-Object { [string]$_.id -ceq 'runtime-ipc' })
-    if ([string]$Coverage.milestone -cne 'M1.1.46' -or $runtimeSurface.Count -ne 1 -or
+    if ([string]$Coverage.milestone -cne 'M1.1.47' -or $runtimeSurface.Count -ne 1 -or
         [string]$runtimeSurface[0].coverage -cne 'partial' -or
         'exhaustive-command-result-and-active-adapter-inventory' -cnotin
+            @($runtimeSurface[0].covered) -or
+        'foreground-contact-ticket-automation-policy-and-status' -cnotin
             @($runtimeSurface[0].covered) -or
         (@($runtimeSurface[0].remaining) -join ',') -cne ($remaining -join ',')) {
         throw 'canonical coverage did not retain the explicit remaining active adapter work'
@@ -331,11 +329,11 @@ Assert-Rejected {
 } 'untracked_active_postcard_variant'
 
 Write-Output 'runtime_ipc_completion_inventory_boundary=verified'
-Write-Output 'canonical_commands=32'
-Write-Output 'canonical_results=31'
+Write-Output 'canonical_commands=34'
+Write-Output 'canonical_results=33'
 Write-Output 'active_postcard_commands=34'
 Write-Output 'active_postcard_responses=31'
-Write-Output 'postcard_only_activation_blockers=7'
+Write-Output 'postcard_only_activation_blockers=5'
 Write-Output 'canonical_target_complete=false'
 Write-Output 'canonical_cbor_activated=false'
 Write-Output 'active_wire_changed=false'

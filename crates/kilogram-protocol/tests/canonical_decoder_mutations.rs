@@ -203,6 +203,14 @@ use kilogram_protocol::canonical_runtime_ipc_recovery_plan_v1::{
     verify_runtime_ipc_recovery_plan_request_for_descriptor_v1,
     verify_runtime_ipc_recovery_plan_response_for_request_v1,
 };
+use kilogram_protocol::canonical_runtime_ipc_ticket_automation_v1::{
+    CanonicalRuntimeIpcTicketAutomationRequestV1,
+    CanonicalSignedRuntimeIpcTicketAutomationResponseV1,
+    decode_and_verify_runtime_ipc_ticket_automation_request_v1,
+    decode_and_verify_signed_runtime_ipc_ticket_automation_response_v1,
+    verify_runtime_ipc_ticket_automation_request_for_descriptor_v1,
+    verify_runtime_ipc_ticket_automation_response_for_request_v1,
+};
 use kilogram_protocol::canonical_runtime_ipc_v1::{
     CanonicalRuntimeIpcCoreRequestV1, CanonicalRuntimeIpcDescriptorContentV1,
     CanonicalRuntimeIpcLoopbackAddressV1, CanonicalSignedRuntimeIpcCoreResponseV1,
@@ -231,7 +239,7 @@ use kilogram_protocol::canonical_ticket_publication_v1::{
 use serde_json::Value;
 
 const MINIMUM_MUTATIONS: usize = 500;
-const EXPECTED_MUTATIONS: usize = 30_843;
+const EXPECTED_MUTATIONS: usize = 31_851;
 const MAXIMUM_MUTATIONS: usize = 35_000;
 const MAXIMUM_GRID_POSITIONS: usize = 128;
 
@@ -427,6 +435,15 @@ enum Decoder {
     },
     RuntimeIpcRecoveryExecutionResponse {
         request: Box<CanonicalRuntimeIpcRecoveryExecutionRequestV1>,
+        descriptor: Box<CanonicalSignedRuntimeIpcDescriptorV1>,
+    },
+    RuntimeIpcTicketAutomationRequest {
+        descriptor: Box<CanonicalSignedRuntimeIpcDescriptorV1>,
+        response: Box<CanonicalSignedRuntimeIpcTicketAutomationResponseV1>,
+        now_unix_seconds: u64,
+    },
+    RuntimeIpcTicketAutomationResponse {
+        request: Box<CanonicalRuntimeIpcTicketAutomationRequestV1>,
         descriptor: Box<CanonicalSignedRuntimeIpcDescriptorV1>,
     },
     TicketPublicationCapability,
@@ -1007,6 +1024,38 @@ fn accepts(decoder: &Decoder, bytes: &[u8]) -> bool {
                 )
             })
             .is_ok(),
+        Decoder::RuntimeIpcTicketAutomationRequest {
+            descriptor,
+            response,
+            now_unix_seconds,
+        } => decode_and_verify_runtime_ipc_ticket_automation_request_v1(bytes)
+            .and_then(|request| {
+                verify_runtime_ipc_ticket_automation_request_for_descriptor_v1(
+                    &request,
+                    descriptor,
+                    *now_unix_seconds,
+                )?;
+                verify_runtime_ipc_ticket_automation_response_for_request_v1(
+                    response,
+                    &request,
+                    descriptor,
+                    *now_unix_seconds,
+                )
+            })
+            .is_ok(),
+        Decoder::RuntimeIpcTicketAutomationResponse {
+            request,
+            descriptor,
+        } => decode_and_verify_signed_runtime_ipc_ticket_automation_response_v1(bytes)
+            .and_then(|response| {
+                verify_runtime_ipc_ticket_automation_response_for_request_v1(
+                    &response,
+                    request,
+                    descriptor,
+                    request.issued_at_unix_seconds,
+                )
+            })
+            .is_ok(),
         Decoder::TicketPublicationCapability => {
             decode_and_verify_ticket_publication_capability_v1(bytes).is_ok()
         }
@@ -1310,6 +1359,10 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
     let runtime_ipc_recovery_execution: Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../CANONICAL-RUNTIME-IPC-RECOVERY-EXECUTION-VECTORS.json"
+    )))?;
+    let runtime_ipc_ticket_automation: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../CANONICAL-RUNTIME-IPC-TICKET-AUTOMATION-VECTORS.json"
     )))?;
     let ticket_publication: Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
@@ -1747,6 +1800,35 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         runtime_ipc_recovery_execution["input"]["status_issued_at_unix_seconds"]
             .as_u64()
             .ok_or("runtime IPC recovery-execution status valid time is missing")?;
+    let runtime_ipc_ticket_automation_descriptor =
+        decode_and_verify_signed_runtime_ipc_descriptor_v1(&pointer_hex(
+            &runtime_ipc_ticket_automation,
+            "/input/descriptor_signed_cbor_hex",
+        )?)?;
+    let runtime_ipc_ticket_automation_configure_request =
+        decode_and_verify_runtime_ipc_ticket_automation_request_v1(&pointer_hex(
+            &runtime_ipc_ticket_automation,
+            "/expected/configure/request/cbor_hex",
+        )?)?;
+    let runtime_ipc_ticket_automation_configure_response =
+        decode_and_verify_signed_runtime_ipc_ticket_automation_response_v1(&pointer_hex(
+            &runtime_ipc_ticket_automation,
+            "/expected/configure/response/signed_cbor_hex",
+        )?)?;
+    let runtime_ipc_ticket_automation_status_request =
+        decode_and_verify_runtime_ipc_ticket_automation_request_v1(&pointer_hex(
+            &runtime_ipc_ticket_automation,
+            "/expected/status/request/cbor_hex",
+        )?)?;
+    let runtime_ipc_ticket_automation_status_response =
+        decode_and_verify_signed_runtime_ipc_ticket_automation_response_v1(&pointer_hex(
+            &runtime_ipc_ticket_automation,
+            "/expected/status/response/signed_cbor_hex",
+        )?)?;
+    let runtime_ipc_ticket_automation_valid_at =
+        runtime_ipc_ticket_automation["input"]["observed_at_unix_seconds"]
+            .as_u64()
+            .ok_or("runtime IPC ticket-automation observation time is missing")?;
     let publication_resolution_response_bytes = pointer_hex(
         &publication_conflict,
         "/expected/resolution_response/cbor_hex",
@@ -2672,6 +2754,52 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
             )?,
         ),
         (
+            "runtime-ipc-ticket-automation-configure-request",
+            Decoder::RuntimeIpcTicketAutomationRequest {
+                descriptor: Box::new(runtime_ipc_ticket_automation_descriptor.clone()),
+                response: Box::new(runtime_ipc_ticket_automation_configure_response.clone()),
+                now_unix_seconds: runtime_ipc_ticket_automation_valid_at,
+            },
+            pointer_hex(
+                &runtime_ipc_ticket_automation,
+                "/expected/configure/request/cbor_hex",
+            )?,
+        ),
+        (
+            "signed-runtime-ipc-ticket-automation-configure-response",
+            Decoder::RuntimeIpcTicketAutomationResponse {
+                request: Box::new(runtime_ipc_ticket_automation_configure_request.clone()),
+                descriptor: Box::new(runtime_ipc_ticket_automation_descriptor.clone()),
+            },
+            pointer_hex(
+                &runtime_ipc_ticket_automation,
+                "/expected/configure/response/signed_cbor_hex",
+            )?,
+        ),
+        (
+            "runtime-ipc-ticket-automation-status-request",
+            Decoder::RuntimeIpcTicketAutomationRequest {
+                descriptor: Box::new(runtime_ipc_ticket_automation_descriptor.clone()),
+                response: Box::new(runtime_ipc_ticket_automation_status_response.clone()),
+                now_unix_seconds: runtime_ipc_ticket_automation_valid_at,
+            },
+            pointer_hex(
+                &runtime_ipc_ticket_automation,
+                "/expected/status/request/cbor_hex",
+            )?,
+        ),
+        (
+            "signed-runtime-ipc-ticket-automation-status-response",
+            Decoder::RuntimeIpcTicketAutomationResponse {
+                request: Box::new(runtime_ipc_ticket_automation_status_request.clone()),
+                descriptor: Box::new(runtime_ipc_ticket_automation_descriptor.clone()),
+            },
+            pointer_hex(
+                &runtime_ipc_ticket_automation,
+                "/expected/status/response/signed_cbor_hex",
+            )?,
+        ),
+        (
             "ticket-publication-capability",
             Decoder::TicketPublicationCapability,
             pointer_hex(&ticket_publication, "/expected/rotated_capability/cbor_hex")?,
@@ -3195,6 +3323,24 @@ fn bounded_golden_decoder_mutation_corpus_fails_closed() -> Result<(), Box<dyn s
         Decoder::RuntimeIpcRecoveryExecutionResponse {
             request: Box::new(runtime_ipc_recovery_execution_status_request),
             descriptor: Box::new(runtime_ipc_recovery_execution_descriptor),
+        },
+        Decoder::RuntimeIpcTicketAutomationRequest {
+            descriptor: Box::new(runtime_ipc_ticket_automation_descriptor.clone()),
+            response: Box::new(runtime_ipc_ticket_automation_configure_response),
+            now_unix_seconds: runtime_ipc_ticket_automation_valid_at,
+        },
+        Decoder::RuntimeIpcTicketAutomationResponse {
+            request: Box::new(runtime_ipc_ticket_automation_configure_request),
+            descriptor: Box::new(runtime_ipc_ticket_automation_descriptor.clone()),
+        },
+        Decoder::RuntimeIpcTicketAutomationRequest {
+            descriptor: Box::new(runtime_ipc_ticket_automation_descriptor.clone()),
+            response: Box::new(runtime_ipc_ticket_automation_status_response),
+            now_unix_seconds: runtime_ipc_ticket_automation_valid_at,
+        },
+        Decoder::RuntimeIpcTicketAutomationResponse {
+            request: Box::new(runtime_ipc_ticket_automation_status_request),
+            descriptor: Box::new(runtime_ipc_ticket_automation_descriptor),
         },
         Decoder::RuntimeIpcDirectoryResponse {
             request: Box::new(runtime_ipc_directory_request),

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.46",
+  "milestone": "M1.1.47",
   "status": "candidate-not-active",
   "changes_active_wire": false,
   "profile": "kilogram-deterministic-cbor-v1",
@@ -94,6 +94,16 @@
     "maximum_recovery_retry_seconds": 3600,
     "minimum_recovery_attempt_lease_seconds": 30,
     "maximum_recovery_attempt_lease_seconds": 7200,
+    "maximum_ticket_automation_request_bytes": 131072,
+    "maximum_ticket_automation_response_bytes": 524288,
+    "maximum_ticket_automation_policies": 256,
+    "maximum_ticket_automation_service_origin_bytes": 512,
+    "minimum_ticket_automation_ttl_seconds": 30,
+    "maximum_ticket_automation_ttl_seconds": 3600,
+    "minimum_ticket_automation_refresh_before_seconds": 10,
+    "maximum_ticket_automation_refresh_before_seconds": 1800,
+    "maximum_ticket_automation_retry_seconds": 3600,
+    "minimum_ticket_automation_success_recheck_seconds": 30,
     "maximum_error_bytes": 4096,
     "maximum_descriptor_validity_seconds": 86400,
     "maximum_request_validity_seconds": 30,
@@ -493,6 +503,32 @@
       "id": "recovery-execution-response-id-v1",
       "value": "kilogram:runtime-ipc-recovery-execution-response-id:cbor-v1\\0",
       "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "ticket-automation-policy-id-v1",
+      "value": "kilogram:runtime-ipc-ticket-automation-policy-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "ticket-automation-snapshot-id-v1",
+      "value": "kilogram:runtime-ipc-ticket-automation-snapshot-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "ticket-automation-request-digest-v1",
+      "value": "kilogram:runtime-ipc-ticket-automation-request-digest:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
+    },
+    {
+      "id": "ticket-automation-response-signature-v1",
+      "value": "kilogram:runtime-ipc-ticket-automation-response-signature:cbor-v1\\0",
+      "operation": "ed25519-signature",
+      "signer": "descriptor-device-ed25519"
+    },
+    {
+      "id": "ticket-automation-response-id-v1",
+      "value": "kilogram:runtime-ipc-ticket-automation-response-id:cbor-v1\\0",
+      "operation": "blake3-domain-prefixed-digest"
     }
   ],
   "objects": [
@@ -675,6 +711,16 @@
       "id": "signed-runtime-ipc-recovery-execution-response-v1",
       "kind": "device-signed-policy-derived-foreground-recovery-execution-snapshot",
       "maximum_bytes": 2097152
+    },
+    {
+      "id": "runtime-ipc-ticket-automation-request-v1",
+      "kind": "short-lived-exact-predecessor-bound-contact-ticket-automation-policy-request",
+      "maximum_bytes": 131072
+    },
+    {
+      "id": "signed-runtime-ipc-ticket-automation-response-v1",
+      "kind": "device-signed-derived-foreground-ticket-automation-policy-snapshot",
+      "maximum_bytes": 524288
     }
   ],
   "covered_commands": [
@@ -697,6 +743,8 @@
     "rotate-publication-channel",
     "publish-own-ticket",
     "refresh-contact-ticket",
+    "configure-ticket-automation",
+    "ticket-automation-status",
     "create-publication-conflict-request",
     "apply-publication-conflict-response",
     "configure-own-device-announcement-automation",
@@ -730,6 +778,8 @@
     "publication-channel-rotated",
     "own-ticket-published",
     "contact-ticket-refreshed",
+    "ticket-automation-configured",
+    "ticket-automation-status",
     "publication-conflict-request-created",
     "publication-conflict-response-applied",
     "own-device-announcement-automation-configured",
@@ -904,12 +954,24 @@
     "an active conversation-list continuation exists only on a full page and equals the exact label and peer Account tuple of the final returned summary",
     "the desktop independently validates every active conversation page and bounds one automatic refresh to 1024 pages rather than accepting truncation as success",
     "the completion inventory contains every canonical command/result pair and its owning module, and its command and result sequences exactly match this schema",
-    "every active Postcard command and response variant has one explicit canonical, bounded-replacement, legacy-removal, bootstrap-helper or scheduler-helper disposition",
-    "canonical activation fails closed while any of the seven enumerated Postcard-only activation blockers remains active",
-    "the canonical target remains incomplete while ticket automation policy and status, endpoint-announcement bootstrap helper disposition or legacy central HTTPS mailbox command removal remains unresolved"
+    "every active Postcard command and response variant has one explicit canonical, bounded-replacement, legacy-removal, bootstrap-helper or active-alias disposition",
+    "canonical activation fails closed while any of the five enumerated Postcard-only activation blockers remains active",
+    "ticket automation configuration binds one enrolled contact, peer Account and conversation label to a canonical root-only HTTPS publication service origin and the contact ID is rederived from the exact descriptor Account, peer Account and label",
+    "ticket automation TTL, refresh lead, retry bounds and four-bit Ethernet, Wi-Fi, mobile and unknown network mask are explicit and fail closed outside their limits",
+    "a ticket automation policy starts at generation one without a predecessor and every replacement advances exactly one generation from the exact expected policy ID",
+    "the policy ID commits the Account, local Device, generation, predecessor, configuration time and complete bounded configuration",
+    "each policy carries exactly one publish action and one refresh action; reordered, duplicated or substituted actions fail closed",
+    "attempt, success, retry, publication generation and expiry option tuples are internally consistent and nonzero when present; successful recheck and failed retry deadlines are derived exactly from the signed policy",
+    "disabled and network-blocked scheduler states are derived from policy and observation while due, fresh and backoff are derived from the signed attempt result and retry deadline",
+    "publication-conflict quarantine is available only to refresh, carries no next retry deadline and cannot be asserted for publish",
+    "status contains at most 256 unique policies in strict contact ID order and declares the exact policy count",
+    "the ticket automation snapshot ID commits the Account, local Device, observation time, network class and complete ordered policy projection",
+    "configuration and status results bind the complete request digest under the exact descriptor Device signature and their observation time remains inside the request validity window",
+    "configuration and status require no restart, execute only while the foreground runtime is running and explicitly deny an OS background service",
+    "ticket plaintext, HPKE envelope bytes, publication capabilities, Account Root secrets, Device private keys and local filesystem paths are forbidden; request ID is the durable idempotency key",
+    "the canonical target remains incomplete while endpoint-announcement bootstrap helper disposition or legacy central HTTPS mailbox command removal remains unresolved"
   ],
   "remaining_runtime_ipc_surface": [
-    "ticket-automation-policy-and-status",
     "endpoint-announcement-bootstrap-helper-disposition",
     "legacy-central-https-mailbox-command-removal"
   ]

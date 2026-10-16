@@ -5,7 +5,7 @@
   "active_runtime_changed": false,
   "seed": 1262836037,
   "minimum_mutations": 500,
-  "expected_mutations": 30843,
+  "expected_mutations": 31851,
   "maximum_mutations": 35000,
   "fixtures": [
     {
@@ -788,6 +788,34 @@
       "json_pointer": "/expected/status/response/signed_cbor_hex",
       "decoder": "decode_and_verify_signed_runtime_ipc_recovery_execution_response_v1",
       "context_verifier": "verify_runtime_ipc_recovery_execution_response_for_request_v1"
+    },
+    {
+      "id": "runtime-ipc-ticket-automation-configure-request-v1",
+      "vector_file": "CANONICAL-RUNTIME-IPC-TICKET-AUTOMATION-VECTORS.json",
+      "json_pointer": "/expected/configure/request/cbor_hex",
+      "decoder": "decode_and_verify_runtime_ipc_ticket_automation_request_v1",
+      "context_verifier": "verify_runtime_ipc_ticket_automation_request_for_descriptor_v1+verify_runtime_ipc_ticket_automation_response_for_request_v1"
+    },
+    {
+      "id": "signed-runtime-ipc-ticket-automation-configure-response-v1",
+      "vector_file": "CANONICAL-RUNTIME-IPC-TICKET-AUTOMATION-VECTORS.json",
+      "json_pointer": "/expected/configure/response/signed_cbor_hex",
+      "decoder": "decode_and_verify_signed_runtime_ipc_ticket_automation_response_v1",
+      "context_verifier": "verify_runtime_ipc_ticket_automation_response_for_request_v1"
+    },
+    {
+      "id": "runtime-ipc-ticket-automation-status-request-v1",
+      "vector_file": "CANONICAL-RUNTIME-IPC-TICKET-AUTOMATION-VECTORS.json",
+      "json_pointer": "/expected/status/request/cbor_hex",
+      "decoder": "decode_and_verify_runtime_ipc_ticket_automation_request_v1",
+      "context_verifier": "verify_runtime_ipc_ticket_automation_request_for_descriptor_v1+verify_runtime_ipc_ticket_automation_response_for_request_v1"
+    },
+    {
+      "id": "signed-runtime-ipc-ticket-automation-status-response-v1",
+      "vector_file": "CANONICAL-RUNTIME-IPC-TICKET-AUTOMATION-VECTORS.json",
+      "json_pointer": "/expected/status/response/signed_cbor_hex",
+      "decoder": "decode_and_verify_signed_runtime_ipc_ticket_automation_response_v1",
+      "context_verifier": "verify_runtime_ipc_ticket_automation_response_for_request_v1"
     }
   ],
   "mutation_classes": [

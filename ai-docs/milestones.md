@@ -6115,3 +6115,29 @@ correlation visible, Windows-only field evidence, independent security audit
 - canonical coverage остаётся 16 complete / 1 partial / 1 not-started / 2
   not-targeted. Canonical CBOR не активирован; active local control, peer wire,
   network, release/archive/push/tag не менялись.
+
+### M1.1.47 — canonical runtime IPC ticket automation: принято локально
+
+- добавлены deterministic-CBOR `configure-ticket-automation` и
+  `ticket-automation-status` с Device-signed configured/status/error responses,
+  domain-separated policy/snapshot/request/response IDs и checked-in golden
+  vectors;
+- configuration относится только к already-enrolled contact и root-only HTTPS
+  opaque ticket-publication origin. Contact ID пересчитывается из exact
+  descriptor Account, peer Account и conversation label; ticket plaintext,
+  capabilities, secret keys, IP/network names и filesystem paths через IPC не
+  проходят;
+- policy replacement exact-связывает predecessor generation/ID. Status содержит
+  fixed publish/refresh actions, strict contact-ID order, exact success recheck
+  и capped exponential failure deadline; publication conflict quarantine
+  допускается только для refresh и не планирует автоматический retry;
+- execution scope остаётся foreground runtime only, restart не требуется,
+  Windows Task Scheduler/service и другие OS background agents не включаются;
+- независимый Node reference воспроизвёл CBOR/BLAKE3/Ed25519 bytes. Полный
+  bounded decoder corpus прошёл 31851/31851 mutations за 2647.50 s; protocol
+  unit regression: 141 passed, 0 failed, 15 explicit vector generators ignored;
+- accepted-tag readiness прошёл 80/80 вместе с rustfmt и workspace offline
+  strict Clippy. Completion ledger теперь содержит 34 commands, 33 results и
+  34 pairs; остаются ровно endpoint-announcement bootstrap-helper disposition и
+  legacy central-HTTPS mailbox-command removal. Active Postcard v27/descriptor
+  v8, peer wire, network, release/archive/push/tag не менялись.

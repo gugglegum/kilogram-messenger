@@ -1,4 +1,4 @@
-; Kilogram deterministic-CBOR local runtime IPC model, M1.1.44.
+; Kilogram deterministic-CBOR local runtime IPC model, M1.1.47.
 ; Only unsigned integers, definite byte strings and definite arrays are used.
 
 profile-version = 1
@@ -1454,6 +1454,114 @@ signed-runtime-ipc-recovery-execution-response-v1 = [
   signature
 ]
 
+; Per-contact publish/refresh automation is a foreground-runtime scheduler.
+; It persists signed policy and attempt state but neither installs an OS
+; background service nor stores ticket plaintext in routine IPC.
+runtime-ipc-ticket-automation-previous-policy-v1 =
+  [none: 0] /
+  [some: 1, generation: uint, policy-id: digest]
+
+runtime-ipc-ticket-automation-configuration-v1 = [
+  profile-version,
+  contact-id: digest,
+  conversation-label-utf8: bytes .size (1..4096),
+  peer-account-id: account-id,
+  enabled: 0..1,
+  service-origin-utf8: bytes .size (1..512),
+  ttl-seconds: 30..3600,
+  refresh-before-seconds: 10..1800,
+  retry-base-seconds: 1..3600,
+  retry-max-seconds: 1..3600,
+  allowed-network-mask: 0..15
+]
+
+runtime-ipc-ticket-automation-command-v1 =
+  [configure-ticket-automation: 0,
+   runtime-ipc-ticket-automation-previous-policy-v1,
+   runtime-ipc-ticket-automation-configuration-v1] /
+  [ticket-automation-status: 1]
+
+runtime-ipc-ticket-automation-request-v1 = [
+  profile-version,
+  descriptor-id: digest,
+  request-id,
+  bearer-token: token,
+  issued-at-unix-seconds: uint,
+  expires-at-unix-seconds: uint,
+  runtime-ipc-ticket-automation-command-v1
+]
+
+runtime-ipc-ticket-automation-optional-id-v1 =
+  [none: 0] /
+  [some: 1, value: digest]
+
+runtime-ipc-ticket-automation-optional-uint-v1 =
+  [none: 0] /
+  [some: 1, value: uint]
+
+runtime-ipc-ticket-automation-network-v1 = 0..3
+runtime-ipc-ticket-automation-action-v1 = 0..1
+runtime-ipc-ticket-automation-scheduler-state-v1 = 0..5
+runtime-ipc-ticket-automation-last-result-v1 = 0..2
+
+runtime-ipc-ticket-automation-action-status-v1 = [
+  profile-version,
+  runtime-ipc-ticket-automation-action-v1,
+  runtime-ipc-ticket-automation-scheduler-state-v1,
+  last-attempt-unix-seconds: runtime-ipc-ticket-automation-optional-uint-v1,
+  last-success-unix-seconds: runtime-ipc-ticket-automation-optional-uint-v1,
+  next-attempt-unix-seconds: runtime-ipc-ticket-automation-optional-uint-v1,
+  consecutive-failures: 0..4294967295,
+  publication-generation: runtime-ipc-ticket-automation-optional-uint-v1,
+  expires-at-unix-seconds: runtime-ipc-ticket-automation-optional-uint-v1,
+  runtime-ipc-ticket-automation-last-result-v1
+]
+
+runtime-ipc-ticket-automation-policy-status-v1 = [
+  profile-version,
+  runtime-ipc-ticket-automation-configuration-v1,
+  generation: uint,
+  previous-policy-id: runtime-ipc-ticket-automation-optional-id-v1,
+  policy-id: digest,
+  configured-at-unix-seconds: uint,
+  publish: runtime-ipc-ticket-automation-action-status-v1,
+  refresh: runtime-ipc-ticket-automation-action-status-v1
+]
+
+runtime-ipc-ticket-automation-result-v1 =
+  [ticket-automation-configured: 0,
+   outcome: 0..1,
+   observed-at-unix-seconds: uint,
+   runtime-ipc-ticket-automation-network-v1,
+   runtime-ipc-ticket-automation-policy-status-v1,
+   restart-not-required: 0,
+   foreground-runtime-only: 0,
+   os-background-service-enabled: 0] /
+  [ticket-automation-status: 1,
+   observed-at-unix-seconds: uint,
+   runtime-ipc-ticket-automation-network-v1,
+   snapshot-id: digest,
+   policies: [* runtime-ipc-ticket-automation-policy-status-v1],
+   foreground-runtime-only: 0,
+   os-background-service-enabled: 0,
+   policy-count: 0..256] /
+  [error: 2, error-code: 1..65535, message-utf8: bytes .size (1..4096)]
+
+runtime-ipc-ticket-automation-response-content-v1 = [
+  profile-version,
+  descriptor-id: digest,
+  request-id,
+  request-digest: digest,
+  responder-device-id: device-id,
+  runtime-ipc-ticket-automation-result-v1
+]
+
+signed-runtime-ipc-ticket-automation-response-v1 = [
+  profile-version,
+  runtime-ipc-ticket-automation-response-content-v1,
+  signature
+]
+
 kilogram-runtime-ipc-v1 =
   signed-runtime-ipc-descriptor-v1 /
   runtime-ipc-core-request-v1 /
@@ -1489,4 +1597,6 @@ kilogram-runtime-ipc-v1 =
   runtime-ipc-recovery-plan-request-v1 /
   signed-runtime-ipc-recovery-plan-response-v1 /
   runtime-ipc-recovery-execution-request-v1 /
-  signed-runtime-ipc-recovery-execution-response-v1
+  signed-runtime-ipc-recovery-execution-response-v1 /
+  runtime-ipc-ticket-automation-request-v1 /
+  signed-runtime-ipc-ticket-automation-response-v1
