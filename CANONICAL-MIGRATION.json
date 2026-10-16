@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.61",
-  "status": "dormant-atomic-legacy-import-checkpoint-verified-not-active",
+  "milestone": "M1.1.62",
+  "status": "dormant-signed-session-bootstrap-verified-not-active",
   "changes_active_wire": false,
   "current_encoding": "postcard",
   "candidate_encoding": "kilogram-deterministic-cbor-v2-typed-history",
@@ -20,6 +20,7 @@
     "dormant_cross_format_membership_policy": "verified",
     "dormant_bounded_resumable_legacy_import": "verified",
     "dormant_atomic_legacy_import_checkpoint": "verified",
+    "dormant_signed_session_bootstrap": "verified",
     "registered": false,
     "dialed": false
   },
@@ -195,6 +196,10 @@
     },
     {
       "id": "dormant-atomic-legacy-import-checkpoint",
+      "status": "verified"
+    },
+    {
+      "id": "dormant-signed-session-bootstrap",
       "status": "verified"
     },
     {

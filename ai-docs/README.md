@@ -1055,6 +1055,12 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   что и carrier page: crash/retry не может показать advanced cursor без полной
   page, stale/skipped/corrupt state fail closed. Это локальный migration cursor,
   а не signed peer-session checkpoint; `/cbor/2` всё ещё inactive.
+- [`../docs/RFC-0188-m1162-dormant-signed-session-bootstrap.md`](../docs/RFC-0188-m1162-dormant-signed-session-bootstrap.md) —
+  M1.1.62 разрешает первый Device-signed `/cbor/2` checkpoint только после
+  завершения exact durable import plan, атомарно хранит immutable sequence-1
+  record и head и fail closed проверяет signature/ID/key/head relation. Это
+  gated dormant bootstrap; successor checkpoints и mutual capability selection
+  ещё не подключены, `/cbor/2` не зарегистрирован и не dial-ится.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

@@ -113,9 +113,9 @@ function Assert-Contract {
         throw 'canonical sync v2 dormant adapter remaining-work boundary changed'
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.61' -or
+    if ([string]$Migration.milestone -cne 'M1.1.62' -or
         [string]$Migration.status -cne
-            'dormant-atomic-legacy-import-checkpoint-verified-not-active' -or
+            'dormant-signed-session-bootstrap-verified-not-active' -or
         [string]$Migration.current_state -cne 'legacy-only' -or
         [bool]$Migration.candidate_identifier_registered -or
         [string]$Migration.history_compatible_successor.dormant_runtime_state_machine -cne
@@ -127,6 +127,8 @@ function Assert-Contract {
         [string]$Migration.history_compatible_successor.dormant_bounded_resumable_legacy_import -cne
             'verified' -or
         [string]$Migration.history_compatible_successor.dormant_atomic_legacy_import_checkpoint -cne
+            'verified' -or
+        [string]$Migration.history_compatible_successor.dormant_signed_session_bootstrap -cne
             'verified') {
         throw 'canonical migration omitted the dormant runtime state machine'
     }
@@ -143,25 +145,28 @@ function Assert-Contract {
         throw 'canonical migration confused dormant verification with active runtime support'
     }
 
-    if ([string]$TransportManifest.milestone -cne 'M1.1.61' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.62' -or
         [string]$TransportManifest.status -cne
-            'dormant-atomic-legacy-import-checkpoint-verified-not-active' -or
+            'dormant-signed-session-bootstrap-verified-not-active' -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_runtime_state_machine -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_atomic_typed_store -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_cross_format_membership_policy -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_bounded_resumable_legacy_import -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_atomic_legacy_import_checkpoint -or
+        -not [bool]$TransportManifest.history_compatible_successor.dormant_signed_session_bootstrap -or
         [bool]$TransportManifest.history_compatible_successor.registered -or
         [bool]$TransportManifest.history_compatible_successor.dialed -or
         [bool]$TransportManifest.authenticated_capability.canonical_dial_enabled -or
         [string]$TransportManifest.selection.current_state -cne 'legacy-only' -or
         (@($TransportManifest.remaining)[0]) -cne
-            'signed-sync-checkpoint-and-capability-integration') {
+            'signed-checkpoint-successor-runtime-integration' -or
+        'mutual-authenticated-capability-selection' -cnotin
+            @($TransportManifest.remaining)) {
         throw 'canonical transport manifest does not preserve dormant-only state'
     }
 
     $surface = @($Coverage.surfaces | Where-Object { [string]$_.id -ceq 'transport-sync' })
-    if ([string]$Coverage.milestone -cne 'M1.1.61' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.62' -or
         $surface.Count -ne 1 -or [string]$surface[0].coverage -cne 'partial' -or
         'dormant-history-compatible-sync-v2-runtime-state-machine' -cnotin
             @($surface[0].covered) -or
@@ -169,7 +174,10 @@ function Assert-Contract {
         'dormant-cross-format-membership-policy' -cnotin @($surface[0].covered) -or
         'dormant-bounded-resumable-legacy-import' -cnotin @($surface[0].covered) -or
         'dormant-atomic-legacy-import-checkpoint' -cnotin @($surface[0].covered) -or
-        'signed-sync-checkpoint-and-capability-integration' -cnotin
+        'dormant-signed-session-bootstrap' -cnotin @($surface[0].covered) -or
+        'signed-checkpoint-successor-runtime-integration' -cnotin
+            @($surface[0].remaining) -or
+        'mutual-authenticated-capability-selection' -cnotin
             @($surface[0].remaining)) {
         throw 'canonical coverage omitted the dormant runtime state machine boundary'
     }

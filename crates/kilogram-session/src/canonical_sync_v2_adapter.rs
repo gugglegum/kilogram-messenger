@@ -17,6 +17,12 @@ use kilogram_protocol::{
     },
     canonical_event_v1::{verify_authorized_event_for_membership_v1, verify_authorized_event_v1},
     canonical_sync_history_v2::{CanonicalSyncEventCarrierV2, CanonicalSyncEventKeyV2},
+    canonical_sync_session_v2::{
+        CANONICAL_SYNC_SESSION_PROTOCOL_IDENTIFIER_V2, CanonicalSignedSyncSessionCheckpointV2,
+        CanonicalSyncNextActionV2, CanonicalSyncSessionCheckpointContentV2,
+        CanonicalSyncSessionV2Error, sync_session_checkpoint_signing_bytes_v2,
+        verify_signed_sync_session_checkpoint_v2,
+    },
     canonical_sync_v2::{
         CanonicalSignedSyncDiffV2, CanonicalSignedSyncInventoryV2, CanonicalSyncClientFrameV2,
         CanonicalSyncCompleteV2, CanonicalSyncDiffContentV2, CanonicalSyncEventBatchV2,
@@ -27,7 +33,10 @@ use kilogram_protocol::{
         verify_signed_sync_diff_v2, verify_signed_sync_inventory_v2, verify_sync_frame_session_v2,
     },
 };
-use kilogram_store::{CanonicalSyncV2CarrierStore, StoreError};
+use kilogram_store::{
+    CanonicalSyncV2CarrierStore, CanonicalSyncV2LegacyImportPlan,
+    CanonicalSyncV2StoredSessionCheckpoint, StoreError,
+};
 use thiserror::Error;
 
 /// Storage contract required before canonical sync v2 can be activated.
@@ -393,6 +402,56 @@ impl<'a, S: CanonicalSyncV2Store + ?Sized, P: CanonicalSyncV2EventPolicy + ?Size
     }
 }
 
+impl<'a, P: CanonicalSyncV2EventPolicy + ?Sized>
+    CanonicalSyncV2Client<'a, CanonicalSyncV2CarrierStore, P>
+{
+    /// Creates the dormant client and its first signed checkpoint only after
+    /// the exact local legacy-import plan is durably complete.
+    pub fn bootstrap_from_completed_legacy_import(
+        identity: &'a DeviceIdentity,
+        store: &'a CanonicalSyncV2CarrierStore,
+        policy: &'a P,
+        plan: &CanonicalSyncV2LegacyImportPlan,
+        session_binding: SyncSessionBinding,
+        expected_responder: DeviceId,
+    ) -> Result<(Self, CanonicalSyncV2StoredSessionCheckpoint), CanonicalSyncV2SessionError> {
+        let conversation_id = *plan.conversation_id().as_bytes();
+        let content = CanonicalSyncSessionCheckpointContentV2 {
+            protocol_identifier: *CANONICAL_SYNC_SESSION_PROTOCOL_IDENTIFIER_V2,
+            conversation_id,
+            local_device_id: *identity.device_id().as_bytes(),
+            peer_device_id: *expected_responder.as_bytes(),
+            session_binding: *session_binding.as_bytes(),
+            checkpoint_sequence: 1,
+            sync_round: 1,
+            predecessor_checkpoint_id: None,
+            received_event_keys: Vec::new(),
+            sent_event_keys: Vec::new(),
+            local_more_available: false,
+            peer_more_available: false,
+            next_action: CanonicalSyncNextActionV2::SendInventory,
+            paused: false,
+        };
+        let checkpoint = CanonicalSignedSyncSessionCheckpointV2 {
+            signature: identity.sign(&sync_session_checkpoint_signing_bytes_v2(&content)?),
+            content,
+        };
+        verify_signed_sync_session_checkpoint_v2(&checkpoint)?;
+        let stored = store.install_legacy_import_session_bootstrap(plan, &checkpoint)?;
+        Ok((
+            Self::new(
+                identity,
+                store,
+                policy,
+                conversation_id,
+                session_binding,
+                expected_responder,
+            ),
+            stored,
+        ))
+    }
+}
+
 pub struct CanonicalSyncV2ClientInventoryRound {
     inventory: CanonicalSignedSyncInventoryV2,
     advertised_event_keys: HashSet<CanonicalSyncEventKeyV2>,
@@ -605,6 +664,9 @@ pub struct CanonicalSyncV2RoundStats {
 pub enum CanonicalSyncV2SessionError {
     #[error(transparent)]
     Protocol(#[from] CanonicalSyncV2Error),
+
+    #[error(transparent)]
+    Checkpoint(#[from] CanonicalSyncSessionV2Error),
 
     #[error(transparent)]
     Store(#[from] StoreError),
@@ -1132,6 +1194,94 @@ mod tests {
                 &[legacy_key]
             )?,
             vec![legacy]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn concrete_client_bootstrap_requires_the_completed_exact_legacy_import()
+    -> Result<(), Box<dyn Error>> {
+        let source_directory = tempdir()?;
+        let target_directory = tempdir()?;
+        let legacy = carrier("/expected/legacy_carrier_cbor_hex")?;
+        let conversation_id = *legacy.conversation_id();
+        let author_account_id = carrier_author_account_id(&legacy);
+        let membership = legacy_membership(conversation_id, &[author_account_id])?;
+        let authorized_event = match legacy {
+            CanonicalSyncEventCarrierV2::LegacyPostcardV6(bridge) => {
+                bridge.into_active_authorized_event()
+            }
+            CanonicalSyncEventCarrierV2::CanonicalCborV1(_) => {
+                return Err(io::Error::other("legacy vector decoded as canonical carrier").into());
+            }
+        };
+        let source = kilogram_store::EventStore::open(source_directory.path())?;
+        source.put_authorized(&authorized_event, &membership)?;
+        let plan = source.canonical_sync_v2_legacy_import_plan(
+            authorized_event.event().conversation_id(),
+            &membership,
+        )?;
+        let target = CanonicalSyncV2CarrierStore::open(target_directory.path())?;
+        let policy = CanonicalSyncV2MembershipPolicy::from_legacy(membership.clone())?;
+        let identity = DeviceIdentity::from_secret_bytes([0x24; 32]);
+        let peer = DeviceIdentity::from_secret_bytes([0x44; 32]);
+        let session_binding = SyncSessionBinding::from_transport_label(
+            "concrete-bootstrap-after-completed-legacy-import",
+        );
+
+        assert!(matches!(
+            CanonicalSyncV2Client::bootstrap_from_completed_legacy_import(
+                &identity,
+                &target,
+                &policy,
+                &plan,
+                session_binding,
+                peer.device_id(),
+            ),
+            Err(CanonicalSyncV2SessionError::Store(
+                StoreError::CanonicalSyncV2SessionBootstrapImportMissing
+            ))
+        ));
+
+        let progress = target.import_legacy_page(
+            &source,
+            &membership,
+            &plan,
+            plan.start_cursor(),
+            MAX_CANONICAL_SYNC_V2_EVENTS_PER_BATCH,
+        )?;
+        assert!(progress.is_complete());
+        let (client, stored) = CanonicalSyncV2Client::bootstrap_from_completed_legacy_import(
+            &identity,
+            &target,
+            &policy,
+            &plan,
+            session_binding,
+            peer.device_id(),
+        )?;
+        assert_eq!(stored.import_plan_id(), plan.plan_id());
+        assert_eq!(stored.checkpoint().content.checkpoint_sequence, 1);
+        assert_eq!(stored.checkpoint().content.sync_round, 1);
+        assert_eq!(
+            stored.checkpoint().content.next_action,
+            CanonicalSyncNextActionV2::SendInventory
+        );
+        assert_eq!(
+            target.session_checkpoint_head(
+                conversation_id,
+                *identity.device_id().as_bytes(),
+                *peer.device_id().as_bytes(),
+                *session_binding.as_bytes(),
+            )?,
+            Some(stored)
+        );
+
+        let round = client.begin_round()?;
+        verify_signed_sync_inventory_v2(round.inventory())?;
+        assert_eq!(round.inventory().content.conversation_id, conversation_id);
+        assert_eq!(
+            round.inventory().content.event_keys,
+            target.inventory(conversation_id)?
         );
         Ok(())
     }

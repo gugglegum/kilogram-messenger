@@ -194,8 +194,8 @@ function Assert-Boundary {
         'crates/kilogram-sync-capability/src/lib.rs|SYNC_TRANSPORT_CAPABILITY_VERSION|u8|2'
     ) 'connection-ticket compatibility bindings'
 
-    if ([string]$TransportManifest.milestone -cne 'M1.1.61' -or
-        [string]$TransportManifest.status -cne 'dormant-atomic-legacy-import-checkpoint-verified-not-active' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.62' -or
+        [string]$TransportManifest.status -cne 'dormant-signed-session-bootstrap-verified-not-active' -or
         [string]$TransportManifest.active.alpn -cne $legacyAlpn -or
         -not [bool]$TransportManifest.active.registered -or
         -not [bool]$TransportManifest.active.dialed -or
@@ -211,6 +211,7 @@ function Assert-Boundary {
         -not [bool]$TransportManifest.history_compatible_successor.dormant_cross_format_membership_policy -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_bounded_resumable_legacy_import -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_atomic_legacy_import_checkpoint -or
+        -not [bool]$TransportManifest.history_compatible_successor.dormant_signed_session_bootstrap -or
         [bool]$TransportManifest.history_compatible_successor.registered -or
         [bool]$TransportManifest.history_compatible_successor.dialed -or
         [string]$TransportManifest.authenticated_capability.portable_artifact -cne
@@ -231,8 +232,8 @@ function Assert-Boundary {
     $capabilityRequirement = @($CanonicalMigration.activation_requirements | Where-Object {
         [string]$_.id -ceq 'authenticated-capability-envelope'
     })
-    if ([string]$CanonicalMigration.milestone -cne 'M1.1.61' -or
-        [string]$CanonicalMigration.status -cne 'dormant-atomic-legacy-import-checkpoint-verified-not-active' -or
+    if ([string]$CanonicalMigration.milestone -cne 'M1.1.62' -or
+        [string]$CanonicalMigration.status -cne 'dormant-signed-session-bootstrap-verified-not-active' -or
         [string]$CanonicalMigration.current_state -cne 'legacy-only' -or
         [string]$CanonicalMigration.candidate_protocol_identifier -cne $canonicalAlpn -or
         [string]$CanonicalMigration.history_compatible_successor.authenticated_ticket_capability -cne
@@ -240,6 +241,8 @@ function Assert-Boundary {
         [string]$CanonicalMigration.history_compatible_successor.dormant_bounded_resumable_legacy_import -cne
             'verified' -or
         [string]$CanonicalMigration.history_compatible_successor.dormant_atomic_legacy_import_checkpoint -cne
+            'verified' -or
+        [string]$CanonicalMigration.history_compatible_successor.dormant_signed_session_bootstrap -cne
             'verified' -or
         [bool]$CanonicalMigration.candidate_identifier_registered -or
         $capabilityRequirement.Count -ne 1 -or
@@ -250,13 +253,13 @@ function Assert-Boundary {
     $coverageSurface = @($Coverage.surfaces | Where-Object {
         [string]$_.id -ceq 'transport-sync'
     })
-    if ([string]$Coverage.milestone -cne 'M1.1.61' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.62' -or
         $coverageSurface.Count -ne 1 -or
         [string]$coverageSurface[0].coverage -cne 'partial' -or
         (@($coverageSurface[0].covered) -join ',') -cne
-            'parallel-cbor-alpn-identifier-allocation,history-compatible-cbor-v2-alpn-identifier-allocation,typed-durable-canonical-sync-session-checkpoint,authenticated-ticket-v13-history-compatible-cbor-v2-capability,dormant-history-compatible-sync-v2-runtime-state-machine,dormant-atomic-typed-carrier-store,dormant-cross-format-membership-policy,dormant-bounded-resumable-legacy-import,dormant-atomic-legacy-import-checkpoint' -or
+            'parallel-cbor-alpn-identifier-allocation,history-compatible-cbor-v2-alpn-identifier-allocation,typed-durable-canonical-sync-session-checkpoint,authenticated-ticket-v13-history-compatible-cbor-v2-capability,dormant-history-compatible-sync-v2-runtime-state-machine,dormant-atomic-typed-carrier-store,dormant-cross-format-membership-policy,dormant-bounded-resumable-legacy-import,dormant-atomic-legacy-import-checkpoint,dormant-signed-session-bootstrap' -or
         (@($coverageSurface[0].remaining) -join ',') -cne
-            'signed-sync-checkpoint-and-capability-integration') {
+            'signed-checkpoint-successor-runtime-integration,mutual-authenticated-capability-selection') {
         throw 'canonical coverage did not record the authenticated capability envelope'
     }
 

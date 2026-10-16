@@ -2370,6 +2370,14 @@ is idempotent. This is local migration progress, not the Device-signed peer
 session checkpoint: `/cbor/2` remains unregistered and undialed until explicit
 runtime/checkpoint and authenticated capability-selection work is complete.
 
+[`RFC-0188`](docs/RFC-0188-m1162-dormant-signed-session-bootstrap.md) now gates
+the first Device-signed `/cbor/2` session checkpoint on completion of that exact
+durable import plan. The immutable signed record and its head are committed in
+one immediate-durability redb transaction, verified again on read/reopen and
+replayed idempotently. Only sequence 1 is integrated: successor checkpoints,
+mutual authenticated capability selection and active transport remain pending,
+so `/cbor/2` is still unregistered and undialed.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

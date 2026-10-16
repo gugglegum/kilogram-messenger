@@ -4133,6 +4133,34 @@ Hosted follow-up:
 - No network operation, release build, archive, stable executable replacement,
   push or tag belongs to this stage.
 
+## M1.1.62 dormant signed session bootstrap (2026-10-16)
+
+- Added versioned redb tables `canonical-sync-v2-session-checkpoints-v1` and
+  `canonical-sync-v2-session-checkpoint-heads-v1`. The immutable journal key is
+  exact conversation/local Device/peer Device/session binding plus checkpoint
+  sequence; its value locally binds import plan ID, checkpoint ID and canonical
+  signed checkpoint bytes. The head repeats plan, sequence and checkpoint ID.
+- `install_legacy_import_session_bootstrap` opens one immediate-durability
+  transaction, re-reads and verifies the exact durable import checkpoint, and
+  refuses missing or incomplete imports before installing journal and head.
+  Exact replay is idempotent; orphan/conflicting state fails closed.
+- `CanonicalSyncV2Client::bootstrap_from_completed_legacy_import` constructs
+  and signs only the sequence-1/round-1 `SendInventory` shape. The import plan
+  remains local evidence and is not claimed as peer-visible signed content.
+- Focused debug/offline store tests passed 3/3; full `kilogram-store` passed
+  22/22. Focused cross-crate session test passed 1/1; full
+  `kilogram-session` passed 12/12. Tests required execution outside the file
+  sandbox because Windows temporary directories returned access denied inside
+  it; Cargo stayed at two jobs and below-normal priority.
+- The dedicated boundary plus twelve related aggregate boundaries passed both
+  normal and negative self-test modes. All 92 root JSON files parsed. `cargo
+  fmt --all -- --check`, workspace locked/offline strict Clippy and accepted
+  `M1.0.0` readiness passed 94/94.
+- This stage starts no active network path, test/release archive or stable EXE.
+  `/cbor/2` remains unregistered and undialed. Next work is durable successor
+  checkpoint integration across every runtime transition, followed by mutual
+  authenticated capability selection and downgrade regression.
+
 ## M1.1.59 dormant cross-format membership policy (2026-10-16)
 
 - Added `CanonicalSyncV2MembershipPolicy` to the dormant session adapter. It is

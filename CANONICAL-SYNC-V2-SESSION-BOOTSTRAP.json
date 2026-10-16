@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.62",
+  "status": "dormant-signed-session-bootstrap-verified-not-active",
+  "changes_active_wire": false,
+  "protocol_identifier": "kilogram/m1/sync/cbor/2",
+  "implementation": {
+    "storage_crate": "kilogram-store",
+    "session_crate": "kilogram-session",
+    "store": "CanonicalSyncV2CarrierStore",
+    "client": "CanonicalSyncV2Client",
+    "record_type": "CanonicalSyncV2StoredSessionCheckpoint",
+    "signed_checkpoint_type": "CanonicalSignedSyncSessionCheckpointV2",
+    "database_engine": "redb",
+    "journal_table": "canonical-sync-v2-session-checkpoints-v1",
+    "head_table": "canonical-sync-v2-session-checkpoint-heads-v1",
+    "record_version": 1,
+    "head_version": 1
+  },
+  "identity_key": [
+    "conversation-id-32-bytes",
+    "local-device-id-32-bytes",
+    "peer-device-id-32-bytes",
+    "session-binding-32-bytes"
+  ],
+  "journal_key_suffix": "checkpoint-sequence-u64-big-endian",
+  "journal_record": [
+    "version-u8",
+    "legacy-import-plan-id-32-bytes",
+    "signed-checkpoint-id-32-bytes",
+    "canonical-signed-checkpoint-cbor"
+  ],
+  "head_record": [
+    "version-u8",
+    "legacy-import-plan-id-32-bytes",
+    "checkpoint-sequence-u64-big-endian",
+    "signed-checkpoint-id-32-bytes"
+  ],
+  "contracts": {
+    "complete_exact_legacy_import_required": true,
+    "import_plan_bound_in_local_record": true,
+    "import_plan_added_to_peer_visible_checkpoint": false,
+    "initial_checkpoint_device_signed": true,
+    "exact_cbor_v2_protocol_identifier": true,
+    "initial_checkpoint_sequence_one": true,
+    "initial_sync_round_one": true,
+    "initial_predecessor_absent": true,
+    "initial_event_evidence_empty": true,
+    "initial_availability_false": true,
+    "initial_action_send_inventory": true,
+    "initial_paused_false": true,
+    "immutable_sequence_journal": true,
+    "journal_and_head_same_redb_transaction": true,
+    "immediate_durability": true,
+    "byte_identical_replay_idempotent": true,
+    "head_record_key_signature_and_id_verified": true,
+    "orphan_record_rejected": true,
+    "format_sniffing": false,
+    "parse_error_fallback": false
+  },
+  "regression": {
+    "missing_import_checkpoint_rejected": true,
+    "incomplete_import_checkpoint_rejected": true,
+    "wrong_initial_shape_rejected": true,
+    "wrong_conversation_rejected": true,
+    "malformed_head_rejected": true,
+    "corrupt_signed_record_rejected": true,
+    "orphan_record_rejected": true,
+    "bootstrap_survives_reopen": true,
+    "exact_bootstrap_replay_idempotent": true,
+    "concrete_client_begins_signed_inventory_after_bootstrap": true
+  },
+  "activation": {
+    "completed_import_to_signed_bootstrap_integrated": true,
+    "signed_checkpoint_successor_runtime_integrated": false,
+    "mutual_capability_selection_integrated": false,
+    "active_runtime_import": false,
+    "endpoint_registered": false,
+    "canonical_dial_enabled": false
+  },
+  "remaining": [
+    "signed-checkpoint-successor-runtime-integration",
+    "mutual-authenticated-capability-selection",
+    "mixed-version-and-downgrade-tests",
+    "rollback-drill",
+    "sustained-fuzzing",
+    "fresh-hosted-and-field-evidence"
+  ],
+  "scope": {
+    "network_executed": false,
+    "release_build": false,
+    "archive_created": false,
+    "stable_executable_replaced": false
+  }
+}

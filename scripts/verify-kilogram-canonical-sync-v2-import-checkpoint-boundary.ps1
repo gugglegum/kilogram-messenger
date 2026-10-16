@@ -133,9 +133,9 @@ function Assert-Contract {
         }
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.61' -or
+    if ([string]$Migration.milestone -cne 'M1.1.62' -or
         [string]$Migration.status -cne
-            'dormant-atomic-legacy-import-checkpoint-verified-not-active' -or
+            'dormant-signed-session-bootstrap-verified-not-active' -or
         [string]$Migration.history_compatible_successor.dormant_atomic_legacy_import_checkpoint -cne
             'verified' -or
         [bool]$Migration.candidate_identifier_registered) {
@@ -149,28 +149,32 @@ function Assert-Contract {
         [string]$checkpointRequirement[0].status -cne 'verified') {
         throw 'canonical migration lost the verified atomic import checkpoint requirement'
     }
-    if ([string]$TransportManifest.milestone -cne 'M1.1.61' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.62' -or
         [string]$TransportManifest.status -cne
-            'dormant-atomic-legacy-import-checkpoint-verified-not-active' -or
+            'dormant-signed-session-bootstrap-verified-not-active' -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_atomic_legacy_import_checkpoint -or
+        -not [bool]$TransportManifest.history_compatible_successor.dormant_signed_session_bootstrap -or
         [bool]$TransportManifest.history_compatible_successor.registered -or
         [bool]$TransportManifest.history_compatible_successor.dialed -or
-        'signed-sync-checkpoint-and-capability-integration' -cnotin
+        'signed-checkpoint-successor-runtime-integration' -cnotin
+            @($TransportManifest.remaining) -or
+        'mutual-authenticated-capability-selection' -cnotin
             @($TransportManifest.remaining)) {
         throw 'transport sync manifest lost the dormant atomic import checkpoint boundary'
     }
-    if ([string]$Compatibility.milestone -cne 'M1.1.61' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.62' -or
         [string]$Compatibility.status -cne
-            'dormant-atomic-legacy-import-checkpoint-verified-not-active' -or
+            'dormant-signed-session-bootstrap-verified-not-active' -or
         -not [bool]$Compatibility.required_successor.dormant_atomic_legacy_import_checkpoint_integrated -or
+        -not [bool]$Compatibility.required_successor.dormant_signed_session_bootstrap_integrated -or
         [string]$Compatibility.required_successor.status -cne
-            'dormant-store-policy-import-and-checkpoint-verified-not-active') {
+            'dormant-store-policy-import-checkpoint-and-session-bootstrap-verified-not-active') {
         throw 'history compatibility manifest lost the atomic import checkpoint contract'
     }
     $transportCoverage = @(
         @($Coverage.surfaces) | Where-Object { [string]$_.id -ceq 'transport-sync' }
     )
-    if ([string]$Coverage.milestone -cne 'M1.1.61' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.62' -or
         $transportCoverage.Count -ne 1 -or
         'CANONICAL-SYNC-V2-IMPORT-CHECKPOINT.json' -cnotin
             @($transportCoverage[0].artifacts) -or
@@ -178,7 +182,11 @@ function Assert-Contract {
             @($transportCoverage[0].artifacts) -or
         'dormant-atomic-legacy-import-checkpoint' -cnotin
             @($transportCoverage[0].covered) -or
-        'signed-sync-checkpoint-and-capability-integration' -cnotin
+        'dormant-signed-session-bootstrap' -cnotin
+            @($transportCoverage[0].covered) -or
+        'signed-checkpoint-successor-runtime-integration' -cnotin
+            @($transportCoverage[0].remaining) -or
+        'mutual-authenticated-capability-selection' -cnotin
             @($transportCoverage[0].remaining)) {
         throw 'canonical coverage does not include atomic import checkpoint artifacts'
     }

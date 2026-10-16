@@ -6479,3 +6479,32 @@ correlation visible, Windows-only field evidence, independent security audit
   этап — signed checkpoint/runtime/capability integration;
 - active CLI/Iroh/wire не изменены, `/cbor/2` unregistered/undialed;
   release/archive/stable EXE, push и tag не выполнялись.
+
+### M1.1.62 — dormant signed session bootstrap after exact import: принято локально
+
+- `CanonicalSyncV2CarrierStore` получил immutable Device-signed checkpoint
+  journal по exact session identity и sequence, а также отдельный atomic head.
+  Record локально связывает canonical signed checkpoint и content-derived ID с
+  exact legacy-import plan ID;
+- `CanonicalSyncV2Client::bootstrap_from_completed_legacy_import` создаёт
+  единственный initial shape: sequence/round 1, no predecessor/evidence,
+  availability false, `SendInventory`, not paused. До complete durable import
+  plan constructor fail closed получает missing/incomplete error;
+- journal record и head preflight/insert выполняются одной
+  immediate-durability redb transaction. Exact replay идемпотентен;
+  orphan/conflicting head/record, corruption и signature/ID/key mismatch
+  отвергаются. Reopen возвращает тот же verified checkpoint;
+- plan ID остаётся local migration evidence и не добавляется в peer-visible
+  signed schema. Интегрирован только sequence 1; successor checkpoint
+  persistence/restore после runtime transitions ещё отсутствует;
+- focused store regression прошёл 3/3, полный `kilogram-store` — 22/22;
+  focused cross-crate session regression — 1/1, полный `kilogram-session` —
+  12/12. Dedicated boundary и двенадцать связанных aggregate boundaries
+  прошли normal и negative self-test modes;
+- все 92 root JSON documents parsed, rustfmt, workspace-wide locked/offline
+  strict Clippy и accepted-tag readiness прошли 94/94 против immutable
+  `M1.0.0`; readiness не запускал Rust test executable и не выполнял network;
+- active CLI/Iroh/wire не изменены, `/cbor/2` unregistered/undialed. Следующий
+  bounded slice — signed successor checkpoint persistence/restore во всех
+  runtime transitions, затем mutual authenticated capability selection;
+  release/archive/stable EXE, push и tag не выполнялись.
