@@ -936,34 +936,7 @@ impl CanonicalSyncV2CarrierStore {
         if events.is_empty() {
             return Ok(());
         }
-
-        let mut keyed_events = events
-            .iter()
-            .map(|event| {
-                event
-                    .key()
-                    .map(|key| (key, event))
-                    .map_err(CanonicalSyncV2Error::from)
-            })
-            .collect::<Result<Vec<_>, _>>()?;
-        keyed_events.sort_unstable_by_key(|(key, _)| *key);
-        let canonical_events: Vec<_> = keyed_events
-            .iter()
-            .map(|(_, event)| (*event).clone())
-            .collect();
-        encode_sync_event_batch_v2(&CanonicalSyncEventBatchV2 {
-            conversation_id,
-            events: canonical_events,
-        })?;
-        let prepared = keyed_events
-            .into_iter()
-            .map(|(key, event)| {
-                event
-                    .encode()
-                    .map(|encoded| (key, encoded))
-                    .map_err(CanonicalSyncV2Error::from)
-            })
-            .collect::<Result<Vec<_>, _>>()?;
+        let prepared = prepare_canonical_sync_v2_carriers(conversation_id, events)?;
 
         let mut write = self
             .database
@@ -1281,6 +1254,309 @@ impl CanonicalSyncV2CarrierStore {
         Ok(CanonicalSyncV2StoredSessionRuntime {
             checkpoint: expected_checkpoint.clone(),
             pending_client_frame: Some(frame.clone()),
+        })
+    }
+
+    /// Atomically commits one verified signed successor, its exact replacement
+    /// pending frame and every received carrier authorized by the caller.
+    ///
+    /// `expected_runtime` is an optimistic-concurrency token. The durable head,
+    /// immutable predecessor and pending frame must all still match it. An exact
+    /// lost-response retry verifies the already committed successor, runtime
+    /// frame and carrier set without rewriting them.
+    pub fn commit_session_runtime_transition(
+        &self,
+        expected_runtime: &CanonicalSyncV2StoredSessionRuntime,
+        successor: &CanonicalSignedSyncSessionCheckpointV2,
+        pending_client_frame: Option<&CanonicalSyncClientFrameV2>,
+        received_events: &[CanonicalSyncEventCarrierV2],
+    ) -> Result<CanonicalSyncV2StoredSessionRuntime, StoreError> {
+        verify_signed_sync_session_checkpoint_v2(successor)?;
+        let previous = expected_runtime.checkpoint();
+        let previous_content = &previous.checkpoint.content;
+        let identity_key = canonical_sync_v2_session_identity_key(
+            previous_content.conversation_id,
+            previous_content.local_device_id,
+            previous_content.peer_device_id,
+            previous_content.session_binding,
+        );
+        let expected_head = CanonicalSyncV2SessionCheckpointHead {
+            import_plan_id: previous.import_plan_id,
+            checkpoint_sequence: previous_content.checkpoint_sequence,
+            checkpoint_id: previous.checkpoint_id,
+        };
+        validate_canonical_sync_v2_session_checkpoint_record(
+            previous,
+            identity_key,
+            expected_head,
+        )?;
+        let expected_runtime_record = CanonicalSyncV2SessionRuntimeRecord {
+            checkpoint_id: previous.checkpoint_id,
+            pending_client_frame: expected_runtime.pending_client_frame.clone(),
+        };
+        validate_canonical_sync_v2_session_runtime_record(&expected_runtime_record, previous)?;
+        verify_sync_session_checkpoint_successor_v2(previous.checkpoint(), successor)?;
+        let content = &successor.content;
+        if content.checkpoint_sequence > MAX_CANONICAL_SYNC_V2_SESSION_CHECKPOINTS {
+            return Err(StoreError::CanonicalSyncV2SessionCheckpointChainTooLong {
+                actual: content.checkpoint_sequence,
+                maximum: MAX_CANONICAL_SYNC_V2_SESSION_CHECKPOINTS,
+            });
+        }
+        let successor_id = sync_session_checkpoint_id_v2(successor)?;
+        let stored = CanonicalSyncV2StoredSessionCheckpoint {
+            import_plan_id: previous.import_plan_id,
+            checkpoint_id: successor_id,
+            checkpoint: successor.clone(),
+        };
+        let next_head = CanonicalSyncV2SessionCheckpointHead {
+            import_plan_id: previous.import_plan_id,
+            checkpoint_sequence: content.checkpoint_sequence,
+            checkpoint_id: successor_id,
+        };
+        let next_runtime = CanonicalSyncV2SessionRuntimeRecord {
+            checkpoint_id: successor_id,
+            pending_client_frame: pending_client_frame.cloned(),
+        };
+        validate_canonical_sync_v2_session_runtime_record(&next_runtime, &stored)?;
+        let prepared =
+            prepare_canonical_sync_v2_carriers(content.conversation_id, received_events)?;
+        let expected_received_keys = content
+            .received_event_keys
+            .iter()
+            .copied()
+            .filter(|key| {
+                previous_content
+                    .received_event_keys
+                    .binary_search(key)
+                    .is_err()
+            })
+            .collect::<Vec<_>>();
+        let actual_received_keys = prepared
+            .iter()
+            .map(|(event_key, _)| *event_key)
+            .collect::<Vec<_>>();
+        if actual_received_keys != expected_received_keys {
+            return Err(StoreError::CanonicalSyncV2SessionRuntimeReceivedCarrierMismatch);
+        }
+        let encoded_record = encode_canonical_sync_v2_session_checkpoint_record(&stored)?;
+        let encoded_head = encode_canonical_sync_v2_session_checkpoint_head(next_head);
+        let encoded_runtime = encode_canonical_sync_v2_session_runtime_record(&next_runtime)?;
+        let previous_key = canonical_sync_v2_session_checkpoint_key(
+            identity_key,
+            previous_content.checkpoint_sequence,
+        );
+        let successor_key =
+            canonical_sync_v2_session_checkpoint_key(identity_key, content.checkpoint_sequence);
+
+        let mut write = self
+            .database
+            .begin_write()
+            .map_err(canonical_sync_v2_database_error)?;
+        write
+            .set_durability(Durability::Immediate)
+            .map_err(canonical_sync_v2_database_error)?;
+        let current_head = {
+            let table = write
+                .open_table(CANONICAL_SYNC_V2_SESSION_CHECKPOINT_HEAD_TABLE)
+                .map_err(canonical_sync_v2_database_error)?;
+            table
+                .get(identity_key.as_slice())
+                .map_err(canonical_sync_v2_database_error)?
+                .map(|value| decode_canonical_sync_v2_session_checkpoint_head(value.value()))
+                .transpose()?
+                .ok_or(StoreError::CanonicalSyncV2SessionCheckpointHeadMissing)?
+        };
+
+        if current_head == next_head {
+            let existing = {
+                let table = write
+                    .open_table(CANONICAL_SYNC_V2_SESSION_CHECKPOINT_TABLE)
+                    .map_err(canonical_sync_v2_database_error)?;
+                table
+                    .get(successor_key.as_slice())
+                    .map_err(canonical_sync_v2_database_error)?
+                    .map(|value| decode_canonical_sync_v2_session_checkpoint_record(value.value()))
+                    .transpose()?
+                    .ok_or(StoreError::CanonicalSyncV2SessionCheckpointHeadMissingRecord)?
+            };
+            validate_canonical_sync_v2_session_checkpoint_record(
+                &existing,
+                identity_key,
+                current_head,
+            )?;
+            if existing != stored {
+                return Err(StoreError::CanonicalSyncV2SessionCheckpointConflict);
+            }
+            let current_runtime = {
+                let table = write
+                    .open_table(CANONICAL_SYNC_V2_SESSION_RUNTIME_TABLE)
+                    .map_err(canonical_sync_v2_database_error)?;
+                table
+                    .get(identity_key.as_slice())
+                    .map_err(canonical_sync_v2_database_error)?
+                    .map(|value| decode_canonical_sync_v2_session_runtime_record(value.value()))
+                    .transpose()?
+                    .ok_or(StoreError::CanonicalSyncV2SessionRuntimeMissing)?
+            };
+            validate_canonical_sync_v2_session_runtime_record(&current_runtime, &existing)?;
+            if current_runtime != next_runtime {
+                return Err(StoreError::CanonicalSyncV2SessionRuntimeTransitionConflict);
+            }
+            let table = write
+                .open_table(CANONICAL_SYNC_V2_CARRIER_TABLE)
+                .map_err(canonical_sync_v2_database_error)?;
+            for (event_key, encoded) in &prepared {
+                let storage_key =
+                    canonical_sync_v2_storage_key(content.conversation_id, *event_key);
+                let existing = table
+                    .get(storage_key.as_slice())
+                    .map_err(canonical_sync_v2_database_error)?
+                    .map(|value| value.value().to_vec())
+                    .ok_or(StoreError::CanonicalSyncV2CarrierMissing {
+                        conversation_id: content.conversation_id,
+                        event_key: *event_key,
+                    })?;
+                validate_canonical_sync_v2_stored_carrier(
+                    content.conversation_id,
+                    *event_key,
+                    &existing,
+                )?;
+                if existing != *encoded {
+                    return Err(StoreError::CanonicalSyncV2CarrierConflict {
+                        conversation_id: content.conversation_id,
+                        event_key: *event_key,
+                    });
+                }
+            }
+            return Ok(CanonicalSyncV2StoredSessionRuntime {
+                checkpoint: existing,
+                pending_client_frame: next_runtime.pending_client_frame,
+            });
+        }
+
+        if current_head != expected_head {
+            return Err(StoreError::CanonicalSyncV2SessionRuntimeStaleCheckpoint);
+        }
+        let durable_previous = {
+            let table = write
+                .open_table(CANONICAL_SYNC_V2_SESSION_CHECKPOINT_TABLE)
+                .map_err(canonical_sync_v2_database_error)?;
+            table
+                .get(previous_key.as_slice())
+                .map_err(canonical_sync_v2_database_error)?
+                .map(|value| decode_canonical_sync_v2_session_checkpoint_record(value.value()))
+                .transpose()?
+                .ok_or(StoreError::CanonicalSyncV2SessionCheckpointHeadMissingRecord)?
+        };
+        validate_canonical_sync_v2_session_checkpoint_record(
+            &durable_previous,
+            identity_key,
+            current_head,
+        )?;
+        if durable_previous != *previous {
+            return Err(StoreError::CanonicalSyncV2SessionRuntimeExpectationMismatch);
+        }
+        let current_runtime = {
+            let table = write
+                .open_table(CANONICAL_SYNC_V2_SESSION_RUNTIME_TABLE)
+                .map_err(canonical_sync_v2_database_error)?;
+            table
+                .get(identity_key.as_slice())
+                .map_err(canonical_sync_v2_database_error)?
+                .map(|value| decode_canonical_sync_v2_session_runtime_record(value.value()))
+                .transpose()?
+                .ok_or(StoreError::CanonicalSyncV2SessionRuntimeMissing)?
+        };
+        validate_canonical_sync_v2_session_runtime_record(&current_runtime, &durable_previous)?;
+        if current_runtime != expected_runtime_record {
+            return Err(StoreError::CanonicalSyncV2SessionRuntimeExpectationMismatch);
+        }
+
+        let mut missing = Vec::new();
+        {
+            let table = write
+                .open_table(CANONICAL_SYNC_V2_CARRIER_TABLE)
+                .map_err(canonical_sync_v2_database_error)?;
+            for (index, (event_key, encoded)) in prepared.iter().enumerate() {
+                let storage_key =
+                    canonical_sync_v2_storage_key(content.conversation_id, *event_key);
+                let existing = table
+                    .get(storage_key.as_slice())
+                    .map_err(canonical_sync_v2_database_error)?
+                    .map(|value| value.value().to_vec());
+                match existing {
+                    Some(value) => {
+                        validate_canonical_sync_v2_stored_carrier(
+                            content.conversation_id,
+                            *event_key,
+                            &value,
+                        )?;
+                        if value != *encoded {
+                            return Err(StoreError::CanonicalSyncV2CarrierConflict {
+                                conversation_id: content.conversation_id,
+                                event_key: *event_key,
+                            });
+                        }
+                    }
+                    None => missing.push(index),
+                }
+            }
+        }
+        {
+            let table = write
+                .open_table(CANONICAL_SYNC_V2_SESSION_CHECKPOINT_TABLE)
+                .map_err(canonical_sync_v2_database_error)?;
+            if table
+                .get(successor_key.as_slice())
+                .map_err(canonical_sync_v2_database_error)?
+                .is_some()
+            {
+                return Err(StoreError::CanonicalSyncV2SessionCheckpointOrphanRecord);
+            }
+        }
+
+        {
+            let mut table = write
+                .open_table(CANONICAL_SYNC_V2_CARRIER_TABLE)
+                .map_err(canonical_sync_v2_database_error)?;
+            for index in missing {
+                let (event_key, encoded) = &prepared[index];
+                let storage_key =
+                    canonical_sync_v2_storage_key(content.conversation_id, *event_key);
+                table
+                    .insert(storage_key.as_slice(), encoded.as_slice())
+                    .map_err(canonical_sync_v2_database_error)?;
+            }
+        }
+        {
+            let mut table = write
+                .open_table(CANONICAL_SYNC_V2_SESSION_CHECKPOINT_TABLE)
+                .map_err(canonical_sync_v2_database_error)?;
+            table
+                .insert(successor_key.as_slice(), encoded_record.as_slice())
+                .map_err(canonical_sync_v2_database_error)?;
+        }
+        {
+            let mut table = write
+                .open_table(CANONICAL_SYNC_V2_SESSION_CHECKPOINT_HEAD_TABLE)
+                .map_err(canonical_sync_v2_database_error)?;
+            table
+                .insert(identity_key.as_slice(), encoded_head.as_slice())
+                .map_err(canonical_sync_v2_database_error)?;
+        }
+        {
+            let mut table = write
+                .open_table(CANONICAL_SYNC_V2_SESSION_RUNTIME_TABLE)
+                .map_err(canonical_sync_v2_database_error)?;
+            table
+                .insert(identity_key.as_slice(), encoded_runtime.as_slice())
+                .map_err(canonical_sync_v2_database_error)?;
+        }
+        write.commit().map_err(canonical_sync_v2_database_error)?;
+        Ok(CanonicalSyncV2StoredSessionRuntime {
+            checkpoint: stored,
+            pending_client_frame: next_runtime.pending_client_frame,
         })
     }
 
@@ -1997,6 +2273,43 @@ fn validate_canonical_sync_v2_stored_carrier(
         });
     }
     Ok(carrier)
+}
+
+fn prepare_canonical_sync_v2_carriers(
+    conversation_id: [u8; 32],
+    events: &[CanonicalSyncEventCarrierV2],
+) -> Result<Vec<(CanonicalSyncEventKeyV2, Vec<u8>)>, StoreError> {
+    if events.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut keyed_events = events
+        .iter()
+        .map(|event| {
+            event
+                .key()
+                .map(|key| (key, event))
+                .map_err(CanonicalSyncV2Error::from)
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    keyed_events.sort_unstable_by_key(|(key, _)| *key);
+    let canonical_events = keyed_events
+        .iter()
+        .map(|(_, event)| (*event).clone())
+        .collect::<Vec<_>>();
+    encode_sync_event_batch_v2(&CanonicalSyncEventBatchV2 {
+        conversation_id,
+        events: canonical_events,
+    })?;
+    keyed_events
+        .into_iter()
+        .map(|(key, event)| {
+            event
+                .encode()
+                .map(|encoded| (key, encoded))
+                .map_err(CanonicalSyncV2Error::from)
+                .map_err(StoreError::from)
+        })
+        .collect()
 }
 
 fn canonical_sync_v2_database_error(error: impl std::fmt::Display) -> StoreError {
@@ -3493,6 +3806,15 @@ pub enum StoreError {
     #[error("canonical sync v2 session runtime frame conflicts with immutable pending state")]
     CanonicalSyncV2SessionRuntimeFrameConflict,
 
+    #[error("canonical sync v2 session runtime changed since the transition was prepared")]
+    CanonicalSyncV2SessionRuntimeExpectationMismatch,
+
+    #[error("canonical sync v2 session runtime conflicts with an already committed transition")]
+    CanonicalSyncV2SessionRuntimeTransitionConflict,
+
+    #[error("canonical sync v2 received carriers do not match the signed successor evidence delta")]
+    CanonicalSyncV2SessionRuntimeReceivedCarrierMismatch,
+
     #[error("canonical sync v2 session runtime frame belongs to a different session")]
     CanonicalSyncV2SessionRuntimeFrameSessionMismatch,
 
@@ -3782,6 +4104,26 @@ mod tests {
             .checked_add(1)
             .ok_or("checkpoint sequence overflow")?;
         content.predecessor_checkpoint_id = Some(sync_session_checkpoint_id_v2(previous)?);
+        content.next_action = next_action;
+        Ok(CanonicalSignedSyncSessionCheckpointV2 {
+            signature: identity.sign(&sync_session_checkpoint_signing_bytes_v2(&content)?),
+            content,
+        })
+    }
+
+    fn signed_session_checkpoint_successor_with_received(
+        previous: &CanonicalSignedSyncSessionCheckpointV2,
+        identity: &DeviceIdentity,
+        next_action: CanonicalSyncNextActionV2,
+        received_event_keys: Vec<CanonicalSyncEventKeyV2>,
+    ) -> Result<CanonicalSignedSyncSessionCheckpointV2, Box<dyn Error>> {
+        let mut content = previous.content.clone();
+        content.checkpoint_sequence = content
+            .checkpoint_sequence
+            .checked_add(1)
+            .ok_or("checkpoint sequence overflow")?;
+        content.predecessor_checkpoint_id = Some(sync_session_checkpoint_id_v2(previous)?);
+        content.received_event_keys = received_event_keys;
         content.next_action = next_action;
         Ok(CanonicalSignedSyncSessionCheckpointV2 {
             signature: identity.sign(&sync_session_checkpoint_signing_bytes_v2(&content)?),
@@ -4951,6 +5293,254 @@ mod tests {
             .ok_or("missing reopened runtime state")?;
         assert_eq!(restored.checkpoint(), &receive_diff_stored);
         assert_eq!(restored.pending_client_frame(), Some(&inventory));
+        Ok(())
+    }
+
+    #[test]
+    fn canonical_sync_v2_session_runtime_transition_commits_carriers_checkpoint_and_frame_atomically()
+    -> Result<(), Box<dyn Error>> {
+        let fixture = legacy_import_fixture("canonical-sync-v2-atomic-batch", 0)?;
+        let conversation_id = ConversationId::from_label("canonical-sync-v2-atomic-batch");
+        let plan = fixture
+            .source
+            .canonical_sync_v2_legacy_import_plan(conversation_id, &fixture.membership)?;
+        fixture.target.import_legacy_page(
+            &fixture.source,
+            &fixture.membership,
+            &plan,
+            plan.start_cursor(),
+            1,
+        )?;
+        let identity = DeviceIdentity::from_secret_bytes([0x3a; 32]);
+        let peer = DeviceIdentity::from_secret_bytes([0x5a; 32]);
+        let session_binding =
+            SyncSessionBinding::from_transport_label("canonical-v2-atomic-transition");
+        let initial = signed_legacy_import_session_bootstrap(
+            &plan,
+            &identity,
+            peer.device_id(),
+            session_binding,
+        )?;
+        fixture
+            .target
+            .install_legacy_import_session_bootstrap(&plan, &initial)?;
+        let initial_runtime = fixture
+            .target
+            .session_runtime_state(
+                *conversation_id.as_bytes(),
+                *identity.device_id().as_bytes(),
+                *peer.device_id().as_bytes(),
+                *session_binding.as_bytes(),
+            )?
+            .ok_or("missing initial runtime state")?;
+
+        let inventory_content = CanonicalSyncInventoryContentV2 {
+            conversation_id: *conversation_id.as_bytes(),
+            requester_device_id: *identity.device_id().as_bytes(),
+            session_binding: *session_binding.as_bytes(),
+            event_keys: Vec::new(),
+        };
+        let inventory = CanonicalSyncClientFrameV2::Inventory(CanonicalSignedSyncInventoryV2 {
+            signature: identity.sign(&sync_inventory_signing_bytes_v2(&inventory_content)?),
+            content: inventory_content,
+        });
+        let receive_diff = signed_session_checkpoint_successor(
+            &initial,
+            &identity,
+            CanonicalSyncNextActionV2::ReceiveDiff,
+        )?;
+        let receive_diff_runtime = fixture.target.commit_session_runtime_transition(
+            &initial_runtime,
+            &receive_diff,
+            Some(&inventory),
+            &[],
+        )?;
+        assert_eq!(
+            receive_diff_runtime.pending_client_frame(),
+            Some(&inventory)
+        );
+
+        let (first, _) = canonical_sync_v2_legacy_pair()?;
+        let first_key = first.key()?;
+        let outgoing_batch = CanonicalSyncClientFrameV2::Events(CanonicalSyncEventBatchV2 {
+            conversation_id: *conversation_id.as_bytes(),
+            events: Vec::new(),
+        });
+        let send_batch = signed_session_checkpoint_successor_with_received(
+            &receive_diff,
+            &identity,
+            CanonicalSyncNextActionV2::SendEventBatch,
+            vec![first_key],
+        )?;
+        assert!(matches!(
+            fixture.target.commit_session_runtime_transition(
+                &receive_diff_runtime,
+                &send_batch,
+                Some(&outgoing_batch),
+                &[],
+            ),
+            Err(StoreError::CanonicalSyncV2SessionRuntimeReceivedCarrierMismatch)
+        ));
+        assert!(!canonical_sync_v2_raw_exists(
+            &fixture.target,
+            *conversation_id.as_bytes(),
+            first_key,
+        )?);
+        let committed = fixture.target.commit_session_runtime_transition(
+            &receive_diff_runtime,
+            &send_batch,
+            Some(&outgoing_batch),
+            std::slice::from_ref(&first),
+        )?;
+        assert_eq!(committed.pending_client_frame(), Some(&outgoing_batch));
+        assert_eq!(
+            fixture.target.inventory(*conversation_id.as_bytes())?,
+            vec![first_key]
+        );
+        assert_eq!(
+            fixture.target.commit_session_runtime_transition(
+                &receive_diff_runtime,
+                &send_batch,
+                Some(&outgoing_batch),
+                std::slice::from_ref(&first),
+            )?,
+            committed
+        );
+
+        let LegacyImportFixture {
+            _source_directory,
+            target_directory,
+            _root_directory,
+            source: _,
+            target,
+            root: _,
+            membership: _,
+            events: _,
+        } = fixture;
+        drop(target);
+        let reopened = CanonicalSyncV2CarrierStore::open(target_directory.path())?;
+        assert_eq!(
+            reopened
+                .session_runtime_state(
+                    *conversation_id.as_bytes(),
+                    *identity.device_id().as_bytes(),
+                    *peer.device_id().as_bytes(),
+                    *session_binding.as_bytes(),
+                )?
+                .ok_or("missing reopened runtime state")?,
+            committed
+        );
+        assert_eq!(
+            reopened.events_by_key(*conversation_id.as_bytes(), &[first_key])?,
+            vec![first]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn canonical_sync_v2_session_runtime_transition_conflict_rolls_back_everything()
+    -> Result<(), Box<dyn Error>> {
+        let fixture = legacy_import_fixture("canonical-sync-v2-atomic-batch", 0)?;
+        let conversation_id = ConversationId::from_label("canonical-sync-v2-atomic-batch");
+        let plan = fixture
+            .source
+            .canonical_sync_v2_legacy_import_plan(conversation_id, &fixture.membership)?;
+        fixture.target.import_legacy_page(
+            &fixture.source,
+            &fixture.membership,
+            &plan,
+            plan.start_cursor(),
+            1,
+        )?;
+        let identity = DeviceIdentity::from_secret_bytes([0x3b; 32]);
+        let peer = DeviceIdentity::from_secret_bytes([0x5b; 32]);
+        let session_binding =
+            SyncSessionBinding::from_transport_label("canonical-v2-atomic-rollback");
+        let initial = signed_legacy_import_session_bootstrap(
+            &plan,
+            &identity,
+            peer.device_id(),
+            session_binding,
+        )?;
+        fixture
+            .target
+            .install_legacy_import_session_bootstrap(&plan, &initial)?;
+        let initial_runtime = fixture
+            .target
+            .session_runtime_state(
+                *conversation_id.as_bytes(),
+                *identity.device_id().as_bytes(),
+                *peer.device_id().as_bytes(),
+                *session_binding.as_bytes(),
+            )?
+            .ok_or("missing initial runtime state")?;
+        let receive_diff = signed_session_checkpoint_successor(
+            &initial,
+            &identity,
+            CanonicalSyncNextActionV2::ReceiveDiff,
+        )?;
+        let receive_diff_runtime = fixture.target.commit_session_runtime_transition(
+            &initial_runtime,
+            &receive_diff,
+            None,
+            &[],
+        )?;
+        let (first, second) = canonical_sync_v2_legacy_pair()?;
+        let first_key = first.key()?;
+        let second_key = second.key()?;
+        let mut received_keys = vec![first_key, second_key];
+        received_keys.sort_unstable();
+        overwrite_canonical_sync_v2_raw(
+            &fixture.target,
+            *conversation_id.as_bytes(),
+            first_key,
+            &second.encode()?,
+        )?;
+        let send_batch = signed_session_checkpoint_successor_with_received(
+            &receive_diff,
+            &identity,
+            CanonicalSyncNextActionV2::SendEventBatch,
+            received_keys,
+        )?;
+        let result = fixture.target.commit_session_runtime_transition(
+            &receive_diff_runtime,
+            &send_batch,
+            None,
+            &[first, second],
+        );
+        assert!(matches!(
+            result,
+            Err(StoreError::CanonicalSyncV2StoredCarrierKeyMismatch { .. })
+        ));
+        assert!(!canonical_sync_v2_raw_exists(
+            &fixture.target,
+            *conversation_id.as_bytes(),
+            second_key,
+        )?);
+        assert_eq!(
+            fixture
+                .target
+                .session_runtime_state(
+                    *conversation_id.as_bytes(),
+                    *identity.device_id().as_bytes(),
+                    *peer.device_id().as_bytes(),
+                    *session_binding.as_bytes(),
+                )?
+                .ok_or("missing runtime after rejected transition")?,
+            receive_diff_runtime
+        );
+        assert_eq!(
+            fixture
+                .target
+                .session_checkpoint_head(
+                    *conversation_id.as_bytes(),
+                    *identity.device_id().as_bytes(),
+                    *peer.device_id().as_bytes(),
+                    *session_binding.as_bytes(),
+                )?
+                .ok_or("missing head after rejected transition")?,
+            receive_diff_runtime.checkpoint().clone()
+        );
         Ok(())
     }
 

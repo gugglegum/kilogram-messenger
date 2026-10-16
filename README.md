@@ -2396,6 +2396,16 @@ orphan state fails closed. The state machine still does not advance or resume
 from this journal, so active Postcard v6 is unchanged and `/cbor/2` remains
 unregistered and undialed.
 
+[`RFC-0191`](docs/RFC-0191-m1165-atomic-runtime-transition-transaction.md)
+adds the atomic local transition prerequisite. One immediate-durability redb
+transaction now commits verified received carriers, the immutable signed
+successor, its replacement head and the exact successor-bound pending frame.
+The previously restored runtime is an optimistic concurrency token; exact
+lost-response retry is idempotent, while stale state, an orphan successor or a
+carrier conflict rejects the whole transition. The dormant adapter still does
+not invoke this primitive, so active Postcard v6 is unchanged and `/cbor/2`
+remains unregistered and undialed.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

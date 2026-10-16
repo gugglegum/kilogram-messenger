@@ -4293,3 +4293,27 @@ Hosted follow-up:
   authenticated capability selection remain the next activation work.
 - No network operation, release build, archive, stable executable replacement,
   push or tag belongs to this stage.
+## M1.1.65 atomic runtime transition transaction (2026-10-16)
+
+- Рабочая ветка: `master`; predecessor: local commit `f0f7970` (M1.1.64).
+- Новый store API: `CanonicalSyncV2CarrierStore::commit_session_runtime_transition`.
+  Он использует прежний `CanonicalSyncV2StoredSessionRuntime` как exact
+  optimistic-concurrency token и одной immediate redb transaction пишет
+  verified received carriers, signed successor record, head и replacement
+  pending-frame runtime record.
+- Exact replay после потерянного ответа идемпотентен только при полном совпадении
+  successor/runtime/carrier bytes. Stale runtime, orphan record, malformed или
+  conflicting carrier fail closed до частичного commit.
+- Focused debug/offline regression запускается resource-friendly wrapper с
+  `CargoJobs 2` и below-normal priority. Внутри файловой sandbox Windows temp
+  directories возвращают access denied, поэтому тесты требуют разрешённого
+  запуска вне sandbox; release build и ZIP не нужны.
+- Новый verifier:
+  `scripts/verify-kilogram-canonical-sync-v2-atomic-runtime-transition-boundary.ps1`.
+  Он имеет negative `-SelfTest` и проверяет отсутствие вызова store primitive в
+  adapter/wire/transport/CLI.
+- Focused tests: 2/2; `kilogram-store`: 28/28; `kilogram-session`: 12/12.
+  Все 95 root JSON parsed; 16 связанных boundary scripts прошли normal/self;
+  accepted-tag readiness прошёл 97/97 с offline strict Clippy.
+- Active Postcard v6 не изменён; `/cbor/2` не зарегистрирован и не dial-ится.
+  Следующий этап — adapter transition integration и exact restart dispatch.

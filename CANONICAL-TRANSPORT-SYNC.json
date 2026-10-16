@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.64",
-  "status": "dormant-checkpoint-bound-runtime-frame-journal-verified-not-active",
+  "milestone": "M1.1.65",
+  "status": "dormant-atomic-runtime-transition-transaction-verified-not-active",
   "surface": "transport-sync",
   "changes_active_wire": false,
   "active": {
@@ -36,6 +36,7 @@
     "dormant_signed_session_bootstrap": true,
     "dormant_signed_session_successor_store": true,
     "dormant_checkpoint_bound_runtime_frame_journal": true,
+    "dormant_atomic_runtime_transition_transaction": true,
     "registered": false,
     "dialed": false,
     "format_sniffing": false,
@@ -67,7 +68,6 @@
   },
   "remaining": [
     "signed-checkpoint-runtime-transition-integration",
-    "atomic-received-carrier-and-checkpoint-transition",
     "mutual-authenticated-capability-selection",
     "mixed-version-and-downgrade-tests",
     "rollback-drill",

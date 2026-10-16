@@ -122,9 +122,9 @@ function Assert-Contract {
         throw 'canonical sync v2 session runtime frame scope changed'
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.64' -or
+    if ([string]$Migration.milestone -cne 'M1.1.65' -or
         [string]$Migration.status -cne
-            'dormant-checkpoint-bound-runtime-frame-journal-verified-not-active' -or
+            'dormant-atomic-runtime-transition-transaction-verified-not-active' -or
         [string]$Migration.history_compatible_successor.dormant_checkpoint_bound_runtime_frame_journal -cne
             'verified' -or
         [bool]$Migration.history_compatible_successor.registered -or
@@ -139,30 +139,30 @@ function Assert-Contract {
         [string]$runtimeRequirement[0].status -cne 'verified') {
         throw 'canonical migration runtime frame requirement is not verified'
     }
-    if ([string]$TransportManifest.milestone -cne 'M1.1.64' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.65' -or
         [string]$TransportManifest.status -cne
-            'dormant-checkpoint-bound-runtime-frame-journal-verified-not-active' -or
+            'dormant-atomic-runtime-transition-transaction-verified-not-active' -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_checkpoint_bound_runtime_frame_journal -or
         'signed-checkpoint-runtime-transition-integration' -cnotin
             @($TransportManifest.remaining) -or
-        'atomic-received-carrier-and-checkpoint-transition' -cnotin
+        'atomic-received-carrier-and-checkpoint-transition' -cin
             @($TransportManifest.remaining) -or
         [bool]$TransportManifest.history_compatible_successor.registered -or
         [bool]$TransportManifest.history_compatible_successor.dialed) {
         throw 'transport sync manifest lost checkpoint-bound runtime frame state'
     }
-    if ([string]$Compatibility.milestone -cne 'M1.1.64' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.65' -or
         [string]$Compatibility.status -cne
-            'dormant-checkpoint-bound-runtime-frame-journal-verified-not-active' -or
+            'dormant-atomic-runtime-transition-transaction-verified-not-active' -or
         -not [bool]$Compatibility.required_successor.dormant_checkpoint_bound_runtime_frame_journal_integrated -or
         [string]$Compatibility.required_successor.status -cne
-            'dormant-store-policy-import-checkpoint-session-bootstrap-successor-store-and-runtime-frame-journal-verified-not-active') {
+            'dormant-store-policy-import-checkpoint-session-bootstrap-successor-store-runtime-frame-journal-and-atomic-runtime-transition-verified-not-active') {
         throw 'history compatibility manifest lost checkpoint-bound runtime frame state'
     }
     $transportCoverage = @(
         @($Coverage.surfaces) | Where-Object { [string]$_.id -ceq 'transport-sync' }
     )
-    if ([string]$Coverage.milestone -cne 'M1.1.64' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.65' -or
         $transportCoverage.Count -ne 1 -or
         'CANONICAL-SYNC-V2-SESSION-RUNTIME-FRAME.json' -cnotin
             @($transportCoverage[0].artifacts) -or
@@ -174,7 +174,7 @@ function Assert-Contract {
             @($transportCoverage[0].covered) -or
         'signed-checkpoint-runtime-transition-integration' -cnotin
             @($transportCoverage[0].remaining) -or
-        'atomic-received-carrier-and-checkpoint-transition' -cnotin
+        'atomic-received-carrier-and-checkpoint-transition' -cin
             @($transportCoverage[0].remaining)) {
         throw 'canonical coverage does not include checkpoint-bound runtime frame artifacts'
     }

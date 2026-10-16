@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.65",
+  "status": "dormant-atomic-runtime-transition-transaction-verified-not-active",
+  "changes_active_wire": false,
+  "protocol_identifier": "kilogram/m1/sync/cbor/2",
+  "implementation": {
+    "crate": "kilogram-store",
+    "store": "CanonicalSyncV2CarrierStore",
+    "transition_api": "commit_session_runtime_transition",
+    "durability": "redb-immediate-single-write-transaction",
+    "optimistic_concurrency_token": "CanonicalSyncV2StoredSessionRuntime"
+  },
+  "contracts": {
+    "expected_checkpoint_and_runtime_match_exact_durable_state": true,
+    "successor_signature_and_transition_verified_before_write": true,
+    "received_carriers_closed_codec_verified_before_write": true,
+    "received_carriers_exactly_match_signed_successor_evidence_delta": true,
+    "received_carrier_conflicts_preflighted_before_write": true,
+    "successor_orphan_conflict_preflighted_before_write": true,
+    "received_carriers_successor_head_and_runtime_committed_atomically": true,
+    "replacement_pending_frame_bound_to_successor_checkpoint": true,
+    "exact_lost_response_retry_idempotent": true,
+    "different_retry_successor_or_replacement_frame_rejected": true,
+    "malformed_existing_carrier_rejects_whole_transition": true,
+    "format_sniffing": false,
+    "parse_error_fallback": false
+  },
+  "regression": {
+    "atomic_transition_survives_reopen": true,
+    "received_carrier_visible_with_successor_only_after_commit": true,
+    "replacement_pending_frame_survives_reopen": true,
+    "exact_transition_retry_idempotent": true,
+    "carrier_key_conflict_rolls_back_new_carriers": true,
+    "carrier_key_conflict_preserves_previous_head": true,
+    "carrier_key_conflict_preserves_previous_runtime": true
+  },
+  "activation": {
+    "atomic_store_transition_integrated": true,
+    "adapter_runtime_transition_integrated": false,
+    "runtime_resume_from_checkpoint_integrated": false,
+    "mutual_capability_selection_integrated": false,
+    "endpoint_registered": false,
+    "canonical_dial_enabled": false
+  },
+  "remaining": [
+    "signed-checkpoint-runtime-transition-integration",
+    "mutual-authenticated-capability-selection",
+    "mixed-version-and-downgrade-tests",
+    "rollback-drill",
+    "sustained-fuzzing",
+    "fresh-hosted-and-field-evidence"
+  ],
+  "scope": {
+    "network_executed": false,
+    "release_build": false,
+    "archive_created": false,
+    "stable_executable_replaced": false
+  }
+}

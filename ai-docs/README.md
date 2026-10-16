@@ -1071,6 +1071,11 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   signed checkpoint в отдельной versioned redb table. Bootstrap/successor
   атомарно создают или rebind-ят runtime record, frame write-once и strict
   reverified после reopen; runtime transition/resume ещё не подключены.
+- [`../docs/RFC-0191-m1165-atomic-runtime-transition-transaction.md`](../docs/RFC-0191-m1165-atomic-runtime-transition-transaction.md) —
+  M1.1.65 атомарно коммитит verified received carriers, signed successor,
+  session head и exact successor-bound pending frame. Предыдущий runtime служит
+  optimistic concurrency token; exact retry идемпотентен, conflict откатывает
+  всю transaction. Adapter/resume/capability selection ещё не подключены.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

@@ -6565,3 +6565,26 @@ correlation visible, Windows-only field evidence, independent security audit
   unregistered/undialed; следующий bounded slice — runtime transition
   checkpointing/restart continuation, затем mutual authenticated capability
   selection. Network/release/archive/stable EXE/push/tag не выполнялись.
+### M1.1.65 — dormant atomic runtime transition transaction: принято локально
+
+- `CanonicalSyncV2CarrierStore::commit_session_runtime_transition` принимает
+  exact restored runtime как optimistic concurrency token, verified signed
+  successor, replacement pending frame и received typed carriers;
+- successor signature/edge, runtime/head/predecessor и closed carrier batch
+  проверяются до write. Missing carriers, immutable successor, head и runtime
+  record коммитятся одной immediate-durability redb transaction;
+- exact lost-response retry повторно проверяет committed checkpoint, frame и
+  carrier bytes и возвращает тот же runtime. Stale/mismatched expectation,
+  different retry, orphan successor и immutable carrier conflict fail closed;
+- regression доказывает reopen/restore и полное rollback: corrupt carrier не
+  оставляет новый carrier, successor, head или runtime frame;
+- dedicated manifest, RFC-0191 и boundary фиксируют dormant store-only scope:
+  adapter/resume/capability selection не активированы, `/cbor/2` остаётся
+  unregistered/undialed;
+- focused atomic regression прошёл 2/2, полный `kilogram-store` — 28/28,
+  связанный `kilogram-session` — 12/12. Dedicated boundary и пятнадцать
+  затронутых aggregate boundaries прошли normal и negative self-test modes;
+- все 95 root JSON documents parsed, rustfmt, workspace-wide locked/offline
+  strict Clippy и accepted-tag readiness прошли 97/97 против immutable
+  `M1.0.0`; readiness не запускал test executable и network operation;
+- network/release/archive/stable EXE, push и tag не выполнялись.

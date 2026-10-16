@@ -136,9 +136,9 @@ function Assert-Contract {
         }
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.64' -or
+    if ([string]$Migration.milestone -cne 'M1.1.65' -or
         [string]$Migration.status -cne
-            'dormant-checkpoint-bound-runtime-frame-journal-verified-not-active' -or
+            'dormant-atomic-runtime-transition-transaction-verified-not-active' -or
         [string]$Migration.history_compatible_successor.dormant_bounded_resumable_legacy_import -cne
             'verified' -or
         [string]$Migration.history_compatible_successor.dormant_atomic_legacy_import_checkpoint -cne
@@ -154,9 +154,9 @@ function Assert-Contract {
         [string]$importRequirement[0].status -cne 'verified') {
         throw 'canonical migration lost the verified legacy import requirement'
     }
-    if ([string]$TransportManifest.milestone -cne 'M1.1.64' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.65' -or
         [string]$TransportManifest.status -cne
-            'dormant-checkpoint-bound-runtime-frame-journal-verified-not-active' -or
+            'dormant-atomic-runtime-transition-transaction-verified-not-active' -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_bounded_resumable_legacy_import -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_atomic_legacy_import_checkpoint -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_signed_session_bootstrap -or
@@ -168,22 +168,22 @@ function Assert-Contract {
             @($TransportManifest.remaining)) {
         throw 'transport sync manifest does not preserve the dormant legacy import boundary'
     }
-    if ([string]$Compatibility.milestone -cne 'M1.1.64' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.65' -or
         [string]$Compatibility.status -cne
-            'dormant-checkpoint-bound-runtime-frame-journal-verified-not-active' -or
+            'dormant-atomic-runtime-transition-transaction-verified-not-active' -or
         -not [bool]$Compatibility.required_successor.dormant_bounded_resumable_legacy_import_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_atomic_legacy_import_checkpoint_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_signed_session_bootstrap_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_signed_session_successor_store_integrated -or
         [string]$Compatibility.required_successor.status -cne
-            'dormant-store-policy-import-checkpoint-session-bootstrap-successor-store-and-runtime-frame-journal-verified-not-active') {
+            'dormant-store-policy-import-checkpoint-session-bootstrap-successor-store-runtime-frame-journal-and-atomic-runtime-transition-verified-not-active') {
         throw 'history compatibility manifest lost the dormant legacy import contract'
     }
     $transportCoverage = @(
         @($Coverage.surfaces) |
             Where-Object { [string]$_.id -ceq 'transport-sync' }
     )
-    if ([string]$Coverage.milestone -cne 'M1.1.64' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.65' -or
         $transportCoverage.Count -ne 1 -or
         'CANONICAL-SYNC-V2-LEGACY-IMPORT.json' -cnotin @($transportCoverage[0].artifacts) -or
         'scripts/verify-kilogram-canonical-sync-v2-legacy-import-boundary.ps1' -cnotin

@@ -446,9 +446,10 @@ sessions, distribution, removal и key epochs и не решены этим пр
   с carrier page, а M1.1.62 — gated sequence-1 Device-signed checkpoint после
   complete exact import. M1.1.63 добавил atomic signed successor journal и
   полное verified restore цепочки. M1.1.64 добавил exact pending-frame journal,
-  привязанный к текущему checkpoint, но ещё не подключил его к state machine.
-  Следующий приоритет — atomic создание successor checkpoint на каждом runtime
-  transition, coupling полученных carriers с checkpoint и restart/resume из
+  привязанный к текущему checkpoint. M1.1.65 добавил одну redb transaction для
+  received carriers, signed successor, head и replacement runtime frame с
+  optimistic concurrency и exact retry. Следующий приоритет — подключить эту
+  transaction к каждому переходу dormant adapter и доказать restart/resume из
   восстановленного action,
   затем mutual authenticated capability selection перед active dual reader без
   fallback после canonical failure. Общая activation требует
@@ -469,12 +470,12 @@ sessions, distribution, removal и key epochs и не решены этим пр
   M1.1.55 добавил typed durable checkpoint, который не теряет namespace при
   resume и подписывает exact protocol identifier. M1.1.56 аутентифицировал
   exact `/cbor/2` в Device-signed ticket capability v2 без регистрации/dial.
-  M1.1.57–M1.1.64 закрыли dormant state machine, atomic typed carrier store,
+  M1.1.57–M1.1.65 закрыли dormant state machine, atomic typed carrier store,
   2×2 cross-format membership policy, bounded exact legacy-history import и
   atomic durable local import cursor, gated initial signed checkpoint и full
-  signed successor persistence/restore и exact checkpoint-bound pending-frame
-  journal. Открыты runtime transition checkpointing, atomic carrier/checkpoint
-  coupling, restart continuation и mutual authenticated capability
+  signed successor persistence/restore, exact checkpoint-bound pending-frame
+  journal и atomic carrier/checkpoint/runtime transition transaction. Открыты
+  adapter integration, restart continuation и mutual authenticated capability
   selection, и только затем active dual-reader slice с downgrade regression.
 
 ## Инварианты при выборе ответов
