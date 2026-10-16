@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.62",
-  "status": "dormant-signed-session-bootstrap-verified-not-active",
+  "milestone": "M1.1.63",
+  "status": "dormant-signed-session-successor-store-verified-not-active",
   "changes_active_wire": false,
   "active": {
     "encoding": "postcard-v6",
@@ -48,10 +48,11 @@
     "dormant_bounded_resumable_legacy_import_integrated": true,
     "dormant_atomic_legacy_import_checkpoint_integrated": true,
     "dormant_signed_session_bootstrap_integrated": true,
+    "dormant_signed_session_successor_store_integrated": true,
     "must_integrate_bridge_into_closed_frames": true,
     "must_authenticate_exact_identifier_in_connection_ticket": true,
     "must_preserve_no-sniffing-and-no-parse-fallback": true,
-    "status": "dormant-store-policy-import-checkpoint-and-session-bootstrap-verified-not-active"
+    "status": "dormant-store-policy-import-checkpoint-session-bootstrap-and-successor-store-verified-not-active"
   },
   "forbidden": [
     "resign-historical-event-with-migration-key",

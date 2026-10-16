@@ -121,8 +121,9 @@ function Assert-Contract {
         -not [bool]$Compatibility.required_successor.dormant_bounded_resumable_legacy_import_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_atomic_legacy_import_checkpoint_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_signed_session_bootstrap_integrated -or
+        -not [bool]$Compatibility.required_successor.dormant_signed_session_successor_store_integrated -or
         [string]$Compatibility.required_successor.status -cne
-            'dormant-store-policy-import-checkpoint-and-session-bootstrap-verified-not-active') {
+            'dormant-store-policy-import-checkpoint-session-bootstrap-and-successor-store-verified-not-active') {
         throw 'canonical sync history compatibility ledger changed'
     }
     if ([string]$Migration.history_compatible_successor.protocol_identifier -cne
@@ -145,6 +146,8 @@ function Assert-Contract {
         [string]$Migration.history_compatible_successor.dormant_atomic_legacy_import_checkpoint -cne
             'verified' -or
         [string]$Migration.history_compatible_successor.dormant_signed_session_bootstrap -cne
+            'verified' -or
+        [string]$Migration.history_compatible_successor.dormant_signed_session_successor_store -cne
             'verified' -or
         [bool]$Migration.history_compatible_successor.registered -or
         [bool]$Migration.history_compatible_successor.dialed -or
@@ -169,6 +172,7 @@ function Assert-Contract {
         -not [bool]$TransportManifest.history_compatible_successor.dormant_bounded_resumable_legacy_import -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_atomic_legacy_import_checkpoint -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_signed_session_bootstrap -or
+        -not [bool]$TransportManifest.history_compatible_successor.dormant_signed_session_successor_store -or
         [bool]$TransportManifest.history_compatible_successor.registered -or
         [bool]$TransportManifest.history_compatible_successor.dialed -or
         [bool]$TransportManifest.authenticated_capability.canonical_dial_enabled) {

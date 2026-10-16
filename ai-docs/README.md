@@ -1061,6 +1061,11 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   record и head и fail closed проверяет signature/ID/key/head relation. Это
   gated dormant bootstrap; successor checkpoints и mutual capability selection
   ещё не подключены, `/cbor/2` не зарегистрирован и не dial-ится.
+- [`../docs/RFC-0189-m1163-dormant-signed-session-successor-store.md`](../docs/RFC-0189-m1163-dormant-signed-session-successor-store.md) —
+  M1.1.63 атомарно добавляет Device-signed successor checkpoints в тот же
+  immutable journal и после reopen проверяет всю bounded chain от exact
+  sequence-1 bootstrap до head. Gap/fork/missing/corrupt ancestry fail closed;
+  runtime transitions и mutual capability selection ещё не подключены.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

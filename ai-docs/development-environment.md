@@ -4133,6 +4133,29 @@ Hosted follow-up:
 - No network operation, release build, archive, stable executable replacement,
   push or tag belongs to this stage.
 
+## M1.1.63 dormant signed session successor store (2026-10-16)
+
+- `CanonicalSyncV2CarrierStore` now appends a verified Device-signed successor
+  only against the exact current durable head. The canonical protocol verifier
+  enforces identity, sequence, predecessor, round, typed evidence, availability,
+  next-action, pause/resume and terminal transition rules.
+- The immutable successor record and replacement head share one redb write
+  transaction with immediate durability. Exact replay is idempotent; gaps,
+  stale or forked successors, missing heads and terminal successors fail closed.
+- `session_checkpoint_chain` reads every record from sequence one through the
+  bounded head (maximum 65,536), revalidates the initial bootstrap and verifies
+  every signed successor edge before returning a head. Missing or corrupted
+  ancestry is never skipped or repaired implicitly.
+- Focused store tests passed 5/5; full `kilogram-store` passed 24/24 and full
+  `kilogram-session` passed 12/12. The dedicated boundary plus thirteen related
+  aggregate boundaries passed normal and negative self-test modes.
+- All 93 root JSON documents parsed. `cargo fmt --all -- --check`, workspace
+  locked/offline strict Clippy and accepted `M1.0.0` readiness passed 95/95.
+- Runtime frame transitions still do not write or resume these checkpoints.
+  `/cbor/2` remains unregistered and undialed pending that integration and
+  mutual authenticated capability selection. No network operation, release
+  build, archive, stable executable replacement, push or tag belongs here.
+
 ## M1.1.62 dormant signed session bootstrap (2026-10-16)
 
 - Added versioned redb tables `canonical-sync-v2-session-checkpoints-v1` and

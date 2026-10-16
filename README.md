@@ -2378,6 +2378,14 @@ replayed idempotently. Only sequence 1 is integrated: successor checkpoints,
 mutual authenticated capability selection and active transport remain pending,
 so `/cbor/2` is still unregistered and undialed.
 
+[`RFC-0189`](docs/RFC-0189-m1163-dormant-signed-session-successor-store.md)
+extends that dormant journal with atomic Device-signed successor append and
+bounded full-chain restore. Every immutable record, signature, checkpoint ID,
+predecessor edge and transition is reverified after reopen; gaps, forks,
+corruption and missing ancestry fail closed. Runtime frame transitions do not
+yet emit or resume from these checkpoints, so `/cbor/2` remains unregistered
+and undialed pending runtime integration and mutual capability selection.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

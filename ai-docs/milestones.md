@@ -6508,3 +6508,32 @@ correlation visible, Windows-only field evidence, independent security audit
   bounded slice — signed successor checkpoint persistence/restore во всех
   runtime transitions, затем mutual authenticated capability selection;
   release/archive/stable EXE, push и tag не выполнялись.
+
+### M1.1.63 — dormant signed session successor store: принято локально
+
+- `CanonicalSyncV2CarrierStore::append_session_checkpoint_successor` требует
+  exact durable head и проверяет новый Device-signed checkpoint canonical
+  protocol verifier: immutable session identity, sequence/predecessor/round,
+  typed cumulative evidence, availability, next-action, pause/resume и terminal
+  rules. Import-plan binding наследуется только из verified local head;
+- immutable successor record и replacement head коммитятся одной
+  immediate-durability redb transaction. Exact lost-response replay
+  идемпотентен; gap, stale/forked successor, orphan и successor после terminal
+  state fail closed;
+- `session_checkpoint_chain` bounded до 65,536 records и после reopen проверяет
+  exact initial bootstrap, каждый record key/signature/content-derived ID/local
+  plan binding и каждую predecessor edge до head. Missing intermediate record,
+  corrupt ancestry и oversized head отвергаются без guess/repair/truncation;
+- regression восстанавливает exact three-checkpoint chain после reopen и
+  покрывает replay, skipped sequence, same-sequence fork, corrupt/missing
+  ancestry и missing durable head. Focused store regression прошёл 5/5, полный
+  `kilogram-store` — 24/24, полный `kilogram-session` — 12/12;
+- dedicated boundary и тринадцать связанных aggregate boundaries прошли normal
+  и negative self-test modes. Все 93 root JSON documents parsed, rustfmt,
+  workspace-wide locked/offline strict Clippy и accepted-tag readiness прошли
+  95/95 против immutable `M1.0.0`;
+- это dormant storage/restore primitive: runtime frame transitions ещё не
+  создают checkpoints и не продолжаются из restored action. `/cbor/2` остаётся
+  unregistered/undialed; следующий bounded slice — runtime transition
+  checkpointing/restart continuation, затем mutual authenticated capability
+  selection. Network/release/archive/stable EXE/push/tag не выполнялись.

@@ -43,8 +43,8 @@ function Assert-Boundary {
     $canonicalAlpn = 'kilogram/m1/sync/cbor/1'
     $historyCompatibleAlpn = 'kilogram/m1/sync/cbor/2'
     if ([UInt64]$Manifest.schema_version -ne 1 -or
-        [string]$Manifest.milestone -cne 'M1.1.62' -or
-        [string]$Manifest.status -cne 'dormant-signed-session-bootstrap-verified-not-active' -or
+        [string]$Manifest.milestone -cne 'M1.1.63' -or
+        [string]$Manifest.status -cne 'dormant-signed-session-successor-store-verified-not-active' -or
         [string]$Manifest.surface -cne 'transport-sync' -or
         [bool]$Manifest.changes_active_wire) {
         throw 'canonical transport sync manifest header changed'
@@ -80,6 +80,7 @@ function Assert-Boundary {
         -not [bool]$Manifest.history_compatible_successor.dormant_bounded_resumable_legacy_import -or
         -not [bool]$Manifest.history_compatible_successor.dormant_atomic_legacy_import_checkpoint -or
         -not [bool]$Manifest.history_compatible_successor.dormant_signed_session_bootstrap -or
+        -not [bool]$Manifest.history_compatible_successor.dormant_signed_session_successor_store -or
         [bool]$Manifest.history_compatible_successor.registered -or
         [bool]$Manifest.history_compatible_successor.dialed -or
         [bool]$Manifest.history_compatible_successor.format_sniffing -or
@@ -96,7 +97,7 @@ function Assert-Boundary {
         throw 'canonical synchronization selection policy changed'
     }
     $expectedRemaining = @(
-        'signed-checkpoint-successor-runtime-integration',
+        'signed-checkpoint-runtime-transition-integration',
         'mutual-authenticated-capability-selection',
         'mixed-version-and-downgrade-tests',
         'rollback-drill',
@@ -119,8 +120,8 @@ function Assert-Boundary {
         throw 'canonical synchronization remaining-work boundary changed'
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.62' -or
-        [string]$Migration.status -cne 'dormant-signed-session-bootstrap-verified-not-active' -or
+    if ([string]$Migration.milestone -cne 'M1.1.63' -or
+        [string]$Migration.status -cne 'dormant-signed-session-successor-store-verified-not-active' -or
         [string]$Migration.candidate_protocol_identifier -cne $historyCompatibleAlpn -or
         [string]$Migration.history_compatible_successor.protocol_identifier -cne
             $historyCompatibleAlpn -or
@@ -151,13 +152,13 @@ function Assert-Boundary {
     }
 
     $surface = @($Coverage.surfaces | Where-Object { [string]$_.id -ceq 'transport-sync' })
-    if ([string]$Coverage.milestone -cne 'M1.1.62' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.63' -or
         $surface.Count -ne 1 -or
         [string]$surface[0].coverage -cne 'partial' -or
         (@($surface[0].covered) -join ',') -cne
-            'parallel-cbor-alpn-identifier-allocation,history-compatible-cbor-v2-alpn-identifier-allocation,typed-durable-canonical-sync-session-checkpoint,authenticated-ticket-v13-history-compatible-cbor-v2-capability,dormant-history-compatible-sync-v2-runtime-state-machine,dormant-atomic-typed-carrier-store,dormant-cross-format-membership-policy,dormant-bounded-resumable-legacy-import,dormant-atomic-legacy-import-checkpoint,dormant-signed-session-bootstrap' -or
+            'parallel-cbor-alpn-identifier-allocation,history-compatible-cbor-v2-alpn-identifier-allocation,typed-durable-canonical-sync-session-checkpoint,authenticated-ticket-v13-history-compatible-cbor-v2-capability,dormant-history-compatible-sync-v2-runtime-state-machine,dormant-atomic-typed-carrier-store,dormant-cross-format-membership-policy,dormant-bounded-resumable-legacy-import,dormant-atomic-legacy-import-checkpoint,dormant-signed-session-bootstrap,dormant-signed-session-successor-store' -or
         (@($surface[0].remaining) -join ',') -cne
-            'signed-checkpoint-successor-runtime-integration,mutual-authenticated-capability-selection' -or
+            'signed-checkpoint-runtime-transition-integration,mutual-authenticated-capability-selection' -or
         [int]$Coverage.summary.complete -ne 17 -or
         [int]$Coverage.summary.partial -ne 1 -or
         [int]$Coverage.summary.not_started -ne 0 -or

@@ -444,10 +444,11 @@ sessions, distribution, removal и key epochs и не решены этим пр
   concrete cross-format membership policy, M1.1.60 — bounded/resumable exact
   legacy import, M1.1.61 — plan-scoped durable cursor в одной redb transaction
   с carrier page, а M1.1.62 — gated sequence-1 Device-signed checkpoint после
-  complete exact import. Следующий приоритет — persistence/restore всех signed
-  successor checkpoints после runtime transitions и mutual authenticated
-  capability selection перед active dual reader без fallback после canonical
-  failure. Общая activation требует
+  complete exact import. M1.1.63 добавил atomic signed successor journal и
+  полное verified restore цепочки. Следующий приоритет — создание checkpoint
+  на каждом runtime transition и restart/resume из восстановленного action,
+  затем mutual authenticated capability selection перед active dual reader без
+  fallback после canonical failure. Общая activation требует
   explicit identifiers, downgrade
   tests, sustained fuzzing, independent HPKE conformance и fresh multi-device
   field evidence.
@@ -465,12 +466,12 @@ sessions, distribution, removal и key epochs и не решены этим пр
   M1.1.55 добавил typed durable checkpoint, который не теряет namespace при
   resume и подписывает exact protocol identifier. M1.1.56 аутентифицировал
   exact `/cbor/2` в Device-signed ticket capability v2 без регистрации/dial.
-  M1.1.57–M1.1.62 закрыли dormant state machine, atomic typed carrier store,
+  M1.1.57–M1.1.63 закрыли dormant state machine, atomic typed carrier store,
   2×2 cross-format membership policy, bounded exact legacy-history import и
-  atomic durable local import cursor плюс gated initial signed checkpoint.
-  Открыты signed successor checkpoint persistence/restore и mutual
-  authenticated capability selection, и только затем active dual-reader slice
-  с downgrade regression.
+  atomic durable local import cursor, gated initial signed checkpoint и full
+  signed successor persistence/restore. Открыты runtime transition
+  checkpointing/restart continuation и mutual authenticated capability
+  selection, и только затем active dual-reader slice с downgrade regression.
 
 ## Инварианты при выборе ответов
 

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.62",
-  "status": "dormant-signed-session-bootstrap-verified-not-active",
+  "milestone": "M1.1.63",
+  "status": "dormant-signed-session-successor-store-verified-not-active",
   "surface": "transport-sync",
   "changes_active_wire": false,
   "active": {
@@ -34,6 +34,7 @@
     "dormant_bounded_resumable_legacy_import": true,
     "dormant_atomic_legacy_import_checkpoint": true,
     "dormant_signed_session_bootstrap": true,
+    "dormant_signed_session_successor_store": true,
     "registered": false,
     "dialed": false,
     "format_sniffing": false,
@@ -64,7 +65,7 @@
     ]
   },
   "remaining": [
-    "signed-checkpoint-successor-runtime-integration",
+    "signed-checkpoint-runtime-transition-integration",
     "mutual-authenticated-capability-selection",
     "mixed-version-and-downgrade-tests",
     "rollback-drill",

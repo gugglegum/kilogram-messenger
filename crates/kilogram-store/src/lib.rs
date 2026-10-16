@@ -23,7 +23,7 @@ use kilogram_protocol::{
         CanonicalSyncSessionV2Error, MAX_CANONICAL_SYNC_SESSION_CHECKPOINT_BYTES_V2,
         decode_and_verify_signed_sync_session_checkpoint_v2,
         encode_signed_sync_session_checkpoint_v2, sync_session_checkpoint_id_v2,
-        verify_signed_sync_session_checkpoint_v2,
+        verify_signed_sync_session_checkpoint_v2, verify_sync_session_checkpoint_successor_v2,
     },
     canonical_sync_v2::{
         CanonicalSyncEventBatchV2, CanonicalSyncV2Error, MAX_CANONICAL_SYNC_V2_EVENTS_PER_BATCH,
@@ -61,6 +61,7 @@ const CANONICAL_SYNC_V2_SESSION_CHECKPOINT_RECORD_VERSION: u8 = 1;
 const CANONICAL_SYNC_V2_SESSION_CHECKPOINT_RECORD_HEADER_BYTES: usize = 65;
 const CANONICAL_SYNC_V2_SESSION_CHECKPOINT_HEAD_VERSION: u8 = 1;
 const CANONICAL_SYNC_V2_SESSION_CHECKPOINT_HEAD_BYTES: usize = 73;
+pub const MAX_CANONICAL_SYNC_V2_SESSION_CHECKPOINTS: u64 = 65_536;
 const CANONICAL_SYNC_V2_LEGACY_IMPORT_MEMBERSHIP_DIGEST_CONTEXT: &str =
     "kilogram:canonical-sync-v2-legacy-import-membership:v1";
 const CANONICAL_SYNC_V2_LEGACY_IMPORT_EVENT_DIGEST_CONTEXT: &str =
@@ -1004,6 +1005,25 @@ impl CanonicalSyncV2CarrierStore {
         peer_device_id: [u8; 32],
         session_binding: [u8; 32],
     ) -> Result<Option<CanonicalSyncV2StoredSessionCheckpoint>, StoreError> {
+        Ok(self
+            .session_checkpoint_chain(
+                conversation_id,
+                local_device_id,
+                peer_device_id,
+                session_binding,
+            )?
+            .pop())
+    }
+
+    /// Restores and verifies the complete immutable checkpoint chain for one
+    /// exact dormant `/cbor/2` session.
+    pub fn session_checkpoint_chain(
+        &self,
+        conversation_id: [u8; 32],
+        local_device_id: [u8; 32],
+        peer_device_id: [u8; 32],
+        session_binding: [u8; 32],
+    ) -> Result<Vec<CanonicalSyncV2StoredSessionCheckpoint>, StoreError> {
         let identity_key = canonical_sync_v2_session_identity_key(
             conversation_id,
             local_device_id,
@@ -1025,23 +1045,63 @@ impl CanonicalSyncV2CarrierStore {
                 .transpose()?
         };
         let Some(head) = head else {
-            return Ok(None);
+            return Ok(Vec::new());
         };
-        let record_key =
-            canonical_sync_v2_session_checkpoint_key(identity_key, head.checkpoint_sequence);
-        let record = {
-            let table = read
-                .open_table(CANONICAL_SYNC_V2_SESSION_CHECKPOINT_TABLE)
-                .map_err(canonical_sync_v2_database_error)?;
-            table
+        if head.checkpoint_sequence > MAX_CANONICAL_SYNC_V2_SESSION_CHECKPOINTS {
+            return Err(StoreError::CanonicalSyncV2SessionCheckpointChainTooLong {
+                actual: head.checkpoint_sequence,
+                maximum: MAX_CANONICAL_SYNC_V2_SESSION_CHECKPOINTS,
+            });
+        }
+
+        let table = read
+            .open_table(CANONICAL_SYNC_V2_SESSION_CHECKPOINT_TABLE)
+            .map_err(canonical_sync_v2_database_error)?;
+        let mut chain: Vec<CanonicalSyncV2StoredSessionCheckpoint> =
+            Vec::with_capacity(head.checkpoint_sequence as usize);
+        for checkpoint_sequence in 1..=head.checkpoint_sequence {
+            let record_key =
+                canonical_sync_v2_session_checkpoint_key(identity_key, checkpoint_sequence);
+            let record = table
                 .get(record_key.as_slice())
                 .map_err(canonical_sync_v2_database_error)?
                 .map(|value| decode_canonical_sync_v2_session_checkpoint_record(value.value()))
                 .transpose()?
-                .ok_or(StoreError::CanonicalSyncV2SessionCheckpointHeadMissingRecord)?
-        };
-        validate_canonical_sync_v2_session_checkpoint_record(&record, identity_key, head)?;
-        Ok(Some(record))
+                .ok_or(
+                    StoreError::CanonicalSyncV2SessionCheckpointChainMissingRecord {
+                        checkpoint_sequence,
+                    },
+                )?;
+            let record_head = CanonicalSyncV2SessionCheckpointHead {
+                import_plan_id: head.import_plan_id,
+                checkpoint_sequence,
+                checkpoint_id: record.checkpoint_id,
+            };
+            validate_canonical_sync_v2_session_checkpoint_record(
+                &record,
+                identity_key,
+                record_head,
+            )?;
+            if let Some(previous) = chain.last() {
+                verify_sync_session_checkpoint_successor_v2(
+                    previous.checkpoint(),
+                    record.checkpoint(),
+                )?;
+            } else {
+                validate_canonical_sync_v2_initial_session_checkpoint(record.checkpoint())?;
+            }
+            chain.push(record);
+        }
+        let restored_head = chain
+            .last()
+            .ok_or(StoreError::CanonicalSyncV2SessionCheckpointHeadMissingRecord)?;
+        if restored_head.import_plan_id != head.import_plan_id
+            || restored_head.checkpoint_id != head.checkpoint_id
+            || restored_head.checkpoint.content.checkpoint_sequence != head.checkpoint_sequence
+        {
+            return Err(StoreError::CanonicalSyncV2SessionCheckpointRecordMismatch);
+        }
+        Ok(chain)
     }
 
     /// Atomically installs the first Device-signed session checkpoint only
@@ -1144,6 +1204,147 @@ impl CanonicalSyncV2CarrierStore {
             }
             return Ok(existing);
         }
+
+        {
+            let mut table = write
+                .open_table(CANONICAL_SYNC_V2_SESSION_CHECKPOINT_TABLE)
+                .map_err(canonical_sync_v2_database_error)?;
+            if table
+                .get(record_key.as_slice())
+                .map_err(canonical_sync_v2_database_error)?
+                .is_some()
+            {
+                return Err(StoreError::CanonicalSyncV2SessionCheckpointOrphanRecord);
+            }
+            table
+                .insert(record_key.as_slice(), encoded_record.as_slice())
+                .map_err(canonical_sync_v2_database_error)?;
+        }
+        {
+            let mut table = write
+                .open_table(CANONICAL_SYNC_V2_SESSION_CHECKPOINT_HEAD_TABLE)
+                .map_err(canonical_sync_v2_database_error)?;
+            table
+                .insert(identity_key.as_slice(), encoded_head.as_slice())
+                .map_err(canonical_sync_v2_database_error)?;
+        }
+        write.commit().map_err(canonical_sync_v2_database_error)?;
+        Ok(stored)
+    }
+
+    /// Atomically appends one verified signed successor and advances the
+    /// session head. An exact retry is idempotent; forks and gaps fail closed.
+    pub fn append_session_checkpoint_successor(
+        &self,
+        successor: &CanonicalSignedSyncSessionCheckpointV2,
+    ) -> Result<CanonicalSyncV2StoredSessionCheckpoint, StoreError> {
+        verify_signed_sync_session_checkpoint_v2(successor)?;
+        let content = &successor.content;
+        if content.checkpoint_sequence > MAX_CANONICAL_SYNC_V2_SESSION_CHECKPOINTS {
+            return Err(StoreError::CanonicalSyncV2SessionCheckpointChainTooLong {
+                actual: content.checkpoint_sequence,
+                maximum: MAX_CANONICAL_SYNC_V2_SESSION_CHECKPOINTS,
+            });
+        }
+        let successor_id = sync_session_checkpoint_id_v2(successor)?;
+        let identity_key = canonical_sync_v2_session_identity_key(
+            content.conversation_id,
+            content.local_device_id,
+            content.peer_device_id,
+            content.session_binding,
+        );
+
+        let mut write = self
+            .database
+            .begin_write()
+            .map_err(canonical_sync_v2_database_error)?;
+        write
+            .set_durability(Durability::Immediate)
+            .map_err(canonical_sync_v2_database_error)?;
+        let current_head = {
+            let table = write
+                .open_table(CANONICAL_SYNC_V2_SESSION_CHECKPOINT_HEAD_TABLE)
+                .map_err(canonical_sync_v2_database_error)?;
+            table
+                .get(identity_key.as_slice())
+                .map_err(canonical_sync_v2_database_error)?
+                .map(|value| decode_canonical_sync_v2_session_checkpoint_head(value.value()))
+                .transpose()?
+                .ok_or(StoreError::CanonicalSyncV2SessionCheckpointHeadMissing)?
+        };
+        if current_head.checkpoint_sequence > MAX_CANONICAL_SYNC_V2_SESSION_CHECKPOINTS {
+            return Err(StoreError::CanonicalSyncV2SessionCheckpointChainTooLong {
+                actual: current_head.checkpoint_sequence,
+                maximum: MAX_CANONICAL_SYNC_V2_SESSION_CHECKPOINTS,
+            });
+        }
+
+        if current_head.checkpoint_sequence == content.checkpoint_sequence {
+            if current_head.checkpoint_id != successor_id {
+                return Err(StoreError::CanonicalSyncV2SessionCheckpointHeadConflict);
+            }
+            let record_key = canonical_sync_v2_session_checkpoint_key(
+                identity_key,
+                current_head.checkpoint_sequence,
+            );
+            let existing = {
+                let table = write
+                    .open_table(CANONICAL_SYNC_V2_SESSION_CHECKPOINT_TABLE)
+                    .map_err(canonical_sync_v2_database_error)?;
+                table
+                    .get(record_key.as_slice())
+                    .map_err(canonical_sync_v2_database_error)?
+                    .map(|value| decode_canonical_sync_v2_session_checkpoint_record(value.value()))
+                    .transpose()?
+                    .ok_or(StoreError::CanonicalSyncV2SessionCheckpointHeadMissingRecord)?
+            };
+            validate_canonical_sync_v2_session_checkpoint_record(
+                &existing,
+                identity_key,
+                current_head,
+            )?;
+            if existing.checkpoint != *successor {
+                return Err(StoreError::CanonicalSyncV2SessionCheckpointConflict);
+            }
+            return Ok(existing);
+        }
+
+        let previous_key = canonical_sync_v2_session_checkpoint_key(
+            identity_key,
+            current_head.checkpoint_sequence,
+        );
+        let previous = {
+            let table = write
+                .open_table(CANONICAL_SYNC_V2_SESSION_CHECKPOINT_TABLE)
+                .map_err(canonical_sync_v2_database_error)?;
+            table
+                .get(previous_key.as_slice())
+                .map_err(canonical_sync_v2_database_error)?
+                .map(|value| decode_canonical_sync_v2_session_checkpoint_record(value.value()))
+                .transpose()?
+                .ok_or(StoreError::CanonicalSyncV2SessionCheckpointHeadMissingRecord)?
+        };
+        validate_canonical_sync_v2_session_checkpoint_record(
+            &previous,
+            identity_key,
+            current_head,
+        )?;
+        verify_sync_session_checkpoint_successor_v2(previous.checkpoint(), successor)?;
+
+        let stored = CanonicalSyncV2StoredSessionCheckpoint {
+            import_plan_id: current_head.import_plan_id,
+            checkpoint_id: successor_id,
+            checkpoint: successor.clone(),
+        };
+        let encoded_record = encode_canonical_sync_v2_session_checkpoint_record(&stored)?;
+        let record_key =
+            canonical_sync_v2_session_checkpoint_key(identity_key, content.checkpoint_sequence);
+        let next_head = CanonicalSyncV2SessionCheckpointHead {
+            import_plan_id: current_head.import_plan_id,
+            checkpoint_sequence: content.checkpoint_sequence,
+            checkpoint_id: successor_id,
+        };
+        let encoded_head = encode_canonical_sync_v2_session_checkpoint_head(next_head);
 
         {
             let mut table = write
@@ -1650,11 +1851,19 @@ fn validate_canonical_sync_v2_legacy_import_session_bootstrap(
     plan: &CanonicalSyncV2LegacyImportPlan,
     checkpoint: &CanonicalSignedSyncSessionCheckpointV2,
 ) -> Result<(), StoreError> {
-    verify_signed_sync_session_checkpoint_v2(checkpoint)?;
+    validate_canonical_sync_v2_initial_session_checkpoint(checkpoint)?;
     let content = &checkpoint.content;
     if content.conversation_id != *plan.conversation_id.as_bytes() {
         return Err(StoreError::CanonicalSyncV2SessionBootstrapConversationMismatch);
     }
+    Ok(())
+}
+
+fn validate_canonical_sync_v2_initial_session_checkpoint(
+    checkpoint: &CanonicalSignedSyncSessionCheckpointV2,
+) -> Result<(), StoreError> {
+    verify_signed_sync_session_checkpoint_v2(checkpoint)?;
+    let content = &checkpoint.content;
     if content.checkpoint_sequence != 1
         || content.sync_round != 1
         || content.predecessor_checkpoint_id.is_some()
@@ -2883,6 +3092,17 @@ pub enum StoreError {
     #[error("canonical sync v2 session checkpoint head sequence must be positive")]
     CanonicalSyncV2SessionCheckpointHeadSequence,
 
+    #[error(
+        "canonical sync v2 session checkpoint chain contains {actual} records; maximum is {maximum}"
+    )]
+    CanonicalSyncV2SessionCheckpointChainTooLong { actual: u64, maximum: u64 },
+
+    #[error("canonical sync v2 session checkpoint chain is missing sequence {checkpoint_sequence}")]
+    CanonicalSyncV2SessionCheckpointChainMissingRecord { checkpoint_sequence: u64 },
+
+    #[error("canonical sync v2 session checkpoint successor has no durable session head")]
+    CanonicalSyncV2SessionCheckpointHeadMissing,
+
     #[error("canonical sync v2 session checkpoint head points to a missing immutable record")]
     CanonicalSyncV2SessionCheckpointHeadMissingRecord,
 
@@ -3169,6 +3389,24 @@ mod tests {
         })
     }
 
+    fn signed_session_checkpoint_successor(
+        previous: &CanonicalSignedSyncSessionCheckpointV2,
+        identity: &DeviceIdentity,
+        next_action: CanonicalSyncNextActionV2,
+    ) -> Result<CanonicalSignedSyncSessionCheckpointV2, Box<dyn Error>> {
+        let mut content = previous.content.clone();
+        content.checkpoint_sequence = content
+            .checkpoint_sequence
+            .checked_add(1)
+            .ok_or("checkpoint sequence overflow")?;
+        content.predecessor_checkpoint_id = Some(sync_session_checkpoint_id_v2(previous)?);
+        content.next_action = next_action;
+        Ok(CanonicalSignedSyncSessionCheckpointV2 {
+            signature: identity.sign(&sync_session_checkpoint_signing_bytes_v2(&content)?),
+            content,
+        })
+    }
+
     fn overwrite_canonical_sync_v2_raw(
         store: &CanonicalSyncV2CarrierStore,
         conversation_id: [u8; 32],
@@ -3278,6 +3516,28 @@ mod tests {
                 .map_err(canonical_sync_v2_database_error)?;
             table
                 .insert(record_key.as_slice(), encoded)
+                .map_err(canonical_sync_v2_database_error)?;
+        }
+        write.commit().map_err(canonical_sync_v2_database_error)
+    }
+
+    fn remove_canonical_sync_v2_session_record_raw(
+        store: &CanonicalSyncV2CarrierStore,
+        record_key: [u8; CANONICAL_SYNC_V2_SESSION_CHECKPOINT_KEY_BYTES],
+    ) -> Result<(), StoreError> {
+        let mut write = store
+            .database
+            .begin_write()
+            .map_err(canonical_sync_v2_database_error)?;
+        write
+            .set_durability(Durability::Immediate)
+            .map_err(canonical_sync_v2_database_error)?;
+        {
+            let mut table = write
+                .open_table(CANONICAL_SYNC_V2_SESSION_CHECKPOINT_TABLE)
+                .map_err(canonical_sync_v2_database_error)?;
+            table
+                .remove(record_key.as_slice())
                 .map_err(canonical_sync_v2_database_error)?;
         }
         write.commit().map_err(canonical_sync_v2_database_error)
@@ -4052,6 +4312,214 @@ mod tests {
             ));
         }
 
+        Ok(())
+    }
+
+    #[test]
+    fn canonical_sync_v2_session_successors_restore_the_complete_chain_after_reopen()
+    -> Result<(), Box<dyn Error>> {
+        let fixture = legacy_import_fixture("canonical-sync-v2-session-successors", 1)?;
+        let conversation_id = fixture.events[0].event().conversation_id();
+        let plan = fixture
+            .source
+            .canonical_sync_v2_legacy_import_plan(conversation_id, &fixture.membership)?;
+        fixture.target.import_legacy_page(
+            &fixture.source,
+            &fixture.membership,
+            &plan,
+            plan.start_cursor(),
+            1,
+        )?;
+        let identity = DeviceIdentity::from_secret_bytes([0x36; 32]);
+        let peer = DeviceIdentity::from_secret_bytes([0x56; 32]);
+        let session_binding =
+            SyncSessionBinding::from_transport_label("canonical-v2-successor-restore");
+        let initial = signed_legacy_import_session_bootstrap(
+            &plan,
+            &identity,
+            peer.device_id(),
+            session_binding,
+        )?;
+        let initial_stored = fixture
+            .target
+            .install_legacy_import_session_bootstrap(&plan, &initial)?;
+        let receive_diff = signed_session_checkpoint_successor(
+            &initial,
+            &identity,
+            CanonicalSyncNextActionV2::ReceiveDiff,
+        )?;
+        let receive_diff_stored = fixture
+            .target
+            .append_session_checkpoint_successor(&receive_diff)?;
+        let send_batch = signed_session_checkpoint_successor(
+            &receive_diff,
+            &identity,
+            CanonicalSyncNextActionV2::SendEventBatch,
+        )?;
+        let send_batch_stored = fixture
+            .target
+            .append_session_checkpoint_successor(&send_batch)?;
+
+        let expected = vec![
+            initial_stored,
+            receive_diff_stored,
+            send_batch_stored.clone(),
+        ];
+        assert_eq!(
+            fixture.target.session_checkpoint_chain(
+                *conversation_id.as_bytes(),
+                *identity.device_id().as_bytes(),
+                *peer.device_id().as_bytes(),
+                *session_binding.as_bytes(),
+            )?,
+            expected
+        );
+        assert_eq!(
+            fixture
+                .target
+                .append_session_checkpoint_successor(&send_batch)?,
+            send_batch_stored
+        );
+
+        let LegacyImportFixture {
+            _source_directory,
+            target_directory,
+            _root_directory,
+            source: _,
+            target,
+            root: _,
+            membership: _,
+            events: _,
+        } = fixture;
+        drop(target);
+        let reopened = CanonicalSyncV2CarrierStore::open(target_directory.path())?;
+        assert_eq!(
+            reopened.session_checkpoint_chain(
+                *conversation_id.as_bytes(),
+                *identity.device_id().as_bytes(),
+                *peer.device_id().as_bytes(),
+                *session_binding.as_bytes(),
+            )?,
+            expected
+        );
+        assert_eq!(
+            reopened.session_checkpoint_head(
+                *conversation_id.as_bytes(),
+                *identity.device_id().as_bytes(),
+                *peer.device_id().as_bytes(),
+                *session_binding.as_bytes(),
+            )?,
+            Some(send_batch_stored)
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn canonical_sync_v2_session_successor_forks_gaps_and_corrupt_ancestry_fail_closed()
+    -> Result<(), Box<dyn Error>> {
+        let fixture = legacy_import_fixture("canonical-sync-v2-session-successor-reject", 1)?;
+        let conversation_id = fixture.events[0].event().conversation_id();
+        let plan = fixture
+            .source
+            .canonical_sync_v2_legacy_import_plan(conversation_id, &fixture.membership)?;
+        fixture.target.import_legacy_page(
+            &fixture.source,
+            &fixture.membership,
+            &plan,
+            plan.start_cursor(),
+            1,
+        )?;
+        let identity = DeviceIdentity::from_secret_bytes([0x37; 32]);
+        let peer = DeviceIdentity::from_secret_bytes([0x57; 32]);
+        let session_binding =
+            SyncSessionBinding::from_transport_label("canonical-v2-successor-reject");
+        let initial = signed_legacy_import_session_bootstrap(
+            &plan,
+            &identity,
+            peer.device_id(),
+            session_binding,
+        )?;
+        let initial_stored = fixture
+            .target
+            .install_legacy_import_session_bootstrap(&plan, &initial)?;
+
+        let mut skipped = signed_session_checkpoint_successor(
+            &initial,
+            &identity,
+            CanonicalSyncNextActionV2::ReceiveDiff,
+        )?;
+        skipped.content.checkpoint_sequence = 3;
+        skipped.signature =
+            identity.sign(&sync_session_checkpoint_signing_bytes_v2(&skipped.content)?);
+        assert!(matches!(
+            fixture.target.append_session_checkpoint_successor(&skipped),
+            Err(StoreError::CanonicalSyncV2SessionCheckpoint(
+                CanonicalSyncSessionV2Error::CheckpointSequenceDiscontinuity
+            ))
+        ));
+
+        let receive_diff = signed_session_checkpoint_successor(
+            &initial,
+            &identity,
+            CanonicalSyncNextActionV2::ReceiveDiff,
+        )?;
+        fixture
+            .target
+            .append_session_checkpoint_successor(&receive_diff)?;
+        let fork = signed_session_checkpoint_successor(
+            &initial,
+            &identity,
+            CanonicalSyncNextActionV2::Rejected,
+        )?;
+        assert!(matches!(
+            fixture.target.append_session_checkpoint_successor(&fork),
+            Err(StoreError::CanonicalSyncV2SessionCheckpointHeadConflict)
+        ));
+
+        let identity_key = canonical_sync_v2_session_identity_key(
+            *conversation_id.as_bytes(),
+            *identity.device_id().as_bytes(),
+            *peer.device_id().as_bytes(),
+            *session_binding.as_bytes(),
+        );
+        let record_key = canonical_sync_v2_session_checkpoint_key(identity_key, 1);
+        let mut corrupted = encode_canonical_sync_v2_session_checkpoint_record(&initial_stored)?;
+        let final_byte = corrupted
+            .last_mut()
+            .ok_or("encoded session checkpoint unexpectedly empty")?;
+        *final_byte ^= 1;
+        overwrite_canonical_sync_v2_session_record_raw(&fixture.target, record_key, &corrupted)?;
+        assert!(matches!(
+            fixture.target.session_checkpoint_chain(
+                *conversation_id.as_bytes(),
+                *identity.device_id().as_bytes(),
+                *peer.device_id().as_bytes(),
+                *session_binding.as_bytes(),
+            ),
+            Err(StoreError::CanonicalSyncV2SessionCheckpoint(_))
+        ));
+
+        remove_canonical_sync_v2_session_record_raw(&fixture.target, record_key)?;
+        assert!(matches!(
+            fixture.target.session_checkpoint_chain(
+                *conversation_id.as_bytes(),
+                *identity.device_id().as_bytes(),
+                *peer.device_id().as_bytes(),
+                *session_binding.as_bytes(),
+            ),
+            Err(
+                StoreError::CanonicalSyncV2SessionCheckpointChainMissingRecord {
+                    checkpoint_sequence: 1
+                }
+            )
+        ));
+
+        let empty_directory = tempdir()?;
+        let empty = CanonicalSyncV2CarrierStore::open(empty_directory.path())?;
+        assert!(matches!(
+            empty.append_session_checkpoint_successor(&receive_diff),
+            Err(StoreError::CanonicalSyncV2SessionCheckpointHeadMissing)
+        ));
         Ok(())
     }
 

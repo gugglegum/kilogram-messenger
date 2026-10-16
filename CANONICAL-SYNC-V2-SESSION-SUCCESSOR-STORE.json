@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.63",
+  "status": "dormant-signed-session-successor-store-verified-not-active",
+  "changes_active_wire": false,
+  "protocol_identifier": "kilogram/m1/sync/cbor/2",
+  "implementation": {
+    "crate": "kilogram-store",
+    "store": "CanonicalSyncV2CarrierStore",
+    "record_type": "CanonicalSyncV2StoredSessionCheckpoint",
+    "signed_checkpoint_type": "CanonicalSignedSyncSessionCheckpointV2",
+    "journal_table": "canonical-sync-v2-session-checkpoints-v1",
+    "head_table": "canonical-sync-v2-session-checkpoint-heads-v1",
+    "append_api": "append_session_checkpoint_successor",
+    "restore_api": "session_checkpoint_chain",
+    "maximum_checkpoints_per_session": 65536
+  },
+  "contracts": {
+    "device_signature_verified": true,
+    "session_identity_immutable": true,
+    "sequence_exactly_increments": true,
+    "predecessor_exact_checkpoint_id": true,
+    "sync_round_transition_verified": true,
+    "typed_event_evidence_monotonic": true,
+    "next_action_transition_verified": true,
+    "pause_resume_transition_verified": true,
+    "terminal_successor_rejected": true,
+    "current_durable_head_required": true,
+    "import_plan_binding_inherited_from_head": true,
+    "immutable_sequence_journal": true,
+    "successor_and_head_same_redb_transaction": true,
+    "immediate_durability": true,
+    "exact_successor_replay_idempotent": true,
+    "complete_chain_verified_on_restore": true,
+    "initial_bootstrap_shape_reverified_on_restore": true,
+    "missing_intermediate_record_rejected": true,
+    "corrupt_ancestry_rejected": true,
+    "format_sniffing": false,
+    "parse_error_fallback": false
+  },
+  "regression": {
+    "three_checkpoint_chain_restored_after_reopen": true,
+    "exact_successor_replay_idempotent": true,
+    "skipped_sequence_rejected": true,
+    "same_sequence_fork_rejected": true,
+    "corrupt_ancestor_rejected": true,
+    "missing_intermediate_record_rejected": true,
+    "missing_session_head_rejected": true
+  },
+  "activation": {
+    "signed_successor_store_integrated": true,
+    "runtime_transition_checkpointing_integrated": false,
+    "runtime_resume_from_checkpoint_integrated": false,
+    "mutual_capability_selection_integrated": false,
+    "endpoint_registered": false,
+    "canonical_dial_enabled": false
+  },
+  "remaining": [
+    "signed-checkpoint-runtime-transition-integration",
+    "mutual-authenticated-capability-selection",
+    "mixed-version-and-downgrade-tests",
+    "rollback-drill",
+    "sustained-fuzzing",
+    "fresh-hosted-and-field-evidence"
+  ],
+  "scope": {
+    "network_executed": false,
+    "release_build": false,
+    "archive_created": false,
+    "stable_executable_replaced": false
+  }
+}
