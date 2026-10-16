@@ -100,9 +100,9 @@ function Assert-Contract {
         throw 'canonical sync v2 responder activation boundary changed'
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.67' -or
+    if ([string]$Migration.milestone -cne 'M1.1.68' -or
         [string]$Migration.status -cne
-            'dormant-durable-responder-transition-adapter-verified-not-active' -or
+            'dormant-mutual-authenticated-candidate-selection-verified-not-active' -or
         [string]$Migration.history_compatible_successor.dormant_durable_responder_transition_adapter -cne
             'verified' -or
         [bool]$Migration.history_compatible_successor.registered -or
@@ -116,25 +116,25 @@ function Assert-Contract {
     if ($requirement.Count -ne 1 -or [string]$requirement[0].status -cne 'verified') {
         throw 'canonical migration durable responder requirement is not verified'
     }
-    if ([string]$TransportManifest.milestone -cne 'M1.1.67' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.68' -or
         [string]$TransportManifest.status -cne
-            'dormant-durable-responder-transition-adapter-verified-not-active' -or
+            'dormant-mutual-authenticated-candidate-selection-verified-not-active' -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_durable_responder_transition_adapter -or
         'dormant-server-runtime-transition-integration' -cin @($TransportManifest.remaining) -or
         [bool]$TransportManifest.history_compatible_successor.registered -or
         [bool]$TransportManifest.history_compatible_successor.dialed) {
         throw 'transport sync manifest lost durable responder state'
     }
-    if ([string]$Compatibility.milestone -cne 'M1.1.67' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.68' -or
         [string]$Compatibility.status -cne
-            'dormant-durable-responder-transition-adapter-verified-not-active' -or
+            'dormant-mutual-authenticated-candidate-selection-verified-not-active' -or
         -not [bool]$Compatibility.required_successor.dormant_durable_responder_transition_adapter_integrated) {
         throw 'history compatibility manifest lost durable responder state'
     }
     $transportCoverage = @(
         @($Coverage.surfaces) | Where-Object { [string]$_.id -ceq 'transport-sync' }
     )
-    if ([string]$Coverage.milestone -cne 'M1.1.67' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.68' -or
         $transportCoverage.Count -ne 1 -or
         'CANONICAL-SYNC-V2-DURABLE-RESPONDER-ADAPTER.json' -cnotin
             @($transportCoverage[0].artifacts) -or

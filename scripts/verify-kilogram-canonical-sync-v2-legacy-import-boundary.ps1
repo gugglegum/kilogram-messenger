@@ -136,9 +136,9 @@ function Assert-Contract {
         }
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.67' -or
+    if ([string]$Migration.milestone -cne 'M1.1.68' -or
         [string]$Migration.status -cne
-            'dormant-durable-responder-transition-adapter-verified-not-active' -or
+            'dormant-mutual-authenticated-candidate-selection-verified-not-active' -or
         [string]$Migration.history_compatible_successor.dormant_bounded_resumable_legacy_import -cne
             'verified' -or
         [string]$Migration.history_compatible_successor.dormant_atomic_legacy_import_checkpoint -cne
@@ -154,9 +154,9 @@ function Assert-Contract {
         [string]$importRequirement[0].status -cne 'verified') {
         throw 'canonical migration lost the verified legacy import requirement'
     }
-    if ([string]$TransportManifest.milestone -cne 'M1.1.67' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.68' -or
         [string]$TransportManifest.status -cne
-            'dormant-durable-responder-transition-adapter-verified-not-active' -or
+            'dormant-mutual-authenticated-candidate-selection-verified-not-active' -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_bounded_resumable_legacy_import -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_atomic_legacy_import_checkpoint -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_signed_session_bootstrap -or
@@ -164,26 +164,26 @@ function Assert-Contract {
         [bool]$TransportManifest.history_compatible_successor.dialed -or
         'dormant-server-runtime-transition-integration' -cin
             @($TransportManifest.remaining) -or
-        'mutual-authenticated-capability-selection' -cnotin
+        'dual-reader-runtime-implementation' -cnotin
             @($TransportManifest.remaining)) {
         throw 'transport sync manifest does not preserve the dormant legacy import boundary'
     }
-    if ([string]$Compatibility.milestone -cne 'M1.1.67' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.68' -or
         [string]$Compatibility.status -cne
-            'dormant-durable-responder-transition-adapter-verified-not-active' -or
+            'dormant-mutual-authenticated-candidate-selection-verified-not-active' -or
         -not [bool]$Compatibility.required_successor.dormant_bounded_resumable_legacy_import_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_atomic_legacy_import_checkpoint_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_signed_session_bootstrap_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_signed_session_successor_store_integrated -or
         [string]$Compatibility.required_successor.status -cne
-            'dormant-store-policy-import-checkpoint-session-bootstrap-successor-store-runtime-frame-journal-atomic-transition-and-durable-client-and-responder-adapters-verified-not-active') {
+            'dormant-mutual-authenticated-candidate-selection-verified-not-active') {
         throw 'history compatibility manifest lost the dormant legacy import contract'
     }
     $transportCoverage = @(
         @($Coverage.surfaces) |
             Where-Object { [string]$_.id -ceq 'transport-sync' }
     )
-    if ([string]$Coverage.milestone -cne 'M1.1.67' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.68' -or
         $transportCoverage.Count -ne 1 -or
         'CANONICAL-SYNC-V2-LEGACY-IMPORT.json' -cnotin @($transportCoverage[0].artifacts) -or
         'scripts/verify-kilogram-canonical-sync-v2-legacy-import-boundary.ps1' -cnotin
@@ -193,7 +193,7 @@ function Assert-Contract {
         'dormant-signed-session-bootstrap' -cnotin @($transportCoverage[0].covered) -or
         'dormant-server-runtime-transition-integration' -cin
             @($transportCoverage[0].remaining) -or
-        'mutual-authenticated-capability-selection' -cnotin
+        'dual-reader-runtime-implementation' -cnotin
             @($transportCoverage[0].remaining)) {
         throw 'canonical coverage does not include the dormant legacy import artifacts'
     }

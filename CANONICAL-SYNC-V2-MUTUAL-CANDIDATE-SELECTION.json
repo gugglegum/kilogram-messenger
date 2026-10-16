@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.68",
+  "status": "dormant-mutual-authenticated-candidate-selection-verified-not-active",
+  "changes_active_wire": false,
+  "protocol_identifier": "kilogram/m1/sync/cbor/2",
+  "implementation": {
+    "listener_capability": "SignedSyncTransportCapability",
+    "requester_offer": "SignedSyncTransportCandidateOffer",
+    "listener_acceptance": "SignedSyncTransportCandidateAcceptance",
+    "durable_verifier": "verify_durable_mutual_canonical_candidate_selection",
+    "result": "CanonicalSyncV2MutualCandidateSelection"
+  },
+  "signature_domains": {
+    "listener_capability": "kilogram:sync-transport-capability-signature:v2\\0",
+    "requester_offer": "kilogram:sync-transport-candidate-offer-signature:v1\\0",
+    "listener_acceptance": "kilogram:sync-transport-candidate-acceptance-signature:v1\\0"
+  },
+  "content_address_domains": {
+    "listener_capability": "kilogram:sync-transport-capability-artifact-id:v2\\0",
+    "requester_offer": "kilogram:sync-transport-candidate-offer-id:v1\\0"
+  },
+  "offer_bindings": [
+    "listener-capability-id",
+    "conversation-id",
+    "listener-account-id",
+    "listener-device-id",
+    "requester-account-id",
+    "requester-device-id",
+    "session-binding",
+    "listener-authority-revision",
+    "requester-authority-revision",
+    "migration-epoch",
+    "canonical-cbor-v2-protocol",
+    "no-fallback-after-selected-failure"
+  ],
+  "acceptance_bindings": [
+    "requester-offer-id",
+    "conversation-id",
+    "listener-device-id",
+    "requester-device-id",
+    "session-binding",
+    "migration-epoch",
+    "canonical-cbor-v2-protocol",
+    "no-fallback-after-selected-failure"
+  ],
+  "authority_contract": {
+    "listener_device_session_authorization_required": true,
+    "requester_device_session_authorization_required": true,
+    "sync_history_capability_required": true,
+    "account_device_revision_and_session_exact_bound": true,
+    "listener_capability_time_and_ticket_binding_reverified": true
+  },
+  "durable_contract": {
+    "client_runtime_identity_exact_bound": true,
+    "responder_runtime_identity_exact_bound": true,
+    "conversation_device_session_and_protocol_exact_bound": true,
+    "completed_legacy_import_prerequisite_inherited": true
+  },
+  "fail_closed": {
+    "unknown_selection_version": true,
+    "zero_or_unsafe_binding": true,
+    "wrong_device_signature": true,
+    "capability_or_offer_substitution": true,
+    "cross_offer_acceptance": true,
+    "authority_or_revision_mismatch": true,
+    "durable_runtime_identity_mismatch": true,
+    "expired_listener_capability": true,
+    "fallback_after_selected_failure": true
+  },
+  "activation": {
+    "mutual_candidate_selection_integrated": true,
+    "selection_authorizes_transport_activation": false,
+    "endpoint_registered": false,
+    "canonical_dial_enabled": false,
+    "active_postcard_path_changed": false
+  },
+  "remaining": [
+    "dual-reader-runtime-implementation",
+    "mixed-version-and-downgrade-tests",
+    "rollback-drill",
+    "sustained-fuzzing",
+    "fresh-hosted-and-field-evidence"
+  ],
+  "scope": {
+    "network_executed": false,
+    "release_build": false,
+    "archive_created": false,
+    "stable_executable_replaced": false
+  }
+}

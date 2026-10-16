@@ -1106,6 +1106,11 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.1.67 добавляет отдельный responder-signed checkpoint/journal и atomic
   server transitions: exact Diff/Complete переживают restart, а incoming batch
   коммитится вместе с successor/head/frame до ответа.
+- [`../docs/RFC-0195-m1168-mutual-authenticated-candidate-selection.md`](../docs/RFC-0195-m1168-mutual-authenticated-candidate-selection.md) —
+  M1.1.68 связывает listener capability, requester-signed offer,
+  listener-signed acceptance, обе authority/session chains и durable
+  client/responder identities, но намеренно не разрешает ALPN registration или
+  dial.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

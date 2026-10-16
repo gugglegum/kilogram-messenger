@@ -6642,3 +6642,27 @@ correlation visible, Windows-only field evidence, independent security audit
   selection ещё не подключён. Active Postcard v6 не менялся, `/cbor/2`
   unregistered/undialed; network/release/archive/stable EXE/push/tag не
   выполнялись.
+
+### M1.1.68 — dormant mutual authenticated candidate selection: принято локально
+
+- `kilogram-sync-capability` создаёт domain-separated artifact ID listener
+  capability, requester-signed exact candidate offer и listener-signed
+  acceptance exact offer ID;
+- offer exact-связывает conversation, обе Account/Device identity, обе
+  authority revision, session binding, migration epoch и только
+  `kilogram/m1/sync/cbor/2`; fallback после выбранного canonical failure
+  запрещён;
+- session integration повторно проверяет ticket binding/freshness, обе
+  canonical Device session authorization с `SyncHistory` и exact identity
+  durable client/responder checkpoints;
+- результат намеренно не является transport permit:
+  `active_transport_authorized=false`; canonical ALPN остаётся
+  unregistered/undialed, active Postcard v6 не меняется;
+- добавлены `CANONICAL-SYNC-V2-MUTUAL-CANDIDATE-SELECTION.json`, RFC-0195 и
+  отдельный boundary с негативными self-tests. Следующий bounded slice —
+  mixed-version/downgrade matrix до любого dual-reader activation.
+- `kilogram-sync-capability` прошёл 5/5, `kilogram-session` 15/15; 20
+  затронутых boundaries прошли normal и 19 поддерживающих self-test прошли
+  negative mode. Все 98 root JSON parsed, rustfmt и workspace locked/offline
+  strict Clippy verified; accepted-tag readiness прошёл 100/100 против
+  immutable `M1.0.0` без запуска Rust test executables внутри readiness.

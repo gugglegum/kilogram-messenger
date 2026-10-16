@@ -15,6 +15,10 @@ use kilogram_protocol::{
     canonical_account_v1::{
         CanonicalSignedConversationMembershipV1, verify_signed_conversation_membership_v1,
     },
+    canonical_authority_v1::{
+        CanonicalAuthorityError, CanonicalDeviceCapabilityV1,
+        CanonicalSignedDeviceSessionAuthorizationV1, verify_signed_device_session_authorization_v1,
+    },
     canonical_event_v1::{verify_authorized_event_for_membership_v1, verify_authorized_event_v1},
     canonical_sync_history_v2::{CanonicalSyncEventCarrierV2, CanonicalSyncEventKeyV2},
     canonical_sync_responder_session_v2::{
@@ -43,6 +47,11 @@ use kilogram_store::{
     CanonicalSyncV2CarrierStore, CanonicalSyncV2LegacyImportPlan,
     CanonicalSyncV2StoredResponderCheckpoint, CanonicalSyncV2StoredResponderRuntime,
     CanonicalSyncV2StoredSessionCheckpoint, CanonicalSyncV2StoredSessionRuntime, StoreError,
+};
+use kilogram_sync_capability::{
+    SignedSyncTransportCandidateAcceptance, SignedSyncTransportCandidateOffer,
+    SignedSyncTransportCapability, SyncTransportCapabilityBinding, SyncTransportCapabilityError,
+    SyncTransportProtocol, verify_mutual_canonical_candidate_selection,
 };
 use thiserror::Error;
 
@@ -1493,6 +1502,142 @@ impl CanonicalSyncV2DurableResponderActionKind {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct CanonicalSyncV2MutualCandidateSelection {
+    conversation_id: [u8; 32],
+    listener_account_id: AccountId,
+    listener_device_id: DeviceId,
+    requester_account_id: AccountId,
+    requester_device_id: DeviceId,
+    session_binding: [u8; 32],
+    migration_epoch: u64,
+    selected_protocol: SyncTransportProtocol,
+}
+
+impl CanonicalSyncV2MutualCandidateSelection {
+    pub fn conversation_id(&self) -> [u8; 32] {
+        self.conversation_id
+    }
+
+    pub fn listener_account_id(&self) -> AccountId {
+        self.listener_account_id
+    }
+
+    pub fn listener_device_id(&self) -> DeviceId {
+        self.listener_device_id
+    }
+
+    pub fn requester_account_id(&self) -> AccountId {
+        self.requester_account_id
+    }
+
+    pub fn requester_device_id(&self) -> DeviceId {
+        self.requester_device_id
+    }
+
+    pub fn session_binding(&self) -> [u8; 32] {
+        self.session_binding
+    }
+
+    pub fn migration_epoch(&self) -> u64 {
+        self.migration_epoch
+    }
+
+    pub fn selected_protocol(&self) -> SyncTransportProtocol {
+        self.selected_protocol
+    }
+
+    /// Candidate selection is deliberately distinct from transport
+    /// activation. M1.1.68 never authorizes ALPN registration or dial.
+    pub const fn active_transport_authorized(&self) -> bool {
+        false
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn verify_durable_mutual_canonical_candidate_selection(
+    listener_capability: &SignedSyncTransportCapability,
+    expected_listener_binding: &SyncTransportCapabilityBinding<'_>,
+    offer: &SignedSyncTransportCandidateOffer,
+    acceptance: &SignedSyncTransportCandidateAcceptance,
+    listener_authorization: &CanonicalSignedDeviceSessionAuthorizationV1,
+    requester_authorization: &CanonicalSignedDeviceSessionAuthorizationV1,
+    client_runtime: &CanonicalSyncV2StoredSessionRuntime,
+    responder_runtime: &CanonicalSyncV2StoredResponderRuntime,
+    now_unix_seconds: u64,
+) -> Result<CanonicalSyncV2MutualCandidateSelection, CanonicalSyncV2SessionError> {
+    listener_capability.verify_binding(expected_listener_binding)?;
+    listener_capability.verify_at(now_unix_seconds)?;
+    verify_mutual_canonical_candidate_selection(listener_capability, offer, acceptance)?;
+
+    verify_candidate_session_authorization(
+        listener_authorization,
+        offer.listener_account_id(),
+        offer.listener_device_id(),
+        offer.session_binding(),
+        offer.listener_authority_revision(),
+    )?;
+    verify_candidate_session_authorization(
+        requester_authorization,
+        offer.requester_account_id(),
+        offer.requester_device_id(),
+        offer.session_binding(),
+        offer.requester_authority_revision(),
+    )?;
+
+    let client = &client_runtime.checkpoint().checkpoint().content;
+    let responder = &responder_runtime.checkpoint().checkpoint().content;
+    if client.conversation_id != offer.conversation_id()
+        || responder.conversation_id != offer.conversation_id()
+        || client.local_device_id != *offer.requester_device_id().as_bytes()
+        || client.peer_device_id != *offer.listener_device_id().as_bytes()
+        || responder.responder_device_id != *offer.listener_device_id().as_bytes()
+        || responder.requester_device_id != *offer.requester_device_id().as_bytes()
+        || client.session_binding != offer.session_binding()
+        || responder.session_binding != offer.session_binding()
+        || client.protocol_identifier != *CANONICAL_SYNC_SESSION_PROTOCOL_IDENTIFIER_V2
+        || responder.protocol_identifier != *CANONICAL_SYNC_SESSION_PROTOCOL_IDENTIFIER_V2
+    {
+        return Err(CanonicalSyncV2SessionError::MutualCandidateDurableIdentityMismatch);
+    }
+
+    Ok(CanonicalSyncV2MutualCandidateSelection {
+        conversation_id: offer.conversation_id(),
+        listener_account_id: offer.listener_account_id(),
+        listener_device_id: offer.listener_device_id(),
+        requester_account_id: offer.requester_account_id(),
+        requester_device_id: offer.requester_device_id(),
+        session_binding: offer.session_binding(),
+        migration_epoch: offer.migration_epoch(),
+        selected_protocol: acceptance.selected_protocol(),
+    })
+}
+
+fn verify_candidate_session_authorization(
+    authorization: &CanonicalSignedDeviceSessionAuthorizationV1,
+    expected_account_id: AccountId,
+    expected_device_id: DeviceId,
+    expected_session_binding: [u8; 32],
+    expected_authority_revision: u64,
+) -> Result<(), CanonicalSyncV2SessionError> {
+    verify_signed_device_session_authorization_v1(authorization)?;
+    let content = &authorization.content;
+    let certificate = &content.certificate.content;
+    let authority = &content.authority_snapshot.content;
+    if certificate.account_id != *expected_account_id.as_bytes()
+        || certificate.device_id != *expected_device_id.as_bytes()
+        || authority.account_id != *expected_account_id.as_bytes()
+        || authority.revision != expected_authority_revision
+        || content.session_binding != expected_session_binding
+        || !certificate
+            .capabilities
+            .contains(&CanonicalDeviceCapabilityV1::SyncHistory)
+    {
+        return Err(CanonicalSyncV2SessionError::MutualCandidateAuthorizationMismatch);
+    }
+    Ok(())
+}
+
 pub enum CanonicalSyncV2ServerInventoryOutcome {
     Accepted(Box<CanonicalSyncV2ServerInventoryRound>),
     Rejected(CanonicalSyncRejectedV2),
@@ -1564,6 +1709,12 @@ pub enum CanonicalSyncV2SessionError {
     ResponderCheckpoint(#[from] CanonicalSyncResponderSessionV2Error),
 
     #[error(transparent)]
+    Authority(#[from] CanonicalAuthorityError),
+
+    #[error(transparent)]
+    Capability(#[from] SyncTransportCapabilityError),
+
+    #[error(transparent)]
     Store(#[from] StoreError),
 
     #[error(transparent)]
@@ -1633,6 +1784,14 @@ pub enum CanonicalSyncV2SessionError {
     DurableResponderRuntimeFrameMismatch {
         action: CanonicalSyncResponderNextActionV2,
     },
+
+    #[error(
+        "mutual canonical candidate authorization does not match Account, Device, revision, capability or session"
+    )]
+    MutualCandidateAuthorizationMismatch,
+
+    #[error("mutual canonical candidate selection does not match both durable adapter identities")]
+    MutualCandidateDurableIdentityMismatch,
 }
 
 struct CanonicalSyncV2Plan {
@@ -1752,16 +1911,24 @@ fn event_keys(
 mod tests {
     use std::{cell::RefCell, collections::BTreeMap, error::Error, io};
 
+    use ed25519_dalek::{Signer, SigningKey};
     use kilogram_identity::{AccountRootState, ConversationScopeId};
     use kilogram_protocol::canonical_account_v1::{
         CanonicalConversationMembershipContentV1, CanonicalSignedConversationMembershipV1,
         conversation_membership_signing_bytes_v1,
+    };
+    use kilogram_protocol::canonical_authority_v1::{
+        CanonicalAccountAuthoritySnapshotContentV1, CanonicalDeviceCertificateContentV1,
+        CanonicalDeviceSessionAuthorizationContentV1, CanonicalSignedAccountAuthoritySnapshotV1,
+        CanonicalSignedDeviceCertificateV1, account_authority_snapshot_signing_bytes_v1,
+        device_certificate_signing_bytes_v1, device_session_authorization_signing_bytes_v1,
     };
     use kilogram_protocol::canonical_sync_history_v2::CanonicalSyncHistoryV2Error;
     use kilogram_protocol::canonical_sync_v2::{
         decode_and_verify_sync_client_frame_v2, decode_and_verify_sync_server_frame_v2,
         encode_sync_client_frame_v2, encode_sync_server_frame_v2,
     };
+    use kilogram_sync_capability::SyncTransportCandidateOfferBinding;
     use serde_json::Value;
     use tempfile::tempdir;
 
@@ -1958,6 +2125,53 @@ mod tests {
         };
         let signature = owner.sign(&conversation_membership_signing_bytes_v1(&content)?);
         Ok(CanonicalSignedConversationMembershipV1 { content, signature })
+    }
+
+    fn canonical_session_authorization(
+        root_secret: [u8; 32],
+        device: &DeviceIdentity,
+        session_binding: [u8; 32],
+        authority_revision: u64,
+    ) -> Result<(AccountId, CanonicalSignedDeviceSessionAuthorizationV1), Box<dyn Error>> {
+        let root = SigningKey::from_bytes(&root_secret);
+        let account_id = AccountId::from_bytes(root.verifying_key().to_bytes());
+        let certificate_content = CanonicalDeviceCertificateContentV1 {
+            account_id: *account_id.as_bytes(),
+            device_id: *device.device_id().as_bytes(),
+            encryption_public_key: [root_secret[0]; 32],
+            authority_sequence: 1,
+            capabilities: vec![CanonicalDeviceCapabilityV1::SyncHistory],
+        };
+        let certificate = CanonicalSignedDeviceCertificateV1 {
+            signature: root
+                .sign(&device_certificate_signing_bytes_v1(&certificate_content)?)
+                .to_bytes(),
+            content: certificate_content,
+        };
+        let authority_content = CanonicalAccountAuthoritySnapshotContentV1 {
+            account_id: *account_id.as_bytes(),
+            revision: authority_revision,
+            revocations: Vec::new(),
+        };
+        let authority_snapshot = CanonicalSignedAccountAuthoritySnapshotV1 {
+            signature: root
+                .sign(&account_authority_snapshot_signing_bytes_v1(
+                    &authority_content,
+                )?)
+                .to_bytes(),
+            content: authority_content,
+        };
+        let content = CanonicalDeviceSessionAuthorizationContentV1 {
+            session_binding,
+            certificate,
+            authority_snapshot,
+        };
+        let authorization = CanonicalSignedDeviceSessionAuthorizationV1 {
+            signature: device.sign(&device_session_authorization_signing_bytes_v1(&content)?),
+            content,
+        };
+        verify_signed_device_session_authorization_v1(&authorization)?;
+        Ok((account_id, authorization))
     }
 
     fn decode_client_frame(
@@ -2539,6 +2753,165 @@ mod tests {
                 .len(),
             5
         );
+        Ok(())
+    }
+
+    #[test]
+    fn mutual_candidate_selection_binds_ticket_authorities_and_both_durable_adapters()
+    -> Result<(), Box<dyn Error>> {
+        let source_directory = tempdir()?;
+        let target_directory = tempdir()?;
+        let example = carrier("/expected/legacy_carrier_cbor_hex")?;
+        let conversation_id = *example.conversation_id();
+        let membership =
+            legacy_membership(conversation_id, &[carrier_author_account_id(&example)])?;
+        let active_event = match example.clone() {
+            CanonicalSyncEventCarrierV2::LegacyPostcardV6(bridge) => {
+                bridge.into_active_authorized_event()
+            }
+            CanonicalSyncEventCarrierV2::CanonicalCborV1(_) => {
+                return Err(io::Error::other("legacy vector decoded as canonical carrier").into());
+            }
+        };
+        let source = kilogram_store::EventStore::open(source_directory.path())?;
+        let plan = source.canonical_sync_v2_legacy_import_plan(
+            active_event.event().conversation_id(),
+            &membership,
+        )?;
+        let target = CanonicalSyncV2CarrierStore::open(target_directory.path())?;
+        let imported = target.import_legacy_page(
+            &source,
+            &membership,
+            &plan,
+            plan.start_cursor(),
+            MAX_CANONICAL_SYNC_V2_EVENTS_PER_BATCH,
+        )?;
+        assert!(imported.is_complete());
+
+        let listener = DeviceIdentity::from_secret_bytes([0x27; 32]);
+        let requester = DeviceIdentity::from_secret_bytes([0x47; 32]);
+        let session_binding =
+            SyncSessionBinding::from_transport_label("mutual-candidate-selection");
+        let policy = CanonicalSyncV2MembershipPolicy::from_legacy(membership)?;
+        let (client, _) = CanonicalSyncV2Client::bootstrap_from_completed_legacy_import(
+            &requester,
+            &target,
+            &policy,
+            &plan,
+            session_binding,
+            listener.device_id(),
+        )?;
+        let (server, _) = CanonicalSyncV2Server::bootstrap_responder_from_completed_legacy_import(
+            &listener,
+            &target,
+            &policy,
+            &plan,
+            session_binding,
+            requester.device_id(),
+        )?;
+        let client_runtime = client.restore_durable_runtime()?;
+        let responder_runtime = server.restore_durable_responder_runtime()?;
+
+        let (listener_account_id, listener_authorization) =
+            canonical_session_authorization([0x81; 32], &listener, *session_binding.as_bytes(), 7)?;
+        let (requester_account_id, requester_authorization) = canonical_session_authorization(
+            [0x91; 32],
+            &requester,
+            *session_binding.as_bytes(),
+            9,
+        )?;
+        let endpoint_id = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+        let capability_binding = SyncTransportCapabilityBinding {
+            listener_account_id,
+            listener_device_id: listener.device_id(),
+            authority_revision: 7,
+            allowed_requester_account_id: requester_account_id,
+            endpoint_id,
+            ticket_publication_channel_epoch: 4,
+            issued_at_unix_seconds: 1_000,
+            expires_at_unix_seconds: 2_000,
+        };
+        let capability = SignedSyncTransportCapability::issue_legacy_with_canonical_candidate(
+            &listener,
+            &capability_binding,
+        )?;
+        let offer_binding = SyncTransportCandidateOfferBinding {
+            listener_capability_id: capability.artifact_id()?,
+            conversation_id,
+            listener_account_id,
+            listener_device_id: listener.device_id(),
+            requester_account_id,
+            requester_device_id: requester.device_id(),
+            session_binding: *session_binding.as_bytes(),
+            listener_authority_revision: 7,
+            requester_authority_revision: 9,
+            migration_epoch: 1,
+        };
+        let offer = SignedSyncTransportCandidateOffer::issue(&requester, offer_binding)?;
+        let acceptance = SignedSyncTransportCandidateAcceptance::issue(&listener, &offer)?;
+        let selected = verify_durable_mutual_canonical_candidate_selection(
+            &capability,
+            &capability_binding,
+            &offer,
+            &acceptance,
+            &listener_authorization,
+            &requester_authorization,
+            &client_runtime,
+            &responder_runtime,
+            1_500,
+        )?;
+        assert_eq!(selected.conversation_id(), conversation_id);
+        assert_eq!(selected.listener_account_id(), listener_account_id);
+        assert_eq!(selected.requester_account_id(), requester_account_id);
+        assert_eq!(selected.listener_device_id(), listener.device_id());
+        assert_eq!(selected.requester_device_id(), requester.device_id());
+        assert_eq!(selected.session_binding(), *session_binding.as_bytes());
+        assert_eq!(selected.migration_epoch(), 1);
+        assert_eq!(
+            selected.selected_protocol(),
+            SyncTransportProtocol::CanonicalCborV2
+        );
+        assert!(!selected.active_transport_authorized());
+
+        let wrong_revision_offer = SignedSyncTransportCandidateOffer::issue(
+            &requester,
+            SyncTransportCandidateOfferBinding {
+                requester_authority_revision: 10,
+                ..offer_binding
+            },
+        )?;
+        let wrong_revision_acceptance =
+            SignedSyncTransportCandidateAcceptance::issue(&listener, &wrong_revision_offer)?;
+        assert!(matches!(
+            verify_durable_mutual_canonical_candidate_selection(
+                &capability,
+                &capability_binding,
+                &wrong_revision_offer,
+                &wrong_revision_acceptance,
+                &listener_authorization,
+                &requester_authorization,
+                &client_runtime,
+                &responder_runtime,
+                1_500,
+            ),
+            Err(CanonicalSyncV2SessionError::MutualCandidateAuthorizationMismatch)
+        ));
+        assert!(matches!(
+            verify_durable_mutual_canonical_candidate_selection(
+                &capability,
+                &capability_binding,
+                &offer,
+                &acceptance,
+                &listener_authorization,
+                &requester_authorization,
+                &client_runtime,
+                &responder_runtime,
+                10_000,
+            ),
+            Err(CanonicalSyncV2SessionError::Capability(
+                SyncTransportCapabilityError::Expired { .. }
+            ))
+        ));
         Ok(())
     }
 

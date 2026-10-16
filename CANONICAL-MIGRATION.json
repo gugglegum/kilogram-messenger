@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.67",
-  "status": "dormant-durable-responder-transition-adapter-verified-not-active",
+  "milestone": "M1.1.68",
+  "status": "dormant-mutual-authenticated-candidate-selection-verified-not-active",
   "changes_active_wire": false,
   "current_encoding": "postcard",
   "candidate_encoding": "kilogram-deterministic-cbor-v2-typed-history",
@@ -26,17 +26,20 @@
     "dormant_atomic_runtime_transition_transaction": "verified",
     "dormant_durable_client_transition_adapter": "verified",
     "dormant_durable_responder_transition_adapter": "verified",
+    "dormant_mutual_authenticated_candidate_selection": "verified",
     "registered": false,
     "dialed": false
   },
   "current_state": "legacy-only",
   "selection": {
-    "mechanism": "authenticated-capability-bound-explicit-identifier",
+    "mechanism": "listener-capability-bound-requester-offer-and-listener-acceptance",
     "capability": "kilogram-deterministic-cbor-v2-typed-history",
     "capability_freshness": "ticket-v13-device-signed-authority-endpoint-requester-publication-epoch-and-prekey-validity-bound",
     "format_sniffing": false,
     "parse_error_fallback": false,
-    "reuse_existing_identifier": false
+    "reuse_existing_identifier": false,
+    "mutual_authenticated_candidate_selection": "verified",
+    "selection_authorizes_registration_or_dial": false
   },
   "states": [
     {
@@ -225,6 +228,10 @@
     },
     {
       "id": "dormant-durable-responder-transition-adapter",
+      "status": "verified"
+    },
+    {
+      "id": "mutual-authenticated-capability-selection",
       "status": "verified"
     },
     {

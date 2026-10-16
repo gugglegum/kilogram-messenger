@@ -4378,3 +4378,25 @@ Hosted follow-up:
   regressions выше являются test evidence этого этапа.
 - Следующий slice — mutual authenticated capability selection между durable
   client/responder без регистрации или dial `/cbor/2` до отдельного решения.
+
+## M1.1.68 dormant mutual authenticated candidate selection (2026-10-17)
+
+- Production dependencies: `kilogram-sync-capability` uses workspace BLAKE3
+  for domain-separated capability/offer IDs; `kilogram-session` depends on the
+  capability crate and uses `ed25519-dalek` only in integration tests.
+- Targeted offline debug tests use
+  `scripts/invoke-cargo-friendly.ps1 -CargoJobs 2`; redb/tempdir session tests
+  need execution outside the Windows sandbox because sandboxed TEMP can return
+  `os error 5`.
+- Verified before documentation close: sync-capability 5/5 and focused mutual
+  selection session regression 1/1; full session regression 15/15.
+- Dedicated verifier:
+  `scripts/verify-kilogram-canonical-sync-v2-mutual-candidate-selection-boundary.ps1`.
+  It rejects activation permission, fallback, a missing authority binding,
+  shared offer/acceptance signature domain and any active Iroh/CLI leak.
+- No network operation, release build, archive or stable executable is needed
+  for this dormant stage.
+- Final local evidence: 20 affected boundary normal runs and 19 negative
+  self-test runs passed; 98 root JSON files parsed; rustfmt and workspace
+  locked/offline strict Clippy passed; accepted-tag readiness passed 100/100
+  against immutable `M1.0.0`.

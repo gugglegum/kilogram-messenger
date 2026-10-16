@@ -43,8 +43,8 @@ function Assert-Boundary {
     $canonicalAlpn = 'kilogram/m1/sync/cbor/1'
     $historyCompatibleAlpn = 'kilogram/m1/sync/cbor/2'
     if ([UInt64]$Manifest.schema_version -ne 1 -or
-        [string]$Manifest.milestone -cne 'M1.1.67' -or
-        [string]$Manifest.status -cne 'dormant-durable-responder-transition-adapter-verified-not-active' -or
+        [string]$Manifest.milestone -cne 'M1.1.68' -or
+        [string]$Manifest.status -cne 'dormant-mutual-authenticated-candidate-selection-verified-not-active' -or
         [string]$Manifest.surface -cne 'transport-sync' -or
         [bool]$Manifest.changes_active_wire) {
         throw 'canonical transport sync manifest header changed'
@@ -98,7 +98,7 @@ function Assert-Boundary {
         throw 'canonical synchronization selection policy changed'
     }
     $expectedRemaining = @(
-        'mutual-authenticated-capability-selection',
+        'dual-reader-runtime-implementation',
         'mixed-version-and-downgrade-tests',
         'rollback-drill',
         'sustained-fuzzing',
@@ -120,8 +120,8 @@ function Assert-Boundary {
         throw 'canonical synchronization remaining-work boundary changed'
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.67' -or
-        [string]$Migration.status -cne 'dormant-durable-responder-transition-adapter-verified-not-active' -or
+    if ([string]$Migration.milestone -cne 'M1.1.68' -or
+        [string]$Migration.status -cne 'dormant-mutual-authenticated-candidate-selection-verified-not-active' -or
         [string]$Migration.candidate_protocol_identifier -cne $historyCompatibleAlpn -or
         [string]$Migration.history_compatible_successor.protocol_identifier -cne
             $historyCompatibleAlpn -or
@@ -152,13 +152,13 @@ function Assert-Boundary {
     }
 
     $surface = @($Coverage.surfaces | Where-Object { [string]$_.id -ceq 'transport-sync' })
-    if ([string]$Coverage.milestone -cne 'M1.1.67' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.68' -or
         $surface.Count -ne 1 -or
         [string]$surface[0].coverage -cne 'partial' -or
         (@($surface[0].covered) -join ',') -cne
-            'parallel-cbor-alpn-identifier-allocation,history-compatible-cbor-v2-alpn-identifier-allocation,typed-durable-canonical-sync-session-checkpoint,authenticated-ticket-v13-history-compatible-cbor-v2-capability,dormant-history-compatible-sync-v2-runtime-state-machine,dormant-atomic-typed-carrier-store,dormant-cross-format-membership-policy,dormant-bounded-resumable-legacy-import,dormant-atomic-legacy-import-checkpoint,dormant-signed-session-bootstrap,dormant-signed-session-successor-store,dormant-checkpoint-bound-runtime-frame-journal,dormant-atomic-runtime-transition-transaction,dormant-durable-client-transition-adapter,dormant-durable-responder-transition-adapter' -or
+            'parallel-cbor-alpn-identifier-allocation,history-compatible-cbor-v2-alpn-identifier-allocation,typed-durable-canonical-sync-session-checkpoint,authenticated-ticket-v13-history-compatible-cbor-v2-capability,dormant-history-compatible-sync-v2-runtime-state-machine,dormant-atomic-typed-carrier-store,dormant-cross-format-membership-policy,dormant-bounded-resumable-legacy-import,dormant-atomic-legacy-import-checkpoint,dormant-signed-session-bootstrap,dormant-signed-session-successor-store,dormant-checkpoint-bound-runtime-frame-journal,dormant-atomic-runtime-transition-transaction,dormant-durable-client-transition-adapter,dormant-durable-responder-transition-adapter,dormant-mutual-authenticated-candidate-selection' -or
         (@($surface[0].remaining) -join ',') -cne
-            'mutual-authenticated-capability-selection' -or
+            'dual-reader-runtime-implementation,mixed-version-and-downgrade-tests,rollback-drill,sustained-fuzzing,fresh-hosted-and-field-evidence' -or
         [int]$Coverage.summary.complete -ne 17 -or
         [int]$Coverage.summary.partial -ne 1 -or
         [int]$Coverage.summary.not_started -ne 0 -or

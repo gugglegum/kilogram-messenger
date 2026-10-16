@@ -3350,10 +3350,12 @@ dependencies = [
 name = "kilogram-session"
 version = "0.1.0"
 dependencies = [
+ "ed25519-dalek 3.0.0",
  "kilogram-identity",
  "kilogram-protocol",
  "kilogram-ratchet",
  "kilogram-store",
+ "kilogram-sync-capability",
  "serde_json",
  "tempfile",
  "thiserror 2.0.20",
@@ -3395,6 +3397,7 @@ dependencies = [
 name = "kilogram-sync-capability"
 version = "0.1.0"
 dependencies = [
+ "blake3",
  "kilogram-identity",
  "serde",
  "serde_json",

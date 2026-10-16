@@ -456,9 +456,12 @@ sessions, distribution, removal и key epochs и не решены этим пр
   optimistic concurrency и exact retry. M1.1.66 подключил её к concrete
   durable client adapter, а M1.1.67 добавил отдельный responder checkpoint,
   responder-only journal и atomic durable server transitions с exact
-  Diff/Complete restart dispatch. Следующий приоритет — mutual authenticated
-  capability selection между уже durable сторонами перед active dual reader
-  без fallback после canonical failure. Общая activation требует
+  Diff/Complete restart dispatch. M1.1.68 добавил взаимную Device-signed
+  candidate ceremony, проверку обеих canonical authority/session chains и
+  exact binding обоих durable adapters, но намеренно не выдал transport
+  activation permit. Следующий приоритет — mixed-version/downgrade matrix,
+  затем отдельный active dual-reader slice без fallback после canonical
+  failure. Общая activation требует
   explicit identifiers, downgrade
   tests, sustained fuzzing, independent HPKE conformance и fresh multi-device
   field evidence.
@@ -483,8 +486,9 @@ sessions, distribution, removal и key epochs и не решены этим пр
   journal и atomic carrier/checkpoint/runtime transition transaction.
   M1.1.66–M1.1.67 интегрировали эту transaction в durable client и responder
   adapters и доказали exact restart/retry с раздельными signed journals.
-  Открыты mutual authenticated capability selection и затем active dual-reader
-  slice с mixed-version/downgrade regression.
+  M1.1.68 закрыл mutual authenticated candidate selection, но не активировал
+  transport. Открыты mixed-version/downgrade regression, explicit dual-reader
+  activation, rollback drill, sustained fuzzing и fresh field evidence.
 
 ## Инварианты при выборе ответов
 

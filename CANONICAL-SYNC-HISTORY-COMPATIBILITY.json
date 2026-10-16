@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.67",
-  "status": "dormant-durable-responder-transition-adapter-verified-not-active",
+  "milestone": "M1.1.68",
+  "status": "dormant-mutual-authenticated-candidate-selection-verified-not-active",
   "changes_active_wire": false,
   "active": {
     "encoding": "postcard-v6",
@@ -53,10 +53,11 @@
     "dormant_atomic_runtime_transition_transaction_integrated": true,
     "dormant_durable_client_transition_adapter_integrated": true,
     "dormant_durable_responder_transition_adapter_integrated": true,
+    "dormant_mutual_authenticated_candidate_selection_integrated": true,
     "must_integrate_bridge_into_closed_frames": true,
     "must_authenticate_exact_identifier_in_connection_ticket": true,
     "must_preserve_no-sniffing-and-no-parse-fallback": true,
-    "status": "dormant-store-policy-import-checkpoint-session-bootstrap-successor-store-runtime-frame-journal-atomic-transition-and-durable-client-and-responder-adapters-verified-not-active"
+    "status": "dormant-mutual-authenticated-candidate-selection-verified-not-active"
   },
   "forbidden": [
     "resign-historical-event-with-migration-key",

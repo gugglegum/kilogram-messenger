@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.67",
-  "status": "dormant-durable-responder-transition-adapter-verified-not-active",
+  "milestone": "M1.1.68",
+  "status": "dormant-mutual-authenticated-candidate-selection-verified-not-active",
   "surface": "transport-sync",
   "changes_active_wire": false,
   "active": {
@@ -39,6 +39,7 @@
     "dormant_atomic_runtime_transition_transaction": true,
     "dormant_durable_client_transition_adapter": true,
     "dormant_durable_responder_transition_adapter": true,
+    "dormant_mutual_authenticated_candidate_selection": true,
     "registered": false,
     "dialed": false,
     "format_sniffing": false,
@@ -49,12 +50,18 @@
     "listener_capability_required_before_dial": true,
     "listener_capability_authentication": "ticket-v13-device-signed-and-bound-to-authority-endpoint-requester-publication-epoch-and-prekey-validity",
     "requester_capability_authentication": "canonical-device-session-authorization-before-sync-frames",
+    "mutual_authenticated_candidate_selection": true,
+    "requester_offer_authentication": "device-signed-capability-id-conversation-accounts-devices-authority-revisions-session-and-migration-epoch",
+    "listener_acceptance_authentication": "device-signed-exact-requester-offer-id",
+    "both_durable_adapter_identities_required": true,
+    "selection_authorizes_registration_or_dial": false,
     "fallback_after_selected_canonical_failure": false
   },
   "authenticated_capability": {
     "portable_artifact": "connection-ticket-v13",
     "capability_version": 2,
     "signature_domain": "kilogram:sync-transport-capability-signature:v2\\0",
+    "artifact_id_domain": "kilogram:sync-transport-capability-artifact-id:v2\\0",
     "active_protocols": ["kilogram/m0/sync/8"],
     "candidate_protocols": ["kilogram/m1/sync/cbor/2"],
     "canonical_dial_enabled": false,
@@ -69,7 +76,7 @@
     ]
   },
   "remaining": [
-    "mutual-authenticated-capability-selection",
+    "dual-reader-runtime-implementation",
     "mixed-version-and-downgrade-tests",
     "rollback-drill",
     "sustained-fuzzing",
