@@ -1,4 +1,5 @@
 use std::{
+    cmp::Ordering,
     fmt, fs,
     io::Write,
     net::SocketAddr,
@@ -21,7 +22,7 @@ use tokio::{
     time::timeout,
 };
 
-const IPC_VERSION: u8 = 26;
+const IPC_VERSION: u8 = 27;
 const MAX_DESCRIPTOR_BYTES: u64 = 16 * 1024;
 const MAX_LAUNCH_PROFILE_BYTES: u64 = 64 * 1024;
 const MAX_LAUNCH_PROFILE_PATHS: usize = 64;
@@ -44,8 +45,9 @@ const MAX_FRAME_BYTES: usize = 256 * 1024;
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(3);
 const IO_TIMEOUT: Duration = Duration::from_secs(30);
 const REQUEST_CHANNEL_CAPACITY: usize = 64;
-const DESCRIPTOR_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-ipc-descriptor:v7\0";
+const DESCRIPTOR_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-ipc-descriptor:v8\0";
 pub const RUNTIME_LAUNCH_PROFILE_VERSION: u8 = 1;
+pub const MAX_RUNTIME_IPC_CONVERSATION_PAGE_SIZE: u16 = 64;
 pub const DEFAULT_VOLUNTEER_STORAGE_LISTEN_PORT: u16 = 0;
 pub const DEFAULT_VOLUNTEER_STORAGE_TOTAL_BYTES: u64 = 200 * 1024 * 1024;
 pub const DEFAULT_VOLUNTEER_STORAGE_ETHERNET_TRANSFER_BYTES: u64 = 500 * 1024 * 1024;
@@ -675,7 +677,10 @@ pub enum RuntimeIpcCommand {
         allow_unknown_network: bool,
     },
     OwnDeviceRosterAutomationStatus,
-    ConversationList,
+    ConversationListPage {
+        cursor: Option<RuntimeIpcConversationCursor>,
+        limit: u16,
+    },
     HistoryPage {
         conversation: String,
         cursor: Option<RuntimeIpcHistoryCursor>,
@@ -739,6 +744,58 @@ impl FromStr for RuntimeIpcRequestId {
                 .context("runtime IPC request ID contains non-hexadecimal characters")?;
         }
         Ok(Self(bytes))
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+pub struct RuntimeIpcConversationCursor {
+    conversation_label: String,
+    peer_account_id: AccountId,
+}
+
+impl RuntimeIpcConversationCursor {
+    pub fn new(conversation_label: String, peer_account_id: AccountId) -> Result<Self> {
+        let cursor = Self {
+            conversation_label,
+            peer_account_id,
+        };
+        cursor.validate()?;
+        Ok(cursor)
+    }
+
+    pub fn from_summary(summary: &RuntimeIpcConversationSummary) -> Result<Self> {
+        Self::new(summary.conversation_label.clone(), summary.peer_account_id)
+    }
+
+    pub fn conversation_label(&self) -> &str {
+        &self.conversation_label
+    }
+
+    pub fn peer_account_id(&self) -> AccountId {
+        self.peer_account_id
+    }
+
+    pub fn validate(&self) -> Result<()> {
+        ensure!(
+            !self.conversation_label.is_empty() && self.conversation_label.len() <= 4_096,
+            "runtime IPC conversation cursor label must contain between 1 and 4096 bytes"
+        );
+        ensure!(
+            self.peer_account_id != AccountId::from_bytes([0; 32]),
+            "runtime IPC conversation cursor Account ID must be nonzero"
+        );
+        Ok(())
+    }
+
+    pub fn compare_key(&self, label: &str, peer_account_id: AccountId) -> Ordering {
+        self.conversation_label
+            .as_bytes()
+            .cmp(label.as_bytes())
+            .then_with(|| {
+                self.peer_account_id
+                    .as_bytes()
+                    .cmp(peer_account_id.as_bytes())
+            })
     }
 }
 
@@ -872,6 +929,120 @@ pub struct RuntimeIpcConversationSummary {
     pub route_policy: RuntimeIpcRoutePolicy,
     pub message_count: u32,
     pub latest_message: Option<RuntimeIpcMessagePreview>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcConversationPage {
+    pub conversations: Vec<RuntimeIpcConversationSummary>,
+    pub next_cursor: Option<RuntimeIpcConversationCursor>,
+}
+
+impl RuntimeIpcConversationPage {
+    pub fn validate_for_request(
+        &self,
+        request_cursor: Option<&RuntimeIpcConversationCursor>,
+        limit: u16,
+    ) -> Result<()> {
+        ensure!(
+            (1..=MAX_RUNTIME_IPC_CONVERSATION_PAGE_SIZE).contains(&limit),
+            "runtime IPC conversation page limit must be between 1 and {MAX_RUNTIME_IPC_CONVERSATION_PAGE_SIZE}"
+        );
+        if let Some(cursor) = request_cursor {
+            cursor.validate()?;
+        }
+        ensure!(
+            self.conversations.len() <= usize::from(limit),
+            "runtime IPC conversation page exceeds the requested limit"
+        );
+        for summary in &self.conversations {
+            validate_conversation_summary(summary)?;
+        }
+        ensure!(
+            self.conversations.windows(2).all(|pair| {
+                compare_conversation_keys(
+                    &pair[0].conversation_label,
+                    pair[0].peer_account_id,
+                    &pair[1].conversation_label,
+                    pair[1].peer_account_id,
+                ) == Ordering::Less
+            }),
+            "runtime IPC conversation page is not strictly ordered"
+        );
+        if let (Some(cursor), Some(first)) = (request_cursor, self.conversations.first()) {
+            ensure!(
+                cursor.compare_key(&first.conversation_label, first.peer_account_id)
+                    == Ordering::Less,
+                "runtime IPC conversation page did not advance beyond its request cursor"
+            );
+        }
+        match (&self.next_cursor, self.conversations.last()) {
+            (None, _) => {}
+            (Some(_), None) => bail!("empty runtime IPC conversation page has a continuation"),
+            (Some(cursor), Some(last)) => {
+                cursor.validate()?;
+                ensure!(
+                    self.conversations.len() == usize::from(limit),
+                    "short runtime IPC conversation page has a continuation"
+                );
+                ensure!(
+                    cursor.conversation_label == last.conversation_label
+                        && cursor.peer_account_id == last.peer_account_id,
+                    "runtime IPC conversation continuation does not match the last summary"
+                );
+            }
+        }
+        Ok(())
+    }
+}
+
+fn compare_conversation_keys(
+    left_label: &str,
+    left_account_id: AccountId,
+    right_label: &str,
+    right_account_id: AccountId,
+) -> Ordering {
+    left_label
+        .as_bytes()
+        .cmp(right_label.as_bytes())
+        .then_with(|| left_account_id.as_bytes().cmp(right_account_id.as_bytes()))
+}
+
+fn validate_conversation_summary(summary: &RuntimeIpcConversationSummary) -> Result<()> {
+    ensure!(
+        !summary.contact_id.is_empty()
+            && summary.contact_id.len() <= 4_096
+            && !summary.conversation_label.is_empty()
+            && summary.conversation_label.len() <= 4_096
+            && summary.conversation_id == ConversationId::from_label(&summary.conversation_label)
+            && summary.peer_account_id != AccountId::from_bytes([0; 32]),
+        "runtime IPC conversation summary identity is invalid"
+    );
+    ensure!(
+        usize::from(summary.endpoint_candidate_count) == summary.endpoint_candidates.len(),
+        "runtime IPC conversation endpoint count does not match its candidates"
+    );
+    let usable = summary
+        .endpoint_candidates
+        .iter()
+        .filter(|candidate| candidate.state == RuntimeIpcEndpointCandidateState::Usable)
+        .count();
+    let stale = summary
+        .endpoint_candidates
+        .iter()
+        .filter(|candidate| candidate.state == RuntimeIpcEndpointCandidateState::Stale)
+        .count();
+    let quarantined = summary
+        .endpoint_candidates
+        .iter()
+        .filter(|candidate| candidate.state == RuntimeIpcEndpointCandidateState::Quarantined)
+        .count();
+    ensure!(
+        usize::from(summary.usable_endpoint_candidate_count) == usable
+            && usize::from(summary.stale_endpoint_candidate_count) == stale
+            && usize::from(summary.quarantined_endpoint_candidate_count) == quarantined,
+        "runtime IPC conversation endpoint state counts do not match their candidates"
+    );
+    Ok(())
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -1381,7 +1552,7 @@ pub enum RuntimeIpcResponse {
     OwnDeviceTicketDiscoveryStatus(Vec<RuntimeIpcOwnDeviceTicketDiscoveryStatus>),
     OwnDeviceRosterAutomationConfigured(Box<RuntimeIpcOwnDeviceRosterAutomationStatus>),
     OwnDeviceRosterAutomationStatus(Option<Box<RuntimeIpcOwnDeviceRosterAutomationStatus>>),
-    ConversationList(Vec<RuntimeIpcConversationSummary>),
+    ConversationListPage(RuntimeIpcConversationPage),
     HistoryPage(RuntimeIpcHistoryPage),
     ChangeState {
         revision: u64,
@@ -1912,6 +2083,36 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn version_26_request_is_rejected_before_actor_dispatch() -> Result<(), Box<dyn Error>> {
+        let directory = tempfile::tempdir()?;
+        let descriptor_path = directory.path().join("runtime.ipc.json");
+        let root = AccountRootState::create(directory.path().join("root"))?;
+        let identity = kilogram_identity::DeviceIdentity::generate()?;
+        let (server, mut receiver) =
+            RuntimeIpcServer::start(descriptor_path.clone(), root.account_id(), &identity).await?;
+        let descriptor = load_descriptor(&descriptor_path)?;
+        let (address, token) = descriptor.verify()?;
+        let mut stream = TcpStream::connect(address).await?;
+        write_frame(
+            &mut stream,
+            &RuntimeIpcRequest {
+                version: 26,
+                token,
+                command: RuntimeIpcCommand::Ping,
+            },
+        )
+        .await?;
+        assert!(read_frame::<RuntimeIpcResponse>(&mut stream).await.is_err());
+        assert!(
+            timeout(Duration::from_millis(100), receiver.recv())
+                .await
+                .is_err()
+        );
+        server.shutdown().await?;
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn change_wait_is_long_polled_without_blocking_actor() -> Result<(), Box<dyn Error>> {
         let directory = tempfile::tempdir()?;
         let descriptor_path = directory.path().join("runtime.ipc.json");
@@ -1999,8 +2200,8 @@ mod tests {
         )?;
         assert!(descriptor.verify().is_ok());
         let mut old_version = descriptor.clone();
-        old_version.content.version = 1;
-        let mut old_signing_bytes = DESCRIPTOR_SIGNATURE_DOMAIN.to_vec();
+        old_version.content.version = 26;
+        let mut old_signing_bytes = b"kilogram:runtime-ipc-descriptor:v7\0".to_vec();
         old_signing_bytes.extend_from_slice(&postcard::to_allocvec(&old_version.content)?);
         old_version.signature = identity.sign(&old_signing_bytes).to_vec();
         assert!(old_version.verify().is_err());
@@ -2024,6 +2225,91 @@ mod tests {
         assert!(
             "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
                 .parse::<RuntimeIpcRequestId>()
+                .is_err()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn conversation_page_requires_exact_monotonic_continuation() -> Result<(), Box<dyn Error>> {
+        fn summary(
+            label: &str,
+            account_byte: u8,
+            peer_device_id: DeviceId,
+        ) -> RuntimeIpcConversationSummary {
+            RuntimeIpcConversationSummary {
+                contact_id: format!("{account_byte:064x}"),
+                conversation_label: label.to_owned(),
+                conversation_id: ConversationId::from_label(label),
+                peer_account_id: AccountId::from_bytes([account_byte; 32]),
+                peer_device_id,
+                endpoint_candidate_count: 1,
+                usable_endpoint_candidate_count: 1,
+                stale_endpoint_candidate_count: 0,
+                quarantined_endpoint_candidate_count: 0,
+                endpoint_candidates: vec![RuntimeIpcEndpointCandidateStatus {
+                    peer_device_id,
+                    primary: true,
+                    route_policy: RuntimeIpcRoutePolicy::Auto,
+                    descriptor_file: PathBuf::from("peer.ticket"),
+                    state: RuntimeIpcEndpointCandidateState::Usable,
+                    authority_revision: Some(1),
+                    publication_channel_id: None,
+                    observed_publication_generation: None,
+                    observed_at_unix_seconds: None,
+                    publication_conflict_generation: None,
+                    publication_conflict_proof_id: None,
+                    publication_conflict_detected_at_unix_seconds: None,
+                    detail: "usable".to_owned(),
+                }],
+                route_policy: RuntimeIpcRoutePolicy::Auto,
+                message_count: 0,
+                latest_message: None,
+            }
+        }
+
+        let peer_device_id = kilogram_identity::DeviceIdentity::generate()?.device_id();
+        let first = summary("a", 1, peer_device_id);
+        let second = summary("b", 2, peer_device_id);
+        let continuation = RuntimeIpcConversationCursor::from_summary(&second)?;
+        let page = RuntimeIpcConversationPage {
+            conversations: vec![first.clone(), second.clone()],
+            next_cursor: Some(continuation.clone()),
+        };
+        page.validate_for_request(None, 2)?;
+
+        let request_cursor = RuntimeIpcConversationCursor::from_summary(&first)?;
+        RuntimeIpcConversationPage {
+            conversations: vec![second.clone()],
+            next_cursor: None,
+        }
+        .validate_for_request(Some(&request_cursor), 2)?;
+
+        let mut wrong_continuation = page.clone();
+        wrong_continuation.next_cursor = Some(request_cursor.clone());
+        assert!(wrong_continuation.validate_for_request(None, 2).is_err());
+
+        let mut duplicate = page.clone();
+        duplicate.conversations[1] = first.clone();
+        assert!(duplicate.validate_for_request(None, 2).is_err());
+
+        let short_with_continuation = RuntimeIpcConversationPage {
+            conversations: vec![second.clone()],
+            next_cursor: Some(continuation),
+        };
+        assert!(
+            short_with_continuation
+                .validate_for_request(None, 2)
+                .is_err()
+        );
+
+        let nonadvancing = RuntimeIpcConversationPage {
+            conversations: vec![first],
+            next_cursor: None,
+        };
+        assert!(
+            nonadvancing
+                .validate_for_request(Some(&request_cursor), 2)
                 .is_err()
         );
         Ok(())

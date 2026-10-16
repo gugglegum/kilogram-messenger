@@ -6066,3 +6066,32 @@ correlation visible, Windows-only field evidence, independent security audit
   v26/JSON descriptor v7, network, test EXE, release/archive/push/tag не
   менялись. Следующий приоритет — explicit migration активного unpaged
   conversation list, затем оставшиеся mutation-result contracts.
+
+### M1.1.45 — active runtime IPC conversation pagination: принято локально
+
+- active loopback IPC заменил unpaged `ConversationList` на
+  `ConversationListPage { cursor, limit }`; Postcard version повышен с 26 до
+  27, signed JSON descriptor domain — с v7 до v8;
+- cursor exact-связывает UTF-8 conversation label и peer Account ID, порядок
+  bytewise-детерминирован, limit ограничен 1..64, continuation допустим только
+  для полной страницы и обязан совпасть с последним summary;
+- runtime сортирует authenticated contacts и выбирает не более одной страницы
+  до загрузки membership/history/endpoint preview. Duplicate cursor keys,
+  non-monotonic page и несогласованные endpoint counters fail closed;
+- Windows desktop автоматически собирает страницы, повторно валидирует каждый
+  cursor/page и явно падает после safety bound 1024 страниц (65 536
+  conversations), не выдавая усечение за успех;
+- migration — deliberate exact-version hard cut для co-installed binaries:
+  legacy v26 descriptor/request отвергаются до actor dispatch, downgrade и
+  dual reader отсутствуют. Peer, relay, mailbox, sync wire и inactive
+  canonical CBOR не менялись;
+- IPC unit regression прошёл 17/17, desktop multi-page test — 1/1, локальная
+  direct-only двух-runtime CLI integration — 1/1. Dedicated migration boundary,
+  aggregate canonical/compatibility gates, rustfmt и strict offline Clippy
+  прошли;
+- accepted-tag readiness прошёл 78/78 против immutable `M1.0.0`. Default
+  current-candidate mode ожидаемо отвергает protected-surface drift и не
+  переиспользует старое field evidence. Release/archive/push/tag не создавались;
+- canonical coverage остаётся 16 complete, 1 partial, 1 not-started и 2
+  not-targeted. В partial `runtime-ipc` остались только associated
+  mutation-result contracts.

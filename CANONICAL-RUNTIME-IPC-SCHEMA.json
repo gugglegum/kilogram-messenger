@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.44",
+  "milestone": "M1.1.45",
   "status": "candidate-not-active",
   "changes_active_wire": false,
   "profile": "kilogram-deterministic-cbor-v1",
@@ -10,7 +10,7 @@
     "root_rule": "kilogram-runtime-ipc-v1"
   },
   "activation": {
-    "current_runtime_encoding": "postcard-v26-with-json-descriptor-v7",
+    "current_runtime_encoding": "postcard-v27-with-json-descriptor-v8",
     "current_runtime_changed": false,
     "candidate_protocol_identifier": "unassigned",
     "required_before_activation": [
@@ -898,10 +898,13 @@
     "execution status and start responses require no restart, execute only in the foreground runtime and explicitly deny an OS background service",
     "Account Root secrets, Device private keys, private recovery capabilities, decrypted history, page payloads and local filesystem paths are forbidden from recovery execution IPC",
     "the request ID is the durable execution idempotency key: exact replay may return already committed while divergent reuse or a stale plan record fails before scheduling",
-    "the execution contract makes no claim that a source is online, that a page was transferred, that history converged or that any remote copy was erased"
+    "the execution contract makes no claim that a source is online, that a page was transferred, that history converged or that any remote copy was erased",
+    "the active Postcard adapter uses explicit IPC version 27 with descriptor signature domain v8 and rejects version 26 descriptors and requests before actor dispatch",
+    "the active conversation-list adapter accepts only limits from 1 through 64 and returns strict UTF-8-label then peer-Account ordering after the exact request cursor",
+    "an active conversation-list continuation exists only on a full page and equals the exact label and peer Account tuple of the final returned summary",
+    "the desktop independently validates every active conversation page and bounds one automatic refresh to 1024 pages rather than accepting truncation as success"
   ],
   "remaining_runtime_ipc_surface": [
-    "active-unpaged-conversation-list-migration",
     "all-associated-mutation-results-not-listed-above"
   ]
 }

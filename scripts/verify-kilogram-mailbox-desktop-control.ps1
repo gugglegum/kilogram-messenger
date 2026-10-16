@@ -27,7 +27,7 @@ function Get-RustStructBlock {
     return $match.Value
 }
 
-if (-not $ipc.Contains('const IPC_VERSION: u8 = 26;')) {
+if (-not $ipc.Contains('const IPC_VERSION: u8 = 27;')) {
     throw 'mailbox desktop-control contract must use authenticated IPC version 26'
 }
 
@@ -163,7 +163,7 @@ foreach ($manifestPath in @(
 }
 
 Write-Output 'mailbox_desktop_control=verified'
-Write-Output 'ipc_version=26'
+Write-Output 'ipc_version=27'
 Write-Output 'runtime_owner=single-locked-actor'
 Write-Output 'mutations=activate-v2-exact-rotate-v2-exact-revoke'
 Write-Output 'status=lifecycle-heads-convergence-and-exact-locator'

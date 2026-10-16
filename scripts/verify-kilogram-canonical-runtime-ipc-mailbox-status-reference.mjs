@@ -198,7 +198,7 @@ const options = parse(process.argv.slice(2));
 const schema = JSON.parse(readFileSync(options.schema, "utf8"));
 const vectors = JSON.parse(readFileSync(options.vectors, "utf8"));
 const provisioning = JSON.parse(readFileSync(options["provisioning-vectors"], "utf8"));
-assert(schema.milestone === "M1.1.44" && schema.status === "candidate-not-active",
+assert(schema.milestone === "M1.1.45" && schema.status === "candidate-not-active",
   "mailbox status schema milestone or activation state changed");
 equalJson(generate(provisioning, vectors.input), vectors.expected,
   "canonical runtime IPC mailbox status vectors");

@@ -281,10 +281,10 @@
       "class": "local-control",
       "encoding": "postcard",
       "compatibility": "exact-version",
-      "migration": "new-version-dual-reader",
+      "migration": "new-version-explicit-migration",
       "bindings": [
-        { "path": "crates/kilogram-runtime-ipc/src/lib.rs", "symbol": "DESCRIPTOR_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:runtime-ipc-descriptor:v7\\0" },
-        { "path": "crates/kilogram-runtime-ipc/src/lib.rs", "symbol": "IPC_VERSION", "rust_type": "u8", "value": 26 },
+        { "path": "crates/kilogram-runtime-ipc/src/lib.rs", "symbol": "DESCRIPTOR_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:runtime-ipc-descriptor:v8\\0" },
+        { "path": "crates/kilogram-runtime-ipc/src/lib.rs", "symbol": "IPC_VERSION", "rust_type": "u8", "value": 27 },
         { "path": "crates/kilogram-runtime-ipc/src/lib.rs", "symbol": "RUNTIME_LAUNCH_PROFILE_VERSION", "rust_type": "u8", "value": 1 }
       ]
     },

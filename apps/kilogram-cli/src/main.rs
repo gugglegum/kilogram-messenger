@@ -68,13 +68,14 @@ use kilogram_ratchet::{
     SignedRatchetIdentity, unix_time_now,
 };
 use kilogram_runtime_ipc::{
-    DEFAULT_VOLUNTEER_STORAGE_LISTEN_PORT, RuntimeIpcCommand, RuntimeIpcContactTicketRefresh,
-    RuntimeIpcConversationSummary, RuntimeIpcDescriptor, RuntimeIpcDeviceDirectoryStatus,
-    RuntimeIpcDeviceDirectoryUpdate, RuntimeIpcEndpointAnnouncementExport,
-    RuntimeIpcEndpointAnnouncementImport, RuntimeIpcEndpointAnnouncementPush,
-    RuntimeIpcEndpointCandidateState, RuntimeIpcEndpointCandidateStatus,
-    RuntimeIpcEndpointTicketRefresh, RuntimeIpcHistoryCursor, RuntimeIpcHistoryMessage,
-    RuntimeIpcHistoryPage, RuntimeIpcMailboxCapabilityStatus,
+    DEFAULT_VOLUNTEER_STORAGE_LISTEN_PORT, MAX_RUNTIME_IPC_CONVERSATION_PAGE_SIZE,
+    RuntimeIpcCommand, RuntimeIpcContactTicketRefresh, RuntimeIpcConversationCursor,
+    RuntimeIpcConversationPage, RuntimeIpcConversationSummary, RuntimeIpcDescriptor,
+    RuntimeIpcDeviceDirectoryStatus, RuntimeIpcDeviceDirectoryUpdate,
+    RuntimeIpcEndpointAnnouncementExport, RuntimeIpcEndpointAnnouncementImport,
+    RuntimeIpcEndpointAnnouncementPush, RuntimeIpcEndpointCandidateState,
+    RuntimeIpcEndpointCandidateStatus, RuntimeIpcEndpointTicketRefresh, RuntimeIpcHistoryCursor,
+    RuntimeIpcHistoryMessage, RuntimeIpcHistoryPage, RuntimeIpcMailboxCapabilityStatus,
     RuntimeIpcMailboxCapabilityTransition, RuntimeIpcMailboxStatus, RuntimeIpcMessagePreview,
     RuntimeIpcNetworkClass, RuntimeIpcOutboxStatus,
     RuntimeIpcOwnDeviceAnnouncementAutomationStatus, RuntimeIpcOwnDeviceRosterAutomationStatus,
@@ -11985,9 +11986,18 @@ fn open_runtime_history_message(
     })
 }
 
-fn collect_runtime_conversation_list(
+fn collect_runtime_conversation_page(
     state_directory: &Path,
-) -> Result<Vec<RuntimeIpcConversationSummary>> {
+    cursor: Option<RuntimeIpcConversationCursor>,
+    limit: u16,
+) -> Result<RuntimeIpcConversationPage> {
+    ensure!(
+        (1..=MAX_RUNTIME_IPC_CONVERSATION_PAGE_SIZE).contains(&limit),
+        "runtime conversation page limit must be between 1 and {MAX_RUNTIME_IPC_CONVERSATION_PAGE_SIZE}"
+    );
+    if let Some(cursor) = cursor.as_ref() {
+        cursor.validate()?;
+    }
     let device_state = load_command_device_state(state_directory)?;
     let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
     let local_certificate = trust.load_certificate()?;
@@ -11999,10 +12009,49 @@ fn collect_runtime_conversation_list(
     )?;
     let local_authority = trust.load_own_authority_snapshot(&local_certificate)?;
     let read_repositories = open_immutable_read_repositories(state_directory)?;
-    let mut summaries = Vec::with_capacity(snapshot.contacts.len());
+    let mut contacts = snapshot.contacts.values().collect::<Vec<_>>();
+    contacts.sort_by(|left, right| {
+        left.conversation_label()
+            .as_bytes()
+            .cmp(right.conversation_label().as_bytes())
+            .then_with(|| {
+                left.peer_account_id()
+                    .as_bytes()
+                    .cmp(right.peer_account_id().as_bytes())
+            })
+    });
+    ensure!(
+        contacts.windows(2).all(|pair| {
+            pair[0]
+                .conversation_label()
+                .as_bytes()
+                .cmp(pair[1].conversation_label().as_bytes())
+                .then_with(|| {
+                    pair[0]
+                        .peer_account_id()
+                        .as_bytes()
+                        .cmp(pair[1].peer_account_id().as_bytes())
+                })
+                .is_lt()
+        }),
+        "runtime contacts contain a duplicated conversation cursor key"
+    );
+    let start = cursor.as_ref().map_or(0, |cursor| {
+        contacts.partition_point(|contact| {
+            !cursor
+                .compare_key(contact.conversation_label(), contact.peer_account_id())
+                .is_lt()
+        })
+    });
+    let end = start
+        .checked_add(usize::from(limit))
+        .context("runtime conversation page range overflow")?
+        .min(contacts.len());
+    let has_more = end < contacts.len();
+    let mut summaries = Vec::with_capacity(end.saturating_sub(start));
     let mut inspected_events = 0_usize;
 
-    for contact in snapshot.contacts.values() {
+    for contact in &contacts[start..end] {
         let membership = trust
             .load_conversation_membership(contact.conversation_id().scope_id())
             .with_context(|| {
@@ -12108,16 +12157,20 @@ fn collect_runtime_conversation_list(
             latest_message,
         });
     }
-    summaries.sort_by(|left, right| {
-        left.conversation_label
-            .cmp(&right.conversation_label)
-            .then_with(|| {
-                left.peer_account_id
-                    .as_bytes()
-                    .cmp(right.peer_account_id.as_bytes())
-            })
-    });
-    Ok(summaries)
+    let next_cursor = has_more
+        .then(|| {
+            summaries
+                .last()
+                .context("runtime conversation continuation has no summary")
+                .and_then(RuntimeIpcConversationCursor::from_summary)
+        })
+        .transpose()?;
+    let page = RuntimeIpcConversationPage {
+        conversations: summaries,
+        next_cursor,
+    };
+    page.validate_for_request(cursor.as_ref(), limit)?;
+    Ok(page)
 }
 
 fn collect_runtime_history_page(
@@ -14498,12 +14551,14 @@ async fn handle_runtime_ipc_work(
                 },
             }
         }
-        RuntimeIpcCommand::ConversationList => {
-            let conversations = StateDirectoryLock::acquire(state_directory)
+        RuntimeIpcCommand::ConversationListPage { cursor, limit } => {
+            let page = StateDirectoryLock::acquire(state_directory)
                 .context("lock runtime state for IPC conversation snapshot")
-                .and_then(|_lock| collect_runtime_conversation_list(state_directory));
-            match conversations {
-                Ok(conversations) => RuntimeIpcResponse::ConversationList(conversations),
+                .and_then(|_lock| {
+                    collect_runtime_conversation_page(state_directory, cursor, limit)
+                });
+            match page {
+                Ok(page) => RuntimeIpcResponse::ConversationListPage(page),
                 Err(error) => RuntimeIpcResponse::Error {
                     message: format!("{error:#}"),
                 },
@@ -33533,12 +33588,20 @@ mod tests {
                 && peer_device_id == bob_device.identity().device_id()
         ));
         assert!(matches!(
-            kilogram_runtime_ipc::call(&alice_ipc, RuntimeIpcCommand::ConversationList).await?,
-            RuntimeIpcResponse::ConversationList(conversations)
-                if conversations.len() == 1
-                    && conversations[0].conversation_label == conversation_label
-                    && conversations[0].message_count == 0
-                    && conversations[0].latest_message.is_none()
+            kilogram_runtime_ipc::call(
+                &alice_ipc,
+                RuntimeIpcCommand::ConversationListPage {
+                    cursor: None,
+                    limit: MAX_RUNTIME_IPC_CONVERSATION_PAGE_SIZE,
+                },
+            )
+            .await?,
+            RuntimeIpcResponse::ConversationListPage(page)
+                if page.conversations.len() == 1
+                    && page.conversations[0].conversation_label == conversation_label
+                    && page.conversations[0].message_count == 0
+                    && page.conversations[0].latest_message.is_none()
+                    && page.next_cursor.is_none()
         ));
         assert!(matches!(
             kilogram_runtime_ipc::call(
@@ -33640,11 +33703,16 @@ mod tests {
         assert_eq!(snapshot.materialized.len(), 1);
         assert_eq!(snapshot.delivered.len(), 1);
         assert_eq!(snapshot.pending_count(), 0);
-        let conversations = collect_runtime_conversation_list(&alice_state)?;
-        assert_eq!(conversations.len(), 1);
-        assert_eq!(conversations[0].message_count, 1);
+        let conversations = collect_runtime_conversation_page(
+            &alice_state,
+            None,
+            MAX_RUNTIME_IPC_CONVERSATION_PAGE_SIZE,
+        )?;
+        assert_eq!(conversations.conversations.len(), 1);
+        assert!(conversations.next_cursor.is_none());
+        assert_eq!(conversations.conversations[0].message_count, 1);
         assert_eq!(
-            conversations[0]
+            conversations.conversations[0]
                 .latest_message
                 .as_ref()
                 .map(|message| message.body.as_str()),

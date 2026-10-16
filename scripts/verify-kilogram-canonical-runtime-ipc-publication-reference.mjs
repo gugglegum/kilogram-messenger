@@ -234,12 +234,12 @@ const vectors = JSON.parse(readFileSync(options.vectors, "utf8"));
 const core = JSON.parse(readFileSync(options["core-vectors"], "utf8"));
 const contact = JSON.parse(readFileSync(options["contact-vectors"], "utf8"));
 const ticket = JSON.parse(readFileSync(options["ticket-vectors"], "utf8"));
-assert(schema.milestone === "M1.1.44" && schema.status === "candidate-not-active" &&
+assert(schema.milestone === "M1.1.45" && schema.status === "candidate-not-active" &&
   schema.changes_active_wire === false, "runtime IPC publication schema header changed");
 assert(schema.limits.maximum_publication_request_bytes === 65536 &&
   schema.limits.maximum_publication_response_bytes === 65536,
 "runtime IPC publication bounds changed");
-assert(schema.activation.current_runtime_encoding === "postcard-v26-with-json-descriptor-v7" &&
+assert(schema.activation.current_runtime_encoding === "postcard-v27-with-json-descriptor-v8" &&
   schema.activation.current_runtime_changed === false, "active runtime IPC changed");
 assert(vectors.schema_version === 1 && vectors.profile === schema.profile &&
   vectors.activation_status === "not-active" &&

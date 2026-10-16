@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.45",
+  "status": "active-local-control-migration",
+  "surface": "runtime-ipc",
+  "encoding": "postcard",
+  "previous": {
+    "ipc_version": 26,
+    "descriptor_signature_domain": "kilogram:runtime-ipc-descriptor:v7\\0",
+    "conversation_command": "conversation-list-unpaged"
+  },
+  "current": {
+    "ipc_version": 27,
+    "descriptor_signature_domain": "kilogram:runtime-ipc-descriptor:v8\\0",
+    "conversation_command": "conversation-list-page",
+    "maximum_page_size": 64,
+    "desktop_maximum_refresh_pages": 1024
+  },
+  "migration": {
+    "strategy": "exact-version-hard-cut-for-co-installed-binaries",
+    "legacy_descriptor": "rejected-before-connect",
+    "legacy_request": "rejected-before-actor-dispatch",
+    "mixed_version_operation": "unsupported-update-both-binaries-and-restart-runtime",
+    "dual_reader": false,
+    "silent_downgrade": false
+  },
+  "scope": {
+    "changes_active_local_control": true,
+    "changes_peer_network_wire": false,
+    "changes_relay_wire": false,
+    "changes_mailbox_wire": false,
+    "changes_sync_wire": false,
+    "activates_canonical_cbor": false
+  },
+  "pagination": {
+    "cursor": [
+      "exact-utf8-conversation-label",
+      "peer-account-id"
+    ],
+    "ordering": [
+      "utf8-label-bytewise-ascending",
+      "peer-account-id-bytewise-ascending"
+    ],
+    "continuation": "full-page-only-and-equals-last-returned-key",
+    "server_expensive_contact_projection": "selected-page-only",
+    "desktop_behavior": "validate-and-collect-all-pages-or-fail-explicitly"
+  },
+  "verification": [
+    "strict-page-and-cursor-unit-regression",
+    "desktop-multiple-page-aggregation-regression",
+    "legacy-version-request-pre-dispatch-rejection",
+    "legacy-version-and-domain-descriptor-rejection",
+    "dedicated-fail-closed-boundary"
+  ]
+}

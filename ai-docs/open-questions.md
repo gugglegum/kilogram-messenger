@@ -378,7 +378,7 @@ sessions, distribution, removal и key epochs и не решены этим пр
 - Независимый second-builder, подписанный release provenance, обновления клиента
   и дальнейшая защита supply chain поверх M0.9.50 same-host gate.
 - Миграция криптоалгоритмов и wire protocol без разделения сети.
-- После M1.1.44 canonical coverage содержит 16 complete, 1 partial
+- После M1.1.45 canonical coverage содержит 16 complete, 1 partial
   (`runtime-ipc`), один not-started (`transport-sync`) и два not-targeted
   surface. В runtime IPC уже закрыты signed loopback descriptor, bearer/fresh
   request, exact signed response, core Ping/WaitForChange/Shutdown/Error,
@@ -417,10 +417,12 @@ sessions, distribution, removal и key epochs и не решены этим пр
   start/status не принимают caller-supplied outcomes, а recipient Device
   подписывает append-only scheduler chain с bounded attempt lease, exact
   deterministic equal-jitter backoff и canonical recovery checkpoints;
-  readiness выводится из plan policy и runtime observation. Открыты migration
-  активного unpaged conversation list и оставшиеся mutation results. Следующий
-  приоритет — explicit active-list migration, затем последний bounded этап до
-  complete `runtime-ipc`, затем parallel CBOR ALPN/negotiation для
+  readiness выводится из plan policy и runtime observation. Активный unpaged
+  conversation list уже мигрирован на exact cursor pagination в Postcard v27 /
+  JSON descriptor v8 с page limit 64, desktop cap 1024 страниц и fail-closed
+  legacy v26 rejection. Открыты только оставшиеся associated mutation results.
+  Следующий приоритет — последний bounded этап до complete `runtime-ipc`, затем
+  parallel CBOR ALPN/negotiation для
   `transport-sync`. Общая activation требует explicit identifiers, downgrade
   tests, sustained fuzzing, independent HPKE conformance и fresh multi-device
   field evidence.

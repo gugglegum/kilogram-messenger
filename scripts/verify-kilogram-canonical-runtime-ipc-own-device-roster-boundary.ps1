@@ -32,10 +32,10 @@ function Assert-LowerHex {
 
 function Assert-Schema {
     param([object]$Schema, [string]$Rust)
-    if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.44' -or
+    if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.45' -or
         [string]$Schema.status -cne 'candidate-not-active' -or [bool]$Schema.changes_active_wire -or
         [string]$Schema.profile -cne 'kilogram-deterministic-cbor-v1' -or
-        [string]$Schema.activation.current_runtime_encoding -cne 'postcard-v26-with-json-descriptor-v7' -or
+        [string]$Schema.activation.current_runtime_encoding -cne 'postcard-v27-with-json-descriptor-v8' -or
         [bool]$Schema.activation.current_runtime_changed) {
         throw 'canonical own-device roster schema header changed'
     }
@@ -50,8 +50,8 @@ function Assert-Schema {
     }
     if (@($Schema.domains).Count -ne 73 -or @($Schema.objects).Count -ne 36 -or
         @($Schema.covered_commands).Count -ne 32 -or @($Schema.covered_results).Count -ne 31 -or
-        @($Schema.semantic_rules).Count -ne 154 -or
-        @($Schema.remaining_runtime_ipc_surface).Count -ne 2) {
+        @($Schema.semantic_rules).Count -ne 158 -or
+        @($Schema.remaining_runtime_ipc_surface).Count -ne 1) {
         throw 'canonical own-device roster inventory changed'
     }
     foreach ($domain in @(
@@ -196,8 +196,8 @@ if ($lib.IndexOf('pub mod canonical_runtime_ipc_own_device_roster_v1;',
         [StringComparison]::Ordinal) -lt 0) {
     throw 'canonical own-device roster module is not exported'
 }
-foreach ($required in @('const IPC_VERSION: u8 = 26;',
-    'kilogram:runtime-ipc-descriptor:v7\0', 'postcard::to_allocvec', 'postcard::from_bytes')) {
+foreach ($required in @('const IPC_VERSION: u8 = 27;',
+    'kilogram:runtime-ipc-descriptor:v8\0', 'postcard::to_allocvec', 'postcard::from_bytes')) {
     if ($activeIpc.IndexOf($required, [StringComparison]::Ordinal) -lt 0) {
         throw "active runtime IPC boundary is missing '$required'"
     }
@@ -209,11 +209,11 @@ if ($activeIpc.IndexOf('canonical_runtime_ipc_own_device_roster_v1',
 $surface = @($compatibility.surfaces | Where-Object { $_.id -ceq 'runtime-ipc' })
 if ($surface.Count -ne 1 -or [string]$surface[0].encoding -cne 'postcard' -or
     [string]$surface[0].compatibility -cne 'exact-version' -or
-    [int](@($surface[0].bindings | Where-Object { $_.symbol -ceq 'IPC_VERSION' })[0].value) -ne 26) {
-    throw 'active compatibility registry no longer records Postcard runtime IPC v26'
+    [int](@($surface[0].bindings | Where-Object { $_.symbol -ceq 'IPC_VERSION' })[0].value) -ne 27) {
+    throw 'active compatibility registry no longer records Postcard runtime IPC v27'
 }
 $coverageSurface = @($coverage.surfaces | Where-Object { $_.id -ceq 'runtime-ipc' })
-if ([string]$coverage.milestone -cne 'M1.1.44' -or $coverageSurface.Count -ne 1 -or
+if ([string]$coverage.milestone -cne 'M1.1.45' -or $coverageSurface.Count -ne 1 -or
     [string]$coverageSurface[0].coverage -cne 'partial' -or
     'roster-wide-own-device-automation' -cnotin @($coverageSurface[0].covered) -or
     (@($coverageSurface[0].remaining) -join ',') -cne
@@ -290,5 +290,5 @@ Write-Output 'local_path_in_ipc=false'
 Write-Output 'os_background_service_enabled=false'
 Write-Output 'foreground_runtime_only=true'
 Write-Output 'bounded_decoder_mutations=30843'
-Write-Output 'active_postcard_v26_changed=false'
+Write-Output 'active_postcard_v27_changed_by_canonical_candidate=false'
 Write-Output 'network_executed=false'

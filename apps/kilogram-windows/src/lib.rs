@@ -15,13 +15,14 @@ use eframe::egui;
 use kilogram_bootstrap_contract::{DesktopBootstrapOutput, MAX_DESKTOP_BOOTSTRAP_OUTPUT_BYTES};
 use kilogram_identity::{AccountDeviceListSnapshot, AccountId, AccountRecoveryPhrase, DeviceId};
 use kilogram_runtime_ipc::{
-    RuntimeIpcCommand, RuntimeIpcContactTicketRefresh, RuntimeIpcConversationSummary,
-    RuntimeIpcDeviceDirectoryStatus, RuntimeIpcDeviceDirectoryUpdate,
-    RuntimeIpcEndpointCandidateState, RuntimeIpcHistoryCursor, RuntimeIpcHistoryMessage,
-    RuntimeIpcHistoryPage, RuntimeIpcMailboxCapabilityTransition, RuntimeIpcMailboxStatus,
-    RuntimeIpcOutboxStatus, RuntimeIpcQueueState, RuntimeIpcRequestId, RuntimeIpcResponse,
-    RuntimeIpcRoutePolicy, RuntimeIpcTicketAutomationStatus, RuntimeIpcTicketPublication,
-    RuntimeLaunchProfile, RuntimeLaunchSettings, RuntimeVolunteerStorageSettings,
+    MAX_RUNTIME_IPC_CONVERSATION_PAGE_SIZE, RuntimeIpcCommand, RuntimeIpcContactTicketRefresh,
+    RuntimeIpcConversationPage, RuntimeIpcConversationSummary, RuntimeIpcDeviceDirectoryStatus,
+    RuntimeIpcDeviceDirectoryUpdate, RuntimeIpcEndpointCandidateState, RuntimeIpcHistoryCursor,
+    RuntimeIpcHistoryMessage, RuntimeIpcHistoryPage, RuntimeIpcMailboxCapabilityTransition,
+    RuntimeIpcMailboxStatus, RuntimeIpcOutboxStatus, RuntimeIpcQueueState, RuntimeIpcRequestId,
+    RuntimeIpcResponse, RuntimeIpcRoutePolicy, RuntimeIpcTicketAutomationStatus,
+    RuntimeIpcTicketPublication, RuntimeLaunchProfile, RuntimeLaunchSettings,
+    RuntimeVolunteerStorageSettings,
 };
 #[cfg(test)]
 use kilogram_runtime_ipc::{
@@ -48,6 +49,7 @@ const CHANGE_RETRY_INTERVAL: Duration = Duration::from_millis(500);
 const MAX_CONVERSATION_BYTES: usize = 4_096;
 const MAX_MESSAGE_BYTES: usize = 64 * 1024;
 const HISTORY_PAGE_SIZE: u16 = 50;
+const MAX_CONVERSATION_REFRESH_PAGES: usize = 1_024;
 const RUNTIME_START_TIMEOUT: Duration = Duration::from_secs(60);
 const RUNTIME_START_RETRY_INTERVAL: Duration = Duration::from_millis(500);
 const RUNTIME_STOP_TIMEOUT: Duration = Duration::from_secs(3);
@@ -2808,17 +2810,40 @@ async fn execute_request(request: WorkerRequest) -> Result<WorkerSuccess> {
             }
         }
         WorkerRequest::Conversations { descriptor } => {
-            match kilogram_runtime_ipc::call(&descriptor, RuntimeIpcCommand::ConversationList)
-                .await?
-            {
-                RuntimeIpcResponse::ConversationList(conversations) => {
-                    Ok(WorkerSuccess::Conversations(conversations))
+            let mut cursor = None;
+            let mut conversations = Vec::new();
+            for _ in 0..MAX_CONVERSATION_REFRESH_PAGES {
+                let request_cursor = cursor.clone();
+                let command = RuntimeIpcCommand::ConversationListPage {
+                    cursor: request_cursor.clone(),
+                    limit: MAX_RUNTIME_IPC_CONVERSATION_PAGE_SIZE,
+                };
+                match kilogram_runtime_ipc::call(&descriptor, command).await? {
+                    RuntimeIpcResponse::ConversationListPage(page) => {
+                        page.validate_for_request(
+                            request_cursor.as_ref(),
+                            MAX_RUNTIME_IPC_CONVERSATION_PAGE_SIZE,
+                        )?;
+                        let RuntimeIpcConversationPage {
+                            conversations: page_conversations,
+                            next_cursor,
+                        } = page;
+                        conversations.extend(page_conversations);
+                        let Some(next_cursor) = next_cursor else {
+                            return Ok(WorkerSuccess::Conversations(conversations));
+                        };
+                        cursor = Some(next_cursor);
+                    }
+                    RuntimeIpcResponse::Error { message } => {
+                        bail!("Runtime rejected conversation list: {message}")
+                    }
+                    _ => bail!("Runtime returned an unexpected conversation-list response"),
                 }
-                RuntimeIpcResponse::Error { message } => {
-                    bail!("Runtime rejected conversation list: {message}")
-                }
-                _ => bail!("Runtime returned an unexpected conversation-list response"),
             }
+            bail!(
+                "Runtime conversation list exceeded the desktop safety limit of {} pages",
+                MAX_CONVERSATION_REFRESH_PAGES
+            )
         }
         WorkerRequest::History {
             descriptor,
@@ -8869,6 +8894,116 @@ mod tests {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn conversation_refresh_collects_multiple_strict_pages()
+    -> Result<(), Box<dyn std::error::Error>> {
+        fn summary(index: u8, peer_device_id: DeviceId) -> RuntimeIpcConversationSummary {
+            let conversation_label = format!("conversation-{index:03}");
+            RuntimeIpcConversationSummary {
+                contact_id: format!("{index:064x}"),
+                conversation_id: ConversationId::from_label(&conversation_label),
+                conversation_label,
+                peer_account_id: AccountId::from_bytes([index; 32]),
+                peer_device_id,
+                endpoint_candidate_count: 1,
+                usable_endpoint_candidate_count: 1,
+                stale_endpoint_candidate_count: 0,
+                quarantined_endpoint_candidate_count: 0,
+                endpoint_candidates: vec![RuntimeIpcEndpointCandidateStatus {
+                    peer_device_id,
+                    primary: true,
+                    route_policy: RuntimeIpcRoutePolicy::Auto,
+                    descriptor_file: PathBuf::from("peer-runtime.ticket"),
+                    state: RuntimeIpcEndpointCandidateState::Usable,
+                    authority_revision: Some(1),
+                    publication_channel_id: None,
+                    observed_publication_generation: None,
+                    observed_at_unix_seconds: None,
+                    publication_conflict_generation: None,
+                    publication_conflict_proof_id: None,
+                    publication_conflict_detected_at_unix_seconds: None,
+                    detail: "authenticated-current-authority".to_owned(),
+                }],
+                route_policy: RuntimeIpcRoutePolicy::Auto,
+                message_count: 0,
+                latest_message: None,
+            }
+        }
+
+        let directory = tempfile::tempdir()?;
+        let descriptor = directory.path().join("runtime.ipc.json");
+        let root = AccountRootState::create(directory.path().join("root"))?;
+        let identity = DeviceIdentity::generate()?;
+        let peer_device_id = identity.device_id();
+        let (server, mut requests) =
+            RuntimeIpcServer::start(descriptor.clone(), root.account_id(), &identity).await?;
+        let actor = tokio::spawn(async move {
+            let first = requests
+                .recv()
+                .await
+                .context("receive first conversation page")?;
+            let (command, response) = first.into_parts();
+            ensure!(matches!(
+                command,
+                RuntimeIpcCommand::ConversationListPage {
+                    cursor: None,
+                    limit: MAX_RUNTIME_IPC_CONVERSATION_PAGE_SIZE,
+                }
+            ));
+            let first_page = (1..=64)
+                .map(|index| summary(index, peer_device_id))
+                .collect::<Vec<_>>();
+            let continuation = kilogram_runtime_ipc::RuntimeIpcConversationCursor::from_summary(
+                first_page.last().context("first page is empty")?,
+            )?;
+            response
+                .send(RuntimeIpcResponse::ConversationListPage(
+                    RuntimeIpcConversationPage {
+                        conversations: first_page,
+                        next_cursor: Some(continuation.clone()),
+                    },
+                ))
+                .map_err(|_| anyhow::anyhow!("send first conversation page"))?;
+
+            let second = requests
+                .recv()
+                .await
+                .context("receive second conversation page")?;
+            let (command, response) = second.into_parts();
+            ensure!(matches!(
+                command,
+                RuntimeIpcCommand::ConversationListPage {
+                    cursor: Some(cursor),
+                    limit: MAX_RUNTIME_IPC_CONVERSATION_PAGE_SIZE,
+                } if cursor == continuation
+            ));
+            response
+                .send(RuntimeIpcResponse::ConversationListPage(
+                    RuntimeIpcConversationPage {
+                        conversations: vec![summary(65, peer_device_id)],
+                        next_cursor: None,
+                    },
+                ))
+                .map_err(|_| anyhow::anyhow!("send second conversation page"))?;
+            Ok::<_, anyhow::Error>(())
+        });
+
+        let result = execute_request(WorkerRequest::Conversations {
+            descriptor: descriptor.clone(),
+        })
+        .await?;
+        assert!(matches!(
+            result,
+            WorkerSuccess::Conversations(conversations)
+                if conversations.len() == 65
+                    && conversations.first().is_some_and(|item| item.conversation_label == "conversation-001")
+                    && conversations.last().is_some_and(|item| item.conversation_label == "conversation-065")
+        ));
+        actor.await??;
+        server.shutdown().await?;
+        Ok(())
+    }
+
     #[test]
     fn uncertain_queue_retry_reuses_request_id_for_unchanged_draft()
     -> Result<(), Box<dyn std::error::Error>> {
@@ -9035,39 +9170,48 @@ mod tests {
                 .await
                 .context("receive GUI conversation list")?;
             let (command, response) = conversations.into_parts();
-            ensure!(matches!(command, RuntimeIpcCommand::ConversationList));
+            ensure!(matches!(
+                command,
+                RuntimeIpcCommand::ConversationListPage {
+                    cursor: None,
+                    limit: MAX_RUNTIME_IPC_CONVERSATION_PAGE_SIZE,
+                }
+            ));
             response
-                .send(RuntimeIpcResponse::ConversationList(vec![
-                    RuntimeIpcConversationSummary {
-                        contact_id: "22".repeat(32),
-                        conversation_label: "desktop-test".to_owned(),
-                        conversation_id: ConversationId::from_label("desktop-test"),
-                        peer_account_id,
-                        peer_device_id: device_id,
-                        endpoint_candidate_count: 1,
-                        usable_endpoint_candidate_count: 1,
-                        stale_endpoint_candidate_count: 0,
-                        quarantined_endpoint_candidate_count: 0,
-                        endpoint_candidates: vec![RuntimeIpcEndpointCandidateStatus {
+                .send(RuntimeIpcResponse::ConversationListPage(
+                    RuntimeIpcConversationPage {
+                        conversations: vec![RuntimeIpcConversationSummary {
+                            contact_id: "22".repeat(32),
+                            conversation_label: "desktop-test".to_owned(),
+                            conversation_id: ConversationId::from_label("desktop-test"),
+                            peer_account_id,
                             peer_device_id: device_id,
-                            primary: true,
+                            endpoint_candidate_count: 1,
+                            usable_endpoint_candidate_count: 1,
+                            stale_endpoint_candidate_count: 0,
+                            quarantined_endpoint_candidate_count: 0,
+                            endpoint_candidates: vec![RuntimeIpcEndpointCandidateStatus {
+                                peer_device_id: device_id,
+                                primary: true,
+                                route_policy: RuntimeIpcRoutePolicy::Auto,
+                                descriptor_file: PathBuf::from("peer-runtime.ticket"),
+                                state: RuntimeIpcEndpointCandidateState::Usable,
+                                authority_revision: Some(5),
+                                publication_channel_id: Some("77".repeat(32)),
+                                observed_publication_generation: Some(4),
+                                observed_at_unix_seconds: Some(123_789),
+                                publication_conflict_generation: None,
+                                publication_conflict_proof_id: None,
+                                publication_conflict_detected_at_unix_seconds: None,
+                                detail: "authenticated-current-authority".to_owned(),
+                            }],
                             route_policy: RuntimeIpcRoutePolicy::Auto,
-                            descriptor_file: PathBuf::from("peer-runtime.ticket"),
-                            state: RuntimeIpcEndpointCandidateState::Usable,
-                            authority_revision: Some(5),
-                            publication_channel_id: Some("77".repeat(32)),
-                            observed_publication_generation: Some(4),
-                            observed_at_unix_seconds: Some(123_789),
-                            publication_conflict_generation: None,
-                            publication_conflict_proof_id: None,
-                            publication_conflict_detected_at_unix_seconds: None,
-                            detail: "authenticated-current-authority".to_owned(),
+                            message_count: 0,
+                            latest_message: None,
                         }],
-                        route_policy: RuntimeIpcRoutePolicy::Auto,
-                        message_count: 0,
-                        latest_message: None,
+                        next_cursor: None,
                     },
-                ]))
+                ))
                 .map_err(|_| anyhow::anyhow!("send GUI conversation-list response"))?;
 
             let history = requests.recv().await.context("receive GUI history page")?;

@@ -985,6 +985,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.1.44 канонизирует start/status approved recovery plan, Device-signed
   append-only scheduler chain, exact deterministic retry и checkpoint-bound
   progress без caller-supplied outcomes или OS background service.
+- [`../docs/RFC-0171-m1145-active-runtime-ipc-conversation-pagination.md`](../docs/RFC-0171-m1145-active-runtime-ipc-conversation-pagination.md) —
+  M1.1.45 мигрирует active loopback IPC на Postcard v27/descriptor v8 и
+  bounded exact-cursor pagination до дорогой conversation projection, сохраняя
+  peer-network wire и inactive canonical CBOR неизменными.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

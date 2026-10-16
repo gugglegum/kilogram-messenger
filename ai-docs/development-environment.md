@@ -3800,3 +3800,34 @@ Hosted follow-up:
   tag was created. Canonical coverage remains 16 complete, 1 partial,
   1 not-started and 2 not-targeted. The next priority is explicit migration of
   the active unpaged conversation list, followed by remaining mutation results.
+
+## M1.1.45 active runtime IPC conversation pagination (2026-10-16)
+
+- Active local-control IPC now uses Postcard version 27 and signed JSON
+  descriptor domain v8. The unpaged conversation-list command/result was
+  removed in favor of a cursor-bound page with a maximum of 64 summaries.
+- The cursor is the exact UTF-8-label/peer-Account-ID tuple. Runtime selection
+  sorts authenticated contacts, rejects duplicate keys, uses a strict
+  `partition_point`, and performs expensive membership/history/endpoint work
+  only for the selected page. The existing 16,384-event inspection ceiling is
+  therefore page-local rather than account-wide.
+- The desktop collects continuations automatically, independently validates
+  every page, and has an explicit 1,024-page safety ceiling. The user-visible
+  list remains complete or fails explicitly; silent truncation is forbidden.
+- The co-installed runtime/desktop migration is an exact-version hard cut.
+  Correctly signed legacy v26/v7 descriptors and authenticated v26 requests are
+  rejected before connection/actor dispatch. No peer-network format changed,
+  and the deterministic-CBOR candidate remains inactive.
+- `kilogram-runtime-ipc` unit tests passed 17/17, the focused Windows
+  multi-page aggregation test passed 1/1, and the existing direct-only
+  two-runtime CLI integration passed 1/1. Tests needing Windows loopback and
+  system TEMP were rerun outside the restricted sandbox; dependencies remained
+  offline and Cargo used two jobs with BelowNormal priority.
+- The dedicated migration boundary, all canonical runtime-IPC reference gates,
+  protocol compatibility, coverage, rustfmt and workspace locked/offline
+  strict Clippy passed. Accepted-tag readiness passed 78/78 against immutable
+  `M1.0.0`.
+- Default current-candidate production verification correctly rejected reuse of
+  old physical field evidence after protected runtime/protocol drift. No new
+  field claim, network test, executable, release build, archive, push or tag was
+  created. The final partial runtime-IPC item is associated mutation results.
