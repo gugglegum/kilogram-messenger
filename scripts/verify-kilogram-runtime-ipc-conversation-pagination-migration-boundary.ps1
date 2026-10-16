@@ -130,7 +130,7 @@ function Assert-Boundary {
         throw 'canonical runtime IPC aggregate did not record the active adapter migration'
     }
     $runtimeSurface = @($Coverage.surfaces | Where-Object { $_.id -ceq 'runtime-ipc' })
-    if ([string]$Coverage.milestone -cne 'M1.1.49' -or $runtimeSurface.Count -ne 1 -or
+    if ([string]$Coverage.milestone -cne 'M1.1.50' -or $runtimeSurface.Count -ne 1 -or
         'active-postcard-conversation-list-pagination-migration' -cnotin
             @($runtimeSurface[0].covered) -or
         @($runtimeSurface[0].remaining).Count -ne 0) {

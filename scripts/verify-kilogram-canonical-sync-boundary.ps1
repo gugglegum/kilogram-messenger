@@ -39,7 +39,9 @@ function Assert-Schema {
         [string]$Schema.cddl.root_rule -cne 'kilogram-sync-v1' -or
         [string]$Schema.activation.current_runtime_codec -cne 'postcard-v6' -or
         [bool]$Schema.activation.current_runtime_changed -or
-        [string]$Schema.activation.candidate_protocol_identifier -cne 'unassigned') {
+        [string]$Schema.activation.candidate_protocol_identifier -cne 'kilogram/m1/sync/cbor/1' -or
+        'new-explicit-protocol-version-or-parallel-alpn' -cin
+            @($Schema.activation.required_before_activation)) {
         throw 'canonical sync activation boundary changed'
     }
     if ([int]$Schema.limits.maximum_inventory_event_ids -ne 4096 -or
@@ -173,5 +175,6 @@ Write-Output 'closed_client_variants=3'
 Write-Output 'closed_server_variants=4'
 Write-Output 'bounded_decoder_mutations=6264'
 Write-Output 'sync_coverage=complete-via-m1113'
+Write-Output 'candidate_protocol_identifier=kilogram/m1/sync/cbor/1'
 Write-Output 'active_runtime_changed=false'
 Write-Output 'network_executed=false'

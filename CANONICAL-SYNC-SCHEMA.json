@@ -12,10 +12,9 @@
   "activation": {
     "current_runtime_codec": "postcard-v6",
     "current_runtime_changed": false,
-    "candidate_protocol_identifier": "unassigned",
+    "candidate_protocol_identifier": "kilogram/m1/sync/cbor/1",
     "required_before_activation": [
       "canonical-multi-round-session-checkpoint",
-      "new-explicit-protocol-version-or-parallel-alpn",
       "dual-reader-and-downgrade-tests",
       "coverage-guided-fuzzing",
       "fresh-field-and-hosted-evidence"

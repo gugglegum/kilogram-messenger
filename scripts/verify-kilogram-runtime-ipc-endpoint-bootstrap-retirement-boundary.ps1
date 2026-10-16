@@ -171,7 +171,7 @@ function Assert-RetirementBoundary {
     Assert-ExactSequence @($Schema.remaining_runtime_ipc_surface) @() 'schema remaining work'
 
     $surface = @($Coverage.surfaces | Where-Object { [string]$_.id -ceq 'runtime-ipc' })
-    if ([string]$Coverage.milestone -cne 'M1.1.49' -or $surface.Count -ne 1 -or
+    if ([string]$Coverage.milestone -cne 'M1.1.50' -or $surface.Count -ne 1 -or
         'active-postcard-endpoint-bootstrap-helper-retirement' -cnotin @($surface[0].covered) -or
         @($surface[0].remaining).Count -ne 0) {
         throw 'canonical coverage did not record endpoint bootstrap retirement'

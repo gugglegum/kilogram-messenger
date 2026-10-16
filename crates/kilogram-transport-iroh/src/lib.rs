@@ -14,12 +14,47 @@ use serde::{Deserialize, Serialize};
 use tokio::time::{Instant, sleep, timeout};
 
 pub const ALPN: &[u8] = b"kilogram/m0/sync/8";
+pub const CANONICAL_SYNC_ALPN_V1: &[u8] = b"kilogram/m1/sync/cbor/1";
 pub const MAILBOX_ALPN: &[u8] = b"kilogram/m0/blind-mailbox/1";
 pub const MAX_WIRE_MESSAGE_BYTES: usize = 8 * 1024 * 1024;
 pub const WIRE_IO_TIMEOUT: Duration = Duration::from_secs(15);
 const MAX_MAILBOX_ENDPOINT_DESCRIPTOR_BYTES: usize = 16 * 1024;
 const SELECTED_PATH_LOCAL_DOMAIN_TAG_DOMAIN: &[u8] =
     b"kilogram:selected-path-local-domain-tag:v1\0";
+
+/// Exact wire identifier selected before any synchronization frame is read.
+///
+/// The canonical identifier is allocated but deliberately not registered by
+/// the active runtime yet. Callers must never infer a protocol by inspecting a
+/// payload or fall back to Postcard after a canonical decode error.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum SyncWireProtocol {
+    LegacyPostcardV6,
+    CanonicalCborV1,
+}
+
+impl SyncWireProtocol {
+    pub const fn alpn(self) -> &'static [u8] {
+        match self {
+            Self::LegacyPostcardV6 => ALPN,
+            Self::CanonicalCborV1 => CANONICAL_SYNC_ALPN_V1,
+        }
+    }
+
+    pub fn from_alpn(alpn: &[u8]) -> Result<Self> {
+        if alpn == ALPN {
+            return Ok(Self::LegacyPostcardV6);
+        }
+        if alpn == CANONICAL_SYNC_ALPN_V1 {
+            return Ok(Self::CanonicalCborV1);
+        }
+        bail!("unsupported Kilogram synchronization ALPN")
+    }
+
+    pub const fn is_active(self) -> bool {
+        matches!(self, Self::LegacyPostcardV6)
+    }
+}
 
 /// Controls which transport may carry Kilogram application protocol frames.
 ///
@@ -433,6 +468,29 @@ mod tests {
             serde_json::to_string(&RoutePolicy::RelayOnly)?,
             "\"relay-only\""
         );
+        Ok(())
+    }
+
+    #[test]
+    fn synchronization_alpns_are_exact_distinct_and_fail_closed() -> Result<()> {
+        assert_eq!(
+            SyncWireProtocol::from_alpn(ALPN)?,
+            SyncWireProtocol::LegacyPostcardV6
+        );
+        assert_eq!(
+            SyncWireProtocol::from_alpn(CANONICAL_SYNC_ALPN_V1)?,
+            SyncWireProtocol::CanonicalCborV1
+        );
+        assert_eq!(SyncWireProtocol::LegacyPostcardV6.alpn(), ALPN);
+        assert_eq!(
+            SyncWireProtocol::CanonicalCborV1.alpn(),
+            CANONICAL_SYNC_ALPN_V1
+        );
+        assert!(SyncWireProtocol::LegacyPostcardV6.is_active());
+        assert!(!SyncWireProtocol::CanonicalCborV1.is_active());
+        assert_ne!(ALPN, CANONICAL_SYNC_ALPN_V1);
+        assert!(SyncWireProtocol::from_alpn(b"kilogram/m1/sync/cbor").is_err());
+        assert!(SyncWireProtocol::from_alpn(b"kilogram/m1/sync/cbor/2").is_err());
         Ok(())
     }
 

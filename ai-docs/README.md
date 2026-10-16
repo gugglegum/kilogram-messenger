@@ -1005,6 +1005,9 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.1.49 удаляет central-HTTPS mailbox create/rotate из active loopback IPC,
   сохраняет exact volunteer create/rotate и legacy read/upgrade и завершает
   canonical runtime-IPC target через hard cut Postcard v29/descriptor v10.
+- [`../docs/RFC-0176-m1150-canonical-sync-alpn-allocation.md`](../docs/RFC-0176-m1150-canonical-sync-alpn-allocation.md) —
+  M1.1.50 резервирует отдельный exact ALPN canonical-CBOR sync, но намеренно не
+  регистрирует и не dial-ит его до authenticated capability negotiation.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

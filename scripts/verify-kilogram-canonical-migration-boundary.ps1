@@ -6,6 +6,8 @@ $ErrorActionPreference = 'Stop'
 $workspace = [System.IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $manifestPath = Join-Path $workspace 'CANONICAL-MIGRATION.json'
 $rfcPath = Join-Path $workspace 'docs\RFC-0132-m116-canonical-dual-reader-migration.md'
+$transportPath = Join-Path $workspace 'crates\kilogram-transport-iroh\src\lib.rs'
+$cliPath = Join-Path $workspace 'apps\kilogram-cli\src\main.rs'
 
 function Assert-Rejected {
     param([scriptblock]$Action, [string]$Label)
@@ -21,13 +23,14 @@ function Assert-ExactStrings {
 
 function Assert-Manifest {
     param([object]$Manifest)
-    if ([UInt64]$Manifest.schema_version -ne 1 -or [string]$Manifest.milestone -cne 'M1.1.6' -or
-        [string]$Manifest.status -cne 'design-only-not-active' -or [bool]$Manifest.changes_active_wire) {
+    if ([UInt64]$Manifest.schema_version -ne 1 -or [string]$Manifest.milestone -cne 'M1.1.50' -or
+        [string]$Manifest.status -cne 'identifier-allocated-not-active' -or [bool]$Manifest.changes_active_wire) {
         throw 'canonical migration header changed'
     }
     if ([string]$Manifest.current_encoding -cne 'postcard' -or
         [string]$Manifest.candidate_encoding -cne 'kilogram-deterministic-cbor-v1' -or
-        [string]$Manifest.candidate_protocol_identifier -cne 'unassigned') {
+        [string]$Manifest.candidate_protocol_identifier -cne 'kilogram/m1/sync/cbor/1' -or
+        [bool]$Manifest.candidate_identifier_registered) {
         throw 'canonical migration encoding or identifier changed'
     }
     if ([string]$Manifest.selection.mechanism -cne 'authenticated-capability-bound-explicit-identifier' -or
@@ -67,7 +70,7 @@ function Assert-Manifest {
     $requirements = @($Manifest.activation_requirements | ForEach-Object { "$($_.id)|$($_.status)" })
     Assert-ExactStrings $requirements @(
         'canonical-schema-coverage|pending',
-        'parallel-protocol-identifier-allocation|pending',
+        'parallel-protocol-identifier-allocation|verified',
         'dual-reader-runtime-implementation|pending',
         'independent-crypto-conformance|verified',
         'bounded-decoder-mutation-regression|verified',
@@ -78,11 +81,13 @@ function Assert-Manifest {
     ) 'activation requirements'
 }
 
-foreach ($path in @($manifestPath, $rfcPath)) {
+foreach ($path in @($manifestPath, $rfcPath, $transportPath, $cliPath)) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "canonical migration file is missing: $path" }
 }
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 $rfc = Get-Content -LiteralPath $rfcPath -Raw
+$transport = Get-Content -LiteralPath $transportPath -Raw
+$cli = Get-Content -LiteralPath $cliPath -Raw
 Assert-Manifest $manifest
 
 foreach ($required in @(
@@ -99,14 +104,25 @@ $activeWire = Get-Content -LiteralPath (Join-Path $workspace 'crates\kilogram-pr
 if ($activeWire.IndexOf('kilogram-deterministic-cbor-v1', [StringComparison]::Ordinal) -ge 0) {
     throw 'inactive canonical encoding leaked into active protocol wire'
 }
+if ($transport.IndexOf('pub const CANONICAL_SYNC_ALPN_V1: &[u8] = b"kilogram/m1/sync/cbor/1";',
+        [StringComparison]::Ordinal) -lt 0 -or
+    $cli.IndexOf('CANONICAL_SYNC_ALPN_V1', [StringComparison]::Ordinal) -ge 0) {
+    throw 'allocated canonical identifier is missing or active prematurely'
+}
 
 if ($SelfTest) {
     $fallback = $manifest | ConvertTo-Json -Depth 20 | ConvertFrom-Json
     $fallback.selection.parse_error_fallback = $true
     Assert-Rejected { Assert-Manifest $fallback } 'parse_error_fallback'
     $identifier = $manifest | ConvertTo-Json -Depth 20 | ConvertFrom-Json
-    $identifier.candidate_protocol_identifier = 'kilogram/m1/sync/cbor/1'
-    Assert-Rejected { Assert-Manifest $identifier } 'premature_identifier_allocation'
+    $identifier.candidate_protocol_identifier = 'kilogram/m1/sync/cbor/2'
+    Assert-Rejected { Assert-Manifest $identifier } 'changed_candidate_identifier'
+    $registered = $manifest | ConvertTo-Json -Depth 20 | ConvertFrom-Json
+    $registered.candidate_identifier_registered = $true
+    Assert-Rejected { Assert-Manifest $registered } 'premature_identifier_registration'
+    $reused = $manifest | ConvertTo-Json -Depth 20 | ConvertFrom-Json
+    $reused.candidate_protocol_identifier = 'kilogram/m0/sync/8'
+    Assert-Rejected { Assert-Manifest $reused } 'reused_legacy_identifier'
     $transition = $manifest | ConvertTo-Json -Depth 20 | ConvertFrom-Json
     $transition.forward_transitions[0].to = 'dual-reader-prefer-cbor'
     Assert-Rejected { Assert-Manifest $transition } 'skipped_migration_state'
@@ -114,8 +130,9 @@ if ($SelfTest) {
 }
 
 Write-Output 'canonical_migration_boundary=verified'
-Write-Output 'migration_status=design-only-not-active'
-Write-Output 'candidate_protocol_identifier=unassigned'
+Write-Output 'migration_status=identifier-allocated-not-active'
+Write-Output 'candidate_protocol_identifier=kilogram/m1/sync/cbor/1'
+Write-Output 'candidate_identifier_registered=false'
 Write-Output 'format_sniffing=false'
 Write-Output 'parse_error_fallback=false'
 Write-Output 'active_wire_changed=false'

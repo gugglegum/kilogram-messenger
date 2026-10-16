@@ -3924,3 +3924,27 @@ Hosted follow-up:
 - No network run, release build, archive, stable-path EXE, push or tag is part
   of this stage. The next bounded engineering surface is `transport-sync`
   parallel CBOR negotiation.
+
+## M1.1.50 canonical sync ALPN allocation (2026-10-16)
+
+- `kilogram/m1/sync/cbor/1` is allocated in the transport crate and canonical
+  manifests, but remains absent from all active CLI endpoint registration and
+  dial paths. The active compatibility registry still names only
+  `kilogram/m0/sync/8` and Postcard v6.
+- The new `SyncWireProtocol` classifier is exact and fail closed; unit tests
+  reject truncated and future identifiers and prove the candidate is inactive.
+- Dedicated boundary self-tests reject identifier substitution, premature
+  registration, reuse of the legacy ALPN and candidate leakage into active CLI
+  source. Canonical migration/sync/session/coverage gates consume the same exact
+  identifier.
+- Initial sandboxed `cargo fmt` was denied workspace path canonicalization. The
+  identical outside-sandbox debug/offline run passed rustfmt and all 7 transport
+  unit tests with two Cargo jobs and BelowNormal priority.
+- Accepted-tag readiness passed 83/83 against immutable `M1.0.0`, including
+  workspace locked/offline strict Clippy. The first readiness attempt exposed
+  historical runtime-IPC gates that froze the aggregate coverage milestone;
+  those gates now retain their surface assertions while accepting the current
+  M1.1.50 aggregate ledger.
+- No network execution, release build, archive, stable-path executable, push or
+  tag occurred. The next bounded task is an authenticated listener capability
+  bound to current Account authority before any canonical ALPN dial.

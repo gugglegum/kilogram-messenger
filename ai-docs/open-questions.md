@@ -378,8 +378,8 @@ sessions, distribution, removal и key epochs и не решены этим пр
 - Независимый second-builder, подписанный release provenance, обновления клиента
   и дальнейшая защита supply chain поверх M0.9.50 same-host gate.
 - Миграция криптоалгоритмов и wire protocol без разделения сети.
-- После M1.1.49 canonical coverage содержит 17 complete, 0 partial,
-  один not-started (`transport-sync`) и два not-targeted
+- После M1.1.50 canonical coverage содержит 17 complete, один partial
+  (`transport-sync`), 0 not-started и два not-targeted
   surface. В runtime IPC уже закрыты signed loopback descriptor, bearer/fresh
   request, exact signed response, core Ping/WaitForChange/Shutdown/Error,
   paginated conversation list, snapshot-bound history pages, exact peer contact
@@ -432,9 +432,11 @@ sessions, distribution, removal и key epochs и не решены этим пр
   central-HTTPS mailbox create/rotate variants с hard cut Postcard v29 /
   signed descriptor v10; exact volunteer-provider create/rotate и bounded
   one-way disk upgrade сохранены. `runtime-ipc` target и active adapter теперь
-  complete, но canonical CBOR остаётся inactive. Следующий приоритет — parallel
-  CBOR ALPN/negotiation для `transport-sync`. Общая activation требует explicit
-  identifiers, downgrade
+  complete, но canonical CBOR остаётся inactive. M1.1.50 уже резервирует exact
+  parallel ALPN `kilogram/m1/sync/cbor/1`, не регистрируя и не dial-ируя его.
+  Следующий приоритет — authenticated, current-authority-bound listener
+  capability до выбора ALPN, затем dual reader/writer. Общая activation требует
+  explicit identifiers, downgrade
   tests, sustained fuzzing, independent HPKE conformance и fresh multi-device
   field evidence.
 

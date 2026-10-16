@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.50",
+  "status": "identifier-allocated-not-active",
+  "surface": "transport-sync",
+  "changes_active_wire": false,
+  "active": {
+    "encoding": "postcard-v6",
+    "alpn": "kilogram/m0/sync/8",
+    "registered": true,
+    "dialed": true
+  },
+  "candidate": {
+    "encoding": "kilogram-deterministic-cbor-v1",
+    "alpn": "kilogram/m1/sync/cbor/1",
+    "allocated": true,
+    "registered": false,
+    "dialed": false,
+    "format_sniffing": false,
+    "parse_error_fallback": false
+  },
+  "selection": {
+    "current_state": "legacy-only",
+    "listener_capability_required_before_dial": true,
+    "listener_capability_authentication": "device-signed-and-bound-to-current-authority",
+    "requester_capability_authentication": "canonical-device-session-authorization-before-sync-frames",
+    "fallback_after_selected_canonical_failure": false
+  },
+  "remaining": [
+    "authenticated-capability-advertisement",
+    "active-dual-reader-and-writer",
+    "mixed-version-and-downgrade-tests",
+    "rollback-drill",
+    "sustained-fuzzing",
+    "fresh-hosted-and-field-evidence"
+  ],
+  "scope": {
+    "active_wire_changed": false,
+    "network_executed": false
+  }
+}

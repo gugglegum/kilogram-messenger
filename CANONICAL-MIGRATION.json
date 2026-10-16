@@ -1,11 +1,12 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.6",
-  "status": "design-only-not-active",
+  "milestone": "M1.1.50",
+  "status": "identifier-allocated-not-active",
   "changes_active_wire": false,
   "current_encoding": "postcard",
   "candidate_encoding": "kilogram-deterministic-cbor-v1",
-  "candidate_protocol_identifier": "unassigned",
+  "candidate_protocol_identifier": "kilogram/m1/sync/cbor/1",
+  "candidate_identifier_registered": false,
   "selection": {
     "mechanism": "authenticated-capability-bound-explicit-identifier",
     "capability": "kilogram-deterministic-cbor-v1",
@@ -131,7 +132,7 @@
     },
     {
       "id": "parallel-protocol-identifier-allocation",
-      "status": "pending"
+      "status": "verified"
     },
     {
       "id": "dual-reader-runtime-implementation",

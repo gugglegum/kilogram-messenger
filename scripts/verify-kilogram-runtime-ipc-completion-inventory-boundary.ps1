@@ -203,7 +203,7 @@ function Assert-CompletionInventory {
         throw 'canonical runtime IPC schema did not record the exhaustive inventory'
     }
     $runtimeSurface = @($Coverage.surfaces | Where-Object { [string]$_.id -ceq 'runtime-ipc' })
-    if ([string]$Coverage.milestone -cne 'M1.1.49' -or $runtimeSurface.Count -ne 1 -or
+    if ([string]$Coverage.milestone -cne 'M1.1.50' -or $runtimeSurface.Count -ne 1 -or
         [string]$runtimeSurface[0].coverage -cne 'complete' -or
         'exhaustive-command-result-and-active-adapter-inventory' -cnotin
             @($runtimeSurface[0].covered) -or

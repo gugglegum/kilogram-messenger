@@ -175,13 +175,13 @@ function Assert-RetirementBoundary {
     }
 
     $surface = @($Coverage.surfaces | Where-Object { [string]$_.id -ceq 'runtime-ipc' })
-    if ([string]$Coverage.milestone -cne 'M1.1.49' -or $surface.Count -ne 1 -or
+    if ([string]$Coverage.milestone -cne 'M1.1.50' -or $surface.Count -ne 1 -or
         [string]$surface[0].coverage -cne 'complete' -or
         'active-postcard-legacy-central-https-mailbox-command-retirement' -cnotin
             @($surface[0].covered) -or
         @($surface[0].remaining).Count -ne 0 -or
         [int]$Coverage.summary.complete -ne 17 -or
-        [int]$Coverage.summary.partial -ne 0 -or
+        [int]$Coverage.summary.partial -ne 1 -or
         (@($Coverage.next_priority) -join ',') -cne 'transport-sync') {
         throw 'canonical coverage did not complete runtime IPC'
     }

@@ -6190,3 +6190,25 @@ correlation visible, Windows-only field evidence, independent security audit
 - следующий приоритет — `transport-sync`: parallel CBOR ALPN/negotiation с
   explicit identifiers, downgrade resistance и сохранением Postcard fallback до
   отдельного доказанного activation решения.
+
+### M1.1.50 — canonical sync ALPN allocation: принято локально
+
+- зарезервирован отдельный exact ALPN `kilogram/m1/sync/cbor/1` для inactive
+  deterministic-CBOR sync candidate; старый `kilogram/m0/sync/8` остаётся
+  единственным зарегистрированным и dialed sync ALPN;
+- `SyncWireProtocol` принимает только два exact identifier и fail closed
+  отвергает unknown, truncated и future versions. Format sniffing и fallback
+  после canonical connect/decode failure запрещены;
+- `CANONICAL-TRANSPORT-SYNC.json` отдельно фиксирует allocation и activation:
+  candidate allocated, но `registered=false`, `dialed=false`; active wire и
+  compatibility registry не изменены;
+- canonical migration, sync schema и session schema теперь ссылаются на exact
+  allocated identifier. Allocation requirement verified, остальные activation
+  prerequisites остаются pending;
+- coverage: 17 complete / 1 partial (`transport-sync`) / 0 not-started / 2
+  not-targeted. Readiness расширен до 83 fail-closed gates;
+- transport regression прошёл 7/7, accepted-tag readiness — 83/83 вместе с
+  rustfmt и workspace locked/offline strict Clippy в два Cargo job;
+- network, release build, archive, stable-path EXE, push и tag не выполнялись.
+  Следующий slice должен аутентифицировать listener capability до ALPN choice,
+  а не принимать unauthenticated support hint.
