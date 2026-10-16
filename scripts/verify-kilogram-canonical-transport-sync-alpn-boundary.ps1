@@ -43,8 +43,8 @@ function Assert-Boundary {
     $canonicalAlpn = 'kilogram/m1/sync/cbor/1'
     $historyCompatibleAlpn = 'kilogram/m1/sync/cbor/2'
     if ([UInt64]$Manifest.schema_version -ne 1 -or
-        [string]$Manifest.milestone -cne 'M1.1.55' -or
-        [string]$Manifest.status -cne 'history-compatible-successor-session-verified-not-active' -or
+        [string]$Manifest.milestone -cne 'M1.1.56' -or
+        [string]$Manifest.status -cne 'history-compatible-successor-capability-verified-not-active' -or
         [string]$Manifest.surface -cne 'transport-sync' -or
         [bool]$Manifest.changes_active_wire) {
         throw 'canonical transport sync manifest header changed'
@@ -73,7 +73,7 @@ function Assert-Boundary {
         -not [bool]$Manifest.history_compatible_successor.closed_event_carrier -or
         -not [bool]$Manifest.history_compatible_successor.closed_sync_frames -or
         -not [bool]$Manifest.history_compatible_successor.typed_session_checkpoint -or
-        [bool]$Manifest.history_compatible_successor.authenticated_ticket_capability -or
+        -not [bool]$Manifest.history_compatible_successor.authenticated_ticket_capability -or
         [bool]$Manifest.history_compatible_successor.registered -or
         [bool]$Manifest.history_compatible_successor.dialed -or
         [bool]$Manifest.history_compatible_successor.format_sniffing -or
@@ -83,14 +83,13 @@ function Assert-Boundary {
     if ([string]$Manifest.selection.current_state -cne 'legacy-only' -or
         -not [bool]$Manifest.selection.listener_capability_required_before_dial -or
         [string]$Manifest.selection.listener_capability_authentication -cne
-            'ticket-v12-device-signed-and-bound-to-authority-endpoint-requester-publication-epoch-and-prekey-validity' -or
+            'ticket-v13-device-signed-and-bound-to-authority-endpoint-requester-publication-epoch-and-prekey-validity' -or
         [string]$Manifest.selection.requester_capability_authentication -cne
             'canonical-device-session-authorization-before-sync-frames' -or
         [bool]$Manifest.selection.fallback_after_selected_canonical_failure) {
         throw 'canonical synchronization selection policy changed'
     }
     $expectedRemaining = @(
-        'authenticated-cbor-v2-ticket-capability',
         'active-dual-reader-and-canonical-capability-activation',
         'mixed-version-and-downgrade-tests',
         'rollback-drill',
@@ -98,12 +97,12 @@ function Assert-Boundary {
         'fresh-hosted-and-field-evidence'
     )
     if ([string]$Manifest.authenticated_capability.portable_artifact -cne
-            'connection-ticket-v12' -or
-        [int]$Manifest.authenticated_capability.capability_version -ne 1 -or
+            'connection-ticket-v13' -or
+        [int]$Manifest.authenticated_capability.capability_version -ne 2 -or
         [string]$Manifest.authenticated_capability.signature_domain -cne
-            'kilogram:sync-transport-capability-signature:v1\0' -or
+            'kilogram:sync-transport-capability-signature:v2\0' -or
         (@($Manifest.authenticated_capability.active_protocols) -join ',') -cne $legacyAlpn -or
-        (@($Manifest.authenticated_capability.candidate_protocols) -join ',') -cne $canonicalAlpn -or
+        (@($Manifest.authenticated_capability.candidate_protocols) -join ',') -cne $historyCompatibleAlpn -or
         [bool]$Manifest.authenticated_capability.canonical_dial_enabled -or
         (@($Manifest.authenticated_capability.bindings) -join ',') -cne
             'listener-account-id,listener-device-id,authority-revision,allowed-requester-account-id,endpoint-id,ticket-publication-channel-epoch,prekey-directory-common-validity-window' -or
@@ -113,9 +112,9 @@ function Assert-Boundary {
         throw 'canonical synchronization remaining-work boundary changed'
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.55' -or
-        [string]$Migration.status -cne 'history-compatible-successor-session-verified-not-active' -or
-        [string]$Migration.candidate_protocol_identifier -cne $canonicalAlpn -or
+    if ([string]$Migration.milestone -cne 'M1.1.56' -or
+        [string]$Migration.status -cne 'history-compatible-successor-capability-verified-not-active' -or
+        [string]$Migration.candidate_protocol_identifier -cne $historyCompatibleAlpn -or
         [string]$Migration.history_compatible_successor.protocol_identifier -cne
             $historyCompatibleAlpn -or
         [bool]$Migration.candidate_identifier_registered -or
@@ -145,13 +144,13 @@ function Assert-Boundary {
     }
 
     $surface = @($Coverage.surfaces | Where-Object { [string]$_.id -ceq 'transport-sync' })
-    if ([string]$Coverage.milestone -cne 'M1.1.55' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.56' -or
         $surface.Count -ne 1 -or
         [string]$surface[0].coverage -cne 'partial' -or
         (@($surface[0].covered) -join ',') -cne
-            'parallel-cbor-alpn-identifier-allocation,authenticated-ticket-v12-transport-capability-envelope,history-compatible-cbor-v2-alpn-identifier-allocation,typed-durable-canonical-sync-session-checkpoint' -or
+            'parallel-cbor-alpn-identifier-allocation,history-compatible-cbor-v2-alpn-identifier-allocation,typed-durable-canonical-sync-session-checkpoint,authenticated-ticket-v13-history-compatible-cbor-v2-capability' -or
         (@($surface[0].remaining) -join ',') -cne
-            'authenticated-cbor-v2-capability,active-dual-reader-and-canonical-capability-activation' -or
+            'active-dual-reader-and-canonical-capability-activation' -or
         [int]$Coverage.summary.complete -ne 17 -or
         [int]$Coverage.summary.partial -ne 1 -or
         [int]$Coverage.summary.not_started -ne 0 -or
@@ -243,7 +242,7 @@ if ($SelfTest) {
     } 'changed_candidate_identifier'
 
     $prematureRegistration = Copy-JsonObject $manifest
-    $prematureRegistration.candidate.registered = $true
+    $prematureRegistration.history_compatible_successor.registered = $true
     Assert-Rejected {
         Assert-Boundary $prematureRegistration $migration $syncSchema $sessionSchema $coverage `
             $compatibility $transport $cli $rfc

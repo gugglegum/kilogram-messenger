@@ -4059,3 +4059,23 @@ Hosted follow-up:
 - `/cbor/2` is still unregistered, undialed and absent from connection-ticket
   capability. Active Postcard v6, network, release build, archive, stable-path
   executable, push and tag remain unchanged for this stage.
+
+## M1.1.56 authenticated history-compatible sync capability (2026-10-16)
+
+- Migrated portable connection tickets from exact v12/domain v12 to
+  v13/domain v13 and the nested Device-signed sync capability from v1/domain
+  v1 to v2/domain v2. There is no legacy or dual reader.
+- Capability v2 exact-advertises `/cbor/2` as its sole inactive candidate;
+  Postcard v6 remains its sole active protocol and canonical dial stays false.
+- Shared capability regression passed 3/3, focused CLI connection-ticket
+  regression passed 6/6 outside the filesystem sandbox, and the offline crate
+  compiled/tested without Iroh or network dependencies.
+- Aggregate coverage, migration, transport, history bridge, typed carrier,
+  frame, compatibility and ticket boundaries passed normal and negative
+  self-test modes. Readiness inventory remains 88 gates.
+- Final accepted-tag readiness passed 88/88 against immutable `M1.0.0`, with
+  rustfmt and workspace locked/offline strict Clippy. It reported
+  `test_executables_started=false` and `network_executed=false`.
+- No endpoint registration, canonical dial, network operation, release build,
+  archive, stable-path executable replacement, push or tag belongs to this
+  stage.

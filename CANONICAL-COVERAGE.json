@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.55",
+  "milestone": "M1.1.56",
   "status": "coverage-audit-not-active",
   "changes_active_wire": false,
   "source_manifest": "PROTOCOL-COMPATIBILITY.json",
@@ -158,9 +158,9 @@
     {
       "id": "transport-sync",
       "coverage": "partial",
-      "artifacts": ["CANONICAL-TRANSPORT-SYNC.json", "ACTIVE-CONNECTION-TICKET-SYNC-CAPABILITY.json", "crates/kilogram-transport-iroh/src/lib.rs", "crates/kilogram-sync-capability/src/lib.rs", "scripts/verify-kilogram-canonical-transport-sync-alpn-boundary.ps1", "scripts/verify-kilogram-connection-ticket-sync-capability-migration-boundary.ps1", "docs/RFC-0176-m1150-canonical-sync-alpn-allocation.md", "docs/RFC-0177-m1151-authenticated-sync-transport-capability.md"],
-      "covered": ["parallel-cbor-alpn-identifier-allocation", "authenticated-ticket-v12-transport-capability-envelope", "history-compatible-cbor-v2-alpn-identifier-allocation", "typed-durable-canonical-sync-session-checkpoint"],
-      "remaining": ["authenticated-cbor-v2-capability", "active-dual-reader-and-canonical-capability-activation"]
+      "artifacts": ["CANONICAL-TRANSPORT-SYNC.json", "ACTIVE-CONNECTION-TICKET-SYNC-CAPABILITY.json", "crates/kilogram-transport-iroh/src/lib.rs", "crates/kilogram-sync-capability/src/lib.rs", "scripts/verify-kilogram-canonical-transport-sync-alpn-boundary.ps1", "scripts/verify-kilogram-connection-ticket-sync-capability-migration-boundary.ps1", "docs/RFC-0176-m1150-canonical-sync-alpn-allocation.md", "docs/RFC-0177-m1151-authenticated-sync-transport-capability.md", "docs/RFC-0182-m1156-authenticated-history-compatible-sync-capability.md"],
+      "covered": ["parallel-cbor-alpn-identifier-allocation", "history-compatible-cbor-v2-alpn-identifier-allocation", "typed-durable-canonical-sync-session-checkpoint", "authenticated-ticket-v13-history-compatible-cbor-v2-capability"],
+      "remaining": ["active-dual-reader-and-canonical-capability-activation"]
     }
   ],
   "next_priority": ["transport-sync"]

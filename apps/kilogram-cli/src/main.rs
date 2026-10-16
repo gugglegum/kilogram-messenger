@@ -318,8 +318,8 @@ const STREAM_OPEN_TIMEOUT: Duration = Duration::from_secs(15);
 const HISTORY_RECOVERY_NEXT_PAGE_TIMEOUT: Duration = Duration::from_secs(60);
 const MAX_HISTORY_RECOVERY_PAGES_PER_SESSION: usize = 64;
 const CLI_COORDINATOR_STACK_BYTES: usize = 8 * 1024 * 1024;
-const TICKET_SIGNATURE_DOMAIN: &[u8] = b"kilogram:connection-ticket-signature:v12\0";
-const TICKET_VERSION: u8 = 12;
+const TICKET_SIGNATURE_DOMAIN: &[u8] = b"kilogram:connection-ticket-signature:v13\0";
+const TICKET_VERSION: u8 = 13;
 const MAX_RECOVERY_PASSPHRASE_FILE_BYTES: u64 = 4098;
 const DEFAULT_HISTORY_RECOVERY_SCHEDULER_ATTEMPTS: usize = 3;
 const MAX_HISTORY_RECOVERY_SCHEDULER_ATTEMPTS: usize = 8;
@@ -33892,7 +33892,7 @@ mod tests {
         );
         assert_eq!(
             capability.candidate_protocols(),
-            [kilogram_sync_capability::SyncTransportProtocol::CanonicalCborV1]
+            [kilogram_sync_capability::SyncTransportProtocol::CanonicalCborV2]
         );
         assert!(!capability.canonical_dial_enabled());
         decoded.verify_listener_authorization(listener_account_id)?;

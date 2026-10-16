@@ -867,7 +867,7 @@ network or live-runtime command surface. The Windows client now tells the user
 to perform the isolated phase with this binary rather than the general CLI.
 
 The offline decoder is byte-compatible with the existing `.pcrq`, `.pcrp`,
-connection-ticket v12 and QR claim v1 formats. A cross-component regression
+connection-ticket v13 and QR claim v1 formats. A cross-component regression
 uses a request created by the online runtime, signs it with `kilogram-offline`,
 then verifies and applies the response through the original runtime. A checked
 dependency-boundary script rejects accidental network/runtime dependencies.
@@ -959,8 +959,8 @@ its own durable proof. Detector-specific proof IDs remain local, while a stable
 evidence ID lets one audited Root decision apply across sibling Devices.
 
 Ticket v11 introduced an authenticated publication-channel epoch; current
-ticket v12 retains it and additionally binds a signed synchronization transport
-capability. An explicit
+ticket v13 retains it and additionally binds sync transport capability v2 to
+the inactive history-compatible `/cbor/2` candidate. An explicit
 Device-signed rotation changes the derived opaque write capability, rather than
 reissuing the same conflicted channel. The Account Root can then authorize one
 exact fresh peer-signed replacement ticket, old/new channel pair and retained
@@ -1614,7 +1614,7 @@ seconds for Iroh relay-to-direct migration and print `transport_path` (`direct`,
 and number of open paths. These development diagnostics made the two-host LAN
 test distinguish a real direct path from a successful relay fallback.
 
-The listener signs one of three application route policies into ticket v12:
+The listener signs one of three application route policies into ticket v13:
 
 - `auto` accepts Iroh's selected direct or relay path;
 - `direct-only` permits relay-assisted connection establishment and NAT traversal,
@@ -2052,7 +2052,7 @@ runtime itself still has no general configuration-file write authority.
 
 M0.9.29 introduced an explicit wide-area publication/fetch adapter. M0.9.33
 now addresses each publisher-device/recipient-account pair through the hash of
-an unrelated Ed25519 write key carried in signed connection ticket v12. The
+an unrelated Ed25519 write key carried in signed connection ticket v13. The
 private capability is deterministically derived under a separate KDF domain
 from protected local device material and is never persisted or uploaded. The
 store can verify PUT authority without learning an Account ID or Device ID.
@@ -2311,6 +2311,13 @@ The checkpoint signs the exact protocol identifier and keeps cumulative
 evidence as namespace-aware Event keys, so restart cannot collapse legacy and
 native-canonical identities. The signed ticket still does not advertise
 `/cbor/2`, and no endpoint registers or dials the new ALPN.
+
+[`RFC-0182`](docs/RFC-0182-m1156-authenticated-history-compatible-sync-capability.md)
+migrates the portable connection ticket from v12 to v13 and its separately
+Device-signed sync capability from v1 to v2. The inactive candidate is now
+exactly `/cbor/2`; `/cbor/1` and old ticket/capability generations fail closed.
+The active set still contains only Postcard v6, `canonical_dial_enabled` is
+false, and `/cbor/2` remains absent from endpoint registration and dial paths.
 
 ## Contributing
 

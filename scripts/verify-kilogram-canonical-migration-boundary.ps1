@@ -23,14 +23,14 @@ function Assert-ExactStrings {
 
 function Assert-Manifest {
     param([object]$Manifest)
-    if ([UInt64]$Manifest.schema_version -ne 1 -or [string]$Manifest.milestone -cne 'M1.1.55' -or
-        [string]$Manifest.status -cne 'history-compatible-successor-session-verified-not-active' -or
+    if ([UInt64]$Manifest.schema_version -ne 1 -or [string]$Manifest.milestone -cne 'M1.1.56' -or
+        [string]$Manifest.status -cne 'history-compatible-successor-capability-verified-not-active' -or
         [string]$Manifest.current_state -cne 'legacy-only' -or [bool]$Manifest.changes_active_wire) {
         throw 'canonical migration header changed'
     }
     if ([string]$Manifest.current_encoding -cne 'postcard' -or
-        [string]$Manifest.candidate_encoding -cne 'kilogram-deterministic-cbor-v1' -or
-        [string]$Manifest.candidate_protocol_identifier -cne 'kilogram/m1/sync/cbor/1' -or
+        [string]$Manifest.candidate_encoding -cne 'kilogram-deterministic-cbor-v2-typed-history' -or
+        [string]$Manifest.candidate_protocol_identifier -cne 'kilogram/m1/sync/cbor/2' -or
         [bool]$Manifest.candidate_identifier_registered) {
         throw 'canonical migration encoding or identifier changed'
     }
@@ -42,24 +42,24 @@ function Assert-Manifest {
         [string]$Manifest.history_compatible_successor.closed_sync_frames -cne 'verified' -or
         [string]$Manifest.history_compatible_successor.typed_session_checkpoint -cne 'verified' -or
         [string]$Manifest.history_compatible_successor.authenticated_ticket_capability -cne
-            'pending' -or
+            'verified' -or
         [bool]$Manifest.history_compatible_successor.registered -or
         [bool]$Manifest.history_compatible_successor.dialed) {
         throw 'history-compatible successor boundary changed'
     }
     if ([string]$Manifest.selection.mechanism -cne 'authenticated-capability-bound-explicit-identifier' -or
         [string]$Manifest.selection.capability_freshness -cne
-            'ticket-v12-device-signed-authority-endpoint-requester-publication-epoch-and-prekey-validity-bound' -or
+            'ticket-v13-device-signed-authority-endpoint-requester-publication-epoch-and-prekey-validity-bound' -or
         [bool]$Manifest.selection.format_sniffing -or [bool]$Manifest.selection.parse_error_fallback -or
         [bool]$Manifest.selection.reuse_existing_identifier) { throw 'unsafe canonical selection policy' }
 
     Assert-ExactStrings @($Manifest.states | ForEach-Object { $_.id }) @(
-        'legacy-only', 'advertise-cbor-v1', 'dual-reader-prefer-legacy',
+        'legacy-only', 'advertise-cbor-v2', 'dual-reader-prefer-legacy',
         'dual-reader-prefer-cbor', 'cbor-required'
     ) 'migration states'
     Assert-ExactStrings @($Manifest.forward_transitions | ForEach-Object { "$($_.from)->$($_.to)" }) @(
-        'legacy-only->advertise-cbor-v1',
-        'advertise-cbor-v1->dual-reader-prefer-legacy',
+        'legacy-only->advertise-cbor-v2',
+        'advertise-cbor-v2->dual-reader-prefer-legacy',
         'dual-reader-prefer-legacy->dual-reader-prefer-cbor',
         'dual-reader-prefer-cbor->cbor-required'
     ) 'forward transitions'
@@ -75,7 +75,7 @@ function Assert-Manifest {
         'dual-reader|legacy-only|postcard',
         'legacy-only|dual-reader|postcard',
         'dual-reader|dual-reader-without-mutual-authenticated-capability|postcard',
-        'dual-reader-with-authenticated-capability|dual-reader-with-authenticated-capability|kilogram-deterministic-cbor-v1-over-new-identifier'
+        'dual-reader-with-authenticated-capability|dual-reader-with-authenticated-capability|kilogram-deterministic-cbor-v2-over-history-compatible-identifier'
     ) 'compatibility matrix'
     Assert-ExactStrings @($Manifest.fail_closed_conditions) @(
         'unknown-encoding-or-version', 'selected-cbor-decode-failure',
@@ -85,14 +85,14 @@ function Assert-Manifest {
     ) 'fail-closed conditions'
     $requirements = @($Manifest.activation_requirements | ForEach-Object { "$($_.id)|$($_.status)" })
     Assert-ExactStrings $requirements @(
-        'canonical-schema-coverage|pending',
+        'canonical-schema-coverage|verified',
         'parallel-protocol-identifier-allocation|verified',
         'authenticated-capability-envelope|verified',
         'authenticated-legacy-history-bridge|verified',
         'history-compatible-typed-event-carrier|verified',
         'history-compatible-canonical-sync-frames|verified',
         'history-compatible-typed-session-checkpoint|verified',
-        'history-compatible-canonical-sync-generation|pending',
+        'history-compatible-canonical-sync-generation|verified',
         'dual-reader-runtime-implementation|pending',
         'independent-crypto-conformance|verified',
         'bounded-decoder-mutation-regression|verified',
@@ -123,12 +123,16 @@ foreach ($required in @(
 }
 
 $activeWire = Get-Content -LiteralPath (Join-Path $workspace 'crates\kilogram-protocol\src\wire.rs') -Raw
-if ($activeWire.IndexOf('kilogram-deterministic-cbor-v1', [StringComparison]::Ordinal) -ge 0) {
+if ($activeWire.IndexOf('kilogram-deterministic-cbor-v1', [StringComparison]::Ordinal) -ge 0 -or
+    $activeWire.IndexOf('kilogram-deterministic-cbor-v2', [StringComparison]::Ordinal) -ge 0) {
     throw 'inactive canonical encoding leaked into active protocol wire'
 }
 if ($transport.IndexOf('pub const CANONICAL_SYNC_ALPN_V1: &[u8] = b"kilogram/m1/sync/cbor/1";',
         [StringComparison]::Ordinal) -lt 0 -or
-    $cli.IndexOf('CANONICAL_SYNC_ALPN_V1', [StringComparison]::Ordinal) -ge 0) {
+    $transport.IndexOf('pub const CANONICAL_SYNC_ALPN_V2: &[u8] = b"kilogram/m1/sync/cbor/2";',
+        [StringComparison]::Ordinal) -lt 0 -or
+    $cli.IndexOf('CANONICAL_SYNC_ALPN_V1', [StringComparison]::Ordinal) -ge 0 -or
+    $cli.IndexOf('CANONICAL_SYNC_ALPN_V2', [StringComparison]::Ordinal) -ge 0) {
     throw 'allocated canonical identifier is missing or active prematurely'
 }
 
@@ -137,8 +141,8 @@ if ($SelfTest) {
     $fallback.selection.parse_error_fallback = $true
     Assert-Rejected { Assert-Manifest $fallback } 'parse_error_fallback'
     $identifier = $manifest | ConvertTo-Json -Depth 20 | ConvertFrom-Json
-    $identifier.candidate_protocol_identifier = 'kilogram/m1/sync/cbor/2'
-    Assert-Rejected { Assert-Manifest $identifier } 'changed_candidate_identifier'
+    $identifier.candidate_protocol_identifier = 'kilogram/m1/sync/cbor/1'
+    Assert-Rejected { Assert-Manifest $identifier } 'history_incompatible_candidate_identifier'
     $registered = $manifest | ConvertTo-Json -Depth 20 | ConvertFrom-Json
     $registered.candidate_identifier_registered = $true
     Assert-Rejected { Assert-Manifest $registered } 'premature_identifier_registration'
@@ -152,8 +156,8 @@ if ($SelfTest) {
 }
 
 Write-Output 'canonical_migration_boundary=verified'
-Write-Output 'migration_status=history-compatible-successor-session-verified-not-active'
-Write-Output 'candidate_protocol_identifier=kilogram/m1/sync/cbor/1'
+Write-Output 'migration_status=history-compatible-successor-capability-verified-not-active'
+Write-Output 'candidate_protocol_identifier=kilogram/m1/sync/cbor/2'
 Write-Output 'history_compatible_successor_identifier=kilogram/m1/sync/cbor/2'
 Write-Output 'candidate_identifier_registered=false'
 Write-Output 'format_sniffing=false'

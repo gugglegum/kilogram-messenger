@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.55",
-  "status": "history-compatible-successor-session-verified-not-active",
+  "milestone": "M1.1.56",
+  "status": "history-compatible-successor-capability-verified-not-active",
   "surface": "transport-sync",
   "changes_active_wire": false,
   "active": {
@@ -27,7 +27,7 @@
     "closed_event_carrier": true,
     "closed_sync_frames": true,
     "typed_session_checkpoint": true,
-    "authenticated_ticket_capability": false,
+    "authenticated_ticket_capability": true,
     "registered": false,
     "dialed": false,
     "format_sniffing": false,
@@ -36,16 +36,16 @@
   "selection": {
     "current_state": "legacy-only",
     "listener_capability_required_before_dial": true,
-    "listener_capability_authentication": "ticket-v12-device-signed-and-bound-to-authority-endpoint-requester-publication-epoch-and-prekey-validity",
+    "listener_capability_authentication": "ticket-v13-device-signed-and-bound-to-authority-endpoint-requester-publication-epoch-and-prekey-validity",
     "requester_capability_authentication": "canonical-device-session-authorization-before-sync-frames",
     "fallback_after_selected_canonical_failure": false
   },
   "authenticated_capability": {
-    "portable_artifact": "connection-ticket-v12",
-    "capability_version": 1,
-    "signature_domain": "kilogram:sync-transport-capability-signature:v1\\0",
+    "portable_artifact": "connection-ticket-v13",
+    "capability_version": 2,
+    "signature_domain": "kilogram:sync-transport-capability-signature:v2\\0",
     "active_protocols": ["kilogram/m0/sync/8"],
-    "candidate_protocols": ["kilogram/m1/sync/cbor/1"],
+    "candidate_protocols": ["kilogram/m1/sync/cbor/2"],
     "canonical_dial_enabled": false,
     "bindings": [
       "listener-account-id",
@@ -58,7 +58,6 @@
     ]
   },
   "remaining": [
-    "authenticated-cbor-v2-ticket-capability",
     "active-dual-reader-and-canonical-capability-activation",
     "mixed-version-and-downgrade-tests",
     "rollback-drill",

@@ -17,7 +17,7 @@ function Assert-Rejected {
 
 function Assert-Manifest {
     param([object]$Coverage, [object]$Source)
-    if ([UInt64]$Coverage.schema_version -ne 1 -or [string]$Coverage.milestone -cne 'M1.1.55' -or
+    if ([UInt64]$Coverage.schema_version -ne 1 -or [string]$Coverage.milestone -cne 'M1.1.56' -or
         [string]$Coverage.status -cne 'coverage-audit-not-active' -or [bool]$Coverage.changes_active_wire -or
         [string]$Coverage.source_manifest -cne 'PROTOCOL-COMPATIBILITY.json' -or
         [string]$Coverage.target_profile -cne 'kilogram-deterministic-cbor-v1') {
@@ -88,8 +88,8 @@ $rfc = Get-Content -LiteralPath $rfcPath -Raw
 Assert-Manifest $coverage $source
 
 $schemaRequirement = @($migration.activation_requirements | Where-Object { $_.id -ceq 'canonical-schema-coverage' })
-if ($schemaRequirement.Count -ne 1 -or [string]$schemaRequirement[0].status -cne 'pending') {
-    throw 'migration no longer blocks on canonical schema coverage'
+if ($schemaRequirement.Count -ne 1 -or [string]$schemaRequirement[0].status -cne 'verified') {
+    throw 'migration did not verify canonical schema coverage'
 }
 foreach ($required in @('four are complete, two are partial, twelve are not',
     'A partial surface is not activation', 'changes no active wire bytes')) {

@@ -1,23 +1,23 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.51",
+  "milestone": "M1.1.56",
   "status": "active-portable-artifact-migration",
   "surface": "connection-ticket",
   "previous": {
-    "ticket_version": 11,
-    "signature_domain": "kilogram:connection-ticket-signature:v11\\0",
-    "sync_transport_capability": false
-  },
-  "current": {
     "ticket_version": 12,
     "signature_domain": "kilogram:connection-ticket-signature:v12\\0",
     "sync_transport_capability": true
   },
+  "current": {
+    "ticket_version": 13,
+    "signature_domain": "kilogram:connection-ticket-signature:v13\\0",
+    "sync_transport_capability": true
+  },
   "capability": {
-    "version": 1,
-    "signature_domain": "kilogram:sync-transport-capability-signature:v1\\0",
+    "version": 2,
+    "signature_domain": "kilogram:sync-transport-capability-signature:v2\\0",
     "active_protocols": ["kilogram/m0/sync/8"],
-    "candidate_protocols": ["kilogram/m1/sync/cbor/1"],
+    "candidate_protocols": ["kilogram/m1/sync/cbor/2"],
     "canonical_dial_enabled": false,
     "bindings": [
       "listener-account-id",

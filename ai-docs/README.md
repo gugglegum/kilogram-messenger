@@ -1029,6 +1029,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   protocol identifier подписан, evidence хранит typed Event keys, chain
   fail closed проверяет predecessor/round/pause/terminal transitions; ticket
   capability и runtime activation остаются pending.
+- [`../docs/RFC-0182-m1156-authenticated-history-compatible-sync-capability.md`](../docs/RFC-0182-m1156-authenticated-history-compatible-sync-capability.md) —
+  M1.1.56 переводит portable ticket v12→v13 и signed sync capability v1→v2,
+  аутентифицирует exact `/cbor/2` candidate и fail closed отвергает `/cbor/1`,
+  не регистрируя и не dial-я canonical ALPN.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

@@ -114,9 +114,9 @@ function Assert-Contract {
         -not [bool]$Compatibility.required_successor.closed_event_carrier_integrated -or
         -not [bool]$Compatibility.required_successor.closed_sync_frames_integrated -or
         -not [bool]$Compatibility.required_successor.typed_session_checkpoint_integrated -or
-        [bool]$Compatibility.required_successor.ticket_capability_authenticated -or
+        -not [bool]$Compatibility.required_successor.ticket_capability_authenticated -or
         [string]$Compatibility.required_successor.status -cne
-            'closed-frames-and-session-verified-capability-pending') {
+            'closed-generation-and-capability-verified-not-active') {
         throw 'canonical sync history compatibility ledger changed'
     }
     if ([string]$Migration.history_compatible_successor.protocol_identifier -cne
@@ -127,7 +127,7 @@ function Assert-Contract {
         [string]$Migration.history_compatible_successor.closed_sync_frames -cne 'verified' -or
         [string]$Migration.history_compatible_successor.typed_session_checkpoint -cne 'verified' -or
         [string]$Migration.history_compatible_successor.authenticated_ticket_capability -cne
-            'pending' -or
+            'verified' -or
         [bool]$Migration.history_compatible_successor.registered -or
         [bool]$Migration.history_compatible_successor.dialed -or
         [string]$Migration.current_state -cne 'legacy-only') {
@@ -144,7 +144,7 @@ function Assert-Contract {
         -not [bool]$TransportManifest.history_compatible_successor.allocated -or
         -not [bool]$TransportManifest.history_compatible_successor.closed_sync_frames -or
         -not [bool]$TransportManifest.history_compatible_successor.typed_session_checkpoint -or
-        [bool]$TransportManifest.history_compatible_successor.authenticated_ticket_capability -or
+        -not [bool]$TransportManifest.history_compatible_successor.authenticated_ticket_capability -or
         [bool]$TransportManifest.history_compatible_successor.registered -or
         [bool]$TransportManifest.history_compatible_successor.dialed -or
         [bool]$TransportManifest.authenticated_capability.canonical_dial_enabled) {
@@ -298,7 +298,7 @@ Write-Output 'history_compatible_sync_alpn=kilogram/m1/sync/cbor/2'
 Write-Output 'typed_event_namespaces=2'
 Write-Output 'closed_event_carriers=2'
 Write-Output 'closed_sync_frames=verified'
-Write-Output 'authenticated_ticket_capability=pending'
+Write-Output 'authenticated_ticket_capability=verified'
 Write-Output 'candidate_identifier_registered=false'
 Write-Output 'candidate_identifier_dialed=false'
 Write-Output 'active_runtime_changed=false'

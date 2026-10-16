@@ -434,13 +434,13 @@ sessions, distribution, removal и key epochs и не решены этим пр
   one-way disk upgrade сохранены. `runtime-ipc` target и active adapter теперь
   complete, но canonical CBOR остаётся inactive. M1.1.50 резервирует exact
   parallel ALPN `kilogram/m1/sync/cbor/1`, а M1.1.51 добавляет connection ticket
-  v12 с отдельным Device-signed capability, exact-связанным с authority,
-  requester, endpoint, publication epoch и prekey validity. Capability всё ещё
-  объявляет только legacy active и canonical candidate с disabled dial.
-  После M1.1.55 closed history-compatible `/cbor/2` frames и typed durable
-  checkpoint уже verified. Следующий приоритет — отдельная Device-signed exact
-  `/cbor/2` ticket capability; только затем active dual reader без fallback
-  после canonical failure. Общая activation требует
+  v12 с отдельным Device-signed capability. После выявления несовместимости
+  установленной истории M1.1.53–M1.1.55 закрыли history-compatible `/cbor/2`
+  event carrier, frames и typed durable checkpoint. M1.1.56 перевёл ticket на
+  v13 и capability на v2: exact `/cbor/2` теперь authenticated candidate,
+  `/cbor/1` fail closed отвергается, legacy остаётся единственным active
+  protocol, dial disabled. Следующий приоритет — отдельный active dual reader
+  без fallback после canonical failure. Общая activation требует
   explicit identifiers, downgrade
   tests, sustained fuzzing, independent HPKE conformance и fresh multi-device
   field evidence.
@@ -456,8 +456,9 @@ sessions, distribution, removal и key epochs и не решены этим пр
   typed keys используются во всех inventories и completion evidence, а оба
   carrier variants проходят один closed decoder без sniffing/fallback.
   M1.1.55 добавил typed durable checkpoint, который не теряет namespace при
-  resume и подписывает exact protocol identifier. Остаётся способ добавить
-  exact `/cbor/2` в Device-signed ticket capability без преждевременного dial.
+  resume и подписывает exact protocol identifier. M1.1.56 аутентифицировал
+  exact `/cbor/2` в Device-signed ticket capability v2 без регистрации/dial;
+  открытым остаётся отдельный active dual-reader slice с downgrade regression.
 
 ## Инварианты при выборе ответов
 

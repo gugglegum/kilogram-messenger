@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.55",
-  "status": "history-compatible-successor-session-verified-not-active",
+  "milestone": "M1.1.56",
+  "status": "history-compatible-successor-capability-verified-not-active",
   "changes_active_wire": false,
   "current_encoding": "postcard",
-  "candidate_encoding": "kilogram-deterministic-cbor-v1",
-  "candidate_protocol_identifier": "kilogram/m1/sync/cbor/1",
+  "candidate_encoding": "kilogram-deterministic-cbor-v2-typed-history",
+  "candidate_protocol_identifier": "kilogram/m1/sync/cbor/2",
   "candidate_identifier_registered": false,
   "history_compatible_successor": {
     "protocol_identifier": "kilogram/m1/sync/cbor/2",
@@ -14,15 +14,15 @@
     "closed_event_carrier": "verified",
     "closed_sync_frames": "verified",
     "typed_session_checkpoint": "verified",
-    "authenticated_ticket_capability": "pending",
+    "authenticated_ticket_capability": "verified",
     "registered": false,
     "dialed": false
   },
   "current_state": "legacy-only",
   "selection": {
     "mechanism": "authenticated-capability-bound-explicit-identifier",
-    "capability": "kilogram-deterministic-cbor-v1",
-    "capability_freshness": "ticket-v12-device-signed-authority-endpoint-requester-publication-epoch-and-prekey-validity-bound",
+    "capability": "kilogram-deterministic-cbor-v2-typed-history",
+    "capability_freshness": "ticket-v13-device-signed-authority-endpoint-requester-publication-epoch-and-prekey-validity-bound",
     "format_sniffing": false,
     "parse_error_fallback": false,
     "reuse_existing_identifier": false
@@ -34,30 +34,30 @@
       "writer": "postcard"
     },
     {
-      "id": "advertise-cbor-v1",
+      "id": "advertise-cbor-v2",
       "readers": ["postcard"],
       "writer": "postcard"
     },
     {
       "id": "dual-reader-prefer-legacy",
-      "readers": ["postcard", "kilogram-deterministic-cbor-v1"],
-      "writer": "postcard-unless-mutually-authenticated-cbor-v1"
+      "readers": ["postcard", "kilogram-deterministic-cbor-v2-typed-history"],
+      "writer": "postcard-unless-mutually-authenticated-cbor-v2"
     },
     {
       "id": "dual-reader-prefer-cbor",
-      "readers": ["postcard", "kilogram-deterministic-cbor-v1"],
-      "writer": "kilogram-deterministic-cbor-v1-when-mutually-authenticated"
+      "readers": ["postcard", "kilogram-deterministic-cbor-v2-typed-history"],
+      "writer": "kilogram-deterministic-cbor-v2-when-mutually-authenticated"
     },
     {
       "id": "cbor-required",
-      "readers": ["kilogram-deterministic-cbor-v1"],
-      "writer": "kilogram-deterministic-cbor-v1"
+      "readers": ["kilogram-deterministic-cbor-v2-typed-history"],
+      "writer": "kilogram-deterministic-cbor-v2-typed-history"
     }
   ],
   "forward_transitions": [
     {
       "from": "legacy-only",
-      "to": "advertise-cbor-v1",
+      "to": "advertise-cbor-v2",
       "requirements": [
         "complete-canonical-coverage",
         "new-parallel-protocol-identifier",
@@ -68,7 +68,7 @@
       ]
     },
     {
-      "from": "advertise-cbor-v1",
+      "from": "advertise-cbor-v2",
       "to": "dual-reader-prefer-legacy",
       "requirements": [
         "authenticated-capability-binding",
@@ -129,7 +129,7 @@
     {
       "initiator": "dual-reader-with-authenticated-capability",
       "responder": "dual-reader-with-authenticated-capability",
-      "result": "kilogram-deterministic-cbor-v1-over-new-identifier"
+      "result": "kilogram-deterministic-cbor-v2-over-history-compatible-identifier"
     }
   ],
   "fail_closed_conditions": [
@@ -142,7 +142,7 @@
   "activation_requirements": [
     {
       "id": "canonical-schema-coverage",
-      "status": "pending"
+      "status": "verified"
     },
     {
       "id": "parallel-protocol-identifier-allocation",
@@ -170,7 +170,7 @@
     },
     {
       "id": "history-compatible-canonical-sync-generation",
-      "status": "pending"
+      "status": "verified"
     },
     {
       "id": "dual-reader-runtime-implementation",

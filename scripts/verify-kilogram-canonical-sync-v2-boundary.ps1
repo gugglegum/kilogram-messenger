@@ -127,17 +127,17 @@ function Assert-Contract {
         throw 'canonical sync v2 nested carrier vector boundary changed'
     }
 
-    if ([string]$Compatibility.milestone -cne 'M1.1.55' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.56' -or
         [string]$Compatibility.status -cne
-            'history-compatible-frames-and-session-verified-capability-pending' -or
+            'history-compatible-generation-capability-verified-not-active' -or
         -not [bool]$Compatibility.required_successor.closed_sync_frames_integrated -or
         -not [bool]$Compatibility.required_successor.typed_session_checkpoint_integrated -or
-        [bool]$Compatibility.required_successor.ticket_capability_authenticated) {
+        -not [bool]$Compatibility.required_successor.ticket_capability_authenticated) {
         throw 'canonical sync compatibility frame ledger changed'
     }
-    if ([string]$Migration.milestone -cne 'M1.1.55' -or
+    if ([string]$Migration.milestone -cne 'M1.1.56' -or
         [string]$Migration.status -cne
-            'history-compatible-successor-session-verified-not-active' -or
+            'history-compatible-successor-capability-verified-not-active' -or
         [string]$Migration.history_compatible_successor.closed_sync_frames -cne 'verified' -or
         [string]$Migration.history_compatible_successor.typed_session_checkpoint -cne 'verified' -or
         [bool]$Migration.history_compatible_successor.registered -or
@@ -151,11 +151,11 @@ function Assert-Contract {
         [string]$frameRequirement[0].status -cne 'verified') {
         throw 'canonical migration omitted verified history-compatible frames'
     }
-    if ([string]$TransportManifest.milestone -cne 'M1.1.55' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.56' -or
         [string]$TransportManifest.history_compatible_successor.alpn -cne $successorAlpn -or
         -not [bool]$TransportManifest.history_compatible_successor.closed_sync_frames -or
         -not [bool]$TransportManifest.history_compatible_successor.typed_session_checkpoint -or
-        [bool]$TransportManifest.history_compatible_successor.authenticated_ticket_capability -or
+        -not [bool]$TransportManifest.history_compatible_successor.authenticated_ticket_capability -or
         [bool]$TransportManifest.history_compatible_successor.registered -or
         [bool]$TransportManifest.history_compatible_successor.dialed -or
         [bool]$TransportManifest.authenticated_capability.canonical_dial_enabled) {
@@ -288,7 +288,7 @@ if ($SelfTest) {
 Write-Output 'canonical_sync_v2_boundary=verified'
 Write-Output 'history_compatible_sync_frames=verified'
 Write-Output 'typed_session_checkpoint=verified'
-Write-Output 'authenticated_ticket_capability=pending'
+Write-Output 'authenticated_ticket_capability=verified'
 Write-Output 'candidate_identifier_registered=false'
 Write-Output 'candidate_identifier_dialed=false'
 Write-Output 'active_runtime_changed=false'

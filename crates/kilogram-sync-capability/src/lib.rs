@@ -4,11 +4,11 @@ use kilogram_identity::{AccountId, DeviceId, DeviceIdentity, IdentityError};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-pub const CANONICAL_SYNC_ALPN: &str = "kilogram/m1/sync/cbor/1";
+pub const CANONICAL_SYNC_ALPN: &str = "kilogram/m1/sync/cbor/2";
 pub const LEGACY_SYNC_ALPN: &str = "kilogram/m0/sync/8";
 pub const SYNC_TRANSPORT_CAPABILITY_SIGNATURE_DOMAIN: &[u8] =
-    b"kilogram:sync-transport-capability-signature:v1\0";
-pub const SYNC_TRANSPORT_CAPABILITY_VERSION: u8 = 1;
+    b"kilogram:sync-transport-capability-signature:v2\0";
+pub const SYNC_TRANSPORT_CAPABILITY_VERSION: u8 = 2;
 pub const MAX_SYNC_TRANSPORT_CAPABILITY_VALIDITY_SECONDS: u64 = 30 * 24 * 60 * 60;
 pub const SYNC_TRANSPORT_CAPABILITY_CLOCK_SKEW_SECONDS: u64 = 5 * 60;
 
@@ -16,14 +16,14 @@ pub const SYNC_TRANSPORT_CAPABILITY_CLOCK_SKEW_SECONDS: u64 = 5 * 60;
 #[serde(rename_all = "kebab-case")]
 pub enum SyncTransportProtocol {
     LegacyPostcardV6,
-    CanonicalCborV1,
+    CanonicalCborV2,
 }
 
 impl SyncTransportProtocol {
     pub const fn alpn(self) -> &'static str {
         match self {
             Self::LegacyPostcardV6 => LEGACY_SYNC_ALPN,
-            Self::CanonicalCborV1 => CANONICAL_SYNC_ALPN,
+            Self::CanonicalCborV2 => CANONICAL_SYNC_ALPN,
         }
     }
 }
@@ -78,7 +78,7 @@ impl SignedSyncTransportCapability {
             issued_at_unix_seconds: binding.issued_at_unix_seconds,
             expires_at_unix_seconds: binding.expires_at_unix_seconds,
             active_protocols: vec![SyncTransportProtocol::LegacyPostcardV6],
-            candidate_protocols: vec![SyncTransportProtocol::CanonicalCborV1],
+            candidate_protocols: vec![SyncTransportProtocol::CanonicalCborV2],
             canonical_dial_enabled: false,
         };
         if listener_identity.device_id() != binding.listener_device_id {
@@ -213,7 +213,7 @@ fn validate_content(
         return Err(SyncTransportCapabilityError::ValidityTooLong(validity));
     }
     if content.active_protocols != [SyncTransportProtocol::LegacyPostcardV6]
-        || content.candidate_protocols != [SyncTransportProtocol::CanonicalCborV1]
+        || content.candidate_protocols != [SyncTransportProtocol::CanonicalCborV2]
         || content.canonical_dial_enabled
     {
         return Err(SyncTransportCapabilityError::UnsafeProtocolState);
@@ -302,7 +302,7 @@ mod tests {
         );
         assert_eq!(
             capability.candidate_protocols(),
-            [SyncTransportProtocol::CanonicalCborV1]
+            [SyncTransportProtocol::CanonicalCborV2]
         );
         assert!(!capability.canonical_dial_enabled());
         assert_eq!(
@@ -310,8 +310,35 @@ mod tests {
             LEGACY_SYNC_ALPN
         );
         assert_eq!(
-            SyncTransportProtocol::CanonicalCborV1.alpn(),
+            SyncTransportProtocol::CanonicalCborV2.alpn(),
             CANONICAL_SYNC_ALPN
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn previous_capability_and_candidate_generation_fail_closed()
+    -> Result<(), SyncTransportCapabilityError> {
+        let identity = DeviceIdentity::generate()?;
+        let expected = binding(
+            &identity,
+            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        )?;
+        let capability = SignedSyncTransportCapability::issue_legacy_with_canonical_candidate(
+            &identity, &expected,
+        )?;
+
+        let mut previous_version = capability.clone();
+        previous_version.content.version = SYNC_TRANSPORT_CAPABILITY_VERSION - 1;
+        assert!(matches!(
+            previous_version.verify(),
+            Err(SyncTransportCapabilityError::UnsupportedVersion(1))
+        ));
+
+        let encoded = serde_json::to_string(&capability)?;
+        let previous_candidate = encoded.replace("canonical-cbor-v2", "canonical-cbor-v1");
+        assert!(
+            serde_json::from_str::<SignedSyncTransportCapability>(&previous_candidate).is_err()
         );
         Ok(())
     }

@@ -111,14 +111,14 @@
       "compatibility": "exact-version",
       "migration": "new-version-explicit-migration",
       "bindings": [
-        { "path": "apps/kilogram-cli/src/main.rs", "symbol": "TICKET_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:connection-ticket-signature:v12\\0" },
-        { "path": "apps/kilogram-cli/src/main.rs", "symbol": "TICKET_VERSION", "rust_type": "u8", "value": 12 },
-        { "path": "apps/kilogram-offline/src/lib.rs", "symbol": "TICKET_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:connection-ticket-signature:v12\\0" },
-        { "path": "apps/kilogram-offline/src/lib.rs", "symbol": "TICKET_VERSION", "rust_type": "u8", "value": 12 },
-        { "path": "crates/kilogram-sync-capability/src/lib.rs", "symbol": "CANONICAL_SYNC_ALPN", "rust_type": "str", "value": "kilogram/m1/sync/cbor/1" },
+        { "path": "apps/kilogram-cli/src/main.rs", "symbol": "TICKET_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:connection-ticket-signature:v13\\0" },
+        { "path": "apps/kilogram-cli/src/main.rs", "symbol": "TICKET_VERSION", "rust_type": "u8", "value": 13 },
+        { "path": "apps/kilogram-offline/src/lib.rs", "symbol": "TICKET_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:connection-ticket-signature:v13\\0" },
+        { "path": "apps/kilogram-offline/src/lib.rs", "symbol": "TICKET_VERSION", "rust_type": "u8", "value": 13 },
+        { "path": "crates/kilogram-sync-capability/src/lib.rs", "symbol": "CANONICAL_SYNC_ALPN", "rust_type": "str", "value": "kilogram/m1/sync/cbor/2" },
         { "path": "crates/kilogram-sync-capability/src/lib.rs", "symbol": "LEGACY_SYNC_ALPN", "rust_type": "str", "value": "kilogram/m0/sync/8" },
-        { "path": "crates/kilogram-sync-capability/src/lib.rs", "symbol": "SYNC_TRANSPORT_CAPABILITY_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:sync-transport-capability-signature:v1\\0" },
-        { "path": "crates/kilogram-sync-capability/src/lib.rs", "symbol": "SYNC_TRANSPORT_CAPABILITY_VERSION", "rust_type": "u8", "value": 1 }
+        { "path": "crates/kilogram-sync-capability/src/lib.rs", "symbol": "SYNC_TRANSPORT_CAPABILITY_SIGNATURE_DOMAIN", "rust_type": "bytes", "value": "kilogram:sync-transport-capability-signature:v2\\0" },
+        { "path": "crates/kilogram-sync-capability/src/lib.rs", "symbol": "SYNC_TRANSPORT_CAPABILITY_VERSION", "rust_type": "u8", "value": 2 }
       ]
     },
     {

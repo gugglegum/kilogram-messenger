@@ -6327,3 +6327,23 @@ correlation visible, Windows-only field evidence, independent security audit
   readiness прошли 88/88 против immutable `M1.0.0`; два исторических
   sync/session boundary также синхронизированы с новым closed coverage item и
   их negative self-tests остались зелёными.
+
+### M1.1.56 — authenticated history-compatible sync capability: принято локально
+
+- connection ticket получил exact hard cut v12/domain v12 → v13/domain v13,
+  nested Device-signed sync capability — v1/domain v1 → v2/domain v2;
+- capability по-прежнему объявляет ровно Postcard v6 как active, но inactive
+  candidate теперь exact `kilogram/m1/sync/cbor/2`; history-incompatible
+  `/cbor/1`, old version, changed binding, premature dial/registration fail
+  closed;
+- online CLI и Iroh-free offline verifier используют общий capability crate,
+  outer ticket signature проверяется до nested semantic binding к authority,
+  requester, endpoint, publication epoch и prekey validity;
+- focused capability regression прошёл 3/3, connection-ticket regression —
+  6/6, offline crate compile/test — green; все связанные aggregate boundaries
+  и negative self-tests синхронизированы;
+- rustfmt, workspace-wide locked/offline strict Clippy и полный accepted-tag
+  readiness прошли 88/88 против immutable `M1.0.0`; ни один test executable
+  или network process readiness-прогоном не запускался;
+- `/cbor/2` остаётся unregistered/undialed, active Postcard wire не менялся.
+  Network, release/archive/stable EXE/push/tag не выполнялись.
