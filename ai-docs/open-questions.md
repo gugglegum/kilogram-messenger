@@ -440,9 +440,10 @@ sessions, distribution, removal и key epochs и не решены этим пр
   v13 и capability на v2: exact `/cbor/2` теперь authenticated candidate,
   `/cbor/1` fail closed отвергается, legacy остаётся единственным active
   protocol, dial disabled. M1.1.57 добавил dormant transport-independent state
-  machine, M1.1.58 — отдельный atomic namespace-aware typed store, а M1.1.59 —
-  concrete cross-format membership policy. Следующий приоритет — bounded legacy
-  import и transactional checkpoint/store/capability integration перед active
+  machine, M1.1.58 — отдельный atomic namespace-aware typed store, M1.1.59 —
+  concrete cross-format membership policy, а M1.1.60 — bounded/resumable exact
+  legacy import с atomic carrier page. Следующий приоритет — durable import
+  cursor в той же redb transaction и checkpoint/runtime/capability integration перед active
   dual reader без fallback после canonical failure. Общая activation требует
   explicit identifiers, downgrade
   tests, sustained fuzzing, independent HPKE conformance и fresh multi-device
@@ -461,10 +462,11 @@ sessions, distribution, removal и key epochs и не решены этим пр
   M1.1.55 добавил typed durable checkpoint, который не теряет namespace при
   resume и подписывает exact protocol identifier. M1.1.56 аутентифицировал
   exact `/cbor/2` в Device-signed ticket capability v2 без регистрации/dial.
-  M1.1.57–M1.1.59 закрыли dormant state machine, atomic typed carrier store и
-  2×2 cross-format membership policy; открыты legacy import, checkpoint/store
-  transaction и capability selection, и только затем active dual-reader slice
-  с downgrade regression.
+  M1.1.57–M1.1.60 закрыли dormant state machine, atomic typed carrier store,
+  2×2 cross-format membership policy и bounded exact legacy-history import.
+  Открыты atomic durable import cursor, signed checkpoint/runtime integration и
+  capability selection, и только затем active dual-reader slice с downgrade
+  regression.
 
 ## Инварианты при выборе ответов
 

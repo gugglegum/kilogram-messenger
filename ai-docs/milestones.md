@@ -6422,3 +6422,31 @@ correlation visible, Windows-only field evidence, independent security audit
 - legacy import, checkpoint/store transaction и authenticated capability
   selection остаются следующими activation prerequisites. Release/archive,
   stable EXE, push и tag на этом этапе не выполнялись.
+
+### M1.1.60 — dormant bounded/resumable legacy-history import: принято локально
+
+- `kilogram-store` получил immutable `CanonicalSyncV2LegacyImportPlan`, exact
+  plan-bound cursor и progress result для переноса установленной filesystem
+  `EventStore` history в отдельный `CanonicalSyncV2CarrierStore`;
+- source inventory ограничен 4096 events, одна page — 1..64 events. Plan ID
+  domain-separated BLAKE3 связывает exact verified Postcard membership bytes,
+  revision, conversation и каждый строго упорядоченный Event ID с exact
+  authorized Postcard bytes;
+- import не синтезирует native canonical event и не переподписывает историю:
+  каждый исходный event повторно проверяется и сохраняется в exact legacy
+  bridge carrier с исходными author/certificate/authority signatures;
+- resume fail closed проверяет exact plan ID и весь prefix до cursor: skipped
+  entry, changed source claim, changed membership или cross-plan cursor
+  отвергаются. Повтор той же cursor идемпотентен;
+- каждая page проходит existing redb preflight и одну atomic immediate-durability
+  transaction; conflict в одном item не оставляет более поздние page inserts;
+- focused regression прошёл 3/3, полный `kilogram-store` regression — 17/17.
+  Dedicated boundary и десять связанных aggregate boundaries прошли normal и
+  negative self-test modes;
+- rustfmt, workspace-wide locked/offline strict Clippy и accepted-tag readiness
+  прошли 92/92 против immutable `M1.0.0`; readiness не запускал Rust test
+  executable и не выполнял network operation;
+- cursor намеренно ещё не хранится durable: следующий этап должен записывать
+  plan ID/cursor в одной redb transaction с carrier page и затем связать это с
+  signed `/cbor/2` checkpoint. Active CLI/Iroh/wire не изменены, `/cbor/2`
+  unregistered/undialed; release/archive/stable EXE, push и tag не выполнялись.

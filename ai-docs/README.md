@@ -1045,6 +1045,11 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.1.59 добавляет dormant concrete membership policy: legacy Postcard и
   canonical-CBOR membership snapshots независимо авторизуют оба closed carrier
   формата без sniffing, fallback и подключения `/cbor/2` к active runtime.
+- [`../docs/RFC-0186-m1160-dormant-bounded-legacy-history-import.md`](../docs/RFC-0186-m1160-dormant-bounded-legacy-history-import.md) —
+  M1.1.60 добавляет dormant bounded/resumable import из active filesystem
+  `EventStore` в отдельный typed carrier store: exact legacy bytes сохраняются
+  в bridge, plan/cursor exact-связаны, prefix skip и changed claims fail closed,
+  но durable cursor/checkpoint/runtime activation остаются отдельным этапом.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

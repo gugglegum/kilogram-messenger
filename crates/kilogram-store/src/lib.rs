@@ -14,10 +14,12 @@ use kilogram_protocol::{
     AuthorizedEvent, ConversationId, EventId, LocalTextProjection, ProtocolError, SignedEvent,
     canonical_sync_history_v2::{
         CANONICAL_CBOR_V1_EVENT_NAMESPACE, CanonicalSyncEventCarrierV2, CanonicalSyncEventKeyV2,
-        CanonicalSyncEventNamespaceV2, LEGACY_POSTCARD_V6_EVENT_NAMESPACE,
+        CanonicalSyncEventNamespaceV2, CanonicalSyncHistoryV2Error,
+        LEGACY_POSTCARD_V6_EVENT_NAMESPACE,
     },
+    canonical_sync_legacy_event_v1::CanonicalSyncLegacyEventBridgeV1,
     canonical_sync_v2::{
-        CanonicalSyncEventBatchV2, CanonicalSyncV2Error,
+        CanonicalSyncEventBatchV2, CanonicalSyncV2Error, MAX_CANONICAL_SYNC_V2_EVENTS_PER_BATCH,
         MAX_CANONICAL_SYNC_V2_INVENTORY_EVENT_KEYS, encode_sync_event_batch_v2,
     },
 };
@@ -37,6 +39,12 @@ const CANONICAL_SYNC_V2_META_TABLE: TableDefinition<&str, &[u8]> =
     TableDefinition::new("canonical-sync-v2-meta-v1");
 const CANONICAL_SYNC_V2_CARRIER_TABLE: TableDefinition<&[u8], &[u8]> =
     TableDefinition::new("canonical-sync-v2-carriers-v1");
+const CANONICAL_SYNC_V2_LEGACY_IMPORT_MEMBERSHIP_DIGEST_CONTEXT: &str =
+    "kilogram:canonical-sync-v2-legacy-import-membership:v1";
+const CANONICAL_SYNC_V2_LEGACY_IMPORT_EVENT_DIGEST_CONTEXT: &str =
+    "kilogram:canonical-sync-v2-legacy-import-event:v1";
+const CANONICAL_SYNC_V2_LEGACY_IMPORT_PLAN_ID_CONTEXT: &str =
+    "kilogram:canonical-sync-v2-legacy-import-plan:v1";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum StoreOutcome {
@@ -99,6 +107,139 @@ pub struct EventStore {
 /// activation requirements.
 pub struct CanonicalSyncV2CarrierStore {
     database: Database,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct CanonicalSyncV2LegacyImportItem {
+    event_id: EventId,
+    authorized_event_digest: [u8; 32],
+}
+
+/// Immutable, deterministic source claim for one dormant legacy-history import.
+///
+/// The plan binds the exact owner-signed membership snapshot and exact Postcard
+/// bytes of every authorized legacy event. Rebuilding the plan after restart
+/// produces the same ID only while the source claim is byte-identical.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CanonicalSyncV2LegacyImportPlan {
+    conversation_id: ConversationId,
+    membership_revision: u64,
+    membership_digest: [u8; 32],
+    items: Vec<CanonicalSyncV2LegacyImportItem>,
+    plan_id: [u8; 32],
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct CanonicalSyncV2LegacyImportCursor {
+    plan_id: [u8; 32],
+    next_index: u64,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CanonicalSyncV2LegacyImportProgress {
+    cursor: CanonicalSyncV2LegacyImportCursor,
+    imported_event_keys: Vec<CanonicalSyncEventKeyV2>,
+    total_event_count: u64,
+    complete: bool,
+}
+
+impl CanonicalSyncV2LegacyImportPlan {
+    pub fn plan_id(&self) -> [u8; 32] {
+        self.plan_id
+    }
+
+    pub fn conversation_id(&self) -> ConversationId {
+        self.conversation_id
+    }
+
+    pub fn membership_revision(&self) -> u64 {
+        self.membership_revision
+    }
+
+    pub fn event_count(&self) -> u64 {
+        self.items.len() as u64
+    }
+
+    pub fn start_cursor(&self) -> CanonicalSyncV2LegacyImportCursor {
+        CanonicalSyncV2LegacyImportCursor {
+            plan_id: self.plan_id,
+            next_index: 0,
+        }
+    }
+
+    pub fn resume_cursor(
+        &self,
+        next_index: u64,
+    ) -> Result<CanonicalSyncV2LegacyImportCursor, StoreError> {
+        self.verify()?;
+        if next_index > self.event_count() {
+            return Err(StoreError::CanonicalSyncV2LegacyImportCursorOutOfRange {
+                next_index,
+                event_count: self.event_count(),
+            });
+        }
+        Ok(CanonicalSyncV2LegacyImportCursor {
+            plan_id: self.plan_id,
+            next_index,
+        })
+    }
+
+    fn verify(&self) -> Result<(), StoreError> {
+        if self.items.len() > MAX_CANONICAL_SYNC_V2_INVENTORY_EVENT_KEYS {
+            return Err(StoreError::CanonicalSyncV2LegacyImportSourceTooLarge {
+                actual: self.items.len(),
+                maximum: MAX_CANONICAL_SYNC_V2_INVENTORY_EVENT_KEYS,
+            });
+        }
+        if self
+            .items
+            .windows(2)
+            .any(|pair| pair[0].event_id >= pair[1].event_id)
+        {
+            return Err(StoreError::CanonicalSyncV2LegacyImportPlanOrder);
+        }
+        let actual = canonical_sync_v2_legacy_import_plan_id(
+            self.conversation_id,
+            self.membership_revision,
+            self.membership_digest,
+            &self.items,
+        );
+        if actual != self.plan_id {
+            return Err(StoreError::CanonicalSyncV2LegacyImportPlanIdMismatch {
+                expected: self.plan_id,
+                actual,
+            });
+        }
+        Ok(())
+    }
+}
+
+impl CanonicalSyncV2LegacyImportCursor {
+    pub fn plan_id(self) -> [u8; 32] {
+        self.plan_id
+    }
+
+    pub fn next_index(self) -> u64 {
+        self.next_index
+    }
+}
+
+impl CanonicalSyncV2LegacyImportProgress {
+    pub fn cursor(&self) -> CanonicalSyncV2LegacyImportCursor {
+        self.cursor
+    }
+
+    pub fn imported_event_keys(&self) -> &[CanonicalSyncEventKeyV2] {
+        &self.imported_event_keys
+    }
+
+    pub fn total_event_count(&self) -> u64 {
+        self.total_event_count
+    }
+
+    pub fn is_complete(&self) -> bool {
+        self.complete
+    }
 }
 
 /// Immutable local-only storage for plaintext projections encrypted to one device.
@@ -673,6 +814,145 @@ impl CanonicalSyncV2CarrierStore {
         }
         write.commit().map_err(canonical_sync_v2_database_error)
     }
+
+    /// Imports at most one canonical-sync batch from an exact legacy source plan.
+    ///
+    /// A caller may retry the same cursor after interruption. Exact carrier
+    /// replay is idempotent. A cursor that skips a missing prefix, belongs to a
+    /// different plan, or is paired with changed membership/source bytes fails
+    /// before the next atomic target batch is committed.
+    pub fn import_legacy_page(
+        &self,
+        source: &EventStore,
+        membership: &ConversationMembershipSnapshot,
+        plan: &CanonicalSyncV2LegacyImportPlan,
+        cursor: CanonicalSyncV2LegacyImportCursor,
+        maximum_events: usize,
+    ) -> Result<CanonicalSyncV2LegacyImportProgress, StoreError> {
+        plan.verify()?;
+        if maximum_events == 0 || maximum_events > MAX_CANONICAL_SYNC_V2_EVENTS_PER_BATCH {
+            return Err(StoreError::CanonicalSyncV2LegacyImportPageSize {
+                actual: maximum_events,
+                maximum: MAX_CANONICAL_SYNC_V2_EVENTS_PER_BATCH,
+            });
+        }
+        if cursor.plan_id != plan.plan_id {
+            return Err(StoreError::CanonicalSyncV2LegacyImportCursorPlanMismatch {
+                expected: plan.plan_id,
+                actual: cursor.plan_id,
+            });
+        }
+
+        let membership_bytes = membership.encode().map_err(ProtocolError::from)?;
+        let membership_digest =
+            canonical_sync_v2_legacy_import_membership_digest(&membership_bytes);
+        if membership.conversation_id() != plan.conversation_id.scope_id()
+            || membership.revision() != plan.membership_revision
+            || membership_digest != plan.membership_digest
+        {
+            return Err(StoreError::CanonicalSyncV2LegacyImportMembershipMismatch);
+        }
+
+        let next_index = usize::try_from(cursor.next_index).map_err(|_| {
+            StoreError::CanonicalSyncV2LegacyImportCursorOutOfRange {
+                next_index: cursor.next_index,
+                event_count: plan.event_count(),
+            }
+        })?;
+        if next_index > plan.items.len() {
+            return Err(StoreError::CanonicalSyncV2LegacyImportCursorOutOfRange {
+                next_index: cursor.next_index,
+                event_count: plan.event_count(),
+            });
+        }
+
+        self.verify_legacy_import_prefix(membership, plan, next_index)?;
+
+        let end = next_index
+            .saturating_add(maximum_events)
+            .min(plan.items.len());
+        let page = &plan.items[next_index..end];
+        let requested_event_ids = page.iter().map(|item| item.event_id).collect::<Vec<_>>();
+        let authorized_events = source.authorized_events_by_id(
+            plan.conversation_id,
+            &requested_event_ids,
+            membership,
+        )?;
+        let mut carriers = Vec::with_capacity(authorized_events.len());
+        for (item, event) in page.iter().zip(authorized_events) {
+            let encoded = event.encode()?;
+            let actual_digest =
+                canonical_sync_v2_legacy_import_event_digest(item.event_id, &encoded);
+            if actual_digest != item.authorized_event_digest {
+                return Err(StoreError::CanonicalSyncV2LegacyImportSourceEventChanged {
+                    event_id: item.event_id,
+                });
+            }
+            let bridge = CanonicalSyncLegacyEventBridgeV1::from_active_event(&event)
+                .map_err(CanonicalSyncHistoryV2Error::from)
+                .map_err(CanonicalSyncV2Error::from)?;
+            carriers.push(CanonicalSyncEventCarrierV2::LegacyPostcardV6(bridge));
+        }
+
+        self.put_batch(*plan.conversation_id.as_bytes(), &carriers)?;
+        let imported_event_keys = carriers
+            .iter()
+            .map(CanonicalSyncEventCarrierV2::key)
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(CanonicalSyncV2Error::from)?;
+        let next_index = end as u64;
+        Ok(CanonicalSyncV2LegacyImportProgress {
+            cursor: CanonicalSyncV2LegacyImportCursor {
+                plan_id: plan.plan_id,
+                next_index,
+            },
+            imported_event_keys,
+            total_event_count: plan.event_count(),
+            complete: end == plan.items.len(),
+        })
+    }
+
+    fn verify_legacy_import_prefix(
+        &self,
+        membership: &ConversationMembershipSnapshot,
+        plan: &CanonicalSyncV2LegacyImportPlan,
+        next_index: usize,
+    ) -> Result<(), StoreError> {
+        if next_index == 0 {
+            return Ok(());
+        }
+        let expected_items = &plan.items[..next_index];
+        let expected_keys = expected_items
+            .iter()
+            .map(|item| {
+                CanonicalSyncEventKeyV2::new(
+                    CanonicalSyncEventNamespaceV2::LegacyPostcardV6,
+                    *item.event_id.as_bytes(),
+                )
+            })
+            .collect::<Vec<_>>();
+        let stored = self.events_by_key(*plan.conversation_id.as_bytes(), &expected_keys)?;
+        for (item, carrier) in expected_items.iter().zip(stored) {
+            let CanonicalSyncEventCarrierV2::LegacyPostcardV6(bridge) = carrier else {
+                return Err(StoreError::CanonicalSyncV2LegacyImportPrefixMismatch {
+                    event_id: item.event_id,
+                });
+            };
+            bridge
+                .active_authorized_event()
+                .verify_for_membership(membership)?;
+            let actual_digest = canonical_sync_v2_legacy_import_event_digest(
+                item.event_id,
+                bridge.active_authorized_event_postcard(),
+            );
+            if actual_digest != item.authorized_event_digest {
+                return Err(StoreError::CanonicalSyncV2LegacyImportPrefixMismatch {
+                    event_id: item.event_id,
+                });
+            }
+        }
+        Ok(())
+    }
 }
 
 fn canonical_sync_v2_storage_key(
@@ -751,12 +1031,92 @@ fn canonical_sync_v2_database_error(error: impl std::fmt::Display) -> StoreError
     StoreError::CanonicalSyncV2Database(error.to_string())
 }
 
+fn canonical_sync_v2_legacy_import_membership_digest(encoded: &[u8]) -> [u8; 32] {
+    let mut hasher =
+        blake3::Hasher::new_derive_key(CANONICAL_SYNC_V2_LEGACY_IMPORT_MEMBERSHIP_DIGEST_CONTEXT);
+    hasher.update(&(encoded.len() as u64).to_be_bytes());
+    hasher.update(encoded);
+    *hasher.finalize().as_bytes()
+}
+
+fn canonical_sync_v2_legacy_import_event_digest(event_id: EventId, encoded: &[u8]) -> [u8; 32] {
+    let mut hasher =
+        blake3::Hasher::new_derive_key(CANONICAL_SYNC_V2_LEGACY_IMPORT_EVENT_DIGEST_CONTEXT);
+    hasher.update(event_id.as_bytes());
+    hasher.update(&(encoded.len() as u64).to_be_bytes());
+    hasher.update(encoded);
+    *hasher.finalize().as_bytes()
+}
+
+fn canonical_sync_v2_legacy_import_plan_id(
+    conversation_id: ConversationId,
+    membership_revision: u64,
+    membership_digest: [u8; 32],
+    items: &[CanonicalSyncV2LegacyImportItem],
+) -> [u8; 32] {
+    let mut hasher =
+        blake3::Hasher::new_derive_key(CANONICAL_SYNC_V2_LEGACY_IMPORT_PLAN_ID_CONTEXT);
+    hasher.update(conversation_id.as_bytes());
+    hasher.update(&membership_revision.to_be_bytes());
+    hasher.update(&membership_digest);
+    hasher.update(&(items.len() as u64).to_be_bytes());
+    for item in items {
+        hasher.update(item.event_id.as_bytes());
+        hasher.update(&item.authorized_event_digest);
+    }
+    *hasher.finalize().as_bytes()
+}
+
 impl EventStore {
     pub fn open(root: impl AsRef<Path>) -> Result<Self, StoreError> {
         let root = root.as_ref().to_path_buf();
         fs::create_dir_all(&root)?;
         let root = fs::canonicalize(root)?;
         Ok(Self { root })
+    }
+
+    pub fn canonical_sync_v2_legacy_import_plan(
+        &self,
+        conversation_id: ConversationId,
+        membership: &ConversationMembershipSnapshot,
+    ) -> Result<CanonicalSyncV2LegacyImportPlan, StoreError> {
+        let stored = self.load_authorized_conversation(conversation_id, membership)?;
+        if stored.len() > MAX_CANONICAL_SYNC_V2_INVENTORY_EVENT_KEYS {
+            return Err(StoreError::CanonicalSyncV2LegacyImportSourceTooLarge {
+                actual: stored.len(),
+                maximum: MAX_CANONICAL_SYNC_V2_INVENTORY_EVENT_KEYS,
+            });
+        }
+        let membership_bytes = membership.encode().map_err(ProtocolError::from)?;
+        let membership_digest =
+            canonical_sync_v2_legacy_import_membership_digest(&membership_bytes);
+        let items = stored
+            .into_iter()
+            .map(|stored| {
+                let encoded = stored.event.encode()?;
+                Ok(CanonicalSyncV2LegacyImportItem {
+                    event_id: stored.id,
+                    authorized_event_digest: canonical_sync_v2_legacy_import_event_digest(
+                        stored.id, &encoded,
+                    ),
+                })
+            })
+            .collect::<Result<Vec<_>, StoreError>>()?;
+        let plan_id = canonical_sync_v2_legacy_import_plan_id(
+            conversation_id,
+            membership.revision(),
+            membership_digest,
+            &items,
+        );
+        let plan = CanonicalSyncV2LegacyImportPlan {
+            conversation_id,
+            membership_revision: membership.revision(),
+            membership_digest,
+            items,
+            plan_id,
+        };
+        plan.verify()?;
+        Ok(plan)
     }
 
     pub fn put(&self, event: &SignedEvent) -> Result<StoreOutcome, StoreError> {
@@ -1618,6 +1978,41 @@ pub enum StoreError {
         actual: CanonicalSyncEventKeyV2,
     },
 
+    #[error(
+        "legacy import source contains {actual} events; canonical sync v2 maximum is {maximum}"
+    )]
+    CanonicalSyncV2LegacyImportSourceTooLarge { actual: usize, maximum: usize },
+
+    #[error("legacy import plan event IDs are not strictly ordered and unique")]
+    CanonicalSyncV2LegacyImportPlanOrder,
+
+    #[error("legacy import plan ID {actual:?} does not match embedded ID {expected:?}")]
+    CanonicalSyncV2LegacyImportPlanIdMismatch {
+        expected: [u8; 32],
+        actual: [u8; 32],
+    },
+
+    #[error("legacy import cursor belongs to plan {actual:?}; expected {expected:?}")]
+    CanonicalSyncV2LegacyImportCursorPlanMismatch {
+        expected: [u8; 32],
+        actual: [u8; 32],
+    },
+
+    #[error("legacy import cursor index {next_index} exceeds event count {event_count}")]
+    CanonicalSyncV2LegacyImportCursorOutOfRange { next_index: u64, event_count: u64 },
+
+    #[error("legacy import page size is {actual}; expected 1..={maximum}")]
+    CanonicalSyncV2LegacyImportPageSize { actual: usize, maximum: usize },
+
+    #[error("legacy import membership snapshot does not match the exact source plan")]
+    CanonicalSyncV2LegacyImportMembershipMismatch,
+
+    #[error("legacy import source bytes changed for event {event_id}")]
+    CanonicalSyncV2LegacyImportSourceEventChanged { event_id: EventId },
+
+    #[error("legacy import resume prefix does not match event {event_id}")]
+    CanonicalSyncV2LegacyImportPrefixMismatch { event_id: EventId },
+
     #[error("immutable read snapshot contains an unsafe or unsupported path: {0}")]
     InvalidImmutableSnapshotPath(String),
 
@@ -1735,7 +2130,7 @@ mod tests {
     };
     use kilogram_protocol::{AuthorizedEvent, EventPayload, LocalTextProjection};
     use kilogram_ratchet::RatchetState;
-    use tempfile::tempdir;
+    use tempfile::{TempDir, tempdir};
 
     use super::*;
 
@@ -1789,6 +2184,70 @@ mod tests {
                 kilogram_protocol::canonical_sync_legacy_event_v1::CanonicalSyncLegacyEventBridgeV1::from_active_event(&second)?,
             ),
         ))
+    }
+
+    struct LegacyImportFixture {
+        _source_directory: TempDir,
+        _target_directory: TempDir,
+        _root_directory: TempDir,
+        source: EventStore,
+        target: CanonicalSyncV2CarrierStore,
+        root: AccountRootState,
+        membership: ConversationMembershipSnapshot,
+        events: Vec<AuthorizedEvent>,
+    }
+
+    fn legacy_import_fixture(
+        label: &str,
+        event_count: u64,
+    ) -> Result<LegacyImportFixture, Box<dyn Error>> {
+        let source_directory = tempdir()?;
+        let target_directory = tempdir()?;
+        let root_directory = tempdir()?;
+        let source = EventStore::open(source_directory.path())?;
+        let target = CanonicalSyncV2CarrierStore::open(target_directory.path())?;
+        let root = AccountRootState::create(root_directory.path())?;
+        let identity = DeviceIdentity::generate()?;
+        let encryption = DeviceEncryptionIdentity::generate()?;
+        let certificate = root.issue_device_certificate(
+            identity.device_id(),
+            encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let authority_snapshot = root.authority_snapshot()?;
+        let conversation_id = ConversationId::from_label(label);
+        let membership = root.create_conversation_membership(conversation_id.scope_id(), &[])?;
+        let mut events: Vec<AuthorizedEvent> = Vec::new();
+        for sequence in 0..event_count {
+            let parents = events
+                .last()
+                .map(|event| event.event().event_id())
+                .transpose()?
+                .into_iter()
+                .collect();
+            events.push(AuthorizedEvent::new(
+                sign_test_text(
+                    &identity,
+                    conversation_id,
+                    sequence,
+                    parents,
+                    &format!("legacy import event {sequence}"),
+                )?,
+                certificate.clone(),
+                authority_snapshot.clone(),
+            )?);
+        }
+        source.put_authorized_batch(&events, &membership)?;
+        Ok(LegacyImportFixture {
+            _source_directory: source_directory,
+            _target_directory: target_directory,
+            _root_directory: root_directory,
+            source,
+            target,
+            root,
+            membership,
+            events,
+        })
     }
 
     fn overwrite_canonical_sync_v2_raw(
@@ -1914,6 +2373,216 @@ mod tests {
             store.inventory(conversation_id),
             Err(StoreError::CanonicalSyncV2(_))
         ));
+        Ok(())
+    }
+
+    #[test]
+    fn canonical_sync_v2_legacy_import_is_bounded_resumable_and_idempotent()
+    -> Result<(), Box<dyn Error>> {
+        let fixture = legacy_import_fixture("canonical-sync-v2-legacy-import", 3)?;
+        let conversation_id = fixture.events[0].event().conversation_id();
+        let plan = fixture
+            .source
+            .canonical_sync_v2_legacy_import_plan(conversation_id, &fixture.membership)?;
+        assert_eq!(plan.conversation_id(), conversation_id);
+        assert_eq!(plan.membership_revision(), fixture.membership.revision());
+        assert_eq!(plan.event_count(), 3);
+
+        let start = plan.start_cursor();
+        let first = fixture.target.import_legacy_page(
+            &fixture.source,
+            &fixture.membership,
+            &plan,
+            start,
+            2,
+        )?;
+        assert_eq!(first.imported_event_keys().len(), 2);
+        assert_eq!(first.total_event_count(), 3);
+        assert!(!first.is_complete());
+        assert_eq!(
+            fixture.target.inventory(*conversation_id.as_bytes())?.len(),
+            2
+        );
+
+        let retry = fixture.target.import_legacy_page(
+            &fixture.source,
+            &fixture.membership,
+            &plan,
+            start,
+            2,
+        )?;
+        assert_eq!(retry, first);
+        assert_eq!(
+            fixture.target.inventory(*conversation_id.as_bytes())?.len(),
+            2
+        );
+
+        let completed = fixture.target.import_legacy_page(
+            &fixture.source,
+            &fixture.membership,
+            &plan,
+            first.cursor(),
+            2,
+        )?;
+        assert_eq!(completed.imported_event_keys().len(), 1);
+        assert_eq!(completed.cursor().next_index(), 3);
+        assert!(completed.is_complete());
+        assert_eq!(
+            fixture.target.inventory(*conversation_id.as_bytes())?.len(),
+            3
+        );
+
+        let complete_retry = fixture.target.import_legacy_page(
+            &fixture.source,
+            &fixture.membership,
+            &plan,
+            completed.cursor(),
+            2,
+        )?;
+        assert!(complete_retry.imported_event_keys().is_empty());
+        assert!(complete_retry.is_complete());
+        Ok(())
+    }
+
+    #[test]
+    fn canonical_sync_v2_legacy_import_rejects_skips_and_changed_claims()
+    -> Result<(), Box<dyn Error>> {
+        let fixture = legacy_import_fixture("canonical-sync-v2-legacy-import-reject", 2)?;
+        let conversation_id = fixture.events[0].event().conversation_id();
+        let plan = fixture
+            .source
+            .canonical_sync_v2_legacy_import_plan(conversation_id, &fixture.membership)?;
+
+        let skipped = plan.resume_cursor(1)?;
+        assert!(matches!(
+            fixture.target.import_legacy_page(
+                &fixture.source,
+                &fixture.membership,
+                &plan,
+                skipped,
+                1,
+            ),
+            Err(StoreError::CanonicalSyncV2CarrierMissing { .. })
+        ));
+        assert!(matches!(
+            plan.resume_cursor(3),
+            Err(StoreError::CanonicalSyncV2LegacyImportCursorOutOfRange { .. })
+        ));
+        assert!(matches!(
+            fixture.target.import_legacy_page(
+                &fixture.source,
+                &fixture.membership,
+                &plan,
+                plan.start_cursor(),
+                0,
+            ),
+            Err(StoreError::CanonicalSyncV2LegacyImportPageSize { .. })
+        ));
+
+        let changed_membership = fixture.root.add_conversation_members(
+            conversation_id.scope_id(),
+            &[kilogram_identity::AccountId::from_bytes([0x77; 32])],
+        )?;
+        assert!(matches!(
+            fixture.target.import_legacy_page(
+                &fixture.source,
+                &changed_membership,
+                &plan,
+                plan.start_cursor(),
+                1,
+            ),
+            Err(StoreError::CanonicalSyncV2LegacyImportMembershipMismatch)
+        ));
+
+        let mut changed_source_plan = plan.clone();
+        changed_source_plan.items[0].authorized_event_digest[0] ^= 1;
+        changed_source_plan.plan_id = canonical_sync_v2_legacy_import_plan_id(
+            changed_source_plan.conversation_id,
+            changed_source_plan.membership_revision,
+            changed_source_plan.membership_digest,
+            &changed_source_plan.items,
+        );
+        assert!(matches!(
+            fixture.target.import_legacy_page(
+                &fixture.source,
+                &fixture.membership,
+                &changed_source_plan,
+                changed_source_plan.start_cursor(),
+                1,
+            ),
+            Err(StoreError::CanonicalSyncV2LegacyImportSourceEventChanged { .. })
+        ));
+
+        let wrong_plan_cursor = CanonicalSyncV2LegacyImportCursor {
+            plan_id: [0x55; 32],
+            next_index: 0,
+        };
+        assert!(matches!(
+            fixture.target.import_legacy_page(
+                &fixture.source,
+                &fixture.membership,
+                &plan,
+                wrong_plan_cursor,
+                1,
+            ),
+            Err(StoreError::CanonicalSyncV2LegacyImportCursorPlanMismatch { .. })
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn canonical_sync_v2_legacy_import_conflict_does_not_commit_later_page_items()
+    -> Result<(), Box<dyn Error>> {
+        let fixture = legacy_import_fixture("canonical-sync-v2-legacy-import-atomic", 2)?;
+        let conversation_id = fixture.events[0].event().conversation_id();
+        let plan = fixture
+            .source
+            .canonical_sync_v2_legacy_import_plan(conversation_id, &fixture.membership)?;
+        let first_key = CanonicalSyncEventKeyV2::new(
+            CanonicalSyncEventNamespaceV2::LegacyPostcardV6,
+            *plan.items[0].event_id.as_bytes(),
+        );
+        let second_key = CanonicalSyncEventKeyV2::new(
+            CanonicalSyncEventNamespaceV2::LegacyPostcardV6,
+            *plan.items[1].event_id.as_bytes(),
+        );
+        let mut conflicting_events = fixture.source.authorized_events_by_id(
+            conversation_id,
+            &[plan.items[1].event_id],
+            &fixture.membership,
+        )?;
+        let Some(conflicting_event) = conflicting_events.pop() else {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "legacy import conflict fixture is missing its second event",
+            )
+            .into());
+        };
+        let conflicting_carrier = CanonicalSyncEventCarrierV2::LegacyPostcardV6(
+            CanonicalSyncLegacyEventBridgeV1::from_active_event(&conflicting_event)?,
+        );
+        overwrite_canonical_sync_v2_raw(
+            &fixture.target,
+            *conversation_id.as_bytes(),
+            first_key,
+            &conflicting_carrier.encode()?,
+        )?;
+
+        assert!(matches!(
+            fixture.target.import_legacy_page(
+                &fixture.source,
+                &fixture.membership,
+                &plan,
+                plan.start_cursor(),
+                2,
+            ),
+            Err(StoreError::CanonicalSyncV2StoredCarrierKeyMismatch { .. })
+        ));
+        assert!(!canonical_sync_v2_raw_exists(
+            &fixture.target,
+            *conversation_id.as_bytes(),
+            second_key,
+        )?);
         Ok(())
     }
 

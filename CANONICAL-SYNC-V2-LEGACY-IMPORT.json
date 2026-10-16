@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.60",
+  "status": "dormant-bounded-resumable-legacy-import-verified-not-active",
+  "changes_active_wire": false,
+  "protocol_identifier": "kilogram/m1/sync/cbor/2",
+  "implementation": {
+    "crate": "kilogram-store",
+    "source_store": "EventStore",
+    "target_store": "CanonicalSyncV2CarrierStore",
+    "plan_type": "CanonicalSyncV2LegacyImportPlan",
+    "cursor_type": "CanonicalSyncV2LegacyImportCursor",
+    "progress_type": "CanonicalSyncV2LegacyImportProgress"
+  },
+  "bounds": {
+    "maximum_source_events": 4096,
+    "maximum_events_per_page": 64,
+    "empty_page_size_allowed": false
+  },
+  "integrity": {
+    "membership_snapshot": "exact-verified-postcard-bytes-domain-separated-blake3",
+    "source_event": "event-id-plus-exact-authorized-postcard-bytes-domain-separated-blake3",
+    "plan_id": "conversation-membership-and-strictly-ordered-source-items-domain-separated-blake3",
+    "cursor_binding": "exact-plan-id-and-next-index",
+    "target_key": "conversation-id-legacy-namespace-event-id"
+  },
+  "contracts": {
+    "source_membership_verified": true,
+    "source_authorization_reverified": true,
+    "source_items_strictly_ordered_and_unique": true,
+    "source_byte_change_rejected": true,
+    "membership_change_rejected": true,
+    "cross_plan_cursor_rejected": true,
+    "resume_prefix_must_exist_and_match": true,
+    "same_cursor_retry_idempotent": true,
+    "page_preflighted_and_committed_atomically": true,
+    "partial_page_commit_on_conflict": false,
+    "native_canonical_events_synthesized": false,
+    "format_sniffing": false,
+    "parse_error_fallback": false
+  },
+  "regression": {
+    "bounded_multi_page_import": true,
+    "same_cursor_retry": true,
+    "complete_cursor_retry": true,
+    "skipped_prefix_rejected": true,
+    "changed_membership_rejected": true,
+    "changed_source_claim_rejected": true,
+    "cross_plan_cursor_rejected": true,
+    "conflict_rolls_back_later_page_items": true
+  },
+  "activation": {
+    "active_runtime_import": false,
+    "durable_cursor_transaction_integrated": false,
+    "endpoint_registered": false,
+    "canonical_dial_enabled": false
+  },
+  "remaining": [
+    "durable-import-cursor-and-store-transaction",
+    "durable-sync-checkpoint-runtime-integration",
+    "mutual-authenticated-capability-selection",
+    "mixed-version-and-downgrade-tests",
+    "rollback-drill",
+    "sustained-fuzzing",
+    "fresh-hosted-and-field-evidence"
+  ],
+  "scope": {
+    "network_executed": false,
+    "release_build": false,
+    "archive_created": false,
+    "stable_executable_replaced": false
+  }
+}

@@ -2349,6 +2349,18 @@ existing conversation membership solely for migration. Legacy import,
 checkpoint/store coupling and authenticated capability selection remain
 inactive follow-up work.
 
+[`RFC-0186`](docs/RFC-0186-m1160-dormant-bounded-legacy-history-import.md)
+adds the dormant importer from the installed filesystem `EventStore` into the
+separate namespace-aware `/cbor/2` carrier database. A deterministic plan binds
+the exact verified Postcard membership snapshot and at most 4096 strictly
+ordered source events; pages contain at most 64 events and preserve each exact
+authorized Postcard payload inside the legacy bridge instead of synthesizing a
+native canonical event. Resume cursors are plan-bound, skipped prefixes and
+changed source claims fail closed, and each page uses one atomic carrier-store
+transaction. The cursor itself is deliberately not durable yet, so atomic
+cursor/store/checkpoint coupling and authenticated runtime selection remain
+inactive follow-up work.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

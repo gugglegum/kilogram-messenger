@@ -131,13 +131,15 @@ function Assert-Contract {
         throw 'canonical sync v2 typed store remaining-work boundary changed'
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.59' -or
-        [string]$Migration.status -cne 'dormant-cross-format-membership-policy-verified-not-active' -or
+    if ([string]$Migration.milestone -cne 'M1.1.60' -or
+        [string]$Migration.status -cne 'dormant-bounded-resumable-legacy-import-verified-not-active' -or
         [string]$Migration.current_state -cne 'legacy-only' -or
         [bool]$Migration.candidate_identifier_registered -or
         [string]$Migration.history_compatible_successor.dormant_atomic_typed_store -cne
             'verified' -or
         [string]$Migration.history_compatible_successor.dormant_cross_format_membership_policy -cne
+            'verified' -or
+        [string]$Migration.history_compatible_successor.dormant_bounded_resumable_legacy_import -cne
             'verified') {
         throw 'canonical migration omitted the dormant atomic typed store'
     }
@@ -154,27 +156,29 @@ function Assert-Contract {
         throw 'canonical migration confused dormant storage with active runtime support'
     }
 
-    if ([string]$TransportManifest.milestone -cne 'M1.1.59' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.60' -or
         [string]$TransportManifest.status -cne
-            'dormant-cross-format-membership-policy-verified-not-active' -or
+            'dormant-bounded-resumable-legacy-import-verified-not-active' -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_atomic_typed_store -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_cross_format_membership_policy -or
+        -not [bool]$TransportManifest.history_compatible_successor.dormant_bounded_resumable_legacy_import -or
         [bool]$TransportManifest.history_compatible_successor.registered -or
         [bool]$TransportManifest.history_compatible_successor.dialed -or
         [bool]$TransportManifest.authenticated_capability.canonical_dial_enabled -or
         [string]$TransportManifest.selection.current_state -cne 'legacy-only' -or
         (@($TransportManifest.remaining)[0]) -cne
-            'legacy-import-checkpoint-and-capability-integration') {
+            'durable-import-checkpoint-and-capability-integration') {
         throw 'canonical transport manifest does not preserve dormant-only storage'
     }
 
-    if ([string]$Compatibility.milestone -cne 'M1.1.59' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.60' -or
         [string]$Compatibility.status -cne
-            'dormant-cross-format-membership-policy-verified-not-active' -or
+            'dormant-bounded-resumable-legacy-import-verified-not-active' -or
         -not [bool]$Compatibility.required_successor.dormant_atomic_typed_store_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_cross_format_membership_policy_integrated -or
+        -not [bool]$Compatibility.required_successor.dormant_bounded_resumable_legacy_import_integrated -or
         [string]$Compatibility.required_successor.status -cne
-            'dormant-store-and-membership-policy-verified-not-active' -or
+            'dormant-store-policy-and-legacy-import-verified-not-active' -or
         [bool]$Compatibility.required_successor.{must_preserve_no-sniffing-and-no-parse-fallback} -ne
             $true -or
         -not [bool]$Compatibility.active.registered -or
@@ -183,11 +187,12 @@ function Assert-Contract {
     }
 
     $surface = @($Coverage.surfaces | Where-Object { [string]$_.id -ceq 'transport-sync' })
-    if ([string]$Coverage.milestone -cne 'M1.1.59' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.60' -or
         $surface.Count -ne 1 -or [string]$surface[0].coverage -cne 'partial' -or
         'dormant-atomic-typed-carrier-store' -cnotin @($surface[0].covered) -or
         'dormant-cross-format-membership-policy' -cnotin @($surface[0].covered) -or
-        'legacy-import-checkpoint-and-capability-integration' -cnotin
+        'dormant-bounded-resumable-legacy-import' -cnotin @($surface[0].covered) -or
+        'durable-import-checkpoint-and-capability-integration' -cnotin
             @($surface[0].remaining)) {
         throw 'canonical coverage omitted the dormant atomic typed store boundary'
     }

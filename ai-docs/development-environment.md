@@ -4158,3 +4158,30 @@ Hosted follow-up:
 - Legacy import, checkpoint/store transaction and authenticated capability
   selection remain pending. No release build, archive, stable executable
   replacement, push or tag belongs to this stage.
+
+## M1.1.60 dormant bounded/resumable legacy-history import (2026-10-16)
+
+- `kilogram-store` now builds an immutable import plan from the exact verified
+  Postcard membership snapshot and every exact verified `AuthorizedEvent` in
+  one conversation. Inventory is bounded at 4096 and sorted by Event ID.
+- Domain-separated BLAKE3 claims bind membership bytes, source Event IDs and
+  exact authorization bytes. The plan never converts installed history into a
+  native canonical event; it creates the verified legacy bridge carrier.
+- One import call accepts 1..64 events. The plan-bound cursor cannot skip work:
+  every earlier carrier must already exist and exactly match the source claim
+  and membership before a later page can commit. Same-cursor retry is
+  idempotent, changed source/membership and cross-plan cursors fail closed.
+- The existing carrier-store batch preflight and redb write transaction make a
+  page atomic; regression proves a conflicting item leaves later missing page
+  items absent. The cursor itself is deliberately not persisted in this stage,
+  avoiding a false cross-file atomicity claim.
+- Focused import regression passed 3/3 and full `kilogram-store` regression
+  passed 17/17. The dedicated boundary and ten related aggregate boundaries
+  passed normal plus negative self-test modes under Windows PowerShell 5.1.
+- Root JSON parsing, rustfmt, workspace locked/offline strict Clippy and
+  accepted-tag readiness passed 92/92 against immutable `M1.0.0`; readiness
+  started no Rust test executable and executed no network operation.
+- Next work is a redb transaction that couples carrier page and durable import
+  cursor, followed by signed `/cbor/2` checkpoint/runtime capability
+  integration. No active CLI/Iroh/wire path, release build, archive, stable
+  executable, push or tag changed here.
