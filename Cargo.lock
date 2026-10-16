@@ -3166,6 +3166,7 @@ dependencies = [
  "kilogram-session",
  "kilogram-state",
  "kilogram-store",
+ "kilogram-sync-capability",
  "kilogram-ticket-publication",
  "kilogram-ticket-store",
  "kilogram-transport-iroh",
@@ -3272,6 +3273,7 @@ dependencies = [
  "kilogram-identity",
  "kilogram-publication-conflict",
  "kilogram-ratchet",
+ "kilogram-sync-capability",
  "kilogram-ticket-publication",
  "qrcode",
  "rqrr",
@@ -3382,6 +3384,16 @@ dependencies = [
  "kilogram-protocol",
  "kilogram-ratchet",
  "tempfile",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "kilogram-sync-capability"
+version = "0.1.0"
+dependencies = [
+ "kilogram-identity",
+ "serde",
+ "serde_json",
  "thiserror 2.0.20",
 ]
 

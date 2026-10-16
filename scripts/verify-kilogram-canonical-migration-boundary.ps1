@@ -23,8 +23,9 @@ function Assert-ExactStrings {
 
 function Assert-Manifest {
     param([object]$Manifest)
-    if ([UInt64]$Manifest.schema_version -ne 1 -or [string]$Manifest.milestone -cne 'M1.1.50' -or
-        [string]$Manifest.status -cne 'identifier-allocated-not-active' -or [bool]$Manifest.changes_active_wire) {
+    if ([UInt64]$Manifest.schema_version -ne 1 -or [string]$Manifest.milestone -cne 'M1.1.51' -or
+        [string]$Manifest.status -cne 'authenticated-capability-carried-not-active' -or
+        [string]$Manifest.current_state -cne 'legacy-only' -or [bool]$Manifest.changes_active_wire) {
         throw 'canonical migration header changed'
     }
     if ([string]$Manifest.current_encoding -cne 'postcard' -or
@@ -34,6 +35,8 @@ function Assert-Manifest {
         throw 'canonical migration encoding or identifier changed'
     }
     if ([string]$Manifest.selection.mechanism -cne 'authenticated-capability-bound-explicit-identifier' -or
+        [string]$Manifest.selection.capability_freshness -cne
+            'ticket-v12-device-signed-authority-endpoint-requester-publication-epoch-and-prekey-validity-bound' -or
         [bool]$Manifest.selection.format_sniffing -or [bool]$Manifest.selection.parse_error_fallback -or
         [bool]$Manifest.selection.reuse_existing_identifier) { throw 'unsafe canonical selection policy' }
 
@@ -71,6 +74,7 @@ function Assert-Manifest {
     Assert-ExactStrings $requirements @(
         'canonical-schema-coverage|pending',
         'parallel-protocol-identifier-allocation|verified',
+        'authenticated-capability-envelope|verified',
         'dual-reader-runtime-implementation|pending',
         'independent-crypto-conformance|verified',
         'bounded-decoder-mutation-regression|verified',
@@ -130,7 +134,7 @@ if ($SelfTest) {
 }
 
 Write-Output 'canonical_migration_boundary=verified'
-Write-Output 'migration_status=identifier-allocated-not-active'
+Write-Output 'migration_status=authenticated-capability-carried-not-active'
 Write-Output 'candidate_protocol_identifier=kilogram/m1/sync/cbor/1'
 Write-Output 'candidate_identifier_registered=false'
 Write-Output 'format_sniffing=false'

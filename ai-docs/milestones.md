@@ -6212,3 +6212,31 @@ correlation visible, Windows-only field evidence, independent security audit
 - network, release build, archive, stable-path EXE, push и tag не выполнялись.
   Следующий slice должен аутентифицировать listener capability до ALPN choice,
   а не принимать unauthenticated support hint.
+
+### M1.1.51 — authenticated sync transport capability: принято локально
+
+- connection ticket обновлён exact hard cut с v11/signature-domain v11 до
+  v12/domain v12; legacy v1-v11 и unknown future artifacts fail closed, dual
+  reader и silent downgrade отсутствуют;
+- ticket содержит отдельно Device-signed capability v1, которая связывает
+  listener Account/Device, exact authority revision, allowed requester Account,
+  endpoint ID, publication channel epoch и общий prekey-directory validity
+  window;
+- capability объявляет active только `kilogram/m0/sync/8`, candidate только
+  `kilogram/m1/sync/cbor/1` и `canonical_dial_enabled=false`. Canonical ALPN
+  остаётся unregistered/undialed, active sync frame остаётся Postcard v6;
+- online и Iroh-free offline verifier используют общий
+  `kilogram-sync-capability` crate и сначала проверяют outer ticket signature,
+  затем nested signature/context/freshness. Valid capability, перенесённый на
+  другой endpoint, отвергается;
+- dedicated boundary self-test отвергает forged v11 current version, включённый
+  canonical dial, удалённый endpoint binding, undeclared dual reader и
+  premature canonical registration. Protocol registry содержит 159 exact
+  bindings, readiness inventory расширен до 84 gates;
+- focused capability regression прошёл 2/2, CLI connection-ticket regression —
+  6/6, offline dependency boundary подтверждает отсутствие Iroh/Tokio/Reqwest;
+  accepted-tag readiness прошёл 84/84 вместе с rustfmt и workspace
+  locked/offline strict Clippy; network, release/archive/stable EXE/push/tag не
+  выполнялись;
+- следующий slice — active parallel canonical reader и явное включение signed
+  capability с mixed-version, downgrade и no-fallback regression.

@@ -1008,6 +1008,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
 - [`../docs/RFC-0176-m1150-canonical-sync-alpn-allocation.md`](../docs/RFC-0176-m1150-canonical-sync-alpn-allocation.md) —
   M1.1.50 резервирует отдельный exact ALPN canonical-CBOR sync, но намеренно не
   регистрирует и не dial-ит его до authenticated capability negotiation.
+- [`../docs/RFC-0177-m1151-authenticated-sync-transport-capability.md`](../docs/RFC-0177-m1151-authenticated-sync-transport-capability.md) —
+  M1.1.51 переносит Device-signed legacy-active/canonical-candidate capability
+  в connection ticket v12, exact-связывая authority, endpoint, requester,
+  publication epoch и prekey validity без регистрации canonical ALPN.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

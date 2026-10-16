@@ -16,6 +16,7 @@ image.workspace = true
 kilogram-identity = { path = "../../crates/kilogram-identity" }
 kilogram-publication-conflict = { path = "../../crates/kilogram-publication-conflict" }
 kilogram-ratchet = { path = "../../crates/kilogram-ratchet" }
+kilogram-sync-capability = { path = "../../crates/kilogram-sync-capability" }
 kilogram-ticket-publication = { path = "../../crates/kilogram-ticket-publication" }
 qrcode.workspace = true
 rqrr.workspace = true

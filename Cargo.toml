@@ -16,6 +16,7 @@ members = [
     "crates/kilogram-ratchet",
     "crates/kilogram-runtime-ipc",
     "crates/kilogram-session",
+    "crates/kilogram-sync-capability",
     "crates/kilogram-state",
     "crates/kilogram-store",
     "crates/kilogram-ticket-publication",

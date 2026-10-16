@@ -16,7 +16,7 @@ $expectedSurfaceBindingCounts = [ordered]@{
     'blind-mailbox-capability' = 11
     'blind-mailbox-provider-gossip' = 5
     'blind-mailbox-transport' = 3
-    'connection-ticket' = 4
+    'connection-ticket' = 8
     'desktop-bootstrap' = 1
     'device-session-authorization' = 2
     'endpoint-announcement' = 10
@@ -348,8 +348,8 @@ if (-not (Test-Path -LiteralPath $registryPath -PathType Leaf)) {
 }
 $registry = Get-Content -LiteralPath $registryPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $bindingCount = Assert-Registry $registry $workspace $expectedSurfaceBindingCounts
-if ($bindingCount -ne 155) {
-    throw "protocol source binding count must remain exactly 155, got $bindingCount"
+if ($bindingCount -ne 159) {
+    throw "protocol source binding count must remain exactly 159, got $bindingCount"
 }
 
 $registrySha256 = (Get-FileHash -LiteralPath $registryPath -Algorithm SHA256).Hash.ToLowerInvariant()

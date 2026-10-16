@@ -42,8 +42,8 @@ function Assert-Boundary {
     $legacyAlpn = 'kilogram/m0/sync/8'
     $canonicalAlpn = 'kilogram/m1/sync/cbor/1'
     if ([UInt64]$Manifest.schema_version -ne 1 -or
-        [string]$Manifest.milestone -cne 'M1.1.50' -or
-        [string]$Manifest.status -cne 'identifier-allocated-not-active' -or
+        [string]$Manifest.milestone -cne 'M1.1.51' -or
+        [string]$Manifest.status -cne 'authenticated-capability-carried-not-active' -or
         [string]$Manifest.surface -cne 'transport-sync' -or
         [bool]$Manifest.changes_active_wire) {
         throw 'canonical transport sync manifest header changed'
@@ -67,30 +67,40 @@ function Assert-Boundary {
     if ([string]$Manifest.selection.current_state -cne 'legacy-only' -or
         -not [bool]$Manifest.selection.listener_capability_required_before_dial -or
         [string]$Manifest.selection.listener_capability_authentication -cne
-            'device-signed-and-bound-to-current-authority' -or
+            'ticket-v12-device-signed-and-bound-to-authority-endpoint-requester-publication-epoch-and-prekey-validity' -or
         [string]$Manifest.selection.requester_capability_authentication -cne
             'canonical-device-session-authorization-before-sync-frames' -or
         [bool]$Manifest.selection.fallback_after_selected_canonical_failure) {
         throw 'canonical synchronization selection policy changed'
     }
     $expectedRemaining = @(
-        'authenticated-capability-advertisement',
-        'active-dual-reader-and-writer',
+        'active-dual-reader-and-canonical-capability-activation',
         'mixed-version-and-downgrade-tests',
         'rollback-drill',
         'sustained-fuzzing',
         'fresh-hosted-and-field-evidence'
     )
-    if ((@($Manifest.remaining) -join ',') -cne ($expectedRemaining -join ',') -or
+    if ([string]$Manifest.authenticated_capability.portable_artifact -cne
+            'connection-ticket-v12' -or
+        [int]$Manifest.authenticated_capability.capability_version -ne 1 -or
+        [string]$Manifest.authenticated_capability.signature_domain -cne
+            'kilogram:sync-transport-capability-signature:v1\0' -or
+        (@($Manifest.authenticated_capability.active_protocols) -join ',') -cne $legacyAlpn -or
+        (@($Manifest.authenticated_capability.candidate_protocols) -join ',') -cne $canonicalAlpn -or
+        [bool]$Manifest.authenticated_capability.canonical_dial_enabled -or
+        (@($Manifest.authenticated_capability.bindings) -join ',') -cne
+            'listener-account-id,listener-device-id,authority-revision,allowed-requester-account-id,endpoint-id,ticket-publication-channel-epoch,prekey-directory-common-validity-window' -or
+        (@($Manifest.remaining) -join ',') -cne ($expectedRemaining -join ',') -or
         [bool]$Manifest.scope.active_wire_changed -or
         [bool]$Manifest.scope.network_executed) {
         throw 'canonical synchronization remaining-work boundary changed'
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.50' -or
-        [string]$Migration.status -cne 'identifier-allocated-not-active' -or
+    if ([string]$Migration.milestone -cne 'M1.1.51' -or
+        [string]$Migration.status -cne 'authenticated-capability-carried-not-active' -or
         [string]$Migration.candidate_protocol_identifier -cne $canonicalAlpn -or
-        [bool]$Migration.candidate_identifier_registered) {
+        [bool]$Migration.candidate_identifier_registered -or
+        [string]$Migration.current_state -cne 'legacy-only') {
         throw 'canonical migration does not preserve allocated inactive identifier'
     }
     $allocation = @($Migration.activation_requirements | Where-Object {
@@ -98,6 +108,13 @@ function Assert-Boundary {
     })
     if ($allocation.Count -ne 1 -or [string]$allocation[0].status -cne 'verified') {
         throw 'canonical migration did not verify parallel identifier allocation'
+    }
+    $capabilityEnvelope = @($Migration.activation_requirements | Where-Object {
+        [string]$_.id -ceq 'authenticated-capability-envelope'
+    })
+    if ($capabilityEnvelope.Count -ne 1 -or
+        [string]$capabilityEnvelope[0].status -cne 'verified') {
+        throw 'canonical migration did not verify authenticated capability envelope'
     }
     foreach ($schema in @($SyncSchema, $SessionSchema)) {
         if ([string]$schema.activation.candidate_protocol_identifier -cne $canonicalAlpn -or
@@ -109,12 +126,13 @@ function Assert-Boundary {
     }
 
     $surface = @($Coverage.surfaces | Where-Object { [string]$_.id -ceq 'transport-sync' })
-    if ([string]$Coverage.milestone -cne 'M1.1.50' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.51' -or
         $surface.Count -ne 1 -or
         [string]$surface[0].coverage -cne 'partial' -or
-        (@($surface[0].covered) -join ',') -cne 'parallel-cbor-alpn-identifier-allocation' -or
+        (@($surface[0].covered) -join ',') -cne
+            'parallel-cbor-alpn-identifier-allocation,authenticated-ticket-v12-transport-capability-envelope' -or
         (@($surface[0].remaining) -join ',') -cne
-            'authenticated-capability-bound-negotiation-and-dual-reader' -or
+            'active-dual-reader-and-canonical-capability-activation' -or
         [int]$Coverage.summary.complete -ne 17 -or
         [int]$Coverage.summary.partial -ne 1 -or
         [int]$Coverage.summary.not_started -ne 0 -or

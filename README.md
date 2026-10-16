@@ -867,7 +867,7 @@ network or live-runtime command surface. The Windows client now tells the user
 to perform the isolated phase with this binary rather than the general CLI.
 
 The offline decoder is byte-compatible with the existing `.pcrq`, `.pcrp`,
-connection-ticket v11 and QR claim v1 formats. A cross-component regression
+connection-ticket v12 and QR claim v1 formats. A cross-component regression
 uses a request created by the online runtime, signs it with `kilogram-offline`,
 then verifies and applies the response through the original runtime. A checked
 dependency-boundary script rejects accidental network/runtime dependencies.
@@ -958,7 +958,9 @@ and exact current Root roster, then signs and stores the same canonical pair as
 its own durable proof. Detector-specific proof IDs remain local, while a stable
 evidence ID lets one audited Root decision apply across sibling Devices.
 
-Ticket v11 adds an authenticated publication-channel epoch. An explicit
+Ticket v11 introduced an authenticated publication-channel epoch; current
+ticket v12 retains it and additionally binds a signed synchronization transport
+capability. An explicit
 Device-signed rotation changes the derived opaque write capability, rather than
 reissuing the same conflicted channel. The Account Root can then authorize one
 exact fresh peer-signed replacement ticket, old/new channel pair and retained
@@ -1612,7 +1614,7 @@ seconds for Iroh relay-to-direct migration and print `transport_path` (`direct`,
 and number of open paths. These development diagnostics made the two-host LAN
 test distinguish a real direct path from a successful relay fallback.
 
-The listener signs one of three application route policies into ticket v11:
+The listener signs one of three application route policies into ticket v12:
 
 - `auto` accepts Iroh's selected direct or relay path;
 - `direct-only` permits relay-assisted connection establishment and NAT traversal,
@@ -2050,7 +2052,7 @@ runtime itself still has no general configuration-file write authority.
 
 M0.9.29 introduced an explicit wide-area publication/fetch adapter. M0.9.33
 now addresses each publisher-device/recipient-account pair through the hash of
-an unrelated Ed25519 write key carried in signed connection ticket v11. The
+an unrelated Ed25519 write key carried in signed connection ticket v12. The
 private capability is deterministically derived under a separate KDF domain
 from protected local device material and is never persisted or uploaded. The
 store can verify PUT authority without learning an Account ID or Device ID.
@@ -2253,7 +2255,7 @@ insufficient: the requester must present a certificate and authority snapshot
 for the allowed account and prove possession of its device key.
 The ticket contains neither the Iroh endpoint secret nor any application secret.
 Ticket JSON, Postcard messages, and development conversation-label derivation
-remain provisional choices. Ticket v11 intentionally does not decode v1-v10
+remain provisional choices. Ticket v12 intentionally does not decode v1-v11
 tickets; restart the listener to generate a ticket matching this build. See
 [`RFC-0002`](docs/RFC-0002-account-device-authority.md) for snapshot and
 first-contact freshness boundaries.

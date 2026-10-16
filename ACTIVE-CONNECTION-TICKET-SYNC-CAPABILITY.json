@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.51",
+  "status": "active-portable-artifact-migration",
+  "surface": "connection-ticket",
+  "previous": {
+    "ticket_version": 11,
+    "signature_domain": "kilogram:connection-ticket-signature:v11\\0",
+    "sync_transport_capability": false
+  },
+  "current": {
+    "ticket_version": 12,
+    "signature_domain": "kilogram:connection-ticket-signature:v12\\0",
+    "sync_transport_capability": true
+  },
+  "capability": {
+    "version": 1,
+    "signature_domain": "kilogram:sync-transport-capability-signature:v1\\0",
+    "active_protocols": ["kilogram/m0/sync/8"],
+    "candidate_protocols": ["kilogram/m1/sync/cbor/1"],
+    "canonical_dial_enabled": false,
+    "bindings": [
+      "listener-account-id",
+      "listener-device-id",
+      "authority-revision",
+      "allowed-requester-account-id",
+      "endpoint-id",
+      "ticket-publication-channel-epoch",
+      "prekey-directory-common-validity-window"
+    ]
+  },
+  "migration": {
+    "strategy": "exact-version-hard-cut-for-experimental-portable-ticket",
+    "legacy_reader": false,
+    "dual_reader": false,
+    "silent_downgrade": false,
+    "listener_restart_reissues_current_ticket": true
+  },
+  "scope": {
+    "changes_connection_ticket_bytes": true,
+    "changes_active_sync_alpn": false,
+    "registers_canonical_alpn": false,
+    "dials_canonical_alpn": false,
+    "changes_sync_frames": false,
+    "network_executed": false
+  }
+}

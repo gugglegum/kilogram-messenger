@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.50",
+  "milestone": "M1.1.51",
   "status": "coverage-audit-not-active",
   "changes_active_wire": false,
   "source_manifest": "PROTOCOL-COMPATIBILITY.json",
@@ -158,9 +158,9 @@
     {
       "id": "transport-sync",
       "coverage": "partial",
-      "artifacts": ["CANONICAL-TRANSPORT-SYNC.json", "crates/kilogram-transport-iroh/src/lib.rs", "scripts/verify-kilogram-canonical-transport-sync-alpn-boundary.ps1", "docs/RFC-0176-m1150-canonical-sync-alpn-allocation.md"],
-      "covered": ["parallel-cbor-alpn-identifier-allocation"],
-      "remaining": ["authenticated-capability-bound-negotiation-and-dual-reader"]
+      "artifacts": ["CANONICAL-TRANSPORT-SYNC.json", "ACTIVE-CONNECTION-TICKET-SYNC-CAPABILITY.json", "crates/kilogram-transport-iroh/src/lib.rs", "crates/kilogram-sync-capability/src/lib.rs", "scripts/verify-kilogram-canonical-transport-sync-alpn-boundary.ps1", "scripts/verify-kilogram-connection-ticket-sync-capability-migration-boundary.ps1", "docs/RFC-0176-m1150-canonical-sync-alpn-allocation.md", "docs/RFC-0177-m1151-authenticated-sync-transport-capability.md"],
+      "covered": ["parallel-cbor-alpn-identifier-allocation", "authenticated-ticket-v12-transport-capability-envelope"],
+      "remaining": ["active-dual-reader-and-canonical-capability-activation"]
     }
   ],
   "next_priority": ["transport-sync"]

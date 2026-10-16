@@ -3948,3 +3948,30 @@ Hosted follow-up:
 - No network execution, release build, archive, stable-path executable, push or
   tag occurred. The next bounded task is an authenticated listener capability
   bound to current Account authority before any canonical ALPN dial.
+
+## M1.1.51 authenticated sync transport capability (2026-10-16)
+
+- Added the Iroh-free `kilogram-sync-capability` crate and embedded its
+  separately Device-signed v1 artifact into connection ticket v12. The exact
+  context includes listener Account/Device, authority revision, requester
+  Account, endpoint ID, publication epoch and the common prekey validity window.
+- Capability validation freezes the current safe state: legacy Postcard ALPN is
+  active, canonical CBOR ALPN is candidate-only and canonical dialing is false.
+  The candidate remains absent from endpoint registration and dial paths.
+- Online and offline ticket verification authenticates the outer v12 ticket
+  before checking the nested capability binding. One captured clock value is
+  used for directory and capability freshness in each verifier.
+- The dedicated migration boundary self-tests reject a forged current v11,
+  dropped endpoint binding, enabled canonical dial, undeclared dual reader and
+  premature canonical ALPN registration. Offline dependency inspection proves
+  the shared crate adds no Iroh, Tokio or Reqwest surface.
+- Debug/offline checks used two Cargo jobs and BelowNormal priority. Capability
+  tests passed 2/2 and filtered CLI connection-ticket tests passed 6/6; no
+  network, release build, archive, stable-path executable, push or tag ran.
+- Accepted-tag readiness passed 84/84 against immutable `M1.0.0`, including
+  rustfmt and workspace locked/offline strict Clippy. The first standalone
+  sandboxed rustfmt attempt was denied path canonicalization; the identical
+  outside-sandbox check completed successfully.
+- Canonical coverage remains 17 complete / 1 partial / 0 not-started / 2
+  not-targeted. The next bounded work is an active dual reader plus an explicit
+  signed capability activation, with no failure-triggered legacy fallback.

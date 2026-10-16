@@ -25,14 +25,15 @@ use kilogram_publication_conflict::{
     SignedPublicationConflictResolutionRequest,
 };
 use kilogram_ratchet::AccountPrekeyDirectory;
+use kilogram_sync_capability::{SignedSyncTransportCapability, SyncTransportCapabilityBinding};
 use kilogram_ticket_publication::TicketPublicationWriteKey;
 use qrcode::{EcLevel, QrCode, Version};
 use serde::{Deserialize, Serialize};
 use serde_json::value::RawValue;
 use tempfile::NamedTempFile;
 
-const TICKET_VERSION: u8 = 11;
-const TICKET_SIGNATURE_DOMAIN: &[u8] = b"kilogram:connection-ticket-signature:v11\0";
+const TICKET_VERSION: u8 = 12;
+const TICKET_SIGNATURE_DOMAIN: &[u8] = b"kilogram:connection-ticket-signature:v12\0";
 const QR_MODULE_PIXELS: u32 = 4;
 const MAX_QR_IMAGE_FILE_BYTES: u64 = 16 * 1024 * 1024;
 const MAX_QR_IMAGE_DIMENSION: u32 = 4_096;
@@ -62,6 +63,7 @@ struct OfflineConnectionTicketContent {
     allowed_requester_account_id: AccountId,
     ticket_publication_write_key: TicketPublicationWriteKey,
     ticket_publication_channel_epoch: u64,
+    sync_transport_capability: SignedSyncTransportCapability,
     route_policy: PublicationConflictRoutePolicy,
 }
 
@@ -97,16 +99,15 @@ impl OfflineConnectionTicket {
             "unsupported connection ticket version: {}",
             self.content.version
         );
-        self.endpoint_summary()?;
+        let endpoint = self.endpoint_summary()?;
+        let now = unix_time_now()?;
         self.content
             .ticket_publication_write_key
             .verify()
             .context("verify ticket publication write key")?;
         self.content.listener_certificate.verify()?;
         self.content.listener_directory.verify()?;
-        self.content
-            .listener_directory
-            .verify_at(unix_time_now()?)?;
+        self.content.listener_directory.verify_at(now)?;
         ensure!(
             self.content.listener_directory.account_id()
                 == self.content.listener_certificate.account_id(),
@@ -123,7 +124,23 @@ impl OfflineConnectionTicket {
             .listener_certificate
             .device_id()
             .verify(&ticket_signing_bytes(&self.content)?, &self.signature)
-            .context("verify listener signature on connection ticket")
+            .context("verify listener signature on connection ticket")?;
+        let (issued_at_unix_seconds, expires_at_unix_seconds) =
+            prekey_directory_validity(&self.content.listener_directory)?;
+        self.content
+            .sync_transport_capability
+            .verify_binding(&SyncTransportCapabilityBinding {
+                listener_account_id: self.content.listener_certificate.account_id(),
+                listener_device_id: self.content.listener_certificate.device_id(),
+                authority_revision: self.content.listener_directory.revision(),
+                allowed_requester_account_id: self.content.allowed_requester_account_id,
+                endpoint_id: &endpoint.id,
+                ticket_publication_channel_epoch: self.content.ticket_publication_channel_epoch,
+                issued_at_unix_seconds,
+                expires_at_unix_seconds,
+            })?;
+        self.content.sync_transport_capability.verify_at(now)?;
+        Ok(())
     }
 
     fn endpoint_summary(&self) -> Result<EndpointSummary> {
@@ -645,6 +662,26 @@ fn ticket_signing_bytes(content: &OfflineConnectionTicketContent) -> Result<Vec<
     bytes.extend_from_slice(TICKET_SIGNATURE_DOMAIN);
     bytes.extend_from_slice(&encoded);
     Ok(bytes)
+}
+
+fn prekey_directory_validity(directory: &AccountPrekeyDirectory) -> Result<(u64, u64)> {
+    let issued_at = directory
+        .pools()
+        .iter()
+        .map(|pool| pool.published_at_unix_seconds())
+        .max()
+        .context("prekey directory contains no signed pools")?;
+    let expires_at = directory
+        .pools()
+        .iter()
+        .map(|pool| pool.expires_at_unix_seconds())
+        .min()
+        .context("prekey directory contains no signed pools")?;
+    ensure!(
+        issued_at < expires_at,
+        "prekey directory has no common capability validity window"
+    );
+    Ok((issued_at, expires_at))
 }
 
 fn read_bounded_regular_file(path: &Path, max_bytes: u64, label: &str) -> Result<Vec<u8>> {

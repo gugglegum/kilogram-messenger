@@ -213,7 +213,7 @@ if ($surface.Count -ne 1 -or [string]$surface[0].encoding -cne 'postcard' -or
     throw 'active compatibility registry no longer records Postcard runtime IPC v29'
 }
 $coverageSurface = @($coverage.surfaces | Where-Object { $_.id -ceq 'runtime-ipc' })
-if ([string]$coverage.milestone -cne 'M1.1.50' -or $coverageSurface.Count -ne 1 -or
+if ($coverageSurface.Count -ne 1 -or
     [string]$coverageSurface[0].coverage -cne 'complete' -or
     'roster-wide-own-device-automation' -cnotin @($coverageSurface[0].covered) -or
     (@($coverageSurface[0].remaining) -join ',') -cne

@@ -1,16 +1,17 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.50",
-  "status": "identifier-allocated-not-active",
+  "milestone": "M1.1.51",
+  "status": "authenticated-capability-carried-not-active",
   "changes_active_wire": false,
   "current_encoding": "postcard",
   "candidate_encoding": "kilogram-deterministic-cbor-v1",
   "candidate_protocol_identifier": "kilogram/m1/sync/cbor/1",
   "candidate_identifier_registered": false,
+  "current_state": "legacy-only",
   "selection": {
     "mechanism": "authenticated-capability-bound-explicit-identifier",
     "capability": "kilogram-deterministic-cbor-v1",
-    "capability_freshness": "bound-to-current-authority-and-session",
+    "capability_freshness": "ticket-v12-device-signed-authority-endpoint-requester-publication-epoch-and-prekey-validity-bound",
     "format_sniffing": false,
     "parse_error_fallback": false,
     "reuse_existing_identifier": false
@@ -132,6 +133,10 @@
     },
     {
       "id": "parallel-protocol-identifier-allocation",
+      "status": "verified"
+    },
+    {
+      "id": "authenticated-capability-envelope",
       "status": "verified"
     },
     {

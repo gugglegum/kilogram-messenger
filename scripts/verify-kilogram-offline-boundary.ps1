@@ -41,9 +41,13 @@ try {
     if (-not ($tree | Where-Object { $_ -match '^kilogram-publication-conflict v' })) {
         throw 'offline dependency boundary is missing the shared publication-conflict crate'
     }
+    if (-not ($tree | Where-Object { $_ -match '^kilogram-sync-capability v' })) {
+        throw 'offline dependency boundary is missing the shared sync transport capability crate'
+    }
 
     Write-Output 'offline_boundary=verified'
     Write-Output 'shared_publication_conflict_codec=true'
+    Write-Output 'shared_sync_transport_capability=true'
     Write-Output 'blake3_codegen=pure-rust-intrinsics'
     Write-Output 'linked_blake3_native_objects=false'
     Write-Output 'network_dependencies=false'

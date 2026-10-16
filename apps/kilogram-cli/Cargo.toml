@@ -25,6 +25,7 @@ kilogram-publication-conflict = { path = "../../crates/kilogram-publication-conf
 kilogram-ratchet = { path = "../../crates/kilogram-ratchet" }
 kilogram-runtime-ipc = { path = "../../crates/kilogram-runtime-ipc" }
 kilogram-session = { path = "../../crates/kilogram-session" }
+kilogram-sync-capability = { path = "../../crates/kilogram-sync-capability" }
 kilogram-state = { path = "../../crates/kilogram-state" }
 kilogram-store = { path = "../../crates/kilogram-store" }
 kilogram-ticket-publication = { path = "../../crates/kilogram-ticket-publication" }

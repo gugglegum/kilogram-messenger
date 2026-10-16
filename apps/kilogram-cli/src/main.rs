@@ -104,6 +104,7 @@ use kilogram_store::{
     EventReadRepository, EventStore, ImmutableEventReadSnapshot, ImmutableLocalMessageReadSnapshot,
     LocalMessageReadRepository, LocalMessageStore, StoreError, StoreOutcome, StoredAuthorizedEvent,
 };
+use kilogram_sync_capability::{SignedSyncTransportCapability, SyncTransportCapabilityBinding};
 use kilogram_ticket_store::{
     StoreConfig, StoreServiceMode, TicketStoreServer, VolunteerMailboxService,
 };
@@ -317,8 +318,8 @@ const STREAM_OPEN_TIMEOUT: Duration = Duration::from_secs(15);
 const HISTORY_RECOVERY_NEXT_PAGE_TIMEOUT: Duration = Duration::from_secs(60);
 const MAX_HISTORY_RECOVERY_PAGES_PER_SESSION: usize = 64;
 const CLI_COORDINATOR_STACK_BYTES: usize = 8 * 1024 * 1024;
-const TICKET_SIGNATURE_DOMAIN: &[u8] = b"kilogram:connection-ticket-signature:v11\0";
-const TICKET_VERSION: u8 = 11;
+const TICKET_SIGNATURE_DOMAIN: &[u8] = b"kilogram:connection-ticket-signature:v12\0";
+const TICKET_VERSION: u8 = 12;
 const MAX_RECOVERY_PASSPHRASE_FILE_BYTES: u64 = 4098;
 const DEFAULT_HISTORY_RECOVERY_SCHEDULER_ATTEMPTS: usize = 3;
 const MAX_HISTORY_RECOVERY_SCHEDULER_ATTEMPTS: usize = 8;
@@ -2554,6 +2555,7 @@ struct ConnectionTicketContent {
     allowed_requester_account_id: AccountId,
     ticket_publication_write_key: TicketPublicationWriteKey,
     ticket_publication_channel_epoch: u64,
+    sync_transport_capability: SignedSyncTransportCapability,
     route_policy: RoutePolicy,
 }
 
@@ -2615,6 +2617,13 @@ impl ConnectionTicket {
                 .is_some(),
             "listener prekey directory has no pool for the listening device"
         );
+        let sync_transport_capability = issue_sync_transport_capability(
+            &endpoint,
+            listener_identity,
+            &listener_directory,
+            allowed_requester_account_id,
+            publication_channel_epoch,
+        )?;
         let content = ConnectionTicketContent {
             version: TICKET_VERSION,
             endpoint,
@@ -2628,6 +2637,7 @@ impl ConnectionTicket {
             )
             .write_key(),
             ticket_publication_channel_epoch: publication_channel_epoch,
+            sync_transport_capability,
             route_policy,
         };
         let signature = listener_identity
@@ -2704,9 +2714,9 @@ impl ConnectionTicket {
 
     fn verify(&self) -> Result<()> {
         self.verify_authenticated()?;
-        self.content
-            .listener_directory
-            .verify_at(unix_time_now()?)?;
+        let now = unix_time_now()?;
+        self.content.listener_directory.verify_at(now)?;
+        self.content.sync_transport_capability.verify_at(now)?;
         Ok(())
     }
 
@@ -2738,7 +2748,9 @@ impl ConnectionTicket {
             .listener_certificate
             .device_id()
             .verify(&ticket_signing_bytes(&self.content)?, &self.signature)
-            .context("verify listener signature on connection ticket")
+            .context("verify listener signature on connection ticket")?;
+        verify_sync_transport_capability_binding(&self.content)?;
+        Ok(())
     }
 
     fn verify_authenticated_listener_authorization(
@@ -2847,6 +2859,72 @@ fn ticket_signing_bytes(content: &ConnectionTicketContent) -> Result<Vec<u8>> {
     bytes.extend_from_slice(TICKET_SIGNATURE_DOMAIN);
     bytes.extend_from_slice(&encoded);
     Ok(bytes)
+}
+
+fn prekey_directory_validity(directory: &AccountPrekeyDirectory) -> Result<(u64, u64)> {
+    let issued_at = directory
+        .pools()
+        .iter()
+        .map(SignedPrekeyPool::published_at_unix_seconds)
+        .max()
+        .context("prekey directory contains no signed pools")?;
+    let expires_at = directory
+        .pools()
+        .iter()
+        .map(SignedPrekeyPool::expires_at_unix_seconds)
+        .min()
+        .context("prekey directory contains no signed pools")?;
+    ensure!(
+        issued_at < expires_at,
+        "prekey directory has no common capability validity window"
+    );
+    Ok((issued_at, expires_at))
+}
+
+fn issue_sync_transport_capability(
+    endpoint: &EndpointAddr,
+    listener_identity: &DeviceIdentity,
+    listener_directory: &AccountPrekeyDirectory,
+    allowed_requester_account_id: AccountId,
+    ticket_publication_channel_epoch: u64,
+) -> Result<SignedSyncTransportCapability> {
+    let endpoint_id = endpoint.id.to_string();
+    let (issued_at_unix_seconds, expires_at_unix_seconds) =
+        prekey_directory_validity(listener_directory)?;
+    Ok(
+        SignedSyncTransportCapability::issue_legacy_with_canonical_candidate(
+            listener_identity,
+            &SyncTransportCapabilityBinding {
+                listener_account_id: listener_directory.account_id(),
+                listener_device_id: listener_identity.device_id(),
+                authority_revision: listener_directory.revision(),
+                allowed_requester_account_id,
+                endpoint_id: &endpoint_id,
+                ticket_publication_channel_epoch,
+                issued_at_unix_seconds,
+                expires_at_unix_seconds,
+            },
+        )?,
+    )
+}
+
+fn verify_sync_transport_capability_binding(content: &ConnectionTicketContent) -> Result<()> {
+    let endpoint_id = content.endpoint.id.to_string();
+    let (issued_at_unix_seconds, expires_at_unix_seconds) =
+        prekey_directory_validity(&content.listener_directory)?;
+    content
+        .sync_transport_capability
+        .verify_binding(&SyncTransportCapabilityBinding {
+            listener_account_id: content.listener_certificate.account_id(),
+            listener_device_id: content.listener_certificate.device_id(),
+            authority_revision: content.listener_directory.revision(),
+            allowed_requester_account_id: content.allowed_requester_account_id,
+            endpoint_id: &endpoint_id,
+            ticket_publication_channel_epoch: content.ticket_publication_channel_epoch,
+            issued_at_unix_seconds,
+            expires_at_unix_seconds,
+        })?;
+    Ok(())
 }
 
 fn main() -> Result<()> {
@@ -32551,15 +32629,24 @@ mod tests {
         let expired_directory =
             AccountPrekeyDirectory::new(bob_directory.device_list().clone(), expired_pools)?;
         for index in 0..2 {
+            let expired_endpoint = bob_tickets[index].endpoint().clone();
+            let sync_transport_capability = issue_sync_transport_capability(
+                &expired_endpoint,
+                &bob_identities[index],
+                &expired_directory,
+                alice_root.account_id(),
+                bob_tickets[index].ticket_publication_channel_epoch(),
+            )?;
             let expired_content = ConnectionTicketContent {
                 version: TICKET_VERSION,
-                endpoint: bob_tickets[index].endpoint().clone(),
+                endpoint: expired_endpoint,
                 listener_certificate: bob_certificates[index].clone(),
                 listener_directory: expired_directory.clone(),
                 allowed_requester_account_id: alice_root.account_id(),
                 ticket_publication_write_key: bob_tickets[index].ticket_publication_write_key(),
                 ticket_publication_channel_epoch: bob_tickets[index]
                     .ticket_publication_channel_epoch(),
+                sync_transport_capability,
                 route_policy: RoutePolicy::Auto,
             };
             let expired_ticket = ConnectionTicket {
@@ -33787,6 +33874,27 @@ mod tests {
             )
             .write_key()
         );
+        let capability = &decoded.content.sync_transport_capability;
+        assert_eq!(capability.listener_account_id(), listener_account_id);
+        assert_eq!(capability.listener_device_id(), listener_device_id);
+        assert_eq!(
+            capability.authority_revision(),
+            decoded.listener_directory().revision()
+        );
+        assert_eq!(
+            capability.allowed_requester_account_id(),
+            allowed_requester_account_id
+        );
+        assert_eq!(capability.endpoint_id(), endpoint.id.to_string());
+        assert_eq!(
+            capability.active_protocols(),
+            [kilogram_sync_capability::SyncTransportProtocol::LegacyPostcardV6]
+        );
+        assert_eq!(
+            capability.candidate_protocols(),
+            [kilogram_sync_capability::SyncTransportProtocol::CanonicalCborV1]
+        );
+        assert!(!capability.canonical_dial_enabled());
         decoded.verify_listener_authorization(listener_account_id)?;
         assert!(
             decoded
@@ -34045,6 +34153,40 @@ mod tests {
                 .to_string()
                 .contains("verify listener signature on connection ticket")
         );
+        Ok(())
+    }
+
+    #[test]
+    fn connection_ticket_rejects_a_valid_capability_bound_to_another_endpoint() -> Result<()> {
+        let identity = DeviceIdentity::generate()?;
+        let (_, certificate, _, directory) = authority_for(&identity)?;
+        let requester = DeviceIdentity::generate()?;
+        let (requester_account_id, _, _, _) = authority_for(&requester)?;
+        let endpoint = EndpointAddr::new(SecretKey::generate().public());
+        let mut ticket = ConnectionTicket::new(
+            endpoint,
+            &identity,
+            certificate,
+            directory.clone(),
+            requester_account_id,
+            RoutePolicy::Auto,
+        )?;
+        ticket.content.sync_transport_capability = issue_sync_transport_capability(
+            &EndpointAddr::new(SecretKey::generate().public()),
+            &identity,
+            &directory,
+            requester_account_id,
+            0,
+        )?;
+        ticket.signature = identity
+            .sign(&ticket_signing_bytes(&ticket.content)?)
+            .to_vec();
+        let encoded = URL_SAFE_NO_PAD.encode(serde_json::to_vec(&ticket)?);
+
+        let error = ConnectionTicket::decode(&encoded)
+            .err()
+            .context("cross-endpoint sync capability unexpectedly succeeded")?;
+        assert!(format!("{error:#}").contains("binding does not match"));
         Ok(())
     }
 
