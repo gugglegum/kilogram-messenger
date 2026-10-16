@@ -378,7 +378,7 @@ sessions, distribution, removal и key epochs и не решены этим пр
 - Независимый second-builder, подписанный release provenance, обновления клиента
   и дальнейшая защита supply chain поверх M0.9.50 same-host gate.
 - Миграция криптоалгоритмов и wire protocol без разделения сети.
-- После M1.1.47 canonical coverage содержит 16 complete, 1 partial
+- После M1.1.48 canonical coverage содержит 16 complete, 1 partial
   (`runtime-ipc`), один not-started (`transport-sync`) и два not-targeted
   surface. В runtime IPC уже закрыты signed loopback descriptor, bearer/fresh
   request, exact signed response, core Ping/WaitForChange/Shutdown/Error,
@@ -427,8 +427,11 @@ sessions, distribution, removal и key epochs и не решены этим пр
   success refresh deadline и failure backoff детерминированы, а opaque HTTPS
   origin не является mailbox или OS background service. Открыты ровно два
   класса: окончательный disposition endpoint-announcement bootstrap helpers и
-  удаление legacy central-HTTPS mailbox create/rotate commands. Следующий
-  приоритет — эти два bounded этапа до complete `runtime-ipc`, затем
+  endpoint-announcement bootstrap helpers удалены из public CLI/loopback IPC в
+  M1.1.48 с exact hard cut Postcard v28 / signed descriptor v9; internal peer
+  push и foreground automations сохранены. Открыт один класс: удаление legacy
+  central-HTTPS mailbox create/rotate commands. Следующий приоритет — этот
+  bounded этап до complete `runtime-ipc`, затем
   parallel CBOR ALPN/negotiation для
   `transport-sync`. Общая activation требует explicit identifiers, downgrade
   tests, sustained fuzzing, independent HPKE conformance и fresh multi-device

@@ -6141,3 +6141,25 @@ correlation visible, Windows-only field evidence, independent security audit
   34 pairs; остаются ровно endpoint-announcement bootstrap-helper disposition и
   legacy central-HTTPS mailbox-command removal. Active Postcard v27/descriptor
   v8, peer wire, network, release/archive/push/tag не менялись.
+
+### M1.1.48 — active runtime IPC endpoint bootstrap retirement: принято локально
+
+- из публичного CLI и активного loopback Postcard IPC удалены ручные
+  `ExportEndpointAnnouncements`, `ImportEndpointAnnouncements` и
+  `PushEndpointAnnouncements` вместе с их тремя ответами;
+- authenticated peer `EndpointAnnouncementPush`, foreground own-device/contact
+  automations и внутренние export/import helpers сохранены: удалён только
+  устаревший operator-driven bootstrap path, а не transport capability;
+- из-за сдвига Postcard enum discriminants выполнен exact-version hard cut:
+  IPC v28 и signed descriptor domain v9 отвергают legacy v27/v8 до
+  connect/actor dispatch; downgrade/dual reader не добавлялись;
+- dedicated retirement boundary self-test-ит forged current version, пропуск
+  retired command и повторное появление CLI subcommand. Completion inventory
+  теперь исчерпывает 31 active command, 28 response и оставляет только два
+  legacy central-HTTPS mailbox blockers;
+- `kilogram-runtime-ipc` regression прошёл 17/17, focused CLI regression — 4/4,
+  все canonical IPC gates и accepted-tag readiness — 81/81; rustfmt и workspace
+  locked/offline strict Clippy прошли с двумя Cargo jobs и BelowNormal priority;
+- default current-candidate readiness ожидаемо не переиспользует старое physical
+  field evidence после protected runtime drift. Peer/relay/mailbox/sync wire,
+  network, release/archive/executable/push/tag не менялись.

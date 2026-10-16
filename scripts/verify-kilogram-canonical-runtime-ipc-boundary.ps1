@@ -33,13 +33,13 @@ function Assert-LowerHex {
 
 function Assert-Schema {
     param([object]$Schema, [string]$Rust)
-    if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.47' -or
+    if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.48' -or
         [string]$Schema.status -cne 'candidate-not-active' -or [bool]$Schema.changes_active_wire -or
         [string]$Schema.profile -cne 'kilogram-deterministic-cbor-v1' -or
         [string]$Schema.cddl.path -cne 'CANONICAL-RUNTIME-IPC.cddl' -or
         [string]$Schema.cddl.root_rule -cne 'kilogram-runtime-ipc-v1' -or
-        [string]$Schema.activation.current_runtime_encoding -cne 'postcard-v27-with-json-descriptor-v8' -or
-        [bool]$Schema.activation.current_runtime_changed) {
+        [string]$Schema.activation.current_runtime_encoding -cne 'postcard-v28-with-json-descriptor-v9' -or
+        -not [bool]$Schema.activation.current_runtime_changed) {
         throw 'canonical runtime IPC schema header changed'
     }
     $limits = @(
@@ -57,8 +57,8 @@ function Assert-Schema {
     }
     if (@($Schema.domains).Count -ne 78 -or @($Schema.objects).Count -ne 38 -or
         @($Schema.covered_commands).Count -ne 34 -or @($Schema.covered_results).Count -ne 33 -or
-        @($Schema.semantic_rules).Count -ne 175 -or
-        @($Schema.remaining_runtime_ipc_surface).Count -ne 2) {
+        @($Schema.semantic_rules).Count -ne 177 -or
+        @($Schema.remaining_runtime_ipc_surface).Count -ne 1) {
         throw 'canonical runtime IPC inventory changed'
     }
     foreach ($required in @(
@@ -140,8 +140,8 @@ foreach ($required in @('signed-runtime-ipc-descriptor-v1', 'runtime-ipc-core-re
 if ($lib.IndexOf('pub mod canonical_runtime_ipc_v1;', [StringComparison]::Ordinal) -lt 0) {
     throw 'canonical runtime IPC module is not exported'
 }
-foreach ($required in @('const IPC_VERSION: u8 = 27;',
-    'kilogram:runtime-ipc-descriptor:v8\0', 'postcard::to_allocvec', 'postcard::from_bytes')) {
+foreach ($required in @('const IPC_VERSION: u8 = 28;',
+    'kilogram:runtime-ipc-descriptor:v9\0', 'postcard::to_allocvec', 'postcard::from_bytes')) {
     if ($activeIpc.IndexOf($required, [StringComparison]::Ordinal) -lt 0) {
         throw "active runtime IPC boundary is missing '$required'"
     }
@@ -152,8 +152,8 @@ if ($activeIpc.IndexOf('canonical_runtime_ipc_v1', [StringComparison]::Ordinal) 
 $source = @($compatibility.surfaces | Where-Object { $_.id -ceq 'runtime-ipc' })
 if ($source.Count -ne 1 -or [string]$source[0].encoding -cne 'postcard' -or
     [string]$source[0].compatibility -cne 'exact-version' -or
-    [int](@($source[0].bindings | Where-Object { $_.symbol -ceq 'IPC_VERSION' })[0].value) -ne 27) {
-    throw 'active compatibility registry no longer records Postcard runtime IPC v27'
+    [int](@($source[0].bindings | Where-Object { $_.symbol -ceq 'IPC_VERSION' })[0].value) -ne 28) {
+    throw 'active compatibility registry no longer records Postcard runtime IPC v28'
 }
 $surface = @($coverage.surfaces | Where-Object { $_.id -ceq 'runtime-ipc' })
 $expectedCovered = @('device-signed-loopback-descriptor',
@@ -182,7 +182,8 @@ $expectedCovered = @('device-signed-loopback-descriptor',
     'recovery-execution-start-and-status',
     'active-postcard-conversation-list-pagination-migration',
     'exhaustive-command-result-and-active-adapter-inventory',
-    'foreground-contact-ticket-automation-policy-and-status')
+    'foreground-contact-ticket-automation-policy-and-status',
+    'active-postcard-endpoint-bootstrap-helper-retirement')
 $expectedRemaining = @($schema.remaining_runtime_ipc_surface | ForEach-Object { [string]$_ })
 if ($surface.Count -ne 1 -or [string]$surface[0].coverage -cne 'partial' -or
     (@($surface[0].covered) -join ',') -cne ($expectedCovered -join ',') -or
@@ -241,5 +242,5 @@ Write-Output 'signed_loopback_descriptor=verified'
 Write-Output 'bearer_authenticated_request=verified'
 Write-Output 'device_signed_exact_response=verified'
 Write-Output 'bounded_decoder_mutations=31851'
-Write-Output 'active_postcard_v27_changed_by_canonical_candidate=false'
+Write-Output 'active_postcard_v28_changed_by_canonical_candidate=false'
 Write-Output 'network_executed=false'

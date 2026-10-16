@@ -1,4 +1,4 @@
-; Kilogram deterministic-CBOR local runtime IPC model, M1.1.47.
+; Kilogram deterministic-CBOR local runtime IPC model, M1.1.48.
 ; Only unsigned integers, definite byte strings and definite arrays are used.
 
 profile-version = 1

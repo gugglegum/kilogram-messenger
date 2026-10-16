@@ -3872,3 +3872,25 @@ Hosted follow-up:
   pairs. Canonical CBOR remains inactive; active Postcard v27/JSON descriptor v8
   is unchanged. Two runtime-IPC gaps remain: endpoint-announcement bootstrap
   helper disposition and legacy central-HTTPS mailbox command removal.
+
+## M1.1.48 active runtime IPC endpoint bootstrap retirement (2026-10-16)
+
+- Removed the obsolete public CLI/loopback IPC export, import and push endpoint
+  announcement helpers while retaining authenticated peer push and the
+  foreground automation paths that use the same internal storage primitives.
+- The active local-control protocol made an exact hard cut from Postcard v27
+  and signed descriptor domain v8 to v28/v9. Correctly signed legacy v27/v8
+  descriptors and requests are rejected before connection or actor dispatch;
+  no compatibility reader was added.
+- The dedicated retirement boundary rejects a forged current version, an
+  omitted retired variant and a reintroduced public CLI command. The exhaustive
+  active inventory now contains 31 commands and 28 responses with two explicit
+  legacy central-HTTPS mailbox blockers.
+- `kilogram-runtime-ipc --lib` passed 17/17 tests and the focused CLI endpoint
+  announcement regression passed 4/4. All canonical IPC boundaries, coverage,
+  protocol compatibility, rustfmt and workspace locked/offline strict Clippy
+  passed with two Cargo jobs and BelowNormal priority.
+- Accepted-tag readiness passed 81/81 against immutable `M1.0.0`. Default
+  current-candidate mode correctly rejected reuse of pre-change physical field
+  evidence. No network test, release build, archive, executable, push or tag
+  was created.

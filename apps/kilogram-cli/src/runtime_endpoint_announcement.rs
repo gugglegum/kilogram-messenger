@@ -706,6 +706,7 @@ impl SignedEndpointAnnouncementBundle {
         self.content.created_at_unix_seconds
     }
 
+    #[cfg(test)]
     pub fn expires_at_unix_seconds(&self) -> u64 {
         self.content.expires_at_unix_seconds
     }

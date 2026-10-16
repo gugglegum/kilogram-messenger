@@ -997,6 +997,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.1.47 канонизирует foreground-only ticket automation policy/status, exact
   predecessor и детерминированные scheduler deadlines без ticket plaintext,
   mailbox semantics или OS background service.
+- [`../docs/RFC-0174-m1148-active-runtime-ipc-endpoint-bootstrap-retirement.md`](../docs/RFC-0174-m1148-active-runtime-ipc-endpoint-bootstrap-retirement.md) —
+  M1.1.48 удаляет ручные file-path export/import/push endpoint-announcement
+  команды из active loopback IPC, переводит Postcard на v28/descriptor v9 и
+  сохраняет authenticated peer wire и foreground own-device automation.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

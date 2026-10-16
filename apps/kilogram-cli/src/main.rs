@@ -72,10 +72,10 @@ use kilogram_runtime_ipc::{
     RuntimeIpcCommand, RuntimeIpcContactTicketRefresh, RuntimeIpcConversationCursor,
     RuntimeIpcConversationPage, RuntimeIpcConversationSummary, RuntimeIpcDescriptor,
     RuntimeIpcDeviceDirectoryStatus, RuntimeIpcDeviceDirectoryUpdate,
-    RuntimeIpcEndpointAnnouncementExport, RuntimeIpcEndpointAnnouncementImport,
-    RuntimeIpcEndpointAnnouncementPush, RuntimeIpcEndpointCandidateState,
-    RuntimeIpcEndpointCandidateStatus, RuntimeIpcEndpointTicketRefresh, RuntimeIpcHistoryCursor,
-    RuntimeIpcHistoryMessage, RuntimeIpcHistoryPage, RuntimeIpcMailboxCapabilityStatus,
+    RuntimeIpcEndpointAnnouncementImport, RuntimeIpcEndpointAnnouncementPush,
+    RuntimeIpcEndpointCandidateState, RuntimeIpcEndpointCandidateStatus,
+    RuntimeIpcEndpointTicketRefresh, RuntimeIpcHistoryCursor, RuntimeIpcHistoryMessage,
+    RuntimeIpcHistoryPage, RuntimeIpcMailboxCapabilityStatus,
     RuntimeIpcMailboxCapabilityTransition, RuntimeIpcMailboxStatus, RuntimeIpcMessagePreview,
     RuntimeIpcNetworkClass, RuntimeIpcOutboxStatus,
     RuntimeIpcOwnDeviceAnnouncementAutomationStatus, RuntimeIpcOwnDeviceRosterAutomationStatus,
@@ -144,6 +144,8 @@ mod runtime_queue;
 mod runtime_ticket_automation;
 mod runtime_ticket_checkpoint;
 
+#[cfg(test)]
+use kilogram_runtime_ipc::RuntimeIpcEndpointAnnouncementExport;
 use publication_conflict_ceremony::{
     PublicationConflictRequestInspection, PublicationConflictResponseInspection,
     inspect_publication_conflict_request, inspect_publication_conflict_response,
@@ -179,13 +181,14 @@ use recovery_scheduler::{
     RecoverySchedulerReadiness, SignedRecoverySchedulerState, load_recovery_scheduler_state,
     persist_recovery_scheduler_state,
 };
+#[cfg(test)]
+use runtime_endpoint_announcement::MAX_ENDPOINT_ANNOUNCEMENT_BYTES;
 use runtime_endpoint_announcement::{
     AcceptedEndpointObservationId, ContactEndpointAnnouncement,
     DEFAULT_ENDPOINT_ANNOUNCEMENT_VALIDITY_SECONDS, EncryptedEndpointAnnouncementBundle,
     EndpointAnnouncementBundleId, EndpointCandidateAnnouncement, EndpointObservationAnnouncement,
-    MAX_ENDPOINT_ANNOUNCEMENT_BYTES, MAX_ENDPOINT_ANNOUNCEMENT_VALIDITY_SECONDS,
-    SignedAcceptedEndpointObservation, SignedEndpointAnnouncementAcknowledgement,
-    SignedEndpointAnnouncementBundle,
+    MAX_ENDPOINT_ANNOUNCEMENT_VALIDITY_SECONDS, SignedAcceptedEndpointObservation,
+    SignedEndpointAnnouncementAcknowledgement, SignedEndpointAnnouncementBundle,
 };
 use runtime_mailbox::{
     RuntimeMailboxPayload, SignedRuntimeLocalMailboxBinding, SignedRuntimeMailboxDispatch,
@@ -1171,55 +1174,6 @@ enum Command {
         /// Runtime-owned local IPC descriptor.
         #[arg(long)]
         ipc_file: PathBuf,
-    },
-
-    /// Export bounded endpoint candidates to another authorized device of this account.
-    RuntimeIpcExportEndpointAnnouncements {
-        /// Runtime-owned local IPC descriptor.
-        #[arg(long)]
-        ipc_file: PathBuf,
-
-        /// Existing active account device that alone can decrypt the bundle.
-        #[arg(long)]
-        recipient_device: DeviceId,
-
-        /// New output file for the encrypted, source-signed bundle.
-        #[arg(long)]
-        output_file: PathBuf,
-
-        /// Short replay window for transferring the bundle.
-        #[arg(long, default_value_t = DEFAULT_ENDPOINT_ANNOUNCEMENT_VALIDITY_SECONDS)]
-        validity_seconds: u64,
-    },
-
-    /// Import endpoint candidates announced by another authorized device of this account.
-    RuntimeIpcImportEndpointAnnouncements {
-        /// Runtime-owned local IPC descriptor.
-        #[arg(long)]
-        ipc_file: PathBuf,
-
-        /// Recipient-encrypted endpoint announcement bundle.
-        #[arg(long)]
-        bundle_file: PathBuf,
-
-        /// Runtime-managed directory for imported public connection tickets.
-        #[arg(long)]
-        descriptor_directory: PathBuf,
-    },
-
-    /// Push endpoint candidates to another running device of the same account.
-    RuntimeIpcPushEndpointAnnouncements {
-        /// Runtime-owned local IPC descriptor.
-        #[arg(long)]
-        ipc_file: PathBuf,
-
-        /// Fresh connection ticket published by the recipient runtime for this account.
-        #[arg(long)]
-        recipient_ticket_file: PathBuf,
-
-        /// Short replay window for the recipient-encrypted bundle.
-        #[arg(long, default_value_t = DEFAULT_ENDPOINT_ANNOUNCEMENT_VALIDITY_SECONDS)]
-        validity_seconds: u64,
     },
 
     /// Configure restart-safe foreground endpoint announcements to one own device.
@@ -2272,9 +2226,6 @@ impl Command {
             | Self::RuntimeIpcRefreshContactTicket { .. }
             | Self::RuntimeIpcConfigureTicketAutomation { .. }
             | Self::RuntimeIpcTicketAutomationStatus { .. }
-            | Self::RuntimeIpcExportEndpointAnnouncements { .. }
-            | Self::RuntimeIpcImportEndpointAnnouncements { .. }
-            | Self::RuntimeIpcPushEndpointAnnouncements { .. }
             | Self::RuntimeIpcConfigureOwnDeviceAnnouncements { .. }
             | Self::RuntimeIpcOwnDeviceAnnouncementStatus { .. }
             | Self::RuntimeIpcConfigureOwnDeviceDiscovery { .. }
@@ -3471,40 +3422,6 @@ async fn run_command(command: Command) -> Result<()> {
         }
         Command::RuntimeIpcTicketAutomationStatus { ipc_file } => {
             runtime_ipc_ticket_automation_status(ipc_file).await
-        }
-        Command::RuntimeIpcExportEndpointAnnouncements {
-            ipc_file,
-            recipient_device,
-            output_file,
-            validity_seconds,
-        } => {
-            runtime_ipc_export_endpoint_announcements(
-                ipc_file,
-                recipient_device,
-                output_file,
-                validity_seconds,
-            )
-            .await
-        }
-        Command::RuntimeIpcImportEndpointAnnouncements {
-            ipc_file,
-            bundle_file,
-            descriptor_directory,
-        } => {
-            runtime_ipc_import_endpoint_announcements(ipc_file, bundle_file, descriptor_directory)
-                .await
-        }
-        Command::RuntimeIpcPushEndpointAnnouncements {
-            ipc_file,
-            recipient_ticket_file,
-            validity_seconds,
-        } => {
-            runtime_ipc_push_endpoint_announcements(
-                ipc_file,
-                recipient_ticket_file,
-                validity_seconds,
-            )
-            .await
         }
         Command::RuntimeIpcConfigureOwnDeviceAnnouncements {
             ipc_file,
@@ -8306,6 +8223,7 @@ struct PreparedRuntimeEndpointAnnouncementExport {
     observation_count: usize,
     publication_conflict_count: usize,
     publication_resolution_count: usize,
+    #[cfg(test)]
     expires_at_unix_seconds: u64,
     envelope: EncryptedEndpointAnnouncementBundle,
 }
@@ -8442,6 +8360,7 @@ fn build_runtime_endpoint_announcements(
         observation_count,
         publication_conflict_count,
         publication_resolution_count,
+        #[cfg(test)]
         expires_at_unix_seconds: bundle.expires_at_unix_seconds(),
         envelope,
     })
@@ -8478,6 +8397,7 @@ fn runtime_endpoint_observation_announcement(
     })
 }
 
+#[cfg(test)]
 fn export_runtime_endpoint_announcements(
     state_directory: &Path,
     current_ticket: &ConnectionTicket,
@@ -9443,6 +9363,7 @@ fn read_bounded_regular_file(path: &Path, max_bytes: u64, label: &str) -> Result
     fs::read(path).with_context(|| format!("read {label} {}", path.display()))
 }
 
+#[cfg(test)]
 fn import_runtime_endpoint_announcements(
     state_directory: &Path,
     current_ticket: &ConnectionTicket,
@@ -12859,89 +12780,6 @@ async fn runtime_ipc_ticket_automation_status(ipc_file: PathBuf) -> Result<()> {
     }
 }
 
-async fn runtime_ipc_export_endpoint_announcements(
-    ipc_file: PathBuf,
-    recipient_device_id: DeviceId,
-    output_file: PathBuf,
-    validity_seconds: u64,
-) -> Result<()> {
-    match kilogram_runtime_ipc::call(
-        &ipc_file,
-        RuntimeIpcCommand::ExportEndpointAnnouncements {
-            recipient_device_id,
-            output_file,
-            validity_seconds,
-        },
-    )
-    .await?
-    {
-        RuntimeIpcResponse::EndpointAnnouncementsExported(report) => {
-            print_runtime_endpoint_announcement_export(&report);
-            Ok(())
-        }
-        RuntimeIpcResponse::Error { message } => {
-            bail!("runtime IPC rejected endpoint announcement export: {message}")
-        }
-        response => bail!(
-            "runtime IPC returned an unexpected endpoint announcement export response: {response:?}"
-        ),
-    }
-}
-
-async fn runtime_ipc_import_endpoint_announcements(
-    ipc_file: PathBuf,
-    bundle_file: PathBuf,
-    descriptor_directory: PathBuf,
-) -> Result<()> {
-    match kilogram_runtime_ipc::call(
-        &ipc_file,
-        RuntimeIpcCommand::ImportEndpointAnnouncements {
-            bundle_file,
-            descriptor_directory,
-        },
-    )
-    .await?
-    {
-        RuntimeIpcResponse::EndpointAnnouncementsImported(report) => {
-            print_runtime_endpoint_announcement_import(&report);
-            Ok(())
-        }
-        RuntimeIpcResponse::Error { message } => {
-            bail!("runtime IPC rejected endpoint announcement import: {message}")
-        }
-        response => bail!(
-            "runtime IPC returned an unexpected endpoint announcement import response: {response:?}"
-        ),
-    }
-}
-
-async fn runtime_ipc_push_endpoint_announcements(
-    ipc_file: PathBuf,
-    recipient_ticket_file: PathBuf,
-    validity_seconds: u64,
-) -> Result<()> {
-    match kilogram_runtime_ipc::call(
-        &ipc_file,
-        RuntimeIpcCommand::PushEndpointAnnouncements {
-            recipient_ticket_file,
-            validity_seconds,
-        },
-    )
-    .await?
-    {
-        RuntimeIpcResponse::EndpointAnnouncementsPushed(report) => {
-            print_runtime_endpoint_announcement_push(&report);
-            Ok(())
-        }
-        RuntimeIpcResponse::Error { message } => {
-            bail!("runtime IPC rejected endpoint announcement push: {message}")
-        }
-        response => bail!(
-            "runtime IPC returned an unexpected endpoint announcement push response: {response:?}"
-        ),
-    }
-}
-
 #[allow(clippy::too_many_arguments)]
 async fn runtime_ipc_configure_own_device_announcements(
     ipc_file: PathBuf,
@@ -13161,28 +12999,6 @@ async fn runtime_ipc_own_device_roster_status(ipc_file: PathBuf) -> Result<()> {
     }
 }
 
-fn print_runtime_endpoint_announcement_export(report: &RuntimeIpcEndpointAnnouncementExport) {
-    println!("endpoint_announcement_bundle_id={}", report.bundle_id);
-    println!("source_device_id={}", report.source_device_id);
-    println!("recipient_device_id={}", report.recipient_device_id);
-    println!("authority_revision={}", report.authority_revision);
-    println!("contact_count={}", report.contact_count);
-    println!("endpoint_count={}", report.endpoint_count);
-    println!("observation_count={}", report.observation_count);
-    println!(
-        "publication_conflict_count={}",
-        report.publication_conflict_count
-    );
-    println!(
-        "publication_resolution_count={}",
-        report.publication_resolution_count
-    );
-    println!("expires_at_unix_seconds={}", report.expires_at_unix_seconds);
-    println!("output_file={}", report.output_file.display());
-    println!("protection={}", report.protection);
-    println!("status=endpoint-announcements-exported");
-}
-
 fn print_runtime_endpoint_announcement_import(report: &RuntimeIpcEndpointAnnouncementImport) {
     println!("endpoint_announcement_bundle_id={}", report.bundle_id);
     println!("source_device_id={}", report.source_device_id);
@@ -13226,52 +13042,6 @@ fn print_runtime_endpoint_announcement_import(report: &RuntimeIpcEndpointAnnounc
     );
     println!("authority_status={}", report.authority_status);
     println!("status=endpoint-announcements-imported");
-}
-
-fn print_runtime_endpoint_announcement_push(report: &RuntimeIpcEndpointAnnouncementPush) {
-    println!("endpoint_announcement_bundle_id={}", report.bundle_id);
-    println!("source_device_id={}", report.source_device_id);
-    println!("recipient_device_id={}", report.recipient_device_id);
-    println!("authority_revision={}", report.authority_revision);
-    println!("contact_count={}", report.contact_count);
-    println!("endpoint_count={}", report.endpoint_count);
-    println!("observation_count={}", report.observation_count);
-    println!(
-        "publication_conflict_count={}",
-        report.publication_conflict_count
-    );
-    println!(
-        "publication_resolution_count={}",
-        report.publication_resolution_count
-    );
-    println!("encrypted_bundle_bytes={}", report.encrypted_bundle_bytes);
-    println!(
-        "recipient_contact_added_count={}",
-        report.recipient_contact_added_count
-    );
-    println!(
-        "recipient_endpoint_added_count={}",
-        report.recipient_endpoint_added_count
-    );
-    println!(
-        "recipient_publication_binding_added_count={}",
-        report.recipient_publication_binding_added_count
-    );
-    println!(
-        "recipient_observation_evidence_added_count={}",
-        report.recipient_observation_evidence_added_count
-    );
-    println!(
-        "recipient_publication_conflict_added_count={}",
-        report.recipient_publication_conflict_added_count
-    );
-    println!(
-        "recipient_publication_resolution_added_count={}",
-        report.recipient_publication_resolution_added_count
-    );
-    println!("transport_path={}", report.transport_path);
-    println!("acknowledgement_status={}", report.acknowledgement_status);
-    println!("status=endpoint-announcements-pushed");
 }
 
 fn print_runtime_own_device_announcement_status(
@@ -14287,77 +14057,6 @@ async fn handle_runtime_ipc_work(
                 state_changed = refresh.refreshed_endpoint_candidate_count != 0;
                 RuntimeIpcResponse::ContactTicketRefreshed(Box::new(refresh))
             }
-            Err(error) => RuntimeIpcResponse::Error {
-                message: format!("{error:#}"),
-            },
-        },
-        RuntimeIpcCommand::ExportEndpointAnnouncements {
-            recipient_device_id,
-            output_file,
-            validity_seconds,
-        } => {
-            let export = StateDirectoryLock::acquire(state_directory)
-                .context("lock runtime state for endpoint announcement export")
-                .and_then(|_lock| {
-                    export_runtime_endpoint_announcements(
-                        state_directory,
-                        ticket,
-                        recipient_device_id,
-                        output_file,
-                        validity_seconds,
-                    )
-                });
-            match export {
-                Ok(report) => RuntimeIpcResponse::EndpointAnnouncementsExported(Box::new(report)),
-                Err(error) => RuntimeIpcResponse::Error {
-                    message: format!("{error:#}"),
-                },
-            }
-        }
-        RuntimeIpcCommand::ImportEndpointAnnouncements {
-            bundle_file,
-            descriptor_directory,
-        } => match with_locked_state(state_directory, || {
-            import_runtime_endpoint_announcements(
-                state_directory,
-                ticket,
-                &bundle_file,
-                &descriptor_directory,
-            )
-        }) {
-            Ok(report) => {
-                state_changed = report.contact_added_count != 0
-                    || report.endpoint_added_count != 0
-                    || report.publication_binding_added_count != 0
-                    || report.observation_evidence_added_count != 0;
-                RuntimeIpcResponse::EndpointAnnouncementsImported(Box::new(report))
-            }
-            Err(error) => {
-                if error
-                    .downcast_ref::<RuntimePublicationChannelQuarantined>()
-                    .is_some()
-                {
-                    state_changed = true;
-                }
-                RuntimeIpcResponse::Error {
-                    message: format!("{error:#}"),
-                }
-            }
-        },
-        RuntimeIpcCommand::PushEndpointAnnouncements {
-            recipient_ticket_file,
-            validity_seconds,
-        } => match push_runtime_endpoint_announcements(
-            state_directory,
-            endpoint,
-            ticket,
-            &recipient_ticket_file,
-            None,
-            validity_seconds,
-        )
-        .await
-        {
-            Ok(report) => RuntimeIpcResponse::EndpointAnnouncementsPushed(Box::new(report)),
             Err(error) => RuntimeIpcResponse::Error {
                 message: format!("{error:#}"),
             },

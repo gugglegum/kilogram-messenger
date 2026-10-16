@@ -89,13 +89,13 @@ function Assert-CompletionInventory {
     )
 
     if ([UInt64]$Manifest.schema_version -ne 1 -or
-        [string]$Manifest.milestone -cne 'M1.1.47' -or
+        [string]$Manifest.milestone -cne 'M1.1.48' -or
         [string]$Manifest.status -cne 'completion-inventory-complete-canonical-target-partial' -or
         [string]$Manifest.surface -cne 'runtime-ipc' -or
         [bool]$Manifest.scope.canonical_target_complete -or
         [bool]$Manifest.scope.active_postcard_adapter_complete -or
         [bool]$Manifest.scope.canonical_cbor_active -or
-        [bool]$Manifest.scope.changes_active_local_control -or
+        -not [bool]$Manifest.scope.changes_active_local_control -or
         [bool]$Manifest.scope.changes_peer_network_wire) {
         throw 'runtime IPC completion inventory scope changed'
     }
@@ -144,11 +144,11 @@ function Assert-CompletionInventory {
 
     $activeCommands = @($Manifest.active_postcard.commands)
     $activeResponses = @($Manifest.active_postcard.responses)
-    if ([int]$Manifest.active_postcard.version -ne 27 -or
+    if ([int]$Manifest.active_postcard.version -ne 28 -or
         [string]$Manifest.active_postcard.descriptor_signature_domain -cne
-            'kilogram:runtime-ipc-descriptor:v8\0' -or
-        $RuntimeSource.IndexOf('const IPC_VERSION: u8 = 27;', [StringComparison]::Ordinal) -lt 0 -or
-        $RuntimeSource.IndexOf('kilogram:runtime-ipc-descriptor:v8\0', [StringComparison]::Ordinal) -lt 0) {
+            'kilogram:runtime-ipc-descriptor:v9\0' -or
+        $RuntimeSource.IndexOf('const IPC_VERSION: u8 = 28;', [StringComparison]::Ordinal) -lt 0 -or
+        $RuntimeSource.IndexOf('kilogram:runtime-ipc-descriptor:v9\0', [StringComparison]::Ordinal) -lt 0) {
         throw 'active Postcard runtime IPC identity changed'
     }
     $activeCommandNames = @($activeCommands | ForEach-Object { [string]$_.variant })
@@ -164,8 +164,6 @@ function Assert-CompletionInventory {
         'canonical-target',
         'canonical-bounded-replacement',
         'legacy-central-https-remove-before-cbor-activation',
-        'postcard-only-bootstrap-helper-covered-by-endpoint-announcement-surface',
-        'postcard-only-bootstrap-helper-covered-by-own-device-announcement',
         'active-alias-of-canonical-target'
     )
     foreach ($entry in $activeCommands) {
@@ -191,10 +189,7 @@ function Assert-CompletionInventory {
 
     $expectedBlockers = @(
         'CreateMailboxCapability',
-        'RotateMailboxCapability',
-        'ExportEndpointAnnouncements',
-        'ImportEndpointAnnouncements',
-        'PushEndpointAnnouncements'
+        'RotateMailboxCapability'
     )
     Assert-ExactSequence @($Manifest.postcard_only_activation_blockers) $expectedBlockers `
         'Postcard-only activation blockers'
@@ -205,7 +200,6 @@ function Assert-CompletionInventory {
         }
     }
     $remaining = @(
-        'endpoint-announcement-bootstrap-helper-disposition',
         'legacy-central-https-mailbox-command-removal'
     )
     Assert-ExactSequence @($Manifest.remaining_canonical_work) $remaining `
@@ -213,20 +207,22 @@ function Assert-CompletionInventory {
     Assert-ExactSequence @($Schema.remaining_runtime_ipc_surface) $remaining `
         'canonical schema remaining work'
 
-    if ([string]$Schema.milestone -cne 'M1.1.47' -or
+    if ([string]$Schema.milestone -cne 'M1.1.48' -or
         [string]$Schema.status -cne 'candidate-not-active' -or
         [string]$Schema.activation.current_runtime_encoding -cne
-            'postcard-v27-with-json-descriptor-v8' -or
-        [bool]$Schema.activation.current_runtime_changed -or
-        @($Schema.semantic_rules).Count -ne 175) {
+            'postcard-v28-with-json-descriptor-v9' -or
+        -not [bool]$Schema.activation.current_runtime_changed -or
+        @($Schema.semantic_rules).Count -ne 177) {
         throw 'canonical runtime IPC schema did not record the exhaustive inventory'
     }
     $runtimeSurface = @($Coverage.surfaces | Where-Object { [string]$_.id -ceq 'runtime-ipc' })
-    if ([string]$Coverage.milestone -cne 'M1.1.47' -or $runtimeSurface.Count -ne 1 -or
+    if ([string]$Coverage.milestone -cne 'M1.1.48' -or $runtimeSurface.Count -ne 1 -or
         [string]$runtimeSurface[0].coverage -cne 'partial' -or
         'exhaustive-command-result-and-active-adapter-inventory' -cnotin
             @($runtimeSurface[0].covered) -or
         'foreground-contact-ticket-automation-policy-and-status' -cnotin
+            @($runtimeSurface[0].covered) -or
+        'active-postcard-endpoint-bootstrap-helper-retirement' -cnotin
             @($runtimeSurface[0].covered) -or
         (@($runtimeSurface[0].remaining) -join ',') -cne ($remaining -join ',')) {
         throw 'canonical coverage did not retain the explicit remaining active adapter work'
@@ -239,8 +235,8 @@ function Assert-CompletionInventory {
         [string]$compatibilitySurface[0].compatibility -cne 'exact-version' -or
         [int](@($compatibilitySurface[0].bindings | Where-Object {
             [string]$_.symbol -ceq 'IPC_VERSION'
-        })[0].value) -ne 27) {
-        throw 'protocol compatibility registry no longer describes active IPC v27'
+        })[0].value) -ne 28) {
+        throw 'protocol compatibility registry no longer describes active IPC v28'
     }
 
     $activationRequirements = @(
@@ -331,9 +327,9 @@ Assert-Rejected {
 Write-Output 'runtime_ipc_completion_inventory_boundary=verified'
 Write-Output 'canonical_commands=34'
 Write-Output 'canonical_results=33'
-Write-Output 'active_postcard_commands=34'
-Write-Output 'active_postcard_responses=31'
-Write-Output 'postcard_only_activation_blockers=5'
+Write-Output 'active_postcard_commands=31'
+Write-Output 'active_postcard_responses=28'
+Write-Output 'postcard_only_activation_blockers=2'
 Write-Output 'canonical_target_complete=false'
 Write-Output 'canonical_cbor_activated=false'
 Write-Output 'active_wire_changed=false'

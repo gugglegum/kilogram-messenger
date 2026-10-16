@@ -33,11 +33,11 @@ function Assert-LowerHex {
 
 function Assert-Schema {
     param([object]$Schema, [string]$Rust)
-    if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.47' -or
+    if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.48' -or
         [string]$Schema.status -cne 'candidate-not-active' -or [bool]$Schema.changes_active_wire -or
         [string]$Schema.profile -cne 'kilogram-deterministic-cbor-v1' -or
-        [string]$Schema.activation.current_runtime_encoding -cne 'postcard-v27-with-json-descriptor-v8' -or
-        [bool]$Schema.activation.current_runtime_changed) {
+        [string]$Schema.activation.current_runtime_encoding -cne 'postcard-v28-with-json-descriptor-v9' -or
+        -not [bool]$Schema.activation.current_runtime_changed) {
         throw 'canonical ticket-automation schema header changed'
     }
     $limits = @(
@@ -57,9 +57,9 @@ function Assert-Schema {
     }
     if (@($Schema.domains).Count -ne 78 -or @($Schema.objects).Count -ne 38 -or
         @($Schema.covered_commands).Count -ne 34 -or @($Schema.covered_results).Count -ne 33 -or
-        @($Schema.semantic_rules).Count -ne 175 -or
+        @($Schema.semantic_rules).Count -ne 177 -or
         (@($Schema.remaining_runtime_ipc_surface) -join ',') -cne
-        'endpoint-announcement-bootstrap-helper-disposition,legacy-central-https-mailbox-command-removal') {
+        'legacy-central-https-mailbox-command-removal') {
         throw 'canonical ticket-automation inventory changed'
     }
     foreach ($domain in @(
@@ -185,8 +185,8 @@ if ($lib.IndexOf('pub mod canonical_runtime_ipc_ticket_automation_v1;',
         [StringComparison]::Ordinal) -lt 0) {
     throw 'canonical ticket-automation module is not exported'
 }
-foreach ($required in @('const IPC_VERSION: u8 = 27;',
-    'kilogram:runtime-ipc-descriptor:v8\0', 'postcard::to_allocvec', 'postcard::from_bytes')) {
+foreach ($required in @('const IPC_VERSION: u8 = 28;',
+    'kilogram:runtime-ipc-descriptor:v9\0', 'postcard::to_allocvec', 'postcard::from_bytes')) {
     if ($activeIpc.IndexOf($required, [StringComparison]::Ordinal) -lt 0) {
         throw "active runtime IPC boundary is missing '$required'"
     }
@@ -198,11 +198,11 @@ if ($activeIpc.IndexOf('canonical_runtime_ipc_ticket_automation_v1',
 $surface = @($compatibility.surfaces | Where-Object { $_.id -ceq 'runtime-ipc' })
 if ($surface.Count -ne 1 -or [string]$surface[0].encoding -cne 'postcard' -or
     [string]$surface[0].compatibility -cne 'exact-version' -or
-    [int](@($surface[0].bindings | Where-Object { $_.symbol -ceq 'IPC_VERSION' })[0].value) -ne 27) {
-    throw 'active compatibility registry no longer records Postcard runtime IPC v27'
+    [int](@($surface[0].bindings | Where-Object { $_.symbol -ceq 'IPC_VERSION' })[0].value) -ne 28) {
+    throw 'active compatibility registry no longer records Postcard runtime IPC v28'
 }
 $coverageSurface = @($coverage.surfaces | Where-Object { $_.id -ceq 'runtime-ipc' })
-if ([string]$coverage.milestone -cne 'M1.1.47' -or $coverageSurface.Count -ne 1 -or
+if ([string]$coverage.milestone -cne 'M1.1.48' -or $coverageSurface.Count -ne 1 -or
     [string]$coverageSurface[0].coverage -cne 'partial' -or
     'foreground-contact-ticket-automation-policy-and-status' -cnotin @($coverageSurface[0].covered) -or
     (@($coverageSurface[0].remaining) -join ',') -cne
@@ -212,11 +212,11 @@ if ([string]$coverage.milestone -cne 'M1.1.47' -or $coverageSurface.Count -ne 1 
 $pairs = @($completion.canonical.command_result_pairs | Where-Object {
     [string]$_.module -ceq 'ticket-automation'
 })
-if ([string]$completion.milestone -cne 'M1.1.47' -or $pairs.Count -ne 2 -or
+if ([string]$completion.milestone -cne 'M1.1.48' -or $pairs.Count -ne 2 -or
     (@($pairs | ForEach-Object { "$([string]$_.command):$([string]$_.result)" }) -join ',') -cne
     'configure-ticket-automation:ticket-automation-configured,ticket-automation-status:ticket-automation-status' -or
-    @($completion.postcard_only_activation_blockers).Count -ne 5 -or
-    @($completion.remaining_canonical_work).Count -ne 2) {
+    @($completion.postcard_only_activation_blockers).Count -ne 2 -or
+    @($completion.remaining_canonical_work).Count -ne 1) {
     throw 'runtime IPC completion inventory did not retire the ticket-automation blocker'
 }
 $expectedMutationIds = @('runtime-ipc-ticket-automation-configure-request-v1',

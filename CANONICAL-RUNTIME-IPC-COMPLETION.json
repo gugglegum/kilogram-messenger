@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.47",
+  "milestone": "M1.1.48",
   "status": "completion-inventory-complete-canonical-target-partial",
   "surface": "runtime-ipc",
   "scope": {
     "canonical_target_complete": false,
     "active_postcard_adapter_complete": false,
     "canonical_cbor_active": false,
-    "changes_active_local_control": false,
+    "changes_active_local_control": true,
     "changes_peer_network_wire": false
   },
   "canonical": {
@@ -123,8 +123,8 @@
     ]
   },
   "active_postcard": {
-    "version": 27,
-    "descriptor_signature_domain": "kilogram:runtime-ipc-descriptor:v8\\0",
+    "version": 28,
+    "descriptor_signature_domain": "kilogram:runtime-ipc-descriptor:v9\\0",
     "commands": [
       { "variant": "Ping", "disposition": "canonical-target", "canonical_commands": ["ping"] },
       { "variant": "AddContact", "disposition": "canonical-target", "canonical_commands": ["add-contact"] },
@@ -145,9 +145,6 @@
       { "variant": "RefreshContactTicket", "disposition": "canonical-target", "canonical_commands": ["refresh-contact-ticket"] },
       { "variant": "ConfigureTicketAutomation", "disposition": "canonical-target", "canonical_commands": ["configure-ticket-automation"] },
       { "variant": "TicketAutomationStatus", "disposition": "canonical-target", "canonical_commands": ["ticket-automation-status"] },
-      { "variant": "ExportEndpointAnnouncements", "disposition": "postcard-only-bootstrap-helper-covered-by-endpoint-announcement-surface", "canonical_commands": [] },
-      { "variant": "ImportEndpointAnnouncements", "disposition": "postcard-only-bootstrap-helper-covered-by-endpoint-announcement-surface", "canonical_commands": [] },
-      { "variant": "PushEndpointAnnouncements", "disposition": "postcard-only-bootstrap-helper-covered-by-own-device-announcement", "canonical_commands": ["configure-own-device-announcement-automation"] },
       { "variant": "ConfigureOwnDeviceAnnouncementAutomation", "disposition": "canonical-target", "canonical_commands": ["configure-own-device-announcement-automation"] },
       { "variant": "OwnDeviceAnnouncementAutomationStatus", "disposition": "canonical-target", "canonical_commands": ["own-device-announcement-automation-status"] },
       { "variant": "ConfigureOwnDeviceTicketDiscovery", "disposition": "canonical-target", "canonical_commands": ["configure-own-device-ticket-discovery"] },
@@ -179,9 +176,6 @@
       { "variant": "ContactTicketRefreshed", "disposition": "canonical-target", "canonical_results": ["contact-ticket-refreshed"] },
       { "variant": "TicketAutomationConfigured", "disposition": "canonical-target", "canonical_results": ["ticket-automation-configured"] },
       { "variant": "TicketAutomationStatus", "disposition": "canonical-target", "canonical_results": ["ticket-automation-status"] },
-      { "variant": "EndpointAnnouncementsExported", "disposition": "postcard-only-bootstrap-helper-covered-by-endpoint-announcement-surface", "canonical_results": [] },
-      { "variant": "EndpointAnnouncementsImported", "disposition": "postcard-only-bootstrap-helper-covered-by-endpoint-announcement-surface", "canonical_results": [] },
-      { "variant": "EndpointAnnouncementsPushed", "disposition": "postcard-only-bootstrap-helper-covered-by-own-device-announcement", "canonical_results": ["own-device-announcement-automation-configured"] },
       { "variant": "OwnDeviceAnnouncementAutomationConfigured", "disposition": "canonical-target", "canonical_results": ["own-device-announcement-automation-configured"] },
       { "variant": "OwnDeviceAnnouncementAutomationStatus", "disposition": "canonical-target", "canonical_results": ["own-device-announcement-automation-status"] },
       { "variant": "OwnDeviceTicketDiscoveryConfigured", "disposition": "canonical-target", "canonical_results": ["own-device-ticket-discovery-configured"] },
@@ -197,13 +191,9 @@
   },
   "postcard_only_activation_blockers": [
     "CreateMailboxCapability",
-    "RotateMailboxCapability",
-    "ExportEndpointAnnouncements",
-    "ImportEndpointAnnouncements",
-    "PushEndpointAnnouncements"
+    "RotateMailboxCapability"
   ],
   "remaining_canonical_work": [
-    "endpoint-announcement-bootstrap-helper-disposition",
     "legacy-central-https-mailbox-command-removal"
   ],
   "activation_requirements": [

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.47",
+  "milestone": "M1.1.48",
   "status": "candidate-not-active",
   "changes_active_wire": false,
   "profile": "kilogram-deterministic-cbor-v1",
@@ -10,8 +10,8 @@
     "root_rule": "kilogram-runtime-ipc-v1"
   },
   "activation": {
-    "current_runtime_encoding": "postcard-v27-with-json-descriptor-v8",
-    "current_runtime_changed": false,
+    "current_runtime_encoding": "postcard-v28-with-json-descriptor-v9",
+    "current_runtime_changed": true,
     "candidate_protocol_identifier": "unassigned",
     "required_before_activation": [
       "complete-all-runtime-ipc-commands-and-results",
@@ -949,13 +949,13 @@
     "Account Root secrets, Device private keys, private recovery capabilities, decrypted history, page payloads and local filesystem paths are forbidden from recovery execution IPC",
     "the request ID is the durable execution idempotency key: exact replay may return already committed while divergent reuse or a stale plan record fails before scheduling",
     "the execution contract makes no claim that a source is online, that a page was transferred, that history converged or that any remote copy was erased",
-    "the active Postcard adapter uses explicit IPC version 27 with descriptor signature domain v8 and rejects version 26 descriptors and requests before actor dispatch",
+    "the active Postcard adapter uses explicit IPC version 28 with descriptor signature domain v9 and rejects version 27 descriptors and requests before actor dispatch",
     "the active conversation-list adapter accepts only limits from 1 through 64 and returns strict UTF-8-label then peer-Account ordering after the exact request cursor",
     "an active conversation-list continuation exists only on a full page and equals the exact label and peer Account tuple of the final returned summary",
     "the desktop independently validates every active conversation page and bounds one automatic refresh to 1024 pages rather than accepting truncation as success",
     "the completion inventory contains every canonical command/result pair and its owning module, and its command and result sequences exactly match this schema",
     "every active Postcard command and response variant has one explicit canonical, bounded-replacement, legacy-removal, bootstrap-helper or active-alias disposition",
-    "canonical activation fails closed while any of the five enumerated Postcard-only activation blockers remains active",
+    "canonical activation fails closed while either of the two enumerated Postcard-only activation blockers remains active",
     "ticket automation configuration binds one enrolled contact, peer Account and conversation label to a canonical root-only HTTPS publication service origin and the contact ID is rederived from the exact descriptor Account, peer Account and label",
     "ticket automation TTL, refresh lead, retry bounds and four-bit Ethernet, Wi-Fi, mobile and unknown network mask are explicit and fail closed outside their limits",
     "a ticket automation policy starts at generation one without a predecessor and every replacement advances exactly one generation from the exact expected policy ID",
@@ -969,10 +969,11 @@
     "configuration and status results bind the complete request digest under the exact descriptor Device signature and their observation time remains inside the request validity window",
     "configuration and status require no restart, execute only while the foreground runtime is running and explicitly deny an OS background service",
     "ticket plaintext, HPKE envelope bytes, publication capabilities, Account Root secrets, Device private keys and local filesystem paths are forbidden; request ID is the durable idempotency key",
-    "the canonical target remains incomplete while endpoint-announcement bootstrap helper disposition or legacy central HTTPS mailbox command removal remains unresolved"
+    "manual endpoint-announcement export, import and push commands and their result variants are absent from the active Postcard adapter while authenticated foreground own-device announcement and discovery automation remains available",
+    "manual endpoint-announcement bundle and recipient ticket paths no longer cross active loopback IPC and the associated CLI subcommands are unavailable",
+    "the canonical target remains incomplete while legacy central HTTPS mailbox command removal remains unresolved"
   ],
   "remaining_runtime_ipc_surface": [
-    "endpoint-announcement-bootstrap-helper-disposition",
     "legacy-central-https-mailbox-command-removal"
   ]
 }
