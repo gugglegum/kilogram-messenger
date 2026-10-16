@@ -453,11 +453,12 @@ sessions, distribution, removal и key epochs и не решены этим пр
   полное verified restore цепочки. M1.1.64 добавил exact pending-frame journal,
   привязанный к текущему checkpoint. M1.1.65 добавил одну redb transaction для
   received carriers, signed successor, head и replacement runtime frame с
-  optimistic concurrency и exact retry. Следующий приоритет — подключить эту
-  transaction к каждому переходу dormant adapter и доказать restart/resume из
-  восстановленного action,
-  затем mutual authenticated capability selection перед active dual reader без
-  fallback после canonical failure. Общая activation требует
+  optimistic concurrency и exact retry. M1.1.66 подключил её к concrete
+  durable client adapter, а M1.1.67 добавил отдельный responder checkpoint,
+  responder-only journal и atomic durable server transitions с exact
+  Diff/Complete restart dispatch. Следующий приоритет — mutual authenticated
+  capability selection между уже durable сторонами перед active dual reader
+  без fallback после canonical failure. Общая activation требует
   explicit identifiers, downgrade
   tests, sustained fuzzing, independent HPKE conformance и fresh multi-device
   field evidence.
@@ -479,9 +480,11 @@ sessions, distribution, removal и key epochs и не решены этим пр
   2×2 cross-format membership policy, bounded exact legacy-history import и
   atomic durable local import cursor, gated initial signed checkpoint и full
   signed successor persistence/restore, exact checkpoint-bound pending-frame
-  journal и atomic carrier/checkpoint/runtime transition transaction. Открыты
-  adapter integration, restart continuation и mutual authenticated capability
-  selection, и только затем active dual-reader slice с downgrade regression.
+  journal и atomic carrier/checkpoint/runtime transition transaction.
+  M1.1.66–M1.1.67 интегрировали эту transaction в durable client и responder
+  adapters и доказали exact restart/retry с раздельными signed journals.
+  Открыты mutual authenticated capability selection и затем active dual-reader
+  slice с mixed-version/downgrade regression.
 
 ## Инварианты при выборе ответов
 

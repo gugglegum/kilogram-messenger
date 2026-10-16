@@ -113,9 +113,9 @@ function Assert-Contract {
         throw 'canonical sync v2 atomic transition scope changed'
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.66' -or
+    if ([string]$Migration.milestone -cne 'M1.1.67' -or
         [string]$Migration.status -cne
-            'dormant-durable-client-transition-adapter-verified-not-active' -or
+            'dormant-durable-responder-transition-adapter-verified-not-active' -or
         [string]$Migration.history_compatible_successor.dormant_atomic_runtime_transition_transaction -cne
             'verified' -or
         [bool]$Migration.history_compatible_successor.registered -or
@@ -129,9 +129,9 @@ function Assert-Contract {
     if ($requirement.Count -ne 1 -or [string]$requirement[0].status -cne 'verified') {
         throw 'canonical migration atomic runtime transition requirement is not verified'
     }
-    if ([string]$TransportManifest.milestone -cne 'M1.1.66' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.67' -or
         [string]$TransportManifest.status -cne
-            'dormant-durable-client-transition-adapter-verified-not-active' -or
+            'dormant-durable-responder-transition-adapter-verified-not-active' -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_atomic_runtime_transition_transaction -or
         'atomic-received-carrier-and-checkpoint-transition' -cin
             @($TransportManifest.remaining) -or
@@ -139,18 +139,18 @@ function Assert-Contract {
         [bool]$TransportManifest.history_compatible_successor.dialed) {
         throw 'transport sync manifest lost atomic runtime transition state'
     }
-    if ([string]$Compatibility.milestone -cne 'M1.1.66' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.67' -or
         [string]$Compatibility.status -cne
-            'dormant-durable-client-transition-adapter-verified-not-active' -or
+            'dormant-durable-responder-transition-adapter-verified-not-active' -or
         -not [bool]$Compatibility.required_successor.dormant_atomic_runtime_transition_transaction_integrated -or
         [string]$Compatibility.required_successor.status -cne
-            'dormant-store-policy-import-checkpoint-session-bootstrap-successor-store-runtime-frame-journal-atomic-transition-and-durable-client-adapter-verified-not-active') {
+            'dormant-store-policy-import-checkpoint-session-bootstrap-successor-store-runtime-frame-journal-atomic-transition-and-durable-client-and-responder-adapters-verified-not-active') {
         throw 'history compatibility manifest lost atomic runtime transition state'
     }
     $transportCoverage = @(
         @($Coverage.surfaces) | Where-Object { [string]$_.id -ceq 'transport-sync' }
     )
-    if ([string]$Coverage.milestone -cne 'M1.1.66' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.67' -or
         $transportCoverage.Count -ne 1 -or
         'CANONICAL-SYNC-V2-ATOMIC-RUNTIME-TRANSITION.json' -cnotin
             @($transportCoverage[0].artifacts) -or

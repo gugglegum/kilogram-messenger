@@ -17,6 +17,12 @@ use kilogram_protocol::{
     },
     canonical_event_v1::{verify_authorized_event_for_membership_v1, verify_authorized_event_v1},
     canonical_sync_history_v2::{CanonicalSyncEventCarrierV2, CanonicalSyncEventKeyV2},
+    canonical_sync_responder_session_v2::{
+        CanonicalSignedSyncResponderCheckpointV2, CanonicalSyncResponderCheckpointContentV2,
+        CanonicalSyncResponderNextActionV2, CanonicalSyncResponderSessionV2Error,
+        sync_responder_checkpoint_id_v2, sync_responder_checkpoint_signing_bytes_v2,
+        verify_signed_sync_responder_checkpoint_v2,
+    },
     canonical_sync_session_v2::{
         CANONICAL_SYNC_SESSION_PROTOCOL_IDENTIFIER_V2, CanonicalSignedSyncSessionCheckpointV2,
         CanonicalSyncNextActionV2, CanonicalSyncSessionCheckpointContentV2,
@@ -35,6 +41,7 @@ use kilogram_protocol::{
 };
 use kilogram_store::{
     CanonicalSyncV2CarrierStore, CanonicalSyncV2LegacyImportPlan,
+    CanonicalSyncV2StoredResponderCheckpoint, CanonicalSyncV2StoredResponderRuntime,
     CanonicalSyncV2StoredSessionCheckpoint, CanonicalSyncV2StoredSessionRuntime, StoreError,
 };
 use thiserror::Error;
@@ -1049,6 +1056,443 @@ impl<'a, S: CanonicalSyncV2Store + ?Sized, P: CanonicalSyncV2EventPolicy + ?Size
     }
 }
 
+impl<'a, P: CanonicalSyncV2EventPolicy + ?Sized>
+    CanonicalSyncV2Server<'a, CanonicalSyncV2CarrierStore, P>
+{
+    /// Creates the durable responder journal only after the exact local
+    /// legacy import has a completed atomic checkpoint.
+    pub fn bootstrap_responder_from_completed_legacy_import(
+        identity: &'a DeviceIdentity,
+        store: &'a CanonicalSyncV2CarrierStore,
+        policy: &'a P,
+        plan: &CanonicalSyncV2LegacyImportPlan,
+        session_binding: SyncSessionBinding,
+        allowed_requester: DeviceId,
+    ) -> Result<(Self, CanonicalSyncV2StoredResponderCheckpoint), CanonicalSyncV2SessionError> {
+        let conversation_id = *plan.conversation_id().as_bytes();
+        let content = CanonicalSyncResponderCheckpointContentV2 {
+            protocol_identifier: *CANONICAL_SYNC_SESSION_PROTOCOL_IDENTIFIER_V2,
+            conversation_id,
+            responder_device_id: *identity.device_id().as_bytes(),
+            requester_device_id: *allowed_requester.as_bytes(),
+            session_binding: *session_binding.as_bytes(),
+            checkpoint_sequence: 1,
+            sync_round: 1,
+            predecessor_checkpoint_id: None,
+            received_event_keys: Vec::new(),
+            sent_event_keys: Vec::new(),
+            continuation_required: false,
+            next_action: CanonicalSyncResponderNextActionV2::ReceiveInventory,
+            paused: false,
+        };
+        let checkpoint = CanonicalSignedSyncResponderCheckpointV2 {
+            signature: identity.sign(&sync_responder_checkpoint_signing_bytes_v2(&content)?),
+            content,
+        };
+        verify_signed_sync_responder_checkpoint_v2(&checkpoint)?;
+        let stored = store.install_legacy_import_responder_bootstrap(plan, &checkpoint)?;
+        Ok((
+            Self::new(
+                identity,
+                store,
+                policy,
+                conversation_id,
+                session_binding,
+                allowed_requester,
+            ),
+            stored,
+        ))
+    }
+
+    pub fn restore_durable_responder_runtime(
+        &self,
+    ) -> Result<CanonicalSyncV2StoredResponderRuntime, CanonicalSyncV2SessionError> {
+        self.store
+            .responder_runtime_state(
+                self.conversation_id,
+                *self.identity.device_id().as_bytes(),
+                *self.allowed_requester.as_bytes(),
+                *self.session_binding.as_bytes(),
+            )?
+            .ok_or(CanonicalSyncV2SessionError::DurableSessionMissing)
+    }
+
+    /// Maps the exact verified responder checkpoint/frame pair to its only
+    /// safe restart action. No Diff or Complete is rebuilt after a crash.
+    pub fn durable_responder_action(
+        &self,
+        runtime: &CanonicalSyncV2StoredResponderRuntime,
+    ) -> Result<CanonicalSyncV2DurableResponderAction, CanonicalSyncV2SessionError> {
+        self.verify_durable_responder_identity(runtime)?;
+        let content = &runtime.checkpoint().checkpoint().content;
+        let action = match (content.next_action, runtime.pending_server_frame()) {
+            (CanonicalSyncResponderNextActionV2::ReceiveInventory, None) => {
+                CanonicalSyncV2DurableResponderAction::AwaitInventory
+            }
+            (
+                CanonicalSyncResponderNextActionV2::SendDiff,
+                Some(CanonicalSyncServerFrameV2::Diff(diff)),
+            ) => CanonicalSyncV2DurableResponderAction::TransmitDiff(diff.clone()),
+            (
+                CanonicalSyncResponderNextActionV2::ReceiveEventBatch,
+                Some(CanonicalSyncServerFrameV2::Diff(diff)),
+            ) => CanonicalSyncV2DurableResponderAction::RetransmitDiff(diff.clone()),
+            (
+                CanonicalSyncResponderNextActionV2::SendComplete,
+                Some(CanonicalSyncServerFrameV2::Complete(complete)),
+            ) => CanonicalSyncV2DurableResponderAction::TransmitComplete(complete.clone()),
+            (CanonicalSyncResponderNextActionV2::Complete, None) => {
+                CanonicalSyncV2DurableResponderAction::Complete
+            }
+            (
+                CanonicalSyncResponderNextActionV2::Rejected,
+                Some(CanonicalSyncServerFrameV2::Rejected(rejected)),
+            ) => CanonicalSyncV2DurableResponderAction::TransmitRejection(rejected.clone()),
+            (action, _) => {
+                return Err(
+                    CanonicalSyncV2SessionError::DurableResponderRuntimeFrameMismatch { action },
+                );
+            }
+        };
+        if content.paused {
+            Ok(CanonicalSyncV2DurableResponderAction::Paused)
+        } else {
+            Ok(action)
+        }
+    }
+
+    /// Verifies an Inventory and atomically journals the exact Diff (or exact
+    /// rejection) before that response may cross the transport boundary.
+    pub fn accept_durable_inventory(
+        &self,
+        expected_runtime: &CanonicalSyncV2StoredResponderRuntime,
+        inventory: &CanonicalSignedSyncInventoryV2,
+    ) -> Result<CanonicalSyncV2StoredResponderRuntime, CanonicalSyncV2SessionError> {
+        self.require_durable_responder_action(
+            expected_runtime,
+            CanonicalSyncV2DurableResponderActionKind::AwaitInventory,
+        )?;
+        let previous = &expected_runtime.checkpoint().checkpoint().content;
+        match self.accept_inventory(inventory)? {
+            CanonicalSyncV2ServerInventoryOutcome::Accepted(round) => {
+                let sent_event_keys = merge_cumulative_event_keys(
+                    &previous.sent_event_keys,
+                    &event_keys(&round.diff.content.events)?,
+                );
+                let successor = self.signed_durable_responder_successor(
+                    expected_runtime,
+                    previous.sync_round,
+                    previous.received_event_keys.clone(),
+                    sent_event_keys,
+                    round.more_available,
+                    CanonicalSyncResponderNextActionV2::SendDiff,
+                )?;
+                let frame = round.frame();
+                self.store
+                    .commit_responder_runtime_transition(
+                        expected_runtime,
+                        &successor,
+                        Some(&frame),
+                        &[],
+                    )
+                    .map_err(Into::into)
+            }
+            CanonicalSyncV2ServerInventoryOutcome::Rejected(rejected) => {
+                let successor = self.signed_durable_responder_successor(
+                    expected_runtime,
+                    previous.sync_round,
+                    previous.received_event_keys.clone(),
+                    previous.sent_event_keys.clone(),
+                    false,
+                    CanonicalSyncResponderNextActionV2::Rejected,
+                )?;
+                let frame = CanonicalSyncServerFrameV2::Rejected(rejected);
+                self.store
+                    .commit_responder_runtime_transition(
+                        expected_runtime,
+                        &successor,
+                        Some(&frame),
+                        &[],
+                    )
+                    .map_err(Into::into)
+            }
+        }
+    }
+
+    /// Marks the exact persisted Diff as sent while retaining it for an
+    /// uncertain-send retry until the matching EventBatch is committed.
+    pub fn mark_durable_diff_sent(
+        &self,
+        expected_runtime: &CanonicalSyncV2StoredResponderRuntime,
+    ) -> Result<CanonicalSyncV2StoredResponderRuntime, CanonicalSyncV2SessionError> {
+        self.require_durable_responder_action(
+            expected_runtime,
+            CanonicalSyncV2DurableResponderActionKind::TransmitDiff,
+        )?;
+        let previous = &expected_runtime.checkpoint().checkpoint().content;
+        let successor = self.signed_durable_responder_successor(
+            expected_runtime,
+            previous.sync_round,
+            previous.received_event_keys.clone(),
+            previous.sent_event_keys.clone(),
+            previous.continuation_required,
+            CanonicalSyncResponderNextActionV2::ReceiveEventBatch,
+        )?;
+        self.store
+            .commit_responder_runtime_transition(
+                expected_runtime,
+                &successor,
+                expected_runtime.pending_server_frame(),
+                &[],
+            )
+            .map_err(Into::into)
+    }
+
+    /// Verifies the EventBatch against the requested keys in the exact durable
+    /// Diff, then atomically commits carriers, evidence and exact Complete.
+    pub fn accept_durable_event_batch(
+        &self,
+        expected_runtime: &CanonicalSyncV2StoredResponderRuntime,
+        batch: CanonicalSyncEventBatchV2,
+    ) -> Result<
+        (
+            CanonicalSyncV2RoundStats,
+            CanonicalSyncV2StoredResponderRuntime,
+        ),
+        CanonicalSyncV2SessionError,
+    > {
+        let diff = match self.durable_responder_action(expected_runtime)? {
+            CanonicalSyncV2DurableResponderAction::RetransmitDiff(diff) => diff,
+            other => {
+                return Err(CanonicalSyncV2SessionError::UnexpectedDurableAction {
+                    expected: "retransmit-diff",
+                    actual: other.kind().label(),
+                });
+            }
+        };
+        encode_sync_event_batch_v2(&batch)?;
+        if batch.conversation_id != self.conversation_id {
+            return Err(CanonicalSyncV2SessionError::ConversationMismatch);
+        }
+        let supplied_event_keys =
+            validate_events(self.policy, self.conversation_id, &batch.events)?;
+        if supplied_event_keys != diff.content.requested_event_keys {
+            return Err(CanonicalSyncV2SessionError::BatchEventKeysMismatch);
+        }
+        let response = CanonicalSyncCompleteV2 {
+            conversation_id: self.conversation_id,
+            stored_event_keys: supplied_event_keys.clone(),
+            more_available: diff.content.more_available,
+        };
+        encode_sync_complete_v2(&response)?;
+        let stats = CanonicalSyncV2RoundStats {
+            sent_events: diff.content.events.len(),
+            received_events: supplied_event_keys.len(),
+            more_available: diff.content.more_available,
+        };
+        let previous = &expected_runtime.checkpoint().checkpoint().content;
+        let received_event_keys =
+            merge_cumulative_event_keys(&previous.received_event_keys, &supplied_event_keys);
+        let successor = self.signed_durable_responder_successor(
+            expected_runtime,
+            previous.sync_round,
+            received_event_keys,
+            previous.sent_event_keys.clone(),
+            diff.content.more_available,
+            CanonicalSyncResponderNextActionV2::SendComplete,
+        )?;
+        let frame = CanonicalSyncServerFrameV2::Complete(response);
+        let runtime = self.store.commit_responder_runtime_transition(
+            expected_runtime,
+            &successor,
+            Some(&frame),
+            &batch.events,
+        )?;
+        Ok((stats, runtime))
+    }
+
+    /// Records the Complete send boundary. A continuation advances exactly
+    /// one round; a converged session becomes terminal and clears the frame.
+    pub fn mark_durable_complete_sent(
+        &self,
+        expected_runtime: &CanonicalSyncV2StoredResponderRuntime,
+    ) -> Result<CanonicalSyncV2StoredResponderRuntime, CanonicalSyncV2SessionError> {
+        self.require_durable_responder_action(
+            expected_runtime,
+            CanonicalSyncV2DurableResponderActionKind::TransmitComplete,
+        )?;
+        let previous = &expected_runtime.checkpoint().checkpoint().content;
+        let (sync_round, continuation_required, next_action) = if previous.continuation_required {
+            (
+                previous
+                    .sync_round
+                    .checked_add(1)
+                    .ok_or(CanonicalSyncV2SessionError::DurableCheckpointSequenceOverflow)?,
+                false,
+                CanonicalSyncResponderNextActionV2::ReceiveInventory,
+            )
+        } else {
+            (
+                previous.sync_round,
+                false,
+                CanonicalSyncResponderNextActionV2::Complete,
+            )
+        };
+        let successor = self.signed_durable_responder_successor(
+            expected_runtime,
+            sync_round,
+            previous.received_event_keys.clone(),
+            previous.sent_event_keys.clone(),
+            continuation_required,
+            next_action,
+        )?;
+        self.store
+            .commit_responder_runtime_transition(expected_runtime, &successor, None, &[])
+            .map_err(Into::into)
+    }
+
+    fn verify_durable_responder_identity(
+        &self,
+        runtime: &CanonicalSyncV2StoredResponderRuntime,
+    ) -> Result<(), CanonicalSyncV2SessionError> {
+        let content = &runtime.checkpoint().checkpoint().content;
+        if content.conversation_id != self.conversation_id
+            || content.responder_device_id != *self.identity.device_id().as_bytes()
+            || content.requester_device_id != *self.allowed_requester.as_bytes()
+            || content.session_binding != *self.session_binding.as_bytes()
+        {
+            return Err(CanonicalSyncV2SessionError::DurableSessionIdentityMismatch);
+        }
+        Ok(())
+    }
+
+    fn require_durable_responder_action(
+        &self,
+        runtime: &CanonicalSyncV2StoredResponderRuntime,
+        expected: CanonicalSyncV2DurableResponderActionKind,
+    ) -> Result<(), CanonicalSyncV2SessionError> {
+        let actual = self.durable_responder_action(runtime)?;
+        if actual.kind() != expected {
+            return Err(CanonicalSyncV2SessionError::UnexpectedDurableAction {
+                expected: expected.label(),
+                actual: actual.kind().label(),
+            });
+        }
+        Ok(())
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn signed_durable_responder_successor(
+        &self,
+        previous: &CanonicalSyncV2StoredResponderRuntime,
+        sync_round: u64,
+        received_event_keys: Vec<CanonicalSyncEventKeyV2>,
+        sent_event_keys: Vec<CanonicalSyncEventKeyV2>,
+        continuation_required: bool,
+        next_action: CanonicalSyncResponderNextActionV2,
+    ) -> Result<CanonicalSignedSyncResponderCheckpointV2, CanonicalSyncV2SessionError> {
+        self.verify_durable_responder_identity(previous)?;
+        let previous_checkpoint = previous.checkpoint().checkpoint();
+        let checkpoint_sequence = previous_checkpoint
+            .content
+            .checkpoint_sequence
+            .checked_add(1)
+            .ok_or(CanonicalSyncV2SessionError::DurableCheckpointSequenceOverflow)?;
+        let content = CanonicalSyncResponderCheckpointContentV2 {
+            protocol_identifier: previous_checkpoint.content.protocol_identifier,
+            conversation_id: previous_checkpoint.content.conversation_id,
+            responder_device_id: previous_checkpoint.content.responder_device_id,
+            requester_device_id: previous_checkpoint.content.requester_device_id,
+            session_binding: previous_checkpoint.content.session_binding,
+            checkpoint_sequence,
+            sync_round,
+            predecessor_checkpoint_id: Some(sync_responder_checkpoint_id_v2(previous_checkpoint)?),
+            received_event_keys,
+            sent_event_keys,
+            continuation_required,
+            next_action,
+            paused: false,
+        };
+        let successor = CanonicalSignedSyncResponderCheckpointV2 {
+            signature: self
+                .identity
+                .sign(&sync_responder_checkpoint_signing_bytes_v2(&content)?),
+            content,
+        };
+        verify_signed_sync_responder_checkpoint_v2(&successor)?;
+        Ok(successor)
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum CanonicalSyncV2DurableResponderAction {
+    AwaitInventory,
+    TransmitDiff(CanonicalSignedSyncDiffV2),
+    RetransmitDiff(CanonicalSignedSyncDiffV2),
+    TransmitComplete(CanonicalSyncCompleteV2),
+    TransmitRejection(CanonicalSyncRejectedV2),
+    Paused,
+    Complete,
+}
+
+impl CanonicalSyncV2DurableResponderAction {
+    pub fn frame(&self) -> Option<CanonicalSyncServerFrameV2> {
+        match self {
+            Self::TransmitDiff(diff) | Self::RetransmitDiff(diff) => {
+                Some(CanonicalSyncServerFrameV2::Diff(diff.clone()))
+            }
+            Self::TransmitComplete(complete) => {
+                Some(CanonicalSyncServerFrameV2::Complete(complete.clone()))
+            }
+            Self::TransmitRejection(rejected) => {
+                Some(CanonicalSyncServerFrameV2::Rejected(rejected.clone()))
+            }
+            Self::AwaitInventory | Self::Paused | Self::Complete => None,
+        }
+    }
+
+    fn kind(&self) -> CanonicalSyncV2DurableResponderActionKind {
+        match self {
+            Self::AwaitInventory => CanonicalSyncV2DurableResponderActionKind::AwaitInventory,
+            Self::TransmitDiff(_) => CanonicalSyncV2DurableResponderActionKind::TransmitDiff,
+            Self::RetransmitDiff(_) => CanonicalSyncV2DurableResponderActionKind::RetransmitDiff,
+            Self::TransmitComplete(_) => {
+                CanonicalSyncV2DurableResponderActionKind::TransmitComplete
+            }
+            Self::TransmitRejection(_) => {
+                CanonicalSyncV2DurableResponderActionKind::TransmitRejection
+            }
+            Self::Paused => CanonicalSyncV2DurableResponderActionKind::Paused,
+            Self::Complete => CanonicalSyncV2DurableResponderActionKind::Complete,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum CanonicalSyncV2DurableResponderActionKind {
+    AwaitInventory,
+    TransmitDiff,
+    RetransmitDiff,
+    TransmitComplete,
+    TransmitRejection,
+    Paused,
+    Complete,
+}
+
+impl CanonicalSyncV2DurableResponderActionKind {
+    const fn label(self) -> &'static str {
+        match self {
+            Self::AwaitInventory => "await-inventory",
+            Self::TransmitDiff => "transmit-diff",
+            Self::RetransmitDiff => "retransmit-diff",
+            Self::TransmitComplete => "transmit-complete",
+            Self::TransmitRejection => "transmit-rejection",
+            Self::Paused => "paused",
+            Self::Complete => "complete",
+        }
+    }
+}
+
 pub enum CanonicalSyncV2ServerInventoryOutcome {
     Accepted(Box<CanonicalSyncV2ServerInventoryRound>),
     Rejected(CanonicalSyncRejectedV2),
@@ -1117,6 +1561,9 @@ pub enum CanonicalSyncV2SessionError {
     Checkpoint(#[from] CanonicalSyncSessionV2Error),
 
     #[error(transparent)]
+    ResponderCheckpoint(#[from] CanonicalSyncResponderSessionV2Error),
+
+    #[error(transparent)]
     Store(#[from] StoreError),
 
     #[error(transparent)]
@@ -1179,6 +1626,13 @@ pub enum CanonicalSyncV2SessionError {
 
     #[error("durable canonical sync v2 round has no verified checkpoint baseline")]
     DurableRoundBaselineMissing,
+
+    #[error(
+        "durable canonical sync v2 responder pending frame does not match checkpoint action {action:?}"
+    )]
+    DurableResponderRuntimeFrameMismatch {
+        action: CanonicalSyncResponderNextActionV2,
+    },
 }
 
 struct CanonicalSyncV2Plan {
@@ -1936,6 +2390,154 @@ mod tests {
                 )?
                 .len(),
             9
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn durable_responder_transitions_resume_exact_frames_and_commit_batch_atomically()
+    -> Result<(), Box<dyn Error>> {
+        let source_directory = tempdir()?;
+        let target_directory = tempdir()?;
+        let incoming = carrier("/expected/legacy_carrier_cbor_hex")?;
+        let incoming_key = incoming.key()?;
+        let conversation_id = *incoming.conversation_id();
+        let author_account_id = carrier_author_account_id(&incoming);
+        let membership = legacy_membership(conversation_id, &[author_account_id])?;
+        let active_event = match incoming.clone() {
+            CanonicalSyncEventCarrierV2::LegacyPostcardV6(bridge) => {
+                bridge.into_active_authorized_event()
+            }
+            CanonicalSyncEventCarrierV2::CanonicalCborV1(_) => {
+                return Err(io::Error::other("legacy vector decoded as canonical carrier").into());
+            }
+        };
+        let source = kilogram_store::EventStore::open(source_directory.path())?;
+        let plan = source.canonical_sync_v2_legacy_import_plan(
+            active_event.event().conversation_id(),
+            &membership,
+        )?;
+        let target = CanonicalSyncV2CarrierStore::open(target_directory.path())?;
+        let imported = target.import_legacy_page(
+            &source,
+            &membership,
+            &plan,
+            plan.start_cursor(),
+            MAX_CANONICAL_SYNC_V2_EVENTS_PER_BATCH,
+        )?;
+        assert!(imported.is_complete());
+
+        let policy = CanonicalSyncV2MembershipPolicy::from_legacy(membership)?;
+        let responder = DeviceIdentity::from_secret_bytes([0x26; 32]);
+        let requester = DeviceIdentity::from_secret_bytes([0x46; 32]);
+        let session_binding = SyncSessionBinding::from_transport_label("durable-responder-restart");
+        let receive_batch;
+        {
+            let (server, _) =
+                CanonicalSyncV2Server::bootstrap_responder_from_completed_legacy_import(
+                    &responder,
+                    &target,
+                    &policy,
+                    &plan,
+                    session_binding,
+                    requester.device_id(),
+                )?;
+            let initial = server.restore_durable_responder_runtime()?;
+            assert_eq!(
+                server.durable_responder_action(&initial)?,
+                CanonicalSyncV2DurableResponderAction::AwaitInventory
+            );
+
+            let inventory_content = CanonicalSyncInventoryContentV2 {
+                conversation_id,
+                requester_device_id: *requester.device_id().as_bytes(),
+                session_binding: *session_binding.as_bytes(),
+                event_keys: vec![incoming_key],
+            };
+            let inventory = CanonicalSignedSyncInventoryV2 {
+                signature: requester.sign(&sync_inventory_signing_bytes_v2(&inventory_content)?),
+                content: inventory_content,
+            };
+            let send_diff = server.accept_durable_inventory(&initial, &inventory)?;
+            let diff = match server.durable_responder_action(&send_diff)? {
+                CanonicalSyncV2DurableResponderAction::TransmitDiff(diff) => diff,
+                other => {
+                    return Err(io::Error::other(format!("unexpected action: {other:?}")).into());
+                }
+            };
+            assert_eq!(diff.content.requested_event_keys, vec![incoming_key]);
+            assert!(diff.content.events.is_empty());
+            assert!(!diff.content.more_available);
+            assert_eq!(
+                server.accept_durable_inventory(&initial, &inventory)?,
+                send_diff
+            );
+
+            receive_batch = server.mark_durable_diff_sent(&send_diff)?;
+            assert_eq!(
+                server.durable_responder_action(&receive_batch)?.frame(),
+                Some(CanonicalSyncServerFrameV2::Diff(diff.clone()))
+            );
+            assert_eq!(server.mark_durable_diff_sent(&send_diff)?, receive_batch);
+        }
+
+        drop(target);
+        let reopened = CanonicalSyncV2CarrierStore::open(target_directory.path())?;
+        let restarted = CanonicalSyncV2Server::new(
+            &responder,
+            &reopened,
+            &policy,
+            conversation_id,
+            session_binding,
+            requester.device_id(),
+        );
+        let restored = restarted.restore_durable_responder_runtime()?;
+        assert_eq!(restored, receive_batch);
+
+        let batch = CanonicalSyncEventBatchV2 {
+            conversation_id,
+            events: vec![incoming.clone()],
+        };
+        let (stats, send_complete) =
+            restarted.accept_durable_event_batch(&restored, batch.clone())?;
+        assert_eq!(
+            stats,
+            CanonicalSyncV2RoundStats {
+                sent_events: 0,
+                received_events: 1,
+                more_available: false,
+            }
+        );
+        assert_eq!(reopened.inventory(conversation_id)?, vec![incoming_key]);
+        let complete = match restarted.durable_responder_action(&send_complete)? {
+            CanonicalSyncV2DurableResponderAction::TransmitComplete(complete) => complete,
+            other => return Err(io::Error::other(format!("unexpected action: {other:?}")).into()),
+        };
+        assert_eq!(complete.stored_event_keys, vec![incoming_key]);
+        assert_eq!(
+            restarted.accept_durable_event_batch(&restored, batch)?.1,
+            send_complete
+        );
+
+        let terminal = restarted.mark_durable_complete_sent(&send_complete)?;
+        assert_eq!(
+            restarted.durable_responder_action(&terminal)?,
+            CanonicalSyncV2DurableResponderAction::Complete
+        );
+        assert_eq!(
+            restarted.mark_durable_complete_sent(&send_complete)?,
+            terminal
+        );
+        assert_eq!(
+            reopened
+                .responder_checkpoint_chain(
+                    conversation_id,
+                    *responder.device_id().as_bytes(),
+                    *requester.device_id().as_bytes(),
+                    *session_binding.as_bytes(),
+                )?
+                .len(),
+            5
         );
         Ok(())
     }

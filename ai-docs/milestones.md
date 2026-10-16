@@ -6618,3 +6618,27 @@ correlation visible, Windows-only field evidence, independent security audit
   Clippy без запуска Rust test executables внутри readiness;
 - active Postcard v6 не изменён, `/cbor/2` unregistered/undialed; network,
   release/archive/stable EXE, push и tag не выполнялись.
+
+### M1.1.67 — dormant durable responder transition adapter: принято локально
+
+- добавлен отдельный `CanonicalSignedSyncResponderCheckpointV2`: он подписывает
+  conversation, responder/requester Devices, session, sequence/round,
+  predecessor, cumulative typed evidence, continuation и responder action;
+- responder signature/ID domains и три redb tables отделены от initiator
+  journal, поэтому роли нельзя подменить совместимым байтовым представлением;
+- concrete server сохраняет signed successor и exact Diff до send, сохраняет
+  тот же Diff на uncertain send boundary и восстанавливает его после restart;
+- incoming EventBatch проверяется против exact persisted Diff, а verified
+  carriers, responder successor/head и exact Complete коммитятся одной
+  immediate-durability transaction. Exact retry идемпотентен, stale/fork/gap,
+  frame или signed-evidence mismatch fail closed;
+- restart regression закрывает Inventory → Diff → EventBatch → Complete,
+  drop/reopen redb, lost-response retries и terminal five-checkpoint chain;
+- protocol regression прошёл 170/170, store 28/28, session 14/14; 36 запусков
+  затронутых boundary normal/self-test прошли, 97 root JSON parsed, rustfmt и
+  workspace-wide locked/offline strict Clippy verified; accepted-tag readiness
+  прошёл 99/99 против immutable `M1.0.0`;
+- оба dormant adapter теперь durable, но mutual authenticated capability
+  selection ещё не подключён. Active Postcard v6 не менялся, `/cbor/2`
+  unregistered/undialed; network/release/archive/stable EXE/push/tag не
+  выполнялись.

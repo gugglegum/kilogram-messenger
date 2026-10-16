@@ -36,6 +36,12 @@ use redb::{Database, Durability, ReadableDatabase, ReadableTable, TableDefinitio
 use tempfile::NamedTempFile;
 use thiserror::Error;
 
+mod canonical_sync_v2_responder_store;
+
+pub use canonical_sync_v2_responder_store::{
+    CanonicalSyncV2StoredResponderCheckpoint, CanonicalSyncV2StoredResponderRuntime,
+};
+
 const EVENT_FILE_EXTENSION: &str = "event";
 const AUTHORIZATION_FILE_EXTENSION: &str = "authorization";
 const LOCAL_TEXT_PROJECTION_FILE_EXTENSION: &str = "local-text";
@@ -857,6 +863,27 @@ impl CanonicalSyncV2CarrierStore {
         {
             let _session_runtime = write
                 .open_table(CANONICAL_SYNC_V2_SESSION_RUNTIME_TABLE)
+                .map_err(canonical_sync_v2_database_error)?;
+        }
+        {
+            let _responder_checkpoints = write
+                .open_table(
+                    canonical_sync_v2_responder_store::CANONICAL_SYNC_V2_RESPONDER_CHECKPOINT_TABLE,
+                )
+                .map_err(canonical_sync_v2_database_error)?;
+        }
+        {
+            let _responder_heads = write
+                .open_table(
+                    canonical_sync_v2_responder_store::CANONICAL_SYNC_V2_RESPONDER_CHECKPOINT_HEAD_TABLE,
+                )
+                .map_err(canonical_sync_v2_database_error)?;
+        }
+        {
+            let _responder_runtime = write
+                .open_table(
+                    canonical_sync_v2_responder_store::CANONICAL_SYNC_V2_RESPONDER_RUNTIME_TABLE,
+                )
                 .map_err(canonical_sync_v2_database_error)?;
         }
         write.commit().map_err(canonical_sync_v2_database_error)?;
@@ -3608,6 +3635,12 @@ pub enum StoreError {
 
     #[error("canonical sync v2 signed session checkpoint validation failed")]
     CanonicalSyncV2SessionCheckpoint(#[from] CanonicalSyncSessionV2Error),
+
+    #[error("canonical sync v2 signed responder checkpoint validation failed")]
+    CanonicalSyncV2ResponderCheckpoint(
+        #[from]
+        kilogram_protocol::canonical_sync_responder_session_v2::CanonicalSyncResponderSessionV2Error,
+    ),
 
     #[error("canonical sync v2 carrier database operation failed: {0}")]
     CanonicalSyncV2Database(String),

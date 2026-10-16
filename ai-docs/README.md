@@ -1094,6 +1094,18 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   session head и exact successor-bound pending frame. Предыдущий runtime служит
   optimistic concurrency token; exact retry идемпотентен, conflict откатывает
   всю transaction. Adapter/resume/capability selection ещё не подключены.
+- [`../docs/RFC-0192-m1166-durable-client-transition-adapter.md`](../docs/RFC-0192-m1166-durable-client-transition-adapter.md) —
+  M1.1.66 подключает atomic transition к dormant canonical client: Inventory и
+  EventBatch сохраняются до send, restart возвращает exact pending frame, а
+  continuation/terminal completion опирается на signed cumulative evidence.
+- [`../docs/RFC-0193-user-sovereignty-and-contextual-identity.md`](../docs/RFC-0193-user-sovereignty-and-contextual-identity.md) —
+  фиксирует продуктовые принципы Telegram-знакомого UX, отсутствия публичного
+  вечного User ID, context-scoped anti-abuse и local-owner контроля над уже
+  полученной append-only историей, версиями edit и retract.
+- [`../docs/RFC-0194-m1167-durable-responder-transition-adapter.md`](../docs/RFC-0194-m1167-durable-responder-transition-adapter.md) —
+  M1.1.67 добавляет отдельный responder-signed checkpoint/journal и atomic
+  server transitions: exact Diff/Complete переживают restart, а incoming batch
+  коммитится вместе с successor/head/frame до ответа.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

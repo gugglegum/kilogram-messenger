@@ -4345,3 +4345,36 @@ Hosted follow-up:
   network operation.
 - Active Postcard v6 и network surface не менялись; `/cbor/2` остаётся
   unregistered/undialed. Release build, ZIP, stable EXE, push и tag не нужны.
+
+## M1.1.67 dormant durable responder transition adapter (2026-10-17)
+
+- Рабочая ветка: `master`; predecessor: local commit `5d25e51` (M1.1.66), над
+  ним уже находится documentation-only commit `fa96186` (RFC-0193).
+- Новый protocol module:
+  `crates/kilogram-protocol/src/canonical_sync_responder_session_v2.rs`.
+  Signature и checkpoint-ID domains намеренно отличаются от initiator domains.
+- Новый store module:
+  `crates/kilogram-store/src/canonical_sync_v2_responder_store.rs`. Отдельные
+  checkpoint/head/runtime tables открываются вместе с dormant carrier store;
+  received carriers и responder successor/head/pending frame записываются одной
+  immediate-durability transaction.
+- Concrete server APIs: `restore_durable_responder_runtime`,
+  `durable_responder_action`, `accept_durable_inventory`,
+  `mark_durable_diff_sent`, `accept_durable_event_batch` и
+  `mark_durable_complete_sent`.
+- Windows filesystem regressions требуют запуск вне sandbox из-за `os error 5`
+  на tempdir/canonicalize. Использован resource-friendly wrapper с
+  `CargoJobs 2`, offline debug profile и below-normal process priority.
+- Проверено: `kilogram-protocol` 170/170, `kilogram-store` 28/28,
+  `kilogram-session` 14/14; 18 связанных scripts прошли normal и `-SelfTest`
+  (36 запусков); 97 root JSON parsed; rustfmt и workspace locked/offline strict
+  Clippy прошли.
+- Dedicated verifier:
+  `scripts/verify-kilogram-canonical-sync-v2-durable-responder-adapter-boundary.ps1`.
+  Он отвергает shared role domain, premature capability activation,
+  parse-error fallback и active transport leak.
+- Accepted-tag readiness прошёл 99/99 против immutable `M1.0.0`; внутри
+  readiness Rust test executables и network не запускались. Отдельные
+  regressions выше являются test evidence этого этапа.
+- Следующий slice — mutual authenticated capability selection между durable
+  client/responder без регистрации или dial `/cbor/2` до отдельного решения.
