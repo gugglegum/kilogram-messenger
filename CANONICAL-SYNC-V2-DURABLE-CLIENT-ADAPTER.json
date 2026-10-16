@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.66",
+  "status": "dormant-durable-client-transition-adapter-verified-not-active",
+  "changes_active_wire": false,
+  "protocol_identifier": "kilogram/m1/sync/cbor/2",
+  "implementation": {
+    "crate": "kilogram-session",
+    "adapter": "CanonicalSyncV2Client<CanonicalSyncV2CarrierStore>",
+    "durable_state": "CanonicalSyncV2StoredSessionRuntime",
+    "atomic_transition": "CanonicalSyncV2CarrierStore::commit_session_runtime_transition"
+  },
+  "contracts": {
+    "bootstrap_restores_exact_session_identity": true,
+    "inventory_persisted_before_transport_write": true,
+    "diff_verification_precedes_storage": true,
+    "received_carriers_checkpoint_head_and_batch_frame_commit_atomically": true,
+    "event_batch_persisted_before_transport_write": true,
+    "receive_complete_preserves_exact_event_batch_for_retry": true,
+    "complete_verifies_exact_current_round_sent_keys": true,
+    "continuation_advances_exactly_one_round": true,
+    "terminal_completion_clears_pending_frame": true,
+    "restart_dispatch_uses_exact_persisted_frame": true,
+    "unexpected_action_or_frame_fails_closed": true,
+    "exact_lost_response_retry_idempotent": true,
+    "format_sniffing": false,
+    "parse_error_fallback": false
+  },
+  "resume_actions": [
+    "prepare-inventory",
+    "transmit-exact-inventory",
+    "transmit-exact-event-batch",
+    "retransmit-exact-event-batch-while-awaiting-complete",
+    "paused",
+    "complete",
+    "rejected"
+  ],
+  "regression": {
+    "two_round_client_session_reaches_terminal_checkpoint": true,
+    "received_carrier_commits_with_send_batch_checkpoint": true,
+    "inventory_and_event_batch_resume_exactly": true,
+    "database_reopen_restores_next_round": true,
+    "empty_second_round_is_supported": true,
+    "diff_transition_exact_retry_is_idempotent": true,
+    "batch_sent_transition_exact_retry_is_idempotent": true,
+    "complete_transition_exact_retry_is_idempotent": true,
+    "cumulative_received_evidence_is_round_scoped_for_stats": true
+  },
+  "activation": {
+    "atomic_store_transition_integrated": true,
+    "durable_client_adapter_integrated": true,
+    "exact_client_restart_dispatch_integrated": true,
+    "durable_server_adapter_integrated": false,
+    "mutual_capability_selection_integrated": false,
+    "endpoint_registered": false,
+    "canonical_dial_enabled": false
+  },
+  "remaining": [
+    "dormant-server-runtime-transition-integration",
+    "mutual-authenticated-capability-selection",
+    "mixed-version-and-downgrade-tests",
+    "rollback-drill",
+    "sustained-fuzzing",
+    "fresh-hosted-and-field-evidence"
+  ],
+  "scope": {
+    "network_executed": false,
+    "release_build": false,
+    "archive_created": false,
+    "stable_executable_replaced": false
+  }
+}

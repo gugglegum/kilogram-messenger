@@ -116,9 +116,9 @@ function Assert-Contract {
         [bool]$Bootstrap.activation.mutual_capability_selection_integrated) {
         throw 'initial session bootstrap boundary changed prematurely'
     }
-    if ([string]$Migration.milestone -cne 'M1.1.65' -or
+    if ([string]$Migration.milestone -cne 'M1.1.66' -or
         [string]$Migration.status -cne
-            'dormant-atomic-runtime-transition-transaction-verified-not-active' -or
+            'dormant-durable-client-transition-adapter-verified-not-active' -or
         [string]$Migration.history_compatible_successor.dormant_signed_session_successor_store -cne
             'verified' -or
         [string]$Migration.history_compatible_successor.dormant_checkpoint_bound_runtime_frame_journal -cne
@@ -135,30 +135,30 @@ function Assert-Contract {
         [string]$successorRequirement[0].status -cne 'verified') {
         throw 'canonical migration successor store requirement is not verified'
     }
-    if ([string]$TransportManifest.milestone -cne 'M1.1.65' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.66' -or
         [string]$TransportManifest.status -cne
-            'dormant-atomic-runtime-transition-transaction-verified-not-active' -or
+            'dormant-durable-client-transition-adapter-verified-not-active' -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_signed_session_successor_store -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_checkpoint_bound_runtime_frame_journal -or
-        'signed-checkpoint-runtime-transition-integration' -cnotin
+        'dormant-server-runtime-transition-integration' -cnotin
             @($TransportManifest.remaining) -or
         [bool]$TransportManifest.history_compatible_successor.registered -or
         [bool]$TransportManifest.history_compatible_successor.dialed) {
         throw 'transport sync manifest lost dormant successor store state'
     }
-    if ([string]$Compatibility.milestone -cne 'M1.1.65' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.66' -or
         [string]$Compatibility.status -cne
-            'dormant-atomic-runtime-transition-transaction-verified-not-active' -or
+            'dormant-durable-client-transition-adapter-verified-not-active' -or
         -not [bool]$Compatibility.required_successor.dormant_signed_session_successor_store_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_checkpoint_bound_runtime_frame_journal_integrated -or
         [string]$Compatibility.required_successor.status -cne
-            'dormant-store-policy-import-checkpoint-session-bootstrap-successor-store-runtime-frame-journal-and-atomic-runtime-transition-verified-not-active') {
+            'dormant-store-policy-import-checkpoint-session-bootstrap-successor-store-runtime-frame-journal-atomic-transition-and-durable-client-adapter-verified-not-active') {
         throw 'history compatibility manifest lost dormant successor store state'
     }
     $transportCoverage = @(
         @($Coverage.surfaces) | Where-Object { [string]$_.id -ceq 'transport-sync' }
     )
-    if ([string]$Coverage.milestone -cne 'M1.1.65' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.66' -or
         $transportCoverage.Count -ne 1 -or
         'CANONICAL-SYNC-V2-SESSION-SUCCESSOR-STORE.json' -cnotin
             @($transportCoverage[0].artifacts) -or
@@ -168,7 +168,7 @@ function Assert-Contract {
             @($transportCoverage[0].artifacts) -or
         'dormant-signed-session-successor-store' -cnotin
             @($transportCoverage[0].covered) -or
-        'signed-checkpoint-runtime-transition-integration' -cnotin
+        'dormant-server-runtime-transition-integration' -cnotin
             @($transportCoverage[0].remaining)) {
         throw 'canonical coverage does not include dormant successor store artifacts'
     }

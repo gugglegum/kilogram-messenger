@@ -113,9 +113,9 @@ function Assert-Contract {
         throw 'canonical sync v2 atomic transition scope changed'
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.65' -or
+    if ([string]$Migration.milestone -cne 'M1.1.66' -or
         [string]$Migration.status -cne
-            'dormant-atomic-runtime-transition-transaction-verified-not-active' -or
+            'dormant-durable-client-transition-adapter-verified-not-active' -or
         [string]$Migration.history_compatible_successor.dormant_atomic_runtime_transition_transaction -cne
             'verified' -or
         [bool]$Migration.history_compatible_successor.registered -or
@@ -129,9 +129,9 @@ function Assert-Contract {
     if ($requirement.Count -ne 1 -or [string]$requirement[0].status -cne 'verified') {
         throw 'canonical migration atomic runtime transition requirement is not verified'
     }
-    if ([string]$TransportManifest.milestone -cne 'M1.1.65' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.66' -or
         [string]$TransportManifest.status -cne
-            'dormant-atomic-runtime-transition-transaction-verified-not-active' -or
+            'dormant-durable-client-transition-adapter-verified-not-active' -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_atomic_runtime_transition_transaction -or
         'atomic-received-carrier-and-checkpoint-transition' -cin
             @($TransportManifest.remaining) -or
@@ -139,18 +139,18 @@ function Assert-Contract {
         [bool]$TransportManifest.history_compatible_successor.dialed) {
         throw 'transport sync manifest lost atomic runtime transition state'
     }
-    if ([string]$Compatibility.milestone -cne 'M1.1.65' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.66' -or
         [string]$Compatibility.status -cne
-            'dormant-atomic-runtime-transition-transaction-verified-not-active' -or
+            'dormant-durable-client-transition-adapter-verified-not-active' -or
         -not [bool]$Compatibility.required_successor.dormant_atomic_runtime_transition_transaction_integrated -or
         [string]$Compatibility.required_successor.status -cne
-            'dormant-store-policy-import-checkpoint-session-bootstrap-successor-store-runtime-frame-journal-and-atomic-runtime-transition-verified-not-active') {
+            'dormant-store-policy-import-checkpoint-session-bootstrap-successor-store-runtime-frame-journal-atomic-transition-and-durable-client-adapter-verified-not-active') {
         throw 'history compatibility manifest lost atomic runtime transition state'
     }
     $transportCoverage = @(
         @($Coverage.surfaces) | Where-Object { [string]$_.id -ceq 'transport-sync' }
     )
-    if ([string]$Coverage.milestone -cne 'M1.1.65' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.66' -or
         $transportCoverage.Count -ne 1 -or
         'CANONICAL-SYNC-V2-ATOMIC-RUNTIME-TRANSITION.json' -cnotin
             @($transportCoverage[0].artifacts) -or
@@ -178,9 +178,12 @@ function Assert-Contract {
             throw "kilogram-store lost atomic runtime transition source marker: $needle"
         }
     }
-    foreach ($inactiveSource in @($Adapter, $Wire, $Transport, $Cli)) {
+    if (-not $Adapter.Contains('commit_session_runtime_transition')) {
+        throw 'atomic runtime transition is no longer integrated by the dormant adapter'
+    }
+    foreach ($inactiveSource in @($Wire, $Transport, $Cli)) {
         if ($inactiveSource.Contains('commit_session_runtime_transition')) {
-            throw 'atomic runtime transition leaked into adapter/wire/transport/CLI code'
+            throw 'atomic runtime transition leaked into active wire/transport/CLI code'
         }
     }
     $normalizedRfc = [regex]::Replace($Rfc, '\s+', ' ')
@@ -245,8 +248,8 @@ if ($SelfTest) {
 
     Assert-Rejected {
         Assert-Contract $manifest $migration $transportManifest $compatibility $coverage `
-            $store ($adapter + ' commit_session_runtime_transition') $wire $transport $cli $rfc
-    } 'transition_leaked_into_adapter'
+            $store $adapter $wire ($transport + ' commit_session_runtime_transition') $cli $rfc
+    } 'transition_leaked_into_active_transport'
 
     Write-Output 'canonical_sync_v2_atomic_runtime_transition_self_test=passed'
 }

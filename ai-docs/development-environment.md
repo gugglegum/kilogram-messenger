@@ -4317,3 +4317,31 @@ Hosted follow-up:
   accepted-tag readiness прошёл 97/97 с offline strict Clippy.
 - Active Postcard v6 не изменён; `/cbor/2` не зарегистрирован и не dial-ится.
   Следующий этап — adapter transition integration и exact restart dispatch.
+
+## M1.1.66 dormant durable client transition adapter (2026-10-16)
+
+- Рабочая ветка: `master`; predecessor: local commit `f377960` (M1.1.65).
+- Concrete client APIs: `restore_durable_runtime`, `durable_action`,
+  `begin_durable_round`, `accept_durable_diff`, `mark_durable_batch_sent` и
+  `accept_durable_complete`.
+- До любого transport write exact Inventory/EventBatch уже связан с signed
+  checkpoint. Diff received carriers и successor/frame пишутся через
+  `commit_session_runtime_transition`, поэтому adapter не создаёт отдельного
+  carrier/checkpoint crash window.
+- Restart action не перестраивает frame из изменившегося local inventory:
+  `ReceiveDiff`, `SendEventBatch` и `ReceiveComplete` возвращают exact persisted
+  canonical frame. Wrong identity, action/frame mismatch и missing durable
+  session fail closed.
+- Двухраундовый debug/offline regression с redb reopen прошёл; полный
+  `kilogram-session` regression — 13/13. Cargo запускался через friendly wrapper
+  с `CargoJobs 2` и below-normal priority.
+- Новый verifier:
+  `scripts/verify-kilogram-canonical-sync-v2-durable-client-adapter-boundary.ps1`.
+  Он проверяет aggregate contracts, negative self-test и отсутствие adapter
+  calls в active wire/Iroh/CLI.
+- Все 96 root JSON documents parsed; полный accepted-tag readiness прошёл
+  98/98 против immutable `M1.0.0`, включая rustfmt и workspace locked/offline
+  strict Clippy. Readiness не запускал Rust test executables и не выполнял
+  network operation.
+- Active Postcard v6 и network surface не менялись; `/cbor/2` остаётся
+  unregistered/undialed. Release build, ZIP, stable EXE, push и tag не нужны.

@@ -122,9 +122,9 @@ function Assert-Contract {
         throw 'canonical sync v2 session runtime frame scope changed'
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.65' -or
+    if ([string]$Migration.milestone -cne 'M1.1.66' -or
         [string]$Migration.status -cne
-            'dormant-atomic-runtime-transition-transaction-verified-not-active' -or
+            'dormant-durable-client-transition-adapter-verified-not-active' -or
         [string]$Migration.history_compatible_successor.dormant_checkpoint_bound_runtime_frame_journal -cne
             'verified' -or
         [bool]$Migration.history_compatible_successor.registered -or
@@ -139,11 +139,11 @@ function Assert-Contract {
         [string]$runtimeRequirement[0].status -cne 'verified') {
         throw 'canonical migration runtime frame requirement is not verified'
     }
-    if ([string]$TransportManifest.milestone -cne 'M1.1.65' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.66' -or
         [string]$TransportManifest.status -cne
-            'dormant-atomic-runtime-transition-transaction-verified-not-active' -or
+            'dormant-durable-client-transition-adapter-verified-not-active' -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_checkpoint_bound_runtime_frame_journal -or
-        'signed-checkpoint-runtime-transition-integration' -cnotin
+        'dormant-server-runtime-transition-integration' -cnotin
             @($TransportManifest.remaining) -or
         'atomic-received-carrier-and-checkpoint-transition' -cin
             @($TransportManifest.remaining) -or
@@ -151,18 +151,18 @@ function Assert-Contract {
         [bool]$TransportManifest.history_compatible_successor.dialed) {
         throw 'transport sync manifest lost checkpoint-bound runtime frame state'
     }
-    if ([string]$Compatibility.milestone -cne 'M1.1.65' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.66' -or
         [string]$Compatibility.status -cne
-            'dormant-atomic-runtime-transition-transaction-verified-not-active' -or
+            'dormant-durable-client-transition-adapter-verified-not-active' -or
         -not [bool]$Compatibility.required_successor.dormant_checkpoint_bound_runtime_frame_journal_integrated -or
         [string]$Compatibility.required_successor.status -cne
-            'dormant-store-policy-import-checkpoint-session-bootstrap-successor-store-runtime-frame-journal-and-atomic-runtime-transition-verified-not-active') {
+            'dormant-store-policy-import-checkpoint-session-bootstrap-successor-store-runtime-frame-journal-atomic-transition-and-durable-client-adapter-verified-not-active') {
         throw 'history compatibility manifest lost checkpoint-bound runtime frame state'
     }
     $transportCoverage = @(
         @($Coverage.surfaces) | Where-Object { [string]$_.id -ceq 'transport-sync' }
     )
-    if ([string]$Coverage.milestone -cne 'M1.1.65' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.66' -or
         $transportCoverage.Count -ne 1 -or
         'CANONICAL-SYNC-V2-SESSION-RUNTIME-FRAME.json' -cnotin
             @($transportCoverage[0].artifacts) -or
@@ -172,7 +172,7 @@ function Assert-Contract {
             @($transportCoverage[0].artifacts) -or
         'dormant-checkpoint-bound-runtime-frame-journal' -cnotin
             @($transportCoverage[0].covered) -or
-        'signed-checkpoint-runtime-transition-integration' -cnotin
+        'dormant-server-runtime-transition-integration' -cnotin
             @($transportCoverage[0].remaining) -or
         'atomic-received-carrier-and-checkpoint-transition' -cin
             @($transportCoverage[0].remaining)) {
@@ -194,11 +194,15 @@ function Assert-Contract {
             throw "kilogram-store lost session runtime frame source marker: $needle"
         }
     }
-    foreach ($inactiveSource in @($Adapter, $Wire, $Transport, $Cli)) {
+    if (-not $Adapter.Contains('pub fn restore_durable_runtime(') -or
+        -not $Adapter.Contains('session_runtime_state(')) {
+        throw 'checkpoint-bound runtime frame journal is no longer integrated by the dormant adapter'
+    }
+    foreach ($inactiveSource in @($Wire, $Transport, $Cli)) {
         if ($inactiveSource.Contains('set_session_pending_client_frame') -or
             $inactiveSource.Contains('session_runtime_state') -or
             $inactiveSource.Contains('canonical-sync-v2-session-runtime-v1')) {
-            throw 'checkpoint-bound runtime frame journal leaked into runtime/wire/transport/CLI code'
+            throw 'checkpoint-bound runtime frame journal leaked into active wire/transport/CLI code'
         }
     }
     $normalizedRfc = [regex]::Replace($Rfc, '\s+', ' ')
@@ -263,8 +267,8 @@ if ($SelfTest) {
 
     Assert-Rejected {
         Assert-Contract $manifest $migration $transportManifest $compatibility $coverage `
-            $store ($adapter + ' set_session_pending_client_frame') $wire $transport $cli $rfc
-    } 'runtime_frame_journal_leaked_into_adapter'
+            $store $adapter $wire ($transport + ' set_session_pending_client_frame') $cli $rfc
+    } 'runtime_frame_journal_leaked_into_active_transport'
 
     Write-Output 'canonical_sync_v2_session_runtime_frame_self_test=passed'
 }

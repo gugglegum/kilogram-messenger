@@ -194,8 +194,8 @@ function Assert-Boundary {
         'crates/kilogram-sync-capability/src/lib.rs|SYNC_TRANSPORT_CAPABILITY_VERSION|u8|2'
     ) 'connection-ticket compatibility bindings'
 
-    if ([string]$TransportManifest.milestone -cne 'M1.1.65' -or
-        [string]$TransportManifest.status -cne 'dormant-atomic-runtime-transition-transaction-verified-not-active' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.66' -or
+        [string]$TransportManifest.status -cne 'dormant-durable-client-transition-adapter-verified-not-active' -or
         [string]$TransportManifest.active.alpn -cne $legacyAlpn -or
         -not [bool]$TransportManifest.active.registered -or
         -not [bool]$TransportManifest.active.dialed -or
@@ -233,8 +233,8 @@ function Assert-Boundary {
     $capabilityRequirement = @($CanonicalMigration.activation_requirements | Where-Object {
         [string]$_.id -ceq 'authenticated-capability-envelope'
     })
-    if ([string]$CanonicalMigration.milestone -cne 'M1.1.65' -or
-        [string]$CanonicalMigration.status -cne 'dormant-atomic-runtime-transition-transaction-verified-not-active' -or
+    if ([string]$CanonicalMigration.milestone -cne 'M1.1.66' -or
+        [string]$CanonicalMigration.status -cne 'dormant-durable-client-transition-adapter-verified-not-active' -or
         [string]$CanonicalMigration.current_state -cne 'legacy-only' -or
         [string]$CanonicalMigration.candidate_protocol_identifier -cne $canonicalAlpn -or
         [string]$CanonicalMigration.history_compatible_successor.authenticated_ticket_capability -cne
@@ -258,13 +258,13 @@ function Assert-Boundary {
     $coverageSurface = @($Coverage.surfaces | Where-Object {
         [string]$_.id -ceq 'transport-sync'
     })
-    if ([string]$Coverage.milestone -cne 'M1.1.65' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.66' -or
         $coverageSurface.Count -ne 1 -or
         [string]$coverageSurface[0].coverage -cne 'partial' -or
         (@($coverageSurface[0].covered) -join ',') -cne
-            'parallel-cbor-alpn-identifier-allocation,history-compatible-cbor-v2-alpn-identifier-allocation,typed-durable-canonical-sync-session-checkpoint,authenticated-ticket-v13-history-compatible-cbor-v2-capability,dormant-history-compatible-sync-v2-runtime-state-machine,dormant-atomic-typed-carrier-store,dormant-cross-format-membership-policy,dormant-bounded-resumable-legacy-import,dormant-atomic-legacy-import-checkpoint,dormant-signed-session-bootstrap,dormant-signed-session-successor-store,dormant-checkpoint-bound-runtime-frame-journal,dormant-atomic-runtime-transition-transaction' -or
+            'parallel-cbor-alpn-identifier-allocation,history-compatible-cbor-v2-alpn-identifier-allocation,typed-durable-canonical-sync-session-checkpoint,authenticated-ticket-v13-history-compatible-cbor-v2-capability,dormant-history-compatible-sync-v2-runtime-state-machine,dormant-atomic-typed-carrier-store,dormant-cross-format-membership-policy,dormant-bounded-resumable-legacy-import,dormant-atomic-legacy-import-checkpoint,dormant-signed-session-bootstrap,dormant-signed-session-successor-store,dormant-checkpoint-bound-runtime-frame-journal,dormant-atomic-runtime-transition-transaction,dormant-durable-client-transition-adapter' -or
         (@($coverageSurface[0].remaining) -join ',') -cne
-            'signed-checkpoint-runtime-transition-integration,mutual-authenticated-capability-selection') {
+            'dormant-server-runtime-transition-integration,mutual-authenticated-capability-selection') {
         throw 'canonical coverage did not record the authenticated capability envelope'
     }
 

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.65",
-  "status": "dormant-atomic-runtime-transition-transaction-verified-not-active",
+  "milestone": "M1.1.66",
+  "status": "dormant-durable-client-transition-adapter-verified-not-active",
   "changes_active_wire": false,
   "current_encoding": "postcard",
   "candidate_encoding": "kilogram-deterministic-cbor-v2-typed-history",
@@ -24,6 +24,7 @@
     "dormant_signed_session_successor_store": "verified",
     "dormant_checkpoint_bound_runtime_frame_journal": "verified",
     "dormant_atomic_runtime_transition_transaction": "verified",
+    "dormant_durable_client_transition_adapter": "verified",
     "registered": false,
     "dialed": false
   },
@@ -215,6 +216,10 @@
     },
     {
       "id": "dormant-atomic-runtime-transition-transaction",
+      "status": "verified"
+    },
+    {
+      "id": "dormant-durable-client-transition-adapter",
       "status": "verified"
     },
     {

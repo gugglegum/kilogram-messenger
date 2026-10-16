@@ -6588,3 +6588,33 @@ correlation visible, Windows-only field evidence, independent security audit
   strict Clippy и accepted-tag readiness прошли 97/97 против immutable
   `M1.0.0`; readiness не запускал test executable и network operation;
 - network/release/archive/stable EXE, push и tag не выполнялись.
+
+### M1.1.66 — dormant durable client transition adapter: принято локально
+
+- concrete `CanonicalSyncV2Client<CanonicalSyncV2CarrierStore>` восстанавливает
+  exact session runtime и отображает его в однозначное действие: prepare
+  Inventory, transmit persisted Inventory/EventBatch, retransmit exact
+  EventBatch while awaiting Complete, paused либо terminal;
+- `begin_durable_round` подписывает и сохраняет Inventory до transport write.
+  `accept_durable_diff` проверяет responder/session/request/policy и одной
+  M1.1.65 transaction коммитит received carriers, signed cumulative evidence,
+  head и exact pending EventBatch;
+- `mark_durable_batch_sent` сохраняет тот же EventBatch при переходе в
+  `ReceiveComplete`. `accept_durable_complete` сверяет exact current-round sent
+  keys и continuation, затем очищает frame в terminal `Complete` либо ровно на
+  один round переходит к `SendInventory`;
+- local availability остаётся true, пока EventBatch, включая empty batch,
+  доступен для send/retry. Это позволяет корректно завершить уже converged
+  empty round; terminal checkpoint очищает оба availability flags;
+- regression выполняет два раунда, atomic receive, три exact lost-response
+  retry, drop/reopen redb, empty final round и проверяет девять signed
+  checkpoints. Полный `kilogram-session` regression прошёл 13/13;
+- dedicated manifest/RFC/boundary фиксируют отсутствие вызовов нового adapter
+  из active wire/Iroh/CLI. Durable server adapter и mutual authenticated
+  capability selection остаются следующими отдельными этапами;
+- все 96 root JSON documents parsed. Dedicated и связанные boundaries прошли
+  normal/negative проверки; accepted-tag readiness прошёл 98/98 против
+  immutable `M1.0.0`, включая rustfmt и workspace-wide locked/offline strict
+  Clippy без запуска Rust test executables внутри readiness;
+- active Postcard v6 не изменён, `/cbor/2` unregistered/undialed; network,
+  release/archive/stable EXE, push и tag не выполнялись.
