@@ -41,9 +41,10 @@ function Assert-Boundary {
 
     $legacyAlpn = 'kilogram/m0/sync/8'
     $canonicalAlpn = 'kilogram/m1/sync/cbor/1'
+    $historyCompatibleAlpn = 'kilogram/m1/sync/cbor/2'
     if ([UInt64]$Manifest.schema_version -ne 1 -or
-        [string]$Manifest.milestone -cne 'M1.1.51' -or
-        [string]$Manifest.status -cne 'authenticated-capability-carried-not-active' -or
+        [string]$Manifest.milestone -cne 'M1.1.53' -or
+        [string]$Manifest.status -cne 'history-compatible-successor-allocated-not-active' -or
         [string]$Manifest.surface -cne 'transport-sync' -or
         [bool]$Manifest.changes_active_wire) {
         throw 'canonical transport sync manifest header changed'
@@ -64,6 +65,20 @@ function Assert-Boundary {
         [string]$Manifest.candidate.alpn -ceq [string]$Manifest.active.alpn) {
         throw 'canonical synchronization candidate activation boundary changed'
     }
+    if ([string]$Manifest.history_compatible_successor.encoding -cne
+            'kilogram-deterministic-cbor-v2-typed-history' -or
+        [string]$Manifest.history_compatible_successor.alpn -cne $historyCompatibleAlpn -or
+        -not [bool]$Manifest.history_compatible_successor.allocated -or
+        -not [bool]$Manifest.history_compatible_successor.typed_event_identity -or
+        -not [bool]$Manifest.history_compatible_successor.closed_event_carrier -or
+        [bool]$Manifest.history_compatible_successor.closed_sync_frames -or
+        [bool]$Manifest.history_compatible_successor.authenticated_ticket_capability -or
+        [bool]$Manifest.history_compatible_successor.registered -or
+        [bool]$Manifest.history_compatible_successor.dialed -or
+        [bool]$Manifest.history_compatible_successor.format_sniffing -or
+        [bool]$Manifest.history_compatible_successor.parse_error_fallback) {
+        throw 'history-compatible synchronization successor boundary changed'
+    }
     if ([string]$Manifest.selection.current_state -cne 'legacy-only' -or
         -not [bool]$Manifest.selection.listener_capability_required_before_dial -or
         [string]$Manifest.selection.listener_capability_authentication -cne
@@ -74,7 +89,8 @@ function Assert-Boundary {
         throw 'canonical synchronization selection policy changed'
     }
     $expectedRemaining = @(
-        'history-compatible-canonical-sync-generation',
+        'closed-history-compatible-canonical-sync-frames',
+        'authenticated-cbor-v2-ticket-capability',
         'active-dual-reader-and-canonical-capability-activation',
         'mixed-version-and-downgrade-tests',
         'rollback-drill',
@@ -97,9 +113,11 @@ function Assert-Boundary {
         throw 'canonical synchronization remaining-work boundary changed'
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.51' -or
-        [string]$Migration.status -cne 'authenticated-capability-carried-not-active' -or
+    if ([string]$Migration.milestone -cne 'M1.1.53' -or
+        [string]$Migration.status -cne 'history-compatible-successor-allocated-not-active' -or
         [string]$Migration.candidate_protocol_identifier -cne $canonicalAlpn -or
+        [string]$Migration.history_compatible_successor.protocol_identifier -cne
+            $historyCompatibleAlpn -or
         [bool]$Migration.candidate_identifier_registered -or
         [string]$Migration.current_state -cne 'legacy-only') {
         throw 'canonical migration does not preserve allocated inactive identifier'
@@ -127,13 +145,13 @@ function Assert-Boundary {
     }
 
     $surface = @($Coverage.surfaces | Where-Object { [string]$_.id -ceq 'transport-sync' })
-    if ([string]$Coverage.milestone -cne 'M1.1.51' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.53' -or
         $surface.Count -ne 1 -or
         [string]$surface[0].coverage -cne 'partial' -or
         (@($surface[0].covered) -join ',') -cne
-            'parallel-cbor-alpn-identifier-allocation,authenticated-ticket-v12-transport-capability-envelope' -or
+            'parallel-cbor-alpn-identifier-allocation,authenticated-ticket-v12-transport-capability-envelope,history-compatible-cbor-v2-alpn-identifier-allocation' -or
         (@($surface[0].remaining) -join ',') -cne
-            'active-dual-reader-and-canonical-capability-activation' -or
+            'closed-history-compatible-sync-frames-and-authenticated-cbor-v2-capability,active-dual-reader-and-canonical-capability-activation' -or
         [int]$Coverage.summary.complete -ne 17 -or
         [int]$Coverage.summary.partial -ne 1 -or
         [int]$Coverage.summary.not_started -ne 0 -or
@@ -155,9 +173,11 @@ function Assert-Boundary {
     foreach ($required in @(
         'pub const ALPN: &[u8] = b"kilogram/m0/sync/8";',
         'pub const CANONICAL_SYNC_ALPN_V1: &[u8] = b"kilogram/m1/sync/cbor/1";',
+        'pub const CANONICAL_SYNC_ALPN_V2: &[u8] = b"kilogram/m1/sync/cbor/2";',
         'pub enum SyncWireProtocol',
         'Self::LegacyPostcardV6 => ALPN',
         'Self::CanonicalCborV1 => CANONICAL_SYNC_ALPN_V1',
+        'Self::CanonicalCborV2 => CANONICAL_SYNC_ALPN_V2',
         'bail!("unsupported Kilogram synchronization ALPN")',
         'synchronization_alpns_are_exact_distinct_and_fail_closed'
     )) {
@@ -166,7 +186,9 @@ function Assert-Boundary {
         }
     }
     if ($CliSource.IndexOf('CANONICAL_SYNC_ALPN_V1', [StringComparison]::Ordinal) -ge 0 -or
-        $CliSource.IndexOf($canonicalAlpn, [StringComparison]::Ordinal) -ge 0) {
+        $CliSource.IndexOf('CANONICAL_SYNC_ALPN_V2', [StringComparison]::Ordinal) -ge 0 -or
+        $CliSource.IndexOf($canonicalAlpn, [StringComparison]::Ordinal) -ge 0 -or
+        $CliSource.IndexOf($historyCompatibleAlpn, [StringComparison]::Ordinal) -ge 0) {
         throw 'inactive canonical ALPN leaked into active CLI registration or dial path'
     }
     if ($CliSource.IndexOf('.alpns(vec![ALPN.to_vec()])', [StringComparison]::Ordinal) -lt 0 -or
@@ -245,6 +267,7 @@ if ($SelfTest) {
 Write-Output 'canonical_transport_sync_alpn_boundary=verified'
 Write-Output 'active_sync_alpn=kilogram/m0/sync/8'
 Write-Output 'candidate_sync_alpn=kilogram/m1/sync/cbor/1'
+Write-Output 'history_compatible_sync_alpn=kilogram/m1/sync/cbor/2'
 Write-Output 'candidate_identifier_allocated=true'
 Write-Output 'candidate_identifier_registered=false'
 Write-Output 'candidate_identifier_dialed=false'

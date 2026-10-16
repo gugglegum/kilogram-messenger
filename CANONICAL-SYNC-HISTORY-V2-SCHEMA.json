@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.53",
+  "status": "typed-history-carrier-verified-frames-pending",
+  "changes_active_wire": false,
+  "profile": "kilogram-deterministic-cbor-v1",
+  "candidate_protocol_identifier": "kilogram/m1/sync/cbor/2",
+  "candidate_identifier_allocated": true,
+  "candidate_identifier_registered": false,
+  "candidate_identifier_dialed": false,
+  "cddl": {
+    "standard": "RFC 8610",
+    "path": "CANONICAL-SYNC-HISTORY-V2.cddl",
+    "root_rule": "kilogram-sync-history-v2"
+  },
+  "limits": {
+    "maximum_encoded_object_bytes": 8388608
+  },
+  "event_namespaces": {
+    "1": {
+      "id": "legacy-postcard-v6",
+      "event_id_domain": "kilogram:event-id:v5\u0000",
+      "payload": "sync-legacy-event-bridge-v1"
+    },
+    "2": {
+      "id": "canonical-cbor-v1",
+      "event_id_domain": "kilogram:event-id:cbor-v1\u0000",
+      "payload": "authorized-event-v1"
+    }
+  },
+  "objects": [
+    { "id": "sync-event-key-v2", "kind": "typed-identifier", "array_length": 3 },
+    { "id": "sync-event-carrier-v2", "kind": "closed-variant", "array_length": 3 }
+  ],
+  "external_objects": [
+    { "id": "sync-legacy-event-bridge-v1", "schema": "CANONICAL-SYNC-LEGACY-EVENT-SCHEMA.json" },
+    { "id": "authorized-event-v1", "schema": "CANONICAL-EVENT-SCHEMA.json" }
+  ],
+  "semantic_rules": [
+    "event identity is the ordered pair of namespace and 32-byte Event ID",
+    "equal raw Event ID bytes in different namespaces are distinct identities",
+    "carrier variant and payload codec are a closed exact mapping",
+    "legacy payloads preserve and verify exact active Postcard AuthorizedEvent bytes",
+    "canonical payloads verify native canonical event certificate and authority signatures",
+    "format sniffing and parse-error fallback are forbidden",
+    "every standalone key carrier and nested payload is bounded to eight MiB"
+  ],
+  "remaining_before_activation": [
+    "closed-history-compatible-sync-frames",
+    "typed-session-checkpoints",
+    "authenticated-ticket-capability-for-exact-cbor-v2-identifier",
+    "dual-reader-runtime-and-downgrade-tests"
+  ]
+}

@@ -6264,3 +6264,24 @@ correlation visible, Windows-only field evidence, independent security audit
 - accepted-tag readiness прошёл 85/85 вместе с rustfmt и workspace
   locked/offline strict Clippy в два Cargo job; network, release build, archive,
   stable-path EXE, push и tag не выполнялись.
+
+### M1.1.53 — typed history-compatible sync event carrier: принято локально
+
+- выделен отдельный inactive ALPN `kilogram/m1/sync/cbor/2`; active
+  `kilogram/m0/sync/8` остаётся единственным registered/dialed, а несовместимый
+  с установленной историей `/cbor/1` не меняется;
+- введён `CanonicalSyncEventKeyV2 = (namespace, Event ID)`: namespace `1`
+  относится к active Postcard-v5 Event-ID domain, namespace `2` — к native
+  canonical-CBOR-v1 domain. Даже одинаковые 32 байта теперь являются разными
+  логическими ключами;
+- closed `CanonicalSyncEventCarrierV2` принимает ровно verified legacy bridge
+  или verified native canonical event. Variant выбирает один decoder; sniffing,
+  parse-error fallback, unknown namespace и variant/payload mismatch fail closed;
+- CDDL/schema/vector и независимый Node reference воспроизводят оба typed key и
+  carrier. Focused Rust regression 2/2 и семь связанных boundary contracts с
+  self-tests прошли;
+- accepted-tag readiness прошёл 86/86 вместе с rustfmt и workspace
+  locked/offline strict Clippy в два Cargo job;
+- full v2 inventory/diff/batch/complete frames, typed session checkpoints и
+  Device-signed ticket capability для exact `/cbor/2` остаются pending. Active
+  wire, ticket bytes, network, release/archive/stable EXE/push/tag не менялись.

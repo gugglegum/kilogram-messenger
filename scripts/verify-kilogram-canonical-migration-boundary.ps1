@@ -23,8 +23,8 @@ function Assert-ExactStrings {
 
 function Assert-Manifest {
     param([object]$Manifest)
-    if ([UInt64]$Manifest.schema_version -ne 1 -or [string]$Manifest.milestone -cne 'M1.1.51' -or
-        [string]$Manifest.status -cne 'authenticated-capability-carried-not-active' -or
+    if ([UInt64]$Manifest.schema_version -ne 1 -or [string]$Manifest.milestone -cne 'M1.1.53' -or
+        [string]$Manifest.status -cne 'history-compatible-successor-allocated-not-active' -or
         [string]$Manifest.current_state -cne 'legacy-only' -or [bool]$Manifest.changes_active_wire) {
         throw 'canonical migration header changed'
     }
@@ -33,6 +33,18 @@ function Assert-Manifest {
         [string]$Manifest.candidate_protocol_identifier -cne 'kilogram/m1/sync/cbor/1' -or
         [bool]$Manifest.candidate_identifier_registered) {
         throw 'canonical migration encoding or identifier changed'
+    }
+    if ([string]$Manifest.history_compatible_successor.protocol_identifier -cne
+            'kilogram/m1/sync/cbor/2' -or
+        -not [bool]$Manifest.history_compatible_successor.identifier_allocated -or
+        [string]$Manifest.history_compatible_successor.typed_event_identity -cne 'verified' -or
+        [string]$Manifest.history_compatible_successor.closed_event_carrier -cne 'verified' -or
+        [string]$Manifest.history_compatible_successor.closed_sync_frames -cne 'pending' -or
+        [string]$Manifest.history_compatible_successor.authenticated_ticket_capability -cne
+            'pending' -or
+        [bool]$Manifest.history_compatible_successor.registered -or
+        [bool]$Manifest.history_compatible_successor.dialed) {
+        throw 'history-compatible successor boundary changed'
     }
     if ([string]$Manifest.selection.mechanism -cne 'authenticated-capability-bound-explicit-identifier' -or
         [string]$Manifest.selection.capability_freshness -cne
@@ -76,6 +88,7 @@ function Assert-Manifest {
         'parallel-protocol-identifier-allocation|verified',
         'authenticated-capability-envelope|verified',
         'authenticated-legacy-history-bridge|verified',
+        'history-compatible-typed-event-carrier|verified',
         'history-compatible-canonical-sync-generation|pending',
         'dual-reader-runtime-implementation|pending',
         'independent-crypto-conformance|verified',
@@ -136,8 +149,9 @@ if ($SelfTest) {
 }
 
 Write-Output 'canonical_migration_boundary=verified'
-Write-Output 'migration_status=authenticated-capability-carried-not-active'
+Write-Output 'migration_status=history-compatible-successor-allocated-not-active'
 Write-Output 'candidate_protocol_identifier=kilogram/m1/sync/cbor/1'
+Write-Output 'history_compatible_successor_identifier=kilogram/m1/sync/cbor/2'
 Write-Output 'candidate_identifier_registered=false'
 Write-Output 'format_sniffing=false'
 Write-Output 'parse_error_fallback=false'

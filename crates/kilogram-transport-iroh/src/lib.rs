@@ -15,6 +15,7 @@ use tokio::time::{Instant, sleep, timeout};
 
 pub const ALPN: &[u8] = b"kilogram/m0/sync/8";
 pub const CANONICAL_SYNC_ALPN_V1: &[u8] = b"kilogram/m1/sync/cbor/1";
+pub const CANONICAL_SYNC_ALPN_V2: &[u8] = b"kilogram/m1/sync/cbor/2";
 pub const MAILBOX_ALPN: &[u8] = b"kilogram/m0/blind-mailbox/1";
 pub const MAX_WIRE_MESSAGE_BYTES: usize = 8 * 1024 * 1024;
 pub const WIRE_IO_TIMEOUT: Duration = Duration::from_secs(15);
@@ -31,6 +32,7 @@ const SELECTED_PATH_LOCAL_DOMAIN_TAG_DOMAIN: &[u8] =
 pub enum SyncWireProtocol {
     LegacyPostcardV6,
     CanonicalCborV1,
+    CanonicalCborV2,
 }
 
 impl SyncWireProtocol {
@@ -38,6 +40,7 @@ impl SyncWireProtocol {
         match self {
             Self::LegacyPostcardV6 => ALPN,
             Self::CanonicalCborV1 => CANONICAL_SYNC_ALPN_V1,
+            Self::CanonicalCborV2 => CANONICAL_SYNC_ALPN_V2,
         }
     }
 
@@ -47,6 +50,9 @@ impl SyncWireProtocol {
         }
         if alpn == CANONICAL_SYNC_ALPN_V1 {
             return Ok(Self::CanonicalCborV1);
+        }
+        if alpn == CANONICAL_SYNC_ALPN_V2 {
+            return Ok(Self::CanonicalCborV2);
         }
         bail!("unsupported Kilogram synchronization ALPN")
     }
@@ -481,16 +487,27 @@ mod tests {
             SyncWireProtocol::from_alpn(CANONICAL_SYNC_ALPN_V1)?,
             SyncWireProtocol::CanonicalCborV1
         );
+        assert_eq!(
+            SyncWireProtocol::from_alpn(CANONICAL_SYNC_ALPN_V2)?,
+            SyncWireProtocol::CanonicalCborV2
+        );
         assert_eq!(SyncWireProtocol::LegacyPostcardV6.alpn(), ALPN);
         assert_eq!(
             SyncWireProtocol::CanonicalCborV1.alpn(),
             CANONICAL_SYNC_ALPN_V1
         );
+        assert_eq!(
+            SyncWireProtocol::CanonicalCborV2.alpn(),
+            CANONICAL_SYNC_ALPN_V2
+        );
         assert!(SyncWireProtocol::LegacyPostcardV6.is_active());
         assert!(!SyncWireProtocol::CanonicalCborV1.is_active());
+        assert!(!SyncWireProtocol::CanonicalCborV2.is_active());
         assert_ne!(ALPN, CANONICAL_SYNC_ALPN_V1);
+        assert_ne!(ALPN, CANONICAL_SYNC_ALPN_V2);
+        assert_ne!(CANONICAL_SYNC_ALPN_V1, CANONICAL_SYNC_ALPN_V2);
         assert!(SyncWireProtocol::from_alpn(b"kilogram/m1/sync/cbor").is_err());
-        assert!(SyncWireProtocol::from_alpn(b"kilogram/m1/sync/cbor/2").is_err());
+        assert!(SyncWireProtocol::from_alpn(b"kilogram/m1/sync/cbor/3").is_err());
         Ok(())
     }
 

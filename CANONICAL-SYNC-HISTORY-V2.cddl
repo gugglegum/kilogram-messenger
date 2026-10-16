@@ -1,0 +1,21 @@
+; Kilogram history-compatible canonical sync event identity and carrier, M1.1.53.
+
+profile-version = 1
+id-32 = bytes .size 32
+sync-event-namespace-v2 = 1 / 2
+; 1 = active Postcard v6 Event-ID domain
+; 2 = native deterministic-CBOR v1 Event-ID domain
+
+sync-event-key-v2 = [
+  profile-version,
+  namespace: sync-event-namespace-v2,
+  event-id: id-32
+]
+
+sync-event-carrier-v2 = [
+  profile-version,
+  variant: sync-event-namespace-v2,
+  payload: bytes
+]
+
+kilogram-sync-history-v2 = sync-event-key-v2 / sync-event-carrier-v2

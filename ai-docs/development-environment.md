@@ -3998,3 +3998,23 @@ Hosted follow-up:
   rustfmt and workspace locked/offline strict Clippy with two Cargo jobs. No
   network execution, release build, archive, stable-path executable, push or
   tag belongs to this stage.
+
+## M1.1.53 typed history-compatible sync event carrier (2026-10-16)
+
+- Added `canonical_sync_history_v2` with explicit legacy-Postcard and
+  canonical-CBOR Event-ID namespaces, deterministic typed keys and a closed
+  two-variant carrier. Raw 32-byte equality never collapses the namespaces.
+- Allocated `kilogram/m1/sync/cbor/2` in `SyncWireProtocol`, but kept it out of
+  CLI endpoint registration, dial paths and ticket capability. Both canonical
+  generations remain inactive; Postcard v6 remains the only active sync wire.
+- Independent Node generation exactly matched committed key/carrier vectors.
+  Rust debug/offline regression passed 2/2 with two jobs and BelowNormal
+  priority; variant substitution, unknown namespace, trailing data and raw-ID
+  collision cases fail closed.
+- History/migration/transport/coverage ledgers now distinguish verified typed
+  carrier from pending v2 frames and pending authenticated ticket capability.
+  Related boundary self-tests pass. Accepted-tag readiness passed 86/86 against
+  immutable `M1.0.0`, including rustfmt and workspace locked/offline strict
+  Clippy with two Cargo jobs.
+- No network operation, release build, archive, stable executable replacement,
+  push or tag is part of this stage.

@@ -2294,6 +2294,13 @@ authorized-event bytes. The allocated canonical sync v1 ALPN therefore remains
 unregistered and undialed until a separately identified history-compatible
 generation integrates that bridge.
 
+[`RFC-0179`](docs/RFC-0179-m1153-typed-history-compatible-sync-event-carrier.md)
+allocates that successor as `kilogram/m1/sync/cbor/2` and gives every event a
+typed `(namespace, Event ID)` identity. Its closed carrier verifies either the
+exact historical Postcard bridge or a native canonical event without sniffing
+or fallback. This remains conformance-only: v2 frames and ticket capability
+are incomplete, and no endpoint registers or dials the new ALPN.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

@@ -109,9 +109,9 @@ function Assert-BridgeContract {
     Assert-LowerHex ([string]$Vectors.expected.bridge_cbor_hex) -1 'bridge CBOR'
 
     if ([UInt64]$Compatibility.schema_version -ne 1 -or
-        [string]$Compatibility.milestone -cne 'M1.1.52' -or
+        [string]$Compatibility.milestone -cne 'M1.1.53' -or
         [string]$Compatibility.status -cne
-            'legacy-history-bridge-verified-activation-blocked' -or
+            'typed-history-carrier-verified-frames-pending' -or
         [bool]$Compatibility.changes_active_wire -or
         [string]$Compatibility.active.alpn -cne $legacyAlpn -or
         -not [bool]$Compatibility.active.history_compatible -or
@@ -134,10 +134,16 @@ function Assert-BridgeContract {
         (@($Compatibility.bridge.metadata_bindings) -join ',') -cne
             'conversation-id,active-event-id,author-account-id,author-device-id' -or
         [string]$Compatibility.required_successor.explicit_protocol_identifier -cne
-            'unallocated' -or
+            'kilogram/m1/sync/cbor/2' -or
+        -not [bool]$Compatibility.required_successor.identifier_allocated -or
+        -not [bool]$Compatibility.required_successor.typed_event_key_integrated -or
+        -not [bool]$Compatibility.required_successor.closed_event_carrier_integrated -or
+        [bool]$Compatibility.required_successor.closed_sync_frames_integrated -or
+        [bool]$Compatibility.required_successor.ticket_capability_authenticated -or
         -not [bool]$Compatibility.required_successor.must_integrate_bridge_into_closed_frames -or
         -not [bool]$Compatibility.required_successor.must_authenticate_exact_identifier_in_connection_ticket -or
-        [string]$Compatibility.required_successor.status -cne 'pending') {
+        [string]$Compatibility.required_successor.status -cne
+            'typed-carrier-verified-frames-and-capability-pending') {
         throw 'canonical sync legacy-event bridge or successor contract changed'
     }
 
@@ -155,7 +161,10 @@ function Assert-BridgeContract {
         [bool]$Migration.candidate_identifier_registered) {
         throw 'canonical migration does not block on a history-compatible generation'
     }
-    if ('history-compatible-canonical-sync-generation' -cnotin @($TransportManifest.remaining) -or
+    if ('closed-history-compatible-canonical-sync-frames' -cnotin
+            @($TransportManifest.remaining) -or
+        'authenticated-cbor-v2-ticket-capability' -cnotin
+            @($TransportManifest.remaining) -or
         [string]$TransportManifest.active.alpn -cne $legacyAlpn -or
         [bool]$TransportManifest.candidate.registered -or
         [bool]$TransportManifest.candidate.dialed -or
@@ -314,7 +323,7 @@ Write-Output 'canonical_sync_legacy_event_boundary=verified'
 Write-Output 'exact_active_postcard_bytes=preserved-and-reverified'
 Write-Output 'original_author_private_keys_required=false'
 Write-Output 'canonical_sync_v1_history_compatible=false'
-Write-Output 'history_compatible_successor_identifier=unallocated'
+Write-Output 'history_compatible_successor_identifier=kilogram/m1/sync/cbor/2'
 Write-Output 'active_sync_alpn=kilogram/m0/sync/8'
 Write-Output 'active_runtime_changed=false'
 Write-Output 'network_executed=false'

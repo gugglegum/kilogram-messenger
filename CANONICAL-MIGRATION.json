@@ -1,12 +1,22 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.51",
-  "status": "authenticated-capability-carried-not-active",
+  "milestone": "M1.1.53",
+  "status": "history-compatible-successor-allocated-not-active",
   "changes_active_wire": false,
   "current_encoding": "postcard",
   "candidate_encoding": "kilogram-deterministic-cbor-v1",
   "candidate_protocol_identifier": "kilogram/m1/sync/cbor/1",
   "candidate_identifier_registered": false,
+  "history_compatible_successor": {
+    "protocol_identifier": "kilogram/m1/sync/cbor/2",
+    "identifier_allocated": true,
+    "typed_event_identity": "verified",
+    "closed_event_carrier": "verified",
+    "closed_sync_frames": "pending",
+    "authenticated_ticket_capability": "pending",
+    "registered": false,
+    "dialed": false
+  },
   "current_state": "legacy-only",
   "selection": {
     "mechanism": "authenticated-capability-bound-explicit-identifier",
@@ -143,6 +153,10 @@
     },
     {
       "id": "authenticated-legacy-history-bridge",
+      "status": "verified"
+    },
+    {
+      "id": "history-compatible-typed-event-carrier",
       "status": "verified"
     },
     {

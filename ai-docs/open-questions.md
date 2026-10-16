@@ -437,8 +437,9 @@ sessions, distribution, removal и key epochs и не решены этим пр
   v12 с отдельным Device-signed capability, exact-связанным с authority,
   requester, endpoint, publication epoch и prekey validity. Capability всё ещё
   объявляет только legacy active и canonical candidate с disabled dial.
-  Следующий приоритет — active dual reader и отдельная signed capability
-  activation без fallback после canonical failure. Общая activation требует
+  После M1.1.53 следующий приоритет — closed history-compatible `/cbor/2`
+  frames и typed checkpoint; только затем отдельная signed capability и active
+  dual reader без fallback после canonical failure. Общая activation требует
   explicit identifiers, downgrade
   tests, sustained fuzzing, independent HPKE conformance и fresh multi-device
   field evidence.
@@ -447,9 +448,15 @@ sessions, distribution, removal и key epochs и не решены этим пр
   canonical event нельзя вывести из исторического Postcard event без исходного
   author Device key, а embedded certificate/authority/ratchet artifacts также
   имеют старые signature preimages. Exact-byte authenticated bridge уже
-  verified, но не встроен в closed `kilogram/m1/sync/cbor/1`. Следующий
-  инженерный вопрос — форма нового history-compatible sync generation и его
-  exact ALPN/version; переиспользовать или молча расширять `/cbor/1` нельзя.
+  verified, но не встроен в closed `kilogram/m1/sync/cbor/1`. M1.1.53 решил
+  этот вопрос отдельным `/cbor/2` и typed identity; переиспользовать или молча
+  расширять `/cbor/1` по-прежнему нельзя.
+- M1.1.53 закрыл выбор identity/carrier и выделил exact successor
+  `kilogram/m1/sync/cbor/2`: Event key включает namespace, carrier закрыт на
+  verified legacy bridge и native canonical event. Остаётся определить и
+  проверить полные v2 inventory/diff/batch/complete frames, typed durable
+  checkpoint и способ добавить exact `/cbor/2` в Device-signed ticket
+  capability без преждевременного dial.
 
 ## Инварианты при выборе ответов
 
