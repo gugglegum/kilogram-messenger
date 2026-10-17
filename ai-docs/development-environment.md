@@ -4521,3 +4521,25 @@ Hosted follow-up:
 - Do not mark `observed.harness_compiled_with_libfuzzer`, smoke/sustained run or
   coverage as true until a prepared nightly + cargo-fuzz + ASan/LLVM host has
   actually produced the bounded machine record and coverage output.
+
+## M1.1.74 pinned instrumented fuzz toolchain (2026-10-17)
+
+- Workspace default remains stable Rust. The isolated harness uses installed
+  toolchain `nightly` = rustc `1.101.0-nightly`, commit
+  `5d8fec0669a64607db9ccbf663e7c23125bf4748`, commit date `2026-10-16`, LLVM
+  `23.1.4`, with `llvm-tools-preview`.
+- Installed driver is cargo-fuzz `0.13.2`; `fuzz/Cargo.lock` pins
+  libfuzzer-sys `0.4.13` and is part of the reviewable source contract.
+- Windows runtime files are under Visual Studio 2022 Community MSVC
+  `14.44.35207`: `bin/Hostx64/x64/clang_rt.asan_dynamic-x86_64.dll` and
+  `lib/x64/clang_rt.asan_dynamic_runtime_thunk-x86_64.lib`.
+- Runner discovers both runtime files, verifies exact tool versions and only
+  then temporarily prepends the runtime DLL directory to the child PATH.
+- Instrumented build completed successfully. Output binary was 2,178,560 bytes
+  with SHA-256
+  `1c53c755571bcdaf2399fd82b1c54c81850253815e6e8a6add9041ee60d5b03a`.
+- Generated `fuzz/target` is ignored and retained as a bounded incremental build
+  cache; campaign logs, corpus, artifacts and coverage stay under ignored
+  paths. No release archive or stable executable was produced.
+- This stage proves environment and build reproducibility only. Run evidence,
+  coverage and the 8-hour/1,000,000-execution gate remain separate stages.

@@ -1,12 +1,13 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.73",
-  "status": "coverage-guided-fuzz-harness-verified-campaign-not-run",
+  "milestone": "M1.1.74",
+  "status": "instrumented-fuzz-target-built-smoke-pending",
   "scope": "history-compatible-canonical-sync-v2-strict-decoders",
   "target": "canonical_sync_v2_decoders",
   "engine": {
     "driver": "cargo-fuzz",
     "minimum_driver_version": "0.12.0",
+    "toolchain_contract_manifest": "CANONICAL-SYNC-V2-FUZZ-TOOLCHAIN.json",
     "backend": "libFuzzer",
     "nightly_toolchain_required": true,
     "address_sanitizer_required": true,
@@ -67,7 +68,7 @@
     "machine_readable_record_required": true
   },
   "observed": {
-    "harness_compiled_with_libfuzzer": false,
+    "harness_compiled_with_libfuzzer": true,
     "smoke_campaign_completed": false,
     "sustained_campaign_completed": false,
     "coverage_report_generated": false,

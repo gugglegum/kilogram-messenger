@@ -498,8 +498,9 @@ sessions, distribution, removal и key epochs и не решены этим пр
   surface (20 fixtures / 2863 mutations), но без compiler instrumentation и
   coverage feedback. M1.1.73 добавил стандартный opt-in cargo-fuzz/libFuzzer
   harness, 13-target dispatcher, 20 raw-binary seeds и one-worker campaign
-  contract, но текущий Windows host не имеет nightly/cargo-fuzz/MSVC ASan:
-  instrumented smoke/sustained campaign и coverage report ещё не выполнены.
+  contract. M1.1.74 подготовил exact Windows toolchain/runtime, checked-in
+  dependency lock и реально собрал instrumented target. Smoke/sustained
+  campaign и coverage report ещё не выполнены и не заявлены.
   Открыты sustained coverage-guided fuzzing и fresh field evidence. При будущей active
   integration signed ceremony должна
   находиться внутри authenticated transport context: одна локальная

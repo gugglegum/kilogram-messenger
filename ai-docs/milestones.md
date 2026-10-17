@@ -6796,3 +6796,21 @@ correlation visible, Windows-only field evidence, independent security audit
   следующий отдельный этап — подготовленный instrumented host и фактическая
   sustained campaign, затем fresh hosted/physical-device evidence. Network,
   release build, archive, stable EXE, push и tag не выполнялись.
+
+### M1.1.74 — pinned instrumented fuzz toolchain: принято локально
+
+- установлен отдельный Rust nightly `1.101.0-nightly` commit
+  `5d8fec0669a64607db9ccbf663e7c23125bf4748` с LLVM `23.1.4`; stable toolchain
+  остаётся default для обычной workspace-разработки;
+- установлен cargo-fuzz `0.13.2`, а nested `fuzz/Cargo.lock` фиксирует
+  libfuzzer-sys `0.4.13` и полный dependency closure;
+- установлен и обнаружен Visual Studio MSVC runtime component; runner требует
+  exact runtime DLL и import library и добавляет DLL directory в PATH только
+  на время дочернего процесса;
+- `canonical_sync_v2_decoders` реально собран для
+  `x86_64-pc-windows-msvc`: 2 178 560 bytes, SHA-256
+  `1c53c755571bcdaf2399fd82b1c54c81850253815e6e8a6add9041ee60d5b03a`;
+- preflight exact-проверяет compiler commit/date/LLVM, cargo-fuzz version,
+  runtime files и 20 seed corpus; mismatch fail closed останавливает запуск;
+- instrumented target build не переименован в execution evidence: smoke,
+  sustained campaign, coverage report и transport activation остаются false.

@@ -13,8 +13,10 @@ $ErrorActionPreference = 'Stop'
 
 $workspace = [System.IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $manifestPath = Join-Path $workspace 'CANONICAL-SYNC-V2-FUZZ-CAMPAIGN.json'
+$toolchainManifestPath = Join-Path $workspace 'CANONICAL-SYNC-V2-FUZZ-TOOLCHAIN.json'
 $preparePath = Join-Path $PSScriptRoot 'prepare-kilogram-canonical-sync-v2-fuzz-corpus.ps1'
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+$toolchainManifest = Get-Content -LiteralPath $toolchainManifestPath -Raw | ConvertFrom-Json
 $isWindowsHost = $env:OS -ceq 'Windows_NT'
 $target = [string]$manifest.target
 $corpusDirectory = Join-Path $workspace ".tmp\fuzz\corpus\$target"
@@ -44,31 +46,98 @@ if ($rustupExitCode -ne 0) {
 $toolchainInstalled = @($installedToolchains | Where-Object {
     $_ -match ('^' + [regex]::Escape($NightlyToolchain) + '(?:-|\s)')
 }).Count -gt 0
+$rustcRelease = ''
+$rustcCommitHash = ''
+$rustcCommitDate = ''
+$llvmVersion = ''
+if ($toolchainInstalled) {
+    $rustcDetails = @(& rustc "+$NightlyToolchain" -vV 2>&1 | ForEach-Object { [string]$_ })
+    if ($LASTEXITCODE -ne 0) {
+        throw "rustc +$NightlyToolchain -vV failed with exit code $LASTEXITCODE"
+    }
+    foreach ($line in $rustcDetails) {
+        if ($line -match '^release:\s*(.+)$') { $rustcRelease = $Matches[1].Trim() }
+        if ($line -match '^commit-hash:\s*(.+)$') { $rustcCommitHash = $Matches[1].Trim() }
+        if ($line -match '^commit-date:\s*(.+)$') { $rustcCommitDate = $Matches[1].Trim() }
+        if ($line -match '^LLVM version:\s*(.+)$') { $llvmVersion = $Matches[1].Trim() }
+    }
+}
 $cargoFuzz = Get-Command cargo-fuzz -ErrorAction SilentlyContinue
 $cargoFuzzInstalled = $null -ne $cargoFuzz
-$asanInstalled = $false
-if ($isWindowsHost) {
-    $asanInstalled = Test-Path -Path `
-        'C:\Program Files\Microsoft Visual Studio\*\*\VC\Tools\Llvm\x64\lib\clang\*\lib\windows\clang_rt.asan_dynamic-x86_64.dll'
+$cargoFuzzVersion = ''
+if ($cargoFuzzInstalled) {
+    $cargoFuzzVersionOutput = [string](& $cargoFuzz.Source --version 2>&1)
+    if ($LASTEXITCODE -ne 0 -or $cargoFuzzVersionOutput -cnotmatch '^cargo-fuzz\s+(.+)$') {
+        throw 'Could not resolve the installed cargo-fuzz version.'
+    }
+    $cargoFuzzVersion = $Matches[1].Trim()
 }
+$asanInstalled = $false
+$asanRuntimePath = $null
+$asanImportLibraryPath = $null
+if ($isWindowsHost) {
+    $asanRuntimeCandidates = @(
+        Get-ChildItem -Path @(
+            'C:\Program Files\Microsoft Visual Studio\*\*\VC\Tools\MSVC\*\bin\Hostx64\x64\clang_rt.asan_dynamic-x86_64.dll',
+            'C:\Program Files\Microsoft Visual Studio\*\*\VC\Tools\MSVC\*\bin\Hostx86\x64\clang_rt.asan_dynamic-x86_64.dll',
+            'C:\Program Files (x86)\Microsoft Visual Studio\*\*\VC\Tools\MSVC\*\bin\Hostx64\x64\clang_rt.asan_dynamic-x86_64.dll',
+            'C:\Program Files (x86)\Microsoft Visual Studio\*\*\VC\Tools\MSVC\*\bin\Hostx86\x64\clang_rt.asan_dynamic-x86_64.dll'
+        ) -File -ErrorAction SilentlyContinue
+    )
+    $asanImportLibraryCandidates = @(
+        Get-ChildItem -Path @(
+            'C:\Program Files\Microsoft Visual Studio\*\*\VC\Tools\MSVC\*\lib\x64\clang_rt.asan_dynamic_runtime_thunk-x86_64.lib',
+            'C:\Program Files (x86)\Microsoft Visual Studio\*\*\VC\Tools\MSVC\*\lib\x64\clang_rt.asan_dynamic_runtime_thunk-x86_64.lib'
+        ) -File -ErrorAction SilentlyContinue
+    )
+    if ($asanRuntimeCandidates.Count -gt 0 -and $asanImportLibraryCandidates.Count -gt 0) {
+        $asanRuntimePath = [string]$asanRuntimeCandidates[0].FullName
+        $asanImportLibraryPath = [string]$asanImportLibraryCandidates[0].FullName
+        $asanInstalled = $true
+    }
+}
+
+$toolchainContractSatisfied = (
+    $toolchainInstalled -and
+    $rustcRelease -ceq [string]$toolchainManifest.toolchain.rustc_release -and
+    $rustcCommitHash -ceq [string]$toolchainManifest.toolchain.rustc_commit_hash -and
+    $rustcCommitDate -ceq [string]$toolchainManifest.toolchain.rustc_commit_date -and
+    $llvmVersion -ceq [string]$toolchainManifest.toolchain.llvm_version
+)
+$cargoFuzzContractSatisfied = (
+    $cargoFuzzInstalled -and
+    $cargoFuzzVersion -ceq [string]$toolchainManifest.toolchain.cargo_fuzz_version
+)
 
 Write-Output "fuzz_toolchain_installed=$($toolchainInstalled.ToString().ToLowerInvariant())"
 Write-Output "cargo_fuzz_installed=$($cargoFuzzInstalled.ToString().ToLowerInvariant())"
 Write-Output "windows_msvc_asan_detected=$($asanInstalled.ToString().ToLowerInvariant())"
-if ($Mode -ceq 'Preflight') {
-    Write-Output 'canonical_sync_v2_fuzz_preflight=complete'
-    Write-Output 'coverage_guided_campaign_executed=false'
-    exit 0
-}
-
+Write-Output "fuzz_rustc_release=$rustcRelease"
+Write-Output "fuzz_rustc_commit_hash=$rustcCommitHash"
+Write-Output "fuzz_rustc_commit_date=$rustcCommitDate"
+Write-Output "fuzz_llvm_version=$llvmVersion"
+Write-Output "cargo_fuzz_version=$cargoFuzzVersion"
+Write-Output "fuzz_toolchain_contract_satisfied=$($toolchainContractSatisfied.ToString().ToLowerInvariant())"
+Write-Output "cargo_fuzz_contract_satisfied=$($cargoFuzzContractSatisfied.ToString().ToLowerInvariant())"
 if (-not $toolchainInstalled) {
     throw "Required Rust toolchain '$NightlyToolchain' is not installed."
 }
 if (-not $cargoFuzzInstalled) {
     throw 'cargo-fuzz is not installed.'
 }
+if (-not $toolchainContractSatisfied) {
+    throw 'The installed Rust nightly does not satisfy the pinned fuzz toolchain contract.'
+}
+if (-not $cargoFuzzContractSatisfied) {
+    throw 'The installed cargo-fuzz does not satisfy the pinned driver contract.'
+}
 if ($isWindowsHost -and -not $asanInstalled) {
     throw 'MSVC AddressSanitizer is not installed; use a prepared Windows host or Linux.'
+}
+if ($Mode -ceq 'Preflight') {
+    Write-Output 'canonical_sync_v2_fuzz_preflight=complete'
+    Write-Output 'coverage_guided_campaign_executed=false'
+    exit 0
 }
 if ($Mode -ceq 'Sustained' -and -not $AcknowledgeSustainedResourceUse) {
     throw 'Sustained mode requires -AcknowledgeSustainedResourceUse.'
@@ -110,6 +179,7 @@ $recordPath = Join-Path $evidenceDirectory "$runId-$target.json"
 $started = [DateTime]::UtcNow
 $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 $previousJobs = $env:CARGO_BUILD_JOBS
+$previousPath = $env:Path
 $previousPriority = $null
 $currentProcess = [System.Diagnostics.Process]::GetCurrentProcess()
 try {
@@ -122,6 +192,9 @@ catch {
 
 try {
     $env:CARGO_BUILD_JOBS = '1'
+    if ($isWindowsHost) {
+        $env:Path = "$(Split-Path -Parent $asanRuntimePath);$previousPath"
+    }
     Push-Location $workspace
     try {
         $cargoArguments = @(
@@ -141,6 +214,7 @@ try {
 finally {
     $stopwatch.Stop()
     $env:CARGO_BUILD_JOBS = $previousJobs
+    $env:Path = $previousPath
     if ($null -ne $previousPriority) {
         try { $currentProcess.PriorityClass = $previousPriority } catch { }
     }
@@ -150,6 +224,9 @@ $coverageGenerated = $false
 if ($runExitCode -eq 0 -and $GenerateCoverage) {
     Push-Location $workspace
     try {
+        if ($isWindowsHost) {
+            $env:Path = "$(Split-Path -Parent $asanRuntimePath);$previousPath"
+        }
         & cargo "+$NightlyToolchain" fuzz coverage $target $corpusDirectory 2>&1 |
             Tee-Object -FilePath (Join-Path $evidenceDirectory "$runId-$target-coverage.log")
         if ($LASTEXITCODE -ne 0) {
@@ -157,6 +234,7 @@ if ($runExitCode -eq 0 -and $GenerateCoverage) {
         }
     }
     finally {
+        $env:Path = $previousPath
         Pop-Location
     }
     $coverageProfile = Join-Path $workspace "fuzz\coverage\$target\coverage.profdata"
@@ -202,6 +280,14 @@ $record = [ordered]@{
     source_worktree_clean_after = $sourceWorktreeCleanAfter
     target = $target
     mode = $Mode.ToLowerInvariant()
+    rustc_release = $rustcRelease
+    rustc_commit_hash = $rustcCommitHash
+    rustc_commit_date = $rustcCommitDate
+    llvm_version = $llvmVersion
+    cargo_fuzz_version = $cargoFuzzVersion
+    sanitizer = 'address'
+    asan_runtime_file = if ($null -eq $asanRuntimePath) { $null } else { [System.IO.Path]::GetFileName($asanRuntimePath) }
+    asan_import_library_file = if ($null -eq $asanImportLibraryPath) { $null } else { [System.IO.Path]::GetFileName($asanImportLibraryPath) }
     started_at_utc = $started.ToString('o')
     elapsed_seconds = $elapsedSeconds
     requested_seconds = $durationSeconds

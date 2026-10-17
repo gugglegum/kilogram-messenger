@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.74",
+  "status": "pinned-instrumented-fuzz-toolchain-verified",
+  "campaign_manifest": "CANONICAL-SYNC-V2-FUZZ-CAMPAIGN.json",
+  "target": "canonical_sync_v2_decoders",
+  "verified_source_revision": "6c3e0c7280c023a34146d8268e73679539b86adb",
+  "host": {
+    "os": "windows",
+    "target_triple": "x86_64-pc-windows-msvc"
+  },
+  "toolchain": {
+    "rustup_name": "nightly",
+    "rustc_release": "1.101.0-nightly",
+    "rustc_commit_hash": "5d8fec0669a64607db9ccbf663e7c23125bf4748",
+    "rustc_commit_date": "2026-10-16",
+    "llvm_version": "23.1.4",
+    "cargo_fuzz_version": "0.13.2",
+    "libfuzzer_sys_version": "0.4.13",
+    "dependency_lock": "fuzz/Cargo.lock"
+  },
+  "windows_address_sanitizer": {
+    "component_id": "Microsoft.VisualStudio.Component.VC.ASAN",
+    "runtime_dll": "clang_rt.asan_dynamic-x86_64.dll",
+    "runtime_import_library": "clang_rt.asan_dynamic_runtime_thunk-x86_64.lib",
+    "runtime_path_discovery": "visual-studio-msvc-tools-wildcard",
+    "runtime_path_injected_for_child_process": true,
+    "detected": true
+  },
+  "observed": {
+    "locked_dependencies_resolved": true,
+    "instrumented_target_built": true,
+    "build_exit_code": 0,
+    "binary_bytes": 2178560,
+    "binary_sha256": "1c53c755571bcdaf2399fd82b1c54c81850253815e6e8a6add9041ee60d5b03a",
+    "smoke_campaign_completed": false,
+    "sustained_campaign_completed": false,
+    "coverage_report_generated": false
+  },
+  "activation": {
+    "active_transport_authorized": false,
+    "candidate_identifier_registered": false,
+    "candidate_identifier_dialed": false,
+    "active_runtime_changed": false
+  },
+  "next_gate": "instrumented-smoke-campaign"
+}

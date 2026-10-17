@@ -1133,6 +1133,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   strict decoders, materialized raw-binary seed corpus и bounded one-worker
   campaign contract, не выдавая отсутствующую instrumented campaign за
   пройденную и не активируя `/cbor/2`.
+- [`../docs/RFC-0201-m1174-pinned-fuzz-toolchain.md`](../docs/RFC-0201-m1174-pinned-fuzz-toolchain.md) —
+  M1.1.74 закрепляет exact nightly compiler, cargo-fuzz, libFuzzer dependency
+  lock и Windows runtime component; instrumented target реально собран, но
+  smoke/sustained execution и coverage пока намеренно не заявлены.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
