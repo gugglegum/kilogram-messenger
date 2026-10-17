@@ -4593,3 +4593,9 @@ Hosted follow-up:
   as the successful postcondition while preserving failure for any path that
   still exists. Two consecutive reset/materialization runs and the boundary
   self-test passed.
+- Process inspection then proved that an earlier detached sustained launch had
+  survived its command host, so two runners were writing the same ignored
+  corpus and artifact paths. Both exact process trees were stopped and that
+  overlapping evidence was rejected. The runner now acquires an exclusive
+  workspace-local file handle before any corpus reset and releases it in a
+  `finally` block; a second runner fails before changing campaign state.

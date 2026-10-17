@@ -22,6 +22,24 @@ $target = [string]$manifest.target
 $corpusDirectory = Join-Path $workspace ".tmp\fuzz\corpus\$target"
 $artifactDirectory = Join-Path $workspace ".tmp\fuzz\artifacts\$target"
 $evidenceDirectory = Join-Path $workspace '.tmp\fuzz\evidence'
+$campaignLockDirectory = Join-Path $workspace '.tmp\fuzz'
+$campaignLockPath = Join-Path $campaignLockDirectory 'canonical_sync_v2_decoders.campaign.lock'
+$campaignLockStream = $null
+[System.IO.Directory]::CreateDirectory($campaignLockDirectory) | Out-Null
+try {
+    $campaignLockStream = [System.IO.File]::Open(
+        $campaignLockPath,
+        [System.IO.FileMode]::OpenOrCreate,
+        [System.IO.FileAccess]::ReadWrite,
+        [System.IO.FileShare]::None
+    )
+}
+catch [System.IO.IOException] {
+    throw 'Another canonical sync v2 campaign is already active.'
+}
+Write-Output 'campaign_lock_acquired=true'
+
+try {
 
 $seedOutput = @(& powershell -NoProfile -ExecutionPolicy Bypass `
     -File $preparePath -OutputDirectory $corpusDirectory -ResetOutputDirectory 2>&1)
@@ -137,7 +155,7 @@ if ($isWindowsHost -and -not $asanInstalled) {
 if ($Mode -ceq 'Preflight') {
     Write-Output 'canonical_sync_v2_fuzz_preflight=complete'
     Write-Output 'coverage_guided_campaign_executed=false'
-    exit 0
+    return
 }
 if ($Mode -ceq 'Sustained' -and -not $AcknowledgeSustainedResourceUse) {
     throw 'Sustained mode requires -AcknowledgeSustainedResourceUse.'
@@ -350,4 +368,10 @@ Write-Output "fuzz_executions=$executions"
 Write-Output "fuzz_elapsed_seconds=$elapsedSeconds"
 Write-Output "coverage_generated=$($coverageGenerated.ToString().ToLowerInvariant())"
 Write-Output "sustained_gate_satisfied=$($sustainedSatisfied.ToString().ToLowerInvariant())"
+}
+finally {
+    if ($null -ne $campaignLockStream) {
+        $campaignLockStream.Dispose()
+    }
+}
 
