@@ -4582,3 +4582,8 @@ Hosted follow-up:
 - Accepted-tag readiness passed 106/106 against immutable `M1.0.0`; rustfmt and
   workspace all-target/all-feature locked/offline Clippy with `-D warnings`
   passed.
+- The first sustained-mode launch exited before workload start because the
+  seed preparer still pinned the historical M1.1.74 campaign state. The
+  preparer now accepts the exact M1.1.75 smoke observation while still
+  rejecting claimed sustained completion or activation. Verify-only corpus,
+  full preflight, and the harness boundary normal/self-test passed afterward.

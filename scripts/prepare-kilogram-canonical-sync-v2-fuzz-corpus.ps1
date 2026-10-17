@@ -89,15 +89,18 @@ if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
     throw "Fuzz campaign manifest is missing: $manifestPath"
 }
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
-if ([string]$manifest.milestone -cne 'M1.1.74' -or
-    [string]$manifest.status -cne 'instrumented-fuzz-target-built-smoke-pending' -or
+if ([string]$manifest.milestone -cne 'M1.1.75' -or
+    [string]$manifest.status -cne 'instrumented-smoke-and-coverage-verified-sustained-pending' -or
     [string]$manifest.target -cne 'canonical_sync_v2_decoders' -or
     [int]$manifest.selector.prefix_bytes -ne 1 -or
     [int]$manifest.selector.target_count -ne 13 -or
     [int]$manifest.seed_count -ne 20 -or
     -not [bool]$manifest.observed.harness_compiled_with_libfuzzer -or
-    [bool]$manifest.observed.smoke_campaign_completed -or
+    -not [bool]$manifest.observed.smoke_campaign_completed -or
     [bool]$manifest.observed.sustained_campaign_completed -or
+    -not [bool]$manifest.observed.coverage_report_generated -or
+    [UInt64]$manifest.observed.executions -ne 5697050 -or
+    [UInt64]$manifest.observed.wall_clock_seconds -ne 301 -or
     [bool]$manifest.activation.active_transport_authorized) {
     throw 'Fuzz campaign manifest is inconsistent or prematurely activated.'
 }
