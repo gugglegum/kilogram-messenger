@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.71",
-  "status": "dormant-deterministic-rollback-drill-verified-not-active",
+  "milestone": "M1.1.72",
+  "status": "canonical-sync-v2-bounded-mutation-corpus-verified-not-active",
   "changes_active_wire": false,
   "active": {
     "encoding": "postcard-v6",
@@ -57,10 +57,11 @@
     "dormant_mixed_version_and_downgrade_matrix_integrated": true,
     "dormant_dual_reader_runtime_coordinator_integrated": true,
     "dormant_deterministic_rollback_drill_integrated": true,
+    "bounded_sync_v2_decoder_mutation_corpus_integrated": true,
     "must_integrate_bridge_into_closed_frames": true,
     "must_authenticate_exact_identifier_in_connection_ticket": true,
     "must_preserve_no-sniffing-and-no-parse-fallback": true,
-    "status": "dormant-deterministic-rollback-drill-verified-not-active"
+    "status": "canonical-sync-v2-bounded-mutation-corpus-verified-not-active"
   },
   "forbidden": [
     "resign-historical-event-with-migration-key",

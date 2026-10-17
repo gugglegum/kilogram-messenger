@@ -6738,3 +6738,31 @@ correlation visible, Windows-only field evidence, independent security audit
 - network/release/archive/stable EXE/push/tag не выполнялись. До отдельного
   activation решения остаются sustained coverage-guided fuzzing и fresh
   hosted/physical-device evidence.
+
+### M1.1.72 — bounded canonical sync v2 decoder mutations: принято локально
+
+- добавлен отдельный manifest `CANONICAL-SYNC-V2-DECODER-MUTATIONS.json` с 20
+  exact fixtures и 2863 детерминированными mutations для typed history keys,
+  обоих carrier variants, inventory/diff/batch/terminal frames, client/server
+  wire frames и обоих signed checkpoint domains;
+- responder checkpoint получил собственный independently checked golden vector:
+  exact content, signing preimage, Ed25519 signature, signed CBOR и BLAKE3 ID
+  воспроизводятся из fixed test seed;
+- mutation policy различает structural-only unsigned semantic objects и
+  authenticated signed/carrier objects. Truncation, trailing data,
+  non-minimal version, indefinite array, reserved head и oversized byte string
+  fail closed; authenticated low-bit flips обязаны отвергаться;
+- focused regression прошёл 2863/2863 mutation cases; dedicated boundary и
+  затронутые aggregate boundaries прошли normal и negative self-test режимы;
+- полный `kilogram-protocol` offline/debug regression вне Windows sandbox
+  прошёл 157 tests при 15 explicit generators ignored: library 155/155,
+  исторический corpus 1/1 за 2607.50s и новый corpus 1/1 за 23.71s;
+- 103 root JSON parsed, readiness inventory exact-связан со 104 boundary
+  scripts;
+- rustfmt, workspace locked/offline strict Clippy с `-D warnings` и
+  accepted-tag readiness 104/104 против immutable `M1.0.0` прошли;
+- corpus явно сообщает `coverage_guided=false` и
+  `compiler_instrumentation=false`: он усиливает bounded CI regression, но не
+  закрывает sustained coverage-guided fuzzing gate;
+- active Postcard v6 и `/cbor/2` transport activation не менялись. Network,
+  release build, archive, stable EXE, push и tag не выполнялись.

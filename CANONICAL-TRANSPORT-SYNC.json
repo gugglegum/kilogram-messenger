@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.71",
-  "status": "dormant-deterministic-rollback-drill-verified-not-active",
+  "milestone": "M1.1.72",
+  "status": "canonical-sync-v2-bounded-mutation-corpus-verified-not-active",
   "surface": "transport-sync",
   "changes_active_wire": false,
   "active": {
@@ -43,6 +43,7 @@
     "dormant_mixed_version_and_downgrade_matrix": true,
     "dormant_dual_reader_runtime_coordinator": true,
     "dormant_deterministic_rollback_drill": true,
+    "bounded_sync_v2_decoder_mutation_corpus": true,
     "registered": false,
     "dialed": false,
     "format_sniffing": false,

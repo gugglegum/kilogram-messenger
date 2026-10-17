@@ -494,7 +494,10 @@ sessions, distribution, removal и key epochs и не решены этим пр
   matrix с exact durable client/responder action, но не выдал transport permit.
   M1.1.71 добавил restart-stable rollback record и fail closed запрет rollback
   после selected/progressed canonical session. Transport всё ещё не активирован.
-  Открыты sustained fuzzing и fresh field evidence. При будущей active
+  M1.1.72 добавил bounded deterministic corpus для полного sync v2 decoder
+  surface (20 fixtures / 2863 mutations), но без compiler instrumentation и
+  coverage feedback. Открыты sustained coverage-guided fuzzing и fresh field
+  evidence. При будущей active
   integration signed ceremony должна
   находиться внутри authenticated transport context: одна локальная
   no-selection row не является защитой от pre-offer stripping.

@@ -1123,6 +1123,11 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.1.71 добавляет строгую persisted snapshot/record модель и доказывает
   детерминированный one-step rollback после restart, запрещая automatic
   error fallback и rollback после selected либо progressed canonical session.
+- [`../docs/RFC-0199-m1172-canonical-sync-v2-decoder-mutations.md`](../docs/RFC-0199-m1172-canonical-sync-v2-decoder-mutations.md) —
+  M1.1.72 закрывает bounded deterministic mutation regression полного
+  history-compatible sync v2 decoder surface: 20 exact fixtures и 2863
+  structural/authenticated mutations без network, randomness или ложной
+  декларации coverage-guided fuzzing.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

@@ -4461,3 +4461,35 @@ Hosted follow-up:
   against immutable `M1.0.0` passed.
 - No network operation, release build, archive, stable executable, push or tag
   was produced. Canonical `/cbor/2` remains unregistered and undialed.
+
+## M1.1.72 bounded canonical sync v2 decoder mutations (2026-10-17)
+
+- New focused test:
+  `crates/kilogram-protocol/tests/canonical_sync_v2_decoder_mutations.rs`.
+  Run it through `scripts/invoke-cargo-friendly.ps1` with `CargoJobs 2`, locked
+  dependencies, offline debug profile and below-normal process priority.
+- The deterministic corpus contains 20 exact fixtures and 2863 mutations. It
+  uses no network or randomness and is bounded by an 8 MiB fixture limit, 128
+  mutation grid positions and 4000 total cases.
+- The responder checkpoint vector is regenerated in the test from a fixed
+  Ed25519 seed and exact-checked against content, preimage, signature, signed
+  CBOR and checkpoint ID stored in
+  `CANONICAL-SYNC-RESPONDER-SESSION-V2-VECTORS.json`.
+- Dedicated verifier:
+  `scripts/verify-kilogram-canonical-sync-v2-decoder-mutations-boundary.ps1`.
+  Its self-test rejects a false coverage claim, count/policy drift, signature
+  drift and premature transport activation.
+- Full `kilogram-protocol` locked/offline debug regression passed outside the
+  Windows sandbox: library 155 passed / 15 explicit generators ignored, the
+  historical 31,851-case corpus passed in 2607.50 seconds, and the new
+  2,863-case sync-v2 corpus passed in 23.71 seconds. The initial sandboxed run
+  produced only the established `os error 5` temp-directory failures; every
+  one of those tests passed unchanged outside the sandbox.
+- All 103 root JSON files parse. The closed readiness inventory and actual
+  boundary script set both contain exactly 104 entries.
+- `cargo fmt --all -- --check`, workspace all-target/all-feature locked/offline
+  Clippy with `-D warnings`, and accepted-tag readiness 104/104 against the
+  immutable `M1.0.0` tag all pass.
+- This is deterministic regression evidence only. `cargo-fuzz`, nightly
+  instrumentation and sustained coverage-guided execution were not available
+  or claimed; that activation gate remains pending.
