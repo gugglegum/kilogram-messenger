@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.73",
+  "status": "coverage-guided-fuzz-harness-verified-campaign-not-run",
+  "scope": "history-compatible-canonical-sync-v2-strict-decoders",
+  "target": "canonical_sync_v2_decoders",
+  "engine": {
+    "driver": "cargo-fuzz",
+    "minimum_driver_version": "0.12.0",
+    "backend": "libFuzzer",
+    "nightly_toolchain_required": true,
+    "address_sanitizer_required": true,
+    "coverage_feedback_required": true
+  },
+  "selector": {
+    "prefix_bytes": 1,
+    "target_count": 13,
+    "mapping": [
+      "event-key",
+      "event-carrier",
+      "inventory",
+      "event-batch",
+      "diff",
+      "complete",
+      "pause",
+      "paused",
+      "rejected",
+      "client-frame",
+      "server-frame",
+      "session-checkpoint",
+      "responder-checkpoint"
+    ]
+  },
+  "seed_count": 20,
+  "seeds": [
+    { "id": "legacy-event-key-v2", "selector": 0, "payload_bytes": 37, "input_bytes": 38, "parts": [{ "document": "CANONICAL-SYNC-HISTORY-V2-VECTORS.json", "pointer": "/expected/legacy_key_cbor_hex" }] },
+    { "id": "canonical-event-key-v2", "selector": 0, "payload_bytes": 37, "input_bytes": 38, "parts": [{ "document": "CANONICAL-SYNC-HISTORY-V2-VECTORS.json", "pointer": "/expected/canonical_key_cbor_hex" }] },
+    { "id": "legacy-event-carrier-v2", "selector": 1, "payload_bytes": 610, "input_bytes": 611, "parts": [{ "document": "CANONICAL-SYNC-HISTORY-V2-VECTORS.json", "pointer": "/expected/legacy_carrier_cbor_hex" }] },
+    { "id": "canonical-event-carrier-v2", "selector": 1, "payload_bytes": 1252, "input_bytes": 1253, "parts": [{ "document": "CANONICAL-SYNC-HISTORY-V2-VECTORS.json", "pointer": "/expected/canonical_carrier_cbor_hex" }] },
+    { "id": "signed-sync-inventory-v2", "selector": 2, "payload_bytes": 212, "input_bytes": 213, "parts": [{ "document": "CANONICAL-SYNC-V2-VECTORS.json", "pointer": "/expected/inventory/signed_cbor_hex" }] },
+    { "id": "sync-event-batch-v2", "selector": 3, "payload_bytes": 650, "input_bytes": 651, "parts": [{ "document": "CANONICAL-SYNC-V2-VECTORS.json", "pointer": "/expected/event_batch/prefix_hex" }, { "document": "CANONICAL-SYNC-HISTORY-V2-VECTORS.json", "pointer": "/expected/legacy_carrier_cbor_hex" }] },
+    { "id": "signed-sync-diff-v2", "selector": 4, "payload_bytes": 214, "input_bytes": 215, "parts": [{ "document": "CANONICAL-SYNC-V2-VECTORS.json", "pointer": "/expected/diff/signed_cbor_hex" }] },
+    { "id": "sync-complete-v2", "selector": 5, "payload_bytes": 77, "input_bytes": 78, "parts": [{ "document": "CANONICAL-SYNC-V2-VECTORS.json", "pointer": "/expected/complete/cbor_hex" }] },
+    { "id": "sync-pause-v2", "selector": 6, "payload_bytes": 36, "input_bytes": 37, "parts": [{ "document": "CANONICAL-SYNC-V2-VECTORS.json", "pointer": "/expected/pause/cbor_hex" }] },
+    { "id": "sync-paused-v2", "selector": 7, "payload_bytes": 36, "input_bytes": 37, "parts": [{ "document": "CANONICAL-SYNC-V2-VECTORS.json", "pointer": "/expected/paused/cbor_hex" }] },
+    { "id": "sync-rejected-v2", "selector": 8, "payload_bytes": 37, "input_bytes": 38, "parts": [{ "document": "CANONICAL-SYNC-V2-VECTORS.json", "pointer": "/expected/rejected/cbor_hex" }] },
+    { "id": "sync-client-inventory-frame-v2", "selector": 9, "payload_bytes": 217, "input_bytes": 218, "parts": [{ "document": "CANONICAL-SYNC-V2-VECTORS.json", "pointer": "/expected/client_frames/inventory_cbor_hex" }] },
+    { "id": "sync-client-events-frame-v2", "selector": 9, "payload_bytes": 656, "input_bytes": 657, "parts": [{ "document": "CANONICAL-SYNC-V2-VECTORS.json", "pointer": "/expected/client_frames/events/prefix_hex" }, { "document": "CANONICAL-SYNC-V2-VECTORS.json", "pointer": "/expected/event_batch/prefix_hex" }, { "document": "CANONICAL-SYNC-HISTORY-V2-VECTORS.json", "pointer": "/expected/legacy_carrier_cbor_hex" }] },
+    { "id": "sync-client-pause-frame-v2", "selector": 9, "payload_bytes": 41, "input_bytes": 42, "parts": [{ "document": "CANONICAL-SYNC-V2-VECTORS.json", "pointer": "/expected/client_frames/pause_cbor_hex" }] },
+    { "id": "sync-server-diff-frame-v2", "selector": 10, "payload_bytes": 219, "input_bytes": 220, "parts": [{ "document": "CANONICAL-SYNC-V2-VECTORS.json", "pointer": "/expected/server_frames/diff_cbor_hex" }] },
+    { "id": "sync-server-complete-frame-v2", "selector": 10, "payload_bytes": 82, "input_bytes": 83, "parts": [{ "document": "CANONICAL-SYNC-V2-VECTORS.json", "pointer": "/expected/server_frames/complete_cbor_hex" }] },
+    { "id": "sync-server-rejected-frame-v2", "selector": 10, "payload_bytes": 42, "input_bytes": 43, "parts": [{ "document": "CANONICAL-SYNC-V2-VECTORS.json", "pointer": "/expected/server_frames/rejected_cbor_hex" }] },
+    { "id": "sync-server-paused-frame-v2", "selector": 10, "payload_bytes": 41, "input_bytes": 42, "parts": [{ "document": "CANONICAL-SYNC-V2-VECTORS.json", "pointer": "/expected/server_frames/paused_cbor_hex" }] },
+    { "id": "signed-sync-session-checkpoint-v2", "selector": 11, "payload_bytes": 312, "input_bytes": 313, "parts": [{ "document": "CANONICAL-SYNC-SESSION-V2-VECTORS.json", "pointer": "/expected/checkpoints/3/signed_cbor_hex" }] },
+    { "id": "signed-sync-responder-checkpoint-v2", "selector": 12, "payload_bytes": 238, "input_bytes": 239, "parts": [{ "document": "CANONICAL-SYNC-RESPONDER-SESSION-V2-VECTORS.json", "pointer": "/expected/signed_cbor_hex" }] }
+  ],
+  "campaign_contract": {
+    "minimum_wall_clock_seconds": 28800,
+    "minimum_executions": 1000000,
+    "workers": 1,
+    "jobs": 1,
+    "maximum_input_bytes": 8388609,
+    "per_input_timeout_seconds": 10,
+    "crashes_allowed": 0,
+    "clean_committed_source_required": true,
+    "coverage_report_required": true,
+    "machine_readable_record_required": true
+  },
+  "observed": {
+    "harness_compiled_with_libfuzzer": false,
+    "smoke_campaign_completed": false,
+    "sustained_campaign_completed": false,
+    "coverage_report_generated": false,
+    "executions": 0,
+    "wall_clock_seconds": 0
+  },
+  "activation": {
+    "active_transport_authorized": false,
+    "candidate_identifier_registered": false,
+    "candidate_identifier_dialed": false,
+    "active_runtime_changed": false
+  },
+  "remaining_m11_gates": [
+    "execute-sustained-coverage-guided-fuzzing",
+    "fresh-hosted-and-field-evidence"
+  ]
+}

@@ -7,6 +7,10 @@ rust-version.workspace = true
 license.workspace = true
 publish = false
 
+[features]
+default = []
+decoder-fuzzing = []
+
 [dependencies]
 base64.workspace = true
 blake3.workspace = true

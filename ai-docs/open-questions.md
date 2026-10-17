@@ -496,8 +496,11 @@ sessions, distribution, removal и key epochs и не решены этим пр
   после selected/progressed canonical session. Transport всё ещё не активирован.
   M1.1.72 добавил bounded deterministic corpus для полного sync v2 decoder
   surface (20 fixtures / 2863 mutations), но без compiler instrumentation и
-  coverage feedback. Открыты sustained coverage-guided fuzzing и fresh field
-  evidence. При будущей active
+  coverage feedback. M1.1.73 добавил стандартный opt-in cargo-fuzz/libFuzzer
+  harness, 13-target dispatcher, 20 raw-binary seeds и one-worker campaign
+  contract, но текущий Windows host не имеет nightly/cargo-fuzz/MSVC ASan:
+  instrumented smoke/sustained campaign и coverage report ещё не выполнены.
+  Открыты sustained coverage-guided fuzzing и fresh field evidence. При будущей active
   integration signed ceremony должна
   находиться внутри authenticated transport context: одна локальная
   no-selection row не является защитой от pre-offer stripping.

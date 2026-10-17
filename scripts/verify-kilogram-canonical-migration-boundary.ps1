@@ -23,8 +23,8 @@ function Assert-ExactStrings {
 
 function Assert-Manifest {
     param([object]$Manifest)
-    if ([UInt64]$Manifest.schema_version -ne 1 -or [string]$Manifest.milestone -cne 'M1.1.72' -or
-        [string]$Manifest.status -cne 'canonical-sync-v2-bounded-mutation-corpus-verified-not-active' -or
+    if ([UInt64]$Manifest.schema_version -ne 1 -or [string]$Manifest.milestone -cne 'M1.1.73' -or
+        [string]$Manifest.status -cne 'canonical-sync-v2-coverage-fuzz-harness-verified-campaign-not-run' -or
         [string]$Manifest.current_state -cne 'legacy-only' -or [bool]$Manifest.changes_active_wire) {
         throw 'canonical migration header changed'
     }
@@ -75,6 +75,8 @@ function Assert-Manifest {
             'verified' -or
         [string]$Manifest.history_compatible_successor.bounded_sync_v2_decoder_mutation_corpus -cne
             'verified' -or
+        [string]$Manifest.history_compatible_successor.coverage_guided_fuzz_harness -cne
+            'verified-not-run' -or
         [bool]$Manifest.history_compatible_successor.registered -or
         [bool]$Manifest.history_compatible_successor.dialed) {
         throw 'history-compatible successor boundary changed'
@@ -153,6 +155,7 @@ function Assert-Manifest {
         'independent-crypto-conformance|verified',
         'bounded-decoder-mutation-regression|verified',
         'bounded-canonical-sync-v2-decoder-mutation-regression|verified',
+        'coverage-guided-fuzz-harness|verified-not-run',
         'sustained-coverage-guided-fuzzing|pending',
         'mixed-version-and-downgrade-tests|verified',
         'fresh-hosted-and-field-evidence|pending',
@@ -213,7 +216,7 @@ if ($SelfTest) {
 }
 
 Write-Output 'canonical_migration_boundary=verified'
-Write-Output 'migration_status=canonical-sync-v2-bounded-mutation-corpus-verified-not-active'
+Write-Output 'migration_status=canonical-sync-v2-coverage-fuzz-harness-verified-campaign-not-run'
 Write-Output 'candidate_protocol_identifier=kilogram/m1/sync/cbor/2'
 Write-Output 'history_compatible_successor_identifier=kilogram/m1/sync/cbor/2'
 Write-Output 'candidate_identifier_registered=false'

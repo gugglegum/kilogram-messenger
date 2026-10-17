@@ -60,7 +60,7 @@ function Assert-Contract {
     )
 
     $status = 'dormant-mutual-authenticated-candidate-selection-verified-not-active'
-    $aggregateStatus = 'canonical-sync-v2-bounded-mutation-corpus-verified-not-active'
+    $aggregateStatus = 'canonical-sync-v2-coverage-fuzz-harness-verified-campaign-not-run'
     if ([UInt64]$Manifest.schema_version -ne 1 -or
         [string]$Manifest.milestone -cne 'M1.1.68' -or
         [string]$Manifest.status -cne $status -or
@@ -165,7 +165,7 @@ function Assert-Contract {
         'fresh-hosted-and-field-evidence'
     ) 'mutual candidate remaining work'
 
-    if ([string]$Migration.milestone -cne 'M1.1.72' -or
+    if ([string]$Migration.milestone -cne 'M1.1.73' -or
         [string]$Migration.status -cne $aggregateStatus -or
         [string]$Migration.current_state -cne 'legacy-only' -or
         [string]$Migration.history_compatible_successor.dormant_mutual_authenticated_candidate_selection -cne
@@ -184,7 +184,7 @@ function Assert-Contract {
     if ($requirement.Count -ne 1 -or [string]$requirement[0].status -cne 'verified') {
         throw 'mutual capability selection requirement is not verified'
     }
-    if ([string]$TransportManifest.milestone -cne 'M1.1.72' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.73' -or
         [string]$TransportManifest.status -cne $aggregateStatus -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_mutual_authenticated_candidate_selection -or
         -not [bool]$TransportManifest.selection.mutual_authenticated_candidate_selection -or
@@ -196,13 +196,13 @@ function Assert-Contract {
         [bool]$TransportManifest.history_compatible_successor.dialed) {
         throw 'transport manifest mutual selection state changed'
     }
-    if ([string]$Compatibility.milestone -cne 'M1.1.72' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.73' -or
         [string]$Compatibility.status -cne $aggregateStatus -or
         -not [bool]$Compatibility.required_successor.dormant_mutual_authenticated_candidate_selection_integrated) {
         throw 'history compatibility lost mutual selection state'
     }
     $surface = @($Coverage.surfaces | Where-Object { [string]$_.id -ceq 'transport-sync' })
-    if ([string]$Coverage.milestone -cne 'M1.1.72' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.73' -or
         $surface.Count -ne 1 -or
         'CANONICAL-SYNC-V2-MUTUAL-CANDIDATE-SELECTION.json' -cnotin @($surface[0].artifacts) -or
         'scripts/verify-kilogram-canonical-sync-v2-mutual-candidate-selection-boundary.ps1' -cnotin

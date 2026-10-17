@@ -59,6 +59,8 @@ pub mod canonical_sync_v1;
 pub mod canonical_sync_v2;
 pub mod canonical_ticket_publication_v1;
 pub mod canonical_v1;
+#[cfg(feature = "decoder-fuzzing")]
+pub mod decoder_fuzzing;
 mod recovery;
 mod rewrap;
 mod wire;

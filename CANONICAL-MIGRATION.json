@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.72",
-  "status": "canonical-sync-v2-bounded-mutation-corpus-verified-not-active",
+  "milestone": "M1.1.73",
+  "status": "canonical-sync-v2-coverage-fuzz-harness-verified-campaign-not-run",
   "changes_active_wire": false,
   "current_encoding": "postcard",
   "candidate_encoding": "kilogram-deterministic-cbor-v2-typed-history",
@@ -31,6 +31,7 @@
     "dormant_dual_reader_runtime_coordinator": "verified",
     "dormant_deterministic_rollback_drill": "verified",
     "bounded_sync_v2_decoder_mutation_corpus": "verified",
+    "coverage_guided_fuzz_harness": "verified-not-run",
     "registered": false,
     "dialed": false
   },
@@ -260,6 +261,10 @@
     {
       "id": "bounded-canonical-sync-v2-decoder-mutation-regression",
       "status": "verified"
+    },
+    {
+      "id": "coverage-guided-fuzz-harness",
+      "status": "verified-not-run"
     },
     {
       "id": "sustained-coverage-guided-fuzzing",

@@ -1128,6 +1128,11 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   history-compatible sync v2 decoder surface: 20 exact fixtures и 2863
   structural/authenticated mutations без network, randomness или ложной
   декларации coverage-guided fuzzing.
+- [`../docs/RFC-0200-m1173-canonical-sync-v2-coverage-fuzz-harness.md`](../docs/RFC-0200-m1173-canonical-sync-v2-coverage-fuzz-harness.md) —
+  M1.1.73 добавляет opt-in cargo-fuzz/libFuzzer harness для всех 13 sync v2
+  strict decoders, materialized raw-binary seed corpus и bounded one-worker
+  campaign contract, не выдавая отсутствующую instrumented campaign за
+  пройденную и не активируя `/cbor/2`.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

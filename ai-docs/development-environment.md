@@ -4493,3 +4493,31 @@ Hosted follow-up:
 - This is deterministic regression evidence only. `cargo-fuzz`, nightly
   instrumentation and sustained coverage-guided execution were not available
   or claimed; that activation gate remains pending.
+
+## M1.1.73 canonical sync v2 coverage fuzz harness (2026-10-17)
+
+- Harness paths: `fuzz/Cargo.toml` and
+  `fuzz/fuzz_targets/canonical_sync_v2_decoders.rs`; stable dispatcher is
+  compiled only with protocol feature `decoder-fuzzing`.
+- Exact seed validation passed with offline debug build and `CargoJobs 2`:
+  `cargo test --package kilogram-protocol --features decoder-fuzzing --test canonical_sync_v2_fuzz_seeds --locked --offline` (1/1).
+- Selector/dispatcher focused unit regression passed (1/1); all 13 selectors
+  reject empty input without panic.
+- Full protocol library regression with `decoder-fuzzing` passed 156 tests with
+  15 explicit vector generators ignored in 190.98 seconds.
+- `prepare-kilogram-canonical-sync-v2-fuzz-corpus.ps1 -VerifyOnly` verified 20
+  raw-binary seeds totaling 5066 bytes and emitted exact SHA-256 evidence.
+- `invoke-kilogram-canonical-sync-v2-fuzz.ps1 -Mode Preflight` completed without
+  network or installation and reported `fuzz_toolchain_installed=false`,
+  `cargo_fuzz_installed=false`, `windows_msvc_asan_detected=false`.
+- 24 affected boundary scripts passed normal and negative `-SelfTest` modes;
+  `verify-kilogram-m1-readiness-boundary.ps1` passed its normal mode. All 104
+  root JSON documents parse.
+- Root and nested-fuzz rustfmt checks passed outside the Windows sandbox after
+  the sandbox returned the established `os error 5`. Workspace all-target,
+  all-feature, locked/offline Clippy with `-D warnings` passed with two jobs and
+  below-normal priority. Accepted-tag readiness passed 105/105 against
+  immutable `M1.0.0`.
+- Do not mark `observed.harness_compiled_with_libfuzzer`, smoke/sustained run or
+  coverage as true until a prepared nightly + cargo-fuzz + ASan/LLVM host has
+  actually produced the bounded machine record and coverage output.

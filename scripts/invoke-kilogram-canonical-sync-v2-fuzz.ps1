@@ -1,0 +1,232 @@
+[CmdletBinding()]
+param(
+    [ValidateSet('Preflight', 'Smoke', 'Sustained')]
+    [string]$Mode = 'Preflight',
+    [string]$NightlyToolchain = 'nightly',
+    [int]$SmokeSeconds = 60,
+    [switch]$GenerateCoverage,
+    [switch]$AcknowledgeSustainedResourceUse
+)
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+
+$workspace = [System.IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
+$manifestPath = Join-Path $workspace 'CANONICAL-SYNC-V2-FUZZ-CAMPAIGN.json'
+$preparePath = Join-Path $PSScriptRoot 'prepare-kilogram-canonical-sync-v2-fuzz-corpus.ps1'
+$manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+$isWindowsHost = $env:OS -ceq 'Windows_NT'
+$target = [string]$manifest.target
+$corpusDirectory = Join-Path $workspace ".tmp\fuzz\corpus\$target"
+$artifactDirectory = Join-Path $workspace ".tmp\fuzz\artifacts\$target"
+$evidenceDirectory = Join-Path $workspace '.tmp\fuzz\evidence'
+
+$seedOutput = @(& powershell -NoProfile -ExecutionPolicy Bypass `
+    -File $preparePath -OutputDirectory $corpusDirectory 2>&1)
+if ($LASTEXITCODE -ne 0 -or
+    'canonical_sync_v2_fuzz_seed_corpus=verified' -notin @($seedOutput | ForEach-Object { [string]$_ })) {
+    throw "Fuzz seed materialization failed.`n$($seedOutput -join [Environment]::NewLine)"
+}
+$seedOutput | Write-Output
+
+$previousErrorActionPreference = $ErrorActionPreference
+try {
+    $ErrorActionPreference = 'Continue'
+    $installedToolchains = @(& rustup toolchain list 2>&1 | ForEach-Object { [string]$_ })
+    $rustupExitCode = $LASTEXITCODE
+}
+finally {
+    $ErrorActionPreference = $previousErrorActionPreference
+}
+if ($rustupExitCode -ne 0) {
+    throw "rustup toolchain list failed with exit code $rustupExitCode"
+}
+$toolchainInstalled = @($installedToolchains | Where-Object {
+    $_ -match ('^' + [regex]::Escape($NightlyToolchain) + '(?:-|\s)')
+}).Count -gt 0
+$cargoFuzz = Get-Command cargo-fuzz -ErrorAction SilentlyContinue
+$cargoFuzzInstalled = $null -ne $cargoFuzz
+$asanInstalled = $false
+if ($isWindowsHost) {
+    $asanInstalled = Test-Path -Path `
+        'C:\Program Files\Microsoft Visual Studio\*\*\VC\Tools\Llvm\x64\lib\clang\*\lib\windows\clang_rt.asan_dynamic-x86_64.dll'
+}
+
+Write-Output "fuzz_toolchain_installed=$($toolchainInstalled.ToString().ToLowerInvariant())"
+Write-Output "cargo_fuzz_installed=$($cargoFuzzInstalled.ToString().ToLowerInvariant())"
+Write-Output "windows_msvc_asan_detected=$($asanInstalled.ToString().ToLowerInvariant())"
+if ($Mode -ceq 'Preflight') {
+    Write-Output 'canonical_sync_v2_fuzz_preflight=complete'
+    Write-Output 'coverage_guided_campaign_executed=false'
+    exit 0
+}
+
+if (-not $toolchainInstalled) {
+    throw "Required Rust toolchain '$NightlyToolchain' is not installed."
+}
+if (-not $cargoFuzzInstalled) {
+    throw 'cargo-fuzz is not installed.'
+}
+if ($isWindowsHost -and -not $asanInstalled) {
+    throw 'MSVC AddressSanitizer is not installed; use a prepared Windows host or Linux.'
+}
+if ($Mode -ceq 'Sustained' -and -not $AcknowledgeSustainedResourceUse) {
+    throw 'Sustained mode requires -AcknowledgeSustainedResourceUse.'
+}
+if ($Mode -ceq 'Sustained' -and -not $GenerateCoverage) {
+    throw 'Sustained mode requires -GenerateCoverage.'
+}
+if ($SmokeSeconds -lt 1 -or $SmokeSeconds -gt 900) {
+    throw 'SmokeSeconds must be between 1 and 900.'
+}
+
+$sourceRevisionBefore = [string](& git rev-parse HEAD)
+if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($sourceRevisionBefore)) {
+    throw 'Could not resolve the source revision before the fuzz campaign.'
+}
+$sourceRevisionBefore = $sourceRevisionBefore.Trim()
+$sourceStatusBefore = @(& git status --porcelain=v1 --untracked-files=all)
+if ($LASTEXITCODE -ne 0) {
+    throw 'Could not inspect the source worktree before the fuzz campaign.'
+}
+$sourceWorktreeCleanBefore = $sourceStatusBefore.Count -eq 0
+Write-Output "source_revision=$sourceRevisionBefore"
+Write-Output "source_worktree_clean=$($sourceWorktreeCleanBefore.ToString().ToLowerInvariant())"
+if ($Mode -ceq 'Sustained' -and -not $sourceWorktreeCleanBefore) {
+    throw 'Sustained mode requires a clean committed source worktree.'
+}
+
+$durationSeconds = if ($Mode -ceq 'Sustained') {
+    [int]$manifest.campaign_contract.minimum_wall_clock_seconds
+}
+else {
+    $SmokeSeconds
+}
+[System.IO.Directory]::CreateDirectory($artifactDirectory) | Out-Null
+[System.IO.Directory]::CreateDirectory($evidenceDirectory) | Out-Null
+$runId = [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssZ')
+$logPath = Join-Path $evidenceDirectory "$runId-$target.log"
+$recordPath = Join-Path $evidenceDirectory "$runId-$target.json"
+$started = [DateTime]::UtcNow
+$stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+$previousJobs = $env:CARGO_BUILD_JOBS
+$previousPriority = $null
+$currentProcess = [System.Diagnostics.Process]::GetCurrentProcess()
+try {
+    $previousPriority = $currentProcess.PriorityClass
+    $currentProcess.PriorityClass = [System.Diagnostics.ProcessPriorityClass]::BelowNormal
+}
+catch {
+    Write-Output "priority_adjustment_warning=$($_.Exception.Message)"
+}
+
+try {
+    $env:CARGO_BUILD_JOBS = '1'
+    Push-Location $workspace
+    try {
+        $cargoArguments = @(
+            "+$NightlyToolchain", 'fuzz', 'run', $target, $corpusDirectory,
+            '--', "-max_total_time=$durationSeconds", '-jobs=1', '-workers=1',
+            "-max_len=$([int]$manifest.campaign_contract.maximum_input_bytes)",
+            "-timeout=$([int]$manifest.campaign_contract.per_input_timeout_seconds)",
+            "-artifact_prefix=$artifactDirectory\"
+        )
+        & cargo @cargoArguments 2>&1 | Tee-Object -FilePath $logPath
+        $runExitCode = $LASTEXITCODE
+    }
+    finally {
+        Pop-Location
+    }
+}
+finally {
+    $stopwatch.Stop()
+    $env:CARGO_BUILD_JOBS = $previousJobs
+    if ($null -ne $previousPriority) {
+        try { $currentProcess.PriorityClass = $previousPriority } catch { }
+    }
+}
+
+$coverageGenerated = $false
+if ($runExitCode -eq 0 -and $GenerateCoverage) {
+    Push-Location $workspace
+    try {
+        & cargo "+$NightlyToolchain" fuzz coverage $target $corpusDirectory 2>&1 |
+            Tee-Object -FilePath (Join-Path $evidenceDirectory "$runId-$target-coverage.log")
+        if ($LASTEXITCODE -ne 0) {
+            throw "cargo fuzz coverage failed with exit code $LASTEXITCODE"
+        }
+    }
+    finally {
+        Pop-Location
+    }
+    $coverageProfile = Join-Path $workspace "fuzz\coverage\$target\coverage.profdata"
+    $coverageGenerated = Test-Path -LiteralPath $coverageProfile -PathType Leaf
+}
+
+$executions = 0L
+if (Test-Path -LiteralPath $logPath -PathType Leaf) {
+    foreach ($match in (Select-String -LiteralPath $logPath -Pattern '#([0-9]+)' -AllMatches)) {
+        foreach ($value in $match.Matches) {
+            $candidate = [long]$value.Groups[1].Value
+            if ($candidate -gt $executions) { $executions = $candidate }
+        }
+    }
+}
+$elapsedSeconds = [long][Math]::Floor($stopwatch.Elapsed.TotalSeconds)
+$sourceRevisionAfter = [string](& git rev-parse HEAD)
+if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($sourceRevisionAfter)) {
+    throw 'Could not resolve the source revision after the fuzz campaign.'
+}
+$sourceRevisionAfter = $sourceRevisionAfter.Trim()
+$sourceStatusAfter = @(& git status --porcelain=v1 --untracked-files=all)
+if ($LASTEXITCODE -ne 0) {
+    throw 'Could not inspect the source worktree after the fuzz campaign.'
+}
+$sourceWorktreeCleanAfter = $sourceStatusAfter.Count -eq 0
+$sustainedSatisfied = (
+    $Mode -ceq 'Sustained' -and
+    $runExitCode -eq 0 -and
+    $sourceWorktreeCleanBefore -and
+    $sourceWorktreeCleanAfter -and
+    $sourceRevisionBefore -ceq $sourceRevisionAfter -and
+    $elapsedSeconds -ge [long]$manifest.campaign_contract.minimum_wall_clock_seconds -and
+    $executions -ge [long]$manifest.campaign_contract.minimum_executions -and
+    $coverageGenerated -and
+    @(Get-ChildItem -LiteralPath $artifactDirectory -File -ErrorAction SilentlyContinue).Count -eq 0
+)
+$record = [ordered]@{
+    schema_version = 1
+    source_revision = $sourceRevisionBefore
+    source_revision_after = $sourceRevisionAfter
+    source_worktree_clean_before = $sourceWorktreeCleanBefore
+    source_worktree_clean_after = $sourceWorktreeCleanAfter
+    target = $target
+    mode = $Mode.ToLowerInvariant()
+    started_at_utc = $started.ToString('o')
+    elapsed_seconds = $elapsedSeconds
+    requested_seconds = $durationSeconds
+    executions = $executions
+    exit_code = $runExitCode
+    workers = 1
+    jobs = 1
+    coverage_generated = $coverageGenerated
+    sustained_gate_satisfied = $sustainedSatisfied
+    log_file = [System.IO.Path]::GetFileName($logPath)
+}
+[System.IO.File]::WriteAllText(
+    $recordPath,
+    (($record | ConvertTo-Json -Depth 5) + [Environment]::NewLine),
+    [System.Text.UTF8Encoding]::new($false)
+)
+if ($runExitCode -ne 0) {
+    throw "cargo fuzz run failed with exit code $runExitCode; evidence=$recordPath"
+}
+if ($Mode -ceq 'Sustained' -and -not $sustainedSatisfied) {
+    throw "Sustained fuzz campaign did not satisfy the closed evidence contract; evidence=$recordPath"
+}
+Write-Output "fuzz_run_record=$recordPath"
+Write-Output "fuzz_executions=$executions"
+Write-Output "fuzz_elapsed_seconds=$elapsedSeconds"
+Write-Output "coverage_generated=$($coverageGenerated.ToString().ToLowerInvariant())"
+Write-Output "sustained_gate_satisfied=$($sustainedSatisfied.ToString().ToLowerInvariant())"
+

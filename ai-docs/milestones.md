@@ -6766,3 +6766,33 @@ correlation visible, Windows-only field evidence, independent security audit
   закрывает sustained coverage-guided fuzzing gate;
 - active Postcard v6 и `/cbor/2` transport activation не менялись. Network,
   release build, archive, stable EXE, push и tag не выполнялись.
+
+### M1.1.73 — canonical sync v2 coverage fuzz harness: принято локально
+
+- добавлен отдельный nested `fuzz` workspace со стандартным
+  `cargo-fuzz`/libFuzzer target; production crate включает dispatcher только
+  через opt-in feature `decoder-fuzzing`;
+- 13 selectors покрывают все public strict decoder entry points, а 20
+  allowlisted golden fixtures материализуются как raw binary: один harness
+  selector byte плюс exact canonical payload;
+- Rust regression независимо восстанавливает seed bytes из JSON pointers,
+  проверяет размеры и требует acceptance соответствующим decoder;
+- campaign manifest и runner фиксируют один worker/job, below-normal priority,
+  8-hour / 1,000,000-execution sustained minimum, 8 MiB + selector max input,
+  10-second timeout, clean unchanged committed source, zero crashes, coverage
+  report и machine record; unmet sustained contract завершается fail closed;
+- локальный preflight не устанавливает зависимости и зафиксировал отсутствие
+  nightly, cargo-fuzz и Windows MSVC ASan. Поэтому libFuzzer campaign и
+  coverage report не заявлены выполненными;
+- dedicated и 23 затронутых historical boundary scripts прошли normal и
+  negative self-test режимы; readiness boundary, не имеющий `-SelfTest`,
+  прошёл normal mode;
+- все 104 root JSON parsed; focused Rust regressions прошли 1/1 + 1/1, полный
+  `kilogram-protocol --lib --features decoder-fuzzing` — 156/156 при 15
+  explicit generators ignored; rustfmt, workspace all-target/all-feature
+  locked/offline strict Clippy и
+  accepted-tag readiness 105/105 против immutable `M1.0.0` прошли;
+- active Postcard v6 не менялся, `/cbor/2` остаётся unregistered/undialed;
+  следующий отдельный этап — подготовленный instrumented host и фактическая
+  sustained campaign, затем fresh hosted/physical-device evidence. Network,
+  release build, archive, stable EXE, push и tag не выполнялись.

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.72",
-  "status": "canonical-sync-v2-bounded-mutation-corpus-verified-not-active",
+  "milestone": "M1.1.73",
+  "status": "canonical-sync-v2-coverage-fuzz-harness-verified-campaign-not-run",
   "surface": "transport-sync",
   "changes_active_wire": false,
   "active": {
@@ -44,6 +44,7 @@
     "dormant_dual_reader_runtime_coordinator": true,
     "dormant_deterministic_rollback_drill": true,
     "bounded_sync_v2_decoder_mutation_corpus": true,
+    "coverage_guided_fuzz_harness": true,
     "registered": false,
     "dialed": false,
     "format_sniffing": false,
