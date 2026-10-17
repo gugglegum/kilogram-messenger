@@ -1141,6 +1141,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.1.75 фиксирует clean-source пятиминутный instrumented run, ноль generated
   artifacts и валидный coverage profile, сохраняя восьмичасовой gate и
   transport activation открытыми.
+- [`../docs/RFC-0203-m1176-sustained-fuzz-campaign.md`](../docs/RFC-0203-m1176-sustained-fuzz-campaign.md) —
+  M1.1.76 фиксирует clean-source восьмичасовой instrumented run: 469 853 771
+  executions, ноль generated artifacts и валидный coverage profile. Sustained
+  decoder gate закрыт, fresh hosted/physical-device evidence остаётся pending.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

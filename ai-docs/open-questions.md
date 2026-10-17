@@ -501,9 +501,10 @@ sessions, distribution, removal и key epochs и не решены этим пр
   contract. M1.1.74 подготовил exact Windows toolchain/runtime, checked-in
   dependency lock и реально собрал instrumented target. M1.1.75 выполнил
   clean-source пятиминутный instrumented smoke: 5 697 050 executions, 0
-  artifacts и валидный coverage profile. Он закрывает только smoke/pipeline
-  gate. Открыты восьмичасовой sustained run и fresh field evidence. При будущей active
-  integration signed ceremony должна
+  artifacts и валидный coverage profile. M1.1.76 выполнил отдельный clean-source
+  sustained run: 28 801 секунда, 469 853 771 executions и 0 artifacts. Локальный
+  sustained decoder gate закрыт; открыто fresh hosted/physical-device evidence.
+  При будущей active integration signed ceremony должна
   находиться внутри authenticated transport context: одна локальная
   no-selection row не является защитой от pre-offer stripping.
 

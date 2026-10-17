@@ -4599,3 +4599,24 @@ Hosted follow-up:
   overlapping evidence was rejected. The runner now acquires an exclusive
   workspace-local file handle before any corpus reset and releases it in a
   `finally` block; a second runner fails before changing campaign state.
+
+## M1.1.76 sustained decoder campaign (2026-10-18)
+
+- The authoritative run started at `2026-10-17T12:02:20.6781480Z` from clean
+  revision `eaf3d75bb16ce42c8368017a68c6f4183d15ab9f`; the same revision and a
+  clean worktree were observed after completion.
+- One Windows MSVC ASan worker/job ran for 28,801 seconds and completed
+  469,853,771 executions. It began with 20 seeds, ended with 1,043 corpus
+  files, produced zero failure artifacts, and exited successfully.
+- Evidence record/log/coverage-log/profile hashes are tracked in
+  `CANONICAL-SYNC-V2-FUZZ-SUSTAINED.json`; all four ignored local files were
+  re-hashed successfully during formalization.
+- `llvm-profdata show` reported front-end instrumentation, 888 functions,
+  2,010 blocks, maximum function count 204,308,962, maximum internal block
+  count 10,543,038, and total count 885,327,009.
+- The sustained decoder gate is now verified. Fresh hosted and physical-device
+  evidence remains pending, and no candidate ALPN registration/dial or active
+  runtime change is authorized by this result.
+- The new boundary plus 25 affected historical boundaries passed normal and
+  negative self-test modes. All 107 root JSON documents parsed; accepted-tag
+  readiness passed 107/107 with rustfmt and locked/offline strict Clippy.

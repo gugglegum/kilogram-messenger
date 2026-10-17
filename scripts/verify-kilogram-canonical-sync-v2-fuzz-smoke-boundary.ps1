@@ -62,8 +62,9 @@ function Assert-SmokeContract {
         [string]$Rfc
     )
 
-    $aggregateStatus = 'canonical-sync-v2-instrumented-smoke-verified-sustained-pending'
+    $aggregateStatus = 'canonical-sync-v2-instrumented-sustained-verified-field-evidence-pending'
     $smokeStatus = 'instrumented-smoke-and-coverage-verified-sustained-pending'
+    $campaignStatus = 'instrumented-sustained-and-coverage-verified-field-evidence-pending'
     $sourceRevision = 'f9148093a7476e2d77c4a967b018c4b26a230225'
 
     if ([UInt64]$Smoke.schema_version -ne 1 -or
@@ -154,17 +155,19 @@ function Assert-SmokeContract {
         throw 'instrumented smoke activated production transport or skipped the next gate'
     }
 
-    if ([string]$Campaign.milestone -cne 'M1.1.75' -or
-        [string]$Campaign.status -cne $smokeStatus -or
+    if ([string]$Campaign.milestone -cne 'M1.1.76' -or
+        [string]$Campaign.status -cne $campaignStatus -or
         [string]$Campaign.engine.smoke_evidence_manifest -cne
             'CANONICAL-SYNC-V2-FUZZ-SMOKE.json' -or
+        [string]$Campaign.engine.sustained_evidence_manifest -cne
+            'CANONICAL-SYNC-V2-FUZZ-SUSTAINED.json' -or
         -not [bool]$Campaign.observed.harness_compiled_with_libfuzzer -or
         -not [bool]$Campaign.observed.smoke_campaign_completed -or
-        [bool]$Campaign.observed.sustained_campaign_completed -or
+        -not [bool]$Campaign.observed.sustained_campaign_completed -or
         -not [bool]$Campaign.observed.coverage_report_generated -or
-        [UInt64]$Campaign.observed.executions -ne 5697050 -or
-        [UInt64]$Campaign.observed.wall_clock_seconds -ne 301) {
-        throw 'campaign manifest does not bind the accepted smoke result'
+        [UInt64]$Campaign.observed.executions -ne 469853771 -or
+        [UInt64]$Campaign.observed.wall_clock_seconds -ne 28801) {
+        throw 'campaign manifest does not preserve smoke and accepted sustained results'
     }
     if ([UInt64]$Campaign.campaign_contract.minimum_wall_clock_seconds -ne 28800 -or
         [UInt64]$Campaign.campaign_contract.minimum_executions -ne 1000000 -or
@@ -174,7 +177,6 @@ function Assert-SmokeContract {
         throw 'sustained campaign contract was weakened'
     }
     Assert-ExactStrings @($Campaign.remaining_m11_gates) @(
-        'execute-sustained-coverage-guided-fuzzing',
         'fresh-hosted-and-field-evidence'
     ) 'remaining campaign gates'
 
@@ -187,10 +189,10 @@ function Assert-SmokeContract {
         throw 'historical toolchain build record changed or was rewritten'
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.75' -or
+    if ([string]$Migration.milestone -cne 'M1.1.76' -or
         [string]$Migration.status -cne $aggregateStatus -or
         [string]$Migration.history_compatible_successor.coverage_guided_fuzz_harness -cne
-            'instrumented-smoke-verified' -or
+            'instrumented-sustained-verified' -or
         [bool]$Migration.history_compatible_successor.registered -or
         [bool]$Migration.history_compatible_successor.dialed) {
         throw 'canonical migration smoke state changed'
@@ -204,22 +206,24 @@ function Assert-SmokeContract {
     if ($smokeRequirement.Count -ne 1 -or
         [string]$smokeRequirement[0].status -cne 'instrumented-smoke-verified' -or
         $sustainedRequirement.Count -ne 1 -or
-        [string]$sustainedRequirement[0].status -cne 'pending') {
+        [string]$sustainedRequirement[0].status -cne 'verified') {
         throw 'smoke and sustained campaign gates were conflated'
     }
-    if ([string]$Transport.milestone -cne 'M1.1.75' -or
+    if ([string]$Transport.milestone -cne 'M1.1.76' -or
         [string]$Transport.status -cne $aggregateStatus -or
         -not [bool]$Transport.history_compatible_successor.coverage_guided_fuzz_harness -or
         -not [bool]$Transport.history_compatible_successor.instrumented_fuzz_smoke -or
+        -not [bool]$Transport.history_compatible_successor.sustained_fuzz_campaign -or
         [bool]$Transport.history_compatible_successor.registered -or
         [bool]$Transport.history_compatible_successor.dialed -or
         [bool]$Transport.scope.network_executed) {
         throw 'transport smoke state changed'
     }
-    if ([string]$Compatibility.milestone -cne 'M1.1.75' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.76' -or
         [string]$Compatibility.status -cne $aggregateStatus -or
         -not [bool]$Compatibility.required_successor.coverage_guided_fuzz_harness_integrated -or
         -not [bool]$Compatibility.required_successor.instrumented_fuzz_smoke_verified -or
+        -not [bool]$Compatibility.required_successor.sustained_fuzz_campaign_verified -or
         [string]$Compatibility.required_successor.status -cne $aggregateStatus) {
         throw 'history compatibility smoke state changed'
     }
@@ -234,7 +238,7 @@ function Assert-SmokeContract {
         'docs/RFC-0201-m1174-pinned-fuzz-toolchain.md',
         'docs/RFC-0202-m1175-instrumented-fuzz-smoke.md'
     )
-    if ([string]$Coverage.milestone -cne 'M1.1.75' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.76' -or
         [string]$Coverage.status -cne $aggregateStatus -or
         $surface.Count -ne 1 -or
         'instrumented-fuzz-smoke' -cnotin @($surface[0].covered)) {
@@ -246,7 +250,7 @@ function Assert-SmokeContract {
         }
     }
     Assert-ExactStrings @($surface[0].remaining) @(
-        'sustained-fuzzing', 'fresh-hosted-and-field-evidence'
+        'fresh-hosted-and-field-evidence'
     ) 'coverage remaining work'
 
     Assert-ContainsAll $Runner @(
@@ -334,7 +338,7 @@ if ($SelfTest) {
 }
 
 $localEvidenceChecked = 0
-foreach ($name in @('record', 'run_log', 'coverage_log', 'coverage_profile')) {
+foreach ($name in @('record', 'run_log', 'coverage_log')) {
     $entry = $smoke.evidence.$name
     $relativePath = ([string]$entry.path).Replace('/', [System.IO.Path]::DirectorySeparatorChar)
     $path = Join-Path $workspace $relativePath
@@ -356,7 +360,7 @@ Write-Output 'smoke_elapsed_seconds=301'
 Write-Output 'smoke_artifact_files=0'
 Write-Output 'coverage_profile_validated=true'
 Write-Output "local_ignored_evidence_checked=$localEvidenceChecked"
-Write-Output 'sustained_coverage_guided_fuzzing=pending'
+Write-Output 'sustained_coverage_guided_fuzzing=verified'
 Write-Output 'active_transport_authorized=false'
 Write-Output 'candidate_identifier_registered=false'
 Write-Output 'candidate_identifier_dialed=false'

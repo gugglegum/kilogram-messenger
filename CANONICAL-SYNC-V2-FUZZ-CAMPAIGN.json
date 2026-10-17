@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.75",
-  "status": "instrumented-smoke-and-coverage-verified-sustained-pending",
+  "milestone": "M1.1.76",
+  "status": "instrumented-sustained-and-coverage-verified-field-evidence-pending",
   "scope": "history-compatible-canonical-sync-v2-strict-decoders",
   "target": "canonical_sync_v2_decoders",
   "engine": {
@@ -9,6 +9,7 @@
     "minimum_driver_version": "0.12.0",
     "toolchain_contract_manifest": "CANONICAL-SYNC-V2-FUZZ-TOOLCHAIN.json",
     "smoke_evidence_manifest": "CANONICAL-SYNC-V2-FUZZ-SMOKE.json",
+    "sustained_evidence_manifest": "CANONICAL-SYNC-V2-FUZZ-SUSTAINED.json",
     "backend": "libFuzzer",
     "nightly_toolchain_required": true,
     "address_sanitizer_required": true,
@@ -71,10 +72,10 @@
   "observed": {
     "harness_compiled_with_libfuzzer": true,
     "smoke_campaign_completed": true,
-    "sustained_campaign_completed": false,
+    "sustained_campaign_completed": true,
     "coverage_report_generated": true,
-    "executions": 5697050,
-    "wall_clock_seconds": 301
+    "executions": 469853771,
+    "wall_clock_seconds": 28801
   },
   "activation": {
     "active_transport_authorized": false,
@@ -83,7 +84,6 @@
     "active_runtime_changed": false
   },
   "remaining_m11_gates": [
-    "execute-sustained-coverage-guided-fuzzing",
     "fresh-hosted-and-field-evidence"
   ]
 }

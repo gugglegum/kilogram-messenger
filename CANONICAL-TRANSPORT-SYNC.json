@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.75",
-  "status": "canonical-sync-v2-instrumented-smoke-verified-sustained-pending",
+  "milestone": "M1.1.76",
+  "status": "canonical-sync-v2-instrumented-sustained-verified-field-evidence-pending",
   "surface": "transport-sync",
   "changes_active_wire": false,
   "active": {
@@ -46,6 +46,7 @@
     "bounded_sync_v2_decoder_mutation_corpus": true,
     "coverage_guided_fuzz_harness": true,
     "instrumented_fuzz_smoke": true,
+    "sustained_fuzz_campaign": true,
     "registered": false,
     "dialed": false,
     "format_sniffing": false,
@@ -85,7 +86,6 @@
     ]
   },
   "remaining": [
-    "sustained-fuzzing",
     "fresh-hosted-and-field-evidence"
   ],
   "scope": {

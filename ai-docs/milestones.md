@@ -6844,3 +6844,28 @@ correlation visible, Windows-only field evidence, independent security audit
   pending. Active Postcard v6 не менялся, `/cbor/2` не зарегистрирован и не
   dial-ится; network, release build, archive, stable EXE, push и tag не
   выполнялись.
+
+### M1.1.76 — sustained decoder campaign: принято локально
+
+- на чистом committed revision
+  `eaf3d75bb16ce42c8368017a68c6f4183d15ab9f` выполнен единственный
+  восьмичасовой instrumented `canonical_sync_v2_decoders` run;
+- один job/worker за 28 801 секунду выполнил 469 853 771 iterations, начав с
+  20 checked-in seeds и завершив 1043 corpus files; exit 0, generated
+  artifacts 0;
+- LLVM profile имеет 230 688 bytes и SHA-256
+  `34ca49d1a3d4b7ba5cc91969d823527f9370de41282761a0fb923fb87c710a92`;
+  `llvm-profdata show` подтвердил front-end instrumentation, 888 functions,
+  2010 blocks и total count 885 327 009;
+- `CANONICAL-SYNC-V2-FUZZ-SUSTAINED.json` фиксирует exact source/toolchain/run
+  и SHA-256 четырёх ignored evidence files; большие логи, corpus и profile не
+  добавляются в Git;
+- dedicated boundary отвергает short run, artifacts, dirty source, activation
+  и aggregate drift; исторические toolchain/smoke records остаются неизменны;
+- новый boundary и 25 затронутых historical boundary прошли normal и negative
+  self-test режимы; все 107 root JSON parsed; accepted-tag readiness 107/107,
+  rustfmt и workspace all-target/all-feature locked/offline strict Clippy
+  прошли;
+- sustained coverage-guided decoder gate закрыт. Fresh hosted/physical-device
+  evidence остаётся pending; active Postcard v6 не менялся, `/cbor/2` остаётся
+  unregistered/undialed.

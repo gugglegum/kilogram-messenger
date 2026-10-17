@@ -83,10 +83,10 @@ function Assert-Contract {
         [string]$ToolchainRfc
     )
 
-    $aggregateStatus = 'canonical-sync-v2-instrumented-smoke-verified-sustained-pending'
+    $aggregateStatus = 'canonical-sync-v2-instrumented-sustained-verified-field-evidence-pending'
     if ([UInt64]$Manifest.schema_version -ne 1 -or
-        [string]$Manifest.milestone -cne 'M1.1.75' -or
-        [string]$Manifest.status -cne 'instrumented-smoke-and-coverage-verified-sustained-pending' -or
+        [string]$Manifest.milestone -cne 'M1.1.76' -or
+        [string]$Manifest.status -cne 'instrumented-sustained-and-coverage-verified-field-evidence-pending' -or
         [string]$Manifest.scope -cne 'history-compatible-canonical-sync-v2-strict-decoders' -or
         [string]$Manifest.target -cne 'canonical_sync_v2_decoders') {
         throw 'sync-v2 fuzz campaign identity changed'
@@ -95,6 +95,7 @@ function Assert-Contract {
         [string]$Manifest.engine.minimum_driver_version -cne '0.12.0' -or
         [string]$Manifest.engine.toolchain_contract_manifest -cne 'CANONICAL-SYNC-V2-FUZZ-TOOLCHAIN.json' -or
         [string]$Manifest.engine.smoke_evidence_manifest -cne 'CANONICAL-SYNC-V2-FUZZ-SMOKE.json' -or
+        [string]$Manifest.engine.sustained_evidence_manifest -cne 'CANONICAL-SYNC-V2-FUZZ-SUSTAINED.json' -or
         [string]$Manifest.engine.backend -cne 'libFuzzer' -or
         -not [bool]$Manifest.engine.nightly_toolchain_required -or
         -not [bool]$Manifest.engine.address_sanitizer_required -or
@@ -205,11 +206,11 @@ function Assert-Contract {
     }
     if (-not [bool]$Manifest.observed.harness_compiled_with_libfuzzer -or
         -not [bool]$Manifest.observed.smoke_campaign_completed -or
-        [bool]$Manifest.observed.sustained_campaign_completed -or
+        -not [bool]$Manifest.observed.sustained_campaign_completed -or
         -not [bool]$Manifest.observed.coverage_report_generated -or
-        [UInt64]$Manifest.observed.executions -ne 5697050 -or
-        [UInt64]$Manifest.observed.wall_clock_seconds -ne 301) {
-        throw 'sync-v2 fuzz smoke observation changed'
+        [UInt64]$Manifest.observed.executions -ne 469853771 -or
+        [UInt64]$Manifest.observed.wall_clock_seconds -ne 28801) {
+        throw 'sync-v2 sustained fuzz observation changed'
     }
     if ([bool]$Manifest.activation.active_transport_authorized -or
         [bool]$Manifest.activation.candidate_identifier_registered -or
@@ -218,7 +219,6 @@ function Assert-Contract {
         throw 'sync-v2 fuzz harness activated production transport'
     }
     Assert-ExactStrings @($Manifest.remaining_m11_gates) @(
-        'execute-sustained-coverage-guided-fuzzing',
         'fresh-hosted-and-field-evidence'
     ) 'sync-v2 fuzz remaining gates'
 
@@ -271,9 +271,10 @@ function Assert-Contract {
         'ConvertFrom-StrictLowerHex', 'Get-JsonPointerValue',
         'canonical_sync_v2_fuzz_seed_corpus=verified',
         'coverage_guided_campaign_executed=false',
-        "[string]`$manifest.milestone -cne 'M1.1.75'",
-        "instrumented-smoke-and-coverage-verified-sustained-pending",
+        "[string]`$manifest.milestone -cne 'M1.1.76'",
+        "instrumented-sustained-and-coverage-verified-field-evidence-pending",
         '-not [bool]$manifest.observed.smoke_campaign_completed',
+        '-not [bool]$manifest.observed.sustained_campaign_completed',
         '-not [bool]$manifest.observed.coverage_report_generated',
         '[switch]$ResetOutputDirectory',
         'ResetOutputDirectory is limited to the ignored fuzz corpus root.',
@@ -321,10 +322,10 @@ function Assert-Contract {
         }
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.75' -or
+    if ([string]$Migration.milestone -cne 'M1.1.76' -or
         [string]$Migration.status -cne $aggregateStatus -or
         [string]$Migration.history_compatible_successor.coverage_guided_fuzz_harness -cne
-            'instrumented-smoke-verified' -or
+            'instrumented-sustained-verified' -or
         [bool]$Migration.selection.selection_authorizes_registration_or_dial) {
         throw 'canonical migration fuzz harness state changed'
     }
@@ -337,21 +338,23 @@ function Assert-Contract {
     if ($harnessRequirement.Count -ne 1 -or
         [string]$harnessRequirement[0].status -cne 'instrumented-smoke-verified' -or
         $campaignRequirement.Count -ne 1 -or
-        [string]$campaignRequirement[0].status -cne 'pending') {
+        [string]$campaignRequirement[0].status -cne 'verified') {
         throw 'fuzz harness and campaign gates were conflated'
     }
-    if ([string]$TransportManifest.milestone -cne 'M1.1.75' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.76' -or
         [string]$TransportManifest.status -cne $aggregateStatus -or
         -not [bool]$TransportManifest.history_compatible_successor.coverage_guided_fuzz_harness -or
         -not [bool]$TransportManifest.history_compatible_successor.instrumented_fuzz_smoke -or
+        -not [bool]$TransportManifest.history_compatible_successor.sustained_fuzz_campaign -or
         [bool]$TransportManifest.history_compatible_successor.registered -or
         [bool]$TransportManifest.history_compatible_successor.dialed) {
         throw 'transport fuzz harness state changed'
     }
-    if ([string]$Compatibility.milestone -cne 'M1.1.75' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.76' -or
         [string]$Compatibility.status -cne $aggregateStatus -or
         -not [bool]$Compatibility.required_successor.coverage_guided_fuzz_harness_integrated -or
         -not [bool]$Compatibility.required_successor.instrumented_fuzz_smoke_verified -or
+        -not [bool]$Compatibility.required_successor.sustained_fuzz_campaign_verified -or
         [string]$Compatibility.required_successor.status -cne $aggregateStatus) {
         throw 'history compatibility fuzz harness state changed'
     }
@@ -360,6 +363,7 @@ function Assert-Contract {
         'CANONICAL-SYNC-V2-FUZZ-CAMPAIGN.json',
         'CANONICAL-SYNC-V2-FUZZ-TOOLCHAIN.json',
         'CANONICAL-SYNC-V2-FUZZ-SMOKE.json',
+        'CANONICAL-SYNC-V2-FUZZ-SUSTAINED.json',
         'crates/kilogram-protocol/src/decoder_fuzzing.rs',
         'crates/kilogram-protocol/tests/canonical_sync_v2_fuzz_seeds.rs',
         'fuzz/Cargo.toml',
@@ -369,15 +373,18 @@ function Assert-Contract {
         'scripts/invoke-kilogram-canonical-sync-v2-fuzz.ps1',
         'scripts/verify-kilogram-canonical-sync-v2-fuzz-harness-boundary.ps1',
         'scripts/verify-kilogram-canonical-sync-v2-fuzz-smoke-boundary.ps1',
+        'scripts/verify-kilogram-canonical-sync-v2-fuzz-sustained-boundary.ps1',
         'docs/RFC-0200-m1173-canonical-sync-v2-coverage-fuzz-harness.md',
         'docs/RFC-0201-m1174-pinned-fuzz-toolchain.md',
-        'docs/RFC-0202-m1175-instrumented-fuzz-smoke.md'
+        'docs/RFC-0202-m1175-instrumented-fuzz-smoke.md',
+        'docs/RFC-0203-m1176-sustained-fuzz-campaign.md'
     )
-    if ([string]$Coverage.milestone -cne 'M1.1.75' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.76' -or
         [string]$Coverage.status -cne $aggregateStatus -or
         $surface.Count -ne 1 -or
         'coverage-guided-fuzz-harness' -cnotin @($surface[0].covered) -or
-        'instrumented-fuzz-smoke' -cnotin @($surface[0].covered)) {
+        'instrumented-fuzz-smoke' -cnotin @($surface[0].covered) -or
+        'sustained-fuzz-campaign' -cnotin @($surface[0].covered)) {
         throw 'canonical coverage fuzz harness state changed'
     }
     foreach ($artifact in $requiredArtifacts) {
@@ -386,7 +393,7 @@ function Assert-Contract {
         }
     }
     Assert-ExactStrings @($surface[0].remaining) @(
-        'sustained-fuzzing', 'fresh-hosted-and-field-evidence'
+        'fresh-hosted-and-field-evidence'
     ) 'coverage remaining work'
 
     foreach ($inactiveSource in @($Wire, $ActiveTransport, $Cli)) {
@@ -467,8 +474,8 @@ Assert-Contract $manifest @arguments
 
 if ($SelfTest) {
     $completed = Copy-JsonObject $manifest
-    $completed.observed.sustained_campaign_completed = $true
-    Assert-Rejected { Assert-Contract $completed @arguments } 'false_campaign_completion'
+    $completed.observed.sustained_campaign_completed = $false
+    Assert-Rejected { Assert-Contract $completed @arguments } 'missing_campaign_completion'
 
     $selector = Copy-JsonObject $manifest
     $selector.selector.mapping[0] = 'different-decoder'
@@ -505,7 +512,7 @@ Write-Output 'exact_seed_count=20'
 Write-Output 'instrumented_target_built=true'
 Write-Output 'instrumented_smoke_completed=true'
 Write-Output 'coverage_report_generated=true'
-Write-Output 'sustained_coverage_guided_fuzzing=pending'
+Write-Output 'sustained_coverage_guided_fuzzing=verified'
 Write-Output 'active_transport_authorized=false'
 Write-Output 'candidate_identifier_registered=false'
 Write-Output 'candidate_identifier_dialed=false'

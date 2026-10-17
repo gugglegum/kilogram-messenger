@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.76",
+  "status": "instrumented-sustained-and-coverage-verified-field-evidence-pending",
+  "campaign_manifest": "CANONICAL-SYNC-V2-FUZZ-CAMPAIGN.json",
+  "toolchain_manifest": "CANONICAL-SYNC-V2-FUZZ-TOOLCHAIN.json",
+  "smoke_evidence_manifest": "CANONICAL-SYNC-V2-FUZZ-SMOKE.json",
+  "target": "canonical_sync_v2_decoders",
+  "source": {
+    "revision_before": "eaf3d75bb16ce42c8368017a68c6f4183d15ab9f",
+    "revision_after": "eaf3d75bb16ce42c8368017a68c6f4183d15ab9f",
+    "worktree_clean_before": true,
+    "worktree_clean_after": true
+  },
+  "host": {
+    "os": "windows",
+    "target_triple": "x86_64-pc-windows-msvc"
+  },
+  "toolchain": {
+    "rustc_release": "1.101.0-nightly",
+    "rustc_commit_hash": "5d8fec0669a64607db9ccbf663e7c23125bf4748",
+    "rustc_commit_date": "2026-10-16",
+    "llvm_version": "23.1.4",
+    "cargo_fuzz_version": "0.13.2",
+    "sanitizer": "address"
+  },
+  "run": {
+    "mode": "sustained",
+    "started_at_utc": "2026-10-17T12:02:20.6781480Z",
+    "requested_seconds": 28800,
+    "elapsed_seconds": 28801,
+    "executions": 469853771,
+    "initial_seed_count": 20,
+    "final_corpus_files": 1043,
+    "artifact_files": 0,
+    "exit_code": 0,
+    "workers": 1,
+    "jobs": 1,
+    "coverage_generated": true,
+    "sustained_gate_satisfied": true
+  },
+  "evidence": {
+    "record": {
+      "path": ".tmp/fuzz/evidence/20261017T120220Z-canonical_sync_v2_decoders.json",
+      "bytes": 1185,
+      "sha256": "c831227154c9ed630bd1e38246bcb7a05d322918ab5e3ad6987179f747d5b981"
+    },
+    "run_log": {
+      "path": ".tmp/fuzz/evidence/20261017T120220Z-canonical_sync_v2_decoders.log",
+      "bytes": 773230,
+      "sha256": "bcab77531605db17d1b27caf34c162907db1ddab49c010d4ddf2704555013747"
+    },
+    "coverage_log": {
+      "path": ".tmp/fuzz/evidence/20261017T120220Z-canonical_sync_v2_decoders-coverage.log",
+      "bytes": 592266,
+      "sha256": "d20d1b78c3dd2e7994b261dacf38f431d997d6e5a515156bc0ecfd1bd338a778"
+    },
+    "coverage_profile": {
+      "path": "fuzz/coverage/canonical_sync_v2_decoders/coverage.profdata",
+      "bytes": 230688,
+      "sha256": "34ca49d1a3d4b7ba5cc91969d823527f9370de41282761a0fb923fb87c710a92"
+    }
+  },
+  "coverage_profile_validation": {
+    "tool": "llvm-profdata show",
+    "instrumentation_level": "Front-end",
+    "total_functions": 888,
+    "maximum_function_count": 204308962,
+    "maximum_internal_block_count": 10543038,
+    "total_blocks": 2010,
+    "total_count": 885327009
+  },
+  "activation": {
+    "active_transport_authorized": false,
+    "candidate_identifier_registered": false,
+    "candidate_identifier_dialed": false,
+    "active_runtime_changed": false
+  },
+  "next_gate": "fresh-hosted-and-field-evidence"
+}
