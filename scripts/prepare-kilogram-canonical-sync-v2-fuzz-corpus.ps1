@@ -37,8 +37,26 @@ if ($ResetOutputDirectory) {
         if (@(Get-ChildItem -LiteralPath $OutputDirectory -Directory -Force).Count -ne 0) {
             throw 'Refusing to reset a corpus directory that contains subdirectories.'
         }
-        Get-ChildItem -LiteralPath $OutputDirectory -File -Force |
-            Remove-Item -Force
+        $files = @(Get-ChildItem -LiteralPath $OutputDirectory -File -Force)
+        if (@($files | Where-Object {
+            ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0
+        }).Count -ne 0) {
+            throw 'Refusing to reset a corpus directory that contains reparse-point files.'
+        }
+        foreach ($file in $files) {
+            $filePath = [System.IO.Path]::GetFullPath($file.FullName)
+            if ([System.IO.Path]::GetDirectoryName($filePath) -cne $OutputDirectory) {
+                throw 'Corpus reset escaped the exact output directory.'
+            }
+            try {
+                Remove-Item -LiteralPath $filePath -Force -ErrorAction Stop
+            }
+            catch {
+                if (Test-Path -LiteralPath $filePath) {
+                    throw
+                }
+            }
+        }
     }
 }
 

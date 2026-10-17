@@ -4587,3 +4587,9 @@ Hosted follow-up:
   preparer now accepts the exact M1.1.75 smoke observation while still
   rejecting claimed sustained completion or activation. Verify-only corpus,
   full preflight, and the harness boundary normal/self-test passed afterward.
+- A subsequent launch exposed a file-system race during flat corpus reset: a
+  listed file disappeared before `Remove-Item`. Reset now checks every exact
+  parent path, rejects file reparse points, and treats an already-absent file
+  as the successful postcondition while preserving failure for any path that
+  still exists. Two consecutive reset/materialization runs and the boundary
+  self-test passed.

@@ -279,6 +279,10 @@ function Assert-Contract {
         'ResetOutputDirectory is limited to the ignored fuzz corpus root.',
         'Refusing to reset a corpus directory through a reparse point.',
         'Refusing to reset a corpus directory that contains subdirectories.',
+        'Refusing to reset a corpus directory that contains reparse-point files.',
+        'Corpus reset escaped the exact output directory.',
+        'Remove-Item -LiteralPath $filePath -Force -ErrorAction Stop',
+        'if (Test-Path -LiteralPath $filePath)',
         'corpus_reset='
     ) 'fuzz seed preparer'
     Assert-ContainsAll $Runner @(
