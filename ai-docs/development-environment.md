@@ -4535,6 +4535,13 @@ Hosted follow-up:
   `lib/x64/clang_rt.asan_dynamic_runtime_thunk-x86_64.lib`.
 - Runner discovers both runtime files, verifies exact tool versions and only
   then temporarily prepends the runtime DLL directory to the child PATH.
+- Windows PowerShell 5.1 reports ordinary native stderr as
+  `NativeCommandError`; the runner therefore logs both channels quietly and
+  uses the native exit code as the only process-success decision.
+- Before every run, the ignored flat corpus and artifact directories are reset
+  with bounded-path, reparse-point and unexpected-subdirectory guards, then
+  exactly 20 seeds are materialized again. A one-second dirty-tree diagnostic
+  completed 37,447 iterations with 0 artifact files.
 - Instrumented build completed successfully. Output binary was 2,178,560 bytes
   with SHA-256
   `1c53c755571bcdaf2399fd82b1c54c81850253815e6e8a6add9041ee60d5b03a`.

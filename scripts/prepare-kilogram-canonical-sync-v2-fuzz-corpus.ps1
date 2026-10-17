@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [string]$OutputDirectory,
-    [switch]$VerifyOnly
+    [switch]$VerifyOnly,
+    [switch]$ResetOutputDirectory
 )
 
 Set-StrictMode -Version Latest
@@ -13,6 +14,33 @@ if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
     $OutputDirectory = Join-Path $workspace '.tmp\fuzz\corpus\canonical_sync_v2_decoders'
 }
 $OutputDirectory = [System.IO.Path]::GetFullPath($OutputDirectory)
+
+if ($ResetOutputDirectory -and $VerifyOnly) {
+    throw 'ResetOutputDirectory cannot be combined with VerifyOnly.'
+}
+if ($ResetOutputDirectory) {
+    $allowedCorpusRoot = [System.IO.Path]::GetFullPath(
+        (Join-Path $workspace '.tmp\fuzz\corpus')
+    )
+    $allowedPrefix = $allowedCorpusRoot.TrimEnd('\') + '\'
+    if (-not $OutputDirectory.StartsWith(
+            $allowedPrefix,
+            [StringComparison]::OrdinalIgnoreCase
+        )) {
+        throw 'ResetOutputDirectory is limited to the ignored fuzz corpus root.'
+    }
+    if (Test-Path -LiteralPath $OutputDirectory) {
+        $directory = Get-Item -LiteralPath $OutputDirectory -Force
+        if (($directory.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+            throw 'Refusing to reset a corpus directory through a reparse point.'
+        }
+        if (@(Get-ChildItem -LiteralPath $OutputDirectory -Directory -Force).Count -ne 0) {
+            throw 'Refusing to reset a corpus directory that contains subdirectories.'
+        }
+        Get-ChildItem -LiteralPath $OutputDirectory -File -Force |
+            Remove-Item -Force
+    }
+}
 
 function ConvertFrom-StrictLowerHex {
     param([Parameter(Mandatory = $true)][string]$Hex)
@@ -146,6 +174,7 @@ Write-Output 'canonical_sync_v2_fuzz_seed_corpus=verified'
 Write-Output "seed_count=$($seenIds.Count)"
 Write-Output "seed_total_bytes=$totalBytes"
 Write-Output "corpus_materialized=$(([bool](-not $VerifyOnly)).ToString().ToLowerInvariant())"
+Write-Output "corpus_reset=$(([bool]$ResetOutputDirectory).ToString().ToLowerInvariant())"
 Write-Output 'network_executed=false'
 Write-Output 'coverage_guided_campaign_executed=false'
 

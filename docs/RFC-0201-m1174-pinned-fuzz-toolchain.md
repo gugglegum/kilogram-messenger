@@ -18,6 +18,12 @@ valid representation of a Visual Studio 2022 installation. The selected DLL
 directory is prepended only to the child process environment and the original
 `PATH` is restored afterwards.
 
+Each invocation resets only the exact flat ignored corpus/artifact directories
+after rejecting reparse points and unexpected subdirectories. This preserves
+the 20-seed start condition and prevents stale output from affecting a later
+result. Windows PowerShell native stderr is retained in bounded log files;
+success is derived from the native exit code rather than stderr presence.
+
 ## Evidence
 
 On the prepared Windows x86-64 host, Rust nightly

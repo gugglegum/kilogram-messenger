@@ -24,7 +24,7 @@ $artifactDirectory = Join-Path $workspace ".tmp\fuzz\artifacts\$target"
 $evidenceDirectory = Join-Path $workspace '.tmp\fuzz\evidence'
 
 $seedOutput = @(& powershell -NoProfile -ExecutionPolicy Bypass `
-    -File $preparePath -OutputDirectory $corpusDirectory 2>&1)
+    -File $preparePath -OutputDirectory $corpusDirectory -ResetOutputDirectory 2>&1)
 if ($LASTEXITCODE -ne 0 -or
     'canonical_sync_v2_fuzz_seed_corpus=verified' -notin @($seedOutput | ForEach-Object { [string]$_ })) {
     throw "Fuzz seed materialization failed.`n$($seedOutput -join [Environment]::NewLine)"
@@ -173,6 +173,12 @@ else {
 }
 [System.IO.Directory]::CreateDirectory($artifactDirectory) | Out-Null
 [System.IO.Directory]::CreateDirectory($evidenceDirectory) | Out-Null
+$artifactDirectoryInfo = Get-Item -LiteralPath $artifactDirectory -Force
+if (($artifactDirectoryInfo.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
+    @(Get-ChildItem -LiteralPath $artifactDirectory -Directory -Force).Count -ne 0) {
+    throw 'Refusing to reset an artifact directory with a reparse point or subdirectories.'
+}
+Get-ChildItem -LiteralPath $artifactDirectory -File -Force | Remove-Item -Force
 $runId = [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssZ')
 $logPath = Join-Path $evidenceDirectory "$runId-$target.log"
 $recordPath = Join-Path $evidenceDirectory "$runId-$target.json"
@@ -181,6 +187,7 @@ $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 $previousJobs = $env:CARGO_BUILD_JOBS
 $previousPath = $env:Path
 $previousPriority = $null
+$runExitCode = -1
 $currentProcess = [System.Diagnostics.Process]::GetCurrentProcess()
 try {
     $previousPriority = $currentProcess.PriorityClass
@@ -198,14 +205,28 @@ try {
     Push-Location $workspace
     try {
         $cargoArguments = @(
-            "+$NightlyToolchain", 'fuzz', 'run', $target, $corpusDirectory,
-            '--', "-max_total_time=$durationSeconds", '-jobs=1', '-workers=1',
+            "+$NightlyToolchain", 'fuzz', 'run', '--jobs', '1',
+            $target, $corpusDirectory,
+            '--', "-max_total_time=$durationSeconds",
             "-max_len=$([int]$manifest.campaign_contract.maximum_input_bytes)",
             "-timeout=$([int]$manifest.campaign_contract.per_input_timeout_seconds)",
             "-artifact_prefix=$artifactDirectory\"
         )
-        & cargo @cargoArguments 2>&1 | Tee-Object -FilePath $logPath
-        $runExitCode = $LASTEXITCODE
+        # Windows PowerShell 5.1 wraps ordinary native stderr (including
+        # Cargo progress) in non-terminating NativeCommandError records. Keep
+        # streaming both channels, but decide success only from the native
+        # process exit code.
+        $nativeErrorActionPreference = $ErrorActionPreference
+        try {
+            $ErrorActionPreference = 'Continue'
+            & cargo @cargoArguments 2>&1 |
+                Tee-Object -FilePath $logPath |
+                Out-Null
+            $runExitCode = $LASTEXITCODE
+        }
+        finally {
+            $ErrorActionPreference = $nativeErrorActionPreference
+        }
     }
     finally {
         Pop-Location
@@ -227,10 +248,19 @@ if ($runExitCode -eq 0 -and $GenerateCoverage) {
         if ($isWindowsHost) {
             $env:Path = "$(Split-Path -Parent $asanRuntimePath);$previousPath"
         }
-        & cargo "+$NightlyToolchain" fuzz coverage $target $corpusDirectory 2>&1 |
-            Tee-Object -FilePath (Join-Path $evidenceDirectory "$runId-$target-coverage.log")
-        if ($LASTEXITCODE -ne 0) {
-            throw "cargo fuzz coverage failed with exit code $LASTEXITCODE"
+        $coverageErrorActionPreference = $ErrorActionPreference
+        try {
+            $ErrorActionPreference = 'Continue'
+            & cargo "+$NightlyToolchain" fuzz coverage $target $corpusDirectory 2>&1 |
+                Tee-Object -FilePath (Join-Path $evidenceDirectory "$runId-$target-coverage.log") |
+                Out-Null
+            $coverageExitCode = $LASTEXITCODE
+        }
+        finally {
+            $ErrorActionPreference = $coverageErrorActionPreference
+        }
+        if ($coverageExitCode -ne 0) {
+            throw "cargo fuzz coverage failed with exit code $coverageExitCode"
         }
     }
     finally {
@@ -251,6 +281,8 @@ if (Test-Path -LiteralPath $logPath -PathType Leaf) {
     }
 }
 $elapsedSeconds = [long][Math]::Floor($stopwatch.Elapsed.TotalSeconds)
+$finalCorpusFiles = @(Get-ChildItem -LiteralPath $corpusDirectory -File -Force).Count
+$artifactFiles = @(Get-ChildItem -LiteralPath $artifactDirectory -File -Force).Count
 $sourceRevisionAfter = [string](& git rev-parse HEAD)
 if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($sourceRevisionAfter)) {
     throw 'Could not resolve the source revision after the fuzz campaign.'
@@ -270,7 +302,7 @@ $sustainedSatisfied = (
     $elapsedSeconds -ge [long]$manifest.campaign_contract.minimum_wall_clock_seconds -and
     $executions -ge [long]$manifest.campaign_contract.minimum_executions -and
     $coverageGenerated -and
-    @(Get-ChildItem -LiteralPath $artifactDirectory -File -ErrorAction SilentlyContinue).Count -eq 0
+    $artifactFiles -eq 0
 )
 $record = [ordered]@{
     schema_version = 1
@@ -292,6 +324,9 @@ $record = [ordered]@{
     elapsed_seconds = $elapsedSeconds
     requested_seconds = $durationSeconds
     executions = $executions
+    initial_seed_count = [int]$manifest.seed_count
+    final_corpus_files = $finalCorpusFiles
+    artifact_files = $artifactFiles
     exit_code = $runExitCode
     workers = 1
     jobs = 1

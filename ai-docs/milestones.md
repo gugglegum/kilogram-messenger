@@ -6812,5 +6812,8 @@ correlation visible, Windows-only field evidence, independent security audit
   `1c53c755571bcdaf2399fd82b1c54c81850253815e6e8a6add9041ee60d5b03a`;
 - preflight exact-проверяет compiler commit/date/LLVM, cargo-fuzz version,
   runtime files и 20 seed corpus; mismatch fail closed останавливает запуск;
+- Windows PowerShell native stderr сохраняется в ignored log, но успех
+  определяется exit code; каждый run безопасно сбрасывает только exact flat
+  corpus/artifact directories и вновь материализует 20 seeds;
 - instrumented target build не переименован в execution evidence: smoke,
   sustained campaign, coverage report и transport activation остаются false.

@@ -268,7 +268,12 @@ function Assert-Contract {
     Assert-ContainsAll $Preparer @(
         'ConvertFrom-StrictLowerHex', 'Get-JsonPointerValue',
         'canonical_sync_v2_fuzz_seed_corpus=verified',
-        'coverage_guided_campaign_executed=false'
+        'coverage_guided_campaign_executed=false',
+        '[switch]$ResetOutputDirectory',
+        'ResetOutputDirectory is limited to the ignored fuzz corpus root.',
+        'Refusing to reset a corpus directory through a reparse point.',
+        'Refusing to reset a corpus directory that contains subdirectories.',
+        'corpus_reset='
     ) 'fuzz seed preparer'
     Assert-ContainsAll $Runner @(
         "[ValidateSet('Preflight', 'Smoke', 'Sustained')]",
@@ -278,15 +283,24 @@ function Assert-Contract {
         'clang_rt.asan_dynamic_runtime_thunk-x86_64.lib',
         '$env:Path = "$(Split-Path -Parent $asanRuntimePath);$previousPath"',
         '$env:Path = $previousPath',
+        '-ResetOutputDirectory',
+        'Refusing to reset an artifact directory with a reparse point or subdirectories.',
+        'initial_seed_count = [int]$manifest.seed_count',
+        'final_corpus_files = $finalCorpusFiles',
+        'artifact_files = $artifactFiles',
+        'Tee-Object -FilePath $logPath', 'Out-Null',
         '-AcknowledgeSustainedResourceUse', "`$env:CARGO_BUILD_JOBS = '1'",
-        "'-jobs=1', '-workers=1'", 'cargo fuzz coverage',
+        "'run', '--jobs', '1'", 'cargo fuzz coverage',
         'Sustained mode requires -GenerateCoverage.',
         'Sustained mode requires a clean committed source worktree.',
         'source_worktree_clean_before', 'source_worktree_clean_after',
         'Sustained fuzz campaign did not satisfy the closed evidence contract',
         'sustained_gate_satisfied', 'coverage_guided_campaign_executed=false'
     ) 'fuzz runner'
-    foreach ($forbidden in @('rustup toolchain install', 'cargo install', '-jobs=2', '-workers=2')) {
+    foreach ($forbidden in @(
+        'rustup toolchain install', 'cargo install', '-jobs=1', '-workers=1',
+        '-jobs=2', '-workers=2'
+    )) {
         if ($Runner.IndexOf($forbidden, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
             throw "fuzz runner contains forbidden resource or installation surface: $forbidden"
         }
