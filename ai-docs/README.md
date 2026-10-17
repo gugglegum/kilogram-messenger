@@ -1137,6 +1137,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.1.74 закрепляет exact nightly compiler, cargo-fuzz, libFuzzer dependency
   lock и Windows runtime component; instrumented target реально собран, но
   smoke/sustained execution и coverage пока намеренно не заявлены.
+- [`../docs/RFC-0202-m1175-instrumented-fuzz-smoke.md`](../docs/RFC-0202-m1175-instrumented-fuzz-smoke.md) —
+  M1.1.75 фиксирует clean-source пятиминутный instrumented run, ноль generated
+  artifacts и валидный coverage profile, сохраняя восьмичасовой gate и
+  transport activation открытыми.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

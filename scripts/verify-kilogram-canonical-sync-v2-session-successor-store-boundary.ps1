@@ -116,9 +116,9 @@ function Assert-Contract {
         [bool]$Bootstrap.activation.mutual_capability_selection_integrated) {
         throw 'initial session bootstrap boundary changed prematurely'
     }
-    if ([string]$Migration.milestone -cne 'M1.1.73' -or
+    if ([string]$Migration.milestone -cne 'M1.1.75' -or
         [string]$Migration.status -cne
-            'canonical-sync-v2-coverage-fuzz-harness-verified-campaign-not-run' -or
+            'canonical-sync-v2-instrumented-smoke-verified-sustained-pending' -or
         [string]$Migration.history_compatible_successor.dormant_signed_session_successor_store -cne
             'verified' -or
         [string]$Migration.history_compatible_successor.dormant_checkpoint_bound_runtime_frame_journal -cne
@@ -135,9 +135,9 @@ function Assert-Contract {
         [string]$successorRequirement[0].status -cne 'verified') {
         throw 'canonical migration successor store requirement is not verified'
     }
-    if ([string]$TransportManifest.milestone -cne 'M1.1.73' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.75' -or
         [string]$TransportManifest.status -cne
-            'canonical-sync-v2-coverage-fuzz-harness-verified-campaign-not-run' -or
+            'canonical-sync-v2-instrumented-smoke-verified-sustained-pending' -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_signed_session_successor_store -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_checkpoint_bound_runtime_frame_journal -or
         'dormant-server-runtime-transition-integration' -cin
@@ -146,19 +146,19 @@ function Assert-Contract {
         [bool]$TransportManifest.history_compatible_successor.dialed) {
         throw 'transport sync manifest lost dormant successor store state'
     }
-    if ([string]$Compatibility.milestone -cne 'M1.1.73' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.75' -or
         [string]$Compatibility.status -cne
-            'canonical-sync-v2-coverage-fuzz-harness-verified-campaign-not-run' -or
+            'canonical-sync-v2-instrumented-smoke-verified-sustained-pending' -or
         -not [bool]$Compatibility.required_successor.dormant_signed_session_successor_store_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_checkpoint_bound_runtime_frame_journal_integrated -or
         [string]$Compatibility.required_successor.status -cne
-            'canonical-sync-v2-coverage-fuzz-harness-verified-campaign-not-run') {
+            'canonical-sync-v2-instrumented-smoke-verified-sustained-pending') {
         throw 'history compatibility manifest lost dormant successor store state'
     }
     $transportCoverage = @(
         @($Coverage.surfaces) | Where-Object { [string]$_.id -ceq 'transport-sync' }
     )
-    if ([string]$Coverage.milestone -cne 'M1.1.73' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.75' -or
         $transportCoverage.Count -ne 1 -or
         'CANONICAL-SYNC-V2-SESSION-SUCCESSOR-STORE.json' -cnotin
             @($transportCoverage[0].artifacts) -or

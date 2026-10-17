@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.75",
+  "status": "instrumented-smoke-and-coverage-verified-sustained-pending",
+  "campaign_manifest": "CANONICAL-SYNC-V2-FUZZ-CAMPAIGN.json",
+  "toolchain_manifest": "CANONICAL-SYNC-V2-FUZZ-TOOLCHAIN.json",
+  "target": "canonical_sync_v2_decoders",
+  "source": {
+    "revision_before": "f9148093a7476e2d77c4a967b018c4b26a230225",
+    "revision_after": "f9148093a7476e2d77c4a967b018c4b26a230225",
+    "worktree_clean_before": true,
+    "worktree_clean_after": true
+  },
+  "host": {
+    "os": "windows",
+    "target_triple": "x86_64-pc-windows-msvc"
+  },
+  "toolchain": {
+    "rustc_release": "1.101.0-nightly",
+    "rustc_commit_hash": "5d8fec0669a64607db9ccbf663e7c23125bf4748",
+    "rustc_commit_date": "2026-10-16",
+    "llvm_version": "23.1.4",
+    "cargo_fuzz_version": "0.13.2",
+    "sanitizer": "address"
+  },
+  "run": {
+    "mode": "smoke",
+    "started_at_utc": "2026-10-17T11:00:00.1772545Z",
+    "requested_seconds": 300,
+    "elapsed_seconds": 301,
+    "executions": 5697050,
+    "initial_seed_count": 20,
+    "final_corpus_files": 859,
+    "artifact_files": 0,
+    "exit_code": 0,
+    "workers": 1,
+    "jobs": 1,
+    "coverage_generated": true,
+    "smoke_gate_satisfied": true,
+    "sustained_gate_satisfied": false
+  },
+  "evidence": {
+    "record": {
+      "path": ".tmp/fuzz/evidence/20261017T110000Z-canonical_sync_v2_decoders.json",
+      "bytes": 1175,
+      "sha256": "60b5dbc862b914eef257c37749b478acce76f94379f6306432949c87f28dbf5b"
+    },
+    "run_log": {
+      "path": ".tmp/fuzz/evidence/20261017T110000Z-canonical_sync_v2_decoders.log",
+      "bytes": 566714,
+      "sha256": "d96ddd1c6f830c1f1a1b7fa36a61085694d8735d66ae0c54ba3db3bc3d248e50"
+    },
+    "coverage_log": {
+      "path": ".tmp/fuzz/evidence/20261017T110000Z-canonical_sync_v2_decoders-coverage.log",
+      "bytes": 498484,
+      "sha256": "61b97c3560359699742e3d6c946cad0e54d9ff1c5c9e032225dc150f580d6829"
+    },
+    "coverage_profile": {
+      "path": "fuzz/coverage/canonical_sync_v2_decoders/coverage.profdata",
+      "bytes": 226312,
+      "sha256": "16e801dbd95013ac16e4bc413723a65ef3d243b0552c5160f5013614d253a723"
+    }
+  },
+  "coverage_profile_validation": {
+    "tool": "llvm-profdata show",
+    "instrumentation_level": "Front-end",
+    "total_functions": 871,
+    "maximum_function_count": 193715260,
+    "maximum_internal_block_count": 9996470,
+    "total_blocks": 1986,
+    "total_count": 838948912
+  },
+  "activation": {
+    "active_transport_authorized": false,
+    "candidate_identifier_registered": false,
+    "candidate_identifier_dialed": false,
+    "active_runtime_changed": false
+  },
+  "next_gate": "sustained-instrumented-campaign"
+}

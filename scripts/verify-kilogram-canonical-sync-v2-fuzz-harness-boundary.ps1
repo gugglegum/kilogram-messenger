@@ -7,6 +7,7 @@ $ErrorActionPreference = 'Stop'
 $workspace = [System.IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $manifestPath = Join-Path $workspace 'CANONICAL-SYNC-V2-FUZZ-CAMPAIGN.json'
 $toolchainManifestPath = Join-Path $workspace 'CANONICAL-SYNC-V2-FUZZ-TOOLCHAIN.json'
+$smokeManifestPath = Join-Path $workspace 'CANONICAL-SYNC-V2-FUZZ-SMOKE.json'
 $mutationManifestPath = Join-Path $workspace 'CANONICAL-SYNC-V2-DECODER-MUTATIONS.json'
 $migrationPath = Join-Path $workspace 'CANONICAL-MIGRATION.json'
 $transportManifestPath = Join-Path $workspace 'CANONICAL-TRANSPORT-SYNC.json'
@@ -82,10 +83,10 @@ function Assert-Contract {
         [string]$ToolchainRfc
     )
 
-    $aggregateStatus = 'canonical-sync-v2-coverage-fuzz-harness-verified-campaign-not-run'
+    $aggregateStatus = 'canonical-sync-v2-instrumented-smoke-verified-sustained-pending'
     if ([UInt64]$Manifest.schema_version -ne 1 -or
-        [string]$Manifest.milestone -cne 'M1.1.74' -or
-        [string]$Manifest.status -cne 'instrumented-fuzz-target-built-smoke-pending' -or
+        [string]$Manifest.milestone -cne 'M1.1.75' -or
+        [string]$Manifest.status -cne 'instrumented-smoke-and-coverage-verified-sustained-pending' -or
         [string]$Manifest.scope -cne 'history-compatible-canonical-sync-v2-strict-decoders' -or
         [string]$Manifest.target -cne 'canonical_sync_v2_decoders') {
         throw 'sync-v2 fuzz campaign identity changed'
@@ -93,6 +94,7 @@ function Assert-Contract {
     if ([string]$Manifest.engine.driver -cne 'cargo-fuzz' -or
         [string]$Manifest.engine.minimum_driver_version -cne '0.12.0' -or
         [string]$Manifest.engine.toolchain_contract_manifest -cne 'CANONICAL-SYNC-V2-FUZZ-TOOLCHAIN.json' -or
+        [string]$Manifest.engine.smoke_evidence_manifest -cne 'CANONICAL-SYNC-V2-FUZZ-SMOKE.json' -or
         [string]$Manifest.engine.backend -cne 'libFuzzer' -or
         -not [bool]$Manifest.engine.nightly_toolchain_required -or
         -not [bool]$Manifest.engine.address_sanitizer_required -or
@@ -202,12 +204,12 @@ function Assert-Contract {
         throw 'sync-v2 fuzz campaign resource contract changed'
     }
     if (-not [bool]$Manifest.observed.harness_compiled_with_libfuzzer -or
-        [bool]$Manifest.observed.smoke_campaign_completed -or
+        -not [bool]$Manifest.observed.smoke_campaign_completed -or
         [bool]$Manifest.observed.sustained_campaign_completed -or
-        [bool]$Manifest.observed.coverage_report_generated -or
-        [UInt64]$Manifest.observed.executions -ne 0 -or
-        [UInt64]$Manifest.observed.wall_clock_seconds -ne 0) {
-        throw 'unverified sync-v2 fuzz result was claimed'
+        -not [bool]$Manifest.observed.coverage_report_generated -or
+        [UInt64]$Manifest.observed.executions -ne 5697050 -or
+        [UInt64]$Manifest.observed.wall_clock_seconds -ne 301) {
+        throw 'sync-v2 fuzz smoke observation changed'
     }
     if ([bool]$Manifest.activation.active_transport_authorized -or
         [bool]$Manifest.activation.candidate_identifier_registered -or
@@ -306,10 +308,10 @@ function Assert-Contract {
         }
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.73' -or
+    if ([string]$Migration.milestone -cne 'M1.1.75' -or
         [string]$Migration.status -cne $aggregateStatus -or
         [string]$Migration.history_compatible_successor.coverage_guided_fuzz_harness -cne
-            'verified-not-run' -or
+            'instrumented-smoke-verified' -or
         [bool]$Migration.selection.selection_authorizes_registration_or_dial) {
         throw 'canonical migration fuzz harness state changed'
     }
@@ -320,40 +322,49 @@ function Assert-Contract {
         [string]$_.id -ceq 'sustained-coverage-guided-fuzzing'
     })
     if ($harnessRequirement.Count -ne 1 -or
-        [string]$harnessRequirement[0].status -cne 'verified-not-run' -or
+        [string]$harnessRequirement[0].status -cne 'instrumented-smoke-verified' -or
         $campaignRequirement.Count -ne 1 -or
         [string]$campaignRequirement[0].status -cne 'pending') {
         throw 'fuzz harness and campaign gates were conflated'
     }
-    if ([string]$TransportManifest.milestone -cne 'M1.1.73' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.75' -or
         [string]$TransportManifest.status -cne $aggregateStatus -or
         -not [bool]$TransportManifest.history_compatible_successor.coverage_guided_fuzz_harness -or
+        -not [bool]$TransportManifest.history_compatible_successor.instrumented_fuzz_smoke -or
         [bool]$TransportManifest.history_compatible_successor.registered -or
         [bool]$TransportManifest.history_compatible_successor.dialed) {
         throw 'transport fuzz harness state changed'
     }
-    if ([string]$Compatibility.milestone -cne 'M1.1.73' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.75' -or
         [string]$Compatibility.status -cne $aggregateStatus -or
         -not [bool]$Compatibility.required_successor.coverage_guided_fuzz_harness_integrated -or
+        -not [bool]$Compatibility.required_successor.instrumented_fuzz_smoke_verified -or
         [string]$Compatibility.required_successor.status -cne $aggregateStatus) {
         throw 'history compatibility fuzz harness state changed'
     }
     $surface = @($Coverage.surfaces | Where-Object { [string]$_.id -ceq 'transport-sync' })
     $requiredArtifacts = @(
         'CANONICAL-SYNC-V2-FUZZ-CAMPAIGN.json',
+        'CANONICAL-SYNC-V2-FUZZ-TOOLCHAIN.json',
+        'CANONICAL-SYNC-V2-FUZZ-SMOKE.json',
         'crates/kilogram-protocol/src/decoder_fuzzing.rs',
         'crates/kilogram-protocol/tests/canonical_sync_v2_fuzz_seeds.rs',
         'fuzz/Cargo.toml',
+        'fuzz/Cargo.lock',
         'fuzz/fuzz_targets/canonical_sync_v2_decoders.rs',
         'scripts/prepare-kilogram-canonical-sync-v2-fuzz-corpus.ps1',
         'scripts/invoke-kilogram-canonical-sync-v2-fuzz.ps1',
         'scripts/verify-kilogram-canonical-sync-v2-fuzz-harness-boundary.ps1',
-        'docs/RFC-0200-m1173-canonical-sync-v2-coverage-fuzz-harness.md'
+        'scripts/verify-kilogram-canonical-sync-v2-fuzz-smoke-boundary.ps1',
+        'docs/RFC-0200-m1173-canonical-sync-v2-coverage-fuzz-harness.md',
+        'docs/RFC-0201-m1174-pinned-fuzz-toolchain.md',
+        'docs/RFC-0202-m1175-instrumented-fuzz-smoke.md'
     )
-    if ([string]$Coverage.milestone -cne 'M1.1.73' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.75' -or
         [string]$Coverage.status -cne $aggregateStatus -or
         $surface.Count -ne 1 -or
-        'coverage-guided-fuzz-harness' -cnotin @($surface[0].covered)) {
+        'coverage-guided-fuzz-harness' -cnotin @($surface[0].covered) -or
+        'instrumented-fuzz-smoke' -cnotin @($surface[0].covered)) {
         throw 'canonical coverage fuzz harness state changed'
     }
     foreach ($artifact in $requiredArtifacts) {
@@ -400,7 +411,7 @@ function Assert-Contract {
 }
 
 $paths = @(
-    $manifestPath, $toolchainManifestPath, $mutationManifestPath, $migrationPath, $transportManifestPath,
+    $manifestPath, $toolchainManifestPath, $smokeManifestPath, $mutationManifestPath, $migrationPath, $transportManifestPath,
     $compatibilityPath, $coveragePath, $protocolCargoPath, $protocolLibPath,
     $dispatcherPath, $seedTestPath, $fuzzCargoPath, $fuzzLockPath, $fuzzTargetPath, $gitignorePath, $preparePath,
     $runnerPath, $wirePath, $activeTransportPath, $cliPath, $rfcPath, $toolchainRfcPath
@@ -479,8 +490,8 @@ Write-Output 'canonical_sync_v2_fuzz_harness_boundary=verified'
 Write-Output 'strict_decoder_targets=13'
 Write-Output 'exact_seed_count=20'
 Write-Output 'instrumented_target_built=true'
-Write-Output 'instrumented_campaign_completed=false'
-Write-Output 'coverage_report_generated=false'
+Write-Output 'instrumented_smoke_completed=true'
+Write-Output 'coverage_report_generated=true'
 Write-Output 'sustained_coverage_guided_fuzzing=pending'
 Write-Output 'active_transport_authorized=false'
 Write-Output 'candidate_identifier_registered=false'

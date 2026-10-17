@@ -114,9 +114,9 @@ function Assert-Contract {
         throw 'canonical sync v2 durable client adapter activation boundary changed'
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.73' -or
+    if ([string]$Migration.milestone -cne 'M1.1.75' -or
         [string]$Migration.status -cne
-            'canonical-sync-v2-coverage-fuzz-harness-verified-campaign-not-run' -or
+            'canonical-sync-v2-instrumented-smoke-verified-sustained-pending' -or
         [string]$Migration.history_compatible_successor.dormant_durable_client_transition_adapter -cne
             'verified' -or
         [bool]$Migration.history_compatible_successor.registered -or
@@ -130,9 +130,9 @@ function Assert-Contract {
     if ($requirement.Count -ne 1 -or [string]$requirement[0].status -cne 'verified') {
         throw 'canonical migration durable client adapter requirement is not verified'
     }
-    if ([string]$TransportManifest.milestone -cne 'M1.1.73' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.75' -or
         [string]$TransportManifest.status -cne
-            'canonical-sync-v2-coverage-fuzz-harness-verified-campaign-not-run' -or
+            'canonical-sync-v2-instrumented-smoke-verified-sustained-pending' -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_durable_client_transition_adapter -or
         'dormant-server-runtime-transition-integration' -cin
             @($TransportManifest.remaining) -or
@@ -140,18 +140,18 @@ function Assert-Contract {
         [bool]$TransportManifest.history_compatible_successor.dialed) {
         throw 'transport sync manifest lost durable client adapter state'
     }
-    if ([string]$Compatibility.milestone -cne 'M1.1.73' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.75' -or
         [string]$Compatibility.status -cne
-            'canonical-sync-v2-coverage-fuzz-harness-verified-campaign-not-run' -or
+            'canonical-sync-v2-instrumented-smoke-verified-sustained-pending' -or
         -not [bool]$Compatibility.required_successor.dormant_durable_client_transition_adapter_integrated -or
         [string]$Compatibility.required_successor.status -cne
-            'canonical-sync-v2-coverage-fuzz-harness-verified-campaign-not-run') {
+            'canonical-sync-v2-instrumented-smoke-verified-sustained-pending') {
         throw 'history compatibility manifest lost durable client adapter state'
     }
     $transportCoverage = @(
         @($Coverage.surfaces) | Where-Object { [string]$_.id -ceq 'transport-sync' }
     )
-    if ([string]$Coverage.milestone -cne 'M1.1.73' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.75' -or
         $transportCoverage.Count -ne 1 -or
         'CANONICAL-SYNC-V2-DURABLE-CLIENT-ADAPTER.json' -cnotin
             @($transportCoverage[0].artifacts) -or

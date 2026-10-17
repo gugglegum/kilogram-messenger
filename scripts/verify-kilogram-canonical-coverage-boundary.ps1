@@ -17,8 +17,8 @@ function Assert-Rejected {
 
 function Assert-Manifest {
     param([object]$Coverage, [object]$Source)
-    if ([UInt64]$Coverage.schema_version -ne 1 -or [string]$Coverage.milestone -cne 'M1.1.73' -or
-        [string]$Coverage.status -cne 'canonical-sync-v2-coverage-fuzz-harness-verified-campaign-not-run' -or [bool]$Coverage.changes_active_wire -or
+    if ([UInt64]$Coverage.schema_version -ne 1 -or [string]$Coverage.milestone -cne 'M1.1.75' -or
+        [string]$Coverage.status -cne 'canonical-sync-v2-instrumented-smoke-verified-sustained-pending' -or [bool]$Coverage.changes_active_wire -or
         [string]$Coverage.source_manifest -cne 'PROTOCOL-COMPATIBILITY.json' -or
         [string]$Coverage.target_profile -cne 'kilogram-deterministic-cbor-v1') {
         throw 'canonical coverage header changed'

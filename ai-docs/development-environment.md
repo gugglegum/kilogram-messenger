@@ -4550,3 +4550,35 @@ Hosted follow-up:
   paths. No release archive or stable executable was produced.
 - This stage proves environment and build reproducibility only. Run evidence,
   coverage and the 8-hour/1,000,000-execution gate remain separate stages.
+
+## M1.1.75 instrumented decoder smoke (2026-10-17)
+
+- Clean source revision before and after:
+  `f9148093a7476e2d77c4a967b018c4b26a230225`.
+- Runner mode `Smoke`, requested 300 seconds, observed 301 seconds, one job and
+  one worker, process exit code 0.
+- Observed 5,697,050 executions; exact reset started with 20 seeds and produced
+  859 corpus files. The artifact directory remained empty.
+- Machine record:
+  `.tmp/fuzz/evidence/20261017T110000Z-canonical_sync_v2_decoders.json`
+  (1,175 bytes, SHA-256
+  `60b5dbc862b914eef257c37749b478acce76f94379f6306432949c87f28dbf5b`).
+- Run log: 566,714 bytes, SHA-256
+  `d96ddd1c6f830c1f1a1b7fa36a61085694d8735d66ae0c54ba3db3bc3d248e50`.
+  Coverage log: 498,484 bytes, SHA-256
+  `61b97c3560359699742e3d6c946cad0e54d9ff1c5c9e032225dc150f580d6829`.
+- Coverage profile:
+  `fuzz/coverage/canonical_sync_v2_decoders/coverage.profdata` (226,312 bytes,
+  SHA-256
+  `16e801dbd95013ac16e4bc413723a65ef3d243b0552c5160f5013614d253a723`).
+- Pinned nightly `llvm-profdata show` accepted the profile: front-end
+  instrumentation, 871 functions, maximum function count 193,715,260,
+  maximum internal block count 9,996,470, 1,986 blocks, total count
+  838,948,912.
+- The tracked manifest is portable; ignored raw evidence is optional on another
+  clone. This run intentionally does not satisfy the 28,800-second gate.
+- The new smoke boundary and 23 affected historical boundaries passed normal
+  and negative self-test modes. All 106 root JSON documents parse.
+- Accepted-tag readiness passed 106/106 against immutable `M1.0.0`; rustfmt and
+  workspace all-target/all-feature locked/offline Clippy with `-D warnings`
+  passed.

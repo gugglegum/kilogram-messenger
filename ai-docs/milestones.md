@@ -6817,3 +6817,30 @@ correlation visible, Windows-only field evidence, independent security audit
   corpus/artifact directories и вновь материализует 20 seeds;
 - instrumented target build не переименован в execution evidence: smoke,
   sustained campaign, coverage report и transport activation остаются false.
+
+### M1.1.75 — instrumented decoder smoke and coverage profile: принято локально
+
+- на clean committed revision
+  `f9148093a7476e2d77c4a967b018c4b26a230225` выполнен отдельный
+  инструментированный run продолжительностью 301 секунду;
+- один job/worker выполнил 5 697 050 iterations, начав ровно с 20 seeds и
+  завершив 859 corpus files; process exit 0, generated artifacts 0;
+- coverage pipeline создал профиль 226 312 bytes с SHA-256
+  `16e801dbd95013ac16e4bc413723a65ef3d243b0552c5160f5013614d253a723`;
+  `llvm-profdata show` подтвердил front-end instrumentation, 871 functions,
+  1986 blocks и total count 838 948 912;
+- tracked `CANONICAL-SYNC-V2-FUZZ-SMOKE.json` хранит exact source/toolchain/run
+  metadata, размеры и SHA-256 четырёх ignored evidence outputs; большие логи,
+  corpus и binary profile в Git не добавляются;
+- новый fail-closed boundary отделяет завершённый smoke gate от незавершённого
+  sustained gate и отвергает source drift, dirty source, artifacts, missing
+  coverage, parallel workers и premature activation;
+- новый boundary и 23 затронутых historical boundary прошли normal и negative
+  self-test режимы; readiness inventory содержит 106 gate, все 106 root JSON
+  parsed;
+- accepted-tag readiness 106/106 против immutable `M1.0.0`, rustfmt и
+  workspace all-target/all-feature locked/offline strict Clippy прошли;
+- обязательные 28 800 секунд и fresh hosted/physical-device evidence остаются
+  pending. Active Postcard v6 не менялся, `/cbor/2` не зарегистрирован и не
+  dial-ится; network, release build, archive, stable EXE, push и tag не
+  выполнялись.

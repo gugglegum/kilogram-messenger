@@ -499,9 +499,10 @@ sessions, distribution, removal и key epochs и не решены этим пр
   coverage feedback. M1.1.73 добавил стандартный opt-in cargo-fuzz/libFuzzer
   harness, 13-target dispatcher, 20 raw-binary seeds и one-worker campaign
   contract. M1.1.74 подготовил exact Windows toolchain/runtime, checked-in
-  dependency lock и реально собрал instrumented target. Smoke/sustained
-  campaign и coverage report ещё не выполнены и не заявлены.
-  Открыты sustained coverage-guided fuzzing и fresh field evidence. При будущей active
+  dependency lock и реально собрал instrumented target. M1.1.75 выполнил
+  clean-source пятиминутный instrumented smoke: 5 697 050 executions, 0
+  artifacts и валидный coverage profile. Он закрывает только smoke/pipeline
+  gate. Открыты восьмичасовой sustained run и fresh field evidence. При будущей active
   integration signed ceremony должна
   находиться внутри authenticated transport context: одна локальная
   no-selection row не является защитой от pre-offer stripping.

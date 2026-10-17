@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.73",
-  "status": "canonical-sync-v2-coverage-fuzz-harness-verified-campaign-not-run",
+  "milestone": "M1.1.75",
+  "status": "canonical-sync-v2-instrumented-smoke-verified-sustained-pending",
   "changes_active_wire": false,
   "active": {
     "encoding": "postcard-v6",
@@ -59,10 +59,11 @@
     "dormant_deterministic_rollback_drill_integrated": true,
     "bounded_sync_v2_decoder_mutation_corpus_integrated": true,
     "coverage_guided_fuzz_harness_integrated": true,
+    "instrumented_fuzz_smoke_verified": true,
     "must_integrate_bridge_into_closed_frames": true,
     "must_authenticate_exact_identifier_in_connection_ticket": true,
     "must_preserve_no-sniffing-and-no-parse-fallback": true,
-    "status": "canonical-sync-v2-coverage-fuzz-harness-verified-campaign-not-run"
+    "status": "canonical-sync-v2-instrumented-smoke-verified-sustained-pending"
   },
   "forbidden": [
     "resign-historical-event-with-migration-key",

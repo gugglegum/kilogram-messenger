@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.73",
-  "status": "canonical-sync-v2-coverage-fuzz-harness-verified-campaign-not-run",
+  "milestone": "M1.1.75",
+  "status": "canonical-sync-v2-instrumented-smoke-verified-sustained-pending",
   "changes_active_wire": false,
   "current_encoding": "postcard",
   "candidate_encoding": "kilogram-deterministic-cbor-v2-typed-history",
@@ -31,7 +31,7 @@
     "dormant_dual_reader_runtime_coordinator": "verified",
     "dormant_deterministic_rollback_drill": "verified",
     "bounded_sync_v2_decoder_mutation_corpus": "verified",
-    "coverage_guided_fuzz_harness": "verified-not-run",
+    "coverage_guided_fuzz_harness": "instrumented-smoke-verified",
     "registered": false,
     "dialed": false
   },
@@ -264,7 +264,7 @@
     },
     {
       "id": "coverage-guided-fuzz-harness",
-      "status": "verified-not-run"
+      "status": "instrumented-smoke-verified"
     },
     {
       "id": "sustained-coverage-guided-fuzzing",
