@@ -4654,3 +4654,30 @@ Hosted follow-up:
   directories and identical binary SHA-256 on both machines.
 - No release build, ZIP, tag or automatic-on-push workflow is part of this
   stage. Both Windows workflows are manual-only.
+- SSH must be probed outside the Codex network sandbox. On 2026-10-18 the
+  outside-sandbox checks proved TCP/22, `plink` command execution and `pscp`
+  upload/delete while the main-PC VPN remained enabled; no stale remote
+  Kilogram process existed. The earlier sandbox `Test-NetConnection` failures
+  are not authoritative LAN evidence.
+- Windows PowerShell 5.1 on the main PC leaves `ExitCode` empty for a completed
+  `Start-Process -PassThru` object even after `WaitForExit()` and `Refresh()`.
+  Evidence controllers therefore use `System.Diagnostics.ProcessStartInfo`,
+  asynchronously drain both output streams and read the native exit code from
+  the direct Process object. Zero/non-zero runner probes must pass before a
+  field or hosted run.
+- Recursive `pscp` cannot traverse a 267-character local role-state path even
+  with Windows long paths enabled. The ignored field output root is shortened
+  to `.tmp/f/<experiment>`; the longest observed state path becomes 249
+  characters without changing or omitting any state file.
+- Rehearsal `m1180-field-20261018T033516Z` used two physical hosts and exact
+  binary SHA-256
+  `e23ba26692caf7fe355f04dda5f8825b0222b32ffe62794f0228bd35e7e1f625`.
+  Direct, checkpoint/resume, pinned APS1 relay, mixed-version legacy,
+  selected-v2 corruption with zero fallback and rollback all completed. The
+  bounded manifest passed after the verifier was corrected to require the
+  actual durable checkpoint: Alice count 2 / `SendEventBatch`, Bob count 1 /
+  `ReceiveEventBatch`, then count 2 and one digest on both roles after restart.
+- The rehearsal revision is not final evidence because the process runner and
+  verifier fixes are tracked changes. Freeze and commit those fixes, rebuild
+  the evidence binary, then collect final physical and manual hosted manifests
+  from that same exact revision.

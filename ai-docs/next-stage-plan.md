@@ -1,9 +1,15 @@
 # Следующий большой этап: M1.1.77–M1.1.80
 
 Статус: выполняется. Пакеты 1–3 реализованы и прошли локальные fail-closed
-проверки; пакет 4 подготовлен, но физический direct/relay run ожидает отключения
-VPN/Wintun на основном ПК. Fresh hosted run ожидает exact implementation commit
-и отдельного разрешения на push. Production transport не изменён.
+проверки. Автономный двухмашинный rehearsal на commit `ae9672b` подтвердил
+direct, restart/resume, pinned APS1 relay, mixed-version downgrade,
+post-selection fail-closed и rollback. Во время приёмки обнаружены и исправлены
+две ошибки evidence tooling: Windows PowerShell 5.1 не заполнял
+`Start-Process.ExitCode`, а verifier ожидал симметричный checkpoint вместо
+фактической durable границы Alice `2/SendEventBatch`, Bob
+`1/ReceiveEventBatch`. После фиксации tooling нужен один final physical rerun на
+новом frozen commit; fresh hosted run той же ревизии ожидает отдельного
+разрешения на push. Production transport не изменён.
 
 Цель: за один длительный блок продолжительностью примерно 8–10 часов закрыть
 последний технический gate `fresh-hosted-and-field-evidence` для dormant

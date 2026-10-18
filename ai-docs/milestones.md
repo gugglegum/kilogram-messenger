@@ -6907,14 +6907,23 @@ correlation visible, Windows-only field evidence, independent security audit
 - hosted result ещё не заявлен: нужен exact implementation commit, явное
   разрешение на push и зелёный ручной run этой ревизии.
 
-### M1.1.80 — physical Windows evidence: подготовлен, run ожидается
+### M1.1.80 — physical Windows evidence: rehearsal принят, final frozen-revision run ожидается
 
 - ноутбук `paul_hp_omen` и основной ПК подготовлены для одинакового stable-name
   debug binary; coordination выполняется через SSH/SCP, не через Yandex Disk;
 - Windows Firewall разрешает exact stable path на ноутбуке, а основной ПК уже
   имеет узкие правила для workspace debug CLI;
-- active `xray_tun/Wintun` на основном ПК блокирует даже LAN ICMP и SSH, поэтому
-  финальный direct/relay прогон будет начат только после локальной фиксации
-  revision и краткого отключения VPN на основном ПК;
-- никакой physical success пока не заявлен; старые state и прежние smoke runs
-  не принимаются как evidence этого этапа.
+- проверка вне сетевой песочницы подтвердила TCP/22, SSH execution и SCP при
+  включённом VPN основного ПК; прежние отрицательные LAN probes были artifact
+  sandbox isolation, а не ограничением ноутбука или v2rayN;
+- автономный fresh rehearsal на `ae9672b` и одном exact debug binary SHA-256
+  `e23ba26692caf7fe355f04dda5f8825b0222b32ffe62794f0228bd35e7e1f625`
+  подтвердил direct, restart/resume, pinned APS1 relay, pre-selection legacy,
+  zero-fallback corrupt selected-v2 и rollback на двух физических хостах;
+- rehearsal выявил fail-closed verifier drift: checkpoint правильно имеет
+  Alice `2/SendEventBatch`, Bob `1/ReceiveEventBatch`, а после restart обе роли
+  сходятся к count 2 и одному digest. Verifier и Windows PowerShell 5.1 process
+  runner исправлены, negative mutations расширены;
+- rehearsal не становится финальным canonical evidence, потому что tooling fix
+  меняет frozen source revision. После commit и пересборки требуется один final
+  physical run, затем manual hosted run ровно той же ревизии.

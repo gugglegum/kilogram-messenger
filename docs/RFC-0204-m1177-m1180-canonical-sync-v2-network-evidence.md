@@ -70,6 +70,14 @@ Each independent scenario starts from a fresh prepared directory:
 6. explicit one-step rollback, plus rejection of rollback while selected
    canonical evidence is active.
 
+The restart checkpoint is intentionally asymmetric. Alice has already applied
+the authenticated Diff and journals `SendEventBatch`, so her inventory contains
+two events. Bob has durably sent that Diff but still journals
+`ReceiveEventBatch`, so his inventory contains one event. A successful restart
+must resume those exact actions and converge both roles to two events with the
+same digest; requiring equal checkpoint inventories would test the wrong
+boundary.
+
 Hosted evidence uses two fresh processes on one Windows runner. Physical
 evidence requires two distinct Windows host names and the same executable
 SHA-256 on both hosts. The two evidence kinds are never interchangeable.
@@ -90,7 +98,8 @@ target, topology, production boundary and all scenario reports. It rejects:
 - any claim that `/cbor/2` is registered or dialed by default.
 
 Its self-test includes positive evidence and negative revision, fallback,
-topology and secret-field mutations.
+topology, secret-field, checkpoint-count, checkpoint-action and rollback-path
+mutations.
 
 ## Hosted execution policy
 

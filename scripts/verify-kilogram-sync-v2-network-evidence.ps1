@@ -47,7 +47,7 @@ function Assert-Report {
         [Parameter(Mandatory)] [string] $Scenario,
         [Parameter(Mandatory)] [string] $Status,
         [Parameter(Mandatory)] [string] $Protocol,
-        [AllowNull()] [string] $Path,
+        [AllowNull()] [object] $Path,
         [Parameter(Mandatory)] [bool] $CanonicalSelected,
         [Parameter(Mandatory)] [int] $InventoryCount,
         [Parameter(Mandatory)] [string] $Context
@@ -99,15 +99,16 @@ function Assert-ReportPair {
         [Parameter(Mandatory)] [string] $Protocol,
         [AllowNull()] [string] $Path,
         [Parameter(Mandatory)] [bool] $CanonicalSelected,
-        [Parameter(Mandatory)] [int] $InventoryCount,
+        [Parameter(Mandatory)] [int] $AliceInventoryCount,
+        [Parameter(Mandatory)] [int] $BobInventoryCount,
         [Parameter(Mandatory)] [bool] $RequireConvergence,
         [Parameter(Mandatory)] [string] $Context
     )
     Assert-ExactProperties $Pair @('alice', 'bob') $Context
     Assert-Report $Pair.alice $Revision 'alice' $AliceScenario $Status $Protocol $Path `
-        $CanonicalSelected $InventoryCount "$Context Alice"
+        $CanonicalSelected $AliceInventoryCount "$Context Alice"
     Assert-Report $Pair.bob $Revision 'bob' $BobScenario $Status $Protocol $Path `
-        $CanonicalSelected $InventoryCount "$Context Bob"
+        $CanonicalSelected $BobInventoryCount "$Context Bob"
     if ([string]$Pair.alice.run_id -cne [string]$Pair.bob.run_id) {
         throw "$Context roles do not share one run ID"
     }
@@ -233,7 +234,7 @@ function Test-SyncV2NetworkEvidence {
         'direct', 'restart_resume', 'relay', 'mixed_version', 'post_selection_failure', 'rollback'
     ) 'scenarios'
     Assert-ReportPair $scenarios.direct $revision 'canonical-v2-dialer' 'canonical-v2-listener' `
-        'synchronized' $CandidateAlpn 'direct' $true 2 $true 'direct scenario'
+        'synchronized' $CandidateAlpn 'direct' $true 2 2 $true 'direct scenario'
     if ([string]$scenarios.direct.alice.client_action -cne 'Complete' -or
         [string]$scenarios.direct.bob.responder_action -cne 'Complete') {
         throw 'direct scenario did not reach durable Complete on both active roles'
@@ -247,14 +248,14 @@ function Test-SyncV2NetworkEvidence {
     Assert-ExactProperties $scenarios.restart_resume @('checkpoint', 'resumed') 'restart/resume scenario'
     Assert-ReportPair $scenarios.restart_resume.checkpoint $revision `
         'restart-checkpoint-dialer' 'restart-checkpoint-listener' 'checkpoint-stop' `
-        $CandidateAlpn 'direct' $true 1 $false 'restart checkpoint'
-    if ([string]$scenarios.restart_resume.checkpoint.alice.client_action -cne 'SendEvents' -or
-        [string]$scenarios.restart_resume.checkpoint.bob.responder_action -cne 'ReceiveEvents') {
+        $CandidateAlpn 'direct' $true 2 1 $false 'restart checkpoint'
+    if ([string]$scenarios.restart_resume.checkpoint.alice.client_action -cne 'SendEventBatch' -or
+        [string]$scenarios.restart_resume.checkpoint.bob.responder_action -cne 'ReceiveEventBatch') {
         throw 'restart checkpoint is not the intended durable inter-frame boundary'
     }
     Assert-ReportPair $scenarios.restart_resume.resumed $revision `
         'canonical-v2-dialer' 'canonical-v2-listener' 'synchronized' `
-        $CandidateAlpn 'direct' $true 2 $true 'restart resume'
+        $CandidateAlpn 'direct' $true 2 2 $true 'restart resume'
 
     Assert-ExactProperties $scenarios.relay @('status', 'reason', 'alice', 'bob') 'relay scenario'
     if ([string]$scenarios.relay.status -ceq 'verified') {
@@ -279,7 +280,7 @@ function Test-SyncV2NetworkEvidence {
 
     Assert-ReportPair $scenarios.mixed_version $revision `
         'mixed-version-legacy-dialer' 'mixed-version-legacy-listener' 'legacy-agreed' `
-        $LegacyAlpn 'direct' $false 1 $false 'mixed-version scenario'
+        $LegacyAlpn 'direct' $false 1 1 $false 'mixed-version scenario'
     Assert-ExactProperties $scenarios.post_selection_failure @('alice', 'bob') 'post-selection failure'
     Assert-Report $scenarios.post_selection_failure.alice $revision 'alice' `
         'post-selection-corrupt-dialer' 'corrupt-frame-sent' $CandidateAlpn 'direct' $true 1 `
@@ -331,7 +332,7 @@ function Test-SyncV2NetworkEvidence {
 function New-TestReport {
     param(
         [string] $Revision, [string] $RunId, [string] $Role, [string] $Scenario,
-        [string] $Status, [string] $Protocol, [AllowNull()] [string] $Path,
+        [string] $Status, [string] $Protocol, [AllowNull()] [object] $Path,
         [bool] $Canonical, [int] $Count, [string] $Digest,
         [string] $ClientAction, [string] $ResponderAction
     )
@@ -355,8 +356,8 @@ function New-TestManifest {
         bob = New-TestReport $revision 'self-direct' 'bob' 'canonical-v2-listener' 'synchronized' $CandidateAlpn 'direct' $true 2 $digest 'SendInventory' 'Complete'
     }
     $checkpoint = [ordered]@{
-        alice = New-TestReport $revision 'self-restart' 'alice' 'restart-checkpoint-dialer' 'checkpoint-stop' $CandidateAlpn 'direct' $true 1 ('11' * 32) 'SendEvents' 'AwaitInventory'
-        bob = New-TestReport $revision 'self-restart' 'bob' 'restart-checkpoint-listener' 'checkpoint-stop' $CandidateAlpn 'direct' $true 1 ('22' * 32) 'SendInventory' 'ReceiveEvents'
+        alice = New-TestReport $revision 'self-restart' 'alice' 'restart-checkpoint-dialer' 'checkpoint-stop' $CandidateAlpn 'direct' $true 2 ('11' * 32) 'SendEventBatch' 'ReceiveInventory'
+        bob = New-TestReport $revision 'self-restart' 'bob' 'restart-checkpoint-listener' 'checkpoint-stop' $CandidateAlpn 'direct' $true 1 ('22' * 32) 'SendInventory' 'ReceiveEventBatch'
     }
     $resumed = [ordered]@{
         alice = New-TestReport $revision 'self-restart' 'alice' 'canonical-v2-dialer' 'synchronized' $CandidateAlpn 'direct' $true 2 $digest 'Complete' 'AwaitInventory'
@@ -409,7 +410,15 @@ if ($SelfTest) {
             @{ name = 'wrong-revision'; apply = { param($m) $m.scenarios.direct.alice.source_revision = '00' * 20 } },
             @{ name = 'fallback'; apply = { param($m) $m.scenarios.post_selection_failure.bob.fallback_attempts = 1 } },
             @{ name = 'same-physical-host'; apply = { param($m) $m.evidence_kind = 'physical-windows'; $m.topology.distinct_physical_hosts = $true } },
-            @{ name = 'secret-field'; apply = { param($m) $m.scenarios.direct.alice | Add-Member -NotePropertyName local_device_secret -NotePropertyValue ('00' * 32) } }
+            @{ name = 'secret-field'; apply = { param($m) $m.scenarios.direct.alice | Add-Member -NotePropertyName local_device_secret -NotePropertyValue ('00' * 32) } },
+            @{ name = 'checkpoint-count'; apply = { param($m) $m.scenarios.restart_resume.checkpoint.alice.inventory_count = 1 } },
+            @{ name = 'checkpoint-action'; apply = { param($m) $m.scenarios.restart_resume.checkpoint.alice.client_action = 'SendEvents' } },
+            @{ name = 'rollback-telemetry'; apply = {
+                param($m)
+                $m.scenarios.rollback.alice.route_policy = 'direct-only'
+                $m.scenarios.rollback.alice.selected_path = 'direct'
+                $m.scenarios.rollback.alice.remote_address = 'direct:test'
+            } }
         )
         foreach ($mutation in $mutations) {
             $candidate = (New-TestManifest | ConvertTo-Json -Depth 20) | ConvertFrom-Json
@@ -421,7 +430,7 @@ if ($SelfTest) {
             if (-not $failedClosed) { throw "negative evidence self-test did not fail closed: $($mutation.name)" }
         }
         Write-Output 'sync_v2_network_evidence_self_test=verified'
-        Write-Output 'negative_mutations=4'
+        Write-Output "negative_mutations=$($mutations.Count)"
     }
     finally {
         if (Test-Path -LiteralPath $directory) {

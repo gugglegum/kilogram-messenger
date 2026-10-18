@@ -4,7 +4,8 @@ param(
     [Parameter(Mandatory)] [string] $OutputDirectory,
     [Parameter(Mandatory)] [string] $SourceRevision,
     [string] $ExperimentId = ('m1180-hosted-' + (Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ')),
-    [switch] $AttemptRelay
+    [switch] $AttemptRelay,
+    [switch] $ProcessRunnerSelfTest
 )
 
 Set-StrictMode -Version Latest
@@ -28,6 +29,53 @@ New-Item -ItemType Directory -Force -Path $binDirectory | Out-Null
 $binary = Join-Path $binDirectory 'kilogram-cli.exe'
 Copy-Item -LiteralPath $sourceBinary -Destination $binary -Force
 
+function ConvertTo-NativeCommandLineArgument {
+    param([AllowEmptyString()] [string] $Value)
+    if ($Value.Length -gt 0 -and $Value -cnotmatch '[\s"]') {
+        return $Value
+    }
+    $builder = New-Object System.Text.StringBuilder
+    [void]$builder.Append('"')
+    $backslashes = 0
+    foreach ($character in $Value.ToCharArray()) {
+        if ($character -eq [char]'\') {
+            $backslashes++
+            continue
+        }
+        if ($character -eq [char]'"') {
+            if ($backslashes -gt 0) {
+                [void]$builder.Append(('\' * ($backslashes * 2)))
+            }
+            [void]$builder.Append('\"')
+            $backslashes = 0
+            continue
+        }
+        if ($backslashes -gt 0) {
+            [void]$builder.Append(('\' * $backslashes))
+            $backslashes = 0
+        }
+        [void]$builder.Append($character)
+    }
+    if ($backslashes -gt 0) {
+        [void]$builder.Append(('\' * ($backslashes * 2)))
+    }
+    [void]$builder.Append('"')
+    return $builder.ToString()
+}
+
+function Complete-EvidenceProcess {
+    param([Parameter(Mandatory)] [object] $Started)
+    $stdout = $Started.StdoutTask.Result
+    $stderr = $Started.StderrTask.Result
+    [IO.File]::WriteAllText($Started.Stdout, $stdout, [Text.UTF8Encoding]::new($false))
+    [IO.File]::WriteAllText($Started.Stderr, $stderr, [Text.UTF8Encoding]::new($false))
+    return [PSCustomObject]@{
+        ExitCode = [int]$Started.Process.ExitCode
+        Stdout = $stdout
+        Stderr = $stderr
+    }
+}
+
 function Start-EvidenceProcess {
     param(
         [Parameter(Mandatory)] [string[]] $Arguments,
@@ -39,9 +87,27 @@ function Start-EvidenceProcess {
     }
     $stdout = "$LogPrefix.stdout.log"
     $stderr = "$LogPrefix.stderr.log"
-    $process = Start-Process -FilePath $binary -ArgumentList $Arguments -PassThru `
-        -WindowStyle Hidden -RedirectStandardOutput $stdout -RedirectStandardError $stderr
-    [PSCustomObject]@{ Process = $process; Stdout = $stdout; Stderr = $stderr }
+    $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $startInfo.FileName = $binary
+    $startInfo.Arguments = (($Arguments | ForEach-Object {
+        ConvertTo-NativeCommandLineArgument ([string]$_)
+    }) -join ' ')
+    $startInfo.UseShellExecute = $false
+    $startInfo.CreateNoWindow = $true
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+    $process = New-Object System.Diagnostics.Process
+    $process.StartInfo = $startInfo
+    if (-not $process.Start()) {
+        throw "failed to start evidence process: $binary"
+    }
+    [PSCustomObject]@{
+        Process = $process
+        StdoutTask = $process.StandardOutput.ReadToEndAsync()
+        StderrTask = $process.StandardError.ReadToEndAsync()
+        Stdout = $stdout
+        Stderr = $stderr
+    }
 }
 
 function Read-BoundedLog {
@@ -57,6 +123,9 @@ function Stop-EvidenceProcess {
     if ($null -ne $Started -and -not $Started.Process.HasExited) {
         Stop-Process -Id $Started.Process.Id -Force -ErrorAction SilentlyContinue
         $Started.Process.WaitForExit(5000) | Out-Null
+    }
+    if ($null -ne $Started -and $Started.Process.HasExited) {
+        $null = Complete-EvidenceProcess $Started
     }
 }
 
@@ -75,10 +144,10 @@ function Wait-EvidenceProcess {
         Stop-EvidenceProcess $Started
         throw "$Description timed out after $TimeoutSeconds seconds"
     }
-    if ($Started.Process.ExitCode -ne 0) {
-        $stdout = Read-BoundedLog $Started.Stdout
-        $stderr = Read-BoundedLog $Started.Stderr
-        throw "$Description failed with exit code $($Started.Process.ExitCode). stdout=[$stdout] stderr=[$stderr]"
+    $Started.Process.WaitForExit()
+    $result = Complete-EvidenceProcess $Started
+    if ($result.ExitCode -ne 0) {
+        throw "$Description failed with exit code $($result.ExitCode). stdout=[$($result.Stdout)] stderr=[$($result.Stderr)]"
     }
 }
 
@@ -116,6 +185,28 @@ function Invoke-EvidenceCommand {
     )
     $started = Start-EvidenceProcess $Arguments $LogPrefix
     Wait-EvidenceProcess $started $TimeoutSeconds $Description
+}
+
+if ($ProcessRunnerSelfTest) {
+    Invoke-EvidenceCommand @('--help') (Join-Path $output 'runner-zero') `
+        'hosted process runner zero-exit probe' 30
+    $nonZeroObserved = $false
+    try {
+        Invoke-EvidenceCommand @('not-a-real-evidence-command') `
+            (Join-Path $output 'runner-nonzero') `
+            'hosted process runner nonzero-exit probe' 30
+    }
+    catch {
+        if ([string]$_.Exception.Message -match 'failed with exit code [1-9][0-9]*') {
+            $nonZeroObserved = $true
+        }
+        else { throw }
+    }
+    if (-not $nonZeroObserved) {
+        throw 'hosted process runner accepted an invalid command'
+    }
+    Write-Output 'sync_v2_hosted_process_runner_self_test=verified'
+    return
 }
 
 function Initialize-Scenario {

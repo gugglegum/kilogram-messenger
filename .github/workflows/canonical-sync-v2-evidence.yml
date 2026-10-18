@@ -56,6 +56,12 @@ jobs:
           powershell -NoProfile -ExecutionPolicy Bypass `
             -File .\scripts\verify-kilogram-sync-v2-network-evidence.ps1 `
             -SelfTest
+          powershell -NoProfile -ExecutionPolicy Bypass `
+            -File .\scripts\invoke-kilogram-sync-v2-hosted-evidence.ps1 `
+            -BinaryPath .\target\debug\kilogram-sync-v2-evidence.exe `
+            -OutputDirectory .\.tmp\canonical-sync-v2-runner-self-test `
+            -SourceRevision '${{ steps.source.outputs.revision }}' `
+            -ProcessRunnerSelfTest
 
       - name: Run two fresh processes and verify bounded evidence
         run: |
