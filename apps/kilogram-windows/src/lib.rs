@@ -40,7 +40,7 @@ mod wizard;
 
 use activation::{
     ActivationPlan, ActivationStatus, ActivationUiAction, ActivationView, Disposition,
-    MigrationState,
+    GuidedRestartState, MigrationState,
 };
 
 use wizard::{
@@ -274,6 +274,8 @@ enum RuntimeUiAction {
     RevokeMailbox,
     RefreshMailboxStatus,
     RefreshCanonicalActivation,
+    StopAndInspectCanonicalActivation,
+    RetryCanonicalActivationFreshStart,
     PlanCanonicalActivation,
     ApplyCanonicalActivation,
     RefreshCanonicalRuntimeStatus,
@@ -3119,6 +3121,7 @@ struct KilogramApp {
     canonical_activation: ActivationView,
     drop_target: Option<DropTarget>,
     runtime_process: Option<Child>,
+    guided_stop_deadline: Option<Instant>,
     runtime_start_deadline: Option<Instant>,
     runtime_next_connect_attempt: Instant,
     runtime_start_error: Option<String>,
@@ -3175,6 +3178,7 @@ impl KilogramApp {
             canonical_activation: ActivationView::default(),
             drop_target: None,
             runtime_process: None,
+            guided_stop_deadline: None,
             runtime_start_deadline: None,
             runtime_next_connect_attempt: Instant::now(),
             runtime_start_error: None,
@@ -3227,6 +3231,31 @@ impl KilogramApp {
                 self.apply_canonical_activation_response(response);
                 continue;
             }
+            if response.operation == Operation::Shutdown
+                && self.model.pending != Some(Operation::Shutdown)
+            {
+                // The desktop may observe the owned child exit before the
+                // asynchronous shutdown acknowledgement reaches this queue.
+                // Actual process exit is stronger evidence; never let the
+                // stale acknowledgement clear a newer offline inspection.
+                continue;
+            }
+            if response.operation == Operation::Connect
+                && self.runtime_process.is_none()
+                && matches!(
+                    self.canonical_activation.guided_restart,
+                    GuidedRestartState::Failed {
+                        expectation: Some(_),
+                        ..
+                    }
+                )
+            {
+                // A response that raced with fresh-process exit/termination
+                // cannot complete the retained exact verification. Only the
+                // explicit retry may consume the expectation.
+                self.model.pending = None;
+                continue;
+            }
             if response.operation == Operation::Connect
                 && response.result.is_err()
                 && self.runtime_start_deadline.is_some()
@@ -3236,6 +3265,48 @@ impl KilogramApp {
                 self.model.connection = ConnectionState::Connecting;
                 self.runtime_next_connect_attempt = Instant::now() + RUNTIME_START_RETRY_INTERVAL;
                 continue;
+            }
+            let guided_restart_verified = if response.operation == Operation::Connect
+                && self.canonical_activation.awaiting_fresh_runtime()
+            {
+                match &response.result {
+                    Ok(WorkerSuccess::Connected {
+                        device_id,
+                        canonical_runtime_status,
+                        ..
+                    }) => match self
+                        .canonical_activation
+                        .verify_fresh_runtime(device_id, canonical_runtime_status)
+                    {
+                        Ok(()) => true,
+                        Err(error) => {
+                            self.abort_guided_fresh_runtime(format!(
+                                "Post-restart activation verification failed: {error:#}"
+                            ));
+                            continue;
+                        }
+                    },
+                    Ok(_) => {
+                        self.abort_guided_fresh_runtime(
+                            "Post-restart activation verification received an unexpected worker result"
+                                .to_owned(),
+                        );
+                        continue;
+                    }
+                    Err(_) => false,
+                }
+            } else {
+                false
+            };
+            if response.operation == Operation::Shutdown
+                && matches!(
+                    self.canonical_activation.guided_restart,
+                    GuidedRestartState::StopRequested
+                )
+                && let Err(message) = &response.result
+            {
+                self.canonical_activation.fail_guided(message.clone());
+                self.guided_stop_deadline = None;
             }
             let connected = matches!(response.result, Ok(WorkerSuccess::Connected { .. }));
             let shutdown = matches!(response.result, Ok(WorkerSuccess::Shutdown));
@@ -3252,6 +3323,12 @@ impl KilogramApp {
                 self.runtime_start_deadline = None;
                 self.runtime_start_error = None;
                 self.start_change_subscription();
+                if guided_restart_verified {
+                    self.model.notice = Some(
+                        "Guided activation completed: the fresh authenticated runtime loaded the exact applied signed policy."
+                            .to_owned(),
+                    );
+                }
             }
             if shutdown {
                 self.stop_change_subscription();
@@ -3275,13 +3352,21 @@ impl KilogramApp {
         let success = match response.result {
             Ok(success) => success,
             Err(message) => {
+                if matches!(
+                    self.canonical_activation.guided_restart,
+                    GuidedRestartState::InspectingOffline | GuidedRestartState::Applying
+                ) {
+                    self.canonical_activation.fail_guided(message.clone());
+                }
                 self.model.error = Some(message);
                 return;
             }
         };
+        let mut start_fresh_runtime = false;
         let result: Result<()> = match success {
             WorkerSuccess::CanonicalActivationStatus(status) => {
                 self.canonical_activation.install_status(status);
+                self.canonical_activation.mark_offline_status_ready();
                 self.model.notice = Some(
                     "Canonical sync v2 activation authority verified from the stopped runtime state."
                         .to_owned(),
@@ -3300,21 +3385,40 @@ impl KilogramApp {
             WorkerSuccess::CanonicalActivationApplied {
                 applied_record_id,
                 status,
-            } => {
-                self.canonical_activation.install_status(status);
-                self.model.notice = Some(format!(
-                    "Signed activation successor {} applied. Start a fresh runtime to load the new policy.",
-                    compact_id(&applied_record_id)
-                ));
-                Ok(())
-            }
+            } => self
+                .canonical_activation
+                .expect_fresh_runtime(&applied_record_id, &status)
+                .map(|()| {
+                    self.canonical_activation.install_status(status);
+                    self.model.notice = Some(format!(
+                        "Signed activation successor {} applied. Starting a fresh runtime for exact verification.",
+                        compact_id(&applied_record_id)
+                    ));
+                    start_fresh_runtime = true;
+                }),
             _ => Err(anyhow::anyhow!(
                 "non-activation worker result reached activation ceremony"
             )),
         };
         match result {
-            Ok(()) => self.model.error = None,
-            Err(error) => self.model.error = Some(format!("Activation ceremony: {error:#}")),
+            Ok(()) => {
+                self.model.error = None;
+                if start_fresh_runtime {
+                    self.start_runtime();
+                }
+            }
+            Err(error) => {
+                let detail = format!("Activation ceremony: {error:#}");
+                if matches!(
+                    self.canonical_activation.guided_restart,
+                    GuidedRestartState::InspectingOffline
+                        | GuidedRestartState::Applying
+                        | GuidedRestartState::StartingFresh(_)
+                ) {
+                    self.canonical_activation.fail_guided(detail.clone());
+                }
+                self.model.error = Some(detail);
+            }
         }
     }
 
@@ -4981,6 +5085,9 @@ impl KilogramApp {
         })();
         match result {
             Ok(child) => {
+                if !self.canonical_activation.awaiting_fresh_runtime() {
+                    self.canonical_activation.guided_restart = GuidedRestartState::Idle;
+                }
                 self.canonical_activation.status = None;
                 self.canonical_activation.invalidate_plan();
                 self.runtime_process = Some(child);
@@ -4991,7 +5098,13 @@ impl KilogramApp {
                 self.model.notice = Some("Runtime process started; waiting for IPC".to_owned());
                 self.model.error = None;
             }
-            Err(error) => self.model.fail(Operation::Connect, format!("{error:#}")),
+            Err(error) => {
+                let detail = format!("Start fresh runtime: {error:#}");
+                if self.canonical_activation.awaiting_fresh_runtime() {
+                    self.canonical_activation.fail_guided(detail.clone());
+                }
+                self.model.fail(Operation::Connect, detail);
+            }
         }
     }
 
@@ -5012,6 +5125,80 @@ impl KilogramApp {
                 self.submit(Operation::Shutdown, WorkerRequest::Shutdown { descriptor })
             }
             Err(error) => self.model.fail(Operation::Shutdown, format!("{error:#}")),
+        }
+    }
+
+    fn start_guided_canonical_activation(&mut self) {
+        let result: Result<()> = (|| {
+            ensure!(
+                self.runtime_process.is_some()
+                    && self.model.connection == ConnectionState::Connected,
+                "The guided stop requires a connected desktop-owned runtime"
+            );
+            ensure!(
+                self.model.pending.is_none(),
+                "Wait for the current desktop operation to finish"
+            );
+            self.canonical_activation.begin_guided_stop()?;
+            Ok(())
+        })();
+        match result {
+            Ok(()) => {
+                self.start_shutdown();
+                if self.model.pending != Some(Operation::Shutdown) {
+                    let detail = self
+                        .model
+                        .error
+                        .clone()
+                        .unwrap_or_else(|| "Failed to request a clean runtime stop".to_owned());
+                    self.canonical_activation.fail_guided(detail);
+                    self.guided_stop_deadline = None;
+                } else {
+                    self.guided_stop_deadline = Some(Instant::now() + RUNTIME_STOP_TIMEOUT);
+                }
+            }
+            Err(error) => {
+                self.model.error = Some(format!("Guided activation: {error:#}"));
+            }
+        }
+    }
+
+    fn retry_guided_canonical_activation_fresh_start(&mut self) {
+        let result: Result<()> = (|| {
+            ensure!(
+                self.runtime_process.is_none()
+                    && self.model.connection == ConnectionState::Disconnected
+                    && self.model.pending.is_none(),
+                "Stop and disconnect the runtime before retrying exact verification"
+            );
+            self.canonical_activation.retry_fresh_runtime()?;
+            Ok(())
+        })();
+        match result {
+            Ok(()) => self.start_runtime(),
+            Err(error) => {
+                self.model.error = Some(format!("Guided activation retry: {error:#}"));
+            }
+        }
+    }
+
+    fn advance_guided_canonical_activation(&mut self) {
+        if !self.canonical_activation.should_inspect_stopped_runtime()
+            || self.runtime_process.is_some()
+            || self.model.connection != ConnectionState::Disconnected
+            || self.model.pending.is_some()
+        {
+            return;
+        }
+        self.canonical_activation.mark_offline_inspection_started();
+        self.start_canonical_activation_status();
+        if self.model.pending != Some(Operation::CanonicalActivationStatus) {
+            let detail = self
+                .model
+                .error
+                .clone()
+                .unwrap_or_else(|| "Failed to inspect stopped activation authority".to_owned());
+            self.canonical_activation.fail_guided(detail);
         }
     }
 
@@ -5132,7 +5319,16 @@ impl KilogramApp {
             })
         })();
         match result {
-            Ok(request) => self.submit(Operation::CanonicalActivationApply, request),
+            Ok(request) => {
+                self.canonical_activation.begin_guided_apply();
+                self.submit(Operation::CanonicalActivationApply, request);
+                if self.model.pending != Some(Operation::CanonicalActivationApply) {
+                    let detail = self.model.error.clone().unwrap_or_else(|| {
+                        "Failed to submit the exact activation successor".to_owned()
+                    });
+                    self.canonical_activation.fail_guided(detail);
+                }
+            }
             Err(error) => self
                 .model
                 .fail(Operation::CanonicalActivationApply, format!("{error:#}")),
@@ -5464,20 +5660,34 @@ impl KilogramApp {
         match outcome {
             Ok(Some(status)) => {
                 self.runtime_process = None;
+                self.guided_stop_deadline = None;
                 let was_starting = self.runtime_start_deadline.take().is_some();
+                let guided_starting = self.canonical_activation.awaiting_fresh_runtime();
+                self.canonical_activation
+                    .mark_runtime_exited_for_guided_stop();
                 self.model.pending = None;
                 self.model.connection = ConnectionState::Disconnected;
                 self.model.account_id = None;
                 self.model.device_id = None;
                 self.model.mailbox_status = None;
                 self.model.mailbox_transition = None;
+                self.model.canonical_runtime_status = None;
                 self.stop_change_subscription();
                 if was_starting {
                     let detail = self
                         .runtime_start_error
                         .take()
                         .unwrap_or_else(|| format!("runtime exited with {status}"));
-                    self.model.error = Some(format!("Runtime failed to start: {detail}"));
+                    let detail = format!("Runtime failed to start: {detail}");
+                    if guided_starting {
+                        self.canonical_activation.fail_guided(detail.clone());
+                    }
+                    self.model.error = Some(detail);
+                } else if self.canonical_activation.should_inspect_stopped_runtime() {
+                    self.model.notice = Some(
+                        "Runtime process exited; verifying the stopped activation authority."
+                            .to_owned(),
+                    );
                 } else {
                     self.model.notice = Some(format!("Runtime process exited: {status}"));
                 }
@@ -5498,17 +5708,61 @@ impl KilogramApp {
                 let _ = child.kill();
             }
             self.runtime_start_deadline = None;
-            self.model.fail(
-                Operation::Connect,
-                self.runtime_start_error
-                    .take()
-                    .unwrap_or_else(|| "Runtime startup timed out".to_owned()),
-            );
+            let detail = self
+                .runtime_start_error
+                .take()
+                .unwrap_or_else(|| "Runtime startup timed out".to_owned());
+            if self.canonical_activation.awaiting_fresh_runtime() {
+                self.canonical_activation.fail_guided(detail.clone());
+            }
+            self.model.fail(Operation::Connect, detail);
             return;
         }
         if self.model.pending.is_none() && Instant::now() >= self.runtime_next_connect_attempt {
             self.start_connect();
         }
+    }
+
+    fn enforce_guided_stop_deadline(&mut self) {
+        let Some(deadline) = self.guided_stop_deadline else {
+            return;
+        };
+        if Instant::now() < deadline {
+            return;
+        }
+        self.guided_stop_deadline = None;
+        if let Some(child) = self.runtime_process.as_mut() {
+            let _ = child.kill();
+        }
+        let detail = format!(
+            "Old runtime did not exit within {:.1}s; the desktop terminated its child and stopped before offline activation",
+            RUNTIME_STOP_TIMEOUT.as_secs_f32()
+        );
+        self.canonical_activation.fail_guided(detail.clone());
+        self.model.pending = None;
+        self.model.connection = ConnectionState::Disconnected;
+        self.stop_change_subscription();
+        self.model.error = Some(detail);
+    }
+
+    fn abort_guided_fresh_runtime(&mut self, detail: String) {
+        self.canonical_activation.fail_guided(detail.clone());
+        self.runtime_start_deadline = None;
+        self.runtime_start_error = None;
+        if let Some(mut child) = self.runtime_process.take() {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
+        self.model.pending = None;
+        self.model.connection = ConnectionState::Disconnected;
+        self.model.account_id = None;
+        self.model.device_id = None;
+        self.model.mailbox_status = None;
+        self.model.mailbox_transition = None;
+        self.model.canonical_runtime_status = None;
+        self.stop_change_subscription();
+        self.model.notice = None;
+        self.model.error = Some(detail);
     }
 
     fn accept_dropped_descriptor(&mut self, context: &egui::Context) {
@@ -7552,6 +7806,8 @@ impl KilogramApp {
         }
         let activation_runtime_offline = self.runtime_process.is_none()
             && self.model.connection == ConnectionState::Disconnected;
+        let activation_desktop_owned_runtime_connected =
+            self.runtime_process.is_some() && self.model.connection == ConnectionState::Connected;
         let activation_busy = self.model.pending.is_some();
         ui.collapsing("Canonical sync v2 activation (advanced)", |ui| {
             ui.strong("Running runtime (read only)");
@@ -7648,9 +7904,20 @@ impl KilogramApp {
             ui.strong("Stopped runtime authority ceremony");
             match self
                 .canonical_activation
-                .draw(ui, activation_runtime_offline, activation_busy)
+                .draw(
+                    ui,
+                    activation_runtime_offline,
+                    activation_desktop_owned_runtime_connected,
+                    activation_busy,
+                )
             {
                 ActivationUiAction::None => {}
+                ActivationUiAction::StopAndInspect => {
+                    action = RuntimeUiAction::StopAndInspectCanonicalActivation;
+                }
+                ActivationUiAction::RetryFreshStart => {
+                    action = RuntimeUiAction::RetryCanonicalActivationFreshStart;
+                }
                 ActivationUiAction::Refresh => {
                     action = RuntimeUiAction::RefreshCanonicalActivation;
                 }
@@ -8769,6 +9036,8 @@ impl eframe::App for KilogramApp {
         self.receive_worker_responses();
         self.receive_change_events();
         self.observe_runtime_process();
+        self.enforce_guided_stop_deadline();
+        self.advance_guided_canonical_activation();
         self.maybe_connect_started_runtime();
 
         let mut runtime_action = RuntimeUiAction::None;
@@ -8920,6 +9189,10 @@ impl eframe::App for KilogramApp {
             self.start_mailbox_status();
         } else if runtime_action == RuntimeUiAction::RefreshCanonicalActivation {
             self.start_canonical_activation_status();
+        } else if runtime_action == RuntimeUiAction::StopAndInspectCanonicalActivation {
+            self.start_guided_canonical_activation();
+        } else if runtime_action == RuntimeUiAction::RetryCanonicalActivationFreshStart {
+            self.retry_guided_canonical_activation_fresh_start();
         } else if runtime_action == RuntimeUiAction::PlanCanonicalActivation {
             self.start_canonical_activation_plan();
         } else if runtime_action == RuntimeUiAction::ApplyCanonicalActivation {

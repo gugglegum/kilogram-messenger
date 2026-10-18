@@ -2406,6 +2406,16 @@ carrier conflict rejects the whole transition. The dormant adapter still does
 not invoke this primitive, so active Postcard v6 is unchanged and `/cbor/2`
 remains unregistered and undialed.
 
+The current operator-facing activation boundary is specified by
+[`RFC-0210`](docs/RFC-0210-m1186-desktop-canonical-sync-v2-activation.md),
+[`RFC-0211`](docs/RFC-0211-m1187-canonical-sync-v2-runtime-observability.md),
+and
+[`RFC-0212`](docs/RFC-0212-m1188-canonical-sync-v2-guided-restart.md).
+Together they keep signing authority offline, expose only authenticated
+read-only loaded/configured policy state, and require an exact verified fresh
+runtime after every desktop activation apply. The public default remains
+legacy-only.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

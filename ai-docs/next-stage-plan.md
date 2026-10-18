@@ -1,32 +1,31 @@
-# Текущая точка: M1.1.87 завершён локально
+# Текущая точка: M1.1.88 завершён локально
 
-Статус: `canonical-sync-v2-runtime-observability-verified`; публичный default
+Статус: `canonical-sync-v2-guided-restart-verified`; публичный default
 остаётся `legacy-only`.
 
-Acceptance: IPC regression `17/17`, targeted CLI `1/1`, desktop `26/26`,
-dedicated negative boundary и 32 затронутые historical boundaries зелёные;
-accepted-tag readiness `114/114`, rustfmt и locked/offline strict Clippy прошли.
+Acceptance: desktop `28/28`, dedicated positive/negative restart state-machine
+tests и fail-closed boundary self-test зелёные; accepted-tag readiness
+`115/115`, rustfmt и locked/offline strict Clippy прошли.
 
-Foreground runtime получил authenticated read-only IPC snapshot, который
-раздельно показывает policy, загруженную при построении endpoint/ALPN list, и
-текущую durable configured policy, повторно проверенную под state lock. Их
-exact-расхождение отображается как `restart required`; live mutation, hot apply
-и endpoint rebind по IPC отсутствуют. Добавление enum variants выполнено как
-deliberate hard cut локального IPC v29/domain v10 -> v30/domain v11.
+Windows desktop теперь проводит bounded lifecycle для собственного runtime:
+authenticated shutdown, фактический `Child` exit, offline authority status,
+exact plan/apply, spawn нового child и authenticated connect. До обычной
+загрузки conversations новый runtime обязан вернуть exact applied Device,
+record/epoch/state/disposition/evidence/rights, equal loaded/configured policy,
+`configured_matches_loaded=true` и `restart_required=false`.
 
-Runtime держит только в памяти максимум 32 наблюдения реального sync path:
-inbound/outbound, legacy Postcard v6 или canonical CBOR v2, outcome и bounded
-public/authenticated identifiers без plaintext, IP, relay URL, paths или
-секретов. Desktop загружает snapshot при authenticated connect, обновляет его
-по существующей change-chain и показывает восемь последних строк. Restart
-намеренно очищает telemetry; durable audit log не создаётся.
+Mismatch немедленно завершает новый desktop-owned process и оставляет клиент
+disconnected. Startup exit/timeout также fail closed. Уже применённый durable
+record не откатывается молча: exact ожидание сохраняется в памяти для retry,
+который не добавляет новый authority record. Load/save другого launch profile
+сбрасывает workflow. IPC остаётся v30/domain v11; hot apply и unchecked toggle
+не появились.
 
-Следующий отдельный пакет — M1.1.88: guided stop/apply/fresh-start/post-restart
-verification поверх уже существующей offline authority. Он должен exact-связать
-planned/applied record с policy, загруженной новым runtime, но не превращать
-activation в unchecked toggle, не добавлять hot reload и не менять public
-default. После этого отдельными решениями остаются public-default dual-reader
-rollout и canonical-native history materialization.
+Следующий отдельный пакет — M1.1.89: decision-readiness для публичного
+dual-reader rollout. Он должен собрать явные критерии допуска, cohort/rollback
+границы и доказательства, но не обязан автоматически менять публичный default.
+Canonical-native history materialization и legacy retirement остаются
+отдельными последующими решениями.
 
 ## Исторический план M1.1.81–M1.1.85
 

@@ -4940,3 +4940,20 @@ Hosted follow-up:
   all-target/all-feature locked/offline strict Clippy также прошли.
   Build policy остаётся debug-only, Cargo jobs 2; network/release/ZIP/tag и
   automatic GitHub build не выполнялись.
+
+## M1.1.88 guided restart environment (2026-10-19)
+
+- Изменён только Windows desktop orchestration/state machine и formal
+  manifest/RFC/boundary; runtime IPC, peer transport и sync codecs не менялись.
+- `cargo test -p kilogram-windows --lib --locked --offline --jobs 2` запущен
+  вне filesystem sandbox из-за известного redirected Temp ACL и прошёл 28/28.
+- Pure regression покрывает exact success, wrong Device, record, epoch, rights,
+  dishonest loaded/configured flags, ordered stop/inspect/apply/start/verify и
+  сохранение exact expectation для retry.
+- Новый boundary требует actual child exit до offline inspection, verification
+  до conversations, fail-closed termination и запрещает hot apply/public
+  default drift. Его negative self-test прошёл.
+- Полный readiness: 115/115 против accepted tag `M1.0.0`, rustfmt и
+  workspace-wide all-target/all-feature locked/offline strict Clippy.
+- Build policy: debug only, Cargo jobs 2. Network, release build, ZIP/archive,
+  tag и automatic GitHub build не выполнялись.

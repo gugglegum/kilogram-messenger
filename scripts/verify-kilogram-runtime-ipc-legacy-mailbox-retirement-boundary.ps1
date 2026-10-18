@@ -183,7 +183,7 @@ function Assert-RetirementBoundary {
         [int]$Coverage.summary.complete -ne 18 -or
         [int]$Coverage.summary.partial -ne 0 -or
         (@($Coverage.next_priority) -join ',') -cne
-            'guided-restart-and-post-restart-verification,public-default-dual-reader-rollout-decision,canonical-native-history-materialization') {
+            'public-default-dual-reader-rollout-decision,canonical-native-history-materialization,legacy-sync-retirement-prerequisites') {
         throw 'canonical coverage did not complete runtime IPC'
     }
 

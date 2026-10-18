@@ -1,5 +1,10 @@
 use anyhow::{Context, Result, ensure};
 use eframe::egui;
+use kilogram_runtime_ipc::{
+    RuntimeIpcCanonicalSyncV2Disposition, RuntimeIpcCanonicalSyncV2MigrationState,
+    RuntimeIpcCanonicalSyncV2Permissions, RuntimeIpcCanonicalSyncV2PolicySnapshot,
+    RuntimeIpcCanonicalSyncV2PolicySource, RuntimeIpcCanonicalSyncV2RuntimeStatus,
+};
 
 use crate::wizard::RecoveryCommandOutput;
 
@@ -8,9 +13,86 @@ pub(crate) const MAX_ACTIVATION_REASON_BYTES: usize = 256;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum ActivationUiAction {
     None,
+    StopAndInspect,
+    RetryFreshStart,
     Refresh,
     Plan,
     Apply,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct ActivationRestartExpectation {
+    device_id: String,
+    record_id: String,
+    policy: RuntimeIpcCanonicalSyncV2PolicySnapshot,
+}
+
+impl ActivationRestartExpectation {
+    fn from_applied(applied_record_id: &str, status: &ActivationStatus) -> Result<Self> {
+        ensure!(
+            status.policy_source == "signed-device-chain"
+                && status.record_id.as_deref() == Some(applied_record_id)
+                && status.migration_epoch > 0
+                && status.high_water_verified,
+            "post-apply authority status does not identify the exact signed successor"
+        );
+        Ok(Self {
+            device_id: status.device_id.clone(),
+            record_id: applied_record_id.to_owned(),
+            policy: status.runtime_policy_snapshot()?,
+        })
+    }
+
+    fn verify(
+        &self,
+        connected_device_id: &str,
+        status: &RuntimeIpcCanonicalSyncV2RuntimeStatus,
+    ) -> Result<()> {
+        ensure!(
+            connected_device_id == self.device_id,
+            "fresh runtime authenticated as a different Device"
+        );
+        ensure!(
+            status.configured_matches_loaded && !status.restart_required,
+            "fresh runtime reports that configured and loaded activation policies differ"
+        );
+        ensure!(
+            status.loaded == status.configured,
+            "fresh runtime returned unequal loaded and configured policy snapshots"
+        );
+        ensure!(
+            status.loaded.source == RuntimeIpcCanonicalSyncV2PolicySource::SignedDeviceChain,
+            "fresh runtime did not load the signed Device policy chain"
+        );
+        ensure!(
+            status.loaded == self.policy,
+            "fresh runtime did not load the exact applied activation successor"
+        );
+        Ok(())
+    }
+
+    pub(crate) fn record_id(&self) -> &str {
+        &self.record_id
+    }
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub(crate) enum GuidedRestartState {
+    #[default]
+    Idle,
+    StopRequested,
+    WaitingForOfflineInspection,
+    InspectingOffline,
+    ReadyOffline,
+    Applying,
+    StartingFresh(ActivationRestartExpectation),
+    Verified {
+        record_id: String,
+    },
+    Failed {
+        detail: String,
+        expectation: Option<ActivationRestartExpectation>,
+    },
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -162,6 +244,17 @@ impl ActivationPermissions {
             },
         }
     }
+
+    const fn runtime_permissions(self) -> RuntimeIpcCanonicalSyncV2Permissions {
+        RuntimeIpcCanonicalSyncV2Permissions {
+            legacy_reader_enabled: self.legacy_reader,
+            publish_canonical_capability: self.publish_capability,
+            register_canonical_alpn: self.register_alpn,
+            accept_new_canonical_session: self.accept_new,
+            initiate_new_canonical_session: self.initiate_new,
+            resume_selected_canonical_session: self.resume_selected,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -254,6 +347,44 @@ impl ActivationStatus {
         }
         Ok(value)
     }
+
+    fn runtime_policy_snapshot(&self) -> Result<RuntimeIpcCanonicalSyncV2PolicySnapshot> {
+        let source = match self.policy_source.as_str() {
+            "implicit-default" => RuntimeIpcCanonicalSyncV2PolicySource::ImplicitDefault,
+            "signed-device-chain" => RuntimeIpcCanonicalSyncV2PolicySource::SignedDeviceChain,
+            value => anyhow::bail!("unknown activation policy source: {value}"),
+        };
+        let migration_state = match self.migration_state {
+            MigrationState::LegacyOnly => RuntimeIpcCanonicalSyncV2MigrationState::LegacyOnly,
+            MigrationState::AdvertiseCanonicalV2 => {
+                RuntimeIpcCanonicalSyncV2MigrationState::AdvertiseCanonicalV2
+            }
+            MigrationState::DualReaderPreferLegacy => {
+                RuntimeIpcCanonicalSyncV2MigrationState::DualReaderPreferLegacy
+            }
+            MigrationState::DualReaderPreferCanonical => {
+                RuntimeIpcCanonicalSyncV2MigrationState::DualReaderPreferCanonical
+            }
+            MigrationState::CanonicalRequired => {
+                RuntimeIpcCanonicalSyncV2MigrationState::CanonicalRequired
+            }
+        };
+        let disposition = match self.disposition {
+            Disposition::Normal => RuntimeIpcCanonicalSyncV2Disposition::Normal,
+            Disposition::EmergencyContainment => {
+                RuntimeIpcCanonicalSyncV2Disposition::EmergencyContainment
+            }
+        };
+        Ok(RuntimeIpcCanonicalSyncV2PolicySnapshot {
+            source,
+            record_id: self.record_id.clone(),
+            migration_state,
+            disposition,
+            migration_epoch: self.migration_epoch,
+            canonical_evidence_id: self.canonical_evidence_id.clone(),
+            permissions: self.permissions.runtime_permissions(),
+        })
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -341,6 +472,7 @@ pub(crate) struct ActivationView {
     pub(crate) emergency_containment: bool,
     pub(crate) reason: String,
     pub(crate) confirmation: String,
+    pub(crate) guided_restart: GuidedRestartState,
 }
 
 impl Default for ActivationView {
@@ -352,6 +484,7 @@ impl Default for ActivationView {
             emergency_containment: false,
             reason: String::new(),
             confirmation: String::new(),
+            guided_restart: GuidedRestartState::Idle,
         }
     }
 }
@@ -410,14 +543,212 @@ impl ActivationView {
         })
     }
 
+    pub(crate) fn begin_guided_stop(&mut self) -> Result<()> {
+        ensure!(
+            matches!(
+                self.guided_restart,
+                GuidedRestartState::Idle
+                    | GuidedRestartState::ReadyOffline
+                    | GuidedRestartState::Verified { .. }
+                    | GuidedRestartState::Failed {
+                        expectation: None,
+                        ..
+                    }
+            ),
+            "canonical activation restart workflow is already active"
+        );
+        self.status = None;
+        self.invalidate_plan();
+        self.guided_restart = GuidedRestartState::StopRequested;
+        Ok(())
+    }
+
+    pub(crate) fn mark_runtime_exited_for_guided_stop(&mut self) {
+        if self.guided_restart == GuidedRestartState::StopRequested {
+            self.guided_restart = GuidedRestartState::WaitingForOfflineInspection;
+        }
+    }
+
+    pub(crate) fn should_inspect_stopped_runtime(&self) -> bool {
+        self.guided_restart == GuidedRestartState::WaitingForOfflineInspection
+    }
+
+    pub(crate) fn mark_offline_inspection_started(&mut self) {
+        self.guided_restart = GuidedRestartState::InspectingOffline;
+    }
+
+    pub(crate) fn mark_offline_status_ready(&mut self) {
+        if self.guided_restart == GuidedRestartState::InspectingOffline {
+            self.guided_restart = GuidedRestartState::ReadyOffline;
+        }
+    }
+
+    pub(crate) fn begin_guided_apply(&mut self) {
+        self.guided_restart = GuidedRestartState::Applying;
+    }
+
+    pub(crate) fn expect_fresh_runtime(
+        &mut self,
+        applied_record_id: &str,
+        status: &ActivationStatus,
+    ) -> Result<()> {
+        ensure!(
+            self.guided_restart == GuidedRestartState::Applying,
+            "activation apply completed outside the guided restart workflow"
+        );
+        self.guided_restart = GuidedRestartState::StartingFresh(
+            ActivationRestartExpectation::from_applied(applied_record_id, status)?,
+        );
+        Ok(())
+    }
+
+    pub(crate) fn awaiting_fresh_runtime(&self) -> bool {
+        matches!(self.guided_restart, GuidedRestartState::StartingFresh(_))
+    }
+
+    pub(crate) fn retry_fresh_runtime(&mut self) -> Result<()> {
+        let expectation = match std::mem::take(&mut self.guided_restart) {
+            GuidedRestartState::Failed {
+                expectation: Some(expectation),
+                ..
+            } => expectation,
+            state => {
+                self.guided_restart = state;
+                anyhow::bail!("no exact failed post-restart expectation is available")
+            }
+        };
+        self.guided_restart = GuidedRestartState::StartingFresh(expectation);
+        Ok(())
+    }
+
+    pub(crate) fn verify_fresh_runtime(
+        &mut self,
+        connected_device_id: &str,
+        status: &RuntimeIpcCanonicalSyncV2RuntimeStatus,
+    ) -> Result<()> {
+        let expectation = match &self.guided_restart {
+            GuidedRestartState::StartingFresh(expectation) => expectation,
+            _ => anyhow::bail!("no exact post-restart activation expectation is active"),
+        };
+        expectation.verify(connected_device_id, status)?;
+        self.guided_restart = GuidedRestartState::Verified {
+            record_id: expectation.record_id().to_owned(),
+        };
+        Ok(())
+    }
+
+    pub(crate) fn fail_guided(&mut self, detail: impl Into<String>) {
+        let expectation = match std::mem::take(&mut self.guided_restart) {
+            GuidedRestartState::StartingFresh(expectation) => Some(expectation),
+            GuidedRestartState::Failed { expectation, .. } => expectation,
+            _ => None,
+        };
+        self.guided_restart = GuidedRestartState::Failed {
+            detail: detail.into(),
+            expectation,
+        };
+    }
+
+    fn draw_guided_state(&self, ui: &mut egui::Ui) {
+        match &self.guided_restart {
+            GuidedRestartState::Idle => {}
+            GuidedRestartState::StopRequested => {
+                ui.colored_label(
+                    egui::Color32::from_rgb(246, 195, 93),
+                    "Guided activation: stopping the current desktop-owned runtime…",
+                );
+            }
+            GuidedRestartState::WaitingForOfflineInspection => {
+                ui.colored_label(
+                    egui::Color32::from_rgb(246, 195, 93),
+                    "Guided activation: runtime exited; waiting to inspect the locked state…",
+                );
+            }
+            GuidedRestartState::InspectingOffline => {
+                ui.colored_label(
+                    egui::Color32::from_rgb(246, 195, 93),
+                    "Guided activation: verifying the stopped runtime authority chain…",
+                );
+            }
+            GuidedRestartState::ReadyOffline => {
+                ui.colored_label(
+                    egui::Color32::from_rgb(92, 201, 137),
+                    "Guided activation: stopped authority state verified; plan the exact successor below.",
+                );
+            }
+            GuidedRestartState::Applying => {
+                ui.colored_label(
+                    egui::Color32::from_rgb(246, 195, 93),
+                    "Guided activation: applying the exact signed successor…",
+                );
+            }
+            GuidedRestartState::StartingFresh(expectation) => {
+                ui.colored_label(
+                    egui::Color32::from_rgb(246, 195, 93),
+                    format!(
+                        "Guided activation: starting a fresh runtime and verifying record {}…",
+                        compact_optional_id(Some(expectation.record_id()))
+                    ),
+                );
+            }
+            GuidedRestartState::Verified { record_id } => {
+                ui.colored_label(
+                    egui::Color32::from_rgb(92, 201, 137),
+                    format!(
+                        "Guided activation complete: fresh runtime loaded exact record {}.",
+                        compact_optional_id(Some(record_id))
+                    ),
+                );
+            }
+            GuidedRestartState::Failed {
+                detail,
+                expectation,
+            } => {
+                ui.colored_label(
+                    egui::Color32::from_rgb(239, 112, 112),
+                    format!("Guided activation stopped fail-closed: {detail}"),
+                );
+                if expectation.is_some() {
+                    ui.small("The signed policy is already durable. A retry starts a new process and verifies the same exact record; it does not append another authority record.");
+                }
+            }
+        }
+    }
+
     pub(crate) fn draw(
         &mut self,
         ui: &mut egui::Ui,
         runtime_offline: bool,
+        desktop_owned_runtime_connected: bool,
         busy: bool,
     ) -> ActivationUiAction {
         let mut action = ActivationUiAction::None;
         ui.small("Public default remains legacy-only. This advanced control changes only the selected Device's signed local policy and takes effect after a fresh runtime start.");
+        self.draw_guided_state(ui);
+        if ui
+            .add_enabled(
+                desktop_owned_runtime_connected && !busy,
+                egui::Button::new("Stop runtime and inspect activation authority"),
+            )
+            .clicked()
+        {
+            action = ActivationUiAction::StopAndInspect;
+        }
+        if matches!(
+            self.guided_restart,
+            GuidedRestartState::Failed {
+                expectation: Some(_),
+                ..
+            }
+        ) && ui
+            .add_enabled(
+                runtime_offline && !busy,
+                egui::Button::new("Retry fresh start and exact verification"),
+            )
+            .clicked()
+        {
+            action = ActivationUiAction::RetryFreshStart;
+        }
         if !runtime_offline {
             ui.colored_label(
                 egui::Color32::from_rgb(246, 195, 93),
@@ -538,7 +869,7 @@ impl ActivationView {
             if ui
                 .add_enabled(
                     runtime_offline && !busy && self.apply_ready(),
-                    egui::Button::new("Apply this exact signed successor"),
+                    egui::Button::new("Apply, start fresh runtime, and verify"),
                 )
                 .clicked()
             {
@@ -736,6 +1067,38 @@ mod tests {
         output(&entries)
     }
 
+    fn applied_status() -> ActivationStatus {
+        ActivationStatus {
+            device_id: DEVICE_ID.to_owned(),
+            policy_source: "signed-device-chain".to_owned(),
+            migration_epoch: 1,
+            record_id: Some(RECORD_ID.to_owned()),
+            previous_record_id: None,
+            migration_state: MigrationState::AdvertiseCanonicalV2,
+            disposition: Disposition::Normal,
+            actor: Some("explicit-local".to_owned()),
+            canonical_evidence_id: None,
+            reason: Some("desktop opt-in".to_owned()),
+            high_water_verified: true,
+            permissions: ActivationPermissions::expected(
+                MigrationState::AdvertiseCanonicalV2,
+                Disposition::Normal,
+            ),
+        }
+    }
+
+    fn fresh_runtime_status() -> Result<RuntimeIpcCanonicalSyncV2RuntimeStatus> {
+        let policy = applied_status().runtime_policy_snapshot()?;
+        Ok(RuntimeIpcCanonicalSyncV2RuntimeStatus {
+            loaded: policy.clone(),
+            configured: policy,
+            configured_matches_loaded: true,
+            restart_required: false,
+            observation_capacity: 32,
+            observations: Vec::new(),
+        })
+    }
+
     #[test]
     fn exact_plan_confirmation_is_required_and_any_draft_change_invalidates_it() -> Result<()> {
         let status = ActivationStatus::parse(&status_output())?;
@@ -809,6 +1172,76 @@ mod tests {
         assert!(!view.draft_valid());
         view.reason = "contains\ncontrol".to_owned();
         assert!(!view.draft_valid());
+        Ok(())
+    }
+
+    #[test]
+    fn guided_restart_accepts_only_the_exact_fresh_runtime_policy() -> Result<()> {
+        let status = applied_status();
+        let expectation = ActivationRestartExpectation::from_applied(RECORD_ID, &status)?;
+        expectation.verify(DEVICE_ID, &fresh_runtime_status()?)?;
+
+        let mut wrong_device = fresh_runtime_status()?;
+        assert!(expectation.verify(&"9".repeat(64), &wrong_device).is_err());
+
+        wrong_device.loaded.migration_epoch = 2;
+        wrong_device.configured.migration_epoch = 2;
+        assert!(expectation.verify(DEVICE_ID, &wrong_device).is_err());
+
+        let mut wrong_record = fresh_runtime_status()?;
+        wrong_record.loaded.record_id = Some("3".repeat(64));
+        wrong_record.configured.record_id = Some("3".repeat(64));
+        assert!(expectation.verify(DEVICE_ID, &wrong_record).is_err());
+
+        let mut wrong_rights = fresh_runtime_status()?;
+        wrong_rights.loaded.permissions.accept_new_canonical_session = true;
+        wrong_rights
+            .configured
+            .permissions
+            .accept_new_canonical_session = true;
+        assert!(expectation.verify(DEVICE_ID, &wrong_rights).is_err());
+
+        let mut dishonest_restart_flags = fresh_runtime_status()?;
+        dishonest_restart_flags.configured.migration_epoch = 2;
+        assert!(
+            expectation
+                .verify(DEVICE_ID, &dishonest_restart_flags)
+                .is_err()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn guided_restart_orders_stop_inspect_apply_start_verify_and_preserves_retry() -> Result<()> {
+        let mut view = ActivationView::default();
+        view.begin_guided_stop()?;
+        assert_eq!(view.guided_restart, GuidedRestartState::StopRequested);
+        view.mark_runtime_exited_for_guided_stop();
+        assert!(view.should_inspect_stopped_runtime());
+        view.mark_offline_inspection_started();
+        assert_eq!(view.guided_restart, GuidedRestartState::InspectingOffline);
+        view.mark_offline_status_ready();
+        assert_eq!(view.guided_restart, GuidedRestartState::ReadyOffline);
+        view.begin_guided_apply();
+        view.expect_fresh_runtime(RECORD_ID, &applied_status())?;
+        assert!(view.awaiting_fresh_runtime());
+
+        view.fail_guided("first process failed");
+        assert!(matches!(
+            view.guided_restart,
+            GuidedRestartState::Failed {
+                expectation: Some(_),
+                ..
+            }
+        ));
+        view.retry_fresh_runtime()?;
+        view.verify_fresh_runtime(DEVICE_ID, &fresh_runtime_status()?)?;
+        assert_eq!(
+            view.guided_restart,
+            GuidedRestartState::Verified {
+                record_id: RECORD_ID.to_owned()
+            }
+        );
         Ok(())
     }
 }

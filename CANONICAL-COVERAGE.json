@@ -169,8 +169,8 @@
     }
   ],
   "next_priority": [
-    "guided-restart-and-post-restart-verification",
     "public-default-dual-reader-rollout-decision",
-    "canonical-native-history-materialization"
+    "canonical-native-history-materialization",
+    "legacy-sync-retirement-prerequisites"
   ]
 }

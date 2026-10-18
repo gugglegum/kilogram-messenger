@@ -182,7 +182,7 @@ function Assert-Contract {
         'self.model.connection == ConnectionState::Disconnected',
         '"Stop and disconnect the runtime before using activation authority"',
         'status.record_id.as_deref() == Some(applied_record_id.as_str())',
-        'Start a fresh runtime to load the new policy.'
+        'Starting a fresh runtime for exact verification.'
     ) 'desktop integration'
     Assert-ContainsAll $Ipc @('const IPC_VERSION: u8 = 30;') 'runtime IPC source'
 

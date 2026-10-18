@@ -7155,3 +7155,24 @@ correlation visible, Windows-only field evidence, independent security audit
   rustfmt и workspace all-target/all-feature locked/offline strict Clippy;
 - public default остаётся `legacy-only`; peer/sync wire, release/ZIP/tag,
   network run и automatic GitHub build не менялись.
+
+### M1.1.88 — guided fresh restart and exact activation verification: принят локально
+
+- desktop-owned runtime получает явное действие stop-and-inspect: shutdown ACK
+  не считается завершением, offline helper запускается только после
+  фактического `Child::try_wait` exit;
+- существующая offline status/plan/apply церемония сохранена, но любой apply из
+  desktop теперь автоматически запускает fresh runtime и требует exact
+  post-restart verification;
+- expectation связывает authenticated Device ID, signed record ID, epoch,
+  migration state, disposition, evidence и все шесть permission bits с equal
+  loaded/configured snapshot и честными restart flags;
+- verification выполняется до change subscription и conversation refresh;
+  mismatch завершает новый desktop-owned child и оставляет UI disconnected;
+- startup exit/timeout fail closed. Уже durable apply не откатывается, exact
+  expectation сохраняется для retry без второго authority append;
+- desktop suite прошёл 28/28, dedicated boundary negative mutations прошли,
+  readiness расширен до 115/115 вместе с rustfmt и locked/offline strict
+  Clippy;
+- IPC остаётся v30/domain v11, public default `legacy-only`; network/release/
+  ZIP/tag и automatic GitHub build не выполнялись.
