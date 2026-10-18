@@ -50,7 +50,8 @@ function ConvertTo-NativeArgument {
 function Start-KilogramProcess {
     param(
         [Parameter(Mandatory)] [string[]] $Arguments,
-        [Parameter(Mandatory)] [string] $LogPrefix
+        [Parameter(Mandatory)] [string] $LogPrefix,
+        [hashtable] $Environment = @{}
     )
     $start = [Diagnostics.ProcessStartInfo]::new()
     $start.FileName = $binary
@@ -61,6 +62,9 @@ function Start-KilogramProcess {
     $start.CreateNoWindow = $true
     $start.RedirectStandardOutput = $true
     $start.RedirectStandardError = $true
+    foreach ($entry in $Environment.GetEnumerator()) {
+        $start.EnvironmentVariables[[string]$entry.Key] = [string]$entry.Value
+    }
     $process = [Diagnostics.Process]::new()
     $process.StartInfo = $start
     if (-not $process.Start()) { throw "failed to start $binary" }
@@ -104,7 +108,8 @@ function Wait-KilogramProcess {
     param(
         [Parameter(Mandatory)] [object] $Started,
         [Parameter(Mandatory)] [string] $Description,
-        [int] $TimeoutSeconds = 180
+        [int] $TimeoutSeconds = 180,
+        [switch] $AllowFailure
     )
     $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
     while (-not $Started.Process.HasExited -and [DateTime]::UtcNow -lt $deadline) {
@@ -116,7 +121,7 @@ function Wait-KilogramProcess {
         throw "$Description timed out after $TimeoutSeconds seconds"
     }
     $result = Complete-KilogramProcess $Started
-    if ($result.ExitCode -ne 0) {
+    if ($result.ExitCode -ne 0 -and -not $AllowFailure) {
         throw "$Description failed ($($result.ExitCode)): stdout=[$($result.Stdout)] stderr=[$($result.Stderr)]"
     }
     return $result
@@ -126,9 +131,10 @@ function Invoke-Kilogram {
     param(
         [Parameter(Mandatory)] [string[]] $Arguments,
         [Parameter(Mandatory)] [string] $LogPrefix,
-        [int] $TimeoutSeconds = 180
+        [int] $TimeoutSeconds = 180,
+        [hashtable] $Environment = @{}
     )
-    $started = Start-KilogramProcess $Arguments $LogPrefix
+    $started = Start-KilogramProcess $Arguments $LogPrefix $Environment
     return Wait-KilogramProcess $started ($Arguments -join ' ') $TimeoutSeconds
 }
 
@@ -181,14 +187,21 @@ function Apply-ActivationState {
     param(
         [Parameter(Mandatory)] [string] $StateDirectory,
         [Parameter(Mandatory)] [string] $State,
-        [Parameter(Mandatory)] [string] $Prefix
+        [Parameter(Mandatory)] [string] $Prefix,
+        [ValidateSet('normal', 'emergency-containment')]
+        [string] $Disposition = 'normal',
+        [string] $CanonicalEvidenceId = ''
     )
-    $reason = "M1.1.84 local rehearsal transition to $State"
+    $reason = "M1.1.84 local rehearsal transition to $State/$Disposition"
     $arguments = @(
         '--state-dir', $StateDirectory,
         '--migration-state', $State,
+        '--disposition', $Disposition,
         '--reason', $reason
     )
+    if ($CanonicalEvidenceId) {
+        $arguments += @('--canonical-evidence-id', $CanonicalEvidenceId)
+    }
     $plan = Invoke-Kilogram (@('canonical-sync-policy-plan') + $arguments) "$Prefix-plan"
     Assert-Field $plan.Stdout 'activation_plan_writes_state' 'false'
     $recordId = Get-Field $plan.Stdout 'activation_plan_record_id'
@@ -281,9 +294,17 @@ function Initialize-Pair {
     return [PSCustomObject]@{
         AliceState = $aliceState
         BobState = $bobState
+        AliceAccount = $aliceAccount
+        BobAccount = $bobAccount
         AliceAccountId = $aliceAccountId
         BobAccountId = $bobAccountId
+        AliceCertificate = $aliceCertificate
+        BobCertificate = $bobCertificate
+        AliceDevices = $aliceDevices
         BobDevices = $bobDevices
+        AlicePool = $alicePool
+        BobPool = $bobPool
+        Membership = $membership
         Conversation = $conversation
         ScenarioDirectory = $ScenarioDirectory
     }
@@ -294,6 +315,119 @@ function Get-HistoryEventIds {
     return @([regex]::Matches($Text, '(?m)^event_id=([0-9a-f]{64}) ') | ForEach-Object {
         $_.Groups[1].Value
     } | Sort-Object)
+}
+
+function Assert-HistoryConvergence {
+    param(
+        [Parameter(Mandatory)] [object] $Pair,
+        [Parameter(Mandatory)] [string] $Prefix,
+        [string] $Conversation = ''
+    )
+    if (-not $Conversation) { $Conversation = $Pair.Conversation }
+    $aliceHistory = Invoke-Kilogram @(
+        'history', '--state-dir', $Pair.AliceState, '--conversation', $Conversation
+    ) "$Prefix-alice-history"
+    $bobHistory = Invoke-Kilogram @(
+        'history', '--state-dir', $Pair.BobState, '--conversation', $Conversation
+    ) "$Prefix-bob-history"
+    $aliceIds = @(Get-HistoryEventIds $aliceHistory.Stdout)
+    $bobIds = @(Get-HistoryEventIds $bobHistory.Stdout)
+    if ($aliceIds.Count -eq 0 -or ($aliceIds -join ',') -cne ($bobIds -join ',')) {
+        throw "$Prefix histories did not converge exactly"
+    }
+    return [PSCustomObject]@{
+        EventCount = $aliceIds.Count
+        Digest = ($aliceIds -join ',')
+    }
+}
+
+function Start-BobRuntime {
+    param(
+        [Parameter(Mandatory)] [object] $Pair,
+        [Parameter(Mandatory)] [string] $Ticket,
+        [Parameter(Mandatory)] [string] $Prefix,
+        [int] $MaxSessions = 1,
+        [hashtable] $Environment = @{}
+    )
+    return Start-KilogramProcess @(
+        'runtime', '--state-dir', $Pair.BobState,
+        '--allow-account', $Pair.AliceAccountId,
+        '--device-list-file', $Pair.BobDevices,
+        '--ticket-file', $Ticket,
+        '--route-policy', 'direct-only',
+        '--relay-wait-seconds', '0',
+        '--max-sessions', ([string]$MaxSessions),
+        '--idle-seconds', '120',
+        '--poll-milliseconds', '5000',
+        '--auto-sync-seconds', '0'
+    ) $Prefix $Environment
+}
+
+function Invoke-AliceSync {
+    param(
+        [Parameter(Mandatory)] [object] $Pair,
+        [Parameter(Mandatory)] [string] $Ticket,
+        [Parameter(Mandatory)] [string] $Prefix,
+        [string] $Conversation = '',
+        [hashtable] $Environment = @{}
+    )
+    if (-not $Conversation) { $Conversation = $Pair.Conversation }
+    return Invoke-Kilogram @(
+        'sync', '--state-dir', $Pair.AliceState, '--ticket-file', $Ticket,
+        '--conversation', $Conversation, '--expect-account', $Pair.BobAccountId
+    ) $Prefix 300 $Environment
+}
+
+function Assert-CanonicalSelection {
+    param(
+        [Parameter(Mandatory)] [string] $Text,
+        [string] $ExpectedEvidence = ''
+    )
+    Assert-Field $Text 'sync_transport_selected_alpn' 'kilogram/m1/sync/cbor/2'
+    Assert-Field $Text 'sync_transport_fallback_after_selection' 'false'
+    $evidence = Get-Field $Text 'sync_transport_selection_evidence_id'
+    if ($evidence -cnotmatch '^[0-9a-f]{64}$') {
+        throw "canonical selection evidence is malformed: $evidence"
+    }
+    if ($ExpectedEvidence -and $evidence -cne $ExpectedEvidence) {
+        throw "canonical selection changed across the bounded attempt: expected $ExpectedEvidence, got $evidence"
+    }
+    return $evidence
+}
+
+function New-AdditionalConversation {
+    param(
+        [Parameter(Mandatory)] [object] $Pair,
+        [Parameter(Mandatory)] [string] $Name,
+        [Parameter(Mandatory)] [string] $Prefix
+    )
+    $membership = "$Prefix-membership.snapshot"
+    $bobPool = "$Prefix-bob-prekeys.pool"
+    $null = Invoke-Kilogram @(
+        'conversation-create', '--account-dir', $Pair.AliceAccount, '--conversation', $Name,
+        '--member-account', $Pair.AliceAccountId, '--member-account', $Pair.BobAccountId,
+        '--membership-file', $membership
+    ) "$Prefix-create"
+    $null = Invoke-Kilogram @(
+        'conversation-membership-install', '--state-dir', $Pair.AliceState,
+        '--membership-file', $membership
+    ) "$Prefix-alice-install"
+    $null = Invoke-Kilogram @(
+        'conversation-membership-install', '--state-dir', $Pair.BobState,
+        '--membership-file', $membership
+    ) "$Prefix-bob-install"
+    $null = Invoke-Kilogram @(
+        'ratchet-prekey-pool', '--state-dir', $Pair.BobState,
+        '--pool-file', $bobPool, '--count', '16'
+    ) "$Prefix-bob-prekeys"
+    $null = Invoke-Kilogram @(
+        'seed-history', '--state-dir', $Pair.AliceState, '--conversation', $Name,
+        '--count', '4', '--message-prefix', "M1.1.84-containment-$RunId",
+        '--peer-certificate-file', $Pair.BobCertificate,
+        '--peer-device-list-file', $Pair.BobDevices,
+        '--peer-prekey-pool-file', $bobPool
+    ) "$Prefix-seed" 300
+    return $membership
 }
 
 function Invoke-Scenario {
@@ -367,27 +501,228 @@ function Invoke-Scenario {
             throw 'canonical selection evidence differs between roles'
         }
     }
-    $aliceHistory = Invoke-Kilogram @(
-        'history', '--state-dir', $pair.AliceState, '--conversation', $pair.Conversation
-    ) (Join-Path $directory '10-alice-history')
-    $bobHistory = Invoke-Kilogram @(
-        'history', '--state-dir', $pair.BobState, '--conversation', $pair.Conversation
-    ) (Join-Path $directory '10-bob-history')
-    $aliceIds = Get-HistoryEventIds $aliceHistory.Stdout
-    $bobIds = Get-HistoryEventIds $bobHistory.Stdout
-    if ($aliceIds.Count -eq 0 -or ($aliceIds -join ',') -cne ($bobIds -join ',')) {
-        throw "$Name histories did not converge exactly"
-    }
+    $history = Assert-HistoryConvergence $pair (Join-Path $directory '10')
     return [ordered]@{
         name = $Name
         policy = $Policy
         selected_alpn = $expectedAlpn
-        event_count = $aliceIds.Count
+        event_count = $history.EventCount
         histories_equal = $true
         fallback_after_selection = $false
         selection_evidence_id = if ($Policy -ceq 'optin-optin') {
             Get-Field $sync.Stdout 'sync_transport_selection_evidence_id'
         } else { $null }
+    }
+}
+
+function Invoke-RestartResumeScenario {
+    $directory = Join-Path $output '04-restart-resume'
+    $pair = Initialize-Pair $directory
+    Enable-CanonicalListener $pair.BobState (Join-Path $directory 'bob-activation')
+    Enable-CanonicalInitiator $pair.AliceState (Join-Path $directory 'alice-activation')
+
+    $firstTicket = Join-Path $directory 'bob-first.ticket'
+    $firstRuntime = $null
+    try {
+        $firstRuntime = Start-BobRuntime $pair $firstTicket (Join-Path $directory '08-bob-first-runtime') 2
+        Wait-TicketFile $firstTicket $firstRuntime
+        $interrupted = Invoke-AliceSync $pair $firstTicket (Join-Path $directory '09-alice-interrupted') '' @{
+            KILOGRAM_TEST_STOP_CANONICAL_SYNC_V2_AFTER_DIFF_ONCE = '1'
+        }
+        $firstRuntimeResult = Wait-KilogramProcess $firstRuntime 'Bob first restart/resume runtime' 300
+        $firstRuntime = $null
+    }
+    finally {
+        Stop-KilogramProcess $firstRuntime
+    }
+    Assert-Field $interrupted.Stdout 'runtime_test_fault_status' 'canonical-sync-v2-stopped-after-diff'
+    Assert-Field $interrupted.Stdout 'status' 'canonical-sync-v2-interrupted-after-durable-diff'
+    $evidence = Assert-CanonicalSelection $interrupted.Stdout
+    if ($firstRuntimeResult.Stderr -cnotmatch '(?m)^runtime_canonical_sync_v2_session_status=failed ') {
+        throw 'responder did not record the intentionally interrupted selected canonical session'
+    }
+
+    $secondTicket = Join-Path $directory 'bob-second.ticket'
+    $secondRuntime = $null
+    try {
+        $secondRuntime = Start-BobRuntime $pair $secondTicket (Join-Path $directory '10-bob-second-runtime') 1
+        Wait-TicketFile $secondTicket $secondRuntime
+        $resumed = Invoke-AliceSync $pair $secondTicket (Join-Path $directory '11-alice-resumed')
+        $secondRuntimeResult = Wait-KilogramProcess $secondRuntime 'Bob resumed runtime' 300
+        $secondRuntime = $null
+    }
+    finally {
+        Stop-KilogramProcess $secondRuntime
+    }
+    Assert-Field $resumed.Stdout 'status' 'synchronized'
+    $null = Assert-CanonicalSelection $resumed.Stdout $evidence
+    Assert-Field $secondRuntimeResult.Stdout 'runtime_canonical_sync_v2_session_status' 'completed'
+    $history = Assert-HistoryConvergence $pair (Join-Path $directory '12')
+    return [ordered]@{
+        name = '04-restart-resume'
+        selected_alpn = 'kilogram/m1/sync/cbor/2'
+        interruption_after_durable_diff = $true
+        process_restart = $true
+        exact_selection_resumed = $true
+        selection_evidence_id = $evidence
+        event_count = $history.EventCount
+        histories_equal = $true
+        duplicate_or_loss = $false
+        fallback_after_selection = $false
+    }
+}
+
+function Invoke-SelectedLossScenario {
+    $directory = Join-Path $output '05-selected-loss-fail-closed'
+    $pair = Initialize-Pair $directory
+    Enable-CanonicalListener $pair.BobState (Join-Path $directory 'bob-activation')
+    Enable-CanonicalInitiator $pair.AliceState (Join-Path $directory 'alice-activation')
+    $ticket = Join-Path $directory 'bob.ticket'
+    $runtime = $null
+    try {
+        $runtime = Start-BobRuntime $pair $ticket (Join-Path $directory '08-bob-runtime') 2 @{
+            KILOGRAM_TEST_STOP_CANONICAL_SYNC_V2_AFTER_DIFF_ONCE = '1'
+        }
+        Wait-TicketFile $ticket $runtime
+        $syncProcess = Start-KilogramProcess @(
+            'sync', '--state-dir', $pair.AliceState, '--ticket-file', $ticket,
+            '--conversation', $pair.Conversation, '--expect-account', $pair.BobAccountId
+        ) (Join-Path $directory '09-alice-sync')
+        $failedSync = Wait-KilogramProcess $syncProcess 'Alice selected-loss sync' 300 -AllowFailure
+        $runtimeResult = Wait-KilogramProcess $runtime 'Bob selected-loss runtime' 300
+        $runtime = $null
+    }
+    finally {
+        Stop-KilogramProcess $runtime
+    }
+    if ($failedSync.ExitCode -eq 0) {
+        throw 'selected canonical connection loss unexpectedly succeeded'
+    }
+    $evidence = Assert-CanonicalSelection $failedSync.Stdout
+    if ($failedSync.Stdout -cmatch '(?m)^status=synchronized$') {
+        throw 'selected canonical connection loss reported a false synchronized status'
+    }
+    Assert-Field $runtimeResult.Stdout 'runtime_test_fault_status' 'canonical-sync-v2-stopped-after-diff'
+    if ($runtimeResult.Stderr -cnotmatch '(?m)^runtime_canonical_sync_v2_session_status=failed ') {
+        throw 'selected canonical responder loss did not fail its canonical session'
+    }
+    return [ordered]@{
+        name = '05-selected-loss-fail-closed'
+        selected_alpn = 'kilogram/m1/sync/cbor/2'
+        selection_evidence_id = $evidence
+        client_exit_code = $failedSync.ExitCode
+        synchronized = $false
+        legacy_retry = $false
+        fallback_after_selection = $false
+    }
+}
+
+function Invoke-PreSelectionRollbackScenario {
+    $directory = Join-Path $output '06-pre-selection-rollback'
+    $pair = Initialize-Pair $directory
+    Enable-CanonicalInitiator $pair.AliceState (Join-Path $directory 'alice-activation')
+    Apply-ActivationState $pair.AliceState 'dual-reader-prefer-legacy' (Join-Path $directory 'alice-rollback')
+    $status = Invoke-Kilogram @(
+        'canonical-sync-policy-status', '--state-dir', $pair.AliceState
+    ) (Join-Path $directory '08-status')
+    Assert-Field $status.Stdout 'activation_migration_epoch' '4'
+    Assert-Field $status.Stdout 'activation_migration_state' 'dual-reader-prefer-legacy'
+    Assert-Field $status.Stdout 'activation_disposition' 'normal'
+    Assert-Field $status.Stdout 'activation_canonical_evidence_id' 'none'
+    Assert-Field $status.Stdout 'activation_initiate_new_canonical_session' 'false'
+    return [ordered]@{
+        name = '06-pre-selection-rollback'
+        from = 'dual-reader-prefer-canonical'
+        to = 'dual-reader-prefer-legacy'
+        migration_epoch = 4
+        canonical_evidence = 'none'
+        rollback = 'explicit-one-step'
+    }
+}
+
+function Invoke-ContainmentScenario {
+    $directory = Join-Path $output '07-post-selection-containment'
+    $pair = Initialize-Pair $directory
+    Enable-CanonicalListener $pair.BobState (Join-Path $directory 'bob-activation')
+    Enable-CanonicalInitiator $pair.AliceState (Join-Path $directory 'alice-activation')
+
+    $initialTicket = Join-Path $directory 'bob-initial.ticket'
+    $initialRuntime = $null
+    try {
+        $initialRuntime = Start-BobRuntime $pair $initialTicket (Join-Path $directory '08-bob-initial-runtime') 2
+        Wait-TicketFile $initialTicket $initialRuntime
+        $initialSync = Invoke-AliceSync $pair $initialTicket (Join-Path $directory '09-alice-initial-sync')
+        $initialRuntimeResult = Wait-KilogramProcess $initialRuntime 'Bob pre-containment runtime' 300
+        $initialRuntime = $null
+    }
+    finally {
+        Stop-KilogramProcess $initialRuntime
+    }
+    Assert-Field $initialSync.Stdout 'status' 'synchronized'
+    $evidence = Assert-CanonicalSelection $initialSync.Stdout
+    $null = Assert-CanonicalSelection $initialRuntimeResult.Stdout $evidence
+
+    Apply-ActivationState $pair.AliceState 'dual-reader-prefer-canonical' (Join-Path $directory 'alice-evidence') 'normal' $evidence
+    Apply-ActivationState $pair.BobState 'dual-reader-prefer-legacy' (Join-Path $directory 'bob-evidence') 'normal' $evidence
+    Apply-ActivationState $pair.AliceState 'dual-reader-prefer-canonical' (Join-Path $directory 'alice-containment') 'emergency-containment' $evidence
+    Apply-ActivationState $pair.BobState 'dual-reader-prefer-legacy' (Join-Path $directory 'bob-containment') 'emergency-containment' $evidence
+
+    $resumeTicket = Join-Path $directory 'bob-resume.ticket'
+    $resumeRuntime = $null
+    try {
+        $resumeRuntime = Start-BobRuntime $pair $resumeTicket (Join-Path $directory '10-bob-resume-runtime') 1
+        Wait-TicketFile $resumeTicket $resumeRuntime
+        $resumed = Invoke-AliceSync $pair $resumeTicket (Join-Path $directory '11-alice-resume')
+        $resumeRuntimeResult = Wait-KilogramProcess $resumeRuntime 'Bob contained resume runtime' 300
+        $resumeRuntime = $null
+    }
+    finally {
+        Stop-KilogramProcess $resumeRuntime
+    }
+    Assert-Field $resumed.Stdout 'status' 'synchronized'
+    $null = Assert-CanonicalSelection $resumed.Stdout $evidence
+    Assert-Field $resumed.Stdout 'canonical_sync_v2_containment' 'true'
+    Assert-Field $resumed.Stdout 'canonical_sync_v2_capability_published' 'false'
+    Assert-Field $resumed.Stdout 'canonical_sync_v2_new_initiate_enabled' 'false'
+    Assert-Field $resumed.Stdout 'canonical_sync_v2_selected_resume_enabled' 'true'
+    Assert-Field $resumeRuntimeResult.Stdout 'canonical_sync_v2_containment' 'true'
+    Assert-Field $resumeRuntimeResult.Stdout 'canonical_sync_v2_capability_published' 'false'
+    Assert-Field $resumeRuntimeResult.Stdout 'runtime_canonical_sync_v2_session_status' 'completed'
+    $existingHistory = Assert-HistoryConvergence $pair (Join-Path $directory '12-existing')
+
+    $newConversation = "$RunId-containment-new-conversation"
+    $null = New-AdditionalConversation $pair $newConversation (Join-Path $directory '13-new-conversation')
+    $newTicket = Join-Path $directory 'bob-new-conversation.ticket'
+    $newRuntime = $null
+    try {
+        $newRuntime = Start-BobRuntime $pair $newTicket (Join-Path $directory '14-bob-new-runtime') 1
+        Wait-TicketFile $newTicket $newRuntime
+        $newSync = Invoke-AliceSync $pair $newTicket (Join-Path $directory '15-alice-new-sync') $newConversation
+        $newRuntimeResult = Wait-KilogramProcess $newRuntime 'Bob contained new-conversation runtime' 300
+        $newRuntime = $null
+    }
+    finally {
+        Stop-KilogramProcess $newRuntime
+    }
+    Assert-Field $newSync.Stdout 'status' 'synchronized'
+    Assert-Field $newSync.Stdout 'sync_transport_selected_alpn' 'kilogram/m0/sync/8'
+    Assert-Field $newSync.Stdout 'sync_transport_selection_evidence_id' 'none'
+    Assert-Field $newSync.Stdout 'canonical_sync_v2_containment' 'true'
+    Assert-Field $newRuntimeResult.Stdout 'canonical_sync_v2_capability_published' 'false'
+    $newHistory = Assert-HistoryConvergence $pair (Join-Path $directory '16-new') $newConversation
+
+    return [ordered]@{
+        name = '07-post-selection-containment'
+        selection_evidence_id = $evidence
+        retained_existing_selection = $true
+        existing_selected_alpn = 'kilogram/m1/sync/cbor/2'
+        existing_event_count = $existingHistory.EventCount
+        existing_histories_equal = $true
+        new_canonical_attempts_enabled = $false
+        new_conversation_selected_alpn = 'kilogram/m0/sync/8'
+        new_conversation_event_count = $newHistory.EventCount
+        new_conversation_histories_equal = $true
+        fallback_after_selection = $false
     }
 }
 
@@ -397,11 +732,15 @@ $scenarios = @(
     Invoke-Scenario '01-default-default' 'default-default'
     Invoke-Scenario '02-optin-default' 'optin-default'
     Invoke-Scenario '03-optin-optin' 'optin-optin'
+    Invoke-RestartResumeScenario
+    Invoke-SelectedLossScenario
+    Invoke-PreSelectionRollbackScenario
+    Invoke-ContainmentScenario
 )
 $manifest = [ordered]@{
     schema_version = 1
     milestone = 'M1.1.84'
-    status = 'canonical-sync-v2-local-dark-launch-rehearsal-verified'
+    status = 'canonical-sync-v2-local-resilience-rehearsal-verified'
     source_revision = if ($SourceRevision) { $SourceRevision } else { $null }
     run_id = $RunId
     collected_at_utc = (Get-Date).ToUniversalTime().ToString('o')
@@ -413,6 +752,11 @@ $manifest = [ordered]@{
         profile = 'debug'
     }
     public_default = 'legacy-only'
+    test_faults = [ordered]@{
+        debug_build_only = $true
+        release_available = $false
+        environment_authority = $false
+    }
     scenarios = $scenarios
 }
 $manifestPath = Join-Path $output 'M1184-LOCAL-EVIDENCE.json'
@@ -422,4 +766,4 @@ $manifestPath = Join-Path $output 'M1184-LOCAL-EVIDENCE.json'
     [Text.UTF8Encoding]::new($false)
 )
 Write-Output "evidence_manifest=$manifestPath"
-Write-Output 'status=canonical-sync-v2-local-dark-launch-rehearsal-verified'
+Write-Output 'status=canonical-sync-v2-local-resilience-rehearsal-verified'

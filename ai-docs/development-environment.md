@@ -4836,3 +4836,24 @@ Hosted follow-up:
 - `verify-kilogram-canonical-sync-v2-production-dark-launch-boundary.ps1
   -SelfTest` прошёл. Restart/resume, selected-path failure, containment и
   двухмашинный run остаются M1.1.84; release, ZIP и tag не создавались.
+
+## M1.1.84 local canonical resilience rehearsal (2026-10-18)
+
+- Debug build only, two Cargo jobs; release/ZIP/tag were not created.
+- `cargo test -p kilogram-cli --bin kilogram-cli --locked --offline --jobs 2`
+  must run outside the Codex Windows sandbox because its redirected Temp ACL
+  makes filesystem tests fail with OS error 5. The unrestricted run passed
+  `86/86` in `153.83s`.
+- Build command:
+  `cargo build -p kilogram-cli --bin kilogram-cli --locked --offline --jobs 2`.
+- Successful local runner invocation used
+  `scripts/invoke-kilogram-canonical-sync-v2-dark-launch-local.ps1` with a fresh
+  output directory and run ID `m1184-resilience-20261018T152502Z`.
+- Accepted debug binary SHA-256:
+  `18fe1d407bb1a7c4d58fc739f1bf25c2e6c8a07604a71646f81a98baef690f6c`.
+- The first containment attempt was intentionally not accepted after ratchet
+  anti-rollback rejected reuse of generation-zero Bob prekeys. The runner now
+  creates a fresh next-generation pool for its second conversation, and the
+  complete fresh matrix then passed.
+- Next: commit the implementation, rebuild exactly that revision and copy the
+  same executable to the OpenSSH laptop for the M1.1.84 two-host run.

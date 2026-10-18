@@ -335,6 +335,8 @@ const RUNTIME_MAILBOX_REPLICA_LOCATOR_PROVIDERS: u8 = DEFAULT_REPLICATION_TARGET
 const RUNTIME_MAILBOX_REPLICA_LIST_ITEMS: u16 = 1;
 const RUNTIME_TEST_DROP_MAILBOX_CAPABILITY_ACK_ONCE_ENV: &str =
     "KILOGRAM_TEST_DROP_MAILBOX_CAPABILITY_ACK_ONCE";
+const RUNTIME_TEST_STOP_CANONICAL_SYNC_V2_AFTER_DIFF_ONCE_ENV: &str =
+    "KILOGRAM_TEST_STOP_CANONICAL_SYNC_V2_AFTER_DIFF_ONCE";
 const RUNTIME_TICKET_AUTOMATION_CHECK_INTERVAL: Duration = Duration::from_secs(5);
 const RUNTIME_DEVICE_LIST_DIGEST_DOMAIN: &[u8] = b"kilogram:runtime-device-list:v1\0";
 const OWN_DEVICE_TICKET_PAIRWISE_KEY_CONTEXT: &str =
@@ -17754,40 +17756,46 @@ impl RuntimeOutboundCycleReport {
 
 #[derive(Default)]
 struct RuntimeSessionTestFaults {
-    #[cfg(debug_assertions)]
     drop_mailbox_capability_ack_once: bool,
+    stop_canonical_sync_v2_after_diff_once: bool,
 }
 
 impl RuntimeSessionTestFaults {
     fn from_environment() -> Result<Self> {
-        let Some(value) = std::env::var_os(RUNTIME_TEST_DROP_MAILBOX_CAPABILITY_ACK_ONCE_ENV)
-        else {
-            return Ok(Self::default());
-        };
+        Ok(Self {
+            drop_mailbox_capability_ack_once: debug_test_fault_enabled(
+                RUNTIME_TEST_DROP_MAILBOX_CAPABILITY_ACK_ONCE_ENV,
+            )?,
+            stop_canonical_sync_v2_after_diff_once: debug_test_fault_enabled(
+                RUNTIME_TEST_STOP_CANONICAL_SYNC_V2_AFTER_DIFF_ONCE_ENV,
+            )?,
+        })
+    }
 
-        #[cfg(not(debug_assertions))]
-        {
-            let _ = value;
-            bail!(
-                "{RUNTIME_TEST_DROP_MAILBOX_CAPABILITY_ACK_ONCE_ENV} is available only in debug builds"
-            );
-        }
+    fn take_mailbox_capability_ack_drop(&mut self) -> bool {
+        std::mem::take(&mut self.drop_mailbox_capability_ack_once)
+    }
 
-        #[cfg(debug_assertions)]
-        {
-            ensure!(
-                value == "1",
-                "{RUNTIME_TEST_DROP_MAILBOX_CAPABILITY_ACK_ONCE_ENV} must be exactly 1"
-            );
-            Ok(Self {
-                drop_mailbox_capability_ack_once: true,
-            })
-        }
+    fn take_canonical_sync_v2_stop_after_diff(&mut self) -> bool {
+        std::mem::take(&mut self.stop_canonical_sync_v2_after_diff_once)
+    }
+}
+
+fn debug_test_fault_enabled(name: &str) -> Result<bool> {
+    let Some(value) = std::env::var_os(name) else {
+        return Ok(false);
+    };
+
+    #[cfg(not(debug_assertions))]
+    {
+        let _ = value;
+        bail!("{name} is available only in debug builds");
     }
 
     #[cfg(debug_assertions)]
-    fn take_mailbox_capability_ack_drop(&mut self) -> bool {
-        std::mem::take(&mut self.drop_mailbox_capability_ack_once)
+    {
+        ensure!(value == "1", "{name} must be exactly 1");
+        Ok(true)
     }
 }
 
@@ -18248,6 +18256,11 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
         println!("runtime_test_fault_armed=mailbox-capability-ack-drop-after-durable-apply-once");
         println!("runtime_test_fault_release_available=false");
     }
+    #[cfg(debug_assertions)]
+    if runtime_test_faults.stop_canonical_sync_v2_after_diff_once {
+        println!("runtime_test_fault_armed=canonical-sync-v2-stop-after-diff-once");
+        println!("runtime_test_fault_release_available=false");
+    }
     // Keep the accept future alive across polling ticks. Dropping an Iroh
     // Incoming while a handshake is in progress actively rejects that peer.
     let mut accept: Pin<Box<dyn Future<Output = Result<Connection>> + Send + '_>> =
@@ -18425,11 +18438,14 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                             .await
                             .context("wait for an incoming selected canonical sync v2 path")?;
                     print_ready_path(&ready_path);
+                    let stop_after_diff =
+                        runtime_test_faults.take_canonical_sync_v2_stop_after_diff();
                     match handle_runtime_canonical_sync_v2_connection(
                         &connection,
                         &state_dir,
                         &ticket,
                         canonical_sync_v2_policy,
+                        stop_after_diff,
                     )
                     .await
                     {
@@ -22363,6 +22379,7 @@ async fn handle_runtime_canonical_sync_v2_connection(
     state_directory: &Path,
     ticket: &ConnectionTicket,
     startup_policy: CanonicalSyncV2RuntimePolicy,
+    stop_after_diff: bool,
 ) -> Result<()> {
     ensure!(
         startup_policy.permissions.register_canonical_alpn()
@@ -22460,19 +22477,19 @@ async fn handle_runtime_canonical_sync_v2_connection(
         ))
     })();
 
-    let operation_result = match operation {
-        Ok((
-            device_state,
-            listener_certificate,
-            membership,
-            immutable_reads,
-            event_store,
-            local_message_store,
-            store,
-            membership_policy,
-            selection,
-        )) => {
-            async {
+    let operation_result =
+        match operation {
+            Ok((
+                device_state,
+                listener_certificate,
+                membership,
+                immutable_reads,
+                event_store,
+                local_message_store,
+                store,
+                membership_policy,
+                selection,
+            )) => async {
                 let server = CanonicalSyncV2Server::new(
                     device_state.identity(),
                     &store,
@@ -22481,9 +22498,17 @@ async fn handle_runtime_canonical_sync_v2_connection(
                     selection.session_binding(),
                     selection.offer.requester_device_id(),
                 );
-                let served = serve_canonical_sync_v2_connection(connection, &server, false)
-                    .await
-                    .context("serve selected canonical sync v2 session without fallback")?;
+                let served =
+                    serve_canonical_sync_v2_connection(connection, &server, stop_after_diff)
+                        .await
+                        .context("serve selected canonical sync v2 session without fallback")?;
+                if served == CanonicalSyncV2ServeOutcome::StoppedAfterDiff {
+                    println!("runtime_test_fault_status=canonical-sync-v2-stopped-after-diff");
+                    println!("sync_transport_fallback_after_selection=false");
+                    bail!(
+                        "debug field-test stopped canonical sync v2 responder after durable Diff"
+                    );
+                }
                 ensure!(
                     served == CanonicalSyncV2ServeOutcome::Complete,
                     "selected canonical sync v2 connection ended before durable completion"
@@ -22514,10 +22539,9 @@ async fn handle_runtime_canonical_sync_v2_connection(
                 println!("canonical_sync_v2_materialized_events={materialized}");
                 Ok(())
             }
-            .await
-        }
-        Err(error) => Err(error),
-    };
+            .await,
+            Err(error) => Err(error),
+        };
     let mirror_result = match vault_guard {
         Some(guard) => guard.finish(),
         None => Ok(()),
@@ -22931,6 +22955,7 @@ async fn listen_inner(options: ListenOptions) -> Result<()> {
             &state_dir,
             &ticket,
             canonical_sync_v2_policy,
+            false,
         )
         .await?;
         connection.close(0_u32.into(), b"kilogram canonical sync v2 session complete");
@@ -24779,6 +24804,8 @@ async fn sync(
         (1..=MAX_SYNC_ROUNDS).contains(&max_rounds),
         "--max-rounds must be between 1 and {MAX_SYNC_ROUNDS}"
     );
+    let stop_canonical_after_diff =
+        debug_test_fault_enabled(RUNTIME_TEST_STOP_CANONICAL_SYNC_V2_AFTER_DIFF_ONCE_ENV)?;
     let device_state = load_command_device_state(&state_dir)?;
     let canonical_sync_v2_policy =
         load_canonical_sync_v2_runtime_policy(&state_dir, device_state.identity().device_id())?;
@@ -24861,6 +24888,10 @@ async fn sync(
     println!("target_authority_store={listener_snapshot_store:?}");
     println!("route_policy={}", route_policy.as_str());
     print_canonical_sync_v2_runtime_policy(canonical_sync_v2_policy);
+    if stop_canonical_after_diff {
+        println!("runtime_test_fault_armed=canonical-sync-v2-stop-after-diff-once");
+        println!("runtime_test_fault_release_available=false");
+    }
     print_connection_target(&ticket);
 
     if route_policy == RoutePolicy::RelayOnly {
@@ -25049,9 +25080,32 @@ async fn sync(
             *stable_binding,
             expected_listener_device_id,
         );
-        let outcome = drive_canonical_sync_v2_client(&connection, &canonical_client, false)
-            .await
-            .context("drive selected canonical sync v2 client without fallback")?;
+        let outcome = drive_canonical_sync_v2_client(
+            &connection,
+            &canonical_client,
+            stop_canonical_after_diff,
+        )
+        .await
+        .context("drive selected canonical sync v2 client without fallback")?;
+        if outcome == CanonicalSyncV2ClientOutcome::StoppedAfterDiff {
+            println!("runtime_test_fault_status=canonical-sync-v2-stopped-after-diff");
+            println!(
+                "sync_transport_selected_alpn={}",
+                String::from_utf8_lossy(CANONICAL_SYNC_ALPN_V2)
+            );
+            println!(
+                "sync_transport_selection_evidence_id={}",
+                encode_hex(&selection.selection_id()?)
+            );
+            println!("sync_transport_fallback_after_selection=false");
+            println!("status=canonical-sync-v2-interrupted-after-durable-diff");
+            connection.close(
+                2_u32.into(),
+                b"kilogram debug canonical sync v2 stop after durable diff",
+            );
+            endpoint.close().await;
+            return Ok(());
+        }
         ensure!(
             outcome == CanonicalSyncV2ClientOutcome::Complete,
             "canonical sync v2 client stopped before durable completion"
@@ -25079,6 +25133,10 @@ async fn sync(
         return Ok(());
     }
 
+    ensure!(
+        !stop_canonical_after_diff,
+        "canonical sync v2 stop-after-diff test fault was armed without a selected canonical session"
+    );
     println!(
         "sync_transport_selected_alpn={}",
         String::from_utf8_lossy(ALPN)
@@ -30102,10 +30160,23 @@ mod tests {
     fn mailbox_capability_ack_drop_fault_is_one_shot() {
         let mut faults = RuntimeSessionTestFaults {
             drop_mailbox_capability_ack_once: true,
+            ..RuntimeSessionTestFaults::default()
         };
 
         assert!(faults.take_mailbox_capability_ack_drop());
         assert!(!faults.take_mailbox_capability_ack_drop());
+    }
+
+    #[cfg(debug_assertions)]
+    #[test]
+    fn canonical_sync_v2_stop_after_diff_fault_is_one_shot() {
+        let mut faults = RuntimeSessionTestFaults {
+            stop_canonical_sync_v2_after_diff_once: true,
+            ..RuntimeSessionTestFaults::default()
+        };
+
+        assert!(faults.take_canonical_sync_v2_stop_after_diff());
+        assert!(!faults.take_canonical_sync_v2_stop_after_diff());
     }
 
     #[test]

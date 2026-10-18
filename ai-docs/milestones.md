@@ -7054,3 +7054,22 @@ correlation visible, Windows-only field evidence, independent security audit
 - CLI regression прошёл 85/85; all-target/all-feature check, rustfmt и новый
   fail-closed production-dark-launch verifier с четырьмя negative mutations
   зелёные. Public default остаётся legacy-only; release/ZIP/tag не создавались.
+
+### M1.1.84 — canonical sync v2 resilience rehearsal: локальная половина принята
+
+- в штатный debug binary добавлен one-shot stop-after-Diff fault для client и
+  responder; release build его отвергает, permission/selection он не выдаёт;
+- fresh local matrix прошла 7/7: default/default, opt-in/default,
+  opt-in/opt-in, restart/resume, selected responder loss, one-step rollback и
+  post-selection containment;
+- restart сохранил exact selection evidence и сошёлся без duplicate/loss;
+  selected loss завершил client с ненулевым кодом и zero legacy retry;
+- containment сохранил ALPN и resume старого evidence, отключил publication,
+  new accept/new initiate и отправил новый разговор по Postcard v6;
+- первая попытка нового разговора корректно остановилась на ratchet prekey pool
+  rollback. Harness выпускает свежий следующий pool; вся matrix после этого
+  повторена с нуля и прошла;
+- CLI unit regression вне Windows sandbox прошёл 86/86. Успешный development
+  manifest находится в ignored `.tmp/m1184-resilience-20261018T152502Z`;
+- локальная половина ещё не закрывает M1.1.84: после commit нужен один debug
+  binary exact revision и двухмашинный run на основном ПК и ноутбуке.

@@ -1168,6 +1168,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.1.83 подключает canonical adapter к обычному `kilogram-cli` только через
   verified Device policy, сохраняет default legacy-only и запрещает Postcard
   fallback после mutually signed durable selection.
+- [`../docs/RFC-0208-m1184-canonical-sync-v2-resilience-rehearsal.md`](../docs/RFC-0208-m1184-canonical-sync-v2-resilience-rehearsal.md) —
+  локальная половина M1.1.84 проверяет restart/resume, selected-v2 loss без
+  fallback, pre-evidence rollback и post-selection containment на семи свежих
+  сценариях; exact-revision двухмашинный run остаётся следующим шагом.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
