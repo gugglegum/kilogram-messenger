@@ -2416,6 +2416,13 @@ read-only loaded/configured policy state, and require an exact verified fresh
 runtime after every desktop activation apply. The public default remains
 legacy-only.
 
+[`RFC-0213`](docs/RFC-0213-m1189-canonical-sync-v2-public-rollout-decision.md)
+turns the next public-rollout choice into a fail-closed decision gate. The
+current verdict is `hold`: cohort assignment, private local health evidence,
+N/N-1 production interoperability, an operational containment drill and an
+independent security review remain mandatory. No runtime consumes this
+decision manifest, and the public default is still `legacy-only`.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

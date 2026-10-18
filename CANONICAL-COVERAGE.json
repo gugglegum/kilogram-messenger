@@ -169,7 +169,10 @@
     }
   ],
   "next_priority": [
-    "public-default-dual-reader-rollout-decision",
+    "privacy-preserving-rollout-cohort-authority",
+    "durable-local-rollout-health-evidence",
+    "n-minus-one-production-interoperability",
+    "public-rollout-containment-rehearsal",
     "canonical-native-history-materialization",
     "legacy-sync-retirement-prerequisites"
   ]

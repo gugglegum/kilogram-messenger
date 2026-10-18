@@ -1,0 +1,232 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.89",
+  "status": "canonical-sync-v2-public-rollout-decision-ready-held",
+  "changes_peer_network_wire": false,
+  "changes_sync_wire": false,
+  "changes_runtime_ipc": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "decision": {
+    "scope": "automatic-public-canonical-sync-v2-rollout",
+    "verdict": "hold",
+    "eligible": false,
+    "current_state": "legacy-only",
+    "first_automatic_state_when_eligible": "advertise-cbor-v2",
+    "first_session_accepting_state": "dual-reader-prefer-legacy",
+    "first_session_initiating_state": "dual-reader-prefer-canonical",
+    "canonical_required_authorized": false,
+    "runtime_consumes_this_manifest": false,
+    "human_release_decision_required_for_each_phase": true,
+    "missing_unknown_or_stale_gate_means_hold": true,
+    "weighted_score_or_override_allowed": false
+  },
+  "accepted_evidence": [
+    {
+      "id": "activation-policy-and-authority",
+      "status": "verified",
+      "artifacts": [
+        "CANONICAL-SYNC-V2-ACTIVATION-POLICY.json",
+        "CANONICAL-SYNC-V2-ACTIVATION-AUTHORITY.json"
+      ]
+    },
+    {
+      "id": "production-opt-in-dark-launch",
+      "status": "verified",
+      "artifacts": ["CANONICAL-SYNC-V2-OPT-IN-DARK-LAUNCH.json"]
+    },
+    {
+      "id": "two-host-production-resilience",
+      "status": "verified",
+      "artifacts": [
+        "CANONICAL-SYNC-V2-OPT-IN-DARK-LAUNCH.json",
+        "CANONICAL-SYNC-V2-NETWORK-EVIDENCE.json"
+      ]
+    },
+    {
+      "id": "bounded-and-sustained-decoder-testing",
+      "status": "verified",
+      "artifacts": [
+        "CANONICAL-SYNC-V2-DECODER-MUTATIONS.json",
+        "CANONICAL-SYNC-V2-FUZZ-SUSTAINED.json"
+      ]
+    },
+    {
+      "id": "desktop-exact-restart-activation",
+      "status": "verified",
+      "artifacts": [
+        "CANONICAL-SYNC-V2-RUNTIME-OBSERVABILITY.json",
+        "CANONICAL-SYNC-V2-GUIDED-RESTART.json"
+      ]
+    }
+  ],
+  "mandatory_gates": [
+    {
+      "id": "privacy-preserving-cohort-authority",
+      "status": "pending",
+      "required_before_phase": "advertise-canary"
+    },
+    {
+      "id": "durable-local-rollout-health-evidence",
+      "status": "pending",
+      "required_before_phase": "advertise-canary"
+    },
+    {
+      "id": "n-minus-one-production-executable-interop",
+      "status": "pending",
+      "required_before_phase": "advertise-canary"
+    },
+    {
+      "id": "public-rollout-containment-drill",
+      "status": "pending",
+      "required_before_phase": "advertise-canary"
+    },
+    {
+      "id": "independent-security-review",
+      "status": "pending",
+      "required_before_phase": "accept-canary"
+    }
+  ],
+  "blocking_gates": [
+    "privacy-preserving-cohort-authority",
+    "durable-local-rollout-health-evidence",
+    "n-minus-one-production-executable-interop",
+    "public-rollout-containment-drill",
+    "independent-security-review"
+  ],
+  "cohort_contract": {
+    "assignment_seed": "local-installation-random-secret",
+    "assignment_function": "sha256(seed || signed-release-policy-id)-mod-10000",
+    "assignment_unit": "installation-not-account-or-device",
+    "seed_exported": false,
+    "seed_synced_between_devices": false,
+    "seed_visible_to_peers": false,
+    "account_root_or_device_id_used": false,
+    "contact_conversation_ip_or_relay_used": false,
+    "phase_changes_while_runtime_is_running": false,
+    "cohort_expands_automatically": false
+  },
+  "rollout_phases": [
+    {
+      "id": "advertise-canary",
+      "state": "advertise-cbor-v2",
+      "maximum_cohort_basis_points": 100,
+      "minimum_soak_hours": 168,
+      "accepts_new_canonical_sessions": false,
+      "initiates_new_canonical_sessions": false,
+      "minimum_runtime_starts": 1000,
+      "minimum_sync_attempts": 1000,
+      "minimum_canonical_sessions": 0,
+      "separate_promotion_decision": true
+    },
+    {
+      "id": "accept-canary",
+      "state": "dual-reader-prefer-legacy",
+      "maximum_cohort_basis_points": 100,
+      "minimum_soak_hours": 336,
+      "accepts_new_canonical_sessions": true,
+      "initiates_new_canonical_sessions": false,
+      "minimum_runtime_starts": 1000,
+      "minimum_sync_attempts": 1000,
+      "minimum_canonical_sessions": 250,
+      "separate_promotion_decision": true
+    },
+    {
+      "id": "initiate-canary",
+      "state": "dual-reader-prefer-canonical",
+      "maximum_cohort_basis_points": 500,
+      "minimum_soak_hours": 336,
+      "accepts_new_canonical_sessions": true,
+      "initiates_new_canonical_sessions": true,
+      "minimum_runtime_starts": 2000,
+      "minimum_sync_attempts": 5000,
+      "minimum_canonical_sessions": 1000,
+      "separate_promotion_decision": true
+    },
+    {
+      "id": "expanded-dual-reader",
+      "state": "dual-reader-prefer-canonical",
+      "maximum_cohort_basis_points": 2500,
+      "minimum_soak_hours": 672,
+      "accepts_new_canonical_sessions": true,
+      "initiates_new_canonical_sessions": true,
+      "minimum_runtime_starts": 10000,
+      "minimum_sync_attempts": 50000,
+      "minimum_canonical_sessions": 10000,
+      "separate_promotion_decision": true
+    },
+    {
+      "id": "broad-dual-reader-default",
+      "state": "dual-reader-prefer-canonical",
+      "maximum_cohort_basis_points": 10000,
+      "minimum_soak_hours": 672,
+      "accepts_new_canonical_sessions": true,
+      "initiates_new_canonical_sessions": true,
+      "minimum_runtime_starts": 0,
+      "minimum_sync_attempts": 0,
+      "minimum_canonical_sessions": 0,
+      "separate_promotion_decision": true
+    }
+  ],
+  "promotion_contract": {
+    "phases_may_be_skipped": false,
+    "broad_default_requires_new_decision_manifest": true,
+    "missing_denominator_is_zero_failures": false,
+    "minimum_canonical_completion_basis_points": 9950,
+    "maximum_failure_delta_from_legacy_baseline_basis_points": 50,
+    "maximum_runtime_start_failure_delta_basis_points": 25,
+    "zero_tolerance_events": [
+      "history-loss-or-duplication",
+      "selected-canonical-legacy-fallback",
+      "authority-or-device-binding-mismatch",
+      "authenticated-downgrade-acceptance",
+      "unrecoverable-state-corruption"
+    ]
+  },
+  "health_evidence_privacy": {
+    "storage": "bounded-local-aggregate-only",
+    "export": "explicit-user-or-test-operator-action-only",
+    "message_plaintext_or_ciphertext": false,
+    "account_root_or_device_identifier": false,
+    "peer_contact_or_conversation_identifier": false,
+    "ip_relay_url_or_filesystem_path": false,
+    "per_message_or_per_peer_timeline": false,
+    "missing_or_nonexported_evidence_counts_as_success": false
+  },
+  "containment_and_rollback": {
+    "new_enrollment_stops_first": true,
+    "new_canonical_accept_and_initiate_disabled": true,
+    "canonical_reader_retained_for_selected_resume": true,
+    "durable_canonical_evidence_deleted": false,
+    "selected_canonical_failure_falls_back_to_legacy": false,
+    "forced_state_rewind_after_canonical_evidence": false,
+    "one_step_rollback_before_canonical_evidence_only": true,
+    "fresh_runtime_exact_verification_required": true,
+    "rollback_or_containment_requires_signed_release_or_explicit_local_authority": true
+  },
+  "acceptance": {
+    "decision_boundary_self_test_and_negative_mutations": "verified",
+    "m1_readiness": "116/116",
+    "rustfmt": "verified",
+    "locked_offline_strict_clippy": "verified",
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false,
+    "network_executed": false
+  },
+  "next": [
+    "privacy-preserving-rollout-cohort-authority",
+    "durable-local-rollout-health-evidence",
+    "n-minus-one-production-interoperability",
+    "public-rollout-containment-rehearsal"
+  ],
+  "non_claims": [
+    "public-dual-reader-default-enabled",
+    "automatic-cohort-enrollment-implemented",
+    "rollout-health-telemetry-implemented",
+    "canonical-native-history-materialization",
+    "legacy-retirement",
+    "independent-security-review-completed"
+  ]
+}

@@ -4957,3 +4957,25 @@ Hosted follow-up:
   workspace-wide all-target/all-feature locked/offline strict Clippy.
 - Build policy: debug only, Cargo jobs 2. Network, release build, ZIP/archive,
   tag и automatic GitHub build не выполнялись.
+
+## M1.1.89 public rollout decision readiness (2026-10-19)
+
+- Новый tracked decision:
+  `CANONICAL-SYNC-V2-PUBLIC-ROLLOUT-DECISION.json`.
+- Новый RFC:
+  `docs/RFC-0213-m1189-canonical-sync-v2-public-rollout-decision.md`.
+- Новый boundary:
+  `scripts/verify-kilogram-canonical-sync-v2-public-rollout-decision-boundary.ps1`.
+- Self-test отвергает восемь unsafe mutations: преждевременный public default,
+  ложную eligibility, скрытый blocker, cohort по stable Device identity,
+  automatic expansion, phase skip, selected legacy fallback и broad default
+  без нового decision manifest.
+- `verify-kilogram-runtime-ipc-legacy-mailbox-retirement-boundary.ps1` повторно
+  прошёл после exact обновления canonical coverage priority.
+- `verify-kilogram-m1-readiness-boundary.ps1` фиксирует closed inventory
+  `116`; полный accepted-tag readiness прошёл `116/116`.
+- Cargo jobs: 2; использован существующий debug target cache. Предупреждения о
+  fallback incremental hard-link -> copy относятся к файловой системе и не
+  ослабили strict Clippy.
+- Rust source, peer/sync wire и runtime IPC не менялись; Rust test executables,
+  network, release build, ZIP, tag и automatic GitHub build не запускались.

@@ -7176,3 +7176,23 @@ correlation visible, Windows-only field evidence, independent security audit
   Clippy;
 - IPC остаётся v30/domain v11, public default `legacy-only`; network/release/
   ZIP/tag и automatic GitHub build не выполнялись.
+
+### M1.1.89 — public rollout decision readiness: принят локально
+
+- создан machine-readable public rollout decision с честным verdict `hold`,
+  `eligible=false` и неизменным `public_default=legacy-only`;
+- принятые activation/authority, opt-in production, двуххостовые, fuzz/mutation,
+  observability и guided-restart evidence связаны в один decision gate;
+- определены пять обязательных pending gates: privacy-preserving cohort
+  authority, bounded local health evidence, N/N-1 production interop,
+  operational containment drill и independent security review;
+- cohort contract запрещает Account/Device/contact/conversation/IP как basis и
+  требует неэкспортируемый installation-local random secret;
+- зафиксированы ordered 1% advertise, 1% accept, 5% initiate, 25% expanded и
+  отдельно разрешаемая broad-default фазы с soak/evidence minima;
+- containment прекращает new enrollment/accept/initiate, но сохраняет reader,
+  durable evidence и exact selected resume без legacy fallback;
+- dedicated boundary прошёл восемь negative mutations, readiness расширен до
+  116/116 вместе с rustfmt и locked/offline strict Clippy;
+- peer/sync wire, runtime IPC, network, release/ZIP/tag и automatic GitHub
+  build не менялись.

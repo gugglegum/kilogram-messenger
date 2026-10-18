@@ -1,31 +1,40 @@
-# Текущая точка: M1.1.88 завершён локально
+# Текущая точка: M1.1.89 завершён локально
 
-Статус: `canonical-sync-v2-guided-restart-verified`; публичный default
-остаётся `legacy-only`.
+Статус: `canonical-sync-v2-public-rollout-decision-ready-held`; публичный
+default остаётся `legacy-only`, решение об automatic public rollout — `hold`.
 
-Acceptance: desktop `28/28`, dedicated positive/negative restart state-machine
-tests и fail-closed boundary self-test зелёные; accepted-tag readiness
-`115/115`, rustfmt и locked/offline strict Clippy прошли.
+Acceptance: новый decision boundary и восемь negative mutations зелёные;
+accepted-tag readiness `116/116`, rustfmt и locked/offline strict Clippy
+прошли. Peer/sync wire, runtime IPC, network, release/ZIP/tag и automatic
+GitHub build не менялись.
 
-Windows desktop теперь проводит bounded lifecycle для собственного runtime:
-authenticated shutdown, фактический `Child` exit, offline authority status,
-exact plan/apply, spawn нового child и authenticated connect. До обычной
-загрузки conversations новый runtime обязан вернуть exact applied Device,
-record/epoch/state/disposition/evidence/rights, equal loaded/configured policy,
-`configured_matches_loaded=true` и `restart_required=false`.
+M1.1.89 не смешивает техническую готовность opt-in transport с готовностью
+анонимного публичного rollout. Exact decision manifest фиксирует ordered phases
+1% advertise-only -> 1% accept-only -> 5% initiate -> 25% expanded -> broad
+default, отдельное ручное решение на каждую фазу, soak/evidence minima,
+reliability budgets и zero-tolerance integrity events. Missing/unknown/stale
+evidence всегда означает hold; weighted score и override отсутствуют.
 
-Mismatch немедленно завершает новый desktop-owned process и оставляет клиент
-disconnected. Startup exit/timeout также fail closed. Уже применённый durable
-record не откатывается молча: exact ожидание сохраняется в памяти для retry,
-который не добавляет новый authority record. Load/save другого launch profile
-сбрасывает workflow. IPC остаётся v30/domain v11; hot apply и unchecked toggle
-не появились.
+Cohort запрещено выводить из Account/Device/contact/conversation/IP. Проектный
+контракт требует installation-local random secret, не синхронизируемый и не
+публикуемый наружу. Containment прекращает новое enrollment/accept/initiate,
+но не удаляет durable canonical evidence, не убирает reader exact resume и не
+делает legacy fallback после selection.
 
-Следующий отдельный пакет — M1.1.89: decision-readiness для публичного
-dual-reader rollout. Он должен собрать явные критерии допуска, cohort/rollback
-границы и доказательства, но не обязан автоматически менять публичный default.
-Canonical-native history materialization и legacy retirement остаются
-отдельными последующими решениями.
+Текущий hold имеет пять явных blockers:
+
+1. privacy-preserving cohort authority;
+2. durable bounded local rollout health evidence;
+3. N/N-1 production executable interop;
+4. operational public-rollout containment drill;
+5. independent security review до session-accepting canary.
+
+Следующий отдельный пакет — M1.1.90: реализовать первые два связанных
+prerequisite без активации rollout: локальный installation-scoped cohort seed,
+signed release-policy evaluation и bounded privacy-safe health aggregate с
+только явным export. Он не должен использовать Account/Device ID, создавать
+центральную telemetry-службу или менять `legacy-only` default. N/N-1 field
+matrix и containment rehearsal останутся следующими отдельными gates.
 
 ## Исторический план M1.1.81–M1.1.85
 
