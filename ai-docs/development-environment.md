@@ -4751,3 +4751,24 @@ Hosted follow-up:
   first in-sandbox test attempt was explicitly discarded after the sandbox
   redirected `%TEMP%` to a location that returned Windows `os error 5`; it is
   not product evidence and the valid outside-sandbox rerun had zero failures.
+
+## M1.1.81 canonical sync v2 activation semantics environment (2026-10-18)
+
+- `CanonicalSyncV2ActivationPermissions` является transport-independent и
+  вычисляется из migration state, activation disposition и наличия persisted
+  canonical evidence;
+- policy разделяет шесть прав: legacy reader, capability publication, ALPN
+  registration, accept new, initiate new и resume selected;
+- normal `legacy-only` не публикует и не регистрирует `/cbor/2`;
+  `advertise-cbor-v2` регистрирует reader до publication, но new accept/dial
+  остаются false;
+- containment без canonical evidence и canonical evidence в legacy/advertise
+  state отвергаются. С evidence containment оставляет ALPN только для exact
+  resume, запрещая новые sessions и legacy fallback;
+- проверка:
+  `cargo test -p kilogram-session activation_ --locked --offline --jobs 2`
+  прошла `2/2`; новый boundary verifier с `-SelfTest` отверг publication без
+  reader, fallback, containment без evidence, premature runtime activation и
+  утечку evaluator в active transport;
+- этот этап не менял CLI/Iroh, не запускал network, не создавал release, ZIP
+  или tag. Следующий пакет — durable Device-bound local activation authority.

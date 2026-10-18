@@ -6988,3 +6988,22 @@ correlation visible, Windows-only field evidence, independent security audit
   плюс 15 explicit vector-regeneration ignores и все оставшиеся workspace
   harnesses. Legacy decoder corpus проверил `31 851/31 851` мутацию за
   `2640.20s`, canonical sync v2 corpus — `2 863/2 863` за `24.07s`.
+
+### M1.1.81 — canonical sync v2 activation semantics: принято локально
+
+- добавлен machine-readable
+  `CANONICAL-SYNC-V2-ACTIVATION-POLICY.json` и RFC-0205;
+- migration-state больше не считается достаточным transport permit: policy
+  отдельно определяет legacy reader, capability publication, canonical ALPN
+  registration, new accept, new initiate и exact selected-session resume;
+- `advertise-cbor-v2` публикует build/read readiness и регистрирует reader, но
+  ещё не принимает новую canonical session;
+- `dual-reader-prefer-legacy` принимает authenticated peer-initiated v2, но не
+  начинает его сам; `dual-reader-prefer-canonical` начинает v2 только после
+  mutual authenticated selection;
+- emergency containment формализован как overlay: он требует persisted
+  canonical evidence, запрещает publication/new accept/new dial, но оставляет
+  ALPN для exact resume и никогда не разрешает Postcard fallback;
+- focused Rust tests и fail-closed verifier self-test прошли. Active Iroh/CLI
+  не используют evaluator, `/cbor/2` по умолчанию остаётся
+  unregistered/undialed, network не запускался.

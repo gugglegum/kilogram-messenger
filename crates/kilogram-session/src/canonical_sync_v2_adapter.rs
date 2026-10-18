@@ -1572,6 +1572,140 @@ pub enum CanonicalSyncV2MigrationState {
     CanonicalRequired,
 }
 
+/// Local activation overlay for the canonical synchronization migration.
+///
+/// Emergency containment is deliberately not another migration state. It may
+/// only be applied after authenticated canonical evidence exists and it keeps
+/// the canonical ALPN registered solely so an exact persisted session can be
+/// resumed. It never authorizes a new canonical session or a legacy fallback.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CanonicalSyncV2ActivationDisposition {
+    Normal,
+    EmergencyContainment,
+}
+
+/// Exact transport rights derived from one verified migration state.
+///
+/// Publishing support, registering an ALPN, accepting a new session,
+/// initiating a new session and resuming an existing selected session are
+/// intentionally separate. In particular, containment registers the ALPN for
+/// resume while rejecting every new canonical session.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct CanonicalSyncV2ActivationPermissions {
+    legacy_reader_enabled: bool,
+    publish_canonical_capability: bool,
+    register_canonical_alpn: bool,
+    accept_new_canonical_session: bool,
+    initiate_new_canonical_session: bool,
+    resume_selected_canonical_session: bool,
+}
+
+impl CanonicalSyncV2ActivationPermissions {
+    pub const fn legacy_reader_enabled(self) -> bool {
+        self.legacy_reader_enabled
+    }
+
+    pub const fn publish_canonical_capability(self) -> bool {
+        self.publish_canonical_capability
+    }
+
+    pub const fn register_canonical_alpn(self) -> bool {
+        self.register_canonical_alpn
+    }
+
+    pub const fn accept_new_canonical_session(self) -> bool {
+        self.accept_new_canonical_session
+    }
+
+    pub const fn initiate_new_canonical_session(self) -> bool {
+        self.initiate_new_canonical_session
+    }
+
+    pub const fn resume_selected_canonical_session(self) -> bool {
+        self.resume_selected_canonical_session
+    }
+}
+
+pub fn evaluate_canonical_sync_v2_activation_permissions(
+    migration_state: CanonicalSyncV2MigrationState,
+    disposition: CanonicalSyncV2ActivationDisposition,
+    persisted_canonical_evidence: bool,
+) -> Result<CanonicalSyncV2ActivationPermissions, CanonicalSyncV2SessionError> {
+    if persisted_canonical_evidence
+        && matches!(
+            migration_state,
+            CanonicalSyncV2MigrationState::LegacyOnly
+                | CanonicalSyncV2MigrationState::AdvertiseCanonicalV2
+        )
+    {
+        return Err(CanonicalSyncV2SessionError::ActivationStateConflictsWithCanonicalEvidence);
+    }
+
+    if disposition == CanonicalSyncV2ActivationDisposition::EmergencyContainment {
+        if !persisted_canonical_evidence {
+            return Err(CanonicalSyncV2SessionError::ContainmentRequiresCanonicalEvidence);
+        }
+        return Ok(CanonicalSyncV2ActivationPermissions {
+            legacy_reader_enabled: migration_state
+                != CanonicalSyncV2MigrationState::CanonicalRequired,
+            publish_canonical_capability: false,
+            register_canonical_alpn: true,
+            accept_new_canonical_session: false,
+            initiate_new_canonical_session: false,
+            resume_selected_canonical_session: true,
+        });
+    }
+
+    Ok(match migration_state {
+        CanonicalSyncV2MigrationState::LegacyOnly => CanonicalSyncV2ActivationPermissions {
+            legacy_reader_enabled: true,
+            publish_canonical_capability: false,
+            register_canonical_alpn: false,
+            accept_new_canonical_session: false,
+            initiate_new_canonical_session: false,
+            resume_selected_canonical_session: false,
+        },
+        CanonicalSyncV2MigrationState::AdvertiseCanonicalV2 => {
+            CanonicalSyncV2ActivationPermissions {
+                legacy_reader_enabled: true,
+                publish_canonical_capability: true,
+                register_canonical_alpn: true,
+                accept_new_canonical_session: false,
+                initiate_new_canonical_session: false,
+                resume_selected_canonical_session: false,
+            }
+        }
+        CanonicalSyncV2MigrationState::DualReaderPreferLegacy => {
+            CanonicalSyncV2ActivationPermissions {
+                legacy_reader_enabled: true,
+                publish_canonical_capability: true,
+                register_canonical_alpn: true,
+                accept_new_canonical_session: true,
+                initiate_new_canonical_session: false,
+                resume_selected_canonical_session: true,
+            }
+        }
+        CanonicalSyncV2MigrationState::DualReaderPreferCanonical => {
+            CanonicalSyncV2ActivationPermissions {
+                legacy_reader_enabled: true,
+                publish_canonical_capability: true,
+                register_canonical_alpn: true,
+                accept_new_canonical_session: true,
+                initiate_new_canonical_session: true,
+                resume_selected_canonical_session: true,
+            }
+        }
+        CanonicalSyncV2MigrationState::CanonicalRequired => CanonicalSyncV2ActivationPermissions {
+            legacy_reader_enabled: false,
+            publish_canonical_capability: true,
+            register_canonical_alpn: true,
+            accept_new_canonical_session: true,
+            initiate_new_canonical_session: true,
+            resume_selected_canonical_session: true,
+        },
+    })
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct CanonicalSyncV2DormantTransportPlan {
     migration_state: CanonicalSyncV2MigrationState,
@@ -2553,6 +2687,12 @@ pub enum CanonicalSyncV2SessionError {
 
     #[error("fallback after a selected canonical transport failure is forbidden")]
     CanonicalFallbackForbidden,
+
+    #[error("canonical activation state conflicts with persisted selected-session evidence")]
+    ActivationStateConflictsWithCanonicalEvidence,
+
+    #[error("canonical emergency containment requires persisted selected-session evidence")]
+    ContainmentRequiresCanonicalEvidence,
 
     #[error("canonical migration epoch rolled back from minimum {minimum} to {selected}")]
     MigrationEpochRollback { selected: u64, minimum: u64 },
@@ -3988,6 +4128,119 @@ mod tests {
             Err(CanonicalSyncV2SessionError::CanonicalDurableRuntimeMissing { role: "responder" })
         ));
         assert!(!canonical.active_transport_authorized());
+        Ok(())
+    }
+
+    #[test]
+    fn activation_permissions_separate_publication_registration_and_session_rights()
+    -> Result<(), Box<dyn Error>> {
+        let legacy = evaluate_canonical_sync_v2_activation_permissions(
+            CanonicalSyncV2MigrationState::LegacyOnly,
+            CanonicalSyncV2ActivationDisposition::Normal,
+            false,
+        )?;
+        assert!(legacy.legacy_reader_enabled());
+        assert!(!legacy.publish_canonical_capability());
+        assert!(!legacy.register_canonical_alpn());
+        assert!(!legacy.accept_new_canonical_session());
+        assert!(!legacy.initiate_new_canonical_session());
+        assert!(!legacy.resume_selected_canonical_session());
+
+        let advertise = evaluate_canonical_sync_v2_activation_permissions(
+            CanonicalSyncV2MigrationState::AdvertiseCanonicalV2,
+            CanonicalSyncV2ActivationDisposition::Normal,
+            false,
+        )?;
+        assert!(advertise.legacy_reader_enabled());
+        assert!(advertise.publish_canonical_capability());
+        assert!(advertise.register_canonical_alpn());
+        assert!(!advertise.accept_new_canonical_session());
+        assert!(!advertise.initiate_new_canonical_session());
+        assert!(!advertise.resume_selected_canonical_session());
+
+        let prefer_legacy = evaluate_canonical_sync_v2_activation_permissions(
+            CanonicalSyncV2MigrationState::DualReaderPreferLegacy,
+            CanonicalSyncV2ActivationDisposition::Normal,
+            false,
+        )?;
+        assert!(prefer_legacy.legacy_reader_enabled());
+        assert!(prefer_legacy.publish_canonical_capability());
+        assert!(prefer_legacy.register_canonical_alpn());
+        assert!(prefer_legacy.accept_new_canonical_session());
+        assert!(!prefer_legacy.initiate_new_canonical_session());
+        assert!(prefer_legacy.resume_selected_canonical_session());
+
+        let prefer_canonical = evaluate_canonical_sync_v2_activation_permissions(
+            CanonicalSyncV2MigrationState::DualReaderPreferCanonical,
+            CanonicalSyncV2ActivationDisposition::Normal,
+            false,
+        )?;
+        assert!(prefer_canonical.legacy_reader_enabled());
+        assert!(prefer_canonical.publish_canonical_capability());
+        assert!(prefer_canonical.register_canonical_alpn());
+        assert!(prefer_canonical.accept_new_canonical_session());
+        assert!(prefer_canonical.initiate_new_canonical_session());
+        assert!(prefer_canonical.resume_selected_canonical_session());
+
+        let required = evaluate_canonical_sync_v2_activation_permissions(
+            CanonicalSyncV2MigrationState::CanonicalRequired,
+            CanonicalSyncV2ActivationDisposition::Normal,
+            false,
+        )?;
+        assert!(!required.legacy_reader_enabled());
+        assert!(required.publish_canonical_capability());
+        assert!(required.register_canonical_alpn());
+        assert!(required.accept_new_canonical_session());
+        assert!(required.initiate_new_canonical_session());
+        assert!(required.resume_selected_canonical_session());
+        Ok(())
+    }
+
+    #[test]
+    fn activation_containment_preserves_only_exact_canonical_resume() -> Result<(), Box<dyn Error>>
+    {
+        assert!(matches!(
+            evaluate_canonical_sync_v2_activation_permissions(
+                CanonicalSyncV2MigrationState::DualReaderPreferCanonical,
+                CanonicalSyncV2ActivationDisposition::EmergencyContainment,
+                false,
+            ),
+            Err(CanonicalSyncV2SessionError::ContainmentRequiresCanonicalEvidence)
+        ));
+        for state in [
+            CanonicalSyncV2MigrationState::LegacyOnly,
+            CanonicalSyncV2MigrationState::AdvertiseCanonicalV2,
+        ] {
+            assert!(matches!(
+                evaluate_canonical_sync_v2_activation_permissions(
+                    state,
+                    CanonicalSyncV2ActivationDisposition::Normal,
+                    true,
+                ),
+                Err(CanonicalSyncV2SessionError::ActivationStateConflictsWithCanonicalEvidence)
+            ));
+        }
+
+        let containment = evaluate_canonical_sync_v2_activation_permissions(
+            CanonicalSyncV2MigrationState::DualReaderPreferCanonical,
+            CanonicalSyncV2ActivationDisposition::EmergencyContainment,
+            true,
+        )?;
+        assert!(containment.legacy_reader_enabled());
+        assert!(!containment.publish_canonical_capability());
+        assert!(containment.register_canonical_alpn());
+        assert!(!containment.accept_new_canonical_session());
+        assert!(!containment.initiate_new_canonical_session());
+        assert!(containment.resume_selected_canonical_session());
+
+        let required_containment = evaluate_canonical_sync_v2_activation_permissions(
+            CanonicalSyncV2MigrationState::CanonicalRequired,
+            CanonicalSyncV2ActivationDisposition::EmergencyContainment,
+            true,
+        )?;
+        assert!(!required_containment.legacy_reader_enabled());
+        assert!(required_containment.register_canonical_alpn());
+        assert!(required_containment.resume_selected_canonical_session());
         Ok(())
     }
 

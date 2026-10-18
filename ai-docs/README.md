@@ -1154,6 +1154,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   двухмашинные Windows manifests одной frozen revision. Полная network matrix
   закрывает последний технический gate, но оставляет `/cbor/2` выключенным до
   отдельного explicit activation decision.
+- [`../docs/RFC-0205-m1181-canonical-sync-v2-activation-semantics.md`](../docs/RFC-0205-m1181-canonical-sync-v2-activation-semantics.md) —
+  M1.1.81 разделяет publish/register/accept/initiate/resume права и определяет
+  emergency containment как сохранение exact canonical resume без новых v2
+  sessions либо legacy fallback. Active runtime и default пока не меняются.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

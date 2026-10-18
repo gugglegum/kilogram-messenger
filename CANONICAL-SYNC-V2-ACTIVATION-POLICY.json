@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.81",
+  "status": "canonical-sync-v2-activation-semantics-verified-not-active",
+  "changes_active_wire": false,
+  "public_default": "legacy-only",
+  "legacy_protocol_identifier": "kilogram/m0/sync/8",
+  "canonical_protocol_identifier": "kilogram/m1/sync/cbor/2",
+  "policy_dimensions": [
+    "legacy-reader-enabled",
+    "publish-canonical-capability",
+    "register-canonical-alpn",
+    "accept-new-canonical-session",
+    "initiate-new-canonical-session",
+    "resume-selected-canonical-session"
+  ],
+  "states": [
+    {
+      "id": "legacy-only",
+      "rust_variant": "LegacyOnly",
+      "legacy_reader_enabled": true,
+      "publish_canonical_capability": false,
+      "register_canonical_alpn": false,
+      "accept_new_canonical_session": false,
+      "initiate_new_canonical_session": false,
+      "resume_selected_canonical_session": false
+    },
+    {
+      "id": "advertise-cbor-v2",
+      "rust_variant": "AdvertiseCanonicalV2",
+      "legacy_reader_enabled": true,
+      "publish_canonical_capability": true,
+      "register_canonical_alpn": true,
+      "accept_new_canonical_session": false,
+      "initiate_new_canonical_session": false,
+      "resume_selected_canonical_session": false
+    },
+    {
+      "id": "dual-reader-prefer-legacy",
+      "rust_variant": "DualReaderPreferLegacy",
+      "legacy_reader_enabled": true,
+      "publish_canonical_capability": true,
+      "register_canonical_alpn": true,
+      "accept_new_canonical_session": true,
+      "initiate_new_canonical_session": false,
+      "resume_selected_canonical_session": true
+    },
+    {
+      "id": "dual-reader-prefer-canonical",
+      "rust_variant": "DualReaderPreferCanonical",
+      "legacy_reader_enabled": true,
+      "publish_canonical_capability": true,
+      "register_canonical_alpn": true,
+      "accept_new_canonical_session": true,
+      "initiate_new_canonical_session": true,
+      "resume_selected_canonical_session": true
+    },
+    {
+      "id": "canonical-required",
+      "rust_variant": "CanonicalRequired",
+      "legacy_reader_enabled": false,
+      "publish_canonical_capability": true,
+      "register_canonical_alpn": true,
+      "accept_new_canonical_session": true,
+      "initiate_new_canonical_session": true,
+      "resume_selected_canonical_session": true
+    }
+  ],
+  "emergency_containment": {
+    "migration_state_changed": false,
+    "persisted_canonical_evidence_required": true,
+    "legacy_reader_follows_migration_state": true,
+    "publish_canonical_capability": false,
+    "register_canonical_alpn": true,
+    "accept_new_canonical_session": false,
+    "initiate_new_canonical_session": false,
+    "resume_selected_canonical_session": true,
+    "automatic_parse_or_network_trigger_forbidden": true,
+    "legacy_fallback_forbidden": true,
+    "durable_canonical_evidence_retained": true
+  },
+  "invariants": {
+    "publication_requires_registered_reader": true,
+    "new_canonical_session_requires_mutual_authenticated_selection": true,
+    "resume_requires_exact_persisted_selection": true,
+    "selected_canonical_failure_may_fallback_to_legacy": false,
+    "missing_policy_activates_canonical": false,
+    "malformed_policy_activates_canonical": false,
+    "migration_epoch_rollback_activates_canonical": false
+  },
+  "activation": {
+    "semantic_policy_integrated": true,
+    "durable_local_authority_integrated": false,
+    "active_runtime_integrated": false,
+    "candidate_endpoint_registered_by_default": false,
+    "candidate_dialed_by_default": false,
+    "network_executed": false
+  },
+  "next": [
+    "durable-device-bound-local-activation-authority",
+    "production-runtime-dark-launch-integration",
+    "local-and-two-host-activation-rehearsal"
+  ]
+}

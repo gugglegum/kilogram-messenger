@@ -53,9 +53,11 @@ runtime, не ослабив запрет fallback после authenticated cano
 
 ### M1.1.81 — activation semantics и decision record — 45–60 минут
 
-1. Разделить transport policy на четыре независимых права:
+1. Разделить transport policy на шесть независимых прав:
+   - сохранять либо отключать legacy reader;
    - публиковать authenticated `/cbor/2` capability;
-   - регистрировать и принимать `/cbor/2` ALPN;
+   - регистрировать `/cbor/2` ALPN;
+   - принимать новую mutually selected `/cbor/2` session;
    - инициировать новый `/cbor/2` dial;
    - продолжать уже выбранную durable canonical session.
 2. Сверить имена состояний в Rust, JSON ledgers и RFC. Если прежнее имя
