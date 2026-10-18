@@ -16,6 +16,9 @@ use kilogram_store::CanonicalSyncV2CarrierStore;
 use tokio::time::timeout;
 
 pub const CANONICAL_SYNC_V2_STREAM_TIMEOUT: Duration = Duration::from_secs(20);
+/// Covers peer-side state-lock, vault, legacy-import, and durable-session preparation before the
+/// first response byte. Individual stream I/O remains bounded by `CANONICAL_SYNC_V2_STREAM_TIMEOUT`.
+pub const CANONICAL_SYNC_V2_RESPONSE_TIMEOUT: Duration = Duration::from_secs(2 * 60);
 pub const MAX_CANONICAL_SYNC_V2_FRAME_BYTES: usize = 8 * 1024 * 1024;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -285,10 +288,25 @@ pub async fn read_canonical_sync_v2_server_frame(
     receive: &mut RecvStream,
 ) -> Result<CanonicalSyncServerFrameV2> {
     let bytes = timeout(
-        CANONICAL_SYNC_V2_STREAM_TIMEOUT,
+        CANONICAL_SYNC_V2_RESPONSE_TIMEOUT,
         receive.read_to_end(MAX_CANONICAL_SYNC_V2_FRAME_BYTES),
     )
     .await
     .context("read canonical server frame deadline")??;
     decode_and_verify_sync_server_frame_v2(&bytes).map_err(Into::into)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn responder_preparation_has_a_distinct_bounded_deadline() {
+        assert_eq!(CANONICAL_SYNC_V2_STREAM_TIMEOUT, Duration::from_secs(20));
+        assert_eq!(
+            CANONICAL_SYNC_V2_RESPONSE_TIMEOUT,
+            Duration::from_secs(2 * 60)
+        );
+        assert!(CANONICAL_SYNC_V2_RESPONSE_TIMEOUT > CANONICAL_SYNC_V2_STREAM_TIMEOUT);
+    }
 }
