@@ -31,9 +31,15 @@ $postM1Rfc = Get-Content -LiteralPath $postM1RfcPath -Raw
 $runner = Get-Content -LiteralPath $runnerPath -Raw
 $cacheMaintenance = Get-Content -LiteralPath $cacheMaintenancePath -Raw
 
-foreach ($requiredLine in @('  push:', '  pull_request:', '  workflow_dispatch:')) {
+foreach ($requiredLine in @('  workflow_dispatch:')) {
     if ($workflowLines -cnotcontains $requiredLine) {
         throw "Windows CI workflow is missing exact line '$requiredLine'"
+    }
+}
+
+foreach ($forbiddenLine in @('  push:', '  pull_request:')) {
+    if ($workflowLines -ccontains $forbiddenLine) {
+        throw "Windows CI workflow must remain manual-only; found exact line '$forbiddenLine'"
     }
 }
 
@@ -180,7 +186,8 @@ if ($actionUses.Count -ne 1 -or
 }
 
 foreach ($required in @(
-    'every push and pull request to master',
+    'only by an explicit manual dispatch',
+    'does not run automatically on push or pull request',
     'complete Git history',
     'read-only repository permission',
     'does not create a release build, archive, attestation or tag',
@@ -199,7 +206,7 @@ foreach ($required in @(
 }
 
 Write-Output 'windows_ci_boundary=verified'
-Write-Output 'events=push-master,pull-request-master,manual'
+Write-Output 'events=manual-only'
 Write-Output 'permissions=contents-read'
 Write-Output 'checkout_history=complete'
 Write-Output 'readiness_gate=required'

@@ -3150,6 +3150,7 @@ dependencies = [
  "base64",
  "blake3",
  "clap",
+ "ed25519-dalek 3.0.0",
  "getrandom 0.4.3",
  "image",
  "iroh",

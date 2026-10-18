@@ -1,4 +1,4 @@
-# RFC-0114: Continuous Windows readiness and tests (M0.9.91)
+# RFC-0114: Manually dispatched Windows readiness and tests (M0.9.91)
 
 Status: hosted execution operational; complete product tests passed in run
 `38519726403`. M0.9.94 fixed the post-test empty-cache accounting defect; its
@@ -11,9 +11,9 @@ Independent offline reproduction is intentionally manual and narrowly scoped.
 Before M0.9.91, ordinary changes had no hosted gate proving that the complete
 M1 readiness contract and Rust tests still passed outside the development PC.
 
-The new `Windows CI` workflow runs on every push and pull request to master and
-may also be dispatched manually. It is a verification workflow, not a release
-pipeline.
+The `Windows CI` workflow now runs only by an explicit manual dispatch. It does not run automatically on push or pull request: local locked tests are the fast
+development gate, while hosted capacity is reserved for milestones and exact
+evidence revisions. It remains a verification workflow, not a release pipeline.
 
 ## 2. Hosted operation
 

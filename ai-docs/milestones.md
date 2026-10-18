@@ -6869,3 +6869,52 @@ correlation visible, Windows-only field evidence, independent security audit
 - sustained coverage-guided decoder gate закрыт. Fresh hosted/physical-device
   evidence остаётся pending; active Postcard v6 не менялся, `/cbor/2` остаётся
   unregistered/undialed.
+
+### M1.1.77 — bounded canonical sync v2 evidence contract: принято локально
+
+- добавлен versioned M1.1.80 manifest, который раздельно описывает hosted и
+  physical Windows evidence, exact revision, debug binary SHA-256, topology,
+  direct/restart/relay/mixed-version/fail-closed/rollback scenarios;
+- fail-closed verifier отвергает source drift, fallback после canonical
+  selection, недостоверную physical topology и появление secret material;
+- positive self-test и четыре negative mutations прошли;
+- обычный production CLI не получает feature и остаётся legacy-only.
+
+### M1.1.78 — evidence-only Iroh lane: принято локально
+
+- отдельный `kilogram-sync-v2-evidence` доступен только через Cargo feature
+  `sync-v2-evidence`; default features пусты, production main не ссылается на
+  candidate lane;
+- два независимых процесса используют exact ALPN `kilogram/m1/sync/cbor/2`,
+  существующие durable client/responder adapters и typed carrier store;
+- предусмотрены direct, restart checkpoint/resume, pre-selection legacy
+  control, corrupt selected-frame fail-closed и one-step rollback drills;
+- `--advertise-ip` публикует ровно один фактически обнаруженный адрес и порт,
+  исключая loopback, VMware и VPN candidates из physical ticket;
+- listener принимает evidence-only `--relay-url`; relay-only dialer затем
+  pin-ит strict map к тому же URL из ticket. Для физического контроля выбран
+  ранее проверенный APS1, без изменения production relay defaults;
+- focused adapter regression прошёл 13/13; evidence binary и обычный CLI
+  прошли locked/offline strict Clippy, rustfmt и boundary checks.
+
+### M1.1.79 — manual hosted experiment: подготовлен локально
+
+- добавлен manual-only workflow `canonical-sync-v2-evidence.yml`; push и pull
+  request не запускают его автоматически;
+- workflow собирает только debug evidence binary с двумя Cargo jobs, запускает
+  два свежих процесса на hosted Windows и сохраняет только bounded manifest;
+- release, ZIP, tag, attestation и публикация исполняемого файла отсутствуют;
+- hosted result ещё не заявлен: нужен exact implementation commit, явное
+  разрешение на push и зелёный ручной run этой ревизии.
+
+### M1.1.80 — physical Windows evidence: подготовлен, run ожидается
+
+- ноутбук `paul_hp_omen` и основной ПК подготовлены для одинакового stable-name
+  debug binary; coordination выполняется через SSH/SCP, не через Yandex Disk;
+- Windows Firewall разрешает exact stable path на ноутбуке, а основной ПК уже
+  имеет узкие правила для workspace debug CLI;
+- active `xray_tun/Wintun` на основном ПК блокирует даже LAN ICMP и SSH, поэтому
+  финальный direct/relay прогон будет начат только после локальной фиксации
+  revision и краткого отключения VPN на основном ПК;
+- никакой physical success пока не заявлен; старые state и прежние smoke runs
+  не принимаются как evidence этого этапа.

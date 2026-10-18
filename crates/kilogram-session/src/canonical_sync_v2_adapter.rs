@@ -1,11 +1,12 @@
 //! Dormant transport-independent state machine for canonical sync v2.
 //!
-//! This module deliberately has no `EventStore` implementation and is not
-//! referenced by the CLI or Iroh transport. It proves the state transitions
-//! needed by `kilogram/m1/sync/cbor/2` while leaving the active Postcard v6
-//! runtime unchanged. Activation additionally requires a store that preserves
-//! both typed event namespaces and a policy that verifies conversation
-//! membership for both closed carrier variants.
+//! This module deliberately has no active-runtime `EventStore` integration.
+//! Production CLI/Iroh call sites do not reference it; only the explicitly
+//! feature-gated evidence harness may bind it to an Iroh stream. It proves the
+//! state transitions needed by `kilogram/m1/sync/cbor/2` while leaving the
+//! active Postcard v6 runtime unchanged. Activation additionally requires a
+//! store that preserves both typed event namespaces and a policy that verifies
+//! conversation membership for both closed carrier variants.
 
 use std::collections::{BTreeSet, HashSet};
 

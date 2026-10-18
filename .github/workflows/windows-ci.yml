@@ -1,19 +1,13 @@
 name: Windows CI
 
 on:
-  push:
-    branches:
-      - master
-  pull_request:
-    branches:
-      - master
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: windows-ci-${{ github.event.pull_request.number || github.ref }}
+  group: windows-ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

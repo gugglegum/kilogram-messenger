@@ -4620,3 +4620,37 @@ Hosted follow-up:
 - The new boundary plus 25 affected historical boundaries passed normal and
   negative self-test modes. All 107 root JSON documents parsed; accepted-tag
   readiness passed 107/107 with rustfmt and locked/offline strict Clippy.
+
+## M1.1.77–M1.1.80 sync v2 network evidence environment (2026-10-18)
+
+- Evidence build command:
+  `cargo build --offline --locked -p kilogram-cli --features sync-v2-evidence --bin kilogram-sync-v2-evidence --jobs 2`.
+- Production control command:
+  `cargo clippy --offline --locked -p kilogram-cli --bin kilogram-cli --jobs 2 -- -D warnings`.
+  It does not compile or expose the evidence binary.
+- Evidence strict Clippy command:
+  `cargo clippy --offline --locked -p kilogram-cli --features sync-v2-evidence --bin kilogram-sync-v2-evidence --jobs 2 -- -D warnings`.
+- New boundaries:
+  `verify-kilogram-sync-v2-evidence-boundary.ps1` and
+  `verify-kilogram-sync-v2-network-evidence.ps1 -SelfTest`; readiness boundary
+  now closes an exact inventory of 108 scripts.
+- The physical listener should use `--advertise-ip 192.168.0.140` on the main
+  PC or the exact current LAN address returned by `ipconfig`. The option fails
+  closed unless that address occurs exactly once in Iroh endpoint discovery.
+- Strict relay control should pass
+  `--relay-url https://aps1-1.relay.n0.iroh.link./` to the listener. The dialer
+  consumes and pins the same URL from the signed ticket; no production relay
+  configuration is changed.
+- Laptop SSH identity: host `192.168.0.152`, Windows hostname
+  `paul_hp_omen`, test user `test`. The stable staged program path is
+  `C:\Users\test\KilogramLab\field-kit-current\kilogram-cli.exe`; its inbound
+  UDP firewall rule is bound to that exact program and main-PC source address.
+- Main-PC LAN address observed during preparation: `192.168.0.140`. Active
+  `xray_tun` uses Wintun address `172.18.0.1` and currently causes even
+  `ping 192.168.0.1` and `ping 192.168.0.152` to fail with `General failure`.
+  This is an external test-environment blocker, not accepted protocol evidence.
+- Before the physical run, verify no stale `kilogram-cli` or
+  `kilogram-sync-v2-evidence` process on either host. Use fresh run/state
+  directories and identical binary SHA-256 on both machines.
+- No release build, ZIP, tag or automatic-on-push workflow is part of this
+  stage. Both Windows workflows are manual-only.

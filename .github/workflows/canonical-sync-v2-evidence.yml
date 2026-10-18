@@ -1,0 +1,83 @@
+name: Canonical sync v2 evidence
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: canonical-sync-v2-evidence-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  hosted-evidence:
+    name: Two-process Windows evidence
+    runs-on: windows-2022
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      CARGO_INCREMENTAL: "0"
+      CARGO_TERM_COLOR: always
+
+    steps:
+      - name: Check out exact requested revision
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Resolve exact source and pinned Rust toolchain
+        id: source
+        run: |
+          "revision=$(git rev-parse HEAD)" >> $env:GITHUB_OUTPUT
+          rustup show active-toolchain
+          rustc -vV
+          cargo -vV
+
+      - name: Fetch locked dependencies
+        run: cargo fetch --locked --target x86_64-pc-windows-msvc
+
+      - name: Build only the feature-gated debug evidence harness
+        env:
+          CARGO_NET_OFFLINE: "true"
+        run: |
+          cargo build --offline --locked --jobs 2 `
+            --package kilogram-cli `
+            --features sync-v2-evidence `
+            --bin kilogram-sync-v2-evidence
+
+      - name: Verify evidence-only production boundary
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass `
+            -File .\scripts\verify-kilogram-sync-v2-evidence-boundary.ps1
+          powershell -NoProfile -ExecutionPolicy Bypass `
+            -File .\scripts\verify-kilogram-sync-v2-network-evidence.ps1 `
+            -SelfTest
+
+      - name: Run two fresh processes and verify bounded evidence
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass `
+            -File .\scripts\invoke-kilogram-sync-v2-hosted-evidence.ps1 `
+            -BinaryPath .\target\debug\kilogram-sync-v2-evidence.exe `
+            -OutputDirectory .\.tmp\canonical-sync-v2-hosted `
+            -SourceRevision '${{ steps.source.outputs.revision }}' `
+            -AttemptRelay
+
+      - name: Stage only the bounded manifest
+        run: |
+          New-Item -ItemType Directory -Force -Path .\.tmp\canonical-sync-v2-upload | Out-Null
+          Copy-Item `
+            -LiteralPath .\.tmp\canonical-sync-v2-hosted\manifest.json `
+            -Destination .\.tmp\canonical-sync-v2-upload\manifest.json
+
+      - name: Upload hosted evidence manifest
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: canonical-sync-v2-hosted-${{ steps.source.outputs.revision }}
+          path: .tmp/canonical-sync-v2-upload/manifest.json
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
