@@ -11,6 +11,10 @@ use anyhow::{Context, Result, bail, ensure};
 use clap::{Parser, Subcommand, ValueEnum};
 use ed25519_dalek::{Signer, SigningKey};
 use iroh::{Endpoint, EndpointAddr, RelayUrl, SecretKey, endpoint::Connection};
+use kilogram_cli::canonical_sync_v2_runtime::{
+    CanonicalSyncV2ClientOutcome, CanonicalSyncV2ServeOutcome, drive_canonical_sync_v2_client,
+    serve_canonical_sync_v2_connection,
+};
 use kilogram_identity::{
     AccountId, AccountRootState, ConversationMembershipSnapshot, DeviceCapability,
     DeviceEncryptionIdentity, DeviceId, DeviceIdentity,
@@ -28,18 +32,14 @@ use kilogram_protocol::{
     },
     canonical_sync_history_v2::{CanonicalSyncEventCarrierV2, CanonicalSyncEventKeyV2},
     canonical_sync_v2::{
-        CanonicalSyncClientFrameV2, CanonicalSyncServerFrameV2,
         MAX_CANONICAL_SYNC_V2_EVENTS_PER_BATCH, decode_and_verify_sync_client_frame_v2,
-        decode_and_verify_sync_server_frame_v2, encode_sync_client_frame_v2,
-        encode_sync_server_frame_v2,
     },
 };
 use kilogram_session::canonical_sync_v2_adapter::{
     CanonicalSyncV2Client, CanonicalSyncV2DormantClientDispatch,
     CanonicalSyncV2DormantDualReaderCoordinator, CanonicalSyncV2DormantResponderDispatch,
-    CanonicalSyncV2DurableClientAction, CanonicalSyncV2DurableResponderAction,
-    CanonicalSyncV2MembershipPolicy, CanonicalSyncV2MigrationState, CanonicalSyncV2RollbackTrigger,
-    CanonicalSyncV2Server, CanonicalSyncV2ServerInventoryOutcome,
+    CanonicalSyncV2DurableResponderAction, CanonicalSyncV2MembershipPolicy,
+    CanonicalSyncV2MigrationState, CanonicalSyncV2RollbackTrigger, CanonicalSyncV2Server,
     capture_dormant_canonical_sync_v2_rollback_snapshot,
     evaluate_dormant_canonical_sync_v2_transport_policy, plan_dormant_canonical_sync_v2_rollback,
     verify_durable_mutual_canonical_candidate_selection,
@@ -812,11 +812,12 @@ async fn run_listener(
         );
         let path = await_route_policy(&connection, route_policy, ROUTE_WAIT).await?;
         selected_path = Some((path.kind.as_str().to_owned(), path.remote_address.clone()));
-        let outcome = serve_canonical_connection(&connection, &server, stop_after_diff).await;
+        let outcome =
+            serve_canonical_sync_v2_connection(&connection, &server, stop_after_diff).await;
         connection.close(0_u32.into(), b"kilogram sync v2 evidence session complete");
         match outcome? {
-            ServeOutcome::Complete => break,
-            ServeOutcome::StoppedAfterDiff => {
+            CanonicalSyncV2ServeOutcome::Complete => break,
+            CanonicalSyncV2ServeOutcome::StoppedAfterDiff => {
                 let report = build_report(
                     &config,
                     &store,
@@ -833,7 +834,7 @@ async fn run_listener(
                 println!("status=stopped-after-diff");
                 return Ok(());
             }
-            ServeOutcome::ConnectionInterrupted => continue,
+            CanonicalSyncV2ServeOutcome::ConnectionInterrupted => continue,
         }
     }
     let report = build_report(
@@ -893,14 +894,14 @@ async fn run_dialer(
     .context("connect canonical evidence endpoint")?;
     let path = await_route_policy(&connection, route_policy, ROUTE_WAIT).await?;
     println!("transport_ready_path={}", path.kind.as_str());
-    let outcome = drive_canonical_client(&connection, &client, stop_after_diff).await?;
+    let outcome = drive_canonical_sync_v2_client(&connection, &client, stop_after_diff).await?;
     let (scenario, status, detail) = match outcome {
-        ClientOutcome::Complete => (
+        CanonicalSyncV2ClientOutcome::Complete => (
             "canonical-v2-dialer",
             "synchronized",
             "durable client reached Complete without legacy fallback",
         ),
-        ClientOutcome::StoppedAfterDiff => (
+        CanonicalSyncV2ClientOutcome::StoppedAfterDiff => (
             "restart-checkpoint-dialer",
             "checkpoint-stop",
             "durable event batch persisted; process stopped before batch send",
@@ -923,179 +924,6 @@ async fn run_dialer(
     endpoint.close().await;
     println!("status={status}");
     Ok(())
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum ServeOutcome {
-    Complete,
-    StoppedAfterDiff,
-    ConnectionInterrupted,
-}
-
-async fn serve_canonical_connection(
-    connection: &Connection,
-    server: &CanonicalSyncV2Server<
-        '_,
-        CanonicalSyncV2CarrierStore,
-        CanonicalSyncV2MembershipPolicy,
-    >,
-    stop_after_diff: bool,
-) -> Result<ServeOutcome> {
-    loop {
-        let runtime = server.restore_durable_responder_runtime()?;
-        let action = server.durable_responder_action(&runtime)?;
-        if matches!(action, CanonicalSyncV2DurableResponderAction::Complete) {
-            return Ok(ServeOutcome::Complete);
-        }
-        let streams = timeout(STREAM_TIMEOUT, connection.accept_bi()).await;
-        let (mut send, mut receive) = match streams {
-            Ok(Ok(streams)) => streams,
-            Ok(Err(_)) => return Ok(ServeOutcome::ConnectionInterrupted),
-            Err(_) => return Ok(ServeOutcome::ConnectionInterrupted),
-        };
-        let frame = read_client_frame(&mut receive).await?;
-        match (action, frame) {
-            (
-                CanonicalSyncV2DurableResponderAction::AwaitInventory,
-                CanonicalSyncClientFrameV2::Inventory(inventory),
-            ) => {
-                let pending = server.accept_durable_inventory(&runtime, &inventory)?;
-                let pending_action = server.durable_responder_action(&pending)?;
-                let response = pending_action
-                    .frame()
-                    .context("durable responder did not journal a response")?;
-                write_server_frame(&mut send, &response).await?;
-                if matches!(
-                    pending_action,
-                    CanonicalSyncV2DurableResponderAction::TransmitDiff(_)
-                ) {
-                    server.mark_durable_diff_sent(&pending)?;
-                    if stop_after_diff {
-                        return Ok(ServeOutcome::StoppedAfterDiff);
-                    }
-                }
-            }
-            (
-                pending @ (CanonicalSyncV2DurableResponderAction::TransmitDiff(_)
-                | CanonicalSyncV2DurableResponderAction::RetransmitDiff(_)),
-                CanonicalSyncClientFrameV2::Inventory(inventory),
-            ) => {
-                let rebuilt = match server.accept_inventory(&inventory)? {
-                    CanonicalSyncV2ServerInventoryOutcome::Accepted(round) => round.frame(),
-                    CanonicalSyncV2ServerInventoryOutcome::Rejected(rejected) => {
-                        CanonicalSyncServerFrameV2::Rejected(rejected)
-                    }
-                };
-                let expected = pending.frame().context("pending diff missing")?;
-                ensure!(
-                    rebuilt == expected,
-                    "inventory retry changed pending response"
-                );
-                write_server_frame(&mut send, &expected).await?;
-                if matches!(
-                    pending,
-                    CanonicalSyncV2DurableResponderAction::TransmitDiff(_)
-                ) {
-                    server.mark_durable_diff_sent(&runtime)?;
-                }
-                if stop_after_diff {
-                    return Ok(ServeOutcome::StoppedAfterDiff);
-                }
-            }
-            (
-                pending @ (CanonicalSyncV2DurableResponderAction::TransmitDiff(_)
-                | CanonicalSyncV2DurableResponderAction::RetransmitDiff(_)),
-                CanonicalSyncClientFrameV2::Events(batch),
-            ) => {
-                let ready = if matches!(
-                    pending,
-                    CanonicalSyncV2DurableResponderAction::TransmitDiff(_)
-                ) {
-                    server.mark_durable_diff_sent(&runtime)?
-                } else {
-                    runtime
-                };
-                let (_, complete) = server.accept_durable_event_batch(&ready, batch)?;
-                let response = server
-                    .durable_responder_action(&complete)?
-                    .frame()
-                    .context("durable complete frame missing")?;
-                write_server_frame(&mut send, &response).await?;
-                server.mark_durable_complete_sent(&complete)?;
-            }
-            (
-                CanonicalSyncV2DurableResponderAction::TransmitComplete(complete),
-                CanonicalSyncClientFrameV2::Events(_),
-            ) => {
-                write_server_frame(&mut send, &CanonicalSyncServerFrameV2::Complete(complete))
-                    .await?;
-                server.mark_durable_complete_sent(&runtime)?;
-            }
-            (actual, _) => {
-                bail!("unexpected canonical frame for durable responder action {actual:?}")
-            }
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum ClientOutcome {
-    Complete,
-    StoppedAfterDiff,
-}
-
-async fn drive_canonical_client(
-    connection: &Connection,
-    client: &CanonicalSyncV2Client<
-        '_,
-        CanonicalSyncV2CarrierStore,
-        CanonicalSyncV2MembershipPolicy,
-    >,
-    stop_after_diff: bool,
-) -> Result<ClientOutcome> {
-    loop {
-        let runtime = client.restore_durable_runtime()?;
-        match client.durable_action(&runtime)? {
-            CanonicalSyncV2DurableClientAction::PrepareInventory => {
-                client.begin_durable_round(&runtime)?;
-            }
-            CanonicalSyncV2DurableClientAction::TransmitInventory(inventory) => {
-                let response = exchange_client_frame(
-                    connection,
-                    &CanonicalSyncClientFrameV2::Inventory(inventory),
-                )
-                .await?;
-                let CanonicalSyncServerFrameV2::Diff(diff) = response else {
-                    bail!("canonical client expected Diff")
-                };
-                client.accept_durable_diff(&runtime, diff)?;
-                if stop_after_diff {
-                    return Ok(ClientOutcome::StoppedAfterDiff);
-                }
-            }
-            CanonicalSyncV2DurableClientAction::TransmitEventBatch(batch) => {
-                let (mut send, mut receive) = open_bi(connection).await?;
-                write_client_frame(&mut send, &CanonicalSyncClientFrameV2::Events(batch)).await?;
-                let waiting = client.mark_durable_batch_sent(&runtime)?;
-                let response = read_server_frame(&mut receive).await?;
-                let CanonicalSyncServerFrameV2::Complete(complete) = response else {
-                    bail!("canonical client expected Complete")
-                };
-                client.accept_durable_complete(&waiting, complete)?;
-            }
-            CanonicalSyncV2DurableClientAction::RetransmitEventBatch(batch) => {
-                let response =
-                    exchange_client_frame(connection, &CanonicalSyncClientFrameV2::Events(batch))
-                        .await?;
-                let CanonicalSyncServerFrameV2::Complete(complete) = response else {
-                    bail!("canonical client expected retransmitted Complete")
-                };
-                client.accept_durable_complete(&runtime, complete)?;
-            }
-            CanonicalSyncV2DurableClientAction::Complete => return Ok(ClientOutcome::Complete),
-            other => bail!("unsupported durable client action in evidence lane: {other:?}"),
-        }
-    }
 }
 
 async fn run_corrupt_listener(
@@ -1638,57 +1466,6 @@ async fn open_bi(
         .await
         .context("open evidence stream deadline")?
         .context("open evidence stream")
-}
-
-async fn exchange_client_frame(
-    connection: &Connection,
-    frame: &CanonicalSyncClientFrameV2,
-) -> Result<CanonicalSyncServerFrameV2> {
-    let (mut send, mut receive) = open_bi(connection).await?;
-    write_client_frame(&mut send, frame).await?;
-    read_server_frame(&mut receive).await
-}
-
-async fn write_client_frame(
-    send: &mut iroh::endpoint::SendStream,
-    frame: &CanonicalSyncClientFrameV2,
-) -> Result<()> {
-    let bytes = encode_sync_client_frame_v2(frame)?;
-    timeout(STREAM_TIMEOUT, send.write_all(&bytes))
-        .await
-        .context("write canonical client frame deadline")??;
-    send.finish().context("finish canonical client frame")?;
-    Ok(())
-}
-
-async fn read_client_frame(
-    receive: &mut iroh::endpoint::RecvStream,
-) -> Result<CanonicalSyncClientFrameV2> {
-    let bytes = timeout(STREAM_TIMEOUT, receive.read_to_end(MAX_FRAME_BYTES))
-        .await
-        .context("read canonical client frame deadline")??;
-    decode_and_verify_sync_client_frame_v2(&bytes).map_err(Into::into)
-}
-
-async fn write_server_frame(
-    send: &mut iroh::endpoint::SendStream,
-    frame: &CanonicalSyncServerFrameV2,
-) -> Result<()> {
-    let bytes = encode_sync_server_frame_v2(frame)?;
-    timeout(STREAM_TIMEOUT, send.write_all(&bytes))
-        .await
-        .context("write canonical server frame deadline")??;
-    send.finish().context("finish canonical server frame")?;
-    Ok(())
-}
-
-async fn read_server_frame(
-    receive: &mut iroh::endpoint::RecvStream,
-) -> Result<CanonicalSyncServerFrameV2> {
-    let bytes = timeout(STREAM_TIMEOUT, receive.read_to_end(MAX_FRAME_BYTES))
-        .await
-        .context("read canonical server frame deadline")??;
-    decode_and_verify_sync_server_frame_v2(&bytes).map_err(Into::into)
 }
 
 fn write_ticket(
