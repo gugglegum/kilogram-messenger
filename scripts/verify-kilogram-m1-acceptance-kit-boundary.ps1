@@ -101,7 +101,6 @@ if ([regex]::IsMatch($builder, '(?i)Copy-Item[^\r\n]+(?:ProfileFile|IpcFile|stat
 }
 
 $manifestPaths = @(
-    (Join-Path $workspace 'apps\kilogram-cli\Cargo.toml'),
     (Join-Path $workspace 'apps\kilogram-windows\Cargo.toml'),
     (Join-Path $workspace 'apps\kilogram-ticket-store\Cargo.toml')
 )
@@ -109,6 +108,20 @@ foreach ($manifestPath in $manifestPaths) {
     $manifest = Get-Content -LiteralPath $manifestPath -Raw
     if ($manifest -match '(?m)^\s*\[\[bin\]\]\s*$') {
         throw "acceptance work unexpectedly added an explicit executable target: $manifestPath"
+    }
+}
+
+$cliManifest = Get-Content -LiteralPath (Join-Path $workspace 'apps\kilogram-cli\Cargo.toml') -Raw
+if ([regex]::Matches($cliManifest, '(?m)^\s*\[\[bin\]\]\s*$').Count -ne 1) {
+    throw 'acceptance boundary requires exactly one feature-gated CLI evidence executable'
+}
+foreach ($required in @(
+    'default = []',
+    'name = "kilogram-sync-v2-evidence"',
+    'required-features = ["sync-v2-evidence"]'
+)) {
+    if (-not $cliManifest.Contains($required)) {
+        throw "acceptance boundary lost the dormant CLI evidence guard: $required"
     }
 }
 
@@ -131,4 +144,5 @@ Write-Output 'private_state_copy=forbidden'
 Write-Output 'release_build=false'
 Write-Output 'archive_created=false'
 Write-Output 'network_executed=false'
-Write-Output 'new_executable=false'
+Write-Output 'production_new_executable=false'
+Write-Output 'feature_gated_evidence_executable=true'

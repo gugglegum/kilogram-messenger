@@ -86,13 +86,12 @@ foreach ($required in @(
     }
 }
 
-if (Select-String -LiteralPath $manifestPath -Pattern '^\s*\[\[bin\]\]\s*$') {
-    throw 'automatic legacy mailbox upgrade unexpectedly added another executable target'
-}
+& (Join-Path $PSScriptRoot 'verify-kilogram-sync-v2-evidence-boundary.ps1') | Out-Null
 
 Write-Output 'mailbox_legacy_upgrade_boundary=verified'
 Write-Output 'eligibility=acknowledged-legacy-head-and-two-admission-qualified-transport-distinct-providers'
 Write-Output 'transition=ordered-rotation-with-predecessor-overlap'
 Write-Output 'message_requeue=false'
 Write-Output 'https_compatibility=legacy-v1-only'
-Write-Output 'new_executable=false'
+Write-Output 'production_new_executable=false'
+Write-Output 'feature_gated_evidence_executable=true'

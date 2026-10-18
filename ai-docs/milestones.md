@@ -6907,7 +6907,7 @@ correlation visible, Windows-only field evidence, independent security audit
 - hosted result ещё не заявлен: нужен exact implementation commit, явное
   разрешение на push и зелёный ручной run этой ревизии.
 
-### M1.1.80 — physical Windows evidence: rehearsal принят, final frozen-revision run ожидается
+### M1.1.80 — physical Windows evidence: pre-freeze matrix принята, final frozen-revision run ожидается
 
 - ноутбук `paul_hp_omen` и основной ПК подготовлены для одинакового stable-name
   debug binary; coordination выполняется через SSH/SCP, не через Yandex Disk;
@@ -6927,3 +6927,23 @@ correlation visible, Windows-only field evidence, independent security audit
 - rehearsal не становится финальным canonical evidence, потому что tooling fix
   меняет frozen source revision. После commit и пересборки требуется один final
   physical run, затем manual hosted run ровно той же ревизии.
+- второй fresh physical run `m1180-field-20261018T034245Z` на commit
+  `402e86861a4b4145d7947df36ea8be246cfd1031` и binary SHA-256
+  `e23ba26692caf7fe355f04dda5f8825b0222b32ffe62794f0228bd35e7e1f625`
+  повторно подтвердил всю matrix; bounded manifest SHA-256
+  `ae873be47c1e755d95c6ba76cb2261dfc7c0b0e3fef0495dc3c78216dc9bedd8`
+  принят verifier-ом;
+- full readiness затем обнаружил только historical gate drift: ранние
+  mailbox/provider boundaries ошибочно считали любой explicit `[[bin]]`
+  production-изменением. Они теперь делегируют exact проверку feature-gated
+  evidence executable каноническому boundary, сохраняя запрет EXE для
+  library/production targets;
+- после исправления readiness прошёл `108/108`, locked/offline strict Clippy и
+  rustfmt зелёные. Stable regression прошёл без failures: isolated runtime
+  `1/1`, bootstrap `14/14`, CLI `82/82`, protocol `155/155` плюс 15 explicit
+  vector-regeneration ignores, legacy decoder mutations `31 851/31 851`,
+  canonical sync v2 mutations `2 863/2 863` и все оставшиеся workspace
+  harnesses;
+- historical boundary fixes снова меняют frozen revision, поэтому manifest
+  `402e868` остаётся сильным pre-freeze evidence, но не подменяет один последний
+  physical rerun и manual hosted run exact final commit.

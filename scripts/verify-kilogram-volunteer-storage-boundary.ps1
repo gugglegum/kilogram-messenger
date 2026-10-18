@@ -51,9 +51,7 @@ foreach ($required in @(
 if (-not $runtimeManifest.Contains('kilogram-ticket-store = { path = "../kilogram-ticket-store" }')) {
     throw 'ordinary runtime does not embed the bounded blind mailbox store'
 }
-if (Select-String -LiteralPath $runtimeManifestPath -Pattern '^\s*\[\[bin\]\]\s*$') {
-    throw 'volunteer storage unexpectedly added another executable target'
-}
+& (Join-Path $PSScriptRoot 'verify-kilogram-sync-v2-evidence-boundary.ps1') | Out-Null
 
 foreach ($required in @(
     'StoreServiceMode::MailboxOnly',
@@ -96,4 +94,5 @@ Write-Output 'runtime_scope=embedded-mailbox-only'
 Write-Output 'current_ingress=iroh-dedicated-alpn-plus-loopback'
 Write-Output 'peer_discovery=authenticated-bounded-peer-gossip'
 Write-Output 'replication=sender-three-target-two-receipt'
-Write-Output 'new_executable=false'
+Write-Output 'production_new_executable=false'
+Write-Output 'feature_gated_evidence_executable=true'

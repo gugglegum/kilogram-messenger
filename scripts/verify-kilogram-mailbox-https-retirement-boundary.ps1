@@ -155,9 +155,7 @@ foreach ($required in @(
     }
 }
 
-if (Select-String -LiteralPath $manifestPath -Pattern '^\s*\[\[bin\]\]\s*$') {
-    throw 'HTTPS compatibility retirement unexpectedly added another executable target'
-}
+& (Join-Path $PSScriptRoot 'verify-kilogram-sync-v2-evidence-boundary.ps1') | Out-Null
 
 Write-Output 'mailbox_https_retirement_boundary=verified'
 Write-Output 'suppression=exact-authenticated-plus-two-transport-distinct-signed-receipts'
@@ -166,5 +164,6 @@ Write-Output 'legacy_v1_incomplete_exact_https_compatibility=retained'
 Write-Output 'v2_exact_https_compatibility=absent'
 Write-Output 'v2_reverse_ack=exact-volunteer-only'
 Write-Output 'retroactive_https_delete=false'
-Write-Output 'new_executable=false'
+Write-Output 'production_new_executable=false'
+Write-Output 'feature_gated_evidence_executable=true'
 Write-Output 'ipc_schema=v26-service-free-v2'

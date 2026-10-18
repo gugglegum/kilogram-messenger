@@ -97,9 +97,7 @@ foreach ($required in @(
     }
 }
 
-if (Select-String -LiteralPath $runtimeManifestPath -Pattern '^\s*\[\[bin\]\]\s*$') {
-    throw 'volunteer provider selection unexpectedly added another executable target'
-}
+& (Join-Path $PSScriptRoot 'verify-kilogram-sync-v2-evidence-boundary.ps1') | Out-Null
 
 Write-Output 'volunteer_provider_selection_boundary=verified'
 Write-Output 'registry=durable-bounded-signed-offers'
@@ -112,4 +110,5 @@ Write-Output 'unobserved_bootstrap_fallback=true'
 Write-Output 'capability_linkage=false'
 Write-Output 'automatic_gossip=true-bounded-authenticated-session'
 Write-Output 'replication=sender-three-target-two-receipt'
-Write-Output 'new_executable=false'
+Write-Output 'production_new_executable=false'
+Write-Output 'feature_gated_evidence_executable=true'

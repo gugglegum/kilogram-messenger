@@ -110,9 +110,7 @@ foreach ($publicPath in @(
     }
 }
 
-if ($manifest -match '(?m)^\s*\[\[bin\]\]') {
-    throw 'mailbox capability lifecycle unexpectedly added another executable target'
-}
+& (Join-Path $PSScriptRoot 'verify-kilogram-sync-v2-evidence-boundary.ps1') | Out-Null
 
 Write-Output 'mailbox_capability_lifecycle=verified'
 Write-Output 'ordering=device-signed-contiguous-generation-chain'
@@ -121,4 +119,5 @@ Write-Output 'acknowledgement=recipient-device-signed-session-bound'
 Write-Output 'rotation_and_revocation=explicit'
 Write-Output 'current_binding_selection=fail-closed-head-with-acked-rotation-overlap'
 Write-Output 'public_ticket_capability_material=false'
-Write-Output 'new_executable=false'
+Write-Output 'production_new_executable=false'
+Write-Output 'feature_gated_evidence_executable=true'

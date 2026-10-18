@@ -105,9 +105,7 @@ foreach ($required in @(
     }
 }
 
-if (Select-String -LiteralPath $runtimeManifestPath -Pattern '^\s*\[\[bin\]\]\s*$') {
-    throw 'provider gossip unexpectedly added another executable target'
-}
+& (Join-Path $PSScriptRoot 'verify-kilogram-sync-v2-evidence-boundary.ps1') | Out-Null
 
 Write-Output 'volunteer_provider_gossip_boundary=verified'
 Write-Output 'carrier=existing-device-authenticated-iroh-session'
@@ -123,4 +121,5 @@ Write-Output 'social_ids_in_payload=false'
 Write-Output 'mailbox_capabilities_in_payload=false'
 Write-Output 'automatic_gossip=true'
 Write-Output 'replication=sender-three-target-two-receipt'
-Write-Output 'new_executable=false'
+Write-Output 'production_new_executable=false'
+Write-Output 'feature_gated_evidence_executable=true'

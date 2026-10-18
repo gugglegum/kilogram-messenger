@@ -118,9 +118,7 @@ foreach ($required in @(
     }
 }
 
-if (Select-String -LiteralPath $runtimeManifestPath -Pattern '^\s*\[\[bin\]\]\s*$') {
-    throw 'replica-set locator unexpectedly added another executable target'
-}
+& (Join-Path $PSScriptRoot 'verify-kilogram-sync-v2-evidence-boundary.ps1') | Out-Null
 
 Write-Output 'volunteer_replica_set_locator_boundary=verified'
 Write-Output 'locator_authority=recipient-device-signed-capability-update'
@@ -129,4 +127,5 @@ Write-Output 'provider_resolution=exact-indexed-store-key'
 Write-Output 'legacy_capability_mode=bounded-random-fallback'
 Write-Output 'social_ids_exposed_to_provider=false'
 Write-Output 'global_directory=false'
-Write-Output 'new_executable=false'
+Write-Output 'production_new_executable=false'
+Write-Output 'feature_gated_evidence_executable=true'

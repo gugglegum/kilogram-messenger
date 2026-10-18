@@ -96,9 +96,7 @@ foreach ($required in @(
     }
 }
 
-if ($manifest -match '(?m)^\s*\[\[bin\]\]\s*$') {
-    throw 'mailbox field test unexpectedly added another executable target'
-}
+& (Join-Path $PSScriptRoot 'verify-kilogram-sync-v2-evidence-boundary.ps1') | Out-Null
 
 Write-Output 'mailbox_field_test_boundary=verified'
 Write-Output 'fault_scope=debug-only-one-shot'
@@ -107,4 +105,5 @@ Write-Output 'restart_boundary=automatic-runtime-stop-after-vault-mirror'
 Write-Output 'evidence=fail-closed-direct-and-relay-lifecycle'
 Write-Output 'mailbox_round_trip=store-signed-opaque-commit-before-delete'
 Write-Output 'portable_package=false'
-Write-Output 'new_executable=false'
+Write-Output 'production_new_executable=false'
+Write-Output 'feature_gated_evidence_executable=true'

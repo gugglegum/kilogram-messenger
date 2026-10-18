@@ -74,10 +74,7 @@ foreach ($required in @(
     }
 }
 
-$newBinaryDefinitions = Select-String -Path $manifestPath -Pattern '^\s*\[\[bin\]\]\s*$'
-if ($newBinaryDefinitions) {
-    throw 'runtime mailbox flow unexpectedly added another executable target'
-}
+& (Join-Path $PSScriptRoot 'verify-kilogram-sync-v2-evidence-boundary.ps1') | Out-Null
 
 Write-Output 'runtime_mailbox_flow=verified'
 Write-Output 'delivery_order=direct-relay-then-mailbox'
@@ -85,4 +82,5 @@ Write-Output 'delete_order=application-commit-then-delete'
 Write-Output 'reverse_ack=durable-mailbox-fallback'
 Write-Output 'orphan_dispatch=repair-before-network'
 Write-Output 'ipc_states=pending-stored-received-deleted-expired-failed'
-Write-Output 'new_executable=false'
+Write-Output 'production_new_executable=false'
+Write-Output 'feature_gated_evidence_executable=true'

@@ -4681,3 +4681,23 @@ Hosted follow-up:
   verifier fixes are tracked changes. Freeze and commit those fixes, rebuild
   the evidence binary, then collect final physical and manual hosted manifests
   from that same exact revision.
+- Outside-sandbox SSH was reconfirmed on 2026-10-18 while the main-PC VPN was
+  enabled: `test@192.168.0.152` returned host `paul_hp_omen`, and the LAN
+  exception is sufficient for autonomous `plink`/`pscp` coordination.
+- A second fresh physical run on revision
+  `402e86861a4b4145d7947df36ea8be246cfd1031` completed the full matrix and
+  produced `.tmp/f/m1180-field-20261018T034245Z/manifest.json`, SHA-256
+  `ae873be47c1e755d95c6ba76cb2261dfc7c0b0e3fef0495dc3c78216dc9bedd8`.
+  Later historical-boundary compatibility fixes require a final rerun on the
+  next committed revision; the previous state directories must not be reused.
+- Accepted-tag readiness after those compatibility fixes passed `108/108`,
+  rustfmt and locked/offline strict Clippy. The full stable test command used
+  profile `test`, two Cargo jobs, the isolated test before aggregate harnesses,
+  normal process priority, `-Run` and `-NoFailFast`; it completed with
+  `status=passed`. The legacy decoder mutation harness checked exactly 31 851
+  cases in 2 552.55 seconds, and the sync-v2 mutation harness passed its exact
+  2 863-case corpus in 23.28 seconds.
+- The stable regression grew the retained debug cache to about 77.41 GiB,
+  including 48.46 GiB of incremental data. No automatic vacuum is performed
+  before the final evidence build because it would discard useful compilation
+  cache; target remains ignored and is not evidence.

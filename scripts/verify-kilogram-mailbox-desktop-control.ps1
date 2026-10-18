@@ -151,7 +151,6 @@ if (-not $desktopMailboxAction.Contains('self.model.descriptor()') -or
 }
 
 foreach ($manifestPath in @(
-    (Join-Path $workspace 'apps\kilogram-cli\Cargo.toml'),
     (Join-Path $workspace 'apps\kilogram-windows\Cargo.toml')
 )) {
     $manifest = Get-Content -LiteralPath $manifestPath -Raw
@@ -159,6 +158,7 @@ foreach ($manifestPath in @(
         throw "mailbox desktop control unexpectedly added another executable target in $manifestPath"
     }
 }
+& (Join-Path $PSScriptRoot 'verify-kilogram-sync-v2-evidence-boundary.ps1') | Out-Null
 
 Write-Output 'mailbox_desktop_control=verified'
 Write-Output 'ipc_version=29'
@@ -169,4 +169,5 @@ Write-Output 'recipient_selection=exact-device-id'
 Write-Output 'central_https_fields_in_desktop=false'
 Write-Output 'secret_material_in_ipc=false'
 Write-Output 'manual_offer_export=false'
-Write-Output 'new_executable=false'
+Write-Output 'production_new_executable=false'
+Write-Output 'feature_gated_evidence_executable=true'

@@ -1,15 +1,18 @@
 # Следующий большой этап: M1.1.77–M1.1.80
 
 Статус: выполняется. Пакеты 1–3 реализованы и прошли локальные fail-closed
-проверки. Автономный двухмашинный rehearsal на commit `ae9672b` подтвердил
-direct, restart/resume, pinned APS1 relay, mixed-version downgrade,
-post-selection fail-closed и rollback. Во время приёмки обнаружены и исправлены
-две ошибки evidence tooling: Windows PowerShell 5.1 не заполнял
-`Start-Process.ExitCode`, а verifier ожидал симметричный checkpoint вместо
-фактической durable границы Alice `2/SendEventBatch`, Bob
-`1/ReceiveEventBatch`. После фиксации tooling нужен один final physical rerun на
-новом frozen commit; fresh hosted run той же ревизии ожидает отдельного
-разрешения на push. Production transport не изменён.
+проверки. Два автономных двухмашинных прогона (`ae9672b`, затем `402e868`)
+подтвердили direct, restart/resume, pinned APS1 relay, mixed-version downgrade,
+post-selection fail-closed и rollback. Во время приёмки исправлены verifier,
+Windows PowerShell 5.1 process runner и исторические executable boundaries:
+production crates по-прежнему не могут добавлять EXE, а единственный новый
+`kilogram-sync-v2-evidence` разрешён только с `sync-v2-evidence` и выключен в
+default feature set. Readiness прошёл `108/108`, полный stable Rust regression
+прошёл без failures, включая 31 851 legacy и 2 863 sync-v2 decoder mutations.
+Поскольку boundary fixes меняют source revision после второго physical run,
+нужны новый frozen commit, одна финальная physical перепроверка и fresh hosted
+run ровно той же ревизии; hosted run ожидает отдельного разрешения на push.
+Production transport не изменён.
 
 Цель: за один длительный блок продолжительностью примерно 8–10 часов закрыть
 последний технический gate `fresh-hosted-and-field-evidence` для dormant

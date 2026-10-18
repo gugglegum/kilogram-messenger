@@ -183,11 +183,24 @@ foreach ($required in @(
 
 foreach ($manifest in @(
     (Join-Path $workspace 'crates\kilogram-transport-iroh\Cargo.toml'),
-    (Join-Path $workspace 'crates\kilogram-mailbox-client\Cargo.toml'),
-    (Join-Path $workspace 'apps\kilogram-cli\Cargo.toml')
+    (Join-Path $workspace 'crates\kilogram-mailbox-client\Cargo.toml')
 )) {
     if (Select-String -LiteralPath $manifest -Pattern '^\s*\[\[bin\]\]\s*$') {
         throw "provider path-domain provenance unexpectedly added an executable: $manifest"
+    }
+}
+
+$cliManifest = Get-Content -LiteralPath (Join-Path $workspace 'apps\kilogram-cli\Cargo.toml') -Raw
+if ([regex]::Matches($cliManifest, '(?m)^\s*\[\[bin\]\]\s*$').Count -ne 1) {
+    throw 'provider path-domain boundary requires exactly one feature-gated CLI evidence executable'
+}
+foreach ($required in @(
+    'default = []',
+    'name = "kilogram-sync-v2-evidence"',
+    'required-features = ["sync-v2-evidence"]'
+)) {
+    if (-not $cliManifest.Contains($required)) {
+        throw "provider path-domain boundary lost the dormant CLI evidence guard: $required"
     }
 }
 
@@ -207,4 +220,5 @@ Write-Output 'ipc_version=29'
 Write-Output 'network_executed=false'
 Write-Output 'release_build=false'
 Write-Output 'archive_created=false'
-Write-Output 'new_executable=false'
+Write-Output 'production_new_executable=false'
+Write-Output 'feature_gated_evidence_executable=true'

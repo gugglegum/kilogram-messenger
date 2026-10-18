@@ -75,9 +75,7 @@ foreach ($forbidden in @(
     }
 }
 
-if ($manifest -match '(?m)^\s*\[\[bin\]\]') {
-    throw 'mailbox convergence unexpectedly added another executable target'
-}
+& (Join-Path $PSScriptRoot 'verify-kilogram-sync-v2-evidence-boundary.ps1') | Out-Null
 
 Write-Output 'mailbox_capability_convergence=verified'
 Write-Output 'state_machine=transport-independent-reconstructed-from-signed-artifacts'
@@ -87,4 +85,5 @@ Write-Output 'revocation=immediate-fail-closed'
 Write-Output 'crash_regression=activation-lost-ack-retry-rotation-restart-revocation'
 Write-Output 'duplicate_cli_ack_codec=false'
 Write-Output 'network_dependency=false'
-Write-Output 'new_executable=false'
+Write-Output 'production_new_executable=false'
+Write-Output 'feature_gated_evidence_executable=true'

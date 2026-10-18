@@ -97,9 +97,7 @@ foreach ($required in @(
     }
 }
 
-if (Select-String -LiteralPath $runtimeManifestPath -Pattern '^\s*\[\[bin\]\]\s*$') {
-    throw 'volunteer Iroh storage unexpectedly added another executable target'
-}
+& (Join-Path $PSScriptRoot 'verify-kilogram-sync-v2-evidence-boundary.ps1') | Out-Null
 
 Write-Output 'volunteer_iroh_boundary=verified'
 Write-Output 'alpn=kilogram/m0/blind-mailbox/1'
@@ -109,4 +107,5 @@ Write-Output 'rate_limit=authenticated-iroh-endpoint-id'
 Write-Output 'transfer_limit=durable-shared-network-class-budget'
 Write-Output 'discovery=authenticated-bounded-peer-gossip'
 Write-Output 'replication=sender-three-target-two-receipt'
-Write-Output 'new_executable=false'
+Write-Output 'production_new_executable=false'
+Write-Output 'feature_gated_evidence_executable=true'

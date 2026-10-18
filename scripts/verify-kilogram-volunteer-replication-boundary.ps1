@@ -117,9 +117,7 @@ foreach ($forbiddenDependency in @('kilogram-identity', 'kilogram-protocol', 'ir
     }
 }
 
-if (Select-String -LiteralPath $runtimeManifestPath -Pattern '^\s*\[\[bin\]\]\s*$') {
-    throw 'volunteer replication unexpectedly added another executable target'
-}
+& (Join-Path $PSScriptRoot 'verify-kilogram-sync-v2-evidence-boundary.ps1') | Out-Null
 
 Write-Output 'volunteer_replication_boundary=verified'
 Write-Output 'selection_salt=durable-random-per-signed-dispatch'
@@ -131,4 +129,5 @@ Write-Output 'direct_delivery_preferred=true'
 Write-Output 'exact_https_copy=retired-after-authenticated-two-receipt-durability'
 Write-Output 'https_delivery_compatibility=legacy-incomplete-and-reverse-ack'
 Write-Output 'iroh_replica_retrieval=bounded-list-delete-active'
-Write-Output 'new_executable=false'
+Write-Output 'production_new_executable=false'
+Write-Output 'feature_gated_evidence_executable=true'

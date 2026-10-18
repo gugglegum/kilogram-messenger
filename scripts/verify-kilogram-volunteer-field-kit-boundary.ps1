@@ -100,9 +100,7 @@ foreach ($requiredBase64 in @(
     if (-not $guide.Contains($required)) { throw "Russian field guide is missing '$required'" }
 }
 
-if (Select-String -LiteralPath $manifestPath -Pattern '^\s*\[\[bin\]\]\s*$') {
-    throw 'volunteer field kit unexpectedly added another executable target'
-}
+& (Join-Path $PSScriptRoot 'verify-kilogram-sync-v2-evidence-boundary.ps1') | Out-Null
 
 Write-Output 'volunteer_field_kit_boundary=verified'
 Write-Output 'build=clean-head-stable-name-debug'
@@ -113,4 +111,5 @@ Write-Output 'shared_secrets=false'
 Write-Output 'sender_offline_probe=true'
 Write-Output 'evidence=two-put-receipts-two-iroh-commits-two-signed-deletes-restart-history'
 Write-Output 'operator_independence=explicitly-not-proven-on-one-host'
-Write-Output 'new_executable=false'
+Write-Output 'production_new_executable=false'
+Write-Output 'feature_gated_evidence_executable=true'

@@ -98,9 +98,7 @@ foreach ($required in @(
     }
 }
 
-if (Select-String -LiteralPath $runtimeManifestPath -Pattern '^\s*\[\[bin\]\]\s*$') {
-    throw 'volunteer retrieval unexpectedly added another executable target'
-}
+& (Join-Path $PSScriptRoot 'verify-kilogram-sync-v2-evidence-boundary.ps1') | Out-Null
 
 Write-Output 'volunteer_retrieval_boundary=verified'
 Write-Output 'provider_probe_limit=3'
@@ -109,4 +107,5 @@ Write-Output 'application_commit_before_delete=true'
 Write-Output 'delete_receipt=store-signed-and-durable'
 Write-Output 'delete_resume_after_restart=true'
 Write-Output 'https_compatibility_fallback=true'
-Write-Output 'new_executable=false'
+Write-Output 'production_new_executable=false'
+Write-Output 'feature_gated_evidence_executable=true'

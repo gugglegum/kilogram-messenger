@@ -148,14 +148,60 @@ foreach ($required in @(
     }
 }
 
-foreach ($manifest in @(
-    (Join-Path $workspace 'crates\kilogram-mailbox-client\Cargo.toml'),
-    (Join-Path $workspace 'apps\kilogram-cli\Cargo.toml')
-)) {
-    if (Select-String -LiteralPath $manifest -Pattern '^\s*\[\[bin\]\]\s*$') {
-        throw "bootstrap-safe provider selection unexpectedly added an executable: $manifest"
+function Assert-ExecutableBoundary {
+    param(
+        [Parameter(Mandatory)] [string] $MailboxManifest,
+        [Parameter(Mandatory)] [string] $CliManifest
+    )
+    if ($MailboxManifest -match '(?m)^\s*\[\[bin\]\]\s*$') {
+        throw 'bootstrap-safe mailbox client unexpectedly added an executable'
+    }
+    if ([regex]::Matches($CliManifest, '(?m)^\s*\[\[bin\]\]\s*$').Count -ne 1) {
+        throw 'CLI must expose exactly one explicit evidence-only executable'
+    }
+    $featureBlock = Get-SourceBlock -Source $CliManifest -Start '[features]' -End '[[bin]]'
+    $binaryBlock = Get-SourceBlock -Source $CliManifest -Start '[[bin]]' -End '[dependencies]'
+    $expectedFeatures = @(
+        '[features]',
+        'default = []',
+        'sync-v2-evidence = ["dep:ed25519-dalek"]'
+    )
+    $expectedBinary = @(
+        '[[bin]]',
+        'name = "kilogram-sync-v2-evidence"',
+        'path = "src/bin/kilogram-sync-v2-evidence.rs"',
+        'required-features = ["sync-v2-evidence"]'
+    )
+    $actualFeatures = @($featureBlock.Replace("`r`n", "`n").Split("`n") | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+    $actualBinary = @($binaryBlock.Replace("`r`n", "`n").Split("`n") | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+    if (($actualFeatures -join "`n") -cne ($expectedFeatures -join "`n")) {
+        throw 'CLI evidence feature/default boundary changed'
+    }
+    if (($actualBinary -join "`n") -cne ($expectedBinary -join "`n")) {
+        throw 'CLI evidence executable lost its exact feature guard'
     }
 }
+
+$mailboxManifest = Get-Content -LiteralPath (Join-Path $workspace 'crates\kilogram-mailbox-client\Cargo.toml') -Raw
+$cliManifest = Get-Content -LiteralPath (Join-Path $workspace 'apps\kilogram-cli\Cargo.toml') -Raw
+Assert-ExecutableBoundary $mailboxManifest $cliManifest
+
+$unguardedFailed = $false
+try {
+    Assert-ExecutableBoundary $mailboxManifest ($cliManifest.Replace(
+        'required-features = ["sync-v2-evidence"]',
+        'required-features = []'
+    ))
+}
+catch { $unguardedFailed = $true }
+if (-not $unguardedFailed) { throw 'unguarded evidence executable mutation did not fail closed' }
+
+$extraBinaryFailed = $false
+try {
+    Assert-ExecutableBoundary $mailboxManifest ($cliManifest + "`n[[bin]]`nname = `"unexpected`"`n")
+}
+catch { $extraBinaryFailed = $true }
+if (-not $extraBinaryFailed) { throw 'extra CLI executable mutation did not fail closed' }
 
 Write-Output 'bootstrap_safe_provider_selection_boundary=verified'
 Write-Output 'admission_work_floor_bits=18'
@@ -169,4 +215,6 @@ Write-Output 'ipc_version=29'
 Write-Output 'network_executed=false'
 Write-Output 'release_build=false'
 Write-Output 'archive_created=false'
-Write-Output 'new_executable=false'
+Write-Output 'production_new_executable=false'
+Write-Output 'feature_gated_evidence_executable=true'
+Write-Output 'executable_negative_mutations=2'
