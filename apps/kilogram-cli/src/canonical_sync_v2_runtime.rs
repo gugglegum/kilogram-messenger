@@ -41,11 +41,15 @@ pub async fn serve_canonical_sync_v2_connection(
     stop_after_diff: bool,
 ) -> Result<CanonicalSyncV2ServeOutcome> {
     loop {
+        println!("canonical_sync_v2_server_stage=restore-started");
         let runtime = server.restore_durable_responder_runtime()?;
+        println!("canonical_sync_v2_server_stage=restore-completed");
         let action = server.durable_responder_action(&runtime)?;
+        println!("canonical_sync_v2_server_stage=action-resolved");
         if matches!(action, CanonicalSyncV2DurableResponderAction::Complete) {
             return Ok(CanonicalSyncV2ServeOutcome::Complete);
         }
+        println!("canonical_sync_v2_server_stage=stream-accept-wait");
         let streams = timeout(CANONICAL_SYNC_V2_STREAM_TIMEOUT, connection.accept_bi()).await;
         let (mut send, mut receive) = match streams {
             Ok(Ok(streams)) => streams,
@@ -53,7 +57,9 @@ pub async fn serve_canonical_sync_v2_connection(
                 return Ok(CanonicalSyncV2ServeOutcome::ConnectionInterrupted);
             }
         };
+        println!("canonical_sync_v2_server_stage=stream-accepted");
         let frame = read_canonical_sync_v2_client_frame(&mut receive).await?;
+        println!("canonical_sync_v2_server_stage=client-frame-read");
         match (action, frame) {
             (
                 CanonicalSyncV2DurableResponderAction::AwaitInventory,
@@ -151,12 +157,16 @@ pub async fn drive_canonical_sync_v2_client(
     stop_after_diff: bool,
 ) -> Result<CanonicalSyncV2ClientOutcome> {
     loop {
+        println!("canonical_sync_v2_client_stage=restore-started");
         let runtime = client.restore_durable_runtime()?;
+        println!("canonical_sync_v2_client_stage=restore-completed");
         match client.durable_action(&runtime)? {
             CanonicalSyncV2DurableClientAction::PrepareInventory => {
+                println!("canonical_sync_v2_client_stage=prepare-inventory");
                 client.begin_durable_round(&runtime)?;
             }
             CanonicalSyncV2DurableClientAction::TransmitInventory(inventory) => {
+                println!("canonical_sync_v2_client_stage=transmit-inventory");
                 let response = exchange_canonical_sync_v2_client_frame(
                     connection,
                     &CanonicalSyncClientFrameV2::Inventory(inventory),
@@ -171,6 +181,7 @@ pub async fn drive_canonical_sync_v2_client(
                 }
             }
             CanonicalSyncV2DurableClientAction::TransmitEventBatch(batch) => {
+                println!("canonical_sync_v2_client_stage=transmit-event-batch");
                 let (mut send, mut receive) = open_canonical_sync_v2_stream(connection).await?;
                 write_canonical_sync_v2_client_frame(
                     &mut send,
@@ -185,6 +196,7 @@ pub async fn drive_canonical_sync_v2_client(
                 client.accept_durable_complete(&waiting, complete)?;
             }
             CanonicalSyncV2DurableClientAction::RetransmitEventBatch(batch) => {
+                println!("canonical_sync_v2_client_stage=retransmit-event-batch");
                 let response = exchange_canonical_sync_v2_client_frame(
                     connection,
                     &CanonicalSyncClientFrameV2::Events(batch),
@@ -196,6 +208,7 @@ pub async fn drive_canonical_sync_v2_client(
                 client.accept_durable_complete(&runtime, complete)?;
             }
             CanonicalSyncV2DurableClientAction::Complete => {
+                println!("canonical_sync_v2_client_stage=complete");
                 return Ok(CanonicalSyncV2ClientOutcome::Complete);
             }
             other => bail!("unsupported durable client action in canonical runtime: {other:?}"),
@@ -216,8 +229,11 @@ pub async fn exchange_canonical_sync_v2_client_frame(
     connection: &Connection,
     frame: &CanonicalSyncClientFrameV2,
 ) -> Result<CanonicalSyncServerFrameV2> {
+    println!("canonical_sync_v2_client_stage=stream-open-wait");
     let (mut send, mut receive) = open_canonical_sync_v2_stream(connection).await?;
+    println!("canonical_sync_v2_client_stage=stream-opened");
     write_canonical_sync_v2_client_frame(&mut send, frame).await?;
+    println!("canonical_sync_v2_client_stage=client-frame-written");
     read_canonical_sync_v2_server_frame(&mut receive).await
 }
 
