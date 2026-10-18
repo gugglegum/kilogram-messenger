@@ -4919,3 +4919,24 @@ Hosted follow-up:
   epoch-one head `23aac6b46fc61e41673c2150c73c74695b5481432f9e2e061df97c534a7e8fdf`.
 - Build policy: debug only, Cargo jobs 2. Network, release build, ZIP/archive,
   tag и automatic GitHub build не выполнялись.
+
+## M1.1.87 runtime observability environment (2026-10-19)
+
+- Изменены `kilogram-runtime-ipc`, production runtime adapter в
+  `kilogram-cli`, Windows desktop и canonical IPC inventories. Peer transport,
+  sync frame codec и decoder mutation surface не менялись.
+- Local IPC exact-мигрировал на version 30 / descriptor domain v11. Старый v29
+  request regression отвергается до actor dispatch; co-installed runtime,
+  desktop и CLI должны обновляться вместе.
+- Snapshot policy перечитывает durable authority под существующим state lock;
+  observation ring process-local, capacity 32, drop-oldest, без persistence и
+  без чувствительных network/content fields.
+- Первый sandboxed IPC test run дал только известный infrastructure `os error
+  5` из redirected Windows Temp. Тот же locked/offline suite вне sandbox прошёл
+  17/17. CLI targeted test прошёл 1/1; desktop suite после добавления нового
+  authenticated mock-request прошёл 26/26.
+- Новый boundary self-test и 32 затронутых исторических boundaries прошли.
+  Полный accepted-tag readiness завершился `114/114`; rustfmt и workspace-wide
+  all-target/all-feature locked/offline strict Clippy также прошли.
+  Build policy остаётся debug-only, Cargo jobs 2; network/release/ZIP/tag и
+  automatic GitHub build не выполнялись.

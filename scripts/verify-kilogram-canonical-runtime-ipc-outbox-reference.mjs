@@ -272,7 +272,7 @@ assert(schema.limits.maximum_outbox_request_bytes === 65536 &&
   schema.limits.maximum_outbox_page_size === 128 &&
   schema.limits.maximum_outbox_snapshot_items === 4096,
 "runtime IPC outbox bounds changed");
-assert(schema.activation.current_runtime_encoding === "postcard-v29-with-json-descriptor-v10" &&
+assert(schema.activation.current_runtime_encoding === "postcard-v30-with-json-descriptor-v11" &&
   schema.activation.current_runtime_changed === true, "active runtime IPC changed");
 assert(vectors.schema_version === 1 && vectors.profile === schema.profile &&
   vectors.activation_status === "not-active" &&

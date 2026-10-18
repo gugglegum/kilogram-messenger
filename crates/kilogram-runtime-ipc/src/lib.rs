@@ -22,7 +22,7 @@ use tokio::{
     time::timeout,
 };
 
-const IPC_VERSION: u8 = 29;
+const IPC_VERSION: u8 = 30;
 const MAX_DESCRIPTOR_BYTES: u64 = 16 * 1024;
 const MAX_LAUNCH_PROFILE_BYTES: u64 = 64 * 1024;
 const MAX_LAUNCH_PROFILE_PATHS: usize = 64;
@@ -45,9 +45,10 @@ const MAX_FRAME_BYTES: usize = 256 * 1024;
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(3);
 const IO_TIMEOUT: Duration = Duration::from_secs(30);
 const REQUEST_CHANNEL_CAPACITY: usize = 64;
-const DESCRIPTOR_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-ipc-descriptor:v10\0";
+const DESCRIPTOR_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-ipc-descriptor:v11\0";
 pub const RUNTIME_LAUNCH_PROFILE_VERSION: u8 = 1;
 pub const MAX_RUNTIME_IPC_CONVERSATION_PAGE_SIZE: u16 = 64;
+pub const MAX_RUNTIME_IPC_SYNC_PATH_OBSERVATIONS: usize = 32;
 pub const DEFAULT_VOLUNTEER_STORAGE_LISTEN_PORT: u16 = 0;
 pub const DEFAULT_VOLUNTEER_STORAGE_TOTAL_BYTES: u64 = 200 * 1024 * 1024;
 pub const DEFAULT_VOLUNTEER_STORAGE_ETHERNET_TRANSFER_BYTES: u64 = 500 * 1024 * 1024;
@@ -674,6 +675,150 @@ pub enum RuntimeIpcCommand {
         peer_device_id: DeviceId,
         valid_for_seconds: u64,
     },
+    CanonicalSyncV2RuntimeStatus,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub enum RuntimeIpcCanonicalSyncV2PolicySource {
+    ImplicitDefault,
+    SignedDeviceChain,
+}
+
+impl RuntimeIpcCanonicalSyncV2PolicySource {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::ImplicitDefault => "implicit-default",
+            Self::SignedDeviceChain => "signed-device-chain",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub enum RuntimeIpcCanonicalSyncV2MigrationState {
+    LegacyOnly,
+    AdvertiseCanonicalV2,
+    DualReaderPreferLegacy,
+    DualReaderPreferCanonical,
+    CanonicalRequired,
+}
+
+impl RuntimeIpcCanonicalSyncV2MigrationState {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::LegacyOnly => "legacy-only",
+            Self::AdvertiseCanonicalV2 => "advertise-cbor-v2",
+            Self::DualReaderPreferLegacy => "dual-reader-prefer-legacy",
+            Self::DualReaderPreferCanonical => "dual-reader-prefer-canonical",
+            Self::CanonicalRequired => "canonical-required",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub enum RuntimeIpcCanonicalSyncV2Disposition {
+    Normal,
+    EmergencyContainment,
+}
+
+impl RuntimeIpcCanonicalSyncV2Disposition {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Normal => "normal",
+            Self::EmergencyContainment => "emergency-containment",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcCanonicalSyncV2Permissions {
+    pub legacy_reader_enabled: bool,
+    pub publish_canonical_capability: bool,
+    pub register_canonical_alpn: bool,
+    pub accept_new_canonical_session: bool,
+    pub initiate_new_canonical_session: bool,
+    pub resume_selected_canonical_session: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcCanonicalSyncV2PolicySnapshot {
+    pub source: RuntimeIpcCanonicalSyncV2PolicySource,
+    pub record_id: Option<String>,
+    pub migration_state: RuntimeIpcCanonicalSyncV2MigrationState,
+    pub disposition: RuntimeIpcCanonicalSyncV2Disposition,
+    pub migration_epoch: u64,
+    pub canonical_evidence_id: Option<String>,
+    pub permissions: RuntimeIpcCanonicalSyncV2Permissions,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub enum RuntimeIpcSyncPathDirection {
+    Inbound,
+    Outbound,
+}
+
+impl RuntimeIpcSyncPathDirection {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Inbound => "inbound",
+            Self::Outbound => "outbound",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub enum RuntimeIpcSyncPathProtocol {
+    LegacyPostcardV6,
+    CanonicalCborV2,
+}
+
+impl RuntimeIpcSyncPathProtocol {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::LegacyPostcardV6 => "legacy-postcard-v6",
+            Self::CanonicalCborV2 => "canonical-cbor-v2",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub enum RuntimeIpcSyncPathOutcome {
+    Completed,
+    Paused,
+    Interrupted,
+    Failed,
+}
+
+impl RuntimeIpcSyncPathOutcome {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Completed => "completed",
+            Self::Paused => "paused",
+            Self::Interrupted => "interrupted",
+            Self::Failed => "failed",
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcSyncPathObservation {
+    pub sequence: u64,
+    pub direction: RuntimeIpcSyncPathDirection,
+    pub protocol: RuntimeIpcSyncPathProtocol,
+    pub outcome: RuntimeIpcSyncPathOutcome,
+    pub peer_endpoint_id: String,
+    pub peer_device_id: Option<DeviceId>,
+    pub conversation_id: Option<ConversationId>,
+    pub selection_id: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcCanonicalSyncV2RuntimeStatus {
+    pub loaded: RuntimeIpcCanonicalSyncV2PolicySnapshot,
+    pub configured: RuntimeIpcCanonicalSyncV2PolicySnapshot,
+    pub configured_matches_loaded: bool,
+    pub restart_required: bool,
+    pub observation_capacity: u16,
+    pub observations: Vec<RuntimeIpcSyncPathObservation>,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -1530,6 +1675,7 @@ pub enum RuntimeIpcResponse {
     Error {
         message: String,
     },
+    CanonicalSyncV2RuntimeStatus(Box<RuntimeIpcCanonicalSyncV2RuntimeStatus>),
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -2051,7 +2197,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn version_28_request_is_rejected_before_actor_dispatch() -> Result<(), Box<dyn Error>> {
+    async fn version_29_request_is_rejected_before_actor_dispatch() -> Result<(), Box<dyn Error>> {
         let directory = tempfile::tempdir()?;
         let descriptor_path = directory.path().join("runtime.ipc.json");
         let root = AccountRootState::create(directory.path().join("root"))?;
@@ -2064,7 +2210,7 @@ mod tests {
         write_frame(
             &mut stream,
             &RuntimeIpcRequest {
-                version: 28,
+                version: 29,
                 token,
                 command: RuntimeIpcCommand::Ping,
             },
@@ -2168,8 +2314,8 @@ mod tests {
         )?;
         assert!(descriptor.verify().is_ok());
         let mut old_version = descriptor.clone();
-        old_version.content.version = 28;
-        let mut old_signing_bytes = b"kilogram:runtime-ipc-descriptor:v9\0".to_vec();
+        old_version.content.version = 29;
+        let mut old_signing_bytes = b"kilogram:runtime-ipc-descriptor:v10\0".to_vec();
         old_signing_bytes.extend_from_slice(&postcard::to_allocvec(&old_version.content)?);
         old_version.signature = identity.sign(&old_signing_bytes).to_vec();
         assert!(old_version.verify().is_err());

@@ -104,7 +104,7 @@ function Assert-CompletionInventory {
     $results = @($Manifest.canonical.results | ForEach-Object { [string]$_ })
     $universalResults = @($Manifest.canonical.universal_results | ForEach-Object { [string]$_ })
     $pairs = @($Manifest.canonical.command_result_pairs)
-    if ($commands.Count -ne 34 -or $results.Count -ne 33 -or $pairs.Count -ne 34) {
+    if ($commands.Count -ne 35 -or $results.Count -ne 34 -or $pairs.Count -ne 35) {
         throw 'canonical runtime IPC inventory cardinality changed'
     }
     Assert-Unique $commands 'canonical command inventory'
@@ -144,11 +144,11 @@ function Assert-CompletionInventory {
 
     $activeCommands = @($Manifest.active_postcard.commands)
     $activeResponses = @($Manifest.active_postcard.responses)
-    if ([int]$Manifest.active_postcard.version -ne 29 -or
+    if ([int]$Manifest.active_postcard.version -ne 30 -or
         [string]$Manifest.active_postcard.descriptor_signature_domain -cne
-            'kilogram:runtime-ipc-descriptor:v10\0' -or
-        $RuntimeSource.IndexOf('const IPC_VERSION: u8 = 29;', [StringComparison]::Ordinal) -lt 0 -or
-        $RuntimeSource.IndexOf('kilogram:runtime-ipc-descriptor:v10\0', [StringComparison]::Ordinal) -lt 0) {
+            'kilogram:runtime-ipc-descriptor:v11\0' -or
+        $RuntimeSource.IndexOf('const IPC_VERSION: u8 = 30;', [StringComparison]::Ordinal) -lt 0 -or
+        $RuntimeSource.IndexOf('kilogram:runtime-ipc-descriptor:v11\0', [StringComparison]::Ordinal) -lt 0) {
         throw 'active Postcard runtime IPC identity changed'
     }
     $activeCommandNames = @($activeCommands | ForEach-Object { [string]$_.variant })
@@ -197,9 +197,9 @@ function Assert-CompletionInventory {
     if ([string]$Schema.milestone -cne 'M1.1.49' -or
         [string]$Schema.status -cne 'candidate-not-active' -or
         [string]$Schema.activation.current_runtime_encoding -cne
-            'postcard-v29-with-json-descriptor-v10' -or
+            'postcard-v30-with-json-descriptor-v11' -or
         -not [bool]$Schema.activation.current_runtime_changed -or
-        @($Schema.semantic_rules).Count -ne 179) {
+        @($Schema.semantic_rules).Count -ne 180) {
         throw 'canonical runtime IPC schema did not record the exhaustive inventory'
     }
     $runtimeSurface = @($Coverage.surfaces | Where-Object { [string]$_.id -ceq 'runtime-ipc' })
@@ -224,8 +224,8 @@ function Assert-CompletionInventory {
         [string]$compatibilitySurface[0].compatibility -cne 'exact-version' -or
         [int](@($compatibilitySurface[0].bindings | Where-Object {
             [string]$_.symbol -ceq 'IPC_VERSION'
-        })[0].value) -ne 29) {
-        throw 'protocol compatibility registry no longer describes active IPC v29'
+        })[0].value) -ne 30) {
+        throw 'protocol compatibility registry no longer describes active IPC v30'
     }
 
     $activationRequirements = @(
@@ -311,10 +311,10 @@ Assert-Rejected {
 } 'untracked_active_postcard_variant'
 
 Write-Output 'runtime_ipc_completion_inventory_boundary=verified'
-Write-Output 'canonical_commands=34'
-Write-Output 'canonical_results=33'
-Write-Output 'active_postcard_commands=29'
-Write-Output 'active_postcard_responses=28'
+Write-Output 'canonical_commands=35'
+Write-Output 'canonical_results=34'
+Write-Output 'active_postcard_commands=30'
+Write-Output 'active_postcard_responses=29'
 Write-Output 'postcard_only_activation_blockers=0'
 Write-Output 'canonical_target_complete=true'
 Write-Output 'canonical_cbor_activated=false'

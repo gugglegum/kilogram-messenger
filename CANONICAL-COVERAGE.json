@@ -169,8 +169,8 @@
     }
   ],
   "next_priority": [
+    "guided-restart-and-post-restart-verification",
     "public-default-dual-reader-rollout-decision",
-    "desktop-activation-ui",
     "canonical-native-history-materialization"
   ]
 }

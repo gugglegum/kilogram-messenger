@@ -7130,3 +7130,28 @@ correlation visible, Windows-only field evidence, independent security audit
 - release/ZIP/tag/network run и автоматический GitHub build не выполнялись.
   Следующий пакет — read-only runtime observability загруженной policy и
   negotiated sync path после restart.
+
+### M1.1.87 — canonical sync v2 runtime observability: принят локально
+
+- authenticated local IPC получил read-only
+  `CanonicalSyncV2RuntimeStatus`; добавление Postcard variants выполнено как
+  exact hard cut v29/domain v10 -> v30/domain v11 без dual reader;
+- snapshot exact-разделяет verified policy, загруженную при старте endpoint,
+  и текущую configured Device-signed chain head, перечитанную под state lock;
+  любое расхождение явно требует fresh runtime и не применяет policy live;
+- process-local ring хранит максимум 32 наблюдения фактического inbound/outbound
+  пути: legacy Postcard v6 либо canonical CBOR v2, outcome и bounded public /
+  authenticated identifiers. Plaintext, IP, relay URL, paths и secrets
+  отсутствуют; restart очищает telemetry;
+- Windows desktop получает snapshot при connect, обновляет его вручную и через
+  существующую runtime change-chain, показывает loaded/configured rights,
+  restart state и восемь последних observations;
+- canonical IPC inventory расширен до 35 commands / 34 results / 35 pairs,
+  active Postcard — до 30 commands / 29 responses, schema — до 180 rules;
+- IPC regression прошёл 17/17, новый CLI bounded/restart-divergence test 1/1,
+  desktop suite 26/26, 32 затронутых исторических boundaries и новый negative
+  self-test прошли;
+- accepted-tag readiness прошёл `114/114` против immutable `M1.0.0`, включая
+  rustfmt и workspace all-target/all-feature locked/offline strict Clippy;
+- public default остаётся `legacy-only`; peer/sync wire, release/ZIP/tag,
+  network run и automatic GitHub build не менялись.

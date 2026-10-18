@@ -241,7 +241,7 @@ assert(schema.limits.maximum_contact_response_bytes === 131072 &&
   schema.limits.maximum_account_devices === 32 &&
   schema.limits.maximum_endpoint_candidates_per_conversation === 4,
 "runtime IPC contact bounds changed");
-assert(schema.activation.current_runtime_encoding === "postcard-v29-with-json-descriptor-v10" &&
+assert(schema.activation.current_runtime_encoding === "postcard-v30-with-json-descriptor-v11" &&
   schema.activation.current_runtime_changed === true, "active runtime IPC changed");
 assert(vectors.schema_version === 1 && vectors.profile === schema.profile &&
   vectors.activation_status === "not-active" &&

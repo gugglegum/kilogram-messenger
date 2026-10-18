@@ -15,8 +15,9 @@ use eframe::egui;
 use kilogram_bootstrap_contract::{DesktopBootstrapOutput, MAX_DESKTOP_BOOTSTRAP_OUTPUT_BYTES};
 use kilogram_identity::{AccountDeviceListSnapshot, AccountId, AccountRecoveryPhrase, DeviceId};
 use kilogram_runtime_ipc::{
-    MAX_RUNTIME_IPC_CONVERSATION_PAGE_SIZE, RuntimeIpcCommand, RuntimeIpcContactTicketRefresh,
-    RuntimeIpcConversationPage, RuntimeIpcConversationSummary, RuntimeIpcDeviceDirectoryStatus,
+    MAX_RUNTIME_IPC_CONVERSATION_PAGE_SIZE, RuntimeIpcCanonicalSyncV2RuntimeStatus,
+    RuntimeIpcCommand, RuntimeIpcContactTicketRefresh, RuntimeIpcConversationPage,
+    RuntimeIpcConversationSummary, RuntimeIpcDeviceDirectoryStatus,
     RuntimeIpcDeviceDirectoryUpdate, RuntimeIpcEndpointCandidateState, RuntimeIpcHistoryCursor,
     RuntimeIpcHistoryMessage, RuntimeIpcHistoryPage, RuntimeIpcMailboxCapabilityTransition,
     RuntimeIpcMailboxStatus, RuntimeIpcOutboxStatus, RuntimeIpcQueueState, RuntimeIpcRequestId,
@@ -26,7 +27,10 @@ use kilogram_runtime_ipc::{
 };
 #[cfg(test)]
 use kilogram_runtime_ipc::{
-    RuntimeIpcEndpointCandidateStatus, RuntimeIpcEndpointTicketRefresh, RuntimeIpcNetworkClass,
+    RuntimeIpcCanonicalSyncV2Disposition, RuntimeIpcCanonicalSyncV2MigrationState,
+    RuntimeIpcCanonicalSyncV2Permissions, RuntimeIpcCanonicalSyncV2PolicySnapshot,
+    RuntimeIpcCanonicalSyncV2PolicySource, RuntimeIpcEndpointCandidateStatus,
+    RuntimeIpcEndpointTicketRefresh, RuntimeIpcNetworkClass,
     RuntimeIpcTicketAutomationActionStatus,
 };
 use zeroize::{Zeroize as _, Zeroizing};
@@ -239,6 +243,7 @@ enum Operation {
     CanonicalActivationStatus,
     CanonicalActivationPlan,
     CanonicalActivationApply,
+    CanonicalRuntimeStatus,
     Connect,
     AddContact,
     Queue,
@@ -271,6 +276,7 @@ enum RuntimeUiAction {
     RefreshCanonicalActivation,
     PlanCanonicalActivation,
     ApplyCanonicalActivation,
+    RefreshCanonicalRuntimeStatus,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -982,6 +988,7 @@ struct ViewModel {
     mailbox_valid_for_seconds: String,
     mailbox_status: Option<RuntimeIpcMailboxStatus>,
     mailbox_transition: Option<RuntimeIpcMailboxCapabilityTransition>,
+    canonical_runtime_status: Option<RuntimeIpcCanonicalSyncV2RuntimeStatus>,
     notice: Option<String>,
     error: Option<String>,
 }
@@ -1020,6 +1027,7 @@ impl ViewModel {
             mailbox_valid_for_seconds: DEFAULT_MAILBOX_VALIDITY_SECONDS.to_string(),
             mailbox_status: None,
             mailbox_transition: None,
+            canonical_runtime_status: None,
             notice: None,
             error: None,
         }
@@ -1130,6 +1138,7 @@ impl ViewModel {
             self.device_directory_status = None;
             self.mailbox_status = None;
             self.mailbox_transition = None;
+            self.canonical_runtime_status = None;
         }
     }
 
@@ -1156,11 +1165,13 @@ impl ViewModel {
                 account_id,
                 device_id,
                 directory_status,
+                canonical_runtime_status,
             }) => {
                 self.connection = ConnectionState::Connected;
                 self.account_id = Some(account_id);
                 self.device_id = Some(device_id);
                 self.device_directory_status = Some(directory_status);
+                self.canonical_runtime_status = Some(*canonical_runtime_status);
                 self.notice = Some("Authenticated runtime connection established".to_owned());
                 self.error = None;
             }
@@ -1289,6 +1300,11 @@ impl ViewModel {
                 self.mailbox_status = Some(status);
                 self.error = None;
             }
+            Ok(WorkerSuccess::CanonicalRuntimeStatus(status)) => {
+                self.connection = ConnectionState::Connected;
+                self.canonical_runtime_status = Some(*status);
+                self.error = None;
+            }
             Ok(WorkerSuccess::Conversations(conversations)) => {
                 self.connection = ConnectionState::Connected;
                 self.apply_conversations(conversations);
@@ -1313,6 +1329,7 @@ impl ViewModel {
                 self.device_id = None;
                 self.mailbox_status = None;
                 self.mailbox_transition = None;
+                self.canonical_runtime_status = None;
                 self.notice = Some("Runtime stopped cleanly".to_owned());
                 self.error = None;
             }
@@ -1546,6 +1563,9 @@ enum WorkerRequest {
     Connect {
         descriptor: PathBuf,
     },
+    CanonicalRuntimeStatus {
+        descriptor: PathBuf,
+    },
     AddContact {
         descriptor: PathBuf,
         draft: ValidatedContactDraft,
@@ -1658,6 +1678,7 @@ impl WorkerRequest {
             Self::CanonicalActivationPlan { .. } => Operation::CanonicalActivationPlan,
             Self::CanonicalActivationApply { .. } => Operation::CanonicalActivationApply,
             Self::Connect { .. } => Operation::Connect,
+            Self::CanonicalRuntimeStatus { .. } => Operation::CanonicalRuntimeStatus,
             Self::AddContact { .. } => Operation::AddContact,
             Self::Queue { .. } => Operation::Queue,
             Self::Refresh { .. } => Operation::Refresh,
@@ -1732,7 +1753,9 @@ enum WorkerSuccess {
         account_id: String,
         device_id: String,
         directory_status: RuntimeIpcDeviceDirectoryStatus,
+        canonical_runtime_status: Box<RuntimeIpcCanonicalSyncV2RuntimeStatus>,
     },
+    CanonicalRuntimeStatus(Box<RuntimeIpcCanonicalSyncV2RuntimeStatus>),
     Queued {
         queue_id: String,
         contact_id: String,
@@ -2712,14 +2735,43 @@ async fn execute_request(request: WorkerRequest) -> Result<WorkerSuccess> {
                             && directory_status.local_device_id == device_id,
                         "Runtime device-directory status identity differs from ping"
                     );
+                    let canonical_runtime_status = match kilogram_runtime_ipc::call(
+                        &descriptor,
+                        RuntimeIpcCommand::CanonicalSyncV2RuntimeStatus,
+                    )
+                    .await?
+                    {
+                        RuntimeIpcResponse::CanonicalSyncV2RuntimeStatus(status) => status,
+                        RuntimeIpcResponse::Error { message } => {
+                            bail!("Runtime rejected canonical sync status: {message}")
+                        }
+                        _ => bail!("Runtime returned an unexpected canonical sync status"),
+                    };
                     Ok(WorkerSuccess::Connected {
                         account_id: account_id.to_string(),
                         device_id: device_id.to_string(),
                         directory_status,
+                        canonical_runtime_status,
                     })
                 }
                 RuntimeIpcResponse::Error { message } => bail!("Runtime rejected ping: {message}"),
                 _ => bail!("Runtime returned an unexpected ping response"),
+            }
+        }
+        WorkerRequest::CanonicalRuntimeStatus { descriptor } => {
+            match kilogram_runtime_ipc::call(
+                &descriptor,
+                RuntimeIpcCommand::CanonicalSyncV2RuntimeStatus,
+            )
+            .await?
+            {
+                RuntimeIpcResponse::CanonicalSyncV2RuntimeStatus(status) => {
+                    Ok(WorkerSuccess::CanonicalRuntimeStatus(status))
+                }
+                RuntimeIpcResponse::Error { message } => {
+                    bail!("Runtime rejected canonical sync status: {message}")
+                }
+                _ => bail!("Runtime returned an unexpected canonical sync status"),
             }
         }
         WorkerRequest::AddContact { descriptor, draft } => {
@@ -3194,6 +3246,7 @@ impl KilogramApp {
             );
             let refreshed = matches!(response.result, Ok(WorkerSuccess::Refreshed(_)));
             let mailbox_changed = matches!(response.result, Ok(WorkerSuccess::MailboxChanged(_)));
+            let mailbox_status = matches!(response.result, Ok(WorkerSuccess::MailboxStatus(_)));
             self.model.apply(response);
             if connected {
                 self.runtime_start_deadline = None;
@@ -3211,6 +3264,8 @@ impl KilogramApp {
                 self.start_refresh();
             } else if refreshed || mailbox_changed {
                 self.start_mailbox_status();
+            } else if mailbox_status {
+                self.start_canonical_runtime_status();
             }
         }
     }
@@ -4993,6 +5048,24 @@ impl KilogramApp {
             Err(error) => self
                 .model
                 .fail(Operation::CanonicalActivationStatus, format!("{error:#}")),
+        }
+    }
+
+    fn start_canonical_runtime_status(&mut self) {
+        let result: Result<WorkerRequest> = (|| {
+            ensure!(
+                self.model.connection == ConnectionState::Connected,
+                "Connect to the running runtime first"
+            );
+            Ok(WorkerRequest::CanonicalRuntimeStatus {
+                descriptor: self.model.descriptor()?,
+            })
+        })();
+        match result {
+            Ok(request) => self.submit(Operation::CanonicalRuntimeStatus, request),
+            Err(error) => self
+                .model
+                .fail(Operation::CanonicalRuntimeStatus, format!("{error:#}")),
         }
     }
 
@@ -7481,6 +7554,98 @@ impl KilogramApp {
             && self.model.connection == ConnectionState::Disconnected;
         let activation_busy = self.model.pending.is_some();
         ui.collapsing("Canonical sync v2 activation (advanced)", |ui| {
+            ui.strong("Running runtime (read only)");
+            if ui
+                .add_enabled(
+                    !activation_busy && self.model.connection == ConnectionState::Connected,
+                    egui::Button::new("Refresh loaded policy and sync paths"),
+                )
+                .clicked()
+            {
+                action = RuntimeUiAction::RefreshCanonicalRuntimeStatus;
+            }
+            if let Some(status) = self.model.canonical_runtime_status.as_ref() {
+                let loaded = &status.loaded;
+                let configured = &status.configured;
+                ui.colored_label(
+                    if status.restart_required {
+                        egui::Color32::from_rgb(246, 195, 93)
+                    } else {
+                        egui::Color32::from_rgb(92, 201, 137)
+                    },
+                    if status.restart_required {
+                        "Configured activation differs from this process; restart required"
+                    } else {
+                        "Configured activation exactly matches the policy loaded at process start"
+                    },
+                );
+                ui.small(format!(
+                    "Loaded: {} · {} · epoch {} · {} · head {}",
+                    loaded.source.as_str(),
+                    loaded.migration_state.as_str(),
+                    loaded.migration_epoch,
+                    loaded.disposition.as_str(),
+                    loaded
+                        .record_id
+                        .as_deref()
+                        .map(compact_id)
+                        .unwrap_or_else(|| "implicit".to_owned())
+                ));
+                ui.small(format!(
+                    "Configured: {} · {} · epoch {} · {} · head {}",
+                    configured.source.as_str(),
+                    configured.migration_state.as_str(),
+                    configured.migration_epoch,
+                    configured.disposition.as_str(),
+                    configured
+                        .record_id
+                        .as_deref()
+                        .map(compact_id)
+                        .unwrap_or_else(|| "implicit".to_owned())
+                ));
+                ui.small(format!(
+                    "Loaded rights: legacy={} publish={} register={} accept={} initiate={} resume={}",
+                    loaded.permissions.legacy_reader_enabled,
+                    loaded.permissions.publish_canonical_capability,
+                    loaded.permissions.register_canonical_alpn,
+                    loaded.permissions.accept_new_canonical_session,
+                    loaded.permissions.initiate_new_canonical_session,
+                    loaded.permissions.resume_selected_canonical_session
+                ));
+                ui.separator();
+                ui.strong(format!(
+                    "Observed sync paths: {}/{} retained in memory",
+                    status.observations.len(),
+                    status.observation_capacity
+                ));
+                if status.observations.is_empty() {
+                    ui.small("No legacy or canonical sync session has been observed by this runtime process yet.");
+                } else {
+                    for observation in status.observations.iter().rev().take(8) {
+                        ui.small(format!(
+                            "#{} {} · {} · {} · peer {}{}{}",
+                            observation.sequence,
+                            observation.direction.as_str(),
+                            observation.protocol.as_str(),
+                            observation.outcome.as_str(),
+                            compact_id(&observation.peer_endpoint_id),
+                            observation
+                                .conversation_id
+                                .map(|value| format!(" · conversation {}", compact_id(&value.to_string())))
+                                .unwrap_or_default(),
+                            observation
+                                .selection_id
+                                .as_deref()
+                                .map(|value| format!(" · selection {}", compact_id(value)))
+                                .unwrap_or_default()
+                        ));
+                    }
+                }
+            } else {
+                ui.small("Connect to a v30 runtime to inspect its loaded policy and observed sync path. This view cannot change activation authority.");
+            }
+            ui.separator();
+            ui.strong("Stopped runtime authority ceremony");
             match self
                 .canonical_activation
                 .draw(ui, activation_runtime_offline, activation_busy)
@@ -8759,6 +8924,8 @@ impl eframe::App for KilogramApp {
             self.start_canonical_activation_plan();
         } else if runtime_action == RuntimeUiAction::ApplyCanonicalActivation {
             self.start_canonical_activation_apply();
+        } else if runtime_action == RuntimeUiAction::RefreshCanonicalRuntimeStatus {
+            self.start_canonical_runtime_status();
         } else if add_contact_clicked {
             self.start_add_contact();
         } else if let Some(contact_id) = selected_contact {
@@ -9429,6 +9596,30 @@ mod tests {
             profile_convergence_status: "convergence-required".to_owned(),
             restart_recovery_status: "authenticated-receipt-current".to_owned(),
         };
+        let loaded_policy = RuntimeIpcCanonicalSyncV2PolicySnapshot {
+            source: RuntimeIpcCanonicalSyncV2PolicySource::ImplicitDefault,
+            record_id: None,
+            migration_state: RuntimeIpcCanonicalSyncV2MigrationState::LegacyOnly,
+            disposition: RuntimeIpcCanonicalSyncV2Disposition::Normal,
+            migration_epoch: 0,
+            canonical_evidence_id: None,
+            permissions: RuntimeIpcCanonicalSyncV2Permissions {
+                legacy_reader_enabled: true,
+                publish_canonical_capability: false,
+                register_canonical_alpn: false,
+                accept_new_canonical_session: false,
+                initiate_new_canonical_session: false,
+                resume_selected_canonical_session: false,
+            },
+        };
+        let canonical_runtime_status = RuntimeIpcCanonicalSyncV2RuntimeStatus {
+            loaded: loaded_policy.clone(),
+            configured: loaded_policy,
+            configured_matches_loaded: true,
+            restart_required: false,
+            observation_capacity: 32,
+            observations: Vec::new(),
+        };
         let (server, mut requests) =
             RuntimeIpcServer::start(descriptor.clone(), account_id, &identity).await?;
         let actor = tokio::spawn(async move {
@@ -9456,6 +9647,21 @@ mod tests {
                     directory_status.clone(),
                 ))
                 .map_err(|_| anyhow::anyhow!("send GUI device-directory status response"))?;
+
+            let canonical_status = requests
+                .recv()
+                .await
+                .context("receive GUI canonical runtime status")?;
+            let (command, response) = canonical_status.into_parts();
+            ensure!(matches!(
+                command,
+                RuntimeIpcCommand::CanonicalSyncV2RuntimeStatus
+            ));
+            response
+                .send(RuntimeIpcResponse::CanonicalSyncV2RuntimeStatus(Box::new(
+                    canonical_runtime_status,
+                )))
+                .map_err(|_| anyhow::anyhow!("send GUI canonical runtime status response"))?;
 
             let contact = requests.recv().await.context("receive GUI contact")?;
             let (command, response) = contact.into_parts();
@@ -9955,9 +10161,12 @@ mod tests {
             WorkerSuccess::Connected {
                 account_id: connected_account,
                 device_id: connected_device,
+                canonical_runtime_status,
                 ..
             } if connected_account == account_id.to_string()
                 && connected_device == device_id.to_string()
+                && canonical_runtime_status.configured_matches_loaded
+                && !canonical_runtime_status.restart_required
         ));
 
         let contact = execute_request(WorkerRequest::AddContact {

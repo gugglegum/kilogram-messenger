@@ -110,8 +110,8 @@ foreach ($block in @($gossipEntry, $gossipFrame, $protocolRequest, $ipcProvider)
         }
     }
 }
-if ($ipc.IndexOf('const IPC_VERSION: u8 = 29;', [StringComparison]::Ordinal) -lt 0) {
-    throw 'local provider observations unexpectedly changed authenticated IPC v29'
+if ($ipc.IndexOf('const IPC_VERSION: u8 = 30;', [StringComparison]::Ordinal) -lt 0) {
+    throw 'local provider observations unexpectedly changed authenticated IPC v30'
 }
 
 foreach ($required in @(
@@ -162,7 +162,7 @@ Write-Output 'm0983_selection_policy_changed=false'
 Write-Output 'current_selection_consumes_binary_presence=true'
 Write-Output 'observation_count_rank_weight=false'
 Write-Output 'operator_independence=false'
-Write-Output 'ipc_version=29'
+Write-Output 'ipc_version=30'
 Write-Output 'network_executed=false'
 Write-Output 'release_build=false'
 Write-Output 'archive_created=false'

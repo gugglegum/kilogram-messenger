@@ -81,19 +81,19 @@ function Assert-Boundary {
     }
 
     Assert-ContainsExact $Runtime @(
-        'const IPC_VERSION: u8 = 29;',
-        'kilogram:runtime-ipc-descriptor:v10\0',
+        'const IPC_VERSION: u8 = 30;',
+        'kilogram:runtime-ipc-descriptor:v11\0',
         'pub const MAX_RUNTIME_IPC_CONVERSATION_PAGE_SIZE: u16 = 64;',
         'ConversationListPage {',
         'pub struct RuntimeIpcConversationCursor',
         'pub struct RuntimeIpcConversationPage',
         'pub fn validate_for_request(',
         'runtime IPC conversation page did not advance beyond its request cursor',
-        'version_28_request_is_rejected_before_actor_dispatch',
+        'version_29_request_is_rejected_before_actor_dispatch',
         'conversation_page_requires_exact_monotonic_continuation'
     ) 'runtime IPC implementation'
-    if ($Runtime.IndexOf('const IPC_VERSION: u8 = 28;', [StringComparison]::Ordinal) -ge 0 -or
-        [regex]::Matches($Runtime, [regex]::Escape('kilogram:runtime-ipc-descriptor:v9\0')).Count -ne 1) {
+    if ($Runtime.IndexOf('const IPC_VERSION: u8 = 29;', [StringComparison]::Ordinal) -ge 0 -or
+        [regex]::Matches($Runtime, [regex]::Escape('kilogram:runtime-ipc-descriptor:v10\0')).Count -ne 1) {
         throw 'legacy runtime IPC version/domain is not isolated to the downgrade regression'
     }
 
@@ -123,9 +123,9 @@ function Assert-Boundary {
 
     if ([string]$Schema.milestone -cne 'M1.1.49' -or
         [string]$Schema.activation.current_runtime_encoding -cne
-            'postcard-v29-with-json-descriptor-v10' -or
+            'postcard-v30-with-json-descriptor-v11' -or
         -not [bool]$Schema.activation.current_runtime_changed -or
-        @($Schema.semantic_rules).Count -ne 179 -or
+        @($Schema.semantic_rules).Count -ne 180 -or
         @($Schema.remaining_runtime_ipc_surface).Count -ne 0) {
         throw 'canonical runtime IPC aggregate did not record the active adapter migration'
     }
@@ -140,11 +140,11 @@ function Assert-Boundary {
     if ($source.Count -ne 1 -or [string]$source[0].encoding -cne 'postcard' -or
         [string]$source[0].compatibility -cne 'exact-version' -or
         [string]$source[0].migration -cne 'new-version-explicit-migration' -or
-        [int](@($source[0].bindings | Where-Object { $_.symbol -ceq 'IPC_VERSION' })[0].value) -ne 29 -or
+        [int](@($source[0].bindings | Where-Object { $_.symbol -ceq 'IPC_VERSION' })[0].value) -ne 30 -or
         [string](@($source[0].bindings | Where-Object {
             $_.symbol -ceq 'DESCRIPTOR_SIGNATURE_DOMAIN'
-        })[0].value) -cne 'kilogram:runtime-ipc-descriptor:v10\0') {
-        throw 'protocol compatibility registry does not exactly describe active IPC v29'
+        })[0].value) -cne 'kilogram:runtime-ipc-descriptor:v11\0') {
+        throw 'protocol compatibility registry does not exactly describe active IPC v30'
     }
 
     $normalizedRfc = [regex]::Replace($Rfc, '\s+', ' ')
@@ -195,7 +195,7 @@ if ($SelfTest) {
 }
 
 Write-Output 'runtime_ipc_conversation_pagination_migration_boundary=verified'
-Write-Output 'active_runtime_ipc=postcard-v29-json-descriptor-v10'
+Write-Output 'active_runtime_ipc=postcard-v30-json-descriptor-v11'
 Write-Output 'conversation_page_limit=64'
 Write-Output 'desktop_refresh_page_limit=1024'
 Write-Output 'legacy_v26_request_dispatch=false'

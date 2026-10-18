@@ -90,8 +90,8 @@ foreach ($required in @(
     }
 }
 
-if (-not $ipc.Contains('const IPC_VERSION: u8 = 29;')) {
-    throw 'provider admission work unexpectedly changed authenticated IPC v29'
+if (-not $ipc.Contains('const IPC_VERSION: u8 = 30;')) {
+    throw 'provider admission work unexpectedly changed authenticated IPC v30'
 }
 
 foreach ($required in @(
@@ -136,7 +136,7 @@ Write-Output 'selection=admission-work-plus-binary-local-corroboration-plus-tran
 Write-Output 'legacy_exact_commitment_resolution=preserved'
 Write-Output 'operator_independence=false'
 Write-Output 'sybil_resistance=cost-floor-not-proof'
-Write-Output 'ipc_version=29'
+Write-Output 'ipc_version=30'
 Write-Output 'network_executed=false'
 Write-Output 'release_build=false'
 Write-Output 'archive_created=false'

@@ -128,8 +128,8 @@ foreach ($forbidden in @(
         throw "provider IPC exposes forbidden local provenance '$forbidden'"
     }
 }
-if (-not $ipc.Contains('const IPC_VERSION: u8 = 29;')) {
-    throw 'bootstrap-safe provider policy unexpectedly changed authenticated IPC v29'
+if (-not $ipc.Contains('const IPC_VERSION: u8 = 30;')) {
+    throw 'bootstrap-safe provider policy unexpectedly changed authenticated IPC v30'
 }
 
 foreach ($required in @(
@@ -211,7 +211,7 @@ Write-Output 'unobserved_bootstrap_fallback=true'
 Write-Output 'transport_identity_distinct=true'
 Write-Output 'exact_commitment_resolution_changed=false'
 Write-Output 'operator_independence=false'
-Write-Output 'ipc_version=29'
+Write-Output 'ipc_version=30'
 Write-Output 'network_executed=false'
 Write-Output 'release_build=false'
 Write-Output 'archive_created=false'

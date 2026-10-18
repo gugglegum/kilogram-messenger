@@ -36,7 +36,7 @@ function Assert-Schema {
     if ([UInt64]$Schema.schema_version -ne 1 -or [string]$Schema.milestone -cne 'M1.1.49' -or
         [string]$Schema.status -cne 'candidate-not-active' -or [bool]$Schema.changes_active_wire -or
         [string]$Schema.profile -cne 'kilogram-deterministic-cbor-v1' -or
-        [string]$Schema.activation.current_runtime_encoding -cne 'postcard-v29-with-json-descriptor-v10' -or
+        [string]$Schema.activation.current_runtime_encoding -cne 'postcard-v30-with-json-descriptor-v11' -or
         -not [bool]$Schema.activation.current_runtime_changed) {
         throw 'canonical ticket-automation schema header changed'
     }
@@ -56,8 +56,8 @@ function Assert-Schema {
         throw 'canonical ticket-automation limits changed'
     }
     if (@($Schema.domains).Count -ne 78 -or @($Schema.objects).Count -ne 38 -or
-        @($Schema.covered_commands).Count -ne 34 -or @($Schema.covered_results).Count -ne 33 -or
-        @($Schema.semantic_rules).Count -ne 179 -or
+        @($Schema.covered_commands).Count -ne 35 -or @($Schema.covered_results).Count -ne 34 -or
+        @($Schema.semantic_rules).Count -ne 180 -or
         @($Schema.remaining_runtime_ipc_surface).Count -ne 0) {
         throw 'canonical ticket-automation inventory changed'
     }
@@ -184,8 +184,8 @@ if ($lib.IndexOf('pub mod canonical_runtime_ipc_ticket_automation_v1;',
         [StringComparison]::Ordinal) -lt 0) {
     throw 'canonical ticket-automation module is not exported'
 }
-foreach ($required in @('const IPC_VERSION: u8 = 29;',
-    'kilogram:runtime-ipc-descriptor:v10\0', 'postcard::to_allocvec', 'postcard::from_bytes')) {
+foreach ($required in @('const IPC_VERSION: u8 = 30;',
+    'kilogram:runtime-ipc-descriptor:v11\0', 'postcard::to_allocvec', 'postcard::from_bytes')) {
     if ($activeIpc.IndexOf($required, [StringComparison]::Ordinal) -lt 0) {
         throw "active runtime IPC boundary is missing '$required'"
     }
@@ -197,8 +197,8 @@ if ($activeIpc.IndexOf('canonical_runtime_ipc_ticket_automation_v1',
 $surface = @($compatibility.surfaces | Where-Object { $_.id -ceq 'runtime-ipc' })
 if ($surface.Count -ne 1 -or [string]$surface[0].encoding -cne 'postcard' -or
     [string]$surface[0].compatibility -cne 'exact-version' -or
-    [int](@($surface[0].bindings | Where-Object { $_.symbol -ceq 'IPC_VERSION' })[0].value) -ne 29) {
-    throw 'active compatibility registry no longer records Postcard runtime IPC v29'
+    [int](@($surface[0].bindings | Where-Object { $_.symbol -ceq 'IPC_VERSION' })[0].value) -ne 30) {
+    throw 'active compatibility registry no longer records Postcard runtime IPC v30'
 }
 $coverageSurface = @($coverage.surfaces | Where-Object { $_.id -ceq 'runtime-ipc' })
 if ($coverageSurface.Count -ne 1 -or

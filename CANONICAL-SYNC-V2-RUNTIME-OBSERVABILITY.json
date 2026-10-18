@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.87",
+  "status": "canonical-sync-v2-runtime-observability-verified",
+  "changes_peer_network_wire": false,
+  "changes_sync_wire": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "runtime_ipc": {
+    "operation": "read-only-status",
+    "command": "CanonicalSyncV2RuntimeStatus",
+    "response": "CanonicalSyncV2RuntimeStatus",
+    "version": 30,
+    "descriptor_signature_domain": "kilogram:runtime-ipc-descriptor:v11\\0",
+    "previous_version": 29,
+    "previous_descriptor_signature_domain": "kilogram:runtime-ipc-descriptor:v10\\0",
+    "migration": "exact-version-hard-cut-for-co-installed-binaries",
+    "dual_reader": false,
+    "mutation_or_hot_apply": false
+  },
+  "policy_projection": {
+    "loaded_at_process_start": true,
+    "configured_reloaded_under_state_lock": true,
+    "exact_comparison": true,
+    "restart_required_iff_different": true,
+    "implicit_default_visible": true,
+    "signed_chain_head_visible": true,
+    "six_permissions_visible": true
+  },
+  "sync_path_projection": {
+    "storage": "process-memory-only",
+    "capacity": 32,
+    "overflow": "drop-oldest",
+    "sequence": "process-local-monotonic",
+    "directions": ["inbound", "outbound"],
+    "protocols": ["legacy-postcard-v6", "canonical-cbor-v2"],
+    "outcomes": ["completed", "paused", "interrupted", "failed"],
+    "fields": [
+      "sequence",
+      "direction",
+      "protocol",
+      "outcome",
+      "peer-endpoint-id",
+      "optional-peer-device-id",
+      "optional-conversation-id",
+      "optional-selection-id"
+    ],
+    "forbidden": [
+      "message-plaintext",
+      "ciphertext-payload",
+      "ip-address",
+      "relay-url",
+      "filesystem-path",
+      "bearer-token",
+      "device-secret",
+      "account-root-secret",
+      "mailbox-capability"
+    ]
+  },
+  "desktop": {
+    "loads_on_authenticated_connect": true,
+    "refreshes_after_runtime_change_notification": true,
+    "manual_refresh": true,
+    "shows_loaded_and_configured_policy": true,
+    "shows_restart_required": true,
+    "shows_at_most_recent_observations": 8,
+    "activation_authority_remains_offline_only": true
+  },
+  "fail_closed": [
+    "legacy-v29-descriptor-or-request",
+    "malformed-or-foreign-durable-policy",
+    "state-lock-unavailable",
+    "unexpected-runtime-response",
+    "unbounded-observation-list",
+    "inconsistent-loaded-vs-configured-restart-state"
+  ],
+  "accepted_prerequisites": {
+    "activation_policy": "CANONICAL-SYNC-V2-ACTIVATION-POLICY.json",
+    "activation_authority": "CANONICAL-SYNC-V2-ACTIVATION-AUTHORITY.json",
+    "opt_in_dark_launch": "CANONICAL-SYNC-V2-OPT-IN-DARK-LAUNCH.json",
+    "desktop_activation": "CANONICAL-SYNC-V2-DESKTOP-ACTIVATION.json"
+  },
+  "acceptance": {
+    "runtime_ipc_unit_tests": "verified",
+    "cli_observability_unit_test": "verified",
+    "desktop_unit_tests": "verified",
+    "boundary_self_test_and_negative_mutations": "verified",
+    "m1_readiness": "114/114",
+    "rustfmt": "verified",
+    "locked_offline_strict_clippy": "verified",
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false,
+    "network_executed": false
+  },
+  "non_claims": [
+    "public-dual-reader-default",
+    "live-policy-mutation",
+    "hot-endpoint-rebind",
+    "persistent-telemetry-history",
+    "canonical-native-history-materialization",
+    "legacy-retirement",
+    "independent-security-audit"
+  ]
+}

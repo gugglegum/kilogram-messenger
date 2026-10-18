@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, BTreeSet},
+    collections::{BTreeMap, BTreeSet, VecDeque},
     fmt,
     fs::{self, OpenOptions},
     future::Future,
@@ -75,9 +75,12 @@ use kilogram_ratchet::{
 };
 use kilogram_runtime_ipc::{
     DEFAULT_VOLUNTEER_STORAGE_LISTEN_PORT, MAX_RUNTIME_IPC_CONVERSATION_PAGE_SIZE,
-    RuntimeIpcCommand, RuntimeIpcContactTicketRefresh, RuntimeIpcConversationCursor,
-    RuntimeIpcConversationPage, RuntimeIpcConversationSummary, RuntimeIpcDescriptor,
-    RuntimeIpcDeviceDirectoryStatus, RuntimeIpcDeviceDirectoryUpdate,
+    MAX_RUNTIME_IPC_SYNC_PATH_OBSERVATIONS, RuntimeIpcCanonicalSyncV2Disposition,
+    RuntimeIpcCanonicalSyncV2MigrationState, RuntimeIpcCanonicalSyncV2Permissions,
+    RuntimeIpcCanonicalSyncV2PolicySnapshot, RuntimeIpcCanonicalSyncV2PolicySource,
+    RuntimeIpcCanonicalSyncV2RuntimeStatus, RuntimeIpcCommand, RuntimeIpcContactTicketRefresh,
+    RuntimeIpcConversationCursor, RuntimeIpcConversationPage, RuntimeIpcConversationSummary,
+    RuntimeIpcDescriptor, RuntimeIpcDeviceDirectoryStatus, RuntimeIpcDeviceDirectoryUpdate,
     RuntimeIpcEndpointAnnouncementImport, RuntimeIpcEndpointAnnouncementPush,
     RuntimeIpcEndpointCandidateState, RuntimeIpcEndpointCandidateStatus,
     RuntimeIpcEndpointTicketRefresh, RuntimeIpcHistoryCursor, RuntimeIpcHistoryMessage,
@@ -88,11 +91,12 @@ use kilogram_runtime_ipc::{
     RuntimeIpcOwnDeviceTicketDiscoveryStatus, RuntimeIpcPublicationChannelRotation,
     RuntimeIpcPublicationConflictRequest, RuntimeIpcPublicationConflictResolution,
     RuntimeIpcQueueItem, RuntimeIpcQueueState, RuntimeIpcRequestId, RuntimeIpcResponse,
-    RuntimeIpcRoutePolicy, RuntimeIpcServer, RuntimeIpcTicketAutomationActionStatus,
-    RuntimeIpcTicketAutomationStatus, RuntimeIpcTicketPublication,
-    RuntimeIpcVolunteerStorageOfferImport, RuntimeIpcVolunteerStorageProvider,
-    RuntimeIpcVolunteerStorageProviderSet, RuntimeIpcWork, RuntimeLaunchProfile,
-    RuntimeLaunchSettings, RuntimeVolunteerStorageSettings,
+    RuntimeIpcRoutePolicy, RuntimeIpcServer, RuntimeIpcSyncPathDirection,
+    RuntimeIpcSyncPathObservation, RuntimeIpcSyncPathOutcome, RuntimeIpcSyncPathProtocol,
+    RuntimeIpcTicketAutomationActionStatus, RuntimeIpcTicketAutomationStatus,
+    RuntimeIpcTicketPublication, RuntimeIpcVolunteerStorageOfferImport,
+    RuntimeIpcVolunteerStorageProvider, RuntimeIpcVolunteerStorageProviderSet, RuntimeIpcWork,
+    RuntimeLaunchProfile, RuntimeLaunchSettings, RuntimeVolunteerStorageSettings,
 };
 use kilogram_session::{
     MAX_SYNC_ROUNDS, ServerInventoryOutcome, SessionStore, SyncClient, SyncServer,
@@ -3823,17 +3827,16 @@ async fn run_command(command: Command) -> Result<()> {
             conversation,
             max_rounds,
             expect_account,
-        } => {
-            sync(
-                state_dir,
-                ticket,
-                ticket_file,
-                conversation,
-                max_rounds,
-                expect_account,
-            )
-            .await
-        }
+        } => sync(
+            state_dir,
+            ticket,
+            ticket_file,
+            conversation,
+            max_rounds,
+            expect_account,
+        )
+        .await
+        .map(|_| ()),
         Command::SeedHistory {
             state_dir,
             conversation,
@@ -5076,6 +5079,7 @@ struct RuntimeStateSnapshot {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct CanonicalSyncV2RuntimePolicy {
+    record_id: Option<[u8; 32]>,
     migration_state: CanonicalSyncV2MigrationState,
     disposition: CanonicalSyncV2ActivationDisposition,
     migration_epoch: u64,
@@ -5209,6 +5213,7 @@ impl CanonicalSyncV2RuntimePolicy {
         let migration_state = CanonicalSyncV2MigrationState::LegacyOnly;
         let disposition = CanonicalSyncV2ActivationDisposition::Normal;
         Ok(Self {
+            record_id: None,
             migration_state,
             disposition,
             migration_epoch: 0,
@@ -5219,6 +5224,105 @@ impl CanonicalSyncV2RuntimePolicy {
                 false,
             )?,
         })
+    }
+
+    fn ipc_snapshot(self) -> RuntimeIpcCanonicalSyncV2PolicySnapshot {
+        RuntimeIpcCanonicalSyncV2PolicySnapshot {
+            source: if self.record_id.is_some() {
+                RuntimeIpcCanonicalSyncV2PolicySource::SignedDeviceChain
+            } else {
+                RuntimeIpcCanonicalSyncV2PolicySource::ImplicitDefault
+            },
+            record_id: self.record_id.map(|value| encode_hex(&value)),
+            migration_state: match self.migration_state {
+                CanonicalSyncV2MigrationState::LegacyOnly => {
+                    RuntimeIpcCanonicalSyncV2MigrationState::LegacyOnly
+                }
+                CanonicalSyncV2MigrationState::AdvertiseCanonicalV2 => {
+                    RuntimeIpcCanonicalSyncV2MigrationState::AdvertiseCanonicalV2
+                }
+                CanonicalSyncV2MigrationState::DualReaderPreferLegacy => {
+                    RuntimeIpcCanonicalSyncV2MigrationState::DualReaderPreferLegacy
+                }
+                CanonicalSyncV2MigrationState::DualReaderPreferCanonical => {
+                    RuntimeIpcCanonicalSyncV2MigrationState::DualReaderPreferCanonical
+                }
+                CanonicalSyncV2MigrationState::CanonicalRequired => {
+                    RuntimeIpcCanonicalSyncV2MigrationState::CanonicalRequired
+                }
+            },
+            disposition: match self.disposition {
+                CanonicalSyncV2ActivationDisposition::Normal => {
+                    RuntimeIpcCanonicalSyncV2Disposition::Normal
+                }
+                CanonicalSyncV2ActivationDisposition::EmergencyContainment => {
+                    RuntimeIpcCanonicalSyncV2Disposition::EmergencyContainment
+                }
+            },
+            migration_epoch: self.migration_epoch,
+            canonical_evidence_id: self.canonical_evidence_id.map(|value| encode_hex(&value)),
+            permissions: RuntimeIpcCanonicalSyncV2Permissions {
+                legacy_reader_enabled: self.permissions.legacy_reader_enabled(),
+                publish_canonical_capability: self.permissions.publish_canonical_capability(),
+                register_canonical_alpn: self.permissions.register_canonical_alpn(),
+                accept_new_canonical_session: self.permissions.accept_new_canonical_session(),
+                initiate_new_canonical_session: self.permissions.initiate_new_canonical_session(),
+                resume_selected_canonical_session: self
+                    .permissions
+                    .resume_selected_canonical_session(),
+            },
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+struct RuntimeSyncPathObservationDraft {
+    direction: RuntimeIpcSyncPathDirection,
+    protocol: RuntimeIpcSyncPathProtocol,
+    outcome: RuntimeIpcSyncPathOutcome,
+    peer_endpoint_id: String,
+    peer_device_id: Option<DeviceId>,
+    conversation_id: Option<ConversationId>,
+    selection_id: Option<String>,
+}
+
+#[derive(Default)]
+struct RuntimeSyncObservability {
+    next_sequence: u64,
+    observations: VecDeque<RuntimeIpcSyncPathObservation>,
+}
+
+impl RuntimeSyncObservability {
+    fn record(&mut self, draft: RuntimeSyncPathObservationDraft) {
+        self.next_sequence = self.next_sequence.saturating_add(1);
+        if self.observations.len() == MAX_RUNTIME_IPC_SYNC_PATH_OBSERVATIONS {
+            self.observations.pop_front();
+        }
+        self.observations.push_back(RuntimeIpcSyncPathObservation {
+            sequence: self.next_sequence,
+            direction: draft.direction,
+            protocol: draft.protocol,
+            outcome: draft.outcome,
+            peer_endpoint_id: draft.peer_endpoint_id,
+            peer_device_id: draft.peer_device_id,
+            conversation_id: draft.conversation_id,
+            selection_id: draft.selection_id,
+        });
+    }
+
+    fn snapshot(
+        &self,
+        loaded: CanonicalSyncV2RuntimePolicy,
+        configured: CanonicalSyncV2RuntimePolicy,
+    ) -> RuntimeIpcCanonicalSyncV2RuntimeStatus {
+        RuntimeIpcCanonicalSyncV2RuntimeStatus {
+            loaded: loaded.ipc_snapshot(),
+            configured: configured.ipc_snapshot(),
+            configured_matches_loaded: configured == loaded,
+            restart_required: configured != loaded,
+            observation_capacity: MAX_RUNTIME_IPC_SYNC_PATH_OBSERVATIONS as u16,
+            observations: self.observations.iter().cloned().collect(),
+        }
     }
 }
 
@@ -14130,14 +14234,26 @@ struct RuntimePublicPaths<'a> {
     own_device_discovery_directory: Option<&'a Path>,
 }
 
+#[derive(Clone, Copy)]
+struct RuntimeIpcDispatchView<'a> {
+    canonical_sync_v2_policy: CanonicalSyncV2RuntimePolicy,
+    sync_observability: &'a RuntimeSyncObservability,
+    public_paths: RuntimePublicPaths<'a>,
+}
+
 async fn handle_runtime_ipc_work(
     state_directory: &Path,
     endpoint: &Endpoint,
     ticket: &mut ConnectionTicket,
     directory_state: &mut RuntimeDeviceDirectoryState,
-    public_paths: RuntimePublicPaths<'_>,
+    view: RuntimeIpcDispatchView<'_>,
     work: RuntimeIpcWork,
 ) -> RuntimeIpcDispatchOutcome {
+    let RuntimeIpcDispatchView {
+        canonical_sync_v2_policy,
+        sync_observability,
+        public_paths,
+    } = view;
     let (command, response_sender) = work.into_parts();
     let shutdown_requested = matches!(command, RuntimeIpcCommand::Shutdown);
     let mut state_changed = false;
@@ -14148,6 +14264,24 @@ async fn handle_runtime_ipc_work(
             account_id,
             device_id,
         },
+        RuntimeIpcCommand::CanonicalSyncV2RuntimeStatus => {
+            let status = StateDirectoryLock::acquire(state_directory)
+                .context("lock runtime state for canonical sync v2 observability")
+                .and_then(|_lock| {
+                    collect_canonical_sync_v2_runtime_status(
+                        state_directory,
+                        device_id,
+                        canonical_sync_v2_policy,
+                        sync_observability,
+                    )
+                });
+            match status {
+                Ok(status) => RuntimeIpcResponse::CanonicalSyncV2RuntimeStatus(Box::new(status)),
+                Err(error) => RuntimeIpcResponse::Error {
+                    message: format!("{error:#}"),
+                },
+            }
+        }
         RuntimeIpcCommand::AddContact {
             conversation,
             expected_peer_account_id,
@@ -17737,6 +17871,7 @@ struct RuntimeOutboundCycleCompletion {
 struct RuntimeOutboundCycleReport {
     state_changed: bool,
     outbound_actions: usize,
+    sync_observation: Option<RuntimeSyncPathObservationDraft>,
 }
 
 impl RuntimeOutboundCycleReport {
@@ -18245,6 +18380,7 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
     let session_binding = SyncSessionBinding::from_transport_label(&endpoint.id().to_string());
     let mut accepted_sessions = 0_usize;
     let mut accepted_volunteer_storage_sessions = 0_u64;
+    let mut sync_observability = RuntimeSyncObservability::default();
     let mut volunteer_storage_tasks = JoinSet::new();
     let mut outbound_actions = 0_usize;
     let mut last_activity = tokio::time::Instant::now();
@@ -18311,11 +18447,15 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                     &endpoint,
                     &mut ticket,
                     &mut device_directory_state,
-                    RuntimePublicPaths {
-                        primary_ticket: ticket_file.as_deref(),
-                        own_device_ticket: own_device_ticket_file.as_deref(),
-                        own_device_discovery_directory: own_device_discovery_ticket_directory
-                            .as_deref(),
+                    RuntimeIpcDispatchView {
+                        canonical_sync_v2_policy,
+                        sync_observability: &sync_observability,
+                        public_paths: RuntimePublicPaths {
+                            primary_ticket: ticket_file.as_deref(),
+                            own_device_ticket: own_device_ticket_file.as_deref(),
+                            own_device_discovery_directory: own_device_discovery_ticket_directory
+                                .as_deref(),
+                        },
                     },
                     work,
                 )
@@ -18333,7 +18473,10 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
             RuntimeEvent::OutboundCompleted(completion) => {
                 outbound_cycle = None;
                 outbound_scheduler = Some(completion.scheduler);
-                let report = completion.result?;
+                let mut report = completion.result?;
+                if let Some(observation) = report.sync_observation.take() {
+                    sync_observability.record(observation);
+                }
                 if report.state_changed
                     && let Some(server) = ipc_server.as_ref()
                 {
@@ -18440,6 +18583,7 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                     print_ready_path(&ready_path);
                     let stop_after_diff =
                         runtime_test_faults.take_canonical_sync_v2_stop_after_diff();
+                    let canonical_peer_endpoint_id = connection.remote_id().to_string();
                     match handle_runtime_canonical_sync_v2_connection(
                         &connection,
                         &state_dir,
@@ -18449,10 +18593,27 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                     )
                     .await
                     {
-                        Ok(()) => println!("runtime_canonical_sync_v2_session_status=completed"),
-                        Err(error) => eprintln!(
-                            "runtime_canonical_sync_v2_session_status=failed error={error:#}"
-                        ),
+                        Ok(observation) => {
+                            sync_observability.record(observation);
+                            println!("runtime_canonical_sync_v2_session_status=completed");
+                        }
+                        Err(error) => {
+                            sync_observability.record(RuntimeSyncPathObservationDraft {
+                                direction: RuntimeIpcSyncPathDirection::Inbound,
+                                protocol: RuntimeIpcSyncPathProtocol::CanonicalCborV2,
+                                outcome: RuntimeIpcSyncPathOutcome::Failed,
+                                peer_endpoint_id: canonical_peer_endpoint_id,
+                                peer_device_id: None,
+                                conversation_id: None,
+                                selection_id: None,
+                            });
+                            eprintln!(
+                                "runtime_canonical_sync_v2_session_status=failed error={error:#}"
+                            );
+                        }
+                    }
+                    if let Some(server) = ipc_server.as_ref() {
+                        server.publish_change();
                     }
                     connection.close(0_u32.into(), b"kilogram canonical sync v2 session complete");
                     if max_sessions != 0 && accepted_sessions >= max_sessions {
@@ -18470,6 +18631,7 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                 last_activity = tokio::time::Instant::now();
                 println!("runtime_session={accepted_sessions}");
                 println!("peer_id={}", connection.remote_id());
+                let legacy_peer_endpoint_id = connection.remote_id().to_string();
                 let route_result = await_route_policy(&connection, route_policy, ROUTE_POLICY_WAIT)
                     .await
                     .context("wait for an incoming path allowed by the runtime ticket");
@@ -18501,9 +18663,20 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                     }
                     Err(error) => Err(error),
                 };
-                if session_result.is_ok()
-                    && let Some(server) = ipc_server.as_ref()
-                {
+                sync_observability.record(RuntimeSyncPathObservationDraft {
+                    direction: RuntimeIpcSyncPathDirection::Inbound,
+                    protocol: RuntimeIpcSyncPathProtocol::LegacyPostcardV6,
+                    outcome: if session_result.is_ok() {
+                        RuntimeIpcSyncPathOutcome::Completed
+                    } else {
+                        RuntimeIpcSyncPathOutcome::Failed
+                    },
+                    peer_endpoint_id: legacy_peer_endpoint_id,
+                    peer_device_id: None,
+                    conversation_id: None,
+                    selection_id: None,
+                });
+                if let Some(server) = ipc_server.as_ref() {
                     server.publish_change();
                 }
                 match session_result {
@@ -18680,6 +18853,7 @@ async fn run_runtime_outbound_cycle_inner(
             &context.state_directory,
             Duration::from_secs(context.auto_sync_seconds),
             &mut scheduler.last_sync_attempts,
+            &mut report.sync_observation,
         )
         .await
         {
@@ -22163,6 +22337,7 @@ async fn attempt_runtime_contact_sync(
     state_directory: &Path,
     interval: Duration,
     last_attempts: &mut BTreeMap<RuntimeContactId, tokio::time::Instant>,
+    observation: &mut Option<RuntimeSyncPathObservationDraft>,
 ) -> Result<bool> {
     let state_lock = acquire_runtime_state_lock(state_directory)
         .await?
@@ -22238,7 +22413,7 @@ async fn attempt_runtime_contact_sync(
         })) => {
             println!("runtime_sync_contact_id={}", contact.contact_id());
             let mut failures = Vec::new();
-            let mut synchronized = false;
+            let mut synchronized = None;
             for (index, (peer_device_id, encoded_ticket)) in candidates.iter().enumerate() {
                 println!("runtime_sync_endpoint_attempt={}", index + 1);
                 println!("runtime_sync_endpoint_device_id={peer_device_id}");
@@ -22252,9 +22427,9 @@ async fn attempt_runtime_contact_sync(
                 )
                 .await
                 {
-                    Ok(()) => {
+                    Ok(sync_observation) => {
                         println!("runtime_sync_endpoint_failover_count={index}");
-                        synchronized = true;
+                        synchronized = Some(sync_observation);
                         break;
                     }
                     Err(error) => {
@@ -22265,7 +22440,8 @@ async fn attempt_runtime_contact_sync(
                     }
                 }
             }
-            if synchronized {
+            if let Some(sync_observation) = synchronized {
+                *observation = Some(sync_observation);
                 Ok(())
             } else {
                 Err(anyhow::anyhow!(
@@ -22380,7 +22556,7 @@ async fn handle_runtime_canonical_sync_v2_connection(
     ticket: &ConnectionTicket,
     startup_policy: CanonicalSyncV2RuntimePolicy,
     stop_after_diff: bool,
-) -> Result<()> {
+) -> Result<RuntimeSyncPathObservationDraft> {
     println!("runtime_canonical_sync_v2_stage=state-lock-wait");
     ensure!(
         startup_policy.permissions.register_canonical_alpn()
@@ -22552,7 +22728,15 @@ async fn handle_runtime_canonical_sync_v2_connection(
                 );
                 println!("sync_transport_fallback_after_selection=false");
                 println!("canonical_sync_v2_materialized_events={materialized}");
-                Ok(())
+                Ok(RuntimeSyncPathObservationDraft {
+                    direction: RuntimeIpcSyncPathDirection::Inbound,
+                    protocol: RuntimeIpcSyncPathProtocol::CanonicalCborV2,
+                    outcome: RuntimeIpcSyncPathOutcome::Completed,
+                    peer_endpoint_id: connection.remote_id().to_string(),
+                    peer_device_id: Some(selection.offer.requester_device_id()),
+                    conversation_id: Some(selection.conversation_id()),
+                    selection_id: Some(encode_hex(&selection.selection_id()?)),
+                })
             }
             .await,
             Err(error) => Err(error),
@@ -22563,9 +22747,9 @@ async fn handle_runtime_canonical_sync_v2_connection(
     };
     drop(state_lock);
     match (operation_result, mirror_result) {
-        (Ok(()), Ok(())) => Ok(()),
+        (Ok(observation), Ok(())) => Ok(observation),
         (Err(error), Ok(())) => Err(error),
-        (Ok(()), Err(error)) => Err(error.context("finish canonical sync v2 vault mirror")),
+        (Ok(_), Err(error)) => Err(error.context("finish canonical sync v2 vault mirror")),
         (Err(error), Err(mirror_error)) => Err(error.context(format!(
             "canonical sync v2 failed and vault mirror also failed: {mirror_error:#}"
         ))),
@@ -24814,7 +24998,7 @@ async fn sync(
     conversation: String,
     max_rounds: usize,
     expected_listener_account_id: AccountId,
-) -> Result<()> {
+) -> Result<RuntimeSyncPathObservationDraft> {
     ensure!(
         (1..=MAX_SYNC_ROUNDS).contains(&max_rounds),
         "--max-rounds must be between 1 and {MAX_SYNC_ROUNDS}"
@@ -25119,7 +25303,15 @@ async fn sync(
                 b"kilogram debug canonical sync v2 stop after durable diff",
             );
             endpoint.close().await;
-            return Ok(());
+            return Ok(RuntimeSyncPathObservationDraft {
+                direction: RuntimeIpcSyncPathDirection::Outbound,
+                protocol: RuntimeIpcSyncPathProtocol::CanonicalCborV2,
+                outcome: RuntimeIpcSyncPathOutcome::Interrupted,
+                peer_endpoint_id: ticket.endpoint().id.to_string(),
+                peer_device_id: Some(expected_listener_device_id),
+                conversation_id: Some(conversation_id),
+                selection_id: Some(encode_hex(&selection.selection_id()?)),
+            });
         }
         ensure!(
             outcome == CanonicalSyncV2ClientOutcome::Complete,
@@ -25145,7 +25337,15 @@ async fn sync(
         print_transport_diagnostics(&connection, route_policy).await?;
         connection.close(0_u32.into(), b"kilogram canonical sync v2 complete");
         endpoint.close().await;
-        return Ok(());
+        return Ok(RuntimeSyncPathObservationDraft {
+            direction: RuntimeIpcSyncPathDirection::Outbound,
+            protocol: RuntimeIpcSyncPathProtocol::CanonicalCborV2,
+            outcome: RuntimeIpcSyncPathOutcome::Completed,
+            peer_endpoint_id: ticket.endpoint().id.to_string(),
+            peer_device_id: Some(expected_listener_device_id),
+            conversation_id: Some(conversation_id),
+            selection_id: Some(encode_hex(&selection.selection_id()?)),
+        });
     }
 
     ensure!(
@@ -25241,7 +25441,15 @@ async fn sync(
             print_transport_diagnostics(&connection, route_policy).await?;
             connection.close(0_u32.into(), b"kilogram m0 sync complete");
             endpoint.close().await;
-            return Ok(());
+            return Ok(RuntimeSyncPathObservationDraft {
+                direction: RuntimeIpcSyncPathDirection::Outbound,
+                protocol: RuntimeIpcSyncPathProtocol::LegacyPostcardV6,
+                outcome: RuntimeIpcSyncPathOutcome::Completed,
+                peer_endpoint_id: ticket.endpoint().id.to_string(),
+                peer_device_id: Some(expected_listener_device_id),
+                conversation_id: Some(conversation_id),
+                selection_id: None,
+            });
         }
 
         if round_number == max_rounds {
@@ -25271,7 +25479,15 @@ async fn sync(
             print_transport_diagnostics(&connection, route_policy).await?;
             connection.close(0_u32.into(), b"kilogram m0 sync paused");
             endpoint.close().await;
-            return Ok(());
+            return Ok(RuntimeSyncPathObservationDraft {
+                direction: RuntimeIpcSyncPathDirection::Outbound,
+                protocol: RuntimeIpcSyncPathProtocol::LegacyPostcardV6,
+                outcome: RuntimeIpcSyncPathOutcome::Paused,
+                peer_endpoint_id: ticket.endpoint().id.to_string(),
+                peer_device_id: Some(expected_listener_device_id),
+                conversation_id: Some(conversation_id),
+                selection_id: None,
+            });
         }
     }
     bail!("sync exceeded the limit of {MAX_SYNC_ROUNDS} rounds")
@@ -27336,12 +27552,24 @@ fn load_canonical_sync_v2_runtime_policy(
         return CanonicalSyncV2RuntimePolicy::legacy_default();
     };
     Ok(CanonicalSyncV2RuntimePolicy {
+        record_id: Some(head.record_id()?),
         migration_state: head.migration_state(),
         disposition: head.disposition(),
         migration_epoch: head.migration_epoch(),
         canonical_evidence_id: head.canonical_evidence_id(),
         permissions: head.permissions()?,
     })
+}
+
+fn collect_canonical_sync_v2_runtime_status(
+    state_directory: &Path,
+    local_device_id: DeviceId,
+    loaded: CanonicalSyncV2RuntimePolicy,
+    observability: &RuntimeSyncObservability,
+) -> Result<RuntimeIpcCanonicalSyncV2RuntimeStatus> {
+    let configured = load_canonical_sync_v2_runtime_policy(state_directory, local_device_id)
+        .context("load configured canonical sync v2 policy for runtime observability")?;
+    Ok(observability.snapshot(loaded, configured))
 }
 
 fn print_canonical_sync_v2_runtime_policy(policy: CanonicalSyncV2RuntimePolicy) {
@@ -36323,6 +36551,53 @@ mod tests {
         accepted_connection.close(0_u32.into(), b"test complete");
         valid_client.close().await;
         listener.close().await;
+        Ok(())
+    }
+
+    #[test]
+    fn runtime_sync_observability_is_bounded_and_reports_restart_divergence() -> Result<()> {
+        let peer = DeviceIdentity::generate()?.device_id();
+        let conversation = ConversationId::from_label("runtime-observability-test");
+        let mut observability = RuntimeSyncObservability::default();
+        for index in 0..(MAX_RUNTIME_IPC_SYNC_PATH_OBSERVATIONS + 2) {
+            observability.record(RuntimeSyncPathObservationDraft {
+                direction: RuntimeIpcSyncPathDirection::Outbound,
+                protocol: if index % 2 == 0 {
+                    RuntimeIpcSyncPathProtocol::LegacyPostcardV6
+                } else {
+                    RuntimeIpcSyncPathProtocol::CanonicalCborV2
+                },
+                outcome: RuntimeIpcSyncPathOutcome::Completed,
+                peer_endpoint_id: format!("peer-{index}"),
+                peer_device_id: Some(peer),
+                conversation_id: Some(conversation),
+                selection_id: (index % 2 == 1).then(|| format!("{index:064x}")),
+            });
+        }
+
+        let loaded = CanonicalSyncV2RuntimePolicy::legacy_default()?;
+        let mut configured = loaded;
+        configured.migration_epoch = 1;
+        let status = observability.snapshot(loaded, configured);
+
+        assert_eq!(
+            status.observations.len(),
+            MAX_RUNTIME_IPC_SYNC_PATH_OBSERVATIONS
+        );
+        assert_eq!(
+            status.observations.first().map(|item| item.sequence),
+            Some(3)
+        );
+        assert_eq!(
+            status.observations.last().map(|item| item.sequence),
+            Some((MAX_RUNTIME_IPC_SYNC_PATH_OBSERVATIONS + 2) as u64)
+        );
+        assert!(!status.configured_matches_loaded);
+        assert!(status.restart_required);
+        assert_eq!(
+            status.loaded.source,
+            RuntimeIpcCanonicalSyncV2PolicySource::ImplicitDefault
+        );
         Ok(())
     }
 }

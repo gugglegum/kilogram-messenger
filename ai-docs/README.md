@@ -6,10 +6,10 @@
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
 
 Последний рабочий блок описан в
-[`next-stage-plan.md`](next-stage-plan.md): после принятого M1.1.85 opt-in dark
-launch этап M1.1.86 добавил в Windows desktop offline-only status/plan/apply
-церемонию той же Device-bound authority. Публичный default остаётся
-legacy-only; live hot apply отсутствует, после изменения нужен fresh runtime.
+[`next-stage-plan.md`](next-stage-plan.md): M1.1.87 добавил authenticated
+read-only runtime snapshot загруженной/configured canonical policy и bounded
+наблюдения реально выбранных sync paths. Публичный default остаётся
+legacy-only; live hot apply отсутствует, расхождение честно требует restart.
 
 ## Текущее состояние
 
@@ -1181,6 +1181,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.1.86 добавляет в Windows desktop offline-only status/plan/apply церемонию
   существующей Device-signed authority: exact plan confirmation, независимую
   сверку rights matrix и обязательный restart без изменения public default.
+- [`../docs/RFC-0211-m1187-canonical-sync-v2-runtime-observability.md`](../docs/RFC-0211-m1187-canonical-sync-v2-runtime-observability.md) —
+  M1.1.87 раздельно показывает loaded/configured activation policy и максимум
+  32 process-local наблюдения legacy/canonical sync path через read-only IPC
+  v30/domain v11; authority, peer wire и public default не меняются.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

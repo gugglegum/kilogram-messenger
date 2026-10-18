@@ -98,11 +98,11 @@ function Assert-RetirementBoundary {
     }
 
     foreach ($required in @(
-        'const IPC_VERSION: u8 = 29;',
+        'const IPC_VERSION: u8 = 30;',
+        'kilogram:runtime-ipc-descriptor:v11\0',
+        'old_version.content.version = 29;',
         'kilogram:runtime-ipc-descriptor:v10\0',
-        'old_version.content.version = 28;',
-        'kilogram:runtime-ipc-descriptor:v9\0',
-        'version_28_request_is_rejected_before_actor_dispatch',
+        'version_29_request_is_rejected_before_actor_dispatch',
         'assert!(old_version.verify().is_err());'
     )) {
         if ($RuntimeSource.IndexOf($required, [StringComparison]::Ordinal) -lt 0) {
@@ -149,13 +149,13 @@ function Assert-RetirementBoundary {
         -not [bool]$Completion.scope.canonical_target_complete -or
         -not [bool]$Completion.scope.active_postcard_adapter_complete -or
         [bool]$Completion.scope.canonical_cbor_active -or
-        [int]$Completion.active_postcard.version -ne 29 -or
+        [int]$Completion.active_postcard.version -ne 30 -or
         [string]$Completion.active_postcard.descriptor_signature_domain -cne
-            'kilogram:runtime-ipc-descriptor:v10\0' -or
-        $activeCommands.Count -ne 29 -or $activeResponses.Count -ne 28 -or
+            'kilogram:runtime-ipc-descriptor:v11\0' -or
+        $activeCommands.Count -ne 30 -or $activeResponses.Count -ne 29 -or
         @($Completion.postcard_only_activation_blockers).Count -ne 0 -or
         @($Completion.remaining_canonical_work).Count -ne 0) {
-        throw 'completion inventory does not describe complete active Postcard v29'
+        throw 'completion inventory does not describe complete active Postcard v30'
     }
     foreach ($retired in $retiredCommands) {
         if ($retired -cin @($activeCommands | ForEach-Object { [string]$_.variant })) {
@@ -165,9 +165,9 @@ function Assert-RetirementBoundary {
 
     if ([string]$Schema.milestone -cne 'M1.1.49' -or
         [string]$Schema.activation.current_runtime_encoding -cne
-            'postcard-v29-with-json-descriptor-v10' -or
+            'postcard-v30-with-json-descriptor-v11' -or
         -not [bool]$Schema.activation.current_runtime_changed -or
-        @($Schema.semantic_rules).Count -ne 179 -or
+        @($Schema.semantic_rules).Count -ne 180 -or
         @($Schema.remaining_runtime_ipc_surface).Count -ne 0 -or
         'complete-all-runtime-ipc-commands-and-results' -cin
             @($Schema.activation.required_before_activation)) {
@@ -183,7 +183,7 @@ function Assert-RetirementBoundary {
         [int]$Coverage.summary.complete -ne 18 -or
         [int]$Coverage.summary.partial -ne 0 -or
         (@($Coverage.next_priority) -join ',') -cne
-            'public-default-dual-reader-rollout-decision,desktop-activation-ui,canonical-native-history-materialization') {
+            'guided-restart-and-post-restart-verification,public-default-dual-reader-rollout-decision,canonical-native-history-materialization') {
         throw 'canonical coverage did not complete runtime IPC'
     }
 
@@ -193,11 +193,11 @@ function Assert-RetirementBoundary {
     if ($compatibilitySurface.Count -ne 1 -or
         [int](@($compatibilitySurface[0].bindings | Where-Object {
             [string]$_.symbol -ceq 'IPC_VERSION'
-        })[0].value) -ne 29 -or
+        })[0].value) -ne 30 -or
         [string](@($compatibilitySurface[0].bindings | Where-Object {
             [string]$_.symbol -ceq 'DESCRIPTOR_SIGNATURE_DOMAIN'
-        })[0].value) -cne 'kilogram:runtime-ipc-descriptor:v10\0') {
-        throw 'protocol compatibility registry does not describe runtime IPC v29/v10'
+        })[0].value) -cne 'kilogram:runtime-ipc-descriptor:v11\0') {
+        throw 'protocol compatibility registry does not describe runtime IPC v30/v11'
     }
 
     $normalizedRfc = [regex]::Replace($Rfc, '\s+', ' ')
@@ -259,9 +259,9 @@ Assert-Rejected {
 } 'reintroduced_legacy_mailbox_handler'
 
 Write-Output 'runtime_ipc_legacy_mailbox_retirement_boundary=verified'
-Write-Output 'active_postcard_version=29'
-Write-Output 'active_postcard_commands=29'
-Write-Output 'active_postcard_responses=28'
+Write-Output 'active_postcard_version=30'
+Write-Output 'active_postcard_commands=30'
+Write-Output 'active_postcard_responses=29'
 Write-Output 'postcard_only_activation_blockers=0'
 Write-Output 'runtime_ipc_surface=complete'
 Write-Output 'peer_network_wire_changed=false'

@@ -120,8 +120,8 @@ foreach ($forbidden in @(
         throw "provider IPC exposes local path provenance '$forbidden'"
     }
 }
-if (-not $ipc.Contains('const IPC_VERSION: u8 = 29;')) {
-    throw 'provider co-location preference unexpectedly changed authenticated IPC v29'
+if (-not $ipc.Contains('const IPC_VERSION: u8 = 30;')) {
+    throw 'provider co-location preference unexpectedly changed authenticated IPC v30'
 }
 
 foreach ($required in @(
@@ -172,7 +172,7 @@ Write-Output 'missing_tags_rejected=false'
 Write-Output 'exact_commitment_resolution_changed=false'
 Write-Output 'path_tags_transmitted=false'
 Write-Output 'path_tags_in_ipc=false'
-Write-Output 'ipc_version=29'
+Write-Output 'ipc_version=30'
 Write-Output 'network_executed=false'
 Write-Output 'release_build=false'
 Write-Output 'archive_created=false'
