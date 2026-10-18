@@ -6906,6 +6906,14 @@ correlation visible, Windows-only field evidence, independent security audit
 - release, ZIP, tag, attestation и публикация исполняемого файла отсутствуют;
 - hosted result ещё не заявлен: нужен exact implementation commit, явное
   разрешение на push и зелёный ручной run этой ревизии.
+- manual run `39114897550` на `ad98314...` успешно прошёл checkout, clean debug
+  build и оба boundary/self-test шага, но fail-closed остановился до direct
+  scenario: runner создавал scenario directory для prepare-log раньше Rust
+  `prepare`. После исправления полный локальный hosted matrix зелёный;
+  `$LASTEXITCODE` после PowerShell verifier также удалён как неверный контракт.
+- эти orchestration fixes не меняют production runtime или active wire, но
+  требуют нового frozen commit и нового manual run; run `39114897550` остаётся
+  диагностическим, а не принятым hosted evidence.
 
 ### M1.1.80 — physical Windows evidence: pre-freeze matrix принята, final frozen-revision run ожидается
 
@@ -6947,3 +6955,9 @@ correlation visible, Windows-only field evidence, independent security audit
 - historical boundary fixes снова меняют frozen revision, поэтому manifest
   `402e868` остаётся сильным pre-freeze evidence, но не подменяет один последний
   physical rerun и manual hosted run exact final commit.
+- fresh physical run `m1180-field-20261018T051713Z` на `ad98314...` прошёл всю
+  matrix; manifest SHA-256
+  `52f9dbbb54d267617d86f61010e2e3a85c83ebf8437b22b37830b3f199e9ab55`.
+  Первый hosted run этой ревизии выявил только orchestration defects после
+  successful build/boundaries. Новый runner fix опять требует один final
+  physical rerun и hosted run exact следующего commit.

@@ -1,7 +1,8 @@
 # Следующий большой этап: M1.1.77–M1.1.80
 
 Статус: выполняется. Пакеты 1–3 реализованы и прошли локальные fail-closed
-проверки. Два автономных двухмашинных прогона (`ae9672b`, затем `402e868`)
+проверки. Три автономных двухмашинных прогона (`ae9672b`, `402e868`, затем
+`ad98314`)
 подтвердили direct, restart/resume, pinned APS1 relay, mixed-version downgrade,
 post-selection fail-closed и rollback. Во время приёмки исправлены verifier,
 Windows PowerShell 5.1 process runner и исторические executable boundaries:
@@ -10,8 +11,12 @@ production crates по-прежнему не могут добавлять EXE, 
 default feature set. Readiness прошёл `108/108`, полный stable Rust regression
 прошёл без failures, включая 31 851 legacy и 2 863 sync-v2 decoder mutations.
 Поскольку boundary fixes меняют source revision после второго physical run,
-нужны новый frozen commit, одна финальная physical перепроверка и fresh hosted
-run ровно той же ревизии; hosted run ожидает отдельного разрешения на push.
+Первый manual hosted run `39114897550` на `ad98314` прошёл clean build и
+boundaries, затем выявил два orchestration defects до direct scenario:
+преждевременно созданный run directory и чтение unset `$LASTEXITCODE` после
+PowerShell verifier. Исправленный runner локально прошёл всю hosted matrix.
+Нужны новый frozen commit, одна финальная physical перепроверка и fresh hosted
+run ровно той же ревизии; новый push ожидает отдельного разрешения.
 Production transport не изменён.
 
 Цель: за один длительный блок продолжительностью примерно 8–10 часов закрыть

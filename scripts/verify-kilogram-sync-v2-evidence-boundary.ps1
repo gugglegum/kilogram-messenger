@@ -96,8 +96,16 @@ foreach ($forbidden in @("`n  push:", "`n  pull_request:", '--release')) {
 }
 if (-not $runner.Contains("name = 'kilogram-cli.exe'") -or
     -not $runner.Contains("evidence_kind = 'hosted-windows'") -or
-    -not $runner.Contains("distinct_physical_hosts = `$false")) {
+    -not $runner.Contains("distinct_physical_hosts = `$false") -or
+    -not $runner.Contains("sync_v2_hosted_prepare_lifecycle_self_test=verified") -or
+    -not $runner.Contains('if (Test-Path -LiteralPath $directory)') -or
+    -not $runner.Contains('(Join-Path $output "$Name-prepare")')) {
     throw 'hosted runner does not preserve the stable-name and topology boundary'
+}
+if ($runner.Contains("New-Item -ItemType Directory -Force -Path `$directory") -or
+    $runner.Contains("(Join-Path `$directory 'prepare')") -or
+    $runner.Contains('if ($LASTEXITCODE -ne 0)')) {
+    throw 'hosted runner retains a forbidden prepare or PowerShell exit-code boundary'
 }
 foreach ($required in @(
     "'local_device_secret'", "'endpoint_secret'", "'requester_authorization'",

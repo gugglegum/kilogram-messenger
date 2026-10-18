@@ -205,19 +205,36 @@ if ($ProcessRunnerSelfTest) {
     if (-not $nonZeroObserved) {
         throw 'hosted process runner accepted an invalid command'
     }
+
+    $prepareRunDirectory = Join-Path $output 'runner-prepare-run'
+    if (Test-Path -LiteralPath $prepareRunDirectory) {
+        throw 'hosted prepare lifecycle self-test directory already exists'
+    }
+    Invoke-EvidenceCommand @(
+        'prepare', '--run-dir', $prepareRunDirectory,
+        '--source-revision', $SourceRevision,
+        '--run-id', 'm1180-hosted-runner-prepare-self-test'
+    ) (Join-Path $output 'runner-prepare') 'hosted prepare lifecycle probe' 30
+    if (-not (Test-Path -LiteralPath (Join-Path $prepareRunDirectory 'alice') -PathType Container) -or
+        -not (Test-Path -LiteralPath (Join-Path $prepareRunDirectory 'bob') -PathType Container)) {
+        throw 'hosted prepare lifecycle probe did not create both role directories'
+    }
     Write-Output 'sync_v2_hosted_process_runner_self_test=verified'
+    Write-Output 'sync_v2_hosted_prepare_lifecycle_self_test=verified'
     return
 }
 
 function Initialize-Scenario {
     param([Parameter(Mandatory)] [string] $Name)
     $directory = Join-Path $output $Name
-    New-Item -ItemType Directory -Force -Path $directory | Out-Null
+    if (Test-Path -LiteralPath $directory) {
+        throw "hosted evidence scenario directory already exists: $directory"
+    }
     $runId = "$ExperimentId-$Name"
     Invoke-EvidenceCommand @(
         'prepare', '--run-dir', $directory, '--source-revision', $SourceRevision,
         '--run-id', $runId
-    ) (Join-Path $directory 'prepare') "prepare $Name"
+    ) (Join-Path $output "$Name-prepare") "prepare $Name"
     return $directory
 }
 
@@ -365,6 +382,5 @@ $manifestPath = Join-Path $output 'manifest.json'
 $manifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $manifestPath -Encoding utf8
 
 & (Join-Path $PSScriptRoot 'verify-kilogram-sync-v2-network-evidence.ps1') -ManifestPath $manifestPath
-if ($LASTEXITCODE -ne 0) { throw 'hosted evidence verifier failed' }
 Write-Output "manifest=$manifestPath"
 Write-Output 'status=hosted-sync-v2-evidence-verified'

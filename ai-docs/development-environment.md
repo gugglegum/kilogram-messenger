@@ -4701,3 +4701,21 @@ Hosted follow-up:
   including 48.46 GiB of incremental data. No automatic vacuum is performed
   before the final evidence build because it would discard useful compilation
   cache; target remains ignored and is not evidence.
+- Final pre-hosted physical run `m1180-field-20261018T051713Z` used revision
+  `ad983147ad9c0435cb8bcf5b916bf7b0f6ba8b01`; direct, restart/resume, pinned
+  relay, mixed-version, selected-v2 fail-closed and rollback verified. Manifest
+  SHA-256 is `52f9dbbb54d267617d86f61010e2e3a85c83ebf8437b22b37830b3f199e9ab55`;
+  evidence binary SHA-256 remains
+  `e23ba26692caf7fe355f04dda5f8825b0222b32ffe62794f0228bd35e7e1f625`.
+- Manual GitHub run `39114897550` on that exact revision passed clean build,
+  evidence boundary, verifier self-test and process-runner probe, then failed
+  before the direct scenario because orchestration pre-created the run
+  directory used by the fail-closed Rust `prepare` command.
+- The runner now keeps prepare logs outside the not-yet-created scenario,
+  refuses an existing scenario, and its self-test performs an actual prepare
+  lifecycle. It also no longer reads `$LASTEXITCODE` after invoking a `.ps1`;
+  terminating verifier errors are the PowerShell failure contract.
+- The corrected runner completed the entire local hosted matrix outside the
+  Codex network sandbox, including a verified relay path. Because these tracked
+  fixes change source revision, freeze a new commit and repeat final physical
+  and hosted manifests on that same revision.
