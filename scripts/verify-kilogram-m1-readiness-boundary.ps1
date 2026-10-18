@@ -95,6 +95,7 @@ foreach ($required in @(
     "'verify-kilogram-canonical-sync-v2-runtime-observability-boundary.ps1' = 'canonical_sync_v2_runtime_observability_boundary=verified'",
     "'verify-kilogram-canonical-sync-v2-guided-restart-boundary.ps1' = 'canonical_sync_v2_guided_restart_boundary=verified'",
     "'verify-kilogram-canonical-sync-v2-public-rollout-decision-boundary.ps1' = 'canonical_sync_v2_public_rollout_decision_boundary=verified'",
+    "'verify-kilogram-canonical-sync-v2-rollout-local-authority-boundary.ps1' = 'canonical_sync_v2_rollout_local_authority_boundary=verified'",
     "'verify-kilogram-sync-v2-evidence-boundary.ps1' = 'sync_v2_evidence_boundary=verified'",
     "'verify-kilogram-canonical-sync-session-boundary.ps1' = 'canonical_sync_session_boundary=verified'",
     "'verify-kilogram-canonical-sync-session-v2-boundary.ps1' = 'canonical_sync_session_v2_boundary=verified'",
@@ -104,7 +105,7 @@ foreach ($required in @(
     "'verify-kilogram-canonical-wire-boundary.ps1' = 'canonical_wire_boundary=verified'",
     "'verify-kilogram-protocol-compatibility-boundary.ps1' = 'protocol_compatibility_boundary=verified'",
     "Get-ChildItem -LiteralPath `$scriptsDirectory -Filter 'verify-*-boundary.ps1'",
-    'M1 readiness boundary inventory must contain exactly 116 gates',
+    'M1 readiness boundary inventory must contain exactly 117 gates',
     'function Invoke-CapturedPowerShell',
     "`$ErrorActionPreference = 'Continue'",
     "`$gateCapture.ExitCode -ne 0",
@@ -219,7 +220,7 @@ if ($LASTEXITCODE -ne 0 -or
 }
 
 Write-Output 'm1_readiness_boundary=verified'
-Write-Output 'boundary_inventory=closed-116'
+Write-Output 'boundary_inventory=closed-117'
 Write-Output 'candidate_or_accepted_tag_verifier=required'
 Write-Output 'accepted_m1_tag=M1.0.0'
 Write-Output 'format_and_offline_strict_clippy=required'

@@ -7196,3 +7196,21 @@ correlation visible, Windows-only field evidence, independent security audit
   116/116 вместе с rustfmt и locked/offline strict Clippy;
 - peer/sync wire, runtime IPC, network, release/ZIP/tag и automatic GitHub
   build не менялись.
+
+### M1.1.90 — dormant rollout local authority: принят локально
+
+- добавлен отдельный `kilogram-rollout` без runtime/network dependency;
+- signed release policy использует canonical bounded Postcard, Ed25519 с
+  caller-pinned public key, monotonic epoch и exact predecessor ID;
+- genesis обязан быть legacy-only hold, phase не пропускается и не
+  откатывается, containment даёт zero enrollment, broad default отсутствует;
+- installation cohort использует один private 32-byte CSPRNG seed и exact
+  SHA-256 vector, не принимает Account/Device либо network/content identity;
+- immediate-durability redb хранит pinned authority, seed, policy head и не
+  более 16 keyed-MAC health aggregates; stale policy и corruption fail closed;
+- explicit JSON export не содержит seed/bucket/timestamp/path/user identity;
+  uploader, telemetry endpoint и remote attestation отсутствуют;
+- cohort selection не даёт runtime authority, crate не подключён к
+  executable crates, public default остаётся `legacy-only`;
+- 12/12 tests, boundary self-test, readiness 117/117, rustfmt и locked/offline
+  strict Clippy прошли; network/release/ZIP/tag/automatic build не запускались.

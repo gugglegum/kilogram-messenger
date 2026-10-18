@@ -3332,6 +3332,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "kilogram-rollout"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+ "ed25519-dalek 3.0.0",
+ "getrandom 0.4.3",
+ "postcard",
+ "redb",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "thiserror 2.0.20",
+]
+
+[[package]]
 name = "kilogram-runtime-ipc"
 version = "0.1.0"
 dependencies = [

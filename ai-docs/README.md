@@ -1185,6 +1185,15 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.1.87 раздельно показывает loaded/configured activation policy и максимум
   32 process-local наблюдения legacy/canonical sync path через read-only IPC
   v30/domain v11; authority, peer wire и public default не меняются.
+- [`../docs/RFC-0212-m1188-canonical-sync-v2-guided-restart.md`](../docs/RFC-0212-m1188-canonical-sync-v2-guided-restart.md) —
+  M1.1.88 требует actual child exit, offline exact apply и authenticated exact
+  verification fresh runtime до conversation refresh.
+- [`../docs/RFC-0213-m1189-canonical-sync-v2-public-rollout-decision.md`](../docs/RFC-0213-m1189-canonical-sync-v2-public-rollout-decision.md) —
+  M1.1.89 удерживает public rollout в `hold` и формализует ordered cohorts,
+  health, interop, containment и review gates.
+- [`../docs/RFC-0214-m1190-rollout-local-authority.md`](../docs/RFC-0214-m1190-rollout-local-authority.md) —
+  M1.1.90 реализует dormant installation-local cohort/release-policy authority
+  и bounded explicit-only health export без runtime integration либо user ID.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.90",
+  "status": "canonical-sync-v2-rollout-local-authority-verified-dormant",
+  "implementation": "crates/kilogram-rollout",
+  "changes_peer_network_wire": false,
+  "changes_sync_wire": false,
+  "changes_runtime_ipc": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "runtime_rollout_integration_enabled": false,
+  "automatic_enrollment_enabled": false,
+  "automatic_health_upload_enabled": false,
+  "engineering_prerequisites": [
+    {
+      "id": "privacy-preserving-cohort-authority",
+      "status": "implemented-and-locally-verified-dormant"
+    },
+    {
+      "id": "durable-local-rollout-health-evidence",
+      "status": "implemented-and-locally-verified-dormant"
+    }
+  ],
+  "release_policy": {
+    "signature": "ed25519-with-explicitly-pinned-release-public-key",
+    "encoding": "bounded-canonical-postcard-v1",
+    "signature_domain": "kilogram:rollout:release-policy:v1\u0000",
+    "policy_id": "sha256(domain || canonical-signed-policy-bytes)",
+    "policy_chain": "epoch-plus-one-and-exact-previous-policy-id",
+    "genesis": "epoch-one-legacy-only-hold",
+    "phase_skip_allowed": false,
+    "phase_rewind_allowed": false,
+    "same_phase_signed_successor_allowed": true,
+    "containment": "same-or-next-phase-with-zero-enrollment",
+    "broad_default_representable": false,
+    "production_release_key_embedded": false,
+    "policy_distribution_implemented": false
+  },
+  "cohort": {
+    "unit": "local-installation-not-account-or-device",
+    "seed": "32-byte-operating-system-csprng-secret-created-once-in-local-redb",
+    "assignment": "sha256(seed || signed-release-policy-id)-first-u64-be-mod-10000",
+    "buckets": 10000,
+    "maximum_phase_basis_points": {
+      "legacy-only-hold": 0,
+      "advertise-canary": 100,
+      "accept-canary": 100,
+      "initiate-canary": 500,
+      "expanded-dual-reader": 2500
+    },
+    "seed_returned_by_public_api": false,
+    "seed_in_health_export": false,
+    "bucket_in_health_export": false,
+    "account_or_device_id_input": false,
+    "contact_conversation_ip_relay_or_path_input": false,
+    "reinstallation_may_reassign": true,
+    "cross_device_assignment_shared": false
+  },
+  "durable_local_store": {
+    "file": "rollout-local-v1.redb",
+    "durability": "redb-immediate-transaction",
+    "release_authority_pinned": true,
+    "policy_head_monotonic": true,
+    "policy_replay_idempotent": true,
+    "database_symlink_allowed": false,
+    "health_record_mac": "keyed-blake3-with-installation-seed",
+    "health_record_mac_is_remote_attestation": false,
+    "whole_database_rollback_detectable_without_external_witness": false
+  },
+  "health_aggregate": {
+    "maximum_policy_records": 16,
+    "only_current_policy_accepts_events": true,
+    "counter_overflow": "fail-closed",
+    "per_peer_or_per_message_records": false,
+    "timestamps": false,
+    "message_plaintext_or_ciphertext": false,
+    "account_device_peer_contact_or_conversation_id": false,
+    "ip_relay_url_or_filesystem_path": false,
+    "cohort_seed_or_bucket": false,
+    "explicit_export_marker": "user-or-test-operator-requested",
+    "export_format": "bounded-json-aggregate",
+    "automatic_export_or_upload": false,
+    "zero_tolerance_counters": [
+      "history-loss-or-duplication",
+      "selected-canonical-legacy-fallback",
+      "authority-or-device-binding-mismatch",
+      "authenticated-downgrade-acceptance",
+      "unrecoverable-state-corruption"
+    ]
+  },
+  "activation_boundary": {
+    "cohort_selection_grants_runtime_activation": false,
+    "release_policy_directly_writes_device_activation_chain": false,
+    "runtime_depends_on_kilogram_rollout": false,
+    "fresh_runtime_device_authority_ceremony_still_required": true,
+    "missing_policy": "legacy-only-no-selection",
+    "invalid_stale_or_tampered_policy": "fail-closed",
+    "missing_or_tampered_health": "fail-closed-not-success"
+  },
+  "acceptance": {
+    "rollout_unit_tests": "12/12",
+    "exact_sha256_assignment_vector": "verified",
+    "signature_tamper_and_wrong_authority_rejection": "verified",
+    "ordered_policy_chain_and_containment": "verified",
+    "restart_seed_and_policy_stability": "verified",
+    "independent_installation_seeds": "verified",
+    "authenticated_durable_health_and_privacy_export": "verified",
+    "hard_health_history_bound": "verified",
+    "boundary_self_test_and_negative_mutations": "verified",
+    "m1_readiness": "117/117",
+    "rustfmt": "verified",
+    "locked_offline_strict_clippy": "verified",
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false,
+    "network_executed": false
+  },
+  "remaining_public_rollout_gates": [
+    "n-minus-one-production-executable-interop",
+    "public-rollout-containment-drill",
+    "independent-security-review-before-accept-canary"
+  ],
+  "next": [
+    "n-minus-one-production-executable-interop-matrix",
+    "dormant-controller-containment-rehearsal",
+    "production-release-key-and-policy-delivery-decision"
+  ],
+  "non_claims": [
+    "public-rollout-eligible",
+    "public-dual-reader-default-enabled",
+    "runtime-automatic-enrollment-implemented",
+    "central-rollout-telemetry-implemented",
+    "health-export-anonymous-attestation",
+    "whole-local-database-rollback-protection",
+    "independent-security-review-completed"
+  ]
+}

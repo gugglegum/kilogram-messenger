@@ -4979,3 +4979,24 @@ Hosted follow-up:
   ослабили strict Clippy.
 - Rust source, peer/sync wire и runtime IPC не менялись; Rust test executables,
   network, release build, ZIP, tag и automatic GitHub build не запускались.
+
+## M1.1.90 dormant rollout local authority (2026-10-19)
+
+- Новый crate: `crates/kilogram-rollout`; workspace dependency добавляет
+  cached `sha2 0.10.9`, отдельной загрузки registry не потребовалось.
+- Targeted command:
+  `cargo test -p kilogram-rollout --offline` — 12/12 плюс doc-tests.
+- Targeted strict command:
+  `cargo clippy -p kilogram-rollout --all-targets --all-features --locked --offline -- -D warnings`.
+- Formal artifacts:
+  `CANONICAL-SYNC-V2-ROLLOUT-LOCAL-AUTHORITY.json`,
+  `docs/RFC-0214-m1190-rollout-local-authority.md`,
+  `scripts/verify-kilogram-canonical-sync-v2-rollout-local-authority-boundary.ps1`.
+- Boundary self-test отвергает public activation, runtime integration, stable
+  user identity input, seed export, automatic upload, unbounded history,
+  cohort-as-authority, broad default и rollback-security overclaim.
+- Readiness inventory расширен до 117. Build policy остаётся debug-only,
+  Cargo jobs 2; hard-link fallback warning относится к файловой системе target
+  и не является compiler warning.
+- Сеть, второй хост, release build, ZIP/archive, tag и automatic GitHub build
+  не использовались.

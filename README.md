@@ -2423,6 +2423,14 @@ N/N-1 production interoperability, an operational containment drill and an
 independent security review remain mandatory. No runtime consumes this
 decision manifest, and the public default is still `legacy-only`.
 
+[`RFC-0214`](docs/RFC-0214-m1190-rollout-local-authority.md) implements the
+first two local prerequisites without activating them: a signed, monotonic
+release-policy chain over an installation-only random cohort seed, and at most
+sixteen durable privacy-safe health aggregates with explicit export only. The
+new crate has no runtime or network consumer, returns no activation authority,
+and keeps the public default `legacy-only` while N/N-1 interoperability and a
+real containment rehearsal remain open.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected
