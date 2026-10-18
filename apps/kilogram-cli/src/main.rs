@@ -22381,6 +22381,7 @@ async fn handle_runtime_canonical_sync_v2_connection(
     startup_policy: CanonicalSyncV2RuntimePolicy,
     stop_after_diff: bool,
 ) -> Result<()> {
+    println!("runtime_canonical_sync_v2_stage=state-lock-wait");
     ensure!(
         startup_policy.permissions.register_canonical_alpn()
             && startup_policy
@@ -22394,9 +22395,12 @@ async fn handle_runtime_canonical_sync_v2_connection(
             RUNTIME_STATE_LOCK_WAIT.as_secs_f64()
         );
     };
+    println!("runtime_canonical_sync_v2_stage=state-lock-acquired");
     let vault_guard = VaultDualWriteGuard::prepare(state_directory)?;
+    println!("runtime_canonical_sync_v2_stage=vault-prepared");
     let operation = (|| {
         let device_state = load_command_device_state(state_directory)?;
+        println!("runtime_canonical_sync_v2_stage=identity-loaded");
         ensure!(
             device_state.identity().device_id() == ticket.listener_device_id(),
             "runtime identity changed after canonical ALPN registration"
@@ -22405,6 +22409,7 @@ async fn handle_runtime_canonical_sync_v2_connection(
             state_directory,
             device_state.identity().device_id(),
         )?;
+        println!("runtime_canonical_sync_v2_stage=activation-loaded");
         ensure!(
             policy == startup_policy,
             "canonical activation authority changed while the runtime endpoint was active"
@@ -22413,11 +22418,13 @@ async fn handle_runtime_canonical_sync_v2_connection(
         let listener_certificate = trust
             .load_certificate()
             .context("load canonical sync v2 listener certificate")?;
+        println!("runtime_canonical_sync_v2_stage=trust-loaded");
         let snapshot = load_runtime_state_snapshot(
             state_directory,
             listener_certificate.account_id(),
             listener_certificate.device_id(),
         )?;
+        println!("runtime_canonical_sync_v2_stage=runtime-snapshot-loaded");
         let mut selections =
             snapshot
                 .canonical_sync_v2_selections
@@ -22434,6 +22441,7 @@ async fn handle_runtime_canonical_sync_v2_connection(
             "canonical dark-launch runtime has multiple listener selections; first-frame routing is not enabled"
         );
         selection.verify()?;
+        println!("runtime_canonical_sync_v2_stage=selection-verified");
         let conversation_id = selection.conversation_id();
         let membership = trust
             .load_conversation_membership(conversation_id.scope_id())
@@ -22443,18 +22451,22 @@ async fn handle_runtime_canonical_sync_v2_connection(
             listener_certificate.account_id(),
             selection.offer.requester_account_id(),
         )?;
+        println!("runtime_canonical_sync_v2_stage=membership-verified");
         let immutable_reads = open_immutable_read_repositories(state_directory)
             .context("capture immutable canonical sync v2 responder state")?;
+        println!("runtime_canonical_sync_v2_stage=immutable-read-snapshot-opened");
         let event_store = open_event_store(state_directory)?;
         let local_message_store = open_local_message_store(state_directory)?;
         let store =
             CanonicalSyncV2CarrierStore::open(canonical_sync_v2_store_path(state_directory))?;
+        println!("runtime_canonical_sync_v2_stage=stores-opened");
         let plan = import_legacy_history_for_canonical_sync_v2(
             &store,
             &event_store,
             &membership,
             conversation_id,
         )?;
+        println!("runtime_canonical_sync_v2_stage=legacy-history-imported");
         let membership_policy = CanonicalSyncV2MembershipPolicy::from_legacy(membership.clone())?;
         ensure_canonical_sync_v2_responder_bootstrap(
             device_state.identity(),
@@ -22464,6 +22476,7 @@ async fn handle_runtime_canonical_sync_v2_connection(
             selection.session_binding(),
             selection.offer.requester_device_id(),
         )?;
+        println!("runtime_canonical_sync_v2_stage=responder-bootstrap-ready");
         Ok::<_, anyhow::Error>((
             device_state,
             listener_certificate,
@@ -22490,6 +22503,7 @@ async fn handle_runtime_canonical_sync_v2_connection(
                 membership_policy,
                 selection,
             )) => async {
+                println!("runtime_canonical_sync_v2_stage=serve-started");
                 let server = CanonicalSyncV2Server::new(
                     device_state.identity(),
                     &store,
@@ -22502,6 +22516,7 @@ async fn handle_runtime_canonical_sync_v2_connection(
                     serve_canonical_sync_v2_connection(connection, &server, stop_after_diff)
                         .await
                         .context("serve selected canonical sync v2 session without fallback")?;
+                println!("runtime_canonical_sync_v2_stage=serve-completed");
                 if served == CanonicalSyncV2ServeOutcome::StoppedAfterDiff {
                     println!("runtime_test_fault_status=canonical-sync-v2-stopped-after-diff");
                     println!("sync_transport_fallback_after_selection=false");
