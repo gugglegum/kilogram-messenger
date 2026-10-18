@@ -51,8 +51,8 @@ use kilogram_sync_capability::{
     SyncTransportCapabilityBinding, SyncTransportProtocol,
 };
 use kilogram_transport_iroh::{
-    ALPN, CANONICAL_SYNC_ALPN_V2, RoutePolicy, await_route_policy, endpoint_builder_for_remote,
-    endpoint_builder_with_relay,
+    ALPN, CANONICAL_SYNC_ALPN_V2, RoutePolicy, await_route_policy, endpoint_builder,
+    endpoint_builder_for_remote, endpoint_builder_with_relay,
 };
 use serde::{Deserialize, Serialize};
 use tokio::time::{sleep, timeout};
@@ -69,6 +69,7 @@ const ROUTE_WAIT: Duration = Duration::from_secs(30);
 const MAX_FRAME_BYTES: usize = 8 * 1024 * 1024;
 const CAPABILITY_VALIDITY_SECONDS: u64 = 24 * 60 * 60;
 const LEGACY_PROBE_DOMAIN: &[u8] = b"kilogram:sync-v2-evidence-legacy-probe:v1\0";
+const FIELD_PROBE_ALPN: &[u8] = b"kilogram/test/iroh-field-probe/1";
 
 #[derive(Parser)]
 #[command(name = "kilogram-sync-v2-evidence")]
@@ -194,6 +195,26 @@ enum Command {
         #[arg(long)]
         source_revision: String,
     },
+    /// Isolates production-profile Iroh response delivery from Kilogram state and stores.
+    FieldProbeListen {
+        #[arg(long)]
+        ticket_file: PathBuf,
+        #[arg(long, value_enum, default_value_t = EvidenceRoute::DirectOnly)]
+        route_policy: EvidenceRoute,
+        #[arg(long)]
+        advertise_ip: Option<IpAddr>,
+        #[arg(long, value_delimiter = ',', default_value = "1,32,256,1024,8123")]
+        response_sizes: Vec<usize>,
+    },
+    /// Dials a field probe and verifies every exact response size.
+    FieldProbeDial {
+        #[arg(long)]
+        ticket_file: PathBuf,
+        #[arg(long, value_enum, default_value_t = EvidenceRoute::DirectOnly)]
+        route_policy: EvidenceRoute,
+        #[arg(long, value_delimiter = ',', default_value = "1,32,256,1024,8123")]
+        response_sizes: Vec<usize>,
+    },
 }
 
 #[derive(Clone, Copy, Debug, ValueEnum)]
@@ -291,6 +312,13 @@ struct LegacyProbe {
     run_id: String,
     device_id: DeviceId,
     signature: Vec<u8>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct FieldProbeTicket {
+    schema_version: u32,
+    protocol: String,
+    endpoint: EndpointAddr,
 }
 
 #[tokio::main]
@@ -432,7 +460,184 @@ async fn main() -> Result<()> {
             run_dir,
             source_revision,
         } => hosted_self_test(&run_dir, &source_revision).await,
+        Command::FieldProbeListen {
+            ticket_file,
+            route_policy,
+            advertise_ip,
+            response_sizes,
+        } => {
+            run_field_probe_listener(
+                &ticket_file,
+                route_policy.into(),
+                advertise_ip,
+                &response_sizes,
+            )
+            .await
+        }
+        Command::FieldProbeDial {
+            ticket_file,
+            route_policy,
+            response_sizes,
+        } => run_field_probe_dialer(&ticket_file, route_policy.into(), &response_sizes).await,
     }
+}
+
+async fn run_field_probe_listener(
+    ticket_file: &Path,
+    route_policy: RoutePolicy,
+    advertise_ip: Option<IpAddr>,
+    response_sizes: &[usize],
+) -> Result<()> {
+    validate_field_probe_sizes(response_sizes)?;
+    let endpoint = endpoint_builder(route_policy)
+        .alpns(vec![FIELD_PROBE_ALPN.to_vec()])
+        .bind()
+        .await
+        .context("bind field probe listener")?;
+    wait_for_endpoint_online(&endpoint, route_policy).await?;
+    let discovered = endpoint.addr();
+    let endpoint_addr = if let Some(ip) = advertise_ip {
+        let mut advertised = discovered
+            .ip_addrs()
+            .filter(|address| address.ip() == ip)
+            .collect::<Vec<_>>();
+        advertised.sort_unstable();
+        advertised.dedup();
+        ensure!(
+            advertised.len() == 1,
+            "requested field probe advertise IP is not one exact local endpoint address"
+        );
+        EndpointAddr::new(endpoint.id()).with_ip_addr(SocketAddr::new(ip, advertised[0].port()))
+    } else {
+        discovered
+    };
+    write_json(
+        ticket_file,
+        &FieldProbeTicket {
+            schema_version: TICKET_SCHEMA_VERSION,
+            protocol: String::from_utf8(FIELD_PROBE_ALPN.to_vec())?,
+            endpoint: endpoint_addr,
+        },
+    )?;
+    println!("field_probe_role=listener");
+    println!("field_probe_endpoint_id={}", endpoint.id());
+    println!("field_probe_ticket={}", ticket_file.display());
+
+    let connection = accept_connection(&endpoint).await?;
+    let selected = await_route_policy(&connection, route_policy, ROUTE_WAIT).await?;
+    println!("field_probe_path={}", selected.kind.as_str());
+    for (index, &response_size) in response_sizes.iter().enumerate() {
+        println!("field_probe_listener_stage=accept index={index} bytes={response_size}");
+        let (mut send, mut receive) = timeout(STREAM_TIMEOUT, connection.accept_bi())
+            .await
+            .context("accept field probe stream deadline")?
+            .context("accept field probe stream")?;
+        let request = timeout(STREAM_TIMEOUT, receive.read_to_end(64))
+            .await
+            .context("read field probe request deadline")??;
+        ensure!(
+            request == field_probe_request(index, response_size),
+            "field probe request mismatch at index {index}"
+        );
+        let response = field_probe_response(index, response_size);
+        println!("field_probe_listener_stage=write-started index={index} bytes={response_size}");
+        timeout(STREAM_TIMEOUT, send.write_all(&response))
+            .await
+            .context("write field probe response deadline")??;
+        println!("field_probe_listener_stage=write-completed index={index} bytes={response_size}");
+        send.finish().context("finish field probe response")?;
+        let stopped = timeout(STREAM_TIMEOUT, send.stopped())
+            .await
+            .context("confirm field probe response delivery deadline")?
+            .context("confirm field probe response delivery")?;
+        ensure!(
+            stopped.is_none(),
+            "field probe response was stopped by dialer"
+        );
+        println!("field_probe_listener_stage=delivered index={index} bytes={response_size}");
+    }
+    println!("field_probe_status=verified");
+    endpoint.close().await;
+    Ok(())
+}
+
+async fn run_field_probe_dialer(
+    ticket_file: &Path,
+    route_policy: RoutePolicy,
+    response_sizes: &[usize],
+) -> Result<()> {
+    validate_field_probe_sizes(response_sizes)?;
+    let ticket: FieldProbeTicket = serde_json::from_slice(
+        &fs::read(ticket_file)
+            .with_context(|| format!("read field probe ticket {}", ticket_file.display()))?,
+    )?;
+    ensure!(
+        ticket.schema_version == TICKET_SCHEMA_VERSION,
+        "unsupported field probe ticket"
+    );
+    ensure!(
+        ticket.protocol.as_bytes() == FIELD_PROBE_ALPN,
+        "field probe protocol mismatch"
+    );
+    let endpoint = endpoint_builder_for_remote(route_policy, &ticket.endpoint)?
+        .bind()
+        .await
+        .context("bind field probe dialer")?;
+    wait_for_endpoint_online(&endpoint, route_policy).await?;
+    let connection = timeout(
+        CONNECTION_TIMEOUT,
+        endpoint.connect(ticket.endpoint, FIELD_PROBE_ALPN),
+    )
+    .await
+    .context("connect field probe deadline")?
+    .context("connect field probe")?;
+    let selected = await_route_policy(&connection, route_policy, ROUTE_WAIT).await?;
+    println!("field_probe_role=dialer");
+    println!("field_probe_path={}", selected.kind.as_str());
+    for (index, &response_size) in response_sizes.iter().enumerate() {
+        let (mut send, mut receive) = open_bi(&connection).await?;
+        let request = field_probe_request(index, response_size);
+        timeout(STREAM_TIMEOUT, send.write_all(&request))
+            .await
+            .context("write field probe request deadline")??;
+        send.finish().context("finish field probe request")?;
+        println!("field_probe_dialer_stage=read-started index={index} bytes={response_size}");
+        let response = timeout(STREAM_TIMEOUT, receive.read_to_end(response_size + 1))
+            .await
+            .context("read field probe response deadline")??;
+        ensure!(
+            response == field_probe_response(index, response_size),
+            "field probe response mismatch at index {index}"
+        );
+        println!("field_probe_dialer_stage=verified index={index} bytes={response_size}");
+    }
+    println!("field_probe_status=verified");
+    endpoint.close().await;
+    Ok(())
+}
+
+fn validate_field_probe_sizes(response_sizes: &[usize]) -> Result<()> {
+    ensure!(
+        !response_sizes.is_empty(),
+        "field probe requires response sizes"
+    );
+    ensure!(
+        response_sizes
+            .iter()
+            .all(|&size| size > 0 && size <= MAX_FRAME_BYTES),
+        "field probe response size is outside the bounded frame range"
+    );
+    Ok(())
+}
+
+fn field_probe_request(index: usize, response_size: usize) -> Vec<u8> {
+    format!("{index}:{response_size}").into_bytes()
+}
+
+fn field_probe_response(index: usize, response_size: usize) -> Vec<u8> {
+    (0..response_size)
+        .map(|offset| ((index * 31 + offset) % 251) as u8)
+        .collect()
 }
 
 async fn hosted_self_test(run_dir: &Path, source_revision: &str) -> Result<()> {

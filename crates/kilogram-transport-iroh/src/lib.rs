@@ -458,7 +458,7 @@ fn wire_timeout_message(operation: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use iroh::{SecretKey, TransportAddr};
+    use iroh::{Endpoint, SecretKey, TransportAddr, endpoint::presets};
     use kilogram_mailbox::MailboxStoreIdentity;
 
     #[test]
@@ -624,6 +624,57 @@ mod tests {
             .collect::<String>();
         assert!(rendered.contains("<redacted>"));
         assert!(!rendered.contains(&raw));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn bidirectional_response_larger_than_one_packet_is_delivered() -> Result<()> {
+        const TEST_ALPN: &[u8] = b"kilogram/test/bi-response/1";
+        let server = Endpoint::builder(presets::Minimal)
+            .clear_ip_transports()
+            .clear_relay_transports()
+            .bind_addr("127.0.0.1:0")?
+            .alpns(vec![TEST_ALPN.to_vec()])
+            .bind()
+            .await?;
+        let client = Endpoint::builder(presets::Minimal)
+            .clear_ip_transports()
+            .clear_relay_transports()
+            .bind_addr("127.0.0.1:0")?
+            .bind()
+            .await?;
+        let expected = vec![0x5a_u8; 8_123];
+        let server_addr = server.addr();
+        let server_response = expected.clone();
+        let server_task = tokio::spawn({
+            let server = server.clone();
+            async move {
+                let connection = server
+                    .accept()
+                    .await
+                    .context("accept test connection")?
+                    .await
+                    .context("complete test handshake")?;
+                let (mut send, mut receive) = connection.accept_bi().await?;
+                let request = receive.read_to_end(1024).await?;
+                ensure!(request == b"inventory");
+                send.write_all(&server_response).await?;
+                send.finish()?;
+                let stopped = send.stopped().await?;
+                ensure!(stopped.is_none());
+                Ok::<_, anyhow::Error>(())
+            }
+        });
+
+        let connection = client.connect(server_addr, TEST_ALPN).await?;
+        let (mut send, mut receive) = connection.open_bi().await?;
+        send.write_all(b"inventory").await?;
+        send.finish()?;
+        let actual = receive.read_to_end(16 * 1024).await?;
+        ensure!(actual == expected);
+        server_task.await??;
+        client.close().await;
+        server.close().await;
         Ok(())
     }
 }
