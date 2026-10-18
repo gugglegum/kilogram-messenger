@@ -356,6 +356,14 @@ pub async fn write_server_response(send: &mut SendStream, response: &ServerRespo
         .with_context(|| wire_timeout_message("send server protocol response"))?
         .context("send server protocol response")?;
     send.finish().context("finish server protocol response")?;
+    let stopped = timeout(WIRE_IO_TIMEOUT, send.stopped())
+        .await
+        .with_context(|| wire_timeout_message("confirm server protocol response delivery"))?
+        .context("confirm server protocol response delivery")?;
+    ensure!(
+        stopped.is_none(),
+        "client stopped the server protocol response stream with code {stopped:?}"
+    );
     Ok(())
 }
 
