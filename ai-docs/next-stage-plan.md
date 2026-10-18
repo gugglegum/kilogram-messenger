@@ -11,7 +11,10 @@
 
 ## Исходная точка
 
-- точный исходный commit: `cc724c908dc3774c87071a523991f7ef79a81335`;
+- точный runtime/protocol baseline: commit
+  `cc724c908dc3774c87071a523991f7ef79a81335`; последующие roadmap-only commits
+  не меняют его protected runtime surface, а field revision будет заново
+  зафиксирован после реализации evidence lane;
 - восьмичасовой decoder campaign M1.1.76 завершён: 469 853 771 iterations,
   0 artifacts, coverage profile проверен;
 - все локальные activation requirements, кроме
@@ -19,8 +22,10 @@
 - active transport остаётся Postcard v6 / `kilogram/m0/sync/8`;
 - `/cbor/2` выделен и полностью реализован как dormant candidate, но не
   зарегистрирован и не dial-ится;
-- push `master` до `cc724c9` выполнен 2026-10-18; Windows CI run
-  `39087571586` был `in_progress` во время составления плана.
+- первый push runtime baseline выполнен 2026-10-18; Windows CI run
+  `39087571586` был `in_progress` во время составления плана. Итоговым hosted
+  evidence считается только новый green run exact implementation commit,
+  созданный после завершения пакетов 1–3.
 
 ## Рабочие пакеты и ориентировочное время
 
