@@ -98,6 +98,10 @@ const MAX_CIPHERTEXT_BYTES: usize = MAX_TEXT_BYTES + 16;
 pub struct ConversationId([u8; 32]);
 
 impl ConversationId {
+    pub const fn from_bytes(bytes: [u8; 32]) -> Self {
+        Self(bytes)
+    }
+
     pub fn from_label(label: &str) -> Self {
         let mut hasher = blake3::Hasher::new();
         hasher.update(CONVERSATION_LABEL_DOMAIN);
@@ -1072,6 +1076,14 @@ pub enum ProtocolError {
 
     #[error("mailbox provider gossip wire frame has {actual} bytes; maximum is {maximum}")]
     MailboxProviderGossipFrameTooLarge { actual: usize, maximum: usize },
+
+    #[error("synchronization transport selection wire frame must not be empty")]
+    EmptySyncTransportSelectionFrame,
+
+    #[error(
+        "synchronization transport selection wire frame has {actual} bytes; maximum is {maximum}"
+    )]
+    SyncTransportSelectionFrameTooLarge { actual: usize, maximum: usize },
 
     #[error("device authorization response belongs to account {actual}; expected {expected}")]
     DeviceAuthorizationAccountMismatch {

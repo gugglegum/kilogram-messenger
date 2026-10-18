@@ -128,9 +128,28 @@ pub struct SignedSyncTransportCandidateAcceptance {
 }
 
 impl SignedSyncTransportCapability {
+    pub fn issue_legacy_only(
+        listener_identity: &DeviceIdentity,
+        binding: &SyncTransportCapabilityBinding<'_>,
+    ) -> Result<Self, SyncTransportCapabilityError> {
+        Self::issue(listener_identity, binding, Vec::new())
+    }
+
     pub fn issue_legacy_with_canonical_candidate(
         listener_identity: &DeviceIdentity,
         binding: &SyncTransportCapabilityBinding<'_>,
+    ) -> Result<Self, SyncTransportCapabilityError> {
+        Self::issue(
+            listener_identity,
+            binding,
+            vec![SyncTransportProtocol::CanonicalCborV2],
+        )
+    }
+
+    fn issue(
+        listener_identity: &DeviceIdentity,
+        binding: &SyncTransportCapabilityBinding<'_>,
+        candidate_protocols: Vec<SyncTransportProtocol>,
     ) -> Result<Self, SyncTransportCapabilityError> {
         let content = SyncTransportCapabilityContent {
             version: SYNC_TRANSPORT_CAPABILITY_VERSION,
@@ -143,7 +162,7 @@ impl SignedSyncTransportCapability {
             issued_at_unix_seconds: binding.issued_at_unix_seconds,
             expires_at_unix_seconds: binding.expires_at_unix_seconds,
             active_protocols: vec![SyncTransportProtocol::LegacyPostcardV6],
-            candidate_protocols: vec![SyncTransportProtocol::CanonicalCborV2],
+            candidate_protocols,
             canonical_dial_enabled: false,
         };
         if listener_identity.device_id() != binding.listener_device_id {
@@ -551,8 +570,10 @@ fn validate_content(
     if validity > MAX_SYNC_TRANSPORT_CAPABILITY_VALIDITY_SECONDS {
         return Err(SyncTransportCapabilityError::ValidityTooLong(validity));
     }
+    let safe_candidates = content.candidate_protocols.is_empty()
+        || content.candidate_protocols == [SyncTransportProtocol::CanonicalCborV2];
     if content.active_protocols != [SyncTransportProtocol::LegacyPostcardV6]
-        || content.candidate_protocols != [SyncTransportProtocol::CanonicalCborV2]
+        || !safe_candidates
         || content.canonical_dial_enabled
     {
         return Err(SyncTransportCapabilityError::UnsafeProtocolState);
@@ -664,6 +685,27 @@ mod tests {
             SyncTransportProtocol::CanonicalCborV2.alpn(),
             CANONICAL_SYNC_ALPN
         );
+        Ok(())
+    }
+
+    #[test]
+    fn default_capability_does_not_advertise_a_canonical_candidate()
+    -> Result<(), SyncTransportCapabilityError> {
+        let identity = DeviceIdentity::generate()?;
+        let expected = binding(
+            &identity,
+            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        )?;
+        let capability = SignedSyncTransportCapability::issue_legacy_only(&identity, &expected)?;
+
+        capability.verify_at(1_500)?;
+        capability.verify_binding(&expected)?;
+        assert_eq!(
+            capability.active_protocols(),
+            [SyncTransportProtocol::LegacyPostcardV6]
+        );
+        assert!(capability.candidate_protocols().is_empty());
+        assert!(!capability.canonical_dial_enabled());
         Ok(())
     }
 

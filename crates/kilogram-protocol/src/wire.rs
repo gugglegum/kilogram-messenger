@@ -17,6 +17,7 @@ pub const MAX_ENDPOINT_ANNOUNCEMENT_ACKNOWLEDGEMENT_WIRE_BYTES: usize = 4 * 1024
 pub const MAX_MAILBOX_CAPABILITY_UPDATE_WIRE_BYTES: usize = 40 * 1024;
 pub const MAX_MAILBOX_CAPABILITY_ACKNOWLEDGEMENT_WIRE_BYTES: usize = 4 * 1024;
 pub const MAX_MAILBOX_PROVIDER_GOSSIP_WIRE_BYTES: usize = 24 * 1024;
+pub const MAX_SYNC_TRANSPORT_SELECTION_WIRE_BYTES: usize = 256 * 1024;
 
 const SYNC_VERSION: u8 = 6;
 const SYNC_DIFF_SIGNATURE_DOMAIN: &[u8] = b"kilogram:sync-diff-signature:v6\0";
@@ -553,6 +554,7 @@ pub enum ClientRequest {
     EndpointAnnouncementPush(Vec<u8>),
     MailboxCapabilityUpdatePush(Vec<u8>),
     MailboxProviderGossip(Vec<u8>),
+    SyncTransportCandidateOffer(Vec<u8>),
 }
 
 impl ClientRequest {
@@ -582,6 +584,9 @@ impl ClientRequest {
                 validate_mailbox_capability_frame(update, MAX_MAILBOX_CAPABILITY_UPDATE_WIRE_BYTES)
             }
             Self::MailboxProviderGossip(frame) => validate_mailbox_provider_gossip_frame(frame),
+            Self::SyncTransportCandidateOffer(frame) => {
+                validate_sync_transport_selection_frame(frame)
+            }
         }
     }
 }
@@ -603,6 +608,8 @@ pub enum ServerResponse {
     MailboxCapabilityUpdateRejected,
     MailboxProviderGossipAcknowledged(Vec<u8>),
     MailboxProviderGossipRejected,
+    SyncTransportCandidateAccepted(Vec<u8>),
+    SyncTransportCandidateRejected,
 }
 
 impl ServerResponse {
@@ -646,8 +653,25 @@ impl ServerResponse {
                 validate_mailbox_provider_gossip_frame(frame)
             }
             Self::MailboxProviderGossipRejected => Ok(()),
+            Self::SyncTransportCandidateAccepted(frame) => {
+                validate_sync_transport_selection_frame(frame)
+            }
+            Self::SyncTransportCandidateRejected => Ok(()),
         }
     }
+}
+
+fn validate_sync_transport_selection_frame(bytes: &[u8]) -> Result<(), ProtocolError> {
+    if bytes.is_empty() {
+        return Err(ProtocolError::EmptySyncTransportSelectionFrame);
+    }
+    if bytes.len() > MAX_SYNC_TRANSPORT_SELECTION_WIRE_BYTES {
+        return Err(ProtocolError::SyncTransportSelectionFrameTooLarge {
+            actual: bytes.len(),
+            maximum: MAX_SYNC_TRANSPORT_SELECTION_WIRE_BYTES,
+        });
+    }
+    Ok(())
 }
 
 fn validate_mailbox_provider_gossip_frame(bytes: &[u8]) -> Result<(), ProtocolError> {
@@ -1021,6 +1045,31 @@ mod tests {
             ])
             .encode(),
             Err(ProtocolError::EndpointAnnouncementFrameTooLarge { .. })
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn sync_transport_selection_frames_are_bounded_and_round_trip()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let request = ClientRequest::SyncTransportCandidateOffer(vec![1, 2, 3]);
+        assert_eq!(ClientRequest::decode(&request.encode()?)?, request);
+        let response = ServerResponse::SyncTransportCandidateAccepted(vec![4, 5, 6]);
+        assert_eq!(ServerResponse::decode(&response.encode()?)?, response);
+        let rejected = ServerResponse::SyncTransportCandidateRejected;
+        assert_eq!(ServerResponse::decode(&rejected.encode()?)?, rejected);
+        assert!(matches!(
+            ClientRequest::SyncTransportCandidateOffer(Vec::new()).encode(),
+            Err(ProtocolError::EmptySyncTransportSelectionFrame)
+        ));
+        assert!(matches!(
+            ServerResponse::SyncTransportCandidateAccepted(vec![
+                0;
+                MAX_SYNC_TRANSPORT_SELECTION_WIRE_BYTES
+                    + 1
+            ])
+            .encode(),
+            Err(ProtocolError::SyncTransportSelectionFrameTooLarge { .. })
         ));
         Ok(())
     }

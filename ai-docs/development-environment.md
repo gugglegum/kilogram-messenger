@@ -4810,3 +4810,29 @@ Hosted follow-up:
   сохранён. Coordinated rollback всего state directory вместе со старым
   marker требует независимого external/hardware witness и не заявлен закрытым;
 - active Iroh transport не изменён; network, release, ZIP и tag не запускались.
+
+## M1.1.83 production runtime canonical sync v2 dark launch (2026-10-18)
+
+- `kilogram-cli` загружает signed activation authority до Iroh bind и выводит
+  stable policy telemetry: state, epoch, containment, registration,
+  publication, new accept/initiate, selected resume и evidence binding;
+- default capability теперь создаётся через `issue_legacy_only`; canonical
+  candidate появляется только при verified publish permission. Ticket rotation
+  и directory refresh сохраняют текущую policy;
+- Postcard wire получил bounded selection offer/accepted/rejected variants с
+  пределом 256 KiB. Selection record version 1 хранится в
+  `runtime/canonical-sync-v2-selections` и содержит обе подписи, оба Device
+  certificates и оба Account authority snapshots;
+- cross-Device selection epoch равен signed listener ticket publication epoch
+  + 1. Независимые локальные activation epochs Alice и Bob не сравниваются;
+- production canonical state живёт в `canonical-sync-v2-store`; legacy import,
+  client/responder bootstrap, shared Iroh adapter и final materialization
+  выполняются под существующим state lock/vault mirror boundary;
+- `cargo check -p kilogram-cli --all-targets --all-features --locked --offline
+  --jobs 2` прошёл; вне sandbox CLI tests прошли 85/85 за 153.93 s;
+- local rehearsal `m1184-local-20261018T145634Z` использовал debug binary
+  SHA-256 `d4301bd4b1145149da98cd4f7c87170709b9b47efdcb4842e8f2772a879ab878`:
+  два legacy controls и один exact canonical run сошлись без fallback;
+- `verify-kilogram-canonical-sync-v2-production-dark-launch-boundary.ps1
+  -SelfTest` прошёл. Restart/resume, selected-path failure, containment и
+  двухмашинный run остаются M1.1.84; release, ZIP и tag не создавались.

@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.83",
+  "status": "canonical-sync-v2-production-runtime-opt-in-integrated",
+  "changes_active_wire": true,
+  "public_default": "legacy-only",
+  "legacy_protocol_identifier": "kilogram/m0/sync/8",
+  "canonical_protocol_identifier": "kilogram/m1/sync/cbor/2",
+  "authority": {
+    "source": "verified-device-signed-activation-chain",
+    "missing_authority": "implicit-legacy-only",
+    "malformed_or_stale_authority": "fail-closed",
+    "environment_or_convenience_flag_authority": false
+  },
+  "endpoint_policy": {
+    "default_registered_alpns": [
+      "kilogram/m0/sync/8"
+    ],
+    "opt_in_registered_alpns": [
+      "kilogram/m0/sync/8",
+      "kilogram/m1/sync/cbor/2"
+    ],
+    "default_ticket_candidate_protocols": [],
+    "opt_in_ticket_candidate_protocols": [
+      "kilogram/m1/sync/cbor/2"
+    ],
+    "publication_requires_registered_reader": true
+  },
+  "selection": {
+    "negotiation_transport": "authenticated-legacy-postcard-v6",
+    "requester_offer": "device-signed-and-bounded",
+    "listener_acceptance": "device-signed-and-exact-offer-bound",
+    "stable_session_binding": true,
+    "selection_epoch_source": "listener-ticket-publication-channel-epoch-plus-one",
+    "both_account_authority_snapshots_persisted": true,
+    "both_device_certificates_persisted": true,
+    "selection_persisted_before_canonical_dial": true,
+    "selection_persisted_before_acceptance_response": true
+  },
+  "canonical_runtime": {
+    "shared_production_adapter": true,
+    "typed_carrier_store": true,
+    "checkpoint_bound_frame_journal": true,
+    "legacy_history_import": "bounded-resumable-authenticated",
+    "canonical_result_materialization": "legacy-postcard-v6-carriers-only",
+    "selected_error_fallback_to_legacy": false,
+    "selected_resume_requires_exact_persisted_selection": true
+  },
+  "telemetry": {
+    "policy_state": true,
+    "migration_epoch": true,
+    "containment": true,
+    "registered_alpn": true,
+    "published_capability": true,
+    "selected_alpn": true,
+    "selection_evidence_id": true,
+    "message_contents_or_secrets": false
+  },
+  "verification": {
+    "cli_unit_tests": "85/85",
+    "local_default_default": "legacy-postcard-v6-converged",
+    "local_optin_default": "legacy-postcard-v6-converged",
+    "local_optin_optin": "canonical-cbor-v2-converged",
+    "local_histories_equal": true,
+    "local_selection_evidence_equal": true,
+    "local_fallback_after_selection": false,
+    "restart_resume": "pending-m1.1.84",
+    "selected_corruption_or_loss": "pending-m1.1.84",
+    "containment": "pending-m1.1.84",
+    "two_host": "pending-m1.1.84"
+  },
+  "bounded_limitations": [
+    "one-new-canonical-selection-per-listener-runtime-process",
+    "canonical-native-history-materialization-not-enabled",
+    "no-desktop-ui-rollout",
+    "no-public-default-change",
+    "no-legacy-retirement"
+  ],
+  "next": [
+    "restart-resume-and-fail-closed-rehearsal",
+    "two-host-opt-in-rehearsal",
+    "aggregate-regression-and-formalization"
+  ]
+}

@@ -7030,3 +7030,27 @@ correlation visible, Windows-only field evidence, independent security audit
 - новый manifest/RFC и boundary verifier с negative self-test приняты;
   readiness inventory расширен до 110 gates. Active Iroh transport и public
   default не изменены, network/release/ZIP/tag не выполнялись.
+
+### M1.1.83 — production runtime canonical sync v2 dark launch: принято локально
+
+- обычный `kilogram-cli` теперь строит ALPN list и ticket capability только из
+  verified Device-signed activation authority; отсутствие authority оставляет
+  endpoint строго на `kilogram/m0/sync/8` без canonical candidate;
+- в Postcard control channel добавлена bounded mutually authenticated selection
+  ceremony. Requester offer и listener acceptance подписаны Devices, связаны с
+  обоими authority snapshots, certificates, conversation, roles, стабильной
+  session binding и listener ticket publication epoch;
+- exact selection сохраняется append-only до canonical dial/acceptance и
+  повторно проверяется при `/cbor/2`; после selection ни decode, network, state
+  либо checkpoint error не вызывает legacy fallback;
+- production client/responder используют общий Iroh adapter, typed carrier
+  store, resumable legacy import и checkpoint-bound frame journal. Завершённые
+  legacy carriers материализуются обратно в active history; canonical-native
+  materialization пока намеренно выключена;
+- один fresh-host локальный rehearsal подтвердил три контроля: default/default
+  и opt-in/default сошлись по Postcard v6, opt-in/opt-in выбрал
+  `kilogram/m1/sync/cbor/2`; обе стороны сохранили один selection evidence ID,
+  шесть event ID совпали, fallback=false;
+- CLI regression прошёл 85/85; all-target/all-feature check, rustfmt и новый
+  fail-closed production-dark-launch verifier с четырьмя negative mutations
+  зелёные. Public default остаётся legacy-only; release/ZIP/tag не создавались.

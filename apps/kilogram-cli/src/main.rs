@@ -18,6 +18,10 @@ use iroh::{
     Endpoint, EndpointAddr, RelayUrl,
     endpoint::{Connection, RecvStream, SendStream},
 };
+use kilogram_cli::canonical_sync_v2_runtime::{
+    CanonicalSyncV2ClientOutcome, CanonicalSyncV2ServeOutcome, drive_canonical_sync_v2_client,
+    serve_canonical_sync_v2_connection,
+};
 use kilogram_identity::{
     AccountAuthoritySnapshot, AccountDeviceListSnapshot, AccountId, AccountRootState,
     AuthoritySnapshotStoreOutcome, AuthorizedDevice, ConversationMembershipSnapshot,
@@ -61,6 +65,8 @@ use kilogram_protocol::{
     RatchetRecipient, ServerResponse, SignedDeviceSessionAuthorization, SignedEvent,
     SignedHistoryRecoveryCheckpoint, SignedHistoryRewrapRequest, SignedHistoryRewrapTransfer,
     SignedSyncInventory, SyncPause, SyncPaused, SyncSessionBinding,
+    canonical_sync_history_v2::CanonicalSyncEventCarrierV2,
+    canonical_sync_v2::MAX_CANONICAL_SYNC_V2_EVENTS_PER_BATCH,
 };
 use kilogram_ratchet::{
     AccountPrekeyDirectory, DEFAULT_PREKEY_POOL_SIZE, DEFAULT_PREKEY_POOL_VALIDITY_SECONDS,
@@ -98,7 +104,9 @@ use kilogram_session::{
     },
     canonical_sync_v2_adapter::{
         CanonicalSyncV2ActivationDisposition, CanonicalSyncV2ActivationPermissions,
-        CanonicalSyncV2MigrationState, evaluate_canonical_sync_v2_activation_permissions,
+        CanonicalSyncV2Client, CanonicalSyncV2MembershipPolicy, CanonicalSyncV2MigrationState,
+        CanonicalSyncV2Server, CanonicalSyncV2SessionError,
+        evaluate_canonical_sync_v2_activation_permissions,
     },
 };
 use kilogram_state::{
@@ -109,17 +117,23 @@ use kilogram_state::{
     VaultReport,
 };
 use kilogram_store::{
-    AppendOnlyWriteReceipt, CommandEventReadOverlay, CommandLocalMessageReadOverlay,
-    EventReadRepository, EventStore, ImmutableEventReadSnapshot, ImmutableLocalMessageReadSnapshot,
-    LocalMessageReadRepository, LocalMessageStore, StoreError, StoreOutcome, StoredAuthorizedEvent,
+    AppendOnlyWriteReceipt, CanonicalSyncV2CarrierStore, CanonicalSyncV2LegacyImportPlan,
+    CommandEventReadOverlay, CommandLocalMessageReadOverlay, EventReadRepository, EventStore,
+    ImmutableEventReadSnapshot, ImmutableLocalMessageReadSnapshot, LocalMessageReadRepository,
+    LocalMessageStore, StoreError, StoreOutcome, StoredAuthorizedEvent,
 };
-use kilogram_sync_capability::{SignedSyncTransportCapability, SyncTransportCapabilityBinding};
+use kilogram_sync_capability::{
+    SignedSyncTransportCandidateAcceptance, SignedSyncTransportCandidateOffer,
+    SignedSyncTransportCapability, SyncTransportCandidateOfferBinding,
+    SyncTransportCapabilityBinding, SyncTransportProtocol,
+    verify_mutual_canonical_candidate_selection,
+};
 use kilogram_ticket_store::{
     StoreConfig, StoreServiceMode, TicketStoreServer, VolunteerMailboxService,
 };
 use kilogram_transport_iroh::{
-    ALPN, MAILBOX_ALPN, MAX_WIRE_MESSAGE_BYTES, RoutePolicy, SelectedPathDiagnostics,
-    SelectedPathLocalDomainKind, WIRE_IO_TIMEOUT, await_route_policy,
+    ALPN, CANONICAL_SYNC_ALPN_V2, MAILBOX_ALPN, MAX_WIRE_MESSAGE_BYTES, RoutePolicy,
+    SelectedPathDiagnostics, SelectedPathLocalDomainKind, WIRE_IO_TIMEOUT, await_route_policy,
     encode_mailbox_provider_endpoint, endpoint_builder_for_remote, endpoint_builder_with_relay,
     mailbox_provider_endpoint_from_offer, read_client_request, read_mailbox_peer_request,
     read_mailbox_peer_response, read_server_response, selected_path_diagnostics,
@@ -278,6 +292,11 @@ const RUNTIME_LOCAL_MAILBOX_UPDATES_DIRECTORY: &str = "local-mailbox-updates";
 const RUNTIME_PEER_MAILBOX_UPDATES_DIRECTORY: &str = "peer-mailbox-updates";
 const RUNTIME_MAILBOX_UPDATE_ACKNOWLEDGEMENTS_DIRECTORY: &str = "mailbox-update-acknowledgements";
 const RUNTIME_CANONICAL_SYNC_V2_ACTIVATION_DIRECTORY: &str = "canonical-sync-v2-activation";
+const RUNTIME_CANONICAL_SYNC_V2_SELECTION_DIRECTORY: &str = "canonical-sync-v2-selections";
+const CANONICAL_SYNC_V2_STORE_DIRECTORY: &str = "canonical-sync-v2-store";
+const CANONICAL_SYNC_V2_SELECTION_VERSION: u8 = 1;
+const CANONICAL_SYNC_V2_SELECTION_ID_DOMAIN: &[u8] =
+    b"kilogram:runtime-canonical-sync-v2-selection:v1\0";
 const CANONICAL_SYNC_V2_ACTIVATION_HIGH_WATER_FILE: &str =
     "canonical-sync-v2-activation.high-water";
 const MAILBOX_CLIENT_LEDGER_DIRECTORY: &str = "mailbox-client";
@@ -2731,6 +2750,29 @@ impl ConnectionTicket {
         route_policy: RoutePolicy,
         publication_channel_epoch: u64,
     ) -> Result<Self> {
+        Self::new_with_publication_channel_epoch_and_sync_policy(
+            endpoint,
+            listener_identity,
+            listener_certificate,
+            listener_directory,
+            allowed_requester_account_id,
+            route_policy,
+            publication_channel_epoch,
+            false,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn new_with_publication_channel_epoch_and_sync_policy(
+        endpoint: EndpointAddr,
+        listener_identity: &DeviceIdentity,
+        listener_certificate: DeviceCertificate,
+        listener_directory: AccountPrekeyDirectory,
+        allowed_requester_account_id: AccountId,
+        route_policy: RoutePolicy,
+        publication_channel_epoch: u64,
+        publish_canonical_candidate: bool,
+    ) -> Result<Self> {
         ensure!(
             listener_certificate.device_id() == listener_identity.device_id(),
             "listener certificate belongs to a different device"
@@ -2759,6 +2801,7 @@ impl ConnectionTicket {
             &listener_directory,
             allowed_requester_account_id,
             publication_channel_epoch,
+            publish_canonical_candidate,
         )?;
         let content = ConnectionTicketContent {
             version: TICKET_VERSION,
@@ -2846,6 +2889,15 @@ impl ConnectionTicket {
 
     fn route_policy(&self) -> RoutePolicy {
         self.content.route_policy
+    }
+
+    fn sync_transport_capability(&self) -> &SignedSyncTransportCapability {
+        &self.content.sync_transport_capability
+    }
+
+    fn publishes_canonical_sync_v2_candidate(&self) -> bool {
+        self.content.sync_transport_capability.candidate_protocols()
+            == [SyncTransportProtocol::CanonicalCborV2]
     }
 
     fn verify(&self) -> Result<()> {
@@ -3023,25 +3075,29 @@ fn issue_sync_transport_capability(
     listener_directory: &AccountPrekeyDirectory,
     allowed_requester_account_id: AccountId,
     ticket_publication_channel_epoch: u64,
+    publish_canonical_candidate: bool,
 ) -> Result<SignedSyncTransportCapability> {
     let endpoint_id = endpoint.id.to_string();
     let (issued_at_unix_seconds, expires_at_unix_seconds) =
         prekey_directory_validity(listener_directory)?;
-    Ok(
+    let binding = SyncTransportCapabilityBinding {
+        listener_account_id: listener_directory.account_id(),
+        listener_device_id: listener_identity.device_id(),
+        authority_revision: listener_directory.revision(),
+        allowed_requester_account_id,
+        endpoint_id: &endpoint_id,
+        ticket_publication_channel_epoch,
+        issued_at_unix_seconds,
+        expires_at_unix_seconds,
+    };
+    Ok(if publish_canonical_candidate {
         SignedSyncTransportCapability::issue_legacy_with_canonical_candidate(
             listener_identity,
-            &SyncTransportCapabilityBinding {
-                listener_account_id: listener_directory.account_id(),
-                listener_device_id: listener_identity.device_id(),
-                authority_revision: listener_directory.revision(),
-                allowed_requester_account_id,
-                endpoint_id: &endpoint_id,
-                ticket_publication_channel_epoch,
-                issued_at_unix_seconds,
-                expires_at_unix_seconds,
-            },
-        )?,
-    )
+            &binding,
+        )?
+    } else {
+        SignedSyncTransportCapability::issue_legacy_only(listener_identity, &binding)?
+    })
 }
 
 fn verify_sync_transport_capability_binding(content: &ConnectionTicketContent) -> Result<()> {
@@ -4979,6 +5035,7 @@ fn install_membership_primary(
 #[derive(Default)]
 struct RuntimeStateSnapshot {
     canonical_sync_v2_activation_records: Vec<SignedCanonicalSyncV2ActivationRecord>,
+    canonical_sync_v2_selections: BTreeMap<[u8; 32], PersistedCanonicalSyncV2Selection>,
     contacts: BTreeMap<RuntimeContactId, SignedRuntimeContact>,
     endpoint_candidates: BTreeMap<RuntimeEndpointCandidateId, SignedRuntimeEndpointCandidate>,
     endpoint_publication_bindings:
@@ -5013,6 +5070,154 @@ struct RuntimeStateSnapshot {
     peer_mailbox_updates: BTreeMap<MailboxCapabilityUpdateId, SignedMailboxCapabilityUpdate>,
     mailbox_update_acknowledgements:
         BTreeMap<MailboxCapabilityUpdateId, SignedMailboxCapabilityAcknowledgement>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct CanonicalSyncV2RuntimePolicy {
+    migration_state: CanonicalSyncV2MigrationState,
+    disposition: CanonicalSyncV2ActivationDisposition,
+    migration_epoch: u64,
+    canonical_evidence_id: Option<[u8; 32]>,
+    permissions: CanonicalSyncV2ActivationPermissions,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+struct PersistedCanonicalSyncV2Selection {
+    version: u8,
+    listener_capability: SignedSyncTransportCapability,
+    offer: SignedSyncTransportCandidateOffer,
+    acceptance: SignedSyncTransportCandidateAcceptance,
+    listener_certificate: DeviceCertificate,
+    listener_authority_snapshot: AccountAuthoritySnapshot,
+    requester_certificate: DeviceCertificate,
+    requester_authority_snapshot: AccountAuthoritySnapshot,
+}
+
+impl PersistedCanonicalSyncV2Selection {
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        listener_capability: SignedSyncTransportCapability,
+        offer: SignedSyncTransportCandidateOffer,
+        acceptance: SignedSyncTransportCandidateAcceptance,
+        listener_certificate: DeviceCertificate,
+        listener_authority_snapshot: AccountAuthoritySnapshot,
+        requester_certificate: DeviceCertificate,
+        requester_authority_snapshot: AccountAuthoritySnapshot,
+    ) -> Result<Self> {
+        let selection = Self {
+            version: CANONICAL_SYNC_V2_SELECTION_VERSION,
+            listener_capability,
+            offer,
+            acceptance,
+            listener_certificate,
+            listener_authority_snapshot,
+            requester_certificate,
+            requester_authority_snapshot,
+        };
+        selection.verify()?;
+        Ok(selection)
+    }
+
+    fn verify(&self) -> Result<()> {
+        ensure!(
+            self.version == CANONICAL_SYNC_V2_SELECTION_VERSION,
+            "unsupported persisted canonical sync v2 selection version"
+        );
+        verify_mutual_canonical_candidate_selection(
+            &self.listener_capability,
+            &self.offer,
+            &self.acceptance,
+        )
+        .context("verify signed mutual canonical sync v2 selection")?;
+        let listener = verify_device_authorization_with_snapshot(
+            self.offer.listener_account_id(),
+            &self.listener_certificate,
+            &self.listener_authority_snapshot,
+            &DeviceCapability::MESSAGING,
+        )
+        .context("verify canonical selection listener authority")?;
+        let requester = verify_device_authorization_with_snapshot(
+            self.offer.requester_account_id(),
+            &self.requester_certificate,
+            &self.requester_authority_snapshot,
+            &DeviceCapability::MESSAGING,
+        )
+        .context("verify canonical selection requester authority")?;
+        ensure!(
+            listener.device_id() == self.offer.listener_device_id()
+                && requester.device_id() == self.offer.requester_device_id()
+                && self.listener_authority_snapshot.revision()
+                    == self.offer.listener_authority_revision()
+                && self.requester_authority_snapshot.revision()
+                    == self.offer.requester_authority_revision(),
+            "canonical selection identity or authority revision mismatch"
+        );
+        ensure!(
+            self.offer.session_binding()
+                == *canonical_sync_v2_session_binding(
+                    ConversationId::from_bytes(self.offer.conversation_id()),
+                    self.offer.listener_device_id(),
+                    self.offer.requester_device_id(),
+                )
+                .as_bytes(),
+            "canonical selection does not use the stable conversation/device session binding"
+        );
+        ensure!(
+            self.offer.migration_epoch()
+                == canonical_sync_v2_selection_epoch(&self.listener_capability)?,
+            "canonical selection generation does not match the signed listener capability"
+        );
+        Ok(())
+    }
+
+    fn selection_id(&self) -> Result<[u8; 32]> {
+        self.verify()?;
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(CANONICAL_SYNC_V2_SELECTION_ID_DOMAIN);
+        hasher.update(&serde_json::to_vec(self).context("encode canonical selection ID")?);
+        Ok(*hasher.finalize().as_bytes())
+    }
+
+    fn conversation_id(&self) -> ConversationId {
+        ConversationId::from_bytes(self.offer.conversation_id())
+    }
+
+    fn session_binding(&self) -> SyncSessionBinding {
+        canonical_sync_v2_session_binding(
+            self.conversation_id(),
+            self.offer.listener_device_id(),
+            self.offer.requester_device_id(),
+        )
+    }
+
+    fn matches_pair(
+        &self,
+        conversation_id: ConversationId,
+        listener_device_id: DeviceId,
+        requester_device_id: DeviceId,
+    ) -> bool {
+        self.conversation_id() == conversation_id
+            && self.offer.listener_device_id() == listener_device_id
+            && self.offer.requester_device_id() == requester_device_id
+    }
+}
+
+impl CanonicalSyncV2RuntimePolicy {
+    fn legacy_default() -> Result<Self> {
+        let migration_state = CanonicalSyncV2MigrationState::LegacyOnly;
+        let disposition = CanonicalSyncV2ActivationDisposition::Normal;
+        Ok(Self {
+            migration_state,
+            disposition,
+            migration_epoch: 0,
+            canonical_evidence_id: None,
+            permissions: evaluate_canonical_sync_v2_activation_permissions(
+                migration_state,
+                disposition,
+                false,
+            )?,
+        })
+    }
 }
 
 impl RuntimeStateSnapshot {
@@ -5378,6 +5583,24 @@ fn mailbox_capability_session_binding(
     MailboxCapabilitySessionBinding::from_bytes(*session_binding.as_bytes())
 }
 
+fn canonical_sync_v2_session_binding(
+    conversation_id: ConversationId,
+    listener_device_id: DeviceId,
+    requester_device_id: DeviceId,
+) -> SyncSessionBinding {
+    SyncSessionBinding::from_transport_label(&format!(
+        "kilogram:canonical-sync-v2:session:{}:{listener_device_id}:{requester_device_id}",
+        conversation_id
+    ))
+}
+
+fn canonical_sync_v2_selection_epoch(capability: &SignedSyncTransportCapability) -> Result<u64> {
+    capability
+        .ticket_publication_channel_epoch()
+        .checked_add(1)
+        .context("canonical sync v2 selection generation overflow")
+}
+
 fn runtime_contact_relative_path(contact_id: RuntimeContactId) -> PathBuf {
     PathBuf::from(RUNTIME_STATE_DIRECTORY)
         .join(RUNTIME_CONTACTS_DIRECTORY)
@@ -5394,6 +5617,56 @@ fn runtime_canonical_sync_v2_activation_relative_path(
             "{migration_epoch:020}-{}.csv2-activation",
             encode_hex(&record_id)
         ))
+}
+
+fn runtime_canonical_sync_v2_selection_relative_path(selection_id: [u8; 32]) -> PathBuf {
+    PathBuf::from(RUNTIME_STATE_DIRECTORY)
+        .join(RUNTIME_CANONICAL_SYNC_V2_SELECTION_DIRECTORY)
+        .join(format!("{}.csv2-selection", encode_hex(&selection_id)))
+}
+
+fn persist_canonical_sync_v2_selection(
+    state_directory: &Path,
+    selection: &PersistedCanonicalSyncV2Selection,
+) -> Result<StoreOutcome> {
+    let selection_id = selection.selection_id()?;
+    let relative_path = runtime_canonical_sync_v2_selection_relative_path(selection_id);
+    let encoded = serde_json::to_vec(selection).context("encode canonical sync v2 selection")?;
+    ensure!(
+        encoded.len() <= MAX_RUNTIME_RECORD_BYTES,
+        "canonical sync v2 selection exceeds the authenticated runtime record bound"
+    );
+    run_state_transaction(state_directory, |transaction| {
+        persist_runtime_record(state_directory, &relative_path, &encoded, transaction)
+    })
+}
+
+fn selected_canonical_sync_v2_session(
+    state_directory: &Path,
+    local_account_id: AccountId,
+    local_device_id: DeviceId,
+    conversation_id: ConversationId,
+    listener_device_id: DeviceId,
+    requester_device_id: DeviceId,
+) -> Result<Option<PersistedCanonicalSyncV2Selection>> {
+    let snapshot = load_runtime_state_snapshot(state_directory, local_account_id, local_device_id)?;
+    let mut matches = snapshot
+        .canonical_sync_v2_selections
+        .into_values()
+        .filter(|selection| {
+            selection.matches_pair(conversation_id, listener_device_id, requester_device_id)
+        })
+        .collect::<Vec<_>>();
+    matches.sort_by_key(|selection| selection.offer.migration_epoch());
+    if matches.len() > 1 {
+        for pair in matches.windows(2) {
+            ensure!(
+                pair[0].offer.migration_epoch() < pair[1].offer.migration_epoch(),
+                "conflicting canonical sync v2 selections share a migration epoch"
+            );
+        }
+    }
+    Ok(matches.pop())
 }
 
 fn runtime_endpoint_candidate_relative_path(candidate_id: RuntimeEndpointCandidateId) -> PathBuf {
@@ -5942,6 +6215,7 @@ fn read_runtime_record_files(state_directory: &Path) -> Result<Vec<(PathBuf, Vec
         RUNTIME_PEER_MAILBOX_UPDATES_DIRECTORY,
         RUNTIME_MAILBOX_UPDATE_ACKNOWLEDGEMENTS_DIRECTORY,
         RUNTIME_CANONICAL_SYNC_V2_ACTIVATION_DIRECTORY,
+        RUNTIME_CANONICAL_SYNC_V2_SELECTION_DIRECTORY,
     ] {
         let root = state_directory
             .join(RUNTIME_STATE_DIRECTORY)
@@ -5994,7 +6268,30 @@ fn load_runtime_state_snapshot(
             .file_name()
             .and_then(|name| name.to_str())
             .context("runtime record filename is not UTF-8")?;
-        if file_name.ends_with(".csv2-activation") {
+        if file_name.ends_with(".csv2-selection") {
+            let value: PersistedCanonicalSyncV2Selection = serde_json::from_slice(&bytes)
+                .context("decode persisted canonical sync v2 selection")?;
+            value.verify()?;
+            ensure!(
+                (value.listener_certificate.account_id() == local_account_id
+                    && value.listener_certificate.device_id() == local_device_id)
+                    || (value.requester_certificate.account_id() == local_account_id
+                        && value.requester_certificate.device_id() == local_device_id),
+                "persisted canonical sync v2 selection belongs to another local identity"
+            );
+            let selection_id = value.selection_id()?;
+            ensure!(
+                relative_path == runtime_canonical_sync_v2_selection_relative_path(selection_id),
+                "canonical sync v2 selection filename does not match its authenticated state"
+            );
+            ensure!(
+                snapshot
+                    .canonical_sync_v2_selections
+                    .insert(selection_id, value)
+                    .is_none(),
+                "duplicate canonical sync v2 selection ID"
+            );
+        } else if file_name.ends_with(".csv2-activation") {
             let value =
                 SignedCanonicalSyncV2ActivationRecord::decode_and_verify(&bytes, local_device_id)
                     .context("verify canonical sync v2 activation record")?;
@@ -8946,7 +9243,7 @@ fn rotate_live_runtime_publication_channel(
         device_state.identity().device_id() == current_ticket.listener_device_id(),
         "live publication-channel rotation identity differs from the running listener"
     );
-    let replacement = ConnectionTicket::new_with_publication_channel_epoch(
+    let replacement = ConnectionTicket::new_with_publication_channel_epoch_and_sync_policy(
         endpoint.addr(),
         device_state.identity(),
         current_ticket.listener_certificate().clone(),
@@ -8954,6 +9251,7 @@ fn rotate_live_runtime_publication_channel(
         peer_account_id,
         current_ticket.route_policy(),
         report.publication_channel_epoch,
+        current_ticket.publishes_canonical_sync_v2_candidate(),
     )?;
     ensure!(
         replacement
@@ -14944,7 +15242,7 @@ fn apply_runtime_own_device_directory(
         Ok((authority_store, sessions, observations, receipt_store))
     })?;
 
-    let replacement = ConnectionTicket::new_with_publication_channel_epoch(
+    let replacement = ConnectionTicket::new_with_publication_channel_epoch_and_sync_policy(
         endpoint.addr(),
         device_state.identity(),
         local_certificate,
@@ -14952,6 +15250,7 @@ fn apply_runtime_own_device_directory(
         current_ticket.allowed_requester_account_id(),
         current_ticket.route_policy(),
         current_ticket.ticket_publication_channel_epoch(),
+        current_ticket.publishes_canonical_sync_v2_candidate(),
     )?;
     let encoded = replacement.encode()?;
     let ticket_published = if let Some(path) = ticket_file {
@@ -17763,6 +18062,12 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
         prepared.device_state.identity().device_id(),
     )?;
     let mut device_directory_state = prepared.device_directory_state;
+    let canonical_sync_v2_policy = with_locked_state(&state_dir, || {
+        load_canonical_sync_v2_runtime_policy(
+            &state_dir,
+            prepared.device_state.identity().device_id(),
+        )
+    })?;
     let current_network = current_runtime_network_class();
     let volunteer_iroh_enabled = volunteer_storage
         .as_ref()
@@ -17778,7 +18083,16 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
         .net_report_config(iroh::endpoint::NetReportConfig::minimal())
         .bind_addr((std::net::Ipv4Addr::LOCALHOST, 0))
         .context("bind test runtime endpoint exclusively to IPv4 loopback")?;
-    let mut runtime_alpns = vec![ALPN.to_vec()];
+    let mut runtime_alpns = Vec::new();
+    if canonical_sync_v2_policy.permissions.legacy_reader_enabled() {
+        runtime_alpns.push(ALPN.to_vec());
+    }
+    if canonical_sync_v2_policy
+        .permissions
+        .register_canonical_alpn()
+    {
+        runtime_alpns.push(CANONICAL_SYNC_ALPN_V2.to_vec());
+    }
     if volunteer_iroh_enabled {
         runtime_alpns.push(MAILBOX_ALPN.to_vec());
     }
@@ -17800,7 +18114,7 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
         )?;
         Ok(snapshot.publication_channel_epoch(allowed_requester_account_id))
     })?;
-    let mut ticket = ConnectionTicket::new_with_publication_channel_epoch(
+    let mut ticket = ConnectionTicket::new_with_publication_channel_epoch_and_sync_policy(
         endpoint.addr(),
         prepared.device_state.identity(),
         prepared.listener_certificate.clone(),
@@ -17808,6 +18122,9 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
         allowed_requester_account_id,
         route_policy,
         publication_channel_epoch,
+        canonical_sync_v2_policy
+            .permissions
+            .publish_canonical_capability(),
     )?;
     let encoded_ticket = ticket.encode()?;
     let (mut ipc_server, mut ipc_receiver, _ipc_keepalive) = if let Some(ipc_file) = ipc_file {
@@ -17827,6 +18144,7 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
         (None, receiver, Some(keepalive))
     };
     println!("runtime_mode=multi-session-v1");
+    print_canonical_sync_v2_runtime_policy(canonical_sync_v2_policy);
     println!("transport_endpoint_id={}", endpoint.id());
     println!("account_id={}", ticket.listener_account_id());
     println!("device_id={}", prepared.device_state.identity().device_id());
@@ -18095,6 +18413,36 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                         println!("runtime_volunteer_storage_session_status=disabled-rejected");
                         connection.close(3_u32.into(), b"kilogram volunteer storage disabled");
                     }
+                    continue;
+                }
+                if connection.alpn() == CANONICAL_SYNC_ALPN_V2 {
+                    accepted_sessions += 1;
+                    last_activity = tokio::time::Instant::now();
+                    println!("runtime_session={accepted_sessions}");
+                    println!("peer_id={}", connection.remote_id());
+                    let ready_path =
+                        await_route_policy(&connection, route_policy, ROUTE_POLICY_WAIT)
+                            .await
+                            .context("wait for an incoming selected canonical sync v2 path")?;
+                    print_ready_path(&ready_path);
+                    match handle_runtime_canonical_sync_v2_connection(
+                        &connection,
+                        &state_dir,
+                        &ticket,
+                        canonical_sync_v2_policy,
+                    )
+                    .await
+                    {
+                        Ok(()) => println!("runtime_canonical_sync_v2_session_status=completed"),
+                        Err(error) => eprintln!(
+                            "runtime_canonical_sync_v2_session_status=failed error={error:#}"
+                        ),
+                    }
+                    connection.close(0_u32.into(), b"kilogram canonical sync v2 session complete");
+                    if max_sessions != 0 && accepted_sessions >= max_sessions {
+                        break "session-limit";
+                    }
+                    println!("status=runtime-listening");
                     continue;
                 }
                 if connection.alpn() != ALPN {
@@ -22010,6 +22358,181 @@ async fn acquire_runtime_state_lock(state_directory: &Path) -> Result<Option<Sta
     }
 }
 
+async fn handle_runtime_canonical_sync_v2_connection(
+    connection: &Connection,
+    state_directory: &Path,
+    ticket: &ConnectionTicket,
+    startup_policy: CanonicalSyncV2RuntimePolicy,
+) -> Result<()> {
+    ensure!(
+        startup_policy.permissions.register_canonical_alpn()
+            && startup_policy
+                .permissions
+                .resume_selected_canonical_session(),
+        "runtime activation policy does not authorize canonical sync v2 resume"
+    );
+    let Some(state_lock) = acquire_runtime_state_lock(state_directory).await? else {
+        bail!(
+            "runtime state lock remained busy for {:.1}s",
+            RUNTIME_STATE_LOCK_WAIT.as_secs_f64()
+        );
+    };
+    let vault_guard = VaultDualWriteGuard::prepare(state_directory)?;
+    let operation = (|| {
+        let device_state = load_command_device_state(state_directory)?;
+        ensure!(
+            device_state.identity().device_id() == ticket.listener_device_id(),
+            "runtime identity changed after canonical ALPN registration"
+        );
+        let policy = load_canonical_sync_v2_runtime_policy(
+            state_directory,
+            device_state.identity().device_id(),
+        )?;
+        ensure!(
+            policy == startup_policy,
+            "canonical activation authority changed while the runtime endpoint was active"
+        );
+        let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+        let listener_certificate = trust
+            .load_certificate()
+            .context("load canonical sync v2 listener certificate")?;
+        let snapshot = load_runtime_state_snapshot(
+            state_directory,
+            listener_certificate.account_id(),
+            listener_certificate.device_id(),
+        )?;
+        let mut selections =
+            snapshot
+                .canonical_sync_v2_selections
+                .into_values()
+                .filter(|selection| {
+                    selection.offer.listener_account_id() == listener_certificate.account_id()
+                        && selection.offer.listener_device_id() == listener_certificate.device_id()
+                });
+        let selection = selections
+            .next()
+            .context("canonical ALPN connection has no persisted mutual selection")?;
+        ensure!(
+            selections.next().is_none(),
+            "canonical dark-launch runtime has multiple listener selections; first-frame routing is not enabled"
+        );
+        selection.verify()?;
+        let conversation_id = selection.conversation_id();
+        let membership = trust
+            .load_conversation_membership(conversation_id.scope_id())
+            .context("load canonical sync v2 listener membership")?;
+        require_conversation_participants(
+            &membership,
+            listener_certificate.account_id(),
+            selection.offer.requester_account_id(),
+        )?;
+        let immutable_reads = open_immutable_read_repositories(state_directory)
+            .context("capture immutable canonical sync v2 responder state")?;
+        let event_store = open_event_store(state_directory)?;
+        let local_message_store = open_local_message_store(state_directory)?;
+        let store =
+            CanonicalSyncV2CarrierStore::open(canonical_sync_v2_store_path(state_directory))?;
+        let plan = import_legacy_history_for_canonical_sync_v2(
+            &store,
+            &event_store,
+            &membership,
+            conversation_id,
+        )?;
+        let membership_policy = CanonicalSyncV2MembershipPolicy::from_legacy(membership.clone())?;
+        ensure_canonical_sync_v2_responder_bootstrap(
+            device_state.identity(),
+            &store,
+            &membership_policy,
+            &plan,
+            selection.session_binding(),
+            selection.offer.requester_device_id(),
+        )?;
+        Ok::<_, anyhow::Error>((
+            device_state,
+            listener_certificate,
+            membership,
+            immutable_reads,
+            event_store,
+            local_message_store,
+            store,
+            membership_policy,
+            selection,
+        ))
+    })();
+
+    let operation_result = match operation {
+        Ok((
+            device_state,
+            listener_certificate,
+            membership,
+            immutable_reads,
+            event_store,
+            local_message_store,
+            store,
+            membership_policy,
+            selection,
+        )) => {
+            async {
+                let server = CanonicalSyncV2Server::new(
+                    device_state.identity(),
+                    &store,
+                    &membership_policy,
+                    *selection.conversation_id().as_bytes(),
+                    selection.session_binding(),
+                    selection.offer.requester_device_id(),
+                );
+                let served = serve_canonical_sync_v2_connection(connection, &server, false)
+                    .await
+                    .context("serve selected canonical sync v2 session without fallback")?;
+                ensure!(
+                    served == CanonicalSyncV2ServeOutcome::Complete,
+                    "selected canonical sync v2 connection ended before durable completion"
+                );
+                let decrypting_store = DecryptingSessionStore::new(
+                    state_directory,
+                    &event_store,
+                    &local_message_store,
+                    &device_state,
+                    listener_certificate.account_id(),
+                    immutable_reads,
+                );
+                let materialized = materialize_canonical_sync_v2_legacy_carriers(
+                    &store,
+                    &decrypting_store,
+                    &membership,
+                    selection.conversation_id(),
+                )?;
+                println!(
+                    "sync_transport_selected_alpn={}",
+                    String::from_utf8_lossy(CANONICAL_SYNC_ALPN_V2)
+                );
+                println!(
+                    "sync_transport_selection_evidence_id={}",
+                    encode_hex(&selection.selection_id()?)
+                );
+                println!("sync_transport_fallback_after_selection=false");
+                println!("canonical_sync_v2_materialized_events={materialized}");
+                Ok(())
+            }
+            .await
+        }
+        Err(error) => Err(error),
+    };
+    let mirror_result = match vault_guard {
+        Some(guard) => guard.finish(),
+        None => Ok(()),
+    };
+    drop(state_lock);
+    match (operation_result, mirror_result) {
+        (Ok(()), Ok(())) => Ok(()),
+        (Err(error), Ok(())) => Err(error),
+        (Ok(()), Err(error)) => Err(error.context("finish canonical sync v2 vault mirror")),
+        (Err(error), Err(mirror_error)) => Err(error.context(format!(
+            "canonical sync v2 failed and vault mirror also failed: {mirror_error:#}"
+        ))),
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 async fn handle_runtime_application_connection(
     connection: &Connection,
@@ -22207,21 +22730,37 @@ async fn listen_inner(options: ListenOptions) -> Result<()> {
     listener_directory
         .verify_at(now_unix_seconds)
         .context("verify listener account prekey directory freshness")?;
+    let canonical_sync_v2_policy =
+        load_canonical_sync_v2_runtime_policy(&state_dir, device_state.identity().device_id())?;
+    let mut listener_alpns = Vec::new();
+    if canonical_sync_v2_policy.permissions.legacy_reader_enabled() {
+        listener_alpns.push(ALPN.to_vec());
+    }
+    if canonical_sync_v2_policy
+        .permissions
+        .register_canonical_alpn()
+    {
+        listener_alpns.push(CANONICAL_SYNC_ALPN_V2.to_vec());
+    }
     let endpoint = endpoint_builder_with_relay(route_policy, relay_url)
-        .alpns(vec![ALPN.to_vec()])
+        .alpns(listener_alpns)
         .bind()
         .await
         .context("bind listening Iroh endpoint")?;
 
     wait_for_relay(&endpoint, route_policy, relay_wait_seconds).await?;
 
-    let ticket = ConnectionTicket::new(
+    let ticket = ConnectionTicket::new_with_publication_channel_epoch_and_sync_policy(
         endpoint.addr(),
         device_state.identity(),
         listener_certificate.clone(),
         listener_directory,
         allowed_requester_account_id,
         route_policy,
+        0,
+        canonical_sync_v2_policy
+            .permissions
+            .publish_canonical_capability(),
     )?;
     let encoded_ticket = ticket.encode()?;
     let recovery_link = publishes_history_recovery_link
@@ -22277,6 +22816,7 @@ async fn listen_inner(options: ListenOptions) -> Result<()> {
         );
     }
     println!("transport_endpoint_id={}", endpoint.id());
+    print_canonical_sync_v2_runtime_policy(canonical_sync_v2_policy);
     println!("account_id={}", ticket.listener_account_id());
     println!("device_id={}", device_state.identity().device_id());
     println!(
@@ -22384,6 +22924,20 @@ async fn listen_inner(options: ListenOptions) -> Result<()> {
         .await
         .context("wait for an incoming path allowed by the connection ticket")?;
     print_ready_path(&ready_path);
+
+    if connection.alpn() == CANONICAL_SYNC_ALPN_V2 {
+        handle_runtime_canonical_sync_v2_connection(
+            &connection,
+            &state_dir,
+            &ticket,
+            canonical_sync_v2_policy,
+        )
+        .await?;
+        connection.close(0_u32.into(), b"kilogram canonical sync v2 session complete");
+        drop(recovery_discovery_publisher);
+        endpoint.close().await;
+        return Ok(());
+    }
 
     let session_binding = SyncSessionBinding::from_transport_label(&endpoint.id().to_string());
     handle_authorized_application_connection(
@@ -22718,6 +23272,20 @@ async fn handle_authorized_application_connection(
             println!("status=runtime-mailbox-provider-gossip-exchanged");
             true
         }
+        ClientRequest::SyncTransportCandidateOffer(offer_bytes) => {
+            handle_sync_transport_candidate_offer(
+                state_directory,
+                device_state,
+                event_store,
+                listener_certificate,
+                current_ticket,
+                &authorized_requester,
+                &mut send,
+                &offer_bytes,
+            )
+            .await?;
+            true
+        }
         ClientRequest::AuthorizeDevice(_) => {
             bail!("device authorization cannot be repeated on an authorized connection")
         }
@@ -22726,6 +23294,135 @@ async fn handle_authorized_application_connection(
     if print_transport_after_request {
         print_transport_diagnostics(connection, route_policy).await?;
     }
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn handle_sync_transport_candidate_offer(
+    state_directory: &Path,
+    device_state: &DeviceState,
+    event_store: &EventStore,
+    listener_certificate: &DeviceCertificate,
+    current_ticket: &ConnectionTicket,
+    authorized_requester: &AuthorizedSessionDevice,
+    send: &mut SendStream,
+    offer_bytes: &[u8],
+) -> Result<()> {
+    let prepared = (|| {
+        let policy = load_canonical_sync_v2_runtime_policy(
+            state_directory,
+            listener_certificate.device_id(),
+        )?;
+        ensure!(
+            policy.permissions.register_canonical_alpn()
+                && policy.permissions.publish_canonical_capability()
+                && policy.permissions.accept_new_canonical_session(),
+            "local activation policy does not accept a new canonical sync v2 session"
+        );
+        let offer: SignedSyncTransportCandidateOffer = serde_json::from_slice(offer_bytes)
+            .context("decode signed canonical sync v2 candidate offer")?;
+        offer
+            .verify()
+            .context("verify canonical sync v2 candidate offer")?;
+        let capability = current_ticket.sync_transport_capability();
+        capability.verify_at(unix_time_now()?)?;
+        ensure!(
+            capability.candidate_protocols() == [SyncTransportProtocol::CanonicalCborV2],
+            "current ticket did not publish the canonical sync v2 candidate"
+        );
+        ensure!(
+            offer.listener_account_id() == listener_certificate.account_id()
+                && offer.listener_device_id() == listener_certificate.device_id()
+                && offer.requester_account_id() == authorized_requester.account_id()
+                && offer.requester_device_id() == authorized_requester.device_id()
+                && offer.listener_authority_revision()
+                    == current_ticket.listener_authority_snapshot().revision()
+                && offer.requester_authority_revision()
+                    == authorized_requester.authority_snapshot().revision()
+                && offer.migration_epoch() == canonical_sync_v2_selection_epoch(capability)?,
+            "canonical sync v2 candidate offer is outside the authenticated runtime context"
+        );
+        let conversation_id = ConversationId::from_bytes(offer.conversation_id());
+        let expected_session = canonical_sync_v2_session_binding(
+            conversation_id,
+            listener_certificate.device_id(),
+            authorized_requester.device_id(),
+        );
+        ensure!(
+            offer.session_binding() == *expected_session.as_bytes(),
+            "canonical sync v2 candidate offer has a non-stable session binding"
+        );
+        let trust = CommandTrustReadRepository::open(state_directory, device_state)?;
+        let membership = trust
+            .load_conversation_membership(conversation_id.scope_id())
+            .context("load canonical sync v2 conversation membership")?;
+        require_conversation_participants(
+            &membership,
+            listener_certificate.account_id(),
+            authorized_requester.account_id(),
+        )?;
+        let store =
+            CanonicalSyncV2CarrierStore::open(canonical_sync_v2_store_path(state_directory))?;
+        let plan = import_legacy_history_for_canonical_sync_v2(
+            &store,
+            event_store,
+            &membership,
+            conversation_id,
+        )?;
+        let membership_policy = CanonicalSyncV2MembershipPolicy::from_legacy(membership)?;
+        ensure_canonical_sync_v2_responder_bootstrap(
+            device_state.identity(),
+            &store,
+            &membership_policy,
+            &plan,
+            expected_session,
+            authorized_requester.device_id(),
+        )?;
+        let acceptance =
+            SignedSyncTransportCandidateAcceptance::issue(device_state.identity(), &offer)?;
+        let selection = PersistedCanonicalSyncV2Selection::new(
+            capability.clone(),
+            offer,
+            acceptance.clone(),
+            listener_certificate.clone(),
+            current_ticket.listener_authority_snapshot().clone(),
+            authorized_requester.certificate().clone(),
+            authorized_requester.authority_snapshot().clone(),
+        )?;
+        let selection_id = selection.selection_id()?;
+        let store_outcome = persist_canonical_sync_v2_selection(state_directory, &selection)?;
+        Ok::<_, anyhow::Error>((acceptance, selection_id, store_outcome, policy))
+    })();
+
+    let (acceptance, selection_id, store_outcome, policy) = match prepared {
+        Ok(value) => value,
+        Err(error) => {
+            write_server_response(send, &ServerResponse::SyncTransportCandidateRejected).await?;
+            return Err(error).context("reject canonical sync v2 candidate selection");
+        }
+    };
+    let response =
+        serde_json::to_vec(&acceptance).context("encode canonical sync v2 candidate acceptance")?;
+    write_server_response(
+        send,
+        &ServerResponse::SyncTransportCandidateAccepted(response),
+    )
+    .await?;
+    println!(
+        "sync_transport_selected_alpn={}",
+        String::from_utf8_lossy(CANONICAL_SYNC_ALPN_V2)
+    );
+    println!(
+        "sync_transport_selection_evidence_id={}",
+        encode_hex(&selection_id)
+    );
+    println!("sync_transport_selection_store={store_outcome:?}");
+    println!(
+        "sync_transport_selection_migration_epoch={}",
+        policy.migration_epoch
+    );
+    println!("sync_transport_fallback_after_selection=false");
+    println!("status=canonical-sync-v2-selected");
     Ok(())
 }
 
@@ -23218,6 +23915,7 @@ async fn accept_device_authorization(
             Ok(AuthorizedSessionDevice {
                 authorized,
                 certificate: requester_certificate,
+                authority_snapshot: authorization.authority_snapshot().clone(),
             })
         }
         Err(error) => {
@@ -23235,11 +23933,16 @@ async fn accept_device_authorization(
 struct AuthorizedSessionDevice {
     authorized: AuthorizedDevice,
     certificate: DeviceCertificate,
+    authority_snapshot: AccountAuthoritySnapshot,
 }
 
 impl AuthorizedSessionDevice {
     fn certificate(&self) -> &DeviceCertificate {
         &self.certificate
+    }
+
+    fn authority_snapshot(&self) -> &AccountAuthoritySnapshot {
+        &self.authority_snapshot
     }
 }
 
@@ -23943,6 +24646,127 @@ async fn connect(
     Ok(())
 }
 
+fn canonical_sync_v2_store_path(state_directory: &Path) -> PathBuf {
+    state_directory.join(CANONICAL_SYNC_V2_STORE_DIRECTORY)
+}
+
+fn import_legacy_history_for_canonical_sync_v2(
+    store: &CanonicalSyncV2CarrierStore,
+    event_store: &EventStore,
+    membership: &ConversationMembershipSnapshot,
+    conversation_id: ConversationId,
+) -> Result<CanonicalSyncV2LegacyImportPlan> {
+    let plan = event_store
+        .canonical_sync_v2_legacy_import_plan(conversation_id, membership)
+        .context("plan exact legacy history import for canonical sync v2")?;
+    let mut cursor = plan.start_cursor();
+    loop {
+        let progress = store
+            .import_legacy_page(
+                event_store,
+                membership,
+                &plan,
+                cursor,
+                MAX_CANONICAL_SYNC_V2_EVENTS_PER_BATCH,
+            )
+            .context("import exact legacy history page for canonical sync v2")?;
+        cursor = progress.cursor();
+        if progress.is_complete() {
+            break;
+        }
+    }
+    Ok(plan)
+}
+
+fn ensure_canonical_sync_v2_client_bootstrap(
+    identity: &DeviceIdentity,
+    store: &CanonicalSyncV2CarrierStore,
+    policy: &CanonicalSyncV2MembershipPolicy,
+    plan: &CanonicalSyncV2LegacyImportPlan,
+    session_binding: SyncSessionBinding,
+    listener_device_id: DeviceId,
+) -> Result<()> {
+    let client = CanonicalSyncV2Client::new(
+        identity,
+        store,
+        policy,
+        *plan.conversation_id().as_bytes(),
+        session_binding,
+        listener_device_id,
+    );
+    match client.restore_durable_runtime() {
+        Ok(_) => Ok(()),
+        Err(CanonicalSyncV2SessionError::DurableSessionMissing) => {
+            CanonicalSyncV2Client::bootstrap_from_completed_legacy_import(
+                identity,
+                store,
+                policy,
+                plan,
+                session_binding,
+                listener_device_id,
+            )?;
+            Ok(())
+        }
+        Err(error) => Err(error.into()),
+    }
+}
+
+fn ensure_canonical_sync_v2_responder_bootstrap(
+    identity: &DeviceIdentity,
+    store: &CanonicalSyncV2CarrierStore,
+    policy: &CanonicalSyncV2MembershipPolicy,
+    plan: &CanonicalSyncV2LegacyImportPlan,
+    session_binding: SyncSessionBinding,
+    requester_device_id: DeviceId,
+) -> Result<()> {
+    let server = CanonicalSyncV2Server::new(
+        identity,
+        store,
+        policy,
+        *plan.conversation_id().as_bytes(),
+        session_binding,
+        requester_device_id,
+    );
+    match server.restore_durable_responder_runtime() {
+        Ok(_) => Ok(()),
+        Err(CanonicalSyncV2SessionError::DurableSessionMissing) => {
+            CanonicalSyncV2Server::bootstrap_responder_from_completed_legacy_import(
+                identity,
+                store,
+                policy,
+                plan,
+                session_binding,
+                requester_device_id,
+            )?;
+            Ok(())
+        }
+        Err(error) => Err(error.into()),
+    }
+}
+
+fn materialize_canonical_sync_v2_legacy_carriers(
+    store: &CanonicalSyncV2CarrierStore,
+    decrypting_store: &DecryptingSessionStore<'_>,
+    membership: &ConversationMembershipSnapshot,
+    conversation_id: ConversationId,
+) -> Result<usize> {
+    let event_keys = store.inventory(*conversation_id.as_bytes())?;
+    let carriers = store.events_by_key(*conversation_id.as_bytes(), &event_keys)?;
+    let mut events = Vec::with_capacity(carriers.len());
+    for carrier in carriers {
+        let CanonicalSyncEventCarrierV2::LegacyPostcardV6(bridge) = carrier else {
+            bail!(
+                "canonical-native history materialization is not enabled during the opt-in dark launch"
+            );
+        };
+        events.push(bridge.active_authorized_event().clone());
+    }
+    decrypting_store
+        .put_events(&events, membership)
+        .context("materialize canonical sync v2 legacy carriers into active history")?;
+    Ok(events.len())
+}
+
 async fn sync(
     state_dir: PathBuf,
     ticket: Option<String>,
@@ -23956,6 +24780,8 @@ async fn sync(
         "--max-rounds must be between 1 and {MAX_SYNC_ROUNDS}"
     );
     let device_state = load_command_device_state(&state_dir)?;
+    let canonical_sync_v2_policy =
+        load_canonical_sync_v2_runtime_policy(&state_dir, device_state.identity().device_id())?;
     let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
     let requester_certificate = trust
         .load_certificate()
@@ -23991,7 +24817,7 @@ async fn sync(
         &DeviceCapability::MESSAGING,
     )
     .context("this device account is not authorized by the connection ticket")?;
-    let session_binding =
+    let legacy_session_binding =
         SyncSessionBinding::from_transport_label(&ticket.endpoint().id.to_string());
     let conversation_id = ConversationId::from_label(&conversation);
     let membership = trust
@@ -24016,7 +24842,7 @@ async fn sync(
         &decrypting_store,
         conversation_id,
         &membership,
-        session_binding,
+        legacy_session_binding,
         expected_listener_device_id,
     );
 
@@ -24034,12 +24860,231 @@ async fn sync(
     );
     println!("target_authority_store={listener_snapshot_store:?}");
     println!("route_policy={}", route_policy.as_str());
+    print_canonical_sync_v2_runtime_policy(canonical_sync_v2_policy);
     print_connection_target(&ticket);
 
     if route_policy == RoutePolicy::RelayOnly {
         wait_for_relay(&endpoint, route_policy, CLIENT_RELAY_WAIT_SECONDS).await?;
     }
 
+    let requester_device_id = device_state.identity().device_id();
+    let mut canonical_selection = selected_canonical_sync_v2_session(
+        &state_dir,
+        requester_certificate.account_id(),
+        requester_device_id,
+        conversation_id,
+        expected_listener_device_id,
+        requester_device_id,
+    )?;
+    if canonical_selection.is_some()
+        && !canonical_sync_v2_policy
+            .permissions
+            .resume_selected_canonical_session()
+    {
+        bail!(
+            "a persisted canonical sync v2 selection exists, but local activation policy forbids its resume; legacy fallback is prohibited"
+        );
+    }
+
+    let can_initiate_canonical = canonical_selection.is_none()
+        && canonical_sync_v2_policy
+            .permissions
+            .initiate_new_canonical_session()
+        && ticket.sync_transport_capability().candidate_protocols()
+            == [SyncTransportProtocol::CanonicalCborV2];
+
+    let canonical_store = if canonical_selection.is_some() || can_initiate_canonical {
+        let store = CanonicalSyncV2CarrierStore::open(canonical_sync_v2_store_path(&state_dir))?;
+        let plan = import_legacy_history_for_canonical_sync_v2(
+            &store,
+            &event_store,
+            &membership,
+            conversation_id,
+        )?;
+        let membership_policy = CanonicalSyncV2MembershipPolicy::from_legacy(membership.clone())?;
+        let stable_binding = canonical_sync_v2_session_binding(
+            conversation_id,
+            expected_listener_device_id,
+            requester_device_id,
+        );
+        ensure_canonical_sync_v2_client_bootstrap(
+            device_state.identity(),
+            &store,
+            &membership_policy,
+            &plan,
+            stable_binding,
+            expected_listener_device_id,
+        )?;
+        Some((store, membership_policy, stable_binding))
+    } else {
+        None
+    };
+
+    if can_initiate_canonical {
+        let negotiation_connection = timeout(
+            CONNECTION_TIMEOUT,
+            endpoint.connect(ticket.endpoint().clone(), ALPN),
+        )
+        .await
+        .with_context(|| {
+            timeout_message(
+                "connect to listening endpoint for canonical selection",
+                CONNECTION_TIMEOUT,
+            )
+        })?
+        .context("connect to listening endpoint for canonical selection")?;
+        let ready_path =
+            await_route_policy(&negotiation_connection, route_policy, ROUTE_POLICY_WAIT)
+                .await
+                .context("wait for canonical selection path allowed by the connection ticket")?;
+        print_ready_path(&ready_path);
+        authorize_with_listener(
+            &negotiation_connection,
+            device_state.identity(),
+            requester_certificate.clone(),
+            requester_authority_snapshot.clone(),
+            legacy_session_binding,
+        )
+        .await?;
+        let (_, _, stable_binding) = canonical_store
+            .as_ref()
+            .context("canonical client store was not prepared")?;
+        let offer = SignedSyncTransportCandidateOffer::issue(
+            device_state.identity(),
+            SyncTransportCandidateOfferBinding {
+                listener_capability_id: ticket.sync_transport_capability().artifact_id()?,
+                conversation_id: *conversation_id.as_bytes(),
+                listener_account_id: authorized_listener.account_id(),
+                listener_device_id: expected_listener_device_id,
+                requester_account_id: requester_certificate.account_id(),
+                requester_device_id,
+                session_binding: *stable_binding.as_bytes(),
+                listener_authority_revision: ticket.listener_authority_snapshot().revision(),
+                requester_authority_revision: requester_authority_snapshot.revision(),
+                migration_epoch: canonical_sync_v2_selection_epoch(
+                    ticket.sync_transport_capability(),
+                )?,
+            },
+        )?;
+        let offer_bytes =
+            serde_json::to_vec(&offer).context("encode canonical sync v2 candidate offer")?;
+        let (mut send, mut receive) = open_bi(
+            &negotiation_connection,
+            "open canonical sync v2 selection stream",
+        )
+        .await?;
+        write_client_request(
+            &mut send,
+            &ClientRequest::SyncTransportCandidateOffer(offer_bytes),
+        )
+        .await?;
+        let acceptance = match read_server_response(&mut receive).await? {
+            ServerResponse::SyncTransportCandidateAccepted(bytes) => {
+                serde_json::from_slice::<SignedSyncTransportCandidateAcceptance>(&bytes)
+                    .context("decode canonical sync v2 candidate acceptance")?
+            }
+            ServerResponse::SyncTransportCandidateRejected => {
+                bail!("listener rejected the canonical sync v2 candidate selection")
+            }
+            _ => bail!("canonical sync v2 selection expected a candidate response"),
+        };
+        let selection = PersistedCanonicalSyncV2Selection::new(
+            ticket.sync_transport_capability().clone(),
+            offer,
+            acceptance,
+            ticket.listener_certificate().clone(),
+            ticket.listener_authority_snapshot().clone(),
+            requester_certificate.clone(),
+            requester_authority_snapshot.clone(),
+        )?;
+        let selection_id = selection.selection_id()?;
+        let selection_store = persist_canonical_sync_v2_selection(&state_dir, &selection)?;
+        println!(
+            "sync_transport_selected_alpn={}",
+            String::from_utf8_lossy(CANONICAL_SYNC_ALPN_V2)
+        );
+        println!(
+            "sync_transport_selection_evidence_id={}",
+            encode_hex(&selection_id)
+        );
+        println!("sync_transport_selection_store={selection_store:?}");
+        println!("sync_transport_fallback_after_selection=false");
+        canonical_selection = Some(selection);
+        negotiation_connection.close(
+            0_u32.into(),
+            b"kilogram canonical sync v2 selection persisted",
+        );
+    }
+
+    if let Some(selection) = canonical_selection {
+        selection.verify()?;
+        let (store, membership_policy, stable_binding) = canonical_store
+            .as_ref()
+            .context("canonical sync v2 selected without a prepared durable store")?;
+        ensure!(
+            selection.session_binding() == *stable_binding,
+            "persisted canonical selection changed its stable session binding"
+        );
+        let connection = timeout(
+            CONNECTION_TIMEOUT,
+            endpoint.connect(ticket.endpoint().clone(), CANONICAL_SYNC_ALPN_V2),
+        )
+        .await
+        .with_context(|| {
+            timeout_message(
+                "connect to selected canonical sync v2 endpoint",
+                CONNECTION_TIMEOUT,
+            )
+        })?
+        .context("connect to selected canonical sync v2 endpoint")?;
+        let ready_path = await_route_policy(&connection, route_policy, ROUTE_POLICY_WAIT)
+            .await
+            .context("wait for a selected canonical sync v2 path")?;
+        print_ready_path(&ready_path);
+        let canonical_client = CanonicalSyncV2Client::new(
+            device_state.identity(),
+            store,
+            membership_policy,
+            *conversation_id.as_bytes(),
+            *stable_binding,
+            expected_listener_device_id,
+        );
+        let outcome = drive_canonical_sync_v2_client(&connection, &canonical_client, false)
+            .await
+            .context("drive selected canonical sync v2 client without fallback")?;
+        ensure!(
+            outcome == CanonicalSyncV2ClientOutcome::Complete,
+            "canonical sync v2 client stopped before durable completion"
+        );
+        let materialized = materialize_canonical_sync_v2_legacy_carriers(
+            store,
+            &decrypting_store,
+            &membership,
+            conversation_id,
+        )?;
+        println!(
+            "sync_transport_selected_alpn={}",
+            String::from_utf8_lossy(CANONICAL_SYNC_ALPN_V2)
+        );
+        println!(
+            "sync_transport_selection_evidence_id={}",
+            encode_hex(&selection.selection_id()?)
+        );
+        println!("sync_transport_fallback_after_selection=false");
+        println!("canonical_sync_v2_materialized_events={materialized}");
+        println!("status=synchronized");
+        print_transport_diagnostics(&connection, route_policy).await?;
+        connection.close(0_u32.into(), b"kilogram canonical sync v2 complete");
+        endpoint.close().await;
+        return Ok(());
+    }
+
+    println!(
+        "sync_transport_selected_alpn={}",
+        String::from_utf8_lossy(ALPN)
+    );
+    println!("sync_transport_selection_evidence_id=none");
+    println!("sync_transport_fallback_after_selection=false");
     let connection = timeout(
         CONNECTION_TIMEOUT,
         endpoint.connect(ticket.endpoint().clone(), ALPN),
@@ -24059,7 +25104,7 @@ async fn sync(
         device_state.identity(),
         requester_certificate,
         requester_authority_snapshot,
-        session_binding,
+        legacy_session_binding,
     )
     .await?;
 
@@ -26199,6 +27244,74 @@ fn load_canonical_sync_v2_activation_high_water(
         SignedCanonicalSyncV2ActivationHighWater::decode_and_verify(&encoded, local_device_id)
             .context("verify canonical sync v2 activation high-water")?,
     ))
+}
+
+fn load_canonical_sync_v2_runtime_policy(
+    state_directory: &Path,
+    local_device_id: DeviceId,
+) -> Result<CanonicalSyncV2RuntimePolicy> {
+    let records = load_canonical_sync_v2_activation_records(state_directory, local_device_id)?;
+    let high_water =
+        load_canonical_sync_v2_activation_high_water(state_directory, local_device_id)?;
+    let Some(head) = verify_canonical_sync_v2_activation_authority(
+        &records,
+        high_water.as_ref(),
+        local_device_id,
+    )
+    .context("verify canonical sync v2 activation authority for runtime")?
+    else {
+        return CanonicalSyncV2RuntimePolicy::legacy_default();
+    };
+    Ok(CanonicalSyncV2RuntimePolicy {
+        migration_state: head.migration_state(),
+        disposition: head.disposition(),
+        migration_epoch: head.migration_epoch(),
+        canonical_evidence_id: head.canonical_evidence_id(),
+        permissions: head.permissions()?,
+    })
+}
+
+fn print_canonical_sync_v2_runtime_policy(policy: CanonicalSyncV2RuntimePolicy) {
+    println!(
+        "canonical_sync_v2_policy_state={}",
+        canonical_sync_v2_migration_state_name(policy.migration_state)
+    );
+    println!(
+        "canonical_sync_v2_policy_disposition={}",
+        canonical_sync_v2_activation_disposition_name(policy.disposition)
+    );
+    println!(
+        "canonical_sync_v2_migration_epoch={}",
+        policy.migration_epoch
+    );
+    println!(
+        "canonical_sync_v2_containment={}",
+        policy.disposition == CanonicalSyncV2ActivationDisposition::EmergencyContainment
+    );
+    println!(
+        "canonical_sync_v2_alpn_registered={}",
+        policy.permissions.register_canonical_alpn()
+    );
+    println!(
+        "canonical_sync_v2_capability_published={}",
+        policy.permissions.publish_canonical_capability()
+    );
+    println!(
+        "canonical_sync_v2_new_accept_enabled={}",
+        policy.permissions.accept_new_canonical_session()
+    );
+    println!(
+        "canonical_sync_v2_new_initiate_enabled={}",
+        policy.permissions.initiate_new_canonical_session()
+    );
+    println!(
+        "canonical_sync_v2_selected_resume_enabled={}",
+        policy.permissions.resume_selected_canonical_session()
+    );
+    println!(
+        "canonical_sync_v2_evidence_bound={}",
+        policy.canonical_evidence_id.is_some()
+    );
 }
 
 fn publish_canonical_sync_v2_activation_high_water(
@@ -33279,6 +34392,7 @@ mod tests {
                 &expired_directory,
                 alice_root.account_id(),
                 bob_tickets[index].ticket_publication_channel_epoch(),
+                false,
             )?;
             let expired_content = ConnectionTicketContent {
                 version: TICKET_VERSION,
@@ -34533,10 +35647,7 @@ mod tests {
             capability.active_protocols(),
             [kilogram_sync_capability::SyncTransportProtocol::LegacyPostcardV6]
         );
-        assert_eq!(
-            capability.candidate_protocols(),
-            [kilogram_sync_capability::SyncTransportProtocol::CanonicalCborV2]
-        );
+        assert!(capability.candidate_protocols().is_empty());
         assert!(!capability.canonical_dial_enabled());
         decoded.verify_listener_authorization(listener_account_id)?;
         assert!(
@@ -34544,6 +35655,130 @@ mod tests {
                 .verify_listener_authorization(allowed_requester_account_id)
                 .is_err()
         );
+        Ok(())
+    }
+
+    #[test]
+    fn connection_ticket_publishes_canonical_candidate_only_when_policy_allows_it() -> Result<()> {
+        let endpoint = EndpointAddr::new(SecretKey::generate().public());
+        let listener_identity = DeviceIdentity::generate()?;
+        let (_, listener_certificate, _, listener_directory) = authority_for(&listener_identity)?;
+        let requester_identity = DeviceIdentity::generate()?;
+        let (allowed_requester_account_id, _, _, _) = authority_for(&requester_identity)?;
+
+        let ticket = ConnectionTicket::new_with_publication_channel_epoch_and_sync_policy(
+            endpoint,
+            &listener_identity,
+            listener_certificate,
+            listener_directory,
+            allowed_requester_account_id,
+            RoutePolicy::Auto,
+            7,
+            true,
+        )?;
+
+        assert!(ticket.publishes_canonical_sync_v2_candidate());
+        assert_eq!(
+            ticket.sync_transport_capability().active_protocols(),
+            [SyncTransportProtocol::LegacyPostcardV6]
+        );
+        assert!(!ticket.sync_transport_capability().canonical_dial_enabled());
+        ticket.verify()?;
+        Ok(())
+    }
+
+    #[test]
+    fn persisted_canonical_selection_is_mutually_signed_and_context_bound() -> Result<()> {
+        let endpoint = EndpointAddr::new(SecretKey::generate().public());
+        let listener_identity = DeviceIdentity::generate()?;
+        let (_, listener_certificate, listener_authority_snapshot, listener_directory) =
+            authority_for(&listener_identity)?;
+        let requester_identity = DeviceIdentity::generate()?;
+        let (requester_account_id, requester_certificate, requester_authority_snapshot, _) =
+            authority_for(&requester_identity)?;
+        let ticket = ConnectionTicket::new_with_publication_channel_epoch_and_sync_policy(
+            endpoint,
+            &listener_identity,
+            listener_certificate.clone(),
+            listener_directory,
+            requester_account_id,
+            RoutePolicy::Auto,
+            3,
+            true,
+        )?;
+        let conversation_id = ConversationId::from_label("canonical-selection-persistence");
+        let session_binding = canonical_sync_v2_session_binding(
+            conversation_id,
+            listener_identity.device_id(),
+            requester_identity.device_id(),
+        );
+        let offer = SignedSyncTransportCandidateOffer::issue(
+            &requester_identity,
+            SyncTransportCandidateOfferBinding {
+                listener_capability_id: ticket.sync_transport_capability().artifact_id()?,
+                conversation_id: *conversation_id.as_bytes(),
+                listener_account_id: ticket.listener_account_id(),
+                listener_device_id: listener_identity.device_id(),
+                requester_account_id,
+                requester_device_id: requester_identity.device_id(),
+                session_binding: *session_binding.as_bytes(),
+                listener_authority_revision: listener_authority_snapshot.revision(),
+                requester_authority_revision: requester_authority_snapshot.revision(),
+                migration_epoch: 4,
+            },
+        )?;
+        let acceptance = SignedSyncTransportCandidateAcceptance::issue(&listener_identity, &offer)?;
+        let selection = PersistedCanonicalSyncV2Selection::new(
+            ticket.sync_transport_capability().clone(),
+            offer,
+            acceptance,
+            listener_certificate,
+            listener_authority_snapshot,
+            requester_certificate,
+            requester_authority_snapshot,
+        )?;
+
+        selection.verify()?;
+        assert_eq!(selection.conversation_id(), conversation_id);
+        assert_eq!(selection.session_binding(), session_binding);
+        assert_eq!(selection.selection_id()?, selection.selection_id()?);
+
+        let wrong_generation_offer = SignedSyncTransportCandidateOffer::issue(
+            &requester_identity,
+            SyncTransportCandidateOfferBinding {
+                listener_capability_id: ticket.sync_transport_capability().artifact_id()?,
+                conversation_id: *conversation_id.as_bytes(),
+                listener_account_id: ticket.listener_account_id(),
+                listener_device_id: listener_identity.device_id(),
+                requester_account_id,
+                requester_device_id: requester_identity.device_id(),
+                session_binding: *session_binding.as_bytes(),
+                listener_authority_revision: selection.listener_authority_snapshot.revision(),
+                requester_authority_revision: selection.requester_authority_snapshot.revision(),
+                migration_epoch: 5,
+            },
+        )?;
+        let wrong_generation_acceptance = SignedSyncTransportCandidateAcceptance::issue(
+            &listener_identity,
+            &wrong_generation_offer,
+        )?;
+        let error = PersistedCanonicalSyncV2Selection::new(
+            ticket.sync_transport_capability().clone(),
+            wrong_generation_offer,
+            wrong_generation_acceptance,
+            selection.listener_certificate.clone(),
+            selection.listener_authority_snapshot.clone(),
+            selection.requester_certificate.clone(),
+            selection.requester_authority_snapshot.clone(),
+        )
+        .err()
+        .context("wrong selection generation unexpectedly verified")?;
+        assert!(format!("{error:#}").contains("selection generation"));
+
+        let mut tampered = serde_json::to_value(&selection)?;
+        tampered["offer"]["content"]["migration_epoch"] = serde_json::json!(12);
+        let tampered: PersistedCanonicalSyncV2Selection = serde_json::from_value(tampered)?;
+        assert!(tampered.verify().is_err());
         Ok(())
     }
 
@@ -34820,6 +36055,7 @@ mod tests {
             &directory,
             requester_account_id,
             0,
+            false,
         )?;
         ticket.signature = identity
             .sign(&ticket_signing_bytes(&ticket.content)?)

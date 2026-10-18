@@ -14,6 +14,7 @@ $cddlPath = Join-Path $workspace 'CANONICAL-SYNC-V2.cddl'
 $compatibilityPath = Join-Path $workspace 'CANONICAL-SYNC-HISTORY-COMPATIBILITY.json'
 $migrationPath = Join-Path $workspace 'CANONICAL-MIGRATION.json'
 $transportManifestPath = Join-Path $workspace 'CANONICAL-TRANSPORT-SYNC.json'
+$darkLaunchPath = Join-Path $workspace 'CANONICAL-SYNC-V2-PRODUCTION-DARK-LAUNCH.json'
 $coveragePath = Join-Path $workspace 'CANONICAL-COVERAGE.json'
 $rustPath = Join-Path $workspace 'crates\kilogram-protocol\src\canonical_sync_v2.rs'
 $protocolPath = Join-Path $workspace 'crates\kilogram-protocol\src\lib.rs'
@@ -50,6 +51,7 @@ function Assert-Contract {
         [object]$Compatibility,
         [object]$Migration,
         [object]$TransportManifest,
+        [object]$DarkLaunch,
         [object]$Coverage,
         [string]$Rust,
         [string]$Protocol,
@@ -214,11 +216,25 @@ function Assert-Contract {
         $Transport.IndexOf('CANONICAL_SYNC_ALPN_V2', [StringComparison]::Ordinal) -lt 0) {
         throw 'canonical sync v2 module or allocated ALPN is missing'
     }
-    foreach ($activeSource in @($ActiveWire, $Cli)) {
-        if ($activeSource.IndexOf('CANONICAL_SYNC_ALPN_V2', [StringComparison]::Ordinal) -ge 0 -or
-            $activeSource.IndexOf('CanonicalSyncClientFrameV2', [StringComparison]::Ordinal) -ge 0 -or
-            $activeSource.IndexOf($successorAlpn, [StringComparison]::Ordinal) -ge 0) {
-            throw 'inactive canonical sync v2 frames leaked into active runtime'
+    if ([string]$DarkLaunch.milestone -cne 'M1.1.83' -or
+        [string]$DarkLaunch.status -cne
+            'canonical-sync-v2-production-runtime-opt-in-integrated' -or
+        -not [bool]$DarkLaunch.changes_active_wire -or
+        [string]$DarkLaunch.public_default -cne 'legacy-only' -or
+        [string]$DarkLaunch.canonical_protocol_identifier -cne $successorAlpn -or
+        [bool]$DarkLaunch.canonical_runtime.selected_error_fallback_to_legacy) {
+        throw 'canonical sync v2 production activation boundary changed'
+    }
+    if ($ActiveWire.IndexOf('CanonicalSyncClientFrameV2', [StringComparison]::Ordinal) -ge 0) {
+        throw 'canonical CBOR frame codec leaked into the legacy Postcard envelope'
+    }
+    foreach ($required in @(
+        'CANONICAL_SYNC_ALPN_V2',
+        'drive_canonical_sync_v2_client',
+        'sync_transport_fallback_after_selection=false'
+    )) {
+        if ($Cli.IndexOf($required, [StringComparison]::Ordinal) -lt 0) {
+            throw "opt-in production canonical runtime is missing '$required'"
         }
     }
     foreach ($required in @(
@@ -245,7 +261,7 @@ function Assert-Contract {
 foreach ($path in @(
     $schemaPath, $vectorsPath, $historyVectorsPath, $legacyVectorsPath,
     $eventVectorsPath, $cddlPath, $compatibilityPath, $migrationPath,
-    $transportManifestPath, $coveragePath, $rustPath, $protocolPath,
+    $transportManifestPath, $darkLaunchPath, $coveragePath, $rustPath, $protocolPath,
     $transportPath, $activeWirePath, $cliPath, $referencePath, $rfcPath
 )) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
@@ -258,6 +274,7 @@ $vectors = Get-Content -LiteralPath $vectorsPath -Raw | ConvertFrom-Json
 $compatibility = Get-Content -LiteralPath $compatibilityPath -Raw | ConvertFrom-Json
 $migration = Get-Content -LiteralPath $migrationPath -Raw | ConvertFrom-Json
 $transportManifest = Get-Content -LiteralPath $transportManifestPath -Raw | ConvertFrom-Json
+$darkLaunch = Get-Content -LiteralPath $darkLaunchPath -Raw | ConvertFrom-Json
 $coverage = Get-Content -LiteralPath $coveragePath -Raw | ConvertFrom-Json
 $rust = Get-Content -LiteralPath $rustPath -Raw
 $protocol = Get-Content -LiteralPath $protocolPath -Raw
@@ -268,7 +285,7 @@ $cddl = Get-Content -LiteralPath $cddlPath -Raw
 $rfc = Get-Content -LiteralPath $rfcPath -Raw
 
 Assert-Contract $schema $vectors $compatibility $migration $transportManifest `
-    $coverage $rust $protocol $transport $activeWire $cli $cddl $rfc
+    $darkLaunch $coverage $rust $protocol $transport $activeWire $cli $cddl $rfc
 
 $referenceArguments = @(
     $referencePath, '--schema', $schemaPath, '--vectors', $vectorsPath,
@@ -287,14 +304,14 @@ if ($SelfTest) {
     $activated.activation.registered_or_dialed = $true
     Assert-Rejected {
         Assert-Contract $activated $vectors $compatibility $migration $transportManifest `
-            $coverage $rust $protocol $transport $activeWire $cli $cddl $rfc
+            $darkLaunch $coverage $rust $protocol $transport $activeWire $cli $cddl $rfc
     } 'premature_sync_v2_activation'
 
     $variant = Copy-JsonObject $schema
     $variant.variant_registry.client.'1' = 'sync-event-batch-v2'
     Assert-Rejected {
         Assert-Contract $variant $vectors $compatibility $migration $transportManifest `
-            $coverage $rust $protocol $transport $activeWire $cli $cddl $rfc
+            $darkLaunch $coverage $rust $protocol $transport $activeWire $cli $cddl $rfc
     } 'changed_sync_v2_variant_registry'
     Write-Output 'canonical_sync_v2_self_test=passed'
 }
@@ -303,7 +320,6 @@ Write-Output 'canonical_sync_v2_boundary=verified'
 Write-Output 'history_compatible_sync_frames=verified'
 Write-Output 'typed_session_checkpoint=verified'
 Write-Output 'authenticated_ticket_capability=verified'
-Write-Output 'candidate_identifier_registered=false'
-Write-Output 'candidate_identifier_dialed=false'
-Write-Output 'active_runtime_changed=false'
-Write-Output 'network_executed=false'
+Write-Output 'historical_schema_activation=false'
+Write-Output 'public_default=legacy-only'
+Write-Output 'opt_in_runtime_integrated=true'
