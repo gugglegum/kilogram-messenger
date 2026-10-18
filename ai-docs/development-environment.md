@@ -4900,3 +4900,22 @@ Hosted follow-up:
 - Public default remains `kilogram/m0/sync/8`; `/cbor/2` is available only via
   verified local Device authority and mutual selection. No release, ZIP, tag
   or automatic GitHub workflow was created.
+
+## M1.1.86 desktop activation environment (2026-10-19)
+
+- Изменены только `kilogram-windows`, новый manifest/RFC и boundary scripts;
+  wire codec, decoder, runtime endpoint и IPC protocol не менялись.
+- Desktop activation запускает существующий debug `kilogram-cli.exe` только
+  при stopped/disconnected runtime. CLI остаётся владельцем state lock, vault и
+  Device signing key; GUI получает только проверенный текстовый результат.
+- `cargo test -p kilogram-windows --lib --locked --offline --jobs 2` необходимо
+  запускать вне filesystem sandbox: redirected Temp внутри sandbox даёт
+  инфраструктурный Windows `os error 5` в существующих filesystem tests.
+  Вне sandbox весь desktop suite прошёл 25/25 до дополнительного rights-matrix
+  усиления; финальный прогон включает новые negative cases.
+- Targeted all-target/all-feature locked/offline strict Clippy прошёл. Fresh
+  CLI smoke в `.tmp/m1186-desktop-activation-smoke-20261019T003440Z` прошёл
+  implicit legacy-only status, no-write plan, exact apply и verified signed
+  epoch-one head `23aac6b46fc61e41673c2150c73c74695b5481432f9e2e061df97c534a7e8fdf`.
+- Build policy: debug only, Cargo jobs 2. Network, release build, ZIP/archive,
+  tag и automatic GitHub build не выполнялись.

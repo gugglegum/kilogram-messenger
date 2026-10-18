@@ -1,4 +1,29 @@
-# Завершённый большой этап: M1.1.81–M1.1.85
+# Текущая точка: M1.1.86 завершён локально
+
+Статус: `canonical-sync-v2-desktop-offline-activation-verified`; публичный
+default остаётся `legacy-only`.
+
+Windows desktop получил advanced-панель для безопасного просмотра, plan и
+apply уже существующей Device-signed activation authority. Церемония работает
+только при остановленном/disconnected runtime и запускает существующие CLI
+команды под state lock: GUI не получает Device signing key или Account Root
+secret. Plan ничего не пишет, apply требует exact candidate record ID и фразу
+`APPLY <первые 12 hex>`, а после записи повторный status обязан показать тот же
+head. Любая смена draft инвалидирует plan и confirmation.
+
+Live IPC намеренно не расширен: endpoint/ALPN list строятся при старте, поэтому
+запись policy в работающий runtime создала бы расхождение между durable policy
+и in-memory transport. После apply нужен новый запуск runtime. Отдельная
+fail-closed проверка сверяет все шесть прав helper-а с точной policy matrix.
+
+Следующий отдельный пакет — M1.1.87: read-only runtime observability загруженной
+activation policy и реально выбранного sync path в desktop после restart. Он
+может расширить IPC только чтением, не должен выдавать authority, менять
+public default или добавлять hot apply. До реализации надо спроектировать
+versioned snapshot, честно различающий durable configured policy, policy,
+загруженную текущим процессом, и negotiated path конкретной сессии.
+
+## Исторический план M1.1.81–M1.1.85
 
 Статус: завершён; итоговый статус
 `canonical-sync-v2-opt-in-dark-launch-verified`, публичный default остаётся

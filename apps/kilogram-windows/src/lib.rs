@@ -31,7 +31,13 @@ use kilogram_runtime_ipc::{
 };
 use zeroize::{Zeroize as _, Zeroizing};
 
+mod activation;
 mod wizard;
+
+use activation::{
+    ActivationPlan, ActivationStatus, ActivationUiAction, ActivationView, Disposition,
+    MigrationState,
+};
 
 use wizard::{
     AccountRecoveryOutput, AccountRecoveryStatusOutput, DeviceLinkAcceptOutput,
@@ -230,6 +236,9 @@ enum Operation {
     PublicationChannelRotate,
     PublicationConflictRequest,
     PublicationConflictApply,
+    CanonicalActivationStatus,
+    CanonicalActivationPlan,
+    CanonicalActivationApply,
     Connect,
     AddContact,
     Queue,
@@ -259,6 +268,9 @@ enum RuntimeUiAction {
     RotateMailbox,
     RevokeMailbox,
     RefreshMailboxStatus,
+    RefreshCanonicalActivation,
+    PlanCanonicalActivation,
+    ApplyCanonicalActivation,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -1330,7 +1342,10 @@ impl ViewModel {
                 | WorkerSuccess::RecoveryReconciled(_)
                 | WorkerSuccess::PublicationChannelRotated(_)
                 | WorkerSuccess::PublicationConflictRequested(_)
-                | WorkerSuccess::PublicationConflictApplied(_),
+                | WorkerSuccess::PublicationConflictApplied(_)
+                | WorkerSuccess::CanonicalActivationStatus(_)
+                | WorkerSuccess::CanonicalActivationPlanned(_)
+                | WorkerSuccess::CanonicalActivationApplied { .. },
             ) => {
                 self.error = Some("Wizard result reached the runtime view model".to_owned());
             }
@@ -1507,6 +1522,27 @@ enum WorkerRequest {
         ipc_file: PathBuf,
         response_file: PathBuf,
     },
+    CanonicalActivationStatus {
+        executable: PathBuf,
+        state_dir: PathBuf,
+    },
+    CanonicalActivationPlan {
+        executable: PathBuf,
+        state_dir: PathBuf,
+        migration_state: MigrationState,
+        disposition: Disposition,
+        reason: String,
+        canonical_evidence_id: Option<String>,
+    },
+    CanonicalActivationApply {
+        executable: PathBuf,
+        state_dir: PathBuf,
+        migration_state: MigrationState,
+        disposition: Disposition,
+        reason: String,
+        canonical_evidence_id: Option<String>,
+        expected_record_id: String,
+    },
     Connect {
         descriptor: PathBuf,
     },
@@ -1618,6 +1654,9 @@ impl WorkerRequest {
             Self::PublicationChannelRotate { .. } => Operation::PublicationChannelRotate,
             Self::PublicationConflictRequest { .. } => Operation::PublicationConflictRequest,
             Self::PublicationConflictApply { .. } => Operation::PublicationConflictApply,
+            Self::CanonicalActivationStatus { .. } => Operation::CanonicalActivationStatus,
+            Self::CanonicalActivationPlan { .. } => Operation::CanonicalActivationPlan,
+            Self::CanonicalActivationApply { .. } => Operation::CanonicalActivationApply,
             Self::Connect { .. } => Operation::Connect,
             Self::AddContact { .. } => Operation::AddContact,
             Self::Queue { .. } => Operation::Queue,
@@ -1683,6 +1722,12 @@ enum WorkerSuccess {
     PublicationChannelRotated(RecoveryCommandOutput),
     PublicationConflictRequested(RecoveryCommandOutput),
     PublicationConflictApplied(RecoveryCommandOutput),
+    CanonicalActivationStatus(ActivationStatus),
+    CanonicalActivationPlanned(ActivationPlan),
+    CanonicalActivationApplied {
+        applied_record_id: String,
+        status: ActivationStatus,
+    },
     Connected {
         account_id: String,
         device_id: String,
@@ -2528,6 +2573,122 @@ async fn execute_request(request: WorkerRequest) -> Result<WorkerSuccess> {
             );
             Ok(WorkerSuccess::PublicationConflictApplied(output))
         }
+        WorkerRequest::CanonicalActivationStatus {
+            executable,
+            state_dir,
+        } => {
+            let output = run_recovery_command(
+                &executable,
+                "canonical-sync-policy-status",
+                command_arguments([("--state-dir", state_dir.as_os_str())]),
+            )?;
+            Ok(WorkerSuccess::CanonicalActivationStatus(
+                ActivationStatus::parse(&output)?,
+            ))
+        }
+        WorkerRequest::CanonicalActivationPlan {
+            executable,
+            state_dir,
+            migration_state,
+            disposition,
+            reason,
+            canonical_evidence_id,
+        } => {
+            let mut arguments = command_arguments([
+                ("--state-dir", state_dir.as_os_str()),
+                (
+                    "--migration-state",
+                    std::ffi::OsStr::new(migration_state.cli_value()),
+                ),
+                (
+                    "--disposition",
+                    std::ffi::OsStr::new(disposition.cli_value()),
+                ),
+                ("--actor", std::ffi::OsStr::new("explicit-local")),
+                ("--reason", std::ffi::OsStr::new(&reason)),
+            ]);
+            if let Some(evidence_id) = canonical_evidence_id {
+                arguments.extend(command_arguments([(
+                    "--canonical-evidence-id",
+                    std::ffi::OsStr::new(&evidence_id),
+                )]));
+            }
+            let output =
+                run_recovery_command(&executable, "canonical-sync-policy-plan", arguments)?;
+            Ok(WorkerSuccess::CanonicalActivationPlanned(
+                ActivationPlan::parse(&output)?,
+            ))
+        }
+        WorkerRequest::CanonicalActivationApply {
+            executable,
+            state_dir,
+            migration_state,
+            disposition,
+            reason,
+            canonical_evidence_id,
+            expected_record_id,
+        } => {
+            let mut arguments = command_arguments([
+                ("--state-dir", state_dir.as_os_str()),
+                (
+                    "--migration-state",
+                    std::ffi::OsStr::new(migration_state.cli_value()),
+                ),
+                (
+                    "--disposition",
+                    std::ffi::OsStr::new(disposition.cli_value()),
+                ),
+                ("--actor", std::ffi::OsStr::new("explicit-local")),
+                ("--reason", std::ffi::OsStr::new(&reason)),
+                (
+                    "--expected-record-id",
+                    std::ffi::OsStr::new(&expected_record_id),
+                ),
+            ]);
+            if let Some(evidence_id) = canonical_evidence_id {
+                arguments.extend(command_arguments([(
+                    "--canonical-evidence-id",
+                    std::ffi::OsStr::new(&evidence_id),
+                )]));
+            }
+            let applied =
+                run_recovery_command(&executable, "canonical-sync-policy-apply", arguments)?;
+            ensure!(
+                applied.field("process_exit_success") == Some("true")
+                    && matches!(
+                        applied.status(),
+                        "canonical-sync-v2-activation-applied"
+                            | "canonical-sync-v2-activation-repaired"
+                    ),
+                "canonical sync v2 activation apply failed: {}",
+                applied
+                    .field("process_error")
+                    .unwrap_or("unexpected status")
+            );
+            let applied_record_id = applied
+                .field("activation_plan_record_id")
+                .or_else(|| applied.field("activation_record_id"))
+                .context("activation apply omitted the applied record ID")?
+                .to_owned();
+            ensure!(
+                applied_record_id == expected_record_id,
+                "activation apply returned a different record ID"
+            );
+            let status_output = run_recovery_command(
+                &executable,
+                "canonical-sync-policy-status",
+                command_arguments([("--state-dir", state_dir.as_os_str())]),
+            )?;
+            let status = ActivationStatus::parse(&status_output)?;
+            ensure!(
+                status.record_id.as_deref() == Some(applied_record_id.as_str()),
+                "verified activation head differs from the applied successor"
+            );
+            Ok(WorkerSuccess::CanonicalActivationApplied {
+                applied_record_id,
+                status,
+            })
+        }
         WorkerRequest::Connect { descriptor } => {
             match kilogram_runtime_ipc::call(&descriptor, RuntimeIpcCommand::Ping).await? {
                 RuntimeIpcResponse::Pong {
@@ -2903,6 +3064,7 @@ struct KilogramApp {
     device_link: DeviceLinkView,
     recovery: RecoveryView,
     publication_conflict_recovery: PublicationConflictRecoveryView,
+    canonical_activation: ActivationView,
     drop_target: Option<DropTarget>,
     runtime_process: Option<Child>,
     runtime_start_deadline: Option<Instant>,
@@ -2958,6 +3120,7 @@ impl KilogramApp {
             device_link: DeviceLinkView::default(),
             recovery: RecoveryView::default(),
             publication_conflict_recovery: PublicationConflictRecoveryView::default(),
+            canonical_activation: ActivationView::default(),
             drop_target: None,
             runtime_process: None,
             runtime_start_deadline: None,
@@ -3003,6 +3166,15 @@ impl KilogramApp {
                 self.apply_wizard_response(response);
                 continue;
             }
+            if matches!(
+                response.operation,
+                Operation::CanonicalActivationStatus
+                    | Operation::CanonicalActivationPlan
+                    | Operation::CanonicalActivationApply
+            ) {
+                self.apply_canonical_activation_response(response);
+                continue;
+            }
             if response.operation == Operation::Connect
                 && response.result.is_err()
                 && self.runtime_start_deadline.is_some()
@@ -3040,6 +3212,54 @@ impl KilogramApp {
             } else if refreshed || mailbox_changed {
                 self.start_mailbox_status();
             }
+        }
+    }
+
+    fn apply_canonical_activation_response(&mut self, response: WorkerResponse) {
+        self.model.pending = None;
+        let success = match response.result {
+            Ok(success) => success,
+            Err(message) => {
+                self.model.error = Some(message);
+                return;
+            }
+        };
+        let result: Result<()> = match success {
+            WorkerSuccess::CanonicalActivationStatus(status) => {
+                self.canonical_activation.install_status(status);
+                self.model.notice = Some(
+                    "Canonical sync v2 activation authority verified from the stopped runtime state."
+                        .to_owned(),
+                );
+                Ok(())
+            }
+            WorkerSuccess::CanonicalActivationPlanned(plan) => {
+                let record_id = plan.record_id.clone();
+                self.canonical_activation.install_plan(plan).map(|()| {
+                    self.model.notice = Some(format!(
+                        "Exact activation successor {} planned without writing state.",
+                        compact_id(&record_id)
+                    ));
+                })
+            }
+            WorkerSuccess::CanonicalActivationApplied {
+                applied_record_id,
+                status,
+            } => {
+                self.canonical_activation.install_status(status);
+                self.model.notice = Some(format!(
+                    "Signed activation successor {} applied. Start a fresh runtime to load the new policy.",
+                    compact_id(&applied_record_id)
+                ));
+                Ok(())
+            }
+            _ => Err(anyhow::anyhow!(
+                "non-activation worker result reached activation ceremony"
+            )),
+        };
+        match result {
+            Ok(()) => self.model.error = None,
+            Err(error) => self.model.error = Some(format!("Activation ceremony: {error:#}")),
         }
     }
 
@@ -3262,6 +3482,7 @@ impl KilogramApp {
             }
             WorkerSuccess::DeviceLinkAccepted(output) => {
                 let workspace = output.workspace_dir.clone();
+                self.canonical_activation = ActivationView::default();
                 self.runtime_profile_path =
                     workspace.join("runtime.launch.json").display().to_string();
                 self.model.descriptor_path =
@@ -4612,6 +4833,7 @@ impl KilogramApp {
             Ok(profile) => {
                 self.model.descriptor_path = profile.settings().ipc_file.display().to_string();
                 self.runtime_profile_draft = RuntimeProfileDraft::from_profile(&profile);
+                self.canonical_activation = ActivationView::default();
                 self.model.notice = Some("Runtime launch profile loaded".to_owned());
                 self.model.error = None;
             }
@@ -4638,6 +4860,7 @@ impl KilogramApp {
             Ok(profile) => {
                 self.model.descriptor_path = profile.settings().ipc_file.display().to_string();
                 self.runtime_profile_draft = RuntimeProfileDraft::from_profile(&profile);
+                self.canonical_activation = ActivationView::default();
                 self.model.notice = Some("Runtime launch profile saved atomically".to_owned());
                 self.model.error = None;
             }
@@ -4703,6 +4926,8 @@ impl KilogramApp {
         })();
         match result {
             Ok(child) => {
+                self.canonical_activation.status = None;
+                self.canonical_activation.invalidate_plan();
                 self.runtime_process = Some(child);
                 self.runtime_start_deadline = Some(Instant::now() + RUNTIME_START_TIMEOUT);
                 self.runtime_next_connect_attempt = Instant::now();
@@ -4732,6 +4957,112 @@ impl KilogramApp {
                 self.submit(Operation::Shutdown, WorkerRequest::Shutdown { descriptor })
             }
             Err(error) => self.model.fail(Operation::Shutdown, format!("{error:#}")),
+        }
+    }
+
+    fn canonical_activation_offline_context(&self) -> Result<(PathBuf, PathBuf)> {
+        ensure!(
+            self.runtime_process.is_none()
+                && self.model.connection == ConnectionState::Disconnected,
+            "Stop and disconnect the runtime before using activation authority"
+        );
+        let executable = canonical_input_path(
+            &self.runtime_executable_path,
+            "Kilogram CLI executable",
+            true,
+        )?;
+        let state_dir = canonical_input_path(
+            &self.runtime_profile_draft.state_dir,
+            "Runtime state directory",
+            false,
+        )?;
+        Ok((executable, state_dir))
+    }
+
+    fn start_canonical_activation_status(&mut self) {
+        let result = self
+            .canonical_activation_offline_context()
+            .map(
+                |(executable, state_dir)| WorkerRequest::CanonicalActivationStatus {
+                    executable,
+                    state_dir,
+                },
+            );
+        match result {
+            Ok(request) => self.submit(Operation::CanonicalActivationStatus, request),
+            Err(error) => self
+                .model
+                .fail(Operation::CanonicalActivationStatus, format!("{error:#}")),
+        }
+    }
+
+    fn start_canonical_activation_plan(&mut self) {
+        let result: Result<WorkerRequest> = (|| {
+            ensure!(
+                self.canonical_activation.draft_valid(),
+                "Refresh policy and enter a valid bounded reason before planning"
+            );
+            let (executable, state_dir) = self.canonical_activation_offline_context()?;
+            let status = self
+                .canonical_activation
+                .status
+                .as_ref()
+                .context("Refresh the verified activation policy first")?;
+            Ok(WorkerRequest::CanonicalActivationPlan {
+                executable,
+                state_dir,
+                migration_state: self.canonical_activation.target_state,
+                disposition: self.canonical_activation.disposition(),
+                reason: self.canonical_activation.reason.clone(),
+                canonical_evidence_id: status.canonical_evidence_id.clone(),
+            })
+        })();
+        match result {
+            Ok(request) => self.submit(Operation::CanonicalActivationPlan, request),
+            Err(error) => self
+                .model
+                .fail(Operation::CanonicalActivationPlan, format!("{error:#}")),
+        }
+    }
+
+    fn start_canonical_activation_apply(&mut self) {
+        let result: Result<WorkerRequest> = (|| {
+            ensure!(
+                self.canonical_activation.apply_ready(),
+                "The exact plan confirmation is missing or the draft changed"
+            );
+            let (executable, state_dir) = self.canonical_activation_offline_context()?;
+            let plan = self
+                .canonical_activation
+                .plan
+                .as_ref()
+                .context("Create an exact activation plan first")?;
+            let status = self
+                .canonical_activation
+                .status
+                .as_ref()
+                .context("Refresh the verified activation policy first")?;
+            ensure!(
+                plan.current_record_id == status.record_id
+                    && plan.device_id == status.device_id
+                    && plan.canonical_evidence_id == status.canonical_evidence_id,
+                "Displayed activation authority changed since planning"
+            );
+            Ok(WorkerRequest::CanonicalActivationApply {
+                executable,
+                state_dir,
+                migration_state: plan.migration_state,
+                disposition: plan.disposition,
+                reason: plan.reason.clone(),
+                canonical_evidence_id: plan.canonical_evidence_id.clone(),
+                expected_record_id: plan.record_id.clone(),
+            })
+        })();
+        match result {
+            Ok(request) => self.submit(Operation::CanonicalActivationApply, request),
+            Err(error) => self
+                .model
+                .fail(Operation::CanonicalActivationApply, format!("{error:#}")),
         }
     }
 
@@ -7146,6 +7477,26 @@ impl KilogramApp {
             }
             ui.small("The refreshed ticket excludes removed devices from future peer fanout. Previously signed recipient slots cannot be rewritten, and history already copied to a removed device cannot be erased.");
         }
+        let activation_runtime_offline = self.runtime_process.is_none()
+            && self.model.connection == ConnectionState::Disconnected;
+        let activation_busy = self.model.pending.is_some();
+        ui.collapsing("Canonical sync v2 activation (advanced)", |ui| {
+            match self
+                .canonical_activation
+                .draw(ui, activation_runtime_offline, activation_busy)
+            {
+                ActivationUiAction::None => {}
+                ActivationUiAction::Refresh => {
+                    action = RuntimeUiAction::RefreshCanonicalActivation;
+                }
+                ActivationUiAction::Plan => {
+                    action = RuntimeUiAction::PlanCanonicalActivation;
+                }
+                ActivationUiAction::Apply => {
+                    action = RuntimeUiAction::ApplyCanonicalActivation;
+                }
+            }
+        });
         ui.collapsing("Wide-area ticket exchange", |ui| {
             ui.small("For an already enrolled contact, publish/fetch replaces manual synchronized ticket files. The store receives an opaque HPKE envelope under a pseudonymous directional channel; request timing and size remain visible.");
             ui.horizontal(|ui| {
@@ -8402,6 +8753,12 @@ impl eframe::App for KilogramApp {
             self.start_mailbox_change(Operation::MailboxRevoke);
         } else if runtime_action == RuntimeUiAction::RefreshMailboxStatus {
             self.start_mailbox_status();
+        } else if runtime_action == RuntimeUiAction::RefreshCanonicalActivation {
+            self.start_canonical_activation_status();
+        } else if runtime_action == RuntimeUiAction::PlanCanonicalActivation {
+            self.start_canonical_activation_plan();
+        } else if runtime_action == RuntimeUiAction::ApplyCanonicalActivation {
+            self.start_canonical_activation_apply();
         } else if add_contact_clicked {
             self.start_add_contact();
         } else if let Some(contact_id) = selected_contact {

@@ -1,15 +1,15 @@
 # Память проекта Kilogram
 
-Актуально на: 2026-10-18.
+Актуально на: 2026-10-19.
 
 Эта папка — краткая проектная память и дорожная карта. Подробная техническая
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
 
-Последний большой рабочий блок описан в
-[`next-stage-plan.md`](next-stage-plan.md): M1.1.81–M1.1.85 закрыли точную
-activation semantics, durable Device-bound authority, opt-in интеграцию,
-двухмашинный resilience rehearsal и итоговый aggregate regression. Canonical
-sync v2 принят как opt-in dark launch; публичный default остаётся legacy-only.
+Последний рабочий блок описан в
+[`next-stage-plan.md`](next-stage-plan.md): после принятого M1.1.85 opt-in dark
+launch этап M1.1.86 добавил в Windows desktop offline-only status/plan/apply
+церемонию той же Device-bound authority. Публичный default остаётся
+legacy-only; live hot apply отсутствует, после изменения нужен fresh runtime.
 
 ## Текущее состояние
 
@@ -1177,6 +1177,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   фиксирует прошедшие 112 readiness gates и полный regression кроме двух
   неизменённых принятых mutation corpora. Статус — verified opt-in dark launch,
   не public activation.
+- [`../docs/RFC-0210-m1186-desktop-canonical-sync-v2-activation.md`](../docs/RFC-0210-m1186-desktop-canonical-sync-v2-activation.md) —
+  M1.1.86 добавляет в Windows desktop offline-only status/plan/apply церемонию
+  существующей Device-signed authority: exact plan confirmation, независимую
+  сверку rights matrix и обязательный restart без изменения public default.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

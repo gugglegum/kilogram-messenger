@@ -7108,3 +7108,25 @@ correlation visible, Windows-only field evidence, independent security audit
   перенаправленного Temp с `os error 5`; идентичный unrestricted запуск прошёл;
 - release build, архив, tag и автоматический GitHub build не выполнялись.
   Следующий продуктовый пакет — desktop activation UI без смены public default.
+
+### M1.1.86 — safe desktop canonical sync v2 activation: принят локально
+
+- Windows desktop получил advanced offline-only панель для status, exact plan
+  и apply существующей Device-signed append-only activation authority;
+- GUI не импортирует Device/Root secrets и не создаёт новый authority: он
+  запускает существующий `kilogram-cli` под state lock с actor
+  `explicit-local`;
+- работающий или connected runtime блокирует церемонию. Live IPC остаётся v29,
+  потому что endpoint ALPN list загружается при старте; после apply требуется
+  fresh runtime;
+- plan обязан сообщить `writes_state=false`, совпасть по Device/head/epoch,
+  state/disposition/evidence/reason и пройти независимую сверку всех шести
+  policy rights;
+- apply открывается только после exact `APPLY <12 hex>`; смена draft сбрасывает
+  plan, а повторный status обязан подтвердить exact applied record head;
+- unit tests, strict targeted Clippy, fresh CLI status/plan/apply smoke и
+  verifier с negative mutations прошли. Readiness inventory расширен до 113
+  gates; public default остаётся `legacy-only`;
+- release/ZIP/tag/network run и автоматический GitHub build не выполнялись.
+  Следующий пакет — read-only runtime observability загруженной policy и
+  negotiated sync path после restart.

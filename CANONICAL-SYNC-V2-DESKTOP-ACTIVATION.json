@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.86",
+  "status": "canonical-sync-v2-desktop-offline-activation-verified",
+  "changes_active_wire": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "existing_opt_in_wire_available": true,
+  "authority": {
+    "source": "existing-cli-device-signed-append-only-chain",
+    "desktop_holds_device_secret": false,
+    "desktop_holds_account_root_secret": false,
+    "actor": "explicit-local",
+    "runtime_must_be_stopped": true,
+    "execution": "offline-cli-helper-under-existing-state-lock",
+    "live_runtime_ipc_extended": false,
+    "ipc_version": 29,
+    "fresh_runtime_required_after_apply": true
+  },
+  "ceremony": {
+    "operations": [
+      "refresh-verified-status",
+      "plan-exact-transition-without-write",
+      "apply-exact-signed-successor"
+    ],
+    "states": [
+      "legacy-only",
+      "advertise-cbor-v2",
+      "dual-reader-prefer-legacy",
+      "dual-reader-prefer-canonical",
+      "canonical-required"
+    ],
+    "reason_min_utf8_bytes": 1,
+    "reason_max_utf8_bytes": 256,
+    "reason_surrounding_whitespace_allowed": false,
+    "reason_control_characters_allowed": false,
+    "plan_writes_state": false,
+    "apply_requires_expected_record_id": true,
+    "confirmation": "APPLY <first-12-lowercase-hex-of-candidate-record-id>",
+    "draft_change_invalidates_plan": true,
+    "post_apply_status_head_must_equal_applied_record_id": true,
+    "helper_rights_must_equal_policy_matrix": true,
+    "emergency_containment_requires_existing_evidence": true,
+    "emergency_containment_preserves_exact_resume": true
+  },
+  "fail_closed": [
+    "runtime-running-or-connected",
+    "state-lock-unavailable",
+    "missing-or-malformed-helper-field",
+    "noncanonical-identifier",
+    "inconsistent-policy-rights",
+    "stale-device-head-epoch-or-evidence",
+    "changed-draft-after-plan",
+    "wrong-confirmation-phrase",
+    "unexpected-applied-record-id",
+    "post-apply-head-mismatch"
+  ],
+  "accepted_prerequisites": {
+    "activation_policy": "CANONICAL-SYNC-V2-ACTIVATION-POLICY.json",
+    "activation_authority": "CANONICAL-SYNC-V2-ACTIVATION-AUTHORITY.json",
+    "opt_in_dark_launch": "CANONICAL-SYNC-V2-OPT-IN-DARK-LAUNCH.json"
+  },
+  "acceptance": {
+    "desktop_unit_tests": "verified",
+    "offline_cli_lifecycle_smoke": "verified",
+    "boundary_self_test_and_negative_mutations": "verified",
+    "m1_readiness": "113/113",
+    "rustfmt": "verified",
+    "locked_offline_strict_clippy": "verified",
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false,
+    "network_executed": false
+  },
+  "non_claims": [
+    "public-dual-reader-default",
+    "hot-policy-reload",
+    "canonical-native-history-materialization",
+    "legacy-retirement",
+    "independent-security-audit"
+  ]
+}
