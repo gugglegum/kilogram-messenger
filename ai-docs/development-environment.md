@@ -4855,5 +4855,23 @@ Hosted follow-up:
   anti-rollback rejected reuse of generation-zero Bob prekeys. The runner now
   creates a fresh next-generation pool for its second conversation, and the
   complete fresh matrix then passed.
-- Next: commit the implementation, rebuild exactly that revision and copy the
-  same executable to the OpenSSH laptop for the M1.1.84 two-host run.
+- A production-path field probe between the PC and laptop transferred responses
+  of 1, 32, 256, 1024 and 8123 bytes intact. This ruled out N0/QUIC response
+  size and Windows firewall as the source of the initial timeout.
+- Root cause: the requester's 20-second stream deadline also covered remote
+  state-lock, vault, store, legacy import and durable-session preparation. The
+  runtime now uses a bounded 120-second first-response/preparation deadline and
+  retains 20 seconds for individual stream I/O. A unit test pins the separation.
+- Transport regression
+  `bidirectional_response_larger_than_one_packet_is_delivered` passes with an
+  8123-byte response; `kilogram-transport-iroh` passes 8/8.
+- Exact-revision command used the committed debug executable from
+  `7ee5ef808cb56c3c48d7a0b6dc07c0984b81992c` on both hosts through
+  `scripts/invoke-kilogram-canonical-sync-v2-dark-launch-two-host.ps1`.
+- Accepted two-host manifest:
+  `.tmp/m1184-exact-20261018T165652Z/M1184-TWO-HOST-EVIDENCE.json`.
+  Both `PAUL_HP_OMEN` and `DESKTOP-PAUL-RY` reported executable SHA-256
+  `be8ca16754c2ad1291d4ea56c0a339b6e6a0f5994e6816c1c3d966871f42c532`
+  and all six scenarios passed over direct Iroh LAN.
+- M1.1.84 is complete. M1.1.85 is the remaining local aggregate regression and
+  ledger/formalization gate.

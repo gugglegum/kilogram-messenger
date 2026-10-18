@@ -1,7 +1,7 @@
 # Следующий большой этап: M1.1.81–M1.1.85
 
-Статус: выполняется; M1.1.81–M1.1.83 и локальная половина M1.1.84 завершены,
-exact-revision двухмашинный M1.1.84 следующий.
+Статус: выполняется; M1.1.81–M1.1.84 завершены, M1.1.85 — следующий
+агрегированный gate.
 
 Оценка: 5.5–7.5 часа чистого времени при отсутствии внешних сетевых сбоев.
 
@@ -143,6 +143,15 @@ manifest содержит реальные Iroh telemetry и закрытые im
 истории совпадают. Старые state directories и Yandex Disk как coordination
 transport не используются.
 
+Результат: принят exact-revision run `m1184-exact-20261018T165652Z` на
+`7ee5ef808cb56c3c48d7a0b6dc07c0984b81992c`; один debug binary SHA-256
+`be8ca16754c2ad1291d4ea56c0a339b6e6a0f5994e6816c1c3d966871f42c532`
+использован на `PAUL_HP_OMEN` и `DESKTOP-PAUL-RY`. Все шесть сценариев
+прошли, включая exact resume, containment и selected-loss без legacy retry.
+Field probe отдельно подтвердил ответы 1–8123 bytes и позволил исправить
+смешение 20-секундного stream-I/O deadline с подготовкой responder: первое
+ожидание ответа теперь ограничено двумя минутами, отдельные I/O — 20 секундами.
+
 ### M1.1.85 — regression, formalization и commit — 75–105 минут
 
 1. Прогнать все изменённые boundary self-tests и negative mutation tests.
@@ -185,8 +194,8 @@ desktop UI и тем более legacy retirement — отдельные пос�
 - Cargo jobs 2 по умолчанию, existing target cache сохраняется;
 - GitHub Actions только manual и лишь если локальное/двухмашинное evidence
   выявит host-specific uncertainty; push сам по себе build не запускает;
-- ноутбук нужен только для M1.1.84 примерно на 1–2 часа: питание подключено,
-  sleep выключен, OpenSSH доступен, VPN выключен;
+- ноутбук требовался только для M1.1.84; exact двуххостовый run уже завершён,
+  M1.1.85 выполняется локально;
 - никаких фоновых OS services, Task Scheduler jobs или постоянных firewall
   exceptions сверх уже используемого стабильного executable path;
 - bounded evidence содержит hashes, counts и transport metadata, но не state,

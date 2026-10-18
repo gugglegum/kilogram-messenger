@@ -7055,7 +7055,7 @@ correlation visible, Windows-only field evidence, independent security audit
   fail-closed production-dark-launch verifier с четырьмя negative mutations
   зелёные. Public default остаётся legacy-only; release/ZIP/tag не создавались.
 
-### M1.1.84 — canonical sync v2 resilience rehearsal: локальная половина принята
+### M1.1.84 — canonical sync v2 resilience rehearsal: принят
 
 - в штатный debug binary добавлен one-shot stop-after-Diff fault для client и
   responder; release build его отвергает, permission/selection он не выдаёт;
@@ -7071,5 +7071,17 @@ correlation visible, Windows-only field evidence, independent security audit
   повторена с нуля и прошла;
 - CLI unit regression вне Windows sandbox прошёл 86/86. Успешный development
   manifest находится в ignored `.tmp/m1184-resilience-20261018T152502Z`;
-- локальная половина ещё не закрывает M1.1.84: после commit нужен один debug
-  binary exact revision и двухмашинный run на основном ПК и ноутбуке.
+- первый field run выявил ошибочную общую границу: 20-секундный I/O timeout
+  включал responder-side state/vault/store/import preparation. Production-path
+  probe передал ответы 1, 32, 256, 1024 и 8123 bytes, исключив Iroh/QUIC и
+  размер ответа; runtime получил отдельный bounded response deadline 120 s при
+  сохранении 20 s для отдельных stream I/O;
+- exact-revision run `m1184-exact-20261018T165652Z` на
+  `7ee5ef808cb56c3c48d7a0b6dc07c0984b81992c` прошёл всю matrix между
+  `PAUL_HP_OMEN` и `DESKTOP-PAUL-RY` по direct Iroh LAN. SHA-256 одного debug
+  binary на обоих хостах —
+  `be8ca16754c2ad1291d4ea56c0a339b6e6a0f5994e6816c1c3d966871f42c532`;
+- field manifest имеет статус
+  `canonical-sync-v2-two-host-activation-rehearsal-verified`: legacy controls,
+  mutual `/cbor/2`, restart/exact resume, containment, selected loss и rollback
+  подтвердили ожидаемые границы без потери/дублирования и без legacy fallback.

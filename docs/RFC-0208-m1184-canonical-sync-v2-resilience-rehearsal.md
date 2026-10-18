@@ -1,6 +1,6 @@
 # RFC-0208: M1.1.84 canonical sync v2 resilience rehearsal
 
-Status: local half accepted; exact-revision two-host rehearsal pending.
+Status: accepted; exact-revision two-host rehearsal verified.
 
 ## Purpose
 
@@ -62,15 +62,44 @@ prekey pool, and the entire seven-scenario matrix was rerun from fresh state.
 The accepted run therefore preserves the ratchet anti-rollback boundary rather
 than weakening it for test convenience.
 
-## Remaining acceptance work
+## Field diagnosis and bounded response deadline
 
-The local run used an uncommitted implementation binary and therefore is a
-development rehearsal, not the final exact-revision field artifact. The next
-step is to commit this implementation, rebuild one stable debug executable and
-run the relevant matrix across the primary PC and the OpenSSH-connected Windows
-laptop. Both hosts must report the same source revision and executable SHA-256.
+The first exact-revision field attempt exposed a real orchestration defect. The
+client's 20-second stream-I/O deadline also covered responder-side state-lock,
+vault, store, import and durable-session preparation. A healthy responder could
+therefore start writing the Diff only after the requester had already closed
+the stream.
 
-Only after that field manifest and the aggregate M1.1.85 regression pass may the
-milestone status become `canonical-sync-v2-opt-in-dark-launch-verified`. The
+A feature-gated field probe sent 1, 32, 256, 1024 and 8123-byte responses over
+the same production N0 direct path between the two physical hosts. Every size
+arrived intact. This ruled out response-size, QUIC and Windows firewall causes.
+The runtime now keeps the 20-second deadline for individual stream I/O but gives
+bounded responder preparation and first response a distinct two-minute
+deadline. The timeout remains fail closed and does not permit legacy fallback
+after canonical selection.
+
+## Accepted exact-revision field evidence
+
+The complete two-host matrix passed from fresh state on source revision
+`7ee5ef808cb56c3c48d7a0b6dc07c0984b81992c`. One debug executable was used on
+both hosts:
+
+- SHA-256: `be8ca16754c2ad1291d4ea56c0a339b6e6a0f5994e6816c1c3d966871f42c532`;
+- size: 59,981,824 bytes;
+- target: `x86_64-pc-windows-msvc`;
+- Alice: `PAUL_HP_OMEN`; Bob: `DESKTOP-PAUL-RY`;
+- transport: direct Iroh LAN; distinct physical hosts.
+
+The accepted manifest is retained outside Git at
+`.tmp/m1184-exact-20261018T165652Z/M1184-TWO-HOST-EVIDENCE.json`. It reports
+`canonical-sync-v2-two-host-activation-rehearsal-verified`. Default/default and
+mixed opt-in controls selected Postcard v6, mutual opt-in selected `/cbor/2`,
+restart resumed the exact durable selection, containment preserved that resume
+while routing a fresh conversation over Postcard, and selected-path loss exited
+non-zero without synchronization or legacy retry. All successful histories
+were equal.
+
+M1.1.84 is complete. The aggregate M1.1.85 regression and ledger update remain
+the final gate for status `canonical-sync-v2-opt-in-dark-launch-verified`. The
 public default remains `legacy-only`; desktop rollout, canonical-native history
 and legacy retirement remain separate decisions.
