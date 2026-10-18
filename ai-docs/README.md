@@ -5,9 +5,10 @@
 Эта папка — краткая проектная память и дорожная карта. Подробная техническая
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
 
-Следующий большой рабочий блок на 8–10 часов описан в
-[`next-stage-plan.md`](next-stage-plan.md): fresh hosted и двухмашинное
-evidence для dormant `/cbor/2` без автоматической смены transport по умолчанию.
+Текущий большой рабочий блок описан в
+[`next-stage-plan.md`](next-stage-plan.md): M1.1.81–M1.1.82 закрыли точную
+activation semantics и durable Device-bound authority; далее выполняется
+opt-in production-runtime dark launch без смены transport по умолчанию.
 
 ## Текущее состояние
 
@@ -1158,6 +1159,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.1.81 разделяет publish/register/accept/initiate/resume права и определяет
   emergency containment как сохранение exact canonical resume без новых v2
   sessions либо legacy fallback. Active runtime и default пока не меняются.
+- [`../docs/RFC-0206-m1182-durable-canonical-sync-v2-activation-authority.md`](../docs/RFC-0206-m1182-durable-canonical-sync-v2-activation-authority.md) —
+  M1.1.82 добавляет Device-signed append-only activation chain, exact
+  plan/apply, signed atomic high-water и fail-closed restart/crash/rollback
+  boundary. Authority уже durable, но Iroh runtime ещё её не потребляет.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

@@ -4772,3 +4772,41 @@ Hosted follow-up:
   утечку evaluator в active transport;
 - этот этап не менял CLI/Iroh, не запускал network, не создавал release, ZIP
   или tag. Следующий пакет — durable Device-bound local activation authority.
+
+## M1.1.82 durable activation authority environment (2026-10-18)
+
+- record format custom fixed-prefix v1: magic `KILOGRAM-CSAP-V1`, Ed25519
+  Device signature, domain-separated BLAKE3 record ID, max reason 256 bytes;
+- signed high-water `KILOGRAM-CSHW-V1` хранится рядом с state root, связывает
+  exact epoch/head и публикуется atomic replace после append-only commit;
+- runtime record path:
+  `runtime/canonical-sync-v2-activation/<epoch>-<record-id>.csv2-activation`;
+  он включён в runtime DB-primary read и typed append-only delta;
+- новые команды: `canonical-sync-policy-status`,
+  `canonical-sync-policy-plan`, `canonical-sync-policy-apply`;
+- focused test:
+  `cargo test -p kilogram-session canonical_sync_v2_activation --locked
+  --offline --jobs 2` прошёл 5/5;
+- полный regression изменённых crates вне sandbox прошёл: `kilogram-session`
+  25/25 за 83.50 s, `kilogram-cli` 83/83 за 153.67 s. Предшествующий
+  session-run внутри sandbox отклонён как infrastructure-only: 11 тестов,
+  использующих Windows `%TEMP%`, получили известный `os error 5`;
+- locked/offline strict Clippy для `kilogram-session` и `kilogram-cli` со всеми
+  targets/features и `-D warnings` прошёл; rustfmt check зелёный;
+- реальный CLI lifecycle прошёл на fresh filesystem state и на migrated
+  Windows-DPAPI vault state. Искусственное удаление high-water после record
+  commit заставило `status` fail closed, а byte-exact повторный `apply`
+  восстановил только тот же planned record;
+- verifier
+  `verify-kilogram-canonical-sync-v2-activation-authority-boundary.ps1
+  -SelfTest`, прежний activation-policy self-test и readiness boundary прошли;
+  inventory теперь `closed-110`;
+- полный `verify-kilogram-m1-readiness.ps1 -AcceptedTag M1.0.0` прошёл
+  `110/110`, включая locked/offline workspace Clippy; две исторические
+  dormant-проверки уточнены так, чтобы разрешать CLI только migration enum и
+  permission evaluator, но по-прежнему запрещать wire state machine, ALPN
+  registration и dial path;
+- local high-water обнаруживает tail rollback только пока более новый marker
+  сохранён. Coordinated rollback всего state directory вместе со старым
+  marker требует независимого external/hardware witness и не заявлен закрытым;
+- active Iroh transport не изменён; network, release, ZIP и tag не запускались.

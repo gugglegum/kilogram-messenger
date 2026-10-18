@@ -90,14 +90,13 @@
   },
   "activation": {
     "semantic_policy_integrated": true,
-    "durable_local_authority_integrated": false,
+    "durable_local_authority_integrated": true,
     "active_runtime_integrated": false,
     "candidate_endpoint_registered_by_default": false,
     "candidate_dialed_by_default": false,
     "network_executed": false
   },
   "next": [
-    "durable-device-bound-local-activation-authority",
     "production-runtime-dark-launch-integration",
     "local-and-two-host-activation-rehearsal"
   ]

@@ -7007,3 +7007,26 @@ correlation visible, Windows-only field evidence, independent security audit
 - focused Rust tests и fail-closed verifier self-test прошли. Active Iroh/CLI
   не используют evaluator, `/cbor/2` по умолчанию остаётся
   unregistered/undialed, network не запускался.
+
+### M1.1.82 — durable local activation authority: принято локально
+
+- добавлены `SignedCanonicalSyncV2ActivationRecord` и signed high-water:
+  Device ID, monotonic epoch, exact previous record, state/disposition,
+  bounded actor/reason и optional exact canonical evidence входят в подпись;
+- chain verifier fail closed отклоняет wrong Device, invalid signature,
+  replay/fork/gap, skipped epoch, неодношаговый transition, post-evidence
+  rollback и смену/удаление evidence binding;
+- `canonical-sync-policy-status` сохраняет отсутствие authority как
+  `legacy-only`; `plan` ничего не пишет, а `apply` exact-сверяет ранее
+  напечатанный candidate ID;
+- append-only record проходит через `StateTransaction` и vault-primary typed
+  delta. High-water публикуется atomic replace только после commit; exact
+  повторный apply может завершить прерванный marker publish;
+- filesystem и migrated-vault CLI lifecycle прошли, включая restart и
+  искусственно прерванный record/high-water boundary. Unit tests закрыли
+  replay, epoch skip, fork, wrong Device, tail rollback и containment;
+- полный regression изменённых crates прошёл: session 25/25 и CLI 83/83;
+  targeted all-target/all-feature strict Clippy и rustfmt также зелёные;
+- новый manifest/RFC и boundary verifier с negative self-test приняты;
+  readiness inventory расширен до 110 gates. Active Iroh transport и public
+  default не изменены, network/release/ZIP/tag не выполнялись.

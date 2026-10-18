@@ -132,7 +132,7 @@ function Assert-Contract {
     }
 
     if (-not [bool]$Manifest.activation.semantic_policy_integrated -or
-        [bool]$Manifest.activation.durable_local_authority_integrated -or
+        -not [bool]$Manifest.activation.durable_local_authority_integrated -or
         [bool]$Manifest.activation.active_runtime_integrated -or
         [bool]$Manifest.activation.candidate_endpoint_registered_by_default -or
         [bool]$Manifest.activation.candidate_dialed_by_default -or
@@ -140,7 +140,6 @@ function Assert-Contract {
         throw 'canonical activation boundary changed prematurely'
     }
     Assert-ExactStrings @($Manifest.next) @(
-        'durable-device-bound-local-activation-authority',
         'production-runtime-dark-launch-integration',
         'local-and-two-host-activation-rehearsal'
     ) 'canonical activation next work'
@@ -172,10 +171,10 @@ function Assert-Contract {
             throw "canonical activation source marker missing: $needle"
         }
     }
-    foreach ($inactiveSource in @($Transport, $Cli)) {
+    foreach ($inactiveSource in @($Transport)) {
         if ($inactiveSource.Contains('evaluate_canonical_sync_v2_activation_permissions') -or
             $inactiveSource.Contains('CanonicalSyncV2ActivationPermissions')) {
-            throw 'canonical activation policy leaked into active transport or CLI prematurely'
+            throw 'canonical activation policy leaked into active transport prematurely'
         }
     }
 

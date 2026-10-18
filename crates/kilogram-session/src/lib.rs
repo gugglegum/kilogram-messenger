@@ -1,3 +1,4 @@
+pub mod canonical_sync_v2_activation;
 pub mod canonical_sync_v2_adapter;
 
 use std::collections::HashSet;

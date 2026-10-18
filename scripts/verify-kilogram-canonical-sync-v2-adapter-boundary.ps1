@@ -214,7 +214,7 @@ function Assert-Contract {
             [StringComparison]::Ordinal) -lt 0) {
         throw 'canonical sync v2 dormant adapter module is not exported'
     }
-    foreach ($activeSource in @($ActiveWire, $Transport, $Cli)) {
+    foreach ($activeSource in @($ActiveWire, $Transport)) {
         if ($activeSource.IndexOf('canonical_sync_v2_adapter',
                 [StringComparison]::Ordinal) -ge 0 -or
             $activeSource.IndexOf('CanonicalSyncV2Client',
@@ -223,6 +223,20 @@ function Assert-Contract {
                 [StringComparison]::Ordinal) -ge 0) {
             throw 'dormant canonical sync v2 adapter leaked into active runtime source'
         }
+    }
+    # M1.1.82 deliberately reuses only the adapter's transport-independent
+    # migration-state vocabulary and permission evaluator in the local CLI
+    # activation authority.  The dormant wire state machines must still remain
+    # absent from every active registration, dial, and request path.
+    if ($Cli.IndexOf('CanonicalSyncV2Client',
+            [StringComparison]::Ordinal) -ge 0 -or
+        $Cli.IndexOf('CanonicalSyncV2Server',
+            [StringComparison]::Ordinal) -ge 0 -or
+        $Cli.IndexOf('CanonicalSyncV2Store',
+            [StringComparison]::Ordinal) -ge 0 -or
+        $Cli.IndexOf('CanonicalSyncV2EventPolicy',
+            [StringComparison]::Ordinal) -ge 0) {
+        throw 'dormant canonical sync v2 wire adapter leaked into active CLI source'
     }
     if ($Cli.IndexOf('CANONICAL_SYNC_ALPN_V2', [StringComparison]::Ordinal) -ge 0 -or
         $Cli.IndexOf($alpn, [StringComparison]::Ordinal) -ge 0) {

@@ -91,6 +91,15 @@ use kilogram_runtime_ipc::{
 use kilogram_session::{
     MAX_SYNC_ROUNDS, ServerInventoryOutcome, SessionStore, SyncClient, SyncServer,
     authorize_device_session,
+    canonical_sync_v2_activation::{
+        CanonicalSyncV2ActivationActor, CanonicalSyncV2ActivationError,
+        SignedCanonicalSyncV2ActivationHighWater, SignedCanonicalSyncV2ActivationRecord,
+        verify_canonical_sync_v2_activation_authority, verify_canonical_sync_v2_activation_chain,
+    },
+    canonical_sync_v2_adapter::{
+        CanonicalSyncV2ActivationDisposition, CanonicalSyncV2ActivationPermissions,
+        CanonicalSyncV2MigrationState, evaluate_canonical_sync_v2_activation_permissions,
+    },
 };
 use kilogram_state::{
     DeviceIdentityStateRepository, EncryptedStateVault, STATE_VAULT_FILE, STATE_VAULT_KEY_FILE,
@@ -268,6 +277,9 @@ const RUNTIME_MAILBOX_DISPATCHES_DIRECTORY: &str = "mailbox-dispatches";
 const RUNTIME_LOCAL_MAILBOX_UPDATES_DIRECTORY: &str = "local-mailbox-updates";
 const RUNTIME_PEER_MAILBOX_UPDATES_DIRECTORY: &str = "peer-mailbox-updates";
 const RUNTIME_MAILBOX_UPDATE_ACKNOWLEDGEMENTS_DIRECTORY: &str = "mailbox-update-acknowledgements";
+const RUNTIME_CANONICAL_SYNC_V2_ACTIVATION_DIRECTORY: &str = "canonical-sync-v2-activation";
+const CANONICAL_SYNC_V2_ACTIVATION_HIGH_WATER_FILE: &str =
+    "canonical-sync-v2-activation.high-water";
 const MAILBOX_CLIENT_LEDGER_DIRECTORY: &str = "mailbox-client";
 const MAILBOX_PROVIDER_REGISTRY_DIRECTORY: &str = "mailbox-providers";
 const MAILBOX_PROVIDER_TRANSPORT_IDENTITY_DOMAIN: &[u8] =
@@ -1938,6 +1950,71 @@ enum Command {
         state_dir: PathBuf,
     },
 
+    /// Inspect the verified Device-bound canonical sync v2 activation authority.
+    CanonicalSyncPolicyStatus {
+        /// Directory containing this Device's persistent state.
+        #[arg(long)]
+        state_dir: PathBuf,
+    },
+
+    /// Plan one exact signed activation successor without modifying local state.
+    CanonicalSyncPolicyPlan {
+        /// Directory containing this Device's persistent state.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Exact next migration state.
+        #[arg(long, value_enum)]
+        migration_state: CanonicalSyncMigrationStateArg,
+
+        /// Normal operation or post-selection emergency containment.
+        #[arg(long, value_enum, default_value = "normal")]
+        disposition: CanonicalSyncActivationDispositionArg,
+
+        /// Bounded authority actor recorded in the signed successor.
+        #[arg(long, value_enum, default_value = "explicit-local")]
+        actor: CanonicalSyncActivationActorArg,
+
+        /// Human-readable bounded reason included in the signed record.
+        #[arg(long)]
+        reason: String,
+
+        /// Exact persisted canonical selection/progress evidence ID, as 64 hex characters.
+        #[arg(long)]
+        canonical_evidence_id: Option<String>,
+    },
+
+    /// Apply an exact previously planned activation successor.
+    CanonicalSyncPolicyApply {
+        /// Directory containing this Device's persistent state.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Exact next migration state.
+        #[arg(long, value_enum)]
+        migration_state: CanonicalSyncMigrationStateArg,
+
+        /// Normal operation or post-selection emergency containment.
+        #[arg(long, value_enum, default_value = "normal")]
+        disposition: CanonicalSyncActivationDispositionArg,
+
+        /// Bounded authority actor recorded in the signed successor.
+        #[arg(long, value_enum, default_value = "explicit-local")]
+        actor: CanonicalSyncActivationActorArg,
+
+        /// Human-readable bounded reason included in the signed record.
+        #[arg(long)]
+        reason: String,
+
+        /// Exact persisted canonical selection/progress evidence ID, as 64 hex characters.
+        #[arg(long)]
+        canonical_evidence_id: Option<String>,
+
+        /// Exact candidate record ID printed by canonical-sync-policy-plan.
+        #[arg(long)]
+        expected_record_id: String,
+    },
+
     /// Create a development Account Root authority in a separate directory.
     AccountCreate {
         /// Directory reserved for the offline Account Root secret and authority sequence.
@@ -2185,6 +2262,9 @@ impl Command {
             | Self::HistoryRewrapReconcile { state_dir, .. }
             | Self::History { state_dir, .. }
             | Self::Identity { state_dir }
+            | Self::CanonicalSyncPolicyStatus { state_dir }
+            | Self::CanonicalSyncPolicyPlan { state_dir, .. }
+            | Self::CanonicalSyncPolicyApply { state_dir, .. }
             | Self::ConversationMembershipInstall { state_dir, .. }
             | Self::DeviceEnroll { state_dir, .. }
             | Self::DeviceAuthorityUpdate { state_dir, .. }
@@ -2271,6 +2351,62 @@ enum RoutePolicyArg {
     Auto,
     DirectOnly,
     RelayOnly,
+}
+
+#[derive(Clone, Copy, Debug, ValueEnum)]
+enum CanonicalSyncMigrationStateArg {
+    LegacyOnly,
+    #[value(name = "advertise-cbor-v2")]
+    AdvertiseCanonicalV2,
+    DualReaderPreferLegacy,
+    DualReaderPreferCanonical,
+    CanonicalRequired,
+}
+
+impl From<CanonicalSyncMigrationStateArg> for CanonicalSyncV2MigrationState {
+    fn from(value: CanonicalSyncMigrationStateArg) -> Self {
+        match value {
+            CanonicalSyncMigrationStateArg::LegacyOnly => Self::LegacyOnly,
+            CanonicalSyncMigrationStateArg::AdvertiseCanonicalV2 => Self::AdvertiseCanonicalV2,
+            CanonicalSyncMigrationStateArg::DualReaderPreferLegacy => Self::DualReaderPreferLegacy,
+            CanonicalSyncMigrationStateArg::DualReaderPreferCanonical => {
+                Self::DualReaderPreferCanonical
+            }
+            CanonicalSyncMigrationStateArg::CanonicalRequired => Self::CanonicalRequired,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, ValueEnum)]
+enum CanonicalSyncActivationDispositionArg {
+    Normal,
+    EmergencyContainment,
+}
+
+impl From<CanonicalSyncActivationDispositionArg> for CanonicalSyncV2ActivationDisposition {
+    fn from(value: CanonicalSyncActivationDispositionArg) -> Self {
+        match value {
+            CanonicalSyncActivationDispositionArg::Normal => Self::Normal,
+            CanonicalSyncActivationDispositionArg::EmergencyContainment => {
+                Self::EmergencyContainment
+            }
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, ValueEnum)]
+enum CanonicalSyncActivationActorArg {
+    ExplicitLocal,
+    ReleasePolicy,
+}
+
+impl From<CanonicalSyncActivationActorArg> for CanonicalSyncV2ActivationActor {
+    fn from(value: CanonicalSyncActivationActorArg) -> Self {
+        match value {
+            CanonicalSyncActivationActorArg::ExplicitLocal => Self::ExplicitLocal,
+            CanonicalSyncActivationActorArg::ReleasePolicy => Self::ReleasePolicy,
+        }
+    }
 }
 
 struct ListenOptions {
@@ -3900,6 +4036,41 @@ async fn run_command(command: Command) -> Result<()> {
             conversation,
         } => show_history(state_dir, conversation),
         Command::Identity { state_dir } => show_identity(state_dir),
+        Command::CanonicalSyncPolicyStatus { state_dir } => {
+            show_canonical_sync_v2_activation_status(state_dir)
+        }
+        Command::CanonicalSyncPolicyPlan {
+            state_dir,
+            migration_state,
+            disposition,
+            actor,
+            reason,
+            canonical_evidence_id,
+        } => plan_canonical_sync_v2_activation(
+            state_dir,
+            migration_state.into(),
+            disposition.into(),
+            actor.into(),
+            canonical_evidence_id,
+            reason,
+        ),
+        Command::CanonicalSyncPolicyApply {
+            state_dir,
+            migration_state,
+            disposition,
+            actor,
+            reason,
+            canonical_evidence_id,
+            expected_record_id,
+        } => apply_canonical_sync_v2_activation(
+            state_dir,
+            migration_state.into(),
+            disposition.into(),
+            actor.into(),
+            canonical_evidence_id,
+            reason,
+            expected_record_id,
+        ),
         Command::AccountCreate { account_dir } => create_account(account_dir),
         Command::AccountShow { account_dir } => show_account(account_dir),
         Command::AccountSnapshot {
@@ -4807,6 +4978,7 @@ fn install_membership_primary(
 
 #[derive(Default)]
 struct RuntimeStateSnapshot {
+    canonical_sync_v2_activation_records: Vec<SignedCanonicalSyncV2ActivationRecord>,
     contacts: BTreeMap<RuntimeContactId, SignedRuntimeContact>,
     endpoint_candidates: BTreeMap<RuntimeEndpointCandidateId, SignedRuntimeEndpointCandidate>,
     endpoint_publication_bindings:
@@ -5210,6 +5382,18 @@ fn runtime_contact_relative_path(contact_id: RuntimeContactId) -> PathBuf {
     PathBuf::from(RUNTIME_STATE_DIRECTORY)
         .join(RUNTIME_CONTACTS_DIRECTORY)
         .join(format!("{contact_id}.contact"))
+}
+
+fn runtime_canonical_sync_v2_activation_relative_path(
+    migration_epoch: u64,
+    record_id: [u8; 32],
+) -> PathBuf {
+    PathBuf::from(RUNTIME_STATE_DIRECTORY)
+        .join(RUNTIME_CANONICAL_SYNC_V2_ACTIVATION_DIRECTORY)
+        .join(format!(
+            "{migration_epoch:020}-{}.csv2-activation",
+            encode_hex(&record_id)
+        ))
 }
 
 fn runtime_endpoint_candidate_relative_path(candidate_id: RuntimeEndpointCandidateId) -> PathBuf {
@@ -5757,6 +5941,7 @@ fn read_runtime_record_files(state_directory: &Path) -> Result<Vec<(PathBuf, Vec
         RUNTIME_LOCAL_MAILBOX_UPDATES_DIRECTORY,
         RUNTIME_PEER_MAILBOX_UPDATES_DIRECTORY,
         RUNTIME_MAILBOX_UPDATE_ACKNOWLEDGEMENTS_DIRECTORY,
+        RUNTIME_CANONICAL_SYNC_V2_ACTIVATION_DIRECTORY,
     ] {
         let root = state_directory
             .join(RUNTIME_STATE_DIRECTORY)
@@ -5809,7 +5994,20 @@ fn load_runtime_state_snapshot(
             .file_name()
             .and_then(|name| name.to_str())
             .context("runtime record filename is not UTF-8")?;
-        if file_name.ends_with(".directory-receipt") {
+        if file_name.ends_with(".csv2-activation") {
+            let value =
+                SignedCanonicalSyncV2ActivationRecord::decode_and_verify(&bytes, local_device_id)
+                    .context("verify canonical sync v2 activation record")?;
+            ensure!(
+                relative_path
+                    == runtime_canonical_sync_v2_activation_relative_path(
+                        value.migration_epoch(),
+                        value.record_id()?,
+                    ),
+                "canonical sync v2 activation filename does not match its authenticated state"
+            );
+            snapshot.canonical_sync_v2_activation_records.push(value);
+        } else if file_name.ends_with(".directory-receipt") {
             let value = SignedRuntimeDeviceDirectoryReceipt::decode(&bytes)?;
             ensure!(
                 value.account_id() == local_account_id
@@ -25939,6 +26137,451 @@ fn show_identity(state_dir: PathBuf) -> Result<()> {
         device_state.encryption().public_key()
     );
     Ok(())
+}
+
+fn canonical_sync_v2_activation_high_water_path(state_directory: &Path) -> PathBuf {
+    state_directory.join(CANONICAL_SYNC_V2_ACTIVATION_HIGH_WATER_FILE)
+}
+
+fn load_canonical_sync_v2_activation_records(
+    state_directory: &Path,
+    local_device_id: DeviceId,
+) -> Result<Vec<SignedCanonicalSyncV2ActivationRecord>> {
+    let mut records = Vec::new();
+    for (relative_path, bytes) in read_runtime_record_files(state_directory)? {
+        let file_name = relative_path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .context("runtime record filename is not UTF-8")?;
+        if !file_name.ends_with(".csv2-activation") {
+            continue;
+        }
+        let record =
+            SignedCanonicalSyncV2ActivationRecord::decode_and_verify(&bytes, local_device_id)
+                .context("verify canonical sync v2 activation record")?;
+        ensure!(
+            relative_path
+                == runtime_canonical_sync_v2_activation_relative_path(
+                    record.migration_epoch(),
+                    record.record_id()?,
+                ),
+            "canonical sync v2 activation filename does not match its authenticated state"
+        );
+        records.push(record);
+    }
+    Ok(records)
+}
+
+fn load_canonical_sync_v2_activation_high_water(
+    state_directory: &Path,
+    local_device_id: DeviceId,
+) -> Result<Option<SignedCanonicalSyncV2ActivationHighWater>> {
+    let path = canonical_sync_v2_activation_high_water_path(state_directory);
+    let metadata = match fs::symlink_metadata(&path) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => {
+            return Err(error)
+                .with_context(|| format!("inspect activation high-water {}", path.display()));
+        }
+    };
+    ensure!(
+        metadata.file_type().is_file() && !metadata.file_type().is_symlink(),
+        "canonical sync v2 activation high-water is not a regular file"
+    );
+    ensure!(
+        metadata.len() <= 1024,
+        "canonical sync v2 activation high-water is unexpectedly large"
+    );
+    let encoded = fs::read(&path)
+        .with_context(|| format!("read activation high-water {}", path.display()))?;
+    Ok(Some(
+        SignedCanonicalSyncV2ActivationHighWater::decode_and_verify(&encoded, local_device_id)
+            .context("verify canonical sync v2 activation high-water")?,
+    ))
+}
+
+fn publish_canonical_sync_v2_activation_high_water(
+    state_directory: &Path,
+    high_water: &SignedCanonicalSyncV2ActivationHighWater,
+) -> Result<()> {
+    publish_runtime_ticket(
+        &canonical_sync_v2_activation_high_water_path(state_directory),
+        &high_water.encode(),
+    )
+    .context("atomically publish canonical sync v2 activation high-water")
+}
+
+fn show_canonical_sync_v2_activation_status(state_dir: PathBuf) -> Result<()> {
+    let device_state = load_command_device_state(&state_dir)?;
+    let local_device_id = device_state.identity().device_id();
+    let records = load_canonical_sync_v2_activation_records(&state_dir, local_device_id)?;
+    let high_water = load_canonical_sync_v2_activation_high_water(&state_dir, local_device_id)?;
+    let head = verify_canonical_sync_v2_activation_authority(
+        &records,
+        high_water.as_ref(),
+        local_device_id,
+    )
+    .context("verify canonical sync v2 activation authority")?;
+    print_canonical_sync_v2_activation_status(local_device_id, head.as_ref(), high_water.as_ref())?;
+    println!("status=canonical-sync-v2-activation-authority-verified");
+    Ok(())
+}
+
+fn plan_canonical_sync_v2_activation(
+    state_dir: PathBuf,
+    migration_state: CanonicalSyncV2MigrationState,
+    disposition: CanonicalSyncV2ActivationDisposition,
+    actor: CanonicalSyncV2ActivationActor,
+    canonical_evidence_id: Option<String>,
+    reason: String,
+) -> Result<()> {
+    let device_state = load_command_device_state(&state_dir)?;
+    let local_device_id = device_state.identity().device_id();
+    let records = load_canonical_sync_v2_activation_records(&state_dir, local_device_id)?;
+    let high_water = load_canonical_sync_v2_activation_high_water(&state_dir, local_device_id)?;
+    let head = verify_canonical_sync_v2_activation_authority(
+        &records,
+        high_water.as_ref(),
+        local_device_id,
+    )
+    .context("verify canonical sync v2 activation authority before planning")?;
+    let evidence = canonical_evidence_id
+        .as_deref()
+        .map(|value| decode_hex_32(value, "canonical sync v2 evidence ID"))
+        .transpose()?;
+    let candidate = SignedCanonicalSyncV2ActivationRecord::issue(
+        device_state.identity(),
+        head.as_ref(),
+        migration_state,
+        disposition,
+        actor,
+        evidence,
+        reason,
+    )
+    .context("plan exact canonical sync v2 activation successor")?;
+    print_canonical_sync_v2_activation_candidate(&candidate, head.as_ref())?;
+    println!("activation_plan_writes_state=false");
+    println!("status=canonical-sync-v2-activation-planned");
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn apply_canonical_sync_v2_activation(
+    state_dir: PathBuf,
+    migration_state: CanonicalSyncV2MigrationState,
+    disposition: CanonicalSyncV2ActivationDisposition,
+    actor: CanonicalSyncV2ActivationActor,
+    canonical_evidence_id: Option<String>,
+    reason: String,
+    expected_record_id: String,
+) -> Result<()> {
+    let device_state = load_command_device_state(&state_dir)?;
+    let identity = device_state.identity();
+    let local_device_id = identity.device_id();
+    let expected_record_id = decode_hex_32(
+        &expected_record_id,
+        "expected canonical sync v2 activation record ID",
+    )?;
+    let evidence = canonical_evidence_id
+        .as_deref()
+        .map(|value| decode_hex_32(value, "canonical sync v2 evidence ID"))
+        .transpose()?;
+    let records = load_canonical_sync_v2_activation_records(&state_dir, local_device_id)?;
+    let raw_head = verify_canonical_sync_v2_activation_chain(&records, local_device_id)
+        .context("verify append-only canonical sync v2 activation chain")?;
+    let high_water = load_canonical_sync_v2_activation_high_water(&state_dir, local_device_id)?;
+
+    match verify_canonical_sync_v2_activation_authority(
+        &records,
+        high_water.as_ref(),
+        local_device_id,
+    ) {
+        Ok(authoritative_head) => {
+            let candidate = SignedCanonicalSyncV2ActivationRecord::issue(
+                identity,
+                authoritative_head.as_ref(),
+                migration_state,
+                disposition,
+                actor,
+                evidence,
+                reason,
+            )
+            .context("recompute exact canonical sync v2 activation plan")?;
+            let candidate_id = candidate.record_id()?;
+            ensure!(
+                candidate_id == expected_record_id,
+                "canonical sync v2 activation plan changed; refusing stale or altered apply"
+            );
+            let relative_path = runtime_canonical_sync_v2_activation_relative_path(
+                candidate.migration_epoch(),
+                candidate_id,
+            );
+            let encoded = candidate.encode()?;
+            let outcome = run_state_transaction(&state_dir, |transaction| {
+                persist_runtime_record(&state_dir, &relative_path, &encoded, transaction)
+            })?;
+            let new_high_water =
+                SignedCanonicalSyncV2ActivationHighWater::issue(identity, &candidate)?;
+            publish_canonical_sync_v2_activation_high_water(&state_dir, &new_high_water)?;
+            print_canonical_sync_v2_activation_candidate(&candidate, authoritative_head.as_ref())?;
+            println!(
+                "activation_record_store={}",
+                match outcome {
+                    StoreOutcome::Inserted => "inserted",
+                    StoreOutcome::AlreadyPresent => "already-present",
+                }
+            );
+            println!("activation_high_water=atomic-replace");
+            println!("status=canonical-sync-v2-activation-applied");
+            Ok(())
+        }
+        Err(error @ CanonicalSyncV2ActivationError::HighWaterMissing)
+        | Err(error @ CanonicalSyncV2ActivationError::HighWaterMismatch) => {
+            repair_interrupted_canonical_sync_v2_activation_apply(
+                &state_dir,
+                identity,
+                &records,
+                raw_head.as_ref(),
+                high_water.as_ref(),
+                migration_state,
+                disposition,
+                actor,
+                evidence,
+                reason,
+                expected_record_id,
+                error,
+            )
+        }
+        Err(error) => Err(error).context("verify canonical sync v2 activation authority"),
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn repair_interrupted_canonical_sync_v2_activation_apply(
+    state_directory: &Path,
+    identity: &DeviceIdentity,
+    records: &[SignedCanonicalSyncV2ActivationRecord],
+    raw_head: Option<&SignedCanonicalSyncV2ActivationRecord>,
+    high_water: Option<&SignedCanonicalSyncV2ActivationHighWater>,
+    migration_state: CanonicalSyncV2MigrationState,
+    disposition: CanonicalSyncV2ActivationDisposition,
+    actor: CanonicalSyncV2ActivationActor,
+    evidence: Option<[u8; 32]>,
+    reason: String,
+    expected_record_id: [u8; 32],
+    authority_error: CanonicalSyncV2ActivationError,
+) -> Result<()> {
+    let raw_head = raw_head.context("activation authority has no chain head to repair")?;
+    ensure!(
+        raw_head.record_id()? == expected_record_id,
+        "activation authority is incomplete at a different record; refusing repair"
+    );
+    let previous = if raw_head.migration_epoch() == 1 {
+        None
+    } else {
+        records
+            .iter()
+            .find(|record| record.migration_epoch() + 1 == raw_head.migration_epoch())
+    };
+    ensure!(
+        raw_head.migration_epoch() == 1 || previous.is_some(),
+        "activation authority interrupted repair cannot locate exact previous record"
+    );
+    if let Some(high_water) = high_water {
+        let previous = previous.context(
+            "activation high-water mismatch cannot be repaired for a first-record transition",
+        )?;
+        ensure!(
+            high_water.migration_epoch() == previous.migration_epoch()
+                && high_water.head_record_id() == previous.record_id()?,
+            "activation high-water is not the exact previous head; refusing repair"
+        );
+    }
+    let recomputed = SignedCanonicalSyncV2ActivationRecord::issue(
+        identity,
+        previous,
+        migration_state,
+        disposition,
+        actor,
+        evidence,
+        reason,
+    )
+    .context("recompute interrupted canonical sync v2 activation record")?;
+    ensure!(
+        recomputed.encode()? == raw_head.encode()?,
+        "interrupted activation record does not exactly match the requested apply"
+    );
+    let repaired = SignedCanonicalSyncV2ActivationHighWater::issue(identity, raw_head)?;
+    publish_canonical_sync_v2_activation_high_water(state_directory, &repaired)?;
+    println!("activation_interrupted_authority_error={authority_error}");
+    println!("activation_record_store=already-present");
+    println!("activation_high_water=atomic-repair");
+    println!("activation_record_id={}", encode_hex(&expected_record_id));
+    println!("status=canonical-sync-v2-activation-repaired");
+    Ok(())
+}
+
+fn print_canonical_sync_v2_activation_status(
+    local_device_id: DeviceId,
+    head: Option<&SignedCanonicalSyncV2ActivationRecord>,
+    high_water: Option<&SignedCanonicalSyncV2ActivationHighWater>,
+) -> Result<()> {
+    println!("activation_device_id={local_device_id}");
+    match head {
+        Some(head) => {
+            println!("activation_policy_source=signed-device-chain");
+            println!("activation_migration_epoch={}", head.migration_epoch());
+            println!("activation_record_id={}", encode_hex(&head.record_id()?));
+            println!(
+                "activation_previous_record_id={}",
+                head.previous_record_id()
+                    .map(|value| encode_hex(&value))
+                    .unwrap_or_else(|| "none".to_owned())
+            );
+            println!(
+                "activation_migration_state={}",
+                canonical_sync_v2_migration_state_name(head.migration_state())
+            );
+            println!(
+                "activation_disposition={}",
+                canonical_sync_v2_activation_disposition_name(head.disposition())
+            );
+            println!("activation_actor={}", head.actor().as_str());
+            println!(
+                "activation_canonical_evidence_id={}",
+                head.canonical_evidence_id()
+                    .map(|value| encode_hex(&value))
+                    .unwrap_or_else(|| "none".to_owned())
+            );
+            println!("activation_reason={}", head.reason());
+            print_canonical_sync_v2_activation_permissions(head.permissions()?);
+        }
+        None => {
+            println!("activation_policy_source=implicit-default");
+            println!("activation_migration_epoch=0");
+            println!("activation_record_id=none");
+            println!("activation_previous_record_id=none");
+            println!("activation_migration_state=legacy-only");
+            println!("activation_disposition=normal");
+            println!("activation_actor=none");
+            println!("activation_canonical_evidence_id=none");
+            println!("activation_reason=none");
+            print_canonical_sync_v2_activation_permissions(
+                evaluate_canonical_sync_v2_activation_permissions(
+                    CanonicalSyncV2MigrationState::LegacyOnly,
+                    CanonicalSyncV2ActivationDisposition::Normal,
+                    false,
+                )?,
+            );
+        }
+    }
+    println!(
+        "activation_high_water={}",
+        if high_water.is_some() {
+            "verified"
+        } else {
+            "absent"
+        }
+    );
+    Ok(())
+}
+
+fn print_canonical_sync_v2_activation_candidate(
+    candidate: &SignedCanonicalSyncV2ActivationRecord,
+    current_head: Option<&SignedCanonicalSyncV2ActivationRecord>,
+) -> Result<()> {
+    println!("activation_device_id={}", candidate.local_device_id());
+    println!(
+        "activation_current_record_id={}",
+        current_head
+            .map(SignedCanonicalSyncV2ActivationRecord::record_id)
+            .transpose()?
+            .map(|value| encode_hex(&value))
+            .unwrap_or_else(|| "none".to_owned())
+    );
+    println!(
+        "activation_plan_record_id={}",
+        encode_hex(&candidate.record_id()?)
+    );
+    println!(
+        "activation_plan_previous_record_id={}",
+        candidate
+            .previous_record_id()
+            .map(|value| encode_hex(&value))
+            .unwrap_or_else(|| "none".to_owned())
+    );
+    println!(
+        "activation_plan_migration_epoch={}",
+        candidate.migration_epoch()
+    );
+    println!(
+        "activation_plan_migration_state={}",
+        canonical_sync_v2_migration_state_name(candidate.migration_state())
+    );
+    println!(
+        "activation_plan_disposition={}",
+        canonical_sync_v2_activation_disposition_name(candidate.disposition())
+    );
+    println!("activation_plan_actor={}", candidate.actor().as_str());
+    println!(
+        "activation_plan_canonical_evidence_id={}",
+        candidate
+            .canonical_evidence_id()
+            .map(|value| encode_hex(&value))
+            .unwrap_or_else(|| "none".to_owned())
+    );
+    println!("activation_plan_reason={}", candidate.reason());
+    print_canonical_sync_v2_activation_permissions(candidate.permissions()?);
+    Ok(())
+}
+
+fn print_canonical_sync_v2_activation_permissions(
+    permissions: CanonicalSyncV2ActivationPermissions,
+) {
+    println!(
+        "activation_legacy_reader_enabled={}",
+        permissions.legacy_reader_enabled()
+    );
+    println!(
+        "activation_publish_canonical_capability={}",
+        permissions.publish_canonical_capability()
+    );
+    println!(
+        "activation_register_canonical_alpn={}",
+        permissions.register_canonical_alpn()
+    );
+    println!(
+        "activation_accept_new_canonical_session={}",
+        permissions.accept_new_canonical_session()
+    );
+    println!(
+        "activation_initiate_new_canonical_session={}",
+        permissions.initiate_new_canonical_session()
+    );
+    println!(
+        "activation_resume_selected_canonical_session={}",
+        permissions.resume_selected_canonical_session()
+    );
+}
+
+fn canonical_sync_v2_migration_state_name(state: CanonicalSyncV2MigrationState) -> &'static str {
+    match state {
+        CanonicalSyncV2MigrationState::LegacyOnly => "legacy-only",
+        CanonicalSyncV2MigrationState::AdvertiseCanonicalV2 => "advertise-cbor-v2",
+        CanonicalSyncV2MigrationState::DualReaderPreferLegacy => "dual-reader-prefer-legacy",
+        CanonicalSyncV2MigrationState::DualReaderPreferCanonical => "dual-reader-prefer-canonical",
+        CanonicalSyncV2MigrationState::CanonicalRequired => "canonical-required",
+    }
+}
+
+fn canonical_sync_v2_activation_disposition_name(
+    disposition: CanonicalSyncV2ActivationDisposition,
+) -> &'static str {
+    match disposition {
+        CanonicalSyncV2ActivationDisposition::Normal => "normal",
+        CanonicalSyncV2ActivationDisposition::EmergencyContainment => "emergency-containment",
+    }
 }
 
 fn create_account(account_dir: PathBuf) -> Result<()> {

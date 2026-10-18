@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.82",
+  "status": "canonical-sync-v2-durable-local-activation-authority-verified",
+  "changes_active_wire": false,
+  "public_default": "legacy-only",
+  "authority": {
+    "source": "device-signed-append-only-chain",
+    "record_version": 1,
+    "record_magic": "KILOGRAM-CSAP-V1",
+    "record_id": "blake3-derived-key-over-exact-signed-record",
+    "signature": "ed25519-device",
+    "device_bound": true,
+    "first_epoch": 1,
+    "epoch_step": 1,
+    "exact_previous_record_binding": true,
+    "reason_min_bytes": 1,
+    "reason_max_bytes": 256,
+    "reason_trimmed_control_free": true,
+    "actors": [
+      "explicit-local",
+      "release-policy"
+    ],
+    "environment_variable_authority": false,
+    "hidden_permissive_flag_authority": false
+  },
+  "high_water": {
+    "version": 1,
+    "magic": "KILOGRAM-CSHW-V1",
+    "signature": "ed25519-device",
+    "atomic_replace": true,
+    "exact_epoch_and_head_binding": true,
+    "chain_without_high_water_activates_canonical": false,
+    "high_water_without_chain_activates_canonical": false,
+    "mismatched_high_water_activates_canonical": false,
+    "interrupted_tail_repair_requires_exact_planned_record_id": true
+  },
+  "transitions": {
+    "forward": "exactly-one-state",
+    "pre_evidence_rollback": "exactly-one-state",
+    "post_evidence_rollback": "forbidden",
+    "containment": "same-state-with-exact-evidence",
+    "exit_containment": "same-state-preserve-exact-evidence",
+    "first_explicit_state": "advertise-cbor-v2",
+    "epoch_skip": "rejected",
+    "fork": "rejected",
+    "replay": "rejected",
+    "wrong_device": "rejected",
+    "canonical_evidence_change_or_removal": "rejected"
+  },
+  "commands": {
+    "status": {
+      "name": "canonical-sync-policy-status",
+      "writes_state": false,
+      "missing_chain_and_high_water": "implicit-legacy-only"
+    },
+    "plan": {
+      "name": "canonical-sync-policy-plan",
+      "writes_state": false,
+      "prints_exact_candidate_record_id": true
+    },
+    "apply": {
+      "name": "canonical-sync-policy-apply",
+      "requires_exact_candidate_record_id": true,
+      "append_only_record": true,
+      "vault_primary_transaction": true,
+      "publishes_signed_high_water_after_record_commit": true
+    }
+  },
+  "failure_policy": {
+    "missing_authority": "implicit-legacy-only",
+    "malformed_record": "fail-closed",
+    "invalid_signature": "fail-closed",
+    "stale_expected_record_id": "fail-closed",
+    "forked_chain": "fail-closed",
+    "epoch_gap": "fail-closed",
+    "wrong_device": "fail-closed",
+    "truncated_tail_against_retained_high_water": "fail-closed"
+  },
+  "anti_rollback_scope": {
+    "detects_record_tamper_fork_gap_and_retained_high_water_tail_rollback": true,
+    "detects_coordinated_whole_directory_and_witness_rollback": false,
+    "external_or_hardware_witness_required_for_coordinated_rollback": true
+  },
+  "verification": {
+    "restart": true,
+    "interrupted_record_before_high_water": true,
+    "replay": true,
+    "epoch_skip": true,
+    "fork": true,
+    "wrong_device": true,
+    "filesystem_cli_lifecycle": true,
+    "vault_primary_cli_lifecycle": true,
+    "network_executed": false
+  },
+  "activation": {
+    "semantic_policy_integrated": true,
+    "durable_local_authority_integrated": true,
+    "active_runtime_integrated": false,
+    "candidate_endpoint_registered_by_default": false,
+    "candidate_dialed_by_default": false
+  },
+  "next": [
+    "production-runtime-dark-launch-integration",
+    "local-and-two-host-activation-rehearsal",
+    "aggregate-regression-and-formalization"
+  ]
+}

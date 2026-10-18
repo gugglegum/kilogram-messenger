@@ -197,12 +197,19 @@ function Assert-Contract {
             throw "mixed-version source marker missing: $needle"
         }
     }
-    foreach ($inactiveSource in @($Wire, $Transport, $Cli)) {
+    foreach ($inactiveSource in @($Wire, $Transport)) {
         if ($inactiveSource.Contains('evaluate_dormant_canonical_sync_v2_transport_policy') -or
             $inactiveSource.Contains('CanonicalSyncV2DormantTransportPlan') -or
             $inactiveSource.Contains('CanonicalSyncV2MigrationState')) {
             throw 'dormant matrix leaked into active wire/transport/CLI code'
         }
+    }
+    # M1.1.82 shares the migration-state enum with the signed local activation
+    # authority, but the dormant transport planner itself must remain absent
+    # from the CLI until the production dark-launch integration is authorized.
+    if ($Cli.Contains('evaluate_dormant_canonical_sync_v2_transport_policy') -or
+        $Cli.Contains('CanonicalSyncV2DormantTransportPlan')) {
+        throw 'dormant transport matrix leaked into active CLI code'
     }
     $normalizedRfc = [regex]::Replace($Rfc, '\s+', ' ')
     foreach ($needle in @(
