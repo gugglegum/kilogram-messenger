@@ -1,155 +1,190 @@
-# Следующий большой этап: M1.1.77–M1.1.80
+# Следующий большой этап: M1.1.81–M1.1.85
 
-Статус: завершено. Frozen revision
-`b1f23c3719a0842979f047d874141953ae93ccac` прошла свежий двухмашинный
-physical Windows run и независимый manual hosted run `39116855502`. Оба
-bounded manifest приняты fail-closed verifier-ом; direct, restart/resume,
-relay, mixed-version, post-selection failure и rollback подтверждены.
-Канонические ledgers переведены в состояние
-`ready-for-explicit-activation-decision`, но production transport не изменён:
-Postcard v6 остаётся активным, `/cbor/2` не зарегистрирован и не dial-ится по
-умолчанию.
+Статус: запланировано, выполнение не начато.
 
-Финальная формализация также проверена на точном итоговом дереве: все 27
-изменённых boundary self-tests прошли, accepted-tag readiness прошёл `108/108`
-вместе с rustfmt и locked/offline strict Clippy, а полный stable Rust regression
-завершился `status=passed`. Legacy decoder corpus проверил `31 851/31 851`
-мутацию за `2640.20s`, canonical sync v2 corpus — `2 863/2 863` за `24.07s`.
+Оценка: 5.5–7.5 часа чистого времени при отсутствии внешних сетевых сбоев.
 
-Цель: за один длительный блок продолжительностью примерно 8–10 часов закрыть
-последний технический gate `fresh-hosted-and-field-evidence` для dormant
-`kilogram/m1/sync/cbor/2` и получить честное состояние
-`ready-for-explicit-activation-decision`. Сам этап не меняет transport по
-умолчанию, не удаляет Postcard v6 и не разрешает fallback после ошибки уже
-выбранной canonical-сессии.
+Цель: выполнить первый обратимо управляемый dark launch canonical sync v2 в
+штатном runtime. Обычный запуск и все существующие пользователи остаются в
+`legacy-only`: Postcard v6 / `kilogram/m0/sync/8`. `/cbor/2` может быть включён
+только явной локальной политикой на специально выбранных тестовых Devices.
+
+Этап не меняет публичный default, не удаляет legacy reader, не создаёт release,
+ZIP или tag и не включает автоматический GitHub build. Он должен превратить
+проверенный evidence-only transport в контролируемый opt-in путь того же
+runtime, не ослабив запрет fallback после authenticated canonical selection.
 
 ## Исходная точка
 
-- точный runtime/protocol baseline: commit
-  `cc724c908dc3774c87071a523991f7ef79a81335`; последующие roadmap-only commits
-  не меняют его protected runtime surface, а field revision будет заново
-  зафиксирован после реализации evidence lane;
-- восьмичасовой decoder campaign M1.1.76 завершён: 469 853 771 iterations,
-  0 artifacts, coverage profile проверен;
-- все локальные activation requirements, кроме
-  `fresh-hosted-and-field-evidence`, отмечены verified;
-- active transport остаётся Postcard v6 / `kilogram/m0/sync/8`;
-- `/cbor/2` выделен и полностью реализован как dormant candidate, но не
-  зарегистрирован и не dial-ится;
-- первый push runtime baseline выполнен 2026-10-18; Windows CI run
-  `39087571586` был `in_progress` во время составления плана. Итоговым hosted
-  evidence считается только новый green run exact implementation commit,
-  созданный после завершения пакетов 1–3.
+- M1.1.80 закрыт commit-ом
+  `478bd71049585fe0dc19901858b5c895b843fbff`;
+- exact implementation revision
+  `b1f23c3719a0842979f047d874141953ae93ccac` подтверждена independent hosted
+  run `39116855502` и двухмашинным Windows field run
+  `m1180-field-20261018T093610Z`;
+- все 18 targeted canonical surfaces и все activation requirements verified;
+- `changes_active_wire=false`, `/cbor/2` не зарегистрирован и не dial-ится
+  обычным runtime;
+- default и единственный публично активный transport — Postcard v6;
+- текущее имя состояния `advertise-cbor-v2` семантически неоднозначно: manifest
+  называет его Postcard-only reader, хотя capability нельзя публиковать как
+  доступную до готовности безопасно принять соответствующий ALPN;
+- `dual-reader-prefer-legacy` и `dual-reader-prefer-cbor` также требуют точного
+  определения того, кто публикует capability, кто принимает `/cbor/2` и кто
+  первым его dial-ит. Название состояния не должно подменять эти три независимые
+  разрешения.
 
-## Рабочие пакеты и ориентировочное время
+## Ожидаемый итог
 
-### 1. Hosted baseline и точный evidence contract — 1–1.5 часа
+1. Есть один machine-readable activation policy и RFC с точной матрицей
+   `publish / accept / initiate / resume` для каждого migration state.
+2. Policy хранится атомарно, привязана к Device и monotonic migration epoch,
+   а tamper, fork и rollback блокируют activation.
+3. Новый и существующий профиль без явной policy остаётся `legacy-only`.
+4. Штатный runtime умеет opt-in `/cbor/2` без отдельной evidence-only логики.
+5. Два явно выбранных тестовых Devices проходят direct v2 sync, restart/resume,
+   mixed-version control и selected-v2 fail-closed test.
+6. Аварийное containment запрещает новые v2 sessions, но сохраняет reader и
+   возможность resume уже выбранной canonical session; оно никогда не
+   превращает canonical failure в legacy retry.
+7. Public default, release artifacts и пользовательская история не меняются.
 
-1. Дождаться результата Windows CI для `cc724c9` и сохранить exact run ID,
-   revision и conclusion.
-2. При failure сначала локализовать и исправить только воспроизводимую причину;
-   любой code change требует нового clean push и нового hosted run.
-3. Определить отдельный versioned manifest свежего evidence: exact source tree,
-   toolchain, бинарные SHA-256, роли, transport identifiers, route, run IDs,
-   counts, restart/rollback results и отсутствие fallback после выбранного
-   `/cbor/2`.
-4. Добавить fail-closed verifier и negative self-tests. GitHub-hosted evidence
-   и physical-device evidence должны оставаться двумя различными объектами.
+## Рабочие пакеты
 
-Контрольная точка: hosted baseline зелёный, schema не допускает подмену
-revision, бинарника, topology или transport path.
+### M1.1.81 — activation semantics и decision record — 45–60 минут
 
-### 2. Явно ограниченная field-активация candidate — 2–2.5 часа
+1. Разделить transport policy на четыре независимых права:
+   - публиковать authenticated `/cbor/2` capability;
+   - регистрировать и принимать `/cbor/2` ALPN;
+   - инициировать новый `/cbor/2` dial;
+   - продолжать уже выбранную durable canonical session.
+2. Сверить имена состояний в Rust, JSON ledgers и RFC. Если прежнее имя
+   `advertise-cbor-v2` допускает unsafe interpretation, уточнить его семантику
+   без переиспользования wire identifiers.
+3. Зафиксировать exact forward transitions, explicit one-step rollback до
+   canonical evidence и отдельное emergency containment после selection.
+4. Создать RFC и `CANONICAL-SYNC-V2-ACTIVATION-POLICY.json` с negative
+   fail-closed matrix.
+5. Добавить verifier, который запрещает capability publication без matching
+   listener/read capability и запрещает legacy fallback после selection.
 
-1. Добавить только debug/test evidence lane, который может зарегистрировать
-   `/cbor/2` и dial-ить его после уже реализованной взаимной authenticated
-   selection ceremony.
-2. Не добавлять silent production flag и не менять default: отсутствие exact
-   evidence option обязано оставлять процесс legacy-only.
-3. Сохранить жёсткое правило: до взаимного выбора возможен downgrade к legacy;
-   после выбора canonical любая decode/network/session ошибка завершает попытку
-   без Postcard fallback.
-4. Подключить durable client/responder adapters, typed store, resume и rollback
-   snapshot к реальному Iroh stream, не создавая второй логики состояния.
-5. Добавить focused Rust tests для v2/v2, v2/legacy, restart-resume,
-   post-selection failure и one-step rollback.
+Контрольная точка: state names больше не скрывают поведение; из одного manifest
+однозначно видно, что endpoint публикует, принимает, инициирует и возобновляет.
+Active transport пока не меняется.
 
-Контрольная точка: network-capable candidate доступен только через явно
-ограниченный evidence path; обычный CLI/runtime остаётся byte-for-byte по
-поведению legacy-only.
+### M1.1.82 — durable local activation authority — 60–75 минут
 
-### 3. Автоматизированный hosted experiment — 1–1.5 часа
+1. Реализовать versioned Device-bound activation record с monotonic epoch,
+   exact previous-record binding и bounded reason/actor metadata.
+2. Использовать atomic no-clobber/replace discipline и существующие
+   anti-rollback primitives; не вводить environment variable или скрытый
+   permissive flag как источник authority.
+3. Добавить команды `status`, `plan` и `apply` для явной локальной операции.
+   `plan` не меняет состояние, `apply` обязан exact-match предыдущий record.
+4. Missing, malformed, stale, forked или относящаяся к другому Device policy
+   должна давать `legacy-only` либо fail closed, но никогда не активировать v2.
+5. Проверить restart, interrupted write, replay, epoch skip и wrong-Device
+   cases.
 
-1. Запустить два свежих процесса на GitHub-hosted Windows runner с отдельными
-   state directories и тестовыми identities.
-2. Проверить exact ALPN `/cbor/2`, двусторонний sync, одинаковую историю,
-   restart-resume и отсутствие plaintext в evidence.
-3. Отдельно выполнить mixed-version control и negative post-selection control.
-4. Загружать только небольшой manifest/log summary без state, secrets, corpus,
-   release EXE или ZIP.
+Контрольная точка: обычный state directory без activation record ведёт себя как
+до этапа; включение нельзя получить случайным CLI argument, повреждённым файлом
+или откатом каталога.
 
-Контрольная точка: fresh hosted regression принят verifier-ом, но явно не
-считается physical-device evidence.
+### M1.1.83 — production runtime dark-launch integration — 90–120 минут
 
-### 4. Двухмашинный Windows field run — 2–3 часа
+1. Вынести проверенный Iroh `/cbor/2` adapter из evidence binary в общий
+   runtime module, не копируя state machine и typed store.
+2. Строить endpoint ALPN list строго из verified activation policy:
+   - legacy ALPN остаётся зарегистрированным во всех opt-in состояниях этого
+     этапа;
+   - `/cbor/2` регистрируется до его capability publication;
+   - dial разрешается только после mutual authenticated selection;
+   - resume exact persisted canonical session не зависит от текущего желания
+     начать новые sessions.
+3. Связать client/responder dispatch с уже проверенными durable adapters и
+   checkpoint-bound frame journal.
+4. После выбранного `/cbor/2` любая decode, network или state error завершает
+   attempt; Postcard fallback отсутствует.
+5. Добавить stable telemetry fields для policy state, migration epoch,
+   selected ALPN и containment, не записывая message contents или secrets.
 
-Достаточно основного ПК и ноутбука. Используются свежие test-only state
-directories и debug binaries с одинаковым SHA-256. Ноутбук должен быть включён,
-не спать, быть доступен по OpenSSH; VPN лучше отключить на обоих устройствах.
+Контрольная точка: один обычный `kilogram-cli` debug binary поддерживает оба
+reader-а только при точной opt-in policy; без неё его endpoint остаётся
+legacy-only. Отдельный evidence executable больше не является единственным
+местом реального v2 transport.
 
-Матрица:
+### M1.1.84 — local и двухмашинный activation rehearsal — 60–90 минут
 
-1. direct LAN: v2/v2, bidirectional history convergence;
-2. остановка одного процесса между durable commit и продолжением, затем resume
-   без потери или дублирования события;
-3. relay-only control через один pinned relay, если relay доступен;
-4. v2/legacy: согласованный legacy path до canonical selection;
-5. испорченный/оборванный selected-v2 attempt: fail closed, без legacy retry;
-6. explicit one-step rollback с неизменной пользовательской историей.
+Сначала на одном хосте, затем на основном ПК и ноутбуке через уже настроенный
+OpenSSH выполнить на свежих test-only state directories:
 
-Каждый процесс пишет в локальный закрытый log и после завершения закрывает
-handle; controller собирает immutable copies, hashes и bounded summary. Не
-использовать Yandex Disk как coordination transport и не переиспользовать
-старые state directories.
+1. default/default control: только Postcard v6;
+2. opt-in/default mixed-version control: согласованный legacy path без ложной
+   canonical selection;
+3. opt-in/opt-in: exact `/cbor/2`, bidirectional convergence;
+4. process restart после durable progress и exact resume без duplicate/loss;
+5. deliberate selected-v2 corruption/connection loss: fail closed, zero legacy
+   retry;
+6. pre-selection explicit one-step rollback;
+7. post-selection containment: новые v2 attempts выключены, но persisted
+   canonical evidence не стирается и не трактуется как legacy;
+8. повторный обычный запуск доказывает, что public default не изменён.
 
-Контрольная точка: два физических Windows host подтверждают один exact commit
-и exact binaries; direct или relay path подтверждён реальной Iroh telemetry,
-истории совпадают, restart и rollback доказаны.
+Для этого пакета достаточно одной LAN; повторять мобильную/relay топологию не
+обязательно, потому что реальный relay path exact candidate уже подтверждён в
+M1.1.80. Если adapter или route selection существенно изменятся, relay control
+снова становится обязательным.
 
-### 5. Формализация, regression и commit — 1–1.5 часа
+Контрольная точка: exact commit и binary SHA совпадают на обоих устройствах,
+manifest содержит реальные Iroh telemetry и закрытые immutable log copies, а
+истории совпадают. Старые state directories и Yandex Disk как coordination
+transport не используются.
 
-1. Проверить hosted и physical manifests новым verifier-ом.
-2. Обновить canonical migration/transport/coverage ledgers: последний evidence
-   gate становится verified, но `changes_active_wire=false`, candidate
-   `registered=false` и `dialed=false` остаются production defaults.
-3. Зафиксировать отдельный RFC с результатами и остаточными рисками.
-4. Прогнать affected boundary self-tests, полный readiness, rustfmt, locked
-   offline strict Clippy и bounded stable Rust regression.
-5. Закоммитить только при чистом дереве и зелёных проверках. Push выполнять
-   отдельно после проверки commit-а.
+### M1.1.85 — regression, formalization и commit — 75–105 минут
 
-Итоговое состояние: `ready-for-explicit-activation-decision`, а не
-`activated`. Следующий отдельный этап после человеческого решения сможет
-перевести default в `dual-reader-prefer-legacy`; удаление legacy и переход в
-`cbor-required` в этот блок не входят.
+1. Прогнать все изменённые boundary self-tests и negative mutation tests.
+2. Выполнить readiness, rustfmt, locked/offline strict Clippy и полный stable
+   Rust regression.
+3. Legacy и v2 decoder mutation corpora повторять только если менялись decoder,
+   frame codec или их strict validation surface; восьмичасовой fuzz campaign
+   без такого изменения не повторять.
+4. Обновить canonical migration, transport и coverage ledgers. Новый статус
+   должен честно отличать `opt-in-dark-launch-verified` от public activation.
+5. Зафиксировать результаты в RFC, roadmap и отдельном commit; push разрешён
+   после чистого финального verification.
+
+Итоговый статус: `canonical-sync-v2-opt-in-dark-launch-verified`, но default
+остаётся `legacy-only`. Переход public default в dual-reader mode, rollout через
+desktop UI и тем более legacy retirement — отдельные последующие решения.
 
 ## Stop conditions
 
-- hosted и physical evidence относятся к разным source revisions;
-- бинарные SHA-256 на ПК и ноутбуке различаются;
-- field run использовал старое или частично заполненное state directory;
-- selected canonical attempt незаметно перешёл на legacy;
-- evidence зависит от открытого/несинхронизированного файла;
-- любое изменение runtime/protocol после field run инвалидирует evidence и
-  требует пересборку и повтор именно затронутых прогонов;
-- обнаружена потеря, дублирование или изменение уже сохранённой истории.
+- capability публикуется раньше matching listener/read readiness;
+- два состояния с разными именами дают неразличимое поведение без явно
+  документированной причины;
+- policy можно включить простым tampered file, environment variable или stale
+  epoch;
+- обычный профиль регистрирует либо dial-ит `/cbor/2`;
+- selected canonical error вызывает Postcard retry;
+- containment удаляет reader или durable canonical evidence;
+- после field run меняется protected runtime/protocol surface без повторной
+  сборки и затронутых прогонов;
+- обнаружена потеря, дублирование или изменение ранее сохранённой истории;
+- для прохождения теста требуется ослабить authority, membership или checkpoint
+  validation.
 
-## Ресурсная политика
+При любом stop condition этап не получает новый milestone status. Default
+остаётся Postcard v6, а найденная граница документируется как blocker.
 
-- debug builds, без release/ZIP;
-- Cargo jobs 2 по умолчанию, normal или below-normal priority, чтобы ПК оставался
-  отзывчивым;
-- существующий target cache сохраняется;
-- не повторять восьмичасовой fuzz campaign, если decoder/toolchain/seed surface
-  не менялись;
-- никаких фоновых OS services, scheduler tasks, tags или releases.
+## Ресурсная и операционная политика
+
+- debug builds, без release/ZIP/tag;
+- Cargo jobs 2 по умолчанию, existing target cache сохраняется;
+- GitHub Actions только manual и лишь если локальное/двухмашинное evidence
+  выявит host-specific uncertainty; push сам по себе build не запускает;
+- ноутбук нужен только для M1.1.84 примерно на 1–2 часа: питание подключено,
+  sleep выключен, OpenSSH доступен, VPN выключен;
+- никаких фоновых OS services, Task Scheduler jobs или постоянных firewall
+  exceptions сверх уже используемого стабильного executable path;
+- bounded evidence содержит hashes, counts и transport metadata, но не state,
+  secrets, plaintext history или release binaries.
