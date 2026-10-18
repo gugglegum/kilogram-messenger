@@ -4719,3 +4719,35 @@ Hosted follow-up:
   Codex network sandbox, including a verified relay path. Because these tracked
   fixes change source revision, freeze a new commit and repeat final physical
   and hosted manifests on that same revision.
+- Frozen source revision
+  `b1f23c3719a0842979f047d874141953ae93ccac` is the accepted M1.1.80 evidence
+  baseline. Physical manifest:
+  `.tmp/f/m1180-field-20261018T093610Z/manifest.json`, 29,646 bytes, SHA-256
+  `3b87c95c9298fead83ab6cf07d2c37d59e1d8e3336db1d85eb6841a8c9831b37`.
+- Accepted hosted workflow run is `39116855502`. Downloaded manifest:
+  `.tmp/m1180-hosted-39116855502/canonical-sync-v2-hosted-b1f23c3719a0842979f047d874141953ae93ccac/manifest.json`,
+  29,618 bytes, SHA-256
+  `d6382354c0327bb1aa900e7dc33536b467401f95edade1e9113f33e89e21e535`.
+- The physical executable hash is
+  `e23ba26692caf7fe355f04dda5f8825b0222b32ffe62794f0228bd35e7e1f625`;
+  the hosted executable hash is
+  `6a0add9561ce59e4c9b2d36a0ab3f81ab2fc5287df25905579f94c81ec031f9c`.
+  Cross-builder binary equality is not claimed; exact equality on both
+  physical roles and within the hosted topology is verified.
+- `CANONICAL-SYNC-V2-NETWORK-EVIDENCE.json` is the portable compact record.
+  Raw state, identities and logs remain ignored. Production `/cbor/2` default
+  registration/dial remain false; no release, ZIP or tag was created.
+- Final tracked-tree validation used
+  `scripts/run-cargo-tests-stable.ps1 -Profile test -CargoJobs 2
+  -IsolatedTestsFile .\scripts\windows-ci-isolated-tests.json
+  -IsolatedTestOrder BeforeAggregate -NormalProcessPriority -Run -NoFailFast`
+  outside the Codex filesystem sandbox so Rust tests could use the normal
+  Windows temporary directory. The run ended with `status=passed`: the
+  isolated runtime case passed `1/1`, legacy decoder mutations passed
+  `31 851/31 851` in `2640.20s`, and canonical sync v2 decoder mutations
+  passed `2 863/2 863` in `24.07s`; all remaining workspace harnesses passed.
+- The same final tree passed all 27 changed boundary self-tests and accepted-tag
+  readiness `108/108`, including rustfmt and locked/offline strict Clippy. A
+  first in-sandbox test attempt was explicitly discarded after the sandbox
+  redirected `%TEMP%` to a location that returned Windows `os error 5`; it is
+  not product evidence and the valid outside-sandbox rerun had zero failures.

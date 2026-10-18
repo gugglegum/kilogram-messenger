@@ -1,7 +1,8 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.76",
-  "status": "canonical-sync-v2-instrumented-sustained-verified-field-evidence-pending",
+  "milestone": "M1.1.80",
+  "status": "canonical-sync-v2-ready-for-explicit-activation-decision",
+  "network_evidence_manifest": "CANONICAL-SYNC-V2-NETWORK-EVIDENCE.json",
   "surface": "transport-sync",
   "changes_active_wire": false,
   "active": {
@@ -85,11 +86,9 @@
       "prekey-directory-common-validity-window"
     ]
   },
-  "remaining": [
-    "fresh-hosted-and-field-evidence"
-  ],
+  "remaining": [],
   "scope": {
     "active_wire_changed": false,
-    "network_executed": false
+    "network_executed": true
   }
 }

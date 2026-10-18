@@ -52,7 +52,7 @@ function Assert-Contract {
     )
 
     $rollbackStatus = 'dormant-deterministic-rollback-drill-verified-not-active'
-    $aggregateStatus = 'canonical-sync-v2-instrumented-sustained-verified-field-evidence-pending'
+    $aggregateStatus = 'canonical-sync-v2-ready-for-explicit-activation-decision'
     if ([UInt64]$Manifest.schema_version -ne 1 -or
         [string]$Manifest.milestone -cne 'M1.1.71' -or
         [string]$Manifest.status -cne $rollbackStatus -or
@@ -145,7 +145,7 @@ function Assert-Contract {
         [bool]$DualReader.activation.active_transport_authorized) {
         throw 'dual-reader prerequisite changed'
     }
-    if ([string]$Migration.milestone -cne 'M1.1.76' -or
+    if ([string]$Migration.milestone -cne 'M1.1.80' -or
         [string]$Migration.status -cne $aggregateStatus -or
         [string]$Migration.current_state -cne 'legacy-only' -or
         [string]$Migration.history_compatible_successor.dormant_deterministic_rollback_drill -cne
@@ -165,7 +165,7 @@ function Assert-Contract {
         [string]$rollbackRequirement[0].status -cne 'verified') {
         throw 'rollback drill activation requirement is not verified'
     }
-    if ([string]$TransportManifest.milestone -cne 'M1.1.76' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.80' -or
         [string]$TransportManifest.status -cne $aggregateStatus -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_deterministic_rollback_drill -or
         -not [bool]$TransportManifest.selection.rollback_drill_verified -or
@@ -174,17 +174,15 @@ function Assert-Contract {
         [bool]$TransportManifest.history_compatible_successor.dialed) {
         throw 'transport manifest rollback state changed'
     }
-    Assert-ExactStrings @($TransportManifest.remaining) @(
-        'fresh-hosted-and-field-evidence'
-    ) 'transport remaining work'
-    if ([string]$Compatibility.milestone -cne 'M1.1.76' -or
+    Assert-ExactStrings @($TransportManifest.remaining) @() 'transport remaining work'
+    if ([string]$Compatibility.milestone -cne 'M1.1.80' -or
         [string]$Compatibility.status -cne $aggregateStatus -or
         -not [bool]$Compatibility.required_successor.dormant_deterministic_rollback_drill_integrated -or
         [string]$Compatibility.required_successor.status -cne $aggregateStatus) {
         throw 'history compatibility rollback state changed'
     }
     $surface = @($Coverage.surfaces | Where-Object { [string]$_.id -ceq 'transport-sync' })
-    if ([string]$Coverage.milestone -cne 'M1.1.76' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.80' -or
         $surface.Count -ne 1 -or
         'CANONICAL-SYNC-V2-ROLLBACK-DRILL.json' -cnotin @($surface[0].artifacts) -or
         'scripts/verify-kilogram-canonical-sync-v2-rollback-drill-boundary.ps1' -cnotin
@@ -194,9 +192,7 @@ function Assert-Contract {
         'rollback-drill' -cin @($surface[0].remaining)) {
         throw 'coverage rollback drill state changed'
     }
-    Assert-ExactStrings @($surface[0].remaining) @(
-        'fresh-hosted-and-field-evidence'
-    ) 'coverage remaining work'
+    Assert-ExactStrings @($surface[0].remaining) @() 'coverage remaining work'
 
     foreach ($needle in @(
         'pub struct CanonicalSyncV2RollbackSnapshot',

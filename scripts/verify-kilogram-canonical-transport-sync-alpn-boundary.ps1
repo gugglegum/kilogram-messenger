@@ -43,8 +43,8 @@ function Assert-Boundary {
     $canonicalAlpn = 'kilogram/m1/sync/cbor/1'
     $historyCompatibleAlpn = 'kilogram/m1/sync/cbor/2'
     if ([UInt64]$Manifest.schema_version -ne 1 -or
-        [string]$Manifest.milestone -cne 'M1.1.76' -or
-        [string]$Manifest.status -cne 'canonical-sync-v2-instrumented-sustained-verified-field-evidence-pending' -or
+        [string]$Manifest.milestone -cne 'M1.1.80' -or
+        [string]$Manifest.status -cne 'canonical-sync-v2-ready-for-explicit-activation-decision' -or
         [string]$Manifest.surface -cne 'transport-sync' -or
         [bool]$Manifest.changes_active_wire) {
         throw 'canonical transport sync manifest header changed'
@@ -110,9 +110,7 @@ function Assert-Boundary {
         [bool]$Manifest.selection.fallback_after_selected_canonical_failure) {
         throw 'canonical synchronization selection policy changed'
     }
-    $expectedRemaining = @(
-        'fresh-hosted-and-field-evidence'
-    )
+    $expectedRemaining = @()
     if ([string]$Manifest.authenticated_capability.portable_artifact -cne
             'connection-ticket-v13' -or
         [int]$Manifest.authenticated_capability.capability_version -ne 2 -or
@@ -125,12 +123,12 @@ function Assert-Boundary {
             'listener-account-id,listener-device-id,authority-revision,allowed-requester-account-id,endpoint-id,ticket-publication-channel-epoch,prekey-directory-common-validity-window' -or
         (@($Manifest.remaining) -join ',') -cne ($expectedRemaining -join ',') -or
         [bool]$Manifest.scope.active_wire_changed -or
-        [bool]$Manifest.scope.network_executed) {
+        -not [bool]$Manifest.scope.network_executed) {
         throw 'canonical synchronization remaining-work boundary changed'
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.76' -or
-        [string]$Migration.status -cne 'canonical-sync-v2-instrumented-sustained-verified-field-evidence-pending' -or
+    if ([string]$Migration.milestone -cne 'M1.1.80' -or
+        [string]$Migration.status -cne 'canonical-sync-v2-ready-for-explicit-activation-decision' -or
         [string]$Migration.candidate_protocol_identifier -cne $historyCompatibleAlpn -or
         [string]$Migration.history_compatible_successor.protocol_identifier -cne
             $historyCompatibleAlpn -or
@@ -161,15 +159,14 @@ function Assert-Boundary {
     }
 
     $surface = @($Coverage.surfaces | Where-Object { [string]$_.id -ceq 'transport-sync' })
-    if ([string]$Coverage.milestone -cne 'M1.1.76' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.80' -or
         $surface.Count -ne 1 -or
-        [string]$surface[0].coverage -cne 'partial' -or
+        [string]$surface[0].coverage -cne 'complete' -or
         (@($surface[0].covered) -join ',') -cne
-            'parallel-cbor-alpn-identifier-allocation,history-compatible-cbor-v2-alpn-identifier-allocation,typed-durable-canonical-sync-session-checkpoint,authenticated-ticket-v13-history-compatible-cbor-v2-capability,dormant-history-compatible-sync-v2-runtime-state-machine,dormant-atomic-typed-carrier-store,dormant-cross-format-membership-policy,dormant-bounded-resumable-legacy-import,dormant-atomic-legacy-import-checkpoint,dormant-signed-session-bootstrap,dormant-signed-session-successor-store,dormant-checkpoint-bound-runtime-frame-journal,dormant-atomic-runtime-transition-transaction,dormant-durable-client-transition-adapter,dormant-durable-responder-transition-adapter,dormant-mutual-authenticated-candidate-selection,dormant-mixed-version-and-downgrade-matrix,dormant-dual-reader-runtime-coordinator,dormant-deterministic-rollback-drill,bounded-canonical-sync-v2-decoder-mutation-corpus,coverage-guided-fuzz-harness,instrumented-fuzz-smoke,sustained-fuzz-campaign' -or
-        (@($surface[0].remaining) -join ',') -cne
-            'fresh-hosted-and-field-evidence' -or
-        [int]$Coverage.summary.complete -ne 17 -or
-        [int]$Coverage.summary.partial -ne 1 -or
+            'parallel-cbor-alpn-identifier-allocation,history-compatible-cbor-v2-alpn-identifier-allocation,typed-durable-canonical-sync-session-checkpoint,authenticated-ticket-v13-history-compatible-cbor-v2-capability,dormant-history-compatible-sync-v2-runtime-state-machine,dormant-atomic-typed-carrier-store,dormant-cross-format-membership-policy,dormant-bounded-resumable-legacy-import,dormant-atomic-legacy-import-checkpoint,dormant-signed-session-bootstrap,dormant-signed-session-successor-store,dormant-checkpoint-bound-runtime-frame-journal,dormant-atomic-runtime-transition-transaction,dormant-durable-client-transition-adapter,dormant-durable-responder-transition-adapter,dormant-mutual-authenticated-candidate-selection,dormant-mixed-version-and-downgrade-matrix,dormant-dual-reader-runtime-coordinator,dormant-deterministic-rollback-drill,bounded-canonical-sync-v2-decoder-mutation-corpus,coverage-guided-fuzz-harness,instrumented-fuzz-smoke,sustained-fuzz-campaign,fresh-hosted-and-field-evidence' -or
+        @($surface[0].remaining).Count -ne 0 -or
+        [int]$Coverage.summary.complete -ne 18 -or
+        [int]$Coverage.summary.partial -ne 0 -or
         [int]$Coverage.summary.not_started -ne 0 -or
         [int]$Coverage.summary.not_targeted -ne 2) {
         throw 'canonical transport sync coverage changed'
@@ -288,4 +285,4 @@ Write-Output 'candidate_identifier_allocated=true'
 Write-Output 'candidate_identifier_registered=false'
 Write-Output 'candidate_identifier_dialed=false'
 Write-Output 'active_wire_changed=false'
-Write-Output 'network_executed=false'
+Write-Output 'network_evidence_executed=true'

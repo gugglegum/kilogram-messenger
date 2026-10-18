@@ -1,7 +1,8 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.76",
-  "status": "canonical-sync-v2-instrumented-sustained-verified-field-evidence-pending",
+  "milestone": "M1.1.80",
+  "status": "canonical-sync-v2-ready-for-explicit-activation-decision",
+  "network_evidence_manifest": "CANONICAL-SYNC-V2-NETWORK-EVIDENCE.json",
   "changes_active_wire": false,
   "active": {
     "encoding": "postcard-v6",
@@ -64,7 +65,7 @@
     "must_integrate_bridge_into_closed_frames": true,
     "must_authenticate_exact_identifier_in_connection_ticket": true,
     "must_preserve_no-sniffing-and-no-parse-fallback": true,
-    "status": "canonical-sync-v2-instrumented-sustained-verified-field-evidence-pending"
+    "status": "canonical-sync-v2-ready-for-explicit-activation-decision"
   },
   "forbidden": [
     "resign-historical-event-with-migration-key",
@@ -75,7 +76,7 @@
     "parse-error-fallback-to-legacy"
   ],
   "scope": {
-    "network_executed": false,
+    "network_executed": true,
     "release_build": false,
     "archive_created": false,
     "stable_executable_replaced": false

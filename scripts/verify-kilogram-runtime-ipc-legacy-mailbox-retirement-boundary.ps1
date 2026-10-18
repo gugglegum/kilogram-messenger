@@ -180,9 +180,9 @@ function Assert-RetirementBoundary {
         'active-postcard-legacy-central-https-mailbox-command-retirement' -cnotin
             @($surface[0].covered) -or
         @($surface[0].remaining).Count -ne 0 -or
-        [int]$Coverage.summary.complete -ne 17 -or
-        [int]$Coverage.summary.partial -ne 1 -or
-        (@($Coverage.next_priority) -join ',') -cne 'transport-sync') {
+        [int]$Coverage.summary.complete -ne 18 -or
+        [int]$Coverage.summary.partial -ne 0 -or
+        (@($Coverage.next_priority) -join ',') -cne 'explicit-sync-v2-activation-decision') {
         throw 'canonical coverage did not complete runtime IPC'
     }
 

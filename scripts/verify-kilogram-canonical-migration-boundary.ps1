@@ -23,8 +23,8 @@ function Assert-ExactStrings {
 
 function Assert-Manifest {
     param([object]$Manifest)
-    if ([UInt64]$Manifest.schema_version -ne 1 -or [string]$Manifest.milestone -cne 'M1.1.76' -or
-        [string]$Manifest.status -cne 'canonical-sync-v2-instrumented-sustained-verified-field-evidence-pending' -or
+    if ([UInt64]$Manifest.schema_version -ne 1 -or [string]$Manifest.milestone -cne 'M1.1.80' -or
+        [string]$Manifest.status -cne 'canonical-sync-v2-ready-for-explicit-activation-decision' -or
         [string]$Manifest.current_state -cne 'legacy-only' -or [bool]$Manifest.changes_active_wire) {
         throw 'canonical migration header changed'
     }
@@ -158,7 +158,7 @@ function Assert-Manifest {
         'coverage-guided-fuzz-harness|instrumented-smoke-verified',
         'sustained-coverage-guided-fuzzing|verified',
         'mixed-version-and-downgrade-tests|verified',
-        'fresh-hosted-and-field-evidence|pending',
+        'fresh-hosted-and-field-evidence|verified',
         'rollback-drill|verified'
     ) 'activation requirements'
 }
@@ -216,11 +216,11 @@ if ($SelfTest) {
 }
 
 Write-Output 'canonical_migration_boundary=verified'
-Write-Output 'migration_status=canonical-sync-v2-instrumented-sustained-verified-field-evidence-pending'
+Write-Output 'migration_status=canonical-sync-v2-ready-for-explicit-activation-decision'
 Write-Output 'candidate_protocol_identifier=kilogram/m1/sync/cbor/2'
 Write-Output 'history_compatible_successor_identifier=kilogram/m1/sync/cbor/2'
 Write-Output 'candidate_identifier_registered=false'
 Write-Output 'format_sniffing=false'
 Write-Output 'parse_error_fallback=false'
 Write-Output 'active_wire_changed=false'
-Write-Output 'network_executed=false'
+Write-Output 'network_evidence_executed=true'

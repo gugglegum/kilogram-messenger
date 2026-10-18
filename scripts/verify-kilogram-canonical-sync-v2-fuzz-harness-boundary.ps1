@@ -83,7 +83,7 @@ function Assert-Contract {
         [string]$ToolchainRfc
     )
 
-    $aggregateStatus = 'canonical-sync-v2-instrumented-sustained-verified-field-evidence-pending'
+    $aggregateStatus = 'canonical-sync-v2-ready-for-explicit-activation-decision'
     if ([UInt64]$Manifest.schema_version -ne 1 -or
         [string]$Manifest.milestone -cne 'M1.1.76' -or
         [string]$Manifest.status -cne 'instrumented-sustained-and-coverage-verified-field-evidence-pending' -or
@@ -322,7 +322,7 @@ function Assert-Contract {
         }
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.76' -or
+    if ([string]$Migration.milestone -cne 'M1.1.80' -or
         [string]$Migration.status -cne $aggregateStatus -or
         [string]$Migration.history_compatible_successor.coverage_guided_fuzz_harness -cne
             'instrumented-sustained-verified' -or
@@ -341,7 +341,7 @@ function Assert-Contract {
         [string]$campaignRequirement[0].status -cne 'verified') {
         throw 'fuzz harness and campaign gates were conflated'
     }
-    if ([string]$TransportManifest.milestone -cne 'M1.1.76' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.80' -or
         [string]$TransportManifest.status -cne $aggregateStatus -or
         -not [bool]$TransportManifest.history_compatible_successor.coverage_guided_fuzz_harness -or
         -not [bool]$TransportManifest.history_compatible_successor.instrumented_fuzz_smoke -or
@@ -350,7 +350,7 @@ function Assert-Contract {
         [bool]$TransportManifest.history_compatible_successor.dialed) {
         throw 'transport fuzz harness state changed'
     }
-    if ([string]$Compatibility.milestone -cne 'M1.1.76' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.80' -or
         [string]$Compatibility.status -cne $aggregateStatus -or
         -not [bool]$Compatibility.required_successor.coverage_guided_fuzz_harness_integrated -or
         -not [bool]$Compatibility.required_successor.instrumented_fuzz_smoke_verified -or
@@ -379,7 +379,7 @@ function Assert-Contract {
         'docs/RFC-0202-m1175-instrumented-fuzz-smoke.md',
         'docs/RFC-0203-m1176-sustained-fuzz-campaign.md'
     )
-    if ([string]$Coverage.milestone -cne 'M1.1.76' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.80' -or
         [string]$Coverage.status -cne $aggregateStatus -or
         $surface.Count -ne 1 -or
         'coverage-guided-fuzz-harness' -cnotin @($surface[0].covered) -or
@@ -392,9 +392,7 @@ function Assert-Contract {
             throw "canonical coverage is missing fuzz artifact '$artifact'"
         }
     }
-    Assert-ExactStrings @($surface[0].remaining) @(
-        'fresh-hosted-and-field-evidence'
-    ) 'coverage remaining work'
+    Assert-ExactStrings @($surface[0].remaining) @() 'coverage remaining work'
 
     foreach ($inactiveSource in @($Wire, $ActiveTransport, $Cli)) {
         if ($inactiveSource.Contains('CANONICAL-SYNC-V2-FUZZ-CAMPAIGN') -or

@@ -6897,15 +6897,15 @@ correlation visible, Windows-only field evidence, independent security audit
 - focused adapter regression прошёл 13/13; evidence binary и обычный CLI
   прошли locked/offline strict Clippy, rustfmt и boundary checks.
 
-### M1.1.79 — manual hosted experiment: подготовлен локально
+### M1.1.79 — manual hosted experiment: принято
 
 - добавлен manual-only workflow `canonical-sync-v2-evidence.yml`; push и pull
   request не запускают его автоматически;
 - workflow собирает только debug evidence binary с двумя Cargo jobs, запускает
   два свежих процесса на hosted Windows и сохраняет только bounded manifest;
 - release, ZIP, tag, attestation и публикация исполняемого файла отсутствуют;
-- hosted result ещё не заявлен: нужен exact implementation commit, явное
-  разрешение на push и зелёный ручной run этой ревизии.
+- accepted hosted result получен отдельным ручным запуском exact frozen
+  revision; workflow остаётся manual-only.
 - manual run `39114897550` на `ad98314...` успешно прошёл checkout, clean debug
   build и оба boundary/self-test шага, но fail-closed остановился до direct
   scenario: runner создавал scenario directory для prepare-log раньше Rust
@@ -6915,7 +6915,7 @@ correlation visible, Windows-only field evidence, independent security audit
   требуют нового frozen commit и нового manual run; run `39114897550` остаётся
   диагностическим, а не принятым hosted evidence.
 
-### M1.1.80 — physical Windows evidence: pre-freeze matrix принята, final frozen-revision run ожидается
+### M1.1.80 — canonical sync v2 network evidence: принято
 
 - ноутбук `paul_hp_omen` и основной ПК подготовлены для одинакового stable-name
   debug binary; coordination выполняется через SSH/SCP, не через Yandex Disk;
@@ -6961,3 +6961,30 @@ correlation visible, Windows-only field evidence, independent security audit
   Первый hosted run этой ревизии выявил только orchestration defects после
   successful build/boundaries. Новый runner fix опять требует один final
   physical rerun и hosted run exact следующего commit.
+- final frozen revision
+  `b1f23c3719a0842979f047d874141953ae93ccac` прошла свежий physical run
+  `m1180-field-20261018T093610Z`: два разных Windows host, одинаковый binary
+  SHA-256 `e23ba26692caf7fe355f04dda5f8825b0222b32ffe62794f0228bd35e7e1f625`,
+  manifest SHA-256
+  `3b87c95c9298fead83ab6cf07d2c37d59e1d8e3336db1d85eb6841a8c9831b37`;
+- manual hosted run `39116855502` той же revision полностью зелёный; hosted
+  manifest SHA-256
+  `d6382354c0327bb1aa900e7dc33536b467401f95edade1e9113f33e89e21e535`,
+  hosted binary SHA-256
+  `6a0add9561ce59e4c9b2d36a0ab3f81ab2fc5287df25905579f94c81ec031f9c`;
+- оба topology независимо подтвердили direct, restart/resume, relay,
+  mixed-version, zero-fallback fail-closed и rollback; различие hosted и
+  physical binary hash допустимо, идентичность обязательна внутри topology;
+- `CANONICAL-SYNC-V2-NETWORK-EVIDENCE.json` сохраняет compact audit record,
+  последний activation requirement verified, aggregate coverage `18/18`
+  targeted complete. Итог — `ready-for-explicit-activation-decision`, не
+  activation: `/cbor/2` остаётся evidence-only и выключен по умолчанию.
+- итоговое tracked дерево прошло self-tests всех 27 изменённых boundary gates;
+  accepted-tag readiness прошёл `108/108`, rustfmt и locked/offline strict
+  Clippy зелёные;
+- полный stable Rust regression с profile `test`, двумя Cargo jobs, isolated
+  test до aggregate harnesses и `-NoFailFast` завершился `status=passed`:
+  isolated runtime `1/1`, bootstrap `14/14`, CLI `82/82`, protocol `155/155`
+  плюс 15 explicit vector-regeneration ignores и все оставшиеся workspace
+  harnesses. Legacy decoder corpus проверил `31 851/31 851` мутацию за
+  `2640.20s`, canonical sync v2 corpus — `2 863/2 863` за `24.07s`.

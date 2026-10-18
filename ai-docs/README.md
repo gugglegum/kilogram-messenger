@@ -1149,6 +1149,11 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.1.76 фиксирует clean-source восьмичасовой instrumented run: 469 853 771
   executions, ноль generated artifacts и валидный coverage profile. Sustained
   decoder gate закрыт, fresh hosted/physical-device evidence остаётся pending.
+- [`../docs/RFC-0204-m1177-m1180-canonical-sync-v2-network-evidence.md`](../docs/RFC-0204-m1177-m1180-canonical-sync-v2-network-evidence.md) —
+  M1.1.77–M1.1.80 фиксирует feature-gated evidence lane и принятые hosted и
+  двухмашинные Windows manifests одной frozen revision. Полная network matrix
+  закрывает последний технический gate, но оставляет `/cbor/2` выключенным до
+  отдельного explicit activation decision.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

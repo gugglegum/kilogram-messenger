@@ -17,8 +17,8 @@ function Assert-Rejected {
 
 function Assert-Manifest {
     param([object]$Coverage, [object]$Source)
-    if ([UInt64]$Coverage.schema_version -ne 1 -or [string]$Coverage.milestone -cne 'M1.1.76' -or
-        [string]$Coverage.status -cne 'canonical-sync-v2-instrumented-sustained-verified-field-evidence-pending' -or [bool]$Coverage.changes_active_wire -or
+    if ([UInt64]$Coverage.schema_version -ne 1 -or [string]$Coverage.milestone -cne 'M1.1.80' -or
+        [string]$Coverage.status -cne 'canonical-sync-v2-ready-for-explicit-activation-decision' -or [bool]$Coverage.changes_active_wire -or
         [string]$Coverage.source_manifest -cne 'PROTOCOL-COMPATIBILITY.json' -or
         [string]$Coverage.target_profile -cne 'kilogram-deterministic-cbor-v1') {
         throw 'canonical coverage header changed'
@@ -29,9 +29,9 @@ function Assert-Manifest {
         throw 'canonical coverage does not exactly cover source registry'
     }
     if ($sourceIds.Count -ne 20 -or [int]$Coverage.summary.source_surfaces -ne 20 -or
-        [int]$Coverage.summary.complete -ne 17 -or [int]$Coverage.summary.partial -ne 1 -or
+        [int]$Coverage.summary.complete -ne 18 -or [int]$Coverage.summary.partial -ne 0 -or
         [int]$Coverage.summary.not_started -ne 0 -or [int]$Coverage.summary.not_targeted -ne 2 -or
-        [bool]$Coverage.summary.activation_ready) { throw 'canonical coverage summary changed' }
+        -not [bool]$Coverage.summary.activation_ready) { throw 'canonical coverage summary changed' }
 
     $counts = @{}
     foreach ($name in @('complete', 'partial', 'not-started', 'not-targeted')) { $counts[$name] = 0 }
@@ -64,16 +64,16 @@ function Assert-Manifest {
             }
         }
     }
-    if ($counts['complete'] -ne 17 -or $counts['partial'] -ne 1 -or
+    if ($counts['complete'] -ne 18 -or $counts['partial'] -ne 0 -or
         $counts['not-started'] -ne 0 -or $counts['not-targeted'] -ne 2) {
         throw 'computed canonical coverage counts changed'
     }
     $completeIds = @($Coverage.surfaces | Where-Object { $_.coverage -ceq 'complete' } | ForEach-Object { $_.id })
-    if (($completeIds -join ',') -cne 'account-authority,account-recovery,authorized-event,blind-mailbox-capability,blind-mailbox-provider-gossip,blind-mailbox-transport,device-session-authorization,endpoint-announcement,history-recovery,history-rewrap,mailbox-provisioning,publication-conflict,ratchet-public-artifacts,runtime-ipc,runtime-mailbox-envelope,sync,ticket-publication-capability') {
+    if (($completeIds -join ',') -cne 'account-authority,account-recovery,authorized-event,blind-mailbox-capability,blind-mailbox-provider-gossip,blind-mailbox-transport,device-session-authorization,endpoint-announcement,history-recovery,history-rewrap,mailbox-provisioning,publication-conflict,ratchet-public-artifacts,runtime-ipc,runtime-mailbox-envelope,sync,ticket-publication-capability,transport-sync') {
         throw 'unexpected complete canonical surface'
     }
     $partialIds = @($Coverage.surfaces | Where-Object { $_.coverage -ceq 'partial' } | ForEach-Object { $_.id })
-    if (($partialIds -join ',') -cne 'transport-sync') {
+    if ($partialIds.Count -ne 0) {
         throw 'unexpected partial canonical surface'
     }
 }
@@ -102,20 +102,20 @@ if ($SelfTest) {
     $removed = $coverage | ConvertTo-Json -Depth 20 | ConvertFrom-Json
     $removed.surfaces = @($removed.surfaces | Select-Object -Skip 1)
     Assert-Rejected { Assert-Manifest $removed $source } 'removed_source_surface'
-    $promoted = $coverage | ConvertTo-Json -Depth 20 | ConvertFrom-Json
-    $promoted.surfaces[19].coverage = 'complete'
-    Assert-Rejected { Assert-Manifest $promoted $source } 'incomplete_surface_promoted'
-    $ready = $coverage | ConvertTo-Json -Depth 20 | ConvertFrom-Json
-    $ready.summary.activation_ready = $true
-    Assert-Rejected { Assert-Manifest $ready $source } 'premature_activation_ready'
+    $reopened = $coverage | ConvertTo-Json -Depth 20 | ConvertFrom-Json
+    $reopened.surfaces[19].coverage = 'partial'
+    Assert-Rejected { Assert-Manifest $reopened $source } 'completed_surface_reopened'
+    $notReady = $coverage | ConvertTo-Json -Depth 20 | ConvertFrom-Json
+    $notReady.summary.activation_ready = $false
+    Assert-Rejected { Assert-Manifest $notReady $source } 'completed_coverage_not_ready'
     Write-Output 'canonical_coverage_self_test=passed'
 }
 
 Write-Output 'canonical_coverage_boundary=verified'
 Write-Output 'source_surfaces=20'
-Write-Output 'complete_surfaces=17'
-Write-Output 'partial_surfaces=1'
+Write-Output 'complete_surfaces=18'
+Write-Output 'partial_surfaces=0'
 Write-Output 'not_started_surfaces=0'
 Write-Output 'not_targeted_surfaces=2'
-Write-Output 'activation_ready=false'
+Write-Output 'activation_ready=true'
 Write-Output 'active_wire_changed=false'

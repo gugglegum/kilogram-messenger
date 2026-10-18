@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.80",
+  "status": "canonical-sync-v2-ready-for-explicit-activation-decision",
+  "source_revision": "b1f23c3719a0842979f047d874141953ae93ccac",
+  "protocol": {
+    "active": "kilogram/m0/sync/8",
+    "evidence_candidate": "kilogram/m1/sync/cbor/2"
+  },
+  "matrix": [
+    "canonical-v2-v2-direct",
+    "canonical-v2-restart-resume",
+    "canonical-v2-v2-relay",
+    "mixed-version-pre-selection-legacy",
+    "post-selection-corruption-fail-closed",
+    "explicit-one-step-rollback"
+  ],
+  "hosted": {
+    "evidence_kind": "hosted-windows",
+    "workflow": ".github/workflows/canonical-sync-v2-evidence.yml",
+    "workflow_run_id": 39116855502,
+    "collected_at_utc": "2026-10-18T09:56:31.9633548Z",
+    "manifest_sha256": "d6382354c0327bb1aa900e7dc33536b467401f95edade1e9113f33e89e21e535",
+    "manifest_bytes": 29618,
+    "binary_sha256": "6a0add9561ce59e4c9b2d36a0ab3f81ab2fc5287df25905579f94c81ec031f9c",
+    "binary_bytes": 39045120,
+    "target": "x86_64-pc-windows-msvc",
+    "profile": "debug",
+    "feature": "sync-v2-evidence",
+    "topology": "single-host-two-process",
+    "same_binary_within_topology": true,
+    "result": "verified"
+  },
+  "physical": {
+    "evidence_kind": "physical-windows",
+    "run_id": "m1180-field-20261018T093610Z",
+    "collected_at_utc": "2026-10-18T09:38:46.4698415Z",
+    "manifest_sha256": "3b87c95c9298fead83ab6cf07d2c37d59e1d8e3336db1d85eb6841a8c9831b37",
+    "manifest_bytes": 29646,
+    "binary_sha256": "e23ba26692caf7fe355f04dda5f8825b0222b32ffe62794f0228bd35e7e1f625",
+    "binary_bytes": 39043072,
+    "target": "x86_64-pc-windows-msvc",
+    "profile": "debug",
+    "feature": "sync-v2-evidence",
+    "topology": "two-distinct-physical-hosts",
+    "same_binary_within_topology": true,
+    "result": "verified"
+  },
+  "acceptance": {
+    "same_source_revision": true,
+    "hosted_and_physical_topologies_distinct": true,
+    "direct": "verified",
+    "restart_resume": "verified",
+    "relay": "verified",
+    "mixed_version": "verified",
+    "post_selection_fail_closed": "verified",
+    "rollback": "verified"
+  },
+  "production_boundary": {
+    "candidate_registered_by_default": false,
+    "candidate_dialed_by_default": false,
+    "legacy_fallback_after_selection": false,
+    "changes_active_wire": false,
+    "evidence_only": true
+  },
+  "residual_risks": [
+    "windows-only-network-evidence",
+    "independent-security-audit-not-performed",
+    "default-activation-requires-separate-explicit-decision"
+  ]
+}

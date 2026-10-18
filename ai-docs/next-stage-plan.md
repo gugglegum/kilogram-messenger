@@ -1,23 +1,20 @@
 # Следующий большой этап: M1.1.77–M1.1.80
 
-Статус: выполняется. Пакеты 1–3 реализованы и прошли локальные fail-closed
-проверки. Три автономных двухмашинных прогона (`ae9672b`, `402e868`, затем
-`ad98314`)
-подтвердили direct, restart/resume, pinned APS1 relay, mixed-version downgrade,
-post-selection fail-closed и rollback. Во время приёмки исправлены verifier,
-Windows PowerShell 5.1 process runner и исторические executable boundaries:
-production crates по-прежнему не могут добавлять EXE, а единственный новый
-`kilogram-sync-v2-evidence` разрешён только с `sync-v2-evidence` и выключен в
-default feature set. Readiness прошёл `108/108`, полный stable Rust regression
-прошёл без failures, включая 31 851 legacy и 2 863 sync-v2 decoder mutations.
-Поскольку boundary fixes меняют source revision после второго physical run,
-Первый manual hosted run `39114897550` на `ad98314` прошёл clean build и
-boundaries, затем выявил два orchestration defects до direct scenario:
-преждевременно созданный run directory и чтение unset `$LASTEXITCODE` после
-PowerShell verifier. Исправленный runner локально прошёл всю hosted matrix.
-Нужны новый frozen commit, одна финальная physical перепроверка и fresh hosted
-run ровно той же ревизии; новый push ожидает отдельного разрешения.
-Production transport не изменён.
+Статус: завершено. Frozen revision
+`b1f23c3719a0842979f047d874141953ae93ccac` прошла свежий двухмашинный
+physical Windows run и независимый manual hosted run `39116855502`. Оба
+bounded manifest приняты fail-closed verifier-ом; direct, restart/resume,
+relay, mixed-version, post-selection failure и rollback подтверждены.
+Канонические ledgers переведены в состояние
+`ready-for-explicit-activation-decision`, но production transport не изменён:
+Postcard v6 остаётся активным, `/cbor/2` не зарегистрирован и не dial-ится по
+умолчанию.
+
+Финальная формализация также проверена на точном итоговом дереве: все 27
+изменённых boundary self-tests прошли, accepted-tag readiness прошёл `108/108`
+вместе с rustfmt и locked/offline strict Clippy, а полный stable Rust regression
+завершился `status=passed`. Legacy decoder corpus проверил `31 851/31 851`
+мутацию за `2640.20s`, canonical sync v2 corpus — `2 863/2 863` за `24.07s`.
 
 Цель: за один длительный блок продолжительностью примерно 8–10 часов закрыть
 последний технический gate `fresh-hosted-and-field-evidence` для dormant

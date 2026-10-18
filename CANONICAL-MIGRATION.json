@@ -1,7 +1,8 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.76",
-  "status": "canonical-sync-v2-instrumented-sustained-verified-field-evidence-pending",
+  "milestone": "M1.1.80",
+  "status": "canonical-sync-v2-ready-for-explicit-activation-decision",
+  "network_evidence_manifest": "CANONICAL-SYNC-V2-NETWORK-EVIDENCE.json",
   "changes_active_wire": false,
   "current_encoding": "postcard",
   "candidate_encoding": "kilogram-deterministic-cbor-v2-typed-history",
@@ -276,7 +277,7 @@
     },
     {
       "id": "fresh-hosted-and-field-evidence",
-      "status": "pending"
+      "status": "verified"
     },
     {
       "id": "rollback-drill",

@@ -1,7 +1,7 @@
 # RFC-0204: M1.1.77–M1.1.80 canonical sync v2 network evidence
 
-Status: implementation complete; exact hosted and physical result records are
-collected only after the implementation commit is fixed.
+Status: accepted. Exact hosted and physical records for one frozen source
+revision are verified; production activation remains deliberately disabled.
 
 ## Purpose
 
@@ -124,3 +124,61 @@ Passing this stage means `ready-for-explicit-activation-decision`, not
 
 Any later dual-reader or prefer-canonical activation requires a separate
 decision and change set. Postcard removal is outside this RFC.
+
+## Accepted evidence
+
+Both accepted manifests identify source revision
+`b1f23c3719a0842979f047d874141953ae93ccac` and pass the bounded network
+evidence verifier.
+
+The physical Windows run `m1180-field-20261018T093610Z` used two distinct
+hosts and one identical debug executable on both roles. Its manifest is 29,646
+bytes with SHA-256
+`3b87c95c9298fead83ab6cf07d2c37d59e1d8e3336db1d85eb6841a8c9831b37`;
+the executable SHA-256 is
+`e23ba26692caf7fe355f04dda5f8825b0222b32ffe62794f0228bd35e7e1f625`.
+
+Manual GitHub Actions run `39116855502` independently built and exercised two
+fresh processes on one hosted Windows runner. Its manifest is 29,618 bytes
+with SHA-256
+`d6382354c0327bb1aa900e7dc33536b467401f95edade1e9113f33e89e21e535`;
+the hosted executable SHA-256 is
+`6a0add9561ce59e4c9b2d36a0ab3f81ab2fc5287df25905579f94c81ec031f9c`.
+The hosted and physical executable hashes are not required to match because
+they were built by different MSVC environments; each topology does require
+one exact hash across its own participants.
+
+Both records verify direct convergence, restart/resume from the asymmetric
+durable checkpoint, a real relay-only path, pre-selection mixed-version legacy
+agreement, fail-closed corruption after canonical selection with zero legacy
+fallback, and explicit one-step rollback with unchanged history.
+
+`CANONICAL-SYNC-V2-NETWORK-EVIDENCE.json` preserves the exact run identifiers,
+manifest and executable hashes, topology classes, accepted matrix and residual
+risks without committing state directories, private identities or raw logs.
+The resulting aggregate status is
+`canonical-sync-v2-ready-for-explicit-activation-decision`.
+
+## Final local validation
+
+The tracked acceptance tree passed all 27 changed boundary self-tests and the
+accepted-tag readiness suite `108/108`, including rustfmt and locked/offline
+strict Clippy. The complete stable Rust regression also ended with
+`status=passed`: isolated runtime `1/1`, bootstrap `14/14`, CLI `82/82`,
+protocol `155/155` with 15 explicit vector-regeneration ignores, and every
+remaining workspace harness passed. The legacy decoder corpus checked all
+31,851 mutations in 2,640.20 seconds; the canonical sync v2 decoder corpus
+checked all 2,863 mutations in 24.07 seconds.
+
+This validation does not create a new network-evidence source revision. The
+accepted implementation remains the frozen `b1f23c3...` commit; the later
+tracked changes only record and fail-closed verify its accepted manifests.
+
+## Residual risks
+
+- Network evidence is Windows-only.
+- This engineering evidence is not an independent security audit.
+- The public deployment consequences of enabling a dual reader have not yet
+  been accepted by an explicit product/security decision.
+- `/cbor/2` therefore remains unregistered and undialed by default, while
+  Postcard v6 remains the only active synchronization transport.
