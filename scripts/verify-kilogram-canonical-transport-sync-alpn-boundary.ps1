@@ -13,7 +13,7 @@ $coveragePath = Join-Path $workspace 'CANONICAL-COVERAGE.json'
 $compatibilityPath = Join-Path $workspace 'PROTOCOL-COMPATIBILITY.json'
 $transportPath = Join-Path $workspace 'crates\kilogram-transport-iroh\src\lib.rs'
 $cliPath = Join-Path $workspace 'apps\kilogram-cli\src\main.rs'
-$rfcPath = Join-Path $workspace 'docs\RFC-0176-m1150-canonical-sync-alpn-allocation.md'
+$rfcPath = Join-Path $workspace 'docs\RFC-0209-m1185-canonical-sync-v2-opt-in-dark-launch-acceptance.md'
 
 function Assert-Rejected {
     param([scriptblock]$Action, [string]$Label)
@@ -43,10 +43,13 @@ function Assert-Boundary {
     $canonicalAlpn = 'kilogram/m1/sync/cbor/1'
     $historyCompatibleAlpn = 'kilogram/m1/sync/cbor/2'
     if ([UInt64]$Manifest.schema_version -ne 1 -or
-        [string]$Manifest.milestone -cne 'M1.1.80' -or
-        [string]$Manifest.status -cne 'canonical-sync-v2-ready-for-explicit-activation-decision' -or
+        [string]$Manifest.milestone -cne 'M1.1.85' -or
+        [string]$Manifest.status -cne 'canonical-sync-v2-opt-in-dark-launch-verified' -or
         [string]$Manifest.surface -cne 'transport-sync' -or
-        [bool]$Manifest.changes_active_wire) {
+        -not [bool]$Manifest.changes_active_wire -or
+        [string]$Manifest.public_default -cne 'legacy-only' -or
+        [string]$Manifest.opt_in_dark_launch_manifest -cne
+            'CANONICAL-SYNC-V2-OPT-IN-DARK-LAUNCH.json') {
         throw 'canonical transport sync manifest header changed'
     }
     if ([string]$Manifest.active.encoding -cne 'postcard-v6' -or
@@ -122,13 +125,25 @@ function Assert-Boundary {
         (@($Manifest.authenticated_capability.bindings) -join ',') -cne
             'listener-account-id,listener-device-id,authority-revision,allowed-requester-account-id,endpoint-id,ticket-publication-channel-epoch,prekey-directory-common-validity-window' -or
         (@($Manifest.remaining) -join ',') -cne ($expectedRemaining -join ',') -or
-        [bool]$Manifest.scope.active_wire_changed -or
+        -not [bool]$Manifest.scope.active_wire_changed -or
         -not [bool]$Manifest.scope.network_executed) {
         throw 'canonical synchronization remaining-work boundary changed'
     }
+    if ([string]$Manifest.opt_in_dark_launch.authority -cne
+            'verified-device-signed-activation-chain' -or
+        [bool]$Manifest.opt_in_dark_launch.registered_by_default -or
+        [bool]$Manifest.opt_in_dark_launch.dialed_by_default -or
+        -not [bool]$Manifest.opt_in_dark_launch.registered_by_verified_opt_in -or
+        -not [bool]$Manifest.opt_in_dark_launch.dialed_after_mutual_authenticated_selection -or
+        [UInt64]$Manifest.opt_in_dark_launch.responder_preparation_and_first_response_timeout_seconds -ne 120 -or
+        [UInt64]$Manifest.opt_in_dark_launch.stream_io_timeout_seconds -ne 20 -or
+        [bool]$Manifest.opt_in_dark_launch.selected_failure_fallback_to_legacy -or
+        [string]$Manifest.opt_in_dark_launch.two_host_resilience_rehearsal -cne 'verified') {
+        throw 'canonical synchronization opt-in boundary changed'
+    }
 
-    if ([string]$Migration.milestone -cne 'M1.1.80' -or
-        [string]$Migration.status -cne 'canonical-sync-v2-ready-for-explicit-activation-decision' -or
+    if ([string]$Migration.milestone -cne 'M1.1.85' -or
+        [string]$Migration.status -cne 'canonical-sync-v2-opt-in-dark-launch-verified' -or
         [string]$Migration.candidate_protocol_identifier -cne $historyCompatibleAlpn -or
         [string]$Migration.history_compatible_successor.protocol_identifier -cne
             $historyCompatibleAlpn -or
@@ -159,11 +174,11 @@ function Assert-Boundary {
     }
 
     $surface = @($Coverage.surfaces | Where-Object { [string]$_.id -ceq 'transport-sync' })
-    if ([string]$Coverage.milestone -cne 'M1.1.80' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.85' -or
         $surface.Count -ne 1 -or
         [string]$surface[0].coverage -cne 'complete' -or
         (@($surface[0].covered) -join ',') -cne
-            'parallel-cbor-alpn-identifier-allocation,history-compatible-cbor-v2-alpn-identifier-allocation,typed-durable-canonical-sync-session-checkpoint,authenticated-ticket-v13-history-compatible-cbor-v2-capability,dormant-history-compatible-sync-v2-runtime-state-machine,dormant-atomic-typed-carrier-store,dormant-cross-format-membership-policy,dormant-bounded-resumable-legacy-import,dormant-atomic-legacy-import-checkpoint,dormant-signed-session-bootstrap,dormant-signed-session-successor-store,dormant-checkpoint-bound-runtime-frame-journal,dormant-atomic-runtime-transition-transaction,dormant-durable-client-transition-adapter,dormant-durable-responder-transition-adapter,dormant-mutual-authenticated-candidate-selection,dormant-mixed-version-and-downgrade-matrix,dormant-dual-reader-runtime-coordinator,dormant-deterministic-rollback-drill,bounded-canonical-sync-v2-decoder-mutation-corpus,coverage-guided-fuzz-harness,instrumented-fuzz-smoke,sustained-fuzz-campaign,fresh-hosted-and-field-evidence' -or
+            'parallel-cbor-alpn-identifier-allocation,history-compatible-cbor-v2-alpn-identifier-allocation,typed-durable-canonical-sync-session-checkpoint,authenticated-ticket-v13-history-compatible-cbor-v2-capability,dormant-history-compatible-sync-v2-runtime-state-machine,dormant-atomic-typed-carrier-store,dormant-cross-format-membership-policy,dormant-bounded-resumable-legacy-import,dormant-atomic-legacy-import-checkpoint,dormant-signed-session-bootstrap,dormant-signed-session-successor-store,dormant-checkpoint-bound-runtime-frame-journal,dormant-atomic-runtime-transition-transaction,dormant-durable-client-transition-adapter,dormant-durable-responder-transition-adapter,dormant-mutual-authenticated-candidate-selection,dormant-mixed-version-and-downgrade-matrix,dormant-dual-reader-runtime-coordinator,dormant-deterministic-rollback-drill,bounded-canonical-sync-v2-decoder-mutation-corpus,coverage-guided-fuzz-harness,instrumented-fuzz-smoke,sustained-fuzz-campaign,fresh-hosted-and-field-evidence,device-signed-opt-in-activation-policy,production-runtime-dark-launch,two-host-resilience-rehearsal,aggregate-opt-in-dark-launch-acceptance' -or
         @($surface[0].remaining).Count -ne 0 -or
         [int]$Coverage.summary.complete -ne 18 -or
         [int]$Coverage.summary.partial -ne 0 -or
@@ -199,25 +214,32 @@ function Assert-Boundary {
         }
     }
     if ($CliSource.IndexOf('CANONICAL_SYNC_ALPN_V1', [StringComparison]::Ordinal) -ge 0 -or
-        $CliSource.IndexOf('CANONICAL_SYNC_ALPN_V2', [StringComparison]::Ordinal) -ge 0 -or
-        $CliSource.IndexOf($canonicalAlpn, [StringComparison]::Ordinal) -ge 0 -or
-        $CliSource.IndexOf($historyCompatibleAlpn, [StringComparison]::Ordinal) -ge 0) {
-        throw 'inactive canonical ALPN leaked into active CLI registration or dial path'
+        $CliSource.IndexOf($canonicalAlpn, [StringComparison]::Ordinal) -ge 0) {
+        throw 'superseded canonical v1 ALPN leaked into the production CLI'
     }
-    if ($CliSource.IndexOf('.alpns(vec![ALPN.to_vec()])', [StringComparison]::Ordinal) -lt 0 -or
-        $CliSource.IndexOf('let mut runtime_alpns = vec![ALPN.to_vec()];',
-            [StringComparison]::Ordinal) -lt 0) {
-        throw 'active legacy synchronization ALPN registration is missing'
+    foreach ($required in @(
+        'let mut runtime_alpns = Vec::new();',
+        'runtime_alpns.push(ALPN.to_vec());',
+        '.register_canonical_alpn()',
+        'runtime_alpns.push(CANONICAL_SYNC_ALPN_V2.to_vec());',
+        'let mut listener_alpns = Vec::new();',
+        'listener_alpns.push(ALPN.to_vec());',
+        'listener_alpns.push(CANONICAL_SYNC_ALPN_V2.to_vec());',
+        '.initiate_new_canonical_session()',
+        'endpoint.connect(ticket.endpoint().clone(), CANONICAL_SYNC_ALPN_V2)'
+    )) {
+        if ($CliSource.IndexOf($required, [StringComparison]::Ordinal) -lt 0) {
+            throw "guarded production ALPN path is missing '$required'"
+        }
     }
 
     $normalizedRfc = [regex]::Replace($Rfc, '\s+', ' ')
     foreach ($required in @(
-        'identifier allocated, not active',
-        'active ALPN remains `kilogram/m0/sync/8`',
-        'Format sniffing and parse-error fallback are forbidden',
-        'absent from every active endpoint ALPN list and every dial path',
-        'must not silently retry',
-        'Allocation alone is not dual-reader support and is not activation'
+        'verified opt-in dark launch',
+        'public_default=legacy-only',
+        'ordinary endpoint registers and dials only `kilogram/m0/sync/8`',
+        'permits a Postcard retry after canonical selection',
+        'does not enable a public dual-reader default'
     )) {
         if ($normalizedRfc.IndexOf($required, [StringComparison]::OrdinalIgnoreCase) -lt 0) {
             throw "RFC-0176 is missing '$required'"
@@ -284,5 +306,6 @@ Write-Output 'history_compatible_sync_alpn=kilogram/m1/sync/cbor/2'
 Write-Output 'candidate_identifier_allocated=true'
 Write-Output 'candidate_identifier_registered=false'
 Write-Output 'candidate_identifier_dialed=false'
-Write-Output 'active_wire_changed=false'
+Write-Output 'public_default=legacy-only'
+Write-Output 'active_wire_changed=true'
 Write-Output 'network_evidence_executed=true'

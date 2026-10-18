@@ -52,7 +52,7 @@ function Assert-Contract {
     )
 
     $status = 'dormant-dual-reader-runtime-coordinator-verified-not-active'
-    $aggregateStatus = 'canonical-sync-v2-ready-for-explicit-activation-decision'
+    $aggregateStatus = 'canonical-sync-v2-opt-in-dark-launch-verified'
     if ([UInt64]$Manifest.schema_version -ne 1 -or
         [string]$Manifest.milestone -cne 'M1.1.70' -or
         [string]$Manifest.status -cne $status -or
@@ -119,7 +119,7 @@ function Assert-Contract {
         [bool]$Matrix.security_boundary.active_transport_authorized) {
         throw 'mixed-version matrix prerequisite changed'
     }
-    if ([string]$Migration.milestone -cne 'M1.1.80' -or
+    if ([string]$Migration.milestone -cne 'M1.1.85' -or
         [string]$Migration.status -cne $aggregateStatus -or
         [string]$Migration.current_state -cne 'legacy-only' -or
         [string]$Migration.history_compatible_successor.dormant_dual_reader_runtime_coordinator -cne
@@ -136,7 +136,7 @@ function Assert-Contract {
     if ($requirement.Count -ne 1 -or [string]$requirement[0].status -cne 'verified') {
         throw 'dual-reader runtime activation requirement is not verified'
     }
-    if ([string]$TransportManifest.milestone -cne 'M1.1.80' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.85' -or
         [string]$TransportManifest.status -cne $aggregateStatus -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_dual_reader_runtime_coordinator -or
         -not [bool]$TransportManifest.selection.dual_reader_runtime_coordinator_verified -or
@@ -146,14 +146,14 @@ function Assert-Contract {
         [bool]$TransportManifest.history_compatible_successor.dialed) {
         throw 'transport manifest dual-reader state changed'
     }
-    if ([string]$Compatibility.milestone -cne 'M1.1.80' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.85' -or
         [string]$Compatibility.status -cne $aggregateStatus -or
         -not [bool]$Compatibility.required_successor.dormant_dual_reader_runtime_coordinator_integrated -or
         [string]$Compatibility.required_successor.status -cne $aggregateStatus) {
         throw 'history compatibility dual-reader state changed'
     }
     $surface = @($Coverage.surfaces | Where-Object { [string]$_.id -ceq 'transport-sync' })
-    if ([string]$Coverage.milestone -cne 'M1.1.80' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.85' -or
         $surface.Count -ne 1 -or
         'CANONICAL-SYNC-V2-DUAL-READER-RUNTIME.json' -cnotin @($surface[0].artifacts) -or
         'scripts/verify-kilogram-canonical-sync-v2-dual-reader-runtime-boundary.ps1' -cnotin

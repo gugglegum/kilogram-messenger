@@ -122,9 +122,9 @@ function Assert-Contract {
         throw 'canonical sync v2 session runtime frame scope changed'
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.80' -or
+    if ([string]$Migration.milestone -cne 'M1.1.85' -or
         [string]$Migration.status -cne
-            'canonical-sync-v2-ready-for-explicit-activation-decision' -or
+            'canonical-sync-v2-opt-in-dark-launch-verified' -or
         [string]$Migration.history_compatible_successor.dormant_checkpoint_bound_runtime_frame_journal -cne
             'verified' -or
         [bool]$Migration.history_compatible_successor.registered -or
@@ -139,9 +139,9 @@ function Assert-Contract {
         [string]$runtimeRequirement[0].status -cne 'verified') {
         throw 'canonical migration runtime frame requirement is not verified'
     }
-    if ([string]$TransportManifest.milestone -cne 'M1.1.80' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.85' -or
         [string]$TransportManifest.status -cne
-            'canonical-sync-v2-ready-for-explicit-activation-decision' -or
+            'canonical-sync-v2-opt-in-dark-launch-verified' -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_checkpoint_bound_runtime_frame_journal -or
         'dormant-server-runtime-transition-integration' -cin
             @($TransportManifest.remaining) -or
@@ -151,18 +151,18 @@ function Assert-Contract {
         [bool]$TransportManifest.history_compatible_successor.dialed) {
         throw 'transport sync manifest lost checkpoint-bound runtime frame state'
     }
-    if ([string]$Compatibility.milestone -cne 'M1.1.80' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.85' -or
         [string]$Compatibility.status -cne
-            'canonical-sync-v2-ready-for-explicit-activation-decision' -or
+            'canonical-sync-v2-opt-in-dark-launch-verified' -or
         -not [bool]$Compatibility.required_successor.dormant_checkpoint_bound_runtime_frame_journal_integrated -or
         [string]$Compatibility.required_successor.status -cne
-            'canonical-sync-v2-ready-for-explicit-activation-decision') {
+            'canonical-sync-v2-opt-in-dark-launch-verified') {
         throw 'history compatibility manifest lost checkpoint-bound runtime frame state'
     }
     $transportCoverage = @(
         @($Coverage.surfaces) | Where-Object { [string]$_.id -ceq 'transport-sync' }
     )
-    if ([string]$Coverage.milestone -cne 'M1.1.80' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.85' -or
         $transportCoverage.Count -ne 1 -or
         'CANONICAL-SYNC-V2-SESSION-RUNTIME-FRAME.json' -cnotin
             @($transportCoverage[0].artifacts) -or

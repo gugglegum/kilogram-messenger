@@ -123,7 +123,7 @@ function Assert-Contract {
         -not [bool]$Compatibility.required_successor.dormant_signed_session_bootstrap_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_signed_session_successor_store_integrated -or
         [string]$Compatibility.required_successor.status -cne
-            'canonical-sync-v2-ready-for-explicit-activation-decision') {
+            'canonical-sync-v2-opt-in-dark-launch-verified') {
         throw 'canonical sync history compatibility ledger changed'
     }
     if ([string]$Migration.history_compatible_successor.protocol_identifier -cne
@@ -229,13 +229,19 @@ function Assert-Contract {
             throw "transport is missing inactive cbor-v2 allocation '$required'"
         }
     }
-    foreach ($activeSource in @($ActiveWire, $Cli)) {
-        if ($activeSource.IndexOf('CANONICAL_SYNC_ALPN_V2',
-                [StringComparison]::Ordinal) -ge 0 -or
-            $activeSource.IndexOf($successorAlpn, [StringComparison]::Ordinal) -ge 0 -or
-            $activeSource.IndexOf('CanonicalSyncEventCarrierV2',
-                [StringComparison]::Ordinal) -ge 0) {
-            throw 'inactive history-compatible sync successor leaked into active runtime'
+    if ($ActiveWire.IndexOf('CANONICAL_SYNC_ALPN_V2', [StringComparison]::Ordinal) -ge 0 -or
+        $ActiveWire.IndexOf($successorAlpn, [StringComparison]::Ordinal) -ge 0 -or
+        $ActiveWire.IndexOf('CanonicalSyncEventCarrierV2', [StringComparison]::Ordinal) -ge 0) {
+        throw 'canonical sync successor leaked into the legacy event wire'
+    }
+    foreach ($required in @(
+        '.register_canonical_alpn()',
+        'runtime_alpns.push(CANONICAL_SYNC_ALPN_V2.to_vec());',
+        '.initiate_new_canonical_session()',
+        'endpoint.connect(ticket.endpoint().clone(), CANONICAL_SYNC_ALPN_V2)'
+    )) {
+        if ($Cli.IndexOf($required, [StringComparison]::Ordinal) -lt 0) {
+            throw "guarded opt-in history-compatible runtime is missing '$required'"
         }
     }
     foreach ($required in @(

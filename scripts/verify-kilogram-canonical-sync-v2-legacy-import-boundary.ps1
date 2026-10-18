@@ -135,9 +135,9 @@ function Assert-Contract {
         }
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.80' -or
+    if ([string]$Migration.milestone -cne 'M1.1.85' -or
         [string]$Migration.status -cne
-            'canonical-sync-v2-ready-for-explicit-activation-decision' -or
+            'canonical-sync-v2-opt-in-dark-launch-verified' -or
         [string]$Migration.history_compatible_successor.dormant_bounded_resumable_legacy_import -cne
             'verified' -or
         [string]$Migration.history_compatible_successor.dormant_atomic_legacy_import_checkpoint -cne
@@ -153,9 +153,9 @@ function Assert-Contract {
         [string]$importRequirement[0].status -cne 'verified') {
         throw 'canonical migration lost the verified legacy import requirement'
     }
-    if ([string]$TransportManifest.milestone -cne 'M1.1.80' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.85' -or
         [string]$TransportManifest.status -cne
-            'canonical-sync-v2-ready-for-explicit-activation-decision' -or
+            'canonical-sync-v2-opt-in-dark-launch-verified' -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_bounded_resumable_legacy_import -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_atomic_legacy_import_checkpoint -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_signed_session_bootstrap -or
@@ -167,22 +167,22 @@ function Assert-Contract {
             @($TransportManifest.remaining)) {
         throw 'transport sync manifest does not preserve the dormant legacy import boundary'
     }
-    if ([string]$Compatibility.milestone -cne 'M1.1.80' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.85' -or
         [string]$Compatibility.status -cne
-            'canonical-sync-v2-ready-for-explicit-activation-decision' -or
+            'canonical-sync-v2-opt-in-dark-launch-verified' -or
         -not [bool]$Compatibility.required_successor.dormant_bounded_resumable_legacy_import_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_atomic_legacy_import_checkpoint_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_signed_session_bootstrap_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_signed_session_successor_store_integrated -or
         [string]$Compatibility.required_successor.status -cne
-            'canonical-sync-v2-ready-for-explicit-activation-decision') {
+            'canonical-sync-v2-opt-in-dark-launch-verified') {
         throw 'history compatibility manifest lost the dormant legacy import contract'
     }
     $transportCoverage = @(
         @($Coverage.surfaces) |
             Where-Object { [string]$_.id -ceq 'transport-sync' }
     )
-    if ([string]$Coverage.milestone -cne 'M1.1.80' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.85' -or
         $transportCoverage.Count -ne 1 -or
         'CANONICAL-SYNC-V2-LEGACY-IMPORT.json' -cnotin @($transportCoverage[0].artifacts) -or
         'scripts/verify-kilogram-canonical-sync-v2-legacy-import-boundary.ps1' -cnotin
@@ -225,10 +225,20 @@ function Assert-Contract {
     if (-not $StoreCargo.Contains('blake3.workspace = true')) {
         throw 'kilogram-store lost its domain-separated BLAKE3 plan dependency'
     }
-    foreach ($activeSource in @($Wire, $Transport, $Cli)) {
+    foreach ($activeSource in @($Wire, $Transport)) {
         if ($activeSource.Contains('CanonicalSyncV2LegacyImportPlan') -or
             $activeSource.Contains('import_legacy_page')) {
-            throw 'dormant legacy import leaked into active wire/transport/CLI code'
+            throw 'canonical legacy import leaked into legacy wire or generic transport code'
+        }
+    }
+    foreach ($needle in @(
+        'CanonicalSyncV2LegacyImportPlan',
+        '.import_legacy_page(',
+        '.register_canonical_alpn()',
+        '.initiate_new_canonical_session()'
+    )) {
+        if (-not $Cli.Contains($needle)) {
+            throw "guarded canonical legacy import integration is missing '$needle'"
         }
     }
     foreach ($needle in @(
@@ -296,8 +306,9 @@ if ($SelfTest) {
 
     Assert-Rejected {
         Assert-Contract $manifest $migration $transportManifest $compatibility $coverage `
-            $store $storeCargo $wire $transport ($cli + ' CanonicalSyncV2LegacyImportPlan') $rfc
-    } 'legacy_import_leaked_into_active_cli'
+            $store $storeCargo $wire $transport `
+            ($cli.Replace('.initiate_new_canonical_session()', '.legacy_reader_enabled()')) $rfc
+    } 'legacy_import_opt_in_guard_removed'
 
     Write-Output 'canonical_sync_v2_legacy_import_self_test=passed'
 }

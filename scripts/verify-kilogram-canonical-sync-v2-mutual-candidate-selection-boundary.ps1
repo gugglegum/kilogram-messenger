@@ -60,7 +60,7 @@ function Assert-Contract {
     )
 
     $status = 'dormant-mutual-authenticated-candidate-selection-verified-not-active'
-    $aggregateStatus = 'canonical-sync-v2-ready-for-explicit-activation-decision'
+    $aggregateStatus = 'canonical-sync-v2-opt-in-dark-launch-verified'
     if ([UInt64]$Manifest.schema_version -ne 1 -or
         [string]$Manifest.milestone -cne 'M1.1.68' -or
         [string]$Manifest.status -cne $status -or
@@ -165,7 +165,7 @@ function Assert-Contract {
         'fresh-hosted-and-field-evidence'
     ) 'mutual candidate remaining work'
 
-    if ([string]$Migration.milestone -cne 'M1.1.80' -or
+    if ([string]$Migration.milestone -cne 'M1.1.85' -or
         [string]$Migration.status -cne $aggregateStatus -or
         [string]$Migration.current_state -cne 'legacy-only' -or
         [string]$Migration.history_compatible_successor.dormant_mutual_authenticated_candidate_selection -cne
@@ -184,7 +184,7 @@ function Assert-Contract {
     if ($requirement.Count -ne 1 -or [string]$requirement[0].status -cne 'verified') {
         throw 'mutual capability selection requirement is not verified'
     }
-    if ([string]$TransportManifest.milestone -cne 'M1.1.80' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.85' -or
         [string]$TransportManifest.status -cne $aggregateStatus -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_mutual_authenticated_candidate_selection -or
         -not [bool]$TransportManifest.selection.mutual_authenticated_candidate_selection -or
@@ -196,13 +196,13 @@ function Assert-Contract {
         [bool]$TransportManifest.history_compatible_successor.dialed) {
         throw 'transport manifest mutual selection state changed'
     }
-    if ([string]$Compatibility.milestone -cne 'M1.1.80' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.85' -or
         [string]$Compatibility.status -cne $aggregateStatus -or
         -not [bool]$Compatibility.required_successor.dormant_mutual_authenticated_candidate_selection_integrated) {
         throw 'history compatibility lost mutual selection state'
     }
     $surface = @($Coverage.surfaces | Where-Object { [string]$_.id -ceq 'transport-sync' })
-    if ([string]$Coverage.milestone -cne 'M1.1.80' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.85' -or
         $surface.Count -ne 1 -or
         'CANONICAL-SYNC-V2-MUTUAL-CANDIDATE-SELECTION.json' -cnotin @($surface[0].artifacts) -or
         'scripts/verify-kilogram-canonical-sync-v2-mutual-candidate-selection-boundary.ps1' -cnotin
@@ -246,11 +246,20 @@ function Assert-Contract {
             'kilogram-sync-capability = { path = "../kilogram-sync-capability" }')) {
         throw 'session crate does not declare the capability verifier dependency'
     }
-    foreach ($inactiveSource in @($Wire, $Transport, $Cli)) {
+    foreach ($inactiveSource in @($Wire, $Transport)) {
         if ($inactiveSource.Contains('SignedSyncTransportCandidateOffer') -or
             $inactiveSource.Contains('verify_durable_mutual_canonical_candidate_selection') -or
             $inactiveSource.Contains('CanonicalSyncV2MutualCandidateSelection')) {
-            throw 'dormant mutual candidate selection leaked into active wire/transport/CLI code'
+            throw 'mutual candidate selection leaked into legacy wire or generic transport code'
+        }
+    }
+    foreach ($needle in @(
+        'SignedSyncTransportCandidateOffer',
+        '.initiate_new_canonical_session()',
+        'endpoint.connect(ticket.endpoint().clone(), CANONICAL_SYNC_ALPN_V2)'
+    )) {
+        if (-not $Cli.Contains($needle)) {
+            throw "guarded mutual candidate selection integration is missing '$needle'"
         }
     }
     $normalizedRfc = [regex]::Replace($Rfc, '\s+', ' ')

@@ -1,9 +1,11 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.80",
-  "status": "canonical-sync-v2-ready-for-explicit-activation-decision",
+  "milestone": "M1.1.85",
+  "status": "canonical-sync-v2-opt-in-dark-launch-verified",
   "network_evidence_manifest": "CANONICAL-SYNC-V2-NETWORK-EVIDENCE.json",
-  "changes_active_wire": false,
+  "opt_in_dark_launch_manifest": "CANONICAL-SYNC-V2-OPT-IN-DARK-LAUNCH.json",
+  "changes_active_wire": true,
+  "public_default": "legacy-only",
   "current_encoding": "postcard",
   "candidate_encoding": "kilogram-deterministic-cbor-v2-typed-history",
   "candidate_protocol_identifier": "kilogram/m1/sync/cbor/2",
@@ -37,6 +39,15 @@
     "dialed": false
   },
   "current_state": "legacy-only",
+  "opt_in_dark_launch": {
+    "authority": "device-signed-append-only-chain",
+    "registered_by_default": false,
+    "dialed_by_default": false,
+    "registered_by_verified_opt_in": true,
+    "dialed_after_mutual_authenticated_selection": true,
+    "selected_failure_fallback_to_legacy": false,
+    "two_host_resilience_rehearsal": "verified"
+  },
   "selection": {
     "mechanism": "listener-capability-bound-requester-offer-and-listener-acceptance",
     "capability": "kilogram-deterministic-cbor-v2-typed-history",
@@ -281,6 +292,22 @@
     },
     {
       "id": "rollback-drill",
+      "status": "verified"
+    },
+    {
+      "id": "device-signed-opt-in-activation-policy",
+      "status": "verified"
+    },
+    {
+      "id": "production-runtime-dark-launch-integration",
+      "status": "verified"
+    },
+    {
+      "id": "two-host-opt-in-resilience-rehearsal",
+      "status": "verified"
+    },
+    {
+      "id": "aggregate-regression-and-formalization",
       "status": "verified"
     }
   ]

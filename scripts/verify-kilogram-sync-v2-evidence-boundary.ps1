@@ -147,9 +147,13 @@ $compatibility = Get-Content -LiteralPath $compatibilityPath -Raw | ConvertFrom-
 
 Assert-NetworkEvidenceRecord $record
 foreach ($aggregate in @($migration, $transportManifest, $coverage, $compatibility)) {
-    if ([string]$aggregate.milestone -cne 'M1.1.80' -or
-        [string]$aggregate.status -cne 'canonical-sync-v2-ready-for-explicit-activation-decision' -or
-        [string]$aggregate.network_evidence_manifest -cne 'CANONICAL-SYNC-V2-NETWORK-EVIDENCE.json') {
+    if ([string]$aggregate.milestone -cne 'M1.1.85' -or
+        [string]$aggregate.status -cne 'canonical-sync-v2-opt-in-dark-launch-verified' -or
+        [string]$aggregate.network_evidence_manifest -cne 'CANONICAL-SYNC-V2-NETWORK-EVIDENCE.json' -or
+        [string]$aggregate.opt_in_dark_launch_manifest -cne
+            'CANONICAL-SYNC-V2-OPT-IN-DARK-LAUNCH.json' -or
+        -not [bool]$aggregate.changes_active_wire -or
+        [string]$aggregate.public_default -cne 'legacy-only') {
         throw 'aggregate canonical evidence linkage changed'
     }
 }
@@ -160,7 +164,7 @@ $transportCoverage = @($coverage.surfaces | Where-Object { [string]$_.id -ceq 't
 if ($evidenceRequirement.Count -ne 1 -or [string]$evidenceRequirement[0].status -cne 'verified' -or
     @($transportManifest.remaining).Count -ne 0 -or
     -not [bool]$transportManifest.scope.network_executed -or
-    [bool]$transportManifest.scope.active_wire_changed -or
+    -not [bool]$transportManifest.scope.active_wire_changed -or
     [bool]$transportManifest.history_compatible_successor.registered -or
     [bool]$transportManifest.history_compatible_successor.dialed -or
     [bool]$transportManifest.authenticated_capability.canonical_dial_enabled -or
@@ -169,7 +173,7 @@ if ($evidenceRequirement.Count -ne 1 -or [string]$evidenceRequirement[0].status 
     'fresh-hosted-and-field-evidence' -cnotin @($transportCoverage[0].covered) -or
     -not [bool]$coverage.summary.activation_ready -or
     -not [bool]$compatibility.scope.network_executed -or
-    [bool]$compatibility.changes_active_wire -or
+    -not [bool]$compatibility.changes_active_wire -or
     [bool]$compatibility.existing_canonical_candidate.registered -or
     [bool]$compatibility.existing_canonical_candidate.dialed) {
     throw 'aggregate canonical evidence acceptance is incomplete or activated prematurely'
@@ -219,8 +223,7 @@ foreach ($required in @(
 
 foreach ($forbidden in @(
     'kilogram-sync-v2-evidence',
-    'sync-v2-evidence',
-    'CANONICAL_SYNC_ALPN_V2'
+    'sync-v2-evidence'
 )) {
     if ($production.Contains($forbidden)) {
         throw "production CLI unexpectedly references evidence-only surface: $forbidden"
@@ -232,8 +235,16 @@ if (-not $transport.Contains('pub const ALPN: &[u8] = b"kilogram/m0/sync/8";') -
     throw 'sync transport identifiers are not exact'
 }
 
-if ([regex]::IsMatch($production, '(?m)^\s*\.alpns\([^\r\n]*CANONICAL_SYNC_ALPN_V2')) {
-    throw 'production CLI registers the dormant canonical v2 ALPN'
+foreach ($required in @(
+    'let mut runtime_alpns = Vec::new();',
+    '.register_canonical_alpn()',
+    'runtime_alpns.push(CANONICAL_SYNC_ALPN_V2.to_vec());',
+    '.initiate_new_canonical_session()',
+    'endpoint.connect(ticket.endpoint().clone(), CANONICAL_SYNC_ALPN_V2)'
+)) {
+    if (-not $production.Contains($required)) {
+        throw "production CLI is missing guarded opt-in marker: $required"
+    }
 }
 
 foreach ($required in @(

@@ -7,7 +7,7 @@ $workspace = [System.IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $coveragePath = Join-Path $workspace 'CANONICAL-COVERAGE.json'
 $sourcePath = Join-Path $workspace 'PROTOCOL-COMPATIBILITY.json'
 $migrationPath = Join-Path $workspace 'CANONICAL-MIGRATION.json'
-$rfcPath = Join-Path $workspace 'docs\RFC-0133-m117-canonical-coverage-audit.md'
+$rfcPath = Join-Path $workspace 'docs\RFC-0209-m1185-canonical-sync-v2-opt-in-dark-launch-acceptance.md'
 
 function Assert-Rejected {
     param([scriptblock]$Action, [string]$Label)
@@ -17,8 +17,12 @@ function Assert-Rejected {
 
 function Assert-Manifest {
     param([object]$Coverage, [object]$Source)
-    if ([UInt64]$Coverage.schema_version -ne 1 -or [string]$Coverage.milestone -cne 'M1.1.80' -or
-        [string]$Coverage.status -cne 'canonical-sync-v2-ready-for-explicit-activation-decision' -or [bool]$Coverage.changes_active_wire -or
+    if ([UInt64]$Coverage.schema_version -ne 1 -or [string]$Coverage.milestone -cne 'M1.1.85' -or
+        [string]$Coverage.status -cne 'canonical-sync-v2-opt-in-dark-launch-verified' -or
+        -not [bool]$Coverage.changes_active_wire -or
+        [string]$Coverage.public_default -cne 'legacy-only' -or
+        [string]$Coverage.opt_in_dark_launch_manifest -cne
+            'CANONICAL-SYNC-V2-OPT-IN-DARK-LAUNCH.json' -or
         [string]$Coverage.source_manifest -cne 'PROTOCOL-COMPATIBILITY.json' -or
         [string]$Coverage.target_profile -cne 'kilogram-deterministic-cbor-v1') {
         throw 'canonical coverage header changed'
@@ -31,7 +35,11 @@ function Assert-Manifest {
     if ($sourceIds.Count -ne 20 -or [int]$Coverage.summary.source_surfaces -ne 20 -or
         [int]$Coverage.summary.complete -ne 18 -or [int]$Coverage.summary.partial -ne 0 -or
         [int]$Coverage.summary.not_started -ne 0 -or [int]$Coverage.summary.not_targeted -ne 2 -or
-        -not [bool]$Coverage.summary.activation_ready) { throw 'canonical coverage summary changed' }
+        -not [bool]$Coverage.summary.activation_ready -or
+        -not [bool]$Coverage.summary.opt_in_dark_launch_verified -or
+        [bool]$Coverage.summary.public_default_activated) {
+        throw 'canonical coverage summary changed'
+    }
 
     $counts = @{}
     foreach ($name in @('complete', 'partial', 'not-started', 'not-targeted')) { $counts[$name] = 0 }
@@ -91,9 +99,13 @@ $schemaRequirement = @($migration.activation_requirements | Where-Object { $_.id
 if ($schemaRequirement.Count -ne 1 -or [string]$schemaRequirement[0].status -cne 'verified') {
     throw 'migration did not verify canonical schema coverage'
 }
-foreach ($required in @('four are complete, two are partial, twelve are not',
-    'A partial surface is not activation', 'changes no active wire bytes')) {
-    if ($rfc.IndexOf($required, [StringComparison]::OrdinalIgnoreCase) -lt 0) {
+$normalizedRfc = [regex]::Replace($rfc, '\s+', ' ')
+foreach ($required in @(
+    'verified opt-in dark launch',
+    'public_default=legacy-only',
+    'does not enable a public dual-reader default'
+)) {
+    if ($normalizedRfc.IndexOf($required, [StringComparison]::OrdinalIgnoreCase) -lt 0) {
         throw "coverage RFC is missing '$required'"
     }
 }
@@ -118,4 +130,6 @@ Write-Output 'partial_surfaces=0'
 Write-Output 'not_started_surfaces=0'
 Write-Output 'not_targeted_surfaces=2'
 Write-Output 'activation_ready=true'
-Write-Output 'active_wire_changed=false'
+Write-Output 'opt_in_dark_launch_verified=true'
+Write-Output 'public_default=legacy-only'
+Write-Output 'active_wire_changed=true'

@@ -63,7 +63,7 @@ function Assert-SustainedContract {
     )
 
     $campaignStatus = 'instrumented-sustained-and-coverage-verified-field-evidence-pending'
-    $aggregateStatus = 'canonical-sync-v2-ready-for-explicit-activation-decision'
+    $aggregateStatus = 'canonical-sync-v2-opt-in-dark-launch-verified'
     $sourceRevision = 'eaf3d75bb16ce42c8368017a68c6f4183d15ab9f'
 
     if ([UInt64]$Sustained.schema_version -ne 1 -or
@@ -192,7 +192,7 @@ function Assert-SustainedContract {
         throw 'historical smoke evidence changed or was rewritten'
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.80' -or
+    if ([string]$Migration.milestone -cne 'M1.1.85' -or
         [string]$Migration.status -cne $aggregateStatus -or
         [string]$Migration.history_compatible_successor.coverage_guided_fuzz_harness -cne
             'instrumented-sustained-verified' -or
@@ -217,7 +217,7 @@ function Assert-SustainedContract {
         [string]$fieldRequirement[0].status -cne 'verified') {
         throw 'sustained and field-evidence gates were conflated'
     }
-    if ([string]$Transport.milestone -cne 'M1.1.80' -or
+    if ([string]$Transport.milestone -cne 'M1.1.85' -or
         [string]$Transport.status -cne $aggregateStatus -or
         -not [bool]$Transport.history_compatible_successor.instrumented_fuzz_smoke -or
         -not [bool]$Transport.history_compatible_successor.sustained_fuzz_campaign -or
@@ -227,7 +227,7 @@ function Assert-SustainedContract {
         throw 'transport sustained state changed'
     }
     Assert-ExactStrings @($Transport.remaining) @() 'transport remaining work'
-    if ([string]$Compatibility.milestone -cne 'M1.1.80' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.85' -or
         [string]$Compatibility.status -cne $aggregateStatus -or
         -not [bool]$Compatibility.required_successor.instrumented_fuzz_smoke_verified -or
         -not [bool]$Compatibility.required_successor.sustained_fuzz_campaign_verified -or
@@ -241,7 +241,7 @@ function Assert-SustainedContract {
         'scripts/verify-kilogram-canonical-sync-v2-fuzz-sustained-boundary.ps1',
         'docs/RFC-0203-m1176-sustained-fuzz-campaign.md'
     )
-    if ([string]$Coverage.milestone -cne 'M1.1.80' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.85' -or
         [string]$Coverage.status -cne $aggregateStatus -or
         $surface.Count -ne 1 -or
         'sustained-fuzz-campaign' -cnotin @($surface[0].covered)) {

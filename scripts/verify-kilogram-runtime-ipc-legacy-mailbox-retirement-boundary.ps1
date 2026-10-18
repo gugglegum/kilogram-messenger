@@ -182,7 +182,8 @@ function Assert-RetirementBoundary {
         @($surface[0].remaining).Count -ne 0 -or
         [int]$Coverage.summary.complete -ne 18 -or
         [int]$Coverage.summary.partial -ne 0 -or
-        (@($Coverage.next_priority) -join ',') -cne 'explicit-sync-v2-activation-decision') {
+        (@($Coverage.next_priority) -join ',') -cne
+            'public-default-dual-reader-rollout-decision,desktop-activation-ui,canonical-native-history-materialization') {
         throw 'canonical coverage did not complete runtime IPC'
     }
 

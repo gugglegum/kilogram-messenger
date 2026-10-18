@@ -5,11 +5,11 @@
 Эта папка — краткая проектная память и дорожная карта. Подробная техническая
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
 
-Текущий большой рабочий блок описан в
-[`next-stage-plan.md`](next-stage-plan.md): M1.1.81–M1.1.83 закрыли точную
-activation semantics, durable Device-bound authority и opt-in интеграцию
-canonical sync v2 в штатный runtime; далее проверяются restart/containment и
-двухмашинный rehearsal без смены transport по умолчанию.
+Последний большой рабочий блок описан в
+[`next-stage-plan.md`](next-stage-plan.md): M1.1.81–M1.1.85 закрыли точную
+activation semantics, durable Device-bound authority, opt-in интеграцию,
+двухмашинный resilience rehearsal и итоговый aggregate regression. Canonical
+sync v2 принят как opt-in dark launch; публичный default остаётся legacy-only.
 
 ## Текущее состояние
 
@@ -1172,6 +1172,11 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.1.84 проверяет restart/resume, selected-v2 loss без fallback,
   pre-evidence rollback и post-selection containment; exact-revision run на
   двух физических Windows-хостах принят, public default остаётся legacy-only.
+- [`../docs/RFC-0209-m1185-canonical-sync-v2-opt-in-dark-launch-acceptance.md`](../docs/RFC-0209-m1185-canonical-sync-v2-opt-in-dark-launch-acceptance.md) —
+  M1.1.85 агрегирует authority, production integration и двухмашинное evidence,
+  фиксирует прошедшие 112 readiness gates и полный regression кроме двух
+  неизменённых принятых mutation corpora. Статус — verified opt-in dark launch,
+  не public activation.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

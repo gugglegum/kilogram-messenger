@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.85",
+  "status": "canonical-sync-v2-opt-in-dark-launch-verified",
+  "changes_active_wire": true,
+  "public_default": "legacy-only",
+  "legacy_protocol_identifier": "kilogram/m0/sync/8",
+  "canonical_protocol_identifier": "kilogram/m1/sync/cbor/2",
+  "activation_scope": {
+    "authority": "verified-device-signed-append-only-chain",
+    "missing_authority": "implicit-legacy-only",
+    "malformed_or_stale_authority": "fail-closed",
+    "default_registered_alpns": ["kilogram/m0/sync/8"],
+    "opt_in_registered_alpns": [
+      "kilogram/m0/sync/8",
+      "kilogram/m1/sync/cbor/2"
+    ],
+    "new_canonical_session_requires_mutual_authenticated_selection": true,
+    "selected_canonical_failure_fallback_to_legacy": false,
+    "containment_preserves_exact_selected_resume": true
+  },
+  "runtime_bounds": {
+    "stream_io_timeout_seconds": 20,
+    "responder_preparation_and_first_response_timeout_seconds": 120,
+    "response_timeout_is_distinct_from_stream_io_timeout": true,
+    "timeout_grants_authority": false,
+    "timeout_permits_legacy_fallback_after_selection": false
+  },
+  "field_evidence": {
+    "status": "canonical-sync-v2-two-host-activation-rehearsal-verified",
+    "run_id": "m1184-exact-20261018T165652Z",
+    "source_revision": "7ee5ef808cb56c3c48d7a0b6dc07c0984b81992c",
+    "binary_sha256": "be8ca16754c2ad1291d4ea56c0a339b6e6a0f5994e6816c1c3d966871f42c532",
+    "binary_bytes": 59981824,
+    "target": "x86_64-pc-windows-msvc",
+    "profile": "debug",
+    "alice_host": "PAUL_HP_OMEN",
+    "bob_host": "DESKTOP-PAUL-RY",
+    "distinct_physical_hosts": true,
+    "same_binary_on_both_hosts": true,
+    "transport": "iroh-direct-lan",
+    "default_default_legacy_converged": true,
+    "opt_in_default_legacy_converged": true,
+    "opt_in_opt_in_canonical_converged": true,
+    "restart_exact_selection_resumed": true,
+    "containment_exact_selection_resumed": true,
+    "containment_new_conversation_legacy": true,
+    "selected_loss_failed_closed": true,
+    "selected_loss_legacy_retry": false,
+    "pre_selection_one_step_rollback": true,
+    "successful_histories_equal": true
+  },
+  "decoder_regression": {
+    "decoder_or_frame_codec_changed_since_accepted_corpora": false,
+    "legacy_mutation_corpus_rerun_required": false,
+    "canonical_sync_v2_mutation_corpus_rerun_required": false,
+    "accepted_legacy_mutations": 31851,
+    "accepted_canonical_sync_v2_mutations": 2863,
+    "sustained_fuzz_campaign_rerun_required": false
+  },
+  "acceptance": {
+    "changed_boundary_self_tests": "verified",
+    "negative_mutations": "verified",
+    "m1_readiness": "112/112",
+    "rustfmt": "verified",
+    "locked_offline_strict_clippy": "verified",
+    "stable_rust_regression_except_unchanged_decoder_corpora": "verified",
+    "stable_runner_profile": "test",
+    "stable_runner_cargo_jobs": 2,
+    "stable_runner_isolated_tests": "1/1",
+    "stable_runner_status": "passed",
+    "intentionally_skipped_unchanged_tests": [
+      "bounded_golden_decoder_mutation_corpus_fails_closed",
+      "bounded_canonical_sync_v2_decoder_mutation_corpus_fails_closed"
+    ],
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false
+  },
+  "remaining_product_decisions": [
+    "public-default-dual-reader-rollout",
+    "desktop-activation-ui",
+    "canonical-native-history-materialization",
+    "legacy-retirement",
+    "non-windows-field-evidence",
+    "independent-security-audit"
+  ]
+}

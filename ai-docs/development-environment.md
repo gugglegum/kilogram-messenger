@@ -4875,3 +4875,28 @@ Hosted follow-up:
   and all six scenarios passed over direct Iroh LAN.
 - M1.1.84 is complete. M1.1.85 is the remaining local aggregate regression and
   ledger/formalization gate.
+
+## M1.1.85 opt-in dark-launch acceptance environment (2026-10-18)
+
+- Aggregate contract: `CANONICAL-SYNC-V2-OPT-IN-DARK-LAUNCH.json`; verifier:
+  `scripts/verify-kilogram-canonical-sync-v2-opt-in-dark-launch-boundary.ps1`.
+- Final readiness command used `-AcceptedTag M1.0.0` and passed `112/112`,
+  rustfmt and locked/offline workspace strict Clippy. No test executable was
+  started by readiness.
+- Stable regression used profile `test`, `-CargoJobs 2`, isolated test order
+  `BeforeAggregate`, normal process priority, `-Run` and `-NoFailFast`.
+  It completed with `status=passed` and isolated runtime `1/1`.
+- The only skips were
+  `bounded_golden_decoder_mutation_corpus_fails_closed` and
+  `bounded_canonical_sync_v2_decoder_mutation_corpus_fails_closed`. Their exact
+  31 851 and 2 863 mutation corpora, plus sustained fuzz, remain accepted from
+  the unchanged decoder/frame surface.
+- The first regression invocation inside the Codex filesystem sandbox was
+  discarded after redirected `%TEMP%` produced repeated Windows `os error 5`.
+  The identical outside-sandbox rerun had zero failures.
+- The stable runner retained the debug cache. Its trailing cache report showed
+  about 92.2 GiB total target data; no automatic vacuum was performed because
+  the accepted resource policy preserves useful incremental compilation state.
+- Public default remains `kilogram/m0/sync/8`; `/cbor/2` is available only via
+  verified local Device authority and mutual selection. No release, ZIP, tag
+  or automatic GitHub workflow was created.

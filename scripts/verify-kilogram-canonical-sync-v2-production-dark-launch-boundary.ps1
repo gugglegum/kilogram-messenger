@@ -151,8 +151,8 @@ function Assert-Contract {
         'persist_canonical_sync_v2_selection(',
         'canonical_sync_v2_selection_epoch(',
         'endpoint.connect(ticket.endpoint().clone(), CANONICAL_SYNC_ALPN_V2)',
-        'drive_canonical_sync_v2_client(&connection, &canonical_client, false)',
-        'serve_canonical_sync_v2_connection(connection, &server, false)',
+        'let outcome = drive_canonical_sync_v2_client(',
+        'serve_canonical_sync_v2_connection(connection, &server, stop_after_diff)',
         'sync_transport_fallback_after_selection=false'
     ) 'production CLI integration'
     Assert-ContainsAll $Runtime @(

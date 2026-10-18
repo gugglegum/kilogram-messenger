@@ -121,9 +121,9 @@ function Assert-Contract {
         throw 'canonical sync v2 membership policy remaining-work boundary changed'
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.80' -or
+    if ([string]$Migration.milestone -cne 'M1.1.85' -or
         [string]$Migration.status -cne
-            'canonical-sync-v2-ready-for-explicit-activation-decision' -or
+            'canonical-sync-v2-opt-in-dark-launch-verified' -or
         [string]$Migration.current_state -cne 'legacy-only' -or
         [bool]$Migration.candidate_identifier_registered -or
         [string]$Migration.history_compatible_successor.dormant_cross_format_membership_policy -cne
@@ -147,9 +147,9 @@ function Assert-Contract {
         throw 'canonical migration confused dormant policy with active runtime support'
     }
 
-    if ([string]$TransportManifest.milestone -cne 'M1.1.80' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.85' -or
         [string]$TransportManifest.status -cne
-            'canonical-sync-v2-ready-for-explicit-activation-decision' -or
+            'canonical-sync-v2-opt-in-dark-launch-verified' -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_cross_format_membership_policy -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_bounded_resumable_legacy_import -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_atomic_legacy_import_checkpoint -or
@@ -165,23 +165,23 @@ function Assert-Contract {
         throw 'canonical transport manifest does not preserve dormant-only policy'
     }
 
-    if ([string]$Compatibility.milestone -cne 'M1.1.80' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.85' -or
         [string]$Compatibility.status -cne
-            'canonical-sync-v2-ready-for-explicit-activation-decision' -or
+            'canonical-sync-v2-opt-in-dark-launch-verified' -or
         -not [bool]$Compatibility.required_successor.dormant_cross_format_membership_policy_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_bounded_resumable_legacy_import_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_atomic_legacy_import_checkpoint_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_signed_session_bootstrap_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_signed_session_successor_store_integrated -or
         [string]$Compatibility.required_successor.status -cne
-            'canonical-sync-v2-ready-for-explicit-activation-decision' -or
+            'canonical-sync-v2-opt-in-dark-launch-verified' -or
         -not [bool]$Compatibility.active.registered -or
         -not [bool]$Compatibility.active.dialed) {
         throw 'history compatibility manifest omitted dormant cross-format policy'
     }
 
     $surface = @($Coverage.surfaces | Where-Object { [string]$_.id -ceq 'transport-sync' })
-    if ([string]$Coverage.milestone -cne 'M1.1.80' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.85' -or
         $surface.Count -ne 1 -or [string]$surface[0].coverage -cne 'complete' -or
         'dormant-cross-format-membership-policy' -cnotin @($surface[0].covered) -or
         'dormant-bounded-resumable-legacy-import' -cnotin @($surface[0].covered) -or
@@ -224,10 +224,19 @@ function Assert-Contract {
             throw "canonical sync v2 membership policy source is missing '$required'"
         }
     }
-    foreach ($activeSource in @($Wire, $Transport, $Cli)) {
+    foreach ($activeSource in @($Wire, $Transport)) {
         if ($activeSource.IndexOf('CanonicalSyncV2MembershipPolicy',
                 [StringComparison]::Ordinal) -ge 0) {
-            throw 'dormant canonical sync v2 membership policy leaked into active runtime source'
+            throw 'canonical sync v2 membership policy leaked into legacy wire or generic transport source'
+        }
+    }
+    foreach ($required in @(
+        'CanonicalSyncV2MembershipPolicy',
+        '.register_canonical_alpn()',
+        '.initiate_new_canonical_session()'
+    )) {
+        if ($Cli.IndexOf($required, [StringComparison]::Ordinal) -lt 0) {
+            throw "guarded canonical membership-policy integration is missing '$required'"
         }
     }
 
@@ -291,11 +300,11 @@ if ($SelfTest) {
             $adapter $wire $transport $cli $rfc
     } 'premature_active_membership_policy'
 
-    $leakedCli = $cli + "`nCanonicalSyncV2MembershipPolicy`n"
+    $unguardedCli = $cli.Replace('.initiate_new_canonical_session()', '.legacy_reader_enabled()')
     Assert-Rejected {
         Assert-Contract $manifest $migration $transportManifest $compatibility $coverage `
-            $adapter $wire $transport $leakedCli $rfc
-    } 'membership_policy_leaked_into_active_cli'
+            $adapter $wire $transport $unguardedCli $rfc
+    } 'membership_policy_opt_in_guard_removed'
     Write-Output 'canonical_sync_v2_membership_policy_self_test=passed'
 }
 

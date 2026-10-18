@@ -176,7 +176,11 @@ function Assert-Contract {
     ) 'activation authority next work'
 
     if ([string]$Migration.current_state -cne 'legacy-only' -or
-        [bool]$Migration.changes_active_wire -or
+        -not [bool]$Migration.changes_active_wire -or
+        [string]$Migration.public_default -cne 'legacy-only' -or
+        [bool]$Migration.opt_in_dark_launch.registered_by_default -or
+        [bool]$Migration.opt_in_dark_launch.dialed_by_default -or
+        -not [bool]$Migration.opt_in_dark_launch.registered_by_verified_opt_in -or
         [bool]$Migration.history_compatible_successor.registered -or
         [bool]$Migration.history_compatible_successor.dialed) {
         throw 'public canonical migration changed during authority-only work'

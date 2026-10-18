@@ -5,7 +5,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $workspace = [System.IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $manifestPath = Join-Path $workspace 'CANONICAL-MIGRATION.json'
-$rfcPath = Join-Path $workspace 'docs\RFC-0132-m116-canonical-dual-reader-migration.md'
+$rfcPath = Join-Path $workspace 'docs\RFC-0209-m1185-canonical-sync-v2-opt-in-dark-launch-acceptance.md'
 $transportPath = Join-Path $workspace 'crates\kilogram-transport-iroh\src\lib.rs'
 $cliPath = Join-Path $workspace 'apps\kilogram-cli\src\main.rs'
 
@@ -23,9 +23,13 @@ function Assert-ExactStrings {
 
 function Assert-Manifest {
     param([object]$Manifest)
-    if ([UInt64]$Manifest.schema_version -ne 1 -or [string]$Manifest.milestone -cne 'M1.1.80' -or
-        [string]$Manifest.status -cne 'canonical-sync-v2-ready-for-explicit-activation-decision' -or
-        [string]$Manifest.current_state -cne 'legacy-only' -or [bool]$Manifest.changes_active_wire) {
+    if ([UInt64]$Manifest.schema_version -ne 1 -or [string]$Manifest.milestone -cne 'M1.1.85' -or
+        [string]$Manifest.status -cne 'canonical-sync-v2-opt-in-dark-launch-verified' -or
+        [string]$Manifest.current_state -cne 'legacy-only' -or
+        -not [bool]$Manifest.changes_active_wire -or
+        [string]$Manifest.public_default -cne 'legacy-only' -or
+        [string]$Manifest.opt_in_dark_launch_manifest -cne
+            'CANONICAL-SYNC-V2-OPT-IN-DARK-LAUNCH.json') {
         throw 'canonical migration header changed'
     }
     if ([string]$Manifest.current_encoding -cne 'postcard' -or
@@ -33,6 +37,16 @@ function Assert-Manifest {
         [string]$Manifest.candidate_protocol_identifier -cne 'kilogram/m1/sync/cbor/2' -or
         [bool]$Manifest.candidate_identifier_registered) {
         throw 'canonical migration encoding or identifier changed'
+    }
+    if ([string]$Manifest.opt_in_dark_launch.authority -cne
+            'device-signed-append-only-chain' -or
+        [bool]$Manifest.opt_in_dark_launch.registered_by_default -or
+        [bool]$Manifest.opt_in_dark_launch.dialed_by_default -or
+        -not [bool]$Manifest.opt_in_dark_launch.registered_by_verified_opt_in -or
+        -not [bool]$Manifest.opt_in_dark_launch.dialed_after_mutual_authenticated_selection -or
+        [bool]$Manifest.opt_in_dark_launch.selected_failure_fallback_to_legacy -or
+        [string]$Manifest.opt_in_dark_launch.two_host_resilience_rehearsal -cne 'verified') {
+        throw 'canonical opt-in dark-launch boundary changed'
     }
     if ([string]$Manifest.history_compatible_successor.protocol_identifier -cne
             'kilogram/m1/sync/cbor/2' -or
@@ -159,7 +173,11 @@ function Assert-Manifest {
         'sustained-coverage-guided-fuzzing|verified',
         'mixed-version-and-downgrade-tests|verified',
         'fresh-hosted-and-field-evidence|verified',
-        'rollback-drill|verified'
+        'rollback-drill|verified',
+        'device-signed-opt-in-activation-policy|verified',
+        'production-runtime-dark-launch-integration|verified',
+        'two-host-opt-in-resilience-rehearsal|verified',
+        'aggregate-regression-and-formalization|verified'
     ) 'activation requirements'
 }
 
@@ -172,12 +190,14 @@ $transport = Get-Content -LiteralPath $transportPath -Raw
 $cli = Get-Content -LiteralPath $cliPath -Raw
 Assert-Manifest $manifest
 
+$normalizedRfc = [regex]::Replace($rfc, '\s+', ' ')
 foreach ($required in @(
-    'Format sniffing is forbidden', 'fails closed', 'must never be reused',
-    'never trigger rollback',
-    'Activation remains blocked', 'changes no active wire bytes'
+    'verified opt-in dark launch',
+    'public_default=legacy-only',
+    'does not enable a public dual-reader default',
+    'Neither timeout grants activation authority or permits a Postcard retry'
 )) {
-    if ($rfc.IndexOf($required, [StringComparison]::OrdinalIgnoreCase) -lt 0) {
+    if ($normalizedRfc.IndexOf($required, [StringComparison]::OrdinalIgnoreCase) -lt 0) {
         throw "migration RFC is missing '$required'"
     }
 }
@@ -191,9 +211,21 @@ if ($transport.IndexOf('pub const CANONICAL_SYNC_ALPN_V1: &[u8] = b"kilogram/m1/
         [StringComparison]::Ordinal) -lt 0 -or
     $transport.IndexOf('pub const CANONICAL_SYNC_ALPN_V2: &[u8] = b"kilogram/m1/sync/cbor/2";',
         [StringComparison]::Ordinal) -lt 0 -or
-    $cli.IndexOf('CANONICAL_SYNC_ALPN_V1', [StringComparison]::Ordinal) -ge 0 -or
-    $cli.IndexOf('CANONICAL_SYNC_ALPN_V2', [StringComparison]::Ordinal) -ge 0) {
-    throw 'allocated canonical identifier is missing or active prematurely'
+    $cli.IndexOf('CANONICAL_SYNC_ALPN_V1', [StringComparison]::Ordinal) -ge 0) {
+    throw 'canonical identifier allocation changed'
+}
+foreach ($required in @(
+    'let mut runtime_alpns = Vec::new();',
+    '.register_canonical_alpn()',
+    'runtime_alpns.push(CANONICAL_SYNC_ALPN_V2.to_vec());',
+    'let mut listener_alpns = Vec::new();',
+    'listener_alpns.push(CANONICAL_SYNC_ALPN_V2.to_vec());',
+    '.initiate_new_canonical_session()',
+    'endpoint.connect(ticket.endpoint().clone(), CANONICAL_SYNC_ALPN_V2)'
+)) {
+    if ($cli.IndexOf($required, [StringComparison]::Ordinal) -lt 0) {
+        throw "guarded canonical production path is missing '$required'"
+    }
 }
 
 if ($SelfTest) {
@@ -216,11 +248,13 @@ if ($SelfTest) {
 }
 
 Write-Output 'canonical_migration_boundary=verified'
-Write-Output 'migration_status=canonical-sync-v2-ready-for-explicit-activation-decision'
+Write-Output 'migration_status=canonical-sync-v2-opt-in-dark-launch-verified'
 Write-Output 'candidate_protocol_identifier=kilogram/m1/sync/cbor/2'
 Write-Output 'history_compatible_successor_identifier=kilogram/m1/sync/cbor/2'
 Write-Output 'candidate_identifier_registered=false'
 Write-Output 'format_sniffing=false'
 Write-Output 'parse_error_fallback=false'
-Write-Output 'active_wire_changed=false'
+Write-Output 'public_default=legacy-only'
+Write-Output 'opt_in_active_wire_changed=true'
+Write-Output 'active_wire_changed=true'
 Write-Output 'network_evidence_executed=true'

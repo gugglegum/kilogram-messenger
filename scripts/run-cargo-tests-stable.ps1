@@ -10,7 +10,8 @@ param(
     [switch]$NormalProcessPriority,
     [switch]$Run,
     [switch]$NoFailFast,
-    [switch]$NoCapture
+    [switch]$NoCapture,
+    [string[]]$SkipTest = @()
 )
 
 Set-StrictMode -Version Latest
@@ -212,6 +213,13 @@ Write-Warning 'Executing stable-path test harnesses. A network-listening harness
 $testArguments = @()
 if (-not [string]::IsNullOrWhiteSpace($Filter)) {
     $testArguments += $Filter
+}
+foreach ($skippedTest in $SkipTest) {
+    if ([string]::IsNullOrWhiteSpace($skippedTest)) {
+        throw 'Skipped test names must not be empty.'
+    }
+    $testArguments += @('--skip', $skippedTest)
+    Write-Host "skipping_unchanged_test=$skippedTest"
 }
 if ($NoCapture) {
     $testArguments += '--nocapture'

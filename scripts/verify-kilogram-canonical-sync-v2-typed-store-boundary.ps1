@@ -131,8 +131,8 @@ function Assert-Contract {
         throw 'canonical sync v2 typed store remaining-work boundary changed'
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.80' -or
-        [string]$Migration.status -cne 'canonical-sync-v2-ready-for-explicit-activation-decision' -or
+    if ([string]$Migration.milestone -cne 'M1.1.85' -or
+        [string]$Migration.status -cne 'canonical-sync-v2-opt-in-dark-launch-verified' -or
         [string]$Migration.current_state -cne 'legacy-only' -or
         [bool]$Migration.candidate_identifier_registered -or
         [string]$Migration.history_compatible_successor.dormant_atomic_typed_store -cne
@@ -158,9 +158,9 @@ function Assert-Contract {
         throw 'canonical migration confused dormant storage with active runtime support'
     }
 
-    if ([string]$TransportManifest.milestone -cne 'M1.1.80' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.85' -or
         [string]$TransportManifest.status -cne
-            'canonical-sync-v2-ready-for-explicit-activation-decision' -or
+            'canonical-sync-v2-opt-in-dark-launch-verified' -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_atomic_typed_store -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_cross_format_membership_policy -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_bounded_resumable_legacy_import -or
@@ -177,9 +177,9 @@ function Assert-Contract {
         throw 'canonical transport manifest does not preserve dormant-only storage'
     }
 
-    if ([string]$Compatibility.milestone -cne 'M1.1.80' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.85' -or
         [string]$Compatibility.status -cne
-            'canonical-sync-v2-ready-for-explicit-activation-decision' -or
+            'canonical-sync-v2-opt-in-dark-launch-verified' -or
         -not [bool]$Compatibility.required_successor.dormant_atomic_typed_store_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_cross_format_membership_policy_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_bounded_resumable_legacy_import_integrated -or
@@ -187,7 +187,7 @@ function Assert-Contract {
         -not [bool]$Compatibility.required_successor.dormant_signed_session_bootstrap_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_signed_session_successor_store_integrated -or
         [string]$Compatibility.required_successor.status -cne
-            'canonical-sync-v2-ready-for-explicit-activation-decision' -or
+            'canonical-sync-v2-opt-in-dark-launch-verified' -or
         [bool]$Compatibility.required_successor.{must_preserve_no-sniffing-and-no-parse-fallback} -ne
             $true -or
         -not [bool]$Compatibility.active.registered -or
@@ -196,7 +196,7 @@ function Assert-Contract {
     }
 
     $surface = @($Coverage.surfaces | Where-Object { [string]$_.id -ceq 'transport-sync' })
-    if ([string]$Coverage.milestone -cne 'M1.1.80' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.85' -or
         $surface.Count -ne 1 -or [string]$surface[0].coverage -cne 'complete' -or
         'dormant-atomic-typed-carrier-store' -cnotin @($surface[0].covered) -or
         'dormant-cross-format-membership-policy' -cnotin @($surface[0].covered) -or
@@ -249,15 +249,25 @@ function Assert-Contract {
         }
     }
 
-    foreach ($activeSource in @($Wire, $Transport, $Cli)) {
+    foreach ($activeSource in @($Wire, $Transport)) {
         foreach ($forbidden in @(
             'CanonicalSyncV2CarrierStore',
             'CANONICAL_SYNC_V2_STORE_FILE',
             'canonical-sync-v2.redb'
         )) {
             if ($activeSource.IndexOf($forbidden, [StringComparison]::Ordinal) -ge 0) {
-                throw "dormant canonical sync v2 typed store leaked into active runtime source: $forbidden"
+                throw "canonical sync v2 typed store leaked into legacy wire or generic transport source: $forbidden"
             }
+        }
+    }
+    foreach ($required in @(
+        'CanonicalSyncV2CarrierStore',
+        'canonical_sync_v2_store_path',
+        '.register_canonical_alpn()',
+        '.initiate_new_canonical_session()'
+    )) {
+        if ($Cli.IndexOf($required, [StringComparison]::Ordinal) -lt 0) {
+            throw "guarded canonical typed-store integration is missing '$required'"
         }
     }
 
@@ -323,11 +333,11 @@ if ($SelfTest) {
             $store $adapter $wire $transport $cli $rfc
     } 'changed_store_schema_marker'
 
-    $leakedCli = $cli + "`nCanonicalSyncV2CarrierStore`n"
+    $unguardedCli = $cli.Replace('.initiate_new_canonical_session()', '.legacy_reader_enabled()')
     Assert-Rejected {
         Assert-Contract $manifest $migration $transportManifest $compatibility $coverage `
-            $store $adapter $wire $transport $leakedCli $rfc
-    } 'typed_store_leaked_into_active_cli'
+            $store $adapter $wire $transport $unguardedCli $rfc
+    } 'typed_store_opt_in_guard_removed'
     Write-Output 'canonical_sync_v2_typed_store_self_test=passed'
 }
 

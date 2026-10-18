@@ -1,9 +1,11 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.80",
-  "status": "canonical-sync-v2-ready-for-explicit-activation-decision",
+  "milestone": "M1.1.85",
+  "status": "canonical-sync-v2-opt-in-dark-launch-verified",
   "network_evidence_manifest": "CANONICAL-SYNC-V2-NETWORK-EVIDENCE.json",
-  "changes_active_wire": false,
+  "opt_in_dark_launch_manifest": "CANONICAL-SYNC-V2-OPT-IN-DARK-LAUNCH.json",
+  "changes_active_wire": true,
+  "public_default": "legacy-only",
   "active": {
     "encoding": "postcard-v6",
     "alpn": "kilogram/m0/sync/8",
@@ -65,7 +67,14 @@
     "must_integrate_bridge_into_closed_frames": true,
     "must_authenticate_exact_identifier_in_connection_ticket": true,
     "must_preserve_no-sniffing-and-no-parse-fallback": true,
-    "status": "canonical-sync-v2-ready-for-explicit-activation-decision"
+    "status": "canonical-sync-v2-opt-in-dark-launch-verified"
+  },
+  "opt_in_dark_launch": {
+    "legacy_carrier_materialization": true,
+    "canonical_native_history_materialization": false,
+    "exact_selected_resume": true,
+    "selected_failure_fallback_to_legacy": false,
+    "two_host_histories_equal": true
   },
   "forbidden": [
     "resign-historical-event-with-migration-key",

@@ -151,9 +151,9 @@ function Assert-Contract {
         }
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.80' -or
+    if ([string]$Migration.milestone -cne 'M1.1.85' -or
         [string]$Migration.status -cne
-            'canonical-sync-v2-ready-for-explicit-activation-decision' -or
+            'canonical-sync-v2-opt-in-dark-launch-verified' -or
         [string]$Migration.history_compatible_successor.dormant_signed_session_bootstrap -cne
             'verified' -or
         [string]$Migration.history_compatible_successor.dormant_signed_session_successor_store -cne
@@ -169,9 +169,9 @@ function Assert-Contract {
         [string]$bootstrapRequirement[0].status -cne 'verified') {
         throw 'canonical migration lost the verified signed session bootstrap requirement'
     }
-    if ([string]$TransportManifest.milestone -cne 'M1.1.80' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.85' -or
         [string]$TransportManifest.status -cne
-            'canonical-sync-v2-ready-for-explicit-activation-decision' -or
+            'canonical-sync-v2-opt-in-dark-launch-verified' -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_signed_session_bootstrap -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_signed_session_successor_store -or
         [bool]$TransportManifest.history_compatible_successor.registered -or
@@ -182,19 +182,19 @@ function Assert-Contract {
             @($TransportManifest.remaining)) {
         throw 'transport sync manifest lost the dormant signed session bootstrap boundary'
     }
-    if ([string]$Compatibility.milestone -cne 'M1.1.80' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.85' -or
         [string]$Compatibility.status -cne
-            'canonical-sync-v2-ready-for-explicit-activation-decision' -or
+            'canonical-sync-v2-opt-in-dark-launch-verified' -or
         -not [bool]$Compatibility.required_successor.dormant_signed_session_bootstrap_integrated -or
         -not [bool]$Compatibility.required_successor.dormant_signed_session_successor_store_integrated -or
         [string]$Compatibility.required_successor.status -cne
-            'canonical-sync-v2-ready-for-explicit-activation-decision') {
+            'canonical-sync-v2-opt-in-dark-launch-verified') {
         throw 'history compatibility manifest lost the signed session bootstrap contract'
     }
     $transportCoverage = @(
         @($Coverage.surfaces) | Where-Object { [string]$_.id -ceq 'transport-sync' }
     )
-    if ([string]$Coverage.milestone -cne 'M1.1.80' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.85' -or
         $transportCoverage.Count -ne 1 -or
         'CANONICAL-SYNC-V2-SESSION-BOOTSTRAP.json' -cnotin
             @($transportCoverage[0].artifacts) -or
@@ -238,10 +238,19 @@ function Assert-Contract {
             throw "kilogram-session lost signed session bootstrap source marker: $needle"
         }
     }
-    foreach ($activeSource in @($Wire, $Transport, $Cli)) {
+    foreach ($activeSource in @($Wire, $Transport)) {
         if ($activeSource.Contains('bootstrap_from_completed_legacy_import') -or
             $activeSource.Contains('CanonicalSyncV2StoredSessionCheckpoint')) {
-            throw 'dormant signed session bootstrap leaked into active wire/transport/CLI code'
+            throw 'signed session bootstrap leaked into legacy wire or generic transport code'
+        }
+    }
+    foreach ($needle in @(
+        'CanonicalSyncV2Client::bootstrap_from_completed_legacy_import(',
+        '.register_canonical_alpn()',
+        '.initiate_new_canonical_session()'
+    )) {
+        if (-not $Cli.Contains($needle)) {
+            throw "guarded signed session bootstrap integration is missing '$needle'"
         }
     }
     $normalizedRfc = [regex]::Replace($Rfc, '\s+', ' ')
@@ -303,8 +312,8 @@ if ($SelfTest) {
     Assert-Rejected {
         Assert-Contract $manifest $migration $transportManifest $compatibility $coverage `
             $store $session $wire $transport `
-            ($cli + ' bootstrap_from_completed_legacy_import') $rfc
-    } 'session_bootstrap_leaked_into_active_cli'
+            ($cli.Replace('.initiate_new_canonical_session()', '.legacy_reader_enabled()')) $rfc
+    } 'session_bootstrap_opt_in_guard_removed'
 
     Write-Output 'canonical_sync_v2_session_bootstrap_self_test=passed'
 }

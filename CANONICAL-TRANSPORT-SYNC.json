@@ -1,10 +1,12 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.80",
-  "status": "canonical-sync-v2-ready-for-explicit-activation-decision",
+  "milestone": "M1.1.85",
+  "status": "canonical-sync-v2-opt-in-dark-launch-verified",
   "network_evidence_manifest": "CANONICAL-SYNC-V2-NETWORK-EVIDENCE.json",
+  "opt_in_dark_launch_manifest": "CANONICAL-SYNC-V2-OPT-IN-DARK-LAUNCH.json",
   "surface": "transport-sync",
-  "changes_active_wire": false,
+  "changes_active_wire": true,
+  "public_default": "legacy-only",
   "active": {
     "encoding": "postcard-v6",
     "alpn": "kilogram/m0/sync/8",
@@ -86,9 +88,20 @@
       "prekey-directory-common-validity-window"
     ]
   },
+  "opt_in_dark_launch": {
+    "authority": "verified-device-signed-activation-chain",
+    "registered_by_default": false,
+    "dialed_by_default": false,
+    "registered_by_verified_opt_in": true,
+    "dialed_after_mutual_authenticated_selection": true,
+    "responder_preparation_and_first_response_timeout_seconds": 120,
+    "stream_io_timeout_seconds": 20,
+    "selected_failure_fallback_to_legacy": false,
+    "two_host_resilience_rehearsal": "verified"
+  },
   "remaining": [],
   "scope": {
-    "active_wire_changed": false,
+    "active_wire_changed": true,
     "network_executed": true
   }
 }

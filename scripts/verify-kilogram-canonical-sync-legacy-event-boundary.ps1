@@ -109,10 +109,13 @@ function Assert-BridgeContract {
     Assert-LowerHex ([string]$Vectors.expected.bridge_cbor_hex) -1 'bridge CBOR'
 
     if ([UInt64]$Compatibility.schema_version -ne 1 -or
-        [string]$Compatibility.milestone -cne 'M1.1.80' -or
+        [string]$Compatibility.milestone -cne 'M1.1.85' -or
         [string]$Compatibility.status -cne
-            'canonical-sync-v2-ready-for-explicit-activation-decision' -or
-        [bool]$Compatibility.changes_active_wire -or
+            'canonical-sync-v2-opt-in-dark-launch-verified' -or
+        -not [bool]$Compatibility.changes_active_wire -or
+        [string]$Compatibility.public_default -cne 'legacy-only' -or
+        [string]$Compatibility.opt_in_dark_launch_manifest -cne
+            'CANONICAL-SYNC-V2-OPT-IN-DARK-LAUNCH.json' -or
         [string]$Compatibility.active.alpn -cne $legacyAlpn -or
         -not [bool]$Compatibility.active.history_compatible -or
         -not [bool]$Compatibility.active.registered -or
@@ -151,7 +154,7 @@ function Assert-BridgeContract {
         -not [bool]$Compatibility.required_successor.must_integrate_bridge_into_closed_frames -or
         -not [bool]$Compatibility.required_successor.must_authenticate_exact_identifier_in_connection_ticket -or
         [string]$Compatibility.required_successor.status -cne
-            'canonical-sync-v2-ready-for-explicit-activation-decision') {
+            'canonical-sync-v2-opt-in-dark-launch-verified') {
         throw 'canonical sync legacy-event bridge or successor contract changed'
     }
 

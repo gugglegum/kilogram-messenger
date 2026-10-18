@@ -62,7 +62,7 @@ function Assert-SmokeContract {
         [string]$Rfc
     )
 
-    $aggregateStatus = 'canonical-sync-v2-ready-for-explicit-activation-decision'
+    $aggregateStatus = 'canonical-sync-v2-opt-in-dark-launch-verified'
     $smokeStatus = 'instrumented-smoke-and-coverage-verified-sustained-pending'
     $campaignStatus = 'instrumented-sustained-and-coverage-verified-field-evidence-pending'
     $sourceRevision = 'f9148093a7476e2d77c4a967b018c4b26a230225'
@@ -189,7 +189,7 @@ function Assert-SmokeContract {
         throw 'historical toolchain build record changed or was rewritten'
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.80' -or
+    if ([string]$Migration.milestone -cne 'M1.1.85' -or
         [string]$Migration.status -cne $aggregateStatus -or
         [string]$Migration.history_compatible_successor.coverage_guided_fuzz_harness -cne
             'instrumented-sustained-verified' -or
@@ -209,7 +209,7 @@ function Assert-SmokeContract {
         [string]$sustainedRequirement[0].status -cne 'verified') {
         throw 'smoke and sustained campaign gates were conflated'
     }
-    if ([string]$Transport.milestone -cne 'M1.1.80' -or
+    if ([string]$Transport.milestone -cne 'M1.1.85' -or
         [string]$Transport.status -cne $aggregateStatus -or
         -not [bool]$Transport.history_compatible_successor.coverage_guided_fuzz_harness -or
         -not [bool]$Transport.history_compatible_successor.instrumented_fuzz_smoke -or
@@ -219,7 +219,7 @@ function Assert-SmokeContract {
         -not [bool]$Transport.scope.network_executed) {
         throw 'transport smoke state changed'
     }
-    if ([string]$Compatibility.milestone -cne 'M1.1.80' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.85' -or
         [string]$Compatibility.status -cne $aggregateStatus -or
         -not [bool]$Compatibility.required_successor.coverage_guided_fuzz_harness_integrated -or
         -not [bool]$Compatibility.required_successor.instrumented_fuzz_smoke_verified -or
@@ -238,7 +238,7 @@ function Assert-SmokeContract {
         'docs/RFC-0201-m1174-pinned-fuzz-toolchain.md',
         'docs/RFC-0202-m1175-instrumented-fuzz-smoke.md'
     )
-    if ([string]$Coverage.milestone -cne 'M1.1.80' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.85' -or
         [string]$Coverage.status -cne $aggregateStatus -or
         $surface.Count -ne 1 -or
         'instrumented-fuzz-smoke' -cnotin @($surface[0].covered)) {

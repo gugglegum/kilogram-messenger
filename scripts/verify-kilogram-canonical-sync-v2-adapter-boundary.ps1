@@ -113,9 +113,9 @@ function Assert-Contract {
         throw 'canonical sync v2 dormant adapter remaining-work boundary changed'
     }
 
-    if ([string]$Migration.milestone -cne 'M1.1.80' -or
+    if ([string]$Migration.milestone -cne 'M1.1.85' -or
         [string]$Migration.status -cne
-            'canonical-sync-v2-ready-for-explicit-activation-decision' -or
+            'canonical-sync-v2-opt-in-dark-launch-verified' -or
         [string]$Migration.current_state -cne 'legacy-only' -or
         [bool]$Migration.candidate_identifier_registered -or
         [string]$Migration.history_compatible_successor.dormant_runtime_state_machine -cne
@@ -145,9 +145,9 @@ function Assert-Contract {
         throw 'canonical migration confused dormant verification with active runtime support'
     }
 
-    if ([string]$TransportManifest.milestone -cne 'M1.1.80' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.85' -or
         [string]$TransportManifest.status -cne
-            'canonical-sync-v2-ready-for-explicit-activation-decision' -or
+            'canonical-sync-v2-opt-in-dark-launch-verified' -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_runtime_state_machine -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_atomic_typed_store -or
         -not [bool]$TransportManifest.history_compatible_successor.dormant_cross_format_membership_policy -or
@@ -166,7 +166,7 @@ function Assert-Contract {
     }
 
     $surface = @($Coverage.surfaces | Where-Object { [string]$_.id -ceq 'transport-sync' })
-    if ([string]$Coverage.milestone -cne 'M1.1.80' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.85' -or
         $surface.Count -ne 1 -or [string]$surface[0].coverage -cne 'complete' -or
         'dormant-history-compatible-sync-v2-runtime-state-machine' -cnotin
             @($surface[0].covered) -or
@@ -224,23 +224,21 @@ function Assert-Contract {
             throw 'dormant canonical sync v2 adapter leaked into active runtime source'
         }
     }
-    # M1.1.82 deliberately reuses only the adapter's transport-independent
-    # migration-state vocabulary and permission evaluator in the local CLI
-    # activation authority.  The dormant wire state machines must still remain
-    # absent from every active registration, dial, and request path.
-    if ($Cli.IndexOf('CanonicalSyncV2Client',
-            [StringComparison]::Ordinal) -ge 0 -or
-        $Cli.IndexOf('CanonicalSyncV2Server',
-            [StringComparison]::Ordinal) -ge 0 -or
-        $Cli.IndexOf('CanonicalSyncV2Store',
-            [StringComparison]::Ordinal) -ge 0 -or
-        $Cli.IndexOf('CanonicalSyncV2EventPolicy',
-            [StringComparison]::Ordinal) -ge 0) {
-        throw 'dormant canonical sync v2 wire adapter leaked into active CLI source'
-    }
-    if ($Cli.IndexOf('CANONICAL_SYNC_ALPN_V2', [StringComparison]::Ordinal) -ge 0 -or
-        $Cli.IndexOf($alpn, [StringComparison]::Ordinal) -ge 0) {
-        throw 'canonical sync v2 identifier leaked into active CLI registration or dial path'
+    # The adapter is now reachable only through the verified M1.1.85 opt-in
+    # policy.  The legacy wire and the generic transport crate remain clean;
+    # the production CLI must retain all permission and selection guards.
+    foreach ($required in @(
+        'CanonicalSyncV2Client',
+        'CanonicalSyncV2Server',
+        'CanonicalSyncV2CarrierStore',
+        'CanonicalSyncV2MembershipPolicy',
+        '.register_canonical_alpn()',
+        '.initiate_new_canonical_session()',
+        'endpoint.connect(ticket.endpoint().clone(), CANONICAL_SYNC_ALPN_V2)'
+    )) {
+        if ($Cli.IndexOf($required, [StringComparison]::Ordinal) -lt 0) {
+            throw "guarded canonical sync v2 adapter integration is missing '$required'"
+        }
     }
 
     $normalizedRfc = [regex]::Replace($Rfc, '\s+', ' ')
@@ -296,11 +294,11 @@ if ($SelfTest) {
             $session $activeWire $transport $cli $rfc
     } 'removed_membership_policy_boundary'
 
-    $leakedCli = $cli + "`nCanonicalSyncV2Client`n"
+    $unguardedCli = $cli.Replace('.initiate_new_canonical_session()', '.legacy_reader_enabled()')
     Assert-Rejected {
         Assert-Contract $manifest $migration $transportManifest $coverage $adapter `
-            $session $activeWire $transport $leakedCli $rfc
-    } 'adapter_leaked_into_active_cli'
+            $session $activeWire $transport $unguardedCli $rfc
+    } 'adapter_opt_in_guard_removed'
     Write-Output 'canonical_sync_v2_adapter_self_test=passed'
 }
 

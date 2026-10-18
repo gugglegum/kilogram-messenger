@@ -194,8 +194,8 @@ function Assert-Boundary {
         'crates/kilogram-sync-capability/src/lib.rs|SYNC_TRANSPORT_CAPABILITY_VERSION|u8|2'
     ) 'connection-ticket compatibility bindings'
 
-    if ([string]$TransportManifest.milestone -cne 'M1.1.80' -or
-        [string]$TransportManifest.status -cne 'canonical-sync-v2-ready-for-explicit-activation-decision' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.85' -or
+        [string]$TransportManifest.status -cne 'canonical-sync-v2-opt-in-dark-launch-verified' -or
         [string]$TransportManifest.active.alpn -cne $legacyAlpn -or
         -not [bool]$TransportManifest.active.registered -or
         -not [bool]$TransportManifest.active.dialed -or
@@ -229,7 +229,10 @@ function Assert-Boundary {
         (@($TransportManifest.authenticated_capability.candidate_protocols) -join ',') -cne
             $canonicalAlpn -or
         [bool]$TransportManifest.authenticated_capability.canonical_dial_enabled -or
-        [bool]$TransportManifest.scope.active_wire_changed -or
+        -not [bool]$TransportManifest.scope.active_wire_changed -or
+        [string]$TransportManifest.public_default -cne 'legacy-only' -or
+        [bool]$TransportManifest.opt_in_dark_launch.registered_by_default -or
+        [bool]$TransportManifest.opt_in_dark_launch.dialed_by_default -or
         -not [bool]$TransportManifest.scope.network_executed) {
         throw 'canonical transport remains-active boundary changed'
     }
@@ -237,8 +240,8 @@ function Assert-Boundary {
     $capabilityRequirement = @($CanonicalMigration.activation_requirements | Where-Object {
         [string]$_.id -ceq 'authenticated-capability-envelope'
     })
-    if ([string]$CanonicalMigration.milestone -cne 'M1.1.80' -or
-        [string]$CanonicalMigration.status -cne 'canonical-sync-v2-ready-for-explicit-activation-decision' -or
+    if ([string]$CanonicalMigration.milestone -cne 'M1.1.85' -or
+        [string]$CanonicalMigration.status -cne 'canonical-sync-v2-opt-in-dark-launch-verified' -or
         [string]$CanonicalMigration.current_state -cne 'legacy-only' -or
         [string]$CanonicalMigration.candidate_protocol_identifier -cne $canonicalAlpn -or
         [string]$CanonicalMigration.history_compatible_successor.authenticated_ticket_capability -cne
@@ -264,11 +267,11 @@ function Assert-Boundary {
     $coverageSurface = @($Coverage.surfaces | Where-Object {
         [string]$_.id -ceq 'transport-sync'
     })
-    if ([string]$Coverage.milestone -cne 'M1.1.80' -or
+    if ([string]$Coverage.milestone -cne 'M1.1.85' -or
         $coverageSurface.Count -ne 1 -or
         [string]$coverageSurface[0].coverage -cne 'complete' -or
         (@($coverageSurface[0].covered) -join ',') -cne
-            'parallel-cbor-alpn-identifier-allocation,history-compatible-cbor-v2-alpn-identifier-allocation,typed-durable-canonical-sync-session-checkpoint,authenticated-ticket-v13-history-compatible-cbor-v2-capability,dormant-history-compatible-sync-v2-runtime-state-machine,dormant-atomic-typed-carrier-store,dormant-cross-format-membership-policy,dormant-bounded-resumable-legacy-import,dormant-atomic-legacy-import-checkpoint,dormant-signed-session-bootstrap,dormant-signed-session-successor-store,dormant-checkpoint-bound-runtime-frame-journal,dormant-atomic-runtime-transition-transaction,dormant-durable-client-transition-adapter,dormant-durable-responder-transition-adapter,dormant-mutual-authenticated-candidate-selection,dormant-mixed-version-and-downgrade-matrix,dormant-dual-reader-runtime-coordinator,dormant-deterministic-rollback-drill,bounded-canonical-sync-v2-decoder-mutation-corpus,coverage-guided-fuzz-harness,instrumented-fuzz-smoke,sustained-fuzz-campaign,fresh-hosted-and-field-evidence' -or
+            'parallel-cbor-alpn-identifier-allocation,history-compatible-cbor-v2-alpn-identifier-allocation,typed-durable-canonical-sync-session-checkpoint,authenticated-ticket-v13-history-compatible-cbor-v2-capability,dormant-history-compatible-sync-v2-runtime-state-machine,dormant-atomic-typed-carrier-store,dormant-cross-format-membership-policy,dormant-bounded-resumable-legacy-import,dormant-atomic-legacy-import-checkpoint,dormant-signed-session-bootstrap,dormant-signed-session-successor-store,dormant-checkpoint-bound-runtime-frame-journal,dormant-atomic-runtime-transition-transaction,dormant-durable-client-transition-adapter,dormant-durable-responder-transition-adapter,dormant-mutual-authenticated-candidate-selection,dormant-mixed-version-and-downgrade-matrix,dormant-dual-reader-runtime-coordinator,dormant-deterministic-rollback-drill,bounded-canonical-sync-v2-decoder-mutation-corpus,coverage-guided-fuzz-harness,instrumented-fuzz-smoke,sustained-fuzz-campaign,fresh-hosted-and-field-evidence,device-signed-opt-in-activation-policy,production-runtime-dark-launch,two-host-resilience-rehearsal,aggregate-opt-in-dark-launch-acceptance' -or
         @($coverageSurface[0].remaining).Count -ne 0) {
         throw 'canonical coverage did not record the authenticated capability envelope'
     }

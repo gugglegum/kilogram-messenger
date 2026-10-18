@@ -168,14 +168,14 @@ function Assert-Contract {
         }
     }
 
-    $aggregateStatus = 'canonical-sync-v2-ready-for-explicit-activation-decision'
+    $aggregateStatus = 'canonical-sync-v2-opt-in-dark-launch-verified'
     if ([string]$Rollback.milestone -cne 'M1.1.71' -or
         [string]$Rollback.status -cne
             'dormant-deterministic-rollback-drill-verified-not-active' -or
         [bool]$Rollback.activation.active_transport_authorized) {
         throw 'rollback drill prerequisite changed'
     }
-    if ([string]$Migration.milestone -cne 'M1.1.80' -or
+    if ([string]$Migration.milestone -cne 'M1.1.85' -or
         [string]$Migration.status -cne $aggregateStatus -or
         [string]$Migration.history_compatible_successor.bounded_sync_v2_decoder_mutation_corpus -cne
             'verified' -or
@@ -189,7 +189,7 @@ function Assert-Contract {
         [string]$mutationRequirement[0].status -cne 'verified') {
         throw 'sync-v2 mutation activation requirement is not verified'
     }
-    if ([string]$TransportManifest.milestone -cne 'M1.1.80' -or
+    if ([string]$TransportManifest.milestone -cne 'M1.1.85' -or
         [string]$TransportManifest.status -cne $aggregateStatus -or
         -not [bool]$TransportManifest.history_compatible_successor.bounded_sync_v2_decoder_mutation_corpus -or
         [bool]$TransportManifest.history_compatible_successor.registered -or
@@ -197,14 +197,14 @@ function Assert-Contract {
         throw 'transport manifest mutation state changed'
     }
     Assert-ExactStrings @($TransportManifest.remaining) @() 'transport remaining work'
-    if ([string]$Compatibility.milestone -cne 'M1.1.80' -or
+    if ([string]$Compatibility.milestone -cne 'M1.1.85' -or
         [string]$Compatibility.status -cne $aggregateStatus -or
         -not [bool]$Compatibility.required_successor.bounded_sync_v2_decoder_mutation_corpus_integrated -or
         [string]$Compatibility.required_successor.status -cne $aggregateStatus) {
         throw 'history compatibility mutation state changed'
     }
     $surface = @($Coverage.surfaces | Where-Object { [string]$_.id -ceq 'transport-sync' })
-    if ([string]$Coverage.milestone -cne 'M1.1.80' -or $surface.Count -ne 1 -or
+    if ([string]$Coverage.milestone -cne 'M1.1.85' -or $surface.Count -ne 1 -or
         'CANONICAL-SYNC-V2-DECODER-MUTATIONS.json' -cnotin @($surface[0].artifacts) -or
         'CANONICAL-SYNC-RESPONDER-SESSION-V2-VECTORS.json' -cnotin @($surface[0].artifacts) -or
         'crates/kilogram-protocol/tests/canonical_sync_v2_decoder_mutations.rs' -cnotin

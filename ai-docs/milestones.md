@@ -7085,3 +7085,26 @@ correlation visible, Windows-only field evidence, independent security audit
   `canonical-sync-v2-two-host-activation-rehearsal-verified`: legacy controls,
   mutual `/cbor/2`, restart/exact resume, containment, selected loss и rollback
   подтвердили ожидаемые границы без потери/дублирования и без legacy fallback.
+
+### M1.1.85 — canonical sync v2 opt-in dark-launch acceptance: принят
+
+- добавлены aggregate manifest
+  `CANONICAL-SYNC-V2-OPT-IN-DARK-LAUNCH.json`, RFC-0209 и fail-closed verifier;
+- четыре canonical ledger синхронизированы на
+  `canonical-sync-v2-opt-in-dark-launch-verified`,
+  `changes_active_wire=true` и `public_default=legacy-only`;
+- verifier pin-ит Device-signed append-only authority, default и opt-in ALPN
+  lists, mutual authenticated selection, отсутствие fallback после selection,
+  exact M1.1.84 two-host evidence и раздельные deadlines 120/20 секунд;
+- readiness inventory расширен до 112 gates. Все 112/112 прошли вместе с
+  rustfmt и locked/offline strict Clippy против принятого tag `M1.0.0`;
+- полный stable Rust runner вне Windows sandbox завершился `status=passed` с
+  profile `test`, двумя Cargo jobs, isolated runtime test `1/1` и всеми
+  workspace harnesses кроме двух явно пропущенных неизменённых corpora;
+- ранее принятые 31 851 legacy и 2 863 canonical sync v2 decoder mutations не
+  повторялись: decoder/frame surface не менялась. Восьмичасовой sustained fuzz
+  также не повторялся;
+- первый in-sandbox regression отклонён как infrastructure-only из-за
+  перенаправленного Temp с `os error 5`; идентичный unrestricted запуск прошёл;
+- release build, архив, tag и автоматический GitHub build не выполнялись.
+  Следующий продуктовый пакет — desktop activation UI без смены public default.

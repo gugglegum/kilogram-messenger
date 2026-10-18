@@ -1,7 +1,8 @@
-# Следующий большой этап: M1.1.81–M1.1.85
+# Завершённый большой этап: M1.1.81–M1.1.85
 
-Статус: выполняется; M1.1.81–M1.1.84 завершены, M1.1.85 — следующий
-агрегированный gate.
+Статус: завершён; итоговый статус
+`canonical-sync-v2-opt-in-dark-launch-verified`, публичный default остаётся
+`legacy-only`.
 
 Оценка: 5.5–7.5 часа чистого времени при отсутствии внешних сетевых сбоев.
 
@@ -168,6 +169,18 @@ Field probe отдельно подтвердил ответы 1–8123 bytes и
 Итоговый статус: `canonical-sync-v2-opt-in-dark-launch-verified`, но default
 остаётся `legacy-only`. Переход public default в dual-reader mode, rollout через
 desktop UI и тем более legacy retirement — отдельные последующие решения.
+
+Результат: все изменённые boundary self-tests и negative mutations прошли;
+accepted-tag readiness закрыл `112/112`, rustfmt и locked/offline strict Clippy
+зелёные. Stable runner с profile `test`, двумя Cargo jobs и isolated test до
+aggregate harnesses завершился `status=passed`. Не запускались только два
+неизменённых уже принятых mutation-corpus теста, как и было предусмотрено
+планом. Release, ZIP, tag и автоматический GitHub build не создавались.
+
+Следующий отдельный пакет — M1.1.86: безопасная desktop UI для просмотра
+текущей activation policy и явной plan/apply церемонии. Она не должна менять
+public default, скрывать последствия включения или превращать UI-toggle в
+самостоятельный источник authority.
 
 ## Stop conditions
 
