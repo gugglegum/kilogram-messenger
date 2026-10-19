@@ -141,8 +141,8 @@ use kilogram_transport_iroh::{
     encode_mailbox_provider_endpoint, endpoint_builder_for_remote, endpoint_builder_with_relay,
     mailbox_provider_endpoint_from_offer, read_client_request, read_mailbox_peer_request,
     read_mailbox_peer_response, read_server_response, selected_path_diagnostics,
-    write_client_request, write_mailbox_peer_request, write_mailbox_peer_response,
-    write_server_response,
+    write_client_request, write_intermediate_server_response, write_mailbox_peer_request,
+    write_mailbox_peer_response, write_server_response,
 };
 use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
@@ -24528,11 +24528,21 @@ async fn handle_sync_request(
                 return Ok(());
             }
         };
-        write_server_response(
-            &mut inventory_send,
-            &ServerResponse::SyncDiff(server_round.diff().clone()),
-        )
-        .await?;
+        let diff_response = ServerResponse::SyncDiff(server_round.diff().clone());
+        let diff_wire_bytes = diff_response
+            .encode()
+            .context("encode legacy synchronization diff for diagnostics")?
+            .len();
+        println!(
+            "sync_round_{round_number}_diff_requested_events={}",
+            server_round.diff().requested_event_ids().len()
+        );
+        println!(
+            "sync_round_{round_number}_diff_offered_events={}",
+            server_round.diff().events().len()
+        );
+        println!("sync_round_{round_number}_diff_wire_bytes={diff_wire_bytes}");
+        write_intermediate_server_response(&mut inventory_send, &diff_response).await?;
 
         let (mut batch_send, mut batch_receive) =
             accept_bi(connection, "accept sync event batch stream").await?;

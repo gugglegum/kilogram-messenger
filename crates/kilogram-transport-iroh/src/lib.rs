@@ -351,11 +351,7 @@ pub async fn read_server_response(receive: &mut RecvStream) -> Result<ServerResp
 }
 
 pub async fn write_server_response(send: &mut SendStream, response: &ServerResponse) -> Result<()> {
-    timeout(WIRE_IO_TIMEOUT, send.write_all(&response.encode()?))
-        .await
-        .with_context(|| wire_timeout_message("send server protocol response"))?
-        .context("send server protocol response")?;
-    send.finish().context("finish server protocol response")?;
+    write_server_response_frame(send, response).await?;
     let stopped = timeout(WIRE_IO_TIMEOUT, send.stopped())
         .await
         .with_context(|| wire_timeout_message("confirm server protocol response delivery"))?
@@ -364,6 +360,31 @@ pub async fn write_server_response(send: &mut SendStream, response: &ServerRespo
         stopped.is_none(),
         "client stopped the server protocol response stream with code {stopped:?}"
     );
+    Ok(())
+}
+
+/// Writes an intermediate response whose receipt is proven by a required
+/// follow-up request on another stream of the same live connection.
+///
+/// This deliberately preserves the M1.0.0 stream lifecycle: older peers can
+/// wait for the response FIN before they open that follow-up stream. Callers
+/// must not use it for the final response before closing a connection.
+pub async fn write_intermediate_server_response(
+    send: &mut SendStream,
+    response: &ServerResponse,
+) -> Result<()> {
+    write_server_response_frame(send, response).await
+}
+
+async fn write_server_response_frame(
+    send: &mut SendStream,
+    response: &ServerResponse,
+) -> Result<()> {
+    timeout(WIRE_IO_TIMEOUT, send.write_all(&response.encode()?))
+        .await
+        .with_context(|| wire_timeout_message("send server protocol response"))?
+        .context("send server protocol response")?;
+    send.finish().context("finish server protocol response")?;
     Ok(())
 }
 

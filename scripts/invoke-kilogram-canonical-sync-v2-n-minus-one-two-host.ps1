@@ -39,7 +39,8 @@ if (Test-Path -LiteralPath $output) { throw "interop evidence directory already 
 New-Item -ItemType Directory -Path $output | Out-Null
 $controllerLogs = Join-Path $output 'controller-logs'
 $runnerDirectory = Join-Path $workspace '.tmp\kilogram-field-runner'
-New-Item -ItemType Directory -Path $controllerLogs, $runnerDirectory | Out-Null
+New-Item -ItemType Directory -Path $controllerLogs | Out-Null
+New-Item -ItemType Directory -Force -Path $runnerDirectory | Out-Null
 $localRunner = Join-Path $runnerDirectory 'kilogram-cli.exe'
 $remoteRoot = "C:/Users/$RemoteUser/KilogramLab/$RunId"
 $remoteRunnerDirectory = "C:/Users/$RemoteUser/KilogramLab/n-minus-one-stable"
