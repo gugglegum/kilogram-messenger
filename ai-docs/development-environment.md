@@ -5353,3 +5353,27 @@ Hosted follow-up:
 - No second host, product network, release build, ZIP/archive, new tag or
   automatic GitHub build was used. Existing debug dependencies were retained;
   public sync default remains `legacy-only`.
+
+## M1.2.18 explicit old-history recovery plan environment (2026-10-20)
+
+- Added the pure leaf crate `kilogram-peer-history-recovery`; it depends only
+  on existing identity, account-authority, event-log, history-rewrap and
+  peer-reenrollment primitives. It has no Tokio, Iroh, HTTP, redb, desktop or
+  runtime dependency and exposes no execution method.
+- Windows tests were compiled without execution and launched through
+  `scripts/run-cargo-tests-stable.ps1` as the fixed executable
+  `target/debug/deps/kilogram-peer-history-recovery-lib-kilogram_peer_history_recovery-tests.exe`.
+  The six tests passed under the debug/test profile with two Cargo jobs.
+- The first stable invocation inherited the default sandbox TEMP directory and
+  all fixtures failed to create with Windows `os error 5`. Re-running the same
+  stable executable with TEMP/TMP inside workspace `.tmp/rust-tests` passed
+  6/6; this was an environment write restriction, not a planner failure.
+- Dedicated boundary verification passes and rejects 10/10 negative
+  mutations. It proves body-free bounded inventory, separate source consent,
+  consumed-transition binding and absence of store/network/desktop/IPC
+  authority.
+- Accepted-tag readiness passes 144/144 against immutable `M1.0.0`, including
+  rustfmt and workspace-wide locked/offline strict Clippy.
+- No product network operation, second host, release build, ZIP/archive, tag
+  or automatic GitHub build was used. Active IPC remains v33/domain v14 and
+  public sync default remains `legacy-only`.

@@ -1,35 +1,34 @@
-# Текущая точка: M1.2.17 завершён, следующий M1.2.18
+# Текущая точка: M1.2.18 завершён, следующий M1.2.19
 
-Статус на 2026-10-20: Windows-клиент проводит peer re-enrollment как явную
-authenticated церемонию `status -> plan -> approve -> accept -> fresh start ->
-consumed`. GUI видит только privacy-safe signed projection; exact phrase и
-отдельный checkbox обязательны, incomplete state не считается успехом, hot
-apply и clear quarantine отсутствуют. После acceptance desktop штатно
-останавливает только запущенный им runtime, запускает новый процесс и принимает
-успех лишь при exact совпадении receipt/transition. Readiness 143/143; stable
-Windows regression 36/36. IPC остаётся v33/domain v14, peer wire и public
-default `legacy-only` не изменены.
+Статус на 2026-10-20: peer/device re-enrollment и доступ replacement Device к
+старой читаемой истории теперь являются двумя независимыми полномочиями.
+Новый pure planner принимает только Device-signed body-free claims источников,
+bounded range/checkpoint inventory и уже `consumed` fresh-start transition.
+Divergent claims остаются видимыми, но блокируют plan. Content-addressed plan
+exact-связан с replacement Device, Account authority, membership, source,
+ranges и checkpoints; его отдельно подтверждает и подписывает Device-владелец
+истории фразой `RECOVER HISTORY`. Focused stable regression прошёл 6/6,
+boundary отклонил 10/10 ослаблений, accepted-tag readiness — 144/144.
+Transfer/rewrap/store/network/desktop/IPC не добавлялись; IPC остаётся
+v33/domain v14, public default — `legacy-only`.
 
-## Следующий этап: M1.2.18 explicit old-history recovery plan
+## Следующий этап: M1.2.19 durable old-history recovery consent
 
-- отделить успешное peer/device re-enrollment от доступа replacement Device к
-  старой читаемой истории: новая identity не получает такой доступ неявно;
-- построить read-only bounded inventory доступных локальных history sources,
-  conversation/range coverage и уже существующих rewrap checkpoints без
-  чтения message bodies в GUI;
-- создать отдельный content-addressed recovery plan, exact-связанный с
-  replacement Device, authority revision, conversation/ranges, source claim и
-  текущим re-enrollment transition;
-- потребовать отдельное осознанное согласие владельца истории; re-enrollment
-  approval, peer acceptance и history recovery consent не объединять;
-- changed source inventory, authority, membership, recipient, range либо
-  checkpoint инвалидирует plan. Divergent source claims остаются видимыми и
-  fail closed;
-- на этом этапе не выполнять transfer/rewrap автоматически и не добавлять
-  network authority в desktop. Execution, resumable multi-source transfer и
-  окончательная reconciliation остаются последующими отдельными этапами;
-- добавить pure planner tests и fail-closed boundary. Active IPC, peer/sync
-  wire, public default, release/ZIP/tag и automatic GitHub build не менять.
+- хранить подписанный old-history recovery plan в отдельной owner-bound redb,
+  не смешивая его с re-enrollment acceptance и runtime transition stores;
+- перед первой durable записью повторно exact-проверять source Device,
+  replacement Device, current authority, memberships, body-free inventory,
+  checkpoints и consumed transition;
+- одной immediate-durability транзакцией записывать immutable consent record и
+  единственный current head. Exact replay должен быть идемпотентен; competing
+  plan, fork, rollback, foreign owner и corruption должны fail closed;
+- expiry ограничивает первый commit, но уже принятый exact record остаётся
+  проверяемым после expiry и перезапуска;
+- предоставить только bounded read-only status без message bodies, raw
+  identity, путей или network coordinates;
+- actual rewrap/transfer, checkpoint advance, multi-source scheduler, active
+  IPC и desktop execution оставить отдельным последующим этапам. Wire, public
+  default, release/ZIP/tag и automatic GitHub build не менять.
 
 # Завершённый расширенный пакет: M1.1.92–M1.2.5
 

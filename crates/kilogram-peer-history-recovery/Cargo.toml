@@ -1,0 +1,26 @@
+[package]
+name = "kilogram-peer-history-recovery"
+description = "Explicit old-history recovery inventory and consent planning after Kilogram peer re-enrollment"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+blake3.workspace = true
+getrandom.workspace = true
+kilogram-identity = { path = "../kilogram-identity" }
+kilogram-peer-reenrollment = { path = "../kilogram-peer-reenrollment" }
+kilogram-peer-reenrollment-acceptance = { path = "../kilogram-peer-reenrollment-acceptance" }
+kilogram-peer-reenrollment-runtime = { path = "../kilogram-peer-reenrollment-runtime" }
+kilogram-protocol = { path = "../kilogram-protocol" }
+postcard.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

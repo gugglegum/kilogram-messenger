@@ -2577,6 +2577,63 @@ restart. A blocked contact cannot starve other due contacts. Wire/IPC remain
 unchanged, automatic recovery is absent and the public default is still
 `legacy-only`.
 
+[`RFC-0233`](docs/RFC-0233-m1209-runtime-quarantine-observability.md) exposes
+durable quarantine, process-local scheduler suppression and ordinary network
+retry as three distinct privacy-safe states through read-only IPC. Opaque
+contact IDs replace raw identity and no clear, retry, downgrade or recovery
+authority is added.
+
+[`RFC-0234`](docs/RFC-0234-m1210-device-authorized-peer-reenrollment-plan.md)
+defines an offline Device-signed re-enrollment plan tied to the exact old
+quarantine head, old and replacement Root-signed authorities, fresh invitation
+and monotonic history. The plan cannot itself clear quarantine or use network.
+
+[`RFC-0235`](docs/RFC-0235-m1211-durable-peer-reenrollment-acceptance.md)
+persists explicit acceptance in a separate immediate-durability store. A
+current Device signs the receipt; replay is idempotent, while a second
+successor, changed context, fork or corruption fails closed.
+
+[`RFC-0236`](docs/RFC-0236-m1212-fresh-start-peer-reenrollment-consumption.md)
+makes an accepted successor usable only through a Device-signed
+`prepared -> consumed` transition on a fresh runtime start before endpoint
+creation. It preserves the predecessor contact and quarantine as audit
+evidence and does not auto-send queued work.
+
+[`RFC-0237`](docs/RFC-0237-m1213-peer-reenrollment-two-host-rehearsal.md)
+records exact-binary two-host evidence for that fresh-start path. A quarantined
+predecessor stayed blocked, a substituted descriptor failed before network,
+and the accepted successor delivered queued ciphertext once; old readable
+history remained a separate problem.
+
+[`RFC-0238`](docs/RFC-0238-m1214-canonical-runtime-ipc-peer-reenrollment-contract.md)
+defines a dormant canonical IPC codec for inspect, plan, approve, accept and
+status without adding those mutations to active runtime IPC. Only opaque IDs,
+verified summaries and confirmation phrases cross the boundary.
+
+[`RFC-0239`](docs/RFC-0239-m1215-read-only-runtime-peer-reenrollment-adapter.md)
+connects only inspect and status to active IPC. Existing stores are opened with
+no-create/no-repair semantics; plan, approve and accept are rejected before
+store access, and secrets, tickets, endpoints and paths remain hidden.
+
+[`RFC-0240`](docs/RFC-0240-m1216-fresh-start-peer-reenrollment-mutation-adapter.md)
+adds explicit plan, approve and accept to authenticated IPC behind exact
+descriptor, Device, authority, quarantine and typed-confirmation checks. A
+signed monotonic journal makes crash points visible and resumable; only a
+complete ceremony can be consumed on a later fresh start.
+
+[`RFC-0241`](docs/RFC-0241-m1217-guided-desktop-peer-reenrollment-ceremony.md)
+guides that ceremony in the Windows client without moving identity secrets or
+network authority into the GUI. Consent resets on any signed-context drift;
+success requires a clean desktop-owned runtime restart and exact consumed
+receipt/transition verification.
+
+[`RFC-0242`](docs/RFC-0242-m1218-explicit-old-history-recovery-plan.md)
+separates replacement-Device enrollment from old-history access. Device-signed
+body-free source claims form a bounded inventory; divergence blocks planning,
+and a content-addressed plan requires a separate history-owner signature over
+the exact authority, membership, recipient, source, ranges and checkpoints.
+No transfer, rewrap, store, network or active IPC authority is included.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

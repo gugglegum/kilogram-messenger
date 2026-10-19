@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.18",
+  "status": "peer-reenrollment-old-history-recovery-plan-verified",
+  "contract_source": "M1.2.17",
+  "implementation": [
+    "crates/kilogram-peer-history-recovery",
+    "crates/kilogram-peer-reenrollment-acceptance",
+    "crates/kilogram-peer-reenrollment-runtime",
+    "crates/kilogram-protocol/src/recovery.rs"
+  ],
+  "changes_connection_ticket_wire": false,
+  "changes_sync_wire": false,
+  "changes_active_runtime_ipc": false,
+  "changes_desktop_runtime_authority": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "inventory": {
+    "read_only": true,
+    "max_sources": 8,
+    "max_conversations": 64,
+    "max_ranges": 256,
+    "max_checkpoints": 256,
+    "signed_source_claims": true,
+    "recipient_signed_existing_checkpoints": true,
+    "privacy_safe_view": true,
+    "message_bodies_visible": false,
+    "divergent_claims_visible": true,
+    "divergent_claims_plannable": false
+  },
+  "plan": {
+    "content_addressed": true,
+    "source_device_signed": true,
+    "requires_consumed_reenrollment_transition": true,
+    "binds_acceptance_receipt": true,
+    "binds_reenrollment_transition": true,
+    "binds_replacement_device": true,
+    "binds_authority_revision_and_digest": true,
+    "binds_membership_revision_and_digest": true,
+    "binds_source_claim_and_inventory": true,
+    "binds_conversation_ranges": true,
+    "binds_existing_checkpoint": true,
+    "validity_seconds": 900
+  },
+  "consent": {
+    "separate_from_reenrollment_approval": true,
+    "separate_from_peer_acceptance": true,
+    "exact_typed_phrase_prefix": "RECOVER HISTORY",
+    "explicit_history_owner_approval": true,
+    "replacement_device_cannot_self_approve_source_history": true
+  },
+  "invalidation": {
+    "changed_source_inventory": true,
+    "changed_authority": true,
+    "changed_membership": true,
+    "changed_recipient": true,
+    "changed_range": true,
+    "changed_checkpoint": true,
+    "changed_reenrollment_transition": true
+  },
+  "execution": {
+    "rewrap_or_transfer_performed": false,
+    "checkpoint_mutation_performed": false,
+    "durable_state_written": false,
+    "network_opened": false,
+    "desktop_control_added": false,
+    "automatic_recovery": false
+  },
+  "verification": {
+    "pure_planner_tests": 6,
+    "stable_path_rust_harness_required_on_windows": true,
+    "boundary_self_test_and_negative_mutations": "verified",
+    "m1_readiness": "144/144",
+    "second_host_required": false,
+    "product_network_executed": false,
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false
+  },
+  "non_claims": [
+    "history-transfer-execution",
+    "automatic-history-rewrap",
+    "cross-account-history-disclosure",
+    "global-history-completeness",
+    "desktop-history-recovery-authority",
+    "public-rollout-eligibility",
+    "independent-security-review-completed"
+  ],
+  "next": [
+    "durable-old-history-recovery-consent-store",
+    "resumable-multi-source-execution",
+    "independent-protocol-and-security-review"
+  ]
+}

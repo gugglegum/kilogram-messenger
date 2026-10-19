@@ -7779,3 +7779,26 @@ correlation visible, Windows-only field evidence, independent security audit
   locked/offline strict Clippy. IPC остаётся v33/domain v14, wire и public
   default `legacy-only` не менялись; second host, product network,
   release/ZIP/tag и automatic GitHub build не использовались.
+
+### M1.2.18 — explicit old-history recovery plan: принят локально
+
+- успешный peer re-enrollment больше нельзя трактовать как неявное разрешение
+  на чтение старой истории: planner требует отдельное owner-approved consent;
+- каждый потенциальный источник публикует bounded Device-signed claim без
+  message bodies. Inventory показывает opaque conversation coverage, ranges и
+  existing signed checkpoints; несовпадающие claims видимы как `Divergent` и
+  не позволяют построить recovery plan;
+- plan content-addressed и exact-связан с consumed fresh-start transition,
+  acceptance receipt, current Account authority, replacement Device,
+  membership, одним source claim, выбранными ranges и checkpoints;
+- подтверждение `HistoryOwnerApproved` требует отдельной точной фразы
+  `RECOVER HISTORY`, после чего plan подписывает именно source Device. Подпись
+  replacement Device, прежний re-enrollment approval или receipt не дают это
+  полномочие;
+- drift authority, recipient, membership, source, range, checkpoint либо
+  consumed transition инвалидирует plan; tamper и expiry fail closed;
+- pure stable-path regression прошёл 6/6, dedicated boundary отклонил 10/10
+  negative mutations, accepted-tag readiness прошёл 144/144 с rustfmt и
+  workspace-wide locked/offline strict Clippy. Planner не имеет store,
+  transfer/rewrap, network, desktop или active IPC authority; wire/default
+  `legacy-only` не менялись.
