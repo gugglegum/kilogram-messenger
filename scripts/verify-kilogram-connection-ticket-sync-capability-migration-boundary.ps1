@@ -14,7 +14,7 @@ $cliPath = Join-Path $workspace 'apps\kilogram-cli\src\main.rs'
 $offlinePath = Join-Path $workspace 'apps\kilogram-offline\src\lib.rs'
 $capabilityCargoPath = Join-Path $workspace 'crates\kilogram-sync-capability\Cargo.toml'
 $capabilityPath = Join-Path $workspace 'crates\kilogram-sync-capability\src\lib.rs'
-$rfcPath = Join-Path $workspace 'docs\RFC-0182-m1156-authenticated-history-compatible-sync-capability.md'
+$rfcPath = Join-Path $workspace 'docs\RFC-0215-m1191-n-minus-one-production-interop.md'
 
 function Assert-Rejected {
     param([scriptblock]$Action, [string]$Label)
@@ -52,20 +52,26 @@ function Assert-Boundary {
     $legacyAlpn = 'kilogram/m0/sync/8'
     $historicalCanonicalAlpn = 'kilogram/m1/sync/cbor/1'
     $canonicalAlpn = 'kilogram/m1/sync/cbor/2'
-    $ticketDomain = 'kilogram:connection-ticket-signature:v13\0'
+    $ticketDomain = 'kilogram:connection-ticket-signature:v11\0'
     $capabilityDomain = 'kilogram:sync-transport-capability-signature:v2\0'
 
     if ([UInt64]$Migration.schema_version -ne 1 -or
-        [string]$Migration.milestone -cne 'M1.1.56' -or
-        [string]$Migration.status -cne 'active-portable-artifact-migration' -or
+        [string]$Migration.milestone -cne 'M1.1.91' -or
+        [string]$Migration.status -cne 'active-m1-compatible-optional-extension' -or
         [string]$Migration.surface -cne 'connection-ticket' -or
-        [int]$Migration.previous.ticket_version -ne 12 -or
+        [int]$Migration.previous.ticket_version -ne 13 -or
         [string]$Migration.previous.signature_domain -cne
-            'kilogram:connection-ticket-signature:v12\0' -or
+            'kilogram:connection-ticket-signature:v13\0' -or
         -not [bool]$Migration.previous.sync_transport_capability -or
-        [int]$Migration.current.ticket_version -ne 13 -or
+        [bool]$Migration.previous.sync_transport_capability_optional -or
+        [int]$Migration.current.ticket_version -ne 11 -or
         [string]$Migration.current.signature_domain -cne $ticketDomain -or
-        -not [bool]$Migration.current.sync_transport_capability) {
+        -not [bool]$Migration.current.sync_transport_capability -or
+        -not [bool]$Migration.current.sync_transport_capability_optional -or
+        [string]$Migration.current.outer_signature_projection -cne
+            'exact-m1.0.0-legacy-fields' -or
+        [string]$Migration.current.extension_signature -cne
+            'independent-device-signature-v2') {
         throw 'connection-ticket sync capability migration identity changed'
     }
 
@@ -89,38 +95,61 @@ function Assert-Boundary {
     }
 
     if ([string]$Migration.migration.strategy -cne
-            'exact-version-hard-cut-for-experimental-portable-ticket' -or
-        [bool]$Migration.migration.legacy_reader -or
+            'accepted-m1-envelope-with-optional-independently-signed-extension' -or
+        -not [bool]$Migration.migration.legacy_reader -or
         [bool]$Migration.migration.dual_reader -or
+        -not [bool]$Migration.migration.optional_extension_dual_shape_reader -or
+        [bool]$Migration.migration.superseded_v13_reader -or
+        -not [bool]$Migration.migration.accepted_m1_reader_ignores_unknown_extension -or
+        -not [bool]$Migration.migration.current_reader_accepts_missing_extension_as_legacy_only -or
         [bool]$Migration.migration.silent_downgrade -or
+        [bool]$Migration.migration.extension_stripping_detectable_before_first_selection -or
+        -not [bool]$Migration.migration.selected_session_downgrade_blocked -or
         -not [bool]$Migration.migration.listener_restart_reissues_current_ticket) {
-        throw 'connection-ticket hard-cut migration policy changed'
+        throw 'connection-ticket compatible extension migration policy changed'
     }
     if (-not [bool]$Migration.scope.changes_connection_ticket_bytes -or
         [bool]$Migration.scope.changes_active_sync_alpn -or
         [bool]$Migration.scope.registers_canonical_alpn -or
         [bool]$Migration.scope.dials_canonical_alpn -or
         [bool]$Migration.scope.changes_sync_frames -or
-        [bool]$Migration.scope.network_executed) {
+        -not [bool]$Migration.scope.network_executed) {
         throw 'connection-ticket migration scope changed'
     }
 
     foreach ($source in @($CliSource, $OfflineSource)) {
         foreach ($required in @(
-            'const TICKET_VERSION: u8 = 13;',
-            'kilogram:connection-ticket-signature:v13\0',
-            'sync_transport_capability: SignedSyncTransportCapability',
+            'const TICKET_VERSION: u8 = 11;',
+            'kilogram:connection-ticket-signature:v11\0',
+            'sync_transport_capability: Option<SignedSyncTransportCapability>',
             'SyncTransportCapabilityBinding'
         )) {
             if ($source.IndexOf($required, [StringComparison]::Ordinal) -lt 0) {
                 throw "connection-ticket verifier is missing '$required'"
             }
         }
-        if ($source.IndexOf('const TICKET_VERSION: u8 = 12;',
+        if ($source.IndexOf('const TICKET_VERSION: u8 = 13;',
                 [StringComparison]::Ordinal) -ge 0 -or
-            $source.IndexOf('kilogram:connection-ticket-signature:v12\0',
+            $source.IndexOf('kilogram:connection-ticket-signature:v13\0',
                 [StringComparison]::Ordinal) -ge 0) {
-            throw 'legacy connection-ticket reader remains active'
+            throw 'superseded incompatible connection-ticket envelope remains active'
+        }
+    }
+    foreach ($required in @(
+        'struct LegacyConnectionTicketContent',
+        'let legacy = LegacyConnectionTicketContent {',
+        'Missing extension means an N-1 legacy peer.'
+    )) {
+        if ($CliSource.IndexOf($required, [StringComparison]::Ordinal) -lt 0) {
+            throw "online compatible ticket projection is missing '$required'"
+        }
+    }
+    foreach ($required in @(
+        'struct OfflineLegacyConnectionTicketContent',
+        'let legacy = OfflineLegacyConnectionTicketContent {'
+    )) {
+        if ($OfflineSource.IndexOf($required, [StringComparison]::Ordinal) -lt 0) {
+            throw "offline compatible ticket projection is missing '$required'"
         }
     }
 
@@ -181,13 +210,17 @@ function Assert-Boundary {
     if ($compatibilitySurface.Count -ne 1) {
         throw 'connection-ticket compatibility surface is missing'
     }
+    if ([string]$compatibilitySurface[0].compatibility -cne 'explicit-reader-set' -or
+        [string]$compatibilitySurface[0].migration -cne 'new-version-explicit-migration') {
+        throw 'connection-ticket compatibility policy changed'
+    }
     Assert-ExactSequence @($compatibilitySurface[0].bindings | ForEach-Object {
         "$($_.path)|$($_.symbol)|$($_.rust_type)|$($_.value)"
     }) @(
-        'apps/kilogram-cli/src/main.rs|TICKET_SIGNATURE_DOMAIN|bytes|kilogram:connection-ticket-signature:v13\0',
-        'apps/kilogram-cli/src/main.rs|TICKET_VERSION|u8|13',
-        'apps/kilogram-offline/src/lib.rs|TICKET_SIGNATURE_DOMAIN|bytes|kilogram:connection-ticket-signature:v13\0',
-        'apps/kilogram-offline/src/lib.rs|TICKET_VERSION|u8|13',
+        'apps/kilogram-cli/src/main.rs|TICKET_SIGNATURE_DOMAIN|bytes|kilogram:connection-ticket-signature:v11\0',
+        'apps/kilogram-cli/src/main.rs|TICKET_VERSION|u8|11',
+        'apps/kilogram-offline/src/lib.rs|TICKET_SIGNATURE_DOMAIN|bytes|kilogram:connection-ticket-signature:v11\0',
+        'apps/kilogram-offline/src/lib.rs|TICKET_VERSION|u8|11',
         'crates/kilogram-sync-capability/src/lib.rs|CANONICAL_SYNC_ALPN|str|kilogram/m1/sync/cbor/2',
         'crates/kilogram-sync-capability/src/lib.rs|LEGACY_SYNC_ALPN|str|kilogram/m0/sync/8',
         'crates/kilogram-sync-capability/src/lib.rs|SYNC_TRANSPORT_CAPABILITY_SIGNATURE_DOMAIN|bytes|kilogram:sync-transport-capability-signature:v2\0',
@@ -220,7 +253,7 @@ function Assert-Boundary {
         [bool]$TransportManifest.history_compatible_successor.registered -or
         [bool]$TransportManifest.history_compatible_successor.dialed -or
         [string]$TransportManifest.authenticated_capability.portable_artifact -cne
-            'connection-ticket-v13' -or
+            'connection-ticket-v11-with-optional-capability-v2' -or
         [int]$TransportManifest.authenticated_capability.capability_version -ne 2 -or
         [string]$TransportManifest.authenticated_capability.signature_domain -cne
             $capabilityDomain -or
@@ -271,22 +304,22 @@ function Assert-Boundary {
         $coverageSurface.Count -ne 1 -or
         [string]$coverageSurface[0].coverage -cne 'complete' -or
         (@($coverageSurface[0].covered) -join ',') -cne
-            'parallel-cbor-alpn-identifier-allocation,history-compatible-cbor-v2-alpn-identifier-allocation,typed-durable-canonical-sync-session-checkpoint,authenticated-ticket-v13-history-compatible-cbor-v2-capability,dormant-history-compatible-sync-v2-runtime-state-machine,dormant-atomic-typed-carrier-store,dormant-cross-format-membership-policy,dormant-bounded-resumable-legacy-import,dormant-atomic-legacy-import-checkpoint,dormant-signed-session-bootstrap,dormant-signed-session-successor-store,dormant-checkpoint-bound-runtime-frame-journal,dormant-atomic-runtime-transition-transaction,dormant-durable-client-transition-adapter,dormant-durable-responder-transition-adapter,dormant-mutual-authenticated-candidate-selection,dormant-mixed-version-and-downgrade-matrix,dormant-dual-reader-runtime-coordinator,dormant-deterministic-rollback-drill,bounded-canonical-sync-v2-decoder-mutation-corpus,coverage-guided-fuzz-harness,instrumented-fuzz-smoke,sustained-fuzz-campaign,fresh-hosted-and-field-evidence,device-signed-opt-in-activation-policy,production-runtime-dark-launch,two-host-resilience-rehearsal,aggregate-opt-in-dark-launch-acceptance' -or
+            'parallel-cbor-alpn-identifier-allocation,history-compatible-cbor-v2-alpn-identifier-allocation,typed-durable-canonical-sync-session-checkpoint,authenticated-ticket-v11-optional-history-compatible-cbor-v2-capability,dormant-history-compatible-sync-v2-runtime-state-machine,dormant-atomic-typed-carrier-store,dormant-cross-format-membership-policy,dormant-bounded-resumable-legacy-import,dormant-atomic-legacy-import-checkpoint,dormant-signed-session-bootstrap,dormant-signed-session-successor-store,dormant-checkpoint-bound-runtime-frame-journal,dormant-atomic-runtime-transition-transaction,dormant-durable-client-transition-adapter,dormant-durable-responder-transition-adapter,dormant-mutual-authenticated-candidate-selection,dormant-mixed-version-and-downgrade-matrix,dormant-dual-reader-runtime-coordinator,dormant-deterministic-rollback-drill,bounded-canonical-sync-v2-decoder-mutation-corpus,coverage-guided-fuzz-harness,instrumented-fuzz-smoke,sustained-fuzz-campaign,fresh-hosted-and-field-evidence,device-signed-opt-in-activation-policy,production-runtime-dark-launch,two-host-resilience-rehearsal,aggregate-opt-in-dark-launch-acceptance,n-minus-one-production-executable-interop' -or
         @($coverageSurface[0].remaining).Count -ne 0) {
         throw 'canonical coverage did not record the authenticated capability envelope'
     }
 
     $normalizedRfc = [regex]::Replace($Rfc, '\s+', ' ')
     foreach ($required in @(
-        'Connection ticket v13 carries sync transport capability v2',
-        'history-incompatible `/cbor/1` allocation is not advertised',
-        'There is no dual reader',
-        'outer ticket is authenticated before the nested capability binding is trusted',
-        '`/cbor/2` is still absent from the active endpoint ALPN list',
-        'no canonical reader, writer, fallback or network experiment is enabled here'
+        'outer ticket is now frozen at the exact M1.0.0 v11 projection',
+        'optional, independently Device-signed extension',
+        'old reader ignores the unknown JSON field',
+        'absence means a legacy-only N-1 peer',
+        'optional-extension stripping before the first selection is not proven detectable',
+        'does not authorize public canonical rollout'
     )) {
         if ($normalizedRfc.IndexOf($required, [StringComparison]::OrdinalIgnoreCase) -lt 0) {
-            throw "RFC-0182 is missing '$required'"
+            throw "RFC-0215 is missing '$required'"
         }
     }
 }
@@ -317,7 +350,7 @@ Assert-Boundary $migration $transportManifest $canonicalMigration $coverage `
 
 if ($SelfTest) {
     $forgedVersion = Copy-JsonObject $migration
-    $forgedVersion.current.ticket_version = 12
+    $forgedVersion.current.ticket_version = 13
     Assert-Rejected {
         Assert-Boundary $forgedVersion $transportManifest $canonicalMigration $coverage `
             $compatibility $cli $offline $capabilityCargo $capability $rfc
@@ -346,12 +379,26 @@ if ($SelfTest) {
             $compatibility $cli $offline $capabilityCargo $capability $rfc
     } 'dropped_endpoint_binding'
 
-    $dualReader = Copy-JsonObject $migration
-    $dualReader.migration.dual_reader = $true
+    $legacyReader = Copy-JsonObject $migration
+    $legacyReader.migration.legacy_reader = $false
     Assert-Rejected {
-        Assert-Boundary $dualReader $transportManifest $canonicalMigration $coverage `
+        Assert-Boundary $legacyReader $transportManifest $canonicalMigration $coverage `
             $compatibility $cli $offline $capabilityCargo $capability $rfc
-    } 'undeclared_dual_reader'
+    } 'accepted_m1_reader_removed'
+
+    $dualShapeReader = Copy-JsonObject $migration
+    $dualShapeReader.migration.optional_extension_dual_shape_reader = $false
+    Assert-Rejected {
+        Assert-Boundary $dualShapeReader $transportManifest $canonicalMigration $coverage `
+            $compatibility $cli $offline $capabilityCargo $capability $rfc
+    } 'optional_extension_shape_reader_removed'
+
+    $supersededReader = Copy-JsonObject $migration
+    $supersededReader.migration.superseded_v13_reader = $true
+    Assert-Rejected {
+        Assert-Boundary $supersededReader $transportManifest $canonicalMigration $coverage `
+            $compatibility $cli $offline $capabilityCargo $capability $rfc
+    } 'superseded_v13_reader_reintroduced'
 
     $prematureRegistration = Copy-JsonObject $transportManifest
     $prematureRegistration.history_compatible_successor.registered = $true
@@ -364,11 +411,15 @@ if ($SelfTest) {
 }
 
 Write-Output 'connection_ticket_sync_capability_migration_boundary=verified'
-Write-Output 'connection_ticket_version=13'
-Write-Output 'connection_ticket_legacy_reader=false'
+Write-Output 'connection_ticket_version=11'
+Write-Output 'connection_ticket_legacy_reader=true'
+Write-Output 'connection_ticket_version_dual_reader=false'
+Write-Output 'connection_ticket_optional_extension_dual_shape_reader=true'
+Write-Output 'connection_ticket_superseded_v13_reader=false'
+Write-Output 'sync_transport_capability_optional=true'
 Write-Output 'sync_transport_capability_version=2'
 Write-Output 'active_sync_alpn=kilogram/m0/sync/8'
 Write-Output 'candidate_sync_alpn=kilogram/m1/sync/cbor/2'
 Write-Output 'canonical_dial_enabled=false'
 Write-Output 'active_sync_wire_changed=false'
-Write-Output 'network_executed=false'
+Write-Output 'network_executed=true'

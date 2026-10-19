@@ -7214,3 +7214,24 @@ correlation visible, Windows-only field evidence, independent security audit
   executable crates, public default остаётся `legacy-only`;
 - 12/12 tests, boundary self-test, readiness 117/117, rustfmt и locked/offline
   strict Clippy прошли; network/release/ZIP/tag/automatic build не запускались.
+
+### M1.1.91 — exact N/N-1 production executable interop: принят
+
+- exact accepted M1.0.0 executable и current revision `6d95cb7` прошли 4/4
+  bidirectional direct/relay scenarios на двух физических Windows-хостах;
+- каждый scenario подтвердил delivery acknowledgement, listener restart,
+  legacy sync и exact history equality; canonical v2 не выбирался;
+- один durable state прошёл N-1/N-1 direct, N-1/N direct и N/N relay, финально
+  18 events с одинаковым inventory digest;
+- ticket v11/signature projection сохранён byte-compatible, новый sync
+  capability вынесен в independently signed optional extension;
+- current reader принимает две формы одного v11 envelope (extension absent или
+  present), но не является version-level dual reader и не принимает v13;
+- intermediate response lifecycle совместим с M1.0.0, sync follow-up deadline
+  отделён от generic stream open и ограничен 120 seconds;
+- tracked evidence не экспортирует raw logs/state, IDs либо message bodies;
+  stable executable paths предотвращают новое firewall identity на каждый SHA;
+- first-contact stripping optional capability пока неотличим от genuine M1
+  peer; durable selected sessions downgrade не принимают, public hold сохранён;
+- dedicated negative boundary и readiness расширены до 118 gates. Public
+  default остаётся `legacy-only`; release/ZIP/tag не создавались.

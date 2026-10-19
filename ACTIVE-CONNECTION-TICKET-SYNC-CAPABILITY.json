@@ -1,17 +1,21 @@
 {
   "schema_version": 1,
-  "milestone": "M1.1.56",
-  "status": "active-portable-artifact-migration",
+  "milestone": "M1.1.91",
+  "status": "active-m1-compatible-optional-extension",
   "surface": "connection-ticket",
   "previous": {
-    "ticket_version": 12,
-    "signature_domain": "kilogram:connection-ticket-signature:v12\\0",
-    "sync_transport_capability": true
-  },
-  "current": {
     "ticket_version": 13,
     "signature_domain": "kilogram:connection-ticket-signature:v13\\0",
-    "sync_transport_capability": true
+    "sync_transport_capability": true,
+    "sync_transport_capability_optional": false
+  },
+  "current": {
+    "ticket_version": 11,
+    "signature_domain": "kilogram:connection-ticket-signature:v11\\0",
+    "sync_transport_capability": true,
+    "sync_transport_capability_optional": true,
+    "outer_signature_projection": "exact-m1.0.0-legacy-fields",
+    "extension_signature": "independent-device-signature-v2"
   },
   "capability": {
     "version": 2,
@@ -30,10 +34,16 @@
     ]
   },
   "migration": {
-    "strategy": "exact-version-hard-cut-for-experimental-portable-ticket",
-    "legacy_reader": false,
+    "strategy": "accepted-m1-envelope-with-optional-independently-signed-extension",
+    "legacy_reader": true,
     "dual_reader": false,
+    "optional_extension_dual_shape_reader": true,
+    "superseded_v13_reader": false,
+    "accepted_m1_reader_ignores_unknown_extension": true,
+    "current_reader_accepts_missing_extension_as_legacy_only": true,
     "silent_downgrade": false,
+    "extension_stripping_detectable_before_first_selection": false,
+    "selected_session_downgrade_blocked": true,
     "listener_restart_reissues_current_ticket": true
   },
   "scope": {
@@ -42,6 +52,6 @@
     "registers_canonical_alpn": false,
     "dials_canonical_alpn": false,
     "changes_sync_frames": false,
-    "network_executed": false
+    "network_executed": true
   }
 }

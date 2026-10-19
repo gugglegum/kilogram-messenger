@@ -102,7 +102,7 @@ function Assert-Boundary {
     if ([string]$Manifest.selection.current_state -cne 'legacy-only' -or
         -not [bool]$Manifest.selection.listener_capability_required_before_dial -or
         [string]$Manifest.selection.listener_capability_authentication -cne
-            'ticket-v13-device-signed-and-bound-to-authority-endpoint-requester-publication-epoch-and-prekey-validity' -or
+            'ticket-v11-m1-envelope-plus-optional-independent-device-signature-bound-to-authority-endpoint-requester-publication-epoch-and-prekey-validity' -or
         [string]$Manifest.selection.requester_capability_authentication -cne
             'canonical-device-session-authorization-before-sync-frames' -or
         -not [bool]$Manifest.selection.mutual_authenticated_candidate_selection -or
@@ -115,7 +115,7 @@ function Assert-Boundary {
     }
     $expectedRemaining = @()
     if ([string]$Manifest.authenticated_capability.portable_artifact -cne
-            'connection-ticket-v13' -or
+            'connection-ticket-v11-with-optional-capability-v2' -or
         [int]$Manifest.authenticated_capability.capability_version -ne 2 -or
         [string]$Manifest.authenticated_capability.signature_domain -cne
             'kilogram:sync-transport-capability-signature:v2\0' -or
@@ -178,7 +178,7 @@ function Assert-Boundary {
         $surface.Count -ne 1 -or
         [string]$surface[0].coverage -cne 'complete' -or
         (@($surface[0].covered) -join ',') -cne
-            'parallel-cbor-alpn-identifier-allocation,history-compatible-cbor-v2-alpn-identifier-allocation,typed-durable-canonical-sync-session-checkpoint,authenticated-ticket-v13-history-compatible-cbor-v2-capability,dormant-history-compatible-sync-v2-runtime-state-machine,dormant-atomic-typed-carrier-store,dormant-cross-format-membership-policy,dormant-bounded-resumable-legacy-import,dormant-atomic-legacy-import-checkpoint,dormant-signed-session-bootstrap,dormant-signed-session-successor-store,dormant-checkpoint-bound-runtime-frame-journal,dormant-atomic-runtime-transition-transaction,dormant-durable-client-transition-adapter,dormant-durable-responder-transition-adapter,dormant-mutual-authenticated-candidate-selection,dormant-mixed-version-and-downgrade-matrix,dormant-dual-reader-runtime-coordinator,dormant-deterministic-rollback-drill,bounded-canonical-sync-v2-decoder-mutation-corpus,coverage-guided-fuzz-harness,instrumented-fuzz-smoke,sustained-fuzz-campaign,fresh-hosted-and-field-evidence,device-signed-opt-in-activation-policy,production-runtime-dark-launch,two-host-resilience-rehearsal,aggregate-opt-in-dark-launch-acceptance' -or
+            'parallel-cbor-alpn-identifier-allocation,history-compatible-cbor-v2-alpn-identifier-allocation,typed-durable-canonical-sync-session-checkpoint,authenticated-ticket-v11-optional-history-compatible-cbor-v2-capability,dormant-history-compatible-sync-v2-runtime-state-machine,dormant-atomic-typed-carrier-store,dormant-cross-format-membership-policy,dormant-bounded-resumable-legacy-import,dormant-atomic-legacy-import-checkpoint,dormant-signed-session-bootstrap,dormant-signed-session-successor-store,dormant-checkpoint-bound-runtime-frame-journal,dormant-atomic-runtime-transition-transaction,dormant-durable-client-transition-adapter,dormant-durable-responder-transition-adapter,dormant-mutual-authenticated-candidate-selection,dormant-mixed-version-and-downgrade-matrix,dormant-dual-reader-runtime-coordinator,dormant-deterministic-rollback-drill,bounded-canonical-sync-v2-decoder-mutation-corpus,coverage-guided-fuzz-harness,instrumented-fuzz-smoke,sustained-fuzz-campaign,fresh-hosted-and-field-evidence,device-signed-opt-in-activation-policy,production-runtime-dark-launch,two-host-resilience-rehearsal,aggregate-opt-in-dark-launch-acceptance,n-minus-one-production-executable-interop' -or
         @($surface[0].remaining).Count -ne 0 -or
         [int]$Coverage.summary.complete -ne 18 -or
         [int]$Coverage.summary.partial -ne 0 -or

@@ -98,7 +98,7 @@ function Assert-Manifest {
     if ([string]$Manifest.selection.mechanism -cne
             'listener-capability-bound-requester-offer-and-listener-acceptance' -or
         [string]$Manifest.selection.capability_freshness -cne
-            'ticket-v13-device-signed-authority-endpoint-requester-publication-epoch-and-prekey-validity-bound' -or
+            'ticket-v11-m1-envelope-optional-independent-device-signature-authority-endpoint-requester-publication-epoch-and-prekey-validity-bound' -or
         [bool]$Manifest.selection.format_sniffing -or [bool]$Manifest.selection.parse_error_fallback -or
         [bool]$Manifest.selection.reuse_existing_identifier -or
         [string]$Manifest.selection.mutual_authenticated_candidate_selection -cne 'verified' -or

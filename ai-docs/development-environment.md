@@ -5000,3 +5000,26 @@ Hosted follow-up:
   и не является compiler warning.
 - Сеть, второй хост, release build, ZIP/archive, tag и automatic GitHub build
   не использовались.
+
+## M1.1.91 N/N-1 production executable interop (2026-10-19)
+
+- Exact field evidence:
+  `.tmp/m1191-n-minus-one/evidence-attempt9/M1191-N-MINUS-ONE-EVIDENCE.json`;
+  compact tracked copy: `CANONICAL-SYNC-V2-N-MINUS-ONE-INTEROP.json`.
+- Accepted M1.0.0: revision `60b20b364c8df2324a0a287b4bcb6c056ae12c39`,
+  SHA-256 `24c5681000af166cdbe63e61942c0d0dfbc5e1fca0772e257d99dd7984cde7c6`,
+  57,975,296 bytes.
+- Successor: revision `6d95cb73359f44f20908d52b4fd2eaf7869cdede`,
+  SHA-256 `22265eb35c8a94f84ab3e83c67d12235080e80c9e8f81fc56f60362897e1e13e`,
+  60,089,856 bytes.
+- Hosts: `DESKTOP-PAUL-RY` and `PAUL_HP_OMEN`; 4/4 direct/relay direction
+  matrix and forward upgrade chain passed with exact history equality.
+- M1.0.0 imported four events in about 53.8 seconds. Server follow-up accept is
+  now separately bounded at 120 seconds; individual wire I/O limits remain.
+- Harness uses stable local `.tmp/kilogram-field-runner/kilogram-cli.exe` and
+  remote `KilogramLab/n-minus-one-stable/kilogram-cli.exe` paths. Never run
+  network Rust tests via raw `cargo test` on Windows; use
+  `scripts/run-cargo-tests-stable.ps1` to avoid recurring hash-path firewall
+  prompts.
+- Build profile debug, target x86_64-pc-windows-msvc, Cargo jobs 2. Raw logs
+  and state stay ignored. Release/ZIP/tag were not created.

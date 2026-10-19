@@ -1194,6 +1194,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
 - [`../docs/RFC-0214-m1190-rollout-local-authority.md`](../docs/RFC-0214-m1190-rollout-local-authority.md) —
   M1.1.90 реализует dormant installation-local cohort/release-policy authority
   и bounded explicit-only health export без runtime integration либо user ID.
+- [`../docs/RFC-0215-m1191-n-minus-one-production-interop.md`](../docs/RFC-0215-m1191-n-minus-one-production-interop.md) —
+  M1.1.91 подтверждает exact M1.0.0/current interop в обоих направлениях по
+  direct/relay и forward upgrade одного durable state; public default остаётся
+  legacy-only, а полевые EXE используют постоянные firewall paths.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

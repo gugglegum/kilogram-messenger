@@ -1,38 +1,43 @@
-# Текущая точка: M1.1.90 завершён локально
+# Текущая точка: M1.1.91 завершён
 
-Статус: `canonical-sync-v2-rollout-local-authority-verified-dormant`; public
+Статус: `canonical-sync-v2-n-minus-one-production-interop-verified`; public
 rollout по-прежнему `hold`, default остаётся `legacy-only`.
 
-Acceptance: новый crate `kilogram-rollout` прошёл 12/12 unit tests, точный
-SHA-256 cohort vector, strict Clippy и negative boundary mutations; readiness
-расширен до `117/117`. Peer/sync wire, runtime IPC, network, release/ZIP/tag и
-automatic GitHub build не менялись.
+Exact accepted M1.0.0 binary и successor с revision `6d95cb7` прошли на двух
+физических Windows-хостах четыре N/N-1 направления: current -> previous и
+previous -> current по direct и strict relay. Каждый сценарий включал delivery
+ACK, restart listener, sync и exact equality history inventory. Отдельная
+forward-only цепочка на одном durable state прошла N-1/N-1 -> N-1/N -> N/N с
+ростом истории 6 -> 12 -> 18 и финальным relay.
 
-Реализованы два local engineering prerequisite из M1.1.89:
+Полевой прогон обнаружил и исправил три совместимости:
 
-1. installation-local 32-byte random seed и exact
-   `SHA256(seed || signed-policy-id) mod 10000`, без Account/Device/contact/
-   conversation/network identity;
-2. максимум 16 durable fixed-schema health aggregates с explicit-only JSON
-   export без seed, bucket, timestamp, path или пользовательских identifiers.
+1. outer connection-ticket envelope/signature возвращён к exact M1.0.0 v11;
+   новый sync capability стал independently signed optional extension;
+   это один v11 reader двух JSON shapes, а не version-level dual reader;
+   superseded experimental v13 не принимается;
+2. intermediate SyncDiff завершает stream без взаимной блокировки на
+   `send.stopped`; receipt доказывает обязательный follow-up request;
+3. старому debug binary требовалось около 53.8 s на durable import четырёх
+   events, поэтому follow-up accept получил отдельный bounded timeout 120 s.
 
-Release policy — canonical bounded Postcard, Ed25519 с явно pinned public key,
-monotonic epoch + exact previous policy ID. Genesis всегда legacy-only hold;
-phase нельзя пропустить или откатить. Containment сохраняет phase и задаёт zero
-enrollment. Broad default намеренно не представим.
+Tracked evidence не содержит raw logs/state, Account/Device IDs или message
+bodies. Полевой harness использует постоянный `kilogram-cli.exe` path на обоих
+хостах. На Windows сетевые Rust tests нельзя запускать прямым `cargo test`:
+только `scripts/run-cargo-tests-stable.ps1`, иначе hash-named test EXE снова
+создаёт новый Windows Firewall prompt.
 
-Crate не подключён к runtime/desktop/CLI: даже selected cohort возвращает
-`runtime_activation_authorized=false`. Production release key и delivery не
-выбраны; automatic upload/telemetry отсутствуют. Local keyed MAC — только
-corruption detection, не remote attestation; rollback всей redb без внешнего
-witness не обнаруживается.
+Открытое ограничение: до первого durable canonical selection удаление optional
+capability из ticket неотличимо от genuine M1.0.0 peer. Уже selected session не
+может откатиться в legacy, но accept-canary нельзя открывать до отдельного
+решения по этой first-contact ambiguity и independent review.
 
-Следующий отдельный пакет — M1.1.91: exact N/N-1 production executable interop
-matrix на accepted `M1.0.0` и текущем successor для upgrade/restart, direct и
-relay paths. Он не включает cohort runtime integration и не меняет public
-default. После него нужен dormant controller containment rehearsal, включая
-production release-key/delivery decision; independent review остаётся внешним
-gate до accept-canary.
+Следующий пакет — M1.1.92: dormant rollout controller + operational containment
+rehearsal. Нужно выбрать границу production release key/policy delivery,
+подключить cohort evaluation к существующей Device-signed activation ceremony
+без automatic enrollment, затем доказать canary stop/containment/restart и
+отсутствие legacy fallback для уже selected sessions. Independent security
+review остаётся внешним обязательным gate до accept-canary.
 
 ## Исторический план M1.1.81–M1.1.85
 

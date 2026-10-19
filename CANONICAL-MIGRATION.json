@@ -51,7 +51,7 @@
   "selection": {
     "mechanism": "listener-capability-bound-requester-offer-and-listener-acceptance",
     "capability": "kilogram-deterministic-cbor-v2-typed-history",
-    "capability_freshness": "ticket-v13-device-signed-authority-endpoint-requester-publication-epoch-and-prekey-validity-bound",
+    "capability_freshness": "ticket-v11-m1-envelope-optional-independent-device-signature-authority-endpoint-requester-publication-epoch-and-prekey-validity-bound",
     "format_sniffing": false,
     "parse_error_fallback": false,
     "reuse_existing_identifier": false,

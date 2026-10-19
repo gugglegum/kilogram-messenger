@@ -58,7 +58,7 @@
   "selection": {
     "current_state": "legacy-only",
     "listener_capability_required_before_dial": true,
-    "listener_capability_authentication": "ticket-v13-device-signed-and-bound-to-authority-endpoint-requester-publication-epoch-and-prekey-validity",
+    "listener_capability_authentication": "ticket-v11-m1-envelope-plus-optional-independent-device-signature-bound-to-authority-endpoint-requester-publication-epoch-and-prekey-validity",
     "requester_capability_authentication": "canonical-device-session-authorization-before-sync-frames",
     "mutual_authenticated_candidate_selection": true,
     "requester_offer_authentication": "device-signed-capability-id-conversation-accounts-devices-authority-revisions-session-and-migration-epoch",
@@ -71,7 +71,7 @@
     "fallback_after_selected_canonical_failure": false
   },
   "authenticated_capability": {
-    "portable_artifact": "connection-ticket-v13",
+    "portable_artifact": "connection-ticket-v11-with-optional-capability-v2",
     "capability_version": 2,
     "signature_domain": "kilogram:sync-transport-capability-signature:v2\\0",
     "artifact_id_domain": "kilogram:sync-transport-capability-artifact-id:v2\\0",

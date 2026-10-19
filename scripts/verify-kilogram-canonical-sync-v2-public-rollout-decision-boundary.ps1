@@ -287,7 +287,7 @@ function Assert-Contract {
 
     if ([string]$Coverage.public_default -cne 'legacy-only' -or
         (@($Coverage.next_priority) -join ',') -cne
-            'privacy-preserving-rollout-cohort-authority,durable-local-rollout-health-evidence,n-minus-one-production-interoperability,public-rollout-containment-rehearsal,canonical-native-history-materialization,legacy-sync-retirement-prerequisites') {
+            'privacy-preserving-rollout-cohort-authority,durable-local-rollout-health-evidence,first-contact-ticket-extension-stripping-resolution,public-rollout-containment-rehearsal,canonical-native-history-materialization,legacy-sync-retirement-prerequisites') {
         throw 'canonical coverage rollout priority changed'
     }
 

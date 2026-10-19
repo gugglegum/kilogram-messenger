@@ -84,6 +84,23 @@ function Assert-Manifest {
     if ($partialIds.Count -ne 0) {
         throw 'unexpected partial canonical surface'
     }
+    $transportSurface = @($Coverage.surfaces | Where-Object { $_.id -ceq 'transport-sync' })
+    if ($transportSurface.Count -ne 1) {
+        throw 'transport-sync coverage surface is missing'
+    }
+    foreach ($requiredArtifact in @(
+        'CANONICAL-SYNC-V2-N-MINUS-ONE-INTEROP.json',
+        'scripts/verify-kilogram-canonical-sync-v2-n-minus-one-interop-boundary.ps1',
+        'docs/RFC-0215-m1191-n-minus-one-production-interop.md'
+    )) {
+        if ($requiredArtifact -cnotin @($transportSurface[0].artifacts)) {
+            throw "transport-sync coverage is missing '$requiredArtifact'"
+        }
+    }
+    if ((@($Coverage.next_priority) -join ',') -cne
+        'privacy-preserving-rollout-cohort-authority,durable-local-rollout-health-evidence,first-contact-ticket-extension-stripping-resolution,public-rollout-containment-rehearsal,canonical-native-history-materialization,legacy-sync-retirement-prerequisites') {
+        throw 'canonical next-priority inventory changed'
+    }
 }
 
 foreach ($path in @($coveragePath, $sourcePath, $migrationPath, $rfcPath)) {
@@ -120,6 +137,20 @@ if ($SelfTest) {
     $notReady = $coverage | ConvertTo-Json -Depth 20 | ConvertFrom-Json
     $notReady.summary.activation_ready = $false
     Assert-Rejected { Assert-Manifest $notReady $source } 'completed_coverage_not_ready'
+    $missingInteropEvidence = $coverage | ConvertTo-Json -Depth 20 | ConvertFrom-Json
+    $missingTransportSurface = @($missingInteropEvidence.surfaces | Where-Object {
+        [string]$_.id -ceq 'transport-sync'
+    })[0]
+    $missingTransportSurface.artifacts = @(
+        $missingTransportSurface.artifacts |
+            Where-Object { [string]$_ -cne 'CANONICAL-SYNC-V2-N-MINUS-ONE-INTEROP.json' }
+    )
+    Assert-Rejected {
+        Assert-Manifest $missingInteropEvidence $source
+    } 'n_minus_one_evidence_untracked'
+    $stalePriority = $coverage | ConvertTo-Json -Depth 20 | ConvertFrom-Json
+    $stalePriority.next_priority[2] = 'n-minus-one-production-interoperability'
+    Assert-Rejected { Assert-Manifest $stalePriority $source } 'completed_priority_reopened'
     Write-Output 'canonical_coverage_self_test=passed'
 }
 

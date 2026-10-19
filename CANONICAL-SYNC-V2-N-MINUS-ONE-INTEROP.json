@@ -1,0 +1,165 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.91",
+  "status": "canonical-sync-v2-n-minus-one-production-interop-verified",
+  "run_id": "m1191-interop-attempt9",
+  "collected_at_utc": "2026-10-19T01:27:16.3460521Z",
+  "accepted": {
+    "tag": "M1.0.0",
+    "revision": "60b20b364c8df2324a0a287b4bcb6c056ae12c39",
+    "binary_sha256": "24c5681000af166cdbe63e61942c0d0dfbc5e1fca0772e257d99dd7984cde7c6",
+    "binary_bytes": 57975296
+  },
+  "successor": {
+    "revision": "6d95cb73359f44f20908d52b4fd2eaf7869cdede",
+    "binary_sha256": "22265eb35c8a94f84ab3e83c67d12235080e80c9e8f81fc56f60362897e1e13e",
+    "binary_bytes": 60089856
+  },
+  "build": {
+    "profile": "debug",
+    "target": "x86_64-pc-windows-msvc",
+    "cargo_jobs": 2,
+    "release_build": false,
+    "archive_created": false
+  },
+  "topology": {
+    "controller_host": "DESKTOP-PAUL-RY",
+    "remote_host": "PAUL_HP_OMEN",
+    "distinct_physical_hosts": true
+  },
+  "protocol": {
+    "common_sync_alpn": "kilogram/m0/sync/8",
+    "canonical_sync_alpn": "kilogram/m1/sync/cbor/2",
+    "canonical_selected": false,
+    "public_default": "legacy-only"
+  },
+  "matrix": [
+    {
+      "name": "01-current-to-previous-direct",
+      "initiator_version": "N",
+      "responder_version": "N-1",
+      "route_policy": "direct-only",
+      "selected_path": "direct",
+      "protocol": "kilogram/m0/sync/8",
+      "delivery_acknowledged": true,
+      "listener_restart": true,
+      "synchronized": true,
+      "histories_equal": true,
+      "event_count": 6,
+      "inventory_digest": "3c08d0e52a91d46d6736729bac12d9b74a8eb2ffa744b54465dd1961e238fb18",
+      "canonical_selected": false,
+      "fallback_after_selection": false
+    },
+    {
+      "name": "02-previous-to-current-direct",
+      "initiator_version": "N-1",
+      "responder_version": "N",
+      "route_policy": "direct-only",
+      "selected_path": "direct",
+      "protocol": "kilogram/m0/sync/8",
+      "delivery_acknowledged": true,
+      "listener_restart": true,
+      "synchronized": true,
+      "histories_equal": true,
+      "event_count": 6,
+      "inventory_digest": "cf3de1bd61c56f5cd3959e2990dbe6d4f98f8434f331a384784b89c5f074d014",
+      "canonical_selected": false,
+      "fallback_after_selection": false
+    },
+    {
+      "name": "03-current-to-previous-relay",
+      "initiator_version": "N",
+      "responder_version": "N-1",
+      "route_policy": "relay-only",
+      "selected_path": "relay",
+      "protocol": "kilogram/m0/sync/8",
+      "delivery_acknowledged": true,
+      "listener_restart": true,
+      "synchronized": true,
+      "histories_equal": true,
+      "event_count": 6,
+      "inventory_digest": "650f558d4428dce30418acffe20574601703a9d21d428b3e3e95ac7b3e1794ea",
+      "canonical_selected": false,
+      "fallback_after_selection": false
+    },
+    {
+      "name": "04-previous-to-current-relay",
+      "initiator_version": "N-1",
+      "responder_version": "N",
+      "route_policy": "relay-only",
+      "selected_path": "relay",
+      "protocol": "kilogram/m0/sync/8",
+      "delivery_acknowledged": true,
+      "listener_restart": true,
+      "synchronized": true,
+      "histories_equal": true,
+      "event_count": 6,
+      "inventory_digest": "cb873a3ffd7b8a5a94a69831d1dbcb71db310fccd49cdcbc64dece0dc41d9bf3",
+      "canonical_selected": false,
+      "fallback_after_selection": false
+    }
+  ],
+  "upgrade_chain": {
+    "name": "05-forward-upgrade",
+    "state_reused": true,
+    "forward_only": true,
+    "downgrade_after_upgrade_attempted": false,
+    "baseline": {
+      "name": "05a-nminus1-baseline",
+      "initiator_version": "N-1",
+      "responder_version": "N-1",
+      "route_policy": "direct-only",
+      "selected_path": "direct",
+      "protocol": "kilogram/m0/sync/8",
+      "delivery_acknowledged": true,
+      "listener_restart": true,
+      "synchronized": true,
+      "histories_equal": true,
+      "event_count": 6,
+      "inventory_digest": "f77ed43bbc51a2e26c164b49090ca9e520c534401ec9b31b2f0a78320f52e95c",
+      "canonical_selected": false,
+      "fallback_after_selection": false
+    },
+    "responder_upgrade": {
+      "name": "05b-responder-upgraded",
+      "initiator_version": "N-1",
+      "responder_version": "N",
+      "route_policy": "direct-only",
+      "selected_path": "direct",
+      "protocol": "kilogram/m0/sync/8",
+      "delivery_acknowledged": true,
+      "listener_restart": true,
+      "synchronized": true,
+      "histories_equal": true,
+      "event_count": 12,
+      "inventory_digest": "db0abaa1b286e4796867f0ab23801e8328aea57f686c0d2d1555115664b39019",
+      "canonical_selected": false,
+      "fallback_after_selection": false
+    },
+    "initiator_upgrade": {
+      "name": "05c-initiator-upgraded",
+      "initiator_version": "N",
+      "responder_version": "N",
+      "route_policy": "relay-only",
+      "selected_path": "relay",
+      "protocol": "kilogram/m0/sync/8",
+      "delivery_acknowledged": true,
+      "listener_restart": true,
+      "synchronized": true,
+      "histories_equal": true,
+      "event_count": 18,
+      "inventory_digest": "cb21ee1a1935fb165e29fec4e4ec80da5496386196581c08b2809a492476e84a",
+      "canonical_selected": false,
+      "fallback_after_selection": false
+    },
+    "final_histories_equal": true,
+    "final_event_count": 18,
+    "final_inventory_digest": "cb21ee1a1935fb165e29fec4e4ec80da5496386196581c08b2809a492476e84a"
+  },
+  "privacy": {
+    "raw_logs_committed": false,
+    "state_committed": false,
+    "account_or_device_ids_exported": false,
+    "message_bodies_exported": false
+  }
+}
