@@ -18181,7 +18181,7 @@ enum RuntimeEvent {
     Connection(Connection),
     Ipc(RuntimeIpcWork),
     IpcClosed,
-    OutboundCompleted(RuntimeOutboundCycleCompletion),
+    OutboundCompleted(Box<RuntimeOutboundCycleCompletion>),
     Tick,
     IdleTimeout,
     Shutdown,
@@ -18192,6 +18192,8 @@ type RuntimeOutboundCycleTask = JoinHandle<RuntimeOutboundCycleCompletion>;
 struct RuntimeOutboundScheduler {
     automatic_sync_started_at: tokio::time::Instant,
     last_sync_attempts: BTreeMap<RuntimeContactId, tokio::time::Instant>,
+    capability_blocked_sync_contacts: BTreeSet<RuntimeContactId>,
+    capability_blocked_queue_items: BTreeSet<RuntimeQueueId>,
     last_ticket_automation_check: tokio::time::Instant,
     last_mailbox_check: tokio::time::Instant,
     last_mailbox_legacy_upgrade_check: tokio::time::Instant,
@@ -18209,6 +18211,8 @@ impl RuntimeOutboundScheduler {
         Self {
             automatic_sync_started_at: now,
             last_sync_attempts: BTreeMap::new(),
+            capability_blocked_sync_contacts: BTreeSet::new(),
+            capability_blocked_queue_items: BTreeSet::new(),
             last_ticket_automation_check: now - RUNTIME_TICKET_AUTOMATION_CHECK_INTERVAL,
             last_mailbox_check: now - RUNTIME_MAILBOX_POLL_INTERVAL,
             last_mailbox_legacy_upgrade_check: now - RUNTIME_MAILBOX_LEGACY_UPGRADE_INTERVAL,
@@ -18840,6 +18844,7 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                 }
             }
             RuntimeEvent::OutboundCompleted(completion) => {
+                let completion = *completion;
                 outbound_cycle = None;
                 outbound_scheduler = Some(completion.scheduler);
                 let mut report = completion.result?;
@@ -19157,6 +19162,7 @@ async fn run_runtime_outbound_cycle_inner(
         &context.state_directory,
         context.retry_base_seconds,
         context.retry_max_seconds,
+        &mut scheduler.capability_blocked_queue_items,
     )
     .await?;
     if !matches!(delivery_attempt, RuntimeDeliveryAttempt::NoWork) {
@@ -19222,6 +19228,7 @@ async fn run_runtime_outbound_cycle_inner(
             &context.state_directory,
             Duration::from_secs(context.auto_sync_seconds),
             &mut scheduler.last_sync_attempts,
+            &mut scheduler.capability_blocked_sync_contacts,
             &mut report.sync_observation,
         )
         .await
@@ -19229,10 +19236,10 @@ async fn run_runtime_outbound_cycle_inner(
             Ok(attempted) => attempted,
             Err(error) => {
                 eprintln!("runtime_sync_status=failed error={error:#}");
-                false
+                RuntimeContactSyncAttempt::NoWork
             }
         };
-        if attempted {
+        if attempted.attempted() {
             report.mark_outbound_action();
             return Ok(report);
         }
@@ -19510,6 +19517,7 @@ enum RuntimeDeliveryAttempt {
     Delivered,
     MailboxStored,
     RetryScheduled,
+    CapabilityBlocked,
 }
 
 struct RuntimeMailboxLegacyUpgradeCandidate {
@@ -22182,7 +22190,10 @@ async fn attempt_runtime_mailbox_poll(
     Ok(RuntimeMailboxPollAttempt::StateChanged)
 }
 
-fn select_due_runtime_queue(state_directory: &Path) -> Result<Option<RuntimeQueueId>> {
+fn select_due_runtime_queue(
+    state_directory: &Path,
+    capability_blocked_queue_items: &BTreeSet<RuntimeQueueId>,
+) -> Result<Option<RuntimeQueueId>> {
     let device_state = load_command_device_state(state_directory)?;
     let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
     let certificate = trust.load_certificate()?;
@@ -22193,7 +22204,8 @@ fn select_due_runtime_queue(state_directory: &Path) -> Result<Option<RuntimeQueu
     )?;
     let now = unix_time_now()?;
     Ok(snapshot.queued.keys().copied().find(|queue_id| {
-        !snapshot.delivered.contains_key(queue_id)
+        !capability_blocked_queue_items.contains(queue_id)
+            && !snapshot.delivered.contains_key(queue_id)
             && !snapshot.mailbox_dispatches.contains_key(queue_id)
             && snapshot
                 .latest_retry(*queue_id)
@@ -22206,17 +22218,32 @@ async fn attempt_next_runtime_delivery(
     state_directory: &Path,
     retry_base_seconds: u64,
     retry_max_seconds: u64,
+    capability_blocked_queue_items: &mut BTreeSet<RuntimeQueueId>,
 ) -> Result<RuntimeDeliveryAttempt> {
     let selection_lock = acquire_runtime_state_lock(state_directory)
         .await?
         .context("runtime state lock remained busy while selecting outbound work")?;
-    let selected = select_due_runtime_queue(state_directory);
+    let selected = select_due_runtime_queue(state_directory, capability_blocked_queue_items);
     drop(selection_lock);
     let Some(queue_id) = selected? else {
         return Ok(RuntimeDeliveryAttempt::NoWork);
     };
     let prepared = match prepare_runtime_delivery(state_directory, queue_id).await {
         Ok(prepared) => prepared,
+        Err(error) if peer_capability_transport_block(&error).is_some() => {
+            let blocked = peer_capability_transport_block(&error)
+                .context("peer capability block classification disappeared")?;
+            capability_blocked_queue_items.insert(queue_id);
+            println!("runtime_queue_id={queue_id}");
+            println!("runtime_peer_capability_status=blocked");
+            println!(
+                "runtime_peer_capability_reason={}",
+                peer_capability_quarantine_reason_name(blocked.reason)
+            );
+            println!("runtime_outbound_network_attempted=false");
+            println!("runtime_outbound_status=capability-blocked");
+            return Ok(RuntimeDeliveryAttempt::CapabilityBlocked);
+        }
         Err(error) => {
             eprintln!(
                 "runtime_outbound_status=failed runtime_queue_id={queue_id} stage=prepare error={error:#}"
@@ -22310,6 +22337,22 @@ async fn prepare_runtime_delivery(
             &local_authority,
             &pinned_peer_authority,
         )?;
+        let membership = trust
+            .load_conversation_membership(queued.conversation_id().scope_id())
+            .context("load runtime queued conversation membership")?;
+        require_conversation_participants(
+            &membership,
+            local_certificate.account_id(),
+            contact.peer_account_id(),
+        )?;
+        authorize_runtime_candidates_before_outbound_network(
+            state_directory,
+            device_state.identity(),
+            local_certificate.account_id(),
+            queued.conversation_id(),
+            contact.peer_account_id(),
+            &endpoint_candidates,
+        )?;
         let ticket = endpoint_candidates
             .first()
             .context("runtime endpoint candidate set is empty")?
@@ -22344,14 +22387,6 @@ async fn prepare_runtime_delivery(
             }
             Ok(())
         })?;
-        let membership = trust
-            .load_conversation_membership(queued.conversation_id().scope_id())
-            .context("load runtime queued conversation membership")?;
-        require_conversation_participants(
-            &membership,
-            local_certificate.account_id(),
-            contact.peer_account_id(),
-        )?;
         let event = match snapshot.materialized.get(&queue_id) {
             Some(materialized) => materialized.event().clone(),
             None => {
@@ -22689,6 +22724,29 @@ struct PreparedRuntimeSync {
     candidates: Vec<(DeviceId, String)>,
 }
 
+enum RuntimeSyncPreparation {
+    NoWork,
+    Ready(Box<PreparedRuntimeSync>),
+    CapabilityBlocked {
+        contact_id: RuntimeContactId,
+        block: PeerCapabilityTransportBlocked,
+    },
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum RuntimeContactSyncAttempt {
+    NoWork,
+    Synchronized,
+    Failed,
+    CapabilityBlocked,
+}
+
+impl RuntimeContactSyncAttempt {
+    fn attempted(self) -> bool {
+        !matches!(self, Self::NoWork)
+    }
+}
+
 fn runtime_automatic_sync_initiator(
     local_account_id: AccountId,
     local_device_id: DeviceId,
@@ -22702,17 +22760,37 @@ fn runtime_automatic_sync_initiator(
     }
 }
 
+fn select_due_runtime_sync_contact(
+    snapshot: &RuntimeStateSnapshot,
+    last_attempts: &BTreeMap<RuntimeContactId, tokio::time::Instant>,
+    capability_blocked_sync_contacts: &BTreeSet<RuntimeContactId>,
+    now: tokio::time::Instant,
+    interval: Duration,
+) -> Option<SignedRuntimeContact> {
+    snapshot
+        .contacts
+        .values()
+        .find(|contact| {
+            !capability_blocked_sync_contacts.contains(&contact.contact_id())
+                && last_attempts
+                    .get(&contact.contact_id())
+                    .is_none_or(|last| now.duration_since(*last) >= interval)
+        })
+        .cloned()
+}
+
 async fn attempt_runtime_contact_sync(
     state_directory: &Path,
     interval: Duration,
     last_attempts: &mut BTreeMap<RuntimeContactId, tokio::time::Instant>,
+    capability_blocked_sync_contacts: &mut BTreeSet<RuntimeContactId>,
     observation: &mut Option<RuntimeSyncPathObservationDraft>,
-) -> Result<bool> {
+) -> Result<RuntimeContactSyncAttempt> {
     let state_lock = acquire_runtime_state_lock(state_directory)
         .await?
         .context("runtime state lock remained busy while preparing automatic sync")?;
     let vault_guard = VaultDualWriteGuard::prepare(state_directory)?;
-    let preparation: Result<Option<PreparedRuntimeSync>> = (|| {
+    let preparation: Result<RuntimeSyncPreparation> = (|| {
         let device_state = load_command_device_state(state_directory)?;
         let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
         let certificate = trust.load_certificate()?;
@@ -22723,17 +22801,15 @@ async fn attempt_runtime_contact_sync(
             device_state.identity().device_id(),
         )?;
         let now = tokio::time::Instant::now();
-        let contact = snapshot
-            .contacts
-            .values()
-            .find(|contact| {
-                last_attempts
-                    .get(&contact.contact_id())
-                    .is_none_or(|last| now.duration_since(*last) >= interval)
-            })
-            .cloned();
+        let contact = select_due_runtime_sync_contact(
+            &snapshot,
+            last_attempts,
+            capability_blocked_sync_contacts,
+            now,
+            interval,
+        );
         let Some(contact) = contact else {
-            return Ok(None);
+            return Ok(RuntimeSyncPreparation::NoWork);
         };
         last_attempts.insert(contact.contact_id(), now);
         if !runtime_automatic_sync_initiator(
@@ -22746,7 +22822,7 @@ async fn attempt_runtime_contact_sync(
             println!("runtime_sync_contact_id={}", contact.contact_id());
             println!("runtime_sync_peer_account_id={}", contact.peer_account_id());
             println!("runtime_sync_peer_device_id={}", contact.peer_device_id());
-            return Ok(None);
+            return Ok(RuntimeSyncPreparation::NoWork);
         }
         println!("runtime_sync_role=initiator");
         println!("runtime_sync_peer_account_id={}", contact.peer_account_id());
@@ -22763,26 +22839,49 @@ async fn attempt_runtime_contact_sync(
         )?
         .into_iter()
         .filter(|candidate| candidate.authority_current)
-        .map(|candidate| Ok((candidate.peer_device_id, candidate.ticket.encode()?)))
-        .collect::<Result<Vec<_>>>()?;
+        .collect::<Vec<_>>();
         ensure!(
             !candidates.is_empty(),
             "automatic sync has no endpoint candidate at the authority high-water revision"
         );
-        Ok(Some(PreparedRuntimeSync {
-            contact,
-            candidates,
-        }))
+        if let Err(error) = authorize_runtime_candidates_before_outbound_network(
+            state_directory,
+            device_state.identity(),
+            certificate.account_id(),
+            contact.conversation_id(),
+            contact.peer_account_id(),
+            &candidates,
+        ) {
+            if let Some(block) = peer_capability_transport_block(&error) {
+                return Ok(RuntimeSyncPreparation::CapabilityBlocked {
+                    contact_id: contact.contact_id(),
+                    block: *block,
+                });
+            }
+            return Err(error);
+        }
+        let candidates = candidates
+            .into_iter()
+            .map(|candidate| Ok((candidate.peer_device_id, candidate.ticket.encode()?)))
+            .collect::<Result<Vec<_>>>()?;
+        Ok(RuntimeSyncPreparation::Ready(Box::new(
+            PreparedRuntimeSync {
+                contact,
+                candidates,
+            },
+        )))
     })();
 
     let operation_result = match preparation {
-        Ok(Some(PreparedRuntimeSync {
-            contact,
-            candidates,
-        })) => {
+        Ok(RuntimeSyncPreparation::Ready(prepared)) => {
+            let PreparedRuntimeSync {
+                contact,
+                candidates,
+            } = *prepared;
             println!("runtime_sync_contact_id={}", contact.contact_id());
             let mut failures = Vec::new();
             let mut synchronized = None;
+            let mut capability_block = None;
             for (index, (peer_device_id, encoded_ticket)) in candidates.iter().enumerate() {
                 println!("runtime_sync_endpoint_attempt={}", index + 1);
                 println!("runtime_sync_endpoint_device_id={peer_device_id}");
@@ -22802,6 +22901,10 @@ async fn attempt_runtime_contact_sync(
                         break;
                     }
                     Err(error) => {
+                        if let Some(blocked) = peer_capability_transport_block(&error) {
+                            capability_block = Some((*blocked, index != 0));
+                            break;
+                        }
                         eprintln!(
                             "runtime_sync_endpoint_status=failed peer_device_id={peer_device_id} error={error:#}"
                         );
@@ -22811,23 +22914,44 @@ async fn attempt_runtime_contact_sync(
             }
             if let Some(sync_observation) = synchronized {
                 *observation = Some(sync_observation);
-                Ok(())
+                Ok(RuntimeContactSyncAttempt::Synchronized)
+            } else if let Some((blocked, network_attempted)) = capability_block {
+                capability_blocked_sync_contacts.insert(contact.contact_id());
+                println!("runtime_sync_capability_status=blocked");
+                println!(
+                    "runtime_sync_capability_reason={}",
+                    peer_capability_quarantine_reason_name(blocked.reason)
+                );
+                println!("runtime_sync_network_attempted={network_attempted}");
+                Ok(RuntimeContactSyncAttempt::CapabilityBlocked)
             } else {
-                Err(anyhow::anyhow!(
-                    "all {} authenticated sync endpoint candidates failed: {}",
+                eprintln!(
+                    "runtime_sync_status=failed error=all {} authenticated sync endpoint candidates failed: {}",
                     candidates.len(),
                     failures.join(" | ")
-                ))
+                );
+                Ok(RuntimeContactSyncAttempt::Failed)
             }
         }
-        Ok(None) => {
+        Ok(RuntimeSyncPreparation::NoWork) => {
             let mirror_result = match vault_guard {
                 Some(guard) => guard.finish(),
                 None => Ok(()),
             };
             drop(state_lock);
             mirror_result?;
-            return Ok(false);
+            return Ok(RuntimeContactSyncAttempt::NoWork);
+        }
+        Ok(RuntimeSyncPreparation::CapabilityBlocked { contact_id, block }) => {
+            capability_blocked_sync_contacts.insert(contact_id);
+            println!("runtime_sync_contact_id={contact_id}");
+            println!("runtime_sync_capability_status=blocked");
+            println!(
+                "runtime_sync_capability_reason={}",
+                peer_capability_quarantine_reason_name(block.reason)
+            );
+            println!("runtime_sync_network_attempted=false");
+            Ok(RuntimeContactSyncAttempt::CapabilityBlocked)
         }
         Err(error) => Err(error),
     };
@@ -22837,11 +22961,18 @@ async fn attempt_runtime_contact_sync(
     };
     drop(state_lock);
     mirror_result.context("finish automatic sync state-vault mirror")?;
-    match operation_result {
-        Ok(()) => println!("runtime_sync_status=synchronized"),
+    match operation_result.as_ref() {
+        Ok(RuntimeContactSyncAttempt::Synchronized) => {
+            println!("runtime_sync_status=synchronized")
+        }
+        Ok(RuntimeContactSyncAttempt::CapabilityBlocked) => {
+            println!("runtime_sync_status=capability-blocked")
+        }
+        Ok(RuntimeContactSyncAttempt::Failed) => {}
+        Ok(RuntimeContactSyncAttempt::NoWork) => unreachable!("prepared sync became no-work"),
         Err(error) => eprintln!("runtime_sync_status=failed error={error:#}"),
     }
-    Ok(true)
+    operation_result
 }
 
 async fn wait_for_runtime_event(
@@ -22865,7 +22996,7 @@ async fn wait_for_runtime_event(
                 Ok(work.map_or(RuntimeEvent::IpcClosed, RuntimeEvent::Ipc))
             }
             completed = wait_for_runtime_outbound_cycle(outbound_cycle) => {
-                completed.map(RuntimeEvent::OutboundCompleted)
+                completed.map(|completion| RuntimeEvent::OutboundCompleted(Box::new(completion)))
             }
             _ = poll_tick.tick() => Ok(RuntimeEvent::Tick),
             () = tokio::time::sleep_until(idle_deadline) => Ok(RuntimeEvent::IdleTimeout),
@@ -22882,7 +23013,7 @@ async fn wait_for_runtime_event(
                 Ok(work.map_or(RuntimeEvent::IpcClosed, RuntimeEvent::Ipc))
             }
             completed = wait_for_runtime_outbound_cycle(outbound_cycle) => {
-                completed.map(RuntimeEvent::OutboundCompleted)
+                completed.map(|completion| RuntimeEvent::OutboundCompleted(Box::new(completion)))
             }
             _ = poll_tick.tick() => Ok(RuntimeEvent::Tick),
         }
@@ -25263,6 +25394,30 @@ enum PeerCapabilityTransportEvidenceSource {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct PeerCapabilityTransportBlocked {
+    reason: PeerSyncCapabilityQuarantineReason,
+    reason_name: &'static str,
+}
+
+impl fmt::Display for PeerCapabilityTransportBlocked {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            formatter,
+            "peer sync capability floor is quarantined: {}",
+            self.reason_name
+        )
+    }
+}
+
+impl std::error::Error for PeerCapabilityTransportBlocked {}
+
+fn peer_capability_transport_block(
+    error: &anyhow::Error,
+) -> Option<&PeerCapabilityTransportBlocked> {
+    error.downcast_ref::<PeerCapabilityTransportBlocked>()
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct PeerCapabilityTransportAuthorization {
     floor: PeerSyncCapabilityFloor,
     permitted_use: PeerSyncCapabilityUse,
@@ -25349,10 +25504,11 @@ fn apply_peer_capability_floor_before_sync(
         .map(|state| state.floor)
         .unwrap_or(PeerSyncCapabilityFloor::LegacyUnasserted);
     if let PeerSyncCapabilityFloor::Quarantined { reason } = floor {
-        bail!(
-            "peer sync capability floor is quarantined: {}",
-            peer_capability_quarantine_reason_name(reason)
-        );
+        return Err(PeerCapabilityTransportBlocked {
+            reason,
+            reason_name: peer_capability_quarantine_reason_name(reason),
+        }
+        .into());
     }
     ensure!(
         outcome.permitted_use != PeerSyncCapabilityUse::Quarantined,
@@ -25366,6 +25522,76 @@ fn apply_peer_capability_floor_before_sync(
         changed: outcome.changed,
         evidence_source,
     })
+}
+
+struct PeerCapabilityTransportContext {
+    canonical_selection: Option<PersistedCanonicalSyncV2Selection>,
+    authorization: PeerCapabilityTransportAuthorization,
+}
+
+fn authorize_peer_capability_transport_for_conversation(
+    state_directory: &Path,
+    owner: &DeviceIdentity,
+    local_account_id: AccountId,
+    conversation_id: ConversationId,
+    peer_account_id: AccountId,
+    peer_device_id: DeviceId,
+    ticket: &ConnectionTicket,
+) -> Result<PeerCapabilityTransportContext> {
+    let canonical_selection = selected_canonical_sync_v2_session(
+        state_directory,
+        local_account_id,
+        owner.device_id(),
+        conversation_id,
+        peer_device_id,
+        owner.device_id(),
+    )?;
+    let (evidence, evidence_source) = if let Some(selection) = canonical_selection.as_ref() {
+        (
+            peer_sync_capability_evidence(Some(&selection.listener_capability))?,
+            PeerCapabilityTransportEvidenceSource::PersistedCanonicalSelection,
+        )
+    } else {
+        (
+            peer_sync_capability_evidence(ticket.sync_transport_capability())?,
+            PeerCapabilityTransportEvidenceSource::ConnectionTicket,
+        )
+    };
+    let authorization = apply_peer_capability_floor_before_sync(
+        state_directory,
+        owner,
+        peer_account_id,
+        peer_device_id,
+        evidence,
+        evidence_source,
+    )?;
+    Ok(PeerCapabilityTransportContext {
+        canonical_selection,
+        authorization,
+    })
+}
+
+fn authorize_runtime_candidates_before_outbound_network(
+    state_directory: &Path,
+    owner: &DeviceIdentity,
+    local_account_id: AccountId,
+    conversation_id: ConversationId,
+    peer_account_id: AccountId,
+    candidates: &[ResolvedRuntimeEndpointCandidate],
+) -> Result<()> {
+    for candidate in candidates {
+        let context = authorize_peer_capability_transport_for_conversation(
+            state_directory,
+            owner,
+            local_account_id,
+            conversation_id,
+            peer_account_id,
+            candidate.peer_device_id,
+            &candidate.ticket,
+        )?;
+        print_peer_capability_transport_authorization(context.authorization);
+    }
+    Ok(())
 }
 
 fn print_peer_capability_transport_authorization(
@@ -25589,34 +25815,17 @@ async fn sync(
         authorized_listener.account_id(),
     )?;
     let requester_device_id = device_state.identity().device_id();
-    let mut canonical_selection = selected_canonical_sync_v2_session(
-        &state_dir,
-        requester_certificate.account_id(),
-        requester_device_id,
-        conversation_id,
-        expected_listener_device_id,
-        requester_device_id,
-    )?;
-    let (peer_capability_evidence, peer_capability_evidence_source) =
-        if let Some(selection) = canonical_selection.as_ref() {
-            (
-                peer_sync_capability_evidence(Some(&selection.listener_capability))?,
-                PeerCapabilityTransportEvidenceSource::PersistedCanonicalSelection,
-            )
-        } else {
-            (
-                peer_sync_capability_evidence(ticket.sync_transport_capability())?,
-                PeerCapabilityTransportEvidenceSource::ConnectionTicket,
-            )
-        };
-    let peer_capability_authorization = apply_peer_capability_floor_before_sync(
+    let peer_capability_context = authorize_peer_capability_transport_for_conversation(
         &state_dir,
         device_state.identity(),
+        requester_certificate.account_id(),
+        conversation_id,
         authorized_listener.account_id(),
         expected_listener_device_id,
-        peer_capability_evidence,
-        peer_capability_evidence_source,
+        &ticket,
     )?;
+    let mut canonical_selection = peer_capability_context.canonical_selection;
+    let peer_capability_authorization = peer_capability_context.authorization;
     print_peer_capability_transport_authorization(peer_capability_authorization);
     print_immutable_read_diagnostics("sync", &immutable_reads);
     let decrypting_store = DecryptingSessionStore::new(
@@ -38088,6 +38297,74 @@ mod tests {
     }
 
     #[test]
+    fn peer_capability_transport_unknown_legacy_does_not_create_peer_record_in_existing_store()
+    -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let requester = DeviceIdentity::generate()?;
+        let canonical_listener = DeviceIdentity::generate()?;
+        let legacy_listener = DeviceIdentity::generate()?;
+        let (canonical_account_id, canonical_certificate, _, canonical_directory) =
+            authority_for(&canonical_listener)?;
+        let (legacy_account_id, legacy_certificate, _, legacy_directory) =
+            authority_for(&legacy_listener)?;
+        let (requester_account_id, _, _, _) = authority_for(&requester)?;
+        let canonical_ticket =
+            ConnectionTicket::new_with_publication_channel_epoch_and_sync_policy(
+                EndpointAddr::new(SecretKey::generate().public()),
+                &canonical_listener,
+                canonical_certificate,
+                canonical_directory,
+                requester_account_id,
+                RoutePolicy::DirectOnly,
+                4,
+                true,
+            )?;
+        let mut legacy_ticket = ConnectionTicket::new(
+            EndpointAddr::new(SecretKey::generate().public()),
+            &legacy_listener,
+            legacy_certificate,
+            legacy_directory,
+            requester_account_id,
+            RoutePolicy::DirectOnly,
+        )?;
+        legacy_ticket.content.sync_transport_capability = None;
+        legacy_ticket.verify()?;
+
+        apply_peer_capability_floor_before_sync(
+            directory.path(),
+            &requester,
+            canonical_account_id,
+            canonical_listener.device_id(),
+            peer_sync_capability_evidence(canonical_ticket.sync_transport_capability())?,
+            PeerCapabilityTransportEvidenceSource::ConnectionTicket,
+        )?;
+        let legacy = apply_peer_capability_floor_before_sync(
+            directory.path(),
+            &requester,
+            legacy_account_id,
+            legacy_listener.device_id(),
+            peer_sync_capability_evidence(legacy_ticket.sync_transport_capability())?,
+            PeerCapabilityTransportEvidenceSource::ConnectionTicket,
+        )?;
+
+        assert_eq!(legacy.record_id, None);
+        assert!(!legacy.changed);
+        let store = PeerCapabilityStore::open(
+            directory.path().join(PEER_SYNC_CAPABILITY_DIRECTORY),
+            requester.device_id(),
+        )?;
+        assert!(
+            store
+                .load_state(PeerCapabilityKey::new(
+                    legacy_account_id,
+                    legacy_listener.device_id(),
+                ))?
+                .is_none()
+        );
+        Ok(())
+    }
+
+    #[test]
     fn peer_capability_transport_pins_authenticated_canonical_before_use() -> Result<()> {
         let directory = tempfile::tempdir()?;
         let requester = DeviceIdentity::generate()?;
@@ -38098,7 +38375,7 @@ mod tests {
         let ticket = ConnectionTicket::new_with_publication_channel_epoch_and_sync_policy(
             EndpointAddr::new(SecretKey::generate().public()),
             &listener,
-            listener_certificate,
+            listener_certificate.clone(),
             listener_directory,
             requester_account_id,
             RoutePolicy::DirectOnly,
@@ -38195,51 +38472,359 @@ mod tests {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn runtime_outbox_quarantine_blocks_before_materialization_and_recovers_after_restart()
+    -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let first_state_directory = directory.path().join("first-state");
+        let second_state_directory = directory.path().join("second-state");
+        let first_root = AccountRootState::create(directory.path().join("first-root"))?;
+        let second_root = AccountRootState::create(directory.path().join("second-root"))?;
+        let first = DeviceState::load_or_create(&first_state_directory)?;
+        let second = DeviceState::load_or_create(&second_state_directory)?;
+        let first_initiates = runtime_automatic_sync_initiator(
+            first_root.account_id(),
+            first.identity().device_id(),
+            second_root.account_id(),
+            second.identity().device_id(),
+        );
+        let (local_state_directory, local_root, local, peer_state_directory, peer_root, peer) =
+            if first_initiates {
+                (
+                    first_state_directory,
+                    first_root,
+                    first,
+                    second_state_directory,
+                    second_root,
+                    second,
+                )
+            } else {
+                (
+                    second_state_directory,
+                    second_root,
+                    second,
+                    first_state_directory,
+                    first_root,
+                    first,
+                )
+            };
+        let local_certificate = local_root.issue_device_certificate(
+            local.identity().device_id(),
+            local.encryption().public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let peer_certificate = peer_root.issue_device_certificate(
+            peer.identity().device_id(),
+            peer.encryption().public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let local_devices =
+            local_root.publish_device_list(std::slice::from_ref(&local_certificate))?;
+        let peer_devices =
+            peer_root.publish_device_list(std::slice::from_ref(&peer_certificate))?;
+        local.install_certificate(&local_certificate)?;
+        local.install_own_authority_snapshot(local_devices.authority_snapshot())?;
+        peer.install_certificate(&peer_certificate)?;
+        peer.install_own_authority_snapshot(peer_devices.authority_snapshot())?;
+        let peer_pool = RatchetState::load_or_create(&peer_state_directory)?.prekey_pool(
+            peer.identity(),
+            4,
+            unix_time_now()?,
+            DEFAULT_PREKEY_POOL_VALIDITY_SECONDS,
+        )?;
+        let peer_directory = AccountPrekeyDirectory::new(peer_devices, vec![peer_pool])?;
+        let conversation = "runtime-outbox-capability-block";
+        let conversation_id = ConversationId::from_label(conversation);
+        let membership = local_root.create_conversation_membership(
+            conversation_id.scope_id(),
+            &[peer_root.account_id()],
+        )?;
+        local.install_conversation_membership(&membership)?;
+        peer.install_conversation_membership(&membership)?;
+        let mut ticket = ConnectionTicket::new_with_publication_channel_epoch_and_sync_policy(
+            EndpointAddr::new(SecretKey::generate().public()),
+            peer.identity(),
+            peer_certificate,
+            peer_directory,
+            local_root.account_id(),
+            RoutePolicy::DirectOnly,
+            4,
+            true,
+        )?;
+        let ticket_file = directory.path().join("peer.ticket");
+        fs::write(&ticket_file, ticket.encode()?)?;
+        let contact = add_runtime_contact_record(
+            &local_state_directory,
+            conversation.to_owned(),
+            peer_root.account_id(),
+            ticket_file.clone(),
+        )?;
+        let queue_id = RuntimeQueueId::generate()?;
+        queue_runtime_message_with_id(
+            &local_state_directory,
+            queue_id,
+            conversation.to_owned(),
+            peer_root.account_id(),
+            "must remain sealed while peer is quarantined".to_owned(),
+        )?;
+        let pinned = authorize_peer_capability_transport_for_conversation(
+            &local_state_directory,
+            local.identity(),
+            local_root.account_id(),
+            conversation_id,
+            peer_root.account_id(),
+            peer.identity().device_id(),
+            &ticket,
+        )?;
+        assert_eq!(pinned.authorization.record_sequence, Some(1));
+        ticket.content.sync_transport_capability = None;
+        ticket.verify()?;
+        fs::write(&ticket_file, ticket.encode()?)?;
+
+        let error = prepare_runtime_delivery(&local_state_directory, queue_id)
+            .await
+            .err()
+            .context("quarantined runtime queue unexpectedly reached outbound delivery")?;
+        let blocked = peer_capability_transport_block(&error)
+            .context("runtime queue failure omitted its capability-block classification")?;
+        assert_eq!(
+            blocked.reason,
+            PeerSyncCapabilityQuarantineReason::PinnedCanonicalCapabilityMissing
+        );
+        let snapshot = load_runtime_state_snapshot(
+            &local_state_directory,
+            local_root.account_id(),
+            local.identity().device_id(),
+        )?;
+        assert!(snapshot.materialized.is_empty());
+        assert!(snapshot.retries.is_empty());
+        assert_eq!(
+            select_due_runtime_queue(&local_state_directory, &BTreeSet::new())?,
+            Some(queue_id)
+        );
+        assert_eq!(
+            select_due_runtime_queue(&local_state_directory, &BTreeSet::from([queue_id]),)?,
+            None
+        );
+
+        let restart_error = prepare_runtime_delivery(&local_state_directory, queue_id)
+            .await
+            .err()
+            .context("restart lost the durable peer capability quarantine")?;
+        assert!(peer_capability_transport_block(&restart_error).is_some());
+        let store = PeerCapabilityStore::open(
+            local_state_directory.join(PEER_SYNC_CAPABILITY_DIRECTORY),
+            local.identity().device_id(),
+        )?;
+        let durable = store
+            .load_state(PeerCapabilityKey::new(
+                peer_root.account_id(),
+                peer.identity().device_id(),
+            ))?
+            .context("runtime queue quarantine was not durable")?;
+        assert_eq!(durable.sequence, 2);
+        assert!(matches!(
+            durable.floor,
+            PeerSyncCapabilityFloor::Quarantined {
+                reason: PeerSyncCapabilityQuarantineReason::PinnedCanonicalCapabilityMissing
+            }
+        ));
+        drop(store);
+        let mut last_attempts = BTreeMap::new();
+        let mut blocked_contacts = BTreeSet::new();
+        let mut observation = None;
+        let scheduled = attempt_runtime_contact_sync(
+            &local_state_directory,
+            Duration::ZERO,
+            &mut last_attempts,
+            &mut blocked_contacts,
+            &mut observation,
+        )
+        .await?;
+        assert_eq!(scheduled, RuntimeContactSyncAttempt::CapabilityBlocked);
+        assert_eq!(blocked_contacts, BTreeSet::from([contact.contact_id]));
+        assert!(observation.is_none());
+
+        let restarted = attempt_runtime_contact_sync(
+            &local_state_directory,
+            Duration::ZERO,
+            &mut BTreeMap::new(),
+            &mut BTreeSet::new(),
+            &mut None,
+        )
+        .await?;
+        assert_eq!(restarted, RuntimeContactSyncAttempt::CapabilityBlocked);
+        Ok(())
+    }
+
     #[test]
     fn peer_capability_transport_persisted_selection_is_resume_authority() -> Result<()> {
         let directory = tempfile::tempdir()?;
-        let requester = DeviceIdentity::generate()?;
+        let requester_state_directory = directory.path().join("requester-state");
+        let requester_state = DeviceState::load_or_create(&requester_state_directory)?;
+        let requester = requester_state.identity();
+        let requester_root = AccountRootState::create(directory.path().join("requester-root"))?;
+        let requester_certificate = requester_root.issue_device_certificate(
+            requester.device_id(),
+            requester_state.encryption().public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let requester_device_list =
+            requester_root.publish_device_list(std::slice::from_ref(&requester_certificate))?;
+        requester_state.install_certificate(&requester_certificate)?;
+        requester_state
+            .install_own_authority_snapshot(requester_device_list.authority_snapshot())?;
+        let requester_authority_snapshot = requester_device_list.authority_snapshot().clone();
         let listener = DeviceIdentity::generate()?;
-        let (listener_account_id, listener_certificate, _, listener_directory) =
-            authority_for(&listener)?;
-        let (requester_account_id, _, _, _) = authority_for(&requester)?;
+        let (
+            listener_account_id,
+            listener_certificate,
+            listener_authority_snapshot,
+            listener_directory,
+        ) = authority_for(&listener)?;
+        let requester_account_id = requester_root.account_id();
         let ticket = ConnectionTicket::new_with_publication_channel_epoch_and_sync_policy(
             EndpointAddr::new(SecretKey::generate().public()),
             &listener,
-            listener_certificate,
+            listener_certificate.clone(),
             listener_directory,
             requester_account_id,
             RoutePolicy::DirectOnly,
             4,
             true,
         )?;
-        let evidence = peer_sync_capability_evidence(ticket.sync_transport_capability())?;
-        apply_peer_capability_floor_before_sync(
-            directory.path(),
-            &requester,
-            listener_account_id,
+        let conversation_id = ConversationId::from_label("runtime-persisted-selection-authority");
+        let session_binding = canonical_sync_v2_session_binding(
+            conversation_id,
             listener.device_id(),
-            evidence,
-            PeerCapabilityTransportEvidenceSource::ConnectionTicket,
+            requester.device_id(),
+        );
+        let offer = SignedSyncTransportCandidateOffer::issue(
+            requester,
+            SyncTransportCandidateOfferBinding {
+                listener_capability_id: ticket
+                    .sync_transport_capability()
+                    .context("canonical ticket omitted its sync capability")?
+                    .artifact_id()?,
+                conversation_id: *conversation_id.as_bytes(),
+                listener_account_id,
+                listener_device_id: listener.device_id(),
+                requester_account_id,
+                requester_device_id: requester.device_id(),
+                session_binding: *session_binding.as_bytes(),
+                listener_authority_revision: listener_authority_snapshot.revision(),
+                requester_authority_revision: requester_authority_snapshot.revision(),
+                migration_epoch: 5,
+            },
         )?;
+        let acceptance = SignedSyncTransportCandidateAcceptance::issue(&listener, &offer)?;
+        let selection = PersistedCanonicalSyncV2Selection::new(
+            ticket
+                .sync_transport_capability()
+                .context("canonical ticket omitted its sync capability")?
+                .clone(),
+            offer,
+            acceptance,
+            listener_certificate,
+            listener_authority_snapshot,
+            requester_certificate,
+            requester_authority_snapshot,
+        )?;
+        persist_canonical_sync_v2_selection(&requester_state_directory, &selection)?;
+        let mut stripped_ticket = ticket;
+        stripped_ticket.content.sync_transport_capability = None;
+        stripped_ticket.verify()?;
 
-        let resumed = apply_peer_capability_floor_before_sync(
-            directory.path(),
-            &requester,
+        let resumed = authorize_peer_capability_transport_for_conversation(
+            &requester_state_directory,
+            requester,
+            requester_account_id,
+            conversation_id,
             listener_account_id,
             listener.device_id(),
-            evidence,
-            PeerCapabilityTransportEvidenceSource::PersistedCanonicalSelection,
+            &stripped_ticket,
         )?;
         assert_eq!(
-            resumed.permitted_use,
+            resumed.authorization.permitted_use,
             PeerSyncCapabilityUse::AuthenticatedCanonicalCandidate
         );
-        assert_eq!(resumed.record_sequence, Some(1));
-        assert!(!resumed.changed);
+        assert_eq!(resumed.authorization.record_sequence, Some(1));
+        assert!(resumed.authorization.changed);
         assert_eq!(
-            resumed.evidence_source,
+            resumed.authorization.evidence_source,
             PeerCapabilityTransportEvidenceSource::PersistedCanonicalSelection
+        );
+        let restarted = authorize_peer_capability_transport_for_conversation(
+            &requester_state_directory,
+            requester,
+            requester_account_id,
+            conversation_id,
+            listener_account_id,
+            listener.device_id(),
+            &stripped_ticket,
+        )?;
+        assert_eq!(restarted.authorization.record_sequence, Some(1));
+        assert!(!restarted.authorization.changed);
+        Ok(())
+    }
+
+    #[test]
+    fn runtime_sync_scheduler_skips_blocked_contact_without_starving_next_peer() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let owner = DeviceIdentity::generate()?;
+        let local_account_id = AccountId::from_bytes([1_u8; 32]);
+        let first = SignedRuntimeContact::sign(
+            &owner,
+            local_account_id,
+            AccountId::from_bytes([2_u8; 32]),
+            DeviceId::from_bytes([3_u8; 32]),
+            "runtime-capability-first".to_owned(),
+            ConversationId::from_label("runtime-capability-first"),
+            RoutePolicy::DirectOnly,
+            directory.path().join("first.ticket"),
+        )?;
+        let second = SignedRuntimeContact::sign(
+            &owner,
+            local_account_id,
+            AccountId::from_bytes([4_u8; 32]),
+            DeviceId::from_bytes([5_u8; 32]),
+            "runtime-capability-second".to_owned(),
+            ConversationId::from_label("runtime-capability-second"),
+            RoutePolicy::DirectOnly,
+            directory.path().join("second.ticket"),
+        )?;
+        let mut snapshot = RuntimeStateSnapshot::default();
+        snapshot.contacts.insert(first.contact_id(), first);
+        snapshot.contacts.insert(second.contact_id(), second);
+        let now = tokio::time::Instant::now();
+        let first_selected = select_due_runtime_sync_contact(
+            &snapshot,
+            &BTreeMap::new(),
+            &BTreeSet::new(),
+            now,
+            Duration::from_secs(60),
+        )
+        .context("scheduler omitted its first due contact")?;
+        let mut blocked = BTreeSet::from([first_selected.contact_id()]);
+        let next_selected = select_due_runtime_sync_contact(
+            &snapshot,
+            &BTreeMap::new(),
+            &blocked,
+            now,
+            Duration::from_secs(60),
+        )
+        .context("blocked contact starved the next due peer")?;
+        assert_ne!(next_selected.contact_id(), first_selected.contact_id());
+        blocked.clear();
+        assert!(
+            select_due_runtime_sync_contact(
+                &snapshot,
+                &BTreeMap::new(),
+                &blocked,
+                now,
+                Duration::from_secs(60),
+            )
+            .is_some()
         );
         Ok(())
     }

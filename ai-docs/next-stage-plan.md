@@ -1,24 +1,24 @@
-# Текущая точка: M1.2.7 peer capability two-host rehearsal
+# Текущая точка: M1.2.8 automated runtime enforcement
 
-Статус на 2026-10-19: exact debug binary прошёл три актуальные базовые пары и
-три enforcement-сценария на двух физических Windows-хостах. Unknown
-extension-free first contact сохранил legacy/no-create; authenticated candidate
-pin затем stripping дали durable sequence 1 -> quarantine sequence 2 до
-endpoint; persisted canonical selection resume-ился на `/cbor/2` без fallback.
-Tracked evidence bounded и privacy-safe. Public default остаётся `legacy-only`.
+Статус на 2026-10-19: runtime outbox и scheduled sync используют общий durable
+peer capability decision до materialization/network. Quarantined work не
+попадает в retry/mailbox fallback или busy loop, другие peers не starve, а
+restart заново проверяет Device-signed floor. Persisted canonical selection
+остаётся resume authority, unknown extension-free first contact —
+legacy/no-create. Wire/IPC не изменены, public default остаётся `legacy-only`.
 
-## Следующий этап: M1.2.8 automated runtime sync enforcement
+## Следующий этап: M1.2.9 read-only runtime quarantine observability
 
-- применить тот же единый peer capability decision к runtime outbound queue и
-  scheduled sync до любого endpoint bind, не создавая второй semantic path;
-- quarantined peer не должен попадать в busy retry loop или silently fallback,
-  а bounded privacy-safe runtime observation должна объяснять остановку;
-- selected canonical resume обязан сохранять persisted-selection authority,
-  unknown extension-free runtime first contact — legacy/no-create;
-- проверить crash/restart, очередь нескольких peers и отсутствие network I/O
-  для quarantined item через stable-path Rust harnesses;
-- не добавлять automatic quarantine recovery, не менять wire и оставить
-  public rollout/default `legacy-only`.
+- добавить bounded read-only runtime/desktop представление quarantined
+  queue/contact без раскрытия ticket, endpoint, message body или raw peer IDs;
+- различать durable capability quarantine, process-local scheduler suppression
+  и обычную network retry, не превращая observer в recovery authority;
+- сохранить missing-store/no-create и не заставлять status открывать либо
+  создавать capability DB;
+- проверить restart, несколько peers, pagination/bounds и отсутствие mutation
+  через stable-path harness и fail-closed boundary;
+- не добавлять automatic clear/recovery, не менять wire и оставить public
+  rollout/default `legacy-only`.
 
 # Завершённый расширенный пакет: M1.1.92–M1.2.5
 

@@ -1202,6 +1202,11 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.2.7 подтверждает на двух физических Windows-хостах legacy/no-create,
   durable quarantine до endpoint после stripping и persisted canonical resume
   без fallback одним exact debug binary; public default остаётся legacy-only.
+- [`../docs/RFC-0232-m1208-automated-runtime-enforcement.md`](../docs/RFC-0232-m1208-automated-runtime-enforcement.md) —
+  M1.2.8 применяет тот же durable peer capability floor к runtime outbox и
+  scheduled sync до materialization/network, исключает busy retry и starvation
+  других peers, а после restart заново проверяет durable quarantine; wire/IPC и
+  public default не меняются.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

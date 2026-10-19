@@ -2568,6 +2568,15 @@ signed canonical selection resumed on `/cbor/2` without fallback even when the
 current optional extension was removed. Raw state, tickets, addresses and
 identifiers remain outside Git. The public default remains `legacy-only`.
 
+[`RFC-0232`](docs/RFC-0232-m1208-automated-runtime-enforcement.md) applies the
+same durable decision to queued delivery and scheduled runtime sync. Every
+authenticated endpoint candidate is preflighted before message materialization
+or network use; quarantined work is skipped for the process lifetime without a
+retry or mailbox fallback, then safely rechecked from durable state after
+restart. A blocked contact cannot starve other due contacts. Wire/IPC remain
+unchanged, automatic recovery is absent and the public default is still
+`legacy-only`.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

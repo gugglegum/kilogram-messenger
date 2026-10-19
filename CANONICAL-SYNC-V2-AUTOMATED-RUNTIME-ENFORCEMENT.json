@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.8",
+  "status": "canonical-sync-v2-automated-runtime-enforcement-verified",
+  "implementation": [
+    "apps/kilogram-cli",
+    "crates/kilogram-peer-capability-store",
+    "crates/kilogram-sync-capability"
+  ],
+  "changes_connection_ticket_wire": false,
+  "changes_sync_wire": false,
+  "changes_runtime_ipc": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "shared_authority_boundary": {
+    "one_capability_decision_path": true,
+    "persisted_canonical_selection_is_resume_authority": true,
+    "unknown_extension_free_first_contact": "legacy-compatible-unasserted",
+    "unknown_extension_free_first_contact_creates_store": false
+  },
+  "runtime_outbox_boundary": {
+    "capability_floor_before_message_materialization": true,
+    "capability_floor_before_endpoint_or_network": true,
+    "capability_floor_before_mailbox_fallback": true,
+    "quarantined_item_creates_retry_record": false,
+    "quarantined_item_reselected_in_same_process": false,
+    "restart_rechecks_durable_floor": true
+  },
+  "scheduled_sync_boundary": {
+    "capability_floor_before_sync_attempt": true,
+    "quarantined_contact_reselected_in_same_process": false,
+    "capability_block_stops_candidate_failover": true,
+    "blocked_contact_starves_other_contacts": false,
+    "restart_rechecks_durable_floor": true
+  },
+  "bounded_observation": {
+    "outbox_status": "capability-blocked",
+    "scheduled_sync_status": "capability-blocked",
+    "network_attempted_false_is_reported_for_preflight_block": true,
+    "prints_ticket_body": false,
+    "prints_endpoint_address": false,
+    "prints_message_content": false
+  },
+  "activation_boundary": {
+    "automatic_quarantine_recovery_enabled": false,
+    "runtime_ipc_quarantine_mutation_enabled": false,
+    "public_canonical_rollout_enabled": false
+  },
+  "verification": {
+    "stable_path_rust_harness_required_on_windows": true,
+    "quarantine_before_materialization_tested": true,
+    "restart_recheck_tested": true,
+    "multiple_contact_fairness_tested": true,
+    "legacy_no_create_tested": true
+  },
+  "non_claims": [
+    "generic-first-contact-extension-stripping-detection",
+    "automatic-quarantine-recovery",
+    "runtime-ipc-quarantine-control",
+    "whole-store-rollback-resistance-without-external-witness",
+    "public-rollout-eligibility",
+    "independent-security-review-completed"
+  ],
+  "next": [
+    "read-only-runtime-quarantine-observability",
+    "explicit-local-quarantine-recovery-design",
+    "independent-protocol-and-security-review"
+  ]
+}

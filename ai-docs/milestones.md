@@ -7519,3 +7519,25 @@ correlation visible, Windows-only field evidence, independent security audit
 - dedicated fail-closed boundary и self-test добавлены, aggregate readiness
   расширен до 133/133; wire, runtime IPC и public default `legacy-only` не
   изменены, release/ZIP/tag не создавались.
+
+### M1.2.8 — automated runtime peer capability enforcement: принят локально
+
+- runtime outbox проверяет все authenticated endpoint candidates общим
+  conversation-scoped capability authorizer после membership, но до открытия
+  sealed body, ratchet/event materialization, network и mailbox fallback;
+- quarantine сохраняет queue item неизменным, не создаёт retry и исключает его
+  из повторного выбора до конца процесса; после restart durable floor
+  проверяется снова до любых side effects;
+- scheduled sync выполняет тот же preflight до вызова `sync`, прекращает
+  candidate failover при capability block и process-locally пропускает этот
+  contact, не блокируя выбор других due peers;
+- persisted canonical selection продолжает быть resume authority; unknown
+  extension-free runtime first contact остаётся legacy/no-create даже при уже
+  существующей capability DB другого peer;
+- bounded diagnostics различают `capability-blocked` и подтверждают
+  `network_attempted=false` для preflight block без ticket, endpoint или body;
+- focused stable-path tests и fail-closed boundary закрывают materialization,
+  restart и multi-contact fairness; полный stable-path CLI regression прошёл
+  99/99 binary и 1/1 library test, accepted-tag readiness — 134/134;
+- wire, runtime IPC, automatic recovery и public default `legacy-only` не
+  изменены; release/ZIP/tag и второй физический хост не использовались.

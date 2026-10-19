@@ -5103,3 +5103,28 @@ Hosted follow-up:
   secret. No release build, ZIP/archive or tag was created.
 - Aggregate readiness is 133/133. M1.2.8 should bring the same enforcement into
   automated runtime outbound sync without automatic quarantine recovery.
+
+## M1.2.8 automated runtime enforcement environment (2026-10-19)
+
+- Implementation remains inside the ordinary `kilogram-cli` runtime and reuses
+  the M1.2.6 conversation-scoped capability authorizer and durable
+  `kilogram-peer-capability-store`; there is no dependency or wire-format bump.
+- Outbox preflight is ordered before sealed-body open, ratchet/event
+  materialization, endpoint use and mailbox fallback. Scheduled sync preflights
+  every authority-current endpoint candidate before invoking `sync`.
+- Process-local blocked queue/contact sets prevent busy retry and let unrelated
+  contacts progress. They are deliberately not durable recovery authority;
+  restart re-evaluates the Device-signed durable floor.
+- Focused Rust tests are compiled with `cargo test --no-run` and executed only
+  through `scripts/run-cargo-tests-stable.ps1`, keeping stable Windows Firewall
+  executable paths. Build profile remains debug/verification with Cargo jobs 2;
+  no release build, ZIP/archive, tag or second-host run is required.
+- The new boundary is
+  `verify-kilogram-canonical-sync-v2-automated-runtime-enforcement-boundary.ps1`;
+  its normal and mutation self-test modes passed. Focused stable tests passed
+  5 peer-capability + 1 outbox/restart + 1 scheduler/fairness cases.
+- Full stable-path CLI regression passed 99/99 binary and 1/1 library tests in
+  596.81 seconds. Accepted-tag readiness passed 134/134 against immutable
+  `M1.0.0`, including rustfmt and workspace-wide locked/offline strict Clippy.
+  Runtime IPC, automatic quarantine recovery and the public `legacy-only`
+  default remain unchanged.

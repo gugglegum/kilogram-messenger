@@ -45,6 +45,7 @@ function Assert-Contract {
         'PersistedCanonicalSelection',
         'fn peer_sync_capability_evidence(',
         'fn apply_peer_capability_floor_before_sync(',
+        'fn authorize_peer_capability_transport_for_conversation(',
         'durably apply authenticated peer capability before sync transport selection',
         'peer sync capability floor is quarantined:',
         'peer_capability_transport_unknown_legacy_does_not_create_store',
@@ -55,7 +56,7 @@ function Assert-Contract {
 
     $syncStart = $Cli.IndexOf('async fn sync(', [StringComparison]::Ordinal)
     $enforcement = $Cli.IndexOf(
-        'let peer_capability_authorization = apply_peer_capability_floor_before_sync(',
+        'let peer_capability_context = authorize_peer_capability_transport_for_conversation(',
         $syncStart,
         [StringComparison]::Ordinal
     )
