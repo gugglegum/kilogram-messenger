@@ -3,6 +3,7 @@ param(
     [switch]$SelfTest,
     [switch]$VacuumAndWarm,
     [switch]$PruneVerification,
+    [switch]$PruneDebugIncremental,
     [int]$CargoJobs = 0,
     [double]$WarningGiB = 40
 )
@@ -13,8 +14,8 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'cargo-resource-policy.ps1')
 $cargoJobsResolved = Set-KilogramCargoResourcePolicy -RequestedJobs $CargoJobs
 
-if ($VacuumAndWarm -and $PruneVerification) {
-    throw 'Choose either -VacuumAndWarm or -PruneVerification, not both.'
+if ($VacuumAndWarm -and ($PruneVerification -or $PruneDebugIncremental)) {
+    throw 'VacuumAndWarm cannot be combined with a targeted prune.'
 }
 if ($WarningGiB -le 0) {
     throw 'WarningGiB must be positive.'
@@ -64,8 +65,22 @@ function Remove-VerifiedDirectory([string]$Path, [string]$ExpectedName) {
     }
 }
 
+function Remove-VerifiedDebugIncrementalDirectory {
+    $expectedParent = [System.IO.Path]::GetFullPath((Join-Path $target 'debug'))
+    $resolved = [System.IO.Path]::GetFullPath((Join-Path $expectedParent 'incremental'))
+    $parent = [System.IO.Directory]::GetParent($resolved)
+    if ($null -eq $parent -or
+        -not $parent.FullName.Equals($expectedParent, [System.StringComparison]::OrdinalIgnoreCase) -or
+        -not ([System.IO.Path]::GetFileName($resolved).Equals('incremental', [System.StringComparison]::OrdinalIgnoreCase))) {
+        throw "Refusing unexpected debug incremental cache path: $resolved"
+    }
+    if (Test-Path -LiteralPath $resolved) {
+        Remove-Item -LiteralPath $resolved -Recurse -Force
+    }
+}
+
 if ($SelfTest) {
-    if ($VacuumAndWarm -or $PruneVerification) {
+    if ($VacuumAndWarm -or $PruneVerification -or $PruneDebugIncremental) {
         throw 'SelfTest cannot be combined with cache mutation switches.'
     }
     $selfTestRoot = Join-Path ([System.IO.Path]::GetTempPath()) (
@@ -125,6 +140,9 @@ try {
     elseif ($PruneVerification) {
         Remove-VerifiedDirectory (Join-Path $target 'verification') 'verification'
     }
+    if ($PruneDebugIncremental) {
+        Remove-VerifiedDebugIncrementalDirectory
+    }
 
     $rows = foreach ($entry in @(
         @{ Name = 'debug-incremental'; Path = (Join-Path $target 'debug\incremental') },
@@ -148,10 +166,11 @@ try {
     $aboveWarning = $total.Bytes -gt ($WarningGiB * 1GB)
     Write-Output "cache_above_warning=$aboveWarning".ToLowerInvariant()
     if ($aboveWarning) {
-        Write-Warning "Cargo target exceeds $WarningGiB GiB. Keep the fast dev/release cache unless space is needed; use -PruneVerification for the disposable test profile or -VacuumAndWarm for an explicit full reset."
+        Write-Warning "Cargo target exceeds $WarningGiB GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations, -PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset."
     }
     Write-Output "vacuum_and_warm=$($VacuumAndWarm.IsPresent)".ToLowerInvariant()
     Write-Output "verification_pruned=$($PruneVerification.IsPresent)".ToLowerInvariant()
+    Write-Output "debug_incremental_pruned=$($PruneDebugIncremental.IsPresent)".ToLowerInvariant()
 }
 finally {
     Pop-Location
