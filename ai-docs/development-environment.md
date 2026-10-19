@@ -5377,3 +5377,23 @@ Hosted follow-up:
 - No product network operation, second host, release build, ZIP/archive, tag
   or automatic GitHub build was used. Active IPC remains v33/domain v14 and
   public sync default remains `legacy-only`.
+
+## M1.2.19 durable old-history recovery consent environment (2026-10-20)
+
+- Added `kilogram-peer-history-recovery-consent`, a separate owner-bound redb
+  store with immediate durability, immutable source-Device-signed records and
+  one exact head per consumed re-enrollment transition.
+- First commit reuses the M1.2.18 verifier over the live authority,
+  memberships, body-free inventory, ranges, checkpoints and consumed
+  transition. Exact committed replay is checked before live expiry so durable
+  evidence remains idempotently readable after the original plan expires.
+- Windows tests were compiled without execution and launched only through
+  `scripts/run-cargo-tests-stable.ps1` at the fixed executable path, debug/test
+  profile and two Cargo jobs. All six store tests passed.
+- Dedicated boundary verification rejects 10/10 mutations. Accepted-tag
+  readiness passes 145/145 against immutable `M1.0.0`, including rustfmt and
+  workspace-wide locked/offline strict Clippy.
+- No product network operation, second host, release build, ZIP/archive, tag
+  or automatic GitHub build was used. Whole-database rollback detection
+  without an external witness is not claimed; active IPC remains v33/domain
+  v14 and public sync default remains `legacy-only`.

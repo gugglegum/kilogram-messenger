@@ -13,6 +13,7 @@ members = [
     "crates/kilogram-mailbox-provisioning",
     "crates/kilogram-peer-capability-store",
     "crates/kilogram-peer-history-recovery",
+    "crates/kilogram-peer-history-recovery-consent",
     "crates/kilogram-peer-reenrollment",
     "crates/kilogram-peer-reenrollment-acceptance",
     "crates/kilogram-peer-reenrollment-runtime",

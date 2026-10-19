@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.19",
+  "status": "durable-old-history-recovery-consent-store-verified",
+  "contract_source": "M1.2.18",
+  "implementation": [
+    "crates/kilogram-peer-history-recovery-consent",
+    "crates/kilogram-peer-history-recovery"
+  ],
+  "changes_connection_ticket_wire": false,
+  "changes_sync_wire": false,
+  "changes_active_runtime_ipc": false,
+  "changes_desktop_runtime_authority": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "store": {
+    "database_file": "old-history-recovery-consent-v1.redb",
+    "separate_from_reenrollment_stores": true,
+    "owner_account_bound": true,
+    "owner_device_bound": true,
+    "immediate_durability": true,
+    "immutable_signed_records": true,
+    "single_head_per_transition": true,
+    "max_records": 4096,
+    "max_record_bytes": 98304,
+    "max_head_bytes": 1024
+  },
+  "first_commit": {
+    "reverifies_signed_plan": true,
+    "reverifies_consumed_transition": true,
+    "reverifies_current_authority": true,
+    "reverifies_memberships": true,
+    "reverifies_body_free_inventory": true,
+    "reverifies_ranges_and_checkpoints": true,
+    "requires_unexpired_plan": true,
+    "atomic_record_and_head": true
+  },
+  "replay": {
+    "exact_replay_idempotent": true,
+    "exact_committed_replay_after_expiry": true,
+    "competing_plan_rejected": true,
+    "foreign_owner_rejected": true,
+    "fork_and_orphan_rejected": true,
+    "corruption_rejected": true,
+    "new_existing_database_never_repaired": true
+  },
+  "observation": {
+    "read_only_open_existing": true,
+    "missing_store_created": false,
+    "message_bodies_visible": false,
+    "raw_identity_visible": false,
+    "filesystem_paths_visible": false,
+    "network_coordinates_visible": false,
+    "execution_authorized": false
+  },
+  "execution": {
+    "rewrap_or_transfer_performed": false,
+    "checkpoint_mutation_performed": false,
+    "network_opened": false,
+    "active_ipc_command_added": false,
+    "desktop_control_added": false,
+    "automatic_recovery": false
+  },
+  "verification": {
+    "durable_store_tests": 6,
+    "stable_path_rust_harness_required_on_windows": true,
+    "boundary_self_test_and_negative_mutations": "verified",
+    "m1_readiness": "145/145",
+    "second_host_required": false,
+    "product_network_executed": false,
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false
+  },
+  "non_claims": [
+    "whole-database-rollback-detection-without-external-witness",
+    "history-transfer-execution",
+    "automatic-history-rewrap",
+    "multi-source-recovery-scheduling",
+    "desktop-history-recovery-authority",
+    "public-rollout-eligibility",
+    "independent-security-review-completed"
+  ],
+  "next": [
+    "bounded-resumable-single-source-recovery-execution",
+    "multi-source-recovery-scheduling",
+    "independent-protocol-and-security-review"
+  ]
+}

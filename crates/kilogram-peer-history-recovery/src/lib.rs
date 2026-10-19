@@ -825,6 +825,22 @@ impl SignedOldHistoryRecoveryPlan {
         self.content.reenrollment.transition_id
     }
 
+    pub fn acceptance_receipt_id(&self) -> [u8; 32] {
+        self.content.reenrollment.acceptance_receipt_id
+    }
+
+    pub fn history_account_id(&self) -> AccountId {
+        self.content.reenrollment.history_account_id
+    }
+
+    pub fn history_authority_revision(&self) -> u64 {
+        self.content.reenrollment.history_authority_revision
+    }
+
+    pub fn history_authority_digest(&self) -> [u8; 32] {
+        self.content.reenrollment.history_authority_digest
+    }
+
     pub fn source_device_id(&self) -> DeviceId {
         self.content.source_device_id
     }
@@ -833,8 +849,24 @@ impl SignedOldHistoryRecoveryPlan {
         self.content.reenrollment.replacement_device_id
     }
 
+    pub fn source_claim_id(&self) -> [u8; 32] {
+        self.content.source_claim_id
+    }
+
+    pub fn inventory_id(&self) -> [u8; 32] {
+        self.content.inventory_id
+    }
+
     pub fn selection_count(&self) -> usize {
         self.content.selections.len()
+    }
+
+    pub fn prepared_at_unix_seconds(&self) -> u64 {
+        self.content.prepared_at_unix_seconds
+    }
+
+    pub fn expires_at_unix_seconds(&self) -> u64 {
+        self.content.expires_at_unix_seconds
     }
 
     #[allow(clippy::too_many_arguments)]

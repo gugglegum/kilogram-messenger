@@ -1,34 +1,30 @@
-# Текущая точка: M1.2.18 завершён, следующий M1.2.19
+# Текущая точка: M1.2.19 завершён, следующий M1.2.20
 
-Статус на 2026-10-20: peer/device re-enrollment и доступ replacement Device к
-старой читаемой истории теперь являются двумя независимыми полномочиями.
-Новый pure planner принимает только Device-signed body-free claims источников,
-bounded range/checkpoint inventory и уже `consumed` fresh-start transition.
-Divergent claims остаются видимыми, но блокируют plan. Content-addressed plan
-exact-связан с replacement Device, Account authority, membership, source,
-ranges и checkpoints; его отдельно подтверждает и подписывает Device-владелец
-истории фразой `RECOVER HISTORY`. Focused stable regression прошёл 6/6,
-boundary отклонил 10/10 ослаблений, accepted-tag readiness — 144/144.
-Transfer/rewrap/store/network/desktop/IPC не добавлялись; IPC остаётся
-v33/domain v14, public default — `legacy-only`.
+Статус на 2026-10-20: отдельное согласие владельца старой читаемой истории
+теперь сохраняется в owner Account/Device-bound redb до любого исполнения.
+Первая запись повторно проверяет signed plan и полный live context, после чего
+immutable record и единственный transition head фиксируются одной `Immediate`
+транзакцией. Exact committed replay остаётся идемпотентным после expiry;
+competing plan, foreign owner, fork/orphan и corruption fail closed. Focused
+stable regression прошёл 6/6, boundary отклонил 10/10 ослаблений,
+accepted-tag readiness — 145/145. Read-only status body-free и не разрешает
+execution; IPC остаётся v33/domain v14, public default — `legacy-only`.
 
-## Следующий этап: M1.2.19 durable old-history recovery consent
+## Следующий этап: M1.2.20 bounded resumable single-source recovery execution
 
-- хранить подписанный old-history recovery plan в отдельной owner-bound redb,
-  не смешивая его с re-enrollment acceptance и runtime transition stores;
-- перед первой durable записью повторно exact-проверять source Device,
-  replacement Device, current authority, memberships, body-free inventory,
-  checkpoints и consumed transition;
-- одной immediate-durability транзакцией записывать immutable consent record и
-  единственный current head. Exact replay должен быть идемпотентен; competing
-  plan, fork, rollback, foreign owner и corruption должны fail closed;
-- expiry ограничивает первый commit, но уже принятый exact record остаётся
-  проверяемым после expiry и перезапуска;
-- предоставить только bounded read-only status без message bodies, raw
-  identity, путей или network coordinates;
-- actual rewrap/transfer, checkpoint advance, multi-source scheduler, active
-  IPC и desktop execution оставить отдельным последующим этапам. Wire, public
-  default, release/ZIP/tag и automatic GitHub build не менять.
+- начинать execution только из exact durable consent M1.2.19, повторно
+  проверяя record/head, signed plan, owner/recipient и неизменный live context;
+- использовать существующий authenticated same-account history-rewrap format,
+  не создавая второй wire/encryption protocol и не сохраняя plaintext;
+- в отдельном append-only execution journal exact-связать consent, source,
+  conversation range, input inventory, output bundle и checkpoint transition;
+- обрабатывать bounded chunks и делать crash/restart resume идемпотентным:
+  replay уже committed chunk не должен повторно раскрывать или продвигать
+  history, divergent output/checkpoint должен fail closed;
+- сначала доказать local/offline single-source execution и privacy-safe status.
+  Multi-source scheduler, network delivery, active IPC и desktop controls
+  оставить отдельными этапами;
+- wire, public default, release/ZIP/tag и automatic GitHub build не менять.
 
 # Завершённый расширенный пакет: M1.1.92–M1.2.5
 

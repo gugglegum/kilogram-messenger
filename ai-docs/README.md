@@ -1231,6 +1231,11 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.2.14 задаёт dormant bounded signed IPC contract для раздельных
   inspect/plan/approve/accept/status стадий, privacy-safe UI projection и
   отдельного old-history rewrap status, не меняя active runtime IPC v31.
+- [`../docs/RFC-0243-m1219-durable-old-history-recovery-consent.md`](../docs/RFC-0243-m1219-durable-old-history-recovery-consent.md) —
+  M1.2.19 сохраняет exact source-owner consent в отдельной Account/Device-bound
+  immediate-durability redb. First commit повторно проверяет весь live context,
+  exact replay после expiry идемпотентен, а competing/fork/orphan/corruption
+  fail closed; status body-free и не даёт execution authority.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

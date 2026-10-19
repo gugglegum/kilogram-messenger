@@ -7802,3 +7802,24 @@ correlation visible, Windows-only field evidence, independent security audit
   workspace-wide locked/offline strict Clippy. Planner не имеет store,
   transfer/rewrap, network, desktop или active IPC authority; wire/default
   `legacy-only` не менялись.
+
+### M1.2.19 — durable old-history recovery consent: принят локально
+
+- отдельная `old-history-recovery-consent-v1.redb` exact-привязана к Account и
+  source Device и не смешивается с acceptance/runtime/capability stores;
+- первая durable запись повторно проверяет signed plan, consumed transition,
+  current authority, memberships, body-free inventory, ranges, checkpoints и
+  expiry; immutable signed record и transition head записываются одной
+  immediate-durability транзакцией;
+- exact replay уже committed plan идемпотентен даже после его expiry, но
+  competing plan для того же transition, foreign owner, fork/orphan,
+  corruption и incomplete metadata отклоняются без восстановления данных;
+- read-only open existing не создаёт store и показывает только artifact IDs,
+  scoped opaque Device tokens, bounded count/time и expired flag. Message
+  bodies, raw identity, paths, endpoints и execution authority отсутствуют;
+- stable-path regression прошёл 6/6, dedicated boundary отклонил 10/10
+  mutations, accepted-tag readiness прошёл 145/145 с rustfmt и
+  workspace-wide locked/offline strict Clippy;
+- whole-DB rollback без external monotonic witness остаётся честным non-claim.
+  Transfer/rewrap/checkpoint advance, network, IPC и desktop не добавлялись;
+  wire/default `legacy-only` не менялись.

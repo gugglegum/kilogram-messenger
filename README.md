@@ -2634,6 +2634,13 @@ and a content-addressed plan requires a separate history-owner signature over
 the exact authority, membership, recipient, source, ranges and checkpoints.
 No transfer, rewrap, store, network or active IPC authority is included.
 
+[`RFC-0243`](docs/RFC-0243-m1219-durable-old-history-recovery-consent.md)
+persists that exact source-owner consent in a separate Account/Device-bound
+immediate-durability store. First commit rechecks the complete live context;
+exact replay remains idempotent after expiry, while competing plans, foreign
+owners, orphaned records and corruption fail closed. The read-only projection
+contains no message bodies or execution authority.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected
