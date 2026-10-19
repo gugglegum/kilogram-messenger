@@ -8,8 +8,12 @@ M1.2.6 moved the durable peer capability floor into the real outbound sync
 path. This milestone requires the exact debug executable to exercise that path
 between two physical Windows hosts through stable executable names.
 
-The field harness first runs the established canonical sync v2 two-host
-rehearsal. It then reuses only its disposable states to verify four properties:
+The field harness first runs the three established basic canonical sync v2
+two-host scenarios to prepare authenticated disposable pairs. It deliberately
+does not replay the historical M1.1.84 containment expectation: after M1.2.6,
+a fresh conversation cannot distinguish intentional capability suppression
+from stripping once the peer capability floor was pinned. It then reuses the
+three disposable pair states to verify four properties:
 
 1. an extension-free first-contact ticket completes legacy sync without
    creating a capability store;

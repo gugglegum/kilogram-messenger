@@ -460,11 +460,11 @@ $binaryHash = (Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash.ToLower
 
 try {
     Write-Output 'Running the established two-host canonical baseline...'
-    $baseLines = @(& $baseHarness -BinaryPath $binary -OutputDirectory $baseOutput -SourceRevision $SourceRevision -RemoteHost $RemoteHost -RemoteUser $RemoteUser -PlinkPath $PlinkPath -PscpPath $PscpPath -RunId $RunId 2>&1)
-    if ('status=canonical-sync-v2-two-host-activation-rehearsal-verified' -notin @($baseLines | ForEach-Object { [string]$_ })) {
-        throw "base two-host rehearsal did not report success: $($baseLines -join [Environment]::NewLine)"
+    $baseLines = @(& $baseHarness -BinaryPath $binary -OutputDirectory $baseOutput -SourceRevision $SourceRevision -RemoteHost $RemoteHost -RemoteUser $RemoteUser -PlinkPath $PlinkPath -PscpPath $PscpPath -RunId $RunId -BasicPairPreparationOnly 2>&1)
+    if ('status=canonical-sync-v2-two-host-basic-pairs-prepared' -notin @($baseLines | ForEach-Object { [string]$_ })) {
+        throw "base two-host pair preparation did not report success: $($baseLines -join [Environment]::NewLine)"
     }
-    $baseEvidencePath = Join-Path $baseOutput 'M1184-TWO-HOST-EVIDENCE.json'
+    $baseEvidencePath = Join-Path $baseOutput 'M1207-BASIC-PAIR-EVIDENCE.json'
     $baseEvidence = Get-Content -LiteralPath $baseEvidencePath -Raw | ConvertFrom-Json
     if ([string]$baseEvidence.source_revision -cne $SourceRevision -or
         [string]$baseEvidence.binary.sha256 -cne $binaryHash -or
@@ -511,9 +511,9 @@ try {
             transport = 'iroh-direct-lan'
             ssh_is_control_channel_only = $true
         }
-        base_rehearsal = [ordered]@{
-            status = 'canonical-sync-v2-two-host-activation-rehearsal-verified'
-            scenarios = 6
+        base_pair_preparation = [ordered]@{
+            status = 'canonical-sync-v2-two-host-basic-pairs-prepared'
+            scenarios = 3
         }
         scenarios = @($legacy, $pinAndQuarantine, $selectedResume)
         privacy = [ordered]@{

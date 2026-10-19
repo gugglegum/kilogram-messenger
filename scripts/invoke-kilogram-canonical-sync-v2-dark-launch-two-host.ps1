@@ -7,7 +7,8 @@ param(
     [string] $RemoteUser = 'test',
     [string] $PlinkPath = 'C:\Program Files\Utils\plink.exe',
     [string] $PscpPath = 'C:\Program Files\Utils\pscp.exe',
-    [string] $RunId = ('m1184-field-' + (Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ'))
+    [string] $RunId = ('m1184-field-' + (Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ')),
+    [switch] $BasicPairPreparationOnly
 )
 
 Set-StrictMode -Version Latest
@@ -499,6 +500,27 @@ try {
         Invoke-BasicScenario '01-default-default' 'default-default'
         Invoke-BasicScenario '02-optin-default' 'optin-default'
         Invoke-BasicScenario '03-optin-optin' 'optin-optin'
+    )
+    if ($BasicPairPreparationOnly) {
+        $manifest = [ordered]@{
+            schema_version = 1
+            milestone = 'M1.2.7-fixture'
+            status = 'canonical-sync-v2-two-host-basic-pairs-prepared'
+            source_revision = $SourceRevision
+            run_id = $RunId
+            collected_at_utc = (Get-Date).ToUniversalTime().ToString('o')
+            binary = [ordered]@{ name = 'kilogram-cli.exe'; sha256 = $binaryHash; bytes = [int64]$binaryItem.Length; profile = 'debug'; target = 'x86_64-pc-windows-msvc' }
+            topology = [ordered]@{ alice_host = $remoteMachine; bob_host = [Environment]::MachineName; distinct_physical_hosts = $true; alice_binary_sha256 = $remoteHash; bob_binary_sha256 = $binaryHash; transport = 'iroh-direct-lan' }
+            public_default = 'legacy-only'
+            scenarios = $scenarios
+        }
+        $manifestPath = Join-Path $output 'M1207-BASIC-PAIR-EVIDENCE.json'
+        [IO.File]::WriteAllText($manifestPath, ($manifest | ConvertTo-Json -Depth 12), [Text.UTF8Encoding]::new($false))
+        Write-Output "evidence_manifest=$manifestPath"
+        Write-Output 'status=canonical-sync-v2-two-host-basic-pairs-prepared'
+        return
+    }
+    $scenarios += @(
         Invoke-RestartContainmentScenario
         Invoke-SelectedLossScenario
         Invoke-RollbackScenario
