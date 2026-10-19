@@ -98,11 +98,11 @@ function Assert-RetirementBoundary {
     }
 
     foreach ($required in @(
-        'const IPC_VERSION: u8 = 32;',
-        'kilogram:runtime-ipc-descriptor:v13\0',
+        'const IPC_VERSION: u8 = 33;',
+        'kilogram:runtime-ipc-descriptor:v14\0',
         'old_version.content.version = 30;',
         'kilogram:runtime-ipc-descriptor:v11\0',
-        'version_31_request_is_rejected_before_actor_dispatch',
+        'version_32_request_is_rejected_before_actor_dispatch',
         'assert!(old_version.verify().is_err());'
     )) {
         if ($RuntimeSource.IndexOf($required, [StringComparison]::Ordinal) -lt 0) {
@@ -149,13 +149,13 @@ function Assert-RetirementBoundary {
         -not [bool]$Completion.scope.canonical_target_complete -or
         -not [bool]$Completion.scope.active_postcard_adapter_complete -or
         [bool]$Completion.scope.canonical_cbor_active -or
-        [int]$Completion.active_postcard.version -ne 32 -or
+        [int]$Completion.active_postcard.version -ne 33 -or
         [string]$Completion.active_postcard.descriptor_signature_domain -cne
-            'kilogram:runtime-ipc-descriptor:v13\0' -or
-        $activeCommands.Count -ne 32 -or $activeResponses.Count -ne 31 -or
+            'kilogram:runtime-ipc-descriptor:v14\0' -or
+        $activeCommands.Count -ne 33 -or $activeResponses.Count -ne 32 -or
         @($Completion.postcard_only_activation_blockers).Count -ne 0 -or
         @($Completion.remaining_canonical_work).Count -ne 0) {
-        throw 'completion inventory does not describe complete active Postcard v32'
+        throw 'completion inventory does not describe complete active Postcard v33'
     }
     foreach ($retired in $retiredCommands) {
         if ($retired -cin @($activeCommands | ForEach-Object { [string]$_.variant })) {
@@ -165,9 +165,9 @@ function Assert-RetirementBoundary {
 
     if ([string]$Schema.milestone -cne 'M1.1.49' -or
         [string]$Schema.activation.current_runtime_encoding -cne
-            'postcard-v32-with-json-descriptor-v13' -or
+            'postcard-v33-with-json-descriptor-v14' -or
         -not [bool]$Schema.activation.current_runtime_changed -or
-        @($Schema.semantic_rules).Count -ne 185 -or
+        @($Schema.semantic_rules).Count -ne 192 -or
         @($Schema.remaining_runtime_ipc_surface).Count -ne 0 -or
         'complete-all-runtime-ipc-commands-and-results' -cin
             @($Schema.activation.required_before_activation)) {
@@ -193,11 +193,11 @@ function Assert-RetirementBoundary {
     if ($compatibilitySurface.Count -ne 1 -or
         [int](@($compatibilitySurface[0].bindings | Where-Object {
             [string]$_.symbol -ceq 'IPC_VERSION'
-        })[0].value) -ne 32 -or
+        })[0].value) -ne 33 -or
         [string](@($compatibilitySurface[0].bindings | Where-Object {
             [string]$_.symbol -ceq 'DESCRIPTOR_SIGNATURE_DOMAIN'
-        })[0].value) -cne 'kilogram:runtime-ipc-descriptor:v13\0') {
-        throw 'protocol compatibility registry does not describe runtime IPC v32/v13'
+        })[0].value) -cne 'kilogram:runtime-ipc-descriptor:v14\0') {
+        throw 'protocol compatibility registry does not describe runtime IPC v33/v14'
     }
 
     $normalizedRfc = [regex]::Replace($Rfc, '\s+', ' ')

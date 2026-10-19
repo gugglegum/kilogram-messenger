@@ -227,6 +227,15 @@ impl SignedPeerReenrollmentAcceptanceReceipt {
         self.content.tombstone_plan_id
     }
 
+    pub fn matches_tombstone(
+        &self,
+        tombstone: &SignedPeerReenrollmentTombstone,
+    ) -> Result<bool, PeerReenrollmentAcceptanceStoreError> {
+        let encoded = tombstone.encode()?;
+        Ok(tombstone.plan_id()? == self.content.tombstone_plan_id
+            && tombstone_digest(&encoded) == self.content.tombstone_artifact_digest)
+    }
+
     pub fn replacement_peer_device_id(&self) -> DeviceId {
         self.content.replacement_peer_device_id
     }

@@ -204,7 +204,7 @@ assert(schema.milestone === "M1.1.49" && schema.status === "candidate-not-active
   schema.changes_active_wire === false, "runtime IPC schema header changed");
 assert(schema.cddl.path === "CANONICAL-RUNTIME-IPC.cddl" &&
   schema.cddl.root_rule === "kilogram-runtime-ipc-v1", "runtime IPC CDDL binding changed");
-assert(schema.activation.current_runtime_encoding === "postcard-v32-with-json-descriptor-v13" &&
+assert(schema.activation.current_runtime_encoding === "postcard-v33-with-json-descriptor-v14" &&
   schema.activation.current_runtime_changed === true, "active runtime IPC changed");
 assert(vectors.schema_version === 1 && vectors.profile === schema.profile &&
   vectors.activation_status === "not-active", "runtime IPC vector header changed");

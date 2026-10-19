@@ -148,15 +148,15 @@ function Assert-Contract {
 
     Assert-ContainsAll $CrateManifest @('blake3.workspace = true') 'runtime IPC crate manifest'
     Assert-ContainsAll $Lib @(
-        'const IPC_VERSION: u8 = 32;',
-        'kilogram:runtime-ipc-descriptor:v13',
+        'const IPC_VERSION: u8 = 33;',
+        'kilogram:runtime-ipc-descriptor:v14',
         'mod peer_reenrollment_contract;',
         'pub use peer_reenrollment_contract::*;',
         'PeerReenrollmentRead {'
     ) 'active runtime IPC library'
 
     Assert-ContainsAll $Contract @(
-        'RUNTIME_IPC_PEER_REENROLLMENT_CONTRACT_VERSION: u8 = 1',
+        'RUNTIME_IPC_PEER_REENROLLMENT_CONTRACT_VERSION: u8 = 2',
         'MAX_RUNTIME_IPC_PEER_REENROLLMENT_REQUEST_BYTES: usize = 4 * 1024',
         'MAX_RUNTIME_IPC_PEER_REENROLLMENT_RESPONSE_BYTES: usize = 16 * 1024',
         'pub enum RuntimeIpcPeerReenrollmentCommand',
@@ -164,7 +164,8 @@ function Assert-Contract {
         'RuntimeIpcPeerReenrollmentExplicitApproval::UserConfirmed',
         'confirmation phrase does not match the plan ID',
         'pub enum RuntimeIpcPeerReenrollmentStatus',
-        'MissingInvitation', 'UnsafeOrDivergent', 'AcceptedRestartRequired', 'Consumed',
+        'MissingInvitation', 'UnsafeOrDivergent', 'AcceptanceIncomplete',
+        'AcceptedRestartRequired', 'Consumed',
         'pub struct SignedRuntimeIpcPeerReenrollmentResponse',
         'request_digest: request.request_digest()?',
         'runtime_descriptor_binding: descriptor_binding(descriptor)?',
@@ -180,6 +181,7 @@ function Assert-Contract {
         'signed_response_exact_binds_request_descriptor_and_current_device',
         'stage_skips_and_inconsistent_durable_claims_fail_closed',
         'process_local_suppression_never_substitutes_for_durable_quarantine',
+        'incomplete_acceptance_is_observable_but_never_restart_authority',
         'history_rewrap_is_explicit_and_independent_from_reenrollment',
         'public_projection_contains_no_raw_identity_transport_or_message_fields'
     ) 'peer re-enrollment IPC contract'

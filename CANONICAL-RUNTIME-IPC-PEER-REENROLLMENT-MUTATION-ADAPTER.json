@@ -1,0 +1,136 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.16",
+  "status": "canonical-runtime-ipc-peer-reenrollment-mutation-adapter-verified",
+  "contract_source": "M1.2.14",
+  "read_adapter_source": "M1.2.15",
+  "implementation": [
+    "apps/kilogram-cli",
+    "crates/kilogram-peer-reenrollment",
+    "crates/kilogram-peer-reenrollment-acceptance",
+    "crates/kilogram-peer-reenrollment-runtime",
+    "crates/kilogram-runtime-ipc"
+  ],
+  "changes_connection_ticket_wire": false,
+  "changes_sync_wire": false,
+  "changes_active_runtime_ipc": true,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "runtime_ipc": {
+    "command": "PeerReenrollmentMutation",
+    "response": "PeerReenrollmentMutation",
+    "allowed_nested_commands": [
+      "plan",
+      "approve",
+      "accept"
+    ],
+    "rejected_nested_commands": [
+      "inspect",
+      "status"
+    ],
+    "version": 33,
+    "descriptor_signature_domain": "kilogram:runtime-ipc-descriptor:v14\\0",
+    "previous_version": 32,
+    "previous_descriptor_signature_domain": "kilogram:runtime-ipc-descriptor:v13\\0",
+    "migration": "exact-version-hard-cut-for-co-installed-binaries",
+    "dual_reader": false,
+    "maximum_nested_request_bytes": 4096,
+    "maximum_signed_response_bytes": 16384
+  },
+  "authority": {
+    "mutation_runs_inside_active_runtime": true,
+    "client_receives_device_secret": false,
+    "desktop_mutation_authority": false,
+    "remote_mutation_authority": false,
+    "implicit_approval": false,
+    "typed_confirmation_prefix": "REENROLL",
+    "explicit_approval": "UserConfirmed",
+    "exact_contact_binding": true,
+    "exact_staged_invitation_binding": true,
+    "exact_quarantine_record_binding": true,
+    "exact_plan_binding": true,
+    "exact_tombstone_binding": true
+  },
+  "durable_ceremony": {
+    "store": "peer-reenrollment-runtime-ceremony-v1.redb",
+    "owner_bound_to_account_and_current_device": true,
+    "records_signed_by_current_device": true,
+    "maximum_records": 4096,
+    "canonical_reencode_required": true,
+    "phases": [
+      "planned",
+      "approved",
+      "acceptance-committed",
+      "complete"
+    ],
+    "monotonic_phase_progression": true,
+    "exact_replay_idempotent": true,
+    "divergent_replay_fails_closed": true,
+    "acceptance_receipt_id_bound": true,
+    "runtime_transition_id_bound": true,
+    "incomplete_state_observable": true
+  },
+  "fresh_start": {
+    "hot_apply": false,
+    "restart_required_only_after_complete_journal": true,
+    "incomplete_journal_skipped_at_startup": true,
+    "predecessor_contact_retained_until_complete": true,
+    "predecessor_quarantine_retained": true,
+    "old_readable_evidence_retained": true,
+    "queued_messages_rebound_only_at_fresh_start": true,
+    "history_recovery_separate": true
+  },
+  "cli": {
+    "plan_command": "runtime-ipc-peer-reenrollment-plan",
+    "approve_command": "runtime-ipc-peer-reenrollment-approve",
+    "accept_command": "runtime-ipc-peer-reenrollment-accept",
+    "approve_flag_required": true,
+    "exact_confirmation_phrase_required": true,
+    "uses_authenticated_runtime_descriptor": true,
+    "offline_acceptance_command_retained_for_compatibility": true
+  },
+  "desktop": {
+    "read_only_adapter_retained": true,
+    "plan_action_present": false,
+    "approve_action_present": false,
+    "accept_action_present": false,
+    "clear_action_present": false,
+    "retry_action_present": false,
+    "hot_apply_action_present": false,
+    "automatic_recovery_present": false
+  },
+  "verification": {
+    "stable_path_rust_harness_required_on_windows": true,
+    "plan_approval_acceptance_tested": true,
+    "typed_confirmation_tested": true,
+    "fault_after_acceptance_commit_tested": true,
+    "fault_after_acceptance_journal_tested": true,
+    "fault_after_transition_prepare_tested": true,
+    "fresh_start_skip_incomplete_tested": true,
+    "exact_resume_tested": true,
+    "different_timestamp_replay_tested": true,
+    "read_and_mutation_adapter_separation_tested": true,
+    "boundary_self_test_and_negative_mutations": "verified",
+    "m1_readiness": "142/142",
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false,
+    "second_host_required": false,
+    "network_executed": false
+  },
+  "non_claims": [
+    "guided-desktop-peer-reenrollment-ceremony",
+    "automatic-peer-reenrollment",
+    "quarantine-clear-or-record-deletion",
+    "hot-runtime-transition-apply",
+    "implicit-old-history-recovery",
+    "public-rollout-eligibility",
+    "independent-security-review-completed"
+  ],
+  "next": [
+    "guided-desktop-peer-reenrollment-ceremony",
+    "explicit-old-history-recovery",
+    "independent-protocol-and-security-review"
+  ]
+}

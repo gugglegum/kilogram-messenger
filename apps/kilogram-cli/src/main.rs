@@ -68,9 +68,12 @@ use kilogram_peer_reenrollment_acceptance::{
     PeerReenrollmentAcceptanceReadStore, PeerReenrollmentAcceptanceStore,
 };
 use kilogram_peer_reenrollment_runtime::{
-    DurablePeerReenrollmentRuntimeTransition, PeerReenrollmentRuntimeBinding,
-    PeerReenrollmentRuntimeConsumeOutcome, PeerReenrollmentRuntimePrepareOutcome,
-    PeerReenrollmentRuntimeReadStore, PeerReenrollmentRuntimeStore,
+    DurablePeerReenrollmentRuntimeCeremony, DurablePeerReenrollmentRuntimeTransition,
+    PeerReenrollmentRuntimeBinding, PeerReenrollmentRuntimeCeremonyPhase,
+    PeerReenrollmentRuntimeCeremonyReadStore, PeerReenrollmentRuntimeCeremonyStore,
+    PeerReenrollmentRuntimeCeremonyWriteOutcome, PeerReenrollmentRuntimeConsumeOutcome,
+    PeerReenrollmentRuntimePrepareOutcome, PeerReenrollmentRuntimeReadStore,
+    PeerReenrollmentRuntimeStore, peer_reenrollment_tombstone_id,
 };
 use kilogram_peer_reenrollment_staging::{
     PeerReenrollmentStagingOutcome, PeerReenrollmentStagingReadStore, PeerReenrollmentStagingStore,
@@ -136,20 +139,20 @@ use kilogram_runtime_ipc::{
     RuntimeIpcPeerCapabilityPage, RuntimeIpcPeerCapabilityQuarantineReason,
     RuntimeIpcPeerCapabilityStatusItem, RuntimeIpcPeerReenrollmentArtifactId,
     RuntimeIpcPeerReenrollmentCommand, RuntimeIpcPeerReenrollmentContactId,
-    RuntimeIpcPeerReenrollmentDurableOutcome, RuntimeIpcPeerReenrollmentHazard,
-    RuntimeIpcPeerReenrollmentHistoryRecovery, RuntimeIpcPeerReenrollmentInvitationSummary,
-    RuntimeIpcPeerReenrollmentPlanSummary, RuntimeIpcPeerReenrollmentQuarantineSummary,
-    RuntimeIpcPeerReenrollmentRequest, RuntimeIpcPeerReenrollmentResponse,
-    RuntimeIpcPeerReenrollmentStatus, RuntimeIpcPeerReenrollmentSuppressionSummary,
-    RuntimeIpcPublicationChannelRotation, RuntimeIpcPublicationConflictRequest,
-    RuntimeIpcPublicationConflictResolution, RuntimeIpcQueueItem, RuntimeIpcQueueState,
-    RuntimeIpcRequestId, RuntimeIpcResponse, RuntimeIpcRoutePolicy, RuntimeIpcServer,
-    RuntimeIpcSyncPathDirection, RuntimeIpcSyncPathObservation, RuntimeIpcSyncPathOutcome,
-    RuntimeIpcSyncPathProtocol, RuntimeIpcTicketAutomationActionStatus,
-    RuntimeIpcTicketAutomationStatus, RuntimeIpcTicketPublication,
-    RuntimeIpcVolunteerStorageOfferImport, RuntimeIpcVolunteerStorageProvider,
-    RuntimeIpcVolunteerStorageProviderSet, RuntimeIpcWork, RuntimeLaunchProfile,
-    RuntimeLaunchSettings, RuntimeVolunteerStorageSettings,
+    RuntimeIpcPeerReenrollmentDurableOutcome, RuntimeIpcPeerReenrollmentExplicitApproval,
+    RuntimeIpcPeerReenrollmentHazard, RuntimeIpcPeerReenrollmentHistoryRecovery,
+    RuntimeIpcPeerReenrollmentInvitationSummary, RuntimeIpcPeerReenrollmentPlanSummary,
+    RuntimeIpcPeerReenrollmentQuarantineSummary, RuntimeIpcPeerReenrollmentRequest,
+    RuntimeIpcPeerReenrollmentResponse, RuntimeIpcPeerReenrollmentStatus,
+    RuntimeIpcPeerReenrollmentSuppressionSummary, RuntimeIpcPublicationChannelRotation,
+    RuntimeIpcPublicationConflictRequest, RuntimeIpcPublicationConflictResolution,
+    RuntimeIpcQueueItem, RuntimeIpcQueueState, RuntimeIpcRequestId, RuntimeIpcResponse,
+    RuntimeIpcRoutePolicy, RuntimeIpcServer, RuntimeIpcSyncPathDirection,
+    RuntimeIpcSyncPathObservation, RuntimeIpcSyncPathOutcome, RuntimeIpcSyncPathProtocol,
+    RuntimeIpcTicketAutomationActionStatus, RuntimeIpcTicketAutomationStatus,
+    RuntimeIpcTicketPublication, RuntimeIpcVolunteerStorageOfferImport,
+    RuntimeIpcVolunteerStorageProvider, RuntimeIpcVolunteerStorageProviderSet, RuntimeIpcWork,
+    RuntimeLaunchProfile, RuntimeLaunchSettings, RuntimeVolunteerStorageSettings,
     SignedRuntimeIpcPeerReenrollmentResponse,
 };
 use kilogram_session::{
@@ -1069,6 +1072,67 @@ enum Command {
         /// Optional exact staged invitation reference; never a filesystem path.
         #[arg(long)]
         staged_invitation_id: Option<RuntimeIpcPeerReenrollmentArtifactId>,
+    },
+
+    /// Prepare one exact runtime-owned peer re-enrollment plan.
+    RuntimeIpcPeerReenrollmentPlan {
+        /// Runtime-owned local IPC descriptor.
+        #[arg(long)]
+        ipc_file: PathBuf,
+
+        /// Opaque 64-hex-character contact ID already shown by the runtime.
+        #[arg(long)]
+        contact_id: RuntimeIpcPeerReenrollmentContactId,
+
+        /// Exact staged invitation ID shown by inspect.
+        #[arg(long)]
+        invitation_id: RuntimeIpcPeerReenrollmentArtifactId,
+
+        /// Exact durable quarantine record ID shown by inspect.
+        #[arg(long)]
+        quarantine_record_id: RuntimeIpcPeerReenrollmentArtifactId,
+    },
+
+    /// Explicitly approve one exact runtime-owned peer re-enrollment plan.
+    RuntimeIpcPeerReenrollmentApprove {
+        /// Runtime-owned local IPC descriptor.
+        #[arg(long)]
+        ipc_file: PathBuf,
+
+        /// Opaque 64-hex-character contact ID already shown by the runtime.
+        #[arg(long)]
+        contact_id: RuntimeIpcPeerReenrollmentContactId,
+
+        /// Exact plan ID shown by the plan step.
+        #[arg(long)]
+        plan_id: RuntimeIpcPeerReenrollmentArtifactId,
+
+        /// Exact typed REENROLL phrase shown by the plan step.
+        #[arg(long)]
+        confirm_phrase: String,
+
+        /// Explicit local user confirmation; omission fails closed.
+        #[arg(long)]
+        approve: bool,
+    },
+
+    /// Commit one approved successor and prepare it for a fresh runtime start.
+    RuntimeIpcPeerReenrollmentAccept {
+        /// Runtime-owned local IPC descriptor.
+        #[arg(long)]
+        ipc_file: PathBuf,
+
+        /// Opaque 64-hex-character contact ID already shown by the runtime.
+        #[arg(long)]
+        contact_id: RuntimeIpcPeerReenrollmentContactId,
+
+        /// Exact Device-signed tombstone ID shown by the approval step.
+        #[arg(long)]
+        tombstone_id: RuntimeIpcPeerReenrollmentArtifactId,
+
+        /// Exact durable quarantine record ID shown by inspect.
+        #[arg(long)]
+        quarantine_record_id: RuntimeIpcPeerReenrollmentArtifactId,
     },
 
     /// Read durable peer re-enrollment state through the authenticated runtime.
@@ -2711,6 +2775,9 @@ impl Command {
             | Self::RuntimeIpcPing { .. }
             | Self::RuntimeIpcContactAdd { .. }
             | Self::RuntimeIpcPeerReenrollmentInspect { .. }
+            | Self::RuntimeIpcPeerReenrollmentPlan { .. }
+            | Self::RuntimeIpcPeerReenrollmentApprove { .. }
+            | Self::RuntimeIpcPeerReenrollmentAccept { .. }
             | Self::RuntimeIpcPeerReenrollmentStatus { .. }
             | Self::RuntimeIpcQueueMessage { .. }
             | Self::RuntimeIpcOutboxStatus { .. }
@@ -4028,6 +4095,60 @@ async fn run_command(command: Command) -> Result<()> {
                 RuntimeIpcPeerReenrollmentCommand::Inspect {
                     contact_id,
                     staged_invitation_id,
+                },
+            )
+            .await
+        }
+        Command::RuntimeIpcPeerReenrollmentPlan {
+            ipc_file,
+            contact_id,
+            invitation_id,
+            quarantine_record_id,
+        } => {
+            runtime_ipc_peer_reenrollment_mutation(
+                ipc_file,
+                RuntimeIpcPeerReenrollmentCommand::Plan {
+                    contact_id,
+                    invitation_id,
+                    quarantine_record_id,
+                },
+            )
+            .await
+        }
+        Command::RuntimeIpcPeerReenrollmentApprove {
+            ipc_file,
+            contact_id,
+            plan_id,
+            confirm_phrase,
+            approve,
+        } => {
+            ensure!(
+                approve,
+                "runtime peer re-enrollment approval flag is required"
+            );
+            runtime_ipc_peer_reenrollment_mutation(
+                ipc_file,
+                RuntimeIpcPeerReenrollmentCommand::Approve {
+                    contact_id,
+                    plan_id,
+                    confirmation_phrase: confirm_phrase,
+                    explicit_approval: RuntimeIpcPeerReenrollmentExplicitApproval::UserConfirmed,
+                },
+            )
+            .await
+        }
+        Command::RuntimeIpcPeerReenrollmentAccept {
+            ipc_file,
+            contact_id,
+            tombstone_id,
+            quarantine_record_id,
+        } => {
+            runtime_ipc_peer_reenrollment_mutation(
+                ipc_file,
+                RuntimeIpcPeerReenrollmentCommand::Accept {
+                    contact_id,
+                    tombstone_id,
+                    quarantine_record_id,
                 },
             )
             .await
@@ -8543,10 +8664,41 @@ fn consume_peer_reenrollment_transitions_at_runtime_start(
     let store = PeerReenrollmentRuntimeStore::open(directory, local_account_id, local_device_id)
         .context("open peer re-enrollment runtime transition store")?;
     let transitions = store.load_all()?;
+    let ceremony_store = PeerReenrollmentRuntimeCeremonyStore::is_initialized(
+        state_directory.join(PEER_REENROLLMENT_RUNTIME_DIRECTORY),
+    )
+    .then(|| {
+        PeerReenrollmentRuntimeCeremonyReadStore::open_existing(
+            state_directory.join(PEER_REENROLLMENT_RUNTIME_DIRECTORY),
+            local_account_id,
+            local_device_id,
+        )
+    })
+    .transpose()?;
 
     // Validate the complete set before publishing any new consumed head. A
     // corrupt second record must not partially activate the first one.
     for durable in &transitions {
+        if let Some(ceremony) = ceremony_store
+            .as_ref()
+            .map(|store| store.load(durable.transition().contact_id()))
+            .transpose()?
+            .flatten()
+        {
+            ensure!(
+                !durable.consumed()
+                    || ceremony.phase() == PeerReenrollmentRuntimeCeremonyPhase::Complete,
+                "consumed peer re-enrollment transition has an incomplete runtime ceremony"
+            );
+            if ceremony.phase() == PeerReenrollmentRuntimeCeremonyPhase::Complete {
+                ensure!(
+                    ceremony.acceptance_receipt_id()
+                        == Some(durable.transition().acceptance_receipt_id())
+                        && ceremony.runtime_transition_id() == Some(durable.transition_id()),
+                    "completed peer re-enrollment ceremony differs from its runtime transition"
+                );
+            }
+        }
         validate_peer_reenrollment_runtime_transition(
             state_directory,
             local_account_id,
@@ -8563,6 +8715,15 @@ fn consume_peer_reenrollment_transitions_at_runtime_start(
         ..PeerReenrollmentRuntimeStartupReport::default()
     };
     for durable in transitions {
+        if let Some(ceremony) = ceremony_store
+            .as_ref()
+            .map(|store| store.load(durable.transition().contact_id()))
+            .transpose()?
+            .flatten()
+            && ceremony.phase() != PeerReenrollmentRuntimeCeremonyPhase::Complete
+        {
+            continue;
+        }
         match store.consume(durable.transition().contact_id(), durable.transition_id())? {
             PeerReenrollmentRuntimeConsumeOutcome::Consumed(_) => report.consumed += 1,
             PeerReenrollmentRuntimeConsumeOutcome::AlreadyConsumed(_) => {
@@ -13574,6 +13735,593 @@ fn ensure_runtime_peer_reenrollment_observation_command(
     Ok(())
 }
 
+fn ensure_runtime_peer_reenrollment_mutation_command(
+    command: &RuntimeIpcPeerReenrollmentCommand,
+) -> Result<()> {
+    ensure!(
+        matches!(
+            command,
+            RuntimeIpcPeerReenrollmentCommand::Plan { .. }
+                | RuntimeIpcPeerReenrollmentCommand::Approve { .. }
+                | RuntimeIpcPeerReenrollmentCommand::Accept { .. }
+        ),
+        "runtime IPC peer re-enrollment mutation adapter rejects observation commands"
+    );
+    Ok(())
+}
+
+struct RuntimePeerReenrollmentMutationInputs {
+    contact_id: [u8; 32],
+    local_account_id: AccountId,
+    local_device_id: DeviceId,
+    peer_account_id: AccountId,
+    quarantine: kilogram_peer_capability_store::DurablePeerCapabilityQuarantineHead,
+    staged: StagedPeerReenrollmentInvitation,
+    invitation: SignedCurrentPeerInvitation,
+    peer_authority: AccountDeviceListSnapshot,
+}
+
+#[allow(clippy::too_many_arguments)]
+fn load_runtime_peer_reenrollment_mutation_inputs(
+    state_directory: &Path,
+    local_authority: &AccountDeviceListSnapshot,
+    contact_id: &RuntimeIpcPeerReenrollmentContactId,
+    expected_staged_invitation_id: [u8; 32],
+    expected_invitation_id: [u8; 32],
+    expected_quarantine_record_id: [u8; 32],
+    now_unix_seconds: u64,
+    require_fresh_invitation: bool,
+) -> Result<RuntimePeerReenrollmentMutationInputs> {
+    let contact_id_bytes = decode_hex_32(contact_id.as_str(), "peer re-enrollment contact ID")?;
+    let device_state = load_command_device_state(state_directory)?;
+    let local_device_id = device_state.identity().device_id();
+    let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+    let local_certificate = trust.load_certificate()?;
+    let local_account_id = local_certificate.account_id();
+    ensure!(
+        local_authority.account_id() == local_account_id
+            && local_authority.certificate_for(local_device_id).is_some(),
+        "runtime local authority no longer authorizes this Device"
+    );
+    let snapshot = load_runtime_state_snapshot(state_directory, local_account_id, local_device_id)?;
+    let contacts = snapshot
+        .contacts
+        .values()
+        .filter(|candidate| candidate.contact_id().as_bytes() == &contact_id_bytes)
+        .collect::<Vec<_>>();
+    ensure!(
+        contacts.len() == 1,
+        "peer re-enrollment contact ID does not identify exactly one runtime contact"
+    );
+    let contact = contacts[0];
+    let peer_account_id = contact.peer_account_id();
+
+    let capability_directory = state_directory.join(PEER_SYNC_CAPABILITY_DIRECTORY);
+    ensure!(
+        PeerCapabilityStore::is_initialized(&capability_directory),
+        "peer re-enrollment mutation requires an existing durable quarantine"
+    );
+    let capability = PeerCapabilityReadStore::open_existing(capability_directory, local_device_id)?;
+    let quarantine = capability.load_quarantined_head(PeerCapabilityKey::new(
+        peer_account_id,
+        contact.peer_device_id(),
+    ))?;
+    ensure!(
+        quarantine.head().record_id == expected_quarantine_record_id,
+        "peer re-enrollment durable quarantine changed"
+    );
+
+    let staging_directory = state_directory.join(PEER_REENROLLMENT_STAGING_DIRECTORY);
+    ensure!(
+        PeerReenrollmentStagingReadStore::is_initialized(&staging_directory),
+        "peer re-enrollment staging store is absent"
+    );
+    let matching = PeerReenrollmentStagingReadStore::open_existing(
+        staging_directory,
+        local_account_id,
+        local_device_id,
+    )?
+    .load_all()?
+    .into_iter()
+    .filter(|record| {
+        record.contact_id() == contact_id_bytes
+            && record.invitation_id() == expected_invitation_id
+            && record
+                .stage_id()
+                .is_ok_and(|stage_id| stage_id == expected_staged_invitation_id)
+    })
+    .collect::<Vec<_>>();
+    ensure!(
+        matching.len() == 1,
+        "peer re-enrollment mutation does not identify exactly one staged invitation"
+    );
+    let staged = matching
+        .into_iter()
+        .next()
+        .context("selected peer re-enrollment staged invitation disappeared")?;
+    let invitation = staged.invitation()?;
+    let ticket = verify_current_peer_invitation_artifact(
+        &invitation,
+        require_fresh_invitation.then_some(now_unix_seconds),
+    )?;
+    ensure!(
+        invitation.allowed_requester_account_id() == local_account_id
+            && invitation.listener_account_id() == peer_account_id
+            && invitation.listener_device_id() != contact.peer_device_id()
+            && ticket.listener_directory().device_list().account_id() == peer_account_id,
+        "peer re-enrollment staged invitation no longer matches the quarantined contact"
+    );
+    Ok(RuntimePeerReenrollmentMutationInputs {
+        contact_id: contact_id_bytes,
+        local_account_id,
+        local_device_id,
+        peer_account_id,
+        quarantine,
+        staged,
+        invitation,
+        peer_authority: ticket.listener_directory().device_list().clone(),
+    })
+}
+
+fn load_runtime_peer_reenrollment_ceremony(
+    state_directory: &Path,
+    local_account_id: AccountId,
+    local_device_id: DeviceId,
+    contact_id: [u8; 32],
+) -> Result<Option<DurablePeerReenrollmentRuntimeCeremony>> {
+    let directory = state_directory.join(PEER_REENROLLMENT_RUNTIME_DIRECTORY);
+    if !PeerReenrollmentRuntimeCeremonyStore::is_initialized(&directory) {
+        return Ok(None);
+    }
+    PeerReenrollmentRuntimeCeremonyReadStore::open_existing(
+        directory,
+        local_account_id,
+        local_device_id,
+    )?
+    .load(contact_id)
+    .map_err(Into::into)
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum RuntimePeerReenrollmentMutationFault {
+    None,
+    AfterAcceptanceCommit,
+    AfterAcceptanceJournal,
+    AfterTransitionPrepare,
+}
+
+struct RuntimePeerReenrollmentMutationResult {
+    response: RuntimeIpcPeerReenrollmentResponse,
+    changed: bool,
+}
+
+fn ceremony_write_changed(outcome: &PeerReenrollmentRuntimeCeremonyWriteOutcome) -> bool {
+    matches!(
+        outcome,
+        PeerReenrollmentRuntimeCeremonyWriteOutcome::Written(_)
+    )
+}
+
+fn inspect_response_for_mutation(
+    state_directory: &Path,
+    scheduler: &RuntimeOutboundScheduler,
+    local_authority: &AccountDeviceListSnapshot,
+    contact_id: RuntimeIpcPeerReenrollmentContactId,
+    staged_invitation_id: [u8; 32],
+    now_unix_seconds: u64,
+) -> Result<RuntimeIpcPeerReenrollmentResponse> {
+    let response = collect_runtime_peer_reenrollment_response(
+        state_directory,
+        scheduler,
+        local_authority,
+        &RuntimeIpcPeerReenrollmentCommand::Inspect {
+            contact_id,
+            staged_invitation_id: Some(peer_reenrollment_artifact_id(staged_invitation_id)?),
+        },
+        now_unix_seconds,
+    )?;
+    ensure!(
+        response.status == RuntimeIpcPeerReenrollmentStatus::Ready,
+        "peer re-enrollment live context is not ready: {}",
+        peer_reenrollment_status_name(response.status)
+    );
+    Ok(response)
+}
+
+fn execute_runtime_peer_reenrollment_mutation(
+    state_directory: &Path,
+    scheduler: &RuntimeOutboundScheduler,
+    local_authority: &AccountDeviceListSnapshot,
+    command: &RuntimeIpcPeerReenrollmentCommand,
+    now_unix_seconds: u64,
+    fault: RuntimePeerReenrollmentMutationFault,
+) -> Result<RuntimePeerReenrollmentMutationResult> {
+    ensure_runtime_peer_reenrollment_mutation_command(command)?;
+    match command {
+        RuntimeIpcPeerReenrollmentCommand::Plan {
+            contact_id,
+            invitation_id,
+            quarantine_record_id,
+        } => {
+            let contact_id_bytes =
+                decode_hex_32(contact_id.as_str(), "peer re-enrollment contact ID")?;
+            let expected_invitation_id =
+                decode_hex_32(invitation_id.as_str(), "peer re-enrollment invitation ID")?;
+            let expected_quarantine_record_id = decode_hex_32(
+                quarantine_record_id.as_str(),
+                "peer re-enrollment quarantine record ID",
+            )?;
+            let device_state = load_command_device_state(state_directory)?;
+            let local_device_id = device_state.identity().device_id();
+            let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+            let local_account_id = trust.load_certificate()?.account_id();
+            let existing = load_runtime_peer_reenrollment_ceremony(
+                state_directory,
+                local_account_id,
+                local_device_id,
+                contact_id_bytes,
+            )?;
+            let staged_invitation_id = if let Some(existing) = &existing {
+                ensure!(
+                    existing.phase() == PeerReenrollmentRuntimeCeremonyPhase::Planned
+                        && existing.invitation_id() == expected_invitation_id
+                        && existing.quarantine_record_id() == expected_quarantine_record_id,
+                    "peer re-enrollment plan cannot replace an existing ceremony"
+                );
+                existing.staged_invitation_id()
+            } else {
+                let staging_directory = state_directory.join(PEER_REENROLLMENT_STAGING_DIRECTORY);
+                ensure!(
+                    PeerReenrollmentStagingReadStore::is_initialized(&staging_directory),
+                    "peer re-enrollment staging store is absent"
+                );
+                let matching = PeerReenrollmentStagingReadStore::open_existing(
+                    staging_directory,
+                    local_account_id,
+                    local_device_id,
+                )?
+                .load_all()?
+                .into_iter()
+                .filter(|record| {
+                    record.contact_id() == contact_id_bytes
+                        && record.invitation_id() == expected_invitation_id
+                })
+                .collect::<Vec<_>>();
+                ensure!(
+                    matching.len() == 1,
+                    "peer re-enrollment invitation ID does not identify exactly one staged artifact"
+                );
+                matching[0].stage_id()?
+            };
+            let inputs = load_runtime_peer_reenrollment_mutation_inputs(
+                state_directory,
+                local_authority,
+                contact_id,
+                staged_invitation_id,
+                expected_invitation_id,
+                expected_quarantine_record_id,
+                now_unix_seconds,
+                true,
+            )?;
+            let mut response = inspect_response_for_mutation(
+                state_directory,
+                scheduler,
+                local_authority,
+                contact_id.clone(),
+                staged_invitation_id,
+                now_unix_seconds,
+            )?;
+            let plan = if let Some(existing) = existing {
+                let plan = existing.plan()?;
+                plan.verify_context(
+                    local_authority,
+                    &inputs.quarantine,
+                    &inputs.peer_authority,
+                    &inputs.invitation,
+                    now_unix_seconds,
+                )?;
+                plan
+            } else {
+                PeerReenrollmentPlan::prepare(
+                    inputs.local_device_id,
+                    local_authority,
+                    &inputs.quarantine,
+                    &inputs.peer_authority,
+                    &inputs.invitation,
+                    now_unix_seconds,
+                )?
+            };
+            let store = PeerReenrollmentRuntimeCeremonyStore::open(
+                state_directory.join(PEER_REENROLLMENT_RUNTIME_DIRECTORY),
+                inputs.local_account_id,
+                inputs.local_device_id,
+            )?;
+            let outcome = store.prepare(
+                device_state.identity(),
+                inputs.contact_id,
+                inputs.staged.stage_id()?,
+                inputs.invitation.invitation_id()?,
+                inputs.quarantine.head().record_id,
+                &plan,
+            )?;
+            let plan_id = peer_reenrollment_artifact_id(plan.plan_id()?)?;
+            response.status = RuntimeIpcPeerReenrollmentStatus::ApprovalRequired;
+            response.plan = Some(RuntimeIpcPeerReenrollmentPlanSummary::new(
+                plan_id.clone(),
+                plan.expires_at_unix_seconds(),
+            )?);
+            response.durable_outcome =
+                RuntimeIpcPeerReenrollmentDurableOutcome::PlanPrepared { plan_id };
+            Ok(RuntimePeerReenrollmentMutationResult {
+                response,
+                changed: ceremony_write_changed(&outcome),
+            })
+        }
+        RuntimeIpcPeerReenrollmentCommand::Approve {
+            contact_id,
+            plan_id,
+            confirmation_phrase,
+            explicit_approval,
+        } => {
+            ensure!(
+                *explicit_approval == RuntimeIpcPeerReenrollmentExplicitApproval::UserConfirmed,
+                "peer re-enrollment approval was not explicitly confirmed"
+            );
+            let contact_id_bytes =
+                decode_hex_32(contact_id.as_str(), "peer re-enrollment contact ID")?;
+            let device_state = load_command_device_state(state_directory)?;
+            let local_device_id = device_state.identity().device_id();
+            let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+            let local_account_id = trust.load_certificate()?.account_id();
+            let ceremony = load_runtime_peer_reenrollment_ceremony(
+                state_directory,
+                local_account_id,
+                local_device_id,
+                contact_id_bytes,
+            )?
+            .context("peer re-enrollment approval has no prepared runtime ceremony")?;
+            ensure!(
+                matches!(
+                    ceremony.phase(),
+                    PeerReenrollmentRuntimeCeremonyPhase::Planned
+                        | PeerReenrollmentRuntimeCeremonyPhase::Approved
+                ),
+                "peer re-enrollment approval cannot rewind an advanced ceremony"
+            );
+            let inputs = load_runtime_peer_reenrollment_mutation_inputs(
+                state_directory,
+                local_authority,
+                contact_id,
+                ceremony.staged_invitation_id(),
+                ceremony.invitation_id(),
+                ceremony.quarantine_record_id(),
+                now_unix_seconds,
+                true,
+            )?;
+            let mut response = inspect_response_for_mutation(
+                state_directory,
+                scheduler,
+                local_authority,
+                contact_id.clone(),
+                ceremony.staged_invitation_id(),
+                now_unix_seconds,
+            )?;
+            let plan = ceremony.plan()?;
+            ensure!(
+                peer_reenrollment_artifact_id(plan.plan_id()?)? == *plan_id,
+                "peer re-enrollment approval names another plan"
+            );
+            plan.verify_context(
+                local_authority,
+                &inputs.quarantine,
+                &inputs.peer_authority,
+                &inputs.invitation,
+                now_unix_seconds,
+            )?;
+            let tombstone = plan.clone().confirm_and_sign(
+                device_state.identity(),
+                confirmation_phrase,
+                ExplicitPeerReenrollmentApproval::UserOrTestOperatorApproved,
+            )?;
+            let store = PeerReenrollmentRuntimeCeremonyStore::open(
+                state_directory.join(PEER_REENROLLMENT_RUNTIME_DIRECTORY),
+                local_account_id,
+                local_device_id,
+            )?;
+            let outcome = store.approve(
+                device_state.identity(),
+                contact_id_bytes,
+                plan.plan_id()?,
+                &tombstone,
+            )?;
+            let tombstone_id =
+                peer_reenrollment_artifact_id(peer_reenrollment_tombstone_id(&tombstone)?)?;
+            response.status = RuntimeIpcPeerReenrollmentStatus::ApprovedPrepared;
+            response.plan = Some(RuntimeIpcPeerReenrollmentPlanSummary::new(
+                plan_id.clone(),
+                plan.expires_at_unix_seconds(),
+            )?);
+            response.durable_outcome = RuntimeIpcPeerReenrollmentDurableOutcome::ApprovalPrepared {
+                plan_id: plan_id.clone(),
+                tombstone_id,
+            };
+            Ok(RuntimePeerReenrollmentMutationResult {
+                response,
+                changed: ceremony_write_changed(&outcome),
+            })
+        }
+        RuntimeIpcPeerReenrollmentCommand::Accept {
+            contact_id,
+            tombstone_id,
+            quarantine_record_id,
+        } => {
+            let contact_id_bytes =
+                decode_hex_32(contact_id.as_str(), "peer re-enrollment contact ID")?;
+            let expected_tombstone_id =
+                decode_hex_32(tombstone_id.as_str(), "peer re-enrollment tombstone ID")?;
+            let expected_quarantine_record_id = decode_hex_32(
+                quarantine_record_id.as_str(),
+                "peer re-enrollment quarantine record ID",
+            )?;
+            let device_state = load_command_device_state(state_directory)?;
+            let local_device_id = device_state.identity().device_id();
+            let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+            let local_account_id = trust.load_certificate()?.account_id();
+            let ceremony = load_runtime_peer_reenrollment_ceremony(
+                state_directory,
+                local_account_id,
+                local_device_id,
+                contact_id_bytes,
+            )?
+            .context("peer re-enrollment acceptance has no approved runtime ceremony")?;
+            ensure!(
+                matches!(
+                    ceremony.phase(),
+                    PeerReenrollmentRuntimeCeremonyPhase::Approved
+                        | PeerReenrollmentRuntimeCeremonyPhase::AcceptanceCommitted
+                        | PeerReenrollmentRuntimeCeremonyPhase::Complete
+                ) && ceremony.tombstone_id()? == Some(expected_tombstone_id)
+                    && ceremony.quarantine_record_id() == expected_quarantine_record_id,
+                "peer re-enrollment acceptance does not match the approved ceremony"
+            );
+            let inputs = load_runtime_peer_reenrollment_mutation_inputs(
+                state_directory,
+                local_authority,
+                contact_id,
+                ceremony.staged_invitation_id(),
+                ceremony.invitation_id(),
+                ceremony.quarantine_record_id(),
+                now_unix_seconds,
+                false,
+            )?;
+            let tombstone = ceremony
+                .tombstone()?
+                .context("approved peer re-enrollment ceremony has no tombstone")?;
+            ensure!(
+                tombstone.peer_account_id() == inputs.peer_account_id,
+                "approved peer re-enrollment ceremony names another peer Account"
+            );
+            let acceptance_directory = state_directory.join(PEER_REENROLLMENT_ACCEPTANCE_DIRECTORY);
+            let existing_acceptance =
+                if PeerReenrollmentAcceptanceStore::is_initialized(&acceptance_directory) {
+                    PeerReenrollmentAcceptanceReadStore::open_existing(
+                        &acceptance_directory,
+                        local_account_id,
+                        local_device_id,
+                    )?
+                    .load_for_peer(inputs.peer_account_id)?
+                } else {
+                    None
+                };
+            if existing_acceptance.is_none() {
+                tombstone.verify_context(
+                    local_authority,
+                    &inputs.quarantine,
+                    &inputs.peer_authority,
+                    &inputs.invitation,
+                    now_unix_seconds,
+                )?;
+            }
+            let acceptance_store = PeerReenrollmentAcceptanceStore::open(
+                acceptance_directory,
+                local_account_id,
+                local_device_id,
+            )?;
+            let acceptance_outcome = acceptance_store.accept(
+                device_state.identity(),
+                &tombstone,
+                local_authority,
+                &inputs.quarantine,
+                &inputs.peer_authority,
+                &inputs.invitation,
+                now_unix_seconds,
+            )?;
+            let (acceptance, acceptance_changed) = match acceptance_outcome {
+                PeerReenrollmentAcceptanceOutcome::Accepted(value) => (value, true),
+                PeerReenrollmentAcceptanceOutcome::AlreadyAccepted(value) => (value, false),
+            };
+            drop(acceptance_store);
+            if fault == RuntimePeerReenrollmentMutationFault::AfterAcceptanceCommit {
+                bail!("test-only fault after peer re-enrollment acceptance commit");
+            }
+            let ceremony_store = PeerReenrollmentRuntimeCeremonyStore::open(
+                state_directory.join(PEER_REENROLLMENT_RUNTIME_DIRECTORY),
+                local_account_id,
+                local_device_id,
+            )?;
+            let acceptance_journal = ceremony_store.mark_acceptance_committed(
+                device_state.identity(),
+                contact_id_bytes,
+                expected_tombstone_id,
+                acceptance.receipt_id(),
+            )?;
+            if fault == RuntimePeerReenrollmentMutationFault::AfterAcceptanceJournal {
+                bail!("test-only fault after peer re-enrollment acceptance journal");
+            }
+            let (prepared, _) = prepare_peer_reenrollment_runtime_transition(
+                state_directory,
+                &device_state,
+                local_authority,
+                &inputs.quarantine,
+                &inputs.peer_authority,
+                &inputs.invitation,
+                &acceptance,
+                now_unix_seconds,
+            )?;
+            let runtime_directory = state_directory.join(PEER_REENROLLMENT_RUNTIME_DIRECTORY);
+            let transition = PeerReenrollmentRuntimeReadStore::open_existing(
+                &runtime_directory,
+                local_account_id,
+                local_device_id,
+            )?
+            .load_all()?
+            .into_iter()
+            .filter(|value| value.transition().contact_id() == contact_id_bytes)
+            .collect::<Vec<_>>();
+            ensure!(
+                transition.len() == 1,
+                "accepted peer re-enrollment has no exact runtime transition"
+            );
+            let transition_id = transition[0].transition_id();
+            if fault == RuntimePeerReenrollmentMutationFault::AfterTransitionPrepare {
+                bail!("test-only fault after peer re-enrollment transition preparation");
+            }
+            let completion = ceremony_store.complete(
+                device_state.identity(),
+                contact_id_bytes,
+                acceptance.receipt_id(),
+                transition_id,
+            )?;
+            let completion_changed = ceremony_write_changed(&completion);
+            drop(ceremony_store);
+            let response = collect_runtime_peer_reenrollment_response(
+                state_directory,
+                scheduler,
+                local_authority,
+                &RuntimeIpcPeerReenrollmentCommand::Status {
+                    contact_id: contact_id.clone(),
+                },
+                now_unix_seconds,
+            )?;
+            ensure!(
+                response.status == RuntimeIpcPeerReenrollmentStatus::AcceptedRestartRequired,
+                "accepted peer re-enrollment was not prepared for a fresh start"
+            );
+            Ok(RuntimePeerReenrollmentMutationResult {
+                response,
+                changed: acceptance_changed
+                    || ceremony_write_changed(&acceptance_journal)
+                    || prepared != 0
+                    || completion_changed,
+            })
+        }
+        RuntimeIpcPeerReenrollmentCommand::Inspect { .. }
+        | RuntimeIpcPeerReenrollmentCommand::Status { .. } => {
+            bail!("runtime peer re-enrollment mutation received an observation command")
+        }
+    }
+}
+
 fn collect_runtime_peer_reenrollment_response(
     state_directory: &Path,
     scheduler: &RuntimeOutboundScheduler,
@@ -13625,6 +14373,12 @@ fn collect_runtime_peer_reenrollment_response(
         "multiple peer re-enrollment transitions claim one contact"
     );
     let transition = matching_transitions.first().copied();
+    let ceremony = load_runtime_peer_reenrollment_ceremony(
+        state_directory,
+        local_account_id,
+        local_device_id,
+        contact_id_bytes,
+    )?;
     let peer_account_id = transition
         .map(|durable| durable.transition().peer_account_id())
         .unwrap_or_else(|| contact.peer_account_id());
@@ -13706,6 +14460,7 @@ fn collect_runtime_peer_reenrollment_response(
         ));
     };
 
+    let mut incomplete_acceptance = None;
     if matches!(command, RuntimeIpcPeerReenrollmentCommand::Status { .. }) {
         let acceptance_directory = state_directory.join(PEER_REENROLLMENT_ACCEPTANCE_DIRECTORY);
         let acceptance = if PeerReenrollmentAcceptanceStore::is_initialized(&acceptance_directory) {
@@ -13718,7 +14473,7 @@ fn collect_runtime_peer_reenrollment_response(
         } else {
             None
         };
-        match (acceptance.as_ref(), transition) {
+        match (acceptance, transition) {
             (Some(acceptance), Some(transition)) => {
                 let receipt = acceptance.receipt();
                 let durable_transition = transition.transition();
@@ -13756,6 +14511,44 @@ fn collect_runtime_peer_reenrollment_response(
                 let acceptance_receipt_id = peer_reenrollment_artifact_id(acceptance.receipt_id())?;
                 let runtime_transition_id =
                     peer_reenrollment_artifact_id(transition.transition_id())?;
+                if let Some(ceremony) = &ceremony {
+                    let ceremony_tombstone = ceremony
+                        .tombstone()?
+                        .context("advanced peer re-enrollment ceremony lost its tombstone")?;
+                    if ceremony.acceptance_receipt_id() != Some(acceptance.receipt_id())
+                        || ceremony.plan_id()? != receipt.tombstone_plan_id()
+                        || !receipt.matches_tombstone(&ceremony_tombstone)?
+                    {
+                        return Ok(unsafe_response(
+                            RuntimeIpcPeerReenrollmentHazard::AuthorityDiverged,
+                            Some(invitation_summary),
+                        ));
+                    }
+                    if ceremony.phase() != PeerReenrollmentRuntimeCeremonyPhase::Complete {
+                        return Ok(RuntimeIpcPeerReenrollmentResponse {
+                            contact_id,
+                            status: RuntimeIpcPeerReenrollmentStatus::AcceptanceIncomplete,
+                            hazard: None,
+                            invitation: Some(invitation_summary),
+                            quarantine: quarantine_summary,
+                            plan: Some(plan),
+                            durable_outcome:
+                                RuntimeIpcPeerReenrollmentDurableOutcome::AcceptanceIncomplete {
+                                    acceptance_receipt_id,
+                                },
+                            suppression,
+                            history_recovery:
+                                RuntimeIpcPeerReenrollmentHistoryRecovery::SeparateApprovalRequired,
+                            restart_required: false,
+                        });
+                    }
+                    if ceremony.runtime_transition_id() != Some(transition.transition_id()) {
+                        return Ok(unsafe_response(
+                            RuntimeIpcPeerReenrollmentHazard::AuthorityDiverged,
+                            Some(invitation_summary),
+                        ));
+                    }
+                }
                 let (status, durable_outcome, restart_required) = if transition.consumed() {
                     (
                         RuntimeIpcPeerReenrollmentStatus::Consumed,
@@ -13789,7 +14582,35 @@ fn collect_runtime_peer_reenrollment_response(
                     restart_required,
                 });
             }
-            (Some(_), None) | (None, Some(_)) => {
+            (Some(acceptance), None) => {
+                let Some(ceremony) = &ceremony else {
+                    return Ok(unsafe_response(
+                        RuntimeIpcPeerReenrollmentHazard::AuthorityDiverged,
+                        None,
+                    ));
+                };
+                let ceremony_tombstone = ceremony
+                    .tombstone()?
+                    .context("approved peer re-enrollment ceremony lost its tombstone")?;
+                if !matches!(
+                    ceremony.phase(),
+                    PeerReenrollmentRuntimeCeremonyPhase::Approved
+                        | PeerReenrollmentRuntimeCeremonyPhase::AcceptanceCommitted
+                ) || (ceremony.acceptance_receipt_id().is_some()
+                    && ceremony.acceptance_receipt_id() != Some(acceptance.receipt_id()))
+                    || ceremony.plan_id()? != acceptance.receipt().tombstone_plan_id()
+                    || !acceptance
+                        .receipt()
+                        .matches_tombstone(&ceremony_tombstone)?
+                {
+                    return Ok(unsafe_response(
+                        RuntimeIpcPeerReenrollmentHazard::AuthorityDiverged,
+                        None,
+                    ));
+                }
+                incomplete_acceptance = Some(acceptance);
+            }
+            (None, Some(_)) => {
                 return Ok(unsafe_response(
                     RuntimeIpcPeerReenrollmentHazard::AuthorityDiverged,
                     None,
@@ -13838,26 +14659,44 @@ fn collect_runtime_peer_reenrollment_response(
             None => None,
         },
         RuntimeIpcPeerReenrollmentCommand::Status { .. } => {
-            let fresh = staged
-                .iter()
-                .filter(|record| {
-                    record.invitation().is_ok_and(|invitation| {
-                        invitation.issued_at_unix_seconds() <= now_unix_seconds
-                            && now_unix_seconds < invitation.expires_at_unix_seconds()
-                    })
-                })
-                .collect::<Vec<_>>();
-            if fresh.len() > 1 {
-                return Ok(unsafe_response(
-                    RuntimeIpcPeerReenrollmentHazard::ArtifactReplay,
-                    None,
-                ));
-            }
-            fresh.first().copied().or_else(|| {
-                staged
+            if let Some(ceremony) = &ceremony {
+                let matching = staged
                     .iter()
-                    .max_by_key(|record| record.staged_at_unix_seconds())
-            })
+                    .filter(|record| {
+                        record
+                            .stage_id()
+                            .is_ok_and(|stage_id| stage_id == ceremony.staged_invitation_id())
+                    })
+                    .collect::<Vec<_>>();
+                if matching.len() != 1 {
+                    return Ok(unsafe_response(
+                        RuntimeIpcPeerReenrollmentHazard::ArtifactReplay,
+                        None,
+                    ));
+                }
+                matching.first().copied()
+            } else {
+                let fresh = staged
+                    .iter()
+                    .filter(|record| {
+                        record.invitation().is_ok_and(|invitation| {
+                            invitation.issued_at_unix_seconds() <= now_unix_seconds
+                                && now_unix_seconds < invitation.expires_at_unix_seconds()
+                        })
+                    })
+                    .collect::<Vec<_>>();
+                if fresh.len() > 1 {
+                    return Ok(unsafe_response(
+                        RuntimeIpcPeerReenrollmentHazard::ArtifactReplay,
+                        None,
+                    ));
+                }
+                fresh.first().copied().or_else(|| {
+                    staged
+                        .iter()
+                        .max_by_key(|record| record.staged_at_unix_seconds())
+                })
+            }
         }
         _ => None,
     };
@@ -13877,6 +14716,58 @@ fn collect_runtime_peer_reenrollment_response(
     };
     let invitation = staged.invitation()?;
     let invitation_summary = peer_reenrollment_invitation_summary(&invitation)?;
+    if let Some(acceptance) = incomplete_acceptance {
+        let Some(ceremony) = &ceremony else {
+            return Ok(unsafe_response(
+                RuntimeIpcPeerReenrollmentHazard::AuthorityDiverged,
+                Some(invitation_summary),
+            ));
+        };
+        let ticket = match verify_current_peer_invitation_artifact(&invitation, None) {
+            Ok(ticket) => ticket,
+            Err(_) => {
+                return Ok(unsafe_response(
+                    RuntimeIpcPeerReenrollmentHazard::UnsupportedCapability,
+                    Some(invitation_summary),
+                ));
+            }
+        };
+        if ceremony.invitation_id() != invitation.invitation_id()?
+            || ceremony.quarantine_record_id() != quarantine.head().record_id
+            || acceptance
+                .receipt()
+                .verify_bound_context(
+                    local_authority,
+                    quarantine,
+                    ticket.listener_directory().device_list(),
+                    &invitation,
+                )
+                .is_err()
+        {
+            return Ok(unsafe_response(
+                RuntimeIpcPeerReenrollmentHazard::AuthorityDiverged,
+                Some(invitation_summary),
+            ));
+        }
+        let plan = RuntimeIpcPeerReenrollmentPlanSummary::new(
+            peer_reenrollment_artifact_id(acceptance.receipt().tombstone_plan_id())?,
+            acceptance.receipt().tombstone_expires_at_unix_seconds(),
+        )?;
+        return Ok(RuntimeIpcPeerReenrollmentResponse {
+            contact_id,
+            status: RuntimeIpcPeerReenrollmentStatus::AcceptanceIncomplete,
+            hazard: None,
+            invitation: Some(invitation_summary),
+            quarantine: quarantine_summary,
+            plan: Some(plan),
+            durable_outcome: RuntimeIpcPeerReenrollmentDurableOutcome::AcceptanceIncomplete {
+                acceptance_receipt_id: peer_reenrollment_artifact_id(acceptance.receipt_id())?,
+            },
+            suppression,
+            history_recovery: RuntimeIpcPeerReenrollmentHistoryRecovery::SeparateApprovalRequired,
+            restart_required: false,
+        });
+    }
     if invitation.issued_at_unix_seconds() > now_unix_seconds
         || invitation.expires_at_unix_seconds() <= now_unix_seconds
     {
@@ -13918,6 +14809,105 @@ fn collect_runtime_peer_reenrollment_response(
             RuntimeIpcPeerReenrollmentHazard::AuthorityDiverged,
             Some(invitation_summary),
         ));
+    }
+    if matches!(command, RuntimeIpcPeerReenrollmentCommand::Status { .. })
+        && let Some(ceremony) = &ceremony
+    {
+        if ceremony.invitation_id() != invitation.invitation_id()?
+            || ceremony.quarantine_record_id() != quarantine.head().record_id
+            || ceremony.staged_invitation_id() != staged.stage_id()?
+        {
+            return Ok(unsafe_response(
+                RuntimeIpcPeerReenrollmentHazard::AuthorityDiverged,
+                Some(invitation_summary),
+            ));
+        }
+        let plan = ceremony.plan()?;
+        let plan_summary = RuntimeIpcPeerReenrollmentPlanSummary::new(
+            peer_reenrollment_artifact_id(plan.plan_id()?)?,
+            plan.expires_at_unix_seconds(),
+        )?;
+        match ceremony.phase() {
+            PeerReenrollmentRuntimeCeremonyPhase::Planned => {
+                if plan
+                    .verify_context(
+                        local_authority,
+                        quarantine,
+                        ticket.listener_directory().device_list(),
+                        &invitation,
+                        now_unix_seconds,
+                    )
+                    .is_err()
+                {
+                    return Ok(unsafe_response(
+                        RuntimeIpcPeerReenrollmentHazard::AuthorityDiverged,
+                        Some(invitation_summary),
+                    ));
+                }
+                let plan_id = plan_summary.plan_id.clone();
+                return Ok(RuntimeIpcPeerReenrollmentResponse {
+                    contact_id,
+                    status: RuntimeIpcPeerReenrollmentStatus::ApprovalRequired,
+                    hazard: None,
+                    invitation: Some(invitation_summary),
+                    quarantine: quarantine_summary,
+                    plan: Some(plan_summary),
+                    durable_outcome: RuntimeIpcPeerReenrollmentDurableOutcome::PlanPrepared {
+                        plan_id,
+                    },
+                    suppression,
+                    history_recovery:
+                        RuntimeIpcPeerReenrollmentHistoryRecovery::SeparateApprovalRequired,
+                    restart_required: false,
+                });
+            }
+            PeerReenrollmentRuntimeCeremonyPhase::Approved => {
+                let tombstone = ceremony
+                    .tombstone()?
+                    .context("approved peer re-enrollment ceremony lost its tombstone")?;
+                if tombstone
+                    .verify_context(
+                        local_authority,
+                        quarantine,
+                        ticket.listener_directory().device_list(),
+                        &invitation,
+                        now_unix_seconds,
+                    )
+                    .is_err()
+                {
+                    return Ok(unsafe_response(
+                        RuntimeIpcPeerReenrollmentHazard::AuthorityDiverged,
+                        Some(invitation_summary),
+                    ));
+                }
+                let plan_id = plan_summary.plan_id.clone();
+                return Ok(RuntimeIpcPeerReenrollmentResponse {
+                    contact_id,
+                    status: RuntimeIpcPeerReenrollmentStatus::ApprovedPrepared,
+                    hazard: None,
+                    invitation: Some(invitation_summary),
+                    quarantine: quarantine_summary,
+                    plan: Some(plan_summary),
+                    durable_outcome: RuntimeIpcPeerReenrollmentDurableOutcome::ApprovalPrepared {
+                        plan_id,
+                        tombstone_id: peer_reenrollment_artifact_id(
+                            peer_reenrollment_tombstone_id(&tombstone)?,
+                        )?,
+                    },
+                    suppression,
+                    history_recovery:
+                        RuntimeIpcPeerReenrollmentHistoryRecovery::SeparateApprovalRequired,
+                    restart_required: false,
+                });
+            }
+            PeerReenrollmentRuntimeCeremonyPhase::AcceptanceCommitted
+            | PeerReenrollmentRuntimeCeremonyPhase::Complete => {
+                return Ok(unsafe_response(
+                    RuntimeIpcPeerReenrollmentHazard::AuthorityDiverged,
+                    Some(invitation_summary),
+                ));
+            }
+        }
     }
     Ok(RuntimeIpcPeerReenrollmentResponse {
         contact_id,
@@ -14480,6 +15470,7 @@ fn peer_reenrollment_status_name(status: RuntimeIpcPeerReenrollmentStatus) -> &'
         RuntimeIpcPeerReenrollmentStatus::Ready => "ready",
         RuntimeIpcPeerReenrollmentStatus::ApprovalRequired => "approval-required",
         RuntimeIpcPeerReenrollmentStatus::ApprovedPrepared => "approved-prepared",
+        RuntimeIpcPeerReenrollmentStatus::AcceptanceIncomplete => "acceptance-incomplete",
         RuntimeIpcPeerReenrollmentStatus::AcceptedRestartRequired => "accepted-restart-required",
         RuntimeIpcPeerReenrollmentStatus::Consumed => "consumed",
     }
@@ -14498,7 +15489,10 @@ fn peer_reenrollment_hazard_name(hazard: RuntimeIpcPeerReenrollmentHazard) -> &'
     }
 }
 
-fn print_runtime_peer_reenrollment_response(response: &RuntimeIpcPeerReenrollmentResponse) {
+fn print_runtime_peer_reenrollment_response(
+    response: &RuntimeIpcPeerReenrollmentResponse,
+    mutation_authority: bool,
+) {
     println!("peer_reenrollment_contact_id={}", response.contact_id);
     println!(
         "peer_reenrollment_state={}",
@@ -14594,7 +15588,7 @@ fn print_runtime_peer_reenrollment_response(response: &RuntimeIpcPeerReenrollmen
         "peer_reenrollment_restart_required={}",
         response.restart_required
     );
-    println!("peer_reenrollment_mutation_authority=false");
+    println!("peer_reenrollment_mutation_authority={mutation_authority}");
 }
 
 async fn runtime_ipc_peer_reenrollment_read(
@@ -14629,7 +15623,7 @@ async fn runtime_ipc_peer_reenrollment_read(
                 &request,
                 &descriptor,
             )?;
-            print_runtime_peer_reenrollment_response(signed.response());
+            print_runtime_peer_reenrollment_response(signed.response(), false);
             println!("status=runtime-peer-reenrollment-observed");
             Ok(())
         }
@@ -14637,6 +15631,50 @@ async fn runtime_ipc_peer_reenrollment_read(
             bail!("runtime IPC rejected peer re-enrollment observation: {message}")
         }
         _ => bail!("runtime IPC returned an unexpected peer re-enrollment response"),
+    }
+}
+
+async fn runtime_ipc_peer_reenrollment_mutation(
+    ipc_file: PathBuf,
+    command: RuntimeIpcPeerReenrollmentCommand,
+) -> Result<()> {
+    ensure!(
+        matches!(
+            command,
+            RuntimeIpcPeerReenrollmentCommand::Plan { .. }
+                | RuntimeIpcPeerReenrollmentCommand::Approve { .. }
+                | RuntimeIpcPeerReenrollmentCommand::Accept { .. }
+        ),
+        "CLI peer re-enrollment mutation client accepts only plan, approve, or accept"
+    );
+    let descriptor = RuntimeIpcDescriptor::load(&ipc_file)?;
+    let request = RuntimeIpcPeerReenrollmentRequest::new(
+        &descriptor,
+        RuntimeIpcRequestId::generate()?,
+        command,
+    )?;
+    let response = kilogram_runtime_ipc::call(
+        &ipc_file,
+        RuntimeIpcCommand::PeerReenrollmentMutation {
+            request: request.encode()?,
+        },
+    )
+    .await?;
+    match response {
+        RuntimeIpcResponse::PeerReenrollmentMutation { signed_response } => {
+            let signed = SignedRuntimeIpcPeerReenrollmentResponse::decode_and_verify(
+                &signed_response,
+                &request,
+                &descriptor,
+            )?;
+            print_runtime_peer_reenrollment_response(signed.response(), true);
+            println!("status=runtime-peer-reenrollment-mutated");
+            Ok(())
+        }
+        RuntimeIpcResponse::Error { message } => {
+            bail!("runtime IPC rejected peer re-enrollment mutation: {message}")
+        }
+        _ => bail!("runtime IPC returned an unexpected peer re-enrollment mutation response"),
     }
 }
 
@@ -16019,6 +17057,41 @@ async fn handle_runtime_ipc_work(
                 });
             match status {
                 Ok(signed_response) => RuntimeIpcResponse::PeerReenrollmentRead { signed_response },
+                Err(error) => RuntimeIpcResponse::Error {
+                    message: format!("{error:#}"),
+                },
+            }
+        }
+        RuntimeIpcCommand::PeerReenrollmentMutation { request } => {
+            let status = StateDirectoryLock::acquire(state_directory)
+                .context("lock runtime state for explicit peer re-enrollment mutation")
+                .and_then(|_lock| {
+                    let request = RuntimeIpcPeerReenrollmentRequest::decode_and_validate(
+                        &request, descriptor,
+                    )?;
+                    ensure_runtime_peer_reenrollment_mutation_command(request.command())?;
+                    let result = execute_runtime_peer_reenrollment_mutation(
+                        state_directory,
+                        outbound_scheduler,
+                        local_authority,
+                        request.command(),
+                        unix_time_now()?,
+                        RuntimePeerReenrollmentMutationFault::None,
+                    )?;
+                    let signed = SignedRuntimeIpcPeerReenrollmentResponse::issue(
+                        &request,
+                        descriptor,
+                        identity,
+                        result.response,
+                    )?
+                    .encode()?;
+                    Ok((signed, result.changed))
+                });
+            match status {
+                Ok((signed_response, changed)) => {
+                    state_changed = changed;
+                    RuntimeIpcResponse::PeerReenrollmentMutation { signed_response }
+                }
                 Err(error) => RuntimeIpcResponse::Error {
                     message: format!("{error:#}"),
                 },
@@ -35591,7 +36664,7 @@ mod tests {
     }
 
     #[test]
-    fn active_peer_reenrollment_adapter_rejects_all_mutation_commands() -> Result<()> {
+    fn peer_reenrollment_observation_and_mutation_adapters_are_disjoint() -> Result<()> {
         let contact_id = RuntimeIpcPeerReenrollmentContactId::new(encode_hex(&[1_u8; 32]))?;
         let plan_id = RuntimeIpcPeerReenrollmentArtifactId::from_bytes([2_u8; 32])?;
         let invitation_id = RuntimeIpcPeerReenrollmentArtifactId::from_bytes([3_u8; 32])?;
@@ -35611,14 +36684,18 @@ mod tests {
                     kilogram_runtime_ipc::RuntimeIpcPeerReenrollmentExplicitApproval::UserConfirmed,
             },
             RuntimeIpcPeerReenrollmentCommand::Accept {
-                contact_id,
+                contact_id: contact_id.clone(),
                 tombstone_id,
                 quarantine_record_id,
             },
         ];
         for command in commands {
             assert!(ensure_runtime_peer_reenrollment_observation_command(&command).is_err());
+            ensure_runtime_peer_reenrollment_mutation_command(&command)?;
         }
+        let observation = RuntimeIpcPeerReenrollmentCommand::Status { contact_id };
+        ensure_runtime_peer_reenrollment_observation_command(&observation)?;
+        assert!(ensure_runtime_peer_reenrollment_mutation_command(&observation).is_err());
         Ok(())
     }
 
@@ -35831,53 +36908,230 @@ mod tests {
                 .exists()
         );
 
-        let plan = PeerReenrollmentPlan::prepare(
-            local_state.identity().device_id(),
-            &local_authority,
-            &quarantine,
-            &peer_authority,
-            &invitation,
-            unix_time_now()?,
-        )?;
-        let phrase = plan.confirmation_phrase()?;
-        let tombstone = plan.confirm_and_sign(
-            local_state.identity(),
-            &phrase,
-            ExplicitPeerReenrollmentApproval::UserOrTestOperatorApproved,
-        )?;
-        let acceptance_store = PeerReenrollmentAcceptanceStore::open(
-            local_state_directory.join(PEER_REENROLLMENT_ACCEPTANCE_DIRECTORY),
-            local_root.account_id(),
-            local_state.identity().device_id(),
-        )?;
-        let acceptance = match acceptance_store.accept(
-            local_state.identity(),
-            &tombstone,
-            &local_authority,
-            &quarantine,
-            &peer_authority,
-            &invitation,
-            unix_time_now()?,
-        )? {
-            PeerReenrollmentAcceptanceOutcome::Accepted(value) => value,
-            PeerReenrollmentAcceptanceOutcome::AlreadyAccepted(_) => {
-                bail!("fresh fixture unexpectedly replayed peer re-enrollment acceptance")
-            }
+        let invitation_id = ready
+            .invitation
+            .as_ref()
+            .context("ready response omitted its invitation")?
+            .invitation_id
+            .clone();
+        let quarantine_record_id = ready
+            .quarantine
+            .as_ref()
+            .context("ready response omitted its quarantine")?
+            .record_id
+            .clone();
+        let plan_command = RuntimeIpcPeerReenrollmentCommand::Plan {
+            contact_id: observed_contact_id.clone(),
+            invitation_id,
+            quarantine_record_id: quarantine_record_id.clone(),
         };
-        drop(acceptance_store);
+        let planned = execute_runtime_peer_reenrollment_mutation(
+            &local_state_directory,
+            &scheduler,
+            &local_authority,
+            &plan_command,
+            unix_time_now()?,
+            RuntimePeerReenrollmentMutationFault::None,
+        )?;
+        planned.response.validate()?;
+        assert!(planned.changed);
         assert_eq!(
-            prepare_peer_reenrollment_runtime_transition(
-                &local_state_directory,
-                &local_state,
-                &local_authority,
-                &quarantine,
-                &peer_authority,
-                &invitation,
-                &acceptance,
-                unix_time_now()?,
-            )?,
-            (1, 0)
+            planned.response.status,
+            RuntimeIpcPeerReenrollmentStatus::ApprovalRequired
         );
+        let plan_summary = planned
+            .response
+            .plan
+            .as_ref()
+            .context("planned response omitted its plan")?;
+        let plan_id = plan_summary.plan_id.clone();
+        let confirmation_phrase = plan_summary.confirmation_phrase.clone();
+        assert!(matches!(
+            planned.response.durable_outcome,
+            RuntimeIpcPeerReenrollmentDurableOutcome::PlanPrepared { .. }
+        ));
+
+        let planned_status = collect_runtime_peer_reenrollment_response(
+            &local_state_directory,
+            &scheduler,
+            &local_authority,
+            &RuntimeIpcPeerReenrollmentCommand::Status {
+                contact_id: observed_contact_id.clone(),
+            },
+            unix_time_now()?,
+        )?;
+        planned_status.validate()?;
+        assert_eq!(
+            planned_status.status,
+            RuntimeIpcPeerReenrollmentStatus::ApprovalRequired
+        );
+
+        let approved = execute_runtime_peer_reenrollment_mutation(
+            &local_state_directory,
+            &scheduler,
+            &local_authority,
+            &RuntimeIpcPeerReenrollmentCommand::Approve {
+                contact_id: observed_contact_id.clone(),
+                plan_id: plan_id.clone(),
+                confirmation_phrase,
+                explicit_approval: RuntimeIpcPeerReenrollmentExplicitApproval::UserConfirmed,
+            },
+            unix_time_now()?,
+            RuntimePeerReenrollmentMutationFault::None,
+        )?;
+        approved.response.validate()?;
+        assert!(approved.changed);
+        assert_eq!(
+            approved.response.status,
+            RuntimeIpcPeerReenrollmentStatus::ApprovedPrepared
+        );
+        let tombstone_id = match &approved.response.durable_outcome {
+            RuntimeIpcPeerReenrollmentDurableOutcome::ApprovalPrepared {
+                plan_id: approved_plan_id,
+                tombstone_id,
+            } => {
+                assert_eq!(approved_plan_id, &plan_id);
+                tombstone_id.clone()
+            }
+            other => bail!("approved response has an unexpected outcome: {other:?}"),
+        };
+
+        let approved_status = collect_runtime_peer_reenrollment_response(
+            &local_state_directory,
+            &scheduler,
+            &local_authority,
+            &RuntimeIpcPeerReenrollmentCommand::Status {
+                contact_id: observed_contact_id.clone(),
+            },
+            unix_time_now()?,
+        )?;
+        approved_status.validate()?;
+        assert_eq!(
+            approved_status.status,
+            RuntimeIpcPeerReenrollmentStatus::ApprovedPrepared
+        );
+
+        let accept_command = RuntimeIpcPeerReenrollmentCommand::Accept {
+            contact_id: observed_contact_id.clone(),
+            tombstone_id,
+            quarantine_record_id,
+        };
+        let first_fault = execute_runtime_peer_reenrollment_mutation(
+            &local_state_directory,
+            &scheduler,
+            &local_authority,
+            &accept_command,
+            unix_time_now()?,
+            RuntimePeerReenrollmentMutationFault::AfterAcceptanceCommit,
+        )
+        .err()
+        .context("acceptance commit fault was not injected")?;
+        assert!(format!("{first_fault:#}").contains("after peer re-enrollment acceptance commit"));
+        let first_incomplete = collect_runtime_peer_reenrollment_response(
+            &local_state_directory,
+            &scheduler,
+            &local_authority,
+            &RuntimeIpcPeerReenrollmentCommand::Status {
+                contact_id: observed_contact_id.clone(),
+            },
+            unix_time_now()?,
+        )?;
+        first_incomplete.validate()?;
+        assert_eq!(
+            first_incomplete.status,
+            RuntimeIpcPeerReenrollmentStatus::AcceptanceIncomplete
+        );
+
+        let journal_fault = execute_runtime_peer_reenrollment_mutation(
+            &local_state_directory,
+            &scheduler,
+            &local_authority,
+            &accept_command,
+            unix_time_now()?,
+            RuntimePeerReenrollmentMutationFault::AfterAcceptanceJournal,
+        )
+        .err()
+        .context("acceptance journal fault was not injected")?;
+        assert!(
+            format!("{journal_fault:#}").contains("after peer re-enrollment acceptance journal")
+        );
+        let journal_incomplete = collect_runtime_peer_reenrollment_response(
+            &local_state_directory,
+            &scheduler,
+            &local_authority,
+            &RuntimeIpcPeerReenrollmentCommand::Status {
+                contact_id: observed_contact_id.clone(),
+            },
+            unix_time_now()?,
+        )?;
+        journal_incomplete.validate()?;
+        assert_eq!(
+            journal_incomplete.status,
+            RuntimeIpcPeerReenrollmentStatus::AcceptanceIncomplete
+        );
+
+        let transition_fault = execute_runtime_peer_reenrollment_mutation(
+            &local_state_directory,
+            &scheduler,
+            &local_authority,
+            &accept_command,
+            unix_time_now()?,
+            RuntimePeerReenrollmentMutationFault::AfterTransitionPrepare,
+        )
+        .err()
+        .context("runtime transition fault was not injected")?;
+        assert!(
+            format!("{transition_fault:#}")
+                .contains("after peer re-enrollment transition preparation")
+        );
+        let transition_incomplete = collect_runtime_peer_reenrollment_response(
+            &local_state_directory,
+            &scheduler,
+            &local_authority,
+            &RuntimeIpcPeerReenrollmentCommand::Status {
+                contact_id: observed_contact_id.clone(),
+            },
+            unix_time_now()?,
+        )?;
+        transition_incomplete.validate()?;
+        assert_eq!(
+            transition_incomplete.status,
+            RuntimeIpcPeerReenrollmentStatus::AcceptanceIncomplete
+        );
+        let skipped_incomplete = consume_peer_reenrollment_transitions_at_runtime_start(
+            &local_state_directory,
+            &local_state,
+            &local_authority,
+        )?;
+        assert_eq!(skipped_incomplete.prepared, 1);
+        assert_eq!(skipped_incomplete.consumed, 0);
+        assert_eq!(skipped_incomplete.already_consumed, 0);
+
+        let completed = execute_runtime_peer_reenrollment_mutation(
+            &local_state_directory,
+            &scheduler,
+            &local_authority,
+            &accept_command,
+            unix_time_now()?,
+            RuntimePeerReenrollmentMutationFault::None,
+        )?;
+        completed.response.validate()?;
+        assert!(completed.changed);
+        assert_eq!(
+            completed.response.status,
+            RuntimeIpcPeerReenrollmentStatus::AcceptedRestartRequired
+        );
+        let replayed = execute_runtime_peer_reenrollment_mutation(
+            &local_state_directory,
+            &scheduler,
+            &local_authority,
+            &accept_command,
+            unix_time_now()?,
+            RuntimePeerReenrollmentMutationFault::None,
+        )?;
+        replayed.response.validate()?;
+        assert!(!replayed.changed);
+        assert_eq!(replayed.response, completed.response);
 
         let accepted = collect_runtime_peer_reenrollment_response(
             &local_state_directory,

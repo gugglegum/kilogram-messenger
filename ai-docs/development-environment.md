@@ -5298,3 +5298,31 @@ Hosted follow-up:
   reusable debug deps/build outputs remain for faster subsequent builds.
 - No product network operation, laptop, release build, archive, tag or
   automatic GitHub build was used. Public sync default remains `legacy-only`.
+
+## M1.2.16 fresh-start peer re-enrollment mutation adapter environment (2026-10-20)
+
+- Active local IPC is exact version 33 with descriptor signature domain v14;
+  version 32 is rejected before actor dispatch. Peer and sync wire formats are
+  unchanged.
+- Rust harnesses were compiled without execution and launched only by
+  `scripts/run-cargo-tests-stable.ps1` under stable EXE names. Cargo used the
+  debug/test profile, two jobs and below-normal priority; no release artifact
+  or ZIP was produced.
+- Changed-package stable regression passed CLI binary 102/102 plus library
+  1/1, peer re-enrollment 5/5, acceptance 5/5, runtime/journal 7/7, runtime IPC
+  27/27 and Windows library 30/30. The focused crash/replay scenario also
+  passed after the full run.
+- The crash test exposed two implementation defects before acceptance: exact
+  transition replay used wall-clock preparation time as identity, and the
+  acceptance redb handle remained open during response collection. Replay now
+  compares immutable operation context without timestamp, and store handles
+  are released before reopening read views.
+- Dedicated mutation boundary rejects 10/10 negative mutations. Accepted-tag
+  readiness passes 142/142 against immutable `M1.0.0`, including rustfmt and
+  workspace-wide locked/offline strict Clippy.
+- Full regression grew `target` to about 45.6 GiB because this filesystem
+  copies incremental artifacts instead of hard-linking them. Disposable debug
+  incremental generations may be pruned after validation without removing
+  reusable debug dependencies and build outputs.
+- No product network operation, laptop, release build, archive, new tag or
+  automatic GitHub build was used. Public sync default remains `legacy-only`.

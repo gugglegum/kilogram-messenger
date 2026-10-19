@@ -257,6 +257,38 @@ signed-runtime-ipc-read-response-v1 = [
   signature
 ]
 
+runtime-ipc-peer-reenrollment-command-v1 =
+  [peer-reenrollment-mutation: 0, nested-descriptor-bound-request: bytes .size (1..4096)]
+
+runtime-ipc-peer-reenrollment-request-v1 = [
+  profile-version,
+  descriptor-id: digest,
+  request-id,
+  bearer-token: token,
+  issued-at-unix-seconds: uint,
+  expires-at-unix-seconds: uint,
+  runtime-ipc-peer-reenrollment-command-v1
+]
+
+runtime-ipc-peer-reenrollment-result-v1 =
+  [peer-reenrollment-mutation-result: 0, current-device-signed-response: bytes .size (1..16384)] /
+  [error: 1, error-code: 1..65535, message-utf8: bytes .size (1..4096)]
+
+runtime-ipc-peer-reenrollment-response-content-v1 = [
+  profile-version,
+  descriptor-id: digest,
+  request-id,
+  request-digest: digest,
+  responder-device-id: device-id,
+  runtime-ipc-peer-reenrollment-result-v1
+]
+
+signed-runtime-ipc-peer-reenrollment-response-v1 = [
+  profile-version,
+  runtime-ipc-peer-reenrollment-response-content-v1,
+  signature
+]
+
 runtime-ipc-option-digest-v1 = [none: 0] / [some: 1, digest]
 
 runtime-ipc-contact-command-v1 =
@@ -1640,6 +1672,8 @@ kilogram-runtime-ipc-v1 =
   signed-runtime-ipc-core-response-v1 /
   runtime-ipc-read-request-v1 /
   signed-runtime-ipc-read-response-v1 /
+  runtime-ipc-peer-reenrollment-request-v1 /
+  signed-runtime-ipc-peer-reenrollment-response-v1 /
   runtime-ipc-contact-request-v1 /
   signed-runtime-ipc-contact-response-v1 /
   runtime-ipc-directory-request-v1 /

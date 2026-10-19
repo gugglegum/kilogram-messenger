@@ -61,10 +61,10 @@ function Assert-Contract {
         [string]$runtime.response -cne 'PeerReenrollmentRead' -or
         (@($runtime.allowed_nested_commands) -join ',') -cne 'inspect,status' -or
         (@($runtime.rejected_nested_commands) -join ',') -cne 'plan,approve,accept' -or
-        [int]$runtime.version -ne 32 -or
-        [string]$runtime.descriptor_signature_domain -cne 'kilogram:runtime-ipc-descriptor:v13\0' -or
-        [int]$runtime.previous_version -ne 31 -or
-        [string]$runtime.previous_descriptor_signature_domain -cne 'kilogram:runtime-ipc-descriptor:v12\0' -or
+        [int]$runtime.version -ne 33 -or
+        [string]$runtime.descriptor_signature_domain -cne 'kilogram:runtime-ipc-descriptor:v14\0' -or
+        [int]$runtime.previous_version -ne 32 -or
+        [string]$runtime.previous_descriptor_signature_domain -cne 'kilogram:runtime-ipc-descriptor:v13\0' -or
         [string]$runtime.migration -cne 'exact-version-hard-cut-for-co-installed-binaries' -or
         [bool]$runtime.dual_reader -or
         [int]$runtime.maximum_nested_request_bytes -ne 4096 -or
@@ -133,13 +133,13 @@ function Assert-Contract {
         if ([bool]$desktopBoundary.$forbidden) { throw "desktop gained forbidden authority '$forbidden'" }
     }
 
-    if ([int]$Completion.active_postcard.version -ne 32 -or
-        [string]$Completion.active_postcard.descriptor_signature_domain -cne 'kilogram:runtime-ipc-descriptor:v13\0' -or
-        @($Completion.canonical.commands).Count -ne 37 -or
-        @($Completion.canonical.results).Count -ne 36 -or
-        @($Completion.canonical.command_result_pairs).Count -ne 37 -or
-        @($Completion.active_postcard.commands).Count -ne 32 -or
-        @($Completion.active_postcard.responses).Count -ne 31 -or
+    if ([int]$Completion.active_postcard.version -ne 33 -or
+        [string]$Completion.active_postcard.descriptor_signature_domain -cne 'kilogram:runtime-ipc-descriptor:v14\0' -or
+        @($Completion.canonical.commands).Count -ne 38 -or
+        @($Completion.canonical.results).Count -ne 37 -or
+        @($Completion.canonical.command_result_pairs).Count -ne 38 -or
+        @($Completion.active_postcard.commands).Count -ne 33 -or
+        @($Completion.active_postcard.responses).Count -ne 32 -or
         'peer-reenrollment-read' -cnotin @($Completion.canonical.commands) -or
         'peer-reenrollment-read-result' -cnotin @($Completion.canonical.results) -or
         'PeerReenrollmentRead' -cnotin @($Completion.active_postcard.commands.variant) -or
@@ -153,26 +153,26 @@ function Assert-Contract {
         [string]$pair[0].module -cne 'read' -or [string]$pair[0].kind -cne 'read') {
         throw 'peer re-enrollment canonical command/result pair changed'
     }
-    if ([string]$Schema.activation.current_runtime_encoding -cne 'postcard-v32-with-json-descriptor-v13' -or
-        @($Schema.covered_commands).Count -ne 37 -or @($Schema.covered_results).Count -ne 36 -or
-        @($Schema.semantic_rules).Count -ne 185 -or
+    if ([string]$Schema.activation.current_runtime_encoding -cne 'postcard-v33-with-json-descriptor-v14' -or
+        @($Schema.covered_commands).Count -ne 38 -or @($Schema.covered_results).Count -ne 37 -or
+        @($Schema.semantic_rules).Count -ne 192 -or
         'peer-reenrollment-read' -cnotin @($Schema.covered_commands) -or
         'peer-reenrollment-read-result' -cnotin @($Schema.covered_results)) {
         throw 'peer re-enrollment canonical schema changed'
     }
     $surface = @($Compatibility.surfaces | Where-Object { [string]$_.id -ceq 'runtime-ipc' })
     if ($surface.Count -ne 1 -or
-        [int](@($surface[0].bindings | Where-Object { [string]$_.symbol -ceq 'IPC_VERSION' })[0].value) -ne 32 -or
+        [int](@($surface[0].bindings | Where-Object { [string]$_.symbol -ceq 'IPC_VERSION' })[0].value) -ne 33 -or
         [string](@($surface[0].bindings | Where-Object {
             [string]$_.symbol -ceq 'DESCRIPTOR_SIGNATURE_DOMAIN'
-        })[0].value) -cne 'kilogram:runtime-ipc-descriptor:v13\0') {
+        })[0].value) -cne 'kilogram:runtime-ipc-descriptor:v14\0') {
         throw 'peer re-enrollment compatibility binding changed'
     }
 
     Assert-ContainsAll $Ipc @(
-        'const IPC_VERSION: u8 = 32;', 'kilogram:runtime-ipc-descriptor:v13\0',
+        'const IPC_VERSION: u8 = 33;', 'kilogram:runtime-ipc-descriptor:v14\0',
         'PeerReenrollmentRead {', 'signed_response: Vec<u8>',
-        'version_31_request_is_rejected_before_actor_dispatch'
+        'version_32_request_is_rejected_before_actor_dispatch'
     ) 'runtime IPC source'
     Assert-ContainsAll $Contract @(
         'MAX_RUNTIME_IPC_PEER_REENROLLMENT_REQUEST_BYTES: usize = 4 * 1024',
@@ -201,7 +201,7 @@ function Assert-Contract {
         'PeerReenrollmentRuntimeReadStore::open_existing(',
         'RuntimeIpcCommand::PeerReenrollmentRead { request }',
         'runtime IPC peer re-enrollment adapter rejects mutation commands',
-        'active_peer_reenrollment_adapter_rejects_all_mutation_commands',
+        'peer_reenrollment_observation_and_mutation_adapters_are_disjoint',
         'peer_reenrollment_consumes_only_at_fresh_start_and_retains_old_evidence'
     ) 'CLI runtime adapter'
     Assert-ContainsAll $Desktop @(
@@ -252,7 +252,7 @@ Assert-Contract $manifest $completion $schema $compatibility $ipc $contract $sta
 if ($SelfTest) {
     $mutations = @()
     $changed = Copy-JsonObject $manifest
-    $changed.runtime_ipc.version = 31
+    $changed.runtime_ipc.version = 32
     $mutations += { Assert-Contract $changed $completion $schema $compatibility $ipc $contract $staging $cli $desktop $rfc }
     $changed = Copy-JsonObject $manifest
     $changed.runtime_ipc.allowed_nested_commands = @('inspect', 'plan', 'status')
@@ -272,7 +272,7 @@ if ($SelfTest) {
     $changedSchema = Copy-JsonObject $schema
     $changedSchema.covered_commands = @($changedSchema.covered_commands | Where-Object { $_ -cne 'peer-reenrollment-read' })
     $mutations += { Assert-Contract $manifest $completion $changedSchema $compatibility $ipc $contract $staging $cli $desktop $rfc }
-    $changedIpc = $ipc.Replace('const IPC_VERSION: u8 = 32;', 'const IPC_VERSION: u8 = 31;')
+    $changedIpc = $ipc.Replace('const IPC_VERSION: u8 = 33;', 'const IPC_VERSION: u8 = 32;')
     $mutations += { Assert-Contract $manifest $completion $schema $compatibility $changedIpc $contract $staging $cli $desktop $rfc }
 
     $rejected = 0
@@ -284,7 +284,7 @@ if ($SelfTest) {
 }
 
 Write-Output 'canonical_runtime_ipc_peer_reenrollment_read_adapter_boundary=verified'
-Write-Output 'active_runtime_ipc_version=32'
+Write-Output 'active_runtime_ipc_version=33'
 Write-Output 'mutation_authority=false'
 Write-Output 'network_executed=false'
 Write-Output 'second_host_required=false'

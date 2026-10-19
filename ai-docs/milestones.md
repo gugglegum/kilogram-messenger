@@ -7725,3 +7725,30 @@ correlation visible, Windows-only field evidence, independent security audit
   stable EXE вне сетевой песочницы прошёл без изменения исходников;
 - connection-ticket/sync wire и public default `legacy-only` не менялись;
   network, ноутбук, release/ZIP/tag и automatic GitHub build не использовались.
+
+### M1.2.16 — fresh-start peer re-enrollment mutation adapter: принят локально
+
+- active authenticated IPC сделал exact hard cut с v32/domain v13 на
+  v33/domain v14 и получил отдельный `PeerReenrollmentMutation`; read adapter
+  по-прежнему принимает только `inspect`/`status`, mutation adapter — только
+  `plan`/`approve`/`accept`;
+- Device secret остаётся только внутри foreground runtime. Plan exact-связывает
+  contact, staged invitation, quarantine и обе authority; approve требует
+  отдельный флаг и точную typed `REENROLL` phrase; accept повторно проверяет
+  весь signed context;
+- runtime-owned bounded redb journal хранит current-Device-signed monotonic
+  фазы `planned -> approved -> acceptance-committed -> complete` и exact IDs
+  plan/tombstone/receipt/transition; divergent replay fail closed;
+- injected crashes после acceptance commit, journal commit и transition
+  prepare остаются честно `acceptance-incomplete`; exact retry завершает ту же
+  ceremony, в том числе если повторный prepare получил новое wall-clock time;
+- incomplete journal не даёт restart authority и пропускается на fresh start;
+  только complete journal разрешает consume до Iroh endpoint. Hot apply,
+  quarantine deletion и implicit history recovery отсутствуют, predecessor и
+  old readable evidence сохраняются;
+- stable-path regression прошёл CLI 102/102 + library 1/1, planner 5/5,
+  acceptance 5/5, runtime/journal 7/7, IPC 27/27 и Windows 30/30; dedicated
+  boundary отклонил 10/10 mutations, readiness прошёл 142/142 с rustfmt и
+  workspace-wide locked/offline strict Clippy;
+- wire и public default `legacy-only` не менялись; product network, ноутбук,
+  release/ZIP/tag и automatic GitHub build не использовались.

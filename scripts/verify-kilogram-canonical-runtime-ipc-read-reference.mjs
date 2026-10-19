@@ -314,7 +314,7 @@ assert(schema.limits.maximum_read_response_bytes === 262144 &&
   schema.limits.maximum_history_page_size === 100 &&
   schema.limits.maximum_history_page_body_bytes === 196608,
 "runtime IPC read bounds changed");
-assert(schema.activation.current_runtime_encoding === "postcard-v32-with-json-descriptor-v13" &&
+assert(schema.activation.current_runtime_encoding === "postcard-v33-with-json-descriptor-v14" &&
   schema.activation.current_runtime_changed === true, "active runtime IPC changed");
 assert(vectors.schema_version === 1 && vectors.profile === schema.profile &&
   vectors.activation_status === "not-active" &&

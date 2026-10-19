@@ -1,45 +1,35 @@
-# Текущая точка: M1.2.15 завершён, следующий M1.2.16
+# Текущая точка: M1.2.16 завершён, следующий M1.2.17
 
-Статус на 2026-10-20: authenticated runtime IPC v32/domain v13 подключает
-только read-only `inspect` и `status` peer re-enrollment. Runtime собирает
-current-Device-signed snapshot из существующих capability, staging, acceptance
-и transition stores без create/repair; desktop и CLI независимо проверяют
-exact request/descriptor/response и не получают ticket, endpoint, путь или
-raw identity. Explicit offline staging не является acceptance authority.
-Readiness 141/141; stable regression: isolated runtime 1/1, CLI 101/101 + 1/1,
-staging 3/3, runtime IPC 26/26 и Windows 30/30. Peer wire и public default
-`legacy-only` неизменны.
+Статус на 2026-10-20: authenticated runtime IPC v33/domain v14 строго
+разделяет read-only `inspect`/`status` и explicit `plan`/`approve`/`accept`.
+Current Device подписывает bounded ceremony journal; partial acceptance честно
+видна как incomplete, exact replay продолжает ту же операцию, а successor
+применяется только на fresh start после complete journal. Desktop пока
+read-only. Readiness 142/142; stable regression: CLI 102/102 + 1/1, planner
+5/5, acceptance 5/5, runtime/journal 7/7, IPC 27/27 и Windows 30/30. Peer wire
+и public default `legacy-only` неизменны.
 
-## Следующий этап: M1.2.16 fresh-start-only explicit peer re-enrollment mutation adapter
+## Следующий этап: M1.2.17 guided desktop peer re-enrollment ceremony
 
-- подключить canonical `plan`, `approve` и `accept` к authenticated runtime IPC
-  как три разные явные операции; `inspect`/`status` никогда не должны создавать
-  план, подпись, receipt или transition;
-- хранить runtime-owned bounded ceremony state по opaque contact ID и exact
-  staged invitation ID; GUI/CLI не передают filesystem path, ticket, endpoint,
-  raw Account/Device ID, private key или reusable capability;
-- план связывать с текущим durable quarantine, обеими authority snapshots,
-  invitation и fresh nonce; повторный plan не должен молча заменять уже
-  подтверждённую либо расходящуюся ceremony;
-- approve разрешать только после exact typed `REENROLL` phrase и explicit
-  `UserConfirmed`; stale request, descriptor replacement, wrong Device,
-  changed authority/quarantine/invitation или replay с другим содержимым
-  должны fail closed до durable mutation;
-- accept должен использовать существующие acceptance и runtime-transition
-  primitives с crash/restart-safe журналом: partial cross-store progress
-  обязан либо безопасно завершаться exact replay, либо оставаться явно
-  incomplete, но не выдавать successor за активный;
-- после accept работающий runtime продолжает использовать quarantined
-  predecessor, не делает hot apply, delivery, retry или network recovery и
-  возвращает `restart_required=true`; successor применяется только следующим
-  fresh start до создания Iroh endpoint;
-- на этом этапе дать mutation surface только privacy-safe CLI IPC client;
-  guided desktop buttons и UX оставить отдельному M1.2.17 после принятия
-  crash/restart semantics;
-- проверить no-create observation, explicit-consent gate, stale/replay/fork,
-  injected crash между stores, restart completion и отсутствие network side
-  effects. Второй хост не нужен; default, peer wire, release/ZIP/tag и
-  automatic GitHub build не менять.
+- добавить в Windows-клиент пошаговый UX поверх уже принятого authenticated
+  IPC, не перенося Device/Root secret, filesystem path, ticket, endpoint, raw
+  Account/Device ID или reusable capability в GUI;
+- начинать только из read-only status: пользователь отдельно выбирает exact
+  staged invitation, получает понятное объяснение quarantine и создаёт plan;
+- показывать bounded summary replacement Device и exact confirmation phrase;
+  approve требует осознанного ввода phrase и отдельного подтверждения, без
+  одного общего toggle, implicit consent или auto-click;
+- accept остаётся отдельным действием после durable approval. UI обязан честно
+  различать `acceptance-incomplete`, `restart-required` и `consumed`, не
+  изображать частичную запись как успех и не предлагать clear quarantine;
+- после complete показывать guided restart, но не hot apply. Restart должен
+  использовать существующую fresh-start проверку и не запускать hidden retry,
+  delivery, recovery либо history rewrap;
+- любой descriptor replacement, runtime restart, changed plan/status или
+  competing ceremony инвалидирует UI confirmation и требует нового refresh;
+- добавить pure state machine/UI tests, authenticated loopback desktop test и
+  fail-closed boundary. Второй хост и product network не нужны; default, peer
+  wire, release/ZIP/tag и automatic GitHub build не менять.
 
 # Завершённый расширенный пакет: M1.1.92–M1.2.5
 

@@ -104,7 +104,7 @@ function Assert-CompletionInventory {
     $results = @($Manifest.canonical.results | ForEach-Object { [string]$_ })
     $universalResults = @($Manifest.canonical.universal_results | ForEach-Object { [string]$_ })
     $pairs = @($Manifest.canonical.command_result_pairs)
-    if ($commands.Count -ne 37 -or $results.Count -ne 36 -or $pairs.Count -ne 37) {
+    if ($commands.Count -ne 38 -or $results.Count -ne 37 -or $pairs.Count -ne 38) {
         throw 'canonical runtime IPC inventory cardinality changed'
     }
     Assert-Unique $commands 'canonical command inventory'
@@ -120,7 +120,8 @@ function Assert-CompletionInventory {
         'core', 'read', 'contact', 'directory', 'queue', 'outbox', 'provider',
         'mailbox-status', 'mailbox-mutation', 'publication', 'publication-network',
         'publication-conflict', 'own-device-announcement', 'own-device-discovery',
-        'own-device-roster', 'recovery-plan', 'recovery-execution', 'ticket-automation'
+        'own-device-roster', 'recovery-plan', 'recovery-execution', 'ticket-automation',
+        'peer-reenrollment'
     )
     $allowedKinds = @('core-control', 'read', 'mutation', 'network-mutation')
     foreach ($pair in $pairs) {
@@ -144,11 +145,11 @@ function Assert-CompletionInventory {
 
     $activeCommands = @($Manifest.active_postcard.commands)
     $activeResponses = @($Manifest.active_postcard.responses)
-    if ([int]$Manifest.active_postcard.version -ne 32 -or
+    if ([int]$Manifest.active_postcard.version -ne 33 -or
         [string]$Manifest.active_postcard.descriptor_signature_domain -cne
-            'kilogram:runtime-ipc-descriptor:v13\0' -or
-        $RuntimeSource.IndexOf('const IPC_VERSION: u8 = 32;', [StringComparison]::Ordinal) -lt 0 -or
-        $RuntimeSource.IndexOf('kilogram:runtime-ipc-descriptor:v13\0', [StringComparison]::Ordinal) -lt 0) {
+            'kilogram:runtime-ipc-descriptor:v14\0' -or
+        $RuntimeSource.IndexOf('const IPC_VERSION: u8 = 33;', [StringComparison]::Ordinal) -lt 0 -or
+        $RuntimeSource.IndexOf('kilogram:runtime-ipc-descriptor:v14\0', [StringComparison]::Ordinal) -lt 0) {
         throw 'active Postcard runtime IPC identity changed'
     }
     $activeCommandNames = @($activeCommands | ForEach-Object { [string]$_.variant })
@@ -197,9 +198,9 @@ function Assert-CompletionInventory {
     if ([string]$Schema.milestone -cne 'M1.1.49' -or
         [string]$Schema.status -cne 'candidate-not-active' -or
         [string]$Schema.activation.current_runtime_encoding -cne
-            'postcard-v32-with-json-descriptor-v13' -or
+            'postcard-v33-with-json-descriptor-v14' -or
         -not [bool]$Schema.activation.current_runtime_changed -or
-        @($Schema.semantic_rules).Count -ne 185) {
+        @($Schema.semantic_rules).Count -ne 192) {
         throw 'canonical runtime IPC schema did not record the exhaustive inventory'
     }
     $runtimeSurface = @($Coverage.surfaces | Where-Object { [string]$_.id -ceq 'runtime-ipc' })
@@ -224,8 +225,8 @@ function Assert-CompletionInventory {
         [string]$compatibilitySurface[0].compatibility -cne 'exact-version' -or
         [int](@($compatibilitySurface[0].bindings | Where-Object {
             [string]$_.symbol -ceq 'IPC_VERSION'
-        })[0].value) -ne 32) {
-        throw 'protocol compatibility registry no longer describes active IPC v32'
+        })[0].value) -ne 33) {
+        throw 'protocol compatibility registry no longer describes active IPC v33'
     }
 
     $activationRequirements = @(
@@ -311,10 +312,10 @@ Assert-Rejected {
 } 'untracked_active_postcard_variant'
 
 Write-Output 'runtime_ipc_completion_inventory_boundary=verified'
-Write-Output 'canonical_commands=37'
-Write-Output 'canonical_results=36'
-Write-Output 'active_postcard_commands=32'
-Write-Output 'active_postcard_responses=31'
+Write-Output 'canonical_commands=38'
+Write-Output 'canonical_results=37'
+Write-Output 'active_postcard_commands=33'
+Write-Output 'active_postcard_responses=32'
 Write-Output 'postcard_only_activation_blockers=0'
 Write-Output 'canonical_target_complete=true'
 Write-Output 'canonical_cbor_activated=false'

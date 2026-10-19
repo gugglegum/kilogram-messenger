@@ -158,6 +158,45 @@ impl PeerReenrollmentPlan {
         Ok(confirmation_phrase(self.plan_id()?))
     }
 
+    /// Re-verify the exact signed authority, quarantine, and invitation inputs
+    /// that produced this still-unapproved plan.
+    ///
+    /// A runtime approval adapter must call this immediately before creating a
+    /// tombstone. Persisting a plan does not grant permission to approve it
+    /// after any of its bound inputs have changed.
+    pub fn verify_context(
+        &self,
+        local_authority: &AccountDeviceListSnapshot,
+        quarantine: &DurablePeerCapabilityQuarantineHead,
+        peer_authority: &AccountDeviceListSnapshot,
+        invitation: &SignedCurrentPeerInvitation,
+        now_unix_seconds: u64,
+    ) -> Result<(), PeerReenrollmentError> {
+        let expected = build_validated_content(
+            self.content.local_device_id,
+            local_authority,
+            quarantine,
+            peer_authority,
+            invitation,
+            self.content.prepared_at_unix_seconds,
+            self.content.nonce,
+        )?;
+        if expected != self.content {
+            return Err(PeerReenrollmentError::ContextMismatch);
+        }
+        if now_unix_seconds < self.content.prepared_at_unix_seconds {
+            return Err(PeerReenrollmentError::PlanNotYetValid);
+        }
+        if now_unix_seconds > self.content.expires_at_unix_seconds {
+            return Err(PeerReenrollmentError::PlanExpired);
+        }
+        invitation.verify_at(now_unix_seconds)?;
+        if invitation.expires_at_unix_seconds() <= now_unix_seconds {
+            return Err(PeerReenrollmentError::InvitationNotFresh);
+        }
+        Ok(())
+    }
+
     pub fn confirm_and_sign(
         self,
         identity: &DeviceIdentity,
@@ -186,6 +225,10 @@ impl PeerReenrollmentPlan {
         self.content.local_account_id
     }
 
+    pub fn local_device_id(&self) -> DeviceId {
+        self.content.local_device_id
+    }
+
     pub fn peer_account_id(&self) -> AccountId {
         self.content.peer_account_id
     }
@@ -196,6 +239,18 @@ impl PeerReenrollmentPlan {
 
     pub fn replacement_peer_device_id(&self) -> DeviceId {
         self.content.replacement_peer_device_id
+    }
+
+    pub fn quarantine_record_id(&self) -> [u8; 32] {
+        self.content.quarantine_record_id
+    }
+
+    pub fn invitation_id(&self) -> [u8; 32] {
+        self.content.invitation_id
+    }
+
+    pub fn prepared_at_unix_seconds(&self) -> u64 {
+        self.content.prepared_at_unix_seconds
     }
 
     pub fn expires_at_unix_seconds(&self) -> u64 {

@@ -146,39 +146,39 @@ function Assert-Contract {
     $results = @($Completion.canonical.results)
     $pairs = @($Completion.canonical.command_result_pairs)
     $pair = @($pairs | Where-Object { [string]$_.command -ceq 'peer-capability-quarantine-page' })
-    if ($commands.Count -ne 37 -or $results.Count -ne 36 -or $pairs.Count -ne 37 -or
+    if ($commands.Count -ne 38 -or $results.Count -ne 37 -or $pairs.Count -ne 38 -or
         $pair.Count -ne 1 -or [string]$pair[0].result -cne 'peer-capability-quarantine-page-result' -or
         [string]$pair[0].module -cne 'read' -or [string]$pair[0].kind -cne 'read' -or
-        [int]$Completion.active_postcard.version -ne 32 -or
-        [string]$Completion.active_postcard.descriptor_signature_domain -cne 'kilogram:runtime-ipc-descriptor:v13\0' -or
-        @($Completion.active_postcard.commands).Count -ne 32 -or
-        @($Completion.active_postcard.responses).Count -ne 31 -or
+        [int]$Completion.active_postcard.version -ne 33 -or
+        [string]$Completion.active_postcard.descriptor_signature_domain -cne 'kilogram:runtime-ipc-descriptor:v14\0' -or
+        @($Completion.active_postcard.commands).Count -ne 33 -or
+        @($Completion.active_postcard.responses).Count -ne 32 -or
         'PeerCapabilityQuarantinePage' -cnotin @($Completion.active_postcard.commands.variant) -or
         'PeerCapabilityQuarantinePage' -cnotin @($Completion.active_postcard.responses.variant)) {
         throw 'runtime quarantine completion inventory changed'
     }
-    if ([string]$Schema.activation.current_runtime_encoding -cne 'postcard-v32-with-json-descriptor-v13' -or
+    if ([string]$Schema.activation.current_runtime_encoding -cne 'postcard-v33-with-json-descriptor-v14' -or
         [int]$Schema.limits.maximum_peer_capability_page_size -ne 64 -or
         [int]$Schema.limits.maximum_peer_capability_contacts -ne 256 -or
         [int]$Schema.limits.maximum_peer_capability_queue_items -ne 4096 -or
-        @($Schema.covered_commands).Count -ne 37 -or @($Schema.covered_results).Count -ne 36 -or
-        @($Schema.semantic_rules).Count -ne 185 -or
+        @($Schema.covered_commands).Count -ne 38 -or @($Schema.covered_results).Count -ne 37 -or
+        @($Schema.semantic_rules).Count -ne 192 -or
         'peer-capability-quarantine-page' -cnotin @($Schema.covered_commands) -or
         'peer-capability-quarantine-page-result' -cnotin @($Schema.covered_results)) {
         throw 'runtime quarantine canonical schema changed'
     }
     $surface = @($Compatibility.surfaces | Where-Object { [string]$_.id -ceq 'runtime-ipc' })
     if ($surface.Count -ne 1 -or
-        [int](@($surface[0].bindings | Where-Object { [string]$_.symbol -ceq 'IPC_VERSION' })[0].value) -ne 32 -or
+        [int](@($surface[0].bindings | Where-Object { [string]$_.symbol -ceq 'IPC_VERSION' })[0].value) -ne 33 -or
         [string](@($surface[0].bindings | Where-Object {
             [string]$_.symbol -ceq 'DESCRIPTOR_SIGNATURE_DOMAIN'
-        })[0].value) -cne 'kilogram:runtime-ipc-descriptor:v13\0') {
+        })[0].value) -cne 'kilogram:runtime-ipc-descriptor:v14\0') {
         throw 'runtime quarantine compatibility binding changed'
     }
 
     Assert-ContainsAll $Ipc @(
-        'const IPC_VERSION: u8 = 32;',
-        'kilogram:runtime-ipc-descriptor:v13\0',
+        'const IPC_VERSION: u8 = 33;',
+        'kilogram:runtime-ipc-descriptor:v14\0',
         'pub const MAX_RUNTIME_IPC_PEER_CAPABILITY_PAGE_SIZE: u16 = 64;',
         'pub const MAX_RUNTIME_IPC_PEER_CAPABILITY_CONTACTS: u16 = 256;',
         'pub const MAX_RUNTIME_IPC_PEER_CAPABILITY_QUEUE_ITEMS: u16 = 4_096;',
@@ -188,7 +188,7 @@ function Assert-Contract {
         'pub struct RuntimeIpcPeerCapabilityStatusItem',
         'pub struct RuntimeIpcPeerCapabilityPage',
         'peer_capability_page_is_bounded_monotonic_and_privacy_preserving',
-        'version_31_request_is_rejected_before_actor_dispatch'
+        'version_32_request_is_rejected_before_actor_dispatch'
     ) 'runtime IPC source'
     Assert-ContainsAll $Ipc @(
         'self.total_relevant_contact_count <= MAX_RUNTIME_IPC_PEER_CAPABILITY_CONTACTS',

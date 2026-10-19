@@ -6,6 +6,10 @@
 //! opens a network endpoint. Both the successor contact artifact and its
 //! mandatory capability floor live in the same signed transition.
 
+mod ceremony;
+
+pub use ceremony::*;
+
 use std::{
     collections::HashSet,
     path::{Path, PathBuf},
@@ -211,6 +215,14 @@ impl SignedPeerReenrollmentRuntimeTransition {
         Ok(*hasher.finalize().as_bytes())
     }
 
+    fn same_preparation_as(&self, other: &Self) -> bool {
+        let mut left = self.content.clone();
+        let mut right = other.content.clone();
+        left.prepared_at_unix_seconds = 0;
+        right.prepared_at_unix_seconds = 0;
+        left == right
+    }
+
     pub fn local_account_id(&self) -> AccountId {
         self.content.local_account_id
     }
@@ -413,7 +425,9 @@ impl PeerReenrollmentRuntimeStore {
             self.owner_device_id,
             key,
         )? {
-            if existing.transition_id == transition_id && existing.transition == candidate {
+            if (existing.transition_id == transition_id && existing.transition == candidate)
+                || existing.transition.same_preparation_as(&candidate)
+            {
                 return Ok(PeerReenrollmentRuntimePrepareOutcome::AlreadyPrepared(
                     existing,
                 ));
@@ -438,7 +452,9 @@ impl PeerReenrollmentRuntimeStore {
                     self.owner_device_id,
                     false,
                 )?;
-                if durable.transition_id == transition_id && durable.transition == candidate {
+                if (durable.transition_id == transition_id && durable.transition == candidate)
+                    || durable.transition.same_preparation_as(&candidate)
+                {
                     return Ok(PeerReenrollmentRuntimePrepareOutcome::AlreadyPrepared(
                         durable,
                     ));
@@ -973,6 +989,8 @@ mod tests {
     struct Fixture {
         root: TempDir,
         local_identity: DeviceIdentity,
+        plan: PeerReenrollmentPlan,
+        tombstone: kilogram_peer_reenrollment::SignedPeerReenrollmentTombstone,
         acceptance: DurablePeerReenrollmentAcceptance,
         invitation: SignedCurrentPeerInvitation,
     }
@@ -1039,7 +1057,7 @@ mod tests {
             1,
             [9_u8; 32],
         )?;
-        let acceptance = accept(
+        let (acceptance, plan, tombstone) = accept(
             root.path(),
             local_device.identity(),
             &local_authority,
@@ -1052,6 +1070,8 @@ mod tests {
             local_identity: DeviceIdentity::from_secret_bytes(
                 local_device.identity().secret_bytes(),
             ),
+            plan,
+            tombstone,
             acceptance,
             invitation,
         })
@@ -1089,7 +1109,14 @@ mod tests {
         quarantine: &DurablePeerCapabilityQuarantineHead,
         peer_authority: &AccountDeviceListSnapshot,
         invitation: &SignedCurrentPeerInvitation,
-    ) -> Result<DurablePeerReenrollmentAcceptance, Box<dyn std::error::Error>> {
+    ) -> Result<
+        (
+            DurablePeerReenrollmentAcceptance,
+            PeerReenrollmentPlan,
+            kilogram_peer_reenrollment::SignedPeerReenrollmentTombstone,
+        ),
+        Box<dyn std::error::Error>,
+    > {
         let plan = PeerReenrollmentPlan::prepare(
             local_identity.device_id(),
             local_authority,
@@ -1099,7 +1126,7 @@ mod tests {
             1_200,
         )?;
         let phrase = plan.confirmation_phrase()?;
-        let tombstone = plan.confirm_and_sign(
+        let tombstone = plan.clone().confirm_and_sign(
             local_identity,
             &phrase,
             ExplicitPeerReenrollmentApproval::UserOrTestOperatorApproved,
@@ -1118,8 +1145,10 @@ mod tests {
             invitation,
             1_300,
         )? {
-            PeerReenrollmentAcceptanceOutcome::Accepted(value) => Ok(value),
-            PeerReenrollmentAcceptanceOutcome::AlreadyAccepted(value) => Ok(value),
+            PeerReenrollmentAcceptanceOutcome::Accepted(value)
+            | PeerReenrollmentAcceptanceOutcome::AlreadyAccepted(value) => {
+                Ok((value, plan, tombstone))
+            }
         }
     }
 
@@ -1203,7 +1232,7 @@ mod tests {
                 &fixture.acceptance,
                 &fixture.invitation,
                 binding(),
-                1_400,
+                1_401,
             )?,
             PeerReenrollmentRuntimePrepareOutcome::AlreadyPrepared(_)
         ));
@@ -1310,6 +1339,187 @@ mod tests {
                 fixture.local_identity.device_id(),
             )
             .is_err()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn runtime_ceremony_is_signed_bounded_and_exactly_resumable()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let fixture = fixture()?;
+        let directory = fixture.root.path().join("runtime-ceremony");
+        let store = PeerReenrollmentRuntimeCeremonyStore::open(
+            &directory,
+            fixture.acceptance.receipt().local_account_id(),
+            fixture.local_identity.device_id(),
+        )?;
+        let contact_id = [31_u8; 32];
+        let staged_invitation_id = [32_u8; 32];
+        let prepared = store.prepare(
+            &fixture.local_identity,
+            contact_id,
+            staged_invitation_id,
+            fixture.plan.invitation_id(),
+            fixture.plan.quarantine_record_id(),
+            &fixture.plan,
+        )?;
+        assert!(matches!(
+            prepared,
+            PeerReenrollmentRuntimeCeremonyWriteOutcome::Written(_)
+        ));
+        assert_eq!(
+            prepared.ceremony().phase(),
+            PeerReenrollmentRuntimeCeremonyPhase::Planned
+        );
+        assert!(matches!(
+            store.prepare(
+                &fixture.local_identity,
+                contact_id,
+                staged_invitation_id,
+                fixture.plan.invitation_id(),
+                fixture.plan.quarantine_record_id(),
+                &fixture.plan,
+            )?,
+            PeerReenrollmentRuntimeCeremonyWriteOutcome::AlreadyPresent(_)
+        ));
+
+        let plan_id = fixture.plan.plan_id()?;
+        let approved = store.approve(
+            &fixture.local_identity,
+            contact_id,
+            plan_id,
+            &fixture.tombstone,
+        )?;
+        assert_eq!(
+            approved.ceremony().phase(),
+            PeerReenrollmentRuntimeCeremonyPhase::Approved
+        );
+        let tombstone_id = peer_reenrollment_tombstone_id(&fixture.tombstone)?;
+        let receipt_id = fixture.acceptance.receipt_id();
+        let accepted = store.mark_acceptance_committed(
+            &fixture.local_identity,
+            contact_id,
+            tombstone_id,
+            receipt_id,
+        )?;
+        assert_eq!(
+            accepted.ceremony().phase(),
+            PeerReenrollmentRuntimeCeremonyPhase::AcceptanceCommitted
+        );
+        drop(store);
+
+        let resumed = PeerReenrollmentRuntimeCeremonyStore::open(
+            &directory,
+            fixture.acceptance.receipt().local_account_id(),
+            fixture.local_identity.device_id(),
+        )?;
+        let incomplete = resumed
+            .load(contact_id)?
+            .ok_or(PeerReenrollmentRuntimeCeremonyError::CeremonyNotPrepared)?;
+        assert_eq!(
+            incomplete.phase(),
+            PeerReenrollmentRuntimeCeremonyPhase::AcceptanceCommitted
+        );
+        assert_eq!(incomplete.runtime_transition_id(), None);
+        let transition_id = [33_u8; 32];
+        let completed = resumed.complete(
+            &fixture.local_identity,
+            contact_id,
+            receipt_id,
+            transition_id,
+        )?;
+        assert_eq!(
+            completed.ceremony().phase(),
+            PeerReenrollmentRuntimeCeremonyPhase::Complete
+        );
+        assert!(matches!(
+            resumed.complete(
+                &fixture.local_identity,
+                contact_id,
+                receipt_id,
+                transition_id,
+            )?,
+            PeerReenrollmentRuntimeCeremonyWriteOutcome::AlreadyPresent(_)
+        ));
+        drop(resumed);
+
+        let read = PeerReenrollmentRuntimeCeremonyReadStore::open_existing(
+            &directory,
+            fixture.acceptance.receipt().local_account_id(),
+            fixture.local_identity.device_id(),
+        )?;
+        let values = read.load_all()?;
+        assert_eq!(values.len(), 1);
+        assert_eq!(values[0].runtime_transition_id(), Some(transition_id));
+        assert_eq!(values[0].tombstone_id()?, Some(tombstone_id));
+        Ok(())
+    }
+
+    #[test]
+    fn runtime_ceremony_rejects_replacement_and_out_of_order_progress()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let fixture = fixture()?;
+        let store = PeerReenrollmentRuntimeCeremonyStore::open(
+            fixture.root.path().join("runtime-ceremony"),
+            fixture.acceptance.receipt().local_account_id(),
+            fixture.local_identity.device_id(),
+        )?;
+        let contact_id = [41_u8; 32];
+        store.prepare(
+            &fixture.local_identity,
+            contact_id,
+            [42_u8; 32],
+            fixture.plan.invitation_id(),
+            fixture.plan.quarantine_record_id(),
+            &fixture.plan,
+        )?;
+        assert!(matches!(
+            store.prepare(
+                &fixture.local_identity,
+                contact_id,
+                [43_u8; 32],
+                fixture.plan.invitation_id(),
+                fixture.plan.quarantine_record_id(),
+                &fixture.plan,
+            ),
+            Err(PeerReenrollmentRuntimeCeremonyError::ContactCeremonyConflict)
+        ));
+        assert!(matches!(
+            store.approve(
+                &fixture.local_identity,
+                contact_id,
+                [44_u8; 32],
+                &fixture.tombstone,
+            ),
+            Err(PeerReenrollmentRuntimeCeremonyError::PlanChanged)
+        ));
+        store.approve(
+            &fixture.local_identity,
+            contact_id,
+            fixture.plan.plan_id()?,
+            &fixture.tombstone,
+        )?;
+        assert!(matches!(
+            store.mark_acceptance_committed(
+                &fixture.local_identity,
+                contact_id,
+                [45_u8; 32],
+                fixture.acceptance.receipt_id(),
+            ),
+            Err(PeerReenrollmentRuntimeCeremonyError::TombstoneChanged)
+        ));
+        assert!(matches!(
+            store.complete(
+                &fixture.local_identity,
+                contact_id,
+                fixture.acceptance.receipt_id(),
+                [46_u8; 32],
+            ),
+            Err(PeerReenrollmentRuntimeCeremonyError::AcceptanceChanged)
+        ));
+        assert_eq!(
+            store.load_all()?[0].phase(),
+            PeerReenrollmentRuntimeCeremonyPhase::Approved
         );
         Ok(())
     }

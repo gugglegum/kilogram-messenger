@@ -380,7 +380,7 @@ assert(schema.limits.maximum_publication_network_request_bytes === 131072 &&
   schema.limits.maximum_publication_service_origin_bytes === 512 &&
   schema.limits.maximum_publication_recipient_devices === 32,
 "runtime IPC publication-network bounds changed");
-assert(schema.activation.current_runtime_encoding === "postcard-v32-with-json-descriptor-v13" &&
+assert(schema.activation.current_runtime_encoding === "postcard-v33-with-json-descriptor-v14" &&
   schema.activation.current_runtime_changed === true, "active runtime IPC changed");
 assert(vectors.schema_version === 1 && vectors.profile === schema.profile &&
   vectors.activation_status === "not-active", "publication-network vector header changed");

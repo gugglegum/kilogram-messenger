@@ -1,9 +1,9 @@
-//! Dormant, privacy-minimizing local IPC contract for explicit peer re-enrollment.
+//! Privacy-minimizing local IPC contract for explicit peer re-enrollment.
 //!
-//! This codec deliberately is not a variant of [`super::RuntimeIpcCommand`].
-//! It defines the future adapter boundary without activating a mutation path in
-//! the production runtime mutation surface. M1.2.15 carries this codec only
-//! through the v32 read-only adapter; plan/approve/accept remain rejected.
+//! Observation and mutation use distinct outer runtime commands. Every nested
+//! request remains descriptor-bound, every response is signed by the current
+//! Device, and no request carries a filesystem path, transport ticket, raw
+//! identity identifier, private key, or reusable capability.
 
 use std::{fmt, str::FromStr};
 
@@ -16,15 +16,15 @@ use super::{
     validate_opaque_contact_id,
 };
 
-pub const RUNTIME_IPC_PEER_REENROLLMENT_CONTRACT_VERSION: u8 = 1;
+pub const RUNTIME_IPC_PEER_REENROLLMENT_CONTRACT_VERSION: u8 = 2;
 pub const MAX_RUNTIME_IPC_PEER_REENROLLMENT_REQUEST_BYTES: usize = 4 * 1024;
 pub const MAX_RUNTIME_IPC_PEER_REENROLLMENT_RESPONSE_BYTES: usize = 16 * 1024;
 pub const MAX_RUNTIME_IPC_PEER_REENROLLMENT_QUEUE_COUNT: u16 = 4_096;
 
-const REQUEST_DIGEST_DOMAIN: &[u8] = b"kilogram:runtime-ipc-peer-reenrollment-request:v1\0";
-const DESCRIPTOR_BINDING_DOMAIN: &[u8] = b"kilogram:runtime-ipc-peer-reenrollment-descriptor:v1\0";
-const DEVICE_BINDING_DOMAIN: &[u8] = b"kilogram:runtime-ipc-peer-reenrollment-device:v1\0";
-const RESPONSE_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-ipc-peer-reenrollment-response:v1\0";
+const REQUEST_DIGEST_DOMAIN: &[u8] = b"kilogram:runtime-ipc-peer-reenrollment-request:v2\0";
+const DESCRIPTOR_BINDING_DOMAIN: &[u8] = b"kilogram:runtime-ipc-peer-reenrollment-descriptor:v2\0";
+const DEVICE_BINDING_DOMAIN: &[u8] = b"kilogram:runtime-ipc-peer-reenrollment-device:v2\0";
+const RESPONSE_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-ipc-peer-reenrollment-response:v2\0";
 
 #[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(transparent)]
@@ -322,6 +322,7 @@ pub enum RuntimeIpcPeerReenrollmentStatus {
     Ready,
     ApprovalRequired,
     ApprovedPrepared,
+    AcceptanceIncomplete,
     AcceptedRestartRequired,
     Consumed,
 }
@@ -424,6 +425,9 @@ pub enum RuntimeIpcPeerReenrollmentDurableOutcome {
         plan_id: RuntimeIpcPeerReenrollmentArtifactId,
         tombstone_id: RuntimeIpcPeerReenrollmentArtifactId,
     },
+    AcceptanceIncomplete {
+        acceptance_receipt_id: RuntimeIpcPeerReenrollmentArtifactId,
+    },
     AcceptanceCommitted {
         acceptance_receipt_id: RuntimeIpcPeerReenrollmentArtifactId,
         runtime_transition_id: RuntimeIpcPeerReenrollmentArtifactId,
@@ -446,6 +450,9 @@ impl RuntimeIpcPeerReenrollmentDurableOutcome {
                 plan_id.validate()?;
                 tombstone_id.validate()
             }
+            Self::AcceptanceIncomplete {
+                acceptance_receipt_id,
+            } => acceptance_receipt_id.validate(),
             Self::AcceptanceCommitted {
                 acceptance_receipt_id,
                 runtime_transition_id,
@@ -614,6 +621,20 @@ impl RuntimeIpcPeerReenrollmentResponse {
                         && plan.plan_id == *plan_id
                         && !self.restart_required,
                     "runtime IPC approved peer re-enrollment response is inconsistent"
+                );
+            }
+            RuntimeIpcPeerReenrollmentStatus::AcceptanceIncomplete => {
+                ensure!(
+                    has_invitation
+                        && has_quarantine
+                        && has_plan
+                        && self.hazard.is_none()
+                        && matches!(
+                            self.durable_outcome,
+                            RuntimeIpcPeerReenrollmentDurableOutcome::AcceptanceIncomplete { .. }
+                        )
+                        && !self.restart_required,
+                    "runtime IPC incomplete peer re-enrollment response is inconsistent"
                 );
             }
             RuntimeIpcPeerReenrollmentStatus::AcceptedRestartRequired => {
@@ -1213,6 +1234,35 @@ mod tests {
         let mut false_authority = response;
         false_authority.quarantine = Some(quarantine());
         assert!(false_authority.validate().is_err());
+    }
+
+    #[test]
+    fn incomplete_acceptance_is_observable_but_never_restart_authority()
+    -> Result<(), Box<dyn Error>> {
+        let mut response = RuntimeIpcPeerReenrollmentResponse {
+            contact_id: contact(1),
+            status: RuntimeIpcPeerReenrollmentStatus::AcceptanceIncomplete,
+            hazard: None,
+            invitation: Some(invitation()),
+            quarantine: Some(quarantine()),
+            plan: Some(plan()),
+            durable_outcome: RuntimeIpcPeerReenrollmentDurableOutcome::AcceptanceIncomplete {
+                acceptance_receipt_id: artifact(8),
+            },
+            suppression: suppression(),
+            history_recovery: RuntimeIpcPeerReenrollmentHistoryRecovery::SeparateApprovalRequired,
+            restart_required: false,
+        };
+        response.validate()?;
+        response.restart_required = true;
+        assert!(response.validate().is_err());
+        response.restart_required = false;
+        response.durable_outcome = RuntimeIpcPeerReenrollmentDurableOutcome::AcceptanceCommitted {
+            acceptance_receipt_id: artifact(8),
+            runtime_transition_id: artifact(9),
+        };
+        assert!(response.validate().is_err());
+        Ok(())
     }
 
     #[test]

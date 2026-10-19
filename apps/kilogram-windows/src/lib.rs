@@ -8185,7 +8185,7 @@ impl KilogramApp {
                     }
                 }
             } else {
-                ui.small("Connect to a v32 runtime to inspect its loaded policy and observed sync path. This view cannot change activation authority.");
+                ui.small("Connect to a v33 runtime to inspect its loaded policy and observed sync path. This view cannot change activation authority.");
             }
             ui.separator();
             ui.strong("Peer capability safety (read only)");

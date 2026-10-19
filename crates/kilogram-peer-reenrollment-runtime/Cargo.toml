@@ -10,6 +10,7 @@ publish = false
 [dependencies]
 blake3.workspace = true
 kilogram-identity = { path = "../kilogram-identity" }
+kilogram-peer-reenrollment = { path = "../kilogram-peer-reenrollment" }
 kilogram-peer-reenrollment-acceptance = { path = "../kilogram-peer-reenrollment-acceptance" }
 kilogram-sync-capability = { path = "../kilogram-sync-capability" }
 postcard.workspace = true
@@ -20,7 +21,6 @@ thiserror.workspace = true
 
 [dev-dependencies]
 kilogram-peer-capability-store = { path = "../kilogram-peer-capability-store" }
-kilogram-peer-reenrollment = { path = "../kilogram-peer-reenrollment" }
 tempfile.workspace = true
 
 [lints]
