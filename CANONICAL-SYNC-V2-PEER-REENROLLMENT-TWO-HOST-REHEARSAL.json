@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.13",
+  "status": "canonical-sync-v2-peer-reenrollment-two-host-rehearsal-verified",
+  "changes_connection_ticket_wire": false,
+  "changes_sync_wire": false,
+  "changes_runtime_ipc": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "rehearsal_boundary": {
+    "exact_same_binary_on_two_physical_hosts": true,
+    "predecessor_quarantine_retained": true,
+    "replacement_device_root_authorized": true,
+    "predecessor_readable_history_rewrapped_offline": true,
+    "explicit_offline_plan_approval_acceptance": true,
+    "descriptor_substitution_rejected_before_network": true,
+    "fresh_start_consumes_successor_before_endpoint": true,
+    "ordinary_scheduler_delivers_queued_item_once": true,
+    "restart_replay_is_idempotent": true,
+    "complete_histories_converge": true
+  },
+  "acceptance": {
+    "two_host_exact_binary_rehearsal": "verified",
+    "field_evidence": "CANONICAL-SYNC-V2-PEER-REENROLLMENT-TWO-HOST-EVIDENCE.json",
+    "implementation_revision": "d307e965f338e11ee786af75a8e3f71309b42fa3",
+    "binary_sha256": "31e3b6e1a925526b5fee1d1bbe4205eb3ed732106e5b1ca479c3e5c5855d4f0f",
+    "binary_bytes": 62375424,
+    "preceding_identical_binary_cli_regression": "101/101 binary + 1/1 library",
+    "runtime_store_tests": "5/5",
+    "boundary_self_test_and_negative_mutations": "verified",
+    "rustfmt": "verified",
+    "locked_offline_strict_clippy": "verified",
+    "aggregate_readiness": "139/139",
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false
+  },
+  "residual_limits": {
+    "transport_topology": "direct-lan-only-for-this-rehearsal",
+    "readable_predecessor_history_source": "required-for-old-message-rewrap",
+    "automatic_peer_reenrollment": "not-implemented",
+    "runtime_ipc_or_desktop_ceremony": "not-implemented",
+    "generic_first_contact_capability_stripping": "not-detectable-without-prior-authenticated-state",
+    "independent_security_review": "required-before-accept-canary"
+  }
+}

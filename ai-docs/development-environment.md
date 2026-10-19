@@ -5215,3 +5215,30 @@ Hosted follow-up:
   all 102 tests; no source or fixture was changed between the runs.
 - No release build, ZIP/archive, tag, automatic GitHub build, network test or
   second physical host was used. Existing target cache was retained.
+
+## M1.2.13 two-host peer re-enrollment environment (2026-10-19)
+
+- The field harness is
+  `scripts/invoke-kilogram-peer-reenrollment-two-host-rehearsal.ps1`. It first
+  runs the accepted M1.2.7 capability prerequisite and then reuses its fresh
+  quarantined pair. Every run uses a unique ignored local/remote directory.
+- The exact debug binary from revision `d307e965...` is 62,375,424 bytes with
+  SHA-256 `31e3b6e...`. Local and laptop copies use the stable paths
+  `.tmp/kilogram-field-runner/kilogram-cli.exe` and
+  `KilogramLab/field-kit-current/kilogram-cli.exe`; no hash-named network test
+  executable was started and no new Firewall identity is expected.
+- The first diagnostic run reached the final sync and failed correctly because
+  six predecessor-authored events targeted Alice's account and the replacement
+  Bob Device had no local projection. The test was fixed with explicit offline
+  `history-rewrap-export/import`; recipient-account validation was not weakened.
+- Accepted run `m1213-field-20261019T171026Z` passed descriptor substitution,
+  fresh-start consumption, direct delivery/ACK, restart replay and final sync.
+  Histories match at 8 events and the queued body occurs exactly once.
+- Raw SSH/process logs, state, tickets, IDs and addresses remain under ignored
+  `.tmp`. Only bounded evidence is tracked. Laptop VPN was not required; LAN
+  was sufficient because route selection was not under test.
+- Boundary normal/self-test rejects 6/6 mutations; aggregate readiness is
+  139/139 with rustfmt and locked/offline strict Clippy. The preceding exact
+  binary regression remains 101/101 CLI binary plus 1/1 library and runtime
+  transition store 5/5. No release, ZIP/archive, tag or automatic GitHub build
+  was created.

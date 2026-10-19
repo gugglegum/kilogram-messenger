@@ -7640,3 +7640,28 @@ correlation visible, Windows-only field evidence, independent security audit
   138/138 с rustfmt и workspace-wide locked/offline strict Clippy;
 - wire, runtime IPC и public default `legacy-only` не менялись; release/ZIP/tag,
   automatic GitHub build, сеть и второй физический хост не использовались.
+
+### M1.2.13 — two-host fresh-start peer re-enrollment rehearsal: принят
+
+- exact debug `kilogram-cli.exe` revision `d307e96`, SHA-256 `31e3b6e...`,
+  62,375,424 bytes выполнен с постоянными именами на основном ПК и физическом
+  Windows-ноутбуке; SSH использовался только как control/artifact channel, а
+  product path был Iroh direct LAN;
+- authenticated predecessor сначала сохранил durable quarantine и блокировал
+  sealed queue item до materialization, endpoint и network;
+- replacement Device создан тем же Account Root, old Device передал ему шесть
+  читаемых local projections через explicit offline history rewrap; прямое
+  расшифрование старых recipient ciphertext новым Device не разрешалось;
+- offline plan/approve/accept подготовил transition без network; подмена
+  accepted descriptor старым ticket была отклонена до endpoint и не потребила
+  transition;
+- fresh runtime потребил exact successor до Iroh endpoint, ordinary scheduler
+  доставил ранее queued message один раз по direct path и получил ACK;
+- restart увидел already-consumed transition, выполнил zero outbound actions
+  и не создал duplicate; финальный sync дал equal histories из 8 events и одно
+  вхождение queued message;
+- predecessor contact остался byte-exact, old quarantine retained; tracked
+  evidence не содержит raw logs/state/tickets, addresses, IDs, body или secret;
+- dedicated boundary отклоняет 6/6 negative mutations, aggregate readiness
+  расширен до 139/139; wire, runtime IPC и public default `legacy-only` не
+  менялись, release/ZIP/tag и automatic GitHub build не создавались.

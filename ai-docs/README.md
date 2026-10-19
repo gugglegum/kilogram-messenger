@@ -1212,6 +1212,20 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   раздельно показывающие durable quarantine, process-local suppression и
   обычный network retry без raw peer/queue IDs, ticket, endpoint, message либо
   clear/retry/recovery authority; missing store остаётся no-create.
+- [`../docs/RFC-0234-m1210-device-authorized-peer-reenrollment-plan.md`](../docs/RFC-0234-m1210-device-authorized-peer-reenrollment-plan.md) —
+  M1.2.10 создаёт bounded offline Device-signed recovery plan из exact
+  quarantine, обеих Root authority и fresh current invitation без clear/apply
+  или network authority.
+- [`../docs/RFC-0235-m1211-durable-peer-reenrollment-acceptance.md`](../docs/RFC-0235-m1211-durable-peer-reenrollment-acceptance.md) —
+  M1.2.11 атомарно фиксирует current-Device-signed acceptance receipt и
+  единственный successor head, сохраняя старую capability DB byte-exact.
+- [`../docs/RFC-0236-m1212-fresh-start-peer-reenrollment-consumption.md`](../docs/RFC-0236-m1212-fresh-start-peer-reenrollment-consumption.md) —
+  M1.2.12 потребляет полный accepted successor только на fresh runtime start и
+  до Iroh endpoint, применяя его как overlay без перезаписи predecessor.
+- [`../docs/RFC-0237-m1213-peer-reenrollment-two-host-rehearsal.md`](../docs/RFC-0237-m1213-peer-reenrollment-two-host-rehearsal.md) —
+  M1.2.13 подтверждает весь flow на двух физических Windows-хостах: explicit
+  history rewrap, fail-closed descriptor substitution, exactly-once delivery,
+  idempotent restart и equal eight-event histories одним exact debug binary.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

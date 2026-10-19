@@ -1,41 +1,38 @@
-# Текущая точка: M1.2.12 завершён, следующий M1.2.13
+# Текущая точка: M1.2.13 завершён, следующий M1.2.14
 
-Статус на 2026-10-19: accepted peer successor теперь проходит отдельный
-двухфазный durable transition. Полная current-Device-signed запись хранится в
-`peer-reenrollment-runtime-v1.redb`; `prepared` ничего не меняет, а fresh-start
-consumer сначала fail-closed валидирует весь набор и только затем публикует
-exact consumed heads до создания Iroh endpoint. Runtime snapshot применяет
-successor как in-memory overlay, не перезаписывая predecessor contact.
+Статус на 2026-10-19: полный peer re-enrollment flow подтверждён exact debug
+binary на основном ПК и физическом Windows-ноутбуке. Старый quarantine
+блокирует queue до сети; offline plan/approve/accept готовит successor;
+descriptor substitution fail closed до endpoint; fresh runtime потребляет
+transition и ordinary scheduler доставляет сообщение один раз. После restart
+нет повторной отправки, обе истории совпадают на 8 events.
 
-Acceptance, старый quarantine, predecessor contact, candidate source и
-transition остаются audit evidence. Queue item не materialize-ится и не
-отправляется как побочный эффект consumption: его заново оценивает обычный
-scheduler. Exact restart идемпотентен; после consumption монотонное повышение
-authority разрешено, но rollback/equivocation, отзыв replacement Device,
-changed descriptor/context, corruption и conflicting successor fail closed.
-Stable-name regression: 5/5 runtime-store + 101/101 CLI binary + 1/1 CLI
-library; boundary negative matrix — 10/10, aggregate readiness — 138/138.
-Wire/IPC/default `legacy-only`
-неизменны.
+Старые сообщения не стали магически читаемыми новым Device: шесть readable
+local projections были явно перенесены existing same-account history rewrap.
+Predecessor contact, quarantine и acceptance сохранены. Exact run
+`m1213-field-20261019T171026Z`, binary SHA-256 `31e3b6e...`; readiness 139/139.
+Wire/IPC/default `legacy-only` неизменны.
 
-## Следующий этап: M1.2.13 two-host fresh-start re-enrollment rehearsal
+## Следующий этап: M1.2.14 canonical runtime IPC peer re-enrollment contract
 
-- подготовить bounded test-only комплект с одним stable `kilogram-cli.exe` на
-  основном ПК и Windows-ноутбуке; exact binary SHA должен совпасть;
-- создать старый authenticated contact, durable canonical floor и quarantine,
-  затем выпустить новый Root-authorized peer Device и current invitation;
-- выполнить plan/approve/accept и доказать, что до restart старый contact
-  остаётся blocked и сеть не открывается от самого acceptance;
-- на fresh runtime start потребить exact transition, установить реальную связь
-  только с replacement Device и провести delivery ACK + sync convergence;
-- повторить restart/replay без duplicate/loss и доказать, что ранее queued item
-  проходит обычную scheduler evaluation ровно один раз;
-- выполнить negative control с подменённым descriptor/authority до endpoint и
-  подтвердить zero network attempt, сохранность predecessor/quarantine и
-  возможность безопасного повтора с exact artifacts;
-- LAN достаточно для этой семантики; relay control нужен только если меняется
-  route/transport surface. Public default, release/ZIP/tag и automatic GitHub
-  build остаются без изменений.
+- определить bounded canonical IPC request/response для read-only inspection,
+  plan, explicit approval и acceptance существующего re-enrollment flow;
+- GUI оперирует opaque contact ID, verified invitation summary, exact artifact
+  IDs и confirmation phrase, но не получает Root/device secret, raw Account/
+  Device IDs, ticket/endpoint, queue/message body либо capability bytes;
+- сохранить отдельные стадии inspect -> plan -> approve -> accept: один toggle,
+  implicit consent, automatic quarantine clear и hot apply запрещены;
+- signed responses должны exact-связывать request digest, runtime descriptor,
+  current Device, predecessor quarantine, successor summary и durable outcome;
+- status различает missing invitation, unsafe/divergent context, ready,
+  approved/prepared, consumed и restart-required, не выдавая process-local
+  suppression за durable authority;
+- явно предупредить, что peer re-enrollment восстанавливает связь, но старая
+  читаемая история нового same-account Device требует отдельный approved
+  history-rewrap source; не обещать полноту при отсутствии такого source;
+- M1.2.14 ограничивается строгим contract/codec/negative corpus без подключения
+  active adapter или desktop кнопок. Сеть и второй хост не нужны; public
+  default, active runtime IPC, release/ZIP/tag и GitHub build не меняются.
 
 # Завершённый расширенный пакет: M1.1.92–M1.2.5
 

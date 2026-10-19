@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.13",
+  "status": "canonical-sync-v2-peer-reenrollment-two-host-rehearsal-verified",
+  "run_id": "m1213-field-20261019T171026Z",
+  "source_revision": "d307e965f338e11ee786af75a8e3f71309b42fa3",
+  "collected_at_utc": "2026-10-19T17:22:49.5117168Z",
+  "public_default": "legacy-only",
+  "changes_connection_ticket_wire": false,
+  "changes_sync_wire": false,
+  "changes_runtime_ipc": false,
+  "changes_public_default": false,
+  "binary": {
+    "name": "kilogram-cli.exe",
+    "stable_local_path": ".tmp/kilogram-field-runner/kilogram-cli.exe",
+    "stable_remote_path": "KilogramLab/field-kit-current/kilogram-cli.exe",
+    "sha256": "31e3b6e1a925526b5fee1d1bbe4205eb3ed732106e5b1ca479c3e5c5855d4f0f",
+    "bytes": 62375424,
+    "profile": "debug",
+    "target": "x86_64-pc-windows-msvc"
+  },
+  "topology": {
+    "local_host": "local-windows-host",
+    "remote_host": "remote-windows-host",
+    "distinct_physical_hosts": true,
+    "binary_hashes_equal": true,
+    "transport": "iroh-direct-lan",
+    "ssh_is_control_channel_only": true
+  },
+  "prerequisite": {
+    "status": "canonical-sync-v2-peer-capability-two-host-rehearsal-verified",
+    "old_peer_floor": "quarantined",
+    "old_peer_quarantine_reason": "pinned-canonical-capability-missing"
+  },
+  "reenrollment": {
+    "predecessor_contact_enrolled": true,
+    "replacement_device_root_authorized": true,
+    "predecessor_history_rewrapped_offline": true,
+    "predecessor_history_rewrapped_event_count": 6,
+    "replacement_endpoint_candidate_enrolled": true,
+    "explicit_plan_approval_acceptance": true,
+    "ceremony_network_executed": false,
+    "transition_prepared_before_restart": true,
+    "transition_consumed_before_restart": false,
+    "descriptor_substitution_rejected": true,
+    "descriptor_substitution_peer_network_attempted": false,
+    "fresh_start_consumed": true,
+    "consumption_phase": "before-network-endpoint",
+    "queued_delivery_status": "delivered",
+    "queued_delivery_path": "direct",
+    "queued_delivery_count": 1,
+    "exact_replay_already_consumed": true,
+    "replay_outbound_actions": 0,
+    "complete_history_event_count": 8,
+    "histories_equal": true,
+    "queued_message_occurrences": 1,
+    "predecessor_contact_byte_exact": true,
+    "old_quarantine_retained": true
+  },
+  "privacy": {
+    "raw_logs_tracked": false,
+    "state_tracked": false,
+    "ticket_bodies_tracked": false,
+    "account_or_device_ids_tracked": false,
+    "endpoint_addresses_tracked": false,
+    "event_or_queue_ids_tracked": false,
+    "secrets_tracked": false
+  }
+}
