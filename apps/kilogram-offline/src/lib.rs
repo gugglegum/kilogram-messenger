@@ -32,8 +32,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::value::RawValue;
 use tempfile::NamedTempFile;
 
-const TICKET_VERSION: u8 = 13;
-const TICKET_SIGNATURE_DOMAIN: &[u8] = b"kilogram:connection-ticket-signature:v13\0";
+// Match the accepted M1.0.0 base envelope. Optional post-M1 metadata is
+// independently signed and therefore does not require a new outer version.
+const TICKET_VERSION: u8 = 11;
+const TICKET_SIGNATURE_DOMAIN: &[u8] = b"kilogram:connection-ticket-signature:v11\0";
 const QR_MODULE_PIXELS: u32 = 4;
 const MAX_QR_IMAGE_FILE_BYTES: u64 = 16 * 1024 * 1024;
 const MAX_QR_IMAGE_DIMENSION: u32 = 4_096;

@@ -355,8 +355,12 @@ const STREAM_OPEN_TIMEOUT: Duration = Duration::from_secs(15);
 const HISTORY_RECOVERY_NEXT_PAGE_TIMEOUT: Duration = Duration::from_secs(60);
 const MAX_HISTORY_RECOVERY_PAGES_PER_SESSION: usize = 64;
 const CLI_COORDINATOR_STACK_BYTES: usize = 8 * 1024 * 1024;
-const TICKET_SIGNATURE_DOMAIN: &[u8] = b"kilogram:connection-ticket-signature:v13\0";
-const TICKET_VERSION: u8 = 13;
+// Keep the base envelope byte-compatible with the accepted M1.0.0 release.
+// Post-M1 transport metadata lives in independently signed optional
+// extensions, so changing the envelope version/domain would unnecessarily
+// prevent an old and a new executable from authenticating each other.
+const TICKET_SIGNATURE_DOMAIN: &[u8] = b"kilogram:connection-ticket-signature:v11\0";
+const TICKET_VERSION: u8 = 11;
 const MAX_RECOVERY_PASSPHRASE_FILE_BYTES: u64 = 4098;
 const DEFAULT_HISTORY_RECOVERY_SCHEDULER_ATTEMPTS: usize = 3;
 const MAX_HISTORY_RECOVERY_SCHEDULER_ATTEMPTS: usize = 8;
@@ -36086,7 +36090,7 @@ mod tests {
         let serialized = serde_json::to_vec(&legacy.content)?;
         let mut signing_bytes =
             Vec::with_capacity(TICKET_SIGNATURE_DOMAIN.len() + serialized.len());
-        signing_bytes.extend_from_slice(TICKET_SIGNATURE_DOMAIN);
+        signing_bytes.extend_from_slice(b"kilogram:connection-ticket-signature:v11\0");
         signing_bytes.extend_from_slice(&serialized);
 
         legacy
@@ -36094,7 +36098,7 @@ mod tests {
             .listener_certificate
             .device_id()
             .verify(&signing_bytes, &legacy.signature)?;
-        assert_eq!(legacy.content.version, TICKET_VERSION);
+        assert_eq!(legacy.content.version, 11);
         assert_eq!(legacy.content.route_policy, RoutePolicy::RelayOnly);
         Ok(())
     }
