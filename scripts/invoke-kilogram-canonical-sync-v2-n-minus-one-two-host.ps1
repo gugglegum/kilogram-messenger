@@ -428,7 +428,14 @@ function Assert-HistoryConvergence {
     $bobCount = [int](Get-Field $bob.Stdout 'event_count')
     $aliceCount = [int](Get-Field $alice.Stdout 'event_count')
     if ($bobCount -ne $aliceCount -or $bobCount -ne $bobIds.Count) { throw "$Prefix history counts differ" }
-    $digest = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes(($bobIds -join "`n")))).ToLowerInvariant()
+    $sha256 = [Security.Cryptography.SHA256]::Create()
+    try {
+        $digestBytes = $sha256.ComputeHash([Text.Encoding]::UTF8.GetBytes(($bobIds -join "`n")))
+    }
+    finally {
+        $sha256.Dispose()
+    }
+    $digest = -join @($digestBytes | ForEach-Object { $_.ToString('x2') })
     return [PSCustomObject]@{ Count = $bobCount; Digest = $digest }
 }
 
