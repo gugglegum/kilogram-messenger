@@ -59,6 +59,14 @@ use kilogram_mailbox_provisioning::{
 use kilogram_peer_capability_store::{
     PeerCapabilityKey, PeerCapabilityReadStore, PeerCapabilityStore,
 };
+use kilogram_peer_reenrollment::{
+    ExplicitPeerReenrollmentApproval, MAX_PEER_REENROLLMENT_PLAN_BYTES, PeerReenrollmentPlan,
+    SignedPeerReenrollmentTombstone,
+};
+use kilogram_peer_reenrollment_acceptance::{
+    PeerReenrollmentAcceptanceOutcome, PeerReenrollmentAcceptanceReadStore,
+    PeerReenrollmentAcceptanceStore,
+};
 use kilogram_protocol::{
     AuthorizedEvent, ClientRequest, ConversationId, DeviceAuthorizationAccepted,
     DeviceAuthorizationRejected, EventId, EventPayload, HistoryRewrapBundle, HistoryRewrapRejected,
@@ -330,6 +338,8 @@ const RUNTIME_CANONICAL_SYNC_V2_ACTIVATION_DIRECTORY: &str = "canonical-sync-v2-
 const RUNTIME_CANONICAL_SYNC_V2_SELECTION_DIRECTORY: &str = "canonical-sync-v2-selections";
 const CANONICAL_SYNC_V2_STORE_DIRECTORY: &str = "canonical-sync-v2-store";
 const PEER_SYNC_CAPABILITY_DIRECTORY: &str = "peer-sync-capability";
+const PEER_REENROLLMENT_ACCEPTANCE_DIRECTORY: &str = "peer-reenrollment-acceptance";
+const MAX_PEER_REENROLLMENT_AUTHORITY_BYTES: u64 = 256 * 1024;
 const CANONICAL_SYNC_V2_SELECTION_VERSION: u8 = 1;
 const CANONICAL_SYNC_V2_SELECTION_ID_DOMAIN: &[u8] =
     b"kilogram:runtime-canonical-sync-v2-selection:v1\0";
@@ -2256,6 +2266,90 @@ enum Command {
         peer_device_id: DeviceId,
     },
 
+    /// Prepare one exact offline peer re-enrollment plan without modifying state.
+    PeerReenrollmentPlan {
+        /// Directory containing this Device's persistent identity and capability store.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Exact Root-signed current device list for the local Account.
+        #[arg(long)]
+        local_device_list_file: PathBuf,
+
+        /// Exact Root-signed current device list for the peer Account.
+        #[arg(long)]
+        peer_device_list_file: PathBuf,
+
+        /// Fresh Device-signed current invitation for the replacement peer Device.
+        #[arg(long)]
+        invitation_file: PathBuf,
+
+        /// Peer Device whose durable capability head is quarantined.
+        #[arg(long)]
+        quarantined_peer_device_id: DeviceId,
+
+        /// New no-clobber unsigned plan artifact.
+        #[arg(long)]
+        output_file: PathBuf,
+    },
+
+    /// Explicitly confirm and Device-sign one exact peer re-enrollment plan.
+    PeerReenrollmentApprove {
+        /// Directory containing this Device's persistent identity.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Exact unsigned plan produced by peer-reenrollment-plan.
+        #[arg(long)]
+        plan_file: PathBuf,
+
+        /// Exact REENROLL phrase printed by peer-reenrollment-plan.
+        #[arg(long)]
+        confirm_phrase: String,
+
+        /// Explicit acknowledgement that this Device may sign the plan.
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        approve: bool,
+
+        /// New no-clobber Device-signed tombstone artifact.
+        #[arg(long)]
+        output_file: PathBuf,
+    },
+
+    /// Atomically persist one exact Device-signed peer re-enrollment acceptance.
+    PeerReenrollmentAccept {
+        /// Directory containing this Device's persistent state.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Exact Device-signed tombstone produced by peer-reenrollment-approve.
+        #[arg(long)]
+        tombstone_file: PathBuf,
+
+        /// Exact Root-signed current device list for the local Account.
+        #[arg(long)]
+        local_device_list_file: PathBuf,
+
+        /// Exact Root-signed current device list for the peer Account.
+        #[arg(long)]
+        peer_device_list_file: PathBuf,
+
+        /// Exact fresh invitation bound into the tombstone.
+        #[arg(long)]
+        invitation_file: PathBuf,
+    },
+
+    /// Inspect a durable peer re-enrollment acceptance without changing state.
+    PeerReenrollmentStatus {
+        /// Directory containing this Device's persistent state.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Exact peer Account ID.
+        #[arg(long)]
+        peer_account_id: AccountId,
+    },
+
     /// Create a development Account Root authority in a separate directory.
     AccountCreate {
         /// Directory reserved for the offline Account Root secret and authority sequence.
@@ -2515,6 +2609,10 @@ impl Command {
             | Self::CurrentPeerInvitationCreate { state_dir, .. }
             | Self::CurrentPeerInvitationImport { state_dir, .. }
             | Self::PeerCapabilityStatus { state_dir, .. }
+            | Self::PeerReenrollmentPlan { state_dir, .. }
+            | Self::PeerReenrollmentApprove { state_dir, .. }
+            | Self::PeerReenrollmentAccept { state_dir, .. }
+            | Self::PeerReenrollmentStatus { state_dir, .. }
             | Self::ConversationMembershipInstall { state_dir, .. }
             | Self::DeviceEnroll { state_dir, .. }
             | Self::DeviceAuthorityUpdate { state_dir, .. }
@@ -4506,6 +4604,45 @@ async fn run_command(command: Command) -> Result<()> {
             peer_account_id,
             peer_device_id,
         } => show_peer_capability_status(state_dir, peer_account_id, peer_device_id),
+        Command::PeerReenrollmentPlan {
+            state_dir,
+            local_device_list_file,
+            peer_device_list_file,
+            invitation_file,
+            quarantined_peer_device_id,
+            output_file,
+        } => plan_peer_reenrollment(
+            state_dir,
+            local_device_list_file,
+            peer_device_list_file,
+            invitation_file,
+            quarantined_peer_device_id,
+            output_file,
+        ),
+        Command::PeerReenrollmentApprove {
+            state_dir,
+            plan_file,
+            confirm_phrase,
+            approve,
+            output_file,
+        } => approve_peer_reenrollment(state_dir, plan_file, confirm_phrase, approve, output_file),
+        Command::PeerReenrollmentAccept {
+            state_dir,
+            tombstone_file,
+            local_device_list_file,
+            peer_device_list_file,
+            invitation_file,
+        } => accept_peer_reenrollment(
+            state_dir,
+            tombstone_file,
+            local_device_list_file,
+            peer_device_list_file,
+            invitation_file,
+        ),
+        Command::PeerReenrollmentStatus {
+            state_dir,
+            peer_account_id,
+        } => show_peer_reenrollment_status(state_dir, peer_account_id),
         Command::AccountCreate { account_dir } => create_account(account_dir),
         Command::AccountShow { account_dir } => show_account(account_dir),
         Command::AccountSnapshot {
@@ -30206,6 +30343,316 @@ fn show_peer_capability_status(
         }
     }
     println!("status=peer-capability-status");
+    Ok(())
+}
+
+fn load_peer_reenrollment_device_list(
+    path: &Path,
+    label: &str,
+) -> Result<AccountDeviceListSnapshot> {
+    let bytes = read_bounded_regular_file(path, MAX_PEER_REENROLLMENT_AUTHORITY_BYTES, label)?;
+    AccountDeviceListSnapshot::decode_and_verify(&bytes)
+        .with_context(|| format!("verify {label} {}", path.display()))
+}
+
+fn load_peer_reenrollment_invitation(path: &Path) -> Result<SignedCurrentPeerInvitation> {
+    let bytes = read_bounded_regular_file(
+        path,
+        MAX_CURRENT_PEER_INVITATION_BYTES as u64,
+        "peer re-enrollment invitation",
+    )?;
+    let invitation: SignedCurrentPeerInvitation =
+        serde_json::from_slice(&bytes).context("decode peer re-enrollment invitation")?;
+    invitation
+        .verify_at(unix_time_now()?)
+        .context("verify peer re-enrollment invitation")?;
+    Ok(invitation)
+}
+
+fn plan_peer_reenrollment(
+    state_dir: PathBuf,
+    local_device_list_file: PathBuf,
+    peer_device_list_file: PathBuf,
+    invitation_file: PathBuf,
+    quarantined_peer_device_id: DeviceId,
+    output_file: PathBuf,
+) -> Result<()> {
+    let device_state = load_command_device_state(&state_dir)?;
+    let local_authority = load_peer_reenrollment_device_list(
+        &local_device_list_file,
+        "local peer re-enrollment device list",
+    )?;
+    let peer_authority = load_peer_reenrollment_device_list(
+        &peer_device_list_file,
+        "peer re-enrollment device list",
+    )?;
+    let invitation = load_peer_reenrollment_invitation(&invitation_file)?;
+    let capability = PeerCapabilityReadStore::open_existing(
+        state_dir.join(PEER_SYNC_CAPABILITY_DIRECTORY),
+        device_state.identity().device_id(),
+    )
+    .context("open peer capability store read-only for re-enrollment plan")?;
+    let quarantine = capability
+        .load_quarantined_head(PeerCapabilityKey::new(
+            peer_authority.account_id(),
+            quarantined_peer_device_id,
+        ))
+        .context("load exact durable peer quarantine for re-enrollment plan")?;
+    let plan = PeerReenrollmentPlan::prepare(
+        device_state.identity().device_id(),
+        &local_authority,
+        &quarantine,
+        &peer_authority,
+        &invitation,
+        unix_time_now()?,
+    )
+    .context("prepare exact peer re-enrollment plan")?;
+    write_new_authority_file(&output_file, &plan.encode()?)
+        .context("write peer re-enrollment plan without overwriting")?;
+    println!("peer_reenrollment_plan_id={}", encode_hex(&plan.plan_id()?));
+    println!(
+        "peer_reenrollment_confirmation_phrase={}",
+        plan.confirmation_phrase()?
+    );
+    println!(
+        "peer_reenrollment_peer_account_id={}",
+        plan.peer_account_id()
+    );
+    println!(
+        "peer_reenrollment_quarantined_peer_device_id={}",
+        plan.quarantined_peer_device_id()
+    );
+    println!(
+        "peer_reenrollment_replacement_peer_device_id={}",
+        plan.replacement_peer_device_id()
+    );
+    println!(
+        "peer_reenrollment_expires_at_unix_seconds={}",
+        plan.expires_at_unix_seconds()
+    );
+    println!("peer_reenrollment_plan_file={}", output_file.display());
+    println!("state_changed=false");
+    println!("network_executed=false");
+    println!("status=peer-reenrollment-planned");
+    Ok(())
+}
+
+fn approve_peer_reenrollment(
+    state_dir: PathBuf,
+    plan_file: PathBuf,
+    confirm_phrase: String,
+    approve: bool,
+    output_file: PathBuf,
+) -> Result<()> {
+    ensure!(approve, "peer re-enrollment approval flag is required");
+    let device_state = load_command_device_state(&state_dir)?;
+    let bytes = read_bounded_operator_artifact(
+        &plan_file,
+        MAX_PEER_REENROLLMENT_PLAN_BYTES,
+        "peer re-enrollment plan",
+    )?;
+    let plan =
+        PeerReenrollmentPlan::decode_and_validate(&bytes, device_state.identity().device_id())
+            .context("validate exact peer re-enrollment plan")?;
+    let tombstone = plan
+        .confirm_and_sign(
+            device_state.identity(),
+            &confirm_phrase,
+            ExplicitPeerReenrollmentApproval::UserOrTestOperatorApproved,
+        )
+        .context("confirm and Device-sign peer re-enrollment plan")?;
+    write_new_authority_file(&output_file, &tombstone.encode()?)
+        .context("write peer re-enrollment tombstone without overwriting")?;
+    println!(
+        "peer_reenrollment_plan_id={}",
+        encode_hex(&tombstone.plan_id()?)
+    );
+    println!(
+        "peer_reenrollment_peer_account_id={}",
+        tombstone.peer_account_id()
+    );
+    println!(
+        "peer_reenrollment_replacement_peer_device_id={}",
+        tombstone.replacement_peer_device_id()
+    );
+    println!("peer_reenrollment_tombstone_file={}", output_file.display());
+    println!("explicit_approval=true");
+    println!("state_changed=false");
+    println!("network_executed=false");
+    println!("status=peer-reenrollment-approved");
+    Ok(())
+}
+
+fn accept_peer_reenrollment(
+    state_dir: PathBuf,
+    tombstone_file: PathBuf,
+    local_device_list_file: PathBuf,
+    peer_device_list_file: PathBuf,
+    invitation_file: PathBuf,
+) -> Result<()> {
+    let device_state = load_command_device_state(&state_dir)?;
+    let tombstone_bytes = read_bounded_operator_artifact(
+        &tombstone_file,
+        MAX_PEER_REENROLLMENT_PLAN_BYTES,
+        "peer re-enrollment tombstone",
+    )?;
+    let tombstone = SignedPeerReenrollmentTombstone::decode_and_verify(
+        &tombstone_bytes,
+        device_state.identity().device_id(),
+    )
+    .context("verify Device-signed peer re-enrollment tombstone")?;
+    let local_authority = load_peer_reenrollment_device_list(
+        &local_device_list_file,
+        "local peer re-enrollment device list",
+    )?;
+    let peer_authority = load_peer_reenrollment_device_list(
+        &peer_device_list_file,
+        "peer re-enrollment device list",
+    )?;
+    let invitation = load_peer_reenrollment_invitation(&invitation_file)?;
+    let capability = PeerCapabilityReadStore::open_existing(
+        state_dir.join(PEER_SYNC_CAPABILITY_DIRECTORY),
+        device_state.identity().device_id(),
+    )
+    .context("open peer capability store read-only for re-enrollment acceptance")?;
+    let quarantine = capability
+        .load_quarantined_head(PeerCapabilityKey::new(
+            tombstone.peer_account_id(),
+            tombstone.quarantined_peer_device_id(),
+        ))
+        .context("load exact durable peer quarantine for re-enrollment acceptance")?;
+    let now = unix_time_now()?;
+    let acceptance_directory = state_dir.join(PEER_REENROLLMENT_ACCEPTANCE_DIRECTORY);
+    if !PeerReenrollmentAcceptanceStore::is_initialized(&acceptance_directory) {
+        tombstone
+            .verify_context(
+                &local_authority,
+                &quarantine,
+                &peer_authority,
+                &invitation,
+                now,
+            )
+            .context("re-verify exact live peer re-enrollment context")?;
+    }
+    let store = PeerReenrollmentAcceptanceStore::open(
+        acceptance_directory,
+        local_authority.account_id(),
+        device_state.identity().device_id(),
+    )
+    .context("open durable peer re-enrollment acceptance store")?;
+    let outcome = store
+        .accept(
+            device_state.identity(),
+            &tombstone,
+            &local_authority,
+            &quarantine,
+            &peer_authority,
+            &invitation,
+            now,
+        )
+        .context("atomically accept exact peer re-enrollment successor")?;
+    let (outcome_name, durable) = match outcome {
+        PeerReenrollmentAcceptanceOutcome::Accepted(value) => ("accepted", value),
+        PeerReenrollmentAcceptanceOutcome::AlreadyAccepted(value) => ("already-accepted", value),
+    };
+    println!(
+        "peer_reenrollment_acceptance_receipt_id={}",
+        encode_hex(&durable.receipt_id())
+    );
+    println!(
+        "peer_reenrollment_plan_id={}",
+        encode_hex(&durable.receipt().tombstone_plan_id())
+    );
+    println!(
+        "peer_reenrollment_peer_account_id={}",
+        durable.peer_account_id()
+    );
+    println!(
+        "peer_reenrollment_replacement_peer_device_id={}",
+        durable.replacement_peer_device_id()
+    );
+    println!("peer_reenrollment_acceptance_outcome={outcome_name}");
+    println!("old_quarantine_retained=true");
+    println!("runtime_restart_required=true");
+    println!("runtime_consumer_enabled=false");
+    println!("network_executed=false");
+    println!("status=peer-reenrollment-acceptance-durable");
+    Ok(())
+}
+
+fn show_peer_reenrollment_status(state_dir: PathBuf, peer_account_id: AccountId) -> Result<()> {
+    let device_state = load_command_device_state(&state_dir)?;
+    let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
+    let certificate = trust
+        .load_certificate()
+        .context("load local Account binding for peer re-enrollment status")?;
+    let directory = state_dir.join(PEER_REENROLLMENT_ACCEPTANCE_DIRECTORY);
+    println!("peer_reenrollment_peer_account_id={peer_account_id}");
+    if !PeerReenrollmentAcceptanceStore::is_initialized(&directory) {
+        println!("peer_reenrollment_acceptance_present=false");
+        println!("status=peer-reenrollment-status");
+        return Ok(());
+    }
+    let store = PeerReenrollmentAcceptanceReadStore::open_existing(
+        directory,
+        certificate.account_id(),
+        device_state.identity().device_id(),
+    )
+    .context("open peer re-enrollment acceptance store read-only")?;
+    let Some(durable) = store.load_for_peer(peer_account_id)? else {
+        println!("peer_reenrollment_acceptance_present=false");
+        println!("status=peer-reenrollment-status");
+        return Ok(());
+    };
+    println!("peer_reenrollment_acceptance_present=true");
+    println!(
+        "peer_reenrollment_acceptance_receipt_id={}",
+        encode_hex(&durable.receipt_id())
+    );
+    println!(
+        "peer_reenrollment_plan_id={}",
+        encode_hex(&durable.receipt().tombstone_plan_id())
+    );
+    println!(
+        "peer_reenrollment_quarantined_peer_device_id={}",
+        durable.receipt().quarantined_peer_device_id()
+    );
+    println!(
+        "peer_reenrollment_replacement_peer_device_id={}",
+        durable.replacement_peer_device_id()
+    );
+    println!(
+        "peer_reenrollment_accepted_at_unix_seconds={}",
+        durable.receipt().accepted_at_unix_seconds()
+    );
+    match durable.successor_floor() {
+        PeerSyncCapabilityFloor::CurrentInvitationRequired {
+            invitation_id,
+            required_capability_id,
+            minimum_authority_revision,
+            minimum_ticket_publication_epoch,
+        } => {
+            println!("peer_reenrollment_successor_floor=current-invitation-required");
+            println!(
+                "peer_reenrollment_successor_invitation_id={}",
+                encode_hex(&invitation_id)
+            );
+            println!(
+                "peer_reenrollment_successor_required_capability_id={}",
+                encode_hex(&required_capability_id)
+            );
+            println!(
+                "peer_reenrollment_successor_minimum_authority_revision={minimum_authority_revision}"
+            );
+            println!(
+                "peer_reenrollment_successor_minimum_ticket_publication_epoch={minimum_ticket_publication_epoch}"
+            );
+        }
+        _ => bail!("durable peer re-enrollment successor floor is invalid"),
+    }
+    println!("old_quarantine_retained=true");
+    println!("runtime_consumer_enabled=false");
+    println!("status=peer-reenrollment-status");
     Ok(())
 }
 

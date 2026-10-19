@@ -5167,3 +5167,22 @@ Hosted follow-up:
   rustfmt and workspace-wide `--locked --offline -D warnings` Clippy.
 - No release build, ZIP/archive, tag, automatic GitHub build, network test or
   second-host run is required for this pure offline state-machine milestone.
+
+## M1.2.11 durable peer re-enrollment acceptance environment (2026-10-19)
+
+- Added workspace crate `kilogram-peer-reenrollment-acceptance`; the original
+  planner remains independent of redb. The acceptance crate has redb and local
+  identity/capability dependencies but no runtime IPC, Iroh, Tokio, HTTP,
+  Windows UI or network dependency.
+- Windows Account Root fixtures again require the stable-name harness outside
+  the filesystem sandbox because protected root-key creation otherwise returns
+  `os error 5`. Direct hash-named `cargo test` was not used.
+- Focused stable-path profile `test`, Cargo jobs 2: planner 5/5 and acceptance
+  5/5. The acceptance group includes exact old capability database byte
+  preservation and reopen after injected pre-commit failure.
+- New boundary normal/self-test passes with 8/8 rejected mutations. Aggregate
+  accepted-tag readiness passes 137/137 against immutable `M1.0.0`, including
+  rustfmt and workspace-wide `--locked --offline -D warnings` Clippy.
+- Existing Cargo target cache was retained for build speed despite its
+  approximately 47 GiB warning; no full clean, release build, ZIP/archive, tag,
+  automatic GitHub build, network test or second host was used.

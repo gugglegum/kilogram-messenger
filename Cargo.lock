@@ -3161,6 +3161,8 @@ dependencies = [
  "kilogram-mailbox-provisioning",
  "kilogram-offline",
  "kilogram-peer-capability-store",
+ "kilogram-peer-reenrollment",
+ "kilogram-peer-reenrollment-acceptance",
  "kilogram-protocol",
  "kilogram-publication-conflict",
  "kilogram-ratchet",
@@ -3309,6 +3311,22 @@ dependencies = [
  "kilogram-peer-capability-store",
  "kilogram-sync-capability",
  "postcard",
+ "serde",
+ "tempfile",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "kilogram-peer-reenrollment-acceptance"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+ "kilogram-identity",
+ "kilogram-peer-capability-store",
+ "kilogram-peer-reenrollment",
+ "kilogram-sync-capability",
+ "postcard",
+ "redb",
  "serde",
  "tempfile",
  "thiserror 2.0.20",

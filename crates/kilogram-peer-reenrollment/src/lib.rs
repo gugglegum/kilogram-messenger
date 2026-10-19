@@ -7,7 +7,7 @@
 //! runtime IPC or transport. It validates an exact Root-signed authority view,
 //! a fresh Device-signed current invitation and the exact durable quarantine
 //! head, then emits a locally Device-signed tombstone plan. Applying that plan
-//! is deliberately outside this crate and outside the M1.2.10 boundary.
+//! remains outside this pure planning crate.
 
 use kilogram_identity::{
     AccountDeviceListSnapshot, AccountId, DeviceCapability, DeviceId, DeviceIdentity, IdentityError,
@@ -125,6 +125,35 @@ impl PeerReenrollmentPlan {
         plan_id(&self.content)
     }
 
+    pub fn decode_and_validate(
+        encoded: &[u8],
+        expected_local_device_id: DeviceId,
+    ) -> Result<Self, PeerReenrollmentError> {
+        if encoded.is_empty() || encoded.len() > MAX_PEER_REENROLLMENT_PLAN_BYTES {
+            return Err(PeerReenrollmentError::ArtifactLength(encoded.len()));
+        }
+        let content: PeerReenrollmentPlanContent =
+            postcard::from_bytes(encoded).map_err(PeerReenrollmentError::Codec)?;
+        validate_content(&content)?;
+        if content.local_device_id != expected_local_device_id {
+            return Err(PeerReenrollmentError::WrongLocalDevice);
+        }
+        let plan = Self { content };
+        if plan.encode()? != encoded {
+            return Err(PeerReenrollmentError::NonCanonicalArtifact);
+        }
+        Ok(plan)
+    }
+
+    pub fn encode(&self) -> Result<Vec<u8>, PeerReenrollmentError> {
+        validate_content(&self.content)?;
+        let encoded = postcard::to_allocvec(&self.content).map_err(PeerReenrollmentError::Codec)?;
+        if encoded.is_empty() || encoded.len() > MAX_PEER_REENROLLMENT_PLAN_BYTES {
+            return Err(PeerReenrollmentError::ArtifactLength(encoded.len()));
+        }
+        Ok(encoded)
+    }
+
     pub fn confirmation_phrase(&self) -> Result<String, PeerReenrollmentError> {
         Ok(confirmation_phrase(self.plan_id()?))
     }
@@ -223,13 +252,32 @@ impl SignedPeerReenrollmentTombstone {
         invitation: &SignedCurrentPeerInvitation,
         now_unix_seconds: u64,
     ) -> Result<(), PeerReenrollmentError> {
-        self.verify_signature()?;
+        self.verify_bound_context(local_authority, quarantine, peer_authority, invitation)?;
         if now_unix_seconds < self.content.prepared_at_unix_seconds {
             return Err(PeerReenrollmentError::PlanNotYetValid);
         }
         if now_unix_seconds > self.content.expires_at_unix_seconds {
             return Err(PeerReenrollmentError::PlanExpired);
         }
+        invitation.verify_at(now_unix_seconds)?;
+        if invitation.expires_at_unix_seconds() <= now_unix_seconds {
+            return Err(PeerReenrollmentError::InvitationNotFresh);
+        }
+        Ok(())
+    }
+
+    /// Re-verify every exact signed input without imposing the current clock.
+    ///
+    /// This exists only so a byte-identical replay of an already committed
+    /// receipt remains idempotent after the short approval window expires.
+    pub fn verify_bound_context(
+        &self,
+        local_authority: &AccountDeviceListSnapshot,
+        quarantine: &DurablePeerCapabilityQuarantineHead,
+        peer_authority: &AccountDeviceListSnapshot,
+        invitation: &SignedCurrentPeerInvitation,
+    ) -> Result<(), PeerReenrollmentError> {
+        self.verify_signature()?;
         let expected = build_validated_content(
             self.content.local_device_id,
             local_authority,
@@ -241,10 +289,6 @@ impl SignedPeerReenrollmentTombstone {
         )?;
         if expected != self.content {
             return Err(PeerReenrollmentError::ContextMismatch);
-        }
-        invitation.verify_at(now_unix_seconds)?;
-        if invitation.expires_at_unix_seconds() <= now_unix_seconds {
-            return Err(PeerReenrollmentError::InvitationNotFresh);
         }
         Ok(())
     }
@@ -275,6 +319,50 @@ impl SignedPeerReenrollmentTombstone {
 
     pub fn predecessor_record_id(&self) -> [u8; 32] {
         self.content.predecessor_record_id
+    }
+
+    pub fn predecessor_floor(&self) -> PeerSyncCapabilityFloor {
+        self.content.predecessor_floor
+    }
+
+    pub fn quarantine_sequence(&self) -> u64 {
+        self.content.quarantine_sequence
+    }
+
+    pub fn quarantine_reason(&self) -> PeerSyncCapabilityQuarantineReason {
+        self.content.quarantine_reason
+    }
+
+    pub fn local_authority_revision(&self) -> u64 {
+        self.content.local_authority_revision
+    }
+
+    pub fn local_authority_digest(&self) -> [u8; 32] {
+        self.content.local_authority_digest
+    }
+
+    pub fn peer_authority_revision(&self) -> u64 {
+        self.content.peer_authority_revision
+    }
+
+    pub fn peer_authority_digest(&self) -> [u8; 32] {
+        self.content.peer_authority_digest
+    }
+
+    pub fn invitation_id(&self) -> [u8; 32] {
+        self.content.invitation_id
+    }
+
+    pub fn required_capability_id(&self) -> [u8; 32] {
+        self.content.required_capability_id
+    }
+
+    pub fn ticket_publication_epoch(&self) -> u64 {
+        self.content.ticket_publication_epoch
+    }
+
+    pub fn prepared_at_unix_seconds(&self) -> u64 {
+        self.content.prepared_at_unix_seconds
     }
 
     pub fn successor_floor(&self) -> PeerSyncCapabilityFloor {
@@ -695,6 +783,14 @@ mod tests {
     -> Result<(), Box<dyn std::error::Error>> {
         let fixture = fixture()?;
         let plan = prepared(&fixture)?;
+        let encoded_plan = plan.encode()?;
+        assert_eq!(
+            PeerReenrollmentPlan::decode_and_validate(
+                &encoded_plan,
+                fixture.local_identity.device_id(),
+            )?,
+            plan
+        );
         assert_eq!(
             plan.local_account_id(),
             fixture.local_authority.account_id()

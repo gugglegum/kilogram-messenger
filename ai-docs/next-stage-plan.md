@@ -1,30 +1,35 @@
-# Текущая точка: M1.2.10 завершён, следующий M1.2.11
+# Текущая точка: M1.2.11 завершён, следующий M1.2.12
 
-Статус на 2026-10-19: отдельный offline crate
-`kilogram-peer-reenrollment` проверяет exact durable quarantine head и его
-подписанный predecessor, обе Root-signed Account authority, fresh current peer
-invitation и monotonic high-water. План требует точную короткую confirmation
-phrase и explicit approval, после чего текущий локальный Device подписывает
-bounded tombstone. Артефакт ничего не применяет: старый quarantine неизменен,
-runtime/IPC/network/CLI/desktop не подключены, public default остаётся
-`legacy-only`. Focused stable-name regression проходит 13/13 тестов, aggregate
-readiness — 136/136, fail-closed negative matrix — 7/7.
+Статус на 2026-10-19: pure planner и durable application разделены.
+`kilogram-peer-reenrollment-acceptance` хранит current-Device-signed receipt и
+единственный per-peer successor head в одной immediate-durability redb
+транзакции. Receipt exact-связан со старым quarantine/predecessor, обеими
+Root-signed authority, полными bytes tombstone, replacement Device и successor
+floor. Exact replay идемпотентен даже после expiry уже принятого плана; changed
+context и второй successor fail closed. Старый capability DB остаётся
+побайтово неизменным. CLI ceremony локальная/offline, runtime consumer выключен
+и требует отдельного fresh start. Focused stable-name regression проходит
+5/5 planner + 5/5 acceptance tests, aggregate readiness — 137/137,
+fail-closed negative matrix — 8/8. Wire/IPC/default `legacy-only` неизменны.
 
-## Следующий этап: M1.2.11 durable re-enrollment acceptance receipt
+## Следующий этап: M1.2.12 fresh-start successor consumption
 
-- определить единственную durable точку применения подписанного tombstone без
-  удаления либо переписывания старой quarantined chain;
-- exact-связать acceptance receipt с текущим contact head, новым peer key,
-  successor capability floor и тем же Root/device-list/invitation context;
-- сделать crash boundary атомарным: либо receipt и новый peer floor полностью
-  durable, либо старый contact остаётся blocked без partial route replacement;
-- exact replay сделать idempotent, а changed contact/quarantine/authority/
-  invitation, fork, rollback и second successor — fail closed;
-- сначала оставить apply локальным offline CLI contract без runtime hot apply,
-  автоматического retry и desktop one-click; runtime должен увидеть successor
-  только после отдельного fresh-start integration milestone;
-- сохранить старый quarantine как audit evidence, unknown first-contact
-  ambiguity, wire и public rollout/default `legacy-only`.
+- разрешить runtime читать acceptance store только при fresh start, до
+  scheduler/outbox и до открытия любого сетевого endpoint;
+- связать accepted successor с exact authenticated current contact/invitation,
+  replacement Device и сохранённым successor floor, не принимая receipt как
+  endpoint либо сетевую authority сам по себе;
+- создать отдельный атомарный contact-successor transition: либо новый contact
+  head и capability floor полностью подготовлены, либо старый contact остаётся
+  blocked; старый quarantine и acceptance receipt не удаляются;
+- не выпускать ранее заблокированные queue items автоматически: после restart
+  требуется обычная повторная scheduler evaluation нового exact contact;
+- exact replay/restart сделать идемпотентным, а missing/corrupt acceptance,
+  changed invitation/authority/contact, fork, rollback и второй successor —
+  fail closed до materialization/network;
+- сохранить runtime IPC без mutation/hot apply, desktop без one-click recovery,
+  unknown first-contact ambiguity, wire и public rollout/default
+  `legacy-only`; двуххостовый network run вынести после локального durable gate.
 
 # Завершённый расширенный пакет: M1.1.92–M1.2.5
 

@@ -7586,3 +7586,29 @@ correlation visible, Windows-only field evidence, independent security audit
   rustfmt и workspace-wide locked/offline strict Clippy;
 - wire, runtime IPC и public default `legacy-only` не менялись; release/ZIP/tag,
   automatic GitHub build, сеть и второй физический хост не использовались.
+
+### M1.2.11 — durable peer re-enrollment acceptance: принят локально
+
+- pure M1.2.10 planner сохранён без redb/apply authority; отдельный crate
+  `kilogram-peer-reenrollment-acceptance` владеет отдельной bounded
+  `peer-reenrollment-acceptance-v1.redb`;
+- current local Device подписывает receipt, exact-связанный с обеими authority
+  revision/digest, старым quarantine record/sequence/reason и predecessor,
+  полными tombstone bytes/plan ID, replacement Device, invitation/capability
+  IDs, publication epoch, successor floor и временем acceptance;
+- receipt и единственный per-peer successor head записываются одной
+  immediate-durability transaction; injected failure перед commit после
+  restart не оставляет ни receipt, ни head;
+- exact replay того же committed artifact идемпотентен даже после plan expiry,
+  но changed live context, corrupt/foreign store и второй successor fail
+  closed без замены первого head;
+- старый capability DB открывается CLI read-only и regression подтверждает его
+  byte-for-byte сохранность; quarantine не очищается и не переписывается;
+- CLI получил отдельные offline no-clobber plan/approve/accept и read-only
+  status commands; runtime consumer/hot apply/network/automatic retry/desktop
+  one-click отсутствуют, после acceptance явно требуется fresh start;
+- stable-path tests прошли 5/5 planner + 5/5 acceptance; boundary отклонил 8/8
+  ослаблений, accepted-tag readiness прошёл 137/137 с rustfmt и
+  workspace-wide locked/offline strict Clippy;
+- wire, runtime IPC и public default `legacy-only` не менялись; release/ZIP/tag,
+  automatic GitHub build, сеть и второй физический хост не использовались.

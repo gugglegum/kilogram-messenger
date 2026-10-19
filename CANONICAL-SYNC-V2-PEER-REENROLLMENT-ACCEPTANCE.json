@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.11",
+  "status": "canonical-sync-v2-peer-reenrollment-acceptance-verified",
+  "implementation": [
+    "crates/kilogram-peer-reenrollment",
+    "crates/kilogram-peer-reenrollment-acceptance",
+    "apps/kilogram-cli"
+  ],
+  "changes_connection_ticket_wire": false,
+  "changes_sync_wire": false,
+  "changes_runtime_ipc": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "durable_acceptance": {
+    "separate_acceptance_database": true,
+    "receipt_and_successor_head_share_one_transaction": true,
+    "immediate_durability": true,
+    "receipt_signed_by_current_local_device": true,
+    "receipt_canonical_and_bounded": true,
+    "maximum_receipt_bytes": 4096,
+    "maximum_head_bytes": 1024,
+    "maximum_acceptances": 4096,
+    "owner_account_and_device_bound": true,
+    "full_store_verified_on_open": true,
+    "partial_receipt_or_head_rejected": true,
+    "pre_commit_failure_leaves_no_partial_state": true
+  },
+  "receipt_binding": {
+    "old_quarantine_record_sequence_reason": true,
+    "old_verified_predecessor_record_and_floor": true,
+    "exact_tombstone_plan_id_and_artifact_digest": true,
+    "local_and_peer_authority_revisions_and_digests": true,
+    "replacement_peer_device": true,
+    "successor_capability_floor": true,
+    "invitation_and_required_capability_ids": true,
+    "ticket_publication_epoch": true,
+    "preparation_expiry_and_acceptance_times": true
+  },
+  "replay_and_conflict": {
+    "exact_replay_is_idempotent": true,
+    "exact_committed_replay_allowed_after_plan_expiry": true,
+    "changed_live_context_rejected": true,
+    "authority_or_publication_rollback_rejected": true,
+    "second_successor_rejected": true,
+    "existing_successor_head_never_replaced": true
+  },
+  "quarantine_boundary": {
+    "old_quarantine_retained": true,
+    "old_capability_database_opened_read_only_by_cli": true,
+    "old_capability_database_byte_preservation_tested": true,
+    "quarantine_clear_or_rewrite_api": false,
+    "successor_lowers_old_floor": false
+  },
+  "operator_boundary": {
+    "manual_plan_command": true,
+    "exact_confirmation_phrase_required": true,
+    "explicit_approval_flag_required": true,
+    "manual_accept_command": true,
+    "read_only_status_command": true,
+    "no_clobber_artifact_files": true,
+    "network_executed": false,
+    "automatic_retry_enabled": false,
+    "runtime_hot_apply_enabled": false,
+    "runtime_consumer_enabled": false,
+    "runtime_restart_required": true,
+    "desktop_one_click_enabled": false
+  },
+  "privacy_boundary": {
+    "contains_connection_ticket_body": false,
+    "contains_endpoint_or_address": false,
+    "contains_relay_url": false,
+    "contains_message_or_ciphertext": false,
+    "contains_filesystem_path": false,
+    "contains_account_root_or_device_secret": false
+  },
+  "verification": {
+    "stable_path_rust_harness_required_on_windows": true,
+    "planner_tests": "5/5",
+    "acceptance_tests": "5/5",
+    "atomic_commit_and_reopen_tested": true,
+    "exact_replay_after_expiry_tested": true,
+    "changed_context_and_second_successor_tested": true,
+    "pre_commit_failure_tested": true,
+    "owner_mismatch_and_corruption_tested": true,
+    "boundary_self_test_and_negative_mutations": "verified",
+    "m1_readiness": "137/137",
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false,
+    "second_host_required": false,
+    "network_executed": false
+  },
+  "non_claims": [
+    "fresh-start-runtime-consumption",
+    "live-contact-route-replacement",
+    "automatic-delivery-retry",
+    "quarantine-clear-or-record-deletion",
+    "global-peer-authority-freshness",
+    "generic-first-contact-extension-stripping-detection",
+    "whole-store-rollback-resistance-without-external-witness",
+    "public-rollout-eligibility",
+    "independent-security-review-completed"
+  ],
+  "next": [
+    "fresh-start-runtime-successor-consumption",
+    "retained-quarantine-audit-export",
+    "independent-protocol-and-security-review"
+  ]
+}

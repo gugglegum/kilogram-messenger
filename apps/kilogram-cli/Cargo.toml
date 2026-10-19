@@ -30,6 +30,8 @@ kilogram-mailbox = { path = "../../crates/kilogram-mailbox" }
 kilogram-mailbox-client = { path = "../../crates/kilogram-mailbox-client" }
 kilogram-mailbox-provisioning = { path = "../../crates/kilogram-mailbox-provisioning" }
 kilogram-peer-capability-store = { path = "../../crates/kilogram-peer-capability-store" }
+kilogram-peer-reenrollment = { path = "../../crates/kilogram-peer-reenrollment" }
+kilogram-peer-reenrollment-acceptance = { path = "../../crates/kilogram-peer-reenrollment-acceptance" }
 kilogram-protocol = { path = "../../crates/kilogram-protocol" }
 kilogram-publication-conflict = { path = "../../crates/kilogram-publication-conflict" }
 kilogram-ratchet = { path = "../../crates/kilogram-ratchet" }
