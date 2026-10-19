@@ -1207,6 +1207,11 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   scheduled sync до materialization/network, исключает busy retry и starvation
   других peers, а после restart заново проверяет durable quarantine; wire/IPC и
   public default не меняются.
+- [`../docs/RFC-0233-m1209-runtime-quarantine-observability.md`](../docs/RFC-0233-m1209-runtime-quarantine-observability.md) —
+  M1.2.9 добавляет bounded read-only IPC v31/domain v12 и Windows-панель,
+  раздельно показывающие durable quarantine, process-local suppression и
+  обычный network retry без raw peer/queue IDs, ticket, endpoint, message либо
+  clear/retry/recovery authority; missing store остаётся no-create.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

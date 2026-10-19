@@ -139,40 +139,40 @@ function Assert-Contract {
 
     $activeCommands = @($Completion.active_postcard.commands)
     $activeResponses = @($Completion.active_postcard.responses)
-    if ([int]$Completion.active_postcard.version -ne 30 -or
+    if ([int]$Completion.active_postcard.version -ne 31 -or
         [string]$Completion.active_postcard.descriptor_signature_domain -cne
-            'kilogram:runtime-ipc-descriptor:v11\0' -or
-        $activeCommands.Count -ne 30 -or $activeResponses.Count -ne 29 -or
-        [string]$activeCommands[-1].variant -cne 'CanonicalSyncV2RuntimeStatus' -or
-        [string]$activeResponses[-1].variant -cne 'CanonicalSyncV2RuntimeStatus' -or
+            'kilogram:runtime-ipc-descriptor:v12\0' -or
+        $activeCommands.Count -ne 31 -or $activeResponses.Count -ne 30 -or
+        'CanonicalSyncV2RuntimeStatus' -cnotin @($activeCommands.variant) -or
+        'CanonicalSyncV2RuntimeStatus' -cnotin @($activeResponses.variant) -or
         'canonical-sync-v2-runtime-status' -cnotin @($Completion.canonical.commands) -or
         'canonical-sync-v2-runtime-status-result' -cnotin @($Completion.canonical.results)) {
         throw 'runtime observability completion inventory changed'
     }
     if ([string]$Schema.activation.current_runtime_encoding -cne
-            'postcard-v30-with-json-descriptor-v11' -or
-        @($Schema.covered_commands).Count -ne 35 -or
-        @($Schema.covered_results).Count -ne 34 -or
-        @($Schema.semantic_rules).Count -ne 180) {
+            'postcard-v31-with-json-descriptor-v12' -or
+        @($Schema.covered_commands).Count -ne 36 -or
+        @($Schema.covered_results).Count -ne 35 -or
+        @($Schema.semantic_rules).Count -ne 181) {
         throw 'runtime observability canonical schema changed'
     }
     $surface = @($Compatibility.surfaces | Where-Object { [string]$_.id -ceq 'runtime-ipc' })
     if ($surface.Count -ne 1 -or
-        [int](@($surface[0].bindings | Where-Object { [string]$_.symbol -ceq 'IPC_VERSION' })[0].value) -ne 30 -or
+        [int](@($surface[0].bindings | Where-Object { [string]$_.symbol -ceq 'IPC_VERSION' })[0].value) -ne 31 -or
         [string](@($surface[0].bindings | Where-Object {
             [string]$_.symbol -ceq 'DESCRIPTOR_SIGNATURE_DOMAIN'
-        })[0].value) -cne 'kilogram:runtime-ipc-descriptor:v11\0') {
+        })[0].value) -cne 'kilogram:runtime-ipc-descriptor:v12\0') {
         throw 'runtime observability compatibility binding changed'
     }
 
     Assert-ContainsAll $Ipc @(
-        'const IPC_VERSION: u8 = 30;',
-        'kilogram:runtime-ipc-descriptor:v11\0',
+        'const IPC_VERSION: u8 = 31;',
+        'kilogram:runtime-ipc-descriptor:v12\0',
         'pub const MAX_RUNTIME_IPC_SYNC_PATH_OBSERVATIONS: usize = 32;',
         'CanonicalSyncV2RuntimeStatus,',
         'CanonicalSyncV2RuntimeStatus(Box<RuntimeIpcCanonicalSyncV2RuntimeStatus>)',
         'pub struct RuntimeIpcCanonicalSyncV2RuntimeStatus',
-        'version_29_request_is_rejected_before_actor_dispatch'
+        'version_30_request_is_rejected_before_actor_dispatch'
     ) 'runtime IPC source'
     Assert-ContainsAll $Cli @(
         'struct RuntimeSyncObservability',

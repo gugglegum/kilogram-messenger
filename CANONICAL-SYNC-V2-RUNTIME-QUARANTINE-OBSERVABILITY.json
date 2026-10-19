@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.9",
+  "status": "canonical-sync-v2-runtime-quarantine-observability-verified",
+  "implementation": [
+    "apps/kilogram-cli",
+    "apps/kilogram-windows",
+    "crates/kilogram-peer-capability-store",
+    "crates/kilogram-runtime-ipc"
+  ],
+  "changes_connection_ticket_wire": false,
+  "changes_sync_wire": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "runtime_ipc": {
+    "operation": "read-only-page",
+    "command": "PeerCapabilityQuarantinePage",
+    "response": "PeerCapabilityQuarantinePage",
+    "version": 31,
+    "descriptor_signature_domain": "kilogram:runtime-ipc-descriptor:v12\\0",
+    "previous_version": 30,
+    "previous_descriptor_signature_domain": "kilogram:runtime-ipc-descriptor:v11\\0",
+    "migration": "exact-version-hard-cut-for-co-installed-binaries",
+    "dual_reader": false,
+    "mutation_or_recovery_authority": false
+  },
+  "bounded_projection": {
+    "maximum_page_items": 64,
+    "maximum_runtime_contacts": 256,
+    "maximum_pending_queue_items": 4096,
+    "cursor": "opaque-contact-id-exclusive",
+    "ordering": "ascending-opaque-contact-id",
+    "distinguishes": [
+      "durable-capability-quarantine",
+      "process-local-scheduler-suppression",
+      "ordinary-network-retry"
+    ],
+    "durable_reason_vocabulary_is_bounded": true,
+    "restart_reloads_durable_quarantine": true,
+    "restart_does_not_reconstruct_process_local_suppression": true
+  },
+  "storage_boundary": {
+    "opens_capability_store_read_only": true,
+    "missing_store_is_valid_empty_state": true,
+    "missing_store_creates_directory": false,
+    "missing_store_creates_database": false,
+    "observation_mutates_database": false,
+    "wrong_owner_or_corrupt_store_fails_closed": true
+  },
+  "privacy_boundary": {
+    "exposes_opaque_contact_id": true,
+    "exposes_raw_account_id": false,
+    "exposes_raw_device_id": false,
+    "exposes_queue_id": false,
+    "exposes_ticket_or_endpoint": false,
+    "exposes_ip_or_relay_url": false,
+    "exposes_message_or_ciphertext": false,
+    "exposes_filesystem_path": false,
+    "exposes_secret_or_capability_bytes": false
+  },
+  "desktop": {
+    "loads_after_authenticated_connect": true,
+    "refreshes_after_runtime_status_refresh": true,
+    "manual_refresh": true,
+    "labels_view_read_only": true,
+    "shows_durable_scheduler_and_network_counts_separately": true,
+    "clear_action_present": false,
+    "retry_action_present": false,
+    "downgrade_action_present": false,
+    "recovery_action_present": false
+  },
+  "activation_boundary": {
+    "automatic_quarantine_clear_enabled": false,
+    "remote_quarantine_clear_enabled": false,
+    "observer_can_retry_network_work": false,
+    "observer_can_downgrade_capability_floor": false,
+    "public_canonical_rollout_enabled": false
+  },
+  "verification": {
+    "stable_path_rust_harness_required_on_windows": true,
+    "missing_store_no_create_tested": true,
+    "read_only_database_bytes_unchanged_tested": true,
+    "restart_classification_tested": true,
+    "multi_peer_order_and_pagination_tested": true,
+    "page_and_collection_bounds_tested": true,
+    "privacy_projection_tested": true,
+    "desktop_authenticated_ipc_tested": true,
+    "boundary_self_test_and_negative_mutations": "verified",
+    "m1_readiness": "135/135",
+    "rustfmt": "verified",
+    "locked_offline_strict_clippy": "verified",
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false,
+    "network_executed": false
+  },
+  "non_claims": [
+    "quarantine-recovery-or-clear-authority",
+    "automatic-network-retry-trigger",
+    "generic-first-contact-extension-stripping-detection",
+    "whole-store-rollback-resistance-without-external-witness",
+    "public-rollout-eligibility",
+    "independent-security-review-completed"
+  ],
+  "next": [
+    "explicit-device-authorized-peer-reenrollment-design",
+    "quarantine-audit-export-design",
+    "independent-protocol-and-security-review"
+  ]
+}

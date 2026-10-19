@@ -19,7 +19,8 @@ use kilogram_sync_capability::{
     evaluate_peer_sync_capability_floor,
 };
 use redb::{
-    Database, Durability, ReadableDatabase, ReadableTable, ReadableTableMetadata, TableDefinition,
+    Database, Durability, ReadOnlyDatabase, ReadableDatabase, ReadableTable, ReadableTableMetadata,
+    TableDefinition,
 };
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -195,6 +196,56 @@ pub struct PeerCapabilityStore {
     directory: PathBuf,
     database: Database,
     owner_device_id: DeviceId,
+}
+
+/// A strictly read-only view of an already initialized peer capability store.
+///
+/// Opening this view never creates a directory, database, table, or recovery
+/// record. Callers that merely render status must use this type instead of
+/// [`PeerCapabilityStore`].
+pub struct PeerCapabilityReadStore {
+    directory: PathBuf,
+    database: ReadOnlyDatabase,
+    owner_device_id: DeviceId,
+}
+
+impl PeerCapabilityReadStore {
+    pub fn open_existing(
+        directory: impl AsRef<Path>,
+        owner_device_id: DeviceId,
+    ) -> Result<Self, PeerCapabilityStoreError> {
+        let directory = directory.as_ref().to_path_buf();
+        let database_path = directory.join(DATABASE_FILE);
+        if !database_path.is_file() {
+            return Err(PeerCapabilityStoreError::StoreNotInitialized);
+        }
+        let database = ReadOnlyDatabase::open(database_path).map_err(database_error)?;
+        verify_database_metadata(&database, owner_device_id)?;
+        verify_all_records_from_database(&database, owner_device_id)?;
+        Ok(Self {
+            directory,
+            database,
+            owner_device_id,
+        })
+    }
+
+    pub fn directory(&self) -> &Path {
+        &self.directory
+    }
+
+    pub fn owner_device_id(&self) -> DeviceId {
+        self.owner_device_id
+    }
+
+    pub fn load_state(
+        &self,
+        key: PeerCapabilityKey,
+    ) -> Result<Option<DurablePeerCapabilityState>, PeerCapabilityStoreError> {
+        match load_verified_head_from_database(&self.database, self.owner_device_id, key)? {
+            Some(record) => Ok(Some(record.state()?)),
+            None => Ok(None),
+        }
+    }
 }
 
 impl PeerCapabilityStore {
@@ -390,120 +441,165 @@ impl PeerCapabilityStore {
         &self,
         key: PeerCapabilityKey,
     ) -> Result<Option<SignedPeerCapabilityRecord>, PeerCapabilityStoreError> {
-        let read = self.database.begin_read().map_err(database_error)?;
-        let heads = read.open_table(HEAD_TABLE).map_err(database_error)?;
-        let key_bytes = key.encoded();
-        let Some(head) = heads
-            .get(key_bytes.as_slice())
-            .map_err(database_error)?
-            .map(|value| copy_id(value.value()))
-            .transpose()?
-        else {
-            return Ok(None);
-        };
-        let records = read.open_table(RECORD_TABLE).map_err(database_error)?;
-        let mut expected_id = head;
-        let mut expected_sequence: Option<u64> = None;
-        let mut chain_ids = HashSet::new();
-        let mut head_record = None;
-
-        loop {
-            if chain_ids.len() >= MAX_PEER_CAPABILITY_RECORDS_PER_PEER {
-                return Err(PeerCapabilityStoreError::PeerRecordLimit);
-            }
-            if !chain_ids.insert(expected_id) {
-                return Err(PeerCapabilityStoreError::RecordCycle);
-            }
-            let encoded = records
-                .get(expected_id.as_slice())
-                .map_err(database_error)?
-                .ok_or(PeerCapabilityStoreError::MissingRecord(expected_id))?;
-            let record = SignedPeerCapabilityRecord::decode_and_verify(
-                encoded.value(),
-                self.owner_device_id,
-                key,
-            )?;
-            if record.record_id()? != expected_id {
-                return Err(PeerCapabilityStoreError::RecordIdMismatch);
-            }
-            if head_record.is_none() {
-                head_record = Some(record.clone());
-            }
-            match expected_sequence {
-                Some(expected) if record.content.sequence != expected => {
-                    return Err(PeerCapabilityStoreError::SequenceGap);
-                }
-                _ => {}
-            }
-            match record.content.previous_record_id {
-                Some(previous) => {
-                    if record.content.sequence <= 1 {
-                        return Err(PeerCapabilityStoreError::SequenceGap);
-                    }
-                    expected_sequence = Some(record.content.sequence - 1);
-                    expected_id = previous;
-                }
-                None => {
-                    if record.content.sequence != 1 {
-                        return Err(PeerCapabilityStoreError::SequenceGap);
-                    }
-                    break;
-                }
-            }
-        }
-
-        for item in records.iter().map_err(database_error)? {
-            let (stored_id, stored_record) = item.map_err(database_error)?;
-            let stored_id = copy_id(stored_id.value())?;
-            let raw: SignedPeerCapabilityRecord = postcard::from_bytes(stored_record.value())?;
-            let record_key =
-                PeerCapabilityKey::new(raw.content.peer_account_id, raw.content.peer_device_id);
-            raw.verify_for(self.owner_device_id, record_key)?;
-            if raw.record_id()? != stored_id {
-                return Err(PeerCapabilityStoreError::RecordIdMismatch);
-            }
-            if record_key == key && !chain_ids.contains(&stored_id) {
-                return Err(PeerCapabilityStoreError::OrphanPeerRecord);
-            }
-        }
-        Ok(head_record)
+        load_verified_head_from_database(&self.database, self.owner_device_id, key)
     }
 
     fn verify_all_records(&self) -> Result<(), PeerCapabilityStoreError> {
-        let read = self.database.begin_read().map_err(database_error)?;
-        let heads = read.open_table(HEAD_TABLE).map_err(database_error)?;
-        let mut keys = HashSet::new();
-        for item in heads.iter().map_err(database_error)? {
-            let (key, head) = item.map_err(database_error)?;
-            let key = decode_peer_key(key.value())?;
-            let _ = copy_id(head.value())?;
-            keys.insert(key);
-        }
-        drop(heads);
-        let records = read.open_table(RECORD_TABLE).map_err(database_error)?;
-        for item in records.iter().map_err(database_error)? {
-            let (stored_id, stored_record) = item.map_err(database_error)?;
-            let stored_id = copy_id(stored_id.value())?;
-            let record: SignedPeerCapabilityRecord = postcard::from_bytes(stored_record.value())?;
-            let key = PeerCapabilityKey::new(
-                record.content.peer_account_id,
-                record.content.peer_device_id,
-            );
-            record.verify_for(self.owner_device_id, key)?;
-            if record.record_id()? != stored_id {
-                return Err(PeerCapabilityStoreError::RecordIdMismatch);
-            }
-            keys.insert(key);
-        }
-        drop(records);
-        drop(read);
-        for key in keys {
-            if self.load_verified_head(key)?.is_none() {
-                return Err(PeerCapabilityStoreError::OrphanPeerRecord);
-            }
-        }
-        Ok(())
+        verify_all_records_from_database(&self.database, self.owner_device_id)
     }
+}
+
+fn load_verified_head_from_database<D: ReadableDatabase>(
+    database: &D,
+    owner_device_id: DeviceId,
+    key: PeerCapabilityKey,
+) -> Result<Option<SignedPeerCapabilityRecord>, PeerCapabilityStoreError> {
+    let read = database.begin_read().map_err(database_error)?;
+    let heads = read.open_table(HEAD_TABLE).map_err(database_error)?;
+    let key_bytes = key.encoded();
+    let Some(head) = heads
+        .get(key_bytes.as_slice())
+        .map_err(database_error)?
+        .map(|value| copy_id(value.value()))
+        .transpose()?
+    else {
+        return Ok(None);
+    };
+    let records = read.open_table(RECORD_TABLE).map_err(database_error)?;
+    let mut expected_id = head;
+    let mut expected_sequence: Option<u64> = None;
+    let mut chain_ids = HashSet::new();
+    let mut head_record = None;
+
+    loop {
+        if chain_ids.len() >= MAX_PEER_CAPABILITY_RECORDS_PER_PEER {
+            return Err(PeerCapabilityStoreError::PeerRecordLimit);
+        }
+        if !chain_ids.insert(expected_id) {
+            return Err(PeerCapabilityStoreError::RecordCycle);
+        }
+        let encoded = records
+            .get(expected_id.as_slice())
+            .map_err(database_error)?
+            .ok_or(PeerCapabilityStoreError::MissingRecord(expected_id))?;
+        let record =
+            SignedPeerCapabilityRecord::decode_and_verify(encoded.value(), owner_device_id, key)?;
+        if record.record_id()? != expected_id {
+            return Err(PeerCapabilityStoreError::RecordIdMismatch);
+        }
+        if head_record.is_none() {
+            head_record = Some(record.clone());
+        }
+        match expected_sequence {
+            Some(expected) if record.content.sequence != expected => {
+                return Err(PeerCapabilityStoreError::SequenceGap);
+            }
+            _ => {}
+        }
+        match record.content.previous_record_id {
+            Some(previous) => {
+                if record.content.sequence <= 1 {
+                    return Err(PeerCapabilityStoreError::SequenceGap);
+                }
+                expected_sequence = Some(record.content.sequence - 1);
+                expected_id = previous;
+            }
+            None => {
+                if record.content.sequence != 1 {
+                    return Err(PeerCapabilityStoreError::SequenceGap);
+                }
+                break;
+            }
+        }
+    }
+
+    for item in records.iter().map_err(database_error)? {
+        let (stored_id, stored_record) = item.map_err(database_error)?;
+        let stored_id = copy_id(stored_id.value())?;
+        let raw: SignedPeerCapabilityRecord = postcard::from_bytes(stored_record.value())?;
+        let record_key =
+            PeerCapabilityKey::new(raw.content.peer_account_id, raw.content.peer_device_id);
+        raw.verify_for(owner_device_id, record_key)?;
+        if raw.record_id()? != stored_id {
+            return Err(PeerCapabilityStoreError::RecordIdMismatch);
+        }
+        if record_key == key && !chain_ids.contains(&stored_id) {
+            return Err(PeerCapabilityStoreError::OrphanPeerRecord);
+        }
+    }
+    Ok(head_record)
+}
+
+fn verify_all_records_from_database<D: ReadableDatabase>(
+    database: &D,
+    owner_device_id: DeviceId,
+) -> Result<(), PeerCapabilityStoreError> {
+    let read = database.begin_read().map_err(database_error)?;
+    let heads = read.open_table(HEAD_TABLE).map_err(database_error)?;
+    let mut keys = HashSet::new();
+    for item in heads.iter().map_err(database_error)? {
+        let (key, head) = item.map_err(database_error)?;
+        let key = decode_peer_key(key.value())?;
+        let _ = copy_id(head.value())?;
+        keys.insert(key);
+    }
+    drop(heads);
+    let records = read.open_table(RECORD_TABLE).map_err(database_error)?;
+    for item in records.iter().map_err(database_error)? {
+        let (stored_id, stored_record) = item.map_err(database_error)?;
+        let stored_id = copy_id(stored_id.value())?;
+        let record: SignedPeerCapabilityRecord = postcard::from_bytes(stored_record.value())?;
+        let key = PeerCapabilityKey::new(
+            record.content.peer_account_id,
+            record.content.peer_device_id,
+        );
+        record.verify_for(owner_device_id, key)?;
+        if record.record_id()? != stored_id {
+            return Err(PeerCapabilityStoreError::RecordIdMismatch);
+        }
+        keys.insert(key);
+    }
+    drop(records);
+    drop(read);
+    for key in keys {
+        if load_verified_head_from_database(database, owner_device_id, key)?.is_none() {
+            return Err(PeerCapabilityStoreError::OrphanPeerRecord);
+        }
+    }
+    Ok(())
+}
+
+fn verify_database_metadata<D: ReadableDatabase>(
+    database: &D,
+    owner_device_id: DeviceId,
+) -> Result<(), PeerCapabilityStoreError> {
+    let read = database.begin_read().map_err(database_error)?;
+    let meta = read.open_table(META_TABLE).map_err(database_error)?;
+    let schema = meta
+        .get(SCHEMA_KEY)
+        .map_err(database_error)?
+        .map(|value| value.value().to_vec())
+        .ok_or(PeerCapabilityStoreError::SchemaMismatch)?;
+    if schema != [SCHEMA_VERSION] {
+        return Err(PeerCapabilityStoreError::SchemaMismatch);
+    }
+    let owner = meta
+        .get(OWNER_DEVICE_KEY)
+        .map_err(database_error)?
+        .map(|value| value.value().to_vec())
+        .ok_or(PeerCapabilityStoreError::OwnerDeviceMismatch)?;
+    if owner.as_slice() != owner_device_id.as_bytes() {
+        return Err(PeerCapabilityStoreError::OwnerDeviceMismatch);
+    }
+    drop(meta);
+    let records = read.open_table(RECORD_TABLE).map_err(database_error)?;
+    if records.len().map_err(database_error)? > MAX_PEER_CAPABILITY_RECORDS {
+        return Err(PeerCapabilityStoreError::GlobalRecordLimit);
+    }
+    drop(records);
+    let heads = read.open_table(HEAD_TABLE).map_err(database_error)?;
+    drop(heads);
+    Ok(())
 }
 
 fn invitation_floor_transition(
@@ -691,6 +787,8 @@ fn database_error(error: impl std::fmt::Display) -> PeerCapabilityStoreError {
 
 #[derive(Debug, Error)]
 pub enum PeerCapabilityStoreError {
+    #[error("peer capability store is not initialized")]
+    StoreNotInitialized,
     #[error("peer capability store I/O failed")]
     Io(#[from] std::io::Error),
     #[error("peer capability database failed: {0}")]
@@ -814,6 +912,74 @@ mod tests {
                 minimum_authority_revision: 4,
                 minimum_ticket_publication_epoch: 9,
             })
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn read_only_open_refuses_absent_store_without_creating_state()
+    -> Result<(), PeerCapabilityStoreError> {
+        let directory = tempfile::tempdir()?
+            .path()
+            .join("absent-peer-capability-store");
+        let owner = DeviceIdentity::generate()?;
+
+        assert!(!directory.exists());
+        assert!(matches!(
+            PeerCapabilityReadStore::open_existing(&directory, owner.device_id()),
+            Err(PeerCapabilityStoreError::StoreNotInitialized)
+        ));
+        assert!(!directory.exists());
+        Ok(())
+    }
+
+    #[test]
+    fn read_only_open_observes_durable_quarantine_without_mutation()
+    -> Result<(), PeerCapabilityStoreError> {
+        let directory = tempfile::tempdir()?;
+        let owner = DeviceIdentity::generate()?;
+        let wrong_owner = DeviceIdentity::generate()?;
+        let peer = DeviceIdentity::generate()?;
+        let key = PeerCapabilityKey::new(account(1), peer.device_id());
+        let store = PeerCapabilityStore::open(directory.path(), owner.device_id())?;
+        store.apply_authenticated_observation(
+            &owner,
+            key,
+            PeerSyncCapabilityEvidence::AuthenticatedCanonicalCandidate {
+                capability_id: [7; 32],
+                authority_revision: 4,
+                ticket_publication_epoch: 9,
+            },
+        )?;
+        store.apply_authenticated_observation(
+            &owner,
+            key,
+            PeerSyncCapabilityEvidence::LegacyTicketWithoutExtension,
+        )?;
+        drop(store);
+
+        let database_path = directory.path().join(DATABASE_FILE);
+        let before = std::fs::read(&database_path)?;
+        {
+            let read_store =
+                PeerCapabilityReadStore::open_existing(directory.path(), owner.device_id())?;
+            assert_eq!(read_store.directory(), directory.path());
+            assert_eq!(read_store.owner_device_id(), owner.device_id());
+            let state = read_store
+                .load_state(key)?
+                .ok_or(PeerCapabilityStoreError::InvalidRecordState)?;
+            assert_eq!(state.sequence, 2);
+            assert!(matches!(
+                state.floor,
+                PeerSyncCapabilityFloor::Quarantined {
+                    reason: PeerSyncCapabilityQuarantineReason::PinnedCanonicalCapabilityMissing
+                }
+            ));
+        }
+        assert_eq!(std::fs::read(&database_path)?, before);
+        assert!(matches!(
+            PeerCapabilityReadStore::open_existing(directory.path(), wrong_owner.device_id()),
+            Err(PeerCapabilityStoreError::OwnerDeviceMismatch)
         ));
         Ok(())
     }

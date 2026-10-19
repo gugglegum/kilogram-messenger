@@ -7541,3 +7541,25 @@ correlation visible, Windows-only field evidence, independent security audit
   99/99 binary и 1/1 library test, accepted-tag readiness — 134/134;
 - wire, runtime IPC, automatic recovery и public default `legacy-only` не
   изменены; release/ZIP/tag и второй физический хост не использовались.
+
+### M1.2.9 — read-only runtime quarantine observability: принят локально
+
+- `PeerCapabilityReadStore` открывает только существующую capability DB через
+  read-only redb API, полностью проверяет metadata/owner/records и не создаёт
+  directory, database, table либо repair record; absent store — valid empty
+  projection, wrong owner/corruption — fail closed;
+- runtime IPC hard-cut обновлён до v31/domain v12 и получил bounded страницу до
+  64 opaque contacts при общих limits 256 contacts/4096 queue items;
+- durable quarantine, process-local scheduler suppression и ordinary network
+  retry имеют разные counters/flags; restart сохраняет первый класс и не
+  выдаёт ephemeral suppression за durable state;
+- IPC/desktop не содержат raw Account/Device/queue IDs, ticket/endpoint/IP/
+  relay URL, message/ciphertext, path либо secret/capability bytes;
+- Windows advanced panel явно read-only и имеет только refresh: clear, retry,
+  downgrade, re-enrollment и recovery actions отсутствуют;
+- stable-path tests покрывают no-create, byte-preserving read, restart,
+  multi-peer ordering/pagination/bounds/privacy и authenticated desktop IPC;
+  все 157/157 тестов проходят через stable-name harness; fail-closed boundary
+  отклоняет 7/7 authority/privacy mutations;
+- aggregate readiness расширен до 135/135; peer/sync wire и public default
+  `legacy-only` не менялись, release/ZIP/tag/network/second host не нужны.

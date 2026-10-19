@@ -128,7 +128,7 @@ foreach ($forbidden in @(
         throw "provider IPC exposes forbidden local provenance '$forbidden'"
     }
 }
-if (-not $ipc.Contains('const IPC_VERSION: u8 = 30;')) {
+if (-not $ipc.Contains('const IPC_VERSION: u8 = 31;')) {
     throw 'bootstrap-safe provider policy unexpectedly changed authenticated IPC v30'
 }
 

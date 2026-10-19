@@ -27,7 +27,7 @@ function Get-RustStructBlock {
     return $match.Value
 }
 
-if (-not $ipc.Contains('const IPC_VERSION: u8 = 30;')) {
+if (-not $ipc.Contains('const IPC_VERSION: u8 = 31;')) {
     throw 'mailbox desktop-control contract must use authenticated IPC version 30'
 }
 

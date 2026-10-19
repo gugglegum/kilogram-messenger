@@ -96,6 +96,7 @@ $expectedGates = [ordered]@{
     'verify-kilogram-canonical-sync-v2-peer-capability-store-boundary.ps1' = 'canonical_sync_v2_peer_capability_store_boundary=verified'
     'verify-kilogram-canonical-sync-v2-peer-capability-transport-enforcement-boundary.ps1' = 'canonical_sync_v2_peer_capability_transport_enforcement_boundary=verified'
     'verify-kilogram-canonical-sync-v2-automated-runtime-enforcement-boundary.ps1' = 'canonical_sync_v2_automated_runtime_enforcement_boundary=verified'
+    'verify-kilogram-canonical-sync-v2-runtime-quarantine-observability-boundary.ps1' = 'canonical_sync_v2_runtime_quarantine_observability_boundary=verified'
     'verify-kilogram-canonical-sync-v2-peer-capability-two-host-rehearsal-boundary.ps1' = 'canonical_sync_v2_peer_capability_two_host_rehearsal_boundary=verified'
     'verify-kilogram-canonical-sync-v2-dormant-rollout-controller-boundary.ps1' = 'canonical_sync_v2_dormant_rollout_controller_boundary=verified'
     'verify-kilogram-canonical-sync-v2-rollout-controller-observer-boundary.ps1' = 'canonical_sync_v2_rollout_controller_observer_boundary=verified'
@@ -227,8 +228,8 @@ function Invoke-CapturedPowerShell {
     }
 }
 
-if ($expectedGates.Count -ne 134) {
-    throw "M1 readiness boundary inventory must contain exactly 134 gates, got $($expectedGates.Count)"
+if ($expectedGates.Count -ne 135) {
+    throw "M1 readiness boundary inventory must contain exactly 135 gates, got $($expectedGates.Count)"
 }
 
 if ($SelfTest) {

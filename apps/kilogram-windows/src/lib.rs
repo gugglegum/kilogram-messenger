@@ -15,15 +15,15 @@ use eframe::egui;
 use kilogram_bootstrap_contract::{DesktopBootstrapOutput, MAX_DESKTOP_BOOTSTRAP_OUTPUT_BYTES};
 use kilogram_identity::{AccountDeviceListSnapshot, AccountId, AccountRecoveryPhrase, DeviceId};
 use kilogram_runtime_ipc::{
-    MAX_RUNTIME_IPC_CONVERSATION_PAGE_SIZE, RuntimeIpcCanonicalSyncV2RuntimeStatus,
-    RuntimeIpcCommand, RuntimeIpcContactTicketRefresh, RuntimeIpcConversationPage,
-    RuntimeIpcConversationSummary, RuntimeIpcDeviceDirectoryStatus,
+    MAX_RUNTIME_IPC_CONVERSATION_PAGE_SIZE, MAX_RUNTIME_IPC_PEER_CAPABILITY_PAGE_SIZE,
+    RuntimeIpcCanonicalSyncV2RuntimeStatus, RuntimeIpcCommand, RuntimeIpcContactTicketRefresh,
+    RuntimeIpcConversationPage, RuntimeIpcConversationSummary, RuntimeIpcDeviceDirectoryStatus,
     RuntimeIpcDeviceDirectoryUpdate, RuntimeIpcEndpointCandidateState, RuntimeIpcHistoryCursor,
     RuntimeIpcHistoryMessage, RuntimeIpcHistoryPage, RuntimeIpcMailboxCapabilityTransition,
-    RuntimeIpcMailboxStatus, RuntimeIpcOutboxStatus, RuntimeIpcQueueState, RuntimeIpcRequestId,
-    RuntimeIpcResponse, RuntimeIpcRoutePolicy, RuntimeIpcTicketAutomationStatus,
-    RuntimeIpcTicketPublication, RuntimeLaunchProfile, RuntimeLaunchSettings,
-    RuntimeVolunteerStorageSettings,
+    RuntimeIpcMailboxStatus, RuntimeIpcOutboxStatus, RuntimeIpcPeerCapabilityPage,
+    RuntimeIpcQueueState, RuntimeIpcRequestId, RuntimeIpcResponse, RuntimeIpcRoutePolicy,
+    RuntimeIpcTicketAutomationStatus, RuntimeIpcTicketPublication, RuntimeLaunchProfile,
+    RuntimeLaunchSettings, RuntimeVolunteerStorageSettings,
 };
 #[cfg(test)]
 use kilogram_runtime_ipc::{
@@ -287,6 +287,7 @@ enum Operation {
     CanonicalActivationApply,
     RolloutOperatorStatus,
     CanonicalRuntimeStatus,
+    PeerCapabilityStatus,
     Connect,
     AddContact,
     Queue,
@@ -323,6 +324,7 @@ enum RuntimeUiAction {
     ApplyCanonicalActivation,
     RefreshRolloutOperatorStatus,
     RefreshCanonicalRuntimeStatus,
+    RefreshPeerCapabilityStatus,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -1035,6 +1037,7 @@ struct ViewModel {
     mailbox_status: Option<RuntimeIpcMailboxStatus>,
     mailbox_transition: Option<RuntimeIpcMailboxCapabilityTransition>,
     canonical_runtime_status: Option<RuntimeIpcCanonicalSyncV2RuntimeStatus>,
+    peer_capability_status: Option<RuntimeIpcPeerCapabilityPage>,
     notice: Option<String>,
     error: Option<String>,
 }
@@ -1074,6 +1077,7 @@ impl ViewModel {
             mailbox_status: None,
             mailbox_transition: None,
             canonical_runtime_status: None,
+            peer_capability_status: None,
             notice: None,
             error: None,
         }
@@ -1185,6 +1189,7 @@ impl ViewModel {
             self.mailbox_status = None;
             self.mailbox_transition = None;
             self.canonical_runtime_status = None;
+            self.peer_capability_status = None;
         }
     }
 
@@ -1351,6 +1356,11 @@ impl ViewModel {
                 self.canonical_runtime_status = Some(*status);
                 self.error = None;
             }
+            Ok(WorkerSuccess::PeerCapabilityStatus(status)) => {
+                self.connection = ConnectionState::Connected;
+                self.peer_capability_status = Some(*status);
+                self.error = None;
+            }
             Ok(WorkerSuccess::Conversations(conversations)) => {
                 self.connection = ConnectionState::Connected;
                 self.apply_conversations(conversations);
@@ -1376,6 +1386,7 @@ impl ViewModel {
                 self.mailbox_status = None;
                 self.mailbox_transition = None;
                 self.canonical_runtime_status = None;
+                self.peer_capability_status = None;
                 self.notice = Some("Runtime stopped cleanly".to_owned());
                 self.error = None;
             }
@@ -1620,6 +1631,9 @@ enum WorkerRequest {
     CanonicalRuntimeStatus {
         descriptor: PathBuf,
     },
+    PeerCapabilityStatus {
+        descriptor: PathBuf,
+    },
     AddContact {
         descriptor: PathBuf,
         draft: ValidatedContactDraft,
@@ -1734,6 +1748,7 @@ impl WorkerRequest {
             Self::RolloutOperatorStatus { .. } => Operation::RolloutOperatorStatus,
             Self::Connect { .. } => Operation::Connect,
             Self::CanonicalRuntimeStatus { .. } => Operation::CanonicalRuntimeStatus,
+            Self::PeerCapabilityStatus { .. } => Operation::PeerCapabilityStatus,
             Self::AddContact { .. } => Operation::AddContact,
             Self::Queue { .. } => Operation::Queue,
             Self::Refresh { .. } => Operation::Refresh,
@@ -1812,6 +1827,7 @@ enum WorkerSuccess {
         canonical_runtime_status: Box<RuntimeIpcCanonicalSyncV2RuntimeStatus>,
     },
     CanonicalRuntimeStatus(Box<RuntimeIpcCanonicalSyncV2RuntimeStatus>),
+    PeerCapabilityStatus(Box<RuntimeIpcPeerCapabilityPage>),
     Queued {
         queue_id: String,
         contact_id: String,
@@ -2854,6 +2870,22 @@ async fn execute_request(request: WorkerRequest) -> Result<WorkerSuccess> {
                 _ => bail!("Runtime returned an unexpected canonical sync status"),
             }
         }
+        WorkerRequest::PeerCapabilityStatus { descriptor } => {
+            let command = RuntimeIpcCommand::PeerCapabilityQuarantinePage {
+                cursor: None,
+                limit: MAX_RUNTIME_IPC_PEER_CAPABILITY_PAGE_SIZE,
+            };
+            match kilogram_runtime_ipc::call(&descriptor, command).await? {
+                RuntimeIpcResponse::PeerCapabilityQuarantinePage(status) => {
+                    status.validate_for_request(None, MAX_RUNTIME_IPC_PEER_CAPABILITY_PAGE_SIZE)?;
+                    Ok(WorkerSuccess::PeerCapabilityStatus(status))
+                }
+                RuntimeIpcResponse::Error { message } => {
+                    bail!("Runtime rejected peer capability status: {message}")
+                }
+                _ => bail!("Runtime returned an unexpected peer capability status"),
+            }
+        }
         WorkerRequest::AddContact { descriptor, draft } => {
             let command = RuntimeIpcCommand::AddContact {
                 conversation: draft.conversation,
@@ -3418,6 +3450,10 @@ impl KilogramApp {
             let refreshed = matches!(response.result, Ok(WorkerSuccess::Refreshed(_)));
             let mailbox_changed = matches!(response.result, Ok(WorkerSuccess::MailboxChanged(_)));
             let mailbox_status = matches!(response.result, Ok(WorkerSuccess::MailboxStatus(_)));
+            let canonical_runtime_status = matches!(
+                response.result,
+                Ok(WorkerSuccess::CanonicalRuntimeStatus(_))
+            );
             self.model.apply(response);
             if connected {
                 self.runtime_start_deadline = None;
@@ -3443,6 +3479,8 @@ impl KilogramApp {
                 self.start_mailbox_status();
             } else if mailbox_status {
                 self.start_canonical_runtime_status();
+            } else if canonical_runtime_status {
+                self.start_peer_capability_status();
             }
         }
     }
@@ -5407,6 +5445,24 @@ impl KilogramApp {
         }
     }
 
+    fn start_peer_capability_status(&mut self) {
+        let result: Result<WorkerRequest> = (|| {
+            ensure!(
+                self.model.connection == ConnectionState::Connected,
+                "Connect to the running runtime first"
+            );
+            Ok(WorkerRequest::PeerCapabilityStatus {
+                descriptor: self.model.descriptor()?,
+            })
+        })();
+        match result {
+            Ok(request) => self.submit(Operation::PeerCapabilityStatus, request),
+            Err(error) => self
+                .model
+                .fail(Operation::PeerCapabilityStatus, format!("{error:#}")),
+        }
+    }
+
     fn start_canonical_activation_plan(&mut self) {
         let result: Result<WorkerRequest> = (|| {
             ensure!(
@@ -5823,6 +5879,7 @@ impl KilogramApp {
                 self.model.mailbox_status = None;
                 self.model.mailbox_transition = None;
                 self.model.canonical_runtime_status = None;
+                self.model.peer_capability_status = None;
                 self.stop_change_subscription();
                 if was_starting {
                     let detail = self
@@ -5911,6 +5968,7 @@ impl KilogramApp {
         self.model.mailbox_status = None;
         self.model.mailbox_transition = None;
         self.model.canonical_runtime_status = None;
+        self.model.peer_capability_status = None;
         self.stop_change_subscription();
         self.model.notice = None;
         self.model.error = Some(detail);
@@ -8049,7 +8107,74 @@ impl KilogramApp {
                     }
                 }
             } else {
-                ui.small("Connect to a v30 runtime to inspect its loaded policy and observed sync path. This view cannot change activation authority.");
+                ui.small("Connect to a v31 runtime to inspect its loaded policy and observed sync path. This view cannot change activation authority.");
+            }
+            ui.separator();
+            ui.strong("Peer capability safety (read only)");
+            if ui
+                .add_enabled(
+                    !activation_busy && self.model.connection == ConnectionState::Connected,
+                    egui::Button::new("Refresh quarantine status"),
+                )
+                .clicked()
+            {
+                action = RuntimeUiAction::RefreshPeerCapabilityStatus;
+            }
+            if let Some(status) = self.model.peer_capability_status.as_ref() {
+                ui.horizontal_wrapped(|ui| {
+                    ui.label(format!(
+                        "Durable quarantine: {} contact(s)",
+                        status.durable_quarantined_contact_count
+                    ));
+                    ui.label(format!(
+                        "Scheduler suppressed: {} contact(s) / {} queue item(s)",
+                        status.scheduler_suppressed_contact_count,
+                        status.scheduler_suppressed_queue_count
+                    ));
+                    ui.label(format!(
+                        "Normal network retry: {} contact(s) / {} queue item(s)",
+                        status.network_retry_contact_count, status.network_retry_queue_count
+                    ));
+                });
+                ui.small(if status.capability_store_initialized {
+                    "The durable capability store existed and was opened read-only."
+                } else {
+                    "No durable capability store exists; this observer did not create one."
+                });
+                if status.items.is_empty() {
+                    ui.small("No quarantined, scheduler-suppressed, or retrying contacts are visible.");
+                } else {
+                    for item in &status.items {
+                        let reasons = if item.durable_reasons.is_empty() {
+                            "none".to_owned()
+                        } else {
+                            item.durable_reasons
+                                .iter()
+                                .map(|reason| reason.as_str())
+                                .collect::<Vec<_>>()
+                                .join(", ")
+                        };
+                        ui.small(format!(
+                            "Contact {} · durable candidates {} ({}) · scheduler sync {} · scheduler queues {} · network retries {} · pending {}",
+                            compact_id(&item.contact_id),
+                            item.durable_quarantined_candidate_count,
+                            reasons,
+                            item.scheduler_sync_suppressed,
+                            item.scheduler_queue_suppressed_count,
+                            item.network_retry_queue_count,
+                            item.pending_queue_count
+                        ));
+                    }
+                    if status.next_cursor.is_some() {
+                        ui.small(format!(
+                            "Showing the first {} of {} relevant contacts; the IPC contract supports bounded continuation pages.",
+                            status.items.len(), status.total_relevant_contact_count
+                        ));
+                    }
+                }
+                ui.small("This panel grants no clear, retry, downgrade, or recovery authority.");
+            } else {
+                ui.small("Refresh to distinguish durable quarantine, this-process scheduler suppression, and ordinary network retry.");
             }
             ui.separator();
             ui.strong("Stopped runtime authority ceremony");
@@ -9362,6 +9487,8 @@ impl eframe::App for KilogramApp {
             self.start_rollout_operator_status();
         } else if runtime_action == RuntimeUiAction::RefreshCanonicalRuntimeStatus {
             self.start_canonical_runtime_status();
+        } else if runtime_action == RuntimeUiAction::RefreshPeerCapabilityStatus {
+            self.start_peer_capability_status();
         } else if add_contact_clicked {
             self.start_add_contact();
         } else if let Some(contact_id) = selected_contact {
@@ -10122,6 +10249,42 @@ mod tests {
                 )))
                 .map_err(|_| anyhow::anyhow!("send GUI canonical runtime status response"))?;
 
+            let peer_capability_status = requests
+                .recv()
+                .await
+                .context("receive GUI peer capability status")?;
+            let (command, response) = peer_capability_status.into_parts();
+            ensure!(matches!(
+                command,
+                RuntimeIpcCommand::PeerCapabilityQuarantinePage {
+                    cursor: None,
+                    limit: MAX_RUNTIME_IPC_PEER_CAPABILITY_PAGE_SIZE,
+                }
+            ));
+            response
+                .send(RuntimeIpcResponse::PeerCapabilityQuarantinePage(Box::new(
+                    RuntimeIpcPeerCapabilityPage {
+                        capability_store_initialized: false,
+                        total_relevant_contact_count: 1,
+                        durable_quarantined_contact_count: 0,
+                        scheduler_suppressed_contact_count: 1,
+                        scheduler_suppressed_queue_count: 1,
+                        network_retry_contact_count: 0,
+                        network_retry_queue_count: 0,
+                        items: vec![kilogram_runtime_ipc::RuntimeIpcPeerCapabilityStatusItem {
+                            contact_id: "21".repeat(32),
+                            durable_quarantined_candidate_count: 0,
+                            durable_reasons: Vec::new(),
+                            scheduler_sync_suppressed: true,
+                            scheduler_queue_suppressed_count: 1,
+                            network_retry_queue_count: 0,
+                            pending_queue_count: 1,
+                        }],
+                        next_cursor: None,
+                    },
+                )))
+                .map_err(|_| anyhow::anyhow!("send GUI peer capability status response"))?;
+
             let contact = requests.recv().await.context("receive GUI contact")?;
             let (command, response) = contact.into_parts();
             let RuntimeIpcCommand::AddContact {
@@ -10626,6 +10789,19 @@ mod tests {
                 && connected_device == device_id.to_string()
                 && canonical_runtime_status.configured_matches_loaded
                 && !canonical_runtime_status.restart_required
+        ));
+
+        let peer_capability_status = execute_request(WorkerRequest::PeerCapabilityStatus {
+            descriptor: descriptor.clone(),
+        })
+        .await?;
+        assert!(matches!(
+            peer_capability_status,
+            WorkerSuccess::PeerCapabilityStatus(status)
+                if !status.capability_store_initialized
+                    && status.scheduler_suppressed_contact_count == 1
+                    && status.items.len() == 1
+                    && status.items[0].contact_id == "21".repeat(32)
         ));
 
         let contact = execute_request(WorkerRequest::AddContact {

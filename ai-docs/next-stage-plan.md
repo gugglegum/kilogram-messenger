@@ -1,24 +1,27 @@
-# Текущая точка: M1.2.8 automated runtime enforcement
+# Текущая точка: M1.2.9 завершён, следующий M1.2.10
 
-Статус на 2026-10-19: runtime outbox и scheduled sync используют общий durable
-peer capability decision до materialization/network. Quarantined work не
-попадает в retry/mailbox fallback или busy loop, другие peers не starve, а
-restart заново проверяет Device-signed floor. Persisted canonical selection
-остаётся resume authority, unknown extension-free first contact —
-legacy/no-create. Wire/IPC не изменены, public default остаётся `legacy-only`.
+Статус на 2026-10-19: runtime IPC v31/domain v12 и Windows desktop дают
+bounded read-only view, который различает durable capability quarantine,
+process-local scheduler suppression и ordinary network retry. Capability store
+открывается строго read-only и только если уже существует; статус не создаёт
+state. Проекция не содержит raw Account/Device/queue IDs, ticket, endpoint,
+message либо secrets и не даёт clear/retry/downgrade/recovery authority. Peer и
+sync wire не менялись, public default остаётся `legacy-only`.
+Stable-name regression проходит 157/157 тестов, aggregate readiness — 135/135,
+fail-closed negative matrix — 7/7.
 
-## Следующий этап: M1.2.9 read-only runtime quarantine observability
+## Следующий этап: M1.2.10 explicit Device-authorized peer re-enrollment design
 
-- добавить bounded read-only runtime/desktop представление quarantined
-  queue/contact без раскрытия ticket, endpoint, message body или raw peer IDs;
-- различать durable capability quarantine, process-local scheduler suppression
-  и обычную network retry, не превращая observer в recovery authority;
-- сохранить missing-store/no-create и не заставлять status открывать либо
-  создавать capability DB;
-- проверить restart, несколько peers, pagination/bounds и отсутствие mutation
-  через stable-path harness и fail-closed boundary;
-- не добавлять automatic clear/recovery, не менять wire и оставить public
-  rollout/default `legacy-only`.
+- определить отдельную локальную церемонию для legitimate peer Device/capability
+  replacement без стирания прежнего quarantine record и без generic clear;
+- требовать fresh current peer invitation, проверенную current Account authority,
+  явное подтверждение пользователя и Device-signed successor/tombstone;
+- exact-связать старый quarantined head, новый peer Device/capability, Account и
+  fresh nonce; stale/forked/substituted invitation должна fail closed;
+- сначала реализовать pure state machine и offline plan artifact без runtime IPC,
+  network, desktop apply или automatic retry;
+- сохранить unknown first-contact ambiguity, wire и public rollout/default
+  `legacy-only` до отдельного решения и security review.
 
 # Завершённый расширенный пакет: M1.1.92–M1.2.5
 

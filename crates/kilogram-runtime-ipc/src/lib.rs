@@ -22,7 +22,7 @@ use tokio::{
     time::timeout,
 };
 
-const IPC_VERSION: u8 = 30;
+const IPC_VERSION: u8 = 31;
 const MAX_DESCRIPTOR_BYTES: u64 = 16 * 1024;
 const MAX_LAUNCH_PROFILE_BYTES: u64 = 64 * 1024;
 const MAX_LAUNCH_PROFILE_PATHS: usize = 64;
@@ -45,9 +45,13 @@ const MAX_FRAME_BYTES: usize = 256 * 1024;
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(3);
 const IO_TIMEOUT: Duration = Duration::from_secs(30);
 const REQUEST_CHANNEL_CAPACITY: usize = 64;
-const DESCRIPTOR_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-ipc-descriptor:v11\0";
+const DESCRIPTOR_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-ipc-descriptor:v12\0";
 pub const RUNTIME_LAUNCH_PROFILE_VERSION: u8 = 1;
 pub const MAX_RUNTIME_IPC_CONVERSATION_PAGE_SIZE: u16 = 64;
+pub const MAX_RUNTIME_IPC_PEER_CAPABILITY_PAGE_SIZE: u16 = 64;
+pub const MAX_RUNTIME_IPC_PEER_CAPABILITY_CONTACTS: u16 = 256;
+pub const MAX_RUNTIME_IPC_PEER_CAPABILITY_QUEUE_ITEMS: u16 = 4_096;
+pub const MAX_RUNTIME_IPC_PEER_CAPABILITY_CANDIDATES_PER_CONTACT: u8 = 4;
 pub const MAX_RUNTIME_IPC_SYNC_PATH_OBSERVATIONS: usize = 32;
 pub const DEFAULT_VOLUNTEER_STORAGE_LISTEN_PORT: u16 = 0;
 pub const DEFAULT_VOLUNTEER_STORAGE_TOTAL_BYTES: u64 = 200 * 1024 * 1024;
@@ -676,6 +680,10 @@ pub enum RuntimeIpcCommand {
         valid_for_seconds: u64,
     },
     CanonicalSyncV2RuntimeStatus,
+    PeerCapabilityQuarantinePage {
+        cursor: Option<RuntimeIpcPeerCapabilityCursor>,
+        limit: u16,
+    },
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -819,6 +827,217 @@ pub struct RuntimeIpcCanonicalSyncV2RuntimeStatus {
     pub restart_required: bool,
     pub observation_capacity: u16,
     pub observations: Vec<RuntimeIpcSyncPathObservation>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+pub struct RuntimeIpcPeerCapabilityCursor {
+    contact_id: String,
+}
+
+impl RuntimeIpcPeerCapabilityCursor {
+    pub fn new(contact_id: String) -> Result<Self> {
+        validate_opaque_contact_id(&contact_id)?;
+        Ok(Self { contact_id })
+    }
+
+    pub fn from_item(item: &RuntimeIpcPeerCapabilityStatusItem) -> Result<Self> {
+        Self::new(item.contact_id.clone())
+    }
+
+    pub fn contact_id(&self) -> &str {
+        &self.contact_id
+    }
+
+    pub fn validate(&self) -> Result<()> {
+        validate_opaque_contact_id(&self.contact_id)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum RuntimeIpcPeerCapabilityQuarantineReason {
+    RequiredInvitationCapabilityMissing,
+    RequiredInvitationCapabilityMismatch,
+    PinnedCanonicalCapabilityMissing,
+    AuthenticatedAuthorityRevisionRegression,
+    AuthenticatedTicketEpochRegression,
+}
+
+impl RuntimeIpcPeerCapabilityQuarantineReason {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::RequiredInvitationCapabilityMissing => "required-invitation-capability-missing",
+            Self::RequiredInvitationCapabilityMismatch => "required-invitation-capability-mismatch",
+            Self::PinnedCanonicalCapabilityMissing => "pinned-canonical-capability-missing",
+            Self::AuthenticatedAuthorityRevisionRegression => {
+                "authenticated-authority-revision-regression"
+            }
+            Self::AuthenticatedTicketEpochRegression => "authenticated-ticket-epoch-regression",
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcPeerCapabilityStatusItem {
+    pub contact_id: String,
+    pub durable_quarantined_candidate_count: u8,
+    pub durable_reasons: Vec<RuntimeIpcPeerCapabilityQuarantineReason>,
+    pub scheduler_sync_suppressed: bool,
+    pub scheduler_queue_suppressed_count: u16,
+    pub network_retry_queue_count: u16,
+    pub pending_queue_count: u16,
+}
+
+impl RuntimeIpcPeerCapabilityStatusItem {
+    fn validate(&self) -> Result<()> {
+        validate_opaque_contact_id(&self.contact_id)?;
+        ensure!(
+            self.durable_quarantined_candidate_count
+                <= MAX_RUNTIME_IPC_PEER_CAPABILITY_CANDIDATES_PER_CONTACT,
+            "runtime IPC durable quarantine candidate count exceeds the contact bound"
+        );
+        ensure!(
+            self.durable_reasons
+                .windows(2)
+                .all(|pair| pair[0] < pair[1]),
+            "runtime IPC peer capability reasons are not strictly ordered"
+        );
+        ensure!(
+            (self.durable_quarantined_candidate_count == 0) == self.durable_reasons.is_empty(),
+            "runtime IPC durable quarantine count and reasons disagree"
+        );
+        ensure!(
+            self.pending_queue_count <= MAX_RUNTIME_IPC_PEER_CAPABILITY_QUEUE_ITEMS
+                && self.scheduler_queue_suppressed_count
+                    <= MAX_RUNTIME_IPC_PEER_CAPABILITY_QUEUE_ITEMS
+                && self.network_retry_queue_count <= MAX_RUNTIME_IPC_PEER_CAPABILITY_QUEUE_ITEMS
+                && self
+                    .scheduler_queue_suppressed_count
+                    .checked_add(self.network_retry_queue_count)
+                    .is_some_and(|count| count <= self.pending_queue_count),
+            "runtime IPC peer capability queue counters are inconsistent"
+        );
+        ensure!(
+            self.durable_quarantined_candidate_count != 0
+                || self.scheduler_sync_suppressed
+                || self.scheduler_queue_suppressed_count != 0
+                || self.network_retry_queue_count != 0,
+            "runtime IPC peer capability page contains an irrelevant contact"
+        );
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeIpcPeerCapabilityPage {
+    pub capability_store_initialized: bool,
+    pub total_relevant_contact_count: u16,
+    pub durable_quarantined_contact_count: u16,
+    pub scheduler_suppressed_contact_count: u16,
+    pub scheduler_suppressed_queue_count: u16,
+    pub network_retry_contact_count: u16,
+    pub network_retry_queue_count: u16,
+    pub items: Vec<RuntimeIpcPeerCapabilityStatusItem>,
+    pub next_cursor: Option<RuntimeIpcPeerCapabilityCursor>,
+}
+
+impl RuntimeIpcPeerCapabilityPage {
+    pub fn validate_for_request(
+        &self,
+        request_cursor: Option<&RuntimeIpcPeerCapabilityCursor>,
+        limit: u16,
+    ) -> Result<()> {
+        ensure!(
+            (1..=MAX_RUNTIME_IPC_PEER_CAPABILITY_PAGE_SIZE).contains(&limit),
+            "runtime IPC peer capability page limit must be between 1 and {MAX_RUNTIME_IPC_PEER_CAPABILITY_PAGE_SIZE}"
+        );
+        if let Some(cursor) = request_cursor {
+            cursor.validate()?;
+        }
+        ensure!(
+            self.items.len() <= usize::from(limit),
+            "runtime IPC peer capability page exceeds the requested limit"
+        );
+        ensure!(
+            usize::from(self.total_relevant_contact_count) >= self.items.len(),
+            "runtime IPC peer capability total is smaller than its page"
+        );
+        ensure!(
+            self.total_relevant_contact_count <= MAX_RUNTIME_IPC_PEER_CAPABILITY_CONTACTS
+                && self.durable_quarantined_contact_count
+                    <= MAX_RUNTIME_IPC_PEER_CAPABILITY_CONTACTS
+                && self.scheduler_suppressed_contact_count
+                    <= MAX_RUNTIME_IPC_PEER_CAPABILITY_CONTACTS
+                && self.network_retry_contact_count <= MAX_RUNTIME_IPC_PEER_CAPABILITY_CONTACTS,
+            "runtime IPC peer capability contact counters exceed their global bound"
+        );
+        ensure!(
+            self.scheduler_suppressed_queue_count <= MAX_RUNTIME_IPC_PEER_CAPABILITY_QUEUE_ITEMS
+                && self.network_retry_queue_count <= MAX_RUNTIME_IPC_PEER_CAPABILITY_QUEUE_ITEMS
+                && self
+                    .scheduler_suppressed_queue_count
+                    .checked_add(self.network_retry_queue_count)
+                    .is_some_and(|count| count <= MAX_RUNTIME_IPC_PEER_CAPABILITY_QUEUE_ITEMS),
+            "runtime IPC peer capability queue counters exceed their global bound"
+        );
+        ensure!(
+            self.durable_quarantined_contact_count <= self.total_relevant_contact_count
+                && self.scheduler_suppressed_contact_count <= self.total_relevant_contact_count
+                && self.network_retry_contact_count <= self.total_relevant_contact_count,
+            "runtime IPC peer capability contact counters exceed the total"
+        );
+        if !self.capability_store_initialized {
+            ensure!(
+                self.durable_quarantined_contact_count == 0
+                    && self
+                        .items
+                        .iter()
+                        .all(|item| item.durable_quarantined_candidate_count == 0),
+                "an absent peer capability store reported durable quarantine"
+            );
+        }
+        for item in &self.items {
+            item.validate()?;
+        }
+        ensure!(
+            self.items
+                .windows(2)
+                .all(|pair| pair[0].contact_id < pair[1].contact_id),
+            "runtime IPC peer capability page is not strictly ordered"
+        );
+        if let (Some(cursor), Some(first)) = (request_cursor, self.items.first()) {
+            ensure!(
+                cursor.contact_id < first.contact_id,
+                "runtime IPC peer capability page did not advance beyond its request cursor"
+            );
+        }
+        match (&self.next_cursor, self.items.last()) {
+            (None, _) => {}
+            (Some(_), None) => bail!("empty runtime IPC peer capability page has a continuation"),
+            (Some(cursor), Some(last)) => {
+                cursor.validate()?;
+                ensure!(
+                    self.items.len() == usize::from(limit),
+                    "short runtime IPC peer capability page has a continuation"
+                );
+                ensure!(
+                    cursor.contact_id == last.contact_id,
+                    "runtime IPC peer capability continuation does not match the last item"
+                );
+            }
+        }
+        Ok(())
+    }
+}
+
+fn validate_opaque_contact_id(value: &str) -> Result<()> {
+    ensure!(
+        value.len() == 64
+            && value
+                .bytes()
+                .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte)),
+        "runtime IPC opaque contact ID must be 64 lowercase hexadecimal characters"
+    );
+    Ok(())
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -1676,6 +1895,7 @@ pub enum RuntimeIpcResponse {
         message: String,
     },
     CanonicalSyncV2RuntimeStatus(Box<RuntimeIpcCanonicalSyncV2RuntimeStatus>),
+    PeerCapabilityQuarantinePage(Box<RuntimeIpcPeerCapabilityPage>),
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -2197,7 +2417,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn version_29_request_is_rejected_before_actor_dispatch() -> Result<(), Box<dyn Error>> {
+    async fn version_30_request_is_rejected_before_actor_dispatch() -> Result<(), Box<dyn Error>> {
         let directory = tempfile::tempdir()?;
         let descriptor_path = directory.path().join("runtime.ipc.json");
         let root = AccountRootState::create(directory.path().join("root"))?;
@@ -2210,7 +2430,7 @@ mod tests {
         write_frame(
             &mut stream,
             &RuntimeIpcRequest {
-                version: 29,
+                version: 30,
                 token,
                 command: RuntimeIpcCommand::Ping,
             },
@@ -2314,8 +2534,8 @@ mod tests {
         )?;
         assert!(descriptor.verify().is_ok());
         let mut old_version = descriptor.clone();
-        old_version.content.version = 29;
-        let mut old_signing_bytes = b"kilogram:runtime-ipc-descriptor:v10\0".to_vec();
+        old_version.content.version = 30;
+        let mut old_signing_bytes = b"kilogram:runtime-ipc-descriptor:v11\0".to_vec();
         old_signing_bytes.extend_from_slice(&postcard::to_allocvec(&old_version.content)?);
         old_version.signature = identity.sign(&old_signing_bytes).to_vec();
         assert!(old_version.verify().is_err());
@@ -2426,6 +2646,119 @@ mod tests {
                 .validate_for_request(Some(&request_cursor), 2)
                 .is_err()
         );
+        Ok(())
+    }
+
+    #[test]
+    fn peer_capability_page_is_bounded_monotonic_and_privacy_preserving()
+    -> Result<(), Box<dyn Error>> {
+        fn item(
+            contact_byte: u8,
+            durable: bool,
+            scheduler_sync_suppressed: bool,
+            scheduler_queue_suppressed_count: u16,
+            network_retry_queue_count: u16,
+        ) -> RuntimeIpcPeerCapabilityStatusItem {
+            RuntimeIpcPeerCapabilityStatusItem {
+                contact_id: format!("{contact_byte:064x}"),
+                durable_quarantined_candidate_count: u8::from(durable),
+                durable_reasons: durable
+                    .then_some(
+                        RuntimeIpcPeerCapabilityQuarantineReason::PinnedCanonicalCapabilityMissing,
+                    )
+                    .into_iter()
+                    .collect(),
+                scheduler_sync_suppressed,
+                scheduler_queue_suppressed_count,
+                network_retry_queue_count,
+                pending_queue_count: scheduler_queue_suppressed_count + network_retry_queue_count,
+            }
+        }
+
+        let first = item(1, true, false, 0, 0);
+        let second = item(2, false, true, 1, 0);
+        let third = item(3, false, false, 0, 1);
+        let continuation = RuntimeIpcPeerCapabilityCursor::from_item(&second)?;
+        let page = RuntimeIpcPeerCapabilityPage {
+            capability_store_initialized: true,
+            total_relevant_contact_count: 3,
+            durable_quarantined_contact_count: 1,
+            scheduler_suppressed_contact_count: 1,
+            scheduler_suppressed_queue_count: 1,
+            network_retry_contact_count: 1,
+            network_retry_queue_count: 1,
+            items: vec![first.clone(), second.clone()],
+            next_cursor: Some(continuation.clone()),
+        };
+        page.validate_for_request(None, 2)?;
+
+        RuntimeIpcPeerCapabilityPage {
+            items: vec![third],
+            next_cursor: None,
+            ..page.clone()
+        }
+        .validate_for_request(Some(&continuation), 2)?;
+
+        let command = RuntimeIpcCommand::PeerCapabilityQuarantinePage {
+            cursor: Some(continuation),
+            limit: 2,
+        };
+        let encoded = postcard::to_allocvec(&command)?;
+        assert_eq!(
+            postcard::from_bytes::<RuntimeIpcCommand>(&encoded)?,
+            command
+        );
+        let response = RuntimeIpcResponse::PeerCapabilityQuarantinePage(Box::new(page.clone()));
+        let encoded = postcard::to_allocvec(&response)?;
+        assert_eq!(
+            postcard::from_bytes::<RuntimeIpcResponse>(&encoded)?,
+            response
+        );
+        let public_projection = serde_json::to_string(&response)?;
+        for forbidden in [
+            "peer_account_id",
+            "peer_device_id",
+            "queue_id",
+            "ticket",
+            "endpoint",
+            "message",
+            "root_secret",
+            "device_secret",
+        ] {
+            assert!(!public_projection.contains(forbidden));
+        }
+
+        let mut unordered = page.clone();
+        unordered.items.swap(0, 1);
+        assert!(unordered.validate_for_request(None, 2).is_err());
+        let mut excessive_contacts = page.clone();
+        excessive_contacts.total_relevant_contact_count =
+            MAX_RUNTIME_IPC_PEER_CAPABILITY_CONTACTS + 1;
+        assert!(excessive_contacts.validate_for_request(None, 2).is_err());
+        let mut excessive_queue_total = page.clone();
+        excessive_queue_total.scheduler_suppressed_queue_count =
+            MAX_RUNTIME_IPC_PEER_CAPABILITY_QUEUE_ITEMS;
+        excessive_queue_total.network_retry_queue_count = 1;
+        assert!(excessive_queue_total.validate_for_request(None, 2).is_err());
+        let mut excessive_candidates = page.clone();
+        excessive_candidates.items[0].durable_quarantined_candidate_count =
+            MAX_RUNTIME_IPC_PEER_CAPABILITY_CANDIDATES_PER_CONTACT + 1;
+        assert!(excessive_candidates.validate_for_request(None, 2).is_err());
+        let mut overlapping_queue_classes = page.clone();
+        overlapping_queue_classes.items[1].network_retry_queue_count = 1;
+        assert!(
+            overlapping_queue_classes
+                .validate_for_request(None, 2)
+                .is_err()
+        );
+        let mut absent_store_with_quarantine = page;
+        absent_store_with_quarantine.capability_store_initialized = false;
+        assert!(
+            absent_store_with_quarantine
+                .validate_for_request(None, 2)
+                .is_err()
+        );
+        assert!(RuntimeIpcPeerCapabilityCursor::new("AA".repeat(32)).is_err());
         Ok(())
     }
 

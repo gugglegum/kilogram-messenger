@@ -161,7 +161,7 @@ foreach ($block in @($gossipEntry, $gossipFrame, $protocolRequest, $ipcProvider)
         }
     }
 }
-if (-not $ipc.Contains('const IPC_VERSION: u8 = 30;')) {
+if (-not $ipc.Contains('const IPC_VERSION: u8 = 31;')) {
     throw 'local provider path provenance unexpectedly changed authenticated IPC v30'
 }
 

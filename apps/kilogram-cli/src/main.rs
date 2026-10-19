@@ -56,7 +56,9 @@ use kilogram_mailbox_provisioning::{
     PeerMailboxBinding, SealedLocalMailboxBinding, SignedMailboxCapabilityAcknowledgement,
     SignedMailboxCapabilityUpdate,
 };
-use kilogram_peer_capability_store::{PeerCapabilityKey, PeerCapabilityStore};
+use kilogram_peer_capability_store::{
+    PeerCapabilityKey, PeerCapabilityReadStore, PeerCapabilityStore,
+};
 use kilogram_protocol::{
     AuthorizedEvent, ClientRequest, ConversationId, DeviceAuthorizationAccepted,
     DeviceAuthorizationRejected, EventId, EventPayload, HistoryRewrapBundle, HistoryRewrapRejected,
@@ -99,12 +101,13 @@ use kilogram_rollout::{
 };
 use kilogram_runtime_ipc::{
     DEFAULT_VOLUNTEER_STORAGE_LISTEN_PORT, MAX_RUNTIME_IPC_CONVERSATION_PAGE_SIZE,
-    MAX_RUNTIME_IPC_SYNC_PATH_OBSERVATIONS, RuntimeIpcCanonicalSyncV2Disposition,
-    RuntimeIpcCanonicalSyncV2MigrationState, RuntimeIpcCanonicalSyncV2Permissions,
-    RuntimeIpcCanonicalSyncV2PolicySnapshot, RuntimeIpcCanonicalSyncV2PolicySource,
-    RuntimeIpcCanonicalSyncV2RuntimeStatus, RuntimeIpcCommand, RuntimeIpcContactTicketRefresh,
-    RuntimeIpcConversationCursor, RuntimeIpcConversationPage, RuntimeIpcConversationSummary,
-    RuntimeIpcDescriptor, RuntimeIpcDeviceDirectoryStatus, RuntimeIpcDeviceDirectoryUpdate,
+    MAX_RUNTIME_IPC_PEER_CAPABILITY_PAGE_SIZE, MAX_RUNTIME_IPC_SYNC_PATH_OBSERVATIONS,
+    RuntimeIpcCanonicalSyncV2Disposition, RuntimeIpcCanonicalSyncV2MigrationState,
+    RuntimeIpcCanonicalSyncV2Permissions, RuntimeIpcCanonicalSyncV2PolicySnapshot,
+    RuntimeIpcCanonicalSyncV2PolicySource, RuntimeIpcCanonicalSyncV2RuntimeStatus,
+    RuntimeIpcCommand, RuntimeIpcContactTicketRefresh, RuntimeIpcConversationCursor,
+    RuntimeIpcConversationPage, RuntimeIpcConversationSummary, RuntimeIpcDescriptor,
+    RuntimeIpcDeviceDirectoryStatus, RuntimeIpcDeviceDirectoryUpdate,
     RuntimeIpcEndpointAnnouncementImport, RuntimeIpcEndpointAnnouncementPush,
     RuntimeIpcEndpointCandidateState, RuntimeIpcEndpointCandidateStatus,
     RuntimeIpcEndpointTicketRefresh, RuntimeIpcHistoryCursor, RuntimeIpcHistoryMessage,
@@ -112,7 +115,9 @@ use kilogram_runtime_ipc::{
     RuntimeIpcMailboxCapabilityTransition, RuntimeIpcMailboxStatus, RuntimeIpcMessagePreview,
     RuntimeIpcNetworkClass, RuntimeIpcOutboxStatus,
     RuntimeIpcOwnDeviceAnnouncementAutomationStatus, RuntimeIpcOwnDeviceRosterAutomationStatus,
-    RuntimeIpcOwnDeviceTicketDiscoveryStatus, RuntimeIpcPublicationChannelRotation,
+    RuntimeIpcOwnDeviceTicketDiscoveryStatus, RuntimeIpcPeerCapabilityCursor,
+    RuntimeIpcPeerCapabilityPage, RuntimeIpcPeerCapabilityQuarantineReason,
+    RuntimeIpcPeerCapabilityStatusItem, RuntimeIpcPublicationChannelRotation,
     RuntimeIpcPublicationConflictRequest, RuntimeIpcPublicationConflictResolution,
     RuntimeIpcQueueItem, RuntimeIpcQueueState, RuntimeIpcRequestId, RuntimeIpcResponse,
     RuntimeIpcRoutePolicy, RuntimeIpcServer, RuntimeIpcSyncPathDirection,
@@ -12780,6 +12785,194 @@ fn collect_runtime_outbox_status(state_directory: &Path) -> Result<RuntimeIpcOut
     })
 }
 
+fn runtime_ipc_peer_capability_quarantine_reason(
+    reason: PeerSyncCapabilityQuarantineReason,
+) -> RuntimeIpcPeerCapabilityQuarantineReason {
+    match reason {
+        PeerSyncCapabilityQuarantineReason::RequiredInvitationCapabilityMissing => {
+            RuntimeIpcPeerCapabilityQuarantineReason::RequiredInvitationCapabilityMissing
+        }
+        PeerSyncCapabilityQuarantineReason::RequiredInvitationCapabilityMismatch => {
+            RuntimeIpcPeerCapabilityQuarantineReason::RequiredInvitationCapabilityMismatch
+        }
+        PeerSyncCapabilityQuarantineReason::PinnedCanonicalCapabilityMissing => {
+            RuntimeIpcPeerCapabilityQuarantineReason::PinnedCanonicalCapabilityMissing
+        }
+        PeerSyncCapabilityQuarantineReason::AuthenticatedAuthorityRevisionRegression => {
+            RuntimeIpcPeerCapabilityQuarantineReason::AuthenticatedAuthorityRevisionRegression
+        }
+        PeerSyncCapabilityQuarantineReason::AuthenticatedTicketEpochRegression => {
+            RuntimeIpcPeerCapabilityQuarantineReason::AuthenticatedTicketEpochRegression
+        }
+    }
+}
+
+fn collect_runtime_peer_capability_quarantine_page(
+    state_directory: &Path,
+    scheduler: &RuntimeOutboundScheduler,
+    cursor: Option<RuntimeIpcPeerCapabilityCursor>,
+    limit: u16,
+) -> Result<RuntimeIpcPeerCapabilityPage> {
+    ensure!(
+        (1..=MAX_RUNTIME_IPC_PEER_CAPABILITY_PAGE_SIZE).contains(&limit),
+        "runtime peer capability page limit must be between 1 and {MAX_RUNTIME_IPC_PEER_CAPABILITY_PAGE_SIZE}"
+    );
+    if let Some(cursor) = cursor.as_ref() {
+        cursor.validate()?;
+    }
+    let device_state = load_command_device_state(state_directory)?;
+    let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+    let local_certificate = trust.load_certificate()?;
+    let snapshot = load_runtime_state_snapshot(
+        state_directory,
+        local_certificate.account_id(),
+        device_state.identity().device_id(),
+    )?;
+    let store_directory = state_directory.join(PEER_SYNC_CAPABILITY_DIRECTORY);
+    let capability_store_initialized = PeerCapabilityStore::is_initialized(&store_directory);
+    let capability_store = capability_store_initialized
+        .then(|| {
+            PeerCapabilityReadStore::open_existing(
+                &store_directory,
+                device_state.identity().device_id(),
+            )
+        })
+        .transpose()
+        .context("open existing peer capability store read-only for runtime observability")?;
+
+    let mut rows = Vec::new();
+    let mut durable_quarantined_contact_count = 0_u16;
+    let mut scheduler_suppressed_contact_count = 0_u16;
+    let mut scheduler_suppressed_queue_count = 0_u16;
+    let mut network_retry_contact_count = 0_u16;
+    let mut network_retry_queue_count = 0_u16;
+
+    for contact in snapshot.contacts.values() {
+        let contact_id = contact.contact_id();
+        let mut peer_devices = BTreeSet::from([contact.peer_device_id()]);
+        peer_devices.extend(
+            snapshot
+                .endpoint_candidates
+                .values()
+                .filter(|candidate| candidate.contact_id() == contact_id)
+                .map(SignedRuntimeEndpointCandidate::peer_device_id),
+        );
+        let mut durable_reasons = BTreeSet::new();
+        let mut durable_quarantined_candidate_count = 0_u8;
+        if let Some(store) = capability_store.as_ref() {
+            for peer_device_id in peer_devices {
+                let state = store.load_state(PeerCapabilityKey::new(
+                    contact.peer_account_id(),
+                    peer_device_id,
+                ))?;
+                if let Some(kilogram_peer_capability_store::DurablePeerCapabilityState {
+                    floor: PeerSyncCapabilityFloor::Quarantined { reason },
+                    ..
+                }) = state
+                {
+                    durable_quarantined_candidate_count = durable_quarantined_candidate_count
+                        .checked_add(1)
+                        .context("durable peer capability quarantine candidate count overflow")?;
+                    durable_reasons.insert(runtime_ipc_peer_capability_quarantine_reason(reason));
+                }
+            }
+        }
+
+        let durable_quarantined = durable_quarantined_candidate_count != 0;
+        let scheduler_sync_suppressed = scheduler
+            .capability_blocked_sync_contacts
+            .contains(&contact_id);
+        let mut contact_scheduler_queue_count = 0_u16;
+        let mut contact_network_retry_count = 0_u16;
+        let mut pending_queue_count = 0_u16;
+        for (queue_id, _) in snapshot
+            .queued
+            .iter()
+            .filter(|(_, queued)| queued.contact_id() == contact_id)
+        {
+            if snapshot.delivered.contains_key(queue_id)
+                || snapshot.mailbox_dispatches.contains_key(queue_id)
+            {
+                continue;
+            }
+            pending_queue_count = pending_queue_count
+                .checked_add(1)
+                .context("runtime peer capability pending queue count overflow")?;
+            if scheduler.capability_blocked_queue_items.contains(queue_id) {
+                contact_scheduler_queue_count = contact_scheduler_queue_count
+                    .checked_add(1)
+                    .context("runtime peer capability scheduler queue count overflow")?;
+            } else if !durable_quarantined && snapshot.latest_retry(*queue_id).is_some() {
+                contact_network_retry_count = contact_network_retry_count
+                    .checked_add(1)
+                    .context("runtime peer capability network retry count overflow")?;
+            }
+        }
+        let scheduler_suppressed = scheduler_sync_suppressed || contact_scheduler_queue_count != 0;
+        let network_retry = contact_network_retry_count != 0;
+        if !durable_quarantined && !scheduler_suppressed && !network_retry {
+            continue;
+        }
+        durable_quarantined_contact_count = durable_quarantined_contact_count
+            .checked_add(u16::from(durable_quarantined))
+            .context("durable peer capability contact count overflow")?;
+        scheduler_suppressed_contact_count = scheduler_suppressed_contact_count
+            .checked_add(u16::from(scheduler_suppressed))
+            .context("runtime scheduler-suppressed contact count overflow")?;
+        scheduler_suppressed_queue_count = scheduler_suppressed_queue_count
+            .checked_add(contact_scheduler_queue_count)
+            .context("runtime scheduler-suppressed queue total overflow")?;
+        network_retry_contact_count = network_retry_contact_count
+            .checked_add(u16::from(network_retry))
+            .context("runtime network-retry contact count overflow")?;
+        network_retry_queue_count = network_retry_queue_count
+            .checked_add(contact_network_retry_count)
+            .context("runtime network-retry queue total overflow")?;
+        rows.push(RuntimeIpcPeerCapabilityStatusItem {
+            contact_id: contact_id.to_string(),
+            durable_quarantined_candidate_count,
+            durable_reasons: durable_reasons.into_iter().collect(),
+            scheduler_sync_suppressed,
+            scheduler_queue_suppressed_count: contact_scheduler_queue_count,
+            network_retry_queue_count: contact_network_retry_count,
+            pending_queue_count,
+        });
+    }
+    rows.sort_by(|left, right| left.contact_id.cmp(&right.contact_id));
+    let total_relevant_contact_count =
+        u16::try_from(rows.len()).context("runtime peer capability contact count overflow")?;
+    let start = cursor.as_ref().map_or(0, |cursor| {
+        rows.partition_point(|item| item.contact_id.as_str() <= cursor.contact_id())
+    });
+    let end = start
+        .checked_add(usize::from(limit))
+        .context("runtime peer capability page range overflow")?
+        .min(rows.len());
+    let has_more = end < rows.len();
+    let items = rows[start..end].to_vec();
+    let next_cursor = has_more
+        .then(|| {
+            items
+                .last()
+                .context("runtime peer capability continuation has no item")
+                .and_then(RuntimeIpcPeerCapabilityCursor::from_item)
+        })
+        .transpose()?;
+    let page = RuntimeIpcPeerCapabilityPage {
+        capability_store_initialized,
+        total_relevant_contact_count,
+        durable_quarantined_contact_count,
+        scheduler_suppressed_contact_count,
+        scheduler_suppressed_queue_count,
+        network_retry_contact_count,
+        network_retry_queue_count,
+        items,
+        next_cursor,
+    };
+    page.validate_for_request(cursor.as_ref(), limit)?;
+    Ok(page)
+}
+
 fn runtime_ipc_route_policy(route_policy: RoutePolicy) -> RuntimeIpcRoutePolicy {
     match route_policy {
         RoutePolicy::Auto => RuntimeIpcRoutePolicy::Auto,
@@ -14607,6 +14800,7 @@ struct RuntimePublicPaths<'a> {
 struct RuntimeIpcDispatchView<'a> {
     canonical_sync_v2_policy: CanonicalSyncV2RuntimePolicy,
     sync_observability: &'a RuntimeSyncObservability,
+    outbound_scheduler: &'a RuntimeOutboundScheduler,
     public_paths: RuntimePublicPaths<'a>,
 }
 
@@ -14621,6 +14815,7 @@ async fn handle_runtime_ipc_work(
     let RuntimeIpcDispatchView {
         canonical_sync_v2_policy,
         sync_observability,
+        outbound_scheduler,
         public_paths,
     } = view;
     let (command, response_sender) = work.into_parts();
@@ -14646,6 +14841,24 @@ async fn handle_runtime_ipc_work(
                 });
             match status {
                 Ok(status) => RuntimeIpcResponse::CanonicalSyncV2RuntimeStatus(Box::new(status)),
+                Err(error) => RuntimeIpcResponse::Error {
+                    message: format!("{error:#}"),
+                },
+            }
+        }
+        RuntimeIpcCommand::PeerCapabilityQuarantinePage { cursor, limit } => {
+            let status = StateDirectoryLock::acquire(state_directory)
+                .context("lock runtime state for peer capability quarantine observability")
+                .and_then(|_lock| {
+                    collect_runtime_peer_capability_quarantine_page(
+                        state_directory,
+                        outbound_scheduler,
+                        cursor,
+                        limit,
+                    )
+                });
+            match status {
+                Ok(status) => RuntimeIpcResponse::PeerCapabilityQuarantinePage(Box::new(status)),
                 Err(error) => RuntimeIpcResponse::Error {
                     message: format!("{error:#}"),
                 },
@@ -18815,6 +19028,9 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
             RuntimeEvent::IpcClosed => bail!("runtime IPC acceptor stopped unexpectedly"),
             RuntimeEvent::Ipc(work) => {
                 last_activity = tokio::time::Instant::now();
+                let scheduler = outbound_scheduler.as_ref().context(
+                    "runtime outbound scheduler was unavailable while IPC work was accepted",
+                )?;
                 let outcome = handle_runtime_ipc_work(
                     &state_dir,
                     &endpoint,
@@ -18823,6 +19039,7 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                     RuntimeIpcDispatchView {
                         canonical_sync_v2_policy,
                         sync_observability: &sync_observability,
+                        outbound_scheduler: scheduler,
                         public_paths: RuntimePublicPaths {
                             primary_ticket: ticket_file.as_deref(),
                             own_device_ticket: own_device_ticket_file.as_deref(),
@@ -29970,8 +30187,11 @@ fn show_peer_capability_status(
         println!("status=peer-capability-status");
         return Ok(());
     }
-    let store = PeerCapabilityStore::open(&store_directory, device_state.identity().device_id())
-        .context("open durable peer sync capability store")?;
+    let store = PeerCapabilityReadStore::open_existing(
+        &store_directory,
+        device_state.identity().device_id(),
+    )
+    .context("open durable peer sync capability store read-only")?;
     let state = store.load_state(PeerCapabilityKey::new(peer_account_id, peer_device_id))?;
     match state {
         Some(state) => {
@@ -38187,6 +38407,29 @@ mod tests {
     }
 
     #[test]
+    fn runtime_peer_capability_observer_does_not_create_an_absent_store() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let root_dir = directory.path().join("root");
+        let state_dir = directory.path().join("state");
+        create_account(root_dir.clone())?;
+        enroll_device(root_dir, state_dir.clone(), None)?;
+        let store_directory = state_dir.join(PEER_SYNC_CAPABILITY_DIRECTORY);
+        assert!(!store_directory.exists());
+
+        let status = collect_runtime_peer_capability_quarantine_page(
+            &state_dir,
+            &RuntimeOutboundScheduler::new(),
+            None,
+            MAX_RUNTIME_IPC_PEER_CAPABILITY_PAGE_SIZE,
+        )?;
+        assert!(!status.capability_store_initialized);
+        assert_eq!(status.total_relevant_contact_count, 0);
+        assert!(status.items.is_empty());
+        assert!(!store_directory.exists());
+        Ok(())
+    }
+
+    #[test]
     fn current_peer_invitation_import_pins_before_export_and_survives_restart() -> Result<()> {
         let directory = tempfile::tempdir()?;
         let listener_state_dir = directory.path().join("listener-state");
@@ -38644,6 +38887,47 @@ mod tests {
         assert_eq!(scheduled, RuntimeContactSyncAttempt::CapabilityBlocked);
         assert_eq!(blocked_contacts, BTreeSet::from([contact.contact_id]));
         assert!(observation.is_none());
+
+        let mut live_scheduler = RuntimeOutboundScheduler::new();
+        live_scheduler.capability_blocked_sync_contacts = blocked_contacts.clone();
+        live_scheduler
+            .capability_blocked_queue_items
+            .insert(queue_id);
+        let live_status = collect_runtime_peer_capability_quarantine_page(
+            &local_state_directory,
+            &live_scheduler,
+            None,
+            MAX_RUNTIME_IPC_PEER_CAPABILITY_PAGE_SIZE,
+        )?;
+        assert!(live_status.capability_store_initialized);
+        assert_eq!(live_status.total_relevant_contact_count, 1);
+        assert_eq!(live_status.durable_quarantined_contact_count, 1);
+        assert_eq!(live_status.scheduler_suppressed_contact_count, 1);
+        assert_eq!(live_status.scheduler_suppressed_queue_count, 1);
+        assert_eq!(live_status.network_retry_contact_count, 0);
+        assert_eq!(live_status.items.len(), 1);
+        assert_eq!(
+            live_status.items[0].contact_id,
+            contact.contact_id.to_string()
+        );
+        assert_eq!(live_status.items[0].durable_quarantined_candidate_count, 1);
+        assert!(live_status.items[0].scheduler_sync_suppressed);
+        assert_eq!(live_status.items[0].scheduler_queue_suppressed_count, 1);
+
+        let restarted_status = collect_runtime_peer_capability_quarantine_page(
+            &local_state_directory,
+            &RuntimeOutboundScheduler::new(),
+            None,
+            MAX_RUNTIME_IPC_PEER_CAPABILITY_PAGE_SIZE,
+        )?;
+        assert_eq!(restarted_status.durable_quarantined_contact_count, 1);
+        assert_eq!(restarted_status.scheduler_suppressed_contact_count, 0);
+        assert_eq!(restarted_status.scheduler_suppressed_queue_count, 0);
+        assert_eq!(restarted_status.items.len(), 1);
+        assert_eq!(
+            restarted_status.items[0].durable_reasons,
+            vec![RuntimeIpcPeerCapabilityQuarantineReason::PinnedCanonicalCapabilityMissing]
+        );
 
         let restarted = attempt_runtime_contact_sync(
             &local_state_directory,

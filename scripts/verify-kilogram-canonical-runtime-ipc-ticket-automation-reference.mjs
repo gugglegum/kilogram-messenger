@@ -259,8 +259,8 @@ const vectors = JSON.parse(readFileSync(args.get("--vectors"), "utf8"));
 assert(schema.milestone === "M1.1.49" && schema.status === "candidate-not-active",
   "runtime IPC schema is not the expected inactive M1.1.49 candidate");
 assert(schema.domains.length === 78 && schema.objects.length === 38 &&
-  schema.covered_commands.length === 35 && schema.covered_results.length === 34 &&
-  schema.semantic_rules.length === 180,
+  schema.covered_commands.length === 36 && schema.covered_results.length === 35 &&
+  schema.semantic_rules.length === 181,
   "runtime IPC schema registry counts changed");
 assert(vectors.schema_version === 1 && vectors.milestone === "M1.1.47" &&
   vectors.status === "candidate-not-active", "ticket automation vector header changed");

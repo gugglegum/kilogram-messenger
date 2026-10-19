@@ -46,7 +46,8 @@
       "cancel-history-recovery-plan",
       "start-history-recovery-execution",
       "history-recovery-execution-status",
-      "canonical-sync-v2-runtime-status"
+      "canonical-sync-v2-runtime-status",
+      "peer-capability-quarantine-page"
     ],
     "results": [
       "pong",
@@ -82,7 +83,8 @@
       "history-recovery-plan-cancelled",
       "history-recovery-execution-started",
       "history-recovery-execution-status",
-      "canonical-sync-v2-runtime-status-result"
+      "canonical-sync-v2-runtime-status-result",
+      "peer-capability-quarantine-page-result"
     ],
     "universal_results": [
       "error"
@@ -122,12 +124,13 @@
       { "command": "cancel-history-recovery-plan", "result": "history-recovery-plan-cancelled", "module": "recovery-plan", "kind": "mutation" },
       { "command": "start-history-recovery-execution", "result": "history-recovery-execution-started", "module": "recovery-execution", "kind": "mutation" },
       { "command": "history-recovery-execution-status", "result": "history-recovery-execution-status", "module": "recovery-execution", "kind": "read" },
-      { "command": "canonical-sync-v2-runtime-status", "result": "canonical-sync-v2-runtime-status-result", "module": "read", "kind": "read" }
+      { "command": "canonical-sync-v2-runtime-status", "result": "canonical-sync-v2-runtime-status-result", "module": "read", "kind": "read" },
+      { "command": "peer-capability-quarantine-page", "result": "peer-capability-quarantine-page-result", "module": "read", "kind": "read" }
     ]
   },
   "active_postcard": {
-    "version": 30,
-    "descriptor_signature_domain": "kilogram:runtime-ipc-descriptor:v11\\0",
+    "version": 31,
+    "descriptor_signature_domain": "kilogram:runtime-ipc-descriptor:v12\\0",
     "commands": [
       { "variant": "Ping", "disposition": "canonical-target", "canonical_commands": ["ping"] },
       { "variant": "AddContact", "disposition": "canonical-target", "canonical_commands": ["add-contact"] },
@@ -158,7 +161,8 @@
       { "variant": "Shutdown", "disposition": "canonical-target", "canonical_commands": ["shutdown"] },
       { "variant": "CreateExactMailboxCapability", "disposition": "canonical-target", "canonical_commands": ["create-mailbox-capability"] },
       { "variant": "RotateExactMailboxCapability", "disposition": "canonical-target", "canonical_commands": ["rotate-mailbox-capability"] },
-      { "variant": "CanonicalSyncV2RuntimeStatus", "disposition": "canonical-target", "canonical_commands": ["canonical-sync-v2-runtime-status"] }
+      { "variant": "CanonicalSyncV2RuntimeStatus", "disposition": "canonical-target", "canonical_commands": ["canonical-sync-v2-runtime-status"] },
+      { "variant": "PeerCapabilityQuarantinePage", "disposition": "canonical-target", "canonical_commands": ["peer-capability-quarantine-page"] }
     ],
     "responses": [
       { "variant": "Pong", "disposition": "canonical-target", "canonical_results": ["pong"] },
@@ -189,7 +193,8 @@
       { "variant": "ChangeState", "disposition": "canonical-target", "canonical_results": ["change-state"] },
       { "variant": "ShutdownAccepted", "disposition": "canonical-target", "canonical_results": ["shutdown-accepted"] },
       { "variant": "Error", "disposition": "canonical-target", "canonical_results": ["error"] },
-      { "variant": "CanonicalSyncV2RuntimeStatus", "disposition": "canonical-target", "canonical_results": ["canonical-sync-v2-runtime-status-result"] }
+      { "variant": "CanonicalSyncV2RuntimeStatus", "disposition": "canonical-target", "canonical_results": ["canonical-sync-v2-runtime-status-result"] },
+      { "variant": "PeerCapabilityQuarantinePage", "disposition": "canonical-target", "canonical_results": ["peer-capability-quarantine-page-result"] }
     ]
   },
   "postcard_only_activation_blockers": [],

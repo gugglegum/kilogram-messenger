@@ -110,7 +110,7 @@ foreach ($block in @($gossipEntry, $gossipFrame, $protocolRequest, $ipcProvider)
         }
     }
 }
-if ($ipc.IndexOf('const IPC_VERSION: u8 = 30;', [StringComparison]::Ordinal) -lt 0) {
+if ($ipc.IndexOf('const IPC_VERSION: u8 = 31;', [StringComparison]::Ordinal) -lt 0) {
     throw 'local provider observations unexpectedly changed authenticated IPC v30'
 }
 

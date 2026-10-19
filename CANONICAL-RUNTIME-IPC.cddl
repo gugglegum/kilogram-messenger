@@ -92,7 +92,8 @@ runtime-ipc-history-cursor-option-v1 =
 runtime-ipc-read-command-v1 =
   [conversation-list-page: 0, runtime-ipc-conversation-cursor-option-v1, limit: 1..64] /
   [history-page: 1, conversation-label-utf8: bytes .size (1..4096), runtime-ipc-history-cursor-option-v1, limit: 1..100] /
-  [canonical-sync-v2-runtime-status: 2]
+  [canonical-sync-v2-runtime-status: 2] /
+  [peer-capability-quarantine-page: 3, runtime-ipc-option-digest-v1, limit: 1..64]
 
 runtime-ipc-read-request-v1 = [
   profile-version,
@@ -210,11 +211,34 @@ runtime-ipc-canonical-sync-v2-runtime-status-v1 = [
   observations: [*32 runtime-ipc-sync-path-observation-v1]
 ]
 
+runtime-ipc-peer-capability-quarantine-reason-v1 = 0..4
+runtime-ipc-peer-capability-status-item-v1 = [
+  opaque-contact-id: digest,
+  durable-quarantined-candidate-count: 0..4,
+  durable-reasons: [*5 runtime-ipc-peer-capability-quarantine-reason-v1],
+  scheduler-sync-suppressed: 0..1,
+  scheduler-queue-suppressed-count: 0..4096,
+  network-retry-queue-count: 0..4096,
+  pending-queue-count: 0..4096
+]
+runtime-ipc-peer-capability-page-v1 = [
+  capability-store-initialized: 0..1,
+  total-relevant-contact-count: 0..256,
+  durable-quarantined-contact-count: 0..256,
+  scheduler-suppressed-contact-count: 0..256,
+  scheduler-suppressed-queue-count: 0..4096,
+  network-retry-contact-count: 0..256,
+  network-retry-queue-count: 0..4096,
+  items: [*64 runtime-ipc-peer-capability-status-item-v1],
+  next-cursor: runtime-ipc-option-digest-v1
+]
+
 runtime-ipc-read-result-v1 =
   [conversation-list-page: 0, conversations: [* runtime-ipc-conversation-summary-v1], runtime-ipc-conversation-cursor-option-v1] /
   [history-page: 1, runtime-ipc-history-page-v1] /
   [canonical-sync-v2-runtime-status-result: 2, runtime-ipc-canonical-sync-v2-runtime-status-v1] /
-  [error: 3, error-code: 1..65535, message-utf8: bytes .size (1..4096)]
+  [peer-capability-quarantine-page-result: 3, runtime-ipc-peer-capability-page-v1] /
+  [error: 4, error-code: 1..65535, message-utf8: bytes .size (1..4096)]
 
 runtime-ipc-read-response-content-v1 = [
   profile-version,

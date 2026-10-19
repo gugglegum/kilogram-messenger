@@ -189,7 +189,7 @@ assert(schema.limits.maximum_queue_request_bytes === 131072 &&
   schema.limits.maximum_queue_response_bytes === 65536 &&
   schema.limits.maximum_queue_message_bytes === 65536,
 "runtime IPC queue bounds changed");
-assert(schema.activation.current_runtime_encoding === "postcard-v30-with-json-descriptor-v11" &&
+assert(schema.activation.current_runtime_encoding === "postcard-v31-with-json-descriptor-v12" &&
   schema.activation.current_runtime_changed === true, "active runtime IPC changed");
 assert(vectors.schema_version === 1 && vectors.profile === schema.profile &&
   vectors.activation_status === "not-active" &&

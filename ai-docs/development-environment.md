@@ -5128,3 +5128,24 @@ Hosted follow-up:
   `M1.0.0`, including rustfmt and workspace-wide locked/offline strict Clippy.
   Runtime IPC, automatic quarantine recovery and the public `legacy-only`
   default remain unchanged.
+
+## M1.2.9 runtime quarantine observability environment (2026-10-19)
+
+- Runtime IPC is now exact v31 with descriptor domain v12; co-installed v30
+  binaries are rejected rather than dual-read. Peer/sync network wire is
+  unchanged.
+- Capability observation uses `redb::ReadOnlyDatabase` and never initializes a
+  missing store. Tests preserve the pre-observation DB bytes and reject foreign
+  owner binding.
+- Windows tests continue to compile with `cargo test --no-run` and execute only
+  through `scripts/run-cargo-tests-stable.ps1`, so test harness EXE paths stay
+  stable and do not trigger new Firewall rules.
+- A sandboxed aggregate attempt compiled successfully but system `%TEMP%` was
+  outside the writable sandbox, causing unrelated tests to fail with Windows
+  `os error 5`. Product evidence comes from the same stable runner outside that
+  filesystem isolation.
+- Verification remains debug/verification, Cargo jobs 2, no release build,
+  ZIP/archive, tag, network run or second physical host. Aggregate readiness is
+  135/135 and the new fail-closed boundary rejects 7/7 negative mutations.
+  Stable-path execution passes 157/157 tests: CLI 100 + library 1, peer
+  capability store 8, runtime IPC 18 and Windows library 30.

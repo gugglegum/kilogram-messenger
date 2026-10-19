@@ -95,11 +95,11 @@ function Assert-RetirementBoundary {
     }
 
     foreach ($required in @(
-        'const IPC_VERSION: u8 = 30;',
+        'const IPC_VERSION: u8 = 31;',
+        'kilogram:runtime-ipc-descriptor:v12\0',
+        'old_version.content.version = 30;',
         'kilogram:runtime-ipc-descriptor:v11\0',
-        'old_version.content.version = 29;',
-        'kilogram:runtime-ipc-descriptor:v10\0',
-        'version_29_request_is_rejected_before_actor_dispatch',
+        'version_30_request_is_rejected_before_actor_dispatch',
         'assert!(old_version.verify().is_err());'
     )) {
         if ($RuntimeSource.IndexOf($required, [StringComparison]::Ordinal) -lt 0) {
@@ -141,11 +141,11 @@ function Assert-RetirementBoundary {
     $activeResponses = @($Completion.active_postcard.responses)
     if ([string]$Completion.milestone -cne 'M1.1.49' -or
         -not [bool]$Completion.scope.changes_active_local_control -or
-        [int]$Completion.active_postcard.version -ne 30 -or
+        [int]$Completion.active_postcard.version -ne 31 -or
         [string]$Completion.active_postcard.descriptor_signature_domain -cne
-            'kilogram:runtime-ipc-descriptor:v11\0' -or
-        $activeCommands.Count -ne 30 -or $activeResponses.Count -ne 29) {
-        throw 'completion inventory does not describe active Postcard v30'
+            'kilogram:runtime-ipc-descriptor:v12\0' -or
+        $activeCommands.Count -ne 31 -or $activeResponses.Count -ne 30) {
+        throw 'completion inventory does not describe active Postcard v31'
     }
     foreach ($retired in $retiredCommands) {
         if ($retired -cin @($activeCommands | ForEach-Object { [string]$_.variant })) {
@@ -164,9 +164,9 @@ function Assert-RetirementBoundary {
 
     if ([string]$Schema.milestone -cne 'M1.1.49' -or
         [string]$Schema.activation.current_runtime_encoding -cne
-            'postcard-v30-with-json-descriptor-v11' -or
+            'postcard-v31-with-json-descriptor-v12' -or
         -not [bool]$Schema.activation.current_runtime_changed -or
-        @($Schema.semantic_rules).Count -ne 180) {
+        @($Schema.semantic_rules).Count -ne 181) {
         throw 'canonical runtime IPC schema did not record the active migration'
     }
     Assert-ExactSequence @($Schema.remaining_runtime_ipc_surface) @() 'schema remaining work'
@@ -184,11 +184,11 @@ function Assert-RetirementBoundary {
     if ($compatibilitySurface.Count -ne 1 -or
         [int](@($compatibilitySurface[0].bindings | Where-Object {
             [string]$_.symbol -ceq 'IPC_VERSION'
-        })[0].value) -ne 30 -or
+        })[0].value) -ne 31 -or
         [string](@($compatibilitySurface[0].bindings | Where-Object {
             [string]$_.symbol -ceq 'DESCRIPTOR_SIGNATURE_DOMAIN'
-        })[0].value) -cne 'kilogram:runtime-ipc-descriptor:v11\0') {
-        throw 'protocol compatibility registry does not describe runtime IPC v30/v11'
+        })[0].value) -cne 'kilogram:runtime-ipc-descriptor:v12\0') {
+        throw 'protocol compatibility registry does not describe runtime IPC v31/v12'
     }
 
     $normalizedRfc = [regex]::Replace($Rfc, '\s+', ' ')
@@ -248,7 +248,7 @@ Assert-Rejected {
 } 'reintroduced_cli_command'
 
 Write-Output 'runtime_ipc_endpoint_bootstrap_retirement_boundary=verified'
-Write-Output 'active_postcard_version=30'
+Write-Output 'active_postcard_version=31'
 Write-Output 'active_postcard_commands=30'
 Write-Output 'active_postcard_responses=29'
 Write-Output 'postcard_only_activation_blockers=0'
