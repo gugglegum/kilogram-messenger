@@ -3160,6 +3160,7 @@ dependencies = [
  "kilogram-mailbox-client",
  "kilogram-mailbox-provisioning",
  "kilogram-offline",
+ "kilogram-peer-capability-store",
  "kilogram-protocol",
  "kilogram-publication-conflict",
  "kilogram-ratchet",
@@ -3281,6 +3282,20 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
+]
+
+[[package]]
+name = "kilogram-peer-capability-store"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+ "kilogram-identity",
+ "kilogram-sync-capability",
+ "postcard",
+ "redb",
+ "serde",
+ "tempfile",
+ "thiserror 2.0.20",
 ]
 
 [[package]]

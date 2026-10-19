@@ -56,6 +56,7 @@ use kilogram_mailbox_provisioning::{
     PeerMailboxBinding, SealedLocalMailboxBinding, SignedMailboxCapabilityAcknowledgement,
     SignedMailboxCapabilityUpdate,
 };
+use kilogram_peer_capability_store::{PeerCapabilityKey, PeerCapabilityStore};
 use kilogram_protocol::{
     AuthorizedEvent, ClientRequest, ConversationId, DeviceAuthorizationAccepted,
     DeviceAuthorizationRejected, EventId, EventPayload, HistoryRewrapBundle, HistoryRewrapRejected,
@@ -127,10 +128,11 @@ use kilogram_store::{
     LocalMessageStore, StoreError, StoreOutcome, StoredAuthorizedEvent,
 };
 use kilogram_sync_capability::{
-    CurrentPeerInvitationBinding, MAX_CURRENT_PEER_INVITATION_BYTES, SignedCurrentPeerInvitation,
-    SignedSyncTransportCandidateAcceptance, SignedSyncTransportCandidateOffer,
-    SignedSyncTransportCapability, SyncTransportCandidateOfferBinding,
-    SyncTransportCapabilityBinding, SyncTransportProtocol,
+    CurrentPeerInvitationBinding, MAX_CURRENT_PEER_INVITATION_BYTES, PeerSyncCapabilityEvidence,
+    PeerSyncCapabilityFloor, PeerSyncCapabilityQuarantineReason, PeerSyncCapabilityUse,
+    SignedCurrentPeerInvitation, SignedSyncTransportCandidateAcceptance,
+    SignedSyncTransportCandidateOffer, SignedSyncTransportCapability,
+    SyncTransportCandidateOfferBinding, SyncTransportCapabilityBinding, SyncTransportProtocol,
     verify_mutual_canonical_candidate_selection,
 };
 use kilogram_ticket_store::{
@@ -2068,6 +2070,36 @@ enum Command {
         invitation_file: PathBuf,
     },
 
+    /// Import and durably pin one verified current peer invitation.
+    CurrentPeerInvitationImport {
+        /// Directory containing this Device's persistent state and Account certificate.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// JSON invitation artifact received from the peer.
+        #[arg(long)]
+        invitation_file: PathBuf,
+
+        /// New no-clobber file receiving the exact verified embedded ticket.
+        #[arg(long)]
+        ticket_output_file: PathBuf,
+    },
+
+    /// Inspect the durable monotonic synchronization capability floor for one peer.
+    PeerCapabilityStatus {
+        /// Directory containing this Device's persistent state.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Exact peer Account ID.
+        #[arg(long)]
+        peer_account_id: AccountId,
+
+        /// Exact peer Device ID.
+        #[arg(long)]
+        peer_device_id: DeviceId,
+    },
+
     /// Create a development Account Root authority in a separate directory.
     AccountCreate {
         /// Directory reserved for the offline Account Root secret and authority sequence.
@@ -2319,6 +2351,8 @@ impl Command {
             | Self::CanonicalSyncPolicyPlan { state_dir, .. }
             | Self::CanonicalSyncPolicyApply { state_dir, .. }
             | Self::CurrentPeerInvitationCreate { state_dir, .. }
+            | Self::CurrentPeerInvitationImport { state_dir, .. }
+            | Self::PeerCapabilityStatus { state_dir, .. }
             | Self::ConversationMembershipInstall { state_dir, .. }
             | Self::DeviceEnroll { state_dir, .. }
             | Self::DeviceAuthorityUpdate { state_dir, .. }
@@ -4206,6 +4240,16 @@ async fn run_command(command: Command) -> Result<()> {
         Command::CurrentPeerInvitationInspect { invitation_file } => {
             inspect_current_peer_invitation(invitation_file)
         }
+        Command::CurrentPeerInvitationImport {
+            state_dir,
+            invitation_file,
+            ticket_output_file,
+        } => import_current_peer_invitation(state_dir, invitation_file, ticket_output_file),
+        Command::PeerCapabilityStatus {
+            state_dir,
+            peer_account_id,
+            peer_device_id,
+        } => show_peer_capability_status(state_dir, peer_account_id, peer_device_id),
         Command::AccountCreate { account_dir } => create_account(account_dir),
         Command::AccountShow { account_dir } => show_account(account_dir),
         Command::AccountSnapshot {
@@ -28169,7 +28213,44 @@ fn create_current_peer_invitation(
 }
 
 fn inspect_current_peer_invitation(invitation_file: PathBuf) -> Result<()> {
-    let encoded = fs::read(&invitation_file).with_context(|| {
+    let (invitation, _) = load_verified_current_peer_invitation(&invitation_file)?;
+    println!(
+        "current_peer_invitation_id={}",
+        encode_hex(&invitation.invitation_id()?)
+    );
+    println!(
+        "current_peer_invitation_required_capability_id={}",
+        encode_hex(&invitation.required_capability_id())
+    );
+    println!(
+        "current_peer_invitation_listener_account_id={}",
+        invitation.listener_account_id()
+    );
+    println!(
+        "current_peer_invitation_listener_device_id={}",
+        invitation.listener_device_id()
+    );
+    println!(
+        "current_peer_invitation_authority_revision={}",
+        invitation.authority_revision()
+    );
+    println!(
+        "current_peer_invitation_ticket_publication_epoch={}",
+        invitation.ticket_publication_channel_epoch()
+    );
+    println!(
+        "current_peer_invitation_required_protocol={}",
+        invitation.required_protocol().alpn()
+    );
+    println!("current_peer_invitation_ticket_embedded=true");
+    println!("status=current-peer-invitation-verified");
+    Ok(())
+}
+
+fn load_verified_current_peer_invitation(
+    invitation_file: &Path,
+) -> Result<(SignedCurrentPeerInvitation, ConnectionTicket)> {
+    let encoded = fs::read(invitation_file).with_context(|| {
         format!(
             "read signed current peer invitation {}",
             invitation_file.display()
@@ -28204,37 +28285,184 @@ fn inspect_current_peer_invitation(invitation_file: PathBuf) -> Result<()> {
         connection_ticket: invitation.connection_ticket(),
         required_capability_id: capability.artifact_id()?,
     })?;
+    Ok((invitation, ticket))
+}
+
+fn import_current_peer_invitation(
+    state_dir: PathBuf,
+    invitation_file: PathBuf,
+    ticket_output_file: PathBuf,
+) -> Result<()> {
+    let device_state = load_command_device_state(&state_dir)?;
+    let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
+    let local_certificate = trust
+        .load_certificate()
+        .context("load local Account certificate for current invitation import")?;
+    let (invitation, ticket) = load_verified_current_peer_invitation(&invitation_file)?;
+    ensure!(
+        invitation.allowed_requester_account_id() == local_certificate.account_id()
+            && ticket.allowed_requester_account_id() == local_certificate.account_id(),
+        "current invitation does not authorize this local Account"
+    );
+    let capability = ticket
+        .sync_transport_capability()
+        .context("verified current invitation lost its required capability")?;
+    let store_directory = state_dir.join("peer-sync-capability");
+    let store = PeerCapabilityStore::open(&store_directory, device_state.identity().device_id())
+        .context("open durable peer sync capability store")?;
+    let required = store
+        .apply_current_invitation(
+            device_state.identity(),
+            local_certificate.account_id(),
+            &invitation,
+            unix_time_now()?,
+        )
+        .context("durably apply current peer invitation floor")?;
+    let key = PeerCapabilityKey::new(
+        invitation.listener_account_id(),
+        invitation.listener_device_id(),
+    );
+    let pinned = store
+        .apply_authenticated_observation(
+            device_state.identity(),
+            key,
+            PeerSyncCapabilityEvidence::AuthenticatedCanonicalCandidate {
+                capability_id: capability.artifact_id()?,
+                authority_revision: capability.authority_revision(),
+                ticket_publication_epoch: capability.ticket_publication_channel_epoch(),
+            },
+        )
+        .context("durably pin invitation's exact authenticated capability")?;
+    ensure!(
+        pinned.permitted_use == PeerSyncCapabilityUse::AuthenticatedCanonicalCandidate,
+        "current peer remains quarantined; refusing to export its embedded ticket"
+    );
+    write_new_authority_file(
+        &ticket_output_file,
+        invitation.connection_ticket().as_bytes(),
+    )
+    .with_context(|| {
+        format!(
+            "write exact verified embedded ticket {}",
+            ticket_output_file.display()
+        )
+    })?;
+    let state = pinned
+        .state
+        .context("authenticated capability pin did not produce durable state")?;
     println!(
         "current_peer_invitation_id={}",
         encode_hex(&invitation.invitation_id()?)
     );
-    println!(
-        "current_peer_invitation_required_capability_id={}",
-        encode_hex(&invitation.required_capability_id())
-    );
-    println!(
-        "current_peer_invitation_listener_account_id={}",
-        invitation.listener_account_id()
-    );
-    println!(
-        "current_peer_invitation_listener_device_id={}",
-        invitation.listener_device_id()
-    );
-    println!(
-        "current_peer_invitation_authority_revision={}",
-        invitation.authority_revision()
-    );
-    println!(
-        "current_peer_invitation_ticket_publication_epoch={}",
-        invitation.ticket_publication_channel_epoch()
-    );
-    println!(
-        "current_peer_invitation_required_protocol={}",
-        invitation.required_protocol().alpn()
-    );
-    println!("current_peer_invitation_ticket_embedded=true");
-    println!("status=current-peer-invitation-verified");
+    println!("peer_capability_record_id={}", encode_hex(&state.record_id));
+    println!("peer_capability_record_sequence={}", state.sequence);
+    println!("peer_capability_floor=canonical-candidate-pinned");
+    println!("peer_capability_invitation_changed={}", required.changed);
+    println!("peer_capability_pin_changed={}", pinned.changed);
+    println!("embedded_ticket_exported=true");
+    println!("status=current-peer-invitation-imported");
     Ok(())
+}
+
+fn show_peer_capability_status(
+    state_dir: PathBuf,
+    peer_account_id: AccountId,
+    peer_device_id: DeviceId,
+) -> Result<()> {
+    let device_state = load_command_device_state(&state_dir)?;
+    let store_directory = state_dir.join("peer-sync-capability");
+    println!("peer_account_id={peer_account_id}");
+    println!("peer_device_id={peer_device_id}");
+    if !PeerCapabilityStore::is_initialized(&store_directory) {
+        println!("peer_capability_floor=legacy-unasserted");
+        println!("peer_capability_record_present=false");
+        println!("status=peer-capability-status");
+        return Ok(());
+    }
+    let store = PeerCapabilityStore::open(&store_directory, device_state.identity().device_id())
+        .context("open durable peer sync capability store")?;
+    let state = store.load_state(PeerCapabilityKey::new(peer_account_id, peer_device_id))?;
+    match state {
+        Some(state) => {
+            println!("peer_capability_record_present=true");
+            println!("peer_capability_record_id={}", encode_hex(&state.record_id));
+            println!("peer_capability_record_sequence={}", state.sequence);
+            print_peer_capability_floor(state.floor);
+        }
+        None => {
+            println!("peer_capability_record_present=false");
+            println!("peer_capability_floor=legacy-unasserted");
+        }
+    }
+    println!("status=peer-capability-status");
+    Ok(())
+}
+
+fn print_peer_capability_floor(floor: PeerSyncCapabilityFloor) {
+    match floor {
+        PeerSyncCapabilityFloor::LegacyUnasserted => {
+            println!("peer_capability_floor=legacy-unasserted");
+        }
+        PeerSyncCapabilityFloor::CurrentInvitationRequired {
+            invitation_id,
+            required_capability_id,
+            minimum_authority_revision,
+            minimum_ticket_publication_epoch,
+        } => {
+            println!("peer_capability_floor=current-invitation-required");
+            println!(
+                "peer_capability_invitation_id={}",
+                encode_hex(&invitation_id)
+            );
+            println!(
+                "peer_capability_required_capability_id={}",
+                encode_hex(&required_capability_id)
+            );
+            println!("peer_capability_minimum_authority_revision={minimum_authority_revision}");
+            println!(
+                "peer_capability_minimum_ticket_publication_epoch={minimum_ticket_publication_epoch}"
+            );
+        }
+        PeerSyncCapabilityFloor::CanonicalCandidatePinned {
+            minimum_authority_revision,
+            minimum_ticket_publication_epoch,
+        } => {
+            println!("peer_capability_floor=canonical-candidate-pinned");
+            println!("peer_capability_minimum_authority_revision={minimum_authority_revision}");
+            println!(
+                "peer_capability_minimum_ticket_publication_epoch={minimum_ticket_publication_epoch}"
+            );
+        }
+        PeerSyncCapabilityFloor::Quarantined { reason } => {
+            println!("peer_capability_floor=quarantined");
+            println!(
+                "peer_capability_quarantine_reason={}",
+                peer_capability_quarantine_reason_name(reason)
+            );
+        }
+    }
+}
+
+fn peer_capability_quarantine_reason_name(
+    reason: PeerSyncCapabilityQuarantineReason,
+) -> &'static str {
+    match reason {
+        PeerSyncCapabilityQuarantineReason::RequiredInvitationCapabilityMissing => {
+            "required-invitation-capability-missing"
+        }
+        PeerSyncCapabilityQuarantineReason::RequiredInvitationCapabilityMismatch => {
+            "required-invitation-capability-mismatch"
+        }
+        PeerSyncCapabilityQuarantineReason::PinnedCanonicalCapabilityMissing => {
+            "pinned-canonical-capability-missing"
+        }
+        PeerSyncCapabilityQuarantineReason::AuthenticatedAuthorityRevisionRegression => {
+            "authenticated-authority-revision-regression"
+        }
+        PeerSyncCapabilityQuarantineReason::AuthenticatedTicketEpochRegression => {
+            "authenticated-ticket-epoch-regression"
+        }
+    }
 }
 
 fn create_account(account_dir: PathBuf) -> Result<()> {
@@ -36364,6 +36592,72 @@ mod tests {
             serde_json::Value::String("Substituted_01".to_owned());
         fs::write(&tampered_file, serde_json::to_vec_pretty(&tampered)?)?;
         assert!(inspect_current_peer_invitation(tampered_file).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn current_peer_invitation_import_pins_before_export_and_survives_restart() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let listener_state_dir = directory.path().join("listener-state");
+        let requester_state_dir = directory.path().join("requester-state");
+        let ticket_file = directory.path().join("listener.ticket");
+        let invitation_file = directory.path().join("listener.invitation.json");
+        let imported_ticket_file = directory.path().join("imported.ticket");
+
+        let listener = DeviceState::load_or_create(&listener_state_dir)?;
+        let (_, listener_certificate, _, listener_directory) = authority_for(listener.identity())?;
+        let requester = DeviceState::load_or_create(&requester_state_dir)?;
+        let requester_root_dir = directory.path().join("requester-root");
+        let requester_root = AccountRootState::create(&requester_root_dir)?;
+        let requester_certificate = requester_root.issue_device_certificate(
+            requester.identity().device_id(),
+            requester.encryption().public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let requester_account_id = requester_root.account_id();
+        requester.install_certificate(&requester_certificate)?;
+        let ticket = ConnectionTicket::new_with_publication_channel_epoch_and_sync_policy(
+            EndpointAddr::new(SecretKey::generate().public()),
+            listener.identity(),
+            listener_certificate,
+            listener_directory,
+            requester_account_id,
+            RoutePolicy::DirectOnly,
+            4,
+            true,
+        )?;
+        let encoded_ticket = ticket.encode()?;
+        fs::write(&ticket_file, &encoded_ticket)?;
+        drop(listener);
+        drop(requester);
+
+        create_current_peer_invitation(listener_state_dir, ticket_file, invitation_file.clone())?;
+        import_current_peer_invitation(
+            requester_state_dir.clone(),
+            invitation_file,
+            imported_ticket_file.clone(),
+        )?;
+        assert_eq!(fs::read_to_string(imported_ticket_file)?, encoded_ticket);
+
+        let requester = DeviceState::load_or_create(&requester_state_dir)?;
+        let store = PeerCapabilityStore::open(
+            requester_state_dir.join("peer-sync-capability"),
+            requester.identity().device_id(),
+        )?;
+        let state = store
+            .load_state(PeerCapabilityKey::new(
+                ticket.listener_account_id(),
+                ticket.listener_device_id(),
+            ))?
+            .context("import did not persist peer capability state")?;
+        assert!(matches!(
+            state.floor,
+            PeerSyncCapabilityFloor::CanonicalCandidatePinned {
+                minimum_authority_revision: 1,
+                minimum_ticket_publication_epoch: 4,
+            }
+        ));
+        assert_eq!(state.sequence, 2);
         Ok(())
     }
 

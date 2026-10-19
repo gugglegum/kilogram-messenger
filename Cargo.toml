@@ -11,6 +11,7 @@ members = [
     "crates/kilogram-mailbox",
     "crates/kilogram-mailbox-client",
     "crates/kilogram-mailbox-provisioning",
+    "crates/kilogram-peer-capability-store",
     "crates/kilogram-protocol",
     "crates/kilogram-publication-conflict",
     "crates/kilogram-ratchet",

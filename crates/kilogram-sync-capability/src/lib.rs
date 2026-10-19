@@ -34,7 +34,7 @@ pub const MAX_CURRENT_PEER_INVITATION_BYTES: usize =
 /// old client. It only means that no stronger assertion has reached this local
 /// installation yet. A current invitation or an authenticated canonical
 /// capability raises the floor; ordinary network input can never lower it.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum PeerSyncCapabilityFloor {
     LegacyUnasserted,
     CurrentInvitationRequired {
@@ -52,7 +52,7 @@ pub enum PeerSyncCapabilityFloor {
     },
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum PeerSyncCapabilityEvidence {
     LegacyTicketWithoutExtension,
     AuthenticatedLegacyOnly {
@@ -67,7 +67,7 @@ pub enum PeerSyncCapabilityEvidence {
     },
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum PeerSyncCapabilityQuarantineReason {
     RequiredInvitationCapabilityMissing,
     RequiredInvitationCapabilityMismatch,
@@ -76,10 +76,11 @@ pub enum PeerSyncCapabilityQuarantineReason {
     AuthenticatedTicketEpochRegression,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum PeerSyncCapabilityUse {
     LegacyCompatibilityUnasserted,
     AuthenticatedLegacyOnly,
+    CanonicalCapabilityRequired,
     AuthenticatedCanonicalCandidate,
     Quarantined,
 }

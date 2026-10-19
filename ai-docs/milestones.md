@@ -7267,3 +7267,19 @@ correlation visible, Windows-only field evidence, independent security audit
   self-test, rustfmt и strict Clippy прошли;
 - import/contact enrollment/network/durable floor остаются выключены, wire и
   runtime IPC не менялись, public default остаётся `legacy-only`.
+
+### M1.1.94 — durable monotonic peer capability store: принят локально
+
+- новый `kilogram-peer-capability-store` хранит только bounded peer IDs,
+  semantic floor, compact evidence и local Device-signed chain records;
+- head+record коммитятся immediate-durability redb transaction, restart заново
+  проверяет owner, signatures, IDs, peer binding, sequence и ancestry;
+- exact retry idempotent, а corruption, wrong owner/requester, gap/cycle,
+  retained head rollback/orphan tail и extension stripping fail closed;
+- `current-peer-invitation-import` проверяет local Account certificate,
+  outer/inner signatures и exact capability, пишет requirement+pin и только
+  затем no-clobber экспортирует embedded ticket;
+- `peer-capability-status` показывает только semantic state/IDs/high-water и не
+  печатает ticket, path, endpoint address либо message data;
+- store tests 6/6 и stable-path CLI restart test прошли; runtime/rollout store
+  не читают, wire/IPC не менялись, public default остаётся `legacy-only`.

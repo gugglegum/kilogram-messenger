@@ -2448,6 +2448,15 @@ inspection never prints the embedded ticket. Import, contact enrollment and
 network connection remain deliberately inactive until the durable pin store is
 available; the public default is still `legacy-only`.
 
+[`RFC-0218`](docs/RFC-0218-m1194-durable-peer-capability-store.md) persists the
+floor as a bounded per-peer chain of local Device-signed redb records. Current
+invitation import verifies the local Account binding, commits the exact
+invitation requirement and capability pin, and only then exports the embedded
+ticket to a new file. Stripping or regression after a pin is durable
+quarantine; network input cannot clear it. Runtime consumption and whole-store
+rollback resistance without an external witness remain explicit non-claims,
+and the public default remains `legacy-only`.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

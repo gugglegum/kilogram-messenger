@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.94",
+  "status": "canonical-sync-v2-peer-capability-store-verified",
+  "implementation": [
+    "crates/kilogram-peer-capability-store",
+    "crates/kilogram-sync-capability",
+    "apps/kilogram-cli"
+  ],
+  "changes_connection_ticket_wire": false,
+  "changes_sync_wire": false,
+  "changes_runtime_ipc": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "store": {
+    "format": "redb-immediate-durability-v1",
+    "owner_binding": "local-device-id",
+    "record_signature": "local-device-ed25519",
+    "record_chain": "per-peer-sequence-and-previous-record-id",
+    "record_limit_global": 65536,
+    "record_limit_per_peer": 1024,
+    "stores_ticket_or_invitation_body": false,
+    "network_dependency": false
+  },
+  "monotonicity": {
+    "first_contact": "legacy-unasserted",
+    "current_invitation_requires_exact_capability": true,
+    "accepted_capability_pins_authority_revision_and_publication_epoch": true,
+    "extension_stripping_after_pin_quarantines": true,
+    "network_can_clear_quarantine": false,
+    "retained_tail_rollback_detected": true,
+    "whole_store_rollback_detected_without_external_witness": false
+  },
+  "cli": {
+    "import": "current-peer-invitation-import",
+    "status": "peer-capability-status",
+    "import_requires_local_account_certificate": true,
+    "import_exports_ticket_only_after_durable_pin": true,
+    "ticket_export_is_no_clobber": true,
+    "standalone_legacy_ticket_can_satisfy_current_import": false
+  },
+  "activation_boundary": {
+    "runtime_reads_store": false,
+    "rollout_policy_reads_store": false,
+    "automatic_enrollment_enabled": false,
+    "automatic_quarantine_recovery_enabled": false
+  },
+  "non_claims": [
+    "whole-directory-rollback-resistance-without-external-witness",
+    "runtime-ticket-import-integration",
+    "automatic-rollout-enrollment",
+    "public-rollout-eligibility"
+  ]
+}
