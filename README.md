@@ -2480,6 +2480,14 @@ Health is additionally bound to the exact release artifact. A deterministic
 640-case controller matrix and corrupt/partial redb rehearsals preserve the
 explicit Device approval boundary; public behavior remains `legacy-only`.
 
+[`RFC-0222`](docs/RFC-0222-m1198-exact-binary-two-host-portability.md) records
+the exact-binary portability gate for that dormant control plane. The same
+verification harness and debug CLI were SHA-256 matched on two physical
+Windows hosts; both passed 56/56 rollout tests, the named end-to-end rehearsal
+and absent-store/operator no-create observers. Only bounded anonymous evidence
+is tracked. The SSH control channel was not a peer-network test, and the public
+default remains `legacy-only`.
+
 [`RFC-0223`](docs/RFC-0223-m1199-offline-release-keyring.md) separates the
 long-lived offline release trust root from at most eight operational policy
 keys. Root-signed complete snapshots form a monotonic predecessor-bound chain;
@@ -2535,8 +2543,11 @@ complete policy/key-rotation chain; installation health follows that verified
 chain; explicit Device approval, containment and explicit recovery are tested
 together. Interrupted apply can repair only the missing high-water for the
 same exact Device-signed artifact. Foreign, stale, truncated and forked input
-fails closed. Public behavior remains `legacy-only`, and accept-canary still
-requires a separate decision plus independent security review.
+fails closed. The exact implementation binaries also passed the full rollout
+suite and named rehearsal on two physical Windows hosts with matching hashes;
+this is portability evidence, not an independent security review. Public
+behavior remains `legacy-only`, and accept-canary still requires a separate
+decision plus independent security review.
 
 ## Contributing
 

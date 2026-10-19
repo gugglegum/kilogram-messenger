@@ -7334,6 +7334,21 @@ correlation visible, Windows-only field evidence, independent security audit
 - 25/25 tests, boundary/self-test, rustfmt и locked/offline strict Clippy
   прошли; сеть, runtime IPC и default не менялись.
 
+### M1.1.98 — exact-binary two-host rollout portability: принят
+
+- evidence milestone не добавляет wire, runtime IPC либо новую authority;
+- один verification-profile rollout harness и один debug CLI скопированы под
+  постоянными именами на физический Windows-ноутбук и exact SHA-256 совпали;
+- на основном ПК и ноутбуке прошли 56/56 rollout tests и named end-to-end
+  rehearsal;
+- absent-store observer и operator observer на обоих хостах вернули
+  `hold-without-create`, не создав missing state;
+- run `m1205-rollout-20261019T071251Z` проверил revision `2f005c1`; compact
+  evidence содержит только revision, hashes, byte counts и anonymous labels;
+- SSH был только control/transfer channel: peer network и listening socket не
+  запускались, Firewall prompt не ожидался;
+- release build, archive и tag не создавались; public default `legacy-only`.
+
 ### M1.1.99 — offline release trust root and key rotation: принят локально
 
 - long-lived offline root отделён от operational policy-signing keys;
@@ -7441,7 +7456,7 @@ correlation visible, Windows-only field evidence, independent security audit
 - rollout tests 56/56 и новые desktop parser tests 2/2 прошли; peer/sync wire,
   runtime IPC и public default не менялись.
 
-### M1.2.5 — complete rollout rehearsal and restart repair: принят локально
+### M1.2.5 — complete rollout rehearsal and restart repair: принят
 
 - один deterministic test проходит пять root-verified policy bundles:
   genesis, advertise, accept, emergency containment и explicit recovery;
@@ -7458,6 +7473,11 @@ correlation visible, Windows-only field evidence, independent security audit
 - named end-to-end rehearsal и focused CLI interrupted-apply regression
   прошли локально; весь rollout suite содержит 56 tests;
 - stable full workspace regression и aggregate readiness 131/131 прошли;
-- двуххостовый exact-binary Windows run пока pending; public default остаётся
-  `legacy-only`, accept-canary запрещён без
-  отдельного решения и независимого security review.
+- exact-binary run `m1205-rollout-20261019T071251Z` на двух физических
+  Windows-хостах прошёл 56/56 tests и named rehearsal на каждом, оба no-create
+  observer checks и exact SHA-256 comparison;
+- bounded evidence сохранён в
+  `CANONICAL-SYNC-V2-ROLLOUT-END-TO-END-TWO-HOST-EVIDENCE.json`; raw logs,
+  state, Account/Device IDs и secrets не отслеживаются;
+- public default остаётся `legacy-only`, accept-canary запрещён без отдельного
+  решения и независимого security review.

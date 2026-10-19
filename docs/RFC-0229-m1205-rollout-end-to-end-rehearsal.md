@@ -1,6 +1,6 @@
 # RFC-0229: M1.2.5 rollout end-to-end rehearsal
 
-Status: locally verified; exact two-host Windows evidence pending.
+Status: locally and on two physical Windows hosts verified; public rollout held.
 
 ## Complete dormant control-plane chain
 
@@ -46,6 +46,13 @@ read-only observers hold without creating missing state. Durable working state
 and raw output stay under ignored `.tmp`; the tracked evidence directory may
 contain only bounded JSON with revision, hashes, counts and anonymous host
 labels.
+
+Run `m1205-rollout-20261019T071251Z` verified implementation revision
+`2f005c124a8333af4cd7a09bd36dee93cb1111a8`: the rollout harness passed 56/56
+on each host, the named rehearsal passed on each host, both observer variants
+held without creating absent stores, and local/remote SHA-256 values matched.
+The compact tracked evidence is
+`CANONICAL-SYNC-V2-ROLLOUT-END-TO-END-TWO-HOST-EVIDENCE.json`.
 
 ## Security boundary and non-claims
 

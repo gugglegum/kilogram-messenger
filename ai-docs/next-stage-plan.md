@@ -1,9 +1,11 @@
-# Текущий расширенный пакет: M1.1.92–M1.2.05
+# Завершённый расширенный пакет: M1.1.92–M1.2.5
 
-Статус на 2026-10-19: M1.1.92–M1.1.97 и M1.1.99–M1.2.5 реализованы локально;
-M1.1.95 зафиксирован commit-ом `14f7db3`, более поздний пакет ожидает итоговые
-границы, regression и commit. M1.1.98 закрывается тем же exact-binary two-host
-run, который является полевой частью M1.2.5. Public rollout остаётся `hold`,
+Статус на 2026-10-19: M1.1.92–M1.2.5 реализованы и проверены; M1.1.95
+зафиксирован commit-ом `14f7db3`, основной dormant control-plane пакет —
+`2f005c1`. M1.1.98 и полевая часть M1.2.5 закрыты exact-binary two-host run
+`m1205-rollout-20261019T071251Z` на основном ПК и физическом Windows-ноутбуке.
+На обоих хостах прошли 56/56 rollout tests, named rehearsal и оба no-create
+observer checks; SHA-256 бинарников совпали. Public rollout остаётся `hold`,
 default — `legacy-only`.
 
 Пакет расширен по просьбе пользователя до полноценного ночного окна. Версия
@@ -20,6 +22,10 @@ default — `legacy-only`.
   read-only observer;
 - хранить в tracked evidence только revision/hash/counts/host labels, без state,
   Device/Account identifiers, raw logs и секретов.
+
+Статус: выполнено тем же exact revision `2f005c1`, который проверен M1.2.5;
+compact evidence сохранён в
+`CANONICAL-SYNC-V2-ROLLOUT-END-TO-END-TWO-HOST-EVIDENCE.json`.
 
 ## M1.1.99 — offline release trust root и bounded keyring
 

@@ -5048,3 +5048,15 @@ Hosted follow-up:
   protocol 156 passed plus 15 explicit vector-regeneration ignores, legacy
   decoder mutations 31,851/31,851 in 2534.98 s, canonical sync v2 decoder
   mutations 2,863/2,863, rollout 56/56, session 25/25 and Windows 30/30.
+- Exact two-host run: `m1205-rollout-20261019T071251Z`, implementation revision
+  `2f005c124a8333af4cd7a09bd36dee93cb1111a8`.
+- The verification harness was 5,033,984 bytes with SHA-256
+  `8a0733cf380367fc7696bf815463967cccfc816a63ae7281288021842d06a10a`;
+  the debug CLI was 61,408,256 bytes with SHA-256
+  `56bfdd7900084a09080b1e19b2dc9b3897316a95e2c3d6d0ab76cf859a33ef01`.
+- Both physical Windows hosts passed rollout 56/56, the named end-to-end test,
+  absent-store observer and operator observer (`hold-without-create`). SSH was
+  only the control/artifact-transfer channel; no P2P listener was created.
+- Bounded tracked record:
+  `CANONICAL-SYNC-V2-ROLLOUT-END-TO-END-TWO-HOST-EVIDENCE.json`. Raw logs,
+  state, Account/Device identifiers and secrets remain ignored.

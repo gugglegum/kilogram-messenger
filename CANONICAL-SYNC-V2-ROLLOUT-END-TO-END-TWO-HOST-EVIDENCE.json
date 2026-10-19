@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.5",
+  "status": "canonical-sync-v2-rollout-end-to-end-two-host-verified",
+  "run_id": "m1205-rollout-20261019T071251Z",
+  "source_revision": "2f005c124a8333af4cd7a09bd36dee93cb1111a8",
+  "public_default": "legacy-only",
+  "changes_peer_network_wire": false,
+  "changes_sync_wire": false,
+  "changes_runtime_ipc": false,
+  "changes_public_default": false,
+  "build": {
+    "rollout_test_harness_profile": "verification",
+    "cli_profile": "debug",
+    "target": "x86_64-pc-windows-msvc",
+    "release_build": false,
+    "archive_created": false
+  },
+  "artifacts": {
+    "rollout_test_harness": {
+      "stable_name": "kilogram-rollout-tests.exe",
+      "sha256": "8a0733cf380367fc7696bf815463967cccfc816a63ae7281288021842d06a10a",
+      "bytes": 5033984
+    },
+    "cli": {
+      "stable_name": "kilogram-cli.exe",
+      "sha256": "56bfdd7900084a09080b1e19b2dc9b3897316a95e2c3d6d0ab76cf859a33ef01",
+      "bytes": 61408256
+    }
+  },
+  "hosts": [
+    {
+      "label": "local-windows-host",
+      "harness_tests": "56/56",
+      "end_to_end_rehearsal": "verified",
+      "absent_store_observer": "hold-without-create",
+      "operator_observer": "hold-without-create"
+    },
+    {
+      "label": "remote-windows-host",
+      "harness_tests": "56/56",
+      "end_to_end_rehearsal": "verified",
+      "absent_store_observer": "hold-without-create",
+      "operator_observer": "hold-without-create"
+    }
+  ],
+  "transport": {
+    "ssh_control_channel_only": true,
+    "p2p_network_executed": false,
+    "listening_socket_created": false,
+    "firewall_prompt_expected": false
+  },
+  "privacy": {
+    "raw_logs_tracked": false,
+    "state_tracked": false,
+    "account_or_device_ids_tracked": false,
+    "secrets_tracked": false
+  }
+}

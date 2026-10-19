@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "milestone": "M1.2.5",
-  "status": "canonical-sync-v2-rollout-end-to-end-verified-local",
+  "status": "canonical-sync-v2-rollout-end-to-end-two-host-verified",
   "changes_peer_network_wire": false,
   "changes_sync_wire": false,
   "changes_runtime_ipc": false,
@@ -35,9 +35,11 @@
   },
   "acceptance": {
     "rollout_unit_tests": "56/56",
-    "named_end_to_end_rehearsal": "verified-local",
+    "named_end_to_end_rehearsal": "verified-local-and-remote",
     "cli_interrupted_apply_repair": "verified-local",
-    "two_host_exact_binary_rehearsal": "pending",
+    "two_host_exact_binary_rehearsal": "verified",
+    "two_host_evidence": "CANONICAL-SYNC-V2-ROLLOUT-END-TO-END-TWO-HOST-EVIDENCE.json",
+    "implementation_revision": "2f005c124a8333af4cd7a09bd36dee93cb1111a8",
     "boundary_self_test": "verified",
     "rustfmt": "verified",
     "locked_offline_strict_clippy": "verified",
