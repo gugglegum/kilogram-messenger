@@ -63,7 +63,20 @@ struct OfflineConnectionTicketContent {
     allowed_requester_account_id: AccountId,
     ticket_publication_write_key: TicketPublicationWriteKey,
     ticket_publication_channel_epoch: u64,
-    sync_transport_capability: SignedSyncTransportCapability,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    sync_transport_capability: Option<SignedSyncTransportCapability>,
+    route_policy: PublicationConflictRoutePolicy,
+}
+
+#[derive(Serialize)]
+struct OfflineLegacyConnectionTicketContent<'a> {
+    version: u8,
+    endpoint: &'a RawValue,
+    listener_certificate: &'a DeviceCertificate,
+    listener_directory: &'a AccountPrekeyDirectory,
+    allowed_requester_account_id: AccountId,
+    ticket_publication_write_key: TicketPublicationWriteKey,
+    ticket_publication_channel_epoch: u64,
     route_policy: PublicationConflictRoutePolicy,
 }
 
@@ -125,11 +138,10 @@ impl OfflineConnectionTicket {
             .device_id()
             .verify(&ticket_signing_bytes(&self.content)?, &self.signature)
             .context("verify listener signature on connection ticket")?;
-        let (issued_at_unix_seconds, expires_at_unix_seconds) =
-            prekey_directory_validity(&self.content.listener_directory)?;
-        self.content
-            .sync_transport_capability
-            .verify_binding(&SyncTransportCapabilityBinding {
+        if let Some(capability) = &self.content.sync_transport_capability {
+            let (issued_at_unix_seconds, expires_at_unix_seconds) =
+                prekey_directory_validity(&self.content.listener_directory)?;
+            capability.verify_binding(&SyncTransportCapabilityBinding {
                 listener_account_id: self.content.listener_certificate.account_id(),
                 listener_device_id: self.content.listener_certificate.device_id(),
                 authority_revision: self.content.listener_directory.revision(),
@@ -139,7 +151,8 @@ impl OfflineConnectionTicket {
                 issued_at_unix_seconds,
                 expires_at_unix_seconds,
             })?;
-        self.content.sync_transport_capability.verify_at(now)?;
+            capability.verify_at(now)?;
+        }
         Ok(())
     }
 
@@ -657,7 +670,18 @@ fn decode_qr(path: &Path) -> Result<String> {
 }
 
 fn ticket_signing_bytes(content: &OfflineConnectionTicketContent) -> Result<Vec<u8>> {
-    let encoded = serde_json::to_vec(content).context("serialize connection ticket content")?;
+    let legacy = OfflineLegacyConnectionTicketContent {
+        version: content.version,
+        endpoint: &content.endpoint,
+        listener_certificate: &content.listener_certificate,
+        listener_directory: &content.listener_directory,
+        allowed_requester_account_id: content.allowed_requester_account_id,
+        ticket_publication_write_key: content.ticket_publication_write_key,
+        ticket_publication_channel_epoch: content.ticket_publication_channel_epoch,
+        route_policy: content.route_policy,
+    };
+    let encoded = serde_json::to_vec(&legacy)
+        .context("serialize legacy-compatible connection ticket content")?;
     let mut bytes = Vec::with_capacity(TICKET_SIGNATURE_DOMAIN.len() + encoded.len());
     bytes.extend_from_slice(TICKET_SIGNATURE_DOMAIN);
     bytes.extend_from_slice(&encoded);

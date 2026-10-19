@@ -2716,7 +2716,20 @@ struct ConnectionTicketContent {
     allowed_requester_account_id: AccountId,
     ticket_publication_write_key: TicketPublicationWriteKey,
     ticket_publication_channel_epoch: u64,
-    sync_transport_capability: SignedSyncTransportCapability,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    sync_transport_capability: Option<SignedSyncTransportCapability>,
+    route_policy: RoutePolicy,
+}
+
+#[derive(Serialize)]
+struct LegacyConnectionTicketContent<'a> {
+    version: u8,
+    endpoint: &'a EndpointAddr,
+    listener_certificate: &'a DeviceCertificate,
+    listener_directory: &'a AccountPrekeyDirectory,
+    allowed_requester_account_id: AccountId,
+    ticket_publication_write_key: TicketPublicationWriteKey,
+    ticket_publication_channel_epoch: u64,
     route_policy: RoutePolicy,
 }
 
@@ -2822,7 +2835,7 @@ impl ConnectionTicket {
             )
             .write_key(),
             ticket_publication_channel_epoch: publication_channel_epoch,
-            sync_transport_capability,
+            sync_transport_capability: Some(sync_transport_capability),
             route_policy,
         };
         let signature = listener_identity
@@ -2897,20 +2910,26 @@ impl ConnectionTicket {
         self.content.route_policy
     }
 
-    fn sync_transport_capability(&self) -> &SignedSyncTransportCapability {
-        &self.content.sync_transport_capability
+    fn sync_transport_capability(&self) -> Option<&SignedSyncTransportCapability> {
+        self.content.sync_transport_capability.as_ref()
     }
 
     fn publishes_canonical_sync_v2_candidate(&self) -> bool {
-        self.content.sync_transport_capability.candidate_protocols()
-            == [SyncTransportProtocol::CanonicalCborV2]
+        self.content
+            .sync_transport_capability
+            .as_ref()
+            .is_some_and(|capability| {
+                capability.candidate_protocols() == [SyncTransportProtocol::CanonicalCborV2]
+            })
     }
 
     fn verify(&self) -> Result<()> {
         self.verify_authenticated()?;
         let now = unix_time_now()?;
         self.content.listener_directory.verify_at(now)?;
-        self.content.sync_transport_capability.verify_at(now)?;
+        if let Some(capability) = &self.content.sync_transport_capability {
+            capability.verify_at(now)?;
+        }
         Ok(())
     }
 
@@ -3048,7 +3067,23 @@ impl HistoryRecoveryBootstrap {
 }
 
 fn ticket_signing_bytes(content: &ConnectionTicketContent) -> Result<Vec<u8>> {
-    let encoded = serde_json::to_vec(content).context("serialize connection ticket content")?;
+    // Preserve the exact M1.0.0 outer signature projection. New transport
+    // capabilities are independently Device-signed extensions: an old client
+    // ignores the unknown JSON field and still authenticates the immutable
+    // legacy ticket, while a new client verifies the extension and its exact
+    // binding when it is present. Missing extension means an N-1 legacy peer.
+    let legacy = LegacyConnectionTicketContent {
+        version: content.version,
+        endpoint: &content.endpoint,
+        listener_certificate: &content.listener_certificate,
+        listener_directory: &content.listener_directory,
+        allowed_requester_account_id: content.allowed_requester_account_id,
+        ticket_publication_write_key: content.ticket_publication_write_key,
+        ticket_publication_channel_epoch: content.ticket_publication_channel_epoch,
+        route_policy: content.route_policy,
+    };
+    let encoded = serde_json::to_vec(&legacy)
+        .context("serialize legacy-compatible connection ticket content")?;
     let mut bytes = Vec::with_capacity(TICKET_SIGNATURE_DOMAIN.len() + encoded.len());
     bytes.extend_from_slice(TICKET_SIGNATURE_DOMAIN);
     bytes.extend_from_slice(&encoded);
@@ -3107,21 +3142,22 @@ fn issue_sync_transport_capability(
 }
 
 fn verify_sync_transport_capability_binding(content: &ConnectionTicketContent) -> Result<()> {
+    let Some(capability) = &content.sync_transport_capability else {
+        return Ok(());
+    };
     let endpoint_id = content.endpoint.id.to_string();
     let (issued_at_unix_seconds, expires_at_unix_seconds) =
         prekey_directory_validity(&content.listener_directory)?;
-    content
-        .sync_transport_capability
-        .verify_binding(&SyncTransportCapabilityBinding {
-            listener_account_id: content.listener_certificate.account_id(),
-            listener_device_id: content.listener_certificate.device_id(),
-            authority_revision: content.listener_directory.revision(),
-            allowed_requester_account_id: content.allowed_requester_account_id,
-            endpoint_id: &endpoint_id,
-            ticket_publication_channel_epoch: content.ticket_publication_channel_epoch,
-            issued_at_unix_seconds,
-            expires_at_unix_seconds,
-        })?;
+    capability.verify_binding(&SyncTransportCapabilityBinding {
+        listener_account_id: content.listener_certificate.account_id(),
+        listener_device_id: content.listener_certificate.device_id(),
+        authority_revision: content.listener_directory.revision(),
+        allowed_requester_account_id: content.allowed_requester_account_id,
+        endpoint_id: &endpoint_id,
+        ticket_publication_channel_epoch: content.ticket_publication_channel_epoch,
+        issued_at_unix_seconds,
+        expires_at_unix_seconds,
+    })?;
     Ok(())
 }
 
@@ -23548,7 +23584,9 @@ async fn handle_sync_transport_candidate_offer(
         offer
             .verify()
             .context("verify canonical sync v2 candidate offer")?;
-        let capability = current_ticket.sync_transport_capability();
+        let capability = current_ticket
+            .sync_transport_capability()
+            .context("current ticket has no canonical sync v2 capability extension")?;
         capability.verify_at(unix_time_now()?)?;
         ensure!(
             capability.candidate_protocols() == [SyncTransportProtocol::CanonicalCborV2],
@@ -25120,8 +25158,11 @@ async fn sync(
         && canonical_sync_v2_policy
             .permissions
             .initiate_new_canonical_session()
-        && ticket.sync_transport_capability().candidate_protocols()
-            == [SyncTransportProtocol::CanonicalCborV2];
+        && ticket
+            .sync_transport_capability()
+            .is_some_and(|capability| {
+                capability.candidate_protocols() == [SyncTransportProtocol::CanonicalCborV2]
+            });
 
     let canonical_store = if canonical_selection.is_some() || can_initiate_canonical {
         let store = CanonicalSyncV2CarrierStore::open(canonical_sync_v2_store_path(&state_dir))?;
@@ -25151,6 +25192,9 @@ async fn sync(
     };
 
     if can_initiate_canonical {
+        let listener_capability = ticket
+            .sync_transport_capability()
+            .context("canonical initiation requires a listener capability extension")?;
         let negotiation_connection = timeout(
             CONNECTION_TIMEOUT,
             endpoint.connect(ticket.endpoint().clone(), ALPN),
@@ -25182,7 +25226,7 @@ async fn sync(
         let offer = SignedSyncTransportCandidateOffer::issue(
             device_state.identity(),
             SyncTransportCandidateOfferBinding {
-                listener_capability_id: ticket.sync_transport_capability().artifact_id()?,
+                listener_capability_id: listener_capability.artifact_id()?,
                 conversation_id: *conversation_id.as_bytes(),
                 listener_account_id: authorized_listener.account_id(),
                 listener_device_id: expected_listener_device_id,
@@ -25191,9 +25235,7 @@ async fn sync(
                 session_binding: *stable_binding.as_bytes(),
                 listener_authority_revision: ticket.listener_authority_snapshot().revision(),
                 requester_authority_revision: requester_authority_snapshot.revision(),
-                migration_epoch: canonical_sync_v2_selection_epoch(
-                    ticket.sync_transport_capability(),
-                )?,
+                migration_epoch: canonical_sync_v2_selection_epoch(listener_capability)?,
             },
         )?;
         let offer_bytes =
@@ -25219,7 +25261,7 @@ async fn sync(
             _ => bail!("canonical sync v2 selection expected a candidate response"),
         };
         let selection = PersistedCanonicalSyncV2Selection::new(
-            ticket.sync_transport_capability().clone(),
+            listener_capability.clone(),
             offer,
             acceptance,
             ticket.listener_certificate().clone(),
@@ -34717,7 +34759,7 @@ mod tests {
                 ticket_publication_write_key: bob_tickets[index].ticket_publication_write_key(),
                 ticket_publication_channel_epoch: bob_tickets[index]
                     .ticket_publication_channel_epoch(),
-                sync_transport_capability,
+                sync_transport_capability: Some(sync_transport_capability),
                 route_policy: RoutePolicy::Auto,
             };
             let expired_ticket = ConnectionTicket {
@@ -35945,7 +35987,9 @@ mod tests {
             )
             .write_key()
         );
-        let capability = &decoded.content.sync_transport_capability;
+        let capability = decoded
+            .sync_transport_capability()
+            .context("new connection ticket omitted its sync capability")?;
         assert_eq!(capability.listener_account_id(), listener_account_id);
         assert_eq!(capability.listener_device_id(), listener_device_id);
         assert_eq!(
@@ -35973,6 +36017,89 @@ mod tests {
     }
 
     #[test]
+    fn connection_ticket_decodes_m100_shape_without_sync_extension() -> Result<()> {
+        let endpoint = EndpointAddr::new(SecretKey::generate().public());
+        let listener_identity = DeviceIdentity::generate()?;
+        let (_, listener_certificate, _, listener_directory) = authority_for(&listener_identity)?;
+        let requester_identity = DeviceIdentity::generate()?;
+        let (requester_account_id, _, _, _) = authority_for(&requester_identity)?;
+        let mut ticket = ConnectionTicket::new(
+            endpoint,
+            &listener_identity,
+            listener_certificate,
+            listener_directory,
+            requester_account_id,
+            RoutePolicy::DirectOnly,
+        )?;
+
+        ticket.content.sync_transport_capability = None;
+        ticket.signature = listener_identity
+            .sign(&ticket_signing_bytes(&ticket.content)?)
+            .to_vec();
+        let encoded = URL_SAFE_NO_PAD.encode(serde_json::to_vec(&ticket)?);
+        let decoded = ConnectionTicket::decode(&encoded)?;
+
+        assert!(decoded.sync_transport_capability().is_none());
+        assert!(!decoded.publishes_canonical_sync_v2_candidate());
+        decoded.verify_listener_authorization(decoded.listener_account_id())?;
+        Ok(())
+    }
+
+    #[test]
+    fn connection_ticket_outer_signature_remains_m100_reader_compatible() -> Result<()> {
+        #[derive(Deserialize, Serialize)]
+        struct M100ConnectionTicketContent {
+            version: u8,
+            endpoint: EndpointAddr,
+            listener_certificate: DeviceCertificate,
+            listener_directory: AccountPrekeyDirectory,
+            allowed_requester_account_id: AccountId,
+            ticket_publication_write_key: TicketPublicationWriteKey,
+            ticket_publication_channel_epoch: u64,
+            route_policy: RoutePolicy,
+        }
+
+        #[derive(Deserialize)]
+        struct M100ConnectionTicket {
+            content: M100ConnectionTicketContent,
+            signature: Vec<u8>,
+        }
+
+        let endpoint = EndpointAddr::new(SecretKey::generate().public());
+        let listener_identity = DeviceIdentity::generate()?;
+        let (_, listener_certificate, _, listener_directory) = authority_for(&listener_identity)?;
+        let requester_identity = DeviceIdentity::generate()?;
+        let (requester_account_id, _, _, _) = authority_for(&requester_identity)?;
+        let encoded = ConnectionTicket::new_with_publication_channel_epoch_and_sync_policy(
+            endpoint,
+            &listener_identity,
+            listener_certificate,
+            listener_directory,
+            requester_account_id,
+            RoutePolicy::RelayOnly,
+            7,
+            true,
+        )?
+        .encode()?;
+        let bytes = URL_SAFE_NO_PAD.decode(encoded)?;
+        let legacy: M100ConnectionTicket = serde_json::from_slice(&bytes)?;
+        let serialized = serde_json::to_vec(&legacy.content)?;
+        let mut signing_bytes =
+            Vec::with_capacity(TICKET_SIGNATURE_DOMAIN.len() + serialized.len());
+        signing_bytes.extend_from_slice(TICKET_SIGNATURE_DOMAIN);
+        signing_bytes.extend_from_slice(&serialized);
+
+        legacy
+            .content
+            .listener_certificate
+            .device_id()
+            .verify(&signing_bytes, &legacy.signature)?;
+        assert_eq!(legacy.content.version, TICKET_VERSION);
+        assert_eq!(legacy.content.route_policy, RoutePolicy::RelayOnly);
+        Ok(())
+    }
+
+    #[test]
     fn connection_ticket_publishes_canonical_candidate_only_when_policy_allows_it() -> Result<()> {
         let endpoint = EndpointAddr::new(SecretKey::generate().public());
         let listener_identity = DeviceIdentity::generate()?;
@@ -35993,10 +36120,18 @@ mod tests {
 
         assert!(ticket.publishes_canonical_sync_v2_candidate());
         assert_eq!(
-            ticket.sync_transport_capability().active_protocols(),
+            ticket
+                .sync_transport_capability()
+                .context("canonical ticket omitted its sync capability")?
+                .active_protocols(),
             [SyncTransportProtocol::LegacyPostcardV6]
         );
-        assert!(!ticket.sync_transport_capability().canonical_dial_enabled());
+        assert!(
+            !ticket
+                .sync_transport_capability()
+                .context("canonical ticket omitted its sync capability")?
+                .canonical_dial_enabled()
+        );
         ticket.verify()?;
         Ok(())
     }
@@ -36029,7 +36164,10 @@ mod tests {
         let offer = SignedSyncTransportCandidateOffer::issue(
             &requester_identity,
             SyncTransportCandidateOfferBinding {
-                listener_capability_id: ticket.sync_transport_capability().artifact_id()?,
+                listener_capability_id: ticket
+                    .sync_transport_capability()
+                    .context("canonical ticket omitted its sync capability")?
+                    .artifact_id()?,
                 conversation_id: *conversation_id.as_bytes(),
                 listener_account_id: ticket.listener_account_id(),
                 listener_device_id: listener_identity.device_id(),
@@ -36043,7 +36181,10 @@ mod tests {
         )?;
         let acceptance = SignedSyncTransportCandidateAcceptance::issue(&listener_identity, &offer)?;
         let selection = PersistedCanonicalSyncV2Selection::new(
-            ticket.sync_transport_capability().clone(),
+            ticket
+                .sync_transport_capability()
+                .context("canonical ticket omitted its sync capability")?
+                .clone(),
             offer,
             acceptance,
             listener_certificate,
@@ -36060,7 +36201,10 @@ mod tests {
         let wrong_generation_offer = SignedSyncTransportCandidateOffer::issue(
             &requester_identity,
             SyncTransportCandidateOfferBinding {
-                listener_capability_id: ticket.sync_transport_capability().artifact_id()?,
+                listener_capability_id: ticket
+                    .sync_transport_capability()
+                    .context("canonical ticket omitted its sync capability")?
+                    .artifact_id()?,
                 conversation_id: *conversation_id.as_bytes(),
                 listener_account_id: ticket.listener_account_id(),
                 listener_device_id: listener_identity.device_id(),
@@ -36077,7 +36221,10 @@ mod tests {
             &wrong_generation_offer,
         )?;
         let error = PersistedCanonicalSyncV2Selection::new(
-            ticket.sync_transport_capability().clone(),
+            ticket
+                .sync_transport_capability()
+                .context("canonical ticket omitted its sync capability")?
+                .clone(),
             wrong_generation_offer,
             wrong_generation_acceptance,
             selection.listener_certificate.clone(),
@@ -36363,14 +36510,14 @@ mod tests {
             requester_account_id,
             RoutePolicy::Auto,
         )?;
-        ticket.content.sync_transport_capability = issue_sync_transport_capability(
+        ticket.content.sync_transport_capability = Some(issue_sync_transport_capability(
             &EndpointAddr::new(SecretKey::generate().public()),
             &identity,
             &directory,
             requester_account_id,
             0,
             false,
-        )?;
+        )?);
         ticket.signature = identity
             .sign(&ticket_signing_bytes(&ticket.content)?)
             .to_vec();
