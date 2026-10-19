@@ -5186,3 +5186,32 @@ Hosted follow-up:
 - Existing Cargo target cache was retained for build speed despite its
   approximately 47 GiB warning; no full clean, release build, ZIP/archive, tag,
   automatic GitHub build, network test or second host was used.
+
+## M1.2.12 fresh-start peer re-enrollment consumption environment (2026-10-19)
+
+- Added workspace crate `kilogram-peer-reenrollment-runtime`; it uses identity,
+  acceptance, sync-capability, postcard and redb only. It has no Iroh, Tokio,
+  HTTP, runtime IPC, Windows UI or network dependency.
+- Runtime consumption is called from the ordinary CLI startup before
+  `endpoint_builder_with_relay` and endpoint bind. Full context preflight occurs
+  before any consumed head is committed.
+- Windows Rust execution used only `scripts/run-cargo-tests-stable.ps1` with
+  Cargo jobs 2. In the restricted tool sandbox, `TEMP` and `TMP` were pointed
+  at workspace `.tmp/rust-tests`; the initial default-temp `os error 5` was an
+  environment write restriction, not a product failure.
+- Focused stable-path results: planner 5/5, acceptance 5/5 and runtime
+  transition store 5/5. Full CLI stable-path regression passes 101/101 binary
+  plus 1/1 library, including the final hardened fresh-start integration test
+  (690.02 s).
+  The focused CLI scenario was repeated after adding monotonic post-consumption
+  local/peer authority advancement and replacement-revocation validation; 1/1
+  passed outside the filesystem sandbox (inside it `%TEMP%` returned expected
+  `os error 5`). Boundary normal/self-test passes with 10/10 rejected mutations; aggregate
+  readiness passes 138/138 with rustfmt and workspace-wide locked/offline
+  strict Clippy.
+- The first full CLI execution inside the restricted network sandbox passed
+  88 tests and rejected 13 loopback/IPC tests with Windows `os error 10013`.
+  Re-running the identical stable EXE outside only that network sandbox passed
+  all 102 tests; no source or fixture was changed between the runs.
+- No release build, ZIP/archive, tag, automatic GitHub build, network test or
+  second physical host was used. Existing target cache was retained.

@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.12",
+  "status": "canonical-sync-v2-peer-reenrollment-runtime-consumption-verified",
+  "implementation": [
+    "crates/kilogram-peer-reenrollment",
+    "crates/kilogram-peer-reenrollment-acceptance",
+    "crates/kilogram-peer-reenrollment-runtime",
+    "apps/kilogram-cli"
+  ],
+  "changes_connection_ticket_wire": false,
+  "changes_sync_wire": false,
+  "changes_runtime_ipc": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "durable_transition": {
+    "separate_runtime_transition_database": true,
+    "prepared_and_consumed_phases_are_distinct": true,
+    "transition_signed_by_current_local_device": true,
+    "prepared_record_contains_complete_successor": true,
+    "consumed_head_references_exact_transition_id": true,
+    "immediate_durability": true,
+    "owner_account_and_device_bound": true,
+    "full_store_verified_on_open": true,
+    "maximum_transition_bytes": 331776,
+    "maximum_contact_artifact_bytes": 16384,
+    "maximum_transitions": 4096
+  },
+  "transition_binding": {
+    "acceptance_receipt_and_quarantine_record_ids": true,
+    "old_and_replacement_peer_devices": true,
+    "contact_and_conversation_ids": true,
+    "predecessor_contact_digest": true,
+    "successor_contact_bytes_and_digest": true,
+    "successor_endpoint_candidate_bytes_and_digest": true,
+    "exact_invitation_bytes_and_id": true,
+    "successor_capability_floor": true,
+    "local_device_signature": true
+  },
+  "fresh_start_boundary": {
+    "prepared_transition_does_not_change_snapshot": true,
+    "all_transitions_preflighted_before_any_consumption": true,
+    "consumption_occurs_only_during_runtime_start": true,
+    "consumption_occurs_before_network_endpoint_creation": true,
+    "consumed_transition_applied_as_in_memory_overlay": true,
+    "exact_restart_replay_is_idempotent": true,
+    "consumed_replay_allows_monotonic_authority_advancement": true,
+    "consumed_replay_rejects_replacement_revocation": true,
+    "changed_descriptor_or_context_fails_closed": true,
+    "hot_apply_enabled": false
+  },
+  "retained_evidence": {
+    "predecessor_contact_file_retained_byte_exact": true,
+    "old_quarantine_retained": true,
+    "acceptance_receipt_retained": true,
+    "prepared_transition_retained": true,
+    "candidate_source_artifact_retained": true,
+    "clear_or_delete_api_added": false
+  },
+  "queue_boundary": {
+    "queued_item_retained_unmaterialized_during_consumption": true,
+    "automatic_delivery_retry_triggered": false,
+    "ordinary_scheduler_must_reevaluate_successor": true,
+    "capability_floor_not_lowered": true
+  },
+  "verification": {
+    "stable_path_rust_harness_required_on_windows": true,
+    "runtime_store_tests": "5/5",
+    "cli_fresh_start_integration_tests": "1/1",
+    "full_cli_stable_regression": "101/101 binary + 1/1 library",
+    "prepare_consume_reopen_tested": true,
+    "exact_replay_tested": true,
+    "post_consumption_authority_advancement_tested": true,
+    "changed_successor_tested": true,
+    "pre_commit_failure_tested": true,
+    "wrong_transition_and_corruption_tested": true,
+    "descriptor_substitution_tested": true,
+    "boundary_self_test_and_negative_mutations": "verified",
+    "m1_readiness": "138/138",
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false,
+    "second_host_required": false,
+    "network_executed": false
+  },
+  "non_claims": [
+    "two-host-reenrollment-field-acceptance",
+    "automatic-delivery-after-reenrollment",
+    "quarantine-clear-or-record-deletion",
+    "global-peer-authority-freshness",
+    "generic-first-contact-extension-stripping-detection",
+    "whole-store-rollback-resistance-without-external-witness",
+    "public-rollout-eligibility",
+    "independent-security-review-completed"
+  ],
+  "next": [
+    "two-host-fresh-start-peer-reenrollment-rehearsal",
+    "retained-quarantine-audit-export",
+    "independent-protocol-and-security-review"
+  ]
+}

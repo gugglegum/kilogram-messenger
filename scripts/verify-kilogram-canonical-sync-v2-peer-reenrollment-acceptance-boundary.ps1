@@ -228,9 +228,7 @@ function Assert-Contract {
         'PeerCapabilityReadStore::open_existing(',
         'old_quarantine_retained=true',
         'runtime_restart_required=true',
-        'runtime_consumer_enabled=false',
-        'network_executed=false',
-        'status=peer-reenrollment-acceptance-durable'
+        'network_executed=false'
     ) 'manual CLI ceremony'
 
     $normalizedRfc = [regex]::Replace($Rfc, '\s+', ' ')

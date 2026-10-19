@@ -7612,3 +7612,31 @@ correlation visible, Windows-only field evidence, independent security audit
   workspace-wide locked/offline strict Clippy;
 - wire, runtime IPC и public default `legacy-only` не менялись; release/ZIP/tag,
   automatic GitHub build, сеть и второй физический хост не использовались.
+
+### M1.2.12 — fresh-start peer re-enrollment consumption: принят локально
+
+- добавлен отдельный bounded `kilogram-peer-reenrollment-runtime` с
+  `peer-reenrollment-runtime-v1.redb`, current-Device-signed complete transition
+  и независимыми prepared/consumed tables;
+- transition exact-связывает acceptance/quarantine IDs, старый и replacement
+  Devices, stable contact/conversation, predecessor digest, полные successor
+  contact/candidate/invitation bytes, их digests/ID и successor floor;
+- explicit acceptance готовит transition, но prepared-only snapshot продолжает
+  использовать старый quarantined Device; hot apply отсутствует;
+- fresh runtime start сначала проверяет все prepared transitions против
+  predecessor, exact accepted local/peer authority, descriptor, acceptance и
+  retained quarantine, затем идемпотентно публикует consumed heads до Iroh
+  endpoint;
+- consumed replay допускает дальнейшее монотонное повышение обеих authority,
+  но отклоняет rollback/equivocation и отзыв replacement Device в новом peer
+  authority snapshot;
+- consumed successor применяется как in-memory overlay; original contact file,
+  acceptance, quarantine, candidate source и transition не удаляются и не
+  переписываются;
+- queued item остаётся sealed/unmaterialized и проходит обычную scheduler
+  evaluation после startup; consumption не запускает delivery или network;
+- stable-path tests прошли 5/5 runtime store, 101/101 CLI binary и 1/1 CLI
+  library; boundary отклонил 10/10 ослаблений, aggregate readiness прошёл
+  138/138 с rustfmt и workspace-wide locked/offline strict Clippy;
+- wire, runtime IPC и public default `legacy-only` не менялись; release/ZIP/tag,
+  automatic GitHub build, сеть и второй физический хост не использовались.

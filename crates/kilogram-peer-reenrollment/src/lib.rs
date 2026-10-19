@@ -433,7 +433,7 @@ fn build_validated_content(
         local_account_id: local_authority.account_id(),
         local_device_id,
         local_authority_revision: local_authority.revision(),
-        local_authority_digest: authority_digest(local_authority)?,
+        local_authority_digest: peer_reenrollment_authority_digest(local_authority)?,
         peer_account_id: peer_authority.account_id(),
         quarantined_peer_device_id: key.peer_device_id,
         quarantine_record_id: head.record_id,
@@ -442,7 +442,7 @@ fn build_validated_content(
         predecessor_record_id: predecessor.record_id,
         predecessor_floor: predecessor.floor,
         peer_authority_revision: peer_authority.revision(),
-        peer_authority_digest: authority_digest(peer_authority)?,
+        peer_authority_digest: peer_reenrollment_authority_digest(peer_authority)?,
         replacement_peer_device_id: invitation.listener_device_id(),
         invitation_id: invitation.invitation_id()?,
         required_capability_id: invitation.required_capability_id(),
@@ -542,7 +542,12 @@ fn validate_content(content: &PeerReenrollmentPlanContent) -> Result<(), PeerRee
     Ok(())
 }
 
-fn authority_digest(
+/// Returns the domain-separated digest used to bind a Root-signed authority
+/// snapshot into peer re-enrollment artifacts.
+///
+/// Runtime consumption deliberately reuses this exact function instead of
+/// defining a second digest domain that could drift from the approved plan.
+pub fn peer_reenrollment_authority_digest(
     authority: &AccountDeviceListSnapshot,
 ) -> Result<[u8; 32], PeerReenrollmentError> {
     let mut hasher = blake3::Hasher::new();

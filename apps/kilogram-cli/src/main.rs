@@ -64,8 +64,13 @@ use kilogram_peer_reenrollment::{
     SignedPeerReenrollmentTombstone,
 };
 use kilogram_peer_reenrollment_acceptance::{
-    PeerReenrollmentAcceptanceOutcome, PeerReenrollmentAcceptanceReadStore,
-    PeerReenrollmentAcceptanceStore,
+    DurablePeerReenrollmentAcceptance, PeerReenrollmentAcceptanceOutcome,
+    PeerReenrollmentAcceptanceReadStore, PeerReenrollmentAcceptanceStore,
+};
+use kilogram_peer_reenrollment_runtime::{
+    DurablePeerReenrollmentRuntimeTransition, PeerReenrollmentRuntimeBinding,
+    PeerReenrollmentRuntimeConsumeOutcome, PeerReenrollmentRuntimePrepareOutcome,
+    PeerReenrollmentRuntimeReadStore, PeerReenrollmentRuntimeStore,
 };
 use kilogram_protocol::{
     AuthorizedEvent, ClientRequest, ConversationId, DeviceAuthorizationAccepted,
@@ -339,6 +344,7 @@ const RUNTIME_CANONICAL_SYNC_V2_SELECTION_DIRECTORY: &str = "canonical-sync-v2-s
 const CANONICAL_SYNC_V2_STORE_DIRECTORY: &str = "canonical-sync-v2-store";
 const PEER_SYNC_CAPABILITY_DIRECTORY: &str = "peer-sync-capability";
 const PEER_REENROLLMENT_ACCEPTANCE_DIRECTORY: &str = "peer-reenrollment-acceptance";
+const PEER_REENROLLMENT_RUNTIME_DIRECTORY: &str = "peer-reenrollment-runtime";
 const MAX_PEER_REENROLLMENT_AUTHORITY_BYTES: u64 = 256 * 1024;
 const CANONICAL_SYNC_V2_SELECTION_VERSION: u8 = 1;
 const CANONICAL_SYNC_V2_SELECTION_ID_DOMAIN: &[u8] =
@@ -6874,7 +6880,7 @@ fn read_runtime_record_files(state_directory: &Path) -> Result<Vec<(PathBuf, Vec
     Ok(records)
 }
 
-fn load_runtime_state_snapshot(
+fn load_runtime_state_snapshot_base(
     state_directory: &Path,
     local_account_id: AccountId,
     local_device_id: DeviceId,
@@ -8148,6 +8154,325 @@ fn load_runtime_state_snapshot(
         );
     }
     Ok(snapshot)
+}
+
+fn load_runtime_state_snapshot(
+    state_directory: &Path,
+    local_account_id: AccountId,
+    local_device_id: DeviceId,
+) -> Result<RuntimeStateSnapshot> {
+    let mut snapshot =
+        load_runtime_state_snapshot_base(state_directory, local_account_id, local_device_id)?;
+    apply_consumed_peer_reenrollment_transitions(
+        state_directory,
+        local_account_id,
+        local_device_id,
+        &mut snapshot,
+    )?;
+    Ok(snapshot)
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+struct PeerReenrollmentRuntimeStartupReport {
+    prepared: usize,
+    consumed: usize,
+    already_consumed: usize,
+}
+
+struct ValidatedPeerReenrollmentRuntimeTransition {
+    successor: SignedRuntimeContact,
+    successor_candidate_id: RuntimeEndpointCandidateId,
+}
+
+fn apply_consumed_peer_reenrollment_transitions(
+    state_directory: &Path,
+    local_account_id: AccountId,
+    local_device_id: DeviceId,
+    snapshot: &mut RuntimeStateSnapshot,
+) -> Result<()> {
+    let directory = state_directory.join(PEER_REENROLLMENT_RUNTIME_DIRECTORY);
+    if !PeerReenrollmentRuntimeStore::is_initialized(&directory) {
+        return Ok(());
+    }
+    let store = PeerReenrollmentRuntimeReadStore::open_existing(
+        directory,
+        local_account_id,
+        local_device_id,
+    )
+    .context("open peer re-enrollment runtime transition store read-only")?;
+    for durable in store.load_all()? {
+        if !durable.consumed() {
+            continue;
+        }
+        let validated = validate_peer_reenrollment_runtime_transition(
+            state_directory,
+            local_account_id,
+            local_device_id,
+            snapshot,
+            &durable,
+            None,
+        )
+        .context("validate consumed peer re-enrollment transition overlay")?;
+        let contact_id = validated.successor.contact_id();
+        ensure!(
+            snapshot
+                .contacts
+                .insert(contact_id, validated.successor)
+                .is_some(),
+            "consumed peer re-enrollment transition lost its predecessor contact"
+        );
+        snapshot
+            .endpoint_candidates
+            .remove(&validated.successor_candidate_id);
+    }
+    Ok(())
+}
+
+fn validate_peer_reenrollment_runtime_transition(
+    state_directory: &Path,
+    local_account_id: AccountId,
+    local_device_id: DeviceId,
+    snapshot: &RuntimeStateSnapshot,
+    durable: &DurablePeerReenrollmentRuntimeTransition,
+    exact_local_authority: Option<&AccountDeviceListSnapshot>,
+) -> Result<ValidatedPeerReenrollmentRuntimeTransition> {
+    let transition = durable.transition();
+    ensure!(
+        transition.local_account_id() == local_account_id
+            && transition.local_device_id() == local_device_id,
+        "peer re-enrollment transition belongs to another local identity"
+    );
+
+    let predecessor = snapshot
+        .contacts
+        .iter()
+        .find(|(contact_id, _)| contact_id.as_bytes() == &transition.contact_id())
+        .map(|(_, contact)| contact)
+        .context("peer re-enrollment predecessor contact is missing")?;
+    let predecessor_bytes = predecessor.encode()?;
+    ensure!(
+        transition.predecessor_contact_matches(&predecessor_bytes),
+        "peer re-enrollment predecessor contact changed after acceptance"
+    );
+    ensure!(
+        predecessor.local_account_id() == local_account_id
+            && predecessor.local_device_id() == local_device_id
+            && predecessor.peer_account_id() == transition.peer_account_id()
+            && predecessor.peer_device_id() == transition.quarantined_peer_device_id()
+            && predecessor.conversation_id().as_bytes() == &transition.conversation_id(),
+        "peer re-enrollment predecessor contact does not match its accepted binding"
+    );
+
+    let successor = SignedRuntimeContact::decode(transition.successor_contact())
+        .context("decode signed peer re-enrollment successor contact")?;
+    successor.verify_local(local_account_id, local_device_id)?;
+    ensure!(
+        successor.contact_id() == predecessor.contact_id()
+            && successor.peer_account_id() == transition.peer_account_id()
+            && successor.peer_device_id() == transition.replacement_peer_device_id()
+            && successor.conversation_id() == predecessor.conversation_id()
+            && successor.conversation_label() == predecessor.conversation_label(),
+        "peer re-enrollment successor contact changes immutable contact identity"
+    );
+
+    let successor_candidate =
+        SignedRuntimeEndpointCandidate::decode(transition.successor_endpoint_candidate())
+            .context("decode signed peer re-enrollment successor endpoint candidate")?;
+    successor_candidate.verify_local(local_account_id, local_device_id)?;
+    ensure!(
+        successor_candidate.contact_id() == predecessor.contact_id()
+            && successor_candidate.peer_account_id() == transition.peer_account_id()
+            && successor_candidate.peer_device_id() == transition.replacement_peer_device_id()
+            && successor_candidate.conversation_id() == predecessor.conversation_id()
+            && successor_candidate.route_policy() == successor.route_policy()
+            && successor_candidate.descriptor_file() == successor.descriptor_file(),
+        "peer re-enrollment successor contact differs from its enrolled endpoint candidate"
+    );
+    let successor_candidate_id = successor_candidate.candidate_id();
+    let enrolled_candidate = snapshot
+        .endpoint_candidates
+        .get(&successor_candidate_id)
+        .context("accepted peer re-enrollment endpoint candidate is missing")?;
+    ensure!(
+        enrolled_candidate.encode()? == transition.successor_endpoint_candidate(),
+        "accepted peer re-enrollment endpoint candidate changed"
+    );
+
+    let invitation = transition
+        .invitation()
+        .context("decode exact accepted peer re-enrollment invitation")?;
+    let ticket = verify_current_peer_invitation_artifact(&invitation, None)
+        .context("verify exact accepted peer re-enrollment invitation")?;
+    let descriptor = fs::read(successor.descriptor_file()).with_context(|| {
+        format!(
+            "read accepted peer re-enrollment descriptor {}",
+            successor.descriptor_file().display()
+        )
+    })?;
+    ensure!(
+        descriptor == invitation.connection_ticket().as_bytes(),
+        "accepted peer re-enrollment endpoint descriptor changed"
+    );
+    ensure!(
+        ticket.listener_account_id() == transition.peer_account_id()
+            && ticket.listener_device_id() == transition.replacement_peer_device_id()
+            && ticket.allowed_requester_account_id() == local_account_id
+            && ticket.route_policy() == successor.route_policy()
+            && invitation.required_floor()? == transition.successor_floor(),
+        "accepted peer re-enrollment ticket differs from its runtime transition"
+    );
+
+    let device_state = load_device_state(state_directory, false)?;
+    ensure!(
+        device_state.identity().device_id() == local_device_id,
+        "peer re-enrollment runtime identity changed"
+    );
+    let trust = CommandTrustReadRepository::open(state_directory, &device_state)?;
+    let local_certificate = trust
+        .load_certificate()
+        .context("load local certificate for peer re-enrollment transition")?;
+    ensure!(
+        local_certificate.account_id() == local_account_id,
+        "peer re-enrollment local Account changed"
+    );
+    let current_local_authority = trust
+        .load_own_authority_snapshot(&local_certificate)
+        .context("load local authority high-water for peer re-enrollment transition")?;
+    verify_device_authorization_with_snapshot(
+        local_account_id,
+        &local_certificate,
+        &current_local_authority,
+        &DeviceCapability::MESSAGING,
+    )
+    .context("local Device is no longer authorized for peer re-enrollment runtime use")?;
+
+    let accepted_peer_authority = ticket.listener_directory().device_list();
+    let pinned_peer_authority = trust
+        .load_peer_authority_snapshot(transition.peer_account_id())
+        .context("load pinned peer authority high-water for re-enrollment transition")?;
+    if exact_local_authority.is_some() {
+        ensure!(
+            accepted_peer_authority.revision() == pinned_peer_authority.revision()
+                && accepted_peer_authority.authority_snapshot().encode()?
+                    == pinned_peer_authority.encode()?,
+            "prepared peer re-enrollment authority no longer matches the exact accepted context"
+        );
+    } else {
+        ensure!(
+            pinned_peer_authority.revision() >= accepted_peer_authority.revision(),
+            "pinned peer authority rolled back behind the consumed re-enrollment transition"
+        );
+        if accepted_peer_authority.revision() == pinned_peer_authority.revision() {
+            ensure!(
+                accepted_peer_authority.authority_snapshot().encode()?
+                    == pinned_peer_authority.encode()?,
+                "accepted peer re-enrollment authority equivocates at the pinned revision"
+            );
+        }
+        verify_device_authorization_with_snapshot(
+            transition.peer_account_id(),
+            ticket.listener_certificate(),
+            &pinned_peer_authority,
+            &DeviceCapability::MESSAGING,
+        )
+        .context("replacement peer Device is no longer authorized after re-enrollment")?;
+    }
+
+    let acceptance_directory = state_directory.join(PEER_REENROLLMENT_ACCEPTANCE_DIRECTORY);
+    ensure!(
+        PeerReenrollmentAcceptanceStore::is_initialized(&acceptance_directory),
+        "peer re-enrollment acceptance store is missing"
+    );
+    let acceptance = PeerReenrollmentAcceptanceReadStore::open_existing(
+        acceptance_directory,
+        local_account_id,
+        local_device_id,
+    )?
+    .load_for_peer(transition.peer_account_id())?
+    .context("accepted peer re-enrollment receipt is missing")?;
+    ensure!(
+        acceptance.receipt_id() == transition.acceptance_receipt_id()
+            && acceptance.replacement_peer_device_id() == transition.replacement_peer_device_id()
+            && acceptance.successor_floor() == transition.successor_floor(),
+        "peer re-enrollment acceptance receipt changed"
+    );
+    let capability = PeerCapabilityReadStore::open_existing(
+        state_directory.join(PEER_SYNC_CAPABILITY_DIRECTORY),
+        local_device_id,
+    )
+    .context("open retained peer quarantine for re-enrollment transition")?;
+    let quarantine = capability
+        .load_quarantined_head(PeerCapabilityKey::new(
+            transition.peer_account_id(),
+            transition.quarantined_peer_device_id(),
+        ))
+        .context("load retained peer quarantine for re-enrollment transition")?;
+    ensure!(
+        quarantine.head().record_id == transition.quarantine_record_id(),
+        "retained peer quarantine changed after re-enrollment acceptance"
+    );
+    if let Some(local_authority) = exact_local_authority {
+        acceptance
+            .receipt()
+            .verify_bound_context(
+                local_authority,
+                &quarantine,
+                accepted_peer_authority,
+                &invitation,
+            )
+            .context("revalidate exact peer re-enrollment acceptance context")?;
+    }
+
+    Ok(ValidatedPeerReenrollmentRuntimeTransition {
+        successor,
+        successor_candidate_id,
+    })
+}
+
+fn consume_peer_reenrollment_transitions_at_runtime_start(
+    state_directory: &Path,
+    device_state: &DeviceState,
+    local_authority: &AccountDeviceListSnapshot,
+) -> Result<PeerReenrollmentRuntimeStartupReport> {
+    let directory = state_directory.join(PEER_REENROLLMENT_RUNTIME_DIRECTORY);
+    if !PeerReenrollmentRuntimeStore::is_initialized(&directory) {
+        return Ok(PeerReenrollmentRuntimeStartupReport::default());
+    }
+    let local_account_id = local_authority.account_id();
+    let local_device_id = device_state.identity().device_id();
+    let snapshot =
+        load_runtime_state_snapshot_base(state_directory, local_account_id, local_device_id)?;
+    let store = PeerReenrollmentRuntimeStore::open(directory, local_account_id, local_device_id)
+        .context("open peer re-enrollment runtime transition store")?;
+    let transitions = store.load_all()?;
+
+    // Validate the complete set before publishing any new consumed head. A
+    // corrupt second record must not partially activate the first one.
+    for durable in &transitions {
+        validate_peer_reenrollment_runtime_transition(
+            state_directory,
+            local_account_id,
+            local_device_id,
+            &snapshot,
+            durable,
+            (!durable.consumed()).then_some(local_authority),
+        )
+        .context("preflight peer re-enrollment transition before network startup")?;
+    }
+
+    let mut report = PeerReenrollmentRuntimeStartupReport {
+        prepared: transitions.len(),
+        ..PeerReenrollmentRuntimeStartupReport::default()
+    };
+    for durable in transitions {
+        match store.consume(durable.transition().contact_id(), durable.transition_id())? {
+            PeerReenrollmentRuntimeConsumeOutcome::Consumed(_) => report.consumed += 1,
+            PeerReenrollmentRuntimeConsumeOutcome::AlreadyConsumed(_) => {
+                report.already_consumed += 1;
+            }
+        }
+    }
+    Ok(report)
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -18921,6 +19246,27 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
     let prepared = with_locked_state(&state_dir, || {
         prepare_runtime_listener(&state_dir, &device_list_file, &peer_prekey_pool_files)
     })?;
+    let peer_reenrollment_startup = with_locked_state(&state_dir, || {
+        consume_peer_reenrollment_transitions_at_runtime_start(
+            &state_dir,
+            &prepared.device_state,
+            prepared.listener_directory.device_list(),
+        )
+    })
+    .context("consume accepted peer re-enrollment transitions before network startup")?;
+    println!(
+        "peer_reenrollment_runtime_transitions_prepared={}",
+        peer_reenrollment_startup.prepared
+    );
+    println!(
+        "peer_reenrollment_runtime_transitions_consumed={}",
+        peer_reenrollment_startup.consumed
+    );
+    println!(
+        "peer_reenrollment_runtime_transitions_already_consumed={}",
+        peer_reenrollment_startup.already_consumed
+    );
+    println!("peer_reenrollment_runtime_consumption_phase=before-network-endpoint");
     let own_device_ticket_file = resolve_runtime_own_device_ticket_path(
         &state_dir,
         ipc_file.as_deref(),
@@ -30207,9 +30553,25 @@ fn load_verified_current_peer_invitation(
     );
     let invitation: SignedCurrentPeerInvitation =
         serde_json::from_slice(&encoded).context("decode signed current peer invitation")?;
-    invitation.verify_at(unix_time_now()?)?;
-    let ticket = ConnectionTicket::decode(invitation.connection_ticket())
-        .context("decode invitation's exact embedded connection ticket")?;
+    let ticket = verify_current_peer_invitation_artifact(&invitation, Some(unix_time_now()?))?;
+    Ok((invitation, ticket))
+}
+
+fn verify_current_peer_invitation_artifact(
+    invitation: &SignedCurrentPeerInvitation,
+    now_unix_seconds: Option<u64>,
+) -> Result<ConnectionTicket> {
+    if let Some(now_unix_seconds) = now_unix_seconds {
+        invitation.verify_at(now_unix_seconds)?;
+    } else {
+        invitation.verify()?;
+    }
+    let ticket = if now_unix_seconds.is_some() {
+        ConnectionTicket::decode(invitation.connection_ticket())
+    } else {
+        ConnectionTicket::decode_authenticated(invitation.connection_ticket())
+    }
+    .context("decode invitation's exact embedded connection ticket")?;
     let capability = ticket
         .sync_transport_capability()
         .context("current invitation's embedded ticket has no sync capability")?;
@@ -30230,7 +30592,7 @@ fn load_verified_current_peer_invitation(
         connection_ticket: invitation.connection_ticket(),
         required_capability_id: capability.artifact_id()?,
     })?;
-    Ok((invitation, ticket))
+    Ok(ticket)
 }
 
 fn import_current_peer_invitation(
@@ -30555,6 +30917,17 @@ fn accept_peer_reenrollment(
         PeerReenrollmentAcceptanceOutcome::Accepted(value) => ("accepted", value),
         PeerReenrollmentAcceptanceOutcome::AlreadyAccepted(value) => ("already-accepted", value),
     };
+    let (prepared_transitions, already_prepared_transitions) =
+        prepare_peer_reenrollment_runtime_transition(
+            &state_dir,
+            &device_state,
+            &local_authority,
+            &quarantine,
+            &peer_authority,
+            &invitation,
+            &durable,
+            now,
+        )?;
     println!(
         "peer_reenrollment_acceptance_receipt_id={}",
         encode_hex(&durable.receipt_id())
@@ -30572,11 +30945,16 @@ fn accept_peer_reenrollment(
         durable.replacement_peer_device_id()
     );
     println!("peer_reenrollment_acceptance_outcome={outcome_name}");
+    println!("peer_reenrollment_runtime_transition_prepared={prepared_transitions}");
+    println!(
+        "peer_reenrollment_runtime_transition_already_prepared={already_prepared_transitions}"
+    );
     println!("old_quarantine_retained=true");
     println!("runtime_restart_required=true");
-    println!("runtime_consumer_enabled=false");
+    println!("runtime_consumer_enabled=true");
+    println!("runtime_hot_apply=false");
     println!("network_executed=false");
-    println!("status=peer-reenrollment-acceptance-durable");
+    println!("status=peer-reenrollment-successor-prepared");
     Ok(())
 }
 
@@ -30651,9 +31029,157 @@ fn show_peer_reenrollment_status(state_dir: PathBuf, peer_account_id: AccountId)
         _ => bail!("durable peer re-enrollment successor floor is invalid"),
     }
     println!("old_quarantine_retained=true");
-    println!("runtime_consumer_enabled=false");
+    let runtime_directory = state_dir.join(PEER_REENROLLMENT_RUNTIME_DIRECTORY);
+    let transitions = if PeerReenrollmentRuntimeStore::is_initialized(&runtime_directory) {
+        PeerReenrollmentRuntimeReadStore::open_existing(
+            runtime_directory,
+            certificate.account_id(),
+            device_state.identity().device_id(),
+        )?
+        .load_all()?
+        .into_iter()
+        .filter(|value| value.transition().peer_account_id() == peer_account_id)
+        .collect::<Vec<_>>()
+    } else {
+        Vec::new()
+    };
+    ensure!(
+        transitions.len() <= 1,
+        "peer re-enrollment status found multiple transitions for one peer"
+    );
+    println!(
+        "peer_reenrollment_runtime_transition_present={}",
+        !transitions.is_empty()
+    );
+    println!(
+        "peer_reenrollment_runtime_transition_consumed={}",
+        transitions.first().is_some_and(|value| value.consumed())
+    );
+    println!("runtime_consumer_enabled=true");
     println!("status=peer-reenrollment-status");
     Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn prepare_peer_reenrollment_runtime_transition(
+    state_directory: &Path,
+    device_state: &DeviceState,
+    local_authority: &AccountDeviceListSnapshot,
+    quarantine: &kilogram_peer_capability_store::DurablePeerCapabilityQuarantineHead,
+    peer_authority: &AccountDeviceListSnapshot,
+    invitation: &SignedCurrentPeerInvitation,
+    acceptance: &DurablePeerReenrollmentAcceptance,
+    now_unix_seconds: u64,
+) -> Result<(usize, usize)> {
+    acceptance.receipt().verify_bound_context(
+        local_authority,
+        quarantine,
+        peer_authority,
+        invitation,
+    )?;
+    let invitation_ticket = verify_current_peer_invitation_artifact(invitation, None)?;
+    ensure!(
+        invitation_ticket.listener_directory().device_list() == peer_authority,
+        "peer re-enrollment invitation does not contain the exact accepted peer authority"
+    );
+    let snapshot = load_runtime_state_snapshot_base(
+        state_directory,
+        local_authority.account_id(),
+        device_state.identity().device_id(),
+    )?;
+    let matching_contacts = snapshot
+        .contacts
+        .values()
+        .filter(|contact| {
+            contact.peer_account_id() == acceptance.peer_account_id()
+                && contact.peer_device_id() == acceptance.receipt().quarantined_peer_device_id()
+        })
+        .collect::<Vec<_>>();
+    ensure!(
+        matching_contacts.len() == 1,
+        "peer re-enrollment requires exactly one current contact bound to the quarantined Device"
+    );
+    let predecessor = matching_contacts[0];
+    let matching_candidates = snapshot
+        .endpoint_candidates
+        .values()
+        .filter(|candidate| {
+            candidate.contact_id() == predecessor.contact_id()
+                && candidate.peer_device_id() == acceptance.replacement_peer_device_id()
+        })
+        .collect::<Vec<_>>();
+    ensure!(
+        matching_candidates.len() == 1,
+        "peer re-enrollment requires exactly one enrolled endpoint candidate for the accepted replacement Device"
+    );
+    let candidate = matching_candidates[0];
+    let descriptor = fs::read_to_string(candidate.descriptor_file()).with_context(|| {
+        format!(
+            "read accepted peer re-enrollment descriptor {}",
+            candidate.descriptor_file().display()
+        )
+    })?;
+    ensure!(
+        descriptor.as_bytes() == invitation.connection_ticket().as_bytes(),
+        "replacement endpoint descriptor is not the exact accepted invitation ticket"
+    );
+    let local_certificate = local_authority
+        .certificate_for(device_state.identity().device_id())
+        .context("accepted local authority omits the current Device certificate")?;
+    ensure!(
+        invitation_ticket.listener_account_id() == candidate.peer_account_id()
+            && invitation_ticket.listener_device_id() == candidate.peer_device_id()
+            && invitation_ticket.route_policy() == candidate.route_policy()
+            && invitation_ticket.allowed_requester_account_id() == local_authority.account_id(),
+        "replacement endpoint candidate differs from the accepted invitation"
+    );
+    invitation_ticket
+        .verify_authenticated_listener_authorization(candidate.peer_account_id())
+        .context("verify accepted replacement Device authorization")?;
+    verify_device_authorization_with_snapshot(
+        local_authority.account_id(),
+        local_certificate,
+        local_authority.authority_snapshot(),
+        &DeviceCapability::MESSAGING,
+    )
+    .context("verify accepting Device authorization")?;
+    let successor = SignedRuntimeContact::sign(
+        device_state.identity(),
+        predecessor.local_account_id(),
+        predecessor.peer_account_id(),
+        candidate.peer_device_id(),
+        predecessor.conversation_label().to_owned(),
+        predecessor.conversation_id(),
+        candidate.route_policy(),
+        candidate.descriptor_file().clone(),
+    )?;
+    ensure!(
+        successor.contact_id() == predecessor.contact_id(),
+        "peer re-enrollment successor changed the logical contact ID"
+    );
+    let binding = PeerReenrollmentRuntimeBinding {
+        contact_id: *predecessor.contact_id().as_bytes(),
+        conversation_id: *predecessor.conversation_id().as_bytes(),
+        predecessor_contact: predecessor.encode()?,
+        successor_contact: successor.encode()?,
+        successor_endpoint_candidate: candidate.encode()?,
+    };
+    let store = PeerReenrollmentRuntimeStore::open(
+        state_directory.join(PEER_REENROLLMENT_RUNTIME_DIRECTORY),
+        local_authority.account_id(),
+        device_state.identity().device_id(),
+    )?;
+    let outcome = store.prepare(
+        device_state.identity(),
+        acceptance,
+        invitation,
+        binding,
+        now_unix_seconds,
+    )?;
+    Ok(match outcome {
+        PeerReenrollmentRuntimePrepareOutcome::Prepared(_) => (1, 0),
+        PeerReenrollmentRuntimePrepareOutcome::AlreadyPrepared(_) => (0, 1),
+    })
 }
 
 fn print_peer_capability_floor(floor: PeerSyncCapabilityFloor) {
@@ -34233,6 +34759,312 @@ mod tests {
             unix_time_now()?,
             DEFAULT_PREKEY_POOL_VALIDITY_SECONDS,
         )?)
+    }
+
+    fn current_invitation_for_ticket(
+        listener: &DeviceIdentity,
+        ticket: &ConnectionTicket,
+    ) -> Result<SignedCurrentPeerInvitation> {
+        let capability = ticket
+            .sync_transport_capability()
+            .context("test ticket omitted its canonical sync capability")?;
+        let encoded = ticket.encode()?;
+        let endpoint_id = ticket.endpoint().id.to_string();
+        Ok(SignedCurrentPeerInvitation::issue(
+            listener,
+            &CurrentPeerInvitationBinding {
+                listener_account_id: ticket.listener_account_id(),
+                listener_device_id: ticket.listener_device_id(),
+                allowed_requester_account_id: ticket.allowed_requester_account_id(),
+                authority_revision: ticket.listener_directory().revision(),
+                endpoint_id: &endpoint_id,
+                ticket_publication_channel_epoch: ticket.ticket_publication_channel_epoch(),
+                issued_at_unix_seconds: capability.issued_at_unix_seconds(),
+                expires_at_unix_seconds: capability.expires_at_unix_seconds(),
+                connection_ticket: &encoded,
+                required_capability_id: capability.artifact_id()?,
+            },
+        )?)
+    }
+
+    #[test]
+    fn peer_reenrollment_consumes_only_at_fresh_start_and_retains_old_evidence() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let local_root = AccountRootState::create(directory.path().join("local-root"))?;
+        let local_state_directory = directory.path().join("local-state");
+        let local_state = DeviceState::load_or_create(&local_state_directory)?;
+        let local_certificate = local_root.issue_device_certificate(
+            local_state.identity().device_id(),
+            local_state.encryption().public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let local_authority =
+            local_root.publish_device_list(std::slice::from_ref(&local_certificate))?;
+        local_state.install_certificate(&local_certificate)?;
+        local_state.install_own_authority_snapshot(local_authority.authority_snapshot())?;
+
+        let peer_root = AccountRootState::create(directory.path().join("peer-root"))?;
+        let old_state_directory = directory.path().join("peer-old");
+        let old_state = DeviceState::load_or_create(&old_state_directory)?;
+        let old_certificate = peer_root.issue_device_certificate(
+            old_state.identity().device_id(),
+            old_state.encryption().public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let old_authority =
+            peer_root.publish_device_list(std::slice::from_ref(&old_certificate))?;
+        let old_pool = RatchetState::load_or_create(&old_state_directory)?.prekey_pool(
+            old_state.identity(),
+            4,
+            unix_time_now()?,
+            DEFAULT_PREKEY_POOL_VALIDITY_SECONDS,
+        )?;
+        let old_ticket = ConnectionTicket::new_with_publication_channel_epoch_and_sync_policy(
+            EndpointAddr::new(SecretKey::generate().public()),
+            old_state.identity(),
+            old_certificate.clone(),
+            AccountPrekeyDirectory::new(old_authority.clone(), vec![old_pool.clone()])?,
+            local_root.account_id(),
+            RoutePolicy::DirectOnly,
+            7,
+            true,
+        )?;
+        let old_invitation = current_invitation_for_ticket(old_state.identity(), &old_ticket)?;
+        let old_ticket_file = directory.path().join("peer-old.ticket");
+        fs::write(&old_ticket_file, old_ticket.encode()?)?;
+
+        let conversation = "peer-reenrollment-fresh-start";
+        let conversation_id = ConversationId::from_label(conversation);
+        let membership = local_root.create_conversation_membership(
+            conversation_id.scope_id(),
+            &[peer_root.account_id()],
+        )?;
+        local_state.install_conversation_membership(&membership)?;
+        let contact = add_runtime_contact_record(
+            &local_state_directory,
+            conversation.to_owned(),
+            peer_root.account_id(),
+            old_ticket_file,
+        )?;
+        let contact_path =
+            local_state_directory.join(runtime_contact_relative_path(contact.contact_id));
+        let predecessor_bytes = fs::read(&contact_path)?;
+        let queue_id = RuntimeQueueId::generate()?;
+        queue_runtime_message_with_id(
+            &local_state_directory,
+            queue_id,
+            conversation.to_owned(),
+            peer_root.account_id(),
+            "remain sealed until ordinary scheduler reevaluation".to_owned(),
+        )?;
+
+        let capability_store = PeerCapabilityStore::open(
+            local_state_directory.join(PEER_SYNC_CAPABILITY_DIRECTORY),
+            local_state.identity().device_id(),
+        )?;
+        capability_store.apply_current_invitation(
+            local_state.identity(),
+            local_root.account_id(),
+            &old_invitation,
+            unix_time_now()?,
+        )?;
+        let old_key =
+            PeerCapabilityKey::new(peer_root.account_id(), old_state.identity().device_id());
+        capability_store.apply_authenticated_observation(
+            local_state.identity(),
+            old_key,
+            PeerSyncCapabilityEvidence::LegacyTicketWithoutExtension,
+        )?;
+        let quarantine = capability_store.load_quarantined_head(old_key)?;
+        drop(capability_store);
+
+        let new_state_directory = directory.path().join("peer-new");
+        let new_state = DeviceState::load_or_create(&new_state_directory)?;
+        let new_certificate = peer_root.issue_device_certificate(
+            new_state.identity().device_id(),
+            new_state.encryption().public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let peer_authority =
+            peer_root.publish_device_list(&[old_certificate, new_certificate.clone()])?;
+        let new_pool = RatchetState::load_or_create(&new_state_directory)?.prekey_pool(
+            new_state.identity(),
+            4,
+            unix_time_now()?,
+            DEFAULT_PREKEY_POOL_VALIDITY_SECONDS,
+        )?;
+        let new_ticket = ConnectionTicket::new_with_publication_channel_epoch_and_sync_policy(
+            EndpointAddr::new(SecretKey::generate().public()),
+            new_state.identity(),
+            new_certificate.clone(),
+            AccountPrekeyDirectory::new(peer_authority.clone(), vec![old_pool, new_pool])?,
+            local_root.account_id(),
+            RoutePolicy::DirectOnly,
+            1,
+            true,
+        )?;
+        let invitation = current_invitation_for_ticket(new_state.identity(), &new_ticket)?;
+        let new_ticket_file = directory.path().join("peer-new.ticket");
+        fs::write(&new_ticket_file, new_ticket.encode()?)?;
+        let candidate = add_runtime_contact_record(
+            &local_state_directory,
+            conversation.to_owned(),
+            peer_root.account_id(),
+            new_ticket_file.clone(),
+        )?;
+        assert!(candidate.endpoint_candidate_added);
+        assert_eq!(candidate.peer_device_id, new_state.identity().device_id());
+
+        let plan = PeerReenrollmentPlan::prepare(
+            local_state.identity().device_id(),
+            &local_authority,
+            &quarantine,
+            &peer_authority,
+            &invitation,
+            unix_time_now()?,
+        )?;
+        let phrase = plan.confirmation_phrase()?;
+        let tombstone = plan.confirm_and_sign(
+            local_state.identity(),
+            &phrase,
+            ExplicitPeerReenrollmentApproval::UserOrTestOperatorApproved,
+        )?;
+        let acceptance_store = PeerReenrollmentAcceptanceStore::open(
+            local_state_directory.join(PEER_REENROLLMENT_ACCEPTANCE_DIRECTORY),
+            local_root.account_id(),
+            local_state.identity().device_id(),
+        )?;
+        let acceptance = match acceptance_store.accept(
+            local_state.identity(),
+            &tombstone,
+            &local_authority,
+            &quarantine,
+            &peer_authority,
+            &invitation,
+            unix_time_now()?,
+        )? {
+            PeerReenrollmentAcceptanceOutcome::Accepted(value) => value,
+            PeerReenrollmentAcceptanceOutcome::AlreadyAccepted(_) => {
+                bail!("fresh fixture unexpectedly replayed peer re-enrollment acceptance")
+            }
+        };
+        drop(acceptance_store);
+        assert_eq!(
+            prepare_peer_reenrollment_runtime_transition(
+                &local_state_directory,
+                &local_state,
+                &local_authority,
+                &quarantine,
+                &peer_authority,
+                &invitation,
+                &acceptance,
+                unix_time_now()?,
+            )?,
+            (1, 0)
+        );
+
+        let prepared = load_runtime_state_snapshot(
+            &local_state_directory,
+            local_root.account_id(),
+            local_state.identity().device_id(),
+        )?;
+        let prepared_contact = prepared
+            .contacts
+            .get(&contact.contact_id)
+            .context("prepared transition lost current contact")?;
+        assert_eq!(
+            prepared_contact.peer_device_id(),
+            old_state.identity().device_id()
+        );
+        assert!(prepared.materialized.is_empty());
+        assert!(prepared.delivered.is_empty());
+        assert!(prepared.queued.contains_key(&queue_id));
+
+        let consumed = consume_peer_reenrollment_transitions_at_runtime_start(
+            &local_state_directory,
+            &local_state,
+            &local_authority,
+        )?;
+        assert_eq!(consumed.prepared, 1);
+        assert_eq!(consumed.consumed, 1);
+        assert_eq!(consumed.already_consumed, 0);
+        let activated = load_runtime_state_snapshot(
+            &local_state_directory,
+            local_root.account_id(),
+            local_state.identity().device_id(),
+        )?;
+        let activated_contact = activated
+            .contacts
+            .get(&contact.contact_id)
+            .context("consumed transition lost successor contact")?;
+        assert_eq!(
+            activated_contact.peer_device_id(),
+            new_state.identity().device_id()
+        );
+        assert_eq!(activated.endpoint_candidates.len(), 0);
+        assert!(activated.materialized.is_empty());
+        assert!(activated.delivered.is_empty());
+        assert!(activated.queued.contains_key(&queue_id));
+        assert_eq!(fs::read(&contact_path)?, predecessor_bytes);
+        assert_eq!(
+            PeerCapabilityReadStore::open_existing(
+                local_state_directory.join(PEER_SYNC_CAPABILITY_DIRECTORY),
+                local_state.identity().device_id(),
+            )?
+            .load_quarantined_head(old_key)?,
+            quarantine
+        );
+
+        let replay = consume_peer_reenrollment_transitions_at_runtime_start(
+            &local_state_directory,
+            &local_state,
+            &local_authority,
+        )?;
+        assert_eq!(replay.prepared, 1);
+        assert_eq!(replay.consumed, 0);
+        assert_eq!(replay.already_consumed, 1);
+
+        let local_extra_identity = DeviceIdentity::generate()?;
+        let local_extra_encryption = DeviceEncryptionIdentity::generate()?;
+        let local_extra_certificate = local_root.issue_device_certificate(
+            local_extra_identity.device_id(),
+            local_extra_encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let advanced_local_authority = local_root
+            .publish_device_list(&[local_certificate.clone(), local_extra_certificate])?;
+        local_state
+            .install_own_authority_snapshot(advanced_local_authority.authority_snapshot())?;
+
+        let peer_extra_identity = DeviceIdentity::generate()?;
+        let peer_extra_encryption = DeviceEncryptionIdentity::generate()?;
+        let peer_extra_certificate = peer_root.issue_device_certificate(
+            peer_extra_identity.device_id(),
+            peer_extra_encryption.public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let advanced_peer_authority =
+            peer_root.publish_device_list(&[new_certificate, peer_extra_certificate])?;
+        local_state.pin_peer_authority_snapshot(advanced_peer_authority.authority_snapshot())?;
+        let advanced_replay = consume_peer_reenrollment_transitions_at_runtime_start(
+            &local_state_directory,
+            &local_state,
+            &advanced_local_authority,
+        )?;
+        assert_eq!(advanced_replay.prepared, 1);
+        assert_eq!(advanced_replay.consumed, 0);
+        assert_eq!(advanced_replay.already_consumed, 1);
+
+        fs::write(&new_ticket_file, old_ticket.encode()?)?;
+        assert!(
+            consume_peer_reenrollment_transitions_at_runtime_start(
+                &local_state_directory,
+                &local_state,
+                &advanced_local_authority,
+            )
+            .is_err()
+        );
+        Ok(())
     }
 
     fn empty_immutable_read_repositories() -> Result<ImmutableReadRepositories> {

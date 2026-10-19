@@ -11,6 +11,7 @@ use kilogram_identity::{
 use kilogram_peer_capability_store::DurablePeerCapabilityQuarantineHead;
 use kilogram_sync_capability::{
     PeerSyncCapabilityFloor, PeerSyncCapabilityQuarantineReason, SignedCurrentPeerInvitation,
+    SyncTransportCapabilityError,
 };
 use redb::{
     Database, Durability, ReadOnlyDatabase, ReadableDatabase, ReadableTable, ReadableTableMetadata,
@@ -19,7 +20,9 @@ use redb::{
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use kilogram_peer_reenrollment::{PeerReenrollmentError, SignedPeerReenrollmentTombstone};
+use kilogram_peer_reenrollment::{
+    PeerReenrollmentError, SignedPeerReenrollmentTombstone, peer_reenrollment_authority_digest,
+};
 
 const DATABASE_FILE: &str = "peer-reenrollment-acceptance-v1.redb";
 const META_TABLE: TableDefinition<&str, &[u8]> =
@@ -188,12 +191,36 @@ impl SignedPeerReenrollmentAcceptanceReceipt {
         self.content.peer_account_id
     }
 
+    pub fn local_authority_revision(&self) -> u64 {
+        self.content.local_authority_revision
+    }
+
+    pub fn local_authority_digest(&self) -> [u8; 32] {
+        self.content.local_authority_digest
+    }
+
     pub fn quarantined_peer_device_id(&self) -> DeviceId {
         self.content.quarantined_peer_device_id
     }
 
     pub fn quarantine_record_id(&self) -> [u8; 32] {
         self.content.quarantine_record_id
+    }
+
+    pub fn quarantine_sequence(&self) -> u64 {
+        self.content.quarantine_sequence
+    }
+
+    pub fn quarantine_reason(&self) -> PeerSyncCapabilityQuarantineReason {
+        self.content.quarantine_reason
+    }
+
+    pub fn predecessor_record_id(&self) -> [u8; 32] {
+        self.content.predecessor_record_id
+    }
+
+    pub fn predecessor_floor(&self) -> PeerSyncCapabilityFloor {
+        self.content.predecessor_floor
     }
 
     pub fn tombstone_plan_id(&self) -> [u8; 32] {
@@ -204,12 +231,76 @@ impl SignedPeerReenrollmentAcceptanceReceipt {
         self.content.replacement_peer_device_id
     }
 
+    pub fn peer_authority_revision(&self) -> u64 {
+        self.content.peer_authority_revision
+    }
+
+    pub fn peer_authority_digest(&self) -> [u8; 32] {
+        self.content.peer_authority_digest
+    }
+
+    pub fn invitation_id(&self) -> [u8; 32] {
+        self.content.invitation_id
+    }
+
+    pub fn required_capability_id(&self) -> [u8; 32] {
+        self.content.required_capability_id
+    }
+
+    pub fn ticket_publication_epoch(&self) -> u64 {
+        self.content.ticket_publication_epoch
+    }
+
     pub fn successor_floor(&self) -> PeerSyncCapabilityFloor {
         self.content.successor_floor
     }
 
     pub fn accepted_at_unix_seconds(&self) -> u64 {
         self.content.accepted_at_unix_seconds
+    }
+
+    /// Revalidates the complete immutable acceptance context without applying
+    /// a new wall-clock freshness rule. The short invitation lifetime gates
+    /// the original approval; a later fresh-start replay must instead prove it
+    /// is consuming the exact artifact that was already accepted.
+    pub fn verify_bound_context(
+        &self,
+        local_authority: &AccountDeviceListSnapshot,
+        quarantine: &DurablePeerCapabilityQuarantineHead,
+        peer_authority: &AccountDeviceListSnapshot,
+        invitation: &SignedCurrentPeerInvitation,
+    ) -> Result<(), PeerReenrollmentAcceptanceStoreError> {
+        self.verify()?;
+        local_authority.verify()?;
+        peer_authority.verify()?;
+        invitation.verify()?;
+        let predecessor = quarantine.predecessor();
+        let head = quarantine.head();
+        if local_authority.account_id() != self.local_account_id()
+            || local_authority.revision() != self.local_authority_revision()
+            || peer_reenrollment_authority_digest(local_authority)? != self.local_authority_digest()
+            || peer_authority.account_id() != self.peer_account_id()
+            || peer_authority.revision() != self.peer_authority_revision()
+            || peer_reenrollment_authority_digest(peer_authority)? != self.peer_authority_digest()
+            || quarantine.key().peer_account_id != self.peer_account_id()
+            || quarantine.key().peer_device_id != self.quarantined_peer_device_id()
+            || head.record_id != self.quarantine_record_id()
+            || head.sequence != self.quarantine_sequence()
+            || quarantine.reason() != self.quarantine_reason()
+            || predecessor.record_id != self.predecessor_record_id()
+            || predecessor.floor != self.predecessor_floor()
+            || invitation.listener_account_id() != self.peer_account_id()
+            || invitation.listener_device_id() != self.replacement_peer_device_id()
+            || invitation.allowed_requester_account_id() != self.local_account_id()
+            || invitation.authority_revision() != self.peer_authority_revision()
+            || invitation.invitation_id()? != self.invitation_id()
+            || invitation.required_capability_id() != self.required_capability_id()
+            || invitation.ticket_publication_channel_epoch() != self.ticket_publication_epoch()
+            || invitation.required_floor()? != self.successor_floor()
+        {
+            return Err(PeerReenrollmentAcceptanceStoreError::LiveContextMismatch);
+        }
+        Ok(())
     }
 
     fn verify(&self) -> Result<(), PeerReenrollmentAcceptanceStoreError> {
@@ -888,6 +979,8 @@ pub enum PeerReenrollmentAcceptanceStoreError {
     DuplicateHeadReceipt,
     #[error("another peer re-enrollment successor is already accepted")]
     SuccessorAlreadyAccepted,
+    #[error("peer re-enrollment acceptance no longer matches its live signed context")]
+    LiveContextMismatch,
     #[error("peer re-enrollment acceptance head changed concurrently")]
     ConcurrentHeadChange,
     #[error("peer re-enrollment acceptance committed an unexpected head")]
@@ -906,6 +999,8 @@ pub enum PeerReenrollmentAcceptanceStoreError {
     Identity(#[from] IdentityError),
     #[error(transparent)]
     Reenrollment(#[from] PeerReenrollmentError),
+    #[error(transparent)]
+    SyncCapability(#[from] SyncTransportCapabilityError),
 }
 
 #[cfg(test)]

@@ -1,35 +1,41 @@
-# Текущая точка: M1.2.11 завершён, следующий M1.2.12
+# Текущая точка: M1.2.12 завершён, следующий M1.2.13
 
-Статус на 2026-10-19: pure planner и durable application разделены.
-`kilogram-peer-reenrollment-acceptance` хранит current-Device-signed receipt и
-единственный per-peer successor head в одной immediate-durability redb
-транзакции. Receipt exact-связан со старым quarantine/predecessor, обеими
-Root-signed authority, полными bytes tombstone, replacement Device и successor
-floor. Exact replay идемпотентен даже после expiry уже принятого плана; changed
-context и второй successor fail closed. Старый capability DB остаётся
-побайтово неизменным. CLI ceremony локальная/offline, runtime consumer выключен
-и требует отдельного fresh start. Focused stable-name regression проходит
-5/5 planner + 5/5 acceptance tests, aggregate readiness — 137/137,
-fail-closed negative matrix — 8/8. Wire/IPC/default `legacy-only` неизменны.
+Статус на 2026-10-19: accepted peer successor теперь проходит отдельный
+двухфазный durable transition. Полная current-Device-signed запись хранится в
+`peer-reenrollment-runtime-v1.redb`; `prepared` ничего не меняет, а fresh-start
+consumer сначала fail-closed валидирует весь набор и только затем публикует
+exact consumed heads до создания Iroh endpoint. Runtime snapshot применяет
+successor как in-memory overlay, не перезаписывая predecessor contact.
 
-## Следующий этап: M1.2.12 fresh-start successor consumption
+Acceptance, старый quarantine, predecessor contact, candidate source и
+transition остаются audit evidence. Queue item не materialize-ится и не
+отправляется как побочный эффект consumption: его заново оценивает обычный
+scheduler. Exact restart идемпотентен; после consumption монотонное повышение
+authority разрешено, но rollback/equivocation, отзыв replacement Device,
+changed descriptor/context, corruption и conflicting successor fail closed.
+Stable-name regression: 5/5 runtime-store + 101/101 CLI binary + 1/1 CLI
+library; boundary negative matrix — 10/10, aggregate readiness — 138/138.
+Wire/IPC/default `legacy-only`
+неизменны.
 
-- разрешить runtime читать acceptance store только при fresh start, до
-  scheduler/outbox и до открытия любого сетевого endpoint;
-- связать accepted successor с exact authenticated current contact/invitation,
-  replacement Device и сохранённым successor floor, не принимая receipt как
-  endpoint либо сетевую authority сам по себе;
-- создать отдельный атомарный contact-successor transition: либо новый contact
-  head и capability floor полностью подготовлены, либо старый contact остаётся
-  blocked; старый quarantine и acceptance receipt не удаляются;
-- не выпускать ранее заблокированные queue items автоматически: после restart
-  требуется обычная повторная scheduler evaluation нового exact contact;
-- exact replay/restart сделать идемпотентным, а missing/corrupt acceptance,
-  changed invitation/authority/contact, fork, rollback и второй successor —
-  fail closed до materialization/network;
-- сохранить runtime IPC без mutation/hot apply, desktop без one-click recovery,
-  unknown first-contact ambiguity, wire и public rollout/default
-  `legacy-only`; двуххостовый network run вынести после локального durable gate.
+## Следующий этап: M1.2.13 two-host fresh-start re-enrollment rehearsal
+
+- подготовить bounded test-only комплект с одним stable `kilogram-cli.exe` на
+  основном ПК и Windows-ноутбуке; exact binary SHA должен совпасть;
+- создать старый authenticated contact, durable canonical floor и quarantine,
+  затем выпустить новый Root-authorized peer Device и current invitation;
+- выполнить plan/approve/accept и доказать, что до restart старый contact
+  остаётся blocked и сеть не открывается от самого acceptance;
+- на fresh runtime start потребить exact transition, установить реальную связь
+  только с replacement Device и провести delivery ACK + sync convergence;
+- повторить restart/replay без duplicate/loss и доказать, что ранее queued item
+  проходит обычную scheduler evaluation ровно один раз;
+- выполнить negative control с подменённым descriptor/authority до endpoint и
+  подтвердить zero network attempt, сохранность predecessor/quarantine и
+  возможность безопасного повтора с exact artifacts;
+- LAN достаточно для этой семантики; relay control нужен только если меняется
+  route/transport surface. Public default, release/ZIP/tag и automatic GitHub
+  build остаются без изменений.
 
 # Завершённый расширенный пакет: M1.1.92–M1.2.5
 
