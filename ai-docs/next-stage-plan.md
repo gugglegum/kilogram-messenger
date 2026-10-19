@@ -1,3 +1,27 @@
+# Текущая точка: M1.2.6 peer capability transport enforcement
+
+Статус на 2026-10-19: durable monotonic capability floor подключён к реальному
+outbound `sync` до создания Iroh endpoint. Unknown extension-free first contact
+остаётся `legacy-compatible-unasserted` без auto-create store; authenticated
+canonical candidate сначала durable pin-ится. Его последующее stripping пишет
+quarantine и останавливает команду до сети. Уже persisted mutually signed
+canonical selection является более сильным resume evidence и не допускает
+legacy fallback из-за stripped current ticket. Public default не менялся:
+`legacy-only`.
+
+## Следующий этап: M1.2.7 field enforcement rehearsal
+
+- собрать CLI через постоянный путь и проверить exact SHA-256 на двух
+  физических Windows-хостах;
+- доказать три pre-network исхода на disposable state: first legacy/no-create,
+  signed candidate/durable pin и stripped-after-pin/durable quarantine;
+- отдельно доказать selected canonical resume с persisted selection без legacy
+  fallback;
+- в tracked evidence сохранить только bounded revision/hash/outcome, без raw
+  ticket, endpoint address, Account/Device IDs, state и secrets;
+- не менять wire/IPC, не включать runtime automation и оставить public default
+  `legacy-only`.
+
 # Завершённый расширенный пакет: M1.1.92–M1.2.5
 
 Статус на 2026-10-19: M1.1.92–M1.2.5 реализованы и проверены; M1.1.95

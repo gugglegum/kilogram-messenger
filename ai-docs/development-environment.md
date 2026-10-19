@@ -5060,3 +5060,25 @@ Hosted follow-up:
 - Bounded tracked record:
   `CANONICAL-SYNC-V2-ROLLOUT-END-TO-END-TWO-HOST-EVIDENCE.json`. Raw logs,
   state, Account/Device identifiers and secrets remain ignored.
+
+## M1.2.6 peer capability transport enforcement environment (2026-10-19)
+
+- Implementation is in the existing `kilogram-cli sync` path and reuses
+  `kilogram-peer-capability-store`; no dependency, wire or runtime IPC change.
+- The enforcement call is ordered after authenticated ticket/authority/
+  membership processing and before `endpoint_builder_for_remote(...).bind()`.
+- Focused Rust tests were compiled without execution and launched only through
+  `scripts/run-cargo-tests-stable.ps1`; 4/4 passed using the stable verification
+  harness name.
+- Full CLI regression through the same stable path passed 96/96 binary tests
+  and 1/1 library test outside the socket-restricted sandbox. The first
+  sandboxed full attempt was stopped after expected loopback socket denials;
+  it was not treated as product evidence.
+- Aggregate M1 readiness passed 132/132, including rustfmt and workspace-wide
+  locked/offline strict Clippy. The only compiler messages were the known
+  target-filesystem incremental hard-link-to-copy warnings.
+- The sandbox cannot write test temp state under the system TEMP (`os error
+  5`), so TEMP/TMP were redirected to ignored `.tmp/verification-temp`; this
+  does not alter product behavior or test assertions.
+- Build profile remains verification/debug with Cargo jobs 2. No release build,
+  archive, tag, second host or network was used for this local milestone.

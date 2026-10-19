@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.6",
+  "status": "canonical-sync-v2-peer-capability-transport-enforcement-verified",
+  "implementation": [
+    "apps/kilogram-cli",
+    "crates/kilogram-peer-capability-store",
+    "crates/kilogram-sync-capability"
+  ],
+  "changes_connection_ticket_wire": false,
+  "changes_sync_wire": false,
+  "changes_runtime_ipc": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "outbound_sync_boundary": {
+    "enforcement_point": "after-authenticated-membership-before-iroh-endpoint-bind",
+    "unknown_extension_free_first_contact": "legacy-compatible-unasserted",
+    "unknown_extension_free_first_contact_creates_store": false,
+    "authenticated_canonical_candidate_is_pinned_before_network": true,
+    "extension_stripping_after_pin_is_durably_quarantined": true,
+    "quarantined_peer_reaches_network": false,
+    "unsupported_capability_set_is_rejected": true
+  },
+  "resume_boundary": {
+    "persisted_mutually_signed_selection_is_authenticated_evidence": true,
+    "current_ticket_may_remove_selected_capability": true,
+    "selected_canonical_resume_may_fall_back_to_legacy": false,
+    "new_canonical_selection_requires_current_ticket_candidate": true
+  },
+  "privacy": {
+    "status_prints_ticket_body": false,
+    "status_prints_endpoint_address": false,
+    "status_prints_message_content": false,
+    "status_prints_semantic_floor_and_record_id": true
+  },
+  "activation_boundary": {
+    "automatic_contact_enrollment_enabled": false,
+    "automatic_quarantine_recovery_enabled": false,
+    "runtime_ipc_integration_enabled": false,
+    "public_canonical_rollout_enabled": false
+  },
+  "non_claims": [
+    "generic-first-contact-extension-stripping-detection",
+    "whole-store-rollback-resistance-without-external-witness",
+    "runtime-automated-sync-integration",
+    "public-rollout-eligibility",
+    "independent-security-review-completed"
+  ],
+  "next": [
+    "stable-executable-two-host-pre-network-enforcement-rehearsal",
+    "runtime-automated-sync-capability-floor-integration",
+    "independent-protocol-and-security-review"
+  ]
+}

@@ -7481,3 +7481,23 @@ correlation visible, Windows-only field evidence, independent security audit
   state, Account/Device IDs и secrets не отслеживаются;
 - public default остаётся `legacy-only`, accept-canary запрещён без отдельного
   решения и независимого security review.
+
+### M1.2.6 — peer capability transport enforcement: принят локально
+
+- real outbound `sync` после проверки ticket/Account Root/membership и до Iroh
+  endpoint bind применяет authenticated capability evidence к durable
+  Device-signed peer floor;
+- signed canonical candidate durable pin-ится до сети; missing extension после
+  pin создаёт durable quarantine и fail closed до endpoint creation;
+- неизвестный extension-free first contact остаётся
+  `legacy-compatible-unasserted`, не создаёт отсутствующий capability store и
+  не считается доказанно старым клиентом;
+- persisted mutually signed canonical selection используется как более сильный
+  resume evidence: stripped optional extension не стирает selection и не
+  разрешает legacy fallback; new selection требует current signed candidate;
+- добавлены 4 network-free CLI regression tests и fail-closed boundary с
+  negative mutation; полный stable-path CLI regression прошёл 96/96 binary и
+  1/1 library tests;
+- aggregate readiness расширен и прошёл 132/132 вместе с rustfmt и
+  workspace-wide locked/offline strict Clippy; wire, runtime IPC и public
+  default не изменены, release/ZIP/tag не создавались.

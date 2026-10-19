@@ -2549,6 +2549,16 @@ this is portability evidence, not an independent security review. Public
 behavior remains `legacy-only`, and accept-canary still requires a separate
 decision plus independent security review.
 
+[`RFC-0230`](docs/RFC-0230-m1206-peer-capability-transport-enforcement.md)
+enforces the durable peer capability floor in the real outbound sync path
+before an Iroh endpoint is bound. A signed canonical candidate is pinned before
+network use, stripping it after the pin durably quarantines the peer, and a
+mutually signed persisted canonical selection remains authoritative for resume
+without legacy fallback. Unknown extension-free first contact remains honest
+`legacy-unasserted` and does not create a capability store; generic
+first-contact stripping detection is still an explicit non-claim. Wire/IPC are
+unchanged and the public default remains `legacy-only`.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

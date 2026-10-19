@@ -324,6 +324,7 @@ const RUNTIME_MAILBOX_UPDATE_ACKNOWLEDGEMENTS_DIRECTORY: &str = "mailbox-update-
 const RUNTIME_CANONICAL_SYNC_V2_ACTIVATION_DIRECTORY: &str = "canonical-sync-v2-activation";
 const RUNTIME_CANONICAL_SYNC_V2_SELECTION_DIRECTORY: &str = "canonical-sync-v2-selections";
 const CANONICAL_SYNC_V2_STORE_DIRECTORY: &str = "canonical-sync-v2-store";
+const PEER_SYNC_CAPABILITY_DIRECTORY: &str = "peer-sync-capability";
 const CANONICAL_SYNC_V2_SELECTION_VERSION: u8 = 1;
 const CANONICAL_SYNC_V2_SELECTION_ID_DOMAIN: &[u8] =
     b"kilogram:runtime-canonical-sync-v2-selection:v1\0";
@@ -25255,6 +25256,158 @@ fn canonical_sync_v2_store_path(state_directory: &Path) -> PathBuf {
     state_directory.join(CANONICAL_SYNC_V2_STORE_DIRECTORY)
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum PeerCapabilityTransportEvidenceSource {
+    ConnectionTicket,
+    PersistedCanonicalSelection,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct PeerCapabilityTransportAuthorization {
+    floor: PeerSyncCapabilityFloor,
+    permitted_use: PeerSyncCapabilityUse,
+    record_id: Option<[u8; 32]>,
+    record_sequence: Option<u64>,
+    changed: bool,
+    evidence_source: PeerCapabilityTransportEvidenceSource,
+}
+
+fn peer_sync_capability_evidence(
+    capability: Option<&SignedSyncTransportCapability>,
+) -> Result<PeerSyncCapabilityEvidence> {
+    let Some(capability) = capability else {
+        return Ok(PeerSyncCapabilityEvidence::LegacyTicketWithoutExtension);
+    };
+    let common = (
+        capability.artifact_id()?,
+        capability.authority_revision(),
+        capability.ticket_publication_channel_epoch(),
+    );
+    match capability.candidate_protocols() {
+        [] => Ok(PeerSyncCapabilityEvidence::AuthenticatedLegacyOnly {
+            capability_id: common.0,
+            authority_revision: common.1,
+            ticket_publication_epoch: common.2,
+        }),
+        [SyncTransportProtocol::CanonicalCborV2] => Ok(
+            PeerSyncCapabilityEvidence::AuthenticatedCanonicalCandidate {
+                capability_id: common.0,
+                authority_revision: common.1,
+                ticket_publication_epoch: common.2,
+            },
+        ),
+        _ => bail!("connection ticket advertises an unsupported sync capability set"),
+    }
+}
+
+fn apply_peer_capability_floor_before_sync(
+    state_directory: &Path,
+    owner: &DeviceIdentity,
+    peer_account_id: AccountId,
+    peer_device_id: DeviceId,
+    evidence: PeerSyncCapabilityEvidence,
+    evidence_source: PeerCapabilityTransportEvidenceSource,
+) -> Result<PeerCapabilityTransportAuthorization> {
+    let store_directory = state_directory.join(PEER_SYNC_CAPABILITY_DIRECTORY);
+    let initializes_floor = matches!(
+        evidence,
+        PeerSyncCapabilityEvidence::AuthenticatedCanonicalCandidate { .. }
+    );
+    if !PeerCapabilityStore::is_initialized(&store_directory) && !initializes_floor {
+        let permitted_use = match evidence {
+            PeerSyncCapabilityEvidence::LegacyTicketWithoutExtension => {
+                PeerSyncCapabilityUse::LegacyCompatibilityUnasserted
+            }
+            PeerSyncCapabilityEvidence::AuthenticatedLegacyOnly { .. } => {
+                PeerSyncCapabilityUse::AuthenticatedLegacyOnly
+            }
+            PeerSyncCapabilityEvidence::AuthenticatedCanonicalCandidate { .. } => {
+                PeerSyncCapabilityUse::AuthenticatedCanonicalCandidate
+            }
+        };
+        return Ok(PeerCapabilityTransportAuthorization {
+            floor: PeerSyncCapabilityFloor::LegacyUnasserted,
+            permitted_use,
+            record_id: None,
+            record_sequence: None,
+            changed: false,
+            evidence_source,
+        });
+    }
+
+    let store = PeerCapabilityStore::open(&store_directory, owner.device_id())
+        .context("open durable peer capability floor before sync transport selection")?;
+    let outcome = store
+        .apply_authenticated_observation(
+            owner,
+            PeerCapabilityKey::new(peer_account_id, peer_device_id),
+            evidence,
+        )
+        .context("durably apply authenticated peer capability before sync transport selection")?;
+    let floor = outcome
+        .state
+        .map(|state| state.floor)
+        .unwrap_or(PeerSyncCapabilityFloor::LegacyUnasserted);
+    if let PeerSyncCapabilityFloor::Quarantined { reason } = floor {
+        bail!(
+            "peer sync capability floor is quarantined: {}",
+            peer_capability_quarantine_reason_name(reason)
+        );
+    }
+    ensure!(
+        outcome.permitted_use != PeerSyncCapabilityUse::Quarantined,
+        "quarantined peer capability unexpectedly escaped its durable floor"
+    );
+    Ok(PeerCapabilityTransportAuthorization {
+        floor,
+        permitted_use: outcome.permitted_use,
+        record_id: outcome.state.map(|state| state.record_id),
+        record_sequence: outcome.state.map(|state| state.sequence),
+        changed: outcome.changed,
+        evidence_source,
+    })
+}
+
+fn print_peer_capability_transport_authorization(
+    authorization: PeerCapabilityTransportAuthorization,
+) {
+    println!(
+        "peer_capability_transport_evidence_source={}",
+        match authorization.evidence_source {
+            PeerCapabilityTransportEvidenceSource::ConnectionTicket => "connection-ticket",
+            PeerCapabilityTransportEvidenceSource::PersistedCanonicalSelection => {
+                "persisted-canonical-selection"
+            }
+        }
+    );
+    println!(
+        "peer_capability_transport_use={}",
+        match authorization.permitted_use {
+            PeerSyncCapabilityUse::LegacyCompatibilityUnasserted => {
+                "legacy-compatibility-unasserted"
+            }
+            PeerSyncCapabilityUse::AuthenticatedLegacyOnly => "authenticated-legacy-only",
+            PeerSyncCapabilityUse::CanonicalCapabilityRequired => "canonical-capability-required",
+            PeerSyncCapabilityUse::AuthenticatedCanonicalCandidate => {
+                "authenticated-canonical-candidate"
+            }
+            PeerSyncCapabilityUse::Quarantined => "quarantined",
+        }
+    );
+    println!(
+        "peer_capability_record_present={}",
+        authorization.record_id.is_some()
+    );
+    if let Some(record_id) = authorization.record_id {
+        println!("peer_capability_record_id={}", encode_hex(&record_id));
+    }
+    if let Some(sequence) = authorization.record_sequence {
+        println!("peer_capability_record_sequence={sequence}");
+    }
+    println!("peer_capability_record_changed={}", authorization.changed);
+    print_peer_capability_floor(authorization.floor);
+}
+
 fn import_legacy_history_for_canonical_sync_v2(
     store: &CanonicalSyncV2CarrierStore,
     event_store: &EventStore,
@@ -25435,6 +25588,36 @@ async fn sync(
         requester_certificate.account_id(),
         authorized_listener.account_id(),
     )?;
+    let requester_device_id = device_state.identity().device_id();
+    let mut canonical_selection = selected_canonical_sync_v2_session(
+        &state_dir,
+        requester_certificate.account_id(),
+        requester_device_id,
+        conversation_id,
+        expected_listener_device_id,
+        requester_device_id,
+    )?;
+    let (peer_capability_evidence, peer_capability_evidence_source) =
+        if let Some(selection) = canonical_selection.as_ref() {
+            (
+                peer_sync_capability_evidence(Some(&selection.listener_capability))?,
+                PeerCapabilityTransportEvidenceSource::PersistedCanonicalSelection,
+            )
+        } else {
+            (
+                peer_sync_capability_evidence(ticket.sync_transport_capability())?,
+                PeerCapabilityTransportEvidenceSource::ConnectionTicket,
+            )
+        };
+    let peer_capability_authorization = apply_peer_capability_floor_before_sync(
+        &state_dir,
+        device_state.identity(),
+        authorized_listener.account_id(),
+        expected_listener_device_id,
+        peer_capability_evidence,
+        peer_capability_evidence_source,
+    )?;
+    print_peer_capability_transport_authorization(peer_capability_authorization);
     print_immutable_read_diagnostics("sync", &immutable_reads);
     let decrypting_store = DecryptingSessionStore::new(
         &state_dir,
@@ -25478,15 +25661,6 @@ async fn sync(
         wait_for_relay(&endpoint, route_policy, CLIENT_RELAY_WAIT_SECONDS).await?;
     }
 
-    let requester_device_id = device_state.identity().device_id();
-    let mut canonical_selection = selected_canonical_sync_v2_session(
-        &state_dir,
-        requester_certificate.account_id(),
-        requester_device_id,
-        conversation_id,
-        expected_listener_device_id,
-        requester_device_id,
-    )?;
     if canonical_selection.is_some()
         && !canonical_sync_v2_policy
             .permissions
@@ -25501,6 +25675,8 @@ async fn sync(
         && canonical_sync_v2_policy
             .permissions
             .initiate_new_canonical_session()
+        && peer_capability_authorization.permitted_use
+            == PeerSyncCapabilityUse::AuthenticatedCanonicalCandidate
         && ticket
             .sync_transport_capability()
             .is_some_and(|capability| {
@@ -37864,6 +38040,207 @@ mod tests {
             }
         ));
         assert_eq!(state.sequence, 2);
+        Ok(())
+    }
+
+    #[test]
+    fn peer_capability_transport_unknown_legacy_does_not_create_store() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let requester = DeviceIdentity::generate()?;
+        let listener = DeviceIdentity::generate()?;
+        let (listener_account_id, listener_certificate, _, listener_directory) =
+            authority_for(&listener)?;
+        let (requester_account_id, _, _, _) = authority_for(&requester)?;
+        let mut ticket = ConnectionTicket::new(
+            EndpointAddr::new(SecretKey::generate().public()),
+            &listener,
+            listener_certificate,
+            listener_directory,
+            requester_account_id,
+            RoutePolicy::DirectOnly,
+        )?;
+        ticket.content.sync_transport_capability = None;
+        ticket.verify()?;
+
+        let authorization = apply_peer_capability_floor_before_sync(
+            directory.path(),
+            &requester,
+            listener_account_id,
+            listener.device_id(),
+            peer_sync_capability_evidence(ticket.sync_transport_capability())?,
+            PeerCapabilityTransportEvidenceSource::ConnectionTicket,
+        )?;
+
+        assert_eq!(
+            authorization.floor,
+            PeerSyncCapabilityFloor::LegacyUnasserted
+        );
+        assert_eq!(
+            authorization.permitted_use,
+            PeerSyncCapabilityUse::LegacyCompatibilityUnasserted
+        );
+        assert_eq!(authorization.record_id, None);
+        assert!(!authorization.changed);
+        assert!(!PeerCapabilityStore::is_initialized(
+            directory.path().join(PEER_SYNC_CAPABILITY_DIRECTORY)
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn peer_capability_transport_pins_authenticated_canonical_before_use() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let requester = DeviceIdentity::generate()?;
+        let listener = DeviceIdentity::generate()?;
+        let (listener_account_id, listener_certificate, _, listener_directory) =
+            authority_for(&listener)?;
+        let (requester_account_id, _, _, _) = authority_for(&requester)?;
+        let ticket = ConnectionTicket::new_with_publication_channel_epoch_and_sync_policy(
+            EndpointAddr::new(SecretKey::generate().public()),
+            &listener,
+            listener_certificate,
+            listener_directory,
+            requester_account_id,
+            RoutePolicy::DirectOnly,
+            4,
+            true,
+        )?;
+
+        let authorization = apply_peer_capability_floor_before_sync(
+            directory.path(),
+            &requester,
+            listener_account_id,
+            listener.device_id(),
+            peer_sync_capability_evidence(ticket.sync_transport_capability())?,
+            PeerCapabilityTransportEvidenceSource::ConnectionTicket,
+        )?;
+
+        assert_eq!(
+            authorization.floor,
+            PeerSyncCapabilityFloor::CanonicalCandidatePinned {
+                minimum_authority_revision: 1,
+                minimum_ticket_publication_epoch: 4,
+            }
+        );
+        assert_eq!(
+            authorization.permitted_use,
+            PeerSyncCapabilityUse::AuthenticatedCanonicalCandidate
+        );
+        assert_eq!(authorization.record_sequence, Some(1));
+        assert!(authorization.changed);
+        assert!(PeerCapabilityStore::is_initialized(
+            directory.path().join(PEER_SYNC_CAPABILITY_DIRECTORY)
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn peer_capability_transport_stripping_quarantines_before_network() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let requester = DeviceIdentity::generate()?;
+        let listener = DeviceIdentity::generate()?;
+        let (listener_account_id, listener_certificate, _, listener_directory) =
+            authority_for(&listener)?;
+        let (requester_account_id, _, _, _) = authority_for(&requester)?;
+        let mut ticket = ConnectionTicket::new_with_publication_channel_epoch_and_sync_policy(
+            EndpointAddr::new(SecretKey::generate().public()),
+            &listener,
+            listener_certificate,
+            listener_directory,
+            requester_account_id,
+            RoutePolicy::DirectOnly,
+            4,
+            true,
+        )?;
+        apply_peer_capability_floor_before_sync(
+            directory.path(),
+            &requester,
+            listener_account_id,
+            listener.device_id(),
+            peer_sync_capability_evidence(ticket.sync_transport_capability())?,
+            PeerCapabilityTransportEvidenceSource::ConnectionTicket,
+        )?;
+
+        ticket.content.sync_transport_capability = None;
+        ticket.verify()?;
+        let error = apply_peer_capability_floor_before_sync(
+            directory.path(),
+            &requester,
+            listener_account_id,
+            listener.device_id(),
+            peer_sync_capability_evidence(ticket.sync_transport_capability())?,
+            PeerCapabilityTransportEvidenceSource::ConnectionTicket,
+        )
+        .err()
+        .context("stripped capability unexpectedly reached transport selection")?;
+        assert!(format!("{error:#}").contains("pinned-canonical-capability-missing"));
+
+        let store = PeerCapabilityStore::open(
+            directory.path().join(PEER_SYNC_CAPABILITY_DIRECTORY),
+            requester.device_id(),
+        )?;
+        let state = store
+            .load_state(PeerCapabilityKey::new(
+                listener_account_id,
+                listener.device_id(),
+            ))?
+            .context("stripping did not durably quarantine the peer floor")?;
+        assert_eq!(state.sequence, 2);
+        assert_eq!(
+            state.floor,
+            PeerSyncCapabilityFloor::Quarantined {
+                reason: PeerSyncCapabilityQuarantineReason::PinnedCanonicalCapabilityMissing,
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn peer_capability_transport_persisted_selection_is_resume_authority() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let requester = DeviceIdentity::generate()?;
+        let listener = DeviceIdentity::generate()?;
+        let (listener_account_id, listener_certificate, _, listener_directory) =
+            authority_for(&listener)?;
+        let (requester_account_id, _, _, _) = authority_for(&requester)?;
+        let ticket = ConnectionTicket::new_with_publication_channel_epoch_and_sync_policy(
+            EndpointAddr::new(SecretKey::generate().public()),
+            &listener,
+            listener_certificate,
+            listener_directory,
+            requester_account_id,
+            RoutePolicy::DirectOnly,
+            4,
+            true,
+        )?;
+        let evidence = peer_sync_capability_evidence(ticket.sync_transport_capability())?;
+        apply_peer_capability_floor_before_sync(
+            directory.path(),
+            &requester,
+            listener_account_id,
+            listener.device_id(),
+            evidence,
+            PeerCapabilityTransportEvidenceSource::ConnectionTicket,
+        )?;
+
+        let resumed = apply_peer_capability_floor_before_sync(
+            directory.path(),
+            &requester,
+            listener_account_id,
+            listener.device_id(),
+            evidence,
+            PeerCapabilityTransportEvidenceSource::PersistedCanonicalSelection,
+        )?;
+        assert_eq!(
+            resumed.permitted_use,
+            PeerSyncCapabilityUse::AuthenticatedCanonicalCandidate
+        );
+        assert_eq!(resumed.record_sequence, Some(1));
+        assert!(!resumed.changed);
+        assert_eq!(
+            resumed.evidence_source,
+            PeerCapabilityTransportEvidenceSource::PersistedCanonicalSelection
+        );
         Ok(())
     }
 

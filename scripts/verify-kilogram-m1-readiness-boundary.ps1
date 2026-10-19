@@ -99,6 +99,7 @@ foreach ($required in @(
     "'verify-kilogram-canonical-sync-v2-peer-capability-floor-boundary.ps1' = 'canonical_sync_v2_peer_capability_floor_boundary=verified'",
     "'verify-kilogram-canonical-sync-v2-current-peer-invitation-boundary.ps1' = 'canonical_sync_v2_current_peer_invitation_boundary=verified'",
     "'verify-kilogram-canonical-sync-v2-peer-capability-store-boundary.ps1' = 'canonical_sync_v2_peer_capability_store_boundary=verified'",
+    "'verify-kilogram-canonical-sync-v2-peer-capability-transport-enforcement-boundary.ps1' = 'canonical_sync_v2_peer_capability_transport_enforcement_boundary=verified'",
     "'verify-kilogram-canonical-sync-v2-dormant-rollout-controller-boundary.ps1' = 'canonical_sync_v2_dormant_rollout_controller_boundary=verified'",
     "'verify-kilogram-canonical-sync-v2-rollout-controller-observer-boundary.ps1' = 'canonical_sync_v2_rollout_controller_observer_boundary=verified'",
     "'verify-kilogram-canonical-sync-v2-rollout-containment-rehearsal-boundary.ps1' = 'canonical_sync_v2_rollout_containment_rehearsal_boundary=verified'",
@@ -119,7 +120,7 @@ foreach ($required in @(
     "'verify-kilogram-canonical-wire-boundary.ps1' = 'canonical_wire_boundary=verified'",
     "'verify-kilogram-protocol-compatibility-boundary.ps1' = 'protocol_compatibility_boundary=verified'",
     "Get-ChildItem -LiteralPath `$scriptsDirectory -Filter 'verify-*-boundary.ps1'",
-    'M1 readiness boundary inventory must contain exactly 131 gates',
+    'M1 readiness boundary inventory must contain exactly 132 gates',
     'function Invoke-CapturedPowerShell',
     "`$ErrorActionPreference = 'Continue'",
     "`$gateCapture.ExitCode -ne 0",
@@ -234,7 +235,7 @@ if ($LASTEXITCODE -ne 0 -or
 }
 
 Write-Output 'm1_readiness_boundary=verified'
-Write-Output 'boundary_inventory=closed-131'
+Write-Output 'boundary_inventory=closed-132'
 Write-Output 'candidate_or_accepted_tag_verifier=required'
 Write-Output 'accepted_m1_tag=M1.0.0'
 Write-Output 'format_and_offline_strict_clippy=required'
