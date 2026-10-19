@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.1",
+  "status": "canonical-sync-v2-atomic-policy-inbox-verified-local",
+  "changes_peer_network_wire": false,
+  "changes_sync_wire": false,
+  "changes_runtime_ipc": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "input_boundary": {
+    "explicit_user_or_test_operator_request_required": true,
+    "maximum_input_bytes": 8192,
+    "regular_file_required": true,
+    "symlink_input": "fail-closed",
+    "changed_during_read": "fail-closed",
+    "automatic_download": false,
+    "background_polling": false,
+    "remote_administration": false
+  },
+  "durability": {
+    "database": "redb-immediate",
+    "maximum_retained_bundles": 32,
+    "record_and_head_same_transaction": true,
+    "exact_replay_idempotent": true,
+    "full_bounded_chain_reverified_on_open": true,
+    "pinned_offline_trust_root": true,
+    "whole_database_rollback_without_external_witness": "not-detectable-non-claim"
+  },
+  "quarantine_matrix": {
+    "malformed_or_tampered_bundle": "reject-without-head-change",
+    "foreign_trust_root": "reject-without-head-change",
+    "stale_or_forked_policy": "reject-without-head-change",
+    "keyring_skip_or_fork": "reject-without-head-change",
+    "partial_or_corrupt_database": "fail-closed-on-open",
+    "orphan_or_non_tip_head": "fail-closed-on-open",
+    "oversized_history": "fail-closed"
+  },
+  "activation_boundary": {
+    "runtime_consumer_exists": false,
+    "desktop_consumer_exists": false,
+    "cli_consumer_exists": false,
+    "store_grants_activation_authority": false,
+    "production_trust_root_exists": false,
+    "automatic_enrollment_enabled": false
+  },
+  "acceptance": {
+    "rollout_unit_tests": "40/40",
+    "boundary_self_test": "verified",
+    "rustfmt": "verified",
+    "locked_offline_strict_clippy": "verified",
+    "network_executed": false,
+    "release_build": false,
+    "archive_created": false
+  }
+}

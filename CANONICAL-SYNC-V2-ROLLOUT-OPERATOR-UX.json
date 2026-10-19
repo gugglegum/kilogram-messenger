@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.4",
+  "status": "canonical-sync-v2-rollout-operator-ux-verified-local",
+  "changes_peer_network_wire": false,
+  "changes_sync_wire": false,
+  "changes_runtime_ipc": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "observer": {
+    "cli_command": "rollout-operator-status",
+    "trusted_policy_store_read_only": true,
+    "rollout_health_store_read_only": true,
+    "rollout_health_store_root_anchored": true,
+    "rollout_health_store_rotation_aware": true,
+    "missing_store_created": false,
+    "desktop_view_read_only": true,
+    "desktop_configuration_explicit": true,
+    "shows_cohort_seed": false,
+    "shows_cohort_bucket": false,
+    "shows_secret_key": false,
+    "writes_state": false
+  },
+  "explicit_ceremonies": {
+    "trusted_policy_import_requires_confirmation": true,
+    "trusted_policy_import_requires_rollout_directory": true,
+    "trusted_policy_import_synchronizes_complete_chain": true,
+    "approval_plan_requires_device_confirmation": true,
+    "approval_plan_writes_activation": false,
+    "approval_apply_requires_exact_artifact_id": true,
+    "recovery_is_separate_from_approval": true,
+    "recovery_plan_requires_device_confirmation": true,
+    "recovery_apply_requires_exact_artifact_id": true,
+    "desktop_one_toggle_activation": false,
+    "automatic_enrollment": false,
+    "network_triggered_apply": false
+  },
+  "authority_boundary": {
+    "offline_root_is_verification_only": true,
+    "release_policy_is_proposal_only": true,
+    "device_signs_approval": true,
+    "device_signs_activation": true,
+    "stale_or_changed_authority": "fail-closed",
+    "exact_replay": "idempotent"
+  },
+  "acceptance": {
+    "rollout_unit_tests": "56/56",
+    "desktop_rollout_parser_tests": "2/2",
+    "desktop_option_contract_test": "verified",
+    "boundary_self_test": "verified",
+    "rustfmt": "verified",
+    "locked_offline_strict_clippy": "verified",
+    "two_host_field_rehearsal": false,
+    "release_build": false,
+    "archive_created": false
+  }
+}

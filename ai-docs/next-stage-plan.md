@@ -1,4 +1,88 @@
-# Текущая точка: M1.1.91 завершён
+# Текущий расширенный пакет: M1.1.92–M1.2.05
+
+Статус на 2026-10-19: M1.1.92–M1.1.97 и M1.1.99–M1.2.5 реализованы локально;
+M1.1.95 зафиксирован commit-ом `14f7db3`, более поздний пакет ожидает итоговые
+границы, regression и commit. M1.1.98 закрывается тем же exact-binary two-host
+run, который является полевой частью M1.2.5. Public rollout остаётся `hold`,
+default — `legacy-only`.
+
+Пакет расширен по просьбе пользователя до полноценного ночного окна. Версия
+здесь означает завершённый проверяемый контракт, а не искусственный временной
+интервал; работа не замедляется ради часов. После каждого устойчивого результата
+разрешены commit и push.
+
+## M1.1.98 — exact-binary two-host portability evidence
+
+- собрать не-сетевой rollout test harness и обычный CLI в debug с постоянными
+  именами файлов;
+- выполнить один и тот же SHA-256 на основном ПК и тестовом Windows-ноутбуке;
+- на обоих хостах доказать полный rollout regression и absent-store/no-create
+  read-only observer;
+- хранить в tracked evidence только revision/hash/counts/host labels, без state,
+  Device/Account identifiers, raw logs и секретов.
+
+## M1.1.99 — offline release trust root и bounded keyring
+
+- отделить долгоживущий offline trust root от операционных policy-signing keys;
+- ввести root-signed monotonic keyring с bounded набором key certificates,
+  exact key IDs, назначениями и явным отзывом;
+- reject unknown signer, key substitution, fork, rollback, skipped epoch,
+  unauthorized purpose и oversized keyring;
+- не встраивать production private/public key и не добавлять сеть.
+
+## M1.2.0 — rotation-aware signed policy envelope
+
+- exact-связать policy с keyring epoch, signer certificate и release artifact;
+- разрешить безопасную ротацию операционного ключа без перепривязки локального
+  trust root;
+- containment permit сделать уже normal rollout permit;
+- сохранить старый single-key format только как неподключённый исторический
+  primitive, не как permissive fallback.
+
+## M1.2.1 — atomic policy inbox and quarantine
+
+- принимать policy/keyring только из явно указанного локального файла;
+- сначала bounded read + canonical decode + full verification, затем atomic
+  staging/commit;
+- invalid, stale, forked, partially written и symlink input помещать в
+  fail-closed diagnostic outcome, не меняя durable head;
+- auto-download, remote admin и background polling отсутствуют.
+
+## M1.2.2 — Device-signed rollout approval bridge
+
+- превратить controller proposal в exact Device-bound activation plan;
+- требовать отдельную явную подпись текущего Device и optimistic exact-head
+  match перед apply;
+- запретить release key, CLI observer, desktop toggle и network input напрямую
+  подписывать либо применять activation;
+- exact replay сделать идемпотентным, stale proposal — отклоняемым.
+
+## M1.2.3 — explicit containment recovery ceremony
+
+- добавить отдельный Device-signed recovery record, который ссылается на exact
+  containment head, healthy policy/health evidence и свежий recovery nonce;
+- запрещать implicit clear, remote clear, epoch skip и восстановление без
+  уже существующей authenticated canonical evidence;
+- проверить crash/restart/replay/fork и сохранение reader/resume rights.
+
+## M1.2.4 — operator UX без скрытой authority
+
+- вывести trust/keyring/policy/controller/approval/recovery состояние в
+  privacy-safe CLI и desktop read-only view;
+- plan/apply остаются отдельной осознанной церемонией с точным summary;
+- никакого одного toggle, auto-enrollment, cohort bucket/seed или secret в UI;
+- обычный запуск без policy остаётся прежним `legacy-only`.
+
+## M1.2.5 — end-to-end rehearsal и расширенная readiness
+
+- двуххостовый debug-only прогон key rotation, policy import, proposal,
+  explicit approval, containment и explicit recovery на test-only state;
+- negative matrix для foreign/stale/truncated/symlink/fork/replay;
+- обновить aggregate readiness, strict Clippy, rustfmt и stable full regression;
+- зафиксировать честный итоговый статус. Accept-canary и изменение public
+  default запрещены без отдельного решения и независимого security review.
+
+## Предыдущая точка: M1.1.91 завершён
 
 Статус: `canonical-sync-v2-n-minus-one-production-interop-verified`; public
 rollout по-прежнему `hold`, default остаётся `legacy-only`.

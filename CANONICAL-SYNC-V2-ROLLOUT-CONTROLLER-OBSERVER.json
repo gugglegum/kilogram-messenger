@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.96",
+  "status": "canonical-sync-v2-rollout-controller-observer-verified-read-only",
+  "implementation": [
+    "crates/kilogram-rollout",
+    "apps/kilogram-cli"
+  ],
+  "changes_peer_network_wire": false,
+  "changes_sync_wire": false,
+  "changes_runtime_ipc": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "observer": {
+    "command": "rollout-controller-status",
+    "opens_existing_rollout_database_read_only": true,
+    "missing_directory_is_hold_without_creation": true,
+    "requires_explicit_release_authority": true,
+    "verifies_pinned_release_authority": true,
+    "verifies_device_activation_authority": true,
+    "verifies_all_bounded_health_records": true,
+    "writes_rollout_state": false,
+    "writes_device_activation_state": false,
+    "uses_runtime_ipc": false,
+    "executes_network": false
+  },
+  "privacy": {
+    "prints_installation_seed": false,
+    "prints_cohort_bucket": false,
+    "prints_message_or_history_data": false,
+    "prints_peer_or_conversation_identity": false,
+    "prints_network_address_or_relay": false,
+    "prints_filesystem_path": false,
+    "prints_local_selected_boolean": true,
+    "prints_aggregate_zero_tolerance_count": true
+  },
+  "authority_boundary": {
+    "decision_is_advisory": true,
+    "runtime_activation_authorized": false,
+    "explicit_device_approval_still_required": true,
+    "release_policy_can_sign_activation": false,
+    "production_release_key_exists": false,
+    "policy_delivery_exists": false,
+    "automatic_enrollment_enabled": false,
+    "automatic_health_upload_enabled": false
+  },
+  "acceptance": {
+    "rollout_unit_tests": "20/20",
+    "missing_store_no_create_smoke": "verified",
+    "foreign_authority_rejection": "verified",
+    "tampered_health_rejection": "verified",
+    "rustfmt": "verified",
+    "locked_offline_strict_clippy": "verified",
+    "release_build": false,
+    "archive_created": false,
+    "network_executed": false
+  }
+}

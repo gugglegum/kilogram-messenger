@@ -33,6 +33,7 @@ kilogram-peer-capability-store = { path = "../../crates/kilogram-peer-capability
 kilogram-protocol = { path = "../../crates/kilogram-protocol" }
 kilogram-publication-conflict = { path = "../../crates/kilogram-publication-conflict" }
 kilogram-ratchet = { path = "../../crates/kilogram-ratchet" }
+kilogram-rollout = { path = "../../crates/kilogram-rollout" }
 kilogram-runtime-ipc = { path = "../../crates/kilogram-runtime-ipc" }
 kilogram-session = { path = "../../crates/kilogram-session" }
 kilogram-sync-capability = { path = "../../crates/kilogram-sync-capability" }
@@ -57,6 +58,7 @@ ed25519-dalek = { workspace = true, optional = true }
 windows = { version = "0.62.2", features = ["Foundation_Collections", "Networking_Connectivity", "System_Power"] }
 
 [dev-dependencies]
+ed25519-dalek.workspace = true
 kilogram-offline = { path = "../kilogram-offline" }
 
 [lints]

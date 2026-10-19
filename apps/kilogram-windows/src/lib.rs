@@ -36,12 +36,14 @@ use kilogram_runtime_ipc::{
 use zeroize::{Zeroize as _, Zeroizing};
 
 mod activation;
+mod rollout_operator;
 mod wizard;
 
 use activation::{
     ActivationPlan, ActivationStatus, ActivationUiAction, ActivationView, Disposition,
     GuidedRestartState, MigrationState,
 };
+use rollout_operator::{RolloutOperatorStatus, RolloutOperatorView};
 
 use wizard::{
     AccountRecoveryOutput, AccountRecoveryStatusOutput, DeviceLinkAcceptOutput,
@@ -91,6 +93,9 @@ struct DesktopOptions {
     runtime_profile_path: PathBuf,
     runtime_executable_path: PathBuf,
     bootstrap_executable_path: PathBuf,
+    rollout_directory: Option<PathBuf>,
+    trusted_policy_directory: Option<PathBuf>,
+    release_trust_root: Option<String>,
     startup_error: Option<String>,
 }
 
@@ -100,9 +105,22 @@ impl DesktopOptions {
         let mut runtime_profile_path = None;
         let mut runtime_executable_path = None;
         let mut bootstrap_executable_path = None;
+        let mut rollout_directory = None;
+        let mut trusted_policy_directory = None;
+        let mut release_trust_root = None;
         let mut startup_error = None;
         let mut arguments = arguments.into_iter();
         while let Some(argument) = arguments.next() {
+            if argument == "--release-trust-root" {
+                if let Some(value) = arguments.next() {
+                    release_trust_root = Some(value.to_string_lossy().into_owned());
+                } else {
+                    startup_error =
+                        Some("Desktop argument --release-trust-root requires a value".to_owned());
+                    break;
+                }
+                continue;
+            }
             let target = if argument == "--ipc-file" {
                 &mut descriptor_path
             } else if argument == "--runtime-profile" {
@@ -111,6 +129,10 @@ impl DesktopOptions {
                 &mut runtime_executable_path
             } else if argument == "--bootstrap-exe" {
                 &mut bootstrap_executable_path
+            } else if argument == "--rollout-dir" {
+                &mut rollout_directory
+            } else if argument == "--trusted-policy-dir" {
+                &mut trusted_policy_directory
             } else {
                 startup_error = Some(format!(
                     "Unknown desktop argument: {}",
@@ -127,6 +149,16 @@ impl DesktopOptions {
                 ));
                 break;
             }
+        }
+
+        let rollout_configuration_count = usize::from(rollout_directory.is_some())
+            + usize::from(trusted_policy_directory.is_some())
+            + usize::from(release_trust_root.is_some());
+        if rollout_configuration_count != 0 && rollout_configuration_count != 3 {
+            startup_error = Some(
+                "Rollout observer requires --rollout-dir, --trusted-policy-dir and --release-trust-root together"
+                    .to_owned(),
+            );
         }
 
         let runtime_profile_path =
@@ -157,9 +189,19 @@ impl DesktopOptions {
                 .unwrap_or_else(default_runtime_executable),
             bootstrap_executable_path: bootstrap_executable_path
                 .unwrap_or_else(default_bootstrap_executable),
+            rollout_directory,
+            trusted_policy_directory,
+            release_trust_root,
             startup_error,
         }
     }
+}
+
+#[derive(Clone, Debug)]
+struct RolloutOperatorConfig {
+    rollout_directory: PathBuf,
+    trusted_policy_directory: PathBuf,
+    release_trust_root: String,
 }
 
 fn default_bootstrap_executable() -> PathBuf {
@@ -243,6 +285,7 @@ enum Operation {
     CanonicalActivationStatus,
     CanonicalActivationPlan,
     CanonicalActivationApply,
+    RolloutOperatorStatus,
     CanonicalRuntimeStatus,
     Connect,
     AddContact,
@@ -278,6 +321,7 @@ enum RuntimeUiAction {
     RetryCanonicalActivationFreshStart,
     PlanCanonicalActivation,
     ApplyCanonicalActivation,
+    RefreshRolloutOperatorStatus,
     RefreshCanonicalRuntimeStatus,
 }
 
@@ -1364,7 +1408,8 @@ impl ViewModel {
                 | WorkerSuccess::PublicationConflictApplied(_)
                 | WorkerSuccess::CanonicalActivationStatus(_)
                 | WorkerSuccess::CanonicalActivationPlanned(_)
-                | WorkerSuccess::CanonicalActivationApplied { .. },
+                | WorkerSuccess::CanonicalActivationApplied { .. }
+                | WorkerSuccess::RolloutOperatorStatus(_),
             ) => {
                 self.error = Some("Wizard result reached the runtime view model".to_owned());
             }
@@ -1562,6 +1607,13 @@ enum WorkerRequest {
         canonical_evidence_id: Option<String>,
         expected_record_id: String,
     },
+    RolloutOperatorStatus {
+        executable: PathBuf,
+        state_dir: PathBuf,
+        rollout_directory: PathBuf,
+        trusted_policy_directory: PathBuf,
+        release_trust_root: String,
+    },
     Connect {
         descriptor: PathBuf,
     },
@@ -1679,6 +1731,7 @@ impl WorkerRequest {
             Self::CanonicalActivationStatus { .. } => Operation::CanonicalActivationStatus,
             Self::CanonicalActivationPlan { .. } => Operation::CanonicalActivationPlan,
             Self::CanonicalActivationApply { .. } => Operation::CanonicalActivationApply,
+            Self::RolloutOperatorStatus { .. } => Operation::RolloutOperatorStatus,
             Self::Connect { .. } => Operation::Connect,
             Self::CanonicalRuntimeStatus { .. } => Operation::CanonicalRuntimeStatus,
             Self::AddContact { .. } => Operation::AddContact,
@@ -1751,6 +1804,7 @@ enum WorkerSuccess {
         applied_record_id: String,
         status: ActivationStatus,
     },
+    RolloutOperatorStatus(RolloutOperatorStatus),
     Connected {
         account_id: String,
         device_id: String,
@@ -2714,6 +2768,30 @@ async fn execute_request(request: WorkerRequest) -> Result<WorkerSuccess> {
                 status,
             })
         }
+        WorkerRequest::RolloutOperatorStatus {
+            executable,
+            state_dir,
+            rollout_directory,
+            trusted_policy_directory,
+            release_trust_root,
+        } => {
+            let output = run_recovery_command(
+                &executable,
+                "rollout-operator-status",
+                command_arguments([
+                    ("--state-dir", state_dir.as_os_str()),
+                    ("--rollout-dir", rollout_directory.as_os_str()),
+                    ("--trusted-policy-dir", trusted_policy_directory.as_os_str()),
+                    (
+                        "--release-trust-root",
+                        std::ffi::OsStr::new(&release_trust_root),
+                    ),
+                ]),
+            )?;
+            Ok(WorkerSuccess::RolloutOperatorStatus(
+                RolloutOperatorStatus::parse(&output)?,
+            ))
+        }
         WorkerRequest::Connect { descriptor } => {
             match kilogram_runtime_ipc::call(&descriptor, RuntimeIpcCommand::Ping).await? {
                 RuntimeIpcResponse::Pong {
@@ -3119,6 +3197,8 @@ struct KilogramApp {
     recovery: RecoveryView,
     publication_conflict_recovery: PublicationConflictRecoveryView,
     canonical_activation: ActivationView,
+    rollout_operator_config: Option<RolloutOperatorConfig>,
+    rollout_operator: RolloutOperatorView,
     drop_target: Option<DropTarget>,
     runtime_process: Option<Child>,
     guided_stop_deadline: Option<Instant>,
@@ -3159,6 +3239,20 @@ impl KilogramApp {
         } else {
             RuntimeProfileDraft::default()
         };
+        let rollout_operator_config = match (
+            options.rollout_directory.as_ref(),
+            options.trusted_policy_directory.as_ref(),
+            options.release_trust_root.as_ref(),
+        ) {
+            (Some(rollout_directory), Some(trusted_policy_directory), Some(release_trust_root)) => {
+                Some(RolloutOperatorConfig {
+                    rollout_directory: rollout_directory.clone(),
+                    trusted_policy_directory: trusted_policy_directory.clone(),
+                    release_trust_root: release_trust_root.clone(),
+                })
+            }
+            _ => None,
+        };
         Self {
             model,
             worker,
@@ -3176,6 +3270,8 @@ impl KilogramApp {
             recovery: RecoveryView::default(),
             publication_conflict_recovery: PublicationConflictRecoveryView::default(),
             canonical_activation: ActivationView::default(),
+            rollout_operator_config,
+            rollout_operator: RolloutOperatorView::default(),
             drop_target: None,
             runtime_process: None,
             guided_stop_deadline: None,
@@ -3229,6 +3325,10 @@ impl KilogramApp {
                     | Operation::CanonicalActivationApply
             ) {
                 self.apply_canonical_activation_response(response);
+                continue;
+            }
+            if response.operation == Operation::RolloutOperatorStatus {
+                self.apply_rollout_operator_response(response);
                 continue;
             }
             if response.operation == Operation::Shutdown
@@ -3419,6 +3519,25 @@ impl KilogramApp {
                 }
                 self.model.error = Some(detail);
             }
+        }
+    }
+
+    fn apply_rollout_operator_response(&mut self, response: WorkerResponse) {
+        self.model.pending = None;
+        match response.result {
+            Ok(WorkerSuccess::RolloutOperatorStatus(status)) => {
+                self.rollout_operator.status = Some(status);
+                self.model.notice = Some(
+                    "Release trust and rollout controller state inspected without writing state."
+                        .to_owned(),
+                );
+                self.model.error = None;
+            }
+            Ok(_) => {
+                self.model.error =
+                    Some("Unexpected result reached the rollout observer".to_owned());
+            }
+            Err(message) => self.model.error = Some(message),
         }
     }
 
@@ -5235,6 +5354,38 @@ impl KilogramApp {
             Err(error) => self
                 .model
                 .fail(Operation::CanonicalActivationStatus, format!("{error:#}")),
+        }
+    }
+
+    fn start_rollout_operator_status(&mut self) {
+        let result: Result<WorkerRequest> = (|| {
+            let config = self
+                .rollout_operator_config
+                .as_ref()
+                .context("Configure the rollout observer at desktop startup")?;
+            let executable = canonical_input_path(
+                &self.runtime_executable_path,
+                "Kilogram CLI executable",
+                true,
+            )?;
+            let state_dir = canonical_input_path(
+                &self.runtime_profile_draft.state_dir,
+                "Runtime state directory",
+                false,
+            )?;
+            Ok(WorkerRequest::RolloutOperatorStatus {
+                executable,
+                state_dir,
+                rollout_directory: config.rollout_directory.clone(),
+                trusted_policy_directory: config.trusted_policy_directory.clone(),
+                release_trust_root: config.release_trust_root.clone(),
+            })
+        })();
+        match result {
+            Ok(request) => self.submit(Operation::RolloutOperatorStatus, request),
+            Err(error) => self
+                .model
+                .fail(Operation::RolloutOperatorStatus, format!("{error:#}")),
         }
     }
 
@@ -7928,6 +8079,16 @@ impl KilogramApp {
                     action = RuntimeUiAction::ApplyCanonicalActivation;
                 }
             }
+            ui.separator();
+            ui.strong("Signed release rollout observer");
+            if self.rollout_operator.draw(
+                ui,
+                self.rollout_operator_config.is_some(),
+                activation_busy,
+                compact_id,
+            ) {
+                action = RuntimeUiAction::RefreshRolloutOperatorStatus;
+            }
         });
         ui.collapsing("Wide-area ticket exchange", |ui| {
             ui.small("For an already enrolled contact, publish/fetch replaces manual synchronized ticket files. The store receives an opaque HPKE envelope under a pseudonymous directional channel; request timing and size remain visible.");
@@ -9197,6 +9358,8 @@ impl eframe::App for KilogramApp {
             self.start_canonical_activation_plan();
         } else if runtime_action == RuntimeUiAction::ApplyCanonicalActivation {
             self.start_canonical_activation_apply();
+        } else if runtime_action == RuntimeUiAction::RefreshRolloutOperatorStatus {
+            self.start_rollout_operator_status();
         } else if runtime_action == RuntimeUiAction::RefreshCanonicalRuntimeStatus {
             self.start_canonical_runtime_status();
         } else if add_contact_clicked {
@@ -9263,6 +9426,12 @@ mod tests {
             OsString::from("runtime-test.exe"),
             OsString::from("--bootstrap-exe"),
             OsString::from("bootstrap-test.exe"),
+            OsString::from("--rollout-dir"),
+            OsString::from("rollout-state"),
+            OsString::from("--trusted-policy-dir"),
+            OsString::from("trusted-policy-state"),
+            OsString::from("--release-trust-root"),
+            OsString::from("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
         ]);
         assert_eq!(options.descriptor_path, PathBuf::from("desktop.ipc.json"));
         assert_eq!(
@@ -9277,10 +9446,27 @@ mod tests {
             options.bootstrap_executable_path,
             PathBuf::from("bootstrap-test.exe")
         );
+        assert_eq!(
+            options.rollout_directory,
+            Some(PathBuf::from("rollout-state"))
+        );
+        assert_eq!(
+            options.trusted_policy_directory,
+            Some(PathBuf::from("trusted-policy-state"))
+        );
+        assert_eq!(
+            options.release_trust_root.as_deref(),
+            Some("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+        );
         assert!(options.startup_error.is_none());
 
         let unknown = DesktopOptions::from_arguments([OsString::from("--unknown")]);
         assert!(unknown.startup_error.is_some());
+        let partial = DesktopOptions::from_arguments([
+            OsString::from("--rollout-dir"),
+            OsString::from("rollout-state"),
+        ]);
+        assert!(partial.startup_error.is_some());
     }
 
     #[test]

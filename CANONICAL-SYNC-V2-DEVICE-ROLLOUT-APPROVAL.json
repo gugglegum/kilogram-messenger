@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.2",
+  "status": "canonical-sync-v2-device-rollout-approval-verified-local",
+  "changes_peer_network_wire": false,
+  "changes_sync_wire": false,
+  "changes_runtime_ipc": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "authority_boundary": {
+    "release_policy_can_propose": true,
+    "release_policy_can_sign_approval": false,
+    "release_policy_can_sign_activation": false,
+    "explicit_local_approval_required": true,
+    "approval_signed_by_device": true,
+    "candidate_activation_signed_by_device": true,
+    "automatic_activation": false
+  },
+  "exact_bindings": {
+    "trusted_policy_bundle_id": true,
+    "release_policy_id_and_epoch": true,
+    "controller_target_and_disposition": true,
+    "local_device_id": true,
+    "activation_predecessor_id_and_epoch": true,
+    "candidate_activation_bytes": true,
+    "fresh_nonce": true
+  },
+  "apply_boundary": {
+    "maximum_approval_bytes": 2048,
+    "exact_replay_idempotent": true,
+    "changed_policy_or_bundle": "fail-closed",
+    "changed_activation_head": "fail-closed",
+    "wrong_device_or_tamper": "fail-closed",
+    "containment_requires_existing_canonical_evidence": true,
+    "storage_side_effects": false,
+    "network_side_effects": false
+  },
+  "remaining_boundaries": {
+    "activation_persistence_integrated": false,
+    "runtime_consumer_exists": false,
+    "desktop_consumer_exists": false,
+    "production_trust_root_exists": false,
+    "containment_recovery_exists": false
+  },
+  "acceptance": {
+    "rollout_unit_tests": "44/44",
+    "boundary_self_test": "verified",
+    "rustfmt": "verified",
+    "locked_offline_strict_clippy": "verified",
+    "network_executed": false,
+    "release_build": false,
+    "archive_created": false
+  }
+}

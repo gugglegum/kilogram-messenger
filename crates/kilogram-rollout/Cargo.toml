@@ -11,6 +11,8 @@ publish = false
 blake3.workspace = true
 ed25519-dalek.workspace = true
 getrandom.workspace = true
+kilogram-identity = { path = "../kilogram-identity" }
+kilogram-session = { path = "../kilogram-session" }
 postcard.workspace = true
 redb.workspace = true
 serde.workspace = true

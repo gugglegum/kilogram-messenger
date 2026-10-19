@@ -2465,6 +2465,79 @@ containment preserves already authenticated canonical evidence, cannot enroll
 a legacy-only installation and cannot clear itself. No runtime, desktop or CLI
 consumer is enabled, so the public default remains `legacy-only`.
 
+[`RFC-0220`](docs/RFC-0220-m1196-read-only-rollout-controller-observer.md)
+exposes that decision through a bounded offline CLI status command. It opens
+only an already initialized rollout database through redb's read-only API,
+validates the explicit pinned release key and Device activation authority, and
+prints a privacy-safe hold or proposal. A missing store remains absent and
+means hold; the command cannot approve or apply activation, use runtime IPC or
+perform network I/O. The public default remains `legacy-only`.
+
+[`RFC-0221`](docs/RFC-0221-m1197-rollout-containment-rehearsal.md) closes a
+containment-recovery edge case: a later healthy policy can no longer make the
+controller propose a normal step while emergency containment is active.
+Health is additionally bound to the exact release artifact. A deterministic
+640-case controller matrix and corrupt/partial redb rehearsals preserve the
+explicit Device approval boundary; public behavior remains `legacy-only`.
+
+[`RFC-0223`](docs/RFC-0223-m1199-offline-release-keyring.md) separates the
+long-lived offline release trust root from at most eight operational policy
+keys. Root-signed complete snapshots form a monotonic predecessor-bound chain;
+keys cannot disappear or mutate, revocation is irreversible, and a narrow
+containment-only key cannot authorize normal rollout. The keyring remains a
+dormant pure-verification primitive with no embedded production root, policy
+delivery, runtime/desktop/CLI consumer or automatic enrollment. Public behavior
+therefore remains `legacy-only`.
+
+[`RFC-0224`](docs/RFC-0224-m1200-rotation-aware-policy-bundle.md) binds each
+release policy to its exact root-signed keyring snapshot, operational signer
+and narrow purpose. Successive policies can cross exactly one verified key
+rotation while retaining the existing exact policy-predecessor chain. A
+containment-only key may stop rollout but cannot expand it. The self-contained
+bundle remains dormant and has no durable store, downloader or runtime
+authority; public behavior remains `legacy-only`.
+
+[`RFC-0225`](docs/RFC-0225-m1201-atomic-policy-inbox.md) adds an explicit-file
+inbox for those bundles. A bounded regular file is fully verified before one
+immediate-durability transaction appends the immutable record and head; reopen
+revalidates the complete bounded chain. Malformed, stale, forked, foreign,
+oversized or unsafe input is rejected without changing the head. There is no
+downloader, background polling, remote administration or activation authority,
+so public behavior remains `legacy-only`.
+
+[`RFC-0226`](docs/RFC-0226-m1202-device-signed-rollout-approval.md) bridges an
+eligible rollout proposal to the existing activation model without transferring
+authority to release infrastructure. An explicit local action creates a bounded
+Device-signed approval over the exact trusted bundle, proposal, activation head
+and independently Device-signed candidate record. Changed policy/head, tamper,
+wrong Device and evidence-free containment fail closed; no persistence, runtime
+IPC or network side effect occurs. Public behavior remains `legacy-only`.
+
+[`RFC-0227`](docs/RFC-0227-m1203-explicit-containment-recovery.md) makes
+leaving emergency containment a distinct Device-signed ceremony. A healthy
+root-verified normal policy and exact local health are prerequisites rather
+than authority; explicit local approval must preserve the current migration
+target and authenticated evidence. Changed policy, health, Device or head fail
+closed, and `canonical-required` remains outside this public controller. No
+state is persisted and the public default remains `legacy-only`.
+
+[`RFC-0228`](docs/RFC-0228-m1204-rollout-operator-ux.md) exposes the complete
+release trust, policy, health, controller and Device-activation state through a
+privacy-safe CLI observer and an explicitly configured read-only Windows panel.
+Policy import, Device approval apply and containment recovery remain separate
+confirmation-bound CLI ceremonies with exact artifact IDs; the desktop has no
+rollout toggle or signing authority. Missing stores remain absent, automatic
+enrollment is forbidden and the public default remains `legacy-only`.
+
+[`RFC-0229`](docs/RFC-0229-m1205-rollout-end-to-end-rehearsal.md) joins those
+pieces in one disposable end-to-end rehearsal. The offline root verifies a
+complete policy/key-rotation chain; installation health follows that verified
+chain; explicit Device approval, containment and explicit recovery are tested
+together. Interrupted apply can repair only the missing high-water for the
+same exact Device-signed artifact. Foreign, stale, truncated and forked input
+fails closed. Public behavior remains `legacy-only`, and accept-canary still
+requires a separate decision plus independent security review.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

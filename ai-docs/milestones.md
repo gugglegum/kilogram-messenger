@@ -7298,3 +7298,166 @@ correlation visible, Windows-only field evidence, independent security audit
   runtime и controller не могут подписать либо применить activation;
 - runtime/desktop/CLI consumer, production key и policy delivery отсутствуют;
   wire/IPC/default не менялись, public default остаётся `legacy-only`.
+
+### M1.1.96 — read-only rollout-controller observer: принят локально
+
+- `rollout-controller-status` — единственный bounded offline consumer нового
+  crate; runtime и desktop по-прежнему его не вызывают;
+- caller явно передаёт pinned Ed25519 release public key; embedded production
+  key и policy downloader отсутствуют;
+- rollout store открывается redb read-only, все retained bounded health records
+  MAC-проверяются, current policy/health exact-связываются;
+- missing directory/database не создаётся и даёт ordinary hold; symlink,
+  foreign authority, partial/tampered state fail closed;
+- Device activation chain проверяется независимо; `canonical-required` вне
+  bounded public controller и отвергается;
+- output не содержит seed, bucket, paths, contacts, messages или network data;
+  proposal не является authority и не может применить activation;
+- rollout tests 20/20, missing-store stable CLI smoke, boundary/self-test,
+  rustfmt и locked/offline strict Clippy прошли;
+- peer/sync wire, runtime IPC и public default не менялись; default
+  `legacy-only`.
+
+### M1.1.97 — containment and corruption rehearsal: принят локально
+
+- найден и закрыт implicit containment-clear: healthy normal policy больше не
+  может предложить normal advance при текущем emergency containment;
+- выход из containment требует отдельной explicit Device recovery ceremony;
+- pure controller exact-связывает health с policy ID, release artifact ID,
+  phase и cohort upper bound, не полагаясь только на store caller;
+- exhaustive 640-case matrix проверяет все phase/disposition/selection/health/
+  target/current-disposition/evidence комбинации;
+- каждый proposal требует Device approval, не даёт release-policy signing или
+  runtime authority; containment сохраняет target и требует evidence;
+- missing current health и truncated redb добавлены к foreign-key/tamper
+  fail-closed rehearsal; whole-store rollback без witness остаётся non-claim;
+- 25/25 tests, boundary/self-test, rustfmt и locked/offline strict Clippy
+  прошли; сеть, runtime IPC и default не менялись.
+
+### M1.1.99 — offline release trust root and key rotation: принят локально
+
+- long-lived offline root отделён от operational policy-signing keys;
+- canonical root-signed complete keyring содержит максимум восемь строго
+  упорядоченных сертификатов и exact predecessor-bound monotonic epoch;
+- successor не может удалить либо изменить старый key, задним числом добавить
+  key, отменить revocation, пропустить epoch или образовать fork;
+- normal и containment signing permissions разделены; containment-only key не
+  даёт право расширять rollout, unknown/revoked/wrong-purpose key отвергается;
+- хотя бы один активный containment signer обязателен в каждом snapshot;
+- production root/private keys, filesystem store, policy delivery и runtime,
+  desktop либо CLI consumers отсутствуют; full-chain rollback без external
+  witness остаётся non-claim;
+- rollout tests 31/31, boundary/self-test, rustfmt и locked/offline strict
+  Clippy прошли; wire/IPC/default не менялись, public default `legacy-only`.
+
+### M1.2.0 — rotation-aware trusted policy bundle: принят локально
+
+- bounded canonical bundle self-contained хранит exact root-signed keyring,
+  keyring ID, operational signer ID, narrow purpose и signed policy bytes;
+- verification начинается с explicitly supplied offline trust-root public key,
+  повторно вычисляет bindings и требует byte-exact canonical re-encode;
+- policy chain может перейти с прежнего authority на новый operational key
+  через ровно один verified keyring successor, не теряя policy epoch/previous ID;
+- containment-only key может подписать emergency containment, но normal rollout
+  expansion им технически не авторизуется; purpose substitution fail closed;
+- foreign root, keyring/policy/signing-key substitution, revoked signer,
+  keyring fork/skip и stale policy отвергаются без permissive fallback;
+- durable store, inbox/download, production root и runtime/desktop/CLI consumers
+  отсутствуют; rollout tests 36/36, boundary/self-test, rustfmt и locked/offline
+  strict Clippy прошли, public default остаётся `legacy-only`.
+
+### M1.2.1 — atomic trusted-policy inbox and quarantine: принят локально
+
+- rotation-aware bundle принимается только из explicitly requested local file;
+- input обязан быть real regular non-symlink file размером 1–8192 bytes и
+  сохранять тип/длину на протяжении bounded read;
+- root/keyring/signer/purpose/policy/canonical bytes полностью проверяются до
+  любого durable write; reject не копирует invalid bytes в store;
+- отдельная redb pin-ит offline trust root и в одной immediate transaction
+  append-ит immutable bundle record и replacement head;
+- exact replay idempotent, concurrent head mismatch fail closed;
+- reopen повторно проверяет максимум 32 records как один exact policy/keyring
+  chain от genesis до named tip; orphan/gap/fork/corruption отвергаются;
+- full coordinated DB rollback без witness остаётся non-claim; download,
+  polling, remote admin и activation consumers отсутствуют;
+- rollout tests 40/40, boundary/self-test, rustfmt и locked/offline strict
+  Clippy прошли; wire/IPC/default не менялись, public default `legacy-only`.
+
+### M1.2.2 — Device-signed rollout approval bridge: принят локально
+
+- controller proposal остаётся advisory и принимается только с exact флагами
+  explicit Device approval=true и release signing authority=false;
+- подготовка требует явный `UserOrTestOperatorApproved` marker;
+- Device-signed approval связывает trusted bundle ID, policy ID/epoch,
+  target/disposition, Device ID, exact activation predecessor ID/epoch, fresh
+  nonce и полные bytes independently Device-signed activation candidate;
+- release root и operational policy keys не способны подписать ни один слой;
+- changed bundle/policy/proposal/head, wrong Device и tamper fail closed;
+- byte-exact already-applied candidate является единственным idempotent replay;
+- containment сохраняет authenticated canonical evidence и не создаётся из
+  evidence-free head;
+- bridge не пишет filesystem, не вызывает runtime IPC/сеть и не подключён к
+  desktop/runtime persistence; public default остаётся `legacy-only`;
+- rollout tests 44/44, boundary/self-test, rustfmt и locked/offline strict
+  Clippy прошли.
+
+### M1.2.3 — explicit containment recovery ceremony: принят локально
+
+- containment нельзя снять новой policy или healthy status автоматически;
+- требуется отдельный `UserOrTestOperatorApproved` и подпись владельца
+  текущей Device activation chain;
+- root-verified normal policy и exact matching health являются prerequisites,
+  но не authority; policy target не может быть ниже contained state;
+- health требует successful runtime start и canonical sync, без runtime/sync
+  failures, pause/interruption, downgrade, corruption и zero-tolerance events;
+- approval связывает bundle, полный fixed-schema health, Device, exact
+  containment head/evidence, nonce и Device-signed candidate bytes;
+- recovery меняет только disposition на normal, сохраняя target/evidence;
+- canonical-required вне public rollout controller и отвергается;
+- exact replay idempotent; changed policy/health/head, wrong Device и tamper
+  fail closed;
+- filesystem/runtime IPC/network side effects и consumers отсутствуют;
+  public default остаётся `legacy-only`;
+- rollout tests 48/48, boundary/self-test, rustfmt и locked/offline strict
+  Clippy прошли.
+
+### M1.2.4 — rollout operator UX without hidden authority: принят локально
+
+- `rollout-operator-status` read-only объединяет Device activation chain,
+  root-verified trusted bundle, matching rollout health и controller decision;
+- missing trusted/health store не создаётся, а даёт fail-closed hold; read-only
+  trusted-policy reopen проверяет exact bytes без изменения redb;
+- output не содержит installation seed/cohort bucket, private keys, paths,
+  contacts, messages или network metadata;
+- Windows desktop показывает только компактный read-only snapshot при явных
+  `--rollout-dir`, `--trusted-policy-dir`, `--release-trust-root`; без всех трёх
+  view disabled и поведение остаётся legacy-only;
+- import требует `--confirm-import`; approval/recovery имеют отдельные plan и
+  apply, Device-signed no-clobber artifact и exact confirmation ID;
+- desktop не имеет rollout toggle, approval/recovery action либо signing
+  authority; auto-enrollment/network apply отсутствуют;
+- trusted health теперь root-anchored и rotation-aware: import требует
+  explicit `--rollout-dir` и синхронизирует полную verified bundle chain;
+- rollout tests 56/56 и новые desktop parser tests 2/2 прошли; peer/sync wire,
+  runtime IPC и public default не менялись.
+
+### M1.2.5 — complete rollout rehearsal and restart repair: принят локально
+
+- один deterministic test проходит пять root-verified policy bundles:
+  genesis, advertise, accept, emergency containment и explicit recovery;
+- operational signing key rotation проходит через offline-root keyring chain;
+  trusted health проверяет уже установленный prefix и добавляет только exact
+  missing successors;
+- explicit Device approval выполнен для трёх activation transitions; release
+  root/operational keys остаются только verification/proposal authority;
+- crash после durable activation record, но до high-water, repair-ится только
+  тем же exact Device-signed approval/recovery artifact после повторной
+  проверки текущих policy, health, Device и predecessor;
+- foreign root, stale, truncated и forked chain reject; replay idempotent;
+  symlink input отвергается на поддерживающем filesystem host;
+- named end-to-end rehearsal и focused CLI interrupted-apply regression
+  прошли локально; весь rollout suite содержит 56 tests;
+- stable full workspace regression и aggregate readiness 131/131 прошли;
+- двуххостовый exact-binary Windows run пока pending; public default остаётся
+  `legacy-only`, accept-canary запрещён без
+  отдельного решения и независимого security review.

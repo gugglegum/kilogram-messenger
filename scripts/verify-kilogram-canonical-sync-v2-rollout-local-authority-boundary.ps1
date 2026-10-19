@@ -258,15 +258,19 @@ function Assert-Contract {
         throw 'rollout crate is absent from the workspace'
     }
 
-    $runtimeConsumers = @(Get-ChildItem -LiteralPath (Join-Path $workspace 'apps'),
+    $rolloutConsumers = @(Get-ChildItem -LiteralPath (Join-Path $workspace 'apps'),
         (Join-Path $workspace 'crates') -Recurse -Filter 'Cargo.toml' |
         Where-Object { $_.FullName -cne $cratePath } |
         Where-Object {
             (Get-Content -LiteralPath $_.FullName -Raw).IndexOf(
                 'kilogram-rollout', [StringComparison]::Ordinal) -ge 0
         })
-    if ($runtimeConsumers.Count -ne 0) {
-        throw 'kilogram-rollout is already consumed by another crate'
+    $expectedReadOnlyObserver = [IO.Path]::GetFullPath(
+        (Join-Path $workspace 'apps\kilogram-cli\Cargo.toml'))
+    if ($rolloutConsumers.Count -ne 1 -or
+        [IO.Path]::GetFullPath($rolloutConsumers[0].FullName) -cne
+            $expectedReadOnlyObserver) {
+        throw 'kilogram-rollout has a consumer beyond the bounded CLI observer'
     }
 
     $normalizedRfc = [regex]::Replace($Rfc, '\s+', ' ')

@@ -96,6 +96,19 @@ foreach ($required in @(
     "'verify-kilogram-canonical-sync-v2-guided-restart-boundary.ps1' = 'canonical_sync_v2_guided_restart_boundary=verified'",
     "'verify-kilogram-canonical-sync-v2-public-rollout-decision-boundary.ps1' = 'canonical_sync_v2_public_rollout_decision_boundary=verified'",
     "'verify-kilogram-canonical-sync-v2-rollout-local-authority-boundary.ps1' = 'canonical_sync_v2_rollout_local_authority_boundary=verified'",
+    "'verify-kilogram-canonical-sync-v2-peer-capability-floor-boundary.ps1' = 'canonical_sync_v2_peer_capability_floor_boundary=verified'",
+    "'verify-kilogram-canonical-sync-v2-current-peer-invitation-boundary.ps1' = 'canonical_sync_v2_current_peer_invitation_boundary=verified'",
+    "'verify-kilogram-canonical-sync-v2-peer-capability-store-boundary.ps1' = 'canonical_sync_v2_peer_capability_store_boundary=verified'",
+    "'verify-kilogram-canonical-sync-v2-dormant-rollout-controller-boundary.ps1' = 'canonical_sync_v2_dormant_rollout_controller_boundary=verified'",
+    "'verify-kilogram-canonical-sync-v2-rollout-controller-observer-boundary.ps1' = 'canonical_sync_v2_rollout_controller_observer_boundary=verified'",
+    "'verify-kilogram-canonical-sync-v2-rollout-containment-rehearsal-boundary.ps1' = 'canonical_sync_v2_rollout_containment_rehearsal_boundary=verified'",
+    "'verify-kilogram-canonical-sync-v2-release-keyring-boundary.ps1' = 'canonical_sync_v2_release_keyring_boundary=verified'",
+    "'verify-kilogram-canonical-sync-v2-trusted-policy-bundle-boundary.ps1' = 'canonical_sync_v2_trusted_policy_bundle_boundary=verified'",
+    "'verify-kilogram-canonical-sync-v2-trusted-policy-inbox-boundary.ps1' = 'canonical_sync_v2_trusted_policy_inbox_boundary=verified'",
+    "'verify-kilogram-canonical-sync-v2-device-rollout-approval-boundary.ps1' = 'canonical_sync_v2_device_rollout_approval_boundary=verified'",
+    "'verify-kilogram-canonical-sync-v2-containment-recovery-boundary.ps1' = 'canonical_sync_v2_containment_recovery_boundary=verified'",
+    "'verify-kilogram-canonical-sync-v2-rollout-operator-ux-boundary.ps1' = 'canonical_sync_v2_rollout_operator_ux_boundary=verified'",
+    "'verify-kilogram-canonical-sync-v2-rollout-end-to-end-rehearsal-boundary.ps1' = 'canonical_sync_v2_rollout_end_to_end_rehearsal_boundary=verified'",
     "'verify-kilogram-canonical-sync-v2-n-minus-one-interop-boundary.ps1' = 'canonical_sync_v2_n_minus_one_interop_boundary=verified'",
     "'verify-kilogram-sync-v2-evidence-boundary.ps1' = 'sync_v2_evidence_boundary=verified'",
     "'verify-kilogram-canonical-sync-session-boundary.ps1' = 'canonical_sync_session_boundary=verified'",
@@ -106,7 +119,7 @@ foreach ($required in @(
     "'verify-kilogram-canonical-wire-boundary.ps1' = 'canonical_wire_boundary=verified'",
     "'verify-kilogram-protocol-compatibility-boundary.ps1' = 'protocol_compatibility_boundary=verified'",
     "Get-ChildItem -LiteralPath `$scriptsDirectory -Filter 'verify-*-boundary.ps1'",
-    'M1 readiness boundary inventory must contain exactly 118 gates',
+    'M1 readiness boundary inventory must contain exactly 131 gates',
     'function Invoke-CapturedPowerShell',
     "`$ErrorActionPreference = 'Continue'",
     "`$gateCapture.ExitCode -ne 0",
@@ -221,7 +234,7 @@ if ($LASTEXITCODE -ne 0 -or
 }
 
 Write-Output 'm1_readiness_boundary=verified'
-Write-Output 'boundary_inventory=closed-118'
+Write-Output 'boundary_inventory=closed-131'
 Write-Output 'candidate_or_accepted_tag_verifier=required'
 Write-Output 'accepted_m1_tag=M1.0.0'
 Write-Output 'format_and_offline_strict_clippy=required'

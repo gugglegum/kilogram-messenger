@@ -74,6 +74,29 @@ use kilogram_ratchet::{
     DecryptedMessage, MAX_PREKEY_POOL_SIZE, RatchetOperation, RatchetState, SignedPrekeyPool,
     SignedRatchetIdentity, unix_time_now,
 };
+use kilogram_rollout::{
+    CohortEvaluation, ReleasePolicyAuthority, RolloutActivationDisposition,
+    RolloutActivationTarget, RolloutControllerCurrentState, RolloutControllerDecision,
+    RolloutControllerHoldReason, RolloutHealthSnapshot,
+    containment_recovery::{
+        ContainmentRecoveryApplyOutcome, ExplicitContainmentRecoveryApproval,
+        MAX_CONTAINMENT_RECOVERY_APPROVAL_BYTES, SignedContainmentRecoveryApproval,
+    },
+    evaluate_rollout_controller, inspect_existing_rollout_store,
+    rollout_approval::{
+        DeviceRolloutApprovalApplyOutcome, ExplicitDeviceRolloutApproval,
+        MAX_DEVICE_ROLLOUT_APPROVAL_BYTES, SignedDeviceRolloutApproval,
+    },
+    trust::ReleaseTrustRoot,
+    trusted_health_store::{
+        TrustedRolloutHealthStore, inspect_existing_trusted_rollout_health_store,
+    },
+    trusted_policy::TrustedReleasePolicyBundle,
+    trusted_policy_store::{
+        ExplicitTrustedPolicyImport, TrustedPolicyImportOutcome, TrustedPolicyStore,
+        inspect_existing_trusted_policy_store,
+    },
+};
 use kilogram_runtime_ipc::{
     DEFAULT_VOLUNTEER_STORAGE_LISTEN_PORT, MAX_RUNTIME_IPC_CONVERSATION_PAGE_SIZE,
     MAX_RUNTIME_IPC_SYNC_PATH_OBSERVATIONS, RuntimeIpcCanonicalSyncV2Disposition,
@@ -2048,6 +2071,133 @@ enum Command {
         expected_record_id: String,
     },
 
+    /// Evaluate the dormant rollout controller without writing any state.
+    RolloutControllerStatus {
+        /// Directory containing this Device's persistent activation state.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Installation-local rollout directory; a missing directory is a hold.
+        #[arg(long)]
+        rollout_dir: PathBuf,
+
+        /// Explicitly pinned Ed25519 release-policy public key, as 64 hex characters.
+        #[arg(long)]
+        release_authority: String,
+    },
+
+    /// Inspect trusted rollout policy, local health, controller and Device authority read-only.
+    RolloutOperatorStatus {
+        /// Directory containing this Device's persistent activation state.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Installation-local rollout health directory; a missing directory is a hold.
+        #[arg(long)]
+        rollout_dir: PathBuf,
+
+        /// Installation-local trusted-policy inbox directory; absence is read-only hold.
+        #[arg(long)]
+        trusted_policy_dir: PathBuf,
+
+        /// Explicit offline release trust-root public key, as 64 hex characters.
+        #[arg(long)]
+        release_trust_root: String,
+    },
+
+    /// Explicitly import one root-verified trusted rollout policy file.
+    RolloutTrustedPolicyImport {
+        /// Installation-local rotation-aware rollout health directory.
+        #[arg(long)]
+        rollout_dir: PathBuf,
+
+        /// Installation-local trusted-policy inbox directory.
+        #[arg(long)]
+        trusted_policy_dir: PathBuf,
+
+        /// Explicit offline release trust-root public key, as 64 hex characters.
+        #[arg(long)]
+        release_trust_root: String,
+
+        /// Bounded local trusted-policy bundle file.
+        #[arg(long)]
+        policy_file: PathBuf,
+
+        /// Required acknowledgement that this command writes the trusted-policy inbox.
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        confirm_import: bool,
+    },
+
+    /// Create a no-clobber Device-signed rollout approval without applying it.
+    RolloutApprovalPlan {
+        #[arg(long)]
+        state_dir: PathBuf,
+        #[arg(long)]
+        rollout_dir: PathBuf,
+        #[arg(long)]
+        trusted_policy_dir: PathBuf,
+        #[arg(long)]
+        release_trust_root: String,
+        /// New no-clobber Device-signed approval artifact.
+        #[arg(long)]
+        approval_file: PathBuf,
+        /// Required acknowledgement that the Device will sign the exact proposal.
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        confirm_device_approval: bool,
+    },
+
+    /// Apply one exact Device-signed rollout approval to local activation authority.
+    RolloutApprovalApply {
+        #[arg(long)]
+        state_dir: PathBuf,
+        #[arg(long)]
+        rollout_dir: PathBuf,
+        #[arg(long)]
+        trusted_policy_dir: PathBuf,
+        #[arg(long)]
+        release_trust_root: String,
+        #[arg(long)]
+        approval_file: PathBuf,
+        /// Exact approval ID printed by rollout-approval-plan.
+        #[arg(long)]
+        expected_approval_id: String,
+    },
+
+    /// Create a no-clobber explicit containment-recovery approval without applying it.
+    RolloutRecoveryPlan {
+        #[arg(long)]
+        state_dir: PathBuf,
+        #[arg(long)]
+        rollout_dir: PathBuf,
+        #[arg(long)]
+        trusted_policy_dir: PathBuf,
+        #[arg(long)]
+        release_trust_root: String,
+        /// New no-clobber Device-signed recovery artifact.
+        #[arg(long)]
+        recovery_file: PathBuf,
+        /// Required acknowledgement that the Device will sign containment recovery.
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        confirm_device_recovery: bool,
+    },
+
+    /// Apply one exact Device-signed containment-recovery approval.
+    RolloutRecoveryApply {
+        #[arg(long)]
+        state_dir: PathBuf,
+        #[arg(long)]
+        rollout_dir: PathBuf,
+        #[arg(long)]
+        trusted_policy_dir: PathBuf,
+        #[arg(long)]
+        release_trust_root: String,
+        #[arg(long)]
+        recovery_file: PathBuf,
+        /// Exact recovery ID printed by rollout-recovery-plan.
+        #[arg(long)]
+        expected_recovery_id: String,
+    },
+
     /// Wrap one exact current connection ticket in a Device-signed invitation.
     CurrentPeerInvitationCreate {
         /// Directory containing the listening Device identity.
@@ -2350,6 +2500,12 @@ impl Command {
             | Self::CanonicalSyncPolicyStatus { state_dir }
             | Self::CanonicalSyncPolicyPlan { state_dir, .. }
             | Self::CanonicalSyncPolicyApply { state_dir, .. }
+            | Self::RolloutControllerStatus { state_dir, .. }
+            | Self::RolloutOperatorStatus { state_dir, .. }
+            | Self::RolloutApprovalPlan { state_dir, .. }
+            | Self::RolloutApprovalApply { state_dir, .. }
+            | Self::RolloutRecoveryPlan { state_dir, .. }
+            | Self::RolloutRecoveryApply { state_dir, .. }
             | Self::CurrentPeerInvitationCreate { state_dir, .. }
             | Self::CurrentPeerInvitationImport { state_dir, .. }
             | Self::PeerCapabilityStatus { state_dir, .. }
@@ -2365,6 +2521,7 @@ impl Command {
             | Self::StateVaultKeyImport { state_dir, .. }
             | Self::StateVaultRestore { state_dir, .. } => Some(state_dir),
             Self::AccountCreate { .. }
+            | Self::RolloutTrustedPolicyImport { .. }
             | Self::CurrentPeerInvitationInspect { .. }
             | Self::RuntimeProfileCreate { .. }
             | Self::RuntimeFromProfile { .. }
@@ -2419,6 +2576,10 @@ impl Command {
                     | Self::StateVaultRestore { .. }
                     | Self::Runtime { .. }
                     | Self::RuntimePublicationConflictCreateRequest { .. }
+                    | Self::RolloutControllerStatus { .. }
+                    | Self::RolloutOperatorStatus { .. }
+                    | Self::RolloutApprovalPlan { .. }
+                    | Self::RolloutRecoveryPlan { .. }
                     | Self::HistoryRecoveryPlanRun { .. }
                     | Self::HistoryRecoveryPlanWatch { .. }
             )
@@ -4231,6 +4392,95 @@ async fn run_command(command: Command) -> Result<()> {
             canonical_evidence_id,
             reason,
             expected_record_id,
+        ),
+        Command::RolloutControllerStatus {
+            state_dir,
+            rollout_dir,
+            release_authority,
+        } => show_rollout_controller_status(state_dir, rollout_dir, release_authority),
+        Command::RolloutOperatorStatus {
+            state_dir,
+            rollout_dir,
+            trusted_policy_dir,
+            release_trust_root,
+        } => show_rollout_operator_status(
+            state_dir,
+            rollout_dir,
+            trusted_policy_dir,
+            release_trust_root,
+        ),
+        Command::RolloutTrustedPolicyImport {
+            rollout_dir,
+            trusted_policy_dir,
+            release_trust_root,
+            policy_file,
+            confirm_import,
+        } => import_rollout_trusted_policy(
+            rollout_dir,
+            trusted_policy_dir,
+            release_trust_root,
+            policy_file,
+            confirm_import,
+        ),
+        Command::RolloutApprovalPlan {
+            state_dir,
+            rollout_dir,
+            trusted_policy_dir,
+            release_trust_root,
+            approval_file,
+            confirm_device_approval,
+        } => plan_rollout_approval(
+            state_dir,
+            rollout_dir,
+            trusted_policy_dir,
+            release_trust_root,
+            approval_file,
+            confirm_device_approval,
+        ),
+        Command::RolloutApprovalApply {
+            state_dir,
+            rollout_dir,
+            trusted_policy_dir,
+            release_trust_root,
+            approval_file,
+            expected_approval_id,
+        } => apply_rollout_approval(
+            state_dir,
+            rollout_dir,
+            trusted_policy_dir,
+            release_trust_root,
+            approval_file,
+            expected_approval_id,
+        ),
+        Command::RolloutRecoveryPlan {
+            state_dir,
+            rollout_dir,
+            trusted_policy_dir,
+            release_trust_root,
+            recovery_file,
+            confirm_device_recovery,
+        } => plan_rollout_recovery(
+            state_dir,
+            rollout_dir,
+            trusted_policy_dir,
+            release_trust_root,
+            recovery_file,
+            confirm_device_recovery,
+        ),
+        Command::RolloutRecoveryApply {
+            state_dir,
+            rollout_dir,
+            trusted_policy_dir,
+            release_trust_root,
+            recovery_file,
+            expected_recovery_id,
+        } => apply_rollout_recovery(
+            state_dir,
+            rollout_dir,
+            trusted_policy_dir,
+            release_trust_root,
+            recovery_file,
+            expected_recovery_id,
         ),
         Command::CurrentPeerInvitationCreate {
             state_dir,
@@ -27787,6 +28037,962 @@ fn show_canonical_sync_v2_activation_status(state_dir: PathBuf) -> Result<()> {
     Ok(())
 }
 
+fn show_rollout_controller_status(
+    state_dir: PathBuf,
+    rollout_dir: PathBuf,
+    release_authority: String,
+) -> Result<()> {
+    let authority = ReleasePolicyAuthority::from_bytes(decode_hex_32(
+        &release_authority,
+        "release-policy authority",
+    )?)
+    .context("validate release-policy authority")?;
+    let device_state = load_command_device_state(&state_dir)?;
+    let local_device_id = device_state.identity().device_id();
+    let runtime_policy = load_canonical_sync_v2_runtime_policy(&state_dir, local_device_id)?;
+    let current_target = match runtime_policy.migration_state {
+        CanonicalSyncV2MigrationState::LegacyOnly => RolloutActivationTarget::LegacyOnly,
+        CanonicalSyncV2MigrationState::AdvertiseCanonicalV2 => {
+            RolloutActivationTarget::AdvertiseCanonicalV2
+        }
+        CanonicalSyncV2MigrationState::DualReaderPreferLegacy => {
+            RolloutActivationTarget::DualReaderPreferLegacy
+        }
+        CanonicalSyncV2MigrationState::DualReaderPreferCanonical => {
+            RolloutActivationTarget::DualReaderPreferCanonical
+        }
+        CanonicalSyncV2MigrationState::CanonicalRequired => {
+            bail!("canonical-required is outside the bounded public rollout controller")
+        }
+    };
+    let current = RolloutControllerCurrentState {
+        target: current_target,
+        disposition: match runtime_policy.disposition {
+            CanonicalSyncV2ActivationDisposition::Normal => RolloutActivationDisposition::Normal,
+            CanonicalSyncV2ActivationDisposition::EmergencyContainment => {
+                RolloutActivationDisposition::EmergencyContainment
+            }
+        },
+        has_authenticated_canonical_evidence: runtime_policy.canonical_evidence_id.is_some(),
+    };
+    let snapshot = inspect_existing_rollout_store(&rollout_dir, authority)
+        .context("inspect rollout state without modifying it")?;
+    let (evaluation, health) = snapshot
+        .map(|snapshot| (snapshot.evaluation, snapshot.health))
+        .unwrap_or((None, None));
+    let decision = evaluate_rollout_controller(evaluation, health, current)
+        .context("evaluate dormant rollout controller")?;
+
+    println!("rollout_store_present={}", snapshot.is_some());
+    println!("rollout_policy_present={}", evaluation.is_some());
+    println!("rollout_health_present={}", health.is_some());
+    if let Some(evaluation) = evaluation {
+        println!(
+            "rollout_policy_id={}",
+            encode_hex(&evaluation.policy_id.as_bytes())
+        );
+        println!("rollout_policy_epoch={}", evaluation.policy_epoch);
+        println!("rollout_phase={}", evaluation.phase.as_str());
+        println!("rollout_cohort_selected={}", evaluation.selected);
+    }
+    if let Some(health) = health {
+        println!(
+            "rollout_zero_tolerance_events={}",
+            health.counters.zero_tolerance_events()?
+        );
+    }
+    println!("rollout_current_target={}", current.target.as_str());
+    println!(
+        "rollout_current_disposition={}",
+        current.disposition.as_str()
+    );
+    println!(
+        "rollout_current_canonical_evidence={}",
+        current.has_authenticated_canonical_evidence
+    );
+    match decision {
+        RolloutControllerDecision::Hold { reason, .. } => {
+            println!("rollout_decision=hold");
+            println!("rollout_hold_reason={}", reason.as_str());
+        }
+        RolloutControllerDecision::ProposeDeviceActivation {
+            policy_id,
+            policy_epoch,
+            target,
+            disposition,
+            requires_explicit_device_approval,
+            release_policy_can_sign_activation,
+        } => {
+            println!("rollout_decision=propose-device-activation");
+            println!(
+                "rollout_proposal_policy_id={}",
+                encode_hex(&policy_id.as_bytes())
+            );
+            println!("rollout_proposal_policy_epoch={policy_epoch}");
+            println!("rollout_proposed_target={}", target.as_str());
+            println!("rollout_proposed_disposition={}", disposition.as_str());
+            println!(
+                "rollout_requires_explicit_device_approval={requires_explicit_device_approval}"
+            );
+            println!(
+                "rollout_release_policy_can_sign_activation={release_policy_can_sign_activation}"
+            );
+        }
+    }
+    println!(
+        "rollout_runtime_activation_authorized={}",
+        decision.runtime_activation_authorized()
+    );
+    println!("status=rollout-controller-observed-read-only");
+    Ok(())
+}
+
+struct RequiredRolloutOperatorContext {
+    bundle: TrustedReleasePolicyBundle,
+    health: RolloutHealthSnapshot,
+    decision: RolloutControllerDecision,
+    activation_head: Option<SignedCanonicalSyncV2ActivationRecord>,
+}
+
+struct RequiredRolloutPolicyHealth {
+    bundle: TrustedReleasePolicyBundle,
+    evaluation: CohortEvaluation,
+    health: RolloutHealthSnapshot,
+}
+
+fn parse_release_trust_root(value: &str) -> Result<ReleaseTrustRoot> {
+    ReleaseTrustRoot::from_bytes(decode_hex_32(value, "offline release trust root")?)
+        .context("validate offline release trust root")
+}
+
+fn load_existing_operator_device_state(state_dir: &Path) -> Result<DeviceState> {
+    if !EncryptedStateVault::is_initialized(state_dir)
+        .context("inspect state vault before rollout operator identity read")?
+    {
+        for file_name in ["device-secret.key", "device-encryption-secret.key"] {
+            let path = state_dir.join(file_name);
+            let metadata = fs::symlink_metadata(&path).with_context(|| {
+                format!(
+                    "rollout operator requires existing Device state; inspect {}",
+                    path.display()
+                )
+            })?;
+            ensure!(
+                metadata.is_file() && !metadata.file_type().is_symlink(),
+                "rollout operator Device state is not a real regular file"
+            );
+        }
+    }
+    load_command_device_state(state_dir)
+}
+
+fn load_authoritative_activation_head(
+    state_dir: &Path,
+    local_device_id: DeviceId,
+) -> Result<Option<SignedCanonicalSyncV2ActivationRecord>> {
+    let records = load_canonical_sync_v2_activation_records(state_dir, local_device_id)?;
+    let high_water = load_canonical_sync_v2_activation_high_water(state_dir, local_device_id)?;
+    verify_canonical_sync_v2_activation_authority(&records, high_water.as_ref(), local_device_id)
+        .context("verify Device activation authority for rollout operator")
+}
+
+fn rollout_current_state_from_head(
+    head: Option<&SignedCanonicalSyncV2ActivationRecord>,
+) -> Result<RolloutControllerCurrentState> {
+    let (target, disposition, has_authenticated_canonical_evidence) = match head {
+        None => (
+            RolloutActivationTarget::LegacyOnly,
+            RolloutActivationDisposition::Normal,
+            false,
+        ),
+        Some(head) => {
+            let target = match head.migration_state() {
+                CanonicalSyncV2MigrationState::LegacyOnly => RolloutActivationTarget::LegacyOnly,
+                CanonicalSyncV2MigrationState::AdvertiseCanonicalV2 => {
+                    RolloutActivationTarget::AdvertiseCanonicalV2
+                }
+                CanonicalSyncV2MigrationState::DualReaderPreferLegacy => {
+                    RolloutActivationTarget::DualReaderPreferLegacy
+                }
+                CanonicalSyncV2MigrationState::DualReaderPreferCanonical => {
+                    RolloutActivationTarget::DualReaderPreferCanonical
+                }
+                CanonicalSyncV2MigrationState::CanonicalRequired => {
+                    bail!("canonical-required is outside the bounded public rollout controller")
+                }
+            };
+            let disposition = match head.disposition() {
+                CanonicalSyncV2ActivationDisposition::Normal => {
+                    RolloutActivationDisposition::Normal
+                }
+                CanonicalSyncV2ActivationDisposition::EmergencyContainment => {
+                    RolloutActivationDisposition::EmergencyContainment
+                }
+            };
+            (target, disposition, head.canonical_evidence_id().is_some())
+        }
+    };
+    Ok(RolloutControllerCurrentState {
+        target,
+        disposition,
+        has_authenticated_canonical_evidence,
+    })
+}
+
+fn verify_bundle_evaluation_binding(
+    bundle: &TrustedReleasePolicyBundle,
+    evaluation: CohortEvaluation,
+) -> Result<()> {
+    let policy = bundle.policy();
+    ensure!(
+        evaluation.policy_id == policy.policy_id()?
+            && evaluation.policy_epoch == policy.policy_epoch()
+            && evaluation.release_artifact_id == policy.release_artifact_id()
+            && evaluation.phase == policy.phase()
+            && evaluation.disposition == policy.disposition()
+            && evaluation.cohort_upper_bound_basis_points
+                == policy.cohort_upper_bound_basis_points(),
+        "rollout health store is not bound to the current trusted policy bundle"
+    );
+    Ok(())
+}
+
+fn load_required_rollout_operator_context(
+    state_dir: &Path,
+    rollout_dir: &Path,
+    trusted_policy_dir: &Path,
+    trust_root: ReleaseTrustRoot,
+    local_device_id: DeviceId,
+) -> Result<RequiredRolloutOperatorContext> {
+    let policy_health =
+        load_required_rollout_policy_health(rollout_dir, trusted_policy_dir, trust_root)?;
+    let activation_head = load_authoritative_activation_head(state_dir, local_device_id)?;
+    let current = rollout_current_state_from_head(activation_head.as_ref())?;
+    let decision = evaluate_rollout_controller(
+        Some(policy_health.evaluation),
+        Some(policy_health.health),
+        current,
+    )
+    .context("evaluate rollout operator controller")?;
+    Ok(RequiredRolloutOperatorContext {
+        bundle: policy_health.bundle,
+        health: policy_health.health,
+        decision,
+        activation_head,
+    })
+}
+
+fn load_required_rollout_policy_health(
+    rollout_dir: &Path,
+    trusted_policy_dir: &Path,
+    trust_root: ReleaseTrustRoot,
+) -> Result<RequiredRolloutPolicyHealth> {
+    let trusted = inspect_existing_trusted_policy_store(trusted_policy_dir, trust_root)
+        .context("inspect trusted-policy inbox without modifying it")?
+        .context("trusted-policy inbox is absent")?;
+    let bundle = trusted
+        .current_bundle
+        .context("trusted-policy inbox has no current bundle")?;
+    let rollout = inspect_existing_trusted_rollout_health_store(rollout_dir, trust_root, &bundle)
+        .context("inspect rotation-aware rollout health state without modifying it")?
+        .context("rollout health store is absent")?;
+    let evaluation = rollout.evaluation;
+    let health = rollout.health;
+    verify_bundle_evaluation_binding(&bundle, evaluation)?;
+    Ok(RequiredRolloutPolicyHealth {
+        bundle,
+        evaluation,
+        health,
+    })
+}
+
+fn print_rollout_operator_decision(decision: RolloutControllerDecision) {
+    match decision {
+        RolloutControllerDecision::Hold { reason, .. } => {
+            println!("rollout_operator_decision=hold");
+            println!("rollout_operator_hold_reason={}", reason.as_str());
+        }
+        RolloutControllerDecision::ProposeDeviceActivation {
+            policy_id,
+            policy_epoch,
+            target,
+            disposition,
+            requires_explicit_device_approval,
+            release_policy_can_sign_activation,
+        } => {
+            println!("rollout_operator_decision=propose-device-activation");
+            println!(
+                "rollout_operator_policy_id={}",
+                encode_hex(&policy_id.as_bytes())
+            );
+            println!("rollout_operator_policy_epoch={policy_epoch}");
+            println!("rollout_operator_target={}", target.as_str());
+            println!("rollout_operator_disposition={}", disposition.as_str());
+            println!(
+                "rollout_operator_explicit_device_approval_required={requires_explicit_device_approval}"
+            );
+            println!(
+                "rollout_operator_release_policy_can_sign_activation={release_policy_can_sign_activation}"
+            );
+        }
+    }
+}
+
+fn show_rollout_operator_status(
+    state_dir: PathBuf,
+    rollout_dir: PathBuf,
+    trusted_policy_dir: PathBuf,
+    release_trust_root: String,
+) -> Result<()> {
+    let trust_root = parse_release_trust_root(&release_trust_root)?;
+    let device_state = load_existing_operator_device_state(&state_dir)?;
+    let local_device_id = device_state.identity().device_id();
+    let activation_head = load_authoritative_activation_head(&state_dir, local_device_id)?;
+    let current = rollout_current_state_from_head(activation_head.as_ref())?;
+    println!("rollout_operator_read_only=true");
+    println!("rollout_operator_device_state=existing");
+    println!(
+        "rollout_operator_current_target={}",
+        current.target.as_str()
+    );
+    println!(
+        "rollout_operator_current_disposition={}",
+        current.disposition.as_str()
+    );
+    println!(
+        "rollout_operator_current_evidence_bound={}",
+        current.has_authenticated_canonical_evidence
+    );
+    println!(
+        "rollout_operator_activation_epoch={}",
+        activation_head
+            .as_ref()
+            .map_or(0, SignedCanonicalSyncV2ActivationRecord::migration_epoch)
+    );
+
+    let Some(trusted) = inspect_existing_trusted_policy_store(&trusted_policy_dir, trust_root)
+        .context("inspect trusted-policy inbox without modifying it")?
+    else {
+        println!("rollout_operator_trusted_store_present=false");
+        println!("rollout_operator_trusted_policy_present=false");
+        println!("rollout_operator_decision=hold");
+        println!("rollout_operator_hold_reason=missing-trusted-policy");
+        println!("rollout_operator_writes_state=false");
+        println!("status=rollout-operator-observed-read-only");
+        return Ok(());
+    };
+    println!("rollout_operator_trusted_store_present=true");
+    let Some(bundle) = trusted.current_bundle else {
+        println!("rollout_operator_trusted_policy_present=false");
+        println!("rollout_operator_decision=hold");
+        println!("rollout_operator_hold_reason=missing-trusted-policy");
+        println!("rollout_operator_writes_state=false");
+        println!("status=rollout-operator-observed-read-only");
+        return Ok(());
+    };
+    println!("rollout_operator_trusted_policy_present=true");
+    println!(
+        "rollout_operator_bundle_id={}",
+        encode_hex(&bundle.bundle_id()?.as_bytes())
+    );
+    println!(
+        "rollout_operator_keyring_id={}",
+        encode_hex(&bundle.keyring_id().as_bytes())
+    );
+    println!(
+        "rollout_operator_signer_key_id={}",
+        encode_hex(&bundle.signer_key_id().as_bytes())
+    );
+    println!(
+        "rollout_operator_keyring_epoch={}",
+        bundle.keyring().keyring_epoch()
+    );
+    println!(
+        "rollout_operator_policy_epoch={}",
+        bundle.policy().policy_epoch()
+    );
+    println!(
+        "rollout_operator_phase={}",
+        bundle.policy().phase().as_str()
+    );
+    println!(
+        "rollout_operator_policy_disposition={}",
+        bundle.policy().disposition().as_str()
+    );
+    let rollout = inspect_existing_trusted_rollout_health_store(&rollout_dir, trust_root, &bundle)
+        .context("inspect rotation-aware rollout health state without modifying it")?;
+    println!(
+        "rollout_operator_health_store_present={}",
+        rollout.is_some()
+    );
+    let (evaluation, health) = rollout
+        .map(|snapshot| (Some(snapshot.evaluation), Some(snapshot.health)))
+        .unwrap_or((None, None));
+    if let Some(evaluation) = evaluation {
+        verify_bundle_evaluation_binding(&bundle, evaluation)?;
+    }
+    println!("rollout_operator_health_present={}", health.is_some());
+    if let Some(health) = health {
+        println!(
+            "rollout_operator_zero_tolerance_events={}",
+            health.counters.zero_tolerance_events()?
+        );
+    }
+    let decision = evaluate_rollout_controller(evaluation, health, current)?;
+    print_rollout_operator_decision(decision);
+    println!("rollout_operator_writes_state=false");
+    println!("status=rollout-operator-observed-read-only");
+    Ok(())
+}
+
+fn import_rollout_trusted_policy(
+    rollout_dir: PathBuf,
+    trusted_policy_dir: PathBuf,
+    release_trust_root: String,
+    policy_file: PathBuf,
+    confirm_import: bool,
+) -> Result<()> {
+    ensure!(
+        confirm_import,
+        "trusted-policy import requires --confirm-import"
+    );
+    let trust_root = parse_release_trust_root(&release_trust_root)?;
+    let store = TrustedPolicyStore::open(&trusted_policy_dir, trust_root)
+        .context("open trusted-policy inbox for explicit import")?;
+    let outcome = store
+        .import_explicit_file(
+            &policy_file,
+            ExplicitTrustedPolicyImport::UserOrTestOperatorRequested,
+        )
+        .context("explicitly import trusted-policy bundle")?;
+    let chain = store
+        .bundle_chain()
+        .context("load complete verified trusted-policy chain")?;
+    let health_store = TrustedRolloutHealthStore::open(&rollout_dir, trust_root)
+        .context("open rotation-aware rollout health store")?;
+    let health = health_store
+        .synchronize_bundle_chain(&chain)
+        .context("synchronize rollout health with complete trusted-policy chain")?;
+    let (status, bundle_id, policy_epoch, keyring_epoch) = match outcome {
+        TrustedPolicyImportOutcome::Installed {
+            bundle_id,
+            policy_epoch,
+            keyring_epoch,
+        } => ("installed", bundle_id, policy_epoch, keyring_epoch),
+        TrustedPolicyImportOutcome::AlreadyCurrent {
+            bundle_id,
+            policy_epoch,
+            keyring_epoch,
+        } => ("already-current", bundle_id, policy_epoch, keyring_epoch),
+    };
+    println!("trusted_policy_import={status}");
+    println!(
+        "trusted_policy_bundle_id={}",
+        encode_hex(&bundle_id.as_bytes())
+    );
+    println!("trusted_policy_epoch={policy_epoch}");
+    println!("trusted_policy_keyring_epoch={keyring_epoch}");
+    println!("trusted_rollout_health_chain_length={}", chain.len());
+    println!(
+        "trusted_rollout_health_bundle_id={}",
+        encode_hex(&health.bundle_id.as_bytes())
+    );
+    println!(
+        "trusted_rollout_health_policy_epoch={}",
+        health.evaluation.policy_epoch
+    );
+    println!("trusted_policy_grants_activation=false");
+    println!("status=rollout-trusted-policy-imported-explicitly");
+    Ok(())
+}
+
+fn read_bounded_operator_artifact(path: &Path, maximum: usize, label: &str) -> Result<Vec<u8>> {
+    let metadata = fs::symlink_metadata(path)
+        .with_context(|| format!("inspect {label} artifact {}", path.display()))?;
+    ensure!(
+        metadata.is_file() && !metadata.file_type().is_symlink(),
+        "{label} artifact is not a real regular file"
+    );
+    let declared = usize::try_from(metadata.len()).context("convert operator artifact length")?;
+    ensure!(
+        (1..=maximum).contains(&declared),
+        "{label} artifact has invalid length {declared}"
+    );
+    let bytes = fs::read(path).with_context(|| format!("read {label} artifact"))?;
+    let after = fs::symlink_metadata(path).context("reinspect operator artifact")?;
+    ensure!(
+        after.is_file()
+            && !after.file_type().is_symlink()
+            && after.len() == metadata.len()
+            && bytes.len() == declared,
+        "{label} artifact changed during bounded read"
+    );
+    Ok(bytes)
+}
+
+fn print_rollout_operator_candidate(
+    candidate: &SignedCanonicalSyncV2ActivationRecord,
+    artifact_kind: &str,
+    artifact_id: [u8; 32],
+) -> Result<()> {
+    println!("rollout_operator_artifact_kind={artifact_kind}");
+    println!("rollout_operator_artifact_id={}", encode_hex(&artifact_id));
+    println!(
+        "rollout_operator_candidate_record_id={}",
+        encode_hex(&candidate.record_id()?)
+    );
+    println!(
+        "rollout_operator_candidate_epoch={}",
+        candidate.migration_epoch()
+    );
+    println!(
+        "rollout_operator_candidate_target={}",
+        canonical_sync_v2_migration_state_name(candidate.migration_state())
+    );
+    println!(
+        "rollout_operator_candidate_disposition={}",
+        canonical_sync_v2_activation_disposition_name(candidate.disposition())
+    );
+    println!(
+        "rollout_operator_candidate_evidence_bound={}",
+        candidate.canonical_evidence_id().is_some()
+    );
+    println!("rollout_operator_candidate_signed_by_device=true");
+    Ok(())
+}
+
+struct InterruptedRolloutActivation {
+    previous: Option<SignedCanonicalSyncV2ActivationRecord>,
+}
+
+fn inspect_interrupted_rollout_activation(
+    state_dir: &Path,
+    identity: &DeviceIdentity,
+    expected_candidate: &SignedCanonicalSyncV2ActivationRecord,
+) -> Result<Option<InterruptedRolloutActivation>> {
+    let local_device_id = identity.device_id();
+    let records = load_canonical_sync_v2_activation_records(state_dir, local_device_id)?;
+    let raw_head = verify_canonical_sync_v2_activation_chain(&records, local_device_id)
+        .context("verify append-only rollout activation chain")?;
+    let high_water = load_canonical_sync_v2_activation_high_water(state_dir, local_device_id)?;
+    match verify_canonical_sync_v2_activation_authority(
+        &records,
+        high_water.as_ref(),
+        local_device_id,
+    ) {
+        Ok(_) => return Ok(None),
+        Err(CanonicalSyncV2ActivationError::HighWaterMissing)
+        | Err(CanonicalSyncV2ActivationError::HighWaterMismatch) => {}
+        Err(error) => {
+            return Err(error).context("verify rollout activation authority before repair");
+        }
+    }
+
+    let raw_head = raw_head.context("interrupted rollout activation has no chain head")?;
+    ensure!(
+        raw_head.record_id()? == expected_candidate.record_id()?
+            && raw_head.encode()? == expected_candidate.encode()?,
+        "interrupted rollout activation does not match the exact confirmed artifact"
+    );
+    let previous = if raw_head.migration_epoch() == 1 {
+        None
+    } else {
+        Some(
+            records
+                .iter()
+                .find(|record| record.migration_epoch() + 1 == raw_head.migration_epoch())
+                .context("interrupted rollout activation predecessor is missing")?
+                .clone(),
+        )
+    };
+    if let Some(high_water) = high_water.as_ref() {
+        let previous = previous.as_ref().context(
+            "rollout high-water mismatch cannot be repaired for a first-record transition",
+        )?;
+        ensure!(
+            high_water.migration_epoch() == previous.migration_epoch()
+                && high_water.head_record_id() == previous.record_id()?,
+            "rollout high-water is not the exact predecessor; refusing repair"
+        );
+    }
+    expected_candidate.verify_transition(previous.as_ref())?;
+    Ok(Some(InterruptedRolloutActivation { previous }))
+}
+
+fn repair_interrupted_rollout_approval(
+    state_dir: &Path,
+    identity: &DeviceIdentity,
+    policy_health: &RequiredRolloutPolicyHealth,
+    approval: &SignedDeviceRolloutApproval,
+) -> Result<bool> {
+    ensure!(
+        approval.trusted_policy_bundle_id() == policy_health.bundle.bundle_id()?,
+        "interrupted rollout approval is bound to a stale trusted-policy bundle"
+    );
+    let candidate = approval.candidate_activation_record()?;
+    let Some(interrupted) =
+        inspect_interrupted_rollout_activation(state_dir, identity, &candidate)?
+    else {
+        return Ok(false);
+    };
+    let decision = evaluate_rollout_controller(
+        Some(policy_health.evaluation),
+        Some(policy_health.health),
+        rollout_current_state_from_head(interrupted.previous.as_ref())?,
+    )?;
+    let validated = match approval.apply(
+        policy_health.bundle.bundle_id()?,
+        decision,
+        interrupted.previous.as_ref(),
+    )? {
+        DeviceRolloutApprovalApplyOutcome::Ready(candidate) => candidate,
+        DeviceRolloutApprovalApplyOutcome::AlreadyApplied(_) => {
+            bail!("interrupted rollout approval unexpectedly precedes its candidate")
+        }
+    };
+    ensure!(
+        validated.encode()? == candidate.encode()?,
+        "interrupted rollout approval candidate changed during repair"
+    );
+    let high_water = SignedCanonicalSyncV2ActivationHighWater::issue(identity, &candidate)?;
+    publish_canonical_sync_v2_activation_high_water(state_dir, &high_water)?;
+    Ok(true)
+}
+
+fn repair_interrupted_rollout_recovery(
+    state_dir: &Path,
+    identity: &DeviceIdentity,
+    trust_root: ReleaseTrustRoot,
+    policy_health: &RequiredRolloutPolicyHealth,
+    recovery: &SignedContainmentRecoveryApproval,
+) -> Result<bool> {
+    ensure!(
+        recovery.trusted_policy_bundle_id() == policy_health.bundle.bundle_id()?,
+        "interrupted containment recovery is bound to a stale trusted-policy bundle"
+    );
+    let candidate = recovery.candidate_activation_record()?;
+    let Some(interrupted) =
+        inspect_interrupted_rollout_activation(state_dir, identity, &candidate)?
+    else {
+        return Ok(false);
+    };
+    let previous = interrupted
+        .previous
+        .as_ref()
+        .context("containment recovery cannot be the first activation record")?;
+    let decision = evaluate_rollout_controller(
+        Some(policy_health.evaluation),
+        Some(policy_health.health),
+        rollout_current_state_from_head(Some(previous))?,
+    )?;
+    ensure!(
+        matches!(
+            decision,
+            RolloutControllerDecision::Hold {
+                reason: RolloutControllerHoldReason::ContainmentRequiresExplicitRecovery,
+                ..
+            }
+        ),
+        "interrupted recovery predecessor is not awaiting explicit recovery"
+    );
+    let validated = match recovery.apply(
+        trust_root,
+        &policy_health.bundle,
+        policy_health.health,
+        previous,
+    )? {
+        ContainmentRecoveryApplyOutcome::Ready(candidate) => candidate,
+        ContainmentRecoveryApplyOutcome::AlreadyApplied(_) => {
+            bail!("interrupted containment recovery unexpectedly precedes its candidate")
+        }
+    };
+    ensure!(
+        validated.encode()? == candidate.encode()?,
+        "interrupted containment recovery candidate changed during repair"
+    );
+    let high_water = SignedCanonicalSyncV2ActivationHighWater::issue(identity, &candidate)?;
+    publish_canonical_sync_v2_activation_high_water(state_dir, &high_water)?;
+    Ok(true)
+}
+
+fn plan_rollout_approval(
+    state_dir: PathBuf,
+    rollout_dir: PathBuf,
+    trusted_policy_dir: PathBuf,
+    release_trust_root: String,
+    approval_file: PathBuf,
+    confirm_device_approval: bool,
+) -> Result<()> {
+    ensure!(
+        confirm_device_approval,
+        "rollout approval plan requires --confirm-device-approval"
+    );
+    let trust_root = parse_release_trust_root(&release_trust_root)?;
+    let device_state = load_existing_operator_device_state(&state_dir)?;
+    let identity = device_state.identity();
+    let context = load_required_rollout_operator_context(
+        &state_dir,
+        &rollout_dir,
+        &trusted_policy_dir,
+        trust_root,
+        identity.device_id(),
+    )?;
+    ensure!(
+        matches!(
+            context.decision,
+            RolloutControllerDecision::ProposeDeviceActivation { .. }
+        ),
+        "rollout controller is holding; no Device approval may be created"
+    );
+    let approval = SignedDeviceRolloutApproval::prepare(
+        identity,
+        context.bundle.bundle_id()?,
+        context.decision,
+        context.activation_head.as_ref(),
+        ExplicitDeviceRolloutApproval::UserOrTestOperatorApproved,
+    )?;
+    let approval_id = approval.approval_id()?;
+    let candidate = approval.candidate_activation_record()?;
+    write_new_authority_file(&approval_file, &approval.encode()?)
+        .context("write no-clobber Device rollout approval")?;
+    print_rollout_operator_candidate(&candidate, "device-rollout-approval", approval_id)?;
+    println!("rollout_operator_activation_state_written=false");
+    println!("status=rollout-device-approval-planned");
+    Ok(())
+}
+
+fn persist_rollout_activation_candidate(
+    state_dir: &Path,
+    identity: &DeviceIdentity,
+    current: Option<&SignedCanonicalSyncV2ActivationRecord>,
+    candidate: &SignedCanonicalSyncV2ActivationRecord,
+) -> Result<StoreOutcome> {
+    ensure!(
+        candidate.local_device_id() == identity.device_id(),
+        "rollout candidate is bound to another Device"
+    );
+    candidate.verify_transition(current)?;
+    let candidate_id = candidate.record_id()?;
+    let relative_path = runtime_canonical_sync_v2_activation_relative_path(
+        candidate.migration_epoch(),
+        candidate_id,
+    );
+    let encoded = candidate.encode()?;
+    let outcome = run_state_transaction(state_dir, |transaction| {
+        persist_runtime_record(state_dir, &relative_path, &encoded, transaction)
+    })?;
+    let high_water = SignedCanonicalSyncV2ActivationHighWater::issue(identity, candidate)?;
+    publish_canonical_sync_v2_activation_high_water(state_dir, &high_water)?;
+    Ok(outcome)
+}
+
+fn apply_rollout_approval(
+    state_dir: PathBuf,
+    rollout_dir: PathBuf,
+    trusted_policy_dir: PathBuf,
+    release_trust_root: String,
+    approval_file: PathBuf,
+    expected_approval_id: String,
+) -> Result<()> {
+    let trust_root = parse_release_trust_root(&release_trust_root)?;
+    let device_state = load_existing_operator_device_state(&state_dir)?;
+    let identity = device_state.identity();
+    let approval_bytes = read_bounded_operator_artifact(
+        &approval_file,
+        MAX_DEVICE_ROLLOUT_APPROVAL_BYTES,
+        "Device rollout approval",
+    )?;
+    let approval =
+        SignedDeviceRolloutApproval::decode_and_verify(&approval_bytes, identity.device_id())?;
+    let approval_id = approval.approval_id()?;
+    ensure!(
+        approval_id == decode_hex_32(&expected_approval_id, "expected Device rollout approval ID")?,
+        "rollout approval confirmation does not match the exact signed artifact"
+    );
+    let policy_health =
+        load_required_rollout_policy_health(&rollout_dir, &trusted_policy_dir, trust_root)?;
+    let repaired =
+        repair_interrupted_rollout_approval(&state_dir, identity, &policy_health, &approval)?;
+    let context = load_required_rollout_operator_context(
+        &state_dir,
+        &rollout_dir,
+        &trusted_policy_dir,
+        trust_root,
+        identity.device_id(),
+    )?;
+    let outcome = approval.apply(
+        context.bundle.bundle_id()?,
+        context.decision,
+        context.activation_head.as_ref(),
+    )?;
+    let (candidate, store) = match outcome {
+        DeviceRolloutApprovalApplyOutcome::Ready(candidate) => {
+            let store = persist_rollout_activation_candidate(
+                &state_dir,
+                identity,
+                context.activation_head.as_ref(),
+                &candidate,
+            )?;
+            (
+                candidate,
+                match store {
+                    StoreOutcome::Inserted => "inserted",
+                    StoreOutcome::AlreadyPresent => "already-present",
+                },
+            )
+        }
+        DeviceRolloutApprovalApplyOutcome::AlreadyApplied(candidate) => {
+            (candidate, "already-authoritative")
+        }
+    };
+    print_rollout_operator_candidate(&candidate, "device-rollout-approval", approval_id)?;
+    println!("rollout_operator_activation_store={store}");
+    println!(
+        "rollout_operator_activation_high_water={}",
+        if repaired {
+            "atomic-repair"
+        } else {
+            "verified-or-published"
+        }
+    );
+    println!("status=rollout-device-approval-applied");
+    Ok(())
+}
+
+fn plan_rollout_recovery(
+    state_dir: PathBuf,
+    rollout_dir: PathBuf,
+    trusted_policy_dir: PathBuf,
+    release_trust_root: String,
+    recovery_file: PathBuf,
+    confirm_device_recovery: bool,
+) -> Result<()> {
+    ensure!(
+        confirm_device_recovery,
+        "containment recovery plan requires --confirm-device-recovery"
+    );
+    let trust_root = parse_release_trust_root(&release_trust_root)?;
+    let device_state = load_existing_operator_device_state(&state_dir)?;
+    let identity = device_state.identity();
+    let context = load_required_rollout_operator_context(
+        &state_dir,
+        &rollout_dir,
+        &trusted_policy_dir,
+        trust_root,
+        identity.device_id(),
+    )?;
+    ensure!(
+        matches!(
+            context.decision,
+            RolloutControllerDecision::Hold {
+                reason: RolloutControllerHoldReason::ContainmentRequiresExplicitRecovery,
+                ..
+            }
+        ),
+        "controller is not waiting for explicit containment recovery"
+    );
+    let containment = context
+        .activation_head
+        .as_ref()
+        .context("containment recovery requires an activation head")?;
+    let recovery = SignedContainmentRecoveryApproval::prepare(
+        identity,
+        trust_root,
+        &context.bundle,
+        context.health,
+        containment,
+        ExplicitContainmentRecoveryApproval::UserOrTestOperatorApproved,
+    )?;
+    let recovery_id = recovery.recovery_id()?;
+    let candidate = recovery.candidate_activation_record()?;
+    write_new_authority_file(&recovery_file, &recovery.encode()?)
+        .context("write no-clobber containment recovery approval")?;
+    print_rollout_operator_candidate(&candidate, "containment-recovery", recovery_id)?;
+    println!("rollout_operator_activation_state_written=false");
+    println!("status=rollout-containment-recovery-planned");
+    Ok(())
+}
+
+fn apply_rollout_recovery(
+    state_dir: PathBuf,
+    rollout_dir: PathBuf,
+    trusted_policy_dir: PathBuf,
+    release_trust_root: String,
+    recovery_file: PathBuf,
+    expected_recovery_id: String,
+) -> Result<()> {
+    let trust_root = parse_release_trust_root(&release_trust_root)?;
+    let device_state = load_existing_operator_device_state(&state_dir)?;
+    let identity = device_state.identity();
+    let recovery_bytes = read_bounded_operator_artifact(
+        &recovery_file,
+        MAX_CONTAINMENT_RECOVERY_APPROVAL_BYTES,
+        "containment recovery",
+    )?;
+    let recovery = SignedContainmentRecoveryApproval::decode_and_verify(
+        &recovery_bytes,
+        identity.device_id(),
+    )?;
+    let recovery_id = recovery.recovery_id()?;
+    ensure!(
+        recovery_id == decode_hex_32(&expected_recovery_id, "expected containment recovery ID")?,
+        "containment recovery confirmation does not match the exact signed artifact"
+    );
+    let policy_health =
+        load_required_rollout_policy_health(&rollout_dir, &trusted_policy_dir, trust_root)?;
+    let repaired = repair_interrupted_rollout_recovery(
+        &state_dir,
+        identity,
+        trust_root,
+        &policy_health,
+        &recovery,
+    )?;
+    let context = load_required_rollout_operator_context(
+        &state_dir,
+        &rollout_dir,
+        &trusted_policy_dir,
+        trust_root,
+        identity.device_id(),
+    )?;
+    let current = context
+        .activation_head
+        .as_ref()
+        .context("containment recovery requires an activation head")?;
+    let outcome = recovery.apply(trust_root, &context.bundle, context.health, current)?;
+    let (candidate, store) = match outcome {
+        ContainmentRecoveryApplyOutcome::Ready(candidate) => {
+            let store = persist_rollout_activation_candidate(
+                &state_dir,
+                identity,
+                Some(current),
+                &candidate,
+            )?;
+            (
+                candidate,
+                match store {
+                    StoreOutcome::Inserted => "inserted",
+                    StoreOutcome::AlreadyPresent => "already-present",
+                },
+            )
+        }
+        ContainmentRecoveryApplyOutcome::AlreadyApplied(candidate) => {
+            (candidate, "already-authoritative")
+        }
+    };
+    print_rollout_operator_candidate(&candidate, "containment-recovery", recovery_id)?;
+    println!("rollout_operator_activation_store={store}");
+    println!(
+        "rollout_operator_activation_high_water={}",
+        if repaired {
+            "atomic-repair"
+        } else {
+            "verified-or-published"
+        }
+    );
+    println!("status=rollout-containment-recovery-applied");
+    Ok(())
+}
+
 fn plan_canonical_sync_v2_activation(
     state_dir: PathBuf,
     migration_state: CanonicalSyncV2MigrationState,
@@ -37223,6 +38429,117 @@ mod tests {
         accepted_connection.close(0_u32.into(), b"test complete");
         valid_client.close().await;
         listener.close().await;
+        Ok(())
+    }
+
+    #[test]
+    fn interrupted_rollout_approval_repairs_only_the_exact_device_signed_candidate() -> Result<()> {
+        use ed25519_dalek::SigningKey;
+        use kilogram_rollout::{
+            ReleaseArtifactId, RolloutDisposition, RolloutHealthCounters, RolloutPhase,
+            rollout_approval::ExplicitDeviceRolloutApproval,
+            trust::{ReleaseSigningKeySpec, ReleaseSigningPermissions, SignedReleaseKeyring},
+        };
+
+        let directory = tempfile::tempdir()?;
+        let state_dir = directory.path().join("state");
+        let device_state = DeviceState::load_or_create(&state_dir)?;
+        let identity = device_state.identity();
+        let root_key = SigningKey::from_bytes(&[201_u8; 32]);
+        let policy_key = SigningKey::from_bytes(&[202_u8; 32]);
+        let trust_root = ReleaseTrustRoot::from_bytes(root_key.verifying_key().to_bytes())?;
+        let keyring = SignedReleaseKeyring::issue_genesis(
+            &root_key,
+            &[ReleaseSigningKeySpec::from_signing_key(
+                &policy_key,
+                ReleaseSigningPermissions::NORMAL_AND_CONTAINMENT,
+            )],
+        )?;
+        let artifact = ReleaseArtifactId::from_bytes([203_u8; 32])?;
+        let genesis = TrustedReleasePolicyBundle::issue_genesis_hold(
+            trust_root,
+            &keyring,
+            &policy_key,
+            artifact,
+        )?;
+        let bundle = TrustedReleasePolicyBundle::issue_successor(
+            trust_root,
+            &keyring,
+            &policy_key,
+            &genesis,
+            artifact,
+            RolloutPhase::AdvertiseCanary,
+            RolloutDisposition::Normal,
+            100,
+        )?;
+        let evaluation = CohortEvaluation {
+            policy_id: bundle.policy().policy_id()?,
+            policy_epoch: bundle.policy().policy_epoch(),
+            release_artifact_id: artifact,
+            phase: RolloutPhase::AdvertiseCanary,
+            disposition: RolloutDisposition::Normal,
+            cohort_bucket: 0,
+            cohort_upper_bound_basis_points: 100,
+            selected: true,
+            runtime_activation_authorized: false,
+        };
+        let health = RolloutHealthSnapshot {
+            policy_id: evaluation.policy_id,
+            release_artifact_id: artifact,
+            phase: evaluation.phase,
+            cohort_upper_bound_basis_points: 100,
+            counters: RolloutHealthCounters::default(),
+        };
+        let decision = evaluate_rollout_controller(
+            Some(evaluation),
+            Some(health),
+            RolloutControllerCurrentState {
+                target: RolloutActivationTarget::LegacyOnly,
+                disposition: RolloutActivationDisposition::Normal,
+                has_authenticated_canonical_evidence: false,
+            },
+        )?;
+        let approval = SignedDeviceRolloutApproval::prepare(
+            identity,
+            bundle.bundle_id()?,
+            decision,
+            None,
+            ExplicitDeviceRolloutApproval::UserOrTestOperatorApproved,
+        )?;
+        let candidate = approval.candidate_activation_record()?;
+        let relative_path = runtime_canonical_sync_v2_activation_relative_path(
+            candidate.migration_epoch(),
+            candidate.record_id()?,
+        );
+        let encoded = candidate.encode()?;
+        run_state_transaction(&state_dir, |transaction| {
+            persist_runtime_record(&state_dir, &relative_path, &encoded, transaction)
+        })?;
+        assert!(
+            load_canonical_sync_v2_activation_high_water(&state_dir, identity.device_id())?
+                .is_none()
+        );
+
+        let policy_health = RequiredRolloutPolicyHealth {
+            bundle,
+            evaluation,
+            health,
+        };
+        assert!(repair_interrupted_rollout_approval(
+            &state_dir,
+            identity,
+            &policy_health,
+            &approval,
+        )?);
+        let authoritative = load_authoritative_activation_head(&state_dir, identity.device_id())?
+            .context("repaired rollout approval has no authoritative head")?;
+        assert_eq!(authoritative.encode()?, candidate.encode()?);
+        assert!(!repair_interrupted_rollout_approval(
+            &state_dir,
+            identity,
+            &policy_health,
+            &approval,
+        )?);
         Ok(())
     }
 

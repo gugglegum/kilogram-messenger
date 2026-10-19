@@ -14,11 +14,22 @@ use std::{
 
 use ed25519_dalek::{Signature, Signer, SigningKey, VerifyingKey};
 use redb::{
-    Database, Durability, ReadableDatabase, ReadableTable, ReadableTableMetadata, TableDefinition,
+    Database, Durability, ReadOnlyDatabase, ReadableDatabase, ReadableTable, ReadableTableMetadata,
+    TableDefinition,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
+
+pub mod containment_recovery;
+pub mod rollout_approval;
+pub mod trust;
+pub mod trusted_health_store;
+pub mod trusted_policy;
+pub mod trusted_policy_store;
+
+#[cfg(test)]
+mod end_to_end_rehearsal;
 
 const DATABASE_FILE: &str = "rollout-local-v1.redb";
 const META_TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("rollout-meta-v1");
@@ -125,7 +136,7 @@ impl RolloutPhase {
         }
     }
 
-    const fn ordinal(self) -> u8 {
+    pub(crate) const fn ordinal(self) -> u8 {
         match self {
             Self::LegacyOnlyHold => 0,
             Self::AdvertiseCanary => 1,
@@ -182,6 +193,7 @@ impl SignedReleasePolicy {
         Self::issue(
             signing_key,
             None,
+            None,
             release_artifact_id,
             RolloutPhase::LegacyOnlyHold,
             RolloutDisposition::Normal,
@@ -200,6 +212,29 @@ impl SignedReleasePolicy {
         Self::issue(
             signing_key,
             Some(previous),
+            Some(ReleasePolicyAuthority::from_bytes(
+                signing_key.verifying_key().to_bytes(),
+            )?),
+            release_artifact_id,
+            phase,
+            disposition,
+            cohort_upper_bound_basis_points,
+        )
+    }
+
+    pub fn issue_successor_with_previous_authority(
+        signing_key: &SigningKey,
+        previous: &Self,
+        previous_authority: ReleasePolicyAuthority,
+        release_artifact_id: ReleaseArtifactId,
+        phase: RolloutPhase,
+        disposition: RolloutDisposition,
+        cohort_upper_bound_basis_points: u16,
+    ) -> Result<Self, RolloutError> {
+        Self::issue(
+            signing_key,
+            Some(previous),
+            Some(previous_authority),
             release_artifact_id,
             phase,
             disposition,
@@ -210,6 +245,7 @@ impl SignedReleasePolicy {
     fn issue(
         signing_key: &SigningKey,
         previous: Option<&Self>,
+        previous_authority: Option<ReleasePolicyAuthority>,
         release_artifact_id: ReleaseArtifactId,
         phase: RolloutPhase,
         disposition: RolloutDisposition,
@@ -218,7 +254,8 @@ impl SignedReleasePolicy {
         let authority = ReleasePolicyAuthority::from_bytes(signing_key.verifying_key().to_bytes())?;
         let (policy_epoch, previous_policy_id) = match previous {
             Some(previous) => {
-                previous.verify(authority)?;
+                previous
+                    .verify(previous_authority.ok_or(RolloutError::InvalidPolicyCombination)?)?;
                 (
                     previous
                         .policy_epoch()
@@ -333,6 +370,7 @@ impl SignedReleasePolicy {
 pub struct CohortEvaluation {
     pub policy_id: ReleasePolicyId,
     pub policy_epoch: u64,
+    pub release_artifact_id: ReleaseArtifactId,
     pub phase: RolloutPhase,
     pub disposition: RolloutDisposition,
     pub cohort_bucket: u16,
@@ -454,6 +492,113 @@ pub struct RolloutHealthSnapshot {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct RolloutReadOnlySnapshot {
+    pub evaluation: Option<CohortEvaluation>,
+    pub health: Option<RolloutHealthSnapshot>,
+}
+
+/// Inspect an already initialized rollout store without creating or modifying
+/// any file. A missing directory or database is a valid dormant state and is
+/// reported as `None`; malformed, foreign or partially initialized state fails
+/// closed.
+pub fn inspect_existing_rollout_store(
+    installation_local_directory: impl AsRef<Path>,
+    authority: ReleasePolicyAuthority,
+) -> Result<Option<RolloutReadOnlySnapshot>, RolloutError> {
+    let requested = installation_local_directory.as_ref();
+    let metadata = match std::fs::symlink_metadata(requested) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(source) => {
+            return Err(RolloutError::Io {
+                action: "inspect rollout local directory",
+                source,
+            });
+        }
+    };
+    if !metadata.is_dir() || metadata.file_type().is_symlink() {
+        return Err(RolloutError::UnsafeLocalDirectory);
+    }
+    let canonical = std::fs::canonicalize(requested).map_err(|source| RolloutError::Io {
+        action: "canonicalize rollout local directory",
+        source,
+    })?;
+    let database_path = canonical.join(DATABASE_FILE);
+    let database_metadata = match std::fs::symlink_metadata(&database_path) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(source) => {
+            return Err(RolloutError::Io {
+                action: "inspect rollout database file",
+                source,
+            });
+        }
+    };
+    if !database_metadata.is_file() || database_metadata.file_type().is_symlink() {
+        return Err(RolloutError::UnsafeDatabaseFile);
+    }
+
+    let database = ReadOnlyDatabase::open(&database_path).map_err(database_error)?;
+    let read = database.begin_read().map_err(database_error)?;
+    let meta = read.open_table(META_TABLE).map_err(database_error)?;
+    let schema = meta
+        .get(DATABASE_SCHEMA_KEY)
+        .map_err(database_error)?
+        .ok_or(RolloutError::DatabaseSchema)?
+        .value()
+        .to_vec();
+    if schema.as_slice() != [DATABASE_SCHEMA_VERSION] {
+        return Err(RolloutError::DatabaseSchema);
+    }
+    let pinned_authority = meta
+        .get(RELEASE_AUTHORITY_KEY)
+        .map_err(database_error)?
+        .ok_or(RolloutError::ReleaseAuthorityMismatch)?
+        .value()
+        .to_vec();
+    if pinned_authority.as_slice() != authority.0 {
+        return Err(RolloutError::ReleaseAuthorityMismatch);
+    }
+    let seed = read_seed_from_table(&meta)?;
+    let policy = read_current_policy_from_table(&meta, authority)?;
+    let health_table = read.open_table(HEALTH_TABLE).map_err(database_error)?;
+    if health_table.len().map_err(database_error)? > MAX_DURABLE_HEALTH_AGGREGATES {
+        return Err(RolloutError::HealthAggregateCapacity);
+    }
+    for entry in health_table.iter().map_err(database_error)? {
+        let (key, value) = entry.map_err(database_error)?;
+        let record = decode_health_record(value.value(), &seed)?;
+        if key.value() != record.content.policy_id {
+            return Err(RolloutError::HealthPolicyBinding);
+        }
+    }
+
+    let Some(policy) = policy else {
+        if !health_table.is_empty().map_err(database_error)? {
+            return Err(RolloutError::HealthPolicyBinding);
+        }
+        return Ok(Some(RolloutReadOnlySnapshot {
+            evaluation: None,
+            health: None,
+        }));
+    };
+    let policy_id = policy.policy_id()?;
+    let evaluation = evaluate_cohort(seed, &policy, policy_id)?;
+    let health_bytes = health_table
+        .get(policy_id.0.as_slice())
+        .map_err(database_error)?
+        .ok_or(RolloutError::MissingHealthRecord)?
+        .value()
+        .to_vec();
+    let health_record = decode_health_record(&health_bytes, &seed)?;
+    validate_health_policy_binding(&health_record.content, &policy, policy_id)?;
+    Ok(Some(RolloutReadOnlySnapshot {
+        evaluation: Some(evaluation),
+        health: Some(snapshot_from_content(&health_record.content)?),
+    }))
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum RolloutActivationTarget {
     LegacyOnly,
     AdvertiseCanonicalV2,
@@ -521,6 +666,7 @@ pub enum RolloutControllerHoldReason {
     InstallationOutsideCohort,
     AlreadyAtOrBeyondPolicyTarget,
     ContainmentWithoutCanonicalEvidence,
+    ContainmentRequiresExplicitRecovery,
 }
 
 impl RolloutControllerHoldReason {
@@ -533,6 +679,7 @@ impl RolloutControllerHoldReason {
             Self::InstallationOutsideCohort => "installation-outside-cohort",
             Self::AlreadyAtOrBeyondPolicyTarget => "already-at-or-beyond-policy-target",
             Self::ContainmentWithoutCanonicalEvidence => "containment-without-canonical-evidence",
+            Self::ContainmentRequiresExplicitRecovery => "containment-requires-explicit-recovery",
         }
     }
 }
@@ -583,6 +730,7 @@ pub fn evaluate_rollout_controller(
         ));
     };
     if health.policy_id != evaluation.policy_id
+        || health.release_artifact_id != evaluation.release_artifact_id
         || health.phase != evaluation.phase
         || health.cohort_upper_bound_basis_points != evaluation.cohort_upper_bound_basis_points
     {
@@ -616,6 +764,13 @@ pub fn evaluate_rollout_controller(
         ));
     }
 
+    if current.disposition == RolloutActivationDisposition::EmergencyContainment {
+        return Ok(controller_hold(
+            RolloutControllerHoldReason::ContainmentRequiresExplicitRecovery,
+            current,
+        ));
+    }
+
     if evaluation.phase == RolloutPhase::LegacyOnlyHold {
         return Ok(controller_hold(
             RolloutControllerHoldReason::LegacyOnlyPolicy,
@@ -642,7 +797,7 @@ pub fn evaluate_rollout_controller(
     ))
 }
 
-fn rollout_phase_target(phase: RolloutPhase) -> RolloutActivationTarget {
+pub(crate) fn rollout_phase_target(phase: RolloutPhase) -> RolloutActivationTarget {
     match phase {
         RolloutPhase::LegacyOnlyHold => RolloutActivationTarget::LegacyOnly,
         RolloutPhase::AdvertiseCanary => RolloutActivationTarget::AdvertiseCanonicalV2,
@@ -993,6 +1148,24 @@ impl RolloutLocalStore {
     }
 
     #[cfg(test)]
+    fn remove_current_health_for_test(&self) -> Result<(), RolloutError> {
+        let evaluation = self
+            .current_evaluation()?
+            .ok_or(RolloutError::NoInstalledPolicy)?;
+        let mut write = self.database.begin_write().map_err(database_error)?;
+        write
+            .set_durability(Durability::Immediate)
+            .map_err(database_error)?;
+        {
+            let mut health = write.open_table(HEALTH_TABLE).map_err(database_error)?;
+            health
+                .remove(evaluation.policy_id.0.as_slice())
+                .map_err(database_error)?;
+        }
+        write.commit().map_err(database_error)
+    }
+
+    #[cfg(test)]
     fn current_health_bytes_for_test(&self) -> Result<Vec<u8>, RolloutError> {
         let evaluation = self
             .current_evaluation()?
@@ -1103,6 +1276,7 @@ fn evaluate_cohort(
     Ok(CohortEvaluation {
         policy_id,
         policy_epoch: policy.policy_epoch(),
+        release_artifact_id: policy.release_artifact_id(),
         phase: policy.phase(),
         disposition: policy.disposition(),
         cohort_bucket,
@@ -1669,6 +1843,124 @@ mod tests {
         Ok(())
     }
 
+    #[test]
+    fn read_only_inspection_does_not_create_missing_state() -> Result<(), RolloutError> {
+        let directory = tempfile::tempdir().map_err(|source| RolloutError::Io {
+            action: "create test directory",
+            source,
+        })?;
+        let missing = directory.path().join("not-created");
+        let key = signing_key(19);
+        assert_eq!(
+            inspect_existing_rollout_store(&missing, authority(&key)?)?,
+            None
+        );
+        assert!(!missing.exists());
+        Ok(())
+    }
+
+    #[test]
+    fn read_only_inspection_verifies_current_policy_and_health() -> Result<(), RolloutError> {
+        let directory = tempfile::tempdir().map_err(|source| RolloutError::Io {
+            action: "create test directory",
+            source,
+        })?;
+        let key = signing_key(20);
+        let release_authority = authority(&key)?;
+        let policy = SignedReleasePolicy::issue_genesis_hold(&key, artifact(1)?)?;
+        let store = RolloutLocalStore::open(directory.path(), release_authority)?;
+        let expected_evaluation = store.install_policy(&policy.encode()?)?;
+        let expected_health = store
+            .current_health_snapshot()?
+            .ok_or(RolloutError::MissingHealthRecord)?;
+        drop(store);
+
+        assert_eq!(
+            inspect_existing_rollout_store(directory.path(), release_authority)?,
+            Some(RolloutReadOnlySnapshot {
+                evaluation: Some(expected_evaluation),
+                health: Some(expected_health),
+            })
+        );
+        assert!(matches!(
+            inspect_existing_rollout_store(directory.path(), authority(&signing_key(21))?),
+            Err(RolloutError::ReleaseAuthorityMismatch)
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn read_only_inspection_rejects_tampered_health() -> Result<(), RolloutError> {
+        let directory = tempfile::tempdir().map_err(|source| RolloutError::Io {
+            action: "create test directory",
+            source,
+        })?;
+        let key = signing_key(22);
+        let release_authority = authority(&key)?;
+        let policy = SignedReleasePolicy::issue_genesis_hold(&key, artifact(1)?)?;
+        let store = RolloutLocalStore::open(directory.path(), release_authority)?;
+        store.install_policy(&policy.encode()?)?;
+        let mut tampered = store.current_health_bytes_for_test()?;
+        tampered[0] ^= 1;
+        store.replace_current_health_for_test(&tampered)?;
+        drop(store);
+
+        assert!(matches!(
+            inspect_existing_rollout_store(directory.path(), release_authority),
+            Err(RolloutError::HealthRecordAuthentication)
+                | Err(RolloutError::InvalidHealthRecord)
+                | Err(RolloutError::HealthCodec(_))
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn read_only_inspection_rejects_missing_current_health() -> Result<(), RolloutError> {
+        let directory = tempfile::tempdir().map_err(|source| RolloutError::Io {
+            action: "create test directory",
+            source,
+        })?;
+        let key = signing_key(23);
+        let release_authority = authority(&key)?;
+        let policy = SignedReleasePolicy::issue_genesis_hold(&key, artifact(1)?)?;
+        let store = RolloutLocalStore::open(directory.path(), release_authority)?;
+        store.install_policy(&policy.encode()?)?;
+        store.remove_current_health_for_test()?;
+        drop(store);
+
+        assert!(matches!(
+            inspect_existing_rollout_store(directory.path(), release_authority),
+            Err(RolloutError::MissingHealthRecord)
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn read_only_inspection_rejects_a_truncated_database() -> Result<(), RolloutError> {
+        let directory = tempfile::tempdir().map_err(|source| RolloutError::Io {
+            action: "create test directory",
+            source,
+        })?;
+        let key = signing_key(24);
+        let release_authority = authority(&key)?;
+        drop(RolloutLocalStore::open(
+            directory.path(),
+            release_authority,
+        )?);
+        std::fs::write(directory.path().join(DATABASE_FILE), b"truncated").map_err(|source| {
+            RolloutError::Io {
+                action: "truncate test rollout database",
+                source,
+            }
+        })?;
+
+        assert!(matches!(
+            inspect_existing_rollout_store(directory.path(), release_authority),
+            Err(RolloutError::Database(_))
+        ));
+        Ok(())
+    }
+
     fn controller_evaluation(
         phase: RolloutPhase,
         disposition: RolloutDisposition,
@@ -1677,6 +1969,7 @@ mod tests {
         CohortEvaluation {
             policy_id: ReleasePolicyId([31; 32]),
             policy_epoch: 7,
+            release_artifact_id: ReleaseArtifactId([41; 32]),
             phase,
             disposition,
             cohort_bucket: 1,
@@ -1844,6 +2137,151 @@ mod tests {
                 current,
             }
         );
+        Ok(())
+    }
+
+    #[test]
+    fn mismatched_release_artifact_is_not_treated_as_healthy() -> Result<(), RolloutError> {
+        let evaluation = controller_evaluation(
+            RolloutPhase::AdvertiseCanary,
+            RolloutDisposition::Normal,
+            true,
+        );
+        let mut health = controller_health(evaluation, RolloutHealthCounters::default());
+        health.release_artifact_id = ReleaseArtifactId([77; 32]);
+        let current = legacy_controller_state();
+        assert_eq!(
+            evaluate_rollout_controller(Some(evaluation), Some(health), current)?,
+            RolloutControllerDecision::Hold {
+                reason: RolloutControllerHoldReason::HealthPolicyMismatch,
+                current,
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn controller_never_clears_existing_containment() -> Result<(), RolloutError> {
+        let evaluation = controller_evaluation(
+            RolloutPhase::ExpandedDualReader,
+            RolloutDisposition::Normal,
+            true,
+        );
+        let health = controller_health(evaluation, RolloutHealthCounters::default());
+        let current = RolloutControllerCurrentState {
+            target: RolloutActivationTarget::DualReaderPreferLegacy,
+            disposition: RolloutActivationDisposition::EmergencyContainment,
+            has_authenticated_canonical_evidence: true,
+        };
+        assert_eq!(
+            evaluate_rollout_controller(Some(evaluation), Some(health), current)?,
+            RolloutControllerDecision::Hold {
+                reason: RolloutControllerHoldReason::ContainmentRequiresExplicitRecovery,
+                current,
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn exhaustive_controller_matrix_preserves_authority_invariants() -> Result<(), RolloutError> {
+        let phases = [
+            RolloutPhase::LegacyOnlyHold,
+            RolloutPhase::AdvertiseCanary,
+            RolloutPhase::AcceptCanary,
+            RolloutPhase::InitiateCanary,
+            RolloutPhase::ExpandedDualReader,
+        ];
+        let policy_dispositions = [RolloutDisposition::Normal, RolloutDisposition::Containment];
+        let targets = [
+            RolloutActivationTarget::LegacyOnly,
+            RolloutActivationTarget::AdvertiseCanonicalV2,
+            RolloutActivationTarget::DualReaderPreferLegacy,
+            RolloutActivationTarget::DualReaderPreferCanonical,
+        ];
+        let current_dispositions = [
+            RolloutActivationDisposition::Normal,
+            RolloutActivationDisposition::EmergencyContainment,
+        ];
+        let mut evaluated = 0_u64;
+
+        for phase in phases {
+            for policy_disposition in policy_dispositions {
+                for selected in [false, true] {
+                    let evaluation = controller_evaluation(phase, policy_disposition, selected);
+                    for zero_tolerance in [false, true] {
+                        let counters = RolloutHealthCounters {
+                            history_loss_or_duplication: u64::from(zero_tolerance),
+                            ..RolloutHealthCounters::default()
+                        };
+                        let health = controller_health(evaluation, counters);
+                        for target in targets {
+                            for current_disposition in current_dispositions {
+                                for evidence in [false, true] {
+                                    let current = RolloutControllerCurrentState {
+                                        target,
+                                        disposition: current_disposition,
+                                        has_authenticated_canonical_evidence: evidence,
+                                    };
+                                    let decision = evaluate_rollout_controller(
+                                        Some(evaluation),
+                                        Some(health),
+                                        current,
+                                    )?;
+                                    evaluated += 1;
+                                    assert!(!decision.runtime_activation_authorized());
+                                    if let RolloutControllerDecision::ProposeDeviceActivation {
+                                        target: proposed_target,
+                                        disposition: proposed_disposition,
+                                        requires_explicit_device_approval,
+                                        release_policy_can_sign_activation,
+                                        ..
+                                    } = decision
+                                    {
+                                        assert!(requires_explicit_device_approval);
+                                        assert!(!release_policy_can_sign_activation);
+                                        assert_eq!(
+                                            current_disposition,
+                                            RolloutActivationDisposition::Normal
+                                        );
+                                        match proposed_disposition {
+                                            RolloutActivationDisposition::EmergencyContainment => {
+                                                assert!(evidence);
+                                                assert_ne!(
+                                                    target,
+                                                    RolloutActivationTarget::LegacyOnly
+                                                );
+                                                assert_eq!(proposed_target, target);
+                                                assert!(
+                                                    policy_disposition
+                                                        == RolloutDisposition::Containment
+                                                        || zero_tolerance
+                                                );
+                                            }
+                                            RolloutActivationDisposition::Normal => {
+                                                assert_eq!(
+                                                    policy_disposition,
+                                                    RolloutDisposition::Normal
+                                                );
+                                                assert!(!zero_tolerance);
+                                                assert!(selected);
+                                                assert_ne!(phase, RolloutPhase::LegacyOnlyHold);
+                                                assert_eq!(proposed_target, target.next());
+                                                assert!(
+                                                    proposed_target.ordinal()
+                                                        <= rollout_phase_target(phase).ordinal()
+                                                );
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        assert_eq!(evaluated, 640);
         Ok(())
     }
 }

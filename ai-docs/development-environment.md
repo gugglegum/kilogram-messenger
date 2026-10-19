@@ -5023,3 +5023,28 @@ Hosted follow-up:
   prompts.
 - Build profile debug, target x86_64-pc-windows-msvc, Cargo jobs 2. Raw logs
   and state stay ignored. Release/ZIP/tag were not created.
+
+## M1.2.5 complete rollout rehearsal environment (2026-10-19)
+
+- Trusted rollout health is now anchored by the offline release root and
+  synchronized from the complete verified trusted-policy chain; an operational
+  key rotation no longer strands the health store.
+- The named deterministic rehearsal covers five policy bundles, three explicit
+  Device-approved transitions, containment, recovery, replay and foreign,
+  stale, truncated and forked negatives. Rollout suite size is 56 tests.
+- CLI approval/recovery apply can repair only the interrupted boundary where
+  the exact Device-signed activation record is durable but its high-water is
+  not. The focused regression passed with TEMP/TMP redirected to
+  `.tmp/verification-temp`; the first sandbox run against system TEMP failed
+  only with Windows `os error 5`.
+- Two-host harness uses stable names, a verification-profile rollout test
+  executable and debug CLI. Its disposable state belongs under ignored
+  `.tmp/rollout-field`; tracked output is bounded JSON evidence only.
+- Build policy remains jobs 2, no release build, ZIP/archive or tag. Windows
+  test executables are launched only through the stable-path runner to avoid
+  recurring Firewall prompts.
+- Full stable-name workspace regression passed outside the socket-restricted
+  sandbox. It includes the isolated live-runtime revocation test, CLI 91/91,
+  protocol 156 passed plus 15 explicit vector-regeneration ignores, legacy
+  decoder mutations 31,851/31,851 in 2534.98 s, canonical sync v2 decoder
+  mutations 2,863/2,863, rollout 56/56, session 25/25 and Windows 30/30.
