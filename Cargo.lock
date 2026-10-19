@@ -3300,6 +3300,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "kilogram-peer-reenrollment"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+ "getrandom 0.4.3",
+ "kilogram-identity",
+ "kilogram-peer-capability-store",
+ "kilogram-sync-capability",
+ "postcard",
+ "serde",
+ "tempfile",
+ "thiserror 2.0.20",
+]
+
+[[package]]
 name = "kilogram-protocol"
 version = "0.1.0"
 dependencies = [

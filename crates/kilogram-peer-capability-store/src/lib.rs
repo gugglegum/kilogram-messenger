@@ -84,6 +84,38 @@ pub struct DurablePeerCapabilityState {
     pub source: PeerCapabilityRecordSource,
 }
 
+/// Exact, verified context for a durable quarantine head.
+///
+/// The predecessor is retained because the quarantine floor intentionally
+/// carries only a reason. A recovery ceremony needs the last authenticated
+/// authority and publication high-water marks without weakening or rewriting
+/// the quarantined chain itself.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct DurablePeerCapabilityQuarantineHead {
+    key: PeerCapabilityKey,
+    head: DurablePeerCapabilityState,
+    predecessor: DurablePeerCapabilityState,
+    reason: PeerSyncCapabilityQuarantineReason,
+}
+
+impl DurablePeerCapabilityQuarantineHead {
+    pub const fn key(&self) -> PeerCapabilityKey {
+        self.key
+    }
+
+    pub const fn head(&self) -> DurablePeerCapabilityState {
+        self.head
+    }
+
+    pub const fn predecessor(&self) -> DurablePeerCapabilityState {
+        self.predecessor
+    }
+
+    pub const fn reason(&self) -> PeerSyncCapabilityQuarantineReason {
+        self.reason
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct PeerCapabilityApplyOutcome {
     pub state: Option<DurablePeerCapabilityState>,
@@ -246,6 +278,13 @@ impl PeerCapabilityReadStore {
             None => Ok(None),
         }
     }
+
+    pub fn load_quarantined_head(
+        &self,
+        key: PeerCapabilityKey,
+    ) -> Result<DurablePeerCapabilityQuarantineHead, PeerCapabilityStoreError> {
+        load_quarantined_head_from_database(&self.database, self.owner_device_id, key)
+    }
 }
 
 impl PeerCapabilityStore {
@@ -286,6 +325,13 @@ impl PeerCapabilityStore {
             Some(record) => Ok(Some(record.state()?)),
             None => Ok(None),
         }
+    }
+
+    pub fn load_quarantined_head(
+        &self,
+        key: PeerCapabilityKey,
+    ) -> Result<DurablePeerCapabilityQuarantineHead, PeerCapabilityStoreError> {
+        load_quarantined_head_from_database(&self.database, self.owner_device_id, key)
     }
 
     pub fn apply_current_invitation(
@@ -528,6 +574,46 @@ fn load_verified_head_from_database<D: ReadableDatabase>(
         }
     }
     Ok(head_record)
+}
+
+fn load_quarantined_head_from_database<D: ReadableDatabase>(
+    database: &D,
+    owner_device_id: DeviceId,
+    key: PeerCapabilityKey,
+) -> Result<DurablePeerCapabilityQuarantineHead, PeerCapabilityStoreError> {
+    let head = load_verified_head_from_database(database, owner_device_id, key)?
+        .ok_or(PeerCapabilityStoreError::PeerStateMissing)?;
+    let PeerSyncCapabilityFloor::Quarantined { reason } = head.content.floor else {
+        return Err(PeerCapabilityStoreError::PeerStateNotQuarantined);
+    };
+    let previous_record_id = head
+        .content
+        .previous_record_id
+        .ok_or(PeerCapabilityStoreError::QuarantinePredecessorMissing)?;
+    let read = database.begin_read().map_err(database_error)?;
+    let records = read.open_table(RECORD_TABLE).map_err(database_error)?;
+    let encoded = records
+        .get(previous_record_id.as_slice())
+        .map_err(database_error)?
+        .ok_or(PeerCapabilityStoreError::MissingRecord(previous_record_id))?;
+    let predecessor =
+        SignedPeerCapabilityRecord::decode_and_verify(encoded.value(), owner_device_id, key)?;
+    if predecessor.record_id()? != previous_record_id
+        || predecessor.content.sequence.checked_add(1) != Some(head.content.sequence)
+        || !matches!(
+            predecessor.content.floor,
+            PeerSyncCapabilityFloor::CurrentInvitationRequired { .. }
+                | PeerSyncCapabilityFloor::CanonicalCandidatePinned { .. }
+        )
+    {
+        return Err(PeerCapabilityStoreError::InvalidQuarantinePredecessor);
+    }
+    Ok(DurablePeerCapabilityQuarantineHead {
+        key,
+        head: head.state()?,
+        predecessor: predecessor.state()?,
+        reason,
+    })
 }
 
 fn verify_all_records_from_database<D: ReadableDatabase>(
@@ -799,6 +885,14 @@ pub enum PeerCapabilityStoreError {
     OwnerDeviceMismatch,
     #[error("current invitation does not authorize the local Account")]
     InvitationRequesterMismatch,
+    #[error("peer capability state is missing")]
+    PeerStateMissing,
+    #[error("peer capability state is not quarantined")]
+    PeerStateNotQuarantined,
+    #[error("peer capability quarantine has no predecessor")]
+    QuarantinePredecessorMissing,
+    #[error("peer capability quarantine predecessor is invalid")]
+    InvalidQuarantinePredecessor,
     #[error("peer capability record has unsupported version {0}")]
     UnsupportedRecordVersion(u8),
     #[error("peer capability record state is invalid")]
@@ -975,6 +1069,22 @@ mod tests {
                     reason: PeerSyncCapabilityQuarantineReason::PinnedCanonicalCapabilityMissing
                 }
             ));
+            let quarantine = read_store.load_quarantined_head(key)?;
+            assert_eq!(quarantine.key(), key);
+            assert_eq!(quarantine.head(), state);
+            assert_eq!(quarantine.head().sequence, 2);
+            assert_eq!(quarantine.predecessor().sequence, 1);
+            assert!(matches!(
+                quarantine.predecessor().floor,
+                PeerSyncCapabilityFloor::CanonicalCandidatePinned {
+                    minimum_authority_revision: 4,
+                    minimum_ticket_publication_epoch: 9,
+                }
+            ));
+            assert_eq!(
+                quarantine.reason(),
+                PeerSyncCapabilityQuarantineReason::PinnedCanonicalCapabilityMissing
+            );
         }
         assert_eq!(std::fs::read(&database_path)?, before);
         assert!(matches!(

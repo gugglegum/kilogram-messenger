@@ -1,27 +1,30 @@
-# Текущая точка: M1.2.9 завершён, следующий M1.2.10
+# Текущая точка: M1.2.10 завершён, следующий M1.2.11
 
-Статус на 2026-10-19: runtime IPC v31/domain v12 и Windows desktop дают
-bounded read-only view, который различает durable capability quarantine,
-process-local scheduler suppression и ordinary network retry. Capability store
-открывается строго read-only и только если уже существует; статус не создаёт
-state. Проекция не содержит raw Account/Device/queue IDs, ticket, endpoint,
-message либо secrets и не даёт clear/retry/downgrade/recovery authority. Peer и
-sync wire не менялись, public default остаётся `legacy-only`.
-Stable-name regression проходит 157/157 тестов, aggregate readiness — 135/135,
-fail-closed negative matrix — 7/7.
+Статус на 2026-10-19: отдельный offline crate
+`kilogram-peer-reenrollment` проверяет exact durable quarantine head и его
+подписанный predecessor, обе Root-signed Account authority, fresh current peer
+invitation и monotonic high-water. План требует точную короткую confirmation
+phrase и explicit approval, после чего текущий локальный Device подписывает
+bounded tombstone. Артефакт ничего не применяет: старый quarantine неизменен,
+runtime/IPC/network/CLI/desktop не подключены, public default остаётся
+`legacy-only`. Focused stable-name regression проходит 13/13 тестов, aggregate
+readiness — 136/136, fail-closed negative matrix — 7/7.
 
-## Следующий этап: M1.2.10 explicit Device-authorized peer re-enrollment design
+## Следующий этап: M1.2.11 durable re-enrollment acceptance receipt
 
-- определить отдельную локальную церемонию для legitimate peer Device/capability
-  replacement без стирания прежнего quarantine record и без generic clear;
-- требовать fresh current peer invitation, проверенную current Account authority,
-  явное подтверждение пользователя и Device-signed successor/tombstone;
-- exact-связать старый quarantined head, новый peer Device/capability, Account и
-  fresh nonce; stale/forked/substituted invitation должна fail closed;
-- сначала реализовать pure state machine и offline plan artifact без runtime IPC,
-  network, desktop apply или automatic retry;
-- сохранить unknown first-contact ambiguity, wire и public rollout/default
-  `legacy-only` до отдельного решения и security review.
+- определить единственную durable точку применения подписанного tombstone без
+  удаления либо переписывания старой quarantined chain;
+- exact-связать acceptance receipt с текущим contact head, новым peer key,
+  successor capability floor и тем же Root/device-list/invitation context;
+- сделать crash boundary атомарным: либо receipt и новый peer floor полностью
+  durable, либо старый contact остаётся blocked без partial route replacement;
+- exact replay сделать idempotent, а changed contact/quarantine/authority/
+  invitation, fork, rollback и second successor — fail closed;
+- сначала оставить apply локальным offline CLI contract без runtime hot apply,
+  автоматического retry и desktop one-click; runtime должен увидеть successor
+  только после отдельного fresh-start integration milestone;
+- сохранить старый quarantine как audit evidence, unknown first-contact
+  ambiguity, wire и public rollout/default `legacy-only`.
 
 # Завершённый расширенный пакет: M1.1.92–M1.2.5
 

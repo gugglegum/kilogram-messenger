@@ -5149,3 +5149,21 @@ Hosted follow-up:
   135/135 and the new fail-closed boundary rejects 7/7 negative mutations.
   Stable-path execution passes 157/157 tests: CLI 100 + library 1, peer
   capability store 8, runtime IPC 18 and Windows library 30.
+
+## M1.2.10 peer re-enrollment planning environment (2026-10-19)
+
+- Added workspace crate `kilogram-peer-reenrollment`; it has only offline
+  identity/capability dependencies and no redb writer, runtime, IPC, Iroh,
+  Tokio, CLI or desktop dependency.
+- Windows Account Root test fixtures use protected root-key creation. Inside
+  the filesystem sandbox this returns `os error 5`; the same stable-name test
+  harness must therefore execute outside that sandbox. This is an environment
+  permission constraint, not a product test failure.
+- Focused stable-path verification uses profile `test`, Cargo jobs 2 and fixed
+  executable names. Results: peer capability store 8/8 and peer re-enrollment
+  5/5. Direct hash-named `cargo test` remains forbidden by AGENTS.md.
+- Boundary normal/self-test passed with 7/7 rejected mutations. Accepted-tag
+  aggregate readiness passed 136/136 against immutable `M1.0.0`, including
+  rustfmt and workspace-wide `--locked --offline -D warnings` Clippy.
+- No release build, ZIP/archive, tag, automatic GitHub build, network test or
+  second-host run is required for this pure offline state-machine milestone.

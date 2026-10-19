@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.10",
+  "status": "canonical-sync-v2-peer-reenrollment-plan-verified",
+  "implementation": [
+    "crates/kilogram-peer-capability-store",
+    "crates/kilogram-peer-reenrollment"
+  ],
+  "changes_connection_ticket_wire": false,
+  "changes_sync_wire": false,
+  "changes_runtime_ipc": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "quarantine_context": {
+    "read_only": true,
+    "verifies_complete_retained_chain": true,
+    "binds_owner_device": true,
+    "binds_exact_peer_key": true,
+    "binds_exact_head_record_and_sequence": true,
+    "binds_exact_predecessor_record_and_floor": true,
+    "missing_or_non_quarantined_state_fails_closed": true,
+    "observation_mutates_database": false
+  },
+  "authority_prerequisites": {
+    "local_root_signed_device_list": true,
+    "local_signer_must_be_active_sync_device": true,
+    "peer_root_signed_device_list": true,
+    "fresh_device_signed_current_invitation": true,
+    "invitation_must_target_local_account": true,
+    "peer_authority_revision_must_match_exactly": true,
+    "replacement_device_must_be_active_sync_device": true,
+    "authority_regression_rejected": true,
+    "same_device_ticket_epoch_regression_rejected": true,
+    "same_device_non_advancing_invitation_rejected": true
+  },
+  "explicit_confirmation": {
+    "fresh_nonce_bytes": 32,
+    "maximum_validity_seconds": 900,
+    "validity_cannot_exceed_invitation": true,
+    "exact_confirmation_phrase_required": true,
+    "explicit_user_or_test_operator_enum_required": true,
+    "signature_authority": "current-local-device-ed25519"
+  },
+  "artifact_binding": {
+    "old_quarantine_head": true,
+    "old_verified_predecessor_floor": true,
+    "local_and_peer_authority_digests": true,
+    "replacement_peer_device": true,
+    "invitation_and_required_capability_ids": true,
+    "publication_epoch": true,
+    "fresh_nonce_and_expiry": true,
+    "canonical_bounded_encoding": true,
+    "maximum_encoded_bytes": 4096
+  },
+  "privacy_boundary": {
+    "contains_connection_ticket_body": false,
+    "contains_endpoint_or_address": false,
+    "contains_relay_url": false,
+    "contains_message_or_ciphertext": false,
+    "contains_filesystem_path": false,
+    "contains_account_root_or_device_secret": false
+  },
+  "activation_boundary": {
+    "artifact_applies_itself": false,
+    "store_writer_dependency": false,
+    "runtime_ipc_dependency": false,
+    "transport_or_network_dependency": false,
+    "cli_or_desktop_integration": false,
+    "automatic_quarantine_clear_enabled": false,
+    "remote_quarantine_clear_enabled": false,
+    "old_quarantine_is_retained": true,
+    "public_canonical_rollout_enabled": false
+  },
+  "verification": {
+    "stable_path_rust_harness_required_on_windows": true,
+    "quarantine_read_only_extraction_tested": true,
+    "explicit_confirmation_tested": true,
+    "wrong_signer_and_tamper_tested": true,
+    "substituted_context_and_expiry_tested": true,
+    "stale_and_regressed_successor_tested": true,
+    "boundary_self_test_and_negative_mutations": "verified",
+    "m1_readiness": "136/136",
+    "rustfmt": "verified",
+    "locked_offline_strict_clippy": "verified",
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false,
+    "network_executed": false
+  },
+  "non_claims": [
+    "durable-reenrollment-application",
+    "quarantine-clear-or-record-deletion",
+    "automatic-network-retry-trigger",
+    "global-peer-authority-freshness",
+    "generic-first-contact-extension-stripping-detection",
+    "whole-store-rollback-resistance-without-external-witness",
+    "public-rollout-eligibility",
+    "independent-security-review-completed"
+  ],
+  "next": [
+    "durable-reenrollment-acceptance-receipt",
+    "retained-quarantine-audit-export",
+    "independent-protocol-and-security-review"
+  ]
+}

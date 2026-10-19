@@ -7563,3 +7563,26 @@ correlation visible, Windows-only field evidence, independent security audit
   отклоняет 7/7 authority/privacy mutations;
 - aggregate readiness расширен до 135/135; peer/sync wire и public default
   `legacy-only` не менялись, release/ZIP/tag/network/second host не нужны.
+
+### M1.2.10 — Device-authorized peer re-enrollment plan: принят локально
+
+- capability store получил строго read-only extraction exact quarantined head,
+  bounded reason и непосредственно предшествующего Device-signed floor; вся
+  retained chain, owner/key binding, IDs и sequence проверяются до выдачи;
+- новый pure offline crate `kilogram-peer-reenrollment` требует current local и
+  peer Root-signed device lists, active SyncHistory Devices, fresh exact current
+  invitation и non-regressing predecessor high-water;
+- same-Device re-enrollment обязан реально продвинуть authority revision либо
+  ticket epoch; cross-Device epoch не сравнивается как общий счётчик, но новый
+  Device обязан находиться в exact peer authority с revision не ниже high-water;
+- план exact-связывает старый quarantine/predecessor, обе authority digest,
+  replacement Device, invitation/capability IDs, epoch, fresh 32-byte nonce и
+  максимум 15 минут validity; confirmation phrase и explicit enum обязательны;
+- локальный Device подписывает bounded canonical tombstone, но crate не имеет
+  store writer, apply/clear API, runtime IPC, transport, CLI либо desktop;
+  старый quarantine остаётся неизменным и сеть не получает recovery authority;
+- stable-path focused regression прошёл 8/8 store + 5/5 re-enrollment tests;
+  boundary отклонил 7/7 ослаблений, accepted-tag readiness прошёл 136/136 с
+  rustfmt и workspace-wide locked/offline strict Clippy;
+- wire, runtime IPC и public default `legacy-only` не менялись; release/ZIP/tag,
+  automatic GitHub build, сеть и второй физический хост не использовались.
