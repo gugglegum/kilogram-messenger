@@ -127,6 +127,7 @@ use kilogram_store::{
     LocalMessageStore, StoreError, StoreOutcome, StoredAuthorizedEvent,
 };
 use kilogram_sync_capability::{
+    CurrentPeerInvitationBinding, MAX_CURRENT_PEER_INVITATION_BYTES, SignedCurrentPeerInvitation,
     SignedSyncTransportCandidateAcceptance, SignedSyncTransportCandidateOffer,
     SignedSyncTransportCapability, SyncTransportCandidateOfferBinding,
     SyncTransportCapabilityBinding, SyncTransportProtocol,
@@ -2045,6 +2046,28 @@ enum Command {
         expected_record_id: String,
     },
 
+    /// Wrap one exact current connection ticket in a Device-signed invitation.
+    CurrentPeerInvitationCreate {
+        /// Directory containing the listening Device identity.
+        #[arg(long)]
+        state_dir: PathBuf,
+
+        /// Exact current connection ticket containing a canonical capability.
+        #[arg(long)]
+        ticket_file: PathBuf,
+
+        /// New no-clobber JSON invitation artifact.
+        #[arg(long)]
+        output_file: PathBuf,
+    },
+
+    /// Verify a current Device-signed invitation and its exact embedded ticket.
+    CurrentPeerInvitationInspect {
+        /// JSON invitation artifact received from the peer.
+        #[arg(long)]
+        invitation_file: PathBuf,
+    },
+
     /// Create a development Account Root authority in a separate directory.
     AccountCreate {
         /// Directory reserved for the offline Account Root secret and authority sequence.
@@ -2295,6 +2318,7 @@ impl Command {
             | Self::CanonicalSyncPolicyStatus { state_dir }
             | Self::CanonicalSyncPolicyPlan { state_dir, .. }
             | Self::CanonicalSyncPolicyApply { state_dir, .. }
+            | Self::CurrentPeerInvitationCreate { state_dir, .. }
             | Self::ConversationMembershipInstall { state_dir, .. }
             | Self::DeviceEnroll { state_dir, .. }
             | Self::DeviceAuthorityUpdate { state_dir, .. }
@@ -2307,6 +2331,7 @@ impl Command {
             | Self::StateVaultKeyImport { state_dir, .. }
             | Self::StateVaultRestore { state_dir, .. } => Some(state_dir),
             Self::AccountCreate { .. }
+            | Self::CurrentPeerInvitationInspect { .. }
             | Self::RuntimeProfileCreate { .. }
             | Self::RuntimeFromProfile { .. }
             | Self::HistoryRewrapSas { .. }
@@ -4173,6 +4198,14 @@ async fn run_command(command: Command) -> Result<()> {
             reason,
             expected_record_id,
         ),
+        Command::CurrentPeerInvitationCreate {
+            state_dir,
+            ticket_file,
+            output_file,
+        } => create_current_peer_invitation(state_dir, ticket_file, output_file),
+        Command::CurrentPeerInvitationInspect { invitation_file } => {
+            inspect_current_peer_invitation(invitation_file)
+        }
         Command::AccountCreate { account_dir } => create_account(account_dir),
         Command::AccountShow { account_dir } => show_account(account_dir),
         Command::AccountSnapshot {
@@ -28066,6 +28099,144 @@ fn canonical_sync_v2_activation_disposition_name(
     }
 }
 
+fn create_current_peer_invitation(
+    state_dir: PathBuf,
+    ticket_file: PathBuf,
+    output_file: PathBuf,
+) -> Result<()> {
+    let device_state = load_command_device_state(&state_dir)?;
+    let encoded_ticket = fs::read_to_string(&ticket_file)
+        .with_context(|| format!("read current connection ticket {}", ticket_file.display()))?;
+    let encoded_ticket = encoded_ticket.trim();
+    ensure!(
+        !encoded_ticket.is_empty(),
+        "connection ticket file is empty"
+    );
+    let ticket = ConnectionTicket::decode(encoded_ticket)
+        .context("decode exact current connection ticket for invitation")?;
+    ensure!(
+        ticket.listener_device_id() == device_state.identity().device_id(),
+        "connection ticket belongs to a different listening Device"
+    );
+    let capability = ticket
+        .sync_transport_capability()
+        .context("current invitation requires a signed sync capability")?;
+    ensure!(
+        capability.candidate_protocols() == [SyncTransportProtocol::CanonicalCborV2],
+        "current invitation requires an advertised canonical sync candidate"
+    );
+    let endpoint_id = ticket.endpoint().id.to_string();
+    let binding = CurrentPeerInvitationBinding {
+        listener_account_id: ticket.listener_account_id(),
+        listener_device_id: ticket.listener_device_id(),
+        allowed_requester_account_id: ticket.allowed_requester_account_id(),
+        authority_revision: ticket.listener_directory().revision(),
+        endpoint_id: &endpoint_id,
+        ticket_publication_channel_epoch: ticket.ticket_publication_channel_epoch(),
+        issued_at_unix_seconds: capability.issued_at_unix_seconds(),
+        expires_at_unix_seconds: capability.expires_at_unix_seconds(),
+        connection_ticket: encoded_ticket,
+        required_capability_id: capability.artifact_id()?,
+    };
+    let invitation = SignedCurrentPeerInvitation::issue(device_state.identity(), &binding)?;
+    let encoded =
+        serde_json::to_vec_pretty(&invitation).context("encode signed current peer invitation")?;
+    ensure!(
+        encoded.len() <= MAX_CURRENT_PEER_INVITATION_BYTES,
+        "encoded current peer invitation exceeds the bounded maximum"
+    );
+    write_new_authority_file(&output_file, &encoded)
+        .with_context(|| format!("write current peer invitation {}", output_file.display()))?;
+    println!(
+        "current_peer_invitation_id={}",
+        encode_hex(&invitation.invitation_id()?)
+    );
+    println!(
+        "current_peer_invitation_required_capability_id={}",
+        encode_hex(&invitation.required_capability_id())
+    );
+    println!(
+        "current_peer_invitation_listener_device_id={}",
+        invitation.listener_device_id()
+    );
+    println!(
+        "current_peer_invitation_allowed_requester_account_id={}",
+        invitation.allowed_requester_account_id()
+    );
+    println!("current_peer_invitation_file={}", output_file.display());
+    println!("status=current-peer-invitation-created");
+    Ok(())
+}
+
+fn inspect_current_peer_invitation(invitation_file: PathBuf) -> Result<()> {
+    let encoded = fs::read(&invitation_file).with_context(|| {
+        format!(
+            "read signed current peer invitation {}",
+            invitation_file.display()
+        )
+    })?;
+    ensure!(
+        !encoded.is_empty() && encoded.len() <= MAX_CURRENT_PEER_INVITATION_BYTES,
+        "current peer invitation length is outside the bounded range"
+    );
+    let invitation: SignedCurrentPeerInvitation =
+        serde_json::from_slice(&encoded).context("decode signed current peer invitation")?;
+    invitation.verify_at(unix_time_now()?)?;
+    let ticket = ConnectionTicket::decode(invitation.connection_ticket())
+        .context("decode invitation's exact embedded connection ticket")?;
+    let capability = ticket
+        .sync_transport_capability()
+        .context("current invitation's embedded ticket has no sync capability")?;
+    ensure!(
+        capability.candidate_protocols() == [SyncTransportProtocol::CanonicalCborV2],
+        "current invitation's embedded ticket does not advertise canonical sync"
+    );
+    let endpoint_id = ticket.endpoint().id.to_string();
+    invitation.verify_binding(&CurrentPeerInvitationBinding {
+        listener_account_id: ticket.listener_account_id(),
+        listener_device_id: ticket.listener_device_id(),
+        allowed_requester_account_id: ticket.allowed_requester_account_id(),
+        authority_revision: ticket.listener_directory().revision(),
+        endpoint_id: &endpoint_id,
+        ticket_publication_channel_epoch: ticket.ticket_publication_channel_epoch(),
+        issued_at_unix_seconds: capability.issued_at_unix_seconds(),
+        expires_at_unix_seconds: capability.expires_at_unix_seconds(),
+        connection_ticket: invitation.connection_ticket(),
+        required_capability_id: capability.artifact_id()?,
+    })?;
+    println!(
+        "current_peer_invitation_id={}",
+        encode_hex(&invitation.invitation_id()?)
+    );
+    println!(
+        "current_peer_invitation_required_capability_id={}",
+        encode_hex(&invitation.required_capability_id())
+    );
+    println!(
+        "current_peer_invitation_listener_account_id={}",
+        invitation.listener_account_id()
+    );
+    println!(
+        "current_peer_invitation_listener_device_id={}",
+        invitation.listener_device_id()
+    );
+    println!(
+        "current_peer_invitation_authority_revision={}",
+        invitation.authority_revision()
+    );
+    println!(
+        "current_peer_invitation_ticket_publication_epoch={}",
+        invitation.ticket_publication_channel_epoch()
+    );
+    println!(
+        "current_peer_invitation_required_protocol={}",
+        invitation.required_protocol().alpn()
+    );
+    println!("current_peer_invitation_ticket_embedded=true");
+    println!("status=current-peer-invitation-verified");
+    Ok(())
+}
+
 fn create_account(account_dir: PathBuf) -> Result<()> {
     let account = AccountRootState::create(&account_dir)
         .with_context(|| format!("create Account Root state in {}", account_dir.display()))?;
@@ -36159,6 +36330,40 @@ mod tests {
                 .canonical_dial_enabled()
         );
         ticket.verify()?;
+        Ok(())
+    }
+
+    #[test]
+    fn current_peer_invitation_cli_binds_exact_ticket_and_rejects_substitution() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let state_dir = directory.path().join("listener-state");
+        let ticket_file = directory.path().join("listener.ticket");
+        let invitation_file = directory.path().join("listener.invitation.json");
+        let tampered_file = directory.path().join("tampered.invitation.json");
+        let listener = DeviceState::load_or_create(&state_dir)?;
+        let (_, listener_certificate, _, listener_directory) = authority_for(listener.identity())?;
+        let requester = DeviceIdentity::generate()?;
+        let (requester_account_id, _, _, _) = authority_for(&requester)?;
+        let ticket = ConnectionTicket::new_with_publication_channel_epoch_and_sync_policy(
+            EndpointAddr::new(SecretKey::generate().public()),
+            listener.identity(),
+            listener_certificate,
+            listener_directory,
+            requester_account_id,
+            RoutePolicy::DirectOnly,
+            4,
+            true,
+        )?;
+        fs::write(&ticket_file, ticket.encode()?)?;
+
+        create_current_peer_invitation(state_dir, ticket_file, invitation_file.clone())?;
+        inspect_current_peer_invitation(invitation_file.clone())?;
+
+        let mut tampered: serde_json::Value = serde_json::from_slice(&fs::read(&invitation_file)?)?;
+        tampered["content"]["connection_ticket"] =
+            serde_json::Value::String("Substituted_01".to_owned());
+        fs::write(&tampered_file, serde_json::to_vec_pretty(&tampered)?)?;
+        assert!(inspect_current_peer_invitation(tampered_file).is_err());
         Ok(())
     }
 

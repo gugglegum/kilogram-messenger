@@ -7250,3 +7250,20 @@ correlation visible, Windows-only field evidence, independent security audit
   prior authenticated state либо stronger invitation envelope;
 - 10/10 targeted tests, boundary и negative self-test прошли; ticket/sync wire,
   runtime IPC и public `legacy-only` default не менялись.
+
+### M1.1.93 — Device-signed current peer invitation: принят локально
+
+- bounded JSON artifact с deny-unknown-fields подписывается listener Device и
+  exact-связывает оба Account, listener Device, authority revision, endpoint,
+  publication epoch, validity window и весь base64url connection ticket;
+- embedded ticket обязан нести exact independently signed canonical capability,
+  ID и protocol которого повторно проверяются против outer invitation;
+- ticket substitution, capability stripping/replacement, wrong signer/version,
+  invalid time и oversized/non-base64url payload fail closed;
+- CLI `current-peer-invitation-create` пишет только новый файл, а
+  `current-peer-invitation-inspect` проверяет outer/inner signatures и bindings,
+  не раскрывая embedded ticket;
+- targeted library tests 13/13, stable-path CLI negative test, boundary,
+  self-test, rustfmt и strict Clippy прошли;
+- import/contact enrollment/network/durable floor остаются выключены, wire и
+  runtime IPC не менялись, public default остаётся `legacy-only`.

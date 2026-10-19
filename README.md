@@ -2439,6 +2439,15 @@ pinned, extension removal or authority/publication regression is quarantined
 instead of silently falling back. The model is dormant and does not change the
 public `legacy-only` default.
 
+[`RFC-0217`](docs/RFC-0217-m1193-current-peer-invitation.md) defines the
+Device-signed current invitation that can safely raise that floor. The bounded
+outer artifact commits to the entire compatible connection ticket, its exact
+independently signed canonical capability and all Account, Device, endpoint,
+authority, publication and validity bindings. Creation is no-clobber and
+inspection never prints the embedded ticket. Import, contact enrollment and
+network connection remain deliberately inactive until the durable pin store is
+available; the public default is still `legacy-only`.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

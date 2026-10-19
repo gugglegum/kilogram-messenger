@@ -16,10 +16,17 @@ pub const SYNC_TRANSPORT_CANDIDATE_OFFER_ID_DOMAIN: &[u8] =
     b"kilogram:sync-transport-candidate-offer-id:v1\0";
 pub const SYNC_TRANSPORT_CANDIDATE_ACCEPTANCE_SIGNATURE_DOMAIN: &[u8] =
     b"kilogram:sync-transport-candidate-acceptance-signature:v1\0";
+pub const CURRENT_PEER_INVITATION_SIGNATURE_DOMAIN: &[u8] =
+    b"kilogram:current-peer-invitation-signature:v1\0";
+pub const CURRENT_PEER_INVITATION_ID_DOMAIN: &[u8] = b"kilogram:current-peer-invitation-id:v1\0";
 pub const SYNC_TRANSPORT_CAPABILITY_VERSION: u8 = 2;
 pub const SYNC_TRANSPORT_CANDIDATE_SELECTION_VERSION: u8 = 1;
+pub const CURRENT_PEER_INVITATION_VERSION: u8 = 1;
 pub const MAX_SYNC_TRANSPORT_CAPABILITY_VALIDITY_SECONDS: u64 = 30 * 24 * 60 * 60;
 pub const SYNC_TRANSPORT_CAPABILITY_CLOCK_SKEW_SECONDS: u64 = 5 * 60;
+pub const MAX_CURRENT_PEER_INVITATION_TICKET_BYTES: usize = 256 * 1024;
+pub const MAX_CURRENT_PEER_INVITATION_BYTES: usize =
+    MAX_CURRENT_PEER_INVITATION_TICKET_BYTES + 4 * 1024;
 
 /// A local, monotonic interpretation of what a peer has already authenticated.
 ///
@@ -301,6 +308,48 @@ pub struct SignedSyncTransportCandidateAcceptance {
     signature: Vec<u8>,
 }
 
+/// A stronger, current-generation introduction envelope. The exact legacy
+/// ticket remains embedded for explicit N-1 interoperability, but a current
+/// importer authenticates this outer Device signature first and therefore
+/// knows that the committed sync capability is mandatory.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct CurrentPeerInvitationContent {
+    version: u8,
+    listener_account_id: AccountId,
+    listener_device_id: DeviceId,
+    allowed_requester_account_id: AccountId,
+    authority_revision: u64,
+    endpoint_id: String,
+    ticket_publication_channel_epoch: u64,
+    issued_at_unix_seconds: u64,
+    expires_at_unix_seconds: u64,
+    connection_ticket: String,
+    required_capability_id: [u8; 32],
+    required_protocol: SyncTransportProtocol,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct SignedCurrentPeerInvitation {
+    content: CurrentPeerInvitationContent,
+    signature: Vec<u8>,
+}
+
+#[derive(Clone, Debug)]
+pub struct CurrentPeerInvitationBinding<'a> {
+    pub listener_account_id: AccountId,
+    pub listener_device_id: DeviceId,
+    pub allowed_requester_account_id: AccountId,
+    pub authority_revision: u64,
+    pub endpoint_id: &'a str,
+    pub ticket_publication_channel_epoch: u64,
+    pub issued_at_unix_seconds: u64,
+    pub expires_at_unix_seconds: u64,
+    pub connection_ticket: &'a str,
+    pub required_capability_id: [u8; 32],
+}
+
 impl SignedSyncTransportCapability {
     pub fn issue_legacy_only(
         listener_identity: &DeviceIdentity,
@@ -450,6 +499,155 @@ impl SignedSyncTransportCapability {
             SYNC_TRANSPORT_CAPABILITY_ARTIFACT_ID_DOMAIN,
             &serde_json::to_vec(self)?,
         ))
+    }
+}
+
+impl SignedCurrentPeerInvitation {
+    pub fn issue(
+        listener_identity: &DeviceIdentity,
+        binding: &CurrentPeerInvitationBinding<'_>,
+    ) -> Result<Self, SyncTransportCapabilityError> {
+        if listener_identity.device_id() != binding.listener_device_id {
+            return Err(SyncTransportCapabilityError::InvitationSignerMismatch);
+        }
+        let content = CurrentPeerInvitationContent {
+            version: CURRENT_PEER_INVITATION_VERSION,
+            listener_account_id: binding.listener_account_id,
+            listener_device_id: binding.listener_device_id,
+            allowed_requester_account_id: binding.allowed_requester_account_id,
+            authority_revision: binding.authority_revision,
+            endpoint_id: binding.endpoint_id.to_owned(),
+            ticket_publication_channel_epoch: binding.ticket_publication_channel_epoch,
+            issued_at_unix_seconds: binding.issued_at_unix_seconds,
+            expires_at_unix_seconds: binding.expires_at_unix_seconds,
+            connection_ticket: binding.connection_ticket.to_owned(),
+            required_capability_id: binding.required_capability_id,
+            required_protocol: SyncTransportProtocol::CanonicalCborV2,
+        };
+        validate_current_peer_invitation_content(&content)?;
+        let signature = listener_identity
+            .sign(&current_peer_invitation_signing_bytes(&content)?)
+            .to_vec();
+        let invitation = Self { content, signature };
+        invitation.verify_binding(binding)?;
+        Ok(invitation)
+    }
+
+    pub fn verify(&self) -> Result<(), SyncTransportCapabilityError> {
+        validate_current_peer_invitation_content(&self.content)?;
+        self.content.listener_device_id.verify(
+            &current_peer_invitation_signing_bytes(&self.content)?,
+            &self.signature,
+        )?;
+        Ok(())
+    }
+
+    pub fn verify_at(&self, now_unix_seconds: u64) -> Result<(), SyncTransportCapabilityError> {
+        self.verify()?;
+        if now_unix_seconds.saturating_add(SYNC_TRANSPORT_CAPABILITY_CLOCK_SKEW_SECONDS)
+            < self.content.issued_at_unix_seconds
+        {
+            return Err(SyncTransportCapabilityError::InvitationNotYetValid {
+                issued_at: self.content.issued_at_unix_seconds,
+                now: now_unix_seconds,
+            });
+        }
+        if now_unix_seconds
+            > self
+                .content
+                .expires_at_unix_seconds
+                .saturating_add(SYNC_TRANSPORT_CAPABILITY_CLOCK_SKEW_SECONDS)
+        {
+            return Err(SyncTransportCapabilityError::InvitationExpired {
+                expires_at: self.content.expires_at_unix_seconds,
+                now: now_unix_seconds,
+            });
+        }
+        Ok(())
+    }
+
+    pub fn verify_binding(
+        &self,
+        expected: &CurrentPeerInvitationBinding<'_>,
+    ) -> Result<(), SyncTransportCapabilityError> {
+        self.verify()?;
+        let actual = &self.content;
+        if actual.listener_account_id != expected.listener_account_id
+            || actual.listener_device_id != expected.listener_device_id
+            || actual.allowed_requester_account_id != expected.allowed_requester_account_id
+            || actual.authority_revision != expected.authority_revision
+            || actual.endpoint_id != expected.endpoint_id
+            || actual.ticket_publication_channel_epoch != expected.ticket_publication_channel_epoch
+            || actual.issued_at_unix_seconds != expected.issued_at_unix_seconds
+            || actual.expires_at_unix_seconds != expected.expires_at_unix_seconds
+            || actual.connection_ticket != expected.connection_ticket
+            || actual.required_capability_id != expected.required_capability_id
+            || actual.required_protocol != SyncTransportProtocol::CanonicalCborV2
+        {
+            return Err(SyncTransportCapabilityError::InvitationBindingMismatch);
+        }
+        Ok(())
+    }
+
+    pub fn invitation_id(&self) -> Result<[u8; 32], SyncTransportCapabilityError> {
+        self.verify()?;
+        Ok(domain_separated_id(
+            CURRENT_PEER_INVITATION_ID_DOMAIN,
+            &serde_json::to_vec(self)?,
+        ))
+    }
+
+    pub fn required_floor(&self) -> Result<PeerSyncCapabilityFloor, SyncTransportCapabilityError> {
+        Ok(PeerSyncCapabilityFloor::CurrentInvitationRequired {
+            invitation_id: self.invitation_id()?,
+            required_capability_id: self.content.required_capability_id,
+            minimum_authority_revision: self.content.authority_revision,
+            minimum_ticket_publication_epoch: self.content.ticket_publication_channel_epoch,
+        })
+    }
+
+    pub fn listener_account_id(&self) -> AccountId {
+        self.content.listener_account_id
+    }
+
+    pub fn listener_device_id(&self) -> DeviceId {
+        self.content.listener_device_id
+    }
+
+    pub fn allowed_requester_account_id(&self) -> AccountId {
+        self.content.allowed_requester_account_id
+    }
+
+    pub fn authority_revision(&self) -> u64 {
+        self.content.authority_revision
+    }
+
+    pub fn endpoint_id(&self) -> &str {
+        &self.content.endpoint_id
+    }
+
+    pub fn ticket_publication_channel_epoch(&self) -> u64 {
+        self.content.ticket_publication_channel_epoch
+    }
+
+    pub fn issued_at_unix_seconds(&self) -> u64 {
+        self.content.issued_at_unix_seconds
+    }
+
+    pub fn expires_at_unix_seconds(&self) -> u64 {
+        self.content.expires_at_unix_seconds
+    }
+
+    pub fn connection_ticket(&self) -> &str {
+        &self.content.connection_ticket
+    }
+
+    pub fn required_capability_id(&self) -> [u8; 32] {
+        self.content.required_capability_id
+    }
+
+    pub fn required_protocol(&self) -> SyncTransportProtocol {
+        self.content.required_protocol
     }
 }
 
@@ -642,6 +840,58 @@ pub fn verify_mutual_canonical_candidate_selection(
     Ok(())
 }
 
+fn validate_current_peer_invitation_content(
+    content: &CurrentPeerInvitationContent,
+) -> Result<(), SyncTransportCapabilityError> {
+    if content.version != CURRENT_PEER_INVITATION_VERSION {
+        return Err(SyncTransportCapabilityError::UnsupportedInvitationVersion(
+            content.version,
+        ));
+    }
+    if content.listener_account_id == content.allowed_requester_account_id
+        || content.authority_revision == 0
+        || content.required_capability_id == [0_u8; 32]
+        || content.required_protocol != SyncTransportProtocol::CanonicalCborV2
+    {
+        return Err(SyncTransportCapabilityError::UnsafeInvitationState);
+    }
+    if content.endpoint_id.len() != 64
+        || !content
+            .endpoint_id
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+    {
+        return Err(SyncTransportCapabilityError::InvalidInvitationEndpointId);
+    }
+    let ticket = content.connection_ticket.as_bytes();
+    if ticket.is_empty()
+        || ticket.len() > MAX_CURRENT_PEER_INVITATION_TICKET_BYTES
+        || !ticket
+            .iter()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_'))
+    {
+        return Err(SyncTransportCapabilityError::InvalidInvitationTicket);
+    }
+    if content.issued_at_unix_seconds >= content.expires_at_unix_seconds {
+        return Err(SyncTransportCapabilityError::InvalidInvitationValidityInterval);
+    }
+    let validity = content
+        .expires_at_unix_seconds
+        .saturating_sub(content.issued_at_unix_seconds);
+    if validity > MAX_SYNC_TRANSPORT_CAPABILITY_VALIDITY_SECONDS {
+        return Err(SyncTransportCapabilityError::InvitationValidityTooLong(
+            validity,
+        ));
+    }
+    Ok(())
+}
+
+fn current_peer_invitation_signing_bytes(
+    content: &CurrentPeerInvitationContent,
+) -> Result<Vec<u8>, SyncTransportCapabilityError> {
+    prefixed_json(CURRENT_PEER_INVITATION_SIGNATURE_DOMAIN, content)
+}
+
 fn validate_candidate_offer_content(
     content: &SyncTransportCandidateOfferContent,
 ) -> Result<(), SyncTransportCapabilityError> {
@@ -788,6 +1038,28 @@ pub enum SyncTransportCapabilityError {
     NotYetValid { issued_at: u64, now: u64 },
     #[error("synchronization transport capability expired at {expires_at}; now={now}")]
     Expired { expires_at: u64, now: u64 },
+    #[error("unsupported current peer invitation version {0}")]
+    UnsupportedInvitationVersion(u8),
+    #[error("current peer invitation signer does not match listener Device")]
+    InvitationSignerMismatch,
+    #[error("current peer invitation binding does not match the exact expected ticket")]
+    InvitationBindingMismatch,
+    #[error("current peer invitation state is unsafe")]
+    UnsafeInvitationState,
+    #[error("current peer invitation endpoint ID is not lowercase 32-byte hex")]
+    InvalidInvitationEndpointId,
+    #[error("current peer invitation contains an invalid or oversized connection ticket")]
+    InvalidInvitationTicket,
+    #[error("current peer invitation validity interval is invalid")]
+    InvalidInvitationValidityInterval,
+    #[error(
+        "current peer invitation validity is {0} seconds; maximum is {MAX_SYNC_TRANSPORT_CAPABILITY_VALIDITY_SECONDS}"
+    )]
+    InvitationValidityTooLong(u64),
+    #[error("current peer invitation is not valid until {issued_at}; now={now}")]
+    InvitationNotYetValid { issued_at: u64, now: u64 },
+    #[error("current peer invitation expired at {expires_at}; now={now}")]
+    InvitationExpired { expires_at: u64, now: u64 },
     #[error("unsupported synchronization candidate selection version {0}")]
     UnsupportedCandidateSelectionVersion(u8),
     #[error("synchronization candidate selection state is unsafe")]
@@ -935,6 +1207,112 @@ mod tests {
         assert!(matches!(
             capability.verify_at(10_000),
             Err(SyncTransportCapabilityError::Expired { .. })
+        ));
+        Ok(())
+    }
+
+    fn invitation_binding<'a>(
+        identity: &DeviceIdentity,
+        connection_ticket: &'a str,
+    ) -> Result<CurrentPeerInvitationBinding<'a>, SyncTransportCapabilityError> {
+        Ok(CurrentPeerInvitationBinding {
+            listener_account_id: AccountId::from_str(&"11".repeat(32))?,
+            listener_device_id: identity.device_id(),
+            allowed_requester_account_id: AccountId::from_str(&"22".repeat(32))?,
+            authority_revision: 7,
+            endpoint_id: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            ticket_publication_channel_epoch: 3,
+            issued_at_unix_seconds: 1_000,
+            expires_at_unix_seconds: 2_000,
+            connection_ticket,
+            required_capability_id: [0x33; 32],
+        })
+    }
+
+    #[test]
+    fn current_invitation_binds_exact_ticket_and_required_capability()
+    -> Result<(), SyncTransportCapabilityError> {
+        let identity = DeviceIdentity::from_secret_bytes([0x43; 32]);
+        let expected = invitation_binding(&identity, "Abc_-09")?;
+        let invitation = SignedCurrentPeerInvitation::issue(&identity, &expected)?;
+
+        invitation.verify_at(1_500)?;
+        invitation.verify_binding(&expected)?;
+        assert_eq!(invitation.connection_ticket(), "Abc_-09");
+        assert_eq!(invitation.required_capability_id(), [0x33; 32]);
+        assert_eq!(
+            invitation.required_protocol(),
+            SyncTransportProtocol::CanonicalCborV2
+        );
+        assert_eq!(
+            invitation.required_floor()?,
+            PeerSyncCapabilityFloor::CurrentInvitationRequired {
+                invitation_id: invitation.invitation_id()?,
+                required_capability_id: [0x33; 32],
+                minimum_authority_revision: 7,
+                minimum_ticket_publication_epoch: 3,
+            }
+        );
+
+        let encoded = serde_json::to_vec(&invitation)?;
+        let decoded: SignedCurrentPeerInvitation = serde_json::from_slice(&encoded)?;
+        assert_eq!(decoded, invitation);
+        decoded.verify_binding(&expected)?;
+        Ok(())
+    }
+
+    #[test]
+    fn current_invitation_stripping_and_substitution_fail_closed()
+    -> Result<(), SyncTransportCapabilityError> {
+        let identity = DeviceIdentity::from_secret_bytes([0x44; 32]);
+        let expected = invitation_binding(&identity, "Abc_-09")?;
+        let invitation = SignedCurrentPeerInvitation::issue(&identity, &expected)?;
+
+        let mut stripped = invitation.clone();
+        stripped.content.required_capability_id = [0; 32];
+        assert!(matches!(
+            stripped.verify(),
+            Err(SyncTransportCapabilityError::UnsafeInvitationState)
+        ));
+
+        let mut substituted_ticket = invitation.clone();
+        substituted_ticket.content.connection_ticket = "Different_10".to_owned();
+        assert!(substituted_ticket.verify().is_err());
+
+        let wrong_ticket = invitation_binding(&identity, "Different_10")?;
+        assert!(matches!(
+            invitation.verify_binding(&wrong_ticket),
+            Err(SyncTransportCapabilityError::InvitationBindingMismatch)
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn current_invitation_wrong_signer_version_and_time_fail_closed()
+    -> Result<(), SyncTransportCapabilityError> {
+        let identity = DeviceIdentity::from_secret_bytes([0x45; 32]);
+        let other = DeviceIdentity::from_secret_bytes([0x46; 32]);
+        let expected = invitation_binding(&identity, "Abc_-09")?;
+        assert!(matches!(
+            SignedCurrentPeerInvitation::issue(&other, &expected),
+            Err(SyncTransportCapabilityError::InvitationSignerMismatch)
+        ));
+        let invitation = SignedCurrentPeerInvitation::issue(&identity, &expected)?;
+        assert!(matches!(
+            invitation.verify_at(100),
+            Err(SyncTransportCapabilityError::InvitationNotYetValid { .. })
+        ));
+        assert!(matches!(
+            invitation.verify_at(10_000),
+            Err(SyncTransportCapabilityError::InvitationExpired { .. })
+        ));
+        let mut old_version = invitation;
+        old_version.content.version = 0;
+        assert!(matches!(
+            old_version.verify(),
+            Err(SyncTransportCapabilityError::UnsupportedInvitationVersion(
+                0
+            ))
         ));
         Ok(())
     }

@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.93",
+  "status": "canonical-sync-v2-current-peer-invitation-verified",
+  "implementation": [
+    "crates/kilogram-sync-capability",
+    "apps/kilogram-cli"
+  ],
+  "changes_connection_ticket_wire": false,
+  "changes_sync_wire": false,
+  "changes_runtime_ipc": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "artifact": {
+    "version": 1,
+    "encoding": "bounded-json-with-deny-unknown-fields",
+    "signature": "listener-device-ed25519",
+    "signature_domain": "kilogram:current-peer-invitation-signature:v1\u0000",
+    "id": "blake3(domain || canonical-serialized-signed-artifact)",
+    "maximum_embedded_ticket_bytes": 262144,
+    "maximum_artifact_bytes": 266240,
+    "required_protocol": "kilogram/m1/sync/cbor/2"
+  },
+  "exact_bindings": [
+    "listener-account-id",
+    "listener-device-id",
+    "allowed-requester-account-id",
+    "account-authority-revision",
+    "endpoint-id",
+    "ticket-publication-channel-epoch",
+    "issued-at-and-expires-at",
+    "entire-base64url-connection-ticket",
+    "required-sync-capability-id",
+    "required-canonical-protocol"
+  ],
+  "cli": {
+    "create": "current-peer-invitation-create",
+    "inspect": "current-peer-invitation-inspect",
+    "create_is_no_clobber": true,
+    "inspect_verifies_embedded_ticket_and_capability": true,
+    "prints_embedded_ticket": false,
+    "automatically_enrolls_contact": false,
+    "automatically_connects": false
+  },
+  "compatibility": {
+    "legacy_ticket_remains_embedded_exactly": true,
+    "old_client_understands_outer_invitation": false,
+    "explicit_legacy_ticket_path_remains_available": true,
+    "current_importer_may_ignore_missing_outer_invitation": false
+  },
+  "activation_boundary": {
+    "durable_floor_store_implemented": false,
+    "runtime_consumes_invitation": false,
+    "rollout_policy_consumes_invitation": false,
+    "automatic_enrollment_enabled": false
+  },
+  "non_claims": [
+    "universal-downgrade-protection-for-legacy-ticket-import",
+    "durable-peer-capability-pin-store",
+    "runtime-contact-enrollment-integration",
+    "public-rollout-eligible"
+  ]
+}
